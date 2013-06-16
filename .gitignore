@@ -1,0 +1,5 @@
+project
+target
+tmp
+finance-*.csv
+*.m3
