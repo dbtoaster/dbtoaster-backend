@@ -10,16 +10,28 @@ sealed abstract class Tree // Generic AST node
 
 // ---------- Data types
 sealed abstract class Type extends Tree
-case object TypeChar   extends Type /*  8 bit */ { override def toString="char" }
-case object TypeShort  extends Type /* 16 bit */ { override def toString="short" }
-case object TypeInt    extends Type /* 32 bit */ { override def toString="int" }
+//case object TypeChar   extends Type /*  8 bit */ { override def toString="char" }
+//case object TypeShort  extends Type /* 16 bit */ { override def toString="short" }
+//case object TypeInt    extends Type /* 32 bit */ { override def toString="int" }
 case object TypeLong   extends Type /* 64 bit */ { override def toString="long" }
-case object TypeFloat  extends Type /* 32 bit */ { override def toString="float" }
+//case object TypeFloat  extends Type /* 32 bit */ { override def toString="float" }
 case object TypeDouble extends Type /* 64 bit */ { override def toString="double" }
 case object TypeDate   extends Type              { override def toString="date" }
 // case object TypeTime extends Type                { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string" } // how to encode it?
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
+
+// ---------- Comparison operators
+sealed abstract class OpCmp extends Tree
+case object OpEq extends OpCmp { override def toString="=" }
+case object OpNe extends OpCmp { override def toString="!=" }
+case object OpGt extends OpCmp { override def toString=">" } // OpLt by reversing arguments
+case object OpGe extends OpCmp { override def toString=">=" } // OpGe by reversing arguments
+
+// ---------- Statement operators (for maps updates)
+sealed abstract class OpUpdate extends Tree
+case object OpSet extends OpUpdate { override def toString=":=" }
+case object OpAdd extends OpUpdate { override def toString="+=" }
 
 // ---------- Source definitions
 case class Source(stream:Boolean, schema:Schema, in:SourceIn, split:Split, adaptor:Adaptor) { override def toString = "CREATE "+(if (stream) "STREAM" else "TABLE")+" "+schema+"\n  FROM "+in+" "+split+" "+adaptor+";" }
@@ -38,63 +50,66 @@ case class SplitSep(delim:String) extends Split { override def toString="'"+deli
 //case class SplitPrefix(bytes:Int) extends Split { override def toString="PREFIXED "+bytes } // records are prefixed with their length in bytes
 
 // -----------------------------------------------------------------------------
+// Typed internal language
+
+/*
+XXX: have a store to provide proper type all maps 
+Coll(name,type,indices) = K3collection
+colls = HashMap[String,Coll]
+
+
+mutable list/set of Maps
+mark each slice index used
+
+*/
+
+// -----------------------------------------------------------------------------
 // M3 language
 
 abstract sealed class M3
 object M3 {
-  def i(s:String,n:Int=1) = { val i="  "*n; i+s.replaceAll(" +$","").replace("\n","\n"+i)+"\n" } // indent
+  def i(s:String,n:Int=1) = { val i="  "*n; i+s.replaceAll(" +$","").replace("\n","\n"+i) } // indent
 
-  case class System(in:List[Source], maps:List[Map], queries:List[Query], triggers:List[Trigger]) extends M3 {
+  case class System(sources:List[Source], maps:List[MMap], queries:List[Query], triggers:List[Trigger]) extends M3 {
     override def toString =
-      "-------------------- SOURCES --------------------\n"+in.mkString("\n\n")+"\n\n"+
+      "-------------------- SOURCES --------------------\n"+sources.mkString("\n\n")+"\n\n"+
       "--------------------- MAPS ----------------------\n"+maps.mkString("\n\n")+"\n\n"+
       "-------------------- QUERIES --------------------\n"+queries.mkString("\n\n")+"\n\n"+
       "------------------- TRIGGERS --------------------\n"+triggers.mkString("\n\n")
   }
-  case class Map(name:String, tp:Type, keys:List[(String,Type)], expr:Expr) {
+  case class MMap(name:String, tp:Type, keys:List[(String,Type)], expr:Expr) extends M3 {
     override def toString="DECLARE MAP "+name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.map{case (n,t)=>n+":"+t}.mkString(",")+"] :=\n"+i(expr+";")
   }
-  case class Query(name:String, m:MapRef) { override def toString="DECLARE QUERY "+name+" := "+m+";" }
-  
+  case class Query(name:String, m:MMapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+m+";" }
+
   // ---------- Triggers
   abstract sealed class Trigger extends M3
-  case class TriggerReady(acts:List[Stmt]) extends Trigger { override def toString="ON SYSTEM READY {\n"+i(acts.mkString("\n"))+"}" }
-  case class TriggerAdd(tuple:Tuple, acts:List[Stmt]) extends Trigger { override def toString="ON + "+tuple+" {\n"+i(acts.mkString("\n"))+"}" }
-  case class TriggerDel(tuple:Tuple, acts:List[Stmt]) extends Trigger { override def toString="ON - "+tuple+" {\n"+i(acts.mkString("\n"))+"}" }
+  case class TriggerReady(stmts:List[Stmt]) extends Trigger { override def toString="ON SYSTEM READY {\n"+i(stmts.mkString("\n"))+"\n}" }
+  case class TriggerAdd(schema:Schema, stmts:List[Stmt]) extends Trigger { override def toString="ON + "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+") {\n"+i(stmts.mkString("\n"))+"\n}" }
+  case class TriggerDel(schema:Schema, stmts:List[Stmt]) extends Trigger { override def toString="ON - "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+") {\n"+i(stmts.mkString("\n"))+"\n}" }
   // case class TriggerCleanup/Failure/Shutdown/Checkpoint(acts:List[Stmt]) extends Trigger
   
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3
-  case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+i(e+")") }
-  case class Tuple(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")" }
-  // Variables
-  case class Let(name:String, e:Expr) extends Expr { override def toString="( "+name+" ^= "+e+")" }
-  case class Ref(name:String) extends Expr { override def toString=name }
-  case class MapRef(name:String, tp:Type, ks:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+ks.mkString(",")+"]" }
   // Constants
-  case class ConstNum(v:String) extends Expr { override def toString=v }
-  case class Const(v:String) extends Expr { override def toString="'"+v+"'" }
-
-  case class Mul(l:Expr,r:Expr) extends Expr { override def toString=l+" * "+r }
-  case class Add(l:Expr,r:Expr) extends Expr { override def toString="("+l+" + "+r+")" }
-  case class Exists(e:Expr) extends Expr { override def toString="EXISTS("+e+")" }
-  case class Apply(fun:String,tp:Type,args:List[Expr]) extends Expr { override def toString="["+fun+":"+tp+"]("+args.mkString(",")+")" }
-  case class Cast(tp:Type,e:Expr) extends Expr { override def toString="[/:"+tp+"]("+e+")" }
-  
-  // ---------- Comparisons (boolean)
-  sealed abstract class Cmp extends Expr
-  case class CmpEq(l:Expr, r:Expr) extends Cmp { override def toString="{"+l+" = "+r+"}" }
-  case class CmpNe(l:Expr, r:Expr) extends Cmp { override def toString="{"+l+" != "+r+"}" }
-  case class CmpGt(l:Expr, r:Expr) extends Cmp { override def toString="{"+l+" > "+r+"}" }
-  case class CmpGe(l:Expr, r:Expr) extends Cmp { override def toString="{"+l+" >= "+r+"}" }
-  case class CmpLt(l:Expr, r:Expr) extends Cmp { override def toString="{"+l+" < "+r+"}" }
-  case class CmpLe(l:Expr, r:Expr) extends Cmp { override def toString="{"+l+" <= "+r+"}" }
-  case class CmpNz(e:Expr) extends Cmp { override def toString="{"+e+"}"; }
-  
-  // ---------- Statement with no return
-  sealed class Stmt extends Tree
-  case class StAdd(m:MapRef, e:Expr) extends Stmt { override def toString=m+" += "+e+";" }
-  case class StSet(m:MapRef, e:Expr) extends Stmt { override def toString=m+" := "+e+";" }
+  case class Const(tp:Type,v:String) extends Expr { override def toString=if (tp==TypeString) "'"+v+"'" else v }
+  // Variables
+  case class Ref(name:String) extends Expr { override def toString=name }
+  case class MMapRef(name:String, tp:Type, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]" }
+  case class Lift(name:String, e:Expr) extends Expr { override def toString="( "+name+" ^= "+e+")" } // 'Let name=e in' semantics
+  case class Tuple(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")" } // appear only in Map declaration
+  // Operations
+  case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+i(e.toString)+"\n)" } // returns a {[tuple(group_keys)] => count} relation
+  case class Mul(l:Expr,r:Expr) extends Expr { override def toString="("+l+" * "+r+")" } // cross-product semantics
+  case class Add(l:Expr,r:Expr) extends Expr { override def toString="("+l+" + "+r+")" } // union semantics
+  case class Exists(e:Expr) extends Expr { override def toString="EXISTS("+e+")" } // returns 0 or 1 (check that there is at least one tuple)
+  case class Apply(fun:String,tp:Type,args:List[Expr]) extends Expr { override def toString="["+fun+":"+tp+"]("+args.mkString(",")+")" } // function application
+  case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op+" "+r+"}"} // comparison, returns 0 or 1
+  // ---------- Statements (no return)
+  sealed class Stmt extends M3
+  case class StAdd(m:MMapRef, e:Expr) extends Stmt { override def toString=m+" += "+e+";" }
+  case class StSet(m:MMapRef, e:Expr) extends Stmt { override def toString=m+" := "+e+";" }
+  // case class StCall(external function) extend Stmt
 }
 
 // -----------------------------------------------------------------------------
@@ -131,7 +146,7 @@ object SQL {
   case class Sum(e:Expr) extends Aggr
   case class Count(e:Expr,d:Boolean=false) extends Aggr
   case class All(q:Query) extends Aggr
-  case class Sme(q:Query) extends Aggr
+  case class Som(q:Query) extends Aggr
   // ---------- Conditions
   sealed abstract class Cond
   case class And(a:Cond, b:Cond) extends Cond
@@ -141,13 +156,7 @@ object SQL {
   case class Not(b:Cond) extends Cond
   case class Like(l:Expr,p:String) extends Cond
   case class Range(l:Expr,min:Expr,max:Expr) extends Cond
-  sealed abstract class Cmp extends Cond
-  case class CmpEq(l:Expr, r:Expr) extends Cmp { override def toString=l+" = "+r }
-  case class CmpNe(l:Expr, r:Expr) extends Cmp { override def toString=l+" <> "+r }
-  case class CmpGt(l:Expr, r:Expr) extends Cmp { override def toString=l+" > "+r }
-  case class CmpGe(l:Expr, r:Expr) extends Cmp { override def toString=l+" >= "+r }
-  case class CmpLt(l:Expr, r:Expr) extends Cmp { override def toString=l+" < "+r }
-  case class CmpLe(l:Expr, r:Expr) extends Cmp { override def toString=l+" <= "+r }
+  case class Cmp(l:Expr, r:Expr, op:OpCmp) extends Cond
 };
 
 /*
@@ -206,6 +215,4 @@ case class Hash(e:Expr) extends Expr
  * query	:= "DECLARE" "QUERY" name ":=" expr ";"
  *** M3 Trigger definition
  * trigger	:= "ON" ("SYSTEM" READY" | ("+"|"-") name "(" name ("," name)* ")") "{" stmt* "}"
-
- 
  */

@@ -32,7 +32,10 @@ class ExtParser extends StandardTokenParsers {
 
   // ------------ Types
   lazy val tpe: Parser[Type] = (("string" | ("char"|"varchar") ~> "(" ~> numericLit <~  ")") ^^^ TypeString
-  | "char" ^^^ TypeChar | "short" ^^^ TypeShort | "int" ^^^ TypeInt | "long" ^^^ TypeLong | ("float"|"decimal") ^^^ TypeFloat | "double" ^^^ TypeDouble | "date" ^^^ TypeDate | failure("Bad type"))
+  | ("char"|"short"|"int"|"long") ^^^ TypeLong //| "char" ^^^ TypeChar | "short" ^^^ TypeShort | "int" ^^^ TypeInt | "long" ^^^ TypeLong
+  | ("float"|"decimal"|"double") ^^^ TypeDouble // | ("float"|"decimal") ^^^ TypeFloat | "double" ^^^ TypeDouble
+  | "date" ^^^ TypeDate | failure("Bad type")
+  )
 
   // ------------ Source declaration
   lazy val source = "CREATE" ~> ("STREAM"|"TABLE") ~ schema ~ ("FROM" ~> sourceIn) ~ split ~ adaptor <~ ";" ^^ { case t~s~i~b~a => Source(t=="STREAM",s,i,b,a) }
@@ -58,41 +61,39 @@ object M3Parser extends ExtParser {
   lexical.delimiters ++= List("{","}",":",":=","+","-","*","/","=","!=","<","<=",">=",">","[","]","^=","+=")
 
   // ------------ Expressions
-  lazy val tuple = ident ~ ("(" ~> repsep(ident, ",") <~ ")") ^^ { case n~f => Tuple(n,f) }
-  lazy val mapref = ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident,",") <~ "]") <~ opt(":" ~ "(" ~ expr ~ ")") ^^
-                    { case n~ot~ks=>MapRef(n,ot match { case Some(t)=>t case None=>null },ks) }
+  lazy val mmapref = ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident,",") <~ "]") <~ opt(":" ~ "(" ~ expr ~ ")") ^^
+                    { case n~ot~ks=>MMapRef(n,ot match { case Some(t)=>t case None=>null },ks) }
 
   lazy val expr:Parser[Expr] = prod ~ opt("+" ~> expr) ^^ { case l~or=>or match{ case Some(r)=>Add(l,r) case None=>l } }
   lazy val prod:Parser[Expr] = atom ~ opt("*" ~> prod) ^^ { case l~or=>or match{ case Some(r)=>Mul(l,r) case None=>l } }
   lazy val atom = (
     ("AggSum" ~> "(" ~> "[" ~> repsep(ident,",") <~  "]" <~ ",") ~ expr <~ ")"  ^^ { case ks~e => AggSum(ks,e) }
-  | mapref | tuple
-  | ("[" ~> "/" ~> ":" ~> tpe <~ "]") ~ ("(" ~> expr <~ ")") ^^ { case t~e => Cast(t,e) }
+  | mmapref
+  | ident ~ ("(" ~> repsep(ident, ",") <~ ")") ^^ { case n~f => Tuple(n,f) } // only in map declaration
+  | ("[" ~> "/" ~> ":" ~> tpe <~ "]") ~ ("(" ~> expr <~ ")") ^^ { case t~e => Apply("/",t,List(e)) }
   | ("[" ~> ident <~ ":") ~ (tpe <~ "]") ~ ("(" ~> repsep(expr,",") <~ ")") ^^ { case n~t~as => Apply(n,t,as) }
   | "EXISTS" ~> "(" ~> expr <~ ")" ^^ { Exists(_) }
-  | "DATE" ~> "(" ~> expr <~ ")" ^^ { Cast(TypeDate,_) }
-  | ("(" ~> ident <~ "^=") ~ (expr <~ ")") ^^ { case n~v => Let(n,v) }
+  | "DATE" ~> "(" ~> expr <~ ")" ^^ { case e => Apply("date",TypeDate,List(e)) }
+  | ("(" ~> ident <~ "^=") ~ (expr <~ ")") ^^ { case n~v => Lift(n,v) }
   |  "(" ~> expr <~ ")"
-  | "{" ~> cmp <~ "}"
+  | "{" ~> expr ~ opt(("="|"!="|">"|"<"|">="|"<=") ~ expr) <~ "}" ^^ {
+    case l~Some(op~r) => op match { case "="=>Cmp(l,r,OpEq) case "!="=>Cmp(l,r,OpNe) case ">"=>Cmp(l,r,OpGt) case ">="=>Cmp(l,r,OpGe) case "<"=>Cmp(r,l,OpGt) case "<="=>Cmp(r,l,OpGe) }
+    case l~None => l
+  }
   | ident ^^ { Ref(_) }
-  | (double | long) ^^ { ConstNum(_) }
-  | stringLit ^^ { Const(_) }
-  )
-
-  lazy val cmp:Parser[Cmp] = (
-    expr ~ ("="|"!="|">"|"<"|">="|"<=") ~ expr ^^ { case l~op~r => op match {
-      case "="=>CmpEq(l,r) case "!="=>CmpNe(l,r) case ">"=>CmpGt(l,r) case ">="=>CmpGe(l,r) case "<"=>CmpLt(l,r) case "<="=>CmpLe(l,r) }
-    }
-  | expr ^^ { case e=>CmpNz(e) }
+  | double ^^ { Const(TypeDouble,_) }
+  | long ^^ { Const(TypeLong,_) }
+  | stringLit ^^ { Const(TypeString,_) }
   )
 
   // ------------ System definition
   lazy val map = ("DECLARE" ~> "MAP" ~> ident) ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe),",") <~ "]" <~ ":=") ~ expr <~ ";" ^^
-                 { case n~t~ks~e => Map(n,t match { case Some(t)=>t case None=>null},ks.map{case n~t=>(n,t)},e) }
-  lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ mapref <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
-  lazy val trigger = (("ON" ~> ("+"|"-")) ~ tuple ~ ("{" ~> rep(stmt) <~ "}") ^^ { case op~t~ss=> if (op=="+") TriggerAdd(t,ss) else TriggerDel(t,ss) }
+                 { case n~t~ks~e => MMap(n,t match { case Some(t)=>t case None=>null},ks.map{case n~t=>(n,t)},e) }
+  lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ mmapref <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
+  lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> repsep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
+                        { case op~n~f~ss=> val s=Schema(n,f.map{(_,null)}); if (op=="+") TriggerAdd(s,ss) else TriggerDel(s,ss) }
                      | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { TriggerReady(_) } | failure("Bad M3 trigger"))
-  lazy val stmt = mapref ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~op~e=>op match { case "+="=>StAdd(m,e) case ":="=>StSet(m,e) } }
+  lazy val stmt = mmapref ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~op~e=>op match { case "+="=>StAdd(m,e) case ":="=>StSet(m,e) } }
 
   lazy val system = {
     val spc = ("-"~"-"~rep("-"))
@@ -121,20 +122,20 @@ object SQLParser extends ExtParser {
   lexical.reserved ++= List("FROM","WHERE","GROUP","JOIN","NATURAL","ON") // reduce this list by conditional accepts
   lexical.delimiters ++= List("+","-","*","/","%","=","<>","<","<=",">=",">")
 
-  lazy val field = opt(ident<~".")~(ident|"*") ^^ { case ot~n => Field(n,ot match {case Some(t)=>t case None=>null}) }
+  lazy val field = opt(ident<~".")~(ident|"*") ^^ { case ot~n => Field(n,ot match {case Some(t)=>t case None=>null}) } // if '*' compute the expansion
 
   // ------------ Expressions
   lazy val expr = prod ~ rep(("+"|"-") ~ prod) ^^ { case a~l => (a/:l) { case (l,o~r)=> o match { case "+" => Add(l,r) case "-" => Sub(l,r) }} }
   lazy val prod = atom ~ rep(("*"|"/"|"%") ~ atom) ^^ { case a~l => (a/:l) { case (l,o~r)=> o match { case "*" => Mul(l,r) case "/" => Div(l,r) case "%" => Mod(l,r) }} }
   lazy val atom:Parser[Expr] = (
     "COUNT" ~> "(" ~>"DISTINCT" ~> expr <~ ")" ^^ { Count(_,true) }
-  | ("ALL"|"SOME") ~ ("(" ~> query <~ ")") ^^ { case op~e => op match { case "ALL"=> All(e) case "SOME"=> Sme(e) } }
+  | ("ALL"|"SOME") ~ ("(" ~> query <~ ")") ^^ { case op~e => op match { case "ALL"=> All(e) case "SOME"=> Som(e) } }
   | ("SUM"|"AVG"|"COUNT") ~ ("(" ~> expr <~ ")") ^^ { case f~e => f.toUpperCase match { case "SUM"=>Sum(e) case "AVG"=>Avg(e) case "COUNT"=>Count(e) } }
   | "DATE" ~> "(" ~> expr <~ ")" ^^ { Cast(TypeDate,_) }
   | ("SUBSTRING"|"SUBSTR")~>"("~> expr ~ (","~>numericLit) ~ opt(","~>numericLit) <~")" ^^ { case v~s~oe=> Substr(v,Integer.parseInt(s),oe match{ case Some(n)=>Integer.parseInt(n) case _=> -1 }) }
   | ("CASE"~>"WHEN"~>cond) ~ ("THEN"~>expr) ~ ("ELSE"~>expr) <~"END" ^^ { case c~t~e=>Case(c,t,e) }
   
-  | ("CASE"~>expr) ~ ("WHEN"~>expr) ~ ("THEN"~>expr) ~ ("ELSE"~>expr) <~"END" ^^ { case c1~c2~t~e=>Case(CmpEq(c1,c2),t,e) }
+  | ("CASE"~>expr) ~ ("WHEN"~>expr) ~ ("THEN"~>expr) ~ ("ELSE"~>expr) <~"END" ^^ { case c1~c2~t~e=>Case(Cmp(c1,c2,OpEq),t,e) }
   | ( ("DATE_PART"~>"("~>stringLit)~(","~>expr<~")")
     | ("EXTRACT"~>"("~>ident)~("FROM"~>expr<~")")
     | ("YEAR"|"MONTH"|"DAY")~("("~>expr<~")")) ^^ { case p~e => Apply(p.toLowerCase,List(e)) } // day(e), month(e), year(e)
@@ -156,7 +157,7 @@ object SQLParser extends ExtParser {
   | expr ~ ("BETWEEN" ~> expr) ~ ("AND" ~> expr) ^^ { case e~m~n => Range(e,m,n) }
   | expr ~ (opt("NOT") <~ "IN") ~ query ^^ { case e~o~q => o match { case Some(_)=>Not(In(e,q)) case None=>In(e,q) } }
   | expr ~ ("="|"<>"|">"|"<"|">="|"<=") ~ expr ^^ { case l~op~r => op match {
-      case "="=>CmpEq(l,r) case "<>"=>CmpNe(l,r) case ">"=>CmpGt(l,r) case ">="=>CmpGe(l,r) case "<"=>CmpLt(l,r) case "<="=>CmpLe(l,r) } }
+      case "="=>Cmp(l,r,OpEq) case "<>"=>Cmp(l,r,OpNe) case ">"=>Cmp(l,r,OpGt) case ">="=>Cmp(l,r,OpGe) case "<"=>Cmp(r,l,OpGt) case "<="=>Cmp(r,l,OpGe) } }
   | "(" ~> disj <~ ")"
   )
   

@@ -18,6 +18,8 @@ Seq(
 
 // --------- Dependencies
 libraryDependencies ++= Seq(
+//	"org.scala-lang" % "scala-reflect" % "2.10.2",
+	"org.scala-lang" % "scala-actors" % "2.10.2",
     "org.scalatest" % "scalatest_2.10" % "2.0.M5b" % "test"
 )
 
@@ -37,7 +39,6 @@ Seq(
 //	Classpaths.typesafeSnapshots
 //)
 //	"org.scalariform" %% "scalariform" % "0.1.4",
-//	"org.scala-lang" % "scala-actors" % "2.10.2",
 //    "ch.epfl" % "lms_2.10" % "0.4-SNAPSHOT"
 
 //Our tests are not threadsafe so disabling parallel execution for now
