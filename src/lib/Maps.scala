@@ -56,16 +56,21 @@ case class K3Map[K,V](v0:V,idxs:List[K3Index[_,K,V]]=Nil) {
   // def fold[@Specialized(Long,Double) T](f:((K,V),T)=>T):T
 }
 
+// Helpers to simplify map creation
 object K3Map {
-  // Constructor helper to slightly simplify notation
   // Example: val map = K3Map.create[(Long,Long),Long](0,List[((Long,Long))=>_]((x:(Long,Long))=>{x._1},(x:(Long,Long))=>{x._2}))
   def create[K,V](v0:V,projs:List[K=>_]) = {
     def idx[P](f:K=>P) = new K3Index[P,K,V](f)
     new K3Map(v0,projs.map(idx(_)))
   }
+  // Example: val map = K3Map.createIdx[(Long,Long),Long](0,List(1,2))
+  def createIdx[K<:Product,V](v0:V,projs:List[Int]) = {
+    def idx(i:Int) = new K3Index[Any,K,V]((k:K)=>k.productElement(i))
+    new K3Map(v0,projs.map(idx(_)))
+  }
 }
 
-// Secondary index (partitions the K3Map key set with a projection function)
+// Secondary index (partitions the K3Map with a key projection function)
 class K3Index[P,K,V](proj:K=>P) {
   val idx = new java.util.HashMap[P,java.util.HashMap[K,V]]()
   def set(key:K,value:V) {
@@ -80,8 +85,19 @@ class K3Index[P,K,V](proj:K=>P) {
   def slice(part:P):java.util.HashMap[K,V] = idx.get(part) match { case null => new java.util.HashMap[K,V]() case s=>s }
 }
 
-/*
 
+
+
+
+
+
+
+
+
+
+
+
+/*
 trait K3Collection[K,V] {
   def contains(key:K):Boolean
   def get(key:K):V
@@ -90,8 +106,6 @@ trait K3Collection[K,V] {
   def foreach(f:(K,V)=>Unit):Unit
   def slice[P](part:Int, partKey:P):K3Collection[K,V]
 }
-
-
 
 // -----------------------------------------------------------------------------
 // Specialized version for Tuple2 keys with indices on 1st and 2nd key

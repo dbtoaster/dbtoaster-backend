@@ -24,20 +24,26 @@ object TypeCheck {
       case TriggerDel(_,ss) => ss flatMap stp
       case TriggerReady(ss) => ss flatMap stp
     }).map(m=>(m.name,m.tp)).toMap
-    val maps = sys0.maps.map{ m=> val tp=mtp(m.name); assert(m.tp==null || m.tp==tp); MMap(m.name,tp, m.keys, m.expr) }
+    val maps = sys0.maps.map{ m=> val tp=mtp(m.name); assert(m.tp==null || m.tp==tp); Map(m.name,tp, m.keys, m.expr) }
     
     // 3. Typecheck deeply the tree to make sure all ops are OK
-    // - MMapRef must have the same type as MMap
-    // - MMapRef keys/arguments must have the same type as MMap declaration
+    // - MapRef must have the same type as Map
+    // - MapRef keys/arguments must have the same type as Map declaration
     // - Apply: name must exist in the library, arguments type must match, return type from library
     // - usual type verifications
 
     // 4. Optional renaming phase for simple&unique variable names
 
     // 5. add information to schemas to know dimensions along which they are sliced => maintain appropriate index
-    
+
     System(sys0.sources,maps,sys0.queries,triggers)
   }
+
+   // operations: fix m3 (resolve types)
+   // - typecheck: propagate type information wherever possible
+   // - compute secondary indices: need to compute bound/free variables for each element
+   // - rename: use mapping and regexp to simplify variable names
+
 
 
 

@@ -61,14 +61,14 @@ object M3Parser extends ExtParser {
   lexical.delimiters ++= List("{","}",":",":=","+","-","*","/","=","!=","<","<=",">=",">","[","]","^=","+=")
 
   // ------------ Expressions
-  lazy val mmapref = ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident,",") <~ "]") <~ opt(":" ~ "(" ~ expr ~ ")") ^^
-                    { case n~ot~ks=>MMapRef(n,ot match { case Some(t)=>t case None=>null },ks) }
+  lazy val mapref = ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident,",") <~ "]") <~ opt(":" ~ "(" ~ expr ~ ")") ^^
+                    { case n~ot~ks=>MapRef(n,ot match { case Some(t)=>t case None=>null },ks) }
 
   lazy val expr:Parser[Expr] = prod ~ opt("+" ~> expr) ^^ { case l~or=>or match{ case Some(r)=>Add(l,r) case None=>l } }
   lazy val prod:Parser[Expr] = atom ~ opt("*" ~> prod) ^^ { case l~or=>or match{ case Some(r)=>Mul(l,r) case None=>l } }
   lazy val atom = (
     ("AggSum" ~> "(" ~> "[" ~> repsep(ident,",") <~  "]" <~ ",") ~ expr <~ ")"  ^^ { case ks~e => AggSum(ks,e) }
-  | mmapref
+  | mapref
   | ident ~ ("(" ~> repsep(ident, ",") <~ ")") ^^ { case n~f => Tuple(n,f) } // only in map declaration
   | ("[" ~> "/" ~> ":" ~> tpe <~ "]") ~ ("(" ~> expr <~ ")") ^^ { case t~e => Apply("/",t,List(e)) }
   | ("[" ~> ident <~ ":") ~ (tpe <~ "]") ~ ("(" ~> repsep(expr,",") <~ ")") ^^ { case n~t~as => Apply(n,t,as) }
@@ -88,12 +88,12 @@ object M3Parser extends ExtParser {
 
   // ------------ System definition
   lazy val map = ("DECLARE" ~> "MAP" ~> ident) ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe),",") <~ "]" <~ ":=") ~ expr <~ ";" ^^
-                 { case n~t~ks~e => MMap(n,t match { case Some(t)=>t case None=>null},ks.map{case n~t=>(n,t)},e) }
-  lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ mmapref <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
+                 { case n~t~ks~e => Map(n,t match { case Some(t)=>t case None=>null},ks.map{case n~t=>(n,t)},e) }
+  lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ mapref <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
   lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> repsep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
                         { case op~n~f~ss=> val s=Schema(n,f.map{(_,null)}); if (op=="+") TriggerAdd(s,ss) else TriggerDel(s,ss) }
                      | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { TriggerReady(_) } | failure("Bad M3 trigger"))
-  lazy val stmt = mmapref ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~op~e=>op match { case "+="=>StAdd(m,e) case ":="=>StSet(m,e) } }
+  lazy val stmt = mapref ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~op~e=>op match { case "+="=>StAdd(m,e) case ":="=>StSet(m,e) } }
 
   lazy val system = {
     val spc = ("-"~"-"~rep("-"))

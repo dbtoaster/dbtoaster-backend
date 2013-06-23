@@ -57,11 +57,14 @@ XXX: have a store to provide proper type all maps
 Coll(name,type,indices) = K3collection
 colls = HashMap[String,Coll]
 
-
 mutable list/set of Maps
 mark each slice index used
 
+
 */
+
+
+
 
 // -----------------------------------------------------------------------------
 // M3 language
@@ -70,17 +73,17 @@ abstract sealed class M3
 object M3 {
   def i(s:String,n:Int=1) = { val i="  "*n; i+s.replaceAll(" +$","").replace("\n","\n"+i) } // indent
 
-  case class System(sources:List[Source], maps:List[MMap], queries:List[Query], triggers:List[Trigger]) extends M3 {
+  case class System(sources:List[Source], maps:List[Map], queries:List[Query], triggers:List[Trigger]) extends M3 {
     override def toString =
       "-------------------- SOURCES --------------------\n"+sources.mkString("\n\n")+"\n\n"+
       "--------------------- MAPS ----------------------\n"+maps.mkString("\n\n")+"\n\n"+
       "-------------------- QUERIES --------------------\n"+queries.mkString("\n\n")+"\n\n"+
       "------------------- TRIGGERS --------------------\n"+triggers.mkString("\n\n")
   }
-  case class MMap(name:String, tp:Type, keys:List[(String,Type)], expr:Expr) extends M3 {
+  case class Map(name:String, tp:Type, keys:List[(String,Type)], expr:Expr) extends M3 {
     override def toString="DECLARE MAP "+name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.map{case (n,t)=>n+":"+t}.mkString(",")+"] :=\n"+i(expr+";")
   }
-  case class Query(name:String, m:MMapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+m+";" }
+  case class Query(name:String, m:MapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+m+";" }
 
   // ---------- Triggers
   abstract sealed class Trigger extends M3
@@ -95,7 +98,7 @@ object M3 {
   case class Const(tp:Type,v:String) extends Expr { override def toString=if (tp==TypeString) "'"+v+"'" else v }
   // Variables
   case class Ref(name:String) extends Expr { override def toString=name }
-  case class MMapRef(name:String, tp:Type, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]" }
+  case class MapRef(name:String, tp:Type, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]" }
   case class Lift(name:String, e:Expr) extends Expr { override def toString="( "+name+" ^= "+e+")" } // 'Let name=e in' semantics
   case class Tuple(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")" } // appear only in Map declaration
   // Operations
@@ -107,8 +110,8 @@ object M3 {
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op+" "+r+"}"} // comparison, returns 0 or 1
   // ---------- Statements (no return)
   sealed class Stmt extends M3
-  case class StAdd(m:MMapRef, e:Expr) extends Stmt { override def toString=m+" += "+e+";" }
-  case class StSet(m:MMapRef, e:Expr) extends Stmt { override def toString=m+" := "+e+";" }
+  case class StAdd(m:MapRef, e:Expr) extends Stmt { override def toString=m+" += "+e+";" }
+  case class StSet(m:MapRef, e:Expr) extends Stmt { override def toString=m+" := "+e+";" }
   // case class StCall(external function) extend Stmt
 }
 

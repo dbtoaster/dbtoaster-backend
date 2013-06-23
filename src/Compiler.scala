@@ -8,8 +8,8 @@ object Compiler {
   def test(m3:String) {
     val ir=M3Parser.parse(m3)
     val ir2=TypeCheck.typeCheck(ir)
-    //println(m3)
-    //println("--------------------------------------")
+    println(m3)
+    println("--------------------------------------")
     println(ScalaGen.genSystem(ir2))
   }
 
