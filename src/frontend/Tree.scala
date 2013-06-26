@@ -1,7 +1,7 @@
 package ddbt.ast
 
 /**
- * This defines the generic nodes that we will manipulate during transformation
+ * This defines the generic nodes that we manipulate during transformations
  * and optimization phases between source SQL and target code.
  * @author TCK
  */
@@ -49,21 +49,12 @@ case class SplitSize(bytes:Int) extends Split { override def toString="FIXEDWIDT
 case class SplitSep(delim:String) extends Split { override def toString="'"+delim+"' DELIMITED" }
 //case class SplitPrefix(bytes:Int) extends Split { override def toString="PREFIXED "+bytes } // records are prefixed with their length in bytes
 
-// -----------------------------------------------------------------------------
-// Typed internal language
-
+// ---------- Maps declarations
 /*
-XXX: have a store to provide proper type all maps 
-Coll(name,type,indices) = K3collection
-colls = HashMap[String,Coll]
-
-mutable list/set of Maps
-mark each slice index used
-
-
+case class MapDef(name:String, tp:Type, keys:List[(String,Type)]) extends Tree {
+  var idxs = Set[Int]() // list of secondary indices that are used for slicing
+}
 */
-
-
 
 
 // -----------------------------------------------------------------------------
@@ -99,7 +90,7 @@ object M3 {
   // Variables
   case class Ref(name:String) extends Expr { override def toString=name }
   case class MapRef(name:String, tp:Type, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]" }
-  case class Lift(name:String, e:Expr) extends Expr { override def toString="( "+name+" ^= "+e+")" } // 'Let name=e in' semantics
+  case class Lift(name:String, e:Expr) extends Expr { override def toString="( "+name+" ^= "+e+")" } // 'Let name=e in' semantics (usually followed by * ...)
   case class Tuple(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")" } // appear only in Map declaration
   // Operations
   case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+i(e.toString)+"\n)" } // returns a {[tuple(group_keys)] => count} relation
@@ -110,9 +101,8 @@ object M3 {
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op+" "+r+"}"} // comparison, returns 0 or 1
   // ---------- Statements (no return)
   sealed class Stmt extends M3
-  case class StAdd(m:MapRef, e:Expr) extends Stmt { override def toString=m+" += "+e+";" }
-  case class StSet(m:MapRef, e:Expr) extends Stmt { override def toString=m+" := "+e+";" }
-  // case class StCall(external function) extend Stmt
+  case class StmtMap(m:MapRef,e:Expr,op:OpUpdate) extends Stmt { override def toString=m+" "+op+" "+e+";" }
+  // case class StmtCall(external function) extend Stmt
 }
 
 // -----------------------------------------------------------------------------
@@ -205,12 +195,10 @@ case class Hash(e:Expr) extends Expr
  *** SQL Query definition
  * sql		:= "SELECT" <XXX> "FROM" <XXX> (WHERE <XXX>)? ("GROUP" "BY" <XXX>)? ";"
  *
- *
  *** M3 common definitions
  * addsum
  * expr
  * stmt
- *
  *
  *** M3 Maps definition
  * map		:= "DECLARE" "MAP" name "(" type ")" "[" "]" "[" name ":" type ("," name ":" type)* "]" := aggsum ";"

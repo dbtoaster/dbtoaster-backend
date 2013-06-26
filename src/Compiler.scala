@@ -7,7 +7,7 @@ object Compiler {
 
   def test(m3:String) {
     val ir=M3Parser.parse(m3)
-    val ir2=TypeCheck.typeCheck(ir)
+    val ir2=TypeCheck.fixTypes(ir)
     println(m3)
     println("--------------------------------------")
     println(ScalaGen.genSystem(ir2))
@@ -15,7 +15,8 @@ object Compiler {
 
   def main(args: Array[String]) {
 
-    test(toast("resources/queries/finance/axfinder.sql"));
+    test(toast("resources/queries/finance/simple.sql"));
+    //test(toast("resources/queries/finance/axfinder.sql"));
   
     //test(toast("resources/queries/simple/r_smallstar.sql"));
     //test(scala.io.Source.fromFile("resources/docs/chrissedtrades.m3").mkString);

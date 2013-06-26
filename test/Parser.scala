@@ -1,3 +1,5 @@
+package ddbt.tests
+
 import org.scalatest._
 import java.io._
 

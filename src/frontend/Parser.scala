@@ -93,7 +93,7 @@ object M3Parser extends ExtParser {
   lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> repsep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
                         { case op~n~f~ss=> val s=Schema(n,f.map{(_,null)}); if (op=="+") TriggerAdd(s,ss) else TriggerDel(s,ss) }
                      | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { TriggerReady(_) } | failure("Bad M3 trigger"))
-  lazy val stmt = mapref ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~op~e=>op match { case "+="=>StAdd(m,e) case ":="=>StSet(m,e) } }
+  lazy val stmt = mapref ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~op~e=>StmtMap(m,e,op match { case "+="=>OpAdd case ":="=>OpSet }) }
 
   lazy val system = {
     val spc = ("-"~"-"~rep("-"))
