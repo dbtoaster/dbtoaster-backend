@@ -20,7 +20,6 @@ object ScalaGen {
   // use delimited CPS to generate code
   // we construct bottom-up, generate the code, and the list of unbounded variables
 
-  
   // Hoisting: not very clean design, use 2x2 continuation ?
   var hoisted:String = "";
   def cpsExpr(e0:Expr,b:Set[String],co:String=>String):String = e0 match {
@@ -56,9 +55,6 @@ object ScalaGen {
     case Cmp(l,r,op) => co(cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
     case Tuple(_,_) => sys.error("Tuple should not appear")
   }
-
-
-
 
   def genStmt(s:Stmt,b:Set[String]):String = s match {
     case StmtMap(m,e,op) =>
@@ -112,75 +108,3 @@ object ScalaGen {
   
 }
 
-
-/*
-CREATE STREAM BIDS(BIDS_T float, BIDS_ID int, BIDS_BROKER_ID int, BIDS_VOLUME float, BIDS_PRICE float)
-CREATE STREAM ASKS(ASKS_T float, ASKS_ID int, ASKS_BROKER_ID int, ASKS_VOLUME float, ASKS_PRICE float)
-
-ON + BIDS(BIDS_T, BIDS_ID, BIDS_BROKER_ID, BIDS_VOLUME, BIDS_PRICE) {
-   COUNT(int)[][AXFINDER] += ((AXFINDER ^= 1) * COUNT_mBIDS2(int)[][]);
-   COUNT_mASKS2(int)[][] += 1;
-}
-
-DECLARE MAP COUNT(int)[][AXFINDER:int] := 
-DECLARE MAP COUNT_mASKS2(int)[][] := 
-DECLARE MAP COUNT_mBIDS2(int)[][] := 
-
-// ---------------------------------------------------
-
-class onInsertBIDS extends ((Double, Long, Long, Double, Double,
-		org.dbtoaster.dbtoasterlib.K3Collection.K3PersistentCollection[Long, Long], // key-value types,  Map "COUNT"
-		org.dbtoaster.dbtoasterlib.K3Collection.SimpleVal[Long], // Map COUNT_mASKS2
-		org.dbtoaster.dbtoasterlib.K3Collection.SimpleVal[Long]) // Map COUNT_mBIDS2
-		=> (Unit)) {
-   def apply(x54: Double, x55: Long, x56: Long, x57: Double, x58: Double, // Bid tuple
-	      x59: org.dbtoaster.dbtoasterlib.K3Collection.K3PersistentCollection[Long, Long],
-	      x60: org.dbtoaster.dbtoasterlib.K3Collection.SimpleVal[Long],
-	      x61: org.dbtoaster.dbtoasterlib.K3Collection.SimpleVal[Long]): Unit = {
-      val x63 = 1L // key AXFinder(exists?)
-      val x70 = if (x59.contains(1L)) x59.lookup(x63, 0) else 0L
-      x59.updateValue(x63, x70 + x61.get())
-      // COUNT_mASKS2(int)[][] += 1;
-      x60.update(x60.get() + 1L)
-   }
-}
-
-
-
-// ---------------------------------------------------
-
-class onInsertBIDS extends ((Double, Long, Long, Double, Double,
-		org.dbtoaster.dbtoasterlib.K3Collection.K3PersistentCollection[Long, Long], // key-value types,  Map "COUNT"
-		org.dbtoaster.dbtoasterlib.K3Collection.SimpleVal[Long], // Map COUNT_mASKS2
-		org.dbtoaster.dbtoasterlib.K3Collection.SimpleVal[Long]) // Map COUNT_mBIDS2
-		=> (Unit)) {
-   def apply(x54: Double, x55: Long, x56: Long, x57: Double, x58: Double, // Bid tuple
-	      x59: org.dbtoaster.dbtoasterlib.K3Collection.K3PersistentCollection[Long, Long],
-	      x60: org.dbtoaster.dbtoasterlib.K3Collection.SimpleVal[Long],
-	      x61: org.dbtoaster.dbtoasterlib.K3Collection.SimpleVal[Long]): Unit = {
-      val x8 = (1L, 1L) // AXFinder ^=1
-      val x9 = List(x8)
-      val x65 = x61.get() // COUNT_mBIDS2(int)[][]
-      x9.foreach {
-         x62 =>
-            val x63 = x62._1
-            val x64 = x62._2
-            val x66 = x64 * x65
-            val x68 = x59.contains(x63)
-            val x70 = if (x68) {
-               val x69 = x59.lookup(x63, 0)
-               x69
-            } else {
-               0L
-            }
-            val x71 = x70 + x66
-            x59.updateValue(x63, x71)
-      }
-      // COUNT_mASKS2(int)[][] += 1;
-      val x75 = x60.get()
-      val x76 = x75 + 1L
-      x60.update(x76)
-      ()
-   }
-}
-*/

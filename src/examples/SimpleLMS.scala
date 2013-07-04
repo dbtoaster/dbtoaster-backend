@@ -46,7 +46,7 @@ trait DBTOptimizerQuery extends DBTQuery {
 object SimpleLMS {
   val onTupleProc = (u:Unit)=>{}
   val onQDone = (u:Unit)=>{}
-  val q = new Query("resources/data/finance-large.csv")
+  val q = new Query("resources/data/finance-huge.csv")
 
   def main(args: Array[String]): Unit = {
     var counter = 0
