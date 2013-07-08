@@ -55,6 +55,7 @@ case class K3Map[K,V](v0:V,idxs:List[K3Index[_,K,V]]=Nil) {
   }
   // Debug
   def size = elems.size
+  def dump = elems
 
   // To be removed by LMS  
   // def groupFold[K2,V2](group:((K,V))=>K2, f:((K,V)=>V2):K3IntermediateMap[K,V]

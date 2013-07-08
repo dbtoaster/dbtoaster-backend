@@ -28,7 +28,7 @@ object AXFinder {
     val sup = system.actorOf(Props[Supervisor],"Supervisor")
     val act = system.actorOf(Props[AXFinder],"AXFinder")
     act ! SetSupervisor(sup)
-    val s = new SourceFile("resources/data/finance-standard.csv")
+    val s = new SourceFile("resources/data/finance.csv") // -standard
     s.setReceiver(act);
     t0 = System.nanoTime()
     s.readAll
@@ -62,7 +62,7 @@ class AXFinder extends Actor {
     case TupleEvent(TupleInsert,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onAddASKS(t,id,b,v,p)
     case TupleEvent(TupleDelete,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelASKS(t,id,b,v,p)
     case EndOfStream2 => 
-//      sup ! Result(COUNT.get(1))
+      sup ! Result(AXFINDER.dump)
       sup ! EndOfStream2
   }
 
