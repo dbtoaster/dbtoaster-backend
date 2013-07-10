@@ -37,6 +37,13 @@ Seq(
   scalacOptions += "-P:continuations:enable"
 )
 
+// --------- Execution options
+Seq(
+  fork := true,
+  javaOptions ++= Seq("-Xss128m" //"-Xss512m","-Xmx2G","-Xms2G","-XX:MaxPermSize=2G" //,"-verbose:gc"
+      //"-agentpath:"+yjp+"=sampling,onexit=snapshot,builtinprobes=all"
+  )
+)
 
 
 

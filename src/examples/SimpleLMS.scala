@@ -1,7 +1,7 @@
 package examples
 
 import java.io._
-import ddbt.lib._
+import ddbt.lib.{K3Map,K3Var}
 import org.dbtoaster.dbtoasterlib.Source._
 import org.dbtoaster.dbtoasterlib.StreamAdaptor._
 import org.dbtoaster.dbtoasterlib.DBToasterExceptions._
@@ -123,7 +123,7 @@ Original result:
             val COUNT_mASKS23 = COUNT_mASKS22._1
             val COUNT_mASKS24 = COUNT_mASKS22._2
             val COUNT_mASKS26 = COUNT_mASKS24 * COUNT_mASKS25
-            val COUNT_mASKS28 = COUNT.contains(COUNT_mASKS23)
+            val COUNT_mASKS28 = COUNT.get(COUNT_mASKS23)!=0L
             val COUNT_mBIDS20 = if (COUNT_mASKS28) COUNT.get(COUNT_mASKS23) else 0L
             val COUNT_mBIDS21 = COUNT_mBIDS20 + COUNT_mASKS26
             COUNT.set(COUNT_mASKS23, COUNT_mBIDS21)
@@ -142,7 +142,7 @@ Original result:
             val x89 = x87._2
             val x91 = x89 * x90
             val x93 = x91 * -1L
-            val x95 = COUNT.contains(x88)
+            val x95 = COUNT.get(x88)!=0L
             val x97 = if (x95) COUNT.get(x88) else 0L
             val x98 = x97 + x93
             COUNT.set(x88, x98)
@@ -160,7 +160,7 @@ Original result:
             val x11 = x10._1
             val x12 = x10._2
             val x14 = x12 * x13
-            val x16 = COUNT.contains(x11)
+            val x16 = COUNT.get(x11)!=0L
             val x18 = if (x16) COUNT.get(x11) else 0L
             val x19 = x18 + x14
             COUNT.set(x11, x19)
@@ -180,7 +180,7 @@ Original result:
             val x37 = x35._2
             val x39 = x37 * x38
             val x41 = x39 * -1L
-            val x43 = COUNT.contains(x36)
+            val x43 = COUNT.get(x36)!=0L
             val x45 = if (x43) COUNT.get(x36) else 0L
             val x46 = x45 + x41
             COUNT.set(x36, x46)

@@ -97,7 +97,7 @@ case object TupleDelete extends TupleOp
 
 // XXX: to be reworked
 abstract sealed class StreamEvent
-case object EndOfStream2 extends StreamEvent // XXX: resolve name clash with dbtoasterlib
+case object EndOfStream extends StreamEvent // XXX: resolve name clash with dbtoasterlib
 case class TupleEvent(op:TupleOp,stream:String,tx:Long,data:List[Any]) extends StreamEvent
 
 /*

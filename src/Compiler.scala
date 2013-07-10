@@ -16,19 +16,16 @@ object Compiler {
   def main(args: Array[String]) {
 
     //test(toast("resources/queries/finance/simple.sql"));
-    //test(toast("resources/queries/finance/axfinder.sql"));
+    test(toast("resources/queries/finance/axfinder.sql"));
     
     // TPC-H 13,15,18
-    test(toast("resources/queries/tpch/query13.sql"));
+    //test(toast("resources/queries/tpch/query13.sql"));
+	(0 until 10).foreach{x=>println}
+	test(toast("resources/queries/tpch/query18.sql"));
+
   
-    //test(toast("resources/queries/simple/r_smallstar.sql"));
+    //test(toast("resources/queries/simple/r_agtbexists.sql"));
     //test(scala.io.Source.fromFile("resources/docs/chrissedtrades.m3").mkString);
-
-
-
-
-    
-
 
     
 

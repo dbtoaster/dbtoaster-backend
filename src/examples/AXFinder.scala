@@ -3,50 +3,20 @@ package examples
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import ddbt.lib._
 
-case class SourceFile(file:String,bufSize:Int=128*1024) {
-  var r:ActorRef = null
-  val d = Decoder((ev:TupleEvent)=>{ r ! ev })
-  def setReceiver(receiver:ActorRef) { r=receiver }
-
-  def readAll() {
-    val in = new java.io.FileInputStream(file)
-    val buf = new Array[Byte](bufSize)
-    var n:Int = 0
-    do { n=in.read(buf); d.add(buf,n); } while (n>0);
-    in.close()
-    r ! EndOfStream2
-  }
-}
-
-case class SetSupervisor(actor:ActorRef)
-case class Result(r:Any)
-
 object AXFinder {
-  val system = ActorSystem("DDBT")
-  var t0:Long = 0
+  import Helper._
   def main(args:Array[String]) {
-    val sup = system.actorOf(Props[Supervisor],"Supervisor")
     val act = system.actorOf(Props[AXFinder],"AXFinder")
-    act ! SetSupervisor(sup)
+    act ! SetSupervisor(supervisor)
     val s = new SourceFile("resources/data/finance.csv") // -standard
     s.setReceiver(act);
-    t0 = System.nanoTime()
+    supervisor ! StartTimer
     s.readAll
-  }
-  class Supervisor extends Actor {
-    def receive = {
-      case Result(r) => println(r.toString)
-      case EndOfStream2 =>
-        val t1 = System.nanoTime()
-        val t = (t1-t0) / 1000
-        println("Running time: %d.%06d".format(t/1000000,t%1000000))
-        system.shutdown
-    }
   }
 }
 
-
 class AXFinder extends Actor {
+  import Helper._
   var sup:ActorRef = null
   
   // This is manually written for the moment, needs to go into ddbt.lib
@@ -61,9 +31,9 @@ class AXFinder extends Actor {
     case TupleEvent(TupleDelete,"BIDS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelBIDS(t,id,b,v,p)
     case TupleEvent(TupleInsert,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onAddASKS(t,id,b,v,p)
     case TupleEvent(TupleDelete,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelASKS(t,id,b,v,p)
-    case EndOfStream2 => 
+    case EndOfStream => 
       sup ! Result(AXFINDER.dump)
-      sup ! EndOfStream2
+      sup ! EndOfStream
   }
 
   // Generated code. Completed by hand:
@@ -72,11 +42,11 @@ class AXFinder extends Actor {
   // - Type of aggregation values
   // - Default value for maps
 
-  val AXFINDER = K3Map.create[Long,Double](0,Nil);
-  val AXFINDER_mASKS1 = K3Map.createIdx[(Long,Double),Double](0,List(0));
-  val AXFINDER_mASKS2 = K3Map.createIdx[(Long,Double),Long](0,List(0));
-  val AXFINDER_mBIDS1 = K3Map.createIdx[(Long,Double),Long](0,List(0));
-  val AXFINDER_mBIDS3 = K3Map.createIdx[(Long,Double),Double](0,List(0));
+  val AXFINDER = K3Map.make[Long,Double](0,Nil);
+  val AXFINDER_mASKS1 = K3Map.makeIdx[(Long,Double),Double](0,List(0));
+  val AXFINDER_mASKS2 = K3Map.makeIdx[(Long,Double),Long](0,List(0));
+  val AXFINDER_mBIDS1 = K3Map.makeIdx[(Long,Double),Long](0,List(0));
+  val AXFINDER_mBIDS3 = K3Map.makeIdx[(Long,Double),Double](0,List(0));
   
   def onAddBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
     var agg1:Double = 0;
