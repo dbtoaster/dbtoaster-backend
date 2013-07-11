@@ -16,14 +16,18 @@ case class K3Var[V](v0:V) {
   override def toString = v.toString
 }
 
+
+
+
+
 /*
 abstract class K3MapInterface[K,V](v0:V) {
-  def contains(key:K): Boolean
   def get(key:K): V
   def set(key:K, value:V): Unit
   def add(key:K, value:V): Unit
   def foreach(f:(K,V)=>Unit): Unit
   def slice[P](part:Int, partKey:P): K3MapInterface[K,V]
+  //def clear()
 }
 */
 
