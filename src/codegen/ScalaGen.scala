@@ -118,8 +118,8 @@ QUERY18(float)[][CUSTOMER_NAME, CUSTOMER_CUSTKEY, O_ORDERKEY, O_ORDERDATE, O_TOT
   }
   
   def genMap(m:Map):String = {
-    if (m.keys.size==0) "val "+m.name+" = new K3Var["+tpe(m.tp)+"](0);"
-    else "val "+m.name+" = K3Map.create["+tup(m.keys.map(x=>tpe(x._2)))+","+tpe(m.tp)+"](0,List("+"<<<SECONDARY_INDICES>>>"+"));"
+    if (m.keys.size==0) "val "+m.name+" = new K3Var["+tpe(m.tp)+"]();"
+    else "val "+m.name+" = K3Map.create["+tup(m.keys.map(x=>tpe(x._2)))+","+tpe(m.tp)+"](List("+"<<<SECONDARY_INDICES>>>"+"));"
   }
 
   def genSystem(s:System):String = {

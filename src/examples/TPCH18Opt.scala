@@ -1,7 +1,7 @@
 package examples
 import ddbt.lib.K3Map
 
-// run-main examples.TPCH18
+// run-main examples.TPCH18Opt
 
 import java.io._;
 import org.dbtoaster.dbtoasterlib.StreamAdaptor._;
@@ -18,7 +18,7 @@ import xml._;
 import scala.actors.Actor;
 import scala.actors.Actor._;
 
-object TPCH18 {
+object TPCH18Opt {
   val onTupleProc = (u:Unit)=>{}
   val onQDone = (u:Unit)=>{}
   val q = new TPCH18QueryNew()
@@ -61,7 +61,7 @@ object TPCH18 {
   }
 }
 
-class TPCH18QueryNew() extends DBTQuery {
+class TPCH18QueryOpt() extends DBTQuery {
   var supervisor: Actor = null;
   def setSupervisor(supervisor: Actor) = this.supervisor = supervisor;
   val s1 = createInputStreamSource(new FileReader("resources/data/tpch/lineitem.csv"), List(new CSVAdaptor("LINEITEM", List(IntColumn,IntColumn,IntColumn,IntColumn,FloatColumn,FloatColumn,FloatColumn,FloatColumn,StringColumn,StringColumn,DateColumn,DateColumn,DateColumn,StringColumn,StringColumn,StringColumn), delimiter = "\\|")), Delimited("\n"));
@@ -73,89 +73,95 @@ class TPCH18QueryNew() extends DBTQuery {
   // ---------------------------------------------------------------------------
 
   val QUERY18 = K3Map.make[(String,Long,Long,Date,Double), Double]()
-  val mORDERS2 = K3Map.make[(String,Long), Long](List((x:(String,Long))=>x._2)) // 0=List(1)
-  val mCUSTOMER1 = K3Map.make[(Long,Long,Date,Double), Double](List((x:(Long,Long,Date,Double))=>x._2)) // 0=List(1)
-  val mCUSTOMER1_mLINEITEM1 = K3Map.make[(Long,Long,Date,Double), Long](List(
+  val mORDERS = K3Map.make[(String,Long), Long](List((x:(String,Long))=>x._2)) // 0=List(1)
+  val mCUSTOMER = K3Map.make[(Long,Long,Date,Double), Double](List((x:(Long,Long,Date,Double))=>x._2)) // 0=List(1)
+  val mCUSTOMER_mLINEITEM = K3Map.make[(Long,Long,Date,Double), Long](List(
     (x:(Long,Long,Date,Double))=>x._1, // 0=List(0)
     (x:(Long,Long,Date,Double))=>x._2  // 1=List(1)
   ))
-  val mLINEITEM1 = K3Map.make[(Long,String,Long,Date,Double), Double]()
-  val mLINEITEM1_mLINEITEM1 = K3Map.make[(Long,String,Long,Date,Double), Long](List((x:(Long,String,Long,Date,Double))=>x._1)) // 0=List(0)
-  val mLINEITEM1_E1_1_L1_1 = K3Map.make[Long,Double]()
+  val mLINEITEM = K3Map.make[(Long,String,Long,Date,Double), Double]()
+  val mLINEITEM_mLINEITEM = K3Map.make[(Long,String,Long,Date,Double), Long](List((x:(Long,String,Long,Date,Double))=>x._1)) // 0=List(0)
+  val mLINEITEM_E1_1_L1_1 = K3Map.make[Long,Double]()
 
   def getQUERY18() = QUERY18
 
   // ---------------------------------------------------------------------------
   def onInsertLINEITEM(L_ORDERKEY: Long,L_PARTKEY: Long,L_SUPPKEY: Long,L_LINENUMBER: Long,L_QUANTITY: Double,L_EXTENDEDPRICE: Double,L_DISCOUNT: Double,L_TAX: Double,L_RETURNFLAG: String,L_LINESTATUS: String,L_SHIPDATE: Date,L_COMMITDATE: Date,L_RECEIPTDATE: Date,L_SHIPINSTRUCT: String,L_SHIPMODE: String,L_COMMENT: String) = {
-    mCUSTOMER1_mLINEITEM1.slice(0,L_ORDERKEY).foreach { case (k,v) => mCUSTOMER1.add((L_ORDERKEY,k._2,k._3,k._4), v * L_QUANTITY) };
-    mLINEITEM1_mLINEITEM1.slice(0,L_ORDERKEY).foreach { case (k,v) => mLINEITEM1.add((L_ORDERKEY,k._2,k._3,k._4,k._5), v * L_QUANTITY) };
-    mLINEITEM1_E1_1_L1_1.add(L_ORDERKEY, L_QUANTITY)
-    QUERY18.clear() //foreach { case (k,v) => QUERY18.set(k,0.0) }; //remove(k)
-    mLINEITEM1.foreach { case (k,v) =>
+    mCUSTOMER_mLINEITEM.slice(0,L_ORDERKEY).foreach { case (k,v) => mCUSTOMER.add((L_ORDERKEY,k._2,k._3,k._4), v * L_QUANTITY) };
+    mLINEITEM_mLINEITEM.slice(0,L_ORDERKEY).foreach { case (k,v) => mLINEITEM.add((L_ORDERKEY,k._2,k._3,k._4,k._5), v * L_QUANTITY) };
+    mLINEITEM_E1_1_L1_1.add(L_ORDERKEY, L_QUANTITY)
+    QUERY18.clear()
+    // join on ORDERKEY
+    mLINEITEM.foreach { case (k,v) =>
       val ORDERKEY:Long = k._1; // Long
-      val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(ORDERKEY)
+      val L3_QTY:Double = mLINEITEM_E1_1_L1_1.get(ORDERKEY)
       QUERY18.set((k._2,k._3,ORDERKEY,k._4,k._5), v * (( (1L * (100L < L3_QTY)) * (L3_QTY /*alias?*/ != 0L)) != 0L))
     }
   }
   // ---------------------------------------------------------------------------
   def onDeleteLINEITEM(L_ORDERKEY: Long,L_PARTKEY: Long,L_SUPPKEY: Long,L_LINENUMBER: Long,L_QUANTITY: Double,L_EXTENDEDPRICE: Double,L_DISCOUNT: Double,L_TAX: Double,L_RETURNFLAG: String,L_LINESTATUS: String,L_SHIPDATE: Date,L_COMMITDATE: Date,L_RECEIPTDATE: Date,L_SHIPINSTRUCT: String,L_SHIPMODE: String,L_COMMENT: String) = {
-    mCUSTOMER1_mLINEITEM1.slice(0,L_ORDERKEY).foreach { case (k,v) => mCUSTOMER1.add((L_ORDERKEY,k._2,k._3,k._4), -v * L_QUANTITY) };
-    mLINEITEM1_mLINEITEM1.slice(0,L_ORDERKEY).foreach { case (k,v) => mLINEITEM1.add((L_ORDERKEY,k._2,k._3,k._4,k._5), -v * L_QUANTITY) };
-    mLINEITEM1_E1_1_L1_1.add(L_ORDERKEY, -L_QUANTITY);
-    QUERY18.clear() //foreach { case (k,v) => QUERY18.set(k,0.0) }; //remove(k)
-    mLINEITEM1.foreach { case (k,v) =>
+    mCUSTOMER_mLINEITEM.slice(0,L_ORDERKEY).foreach { case (k,v) => mCUSTOMER.add((L_ORDERKEY,k._2,k._3,k._4), -v * L_QUANTITY) };
+    mLINEITEM_mLINEITEM.slice(0,L_ORDERKEY).foreach { case (k,v) => mLINEITEM.add((L_ORDERKEY,k._2,k._3,k._4,k._5), -v * L_QUANTITY) };
+    mLINEITEM_E1_1_L1_1.add(L_ORDERKEY, -L_QUANTITY);
+    QUERY18.clear()
+    // join on ORDERKEY
+    mLINEITEM.foreach { case (k,v) =>
       val ORDERKEY:Long = k._1; // Long
-      val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(ORDERKEY)
+      val L3_QTY:Double = mLINEITEM_E1_1_L1_1.get(ORDERKEY)
       QUERY18.set((k._2,k._3,ORDERKEY,k._4,k._5), v * ( (100L < L3_QTY) * (L3_QTY /*alias?*/ != 0L) != 0L))
     }
   }
   // ---------------------------------------------------------------------------
   def onInsertORDERS(O_ORDERKEY: Long,O_CUSTKEY: Long,O_ORDERSTATUS: String,O_TOTALPRICE: Double,O_ORDERDATE: Date,O_ORDERPRIORITY: String,O_CLERK: String,O_SHIPPRIORITY: Long,O_COMMENT: String) = {
-    val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(O_ORDERKEY);
-    if (L3_QTY!=0.0) mORDERS2.slice(0,O_CUSTKEY).foreach { case (k,v) =>
-      val nv = (v * (( (100L < L3_QTY) * (L3_QTY != 0L)) != 0L)) * L3_QTY;
-      QUERY18.add((k._1,O_CUSTKEY,O_ORDERKEY,O_ORDERDATE,O_TOTALPRICE), nv)
+    val L3_QTY:Double = mLINEITEM_E1_1_L1_1.get(O_ORDERKEY);
+    mORDERS.slice(0,O_CUSTKEY).foreach { case (k,v) =>
+      if (L3_QTY!=0.0) {
+        val nv = (v * (( (100L < L3_QTY) * (L3_QTY != 0L)) != 0L)) * L3_QTY;
+        QUERY18.add((k._1,O_CUSTKEY,O_ORDERKEY,O_ORDERDATE,O_TOTALPRICE), nv)
+        mLINEITEM.add((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), v * L3_QTY)
+      }
+      mLINEITEM_mLINEITEM.add((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), v)
     }
-    mCUSTOMER1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), L3_QTY)
-    mCUSTOMER1_mLINEITEM1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), 1L)
-    if (L3_QTY!=0.0) mORDERS2.slice(0,O_CUSTKEY).foreach { case (k,v) => mLINEITEM1.add((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), v * L3_QTY) }
-    mORDERS2.slice(0,O_CUSTKEY).foreach { case (k,v) => mLINEITEM1_mLINEITEM1.add((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), v) }
+    mCUSTOMER.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), L3_QTY)
+    mCUSTOMER_mLINEITEM.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), 1L)
   };
   // ---------------------------------------------------------------------------
   def onDeleteORDERS(O_ORDERKEY: Long,O_CUSTKEY: Long,O_ORDERSTATUS: String,O_TOTALPRICE: Double,O_ORDERDATE: Date,O_ORDERPRIORITY: String,O_CLERK: String,O_SHIPPRIORITY: Long,O_COMMENT: String) = {
-    val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(O_ORDERKEY)
-    if(L3_QTY!=0.0) mORDERS2.slice(0,O_CUSTKEY).foreach { case (k,v) =>
-      val nv = ((v * ((100L < L3_QTY) * (L3_QTY != 0L)) != 0L) * L3_QTY) * -1L;
-      QUERY18.add((k._1,O_CUSTKEY,O_ORDERKEY,O_ORDERDATE,O_TOTALPRICE), nv)
+    val L3_QTY:Double = mLINEITEM_E1_1_L1_1.get(O_ORDERKEY)
+    mORDERS.slice(0,O_CUSTKEY).foreach { case (k,v) =>
+      if(L3_QTY!=0.0) {
+        val nv = ((v * ((100L < L3_QTY) * (L3_QTY != 0L)) != 0L) * L3_QTY) * -1L;
+        QUERY18.add((k._1,O_CUSTKEY,O_ORDERKEY,O_ORDERDATE,O_TOTALPRICE), nv)
+        mLINEITEM.add((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), - (v * L3_QTY))
+      }
+      mLINEITEM_mLINEITEM.add((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -v)
     }
-    mCUSTOMER1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -L3_QTY)
-    mCUSTOMER1_mLINEITEM1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -1L)
-    if(L3_QTY!=0.0) mORDERS2.slice(0,O_CUSTKEY).foreach { case (k,v) => mLINEITEM1.add((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), - (v * L3_QTY)) }
-    mORDERS2.slice(0,O_CUSTKEY).foreach { case (k,v) => mLINEITEM1_mLINEITEM1.add((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -v) }
+    mCUSTOMER.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -L3_QTY)
+    mCUSTOMER_mLINEITEM.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -1L)
   };
   // ---------------------------------------------------------------------------
   def onInsertCUSTOMER(C_CUSTKEY: Long,C_NAME: String,C_ADDRESS: String,C_NATIONKEY: Long,C_PHONE: String,C_ACCTBAL: Double,C_MKTSEGMENT: String,C_COMMENT: String) = {
-    mCUSTOMER1.slice(0,C_CUSTKEY).foreach { case (k,v) =>
+    mCUSTOMER.slice(0,C_CUSTKEY).foreach { case (k,v) =>
       val ORDERKEY:Long = k._1; // Long
-      val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(ORDERKEY); // Double
+      val L3_QTY:Double = mLINEITEM_E1_1_L1_1.get(ORDERKEY); // Double
       val nv = v * (( (100L < L3_QTY) * (L3_QTY != 0L)) != 0L);
       QUERY18.add((C_NAME,C_CUSTKEY,ORDERKEY,k._3,k._4), nv)
+      mLINEITEM.add((k._1,C_NAME,C_CUSTKEY,k._3,k._4), v)
     };
-    mORDERS2.add((C_NAME,C_CUSTKEY), 1L)
-    mCUSTOMER1.slice(0,C_CUSTKEY).foreach { case (k,v) => mLINEITEM1.add((k._1,C_NAME,C_CUSTKEY,k._3,k._4), v) }
-    mCUSTOMER1_mLINEITEM1.slice(1,C_CUSTKEY).foreach { case (k,v) => mLINEITEM1_mLINEITEM1.add((k._1,C_NAME,C_CUSTKEY,k._3,k._4), v) }
+    mORDERS.add((C_NAME,C_CUSTKEY), 1L)
+    mCUSTOMER_mLINEITEM.slice(1,C_CUSTKEY).foreach { case (k,v) => mLINEITEM_mLINEITEM.add((k._1,C_NAME,C_CUSTKEY,k._3,k._4), v) }
   };
   // ---------------------------------------------------------------------------
   def onDeleteCUSTOMER(C_CUSTKEY: Long,C_NAME: String,C_ADDRESS: String,C_NATIONKEY: Long,C_PHONE: String,C_ACCTBAL: Double,C_MKTSEGMENT: String,C_COMMENT: String) = {
-    mCUSTOMER1.slice(0,C_CUSTKEY).foreach { case (k,v) =>
+    mCUSTOMER.slice(0,C_CUSTKEY).foreach { case (k,v) =>
       val ORDERKEY:Long = k._1; // Long
-      val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(ORDERKEY); // Double
+      val L3_QTY:Double = mLINEITEM_E1_1_L1_1.get(ORDERKEY); // Double
       val nv = -v * (( (100L < L3_QTY) * (L3_QTY != 0L)) != 0L);
       QUERY18.add((C_NAME,C_CUSTKEY,ORDERKEY,k._3,k._4), nv)
+      mLINEITEM.add((k._1,C_NAME,C_CUSTKEY,k._3,k._4), -v)
     };
-    mORDERS2.add(Tuple2(C_NAME,C_CUSTKEY), -1L)
-    mCUSTOMER1.slice(0,C_CUSTKEY).foreach { case (k,v) => mLINEITEM1.add((k._1,C_NAME,C_CUSTKEY,k._3,k._4), -v) }
-    mCUSTOMER1_mLINEITEM1.slice(1,C_CUSTKEY).foreach { case (k,v) => mLINEITEM1_mLINEITEM1.add((k._1,C_NAME,C_CUSTKEY,k._3,k._4), -v) }
+    mORDERS.add(Tuple2(C_NAME,C_CUSTKEY), -1L)
+    mCUSTOMER_mLINEITEM.slice(1,C_CUSTKEY).foreach { case (k,v) => mLINEITEM_mLINEITEM.add((k._1,C_NAME,C_CUSTKEY,k._3,k._4), -v) }
   };
   // ---------------------------------------------------------------------------
 
@@ -182,7 +188,6 @@ class TPCH18QueryNew() extends DBTQuery {
     while(true) {
       receive {
         case EndOfStream => {
-          printResults()
           supervisor ! DBTDone;
           exit();
         }
@@ -199,12 +204,12 @@ class TPCH18QueryNew() extends DBTQuery {
     println(NATION.size)
     REGION.printSize;
     QUERY18.printSize;
-    mORDERS2.printSize;
-    mCUSTOMER1.printSize;
-    mCUSTOMER1_mLINEITEM1.printSize;
-    mLINEITEM1.printSize;
-    mLINEITEM1_mLINEITEM1.printSize;
-    mLINEITEM1_E1_1_L1_1.printSize;
+    mORDERS.printSize;
+    mCUSTOMER.printSize;
+    mCUSTOMER_mLINEITEM.printSize;
+    mLINEITEM.printSize;
+    mLINEITEM_mLINEITEM.printSize;
+    mLINEITEM_E1_1_L1_1.printSize;
 */
   }
 }

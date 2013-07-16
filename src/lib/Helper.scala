@@ -43,11 +43,11 @@ object Helper {
     var t0:Long = 0
 
     def receive = {
-      /*
+      /* fix: now it is already a Scala Map[_,_]
       case Result(mj:java.util.HashMap[Any,Any]) => 
          val m = scala.collection.JavaConversions.mapAsScalaMap[Any,Any](mj).toMap
          val pp = new xml.PrettyPrinter(8000, 2);
-         println(pp.format(<COUNT>{ toXML(m) }</COUNT>));
+         println(pp.format(<COUNT>{ AXHelper.toXML(m) }</COUNT>));
       */
       case Result(r) => println(r.toString)
       case StartTimer => t0 = System.nanoTime()
@@ -56,24 +56,6 @@ object Helper {
         val t = (t1-t0) / 1000
         println("Running time: %d.%06d".format(t/1000000,t%1000000))
         system.shutdown
-    }
-
-    def toXML[K,V](m:Map[K,V]): List[xml.Elem] = {
-      val ft = new java.text.SimpleDateFormat("yyyyMMdd")
-      def valToStr(v: Any): String = v match {
-        case d:java.util.Date => ft.format(d)
-        case x => x.toString
-      }
-      var l = List[xml.Elem]()
-      m.foreach{case (k,v) => 
-        val key = try {
-            (k.asInstanceOf[Product].productIterator.foldLeft((0,List[xml.Elem]())) { 
-                  case ((i,l), k) => (i+1, <xml>{ valToStr(k) }</xml>.copy(label=("__a" + i)) :: l)
-            })._2.reverse
-          } catch { case e:java.lang.ClassCastException => <__a0>{ valToStr(k) }</__a0> }
-        l = <item>{ key }<__av>{ valToStr(v) }</__av></item> :: l
-      }
-      l
     }
   }
 }

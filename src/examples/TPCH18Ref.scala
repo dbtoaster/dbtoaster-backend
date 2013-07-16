@@ -908,6 +908,12 @@ class TPCH18Query() extends DBTQuery {
       case EndOfStream => ();
       case _ => throw DBTFatalError("Event could not be dispatched: " + event)
     }
+    /*
+    val rt = Runtime.getRuntime
+    val usedMB = (rt.totalMemory() - rt.freeMemory()) / 1024.0 / 1024.0;
+    println("Mem: %.2f".format(usedMB))
+    */
+
     supervisor ! DBTTupleProcessed;
   }
   def act(): Unit ={
@@ -917,6 +923,7 @@ class TPCH18Query() extends DBTQuery {
     while(true) {
       receive {
         case EndOfStream => {
+          printResults
           supervisor ! DBTDone;
           exit();
         }

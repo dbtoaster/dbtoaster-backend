@@ -110,7 +110,7 @@ class TPCH18QuerySpark() extends DBTQuery {
     val n:Long = 4
     if ((tc % n)==0) {
         val runtime = (System.nanoTime() - ti) / 1000000000.0
-        if (runtime>0) println("Tup/sec: "+(n/runtime));
+        if (runtime>0) println("Tup/sec: "+(n/runtime)+" processed: "+tc+" tuples");
         ti=System.nanoTime()
     }
     tc=tc+1
@@ -148,7 +148,6 @@ class TPCH18QuerySpark() extends DBTQuery {
   }
   // ---------------------------------------------------------------------------
   def onInsertORDERS(O_ORDERKEY: Long,O_CUSTKEY: Long,O_ORDERSTATUS: String,O_TOTALPRICE: Double,O_ORDERDATE: Date,O_ORDERPRIORITY: String,O_CLERK: String,O_SHIPPRIORITY: Long,O_COMMENT: String) = {
-/*
     val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(O_ORDERKEY);
     if (L3_QTY!=0.0) {
       QUERY18.parOp(mORDERS2, (0,O_CUSTKEY), (k:(String,Long), v:Long) => {
@@ -156,16 +155,15 @@ class TPCH18QuerySpark() extends DBTQuery {
         ((k._1,O_CUSTKEY,O_ORDERKEY,O_ORDERDATE,O_TOTALPRICE), nv)
       });
     }
-    mCUSTOMER1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), L3_QTY)
-    mCUSTOMER1_mLINEITEM1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), 1L)
-*/
+//    mCUSTOMER1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), L3_QTY)
+//    mCUSTOMER1_mLINEITEM1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), 1L)
     //if (L3_QTY!=0.0) mLINEITEM1.parOp(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => ((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), v * L3_QTY))
     //mLINEITEM1_mLINEITEM1.parOp(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => ((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), v))
     tick
   }
   // ---------------------------------------------------------------------------
   def onDeleteORDERS(O_ORDERKEY: Long,O_CUSTKEY: Long,O_ORDERSTATUS: String,O_TOTALPRICE: Double,O_ORDERDATE: Date,O_ORDERPRIORITY: String,O_CLERK: String,O_SHIPPRIORITY: Long,O_COMMENT: String) = {
-/*
+    /*
     val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(O_ORDERKEY);
     if (L3_QTY!=0.0) {
       QUERY18.parOp(mORDERS2, (0,O_CUSTKEY), (k:(String,Long), v:Long) => {
@@ -173,9 +171,9 @@ class TPCH18QuerySpark() extends DBTQuery {
         ((k._1,O_CUSTKEY,O_ORDERKEY,O_ORDERDATE,O_TOTALPRICE), -nv)
       });
     }
-    mCUSTOMER1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -L3_QTY)
-    mCUSTOMER1_mLINEITEM1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -1L)
-*/
+    */
+//    mCUSTOMER1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -L3_QTY)
+//    mCUSTOMER1_mLINEITEM1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -1L)
     /*
     var o_ORDERKEY = O_ORDERKEY+0
     var o_CUSTKEY = O_CUSTKEY+0

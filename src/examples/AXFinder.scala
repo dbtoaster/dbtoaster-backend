@@ -32,7 +32,7 @@ class AXFinder extends Actor {
     case TupleEvent(TupleInsert,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onAddASKS(t,id,b,v,p)
     case TupleEvent(TupleDelete,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelASKS(t,id,b,v,p)
     case EndOfStream => 
-      sup ! Result(AXFINDER.dump)
+      sup ! Result(AXFINDER.toMap)
       sup ! EndOfStream
   }
 
@@ -42,11 +42,11 @@ class AXFinder extends Actor {
   // - Type of aggregation values
   // - Default value for maps
 
-  val AXFINDER = K3Map.make[Long,Double](0,Nil);
-  val AXFINDER_mASKS1 = K3Map.makeIdx[(Long,Double),Double](0,List(0));
-  val AXFINDER_mASKS2 = K3Map.makeIdx[(Long,Double),Long](0,List(0));
-  val AXFINDER_mBIDS1 = K3Map.makeIdx[(Long,Double),Long](0,List(0));
-  val AXFINDER_mBIDS3 = K3Map.makeIdx[(Long,Double),Double](0,List(0));
+  val AXFINDER = K3Map.make[Long,Double]();
+  val AXFINDER_mASKS1 = K3Map.makeIdx[(Long,Double),Double](List(0));
+  val AXFINDER_mASKS2 = K3Map.makeIdx[(Long,Double),Long](List(0));
+  val AXFINDER_mBIDS1 = K3Map.makeIdx[(Long,Double),Long](List(0));
+  val AXFINDER_mBIDS3 = K3Map.makeIdx[(Long,Double),Double](List(0));
   
   def onAddBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
     var agg1:Double = 0;

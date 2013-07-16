@@ -102,9 +102,9 @@ class Query(val input: String) extends DBTOptimizerQuery {
     val COUNT_mASKS2 = SimpleVal[Long]("COUNT_mASKS2", 0);
     val COUNT_mBIDS2 = SimpleVal[Long]("COUNT_mBIDS2", 0);
     */
-    val COUNT = new K3Map[Long,Long](0); // out
-    val COUNT_mASKS2 = K3Var[Long](0);
-    val COUNT_mBIDS2 = K3Var[Long](0);
+    val COUNT = K3Map.make[Long,Long](); // out
+    val COUNT_mASKS2 = K3Var[Long]();
+    val COUNT_mBIDS2 = K3Var[Long]();
 /*
 Original result: 
 <COUNT>

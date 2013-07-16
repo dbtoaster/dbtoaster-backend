@@ -17,8 +17,8 @@ import scala.reflect.ClassTag
 class KDMap[K,V:ClassTag](v0:V, partitions:Int, var rdd:RDD[(Any=>Boolean,KSMap[K,V])]) {
   // New operations
 
-  // Issue with this approach is that tmp size must be relatively small to fit in memory
   type TMap = scala.collection.mutable.HashMap[K,V]
+  // Issue with this approach is that tmp size must be relatively small to fit in memory
   def parOp[K2,V2](in:KDMap[K2,V2], sl:(Int,Any), f:(K2,V2)=>(K,V), add:Boolean=true) = {
     val tmp = in.rdd.aggregate(new scala.collection.mutable.HashMap[K,V]())(
       (r:TMap,x:(Any=>Boolean,KSMap[K2,V2])) => { (if (sl==null || sl._1<0) x._2 else x._2.slice(sl._1,sl._2)).foreach { case (k,v) => r + f(k,v) }; r },
@@ -53,7 +53,7 @@ class KDMap[K,V:ClassTag](v0:V, partitions:Int, var rdd:RDD[(Any=>Boolean,KSMap[
   def toXML() = {
     var m = scala.collection.immutable.Map[K,V]()
     collect{case (k,v) => m = m+((k,v))}
-    K3Map.toXML(m)
+    K3Helper.toXML(m)
   }
 }
 
@@ -65,8 +65,9 @@ object KDMap {
   }
 }
 
-// This is very similar to K3 map but with Scala immutable maps
-// This structure is intended to be used internally by SMap
+// -----------------------------------------------------------------------------
+// Very similar to K3 map but with Scala IMMUTABLE maps.
+// Intended to be used internally by distributed maps
 class KSMap[K,V](v0:V,idxs:List[KSIndex[_,K,V]]=Nil) extends java.io.Serializable {
   val elems = HashMap[K,V]()
   def plus(v1:V,v2:V) = (v1,v2) match { // manual type conversion required
