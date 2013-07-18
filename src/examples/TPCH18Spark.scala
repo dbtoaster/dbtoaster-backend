@@ -163,7 +163,6 @@ class TPCH18QuerySpark() extends DBTQuery {
   }
   // ---------------------------------------------------------------------------
   def onDeleteORDERS(O_ORDERKEY: Long,O_CUSTKEY: Long,O_ORDERSTATUS: String,O_TOTALPRICE: Double,O_ORDERDATE: Date,O_ORDERPRIORITY: String,O_CLERK: String,O_SHIPPRIORITY: Long,O_COMMENT: String) = {
-    /*
     val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(O_ORDERKEY);
     if (L3_QTY!=0.0) {
       QUERY18.parOp(mORDERS2, (0,O_CUSTKEY), (k:(String,Long), v:Long) => {
@@ -171,7 +170,6 @@ class TPCH18QuerySpark() extends DBTQuery {
         ((k._1,O_CUSTKEY,O_ORDERKEY,O_ORDERDATE,O_TOTALPRICE), -nv)
       });
     }
-    */
 //    mCUSTOMER1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -L3_QTY)
 //    mCUSTOMER1_mLINEITEM1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -1L)
     /*
@@ -186,7 +184,6 @@ class TPCH18QuerySpark() extends DBTQuery {
   }
   // ---------------------------------------------------------------------------
   def onInsertCUSTOMER(C_CUSTKEY: Long,C_NAME: String,C_ADDRESS: String,C_NATIONKEY: Long,C_PHONE: String,C_ACCTBAL: Double,C_MKTSEGMENT: String,C_COMMENT: String) = {
-/*
     val mL3_QTY = mapL3_QTY()
     QUERY18.parOp(mCUSTOMER1, (0,C_CUSTKEY), (k:(Long,Long,Date,Double),v:Double) => {
       val ORDERKEY:Long = k._1;
@@ -194,7 +191,6 @@ class TPCH18QuerySpark() extends DBTQuery {
       ((C_NAME,C_CUSTKEY,ORDERKEY,k._3,k._4), nv)
     })
     mORDERS2.add((C_NAME,C_CUSTKEY), 1L)
-*/
     /*
     var c_NAME = C_NAME+""       // force Scala compiler to use a new symbol such that it de-alias with
     var c_CUSTKEY = C_CUSTKEY+0  // function arguments and thereby produces clean closures
@@ -205,7 +201,6 @@ class TPCH18QuerySpark() extends DBTQuery {
   }
   // ---------------------------------------------------------------------------
   def onDeleteCUSTOMER(C_CUSTKEY: Long,C_NAME: String,C_ADDRESS: String,C_NATIONKEY: Long,C_PHONE: String,C_ACCTBAL: Double,C_MKTSEGMENT: String,C_COMMENT: String) = {
-/*
     val mL3_QTY = mapL3_QTY()
     QUERY18.parOp(mCUSTOMER1, (0,C_CUSTKEY), (k:(Long,Long,Date,Double),v:Double) => {
       val ORDERKEY:Long = k._1;
@@ -213,7 +208,6 @@ class TPCH18QuerySpark() extends DBTQuery {
       ((C_NAME,C_CUSTKEY,ORDERKEY,k._3,k._4), -nv)
     })
     mORDERS2.add((C_NAME,C_CUSTKEY), -1L)
-*/
     /*
     var c_NAME = C_NAME+""       // force Scala compiler to use a new symbol such that it de-alias with
     var c_CUSTKEY = C_CUSTKEY+0  // function arguments and thereby produces clean closures
@@ -273,3 +267,14 @@ class TPCH18QuerySpark() extends DBTQuery {
 */
   }
 }
+
+
+/*
+TPCH18Ref: 0.736842
+TPCH18: 0.410039
+
+TPCH18Spark: 3-4 tuples / sec (?)
+TPCH18SparkSimple: Deadlock at 1 tuple
+
+
+*/

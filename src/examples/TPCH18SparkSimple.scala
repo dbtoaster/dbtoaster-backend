@@ -70,15 +70,21 @@ class K3MapS1[K:ClassTag,V:ClassTag](val projs:List[K=>_]=Nil,var rdd:RDD[(K,V)]
   private val zero = K3Helper.make_zero[V]()
   private val plus = K3Helper.make_plus[V]()
 
-  def merge(rdd2:RDD[(K,V)]) { rdd = rdd.union(rdd2).reduceByKey(plus).filter{case (k,v) => v!=zero } }
+  def merge(rdd2:RDD[(K,V)]) { rdd = rdd.union(rdd2).reduceByKey(plus).filter{case (k,v) => v!=zero }.coalesce(K3MapS1.N) } // coalesce to reduce memory consumption
   def parAdd[K1,V1](in:K3MapS1[K1,V1],sl:(Int,Any),f:(K1,V1)=>(K,V)) = {
     val m1 = if (sl==null && sl._1<0) in.rdd else in.slice(sl._1,sl._2) // slice (optional)
     merge(m1.map{case (k,v)=>f(k,v)})
   }
   
   def add(k:K,v:V) = merge(K3MapS1.sc.parallelize(Seq((k,v))))
-  def get(k:K) = rdd.lookup(k) match { case Seq(v) => v case _ => zero }
+  def get(k:K) = {
+    // Lookup blocks indefinitely !!!!
+    // rdd.lookup(k) match { case Seq(v) => v case _ => zero }
+    println("Faking Lookup")
+    zero
+  }
   def slice[P](part:Int, partKey:P):RDD[(K,V)] = { val p=projs(part); rdd.filter{case (k,v)=>(p(k)==partKey)} }
+  def toXML = K3Helper.toXML(rdd.collect.toMap)
 }
 
 object K3MapS1 {
@@ -126,41 +132,47 @@ class TPCH18SparkSimpleQuery() extends DBTQuery {
     }
     tc=tc+1
     
+    
+    
     System.gc();
     val rt = Runtime.getRuntime
     val usedMB = (rt.totalMemory() - rt.freeMemory()) / 1024.0 / 1024.0;
     println("Mem: %.2f".format(usedMB))
+
+    /*
+    val x = mCUSTOMER1.rdd.collect
+    mCUSTOMER1.rdd = K3MapS1.sc.parallelize(x.toSeq)
+    */
+
   }
 
 
   //System.setProperty("spark.storage.memoryFraction", "0.1")
 
+    // Plain: Mem: 32.41: [info] Tup/sec:  24.9 /  12.7 processed: 280 tuples
+    //mCUSTOMER1.parAdd(mCUSTOMER1_mLINEITEM1, (0,L_ORDERKEY), (k:(Long,Long,Date,Double),v:Long) => ((L_ORDERKEY,k._2,k._3,k._4), v * L_QUANTITY) )
+
   // ---------------------------------------------------------------------------
   def onInsertLINEITEM(L_ORDERKEY: Long,L_PARTKEY: Long,L_SUPPKEY: Long,L_LINENUMBER: Long,L_QUANTITY: Double,L_EXTENDEDPRICE: Double,L_DISCOUNT: Double,L_TAX: Double,L_RETURNFLAG: String,L_LINESTATUS: String,L_SHIPDATE: Date,L_COMMITDATE: Date,L_RECEIPTDATE: Date,L_SHIPINSTRUCT: String,L_SHIPMODE: String,L_COMMENT: String) = {
-    // Plain: Mem: 32.41: [info] Tup/sec:  24.9 /  12.7 processed: 280 tuples
-    mCUSTOMER1.parAdd(mCUSTOMER1_mLINEITEM1, (0,L_ORDERKEY), (k:(Long,Long,Date,Double),v:Long) => ((L_ORDERKEY,k._2,k._3,k._4), v * L_QUANTITY) )
-    
-/*
+    //println("onInsertLINEITEM")
     mCUSTOMER1.parAdd(mCUSTOMER1_mLINEITEM1, (0,L_ORDERKEY), (k:(Long,Long,Date,Double),v:Long) => ((L_ORDERKEY,k._2,k._3,k._4), v * L_QUANTITY) )
     mLINEITEM1.parAdd(mLINEITEM1_mLINEITEM1, (0,L_ORDERKEY), (k:(Long,String,Long,Date,Double),v:Long) => ((L_ORDERKEY,k._2,k._3,k._4,k._5), v * L_QUANTITY) )
     mLINEITEM1_E1_1_L1_1.add(L_ORDERKEY, L_QUANTITY)
     QUERY18.rdd = mLINEITEM1.rdd.map{ case (k,v) => (k._1,(k,v)) }.join(mLINEITEM1_E1_1_L1_1.rdd).map { case (k0,((k,v),l3_qty)) =>  ((k._2,k._3,k._1,k._4,k._5), v * (100L<l3_qty)) }
-*/
     tick
   }
   // ---------------------------------------------------------------------------
   def onDeleteLINEITEM(L_ORDERKEY: Long,L_PARTKEY: Long,L_SUPPKEY: Long,L_LINENUMBER: Long,L_QUANTITY: Double,L_EXTENDEDPRICE: Double,L_DISCOUNT: Double,L_TAX: Double,L_RETURNFLAG: String,L_LINESTATUS: String,L_SHIPDATE: Date,L_COMMITDATE: Date,L_RECEIPTDATE: Date,L_SHIPINSTRUCT: String,L_SHIPMODE: String,L_COMMENT: String) = {
-/*
+    //println("onDeleteLINEITEM")
     mCUSTOMER1.parAdd(mCUSTOMER1_mLINEITEM1, (0,L_ORDERKEY), (k:(Long,Long,Date,Double),v:Long) => ((L_ORDERKEY,k._2,k._3,k._4), -v * L_QUANTITY) )
     mLINEITEM1.parAdd(mLINEITEM1_mLINEITEM1, (0,L_ORDERKEY), (k:(Long,String,Long,Date,Double),v:Long) => ((L_ORDERKEY,k._2,k._3,k._4,k._5), -v * L_QUANTITY) )
     mLINEITEM1_E1_1_L1_1.add(L_ORDERKEY, L_QUANTITY)
     QUERY18.rdd = mLINEITEM1.rdd.map{ case (k,v) => (k._1,(k,v)) }.join(mLINEITEM1_E1_1_L1_1.rdd).map { case (k0,((k,v),l3_qty)) =>  ((k._2,k._3,k._1,k._4,k._5), v * (100L<l3_qty)) }
-*/
     tick
   }
   // ---------------------------------------------------------------------------
   def onInsertORDERS(O_ORDERKEY: Long,O_CUSTKEY: Long,O_ORDERSTATUS: String,O_TOTALPRICE: Double,O_ORDERDATE: Date,O_ORDERPRIORITY: String,O_CLERK: String,O_SHIPPRIORITY: Long,O_COMMENT: String) = {
-/*
+    //println("onInsertORDERS")
     val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(O_ORDERKEY)
     if (L3_QTY!=0.0) QUERY18.parAdd(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => {
       val nv = (v * (( (100L < L3_QTY) * (L3_QTY != 0L)) != 0L)) * L3_QTY;
@@ -169,13 +181,12 @@ class TPCH18SparkSimpleQuery() extends DBTQuery {
     mCUSTOMER1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), L3_QTY)
     mCUSTOMER1_mLINEITEM1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), 1L)
     if (L3_QTY!=0.0) mLINEITEM1.parAdd(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => ((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), v * L3_QTY))
-    //mLINEITEM1_mLINEITEM1.parAdd(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => ((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), v))
-*/
+    mLINEITEM1_mLINEITEM1.parAdd(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => ((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), v))
     tick
   }
   // ---------------------------------------------------------------------------
   def onDeleteORDERS(O_ORDERKEY: Long,O_CUSTKEY: Long,O_ORDERSTATUS: String,O_TOTALPRICE: Double,O_ORDERDATE: Date,O_ORDERPRIORITY: String,O_CLERK: String,O_SHIPPRIORITY: Long,O_COMMENT: String) = {
-/*
+    //println("onDeleteORDERS")
     val L3_QTY:Double = mLINEITEM1_E1_1_L1_1.get(O_ORDERKEY)
     if (L3_QTY!=0.0) QUERY18.parAdd(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => {
       val nv = (v * (( (100L < L3_QTY) * (L3_QTY != 0L)) != 0L)) * L3_QTY;
@@ -184,30 +195,27 @@ class TPCH18SparkSimpleQuery() extends DBTQuery {
     mCUSTOMER1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -L3_QTY)
     mCUSTOMER1_mLINEITEM1.add((O_ORDERKEY,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -1L)
     if (L3_QTY!=0.0) mLINEITEM1.parAdd(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => ((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -v * L3_QTY))
-    //mLINEITEM1_mLINEITEM1.parAdd(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => ((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -v))
-*/
+    mLINEITEM1_mLINEITEM1.parAdd(mORDERS2, (0,O_CUSTKEY), (k:(String,Long),v:Long) => ((O_ORDERKEY,k._1,O_CUSTKEY,O_ORDERDATE,O_TOTALPRICE), -v))
     tick
   }
   // ---------------------------------------------------------------------------
   def onInsertCUSTOMER(C_CUSTKEY: Long,C_NAME: String,C_ADDRESS: String,C_NATIONKEY: Long,C_PHONE: String,C_ACCTBAL: Double,C_MKTSEGMENT: String,C_COMMENT: String) = {
-/*
+    //println("onInsertCUSTOMER")
     val m1 = mCUSTOMER1.slice(0,C_CUSTKEY).map { case (k,v) => (k._1,(k,v)) }.join(mLINEITEM1_E1_1_L1_1.rdd)
     QUERY18.merge(m1.map { case (k0,((k,v),l3_qty)) => ((C_NAME,C_CUSTKEY,k._1,k._3,k._4), v * (100L < l3_qty)) })
     mORDERS2.add((C_NAME,C_CUSTKEY), 1L)
     mLINEITEM1.parAdd(mCUSTOMER1, (0,C_CUSTKEY), (k:(Long,Long,Date,Double), v:Double) => ((k._1,C_NAME,C_CUSTKEY,k._3,k._4), v))
     mLINEITEM1_mLINEITEM1.parAdd(mCUSTOMER1_mLINEITEM1, (1,C_CUSTKEY), (k:(Long,Long,Date,Double),v:Long) => ((k._1,C_NAME,C_CUSTKEY,k._3,k._4), v) )
-*/
     tick
   }
   // ---------------------------------------------------------------------------
   def onDeleteCUSTOMER(C_CUSTKEY: Long,C_NAME: String,C_ADDRESS: String,C_NATIONKEY: Long,C_PHONE: String,C_ACCTBAL: Double,C_MKTSEGMENT: String,C_COMMENT: String) = {
-/*
+    //println("onDeleteCUSTOMER")
     val m1 = mCUSTOMER1.slice(0,C_CUSTKEY).map { case (k,v) => (k._1,(k,v)) }.join(mLINEITEM1_E1_1_L1_1.rdd)
     QUERY18.merge(m1.map { case (k0,((k,v),l3_qty)) => ((C_NAME,C_CUSTKEY,k._1,k._3,k._4), -v * (100L < l3_qty)) })
     mORDERS2.add((C_NAME,C_CUSTKEY), -1L)
     mLINEITEM1.parAdd(mCUSTOMER1, (0,C_CUSTKEY), (k:(Long,Long,Date,Double), v:Double) => ((k._1,C_NAME,C_CUSTKEY,k._3,k._4), -v))
     mLINEITEM1_mLINEITEM1.parAdd(mCUSTOMER1_mLINEITEM1, (1,C_CUSTKEY), (k:(Long,Long,Date,Double),v:Long) => ((k._1,C_NAME,C_CUSTKEY,k._3,k._4), -v) )
-*/
     tick
   }
   // ---------------------------------------------------------------------------
@@ -241,11 +249,14 @@ class TPCH18SparkSimpleQuery() extends DBTQuery {
         }
         case e: DBTEvent => dispatcher(e) 
       }
+      println("Results ---------------")
+      printResults
+      println("Results end -----------")
     }
   }
   def printResults(): Unit = {
     val pp = new PrettyPrinter(8000, 2);
-    //println(pp.format(<QUERY18>{ getQUERY18().toXML }</QUERY18>));
+    println(pp.format(<QUERY18>{ getQUERY18().toXML }</QUERY18>));
   }
   def printMapSizes() = {
 /*

@@ -3,8 +3,9 @@ package examples
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import ddbt.lib._
 
-object AXFinder {
+object AXFinderAkka {
   import Helper._
+
   def main(args:Array[String]) {
     val act = system.actorOf(Props[AXFinder],"AXFinder")
     act ! SetSupervisor(supervisor)
@@ -15,7 +16,7 @@ object AXFinder {
   }
 }
 
-class AXFinder extends Actor {
+class AXFinderAkka extends Actor {
   import Helper._
   var sup:ActorRef = null
   
@@ -36,27 +37,22 @@ class AXFinder extends Actor {
       sup ! EndOfStream
   }
 
-  // Generated code. Completed by hand:
-  // - Create/createIdx for maps
-  // - Secondary indices of the maps
-  // - Type of aggregation values
-  // - Default value for maps
-
-  val AXFINDER = K3Map.make[Long,Double]();
-  val mASKS1 = K3Map.makeIdx[(Long,Double),Double](List(0));
-  val mASKS2 = K3Map.makeIdx[(Long,Double),Long](List(0));
-  val mBIDS1 = K3Map.makeIdx[(Long,Double),Long](List(0));
-  val mBIDS3 = K3Map.makeIdx[(Long,Double),Double](List(0));
+  val idx = List((x:(Long,Double))=>x._1)
+  val AXFINDER = K4Map.make[Long,Double](system,8);
+  val mASKS1 = K4Map.make[(Long,Double),Double](system,8,idx);
+  val mASKS2 = K4Map.make[(Long,Double),Long](system,8,idx);
+  val mBIDS1 = K4Map.make[(Long,Double),Long](system,8,idx);
+  val mBIDS3 = K4Map.make[(Long,Double),Double](system,8,idx);
   
   def onAddBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
     var agg1:Double = 0;
-    mBIDS1.slice(0,BIDS_BROKER_ID).foreach { case (k2,v3) =>
+    mBIDS1.foreach((0,BIDS_BROKER_ID)) { case (k2,v3) =>
       val A_PRICE = k2._2;
       val __sql_inline_or_1 = (((A_PRICE - BIDS_PRICE) > 1000L) + ((BIDS_PRICE - A_PRICE) > 1000L));
       agg1 = agg1 + (v3 * (__sql_inline_or_1 * (__sql_inline_or_1 > 0L)));
     }
     var agg4:Double = 0;
-    mBIDS3.slice(0,BIDS_BROKER_ID).foreach { case (k5,v6) =>
+    mBIDS3.foreach((0,BIDS_BROKER_ID)) { case (k5,v6) =>
       val A_PRICE = k5._2;
       val __sql_inline_or_1 = (((A_PRICE - BIDS_PRICE) > 1000L) + ((BIDS_PRICE - A_PRICE) > 1000L));
       agg4 = agg4 + (v6 * (__sql_inline_or_1 * (__sql_inline_or_1 > 0L)));
@@ -68,13 +64,13 @@ class AXFinder extends Actor {
   
   def onDelBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
     var agg7:Double = 0;
-    mBIDS1.slice(0,BIDS_BROKER_ID).foreach { case (k8,v9) =>
+    mBIDS1.foreach((0,BIDS_BROKER_ID)) { case (k8,v9) =>
       val A_PRICE = k8._2;
       val __sql_inline_or_1 = (((A_PRICE - BIDS_PRICE) > 1000L) + ((BIDS_PRICE - A_PRICE) > 1000L));
       agg7 = agg7 + (v9 * (__sql_inline_or_1 * (__sql_inline_or_1 > 0L)));
     }
     var agg10:Double = 0;
-    mBIDS3.slice(0,BIDS_BROKER_ID).foreach { case (k11,v12) =>
+    mBIDS3.foreach((0,BIDS_BROKER_ID)) { case (k11,v12) =>
       val A_PRICE = k11._2;
       val __sql_inline_or_1 = (((A_PRICE - BIDS_PRICE) > 1000L) + ((BIDS_PRICE - A_PRICE) > 1000L));
       agg10 = agg10 + (v12 * (__sql_inline_or_1 * (__sql_inline_or_1 > 0L)));
@@ -86,13 +82,13 @@ class AXFinder extends Actor {
   
   def onAddASKS(ASKS_T:Double, ASKS_ID:Long, ASKS_BROKER_ID:Long, ASKS_VOLUME:Double, ASKS_PRICE:Double) {
     var agg13:Double = 0;
-    mASKS1.slice(0,ASKS_BROKER_ID).foreach { case (k14,v15) =>
+    mASKS1.foreach((0,ASKS_BROKER_ID)) { case (k14,v15) =>
       val B_PRICE = k14._2;
       val __sql_inline_or_1 = (((ASKS_PRICE - B_PRICE) > 1000L) + ((B_PRICE - ASKS_PRICE) > 1000L));
       agg13 = agg13 + (v15 * (__sql_inline_or_1 * (__sql_inline_or_1 > 0L)));
     }
     var agg16:Double = 0;
-    mASKS2.slice(0,ASKS_BROKER_ID).foreach { case (k17,v18) =>
+    mASKS2.foreach((0,ASKS_BROKER_ID)) { case (k17,v18) =>
       val B_PRICE = k17._2;
       val __sql_inline_or_1 = (((ASKS_PRICE - B_PRICE) > 1000L) + ((B_PRICE - ASKS_PRICE) > 1000L));
       agg16 = agg16 + (v18 * (__sql_inline_or_1 * (__sql_inline_or_1 > 0L)));
@@ -104,13 +100,13 @@ class AXFinder extends Actor {
   
   def onDelASKS(ASKS_T:Double, ASKS_ID:Long, ASKS_BROKER_ID:Long, ASKS_VOLUME:Double, ASKS_PRICE:Double) {
     var agg19:Double = 0;
-    mASKS1.slice(0,ASKS_BROKER_ID).foreach { case (k20,v21) =>
+    mASKS1.foreach((0,ASKS_BROKER_ID)) { case (k20,v21) =>
       val B_PRICE = k20._2;
       val __sql_inline_or_1 = (((ASKS_PRICE - B_PRICE) > 1000L) + ((B_PRICE - ASKS_PRICE) > 1000L));
       agg19 = agg19 + (v21 * (__sql_inline_or_1 * (__sql_inline_or_1 > 0L)));
     }
     var agg22:Double = 0;
-    mASKS2.slice(0,ASKS_BROKER_ID).foreach { case (k23,v24) =>
+    mASKS2.foreach((0,ASKS_BROKER_ID)) { case (k23,v24) =>
       val B_PRICE = k23._2;
       val __sql_inline_or_1 = (((ASKS_PRICE - B_PRICE) > 1000L) + ((B_PRICE - ASKS_PRICE) > 1000L));
       agg22 = agg22 + (v24 * (__sql_inline_or_1 * (__sql_inline_or_1 > 0L)));
@@ -123,38 +119,4 @@ class AXFinder extends Actor {
   def onSystemReady() {
     
   }
-
-  /*
-  val COUNT = new K3Map[Long,Long](0);
-  val COUNT_mASKS2 = new K3Var[Long](0);
-  val COUNT_mBIDS2 = new K3Var[Long](0);
-  
-  def onAddBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
-    val AXFINDER = 1L;
-    COUNT.add(AXFINDER,(AXFINDER * COUNT_mBIDS2.get()));
-    COUNT_mASKS2.add(1L);
-  }
-  
-  def onDelBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
-    val AXFINDER = 1L;
-    COUNT.add(AXFINDER,(AXFINDER * (COUNT_mBIDS2.get() * -1L)));
-    COUNT_mASKS2.add(-1L);
-  }
-  
-  def onAddASKS(ASKS_T:Double, ASKS_ID:Long, ASKS_BROKER_ID:Long, ASKS_VOLUME:Double, ASKS_PRICE:Double) {
-    val AXFINDER = 1L;
-    COUNT.add(AXFINDER,(AXFINDER * COUNT_mASKS2.get()));
-    COUNT_mBIDS2.add(1L);
-  }
-  
-  def onDelASKS(ASKS_T:Double, ASKS_ID:Long, ASKS_BROKER_ID:Long, ASKS_VOLUME:Double, ASKS_PRICE:Double) {
-    val AXFINDER = 1L;
-    COUNT.add(AXFINDER,(AXFINDER * (COUNT_mASKS2.get() * -1L)));
-    COUNT_mBIDS2.add(-1L);
-  }
-  
-  def onSystemReady() {
-    
-  }
-  */
 }
