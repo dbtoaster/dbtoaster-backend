@@ -23,7 +23,7 @@ trait K4Map[K,V] {
   def add(key:K, value:V) : Unit
   def set(key:K, value:V) : Unit
   def foreach(s:(Int,Any))(f:(K,V)=>Unit) : Unit    // map.slice(s._1,s._2).foreach { case (k,v) => f(k,v) }
-  def aggr[T:ClassTag](s:(Int,Any), f:(K,V)=>T) : T // val s=0; map.slice(s._1,s._2).foreach { case (k,v) => s+=f(k,v) }; s
+  def aggr[T:ClassTag](s:(Int,Any))(f:(K,V)=>T) : T // val s=0; map.slice(s._1,s._2).foreach { case (k,v) => s+=f(k,v) }; s
   def collect(s:(Int,Any)) : Map[K,V]               // map.slice(s._1,s._2).toMap
   def clear(s:(Int,Any)) : Unit                     // map.slice(s._1,s._2).clear()
 }
@@ -51,13 +51,12 @@ object K4Map {
     def set(key:K,value:V) = a ! K4Set(key,value)
     def add(key:K,value:V) = if (value!=v0) a ! K4Add(key,value)
     def foreach(s:(Int,Any)=null)(f:(K,V)=>Unit) = sask[Any](a,K4Foreach(s,f)) //a ! K4Foreach(s,f)
-    def aggr[T:ClassTag](s:(Int,Any), f:(K,V)=>T) = sask[T](a,K4Aggr(s,f,classTag[T]))
+    def aggr[T:ClassTag](s:(Int,Any))(f:(K,V)=>T) = sask[T](a,K4Aggr(s,f,classTag[T]))
     def collect(s:(Int,Any)=null) = sask[Map[K,V]](a,K4Collect(s))
     def clear(s:(Int,Any)=null) = a ! K4Clear(s)
     
     // Aliases:
     def toMap = collect(null)
-    
   }
 
   class Master[K,V] extends Actor {

@@ -22,7 +22,8 @@ trait K3Map[K,V] {
   // additional features
   def size: Int                    // returns the number of key-value mappings in the map
   def toMap: Map[K,V]              // returns the map content
-  def toXML: List[xml.Elem]        // returns the map content as XML 
+  def toXML: List[xml.Elem]        // returns the map content as XML
+  def toStr: String                // returns the map content as (comparable) String
 }
 
 /** Helper object to construct maps. Examples:
@@ -60,9 +61,14 @@ object K3Helper {
     case _ => sys.error("No additivity for "+cT)
   }).asInstanceOf[(T,T)=>T]
   // Convert a map into XML (for debug purposes)
+  private val ft = new java.text.SimpleDateFormat("yyyyMMdd")
+  private def str(v:Any) = v match {
+    case p:Product => "("+(0 until p.productArity).map{x=>p.productElement(x)}.mkString(",")+")"
+    case d:java.util.Date => ft.format(d)
+    case x => x.toString
+  }
+  def toStr[K,V](m:Map[K,V]):String = m.toList.map{case(k,v)=>(str(k),str(v))}.sortBy(x=>x._1).map{case(k,v)=>k+" -> "+v}.mkString("\n")
   def toXML[K,V](m:Map[K,V]): List[xml.Elem] = {
-    val ft = new java.text.SimpleDateFormat("yyyyMMdd")
-    def str(v:Any) = v match { case d:java.util.Date => ft.format(d) case x => x.toString }
     var l = List[xml.Elem]()
     m.foreach{case (k,v) => 
       val key = try {
@@ -113,6 +119,7 @@ case class K3MapMult[K,V:ClassTag](idxs:List[K3Index[_,K,V]]=Nil) extends K3Map[
   def size = elems.size
   def toMap = scala.collection.JavaConversions.mapAsScalaMap(elems).toMap
   def toXML = K3Helper.toXML(toMap)
+  def toStr = K3Helper.toStr(toMap)
   // def contains(key:K) = elems.containsKey(key)
 }
 

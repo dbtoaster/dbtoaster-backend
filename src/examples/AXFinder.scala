@@ -32,7 +32,7 @@ class AXFinder extends Actor {
     case TupleEvent(TupleInsert,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onAddASKS(t,id,b,v,p)
     case TupleEvent(TupleDelete,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelASKS(t,id,b,v,p)
     case EndOfStream => 
-      sup ! Result(AXFINDER.toMap)
+      sup ! Result(K3Helper.toStr(AXFINDER.toMap))
       sup ! EndOfStream
   }
 
