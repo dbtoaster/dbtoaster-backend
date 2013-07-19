@@ -22,7 +22,7 @@ import scala.actors.Actor._;
 object TPCH18Ref {
   val onTupleProc = (u:Unit)=>{}
   val onQDone = (u:Unit)=>{}
-  val q = new TPCH18Query()
+  val q = new TPCH18QueryRef()
 
   def main(args: Array[String]): Unit = {
     var counter = 0
@@ -62,7 +62,7 @@ object TPCH18Ref {
   }
 }
 
-class TPCH18Query() extends DBTQuery {
+class TPCH18QueryRef() extends DBTQuery {
   var supervisor: Actor = null;
   def setSupervisor(supervisor: Actor) = this.supervisor = supervisor;
   val s1 = createInputStreamSource(new FileReader("resources/data/tpch/lineitem.csv"), List(new CSVAdaptor("LINEITEM", List(IntColumn,IntColumn,IntColumn,IntColumn,FloatColumn,FloatColumn,FloatColumn,FloatColumn,StringColumn,StringColumn,DateColumn,DateColumn,DateColumn,StringColumn,StringColumn,StringColumn), delimiter = "\\|")), Delimited("\n"));
@@ -923,7 +923,8 @@ class TPCH18Query() extends DBTQuery {
     while(true) {
       receive {
         case EndOfStream => {
-          printResults
+          //printResults
+          println(getQUERY18().toStr)
           supervisor ! DBTDone;
           exit();
         }

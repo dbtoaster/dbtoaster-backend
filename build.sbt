@@ -18,10 +18,11 @@ Seq(
 
 // --------- Dependencies
 libraryDependencies <++= scalaVersion(v=>Seq(
-  "org.spark-project" %% "spark-core" % "0.8.0-SNAPSHOT",
-  "com.typesafe.akka" %% "akka-actor" % "2.1.4",
-  "org.scala-lang" % "scala-actors" % v,
-  "org.scalatest" %% "scalatest" % "2.0.M5b" % "test"
+  "org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
+  "com.typesafe.akka" %% "akka-actor"   % "2.1.4",
+  "com.typesafe.akka" %% "akka-remote"  % "2.1.4",
+  "org.scala-lang"     % "scala-actors" % v,
+  "org.scalatest"     %% "scalatest"    % "2.0.M5b" % "test"
 ))
 
 // --------- Compilation options

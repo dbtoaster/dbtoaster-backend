@@ -41,20 +41,14 @@ object Helper {
   // Supervisor for result output and time measurement
   class Supervisor extends Actor {
     var t0:Long = 0
-
     def receive = {
-      /* fix: now it is already a Scala Map[_,_]
-      case Result(mj:java.util.HashMap[Any,Any]) => 
-         val m = scala.collection.JavaConversions.mapAsScalaMap[Any,Any](mj).toMap
-         val pp = new xml.PrettyPrinter(8000, 2);
-         println(pp.format(<COUNT>{ AXHelper.toXML(m) }</COUNT>));
-      */
+      case Result(r:Map[_,_]) => println(K3Helper.toStr(r))
       case Result(r) => println(r.toString)
       case StartTimer => t0 = System.nanoTime()
       case EndOfStream =>
         val t1 = System.nanoTime()
         val t = (t1-t0) / 1000
-        println("Running time: %d.%06d".format(t/1000000,t%1000000))
+        println("Running time: %d.%6d".format(t/1000000,t%1000000))
         system.shutdown
     }
   }

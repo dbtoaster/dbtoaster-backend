@@ -65,7 +65,6 @@ import spark.SparkContext
 import spark.SparkContext._
 import spark.RDD
 
-
 class K3MapS1[K:ClassTag,V:ClassTag](val projs:List[K=>_]=Nil,var rdd:RDD[(K,V)]) {
   private val zero = K3Helper.make_zero[V]()
   private val plus = K3Helper.make_plus[V]()
@@ -251,7 +250,7 @@ class TPCH18SparkSimpleQuery() extends DBTQuery {
       }
       println("Results ---------------")
       printResults
-      println("Results end -----------")
+      println("Results end 	-----------")
     }
   }
   def printResults(): Unit = {

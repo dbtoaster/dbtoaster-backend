@@ -10,12 +10,10 @@ import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._
 
-
-
 // A K4Map is a wrapper for ActorRef to provide map-like features.
 // 
 // Issues:
-//  - Performance: actor.ask creates a new actor to wait for the reply
+//  - Performance: actor.ask creates a new actor to wait for the reply. Problem ?
 //  - Deadlock   : ask blocks the thread, hence we cannot do m.foreach{ m.get() }
 //
 trait K4Map[K,V] {

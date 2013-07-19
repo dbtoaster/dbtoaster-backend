@@ -20,7 +20,7 @@ import scala.actors.Actor._;
 object AXFinderRef {
   val onTupleProc = (u:Unit)=>{}
   val onQDone = (u:Unit)=>{}
-  val q = new OrigQuery("resources/data/finance.csv")
+  val q = new AXFinderRef("resources/data/finance.csv")
 
   def main(args: Array[String]): Unit = {
     var counter = 0
@@ -61,7 +61,7 @@ object AXFinderRef {
   }
 }
 
-class OrigQuery(file:String) extends DBTQuery {
+class AXFinderRef(file:String) extends DBTQuery {
   var supervisor: Actor = null;
   def setSupervisor(supervisor: Actor) = this.supervisor = supervisor;
   val s1 = createInputStreamSource(new FileReader(file), List(createAdaptor("orderbook", "BIDS", List(("book", "bids"),("brokers", "10"),("deterministic", "yes"))),createAdaptor("orderbook", "ASKS", List(("book", "asks"),("brokers", "10"),("deterministic", "yes")))), Delimited("\n"));;
