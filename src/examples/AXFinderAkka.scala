@@ -1,48 +1,15 @@
 package examples
-
-import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import ddbt.lib._
 
-object AXFinderAkka {
-  import Helper._
-
-  def main(args:Array[String]) {
-    val act = system.actorOf(Props[AXFinder],"AXFinder")
-    act ! SetSupervisor(supervisor)
-    val s = new SourceFile("resources/data/finance.csv") // -standard
-    s.setReceiver(act);
-    supervisor ! StartTimer
-    s.readAll
-  }
-}
-
-class AXFinderAkka extends Actor {
-  import Helper._
-  var sup:ActorRef = null
-  
-  // This is manually written for the moment, needs to go into ddbt.lib
-  import scala.language.implicitConversions  
-  implicit def boolConv(b:Boolean):Long = if (b) 1L else 0L
-  
-  override def preStart(): Unit = println("Started")
-  override def postStop(): Unit = println("Stopped")
-  def receive = {
-    case SetSupervisor(s) => sup=s
-    case TupleEvent(TupleInsert,"BIDS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onAddBIDS(t,id,b,v,p)
-    case TupleEvent(TupleDelete,"BIDS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelBIDS(t,id,b,v,p)
-    case TupleEvent(TupleInsert,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onAddASKS(t,id,b,v,p)
-    case TupleEvent(TupleDelete,"ASKS",tx,List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelASKS(t,id,b,v,p)
-    case EndOfStream => 
-      sup ! Result(K3Helper.toStr(AXFINDER.toMap))
-      sup ! EndOfStream
-  }
-
+class AXFinderAkka extends AXFinderBase {
+  val N = 16
   val idx = List((x:(Long,Double))=>x._1)
-  val AXFINDER = K4Map.make[Long,Double](system,8);
-  val mASKS1 = K4Map.make[(Long,Double),Double](system,8,idx);
-  val mASKS2 = K4Map.make[(Long,Double),Long](system,8,idx);
-  val mBIDS1 = K4Map.make[(Long,Double),Long](system,8,idx);
-  val mBIDS3 = K4Map.make[(Long,Double),Double](system,8,idx);
+  val AXFINDER = K4Map.make[Long,Double](context,N);
+  val mASKS1 = K4Map.make[(Long,Double),Double](context,N,idx);
+  val mASKS2 = K4Map.make[(Long,Double),Long](context,N,idx);
+  val mBIDS1 = K4Map.make[(Long,Double),Long](context,N,idx);
+  val mBIDS3 = K4Map.make[(Long,Double),Double](context,N,idx);
+  def result = AXFINDER.toMap
   
   def onAddBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
     val agg1 = mBIDS1.aggr((0,BIDS_BROKER_ID)) { case (k2,v3) =>
@@ -106,9 +73,5 @@ class AXFinderAkka extends Actor {
     AXFINDER.add(ASKS_BROKER_ID,(agg19 + (agg22 * -ASKS_VOLUME)));
     mBIDS1.add((ASKS_BROKER_ID,ASKS_PRICE),-1L);
     mBIDS3.add((ASKS_BROKER_ID,ASKS_PRICE),-ASKS_VOLUME);
-  }
-  
-  def onSystemReady() {
-    
   }
 }

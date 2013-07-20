@@ -1,6 +1,6 @@
 package ddbt.lib
 
-import akka.actor.{Actor,ActorRef,ActorSystem,Props}
+import akka.actor.{Actor,ActorRef,ActorRefFactory,Props}
 
 import scala.reflect.ClassTag
 import scala.reflect.classTag
@@ -26,9 +26,9 @@ trait K4Map[K,V] {
   def clear(s:(Int,Any)) : Unit                     // map.slice(s._1,s._2).clear()
 }
 object K4Map {
-  def make[K,V](sys:ActorSystem,workers:Int,projs:List[K=>_]=Nil)(implicit cv:ClassTag[V]):K4Map.Wrapper[K,V] = {
-    val m = sys.actorOf(Props[K4Map.Master[K,V]])
-    val ws = (0 until workers).map{x=>sys.actorOf(Props[K4Map.Worker[K,V]])}.toArray
+  def make[K,V](ctx:ActorRefFactory,workers:Int,projs:List[K=>_]=Nil)(implicit cv:ClassTag[V]):K4Map.Wrapper[K,V] = {
+    val m = ctx.actorOf(Props[K4Map.Master[K,V]])
+    val ws = (0 until workers).map{x=>ctx.actorOf(Props[K4Map.Worker[K,V]])}.toArray
     m ! K4Init(ws,cv,projs); ws.foreach { w => w ! K4Init(ws,cv,projs) }; new Wrapper(m)
   }
 
@@ -130,84 +130,6 @@ object K4Map {
 
 
 /*** LEGACY ***
-
-class K3MapAkka[K,V](system:ActorSystem, workers:Int, projs:List[K=>_]=Nil)(implicit cV:ClassTag[V]) extends K3Map[K,V] {
-  private val ws = (0 until workers).map{ x => system.actorOf(Props[K3MapAkka.Worker[K,V]],"Worker"+x) }.toArray
-  private val v0 = K3Helper.make_zero[V]()
-  private val h = K3MapAkka.hTo(ws)
-}
-object K3MapAkka {
-  // Messages
-  case class Init[K,V](ws:List[ActorRef],cv:ClassTag[V], projs:List[K=>_]=Nil) // Let worker know peers
-  
-  case class Add[K,V](key:K,value:V)
-  case class Set[K,V](key:K,value:V)
-  case class Get[K](key:K)
-  case class Value[V](value:V)
-  case class ParOp[K,V,K2,V2](out:ActorRef,maps:List[ActorRef],f:(K,V)=>(K2,V2),add:Boolean=true)
-  
-  // Hashing helpers
-  def h[K](ws:Array[ActorRef],me:ActorRef) = { // does this belong to me ?
-    val n = ws.length
-    val i = ws.indexOf(me); if (i<0) sys.error("I am not a worker!")
-    (k:K) => (k.hashCode-i)%n == 0
-  }
-  def hTo[K](ws:Array[ActorRef]) = { // which worker does it belong ?
-    val n = ws.length
-    (k:K) => ws( ((k.hashCode%n)+n)%n )
-  }
-  // Distributed worker that holds a partition of the map
-  class Worker[K,V] extends Actor { // with K3Map for redirecting non-owned updates
-    var peers:List[ActorRef] = Nil
-    var map:K3Map[K,V] = null
-    def receive = {
-      case Init(ws,cv,projs) => peers=ws;
-       map=K3Map.make[K,V](projs.asInstanceOf[List[K=>_]])(cv.asInstanceOf[ClassTag[V]])
-      case _ =>
-      
-      // for every message we fork on the key: if it belongs to me, go ahead with map
-      // else go with worker itself which will redirect calls to corresponding peer
-      
-    }
-  }
-}
-
-case class Init(ws:List[ActorRef]) // pass the list of co-workers
-case class Add[K,V](key:K,value:V)
-case class Get[K,V](key:K)
-case class For[K,V](f:(K,V)=>Unit)
-
-abstract class K3MapAkka[K,V] extends Actor {
-  var ws = List[ActorRef]()
-  def add(k:K,v:V):Unit
-//  def get(k:K):V
-  def receive = {
-    case Init(l) => ws = l; println("Init "+self)
-    case Add(k:K,v:V) => add(k,v)
-    case Get(k:K) => sender ! 3
-  }
-}
-
-class Master[K,V] extends K3MapAkka[K,V] {
-  def add(k:K,v:V) = {
-    println("M$Add "+k+" "+v+" to "+ws(0))
-    ws(0) ! Add(k,v)
-  }
-  override def receive = {
-    case Init(l) => super.receive(Init(l)); for (w<-ws) w ! Init(l)
-    case x => super.receive(x)
-  }
-}
-
-class Worker[K,V] extends K3MapAkka[K,V] {
-  def add(k:K,v:V) = println("Worker add "+k+" => "+v)
-}
-
-    val m = system.actorOf(Props[Master[Int,Int]],"Master")
-    val w = system.actorOf(Props[Worker[Int,Int]],"Worker")
-    m ! Init(List(w))
-    m ! Add(3,5)
-
     implicit val timeout = Timeout(5 seconds)
     val future = m ? Get(3)
     val result = Await.result(future, timeout.duration).asInstanceOf[Int]

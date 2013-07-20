@@ -1,7 +1,8 @@
 package ddbt.lib
+import Messages._
 
-// Decode a tuple by splitting binary data, decoding it and calling f on each generated event
-case class Decoder(f:TupleEvent=>Unit,adaptor:Adaptor=Adaptor("orderbook",Nil),splitter:Split=Split()) {
+/* Decode a tuple by splitting binary data, decoding it and calling f on each generated event */
+case class Decoder(f:TupleEvent=>Unit,adaptor:Adaptor=Adaptor("ORDERBOOK",Nil),splitter:Split=Split()) {
   private var data=Array[Byte]()
   def add(b:Array[Byte],n:Int) { if (n<=0) return;
     val l=data.length; val d=new Array[Byte](l+n);
@@ -56,7 +57,8 @@ object Split {
  */
 abstract class Adaptor extends Function3[Array[Byte],Int,Int,List[TupleEvent]] // buffer,start,end => events
 object Adaptor {
-  def apply(name:String,options:List[(String,String)]) = {
+  def apply(name:String,options:Map[String,String]):Adaptor = apply(name,options.toList)
+  def apply(name:String,options:List[(String,String)]):Adaptor = {
     val m=options.map{case (k,v)=>(k.toLowerCase,v)}.toMap
     def i(k:String,v:Int) = m.get(k) match { case Some(x)=>Integer.parseInt(x) case None => v }
     def b(k:String,v:Boolean) = m.get(k) match { case Some(x)=>x.toLowerCase=="yes"||x.toLowerCase=="true"||x=="1" case None => v }
@@ -68,7 +70,7 @@ object Adaptor {
     }
   }
 
-  class CSV(name:String,schema:String,delimiter:String=",",action:String) extends Adaptor {
+  class CSV(name:String,schema:String,delimiter:String=",",action:String="insert") extends Adaptor {
     val dfp = new java.text.SimpleDateFormat("yyyy-MM-dd")
     val tfs:Array[String=>_]=schema.split(",").map{
       case "int"|"long" => (c:String) => java.lang.Long.parseLong(c)
@@ -130,33 +132,28 @@ object Adaptor {
   }
 }
 
-// ------------------- to be moved into general messages
 /*
-abstract sealed class DBTEvent
-case object EndOfStream extends DBTEvent
-case class TupleEvent(op:TupleOp,stream:String,tx:Long,data:List[Any]) extends DBTEvent
-
-abstract sealed class TupleOp
-case object TupleInsert extends TupleOp
-case object TupleDelete extends TupleOp
-*/
-// -------------------
-/*
-object Decoder {
-  def main(args:Array[String]) {
-    def f(e:TupleEvent) {
-      val op = if (e.op==TupleInsert) "+" else "-"
-      println(e.stream+" "+op+"("+e.tx+") : "+e.data);
-    }
-    val d = Decoder(f)
-  
-    val in = new java.io.FileInputStream("resources/data/finance.csv")
-    val buf = new Array[Byte](4)
+ * SourceMux reads from multiple inputs, decodes and forward data to one Actor.
+ * Discussion: thread are used as there is no non-blocking interface for both
+ *   sockets and file I/O in Java. Additionally, the number of stream is fixed,
+ *   and usually small, so thread switching penalty should be low.
+ */
+import java.io.InputStream
+case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Boolean=false,bufferSize:Int=32*1024) {
+  private def read1(in:InputStream,d:Decoder) {
+    val buf = new Array[Byte](bufferSize)
     var n:Int = 0
-    do {
-      n=in.read(buf)
-      d.add(buf,n);
-    } while (n>0);
+    do { n=in.read(buf); d.add(buf,n); } while (n>0);
+    in.close()
+  }
+  def read() {
+    if (!parallel) streams.foreach { case(in,d) => read1(in,d) }
+    else {
+      val ts = streams.map { case (in,d) => new Thread{ override def run() { read1(in,d) }} }
+      ts.foreach(_.start()); ts.foreach(_.join())
+    }
   }
 }
-*/
+
+// http://www.cafeaulait.org/slides/javapolis/toptenmyths/14.html
+// http://docs.oracle.com/javase/7/docs/api/java/nio/channels/AsynchronousFileChannel.html

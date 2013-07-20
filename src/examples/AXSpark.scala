@@ -1,5 +1,6 @@
 package examples
 import ddbt.lib._
+import Messages._
 
 import spark.SparkContext
 import SparkContext._

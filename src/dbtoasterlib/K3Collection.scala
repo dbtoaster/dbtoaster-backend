@@ -270,7 +270,7 @@ package org.dbtoaster.dbtoasterlib {
      * @param <K> The key type
      * @param <V> The value type
      */
-    class K3PersistentCollection[K, V](name: String, elems: Map[K, V], 
+    class K3PersistentCollection[K, V](name: String, val elems: Map[K, V],  // XXX: expose elems
         sndIdx: Option[Map[String, Index[K, V]]]) extends K3Collection[K, V] {
       var lastSize = 0
 

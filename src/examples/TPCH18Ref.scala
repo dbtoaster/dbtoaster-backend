@@ -924,7 +924,7 @@ class TPCH18QueryRef() extends DBTQuery {
       receive {
         case EndOfStream => {
           //printResults
-          println(getQUERY18().toStr)
+          println(ddbt.lib.K3Helper.toStr(getQUERY18().elems.toMap))
           supervisor ! DBTDone;
           exit();
         }

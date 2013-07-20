@@ -1,55 +1,47 @@
 package ddbt.lib
 
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
+import scala.reflect.ClassTag
+import java.io.InputStream
 
-object Helper {
-  // Message being passed to supervisor
-  case object StartTimer
-  case class SetSupervisor(actor:ActorRef)
-  case class Result(r:Any)
+trait Helper {
+  import Messages._
 
-  // System setup
-  val system = ActorSystem("DDBT")
-  val supervisor = system.actorOf(Props[Supervisor],"Supervisor")
-  /*
-  def main(args:Array[String]) {
-    val act = system.actorOf(Props[AXFinder],"AXFinder")
-    act ! SetSupervisor(sup)
-    val s = new SourceFile("resources/data/finance.csv") // -standard
-    s.setReceiver(act);
-    sup ! StartTimer
-    s.readAll
-  }
-  */
-
-  // Wrapper to read data from disk
-  case class SourceFile(file:String,bufSize:Int=128*1024) {
-    var r:ActorRef = null
-    val d = Decoder((ev:TupleEvent)=>{ r ! ev })
-    def setReceiver(receiver:ActorRef) { r=receiver }
-
-    def readAll() {
-      val in = new java.io.FileInputStream(file)
-      val buf = new Array[Byte](bufSize)
-      var n:Int = 0
-      do { n=in.read(buf); d.add(buf,n); } while (n>0);
-      in.close()
-      r ! EndOfStream
-    }
+  def ask[T](a:ActorRef,m:Any):T = {
+    import scala.concurrent.duration._
+    val timeout = akka.util.Timeout(60.seconds)
+    scala.concurrent.Await.result(akka.pattern.ask(a,m)(timeout), timeout.duration).asInstanceOf[T]
   }
 
-  // Supervisor for result output and time measurement
-  class Supervisor extends Actor {
-    var t0:Long = 0
-    def receive = {
-      case Result(r:Map[_,_]) => println(K3Helper.toStr(r))
-      case Result(r) => println(r.toString)
-      case StartTimer => t0 = System.nanoTime()
-      case EndOfStream =>
-        val t1 = System.nanoTime()
-        val t = (t1-t0) / 1000
-        println("Running time: %d.%6d".format(t/1000000,t%1000000))
-        system.shutdown
-    }
+  def run[Q<:akka.actor.Actor,K,V:ClassTag](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,conf:String=null)(implicit cq:ClassTag[Q]):(Long,Map[K,V]) = {
+    val system = ActorSystem("DDBT")
+    val query = system.actorOf(Props[Q],"Query")
+    val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ query ! ev },ad,sp))},parallel)
+    query ! SystemInit
+    // preload existing tables in the query
+    mux.read()
+    val res = ask[(Long,Map[K,V])](query,EndOfStream)
+    system.shutdown
+    res
+  }
+
+  def printTime(ns:Long) { val ms = ns/1000000; println("time: %d.%03ds".format(ms/1000,ms%1000)) }
+  def printMap[K,V](m:Map[K,V]) { println(K3Helper.toStr(m)) } // XXX: remove duplicates
+
+  // Stream definitions
+  def streamsFinance(s:String="") = {
+    val file = new java.io.FileInputStream("resources/data/finance"+(if (s!="") "-"+s else "")+".csv")
+    Seq((file,Adaptor("orderbook",Nil),Split()))
+  }
+  def streamsTPCH15() = {
+    def s(n:String,s:String) = (new java.io.FileInputStream("resources/data/tpch/"+n+".csv"),new Adaptor.CSV(n.toUpperCase,s,"\\|"),Split())
+    Seq(s("lineitem","int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"),
+        s("supplier","int,string,string,int,string,float,string"))
+  }
+  def streamsTPCH18() = {
+    def s(n:String,s:String) = (new java.io.FileInputStream("resources/data/tpch/"+n+".csv"),new Adaptor.CSV(n.toUpperCase,s,"\\|"),Split())
+    Seq(s("lineitem","int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"),
+        s("orders","int,int,string,float,date,string,string,int,string"),
+        s("customer","int,string,string,int,string,float,string,string"))
   }
 }

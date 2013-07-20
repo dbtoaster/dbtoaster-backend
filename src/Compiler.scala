@@ -16,25 +16,15 @@ object Compiler {
   def main(args: Array[String]) {
 
     //test(toast("resources/queries/finance/simple.sql"));
-    test(toast("resources/queries/finance/axfinder.sql"));
+    //test(toast("resources/queries/finance/axfinder.sql"));
     
     // TPC-H 13,15,18
     //test(toast("resources/queries/tpch/query13.sql"));
-	(0 until 10).foreach{x=>println}
-	test(toast("resources/queries/tpch/query18.sql"));
-
-  
+	//(0 until 10).foreach{x=>println}
+	//test(toast("resources/queries/tpch/query15.sql"));
+	test(toast("resources/queries/tpch/query15.sql"));
     //test(toast("resources/queries/simple/r_agtbexists.sql"));
     //test(scala.io.Source.fromFile("resources/docs/chrissedtrades.m3").mkString);
-
-    
-
-    /*
-    println(m3p.triggers.mkString("\n"))
-    println("---------------------------------------")
-    println(m3p.triggers.mkString("\n"))
-    assert(m3p==m3p2)
-    */
 
 /*
 1. frontend
@@ -42,32 +32,21 @@ object Compiler {
 	- generate the m3 file (OK)
 	- parse the m3 (OK)
 	- parse the SQL (INCOMPLETE)
-
 2. type the AST (?)
 	- make sure we have enough information to output scala
-
-==> obtain an AST
-
+	==> obtain an AST
 3. optimize the AST
 	- high level optimization like replacing List
-
 4. prepare for distributed system
 	- add node conditionals in the code
 	- replace some read operations by send/receive (depending node)
-	
 5. generate code with LMS
-
 6. Distribute over nodes
-
 7. Evaluate query
-
 */
-
-
   }
 
   // UTILITIES -----------------------------------------------------------------
-
   def toast(path:String) = {
     val os=System.getProperty("os.name").toLowerCase
     val fam = List("win","lin","mac").filter{os.contains(_)}.head

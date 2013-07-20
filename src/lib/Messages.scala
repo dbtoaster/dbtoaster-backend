@@ -1,4 +1,22 @@
 package ddbt.lib
+import akka.actor.ActorRef
+
+object Messages {
+  // Tuple operations
+  type TOp = Char
+  final val TupleDelete : TOp = 0x00
+  final val TupleInsert : TOp = 0x01
+  
+  // Input stream
+  abstract sealed class StreamEvent
+  case object EndOfStream extends StreamEvent
+  case class TupleEvent(op:TOp,stream:String,tx:Long,data:List[Any]) extends StreamEvent
+
+  // System messages
+  abstract sealed class SystemEvent
+  case object SystemInit extends SystemEvent
+  case object GetResult extends SystemEvent
+}
 
 /**
 
@@ -87,18 +105,11 @@ Failures
 
 **/
 
-// ---------- Operations on tuples
-abstract sealed class TupleOp
-case object TupleInsert extends TupleOp
-case object TupleDelete extends TupleOp
-// case class TupleTransfer extends TupleOp // exchange tuple between two workers
+  // ---------- Operations on tuples
+  // case class TupleTransfer extends TupleOp // exchange tuple between two workers
 
 // ---------- Message passed between nodes
 
-// XXX: to be reworked
-abstract sealed class StreamEvent
-case object EndOfStream extends StreamEvent // XXX: resolve name clash with dbtoasterlib
-case class TupleEvent(op:TupleOp,stream:String,tx:Long,data:List[Any]) extends StreamEvent
 
 /*
 abstract sealed class Msg 
