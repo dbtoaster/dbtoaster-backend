@@ -20,9 +20,9 @@ object Compiler {
     
     // TPC-H 13,15,18
     //test(toast("resources/queries/tpch/query13.sql"));
-	//(0 until 10).foreach{x=>println}
-	//test(toast("resources/queries/tpch/query15.sql"));
 	test(toast("resources/queries/tpch/query15.sql"));
+	//test(toast("resources/queries/tpch/query18.sql"));
+	//(0 until 10).foreach{x=>println}
     //test(toast("resources/queries/simple/r_agtbexists.sql"));
     //test(scala.io.Source.fromFile("resources/docs/chrissedtrades.m3").mkString);
 
@@ -50,7 +50,7 @@ object Compiler {
   def toast(path:String) = {
     val os=System.getProperty("os.name").toLowerCase
     val fam = List("win","lin","mac").filter{os.contains(_)}.head
-    exec(Array("resources/dbtoaster_"+fam,"-l","M3","-F","K3-NO-OPTIMIZE",path))._1
+    exec(Array("resources/dbtoaster_"+fam,"-l","M3" /*,"-F","K3-NO-OPTIMIZE"*/ ,path))._1
   }
   
   // execute arbitrary command, return (out,err)

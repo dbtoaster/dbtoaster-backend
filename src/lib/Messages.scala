@@ -3,14 +3,14 @@ import akka.actor.ActorRef
 
 object Messages {
   // Tuple operations
-  type TOp = Char
-  final val TupleDelete : TOp = 0x00
-  final val TupleInsert : TOp = 0x01
+  type TupleOp = Char
+  final val TupleDelete : TupleOp = 0x00
+  final val TupleInsert : TupleOp = 0x01
   
   // Input stream
   abstract sealed class StreamEvent
   case object EndOfStream extends StreamEvent
-  case class TupleEvent(op:TOp,stream:String,tx:Long,data:List[Any]) extends StreamEvent
+  case class TupleEvent(op:TupleOp,stream:String,tx:Long,data:List[Any]) extends StreamEvent
 
   // System messages
   abstract sealed class SystemEvent
