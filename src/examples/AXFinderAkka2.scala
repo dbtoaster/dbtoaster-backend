@@ -1,46 +1,28 @@
 package examples
 import ddbt.lib._
-//import scala.concurrent.Future
-import scala.reflect.ClassTag
-import scala.reflect.classTag
+import scala.reflect.{ClassTag,classTag}
 import scala.concurrent._
-import ExecutionContext.Implicits.global
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import akka.actor.{Actor,ActorRef}
 import akka.pattern.{ask,pipe}
 
 /*
-For the moment, this is slower than regular Akka and does not produce
-desired result !!!
+Reference    : 0.092 [0.057, 0.656] (sec)
+Gen2         : 0.054 [0.034, 0.206] (sec)
+Akka         : 1.271 [1.114, 1.613] (sec)
 
-Running examples.AXFinder(standard)
-Reference     time: 0.652s
-Gen2          time: 0.334s
-Akka          time: 1.822s
-Simple LMS    time: 0.037s
-Simple Gen2   time: 0.025s
-0 -> 2446668.0
-1 -> -648039.0
-2 -> -5363809.0
-3 -> 864240.0
-4 -> 8384852.0
-5 -> 3288320.0
-6 -> -2605617.0
-7 -> 243551.0
-8 -> 1565128.0
-9 -> 995180.0
-
-Akka2         time: 1.969s (by reducing # synchronization)
-
+Akka2        : ~ 0.800 (by reducing # synchronization)
+Akka2sync    : 1.773s (by automatically reducing #sync)
 */
-
 
 object Msgs {
   type MapRef[K,V] = Byte // Map identifier
   case class Init(master:ActorRef,workers:Array[ActorRef])
   case class Get[K,V](map:MapRef[K,V],key:K) // => V
-  case class Add[K,V](map:MapRef[K,V],key:K,value:V)
-  case class Set[K,V](map:MapRef[K,V],key:K,value:V)
+  abstract sealed class WriteMsg
+  case class Add[K,V](map:MapRef[K,V],key:K,value:V) extends WriteMsg
+  case class Set[K,V](map:MapRef[K,V],key:K,value:V) extends WriteMsg
   case class Foreach[K,V,P](map:MapRef[K,V],part:Int,partKey:P,f:(K,V)=>Unit)
   case class Aggr[K,V,P,R](map:MapRef[K,V],part:Int,partKey:P,f:(K,V)=>R,cR:ClassTag[R]) // => R
   case class Clear[K,V,P](map:MapRef[K,V],part:Int,partKey:P)
@@ -83,8 +65,8 @@ abstract class WorkerActor extends Actor {
     def get[K,V](k:K,c:(K,V)=>Unit) { val h=hr(hash(m,k)); if (h==_id) c(k,local(m).get(k))
       else _futures = _workers(h).ask(Get(m,k))(timeout).map{ v=> c(k,v.asInstanceOf[V]) } :: _futures
     }
-    def add(k:Any,v:Any) { val h=hr(hash(m,k)); if (h==_id) local(m).add(k,v) else { val w=_workers(h); w!Add(m,k,v); _written+=w; } }
-    def set(k:K,v:V) { val h=hr(hash(m,k)); if (h==_id) local(m).set(k,v) else { val w=_workers(h); w!Set(m,k,v); _written+=w; } }
+    def add(k:Any,v:Any) { val h=hr(hash(m,k)); if (h==_id) /*pending+=Add(m,k,v)*/ local(m).add(k,v) else { val w=_workers(h); w!Add(m,k,v); _written+=w; } }
+    def set(k:K,v:V) { val h=hr(hash(m,k)); if (h==_id) /*pending+=Set(m,k,v)*/ local(m).set(k,v) else { val w=_workers(h); w!Set(m,k,v); _written+=w; } }
 
     def aggr[R:ClassTag](f:(K,V)=>R,c:R=>Unit) { 
       _futures = Future.sequence(_workers.map { w => w.ask(Aggr[K,V,P,R](m,p,pk,f,classTag[R]))(timeout) }.toList).transform(
@@ -94,8 +76,8 @@ abstract class WorkerActor extends Actor {
     }
 
     // Group operations: master (or nested operation) broadcasts request, worker process locally
-    def foreach(f:(K,V)=>Unit) { _workers.foreach { w => w ! Foreach[K,V,P](m,p,pk,f) } }
-    def clear() { _workers.foreach { w => w ! Clear[K,V,P](m,p,pk) } }
+    def foreach(f:(K,V)=>Unit) { _workers.foreach { w => w ! Foreach[K,V,P](m,p,pk,f); _written+=w; } }
+    def clear() { _workers.foreach { w => w ! Clear[K,V,P](m,p,pk); _written+=w; } }
     def slice(part:Int, partKey:Any) = new MapFunc(m,part,partKey)
     
     def toMap():Map[K,V] = {
@@ -116,8 +98,10 @@ abstract class WorkerActor extends Actor {
   // file:///Developer/Scala/docs/index.html#scala.concurrent.Future
   def flush() {
     if (self!=_master) sys.error("Flush can only be invoked on master") // as we use blocking calls
-    val fs = _workers.map { w => w.ask(Flush)(timeout) }
-    fs.foreach { f => Await.result(f,timeout.duration) }
+    Await.result(Future.sequence(_futures),timeout.duration); _futures=Nil // wait for futures
+    //Await.result(Future.sequence(_workers.map { w=>w.ask(Flush)(timeout) }.toList),timeout.duration);
+    Await.result(Future.sequence(_written.map { w=>w.ask(Flush)(timeout) }.toList),timeout.duration); _written.clear
+    
   }
   
   // Whenever we receive a message, we know that the operation has already been
@@ -127,15 +111,20 @@ abstract class WorkerActor extends Actor {
     case Get(m,k) => sender ! local(m).get(k)
     case Add(m,k,v) => local(m).add(k,v)
     case Set(m,k,v) => local(m).set(k,v)
+    //case w:WriteMsg => pending += w
     case Foreach(m,p,pk,f) => (if (p<0) local(m) else local(m).slice(p,pk)).foreach { (k,v) => f(k,v) }
     case Aggr(m,p,pk,f,cr) => sender ! (if (p<0) local(m) else local(m).slice(p,pk)).aggr(f)(cr)
     case Clear(m,p,pk) => (if (p<0) local(m) else local(m).slice(p,pk)).clear()
     case Collect(m) => sender ! local(m).toMap
     case Flush => // finish reads, then request ack for all writes
+      //pending.foreach { case Add(m,k,v)=>local(m).add(k,v) case Set(m,k,v)=>local(m).set(k,v) }; pending.clear
       Future.sequence(_futures).transform(
-        s => Future.sequence(_written.map{w=>w.ask(Flush)(timeout)}),
-        f => f).transform(s=>Flush,f=>f) pipeTo sender
+        s => { _futures=Nil; Future.sequence(_written.map{w=>w.ask(Flush)(timeout)})},
+        f => f).transform(s=> { _written.clear; Flush },f=>f) pipeTo sender
   }
+
+  /* Coherency improvement: write only at flush request */
+  //private var pending = scala.collection.mutable.Queue[WriteMsg]()
 }
 
 import scala.reflect.ClassTag
@@ -149,7 +138,7 @@ class MasterActor[T<:Actor](val N:Int)(implicit val cT:ClassTag[T]) extends Work
     case SystemInit =>
       val ws = (0 until N).map {i=>context.actorOf(Props[T])}.toArray
       init(self,ws); ws.foreach { w => w ! Init(self,ws) }; t0=System.nanoTime()
-    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,new MapFunc(0).toMap())
+    case EndOfStream => flush(); val time = System.nanoTime()-t0; sender ! (time,new MapFunc(0).toMap())
   }
   
   /*
@@ -158,15 +147,13 @@ class MasterActor[T<:Actor](val N:Int)(implicit val cT:ClassTag[T]) extends Work
    * - A map needs to be valid to be read
    * - When flushing, all writes are committed to the map
    */
-   /*
-   val invalid = Set[MapRef[Any,Any]]()
-   def registerOp(write:MapRef[Any,Any],read:List[MapRef[Any,Any]]) {
+   //var ctr = 0
+   val invalid = scala.collection.mutable.Set[MapRef[Any,Any]]()
+   def preOp(write:MapRef[Any,Any],read:List[MapRef[Any,Any]]) {
+     if (!read.filter{r=>invalid.contains(r)}.isEmpty) { flush(); invalid.clear; /*println(ctr); ctr=0*/ }
+     invalid += write
+     //ctr += 1
    }
-   val 
-   // add a queue
-   // redefine add, set and flush operation to store in queue
-   */  
-  
 }
 
 // Testing ----------------------------------------
@@ -208,6 +195,7 @@ class AXFinderAkka2 extends MasterActor[WorkerAXFinder](16) {
   val mBIDS3 : MapRef[(Long,Double),Double] = 4
   
   def onAddBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
+    preOp(AXFINDER,List(mBIDS1,mBIDS3))
     mBIDS1.slice(0,BIDS_BROKER_ID).aggr( (k2:(Long,Double),v3:Long)=>{
       val A_PRICE = k2._2;
       val __sql_inline_or_1 = (((A_PRICE - BIDS_PRICE) > 1000L) + ((BIDS_PRICE - A_PRICE) > 1000L));
@@ -220,12 +208,15 @@ class AXFinderAkka2 extends MasterActor[WorkerAXFinder](16) {
     },(agg4:Double)=>
     AXFINDER.add(BIDS_BROKER_ID,((agg1 * -BIDS_VOLUME) + agg4))
     ))
+    preOp(mASKS1,Nil)
     mASKS1.add((BIDS_BROKER_ID,BIDS_PRICE),BIDS_VOLUME);
+    preOp(mASKS2,Nil)
     mASKS2.add((BIDS_BROKER_ID,BIDS_PRICE),1L);
-    flush()
+    //flush()
   }
   
   def onDelBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
+    preOp(AXFINDER,List(mBIDS1,mBIDS3))
     mBIDS1.slice(0,BIDS_BROKER_ID).aggr( (k8:(Long,Double),v9:Long) => {
       val A_PRICE = k8._2;
       val __sql_inline_or_1 = (((A_PRICE - BIDS_PRICE) > 1000L) + ((BIDS_PRICE - A_PRICE) > 1000L));
@@ -238,18 +229,20 @@ class AXFinderAkka2 extends MasterActor[WorkerAXFinder](16) {
     },(agg10:Double)=>
     AXFINDER.add(BIDS_BROKER_ID,((agg7 * BIDS_VOLUME) + (agg10 * -1L)))
     ))
+    preOp(mASKS1,Nil)
     mASKS1.add((BIDS_BROKER_ID,BIDS_PRICE),-BIDS_VOLUME);
+    preOp(mASKS2,Nil)
     mASKS2.add((BIDS_BROKER_ID,BIDS_PRICE),-1L);
-    flush()
+    //flush()
   }
   
   def onAddASKS(ASKS_T:Double, ASKS_ID:Long, ASKS_BROKER_ID:Long, ASKS_VOLUME:Double, ASKS_PRICE:Double) {
+    preOp(AXFINDER,List(mASKS1,mASKS2))
     mASKS1.slice(0,ASKS_BROKER_ID).aggr( (k14:(Long,Double),v15:Double) => {
       val B_PRICE = k14._2;
       val __sql_inline_or_1 = (((ASKS_PRICE - B_PRICE) > 1000L) + ((B_PRICE - ASKS_PRICE) > 1000L));
       v15 * (__sql_inline_or_1 * (__sql_inline_or_1 > 0L))
     },(agg13:Double)=>
-
     mASKS2.slice(0,ASKS_BROKER_ID).aggr ( (k17:(Long,Double),v18:Long) => {
       val B_PRICE = k17._2;
       val __sql_inline_or_1 = (((ASKS_PRICE - B_PRICE) > 1000L) + ((B_PRICE - ASKS_PRICE) > 1000L));
@@ -257,12 +250,15 @@ class AXFinderAkka2 extends MasterActor[WorkerAXFinder](16) {
     },(agg16:Long)=>
     AXFINDER.add(ASKS_BROKER_ID,((agg13 * -1L) + (agg16 * ASKS_VOLUME)))
     ))
+    preOp(mBIDS1,Nil)
     mBIDS1.add((ASKS_BROKER_ID,ASKS_PRICE),1L);
+    preOp(mBIDS3,Nil)
     mBIDS3.add((ASKS_BROKER_ID,ASKS_PRICE),ASKS_VOLUME);
-    flush()
+    //flush()
   }
   
   def onDelASKS(ASKS_T:Double, ASKS_ID:Long, ASKS_BROKER_ID:Long, ASKS_VOLUME:Double, ASKS_PRICE:Double) {
+    preOp(AXFINDER,List(mASKS1,mASKS2))
     mASKS1.slice(0,ASKS_BROKER_ID).aggr ((k20:(Long,Double),v21:Double) => {
       val B_PRICE = k20._2;
       val __sql_inline_or_1 = (((ASKS_PRICE - B_PRICE) > 1000L) + ((B_PRICE - ASKS_PRICE) > 1000L));
@@ -275,16 +271,28 @@ class AXFinderAkka2 extends MasterActor[WorkerAXFinder](16) {
     },(agg22:Long)=>
       AXFINDER.add(ASKS_BROKER_ID,(agg19 + (agg22 * -ASKS_VOLUME)))
     ))
+    preOp(mBIDS1,Nil)
     mBIDS1.add((ASKS_BROKER_ID,ASKS_PRICE),-1L);
+    preOp(mBIDS3,Nil)
     mBIDS3.add((ASKS_BROKER_ID,ASKS_PRICE),-ASKS_VOLUME);
-    flush()
+    //flush()
   }
 }
 
 object AXFinderAkka2 extends Helper {
-  def main(args:Array[String]) {
+  def test {
     val (time,res) = run[AXFinderAkka2,Long,Double](streamsFinance( "standard" ),false);
-    printMap(res); printTime(time)
+    //printMap(res)
+    printTime(time)
+    val ref = Map(0L -> 2446668.0, 1L -> -648039.0, 2L -> -5363809.0, 3L -> 864240.0, 4L -> 8384852.0,
+                  5L -> 3288320.0, 6L -> -2605617.0, 7L -> 243551.0, 8L -> 1565128.0, 9L -> 995180.0)
+    if (ref==res) println("Correct") else { println("ERRORS:")
+      ref.foreach{ case (k,v) => val v2=res(k); if (v!=v2) println("- "+k+": "+v+" != "+v2) }
+    }
+  }
+
+  def main(args:Array[String]) {
+    for (i <- 0 until 10) test
   }
 }
 

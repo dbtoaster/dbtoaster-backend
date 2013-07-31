@@ -2,26 +2,23 @@ package examples
 import ddbt.lib._
 
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
+import scala.reflect.ClassTag
 
 object AXFinder extends Helper {
-  def main(args:Array[String]) {
-    def s = streamsFinance( "standard" /*"large"*/ )
-    print("Reference     ")
-    val (t1,r1) = run[AXFinderRef,Long,Double](s,false);
-    printTime(t1)
-    print("Gen2          ")
-    val (t2,r2) = run[AXFinder,Long,Double](s,false);
-    printTime(t2); assert(r1==r2)
-    print("Akka          ")
-    val (t3,r3) = run[AXFinderAkka,Long,Double](s,false);
-    printTime(t3); assert(r1==r3)
+  def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) = {
+    val out = (0 until count).map { _ => run[Q,Long,Double](streamsFinance( "standard" /*"large"*/ ),false) }
+    val res = out.map(_._2).toList; assert(res.tail.filter{ x=> x!=res.head }.isEmpty)
+    val ts = out.map(_._1).sorted;
+    def t(ns:Long) = { val ms=ns/1000000; "%d.%03d".format(ms/1000,ms%1000) }
+    println(name+" : "+t(ts(count/2))+" ["+t(ts(0))+", "+t(ts(count-1))+"] (sec)"); res.head
+  }
 
-    print("Simple LMS    ")
-    val (t4,r4) = run[AXFinderSimpleLMS,Long,Long](s,false);
-    printTime(t4)
-    print("Simple Gen2   ")
-    val (t5,r5) = run[AXFinderSimple,Long,Long](s,false);
-    printTime(t5); assert(r4==r5)
+  def main(args:Array[String]) {
+    val r1=test[AXFinderRef]      ("Reference   ")
+    val r2=test[AXFinder]         ("Gen2        "); assert(r1==r2)
+    val r3=test[AXFinderAkka]     ("Akka        "); assert(r1==r3)
+    val r4=test[AXFinderSimpleLMS]("Simple LMS  ")
+    val r5=test[AXFinderSimple]   ("Simple Gen2 "); assert(r4==r5)
     printMap(r1)
   }
 }
