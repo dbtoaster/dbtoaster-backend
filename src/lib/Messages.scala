@@ -1,9 +1,9 @@
 package ddbt.lib
-import akka.actor.ActorRef
+//import akka.actor.ActorRef
 
 object Messages {
   // Tuple operations
-  type TupleOp = Char
+  type TupleOp = Byte
   final val TupleDelete : TupleOp = 0x00
   final val TupleInsert : TupleOp = 0x01
   

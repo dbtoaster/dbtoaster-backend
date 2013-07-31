@@ -155,5 +155,30 @@ case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Boolean=false,b
   }
 }
 
+/*
+ * SourceMuxPull is similar to SourceMux but tuples are explicitly requested by
+ * calling the next() function. next() returns either the next TupleEvent or
+ * EndOfStream if all streams have been exhausted.
+ */
+case class SourceMuxPull(streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,bufferSize:Int=32*1024) {
+  type TQueue = scala.collection.mutable.Queue[TupleEvent]
+  case class State(buf:Array[Byte],q:TQueue,in:InputStream,d:Decoder)
+  private val st = streams.map { s=> val q=new TQueue; State(new Array[Byte](bufferSize),q,s._1,Decoder((ev:TupleEvent)=>{ q.enqueue(ev) },s._2, s._3)) }.toArray
+  private var valid:Int = streams.size // number of valid streams
+  private val r = new scala.util.Random
+  private def read(i:Int):StreamEvent = {
+    if (i>=valid) EndOfStream
+    else if (!st(i).q.isEmpty) st(i).q.dequeue()
+    else {
+      val s = st(i)
+      var n:Int = 0
+      do { n=s.in.read(s.buf); s.d.add(s.buf,n); } while (n>0 && s.q.isEmpty);
+      if (n<=0) { close(i); read(0) } else s.q.dequeue()
+    }
+  }
+  private def close(i:Int) { st(i).in.close; valid=valid-1; if (i<valid) st(i)=st(valid); st(valid)=null; }
+  def next():StreamEvent = read(if (parallel) r.nextInt(valid) else 0)
+}
+
 // http://www.cafeaulait.org/slides/javapolis/toptenmyths/14.html
 // http://docs.oracle.com/javase/7/docs/api/java/nio/channels/AsynchronousFileChannel.html

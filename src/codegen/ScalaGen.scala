@@ -12,6 +12,33 @@ object ScalaGen {
   def tpe(tp:Type):String = { val s=tp.toString; s.substring(0,1).toUpperCase+s.substring(1).toLowerCase }
   def tup(vs:List[String]) = { val v=vs.mkString(","); if (vs.size>1) "("+v+")" else v }
 
+  // Retrieve a list of binding variables
+  private def bnd(e:Expr):Set[String] = e match {
+    case Mul(l,r) => bnd(l)++bnd(r)
+    case Add(l,r) => bnd(l)++bnd(r)
+    case Apply(f,t,as) => as.flatMap(a=>bnd(a).toList).toSet
+    case Lift(n,e) => bnd(e)+n
+    case MapRef(n,tp,ks) => ks.toSet
+    case _ => Set() // AggSume
+  }
+  
+  /*
+  // Retrieve a list of unbound variables with their associated 
+  private def free(ex:Expr,b:Set[String]):Set[(String,Expr)] = ex match { // return free variables and a 
+    case Mul(l,r) => free(l)++free(r)
+    case Add(l,r) => free(l)++free(r)
+    case Apply(f,t,as) => as.flatMap(a=>free(a).toList).toSet // -- bnd(Apply()) ?
+    case Lift(n,e) => free(e).filter{case(v,e)=>v!=n}
+
+    case Cmp(l,r,op) => bnd(l)++bnd(r)
+    case MapRef(n,tp,ks) => ks.toSet
+    case Exists(e) => free(e)
+    case _ => Set() // AggSum
+  }
+  */
+  
+
+/*
   private def bnd(e:Expr):Set[String] = e match { // find bound variables
     case Lift(n,e) => bnd(e)+n
     case AggSum(ks,e) => Set() //bnd(e)++ks
@@ -23,6 +50,49 @@ object ScalaGen {
     case MapRef(n,tp,ks) => ks.toSet
     case _ => Set()
   }
+*/
+  /*
+  private def free(e:Expr):Set[String] = e match {
+
+  case class Const(tp:Type,v:String) extends Expr { override def toString=if (tp==TypeString) "'"+v+"'" else v }
+  // Variables
+  case class Ref(name:String) extends Expr { override def toString=name }
+  case class MapRef(name:String, tp:Type, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]" }
+  case class Lift(name:String, e:Expr) extends Expr { override def toString="( "+name+" ^= "+e+")" } // 'Let name=e in' semantics (usually followed by * ...)
+  case class Tuple(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")" } // appear only in Map declaration
+  // Operations
+  case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+i(e.toString)+"\n)" } // returns a {[tuple(group_keys)] => count} relation
+  case class Mul(l:Expr,r:Expr) extends Expr { override def toString="("+l+" * "+r+")" } // cross-product semantics
+  case class Add(l:Expr,r:Expr) extends Expr { override def toString="("+l+" + "+r+")" } // union semantics
+    case Exists(e) extends Expr { override def toString="EXISTS("+e+")" } // returns 0 or 1 (check that there is at least one tuple)
+    case Apply(f,tp,as) => as.flatMap(a=>bnd(a).toList).toSet
+    case Cmp(l,r,_) => free(l)++free(r)
+    case _ => Set()
+  }
+  */
+  
+  
+
+
+  private def getMapRefs(e:Expr):List[MapRef] = Nil
+  private def getLift(e:Expr): List[Lift] = Nil
+  private def useRef(e:Expr,n:String): Boolean = false
+  
+
+
+/*
+  private def replace(ex:Expr,eo:Expr,en:Expr):Expr = ex match {
+    case `eo` => en
+    case Lift(n,e) => Lift(n,replace(e,eo,en))
+    case AggSum(ks,e) => AggSum(ks,replace(e,eo,en))
+    case Mul(l,r) => Mul(replace(l,eo,en),replace(r,eo,en))
+    case Add(l,r) => Add(replace(l,eo,en),replace(r,eo,en))
+    case Exists(e) => Exists(replace(e,eo,en))
+    case Apply(f,tp,as) => Apply(f,tp,as.map{e=>replace(e,eo,en)})
+    case Cmp(l,r,op) => Cmp(replace(l,eo,en),replace(r,eo,en),op)
+    case _ => ex
+  }
+*/
   
   // Generate code bottom-up using delimited CPS and a list of bounded variables
   //   ex:expression to convert
@@ -37,20 +107,35 @@ object ScalaGen {
     //case Mul(Const(typeLong,"-1"),Ref(n)) => co("-"+n)
 
     // -----------------------------------------------
-    // Lifting and enumeration-specific transforms
 
-    case Mul(Lift(n,el),er) if (!b.contains(n)) => cpsExpr(el,b,(vl:String)=>{  cpsExpr(er,b+n,(vr:String)=>"val "+n+" = "+vl+";\n"+co(vr))  })
-    case Mul(MapRef(n,tp,ks),er) if (ks.filter{b.contains(_)}.size>0)  =>
+    // if a binding MapRef on the left binds some variable on the right, let's unfold it now
+    // if a binding Lift on the left binds a variable used on the right, let's unfold it now
+
+
+    
+/*    
+    case mul@Mul(ref@MapRef(n,tp,ks),er) if (ks.filter{!b.contains(_)}.size>0) => // outer foreach loop bind unbound keys
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>b.contains(k)}
       val k0=fresh("k"); val v0=fresh("v");
+      val b1 = b ++ ki.map{case (k,i)=>k} + v0 // we bind keys and value
+      var m1 = replace(mul,ref,Ref(v0))
+
+      // now we replace map reference in the body
+      // finally we generate the body by continuation
+      // then we put that code in the loop
+        
+      // we just generate a loop and that's all we do here
+      // then we rewire all gets into the new value and bind all inner keys
       
       // transform <er> to replace access by references
       // XXX: do we need also to test for non-emptiness of maps that we are currently binding ??
-      
       val sl = if (ko.size>0) ".slice("+slice(n,ko.map{case (k,i)=>i})+","+tup(ko.map{case (k,i)=>k})+")" else ""
       n+sl+".foreach { case ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
-        // XXX: fix if only one index
-        ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";"}.mkString("\n")+"\n"+co(v0))+"\n}" // bind unbounded variables from retrieved key
+        ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+ // bind unbounded variables from retrieved key
+        cpsExpr(m1,b1,co) )+"\n}"
+*/
+    // Different approach: if a variable happen on both sides of the same branch AND if this variable is used by both, generate a loop, replace inner access by variables
+
 
     // -----------------------------------------------
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
@@ -62,21 +147,19 @@ object ScalaGen {
         val k0=fresh("k"); val v0=fresh("v");
         val sl = if (ko.size>0) ".slice("+slice(n,ko.map{case (k,i)=>i})+","+tup(ko.map{case (k,i)=>k})+")" else ""
         n+sl+".foreach { case ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
-          // XXX: fix if only one index
           ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";"}.mkString("\n")+"\n"+co(v0))+"\n}" // bind unbounded variables from retrieved key
       }
-    // Different approach: if a variable happen on both sides of the same branch AND if this variable is used by both, generate a loop, replace inner access by variables
     
-    case Mul(el,er) => cpsExpr(el,b,(vl:String)=>{  cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"))  }) // right is nested in left
-    case Add(el,er) => cpsExpr(el,b,(vl:String)=>{  cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" + "+vr+")"))  }) // right is nested in left
-    case Lift(n,e) =>
-      if (b.contains(n)) cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")"))
-      else sys.error("Lift not in a multiply") //cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co(n))
-      //else cpsExpr(e,b,(v:String)=>"; {\n"+ind("val "+n+" = "+v+";\n"+co(n))+"\n}")
+    case Lift(n,e) => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")")) // lift acts as a constraint
+    case Mul(Lift(n,e),er) if (!b.contains(n)) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(er,b+n,co)
+    case Mul(el,er) => cpsExpr(el,b,(vl:String)=>{ cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")")) }) // right is nested in left
+    case Add(el,er) => cpsExpr(el,b,(vl:String)=>{ cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" + "+vr+")")) }) // right is nested in left
     case AggSum(ks,e) =>
       // XXX: if inner contains element that cannot be bound, create intermediate map ?
       val a0=fresh("agg"); "var "+a0+":Double = 0 //correct type???\n"+cpsExpr(e,b /*++ks.toSet*/,(v:String)=>a0+" += "+v+";")+"\n"+co(a0) // XXX: we did not use ks. Problem?
     case Exists(e) => val e0=fresh("ex"); "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0)
+      // XXX: if all variables are bound, inline it [let ex=v; co(ex)]
+    
       //cpsExpr(e,b,(v:String)=>"if (("+v+")!=0) {\n"+ind(co("1L"))+"\n}")
     case app@Apply(f,tp,as) => if (as.filter(!_.isInstanceOf[Const]).size==0) co(constApply(app)) // hoist constants
       else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,b,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+f) }
@@ -87,10 +170,8 @@ object ScalaGen {
   }
 
   def genStmt(s:Stmt,b:Set[String]):String = s match {
-    case StmtMap(m,e,op) =>
-      val fop=op match { case OpAdd => "add" case OpSet => "set" }
-      val co = (res:String)=>m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+res+");"
-      cpsExpr(e,b,co)
+    case StmtMap(m,e,op) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
+      cpsExpr(e,b,(res:String)=>m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+res+");")
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -124,10 +205,7 @@ object ScalaGen {
 
   // Methods involving only constants are hoisted as global constants
   private val cs = HashMap[Apply,String]() 
-  def constApply(a:Apply):String = cs.get(a) match {
-    case Some(n) => n
-    case None => val n=fresh("c"); cs+=((a,n)); n
-  }
+  def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
   
   def genSystem(s:System,cls:String="Query"):String = {
     val ts = s.triggers.map{genTrigger(_)}.mkString("\n\n") // triggers need to be generated before maps

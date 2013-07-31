@@ -17,20 +17,28 @@ Seq(
 )
 
 // --------- Dependencies
+// Storm dependencies
+/*
+resolvers ++= Seq(
+  "clojars" at "http://clojars.org/repo/",
+  "clojure-releases" at "http://build.clojure.org/releases"
+)
+*/
 libraryDependencies <++= scalaVersion(v=>Seq(
   "org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
   "com.typesafe.akka" %% "akka-actor"   % "2.1.4",
   "com.typesafe.akka" %% "akka-remote"  % "2.1.4",
   "org.scala-lang"     % "scala-actors" % v,
   "org.scalatest"     %% "scalatest"    % "2.0.M5b" % "test"
+  //"com.github.velvia" %% "scala-storm"  % "0.2.3-SNAPSHOT",
+  //"storm"              % "storm"        % "0.8.2"
 ))
 
 // --------- Compilation options
 Seq(
   scalaVersion := "2.10.2",
-  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings")
+  scalacOptions ++= Seq("-target:jvm-1.7", "-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings")
 )
-
 
 Seq(
   autoCompilerPlugins := true,
@@ -45,10 +53,6 @@ Seq(
       //"-agentpath:"+yjp+"=sampling,onexit=snapshot,builtinprobes=all"
   )
 )
-
-
-
-
 
 // libraryDependencies:
 //	"org.scala-lang" % "scala-actors" % v,

@@ -17,6 +17,7 @@ trait K3Map[K,V] {
   def set(key:K, value:V)          // inserts or set the value
   def add(key:K, value:V)          // combines new value with existing one using 'plus'
   def foreach(f:(K,V)=>Unit)       // iterates through all non-zero values of the map
+  def aggr[R](f:(K,V)=>R)(implicit cR:ClassTag[R]):R // aggregate/sum the content of a map/slice
   def slice[P](part:Int, partKey:P):K3Map[K,V] // returns the map partition where the key part is equal to subKey
   def clear()                      // erases all elements of the map or slice
   // additional features
@@ -103,6 +104,9 @@ case class K3MapMult[K,V:ClassTag](idxs:List[K3Index[_,K,V]]=Nil) extends K3Map[
   }
   def add(key:K, value:V) { if (value!=v0) set(key, elems.get(key) match { case null => value case v => plus(v,value) }) }
   def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=>f(k,v) } 
+  def aggr[R](f:(K,V)=>R)(implicit cR:ClassTag[R]):R = { var r:R = K3Helper.make_zero[R](); val p = K3Helper.make_plus[R]()
+    scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=> r = p(r,f(k,v)) }; r
+  }
   def clear() { elems.clear; if (idxs!=Nil) idxs.foreach(_.clear) }
   def slice[P](part:Int, partKey:P):K3MapMult[K,V] = {
     val ix=idxs(part); new K3Slice(elems,ix.asInstanceOf[K3Index[P,K,V]].slice(partKey)) // type information P is erased anyway
@@ -112,7 +116,13 @@ case class K3MapMult[K,V:ClassTag](idxs:List[K3Index[_,K,V]]=Nil) extends K3Map[
   //       This should not be a problem as no slice are maintained between operations.
   class K3Slice(elems:java.util.HashMap[K,V], slice:java.util.HashMap[K,V]) extends K3MapMult[K,V](idxs) {
     override def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](slice).foreach{ case (k,v)=>f(k,v) } 
+    override def aggr[R](f:(K,V)=>R)(implicit cR:ClassTag[R]):R = { var r:R = K3Helper.make_zero[R](); val p = K3Helper.make_plus[R]()
+      scala.collection.JavaConversions.mapAsScalaMap[K,V](slice).foreach{ case (k,v)=> r = p(r,f(k,v)) }; r
+    }
     override def clear() = foreach { case (k,v)=> elems.remove(k); idxs.foreach(_.del(k)) }
+    // Debug
+    override def toMap = scala.collection.JavaConversions.mapAsScalaMap(slice).toMap
+    override def size = slice.size
   }
 
   // Debug

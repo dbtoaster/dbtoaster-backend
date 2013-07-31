@@ -15,6 +15,8 @@ import scala.concurrent.duration._
 // Issues:
 //  - Performance: actor.ask creates a new actor to wait for the reply. Problem ?
 //  - Deadlock   : ask blocks the thread, hence we cannot do m.foreach{ m.get() }
+// XXX: fix coherency issues
+// XXX: use pipe to forward get results (?)
 //
 trait K4Map[K,V] {
   def get(key:K) : V
@@ -52,9 +54,7 @@ object K4Map {
     def aggr[T:ClassTag](s:(Int,Any))(f:(K,V)=>T) = sask[T](a,K4Aggr(s,f,classTag[T]))
     def collect(s:(Int,Any)=null) = sask[Map[K,V]](a,K4Collect(s))
     def clear(s:(Int,Any)=null) = a ! K4Clear(s)
-    
-    // Aliases:
-    def toMap = collect(null)
+    def toMap = collect(null) // convenience alias
   }
 
   class Master[K,V] extends Actor {
@@ -127,7 +127,6 @@ object K4Map {
   case class K4Clear(slice:(Int,Any))
   case object K4Ack // foreach is finished
 }
-
 
 /*** LEGACY ***
     implicit val timeout = Timeout(5 seconds)
