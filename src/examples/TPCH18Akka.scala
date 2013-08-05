@@ -5,8 +5,8 @@ import java.util.Date;
 
 object TPCH18Akka extends Helper {
   def main(args:Array[String]) {
-    val (time,res) = run[TPCH18Akka,Long,Double](streamsTPCH18(),false);
-    printMap(res); printTime(time)
+    val (t,res) = run[TPCH18Akka,Long,Double](streamsTPCH18(),false);
+    println(K3Helper.toStr(res)); println("Time: "+time(t))
   }
 }
 

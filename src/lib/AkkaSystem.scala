@@ -1,13 +1,9 @@
-package tests
+package ddbt.lib
 
 import scala.reflect.ClassTag
 import scala.concurrent.{Future,Await}
-//import scala.concurrent.ExecutionContext.Implicits.global
-import akka.actor.{Actor,ActorRef,ActorSystem,Props,Deploy,Address}
-import akka.remote.RemoteScope
+import akka.actor.{Actor,ActorRef,Props}
 import akka.pattern.ask
-
-import ddbt.lib.{K3Map,K3Helper,Messages}
 
 /*
  * Model: fully asynchronous message passing on workers. Synchronous statements
@@ -21,9 +17,9 @@ import ddbt.lib.{K3Map,K3Helper,Messages}
  * involved might not receive 1 (involving) message before processing the barrier, thus
  * either not replying to the source (deadlock), or replying too early (coherency issue).
  */
-object Msg {
+object WorkerActor {
   type MapRef = Byte
-  type FunRef = Byte
+  type FunRef = Byte // a closure: f -> map,part,partKey,closure
   case class Init(master:ActorRef,workers:Array[ActorRef])
   case class Barrier(tx:Long)
   case class Collect(map:MapRef) // => Map[K,V] (blocking)
@@ -32,17 +28,17 @@ object Msg {
   case class Add[K,V](map:MapRef,key:K,value:V)
   case class Set[K,V](map:MapRef,key:K,value:V)
   case class Clear[P](map:MapRef,part:Int,partKey:P)
-  case class Foreach(f:FunRef,args:List[Any]) /*f->map,part,partKey*/
-  case class Aggr(id:Int,f:FunRef,args:List[Any]) /*f->map,part,partKey*/ // => Sum
+  case class Foreach(f:FunRef,args:List[Any])
+  case class Aggr(id:Int,f:FunRef,args:List[Any]) // => Sum
   case class AggrPart[R](id:Int,res:R)
 }
-import Msg._
 
 /**
  * A worker 'owns' a portion of all maps, determined by hash() function.
  * It responds to events from the master, and can interact with other workers.
  */
 abstract class WorkerActor extends Actor {
+  import WorkerActor._
   /** Matcher for lookup requests/continuations. Also provides caching/merging of requests. */
   object GetMatcher {
     private val cache = new java.util.HashMap[(MapRef,Any),Any]()
@@ -109,7 +105,7 @@ abstract class WorkerActor extends Actor {
   private var master : ActorRef = null
   protected var workers : Array[ActorRef] = null
   protected def init(m:ActorRef,ws:Array[ActorRef]) {
-    println("Init "+self.path)
+    //println("Init "+self.path)
     master=m; workers=ws; val id=workers.indexOf(self); val n=workers.size
     owner = (x:Int) => { val k=((x%n)+n)%n; if (k==id) null else workers(k) } // we might want to use more hash bits
     if (master==self) workers.foreach { w => w!Init(master,workers) }
@@ -159,13 +155,14 @@ abstract class WorkerActor extends Actor {
     def set[K,V](k:K,v:V) { val o=owner(hash(m,k)); if (o==null) local(m).set(k,v) else o!Set(m,k,v) }
     // Group operations: master (or nested operation) broadcasts request, worker process locally
     def clear() = workers.foreach { _ ! Clear(m,p,pk); }
-    def foreach[K,V](f:FunRef,args:List[Any]=Nil) { workers.foreach { _ ! Foreach(f,args) } }
-    def aggr[R:ClassTag](f:FunRef,args:List[Any],co:R=>Unit) = if (self!=master) AggrMatcher.req(f,args,co) else {
-      val fs = workers.map{ w => w.ask(Aggr(-1,f,args))(timeout) };
-      val rs = fs.map{ f=>Await.result(f,timeout.duration).asInstanceOf[AggrPart[R]].res; }
-      var r = K3Helper.make_zero[R](); val p = K3Helper.make_plus[R](); rs.foreach { x=>r=p(r,x) }; co(r)
-    }
     def slice(part:Int, partKey:Any) = new MapFunc(m,part,partKey)
+  }
+
+  def foreach[K,V](f:FunRef,args:List[Any]=Nil) { workers.foreach { _ ! Foreach(f,args) } }
+  def aggr[R:ClassTag](f:FunRef,args:List[Any],co:R=>Unit) = if (self!=master) AggrMatcher.req(f,args,co) else {
+    val fs = workers.map{ w => w.ask(Aggr(-1,f,args))(timeout) };
+    val rs = fs.map{ f=>Await.result(f,timeout.duration).asInstanceOf[AggrPart[R]].res; }
+    var r = K3Helper.make_zero[R](); val p = K3Helper.make_plus[R](); rs.foreach { x=>r=p(r,x) }; co(r)
   }
 }
 
@@ -177,6 +174,7 @@ abstract class WorkerActor extends Actor {
  * - When flushing, all writes are committed to the map
  */
 class MasterActor(props:Array[Props]) extends WorkerActor {
+  import WorkerActor._
   import Messages._
   init(self,props.map{p=>context.actorOf(p)})
   final def local[K,V](m:MapRef) = sys.error("Master owns no map")
@@ -203,67 +201,9 @@ class MasterActor(props:Array[Props]) extends WorkerActor {
   }
 
   private val invalid = scala.collection.mutable.Set[MapRef]()
-  def pre(write:MapRef,read:List[MapRef]) {
+  def pre(write:MapRef,read:List[MapRef]=Nil) {
     if (!read.filter{r=>invalid.contains(r)}.isEmpty) { flush(); invalid.clear; }
     invalid += write
   }
 }
 
-// -----------------------------------------------------------------------------
-
-class MyWorker extends WorkerActor {
-  val map:MapRef = 0
-  val m1 = K3Map.make[Long,Double]()
-  def local[K,V](m:MapRef) = m1.asInstanceOf[K3Map[K,V]]
-  def myReceive : PartialFunction[Any,Unit] = {
-    case Foreach(1,List(d:Double)) => m1.foreach{case (k,v) => map.get(k-1,(v:Double)=>map.add(k,d+v)) }
-    case Aggr(id,1,Nil) => sender ! AggrPart(id,m1.aggr{case (k,v) => v})
-  }
-  override def receive = myReceive orElse super.receive
-}
-class MyMaster(props:Array[Props]) extends MasterActor(props) {
-  val map:MapRef = 0
-  override def receive = myReceive orElse super.receive
-  def myReceive : PartialFunction[Any,Unit] = {
-    case "Hello" =>
-      println("OK ----------")
-      flush()
-      println("OK ----------")
-      flush()
-      println("OK ----------")
-      for (i <- 0 until 10) map.add(i.toLong,1.0)
-      map.foreach(1,List(3.0))
-      map.get(0L,(d:Double)=>println("map(0)="+d))
-      map.aggr(1,Nil,(d:Double)=>map.add(100L,d))
-  }
-}
-
-object MyHelper {
-  def sys(name:String,host:String,port:Int) = {
-    val conf = "akka.loglevel=ERROR\nakka.log-dead-letters-during-shutdown=off\n"+ // disable verbose logging
-               "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote.netty {\nhostname=\""+host+"\"\ntcp.port="+port+"\n}\n}\n"
-    ActorSystem(name,com.typesafe.config.ConfigFactory.parseString(conf))
-  }
-  def props[A<:Actor](name:String,host:String,port:Int)(implicit cA:ClassTag[A]) = Props(cA.runtimeClass).withDeploy(Deploy(scope = RemoteScope(new Address("akka.tcp",name,host,port))))
-
-  // -------- specific
-  val N = 2
-  val port = 2551
-
-  import Messages._
-  def main(args:Array[String]) {
-    val system = sys("MasterSystem","127.0.0.1",port-1)
-    val nodes = (0 until N).map { i => sys("NodeSystem"+i,"127.0.0.1",port+i) }
-    val wprops = (0 until N).map { i=>props[MyWorker]("NodeSystem"+i,"127.0.0.1",port+i) }.toArray
-    val master = system.actorOf(Props(classOf[MyMaster],wprops))
-    master ! SystemInit
-
-    master ! "Hello"
-
-    val timeout = akka.util.Timeout(10000) // operation timeout (ms)  
-    val (t,r) = Await.result(master.ask(EndOfStream)(timeout),timeout.duration).asInstanceOf[(Long,Map[Long,Double])]
-    def tim(ns:Long) = { val ms = ns/1000000; "%d.%03ds".format(ms/1000,ms%1000) }
-    println("Time : "+tim(t)+"\n"+K3Helper.toStr(r))
-    nodes.foreach{ _.shutdown }; system.shutdown
-  }
-}

@@ -5,13 +5,8 @@ import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import scala.reflect.ClassTag
 
 object AXFinder extends Helper {
-  def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) = {
-    val out = (0 until count).map { _ => run[Q,Long,Double](streamsFinance( "standard" /*"large"*/ ),false) }
-    val res = out.map(_._2).toList; assert(res.tail.filter{ x=> x!=res.head }.isEmpty)
-    val ts = out.map(_._1).sorted;
-    def t(ns:Long) = { val ms=ns/1000000; "%d.%03d".format(ms/1000,ms%1000) }
-    println(name+" : "+t(ts(count/2))+" ["+t(ts(0))+", "+t(ts(count-1))+"] (sec)"); res.head
-  }
+  def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) =
+        bench(name,count,()=>run[Q,Long,Double](streamsFinance( "standard" /*"large"*/ ),false))
 
   def main(args:Array[String]) {
     val r1=test[AXFinderRef]      ("Reference   ")
@@ -19,7 +14,7 @@ object AXFinder extends Helper {
     val r3=test[AXFinderAkka]     ("Akka        "); assert(r1==r3)
     val r4=test[AXFinderSimpleLMS]("Simple LMS  ")
     val r5=test[AXFinderSimple]   ("Simple Gen2 "); assert(r4==r5)
-    printMap(r1)
+    println(K3Helper.toStr(r1))
   }
 }
 
