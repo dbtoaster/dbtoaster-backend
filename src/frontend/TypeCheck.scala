@@ -18,7 +18,7 @@ object TypeCheck {
     } }
     
     // 2. Resolve untyped maps (using statements left hand-side) (M3 language fix)
-    def stp(s:Stmt) = s match { case StmtMap(m,_,_)=>List(m) case _ => Nil }
+    def stp(s:Stmt) = s match { case StmtMap(m,_,_,_)=>List(m) case _ => Nil }
     val mtp = triggers.flatMap(t=>t match {
       case TriggerAdd(_,ss) => ss flatMap stp
       case TriggerDel(_,ss) => ss flatMap stp

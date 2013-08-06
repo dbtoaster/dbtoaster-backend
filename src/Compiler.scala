@@ -13,14 +13,19 @@ object Compiler {
     println(ScalaGen.genSystem(ir2))
   }
 
+  // invoke with any filename in finance or tpch : axfinder, query13, query15, query18, ...
   def main(args: Array[String]) {
+    val a = if (args.length>0) args(0) else "axfinder"
+    def q(dir:String):Option[String] = {
+      val p = "resources/queries/"+dir+"/"+a+".sql"
+      if (new java.io.File(p).exists) Some(p) else None
+    }
+    val file = q("finance").getOrElse(q("tpch").getOrElse(sys.error("Not found")))
+    test(toast(file));
 
     //test(toast("resources/queries/finance/simple.sql"));
     //test(toast("resources/queries/finance/axfinder.sql"));
-    
     // TPC-H 13,15,18
-    //test(toast("resources/queries/tpch/query13.sql"));
-	test(toast("resources/queries/tpch/query15.sql"));
 	//test(toast("resources/queries/tpch/query18.sql"));
 	//(0 until 10).foreach{x=>println}
     //test(toast("resources/queries/simple/r_agtbexists.sql"));

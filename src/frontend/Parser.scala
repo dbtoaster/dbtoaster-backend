@@ -61,7 +61,7 @@ object M3Parser extends ExtParser {
   lexical.delimiters ++= List("{","}",":",":=","+","-","*","/","=","!=","<","<=",">=",">","[","]","^=","+=")
 
   // ------------ Expressions
-  lazy val mapref = ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident,",") <~ "]") <~ opt(":" ~ "(" ~ expr ~ ")") ^^
+  lazy val mapref = ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident,",") <~ "]") ^^
                     { case n~ot~ks=>MapRef(n,ot match { case Some(t)=>t case None=>null },ks) }
 
   lazy val expr:Parser[Expr] = prod ~ opt("+" ~> expr) ^^ { case l~or=>or match{ case Some(r)=>Add(l,r) case None=>l } }
@@ -93,7 +93,7 @@ object M3Parser extends ExtParser {
   lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> repsep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
                         { case op~n~f~ss=> val s=Schema(n,f.map{(_,null)}); if (op=="+") TriggerAdd(s,ss) else TriggerDel(s,ss) }
                      | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { TriggerReady(_) } | failure("Bad M3 trigger"))
-  lazy val stmt = mapref ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~op~e=>StmtMap(m,e,op match { case "+="=>OpAdd case ":="=>OpSet }) }
+  lazy val stmt = mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~oi~op~e=>StmtMap(m,e,op match { case "+="=>OpAdd case ":="=>OpSet },oi) }
 
   lazy val system = {
     val spc = ("-"~"-"~rep("-"))

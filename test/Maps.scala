@@ -113,7 +113,7 @@ object MapsPerf extends FunSpec {
     println("- "+K+"x2 slicing/enumerations (first and second subkeys)")
     println("- median of "+S+" samples")
     
-    val m = sMap(K3Map.createIdx[(Long,Long),Long](0,List(0,1)))
+    val m = sMap(K3Map.makeIdx[(Long,Long),Long](List(0,1)))
     println("==> K3Map  : %6d".format(m)+"ms (current)")
 
     val m2 = sColl(new K3Map2[Long,Long,Long](0))

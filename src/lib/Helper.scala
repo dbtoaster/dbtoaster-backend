@@ -63,15 +63,16 @@ trait Helper {
     val file = new java.io.FileInputStream("resources/data/finance"+(if (s!="") "-"+s else "")+".csv")
     Seq((file,Adaptor("orderbook",Nil),Split()))
   }
-  def streamsTPCH15() = {
-    def s(n:String,s:String) = (new java.io.FileInputStream("resources/data/tpch/"+n+".csv"),new Adaptor.CSV(n.toUpperCase,s,"\\|"),Split())
-    Seq(s("lineitem","int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"),
-        s("supplier","int,string,string,int,string,float,string"))
-  }
-  def streamsTPCH18() = {
-    def s(n:String,s:String) = (new java.io.FileInputStream("resources/data/tpch/"+n+".csv"),new Adaptor.CSV(n.toUpperCase,s,"\\|"),Split())
-    Seq(s("lineitem","int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"),
+
+  private def s(n:String,s:String) = (new java.io.FileInputStream("resources/data/tpch/"+n+".csv"),new Adaptor.CSV(n.toUpperCase,s,"\\|"),Split())
+  def streamsTPCH13() = Seq(
         s("orders","int,int,string,float,date,string,string,int,string"),
         s("customer","int,string,string,int,string,float,string,string"))
-  }
+  def streamsTPCH15() = Seq(
+        s("lineitem","int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"),
+        s("supplier","int,string,string,int,string,float,string"))
+  def streamsTPCH18() = Seq(
+        s("lineitem","int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"),
+        s("orders","int,int,string,float,date,string,string,int,string"),
+        s("customer","int,string,string,int,string,float,string,string"))
 }
