@@ -101,8 +101,6 @@ object M3 {
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op+" "+r+"}"} // comparison, returns 0 or 1
   // ---------- Statements (no return)
   sealed class Stmt extends M3
-  
-  // XXX: missing initialization, see TPCH-13
   case class StmtMap(m:MapRef,e:Expr,op:OpUpdate,init:Option[Expr]) extends Stmt { override def toString=m+(init match { case Some(i) => ":("+i+")" case None => ""} )+" "+op+" "+e+";" }
   // case class StmtCall(external function) extend Stmt
 }
