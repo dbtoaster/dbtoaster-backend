@@ -141,7 +141,7 @@ class TPCH13 extends Actor {
       tmp_add7.foreach{ (k21,v21) =>
         ex5 |= (v21)!=0;
       }
-/*
+/* XXX: USELESS => AVOID GENERATING THIS
       if (C_ORDERS_C_COUNT == C_ORDERS_C_COUNT9) {
         tmp12.add(C_ORDERS_C_COUNT9,(ex5 * (C_ORDERS_C_COUNT9 == CUSTDIST_mCUSTOMER1_E1_1.get(C_ORDERS_C_CUSTKEY))));
       }
@@ -159,7 +159,7 @@ class TPCH13 extends Actor {
       tmp_add8.foreach{ (k23,v23) =>
         ex6 |= (v23)!=0;
       }
-/*
+/* XXX: USELESS => AVOID GENERATING THIS
       if (C_ORDERS_C_COUNT == C_ORDERS_C_COUNT10) {
         tmp13.add(C_ORDERS_C_COUNT10,(ex6 * (C_ORDERS_C_COUNT10 == CUSTDIST_mCUSTOMER1_E1_1.get(C_ORDERS_C_CUSTKEY))));
       }

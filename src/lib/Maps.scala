@@ -27,6 +27,14 @@ trait K3Map[K,V] {
   def toStr: String                // returns the map content as (comparable) String
 }
 
+/** An intermediate map that retains 0-multiplicity elements */
+trait K3Temp[K,V] {
+  def add(k:K,v:V)
+  def set(k:K,v:V)
+  def get(k:K):V
+  def foreach(f:(K,V)=>Unit)
+}
+
 /** Helper object to construct maps. Examples:
  * val map1 = K3Map.makeIdx[(Long,Long),Long](0,List(0,1))
  * val map2 = K3Map.make[(Long,Long),Long](0,List[((Long,Long))=>_](
@@ -41,6 +49,7 @@ object K3Map {
   def makeIdx[K<:Product,V:ClassTag](projs:List[Int]=Nil):K3Map[K,V] = {
     make[K,V](projs.map(i => (k:K)=>k.productElement(i)))
   }
+  def temp[K,V:ClassTag]() = new K3TempImp[K,V]()
 }
 
 // -----------------------------------------------------------------------------
@@ -83,6 +92,17 @@ object K3Helper {
   }
 }
 
+/** A regular HashMap with extra add and get-or-zero behaviors. */
+class K3TempImp[K,V:ClassTag]() extends K3Temp[K,V] {
+  private val v0 = K3Helper.make_zero[V]()
+  private val plus = K3Helper.make_plus[V]()
+  private val elems = new java.util.HashMap[K,V]
+  def add(key:K,value:V) { val v=elems.get(key); elems.put(key,if (v!=null) plus(v,value) else value); }
+  def set(key:K,value:V) { elems.put(key,value); }
+  def get(key:K):V = { val v=elems.get(key); if (v==null) v0 else v }
+  def foreach(f:(K,V)=>Unit) { scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=> f(k,v) } }
+};
+
 /**
  * K3MapMult is implemented with Java HashMaps and supports an arbitrary
  * number of secondary indices for slicing.
@@ -105,8 +125,18 @@ case class K3MapMult[K,V:ClassTag](idxs:List[K3Index[_,K,V]]=Nil) extends K3Map[
   def add(key:K, value:V) { if (value!=v0) set(key, elems.get(key) match { case null => value case v => plus(v,value) }) }
   def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=>f(k,v) } 
   def aggr[R](f:(K,V)=>R)(implicit cR:ClassTag[R]):R = { var r:R = K3Helper.make_zero[R](); val p = K3Helper.make_plus[R]()
-    scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=> r = p(r,f(k,v)) }; r
+    foreach{ case (k,v)=> r = p(r,f(k,v)) }; r
   }
+  /*
+  def group[K2,V2](f:(K,V)=>(K2,V2))(implicit cV2:ClassTag[V2]):Map[K2,V2] = {
+    val res = new java.util.HashMap[K2,V2]()
+    val p = K3Helper.make_plus[V2]()
+    foreach { case (k,v)=> val (k2,v2)=f(k,v); val v0=res.get(k2); res.put(k2, if (v0!=null) p(v0,v2) else v2) }
+    scala.collection.JavaConversions.mapAsScalaMap[K2,V2](res).toMap
+  }
+  */
+  //def group[K2,V2](out:K3Temp[K2,V2])(f:(K,V)=>(K2,V2)) = foreach{(k,v)=>val r=f(k,v); out.add(r._1,r._2) }
+
   def clear() { elems.clear; if (idxs!=Nil) idxs.foreach(_.clear) }
   def slice[P](part:Int, partKey:P):K3MapMult[K,V] = {
     val ix=idxs(part); new K3Slice(elems,ix.asInstanceOf[K3Index[P,K,V]].slice(partKey)) // type information P is erased anyway
@@ -116,9 +146,6 @@ case class K3MapMult[K,V:ClassTag](idxs:List[K3Index[_,K,V]]=Nil) extends K3Map[
   //       This should not be a problem as no slice are maintained between operations.
   class K3Slice(elems:java.util.HashMap[K,V], slice:java.util.HashMap[K,V]) extends K3MapMult[K,V](idxs) {
     override def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](slice).foreach{ case (k,v)=>f(k,v) } 
-    override def aggr[R](f:(K,V)=>R)(implicit cR:ClassTag[R]):R = { var r:R = K3Helper.make_zero[R](); val p = K3Helper.make_plus[R]()
-      scala.collection.JavaConversions.mapAsScalaMap[K,V](slice).foreach{ case (k,v)=> r = p(r,f(k,v)) }; r
-    }
     override def clear() = foreach { case (k,v)=> elems.remove(k); idxs.foreach(_.del(k)) }
     // Debug
     override def toMap = scala.collection.JavaConversions.mapAsScalaMap(slice).toMap
