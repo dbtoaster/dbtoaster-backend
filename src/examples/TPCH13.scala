@@ -16,8 +16,13 @@ object TPCH13 extends Helper {
   def main(args:Array[String]) {
     val ref = bench("ReferenceLMS ",10,()=>run[TPCH13Ref,Long,Long](streamsTPCH13()))
     val res = bench("HandOptimized",10,()=>run[TPCH13,Long,Long](streamsTPCH13()))
-    println("Correctness: "+(if(ref.filter{case (k,v) => v!=0}==res.filter{case (k,v) => v!=0}) "OK" else "FAILURE !!!!"))
-    println(K3Helper.toStr(res));
+    val gen = bench("TCK-Generated",10,()=>run[TPCH13Gen,Long,Long](streamsTPCH13()))
+    def eq(m1:Map[Long,Long],m2:Map[Long,Long]) = m1.filter{case (k,v) => v!=0}==m2.filter{case (k,v) => v!=0}
+    println("Correctness: "+(if(eq(ref,res)) "OK" else "FAILURE !!!!"))
+    //println("Correctness: "+(if(eq(ref,gen)) "OK" else "FAILURE !!!!"))
+    println("Reference:"); println(K3Helper.toStr(ref));
+    if(!eq(ref,res)) { println("HandOpt:"); println(K3Helper.toStr(res)); }
+    //if(!eq(ref,gen)) { println("Generated:"); println(K3Helper.toStr(gen)); }
   }
 }
 
@@ -105,22 +110,202 @@ class TPCH13 extends Actor {
     CUSTDIST_mCUSTOMER1_E1_1.add(x265, x325)
   }
 
-  def onInsertCUSTOMER(x512: Long, x513: String, x514: String, x515: Long, x516: String, x517: Double, x518: String, x519: String): Unit = {
-    val temp = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
-    val x570 = CUSTDIST_mCUSTOMER1_E1_3.get(x512)
-    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) =>
-      temp.add(v, -(v != 0L))
-      temp.add(v + (x512 == k) * x570, v != 0L)
+  def onInsertCUSTOMER(c_custkey: Long, x513: String, x514: String, x515: Long, x516: String, x517: Double, x518: String, x519: String): Unit = {
+    val e = CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey)
+
+    /*
+    // manually optimized version
+    val tmp = new Temp[Long, Long]()
+    def gen(k:Long,v:Long) { val x=v+(k==c_custkey)*e; tmp.add(v,-(v!=0)); tmp.add(x,x!=0) }
+    CUSTDIST_mCUSTOMER1_E1_1.foreach(gen)
+    if (CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey)==0L) gen(c_custkey,0L)
+    tmp.foreach{ (k,v) =>
+      if (CUSTDIST.get(k)==0L) CUSTDIST.set(k,CUSTDIST_mCUSTOMER1_E1_1.aggr { (k2,v2) => (v2!=0L)*(v2==k) })
+      CUSTDIST.add(k, v)
     }
-    temp.add(CUSTDIST_mCUSTOMER1_E1_1.get(x512) + (x512 == x512) * x570, x570 != 0L)
-    temp.foreach { case (k,v) =>
-        CUSTDIST.set(k, (if (CUSTDIST.get(k)!=0) CUSTDIST.get(k) else {
-          CUSTDIST_mCUSTOMER1_E1_1.aggr((k2:Long,v2:Long)=> (v2!=0L)*(v2==k))
+    */
+    // (A + B) * -1 + C + D
+    val x526 = new Temp[Long, Long]()
+    // (A + B)
+    val x527 = new Temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x527.add(v, v != 0L) }
+    val x557 = new Temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x557.add(k, v) }
+    x557.add(c_custkey, e)
+    x557.foreach { (k,v) => val x585 = CUSTDIST_mCUSTOMER1_E1_1.get(k); x527.add(x585, v != 0L) }
+    x527.foreach { (k,v) => x526.add(k, v * -1L) }
+    // C
+    val x614 = new Temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x614.add(k, v) }
+    x614.add(c_custkey, e)
+    x614.foreach { (k,v) => val x638 = CUSTDIST_mCUSTOMER1_E1_1.get(k); x526.add(x638, v != 0L) }
+    // D
+    val x657 = new Temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x657.add(k, v) }
+    x657.add(c_custkey, e)
+    x657.foreach { (k,v) =>
+        val x689 = CUSTDIST_mCUSTOMER1_E1_1.get(k) + ((c_custkey == k) * CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey))
+        x526.add(x689, v != 0L)
+    }
+    // Update
+    x526.foreach { case (k,v) =>
+        CUSTDIST.set(k, (if (CUSTDIST.get(k)!=0L) CUSTDIST.get(k) else {
+          var x714: Long = 0L
+          CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k2,v2) =>
+              val x716 = k2
+              x714 += ((v2 != 0L) * (CUSTDIST_mCUSTOMER1_E1_1.get(x716) == k))
+          }
+          x714
         }) + v)
     }
-    CUSTDIST_mORDERS1_E1_4.add(x512, 1L)
-    CUSTDIST_mCUSTOMER1_E1_1.add(x512, x570)
+
+    CUSTDIST_mORDERS1_E1_4.add(c_custkey, 1L)
+    CUSTDIST_mCUSTOMER1_E1_1.add(c_custkey, e)
   }
+  /*
+  CUSTDIST(int)[][C_ORDERS_C_COUNT]:(AggSum([C_ORDERS_C_COUNT],((Exists(CUSTDIST_mCUSTOMER1_E1_1(int)[][C_ORDERS_C_CUSTKEY]) * (C_ORDERS_C_COUNT ^= CUSTDIST_mCUSTOMER1_E1_1(int)[][C_ORDERS_C_CUSTKEY]))))) +=
+  let k = C_ORDERS_C_CUSTKEY
+  let v = CUSTDIST_mCUSTOMER1_E1_1(int)[][k]
+  let e = CUSTDIST_mCUSTOMER1_E1_3(int)[][CUSTOMER_CUSTKEY]
+  let x = v + ((k ^= CUSTOMER_CUSTKEY) * e))
+  (((
+  AggSum([C_ORDERS_C_COUNT],
+    (EXISTS(v) *
+    (C_ORDERS_C_COUNT ^= v)))
+  +
+  AggSum([C_ORDERS_C_COUNT],
+    (EXISTS((x) *
+    (C_ORDERS_C_COUNT ^= v)))
+  ) * -1) +
+  AggSum([C_ORDERS_C_COUNT],
+    (EXISTS((x) *
+    (C_ORDERS_C_COUNT ^= v)))
+  +
+  AggSum([C_ORDERS_C_COUNT],
+    (EXISTS((x) *
+    (C_ORDERS_C_COUNT ^= x))
+  );
+  */
+
+
+/*
+  def onInsertCUSTOMER(c_custkey: Long, x513: String, x514: String, x515: Long, x516: String, x517: Double, x518: String, x519: String): Unit = {
+/*
+    val e13 = CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey)
+
+    val tmp11 = K3Map.make[Long,Long]() // XXX: fix types
+    val tmp14 = K3Map.make[Long,Long]() // XXX: fix types
+    // filling tmp11
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k13,v13) =>
+      val c_orders_c_custkey = k13;
+      val c_orders_c_count = v13;
+      tmp11.add(c_orders_c_count,(c_orders_c_count != 0));
+      val c_orders_c_count11 = (v13 + ((c_orders_c_custkey == c_custkey) * e13));
+      if (c_orders_c_count == c_orders_c_count11) {
+        tmp14.add(c_orders_c_count11,(c_orders_c_count11 != 0));
+      }
+    }
+
+    // --------------- XXX: no clue how we could generate this !!!
+    tmp14.add(CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey) + (c_custkey == c_custkey) * e13, e13 != 0L)
+    // ---------------
+
+    // using tmp11
+    tmp11.foreach { case (k14,v14) =>
+      val tmp15 = K3Map.make[Long,Long]() // XXX: fix types
+      // filling tmp15
+      CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k18,v18) =>
+        val c_orders_c_custkey = k18;
+        val c_orders_c_count = v18;
+        tmp15.add(c_orders_c_count,(c_orders_c_count != 0));
+      }
+
+      // using tmp15
+      if (CUSTDIST.get(k14)==0) CUSTDIST.set(k14,tmp15.get(k14));
+      CUSTDIST.add(k14,-v14 + tmp14.get(k14));
+    }
+    CUSTDIST_mORDERS1_E1_4.add(c_custkey,1L);
+    CUSTDIST_mCUSTOMER1_E1_1.add(c_custkey,e13);
+*/
+
+
+    val temp = new Temp[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val e = CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey)
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) =>
+      temp.add(v, -(v != 0L))
+      temp.add(v + (c_custkey == k) * e, v != 0L)
+      
+    }
+    
+    val kk = CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey) + (c_custkey == c_custkey) * e
+    val c1 = (temp.get(kk)!=0)
+    if (CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey)==0) // MISSING
+    temp.add(CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey) + (c_custkey == c_custkey) * e, e != 0L)
+    val c2 = (temp.get(kk)!=0)
+    if (c1==c2 && c1) println("contains both")
+
+
+    temp.foreach { case (k,v) =>
+        if (CUSTDIST.get(k)==0) CUSTDIST.set(k,CUSTDIST_mCUSTOMER1_E1_1.aggr((k2:Long,v2:Long)=> (v2!=0L)*(v2==k)))
+        CUSTDIST.add(k, v)
+    }
+    CUSTDIST_mORDERS1_E1_4.add(c_custkey, 1L)
+    CUSTDIST_mCUSTOMER1_E1_1.add(c_custkey, e)
+
+
+/*
+VERIFY FOR THIS BUG
+Test case: m
++ C1
+...
+-----> result
+- C1
++ C1
+-----> result must be equal
+
+*/
+
+
+/*
+    val e = CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey)
+    val temp1 = new Temp[Long,Long]()
+    val temp2 = new Temp[Long,Long]() 
+    val temp3 = new Temp[Long,Long]()
+    val temp4 = new Temp[Long,Long]()
+
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) =>
+      val x = v + (k==c_custkey) * e
+      temp1.add(v,v != 0)
+      temp2.add(v,x != 0)
+      temp3.add(v,x != 0)
+      temp4.add(x,x != 0)
+    }
+    // XXX: how did we obtained this ? (because CUSTDIST might contain zero)
+    if (!CUSTDIST_mCUSTOMER1_E1_1.contains(c_custkey)) {
+      //temp4.add(CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey) + (c_custkey == c_custkey) * e, e !=0L)
+      temp4.add(e, e !=0L)
+    }
+
+    temp1.foreach { case (k,v) => if (temp2.get(k)!=null && temp3.get(k)!=null && temp4.get(k)!=null) {
+      if (CUSTDIST.get(k)==0) CUSTDIST.set(k,CUSTDIST_mCUSTOMER1_E1_1.aggr((k2:Long,v2:Long) => v2==k))
+      CUSTDIST.add(k, (temp1.getz(k) + temp2.getz(k)) * -1 + temp3.getz(k) + temp4.getz(k) )
+    }}
+    CUSTDIST_mORDERS1_E1_4.add(c_custkey,1L)
+    CUSTDIST_mCUSTOMER1_E1_1.add(c_custkey,e)
+*/
+
+  }
+*/
+
+  import scala.reflect.ClassTag
+  class Temp[K,V:ClassTag] extends java.util.HashMap[K,V] {
+    val plus = K3Helper.make_plus[V]()
+    val zero = K3Helper.make_zero[V]()
+    def add(k:K,v:V) { val v0 = get(k); put(k,if (v0!=null) plus(v0,v) else v); }
+    def getz(k:K) = { val v0=get(k); if (v0==null) zero else v0 }
+    def foreach(f:(K,V)=>Unit) { scala.collection.JavaConversions.mapAsScalaMap[K,V](this).foreach{ case (k,v)=> f(k,v) } }
+  };
+
 
   // unoptimized as not used
   def onDeleteORDERS(x756: Long, x757: Long, x758: String, x759: Double, x760: Date, x761: String, x762: String, x763: Long, x764: String): Unit = {
@@ -213,11 +398,7 @@ class TPCH13Ref extends Actor {
          x24 =>
             val x25 = x24._1
             val x33 = x19.lookup(x25, 0L)
-            x23.updateValue(x33, ((x23.lookup(x33, 0L)) + (if (((x24._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x23.updateValue(x33, ((x23.lookup(x33, 0L)) + ((x24._2) != 0L)))
       }
       x23.foreach {
          x44 =>
@@ -242,11 +423,7 @@ class TPCH13Ref extends Actor {
          x76 =>
             val x77 = x76._1
             val x85 = x19.lookup(x77, 0L)
-            x75.updateValue(x85, ((x75.lookup(x85, 0L)) + (if (((x76._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x75.updateValue(x85, ((x75.lookup(x85, 0L)) + ((x76._2) != 0L)))
       }
       x75.foreach {
          x96 =>
@@ -270,11 +447,7 @@ class TPCH13Ref extends Actor {
          x129 =>
             val x130 = x129._1
             val x138 = x19.lookup(x130, 0L)
-            x128.updateValue(x138, ((x128.lookup(x138, 0L)) + (if (((x129._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x128.updateValue(x138, ((x128.lookup(x138, 0L)) + ((x129._2) != 0L)))
       }
       x128.foreach {
          x149 =>
@@ -292,16 +465,8 @@ class TPCH13Ref extends Actor {
       x157.foreach {
          x172 =>
             val x173 = x172._1
-            val x190 = (x19.lookup(x173, 0L)) + (((if ((x7 == x173)) {
-               1L
-            } else {
-               0L
-            }) * x64) * (x18.lookup(x7, 0L)))
-            x171.updateValue(x190, ((x171.lookup(x190, 0L)) + (if (((x172._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            val x190 = (x19.lookup(x173, 0L)) + (((x7 == x173) * x64) * (x18.lookup(x7, 0L)))
+            x171.updateValue(x190, ((x171.lookup(x190, 0L)) + ((x172._2) != 0L)))
       }
       x171.foreach {
          x201 =>
@@ -318,15 +483,7 @@ class TPCH13Ref extends Actor {
                x19.foreach {
                   x216 =>
                      val x217 = x216._1
-                     x215 = ((x215) + ((if (((x216._2) != 0L)) {
-                        1L
-                     } else {
-                        0L
-                     }) * (if (((x19.lookup(x217, 0L)) == x210)) {
-                        1L
-                     } else {
-                        0L
-                     })))
+                     x215 = ((x215) + (((x216._2) != 0L) * ((x19.lookup(x217, 0L)) == x210)))
                }
                (x215)
             }) + (x209._2)))
@@ -348,11 +505,7 @@ class TPCH13Ref extends Actor {
          x282 =>
             val x283 = x282._1
             val x291 = x277.lookup(x283, 0L)
-            x281.updateValue(x291, ((x281.lookup(x291, 0L)) + (if (((x282._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x281.updateValue(x291, ((x281.lookup(x291, 0L)) + ((x282._2) != 0L)))
       }
       x281.foreach {
          x302 =>
@@ -372,11 +525,7 @@ class TPCH13Ref extends Actor {
          x331 =>
             val x332 = x331._1
             val x340 = x277.lookup(x332, 0L)
-            x330.updateValue(x340, ((x330.lookup(x340, 0L)) + (if (((x331._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x330.updateValue(x340, ((x330.lookup(x340, 0L)) + ((x331._2) != 0L)))
       }
       x330.foreach {
          x351 =>
@@ -400,11 +549,7 @@ class TPCH13Ref extends Actor {
          x384 =>
             val x385 = x384._1
             val x393 = x277.lookup(x385, 0L)
-            x383.updateValue(x393, ((x383.lookup(x393, 0L)) + (if (((x384._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x383.updateValue(x393, ((x383.lookup(x393, 0L)) + ((x384._2) != 0L)))
       }
       x383.foreach {
          x404 =>
@@ -422,16 +567,8 @@ class TPCH13Ref extends Actor {
       x412.foreach {
          x427 =>
             val x428 = x427._1
-            val x445 = (x277.lookup(x428, 0L)) + (((if ((x265 == x428)) {
-               1L
-            } else {
-               0L
-            }) * (x278.lookup(x265, 0L))) * -1L)
-            x426.updateValue(x445, ((x426.lookup(x445, 0L)) + (if (((x427._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            val x445 = (x277.lookup(x428, 0L)) + (((x265 == x428) * (x278.lookup(x265, 0L))) * -1L)
+            x426.updateValue(x445, ((x426.lookup(x445, 0L)) + ((x427._2) != 0L)))
       }
       x426.foreach {
          x456 =>
@@ -448,15 +585,7 @@ class TPCH13Ref extends Actor {
                x277.foreach {
                   x471 =>
                      val x472 = x471._1
-                     x470 = ((x470) + ((if (((x471._2) != 0L)) {
-                        1L
-                     } else {
-                        0L
-                     }) * (if (((x277.lookup(x472, 0L)) == x465)) {
-                        1L
-                     } else {
-                        0L
-                     })))
+                     x470 = ((x470) + (((x471._2) != 0L) * ((x277.lookup(x472, 0L)) == x465)))
                }
                (x470)
             }) + (x464._2)))
@@ -477,11 +606,7 @@ class TPCH13Ref extends Actor {
          x529 =>
             val x530 = x529._1
             val x538 = x524.lookup(x530, 0L)
-            x528.updateValue(x538, ((x528.lookup(x538, 0L)) + (if (((x529._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x528.updateValue(x538, ((x528.lookup(x538, 0L)) + ((x529._2) != 0L)))
       }
       x528.foreach {
          x549 =>
@@ -501,11 +626,7 @@ class TPCH13Ref extends Actor {
          x576 =>
             val x577 = x576._1
             val x585 = x524.lookup(x577, 0L)
-            x575.updateValue(x585, ((x575.lookup(x585, 0L)) + (if (((x576._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x575.updateValue(x585, ((x575.lookup(x585, 0L)) + ((x576._2) != 0L)))
       }
       x575.foreach {
          x596 =>
@@ -529,11 +650,7 @@ class TPCH13Ref extends Actor {
          x629 =>
             val x630 = x629._1
             val x638 = x524.lookup(x630, 0L)
-            x628.updateValue(x638, ((x628.lookup(x638, 0L)) + (if (((x629._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x628.updateValue(x638, ((x628.lookup(x638, 0L)) + ((x629._2) != 0L)))
       }
       x628.foreach {
          x649 =>
@@ -551,16 +668,8 @@ class TPCH13Ref extends Actor {
       x657.foreach {
          x672 =>
             val x673 = x672._1
-            val x689 = (x524.lookup(x673, 0L)) + ((if ((x512 == x673)) {
-               1L
-            } else {
-               0L
-            }) * (x525.lookup(x512, 0L)))
-            x671.updateValue(x689, ((x671.lookup(x689, 0L)) + (if (((x672._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            val x689 = (x524.lookup(x673, 0L)) + ((x512 == x673) * (x525.lookup(x512, 0L)))
+            x671.updateValue(x689, ((x671.lookup(x689, 0L)) + ((x672._2) != 0L)))
       }
       x671.foreach {
          x700 =>
@@ -577,15 +686,7 @@ class TPCH13Ref extends Actor {
                x524.foreach {
                   x715 =>
                      val x716 = x715._1
-                     x714 = ((x714) + ((if (((x715._2) != 0L)) {
-                        1L
-                     } else {
-                        0L
-                     }) * (if (((x524.lookup(x716, 0L)) == x709)) {
-                        1L
-                     } else {
-                        0L
-                     })))
+                     x714 = ((x714) + (((x715._2) != 0L) * ((x524.lookup(x716, 0L)) == x709)))
                }
                (x714)
             }) + (x708._2)))
@@ -606,11 +707,7 @@ class TPCH13Ref extends Actor {
          x774 =>
             val x775 = x774._1
             val x783 = x769.lookup(x775, 0L)
-            x773.updateValue(x783, ((x773.lookup(x783, 0L)) + (if (((x774._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x773.updateValue(x783, ((x773.lookup(x783, 0L)) + ((x774._2) != 0L)))
       }
       x773.foreach {
          x794 =>
@@ -635,11 +732,7 @@ class TPCH13Ref extends Actor {
          x828 =>
             val x829 = x828._1
             val x837 = x769.lookup(x829, 0L)
-            x827.updateValue(x837, ((x827.lookup(x837, 0L)) + (if (((x828._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x827.updateValue(x837, ((x827.lookup(x837, 0L)) + ((x828._2) != 0L)))
       }
       x827.foreach {
          x848 =>
@@ -663,11 +756,7 @@ class TPCH13Ref extends Actor {
          x881 =>
             val x882 = x881._1
             val x890 = x769.lookup(x882, 0L)
-            x880.updateValue(x890, ((x880.lookup(x890, 0L)) + (if (((x881._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            x880.updateValue(x890, ((x880.lookup(x890, 0L)) + ((x881._2) != 0L)))
       }
       x880.foreach {
          x901 =>
@@ -685,16 +774,8 @@ class TPCH13Ref extends Actor {
       x909.foreach {
          x924 =>
             val x925 = x924._1
-            val x943 = (x769.lookup(x925, 0L)) + ((((if ((x757 == x925)) {
-               1L
-            } else {
-               0L
-            }) * x814) * (x768.lookup(x757, 0L))) * -1L)
-            x923.updateValue(x943, ((x923.lookup(x943, 0L)) + (if (((x924._2) != 0L)) {
-               1L
-            } else {
-               0L
-            })))
+            val x943 = (x769.lookup(x925, 0L)) + ((((x757 == x925) * x814) * (x768.lookup(x757, 0L))) * -1L)
+            x923.updateValue(x943, ((x923.lookup(x943, 0L)) + ((x924._2) != 0L)))
       }
       x923.foreach {
          x954 =>
@@ -711,15 +792,7 @@ class TPCH13Ref extends Actor {
                x769.foreach {
                   x969 =>
                      val x970 = x969._1
-                     x968 = ((x968) + ((if (((x969._2) != 0L)) {
-                        1L
-                     } else {
-                        0L
-                     }) * (if (((x769.lookup(x970, 0L)) == x963)) {
-                        1L
-                     } else {
-                        0L
-                     })))
+                     x968 = ((x968) + (((x969._2) != 0L) * ((x769.lookup(x970, 0L)) == x963)))
                }
                (x968)
             }) + (x962._2)))

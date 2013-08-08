@@ -7,10 +7,7 @@ object AXFinderAkka2 extends Helper {
   //import Messages._
   def main(args:Array[String]) {
     val (t,res) = runLocal[AXFinderMaster,AXFinderWorker,Long,Double](2251,4,streamsFinance("standard"))
-    println(time(t))
-    println(K3Helper.toStr(res))
-    
-    
+    println(time(t)); println(K3Helper.toStr(res))
     //K3Helper.toStr(bench("AXFinderAkka2(Network)",10,()=>runLocal[AXFinderMaster,AXFinderWorker,Long,Double](2251,4,streamsFinance("standard")) ))
   }
 }
