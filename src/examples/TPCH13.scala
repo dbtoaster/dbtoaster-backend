@@ -37,7 +37,10 @@ class TPCH13 extends Actor {
     case SystemInit => t0=System.nanoTime()
     case TupleEvent(TupleInsert,"ORDERS",tx,List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onInsertORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
     case TupleEvent(TupleDelete,"ORDERS",tx,List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onDeleteORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
-    case TupleEvent(TupleInsert,"CUSTOMER",tx,List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onInsertCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
+    case TupleEvent(TupleInsert,"CUSTOMER",tx,List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) =>
+       onInsertCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
+       onInsertCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
+       onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case TupleEvent(TupleDelete,"CUSTOMER",tx,List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,result.toMap)
   }
@@ -110,7 +113,97 @@ class TPCH13 extends Actor {
     CUSTDIST_mCUSTOMER1_E1_1.add(x265, x325)
   }
 
+
+
+
+
+
   def onInsertCUSTOMER(c_custkey: Long, x513: String, x514: String, x515: Long, x516: String, x517: Double, x518: String, x519: String): Unit = {
+    val tmp11 = K3Map.make[Long,Long]() // XXX: fix types
+    // filling tmp11
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k19,v19) =>
+      val C_ORDERS_C_CUSTKEY = k19;
+      val C_ORDERS_C_COUNT = v19;
+      tmp11.add(C_ORDERS_C_COUNT,(C_ORDERS_C_COUNT != 0));
+    }
+    // using tmp11
+    tmp11.foreach { case (k20,v20) =>
+      val C_ORDERS_C_COUNT = k20;
+      val tmp12 = K3Map.make[Long,Long]() // XXX: fix types
+      // filling tmp12
+      var ex5:Long = 0L
+      val tmp_add7 = K3Map.temp[Long,Long]() // XXX: fix types
+      CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k22,v22) =>
+        val C_ORDERS_C_CUSTKEY = k22;
+        tmp_add7.add(C_ORDERS_C_CUSTKEY,v22)
+      }
+      tmp_add7.add(c_custkey,CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey))
+      tmp_add7.foreach{ (k21,v21) =>
+        ex5 |= (v21)!=0;
+      }
+/*
+      if (C_ORDERS_C_COUNT == C_ORDERS_C_COUNT9) {
+        tmp12.add(C_ORDERS_C_COUNT9,(ex5 * (C_ORDERS_C_COUNT9 == CUSTDIST_mCUSTOMER1_E1_1.get(C_ORDERS_C_CUSTKEY))));
+      }
+*/
+      // using tmp12
+      val tmp13 = K3Map.make[Long,Long]() // XXX: fix types
+      // filling tmp13
+      var ex6:Long = 0L
+      val tmp_add8 = K3Map.temp[Long,Long]() // XXX: fix types
+      CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k24,v24) =>
+        val C_ORDERS_C_CUSTKEY = k24;
+        tmp_add8.add(C_ORDERS_C_CUSTKEY,v24)
+      }
+      tmp_add8.add(c_custkey,CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey))
+      tmp_add8.foreach{ (k23,v23) =>
+        ex6 |= (v23)!=0;
+      }
+/*
+      if (C_ORDERS_C_COUNT == C_ORDERS_C_COUNT10) {
+        tmp13.add(C_ORDERS_C_COUNT10,(ex6 * (C_ORDERS_C_COUNT10 == CUSTDIST_mCUSTOMER1_E1_1.get(C_ORDERS_C_CUSTKEY))));
+      }
+*/
+      // using tmp13
+      val tmp14 = K3Map.make[Long,Long]() // XXX: fix types
+      // filling tmp14
+      val tmp_add9 = K3Map.temp[Long,Long]() // XXX: fix types
+      CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k26,v26) =>
+        val C_ORDERS_C_CUSTKEY = k26;
+        tmp_add9.add(C_ORDERS_C_CUSTKEY,v26)
+      }
+      tmp_add9.add(c_custkey,CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey))
+      tmp_add9.foreach{ (k25,v25) =>
+        val C_ORDERS_C_COUNT11 = v25;
+        if (C_ORDERS_C_COUNT == C_ORDERS_C_COUNT11) {
+          tmp14.add(C_ORDERS_C_COUNT11,(C_ORDERS_C_COUNT11 != 0));
+        }
+      }
+      // using tmp14
+      val tmp15 = K3Map.make[Long,Long]() // XXX: fix types
+      // filling tmp15
+      CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k27,v27) =>
+        val C_ORDERS_C_CUSTKEY = k27;
+        val C_ORDERS_C_COUNT12 = v27;
+        if (C_ORDERS_C_COUNT == C_ORDERS_C_COUNT12) {
+          tmp15.add(C_ORDERS_C_COUNT12,(C_ORDERS_C_COUNT12 != 0));
+        }
+      }
+      // using tmp15
+      if (CUSTDIST.get(C_ORDERS_C_COUNT)==0) CUSTDIST.set(C_ORDERS_C_COUNT,tmp15.get(C_ORDERS_C_COUNT));
+      CUSTDIST.add(C_ORDERS_C_COUNT,(((v20 + tmp12.get(C_ORDERS_C_COUNT)) * -1L) + (tmp13.get(C_ORDERS_C_COUNT) + tmp14.get(C_ORDERS_C_COUNT))));
+    }
+    CUSTDIST_mORDERS1_E1_4.add(c_custkey,1L);
+    CUSTDIST_mCUSTOMER1_E1_1.add(c_custkey,CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey));
+  }
+
+
+
+
+
+
+
+  def onInsertCUSTOMER2(c_custkey: Long, x513: String, x514: String, x515: Long, x516: String, x517: Double, x518: String, x519: String): Unit = {
     val e = CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey)
 
     /*
@@ -124,40 +217,107 @@ class TPCH13 extends Actor {
       CUSTDIST.add(k, v)
     }
     */
+    // XXX: for network, create a K3MapWrapper that executes remotely and contains code for executing locally, then chain responder for messages
+
+    import scala.reflect.ClassTag
+    def group[K,V:ClassTag,K2,V2:ClassTag](m:K3Map[K,V],ks:List[K]=Nil)(f:(K,V)=>(K2,V2)):K3Temp[K2,V2] = {
+      val out = new K3TempImp[K2,V2]()
+      m.foreach{ (k,v) => val r=f(k,v); out.add(r._1,r._2); }
+      val z = K3Helper.make_zero[V]()
+      ks.foreach { k => if (m.get(k)==z) { val r=f(k,z); out.add(r._1,r._2) } }
+      out
+    }
+    
+    def unify[K](ts:List[K3Temp[K,_]]):Set[K] = {
+      var s = Set[K]()
+      ts.foreach{t=>t.foreach{ (k,v) => s=s+k }}
+      s
+    }
+
     // (A + B) * -1 + C + D
-    val x526 = new Temp[Long, Long]()
+    val tmp1 = group[Long,Long,Long,Long](CUSTDIST_mCUSTOMER1_E1_1){(k,v)=>(v,v!=0L)}
+    val tmp2 = group[Long,Long,Long,Long](CUSTDIST_mCUSTOMER1_E1_1,List(c_custkey)){(k,v)=>{ val x=v+(k==c_custkey)*e; (v,x!=0L) }}
+    val tmp3 = group[Long,Long,Long,Long](CUSTDIST_mCUSTOMER1_E1_1,List(c_custkey)){(k,v)=>{ val x=v+(k==c_custkey)*e; (v,x!=0L) }}
+    val tmp4 = group[Long,Long,Long,Long](CUSTDIST_mCUSTOMER1_E1_1,List(c_custkey)){(k,v)=>{ val x=v+(k==c_custkey)*e; (x,x!=0L) }}
+    
+    // XXX: implement operators on the product of sets and union of sets ?
+    // XXX: also product with integer / double and sum with integer / double
+    
+    val s = unify[Long](List(tmp1,tmp2,tmp3))
+    s.foreach {
+      case k =>
+        if (CUSTDIST.get(k)==0L) CUSTDIST.set(k, CUSTDIST_mCUSTOMER1_E1_1.aggr{ (k2,v2) =>(v2 != 0L) * (v2 == k)})
+        CUSTDIST.add(k, (tmp1.get(k)+tmp2.get(k)) * -1 + tmp3.get(k) + tmp4.get(k) )
+    }
+    
+    
+
+    /*
+    val x526 = K3Map.temp[Long, Long]()
     // (A + B)
-    val x527 = new Temp[Long, Long]()
+    val x527 = K3Map.temp[Long, Long]()
+    
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x527.add(v, v != 0L) }
-    val x557 = new Temp[Long, Long]()
+    //group(CUSTDIST_mCUSTOMER1_E1_1,x527,(k:Long,v:Long)=>(v,boolConv(v!=0L)),List(c_custkey))
+
+    
+    val x557 = K3Map.temp[Long, Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x557.add(k, v) }
     x557.add(c_custkey, e)
     x557.foreach { (k,v) => val x585 = CUSTDIST_mCUSTOMER1_E1_1.get(k); x527.add(x585, v != 0L) }
     x527.foreach { (k,v) => x526.add(k, v * -1L) }
     // C
-    val x614 = new Temp[Long, Long]()
-    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x614.add(k, v) }
+    val x614 = K3Map.temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x614.add(k, v) }
     x614.add(c_custkey, e)
     x614.foreach { (k,v) => val x638 = CUSTDIST_mCUSTOMER1_E1_1.get(k); x526.add(x638, v != 0L) }
     // D
-    val x657 = new Temp[Long, Long]()
-    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x657.add(k, v) }
+    val x657 = K3Map.temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x657.add(k, v) }
     x657.add(c_custkey, e)
     x657.foreach { (k,v) =>
-        val x689 = CUSTDIST_mCUSTOMER1_E1_1.get(k) + ((c_custkey == k) * CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey))
+        val x689 = CUSTDIST_mCUSTOMER1_E1_1.get(k) + ((c_custkey == k) * e)
+        x526.add(x689, v != 0L)
+    }
+    
+    // Update
+    x526.foreach { (k,v) =>
+      if (CUSTDIST.get(k)==0L) CUSTDIST.set(k, CUSTDIST_mCUSTOMER1_E1_1.aggr{ (k2,v2) =>(v2 != 0L) * (v2 == k)})
+      CUSTDIST.add(k, v)
+    }
+    */
+
+    
+    /*
+    // (A + B) * -1 + C + D
+    val x526 = K3Map.temp[Long, Long]()
+    // (A + B)
+    val x527 = K3Map.temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x527.add(v, v != 0L) }
+    val x557 = K3Map.temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x557.add(k, v) }
+    x557.add(c_custkey, e)
+    x557.foreach { (k,v) => val x585 = CUSTDIST_mCUSTOMER1_E1_1.get(k); x527.add(x585, v != 0L) }
+    x527.foreach { (k,v) => x526.add(k, v * -1L) }
+    // C
+    val x614 = K3Map.temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x614.add(k, v) }
+    x614.add(c_custkey, e)
+    x614.foreach { (k,v) => val x638 = CUSTDIST_mCUSTOMER1_E1_1.get(k); x526.add(x638, v != 0L) }
+    // D
+    val x657 = K3Map.temp[Long, Long]()
+    CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x657.add(k, v) }
+    x657.add(c_custkey, e)
+    x657.foreach { (k,v) =>
+        val x689 = CUSTDIST_mCUSTOMER1_E1_1.get(k) + ((c_custkey == k) * e)
         x526.add(x689, v != 0L)
     }
     // Update
-    x526.foreach { case (k,v) =>
-        CUSTDIST.set(k, (if (CUSTDIST.get(k)!=0L) CUSTDIST.get(k) else {
-          var x714: Long = 0L
-          CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k2,v2) =>
-              val x716 = k2
-              x714 += ((v2 != 0L) * (CUSTDIST_mCUSTOMER1_E1_1.get(x716) == k))
-          }
-          x714
-        }) + v)
+    x526.foreach { (k,v) =>
+      if (CUSTDIST.get(k)==0L) CUSTDIST.set(k, CUSTDIST_mCUSTOMER1_E1_1.aggr{ (k2,v2) =>(v2 != 0L) * (v2 == k)})
+      CUSTDIST.add(k, v)
     }
+    */
 
     CUSTDIST_mORDERS1_E1_4.add(c_custkey, 1L)
     CUSTDIST_mCUSTOMER1_E1_1.add(c_custkey, e)
@@ -186,126 +346,6 @@ class TPCH13 extends Actor {
     (C_ORDERS_C_COUNT ^= x))
   );
   */
-
-
-/*
-  def onInsertCUSTOMER(c_custkey: Long, x513: String, x514: String, x515: Long, x516: String, x517: Double, x518: String, x519: String): Unit = {
-/*
-    val e13 = CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey)
-
-    val tmp11 = K3Map.make[Long,Long]() // XXX: fix types
-    val tmp14 = K3Map.make[Long,Long]() // XXX: fix types
-    // filling tmp11
-    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k13,v13) =>
-      val c_orders_c_custkey = k13;
-      val c_orders_c_count = v13;
-      tmp11.add(c_orders_c_count,(c_orders_c_count != 0));
-      val c_orders_c_count11 = (v13 + ((c_orders_c_custkey == c_custkey) * e13));
-      if (c_orders_c_count == c_orders_c_count11) {
-        tmp14.add(c_orders_c_count11,(c_orders_c_count11 != 0));
-      }
-    }
-
-    // --------------- XXX: no clue how we could generate this !!!
-    tmp14.add(CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey) + (c_custkey == c_custkey) * e13, e13 != 0L)
-    // ---------------
-
-    // using tmp11
-    tmp11.foreach { case (k14,v14) =>
-      val tmp15 = K3Map.make[Long,Long]() // XXX: fix types
-      // filling tmp15
-      CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k18,v18) =>
-        val c_orders_c_custkey = k18;
-        val c_orders_c_count = v18;
-        tmp15.add(c_orders_c_count,(c_orders_c_count != 0));
-      }
-
-      // using tmp15
-      if (CUSTDIST.get(k14)==0) CUSTDIST.set(k14,tmp15.get(k14));
-      CUSTDIST.add(k14,-v14 + tmp14.get(k14));
-    }
-    CUSTDIST_mORDERS1_E1_4.add(c_custkey,1L);
-    CUSTDIST_mCUSTOMER1_E1_1.add(c_custkey,e13);
-*/
-
-
-    val temp = new Temp[Long,Long]() // INTERMEDIATE_WITH_UPDATE
-    val e = CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey)
-    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) =>
-      temp.add(v, -(v != 0L))
-      temp.add(v + (c_custkey == k) * e, v != 0L)
-      
-    }
-    
-    val kk = CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey) + (c_custkey == c_custkey) * e
-    val c1 = (temp.get(kk)!=0)
-    if (CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey)==0) // MISSING
-    temp.add(CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey) + (c_custkey == c_custkey) * e, e != 0L)
-    val c2 = (temp.get(kk)!=0)
-    if (c1==c2 && c1) println("contains both")
-
-
-    temp.foreach { case (k,v) =>
-        if (CUSTDIST.get(k)==0) CUSTDIST.set(k,CUSTDIST_mCUSTOMER1_E1_1.aggr((k2:Long,v2:Long)=> (v2!=0L)*(v2==k)))
-        CUSTDIST.add(k, v)
-    }
-    CUSTDIST_mORDERS1_E1_4.add(c_custkey, 1L)
-    CUSTDIST_mCUSTOMER1_E1_1.add(c_custkey, e)
-
-
-/*
-VERIFY FOR THIS BUG
-Test case: m
-+ C1
-...
------> result
-- C1
-+ C1
------> result must be equal
-
-*/
-
-
-/*
-    val e = CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey)
-    val temp1 = new Temp[Long,Long]()
-    val temp2 = new Temp[Long,Long]() 
-    val temp3 = new Temp[Long,Long]()
-    val temp4 = new Temp[Long,Long]()
-
-    CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) =>
-      val x = v + (k==c_custkey) * e
-      temp1.add(v,v != 0)
-      temp2.add(v,x != 0)
-      temp3.add(v,x != 0)
-      temp4.add(x,x != 0)
-    }
-    // XXX: how did we obtained this ? (because CUSTDIST might contain zero)
-    if (!CUSTDIST_mCUSTOMER1_E1_1.contains(c_custkey)) {
-      //temp4.add(CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey) + (c_custkey == c_custkey) * e, e !=0L)
-      temp4.add(e, e !=0L)
-    }
-
-    temp1.foreach { case (k,v) => if (temp2.get(k)!=null && temp3.get(k)!=null && temp4.get(k)!=null) {
-      if (CUSTDIST.get(k)==0) CUSTDIST.set(k,CUSTDIST_mCUSTOMER1_E1_1.aggr((k2:Long,v2:Long) => v2==k))
-      CUSTDIST.add(k, (temp1.getz(k) + temp2.getz(k)) * -1 + temp3.getz(k) + temp4.getz(k) )
-    }}
-    CUSTDIST_mORDERS1_E1_4.add(c_custkey,1L)
-    CUSTDIST_mCUSTOMER1_E1_1.add(c_custkey,e)
-*/
-
-  }
-*/
-
-  import scala.reflect.ClassTag
-  class Temp[K,V:ClassTag] extends java.util.HashMap[K,V] {
-    val plus = K3Helper.make_plus[V]()
-    val zero = K3Helper.make_zero[V]()
-    def add(k:K,v:V) { val v0 = get(k); put(k,if (v0!=null) plus(v0,v) else v); }
-    def getz(k:K) = { val v0=get(k); if (v0==null) zero else v0 }
-    def foreach(f:(K,V)=>Unit) { scala.collection.JavaConversions.mapAsScalaMap[K,V](this).foreach{ case (k,v)=> f(k,v) } }
-  };
-
 
   // unoptimized as not used
   def onDeleteORDERS(x756: Long, x757: Long, x758: String, x759: Double, x760: Date, x761: String, x762: String, x763: Long, x764: String): Unit = {
@@ -801,4 +841,3 @@ class TPCH13Ref extends Actor {
       x770.updateValue(x757, ((x770.lookup(x757, 0L)) + (x814 * -1L)))
    }
 }
-
