@@ -13,6 +13,18 @@ object Compiler {
     println(ScalaGen.genSystem(ir2))
   }
 
+/*
+
+XXX: create a function that allows automated testing of results produced
+by codegen: these must generate output, compile it and then compare
+result with expected result (stored in a file or better: against DBToaster official results)
+
+1. generate class + associated object + streams
+2. compile the class and execute it
+3. compare with textual result
+
+*/
+
   // invoke with any filename in finance or tpch : axfinder, query13, query15, query18, ...
   def main(args: Array[String]) {
     val a = if (args.length>0) args(0) else "axfinder"

@@ -7,10 +7,10 @@ object ScalaGen {
   import scala.collection.mutable.HashMap
   
   private val counter = HashMap[String,Int]()
-  def fresh(name:String="x") = { val c = counter.getOrElse(name,0)+1; counter.put(name,c); name+c }
-  def ind(s:String,n:Int=1) = { val i="  "*n; i+s.replaceAll(" +$","").replace("\n","\n"+i) }
-  def tpe(tp:Type):String = { val s=tp.toString; s.substring(0,1).toUpperCase+s.substring(1).toLowerCase }
-  def tup(vs:List[String]) = { val v=vs.mkString(","); if (vs.size>1) "("+v+")" else v }
+  private def fresh(name:String="x") = { val c = counter.getOrElse(name,0)+1; counter.put(name,c); name+c }
+  private def ind(s:String,n:Int=1) = { val i="  "*n; i+s.replaceAll(" +$","").replace("\n","\n"+i) }
+  private def tpe(tp:Type):String = { val s=tp.toString; s.substring(0,1).toUpperCase+s.substring(1).toLowerCase }
+  private def tup(vs:List[String]) = { val v=vs.mkString(","); if (vs.size>1) "("+v+")" else v }
 
   // Retrieve a list of binding variables
   private def bnd(ex:Expr):Set[String] = ex match {
@@ -76,27 +76,33 @@ object ScalaGen {
     //Lift alone has only bound variables. In Exists*Lift, Exists binds variables for the Lift
     case Mul(Exists(e1),Lift(n,e)) if (e1==e) => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("("+n+" != 0)")) // LiftExist
     case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)")))
-    case Lift(n,e) => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")")) // Lift acts as a constraint
+
+    // ASSERTION IS WRONG (see TPC-H 15)
+    case Lift(n,e) => 
+      if (b.contains(n)) cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")")) // Lift acts as a constraint
+      else cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("1"))
+      //assert(b.contains(n)); cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")")) // Lift acts as a constraint
+
     case Mul(Lift(n,Ref(n2)),er) if (!b.contains(n)) => cpsExpr(er,b,co).replace(n,n2) // optional: dealiasing
     case Mul(Lift(n,e),er) if (!b.contains(n)) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(Mul(Ref(n),er),b+n,co) // 'regular' Lift    
     case Mul(el,er) => cpsExpr(el,b,(vl:String)=>{ cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")")) }) // right is nested in left
     case Add(el,er) => 
       /*
        * Add is more complicated than Mul. What we want to do is compute the union of the left and right
-       * hand-side domains for a free variable that is present in both domains and then iterate the formula
-       * over this domain. More concretely: compare f(A*B) and f(A+B), where dom(A)!=dom(B) we would generate
+       * hand-side domains for a free variable that is present in both sides and then iterate the formula
+       * over this domain. More concretely: to generate f(A*B) and f(A+B), where dom(A)!=dom(B) we do
        *
-       * f(A*B) --> A.foreach{ (k_a,v_a) => B.foreach { (k_b,v_b) => f(v_a * v_b) } }
-       * f(A+B) --> val dom=A.keySet++B.keySet; dom.foreach { k => f(A.get(k) + B.get(k)) }
+       *    f(A*B) --> A.foreach{ (k_a,v_a) => B.foreach { (k_b,v_b) => f(v_a * v_b) } }
+       *    f(A+B) --> val dom=A.keySet++B.keySet; dom.foreach { k => f(A.get(k) + B.get(k)) }
        *
-       * However, computing the exact domain might be hard, if it maps key portions. An alternative is
+       * However, computing domain union might be hard, if it maps key portions. An alternative is [domA(k_a)=domB(k_b)=dom]
        *
-       *  val t = Temp[dom(A+B),A+B]
-       *  A.foreach{ (k_a,v_a) => t.add(domA(k_a),v_a) }
-       *  B.foreach{ (k_b,v_b) => t.add(domA(k_b),v_b) }
-       *  x.foreach { (k,v) => f(v) }
-       *
+       *    val t = Temp[dom(A+B),A+B]
+       *    A.foreach{ (k_a,v_a) => t.add(domA(k_a),v_a) }
+       *    B.foreach{ (k_b,v_b) => t.add(domB(k_b),v_b) }
+       *    x.foreach { (k,v) => f(v) }
        */
+       /*
        def dom(v:String,ex:Expr):String = ex match {
          case Lift(n,Ref(x)) if (v==n) => x
          case Mul(l,r) => val ll=dom(v,l); if (ll!=null) ll else dom(v,r)
@@ -105,6 +111,7 @@ object ScalaGen {
          case MapRef(n,tp,ks) => if (ks.contains(v)) n+".key("+ks.indexOf(v)+")" else null
          case _ => null
        }
+       */
        val bl = (bnd(el)--b) //.filter{v=>dom(v,el)!=null} // variable that have a specified domain
        val br = (bnd(er)--b) //.filter{v=>dom(v,er)!=null}
        val vs = (bl & br).toList
@@ -116,7 +123,6 @@ object ScalaGen {
          cpsExpr(el,b,(v:String)=>t0+".add("+tup(vs)+","+v+")")+"\n"+
          cpsExpr(er,b,(v:String)=>t0+".add("+tup(vs)+","+v+")")+"\n"+
          t0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-         // XXX: BUG: we want to bind more variable before using the continuation
          (if (vs.size==1) "val "+vs(0)+" = "+k0+"\n" else vs.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
        } else cpsExpr(el,b,(vl:String)=>{ cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")")) }) // right is nested in left
     
@@ -130,19 +136,12 @@ object ScalaGen {
         
         val t0=fresh("tmp")
         "val "+t0+" = K3Map.make[Long,Long]() // XXX: fix types\n"+
-        "// filling "+t0+" (ks = "+ks.toList+")\n"+
         cpsExpr(rename(e,r),b++ks.map(r).toSet,(v:String)=> {
           val s=t0+".add("+tup(ks.map(r))+","+v+");"
-          if (bs.size==0) s else {
-            "if ("+bs.map{ b=>b+" == "+r(b) }.mkString(" && ")+") {\n"+ind(s)+"\n}"
-          }
-        }
-        )+"\n"+
-        "// using "+t0+"\n"+
+          if (bs.size==0) s else "if ("+bs.map{ b=>b+" == "+r(b) }.mkString(" && ")+") {\n"+ind(s)+"\n}"
+        })+"\n"+
         cpsExpr(MapRef(t0,TypeLong,ks),b,co)
       }
-
-
 /*
         val t0=fresh("tmp")
         "val "+t0+" = K3Map.make[Long,Long]() // XXX: fix types\n"+
@@ -160,9 +159,6 @@ object ScalaGen {
         // mark binding variables with outer tag
         // generate inner normally
         // add extra comparison with bound variables
-      
-      
-
 /*
       // co type can be : apply, aggregation, existence
       // add a special primitive for aggregation with keys => groupBy()
@@ -195,8 +191,8 @@ object ScalaGen {
 */
 
     case Exists(e) => val e0=fresh("ex");
-      if ((bnd(e)--b).size==0) "val "+e0+" = ("+cpsExpr(e,b,(v:String)=>e0)+") != 0;\n"+co(e0)
-      else "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0)
+      //if ((bnd(e)--b).size==0) "val "+e0+" = ({"+cpsExpr(e,b,(v:String)=>e0)+"}) != 0;\n"+co(e0) else
+      "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0)
     case app@Apply(f,tp,as) => if (as.filter(!_.isInstanceOf[Const]).size==0) co(constApply(app)) // hoist constants resulting from function application
       else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,b,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+f) }
     case Cmp(l,r,op) => co(cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"("+ll+" "+(if (op==OpEq) "==" else op)+" "+rr+")")))
@@ -236,7 +232,7 @@ object ScalaGen {
     else {
       val tk = tup(m.keys.map(x=>tpe(x._2)))
       val s = sx.getOrElse(m.name,List[List[Int]]())
-      val ix = if (s.size==0) "Nil" else "List("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+")"
+      val ix = if (s.size==0) "" else "List("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+")"
       "val "+m.name+" = K3Map.make["+tk+","+tpe(m.tp)+"]("+ix+");"
     }
   }
