@@ -75,10 +75,10 @@ object ScalaGen {
       }
     //Lift alone has only bound variables. In Exists*Lift, Exists binds variables for the Lift
     case Mul(Exists(e1),Lift(n,e)) if (e1==e) => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("("+n+" != 0)")) // LiftExist
+
+    case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)")))
     case Lift(n,e) => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")")) // Lift acts as a constraint
-    
     case Mul(Lift(n,Ref(n2)),er) if (!b.contains(n)) => cpsExpr(er,b,co).replace(n,n2) // optional: dealiasing
-    
     case Mul(Lift(n,e),er) if (!b.contains(n)) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(Mul(Ref(n),er),b+n,co) // 'regular' Lift    
     case Mul(el,er) => cpsExpr(el,b,(vl:String)=>{ cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")")) }) // right is nested in left
     case Add(el,er) => 
@@ -106,18 +106,20 @@ object ScalaGen {
          case MapRef(n,tp,ks) => if (ks.contains(v)) n+".key("+ks.indexOf(v)+")" else null
          case _ => null
        }
-       val vs = (bnd(el)&bnd(er)).toList
-       if (vs.filter{v=>dom(v,el)!=null && dom(v,er)!=null}.size>0) {
+       val bl = (bnd(el)--b) //.filter{v=>dom(v,el)!=null} // variable that have a specified domain
+       val br = (bnd(er)--b) //.filter{v=>dom(v,er)!=null}
+       
+       val vs = (bl & br).toList
+       if (vs.size>0) {
          val t0=fresh("tmp_add");
          val k0=fresh("k")
          val v0=fresh("v")
          "val "+t0+" = K3Map.temp[Long,Long]() // XXX: fix types"+"\n"+
          cpsExpr(el,b,(v:String)=>t0+".add("+tup(vs)+","+v+")")+"\n"+
          cpsExpr(er,b,(v:String)=>t0+".add("+tup(vs)+","+v+")")+"\n"+
-         t0+".foreach{ ("+k0+","+v0+") =>\n"+ind(co(v0))+"\n}"
-         //"// DOMAIN_UNION {"+vs.map{v=> v+"->"+dom(v,el)+" & "+dom(v,er)}.mkString("; ")+"}\n" else "")
-       } else cpsExpr(el,b,(vl:String)=>{ cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" + "+vr+")")) }) // right is nested in left
-      
+         t0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
+         (if (vs.size==1) "val "+vs(0)+" = "+k0+"\n" else vs.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
+       } else cpsExpr(el,b,(vl:String)=>{ cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")")) }) // right is nested in left
     
     case AggSum(ks,e) =>
       val in = if (ks.size>0) collect(e,{ case Lift(n,x) => Set(n) }) else Set[String]()
@@ -135,9 +137,11 @@ object ScalaGen {
           if (bs.size==0) s else {
             "if ("+bs.map{ b=>b+" == "+r(b) }.mkString(" && ")+") {\n"+ind(s)+"\n}"
           }
-        })+"\n"+
+        }
+        )+"\n"+
         "// using "+t0+"\n"+
         cpsExpr(MapRef(t0,TypeLong,ks),b,co)
+      }
 
 
 /*
@@ -158,7 +162,6 @@ object ScalaGen {
         // generate inner normally
         // add extra comparison with bound variables
       
-      }
       
 
 /*
@@ -180,13 +183,13 @@ object ScalaGen {
         cpsExpr(e,b++ks.toSet,(v:String)=>t0+".add("+tup(ks)+","+v+");")+"\n"+ // filling set
         "// using "+t0+"\n"+
         cpsExpr(MapRef(t0,TypeLong,ks),b,co)
-        /*
+        / *
         s0+".foreach{ case ("+k0+","+v0+") =>\n"+ind(
           (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (k,i)=> "val "+k+" = "+k0+"._"+(i+1)+"\n"}.mkString)+co(v0))+"\n}" // using set
-        */
+        * /
       } else {
         // XXX: fix variables that are already bound outside
-        val a0=fresh("agg"); "var "+a0+":Double = 0 //correct type???\n"+cpsExpr(e,b /*++ks.toSet*/,(v:String)=>a0+" += "+v+";")+"\n"+co(a0) // XXX: we did not use ks. Problem? XXX: convert into slice().aggr()
+        val a0=fresh("agg"); "var "+a0+":Double = 0 //correct type???\n"+cpsExpr(e,b / *++ks.toSet* /,(v:String)=>a0+" += "+v+";")+"\n"+co(a0) // XXX: we did not use ks. Problem? XXX: convert into slice().aggr()
       }
       // val fk = ks.toSet -- b if (fk.size>0) ...
       // XXX: if inner contains element that cannot be bound, create intermediate map ?
