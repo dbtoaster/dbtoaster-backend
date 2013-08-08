@@ -52,7 +52,7 @@ object Split {
  *               deterministic = whether broker id is assigned randomly
  * - CSV       : name = string(schema name)
  *               schema = comma-separated types (see Parser types)
- *               delimited = ","
+ *               delimiter = ","
  *               action = "insert" | "delete" | "both" => col(0):Int=order, col(1):Int=is_insert
  */
 abstract class Adaptor extends Function3[Array[Byte],Int,Int,List[TupleEvent]] // buffer,start,end => events

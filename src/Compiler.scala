@@ -27,6 +27,8 @@ result with expected result (stored in a file or better: against DBToaster offic
 
   // invoke with any filename in finance or tpch : axfinder, query13, query15, query18, ...
   def main(args: Array[String]) {
+    //writeTest("resources/queries/tpch/query13.sql","TPCH13"); return;
+    
     val a = if (args.length>0) args(0) else "axfinder"
     def q(dir:String):Option[String] = {
       val p = "resources/queries/"+dir+"/"+a+".sql"
@@ -87,6 +89,16 @@ result with expected result (stored in a file or better: against DBToaster offic
     val o=out.toString; val e=err.toString
     if (!e.equals("")) println("\nExec: "+cmd+"\n- Out: "+o+"\n- Err: "+e+"\n")
     (o,e)
+  }
+
+  def writeTest(query:String,name:String) {
+    val m3 = toast(query)
+    val ir=M3Parser.parse(m3)
+    val ir2=TypeCheck.fixTypes(ir)
+    val data = ScalaGen.genSystem(ir2,name)
+    val f = new java.io.File("test/"+name+".scala")
+    val p = new java.io.PrintWriter(f)
+    p.print(data); p.close()
   }
 
   /*

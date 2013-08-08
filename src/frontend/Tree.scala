@@ -47,7 +47,7 @@ sealed abstract class Split
 case object SplitLine extends Split { override def toString="LINE DELIMITED" } // deal with \r, \n and \r\n ?
 case class SplitSize(bytes:Int) extends Split { override def toString="FIXEDWIDTH "+bytes }
 case class SplitSep(delim:String) extends Split { override def toString="'"+delim+"' DELIMITED" }
-//case class SplitPrefix(bytes:Int) extends Split { override def toString="PREFIXED "+bytes } // records are prefixed with their length in bytes
+case class SplitPrefix(bytes:Int) extends Split { override def toString="PREFIXED "+bytes } // records are prefixed with their length in bytes
 
 // ---------- Maps declarations
 /*
