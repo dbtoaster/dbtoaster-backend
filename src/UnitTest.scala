@@ -13,7 +13,7 @@ import scala.util.parsing.combinator.RegexParsers
 object UnitParser extends RegexParsers {
   lazy val str = ("\"" ~> """(\\.|[^\"])*""".r <~ "\"" | "'" ~> """(\\.|[^'])*""".r <~ "'") ^^ { x=>x }
   lazy val num = "-?[0-9]+(\\.[0-9]*)?([eE][\\-+]?[0-9]+)?".r //^^ { case x => try { java.lang.Long.parseLong(x) } catch { case _:Exception=> java.lang.Double.parseDouble(x) } }
-  lazy val pat  = """/(\\.|[^/])*/""".r ^^ { x=>x }
+  lazy val pat  = "/" ~> """(\\.|[^/])*""".r <~ "/" ^^ { x=>x.replaceAll("\\\\/","/") } // might need a better solution
 
   // JSON-like map String -> T
   private def map[T](p:Parser[T]) = "{" ~> repsep((str <~ "=>") ~ p,",") <~ "}" ^^ { case rs => rs.map{case n~v=>(n,v)}.toMap }
@@ -55,36 +55,51 @@ object UnitTest {
   import ddbt.frontend._
   import ddbt.codegen._
 
-  //val path_data = "dbtoaster/experiments/data"
+  // First argument is a filter to generate only a particular dataset
+  // sbt run-main ddbt.UnitTest tiny
   def main(args: Array[String]) {
+    val fsz = if (args.length>0 && args(0)!="") (s:String)=>s==args(0) else (s:String)=>true
+  
+    // XXX: add filtering option
+  
     val files=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n")
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
     // XXX: do we need to interpret data in the tests ?
     
     //tests.foreach{ t => 
       val t = tests.filter{t=>t.sql.indexOf("axfinder")!= -1}(0) // we pick one single test for purposes of debugging
-      val c = toast _ andThen M3Parser andThen TypeCheck andThen ScalaGen(clname(t.sql)) // XXX: instead create a full test wrapper
+      val sys = (toast _ andThen M3Parser andThen TypeCheck)(t.sql)
+      val cls = clname(t.sql)
+      val gen = ScalaGen(cls)
+      val str = gen.genStreams(sys.sources)
       
+      //println(gen.genStreams(sys.sources)+)
+      
+      
+      // XXX: instead create a full test wrapper
+      
+      // andThen ScalaGen(clname(t.sql))
       // package: ddbt.test.generated
       
       //println(c(t.sql))
-      t.sets.foreach { case (sz,set) =>
-        println("For set/size "+sz+":")
-        set.out.foreach { case (n,o) =>
-          println("diff( result.get(\""+n+"\"), "+(o match {
+      var helper = "object "+cls+"Spec extends Helper {"+ind("\n"+
+      t.sets.filter{x=>fsz(x._1)}.map { case (sz,set) =>
+        "describe(\""+sz+"\") {"+ind("\n"+
+        "val (t,res) = run["+cls+",Long,Long]("+(str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) }+")\n"+ // XXX: fix types and retrieval
+        "it(\"Runnning time = \"+time(t)+\" sec\") {}\n"+
+        set.out.map { case (n,o) => "it(\""+n+"\") { diff( res.get(\""+n+"\"), "+(o match {
             case QueryMap(m) => "Map("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
             case QueryFile(path,sep) => "decode(\""+path+"\""+(if (sep!=null) ",\""+sep+"\"" else "")+")"
             case QuerySingleton(v) => v
-          })+")")
-        }
-        // update the stream generator with subs
-        // write down the result / call to file loader to load the map from disk
-        
+          })+") }"
+        }.mkString("\n"))+"\n}"
+      }.mkString("\n"))+"\n}\n\n"
+
       
-      }
-      
+      println(helper+gen.genSystem(sys))
+      // XXX: write in a file
+      // XXX: create helpers for diff and loading from disk
     //}
-    
   }
 }
 

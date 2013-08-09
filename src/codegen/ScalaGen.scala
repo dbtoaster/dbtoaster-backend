@@ -208,10 +208,20 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     }.mkString+"\n"+ts)+"\n}\n"
   }
 
-  // Little fix for my libraries as we have only one stream for OrderBooks that generate
-  // both asks and bids events (hence we need to generate only one stream).
-  private def fixOrderbook(s:List[Source]):List[Source] = {
-    s.zipWithIndex.filter{case (s,i)=>(s.adaptor.name!="ORDERBOOK" || i>0)}.map{case (s,i)=>s}
+  def genStreams(sources:List[Source]) = {
+    // Little fix for my libraries as we have only one stream for OrderBooks that generate
+    // both asks and bids events (hence we need to generate only one stream).
+    def fixOrderbook(ss:List[Source]):List[Source] = ss.zipWithIndex.filter{case (s,i)=>(s.adaptor.name!="ORDERBOOK" || i>0)}.map{case (s,i)=>s}
+    "Seq(\n"+ind(fixOrderbook(sources).filter{s=>s.stream}.map{s=>
+      val in = s.in match { case SourceFile(path) => "new java.io.FileInputStream(\""+path+"\")" }
+      val split = "Split"+(s.split match { case SplitLine => "()" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => ".p("+p+")" })
+      val adaptor = s.adaptor.name match {
+        case "ORDERBOOK" => "OrderBook()"
+        case "CSV" => val sep=java.util.regex.Pattern.quote(s.adaptor.options.getOrElse("delimiter",",")).replaceAll("\\\\","\\\\\\\\")
+                      "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map{f=>f._2}.mkString(",")+"\",\""+sep+"\")"
+      }
+      "("+in+",new Adaptor."+adaptor+","+split+")"
+    }.mkString(",\n"))+"\n)"
   }
   
   // Helper that contains the main and stream generator
@@ -221,24 +231,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     "import akka.actor.Actor\n"+
     "import java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind(
-    "def execute() = run["+cls+",Long,Long](Seq(\n"+ind(
-    fixOrderbook(s.sources).filter{s=>s.stream}.map{s=>
-      val in = s.in match {
-        case SourceFile(path) => "new java.io.FileInputStream(\""+path+"\")"
-      }
-      val split = s.split match {
-        case SplitLine => "Split()"
-        case SplitSep(sep) => "Split(\""+sep+"\")"
-        case SplitSize(bytes) => "Split("+bytes+")"
-        case SplitPrefix(p) => "Split.p("+p+")"
-      }
-      val adaptor = s.adaptor.name match {
-        case "ORDERBOOK" => "OrderBook()"
-        case "CSV" => val sep=java.util.regex.Pattern.quote(s.adaptor.options.getOrElse("delimiter",",")).replaceAll("\\\\","\\\\\\\\")
-                      "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map{f=>f._2}.mkString(",")+"\",\""+sep+"\")"
-      }
-      "("+in+",new Adaptor."+adaptor+","+split+")"
-    }.mkString(",\n"))+"\n))\n\n"+
+    "def execute() = run["+cls+",Long,Long]("+genStreams(s.sources)+")\n\n"+ // XXX: fix types here
     "def main(args:Array[String]) {\n"+ind(
     "val res = bench(\"NewGen\",10,execute)\n"+
     "println(K3Helper.toStr(res))")+"\n"+
@@ -246,8 +239,6 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   }
   
   def apply(s:System) = genHelper(s)+genSystem(s)
-  
-  
 }
 
        /*
