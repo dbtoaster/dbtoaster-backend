@@ -55,8 +55,9 @@ class ExtParser extends StandardTokenParsers {
 // -----------------------------------------------------------------------------
 // M3 parser
 
-object M3Parser extends ExtParser {
-  import ddbt.ast._
+import ddbt.ast._
+
+object M3Parser extends ExtParser with (String => M3.System) {
   import ddbt.ast.M3._
   lexical.delimiters ++= List("{","}",":",":=","+","-","*","/","=","!=","<","<=",">=",">","[","]","^=","+=")
 
@@ -103,8 +104,8 @@ object M3Parser extends ExtParser {
     ((spc ~ "TRIGGERS" ~ spc) ~> rep(trigger)) ^^ { case ss~ms~qs~ts => System(ss,ms,qs,ts) }
   }
 
-  def load(path:String) = parse(scala.io.Source.fromFile(path).mkString)
-  def parse(str:String) = phrase(system)(new lexical.Scanner(str)) match {
+  def load(path:String) = apply(scala.io.Source.fromFile(path).mkString)
+  def apply(str:String) = phrase(system)(new lexical.Scanner(str)) match {
     case Success(x, _) => x
     case e => sys.error(e.toString)
   }
@@ -113,8 +114,7 @@ object M3Parser extends ExtParser {
 // -----------------------------------------------------------------------------
 // SQL parser
 
-object SQLParser extends ExtParser {
-  import ddbt.ast._
+object SQLParser extends ExtParser with (String => SQL.System) {
   import ddbt.ast.SQL._
 
   // XXX: THIS IS INCOMPLETE, PLEASE REVIEW ALL, IN PARTICULAR MAIN QUERIES OBJECTS
@@ -176,12 +176,12 @@ object SQLParser extends ExtParser {
   
   // ------------ System definition
   lazy val system = rep(source) ~ rep(query <~ ";") ^^ { case ss ~ qs => System(ss,qs) }
-  def parse(str:String) = phrase(system)(new lexical.Scanner(str)) match {
+  def apply(str:String) = phrase(system)(new lexical.Scanner(str)) match {
     case Success(x, _) => x
     case e => sys.error(e.toString)
   }
   def load(path:String) = {
     def f(p:String) = scala.io.Source.fromFile(p).mkString
-    parse("(?i)INCLUDE [\"']?([^\"';]+)[\"']?;".r.replaceAllIn(f(path),m=>f(m.group(1))).trim)
+    apply("(?i)INCLUDE [\"']?([^\"';]+)[\"']?;".r.replaceAllIn(f(path),m=>f(m.group(1))).trim)
   }
 }

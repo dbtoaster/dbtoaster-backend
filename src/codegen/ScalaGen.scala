@@ -2,7 +2,7 @@ package ddbt.codegen
 import ddbt.ast._
 
 // Generators to emit LMS nodes from AST
-object ScalaGen {
+case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   import ddbt.ast.M3._
   import scala.collection.mutable.HashMap
   
@@ -181,7 +181,7 @@ object ScalaGen {
   private val cs = HashMap[Apply,String]() 
   def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
 
-  def genSystem(s:System,cls:String="Query"):String = {
+  def genSystem(s:System):String = {
     val ts = s.triggers.map{genTrigger(_)}.mkString("\n\n") // triggers need to be generated before maps
     val ms = s.maps.map{genMap(_)}.mkString("\n")
     val qs = "def result = "+s.queries(0).name+".toMap" // fix for multiple queries
@@ -189,7 +189,7 @@ object ScalaGen {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+tpe(t)}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
     }
-    genHelper(s,cls)+
+    
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
@@ -208,15 +208,21 @@ object ScalaGen {
     }.mkString+"\n"+ts)+"\n}\n"
   }
 
+  // Little fix for my libraries as we have only one stream for OrderBooks that generate
+  // both asks and bids events (hence we need to generate only one stream).
+  private def fixOrderbook(s:List[Source]):List[Source] = {
+    s.zipWithIndex.filter{case (s,i)=>(s.adaptor.name!="ORDERBOOK" || i>0)}.map{case (s,i)=>s}
+  }
+  
   // Helper that contains the main and stream generator
-  private def genHelper(s:System,cls:String) = {
-    "import ddbt.lib._\n"+
+  def genHelper(s:System) = {
+    "package ddbt.generated\n"+
+    "import ddbt.lib._\n\n"+
     "import akka.actor.Actor\n"+
     "import java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind(
-    "def main(args:Array[String]) {\n"+ind(
-    "val res = bench(\"NewGen\",10,()=>run["+cls+",Long,Long](Seq(\n"+ind(
-    s.sources.filter{s=>s.stream}.map{s=>
+    "def execute() = run["+cls+",Long,Long](Seq(\n"+ind(
+    fixOrderbook(s.sources).filter{s=>s.stream}.map{s=>
       val in = s.in match {
         case SourceFile(path) => "new java.io.FileInputStream(\""+path+"\")"
       }
@@ -232,10 +238,16 @@ object ScalaGen {
                       "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map{f=>f._2}.mkString(",")+"\",\""+sep+"\")"
       }
       "("+in+",new Adaptor."+adaptor+","+split+")"
-    }.mkString(",\n"))+"\n)))\n"+
+    }.mkString(",\n"))+"\n))\n\n"+
+    "def main(args:Array[String]) {\n"+ind(
+    "val res = bench(\"NewGen\",10,execute)\n"+
     "println(K3Helper.toStr(res))")+"\n"+
     "}")+"\n}\n\n"
   }
+  
+  def apply(s:System) = genHelper(s)+genSystem(s)
+  
+  
 }
 
        /*

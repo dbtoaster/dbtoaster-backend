@@ -1,7 +1,18 @@
-package examples
-import akka.actor.Actor
+package examples // <-- only this line has been manually added
+
 import ddbt.lib._
+import akka.actor.Actor
 import java.util.Date
+
+object TPCH13Gen extends Helper {
+  def main(args:Array[String]) {
+    val res = bench("NewGen",10,()=>run[TPCH13Gen,Long,Long](Seq(
+      (new java.io.FileInputStream("resources/data/tpch/orders.csv"),new Adaptor.CSV("ORDERS","long,long,string,double,date,string,string,long,string","\\Q|\\E"),Split()),
+      (new java.io.FileInputStream("resources/data/tpch/customer.csv"),new Adaptor.CSV("CUSTOMER","long,string,string,long,string,double,string,string","\\Q|\\E"),Split())
+    )))
+    println(K3Helper.toStr(res))
+  }
+}
 
 class TPCH13Gen extends Actor {
   import ddbt.lib.Messages._

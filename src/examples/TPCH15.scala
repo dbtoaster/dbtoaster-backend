@@ -6,9 +6,11 @@ import java.util.Date;
 
 object TPCH15 extends Helper {
   def main(args:Array[String]) {
+    /*
     println("Reference:")
     val (t1,r1) = run[TPCH15Ref,Long,Double](streamsTPCH15(),false);
     println(K3Helper.toStr(r1)); println("Time: "+time(t1))
+    */
     println("Mine:")
     val (t2,r2) = run[TPCH15,Long,Double](streamsTPCH15(),false);
     println(K3Helper.toStr(r2)); println("Time: "+time(t2))

@@ -3,7 +3,7 @@ package ddbt.frontend
 import ddbt.ast._
 import ddbt.ast.M3._
 
-object TypeCheck {
+object TypeCheck extends (M3.System => M3.System) {
   def fixTypes(sys0:System) : System = {
     // 1. Bind trigger schemas to input schemas (M3 language fix)
     val schemas=sys0.sources.map{s=>(s.schema.name,s.schema)}.toMap
@@ -28,6 +28,9 @@ object TypeCheck {
     
     System(sys0.sources,maps,sys0.queries,triggers)
   }
+  
+  def apply(s:System) = fixTypes(s)
+  
 
   // 3. Typecheck deeply the tree to make sure all ops are OK
   // - MapRef must have the same type as Map
@@ -38,6 +41,8 @@ object TypeCheck {
   // 4. Optional renaming phase for simple&unique variable names
 
   // 5. add information to schemas to know dimensions along which they are sliced => maintain appropriate index
+
+  // XXX: introduce a unique factorization of expression to simplify expressions if possible. Use case: TPCH13-> two maps can be removed
 
 
 // -----------------------------------------------------------------------------

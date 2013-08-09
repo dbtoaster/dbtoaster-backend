@@ -1,4 +1,4 @@
-package ddbt.tests
+package ddbt.test
 import ddbt.lib._
 import org.scalatest._
 

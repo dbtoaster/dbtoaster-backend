@@ -1,6 +1,7 @@
 project
 target
 tmp
+ddbt.properties
 finance-*.csv
 *.m3
 .idea
