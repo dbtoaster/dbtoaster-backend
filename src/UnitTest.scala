@@ -31,40 +31,28 @@ object UnitParser extends RegexParsers {
   lazy val qmap:Parser[QueryOut] = "{" ~> repsep(qrow,",") <~ opt(",") <~ "}" ^^ { case rs => QueryMap(rs.toMap) }
   lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (Utils.tup(cs),n) }
 
-  /*
-  lazy val key = (str|num|":[a-z]+".r|pat|arr)
-  lazy val value = key | kv | arr
-  lazy val kv:Parser[String] = "{" ~> repsep(key ~> "=>" <~ value,",") <~ "}" ^^^ { "XXX" }
-  lazy val arr:Parser[String] = "[" ~> repsep(value,",") <~ "]" ^^^ { "XXX" }
-  */
-
   def apply(input: String): QueryTest = parseAll(qtest, input) match {
     case Success(result, _) => result
-    case failure : NoSuccess => sys.error(failure.toString)
+    case failure => sys.error(failure.toString)
   }
 }
 
 // This object is meant to decode the unit tests of original DBtoaster and
 // convert them into plain Scala tests
 object UnitTest {
-  import Utils._
+  import ddbt.Utils._
+  import ddbt.frontend._
+  import ddbt.codegen._
 
   def toast(f:String) = exec(Array("bin/dbtoaster_release","-l","M3",f),true)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
   def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
-  
-  import ddbt.frontend._
-  import ddbt.codegen._
 
   // First argument is a filter to generate only a particular dataset
   // sbt run-main ddbt.UnitTest tiny
   def main(args: Array[String]) {
-    val fsz = if (args.length>0 && args(0)!="") (s:String)=>s==args(0) else (s:String)=>true
-  
-    // XXX: add filtering option
-  
+    val fsz = if (args.length>0 && args(0)!="") (s:String)=>s==args(0) else (s:String)=>true // filtering by size
     val files=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n")
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
-    // XXX: do we need to interpret data in the tests ?
     
     //tests.foreach{ t => 
       val t = tests.filter{t=>t.sql.indexOf("axfinder")!= -1}(0) // we pick one single test for purposes of debugging
@@ -74,8 +62,7 @@ object UnitTest {
       val str = gen.genStreams(sys.sources)
       
       //println(gen.genStreams(sys.sources)+)
-      
-      
+
       // XXX: instead create a full test wrapper
       
       // andThen ScalaGen(clname(t.sql))
@@ -94,7 +81,6 @@ object UnitTest {
           })+") }"
         }.mkString("\n"))+"\n}"
       }.mkString("\n"))+"\n}\n\n"
-
       
       println(helper+gen.genSystem(sys))
       // XXX: write in a file

@@ -3,6 +3,7 @@ package ddbt.frontend
 import scala.util.parsing.combinator.syntactical.StandardTokenParsers
 import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.token.StdTokens
+import ddbt.ast._
 
 // -----------------------------------------------------------------------------
 
@@ -21,14 +22,12 @@ class ExtParser extends StandardTokenParsers {
     acceptIf(x=>x.chars.toLowerCase==chars.toLowerCase)(x=>"Expected '"+chars+"'") ^^ (_.chars))
 
   import lexical._
-  import ddbt.ast._
-
   //lexical.reserved ++= List("")
   lexical.delimiters ++= List("(",")",",",".",";","+","-",":=")
 
   // ------------ Literals
   lazy val long = opt("+"|"-") ~ numericLit ^^ { case s~n => (s match { case Some("-") => "-" case _ => ""})+n }
-  lazy val double = (long <~ ".") ~ opt(numericLit) ~ opt(("E"|"e") ~> long) ^^ { case i ~ d ~ e => i+"."+(d match { case Some(s)=>s case None=>"" })+(e match { case Some(j)=>"E"+j case _=>"" }) }
+  lazy val double = (long <~ ".") ~ opt(numericLit) ~ opt(("E"|"e") ~> long) ^^ { case i~d~e => i+"."+(d match { case Some(s)=>s case None=>"" })+(e match { case Some(j)=>"E"+j case _=>"" }) }
 
   // ------------ Types
   lazy val tpe: Parser[Type] = (("string" | ("char"|"varchar") ~> "(" ~> numericLit <~  ")") ^^^ TypeString
@@ -44,8 +43,8 @@ class ExtParser extends StandardTokenParsers {
   lazy val split = (
     "LINE" ~ "DELIMITED" ^^^ { SplitLine }
   | stringLit <~ "DELIMITED" ^^ { SplitSep(_) }
-  | "FIXEDWIDTH" ~> numericLit ^^ { case x => SplitSize(Integer.parseInt(x)) }
-  //| "PREFIX" ~> numericLit ^^ { SplitPrefix(Integer.parseInt(_)) }
+  | "FIXEDWIDTH" ~> numericLit ^^ { x => SplitSize(Integer.parseInt(x)) }
+  | "PREFIX" ~> numericLit ^^ { x => SplitPrefix(Integer.parseInt(x)) }
   )
   lazy val adaptor = ident ~ opt("(" ~> repsep(ident ~ (":=" ~> stringLit),",") <~ ")") ^^ { case n~oos =>
     Adaptor(n,oos match { case Some(os)=> os.map{case x~y => (x,y) }.toMap case None=>List[(String,String)]().toMap })
@@ -54,8 +53,6 @@ class ExtParser extends StandardTokenParsers {
 
 // -----------------------------------------------------------------------------
 // M3 parser
-
-import ddbt.ast._
 
 object M3Parser extends ExtParser with (String => M3.System) {
   import ddbt.ast.M3._
@@ -89,7 +86,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
 
   // ------------ System definition
   lazy val map = ("DECLARE" ~> "MAP" ~> ident) ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe),",") <~ "]" <~ ":=") ~ expr <~ ";" ^^
-                 { case n~t~ks~e => Map(n,t match { case Some(t)=>t case None=>null},ks.map{case n~t=>(n,t)},e) }
+                 { case n~t~ks~e => MapDef(n,t match { case Some(t)=>t case None=>null},ks.map{case n~t=>(n,t)},e) }
   lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ mapref <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
   lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> repsep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
                         { case op~n~f~ss=> val s=Schema(n,f.map{(_,null)}); if (op=="+") TriggerAdd(s,ss) else TriggerDel(s,ss) }
