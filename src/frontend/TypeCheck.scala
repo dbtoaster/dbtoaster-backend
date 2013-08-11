@@ -46,34 +46,41 @@ object TypeCheck extends (M3.System => M3.System) {
 
   def typeCheck(s0:System) = {
     // 4. Resolve missing types (and also make sure operations are correct)
-    
     val mapTypes = s0.maps.map { case MapDef(n,tp,ks,_) => (n,(ks.map{x=>x._2},tp)) }.toMap // String -> (List(Type),Type)
     def ie(ex:Expr,b:Map[String,Type]):Map[String,Type] = {
       var br=b; // new bindings
+      var dim=List[Type]() // dimension of result set
       ex match { // gives a type to all untyped nodes
-        case m@Mul(l,r) => ie(r,ie(l,b)); m.tp=(l.tp,r.tp) match {
+        case m@Mul(l,r) => br=ie(r,ie(l,b)); m.tp=(l.tp,r.tp) match {
           case (TypeLong,TypeLong) => TypeLong
           case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) | (TypeDouble,TypeDouble) => TypeDouble
           case _ => err("Bad operands: "+ex)
         }
-        case a@Add(l,r) => ie(l,b); ie(r,b); if (l.tp!=r.tp) err("Bad operands: "+ex); a.tp=l.tp
-        case Cmp(l,r,_) => ie(l,b); ie(r,b); if (l.tp!=r.tp && !(l.tp==TypeLong && r.tp==TypeDouble) && !(l.tp==TypeDouble && r.tp==TypeLong)) err("Bad operands: "+ex);
+        dim = l.dim:::r.dim
+        case a@Add(l,r) => br=b++ie(l,b)++ie(r,b); if (l.tp!=r.tp) err("Bad operands: "+ex); a.tp=l.tp
+          dim = if (l.dim.size>r.dim.size) l.dim else r.dim // we might union a set with one slice of smaller dimensionality
+        case Cmp(l,r,_) => br=b++ie(l,b)++ie(r,b); if (l.tp!=r.tp && !(l.tp==TypeLong && r.tp==TypeDouble) && !(l.tp==TypeDouble && r.tp==TypeLong)) err("Bad operands: "+ex)
         case Exists(e) => ie(e,b)
-        case Lift(n,e) => ie(e,b); b.get(n) match { case Some(t) => err("Value "+n+" already lifted") case None => br=b+((n,e.tp)) }
-        case AggSum(ks,e) => ie(e,b)
+        case Lift(n,e) => ie(e,b); b.get(n) match { case Some(t) => err("Value "+n+" already lifted") case None => br=b+((n,e.tp)) }; dim=e.dim
+        case AggSum(ks,e) => br=ie(e,b); dim=ks.map(br)
         case Apply(_,_,as) => as map {x=>ie(x,b)} // XXX: Verify typing of Apply against user-functions library (additional typing informations must be provided)
         case r@Ref(n) => r.tp=b(n)
-        case m@MapRef(n,tp,ks) => val l=mapTypes(n); br=b++(ks zip (l._1)).toMap
+        case m@MapRef(n,tp,ks) => val l=mapTypes(n); br=b++(ks zip l._1).toMap
           if (tp==null) m.tp=l._2 else if (tp!=l._2) err("Bad value type: expected "+l._2+", got "+tp+" for "+ex);
+          val fv = (ks zip mapTypes(n)._1).filter{ case(k,t)=> val c=b.contains(k); if (c && t!=b(k)) err("Key type ("+k+") mismatch in "+ex); !c }
+          br = b++fv.toMap
+          m.tp = mapTypes(n)._2
+          dim=fv.map{_._2}
         case _ =>
       }
+      ex.dim = dim
+      //println("----------------------------")
+      //println(ex.dim+" -> "+ex.tp+" in "+ex)
+
       if (ex.tp==null) err("Untyped: "+ex); br
     }
     def ist(s:Stmt,b:Map[String,Type]=Map()) = s match {
-      case StmtMap(m,e,op,in) => 
-        println("----------------------------")
-        println(e)
-        ie(e,b); in.map(e=>ie(e,b))
+      case StmtMap(m,e,op,in) => ie(e,b); in.map(e=>ie(e,b))
     }
     s0.triggers.foreach {
       case TriggerReady(ss) => ss foreach {x=>ist(x)}

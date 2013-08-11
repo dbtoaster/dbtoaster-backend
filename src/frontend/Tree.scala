@@ -10,14 +10,14 @@ sealed abstract class Tree // Generic AST node
 
 // ---------- Data types
 sealed abstract class Type extends Tree
-//case object TypeChar   extends Type /*  8 bit */ { override def toString="char" }
-//case object TypeShort  extends Type /* 16 bit */ { override def toString="short" }
-//case object TypeInt    extends Type /* 32 bit */ { override def toString="int" }
+//case object TypeChar extends Type /*  8 bit */ { override def toString="char" }
+//case object TypeShort extends Type /*16 bit */ { override def toString="short" }
+//case object TypeInt  extends Type /* 32 bit */ { override def toString="int" }
 case object TypeLong   extends Type /* 64 bit */ { override def toString="long" }
-//case object TypeFloat  extends Type /* 32 bit */ { override def toString="float" }
+//case object TypeFloat extends Type /*32 bit */ { override def toString="float" }
 case object TypeDouble extends Type /* 64 bit */ { override def toString="double" }
 case object TypeDate   extends Type              { override def toString="date" }
-// case object TypeTime extends Type                { override def toString="timestamp" }
+//case object TypeTime extends Type              { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string" } // how to encode it?
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
 
@@ -71,7 +71,8 @@ object M3 {
   
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3 {
-    def tp:Type
+    def tp:Type // result type (map value type)
+    var dim=List[Type]() // set dimensions type (map key type)
     def collect[T](f:PartialFunction[Expr,Set[T]]):Set[T] = f.applyOrElse(this,(ex:Expr)=>ex match {
       case Mul(l,r) => l.collect(f)++r.collect(f)
       case Add(l,r) => l.collect(f)++r.collect(f)
@@ -82,16 +83,18 @@ object M3 {
       case Apply(fn,tp,as) => as.flatMap(a=>a.collect(f)).toSet
       case _ => Set()
     })
-    def replace(f:PartialFunction[Expr,Expr]):Expr = f.applyOrElse(this,(ex:Expr)=>ex match {
-      case Mul(l,r) => Mul(l.replace(f),r.replace(f))
-      case Add(l,r) => Add(l.replace(f),r.replace(f))
-      case Cmp(l,r,op) => Cmp(l.replace(f),r.replace(f),op)
-      case Exists(e) => Exists(e.replace(f))
-      case Lift(n,e) => Lift(n,e.replace(f))
-      case AggSum(ks,e) => AggSum(ks,e.replace(f))
-      case Apply(fn,tp,as) => Apply(fn,tp,as.map(e=>e.replace(f)))
-      case _ => ex
-    })
+    def replace(f:PartialFunction[Expr,Expr]):Expr = { // also preserve types
+      val e = f.applyOrElse(this,(ex:Expr)=>ex match {
+        case Mul(l,r) => val t=Mul(l.replace(f),r.replace(f)); t.tp=this.tp; t
+        case Add(l,r) => val t=Add(l.replace(f),r.replace(f)); t.tp=this.tp; t
+        case Cmp(l,r,op) => Cmp(l.replace(f),r.replace(f),op)
+        case Exists(e) => Exists(e.replace(f))
+        case Lift(n,e) => Lift(n,e.replace(f))
+        case AggSum(ks,e) => AggSum(ks,e.replace(f))
+        case Apply(fn,tp,as) => Apply(fn,tp,as.map(e=>e.replace(f)))
+        case _ => ex
+      }); e.dim=this.dim; e
+    }
   }
   // Constants
   case class Const(tp:Type,v:String) extends Expr { override def toString=if (tp==TypeString) "'"+v+"'" else v }
@@ -101,7 +104,7 @@ object M3 {
   case class Lift(name:String, e:Expr) extends Expr { override def toString="( "+name+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
   case class Tuple(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=null /*unused*/ } // appear only in Map declaration
   // Operations
-  case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+ind(e.toString)+"\n)"; def tp=e.tp } // returns a {[tuple(group_keys)] => count} relation
+  case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+ind(e.toString)+"\n)"; def tp=e.tp; } // (grouping_keys)->sum relation
   case class Mul(l:Expr,r:Expr) extends Expr { override def toString="("+l+" * "+r+")"; var tp:Type=null } // cross-product semantics
   case class Add(l:Expr,r:Expr) extends Expr { override def toString="("+l+" + "+r+")"; var tp:Type=null } // set union semantics
   case class Exists(e:Expr) extends Expr { override def toString="EXISTS("+e+")"; val tp=TypeLong } // returns 0 or 1 (check that there is at least one tuple)

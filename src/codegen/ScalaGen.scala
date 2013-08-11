@@ -60,33 +60,31 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
        */
        val vs = ((bnd(el)&bnd(er))--b).toList // free variables present on both sides
        if (vs.size>0) {
-         val t0=fresh("tmp_add");
-         val k0=fresh("k")
-         val v0=fresh("v")
-         "val "+t0+" = K3Map.temp[Long,Long]() // XXX: fix types"+"\n"+
+         val (t0,k0,v0)=(fresh("tmp_add"),fresh("k"),fresh("v"))
+         "val "+t0+" = K3Map.temp["+tup(ex.dim.map(tpe))+","+tpe(ex.tp)+"]()\n"+
          cpsExpr(el,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
          cpsExpr(er,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
          t0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
          (if (vs.size==1) "val "+vs(0)+" = "+k0+"\n" else vs.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
        } else cpsExpr(el,b,(vl:String)=>{ cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")")) }) // right is nested in left
 
-    case AggSum(ks,e) =>
+    case agg@AggSum(ks,e) =>
       val in = if (ks.size>0) e.collect{ case Lift(n,x) => Set(n) } else Set[String]()
       if ((ks.toSet & in).size==0) { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+"\n"+co(a0) } // key is not defined by inner Lifts
       else {
         val fs = (ks.toSet--b) // free variables
         val bs = (ks.toSet--fs) // bounded variables
-        var r = { val ns = bs.map { b=> (b,fresh(b)) }.toMap; (n:String) => ns.getOrElse(n,n) } // renaming function
+        val r = { val ns = bs.map { b=> (b,fresh(b)) }.toMap; (n:String) => ns.getOrElse(n,n) } // renaming function
         val (t0,fused) = tm match {
           case Some(t0) => (t0,true)
           case None => (fresh("tmp"),false)
         }
         def rename(e:Expr):Expr = e.replace {
-          case Ref(n) => Ref(r(n))
-          case MapRef(n,tp,ks) => MapRef(r(n),tp,ks.map(r))
-          case Lift(n,e) => Lift(r(n),rename(e))
+          case Ref(n) => val t=Ref(r(n)); t.tp=e.tp; t.dim=e.dim; t
+          case MapRef(n,tp,ks) => val t=MapRef(r(n),tp,ks.map(r)); t.tp=e.tp; t.dim=e.dim; t
+          case Lift(n,e) => val t=Lift(r(n),rename(e)); t.dim=e.dim; t
         }
-        (if (!fused) "val "+t0+" = K3Map.make[Long,"+tpe(e.tp)+"]() // XXX: fix types --> key="+tup(ks.map{k=>"tp("+k+")"})+"\n" else "")+
+        (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
         cpsExpr(rename(e),b++ks.map(r).toSet,(v:String)=> {
           val s=t0+".add("+tup(ks.map(r))+","+v+");"
           if (bs.size==0) s else "if ("+bs.map{ b=>b+" == "+r(b) }.mkString(" && ")+") {\n"+ind(s)+"\n}"
