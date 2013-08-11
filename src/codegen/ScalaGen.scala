@@ -94,8 +94,9 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     case Exists(e) => val e0=fresh("ex")
       //if ((e.bound--b).size==0) "val "+e0+" = ({"+cpsExpr(e,b,(v:String)=>e0)+"}) != 0;\n"+co(e0) else
       "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0)
-    case app@Apply(f,tp,as) => if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
-      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,b,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+f) }
+    case app@Apply(f,tp,as) => val fm=Map[String,String](("/","div")); val fn=fm.getOrElse(f,f)
+      if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
+      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,b,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
     case Cmp(l,r,op) => co(cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
     case _ => sys.error("Don't know how to generate "+ex)
   }

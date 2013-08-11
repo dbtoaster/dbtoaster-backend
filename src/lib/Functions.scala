@@ -25,4 +25,6 @@ object Functions {
     case null => val p=java.util.regex.Pattern.compile(re); re_cache.put(re,p); p
     case p => p
   }).matcher(str).find) 1 else 0
+
+  def Udiv(x: Double): Double = 1.0 / x
 }

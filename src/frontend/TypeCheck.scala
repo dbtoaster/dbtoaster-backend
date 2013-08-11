@@ -60,7 +60,7 @@ object TypeCheck extends (M3.System => M3.System) {
           dim = if (l.dim.size>r.dim.size) l.dim else r.dim // we might union a set with one slice of smaller dimensionality
         case Cmp(l,r,_) => br=b++ie(l,b)++ie(r,b); if (l.tp!=r.tp && !(l.tp==TypeLong && r.tp==TypeDouble) && !(l.tp==TypeDouble && r.tp==TypeLong)) err("Bad operands: "+ex)
         case Exists(e) => ie(e,b)
-        case Lift(n,e) => ie(e,b); b.get(n) match { case Some(t) => err("Value "+n+" already lifted") case None => br=b+((n,e.tp)) }; dim=e.dim
+        case Lift(n,e) => ie(e,b); b.get(n) match { case Some(t) => if (t!=e.tp) err("Value "+n+" lifted with "+t+" compared with "+e.tp) case None => br=b+((n,e.tp)) }; dim=e.dim
         case AggSum(ks,e) => br=ie(e,b); dim=ks.map(br)
         case Apply(_,_,as) => as map {x=>ie(x,b)} // XXX: Verify typing of Apply against user-functions library (additional typing informations must be provided)
         case r@Ref(n) => r.tp=b(n)
