@@ -51,6 +51,7 @@ sealed abstract class M3 // see ddbt.frontend.M3Parser
 object M3 {
   import ddbt.Utils.ind
   case class System(sources:List[Source], maps:List[MapDef], queries:List[Query], triggers:List[Trigger]) extends M3 {
+    lazy val mapType = maps.map { m=> (m.name,(m.keys.map{x=>x._2},m.tp)) }.toMap // String => (List(Type),Type)
     override def toString =
       "-------------------- SOURCES --------------------\n"+sources.mkString("\n\n")+"\n\n"+
       "--------------------- MAPS ----------------------\n"+maps.mkString("\n\n")+"\n\n"+
@@ -71,8 +72,8 @@ object M3 {
   
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3 {
-    def tp:Type // result type (map value type)
-    var dim=List[Type]() // set dimensions type (map key type)
+    def tp:Type // expression type (map's value type)
+    var dim=List[Type]() // set dimensions type (map's key type)
     def collect[T](f:PartialFunction[Expr,Set[T]]):Set[T] = f.applyOrElse(this,(ex:Expr)=>ex match {
       case Mul(l,r) => l.collect(f)++r.collect(f)
       case Add(l,r) => l.collect(f)++r.collect(f)
@@ -167,7 +168,7 @@ object SQL {
   case class Like(l:Expr,p:String) extends Cond
   case class Range(l:Expr,min:Expr,max:Expr) extends Cond
   case class Cmp(l:Expr, r:Expr, op:OpCmp) extends Cond
-};
+}
 
 /*
 case class Concat(es:List[Expr]) extends Expr
@@ -190,8 +191,7 @@ case class DihedralAngle(x1:Expr,y1:Expr,z1:Expr, x2:Expr,y2:Expr,z2:Expr,
 case class Cast(tp:Type,e:Expr) extends Tree
 case class Hash(e:Expr) extends Expr
 */
-
-/**
+/*
  *** File format definitions
  * FileSQL	:= stream+ sql
  * FileM3	:= /--+/ "SOURCES" /--+/ (stream)+
@@ -210,7 +210,7 @@ case class Hash(e:Expr) extends Expr
  * Note that in M3, fields name is '<table>_<field>'
  *
  *** SQL Query definition
- * sql		:= "SELECT" <XXX> "FROM" <XXX> (WHERE <XXX>)? ("GROUP" "BY" <XXX>)? ";"
+ * sql		:= "SELECT" <...> "FROM" <...> (WHERE <...>)? ("GROUP" "BY" <...>)? ";"
  *
  *** M3 common definitions
  * addsum

@@ -6,7 +6,7 @@ import scala.reflect.ClassTag
 
 object AXFinder extends Helper {
   def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) =
-        bench(name,count,()=>run[Q,Long,Double](streamsFinance( "standard" /*"large"*/ ),false))
+        bench(name,count,()=>run[Q,Map[Long,Double]](streamsFinance( "standard" /*"large"*/ ),false))
 
   def main(args:Array[String]) {
     val r1=test[AXFinderRef]      ("Reference   ")

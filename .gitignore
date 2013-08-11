@@ -1,7 +1,8 @@
 project
 target
-tmp
+test/gen
 ddbt.properties
+tmp
 finance-*.csv
 *.m3
 .idea

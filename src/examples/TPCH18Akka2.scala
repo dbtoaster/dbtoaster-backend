@@ -6,7 +6,7 @@ import java.util.Date
 object TPCH18Akka2 extends Helper {
   def main(args:Array[String]) {
     //K3Helper.toStr(bench("TPC-H_Q18_Akka2(Network)",4,()=>runLocal[Q18Master,Q18Worker,(String,Long,Long,Date,Double),Double](2251,4,streamsTPCH18()) ))
-    val (t,res) = runLocal[Q18Master,Q18Worker,(String,Long,Long,Date,Double),Double](2251,4,streamsTPCH18());
+    val (t,res) = runLocal[Q18Master,Q18Worker,Map[(String,Long,Long,Date,Double),Double]](2251,4,streamsTPCH18());
     println(K3Helper.toStr(res)); println("Time: "+time(t))
     //for (i <- 0 until 10) { println("Time: "+time(runLocal[Q18Master,Q18Worker,(String,Long,Long,Date,Double),Double](2251,4,streamsTPCH18())._1)); Thread.sleep(1000); }
   }

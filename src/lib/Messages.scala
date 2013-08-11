@@ -10,6 +10,7 @@ object Messages {
   // Input stream
   abstract sealed class StreamEvent
   case object EndOfStream extends StreamEvent
+  case object GetSnapshot extends StreamEvent // similar as EndOfStream but does not shut system down
   case class TupleEvent(op:TupleOp,stream:String,tx:Long,data:List[Any]) extends StreamEvent
 
   // System messages

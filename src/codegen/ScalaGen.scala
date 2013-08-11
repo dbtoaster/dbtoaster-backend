@@ -11,7 +11,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   import ddbt.Utils.{ind,tup} // common functions
   private val counter = HashMap[String,Int]()
   private def fresh(name:String="x") = { val c = counter.getOrElse(name,0)+1; counter.put(name,c); name+c }
-  private def tpe(tp:Type):String = { val s=tp.toString; s.substring(0,1).toUpperCase+s.substring(1).toLowerCase }
+  def tpe(tp:Type):String = { val s=tp.toString; s.substring(0,1).toUpperCase+s.substring(1).toLowerCase }
   private def bnd(e:Expr):Set[String] = e.collect { case Lift(n,e) => bnd(e)+n case AggSum(ks,e) => ks.toSet case MapRef(n,tp,ks) => ks.toSet }
 
   // Generate code bottom-up using delimited CPS and a list of bounded variables
@@ -27,13 +27,13 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>b.contains(k)}
       if (ki.size==0) co(n+".get("+tup(ks)+")") // all keys are bounded
       else {
-        val k0=fresh("k"); val v0=fresh("v");
+        val (k0,v0)=(fresh("k"),fresh("v"))
         val sl = if (ko.size>0) ".slice("+slice(n,ko.map{case (k,i)=>i})+","+tup(ko.map{case (k,i)=>k})+")" else ""
         n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
           ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";"}.mkString("\n")+"\n"+co(v0))+"\n}" // bind unbounded variables from retrieved key
       }
     //Lift alone has only bound variables. In Exists*Lift, Exists binds variables for the Lift
-    case Mul(Exists(e1),Lift(n,e)) if (e1==e) => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("("+n+" != 0)")) // LiftExist
+    case Mul(Exists(e1),Lift(n,e)) if e1==e => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("("+n+" != 0)")) // LiftExist
     case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)")))
 
     // ASSERTION IS WRONG (see TPC-H 15)
@@ -42,8 +42,8 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       else cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("1"))
       //assert(b.contains(n)); cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")")) // Lift acts as a constraint
 
-    case Mul(Lift(n,Ref(n2)),er) if (!b.contains(n)) => cpsExpr(er,b,co).replace(n,n2) // optional: dealiasing
-    case Mul(Lift(n,e),er) if (!b.contains(n)) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(Mul(Ref(n),er),b+n,co) // 'regular' Lift    
+    case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) => cpsExpr(er,b,co).replace(n,n2) // optional: dealiasing
+    case Mul(Lift(n,e),er) if !b.contains(n) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(Mul(Ref(n),er),b+n,co) // 'regular' Lift
     case Mul(el,er) => cpsExpr(el,b,(vl:String)=>{ cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")")) }) // right is nested in left (right is a continuation of left)
     case Add(el,er) => 
       /* Add is more complicated than Mul. We need to compute the domain union of left and right
@@ -72,8 +72,8 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       val in = if (ks.size>0) e.collect{ case Lift(n,x) => Set(n) } else Set[String]()
       if ((ks.toSet & in).size==0) { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+"\n"+co(a0) } // key is not defined by inner Lifts
       else {
-        val fs = (ks.toSet--b) // free variables
-        val bs = (ks.toSet--fs) // bounded variables
+        val fs = ks.toSet--b // free variables
+        val bs = ks.toSet--fs // bounded variables
         val r = { val ns = bs.map { b=> (b,fresh(b)) }.toMap; (n:String) => ns.getOrElse(n,n) } // renaming function
         val (t0,fused) = tm match {
           case Some(t0) => (t0,true)
@@ -91,10 +91,10 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
         })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
       }
 
-    case Exists(e) => val e0=fresh("ex");
+    case Exists(e) => val e0=fresh("ex")
       //if ((e.bound--b).size==0) "val "+e0+" = ({"+cpsExpr(e,b,(v:String)=>e0)+"}) != 0;\n"+co(e0) else
       "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0)
-    case app@Apply(f,tp,as) => if (as.filter(!_.isInstanceOf[Const]).size==0) co(constApply(app)) // hoist constants resulting from function application
+    case app@Apply(f,tp,as) => if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
       else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,b,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+f) }
     case Cmp(l,r,op) => co(cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
     case _ => sys.error("Don't know how to generate "+ex)
@@ -142,10 +142,9 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   private val cs = HashMap[Apply,String]() 
   def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
 
-  def genSystem(s:System):String = {
-    val ts = s.triggers.map{genTrigger(_)}.mkString("\n\n") // triggers need to be generated before maps
-    val ms = s.maps.map{genMap(_)}.mkString("\n")
-    val qs = "def result = "+s.queries(0).name+".toMap" // fix for multiple queries
+  def genSystem(s0:System):String = {
+    val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers need to be generated before maps
+    val ms = s0.maps.map(genMap).mkString("\n")
     def ev(s:Schema,short:Boolean=true):(String,String) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+tpe(t)}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
@@ -156,14 +155,14 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
     "var t0:Long = 0\n"+
     "def receive = {\n"+ind(
-      s.triggers.map{
+      s0.triggers.map{
         case TriggerAdd(s,_) => val (i,o)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\",tx,"+i+") => onAdd"+s.name+o+"\n"
         case TriggerDel(s,_) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\",tx,"+i+") => onDel"+s.name+o+"\n"
         case _ => ""
       }.mkString+
       "case SystemInit => onSystemReady(); t0=System.nanoTime()\n"+
-      "case EndOfStream => val time=System.nanoTime()-t0; sender ! (time,result)"
-    )+"\n}\n\n"+qs+"\n\n"+cs.map{case (Apply(f,tp,as),n) =>
+      "case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,"+tup(s0.queries.map{q=>q.name+".toMap"})+")"
+    )+"\n}\n"+cs.map{case (Apply(f,tp,as),n) =>
       val vs = as.map { a=>cpsExpr(a,Set(),(v:String)=>v) }
       "val "+n+":"+tpe(tp)+" = U"+f+"("+vs.mkString(",")+")\n"
     }.mkString+"\n"+ts)+"\n}\n"
@@ -172,7 +171,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   def genStreams(sources:List[Source]) = {
     // Little fix for my libraries as we have only one stream for OrderBooks that generate
     // both asks and bids events (hence we need to generate only one stream).
-    def fixOrderbook(ss:List[Source]):List[Source] = ss.zipWithIndex.filter{case (s,i)=>(s.adaptor.name!="ORDERBOOK" || i>0)}.map{case (s,i)=>s}
+    def fixOrderbook(ss:List[Source]):List[Source] = ss.zipWithIndex.filter{case (s,i)=>i>0 || s.adaptor.name!="ORDERBOOK"}.map(_._1)
     "Seq(\n"+ind(fixOrderbook(sources).filter{s=>s.stream}.map{s=>
       val in = s.in match { case SourceFile(path) => "new java.io.FileInputStream(\""+path+"\")" }
       val split = "Split"+(s.split match { case SplitLine => "()" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => ".p("+p+")" })
@@ -186,43 +185,28 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   }
   
   // Helper that contains the main and stream generator
-  def genHelper(s:System) = {
+  def genViewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); "Map["+tup(m._1.map(tpe))+","+tpe(m._2)+"]" })
+  def genHelper(s0:System) = {
     "package ddbt.generated\n"+
     "import ddbt.lib._\n\n"+
     "import akka.actor.Actor\n"+
     "import java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind(
-    "def execute() = run["+cls+",Long,Long]("+genStreams(s.sources)+")\n\n"+ // XXX: fix types here
+    "def execute() = run["+cls+","+genViewType(s0)+"]("+genStreams(s0.sources)+")\n\n"+
     "def main(args:Array[String]) {\n"+ind(
     "val res = bench(\"NewGen\",10,execute)\n"+
-    "println(K3Helper.toStr(res))")+"\n"+
-    "}")+"\n}\n\n"
+    s0.queries.zipWithIndex.map { case (q,i)=> val m=s0.mapType(q.m.name);
+      "println(\""+q.name+":\")\nprintln(K3Helper.toStr(res"+(if (s0.queries.size>1) "._"+(i+1) else "")+")+\"\\n\")"
+    }.mkString("\n"))+"\n}")+"\n}\n\n"
   }
   
   def apply(s:System) = genHelper(s)+genSystem(s)
 }
 
-/*
-  // co type can be : apply, aggregation, existence
-  // add a special primitive for aggregation with keys => groupBy()
-  // rename outer variables
-  // generate inner with additional constraints that outer must be == to inner variables
-  // XXX: if inner contains element that cannot be bound, create intermediate map ?
-  e0 match {
-    case Lift(n,e) => hoisted=hoisted+cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+"; // XXX: handle this properly ")+"\n"; co(n) // XXX: bad implementation
-      // XXX: we did not introduce the variable in the later expression
-    case AggSum(ks,e) =>
-      val a0=fresh("agg"); val h=hoisted; hoisted=""; val c=cpsExpr(e,b,(v:String)=>a0+" = "+a0+" + "+v+";")
-      hoisted=h+hoisted+"var "+a0+":Double = 0;\n"+c+"\n"; co(a0) // XXX: fix this as Double/Long wrt. type checking.
-    case Exists(e) => 
-      val e0=fresh("ex"); val h=hoisted; hoisted=""; val c=cpsExpr(e,b,(v:String)=>"val "+e0+" = ("+v+") != 0;")
-      hoisted=h+hoisted+c+"\n"; co(e0)
-    case Mul(l,r) => cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>co("("+ll+" * "+rr+")"))) // XXX: add Lift left variable to right bounded context
-    case Add(l,r) => cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>co("("+ll+" + "+rr+")")))
-  }
-  // We shall understand the multiply as a continuation of the left operand in the right one
-  // Some "-1" simplifications
-  //case Add(l,Mul(Const(typeLong,"-1"),Ref(n))) => co(cpsExpr(l,b,(ll:String)=>"("+ll+" - "+n+")"))
-  //case Mul(Const(typeLong,"-1"),Ref(n)) => co("-"+n)
-  // Different approach: if a variable happen on both sides of the same branch AND if this variable is used by both, generate a loop, replace inner access by variables
-*/
+// co type can be : apply, aggregation, existence
+// add a special primitive for aggregation with keys => groupBy()
+// We shall understand the multiply as a continuation of the left operand in the right one
+// Some "-1" simplifications
+//    case Add(l,Mul(Const(typeLong,"-1"),Ref(n))) => co(cpsExpr(l,b,(ll:String)=>"("+ll+" - "+n+")"))
+//    case Mul(Const(typeLong,"-1"),Ref(n)) => co("-"+n)
+// Different approach: if a variable happen on both sides of the same branch AND if this variable is used by both, generate a loop, replace inner access by variables

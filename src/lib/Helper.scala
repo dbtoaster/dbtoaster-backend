@@ -23,39 +23,48 @@ trait Helper {
   
   // ---------------------------------------------------------------------------
   // Run query actor and collect time+resulting map
+  // T is usually Map[K,V]. For multiple maps, it is a tuple (Map[K1,V1],Map[K2,V2],...)
   
-  def mux[K,V](actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,wait:Int=60000) = {
+  def mux[T](actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,wait:Int=60000) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
     actor ! SystemInit
     // preload existing tables in the query
     mux.read()
     val timeout = akka.util.Timeout(wait)
-    scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(timeout), timeout.duration).asInstanceOf[(Long,Map[K,V])]
+    scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(timeout), timeout.duration).asInstanceOf[(Long,T)]
   }
   
-  def run[Q<:akka.actor.Actor,K,V](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cq:ClassTag[Q]):(Long,Map[K,V]) = {
+  def run[Q<:akka.actor.Actor,T](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cq:ClassTag[Q]):(Long,T) = {
     val system = ActorSystem("DDBT")
     val query = system.actorOf(Props[Q],"Query")
-    val res = mux[K,V](query,streams,parallel)
+    val res = mux[T](query,streams,parallel)
     system.shutdown; res
   }
     
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor,K,V](port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]):(Long,Map[K,V]) = {
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor,T](port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]):(Long,T) = {
     val system:ActorSystem = this.sys("MasterSystem","127.0.0.1",port-1)
     val nodes = (0 until N).map { i => sys("NodeSystem"+i,"127.0.0.1",port+i) }
     val wprops = (0 until N).map { i=>props[W]("NodeSystem"+i,"127.0.0.1",port+i) }.toArray
     val master = system.actorOf(Props(cm.runtimeClass,wprops))
-    val res = mux[K,V](master,streams,parallel)
+    val res = mux[T](master,streams,parallel)
     Thread.sleep(100); nodes.foreach{ _.shutdown }; system.shutdown; Thread.sleep(100); res
   }
   
   def time(ns:Long) = { val ms=ns/1000000; "%d.%03d".format(ms/1000,ms%1000) }
-  def bench[K,V](name:String,count:Int,f:()=>(Long,Map[K,V])):Map[K,V] = {
+  def bench[T](name:String,count:Int,f:()=>(Long,T)):T = {
     val out = (0 until count).map { x => f() }
     val res = out.map(_._2).toList; assert(res.tail.filter{ x=> x!=res.head }.isEmpty)
     val ts = out.map(_._1).sorted;
     println(name+" : "+time(ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec)"); res.head
   }
+
+  // ---------------------------------------------------------------------------
+  // Unit testing helpers
+  def diff[K,V](m1:Map[K,V],m2:Map[K,V]) {
+    // XXX: complete here
+    assert(m1==m2)
+  }
+  
 
   // ---------------------------------------------------------------------------
   // Stream definitions

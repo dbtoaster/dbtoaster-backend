@@ -1,15 +1,17 @@
 package examples // <-- only this line has been manually added
-
 import ddbt.lib._
+
 import akka.actor.Actor
 import java.util.Date
 
 object TPCH13Gen extends Helper {
+  def execute() = run[TPCH13Gen,Map[Long,Long]](Seq(
+    (new java.io.FileInputStream("resources/data/tpch/orders.csv"),new Adaptor.CSV("ORDERS","long,long,string,double,date,string,string,long,string","\\Q|\\E"),Split()),
+    (new java.io.FileInputStream("resources/data/tpch/customer.csv"),new Adaptor.CSV("CUSTOMER","long,string,string,long,string,double,string,string","\\Q|\\E"),Split())
+  ))
+  
   def main(args:Array[String]) {
-    val res = bench("NewGen",10,()=>run[TPCH13Gen,Long,Long](Seq(
-      (new java.io.FileInputStream("resources/data/tpch/orders.csv"),new Adaptor.CSV("ORDERS","long,long,string,double,date,string,string,long,string","\\Q|\\E"),Split()),
-      (new java.io.FileInputStream("resources/data/tpch/customer.csv"),new Adaptor.CSV("CUSTOMER","long,string,string,long,string,double,string,string","\\Q|\\E"),Split())
-    )))
+    val res = bench("NewGen",10,execute)
     println(K3Helper.toStr(res))
   }
 }
@@ -30,11 +32,8 @@ class TPCH13Gen extends Actor {
     case TupleEvent(TupleInsert,"CUSTOMER",tx,List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onAddCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case TupleEvent(TupleDelete,"CUSTOMER",tx,List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDelCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case SystemInit => onSystemReady(); t0=System.nanoTime()
-    case EndOfStream => val time=System.nanoTime()-t0; sender ! (time,result)
+    case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,CUSTDIST.toMap)
   }
-  
-  def result = CUSTDIST.toMap
-  
   
   def onAddORDERS(orders_orderkey:Long, orders_custkey:Long, orders_orderstatus:String, orders_totalprice:Double, orders_orderdate:Date, orders_orderpriority:String, orders_clerk:String, orders_shippriority:Long, orders_comment:String) {
     val tmp_add1 = K3Map.temp[Long,Long]()
@@ -308,3 +307,4 @@ class TPCH13Gen extends Actor {
     
   }
 }
+

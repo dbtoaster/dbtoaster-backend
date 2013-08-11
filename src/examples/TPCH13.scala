@@ -14,9 +14,9 @@ import org.dbtoaster.dbtoasterlib.StdFunctions._
 
 object TPCH13 extends Helper {
   def main(args:Array[String]) {
-    val ref = bench("ReferenceLMS ",10,()=>run[TPCH13Ref,Long,Long](streamsTPCH13()))
-    val res = bench("HandOptimized",10,()=>run[TPCH13,Long,Long](streamsTPCH13()))
-    val gen = bench("TCK-Generated",10,()=>run[TPCH13Gen,Long,Long](streamsTPCH13()))
+    val ref = bench("ReferenceLMS ",10,()=>run[TPCH13Ref,Map[Long,Long]](streamsTPCH13()))
+    val res = bench("HandOptimized",10,()=>run[TPCH13,Map[Long,Long]](streamsTPCH13()))
+    val gen = bench("TCK-Generated",10,()=>run[TPCH13Gen,Map[Long,Long]](streamsTPCH13()))
     def eq(m1:Map[Long,Long],m2:Map[Long,Long]) = m1.filter{case (k,v) => v!=0}==m2.filter{case (k,v) => v!=0}
     println("Correctness: "+(if(eq(ref,res)) "OK" else "FAILURE !!!!"))
     println("Correctness: "+(if(eq(ref,gen)) "OK" else "FAILURE !!!!"))
