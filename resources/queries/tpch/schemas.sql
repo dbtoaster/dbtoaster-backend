@@ -16,7 +16,7 @@ CREATE STREAM LINEITEM (
         shipmode       CHAR(10),
         comment        VARCHAR(44)
     )
-  FROM FILE 'examples/data/tpch/lineitem.csv'
+  FROM FILE 'resources/data/tpch/lineitem.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM ORDERS (
@@ -30,7 +30,7 @@ CREATE STREAM ORDERS (
         shippriority   INT,
         comment        VARCHAR(79)
     )
-  FROM FILE 'examples/data/tpch/orders.csv'
+  FROM FILE 'resources/data/tpch/orders.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM PART (
@@ -44,7 +44,7 @@ CREATE STREAM PART (
         retailprice  DECIMAL,
         comment      VARCHAR(23)
     )
-  FROM FILE 'examples/data/tpch/part.csv'
+  FROM FILE 'resources/data/tpch/part.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM CUSTOMER (
@@ -57,7 +57,7 @@ CREATE STREAM CUSTOMER (
         mktsegment   CHAR(10),
         comment      VARCHAR(117)
     )
-  FROM FILE 'examples/data/tpch/customer.csv'
+  FROM FILE 'resources/data/tpch/customer.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM SUPPLIER (
@@ -69,7 +69,7 @@ CREATE STREAM SUPPLIER (
         acctbal      DECIMAL,
         comment      VARCHAR(101)
     )
-  FROM FILE 'examples/data/tpch/supplier.csv'
+  FROM FILE 'resources/data/tpch/supplier.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM PARTSUPP (
@@ -79,7 +79,7 @@ CREATE STREAM PARTSUPP (
         supplycost   DECIMAL,
         comment      VARCHAR(199)
     )
-  FROM FILE 'examples/data/tpch/partsupp.csv'
+  FROM FILE 'resources/data/tpch/partsupp.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 CREATE TABLE NATION (
@@ -88,7 +88,7 @@ CREATE TABLE NATION (
         regionkey    INT,
         comment      VARCHAR(152)
     )
-  FROM FILE 'examples/data/tpch/nation.csv'
+  FROM FILE 'resources/data/tpch/nation.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 CREATE TABLE REGION (
@@ -96,6 +96,6 @@ CREATE TABLE REGION (
         name         CHAR(25),
         comment      VARCHAR(152)
     )
-  FROM FILE 'examples/data/tpch/region.csv'
+  FROM FILE 'resources/data/tpch/region.csv'
   LINE DELIMITED CSV (delimiter := '|');
 

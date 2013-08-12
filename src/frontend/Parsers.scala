@@ -27,7 +27,7 @@ class ExtParser extends StandardTokenParsers {
 
   // ------------ Literals
   lazy val long = opt("+"|"-") ~ numericLit ^^ { case s~n => (s match { case Some("-") => "-" case _ => ""})+n }
-  lazy val double = (long <~ ".") ~ opt(numericLit) ~ opt(("E"|"e") ~> long) ^^ { case i~d~e => i+"."+(d match { case Some(s)=>s case None=>"" })+(e match { case Some(j)=>"E"+j case _=>"" }) }
+  lazy val double = (long <~ ".") ~ opt(numericLit) ~ opt(("E"|"e") ~> long) ^^ { case i~d~e => val f=i+"."+(d match { case Some(s)=>s case None=>"" })+(e match { case Some(j)=>"E"+j case _=>"" }); if (f.endsWith(".")) f+"0" else f }
 
   // ------------ Types
   lazy val tpe: Parser[Type] = (("string" | ("char"|"varchar") ~> "(" ~> numericLit <~  ")") ^^^ TypeString
