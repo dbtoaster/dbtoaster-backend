@@ -27,4 +27,6 @@ object Functions {
   }).matcher(str).find) 1 else 0
 
   def Udiv(x: Double): Double = 1.0 / x
+  def Ulistmax(v1: Long, v2: Long): Double = Math.max(v1, v2)
+  def Ulistmax(v1: Double, v2: Double): Double = Math.max(v1, v2)
 }
