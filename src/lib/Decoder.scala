@@ -76,6 +76,11 @@ object Adaptor {
       case "int"|"long" => (c:String) => java.lang.Long.parseLong(c)
       case "float"|"double" => (c:String) => java.lang.Double.parseDouble(c)
       case "date" => (c:String) => dfp.parse(c)
+      case "string" => (c:String) => if (c.length==0) "" else c(0) match {
+        case '\'' => c.substring(1,c.length-1).replaceAll("\\\\'","'")
+        case '"' => c.substring(1,c.length-1).replaceAll("\\\\\"","\"")
+        case _ => c
+      }
       case _ => (c:String) => c
     }
     val act:Int = action.toLowerCase match { case "insert"=>0 case "delete"=>1 case _=>2 }

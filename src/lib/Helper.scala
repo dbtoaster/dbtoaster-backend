@@ -60,8 +60,13 @@ trait Helper {
 
   // ---------------------------------------------------------------------------
   // Unit testing helpers
-  def diff[K,V](m1:Map[K,V],m2:Map[K,V]) {
-    // XXX: complete here
+  def diff[K,V](map1:Map[K,V],map2:Map[K,V]) {
+    val m1 = map1.filter{ case (k,v) => map2.get(k) match { case Some(v2) => v2!=v case None => true } }
+    val m2 = map2.filter{ case (k,v) => map1.get(k) match { case Some(v2) => v2!=v case None => true } }
+    if (m1.size>0||m2.size>0) {
+      println("---- Result -------------------------"); println(K3Helper.toStr(m1))
+      println("---- Reference ----------------------"); println(K3Helper.toStr(m2))
+    }
     assert(m1==m2)
   }
   

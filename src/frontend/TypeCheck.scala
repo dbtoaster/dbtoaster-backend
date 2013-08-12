@@ -45,20 +45,20 @@ object TypeCheck extends (M3.System => M3.System) {
   }
 
   def typeCheck(s0:System) = {
+    def tpRes(t1:Type,t2:Type,ex:Expr):Type = (t1,t2) match {
+      case (t1,t2) if t1==t2 => t1
+      case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
+      case _ => err("Bad operands ("+t1+","+t2+"): "+ex)
+    }
+ 
     // 4. Resolve missing types (and also make sure operations are correct)
     def ie(ex:Expr,b:Map[String,Type]):Map[String,Type] = {
       var br=b; // new bindings
       var dim=List[Type]() // dimension of result set
       ex match { // gives a type to all untyped nodes
-        case m@Mul(l,r) => br=ie(r,ie(l,b)); m.tp=(l.tp,r.tp) match {
-          case (TypeLong,TypeLong) => TypeLong
-          case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) | (TypeDouble,TypeDouble) => TypeDouble
-          case _ => err("Bad operands: "+ex)
-        }
-        dim = l.dim:::r.dim
-        case a@Add(l,r) => br=b++ie(l,b)++ie(r,b); if (l.tp!=r.tp) err("Bad operands: "+ex); a.tp=l.tp
-          dim = if (l.dim.size>r.dim.size) l.dim else r.dim // we might union a set with one slice of smaller dimensionality
-        case Cmp(l,r,_) => br=b++ie(l,b)++ie(r,b); if (l.tp!=r.tp && !(l.tp==TypeLong && r.tp==TypeDouble) && !(l.tp==TypeDouble && r.tp==TypeLong)) err("Bad operands: "+ex)
+        case m@Mul(l,r) => br=ie(r,ie(l,b)); m.tp=tpRes(l.tp,r.tp,ex); dim=l.dim:::r.dim
+        case a@Add(l,r) => br=b++ie(l,b)++ie(r,b); a.tp=tpRes(l.tp,r.tp,ex); dim = if (l.dim.size>r.dim.size) l.dim else r.dim // we might union a set with one slice of smaller dimensionality
+        case Cmp(l,r,_) => br=b++ie(l,b)++ie(r,b); tpRes(l.tp,r.tp,ex)
         case Exists(e) => ie(e,b)
         case Lift(n,e) => ie(e,b); b.get(n) match { case Some(t) => if (t!=e.tp) err("Value "+n+" lifted with "+t+" compared with "+e.tp) case None => br=b+((n,e.tp)) }; dim=e.dim
         case AggSum(ks,e) => br=ie(e,b); dim=ks.map(br)
@@ -87,7 +87,7 @@ object TypeCheck extends (M3.System => M3.System) {
   // XXX: introduce a per-trigger constant expression lifting (detect subexpression where all variables are bound by trigger arguments only)
   // XXX: introduce a unique factorization of expression to simplify expressions if possible. Use case: TPCH13 -> 2/4 maps can be removed in each trigger.
   // XXX: Some names are long, improve renaming function (use mapping/regexp to simplify variable names)
-  
+
   def apply(s:System) = {
     val phases = renameVars((s:String)=>s.toLowerCase) _ andThen
                  typeMaps _ andThen
