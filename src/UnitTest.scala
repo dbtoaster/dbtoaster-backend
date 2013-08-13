@@ -92,7 +92,7 @@ object UnitTest {
     
     val passing = (
       List("axfinder","pricespread") :::
-      List("4","6","12","13","17","17a","18","18a","19").map("tpch"+_) :::
+      List("3","4","6","11a","12","13","14","17","17a","18","18a","19").map("tpch"+_) :::
       List("02","02a","03","03a","04","04a","05","06","07","12a","22","45","48","49","50","51","54","55","62a","64a","65a").map("employee/query"+_) :::
       List("r_aggcomparison","r_gtealldynamic","r_impossibleineq","r_ltalldynamic","r_possibleineq","r_possibleineqwitheq","r_nonjoineq","rs_column_mapping_3","singleton_renaming_conflict",
            "t_lifttype","m3k3unable2escalate","rst","r_ineqandeq","r_aggofnestedagg").map("simple/"+_) :::
@@ -101,7 +101,6 @@ object UnitTest {
     
     val failing = (
       List("brokervariance","brokerspread","vwap") :::
-      List("3","11a","14").map("tpch"+_) :::
       List("01","01a","08","08a","09","09a","10","10a","11b","13","14","15","16","16a","35c","36c","37","38a","40").map("employee/query"+_) :::
       List("r_agtbexists","r_avg","r_count","r_bigsumstar","r_btimesa","r_btimesacorrelated","r_deepscoping","r_gbasumb","r_gtesomedynamic","r_gtsomedynamic","r_instatic","r_ltallagg",
            "r_natselfjoin","r_nogroupby","r_selectstar","r_simplenest","r_smallstar","r_starofnested","r_starofnestedagg","r_sumdivgrp","r_sumstar","rs_column_mapping_1",
@@ -113,8 +112,8 @@ object UnitTest {
     
     val nocompile = (all.toSet -- passing.toSet -- failing.toSet).toArray
     /*
-    List(,"missedtrades","ssb4","tpch1","tpch10","tpch11","tpch11a","tpch11c","tpch14","tpch15","tpch16","tpch17a",
-         "tpch18","tpch18a","tpch2","tpch20","tpch21","tpch22","tpch22a","tpch4","tpch5","tpch7","tpch8","tpch9"):::
+    List(,"missedtrades","ssb4") :::
+    List("1","10","11","11a","11c","14","15","16","17a","18","18a","2","20","21","22","22a","4","5","7","8","9").map("tpch"+_) :::
     List("07","11","11a","12","17a","23a","24a","35b","36b","39","46","47","47a","52","52a","53","53a","56","56a","57","57a","58","58a","59","60","61","62","63","63a",
          "64","65","65a","66","66a").map("employee/query"+_) :::
     List("inequality_selfjoin","invalid_schema_fn","","miraculous_minus","miraculous_minus2","r_agtb","r_count_of_one",
@@ -126,12 +125,12 @@ object UnitTest {
     List("12811747","39765730","48183500","52548748","96434723").map("zeus/"+_)
     */
     
-    println("Passing  : "+passing.size) // 49
-    println("Failing  : "+failing.size) // 73
+    println("Passing  : "+passing.size) // 52
+    println("Failing  : "+failing.size) // 70
     println("NoCompile: "+nocompile.size) // 61
-    val files = failing //Array("test/unit/queries/simple/r_aggofnested") //"test/unit/queries/tpch1")
+    val files = nocompile //Array("test/unit/queries/simple/r_aggofnested") //"test/unit/queries/tpch1")
     
-    val independent = false
+    val independent = (files==nocompile)
     
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }

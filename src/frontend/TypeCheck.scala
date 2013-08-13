@@ -101,8 +101,6 @@ object TypeCheck extends (M3.System => M3.System) {
     }
     */
     
-    
-    
     s0.triggers.foreach {
       case TriggerReady(ss) => ss foreach {x=>ist(x)}
       case TriggerAdd(s,ss) => ss foreach {x=>ist(x,s.fields.toMap)}

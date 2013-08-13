@@ -64,13 +64,28 @@ trait Helper {
     val m1 = map1.filter{ case (k,v) => map2.get(k) match { case Some(v2) => v2!=v case None => true } }
     val m2 = map2.filter{ case (k,v) => map1.get(k) match { case Some(v2) => v2!=v case None => true } }
     if (m1.size>0||m2.size>0) {
-      println("---- Result -------------------------"); println(K3Helper.toStr(m1))
-      println("---- Reference ----------------------"); println(K3Helper.toStr(m2))
+      //println("---- Result -------------------------"); println(K3Helper.toStr(m1))
+      //println("---- Reference ----------------------"); println(K3Helper.toStr(m2))
+      //assert(m1==m2)
+
+      val ks=m1.keys++m2.keys
+      var err=false
+      ks.foreach { k=>
+        val v1=m1.getOrElse(k,null);
+        val v2=m2.getOrElse(k,null);
+        if (v1==null) { println("Missing key: "+k+" -> "+v2); err=true; }
+        else if (v2==null) { println("Extra key: "+k+" -> "+v1); err=true; }
+        else try { diff(v1,v2) } catch { case _:Throwable => println("Bad value: "+k+" -> "+v1+" (expected "+v2+")"); err=true }
+      }
+      if (err) { println("--------------------"); assert(m1==m2) }
     }
-    assert(m1==m2)
   }
-  def diff[V](v1:V,v2:V) {
-    assert(v1==v2)
+  
+  val precision = 10 // significative numbers
+  private val diff_p = Math.pow(0.1,precision)
+  def diff[V](v1:V,v2:V) = if (v1!=v2) (v1,v2) match {
+    case (d1:Double,d2:Double) => assert(Math.abs(2*(d1-d2)/(d1+d2))<diff_p)
+    case _ => assert(false)
   }
   
   def loadCSV[K,V](kv:List[Any]=>(K,V),file:String,fmt:String,sep:String=","):Map[K,V] = {

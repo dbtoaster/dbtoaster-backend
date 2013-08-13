@@ -67,6 +67,26 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
        //println("b="+b+"\nl="+bnd(el)+"\nr="+bnd(er)+"\nvs="+vs)
        
        if (vs.size>0) {
+         /// ---------------------------- XXX: deal with this properly
+         /*
+         if (el.dim.size==0 || er.dim.size==0) {
+           val (e0,en) = if (el.dim.size==0) (el,er) else (er,el)
+           val t0=fresh("addx");
+           "var "+t0+":"+tpe(e0.tp)+" = 0\n"+
+           cpsExpr(e0,b,(v:String)=>t0+" += "+v)+"\n"+
+           cpsExpr(en,b,(v:String)=>co("("+t0+" + "+v+")"))
+         } else {
+           rest
+         }
+         Would allow compilation
+         -> Tpch1Spec 1/1
+         -> Employee24aSpec 2/3
+         -> Employee61Spec 0/1
+         -> Employee63aSpec 0/1
+         -> RsumnestedintargetSpec 0/1
+         */
+         /// ----------------------------
+       
          val (t0,k0,v0)=(fresh("tmp_add"),fresh("k"),fresh("v"))
          // XXX: fix this
          //(if (ex.dim.size==0) "/*\n BUG: vs="+vs+"\n b="+b+"\nbl="+(bnd(el).filter(x=> !b.contains(x))--b)+"\nbr="+bnd(er)+"\n"+ex.dim+" -> "+ex.tp+" ["+tm+"] := "+ex+" */\n" else "")+
@@ -81,7 +101,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       if ((ks.toSet & in).size==0) { // key is not defined by inner Lifts
         // XXX: we want to evaluate the content inside a nested context to avoid name collisions or rename lifts
         // XXX: find a nicer solution
-        if (tm!=None) cpsExpr(e,b,co) else { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0; {\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+" }\n"+co(a0) }
+        if (tm!=None) cpsExpr(e,b,co) else { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n{ "+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+" }\n"+co(a0) }
       } else {
         val fs = ks.toSet--b // free variables
         val bs = ks.toSet--fs // bounded variables
@@ -90,12 +110,16 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
           case Some(t0) => (t0,true)
           case None => (fresh("tmp"),false)
         }
-        // XXX: problem with renaming ?? not preserving dimensions ???
         (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
         cpsExpr(e.rename(r),b++ks.map(r).toSet,(v:String)=> {
           val s=t0+".add("+tup(ks.map(r))+","+v+");"
           if (bs.size==0) s else "if ("+bs.map{ b=>b+" == "+r(b) }.mkString(" && ")+") {\n"+ind(s)+"\n}"
         })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
+        /* EQUIVALENT TO
+        (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
+        cpsExpr(e,b++ks.toSet,(v:String)=> { "\n{\n"+t0+".add("+tup(ks)+","+v+");\n}\n"
+        })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
+        */
       }
     case Exists(e) => val e0=fresh("ex")
       //if ((e.bound--b).size==0) "val "+e0+" = ({"+cpsExpr(e,b,(v:String)=>e0)+"}) != 0;\n"+co(e0) else
