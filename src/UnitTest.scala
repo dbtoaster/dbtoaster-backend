@@ -33,7 +33,7 @@ object UnitTest {
   import ddbt.codegen._
 
   val dir=new java.io.File("test/gen") // output folder
-
+  
   def toast(f:String) = exec(Array("bin/dbtoaster_release","-l","M3",f),true)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
   def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
   def clean = if (dir.isDirectory()) dir.listFiles().foreach { f=>f.delete() }
@@ -68,7 +68,8 @@ object UnitTest {
           val (kt,vt) = qt(n)
           val qtp = "["+tup(kt.map(gen.tpe))+","+gen.tpe(vt)+"]"
           val fmt = (kt:::vt::Nil).mkString(",")
-          val kv = { val ll=(kt:::vt::Nil).zipWithIndex
+          val kv = if (kt.size==0) "" else {
+            val ll=(kt:::vt::Nil).zipWithIndex
             "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+gen.tpe(t)}.mkString(",")+") => ("+tup(ll.reverse.tail.reverse.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n"
           }
           "it(\"Correctness "+n+"\") {"+ind("\n"+kv+
@@ -90,65 +91,55 @@ object UnitTest {
     val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }
     
     val passing = (
-      List("axfinder") :::
-      List("4","12","13","18").map("tpch"+_) :::
-      List("02","02a","03","03a","04","04a","05","06","07","12a","22","48","49","50","51","54","55","62a").map("employee/query"+_) :::
+      List("axfinder","pricespread") :::
+      List("4","6","12","13","17","17a","18","18a","19").map("tpch"+_) :::
+      List("02","02a","03","03a","04","04a","05","06","07","12a","22","45","48","49","50","51","54","55","62a","64a","65a").map("employee/query"+_) :::
       List("r_aggcomparison","r_gtealldynamic","r_impossibleineq","r_ltalldynamic","r_possibleineq","r_possibleineqwitheq","r_nonjoineq","rs_column_mapping_3","singleton_renaming_conflict",
-           "t_lifttype","m3k3unable2escalate").map("simple/"+_) :::
+           "t_lifttype","m3k3unable2escalate","rst","r_ineqandeq","r_aggofnestedagg").map("simple/"+_) :::
       List("75453299","95497049","94384934").map("zeus/"+_)
     ).map{x=>"test/unit/queries/"+x}
     
     val failing = (
-      List("brokervariance","brokerspread") :::
-      List("3","11a").map("tpch"+_) :::
+      List("brokervariance","brokerspread","vwap") :::
+      List("3","11a","14").map("tpch"+_) :::
       List("01","01a","08","08a","09","09a","10","10a","11b","13","14","15","16","16a","35c","36c","37","38a","40").map("employee/query"+_) :::
-      List("r_agtbexists","r_bigsumstar","r_btimesa","r_btimesacorrelated","r_deepscoping","r_gbasumb","r_gtesomedynamic","r_gtsomedynamic","r_instatic","r_ltallagg",
-           "r_natselfjoin","r_nogroupby","r_selectstar","r_simplenest","r_smallstar","r_starofnested","r_starofnestedagg","r_sumdivgrp","r_sumstar","rr_ormyself","rs_column_mapping_1",
+      List("r_agtbexists","r_avg","r_count","r_bigsumstar","r_btimesa","r_btimesacorrelated","r_deepscoping","r_gbasumb","r_gtesomedynamic","r_gtsomedynamic","r_instatic","r_ltallagg",
+           "r_natselfjoin","r_nogroupby","r_selectstar","r_simplenest","r_smallstar","r_starofnested","r_starofnestedagg","r_sumdivgrp","r_sumstar","rs_column_mapping_1",
            "rs_column_mapping_2","rs_eqineq","rs_joinon","rs_natjoin","rs_natjoinineq","rs_natjoinpartstar","rs_selectconstcmp","rs_selectpartstar","rs_selectstar","rs_simple","rs_stringjoin",
-           "r_divb","r_ltallavg","rs_joinwithnestedagg").map("simple/"+_) :::
+           "r_divb","r_ltallavg","rs_joinwithnestedagg","r_sum_out_of_aggregate","rs","rs_cmpnest","r_aggofnested","r_sumadivsumb","rstar","rs_inequality","r_sumnestedintargetwitheq",
+           "rs_ineqonnestedagg").map("simple/"+_) :::
       List("11564068","37494577","59977251").map("zeus/"+_)
     ).map{x=>"test/unit/queries/"+x}.toArray
     
     val nocompile = (all.toSet -- passing.toSet -- failing.toSet).toArray
     /*
-    List("vwap","missedtrades","pricespread","ssb4","tpch1","tpch10","tpch11","tpch11a","tpch11c","tpch14","tpch15","tpch16","tpch17","tpch17a",
-         "tpch18","tpch18a","tpch19","tpch2","tpch20","tpch21","tpch22","tpch22a","tpch4","tpch5","tpch6","tpch7","tpch8","tpch9"):::
-    List("07","11","11a","12","17a","23a","24a","35b","36b","39","45","46","47","47a","52","52a","53","53a","56","56a","57","57a","58","58a","59","60","61","62","63","63a",
-         "64","64a","65","65a","66","66a").map("employee/query"+_) :::
-    List("inequality_selfjoin","invalid_schema_fn","","miraculous_minus","miraculous_minus2","r_aggofnested","r_aggofnestedagg","r_agtb","r_avg","r_count","r_count_of_one",
-         "r_count_of_one_prime","r_existsnestedagg","r_indynamic","r_ineqandeq","r_lift_of_count","r_ltallcorravg","r_multinest","r_sum_gb_all_out_of_aggregate",
-         "r_sum_gb_out_of_aggregate","r_sum_out_of_aggregate","r_sumadivsumb","r_sumnestedintarget","r_sumnestedintargetwitheq","r_sumoutsideofagg","r_unique_counts_by_a","rs","rs_cmpnest",
-         "rs_ineqonnestedagg","rs_inequality","rs_ineqwithnestedagg","rst","rstar","rtt_or_with_stars","ss_math").map("simple/"+_) :::
+    List(,"missedtrades","ssb4","tpch1","tpch10","tpch11","tpch11a","tpch11c","tpch14","tpch15","tpch16","tpch17a",
+         "tpch18","tpch18a","tpch2","tpch20","tpch21","tpch22","tpch22a","tpch4","tpch5","tpch7","tpch8","tpch9"):::
+    List("07","11","11a","12","17a","23a","24a","35b","36b","39","46","47","47a","52","52a","53","53a","56","56a","57","57a","58","58a","59","60","61","62","63","63a",
+         "64","65","65a","66","66a").map("employee/query"+_) :::
+    List("inequality_selfjoin","invalid_schema_fn","","miraculous_minus","miraculous_minus2","r_agtb","r_count_of_one",
+         "r_count_of_one_prime","r_existsnestedagg","r_indynamic","r_lift_of_count","r_ltallcorravg","r_multinest","r_sum_gb_all_out_of_aggregate",
+         "r_sum_gb_out_of_aggregate","rr_ormyself"
+         ,"r_sumnestedintarget"
+         ,"r_sumoutsideofagg","r_unique_counts_by_a",
+         ,"rs_ineqwithnestedagg","rtt_or_with_stars","ss_math").map("simple/"+_) :::
     List("12811747","39765730","48183500","52548748","96434723").map("zeus/"+_)
     */
     
-    println("Passing  : "+passing.size) // 37
-    println("Failing  : "+failing.size) // 61
-    println("NoCompile: "+nocompile.size) // 85
-    val files = passing //Array("test/unit/queries/tpch1")
+    println("Passing  : "+passing.size) // 49
+    println("Failing  : "+failing.size) // 73
+    println("NoCompile: "+nocompile.size) // 61
+    val files = failing //Array("test/unit/queries/simple/r_aggofnested") //"test/unit/queries/tpch1")
     
-    val oneByOne = false
+    val independent = false
     
-    // remove all previous tests
-    clean
-    
+    clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
     tests.foreach{ t =>
     //  val t = tests.filter{t=>t.sql.indexOf("axfinder")!= -1}(0) // we pick one single test for purposes of debugging
       try {
-        println("---------------- "+t.sql)
-        if (oneByOne) {
-          clean
-          makeTest(t,fsz)
-          println(exec(Array("sbt","test-only * -- -l ddbt.SlowTest")))
-          
-        } else {
-          makeTest(t,fsz)
-        }
-        // XXX: create helpers for diff and loading from disk
-        
-        
-        
+        println("---------------- "+t.sql); makeTest(t,fsz)
+        if (independent) { println(exec(Array("sbt","test-only * -- -l ddbt.SlowTest"))); clean }
       } catch {
         case th:Throwable => println("Failed to generate "+t.sql+" because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) }
       }

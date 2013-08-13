@@ -35,13 +35,18 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     //Lift alone has only bound variables. In Exists*Lift, Exists binds variables for the Lift
     case Mul(Exists(e1),Lift(n,e)) if e1==e => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("("+n+" != 0)")) // LiftExist
     case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)"),tm),tm)
+    
+    // XXX: optimization
+    //case Mul(Cmp(l,r,op),e) => cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"if ("+ll+" "+op+" "+rr+") {\n"+ind(cpsExpr(e,b,co))+"\n}\n"))
+    
+    // XXX: put each lift in its own context to avoid name clashes
+    
 
     // ASSERTION IS WRONG (see TPC-H 15)
     case Lift(n,e) => 
       if (b.contains(n)) cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")"),tm) // Lift acts as a constraint
       else cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("1"),tm)
       //assert(b.contains(n)); cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")")) // Lift acts as a constraint
-
     case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) => cpsExpr(er,b,co,tm).replace(n,n2) // optional: dealiasing
     case Mul(Lift(n,e),er) if !b.contains(n) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(er,b+n,co,tm) // 'regular' Lift
     case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),tm),tm) // right is nested in left (right is a continuation of left)
@@ -58,22 +63,19 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
        *    B.foreach{ (k_b,v_b) => t.add(domB(k_b),v_b) }
        *    x.foreach { (k,v) => f(v) }
        */
-       val vs = ((bnd(el)&bnd(er))--b).toList // free variables present on both sides
+       val vs = ( (bnd(el)--b) & (bnd(er)--b) ).toList // free variables present on both sides
+       //println("b="+b+"\nl="+bnd(el)+"\nr="+bnd(er)+"\nvs="+vs)
+       
        if (vs.size>0) {
          val (t0,k0,v0)=(fresh("tmp_add"),fresh("k"),fresh("v"))
-         
          // XXX: fix this
-         (if (ex.dim.size==0) "/* BUG:"+ex.dim+" -> "+ex.tp+" ["+tm+"] := "+ex+" */\n" else "")+
+         //(if (ex.dim.size==0) "/*\n BUG: vs="+vs+"\n b="+b+"\nbl="+(bnd(el).filter(x=> !b.contains(x))--b)+"\nbr="+bnd(er)+"\n"+ex.dim+" -> "+ex.tp+" ["+tm+"] := "+ex+" */\n" else "")+
          "val "+t0+" = K3Map.temp["+tup(ex.dim.map(tpe))+","+tpe(ex.tp)+"]()\n"+
          cpsExpr(el,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
          cpsExpr(er,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
          t0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
          (if (vs.size==1) "val "+vs(0)+" = "+k0+"\n" else vs.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
-
-
-
        } else cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),tm),tm) // right is nested in left
-
     case agg@AggSum(ks,e) =>
       val in = if (ks.size>0) e.collect{ case Lift(n,x) => Set(n) } else Set[String]()
       if ((ks.toSet & in).size==0) { // key is not defined by inner Lifts
@@ -88,13 +90,13 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
           case Some(t0) => (t0,true)
           case None => (fresh("tmp"),false)
         }
+        // XXX: problem with renaming ?? not preserving dimensions ???
         (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
         cpsExpr(e.rename(r),b++ks.map(r).toSet,(v:String)=> {
           val s=t0+".add("+tup(ks.map(r))+","+v+");"
           if (bs.size==0) s else "if ("+bs.map{ b=>b+" == "+r(b) }.mkString(" && ")+") {\n"+ind(s)+"\n}"
         })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
       }
-
     case Exists(e) => val e0=fresh("ex")
       //if ((e.bound--b).size==0) "val "+e0+" = ({"+cpsExpr(e,b,(v:String)=>e0)+"}) != 0;\n"+co(e0) else
       "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0)
@@ -165,7 +167,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
         case _ => ""
       }.mkString+
       "case SystemInit => onSystemReady(); t0=System.nanoTime()\n"+
-      "case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,"+tup(s0.queries.map{q=>q.name+".toMap"})+")"
+      "case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,"+tup(s0.queries.map{q=>q.name+(if (s0.mapType(q.m.name)._1.size>0) ".toMap" else ".get()")})+")"
     )+"\n}\n"+cs.map{case (Apply(f,tp,as),n) =>
       val vs = as.map { a=>cpsExpr(a,Set(),(v:String)=>v) }
       "val "+n+":"+tpe(tp)+" = U"+f+"("+vs.mkString(",")+")\n"
@@ -189,7 +191,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   }
   
   // Helper that contains the main and stream generator
-  def genViewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); "Map["+tup(m._1.map(tpe))+","+tpe(m._2)+"]" })
+  def genViewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); if (m._1.size==0) tpe(m._2) else "Map["+tup(m._1.map(tpe))+","+tpe(m._2)+"]" })
   def genHelper(s0:System) = {
     "package ddbt.generated\n"+
     "import ddbt.lib._\n\n"+

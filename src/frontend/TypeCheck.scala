@@ -76,6 +76,33 @@ object TypeCheck extends (M3.System => M3.System) {
     def ist(s:Stmt,b:Map[String,Type]=Map()) = s match {
       case StmtMap(m,e,op,in) => ie(e,b); in.map(e=>ie(e,b))
     }
+    
+    /*
+    def ie(ex:Expr,b:Map[String,Type],ks:List[String]):Map[String,Type] = {
+      var b2=b; // new bindings
+      ex match {
+        case m@Mul(l,r) => b2=ie(r,ie(l,b,ks),ks); m.tp=tpRes(l.tp,r.tp,ex);
+        case a@Add(l,r) => b2=b++ie(l,b,ks)++ie(r,b,ks); a.tp=tpRes(l.tp,r.tp,ex);
+        case Cmp(l,r,_) => b2=b++ie(l,b,ks)++ie(r,b,ks); tpRes(l.tp,r.tp,ex)
+        case Exists(e) => ie(e,b,ks)
+        case Lift(n,e) => ie(e,b,ks); b.get(n) match { case Some(t) => if (t!=e.tp) err("Value "+n+" lifted with "+t+" compared with "+e.tp) case None => b2=b+((n,e.tp)) };
+        case AggSum(ks2,e) => b2=ie(e,b,ks2)
+        case Apply(_,_,as) => as map {x=>ie(x,b,ks)} // XXX: Verify typing of Apply against user-functions library (additional typing informations must be provided)
+        case r@Ref(n) => r.tp=b(n)
+        case m@MapRef(n,tp,ks2) => val mtp=s0.mapType(n); m.tp=mtp._2; b2=b++(ks2 zip mtp._1).toMap
+        case _ =>
+      }
+      ex.dim = ks.filter{k=>b2.contains(k)}.map(b2) // now solve the dimensions using b2
+      println(ex.dim+" in "+ex+"\n")
+      if (ex.tp==null) err("Untyped: "+ex); b2
+    }
+    def ist(s:Stmt,b:Map[String,Type]=Map()) = s match {
+      case StmtMap(m,e,op,in) => ie(e,b,m.keys); in.map(e=>ie(e,b,m.keys))
+    }
+    */
+    
+    
+    
     s0.triggers.foreach {
       case TriggerReady(ss) => ss foreach {x=>ist(x)}
       case TriggerAdd(s,ss) => ss foreach {x=>ist(x,s.fields.toMap)}

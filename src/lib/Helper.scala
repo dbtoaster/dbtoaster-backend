@@ -69,6 +69,9 @@ trait Helper {
     }
     assert(m1==m2)
   }
+  def diff[V](v1:V,v2:V) {
+    assert(v1==v2)
+  }
   
   def loadCSV[K,V](kv:List[Any]=>(K,V),file:String,fmt:String,sep:String=","):Map[K,V] = {
     val m = new java.util.HashMap[K,V]()

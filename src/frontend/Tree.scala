@@ -97,10 +97,10 @@ object M3 {
       }); e.dim=this.dim; e
     }
     def rename(r:String=>String):Expr = replace {
-      case Ref(n) => val t=Ref(r(n)); t.tp=tp; t.dim=dim; t
-      case MapRef(n,tp,ks) => val t=MapRef(/*if (maps) r(n) else*/ n,tp,ks.map(r)); t.tp=tp; t.dim=dim; t
-      case Lift(n,e) => val t=Lift(r(n),e.rename(r)); t.dim=dim; t
-      case AggSum(ks,e) => val t=AggSum(ks map r,e.rename(r)); t.dim=dim; t
+      case Ref(n) => val t=Ref(r(n)); t.tp=tp; t
+      case MapRef(n,tp,ks) => val t=MapRef(n,tp,ks.map(r)); t.tp=tp; t
+      case Lift(n,e) => val t=Lift(r(n),e.rename(r)); t
+      case AggSum(ks,e) => val t=AggSum(ks map r,e.rename(r)); t
     }
   }
   // Constants
