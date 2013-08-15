@@ -102,8 +102,16 @@ trait Helper {
     val file = new java.io.FileInputStream("resources/data/finance"+(if (s!="") "-"+s else "")+".csv")
     Seq((file,Adaptor("orderbook",Nil),Split()))
   }
-
-  private def s(n:String,s:String) = (new java.io.FileInputStream("resources/data/tpch/"+n+".csv"),new Adaptor.CSV(n.toUpperCase,s,"\\|"),Split())
+  private def s(n:String,s:String=null) = {
+    val fmt = if (s!=null) s else n.toLowerCase match {
+      case "orders" => "int,int,string,float,date,string,string,int,string"
+      case "customer" => "int,string,string,int,string,float,string,string"
+      case "supplier" => "int,string,string,int,string,float,string"
+      case "lineitem" => "int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"
+    }
+    (new java.io.FileInputStream("resources/data/tpch/"+n+".csv"),new Adaptor.CSV(n.toUpperCase,fmt,"\\|"),Split())
+  }
+  def streamsTPCH1() = Seq(s("lineitem"))
   def streamsTPCH13() = Seq(
         s("orders","int,int,string,float,date,string,string,int,string"),
         s("customer","int,string,string,int,string,float,string,string"))

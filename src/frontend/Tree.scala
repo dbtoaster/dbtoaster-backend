@@ -51,7 +51,7 @@ sealed abstract class M3 // see ddbt.frontend.M3Parser
 object M3 {
   import ddbt.Utils.ind
   case class System(sources:List[Source], maps:List[MapDef], queries:List[Query], triggers:List[Trigger]) extends M3 {
-    lazy val mapType = maps.map { m=> (m.name,(m.keys.map{x=>x._2},m.tp)) }.toMap // String => (List(Type),Type)
+    lazy val mapType = maps.map { m=> (m.name,(m.keys.map{x=>x._2},m.tp)) }.toMap // String => (List[Type],Type)
     override def toString =
       "-------------------- SOURCES --------------------\n"+sources.mkString("\n\n")+"\n\n"+
       "--------------------- MAPS ----------------------\n"+maps.mkString("\n\n")+"\n\n"+
@@ -72,8 +72,7 @@ object M3 {
   
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3 {
-    def tp:Type // expression type (map's value type)
-    var dim=List[Type]() // set dimensions type (map's key type)
+    def tp:Type // expression type
     def collect[T](f:PartialFunction[Expr,Set[T]]):Set[T] = f.applyOrElse(this,(ex:Expr)=>ex match {
       case Mul(l,r) => l.collect(f)++r.collect(f)
       case Add(l,r) => l.collect(f)++r.collect(f)
@@ -84,36 +83,38 @@ object M3 {
       case Apply(fn,tp,as) => as.flatMap(a=>a.collect(f)).toSet
       case _ => Set()
     })
-    def replace(f:PartialFunction[Expr,Expr]):Expr = { // also preserve types
-      val e = f.applyOrElse(this,(ex:Expr)=>ex match {
-        case Mul(l,r) => val t=Mul(l.replace(f),r.replace(f)); t.tp=this.tp; t
-        case Add(l,r) => val t=Add(l.replace(f),r.replace(f)); t.tp=this.tp; t
-        case Cmp(l,r,op) => Cmp(l.replace(f),r.replace(f),op)
-        case Exists(e) => Exists(e.replace(f))
-        case Lift(n,e) => Lift(n,e.replace(f))
-        case AggSum(ks,e) => AggSum(ks,e.replace(f))
-        case Apply(fn,tp,as) => Apply(fn,tp,as.map(e=>e.replace(f)))
-        case _ => ex
-      }); e.dim=this.dim; e
-    }
+    def replace(f:PartialFunction[Expr,Expr]):Expr = f.applyOrElse(this,(ex:Expr)=>ex match { // also preserve types
+      case Mul(l,r) => val t=Mul(l.replace(f),r.replace(f)); t.tp=tp; t
+      case a@Add(l,r) => val t=Add(l.replace(f),r.replace(f)); t.tp=tp; t.agg=a.agg; t
+      case Cmp(l,r,op) => Cmp(l.replace(f),r.replace(f),op)
+      case Exists(e) => Exists(e.replace(f))
+      case Lift(n,e) => Lift(n,e.replace(f))
+      case a@AggSum(ks,e) => val t=AggSum(ks,e.replace(f)); t.tks=a.tks; t
+      case Apply(fn,tp,as) => Apply(fn,tp,as.map(e=>e.replace(f)))
+      case _ => ex
+    })
     def rename(r:String=>String):Expr = replace {
       case Ref(n) => val t=Ref(r(n)); t.tp=tp; t
       case MapRef(n,tp,ks) => val t=MapRef(n,tp,ks.map(r)); t.tp=tp; t
       case Lift(n,e) => val t=Lift(r(n),e.rename(r)); t
-      case AggSum(ks,e) => val t=AggSum(ks map r,e.rename(r)); t
+      case a@AggSum(ks,e) => val t=AggSum(ks map r,e.rename(r)); t.tks=a.tks; t
+      case a@Add(el,er) => val t=Add(el.rename(r),er.rename(r)); t.tp=tp; t.agg=a.agg.map{case(n,t)=>(r(n),t)}; t
     }
+    def rename(m:Map[String,String]):Expr = rename((s:String)=>m.getOrElse(s,s))
+    def rename(os:String,ns:String):Expr = rename((s:String)=>if(s==os) ns else s)
   }
+
   // Constants
   case class Const(tp:Type,v:String) extends Expr { override def toString=if (tp==TypeString) "'"+v+"'" else v }
   // Variables
   case class Ref(name:String) extends Expr { override def toString=name; var tp:Type=null }
   case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]" }
   case class Lift(name:String, e:Expr) extends Expr { override def toString="( "+name+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
-  case class Tuple(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=null /*unused*/ } // appear only in Map declaration
+  case class Tuple(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=TypeLong } // appear in Map definition and constant table lookups
   // Operations
-  case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+ind(e.toString)+"\n)"; def tp=e.tp; } // (grouping_keys)->sum relation
+  case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+ind(e.toString)+"\n)"; def tp=e.tp; var tks:List[Type]=Nil } // (grouping_keys)->sum relation
   case class Mul(l:Expr,r:Expr) extends Expr { override def toString="("+l+" * "+r+")"; var tp:Type=null } // cross-product semantics
-  case class Add(l:Expr,r:Expr) extends Expr { override def toString="("+l+" + "+r+")"; var tp:Type=null } // set union semantics
+  case class Add(l:Expr,r:Expr) extends Expr { override def toString="("+l+" + "+r+")"; var tp:Type=null; var agg:List[(String,Type)]=Nil } // set union semantics, agg!=Nil if union with free vars
   case class Exists(e:Expr) extends Expr { override def toString="EXISTS("+e+")"; val tp=TypeLong } // returns 0 or 1 (check that there is at least one tuple)
   case class Apply(fun:String,tp:Type,args:List[Expr]) extends Expr { override def toString="["+fun+":"+tp+"]("+args.mkString(",")+")" } // function application
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op.toM3+" "+r+"}"; val tp=TypeLong } // comparison, returns 0 or 1

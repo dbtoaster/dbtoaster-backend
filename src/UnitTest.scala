@@ -41,7 +41,9 @@ object UnitTest {
   // Arguments are the dataset name you want to generate test for.
   // Once generated, use sbt to test.
   //
-  //   sbt ';run-main ddbt.UnitTest standard;test-only * -- -l ddbt.SlowTest'
+  //   sbt ';run-main ddbt.UnitTest tiny tiny_del standard standard_del;test-only * -- -l ddbt.SlowTest'
+  //
+  //   sbt ';queries;test-only * -- -l ddbt.SlowTest'
   //
   def makeTest(t:QueryTest,fsz:String=>Boolean) = {
     val sys = (toast _ andThen M3Parser andThen TypeCheck)(t.sql)
@@ -128,7 +130,7 @@ object UnitTest {
     println("Passing  : "+passing.size) // 52
     println("Failing  : "+failing.size) // 70
     println("NoCompile: "+nocompile.size) // 61
-    val files = nocompile //Array("test/unit/queries/simple/r_aggofnested") //"test/unit/queries/tpch1")
+    val files = Array("test/unit/queries/axfinder","test/unit/queries/tpch13")
     
     val independent = (files==nocompile)
     

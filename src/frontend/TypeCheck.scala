@@ -3,31 +3,52 @@ import ddbt.ast._
 
 object TypeCheck extends (M3.System => M3.System) {
   import ddbt.ast.M3._
+  import ddbt.Utils.{fresh,freshClear}
   @inline def err(msg:String) = sys.error("Type checking error: "+msg)
   
-  def renameVars(r:String=>String)(s0:System) = {
-    // 1. Prettify variable names (not streams, not maps) using a renaming function
+  // 1. Add used (constant) tables in maps, replace access by MapRefs (M3 fix?)
+  def addTables(s0:System) = {
+    val tabs = s0.sources.filter{!_.stream}.map{ s=>(s.schema.name,s.schema.fields) }.toMap
+    var used = Set[String]() // accessed tables
+    def re(e:Expr):Expr = e.replace { case Tuple(t,ks) => used+=t; MapRef(t, TypeLong, ks) }
+    def rst(s:Stmt):Stmt = s match { case StmtMap(m,e,op,in) => StmtMap(m,re(e),op,in map re) }
+    val triggers = s0.triggers.map {
+      case TriggerReady(ss) => TriggerReady(ss map rst)
+      case TriggerAdd(sc,ss) => TriggerAdd(sc,ss map rst)
+      case TriggerDel(sc,ss) => TriggerDel(sc,ss map rst)
+    }
+    val tabMaps = s0.sources.filter{s=> !s.stream && used.contains(s.schema.name) }.map{ so=>
+      val s=so.schema; MapDef(s.name, TypeLong, s.fields, Const(TypeLong,"0L"))
+    }
+    System(s0.sources,tabMaps:::s0.maps,s0.queries,triggers)
+  }
+
+  // 2. Prettify variable names (not streams, not maps) using a renaming function
+  // 3. Rename M3 functions into implementation functions
+  def renameVarsAndFuns(r:String=>String, fn:String=>String)(s0:System) = {
     def rs(s:Schema) = Schema(s.name,s.fields.map{case(n,t)=>(r(n),t)})
     def re(e:Expr):Expr = e.replace {
       case Ref(n) => Ref(r(n))
       case MapRef(n,tp,ks) => MapRef(n,tp,ks.map(r))
       case Lift(n,e) => Lift(r(n),re(e))
       case AggSum(ks,e) => AggSum(ks map r,re(e))
+      case Apply(f,tp,as) => Apply(fn(f),tp,as.map(re))
+      //case Mul(Lift(n,e),r) => val f = fresh("lift"); Mul(Lift(f,re(e).rename(n,f)),re(r).rename(n,f))
     }
-    def rst(s:Stmt):Stmt = s match {
-      case StmtMap(m,e,op,in) => StmtMap(re(m).asInstanceOf[MapRef],re(e),op,in map re)
-    }
+    def rst(s:Stmt):Stmt = s match { case StmtMap(m,e,op,in) => StmtMap(re(m).asInstanceOf[MapRef],re(e),op,in map re) }
     val sources = s0.sources.map { case Source(st,sch,in,sp,ad) => Source(st,rs(sch),in,sp,ad) }
     val triggers = s0.triggers.map {
       case TriggerReady(ss) => TriggerReady(ss map rst)
-      case TriggerAdd(sc, ss) => TriggerAdd(rs(sc),ss map rst)
-      case TriggerDel(sc, ss) => TriggerDel(rs(sc),ss map rst)
+      case TriggerAdd(sc,ss) => TriggerAdd(rs(sc),ss map rst)
+      case TriggerDel(sc,ss) => TriggerDel(rs(sc),ss map rst)
     }
+    //freshClear
     System(sources,s0.maps,s0.queries,triggers)
   }
 
+  // 4. Type trigger arguments by binding to the corresponding input schema
+  // 5. Type untyped maps definitions (using statements left hand-side) (M3 language fix)
   def typeMaps(s0:System) = {
-    // 2. Type trigger arguments by binding to the corresponding input schema
     val schemas=s0.sources.map{s=>(s.schema.name,s.schema)}.toMap
     def sch(s:Schema):Schema = schemas.get(s.name) match {
       case Some(s2) => assert(s.fields.map(_._1)==s2.fields.map(_._1)); s2
@@ -38,69 +59,65 @@ object TypeCheck extends (M3.System => M3.System) {
       case TriggerDel(s,sts) => TriggerDel(sch(s),sts)
       case t => t
     }
-    // 3. Type untyped maps definitions (using statements left hand-side) (M3 language fix)
-    val mtp = triggers.flatMap(t=>t.stmts flatMap { case StmtMap(m,_,_,_)=>List(m) }).map(m=>(m.name,m.tp)).toMap
+    val mtp = triggers.flatMap(t=>t.stmts flatMap { case StmtMap(m,_,_,_)=>List(m) }).map(m=>(m.name,m.tp)).toMap ++
+              s0.sources.filter{s=> !s.stream}.map{s=>(s.schema.name,TypeLong)}.toMap // constant table are not written
     val maps = s0.maps.map{ m=> val tp=mtp(m.name); assert(m.tp==null || m.tp==tp); MapDef(m.name,tp, m.keys, m.expr) }
     System(s0.sources,maps,s0.queries,triggers)
   }
 
+  // 6. Rename lifted variables to avoid name clashes when code gets flattened.
+  // We "lock" input args, output keys and aggregation variables from being renamed
+  def renameLifts(s0:System) = {
+    def re(e:Expr,locked:Set[String]):Expr = e.replace {
+      case Mul(Lift(n,e),r) if !locked.contains(n) => e match {
+        case Ref(m) if (locked.contains(m)) => Mul(re(Lift(n,e),locked),re(r,locked))
+        case _ => val f=fresh("lift"); Mul(Lift(f,re(e.rename(n,f),locked)),re(r.rename(n,f),locked))
+      }
+      case AggSum(ks,e) => AggSum(ks,re(e,locked++ks.toSet))
+    }
+    def rst(s:Stmt,locked:Set[String]=Set()):Stmt = s match {
+      case StmtMap(m,e,op,in) => val l=locked++m.keys.toSet; StmtMap(m,re(e,l),op,in map{x=>re(x,l)})
+    }
+    val triggers = s0.triggers.map {
+      case TriggerReady(ss) => TriggerReady(ss map(x=>rst(x)))
+      case TriggerAdd(sc,ss) => TriggerAdd(sc,ss map(x=>rst(x,sc.fields.map(_._1).toSet)))
+      case TriggerDel(sc,ss) => TriggerDel(sc,ss map(x=>rst(x,sc.fields.map(_._1).toSet)))
+    }
+    freshClear
+    System(s0.sources,s0.maps,s0.queries,triggers)
+  }
+
+  // 7. Resolve missing types (and also make sure operations are correct)
   def typeCheck(s0:System) = {
     def tpRes(t1:Type,t2:Type,ex:Expr):Type = (t1,t2) match {
       case (t1,t2) if t1==t2 => t1
       case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
       case _ => err("Bad operands ("+t1+","+t2+"): "+ex)
     }
- 
-    // 4. Resolve missing types (and also make sure operations are correct)
-    def ie(ex:Expr,b:Map[String,Type]):Map[String,Type] = {
-      var br=b; // new bindings
-      var dim=List[Type]() // dimension of result set
+
+    type Context = Map[String,Type]
+    def ie(ex:Expr,c:Context):Context = {
+      var cr=c; // new bindings
       ex match { // gives a type to all untyped nodes
-        case m@Mul(l,r) => br=ie(r,ie(l,b)); m.tp=tpRes(l.tp,r.tp,ex); dim=l.dim:::r.dim
-        case a@Add(l,r) => br=b++ie(l,b)++ie(r,b); a.tp=tpRes(l.tp,r.tp,ex); dim = if (l.dim.size>r.dim.size) l.dim else r.dim // we might union a set with one slice of smaller dimensionality
-        case Cmp(l,r,_) => br=b++ie(l,b)++ie(r,b); tpRes(l.tp,r.tp,ex)
-        case Exists(e) => ie(e,b)
-        case Lift(n,e) => ie(e,b); b.get(n) match { case Some(t) => if (t!=e.tp) err("Value "+n+" lifted with "+t+" compared with "+e.tp) case None => br=b+((n,e.tp)) }; dim=e.dim
-        case AggSum(ks,e) => br=ie(e,b); dim=ks.map(br)
-        case Apply(_,_,as) => as map {x=>ie(x,b)} // XXX: Verify typing of Apply against user-functions library (additional typing informations must be provided)
-        case r@Ref(n) => r.tp=b(n)
-        case m@MapRef(n,tp,ks) => val mtp=s0.mapType(n); br=b++(ks zip mtp._1).toMap
+        case m@Mul(l,r) => cr=ie(r,ie(l,c)); m.tp=tpRes(l.tp,r.tp,ex)
+        case a@Add(l,r) =>
+          val (fl,fr)=(ie(l,c).filter{x=> !c.contains(x._1)},ie(r,c).filter{x=> !c.contains(x._1)}) // free(l), free(r)
+          a.agg=fl.filter{x=>fr.contains(x._1)}.toList // sorted(free(l)++free(r)), to make a union if necessary (a variable can be bound differently in lhs and rhs)
+          cr=c++fl++fr; a.tp=tpRes(l.tp,r.tp,ex);
+        case Cmp(l,r,_) => cr=c++ie(l,c)++ie(r,c); tpRes(l.tp,r.tp,ex)
+        case Exists(e) => ie(e,c)
+        case Lift(n,e) => ie(e,c); c.get(n) match { case Some(t) => try { tpRes(t,e.tp,ex) } catch { case _:Throwable=> err("Value "+n+" lifted as "+t+" compared with "+e.tp) } case None => cr=c+((n,e.tp)) }
+        case a@AggSum(ks,e) => val in=ie(e,c); cr=c++ks.map{k=>(k,in(k))}; a.tks=ks.map(cr)
+        case Apply(_,_,as) => as map {x=>ie(x,c)} // XXX: check args/return types against user-functions library
+        case r@Ref(n) => r.tp=c(n)
+        case m@MapRef(n,tp,ks) => val mtp=s0.mapType(n); cr=c++(ks zip mtp._1).toMap
           if (tp==null) m.tp=mtp._2 else if (tp!=mtp._2) err("Bad value type: expected "+mtp._2+", got "+tp+" for "+ex)
-          val fv = (ks zip mtp._1).filter{ case(k,t)=> val c=b.contains(k); if (c && t!=b(k)) err("Key type ("+k+") mismatch in "+ex); !c }
-          br=b++fv.toMap; m.tp=mtp._2; dim=fv.map{_._2}
+          (ks zip mtp._1).foreach{ case(k,t)=> if(c.contains(k) && t!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
         case _ =>
       }
-      ex.dim = dim
-      if (ex.tp==null) err("Untyped: "+ex); br
+      if (ex.tp==null) err("Untyped: "+ex); cr
     }
-    def ist(s:Stmt,b:Map[String,Type]=Map()) = s match {
-      case StmtMap(m,e,op,in) => ie(e,b); in.map(e=>ie(e,b))
-    }
-    
-    /*
-    def ie(ex:Expr,b:Map[String,Type],ks:List[String]):Map[String,Type] = {
-      var b2=b; // new bindings
-      ex match {
-        case m@Mul(l,r) => b2=ie(r,ie(l,b,ks),ks); m.tp=tpRes(l.tp,r.tp,ex);
-        case a@Add(l,r) => b2=b++ie(l,b,ks)++ie(r,b,ks); a.tp=tpRes(l.tp,r.tp,ex);
-        case Cmp(l,r,_) => b2=b++ie(l,b,ks)++ie(r,b,ks); tpRes(l.tp,r.tp,ex)
-        case Exists(e) => ie(e,b,ks)
-        case Lift(n,e) => ie(e,b,ks); b.get(n) match { case Some(t) => if (t!=e.tp) err("Value "+n+" lifted with "+t+" compared with "+e.tp) case None => b2=b+((n,e.tp)) };
-        case AggSum(ks2,e) => b2=ie(e,b,ks2)
-        case Apply(_,_,as) => as map {x=>ie(x,b,ks)} // XXX: Verify typing of Apply against user-functions library (additional typing informations must be provided)
-        case r@Ref(n) => r.tp=b(n)
-        case m@MapRef(n,tp,ks2) => val mtp=s0.mapType(n); m.tp=mtp._2; b2=b++(ks2 zip mtp._1).toMap
-        case _ =>
-      }
-      ex.dim = ks.filter{k=>b2.contains(k)}.map(b2) // now solve the dimensions using b2
-      println(ex.dim+" in "+ex+"\n")
-      if (ex.tp==null) err("Untyped: "+ex); b2
-    }
-    def ist(s:Stmt,b:Map[String,Type]=Map()) = s match {
-      case StmtMap(m,e,op,in) => ie(e,b,m.keys); in.map(e=>ie(e,b,m.keys))
-    }
-    */
-    
+    def ist(s:Stmt,b:Map[String,Type]=Map()) = s match { case StmtMap(m,e,op,in) => ie(e,b); in.map(e=>ie(e,b)) }
     s0.triggers.foreach {
       case TriggerReady(ss) => ss foreach {x=>ist(x)}
       case TriggerAdd(s,ss) => ss foreach {x=>ist(x,s.fields.toMap)}
@@ -114,8 +131,12 @@ object TypeCheck extends (M3.System => M3.System) {
   // XXX: Some names are long, improve renaming function (use mapping/regexp to simplify variable names)
 
   def apply(s:System) = {
-    val phases = renameVars((s:String)=>s.toLowerCase) _ andThen
+    val vn = (s:String)=>s.toLowerCase
+    val fn = { val map=Map(("/","div")); (s:String)=>map.getOrElse(s,s) } // renaming of functions
+    val phases = addTables _ andThen
+                 renameVarsAndFuns(vn,fn) _ andThen
                  typeMaps _ andThen
+                 renameLifts andThen
                  typeCheck _
     phases(s)
   }

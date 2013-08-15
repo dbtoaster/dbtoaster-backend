@@ -54,6 +54,16 @@ Seq(
   )
 )
 
+{
+  val t=TaskKey[Unit]("queries")
+  Seq(
+    fullRunTask(t in Compile, Compile, "ddbt.UnitTest", "tiny","tiny_del","standard","standard_del") //,
+    //(test in Test) <<= (test in Test) dependsOn (t in Compile),   // force tests to rebuild
+    //testOptions in Test += Tests.Argument("-l", "ddbt.SlowTest"), // execute only non-tagged tests
+  )
+}
+
+//compile in Compile <<= (compile in Compile) map { x => ("src/librna/make target/scala-2.10/classes").run.exitValue; x }
 // libraryDependencies:
 //	"org.scala-lang" % "scala-actors" % v,
 //	"org.scala-lang" % "scala-reflect" % v,
@@ -76,3 +86,4 @@ Seq(
 //}
 //mainClass := Some("Main")
 //selectMainClass := Some("Main")
+
