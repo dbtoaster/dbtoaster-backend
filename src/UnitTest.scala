@@ -91,53 +91,53 @@ object UnitTest {
     val fsz = if (args.length>0) (s:String)=>args.contains(s) else (s:String)=>true // filtering datasets
     val exclude=List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a").map{x=>"employee/query"+x}.toArray // DBToaster SQL->M3 failing there
     val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }
-    
+
     val passing = (
       List("axfinder","pricespread") :::
-      List("1","3","4","6","11a","12","13","14","17","18","18a","19").map("tpch"+_) :::
-      List("02","02a","03","03a","04","04a","05","06","07","12a","22","45","46","47","47a","48","49","50","51","54","55","59","62a","63a","64a","65a").map("employee/query"+_) :::
+      List("1","3","4","6","11a","12","13","14","17","17a","18","18a","19").map("tpch"+_) :::
+      List("02","02a","03","03a","04","04a","05","06","07","12a","22","23a","24a","45","46","47","47a","48","49","50","51","53a","54","55","59","62a","63a","64a","65a").map("employee/query"+_) :::
       List("r_aggcomparison","r_gtealldynamic","r_impossibleineq","r_ltalldynamic","r_possibleineq","r_possibleineqwitheq","r_nonjoineq","rs_column_mapping_3","singleton_renaming_conflict",
-           "t_lifttype","m3k3unable2escalate","rst","r_ineqandeq","r_aggofnestedagg","r_ltallcorravg","r_instatic").map("simple/"+_) :::
+           "t_lifttype","m3k3unable2escalate","rst","r_ineqandeq","r_aggofnestedagg","r_ltallcorravg","r_instatic","r_unique_counts_by_a").map("simple/"+_) :::
       List("75453299","95497049","94384934").map("zeus/"+_)
-    ).map{x=>"test/unit/queries/"+x}
-    
+    ).map{x=>"test/unit/queries/"+x}.toArray
+
     val failing = (
-      List("brokervariance","brokerspread","vwap") :::
-      List("01","01a","08","08a","09","09a","10","10a","11b","13","14","15","16","16a","17a","23a","24a","35c","36c","37","38a","40").map("employee/query"+_) :::
+      List("brokervariance","brokerspread","vwap","missedtrades") ::: // time out on missedtrades => failed ??
+      List("01","01a","08","08a","09","09a","10","10a","11b","13","14","15","16","16a","17a","35c","36c","37","38a","40").map("employee/query"+_) :::
       List("r_agtbexists","r_avg","r_count","r_bigsumstar","r_btimesa","r_btimesacorrelated","r_deepscoping","r_gbasumb","r_gtesomedynamic","r_gtsomedynamic","r_ltallagg",
            "r_natselfjoin","r_nogroupby","r_selectstar","r_simplenest","r_smallstar","r_starofnested","r_starofnestedagg","r_sumdivgrp","r_sumstar","rs_column_mapping_1",
            "rs_column_mapping_2","rs_eqineq","rs_joinon","rs_natjoin","rs_natjoinineq","rs_natjoinpartstar","rs_selectconstcmp","rs_selectpartstar","rs_selectstar","rs_simple","rs_stringjoin",
            "r_divb","r_ltallavg","rs_joinwithnestedagg","r_sum_out_of_aggregate","rs","rs_cmpnest","r_aggofnested","r_sumadivsumb","rstar","rs_inequality","r_sumnestedintargetwitheq",
-           "rs_ineqonnestedagg","r_indynamic","rr_ormyself","invalid_schema_fn","r_sumnestedintarget","rtt_or_with_stars").map("simple/"+_) :::
+           "rs_ineqonnestedagg","r_indynamic","rr_ormyself","invalid_schema_fn","r_sumnestedintarget","rtt_or_with_stars","r_sum_gb_all_out_of_aggregate","r_sumoutsideofagg",
+           "r_sum_gb_out_of_aggregate").map("simple/"+_) :::
       List("11564068","37494577","39765730","59977251").map("zeus/"+_)
     ).map{x=>"test/unit/queries/"+x}.toArray
-    // time out on missedtrades
-    //  failed ??
+    
     
     val nocompile = (all.toSet -- passing.toSet -- failing.toSet).toArray
     /*
-    List(,"missedtrades","ssb4") :::
+    List("ssb4") :::
     List("10","11","11a","11c","14","15","16","18","18a","2","20","21","22","22a","4","5","7","8","9").map("tpch"+_) :::
-    List("07","11","11a","12","17a","23a","35b","36b","39","52","52a","53","53a","56","56a","57","57a","58","58a","60","61","62","63","64","65","65a","66","66a").map("employee/query"+_) :::
+    List("07","11","11a","12","17a","23a","35b","36b","39","52","52a","53","56","56a","57","57a","58","58a","60","61","62","63","64","65","65a","66","66a").map("employee/query"+_) :::
     List("inequality_selfjoin","","miraculous_minus","miraculous_minus2","r_agtb","r_count_of_one","r_count_of_one_prime","r_existsnestedagg","r_lift_of_count",
-         "r_multinest","r_sum_gb_all_out_of_aggregate","r_sum_gb_out_of_aggregate","r_sumoutsideofagg","r_unique_counts_by_a","rs_ineqwithnestedagg","ss_math").map("simple/"+_) :::
+         "r_multinest","rs_ineqwithnestedagg","ss_math").map("simple/"+_) :::
     List("12811747","48183500","52548748","96434723").map("zeus/"+_)
     */
     
-    println("Passing  : "+passing.size) // 59 (10 tpch still failing on tiny/del datasets)
-    println("Failing  : "+failing.size) // 78
-    println("NoCompile: "+nocompile.size) // 46
-    val files = passing //Array("test/unit/queries/axfinder","test/unit/queries/tpch13","test/unit/queries/tpch1","test/unit/queries/tpch18")
-
-    val independent = (files==nocompile)
+    println("Passing  : "+passing.size) // 64 (10 tpch still failing on tiny/del datasets)
+    println("Failing  : "+failing.size) // 80
+    println("NoCompile: "+nocompile.size) // 39
+    val files = passing //Array("test/unit/queries/simple/r_sumoutsideofagg")
     
+    // Typecheck errors: r_sum_gb_out_of_aggregate.sql, r_sumoutsideofagg.sql, rs_ineqwithnestedagg.sql, r_sum_gb_all_out_of_aggregate.sql, query16, r_multinest.sql
+
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
     tests.foreach{ t =>
-    //  val t = tests.filter{t=>t.sql.indexOf("axfinder")!= -1}(0) // we pick one single test for purposes of debugging
+      // val t = tests.filter{t=>t.sql.indexOf("axfinder")!= -1}(0) // we pick one single test for purposes of debugging
       try {
         println("---------------- "+t.sql); makeTest(t,fsz)
-        if (independent) { println(exec(Array("sbt","test-only * -- -l ddbt.SlowTest"))); clean }
+        // if ((files==nocompile)) { println(exec(Array("sbt","test-only * -- -l ddbt.SlowTest"))); clean }
       } catch {
         case th:Throwable => println("Failed to generate "+t.sql+" because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) }
       }
@@ -145,13 +145,3 @@ object UnitTest {
     println("Now run 'sbt test' to pass tests") 
   }
 }
-
-/*
-Steps: 
-1. Forall test/unit/query (to be executed before tests or manually)
-   - generate the corresponding query executor
-   - generate a custom companion object that will create a test for all sets
-   - generate the result either in a destination file (easier) or in scala code
-   -> the companion object must extend FunSpec or a JUnit test
-2. run sbt tests
-*/

@@ -9,7 +9,8 @@ trait Helper {
   import Messages._
 
   // ---------------------------------------------------------------------------
-  // Remoting helpers
+  // Akka remoting helpers
+
   def sys(name:String,host:String,port:Int) = {
     val conf = "akka.loglevel=ERROR\nakka.log-dead-letters-during-shutdown=off\n"+ // disable verbose logging
                "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote.netty {\nhostname=\""+host+"\"\ntcp.port="+port+"\n}\n}\n"
@@ -60,6 +61,7 @@ trait Helper {
 
   // ---------------------------------------------------------------------------
   // Unit testing helpers
+
   def diff[K,V](map1:Map[K,V],map2:Map[K,V]) { // map1 is the test result, map2 is the reference
     val m1 = map1.filter{ case (k,v) => map2.get(k) match { case Some(v2) => v2!=v case None => true } }
     val m2 = map2.filter{ case (k,v) => map1.get(k) match { case Some(v2) => v2!=v case None => true } }
@@ -97,29 +99,20 @@ trait Helper {
   }
 
   // ---------------------------------------------------------------------------
-  // Stream definitions
-  def streamsFinance(s:String="") = {
-    val file = new java.io.FileInputStream("resources/data/finance"+(if (s!="") "-"+s else "")+".csv")
-    Seq((file,Adaptor("orderbook",Nil),Split()))
-  }
-  private def s(n:String,s:String=null) = {
-    val fmt = if (s!=null) s else n.toLowerCase match {
-      case "orders" => "int,int,string,float,date,string,string,int,string"
-      case "customer" => "int,string,string,int,string,float,string,string"
-      case "supplier" => "int,string,string,int,string,float,string"
-      case "lineitem" => "int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"
-    }
-    (new java.io.FileInputStream("resources/data/tpch/"+n+".csv"),new Adaptor.CSV(n.toUpperCase,fmt,"\\|"),Split())
-  }
-  def streamsTPCH1() = Seq(s("lineitem"))
-  def streamsTPCH13() = Seq(
-        s("orders","int,int,string,float,date,string,string,int,string"),
-        s("customer","int,string,string,int,string,float,string,string"))
-  def streamsTPCH15() = Seq(
-        s("lineitem","int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"),
-        s("supplier","int,string,string,int,string,float,string"))
-  def streamsTPCH18() = Seq(
-        s("lineitem","int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"),
-        s("orders","int,int,string,float,date,string,string,int,string"),
-        s("customer","int,string,string,int,string,float,string,string"))
+  // Stream definitions (used for manual debugging only)
+
+  private def str(file:String,a:Adaptor) = (new java.io.FileInputStream("resources/data/"+file+".csv"),a,Split())
+  def streamsFinance(s:String="") = Seq(str("finance"+(if (s!="") "-"+s else ""),Adaptor("orderbook",Nil)))
+  def streamsRST(ss:Seq[String]=Seq("r")) = ss.map { s=> str("simple/"+s,new Adaptor.CSV(s.toUpperCase,"int,int")) }
+
+  private def tpch(ss:Seq[String]) = ss.map{ n=>str("tpch/"+n,new Adaptor.CSV(n.toUpperCase,n match {
+    case "orders" => "int,int,string,float,date,string,string,int,string"
+    case "customer" => "int,string,string,int,string,float,string,string"
+    case "supplier" => "int,string,string,int,string,float,string"
+    case "lineitem" => "int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"
+  },"\\|")) }
+  def streamsTPCH1() = tpch(Seq("lineitem"))
+  def streamsTPCH13() = tpch(Seq("orders","customer"))
+  def streamsTPCH15() = tpch(Seq("lineitem","supplier"))
+  def streamsTPCH18() = tpch(Seq("lineitem","orders","customer"))
 }

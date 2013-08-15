@@ -49,9 +49,7 @@ Seq(
 // --------- Execution options
 Seq(
   fork := true,
-  javaOptions ++= Seq("-Xss128m" //"-Xss512m","-Xmx2G","-Xms2G","-XX:MaxPermSize=2G" //,"-verbose:gc"
-      //"-agentpath:"+yjp+"=sampling,onexit=snapshot,builtinprobes=all"
-  )
+  javaOptions ++= Seq("-Xss128m") //"-Xss512m","-Xmx2G","-Xms2G","-XX:MaxPermSize=2G" //,"-verbose:gc"
 )
 
 {
@@ -64,8 +62,6 @@ Seq(
 }
 
 //compile in Compile <<= (compile in Compile) map { x => ("src/librna/make target/scala-2.10/classes").run.exitValue; x }
-// libraryDependencies:
-//	"org.scala-lang" % "scala-actors" % v,
 //	"org.scala-lang" % "scala-reflect" % v,
 //	"ch.epfl" %% "lms" % "0.4-SNAPSHOT",
 //	"org.scalariform" %% "scalariform" % "0.1.4",
@@ -86,4 +82,3 @@ Seq(
 //}
 //mainClass := Some("Main")
 //selectMainClass := Some("Main")
-

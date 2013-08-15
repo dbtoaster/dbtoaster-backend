@@ -105,7 +105,7 @@ object TypeCheck extends (M3.System => M3.System) {
           a.agg=fl.filter{x=>fr.contains(x._1)}.toList // sorted(free(l)++free(r)), to make a union if necessary (a variable can be bound differently in lhs and rhs)
           cr=c++fl++fr; a.tp=tpRes(l.tp,r.tp,ex);
         case Cmp(l,r,_) => cr=c++ie(l,c)++ie(r,c); tpRes(l.tp,r.tp,ex)
-        case Exists(e) => ie(e,c)
+        case Exists(e) => cr=ie(e,c)
         case Lift(n,e) => ie(e,c); c.get(n) match { case Some(t) => try { tpRes(t,e.tp,ex) } catch { case _:Throwable=> err("Value "+n+" lifted as "+t+" compared with "+e.tp) } case None => cr=c+((n,e.tp)) }
         case a@AggSum(ks,e) => val in=ie(e,c); cr=c++ks.map{k=>(k,in(k))}; a.tks=ks.map(cr)
         case Apply(_,_,as) => as map {x=>ie(x,c)} // XXX: check args/return types against user-functions library

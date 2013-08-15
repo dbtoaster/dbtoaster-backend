@@ -8,9 +8,10 @@ import ddbt.ast._
 case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
-  import ddbt.Utils.{ind,tup} // common functions
-  private val counter = HashMap[String,Int]()
-  private def fresh(name:String="x") = { val c = counter.getOrElse(name,0)+1; counter.put(name,c); name+c }
+  import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
+
+  type AggMap = (String,List[(String,Type)]) // name -> keys name/type
+
   def tpe(tp:Type):String = { val s=tp.toString; s.substring(0,1).toUpperCase+s.substring(1).toLowerCase }
   private def bnd(e:Expr):Set[String] = e.collect { case Lift(n,e) => bnd(e)+n case AggSum(ks,e) => ks.toSet case MapRef(n,tp,ks) => ks.toSet }
 
@@ -22,34 +23,24 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   //   ex:expression to convert
   //   b :bound variables
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
-  //   tm:temporary map, used to share Add's map for AggSum, avoiding useless intermediate map if possible
-  
-  type AggMap = (String,List[(String,Type)]) // name, keys as name/type
-
-/*  
-//type Binding = Map[String,Type]
-// ---------- Context (variables to values binding for statements)
-class TypeInfo(m:Map[String,Type]) {
-  def apply(s:String)=m(s)
-  def rename(r:List[(String,String)])
-  def rename(o:String,n:String)
-}
-*/
-
-  def cpsExpr(ex:Expr,b:Set[String],co:String=>String,tm:Option[AggMap]=None):String = ex match {
+  //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
+  def cpsExpr(ex:Expr,b:Set[String],co:String=>String,am:Option[AggMap]=None):String = ex match {
     // Fixes
-    case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)"),tm),tm)
-    case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,tm).replace(n,n2) // dealiasing
-
     
-    // This also maintains ctx (bound variables) and free (free variables) at each tree node
-    //var tps:Map[String,Type]=null // type of all variables (bound and free)
-    //e.tps = tps.toList.keys.map{case (k,v)=>(r(k),v}.toMap
+
+    case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)"),am),am)
+    case Mul(Exists(el),er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),co,am),am)
+    
+    
+    case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).replace(n,n2) // dealiasing
 
     // -------------------------------------------------------------------------
     case Ref(n) => co(n)
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
-    case Exists(e) => val e0=fresh("ex"); "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0)
+    //case Exists(e) => val e0=fresh("ex"); "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0) // this should not appear, or find how to bind it properly
+    
+    case Exists(e) => cpsExpr(e,b,(v:String)=>co("(if (("+v+")!=0) 1L else 0L)"))
+    
     case Cmp(l,r,op) => co(cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") 1L else 0L)")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
@@ -62,16 +53,14 @@ class TypeInfo(m:Map[String,Type]) {
           ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";"}.mkString("\n")+"\n"+co(v0))+"\n}\n" // bind free variables from retrieved key
       }
     case Lift(n,e) => 
-      if (b.contains(n)) cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")"),tm)
-      else cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("1"),tm) // XXX: seems never used
-    case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),tm),tm)
+      if (b.contains(n)) cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")"),am)
+      else cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("1"),am) // XXX: seems never used
+    case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),am),am)
     case a@Add(el,er) =>
-      if (a.agg==Nil) cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),tm),tm)
-      else tm match {
-        case Some(t) if t._2==a.agg => cpsExpr(el,b,co,tm)+"\n"+cpsExpr(er,b,co,tm)
+      if (a.agg==Nil) cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),am),am)
+      else am match {
+        case Some(t) if t._2==a.agg => cpsExpr(el,b,co,am)+"\n"+cpsExpr(er,b,co,am)
         case _ =>
-          //tm match { case Some(t) => println("Parent = "+t+" in "+a.agg) case None => }
-
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks=a.agg.map{x=>x._1}
           val tmp = Some((a0,a.agg))
@@ -86,10 +75,9 @@ class TypeInfo(m:Map[String,Type]) {
       val agg=fs.map{f=>(f,(ks zip a.tks).toMap.apply(f)) }
       if (ks.size==0 || fs.size==0) {
         val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+"\n"+co(a0)
-      } else tm match {
-        case Some(t) if t._2==agg => cpsExpr(e,b,co,tm)
+      } else am match {
+        case Some(t) if t._2==agg => cpsExpr(e,b,co,am)
         case _ =>
-          //tm match { case Some(t) => println("Parent = "+t+" in "+agg) case None => }
           val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
           val a0=fresh("agg")
           val tmp=Some((a0,agg)) // declare this as summing target
@@ -142,6 +130,7 @@ class TypeInfo(m:Map[String,Type]) {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+tpe(t)}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
     }
+    freshClear()
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
@@ -190,99 +179,75 @@ class TypeInfo(m:Map[String,Type]) {
   def apply(s:System) = genHelper(s)+genSystem(s)
 }
 
-// co type can be : apply, aggregation, existence
+/**
+ * Implementation notes:
+ * ---------------------------------------------
+ * 1. We shall understand the multiply as a continuation of the left operand in the right one.
+ *
+ * 2. Add is more complicated than Mul as it does union of lhs and rhs.
+ *    If a free variable is present in both sides, iterate these. Concretely:
+ *       f(A*B) --> A.foreach{ (k_a,v_a) => B.foreach { (k_b,v_b) => f(v_a * v_b) } }
+ *       f(A+B) --> val dom=A.keySet++B.keySet; dom.foreach { k => f(A.get(k) + B.get(k)) }
+ *
+ *    Domain union might be quite complex. An lighter alternative is
+ *       val tmp = Temp[domA(k_a)=domB(k_b)=dom -> tp(A)=tp(B)]
+ *       A.foreach{ (k_a,v_a) => tmp.add(domA(k_a),v_a) }
+ *       B.foreach{ (k_b,v_b) => tmp.add(domB(k_b),v_b) }
+ *       tmp.foreach { (k,v) => f(v) }
+ *
+ *
+ * Constraints inherited from M3:
+ * - Lift alone has only bound variables. In Exists*Lift, Exists binds variables for the Lift
+ *
+ */
+
 // add a special primitive for aggregation with keys => groupBy()
-// We shall understand the multiply as a continuation of the left operand in the right one
 // Some "-1" simplifications
 //    case Add(l,Mul(Const(typeLong,"-1"),Ref(n))) => co(cpsExpr(l,b,(ll:String)=>"("+ll+" - "+n+")"))
 //    case Mul(Const(typeLong,"-1"),Ref(n)) => co("-"+n)
-// Different approach: if a variable happen on both sides of the same branch AND if this variable is used by both, generate a loop, replace inner access by variables
-
 
 /*
-
-    // XXX: trigger in add/mul the generation of an outer loop based on the fact that one side is binding a value that is free in both sides
-    //Lift alone has only bound variables. In Exists*Lift, Exists binds variables for the Lift
-    case Mul(Exists(e1),Lift(n,e)) if e1==e => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("("+n+" != 0)")) // LiftExist
-    case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)"),tm),tm)
-    
-    // XXX: optimization
-    //case Mul(Cmp(l,r,op),e) => cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"if ("+ll+" "+op+" "+rr+") {\n"+ind(cpsExpr(e,b,co))+"\n}\n"))
-    
-    // XXX: put each lift in its own context to avoid name clashes
-    // ASSERTION IS WRONG (see TPC-H 15)
-    case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) => cpsExpr(er,b,co,tm).replace(n,n2) // optional: dealiasing
-    case Mul(Lift(n,e),er) if !b.contains(n) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(er,b+n,co,tm) // 'regular' Lift
-    case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),tm),tm) // right is nested in left (right is a continuation of left)
-    case Add(el,er) => 
-      / * Add is more complicated than Mul. We need to compute the domain union of left and right
-       * hand-side domains for free variables present in both sides, then iterate over this domain.
-       * More concretely: to generate f(A*B) and f(A+B), where dom(A)!=dom(B) we do
-       *    f(A*B) --> A.foreach{ (k_a,v_a) => B.foreach { (k_b,v_b) => f(v_a * v_b) } }
-       *    f(A+B) --> val dom=A.keySet++B.keySet; dom.foreach { k => f(A.get(k) + B.get(k)) }
-       *
-       * Computing domain union might be hard, if it maps key portions. An alternative is [domA(k_a) U domB(k_b)=dom]
-       *    val t = Temp[dom(A+B),A+B]
-       *    A.foreach{ (k_a,v_a) => t.add(domA(k_a),v_a) }
-       *    B.foreach{ (k_b,v_b) => t.add(domB(k_b),v_b) }
-       *    x.foreach { (k,v) => f(v) }
-       * /
-       val vs = ( (bnd(el)--b) & (bnd(er)--b) ).toList // free variables present on both sides
-       //println("b="+b+"\nl="+bnd(el)+"\nr="+bnd(er)+"\nvs="+vs)
-       
-       if (vs.size>0 && el.dim.size>0&&er.dim.size>0) {
-         /// ---------------------------- XXX: deal with this properly
-         / *
-         if (el.dim.size==0 || er.dim.size==0) {
-           val (e0,en) = if (el.dim.size==0) (el,er) else (er,el)
-           val t0=fresh("addx");
-           "var "+t0+":"+tpe(e0.tp)+" = 0\n"+
-           cpsExpr(e0,b,(v:String)=>t0+" += "+v)+"\n"+
-           cpsExpr(en,b,(v:String)=>co("("+t0+" + "+v+")"))
-         } else {
-           rest
-         }
-         Would allow compilation
-         -> Tpch1Spec 1/1
-         -> Employee24aSpec 2/3
-         -> Employee61Spec 0/1
-         -> Employee63aSpec 0/1
-         -> RsumnestedintargetSpec 0/1
-         * /
-         /// ----------------------------
-       
-         val (t0,k0,v0)=(fresh("tmp_add"),fresh("k"),fresh("v"))
-         // XXX: fix this
-         //(if (ex.dim.size==0) "/ *\n BUG: vs="+vs+"\n b="+b+"\nbl="+(bnd(el).filter(x=> !b.contains(x))--b)+"\nbr="+bnd(er)+"\n"+ex.dim+" -> "+ex.tp+" ["+tm+"] := "+ex+" * /\n" else "")+
-         "val "+t0+" = K3Map.temp["+tup(ex.dim.map(tpe))+","+tpe(ex.tp)+"]()\n"+
-         cpsExpr(el,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
-         cpsExpr(er,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
-         t0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-         (if (vs.size==1) "val "+vs(0)+" = "+k0+"\n" else vs.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
-       } else cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),tm),tm) // right is nested in left
-    case agg@AggSum(ks,e) =>
-      val in = if (ks.size>0) e.collect{ case Lift(n,x) => Set(n) } else Set[String]()
-      if ((ks.toSet & in).size==0) { // key is not defined by inner Lifts
-        // XXX: we want to evaluate the content inside a nested context to avoid name collisions or rename lifts
-        // XXX: find a nicer solution
-        if (tm!=None) cpsExpr(e,b,co) else { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n{ "+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+" }\n"+co(a0) }
-      } else {
-        val fs = ks.toSet--b // free variables
-        val bs = ks.toSet--fs // bound variables
-        val r = { val ns=bs.map(b=>(b,fresh(b))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
-        val (t0,fused) = tm match {
-          case Some(t0) => (t0,true)
-          case None => (fresh("tmp"),false)
-        }
-        (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
-        cpsExpr(e.rename(r),b++ks.map(r).toSet,(v:String)=> {
-          val s=t0+".add("+tup(ks.map(r))+","+v+");"
-          if (bs.size==0) s else "if ("+bs.map{ b=>b+" == "+r(b) }.mkString(" && ")+") {\n"+ind(s)+"\n}"
-        })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
-        / * EQUIVALENT TO
-        (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
-        cpsExpr(e,b++ks.toSet,(v:String)=> { "\n{\n"+t0+".add("+tup(ks)+","+v+");\n}\n"
-        })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
-        * /
-      }
-    */
+case Mul(Exists(e1),Lift(n,e)) if e1==e => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("("+n+" != 0)")) // LiftExist
+case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)"),am),am)
+// XXX: optimization
+//case Mul(Cmp(l,r,op),e) => cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"if ("+ll+" "+op+" "+rr+") {\n"+ind(cpsExpr(e,b,co))+"\n}\n"))
+// XXX: put each lift in its own context to avoid name clashes
+// ASSERTION IS WRONG (see TPC-H 15)
+case Mul(Lift(n,e),er) if !b.contains(n) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(er,b+n,co,am) // 'regular' Lift
+case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),am),am) // right is nested in left (right is a continuation of left)
+case Add(el,er) => 
+   val vs = ( (bnd(el)--b) & (bnd(er)--b) ).toList // free variables present on both sides
+   //println("b="+b+"\nl="+bnd(el)+"\nr="+bnd(er)+"\nvs="+vs)
+   if (vs.size>0 && el.dim.size>0&&er.dim.size>0) {
+     val (t0,k0,v0)=(fresh("tmp_add"),fresh("k"),fresh("v"))
+     //(if (ex.dim.size==0) "/ *\n BUG: vs="+vs+"\n b="+b+"\nbl="+(bnd(el).filter(x=> !b.contains(x))--b)+"\nbr="+bnd(er)+"\n"+ex.dim+" -> "+ex.tp+" ["+am+"] := "+ex+" * /\n" else "")+
+     "val "+t0+" = K3Map.temp["+tup(ex.dim.map(tpe))+","+tpe(ex.tp)+"]()\n"+
+     cpsExpr(el,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
+     cpsExpr(er,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
+     t0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
+     (if (vs.size==1) "val "+vs(0)+" = "+k0+"\n" else vs.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
+   } else cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),am),am) // right is nested in left
+case agg@AggSum(ks,e) =>
+  val in = if (ks.size>0) e.collect{ case Lift(n,x) => Set(n) } else Set[String]()
+  if ((ks.toSet & in).size==0) { // key is not defined by inner Lifts
+    if (am!=None) cpsExpr(e,b,co) else { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n{ "+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+" }\n"+co(a0) }
+  } else {
+    val fs = ks.toSet--b // free variables
+    val bs = ks.toSet--fs // bound variables
+    val r = { val ns=bs.map(b=>(b,fresh(b))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
+    val (t0,fused) = am match {
+      case Some(t0) => (t0,true)
+      case None => (fresh("tmp"),false)
+    }
+    (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
+    cpsExpr(e.rename(r),b++ks.map(r).toSet,(v:String)=> {
+      val s=t0+".add("+tup(ks.map(r))+","+v+");"
+      if (bs.size==0) s else "if ("+bs.map{ b=>b+" == "+r(b) }.mkString(" && ")+") {\n"+ind(s)+"\n}"
+    })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
+    / * EQUIVALENT TO
+    (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
+    cpsExpr(e,b++ks.toSet,(v:String)=> { "\n{\n"+t0+".add("+tup(ks)+","+v+");\n}\n"
+    })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
+    * /
+  }
+*/
