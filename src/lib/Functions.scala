@@ -29,4 +29,14 @@ object Functions {
   def Udiv(x: Double): Double = 1.0 / x
   def Ulistmax(v1: Long, v2: Long): Double = Math.max(v1, v2)
   def Ulistmax(v1: Double, v2: Double): Double = Math.max(v1, v2)
+  
+  def Udate_part(field:String, date:java.util.Date): Long = {
+    val c = java.util.Calendar.getInstance; c.setTime(date)
+    field.toLowerCase match {
+      case "year"  => c.get(java.util.Calendar.YEAR)
+      case "month" => c.get(java.util.Calendar.MONTH)
+      case "day"   => c.get(java.util.Calendar.DAY_OF_MONTH)
+      case p => throw new Exception("Invalid date part: "+p)
+    }
+  }
 }
