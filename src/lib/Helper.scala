@@ -60,24 +60,24 @@ trait Helper {
 
   // ---------------------------------------------------------------------------
   // Unit testing helpers
-  def diff[K,V](map1:Map[K,V],map2:Map[K,V]) {
+  def diff[K,V](map1:Map[K,V],map2:Map[K,V]) { // map1 is the test result, map2 is the reference
     val m1 = map1.filter{ case (k,v) => map2.get(k) match { case Some(v2) => v2!=v case None => true } }
     val m2 = map2.filter{ case (k,v) => map1.get(k) match { case Some(v2) => v2!=v case None => true } }
     if (m1.size>0||m2.size>0) {
       //println("---- Result -------------------------"); println(K3Helper.toStr(m1))
       //println("---- Reference ----------------------"); println(K3Helper.toStr(m2))
       //assert(m1==m2)
-
       val ks=m1.keys++m2.keys
-      var err=false
+      val err=new StringBuilder()
       ks.foreach { k=>
         val v1=m1.getOrElse(k,null);
         val v2=m2.getOrElse(k,null);
-        if (v1==null) { println("Missing key: "+k+" -> "+v2); err=true; }
-        else if (v2==null) { println("Extra key: "+k+" -> "+v1); err=true; }
-        else try { diff(v1,v2) } catch { case _:Throwable => println("Bad value: "+k+" -> "+v1+" (expected "+v2+")"); err=true }
+        if (v1==null) err.append("Missing key: "+k+" -> "+v2+"\n")
+        else if (v2==null) err.append("Extra key: "+k+" -> "+v1+"\n")
+        else try { diff(v1,v2) } catch { case _:Throwable => err.append("Bad value: "+k+" -> "+v1+" (expected "+v2+")\n") }
       }
-      if (err) { println("--------------------"); assert(m1==m2) }
+      val s = err.toString
+      if (s!="") throw new Exception("Result differs:\n"+s)
     }
   }
   

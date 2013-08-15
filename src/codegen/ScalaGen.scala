@@ -39,7 +39,7 @@ class TypeInfo(m:Map[String,Type]) {
   def cpsExpr(ex:Expr,b:Set[String],co:String=>String,tm:Option[AggMap]=None):String = ex match {
     // Fixes
     case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)"),tm),tm)
-    case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) => cpsExpr(er,b,co,tm).replace(n,n2) // dealiasing
+    case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,tm).replace(n,n2) // dealiasing
 
     
     // This also maintains ctx (bound variables) and free (free variables) at each tree node
@@ -63,12 +63,12 @@ class TypeInfo(m:Map[String,Type]) {
       }
     case Lift(n,e) => 
       if (b.contains(n)) cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")"),tm)
-      else cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("1"),tm)
+      else cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("1"),tm) // XXX: seems never used
     case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),tm),tm)
     case a@Add(el,er) =>
       if (a.agg==Nil) cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),tm),tm)
       else tm match {
-        case Some(t) if t._2==a.agg => cpsExpr(el,b,co,tm)+cpsExpr(er,b,co,tm)
+        case Some(t) if t._2==a.agg => cpsExpr(el,b,co,tm)+"\n"+cpsExpr(er,b,co,tm)
         case _ =>
           //tm match { case Some(t) => println("Parent = "+t+" in "+a.agg) case None => }
 
@@ -101,10 +101,10 @@ class TypeInfo(m:Map[String,Type]) {
 
   def genStmt(s:Stmt,b:Set[String]):String = s match {
     case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
-      cpsExpr(e,b,(res:String) => (oi match {
-          case Some(ie) => cpsExpr(ie,b++bnd(e),(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
-          case None => ""
-        })+m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+res+");")
+      (oi match {
+        case Some(ie) => cpsExpr(ie,b,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
+        case None => ""
+      })+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 

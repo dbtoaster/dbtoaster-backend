@@ -130,7 +130,7 @@ object UnitTest {
     println("Passing  : "+passing.size) // 52
     println("Failing  : "+failing.size) // 70
     println("NoCompile: "+nocompile.size) // 61
-    val files = Array("test/unit/queries/axfinder","test/unit/queries/tpch13")
+    val files = passing //Array("test/unit/queries/axfinder","test/unit/queries/tpch13","test/unit/queries/tpch1","test/unit/queries/tpch18")
     
     val independent = (files==nocompile)
     
