@@ -27,11 +27,8 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   def cpsExpr(ex:Expr,b:Set[String],co:String=>String,am:Option[AggMap]=None):String = ex match {
     // Fixes
     
-
-    case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)"),am),am)
+    case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("(if (("+v1+")!=0) 1L else 0L)"),am),am)
     case Mul(Exists(el),er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),co,am),am)
-    
-    
     case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).replace(n,n2) // dealiasing
 
     // -------------------------------------------------------------------------
