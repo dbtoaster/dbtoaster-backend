@@ -56,28 +56,24 @@ object UnitTest {
   def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
   def clean = if (dir.isDirectory()) dir.listFiles().foreach { f=>f.delete() }
 
-  def makeTest(t:QueryTest,fsz:String=>Boolean) = {
+  def makeTest(t:QueryTest) = {
     val sys = (toast _ andThen M3Parser andThen TypeCheck)(t.sql)
     val cls = clname(t.sql)
     val gen = ScalaGen(cls)
     val str = gen.genStreams(sys.sources)
     val qid = sys.queries.map{_.name}.zipWithIndex.toMap
     val qt = sys.queries.map{q=>(q.name,sys.mapType(q.m.name)) }.toMap
-
     val helper =
-      "package ddbt.test.gen\n"+
-      "import ddbt.lib._\n\n"+
-      "import org.scalatest._\n"+
-      "import akka.actor.Actor\n"+
-      "import java.util.Date\n\n"+
+      "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
       "class "+cls+"Spec extends Helper with FunSpec {"+ind("\n"+
       "import scala.language.implicitConversions\n"+
       "implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();\n"+
       "implicit def strConv(d:Long):String = \"\"+d\n"+
-      t.sets.filter{x=>fsz(x._1)}.map { case (sz,set) =>
+      t.sets.map { case (sz,set) =>
+        // val mystr = (str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) } // seems that set.subs are useless here
+        val mystr = (if (sz.endsWith("_del")) str.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else str).replaceAll("/standard/","/"+sz+"/") // streams for this dataset
         "describe(\"Dataset '"+sz+"'\") {"+ind("\n"+
-        "val (t,res) = run["+cls+","+gen.genViewType(sys)+"]("+(str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) }+")\n"+ // XXX: fix types and retrieval
-        //"it(\"Runnning time = \"+time(t)+\" sec\") {}\n"+
+        "val (t,res) = run["+cls+","+gen.genViewType(sys)+"]("+mystr+")\n"+
         set.out.map { case (n,o) =>
           val (kt,vt) = qt(n)
           val qtp = "["+tup(kt.map(gen.tpe))+","+gen.tpe(vt)+"]"
@@ -101,15 +97,8 @@ object UnitTest {
 
   def main(args: Array[String]) {
     val fsz = if (args.length>0) (s:String)=>args.contains(s) else (s:String)=>true // filtering datasets
-    val exclude=("missedtrades" :: // correct on tiny dataset, timeout (>10 minutes) on standard
-                 List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a").map{x=>"employee/query"+x}).toArray // DBToaster SQL->M3 failing there
+    val exclude=(List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a").map{x=>"employee/query"+x}).toArray // DBToaster SQL->M3 failing there
     val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }
-
-    val failing = ( // TPCH 1, 3, 4, 6, 11a, 12, 13, 14, 17a, 18, 18a are also failing on tiny/del
-      List("brokervariance","brokerspread","vwap") :::
-      List("15","35c","36c","37","38a","40").map("employee/query"+_) :::
-      List("r_indynamic","r_starofnestedagg","rs_joinwithnestedagg").map("simple/"+_)
-    ).map{x=>"test/unit/queries/"+x}.toArray
 
     val nocompile = (
       List("ssb4") ::: List("10","11","11c","15","16","2","20","21","22","22a","5","7","8","9").map("tpch"+_) :::
@@ -119,19 +108,27 @@ object UnitTest {
       List("12811747","48183500","52548748","96434723").map("zeus/"+_)
     ).map{x=>"test/unit/queries/"+x}.toArray
 
-    val passing = (all.toSet -- failing.toSet -- nocompile.toSet).toList.sorted.toArray
+    val failing = 14
+    // 2 TPCH    : 1/standard_del, 4/standard_del
+    // 3 Misc    : brokervariance, brokerspread , vwap
+    // 6 Employee: 15, 35c, 36c, 37, 38a, 40
+    // 3 Simple  : r_indynamic, r_starofnestedagg, rs_joinwithnestedagg
+    
+    val compile = (all.toSet -- nocompile.toSet).toList.sorted.toArray
+    println("Passing  : "+(compile.size - failing))
+    println("Failing  : "+failing)
+    println("NoCompile: "+nocompile.size)
 
-    println("Passing  : "+passing.size) // 131 (10 tpch still failing on tiny/del datasets)
-    println("Failing  : "+failing.size) // 12
-    println("NoCompile: "+nocompile.size) // 39
-    val files = passing // Array("test/unit/queries/simple/r_indynamic")
+    val files = compile // Array("test/unit/queries/tpch1")
 
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
-    tests.foreach{ t =>
-      // val t = tests.filter{t=>t.sql.indexOf("axfinder")!= -1}(0) // we pick one single test for purposes of debugging
+    tests.foreach{ t0 =>
+      val t = QueryTest(t0.sql,t0.sets.filter(x=>fsz(x._1))
+                 .filter{x=> !t0.sql.matches(".*missedtrades.*") || x._1.matches("tiny.*")} // skip missedtrades very long tests
+              )
       if (t.sets.size>0) try {
-        println("---------------- "+t.sql); makeTest(t,fsz)
+        println("---------------- "+t.sql); makeTest(t)
         // if ((files==nocompile)) { println(exec(Array("sbt","test-only * -- -l ddbt.SlowTest"))); clean }
       } catch {
         case th:Throwable => println("Failed to generate "+t.sql+" because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) }

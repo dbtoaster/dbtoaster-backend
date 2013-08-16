@@ -101,15 +101,14 @@ object Adaptor {
       }
       case _ => (c:String) => c
     }
-    val act:Int = action.toLowerCase match { case "insert"=>0 case "delete"=>1 case _=>2 }
+    val ev : Array[String] => (TupleOp,Long,Array[String]) = action.toLowerCase match {
+      case "insert" => (rec:Array[String]) => (TupleInsert,0L,rec)
+      case "delete" => (rec:Array[String]) => (TupleDelete,0L,rec)
+      case _        => (rec:Array[String]) => (if (rec(1)=="1") TupleInsert else TupleDelete, java.lang.Long.parseLong(rec(0)), rec.drop(2))
+    }
     def apply(data:Array[Byte],off:Int,len:Int): List[TupleEvent] = {
-      val rec = new String(data,off,len,"UTF-8").split(delimiter).zipWithIndex.map{ case(x,i) => tfs(i)(x) }.toList
-      val ev = act match {
-        case 0 => TupleEvent(TupleInsert, name, 0, rec)
-        case 1 => TupleEvent(TupleDelete, name, 0, rec)
-        case _ => TupleEvent(if (rec(1)==1) TupleInsert else TupleDelete, name, rec(0).asInstanceOf[Long], rec.drop(2))
-      }
-      List(ev)
+      val (op:TupleOp,tx:Long,rec:Array[String]) = ev(new String(data,off,len,"UTF-8").split(delimiter))
+      List(TupleEvent(op,name,tx,rec.zipWithIndex.map{ case(x,i) => tfs(i)(x) }.toList))
     }
   }
 
