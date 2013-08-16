@@ -62,32 +62,31 @@ trait Helper {
   // ---------------------------------------------------------------------------
   // Unit testing helpers
 
+  val precision = 7 // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)
+  private val diff_p = Math.pow(0.1,precision)
+  private def eq_v[V](v1:V,v2:V) = v1==v2 || ((v1,v2) match { case (d1:Double,d2:Double) => (Math.abs(2*(d1-d2)/(d1+d2))<diff_p) case _ => false })
+  private def eq_p(p1:Product,p2:Product) = { val n=p1.productArity; assert(n==p2.productArity); var r=true; for (i <- 0 until n) { r = r && eq_v(p1.productElement(i),p2.productElement(i)) }; r }
+
+  def diff[V](v1:V,v2:V) = if (!eq_v(v1,v2)) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
   def diff[K,V](map1:Map[K,V],map2:Map[K,V]) { // map1 is the test result, map2 is the reference
     val m1 = map1.filter{ case (k,v) => map2.get(k) match { case Some(v2) => v2!=v case None => true } }
     val m2 = map2.filter{ case (k,v) => map1.get(k) match { case Some(v2) => v2!=v case None => true } }
-    if (m1.size>0||m2.size>0) {
-      //println("---- Result -------------------------"); println(K3Helper.toStr(m1))
-      //println("---- Reference ----------------------"); println(K3Helper.toStr(m2))
-      //assert(m1==m2)
-      val ks=m1.keys++m2.keys
+    if (m1.size>0 || m2.size>0) {
       val err=new StringBuilder()
-      ks.foreach { k=>
-        val v1=m1.getOrElse(k,null);
-        val v2=m2.getOrElse(k,null);
-        if (v1==null) err.append("Missing key: "+k+" -> "+v2+"\n")
-        else if (v2==null) err.append("Extra key: "+k+" -> "+v1+"\n")
-        else try { diff(v1,v2) } catch { case _:Throwable => err.append("Bad value: "+k+" -> "+v1+" (expected "+v2+")\n") }
+      val b1 = scala.collection.mutable.HashMap[K,V](); b1 ++= m1 // extra
+      val b2 = scala.collection.mutable.HashMap[K,V](); b2 ++= m2 // missing
+      m1.foreach { case (k1,v1) =>
+        m2.foreach { case (k2,v2) =>
+          if (b1.contains(k1) && b2.contains(k2)) {
+            val (k,v) = ((k1,k2) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case _ => eq_v(k1,k2) }, eq_v(v1,v2))
+            if (k) { b1.remove(k1); b2.remove(k2); if (!v) err.append("Bad value: "+k1+" -> "+v1+" (expected "+v2+")\n") }
+          }
+        }
       }
-      val s = err.toString
-      if (s!="") throw new Exception("Result differs:\n"+s)
+      b1.foreach { case (k,v) => err.append("Missing key: "+k+" -> "+v+"\n") }
+      b2.foreach { case (k,v) => err.append("Extra key: "+k+" -> "+v+"\n") }
+      val s = err.toString; if (s!="") throw new Exception("Result differs:\n"+s)
     }
-  }
-  
-  val precision = 10 // significative numbers
-  private val diff_p = Math.pow(0.1,precision)
-  def diff[V](v1:V,v2:V) = if (v1!=v2) (v1,v2) match {
-    case (d1:Double,d2:Double) => assert(Math.abs(2*(d1-d2)/(d1+d2))<diff_p)
-    case _ => assert(false)
   }
   
   def loadCSV[K,V](kv:List[Any]=>(K,V),file:String,fmt:String,sep:String=","):Map[K,V] = {

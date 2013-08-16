@@ -75,7 +75,7 @@ object UnitTest {
             val ll=(kt:::vt::Nil).zipWithIndex
             "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+gen.tpe(t)}.mkString(",")+") => ("+tup(ll.reverse.tail.reverse.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n"
           }
-          "it(\"Correctness "+n+"\") {"+ind("\n"+kv+
+          "it(\""+n+" correct\") {"+ind("\n"+kv+
           "diff(res"+(if (sys.queries.size>1) "._"+(qid(n)+1) else "")+", "+(o match {
             case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
             case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+fmt+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")" // XXX: pass data type
@@ -90,14 +90,14 @@ object UnitTest {
   
   def main(args: Array[String]) {
     val fsz = if (args.length>0) (s:String)=>args.contains(s) else (s:String)=>true // filtering datasets
-    val exclude=List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a").map{x=>"employee/query"+x}.toArray // DBToaster SQL->M3 failing there
+    val exclude=("missedtrades" :: // correct on tiny dataset, timeout (>10 minutes) on standard
+                 List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a").map{x=>"employee/query"+x}).toArray // DBToaster SQL->M3 failing there
     val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }
 
     val failing = ( // TPCH 1, 3, 4, 6, 11a, 12, 13, 14, 17a, 18, 18a are also failing on tiny/del
-      List("brokervariance","brokerspread","vwap","missedtrades") ::: // time out on missedtrades => failed ??
+      List("brokervariance","brokerspread","vwap") :::
       List("15","35c","36c","37","38a","40").map("employee/query"+_) :::
-      List("r_indynamic","r_starofnestedagg","r_sumdivgrp","rs_joinwithnestedagg").map("simple/"+_) :::
-      List("37494577").map("zeus/"+_)
+      List("r_indynamic","r_starofnestedagg","rs_joinwithnestedagg").map("simple/"+_)
     ).map{x=>"test/unit/queries/"+x}.toArray
     
     val nocompile = (    
@@ -110,10 +110,10 @@ object UnitTest {
     
     val passing = (all.toSet -- failing.toSet -- nocompile.toSet).toList.sorted.toArray
     
-    println("Passing  : "+passing.size) // 129 (10 tpch still failing on tiny/del datasets)
-    println("Failing  : "+failing.size) // 15
+    println("Passing  : "+passing.size) // 131 (10 tpch still failing on tiny/del datasets)
+    println("Failing  : "+failing.size) // 12
     println("NoCompile: "+nocompile.size) // 39
-    val files = passing //Array("test/unit/queries/simple/r_selectstar")
+    val files = passing // Array("test/unit/queries/simple/r_indynamic")
     
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }

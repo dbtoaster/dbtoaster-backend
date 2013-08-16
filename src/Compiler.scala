@@ -9,7 +9,7 @@ object Compiler {
   val dir = new File("test/gen")
   val compile = ((f:File) => Utils.toast(f)) andThen
                 M3Parser andThen
-                //dump("M3") andThen
+                dump("M3") andThen
                 TypeCheck andThen
                 ScalaGen("Query") andThen
                 dump("Scala") andThen
