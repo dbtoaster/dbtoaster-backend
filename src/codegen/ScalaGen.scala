@@ -86,10 +86,12 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
 
   def genStmt(s:Stmt,b:Set[String]):String = s match {
     case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
-      (oi match {
+      //val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
+      val init = (oi match {
         case Some(ie) => cpsExpr(ie,b,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
         case None => ""
-      })+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")
+      })
+      init+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 

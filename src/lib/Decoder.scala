@@ -19,6 +19,7 @@ case class Decoder(f:TupleEvent=>Unit,adaptor:Adaptor=Adaptor("ORDERBOOK",Nil),s
       System.arraycopy(data,o,d2,0,l2-o); data=d2
     }
   }
+  def eof() { if(data.length>0) adaptor(data,0,data.length).foreach(e=>f(e)) }
 }
 
 /*
@@ -149,7 +150,7 @@ case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Boolean=false,b
     val buf = new Array[Byte](bufferSize)
     var n:Int = 0
     do { n=in.read(buf); d.add(buf,n); } while (n>0);
-    in.close()
+    d.eof(); in.close()
   }
   def read() {
     if (!parallel) streams.foreach { case(in,d) => read1(in,d) }
@@ -178,7 +179,7 @@ case class SourceMuxPull(streams:Seq[(InputStream,Adaptor,Split)],parallel:Boole
       val s = st(i)
       var n:Int = 0
       do { n=s.in.read(s.buf); s.d.add(s.buf,n); } while (n>0 && s.q.isEmpty);
-      if (n<=0) { close(i); read(0) } else s.q.dequeue()
+      if (n<=0) { s.d.eof(); close(i); read(0) } else s.q.dequeue()
     }
   }
   private def close(i:Int) { st(i).in.close; valid=valid-1; if (i<valid) st(i)=st(valid); st(valid)=null; }

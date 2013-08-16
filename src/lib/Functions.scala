@@ -39,4 +39,7 @@ object Functions {
       case p => throw new Exception("Invalid date part: "+p)
     }
   }
+  
+  def Usubstring(s:String,a:Long,b:Long) = s.substring(a.toInt,b.toInt)
+  
 }
