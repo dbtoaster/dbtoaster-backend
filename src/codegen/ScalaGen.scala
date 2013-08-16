@@ -48,15 +48,13 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     // Fixes
     case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("(if (("+v1+")!=0) 1L else 0L)"),am),am)
     case Mul(Exists(el),er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),co,am),am)
-    case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).replace(n,n2) // dealiasing
+    case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).toString.replaceAll("(?<!\\w)"+n+"(?!\\w)",n2) // dealiasing
 
     // -------------------------------------------------------------------------
     case Ref(n) => co(n)
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
     //case Exists(e) => val e0=fresh("ex"); "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0) // this should not appear, or find how to bind it properly
-
     case Exists(e) => cpsExpr(e,b,(v:String)=>co("(if (("+v+")!=0) 1L else 0L)"))
-
     case Cmp(l,r,op) => co(cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") 1L else 0L)")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
@@ -90,7 +88,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       val fs = ks.filter{k=> !b.contains(k)} // free variables
       val agg=fs.map{f=>(f,(ks zip a.tks).toMap.apply(f)) }
       if (ks.size==0 || fs.size==0) {
-        val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+co(a0)
+        val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0)
       } else am match {
         case Some(t) if t._2==agg => cpsExpr(e,b,co,am)
         case _ =>
@@ -98,7 +96,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
           val a0=fresh("agg")
           val tmp=Some((a0,agg)) // declare this as summing target
           "val "+a0+" = K3Map.temp["+tup(a.tks.map(tpe))+","+tpe(e.tp)+"]()\n"+
-          cpsExpr(e.rename(r),b++fs.map(r).toSet,(v:String)=> { a0+".add("+tup(fs.map(r))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,TypeLong,fs),b,co)
+          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(fs.map(r))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,TypeLong,fs),b,co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
   }
@@ -148,6 +146,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+tpe(t)}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
     }
+    // XXX: val loader="def loadTables() { XXX }"
     freshClear()
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+

@@ -101,25 +101,25 @@ object UnitTest {
     val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }
 
     val nocompile = (
-      List("ssb4") ::: List("10","11","11c","15","16","2","20","21","22","22a","5","7","8","9").map("tpch"+_) :::
-      List("35b","36b","39","52a","56a","57a","58a","60","61").map("employee/query"+_) :::
-      List("inequality_selfjoin","miraculous_minus","miraculous_minus2","r_agtb","r_count_of_one","r_count_of_one_prime","r_existsnestedagg","r_lift_of_count","r_multinest",
-           "rs_ineqwithnestedagg","ss_math").map("simple/"+_) :::
+      List("15","2","21","22","22a","7","8","9").map("tpch"+_) :::
+      List("35b","36b","39","52a","60","61").map("employee/query"+_) :::
+      List("inequality_selfjoin","miraculous_minus","miraculous_minus2","r_count_of_one","r_count_of_one_prime","r_lift_of_count","ss_math").map("simple/"+_) :::
       List("12811747","48183500","52548748","96434723").map("zeus/"+_)
     ).map{x=>"test/unit/queries/"+x}.toArray
 
-    val failing = 14
-    // 2 TPCH    : 1/standard_del, 4/standard_del
-    // 3 Misc    : brokervariance, brokerspread , vwap
-    // 6 Employee: 15, 35c, 36c, 37, 38a, 40
-    // 3 Simple  : r_indynamic, r_starofnestedagg, rs_joinwithnestedagg
+    val failing = (
+      List("tpch1","tpch4","tpch11c","tpch10","ssb4","brokervariance","brokerspread","vwap") :::
+      List("15","35c","36c","37","38a","40").map("employee/query"+_) :::
+      List("r_indynamic","r_starofnestedagg","rs_joinwithnestedagg","r_multinest","rs_ineqwithnestedagg").map("simple/"+_)
+    ).map{x=>"test/unit/queries/"+x}.toArray
     
     val compile = (all.toSet -- nocompile.toSet).toList.sorted.toArray
-    println("Passing  : "+(compile.size - failing))
-    println("Failing  : "+failing)
-    println("NoCompile: "+nocompile.size)
-
-    val files = compile // Array("test/unit/queries/tpch1")
+    println("Passing  : "+(compile.size - failing.size)) // 139
+    println("Failing  : "+failing.size) // 19
+    println("NoCompile: "+nocompile.size) // 25
+    // Total 260, Failed 31, Errors 0, Passed 229, Skipped 0
+    
+    val files = nocompile //Array("test/unit/queries/tpch11")
 
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
