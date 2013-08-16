@@ -105,7 +105,7 @@ object UnitTest {
       List("brokerspread","brokervariance","ssb4","vwap") :::
       List("4","9","10","11c","22","22a").map("tpch"+_) :::
       List("15","37","38a","39","40","52a").map("employee/query"+_) :::
-      List("r_count_of_one","r_indynamic","r_multinest","r_starofnestedagg","rs_ineqwithnestedagg","rs_joinwithnestedagg").map("simple/"+_)
+      List("r_count_of_one","r_indynamic","r_multinest","rs_ineqwithnestedagg","rs_joinwithnestedagg").map("simple/"+_)
     ).map{"test/unit/queries/"+_}.toArray
     
     val compile = (all.toSet -- nocompile.toSet).toList.sorted.toArray
@@ -114,8 +114,8 @@ object UnitTest {
     println("Failing  : "+failing.size) // 22
     println("NoCompile: "+nocompile.size) // 2
     
-    val files = failing //Array("test/unit/queries/tpch2")
-    // XXX: setup constant tables
+    val files = passing // Array("test/unit/queries/simple/rs_ineqwithnestedagg")
+    // XXX: load constant tables (nation, region for TPCH)
 
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
