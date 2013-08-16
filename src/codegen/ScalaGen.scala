@@ -96,8 +96,8 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
           val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
           val a0=fresh("agg")
           val tmp=Some((a0,agg)) // declare this as summing target
-          "val "+a0+" = K3Map.temp["+tup(a.tks.map(tpe))+","+tpe(e.tp)+"]()\n"+
-          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(fs.map(r))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,TypeLong,fs),b,co)
+          "val "+a0+" = K3Map.temp["+tup(agg.map(x=>tpe(x._2)))+","+tpe(e.tp)+"]()\n"+
+          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,TypeLong,fs),b,co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
   }
