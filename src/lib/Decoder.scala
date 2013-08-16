@@ -1,6 +1,23 @@
 package ddbt.lib
 import Messages._
 
+/**
+ * These class helps creating a stream of events from a record data.
+ * The data format is defined in terms of records and fields in the record:
+ * - Records are separated according to Split (usually by a new line).
+ * - Records are parsed then using an Adaptor:
+ *   - OrderBook : a special adaptor to create finance streams
+ *   - CSV       : decodes CSV records, format needs to be specified
+ *
+ * To read from any buffered data source, a Decoder is used. It appends data
+ * from a buffer and produces TupleEvents that are passed to a callback.
+ *
+ * Finally, to read from multiple sources and hide buffering details, SourceMux
+ * uses multiple InputStream/Decoder pairs and takes care of generating streams.
+ *
+ * @author TCK
+ */
+
 /* Decode a tuple by splitting binary data, decoding it and calling f on each generated event */
 case class Decoder(f:TupleEvent=>Unit,adaptor:Adaptor=Adaptor("ORDERBOOK",Nil),splitter:Split=Split()) {
   private var data=Array[Byte]()

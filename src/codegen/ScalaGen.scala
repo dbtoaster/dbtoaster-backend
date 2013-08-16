@@ -2,8 +2,28 @@ package ddbt.codegen
 import ddbt.ast._
 
 /**
- * ScalaGen emits directly Scala code (as Strings).
+ * ScalaGen is responsible to transform a typed AST into vanilla Scala code (String).
  * It should be quite straightforward to use LMS to do that instead.
+ *
+ * Implementation notes:
+ * ---------------------------------------------
+ * 1. We shall understand the multiply as a continuation of the left operand in the right one.
+ *
+ * 2. Add is more complicated than Mul as it does union of lhs and rhs.
+ *    If a free variable is present in both sides, iterate these. Concretely:
+ *       f(A*B) --> A.foreach{ (k_a,v_a) => B.foreach { (k_b,v_b) => f(v_a * v_b) } }
+ *       f(A+B) --> val dom=A.keySet++B.keySet; dom.foreach { k => f(A.get(k) + B.get(k)) }
+ *
+ *    Domain union might be quite complex. An lighter alternative is
+ *       val tmp = Temp[domA(k_a)=domB(k_b)=dom -> tp(A)=tp(B)]
+ *       A.foreach{ (k_a,v_a) => tmp.add(domA(k_a),v_a) }
+ *       B.foreach{ (k_b,v_b) => tmp.add(domB(k_b),v_b) }
+ *       tmp.foreach { (k,v) => f(v) }
+ *
+ * Constraints inherited from M3:
+ * - Lift alone has only bound variables. In Exists*Lift, Exists binds variables for the Lift
+ *
+ * @author TCK
  */
 case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   import scala.collection.mutable.HashMap
@@ -16,7 +36,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   private def bnd(e:Expr):Set[String] = e.collect { case Lift(n,e) => bnd(e)+n case AggSum(ks,e) => ks.toSet case MapRef(n,tp,ks) => ks.toSet }
 
   // Methods involving only constants are hoisted as global constants
-  private val cs = HashMap[Apply,String]() 
+  private val cs = HashMap[Apply,String]()
   def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
 
   // Generate code bottom-up using delimited CPS and a list of bound variables
@@ -26,7 +46,6 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
   def cpsExpr(ex:Expr,b:Set[String],co:String=>String,am:Option[AggMap]=None):String = ex match {
     // Fixes
-    
     case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("(if (("+v1+")!=0) 1L else 0L)"),am),am)
     case Mul(Exists(el),er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),co,am),am)
     case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).replace(n,n2) // dealiasing
@@ -35,9 +54,9 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     case Ref(n) => co(n)
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
     //case Exists(e) => val e0=fresh("ex"); "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0) // this should not appear, or find how to bind it properly
-    
+
     case Exists(e) => cpsExpr(e,b,(v:String)=>co("(if (("+v+")!=0) 1L else 0L)"))
-    
+
     case Cmp(l,r,op) => co(cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") 1L else 0L)")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
@@ -49,7 +68,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
         n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
           ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";"}.mkString("\n")+"\n"+co(v0))+"\n}\n" // bind free variables from retrieved key
       }
-    case Lift(n,e) => 
+    case Lift(n,e) =>
       if (b.contains(n)) cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")"),am)
       else cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("1"),am) // XXX: seems never used
     case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),am),am)
@@ -71,7 +90,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       val fs = ks.filter{k=> !b.contains(k)} // free variables
       val agg=fs.map{f=>(f,(ks zip a.tks).toMap.apply(f)) }
       if (ks.size==0 || fs.size==0) {
-        val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+"\n"+co(a0)
+        val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+co(a0)
       } else am match {
         case Some(t) if t._2==agg => cpsExpr(e,b,co,am)
         case _ =>
@@ -102,7 +121,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       case TriggerDel(Schema(n,cs),ss) => ("Del"+n,cs,ss)
     }
     val b=as.map{_._1}.toSet
-    "def on"+n+"("+as.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+ind(ss.map{s=>genStmt(s,b)}.mkString("\n"))+"\n}"
+    "def on"+n+"("+as.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+ind(ss.map{s=>genStmt(s,b)}.mkString)+"\n}"
   }
 
   // Slicing lazy indices (created only when necessary)
@@ -163,7 +182,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       "("+in+",new Adaptor."+adaptor+","+split+")"
     }.mkString(",\n"))+"\n)"
   }
-  
+
   // Helper that contains the main and stream generator
   def genViewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); if (m._1.size==0) tpe(m._2) else "Map["+tup(m._1.map(tpe))+","+tpe(m._2)+"]" })
   def genHelper(s0:System) = {
@@ -177,28 +196,6 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   }
   def apply(s:System) = genHelper(s)+genSystem(s)
 }
-
-/**
- * Implementation notes:
- * ---------------------------------------------
- * 1. We shall understand the multiply as a continuation of the left operand in the right one.
- *
- * 2. Add is more complicated than Mul as it does union of lhs and rhs.
- *    If a free variable is present in both sides, iterate these. Concretely:
- *       f(A*B) --> A.foreach{ (k_a,v_a) => B.foreach { (k_b,v_b) => f(v_a * v_b) } }
- *       f(A+B) --> val dom=A.keySet++B.keySet; dom.foreach { k => f(A.get(k) + B.get(k)) }
- *
- *    Domain union might be quite complex. An lighter alternative is
- *       val tmp = Temp[domA(k_a)=domB(k_b)=dom -> tp(A)=tp(B)]
- *       A.foreach{ (k_a,v_a) => tmp.add(domA(k_a),v_a) }
- *       B.foreach{ (k_b,v_b) => tmp.add(domB(k_b),v_b) }
- *       tmp.foreach { (k,v) => f(v) }
- *
- *
- * Constraints inherited from M3:
- * - Lift alone has only bound variables. In Exists*Lift, Exists binds variables for the Lift
- *
- */
 
 // add a special primitive for aggregation with keys => groupBy()
 // Some "-1" simplifications
@@ -214,7 +211,7 @@ case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1)
 // ASSERTION IS WRONG (see TPC-H 15)
 case Mul(Lift(n,e),er) if !b.contains(n) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(er,b+n,co,am) // 'regular' Lift
 case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),am),am) // right is nested in left (right is a continuation of left)
-case Add(el,er) => 
+case Add(el,er) =>
    val vs = ( (bnd(el)--b) & (bnd(er)--b) ).toList // free variables present on both sides
    //println("b="+b+"\nl="+bnd(el)+"\nr="+bnd(er)+"\nvs="+vs)
    if (vs.size>0 && el.dim.size>0&&er.dim.size>0) {

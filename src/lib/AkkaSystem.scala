@@ -99,7 +99,7 @@ abstract class WorkerActor extends Actor {
   }
 
   // Cluster
-  protected val timeout = akka.util.Timeout(1000) // operation timeout (ms)  
+  protected val timeout = akka.util.Timeout(1000) // operation timeout (ms)
   private val barrier = new java.util.HashMap[ActorRef,Long]()
   private var owner : Int => ActorRef = (h:Int)=>null // returns null if local
   private var master : ActorRef = null
@@ -118,7 +118,7 @@ abstract class WorkerActor extends Actor {
   // def msg(m:String) { val s=self.path.toString; val p=s.indexOf("/user/"); println(s.substring(p)+": "+m); }
 
   // Events handling
-  private def ackBarrier() { 
+  private def ackBarrier() {
     if (barrier.size==0) return; // no barrier started
     if (GetMatcher.pending || AggrMatcher.pending) return; // value requests pending, abort
     val t=barrier.get(master);
@@ -126,7 +126,7 @@ abstract class WorkerActor extends Actor {
       master ! Barrier(t); barrier.clear; GetMatcher.clear; AggrMatcher.clear
     }
   }
-  
+
   def receive = {
     case Init(m,ws) => init(m,ws)
     case Barrier(tx) => barrier.put(sender,tx);
@@ -142,9 +142,9 @@ abstract class WorkerActor extends Actor {
     //case Aggr(id,<f>,<args>) => sender ! AggrPart(id,<result>) needs to be implemented by subclasses
     case x => println("Did not understood "+x)
   }
-  
+
   // Helpers
-  import scala.language.implicitConversions  
+  import scala.language.implicitConversions
   implicit def boolConv(b:Boolean):Long = if (b) 1L else 0L
   implicit def mapRefConv(m:MapRef) = new MapFunc[Any](m)
   class MapFunc[P](m:MapRef,p:Int= -1,pk:P=null) {
@@ -178,7 +178,7 @@ class MasterActor(props:Array[Props]) extends WorkerActor {
   import Messages._
   init(self,props.map{p=>context.actorOf(p)})
   final def local[K,V](m:MapRef) = sys.error("Master owns no map")
-  
+
   private var tx:Long=0
   def flush() { tx=tx+1;
     val fs = workers.map{w=>w.ask(Barrier(tx))(timeout)}
@@ -196,7 +196,7 @@ class MasterActor(props:Array[Props]) extends WorkerActor {
       val r = new java.util.HashMap[K,V]()
       maps.foreach { m=>m.foreach { case (k,v)=> r.put(k,v) } }
       scala.collection.JavaConversions.mapAsScalaMap(r).toMap
-    }  
+    }
     merge(fs.map{ r => Await.result(r,timeout.duration).asInstanceOf[Map[K,V]] })
   }
 
@@ -206,4 +206,3 @@ class MasterActor(props:Array[Props]) extends WorkerActor {
     invalid += write
   }
 }
-

@@ -5,6 +5,15 @@ import scala.util.parsing.combinator.lexical.StdLexical
 import scala.util.parsing.combinator.token.StdTokens
 import ddbt.ast._
 
+/**
+ * These class define the parsers for SQL and M3 languages into corresponding AST.
+ * 
+ * @TODO: SQL parser is broken: it parses correctly but outputted AST is incorrect.
+ * This will not be fixed soon as this composent is not currently used.
+ * 
+ * @author TCK
+ */
+
 // -----------------------------------------------------------------------------
 
 class ExtParser extends StandardTokenParsers {
@@ -131,7 +140,6 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   | "DATE" ~> "(" ~> expr <~ ")" ^^ { Cast(TypeDate,_) }
   | ("SUBSTRING"|"SUBSTR")~>"("~> expr ~ (","~>numericLit) ~ opt(","~>numericLit) <~")" ^^ { case v~s~oe=> Substr(v,Integer.parseInt(s),oe match{ case Some(n)=>Integer.parseInt(n) case _=> -1 }) }
   | ("CASE"~>"WHEN"~>cond) ~ ("THEN"~>expr) ~ ("ELSE"~>expr) <~"END" ^^ { case c~t~e=>Case(c,t,e) }
-  
   | ("CASE"~>expr) ~ ("WHEN"~>expr) ~ ("THEN"~>expr) ~ ("ELSE"~>expr) <~"END" ^^ { case c1~c2~t~e=>Case(Cmp(c1,c2,OpEq),t,e) }
   | ( ("DATE_PART"~>"("~>stringLit)~(","~>expr<~")")
     | ("EXTRACT"~>"("~>ident)~("FROM"~>expr<~")")
@@ -143,7 +151,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   | (double | long | stringLit) ^^ { Const(_) }
   | failure("SQL expression")
   )
-  
+
   // ------------ Conditions
   def disj = rep1sep(conj,"OR") ^^ { case cs => (cs.head/:cs.tail)((x,y)=>Or(x,y)) }
   def conj = rep1sep(cond,"AND") ^^ { case cs => (cs.head/:cs.tail)((x,y)=>And(x,y)) }
@@ -157,20 +165,20 @@ object SQLParser extends ExtParser with (String => SQL.System) {
       case "="=>Cmp(l,r,OpEq) case "<>"=>Cmp(l,r,OpNe) case ">"=>Cmp(l,r,OpGt) case ">="=>Cmp(l,r,OpGe) case "<"=>Cmp(r,l,OpGt) case "<="=>Cmp(r,l,OpGe) } }
   | "(" ~> disj <~ ")"
   )
-  
+
   // ------------ Queries
   lazy val tab = ("(" ~ query ~ ")" | ident) ~ opt(opt("AS")~ident)
   lazy val join = tab ~ "NATURAL"~"JOIN"~ tab | tab ~ "JOIN" ~ tab ~ "ON" ~ cond | tab
   lazy val from = "FROM" ~> repsep(join,",")
   lazy val group = rep1sep(field<~opt("ASC"|"DESC"),",")
-    
+
   lazy val query:Parser[Query] = (
    "LIST"~>"("~>repsep(expr,",")<~")" ^^ { Lst(_) }
   | ("SELECT" ~> opt("DISTINCT")) ~ repsep(expr ~ opt("AS"~>ident),",") ~ opt(from) ~ opt("WHERE" ~> disj) ~ opt("GROUP"~>"BY"~> group) ^^ { case s => View("XXX")}
   | "(" ~> query <~ ")"
   )
   lazy val sqlAny = rep(ident|numericLit|stringLit|"."|","|"("|")"|"+"|"-"|"*"|"/"|"%"|"="|"<>"|"<"|"<="|">="|">") ^^ { _.mkString(" ") }
-  
+
   // ------------ System definition
   lazy val system = rep(source) ~ rep(query <~ ";") ^^ { case ss ~ qs => System(ss,qs) }
   def apply(str:String) = phrase(system)(new lexical.Scanner(str)) match {

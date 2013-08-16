@@ -1,7 +1,11 @@
 package ddbt
 import java.io._
 
-/** This class contains useful functions and variables */
+/**
+ * This class contains useful functions and variables that are shared across
+ * different compiler parts.
+ * @author TCK
+ */
 object Utils {
   // Paths related to DBToaster
   val path_base = "dbtoaster/compiler/alpha5"
@@ -24,7 +28,7 @@ object Utils {
 
     val r = Runtime.getRuntime
     val p = if (repo) r.exec(cmd,null,new File(path_repo+"/"+path_base)) else r.exec(cmd)
-    
+
     def gobble(in:InputStream) = new Runnable {
       var out = new StringBuilder
       var thr = new Thread(this); thr.start

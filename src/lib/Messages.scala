@@ -6,7 +6,7 @@ object Messages {
   type TupleOp = Byte
   final val TupleDelete : TupleOp = 0x00
   final val TupleInsert : TupleOp = 0x01
-  
+
   // Input stream
   abstract sealed class StreamEvent
   case object EndOfStream extends StreamEvent
@@ -26,7 +26,7 @@ ARCHITECTURE OVERVIEW (push-based flow)
 
                   Source (streams)
                      |
-                     v      
+                     v
 Supervisor <---> Serializer -----> Storage
     ^          (broadcasting) <--- (setup tables)
     |                |
@@ -62,13 +62,13 @@ in which modification should happen. If:
 - No : find owner, send it all _aggregated_ data related to modification
 
 Example: SELECT COUNT(*) FROM R,S where R.r=S.s ==> maps mCOUNT,mR(r),mS(s)
-	Assume 2 workers W1,W2 partitionned using modulo 2 on id, and mCOUNT on W1.
-	When tuple <serial,+R(3)> arrives, owner=W1: mR is updated on W1.
-	To compute mCOUNT+=1[R(3)]*COUNT(mS),
-	- W1 does 1[R(3)]*COUNT(mS%2==1) and wait data from W2
-	- W2 detects that its map is used, compute 1[R(3)]*COUNT(mS%2==0) and sends
-	  it to W1
-	- W1 receive data from W2, completes its computation and update mCOUNT
+    Assume 2 workers W1,W2 partitionned using modulo 2 on id, and mCOUNT on W1.
+    When tuple <serial,+R(3)> arrives, owner=W1: mR is updated on W1.
+    To compute mCOUNT+=1[R(3)]*COUNT(mS),
+    - W1 does 1[R(3)]*COUNT(mS%2==1) and wait data from W2
+    - W2 detects that its map is used, compute 1[R(3)]*COUNT(mS%2==0) and sends
+      it to W1
+    - W1 receive data from W2, completes its computation and update mCOUNT
 The key here is to notice that since W1,W2 receive +R(3), they can pre aggregate
 locally before agregating between nodes.
 
@@ -95,13 +95,13 @@ Failures
 - Storage fails: recovery of system becomes impossible.
   When detected, if has Gap property and worth it checkpoint (else useless).
 - Supervisor or display fails: does not affect computation
-- Worker fails: if Gap property or system could sustain a burst 
+- Worker fails: if Gap property or system could sustain a burst
   1. Enqueue all message at serializer
   2.a If storage holds the stream
       - Restore worker from its stable storage (tx_old)
       - Replay the stream (tx_old->tx_current) with help of storage and coworkers
   2.b If storage holds the relations
-      - Recompute all the maps from the relations (we do not need local storage here)     
+      - Recompute all the maps from the relations (we do not need local storage here)
   3. Release queue at serializer (burst), continue processing
 
 **/
@@ -113,7 +113,7 @@ Failures
 
 
 /*
-abstract sealed class Msg 
+abstract sealed class Msg
 // Data
 case object MsgEndOfStream extends Msg
 case class MsgTuple(op:TupleOp,tx:Long,data:List[Any]) extends Msg

@@ -1,11 +1,16 @@
 package ddbt.frontend
 import ddbt.ast._
 
+/**
+ * This function is responsible to fix the M3 parse result to provide a correct
+ * AST and annotate it with appropriate types required for the code generation.
+ * @author TCK
+ */
 object TypeCheck extends (M3.System => M3.System) {
   import ddbt.ast.M3._
   import ddbt.Utils.{fresh,freshClear}
   @inline def err(msg:String) = sys.error("Type checking error: "+msg)
-  
+
   // 1. Add used (constant) tables in maps, replace access by MapRefs (M3 fix?)
   def addTables(s0:System) = {
     val tabs = s0.sources.filter{!_.stream}.map{ s=>(s.schema.name,s.schema.fields) }.toMap
@@ -102,7 +107,7 @@ object TypeCheck extends (M3.System => M3.System) {
         case m@Mul(l,r) => cr=ie(r,ie(l,c)); m.tp=tpRes(l.tp,r.tp,ex)
         case a@Add(l,r) =>
           val (fl,fr)=(ie(l,c).filter{x=> !c.contains(x._1)},ie(r,c).filter{x=> !c.contains(x._1)}) // free(l), free(r)
-          a.agg=fl.filter{x=>fr.contains(x._1)}.toList // sorted(free(l)++free(r)), to make a union if necessary (a variable can be bound differently in lhs and rhs)
+          a.agg=fl.filter{x=>fr.contains(x._1)}.toList // sorted(free(l) & free(r)) : a variable is bound differently in l and r => set union
           cr=c++fl++fr; a.tp=tpRes(l.tp,r.tp,ex);
         case Cmp(l,r,_) => cr=c++ie(l,c)++ie(r,c); tpRes(l.tp,r.tp,ex)
         case Exists(e) => cr=ie(e,c)

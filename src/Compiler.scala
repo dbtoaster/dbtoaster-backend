@@ -23,14 +23,14 @@ object Compiler {
     println("======================== "+name+" ========================")
     println(data.toString); data
   }
-    
+
   def writeScala(dir:File)(data:String):String = {
     val pattern = """class (\w+)""".r
     val cls = pattern.findFirstMatchIn(data).map{_.group(1)} match { case Some(n) => n case _ => sys.error("No class found") }
     Utils.write(dir,cls+".scala",data)
     cls
   }
-  
+
   def writeTest(dir:File)(cls:String):String = {
     Utils.write(dir,cls+"Spec.scala",
     "package ddbt.gen\n"+
@@ -56,7 +56,7 @@ result with expected result (stored in a file or better: against DBToaster offic
 */
 
   // invoke with any filename in finance or tpch : axfinder, query13, query15, query18, ...
-  
+
   def main(args: Array[String]) {
     val a = if (args.length>0) args(0) else "axfinder"
     compile(findQuery(a))
@@ -64,19 +64,19 @@ result with expected result (stored in a file or better: against DBToaster offic
     //test(scala.io.Source.fromFile("resources/docs/chrissedtrades.m3").mkString);
 /*
 1. frontend
-	- create temp directory (OK)
-	- generate the m3 file (OK)
-	- parse the m3 (OK)
-	- parse the SQL (INCOMPLETE)
+   - create temp directory (OK)
+   - generate the m3 file (OK)
+   - parse the m3 (OK)
+   - parse the SQL (INCOMPLETE)
 2. type the AST (?)
-	- make sure we have enough information to output Scala
-	==> obtain an AST
+   - make sure we have enough information to output Scala
+   ==> obtain an AST
 3. optimize the AST
-    - high level optimizations
-	- simplify arithmetic expression
+   - high level optimizations
+   - simplify arithmetic expression
 4. prepare for distributed system
-	- add node conditionals in the code
-	- replace some read operations by send/receive (depending node)
+   - add node conditionals in the code
+   - replace some read operations by send/receive (depending node)
 5. generate code with LMS
 6. Distribute over nodes
 7. Evaluate query
@@ -89,5 +89,5 @@ result with expected result (stored in a file or better: against DBToaster offic
     val fs = ps.map{p => new java.io.File(p)}.filter{f=>f.exists}
     if (fs.size==0) sys.error("File '"+s+"' does not exist") else fs(0)
   }
-  
+
 }

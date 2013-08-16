@@ -1,6 +1,24 @@
 package ddbt.lib
 import scala.reflect.ClassTag
 
+/**
+ * This file encloses all the logic related to internal maps being used in the
+ * generated program. The main difference with regular HashMaps are:
+ * - get(k) : a default 'zero' value is returned when element does not exist
+ * - add(k,v) : 'add' v to previous existing value, set it to v otherwise
+ * 'zero' and 'add' are defined according to the map's value type
+ *
+ * K3Temp behave otherwise as a regular map
+ * K3Var has the same behavior but for a single value (map with 0-elements key)
+ * K3Map additionally does not store 'zero'-valued elements (thus don't iterate
+ * on them). Furthermore, secondary indices (key projections) can be set in K3Map
+ * in order to iterate only on element contained in a single slice.
+ *
+ * Helpers to create these maps are found in the K3Map companion object.
+ *
+ * @author TCK
+ */
+
 /** K3Var encapsulates a mutable variable. */
 case class K3Var[V:ClassTag]() {
   private val plus = K3Helper.make_plus[V]()
@@ -80,9 +98,9 @@ object K3Helper {
   def toStr[K,V](m:Map[K,V]):String = m.toList.map{case(k,v)=>(str(k),str(v))}.sortBy(x=>x._1).map{case(k,v)=>k+" -> "+v}.mkString("\n")
   def toXML[K,V](m:Map[K,V]): List[xml.Elem] = {
     var l = List[xml.Elem]()
-    m.foreach{case (k,v) => 
+    m.foreach{case (k,v) =>
       val key = try {
-          (k.asInstanceOf[Product].productIterator.foldLeft((0,List[xml.Elem]())) { 
+          (k.asInstanceOf[Product].productIterator.foldLeft((0,List[xml.Elem]())) {
                 case ((i,l), k) => (i+1, <xml>{ str(k) }</xml>.copy(label=("__a" + i)) :: l)
           })._2.reverse
         } catch { case e:java.lang.ClassCastException => <__a0>{ str(k) }</__a0> }

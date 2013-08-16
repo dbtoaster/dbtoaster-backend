@@ -69,7 +69,7 @@ object M3 {
   case class TriggerAdd(schema:Schema, stmts:List[Stmt]) extends Trigger { override def toString="ON + "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+") {\n"+ind(stmts.mkString("\n"))+"\n}" }
   case class TriggerDel(schema:Schema, stmts:List[Stmt]) extends Trigger { override def toString="ON - "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+") {\n"+ind(stmts.mkString("\n"))+"\n}" }
   // case class TriggerCleanup/Failure/Shutdown/Checkpoint(acts:List[Stmt]) extends Trigger
-  
+
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3 {
     def tp:Type // expression type
@@ -200,13 +200,13 @@ case class Hash(e:Expr) extends Expr
 */
 /*
  *** File format definitions
- * FileSQL	:= stream+ sql
- * FileM3	:= /--+/ "SOURCES" /--+/ (stream)+
- *             /--+/ "MAPS" /--+/ (map)+
- *             /--+/ "QUERIES" /--+/ (query)+
- *             /--+/ "TRIGGERS" /--+/ (trigger)+
+ * FileSQL := stream+ sql
+ * FileM3  := /--+/ "SOURCES" /--+/ (stream)+
+ *            /--+/ "MAPS" /--+/ (map)+
+ *            /--+/ "QUERIES" /--+/ (query)+
+ *            /--+/ "TRIGGERS" /--+/ (trigger)+
  *** Stream definition
- * stream := "create" "stream" name "(" field ("," field)* ")" "FROM" source 
+ * stream := "create" "stream" name "(" field ("," field)* ")" "FROM" source
  * field  := name type
  * type   := int | float | order | hash | date | string
  * name   := /[a-zA-Z_0-9]+/
@@ -217,7 +217,7 @@ case class Hash(e:Expr) extends Expr
  * Note that in M3, fields name is '<table>_<field>'
  *
  *** SQL Query definition
- * sql		:= "SELECT" <...> "FROM" <...> (WHERE <...>)? ("GROUP" "BY" <...>)? ";"
+ * sql  := "SELECT" <...> "FROM" <...> (WHERE <...>)? ("GROUP" "BY" <...>)? ";"
  *
  *** M3 common definitions
  * addsum
@@ -225,9 +225,9 @@ case class Hash(e:Expr) extends Expr
  * stmt
  *
  *** M3 Maps definition
- * map		:= "DECLARE" "MAP" name "(" type ")" "[" "]" "[" name ":" type ("," name ":" type)* "]" := aggsum ";"
+ * map := "DECLARE" "MAP" name "(" type ")" "[" "]" "[" name ":" type ("," name ":" type)* "]" := aggsum ";"
  *** M3 Query definition
- * query	:= "DECLARE" "QUERY" name ":=" expr ";"
+ * query := "DECLARE" "QUERY" name ":=" expr ";"
  *** M3 Trigger definition
- * trigger	:= "ON" ("SYSTEM" READY" | ("+"|"-") name "(" name ("," name)* ")") "{" stmt* "}"
+ * trigger := "ON" ("SYSTEM" READY" | ("+"|"-") name "(" name ("," name)* ")") "{" stmt* "}"
  */
