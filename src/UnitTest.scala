@@ -97,25 +97,22 @@ object UnitTest {
 
   def main(args: Array[String]) {
     val fsz = if (args.length>0) (s:String)=>args.contains(s) else (s:String)=>true // filtering datasets
-    val exclude=(List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a").map{x=>"employee/query"+x}).toArray // DBToaster SQL->M3 failing there
+    val exclude=(List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a") ::: // DBToaster SQL->M3 fails
+                 List("35b","36b")).map("employee/query"+_) // DBToaster swaps joined tables, thereby failing the tests (and compiling Scala).
     val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }
 
-    val nocompile = List("35b","36b").map("test/unit/queries/employee/query"+_).toArray
     val failing = (
-      List("brokerspread","brokervariance","ssb4","vwap") :::
-      List("4","9","10","11c","22","22a").map("tpch"+_) :::
+      List("brokerspread","brokervariance","vwap") :::
+      List("4","11c","22","22a").map("tpch"+_) :::
       List("15","37","38a","39","40","52a").map("employee/query"+_) :::
-      List("r_count_of_one","r_indynamic","r_multinest","rs_ineqwithnestedagg","rs_joinwithnestedagg").map("simple/"+_)
+      List("r_count_of_one","r_indynamic","r_multinest","rs_joinwithnestedagg").map("simple/"+_)
     ).map{"test/unit/queries/"+_}.toArray
     
-    val compile = (all.toSet -- nocompile.toSet).toList.sorted.toArray
-    val passing = (all.toSet -- nocompile.toSet -- failing.toSet).toList.sorted.toArray
-    println("Passing  : "+(compile.size - failing.size)) // 152
-    println("Failing  : "+failing.size) // 22
-    println("NoCompile: "+nocompile.size) // 2
+    val passing = (all.toSet -- failing.toSet).toList.sorted.toArray
+    println("Passing  : "+(all.size - failing.size)) // 164
+    println("Failing  : "+failing.size) // 17
     
-    val files = passing // Array("test/unit/queries/simple/rs_ineqwithnestedagg")
-    // XXX: load constant tables (nation, region for TPCH)
+    val files = failing //Array("test/unit/queries/tpch13")
 
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }

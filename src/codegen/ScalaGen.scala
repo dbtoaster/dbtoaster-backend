@@ -9,12 +9,12 @@ import ddbt.ast._
  * ---------------------------------------------
  * 1. We shall understand the multiply as a continuation of the left operand in the right one.
  *
- * 2. Add is more complicated than Mul as it does union of lhs and rhs.
+ * 2. Add is more complicated than Mul as it does set union of lhs and rhs.
  *    If a free variable is present in both sides, iterate these. Concretely:
  *       f(A*B) --> A.foreach{ (k_a,v_a) => B.foreach { (k_b,v_b) => f(v_a * v_b) } }
  *       f(A+B) --> val dom=A.keySet++B.keySet; dom.foreach { k => f(A.get(k) + B.get(k)) }
  *
- *    Domain union might be quite complex. An lighter alternative is
+ *    An lighter approach to set union is:
  *       val tmp = Temp[domA(k_a)=domB(k_b)=dom -> tp(A)=tp(B)]
  *       A.foreach{ (k_a,v_a) => tmp.add(domA(k_a),v_a) }
  *       B.foreach{ (k_b,v_b) => tmp.add(domB(k_b),v_b) }
@@ -29,9 +29,6 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-
-  type AggMap = (String,List[(String,Type)]) // name -> keys name/type
-
   def tpe(tp:Type):String = { val s=tp.toString; s.substring(0,1).toUpperCase+s.substring(1).toLowerCase }
   private def bnd(e:Expr):Set[String] = e.collect { case Lift(n,e) => bnd(e)+n case AggSum(ks,e) => ks.toSet case MapRef(n,tp,ks) => ks.toSet }
 
@@ -44,17 +41,18 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   //   b :bound variables
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
-  def cpsExpr(ex:Expr,b:Set[String],co:String=>String,am:Option[AggMap]=None):String = ex match {
+  def cpsExpr(ex:Expr,b:Set[String]=Set(),co:String=>String=(v:String)=>v,am:Option[(String,List[(String,Type)])]=None):String = ex match {
     // Fixes
     case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("(if (("+v1+")!=0) 1L else 0L)"),am),am)
     case Mul(Exists(el),er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),co,am),am)
+    
     // case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).toString.replaceAll("(?<!\\w)"+n+"(?!\\w)",n2) // dealiasing !! co might be out of my allowed scope !!
     // XXX: do we also want to rename aggregation key variables instead of protecting them ? (typecheck/lift rename)
+    //case Exists(e) => val e0=fresh("ex"); "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0) // this should not appear, or find how to bind it properly
 
     // -------------------------------------------------------------------------
     case Ref(n) => co(n)
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
-    //case Exists(e) => val e0=fresh("ex"); "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0) // this should not appear, or find how to bind it properly
     case Exists(e) => cpsExpr(e,b,(v:String)=>co("(if (("+v+")!=0) 1L else 0L)"))
     case Cmp(l,r,op) => co(cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") 1L else 0L)")))
     case app@Apply(fn,tp,as) =>
@@ -88,9 +86,8 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     case a@AggSum(ks,e) =>
       val fs = ks.filter{k=> !b.contains(k)} // free variables
       val agg=fs.map{f=>(f,(ks zip a.tks).toMap.apply(f)) }
-      if (ks.size==0 || fs.size==0) {
-        val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0)
-      } else am match {
+      if (ks.size==0 || fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      else am match {
         case Some(t) if t._2==agg => cpsExpr(e,b,co,am)
         case _ =>
           val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
@@ -123,7 +120,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     "def on"+n+"("+as.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+ind(ss.map{s=>genStmt(s,b)}.mkString)+"\n}"
   }
 
-  // Slicing lazy indices (created only when necessary)
+  // Lazy slicing (secondary) indices computation
   private val sx = HashMap[String,List[List[Int]]]() // slicing indices
   def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
     val s=sx.getOrElse(m,List[List[Int]]()); val n=s.indexOf(i)
@@ -141,13 +138,19 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   }
 
   def genSystem(s0:System):String = {
-    val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers need to be generated before maps
-    val ms = s0.maps.map(genMap).mkString("\n")
     def ev(s:Schema,short:Boolean=true):(String,String) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+tpe(t)}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
     }
-    // XXX: val loader="def loadTables() { XXX }"
+    val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
+    val ms = s0.maps.map(genMap).mkString("\n") // maps
+    val ld = { // optional preloading of static tables content
+      val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o)=ev(s.schema)
+        "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,_,"+i+")=>"+s.schema.name+".add("+o+",1L) },"+ad+","+sp+")))).read;" }.mkString("\n");
+      if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else ""
+    }
+    val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tpe(tp)+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
+    
     freshClear()
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
@@ -159,28 +162,26 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
         case TriggerDel(s,_) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\",tx,"+i+") => onDel"+s.name+o+"\n"
         case _ => ""
       }.mkString+
-      "case SystemInit => onSystemReady(); t0=System.nanoTime()\n"+
+      "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
       "case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,"+tup(s0.queries.map{q=>q.name+(if (s0.mapType(q.m.name)._1.size>0) ".toMap" else ".get()")})+")"
-    )+"\n}\n"+cs.map{case (Apply(f,tp,as),n) =>
-      val vs = as.map { a=>cpsExpr(a,Set(),(v:String)=>v) }
-      "val "+n+":"+tpe(tp)+" = U"+f+"("+vs.mkString(",")+")\n"
-    }.mkString+"\n"+ts)+"\n}\n"
+    )+"\n}\n"+gc+ts+ld)+"\n}\n"
+  }
+
+  private def genStream(s:Source): (String,String,String) = {
+    val in = s.in match { case SourceFile(path) => "new java.io.FileInputStream(\""+path+"\")" }
+    val split = "Split"+(s.split match { case SplitLine => "()" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => ".p("+p+")" })
+    val adaptor = s.adaptor.name match {
+      case "ORDERBOOK" => "OrderBook()"
+      case "CSV" => val sep=java.util.regex.Pattern.quote(s.adaptor.options.getOrElse("delimiter",",")).replaceAll("\\\\","\\\\\\\\")
+                    "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map{f=>f._2}.mkString(",")+"\",\""+sep+"\")"
+    }
+    (in,"new Adaptor."+adaptor,split)
   }
 
   def genStreams(sources:List[Source]) = {
-    // Little fix for my libraries as we have only one stream for OrderBooks that generate
-    // both asks and bids events (hence we need to generate only one stream).
+    // Little fix for libraries variation as 1 stream for OrderBooks generates BOTH asks and bids events.
     def fixOrderbook(ss:List[Source]):List[Source] = ss.zipWithIndex.filter{case (s,i)=>i>0 || s.adaptor.name!="ORDERBOOK"}.map(_._1)
-    "Seq(\n"+ind(fixOrderbook(sources).filter{s=>s.stream}.map{s=>
-      val in = s.in match { case SourceFile(path) => "new java.io.FileInputStream(\""+path+"\")" }
-      val split = "Split"+(s.split match { case SplitLine => "()" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => ".p("+p+")" })
-      val adaptor = s.adaptor.name match {
-        case "ORDERBOOK" => "OrderBook()"
-        case "CSV" => val sep=java.util.regex.Pattern.quote(s.adaptor.options.getOrElse("delimiter",",")).replaceAll("\\\\","\\\\\\\\")
-                      "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map{f=>f._2}.mkString(",")+"\",\""+sep+"\")"
-      }
-      "("+in+",new Adaptor."+adaptor+","+split+")"
-    }.mkString(",\n"))+"\n)"
+    "Seq(\n"+ind(fixOrderbook(sources).filter{s=>s.stream}.map{s=> val (in,ad,sp)=genStream(s); "("+in+","+ad+","+sp+")" }.mkString(",\n"))+"\n)"
   }
 
   // Helper that contains the main and stream generator
