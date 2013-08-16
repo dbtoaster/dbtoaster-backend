@@ -48,7 +48,8 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     // Fixes
     case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("(if (("+v1+")!=0) 1L else 0L)"),am),am)
     case Mul(Exists(el),er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),co,am),am)
-    case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).toString.replaceAll("(?<!\\w)"+n+"(?!\\w)",n2) // dealiasing
+    // case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).toString.replaceAll("(?<!\\w)"+n+"(?!\\w)",n2) // dealiasing !! co might be out of my allowed scope !!
+    // XXX: do we also want to rename aggregation key variables instead of protecting them ? (typecheck/lift rename)
 
     // -------------------------------------------------------------------------
     case Ref(n) => co(n)
@@ -68,8 +69,8 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       }
     case Lift(n,e) =>
       if (b.contains(n)) cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")"),am)
-      else cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("1"),am) // XXX: seems never used
-    case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),am),am)
+      else cpsExpr(e,b,(v:String)=> if (n.matches("^lift[0-9]+$")) "val "+n+" = "+v+";\n"+co("1") else ";{\n"+ind("val "+n+" = "+v+";\n"+co("1"))+"\n};\n",am)
+    case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co(if (vl=="1") vr else if (vr=="1") vl else "("+vl+" * "+vr+")"),am),am)
     case a@Add(el,er) =>
       if (a.agg==Nil) cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),am),am)
       else am match {

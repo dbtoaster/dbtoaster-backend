@@ -100,26 +100,23 @@ object UnitTest {
     val exclude=(List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a").map{x=>"employee/query"+x}).toArray // DBToaster SQL->M3 failing there
     val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }
 
-    val nocompile = (
-      List("15","2","21","22","22a","7","8","9").map("tpch"+_) :::
-      List("35b","36b","39","52a","60","61").map("employee/query"+_) :::
-      List("inequality_selfjoin","miraculous_minus","miraculous_minus2","r_count_of_one","r_count_of_one_prime","r_lift_of_count","ss_math").map("simple/"+_) :::
-      List("12811747","48183500","52548748","96434723").map("zeus/"+_)
-    ).map{x=>"test/unit/queries/"+x}.toArray
-
+    val nocompile = (List("2","8","21","22a").map("tpch"+_) ::: List("35b","36b","60").map("employee/query"+_)).map{x=>"test/unit/queries/"+x}.toArray
     val failing = (
-      List("tpch1","tpch4","tpch11c","tpch10","ssb4","brokervariance","brokerspread","vwap") :::
-      List("15","35c","36c","37","38a","40").map("employee/query"+_) :::
-      List("r_indynamic","r_starofnestedagg","rs_joinwithnestedagg","r_multinest","rs_ineqwithnestedagg").map("simple/"+_)
+      List("4","9","10","11c","22").map("tpch"+_) :::
+      List("brokerspread","brokervariance","ssb4","vwap") :::
+      List("15","37","38a","39","40","52a").map("employee/query"+_) :::
+      List("r_count_of_one","r_indynamic","r_multinest","r_starofnestedagg","rs_ineqwithnestedagg","rs_joinwithnestedagg").map("simple/"+_)
     ).map{x=>"test/unit/queries/"+x}.toArray
     
     val compile = (all.toSet -- nocompile.toSet).toList.sorted.toArray
-    println("Passing  : "+(compile.size - failing.size)) // 139
-    println("Failing  : "+failing.size) // 19
-    println("NoCompile: "+nocompile.size) // 25
+    val passing = (all.toSet -- nocompile.toSet -- failing.toSet).toList.sorted.toArray
+    println("Passing  : "+(compile.size - failing.size)) // 155
+    println("Failing  : "+failing.size) // 21
+    println("NoCompile: "+nocompile.size) // 7
     // Total 260, Failed 31, Errors 0, Passed 229, Skipped 0
     
-    val files = nocompile //Array("test/unit/queries/tpch11")
+    val files = failing // Array("test/unit/queries/ssb4")
+
 
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
