@@ -38,7 +38,6 @@ object TypeCheck extends (M3.System => M3.System) {
       case Lift(n,e) => Lift(r(n),re(e))
       case AggSum(ks,e) => AggSum(ks map r,re(e))
       case Apply(f,tp,as) => Apply(fn(f),tp,as.map(re))
-      //case Mul(Lift(n,e),r) => val f = fresh("lift"); Mul(Lift(f,re(e).rename(n,f)),re(r).rename(n,f))
     }
     def rst(s:Stmt):Stmt = s match { case StmtMap(m,e,op,in) => StmtMap(re(m).asInstanceOf[MapRef],re(e),op,in map re) }
     val sources = s0.sources.map { case Source(st,sch,in,sp,ad) => Source(st,rs(sch),in,sp,ad) }
@@ -47,7 +46,6 @@ object TypeCheck extends (M3.System => M3.System) {
       case TriggerAdd(sc,ss) => TriggerAdd(rs(sc),ss map rst)
       case TriggerDel(sc,ss) => TriggerDel(rs(sc),ss map rst)
     }
-    //freshClear
     System(sources,s0.maps,s0.queries,triggers)
   }
 
@@ -76,7 +74,7 @@ object TypeCheck extends (M3.System => M3.System) {
     def re(e:Expr,locked:Set[String]):Expr = e.replace {
       case Mul(Lift(n,e),r) if !locked.contains(n) => e match {
         case Ref(m) if (locked.contains(m)) => Mul(re(Lift(n,e),locked),re(r,locked))
-        case _ => val f=fresh("lift"); Mul(Lift(f,re(e.rename(n,f),locked)),re(r.rename(n,f),locked))
+        case _ => val f=fresh("lift"); Mul(Lift(f,re(e.rename(n,f),locked+f)),re(r.rename(n,f),locked+f))
       }
       case AggSum(ks,e) => AggSum(ks,re(e,locked++ks.toSet))
     }

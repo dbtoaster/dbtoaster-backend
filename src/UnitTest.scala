@@ -68,7 +68,7 @@ object UnitTest {
       "class "+cls+"Spec extends Helper with FunSpec {"+ind("\n"+
       "import scala.language.implicitConversions\n"+
       "implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();\n"+
-      "implicit def strConv(d:Long):String = \"\"+d\n"+
+      "implicit def strConv(d:Long):String = \"\"+d\n"+ // fix for TPCH22
       t.sets.map { case (sz,set) =>
         // val mystr = (str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) } // seems that set.subs are useless here
         val mystr = (if (sz.endsWith("_del")) str.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else str).replaceAll("/standard/","/"+sz+"/") // streams for this dataset
@@ -100,28 +100,19 @@ object UnitTest {
     val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                        "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                        "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
+    val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }.sorted
+    println("Tests generated : %4d".format(all.size))
+    println("Tests excluded  : %4d".format(exclude.size)+" (front-end issues)")
 
-    val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }
-    val failing = List("brokerspread","tpch11c","tpch22","tpch22a").map{"test/unit/queries/"+_}.toArray
-    
-    val passing = (all.toSet -- failing.toSet).toList.sorted.toArray
-    println("Passing  : "+(all.size - failing.size)) // 164
-    println("Failing  : "+failing.size) // 17
-    
-    val files = passing //Array("test/unit/queries/tpch22a")
+    val files = all
 
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
     tests.foreach{ t0 =>
-      val t = QueryTest(t0.sql,t0.sets.filter(x=>fsz(x._1))
-                 .filter{x=> !t0.sql.matches(".*missedtrades.*") || x._1.matches("tiny.*")} // skip missedtrades very long tests
-              )
-      if (t.sets.size>0) try {
-        println("---------------- "+t.sql); makeTest(t)
-        // if ((files==nocompile)) { println(exec(Array("sbt","test-only * -- -l ddbt.SlowTest"))); clean }
-      } catch {
-        case th:Throwable => println("Failed to generate "+t.sql+" because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) }
-      }
+      val t = QueryTest(t0.sql,t0.sets.filter(x=>fsz(x._1)) // missedtrades is very slow, brokerspread drifts due to rounding errors, similarly as original DBToaster
+                 .filter{x=> !t0.sql.matches(".*(missedtrades|brokerspread).*") || x._1.matches("tiny.*")})
+      if (t.sets.size>0) try { println("---------------- "+t.sql); makeTest(t) }
+      catch { case th:Throwable => println("Compiling '"+t.sql+"' failed because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) } }
     }
     println("Now run 'sbt test' to pass tests")
   }

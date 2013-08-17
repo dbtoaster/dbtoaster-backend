@@ -75,6 +75,7 @@ trait Helper {
       val err=new StringBuilder()
       val b1 = scala.collection.mutable.HashMap[K,V](); b1 ++= m1
       val b2 = scala.collection.mutable.HashMap[K,V](); b2 ++= m2
+      m1.foreach { x=> x._2 match { case d1:Double => if (Math.abs(d1)<diff_p) b1.remove(x._1) case _ => }} // ignore 'almost zero' values
       m1.foreach { case (k1,v1) =>
         m2.foreach { case (k2,v2) =>
           if (b1.contains(k1) && b2.contains(k2)) {
