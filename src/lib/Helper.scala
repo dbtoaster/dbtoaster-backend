@@ -73,8 +73,8 @@ trait Helper {
     val m2 = map2.filter{ case (k,v) => map1.get(k) match { case Some(v2) => v2!=v case None => true } }
     if (m1.size>0 || m2.size>0) {
       val err=new StringBuilder()
-      val b1 = scala.collection.mutable.HashMap[K,V](); b1 ++= m1 // extra
-      val b2 = scala.collection.mutable.HashMap[K,V](); b2 ++= m2 // missing
+      val b1 = scala.collection.mutable.HashMap[K,V](); b1 ++= m1
+      val b2 = scala.collection.mutable.HashMap[K,V](); b2 ++= m2
       m1.foreach { case (k1,v1) =>
         m2.foreach { case (k2,v2) =>
           if (b1.contains(k1) && b2.contains(k2)) {
@@ -83,8 +83,8 @@ trait Helper {
           }
         }
       }
-      b1.foreach { case (k,v) => err.append("Missing key: "+k+" -> "+v+"\n") }
-      b2.foreach { case (k,v) => err.append("Extra key: "+k+" -> "+v+"\n") }
+      b1.foreach { case (k,v) => err.append("Extra key: "+k+" -> "+v+"\n") }
+      b2.foreach { case (k,v) => err.append("Missing key: "+k+" -> "+v+"\n") }
       val s = err.toString; if (s!="") throw new Exception("Result differs:\n"+s)
     }
   }

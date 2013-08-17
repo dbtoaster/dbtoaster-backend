@@ -96,17 +96,19 @@ object UnitTest {
   }
 
   def main(args: Array[String]) {
-    val fsz = if (args.length>0) (s:String)=>args.contains(s) else (s:String)=>true // filtering datasets
-    val exclude=(List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a") ::: // SQL->M3 fails: SQL construct not supported by DBToaster
-                 List("35b","36b")).map("employee/query"+_) // DBToaster swaps joined tables, thereby failing the tests (and compiling Scala).
+    val fsz = if (args.length>0) (s:String)=>args.contains(s) else (s:String)=>true // datasets filter
+    val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
+                       "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
+                       "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
+
     val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }
-    val failing = List("brokerspread","brokervariance","vwap","tpch11c","tpch22","tpch22a","employee/query15").map{"test/unit/queries/"+_}.toArray
+    val failing = List("brokerspread","tpch11c","tpch22","tpch22a").map{"test/unit/queries/"+_}.toArray
     
     val passing = (all.toSet -- failing.toSet).toList.sorted.toArray
     println("Passing  : "+(all.size - failing.size)) // 164
     println("Failing  : "+failing.size) // 17
     
-    val files = passing //Array("test/unit/queries/simple/r_indynamic")
+    val files = passing //Array("test/unit/queries/tpch22a")
 
     clean // remove all previous tests
     val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
