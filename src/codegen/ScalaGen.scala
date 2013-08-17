@@ -44,8 +44,8 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   def cpsExpr(ex:Expr,b:Set[String]=Set(),co:String=>String=(v:String)=>v,am:Option[(String,List[(String,Type)])]=None):String = ex match {
     // Fixes
     case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("(if (("+v1+")!=0) 1L else 0L)"),am),am)
-    case Mul(Exists(el),er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),co,am),am)
-    
+
+    // case Mul(Exists(el),er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),co,am),am) incorrect !!
     // case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).toString.replaceAll("(?<!\\w)"+n+"(?!\\w)",n2) // dealiasing !! co might be out of my allowed scope !!
     // XXX: do we also want to rename aggregation key variables instead of protecting them ? (typecheck/lift rename)
     //case Exists(e) => val e0=fresh("ex"); "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0) // this should not appear, or find how to bind it properly
