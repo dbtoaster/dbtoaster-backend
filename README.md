@@ -1,43 +1,43 @@
-DDBToaster
-==========
-
-Distributed DB Toaster project.
-
+## Distributed DB Toaster
 DB Toaster allows incremental view maintenance (IVM) by recursively computing
 the delta of each individual modification on the query result. This allow dramatic
-speedup over traditional database systems.
+speedup over traditional database systems. More information:
 
-DB Toaster website : http://www.dbtoaster.org
+   * [DB Toaster website](http://www.dbtoaster.org)
+   * [DATA laboratory, EPFL](http://data.epfl.ch)
 
-EPFL Lab website : http://data.epfl.ch
+The goal of Distributed DB Toaster project is to reuse current infrastructure and create a framework to distribute the data and updates load across multiple servers.
 
-The goal of this project is to reuse as much as possible of the current infrastructure
-and create a framework to distribute the data and maintenance load across multiple servers.
+#### Setup
+1. Checkout this repository `$ git clone https://github.com/tcknet/ddbtoaster.git`
+2. Create a file `conf/ddbt.properties` and add the following properties:
+   - `ddbt.base_repo` checkout of DBToaster repository (required for unit tests)
+   - `ddbt.dbtoaster` dbtoaster binary (required if base_repo is not set)
+4. Invoke the original unit tests of DB Toaster using `$ sbt queries` (takes a while)
+5. Execute the compiler using `$ sbt 'run-main ddbt.Compiler <options> <sql_input>'`. You get the options description by running the compiler without arguments.
 
-Setup
------
-1. Checkout this repository
-2. Create conf/ddbt.properties and add the following properties:
-   - ddbt.base_repo: checkout of DBToaster repository (required for unit tests)
-   - ddbt.dbtoaster: dbtoaster binary (required if base_repo is not set)
-3. Do what you want by modifying src/Compiler.scala and run it (WIP)
+Note: to remove the [Spark](http://spark-project.org) and Scala-actors dependencies (unused), delete the `src/examples` and `src/lib/MapsSpark.scala` files and comment the appropriate lines in `build.sbt`.
 
-Status
-------
-Currently the project is in an early stage, where the goal is to match existing
-DBToaster support for code generation. Once it is done, the back-end will be
-forked in local and distributed code generation to support both vanilla Scala and
-Akka-based distributed back-ends.
+#### Status
+Currently the project is in an early stage. It matches existing DBToaster support for code generation based on M3 (Scala only, without LMS optimization). The code generation will soon be extended to support distributed runtime based on Akka remote actors.
 
-Roadmap
--------
-Front-end:
-- Complete SQL parser to generate correct AST (low priority)
+#### Roadmap
+__Front-end__
 
-Codegen:
-- Fix failing/non-compiling test cases with vanilla Scala codegen
-- Create Akka-based distributed codegen
+- Complete SQL parser to generate correct AST _(low priority)_
 
-Runtime:
-- Experiment with Storm (or provide strong performance argument)
+__Codegen__
+
+- Create [Akka](http://akka.io)-based distributed codegen _(high priority)_
+- Create [LMS](https://github.com/TiarkRompf/virtualization-lms-core)-based Scala codegen
+- Create LMS/[Boost](http://www.boost.org)-based C++ codegen
+
+__Runtime__
+
+- Experiment with [Storm](http://storm-project.net) (or provide strong performance argument)
+- Experiment with bare Java NIO or JNI with C sockets
 - Automate distribution and testing over remote nodes
+
+__Language__
+
+- Extend the M3 language to support reactive programming paradigm

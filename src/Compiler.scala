@@ -1,10 +1,15 @@
 package ddbt
+import ddbt.frontend._
+import ddbt.codegen._
 
-import java.io._
+/**
+ * This class is the main compiler executable. It coordinates compilation phases
+ * with respect to used-defined options passed as arguments in the command line.
+ * @author TCK
+ */
 object Compiler {
-  import ddbt.frontend._
-  import ddbt.codegen._
-  
+  import java.io._
+
   var in  : List[String] = Nil  // input files
   var out : String = null       // output file (defaults to stdout)
   var lang: String = "scala"    // output language
@@ -87,7 +92,6 @@ object Compiler {
 
   /*
   // invoke with any filename in finance or tpch : axfinder, query13, query15, query18, ...
-  // TPC-H 13,15,18
   def findQuery(s:String):File = {
     val b = "resources/queries/"; val x=".sql"
     val ps:List[String] = List("","finance/","tpch/","mddb/","simple/").map{d=>b+d+s+x} ::: List(s+x,s)
@@ -113,22 +117,6 @@ object Compiler {
                 //execute("ddbt.gen")
                 // then run 'sbt test'
 
-  def writeScala(dir:File)(data:String):String = {
-    val pattern = """class (\w+)""".r
-    val cls = pattern.findFirstMatchIn(data).map{_.group(1)} match { case Some(n) => n case _ => sys.error("No class found") }
-    Utils.write(dir,cls+".scala",data)
-    cls
-  }
-*/
-/*
-1. frontend
-   - create temp directory (OK)
-   - generate the m3 file (OK)
-   - parse the m3 (OK)
-   - parse the SQL (INCOMPLETE)
-2. type the AST (?)
-   - make sure we have enough information to output Scala
-   ==> obtain an AST
 3. optimize the AST
    - high level optimizations
    - simplify arithmetic expression

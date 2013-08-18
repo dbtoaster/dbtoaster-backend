@@ -5,7 +5,6 @@ import java.io._
 object SlowTest extends Tag("ddbt.SlowTest")
 
 class ParserSpec extends FunSpec with ParallelTestExecution {
-  import ddbt.Compiler._
   import ddbt.Utils._
   import ddbt.frontend._
 
