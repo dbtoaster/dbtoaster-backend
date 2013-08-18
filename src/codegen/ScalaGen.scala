@@ -21,7 +21,8 @@ import ddbt.ast._
  *       tmp.foreach { (k,v) => f(v) }
  *
  * Constraints inherited from M3:
- * - Lift alone has only bound variables. In Exists*Lift, Exists binds variables for the Lift
+ * - Lift alone has only bound variables.
+ * - In Exists*Lift, Exists binds variables for the Lift
  *
  * @author TCK
  */
@@ -30,7 +31,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
   def tpe(tp:Type):String = { val s=tp.toString; s.substring(0,1).toUpperCase+s.substring(1).toLowerCase }
-  private def bnd(e:Expr):Set[String] = e.collect { case Lift(n,e) => bnd(e)+n case AggSum(ks,e) => ks.toSet case MapRef(n,tp,ks) => ks.toSet }
+  def bnd(e:Expr):Set[String] = e.collect { case Lift(n,e) => bnd(e)+n case AggSum(ks,e) => ks.toSet case MapRef(n,tp,ks) => ks.toSet }
 
   // Methods involving only constants are hoisted as global constants
   private val cs = HashMap[Apply,String]()
@@ -41,16 +42,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   //   b :bound variables
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
-  def cpsExpr(ex:Expr,b:Set[String]=Set(),co:String=>String=(v:String)=>v,am:Option[(String,List[(String,Type)])]=None):String = ex match {
-    // Fixes
-    case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("(if (("+v1+")!=0) 1L else 0L)"),am),am)
-
-    // case Mul(Exists(el),er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),co,am),am) incorrect !!
-    // case Mul(Lift(n,Ref(n2)),er) if !b.contains(n) && b.contains(n2) => cpsExpr(er,b,co,am).toString.replaceAll("(?<!\\w)"+n+"(?!\\w)",n2) // dealiasing !! co might be out of my allowed scope !!
-    // XXX: do we also want to rename aggregation key variables instead of protecting them ? (typecheck/lift rename)
-    //case Exists(e) => val e0=fresh("ex"); "var "+e0+":Long = 0L\n"+cpsExpr(e,b,(v:String)=>e0+" |= ("+v+")!=0;")+"\n"+co(e0) // this should not appear, or find how to bind it properly
-
-    // -------------------------------------------------------------------------
+  def cpsExpr(ex:Expr,b:Set[String]=Set(),co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => co(n)
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
     case Exists(e) => cpsExpr(e,b,(v:String)=>co("(if (("+v+")!=0) 1L else 0L)"))
@@ -72,11 +64,11 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     case a@Add(el,er) =>
       if (a.agg==Nil) cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),am),am)
       else am match {
-        case Some(t) if t._2==a.agg => cpsExpr(el,b,co,am)+"\n"+cpsExpr(er,b,co,am)
+        case Some(t) if t==a.agg => cpsExpr(el,b,co,am)+"\n"+cpsExpr(er,b,co,am)
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks=a.agg.map{x=>x._1}
-          val tmp = Some((a0,a.agg))
+          val tmp = Some(a.agg)
           "val "+a0+" = K3Map.temp["+tup(a.agg.map{x=>tpe(x._2)})+","+tpe(ex.tp)+"]()\n"+
           cpsExpr(el,b,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"+
           cpsExpr(er,b,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"+
@@ -88,11 +80,11 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
       val agg=fs.map{f=>(f,(ks zip a.tks).toMap.apply(f)) }
       if (ks.size==0 || fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
-        case Some(t) if t._2==agg => cpsExpr(e,b,co,am)
+        case Some(t) if t==agg => cpsExpr(e,b,co,am)
         case _ =>
           val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
           val a0=fresh("agg")
-          val tmp=Some((a0,agg)) // declare this as summing target
+          val tmp=Some(agg) // declare this as summing target
           "val "+a0+" = K3Map.temp["+tup(agg.map(x=>tpe(x._2)))+","+tpe(e.tp)+"]()\n"+
           cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,TypeLong,fs),b,co)
       }
@@ -197,54 +189,3 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   }
   def apply(s:System) = genHelper(s)+genSystem(s)
 }
-
-// add a special primitive for aggregation with keys => groupBy()
-// Some "-1" simplifications
-//    case Add(l,Mul(Const(typeLong,"-1"),Ref(n))) => co(cpsExpr(l,b,(ll:String)=>"("+ll+" - "+n+")"))
-//    case Mul(Const(typeLong,"-1"),Ref(n)) => co("-"+n)
-
-/*
-case Mul(Exists(e1),Lift(n,e)) if e1==e => assert(b.contains(n)); cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n"+co("("+n+" != 0)")) // LiftExist
-case Mul(Exists(e1),Lift(n,e)) => cpsExpr(e1,b,(v1:String)=>cpsExpr(e,b++bnd(e1),(v:String)=>"val "+n+" = "+v+";\n"+co("("+v1+" != 0)"),am),am)
-// XXX: optimization
-//case Mul(Cmp(l,r,op),e) => cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"if ("+ll+" "+op+" "+rr+") {\n"+ind(cpsExpr(e,b,co))+"\n}\n"))
-// XXX: put each lift in its own context to avoid name clashes
-// ASSERTION IS WRONG (see TPC-H 15)
-case Mul(Lift(n,e),er) if !b.contains(n) => cpsExpr(e,b,(v:String)=>"val "+n+" = "+v+";\n")+cpsExpr(er,b+n,co,am) // 'regular' Lift
-case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co("("+vl+" * "+vr+")"),am),am) // right is nested in left (right is a continuation of left)
-case Add(el,er) =>
-   val vs = ( (bnd(el)--b) & (bnd(er)--b) ).toList // free variables present on both sides
-   //println("b="+b+"\nl="+bnd(el)+"\nr="+bnd(er)+"\nvs="+vs)
-   if (vs.size>0 && el.dim.size>0&&er.dim.size>0) {
-     val (t0,k0,v0)=(fresh("tmp_add"),fresh("k"),fresh("v"))
-     //(if (ex.dim.size==0) "/ *\n BUG: vs="+vs+"\n b="+b+"\nbl="+(bnd(el).filter(x=> !b.contains(x))--b)+"\nbr="+bnd(er)+"\n"+ex.dim+" -> "+ex.tp+" ["+am+"] := "+ex+" * /\n" else "")+
-     "val "+t0+" = K3Map.temp["+tup(ex.dim.map(tpe))+","+tpe(ex.tp)+"]()\n"+
-     cpsExpr(el,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
-     cpsExpr(er,b,(v:String)=>t0+".add("+tup(vs)+","+v+")",Some(t0))+"\n"+
-     t0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-     (if (vs.size==1) "val "+vs(0)+" = "+k0+"\n" else vs.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
-   } else cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),am),am) // right is nested in left
-case agg@AggSum(ks,e) =>
-  val in = if (ks.size>0) e.collect{ case Lift(n,x) => Set(n) } else Set[String]()
-  if ((ks.toSet & in).size==0) { // key is not defined by inner Lifts
-    if (am!=None) cpsExpr(e,b,co) else { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n{ "+cpsExpr(e,b,(v:String)=>a0+" += "+v+";")+" }\n"+co(a0) }
-  } else {
-    val fs = ks.toSet--b // free variables
-    val bs = ks.toSet--fs // bound variables
-    val r = { val ns=bs.map(b=>(b,fresh(b))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
-    val (t0,fused) = am match {
-      case Some(t0) => (t0,true)
-      case None => (fresh("tmp"),false)
-    }
-    (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
-    cpsExpr(e.rename(r),b++ks.map(r).toSet,(v:String)=> {
-      val s=t0+".add("+tup(ks.map(r))+","+v+");"
-      if (bs.size==0) s else "if ("+bs.map{ b=>b+" == "+r(b) }.mkString(" && ")+") {\n"+ind(s)+"\n}"
-    })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
-    / * EQUIVALENT TO
-    (if (!fused) "val "+t0+" = K3Map.make["+tup(agg.dim.map(tpe))+","+tpe(e.tp)+"]()\n" else "")+
-    cpsExpr(e,b++ks.toSet,(v:String)=> { "\n{\n"+t0+".add("+tup(ks)+","+v+");\n}\n"
-    })+(if (!fused) "\n"+cpsExpr(MapRef(t0,TypeLong,ks),b,co) else "")
-    * /
-  }
-*/

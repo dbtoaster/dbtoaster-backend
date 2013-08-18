@@ -40,7 +40,7 @@ object Utils {
     }
     val out=gobble(p.getInputStream); val err=gobble(p.getErrorStream); p.waitFor
     val o=out.toString; val e=err.toString
-    if (!e.equals("")) println("\nExec: "+cmd+"\n- Out: "+o+"\n- Err: "+e+"\n")
+    if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); print(o); System.err.print(e); System.exit(1) }
     (o,e)
   }
 
@@ -60,15 +60,15 @@ object Utils {
   def fresh(name:String="x") = { val c = counter.getOrElse(name,0)+1; counter.put(name,c); name+c }
   def freshClear() = counter.clear
 
-  /*
-  def makeTemp(path:String) {
+  // Create a temporary directory that will be removed at shutdown
+  def makeTempDir(path:String=null):File = {
+    val tmp = if (path!=null) new File(path) else File.createTempFile("ddbt",null)
     def del(f:File) {
       if (f.isDirectory()) f.listFiles().foreach{c=>del(c)}
       if (!f.delete()) sys.error("Failed to delete file: " + f)
     }
-    val tmp=new File(path);
-    if (tmp.exists) del(tmp)
-    if (!tmp.mkdirs()) sys.error("Dir creation failed")
+    if (tmp.exists) del(tmp); tmp.mkdirs // have a fresh folder
+    Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = del(tmp) });
+    tmp
   }
-  */
 }

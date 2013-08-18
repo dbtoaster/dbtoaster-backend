@@ -52,15 +52,29 @@ Seq(
   javaOptions ++= Seq("-Xss128m") //"-Xss512m","-Xmx2G","-Xms2G","-XX:MaxPermSize=2G" //,"-verbose:gc"
 )
 
-{
-  val t=TaskKey[Unit]("queries")
-  Seq(
-    fullRunTask(t in Compile, Compile, "ddbt.UnitTest", "tiny","tiny_del","standard","standard_del") //,
-    //(test in Test) <<= (test in Test) dependsOn (t in Compile),   // force tests to rebuild
-    //testOptions in Test += Tests.Argument("-l", "ddbt.SlowTest"), // execute only non-tagged tests
-  )
+// --------- Custom tasks
+addCommandAlias("queries", ";run-main ddbt.UnitTest tiny tiny_del standard standard_del;test-only ddbt.test.gen.*")
+
+TaskKey[Unit]("pkg") <<= classDirectory /*fullClasspath*/ in Compile map { cd =>
+  val dir=new java.io.File("lib"); if (!dir.exists) dir.mkdirs;
+  scala.sys.process.Process(Seq("jar","-cMf",dir.getPath()+"/ddbt.jar","-C",cd.toString,"ddbt/lib")).!
 }
 
+//{
+//  val t=TaskKey[Unit]("queries-gen2")
+//  val q=TaskKey[Unit]("queries-test2") 
+//  Seq(
+//    fullRunTask(t in Compile, Compile, "ddbt.UnitTest", "tiny","tiny_del","standard","standard_del"),
+//    q <<= (t in Compile) map { x => scala.sys.process.Process(Seq("sbt", "test-only ddbt.test.gen.*")).!; }
+//    //(test in Test) <<= (test in Test) dependsOn (t in Compile),   // force tests to rebuild
+//    //testOptions in Test += Tests.Argument("-l", "ddbt.SlowTest"), // execute only non-tagged tests
+//  )
+//}
+// jar -cf foo.jar -C target/scala-2.10/classes ddbt/lib
+// TaskKey[Unit]("test-queries") := { scala.sys.process.Process(Seq("sbt", "test-only ddbt.test.gen.*")).! }
+//
+// http://grokbase.com/t/gg/simple-build-tool/133xb2khew/sbt-external-process-syntax-in-build-sbt
+// http://stackoverflow.com/questions/15494508/bash-vs-scala-sys-process-process-with-command-line-arguments
 //compile in Compile <<= (compile in Compile) map { x => ("src/librna/make target/scala-2.10/classes").run.exitValue; x }
 //	"org.scala-lang" % "scala-reflect" % v,
 //	"ch.epfl" %% "lms" % "0.4-SNAPSHOT",

@@ -90,16 +90,14 @@ object TypeCheck extends (M3.System => M3.System) {
     System(s0.sources,s0.maps,s0.queries,triggers)
   }
 
-  // 7. Resolve missing types (and also make sure operations are correct)
+  // 7. Resolve missing types (and also make sure operations are correctly typed)
   def typeCheck(s0:System) = {
     def tpRes(t1:Type,t2:Type,ex:Expr):Type = (t1,t2) match {
       case (t1,t2) if t1==t2 => t1
       case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
       case _ => err("Bad operands ("+t1+","+t2+"): "+ex)
     }
-
-    type Context = Map[String,Type]
-    def ie(ex:Expr,c:Context):Context = {
+    def ie(ex:Expr,c:Map[String,Type]):Map[String,Type] = {
       var cr=c; // new bindings
       ex match { // gives a type to all untyped nodes
         case m@Mul(l,r) => cr=ie(r,ie(l,c)); m.tp=tpRes(l.tp,r.tp,ex)
@@ -132,7 +130,6 @@ object TypeCheck extends (M3.System => M3.System) {
   // XXX: introduce a per-trigger constant expression lifting (detect subexpression where all variables are bound by trigger arguments only)
   // XXX: introduce a unique factorization of expression to simplify expressions if possible. Use case: TPCH13 -> 2/4 maps can be removed in each trigger.
   // XXX: Some names are long, improve renaming function (use mapping/regexp to simplify variable names)
-
   def apply(s:System) = {
     val vn = (s:String)=>s.toLowerCase
     val fn = { val map=Map(("/","div")); (s:String)=>map.getOrElse(s,s) } // renaming of functions
