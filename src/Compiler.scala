@@ -43,8 +43,8 @@ object Compiler {
       error("                - calc  : relational calculus")
       error("                - m3    : M3 program")
       error("                - scala : vanilla Scala code")
+      error("                - akka  : distributed Akka code")
       //   ("                - lms   : LMS-optimized Scala")
-      //   ("                - akka  : distributed Akka code")
       //   ("                - cpp   : C++/LMS-optimized code")
       //   ("                - dcpp  : distributed C/C++ code")
       error("Code generation options:")
@@ -76,11 +76,12 @@ object Compiler {
     // Back-end
     lang match {
       case "scala" => output(ScalaGen(name)(m3))
+      case "akka" => output(AkkaGen(name)(m3))
       case _ => error("Compilation not supported")
     }
     // Execution
     if (exec) lang match {
-      case "scala" =>
+      case "scala"|"akka" =>
         val tmp = Utils.makeTempDir()
         Utils.exec(Array("scalac",out,"-cp",libs,"-d",tmp.getPath)) // scala compiler
         val (o,e) = Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name)) // execution

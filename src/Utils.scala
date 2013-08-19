@@ -20,8 +20,6 @@ object Utils {
     (repo,if (repo!="") repo+"/"+path_base+"/bin/dbtoaster_release" else bin)
   }
 
-  def toast(sql:File) = exec(Array(path_bin,"-l","M3",sql.getPath))._1
-
   // Execute arbitrary command, return (out,err)
   def exec(cmd:String):(String,String) = exec(cmd.split(" "))
   def exec(cmd:Array[String],dir:File=null):(String,String) = {

@@ -53,6 +53,8 @@ Seq(
 )
 
 // --------- Custom tasks
+addCommandAlias("toast", ";run-main ddbt.Compiler ")
+
 addCommandAlias("queries", ";run-main ddbt.UnitTest tiny tiny_del standard standard_del;test-only ddbt.test.gen.*")
 
 TaskKey[Unit]("pkg") <<= classDirectory /*fullClasspath*/ in Compile map { cd =>

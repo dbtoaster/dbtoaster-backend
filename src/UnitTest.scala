@@ -52,18 +52,31 @@ object UnitTest {
   // Repository-specific functions shared with tests (Parsers at least)
   private val rbase = new java.io.File(path_repo+"/"+path_base)
   def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
-  def toast(f:String) = exec(Array("bin/dbtoaster_release","-l","M3",f),rbase)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
-  val all = exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),rbase)._1.split("\n")
+  def toast(f:String,opts:List[String]=Nil):String = if (path_repo=="") exec((List(path_bin,"-l","M3"):::opts:::List(f)).toArray)._1 else
+    exec((List("bin/dbtoaster_release","-l","M3"):::opts:::List(f)).toArray,rbase)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
+  
+  val all = try { exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("no repo configured"); Array[String]() }
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                           "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                           "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
   val filtered = all.filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }.sorted
 
+  // Testing helpers (used only in test files)
+  lazy val (allSQL,allM3,baseSQL) = if (Utils.path_repo!="") (all.map(x=>load(x).sql),filtered.map(x=>load(x).sql),path_repo+"/"+path_base)
+  else {
+    val dir = "examples/queries"
+    val files = if (new java.io.File(dir).exists) Utils.exec(Array("find",dir,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n")
+    else { System.err.println(("@"*80)+"\n@"+(" "*78)+("@\n@ %-76s @".format("WARNING: folder '"+dir+"' does not exist, tests skipped !\n@"+(" "*78))+"@\n"+("@"*80))); Array[String]() }
+    (files,files,null)
+  }
+
+  // ---------------------------------------------------------------------------
+
   // Test generator
-  val dir=new java.io.File("test/gen") // output folder
+  private val dir=new java.io.File("test/gen") // output folder
   def makeTest(t:QueryTest) = {
     def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
-    val sys = (toast _ andThen M3Parser andThen TypeCheck)(t.sql)
+    val sys = (((f:String)=>toast(f)) andThen M3Parser andThen TypeCheck)(t.sql)
     val cls = clname(t.sql)
     val gen = ScalaGen(cls)
     val str = gen.genStreams(sys.sources)
