@@ -55,7 +55,7 @@ object UnitTest {
   def toast(f:String,opts:List[String]=Nil):String = if (path_repo=="") exec((List(path_bin,"-l","M3"):::opts:::List(f)).toArray)._1 else
     exec((List("bin/dbtoaster_release","-l","M3"):::opts:::List(f)).toArray,rbase)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
   
-  val all = try { exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("no repo configured"); Array[String]() }
+  val all = try { exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("no repo configured"); Array[String]() }
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                           "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                           "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails

@@ -42,3 +42,12 @@ __Runtime__
 __Language__
 
 - Extend the M3 language to support reactive programming paradigm
+
+#### Troubleshooting
+__UnsupportedClassVersionError: Unsupported major.minor version 51.0__
+
+If you are getting this exception, make sure that you have a JRE for Java 7 installed. 
+
+For Ubuntu you can solve the problem by installing version 7 of OpenJDK:
+
+`sudo apt-get install openjdk-7-jre`

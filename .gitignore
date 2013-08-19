@@ -3,5 +3,6 @@ target
 examples
 conf/ddbt.properties
 test/gen
+bin
 .idea
 *.iml
