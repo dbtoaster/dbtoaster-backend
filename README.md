@@ -9,14 +9,15 @@ speedup over traditional database systems. More information:
 The goal of Distributed DB Toaster project is to reuse current infrastructure and create a framework to distribute the data and updates load across multiple servers.
 
 #### Setup
-1. Checkout this repository `$ git clone https://github.com/tcknet/ddbtoaster.git`
-2. Create a file `conf/ddbt.properties` and add the following properties:
-   - `ddbt.base_repo` checkout of DBToaster repository (required for unit tests)
-   - `ddbt.dbtoaster` dbtoaster binary (required if base_repo is not set)
-4. Invoke the original unit tests of DB Toaster using `$ sbt queries` (takes a while)
-5. Execute the compiler using `$ sbt 'run-main ddbt.Compiler <options> <sql_input>'`. You get the options description by running the compiler without arguments.
-
-Note: to remove the [Spark](http://spark-project.org) and Scala-actors dependencies (unused), delete the `src/examples` and `src/lib/MapsSpark.scala` files and comment the appropriate lines in `build.sbt`.
+1. Checkout the repository `$ git clone https://github.com/tcknet/ddbtoaster.git`
+2. Get some data/queries to play with. Do you have access to DB Toaster repository? (i.e. are you in DATA lab?)
+  - _No:_ add `bin/dbtoaster_release` and `examples/{data,queries}` from [here](http://www.dbtoaster.org/index.php?page=download) to the ddbtoaster folder (keep the same paths).
+  - _Yes:_ Create a file `conf/ddbt.properties` and add the following properties:
+     - `ddbt.base_repo` path to DB Toaster repository (required for unit tests)
+     - `ddbt.dbtoaster` dbtoaster binary (required if base_repo is not set)
+     - You can run DB Toaster unit tests of  using `$ sbt queries` (takes a while)
+3. (Optional) To remove [Spark](http://spark-project.org) and Scala-actors dependencies (as they are not used), delete `src/examples`, `src/lib/MapsSpark.scala` and comment the appropriate lines in `build.sbt`.
+4. Execute the compiler using `$ sbt 'run-main ddbt.Compiler <options> <sql_input>'`. You get the options description by running the compiler without arguments.
 
 #### Status
 Currently the project is in an early stage. It matches existing DBToaster support for code generation based on M3 (Scala only, without LMS optimization). The code generation will soon be extended to support distributed runtime based on Akka remote actors.

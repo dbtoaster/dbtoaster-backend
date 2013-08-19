@@ -24,11 +24,8 @@ object Utils {
 
   // Execute arbitrary command, return (out,err)
   def exec(cmd:String):(String,String) = exec(cmd.split(" "))
-  def exec(cmd:Array[String],repo:Boolean=false):(String,String) = {
-
-    val r = Runtime.getRuntime
-    val p = if (repo) r.exec(cmd,null,new File(path_repo+"/"+path_base)) else r.exec(cmd)
-
+  def exec(cmd:Array[String],dir:File=null):(String,String) = {
+    val p = Runtime.getRuntime.exec(cmd,null,dir)
     def gobble(in:InputStream) = new Runnable {
       var out = new StringBuilder
       var thr = new Thread(this); thr.start

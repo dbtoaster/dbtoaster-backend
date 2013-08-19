@@ -1,9 +1,7 @@
 project
 target
+examples
+conf/ddbt.properties
 test/gen
-ddbt.properties
-tmp
-finance-*.csv
-*.m3
 .idea
 *.iml

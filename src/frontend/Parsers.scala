@@ -125,8 +125,8 @@ object SQLParser extends ExtParser with (String => SQL.System) {
 
   // XXX: THIS IS INCOMPLETE, PLEASE REVIEW ALL, IN PARTICULAR MAIN QUERIES OBJECTS
 
-  lexical.reserved ++= List("FROM","WHERE","GROUP","JOIN","NATURAL","ON") // reduce this list by conditional accepts
-  lexical.delimiters ++= List("+","-","*","/","%","=","<>","<","<=",">=",">")
+  lexical.reserved ++= List("FROM","WHERE","GROUP","LEFT","RIGHT","JOIN","NATURAL","ON") // reduce this list by conditional accepts
+  lexical.delimiters ++= List("+","-","*","/","%","=","<>","!=","<","<=",">=",">")
 
   lazy val field = opt(ident<~".")~(ident|"*") ^^ { case ot~n => Field(n,ot match {case Some(t)=>t case None=>null}) } // if '*' compute the expansion
 
@@ -161,32 +161,36 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   | expr ~ opt("NOT") ~ ("LIKE" ~> stringLit) ^^ { case e~o~s => o match { case Some(_)=>Not(Like(e,s)) case None=>Like(e,s) } }
   | expr ~ ("BETWEEN" ~> expr) ~ ("AND" ~> expr) ^^ { case e~m~n => Range(e,m,n) }
   | expr ~ (opt("NOT") <~ "IN") ~ query ^^ { case e~o~q => o match { case Some(_)=>Not(In(e,q)) case None=>In(e,q) } }
-  | expr ~ ("="|"<>"|">"|"<"|">="|"<=") ~ expr ^^ { case l~op~r => op match {
-      case "="=>Cmp(l,r,OpEq) case "<>"=>Cmp(l,r,OpNe) case ">"=>Cmp(l,r,OpGt) case ">="=>Cmp(l,r,OpGe) case "<"=>Cmp(r,l,OpGt) case "<="=>Cmp(r,l,OpGe) } }
+  | expr ~ ("="|"<>"|">"|"<"|">="|"<="|"!=") ~ expr ^^ { case l~op~r => op match {
+      case "="=>Cmp(l,r,OpEq) case "<>"|"!="=>Cmp(l,r,OpNe) case ">"=>Cmp(l,r,OpGt) case ">="=>Cmp(l,r,OpGe) case "<"=>Cmp(r,l,OpGt) case "<="=>Cmp(r,l,OpGe) } }
   | "(" ~> disj <~ ")"
   )
 
   // ------------ Queries
   lazy val tab = ("(" ~ query ~ ")" | ident) ~ opt(opt("AS")~ident)
-  lazy val join = tab ~ "NATURAL"~"JOIN"~ tab | tab ~ "JOIN" ~ tab ~ "ON" ~ cond | tab
+  lazy val join = tab ~ "NATURAL" ~ "JOIN" ~ tab | tab ~ opt("LEFT"|"RIGHT") ~ "JOIN" ~ tab ~ "ON" ~ cond | tab
   lazy val from = "FROM" ~> repsep(join,",")
   lazy val group = rep1sep(field<~opt("ASC"|"DESC"),",")
 
-  lazy val query:Parser[Query] = (
-   "LIST"~>"("~>repsep(expr,",")<~")" ^^ { Lst(_) }
-  | ("SELECT" ~> opt("DISTINCT")) ~ repsep(expr ~ opt("AS"~>ident),",") ~ opt(from) ~ opt("WHERE" ~> disj) ~ opt("GROUP"~>"BY"~> group) ^^ { case s => View("XXX")}
+  lazy val qatom:Parser[Query] = (
+   opt("LIST")~>"("~>repsep(expr,",")<~")" ^^ { Lst(_) }
+  | ("SELECT" ~> opt("DISTINCT")) ~ repsep(expr ~ opt("AS"~>ident),",") ~ opt(from) ~ opt("WHERE" ~> disj) ~
+      opt(("GROUP"~>"BY"~> group) ~ opt("HAVING" ~> disj)) ~ opt("ORDER"~>"BY"~> group) ^^ { case s => View("XXX")}
   | "(" ~> query <~ ")"
   )
+  lazy val qconj:Parser[Query] = rep1sep(qatom, "INTERSECT") ^^^ View("XXX")
+  lazy val query:Parser[Query] = rep1sep(qconj, ("UNION"~opt("ALL"))) ^^^ View("XXX")
+
   lazy val sqlAny = rep(ident|numericLit|stringLit|"."|","|"("|")"|"+"|"-"|"*"|"/"|"%"|"="|"<>"|"<"|"<="|">="|">") ^^ { _.mkString(" ") }
 
   // ------------ System definition
-  lazy val system = rep(source) ~ rep(query <~ ";") ^^ { case ss ~ qs => System(ss,qs) }
-  def apply(str:String) = phrase(system)(new lexical.Scanner(str)) match {
+  lazy val system = rep(source) ~ rep(query <~ opt(";")) ^^ { case ss ~ qs => System(ss,qs) }
+  def apply(str:String) = phrase(system)(new lexical.Scanner(str.replaceAll("--.*\n?","")  )) match {
     case Success(x, _) => x
     case e => sys.error(e.toString)
   }
-  def load(path:String) = {
-    def f(p:String) = scala.io.Source.fromFile(p).mkString
+  def load(path:String,base:String=null) = {
+    def f(p:String) = scala.io.Source.fromFile((if (base!=null) base+"/" else "")+p).mkString
     apply("(?i)INCLUDE [\"']?([^\"';]+)[\"']?;".r.replaceAllIn(f(path),m=>f(m.group(1))).trim)
   }
 }

@@ -172,6 +172,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
 
   def genStreams(sources:List[Source]) = {
     // Little fix for libraries variation as 1 stream for OrderBooks generates BOTH asks and bids events.
+    // XXX: fix the names of the streams properly
     def fixOrderbook(ss:List[Source]):List[Source] = ss.zipWithIndex.filter{case (s,i)=>i==0 || s.adaptor.name!="ORDERBOOK"}.map(_._1)
     "Seq(\n"+ind(fixOrderbook(sources).filter{s=>s.stream}.map{s=> val (in,ad,sp)=genStream(s); "("+in+","+ad+","+sp+")" }.mkString(",\n"))+"\n)"
   }

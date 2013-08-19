@@ -1,4 +1,6 @@
 package ddbt
+import ddbt.frontend._
+import ddbt.codegen._
 
 /**
  * This class reuses the compiler phases to generate test cases based on the unit
@@ -19,14 +21,11 @@ package ddbt
  * 
  * @author TCK
  */
-
 object UnitTest {
   import ddbt.Utils._
-  import ddbt.frontend._
-  import ddbt.codegen._
 
   // AST of query unit testing
-  case class QueryTest(sql:String,sets:Map[String,QuerySet]) { override def toString = sql+Utils.ind(sets.map{case (k,v)=>"\n - "+k+": "+v.out.toString}.mkString) }
+  case class QueryTest(sql:String,sets:Map[String,QuerySet]) { override def toString = sql+ind(sets.map{case (k,v)=>"\n - "+k+": "+v.out.toString}.mkString) }
   case class QuerySet(subs:List[(String,String)],out:Map[String,QueryOut])
   abstract sealed class QueryOut
   case class QueryMap(m:Map[String,String]) extends QueryOut
@@ -46,17 +45,24 @@ object UnitTest {
     lazy val qout = "{"~>":type"~>"=>"~>((":onelevel"~>","~>":expected"~"=>"~>(qfile|qmap)) | (":singleton"~>","~>":expected"~>"=>"~>num ^^ { case n => QuerySingleton(n) })) <~ opt(",") <~"}" ^^ { case q => q }
     lazy val qfile:Parser[QueryOut] = ("results_file" ~> "(" ~> str) ~ (opt("," ~> pat) <~ ")") ^^ { case f~op => QueryFile(f,op match { case Some(p)=>p case None => null}) }
     lazy val qmap:Parser[QueryOut] = "{" ~> repsep(qrow,",") <~ opt(",") <~ "}" ^^ { case rs => QueryMap(rs.toMap) }
-    lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (Utils.tup(cs),n) }
+    lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (tup(cs),n) }
     def apply(input: String): QueryTest = parseAll(qtest, input) match { case Success(r,_) => r case f => sys.error(f.toString) }
   }
+  
+  // Repository-specific functions shared with tests (Parsers at least)
+  private val rbase = new java.io.File(path_repo+"/"+path_base)
+  def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
+  def toast(f:String) = exec(Array("bin/dbtoaster_release","-l","M3",f),rbase)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
+  val all = exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),rbase)._1.split("\n")
+  val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
+                          "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
+                          "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
+  val filtered = all.filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }.sorted
 
+  // Test generator
   val dir=new java.io.File("test/gen") // output folder
-
-  def toast(f:String) = exec(Array("bin/dbtoaster_release","-l","M3",f),true)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
-  def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
-  def clean = if (dir.isDirectory()) dir.listFiles().foreach { f=>f.delete() }
-
   def makeTest(t:QueryTest) = {
+    def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
     val sys = (toast _ andThen M3Parser andThen TypeCheck)(t.sql)
     val cls = clname(t.sql)
     val gen = ScalaGen(cls)
@@ -85,30 +91,24 @@ object UnitTest {
           "it(\""+n+" correct\") {"+ind("\n"+kv+
           "diff(res"+(if (sys.queries.size>1) "._"+(qid(n)+1) else "")+", "+(o match {
             case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
-            case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+fmt+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")" // XXX: pass data type
+            case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+fmt+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
             case QuerySingleton(v) => v
           })+")")+"\n}"
         }.mkString("\n"))+"\n}"
       }.mkString("\n"))+"\n}\n\n"
-
       write(dir,cls+".scala",helper+gen.genSystem(sys))
       println("Query "+cls+" generated")
   }
 
+  // Generate all tests
   def main(args: Array[String]) {
     val fsz = if (args.length>0) (s:String)=>args.contains(s) else (s:String)=>true // datasets filter
-    val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
-                       "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
-                       "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
-    val all=Utils.exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),true)._1.split("\n").filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }.sorted
-    println("Tests generated : %4d".format(all.size))
+    println("Tests generated : %4d".format(filtered.size))
     println("Tests excluded  : %4d".format(exclude.size)+" (front-end issues)")
+    val files = filtered
 
-    val files = all
-
-    clean // remove all previous tests
-    val tests = files.map { f=> UnitParser(Utils.read(path_repo+"/"+path_base+"/"+f)) }
-    tests.foreach{ t0 =>
+    if (dir.isDirectory()) dir.listFiles().foreach { f=>f.delete() } else dir.mkdirs() // directory cleanup (erase previous tests)
+    files.map(load).foreach{ t0 =>
       val t = QueryTest(t0.sql,t0.sets.filter(x=>fsz(x._1)) // missedtrades is very slow, brokerspread drifts due to rounding errors, similarly as original DBToaster
                  .filter{x=> !t0.sql.matches(".*(missedtrades|brokerspread).*") || x._1.matches("tiny.*")})
       if (t.sets.size>0) try { println("---------------- "+t.sql); makeTest(t) }
