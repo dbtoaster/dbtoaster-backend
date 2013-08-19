@@ -53,7 +53,7 @@ object UnitTest {
   private val rbase = new java.io.File(path_repo+"/"+path_base)
   def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
   def toast(f:String) = exec(Array("bin/dbtoaster_release","-l","M3",f),rbase)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
-  val all = exec(Array("find","test/unit/queries","-type","file","-and","-not","-path","*/.*"),rbase)._1.split("\n")
+  val all = exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n")
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                           "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                           "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
