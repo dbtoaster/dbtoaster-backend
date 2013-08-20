@@ -268,6 +268,43 @@ The global clustering coefficient is based on triplets of nodes. A triplet consi
 
 XXX
 
+\subsubsection*{Problem 9: Max-flow min-cut} 
+
+
+\subsubsection*{Problem 10: Reliable unicast messaging}
+This problem has been presented in the Bloom paper and serves as an example of how Bloom programs can be translated to Morgol programs.
+\[
+\begin{array}{l}
+\text{CREATE STREAM } timer(time: long) \text{ FROM } periodic(10) \\
+\text{CREATE STREAM } pipe\_in(dst : location, src : location, ident : long, payload : string) \text{ FROM } ... \\
+\text{CREATE STREAM } ack\_chan(src : location, dst : location, ident : long) \text{ FROM } channel(dst)\\
+\\
+\text{DECLARE PUBLIC MAP } data\_chan [dst : location, src : location, ident : long][] := \\
+\qquad timer[t] \times send\_buf[dst, src, ident] + pipe\_in[dst, src, ident]\\
+\text{WITH } local\_map := true \\
+\text{DECLARE PUBLIC MAP } got\_ack [ident : long][] := \\
+\qquad ack\_chan[s, d, ident] \times send\_buf[d, s, ident]\\
+\text{WITH } local\_map := true \\
+\text{DECLARE MAP } send\_buf [dst : location, src : location, ident : long, payload : string][] := \\
+\qquad pipe\_in[dst, src, ident, payload] \times (\neg\text{EXISTS}(got\_ack[ident])) \\
+\text{WITH } local\_map := true
+\end{array}
+\]
+
+The basic ideas to translate Bloom programs:
+\begin{itemize}
+\item Channels are translated to streams that read packets from the network
+\item Output interfaces are public maps
+\item Tables are maps
+\item An instance of the Bloom periodic type is represented by a stream of type periodic
+\item When a Bloom collection is defined by multiple statements, we union ($+$) them together
+\end{itemize} 
+
+\discuss{How do we declare a map to be local? Do we want to do that explicitely or do we distribute the map such that every node stores stores its local information?}
+\discuss{Evaluation order?}
+\discuss{What's the best way to represent a send-channel? Do we need output streams?}
+
+---------------------
 \discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
 
 % Andres: I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
