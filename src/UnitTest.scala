@@ -13,11 +13,16 @@ import ddbt.codegen._
  * you want to generate test for. Once finished, you need to manually invoke
  * 'sbt test' to run the tests.
  *
+ *
+ * Arguments:
+ *   -q<pattern> : queries filtering, any matching pattern will select the query
+ *   -d<dataset> : set filtering, name must be exact, takes the union
+ *
  * Usage examples:
  *
- *    sbt ';run-main ddbt.UnitTest tiny tiny_del standard standard_del;test-only * -- -l ddbt.SlowTest'
+ *    sbt ';run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del;test-only * -- -l ddbt.SlowTest'
  *
- *    sbt ';queries;test-only * -- -l ddbt.SlowTest'
+ *    sbt ';run-main ddbt.UnitTest -dbig -q.*axfinder;test-only ddbt.test.gen.*'
  * 
  * @author TCK
  */
@@ -55,19 +60,21 @@ object UnitTest {
   def toast(f:String,opts:List[String]=Nil):String = if (path_repo=="") exec((List(path_bin,"-l","M3"):::opts:::List(f)).toArray)._1 else
     exec((List("bin/dbtoaster_release","-l","M3"):::opts:::List(f)).toArray,rbase)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
   
-  val all = try { exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("no repo configured"); Array[String]() }
+  val all = try { exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("Repository not configured"); Array[String]() }
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                           "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                           "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
   val filtered = all.filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }.sorted
 
-  // Testing helpers (used only in test files)
-  lazy val (allSQL,allM3,baseSQL) = if (Utils.path_repo!="") (all.map(x=>load(x).sql),filtered.map(x=>load(x).sql),path_repo+"/"+path_base)
-  else {
-    val dir = "examples/queries"
-    val files = if (new java.io.File(dir).exists) Utils.exec(Array("find",dir,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n")
-    else { System.err.println(("@"*80)+"\n@"+(" "*78)+("@\n@ %-76s @".format("WARNING: folder '"+dir+"' does not exist, tests skipped !\n@"+(" "*78))+"@\n"+("@"*80))); Array[String]() }
-    (files,files,null)
+  // Testing helper (used only in test files)
+  def sqlFiles(dataset:String="standard"):(Array[String],Array[String],String) = if (Utils.path_repo!="") {
+    val fs = filtered.map(f=>load(f)).filter(t=>t.sets.contains(dataset)).map(t=>t.sql)
+    (all.map(x=>load(x).sql),fs,path_repo+"/"+path_base)
+  } else {
+      val dir = "examples/queries"
+      val files = if (new java.io.File(dir).exists) Utils.exec(Array("find",dir,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n")
+      else { System.err.println(("@"*80)+"\n@"+(" "*78)+("@\n@ %-76s @".format("WARNING: folder '"+dir+"' does not exist, tests skipped !\n@"+(" "*78))+"@\n"+("@"*80))); Array[String]() }
+      (files,files,null)
   }
 
   // ---------------------------------------------------------------------------
@@ -115,18 +122,24 @@ object UnitTest {
 
   // Generate all tests
   def main(args: Array[String]) {
-    val fsz = if (args.length>0) (s:String)=>args.contains(s) else (s:String)=>true // datasets filter
-    println("Tests generated : %4d".format(filtered.size))
+    val f_ds = { val ds = args.filter(_.startsWith("-d")).map(_.substring(2)); if (ds.length>0) (s:String)=>ds.contains(s) else (s:String)=>true }
+    val f_qs = { val ps = args.filter(_.startsWith("-q")).map(p=>java.util.regex.Pattern.compile(p.substring(2)))
+      if (ps.length>0) (s:String)=>ps.exists(p=>p.matcher(s).matches()) else (s:String)=>true
+    }
+
+    val files = filtered.filter(f_qs)
+    println("Tests total     : %4d".format(all.size))
     println("Tests excluded  : %4d".format(exclude.size)+" (front-end issues)")
-    val files = filtered
+    println("Tests selected  : %4d".format(files.size))
 
     if (dir.isDirectory()) dir.listFiles().foreach { f=>f.delete() } else dir.mkdirs() // directory cleanup (erase previous tests)
     files.map(load).foreach{ t0 =>
-      val t = QueryTest(t0.sql,t0.sets.filter(x=>fsz(x._1)) // missedtrades is very slow, brokerspread drifts due to rounding errors, similarly as original DBToaster
+      val t = QueryTest(t0.sql,t0.sets.filter(x=>f_ds(x._1))
+                 // missedtrades is very slow, brokerspread drifts due to rounding errors, similarly as original DBToaster
                  .filter{x=> !t0.sql.matches(".*(missedtrades|brokerspread).*") || x._1.matches("tiny.*")})
       if (t.sets.size>0) try { println("---------------- "+t.sql); makeTest(t) }
       catch { case th:Throwable => println("Compiling '"+t.sql+"' failed because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) } }
     }
-    println("Now run 'sbt test' to pass tests")
+    println("Now run 'test-only ddbt.test.gen.*' to pass tests")
   }
 }

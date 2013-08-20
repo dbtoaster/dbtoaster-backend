@@ -57,7 +57,7 @@ object Utils {
 
   // Create a temporary directory that will be removed at shutdown
   def makeTempDir(path:String=null):File = {
-    val tmp = if (path!=null) new File(path) else File.createTempFile("ddbt",null)
+    val tmp = if (path!=null) new File(path) else new File("tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
     def del(f:File) {
       if (f.isDirectory()) f.listFiles().foreach{c=>del(c)}
       if (!f.delete()) sys.error("Failed to delete file: " + f)
@@ -66,4 +66,8 @@ object Utils {
     Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = del(tmp) });
     tmp
   }
+
+  // Time measurement
+  def time(ns:Long,n:Int=2) = { val ms=ns/1000000; ("%"+(if (n==0)"" else n)+"d.%03d").format(ms/1000,ms%1000) }
+  def ns[T](f:()=>T) = { val t0=System.nanoTime(); var r=f(); val t1=System.nanoTime(); (t1-t0,r) }
 }
