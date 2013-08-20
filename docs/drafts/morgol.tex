@@ -264,11 +264,26 @@ Find all triangles (i.e., cliques of size three) in the graph. Let $s[x,y]$ the 
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Problem 8: Clustering coefficients}
-XXX
-
-The global clustering coefficient is based on triplets of nodes. A triplet consists of three nodes that are connected by either two (open triplet) or three (closed triplet) undirected ties. A triangle consists of three closed triplets, one centred on each of the nodes. The global clustering coefficient is the number of closed triplets (or 3 x triangles) over the total number of triplets (both open and closed).
-
-XXX
+Let a triplet be a set of 3 connected vertices and a closed triplet a 3-clique (triangle).\ul
+\item The global \href{http://en.wikipedia.org/wiki/Clustering_coefficient}{clustering coefficient} $C$ is defined as $C:=\frac{\text{\# closed triplets}}{\text{\# triplets}}$.
+\[C := \dfrac{{\rm AggSum}([], \exists(edge[x,y] \times edge[x,z] \times edge[y,z]))}
+		{{\rm AggSum}([], \exists(edge[x,y] \times edge[x,z]))}\]
+\item The local clustering coefficient of a vertex $v_i$ in the directed graph $G=(V,E)$ is given by
+$C_i=\frac{|\{ e_{jk}:v_j,v_k\in N_i, e_{jk} \in E \}|}{k_i(k_i-1)}$ with $N_i=\{v_j:e_{ij} \in E \land e_{ij} \in E\}$ and $k_i = |N_i|$.
+\[\begin{array}{rcl}
+k[x] &:=& {\rm AggSum}([],edge[x,y] \times edge[y,x]) \\
+Ci[x] &:=& \dfrac{
+	{\rm AggSum}([], (edge[x,y] \times edge[y,x]) \times (edge[x,z] \times edge[z,x]) \times edge[y,z])
+}{k[x] \times (k[x]-1)}
+\end{array}\]
+\item For undirected graph, the local clustering coefficient $C_i$ is doubled. Let $s[x,y]$ the stream of undirected edges and $edge[x,y] := s[x,y]+s[y,x]$. Similarly we obtain:
+\[\begin{array}{rcl}
+k[x] &:=& {\rm AggSum}([],edge[x,y]) \\
+Ci[x] &:=& {\rm AggSum}([], edge[x,y] \times edge[x,z] \times edge[y,z]) \times \dfrac{2}{k[x] \times (k[x]-1)}
+\end{array}\]
+\item To express the network average clustering coefficient $\bar C = \dfrac{1}{n}\sum_{i=1}^n C_i $, we need an additional stream $node[x]$ describing node existence:
+\[{\rm NACC} := \dfrac{{\rm AggSum}([], Ci[x])}{{\rm AggSum}([], node[x])} \]
+\ule
 
 \subsubsection*{Problem 9: Max-flow min-cut} 
 capacity = value
@@ -392,41 +407,37 @@ How do these concerns blend with recursion and incremental maintenance?
 % ------------ LEGACY PROBLEMS END --------------
 
 \section*{Roadmap}
-Goals:\ul
-\item Find use cases and examples
-\item Design the language, allow incrementalization by reusing most of existing infrastructure, and combine the power of Datalog and triggers.
-\item Get a clean and simple semantics that can be used and understood easily in various domains: windowed streams, state machine, continuous queries.
-\item Define distribution strategy
-\item Data locality: optional location specification. Must be orthogonal to other concerns (tag with @all, @group, @hashed ?)
-\item Simulate timestamps / iteration numbers
-\ule
+Target the following domains and concepts: incrementality, continuous queries, active databases/triggers, recursivity, location and distribution (failure tolerance?), windowed streams, state machine, graphs, declarativeness, deltas, stratification.
+\subsubsection*{Language design}\ol
+\item Provide an clean, simple and easy to understand semantics for each of the above domains.\ul
+	\item Stratification: simulate timestamps / iteration numbers? Provide the user facilities like $<\!\!+$, $<\!\!-$ to do operations at the next time step? recursion = non-recursive with fixed \# iterations. orthogonal serie of maps.
+	% look at orchestra (datalog + incrementally) [not very interesting]
+	% http://webdam.inria.fr/College/090512Abiteboul.pdf
+	\item Non-stratified $\to$ stratified standard scheme (user-defined / built-in ?)
+	\item Allow reuse of incrementalization infrastructure and combine recursivity and delta. How to connect a map to its delta to use them.
+	\item Inflationary semantics? What's cleanest language?
+	\ule
+\item Find use cases and examples (at least 1 per domain/concept)
+\item Describe derivation rules for incrementalization (what makes incrementalization easier?)
+\item Describe data structures used in the back-end.\ul
+	\item Have column-oriented / nested tables to avoid keys duplication? compatible with secondary indices ?
+	\ule
+\item Define distribution strategy and data locality specifications. Must be be orthogonal to other concerns (tag with @all, @group, @hashing key part ?). How to handle hashing?
+\ole
 
-Integrate features from
-Socialite\cite{socialite},
-WebDamLog\cite{webdamlog},
-Bloom lattices\cite{bloom_lattices},
-Dedalus\cite{dedalus},
-CALM\cite{bloom_calm},
-Pregel\cite{pregel},
-DatalogFS\cite{datalog_fs} in DBToaster\cite{dbtoaster09,dbtoaster11}.
+Integrate features from Socialite\cite{socialite}, WebDamLog\cite{webdamlog}, Bloom lattices\cite{bloom_lattices}, Dedalus\cite{dedalus}, CALM\cite{bloom_calm}, Pregel\cite{pregel}, DatalogFS\cite{datalog_fs} in DBToaster\cite{dbtoaster09,dbtoaster11}.
 
---------------------------------------------------------------
-
-{\color{red}
-XXX: for non-stratified programs, provide the user facilities like $<+, <-$ to do operations at the next step.
-XXX: we need to be able to define aggregation in one of the keys
-XXX: have column-oriented / nested tables to avoid keys duplication? how is this compatible with secondary indices ?}
-connect map to its delta to use them
-recursion = non-recursive with fixed \# iterations. orthogonal serie of maps
-\begin{verbatim}
-Goal:
-=> inflationary semantics, what's cleanest language ?
-look at orchestra (datalog + incrementally) [not very interesting]
-- explicit deltas, use cases, triggers, active dbs
-- what make it easier to do incrementalization easier
-\end{verbatim}
-
---------------------------------------------------------------
+\subsubsection*{Implementation tasks}\ol
+\item Automate function type checking from library (+extension for arbitrary object)
+\item Add attributes/options to maps (AST), move map index creation into type check
+\item Multiple values/aggregations and filtering for maps, tree secondary indices ? (inequality)
+\item Recursion in the rules (call statement)
+\item LMS code generator
+\item More options for streams input
+\item Distribution framework
+\item New parser for Morgol language
+\item Incrementalization (rules$\to$triggers conversion) by reusing DBToaster front-end
+\ole
 
 % Bibliography
 \bibliographystyle{plain} % acm
