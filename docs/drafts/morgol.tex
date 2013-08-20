@@ -10,6 +10,8 @@
 \begin{minipage}{\dlen}\footnotesize {\bf\color{red} Discussion:} #1\end{minipage}\par}
 \def\say#1#2{\begingroup\par\leftskip1em {\bf #1:} \it #2\par\endgroup}
 
+\newcommand{\lift}{\text{^=}}
+
 \begin{document}
 % --------------------------------------------------------------------------------------------------------------
 \section*{Language syntax and associated semantics}
@@ -269,7 +271,17 @@ The global clustering coefficient is based on triplets of nodes. A triplet consi
 XXX
 
 \subsubsection*{Problem 9: Max-flow min-cut} 
-
+capacity = value
+\[
+\begin{array}{l}
+edge[x,y] := \text{input} \\
+flow[x,y,iteration_n] := \\
+\qquad (flow[x,y,iteration] + spath_e[x,y,iteration] - spath_e[y,x,iteration]) \times \\
+\qquad \qquad (iteration_n = iteration + 1) \\
+spath[x,y][filtermin(l)] := edge[x,y,l] + edge[x,z,l_1] \times spath[z,y,l_2] \times (l = l_1 + l_2) \\
+max\_flow := AggSum([], shortest\_path[iteration, f] \times f)
+\end{array}
+\]
 
 \subsubsection*{Problem 10: Reliable unicast messaging}
 This problem has been presented in the Bloom paper and serves as an example of how Bloom programs can be translated to Morgol programs.
