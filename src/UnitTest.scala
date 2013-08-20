@@ -17,6 +17,7 @@ import ddbt.codegen._
  * Arguments:
  *   -q<pattern> : queries filtering, any matching pattern will select the query
  *   -d<dataset> : set filtering, name must be exact, takes the union
+ *   -o<option>  : add an option that is directly passed to dbtoaster
  *
  * Usage examples:
  *
@@ -76,14 +77,14 @@ object UnitTest {
       else { System.err.println(("@"*80)+"\n@"+(" "*78)+("@\n@ %-76s @".format("WARNING: folder '"+dir+"' does not exist, tests skipped !\n@"+(" "*78))+"@\n"+("@"*80))); Array[String]() }
       (files,files,null)
   }
-
+  
   // ---------------------------------------------------------------------------
 
   // Test generator
   private val dir=new java.io.File("test/gen") // output folder
-  def makeTest(t:QueryTest) = {
+  def makeTest(t:QueryTest,opts:List[String]=Nil) = {
     def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
-    val sys = (((f:String)=>toast(f)) andThen M3Parser andThen TypeCheck)(t.sql)
+    val sys = (((f:String)=>toast(f,opts)) andThen M3Parser andThen TypeCheck)(t.sql)
     val cls = clname(t.sql)
     val gen = ScalaGen(cls)
     val str = gen.genStreams(sys.sources)
@@ -126,6 +127,7 @@ object UnitTest {
     val f_qs = { val ps = args.filter(_.startsWith("-q")).map(p=>java.util.regex.Pattern.compile(p.substring(2)))
       if (ps.length>0) (s:String)=>ps.exists(p=>p.matcher(s).matches()) else (s:String)=>true
     }
+    val opts = args.filter(_.startsWith("-o")).map(_.substring(2)).toList
 
     val files = filtered.filter(f_qs)
     println("Tests total     : %4d".format(all.size))
@@ -137,7 +139,7 @@ object UnitTest {
       val t = QueryTest(t0.sql,t0.sets.filter(x=>f_ds(x._1))
                  // missedtrades is very slow, brokerspread drifts due to rounding errors, similarly as original DBToaster
                  .filter{x=> !t0.sql.matches(".*(missedtrades|brokerspread).*") || x._1.matches("tiny.*")})
-      if (t.sets.size>0) try { println("---------------- "+t.sql); makeTest(t) }
+      if (t.sets.size>0) try { println("---------------- "+t.sql); makeTest(t,opts) }
       catch { case th:Throwable => println("Compiling '"+t.sql+"' failed because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) } }
     }
     println("Now run 'test-only ddbt.test.gen.*' to pass tests")
