@@ -1,0 +1,242 @@
+\documentclass[10pt]{article}
+\usepackage{../inc/style}
+\begin{document}
+% ---------------------------------------------------------------------
+\title{Calculus extended}
+\subsection*{Language specifications}
+\subsubsection*{Syntax}
+File format is similar to M3. There are 4 sections: sources, maps declarations, queries and explicit triggers. The source queries and trigger definitions are the same as in M3.
+The maps are defined as:\ul
+\item {\tt\small DECLARE MAP map[indices:types] := expr;} where expression is a calculus expression. Map references can appear in the expression (including self-reference). Maps are intentional by default.
+\item {\tt\small DECLARE MAP map[indices:types] : type;} declares an unmanaged map, that has no associated triggers. The user can the define extra triggers to compute this map.
+\ule
+We extend the expressions language with:\ul
+\item {\tt\small AggMin([indices], expr)}, {\tt\small AggMax([indices], expr)} that return the minimal resp. maximal value of expression or 0 if there is no such expression exists.
+\ule
+We add new statements (in triggers):\ul
+\item {\tt\small CALL trigger(values) IN expression;} where the IN expression part can be omitted if it is 1. values are constants or variables bound by the right hand-side expression.
+\ule
+The incremental computation of each map is then computed (M3) before it is transformed to imperative version with explicit loops in the target language.
+
+\subsubsection*{Semantics}
+Maps support recursive declaration. Trigger for different maps will be aggregated in a single trigger for a particular event. Triggers calls are passed through a queue (to keep consistent behavior with distributed version). This implies that whenever an event happen all rule are traversed once, matching rules are called and recursive events are added to the queue. Then the next event from the queue is being processed until the queue is empty. Desirable properties we want to achieve (give strong intuition/proof):\ul
+\item Avoid synchronization between add operations on maps (in particular for computing fixpoints)
+\item Avoid stack overflows due to recursion (this is dealt with the events/calls queue)
+\item Avoid recursion if the value is not changed (or changed below some relative threshold)
+\ule
+
+\subsection*{Examples}
+\subsubsection*{Problem 1: betweenness centrality}
+Let our fact table be $edge(x,y)$ we want to compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
+\[\begin{array}{rcl}
+edge[x,y] & := & \text{\it storage of input stream} \\
+path[x,y,len] & := & \exists(edge[x,y]) \times (len\hat= 1) +  \exists(edge[x,z]) \times \exists(path[z,y,l]) \times (len\hat= 1+l) \times (x\ne y)\\
+path_v[x,y,v,len] & := & \exists(path[x,v,l_1]) \times \exists(path[v,y,l_2]) \times (len\hat= l_1+l_2) \times (x\ne y) \\
+centrality[v] & := & \exists(path[x,y,m]) \times (\exists(path[x,y,s] \times (s<m)) = 0) \times \left(\dfrac{{\rm AggSum}([], path_v[x,y,v,m])}{path[x,y,m]}\right)
+\end{array}\]
+
+By adding the condition $(x\ne y )$ in the $path$ definition, we prevent cycles.
+
+\subsubsection*{Problem 2: PageRank}
+The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph, $K$ the diagonal matrix with out-degrees in diagonal. We compute \[R(t+1)=d\cdot M\cdot R(t)+\dfrac{1-d}{N}{\bf 1} \qquad \text{with {\bf 1} a column vector of 1 and }R(0)={\bf 1}\cdot \frac{1}{n}\]
+The issues with the matrix model is that all computation are done synchrnously.
+
+\textbf{Naive version:} To avoid explicit synchronization, we have 2 solutions: maintaining versions in the database or normalizing $|R|=1$ after every computation.
+\[\begin{array}{rrl}
+node[x] &:=& \text{\it input stream} \in\{0,1\} \\
+edge[x,y] &:=& \text{\it input stream, adjacency matrix} \\
+weight[x] &:=& node[x] \times (w_0\hat=weight[x]) \times \left( w_0 + (w_1\hat=nw) \times \left(
+\dfrac{|w_1 - w_0|}{w_1+w_0} > {\rm threshold}\right) \times (w_1-w_0) \right) \\ \\
+&& \text{where } nw= {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]}{{\rm AggSum}([],edge[y,z])}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[v])}\\
+\end{array}\]
+The shortcomings with this approach are the non-preservation of global weight and injection of initial coefficient. The $d$ weighting should mitigates this issue (but not sure at all !!). We also must ensure that we don't call recursively if the value did not change (encode this with threshold in map declaration or in another function?).
+
+\textbf{Clock join:} One possible idea to virtually execute the program synchronously is to have a clock stream and a timestamp attribute for all maps. When a clock tick is inserted, the next iteration can be computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues:\ul
+\item Deletion trigger of weight must be \underline{overridden} to only remove data (and avoid recursion).
+\item How to know that all the data at a tick has been fully computed ?
+\ule
+\[\begin{array}{rrl}
+tick[t] &:=& \text{\it logical clock} \in \{0,1\} \\
+node[x] &:=& \text{\it input stream} \in\{0,1\} \\
+edge[x,y] &:=& \text{\it input stream} \\
+weight[x,t] &:=& node[x] \ \times {\rm AggSum}([x], \dfrac{edge[y,x] \times weight[y,t-1]}{{\rm AggSum}([],edge(y,z))}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[z])}
+\end{array}\]
+
+
+{\color{red}
+XXX: for non-stratified programs, provide the user facilities like $<+, <-$ to do operations at the next step.
+
+XXX: we need to be able to define aggregation in one of the keys
+
+XXX: have column-oriented / nested tables to avoid keys duplication? how is this compatible with secondary indices ?
+}
+
+connect map to its delta to use them
+
+recursion = non-recursive with fixed \# iterations. orthogonal serie of maps
+
+\begin{verbatim}
+Goal:
+- design language
+- incrementalize, generalize this
+- trigger/datalog power combined
+- different use cases : windowed streams, state machine, continuous queries => get a clean semantics
+- locality stuff
+- specify location (optionally) => separate from other concerns. @all, @specific, @hashed (to many?)
+
+- ease of use, ease of understanding semantics
+
+=> inflationary semantics, what's cleanest language ?
+======> write a roadmap
+look at orchestra (datalog + incrementally) [not very interesting]
+- clean
+simple
+locality (orthogonalized)
+- distribution
+- default locality
+- simulate timestamps
+- iteration number
+
+Goals:
+- explicit deltas, use cases, triggers, active dbs
+- what make it easier to do incrementalization easier
+\end{verbatim}
+
+
+for maxflow mincut have sets of flows and union them to construct recursively
+
+instead of hashing tuples to host id, hash to a list of host id => redundancy, then this id can be made "mostly" coherent by doing modulo on group size to get id in group, groups are tagged and a node decides to join to one or more group and join/notifies master at connect
+
+
+
+
+\newpage
+The main concern in this problem definition is that the $path$ map is defined recursively, so we need to bind its definition. The proposal is to distinguish two types of maps: extensional and intentional.
+Only $edge$ would be extensional here.\ul
+\item Extensional (regular) map are modified by triggers
+\item Intentional maps are iteratively converted into: 1) a map with 2) associated triggers, 3) additional statements in the existing triggers and possibly 4) materialize streams it depends on into maps.
+\ule
+The key insight is to see intentional maps as SQL queries over extensional dataset. This means:\ul
+\item We can reuse DBToaster machinery to maintain incrementally intentional maps, thereby having <<front-end M3>> where intentional maps declarations are allowed, and <<back-end M3>> where they are converted into additional maps and triggers.
+\item The concern of having multiple declaration (for the same map) is solved (as DBToaster will automatically break maintenance into multiple triggers)
+\item We do not have to worry about the set and counting semantics of our maps or use deltas.
+\item Updates do not need need a specific order because it is implicitly defined by the triggers call chain (that is we will update $path$ before $centrality$ because $centrality$ depends on $path$ in its definition).
+\item The logical clock of the system would correspond to the events of external tuples arriving.
+\ule
+
+Practically, we could write this program as follows, let the nodes be identified by integers:
+\begin{verbatim}
+-------------------- SOURCES --------------------
+CREATE STREAM sedge(x:int,y:int) FROM ...
+
+--------------------- MAPS ----------------------
+DECLARE MAP EDGE[][x:int,y:int] := sedge(x,y);
+
+DECLARE INTENTIONAL MAP PATH[][x:int,y:int,len:int] := EXISTS(EDGE(x,y)) * (len^=1) +
+    EXISTS(EDGE(x,z)) * EXISTS(PATH(x,y,l)) * (len^=1+l);
+
+DECLARE INTENTIONAL MAP PATHV[][x:int,y:int,v:int,len:int] := ...
+DECLARE INTENTIONAL MAP CENTRALITY[][v:int] := ...
+
+-------------------- QUERIES --------------------
+DECLARE QUERY g := CENTRALITY(double)[][v];
+------------------- TRIGGERS --------------------
+ON + sedge(x,y) { EDGE(x,y) += 1; }
+ON - sedge(x,y) { EDGE(x,y) += -1; }
+\end{verbatim}
+This declaration has no triggers because they will be generated during an M3 intentional$\to$triggers phase. Its result would be the addition of new regular maps and triggers to replace each intentional map.
+\newpage
+We will expand one by one intentional maps into extensional ones. Intuition: a map is convertible only if its right hand-side contains only extensional maps or itself, and we always append additional statements to existing triggers. Practically, we would obtain:
+%  CALL + PATH(x,z,len2) IN PATH(y,z,len) * (len2 ^= len+1)
+\begin{verbatim}
+--------------------- MAPS ----------------------
+DECLARE MAP EDGE[][x:int,y:int] := edge(x,y);
+DECLARE MAP PATH[][x:int,y:int,len:int] := ...        -- expand first
+DECLARE MAP PATHV[][x:int,y:int,v:int,len:int] := ... -- expand second
+DECLARE MAP CENTRALITY[][v:int] := ...                -- expand third
+------------------- TRIGGERS --------------------
+
+ON + sedge(x,y) {
+  EDGE(x,y) += 1; -- first
+  CALL + PATH(x,y,1) -- PATH, base step
+}
+ON - sedge(x,y) {
+  EDGE(x,y) -= 1; -- first
+  CALL - PATH(x,y,1) -- PATH, base step
+}
+
+ON + PATH(x,y,len) {
+  PATH[x,y,len] += 1; -- first
+  CALL + PATH(z,y,len2) IN EDGE(z,x) * (len2 ^= len+1) -- PATH inductive step
+  ... -- call + PATHV
+  ... -- call + CENTRALITY
+}
+
+ON - PATH(x,y,len) {
+  PATH[] := 0; -- clear all
+  CALL + PATH(x,y,len) IN EDGE(x,y) * (len ^= 1) -- rebuild all PATH base steps
+  ... -- call - PATHV
+  ... -- call - CENTRALITY
+}
+
+ON + PATHV(x,y,v,len) {
+  ... -- call + CENTRALITY
+}
+\end{verbatim}
+Notes:\ul
+\item A trigger always appends to its associated map first and foremost.
+\item CALL + ... IN has the same semantics as += but on a trigger instead of a map. If the IN ... part is omitted, it is assumed to be true/1.
+\item We need to assume there is no cycles in the graph, otherwise there is no termination. If we have edges (a,b), (b,a) the set of paths is infinite. It should be up to the programmer that make sure that the path does not contain cycles.
+\item By expanding the intentional maps, we duplicate the logic of <<base step>> in each of the right hand-side extensional map trigger and the recursive <<inductive step>> in its own trigger. For correctness, we only need to make sure no <<inductive step>> is written outside of the own trigger.
+\item Because of incrementality, the idea of <<generations>> mentioned in the implementation details of DataLog is implicit because all previous generations are in the map, whereas next generation is passed through trigger.
+\item In the deletion trigger for paths, we need to replay all the construction steps unless we want to tag each tuple with all the base steps it depends on (which might be even more complex).
+\ule
+
+\subsubsection*{Discussion}
+\ol
+\item One concern was the non-termination of programs. If we let the programmer write his own triggers, we can not prevent him from writing:
+\begin{verbatim}
+ON + EDGE(x,y) { EDGE[x,y] += 1; CALL + EDGE(x,y); }
+\end{verbatim}
+The set semantics is quite straightforward: we place existential guards to avoid multiple insertions.
+\begin{verbatim}
+ON + EDGE(x,y) { EDGE[x,y] += 1; CALL + EDGE(x,y) IN EXISTS(EDGE[x,y]) = 0; }
+\end{verbatim}
+But again, this would not prevent the programmer to shoot himself in the foot by writing recursive non-terminating code. (Unless he is not allowed to edit triggers, but that's maybe not desirable).
+\item We might bound the recursion with each trigger call carrying a counter of <<how far from the original stream event>> it is (where far is counter in \# of calls), and avoid recursion above some threshold.
+\item We need to have an order between maps, which prevents mutual recursion. One workaround for this is to rewrite the program such that there is only self-recursion in the map definition. An insightful programmer might also write his own trigger to close the loop of mutual recursion.
+
+\item Does order matter? We have two different ways of calling other triggers: we can immediately invoke it or add the next trigger call in a queue. The first method produces DFS-like calls whereas the second strategy behave like BFS. I would argue for the latter one as this would give a coherent behavior to what is achievable with message passing for distributed system.
+\item Batching streams? If we only have map add/delete operations in \underline{all} triggers, we may be able to relax the constraints about streams ordering (I think in particular we do not need to wait for a fix-point to be reached before we can send the next external tuple).
+\ole
+
+
+\subsubsection*{Problem 2: metro and busses}
+This problem is to test how difficult it is to convert mutual recursion to self-recursion. Say we have a city with locations (as integers) and metro $m(l_1,l_2)$ and busses $b(l_1,l_2)$ connecting these locations. We want to know all locations reachable from $l_0$ and how many changes (to forbid graph union) are required. The maps contain the minimal number of alternated rides. Original statement would be:
+
+\[\begin{array}{rclllll}
+RB[l] &:=& {\rm MIN}\big(&b(l_0,l),&RB[l_1] \times b(l_1,l),&RM[l_1] \times b(l_1,l) +1&\big) \\
+RM[l] &:=& {\rm MIN}\big(&m(l_0,l),&RM[l_1] \times m(l_1,l),&RB[l_1] \times m(l_1,l) +1&\big) \\
+R[l] &:=& {\rm MIN}\big(&RB[l],&RM[l] \big)
+\end{array}\]
+
+In this case, we can add an extra field to the tuples to know whether they are in the map RB (ending with a bus) or RM (ending with metro). Hence the transformation look quite general and the problem can be transformed: let $x\in\{B, M, 0\}$ in
+\[\begin{array}{rclllll}
+R[l,x] &:=& {\rm MIN}\big(&b(l_0,l),&R[l_1,B] \times b(l_1,l),&R[l_1,M] \times b(l_1,l) +1&\big) \times(x\hat=B) \\
+&& {\rm MIN}\big(&m(l_0,l),&R[l_1,M] \times m(l_1,l),&R[l_1,B] \times m(l_1,l) +1&\big) \times(x\hat=M) \\
+&& {\rm MIN}\big(&R[l,B],&R[l,M] \big)\times(x\hat=0)
+\end{array}\]
+and our query now become $rides(l):=R[l,0]$ with self-recursion.
+
+Conversion seems quite straightforward but this is due to the fact that $RB$, $RM$ and $R$ have the same domain; this may not be true in general. Can we have mutual recursion for functions that do not operate over the same domain ?
+
+%\begin{verbatim}
+%for both problems:
+%- write mathemal definition
+%- write pseudo M3 code
+%- write naive implementation using := to recreate the views at every event
+%- write expanded M3 code (using call to incremental view maintenance on intentionally defined maps)
+%- give ideas how we could achieve this using existing architecture
+%\end{verbatim}
+
+\end{document}

@@ -43,8 +43,8 @@ class ExtParser extends StandardTokenParsers {
   lexical.delimiters ++= List("(",")",",",".",";","+","-",":=")
 
   // ------------ Literals
-  lazy val long = opt("+"|"-") ~ numericLit ^^ { case s~n => (s match { case Some("-") => "-" case _ => ""})+n }
-  lazy val double = (long <~ ".") ~ opt(numericLit) ~ opt(("E"|"e") ~> long) ^^ { case i~d~e => val f=i+"."+(d match { case Some(s)=>s case None=>"" })+(e match { case Some(j)=>"E"+j case _=>"" }); if (f.endsWith(".")) f+"0" else f }
+  lazy val longLit = opt("+"|"-") ~ numericLit ^^ { case s~n => (s match { case Some("-") => "-" case _ => ""})+n }
+  lazy val doubleLit = (longLit <~ ".") ~ opt(numericLit) ~ opt(("E"|"e") ~> longLit) ^^ { case i~d~e => val f=i+"."+(d match { case Some(s)=>s case None=>"" })+(e match { case Some(j)=>"E"+j case _=>"" }); if (f.endsWith(".")) f+"0" else f }
 
   // ------------ Types
   lazy val tpe: Parser[Type] = (("string" | ("char"|"varchar") ~> "(" ~> numericLit <~  ")") ^^^ TypeString
@@ -96,8 +96,8 @@ object M3Parser extends ExtParser with (String => M3.System) {
     case l~None => l
   }
   | ident ^^ { Ref(_) }
-  | double ^^ { Const(TypeDouble,_) }
-  | long ^^ { Const(TypeLong,_) }
+  | doubleLit ^^ { Const(TypeDouble,_) }
+  | longLit ^^ { Const(TypeLong,_) }
   | stringLit ^^ { Const(TypeString,_) }
   )
 
@@ -156,7 +156,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   | field
   | "(" ~> expr <~ ")"
   | "(" ~> query <~ ")" ^^ { Nested(_) }
-  | (double | long | stringLit) ^^ { Const(_) }
+  | (doubleLit | longLit | stringLit) ^^ { Const(_) }
   | failure("SQL expression")
   )
 

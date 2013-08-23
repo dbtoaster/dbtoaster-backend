@@ -1,0 +1,197 @@
+\documentclass[11pt]{article}
+\usepackage{../inc/style}
+\title{Morgol specifications}
+
+\begin{document}
+\section*{Syntax}
+Parsing conventions: we use C-style comments: {\tt // ... line end} or {\tt /* comment */} (whereas {\tt ----} is used in M3).
+Built-in parsers: {\tt ident} (identifier, named by semantics hereafter), {\tt longLit}, {\tt doubleLit} and {\tt stringLit} representing a quoted string. {\tt type} parses a type declaration: {\tt long}, {\tt double}, {\tt string}, {\tt date} but we might support conversion from other type during the parsing phase. For conciseness, we use the following syntactic sugar: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$.
+
+A Morgol reactive system declaration file decomposes in 4 sections, similarly as M3 files and should appear in the same order.
+\begin{verbatim}
+morgol_file ::= source* mapdef* query* trigger*
+\end{verbatim}
+
+\subsubsection*{1. Source declarations}
+Source can be either input streams (content varies while the program is running and generate events) or fixed tables (constant relations). 
+\begin{verbatim}
+source ::= "CREATE" ("STREAM" | "TABLE") schema "FROM" input split adaptor ";"
+schema ::= name "(" rs1(field type, ",") ")"
+input  ::= "FILE" quotedPath
+split  ::= "LINE" "DELIMITED"
+         | quotedSeparator "DELIMITED"
+         | "FIXEDWIDTH" sizeInBytes
+         | "PREFIX" headerBytes
+adaptor ::= name "(" rs(option ":=" value, ",") ")"
+\end{verbatim}
+The implemented adaptors and their respective options are:\ul
+\item {\tt ORDERBOOK}: finance events in CSV, with the columns: {\tt transaction\_id}:int, {\tt broker\_id}:int, {\tt evt\_type}:string$\in\{B,S,E,D\}$ (place bid, place ask, match, cancelled), {\tt volume}:int, {\tt price}:double.\ul
+	\item {\tt brokers}: number of brokers (integer)
+	\item {\tt bids}, {\tt asks}: stream names as string
+	\item {\tt deterministic}: boolean defining whether broker id is assigned randomly
+	\ule
+\item {\tt CSV}\ul
+	\item {\tt name}: string, schema name
+	\item {\tt schema}: string of comma-separated types
+	\item {\tt delimiter}: column delimiter as string, by default a comma
+	\item {\tt action} $\in\{\text{insert, delete, both}\}$. If both, first column denotes the transaction\_id, the second is $\in\{0,1\}$ and is 1 if it is an insertion, following columns are the tuple.
+	\ule
+\ule
+\newpage
+\subsubsection*{2. Internal structures (maps) definitions}
+An expression is defined as follow
+\begin{verbatim}
+expr   ::= "(" expr ")" | add | mul | aggsum | mapref | XXX
+mapref ::= name ("(" type ")")? "[" rs(key, ",") "]" <-- put type in mapdef instead
+add    ::= expr "+" expr
+mul    ::= expr "*" expr
+aggsum ::= "AggSum" "(" "[" rs(key, ",") "]" "," expr ")" <-- fix as "Sum"
+exists ::= "EXISTS" "(" expr ")" <-- fix as "Ex"
+lift   ::= "(" ident "^=" expr ")" <-- fix as "="
+cmp    ::= "{" expr opt(("="|"!="|">"|"<"|">="|"<=") expr) <"}" <-- fix as "=="
+tuple  ::= ident ("(" rs(ident, ",") ")") --> mapref
+apply  ::= ("[" ("/"|ident) ":" type "]") ("(" rs(expr, ",") ")") --> fun_ident "(" args ")"
+ref    ::= ident
+date   ::= "DATE" "(" expr ")"
+const  ::= longLit | doubleLit | stringLit
+
+mapdef ::= "DECLARE" "MAP" name ("(" type ")")? "[" rs(key ":" type, ",") "]" ":=" expr ";"
+    force type presence here
+\end{verbatim}
+
+Maps can be defined in terms of calculus
+
+add extra maps and extra triggers
+
+add recursion
+
+
+\subsubsection*{3. Queries (output)}
+A query is simply a reference to a map that will be made visible outside of the system:
+\begin{verbatim}
+query ::= "DECLARE" "QUERY" externalName ":=" mapName ";"
+\end{verbatim}
+
+\subsubsection*{4. Triggers (user-defined)}
+\begin{verbatim}
+trigger ::= "ON" ("+"|"-") streamName "(" ident ("," ident)* ")" "{" (stmt)* "}"
+          | "ON" "SYSTEM" "READY" "{" (stmt)* "}"
+stmt    ::= mapref (":" "(" expr ")")? ("+="|":=") expr ";"
+
+\end{verbatim}
+
+
+
+
+
+\section*{Semantics}
+AggMin, AggMax
+
+\section*{Examples}
+
+
+
+
+
+--------------------------------------------------------------
+
+XXX: find more problems from papers (Socialite?)
+
+\subsubsection*{Problem 1: betweenness centrality}
+Let our fact table be $edge(x,y)$ we want to compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
+\[\begin{array}{rcl}
+edge[x,y] & := & \text{\it storage of input stream} \\
+path[x,y,len] & := & \exists(edge[x,y]) \times (len\hat= 1) +  \exists(edge[x,z]) \times \exists(path[z,y,l]) \times (len\hat= 1+l) \times (x\ne y)\\
+path_v[x,y,v,len] & := & \exists(path[x,v,l_1]) \times \exists(path[v,y,l_2]) \times (len\hat= l_1+l_2) \times (x\ne y) \\
+centrality[v] & := & \exists(path[x,y,m]) \times (\exists(path[x,y,s] \times (s<m)) = 0) \times \left(\dfrac{{\rm AggSum}([], path_v[x,y,v,m])}{path[x,y,m]}\right)
+\end{array}\]
+
+By adding the condition $(x\ne y )$ in the $path$ definition, we prevent cycles.
+
+\subsubsection*{Problem 2: PageRank}
+The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph, $K$ the diagonal matrix with out-degrees in diagonal. We compute \[R(t+1)=d\cdot M\cdot R(t)+\dfrac{1-d}{N}{\bf 1} \qquad \text{with {\bf 1} a column vector of 1 and }R(0)={\bf 1}\cdot \frac{1}{n}\]
+The issues with the matrix model is that all computation are done synchrnously.
+
+\textbf{Naive version:} To avoid explicit synchronization, we have 2 solutions: maintaining versions in the database or normalizing $|R|=1$ after every computation.
+\[\begin{array}{rrl}
+node[x] &:=& \text{\it input stream} \in\{0,1\} \\
+edge[x,y] &:=& \text{\it input stream, adjacency matrix} \\
+weight[x] &:=& node[x] \times (w_0\hat=weight[x]) \times \left( w_0 + (w_1\hat=nw) \times \left(
+\dfrac{|w_1 - w_0|}{w_1+w_0} > {\rm threshold}\right) \times (w_1-w_0) \right) \\ \\
+&& \text{where } nw= {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]}{{\rm AggSum}([],edge[y,z])}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[v])}\\
+\end{array}\]
+The shortcomings with this approach are the non-preservation of global weight and injection of initial coefficient. The $d$ weighting should mitigates this issue (but not sure at all !!). We also must ensure that we don't call recursively if the value did not change (encode this with threshold in map declaration or in another function?).
+
+\textbf{Clock join:} One possible idea to virtually execute the program synchronously is to have a clock stream and a timestamp attribute for all maps. When a clock tick is inserted, the next iteration can be computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues:\ul
+\item Deletion trigger of weight must be \underline{overridden} to only remove data (and avoid recursion).
+\item How to know that all the data at a tick has been fully computed ?
+\ule
+\[\begin{array}{rrl}
+tick[t] &:=& \text{\it logical clock} \in \{0,1\} \\
+node[x] &:=& \text{\it input stream} \in\{0,1\} \\
+edge[x,y] &:=& \text{\it input stream} \\
+weight[x,t] &:=& node[x] \ \times {\rm AggSum}([x], \dfrac{edge[y,x] \times weight[y,t-1]}{{\rm AggSum}([],edge(y,z))}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[z])}
+\end{array}\]
+
+--------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\section*{Roadmap}
+Goals:\ul
+\item Find use cases and examples
+\item Design the language, allow incrementalization by reusing most of existing infrastructure, and combine the power of datalog and triggers.
+\item Get a clean and simple semantics that can be used and understood easily in various domains: windowed streams, state machine, continuous queries.
+\item Define distribution strategy
+\item Data locality: optional location specification. Must be orthogonal to other concerns (tag with @all, @group, @hashed ?)
+\item Simulate timestamps / iteration numbers
+\ule
+
+Integrate features from
+Socialite\cite{socialite},
+WebDamLog\cite{webdamlog},
+Bloom lattices\cite{bloom_lattices},
+Dedalus\cite{dedalus},
+CALM\cite{bloom_calm},
+Pregel\cite{pregel},
+DatalogFS\cite{datalog_fs} in DBToaster\cite{dbtoaster09,dbtoaster11}.
+
+--------------------------------------------------------------
+
+{\color{red}
+XXX: for non-stratified programs, provide the user facilities like $<+, <-$ to do operations at the next step.
+XXX: we need to be able to define aggregation in one of the keys
+XXX: have column-oriented / nested tables to avoid keys duplication? how is this compatible with secondary indices ?}
+connect map to its delta to use them
+recursion = non-recursive with fixed \# iterations. orthogonal serie of maps
+\begin{verbatim}
+Goal:
+=> inflationary semantics, what's cleanest language ?
+look at orchestra (datalog + incrementally) [not very interesting]
+- explicit deltas, use cases, triggers, active dbs
+- what make it easier to do incrementalization easier
+\end{verbatim}
+
+--------------------------------------------------------------
+
+
+
+
+% Bibliography
+\bibliographystyle{plain} % acm
+\def\pdfurl#1{\href{#1}{\footnotesize pdf}}
+{\small \bibliography{../inc/bibliography.bib}}
+\end{document}

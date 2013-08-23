@@ -1,0 +1,50 @@
+\usepackage{amssymb,amsmath,amsthm,hyperref,verbatim,pict2e,graphicx,array,listings,appendix,color}
+\usepackage{algorithm,algorithmic,booktabs,marvosym,wrapfig,xytree,multicol,multirow,arydshln}
+\hypersetup{colorlinks,citecolor=blue,filecolor=blue,linkcolor=blue,urlcolor=blue}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+
+% margins
+\pagestyle{headings}
+\oddsidemargin 0.0cm
+\evensidemargin 0.0cm
+\topmargin 0.0cm
+\headheight 0.0cm
+\headsep 1.0cm
+\textheight 21.0cm
+\textwidth 16.0cm
+\parskip 0.1cm
+\parindent 0.0cm
+\footskip 1.0cm
+% compact titles
+\usepackage[compact]{titlesec}
+\titlespacing{\section}{0pt}{8pt}{0pt}
+\titlespacing{\subsection}{0pt}{8pt}{0pt}
+\titlespacing{\subsubsection}{0pt}{8pt}{0pt}
+% tables
+\def\tab[#1]{\begin{tabular}{@{\hspace{0cm}} #1 }}
+\def\tabe{\end{tabular}}
+% exponent
+\def\up#1{\textsuperscript{#1}}
+% compact lists
+\usepackage{enumitem}
+\setitemize{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
+\setenumerate{noitemsep,topsep=0pt,parsep=0pt,partopsep=0pt}
+\renewcommand{\labelitemi}{\textbullet}
+\renewcommand{\labelitemii}{$\circ$}
+\renewcommand{\labelitemiii}{\tiny$\blacksquare$}
+\renewcommand{\labelenumi}{\arabic{enumi}.}
+\renewcommand{\labelenumii}{\alph{enumii}.}
+\renewcommand{\labelenumiii}{\roman{enumiii}.}
+\def\ul{\begin{itemize}}
+\def\ule{\end{itemize}}
+\def\ol{\begin{enumerate}}
+\def\ole{\end{enumerate}}
+% header
+\author{\href{mailto:thierry.coppey@epfl.ch}{\color{black} Thierry Coppey}}
+\makeatletter
+\def\ps@headings{\let\@mkboth\markboth
+\def\@evenhead{\footnotesize {\bf \@title}\hfill \textit{\@author}, p.~\thepage}
+\def\@oddhead{\@evenhead}}\pagestyle{headings}
+\makeatother
