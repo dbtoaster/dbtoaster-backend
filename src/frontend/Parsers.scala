@@ -22,6 +22,14 @@ class ExtParser extends StandardTokenParsers {
       val n=name.toLowerCase; val r=reserved.filter(x=>x.toLowerCase==n)
       if (r.size>0) Keyword(r.head) else super.processIdent(name)
     }
+    import scala.util.parsing.input.CharArrayReader.EofCh
+    override def whitespace: Parser[Any] = rep(
+      whitespaceChar
+    | '-' ~ '-' ~ rep( chrExcept(EofCh, '\n') )
+    | '/' ~ '*' ~ comment
+    | '/' ~ '*' ~ failure("unclosed comment")
+    )
+    //override protected def comment: Parser[Any] = '*' ~ '/'  ^^^ ' ' | chrExcept(EofCh) ~ comment
   }
   // Add case insensitivity to keywords
   override val lexical:StdLexical = new CaseInsensitiveLexical
@@ -47,7 +55,7 @@ class ExtParser extends StandardTokenParsers {
 
   // ------------ Source declaration
   lazy val source = "CREATE" ~> ("STREAM"|"TABLE") ~ schema ~ ("FROM" ~> sourceIn) ~ split ~ adaptor <~ ";" ^^ { case t~s~i~b~a => Source(t=="STREAM",s,i,b,a) }
-  lazy val schema = ident ~ ("(" ~> repsep(ident ~ tpe, ",") <~ ")") ^^ { case n~f => Schema(n,f.map{case n~t=>(n,t)}) }
+  lazy val schema = ident ~ ("(" ~> rep1sep(ident ~ tpe, ",") <~ ")") ^^ { case n~f => Schema(n,f.map{case n~t=>(n,t)}) }
   lazy val sourceIn = "FILE" ~> stringLit ^^ { case f => SourceFile(f) }
   lazy val split = (
     "LINE" ~ "DELIMITED" ^^^ { SplitLine }
@@ -97,17 +105,17 @@ object M3Parser extends ExtParser with (String => M3.System) {
   lazy val map = ("DECLARE" ~> "MAP" ~> ident) ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe),",") <~ "]" <~ ":=") ~ expr <~ ";" ^^
                  { case n~t~ks~e => MapDef(n,t match { case Some(t)=>t case None=>null},ks.map{case n~t=>(n,t)},e) }
   lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ mapref <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
-  lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> repsep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
+  lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> rep1sep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
                         { case op~n~f~ss=> val s=Schema(n,f.map{(_,null)}); if (op=="+") TriggerAdd(s,ss) else TriggerDel(s,ss) }
                      | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { TriggerReady(_) } | failure("Bad M3 trigger"))
   lazy val stmt = mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~oi~op~e=>StmtMap(m,e,op match { case "+="=>OpAdd case ":="=>OpSet },oi) }
 
   lazy val system = {
-    val spc = ("-"~"-"~rep("-"))
-    ((spc ~ "SOURCES" ~ spc) ~> rep(source)) ~
-    ((opt(spc) ~ "MAPS" ~ spc) ~> rep(map)) ~
-    ((opt(spc) ~ "QUERIES" ~ spc) ~> rep(query)) ~
-    ((spc ~ "TRIGGERS" ~ spc) ~> rep(trigger)) ^^ { case ss~ms~qs~ts => System(ss,ms,qs,ts) }
+    //val spc = ("-"~"-"~rep("-"))
+    ( /*(spc ~ "SOURCES" ~ spc) ~>*/ rep(source)) ~
+    ( /*(opt(spc) ~ "MAPS" ~ spc) ~>*/ rep(map)) ~
+    ( /*(opt(spc) ~ "QUERIES" ~ spc) ~>*/ rep(query)) ~
+    ( /*(spc ~ "TRIGGERS" ~ spc) ~>*/ rep(trigger)) ^^ { case ss~ms~qs~ts => System(ss,ms,qs,ts) }
   }
 
   def load(path:String) = apply(scala.io.Source.fromFile(path).mkString)
@@ -185,7 +193,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
 
   // ------------ System definition
   lazy val system = rep(source) ~ rep(query <~ opt(";")) ^^ { case ss ~ qs => System(ss,qs) }
-  def apply(str:String) = phrase(system)(new lexical.Scanner(str.replaceAll("--.*\n?","")  )) match {
+  def apply(str:String) = phrase(system)(new lexical.Scanner(str)) match {
     case Success(x, _) => x
     case e => sys.error(e.toString)
   }
