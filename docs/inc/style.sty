@@ -1,5 +1,5 @@
 \usepackage{amssymb,amsmath,amsthm,hyperref,verbatim,pict2e,graphicx,array,listings,appendix,color}
-\usepackage{algorithm,algorithmic,booktabs,marvosym,wrapfig,xytree,multicol,multirow,arydshln}
+%\usepackage{algorithm,algorithmic,booktabs,marvosym,wrapfig,xytree,multicol,multirow,arydshln}
 \hypersetup{colorlinks,citecolor=blue,filecolor=blue,linkcolor=blue,urlcolor=blue}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -48,3 +48,26 @@
 \def\@evenhead{\footnotesize {\bf \@title}\hfill \textit{\@author}, p.~\thepage}
 \def\@oddhead{\@evenhead}}\pagestyle{headings}
 \makeatother
+
+% languages
+\definecolor{dkpink}{RGB}{200,0,100}
+\definecolor{gray}{RGB}{128,128,128}
+\lstset{
+  xleftmargin=20pt,numberstyle=\tiny,stepnumber=1,numbersep=5pt,
+  showstringspaces=true, % underline spaces within strings
+  tabsize=2,
+  captionpos=t, % caption-position
+  breaklines=true, % automatic line breaking
+  breakatwhitespace=true, % sets if automatic breaks should only happen at whitespace
+  title=\lstname, % show the filename of files included with \lstinputlisting; also try caption instead of title
+  basicstyle=\small\tt,keywordstyle=\color{blue},commentstyle=\color{gray},stringstyle=\color{dkpink}
+}
+% Scala
+\lstdefinelanguage{Scala}{
+	morekeywords={abstract,case,catch,class,def,do,else,extends,false,final,finally,for,if,implicit,import,%
+	match,mixin,new,null,object,override,package,	private,protected,requires,return,sealed,super,this,%
+	throw,trait,true,try,type,val,var,while,with,yield},
+	otherkeywords={=>,<-,<\%,<:,>:,\#,@},sensitive=true,
+	morecomment=[l]{//},	morecomment=[n]{/*}{*/},
+	morestring=[b]",morestring=[b]',morestring=[b]"""
+}

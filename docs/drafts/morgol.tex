@@ -2,18 +2,22 @@
 \usepackage{../inc/style}
 \title{Morgol specifications}
 
+\def\discuss#1{\begingroup\par\leftskip2em {\footnotesize {\bf Discussion:} #1} \par\endgroup}
+\def\say#1#2{\begingroup\par\leftskip4em {\bf #1:} \it #2\par\endgroup}
+
 \begin{document}
 \section*{Syntax}
-Parsing conventions: we use C-style comments: {\tt // ... line end} or {\tt /* comment */} (whereas {\tt ----} is used in M3).
-Built-in parsers: {\tt ident} (identifier, named by semantics hereafter), {\tt longLit}, {\tt doubleLit} and {\tt stringLit} representing a quoted string. {\tt type} parses a type declaration: {\tt long}, {\tt double}, {\tt string}, {\tt date} but we might support conversion from other type during the parsing phase. For conciseness, we use the following syntactic sugar: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$.
-
-A Morgol reactive system declaration file decomposes in 4 sections, similarly as M3 files and should appear in the same order.
+Built-in parsers: {\tt ident} (identifier string), {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string), type declaration: ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ additional types might be converted during the parsing phase. For conciseness, we use the following syntactic sugar: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$. We use comments: {\tt //...\textbackslash n} and {\tt /*...*/}.
+\discuss{Using // and /* */ only brings coherency with other languages but breaks compatibility with {\tt----} SQL-like comments. Similarly, should our language be case-sensitive or case-insensitive? To which extend do we keep legacy compatibility? Similarly should we remove useless keywords \textit{create} and \textit{declare}?
+	\say{Thierry}{Be disruptive for simplicity, coherence and ease of use. As language is declarative, we can ignore keywords case but preserve it for variables. Remove verbosity as long as it is easy to understand.}
+	\say{Milos}{We want to keep compatibility with SQL declarations.}
+}
+The system declaration file format is defined as follows:
 \begin{verbatim}
-morgol_file ::= source* mapdef* query* trigger*
+system ::= source* mapdef* query* trigger*
 \end{verbatim}
 
-\subsubsection*{1. Source declarations}
-Source can be either input streams (content varies while the program is running and generate events) or fixed tables (constant relations). 
+\subsubsection*{Sources}
 \begin{verbatim}
 source ::= "CREATE" ("STREAM" | "TABLE") schema "FROM" input split adaptor ";"
 schema ::= name "(" rs1(field type, ",") ")"
@@ -24,40 +28,73 @@ split  ::= "LINE" "DELIMITED"
          | "PREFIX" headerBytes
 adaptor ::= name "(" rs(option ":=" value, ",") ")"
 \end{verbatim}
-The implemented adaptors and their respective options are:\ul
+Source is either input stream (content varies while the program is running and generate events) or fixed tables (constant relations). The implemented adaptors and their respective options are:\ul
 \item {\tt ORDERBOOK}: finance events in CSV, with the columns: {\tt transaction\_id}:int, {\tt broker\_id}:int, {\tt evt\_type}:string$\in\{B,S,E,D\}$ (place bid, place ask, match, cancelled), {\tt volume}:int, {\tt price}:double.\ul
 	\item {\tt brokers}: number of brokers (integer)
-	\item {\tt bids}, {\tt asks}: stream names as string
+	\item {\tt bids}, {\tt asks}: stream names as stringLit
 	\item {\tt deterministic}: boolean defining whether broker id is assigned randomly
 	\ule
 \item {\tt CSV}\ul
 	\item {\tt name}: string, schema name
-	\item {\tt schema}: string of comma-separated types
+	\item {\tt schema}: stringLit of comma-separated types
 	\item {\tt delimiter}: column delimiter as string, by default a comma
 	\item {\tt action} $\in\{\text{insert, delete, both}\}$. If both, first column denotes the transaction\_id, the second is $\in\{0,1\}$ and is 1 if it is an insertion, following columns are the tuple.
 	\ule
 \ule
-\newpage
-\subsubsection*{2. Internal structures (maps) definitions}
-An expression is defined as follow
+
+\subsubsection*{Expressions}
 \begin{verbatim}
-expr   ::= "(" expr ")" | add | mul | aggsum | mapref | XXX
-mapref ::= name ("(" type ")")? "[" rs(key, ",") "]" <-- put type in mapdef instead
+expr   ::= "(" expr ")" | ...
+mapref ::= name "[" rs(key, ",") "]"
 add    ::= expr "+" expr
 mul    ::= expr "*" expr
-aggsum ::= "AggSum" "(" "[" rs(key, ",") "]" "," expr ")" <-- fix as "Sum"
-exists ::= "EXISTS" "(" expr ")" <-- fix as "Ex"
-lift   ::= "(" ident "^=" expr ")" <-- fix as "="
-cmp    ::= "{" expr opt(("="|"!="|">"|"<"|">="|"<=") expr) <"}" <-- fix as "=="
-tuple  ::= ident ("(" rs(ident, ",") ")") --> mapref
-apply  ::= ("[" ("/"|ident) ":" type "]") ("(" rs(expr, ",") ")") --> fun_ident "(" args ")"
+aggsum ::= "Sum" "(" ("[" rs(key, ",") "]" ",")? expr ")"
+exists ::= "Ex" "(" expr ")"
+lift   ::= "(" ident "=" expr ")" // discuss := or =
+cmp    ::= "{" expr opt(("=="|"!="|">"|"<"|">="|"<=") expr) <"}"
+apply  ::= ident "(" rs(expr, ",") ")" // type inferred from library
 ref    ::= ident
-date   ::= "DATE" "(" expr ")"
 const  ::= longLit | doubleLit | stringLit
-
-mapdef ::= "DECLARE" "MAP" name ("(" type ")")? "[" rs(key ":" type, ",") "]" ":=" expr ";"
-    force type presence here
 \end{verbatim}
+% aggmin ::= "Min" "(" ("[" rs(key, ",") "]" ",")? expr ")"
+% aggmax ::= "Max" "(" ("[" rs(key, ",") "]" ",")? expr ")"
+
+Changes are mostly minor syntax changes: we replace table access syntax by map references because they are stored uniformly and there is no reason making a syntactical difference. Exists gets reduced in 'Ex', we replace the lift by '=' and comparison by '=='. Function calls could be simplified if we have reserved keywords for the AggSum and Exists operations, and if we can refer to a library to type check function return and argument types.
+\discuss{Do we want to preserve notation as compatible as possible with SQL or not ?}
+\discuss{Do we introduce explicit AggMin and AggMax operations or are these handled by maps?}
+
+\subsubsection*{Maps (internal structures)}
+\begin{verbatim}
+mapdef ::= "DECLARE" "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? 
+                                 (":" type)? ":=" expr ";" mapopt*
+key    ::= ident ":" type
+aggkey ::= ("min"|"max"|"sum") "(" ident ")" ":" type
+mapopt ::= "SET " mapName "." rs(ident,".") ":=" value ";"
+\end{verbatim}
+
+The options that can be declared for a map are the location and the value threshold. The first one correspond to one or multiple tags (logical group name), where nodes joining the cluster will bear one or multiple tag. The threshold is the relative difference in keys/values for a tuple to be considered for updating. This only applies to double types. \discuss{Not clear to which field the threshold relates. Do we need other options ?}
+
+{\color{red}
+XXX: undecided what multiplicity if two aggregation for my case => use filter keyword ?\\
+XXX: milos' issue: if we have only multiplicity 1 we can put aggr in multiplicity\\
+XXX: mark for inequality comparison internally ? (maintain in tree)
+}
+
+The map type can be omitted if the map's value type is {\tt long}. The first set of keys are treated as regular map keys. The second set of keys are aggregations. They behave similarly as regular map keys for writing/updating but return the aggregation when they are read.
+\discuss{It is not very clear whether aggregation keys should be separated from other keys as they must be provided for addition and deletion, but are read differently.
+	\say{Thierry}{Keep them together as we need these values (before aggregation) for updates such that we can efficiently maintain aggregate value in the underlying data structure.}
+	\say{Milos}{Keep them separate as they have a different semantics.}
+}
+For recursion, we consider that a tuple has changed if it is addition creates a change to the map being read. This can be either: an insertion/deletion, a modification in the value (multiplicity), or a change of the aggregated values.
+\discuss{We need to detect these "modifications" efficiently and compute its delta over the map to create a reaction to it (call other triggers with updates values). It is not clear how a change in an aggregate value will be treated. Should it be a "deletion/insertion" (not desirable because if we have deletion, we have endless loop in shortest path) or a "value update"?
+	\say{Thierry}{I think there is many issues in the nitty gritty details of the implementation that we didn't covered so far.}
+We still do not achieve the effect that is claimed in SociaLite: having one single map to compute the shortest path \textit{and} computing its multiplicity. What should the return value of a map containing aggregations?
+	\say{Thierry}{The returned value should be the multiplicity of the min/max/sum so that we can achieve average and counting easily. We can easily modify it by wrapping into an exists. The shortest path iteration should be done with the number of added tuples.}
+	\say{Milos}{Returned value should be 1 when there is aggregted values (1 aggregate tuple). The number of shortest path is computed using two different maps, one for the minimum length, one for the count.}
+}
+
+
+A stream might have an associated map if it is explicitly referred to. A table must have an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream.
 
 Maps can be defined in terms of calculus
 
@@ -77,17 +114,35 @@ query ::= "DECLARE" "QUERY" externalName ":=" mapName ";"
 trigger ::= "ON" ("+"|"-") streamName "(" ident ("," ident)* ")" "{" (stmt)* "}"
           | "ON" "SYSTEM" "READY" "{" (stmt)* "}"
 stmt    ::= mapref (":" "(" expr ")")? ("+="|":=") expr ";"
-
 \end{verbatim}
 
+rename system ready by a single word ?
 
 
 
 
 \section*{Semantics}
+XXX: write down M3 semantics.
+Semantics is very similar to M3 language, we only describe differences here.
 AggMin, AggMax
 
+AggMin, AggMax, retain only one single value per key. This correspond either to zero if the 
+
 \section*{Examples}
+\subsubsection*{Problem 1: betweenness centrality}
+Let our fact table be $edge(x,y)$ we want to compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
+\def\Ex{{\rm Ex}}
+\[\begin{array}{rcl}
+edge[x,y] & := & \text{\it storage of input stream} \\
+
+spath[] \\
+
+path[x,y,len] & := & \Ex(edge[x,y]) \times (len\hat= 1) +  Ex(edge[x,z]) \times Ex(path[z,y,l]) \times (len\hat= 1+l) \times (x\ne y)\\
+path_v[x,y,v,len] & := & Ex(path[x,v,l_1]) \times Ex(path[v,y,l_2]) \times (len\hat= l_1+l_2) \times (x\ne y) \\
+centrality[v] & := & Ex(path[x,y,m]) \times (Ex(path[x,y,s] \times (s<m)) = 0) \times \left(\dfrac{{\rm Sum}(path_v[x,y,v,m])}{path[x,y,m]}\right)
+\end{array}\]
+
+
 
 
 
@@ -97,20 +152,12 @@ AggMin, AggMax
 
 XXX: find more problems from papers (Socialite?)
 
-\subsubsection*{Problem 1: betweenness centrality}
-Let our fact table be $edge(x,y)$ we want to compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
-\[\begin{array}{rcl}
-edge[x,y] & := & \text{\it storage of input stream} \\
-path[x,y,len] & := & \exists(edge[x,y]) \times (len\hat= 1) +  \exists(edge[x,z]) \times \exists(path[z,y,l]) \times (len\hat= 1+l) \times (x\ne y)\\
-path_v[x,y,v,len] & := & \exists(path[x,v,l_1]) \times \exists(path[v,y,l_2]) \times (len\hat= l_1+l_2) \times (x\ne y) \\
-centrality[v] & := & \exists(path[x,y,m]) \times (\exists(path[x,y,s] \times (s<m)) = 0) \times \left(\dfrac{{\rm AggSum}([], path_v[x,y,v,m])}{path[x,y,m]}\right)
-\end{array}\]
 
 By adding the condition $(x\ne y )$ in the $path$ definition, we prevent cycles.
 
 \subsubsection*{Problem 2: PageRank}
 The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph, $K$ the diagonal matrix with out-degrees in diagonal. We compute \[R(t+1)=d\cdot M\cdot R(t)+\dfrac{1-d}{N}{\bf 1} \qquad \text{with {\bf 1} a column vector of 1 and }R(0)={\bf 1}\cdot \frac{1}{n}\]
-The issues with the matrix model is that all computation are done synchrnously.
+The issues with the matrix model is that all computation are done synchronously.
 
 \textbf{Naive version:} To avoid explicit synchronization, we have 2 solutions: maintaining versions in the database or normalizing $|R|=1$ after every computation.
 \[\begin{array}{rrl}
