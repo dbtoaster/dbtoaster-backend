@@ -6,3 +6,4 @@ test/gen
 bin
 .idea
 *.iml
+*.pdf

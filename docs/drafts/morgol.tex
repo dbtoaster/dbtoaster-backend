@@ -6,13 +6,10 @@
 \def\say#1#2{\begingroup\par\leftskip4em {\bf #1:} \it #2\par\endgroup}
 
 \begin{document}
-\section*{Syntax}
-Built-in parsers: {\tt ident} (identifier string), {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string), type declaration: ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ additional types might be converted during the parsing phase. For conciseness, we use the following syntactic sugar: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$. We use comments: {\tt //...\textbackslash n} and {\tt /*...*/}.
-\discuss{Using // and /* */ only brings coherency with other languages but breaks compatibility with {\tt----} SQL-like comments. Similarly, should our language be case-sensitive or case-insensitive? To which extend do we keep legacy compatibility? Similarly should we remove useless keywords \textit{create} and \textit{declare}?
-	\say{Thierry}{Be disruptive for simplicity, coherence and ease of use. As language is declarative, we can ignore keywords case but preserve it for variables. Remove verbosity as long as it is easy to understand.}
-	\say{Milos}{We want to keep compatibility with SQL declarations.}
-}
-The system declaration file format is defined as follows:
+\section*{Language syntax and associated semantics}
+\discuss{The goal of the language is to be syntactically close from SQL (whereas Scala DSL will be more concise), in particular: case insensitivity, comments style and keywords verbosity.}
+Let {\tt ident} an identifier string, {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string) litterals and ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ a type declaration. Additional types are converted into these during the parsing. For conciseness, we denote: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$. Comments are delimited by: {\tt ----...\textbackslash n} , {\tt //...\textbackslash n} or {\tt /*...*/}.\\
+The system declaration file format is:
 \begin{verbatim}
 system ::= source* mapdef* query* trigger*
 \end{verbatim}
@@ -22,8 +19,7 @@ system ::= source* mapdef* query* trigger*
 source ::= "CREATE" ("STREAM" | "TABLE") schema "FROM" input split adaptor ";"
 schema ::= name "(" rs1(field type, ",") ")"
 input  ::= "FILE" quotedPath
-split  ::= "LINE" "DELIMITED"
-         | quotedSeparator "DELIMITED"
+split  ::= ("LINE" | quotedSeparator) "DELIMITED"
          | "FIXEDWIDTH" sizeInBytes
          | "PREFIX" headerBytes
 adaptor ::= name "(" rs(option ":=" value, ",") ")"
@@ -48,43 +44,79 @@ expr   ::= "(" expr ")" | ...
 mapref ::= name "[" rs(key, ",") "]"
 add    ::= expr "+" expr
 mul    ::= expr "*" expr
-aggsum ::= "Sum" "(" ("[" rs(key, ",") "]" ",")? expr ")"
-exists ::= "Ex" "(" expr ")"
-lift   ::= "(" ident "=" expr ")" // discuss := or =
-cmp    ::= "{" expr opt(("=="|"!="|">"|"<"|">="|"<=") expr) <"}"
+aggsum ::= "SUM" "(" ("[" rs(key, ",") "]" ",")? expr ")"
+exists ::= "EXISTS" "(" expr ")" | "{" expr "}"
+lift   ::= "(" ident "^=" expr ")"
+cmp    ::= expr ("="|"=="|"!="|"<>"|">"|"<"|">="|"<=") expr
 apply  ::= ident "(" rs(expr, ",") ")" // type inferred from library
 ref    ::= ident
 const  ::= longLit | doubleLit | stringLit
 \end{verbatim}
+Minor changes simplify the M3 language, otherwise semantics remains identical.
+Table access are replaced by map references because they share the same semantics. 
+We have aliases for exists (conciseness) and two comparison operators (compatibility).
+AggSum with no key is equivalent to empty key.
+We need to lookup built-in functions return type (and possibly accepted arguments).
+\discuss{For function lookup, how to avoid declaration duplication (Bytecode inspection)?}
+\discuss{Simplify grammar by also using {\tt =} for lift? This introduce ambiguity between lift and cmp as they are differentiated only by the context (depending if the lhs ref is bound), but after all, comparison of two bound variable is semantically equivalent to lift one as the other.}
+
+\discuss{Do we introduce explicit AggMin and AggMax operations or are these handled by maps?}
 % aggmin ::= "Min" "(" ("[" rs(key, ",") "]" ",")? expr ")"
 % aggmax ::= "Max" "(" ("[" rs(key, ",") "]" ",")? expr ")"
 
-Changes are mostly minor syntax changes: we replace table access syntax by map references because they are stored uniformly and there is no reason making a syntactical difference. Exists gets reduced in 'Ex', we replace the lift by '=' and comparison by '=='. Function calls could be simplified if we have reserved keywords for the AggSum and Exists operations, and if we can refer to a library to type check function return and argument types.
-\discuss{Do we want to preserve notation as compatible as possible with SQL or not ?}
-\discuss{Do we introduce explicit AggMin and AggMax operations or are these handled by maps?}
-
 \subsubsection*{Maps (internal structures)}
+A table has an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream. The default type of a map is {\tt long} if not specified. A map associated with an input stream is implicitly created if the stream is accessed by a mapref.
 \begin{verbatim}
 mapdef ::= "DECLARE" "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? 
-                                 (":" type)? ":=" expr ";" mapopt*
+                                 (":" type)? (":=" expr)? mapopt? ";" 
 key    ::= ident ":" type
-aggkey ::= ("min"|"max"|"sum") "(" ident ")" ":" type
-mapopt ::= "SET " mapName "." rs(ident,".") ":=" value ";"
+aggkey ::= "filter"? ("min"|"max"|"sum") "(" ident ")" ":" type
+mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
 \end{verbatim}
+If the expression is not defined, the map is user-managed and the programmer needs to write his own triggers to maintain it.
+\discuss{Do we really need user-defined triggers? Does it give more flexibility/power than expression?}
 
 The options that can be declared for a map are the location and the value threshold. The first one correspond to one or multiple tags (logical group name), where nodes joining the cluster will bear one or multiple tag. The threshold is the relative difference in keys/values for a tuple to be considered for updating. This only applies to double types. \discuss{Not clear to which field the threshold relates. Do we need other options ?}
 
+{\bf Semantics}
+\discuss{most suble topic as we want to have a simple syntax for 3 concerns:\\
+-- Number of shortest paths between two vertices (similar as \cite{socialite} running example)\\
+-- Simple grouping with aggregations as in TPC-H query 1\\
+-- Range conditions as in AXFinder financial query\\
+and blend this nicely with incremental domain maintenance in the implementation.}
+
+First key part is the grouping columns, second part is aggregation values for the group, multiplicity is the number of tuples in the group. Aggregation values semantics is <<element>> for write and <<aggregate>> for read. Finally, if a <<filter>> keyword precedes the aggregation key, tuples that do not have the same aggregation value will be discarded.
+
+The equivalent SQL query of a filtered aggregation key $k$ is a nested query:
+\begin{lstlisting}[language=sql]
+SELECT keys AS keys_out, aggrs FROM map
+WHERE k = (SELECT agg_k(k) FROM map WHERE keys=keys_out)
+GROUP BY keys
+\end{lstlisting}
+\discuss{Do we maintain tuples that have been filtered out ? If yes, how does it combine with incremental domain maintenance? How do we distinguish tuples that we need to re-compute? How to maintain correct multiplicity?}
+
+
+
+
+
+
+
+
+{\center --------------------------------------- legacy discussion ---------------------------------------}
+\begin{verbatim}
+mapdef ::= "DECLARE" "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? 
+                                 (":" type)? ":=" expr mapopt? ";" 
+key    ::= ident ":" type
+aggkey ::= ("min"|"max"|"sum") "(" ident ")" ":" type
+mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
+\end{verbatim}
+
 {\color{red}
-XXX: undecided what multiplicity if two aggregation for my case => use filter keyword ?\\
 XXX: milos' issue: if we have only multiplicity 1 we can put aggr in multiplicity\\
 XXX: mark for inequality comparison internally ? (maintain in tree)
 }
 
-The map type can be omitted if the map's value type is {\tt long}. The first set of keys are treated as regular map keys. The second set of keys are aggregations. They behave similarly as regular map keys for writing/updating but return the aggregation when they are read.
-\discuss{It is not very clear whether aggregation keys should be separated from other keys as they must be provided for addition and deletion, but are read differently.
-	\say{Thierry}{Keep them together as we need these values (before aggregation) for updates such that we can efficiently maintain aggregate value in the underlying data structure.}
-	\say{Milos}{Keep them separate as they have a different semantics.}
-}
+\discuss{It is not very clear whether aggregation keys should be separated from other keys as they must be provided for addition and deletion, but are read differently.}
 For recursion, we consider that a tuple has changed if it is addition creates a change to the map being read. This can be either: an insertion/deletion, a modification in the value (multiplicity), or a change of the aggregated values.
 \discuss{We need to detect these "modifications" efficiently and compute its delta over the map to create a reaction to it (call other triggers with updates values). It is not clear how a change in an aggregate value will be treated. Should it be a "deletion/insertion" (not desirable because if we have deletion, we have endless loop in shortest path) or a "value update"?
 	\say{Thierry}{I think there is many issues in the nitty gritty details of the implementation that we didn't covered so far.}
@@ -92,63 +124,47 @@ We still do not achieve the effect that is claimed in SociaLite: having one sing
 	\say{Thierry}{The returned value should be the multiplicity of the min/max/sum so that we can achieve average and counting easily. We can easily modify it by wrapping into an exists. The shortest path iteration should be done with the number of added tuples.}
 	\say{Milos}{Returned value should be 1 when there is aggregted values (1 aggregate tuple). The number of shortest path is computed using two different maps, one for the minimum length, one for the count.}
 }
+How do these concerns blend with recursion and incremental maintenance?
 
+{\center --------------------------------------- legacy discussion end ---------------------------------------}
 
-A stream might have an associated map if it is explicitly referred to. A table must have an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream.
-
-Maps can be defined in terms of calculus
-
-add extra maps and extra triggers
-
-add recursion
-
-
-\subsubsection*{3. Queries (output)}
-A query is simply a reference to a map that will be made visible outside of the system:
+\subsubsection*{Queries (output)}
 \begin{verbatim}
 query ::= "DECLARE" "QUERY" externalName ":=" mapName ";"
 \end{verbatim}
+A query is simply a reference to a map that will be made visible outside of the system. The semantics is otherwise equivalent to that of M3.
+\discuss{Do we want to do an additional projection or filtering at this point ?}
 
-\subsubsection*{4. Triggers (user-defined)}
+\subsubsection*{Triggers (user-defined)}
 \begin{verbatim}
 trigger ::= "ON" ("+"|"-") streamName "(" ident ("," ident)* ")" "{" (stmt)* "}"
           | "ON" "SYSTEM" "READY" "{" (stmt)* "}"
 stmt    ::= mapref (":" "(" expr ")")? ("+="|":=") expr ";"
+          | "CALL" ("+"|"-") streamName "(" rs(expr, ",") ")"
 \end{verbatim}
-
-rename system ready by a single word ?
-
-
-
-
-\section*{Semantics}
-XXX: write down M3 semantics.
-Semantics is very similar to M3 language, we only describe differences here.
-AggMin, AggMax
-
-AggMin, AggMax, retain only one single value per key. This correspond either to zero if the 
+The triggers being defined by the user are called before any other trigger. It is not possible to override an automatically generated trigger.
+\discuss{Do we want to have an extra syntax for user-defined triggers?}
+\discuss{When do we call user-defined triggers (before all automatic triggers)?}
 
 \section*{Examples}
 \subsubsection*{Problem 1: betweenness centrality}
-Let our fact table be $edge(x,y)$ we want to compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
-\def\Ex{{\rm Ex}}
+Let our stream be $edge(x,y,l)$ (with implicit map). To compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
 \[\begin{array}{rcl}
-edge[x,y] & := & \text{\it storage of input stream} \\
-
-spath[] \\
-
-path[x,y,len] & := & \Ex(edge[x,y]) \times (len\hat= 1) +  Ex(edge[x,z]) \times Ex(path[z,y,l]) \times (len\hat= 1+l) \times (x\ne y)\\
-path_v[x,y,v,len] & := & Ex(path[x,v,l_1]) \times Ex(path[v,y,l_2]) \times (len\hat= l_1+l_2) \times (x\ne y) \\
-centrality[v] & := & Ex(path[x,y,m]) \times (Ex(path[x,y,s] \times (s<m)) = 0) \times \left(\dfrac{{\rm Sum}(path_v[x,y,v,m])}{path[x,y,m]}\right)
+edge[x,y,l] & := & \text{\it implicitly, corresponding to input stream} \\
+spath[x,y][{\rm filter} \min(l)] & := & edge[x,y,l] +  edge[x,z,l_1] \times spath[z,y,l_2] \times (l\hat= l_1+l_2)\\
+spath_v[x,y,v,l] & := & spath[x,v,l_1] \times spath[v,y,l_2] \times (l\hat= l_1+l_2)\\
+centrality[v] & := & \exists(spath[x,y,l]) \times (spath_v[x,y,v,l] / spath[x,y,l])
 \end{array}\]
 
-
-
-
-
-
-
---------------------------------------------------------------
+{\center --------------------------------------- legacy problems ---------------------------------------}
+\subsubsection*{Problem 1: betweenness centrality}
+Let our fact table be $edge(x,y)$ we want to compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
+\[\begin{array}{rcl}
+edge[x,y] & := & \text{\it implicitly defined and related to corresponding input stream} \\
+path[x,y,len] & := & \exists(edge[x,y]) \times (len\hat= 1) +  \exists(edge[x,z]) \times \exists(path[z,y,l]) \times (len\hat= 1+l) \times (x\ne y)\\
+path_v[x,y,v,len] & := & \exists(path[x,v,l_1]) \times \exists(path[v,y,l_2]) \times (len\hat= l_1+l_2) \times (x\ne y) \\
+centrality[v] & := & \exists(path[x,y,m]) \times (\exists(path[x,y,s] \times (s<m)) = 0) \times \left(\dfrac{{\rm Sum}(path_v[x,y,v,m])}{path[x,y,m]}\right)
+\end{array}\]
 
 XXX: find more problems from papers (Socialite?)
 
@@ -180,21 +196,7 @@ edge[x,y] &:=& \text{\it input stream} \\
 weight[x,t] &:=& node[x] \ \times {\rm AggSum}([x], \dfrac{edge[y,x] \times weight[y,t-1]}{{\rm AggSum}([],edge(y,z))}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[z])}
 \end{array}\]
 
---------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+{\center --------------------------------------- legacy problems end ---------------------------------------}
 
 
 \section*{Roadmap}
