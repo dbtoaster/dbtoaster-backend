@@ -8,9 +8,9 @@
 \begin{document}
 % --------------------------------------------------------------------------------------------------------------
 \section*{Language syntax and associated semantics}
-\discuss{The goal of the language is to be syntactically close from SQL (whereas Scala DSL will be more concise), in particular: case insensitivity, comments style and keywords verbosity.}
+\discuss{The goal of this external DSL is to be syntactically close from SQL (whereas Scala internal DSL will be more concise), in particular: case insensitivity, comments style and keywords verbosity.}
 Let {\tt ident} an identifier string, {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string) litterals and ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ a type declaration. Additional types are converted into these during the parsing. For conciseness, we denote: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$. Comments are delimited by: {\tt ----...\textbackslash n} , {\tt //...\textbackslash n} or {\tt /*...*/}.\\
-The system declaration file format is:
+The system declaration file format is defined as:
 \begin{verbatim}
 system ::= source* mapdef* query* trigger*
 \end{verbatim}
@@ -209,6 +209,41 @@ The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a prec
 \discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
 
 
+\begin{verbatim}
+a couple of suggestions/questions that i have come up with so far. let me know if you are interested to discuss them:
+- User defined triggers might help with input from the outside (from non-files -> user interaction), alternative: 
+user defined streams -> define an interface for streams
+==> flexibility in the streams is important
+==> define a class as input/output stream (output necessary ?)
+
+- What about different map types/indexes? should the user be able to define them?
+==> map as hash map, map as tree, how to give a hint to the compiler ?
+==> secondary indices as trees (index on a key part)
+==> inequality join?
+==> make an option and remove once we can automate generation
+
+- Instead of declaring queries seperately, we could just declare maps to be PUBLIC (DEFINE PUBLIC MAP)
+==> good ! Let's have it !!
+
+- I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
+==> not a problem. reduce tables to only what necessary ?
+
+- What does it mean for a map to have a location?
+==> variable number of nodes, have a specific hashing
+
+- Why do we need to specify a type for an aggregate explicitely?
+==> Should be able to define it ==> make it optional
+
+Have varying number of nodes leaving/joining the system ?
+==> How to change the locality of maps ?
+==> Redundancy with multiple hashes ==> options of redundancy
+
+==> clock for timeout
+
+-> MaxFlow Min Cut
+-> Hubs and authorities
+-> what's the timer usage <- clock as custom stream
+\end{verbatim}
 
 {\center --------------------------------------- legacy discussion ---------------------------------------}
 \begin{verbatim}
