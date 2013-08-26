@@ -2,17 +2,24 @@
 \usepackage{../inc/style}
 \title{Morgol specifications}
 
-\def\discuss#1{\par\hspace{2em}\begin{minipage}{15cm}\footnotesize {\bf\color{red} Discussion:} #1\end{minipage}\par}
+\newlength{\dlen}
+\def\discuss#1{\par\hspace{2em}
+\setlength{\dlen}{\textwidth}
+\addtolength{\dlen}{-2em}
+%\addtolength{\dlen}{-\leftmargin}
+\begin{minipage}{\dlen}\footnotesize {\bf\color{red} Discussion:} #1\end{minipage}\par}
 \def\say#1#2{\begingroup\par\leftskip1em {\bf #1:} \it #2\par\endgroup}
 
 \begin{document}
 % --------------------------------------------------------------------------------------------------------------
 \section*{Language syntax and associated semantics}
 \discuss{The goal of this external DSL is to be syntactically close from SQL (whereas Scala internal DSL will be more concise), in particular: case insensitivity, comments style and keywords verbosity.}
-Let {\tt ident} an identifier string, {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string) litterals and ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ a type declaration. Additional types are converted into these during the parsing. For conciseness, we denote: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$. Comments are delimited by: {\tt ----...\textbackslash n} , {\tt //...\textbackslash n} or {\tt /*...*/}.\\
+Let {\tt ident} an identifier string, {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string) literals and ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ a type declaration. Additional types are converted into these during the parsing.
+\discuss{What about user-defined types? As we want to target Scala and C/C++, we should limit ourselves to case classes/C struct, but these could easily be unfolded into multiple values maintained in several columns. Not clear if there is any benefit to allow arbitrary types.}
+For conciseness, we denote: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$. Comments are delimited by: {\tt ----...\textbackslash n} , {\tt //...\textbackslash n} or {\tt /*...*/}.\\
 The system declaration file format is defined as:
 \begin{verbatim}
-system ::= source* mapdef* query* trigger*
+system ::= source* mapdef* trigger*
 \end{verbatim}
 
 % --------------------------------------------------------------------------------------------------------------
@@ -26,6 +33,12 @@ split  ::= ("LINE" | quotedSeparator) "DELIMITED"
          | "PREFIX" headerBytes
 adaptor ::= name "(" rs(option ":=" value, ",") ")"
 \end{verbatim}
+
+\discuss{Andres suggests that input should only be defined by an inteface that the programmer implements (we provide some built-ins: file, network, ...) to support arbitrary sources. Flexibility is important to accomodate with existing streams. One specialized stream would be a clock (see clock join in \hyperref[pb:pagerank]{PageRank}).
+\say{Thierry}{While I agree with Andres, is it most beneficial to have this also in the external DSL or only available in Scala internal DSL?}
+}
+\discuss{Do we want to have the converse (output streams)? Are they handled in user-defined triggers, with an interface or through user-defined (Scala) functions (leveraging the apply expression)?}
+
 Source is either input stream (content varies while the program is running and generate events) or fixed tables (constant relations). The implemented adaptors and their respective options are:\ul
 \item {\tt ORDERBOOK}: finance events in CSV, with the columns: {\tt transaction\_id}:int, {\tt broker\_id}:int, {\tt evt\_type}:string$\in\{B,S,E,D\}$ (place bid, place ask, match, cancelled), {\tt volume}:int, {\tt price}:double.\ul
 	\item {\tt brokers}: number of brokers (integer)
@@ -68,19 +81,23 @@ We need to lookup built-in functions return type (and possibly accepted argument
 % aggmax ::= "Max" "(" ("[" rs(key, ",") "]" ",")? expr ")"
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Maps (internal structures)}
-A table has an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream. The default type of a map is {\tt long} if not specified. A map associated with an input stream is implicitly created if the stream is accessed by a mapref (lookup/foreach).
+\subsubsection*{Maps (internal structures and queries)}
+A table has an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream. The default type of a map is {\tt long} if not specified. A map associated with an input stream is implicitly created if the stream is accessed by a mapref (lookup/foreach). The output keywords has exactly the same semantics as declaring the map being result of a query in M3.
+% In Andres original proposal it was PUBLIC instead of OUTPUT. Good idea :)
+
 \begin{verbatim}
-mapdef ::= "DECLARE" "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? 
+mapdef ::= "DECLARE" "OUTPUT"? "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? 
                                  (":" type)? (":=" expr)? mapopt? ";" 
 key    ::= ident ":" type
 aggkey ::= "filter"? ("min"|"max"|"sum") "(" ident ")" ":" type
 mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
 \end{verbatim}
+\discuss{Are all type annotations necessary?
+	\say{Andres}{Aggregation keys (and possibly keys) types should be inferred}
+	\say{Thierry}{Agree, but not sure we can always derive the correct type because we might have ordering issues and it gets harder with recursion. I would prefer forcing them now and make them optional later. Also note that the aggregation does not need to happen on a key but any bound variable in rhs.}}
+
 If the expression is not defined, the map is user-managed and the programmer needs to write his own triggers to maintain it.
 \discuss{Are user-defined triggers really need? Have they more flexibility/power than expressions?}
-
-The options that can be declared for a map are the location and the value threshold. The first one correspond to one or multiple tags (logical group name), where nodes joining the cluster will bear one or multiple tag. The threshold is the relative difference in keys/values for a tuple to be considered for updating. This only applies to double types. \discuss{Not clear to which field the threshold relates. Do we need other options ?}
 
 {\bf Semantics}
 \discuss{most suble topic as we want to have a simple syntax for 3 concerns:\\
@@ -98,16 +115,21 @@ WHERE k = (SELECT agg_k(k) FROM map WHERE keys=keys_out)
 GROUP BY keys
 \end{lstlisting}
 \discuss{Do we maintain tuples that have been filtered out ? If yes, how does it combine with incremental domain maintenance? How do we distinguish tuples that we need to re-compute? How to maintain correct multiplicity?
-\say{Milos}{disagree with this semantics, think that the resulting multiplicity of aggregation should be 1.}
+\say{Milos}{disagree with this semantics, think that the resulting multiplicity of aggregation should be 1 to keep coherency with the SQL.}
+\say{Thiery}{SQL multiplicity of 1 is only for displaying purposes. We retain more power by having the number of elements aggregated to compute average and count easily afterward.}
 }
 
-% --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Queries (output)}
-\begin{verbatim}
-query ::= "DECLARE" "QUERY" name ":=" mapName ";"
-\end{verbatim}
-A query is simply a reference to a map that will be made visible outside of the system. The semantics is otherwise equivalent to that of M3.
-\discuss{Do we want to do an additional projection or filtering at this point ?}
+{\bf Map options:}\\
+The options that can be declared for a map are the location and the value threshold:
+\ul\item The location is defined by one or multiple tags (logical group name) for the map. Nodes join the cluster with one or more tags: they accept to be in charge of a partition of all maps attributed to the tag.
+	Moreover, we can tune manually the locality with hashing function.
+\ule
+\discuss{What if the number of nodes is variable, in particular what if nodes are leaving/joining  (failure/recovery) the system? There are two approaches: static hashing with redundancy (that is read/write from multiple nodes or \href{http://lpd.epfl.ch/alistarh/DistAlgoFall08/da08-GroupMembershipVSC.pdf}{group membership}. Is there an existing framework we can build on?}
+\ul\item The threshold is the relative difference in keys/values for a tuple to be considered as an update of the map for recursion. This only applies to double types.
+\ule
+\discuss{Not clear to which field the threshold relates. Do we need other options ?}
+\ul\item Andres suggests that we should have options to hint the compiler about which structure we want to maintain secondary indices (tree, hash) in; to address inequality joins for example. When automatic inference  detects sufficiently well these cases, we can remove this option.
+\ule
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Triggers (user-defined)}
@@ -133,7 +155,7 @@ centrality[v] &:=& \exists(spath[x,y,l]) \times (spath_v[x,y,v,l] / spath[x,y,l]
 \end{array}\]
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Problem 2: PageRank}
+\subsubsection*{Problem 2: PageRank} \label{pb:pagerank}
 The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph and $K$ the diagonal matrix with out-degrees in diagonal. We synchronously compute (usually $d=0.85$):
 \[R(t+1)=d\cdot M\cdot R(t)+\dfrac{1-d}{N}{\bf 1} \qquad \text{with {\bf 1} a column vector of 1s and }R(0)={\bf 1}\cdot \frac{1}{n}\]
 
@@ -150,6 +172,7 @@ weight[x] &:=& node[x] \times {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]
 
 \discuss{To execute statements synchronously, we might have multiple options:\ul
 \item {\bf Clock join:} associate a timestamp attribute with all map and create a clock stream. When a clock tick is inserted, the next iteration is computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues: deletion trigger of weight must be \underline{overridden} not to be recursive. How do we check that all elements of a tick have been computed ?
+\say{Andres}{The nice thing with a custom clock stream is that you can tick based on the number of iterations, a timeout or any other event.}
 \item \textbf{Limited iterations:} To execute statements synchronously, we could compute only a fixed number of steps. We can then make that number of step vary to reach threshold requirements.
 \ule}
 
@@ -210,39 +233,13 @@ The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a prec
 
 
 \begin{verbatim}
-a couple of suggestions/questions that i have come up with so far. let me know if you are interested to discuss them:
-- User defined triggers might help with input from the outside (from non-files -> user interaction), alternative: 
-user defined streams -> define an interface for streams
-==> flexibility in the streams is important
-==> define a class as input/output stream (output necessary ?)
-
-- What about different map types/indexes? should the user be able to define them?
-==> map as hash map, map as tree, how to give a hint to the compiler ?
-==> secondary indices as trees (index on a key part)
-==> inequality join?
-==> make an option and remove once we can automate generation
-
-- Instead of declaring queries seperately, we could just declare maps to be PUBLIC (DEFINE PUBLIC MAP)
-==> good ! Let's have it !!
-
-- I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
-==> not a problem. reduce tables to only what necessary ?
-
-- What does it mean for a map to have a location?
-==> variable number of nodes, have a specific hashing
-
-- Why do we need to specify a type for an aggregate explicitely?
-==> Should be able to define it ==> make it optional
-
-Have varying number of nodes leaving/joining the system ?
-==> How to change the locality of maps ?
-==> Redundancy with multiple hashes ==> options of redundancy
-
-==> clock for timeout
+%- I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
+%==> reduce tables to only what necessary ? not sure we can always do that.
 
 -> MaxFlow Min Cut
 -> Hubs and authorities
 -> what's the timer usage <- clock as custom stream
+-> bloom query with locality example
 \end{verbatim}
 
 {\center --------------------------------------- legacy discussion ---------------------------------------}
@@ -312,7 +309,7 @@ How do these concerns blend with recursion and incremental maintenance?
 \section*{Roadmap}
 Goals:\ul
 \item Find use cases and examples
-\item Design the language, allow incrementalization by reusing most of existing infrastructure, and combine the power of datalog and triggers.
+\item Design the language, allow incrementalization by reusing most of existing infrastructure, and combine the power of Datalog and triggers.
 \item Get a clean and simple semantics that can be used and understood easily in various domains: windowed streams, state machine, continuous queries.
 \item Define distribution strategy
 \item Data locality: optional location specification. Must be orthogonal to other concerns (tag with @all, @group, @hashed ?)
@@ -345,9 +342,6 @@ look at orchestra (datalog + incrementally) [not very interesting]
 \end{verbatim}
 
 --------------------------------------------------------------
-
-
-
 
 % Bibliography
 \bibliographystyle{plain} % acm
