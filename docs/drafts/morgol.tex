@@ -2,10 +2,11 @@
 \usepackage{../inc/style}
 \title{Morgol specifications}
 
-\def\discuss#1{\begingroup\par\leftskip2em {\footnotesize {\bf Discussion:} #1} \par\endgroup}
-\def\say#1#2{\begingroup\par\leftskip4em {\bf #1:} \it #2\par\endgroup}
+\def\discuss#1{\par\hspace{2em}\begin{minipage}{15cm}\footnotesize {\bf\color{red} Discussion:} #1\end{minipage}\par}
+\def\say#1#2{\begingroup\par\leftskip1em {\bf #1:} \it #2\par\endgroup}
 
 \begin{document}
+% --------------------------------------------------------------------------------------------------------------
 \section*{Language syntax and associated semantics}
 \discuss{The goal of the language is to be syntactically close from SQL (whereas Scala DSL will be more concise), in particular: case insensitivity, comments style and keywords verbosity.}
 Let {\tt ident} an identifier string, {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string) litterals and ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ a type declaration. Additional types are converted into these during the parsing. For conciseness, we denote: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$. Comments are delimited by: {\tt ----...\textbackslash n} , {\tt //...\textbackslash n} or {\tt /*...*/}.\\
@@ -14,6 +15,7 @@ The system declaration file format is:
 system ::= source* mapdef* query* trigger*
 \end{verbatim}
 
+% --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Sources}
 \begin{verbatim}
 source ::= "CREATE" ("STREAM" | "TABLE") schema "FROM" input split adaptor ";"
@@ -38,6 +40,7 @@ Source is either input stream (content varies while the program is running and g
 	\ule
 \ule
 
+% --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Expressions}
 \begin{verbatim}
 expr   ::= "(" expr ")" | ...
@@ -60,12 +63,13 @@ We need to lookup built-in functions return type (and possibly accepted argument
 \discuss{For function lookup, how to avoid declaration duplication (Bytecode inspection)?}
 \discuss{Simplify grammar by also using {\tt =} for lift? This introduce ambiguity between lift and cmp as they are differentiated only by the context (depending if the lhs ref is bound), but after all, comparison of two bound variable is semantically equivalent to lift one as the other.}
 
-\discuss{Do we introduce explicit AggMin and AggMax operations or are these handled by maps?}
+\discuss{Do we need explicit AggMin and AggMax operations or are these handled by maps?}
 % aggmin ::= "Min" "(" ("[" rs(key, ",") "]" ",")? expr ")"
 % aggmax ::= "Max" "(" ("[" rs(key, ",") "]" ",")? expr ")"
 
+% --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Maps (internal structures)}
-A table has an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream. The default type of a map is {\tt long} if not specified. A map associated with an input stream is implicitly created if the stream is accessed by a mapref.
+A table has an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream. The default type of a map is {\tt long} if not specified. A map associated with an input stream is implicitly created if the stream is accessed by a mapref (lookup/foreach).
 \begin{verbatim}
 mapdef ::= "DECLARE" "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? 
                                  (":" type)? (":=" expr)? mapopt? ";" 
@@ -74,7 +78,7 @@ aggkey ::= "filter"? ("min"|"max"|"sum") "(" ident ")" ":" type
 mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
 \end{verbatim}
 If the expression is not defined, the map is user-managed and the programmer needs to write his own triggers to maintain it.
-\discuss{Do we really need user-defined triggers? Does it give more flexibility/power than expression?}
+\discuss{Are user-defined triggers really need? Have they more flexibility/power than expressions?}
 
 The options that can be declared for a map are the location and the value threshold. The first one correspond to one or multiple tags (logical group name), where nodes joining the cluster will bear one or multiple tag. The threshold is the relative difference in keys/values for a tuple to be considered for updating. This only applies to double types. \discuss{Not clear to which field the threshold relates. Do we need other options ?}
 
@@ -93,12 +97,116 @@ SELECT keys AS keys_out, aggrs FROM map
 WHERE k = (SELECT agg_k(k) FROM map WHERE keys=keys_out)
 GROUP BY keys
 \end{lstlisting}
-\discuss{Do we maintain tuples that have been filtered out ? If yes, how does it combine with incremental domain maintenance? How do we distinguish tuples that we need to re-compute? How to maintain correct multiplicity?}
+\discuss{Do we maintain tuples that have been filtered out ? If yes, how does it combine with incremental domain maintenance? How do we distinguish tuples that we need to re-compute? How to maintain correct multiplicity?
+\say{Milos}{disagree with this semantics, think that the resulting multiplicity of aggregation should be 1.}
+}
 
+% --------------------------------------------------------------------------------------------------------------
+\subsubsection*{Queries (output)}
+\begin{verbatim}
+query ::= "DECLARE" "QUERY" name ":=" mapName ";"
+\end{verbatim}
+A query is simply a reference to a map that will be made visible outside of the system. The semantics is otherwise equivalent to that of M3.
+\discuss{Do we want to do an additional projection or filtering at this point ?}
 
+% --------------------------------------------------------------------------------------------------------------
+\subsubsection*{Triggers (user-defined)}
+\begin{verbatim}
+trigger ::= "ON" ("+"|"-") streamName "(" ident ("," ident)* ")" "{" (stmt)* "}"
+          | "ON" "SYSTEM" "READY" "{" (stmt)* "}"
+stmt    ::= mapref (":" "(" expr ")")? ("+="|":=") expr ";"
+          | "CALL" ("+"|"-") streamName "(" rs(expr, ",") ")"
+\end{verbatim}
+The triggers being defined by the user are called before any other trigger. It is not possible to override an automatically generated trigger.
+\discuss{Do we want to have an extra syntax for user-defined triggers?}
+\discuss{When do we call user-defined triggers (before all automatic triggers)?}
 
+% --------------------------------------------------------------------------------------------------------------
+\section*{Examples}
+\subsubsection*{Problem 1: betweenness centrality}
+Let our stream be $edge(x,y,l)$ (with implicit map). To compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
+\[\begin{array}{rcl}
+edge[x,y,l] &:=& \text{\it implicitly, corresponding to input stream} \\
+spath[x,y][{\rm filter} \min(l)] &:=& edge[x,y,l] +  edge[x,z,l_1] \times spath[z,y,l_2] \times (l\hat= l_1+l_2)\\
+spath_v[x,y,v,l] &:=& spath[x,v,l_1] \times spath[v,y,l_2] \times (l\hat= l_1+l_2)\\
+centrality[v] &:=& \exists(spath[x,y,l]) \times (spath_v[x,y,v,l] / spath[x,y,l])
+\end{array}\]
 
+% --------------------------------------------------------------------------------------------------------------
+\subsubsection*{Problem 2: PageRank}
+The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph and $K$ the diagonal matrix with out-degrees in diagonal. We synchronously compute (usually $d=0.85$):
+\[R(t+1)=d\cdot M\cdot R(t)+\dfrac{1-d}{N}{\bf 1} \qquad \text{with {\bf 1} a column vector of 1s and }R(0)={\bf 1}\cdot \frac{1}{n}\]
 
+Computing this formula asynchronously does not affect correctness but convergence speed (as computation wavefront might visit loops more frequently than necessary).
+
+\[\begin{array}{rrl}
+edge[x,y] &:=& \text{\it input stream, adjacency matrix} \\
+node[x] &:=& \text{\it input stream} \in\{0,1\} \text{ or }\exists(edge[x,y] + edge[z,x]) \\
+out[x] &:=& {\rm AggSum}([],edge[x,y]) \\
+N &:=& {\rm AggSum}([],node[x]) \\
+weight[x] &:=& node[x] \times {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]}{out[y]}) \times d + \dfrac{1-d}{N}\\
+&& \text{with }(threshold := 10^{-5})
+\end{array}\]
+
+\discuss{To execute statements synchronously, we might have multiple options:\ul
+\item {\bf Clock join:} associate a timestamp attribute with all map and create a clock stream. When a clock tick is inserted, the next iteration is computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues: deletion trigger of weight must be \underline{overridden} not to be recursive. How do we check that all elements of a tick have been computed ?
+\item \textbf{Limited iterations:} To execute statements synchronously, we could compute only a fixed number of steps. We can then make that number of step vary to reach threshold requirements.
+\ule}
+
+% --------------------------------------------------------------------------------------------------------------
+\subsubsection*{Problem 3: Optimization for existing queries}
+The \href{http://www.tpc.org/tpch/spec/tpch2.16.0.pdf}{TPC-H} query 1 is a simple aggregation over one table.
+\begin{lstlisting}[language=sql]
+SELECT returnflag, linestatus, 
+  SUM(quantity) AS sum_qty,
+  SUM(extendedprice) AS sum_base_price,
+  SUM(extendedprice * (1-discount)) AS sum_disc_price,
+  SUM(extendedprice * (1-discount)*(1+tax)) AS sum_charge,
+  AVG(quantity) AS avg_qty,
+  AVG(extendedprice) AS avg_price,
+  AVG(discount) AS avg_disc,
+  COUNT(*) AS count_order
+FROM lineitem WHERE shipdate <= DATE('1997-09-01')
+GROUP BY returnflag, linestatus;
+\end{lstlisting}
+If we can detect that only aggregation is done over {\it lineitem}, (formally $\Delta Q1a=f(\Delta lineitem)$), we can eliminate the associated map. The query can be rewritten as:
+\[\begin{array}{l}
+\text{CREATE STREAM }lineitem(quantity,extendedprice,discount,tax,shipdate)\text{ FROM }...\vspace{4pt}\\
+\text{DEFINE MAP }Q1a[r,s][sum(q),sum(ep),sum(dp),sum(c),sum(d)] := lineitem[q,ep,d,t,sd] \times\\
+\qquad (dp \hat= ep\times(1-d)) \times (c \hat= ep\times(1-d)\times(1+t)) \times (sd < \text{date("1997-09-01")})\vspace{4pt}\\
+\text{DEFINE MAP }Q1[r,s,sq,sep,sdp,sc,aq,aep,ad,n] := (n \hat= Q1[r,s][sq,sep,sdp,sc,sd]) \times\\
+\qquad (aq \hat= sq/n) \times (aep \hat= sep/n) \times (ad \hat= sd/n)\vspace{4pt}\\
+\text{DEFINE QUERY }QUERY1 := Q1
+\end{array}\]
+
+\discuss{How can we implement efficiently range condition for AXFinder}
+%\begin{lstlisting}[language=sql]
+%SELECT b.broker_id, SUM(a.volume + (-1 * b.volume)) AS axfinder
+%FROM   bids b, asks a
+%WHERE  b.broker_id = a.broker_id
+%  AND  ( (a.price + ((-1) * b.price) > 1000) OR
+%         (b.price + ((-1) * a.price) > 1000) )
+%GROUP BY b.broker_id;
+%\end{lstlisting}
+
+% --------------------------------------------------------------------------------------------------------------
+\subsubsection*{Problem 4: Hubs and authorities}
+The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a precursor of the PageRank algorithm.
+
+% --------------------------------------------------------------------------------------------------------------
+\subsubsection*{Problem 5: Mutual neighbors}
+
+% --------------------------------------------------------------------------------------------------------------
+\subsubsection*{Problem 6: Connected components}
+\href{http://en.wikipedia.org/wiki/Connected_component_(graph_theory)}{Connected components} probably implemented with \href{http://en.wikipedia.org/wiki/Disjoint-set_data_structure}{disjoint sets}.
+
+% --------------------------------------------------------------------------------------------------------------
+\subsubsection*{Problem 7: Triangles}
+
+% --------------------------------------------------------------------------------------------------------------
+\subsubsection*{Problem 8: Clustering coefficients}
+
+\discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
 
 
 
@@ -128,76 +236,43 @@ How do these concerns blend with recursion and incremental maintenance?
 
 {\center --------------------------------------- legacy discussion end ---------------------------------------}
 
-\subsubsection*{Queries (output)}
-\begin{verbatim}
-query ::= "DECLARE" "QUERY" externalName ":=" mapName ";"
-\end{verbatim}
-A query is simply a reference to a map that will be made visible outside of the system. The semantics is otherwise equivalent to that of M3.
-\discuss{Do we want to do an additional projection or filtering at this point ?}
-
-\subsubsection*{Triggers (user-defined)}
-\begin{verbatim}
-trigger ::= "ON" ("+"|"-") streamName "(" ident ("," ident)* ")" "{" (stmt)* "}"
-          | "ON" "SYSTEM" "READY" "{" (stmt)* "}"
-stmt    ::= mapref (":" "(" expr ")")? ("+="|":=") expr ";"
-          | "CALL" ("+"|"-") streamName "(" rs(expr, ",") ")"
-\end{verbatim}
-The triggers being defined by the user are called before any other trigger. It is not possible to override an automatically generated trigger.
-\discuss{Do we want to have an extra syntax for user-defined triggers?}
-\discuss{When do we call user-defined triggers (before all automatic triggers)?}
-
-\section*{Examples}
-\subsubsection*{Problem 1: betweenness centrality}
-Let our stream be $edge(x,y,l)$ (with implicit map). To compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
-\[\begin{array}{rcl}
-edge[x,y,l] & := & \text{\it implicitly, corresponding to input stream} \\
-spath[x,y][{\rm filter} \min(l)] & := & edge[x,y,l] +  edge[x,z,l_1] \times spath[z,y,l_2] \times (l\hat= l_1+l_2)\\
-spath_v[x,y,v,l] & := & spath[x,v,l_1] \times spath[v,y,l_2] \times (l\hat= l_1+l_2)\\
-centrality[v] & := & \exists(spath[x,y,l]) \times (spath_v[x,y,v,l] / spath[x,y,l])
-\end{array}\]
-
-{\center --------------------------------------- legacy problems ---------------------------------------}
-\subsubsection*{Problem 1: betweenness centrality}
-Let our fact table be $edge(x,y)$ we want to compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
-\[\begin{array}{rcl}
-edge[x,y] & := & \text{\it implicitly defined and related to corresponding input stream} \\
-path[x,y,len] & := & \exists(edge[x,y]) \times (len\hat= 1) +  \exists(edge[x,z]) \times \exists(path[z,y,l]) \times (len\hat= 1+l) \times (x\ne y)\\
-path_v[x,y,v,len] & := & \exists(path[x,v,l_1]) \times \exists(path[v,y,l_2]) \times (len\hat= l_1+l_2) \times (x\ne y) \\
-centrality[v] & := & \exists(path[x,y,m]) \times (\exists(path[x,y,s] \times (s<m)) = 0) \times \left(\dfrac{{\rm Sum}(path_v[x,y,v,m])}{path[x,y,m]}\right)
-\end{array}\]
-
-XXX: find more problems from papers (Socialite?)
-
-
-By adding the condition $(x\ne y )$ in the $path$ definition, we prevent cycles.
-
-\subsubsection*{Problem 2: PageRank}
-The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph, $K$ the diagonal matrix with out-degrees in diagonal. We compute \[R(t+1)=d\cdot M\cdot R(t)+\dfrac{1-d}{N}{\bf 1} \qquad \text{with {\bf 1} a column vector of 1 and }R(0)={\bf 1}\cdot \frac{1}{n}\]
-The issues with the matrix model is that all computation are done synchronously.
-
-\textbf{Naive version:} To avoid explicit synchronization, we have 2 solutions: maintaining versions in the database or normalizing $|R|=1$ after every computation.
-\[\begin{array}{rrl}
-node[x] &:=& \text{\it input stream} \in\{0,1\} \\
-edge[x,y] &:=& \text{\it input stream, adjacency matrix} \\
-weight[x] &:=& node[x] \times (w_0\hat=weight[x]) \times \left( w_0 + (w_1\hat=nw) \times \left(
-\dfrac{|w_1 - w_0|}{w_1+w_0} > {\rm threshold}\right) \times (w_1-w_0) \right) \\ \\
-&& \text{where } nw= {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]}{{\rm AggSum}([],edge[y,z])}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[v])}\\
-\end{array}\]
-The shortcomings with this approach are the non-preservation of global weight and injection of initial coefficient. The $d$ weighting should mitigates this issue (but not sure at all !!). We also must ensure that we don't call recursively if the value did not change (encode this with threshold in map declaration or in another function?).
-
-\textbf{Clock join:} One possible idea to virtually execute the program synchronously is to have a clock stream and a timestamp attribute for all maps. When a clock tick is inserted, the next iteration can be computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues:\ul
-\item Deletion trigger of weight must be \underline{overridden} to only remove data (and avoid recursion).
-\item How to know that all the data at a tick has been fully computed ?
-\ule
-\[\begin{array}{rrl}
-tick[t] &:=& \text{\it logical clock} \in \{0,1\} \\
-node[x] &:=& \text{\it input stream} \in\{0,1\} \\
-edge[x,y] &:=& \text{\it input stream} \\
-weight[x,t] &:=& node[x] \ \times {\rm AggSum}([x], \dfrac{edge[y,x] \times weight[y,t-1]}{{\rm AggSum}([],edge(y,z))}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[z])}
-\end{array}\]
-
-{\center --------------------------------------- legacy problems end ---------------------------------------}
-
+% ------------ LEGACY PROBLEMS --------------
+%\subsubsection*{Problem 1: betweenness centrality}
+%Let our fact table be $edge(x,y)$ we want to compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
+%\[\begin{array}{rcl}
+%edge[x,y] &:=& \text{\it implicitly defined and related to corresponding input stream} \\
+%path[x,y,len] &:=& \exists(edge[x,y]) \times (len\hat= 1) +  \exists(edge[x,z]) \times \exists(path[z,y,l]) \times (len\hat= 1+l) \times (x\ne y)\\
+%path_v[x,y,v,len] &:=& \exists(path[x,v,l_1]) \times \exists(path[v,y,l_2]) \times (len\hat= l_1+l_2) \times (x\ne y) \\
+%centrality[v] &:=& \exists(path[x,y,m]) \times (\exists(path[x,y,s] \times (s<m)) = 0) \times \left(\dfrac{{\rm Sum}(path_v[x,y,v,m])}{path[x,y,m]}\right)
+%\end{array}\]
+%
+%By adding the condition $(x\ne y )$ in the $path$ definition, we prevent cycles. <<< WRONG
+%
+%\subsubsection*{Problem 2: PageRank}
+%The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph, $K$ the diagonal matrix with out-degrees in diagonal. We compute \[R(t+1)=d\cdot M\cdot R(t)+\dfrac{1-d}{N}{\bf 1} \qquad \text{with {\bf 1} a column vector of 1 and }R(0)={\bf 1}\cdot \frac{1}{n}\]
+%The issues with the matrix model is that all computation are done synchronously.
+%
+%\textbf{Naive version:} To avoid explicit synchronization, we have 2 solutions: maintaining versions in the database or normalizing $|R|=1$ after every computation.
+%\[\begin{array}{rrl}
+%node[x] &:=& \text{\it input stream} \in\{0,1\} \\
+%edge[x,y] &:=& \text{\it input stream, adjacency matrix} \\
+%weight[x] &:=& node[x] \times (w_0\hat=weight[x]) \times \left( w_0 + (w_1\hat=nw) \times \left(
+%\dfrac{|w_1 - w_0|}{w_1+w_0} > {\rm threshold}\right) \times (w_1-w_0) \right) \\ \\
+%&& \text{where } nw= {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]}{{\rm AggSum}([],edge[y,z])}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[v])}\\
+%\end{array}\]
+%The shortcomings with this approach are the non-preservation of global weight and injection of initial coefficient. The $d$ weighting should mitigates this issue (but not sure at all !!). We also must ensure that we don't call recursively if the value did not change (encode this with threshold in map declaration or in another function?).
+%
+%\textbf{Clock join:} One possible idea to virtually execute the program synchronously is to have a clock stream and a timestamp attribute for all maps. When a clock tick is inserted, the next iteration can be computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues:\ul
+%\item Deletion trigger of weight must be \underline{overridden} to only remove data (and avoid recursion).
+%\item How to know that all the data at a tick has been fully computed ?
+%\ule
+%\[\begin{array}{rrl}
+%tick[t] &:=& \text{\it logical clock} \in \{0,1\} \\
+%node[x] &:=& \text{\it input stream} \in\{0,1\} \\
+%edge[x,y] &:=& \text{\it input stream} \\
+%weight[x,t] &:=& node[x] \ \times {\rm AggSum}([x], \dfrac{edge[y,x] \times weight[y,t-1]}{{\rm AggSum}([],edge(y,z))}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[z])}
+%\end{array}\]
+% ------------ LEGACY PROBLEMS END --------------
 
 \section*{Roadmap}
 Goals:\ul
