@@ -162,7 +162,7 @@ The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{P
 Computing this formula asynchronously does not affect correctness but convergence speed (as computation wavefront might visit loops more frequently than necessary).
 
 \[\begin{array}{rrl}
-edge[x,y] &:=& \text{\it input stream, adjacency matrix} \\
+edge[x,y] &:=& \text{\it input stream, adjacency list} \\
 node[x] &:=& \text{\it input stream} \in\{0,1\} \text{ or }\exists(edge[x,y] + edge[z,x]) \\
 out[x] &:=& {\rm AggSum}([],edge[x,y]) \\
 N &:=& {\rm AggSum}([],node[x]) \\
@@ -218,7 +218,7 @@ The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a prec
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Problem 5: Link predictions}
-Various link prediction algorithms are described in \cite{linkpred}: ${\bf score}(x,y)$ denotes the probability that a link will be created between nodes $x$ and $y$. Let $\Gamma(v)$ the set of neighbors of a vertex $v$ and $s[x,y]$ the stream of undirected edges between $x$ and $y$. For conciseness, we define $edge[x,y] := s[x,y]+s[y,x]$ such that edges do not need to be duplicated in input stream. If we do not allow multigraphs, we can remove existential quantifiers. We describe the scoring functions as follows:
+Various link prediction algorithms are described in \cite{linkpred}: ${\bf score}(x,y)$ denotes the probability that a link will be created between nodes $x$ and $y$. Let $\Gamma(v)$ the set of neighbors of a vertex $v$ and $s[x,y]$ the stream of undirected edges between $x$ and $y$. For conciseness, we define $edge[x,y] := s[x,y]+s[y,x]$ such that edges do not need to be duplicated in input stream. If we do not allow multigraphs or weighted edges, we can remove existential quantifiers. We describe the scoring functions as follows:
 
 {\bf Common neighbors:} ${\rm score}(x,y)=|\Gamma(x) \cap \Gamma(y)|$
 \[{\rm score}[x,y] := {\rm AggSum}([x,y], \exists(edge[x,z] \times edge[z,y]))\]
@@ -244,20 +244,29 @@ path[x,y,l] &:=& edge[x,y] \times (l\hat=1) +  edge[x,z] \times path[z,y,l_1] \t
 
 {\bf SimRank${}_\gamma$:} ${\rm score}(x,y)=\left\{\begin{array}{ll}1&\text{if }x=y\\
 	\gamma\cdot\dfrac{\sum_{a\in\Gamma(x)}\sum_{b\in\Gamma(y)} {\rm score}(a,b)}
-			{|\Gamma(x)| \cdot |\Gamma(y)|} \end{array}\right.$
-\[
-XXX
-\]
+		{|\Gamma(x)| \cdot |\Gamma(y)|} \end{array}\right.$
+\[{\rm score}[x,y] := (x=y) + (x\ne y) \times\gamma\times\dfrac
+	{\exists(edge[x,a] \times edge[b,y]) \times {\rm score}(a,b)}
+	{{\rm AggSum}([x,y], edge[x,u] \times edge[v,y])}\]
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Problem 6: Connected components}
-\href{http://en.wikipedia.org/wiki/Connected_component_(graph_theory)}{Connected components} probably implemented with \href{http://en.wikipedia.org/wiki/Disjoint-set_data_structure}{disjoint sets}.
+\href{http://en.wikipedia.org/wiki/Connected_component_(graph_theory)}{Connected components} can be solved in $O(n)$ using BFS/DFS to identify all set members and process sets sequentially. Unfortunately this algorithm can not be described easily in our framework because of its sequentiality. We propose an alternate algorithm similar to \href{http://en.wikipedia.org/wiki/Disjoint-set_data_structure}{disjoint sets} that defines the set to which the vertex belong by its minimal representative. Let $s[x,y]$ the stream of undirected edges between $x$ and $y$ and $edge[x,y] := s[x,y]+s[y,x]$. We have:
+\[set[v] := \min(v, edge[v,x] \times set[x])\]
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Problem 7: Triangles}
+Find all triangles (i.e., cliques of size three) in the graph. Let $s[x,y]$ the stream of undirected edges between $x$ and $y$, $edge[x,y] := s[x,y]+s[y,x]$ and assume a total order between vertices.
+\[clique_3[x,y,z] := \underset{\text{find the clique}}{\exists(edge[x,y] \times edge[x,z] \times edge[y,z])}
+	\;\;\times\;\; \underset{\text{sort vertices}}{((x< \min(y,z)) \times (y < z))}\]
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Problem 8: Clustering coefficients}
+XXX
+
+The global clustering coefficient is based on triplets of nodes. A triplet consists of three nodes that are connected by either two (open triplet) or three (closed triplet) undirected ties. A triangle consists of three closed triplets, one centred on each of the nodes. The global clustering coefficient is the number of closed triplets (or 3 x triangles) over the total number of triplets (both open and closed).
+
+XXX
 
 \discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
 
