@@ -172,7 +172,7 @@ weight[x] &:=& node[x] \times {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]
 
 \discuss{To execute statements synchronously, we might have multiple options:\ul
 \item {\bf Clock join:} associate a timestamp attribute with all map and create a clock stream. When a clock tick is inserted, the next iteration is computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues: deletion trigger of weight must be \underline{overridden} not to be recursive. How do we check that all elements of a tick have been computed ?
-\say{Andres}{The nice thing with a custom clock stream is that you can tick based on the number of iterations, a timeout or any other event.}
+\say{Andres}{The nice thing with custom input streams is that you can define the clock stream based on the number of iterations, on a timeout or any other external event.}
 \item \textbf{Limited iterations:} To execute statements synchronously, we could compute only a fixed number of steps. We can then make that number of step vary to reach threshold requirements.
 \ule}
 
@@ -217,7 +217,37 @@ If we can detect that only aggregation is done over {\it lineitem}, (formally $\
 The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a precursor of the PageRank algorithm.
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Problem 5: Mutual neighbors}
+\subsubsection*{Problem 5: Link predictions}
+Various link prediction algorithms are described in \cite{linkpred}: ${\bf score}(x,y)$ denotes the probability that a link will be created between nodes $x$ and $y$. Let $\Gamma(v)$ the set of neighbors of a vertex $v$ and $s[x,y]$ the stream of undirected edges between $x$ and $y$. For conciseness, we define $edge[x,y] := s[x,y]+s[y,x]$ such that edges do not need to be duplicated in input stream. If we do not allow multigraphs, we can remove existential quantifiers. We describe the scoring functions as follows:
+
+{\bf Common neighbors:} ${\rm score}(x,y)=|\Gamma(x) \cap \Gamma(y)|$
+\[{\rm score}[x,y] := {\rm AggSum}([x,y], \exists(edge[x,z] \times edge[z,y]))\]
+
+{\bf Jaccard's coefficient:} ${\rm score}(x,y)=\dfrac{|\Gamma(x) \cap \Gamma(y)|}{|\Gamma(x) \cup \Gamma(y)|}$
+\[{\rm score}[x,y] := \dfrac{{\rm AggSum}([x,y], \exists(edge[x,z] \times edge[z,y]))}
+					{{\rm AggSum}([x,y], \exists(edge[x,z] + edge[z,y])}\]
+
+{\bf Adamic/Adar:} ${\rm score}(x,y)=\sum_{z\in \Gamma(x) \cap \Gamma(y)}\frac{1}{\log|\Gamma(z)|}$
+\[{\rm score}[x,y] := {\rm AggSum}\left([x,y], \exists(edge[x,z]\times edge[z,y])  \times \dfrac{1}{\log(\exists(edge[z,u]))}\right)\]
+
+{\bf Preferential attachement:} ${\rm score}(x,y)=|\Gamma(x)| \cdot |\Gamma(y)|$
+\[{\rm score}[x,y] := {\rm AggSum}([x,y], edge[x,u] \times edge[v,y])\]
+
+{\bf Katz${}_{\beta}$:} ${\rm score}(x,y)=\sum_{\ell=1}^{\infty} \beta^\ell \cdot |{\rm paths}_{x,y}^{\langle\ell\rangle}|$ \\where ${\rm paths}_{x,y}^{\langle\ell\rangle} := \{$paths of length exactly $\ell$ from $x$ to $y\}$\\
+%\ul\item Unweighted: ${\rm paths}_{x,y}^{\langle 1\rangle} := 1$ if and only if $x$ and $y$ collaborate.
+%\item Weighted/multigraph: ${\rm paths}_{x,y}^{\langle 1\rangle}:=$ number of collaborations between $x$ and $y$.\ule
+As we need to sum towards infinity and as usually $\beta \ll 1$ \cite{linkpred}, it is reasonable to bound $\ell \le N$ to finish the computation.
+\[\begin{array}{rcl}
+path[x,y,l] &:=& edge[x,y] \times (l\hat=1) +  edge[x,z] \times path[z,y,l_1] \times (l\hat= l_1+1) \times (l_1<N)\\
+{\rm score}[x,y] &:=& {\rm AggSum}([x,y], path[x,y,l] \times \beta^l )
+\end{array}\]
+
+{\bf SimRank${}_\gamma$:} ${\rm score}(x,y)=\left\{\begin{array}{ll}1&\text{if }x=y\\
+	\gamma\cdot\dfrac{\sum_{a\in\Gamma(x)}\sum_{b\in\Gamma(y)} {\rm score}(a,b)}
+			{|\Gamma(x)| \cdot |\Gamma(y)|} \end{array}\right.$
+\[
+XXX
+\]
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Problem 6: Connected components}
@@ -231,14 +261,11 @@ The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a prec
 
 \discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
 
-
+% Andres: I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
+% ==> reduce tables to only what necessary ? not sure we can always do that.
 \begin{verbatim}
-%- I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
-%==> reduce tables to only what necessary ? not sure we can always do that.
-
 -> MaxFlow Min Cut
 -> Hubs and authorities
--> what's the timer usage <- clock as custom stream
 -> bloom query with locality example
 \end{verbatim}
 
