@@ -262,11 +262,26 @@ Find all triangles (i.e., cliques of size three) in the graph. Let $s[x,y]$ the 
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Problem 8: Clustering coefficients}
-XXX
-
-The global clustering coefficient is based on triplets of nodes. A triplet consists of three nodes that are connected by either two (open triplet) or three (closed triplet) undirected ties. A triangle consists of three closed triplets, one centred on each of the nodes. The global clustering coefficient is the number of closed triplets (or 3 x triangles) over the total number of triplets (both open and closed).
-
-XXX
+Let a triplet be a set of 3 connected vertices and a closed triplet a 3-clique (triangle).\ul
+\item The global \href{http://en.wikipedia.org/wiki/Clustering_coefficient}{clustering coefficient} $C$ is defined as $C:=\frac{\text{\# closed triplets}}{\text{\# triplets}}$.
+\[C := \dfrac{{\rm AggSum}([], \exists(edge[x,y] \times edge[x,z] \times edge[y,z]))}
+		{{\rm AggSum}([], \exists(edge[x,y] \times edge[x,z]))}\]
+\item The local clustering coefficient of a vertex $v_i$ in the directed graph $G=(V,E)$ is given by
+$C_i=\frac{|\{ e_{jk}:v_j,v_k\in N_i, e_{jk} \in E \}|}{k_i(k_i-1)}$ with $N_i=\{v_j:e_{ij} \in E \land e_{ij} \in E\}$ and $k_i = |N_i|$.
+\[\begin{array}{rcl}
+k[x] &:=& {\rm AggSum}([],edge[x,y] \times edge[y,x]) \\
+Ci[x] &:=& \dfrac{
+	{\rm AggSum}([], (edge[x,y] \times edge[y,x]) \times (edge[x,z] \times edge[z,x]) \times edge[y,z])
+}{k[x] \times (k[x]-1)}
+\end{array}\]
+\item For undirected graph, the local clustering coefficient $C_i$ is doubled. Let $s[x,y]$ the stream of undirected edges and $edge[x,y] := s[x,y]+s[y,x]$. Similarly we obtain:
+\[\begin{array}{rcl}
+k[x] &:=& {\rm AggSum}([],edge[x,y]) \\
+Ci[x] &:=& {\rm AggSum}([], edge[x,y] \times edge[x,z] \times edge[y,z]) \times \dfrac{2}{k[x] \times (k[x]-1)}
+\end{array}\]
+\item To express the network average clustering coefficient $\bar C = \dfrac{1}{n}\sum_{i=1}^n C_i $, we need an additional stream $node[x]$ describing node existence:
+\[{\rm NACC} := \dfrac{AggSum([], Ci[x])}{AggSum([], node[x])} \]
+\ule
 
 \discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
 
