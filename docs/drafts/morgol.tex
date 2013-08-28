@@ -180,7 +180,8 @@ weight[x] &:=& node[x] \times {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Problem 3: Optimization for existing queries}
-The \href{http://www.tpc.org/tpch/spec/tpch2.16.0.pdf}{TPC-H} query 1 is a simple aggregation over one table.
+We want to demonstrate how existing queries could benefit of the language extension.\\
+\textbf{TPCH-1:} The \href{http://www.tpc.org/tpch/spec/tpch2.16.0.pdf}{query 1} is a simple aggregation over a single table.
 \begin{lstlisting}[language=sql]
 SELECT returnflag, linestatus, 
   SUM(quantity) AS sum_qty,
@@ -197,14 +198,28 @@ GROUP BY returnflag, linestatus;
 If we can detect that only aggregation is done over {\it lineitem}, (formally $\Delta Q1a=f(\Delta lineitem)$), we can eliminate the associated map. The query can be rewritten as:
 \[\begin{array}{l}
 \text{CREATE STREAM }lineitem(quantity,extendedprice,discount,tax,shipdate)\text{ FROM }...\vspace{4pt}\\
-\text{DEFINE MAP }Q1a[r,s][sum(q),sum(ep),sum(dp),sum(c),sum(d)] := lineitem[q,ep,d,t,sd] \times\\
+\text{DECLARE MAP }Q1A[r,s][sum(q),sum(ep),sum(dp),sum(c),sum(d)] := lineitem[q,ep,d,t,sd] \times\\
 \qquad (dp \hat= ep\times(1-d)) \times (c \hat= ep\times(1-d)\times(1+t)) \times (sd < \text{date("1997-09-01")})\vspace{4pt}\\
-\text{DEFINE MAP }Q1[r,s,sq,sep,sdp,sc,aq,aep,ad,n] := (n \hat= Q1[r,s][sq,sep,sdp,sc,sd]) \times\\
-\qquad (aq \hat= sq/n) \times (aep \hat= sep/n) \times (ad \hat= sd/n)\vspace{4pt}\\
-\text{DEFINE QUERY }QUERY1 := Q1
+\text{DECLARE OUTPUT MAP }Q1[r,s,sq,sep,sdp,sc,aq,aep,ad,n] := \\
+	\qquad (n \hat= Q1A[r,s][sq,sep,sdp,sc,sd]) \times (aq \hat= sq/n) \times (aep \hat= sep/n) \times (ad \hat= sd/n)\vspace{4pt}\\
 \end{array}\]
 
-\discuss{How can we implement efficiently range condition for AXFinder}
+\textbf{AXFinder:} financial query with range conditions. We examine low-level implementation.
+\begin{verbatim}
+let mAXFinder = Map[broker_id] -> value
+let mAsks = Map[broker_id, price][volume] -> multiplicity
+let mBids = Map[broker_id, price][volume] -> multiplicity
+
+on + Bids(b_id, b_vol, b_price) { -- other triggers are very similar
+   mAXFinder.add(b_id, 
+     ymBids.slice(0,b_id).filter(1,">",b_price+1000).aggr {(k,v) =>  k._3 + v * -b_vol } +
+     mBids.slice(0,b_id).filter(1,"<",b_price-1000).aggr {(k,v) =>  k._3 + v * -b_vol }
+   )
+   mAsks.add((b_id,b_price),(b_vol),1)
+}
+\end{verbatim}
+\discuss{In this example, we store secondary indices in a tree to leverage inequalities. M3 prohibits re-slicing (slicing a slice) because it grows to an exponential number of secondary indices. Assuming we allow only a specific order (broker\_id hash, price tree), the tree structure does not alleviate the iteration because result depends on {\tt b\_id} and a combination of keys/value. Although it remains possible to manually maintain special pre-aggregated values at each tree nodes to avoid iterating, it is tricky to generate such code correctly, and in this particular case, the benefits of tree-structured secondary indices are not clear.}
+
 %\begin{lstlisting}[language=sql]
 %SELECT b.broker_id, SUM(a.volume + (-1 * b.volume)) AS axfinder
 %FROM   bids b, asks a
@@ -362,6 +377,26 @@ The basic ideas to translate Bloom programs:
 -> Hubs and authorities
 -> bloom query with locality example
 \end{verbatim}
+
+\subsubsection*{Reactive programming}
+In Morgol, we can simply encode reactive programming by the fact that we can define arbitrary triggers (on +/- ...) and that in these triggers, we can call other triggers (with the call statement). Additionally, we could extend the function library such that the user can define arbitrary functions.
+
+\subsubsection*{State machine}
+An automaton is defined by $M=(Q,\Sigma,\delta,q_0,F)$ with\\
+\begin{tabular}{@{}ll@{\hspace{1cm}}ll}
+$Q$ & finite set of states & $q_0\in Q$ & initial state \\
+$\Sigma$ & finite set of input letters & $F\subseteq Q$ & set of accepting states \\
+$\delta:Q\times\Sigma\to Q$ & the transition function \\
+\end{tabular}
+
+We can find a correspondence by replacing $\Sigma$ by the set of events received, defining a mapping $Q\to\mathbb{N}$ to encode the state and create a table $T(state,message,next\_state)$ to define $\delta$. $q_0$ can be encoded in the <<on system initialized>> trigger and finally, to generate $evt$ when $q_i\in F$, it suffice to compute $\exists(F[q_i]) \times (evt)$ in the input stream trigger.
+
+\subsubsection*{Windowed streams}
+{\color{red} XXX: complete here}
+
+\subsubsection*{Stratification pattern for expressing unstratified programs}
+{\color{red} XXX: complete here}
+
 
 {\center --------------------------------------- legacy discussion ---------------------------------------}
 \begin{verbatim}
