@@ -336,6 +336,10 @@ The maps in this algorithm have the following purposes:
 
 \subsubsection*{Problem 10: Reliable unicast messaging}
 This problem has been presented in the Bloom paper and serves as an example of how Bloom programs can be translated to Morgol programs.
+On a high level the following program allows to send messages reliably from $src$ to $dst$.
+The idea is that the user provides a stream $pipe\_in$ containing the messages that he would like to have sent and $got\_ack$ provides information about which messages have been received by the destination.
+The stream $timer$ is used to retry delivery of unsent messages in regualar intervals.
+Messages to be delivered are saved in the map $data\_chan$ and ACKs are received on the stream $ack\_chan$.
 \[
 \begin{array}{l}
 \text{CREATE STREAM } timer(time: long) \text{ FROM } periodic(10) \\
@@ -365,7 +369,7 @@ The basic ideas to translate Bloom programs:
 
 \discuss{How do we declare a map to be local? Do we want to do that explicitely or do we distribute the map such that every node stores stores its local information?}
 \discuss{Evaluation order?}
-\discuss{What's the best way to represent a send-channel? Do we need output streams?}
+\discuss{What's the best way to represent a send-channel? Do we need output streams? Maybe we could just use our implicit mechanism of distributing data?}
 
 ---------------------
 \discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
