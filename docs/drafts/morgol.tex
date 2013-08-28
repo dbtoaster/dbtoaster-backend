@@ -15,9 +15,10 @@
 \newcommand{\lift}{\text{^=}}
 
 \begin{document}
-
+\tableofcontents
 % --------------------------------------------------------------------------------------------------------------
-\section*{Language syntax and associated semantics}
+\newpage
+\section{Language syntax and semantics}
 \discuss{The goal of this external DSL is to be syntactically close from SQL (whereas Scala internal DSL will be more concise), in particular: case insensitivity, comments style and keywords verbosity.}
 Let {\tt ident} an identifier string, {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string) literals and ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ a type declaration. Additional types are converted into these during the parsing.
 \discuss{What about user-defined types? As we want to target Scala and C/C++, we should limit ourselves to case classes/C struct, but these could easily be unfolded into multiple values maintained in several columns. Not clear if there is any benefit to allow arbitrary types.}
@@ -28,7 +29,7 @@ system ::= source* mapdef* trigger*
 \end{verbatim}
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Sources}
+\subsection{Sources}
 \begin{verbatim}
 source ::= "CREATE" ("STREAM" | "TABLE") schema "FROM" input split adaptor ";"
 schema ::= name "(" rs1(field type, ",") ")"
@@ -59,7 +60,7 @@ Source is either input stream (content varies while the program is running and g
 \ule
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Expressions}
+\subsection{Expressions}
 \begin{verbatim}
 expr   ::= "(" expr ")" | ...
 mapref ::= name "[" rs(key, ",") "]"
@@ -86,7 +87,7 @@ We need to lookup built-in functions return type (and possibly accepted argument
 % aggmax ::= "Max" "(" ("[" rs(key, ",") "]" ",")? expr ")"
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Maps (internal structures and queries)}
+\subsection{Maps (internal structures)}
 A table has an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream. The default type of a map is {\tt long} if not specified. A map associated with an input stream is implicitly created if the stream is accessed by a mapref (lookup/foreach). The output keywords has exactly the same semantics as declaring the map being result of a query in M3.
 % In Andres original proposal it was PUBLIC instead of OUTPUT. Good idea :)
 
@@ -137,7 +138,7 @@ The options that can be declared for a map are the location and the value thresh
 \ule
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Triggers (user-defined)}
+\subsection{Triggers}
 \begin{verbatim}
 trigger ::= "ON" ("+"|"-") streamName "(" ident ("," ident)* ")" "{" (stmt)* "}"
           | "ON" "SYSTEM" "READY" "{" (stmt)* "}"
@@ -149,8 +150,9 @@ The triggers being defined by the user are called before any other trigger. It i
 \discuss{When do we call user-defined triggers (before all automatic triggers)?}
 
 % --------------------------------------------------------------------------------------------------------------
-\section*{Examples}
-\subsubsection*{Problem 1: betweenness centrality}
+\newpage
+\section{Examples}
+\subsection{Betweenness centrality}
 Let our stream be $edge(x,y,l)$ (with implicit map). To compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
 \[\begin{array}{rcl}
 edge[x,y,l] &:=& \text{\it implicitly, corresponding to input stream} \\
@@ -160,7 +162,7 @@ centrality[v] &:=& \exists(spath[x,y,l]) \times (spath_v[x,y,v,l] / spath[x,y,l]
 \end{array}\]
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Problem 2: PageRank} \label{pb:pagerank}
+\subsection{PageRank} \label{pb:pagerank}
 The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph and $K$ the diagonal matrix with out-degrees in diagonal. We synchronously compute (usually $d=0.85$):
 \[R(t+1)=d\cdot M\cdot R(t)+\dfrac{1-d}{N}{\bf 1} \qquad \text{with {\bf 1} a column vector of 1s and }R(0)={\bf 1}\cdot \frac{1}{n}\]
 
@@ -182,7 +184,7 @@ weight[x] &:=& node[x] \times {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]
 \ule}
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Problem 3: Optimization for existing queries}
+\subsection{Optimizations of existing queries}
 We want to demonstrate how existing queries could benefit of the language extension.\\
 \textbf{TPCH-1:} The \href{http://www.tpc.org/tpch/spec/tpch2.16.0.pdf}{query 1} is a simple aggregation over a single table.
 \begin{lstlisting}[language=sql]
@@ -233,11 +235,11 @@ on + Bids(b_id, b_vol, b_price) { -- other triggers are very similar
 %\end{lstlisting}
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Problem 4: Hubs and authorities}
+\subsection{Hubs and authorities}
 The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a precursor of the PageRank algorithm.
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Problem 5: Link predictions}
+\subsection{Link predictions}
 Various link prediction algorithms are described in \cite{linkpred}: ${\bf score}(x,y)$ denotes the probability that a link will be created between nodes $x$ and $y$. Let $\Gamma(v)$ the set of neighbors of a vertex $v$ and $s[x,y]$ the stream of undirected edges between $x$ and $y$. For conciseness, we define $edge[x,y] := s[x,y]+s[y,x]$ such that edges do not need to be duplicated in input stream. If we do not allow multigraphs or weighted edges, we can remove existential quantifiers. We describe the scoring functions as follows:
 
 {\bf Common neighbors:} ${\rm score}(x,y)=|\Gamma(x) \cap \Gamma(y)|$
@@ -270,18 +272,18 @@ path[x,y,l] &:=& edge[x,y] \times (l\hat=1) +  edge[x,z] \times path[z,y,l_1] \t
 	{{\rm AggSum}([x,y], edge[x,u] \times edge[v,y])}\]
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Problem 6: Connected components}
+\subsection{Connected components}
 \href{http://en.wikipedia.org/wiki/Connected_component_(graph_theory)}{Connected components} can be solved in $O(n)$ using BFS/DFS to identify all set members and process sets sequentially. Unfortunately this algorithm can not be described easily in our framework because of its sequentiality. We propose an alternate algorithm similar to \href{http://en.wikipedia.org/wiki/Disjoint-set_data_structure}{disjoint sets} that defines the set to which the vertex belong by its minimal representative. Let $s[x,y]$ the stream of undirected edges between $x$ and $y$ and $edge[x,y] := s[x,y]+s[y,x]$. We have:
 \[set[v] := \min(v, edge[v,x] \times set[x])\]
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Problem 7: Triangles}
+\subsection{Triangles}
 Find all triangles (i.e., cliques of size three) in the graph. Let $s[x,y]$ the stream of undirected edges between $x$ and $y$, $edge[x,y] := s[x,y]+s[y,x]$ and assume a total order between vertices.
 \[clique_3[x,y,z] := \underset{\text{find the clique}}{\exists(edge[x,y] \times edge[x,z] \times edge[y,z])}
 	\;\;\times\;\; \underset{\text{sort vertices}}{((x< \min(y,z)) \times (y < z))}\]
 
 % --------------------------------------------------------------------------------------------------------------
-\subsubsection*{Problem 8: Clustering coefficients}
+\subsection{Clustering coefficients}
 Let a triplet be a set of 3 connected vertices and a closed triplet a 3-clique (triangle).\ul
 \item The global \href{http://en.wikipedia.org/wiki/Clustering_coefficient}{clustering coefficient} $C$ is defined as $C:=\frac{\text{\# closed triplets}}{\text{\# triplets}}$.
 \[C := \dfrac{{\rm AggSum}([], \exists(edge[x,y] \times edge[x,z] \times edge[y,z]))}
@@ -303,7 +305,8 @@ Ci[x] &:=& {\rm AggSum}([], edge[x,y] \times edge[x,z] \times edge[y,z]) \times 
 \[{\rm NACC} := \dfrac{{\rm AggSum}([], Ci[x])}{{\rm AggSum}([], node[x])} \]
 \ule
 
-\subsubsection*{Problem 9: Max-flow min-cut}
+% --------------------------------------------------------------------------------------------------------------
+\subsection{Max-flow min-cut}
 The goal of this problem is the computation of the maximum flow in a network graph.
 The graph is directed and every edge has a capacity assigned.
 The maximum flow is the largest flow from a source to a sink that the network allows.
@@ -337,7 +340,8 @@ The maps in this algorithm have the following purposes:
 \item $max\_flow$: The max flow of the graph 
 \end{itemize}
 
-\subsubsection*{Problem 10: Reliable unicast messaging}
+% --------------------------------------------------------------------------------------------------------------
+\subsection{Reliable unicast messaging}
 This problem has been presented in the Bloom paper and serves as an example of how Bloom programs can be translated to Morgol programs.
 On a high level the following program allows to send messages reliably from $src$ to $dst$.
 The idea is that the user provides a stream $pipe\_in$ containing the messages that he would like to have sent and $got\_ack$ provides information about which messages have been received by the destination.
@@ -374,21 +378,12 @@ The basic ideas to translate Bloom programs:
 \discuss{Evaluation order?}
 \discuss{What's the best way to represent a send-channel? Do we need output streams? Maybe we could just use our implicit mechanism of distributing data?}
 
----------------------
-\discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
-
-% Andres: I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
-% ==> reduce tables to only what necessary ? not sure we can always do that.
-\begin{verbatim}
--> MaxFlow Min Cut
--> Hubs and authorities
--> bloom query with locality example
-\end{verbatim}
-
-\subsubsection*{Reactive programming}
+% --------------------------------------------------------------------------------------------------------------
+\section{Other programming paradigms}
+\subsection{Reactive programming}
 In Morgol, we can simply encode reactive programming by the fact that we can define arbitrary triggers (on +/- ...) and that in these triggers, we can call other triggers (with the call statement). Additionally, we could extend the function library such that the user can define arbitrary functions.
 
-\subsubsection*{State machine}
+\subsection{State machine}
 An automaton is defined by $M=(Q,\Sigma,\delta,q_0,F)$ with\\
 \begin{tabular}{@{}ll@{\hspace{1cm}}ll}
 $Q$ & finite set of states & $q_0\in Q$ & initial state \\
@@ -398,7 +393,8 @@ $\delta:Q\times\Sigma\to Q$ & the transition function \\
 
 We can find a correspondence by replacing $\Sigma$ by the set of events received, defining a mapping $Q\to\mathbb{N}$ to encode the state and create a table $T(state,message,next\_state)$ to define $\delta$. $q_0$ can be encoded in the <<on system initialized>> trigger and finally, to generate $evt$ when $q_i\in F$, it suffice to compute $\exists(F[q_i]) \times (evt)$ in the input stream trigger.
 
-\subsubsection*{Windowed streams}
+% --------------------------------------------------------------------------------------------------------------
+\subsection{Windowed streams}
 There is three at least three possible ways of windowing streams:\ul
 \item \textbf{Disjoint windows:} can be implemented by emptying all maps periodically or based on an event. An appropriate trigger could be written for such task.
 \item \textbf{Fixed-size window:} (size-based sliding) the window contains a fixed number of tuples. Add at stream entrance (master) a LRU log of events (like \href{http://docs.oracle.com/javase/7/docs/api/java/util/LinkedHashSet.html}{{\tt LinkedHashSet}} allowing multiple elements, or a queue with O(1) deletions) where we can retrieve oldest stored elements.\ul
@@ -417,7 +413,7 @@ Note: the clock stream allows both control over window granularity and size.
 \ule
 \discuss{Do we want to generalize the windowing pattern and make it a built-in function of our language? How does it blend with iterative computations?}
 
-\subsubsection*{Iterative computations (and unstratified programs)}
+\subsection{Iterative computations (and unstratified programs)}
 One frequent pattern arising from the examples above is iterative computation of sets (PageRank, Max-flow). Also Bloom solution to express unstratified programs relies on iterative sets of predicates and negations. In a distributed settings we would like to have non-blocking iterations (multiple in-flight iterations) while at the same time reducing memory consumption by pruning useless intermediate results. The iterative computation poses 3 problems:\ul
 \item Throttling: controlling the maximal number or the speed of iterations made?
 \item Termination detection: how to detect that a particular iteration is completely finished?
@@ -428,16 +424,55 @@ We could use a pattern similar to that of windowing stream to address the thrott
 
 Finally, detecting that an iteration step $i$ is terminated can be detected by:\ol
 \item Locally: inspecting the <<to be called>> messages queue and detected locally that all the messages to be processed are referring to a later iteration.
-\item Remotely: ensure all messages of that step have been processed (have a step-specific distributed acknowledgement counter?), see distribution model
+\item Remotely: ensure all messages of that step have been processed (have a step-specific distributed acknowledgement counter?) (see \ref{distrib}).
 \ole
 
-\section*{Distribution model}
+
+
+
+
+
+% --------------------------------------------------------------------------------------------------------------
+\section{Implementation}
+\subsection{Distribution model} \label{distrib}
+The distribution model is one master that receive all streams. Triggers implementation is then parallelized over workers with fully asynchronous messages between master and workers and between workers. Maps are partitioned between workers such that it is possible to know through key hashing which worker is responsible for which key. There are two types of messages being exchanged:\ul
+\item Procedure calls that do not return any value: add, set, foreach, clear
+\item Request/response: get, aggregate (foreach with return value), collect (map transfer)
+\ule
+
+The (trigger) statements are executed sequentially on the master. Whenever the master detects that there is a dependency (read after write) {\color{red} XXX: write after write?}, it will make sure that all previous data has been flushed into workers' map by issuing a barrier request.
+
+\subsection{Barrier}
+The goal of the barrier is to synchronize all workers by making sure that they have received and processed all the messages that were previously sent. For request/response messages, workers need to make sure that they have received desired responses before responding to the barrier.
+
+For procedure calls, we want to avoid acknowledgement chaining and aggregated acknowledgments thus the workers will respond to the master immediately
+
+
+XXX: work out all possible cases such that we are sure that correctness is guaranteed.
+make it a proof-like demonstration.
+
+% A worker 'owns' a portion of all maps, determined by hash() function.
+% It responds to events from the master, and can interact with other workers.
+
+% Master is the main actor where the program runs, and does not own any map portion.
+% Coherency mechanism: keep track of 'invalid' maps, force-write (flush) when necessary
+% - A write invalidates the map
+% - A map needs to be valid to be read from
+% - When flushing, all writes are committed to the map
 
 {\color{red} XXX: complete here}
 
 XXX: write distribution synchronization schema
 
+\discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
 
+% Andres: I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
+% ==> reduce tables to only what necessary ? not sure we can always do that.
+\begin{verbatim}
+-> MaxFlow Min Cut
+-> Hubs and authorities
+-> bloom query with locality example
+\end{verbatim}
 
 {\center --------------------------------------- legacy discussion ---------------------------------------}
 \begin{verbatim}
@@ -503,7 +538,7 @@ How do these concerns blend with recursion and incremental maintenance?
 %\end{array}\]
 % ------------ LEGACY PROBLEMS END --------------
 
-\section*{Roadmap}
+\section{Roadmap}
 Target the following domains and concepts: incrementality, continuous queries, active databases/triggers, recursivity, location and distribution (failure tolerance?), windowed streams, state machine, graphs, declarativeness, deltas, stratification.
 \subsubsection*{Language design}\ol
 \item Provide an clean, simple and easy to understand semantics for each of the above domains.\ul
@@ -537,7 +572,7 @@ Integrate features from Socialite\cite{socialite}, WebDamLog\cite{webdamlog}, Bl
 \ole
 
 % Bibliography
-\bibliographystyle{plain} % acm
+\bibliographystyle{plain} \addcontentsline{toc}{section}{References} % acm
 \def\pdfurl#1{\href{#1}{\footnotesize pdf}}
 {\small \bibliography{../inc/bibliography.bib}}
 \end{document}
