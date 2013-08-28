@@ -1,6 +1,8 @@
 \documentclass[11pt]{article}
 \usepackage{../inc/style}
 \title{Morgol specifications}
+\author{\href{mailto:thierry.coppey@epfl.ch}{\color{black} Thierry Coppey},
+	\href{mailto:andres.notzli@epfl.ch}{\color{black} Andres Noetzli}}
 
 \newlength{\dlen}
 \def\discuss#1{\par\hspace{2em}
@@ -13,6 +15,7 @@
 \newcommand{\lift}{\text{^=}}
 
 \begin{document}
+
 % --------------------------------------------------------------------------------------------------------------
 \section*{Language syntax and associated semantics}
 \discuss{The goal of this external DSL is to be syntactically close from SQL (whereas Scala internal DSL will be more concise), in particular: case insensitivity, comments style and keywords verbosity.}
@@ -421,7 +424,19 @@ One frequent pattern arising from the examples above is iterative computation of
 \item Removal: how to blend iterative formula and avoid recursive removal when pruning useless intermediate results?
 \ule
 
+We could use a pattern similar to that of windowing stream to address the throttling issue. For removal however, we need to make sure that the removal of an iteration does not call recursive deletion. We might do that with a special option for the iterative map (like {\tt ignore\_recursion(delete,clock)}), which would prevent creating deletion triggers for the $clock$ stream in the specified map.
+
+Finally, detecting that an iteration step $i$ is terminated can be detected by:\ol
+\item Locally: inspecting the <<to be called>> messages queue and detected locally that all the messages to be processed are referring to a later iteration.
+\item Remotely: ensure all messages of that step have been processed (have a step-specific distributed acknowledgement counter?), see distribution model
+\ole
+
+\section*{Distribution model}
+
 {\color{red} XXX: complete here}
+
+XXX: write distribution synchronization schema
+
 
 
 {\center --------------------------------------- legacy discussion ---------------------------------------}
