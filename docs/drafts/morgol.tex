@@ -285,18 +285,39 @@ Ci[x] &:=& {\rm AggSum}([], edge[x,y] \times edge[x,z] \times edge[y,z]) \times 
 \[{\rm NACC} := \dfrac{{\rm AggSum}([], Ci[x])}{{\rm AggSum}([], node[x])} \]
 \ule
 
-\subsubsection*{Problem 9: Max-flow min-cut} 
-capacity = value
+\subsubsection*{Problem 9: Max-flow min-cut}
+The goal of this problem is the computation of the maximum flow in a network graph.
+The graph is directed and every edge has a capacity assigned.
+The maximum flow is the largest flow from a source to a sink that the network allows.
+The following algorithm is a variation of the \href{http://en.wikipedia.org/wiki/Edmonds%E2%80%93Karp_algorithm}{Edmonds–Karp algorithm}. 
+The high level idea is to find the shortest path with remaining capacity from source to sink at every iteration, remove the flow of this shortest path and iterate until there is no path from source to sink anymore.
 \[
 \begin{array}{l}
+source := \text{input} \\
+sink := \text{input} \\
 edge[x,y] := \text{input} \\
-flow[x,y,iteration_n] := \\
-\qquad (flow[x,y,iteration] + spath_e[x,y,iteration] - spath_e[y,x,iteration]) \times \\
-\qquad \qquad (iteration_n = iteration + 1) \\
-spath[x,y][filtermin(l)] := edge[x,y,l] + edge[x,z,l_1] \times spath[z,y,l_2] \times (l = l_1 + l_2) \\
-max\_flow := AggSum([], shortest\_path[iteration, f] \times f)
+residual[x,y,i] := edge[x,y] \times (i = 0) + \\
+\qquad (residual[x,y,i_n] - spath_e[x,y,i_n] \times iter\_flow[i_n,f] \times f + \\
+\qquad spath_e[y,x,i_n,flow] \times iter\_flow[i_n,f] \times f) \times (i = i_n + 1)\\
+iter\_flow[i][filtermin(f)] = spath_e[x,y,l,i] \times (f = spath_e[x_2,y_2,l_2,i]) \\
+spath_e[x,y,l,f] = \\
+\qquad spath[source,v_1,l_1,i] \times residual[v_1,v_2,i] \times spath[v_2,sink,l_2,i] \times (flow[x,y,i\times (l = l_1 + l_2 + 1) \\ 
+spath[x,y,i][filtermin(l)] := residual[x,y,i] \times (l = 1) \\
+\qquad (spath[x,z,l_1] \times spath[z,y,l_2] \times (l = l_1 + l_2) \\
+max\_flow := AggSum([], spath[iteration, f] \times f)
 \end{array}
 \]
+The maps in this algorithm have the following purposes:
+\begin{itemize}
+\item $source$: Index of the source node
+\item $sink$: Index of the sink node
+\item $edge$: A map containing the edges with their capacity as values
+\item $residual$: The residual network at iteration $i$ (initialized with the edge capacities)
+\item $iter\_flow$: The flow at iteration $i$ on the shortest path from source to sink
+\item $spath_e$: All edges that are part of the shortest path from source to sink at iteration $i$
+\item $spath$: The shortest paths at iteration $i$
+\item $max\_flow$: The max flow of the graph 
+\end{itemize}
 
 \subsubsection*{Problem 10: Reliable unicast messaging}
 This problem has been presented in the Bloom paper and serves as an example of how Bloom programs can be translated to Morgol programs.
