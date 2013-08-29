@@ -21,7 +21,7 @@
 \section{Language syntax and semantics}
 \discuss{The goal of this external DSL is to be syntactically close from SQL (whereas Scala internal DSL will be more concise), in particular: case insensitivity, comments style and keywords verbosity.}
 Let {\tt ident} an identifier string, {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string) literals and ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ a type declaration. Additional types are converted into these during the parsing.
-\discuss{What about user-defined types? As we want to target Scala and C/C++, we should limit ourselves to case classes/C struct, but these could easily be unfolded into multiple values maintained in several columns. Not clear if there is any benefit to allow arbitrary types.}
+\discuss{What about user-defined types? Targeting Scala and C/C++, we should restrict to case classes/C {\tt struct}, but these could easily be flattened into multiple values in several columns. Benefit of arbitrary types is not clear.}
 For conciseness, we denote: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$. Comments are delimited by: {\tt ----...\textbackslash n} , {\tt //...\textbackslash n} or {\tt /*...*/}.\\
 The system declaration file format is defined as:
 \begin{verbatim}
@@ -100,10 +100,12 @@ mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
 \end{verbatim}
 \discuss{Are all type annotations necessary?
 	\say{Andres}{Aggregation keys (and possibly keys) types should be inferred}
-	\say{Thierry}{Agree, but not sure we can always derive the correct type because we might have ordering issues and it gets harder with recursion. I would prefer forcing them now and make them optional later. Also note that the aggregation does not need to happen on a key but any bound variable in rhs.}}
+	\say{Thierry}{Agree, but not sure we can always derive the correct type because we might have ordering issues and it gets harder with recursion. I prefer them mandatory now and make them optional later. Also note that the aggregation does not need to happen on a key but any bound variable in rhs.}}
 
 If the expression is not defined, the map is user-managed and the programmer needs to write his own triggers to maintain it.
-\discuss{Are user-defined triggers really need? Have they more flexibility/power than expressions?}
+\discuss{Are user-defined triggers really need? Have they more flexibility/power than expressions?
+\say{Thierry}{To encode specifically clock/window we need to make non-symetric add and deletion triggers.}
+}
 
 {\bf Semantics}
 \discuss{most suble topic as we want to have a simple syntax for 3 concerns:\\
@@ -239,18 +241,20 @@ on + Bids(b_id, b_vol, b_price) { -- other triggers are very similar
 The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a precursor of the PageRank algorithm.
 The following program corresponds to the converging version of the algorithm described on the Wikipedia page.
 \[
-\begin{array}{l}
-p[id] = \text{input} \\
-link[from,to] = \text{input} \\
-auth_n[id] = auth[id] + AggSum([id], link[id_2,id] \times hub[id_2]) \\
-auth\_norm = sqrt(AggSum([], (auth_n[id])^2)) \\
-auth[id] = auth_n[id] / norm \text{with} (threshold := X)\\ 
-hub_n[id] = hub[id] + AggSum([id], link[id,id_2] \times auth[id_2]) \\
-hub\_norm = sqrt(AggSum([], (hub_n[id])^2)) \\
-hub[id] = hub_n[id] / norm
+\begin{array}{rcl}
+p[id] &:=& \text{input stream} \\
+link[from,to] &:=& \text{input stream} \\
+auth_n[id] &:=& auth[id] + AggSum([id], link[id_2,id] \times hub[id_2]) \\
+auth\_norm &:=& sqrt(AggSum([], (auth_n[id])^2)) \\
+auth[id] &:=& auth_n[id] / norm \quad\text{with} (threshold := X)\\ 
+hub_n[id] &:=& hub[id] + AggSum([id], link[id,id_2] \times auth[id_2]) \\
+hub\_norm &:=& sqrt(AggSum([], (hub_n[id])^2)) \\
+hub[id] &:=& hub_n[id] / norm
 \end{array}
 \]
-\discuss{What's an elegant way of seeding $auth[id]$ and $hub[id]$ with 1 for every $id$?} 
+\discuss{What's an elegant way of seeding $auth[id]$ and $hub[id]$ with 1 for every $id$?
+\say{Thierry}{Something like $hub[id] := p[id] \times ((\exists(hub[id])!=0) + hub_n[id] / norm)$?}
+} 
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Link predictions}
@@ -327,19 +331,19 @@ The maximum flow is the largest flow from a source to a sink that the network al
 The following algorithm is a variation of the \href{http://en.wikipedia.org/wiki/Edmonds%E2%80%93Karp_algorithm}{Edmonds–Karp algorithm}. 
 The high level idea is to find the shortest path with remaining capacity from source to sink at every iteration, remove the flow of this shortest path and iterate until there is no path from source to sink anymore.
 \[
-\begin{array}{l}
-source := \text{input} \\
-sink := \text{input} \\
-edge[x,y] := \text{input} \\
-residual[x,y,i] := edge[x,y] \times (i = 0) + \\
-\qquad (residual[x,y,i_n] - spath_e[x,y,i_n] \times iter\_flow[i_n,f] \times f + \\
-\qquad spath_e[y,x,i_n,flow] \times iter\_flow[i_n,f] \times f) \times (i = i_n + 1)\\
-iter\_flow[i][filtermin(f)] = spath_e[x,y,l,i] \times (f = spath_e[x_2,y_2,l_2,i]) \\
-spath_e[x,y,l,f] = \\
-\qquad spath[source,v_1,l_1,i] \times residual[v_1,v_2,i] \times spath[v_2,sink,l_2,i] \times (flow[x,y,i\times (l = l_1 + l_2 + 1) \\ 
-spath[x,y,i][filtermin(l)] := residual[x,y,i] \times (l = 1) \\
-\qquad (spath[x,z,l_1] \times spath[z,y,l_2] \times (l = l_1 + l_2) \\
-max\_flow := AggSum([], spath[iteration, f] \times f)
+\begin{array}{rcl}
+source &:=& \text{input} \\
+sink &:=& \text{input} \\
+edge[x,y] &:=& \text{input} \\
+residual[x,y,i] &:=& edge[x,y] \times (i \hat= 0) + \\
+&&\qquad (residual[x,y,i_n] - spath_e[x,y,i_n] \times iter\_flow[i_n,f] \times f + \\
+&&\qquad spath_e[y,x,i_n,flow] \times iter\_flow[i_n,f] \times f) \times (i \hat= i_n + 1)\\
+iter\_flow[i][filter \min(f)] &:=& spath_e[x,y,l,i] \times (f = spath_e[x_2,y_2,l_2,i]) \\
+spath_e[x,y,l,f] &:=& spath[source,v_1,l_1,i] \times residual[v_1,v_2,i] \times\\
+&&\qquad  spath[v_2,sink,l_2,i] \times (flow[x,y,i\times (l = l_1 + l_2 + 1) \\ 
+spath[x,y,i][filter \min(l)] &:=& residual[x,y,i] \times (l = 1) +\\
+&& spath[x,z,l_1] \times spath[z,y,l_2] \times (l = l_1 + l_2) \\
+max\_flow &:=& AggSum([], spath[iteration, f] \times f)
 \end{array}
 \]
 The maps in this algorithm have the following purposes:
@@ -454,7 +458,7 @@ A single \textit{master} node receives all input streams. Triggers execution is 
 \item Request/response: {\tt get}, {\tt aggregate} (foreach with return value), {\tt collect} (map snapshot)
 \ule
 
-Statements are executed sequentially on the master. Whenever the master detects that there is a dependency (read after write) {\color{red} or write after write if one of the write is {\tt set} or {\tt clear}}, it will make sure that all previous data has been flushed into workers' map with a barrier procedure. The worker are purely reactive: they process messages one by one in the order of arrival.
+Statements are executed sequentially on the master. Whenever the master detects that there is a dependency (RaW or WaW with {\tt set} and {\tt clear}), it will make sure that all previous data has been flushed into workers' map with a barrier procedure. The worker are purely reactive: they process messages one by one in the order of arrival.
 
 \subsection{Barrier}
 The goal of the barrier is to synchronize all workers, ensuring that all messages sent have been received and processed. We distinguish two cases:\ul
@@ -470,7 +474,9 @@ Barrier procedure:\ol
 
 \subsubsection*{Correctness proof}
 {\color{red} XXX: complete here}
+
 XXX: work out all possible cases such that we are sure that correctness is guaranteed.
+
 make it a proof-like demonstration.
 
 \subsection{Dependency detection}
@@ -497,9 +503,6 @@ XXX: write distribution synchronization schema
 
 % Andres: I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
 % ==> reduce tables to only what necessary ? not sure we can always do that.
-\begin{verbatim}
--> Hubs and authorities
-\end{verbatim}
 
 {\center --------------------------------------- legacy discussion ---------------------------------------}
 \begin{verbatim}
