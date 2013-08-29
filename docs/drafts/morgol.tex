@@ -102,10 +102,7 @@ mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
 	\say{Andres}{Aggregation keys (and possibly keys) types should be inferred}
 	\say{Thierry}{Agree, but not sure we can always derive the correct type because we might have ordering issues and it gets harder with recursion. I prefer them mandatory now and make them optional later. Also note that the aggregation does not need to happen on a key but any bound variable in rhs.}}
 
-If the expression is not defined, the map is user-managed and the programmer needs to write his own triggers to maintain it.
-\discuss{Are user-defined triggers really need? Have they more flexibility/power than expressions?
-\say{Thierry}{To encode specifically clock/window we need to make non-symetric add and deletion triggers.}
-}
+If the expression is not defined, the map is user-managed and the programmer needs to write his own triggers to maintain it (see Section~\ref{section:triggers} for details).
 
 {\bf Semantics}
 \discuss{most suble topic as we want to have a simple syntax for 3 concerns:\\
@@ -141,6 +138,7 @@ The options that can be declared for a map are the location and the value thresh
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Triggers}
+\label{section:triggers}
 \begin{verbatim}
 trigger ::= "ON" ("+"|"-") streamName "(" ident ("," ident)* ")" "{" (stmt)* "}"
           | "ON" "SYSTEM" "READY" "{" (stmt)* "}"
@@ -148,9 +146,10 @@ stmt    ::= mapref (":" "(" expr ")")? ("+="|":=") expr ";"
           | "CALL" ("+"|"-") streamName "(" rs(expr, ",") ")"
 \end{verbatim}
 The triggers being defined by the user are called before any other trigger. It is not possible to override an automatically generated trigger.
-\discuss{Do we want to have an extra syntax for user-defined triggers?}
 \discuss{When do we call user-defined triggers (before all automatic triggers)?}
-
+\discuss{Are user-defined triggers really need? Have they more flexibility/power than expressions?
+\say{Thierry}{To encode specifically clock/window we need to make non-symetric add and deletion triggers.}
+}
 % --------------------------------------------------------------------------------------------------------------
 \newpage
 \section{Examples}
