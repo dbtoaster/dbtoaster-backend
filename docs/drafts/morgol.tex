@@ -237,6 +237,20 @@ on + Bids(b_id, b_vol, b_price) { -- other triggers are very similar
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Hubs and authorities}
 The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a precursor of the PageRank algorithm.
+The following program corresponds to the converging version of the algorithm described on the Wikipedia page.
+\[
+\begin{array}{l}
+p[id] = \text{input} \\
+link[from,to] = \text{input} \\
+auth_n[id] = auth[id] + AggSum([id], link[id_2,id] \times hub[id_2]) \\
+auth\_norm = sqrt(AggSum([], (auth_n[id])^2)) \\
+auth[id] = auth_n[id] / norm \text{with} (threshold := X)\\ 
+hub_n[id] = hub[id] + AggSum([id], link[id,id_2] \times auth[id_2]) \\
+hub\_norm = sqrt(AggSum([], (hub_n[id])^2)) \\
+hub[id] = hub_n[id] / norm
+\end{array}
+\]
+\discuss{What's an elegant way of seeding $auth[id]$ and $hub[id]$ with 1 for every $id$?} 
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Link predictions}
@@ -484,9 +498,7 @@ XXX: write distribution synchronization schema
 % Andres: I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
 % ==> reduce tables to only what necessary ? not sure we can always do that.
 \begin{verbatim}
--> MaxFlow Min Cut
 -> Hubs and authorities
--> bloom query with locality example
 \end{verbatim}
 
 {\center --------------------------------------- legacy discussion ---------------------------------------}
