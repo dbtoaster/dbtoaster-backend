@@ -181,6 +181,7 @@ weight[x] &:=& node[x] \times {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]
 \discuss{To execute statements synchronously, we might have multiple options:\ul
 \item {\bf Clock join:} associate a timestamp attribute with all map and create a clock stream. When a clock tick is inserted, the next iteration is computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues: deletion trigger of weight must be \underline{overridden} not to be recursive. How do we check that all elements of a tick have been computed ?
 \say{Andres}{The nice thing with custom input streams is that you can define the clock stream based on the number of iterations, on a timeout or any other external event.}
+\say{Thierry}{See \ref{windowed} for a more detailed solution to create a window of in-flight computations.}
 \item \textbf{Limited iterations:} To execute statements synchronously, we could compute only a fixed number of steps. We can then make that number of step vary to reach threshold requirements.
 \ule}
 
@@ -411,7 +412,7 @@ $\delta:Q\times\Sigma\to Q$ & the transition function \\
 We can find a correspondence by replacing $\Sigma$ by the set of events received, defining a mapping $Q\to\mathbb{N}$ to encode the state and create a table $T(state,message,next\_state)$ to define $\delta$. $q_0$ can be encoded in the <<on system initialized>> trigger and finally, to generate $evt$ when $q_i\in F$, it suffice to compute $\exists(F[q_i]) \times (evt)$ in the input stream trigger.
 
 % --------------------------------------------------------------------------------------------------------------
-\subsection{Windowed streams}
+\subsection{Windowed streams} \label{windowed}
 There is three at least three possible ways of windowing streams:\ul
 \item \textbf{Disjoint windows:} can be implemented by emptying all maps periodically or based on an event. An appropriate trigger could be written for such task.
 \item \textbf{Fixed-size window:} (size-based sliding) the window contains a fixed number of tuples. Add at stream entrance (master) a LRU log of events (like \href{http://docs.oracle.com/javase/7/docs/api/java/util/LinkedHashSet.html}{{\tt LinkedHashSet}} allowing multiple elements, or a queue with O(1) deletions) where we can retrieve oldest stored elements.\ul
@@ -430,6 +431,7 @@ Note: the clock stream allows both control over window granularity and size.
 \ule
 \discuss{Do we want to generalize the windowing pattern and make it a built-in function of our language? How does it blend with iterative computations?}
 
+% --------------------------------------------------------------------------------------------------------------
 \subsection{Iterative computations (and unstratified programs)}
 One frequent pattern arising from the examples above is iterative computation of sets (PageRank, Max-flow). Also Bloom solution to express unstratified programs relies on iterative sets of predicates and negations. In a distributed settings we would like to have non-blocking iterations (multiple in-flight iterations) while at the same time reducing memory consumption by pruning useless intermediate results. The iterative computation poses 3 problems:\ul
 \item Throttling: controlling the maximal number or the speed of iterations made?
@@ -443,11 +445,6 @@ Finally, detecting that an iteration step $i$ is terminated can be detected by:\
 \item Locally: inspecting the <<to be called>> messages queue and detected locally that all the messages to be processed are referring to a later iteration.
 \item Remotely: ensure all messages of that step have been processed (have a step-specific distributed acknowledgement counter?) (see \ref{distrib}).
 \ole
-
-
-
-
-
 
 % --------------------------------------------------------------------------------------------------------------
 \section{Implementation}
@@ -494,88 +491,60 @@ We prove correctness and termination by induction:\ul
 	Because it atomically acknowledge his call and create $n$ calls for $w_2$, it is similar as if master would have sent $n$ messages to $w_2$ (case 1).
 	\item $w_2$ acknowledge master before $w_1$, master needs $-n \text{ acks} =n \text{ calls}$ for $w_2$, which will be compensated when receiving $w_1$ message.
 	\ule
-\item Induction: we can iteratively reduce the case 2 to case 1, such that we can consider 1 master with $n$ independent worker. Because case 1 proves correctness for one worker, we iteratively remove 1 worker until case 1 \#.
+\item Induction: we can reduce any complex calling chain to the case 1 by iteratively using the case 2 reduction, thus reducing the call chain by 1. Finally, we are left with 1 master and $N$ independent worker. Since workers are independent, it reduces to $N$ times the case 1 \#
 \ule
 
-Termination proof: whenever a node create a remote call, it counts it positively, whenever a node receives a call, it is counted negatively. Assuming that message processing terminates, all messages will be counted once positively and once negatively, so eventually all counters will be 0 and the barrier will terminate.
+Termination proof: whenever a node create a remote call, it counts it positively, whenever a node receives a call, it is counted negatively. Assuming that message processing terminates, all messages will be counted once positively and once negatively, so eventually all counters will be zero and the barrier will terminate.
 
 \subsection{Dependency detection}
 Intuition: mark as \textit{invalid} maps that might be affected by an in-flight (unacknowledged) messages. Maps read need to be valid. As {\tt set} is not commutative, the destination map must be valid (not to be affected by previous messages). As {\tt add} is commutative, it is not necessary to force the destination to be valid.
+% - A write invalidates the map
+% - A map needs to be valid to be read from
+% - When flushing, all writes are committed to the map
 
 We encode the dependencies detection (to place barriers where appropriate) in two steps:\ol
 \item Compilation: each statement is either {\tt add} or {\tt set} on a map, and read from other maps. We prefix all operations by $\langle mi,\{ mv_1,mv_2,...mv_n \}\rangle$ where $mi$ is the map invalidated by the operation and $mv_i$ are the maps that must be valid.
 \item Runtime: the master maintains the list of invalid maps. If one of the requested map is invalid (in the prefix), a barrier will be issued, the list of invalid maps is cleared and the operations can take place.
 \ole
-\discuss{What about recursion? Do all recursive calls go through the master?}
-
-% A worker 'owns' a portion of all maps, determined by hash() function.
-% It responds to events from the master, and can interact with other workers.
-
-% Master is the main actor where the program runs, and does not own any map portion.
-% Coherency mechanism: keep track of 'invalid' maps, force-write (flush) when necessary
-% - A write invalidates the map
-% - A map needs to be valid to be read from
-% - When flushing, all writes are committed to the map
-
-XXX: write distribution synchronization schema
-
-\discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
-
-% Andres: I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
-% ==> reduce tables to only what necessary ? not sure we can always do that.
-
-{\center --------------------------------------- legacy discussion ---------------------------------------}
-\begin{verbatim}
-mapdef ::= "DECLARE" "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? 
-                                 (":" type)? ":=" expr mapopt? ";" 
-key    ::= ident ":" type
-aggkey ::= ("min"|"max"|"sum") "(" ident ")" ":" type
-mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
-\end{verbatim}
-
-{\color{red}
-XXX: milos' issue: if we have only multiplicity 1 we can put aggr in multiplicity\\
-XXX: mark for inequality comparison internally ? (maintain in tree)
+\discuss{What about recursion? Do all recursive calls go through the master?
+	\say{Thierry}{Yes because the trigger for a stream event is known only at the master level, although this sounds like a bottleneck for performance. How could we avoid going through the master?
+	In general, we should be able to circumvent the master if the updates are \underline{associative and commutative} (for example {\tt add} operation); this should be described in Datalog/Bloom papers and might possibly be linked with Daniel's work.}
 }
 
+\subsection{Distribution strategy (wip)}
+The master process input streams and coordinates worker actions; it does not own any map.
+\discuss{What about single-valued maps ({\tt K3Var}) ? Do we maintain them at master and broadcast their modification to all workers in a separate pattern/piggybacked on the barrier stop?}
+ A worker \textit{owns} a partition of all maps, determined by a hashing function $hash(map,key)\to worker$. We want to determine the hashing function for all maps such that we can improve locality of incremental updates. Ideas: \ul
+\item In equi-join between two relations, we want to hash these two relation along the joining key.
+\item For arbitrary join (inequality, cross-product, ...), co-location is not relevant, but hashing should balance the load between nodes. To minimize the number of message exchanged, it would be better if iteration is done on the largest relation, while the smaller is remotely accessed ({\tt get}) and its replies are cached.
+\ule
+\discuss{Other ideas about how to partition data efficiently ?}
+
+{\color{gray}\footnotesize
+------------------ legacy discussion\\
+\verb$mapdef ::= "DECLARE" "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? $\\
+\verb$                                 (":" type)? ":=" expr mapopt? ";" $\\
+\verb$key    ::= ident ":" type$\\
+\verb$aggkey ::= ("min"|"max"|"sum") "(" ident ")" ":" type$\\
+\verb$mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"$
+\discuss{Do we need to mark for inequality comparison internally ? (maintain in tree)}
 \discuss{It is not very clear whether aggregation keys should be separated from other keys as they must be provided for addition and deletion, but are read differently.}
-For recursion, we consider that a tuple has changed if it is addition creates a change to the map being read. This can be either: an insertion/deletion, a modification in the value (multiplicity), or a change of the aggregated values.
 \discuss{We need to detect these "modifications" efficiently and compute its delta over the map to create a reaction to it (call other triggers with updates values). It is not clear how a change in an aggregate value will be treated. Should it be a "deletion/insertion" (not desirable because if we have deletion, we have endless loop in shortest path) or a "value update"?
 	\say{Thierry}{I think there is many issues in the nitty gritty details of the implementation that we didn't covered so far.}
 We still do not achieve the effect that is claimed in SociaLite: having one single map to compute the shortest path \textit{and} computing its multiplicity. What should the return value of a map containing aggregations?
 	\say{Thierry}{The returned value should be the multiplicity of the min/max/sum so that we can achieve average and counting easily. We can easily modify it by wrapping into an exists. The shortest path iteration should be done with the number of added tuples.}
 	\say{Milos}{Returned value should be 1 when there is aggregted values (1 aggregate tuple). The number of shortest path is computed using two different maps, one for the minimum length, one for the count.}
+	\say{Thierry}{If we always return 1, could we then put the aggregated value there?}
 }
-How do these concerns blend with recursion and incremental maintenance?
-
-{\center --------------------------------------- legacy discussion end ---------------------------------------}
+\discuss{How do these concerns blend with recursion and incremental maintenance?}
+\discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
+% Andres: I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
+% ==> reduce tables to only what necessary ? not sure we can always do that.
+------------------ legacy discussion end
+}
 
 % ------------ LEGACY PROBLEMS --------------
-%\subsubsection*{Problem 1: betweenness centrality}
-%Let our fact table be $edge(x,y)$ we want to compute the \href{http://en.wikipedia.org/wiki/Betweenness_centrality}{betweenness centrality} $g(v)$ of graph nodes $v$, we apply the following rules:
-%\[\begin{array}{rcl}
-%edge[x,y] &:=& \text{\it implicitly defined and related to corresponding input stream} \\
-%path[x,y,len] &:=& \exists(edge[x,y]) \times (len\hat= 1) +  \exists(edge[x,z]) \times \exists(path[z,y,l]) \times (len\hat= 1+l) \times (x\ne y)\\
-%path_v[x,y,v,len] &:=& \exists(path[x,v,l_1]) \times \exists(path[v,y,l_2]) \times (len\hat= l_1+l_2) \times (x\ne y) \\
-%centrality[v] &:=& \exists(path[x,y,m]) \times (\exists(path[x,y,s] \times (s<m)) = 0) \times \left(\dfrac{{\rm Sum}(path_v[x,y,v,m])}{path[x,y,m]}\right)
-%\end{array}\]
-%
-%By adding the condition $(x\ne y )$ in the $path$ definition, we prevent cycles. <<< WRONG
-%
 %\subsubsection*{Problem 2: PageRank}
-%The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph, $K$ the diagonal matrix with out-degrees in diagonal. We compute \[R(t+1)=d\cdot M\cdot R(t)+\dfrac{1-d}{N}{\bf 1} \qquad \text{with {\bf 1} a column vector of 1 and }R(0)={\bf 1}\cdot \frac{1}{n}\]
-%The issues with the matrix model is that all computation are done synchronously.
-%
-%\textbf{Naive version:} To avoid explicit synchronization, we have 2 solutions: maintaining versions in the database or normalizing $|R|=1$ after every computation.
-%\[\begin{array}{rrl}
-%node[x] &:=& \text{\it input stream} \in\{0,1\} \\
-%edge[x,y] &:=& \text{\it input stream, adjacency matrix} \\
-%weight[x] &:=& node[x] \times (w_0\hat=weight[x]) \times \left( w_0 + (w_1\hat=nw) \times \left(
-%\dfrac{|w_1 - w_0|}{w_1+w_0} > {\rm threshold}\right) \times (w_1-w_0) \right) \\ \\
-%&& \text{where } nw= {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]}{{\rm AggSum}([],edge[y,z])}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[v])}\\
-%\end{array}\]
-%The shortcomings with this approach are the non-preservation of global weight and injection of initial coefficient. The $d$ weighting should mitigates this issue (but not sure at all !!). We also must ensure that we don't call recursively if the value did not change (encode this with threshold in map declaration or in another function?).
-%
 %\textbf{Clock join:} One possible idea to virtually execute the program synchronously is to have a clock stream and a timestamp attribute for all maps. When a clock tick is inserted, the next iteration can be computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues:\ul
 %\item Deletion trigger of weight must be \underline{overridden} to only remove data (and avoid recursion).
 %\item How to know that all the data at a tick has been fully computed ?
@@ -622,6 +591,7 @@ Integrate features from Socialite\cite{socialite}, WebDamLog\cite{webdamlog}, Bl
 \ole
 
 % Bibliography
+\newpage
 \bibliographystyle{plain} \addcontentsline{toc}{section}{References} % acm
 \def\pdfurl#1{\href{#1}{\footnotesize pdf}}
 {\small \bibliography{../inc/bibliography.bib}}
