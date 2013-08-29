@@ -435,21 +435,38 @@ Finally, detecting that an iteration step $i$ is terminated can be detected by:\
 % --------------------------------------------------------------------------------------------------------------
 \section{Implementation}
 \subsection{Distribution model} \label{distrib}
-The distribution model is one master that receive all streams. Triggers implementation is then parallelized over workers with fully asynchronous messages between master and workers and between workers. Maps are partitioned between workers such that it is possible to know through key hashing which worker is responsible for which key. There are two types of messages being exchanged:\ul
-\item Procedure calls that do not return any value: add, set, foreach, clear
-\item Request/response: get, aggregate (foreach with return value), collect (map transfer)
+A single \textit{master} node receives all input streams. Triggers execution is then parallelized over \textit{workers} with asynchronous messages between master and workers and between workers. Maps are partitioned between workers such that it is possible to compute (hashing) the worker responsible of a key. There are two types of messages (operations on map) being exchanged:\ul
+\item Procedure calls that do not return any value: {\tt add}, {\tt set}, {\tt foreach}, {\tt clear}
+\item Request/response: {\tt get}, {\tt aggregate} (foreach with return value), {\tt collect} (map snapshot)
 \ule
 
-The (trigger) statements are executed sequentially on the master. Whenever the master detects that there is a dependency (read after write) {\color{red} XXX: write after write?}, it will make sure that all previous data has been flushed into workers' map by issuing a barrier request.
+Statements are executed sequentially on the master. Whenever the master detects that there is a dependency (read after write) {\color{red} or write after write if one of the write is {\tt set} or {\tt clear}}, it will make sure that all previous data has been flushed into workers' map with a barrier procedure. The worker are purely reactive: they process messages one by one in the order of arrival.
 
 \subsection{Barrier}
-The goal of the barrier is to synchronize all workers by making sure that they have received and processed all the messages that were previously sent. For request/response messages, workers need to make sure that they have received desired responses before responding to the barrier.
+The goal of the barrier is to synchronize all workers, ensuring that all messages sent have been received and processed. We distinguish two cases:\ul
+\item Request/response message: acknowledgment is implicit in the response. Each worker ensures that it has no pending request before starting/continuing the barrier procedure.
+\item Procedure calls: workers and master maintain locally the number of procedures started on each worker. Additionally, workers maintain the number of messages they have received.
+\ule
 
-For procedure calls, we want to avoid acknowledgement chaining and aggregated acknowledgments thus the workers will respond to the master immediately
+Barrier procedure:\ol
+\item Master broadcasts a \textit{barrier-start} message to enable the barrier mode of the workers.
+\item When in barrier mode, worker send their local values ($\#recv$ + map $worker\to \#sent$) each time they have processed a message and they have no pending request, or if the number of pending requests (get + aggregations) drops down to zero.
+\item The master computes $\#send-\#recv$ for each worker. When all counters are zero (there is no in-flight message), the master broadcasts a \textit{barrier-stop} message and continues execution.
+\ole
 
-
+\subsubsection*{Correctness proof}
+{\color{red} XXX: complete here}
 XXX: work out all possible cases such that we are sure that correctness is guaranteed.
 make it a proof-like demonstration.
+
+\subsection{Dependency detection}
+Intuition: mark as \textit{invalid} maps that might be affected by an in-flight (unacknowledged) messages. Maps read need to be valid. As {\tt set} is not commutative, the destination map must be valid (not to be affected by previous messages). As {\tt add} is commutative, it is not necessary to force the destination to be valid.
+
+We encode the dependencies detection (to place barriers where appropriate) in two steps:\ol
+\item Compilation: each statement is either {\tt add} or {\tt set} on a map, and read from other maps. We prefix all operations by $\langle mi,\{ mv_1,mv_2,...mv_n \}\rangle$ where $mi$ is the map invalidated by the operation and $mv_i$ are the maps that must be valid.
+\item Runtime: the master maintains the list of invalid maps. If one of the requested map is invalid (in the prefix), a barrier will be issued, the list of invalid maps is cleared and the operations can take place.
+\ole
+\discuss{What about recursion? Do all recursive calls go through the master?}
 
 % A worker 'owns' a portion of all maps, determined by hash() function.
 % It responds to events from the master, and can interact with other workers.
@@ -459,8 +476,6 @@ make it a proof-like demonstration.
 % - A write invalidates the map
 % - A map needs to be valid to be read from
 % - When flushing, all writes are committed to the map
-
-{\color{red} XXX: complete here}
 
 XXX: write distribution synchronization schema
 
