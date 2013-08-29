@@ -453,31 +453,52 @@ Finally, detecting that an iteration step $i$ is terminated can be detected by:\
 % --------------------------------------------------------------------------------------------------------------
 \section{Implementation}
 \subsection{Distribution model} \label{distrib}
-A single \textit{master} node receives all input streams. Triggers execution is then parallelized over \textit{workers} with asynchronous messages between master and workers and between workers. Maps are partitioned between workers such that it is possible to compute (hashing) the worker responsible of a key. There are two types of messages (operations on map) being exchanged:\ul
-\item Procedure calls that do not return any value: {\tt add}, {\tt set}, {\tt foreach}, {\tt clear}
-\item Request/response: {\tt get}, {\tt aggregate} (foreach with return value), {\tt collect} (map snapshot)
+A single \textit{master} node receives all input streams. Triggers execution is then parallelized over \textit{workers} with asynchronous messages between master and workers and between workers. Maps are partitioned between workers such that it is possible to compute (hashing) the worker responsible of a key. There are 3 types of messages being exchanged (denoting operations on a map):\ul
+\item \textbf{Call:} remote procedure invocation, does not return any value: {\tt add}, {\tt set}, {\tt foreach}, {\tt clear}
+\item \textbf{Request:} {\tt get} (lookup), {\tt aggregate} (foreach with return value), {\tt collect} (map snapshot)
+\item \textbf{Response:} answer to a request
 \ule
 
-Statements are executed sequentially on the master. Whenever the master detects that there is a dependency (RaW or WaW with {\tt set} and {\tt clear}), it will make sure that all previous data has been flushed into workers' map with a barrier procedure. The worker are purely reactive: they process messages one by one in the order of arrival.
+Statements are executed sequentially on the master. Whenever the master detects that there is a dependency (RaW or WaW with {\tt set} and {\tt clear}), it makes sure that all previous data has been flushed into workers' map with a barrier procedure. The worker are purely reactive: they process messages one by one in the order of arrival. Requests block until response on the master, whereas they are non-blocking on workers.
 
 \subsection{Barrier}
 The goal of the barrier is to synchronize all workers, ensuring that all messages sent have been received and processed. We distinguish two cases:\ul
-\item Request/response message: acknowledgment is implicit in the response. Each worker ensures that it has no pending request before starting/continuing the barrier procedure.
-\item Procedure calls: workers and master maintain locally the number of procedures started on each worker. Additionally, workers maintain the number of messages they have received.
+\item Request: acknowledgment is implicit in the response. Each worker ensures that it has no pending request before starting/continuing the barrier procedure.
+\item Call: workers and master maintain locally the number of remote calls started remotely on each worker in a map $C_S\langle worker\to\#calls \rangle$. Additionally, workers maintain locally the number of calls $C_R$ they have received.
 \ule
 
-Barrier procedure:\ol
-\item Master broadcasts a \textit{barrier-start} message to enable the barrier mode of the workers.
-\item When in barrier mode, worker send their local values ($\#recv$ + map $worker\to \#sent$) each time they have processed a message and they have no pending request, or if the number of pending requests (get + aggregations) drops down to zero.
-\item The master computes $\#send-\#recv$ for each worker. When all counters are zero (there is no in-flight message), the master broadcasts a \textit{barrier-stop} message and continues execution.
+\subsubsection*{Barrier procedure}\ol
+\item Master broadcasts a \textit{barrier-start} message to enable the barrier mode of the workers. At this point, the master is not allowed to send additional messages (except responses).
+\item In barrier mode, after a worker has processed a message, if it has no pending request:\ul
+	\item If counters are non-zero ($C_R\ne 0 \lor \exists w. C_S[w]\ne 0$), send their values $\langle C_R, C_S\rangle$ to the master and reset them to zero.\ule
+\item At each message reception, the master computes the difference of calls sent and received for each worker ($\sum_{w}C_S[w] - w.C_R$).
+\item When all counters are zero (there is no in-flight message), the master broadcasts a \textit{barrier-stop} message and continues execution.
 \ole
 
-\subsubsection*{Correctness proof}
-{\color{red} XXX: complete here}
+\subsubsection*{Correctness and termination proofs}
+We need to prove that the barrier procedure terminates, and at the end, all message sent have been received.
+We consider the settings of reliable channels (exactly once delivery) but no FIFO guarantee (such that we could use UDP with delivery guarantee instead of TCP if needed). We do not consider failures here, otherwise termination property will (obviously) not be satisfied.
 
-XXX: work out all possible cases such that we are sure that correctness is guaranteed.
+First notice that we can ignore requests/response in the proof:\ul
+\item If the request is issued by master, response must be received before barrier (blocking).
+\item Workers do not create request spontaneously, they result from a call.
+\item If an incoming call create a request on a worker, the delivery of acknowledgement will be delayed until the request is responded (step 2), thus a request can only happen when not all calls have been acknowledged, hence barrier cannot complete before all requests have been answered.
+\item Because of channel delivery guarantee, eventually, all requests will be answered.
+\ule
 
-make it a proof-like demonstration.
+We prove correctness and termination by induction:\ul
+\item Case 1: consider 1 master, 1 worker; the master has sent $n\ge 0$ calls to the worker. At step 2, worker has $k\ge 0$ calls processed, and $r\ge 0$ pending requests. Eventually, all requests will be answered and all messages will arrive (reliable channel) and be processed. Either of these events will generate an acknowledgment to the master (step 2). Because each message is counted exactly once (counter reset), the master will receive exactly $n$ acknowledgements. 
+
+\item Case 2: consider 2 workers; assume worker $w_1$ receive a call whose processing generates $n\ge 0$ calls from $w_1$ on $w_2$. We have the following cases:\ul
+	\item If $n=0$ we are in base case 1.
+	\item $w_1$ finishes processing and send $\langle1,w_2\to n\rangle$ to master.
+	Because it atomically acknowledge his call and create $n$ calls for $w_2$, it is similar as if master would have sent $n$ messages to $w_2$ (case 1).
+	\item $w_2$ acknowledge master before $w_1$, master needs $-n \text{ acks} =n \text{ calls}$ for $w_2$, which will be compensated when receiving $w_1$ message.
+	\ule
+\item Induction: we can iteratively reduce the case 2 to case 1, such that we can consider 1 master with $n$ independent worker. Because case 1 proves correctness for one worker, we iteratively remove 1 worker until case 1 \#.
+\ule
+
+Termination proof: whenever a node create a remote call, it counts it positively, whenever a node receives a call, it is counted negatively. Assuming that message processing terminates, all messages will be counted once positively and once negatively, so eventually all counters will be 0 and the barrier will terminate.
 
 \subsection{Dependency detection}
 Intuition: mark as \textit{invalid} maps that might be affected by an in-flight (unacknowledged) messages. Maps read need to be valid. As {\tt set} is not commutative, the destination map must be valid (not to be affected by previous messages). As {\tt add} is commutative, it is not necessary to force the destination to be valid.
