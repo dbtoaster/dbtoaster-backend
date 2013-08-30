@@ -161,6 +161,17 @@ spath_v[x,y,v,l] &:=& spath[x,v,l_1] \times spath[v,y,l_2] \times (l\hat= l_1+l_
 centrality[v] &:=& \exists(spath[x,y,l]) \times (spath_v[x,y,v,l] / spath[x,y,l])
 \end{array}\]
 
+An alternative to avoid using special tricks in the map, and only aggregation in expression is to cut the path explosion using $m$, a minimum over all values (or current value if no such minimum exist). Then whenever we use the map, we need to plug back the minimum search.
+\[\begin{array}{rcl}
+edge[x,y,l] &:=& \text{input stream} \\
+path[x,y,l] &:=& (edge[x,y,l] + edge[x,z,l_1]\times path[z,y,l_2] \times (l\hat=l_1+l_2)) \times \\
+&& (m\hat=\min (path[x,y,l_m] \times l_m) + \neg\exists(path[x,y,l_z])\times l ) \times (l \le m) \\
+centrality[v] &:=& (m\hat=\min (spath[x,y,l_m] \times l_m)) \times path[x,v,l_1] \times path[v,y,l_2] \times \\
+&& (l_1+l_2=m) / path[x,y,m]
+\end{array}\]
+\discuss{We cannot expect the language user to come up with this solution. We need a systematic desugaring of filtering constructs.
+\say{Thierry}{Pattern observed: at recursive insertion, we use $(m\hat=\min(...)+\neg\exists(...))$ and at usage we need to use $m\hat=\min(...)$ to get correct column value. Bonus: we heretofore were unclear whether to remove elements from the map (and call associated triggers and rebuild map from scratch?!). With this pattern, we clearly keep them in the map (they remain are available) but hide them to the user.}}
+
 % --------------------------------------------------------------------------------------------------------------
 \subsection{PageRank} \label{pb:pagerank}
 The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{PageRank} is defined for $N$ pages with a matrix $M=(K^{-1} A)^T$ where $A$ is the adjacency matrix of the graph and $K$ the diagonal matrix with out-degrees in diagonal. We synchronously compute (usually $d=0.85$):

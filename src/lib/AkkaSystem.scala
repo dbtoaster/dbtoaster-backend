@@ -5,6 +5,13 @@ import scala.concurrent.{Future,Await}
 import akka.actor.{Actor,ActorRef,Props}
 import akka.pattern.ask
 
+// ======================================================================
+//
+// WARNING: CURRENT BARRIER IMPLEMENTATION IS FLAWED, REFER TO 
+//          docs/draft/morgol.tex FOR PROTOCOL CORRECTIONS.
+//
+// ======================================================================
+
 /*
  * Model: fully asynchronous message passing on workers. Synchronous statements
  * on master. Non-returning operations like add, set, foreach and clear do not
