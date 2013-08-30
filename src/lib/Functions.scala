@@ -38,7 +38,7 @@ object Functions {
   }).matcher(str).find) 1L else 0L
 
   def Udiv(x: Double): Double = if (x==0.0) 0.0 else 1.0 / x
-  def Ulistmax(v1: Long, v2: Long): Double = Math.max(v1, v2)
+  def Ulistmax(v1: Long, v2: Long): Long = Math.max(v1, v2)
   def Ulistmax(v1: Double, v2: Double): Double = Math.max(v1, v2)
 
   def Udate_part(field:String, date:java.util.Date): Long = {
@@ -51,7 +51,7 @@ object Functions {
     }
   }
 
-  def Usubstring(s:String,a:Long,b:Long) = s.substring(a.toInt,b.toInt)
+  def Usubstring(s:String,b:Long,e:Long= -1) = if (e== -1) s.substring(b.toInt) else s.substring(b.toInt,e.toInt)
 
   def Uvec_length(x:Double, y:Double, z:Double):Double = Vector(x,y,z).length
   /*

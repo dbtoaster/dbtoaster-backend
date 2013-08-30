@@ -109,7 +109,7 @@ object TypeCheck extends (M3.System => M3.System) {
         case Exists(e) => cr=ie(e,c)
         case Lift(n,e) => ie(e,c); c.get(n) match { case Some(t) => try { tpRes(t,e.tp,ex) } catch { case _:Throwable=> err("Value "+n+" lifted as "+t+" compared with "+e.tp) } case None => cr=c+((n,e.tp)) }
         case a@AggSum(ks,e) => val in=ie(e,c); cr=c++ks.map{k=>(k,in(k))}; a.tks=ks.map(cr)
-        case Apply(_,_,as) => as map {x=>ie(x,c)} // XXX: check args/return types against user-functions library
+        case a@Apply(n,_,as) => as.map(ie(_,c)); a.tp=Library.typeCheck(n,as.map(_.tp))
         case r@Ref(n) => r.tp=c(n)
         case m@MapRef(n,tp,ks) => val mtp=s0.mapType(n); cr=c++(ks zip mtp._1).toMap
           if (tp==null) m.tp=mtp._2 else if (tp!=mtp._2) err("Bad value type: expected "+mtp._2+", got "+tp+" for "+ex)
@@ -127,7 +127,7 @@ object TypeCheck extends (M3.System => M3.System) {
     s0
   }
 
-  // XXX: introduce a per-trigger constant expression lifting (detect subexpression where all variables are bound by trigger arguments only)
+  // XXX: introduce a per-trigger subexpressions lifting (detect subexpression where all variables are bound by trigger arguments only)
   // XXX: introduce a unique factorization of expression to simplify expressions if possible. Use case: TPCH13 -> 2/4 maps can be removed in each trigger.
   // XXX: Some names are long, improve renaming function (use mapping/regexp to simplify variable names)
   def apply(s:System) = {
@@ -140,4 +140,92 @@ object TypeCheck extends (M3.System => M3.System) {
                  typeCheck _
     phases(s)
   }
+}
+
+/*
+ * This object exposes user library methods signature to the type checker.
+ * Correct referencing/inlining is the responsibility of code generator.
+ */
+object Library {
+  // available functions as userName->(callName,retType,minArgs,argTypes)
+  // default argument <i> of <f> is a val named <f>$default$<i> where i=1,2,3...
+  private val funs = new java.util.HashMap[String,(String,List[(Type,List[Type])])]() 
+  private val argm = new java.util.HashMap[String,Int]() // min # of arguments
+  private def typeof[T](c:Class[T]) = c.toString match {
+    case /*"char"|"short"|"int"|*/ "long" => TypeLong
+    case /*"float"|*/ "double" => TypeDouble
+    case "class java.lang.String" => TypeString
+    case "class java.util.Date" => TypeDate
+    case _ => null
+  }
+
+  private def inspect[T](obj:T, namePrefix:String=null, callPrefix:String=null) {
+    val c = obj.getClass
+    val ms0 = c.getMethods.filter(m=>(m.getModifiers()&java.lang.reflect.Modifier.PUBLIC)!=0);
+    val ms = if (namePrefix!=null) ms0.filter{m=>m.getName.startsWith(namePrefix)} else ms0
+    ms.foreach { m =>
+      val rt = typeof(m.getReturnType)
+      val at = m.getParameterTypes.toList.map(a=>typeof(a))
+      if (rt!=null && !at.contains(null)) {
+        val n = m.getName
+        val un = if (namePrefix!=null) n.substring(namePrefix.length) else n
+        val cn = if (callPrefix!=null) callPrefix+"."+n else n
+        val p = un.indexOf("$default$")
+        if (p == -1) {
+          if (!funs.containsKey(un)) funs.put(un,(cn,List((rt,at))))
+          else { val ts=funs.get(un)._2; funs.put(un,(cn,(rt,at)::ts)) } // overloaded
+        } else { // min #arguments required for this function = min(in-1) forall in
+          val (fn,i) = (un.substring(0,p),un.substring(p+9).toInt-1)
+          argm.put(fn,if (!argm.containsKey(fn)) i else Math.min(argm.get(fn),i))
+        }
+      }
+    }
+  }
+
+  // Implicit castings allowed by second-stage compiler
+  private def cast(a:Type,b:Type) = (a==b) || (a==TypeLong && b==TypeDouble)
+  
+  def typeCheck(name:String,as:List[Type]):Type = {
+    if (!funs.containsKey(name)) sys.error("Library: no such function: "+name)
+    val ft = funs.get(name)._2
+    val an = as.size
+    val amin = if (argm.containsKey(name)) argm.get(name) else 0
+    if (an<amin) sys.error("Library: not enough argument for "+name+" (expected "+amin+")")
+    val cs = ft.filter(_._2.size >= an) // candidates prototypes (ret,args)
+    if (cs.size==0) sys.error("Library: too many argument for "+name+" (expected "+ft.maxBy(_._2.size)+")")
+    cs.foreach{ case (r,ats) => if ((true /: (as zip ats)){ case (c,(t1,t2)) => c && t1==t2 }) return r } // exact matching
+    cs.foreach{ case (r,ats) => if ((true /: (as zip ats)){ case (c,(t1,t2)) => c && cast(t1,t2) }) return r } // matching with cast
+    sys.error("Library: bad arguments for "+name+": got <"+as.mkString(",")+"> expected "+ft.map{ case (_,tas) => "<"+tas.mkString(",")+">" }.mkString(",")); null
+  }
+  
+  inspect(ddbt.lib.Functions,"U")
+
+  /*
+  // Expose runtime object functions (Scala-only)
+  def setContext[T](obj:T, prefix:String="obj.") {
+    funs.clear; argm.clear; inspect(ddbt.lib.Functions,"U")
+    if (obj!=null) inspect(ddbt.lib.Functions,null,prefix)
+  }
+
+  // Example for inlining code generation (to be implemented in LMS)
+  def codeGen(name:String,vs:List[String]):String = name match {
+    case "substring" => vs(0)+".substring("+vs(1)+(if (vs.size>2) ","+vs(2) else "")+")"
+    case _ => funs.get(name)._1+"("+vs.mkString(",")+")"
+  }
+  
+  // Demo
+  def main(args:Array[String]) {
+    import collection.JavaConversions._
+    println(typeCheck("substring",List(TypeString,TypeLong)))
+    println(codeGen("substring",List("foo","123")))
+    println("Library content:")
+    funs.toMap.foreach { case (k,v) => println("%-15s".format(k)+" -> "+v+" min="+argm.get(k)) }
+  }
+  */
+
+  // Annotations: http://www.veebsbraindump.com/2013/01/reflecting-annotations-in-scala-2-10/
+  // Seems we can only annotate classes, not methods => cannot implement arbitrary renaming from libs
+  // def Isubstring(vs:List[String]) = vs(0)+".substring("+vs(1)+(if (vs.size>2) ","+vs(2) else "")+")"
+  // try { val m = libClass.getDeclaredMethod("I"+name, classOf[List[String]]); assert(m.getReturnType==classOf[String]); m.invoke(libObj,vs).asInstanceOf[String] }
+  // catch { case _:Throwable => funs.get(name)._1+"("+vs.mkString(",")+")" }
 }

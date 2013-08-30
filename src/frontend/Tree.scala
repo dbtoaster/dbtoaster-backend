@@ -116,7 +116,7 @@ object M3 {
   case class Mul(l:Expr,r:Expr) extends Expr { override def toString="("+l+" * "+r+")"; var tp:Type=null } // cross-product semantics
   case class Add(l:Expr,r:Expr) extends Expr { override def toString="("+l+" + "+r+")"; var tp:Type=null; var agg:List[(String,Type)]=Nil } // set union semantics, agg!=Nil if union with free vars
   case class Exists(e:Expr) extends Expr { override def toString="EXISTS("+e+")"; val tp=TypeLong } // returns 0 or 1 (check that there is at least one tuple)
-  case class Apply(fun:String,tp:Type,args:List[Expr]) extends Expr { override def toString="["+fun+":"+tp+"]("+args.mkString(",")+")" } // function application
+  case class Apply(fun:String,var tp:Type /*=>typeCheck*/,args:List[Expr]) extends Expr { override def toString="["+fun+":"+tp+"]("+args.mkString(",")+")" } // function application
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op.toM3+" "+r+"}"; val tp=TypeLong } // comparison, returns 0 or 1
 
   // ---------- Statement operators (for maps updates)
