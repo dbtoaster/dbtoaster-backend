@@ -1,6 +1,7 @@
 project
 target
-examples
+examples/queries
+examples/data
 conf/ddbt.properties
 test/gen
 bin

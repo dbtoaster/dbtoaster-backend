@@ -1,5 +1,6 @@
 \documentclass[11pt]{article}
 \usepackage{../inc/style}
+\usepackage{ulem}
 \title{Morgol specifications}
 \author{\href{mailto:thierry.coppey@epfl.ch}{\color{black} Thierry Coppey},
 	\href{mailto:andres.notzli@epfl.ch}{\color{black} Andres Noetzli}}
@@ -63,11 +64,10 @@ Source is either input stream (content varies while the program is running and g
 \subsection{Expressions}
 \begin{verbatim}
 expr   ::= "(" expr ")" | ...
-mapref ::= name "[" rs(key, ",") "]"
+mapref ::= name "[" rs(key, ",") "]" ("[" rs(key, ",") "]")?
 add    ::= expr "+" expr
 mul    ::= expr "*" expr
-aggsum ::= "SUM" "(" ("[" rs(key, ",") "]" ",")? expr ")"
-exists ::= "EXISTS" "(" expr ")" | "{" expr "}"
+agg    ::= ("MIN" | "MAX" | "SUM") "(" ("[" rs(key, ",") "]" ",")? expr ")"
 lift   ::= "(" ident "^=" expr ")"
 cmp    ::= expr ("="|"=="|"!="|"<>"|">"|"<"|">="|"<=") expr
 apply  ::= ident "(" rs(expr, ",") ")" // type inferred from library
@@ -77,9 +77,8 @@ const  ::= longLit | doubleLit | stringLit
 Minor changes simplify the M3 language, otherwise semantics remains identical.
 Table access are replaced by map references because they share the same semantics. 
 We have aliases for exists (conciseness) and two comparison operators (compatibility).
-AggSum with no key is equivalent to empty key.
-We need to lookup built-in functions return type (and possibly accepted arguments).
-\discuss{For function lookup, how to avoid declaration duplication (Bytecode inspection)?}
+$\exists(e)$ hack has been deleted because it boils down to $e\ne 0$.
+Aggregation with no key is equivalent to empty key. Built-in functions are looked-up to obtain return type and typecheck arguments.
 \discuss{Simplify grammar by also using {\tt =} for lift? This introduce ambiguity between lift and cmp as they are differentiated only by the context (depending if the lhs ref is bound), but after all, comparison of two bound variable is semantically equivalent to lift one as the other.}
 
 \discuss{Do we need explicit AggMin and AggMax operations or are these handled by maps?}
@@ -564,7 +563,7 @@ Integrate features from Socialite\cite{socialite}, WebDamLog\cite{webdamlog}, Bl
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Implementation tasks}\ol
-\item Automate function type checking from library (+extension for arbitrary object)
+\item \sout{Automate function type checking from library} (+extension for arbitrary object)
 \item Add attributes/options to maps (AST), move map index creation into type checking
 \item Multiple values/aggregations and filtering for maps, tree secondary indices ? (inequality)
 \item Recursion in the rules (call statement)

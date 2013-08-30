@@ -27,7 +27,7 @@ object Compiler {
     while(i<l) {
       args(i) match {
         case "-x" => exec = true
-        case "-l" => eat(s=>s match { case "calc"|"m3"|"scala" => lang=s; case _ => error("Unsupported language: "+s,true) },true)
+        case "-l" => eat(s=>s match { case "calc"|"m3"|"scala"|"lms" => lang=s; case _ => error("Unsupported language: "+s,true) },true)
         case "-o" => eat(s=>out=s)
         case "-n" => eat(s=>name=s)
         case "-L" => eat(s=>libs=s)
@@ -44,7 +44,7 @@ object Compiler {
       error("                - m3    : M3 program")
       error("                - scala : vanilla Scala code")
       error("                - akka  : distributed Akka code")
-      //   ("                - lms   : LMS-optimized Scala")
+      error("                - lms   : LMS-optimized Scala")
       //   ("                - cpp   : C++/LMS-optimized code")
       //   ("                - dcpp  : distributed C/C++ code")
       error("Code generation options:")
@@ -77,11 +77,12 @@ object Compiler {
     lang match {
       case "scala" => output(ScalaGen(name)(m3))
       case "akka" => output(AkkaGen(name)(m3))
+      case "lms" => output(LMSGen(name)(m3))
       case _ => error("Compilation not supported")
     }
     // Execution
     if (exec) lang match {
-      case "scala"|"akka" =>
+      case "scala"|"akka"|"lms" =>
         val tmp = Utils.makeTempDir()
         Utils.exec(Array("scalac",out,"-cp",libs,"-d",tmp.getPath)) // scala compiler
         val (o,e) = Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name)) // execution

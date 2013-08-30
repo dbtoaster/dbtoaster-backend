@@ -58,8 +58,8 @@ object UnitTest {
   // Repository-specific functions shared with tests (Parsers at least)
   private val rbase = new java.io.File(path_repo+"/"+path_base)
   def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
-  def toast(f:String,opts:List[String]=Nil):String = if (path_repo=="") exec((List(path_bin,"-l","M3"):::opts:::List(f)).toArray)._1 else
-    exec((List("bin/dbtoaster_release","-l","M3"):::opts:::List(f)).toArray,rbase)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
+  def toast(f:String,opts:List[String]=Nil):String = if (path_repo=="") exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)._1 else
+    exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
   
   val all = try { exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("Repository not configured"); Array[String]() }
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)

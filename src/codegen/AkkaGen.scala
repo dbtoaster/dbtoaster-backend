@@ -33,6 +33,19 @@ import ddbt.ast._
 case class AkkaGen(cls:String="Query") extends (M3.System => String) {
   import ddbt.ast.M3._
 
+// 1. before each statement, add pre computation
+// 2. at each foreach point, transform into a remote continuation, possibly with a local aggregation continuation
+
+/*
+  map messages
+  map master triggers
+  map worker continuations triggers
+*/
+/*
+  def genRemote(e:Expr,ctx:Map[String,Type],co:String=>String) // this is the only thing we need to insert ?
+  def genExpr(e:Expr,co:Continuation)
+  def genWorker
+*/
 
 /*
 

@@ -18,7 +18,7 @@ case object TypeLong   extends Type /* 64 bit */ { override def toString="long" 
 case object TypeDouble extends Type /* 64 bit */ { override def toString="double" }
 case object TypeDate   extends Type              { override def toString="date" }
 //case object TypeTime extends Type              { override def toString="timestamp" }
-case object TypeString extends Type              { override def toString="string" } // how to encode it?
+case object TypeString extends Type              { override def toString="string" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
 
 // ---------- Comparison operators
@@ -44,6 +44,51 @@ case class SplitSize(bytes:Int) extends Split { override def toString="FIXEDWIDT
 case class SplitSep(delim:String) extends Split { override def toString="'"+delim+"' DELIMITED" }
 case class SplitPrefix(bytes:Int) extends Split { override def toString="PREFIXED "+bytes } // records are prefixed with their length in bytes
 
+// ---------- Map update operators
+sealed abstract class OpMap extends Tree
+case object OpSet extends OpMap { override def toString=":=" }
+case object OpAdd extends OpMap { override def toString="+=" }
+
+// ---------- Trigger events
+sealed abstract class EvtTrigger extends Tree { def args=List[(String,Type)]() }
+case object EvtReady extends EvtTrigger { override def toString="SYSTEM READY" }
+case class EvtAdd(schema:Schema) extends EvtTrigger { override def toString="+ "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields }
+case class EvtDel(schema:Schema) extends EvtTrigger { override def toString="- "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields }
+// Cleanup/Failure/Shutdown/Checkpoint
+
+// -----------------------------------------------------------------------------
+// M4 language (WIP)
+
+sealed abstract class M4 // XXX: build ddbt.frontend.M4Parser
+object M4 {
+  sealed abstract class OpAgg extends M4
+  case object OpSum extends OpAgg
+  case object OpMin extends OpAgg
+  case object OpMax extends OpAgg
+
+  // ---------- System
+  case class System(sources:List[Source], maps:List[MapDef], triggers:List[Trigger]) extends M4
+  case class MapDef(name:String, tp:Type, keys:List[(String,Type)], aggs:List[(String,Type,OpAgg,Boolean)], expr:Expr, opts:Map[String,Any]) extends M4
+  case class Trigger(evt:EvtTrigger, stmts:List[Stmt]) extends M4
+
+  // ---------- Expressions
+  sealed abstract class Expr extends M4
+  case class Const(tp:Type,v:String) extends Expr
+  case class Ref(name:String) extends Expr
+  case class MapRef(name:String, keys:List[String]=Nil, aggs:List[String]=Nil) extends Expr
+  case class Add(l:Expr,r:Expr) extends Expr
+  case class Mul(l:Expr,r:Expr) extends Expr
+  case class Agg(ks:List[String], op:OpAgg, e:Expr) extends Expr
+  case class Lift(name:String, e:Expr) extends Expr
+  case class Apply(fun:String,args:List[Expr]) extends Expr
+  case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr
+
+  // ---------- Statements
+  sealed abstract class Stmt extends M4
+  case class StmtMap(m:MapRef,e:Expr,op:OpMap,init:Option[Expr]) extends Stmt
+  case class StmtCall(evt:EvtTrigger) extends Stmt
+}
+
 // -----------------------------------------------------------------------------
 // M3 language
 
@@ -62,13 +107,7 @@ object M3 {
     override def toString="DECLARE MAP "+name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.map{case (n,t)=>n+":"+t}.mkString(",")+"] :=\n"+ind(expr+";")
   }
   case class Query(name:String, m:MapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+m+";" }
-
-  // ---------- Triggers
-  abstract sealed class Trigger extends M3 { def stmts:List[Stmt] }
-  case class TriggerReady(stmts:List[Stmt]) extends Trigger { override def toString="ON SYSTEM READY {\n"+ind(stmts.mkString("\n"))+"\n}" }
-  case class TriggerAdd(schema:Schema, stmts:List[Stmt]) extends Trigger { override def toString="ON + "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+") {\n"+ind(stmts.mkString("\n"))+"\n}" }
-  case class TriggerDel(schema:Schema, stmts:List[Stmt]) extends Trigger { override def toString="ON - "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+") {\n"+ind(stmts.mkString("\n"))+"\n}" }
-  // case class TriggerCleanup/Failure/Shutdown/Checkpoint(acts:List[Stmt]) extends Trigger
+  case class Trigger(evt:EvtTrigger, stmts:List[Stmt]) extends M3 { override def toString="ON "+evt+" {\n"+ind(stmts.mkString("\n"))+"\n}" }
 
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3 {
@@ -119,14 +158,9 @@ object M3 {
   case class Apply(fun:String,var tp:Type /*=>typeCheck*/,args:List[Expr]) extends Expr { override def toString="["+fun+":"+tp+"]("+args.mkString(",")+")" } // function application
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op.toM3+" "+r+"}"; val tp=TypeLong } // comparison, returns 0 or 1
 
-  // ---------- Statement operators (for maps updates)
-  sealed abstract class OpUpdate extends Tree
-  case object OpSet extends OpUpdate { override def toString=":=" }
-  case object OpAdd extends OpUpdate { override def toString="+=" }
-
   // ---------- Statements (no return)
   sealed abstract class Stmt extends M3
-  case class StmtMap(m:MapRef,e:Expr,op:OpUpdate,init:Option[Expr]) extends Stmt { override def toString=m+(init match { case Some(i) => ":("+i+")" case None => ""} )+" "+op+" "+e+";" }
+  case class StmtMap(m:MapRef,e:Expr,op:OpMap,init:Option[Expr]) extends Stmt { override def toString=m+(init match { case Some(i) => ":("+i+")" case None => ""} )+" "+op+" "+e+";" }
   // case class StmtCall(external function) extend Stmt
 }
 

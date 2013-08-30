@@ -17,11 +17,7 @@ object TypeCheck extends (M3.System => M3.System) {
     var used = Set[String]() // accessed tables
     def re(e:Expr):Expr = e.replace { case Tuple(t,ks) => used+=t; MapRef(t, TypeLong, ks) }
     def rst(s:Stmt):Stmt = s match { case StmtMap(m,e,op,in) => StmtMap(m,re(e),op,in map re) }
-    val triggers = s0.triggers.map {
-      case TriggerReady(ss) => TriggerReady(ss map rst)
-      case TriggerAdd(sc,ss) => TriggerAdd(sc,ss map rst)
-      case TriggerDel(sc,ss) => TriggerDel(sc,ss map rst)
-    }
+    val triggers = s0.triggers.map(t=>Trigger(t.evt,t.stmts map rst))
     val tabMaps = s0.sources.filter{s=> !s.stream && used.contains(s.schema.name) }.map{ so=>
       val s=so.schema; MapDef(s.name, TypeLong, s.fields, Const(TypeLong,"0L"))
     }
@@ -41,11 +37,11 @@ object TypeCheck extends (M3.System => M3.System) {
     }
     def rst(s:Stmt):Stmt = s match { case StmtMap(m,e,op,in) => StmtMap(re(m).asInstanceOf[MapRef],re(e),op,in map re) }
     val sources = s0.sources.map { case Source(st,sch,in,sp,ad) => Source(st,rs(sch),in,sp,ad) }
-    val triggers = s0.triggers.map {
-      case TriggerReady(ss) => TriggerReady(ss map rst)
-      case TriggerAdd(sc,ss) => TriggerAdd(rs(sc),ss map rst)
-      case TriggerDel(sc,ss) => TriggerDel(rs(sc),ss map rst)
-    }
+    val triggers = s0.triggers.map(t => Trigger(t.evt match {
+      case EvtAdd(sc) => EvtAdd(rs(sc))
+      case EvtDel(sc) => EvtDel(rs(sc))
+      case e => e
+    }, t.stmts map rst))
     System(sources,s0.maps,s0.queries,triggers)
   }
 
@@ -57,11 +53,11 @@ object TypeCheck extends (M3.System => M3.System) {
       case Some(s2) => assert(s.fields.map(_._1)==s2.fields.map(_._1)); s2
       case None => err("Trigger input not found "+s)
     }
-    val triggers=s0.triggers.map {
-      case TriggerAdd(s,sts) => TriggerAdd(sch(s),sts)
-      case TriggerDel(s,sts) => TriggerDel(sch(s),sts)
-      case t => t
-    }
+    val triggers=s0.triggers.map(t=>Trigger(t.evt match {
+      case EvtAdd(s) => EvtAdd(sch(s))
+      case EvtDel(s) => EvtDel(sch(s))
+      case e => e
+    },t.stmts))
     val mtp = triggers.flatMap(t=>t.stmts flatMap { case StmtMap(m,_,_,_)=>List(m) }).map(m=>(m.name,m.tp)).toMap ++
               s0.sources.filter{s=> !s.stream}.map{s=>(s.schema.name,TypeLong)}.toMap // constant table are not written
     val maps = s0.maps.map{ m=> val tp=mtp(m.name); assert(m.tp==null || m.tp==tp); MapDef(m.name,tp, m.keys, m.expr) }
@@ -81,10 +77,9 @@ object TypeCheck extends (M3.System => M3.System) {
     def rst(s:Stmt,locked:Set[String]=Set()):Stmt = s match {
       case StmtMap(m,e,op,in) => val l=locked++m.keys.toSet; StmtMap(m,re(e,l),op,in map{x=>re(x,l)})
     }
-    val triggers = s0.triggers.map {
-      case TriggerReady(ss) => TriggerReady(ss map(x=>rst(x)))
-      case TriggerAdd(sc,ss) => TriggerAdd(sc,ss map(x=>rst(x,sc.fields.map(_._1).toSet)))
-      case TriggerDel(sc,ss) => TriggerDel(sc,ss map(x=>rst(x,sc.fields.map(_._1).toSet)))
+    val triggers = s0.triggers.map { case Trigger(e,ss) =>
+      val locked = e.args.map(_._1).toSet
+      Trigger(e,ss.map(x=>rst(x,locked)))
     }
     freshClear
     System(s0.sources,s0.maps,s0.queries,triggers)
@@ -119,11 +114,7 @@ object TypeCheck extends (M3.System => M3.System) {
       if (ex.tp==null) err("Untyped: "+ex); cr
     }
     def ist(s:Stmt,b:Map[String,Type]=Map()) = s match { case StmtMap(m,e,op,in) => ie(e,b); in.map(e=>ie(e,b)) }
-    s0.triggers.foreach {
-      case TriggerReady(ss) => ss foreach {x=>ist(x)}
-      case TriggerAdd(s,ss) => ss foreach {x=>ist(x,s.fields.toMap)}
-      case TriggerDel(s,ss) => ss foreach {x=>ist(x,s.fields.toMap)}
-    }
+    s0.triggers.foreach { t=> t.stmts foreach (x=>ist(x,t.evt.args.toMap)) }
     s0
   }
 

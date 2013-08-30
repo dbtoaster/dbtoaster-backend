@@ -1,6 +1,6 @@
 package ddbt.lib
-//import akka.actor.ActorRef
 
+/** This class encapsulates external messages that arrives to the system. */
 object Messages {
   // Tuple operations
   type TupleOp = Byte
@@ -21,7 +21,7 @@ object Messages {
 
 /**
 
-ARCHITECTURE OVERVIEW (push-based flow)
+LEGACY ARCHITECTURE OVERVIEW (push-based flow)
 ---------------------------------------------------
 
                   Source (streams)
@@ -106,12 +106,6 @@ Failures
 
 **/
 
-  // ---------- Operations on tuples
-  // case class TupleTransfer extends TupleOp // exchange tuple between two workers
-
-// ---------- Message passed between nodes
-
-
 /*
 abstract sealed class Msg
 // Data
@@ -119,7 +113,6 @@ case object MsgEndOfStream extends Msg
 case class MsgTuple(op:TupleOp,tx:Long,data:List[Any]) extends Msg
 //case class MsgEndOfTrx(tx:Long,s:Long) extends Msg // all tuples have been exchanged between two workers for the sth statement of transaction tx
 //case class MsgBulk(op:TupleOp,tx:Long,s:Long,data:List[List[Any]]) extends Msg // bulk transfer between two workers
-
 // System
 case object MsgNodeUp extends Msg    // worker is initialized
 case object MsgNodeReady extends Msg // worker has received all tables content
@@ -127,21 +120,4 @@ case object MsgNodeDone extends Msg  // worker has received end of stream from a
 case class MsgState(num:Long,mem:Long) extends Msg // worker status (#processed tuples, memory usage)
 case class MsgRate(state:Long,view:Long) extends Msg // how often nodes send state (to supervisor) and result (to display)
 // case class MsgCheckpoint extends Msg
-*/
-// ----------
-
-/*
-Input
-InputFile
-InputPort
---->
-Delimiter (line, separator, fixed-size, prefix-size)
-
-abstract class Adaptor
-case class AdaptorCSV extends Adaptor
-case class AdaptorOrderbook extends Adaptor
-
--- multiplexed -->
-
-in a single actor
 */

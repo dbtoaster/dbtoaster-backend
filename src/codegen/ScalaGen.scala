@@ -103,13 +103,13 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   }
 
   def genTrigger(t:Trigger):String = {
-    val (n,as,ss) = t match {
-      case TriggerReady(ss) => ("SystemReady",Nil,ss)
-      case TriggerAdd(Schema(n,cs),ss) => ("Add"+n,cs,ss)
-      case TriggerDel(Schema(n,cs),ss) => ("Del"+n,cs,ss)
+    val (n,as) = t.evt match {
+      case EvtReady => ("SystemReady",Nil)
+      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
+      case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
     val b=as.map{_._1}.toSet
-    "def on"+n+"("+as.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+ind(ss.map{s=>genStmt(s,b)}.mkString)+"\n}"
+    "def on"+n+"("+as.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+ind(t.stmts.map{s=>genStmt(s,b)}.mkString)+"\n}"
   }
 
   // Lazy slicing (secondary) indices computation
@@ -149,11 +149,11 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
     "var t0:Long = 0\n"+
     "def receive = {\n"+ind(
-      s0.triggers.map{
-        case TriggerAdd(s,_) => val (i,o)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\",tx,"+i+") => onAdd"+s.name+o+"\n"
-        case TriggerDel(s,_) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\",tx,"+i+") => onDel"+s.name+o+"\n"
+      s0.triggers.map(_.evt match {
+        case EvtAdd(s) => val (i,o)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\",tx,"+i+") => onAdd"+s.name+o+"\n"
+        case EvtDel(s) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\",tx,"+i+") => onDel"+s.name+o+"\n"
         case _ => ""
-      }.mkString+
+      }).mkString+
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
       "case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,"+tup(s0.queries.map{q=>q.name+(if (s0.mapType(q.m.name)._1.size>0) ".toMap" else ".get()")})+")"
     )+"\n}\n"+gc+ts+ld)+"\n}\n"
