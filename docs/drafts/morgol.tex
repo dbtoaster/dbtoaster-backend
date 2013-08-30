@@ -21,7 +21,7 @@
 \section{Language syntax and semantics}
 \discuss{The goal of this external DSL is to be syntactically close from SQL (whereas Scala internal DSL will be more concise), in particular: case insensitivity, comments style and keywords verbosity.}
 Let {\tt ident} an identifier string, {\tt longLit}, {\tt doubleLit} and {\tt stringLit} (quoted string) literals and ${\tt type}\in\{{\tt long}, {\tt double}, {\tt string}, {\tt date}\}$ a type declaration. Additional types are converted into these during the parsing.
-\discuss{What about user-defined types? Targeting Scala and C/C++, we should restrict to case classes/C {\tt struct}, but these could easily be flattened into multiple values in several columns. Benefit of arbitrary types is not clear.}
+\discuss{What about user-defined types? Targeting Scala and C/C++, we should restrict to case classes/C {\tt struct}, but these could be flattened into multiple columns. Benefit of arbitrary types is not clear.}
 For conciseness, we denote: \verb$rs(a,b) := (a (b a)*)?$ and \verb$rs1(a,b) := a (b a)*$. Comments are delimited by: {\tt ----...\textbackslash n} , {\tt //...\textbackslash n} or {\tt /*...*/}.\\
 The system declaration file format is defined as:
 \begin{verbatim}
@@ -40,7 +40,7 @@ split  ::= ("LINE" | quotedSeparator) "DELIMITED"
 adaptor ::= name "(" rs(option ":=" value, ",") ")"
 \end{verbatim}
 
-\discuss{Andres suggests that input should only be defined by an inteface that the programmer implements (we provide some built-ins: file, network, ...) to support arbitrary sources. Flexibility is important to accomodate with existing streams. One specialized stream would be a clock (see clock join in \hyperref[pb:pagerank]{PageRank}).
+\discuss{Andres suggests that input should only be defined by an interface that the programmer implements (we provide some built-ins: file, network, ...) to support arbitrary sources. Flexibility is important to accomodate with existing streams. One specialized stream would be a clock (see clock join in \hyperref[pb:pagerank]{PageRank}).
 \say{Thierry}{While I agree with Andres, is it most beneficial to have this also in the external DSL or only available in Scala internal DSL?}
 }
 \discuss{Do we want to have the converse (output streams)? Are they handled in user-defined triggers, with an interface or through user-defined (Scala) functions (leveraging the apply expression)?}
@@ -170,7 +170,7 @@ The iterative method of \href{http://en.wikipedia.org/wiki/PageRank#Iterative}{P
 Computing this formula asynchronously does not affect correctness but convergence speed (as computation wavefront might visit loops more frequently than necessary).
 
 \[\begin{array}{rrl}
-edge[x,y] &:=& \text{\it input stream, adjacency list} \\
+edge[x,y] &:=& \text{\it input stream, adjacency list of directed edges } x\to y \\
 node[x] &:=& \text{\it input stream} \in\{0,1\} \text{ or }\exists(edge[x,y] + edge[z,x]) \\
 out[x] &:=& {\rm AggSum}([],edge[x,y]) \\
 N &:=& {\rm AggSum}([],node[x]) \\
@@ -180,6 +180,12 @@ weight[x] &:=& node[x] \times {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]
 
 \discuss{To execute statements synchronously, we might have multiple options:\ul
 \item {\bf Clock join:} associate a timestamp attribute with all map and create a clock stream. When a clock tick is inserted, the next iteration is computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues: deletion trigger of weight must be \underline{overridden} not to be recursive. How do we check that all elements of a tick have been computed ?
+%\[\begin{array}{rrl}
+%tick[t] &:=& \text{\it logical clock} \in \{0,1\} \\
+%node[x] &:=& \text{\it input stream} \in\{0,1\} \\
+%edge[x,y] &:=& \text{\it input stream} \\
+%weight[x,t] &:=& node[x] \ \times {\rm AggSum}([x], \dfrac{edge[y,x] \times weight[y,t-1]}{{\rm AggSum}([],edge(y,z))}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[z])}
+%\end{array}\]
 \say{Andres}{The nice thing with custom input streams is that you can define the clock stream based on the number of iterations, on a timeout or any other external event.}
 \say{Thierry}{See \ref{windowed} for a more detailed solution to create a window of in-flight computations.}
 \item \textbf{Limited iterations:} To execute statements synchronously, we could compute only a fixed number of steps. We can then make that number of step vary to reach threshold requirements.
@@ -240,18 +246,16 @@ on + Bids(b_id, b_vol, b_price) { -- other triggers are very similar
 \subsection{Hubs and authorities}
 The \href{http://en.wikipedia.org/wiki/HITS_algorithm}{HITS algorithm} is a precursor of the PageRank algorithm.
 The following program corresponds to the converging version of the algorithm described on the Wikipedia page.
-\[
-\begin{array}{rcl}
+\[\begin{array}{rcl}
 p[id] &:=& \text{input stream} \\
 link[from,to] &:=& \text{input stream} \\
-auth_n[id] &:=& auth[id] + AggSum([id], link[id_2,id] \times hub[id_2]) \\
-auth\_norm &:=& sqrt(AggSum([], (auth_n[id])^2)) \\
-auth[id] &:=& auth_n[id] / norm \quad\text{with} (threshold := X)\\ 
-hub_n[id] &:=& hub[id] + AggSum([id], link[id,id_2] \times auth[id_2]) \\
-hub\_norm &:=& sqrt(AggSum([], (hub_n[id])^2)) \\
-hub[id] &:=& hub_n[id] / norm
-\end{array}
-\]
+auth_n[id] &:=& auth[id] + {\rm AggSum}([id], link[id_2,id] \times hub[id_2]) \\
+auth\_norm &:=& sqrt({\rm AggSum}([], (auth_n[id])^2)) \\
+auth[id] &:=& auth_n[id] / norm \quad\text{WITH } (threshold := X)\\
+hub_n[id] &:=& hub[id] + {\rm AggSum}([id], link[id,id_2] \times auth[id_2]) \\
+hub\_norm &:=& sqrt({\rm AggSum}([], (hub_n[id])^2)) \\
+hub[id] &:=& hub_n[id] / norm \quad\text{WITH } (threshold := X)\\
+\end{array}\]
 \discuss{What's an elegant way of seeding $auth[id]$ and $hub[id]$ with 1 for every $id$?
 \say{Thierry}{Something like $hub[id] := p[id] \times ((\exists(hub[id])!=0) + hub_n[id] / norm)$?}
 } 
@@ -328,10 +332,8 @@ Ci[x] &:=& {\rm AggSum}([], edge[x,y] \times edge[x,z] \times edge[y,z]) \times 
 The goal of this problem is the computation of the maximum flow in a network graph.
 The graph is directed and every edge has a capacity assigned.
 The maximum flow is the largest flow from a source to a sink that the network allows.
-The following algorithm is a variation of the \href{http://en.wikipedia.org/wiki/Edmonds%E2%80%93Karp_algorithm}{Edmonds–Karp algorithm}. 
-The high level idea is to find the shortest path with remaining capacity from source to sink at every iteration, remove the flow of this shortest path and iterate until there is no path from source to sink anymore.
-\[
-\begin{array}{rcl}
+The following algorithm is a variation of the \href{http://en.wikipedia.org/wiki/Edmonds-Karp_algorithm}{Edmonds–Karp algorithm}. The high level idea is to find the shortest path with remaining capacity from source to sink at every iteration, remove the flow of this shortest path and iterate until there is no path from source to sink anymore.
+\[\begin{array}{rcl}
 source &:=& \text{input} \\
 sink &:=& \text{input} \\
 edge[x,y] &:=& \text{input} \\
@@ -344,8 +346,8 @@ spath_e[x,y,l,f] &:=& spath[source,v_1,l_1,i] \times residual[v_1,v_2,i] \times\
 spath[x,y,i][filter \min(l)] &:=& residual[x,y,i] \times (l = 1) +\\
 && spath[x,z,l_1] \times spath[z,y,l_2] \times (l = l_1 + l_2) \\
 max\_flow &:=& AggSum([], spath[iteration, f] \times f)
-\end{array}
-\]
+\end{array}\]
+
 The maps in this algorithm have the following purposes:
 \begin{itemize}
 \item $source$: Index of the source node
@@ -357,6 +359,9 @@ The maps in this algorithm have the following purposes:
 \item $spath$: The shortest paths at iteration $i$
 \item $max\_flow$: The max flow of the graph 
 \end{itemize}
+\discuss{
+How to incrementalize such computation? By adding an edge, one additional iteration may become possible, by removing edge can we remove the associated $iter\_flow$ and run another iteration? If yes, could we <<hint>> the compiler about that? In other cases, we would need to recompute the max-flow from scratch.
+}
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Reliable unicast messaging}
@@ -392,7 +397,8 @@ The basic ideas to translate Bloom programs:
 \item When a Bloom collection is defined by multiple statements, we union ($+$) them together
 \end{itemize} 
 
-\discuss{How do we declare a map to be local? Do we want to do that explicitely or do we distribute the map such that every node stores stores its local information?}
+\discuss{How do we declare a map to be local? Do we want to do that explicitely or do we distribute the map such that every node stores stores its local information?
+\say{Thierry}{We could simply modify the hashing function of the local map such that it always returns the current node (thereby also denying remote access). To allow inter-node communication, we can have a distributed map $chan[dest,msg]$ partitionned by dest (destination node). Then we write in that map to send a message and the insertion trigger serves as reception callback.}}
 \discuss{Evaluation order?}
 \discuss{What's the best way to represent a send-channel? Do we need output streams? Maybe we could just use our implicit mechanism of distributing data?}
 
@@ -457,6 +463,7 @@ A single \textit{master} node receives all input streams. Triggers execution is 
 
 Statements are executed sequentially on the master. Whenever the master detects that there is a dependency (RaW or WaW with {\tt set} and {\tt clear}), it makes sure that all previous data has been flushed into workers' map with a barrier procedure. The worker are purely reactive: they process messages one by one in the order of arrival. Requests block until response on the master, whereas they are non-blocking on workers.
 
+% --------------------------------------------------------------------------------------------------------------
 \subsection{Barrier}
 The goal of the barrier is to synchronize all workers, ensuring that all messages sent have been received and processed. We distinguish two cases:\ul
 \item Request: acknowledgment is implicit in the response. Each worker ensures that it has no pending request before starting/continuing the barrier procedure.
@@ -496,6 +503,7 @@ We prove correctness and termination by induction:\ul
 
 Termination proof: whenever a node create a remote call, it counts it positively, whenever a node receives a call, it is counted negatively. Assuming that message processing terminates, all messages will be counted once positively and once negatively, so eventually all counters will be zero and the barrier will terminate.
 
+% --------------------------------------------------------------------------------------------------------------
 \subsection{Dependency detection}
 Intuition: mark as \textit{invalid} maps that might be affected by an in-flight (unacknowledged) messages. Maps read need to be valid. As {\tt set} is not commutative, the destination map must be valid (not to be affected by previous messages). As {\tt add} is commutative, it is not necessary to force the destination to be valid.
 % - A write invalidates the map
@@ -511,52 +519,28 @@ We encode the dependencies detection (to place barriers where appropriate) in tw
 	In general, we should be able to circumvent the master if the updates are \underline{associative and commutative} (for example {\tt add} operation); this should be described in Datalog/Bloom papers and might possibly be linked with Daniel's work.}
 }
 
-\subsection{Distribution strategy (wip)}
+% --------------------------------------------------------------------------------------------------------------
+\subsection{Partitioning strategy (wip)}
 The master process input streams and coordinates worker actions; it does not own any map.
-\discuss{What about single-valued maps ({\tt K3Var}) ? Do we maintain them at master and broadcast their modification to all workers in a separate pattern/piggybacked on the barrier stop?}
- A worker \textit{owns} a partition of all maps, determined by a hashing function $hash(map,key)\to worker$. We want to determine the hashing function for all maps such that we can improve locality of incremental updates. Ideas: \ul
+One-value maps ({\tt K3Var}) are maintained at an arbitrary worker (to avoid ordering issue at master) and if lifted appropriately, can be broadcasted from master within calls' context. Workers \textit{own} a partition of (multi-valued) maps, determined by a hashing function $hash(map,key)\to worker$. We want to determine the hashing function for all maps such that we can improve locality of incremental updates. Some ideas: \ul
+\item The hashing function depends on \textit{tags} of workers and maps: tagged maps are attributed to workers with the same tag, otherwise they are distributed among all workers.
+\item For arbitrary join, co-location is irrelevant; hashing needs to balance the load between nodes. To minimize the number of messages, iteration is done on the largest relation\footnote{This can be achieved by trigger recompilation and does not require to reshuffle the data.}; smaller relation is remotely accessed ({\tt get}) and its replies are cached.
+% ---
 \item In equi-join between two relations, we want to hash these two relation along the joining key.
-\item For arbitrary join (inequality, cross-product, ...), co-location is not relevant, but hashing should balance the load between nodes. To minimize the number of message exchanged, it would be better if iteration is done on the largest relation, while the smaller is remotely accessed ({\tt get}) and its replies are cached.
+% ---
 \ule
 \discuss{Other ideas about how to partition data efficiently ?}
-
-{\color{gray}\footnotesize
------------------- legacy discussion\\
-\verb$mapdef ::= "DECLARE" "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? $\\
-\verb$                                 (":" type)? ":=" expr mapopt? ";" $\\
-\verb$key    ::= ident ":" type$\\
-\verb$aggkey ::= ("min"|"max"|"sum") "(" ident ")" ":" type$\\
-\verb$mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"$
-\discuss{Do we need to mark for inequality comparison internally ? (maintain in tree)}
-\discuss{It is not very clear whether aggregation keys should be separated from other keys as they must be provided for addition and deletion, but are read differently.}
-\discuss{We need to detect these "modifications" efficiently and compute its delta over the map to create a reaction to it (call other triggers with updates values). It is not clear how a change in an aggregate value will be treated. Should it be a "deletion/insertion" (not desirable because if we have deletion, we have endless loop in shortest path) or a "value update"?
-	\say{Thierry}{I think there is many issues in the nitty gritty details of the implementation that we didn't covered so far.}
-We still do not achieve the effect that is claimed in SociaLite: having one single map to compute the shortest path \textit{and} computing its multiplicity. What should the return value of a map containing aggregations?
-	\say{Thierry}{The returned value should be the multiplicity of the min/max/sum so that we can achieve average and counting easily. We can easily modify it by wrapping into an exists. The shortest path iteration should be done with the number of added tuples.}
-	\say{Milos}{Returned value should be 1 when there is aggregted values (1 aggregate tuple). The number of shortest path is computed using two different maps, one for the minimum length, one for the count.}
-	\say{Thierry}{If we always return 1, could we then put the aggregated value there?}
-}
-\discuss{How do these concerns blend with recursion and incremental maintenance?}
-\discuss{Can we do more, something that DataLog could not do ? Find other interesting algorithms.}
+\discuss{How do all these concerns blend with recursion and incremental maintenance?}
+\discuss{Can we do something that DataLog could not do ?}
 % Andres: I would suggest to get rid of ON SYSTEM READY and have a stream of system events instead
 % ==> reduce tables to only what necessary ? not sure we can always do that.
------------------- legacy discussion end
+
+\discuss{Do we need to mark for inequality comparison internally ? (maintain in tree)}
+\discuss{We need to detect these "modifications" efficiently and compute its delta over the map to create a reaction to it (call other triggers with updates values). It is not clear how a change in an aggregate value will be treated. Should it be a "deletion/insertion" (not desirable because if we have deletion, we have endless loop in shortest path) or a "value update"?
+	\say{Thierry}{I think there is many issues in the nitty gritty details of the implementation that we didn't covered so far.}
 }
 
-% ------------ LEGACY PROBLEMS --------------
-%\subsubsection*{Problem 2: PageRank}
-%\textbf{Clock join:} One possible idea to virtually execute the program synchronously is to have a clock stream and a timestamp attribute for all maps. When a clock tick is inserted, the next iteration can be computed (join $data \times tick$); when the tick is removed, the associated data can be removed from the map. Issues:\ul
-%\item Deletion trigger of weight must be \underline{overridden} to only remove data (and avoid recursion).
-%\item How to know that all the data at a tick has been fully computed ?
-%\ule
-%\[\begin{array}{rrl}
-%tick[t] &:=& \text{\it logical clock} \in \{0,1\} \\
-%node[x] &:=& \text{\it input stream} \in\{0,1\} \\
-%edge[x,y] &:=& \text{\it input stream} \\
-%weight[x,t] &:=& node[x] \ \times {\rm AggSum}([x], \dfrac{edge[y,x] \times weight[y,t-1]}{{\rm AggSum}([],edge(y,z))}) \times d + \dfrac{1-d}{{\rm AggSum}([],node[z])}
-%\end{array}\]
-% ------------ LEGACY PROBLEMS END --------------
-
+% --------------------------------------------------------------------------------------------------------------
 \section{Roadmap}
 Target the following domains and concepts: incrementality, continuous queries, active databases/triggers, recursivity, location and distribution (failure tolerance?), windowed streams, state machine, graphs, declarativeness, deltas, stratification.
 \subsubsection*{Language design}\ol
@@ -578,9 +562,10 @@ Target the following domains and concepts: incrementality, continuous queries, a
 
 Integrate features from Socialite\cite{socialite}, WebDamLog\cite{webdamlog}, Bloom lattices\cite{bloom_lattices}, Dedalus\cite{dedalus}, CALM\cite{bloom_calm}, Pregel\cite{pregel}, DatalogFS\cite{datalog_fs} in DBToaster\cite{dbtoaster09,dbtoaster11}.
 
+% --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Implementation tasks}\ol
 \item Automate function type checking from library (+extension for arbitrary object)
-\item Add attributes/options to maps (AST), move map index creation into type check
+\item Add attributes/options to maps (AST), move map index creation into type checking
 \item Multiple values/aggregations and filtering for maps, tree secondary indices ? (inequality)
 \item Recursion in the rules (call statement)
 \item LMS code generator
@@ -590,6 +575,7 @@ Integrate features from Socialite\cite{socialite}, WebDamLog\cite{webdamlog}, Bl
 \item Incrementalization (rules$\to$triggers conversion) by reusing DBToaster front-end
 \ole
 
+% --------------------------------------------------------------------------------------------------------------
 % Bibliography
 \newpage
 \bibliographystyle{plain} \addcontentsline{toc}{section}{References} % acm
