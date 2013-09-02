@@ -25,7 +25,7 @@ resolvers ++= Seq(
 )
 */
 libraryDependencies <++= scalaVersion(v=>Seq(
-  "org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
+  //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
   "com.typesafe.akka" %% "akka-actor"   % "2.2.0",
   "com.typesafe.akka" %% "akka-remote"  % "2.2.0",
   "org.scala-lang"     % "scala-actors" % v,
@@ -37,7 +37,7 @@ libraryDependencies <++= scalaVersion(v=>Seq(
 // --------- Compilation options
 Seq(
   scalaVersion := "2.10.2",
-  scalacOptions ++= Seq("-target:jvm-1.7", "-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings")
+  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings") // ,"-target:jvm-1.7"
 )
 
 Seq(
@@ -49,7 +49,7 @@ Seq(
 // --------- Execution options
 Seq(
   fork := true,
-  javaOptions ++= Seq("-Xss128m") //"-Xss512m","-Xmx2G","-Xms2G","-XX:MaxPermSize=2G" //,"-verbose:gc"
+  javaOptions ++= Seq("-Xss128m") // ,"-Xss512m","-Xmx2G","-Xms2G","-XX:MaxPermSize=2G" //,"-verbose:gc"
 )
 
 // --------- Custom tasks

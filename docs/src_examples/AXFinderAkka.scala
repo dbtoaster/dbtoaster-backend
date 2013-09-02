@@ -4,11 +4,11 @@ import ddbt.lib._
 class AXFinderAkka extends AXFinderBase {
   val N = 16
   val idx = List((x:(Long,Double))=>x._1)
-  val AXFINDER = K4Map.make[Long,Double](context,N);
-  val mASKS1 = K4Map.make[(Long,Double),Double](context,N,idx);
-  val mASKS2 = K4Map.make[(Long,Double),Long](context,N,idx);
-  val mBIDS1 = K4Map.make[(Long,Double),Long](context,N,idx);
-  val mBIDS3 = K4Map.make[(Long,Double),Double](context,N,idx);
+  val AXFINDER = KAMap.make[Long,Double](context,N);
+  val mASKS1 = KAMap.make[(Long,Double),Double](context,N,idx);
+  val mASKS2 = KAMap.make[(Long,Double),Long](context,N,idx);
+  val mBIDS1 = KAMap.make[(Long,Double),Long](context,N,idx);
+  val mBIDS3 = KAMap.make[(Long,Double),Double](context,N,idx);
   def result = AXFINDER.toMap
   
   def onAddBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {

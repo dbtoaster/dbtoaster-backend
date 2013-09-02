@@ -12,16 +12,16 @@ object TPCH18Akka extends Helper {
 
 class TPCH18Akka extends TPCH18Base {
   val N = 16
-  val QUERY18 = K4Map.make[(String,Long,Long,Date,Double), Double](context,N)
-  val mORDERS2 = K4Map.make[(String,Long), Long](context,N,List((x:(String,Long))=>x._2)) // 0=List(1)
-  val mCUSTOMER1 = K4Map.make[(Long,Long,Date,Double), Double](context,N,List((x:(Long,Long,Date,Double))=>x._2)) // 0=List(1)
-  val mCUSTOMER1_mLINEITEM1 = K4Map.make[(Long,Long,Date,Double), Long](context,N,List(
+  val QUERY18 = KAMap.make[(String,Long,Long,Date,Double), Double](context,N)
+  val mORDERS2 = KAMap.make[(String,Long), Long](context,N,List((x:(String,Long))=>x._2)) // 0=List(1)
+  val mCUSTOMER1 = KAMap.make[(Long,Long,Date,Double), Double](context,N,List((x:(Long,Long,Date,Double))=>x._2)) // 0=List(1)
+  val mCUSTOMER1_mLINEITEM1 = KAMap.make[(Long,Long,Date,Double), Long](context,N,List(
     (x:(Long,Long,Date,Double))=>x._1, // 0=List(0)
     (x:(Long,Long,Date,Double))=>x._2  // 1=List(1)
   ))
-  val mLINEITEM1 = K4Map.make[(Long,String,Long,Date,Double), Double](context,N)
-  val mLINEITEM1_mLINEITEM1 = K4Map.make[(Long,String,Long,Date,Double), Long](context,N,List((x:(Long,String,Long,Date,Double))=>x._1)) // 0=List(0)
-  val mLINEITEM1_E1_1_L1_1 = K4Map.make[Long,Double](context,N)
+  val mLINEITEM1 = KAMap.make[(Long,String,Long,Date,Double), Double](context,N)
+  val mLINEITEM1_mLINEITEM1 = KAMap.make[(Long,String,Long,Date,Double), Long](context,N,List((x:(Long,String,Long,Date,Double))=>x._1)) // 0=List(0)
+  val mLINEITEM1_E1_1_L1_1 = KAMap.make[Long,Double](context,N)
   def result = QUERY18.toMap
 
   // ---------------------------------------------------------------------------

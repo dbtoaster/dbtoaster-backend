@@ -10,7 +10,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import scala.concurrent.duration._
 
-// A K4Map is a wrapper for ActorRef to provide map-like features.
+// A KAMap is a wrapper for ActorRef to provide map-like features.
 //
 // Issues:
 //  - Performance: actor.ask creates a new actor to wait for the reply. Problem ?
@@ -18,7 +18,7 @@ import scala.concurrent.duration._
 // XXX: fix coherency issues
 // XXX: use pipe to forward get results (?)
 //
-trait K4Map[K,V] {
+trait KAMap[K,V] {
   def get(key:K) : V
   def add(key:K, value:V) : Unit
   def set(key:K, value:V) : Unit
@@ -27,11 +27,11 @@ trait K4Map[K,V] {
   def collect(s:(Int,Any)) : Map[K,V]               // map.slice(s._1,s._2).toMap
   def clear(s:(Int,Any)) : Unit                     // map.slice(s._1,s._2).clear()
 }
-object K4Map {
-  def make[K,V](ctx:ActorRefFactory,workers:Int,projs:List[K=>_]=Nil)(implicit cv:ClassTag[V]):K4Map.Wrapper[K,V] = {
-    val m = ctx.actorOf(Props[K4Map.Master[K,V]])
-    val ws = (0 until workers).map{x=>ctx.actorOf(Props[K4Map.Worker[K,V]])}.toArray
-    m ! K4Init(ws,cv,projs); ws.foreach { w => w ! K4Init(ws,cv,projs) }; new Wrapper(m)
+object KAMap {
+  def make[K,V](ctx:ActorRefFactory,workers:Int,projs:List[K=>_]=Nil)(implicit cv:ClassTag[V]):KAMap.Wrapper[K,V] = {
+    val m = ctx.actorOf(Props[KAMap.Master[K,V]])
+    val ws = (0 until workers).map{x=>ctx.actorOf(Props[KAMap.Worker[K,V]])}.toArray
+    m ! KAInit(ws,cv,projs); ws.foreach { w => w ! KAInit(ws,cv,projs) }; new Wrapper(m)
   }
 
   // ---------------------------------------------------------------------------
@@ -45,15 +45,15 @@ object K4Map {
 
   def sask[T](a:ActorRef,m:Any):T = Await.result(a.ask(m)(timeout), timeout.duration).asInstanceOf[T]
 
-  class Wrapper[K,V:ClassTag](val a:ActorRef) extends K4Map[K,V] {
+  class Wrapper[K,V:ClassTag](val a:ActorRef) extends KAMap[K,V] {
     val v0 = K3Helper.make_zero[V]()
-    def get(key:K) = sask[V](a,K4Get(key))
-    def set(key:K,value:V) = a ! K4Set(key,value)
-    def add(key:K,value:V) = if (value!=v0) a ! K4Add(key,value)
-    def foreach(s:(Int,Any)=null)(f:(K,V)=>Unit) = sask[Any](a,K4Foreach(s,f)) //a ! K4Foreach(s,f)
-    def aggr[T:ClassTag](s:(Int,Any))(f:(K,V)=>T) = sask[T](a,K4Aggr(s,f,classTag[T]))
-    def collect(s:(Int,Any)=null) = sask[Map[K,V]](a,K4Collect(s))
-    def clear(s:(Int,Any)=null) = a ! K4Clear(s)
+    def get(key:K) = sask[V](a,KAGet(key))
+    def set(key:K,value:V) = a ! KASet(key,value)
+    def add(key:K,value:V) = if (value!=v0) a ! KAAdd(key,value)
+    def foreach(s:(Int,Any)=null)(f:(K,V)=>Unit) = sask[Any](a,KAForeach(s,f)) //a ! KAForeach(s,f)
+    def aggr[T:ClassTag](s:(Int,Any))(f:(K,V)=>T) = sask[T](a,KAAggr(s,f,classTag[T]))
+    def collect(s:(Int,Any)=null) = sask[Map[K,V]](a,KACollect(s))
+    def clear(s:(Int,Any)=null) = a ! KAClear(s)
     def toMap = collect(null) // convenience alias
   }
 
@@ -62,30 +62,30 @@ object K4Map {
     var workers:Array[ActorRef] = null
     var h: Any=>ActorRef = null
     def receive = {
-      case K4Init(ws,cv,projs) =>
+      case KAInit(ws,cv,projs) =>
         implicit val tag = cv.asInstanceOf[ClassTag[V]]
         zero = K3Helper.make_zero[V]()
         workers=ws;
         val n=ws.size
         h=(k:Any)=>ws(((k.hashCode%n)+n)%n)
         //println("Master["+self.path+"] ready")
-      case m:K4Add[K,V] => if (m.value!=zero) h(m.key) ! m
-      case m:K4Set[K,V] => h(m.key) ! m
-      case m:K4Get[K] => sender ! Await.result(h(m.key).ask(m)(timeout), timeout.duration)
-      case m:K4Foreach[K,V] => //workers.foreach(w=>w ! m)
+      case m:KAAdd[K,V] => if (m.value!=zero) h(m.key) ! m
+      case m:KASet[K,V] => h(m.key) ! m
+      case m:KAGet[K] => sender ! Await.result(h(m.key).ask(m)(timeout), timeout.duration)
+      case m:KAForeach[K,V] => //workers.foreach(w=>w ! m)
         val fs = workers.map{ w=>w.ask(m)(timeout) }
         fs.foreach{ f=> Await.result(f, timeout.duration) }
-        sender ! K4Ack
-      case m:K4Aggr[K,V,_] =>
+        sender ! KAAck
+      case m:KAAggr[K,V,_] =>
         val fs = workers.map{ w=>w.ask(m)(timeout) }
         val rs = fs.map{ f=> Await.result(f,timeout.duration) }
         val p = K3Helper.make_plus()(m.ct).asInstanceOf[(Any,Any)=>Any]
         val z = K3Helper.make_zero()(m.ct).asInstanceOf[Any]
         sender ! rs.foldLeft(z)(p)
-      case m:K4Collect =>
+      case m:KACollect =>
         val ms = workers.map{ w=> Await.result(w.ask(m)(timeout), timeout.duration).asInstanceOf[Map[K,V]] }
         sender ! ms.foldLeft(scala.collection.immutable.HashMap[K,V]())(_ ++ _)
-      case m:K4Clear => workers.foreach(w=>w ! m)
+      case m:KAClear => workers.foreach(w=>w ! m)
       case m => println("Master did not understood "+m)
     }
   }
@@ -96,36 +96,36 @@ object K4Map {
     var workers:Array[ActorRef] = null
     def slice(s:(Int,Any)) = (if (s==null || s._1<0) map else map.slice(s._1,s._2))
     def receive = {
-      case K4Init(ws,cv,projs) =>
+      case KAInit(ws,cv,projs) =>
         implicit val tag = cv.asInstanceOf[ClassTag[V]]
         zero = K3Helper.make_zero[V]()
         map = K3Map.make[K,V](projs.asInstanceOf[List[K=>_]])
         workers = ws
         //println("Worker["+self.path+"] ready")
-      case m:K4Add[K,V] => map.add(m.key,m.value)
-      case m:K4Set[K,V] => map.set(m.key,m.value)
-      case m:K4Get[K] => sender ! map.get(m.key)
-      case m:K4Foreach[K,V] => slice(m.slice).foreach(m.f); sender ! K4Ack
-      case m:K4Aggr[K,V,_] =>
+      case m:KAAdd[K,V] => map.add(m.key,m.value)
+      case m:KASet[K,V] => map.set(m.key,m.value)
+      case m:KAGet[K] => sender ! map.get(m.key)
+      case m:KAForeach[K,V] => slice(m.slice).foreach(m.f); sender ! KAAck
+      case m:KAAggr[K,V,_] =>
         val plus = K3Helper.make_plus()(m.ct)
         var agg = K3Helper.make_zero()(m.ct)
         slice(m.slice).foreach{ case(k,v)=> agg=plus(agg,m.f(k,v)) }
         sender ! agg
-      case K4Collect(s) => sender ! slice(s).toMap
-      case K4Clear(s) => slice(s).clear()
+      case KACollect(s) => sender ! slice(s).toMap
+      case KAClear(s) => slice(s).clear()
       case m => println("Worker did not understood "+m)
     }
   }
   // Messages passed
-  case class K4Init[K,V](ws:Array[ActorRef],cv:ClassTag[V], projs:List[K=>_]=Nil) // Let worker know peers
-  case class K4Add[K,V](key:K,value:V) // apply on the fly
-  case class K4Set[K,V](key:K,value:V) // must receive exactly 1 message from _ALL_ workers before applying
-  case class K4Get[K](key:K) // ask a single actor, raw result
-  case class K4Aggr[K,V,T](slice:(Int,Any),f:(K,V)=>T,ct:ClassTag[T]) // XXX: pass the class tag within message
-  case class K4Foreach[K,V](slice:(Int,Any),f:(K,V)=>Unit)
-  case class K4Collect(slice:(Int,Any)) // ask all actors, raw result
-  case class K4Clear(slice:(Int,Any))
-  case object K4Ack // foreach is finished
+  case class KAInit[K,V](ws:Array[ActorRef],cv:ClassTag[V], projs:List[K=>_]=Nil) // Let worker know peers
+  case class KAAdd[K,V](key:K,value:V) // apply on the fly
+  case class KASet[K,V](key:K,value:V) // must receive exactly 1 message from _ALL_ workers before applying
+  case class KAGet[K](key:K) // ask a single actor, raw result
+  case class KAAggr[K,V,T](slice:(Int,Any),f:(K,V)=>T,ct:ClassTag[T]) // XXX: pass the class tag within message
+  case class KAForeach[K,V](slice:(Int,Any),f:(K,V)=>Unit)
+  case class KACollect(slice:(Int,Any)) // ask all actors, raw result
+  case class KAClear(slice:(Int,Any))
+  case object KAAck // foreach is finished
 }
 
 /*** LEGACY ***
