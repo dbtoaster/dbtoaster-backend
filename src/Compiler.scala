@@ -71,6 +71,7 @@ object Compiler {
     // Front-end
     val m3 = (M3Parser andThen TypeCheck) (lang match {
       case "calc"|"m3" => output(toast(lang)); System.exit(0); "" // nothing else to do
+      case _ if in.forall(_.endsWith(".m3")) => in.map(Utils.read(_)).mkString("\n")
       case _ => toast("m3")
     })
     // Back-end

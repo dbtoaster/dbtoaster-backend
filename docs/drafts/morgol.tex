@@ -1,4 +1,4 @@
-\documentclass[11pt]{article}
+\documentclass[10pt]{article}
 \usepackage{../inc/style}
 \usepackage{ulem}
 \title{Morgol specifications}
@@ -87,16 +87,18 @@ Aggregation with no key is equivalent to empty key. Built-in functions are looke
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Maps (internal structures)}
-A table has an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream. The default type of a map is {\tt long} if not specified. A map associated with an input stream is implicitly created if the stream is accessed by a mapref (lookup/foreach). The output keywords has exactly the same semantics as declaring the map being result of a query in M3.
-% In Andres original proposal it was PUBLIC instead of OUTPUT. Good idea :)
+A table has an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream. The default type of a map is {\tt long} if not specified. A map associated with an input stream is implicitly created if the stream is accessed by a mapref (lookup/foreach). The public keywords has exactly the same semantics as declaring the map being result of a query in M3. By default, user-defined map are public, maps resulting of incrementalization are private.
 
 \begin{verbatim}
-mapdef ::= "DECLARE" "OUTPUT"? "MAP" name "[" rs(key, ",") "]" ("[" rs(aggkey, ",") "]")? 
-                                 (":" type)? (":=" expr)? mapopt? ";" 
+mapdef ::= "DECLARE" ("PUBLIC"|"PRIVATE")? "MAP" name "[" rs(key, ",") "]"
+                ("[" rs(aggkey, ",") "]")? (":" type)? (":=" expr)? mapopt? mtrigg* ";" 
 key    ::= ident ":" type
 aggkey ::= "filter"? ("min"|"max"|"sum") "(" ident ")" ":" type
 mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
+mtrigg ::= "ON" ("PRE"|"POST")? ("+"|"-") "CALL" userName
 \end{verbatim}
+\discuss{We also want to allow the user to use different types of maps (tree, hash, ...)}
+\discuss{We want to have an initialization expression for the maps}
 \discuss{Are all type annotations necessary?
 	\say{Andres}{Aggregation keys (and possibly keys) types should be inferred}
 	\say{Thierry}{Agree, but not sure we can always derive the correct type because we might have ordering issues and it gets harder with recursion. I prefer them mandatory now and make them optional later. Also note that the aggregation does not need to happen on a key but any bound variable in rhs.}}
@@ -140,15 +142,23 @@ The options that can be declared for a map are the location and the value thresh
 \label{section:triggers}
 \begin{verbatim}
 trigger ::= "ON" ("+"|"-") streamName "(" ident ("," ident)* ")" "{" (stmt)* "}"
+          | "ON" userName "(" ident ("," ident)* ")" "{" (stmt)* "}"
           | "ON" "SYSTEM" "READY" "{" (stmt)* "}"
 stmt    ::= mapref (":" "(" expr ")")? ("+="|":=") expr ";"
           | "CALL" ("+"|"-") streamName "(" rs(expr, ",") ")"
 \end{verbatim}
-The triggers being defined by the user are called before any other trigger. It is not possible to override an automatically generated trigger.
-\discuss{When do we call user-defined triggers (before all automatic triggers)?}
+Trigger can operate on a stream (using its name) or can be user-defined: they need to be attached to a map (see MapDef). It is not possible to override an automatically generated trigger.
+\discuss{Do we wan to allow the declaration of temporary maps within a user-defined trigger (similar to scratch in Bloom)? Is it useful? (Find concrete use cases) Is it complicated?
+\say{Thierry}{This behaviour can be easily encoded with user-defined maps: these are defined globally and also allow inter-triggers communication. To mimic a scratch, the user clears the map at the end of the trigger.}
+}
 \discuss{Are user-defined triggers really need? Have they more flexibility/power than expressions?
 \say{Thierry}{To encode specifically clock/window we need to make non-symetric add and deletion triggers.}
 }
+
+\subsubsection*{System connections}
+We want to have the possibility to have user-defined input stream.
+On the output side, maps marked public should be readable {\it individually}, this is the key to have multiple views/queries running in the same system (these might use disjoint structures or not).
+
 % --------------------------------------------------------------------------------------------------------------
 \newpage
 \section{Examples}
@@ -185,7 +195,7 @@ node[x] &:=& \text{\it input stream} \in\{0,1\} \text{ or }\exists(edge[x,y] + e
 out[x] &:=& {\rm AggSum}([],edge[x,y]) \\
 N &:=& {\rm AggSum}([],node[x]) \\
 weight[x] &:=& node[x] \times {\rm AggSum}([], \dfrac{edge[y,x] \times weight[y]}{out[y]}) \times d + \dfrac{1-d}{N}\\
-&& \text{with }(threshold := 10^{-5})
+&& \text{WITH }(threshold := 10^{-5})
 \end{array}\]
 
 \discuss{To execute statements synchronously, we might have multiple options:\ul
@@ -223,7 +233,7 @@ If we can detect that only aggregation is done over {\it lineitem}, (formally $\
 \text{CREATE STREAM }lineitem(quantity,extendedprice,discount,tax,shipdate)\text{ FROM }...\vspace{4pt}\\
 \text{DECLARE MAP }Q1A[r,s][sum(q),sum(ep),sum(dp),sum(c),sum(d)] := lineitem[q,ep,d,t,sd] \times\\
 \qquad (dp \hat= ep\times(1-d)) \times (c \hat= ep\times(1-d)\times(1+t)) \times (sd < \text{date("1997-09-01")})\vspace{4pt}\\
-\text{DECLARE OUTPUT MAP }Q1[r,s,sq,sep,sdp,sc,aq,aep,ad,n] := \\
+\text{DECLARE PUBLIC MAP }Q1[r,s,sq,sep,sdp,sc,aq,aep,ad,n] := \\
 	\qquad (n \hat= Q1A[r,s][sq,sep,sdp,sc,sd]) \times (aq \hat= sq/n) \times (aep \hat= sep/n) \times (ad \hat= sd/n)\vspace{4pt}\\
 \end{array}\]
 
@@ -438,10 +448,10 @@ There is three at least three possible ways of windowing streams:\ul
 \item \textbf{Rolling window:} (event-based sliding) can be seen as the rolling union of multiple smaller disjoint windows. Whenever a tuple arrives, it is added with current (max) logical timestamp. When a timeout occurs, related elements are removed from the window.
 Let $s[v_1,..,v_n]$ the windowed input stream and $clock[t]$ (with map $clk[t]$) the clock stream that determines the windowed stream $w[v_1,...,v_n,t]$. We have the following triggers: 
 \[\begin{array}{l}
-{\rm on} + s(v_1,...,v_n) : w.{\rm add}((v_1,...,v_n,c), (c \hat= {\rm ArgMax}([],cl[t]) ))\\
-{\rm on} - s(v_1,...,v_n) : w.{\rm add}((v_1,...,v_n,m), -1 \times (m \hat= {\rm ArgMin}([],\exists(w[v_1,...,v_n,t]) \times t)) )\\
-{\rm on} + clock(t) : cl.{\rm set}(t,1)\\
-{\rm on} - clock(t) : cl.{\rm set}(t,0); w.{\rm set}((v_1,...,v_n,t), 0) \text{ // drop all events at }t\\
+{\rm on} + s(v_1,...,v_n) : w[v_1,...,v_n,c] +\!\!= (c \hat= {\rm AggMax}([],cl[t]) )\\
+{\rm on} - s(v_1,...,v_n) : w[v_1,...,v_n,m] +\!\!= -1 \times (m \hat= {\rm AggMin}([],\exists(w[v_1,...,v_n,t]) \times t))\\
+{\rm on} + clock(t) : cl[t] := 1\\
+{\rm on} - clock(t) : cl[t] := 0; w[v_1,...,v_n,t] := 0; \text{ // drop all events at }t\\
 \end{array}\]
 Note: the clock stream allows both control over window granularity and size.
 \ule

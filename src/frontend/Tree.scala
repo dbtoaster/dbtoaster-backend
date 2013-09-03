@@ -58,19 +58,17 @@ case class EvtDel(schema:Schema) extends EvtTrigger { override def toString="- "
 
 // -----------------------------------------------------------------------------
 // M4 language (WIP)
-
+/*
 sealed abstract class M4 // XXX: build ddbt.frontend.M4Parser
 object M4 {
   sealed abstract class OpAgg extends M4
   case object OpSum extends OpAgg
   case object OpMin extends OpAgg
   case object OpMax extends OpAgg
-
   // ---------- System
   case class System(sources:List[Source], maps:List[MapDef], triggers:List[Trigger]) extends M4
   case class MapDef(name:String, tp:Type, keys:List[(String,Type)], aggs:List[(String,Type,OpAgg,Boolean)], expr:Expr, opts:Map[String,Any]) extends M4
   case class Trigger(evt:EvtTrigger, stmts:List[Stmt]) extends M4
-
   // ---------- Expressions
   sealed abstract class Expr extends M4
   case class Const(tp:Type,v:String) extends Expr
@@ -82,12 +80,12 @@ object M4 {
   case class Lift(name:String, e:Expr) extends Expr
   case class Apply(fun:String,args:List[Expr]) extends Expr
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr
-
   // ---------- Statements
   sealed abstract class Stmt extends M4
   case class StmtMap(m:MapRef,e:Expr,op:OpMap,init:Option[Expr]) extends Stmt
   case class StmtCall(evt:EvtTrigger) extends Stmt
 }
+*/
 
 // -----------------------------------------------------------------------------
 // M3 language

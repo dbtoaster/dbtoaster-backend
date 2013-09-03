@@ -8,6 +8,8 @@ speedup over traditional database systems. More information:
 
 The goal of Distributed DB Toaster project is to reuse current infrastructure and create a framework to distribute the data and updates load across multiple servers.
 
+[![Build Status](https://api.travis-ci.org/TCKnet/DDBToaster.png?branch=master)](https://travis-ci.org/TCKnet/DDBToaster)
+
 #### Setup
 1. Checkout the repository `$ git clone https://github.com/tcknet/ddbtoaster.git`
 2. Get some data/queries to play with. Do you have access to DB Toaster repository? (i.e. are you in DATA lab?)

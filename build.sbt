@@ -64,6 +64,27 @@ TaskKey[Unit]("pkg") <<= classDirectory /*fullClasspath*/ in Compile map { cd =>
   scala.sys.process.Process(Seq("jar","-cMf",dir.getPath()+"/ddbt.jar","-C",cd.toString,"ddbt/lib")).!
 }
 
+// --------- LMS conditional inclusion
+{
+  // set ddbt.lms = 1 in conf/ddbt.properties to enable LMS
+  val prop = new java.util.Properties()
+  try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
+  val lms = prop.getProperty("ddbt.lms","0")=="1"
+  if (!lms) Seq() else Seq(
+    sources in Compile ~= (_ filter (x=> !x.toString.endsWith("codegen/LMSGen.scala"))),
+    unmanagedSourceDirectories in Compile += file("lms"),
+    // LMS-specific options
+    scalaOrganization := "org.scala-lang.virtualized",
+    scalaVersion := "2.10.1",
+    libraryDependencies ++= Seq(
+      "org.scala-lang.virtualized" % "scala-library" % "2.10.1",
+      "org.scala-lang.virtualized" % "scala-compiler" % "2.10.1",
+      "EPFL" % "lms_2.10" % "0.3-SNAPSHOT"
+    ),
+    scalacOptions ++= List("-Yvirtualize")
+  ) 
+}
+
 //{
 //  val t=TaskKey[Unit]("queries-gen2")
 //  val q=TaskKey[Unit]("queries-test2") 
