@@ -43,10 +43,13 @@ object Benchmark {
     "java -Xms32M -Xss512m -Xmx2G -Xbootclasspath/a:"+cmd+":"+bcp+" -classpath \"\" -Dscala.usejavacp=true"
   }
   def scala(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
-    try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:Throwable => exec(java_cmd+" "+args)._1 }
+    try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 }
   }
   def scalac(fs:String*) { val p=tmp.getAbsolutePath(); val args="-cp "+path_cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
-    try { exec("fsc "+args) } catch { case _:Throwable => exec(java_cmd+" scala.tools.nsc.Main "+args) }
+    val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec(java_cmd+" scala.tools.nsc.Main "+args)._1 }
+    if (err!="") System.err.println(err)
+    // val p = tmp.getAbsolutePath(); val s = new scala.tools.nsc.Settings(); s.outputDirs.setSingleOutput(p)
+    // val g = new scala.tools.nsc.Global(s); (new g.Run).compile(fs.map(f=>p+"/"+f+".scala").toList)
   }
 
   var dataset="standard"
