@@ -5,6 +5,7 @@ examples/data
 conf/ddbt.properties
 test/gen
 bin
+benchmarks-*.csv
 .idea
 *.iml
 *.pdf
