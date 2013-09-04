@@ -34,8 +34,10 @@ object Benchmark {
   private val path_dbt = if (path_repo!="") path_repo+"/"+path_base+"/" else ""
   private val dbtlib = { val f=path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(f).exists) sys.error("Cannot find the DBToaster Scala library"); f }
    
-  def scalac(fs:String*) { val p=tmp.getAbsolutePath(); exec("fsc -cp target/scala-2.10/classes:"+dbtlib+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString) }
   def scala(cl:String) = exec("scala -J-Xss512m -J-Xmx2G -cp target/scala-2.10/classes:"+dbtlib+":"+tmp.getAbsolutePath()+" "+cl)._1 // -J-verbose:gc
+  def scalac(fs:String*) { val p=tmp.getAbsolutePath(); val args="-cp target/scala-2.10/classes:"+dbtlib+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
+    try { exec("fsc "+args) } catch { case _:Throwable => exec("scalac "+args) } // fallback to slow scala compiler for Travis-CI
+  }
 
   var dataset="standard"
   var modes = List[String]()
