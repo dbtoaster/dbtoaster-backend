@@ -135,8 +135,8 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   | ("SUM"^^^OpSum|"AVG"^^^OpAvg|"COUNT"^^^OpCount|"MIN"^^^OpMin|"MAX"^^^OpMax) ~ ("(" ~> expr <~ ")") ^^ { case f~e => Agg(e,f) }
   | ("ALL"|"SOME") ~ ("(" ~> query <~ ")") ^^ { case op~e => op match { case "ALL"=> All(e) case "SOME"=> Som(e) } }
   | ("DATE"|"SUBSTRING"|("SUBSTR"^^^"substring")|"YEAR"|"MONTH"|"DAY"|"vec_length"|"dihedral_angle"|"listmin"|"listmax") ~ ("(" ~> rep1sep(expr,",") <~ ")") ^^ { case n~as => Apply(n.toLowerCase,as) }
-  | ("CASE"~>"WHEN"~>cond) ~ ("THEN"~>expr) ~ ("ELSE"~>expr) <~"END" ^^ { case c~t~e=>Case(c,t,e) }
-  | ("CASE"~>expr) ~ ("WHEN"~>expr) ~ ("THEN"~>expr) ~ ("ELSE"~>expr) <~"END" ^^ { case c1~c2~t~e=>Case(Cmp(c1,c2,OpEq),t,e) }
+  | "CASE"~> rep1(("WHEN"~>cond) ~ ("THEN"~>expr)) ~ ("ELSE"~>expr) <~"END" ^^ { case ct~e=>Case(ct.map{case c~t => (c,t)}.toList,e) }
+  | ("CASE"~>expr) ~ rep1(("WHEN"~>expr) ~ ("THEN"~>expr)) ~ ("ELSE"~>expr) <~"END" ^^ { case c~vt~e=>Case(vt.map{ case v~t => (Cmp(c,v,OpEq),t)}.toList,e) }
   | ( ("DATE_PART"~>"("~>stringLit)~(","~>expr<~")") | ("EXTRACT"~>"("~>ident)~("FROM"~>expr<~")")) ^^ { case p~e => Apply(p.toLowerCase,List(e)) }
   | field
   | "(" ~> expr <~ ")"
@@ -157,6 +157,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   | expr ~ ("="^^^OpEq|"<>"^^^OpNe|">"^^^OpGt|">="^^^OpGe|"!="^^^OpNe) ~ expr ^^ { case l~op~r => Cmp(l,r,op) }
   | expr ~ ("<"^^^OpGt|"<="^^^OpGe) ~ expr ^^ { case l~op~r => Cmp(r,l,op) }
   | "(" ~> disj <~ ")"
+  | failure("SQL condition")
   )
 
   // ------------ Queries
@@ -164,11 +165,10 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   lazy val qconj:Parser[Query] = qatom ~ opt("INTERSECT"~>qconj) ^^ { case q1~Some(q2) => Inter(q1,q2) case q1~None => q1 }
 
   lazy val tab:Parser[Table] = ("(" ~> query <~ ")" ^^ TableQuery | ident ^^ TableNamed) ~ opt(opt("AS")~>ident) ^^ { case t~Some(n) => TableAlias(t,n) case t~None => t}
-  lazy val join:Parser[Table] = ((tab <~ "NATURAL" <~ "JOIN") ~ tab ^^ { case t1~t2 => TableJoin(t1,t2,JoinNatural) }
-                              | tab ~ (opt("LEFT"|"RIGHT") <~ "JOIN") ~ tab ~ ("ON" ~> cond) ^^ { case t1~j~t2~c =>
-                                 TableJoin(t1,t2,j match { case Some("LEFT") => JoinLeft(c) case Some("RIGHT") => JoinRight(c) case _ => JoinOn(c) })
-                                }
-                              | tab)
+  lazy val join:Parser[Table] = tab ~ rep( // joins should be left-associative
+      ("NATURAL"~"JOIN") ~> tab ^^ { (_,JoinInner,null) }
+    | (opt("LEFT"^^^JoinLeft|"RIGHT"^^^JoinRight|"FULL"^^^JoinFull)<~opt("OUTER")<~"JOIN")~tab~("ON"~>cond) ^^ { case oj~t~c => (t,oj match { case Some(j)=>j case None=>JoinInner },c) }
+    ) ^^ { case t~js => (t/:js) { case (t1,(t2,j,c)) => TableJoin(t1,t2,j,c) }}
 
   lazy val alias = expr ~ opt("AS"~>ident) ^^ { case e~o => o match { case Some(n) => Alias(e,n) case None => e } }
   lazy val groupBy = opt(("GROUP"~>"BY"~>rep1sep(field,",")) ~ opt("HAVING"~>disj)) ^^ { case None => null case Some(fs~ho) => GroupBy(fs,ho match { case Some(c)=>c case None=>null }) }
@@ -177,7 +177,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   lazy val qatom:Parser[Query] = (
    opt("LIST")~>"("~>repsep(expr,",")<~")" ^^ { Lst(_) }
   | ("SELECT" ~> opt("DISTINCT")) ~ repsep(alias,",") ~ opt("FROM" ~> repsep(join,",")) ~ opt("WHERE" ~> disj) ~ groupBy ~ orderBy ^^ { case d~cs~ts~wh~gb~ob =>
-      View(d.isDefined,cs,ts match { case Some(tt) => tt case None => Nil }, wh match { case Some(w) => w case None => null }, gb,ob) }
+      Select(d.isDefined,cs,ts match { case Some(tt) => tt case None => Nil }, wh match { case Some(w) => w case None => null }, gb,ob) }
   | "(" ~> query <~ ")"
   )
 

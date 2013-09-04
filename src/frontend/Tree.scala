@@ -163,10 +163,11 @@ object M3 {
 }
 
 // -----------------------------------------------------------------------------
-// SQL
+// SQL (http://www.contrib.andrew.cmu.edu/~shadow/sql/sql1992.txt)
 
 sealed abstract class SQL // see ddbt.frontend.SQLParser
 object SQL {
+  import ddbt.Utils.ind
   sealed abstract class OpAgg extends SQL
   case object OpSum extends OpAgg
   case object OpMin extends OpAgg
@@ -176,52 +177,54 @@ object SQL {
   case object OpCountDistinct extends OpAgg
   
   sealed abstract class Join extends SQL
-  case object JoinNatural extends Join
-  case class JoinOn(c:Cond) extends Join
-  case class JoinLeft(c:Cond) extends Join
-  case class JoinRight(c:Cond) extends Join
-  
+  case object JoinInner extends Join
+  case object JoinLeft extends Join
+  case object JoinRight extends Join
+  case object JoinFull extends Join
+
+  case class GroupBy(fs:List[Field],cond:Cond) extends SQL { override def toString="GROUP BY "+fs.mkString(", ")+(if(cond!=null) " HAVING "+cond else "") }
+  case class OrderBy(cs:List[(Field,Boolean)]) extends SQL { override def toString="ORDER BY "+cs.map{case (f,d) => f+" "+(if (d) "DESC" else "ASC") }.mkString(", ") }
   case class System(in:List[Source], out:List[SQL.Query]) extends SQL { override def toString = in.mkString("\n\n")+"\n\n"+out.mkString("\n\n"); }
   // ---------- Queries
   abstract sealed class Query extends SQL
-  case class View(distinct:Boolean,cs:List[Expr],ts:List[Table],wh:Cond,gb:GroupBy,ob:OrderBy) extends Query
-    case class GroupBy(fs:List[Field],cond:Cond) extends SQL
-    case class OrderBy(cs:List[(Field,Boolean)]) extends SQL
-
-  case class Lst(es:List[Expr]) extends Query
-  case class Union(q1:Query,q2:Query,all:Boolean=false) extends Query
-  case class Inter(q1:Query,q2:Query) extends Query
+  case class Lst(es:List[Expr]) extends Query { override def toString="("+es.mkString(", ")+")" }
+  case class Union(q1:Query,q2:Query,all:Boolean=false) extends Query { override def toString="("+q1+" UNION"+(if (all) " ALL" else "")+" "+q2+")" }
+  case class Inter(q1:Query,q2:Query) extends Query { override def toString="("+q1+" INTERSECT "+q2+")" }
+  case class Select(distinct:Boolean,cs:List[Expr],ts:List[Table],wh:Cond,gb:GroupBy,ob:OrderBy) extends Query {
+    override def toString="SELECT "+(if(distinct)"DISTINCT " else "")+cs.mkString(", ")+"\nFROM "+ts.mkString(", ")+
+                          (if(wh!=null) "\nWHERE "+wh else "")+(if(gb!=null) "\n"+gb else "")+(if(ob!=null) "\n"+ob else "") 
+  }
   // ---------- Tables
   abstract sealed class Table extends SQL
-  case class TableQuery(q:Query) extends Table
-  case class TableNamed(n:String) extends Table
-  case class TableAlias(t:Table, n:String) extends Table
-  case class TableJoin(t1:Table, t2:Table, j:Join) extends Table
+  case class TableQuery(q:Query) extends Table { override def toString=q.toString }
+  case class TableNamed(n:String) extends Table { override def toString=n }
+  case class TableAlias(t:Table, n:String) extends Table { override def toString=t+" "+n }
+  case class TableJoin(t1:Table, t2:Table, j:Join, c:Cond) extends Table // empty condition = natural join
   // ---------- Expressions
   abstract sealed class Expr extends SQL
-  case class Alias(e:Expr,n:String) extends Expr
-  case class Field(n:String,t:String) extends Expr
-  case class Const(v:String) extends Expr
-  case class Apply(fun:String,args:List[Expr]) extends Expr
-  case class Nested(q:Query) extends Expr
-  case class Case(c:Cond,et:Expr,ee:Expr) extends Expr
+  case class Alias(e:Expr,n:String) extends Expr { override def toString=e+" AS "+n }
+  case class Field(n:String,t:String) extends Expr { override def toString=if (t==null) n else t+"."+n }
+  case class Const(v:String) extends Expr { override def toString="<"+v+">" }
+  case class Apply(fun:String,args:List[Expr]) extends Expr { override def toString=fun+"("+args.mkString(", ")+")" }
+  case class Nested(q:Query) extends Expr { override def toString="("+ind("\n"+q.toString)+"\n)" }
+  case class Case(ce:List[(Cond,Expr)],de:Expr) extends Expr
   // ---------- Arithmetic
-  case class Add(a:Expr,b:Expr) extends Expr
-  case class Sub(a:Expr,b:Expr) extends Expr
-  case class Mul(a:Expr,b:Expr) extends Expr
-  case class Div(a:Expr,b:Expr) extends Expr
-  case class Mod(a:Expr,b:Expr) extends Expr
+  case class Add(l:Expr,r:Expr) extends Expr { override def toString="("+l+" + "+r+")" }
+  case class Sub(l:Expr,r:Expr) extends Expr { override def toString="("+l+" - "+r+")" }
+  case class Mul(l:Expr,r:Expr) extends Expr { override def toString="("+l+" * "+r+")" }
+  case class Div(l:Expr,r:Expr) extends Expr { override def toString="("+l+" / "+r+")" }
+  case class Mod(l:Expr,r:Expr) extends Expr { override def toString="("+l+" % "+r+")" }
   // ---------- Aggregation
-  case class Agg(e:Expr,op:OpAgg) extends Expr
-  case class All(q:Query) extends Expr
-  case class Som(q:Query) extends Expr
+  case class Agg(e:Expr,op:OpAgg) extends Expr { override def toString=(op match { case OpCountDistinct => "COUNT(DISTINCT " case _ => op.toString.substring(2).toUpperCase+"(" })+e+")" }
+  case class All(q:Query) extends Expr { override def toString="ALL("+q+")" }
+  case class Som(q:Query) extends Expr { override def toString="SOME("+q+")" }
   // ---------- Conditions
   sealed abstract class Cond
-  case class And(a:Cond, b:Cond) extends Cond
-  case class Or(a:Cond, b:Cond) extends Cond
-  case class Exists(q:Query) extends Cond
-  case class In(e:Expr,q:Query) extends Cond
-  case class Not(b:Cond) extends Cond
-  case class Like(l:Expr,p:String) extends Cond
-  case class Cmp(l:Expr, r:Expr, op:OpCmp) extends Cond
+  case class And(l:Cond, r:Cond) extends Cond { override def toString="("+l+" AND "+r+")" }
+  case class Or(l:Cond, r:Cond) extends Cond { override def toString="("+l+" OR "+r+")" }
+  case class Exists(q:Query) extends Cond { override def toString="EXISTS("+q+")" }
+  case class In(e:Expr,q:Query) extends Cond { override def toString=e+" IN ("+q+")" }
+  case class Not(e:Cond) extends Cond { override def toString="NOT("+e+")" }
+  case class Like(l:Expr,p:String) extends Cond { override def toString=l+" LIKE '"+p+"'" }
+  case class Cmp(l:Expr, r:Expr, op:OpCmp) extends Cond { override def toString=l+" "+op+" "+r }
 }
