@@ -59,6 +59,8 @@ addCommandAlias("check", ";run-main ddbt.UnitTest ")
 
 addCommandAlias("queries", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del;test-only ddbt.test.gen.*")
 
+addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark ")
+
 TaskKey[Unit]("pkg") <<= classDirectory /*fullClasspath*/ in Compile map { cd =>
   val dir=new java.io.File("lib"); if (!dir.exists) dir.mkdirs;
   scala.sys.process.Process(Seq("jar","-cMf",dir.getPath()+"/ddbt.jar","-C",cd.toString,"ddbt/lib")).!

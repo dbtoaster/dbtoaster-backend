@@ -167,11 +167,36 @@ object M3 {
 
 sealed abstract class SQL // see ddbt.frontend.SQLParser
 object SQL {
+  sealed abstract class OpAgg extends SQL
+  case object OpSum extends OpAgg
+  case object OpMin extends OpAgg
+  case object OpMax extends OpAgg
+  case object OpAvg extends OpAgg
+  case object OpCount extends OpAgg
+  case object OpCountDistinct extends OpAgg
+  
+  sealed abstract class Join extends SQL
+  case object JoinNatural extends Join
+  case class JoinOn(c:Cond) extends Join
+  case class JoinLeft(c:Cond) extends Join
+  case class JoinRight(c:Cond) extends Join
+  
   case class System(in:List[Source], out:List[SQL.Query]) extends SQL { override def toString = in.mkString("\n\n")+"\n\n"+out.mkString("\n\n"); }
   // ---------- Queries
   abstract sealed class Query extends SQL
-  case class View(raw:String) extends Query // SQL query, to be implemented later
+  case class View(distinct:Boolean,cs:List[Expr],ts:List[Table],wh:Cond,gb:GroupBy,ob:OrderBy) extends Query
+    case class GroupBy(fs:List[Field],cond:Cond) extends SQL
+    case class OrderBy(cs:List[(Field,Boolean)]) extends SQL
+
   case class Lst(es:List[Expr]) extends Query
+  case class Union(q1:Query,q2:Query,all:Boolean=false) extends Query
+  case class Inter(q1:Query,q2:Query) extends Query
+  // ---------- Tables
+  abstract sealed class Table extends SQL
+  case class TableQuery(q:Query) extends Table
+  case class TableNamed(n:String) extends Table
+  case class TableAlias(t:Table, n:String) extends Table
+  case class TableJoin(t1:Table, t2:Table, j:Join) extends Table
   // ---------- Expressions
   abstract sealed class Expr extends SQL
   case class Alias(e:Expr,n:String) extends Expr
@@ -179,9 +204,7 @@ object SQL {
   case class Const(v:String) extends Expr
   case class Apply(fun:String,args:List[Expr]) extends Expr
   case class Nested(q:Query) extends Expr
-  case class Cast(tp:Type,e:Expr) extends Expr
   case class Case(c:Cond,et:Expr,ee:Expr) extends Expr
-  case class Substr(e:Expr,start:Int,end:Int= -1) extends Expr
   // ---------- Arithmetic
   case class Add(a:Expr,b:Expr) extends Expr
   case class Sub(a:Expr,b:Expr) extends Expr
@@ -189,14 +212,9 @@ object SQL {
   case class Div(a:Expr,b:Expr) extends Expr
   case class Mod(a:Expr,b:Expr) extends Expr
   // ---------- Aggregation
-  sealed abstract class Aggr extends Expr
-  case class Min(e:Expr) extends Aggr
-  case class Max(e:Expr) extends Aggr
-  case class Avg(e:Expr) extends Aggr
-  case class Sum(e:Expr) extends Aggr
-  case class Count(e:Expr,d:Boolean=false) extends Aggr
-  case class All(q:Query) extends Aggr
-  case class Som(q:Query) extends Aggr
+  case class Agg(e:Expr,op:OpAgg) extends Expr
+  case class All(q:Query) extends Expr
+  case class Som(q:Query) extends Expr
   // ---------- Conditions
   sealed abstract class Cond
   case class And(a:Cond, b:Cond) extends Cond
@@ -205,61 +223,5 @@ object SQL {
   case class In(e:Expr,q:Query) extends Cond
   case class Not(b:Cond) extends Cond
   case class Like(l:Expr,p:String) extends Cond
-  case class Range(l:Expr,min:Expr,max:Expr) extends Cond
   case class Cmp(l:Expr, r:Expr, op:OpCmp) extends Cond
 }
-
-/*
-case class Concat(es:List[Expr]) extends Expr
-case class Ceil(e:Expr) extends Expr
-case class Floor(e:Expr) extends Expr
-// Math
-case class Rad(e:Expr) extends Expr
-case class Deg(e:Expr) extends Expr
-case class Pow(b:Expr, x:Expr) extends Expr
-case class Sqrt(e:Expr) extends Expr
-case class Cos(e:Expr) extends Expr
-case class Sin(e:Expr) extends Expr
-// Vectors
-case class VecLength(x:Expr,y:Expr,z:Expr) extends Expr
-case class VecDot(x1:Expr,y1:Expr,z1:Expr, x2:Expr,y2:Expr,z2:Expr) extends Expr
-case class VecAngle(x1:Expr,y1:Expr,z1:Expr, x2:Expr,y2:Expr,z2:Expr) extends Expr
-case class DihedralAngle(x1:Expr,y1:Expr,z1:Expr, x2:Expr,y2:Expr,z2:Expr,
-                         x3:Expr,y3:Expr,z3:Expr, x4:Expr,y4:Expr,z4:Expr) extends Expr
-// Misc
-case class Cast(tp:Type,e:Expr) extends Tree
-case class Hash(e:Expr) extends Expr
-*/
-/*
- *** File format definitions
- * FileSQL := stream+ sql
- * FileM3  := /--+/ "SOURCES" /--+/ (stream)+
- *            /--+/ "MAPS" /--+/ (map)+
- *            /--+/ "QUERIES" /--+/ (query)+
- *            /--+/ "TRIGGERS" /--+/ (trigger)+
- *** Stream definition
- * stream := "create" "stream" name "(" field ("," field)* ")" "FROM" source
- * field  := name type
- * type   := int | float | order | hash | date | string
- * name   := /[a-zA-Z_0-9]+/
- * string := /'[^']*'/
- * source := "FILE" string "LINE" "DELIMITED" format ";"
- * format := ("CSV" | "ORDERBOOK") ("(" (name ":=" string)+ ")")?
- *
- * Note that in M3, fields name is '<table>_<field>'
- *
- *** SQL Query definition
- * sql  := "SELECT" <...> "FROM" <...> (WHERE <...>)? ("GROUP" "BY" <...>)? ";"
- *
- *** M3 common definitions
- * addsum
- * expr
- * stmt
- *
- *** M3 Maps definition
- * map := "DECLARE" "MAP" name "(" type ")" "[" "]" "[" name ":" type ("," name ":" type)* "]" := aggsum ";"
- *** M3 Query definition
- * query := "DECLARE" "QUERY" name ":=" expr ";"
- *** M3 Trigger definition
- * trigger := "ON" ("SYSTEM" READY" | ("+"|"-") name "(" name ("," name)* ")") "{" stmt* "}"
- */
