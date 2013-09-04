@@ -4,7 +4,10 @@ DIST="http://www.dbtoaster.org/dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz"
 
 dbt_load() {
   if [ ! -f dbt.tgz ]; then ftp -o dbt.tgz $DIST; fi
-  while [ "$1" != "" ]; do tar -xzf dbt.tgz --strip-components 1 dbtoaster/$1; shift; done
+  while [ "$1" != "" ]; do
+    if [ ! -e "$1" ]; then tar -xzf dbt.tgz --strip-components 1 dbtoaster/$1; fi
+    shift
+  done
 }
 
 # SETUP ENVIRONMENT
@@ -17,11 +20,5 @@ ddbt.dbtoaster = bin/dbtoaster_release
 EOF
 
 # RUN TESTS
-for q in `ls -1 examples/queries/*/*.sql`; do
-  if [ "`basename $q`" != "schemas.sql" ]; then
-    echo $q
-    sbt "toast $q -o tmp.scala -x"
-  fi
-done
-
-exec sbt 'test:run-main ddbt.test.Benchmark -csv'
+sbt test
+exec sbt 'test:run-main ddbt.test.Benchmark'
