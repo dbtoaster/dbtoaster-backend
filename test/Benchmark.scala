@@ -32,11 +32,21 @@ object Benchmark {
   private val tmp = makeTempDir() // new File("tmp")
   private val boost = try { val p=new java.util.Properties(); p.load(new java.io.FileInputStream("conf/ddbt.properties")); p.getProperty("ddbt.lib_boost",null) } catch { case _:Throwable => null }
   private val path_dbt = if (path_repo!="") path_repo+"/"+path_base+"/" else ""
-  private val dbtlib = { val f=path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(f).exists) sys.error("Cannot find the DBToaster Scala library"); f }
-   
-  def scala(cl:String) = exec("scala -J-Xss512m -J-Xmx2G -cp target/scala-2.10/classes:"+dbtlib+":"+tmp.getAbsolutePath()+" "+cl)._1 // -J-verbose:gc
-  def scalac(fs:String*) { val p=tmp.getAbsolutePath(); val args="-cp target/scala-2.10/classes:"+dbtlib+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
-    try { exec("fsc "+args) } catch { case _:Throwable => exec("scalac "+args) } // fallback to slow scala compiler for Travis-CI
+  private val path_cp = { // Classpaths
+    val sbt = "target/scala-"+util.Properties.versionString.replaceAll(".* |.[0-9]+$","")+"/classes"
+    val dbt = path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library")
+    sbt+":"+dbt
+  }
+  private val java_cmd = { // used as fallback on Travis-CI (apt-get install scala)
+    val cmd = System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")
+    val bcp = System.getProperty("sun.boot.class.path").split(":").filter{_.indexOf("lib/scala-") != -1}.mkString(":")
+    "java -Xms32M -Xss512m -Xmx2G -Xbootclasspath/a:"+cmd+":"+bcp+" -classpath \"\" -Dscala.usejavacp=true"
+  }
+  def scala(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
+    try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:Throwable => exec(java_cmd+" "+args)._1 }
+  }
+  def scalac(fs:String*) { val p=tmp.getAbsolutePath(); val args="-cp "+path_cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
+    try { exec("fsc "+args) } catch { case _:Throwable => exec(java_cmd+" scala.tools.nsc.Main "+args) }
   }
 
   var dataset="standard"
