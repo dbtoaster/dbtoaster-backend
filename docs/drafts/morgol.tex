@@ -1,6 +1,5 @@
 \documentclass[10pt]{article}
 \usepackage{../inc/style}
-\usepackage{ulem}
 \title{Morgol specifications}
 \author{\href{mailto:thierry.coppey@epfl.ch}{\color{black} Thierry Coppey},
 	\href{mailto:andres.notzli@epfl.ch}{\color{black} Andres Noetzli}}
@@ -93,7 +92,7 @@ A table has an associated map in which the table will be loaded. A table does no
 mapdef ::= "DECLARE" ("PUBLIC"|"PRIVATE")? "MAP" name "[" rs(key, ",") "]"
                 ("[" rs(aggkey, ",") "]")? (":" type)? (":=" expr)? mapopt? mtrigg* ";" 
 key    ::= ident ":" type
-aggkey ::= "filter"? ("min"|"max"|"sum") "(" ident ")" ":" type
+aggkey ::= ("min"|"max"|"sum") "(" ident ")" ":" type
 mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
 mtrigg ::= "ON" ("PRE"|"POST")? ("+"|"-") "CALL" userName
 \end{verbatim}
@@ -112,20 +111,21 @@ If the expression is not defined, the map is user-managed and the programmer nee
 -- Range conditions as in AXFinder financial query\\
 and blend this nicely with incremental domain maintenance in the implementation.}
 
-First key part is the grouping columns, second part is aggregation values for the group, multiplicity is the number of tuples in the group. Aggregation values semantics is <<element>> for write and <<aggregate>> for read. Finally, if a <<filter>> keyword precedes the aggregation key, tuples that do not have the same aggregation value will be discarded.
+First key part is the grouping columns, second part is aggregation values for the group, multiplicity is the number of tuples in the group. Aggregation values semantics is <<element>> for write and <<aggregate>> for read.
 
-The equivalent SQL query of a filtered aggregation key $k$ is a nested query:
-\begin{lstlisting}[language=sql]
-SELECT keys AS keys_out, aggrs FROM map
-WHERE k = (SELECT agg_k(k) FROM map WHERE keys=keys_out)
-GROUP BY keys
-\end{lstlisting}
-\discuss{Do we maintain tuples that have been filtered out ? If yes, how does it combine with incremental domain maintenance? How do we distinguish tuples that we need to re-compute? How to maintain correct multiplicity?
-\say{Milos}{disagree with this semantics, think that the resulting multiplicity of aggregation should be 1 to keep coherency with the SQL.}
-\say{Thiery}{SQL multiplicity of 1 is only for displaying purposes. We retain more power by having the number of elements aggregated to compute average and count easily afterward.}
-}
+% Finally, if a <<filter>> keyword precedes the aggregation key, tuples that do not have the same aggregation value will be discarded.
+%The equivalent SQL query of a filtered aggregation key $k$ is a nested query:
+%\begin{lstlisting}[language=sql]
+%SELECT keys AS keys_out, aggrs FROM map
+%WHERE k = (SELECT agg_k(k) FROM map WHERE keys=keys_out)
+%GROUP BY keys
+%\end{lstlisting}
+%\discuss{Do we maintain tuples that have been filtered out ? If yes, how does it combine with incremental domain maintenance? How do we distinguish tuples that we need to re-compute? How to maintain correct multiplicity?
+%\say{Milos}{disagree with this semantics, think that the resulting multiplicity of aggregation should be 1 to keep coherency with the SQL.}
+%\say{Thiery}{SQL multiplicity of 1 is only for displaying purposes. We retain more power by having the number of elements aggregated to compute average and count easily afterward.}
+%}
 
-{\bf Map options:}\\
+{\bf Map options}\\
 The options that can be declared for a map are the location and the value threshold:
 \ul\item The location is defined by one or multiple tags (logical group name) for the map. Nodes join the cluster with one or more tags: they accept to be in charge of a partition of all maps attributed to the tag.
 	Moreover, we can tune manually the locality with hashing function.
@@ -584,7 +584,6 @@ Integrate features from Socialite\cite{socialite}, WebDamLog\cite{webdamlog}, Bl
 
 % --------------------------------------------------------------------------------------------------------------
 \subsubsection*{Implementation tasks}\ol
-\item \sout{Automate function type checking from library} (+extension for arbitrary object)
 \item Add attributes/options to maps (AST), move map index creation into type checking
 \item Multiple values/aggregations and filtering for maps, tree secondary indices ? (inequality)
 \item Recursion in the rules (call statement)
