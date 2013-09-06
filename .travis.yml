@@ -5,4 +5,8 @@ jdk:
 - oraclejdk7
 # - openjdk7
 # - openjdk6
+virtualenv:
+  system_site_packages: true
+before_install:
+ - sudo apt-get install scala
 script: ./.travis.sh
