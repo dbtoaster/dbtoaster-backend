@@ -7,6 +7,7 @@ object M3Test extends Tag("ddbt.M3Test")
 object SQLTest extends Tag("ddbt.SQLTest")
 
 // sbt 'test-only * -- -l ddbt.M3Test' => run all but M3 tests
+// sbt 'test-only ddbt.test.Parers -- -l ddbt.M3Test' => run all but M3 tests
 
 class ParserSpec extends FunSpec with ParallelTestExecution {
   import ddbt.Utils
@@ -25,7 +26,9 @@ class ParserSpec extends FunSpec with ParallelTestExecution {
   }
   allSQL.foreach { file =>
     it("parse SQL: "+file,SQLTest) {
-      SQLParser.load(file,baseSQL)
+      val sql1=SQLParser.load(file,baseSQL)
+      val sql2=SQLParser(sql1.toString)
+      assert(sql2==sql1,"Double parsing does not preserve semantics")
     }
   }
 }

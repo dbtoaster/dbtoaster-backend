@@ -141,7 +141,9 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   | field
   | "(" ~> expr <~ ")"
   | "(" ~> query <~ ")" ^^ Nested
-  | (doubleLit | longLit | stringLit) ^^ Const
+  | doubleLit ^^ { Const(_,TypeDouble) }
+  | longLit ^^ { Const(_,TypeLong) }
+  | stringLit ^^ { Const(_,TypeString) }
   | failure("SQL expression")
   )
 
@@ -175,14 +177,15 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   lazy val orderBy = opt("ORDER"~>"BY"~>rep1sep(field~opt("ASC"|"DESC"),",")) ^^ { case None => null case Some(fs) => OrderBy(fs.map{ case f~o => (f,o match{ case Some(x) => x.toUpperCase=="DESC" case _ => false }) }) }
   
   lazy val qatom:Parser[Query] = (
-   opt("LIST")~>"("~>repsep(expr,",")<~")" ^^ { Lst(_) }
-  | ("SELECT" ~> opt("DISTINCT")) ~ repsep(alias,",") ~ opt("FROM" ~> repsep(join,",")) ~ opt("WHERE" ~> disj) ~ groupBy ~ orderBy ^^ { case d~cs~ts~wh~gb~ob =>
-      Select(d.isDefined,cs,ts match { case Some(tt) => tt case None => Nil }, wh match { case Some(w) => w case None => null }, gb,ob) }
+    select
+  | opt("LIST")~>"("~>repsep(expr,",")<~")" ^^ { Lst(_) }
   | "(" ~> query <~ ")"
   )
+  lazy val select = ("SELECT" ~> opt("DISTINCT")) ~ repsep(alias,",") ~ opt("FROM" ~> repsep(join,",")) ~ opt("WHERE" ~> disj) ~ groupBy ~ orderBy ^^ { case d~cs~ts~wh~gb~ob =>
+      Select(d.isDefined,cs,ts match { case Some(tt) => tt case None => Nil }, wh match { case Some(w) => w case None => null }, gb,ob) }
 
   // ------------ System definition
-  lazy val system = rep(source) ~ rep(query <~ opt(";")) ^^ { case ss ~ qs => System(ss,qs) }
+  lazy val system = rep(source) ~ rep(select <~ opt(";")) ^^ { case ss ~ qs => System(ss,qs) }
   def apply(str:String) = phrase(system)(new lexical.Scanner(str)) match {
     case Success(x, _) => x
     case e => sys.error(e.toString)
