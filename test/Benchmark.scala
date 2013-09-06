@@ -46,10 +46,17 @@ object Benchmark {
     try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 }
   }
   def scalac(fs:String*) { val p=tmp.getAbsolutePath(); val args="-cp "+path_cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
-    val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec(java_cmd+" scala.tools.nsc.Main "+args)._1 }
+    val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec(java_cmd+" scala.tools.nsc.CompileClient "+args)._1 }
     if (err!="") System.err.println(err)
-    // val p = tmp.getAbsolutePath(); val s = new scala.tools.nsc.Settings(); s.outputDirs.setSingleOutput(p)
-    // val g = new scala.tools.nsc.Global(s); (new g.Run).compile(fs.map(f=>p+"/"+f+".scala").toList)
+    /*
+    build.sbt ==> "org.scala-lang" % "scala-compiler" % v,
+    val cmd = System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")
+    val bcp = System.getProperty("sun.boot.class.path").split(":").mkString(":")
+    val p = tmp.getAbsolutePath(); val s = new scala.tools.nsc.Settings();
+    s.classpath.value = cmd+":"+bcp+":"+path_cp
+    s.outputDirs.setSingleOutput(p)
+    val g = new scala.tools.nsc.Global(s); (new g.Run).compile(fs.map(f=>p+"/"+f+".scala").toList)
+    */
   }
 
   var dataset="standard"
@@ -57,7 +64,6 @@ object Benchmark {
   var csv:PrintWriter = null
 
   // Merge argument parsing with unit test ?
-  // Shall we do a 2-step process using SBT instead ?
 
   def main(args:Array[String]) {
     args.foreach { a => if (a.startsWith("-d")) dataset=a.substring(2) }
@@ -180,6 +186,4 @@ object RunQuery {
 }
 """
 // ----------------------------------------------------------
-
 }
-
