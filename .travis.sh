@@ -2,9 +2,6 @@
 
 DIST="http://www.dbtoaster.org/dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz"
 
-# ADD SCALA BINARIES
-apt-get install scala
-
 # SETUP ENVIRONMENT
 cd `dirname $0`;
 if [ ! -f dbt.tgz ]; then curl $DIST > dbt.tgz; fi
@@ -23,6 +20,3 @@ cat>conf/ddbt.properties<<EOF
 ddbt.dbtoaster = bin/dbtoaster_release
 EOF
 
-# RUN TESTS
-sbt 'test:run-main ddbt.test.Benchmark'
-exec sbt test

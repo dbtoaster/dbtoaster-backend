@@ -5,8 +5,11 @@ jdk:
 - oraclejdk7
 # - openjdk7
 # - openjdk6
-virtualenv:
-  system_site_packages: true
-before_install:
- - sudo apt-get install scala
-script: ./.travis.sh
+#virtualenv:
+#  system_site_packages: true
+#before_install:
+# - sudo apt-get install scala
+before_script: ./.travis.sh
+script:
+- sbt 'test:run-main ddbt.test.Benchmark'
+- sbt test

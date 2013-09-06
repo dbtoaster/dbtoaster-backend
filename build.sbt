@@ -25,11 +25,12 @@ resolvers ++= Seq(
 )
 */
 libraryDependencies <++= scalaVersion(v=>Seq(
+  "com.typesafe.akka" %% "akka-actor"     % "2.2.0",
+  "com.typesafe.akka" %% "akka-remote"    % "2.2.0",
+  "org.scala-lang"     % "scala-actors"   % v,
+  "org.scala-lang"     % "scala-compiler" % v,
+  "org.scalatest"     %% "scalatest"      % "2.0.M5b" % "test"
   //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
-  "com.typesafe.akka" %% "akka-actor"   % "2.2.0",
-  "com.typesafe.akka" %% "akka-remote"  % "2.2.0",
-  "org.scala-lang"     % "scala-actors" % v,
-  "org.scalatest"     %% "scalatest"    % "2.0.M5b" % "test"
   //"com.github.velvia" %% "scala-storm"  % "0.2.3-SNAPSHOT",
   //"storm"              % "storm"        % "0.8.2"
 ))

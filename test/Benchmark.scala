@@ -42,21 +42,22 @@ object Benchmark {
     val bcp = System.getProperty("sun.boot.class.path").split(":").filter{_.indexOf("lib/scala-") != -1}.mkString(":")
     "java -Xms32M -Xss512m -Xmx2G -Xbootclasspath/a:"+cmd+":"+bcp+" -classpath \"\" -Dscala.usejavacp=true"
   }
-  def scala(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
+  def scalax(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
     try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 }
   }
-  def scalac(fs:String*) { val p=tmp.getAbsolutePath(); val args="-cp "+path_cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
+  def scalac(fs:String*) {
+    /*
+    val p=tmp.getAbsolutePath(); val args="-cp "+path_cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
     val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec(java_cmd+" scala.tools.nsc.Main "+args)._1 }
     if (err!="") System.err.println(err)
-    /*
-    build.sbt ==> "org.scala-lang" % "scala-compiler" % v,
+    */
+
     val cmd = System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")
     val bcp = System.getProperty("sun.boot.class.path").split(":").mkString(":")
     val p = tmp.getAbsolutePath(); val s = new scala.tools.nsc.Settings();
     s.classpath.value = cmd+":"+bcp+":"+path_cp
     s.outputDirs.setSingleOutput(p)
     val g = new scala.tools.nsc.Global(s); (new g.Run).compile(fs.map(f=>p+"/"+f+".scala").toList)
-    */
   }
 
   var dataset="standard"
@@ -118,7 +119,7 @@ object Benchmark {
     write(tmp,"NewQuery.scala",sc.replaceAll("/standard/","/"+dataset+"/"))
     val t2 = ns(()=>scalac("NewQuery"))._1
     println(n+" compile"+sp+" : "+time(t2))
-    val s=scala("ddbt.generated.NewQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" : "))
+    val s=scalax("ddbt.generated.NewQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" : "))
     csvTime(t1,t2,s)
   }
 
@@ -133,7 +134,7 @@ object Benchmark {
     write(tmp,"Query.scala",sc.replaceAll("/standard/","/"+dataset+"/"))
     val t2 = ns(()=>scalac("Query","RunQuery"))._1
     println(n+" compile"+sp+" : "+time(t2))
-    val s = scala("org.dbtoaster.RunQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" :"))
+    val s = scalax("org.dbtoaster.RunQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" :"))
     csvTime(t1-t0,t2,s)
   }
 
