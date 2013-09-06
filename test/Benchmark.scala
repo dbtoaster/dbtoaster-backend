@@ -46,7 +46,7 @@ object Benchmark {
     try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 }
   }
   def scalac(fs:String*) { val p=tmp.getAbsolutePath(); val args="-cp "+path_cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
-    val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec(java_cmd+" scala.tools.nsc.CompileClient "+args)._1 }
+    val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec(java_cmd+" scala.tools.nsc.Main "+args)._1 }
     if (err!="") System.err.println(err)
     /*
     build.sbt ==> "org.scala-lang" % "scala-compiler" % v,

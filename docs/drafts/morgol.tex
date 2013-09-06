@@ -66,8 +66,10 @@ expr   ::= "(" expr ")" | ...
 mapref ::= name "[" rs(key, ",") "]" ("[" rs(key, ",") "]")?
 add    ::= expr "+" expr
 mul    ::= expr "*" expr
+min    := "min" "(" rs1(expr, ",") ")"
+max    := "max" "(" rs1(expr, ",") ")"
 lift   ::= "(" ident "^=" expr ")"
-exists ::= "EXISTS" "(" expr ")" | "{" expr "}"
+exists ::= "EXISTS" "(" expr ")"
 count  ::= "COUNT" "(" expr ")"
 agg    ::= ("AggMin" | "AggMax" | "AggSum") "(" ("[" rs(key, ",") "]" ",")? expr ")"
 cmp    ::= expr ("="|"=="|"!="|"<>"|">"|"<"|">="|"<=") expr
@@ -77,16 +79,18 @@ const  ::= longLit | doubleLit | stringLit
 \end{verbatim}
 
 Currently, we do not use input keys because we plan to better support inequalities with a tree structure instead. We unified map and static table reads, because tables are stored in a map, distinction is useless. We have aliases for exists (conciseness) and two comparison operators (compatibility). Aggregation with no key is equivalent to empty key. Built-in functions are looked-up to obtain return type and typecheck arguments. The rest is minor syntactic changes with M3 for convenience.
+\discuss{Do we want to introduce shorthands for exist {\tt "\{" expr "\}"} and count {\tt "!" "\{" expr "\}"} ? }
 
 \subsubsection*{Semantics}
-Major novelty: each expression contains two columns: a value $v$ exposed to the user and an implicit multiplicity $m$ that can be understood as the SQL {\tt count(*)} operator in every expression (i.e. how many tuples are consumed to construct $v$). The semantics is:
+Each expression contains two columns: a value $v$ exposed to the user and an implicit multiplicity $m$ that can be understood as the SQL {\tt count(*)} operator in every expression (i.e. how many tuples are consumed to construct $v$). The semantics is:
 
 \newcommand\erule[4][t_1.. t_n]{\left[\![ #2 ]\!\right] &=& \langle#1\rangle\to \langle #3\rangle & #4\\}
-
 \[\begin{array}{rcll}
 \erule{M[t_1..t_n]}{v,m}{m=1 \text{ if $M$ is a table}}
 \erule{Q_{v_1,m_1} + Q_{v_2,m_2}}{v_1+v_2,m_1+m_2}{t_1..t_n \text{ identical in } Q_1,Q_2}
 \erule{Q_{v_1,m_1} \times Q_{v_2,m_2}}{v_1\times v_2,m_1\times m_2}{t_1..t_n \text{ union of columns}}
+\erule{\min(Q_{v_1,m_1}, Q_{v_2,m_2})}{v_x,m_x}{x = \text{if ($v_1\le v_2$) 1 else 2}}
+\erule{\max(Q_{v_1,m_1}, Q_{v_2,m_2})}{v_x,m_x}{x = \text{if ($v_1\ge v_2$) 1 else 2}}
 \erule[t_1..t_n,\alpha]{\alpha\nwarrow Q_{v,m}}{1,m}{\alpha=v \text{ for all tuples}}
 \erule{\exists(Q_{v,m})}{v,1}{}
 \erule{{\rm Count}(Q_{v,m})}{m,m}{}
@@ -104,32 +108,38 @@ Major novelty: each expression contains two columns: a value $v$ exposed to the 
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Maps (internal structures)}
-A table has an associated map in which the table will be loaded. A table does not generate trigger whereas there are always triggers associated with a stream. The default type of a map is {\tt long} if not specified. A map associated with an input stream is implicitly created if the stream is accessed by a mapref (lookup/foreach). The public keywords has exactly the same semantics as declaring the map being result of a query in M3. By default, user-defined map are public, maps resulting of incrementalization are private.
+A table has an associated map initialized at startup but no triggers. Streams always have associated triggers. The default type of a map is {\tt long} if not specified. Additional maps will be created by incrementalization process (in particular, a stream will be duplicated in a map if there is a foreach/lookup access on it). Public maps are equivalent to a map plus a M3 query on it. By default, user-defined map are public, additional maps resulting of incrementalization are private.
 
 \begin{verbatim}
-mapdef ::= "DECLARE" ("PUBLIC"|"PRIVATE")? "MAP" name "[" rs(key, ",") "]"
-                ("[" rs(aggkey, ",") "]")? (":" type)? (":=" expr)? mapopt? mtrigg* ";" 
-key    ::= ident ":" type
-aggkey ::= ("min"|"max"|"sum") "(" ident ")" ":" type
+mapdef ::= "DECLARE" ("PUBLIC"|"PRIVATE")? "MAP" name "[" rs(ident ":" type, ",") "]"
+                     (":" type)? (":=" expr)? mapopt? mtrigg* ";" 
 mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
 mtrigg ::= "ON" ("PRE"|"POST")? ("+"|"-") "CALL" userName
 \end{verbatim}
-\discuss{We also want to allow the user to use different types of maps (tree, hash, ...)}
-\discuss{We want to have an initialization expression for the maps}
+
+If the expression is not defined, the map is user-managed and the programmer needs to write his own triggers to maintain it (see Section~\ref{section:triggers} for details).
+\discuss{Internally, the maps can have two types of secondary indices: hash and trees. Hash are to be used in equi-joins (for lookup) and tree indices will replace the input keys of M3 with the following benefits: 1. avoid data duplication 2. address complex queries more efficiently by providing an aggregation of the subtree at each  node.}
+
+%\begin{verbatim}
+%mapdef ::= "DECLARE" ("PUBLIC"|"PRIVATE")? "MAP" name "[" rs(key, ",") "]"
+%                ("[" rs(aggkey, ",") "]")? (":" type)? (":=" expr)? mapopt? mtrigg* ";" 
+%key    ::= ident ":" type
+%aggkey ::= ("min"|"max"|"sum") "(" ident ")" ":" type
+%mapopt ::= "WITH" "(" rs(option ":=" value, ",") ")"
+%mtrigg ::= "ON" ("PRE"|"POST")? ("+"|"-") "CALL" userName
+%\end{verbatim}
+%\discuss{We also want to allow the user to use different types of maps (tree, hash, ...)}
+%First key part is the grouping columns, second part is aggregation values for the group, multiplicity is the number of tuples in the group. Aggregation values semantics is <<element>> for write and <<aggregate>> for read.
+
+\discuss{We want to preserve initialization expression for maps as in M3}
 \discuss{Are all type annotations necessary?
 	\say{Andres}{Aggregation keys (and possibly keys) types should be inferred}
 	\say{Thierry}{Agree, but not sure we can always derive the correct type because we might have ordering issues and it gets harder with recursion. I prefer them mandatory now and make them optional later. Also note that the aggregation does not need to happen on a key but any bound variable in rhs.}}
-
-If the expression is not defined, the map is user-managed and the programmer needs to write his own triggers to maintain it (see Section~\ref{section:triggers} for details).
-
-{\bf Semantics}
-\discuss{most suble topic as we want to have a simple syntax for 3 concerns:\\
+\discuss{We want to have a simple syntax for 3 concerns:\\
 -- Number of shortest paths between two vertices (similar as \cite{socialite} running example)\\
 -- Simple grouping with aggregations as in TPC-H query 1\\
 -- Range conditions as in AXFinder financial query\\
 and blend this nicely with incremental domain maintenance in the implementation.}
-
-First key part is the grouping columns, second part is aggregation values for the group, multiplicity is the number of tuples in the group. Aggregation values semantics is <<element>> for write and <<aggregate>> for read.
 
 % Finally, if a <<filter>> keyword precedes the aggregation key, tuples that do not have the same aggregation value will be discarded.
 %The equivalent SQL query of a filtered aggregation key $k$ is a nested query:
@@ -144,16 +154,17 @@ First key part is the grouping columns, second part is aggregation values for th
 %}
 
 {\bf Map options}\\
-The options that can be declared for a map are the location and the value threshold:
-\ul\item The location is defined by one or multiple tags (logical group name) for the map. Nodes join the cluster with one or more tags: they accept to be in charge of a partition of all maps attributed to the tag.
-	Moreover, we can tune manually the locality with hashing function.
+A map can declare the following options:\ul
+\item \textbf{Tags:} a tag is a group identifier indicating which group of (cluster) nodes will be in charge of the map partitions. We can declare more than one tag to achieve redundancy. Hosts will then join the cluster with one or more tag, thereby identifying the map they are willing to be responsible of.
+	\ule\discuss{Is the number of nodes variable? What if nodes are leaving/joining (failure/recovery) the system?There are two approaches: static hashing with redundancy (that is read/write from multiple nodes or \href{http://lpd.epfl.ch/alistarh/DistAlgoFall08/da08-GroupMembershipVSC.pdf}{group membership}. Is there an existing framework we can build on? Note that we could tune manually the location with hashing function.}\ul
+\item \textbf{Threshold:} minimal value relative difference for a tuple update to be considered for recursion. This apply only to maps with value type {\tt double}.
+	\ule\discuss{Do we also need this feature on {\tt double} keys ?}\ul
+\item \textbf{Local:} a map being declared local will only be accessible from the local host (cluster). This helps encoding and enforcing local operations as in \cite{webdamlog}.
+\item Andres suggests that we should have options to hint the compiler about secondary indices structures (tree, hash). When automatic inference is robust enough, we can remove this option.
 \ule
-\discuss{What if the number of nodes is variable, in particular what if nodes are leaving/joining  (failure/recovery) the system? There are two approaches: static hashing with redundancy (that is read/write from multiple nodes or \href{http://lpd.epfl.ch/alistarh/DistAlgoFall08/da08-GroupMembershipVSC.pdf}{group membership}. Is there an existing framework we can build on?}
-\ul\item The threshold is the relative difference in keys/values for a tuple to be considered as an update of the map for recursion. This only applies to double types.
-\ule
-\discuss{Not clear to which field the threshold relates. Do we need other options ?}
-\ul\item Andres suggests that we should have options to hint the compiler about which structure we want to maintain secondary indices (tree, hash) in; to address inequality joins for example. When automatic inference  detects sufficiently well these cases, we can remove this option.
-\ule
+
+	\discuss{Do we need other options ?}
+
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Triggers}

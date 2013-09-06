@@ -21,5 +21,5 @@ ddbt.dbtoaster = bin/dbtoaster_release
 EOF
 
 # RUN TESTS
-sbt test
-exec sbt 'test:run-main ddbt.test.Benchmark'
+sbt 'test:run-main ddbt.test.Benchmark'
+exec sbt test
