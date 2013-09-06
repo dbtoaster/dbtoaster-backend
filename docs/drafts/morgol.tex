@@ -79,7 +79,7 @@ const  ::= longLit | doubleLit | stringLit
 Currently, we do not use input keys because we plan to better support inequalities with a tree structure instead. We unified map and static table reads, because tables are stored in a map, distinction is useless. We have aliases for exists (conciseness) and two comparison operators (compatibility). Aggregation with no key is equivalent to empty key. Built-in functions are looked-up to obtain return type and typecheck arguments. The rest is minor syntactic changes with M3 for convenience.
 
 \subsubsection*{Semantics}
-The major novelty is that each table/map/expression contains two columns: the value and a special multiplicity $m$ can be understood as the SQL {\tt count(*)} operator applied to every expression or \textit{how many tuples are used to construct the expression}. The semantics is:
+Major novelty: each expression contains two columns: a value $v$ exposed to the user and an implicit multiplicity $m$ that can be understood as the SQL {\tt count(*)} operator in every expression (i.e. how many tuples are consumed to construct $v$). The semantics is:
 
 \newcommand\erule[4][t_1.. t_n]{\left[\![ #2 ]\!\right] &=& \langle#1\rangle\to \langle #3\rangle & #4\\}
 
@@ -89,20 +89,18 @@ The major novelty is that each table/map/expression contains two columns: the va
 \erule{Q_{v_1,m_1} \times Q_{v_2,m_2}}{v_1\times v_2,m_1\times m_2}{t_1..t_n \text{ union of columns}}
 \erule[t_1..t_n,\alpha]{\alpha\nwarrow Q_{v,m}}{1,m}{\alpha=v \text{ for all tuples}}
 \erule{\exists(Q_{v,m})}{v,1}{}
-\erule{{\rm COUNT}(Q_{v,m})}{m,m}{}
+\erule{{\rm Count}(Q_{v,m})}{m,m}{}
 \erule[a_1..a_k]{{\rm AggSum}([a_1..a_k], Q_{v,m})}{\sum v_i,\sum m_i}{\forall i\text{ in the group}}
 \erule[a_1..a_k]{{\rm AggMin}([a_1..a_k], Q_{v,m})}{v_i,\sum m_i}{\forall i. v_i\text{ minimal}}
 \erule[a_1..a_k]{{\rm AggMax}([a_1..a_k], Q_{v,m})}{v_i,\sum m_i}{\forall i. v_i\text{ maximal}}
-\erule[]{v_1 \odot v_2}{r,1}{r\in\{0,1\}\text{ the result of }v_1 \odot v_2}
+\erule[]{v_1 \odot v_2}{b,1}{b\in\{0,1\}\text{ the result of }v_1 \odot v_2}
+\erule[]{f(a_1..a_n)}{r,1}{r=f(a_1..a_n)}
+\erule[]{x}{x,1}{x \text{ a constant or identifier}}
 \end{array}\]
-
-
 
 \discuss{$\exists(e)$ serves to bind variables and therefore cannot be transformed into $e\ne 0$.}
 \discuss{Simplify grammar by also using {\tt =} for lift? This introduce ambiguity between lift and cmp as they are differentiated only by the context (depending if the lhs ref is bound), but after all, comparison of two bound variable is semantically equivalent to lift one as the other.}
 % \discuss{Do we need explicit AggMin and AggMax operations or are these handled by maps?}
-% aggmin ::= "Min" "(" ("[" rs(key, ",") "]" ",")? expr ")"
-% aggmax ::= "Max" "(" ("[" rs(key, ",") "]" ",")? expr ")"
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Maps (internal structures)}
