@@ -7,7 +7,7 @@ object M3Test extends Tag("ddbt.M3Test")
 object SQLTest extends Tag("ddbt.SQLTest")
 
 // sbt 'test-only * -- -l ddbt.M3Test' => run all but M3 tests
-// sbt 'test-only ddbt.test.Parers -- -l ddbt.M3Test' => run all but M3 tests
+// sbt 'test-only ddbt.test.ParserSpec -- -l ddbt.M3Test' => run all but M3 tests
 
 class ParserSpec extends FunSpec with ParallelTestExecution {
   import ddbt.Utils

@@ -42,8 +42,8 @@ class ExtParser extends StandardTokenParsers {
   lexical.delimiters ++= List("(",")",",",".",";","+","-",":=")
 
   // ------------ Literals
-  lazy val longLit = opt("+"|"-") ~ numericLit ^^ { case s~n => (s match { case Some("-") => "-" case _ => ""})+n }
-  lazy val doubleLit = (longLit <~ ".") ~ opt(numericLit) ~ opt(("E"|"e") ~> longLit) ^^ { case i~d~e => val f=i+"."+(d match { case Some(s)=>s case None=>"" })+(e match { case Some(j)=>"E"+j case _=>"" }); if (f.endsWith(".")) f+"0" else f }
+  lazy val longLit = opt("+"|"-") ~ numericLit ^^ { case s~n => s.getOrElse("")+n }
+  lazy val doubleLit = (longLit <~ ".") ~ opt(numericLit) ~ opt(("E"|"e") ~> longLit) ^^ { case i~d~e => val f=i+"."+d.getOrElse("")+(e match { case Some(j)=>"E"+j case _=>"" }); if (f.endsWith(".")) f+"0" else f }
 
   // ------------ Types
   lazy val tpe: Parser[Type] = (("string" | ("char"|"varchar") ~> "(" ~> numericLit <~  ")") ^^^ TypeString
@@ -62,8 +62,8 @@ class ExtParser extends StandardTokenParsers {
   | "FIXEDWIDTH" ~> numericLit ^^ { x => SplitSize(Integer.parseInt(x)) }
   | "PREFIX" ~> numericLit ^^ { x => SplitPrefix(Integer.parseInt(x)) }
   )
-  lazy val adaptor = ident ~ opt("(" ~> repsep(ident ~ (":=" ~> stringLit),",") <~ ")") ^^ { case n~oos =>
-    Adaptor(n,oos match { case Some(os)=> os.map{case x~y => (x,y) }.toMap case None=>List[(String,String)]().toMap })
+  lazy val adaptor = ident ~ opt("(" ~> repsep(ident ~ (":=" ~> stringLit),",") <~ ")") ^^ { case n~os =>
+    Adaptor(n,os.getOrElse(Nil).map{case x~y => (x,y) }.toMap)
   }
 }
 
@@ -76,7 +76,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
 
   // ------------ Expressions
   lazy val mapref = ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident,",") <~ "]") ^^
-                    { case n~ot~ks=>MapRef(n,ot match { case Some(t)=>t case None=>null },ks) }
+                    { case n~ot~ks=>MapRef(n,ot.getOrElse(null),ks) }
 
   lazy val expr:Parser[Expr] = prod ~ opt("+" ~> expr) ^^ { case l~or=>or match{ case Some(r)=>Add(l,r) case None=>l } }
   lazy val prod:Parser[Expr] = atom ~ opt("*" ~> prod) ^^ { case l~or=>or match{ case Some(r)=>Mul(l,r) case None=>l } }
@@ -102,7 +102,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
 
   // ------------ System definition
   lazy val map = ("DECLARE" ~> "MAP" ~> ident) ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe),",") <~ "]" <~ ":=") ~ expr <~ ";" ^^
-                 { case n~t~ks~e => MapDef(n,t match { case Some(t)=>t case None=>null},ks.map{case n~t=>(n,t)},e) }
+                 { case n~t~ks~e => MapDef(n,t.getOrElse(null),ks.map{case n~t=>(n,t)},e) }
   lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ mapref <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
   lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> rep1sep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
                         { case op~n~f~ss=> val s=Schema(n,f.map{(_,null)}); Trigger(if (op=="+") EvtAdd(s) else EvtDel(s),ss) }
@@ -123,9 +123,9 @@ object M3Parser extends ExtParser with (String => M3.System) {
 
 object SQLParser extends ExtParser with (String => SQL.System) {
   import ddbt.ast.SQL._
-  lexical.reserved ++= List("FROM","WHERE","GROUP","LEFT","RIGHT","JOIN","NATURAL","ON") // reduce this list by conditional accepts
+  lexical.reserved ++= List("SELECT","FROM","WHERE","GROUP","LEFT","RIGHT","JOIN","NATURAL","ON") // reduce this list by conditional accepts
   lexical.delimiters ++= List("+","-","*","/","%","=","<>","!=","<","<=",">=",">")
-  lazy val field = opt(ident<~".")~(ident|"*") ^^ { case ot~n => Field(n,ot match {case Some(t)=>t case None=>null}) } // if '*' compute the expansion
+  lazy val field = opt(ident<~".")~(ident|"*") ^^ { case t~n => Field(n,t.getOrElse(null)) } // if '*' compute the expansion
 
   // ------------ Expressions
   lazy val expr = prod ~ rep(("+"|"-") ~ prod) ^^ { case a~l => (a/:l) { case (l,o~r)=> o match { case "+" => Add(l,r) case "-" => Sub(l,r) }} }
@@ -169,20 +169,20 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   lazy val tab:Parser[Table] = ("(" ~> query <~ ")" ^^ TableQuery | ident ^^ TableNamed) ~ opt(opt("AS")~>ident) ^^ { case t~Some(n) => TableAlias(t,n) case t~None => t}
   lazy val join:Parser[Table] = tab ~ rep( // joins should be left-associative
       ("NATURAL"~"JOIN") ~> tab ^^ { (_,JoinInner,null) }
-    | (opt("LEFT"^^^JoinLeft|"RIGHT"^^^JoinRight|"FULL"^^^JoinFull)<~opt("OUTER")<~"JOIN")~tab~("ON"~>cond) ^^ { case oj~t~c => (t,oj match { case Some(j)=>j case None=>JoinInner },c) }
+    | (opt("LEFT"^^^JoinLeft|"RIGHT"^^^JoinRight|"FULL"^^^JoinFull)<~opt("OUTER")<~"JOIN")~tab~("ON"~>cond) ^^ { case j~t~c => (t,j.getOrElse(JoinInner),c) }
     ) ^^ { case t~js => (t/:js) { case (t1,(t2,j,c)) => TableJoin(t1,t2,j,c) }}
 
   lazy val alias = expr ~ opt("AS"~>ident) ^^ { case e~o => o match { case Some(n) => Alias(e,n) case None => e } }
-  lazy val groupBy = opt(("GROUP"~>"BY"~>rep1sep(field,",")) ~ opt("HAVING"~>disj)) ^^ { case None => null case Some(fs~ho) => GroupBy(fs,ho match { case Some(c)=>c case None=>null }) }
-  lazy val orderBy = opt("ORDER"~>"BY"~>rep1sep(field~opt("ASC"|"DESC"),",")) ^^ { case None => null case Some(fs) => OrderBy(fs.map{ case f~o => (f,o match{ case Some(x) => x.toUpperCase=="DESC" case _ => false }) }) }
+  lazy val groupBy = "GROUP"~>"BY"~>rep1sep(field,",") ~ opt("HAVING"~>disj) ^^ { case fs~ho => GroupBy(fs,ho.getOrElse(null)) }
+  lazy val orderBy = "ORDER"~>"BY"~>rep1sep(field~opt("ASC"|"DESC"),",") ^^ { case fs => OrderBy(fs.map{ case f~o => (f,o.getOrElse("").toUpperCase=="DESC") }) }
   
   lazy val qatom:Parser[Query] = (
     select
   | opt("LIST")~>"("~>repsep(expr,",")<~")" ^^ { Lst(_) }
   | "(" ~> query <~ ")"
   )
-  lazy val select = ("SELECT" ~> opt("DISTINCT")) ~ repsep(alias,",") ~ opt("FROM" ~> repsep(join,",")) ~ opt("WHERE" ~> disj) ~ groupBy ~ orderBy ^^ { case d~cs~ts~wh~gb~ob =>
-      Select(d.isDefined,cs,ts match { case Some(tt) => tt case None => Nil }, wh match { case Some(w) => w case None => null }, gb,ob) }
+  lazy val select = ("SELECT" ~> opt("DISTINCT")) ~ rep1sep(alias,",") ~ opt("FROM" ~> repsep(join,",")) ~ opt("WHERE" ~> disj) ~ opt(groupBy) ~ opt(orderBy) ^^ {
+    case d~cs~ts~wh~gb~ob => Select(d.isDefined,cs,ts.getOrElse(Nil),wh.getOrElse(null),gb.getOrElse(null),ob.getOrElse(null)) }
 
   // ------------ System definition
   lazy val system = rep(source) ~ rep(select <~ opt(";")) ^^ { case ss ~ qs => System(ss,qs) }
