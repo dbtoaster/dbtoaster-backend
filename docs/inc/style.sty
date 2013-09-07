@@ -72,3 +72,17 @@
 	morecomment=[l]{//},	morecomment=[n]{/*}{*/},
 	morestring=[b]",morestring=[b]',morestring=[b]"""
 }
+
+% -----------------------------------------------------------------------------------------------------------------
+% \tbox : multiline textbox for pictures; \tbox[0=no frame,l=left_align]{width}{height}{content}
+\makeatletter
+\def\instr#1#2{TT\fi\begingroup\edef\x{\endgroup\noexpand\in@{#1}{#2}}\x\ifin@} 
+\newlength{\tbox@len}
+\newcommand\tbox[4][]{\setlength{\tbox@len}{\unitlength}
+	\if\instr{0}{#1}\else \put(0,0){\framebox(#2,#3)[c]{}} \fi
+	\setlength{\unitlength}{.5\tbox@len}\put(0,#3){\setlength{\unitlength}{1pt}%
+		\put(1,-2){\setlength{\unitlength}{#2\tbox@len}\addtolength{\unitlength}{-2pt}%
+			\begin{minipage}{\unitlength}\if\instr{l}{#1} \else \centering \fi #4 \end{minipage}}}
+	\setlength{\unitlength}{\tbox@len}
+}
+\makeatother

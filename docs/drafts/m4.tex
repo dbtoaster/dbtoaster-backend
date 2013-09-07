@@ -1,8 +1,11 @@
 \documentclass[10pt]{article}
 \usepackage{../inc/style}
-\title{Morgol specifications}
+% \tbox : multiline textbox for pictures; \tbox[0=no frame,l=left_align]{width}{height}{content}
+
+\title{M4 specifications}
 \author{\href{mailto:thierry.coppey@epfl.ch}{\color{black} Thierry Coppey},
-	\href{mailto:andres.notzli@epfl.ch}{\color{black} Andres Noetzli}}
+	\href{mailto:andres.notzli@epfl.ch}{\color{black} Andres Noetzli}
+	@\href{http://data.epfl.ch}{\color{black}DATA}}
 
 \newlength{\dlen}
 \def\discuss#1{\par\hspace{2em}
@@ -11,10 +14,84 @@
 %\addtolength{\dlen}{-\leftmargin}
 \begin{minipage}{\dlen}\footnotesize {\bf\color{red} Discussion:} #1\end{minipage}\par}
 \def\say#1#2{\begingroup\par\leftskip1em {\bf #1:} \it #2\par\endgroup}
-
-\newcommand{\lift}{\text{^=}}
-
 \begin{document}
+% --------------------------------------------------------------------------------------------------------------
+
+\section*{Overview}
+\begin{center}
+\setlength{\unitlength}{.4cm} \begin{picture}(30,19)\footnotesize %\put(0,0){\tbox{30}{19}{}}
+\put(0,13) { % Front-end
+	\put(0,4){\tbox[0l]{5}{1.4}{\bf SQL}}
+	\put(0,2){\tbox[0l]{5}{1.4}{\bf M4 calculus}}
+	\put(0,0){\tbox[0l]{5}{1.4}{\bf Scala DSL}}
+	\put(6,4){\tbox{4.5}{1.4}{SQL parser}}
+	\put(6,2){\tbox{4.5}{1.4}{M4 parser}}
+	\put(6,0){\tbox{4.5}{1.4}{Lifting}}
+	\put(12,4){\tbox{4.2}{1.4}{SQL to calc}}
+	\put(12,2){\tbox[0]{4.2}{1.4}{M4 calc IR}}
+	\put(18,4){\tbox{7}{1.4}{Type Checking}}
+	\put(18,1.5){\tbox{7}{1.4}{Incrementalization}}
+	\put(18,-1){\tbox{7}{1.4}{Distribution}}
+	\put(18,-3.2){\tbox[0]{7}{1.4}{M4 triggers IR}}
+	{\linethickness{1pt}
+		\put(4.2,0.7){\vector(1,0){1.8}}
+		\put(4.8,2.7){\vector(1,0){1.2}}
+		\put(2,4.7){\vector(1,0){4}}
+		\put(10.5,4.7){\vector(1,0){1.5}}	\put(14.1,4){\vector(0,-1){1}}
+		\put(10.5,2.7){\vector(1,0){1.8}}
+		\moveto(10.5,.7)\lineto(14.1,.7)\lineto(14.1,1)\strokepath \put(14.1,.7){\vector(0,1){1.5}}
+		\moveto(16,2.7)\lineto(17,2.7)\lineto(17,4.7)\lineto(17.5,4.7)\strokepath \put(17,4.7){\vector(1,0){1}}
+		\put(21.5,4){\vector(0,-1){1.1}}
+		\put(21.5,1.5){\vector(0,-1){1.1}}
+		\put(21.5,-1){\vector(0,-1){1.1}}
+	}
+}
+\put(0,0){ % Back-end
+	\put(7.8,7){\tbox{5}{1.4}{ScalaGen}}
+	\put(13.4,7){\tbox{5}{1.4}{AkkaGen}}
+	\put(19,7){\tbox{5}{1.4}{LMS lifting}}
+	\put(19,4.9){\tbox[0]{5}{1.4}{LMS graph IR}}
+	\put(16.2,2){\tbox{5}{1.4}{LMS Scala}}
+	\put(16.2,0){\tbox{5}{1.4}{LMS Akka}}
+	\put(21.8,2){\tbox{5}{1.4}{Boost C++}}
+	\put(21.8,0){\tbox{5}{1.4}{Cluster C++}}
+	{\linethickness{1pt}
+		\moveto(21.5,10)\lineto(21.5,9.4)\lineto(10.3,9.4)\lineto(10.3,9)\strokepath
+		\put(21.5,9.4){\vector(0,-1){1}}\put(15.9,9.4){\vector(0,-1){1}}\put(10.3,9.4){\vector(0,-1){1}}
+		\put(21.5,7){\vector(0,-1){1}}
+		\moveto(21.5,5)\lineto(21.5,4.5)\lineto(18.7,4.5)\lineto(18.7,4)\strokepath
+		\put(18.7,4.5){\vector(0,-1){1}}\put(18.7,2){\vector(0,-1){.6}}
+		\moveto(21.5,5)\lineto(21.5,4.5)\lineto(24.3,4.5)\lineto(24.3,4)\strokepath
+		\put(24.3,4.5){\vector(0,-1){1}}\put(24.3,2){\vector(0,-1){.6}}
+	}
+}
+\put(0,0){ \put(26,4.9){\tbox[0]{4}{1.4}{\it Statistics}} % Statistics
+	\moveto(26.8,.7)\lineto(28,.7)\lineto(28,4)\strokepath
+	\moveto(26.8,2.7)\lineto(28,2.7)\strokepath\put(28,4){\vector(0,1){1.2}}
+	\moveto(28,6)\lineto(28,10.6)\lineto(25,10.6)\strokepath\put(25,10.6){\vector(-1,0){1}}
+}
+\end{picture}
+\end{center}
+
+M4, the upcoming language, is in a design phase. We plan to maintain the same M4 language across compilation phases to allow manual optimizations. In M4/calc it is possible to assign declaratively map content. In M4/triggers, all these assignments must be replaced by explicit triggers.
+
+Front-ends:\ul
+\item SQL: for users familiar with DBMS
+\item M4 calculus: allows declarative recursion, triggers and distribution specifications
+\item Scala DSL: has the same power as M4 calculus but can interact with Scala functions
+\ule
+
+Back-ends:\ul
+\item ScalaGen: vanilla Scala generator (unoptimized)
+\item AkkaGen: distributed (Akka) code generator
+\item LMS Scala/Akka: LMS-optimized code generators for JVM (default)
+\item Boost/Cluster C++: counterpart version of LMS targeting lower level C++
+\ule
+
+Runtime: it is possible to collect statistics to optimize triggers according to map loads at runtime. The runtime engine needs to bundle the code generator and compiler. This should be a long-term optimization.
+
+% --------------------------------------------------------------------------------------------------------------
+\newpage
 \tableofcontents
 % --------------------------------------------------------------------------------------------------------------
 \newpage
@@ -102,6 +179,8 @@ Each expression contains two columns: a value $v$ exposed to the user and an imp
 \erule[]{x}{x,1}{x \text{ a constant or identifier}}
 \end{array}\]
 
+For domain maintenance, we can only delete a tuple when both multiplicity and values are zero (proved by Milos). Product with a variable can be seen as an infinite relation of constants that is joined with table. We should restrict AggMin and AggMax to positive multiplicity.
+
 \discuss{$\exists(e)$ serves to bind variables and therefore cannot be transformed into $e\ne 0$.}
 \discuss{Simplify grammar by also using {\tt =} for lift? This introduce ambiguity between lift and cmp as they are differentiated only by the context (depending if the lhs ref is bound), but after all, comparison of two bound variable is semantically equivalent to lift one as the other.}
 % \discuss{Do we need explicit AggMin and AggMax operations or are these handled by maps?}
@@ -160,6 +239,10 @@ A map can declare the following options:\ul
 \item \textbf{Threshold:} minimal value relative difference for a tuple update to be considered for recursion. This apply only to maps with value type {\tt double}.
 	\ule\discuss{Do we also need this feature on {\tt double} keys ?}\ul
 \item \textbf{Local:} a map being declared local will only be accessible from the local host (cluster). This helps encoding and enforcing local operations as in \cite{webdamlog}.
+\item \textbf{GPU:} whether the map is to be stored and processed in parallel with CUDA on GPU (when the node hardware supports it). This is planned as a long-term optimization.
+\ule\discuss{Rationale: it is possible to have decent hash maps on GPUs \cite{gpu_hashing}, bottleneck is CPU (memory bandwidth?) and program consists of loops that often execute the same task (smaller divergence).
+\say{Thierry}{At least we should benchmark GPU maps vs CPU maps before we discard this idea.}}\ul
+
 \item Andres suggests that we should have options to hint the compiler about secondary indices structures (tree, hash). When automatic inference is robust enough, we can remove this option.
 \ule
 
@@ -414,7 +497,7 @@ How to incrementalize such computation? By adding an edge, one additional iterat
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Reliable unicast messaging}
-This problem has been presented in the Bloom paper and serves as an example of how Bloom programs can be translated to Morgol programs.
+This problem has been presented in the Bloom paper and serves as an example of how Bloom programs can be translated to M4 programs.
 On a high level the following program allows to send messages reliably from $src$ to $dst$.
 The idea is that the user provides a stream $pipe\_in$ containing the messages that he would like to have sent and $got\_ack$ provides information about which messages have been received by the destination.
 The stream $timer$ is used to retry delivery of unsent messages in regualar intervals.
@@ -454,7 +537,7 @@ The basic ideas to translate Bloom programs:
 % --------------------------------------------------------------------------------------------------------------
 \section{Other programming paradigms}
 \subsection{Reactive programming}
-In Morgol, we can simply encode reactive programming by the fact that we can define arbitrary triggers (on +/- ...) and that in these triggers, we can call other triggers (with the call statement). Additionally, we could extend the function library such that the user can define arbitrary functions.
+In M4, we can simply encode reactive programming by the fact that we can define arbitrary triggers (on +/- ...) and that in these triggers, we can call other triggers (with the call statement). Additionally, we could extend the function library such that the user can define arbitrary functions.
 
 \subsection{State machine}
 An automaton is defined by $M=(Q,\Sigma,\delta,q_0,F)$ with\\
@@ -619,7 +702,7 @@ Integrate features from Socialite\cite{socialite}, WebDamLog\cite{webdamlog}, Bl
 \item LMS code generator
 \item More options for streams input
 \item Distribution framework
-\item New parser for Morgol language
+\item New parser for M4 language
 \item Incrementalization (rules$\to$triggers conversion) by reusing DBToaster front-end
 \ole
 
