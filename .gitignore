@@ -7,6 +7,7 @@ test/gen
 bin
 benchmarks-*.csv
 .idea
+*.numbers
 *.iml
 *.pdf
 *Temp*

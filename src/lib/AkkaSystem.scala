@@ -91,20 +91,20 @@ abstract class WorkerActor extends Actor {
         else {
           val cs=cont.get(k); val c=co.asInstanceOf[Any=>Unit];
           cont.put(k,c::(if (cs!=null) cs else Nil))
-          if (cs==null) o ! Get(map,key); lookupWait // send request
+          if (cs==null) o ! Get(map,key) // send request
         }
       }
     }
     @inline def res[K,V](map:MapRef,key:K,value:V) { // onReceive Val(map,key,value)
       val k=(map,key); cache.put(k,value); cont.remove(k).foreach{ _(value) }
-      bar.ack; lookupDone // ack pending barrier if needed
+      bar.ack // ack pending barrier if needed
     }
     @inline def ready = cont.size==0
     @inline def clear = cache.clear
   }
   
   // ---- aggregation/continuations matcher
-  protected object matcherAggr {
+  private object matcherAggr {
     private val cache = new java.util.HashMap[(FunRef,Array[Any]),Any]()
     private val cont = new java.util.HashMap[Int,List[Any=>Unit]]
     private val sum = new java.util.HashMap[Int,(Int/*count_down*/,Any/*sum*/,(Any,Any)=>Any/*plus*/)]
@@ -121,7 +121,7 @@ abstract class WorkerActor extends Actor {
           params.put(k,(f,args))
           val os = owns.get(m)
           sum.put(k,(os.length,zero,plus))
-          os.foreach{ w=> w!Aggr(k,f,args) }; lookupWait // send
+          os.foreach{ w=> w!Aggr(k,f,args) } // send
         }
       }
     }
@@ -132,7 +132,7 @@ abstract class WorkerActor extends Actor {
       else {
         cache.put(params.get(id),r._2); cont.remove(id).foreach { _(r._2) }
         sum.remove(id); params.remove(id) // cleanup other entries
-        bar.ack; lookupDone // ack pending barrier if needed
+        bar.ack // ack pending barrier if needed
       }
     }
     @inline def ready = cont.size==0
@@ -140,7 +140,8 @@ abstract class WorkerActor extends Actor {
   }
 
   // ---- barrier and counters management
-  private object bar {
+  protected object bar {
+    private var bco: Unit=>Unit = null
     private var enabled = false
     private val count = new java.util.HashMap[ActorRef,Long]() // destination, count (-1 for sent, 1 for recv)
     @inline private def add(a:ActorRef,v:Long) { if (count.containsKey(a)) { val n=count.get(a)+v; if (n==0) count.remove(a) else count.put(a,n) } else if (v!=0) count.put(a,v) }
@@ -154,13 +155,16 @@ abstract class WorkerActor extends Actor {
       (to.map(workers(_)) zip num).foreach { case (w,n) => add(w,n) }
       if (enabled && count.size==0) {
         enabled=false; workers.foreach { w => if (w!=master) w ! Barrier(false) }
-        barrierEnd // continue with sequential event processing (master)
+        if (bco!=null) { bco(); bco=null; }
       }
     }
-    def set(en:Boolean) {
+    def set(en:Boolean,co:(Unit=>Unit)=null) {
       if (enabled==en) return; enabled=en;
       if (self!=master) ack
-      else workers.foreach { w => if (w!=master) { if (en) add(w,-1); w ! Barrier(en) } } // count barrier msg
+      else {
+        if (en && co!=null) bco=co;
+        workers.foreach { w => if (w!=master) { if (en) add(w,-1); w ! Barrier(en) } } // count barrier msg
+      }
     }
     // local counters usage
     @inline def recv = { add(self,1); ack }
@@ -183,14 +187,10 @@ abstract class WorkerActor extends Actor {
     //case Foreach(f,as) => call(f,as); bar.recv
     //case Aggr(id,f,as) => sender ! AggrPart(id,<result>)
     case AggrPart(id,res) => matcherAggr.res(id,res)
-    case m => println("No handler for: "+m)
+    case m => println("Not understood: "+m.toString)
   }
 
-  // ---- inheritable functions
-  protected def barrierStart { /*assert(self==master);*/ bar.set(true) }
-  protected def barrierEnd {} // master callback
-  protected def lookupWait {} // at get/aggr request
-  protected def lookupDone {} // at get/aggr response
+  // ---- map operations
   // Element operation: if key hashes to local, apply locally, otherwise call appropriate worker
   def get[K,V](m:MapRef,k:K,co:V=>Unit) = matcherGet.req(m,k,co) 
   def add[K,V](m:MapRef,k:K,v:V) { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].add(k,v) else bar.send(o,Add(m,k,v)) }
@@ -198,9 +198,13 @@ abstract class WorkerActor extends Actor {
   // Group operations: master (or nested operation) broadcasts request, worker process locally
   def clear[P](m:MapRef,p:Int= -1,pk:P=null) = owns(m).foreach { bar.send(_,Clear(m,p,pk)) }
   def foreach(m:MapRef,f:FunRef,args:Array[Any]) { owns(m).foreach { bar.send(_,Foreach(f,args)) } }
-  def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any],co:R=>Unit) = matcherAggr.req(m,f,args,co,K3Helper.make_zero[R](),K3Helper.make_plus[R]().asInstanceOf[(Any,Any)=>Any])
+  def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any],co:R=>Unit,zero:Any=null,plus:(Any,Any)=>Any=null) = {
+    val (z,p) = if (zero==null&&plus==null) (zero,plus) else (K3Helper.make_zero[R](),K3Helper.make_plus[R]().asInstanceOf[(Any,Any)=>Any])
+    matcherAggr.req(m,f,args,co,z,p)
+  }
 
-  // ---- convenience debugging helpers (should be rewritten by compiler instead)
+  // ---- convenience wrapper for debugging (should be rewritten by compiler instead)
+  /*
   import scala.language.implicitConversions
   implicit def mapRefConv(m:MapRef) = new MapFunc[Any](m)
   class MapFunc[P](m:MapRef,p:Int= -1,pk:P=null) { private val w=WorkerActor.this
@@ -212,6 +216,9 @@ abstract class WorkerActor extends Actor {
     def foreach[K,V](f:FunRef,args:Array[Any]) = w.foreach(m,f,args)
     def aggr[R:ClassTag](f:FunRef,args:Array[Any],co:R=>Unit) = w.aggr(m,f,args,co)
   }
+  */
+  def msg(m:Any) { val s=self.path.toString; val p=s.indexOf("/user/"); println(s.substring(p)+": "+m.toString); }
+
 }
 
 /**
@@ -224,27 +231,51 @@ abstract class MasterActor extends WorkerActor {
   import scala.collection.JavaConversions.mapAsScalaMap
   import WorkerActor._
   import Messages._
-  private var t0:Long = 0 // startup time
+  import scala.util.continuations._
 
+  // --- sequential to CPS conversion
+  def get[K,V](m:MapRef,k:K) = shift { co:(V=>Unit) => super.get(m,k,co) }
+  def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any]) = shift { co:(R=>Unit) => super.aggr(m,f,args,co) }
+  def barrier = shift { co:(Unit=>Unit) => bar.set(true,co); }
+  def toMap[K,V](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
+  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit) = {
+    val zero = new java.util.HashMap[K,V]()
+    def plus[K,V](acc:java.util.HashMap[K,V],m:Map[K,V]) = { m.foreach { case (k,v)=> acc.put(k,v) }; acc }
+    super.aggr(m,fun_collect,Array(m),co,zero,(plus _).asInstanceOf[(Any,Any)=>Any])
+  }
 
-  // declare all event handlers with reset wrapped around
-
-
-  // XXX: use continuations plugin for Scala
-  // XXX: use continuations plugin for Scala
-  // XXX: use continuations plugin for Scala
-
-
-  // XXX: rewrite as fully asynchronous !!!
-  // XXX: rewrite as fully asynchronous !!!
-  // XXX: rewrite as fully asynchronous !!!
-  // XXX: rewrite as fully asynchronous !!!
-
-  // XXX: use continuations plugin for Scala
-
-  // ---- event handlers
-  def receive(e:StreamEvent,sender:ActorRef):Unit // to be implemented
+  // ---- coherency mechanism: if a map used is not flushed, flush all
+  private val invalid = scala.collection.mutable.Set[MapRef]()
+  def pre(write:MapRef,read:MapRef*) = shift { co:(Unit=>Unit) =>
+    if (read.filter{r=>invalid.contains(r)}.isEmpty) { invalid += write; co() }
+    else { bar.set(true,_=>{ invalid.clear; invalid+=write; co(); }) }
+  }
   
+  // ---- handle stream events
+  private var t0:Long = 0 // startup time
+  private val eq = new java.util.LinkedList[(StreamEvent,ActorRef)]() // external event queue
+  private var eproc = false // event currently being processed
+  private def deq() {
+    while (eq.size>0) { val (ev,sender)=eq.remove; ev match {
+      case SystemInit => reset { barrier; t0=System.nanoTime() }
+      case EndOfStream|GetSnapshot => val time=System.nanoTime()-t0; val s=sender;
+        def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
+          case 0 => s ! (time,acc)
+          case n => toMap((n-1).toByte,(m:Map[_,_])=>collect(n-1,m::acc) )
+        }
+        collect(local.length,Nil)
+      case e:TupleEvent => dispatch(e)
+    }}
+    eproc = false
+  }
+
+  val dispatch:PartialFunction[TupleEvent,Unit] // to be implemented by subclasses
+  override def receive = masterRecv orElse super.receive  
+  private val masterRecv : PartialFunction[Any,Unit] = {
+    case ev:StreamEvent => val p = !eproc; eproc = true; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
+  }
+  
+/*
   // ---- thread blocking mechanism
   private object thr {
     private val evq = new java.util.LinkedList[(StreamEvent,ActorRef)]() // external event queue
@@ -262,7 +293,7 @@ abstract class MasterActor extends WorkerActor {
       try { while(true) { val (e,a)=this.synchronized { if (evq.size==0) block(r_extevt); evq.remove; };
         e match {
           case SystemInit => barrierStart; t0=System.nanoTime() // XXX: we're not calling from 
-          case EndOfStream|GetSnapshot => barrierStart; val time=System.nanoTime()-t0; sender ! /*(*/ time /*,toMap(0))*/
+          case EndOfStream|GetSnapshot => barrierStart; val time=System.nanoTime()-t0; sender ! / *(* / time / *,toMap(0))* /
           case e:TupleEvent => receive(e,a) 
         }
       }}
@@ -276,27 +307,11 @@ abstract class MasterActor extends WorkerActor {
   override def lookupWait { thr.block(thr.r_getagg); }
   override def lookupDone { thr.unblock(thr.r_getagg); }
 
-  // ---- synchronous collection of map data
-  private var tmpMap:Map[_,_] = null
-  def toMap[K,V](m:MapRef):Map[K,V] = {
-    def cont(m:java.util.HashMap[K,V]) { tmpMap=m.toMap; thr.unblock(thr.r_getagg); }
-    val zero = new java.util.HashMap[K,V]()
-    def plus[K,V](acc:java.util.HashMap[K,V], m:Map[K,V]) = { m.foreach { case (k,v)=> acc.put(k,v) }; acc }
-    matcherAggr.req(m,fun_collect,Array(m),cont,zero,(plus _).asInstanceOf[(Any,Any)=>Any])
-    thr.block(thr.r_getagg); /*wait*/ val r=tmpMap.asInstanceOf[Map[K,V]]; tmpMap=null; r
-  }
-
-  // ---- coherency mechanism: if a map used is not flushed, flush all
-  private val invalid = scala.collection.mutable.Set[MapRef]()
-  def pre(write:MapRef,used:List[MapRef]=Nil) {
-    if (!used.filter{r=>invalid.contains(r)}.isEmpty) { barrierStart; invalid.clear; }
-    invalid += write
-  }
-
   // ---- legacy behavior
   // At present, we do not support group management, this is done at setup
   // as with previous implementation, worker should support membership.
   // members(self,props.map{p=>context.actorOf(p)})
+*/
 }
 
 
@@ -307,27 +322,37 @@ trait MyMaps {
 }
 
 class Worker extends WorkerActor with MyMaps {
-  import WorkerActor._
+  override def receive = { case m => msg(m.toString); super.receive(m) }
 }
 
 class Master extends MasterActor with MyMaps {
   import Messages._
-  def receive(e:StreamEvent,sender:ActorRef) {
-  
+  val dispatch : PartialFunction[TupleEvent,Unit] = {
+    case e:TupleEvent => println("Got event "+e)
   }
+  override def receive = { case m => msg(m.toString); super.receive(m) }
 }
 
 object Akka3 {
-  import akka.actor.ActorSystem
+  import akka.actor.{Props,ActorSystem}
+  import Messages._
+  import WorkerActor._
+
   def main(args:Array[String]) {
-    println("OK")
     val system = ActorSystem("DDBT")
-    /*
-    val w = system.actorOf(TestWorker,"Query")
-    w ! 
+    val m = system.actorOf(Props[Master])
+    val ws = (0 until 2).map { i => system.actorOf(Props[Worker]) }
+    
+    // setup members
+    m ! Members(m,ws.map{w=>(w,List(0.toByte,1.toByte))}.toArray)
+    
+
+
+
+
+
     Thread.sleep(1000);
     system.shutdown()
-    */
   }
 }
 
@@ -407,16 +432,7 @@ abstract class WorkerActor extends Actor {
 }
 
 class MasterActor(props:Array[Props]) extends WorkerActor {
-  import WorkerActor._
-  import Messages._
   init(self,props.map{p=>context.actorOf(p)})
-  final def local[K,V](m:MapRef) = sys.error("Master owns no map")
-  override def receive = masterReceive orElse super.receive
-  private var t0:Long = 0
-  private def masterReceive : PartialFunction[Any,Unit] = {
-    case SystemInit => flush(); t0=System.nanoTime()
-    case EndOfStream => flush(); val time=System.nanoTime()-t0; sender ! (time,toMap(0))
-  }
 }
 
 LEGACY ARCHITECTURE OVERVIEW (push-based flow)
