@@ -32,7 +32,10 @@ import akka.actor.{Actor,ActorRef}
  * 3. When master receives ack(CR,CS), it sums with local counters.
  * 4. When (CR!=0 && CS!={0..0}) on master (there is no in-flight message), the
  *    master broadcast <stop> to disable barrier mode and continues processing.
- * Note: <start> counts as one RC to enforce barrier.
+ * Note 1: <start> counts as one RC to enforce barrier.
+ * Note 2: during the barrier, the cache must be disable to avoid propagating
+ *         stale informations after the barrier.
+ *
  *
  * @author TCK
  */
@@ -80,13 +83,14 @@ abstract class WorkerActor extends Actor {
   
   // ---- get/continuations matcher
   private object matcherGet {
+    private var enabled = true // enable cache
     private val cache = new java.util.HashMap[(MapRef,Any),Any]()
     private val cont = new java.util.HashMap[(MapRef,Any),List[Any=>Unit]]()
     @inline def req[K,V](map:MapRef,key:K,co:V=>Unit) { // map.get(key,continuation)
       val o=owner(map,key);
       if (o==self) co(local(map).asInstanceOf[K3Map[K,V]].get(key)) // resolves locally
       else {
-        val k=(map,key); val v=cache.get(k);
+        val k=(map,key); val v=if (enabled) cache.get(k) else null;
         if (v!=null) co(v.asInstanceOf[V]) // cached
         else {
           val cs=cont.get(k); val c=co.asInstanceOf[Any=>Unit];
@@ -96,15 +100,16 @@ abstract class WorkerActor extends Actor {
       }
     }
     @inline def res[K,V](map:MapRef,key:K,value:V) { // onReceive Val(map,key,value)
-      val k=(map,key); cache.put(k,value); cont.remove(k).foreach{ _(value) }
+      val k=(map,key); if (enabled) cache.put(k,value); cont.remove(k).foreach{ _(value) }
       bar.ack // ack pending barrier if needed
     }
     @inline def ready = cont.size==0
-    @inline def clear = cache.clear
+    @inline def clear(en:Boolean=true) = { cache.clear; enabled=en }
   }
   
   // ---- aggregation/continuations matcher
   private object matcherAggr {
+    private var enabled = true // enable cache
     private val cache = new java.util.HashMap[(FunRef,Array[Any]),Any]()
     private val cont = new java.util.HashMap[Int,List[Any=>Unit]]
     private val sum = new java.util.HashMap[Int,(Int/*count_down*/,Any/*sum*/,(Any,Any)=>Any/*plus*/)]
@@ -112,7 +117,7 @@ abstract class WorkerActor extends Actor {
     private var ctr:Int = 0
     @inline private def getId(f:FunRef,args:Array[Any]):Int = { params.foreach{ case (k,v) => if (v==(f,args)) return k; }; ctr=ctr+1; ctr }
     @inline def req[R](m:MapRef,f:FunRef,args:Array[Any],co:R=>Unit,zero:Any,plus:(Any,Any)=>Any) { // call aggregation ("f(args)",continuation) on map m (m used only to restrict broadcasting)
-      val k=(f,args); val v=cache.get(k);
+      val k=(f,args); val v=if (enabled) cache.get(k) else null;
       if (v!=null) co(v.asInstanceOf[R]) // cached
       else {
         val k=getId(f,args); val cs=cont.get(k); val c=co.asInstanceOf[Any=>Unit];
@@ -130,13 +135,13 @@ abstract class WorkerActor extends Actor {
       val r = (s._1-1,s._3(s._2,res.asInstanceOf[Any]),s._3)
       if (r._1>0) sum.put(id,r) // incomplete aggregation, wait...
       else {
-        cache.put(params.get(id),r._2); cont.remove(id).foreach { _(r._2) }
+        if (enabled) cache.put(params.get(id),r._2); cont.remove(id).foreach { _(r._2) }
         sum.remove(id); params.remove(id) // cleanup other entries
         bar.ack // ack pending barrier if needed
       }
     }
     @inline def ready = cont.size==0
-    @inline def clear = cache.clear
+    @inline def clear(en:Boolean=true) = { cache.clear; enabled=en }
   }
 
   // ---- barrier and counters management
@@ -153,14 +158,15 @@ abstract class WorkerActor extends Actor {
     }
     @inline def sumAck(to:Array[NodeRef],num:Array[Long]) {
       (to.map(workers(_)) zip num).foreach { case (w,n) => add(w,n) }
+      msg("Got ack => "+count.toMap.mkString)
       if (enabled && count.size==0) {
         enabled=false; workers.foreach { w => if (w!=master) w ! Barrier(false) }
-        if (bco!=null) { bco(); bco=null; }
+        if (bco!=null) { val co=bco; bco=null; co(); }
       }
     }
     def set(en:Boolean,co:(Unit=>Unit)=null) {
-      if (enabled==en) return; enabled=en;
-      if (self!=master) ack
+      if (enabled==en) return; enabled=en; matcherGet.clear(!en); matcherAggr.clear(!en)
+      if (self!=master) { if (en) add(self,1); ack }
       else {
         if (en && co!=null) bco=co;
         workers.foreach { w => if (w!=master) { if (en) add(w,-1); w ! Barrier(en) } } // count barrier msg
@@ -177,7 +183,6 @@ abstract class WorkerActor extends Actor {
     case Members(m,ws) => members(m,ws)
     case Barrier(en) => bar.set(en) // assert(self!=master)
     case Ack(to,num) => bar.sumAck(to,num) // assert(self==master)
-    //case Collect(m) => sender ! local(m).toMap
     case Get(m,k) => sender ! Val(m,k,local(m).asInstanceOf[K3Map[Any,Any]].get(k))
     case Val(m,k,v) => matcherGet.res(m,k,v)
     case Add(m,k,v) => local(m).asInstanceOf[K3Map[Any,Any]].add(k,v); bar.recv
@@ -234,7 +239,7 @@ abstract class MasterActor extends WorkerActor {
   import scala.util.continuations._
 
   // --- sequential to CPS conversion
-  def get[K,V](m:MapRef,k:K) = shift { co:(V=>Unit) => super.get(m,k,co) }
+  def get[K,V](m:MapRef,k:K):V @cps[Unit] = shift { co:(V=>Unit) => super.get(m,k,co) }
   def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any]) = shift { co:(R=>Unit) => super.aggr(m,f,args,co) }
   def barrier = shift { co:(Unit=>Unit) => bar.set(true,co); }
   def toMap[K,V](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
@@ -256,64 +261,45 @@ abstract class MasterActor extends WorkerActor {
   private val eq = new java.util.LinkedList[(StreamEvent,ActorRef)]() // external event queue
   private var eproc = false // event currently being processed
   private def deq() {
-    while (eq.size>0) { val (ev,sender)=eq.remove; ev match {
-      case SystemInit => reset { barrier; t0=System.nanoTime() }
-      case EndOfStream|GetSnapshot => val time=System.nanoTime()-t0; val s=sender;
-        def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
-          case 0 => s ! (time,acc)
-          case n => toMap((n-1).toByte,(m:Map[_,_])=>collect(n-1,m::acc) )
-        }
-        collect(local.length,Nil)
-      case e:TupleEvent => dispatch(e)
-    }}
+    do {
+      val (ev,sender)=eq.removeFirst;
+      ev match {
+        case SystemInit => reset { barrier; t0=System.nanoTime() }
+        case EndOfStream|GetSnapshot => val time=System.nanoTime()-t0; val s=sender;
+          def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
+            case 0 => s ! (time,acc)
+            case n => toMap((n-1).toByte,(m:Map[_,_])=>collect(n-1,m::acc) )
+          }
+          collect(local.length,Nil)
+        case e:TupleEvent => dispatch(e) // XXX: might return earlier than expected => block / pass continuation
+      }
+    } while (eq.size>0)
     eproc = false
   }
 
   val dispatch:PartialFunction[TupleEvent,Unit] // to be implemented by subclasses
   override def receive = masterRecv orElse super.receive  
   private val masterRecv : PartialFunction[Any,Unit] = {
-    case ev:StreamEvent => val p = !eproc; eproc = true; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
+    case ev:StreamEvent => 
+      println("RECEIVE "+ev)
+      val p= !eproc; eproc=true; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
   }
-  
-/*
-  // ---- thread blocking mechanism
-  private object thr {
-    private val evq = new java.util.LinkedList[(StreamEvent,ActorRef)]() // external event queue
-    private var reason = 0 // event being waited by master thread
-    val r_extevt  = 1 // external event
-    val r_barrier = 2 // pending barrier
-    val r_getagg  = 3 // pending get or aggregation
-    def block(r:Int) = this.synchronized { if (r!=reason) { reason=r; this.wait } } // force to block that thread
-    def unblock(r:Int) = this.synchronized { if (r==reason) { reason=0; this.notifyAll } }
-    def add(e:StreamEvent) = {
-      val a = e match { case EndOfStream|GetSnapshot => sender case _ => null }
-      this.synchronized { evq.add((e,a)) }
-    }
-    private var th:Thread = new Thread { override def run() =
-      try { while(true) { val (e,a)=this.synchronized { if (evq.size==0) block(r_extevt); evq.remove; };
-        e match {
-          case SystemInit => barrierStart; t0=System.nanoTime() // XXX: we're not calling from 
-          case EndOfStream|GetSnapshot => barrierStart; val time=System.nanoTime()-t0; sender ! / *(* / time / *,toMap(0))* /
-          case e:TupleEvent => receive(e,a) 
-        }
-      }}
-      catch { case e:InterruptedException => }
-    }
-    th.start
-    def stop() = th.interrupt
-  }
-  override def barrierStart { super.barrierStart; thr.block(thr.r_barrier) }
-  override def barrierEnd { thr.unblock(thr.r_barrier) }
-  override def lookupWait { thr.block(thr.r_getagg); }
-  override def lookupDone { thr.unblock(thr.r_getagg); }
-
-  // ---- legacy behavior
-  // At present, we do not support group management, this is done at setup
-  // as with previous implementation, worker should support membership.
-  // members(self,props.map{p=>context.actorOf(p)})
-*/
 }
 
+// -----------------------------------------------------------------------------
+
+object Consts {
+  import Messages._
+  val m0 = 0.toByte
+  val m1 = 1.toByte
+  val ev1 = TupleEvent(TupleInsert,"S",0,List(1))
+  val ev2 = TupleEvent(TupleInsert,"T",0,List(2))
+  val ev3 = TupleEvent(TupleInsert,"U",0,List(3))
+  val f1 = 1.toByte
+  val f2 = 2.toByte
+  val f3 = 3.toByte
+}
+import Consts._
 
 trait MyMaps {
   val map0 = K3Map.make[Long,Long]()
@@ -322,12 +308,49 @@ trait MyMaps {
 }
 
 class Worker extends WorkerActor with MyMaps {
-  override def receive = { case m => msg(m.toString); super.receive(m) }
+  import WorkerActor._
+
+  override def receive = {
+    case Foreach(f1,Array(n)) => println("F1 : "+n)
+    case m => msg(m.toString); super.receive(m)
+  }
 }
 
+// XXX: WARNING, CACHE MIGHT BE STALE DURING BARRIER/FORCE 
+
 class Master extends MasterActor with MyMaps {
+  import WorkerActor._
   import Messages._
+  import scala.util.continuations._
+
   val dispatch : PartialFunction[TupleEvent,Unit] = {
+    case `ev1` => reset {
+      println("--------------------------- event 1")
+      add(m0,1L,1L)
+      add(m0,2L,2L)
+      println("Pre")
+      barrier; 
+      println("Middle")
+      barrier;
+      println("Post")
+      println("Recv : "+get[Long,Long](m0,1L))
+      println("Recv : "+get[Long,Long](m0,2L))
+      clear(m0)
+      barrier;
+      println("Recv : "+get[Long,Long](m0,1L))
+      println("Recv : "+get[Long,Long](m0,2L))
+      barrier
+    }
+    case `ev2` => reset {
+      println("--------------------------- event 2")
+      //clear(m0)
+      /*
+      barrier;
+      */
+      val n = 500
+      foreach(m0,f1,Array(n))
+      barrier;
+    }
     case e:TupleEvent => println("Got event "+e)
   }
   override def receive = { case m => msg(m.toString); super.receive(m) }
@@ -345,16 +368,20 @@ object Akka3 {
     
     // setup members
     m ! Members(m,ws.map{w=>(w,List(0.toByte,1.toByte))}.toArray)
+    m ! ev1
+    m ! ev2
     
 
 
 
 
 
-    Thread.sleep(1000);
+    Thread.sleep(2000);
     system.shutdown()
   }
 }
+
+
 
 /*
 // ======================================================================
@@ -363,6 +390,10 @@ object Akka3 {
 //          docs/draft/m4.tex FOR PROTOCOL CORRECTIONS.
 //
 // ======================================================================
+  // ---- legacy behavior
+  // At present, we do not support group management, this is done at setup
+  // as with previous implementation, worker should support membership.
+  // members(self,props.map{p=>context.actorOf(p)})
 
 import scala.concurrent.{Future,Await}
 import akka.pattern.ask
