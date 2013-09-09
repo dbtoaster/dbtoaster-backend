@@ -101,7 +101,7 @@ trait Helper {
   // ---------------------------------------------------------------------------
   // Stream definitions (used for manual debugging only)
 
-  private def str(file:String,a:Adaptor) = (new java.io.FileInputStream("resources/data/"+file+".csv"),a,Split())
+  private def str(file:String,a:Adaptor) = (new java.io.FileInputStream("examples/data/"+file+".csv"),a,Split())
   def streamsFinance(s:String="") = Seq(str("finance"+(if (s!="") "-"+s else ""),Adaptor("orderbook",Nil)))
   def streamsRST(ss:Seq[String]=Seq("r")) = ss.map { s=> str("simple/"+s,new Adaptor.CSV(s.toUpperCase,"int,int")) }
 

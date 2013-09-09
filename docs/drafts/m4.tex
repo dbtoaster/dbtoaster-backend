@@ -599,7 +599,7 @@ Statements are executed sequentially on the master. Whenever the master detects 
 \subsection{Barrier}
 The goal of the barrier is to synchronize all workers, ensuring that all messages sent have been received and processed. We distinguish two cases:\ul
 \item Request: acknowledgment is implicit in the response. Each worker ensures that it has no pending request before starting/continuing the barrier procedure.
-\item Call: workers and master maintain locally the number of remote calls started remotely on each worker in a map $C_S\langle worker\to\#calls \rangle$. Additionally, workers maintain locally the number of calls $C_R$ they have received.
+\item Call: workers and master maintain locally the number of remote calls started remotely on each worker in a map $C_S\langle worker\to\#calls \rangle$. Additionally, workers maintain locally the number of calls $C_R$ they have received. Note: the \textit{barrier-start} message counts as a remote call.
 \ule
 
 \subsubsection*{Barrier procedure}\ol
@@ -634,6 +634,8 @@ We prove correctness and termination by induction:\ul
 \ule
 
 Termination proof: whenever a node create a remote call, it counts it positively, whenever a node receives a call, it is counted negatively. Assuming that message processing terminates, all messages will be counted once positively and once negatively, so eventually all counters will be zero and the barrier will terminate.
+
+Note: we could be tempted to lazily devise workers participating to the barrier to reduce the number of messages exchanged and possible stragglers. The issues with this approach is that the master does not know the set of indirectly affected workers, thereby requiring acknowledgements to discover them, thus latency would be increased. Additionally, this complicates implementation as \textit{barrier-start} needs to be piggybacked on potentially all calls.
 
 % --------------------------------------------------------------------------------------------------------------
 \subsection{Dependency detection}
