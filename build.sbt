@@ -28,7 +28,7 @@ libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.0",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.0",
   "org.scala-lang"     % "scala-actors"   % v,
-  "org.scala-lang"     % "scala-compiler" % v,
+  "org.scala-lang"     % "scala-compiler" % v         % "test",
   "org.scalatest"     %% "scalatest"      % "2.0.M5b" % "test"
   //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
   //"com.github.velvia" %% "scala-storm"  % "0.2.3-SNAPSHOT",
@@ -49,8 +49,9 @@ Seq(
 
 // --------- Execution options
 Seq(
-  fork := true,
-  javaOptions ++= Seq("-Xss128m") // ,"-Xss512m","-Xmx2G","-Xms2G","-XX:MaxPermSize=2G" //,"-verbose:gc"
+  fork := true, // required to accept javaOptions
+  javaOptions ++= Seq("-Xss128m"), // ,"-Xss512m","-Xmx2G","-Xms2G","-XX:MaxPermSize=2G" //,"-verbose:gc"
+  javaOptions in Test <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString ) // propagate paths
 )
 
 // --------- Custom tasks
@@ -65,6 +66,15 @@ addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark ")
 TaskKey[Unit]("pkg") <<= classDirectory /*fullClasspath*/ in Compile map { cd =>
   val dir=new java.io.File("lib"); if (!dir.exists) dir.mkdirs;
   scala.sys.process.Process(Seq("jar","-cMf",dir.getPath()+"/ddbt.jar","-C",cd.toString,"ddbt/lib")).!
+}
+
+TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (base, cp) =>
+  def s(file:String,main:String) {
+    val content = "#!/bin/sh\njava -classpath \""+cp.files.absString+"\" "+main+" \"$@\"\n"
+    val out = base/file; IO.write(out,content); out.setExecutable(true)
+  }
+  s("toast.sh","ddbt.Compiler")
+  s("unit.sh","ddbt.UnitTest")
 }
 
 // --------- LMS conditional inclusion
@@ -88,6 +98,7 @@ TaskKey[Unit]("pkg") <<= classDirectory /*fullClasspath*/ in Compile map { cd =>
   ) 
 }
 
+// show full-classpath
 //{
 //  val t=TaskKey[Unit]("queries-gen2")
 //  val q=TaskKey[Unit]("queries-test2") 

@@ -42,9 +42,14 @@ import akka.actor.{Actor,ActorRef}
 
 /** Internal types and messages */
 object WorkerActor {
-  type MapRef = Byte
-  type FunRef = Byte
-  type NodeRef = Short
+  type MapRef = Byte;  
+  type FunRef = Short; 
+  type NodeRef = Short;
+  @inline def MapRef(i:Int) = i.toByte
+  @inline def FunRef(i:Int) = i.toShort
+  @inline def NodeRef(i:Int) = i.toShort
+  private val FunRefMin = java.lang.Short.MIN_VALUE // special functions base id
+  
   // Internal messages
   case class Members(master:ActorRef,workers:Array[(ActorRef,List[MapRef])]) // master can also be a worker for some maps
   case class Barrier(en:Boolean) // switch barrier mode
@@ -64,9 +69,11 @@ object WorkerActor {
 abstract class WorkerActor extends Actor {
   import scala.collection.JavaConversions.mapAsScalaMap
   import WorkerActor._
-  // ---- concrete maps
+  // ---- concrete maps and local operations
   val local:Array[K3Map[_,_]] // local maps
   def hash(m:MapRef,k:Any) = k.hashCode
+  def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) // local foreach
+  def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) // local aggregation
 
   // ---- membership management
   private var master : ActorRef = null
@@ -153,12 +160,11 @@ abstract class WorkerActor extends Actor {
     @inline def ack = if (enabled && matcherGet.ready && matcherAggr.ready && count.size>0) {
       var ds : List[NodeRef] = Nil
       var cs : List[Long] = Nil
-      count.foreach { case (a,n) => ds=workers.indexOf(a).toShort::ds; cs=n::cs }
+      count.foreach { case (a,n) => ds=NodeRef(workers.indexOf(a))::ds; cs=n::cs }
       master ! Ack(ds.toArray,cs.toArray); count.clear
     }
     @inline def sumAck(to:Array[NodeRef],num:Array[Long]) {
       (to.map(workers(_)) zip num).foreach { case (w,n) => add(w,n) }
-      msg("Got ack => "+count.toMap.mkString)
       if (enabled && count.size==0) {
         enabled=false; workers.foreach { w => if (w!=master) w ! Barrier(false) }
         if (bco!=null) { val co=bco; bco=null; co(); }
@@ -178,7 +184,7 @@ abstract class WorkerActor extends Actor {
   }
 
   // ---- message passing
-  protected val fun_collect : FunRef = 255.toByte
+  protected val fun_collect = FunRefMin
   def receive = {
     case Members(m,ws) => members(m,ws)
     case Barrier(en) => bar.set(en) // assert(self!=master)
@@ -188,50 +194,39 @@ abstract class WorkerActor extends Actor {
     case Add(m,k,v) => local(m).asInstanceOf[K3Map[Any,Any]].add(k,v); bar.recv
     case Set(m,k,v) => local(m).asInstanceOf[K3Map[Any,Any]].set(k,v); bar.recv
     case Clear(m,p,pk) => (if (p<0) local(m) else local(m).slice(p,pk)).clear; bar.recv
-    case Aggr(id,fun_collect,Array(m:MapRef)) => sender ! local(m).toMap
-    //case Foreach(f,as) => call(f,as); bar.recv
-    //case Aggr(id,f,as) => sender ! AggrPart(id,<result>)
+    case Foreach(f,as) => forl(f,as,_ => bar.recv)
+    case Aggr(id,fun_collect,Array(m:MapRef)) => bar.send(sender,AggrPart(id,local(m).toMap)) // collect map data
+    case Aggr(id,f,as) => aggl(f,as,(r:Any) => bar.send(sender,AggrPart(id,r)))
     case AggrPart(id,res) => matcherAggr.res(id,res)
     case m => println("Not understood: "+m.toString)
   }
 
   // ---- map operations
-  // Element operation: if key hashes to local, apply locally, otherwise call appropriate worker
+  // Element operation: if key hashes to local, apply locally, otherwise call remote worker
   def get[K,V](m:MapRef,k:K,co:V=>Unit) = matcherGet.req(m,k,co) 
   def add[K,V](m:MapRef,k:K,v:V) { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].add(k,v) else bar.send(o,Add(m,k,v)) }
   def set[K,V](m:MapRef,k:K,v:V) { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].set(k,v) else bar.send(o,Set(m,k,v)) }
-  // Group operations: master (or nested operation) broadcasts request, worker process locally
+  // Group operations: broadcast to owners, workers then process locally
   def clear[P](m:MapRef,p:Int= -1,pk:P=null) = owns(m).foreach { bar.send(_,Clear(m,p,pk)) }
-  def foreach(m:MapRef,f:FunRef,args:Array[Any]) { owns(m).foreach { bar.send(_,Foreach(f,args)) } }
+  def foreach(m:MapRef,f:FunRef,args:Any*) { owns(m).foreach { bar.send(_,Foreach(f,args.toArray)) } }
   def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any],co:R=>Unit,zero:Any=null,plus:(Any,Any)=>Any=null) = {
-    val (z,p) = if (zero==null&&plus==null) (zero,plus) else (K3Helper.make_zero[R](),K3Helper.make_plus[R]().asInstanceOf[(Any,Any)=>Any])
+    val (z,p) = if (zero!=null&&plus!=null) (zero,plus) else (K3Helper.make_zero[R](),K3Helper.make_plus[R]().asInstanceOf[(Any,Any)=>Any])
     matcherAggr.req(m,f,args,co,z,p)
   }
 
-  // ---- convenience wrapper for debugging (should be rewritten by compiler instead)
-  /*
-  import scala.language.implicitConversions
-  implicit def mapRefConv(m:MapRef) = new MapFunc[Any](m)
-  class MapFunc[P](m:MapRef,p:Int= -1,pk:P=null) { private val w=WorkerActor.this
-    def get[K,V](k:K,co:V=>Unit) = w.get(m,k,co)
-    def add[K,V](k:K,v:V) = w.add(m,k,v)
-    def set[K,V](k:K,v:V) = w.set(m,k,v)
-    def clear() = w.clear(m,p,pk)
-    def slice(part:Int, partKey:Any) = new MapFunc(m,part,partKey)
-    def foreach[K,V](f:FunRef,args:Array[Any]) = w.foreach(m,f,args)
-    def aggr[R:ClassTag](f:FunRef,args:Array[Any],co:R=>Unit) = w.aggr(m,f,args,co)
-  }
-  */
-  def msg(m:Any) { val s=self.path.toString; val p=s.indexOf("/user/"); println(s.substring(p)+": "+m.toString); }
+  // ---- debugging
+  def msg(m:Any) { val s=self.path.toString; val p=s.indexOf("/user/"); println(s.substring(p+5)+": "+m.toString); }
 }
 
 /**
- * Master is the main actor and streams entry point. It keeps track of 'invalid'
- * maps, and enforce flushing in-flight messages with a barrier when necessary.
- * Additionally, it simulates sequential processing of external events and blocks
- * on get, aggregation and flush.
+ * Master is an additional role for a worker: it acts as streams entry point. It
+ * processes external events sequentially, keeps track of 'invalid' maps and enforce
+ * writing in-flight messages with a barrier when necessary. To provide a blocking
+ * execution, we use a continuation that fetch next events when finished.
+ * To write imperative-style in a CPS environment, use the continuations plug-in:
+ * http://www.scala-lang.org/api/current/index.html#scala.util.continuations.package
  */
-abstract class MasterActor extends WorkerActor {
+trait MasterActor extends WorkerActor {
   import scala.collection.JavaConversions.mapAsScalaMap
   import WorkerActor._
   import Messages._
@@ -239,13 +234,12 @@ abstract class MasterActor extends WorkerActor {
 
   // --- sequential to CPS conversion
   def get[K,V](m:MapRef,k:K):V @cps[Unit] = shift { co:(V=>Unit) => super.get(m,k,co) }
-  def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any]) = shift { co:(R=>Unit) => super.aggr(m,f,args,co) }
+  def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Any*) = shift { co:(R=>Unit) => super.aggr(m,f,args.toArray,co) }
   def barrier = shift { co:(Unit=>Unit) => bar.set(true,co); }
   def toMap[K,V](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
   def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit) = {
-    val zero = new java.util.HashMap[K,V]()
-    def plus[K,V](acc:java.util.HashMap[K,V],m:Map[K,V]) = { m.foreach { case (k,v)=> acc.put(k,v) }; acc }
-    super.aggr(m,fun_collect,Array(m),co,zero,(plus _).asInstanceOf[(Any,Any)=>Any])
+    val plus = (m1:Map[K,V],m2:Map[K,V]) => m1 ++ m2
+    super.aggr(m,fun_collect,Array(m),co,Map[K,V](),plus.asInstanceOf[(Any,Any)=>Any])
   }
 
   // ---- coherency mechanism: if a map used is not flushed, flush all
@@ -266,14 +260,12 @@ abstract class MasterActor extends WorkerActor {
       else {
         est=2 // expose trampoline
         val (ev,sender)=eq.removeFirst
-        println("Processing "+ev)
-        
         ev match {
           case SystemInit => reset { barrier; t0=System.nanoTime(); deq }
           case EndOfStream|GetSnapshot => val time=System.nanoTime()-t0
             def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
               case 0 => sender ! (time,acc); deq
-              case n => toMap((n-1).toByte,(m:Map[_,_])=>collect(n-1,m::acc) )
+              case n => toMap(MapRef(n-1),(m:Map[_,_])=>collect(n-1,m::acc) )
             }
             collect(local.length,Nil)
           case e:TupleEvent => dispatch(e)
@@ -289,281 +281,3 @@ abstract class MasterActor extends WorkerActor {
     case ev:StreamEvent => val p=(est==0); est=1; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
   }
 }
-
-// -----------------------------------------------------------------------------
-// http://blog.richdougherty.com/2009/04/tail-calls-tailrec-and-trampolines.html
-
-object Consts {
-  import Messages._
-  val m0 = 0.toByte
-  val m1 = 1.toByte
-  val ev1 = TupleEvent(TupleInsert,"S",0,List(1))
-  val ev2 = TupleEvent(TupleInsert,"T",0,List(2))
-  val ev3 = TupleEvent(TupleInsert,"U",0,List(3))
-  val f1 = 1.toByte
-  val f2 = 2.toByte
-  val f3 = 3.toByte
-}
-import Consts._
-
-trait MyMaps {
-  val map0 = K3Map.make[Long,Long]()
-  val map1 = K3Map.make[Double,Double]()
-  val local = Array[K3Map[_,_]](map0,map1)
-}
-
-class Worker extends WorkerActor with MyMaps {
-  import WorkerActor._
-
-  override def receive = {
-    case Foreach(f1,Array(n)) => println("F1 : "+n); bar.recv
-    case m => /*msg(m.toString);*/ super.receive(m)
-  }
-}
-
-// XXX: WARNING, CACHE MIGHT BE STALE DURING BARRIER/FORCE 
-
-class Master extends MasterActor with MyMaps {
-  import WorkerActor._
-  import Messages._
-  import scala.util.continuations._
-
-  // tuple event => trampoline
-  val dispatch : PartialFunction[TupleEvent,Unit] = {
-    case `ev1` => reset {
-      println("--------------------------- event 1")
-      add(m0,1L,1L)
-      add(m0,2L,2L)
-      println("Pre")
-      barrier; 
-      println("Middle")
-      barrier;
-      println("Post")
-      println("Recv : "+get[Long,Long](m0,1L))
-      println("Recv : "+get[Long,Long](m0,2L))
-      clear(m0)
-      barrier;
-      println("Recv : "+get[Long,Long](m0,1L))
-      println("Recv : "+get[Long,Long](m0,2L))
-      barrier
-      deq
-    }
-    case `ev2` => reset {
-      println("--------------------------- event 2")
-      clear(m0)
-      val n = 500
-      foreach(m0,f1,Array(n))
-      barrier
-      deq
-    }
-    case e:TupleEvent => println("Got event "+e); deq
-  }
-  //override def receive = { case m => msg(m.toString); super.receive(m) }
-}
-
-object Akka3 {
-  import akka.actor.{Props,ActorSystem}
-  import Messages._
-  import WorkerActor._
-
-  def main(args:Array[String]) {
-    val system = ActorSystem("DDBT")
-    val m = system.actorOf(Props[Master])
-    val ws = (0 until 2).map { i => system.actorOf(Props[Worker]) }
-    
-    // setup members
-    m ! Members(m,ws.map{w=>(w,List(0.toByte,1.toByte))}.toArray)
-    m ! ev1
-    m ! ev2
-    (0 until 10).foreach { _ => m ! ev3 }
-
-    Thread.sleep(1000);
-    system.shutdown()
-  }
-}
-
-
-
-/*
-// ======================================================================
-//
-// WARNING: CURRENT BARRIER IMPLEMENTATION IS FLAWED, REFER TO 
-//          docs/draft/m4.tex FOR PROTOCOL CORRECTIONS.
-//
-// ======================================================================
-  // ---- legacy behavior
-  // At present, we do not support group management, this is done at setup
-  // as with previous implementation, worker should support membership.
-  // members(self,props.map{p=>context.actorOf(p)})
-
-import scala.concurrent.{Future,Await}
-import akka.pattern.ask
-import akka.actor.Props
-
-abstract class WorkerActor extends Actor {
-  // Cluster
-  protected val timeout = akka.util.Timeout(1000) // operation timeout (ms)
-  private val barrier = new java.util.HashMap[ActorRef,Long]()
-  private var owner : Int => ActorRef = (h:Int)=>null // returns null if local
-  private var master : ActorRef = null
-  protected var workers : Array[ActorRef] = null
-  // ------ Concrete workers should define the functions below
-  def local[K,V](m:MapRef):K3Map[K,V] // local map partition
-  def hash(m:MapRef,k:Any):Int = k.hashCode
-  // ------
-
-  // def msg(m:String) { val s=self.path.toString; val p=s.indexOf("/user/"); println(s.substring(p)+": "+m); }
-
-  // Events handling
-  private def ackBarrier() {
-    if (barrier.size==0) return; // no barrier started
-    if (GetMatcher.pending || AggrMatcher.pending) return; // value requests pending, abort
-    val t=barrier.get(master);
-    if (scala.collection.JavaConversions.mapAsScalaMap(barrier).filter{case(k,v) => v==t}.size==workers.size) { // everyone responded, respond back to master
-      master ! Barrier(t); barrier.clear; GetMatcher.clear; AggrMatcher.clear
-    }
-  }
-
-  def receive = {
-    case Init(m,ws) => init(m,ws)
-    case Barrier(tx) => barrier.put(sender,tx);
-      if (!workers.contains(sender)) { workers.foreach{ w=> if (w!=self) w!Barrier(tx) }; master=sender } // hack: ask() creates a new Actor
-      ackBarrier()
-    case Collect(m) => sender ! local(m).toMap
-    case Get(m,k) => sender ! Val(m,k,local(m).get(k))
-    case Val(m,k,v) => GetMatcher.res(m,k,v)
-    case Add(m,k,v) => local(m).add(k,v)
-    case Set(m,k,v) => local(m).set(k,v)
-    case Clear(m,p,pk) => (if (p<0) local(m) else local(m).slice(p,pk)).clear()
-    //case Foreach(<f>,<args>) => needs to be implemented by subclasses
-    //case Aggr(id,<f>,<args>) => sender ! AggrPart(id,<result>) needs to be implemented by subclasses
-    case x => println("Did not understood "+x)
-  }
-
-  // Helpers
-  import scala.language.implicitConversions
-  implicit def boolConv(b:Boolean):Long = if (b) 1L else 0L
-  implicit def mapRefConv(m:MapRef) = new MapFunc[Any](m)
-  class MapFunc[P](m:MapRef,p:Int= -1,pk:P=null) {
-    // Element operation: if key hashes to local, apply locally, otherwise call appropriate worker
-    def get[K,V](k:K,co:V=>Unit) = if (self!=master) GetMatcher.req(m,k,co) else // master is blocking
-        { val r = Await.result(owner(hash(m,k)).ask(Get(m,k))(timeout),timeout.duration).asInstanceOf[Val[K,V]]; co(r.value) }
-    def add[K,V](k:K,v:V) { val o=owner(hash(m,k)); if (o==null) local(m).add(k,v) else o!Add(m,k,v) }
-    def set[K,V](k:K,v:V) { val o=owner(hash(m,k)); if (o==null) local(m).set(k,v) else o!Set(m,k,v) }
-    // Group operations: master (or nested operation) broadcasts request, worker process locally
-    def clear() = workers.foreach { _ ! Clear(m,p,pk); }
-    def slice(part:Int, partKey:Any) = new MapFunc(m,part,partKey)
-  }
-
-  def foreach[K,V](f:FunRef,args:List[Any]=Nil) { workers.foreach { _ ! Foreach(f,args) } }
-  def aggr[R:ClassTag](f:FunRef,args:List[Any],co:R=>Unit) = if (self!=master) AggrMatcher.req(f,args,co) else {
-    val fs = workers.map{ w => w.ask(Aggr(-1,f,args))(timeout) };
-    val rs = fs.map{ f=>Await.result(f,timeout.duration).asInstanceOf[AggrPart[R]].res; }
-    var r = K3Helper.make_zero[R](); val p = K3Helper.make_plus[R](); rs.foreach { x=>r=p(r,x) }; co(r)
-  }
-}
-
-class MasterActor(props:Array[Props]) extends WorkerActor {
-  init(self,props.map{p=>context.actorOf(p)})
-}
-
-LEGACY ARCHITECTURE OVERVIEW (push-based flow)
----------------------------------------------------
-
-                  Source (streams)
-                     |
-                     v
-Supervisor <---> Serializer -----> Storage
-    ^          (broadcasting) <--- (setup tables)
-    |                |
-    |                v
-    |             /+-+-+\
-    |            / | | | \
-    +---------- W W W W W Workers (partitioned)
-                 \ | | | /
-                  \+-+-+/
-                     |
-                     v
-                  Display (query result)
-
-
-The SOURCE represents the input stream, conceptually external to the system. It
-could be: reading a file or receiving binary data from the network.
-
-The SERIALIZER is the entry point all messages to the system. Its only duty is
-to serialize and broacast all messages it receive: from source and from other
-nodes that need to communicate.
-
-The STORAGE has two roles:
-- storage (database) for static relations (used at initialization)
-- traditional database (preferably: compactness, easy recovery) or (WAL) log
-  storing the stream. Purpose: recover from nodes crash, if necessary. 
-
-The work is distributed to WORKERS that are responsible for processing the tuple
-applying the deltas it generates to their local storage and exchange messages
-with peers, if the peer computation requires their internal state. More
-specifically, each node compute foreach modified map whether they own the slice
-in which modification should happen. If:
-- Yes: compute the delta, possibly waiting data from other nodes
-- No : find owner, send it all _aggregated_ data related to modification
-
-Example: SELECT COUNT(*) FROM R,S where R.r=S.s ==> maps mCOUNT,mR(r),mS(s)
-    Assume 2 workers W1,W2 partitionned using modulo 2 on id, and mCOUNT on W1.
-    When tuple <serial,+R(3)> arrives, owner=W1: mR is updated on W1.
-    To compute mCOUNT+=1[R(3)]*COUNT(mS),
-    - W1 does 1[R(3)]*COUNT(mS%2==1) and wait data from W2
-    - W2 detects that its map is used, compute 1[R(3)]*COUNT(mS%2==0) and sends
-      it to W1
-    - W1 receive data from W2, completes its computation and update mCOUNT
-The key here is to notice that since W1,W2 receive +R(3), they can pre aggregate
-locally before agregating between nodes.
-
-The DISPLAY is the receiver of the query maps, these can be send by all workers
-whenever requested (request message needs to go through serializer).
-
-Finally the SUPERVISOR coordinates all the nodes by handling failures and
-checkpointing. To do that, all system messages are passed to the serializer.
-This guarantees a coherent snapshot of the system.
-
-FAULT TOLERANCE
----------------------------------------------------
-Gap property: the application can sustain a gap in the stream without affecting
-too much the result. Gap can be measured in time, #tuples, relative size, ...
-
-Checkpointing: broadcast message for all workers and storage
-- Workers write their map to permanent local storage.
-- Storage as relations: make a snapshot (lock tables, ...)
-- Storage as stream: if checkpoiting succeeds, discard stream up to check point
-
-Failures
-- Serializer fails: system waits for recovery. If the source does not enqueue
-  messages and not Gap, system is stale and need to be reset.
-- Storage fails: recovery of system becomes impossible.
-  When detected, if has Gap property and worth it checkpoint (else useless).
-- Supervisor or display fails: does not affect computation
-- Worker fails: if Gap property or system could sustain a burst
-  1. Enqueue all message at serializer
-  2.a If storage holds the stream
-      - Restore worker from its stable storage (tx_old)
-      - Replay the stream (tx_old->tx_current) with help of storage and coworkers
-  2.b If storage holds the relations
-      - Recompute all the maps from the relations (we do not need local storage here)
-  3. Release queue at serializer (burst), continue processing
-
-**/
-
-/*
-abstract sealed class Msg
-// Data
-case object MsgEndOfStream extends Msg
-case class MsgTuple(op:TupleOp,tx:Long,data:List[Any]) extends Msg
-//case class MsgEndOfTrx(tx:Long,s:Long) extends Msg // all tuples have been exchanged between two workers for the sth statement of transaction tx
-//case class MsgBulk(op:TupleOp,tx:Long,s:Long,data:List[List[Any]]) extends Msg // bulk transfer between two workers
-// System
-case object MsgNodeUp extends Msg    // worker is initialized
-case object MsgNodeReady extends Msg // worker has received all tables content
-case object MsgNodeDone extends Msg  // worker has received end of stream from all its sources
-case class MsgState(num:Long,mem:Long) extends Msg // worker status (#processed tuples, memory usage)
-case class MsgRate(state:Long,view:Long) extends Msg // how often nodes send state (to supervisor) and result (to display)
-// case class MsgCheckpoint extends Msg
-*/

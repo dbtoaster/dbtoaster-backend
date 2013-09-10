@@ -23,6 +23,25 @@ import java.io._
  * 
  * @author TCK
  */
+
+/** Automated tests */ 
+class BenchmarkSpec extends FunSpec {
+  import ddbt.UnitTest
+  import ddbt.Utils._
+  val tests = UnitTest.sqlFiles("standard")._2
+  tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t => 
+    val n = t.replaceAll(".*queries/|/query|\\.sql","")
+    it ("Query "+n) {
+      val (t0,m3) = ns(()=>UnitTest.toast(t,List("-l","M3")))
+      info("SQL -> M3      : "+time(t0))
+      val (_,o,e) = captureOut(()=>Benchmark.benchScala("scala")(m3,t0))
+      o.trim.split("\n").foreach{ info(_) }
+      if (e.trim!="") assert(false,e)
+    }
+  }
+}
+
+/** Actual configurable program */
 object Benchmark {
   import ddbt.UnitTest
   import ddbt.Utils._
@@ -35,10 +54,14 @@ object Benchmark {
 
   // New approach: run everything in the same JVM for speed, dependencies: scala-compiler
   private val scalac_global = {
-    val deps = (System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":").filter(_.matches("(.*)/\\.(sbt|ivy2)/.*"))
     val dbt = path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library")
-    val vers = util.Properties.versionString.replaceAll(".* |.[0-9]+$","");
-    val cp = "target/scala-"+vers+"/classes:"+dbt+":"+deps.mkString(":")
+    val sbt = System.getProperty("sbt.classpath")
+    val cp = if (sbt!=null) dbt+":"+sbt else {
+      val deps = (System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":").filter(_.matches("(.*)/\\.(sbt|ivy2)/.*"))
+      val vers = util.Properties.versionString.replaceAll(".* |.[0-9]+$","");
+      "target/scala-"+vers+"/classes:"+dbt+":"+deps.mkString(":")
+    }
+
     val s=new scala.tools.nsc.Settings(); s.classpath.value=cp; s.outputDirs.setSingleOutput(tmp.getAbsolutePath()); new scala.tools.nsc.Global(s)
   }
   def scalac(fs:String*) { val p=tmp.getAbsolutePath(); try { (new scalac_global.Run).compile(fs.map(f=>p+"/"+f+".scala").toList) } catch { case t:Throwable => t.printStackTrace } }

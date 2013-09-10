@@ -41,16 +41,24 @@ object Utils {
     (o,e)
   }
   
-  // Class loader to run a class with main(args:Array[String]) within the same VM
-  def loadMain(cp:File,cls:String,args:Array[String]=Array()) = {
+  // Capture console/default output and error streams in two strings
+  def captureOut[R](f:()=>R) : (R,String,String) = {
     val o0=scala.Console.out; val so0=System.out; val po=new PipedOutputStream; scala.Console.setOut(new PrintStream(po)); System.setOut(new PrintStream(po)); val out=gobble(new PipedInputStream(po));
     val e0=scala.Console.err; val se0=System.err; val pe=new PipedOutputStream; scala.Console.setErr(new PrintStream(pe)); System.setErr(new PrintStream(pe)); val err=gobble(new PipedInputStream(pe));
-    try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
-    catch { case t:Throwable => t.printStackTrace(new PrintStream(pe)) }
+    val r = f()
     scala.Console.setOut(o0); System.setOut(so0); po.close
     scala.Console.setErr(e0); System.setErr(se0); pe.close
+    (r,out.toString,err.toString)
+  }
+  
+  // Class loader to run a class with main(args:Array[String]) within the same VM
+  def loadMain(cp:File,cls:String,args:Array[String]=Array()) = {
+    val r = captureOut(()=>{
+      try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
+      catch { case t:Throwable => t.printStackTrace(scala.Console.err) }
+    })
     System.gc(); Thread.sleep(50); System.gc() // call finalize on class loader
-    (out.toString,err.toString)
+    (r._2,r._3)
   }
 
   import java.net.{URL,URLClassLoader}
