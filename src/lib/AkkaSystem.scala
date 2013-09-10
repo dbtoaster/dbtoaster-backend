@@ -223,7 +223,6 @@ abstract class WorkerActor extends Actor {
   }
   */
   def msg(m:Any) { val s=self.path.toString; val p=s.indexOf("/user/"); println(s.substring(p)+": "+m.toString); }
-
 }
 
 /**
@@ -255,38 +254,44 @@ abstract class MasterActor extends WorkerActor {
     if (read.filter{r=>invalid.contains(r)}.isEmpty) { invalid += write; co() }
     else { bar.set(true,_=>{ invalid.clear; invalid+=write; co(); }) }
   }
-  
+
   // ---- handle stream events
   private var t0:Long = 0 // startup time
   private val eq = new java.util.LinkedList[(StreamEvent,ActorRef)]() // external event queue
-  private var eproc = false // event currently being processed
-  private def deq() {
-    do {
-      val (ev,sender)=eq.removeFirst;
-      ev match {
-        case SystemInit => reset { barrier; t0=System.nanoTime() }
-        case EndOfStream|GetSnapshot => val time=System.nanoTime()-t0; val s=sender;
-          def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
-            case 0 => s ! (time,acc)
-            case n => toMap((n-1).toByte,(m:Map[_,_])=>collect(n-1,m::acc) )
-          }
-          collect(local.length,Nil)
-        case e:TupleEvent => dispatch(e) // XXX: might return earlier than expected => block / pass continuation
+  private var est = 0 // state: 0=no loop, 1=loop pending, 2=trampoline, 3=bounce
+  protected def deq {
+    if (est==2) est=3; // bounce
+    else do {
+      if (eq.size==0) est=0 // loop exits
+      else {
+        est=2 // expose trampoline
+        val (ev,sender)=eq.removeFirst
+        println("Processing "+ev)
+        
+        ev match {
+          case SystemInit => reset { barrier; t0=System.nanoTime(); deq }
+          case EndOfStream|GetSnapshot => val time=System.nanoTime()-t0
+            def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
+              case 0 => sender ! (time,acc); deq
+              case n => toMap((n-1).toByte,(m:Map[_,_])=>collect(n-1,m::acc) )
+            }
+            collect(local.length,Nil)
+          case e:TupleEvent => dispatch(e)
+        }
+        if (est==2) est=1 // disable trampoline
       }
-    } while (eq.size>0)
-    eproc = false
+    } while(est==3) // trampoline
   }
 
   val dispatch:PartialFunction[TupleEvent,Unit] // to be implemented by subclasses
   override def receive = masterRecv orElse super.receive  
   private val masterRecv : PartialFunction[Any,Unit] = {
-    case ev:StreamEvent => 
-      println("RECEIVE "+ev)
-      val p= !eproc; eproc=true; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
+    case ev:StreamEvent => val p=(est==0); est=1; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
   }
 }
 
 // -----------------------------------------------------------------------------
+// http://blog.richdougherty.com/2009/04/tail-calls-tailrec-and-trampolines.html
 
 object Consts {
   import Messages._
@@ -311,8 +316,8 @@ class Worker extends WorkerActor with MyMaps {
   import WorkerActor._
 
   override def receive = {
-    case Foreach(f1,Array(n)) => println("F1 : "+n)
-    case m => msg(m.toString); super.receive(m)
+    case Foreach(f1,Array(n)) => println("F1 : "+n); bar.recv
+    case m => /*msg(m.toString);*/ super.receive(m)
   }
 }
 
@@ -323,6 +328,7 @@ class Master extends MasterActor with MyMaps {
   import Messages._
   import scala.util.continuations._
 
+  // tuple event => trampoline
   val dispatch : PartialFunction[TupleEvent,Unit] = {
     case `ev1` => reset {
       println("--------------------------- event 1")
@@ -340,20 +346,19 @@ class Master extends MasterActor with MyMaps {
       println("Recv : "+get[Long,Long](m0,1L))
       println("Recv : "+get[Long,Long](m0,2L))
       barrier
+      deq
     }
     case `ev2` => reset {
       println("--------------------------- event 2")
-      //clear(m0)
-      /*
-      barrier;
-      */
+      clear(m0)
       val n = 500
       foreach(m0,f1,Array(n))
-      barrier;
+      barrier
+      deq
     }
-    case e:TupleEvent => println("Got event "+e)
+    case e:TupleEvent => println("Got event "+e); deq
   }
-  override def receive = { case m => msg(m.toString); super.receive(m) }
+  //override def receive = { case m => msg(m.toString); super.receive(m) }
 }
 
 object Akka3 {
@@ -370,13 +375,9 @@ object Akka3 {
     m ! Members(m,ws.map{w=>(w,List(0.toByte,1.toByte))}.toArray)
     m ! ev1
     m ! ev2
-    
+    (0 until 10).foreach { _ => m ! ev3 }
 
-
-
-
-
-    Thread.sleep(2000);
+    Thread.sleep(1000);
     system.shutdown()
   }
 }
