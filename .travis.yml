@@ -11,5 +11,5 @@ jdk:
 # - sudo apt-get install scala
 before_script: ./.travis.sh
 script:
-- sbt 'test:run-main ddbt.test.Benchmark'
+#- sbt 'test:run-main ddbt.test.Benchmark'
 - sbt test
