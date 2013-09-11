@@ -1,4 +1,4 @@
-package examples
+package ddbt.test.examples
 import ddbt.lib._
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import java.util.Date;

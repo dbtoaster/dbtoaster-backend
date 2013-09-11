@@ -1,8 +1,7 @@
+package ddbt.test.examples
+
 // resources/dbtoaster_mac -l SCALA resources/queries/tpch/query18.sql
-
 // run-main example.TPCH18Ref
-
-package examples
 
 import java.io._;
 import org.dbtoaster.dbtoasterlib.StreamAdaptor._;

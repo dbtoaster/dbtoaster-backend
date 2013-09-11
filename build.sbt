@@ -30,8 +30,8 @@ libraryDependencies <++= scalaVersion(v=>Seq(
   "org.scala-lang"     % "scala-actors"   % v,
   "org.scala-lang"     % "scala-compiler" % v         % "test",
   "org.scalatest"     %% "scalatest"      % "2.0.M5b" % "test"
-  //"com.esotericsoftware.kryo" % "kryo"    % "2.21",
-  //"com.twitter"       %% "chill"          % "0.3.1",
+  //"com.esotericsoftware.kryo" % "kryo"  % "2.21",
+  //"com.twitter"       %% "chill"        % "0.3.1",
   //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
   //"com.github.velvia" %% "scala-storm"  % "0.2.3-SNAPSHOT",
   //"storm"              % "storm"        % "0.8.2"

@@ -1,6 +1,6 @@
-package examples
-
+package ddbt.test.examples
 import ddbt.lib._
+
 import akka.actor.Actor
 import java.util.Date
 import org.dbtoaster.dbtoasterlib.StdFunctions._

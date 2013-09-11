@@ -45,9 +45,9 @@ object WorkerActor {
   type MapRef = Byte;  
   type FunRef = Short; 
   type NodeRef = Short;
-  @inline def MapRef(i:Int) = i.toByte
-  @inline def FunRef(i:Int) = i.toShort
-  @inline def NodeRef(i:Int) = i.toShort
+  def MapRef(i:Int) = i.toByte
+  def FunRef(i:Int) = i.toShort
+  def NodeRef(i:Int) = i.toShort
   private val FunRefMin = java.lang.Short.MIN_VALUE // special functions base id
 
   // XXX: implement more efficient serializer: see 

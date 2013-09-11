@@ -1,4 +1,4 @@
-package examples // <-- only this line has been manually added
+package ddbt.test.examples
 import ddbt.lib._
 
 import akka.actor.Actor
