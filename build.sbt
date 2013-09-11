@@ -25,11 +25,13 @@ resolvers ++= Seq(
 )
 */
 libraryDependencies <++= scalaVersion(v=>Seq(
-  "com.typesafe.akka" %% "akka-actor"     % "2.2.0",
-  "com.typesafe.akka" %% "akka-remote"    % "2.2.0",
+  "com.typesafe.akka" %% "akka-actor"     % "2.2.1",
+  "com.typesafe.akka" %% "akka-remote"    % "2.2.1",
   "org.scala-lang"     % "scala-actors"   % v,
   "org.scala-lang"     % "scala-compiler" % v         % "test",
   "org.scalatest"     %% "scalatest"      % "2.0.M5b" % "test"
+  //"com.esotericsoftware.kryo" % "kryo"    % "2.21",
+  //"com.twitter"       %% "chill"          % "0.3.1",
   //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
   //"com.github.velvia" %% "scala-storm"  % "0.2.3-SNAPSHOT",
   //"storm"              % "storm"        % "0.8.2"
@@ -50,7 +52,8 @@ Seq(
 // --------- Execution options
 Seq(
   fork := true, // required to accept javaOptions
-  javaOptions ++= Seq("-Xss128m"), // ,"-Xss512m","-Xmx2G","-Xms2G","-XX:MaxPermSize=2G" //,"-verbose:gc"
+  javaOptions ++= Seq("-Xss128m"), // ,"-Xss512m","-XX:MaxPermSize=2G" //,"-verbose:gc"
+  // javaOptions ++= Seq("-Xmx14G","-Xms14G"), // testing environment
   javaOptions in Test <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString ) // propagate paths
 )
 

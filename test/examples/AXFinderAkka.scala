@@ -1,29 +1,10 @@
 package ddbt.test.examples
 import ddbt.lib._
 
-import akka.actor.{ActorSystem,Props}
-import scala.reflect.ClassTag
-import java.io._
-
 object AXFinderAkka extends Helper {
   import WorkerActor._
-
-  def runLocal2[M<:akka.actor.Actor,W<:akka.actor.Actor,T](nmaps:Int,port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]):(Long,T) = {
-    val system:ActorSystem = this.sys("MasterSystem","127.0.0.1",port-1)
-    val nodes = (0 until N).map { i => sys("NodeSystem"+i,"127.0.0.1",port+i) }
-    val workers = nodes.map { _.actorOf(Props[W]()) }
-    val master = system.actorOf(Props[M]())
-
-    // initial membership
-    val ms = (0 until nmaps).map { MapRef(_) }.toList
-    master ! Members(master,workers.map{ w => (w,ms) }.toArray)
-
-    val res = mux[T](master,streams,parallel)
-    Thread.sleep(100); nodes.foreach{ _.shutdown }; system.shutdown; Thread.sleep(100); res
-  }
-
   def main(args:Array[String]) {
-    val (t,res) = runLocal2[AXMaster,AXWorker,List[Map[_,_]]](5,2251,4,streamsFinance())
+    val (t,res) = runLocal[AXMaster,AXWorker,List[Map[_,_]]](5,2251,4,streamsFinance())
     println("Time = "+time(t)); println(K3Helper.toStr(res.head))
   }
 }

@@ -1,3 +1,23 @@
+import akka.actor.{Actor,ActorRef,ActorSystem,Props} // ,Deploy,Address
+
+  /*
+  def props[A<:Actor](name:String,host:String,port:Int)(implicit cA:ClassTag[A]) = {
+    Props(cA.runtimeClass).withDeploy(Deploy(scope = RemoteScope(new Address("akka.tcp",name,host,port))))
+  }
+  */
+  /*
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor,T](port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]):(Long,T) = {
+    val system:ActorSystem = this.sys("MasterSystem","127.0.0.1",port-1)
+    val nodes = (0 until N).map { i => sys("NodeSystem"+i,"127.0.0.1",port+i) }
+    val wprops = (0 until N).map { i=>props[W]("NodeSystem"+i,"127.0.0.1",port+i) }.toArray
+    val master = system.actorOf(Props(cm.runtimeClass,wprops))
+    val res = mux[T](master,streams,parallel)
+    Thread.sleep(100); nodes.foreach{ _.shutdown }; system.shutdown; Thread.sleep(100); res
+  }
+  */
+
+// ---------------------------------------
+
 package ddbt.lib
 
 import scala.reflect.ClassTag

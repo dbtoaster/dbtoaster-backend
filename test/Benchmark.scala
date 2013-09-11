@@ -157,7 +157,7 @@ object Benchmark {
       val f="tmp.scala"; UnitTest.toast(t,List("-l","scala","-O4","-o",f));
       val s=read(path_dbt+f); new File(path_dbt+f).delete;
       s.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
-    }) 
+    })
     println(n+" codegen"+sp+" : "+time(math.max(0,t1-t0)))
     write(tmp,"Query.scala",sc.replaceAll("/standard/","/"+dataset+"/"))
     val t2 = ns(()=>scalac("Query","RunQuery"))._1

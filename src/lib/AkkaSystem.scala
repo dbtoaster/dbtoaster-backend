@@ -53,6 +53,8 @@ object WorkerActor {
   // XXX: implement more efficient serializer: see 
   // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
   // https://github.com/romix/akka-kryo-serialization
+  // https://github.com/talex004/akka-kryo-serialization
+  // https://github.com/twitter/chill
 
   // Internal messages
   case class Members(master:ActorRef,workers:Array[(ActorRef,List[MapRef])]) // master can also be a worker for some maps
