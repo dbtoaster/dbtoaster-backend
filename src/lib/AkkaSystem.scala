@@ -49,7 +49,11 @@ object WorkerActor {
   @inline def FunRef(i:Int) = i.toShort
   @inline def NodeRef(i:Int) = i.toShort
   private val FunRefMin = java.lang.Short.MIN_VALUE // special functions base id
-  
+
+  // XXX: implement more efficient serializer: see 
+  // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
+  // https://github.com/romix/akka-kryo-serialization
+
   // Internal messages
   case class Members(master:ActorRef,workers:Array[(ActorRef,List[MapRef])]) // master can also be a worker for some maps
   case class Barrier(en:Boolean) // switch barrier mode
@@ -108,7 +112,7 @@ abstract class WorkerActor extends Actor {
     }
     @inline def res[K,V](map:MapRef,key:K,value:V) { // onReceive Val(map,key,value)
       val k=(map,key); if (enabled) cache.put(k,value); cont.remove(k).foreach{ _(value) }
-      bar.ack // ack pending barrier if needed
+      if (self!=master) bar.ack // ack pending barrier if needed
     }
     @inline def ready = cont.size==0
     @inline def clear(en:Boolean=true) = { cache.clear; enabled=en }
@@ -121,8 +125,9 @@ abstract class WorkerActor extends Actor {
     private val cont = new java.util.HashMap[Int,List[Any=>Unit]]
     private val sum = new java.util.HashMap[Int,(Int/*count_down*/,Any/*sum*/,(Any,Any)=>Any/*plus*/)]
     private val params = new java.util.HashMap[Int,(FunRef,Array[Any])]()
+    private val uniq:Long = math.abs(self.path.toString.hashCode) // unique among the cluster and membership-independent
     private var ctr:Int = 0
-    @inline private def getId(f:FunRef,args:Array[Any]):Int = { params.foreach{ case (k,v) => if (v==(f,args)) return k; }; ctr=ctr+1; ctr }
+    @inline private def getId(f:FunRef,args:Array[Any]):Int = { params.foreach{ case (k,v) => if (v==(f,args)) return k; }; ctr=ctr+1; (ctr*uniq).toInt }
     @inline def req[R](m:MapRef,f:FunRef,args:Array[Any],co:R=>Unit,zero:Any,plus:(Any,Any)=>Any) { // call aggregation ("f(args)",continuation) on map m (m used only to restrict broadcasting)
       val k=(f,args); val v=if (enabled) cache.get(k) else null;
       if (v!=null) co(v.asInstanceOf[R]) // cached
@@ -144,7 +149,7 @@ abstract class WorkerActor extends Actor {
       else {
         if (enabled) cache.put(params.get(id),r._2); cont.remove(id).foreach { _(r._2) }
         sum.remove(id); params.remove(id) // cleanup other entries
-        bar.ack // ack pending barrier if needed
+        if (self!=master) bar.ack // ack pending barrier if needed
       }
     }
     @inline def ready = cont.size==0
@@ -165,10 +170,7 @@ abstract class WorkerActor extends Actor {
     }
     @inline def sumAck(to:Array[NodeRef],num:Array[Long]) {
       (to.map(workers(_)) zip num).foreach { case (w,n) => add(w,n) }
-      if (enabled && count.size==0) {
-        enabled=false; workers.foreach { w => if (w!=master) w ! Barrier(false) }
-        if (bco!=null) { val co=bco; bco=null; co(); }
-      }
+      if (enabled && count.size==0) { set(false); if (bco!=null) { val co=bco; bco=null; co(); } }
     }
     def set(en:Boolean,co:(Unit=>Unit)=null) {
       if (enabled==en) return; enabled=en; matcherGet.clear(!en); matcherAggr.clear(!en)
@@ -195,8 +197,8 @@ abstract class WorkerActor extends Actor {
     case Set(m,k,v) => local(m).asInstanceOf[K3Map[Any,Any]].set(k,v); bar.recv
     case Clear(m,p,pk) => (if (p<0) local(m) else local(m).slice(p,pk)).clear; bar.recv
     case Foreach(f,as) => forl(f,as,_ => bar.recv)
-    case Aggr(id,fun_collect,Array(m:MapRef)) => bar.send(sender,AggrPart(id,local(m).toMap)) // collect map data
-    case Aggr(id,f,as) => aggl(f,as,(r:Any) => bar.send(sender,AggrPart(id,r)))
+    case Aggr(id,fun_collect,Array(m:MapRef)) => sender ! AggrPart(id,local(m).toMap) // collect map data
+    case Aggr(id,f,as) => aggl(f,as,(r:Any) => sender ! AggrPart(id,r))
     case AggrPart(id,res) => matcherAggr.res(id,res)
     case m => println("Not understood: "+m.toString)
   }
@@ -215,7 +217,9 @@ abstract class WorkerActor extends Actor {
   }
 
   // ---- debugging
-  def msg(m:Any) { val s=self.path.toString; val p=s.indexOf("/user/"); println(s.substring(p+5)+": "+m.toString); }
+  def msg(m:Any) { val s=self.path.toString; val p0=s.indexOf("System"); val p1=s.indexOf("/user/");
+    println((if(p0>=0) s.substring(p0+6,p1) else "")+s.substring(p1+5)+": "+m.toString);
+  }
 }
 
 /**
@@ -246,7 +250,7 @@ trait MasterActor extends WorkerActor {
   private val invalid = scala.collection.mutable.Set[MapRef]()
   def pre(write:MapRef,read:MapRef*) = shift { co:(Unit=>Unit) =>
     if (read.filter{r=>invalid.contains(r)}.isEmpty) { invalid += write; co() }
-    else { bar.set(true,_=>{ invalid.clear; invalid+=write; co(); }) }
+    else { invalid.clear; invalid+=write; bar.set(true,co) }
   }
 
   // ---- handle stream events
