@@ -144,7 +144,7 @@ object Benchmark {
   
     val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen ScalaGen("NewQuery"))(m3))
     println(n+" codegen"+sp+" : "+time(t1))
-    write(tmp,"NewQuery.scala",sc.replaceAll("/standard/","/"+dataset+"/"))
+    write(tmp,"NewQuery.scala",(if (dataset.endsWith("_del")) sc.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else sc).replaceAll("/standard/","/"+dataset+"/"))
     val t2 = ns(()=>scalac("NewQuery"))._1
     println(n+" compile"+sp+" : "+time(t2))
     val s=scalax("ddbt.generated.NewQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" : "))

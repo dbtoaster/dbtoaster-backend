@@ -704,6 +704,17 @@ Modifying the group membership asynchronously avoids blocking the streams during
 \ole
 
 % --------------------------------------------------------------------------------------------------------------
+\subsection{Optimizations}
+These are not necessarily related only to distribution but could be \textit{nice to have} features. Focusing on maps:
+\ol
+\item Cuckoo hashing instead of bucket+list / reallocate HashMaps, which adds a constant factor, but uses memory more efficiently \cite{gpu_hashing}. Alternatively, we could implement maps in C/C++ to reduce memory usage (does it?) and use JNI to access them.
+\item Compress keys: pack the key in a byte array: improve locality (1 pointer versus multiple) and reduce memory bandwidth, reduce memory consumption (compression). Reading sometimes not needed: keys are passed 'as-is' to another map.
+\item Have per-column set of values: we share the same value (object) for each key column. Pruning can be done by using weak references in Java \href{http://stackoverflow.com/questions/4062919/why-does-exist-weakhashmap-but-absent-weakset}{[ref]}.
+\item Externalize maps on GPU: bulk key-value lookup/computation/update (foreach). Main (CPU) memory can be access with about $5-6\times $ cost of internal (card) memory. We need to answer to the question hat is the bottleneck? CPU, memory bandwidth or memory latency?
+\item Share main map and secondary indices keys/value pairs?
+\ole
+
+% --------------------------------------------------------------------------------------------------------------
 \section{Roadmap}
 Target the following domains and concepts: incrementality, continuous queries, active databases/triggers, recursivity, location and distribution (failure tolerance?), windowed streams, state machine, graphs, declarativeness, deltas, stratification.
 \subsubsection*{Language design}\ol
