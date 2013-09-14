@@ -48,7 +48,7 @@ object Benchmark {
   import ddbt.frontend._
   import ddbt.codegen._
 
-  private val tmp = makeTempDir() // new File("tmp")
+  val tmp = makeTempDir() // new File("tmp")
   private val boost = try { val p=new java.util.Properties(); p.load(new java.io.FileInputStream("conf/ddbt.properties")); p.getProperty("ddbt.lib_boost",null) } catch { case _:Throwable => null }
   private val path_dbt = if (path_repo!="") path_repo+"/"+path_base+"/" else ""
 
@@ -141,7 +141,6 @@ object Benchmark {
 
   def benchScala(lang:String)(m3:String,t0:Long) {
     val (n,sp) = (lang.substring(0,1).toUpperCase+lang.substring(1)," "* (6-lang.length()))
-  
     val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen ScalaGen("NewQuery"))(m3))
     println(n+" codegen"+sp+" : "+time(t1))
     write(tmp,"NewQuery.scala",(if (dataset.endsWith("_del")) sc.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else sc).replaceAll("/standard/","/"+dataset+"/"))

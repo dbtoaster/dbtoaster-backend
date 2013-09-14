@@ -33,11 +33,11 @@ object Utils {
 
   // Execute arbitrary command, return (out,err)
   def exec(cmd:String):(String,String) = exec(cmd.split(" "))
-  def exec(cmd:Array[String],dir:File=null,env:Array[String]=null):(String,String) = {
+  def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true):(String,String) = {
     val p = Runtime.getRuntime.exec(cmd,env,dir)
     val out=gobble(p.getInputStream); val err=gobble(p.getErrorStream); p.waitFor
     val o=out.toString; val e=err.toString
-    if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); print(o); System.err.print(e); System.exit(1) }
+    if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); print(o); System.err.print(e); if (fatal) System.exit(1) }
     (o,e)
   }
   

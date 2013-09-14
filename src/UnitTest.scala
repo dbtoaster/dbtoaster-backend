@@ -23,7 +23,7 @@ import ddbt.codegen._
  *
  *    sbt ';run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del;test-only * -- -l ddbt.SlowTest'
  *
- *    sbt ';run-main ddbt.UnitTest -dbig -q.*axfinder;test-only ddbt.test.gen.*'
+ *    sbt ';check -dbig -q.*axfinder;test-only ddbt.test.gen.*'
  * 
  * @author TCK
  */
@@ -59,13 +59,13 @@ object UnitTest {
   private val rbase = new java.io.File(path_repo+"/"+path_base)
   def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
   def toast(f:String,opts:List[String]=Nil):String = if (path_repo=="") exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)._1 else
-    exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
+    exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase,null,false)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
   
   val all = try { exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("Repository not configured"); Array[String]() }
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                           "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                           "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
-  val filtered = all.filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }.sorted
+  val filtered = all.filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }.sorted // exclude.map{"test/unit/queries/"+_}.sorted.toArray
 
   // Testing helper (used only in test files)
   def sqlFiles(dataset:String="standard"):(Array[String],Array[String],String) = if (Utils.path_repo!="") {

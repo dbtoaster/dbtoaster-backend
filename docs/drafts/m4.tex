@@ -712,6 +712,7 @@ These are not necessarily related only to distribution but could be \textit{nice
 \item Have per-column set of values: we share the same value (object) for each key column. Pruning can be done by using weak references in Java \href{http://stackoverflow.com/questions/4062919/why-does-exist-weakhashmap-but-absent-weakset}{[ref]}.
 \item Externalize maps on GPU: bulk key-value lookup/computation/update (foreach). Main (CPU) memory can be access with about $5-6\times $ cost of internal (card) memory. We need to answer to the question hat is the bottleneck? CPU, memory bandwidth or memory latency?
 \item Share main map and secondary indices keys/value pairs?
+\item Represent a map as arrays of elements (multiple arrays for the key, two for the value), then use a specialized functions for each key size.
 \ole
 
 % --------------------------------------------------------------------------------------------------------------

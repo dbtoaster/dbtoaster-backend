@@ -18,7 +18,7 @@ object Compiler {
   var exec: Boolean = false     // compile and execute immediately
 
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1) }
-  def toast(l:String) = Utils.exec((Utils.path_bin :: "-l" :: l :: in).toArray)._1
+  def toast(l:String) = Utils.exec((Utils.path_bin :: "-O3" :: "-l" :: l :: in).toArray)._1
 
   def parseArgs(args:Array[String]) {
     val l=args.length

@@ -51,10 +51,10 @@ Seq(
 
 // --------- Execution options
 Seq(
-  fork := true, // required to accept javaOptions
-  javaOptions ++= Seq("-Xss128m"), // ,"-Xss512m","-XX:MaxPermSize=2G" //,"-verbose:gc"
-  // javaOptions ++= Seq("-Xmx14G","-Xms14G"), // testing environment
-  javaOptions in Test <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString ) // propagate paths
+  fork := true, // required to enable javaOptions
+  javaOptions ++= Seq("-Xss128m"), // ,"-Xss512m","-XX:MaxPermSize=2G"
+  //javaOptions ++= Seq("-Xmx14G","-Xms14G","-verbose:gc"),parallelExecution in Test := false, // for large benchmarks
+  javaOptions in Test <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
 )
 
 // --------- Custom tasks

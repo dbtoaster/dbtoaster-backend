@@ -5,37 +5,70 @@ import akka.actor.Actor
 import java.util.Date
 
 object BrokerSpread extends Helper {  
+  import ddbt.Utils._
   import scala.language.implicitConversions
   implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();
   //implicit def strConv(d:Long):String = ""+d
+
+  private val sql = read(path_repo+"/"+path_base+"/test/queries/finance/brokerspread.sql")
+
+  def ref(size:String="standard"):Map[Long,Double] = {
+    // GENERATED WITH:
+    // bin/dbtoaster_release -l scala test/queries/finance/brokerspread.sql > tmp.scala
+    // fsc -cp lib/dbt_scala/dbtlib.jar tmp.scala lib/dbt_scala/src/org/dbtoaster/RunQuery.scala
+    // scala -cp lib/dbt_scala/dbtlib.jar:. org.dbtoaster.RunQuery
+    // rm -r tmp.scala org
+    if (size=="big") return Map[Long,Double]( // BSP, runtime: 9.88339 (Legacy Scala's XML output)
+      (0L,-6.24372635E11),  (1L,-1.3733520427E12),
+      (2L,-5.35811059E11),  (3L,-2.515149258E11),
+      (4L, 5.847079795E11), (5L, 1.755421056E12),
+      (6L,-2.262831577E11), (7L,-4.43621451E11),
+      (8L, 1.1103280205E12),(9L, 1.120289661E12)
+    )
+    if (size=="huge") return Map[Long,Double](
+    )
+    val (b,f) = (new java.io.File(path_repo+"/"+path_base),"tmp.sql"); write(b,f,sql.replaceAll("/standard/","/"+size+"/"))
+    val r = exec(Array("bin/dbtoaster_release",f).toArray,b)._1.split("\n")
+    new java.io.File(path_repo+"/"+path_base+"/"+f).delete;
+    val m=new java.util.HashMap[Long,Double]()
+    val p = java.util.regex.Pattern.compile(".*\\[([0-9]+)\\]->([\\-0-9\\.]+);.*")
+    r.foreach { l => val ma=p.matcher(l); if (ma.matches) m.put(ma.group(1).toLong,ma.group(2).toDouble) }
+    scala.collection.JavaConversions.mapAsScalaMap(m).toMap.filter{ case (k,v) => v!=0.0 }
+  }
+  def gen(size:String="standard") = run[BrokerSpread,Map[Long,Double]](Seq(
+    (new java.io.FileInputStream(path_repo+"/dbtoaster/experiments/data/finance/"+size+"/finance.csv"),new Adaptor.OrderBook(),Split())
+  ))._2
   
-  def main(args:Array[String]) {
-    val (t,res) = run[BrokerSpread,Map[Long,Double]](Seq(
-      (new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/finance/standard/finance.csv"),new Adaptor.OrderBook(),Split())
-    ))
   
-    val (t2,ref) = run[BrokerSpreadRef,Map[Long,Double]](Seq(
-      (new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/finance/standard/finance.csv"),new Adaptor.OrderBook(),Split())
-    ))
-  
-    println("---------------- gen:")
-    println(K3Helper.toStr(res))
-    println("---------------- vanilla:")
-    println(K3Helper.toStr(ref))
-    println("---------------- gen/vanilla diff:")
-    diff(res, ref)
+  def main(args:Array[String]) { // takes about 1 min
+    def t(size:String) {
+      val (r,g)=(ref(size),gen(size))
+      try { diff(g,r) } catch { case e:Exception => scala.Console.err.println("Error with dataset "+size+": "+e.getMessage) }
+      println("Ref "+size+": "+r)
+      println("Gen "+size+": "+g)
+    }
+    t("tiny")
+    t("standard")
+    t("big")
+    t("huge")
+    /*  
+    val (t,res) = run[BrokerSpread,Map[Long,Double]](Seq((new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/finance/standard/finance.csv"),new Adaptor.OrderBook(),Split())))
+    val (t2,ref) = run[BrokerSpreadRef,Map[Long,Double]](Seq((new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/finance/standard/finance.csv"),new Adaptor.OrderBook(),Split())))
+    println("---------------- gen:") println(K3Helper.toStr(res))
+    println("---------------- vanilla:") println(K3Helper.toStr(ref))
+    println("---------------- gen/vanilla diff:") diff(res, ref)
     println("---------------- actual test diff:")
     def kv(l:List[Any]) = l match { case List(v0:Long,v1:Double) => (v0,v1) }
-    try {
-      diff(res, Map[Long,Double]((6L,-55136926200L),(9L,140073076900L),(0L,78933620700L),(5L,158875988600L),(1L,-114956214400L),(4L,18596229300L),(2L,186526996800L),(7L,-27166878800L),(3L,85729885500L),(8L,92711476900L)))
-    } catch { case e:Exception => println("Failed: "+e.getMessage) }
+    try { diff(res, Map[Long,Double]((6L,-55136926200L),(9L,140073076900L),(0L,78933620700L),(5L,158875988600L),(1L,-114956214400L),(4L,18596229300L),(2L,186526996800L),(7L,-27166878800L),(3L,85729885500L),(8L,92711476900L))) }
+    catch { case e:Exception => println("Failed: "+e.getMessage) }
+    */
   }
 }
 
-class BrokerSpread extends Actor {
+class BrokerSpread extends Actor { // Copied from generated code
   import ddbt.lib.Messages._
   import ddbt.lib.Functions._
-
+  
   val BSP = K3Map.make[Long,Double]();
   val BSP_mBIDS1 = K3Map.make[(Long,Double),Long](List((k:(Long,Double))=>k._1));
   val BSP_mBIDS5 = K3Map.make[(Long,Double),Double](List((k:(Long,Double))=>k._1));
@@ -103,265 +136,4 @@ class BrokerSpread extends Actor {
   def onSystemReady() {
     
   }
-}
-
-
-class BrokerSpreadRef extends Actor {
-  import ddbt.lib.Messages._
-  import ddbt.lib.Functions._
-
-  var t0:Long = 0
-  def receive = {
-    case TupleEvent(TupleInsert,"BIDS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleDelete,"BIDS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0,v1,v2,v3,v4)
-    case SystemInit => /*onSystemReady();*/ t0=System.nanoTime()
-    case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,BSP.elems.toMap)
-  }
-
-  import org.dbtoaster.dbtoasterlib.K3Collection._;
-  import org.dbtoaster.dbtoasterlib.DBToasterExceptions._;
-  import org.dbtoaster.dbtoasterlib.ImplicitConversions._;
-  import org.dbtoaster.dbtoasterlib.StdFunctions._;
-
-  import scala.collection.mutable.Map;
-  import scala.collection.JavaConversions.mapAsScalaMap;
-
-  val BSP = new K3PersistentCollection[(Long), Double]("BSP", Map(), None) /* out */;
-  val BSP_mBIDS1 = new K3PersistentCollection[Tuple2[Long,Double], Long]("BSP_mBIDS1", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Long](x => x match {
-    case Tuple2(x1,x2) => (x1) 
-  }
-  )))) /* out */;
-  val BSP_mBIDS5 = new K3PersistentCollection[Tuple2[Long,Double], Double]("BSP_mBIDS5", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Double](x => x match {
-    case Tuple2(x1,x2) => (x1) 
-  }
-  )))) /* out */;
-  def getBSP():K3PersistentCollection[(Long), Double] = {
-    BSP
-  };
-  def onAddBIDS(var_BIDS_T: Double,var_BIDS_ID: Long,var_BIDS_BROKER_ID: Long,var_BIDS_VOLUME: Double,var_BIDS_PRICE: Double) = {      {
-      if((BSP).contains((var_BIDS_BROKER_ID))) {          {
-          val nv = ((BSP).lookup((var_BIDS_BROKER_ID))) + ((((((BSP_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
-            (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_Y_T:Double = x._1._2
-              val var___map_ret__1:Long = x._2
-              (var___accv_1:Long) => {
-                (var___accv_1) + ((var___map_ret__1) * ((if((var_Y_T) < (var_BIDS_T)) 1L else 0L))) 
-              }
-            }
-          }
-          )) + ((BSP_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
-            (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_X_T:Double = x._1._2
-              val var___map_ret__2:Long = x._2
-              (var___accv_2:Long) => {
-                (var___accv_2) + ((var___map_ret__2) * ((if((var_BIDS_T) < (var_X_T)) 1L else 0L))) 
-              }
-            }
-          }
-          )) * (-1L))) * (var_BIDS_PRICE)) * (var_BIDS_VOLUME)) + (BSP_mBIDS5.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
-            (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_X_T:Double = x._1._2
-              val var___map_ret__3:Double = x._2
-              (var___accv_3:Double) => {
-                (var___accv_3) + ((var___map_ret__3) * ((if((var_BIDS_T) < (var_X_T)) 1.0 else 0.0))) 
-              }
-            }
-          }
-          ))) + ((BSP_mBIDS5.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
-            (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_Y_T:Double = x._1._2
-              val var___map_ret__4:Double = x._2
-              (var___accv_4:Double) => {
-                (var___accv_4) + ((var___map_ret__4) * ((if((var_Y_T) < (var_BIDS_T)) 1.0 else 0.0))) 
-              }
-            }
-          }
-          )) * (-1L)));
-          BSP.updateValue((var_BIDS_BROKER_ID), nv)
-        }
-      }
-      else {          {
-          val nv = (((((BSP_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
-            (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_Y_T:Double = x._1._2
-              val var___map_ret__1:Long = x._2
-              (var___accv_1:Long) => {
-                (var___accv_1) + ((var___map_ret__1) * ((if((var_Y_T) < (var_BIDS_T)) 1L else 0L))) 
-              }
-            }
-          }
-          )) + ((BSP_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
-            (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_X_T:Double = x._1._2
-              val var___map_ret__2:Long = x._2
-              (var___accv_2:Long) => {
-                (var___accv_2) + ((var___map_ret__2) * ((if((var_BIDS_T) < (var_X_T)) 1L else 0L))) 
-              }
-            }
-          }
-          )) * (-1L))) * (var_BIDS_PRICE)) * (var_BIDS_VOLUME)) + (BSP_mBIDS5.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
-            (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_X_T:Double = x._1._2
-              val var___map_ret__3:Double = x._2
-              (var___accv_3:Double) => {
-                (var___accv_3) + ((var___map_ret__3) * ((if((var_BIDS_T) < (var_X_T)) 1.0 else 0.0))) 
-              }
-            }
-          }
-          ))) + ((BSP_mBIDS5.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
-            (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_Y_T:Double = x._1._2
-              val var___map_ret__4:Double = x._2
-              (var___accv_4:Double) => {
-                (var___accv_4) + ((var___map_ret__4) * ((if((var_Y_T) < (var_BIDS_T)) 1.0 else 0.0))) 
-              }
-            }
-          }
-          )) * (-1L));
-          BSP.updateValue((var_BIDS_BROKER_ID), nv)
-        }
-      };
-      if((BSP_mBIDS1).contains(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T))) {          {
-          val nv = ((BSP_mBIDS1).lookup(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T))) + (1L);
-          BSP_mBIDS1.updateValue(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T), nv)
-        }
-      }
-      else {          {
-          val nv = 1L;
-          BSP_mBIDS1.updateValue(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T), nv)
-        }
-      };
-      if((BSP_mBIDS5).contains(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T))) {          {
-          val nv = ((BSP_mBIDS5).lookup(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T))) + ((var_BIDS_VOLUME) * (var_BIDS_PRICE));
-          BSP_mBIDS5.updateValue(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T), nv)
-        }
-      }
-      else {          {
-          val nv = (var_BIDS_VOLUME) * (var_BIDS_PRICE);
-          BSP_mBIDS5.updateValue(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T), nv)
-        }
-      }
-    }
-  };
-  def onDelBIDS(var_BIDS_T: Double,var_BIDS_ID: Long,var_BIDS_BROKER_ID: Long,var_BIDS_VOLUME: Double,var_BIDS_PRICE: Double) = {      {
-      if((BSP).contains((var_BIDS_BROKER_ID))) {          {
-          val nv = ((BSP).lookup((var_BIDS_BROKER_ID))) + (((((((BSP_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
-            (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_Y_T:Double = x._1._2
-              val var___map_ret__5:Long = x._2
-              (var___accv_5:Long) => {
-                (var___accv_5) + ((var___map_ret__5) * ((if((var_Y_T) < (var_BIDS_T)) 1L else 0L))) 
-              }
-            }
-          }
-          )) * (-1L)) + (BSP_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
-            (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_X_T:Double = x._1._2
-              val var___map_ret__6:Long = x._2
-              (var___accv_6:Long) => {
-                (var___accv_6) + ((var___map_ret__6) * ((if((var_BIDS_T) < (var_X_T)) 1L else 0L))) 
-              }
-            }
-          }
-          ))) * (var_BIDS_PRICE)) * (var_BIDS_VOLUME)) + ((BSP_mBIDS5.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
-            (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_X_T:Double = x._1._2
-              val var___map_ret__7:Double = x._2
-              (var___accv_7:Double) => {
-                (var___accv_7) + ((var___map_ret__7) * ((if((var_BIDS_T) < (var_X_T)) 1.0 else 0.0))) 
-              }
-            }
-          }
-          )) * (-1L))) + (BSP_mBIDS5.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
-            (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_Y_T:Double = x._1._2
-              val var___map_ret__8:Double = x._2
-              (var___accv_8:Double) => {
-                (var___accv_8) + ((var___map_ret__8) * ((if((var_Y_T) < (var_BIDS_T)) 1.0 else 0.0))) 
-              }
-            }
-          }
-          )));
-          BSP.updateValue((var_BIDS_BROKER_ID), nv)
-        }
-      }
-      else {          {
-          val nv = ((((((BSP_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
-            (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_Y_T:Double = x._1._2
-              val var___map_ret__5:Long = x._2
-              (var___accv_5:Long) => {
-                (var___accv_5) + ((var___map_ret__5) * ((if((var_Y_T) < (var_BIDS_T)) 1L else 0L))) 
-              }
-            }
-          }
-          )) * (-1L)) + (BSP_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
-            (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_X_T:Double = x._1._2
-              val var___map_ret__6:Long = x._2
-              (var___accv_6:Long) => {
-                (var___accv_6) + ((var___map_ret__6) * ((if((var_BIDS_T) < (var_X_T)) 1L else 0L))) 
-              }
-            }
-          }
-          ))) * (var_BIDS_PRICE)) * (var_BIDS_VOLUME)) + ((BSP_mBIDS5.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
-            (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_X_T:Double = x._1._2
-              val var___map_ret__7:Double = x._2
-              (var___accv_7:Double) => {
-                (var___accv_7) + ((var___map_ret__7) * ((if((var_BIDS_T) < (var_X_T)) 1.0 else 0.0))) 
-              }
-            }
-          }
-          )) * (-1L))) + (BSP_mBIDS5.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
-            (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-              val var_BIDS_BROKER_ID:Long = x._1._1
-              val var_Y_T:Double = x._1._2
-              val var___map_ret__8:Double = x._2
-              (var___accv_8:Double) => {
-                (var___accv_8) + ((var___map_ret__8) * ((if((var_Y_T) < (var_BIDS_T)) 1.0 else 0.0))) 
-              }
-            }
-          }
-          ));
-          BSP.updateValue((var_BIDS_BROKER_ID), nv)
-        }
-      };
-      if((BSP_mBIDS1).contains(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T))) {          {
-          val nv = ((BSP_mBIDS1).lookup(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T))) + (-1L);
-          BSP_mBIDS1.updateValue(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T), nv)
-        }
-      }
-      else {          {
-          val nv = -1L;
-          BSP_mBIDS1.updateValue(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T), nv)
-        }
-      };
-      if((BSP_mBIDS5).contains(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T))) {          {
-          val nv = ((BSP_mBIDS5).lookup(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T))) + (((-1L) * (var_BIDS_VOLUME)) * (var_BIDS_PRICE));
-          BSP_mBIDS5.updateValue(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T), nv)
-        }
-      }
-      else {          {
-          val nv = ((-1L) * (var_BIDS_VOLUME)) * (var_BIDS_PRICE);
-          BSP_mBIDS5.updateValue(Tuple2(var_BIDS_BROKER_ID,var_BIDS_T), nv)
-        }
-      }
-    }
-  };
 }

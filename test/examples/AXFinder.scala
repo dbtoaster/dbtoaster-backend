@@ -9,12 +9,11 @@ object AXFinder extends Helper {
         bench(name,count,()=>run[Q,Map[Long,Double]](streamsFinance(""),false))
 
   def main(args:Array[String]) {
-    val r1=test[AXFinderRef]      ("Reference   ")
-    val r2=test[AXFinder]         ("Gen2        "); assert(r1==r2)
- // val r3=test[AXFinderAkka]     ("Akka        "); assert(r1==r3)
+    //val r1=test[AXFinderRef]      ("Reference   ")
+    val r2=test[AXFinder]         ("Gen2        "); //assert(r1==r2)
     val r4=test[AXFinderSimpleLMS]("Simple LMS  ")
     val r5=test[AXFinderSimple]   ("Simple Gen2 "); assert(r4==r5)
-    println(K3Helper.toStr(r1))
+    println(K3Helper.toStr(r2))
   }
 }
 
@@ -222,7 +221,7 @@ class AXFinderSimpleLMS extends AXFinderBase {
 
 // -----------------------------------------------------------------------------
 
-
+/*
 class AXFinderRef extends AXFinderBase {
 
 import org.dbtoaster.dbtoasterlib.StreamAdaptor._;
@@ -235,31 +234,31 @@ import scala.collection.mutable.Map;
 
   def result = AXFINDER.elems.toMap.filter{case(k,v)=>v!=0.0}
 
-  var AXFINDER = new K3PersistentCollection[(Long), Double]("AXFINDER", Map(), None) /* out */;
+  var AXFINDER = new K3PersistentCollection[(Long), Double]("AXFINDER", Map(), None);
   var AXFINDER_mASKS1 = new K3PersistentCollection[Tuple2[Long,Double], Double]("AXFINDER_mASKS1", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Double](x => x match {
     case Tuple2(x1,x2) => (x1) 
   }
-  )))) /* out */;
+  ))));
   var AXFINDER_mASKS2 = new K3PersistentCollection[Tuple2[Long,Double], Long]("AXFINDER_mASKS2", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Long](x => x match {
     case Tuple2(x1,x2) => (x1) 
   }
-  )))) /* out */;
+  ))));
   var AXFINDER_mBIDS1 = new K3PersistentCollection[Tuple2[Long,Double], Long]("AXFINDER_mBIDS1", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Long](x => x match {
     case Tuple2(x1,x2) => (x1) 
   }
-  )))) /* out */;
+  ))));
   var AXFINDER_mBIDS3 = new K3PersistentCollection[Tuple2[Long,Double], Double]("AXFINDER_mBIDS3", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Double](x => x match {
     case Tuple2(x1,x2) => (x1) 
   }
-  )))) /* out */;
+  ))));
 
   def onAddBIDS(var_BIDS_T: Double,var_BIDS_ID: Long,var_BIDS_BROKER_ID: Long,var_BIDS_VOLUME: Double,var_BIDS_PRICE: Double) = {
     if((AXFINDER).contains((var_BIDS_BROKER_ID))) {        {
         val nv = ((AXFINDER).lookup((var_BIDS_BROKER_ID))) + ((((AXFINDER_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
           (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-            val var_BIDS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_A_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__1:Long = x._2 /* Long => Long */;
+            val var_BIDS_BROKER_ID:Long = x._1._1;
+            val var_A_PRICE:Double = x._1._2;
+            val var___map_ret__1:Long = x._2;
             (y:Long) => {
               y match {
                 case var___accv_1 => {
@@ -271,9 +270,9 @@ import scala.collection.mutable.Map;
         }
         )) * (-1L)) * (var_BIDS_VOLUME)) + (AXFINDER_mBIDS3.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
           (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-            val var_BIDS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_A_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__2:Double = x._2 /* Double => Double */;
+            val var_BIDS_BROKER_ID:Long = x._1._1;
+            val var_A_PRICE:Double = x._1._2;
+            val var___map_ret__2:Double = x._2;
             (y:Double) => {
               y match {
                 case var___accv_2 => {
@@ -290,9 +289,9 @@ import scala.collection.mutable.Map;
     else {        {
         val nv = (((AXFINDER_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
           (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-            val var_BIDS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_A_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__1:Long = x._2 /* Long => Long */;
+            val var_BIDS_BROKER_ID:Long = x._1._1;
+            val var_A_PRICE:Double = x._1._2;
+            val var___map_ret__1:Long = x._2;
             (y:Long) => {
               y match {
                 case var___accv_1 => {
@@ -304,9 +303,9 @@ import scala.collection.mutable.Map;
         }
         )) * (-1L)) * (var_BIDS_VOLUME)) + (AXFINDER_mBIDS3.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
           (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-            val var_BIDS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_A_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__2:Double = x._2 /* Double => Double */;
+            val var_BIDS_BROKER_ID:Long = x._1._1;
+            val var_A_PRICE:Double = x._1._2;
+            val var___map_ret__2:Double = x._2;
             (y:Double) => {
               y match {
                 case var___accv_2 => {
@@ -345,9 +344,9 @@ import scala.collection.mutable.Map;
     if((AXFINDER).contains((var_BIDS_BROKER_ID))) {        {
         val nv = ((AXFINDER).lookup((var_BIDS_BROKER_ID))) + (((AXFINDER_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
           (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-            val var_BIDS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_A_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__3:Long = x._2 /* Long => Long */;
+            val var_BIDS_BROKER_ID:Long = x._1._1;
+            val var_A_PRICE:Double = x._1._2;
+            val var___map_ret__3:Long = x._2;
             (y:Long) => {
               y match {
                 case var___accv_3 => {
@@ -359,9 +358,9 @@ import scala.collection.mutable.Map;
         }
         )) * (var_BIDS_VOLUME)) + ((AXFINDER_mBIDS3.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
           (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-            val var_BIDS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_A_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__4:Double = x._2 /* Double => Double */;
+            val var_BIDS_BROKER_ID:Long = x._1._1;
+            val var_A_PRICE:Double = x._1._2;
+            val var___map_ret__4:Double = x._2;
             (y:Double) => {
               y match {
                 case var___accv_4 => {
@@ -378,9 +377,9 @@ import scala.collection.mutable.Map;
     else {        {
         val nv = ((AXFINDER_mBIDS1.slice((var_BIDS_BROKER_ID), List(0)).foldLong(0L, {
           (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-            val var_BIDS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_A_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__3:Long = x._2 /* Long => Long */;
+            val var_BIDS_BROKER_ID:Long = x._1._1;
+            val var_A_PRICE:Double = x._1._2;
+            val var___map_ret__3:Long = x._2;
             (y:Long) => {
               y match {
                 case var___accv_3 => {
@@ -392,9 +391,9 @@ import scala.collection.mutable.Map;
         }
         )) * (var_BIDS_VOLUME)) + ((AXFINDER_mBIDS3.slice((var_BIDS_BROKER_ID), List(0)).fold(0.0, {
           (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-            val var_BIDS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_A_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__4:Double = x._2 /* Double => Double */;
+            val var_BIDS_BROKER_ID:Long = x._1._1;
+            val var_A_PRICE:Double = x._1._2;
+            val var___map_ret__4:Double = x._2;
             (y:Double) => {
               y match {
                 case var___accv_4 => {
@@ -433,9 +432,9 @@ import scala.collection.mutable.Map;
     if((AXFINDER).contains((var_ASKS_BROKER_ID))) {        {
         val nv = ((AXFINDER).lookup((var_ASKS_BROKER_ID))) + (((AXFINDER_mASKS1.slice((var_ASKS_BROKER_ID), List(0)).fold(0.0, {
           (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-            val var_ASKS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_B_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__5:Double = x._2 /* Double => Double */;
+            val var_ASKS_BROKER_ID:Long = x._1._1;
+            val var_B_PRICE:Double = x._1._2;
+            val var___map_ret__5:Double = x._2;
             (y:Double) => {
               y match {
                 case var___accv_5 => {
@@ -447,9 +446,9 @@ import scala.collection.mutable.Map;
         }
         )) * (-1L)) + ((AXFINDER_mASKS2.slice((var_ASKS_BROKER_ID), List(0)).foldLong(0L, {
           (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-            val var_ASKS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_B_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__6:Long = x._2 /* Long => Long */;
+            val var_ASKS_BROKER_ID:Long = x._1._1;
+            val var_B_PRICE:Double = x._1._2;
+            val var___map_ret__6:Long = x._2;
             (y:Long) => {
               y match {
                 case var___accv_6 => {
@@ -466,9 +465,9 @@ import scala.collection.mutable.Map;
     else {        {
         val nv = ((AXFINDER_mASKS1.slice((var_ASKS_BROKER_ID), List(0)).fold(0.0, {
           (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-            val var_ASKS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_B_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__5:Double = x._2 /* Double => Double */;
+            val var_ASKS_BROKER_ID:Long = x._1._1;
+            val var_B_PRICE:Double = x._1._2;
+            val var___map_ret__5:Double = x._2;
             (y:Double) => {
               y match {
                 case var___accv_5 => {
@@ -480,9 +479,9 @@ import scala.collection.mutable.Map;
         }
         )) * (-1L)) + ((AXFINDER_mASKS2.slice((var_ASKS_BROKER_ID), List(0)).foldLong(0L, {
           (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-            val var_ASKS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_B_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__6:Long = x._2 /* Long => Long */;
+            val var_ASKS_BROKER_ID:Long = x._1._1;
+            val var_B_PRICE:Double = x._1._2;
+            val var___map_ret__6:Long = x._2;
             (y:Long) => {
               y match {
                 case var___accv_6 => {
@@ -521,9 +520,9 @@ import scala.collection.mutable.Map;
     if((AXFINDER).contains((var_ASKS_BROKER_ID))) {        {
         val nv = ((AXFINDER).lookup((var_ASKS_BROKER_ID))) + ((AXFINDER_mASKS1.slice((var_ASKS_BROKER_ID), List(0)).fold(0.0, {
           (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-            val var_ASKS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_B_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__7:Double = x._2 /* Double => Double */;
+            val var_ASKS_BROKER_ID:Long = x._1._1;
+            val var_B_PRICE:Double = x._1._2;
+            val var___map_ret__7:Double = x._2;
             (y:Double) => {
               y match {
                 case var___accv_7 => {
@@ -535,9 +534,9 @@ import scala.collection.mutable.Map;
         }
         )) + (((AXFINDER_mASKS2.slice((var_ASKS_BROKER_ID), List(0)).foldLong(0L, {
           (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-            val var_ASKS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_B_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__8:Long = x._2 /* Long => Long */;
+            val var_ASKS_BROKER_ID:Long = x._1._1;
+            val var_B_PRICE:Double = x._1._2;
+            val var___map_ret__8:Long = x._2;
             (y:Long) => {
               y match {
                 case var___accv_8 => {
@@ -554,9 +553,9 @@ import scala.collection.mutable.Map;
     else {        {
         val nv = (AXFINDER_mASKS1.slice((var_ASKS_BROKER_ID), List(0)).fold(0.0, {
           (x:Tuple2[(Tuple2[Long,Double]), Double]) => {
-            val var_ASKS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_B_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__7:Double = x._2 /* Double => Double */;
+            val var_ASKS_BROKER_ID:Long = x._1._1;
+            val var_B_PRICE:Double = x._1._2;
+            val var___map_ret__7:Double = x._2;
             (y:Double) => {
               y match {
                 case var___accv_7 => {
@@ -568,9 +567,9 @@ import scala.collection.mutable.Map;
         }
         )) + (((AXFINDER_mASKS2.slice((var_ASKS_BROKER_ID), List(0)).foldLong(0L, {
           (x:Tuple2[(Tuple2[Long,Double]), Long]) => {
-            val var_ASKS_BROKER_ID:Long = x._1._1 /* Long => Long */;
-            val var_B_PRICE:Double = x._1._2 /* Double => Double */;
-            val var___map_ret__8:Long = x._2 /* Long => Long */;
+            val var_ASKS_BROKER_ID:Long = x._1._1;
+            val var_B_PRICE:Double = x._1._2;
+            val var___map_ret__8:Long = x._2;
             (y:Long) => {
               y match {
                 case var___accv_8 => {
@@ -606,3 +605,4 @@ import scala.collection.mutable.Map;
     }
   };
 }
+*/
