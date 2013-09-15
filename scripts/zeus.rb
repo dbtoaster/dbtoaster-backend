@@ -380,7 +380,7 @@ class Query
   end
   
   def to_s
-    "SELECT #{targets.join(", ")}"+
+    (if @targets.length > 0 then "SELECT #{targets.join(", ")}" else "SELECT 1" end)+
     (if @sources.length > 0 then " FROM #{sources.map{|s|s.to_from}.join(", ")}" else "" end)+
     (if @condition.nil? then "" else " WHERE #{condition}" end)+
     (if @group_by.nil? then "" else " GROUP BY #{group_by.join(", ")}" end)+

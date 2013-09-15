@@ -1,5 +1,15 @@
 package ddbt.test
 
+/**
+ * Automated unsupported queries testing
+ *
+ * sbt 'test:run-main ddbt.test.AllQueries [opts]'
+ *
+ *    -z <num>  : enable Zeus random queries testing (100)
+ *    -s <seed> : test a single Zeus query with given seed
+ *
+ */
+
 object AllQueries {
   import ddbt.Utils._
   import ddbt.UnitTest.{toast,load,filtered}
@@ -8,33 +18,47 @@ object AllQueries {
   import ddbt.test.Benchmark.{tmp,scalac,scalax}
   val rbase = new java.io.File(path_repo+"/"+path_base)
   
+  var zeus = false
+  var seed:Long = 0
+  var num = 100
+  
   def main(args:Array[String]) {
-  
-  
-    var i=0;
-    while(i<100) { i=i+1; zeus() }
-    // Front-end: 89938332
-    // 18817471
-    // 73864231
-    // 9043339
-    // Generator bug: 29641225
+    var i=0; val l=args.length
+    while(i<l) {
+      args(i) match {
+        case "-z" if (i<l+1) => zeus=true; if (i<l+1) try { num=args(i+1).toInt; i+=1; } catch { case _:Throwable => }
+        case "-s" if (i<l+1) => zeus=true; i+=1; seed=args(i).toLong; num=1;
+      }
+      i+=1
+    }
 
-    // moreTests()
+    // 89938332 front-end: translated to different type (int) from its expected type (float)
+    // 36688054 front-end: translated to different type (int) from its expected type (float) 
+    // 18817471 front-end: generate syntactically correct M3, but not semantically correct: unbound variable
+    if (zeus) {
+      if (seed!=0) zeus(seed)
+      else { var i=0; while(i<num) { i=i+1; zeus() } }
+    } else moreTests() 
   }
   
   def zeus(s:Long=0) {
-    val sql = exec("test/zeus.rb"+(if (s!=0) " -s "+s else ""))._1.replaceAll("@@DATA@@",path_repo+"/dbtoaster/experiments/data/simple/tiny")
+    val sql = exec("scripts/zeus.rb"+(if (s!=0) " -s "+s else ""))._1.replaceAll("@@DATA@@",path_repo+"/dbtoaster/experiments/data/simple/tiny")
     val ma = java.util.regex.Pattern.compile(".*seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
     val seed = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
     val sql_file = tmp.getPath+"/zeus.sql"; write(tmp,"zeus.sql",sql)
     try {
       println("Seed = "+seed)
       val (t0,m3) = ns(()=>exec(Array(path_bin,"-l","m3",sql_file))._1)
+      println(m3)
+
       val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen ScalaGen("Zeus",1))(m3)); write(tmp,"Zeus.scala",sc)
+      
+      println(sc)
+      
       val t2 = ns(()=>scalac("Zeus"))._1
       val (t3,r) = ns(()=>scalax("ddbt.generated.Zeus"))
       println("toM3:"+time(t0)+", compile:"+time(t1)+", scalac:"+time(t2)+", run:"+time(t3))
-    } catch { case _:Throwable => }
+    } catch { case t:Throwable => t.printStackTrace() }
   }
 
   /* Lookup for all SQL files in dbt repository tests and try to compile it */
