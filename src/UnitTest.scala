@@ -92,7 +92,7 @@ object UnitTest {
     val qt = sys.queries.map{q=>(q.name,sys.mapType(q.m.name)) }.toMap
     val helper =
       "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-      "class "+cls+"Spec extends Helper with FunSpec {"+ind("\n"+
+      "class "+cls+"Spec extends FunSpec with Helper {"+ind("\n"+
       "import scala.language.implicitConversions\n"+
       "implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();\n"+
       "implicit def strConv(d:Long):String = \"\"+d\n"+ // fix for TPCH22

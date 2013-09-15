@@ -28,8 +28,8 @@ libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.1",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.1",
   "org.scala-lang"     % "scala-actors"   % v,
-  "org.scala-lang"     % "scala-compiler" % v         % "test",
-  "org.scalatest"     %% "scalatest"      % "2.0.M5b" % "test"
+  "org.scala-lang"     % "scala-compiler" % v        % "test",
+  "org.scalatest"     %% "scalatest"      % "2.0.M7" % "test"
   //"com.esotericsoftware.kryo" % "kryo"  % "2.21",
   //"com.twitter"       %% "chill"        % "0.3.1",
   //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",

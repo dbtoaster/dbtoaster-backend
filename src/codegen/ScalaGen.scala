@@ -26,7 +26,7 @@ import ddbt.ast._
  *
  * @author TCK
  */
-case class ScalaGen(cls:String="Query") extends (M3.System => String) {
+case class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => String) {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
@@ -86,7 +86,7 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
           val a0=fresh("agg")
           val tmp=Some(agg) // declare this as summing target
           "val "+a0+" = K3Map.temp["+tup(agg.map(x=>tpe(x._2)))+","+tpe(e.tp)+"]()\n"+
-          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,TypeLong,fs),b,co)
+          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,e.tp,fs),b,co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
   }
@@ -94,10 +94,10 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
   def genStmt(s:Stmt,b:Set[String]):String = s match {
     case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
-      val init = (oi match {
+      val init = oi match {
         case Some(ie) => cpsExpr(ie,b,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
         case None => ""
-      })
+      }
       clear+init+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
@@ -183,10 +183,8 @@ case class ScalaGen(cls:String="Query") extends (M3.System => String) {
     "package ddbt.generated\nimport ddbt.lib._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind(
     "def execute() = run["+cls+","+genViewType(s0)+"]("+genStreams(s0.sources)+")\n\n"+
-    "def main(args:Array[String]) {\n"+ind("val res = bench(\"NewGen\",10,execute)\n"+
-    s0.queries.zipWithIndex.map { case (q,i)=> val m=s0.mapType(q.m.name);
-      "println(\""+q.name+":\")\nprintln(K3Helper.toStr(res"+(if (s0.queries.size>1) "._"+(i+1) else "")+")+\"\\n\")"
-    }.mkString("\n"))+"\n}")+"\n}\n\n"
+    "def main(args:Array[String]) {\n"+ind("val res = bench(\"NewGen\","+numSamples+",execute)\n"+
+    s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\")\nprintln(K3Helper.toStr(res"+(if (s0.queries.size>1) "._"+(i+1) else "")+")+\"\\n\")" }.mkString("\n"))+"\n}")+"\n}\n\n"
   }
   def apply(s:System) = genHelper(s)+genSystem(s)
 }

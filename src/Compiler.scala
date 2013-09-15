@@ -93,32 +93,11 @@ object Compiler {
   }
 }
 
-  /*
-  // invoke with any filename in finance or tpch : axfinder, query13, query15, query18, ...
-  def findQuery(s:String):File = {
-    val b = "resources/queries/"; val x=".sql"
-    val ps:List[String] = List("","finance/","tpch/","mddb/","simple/").map{d=>b+d+s+x} ::: List(s+x,s)
-    val fs = ps.map{p => new java.io.File(p)}.filter{f=>f.exists}
-    if (fs.size==0) sys.error("File '"+s+"' does not exist") else fs(0)
-  }
+/*
   def dump[T](name:String)(data:T):T = {
     println("======================== "+name+" ========================")
     println(data.toString); data
   }
-
-  // Compilation phases
-  val dir = new File("bin")
-  val compile = Utils.toast _ andThen
-                M3Parser andThen
-                //dump("M3") andThen
-                TypeCheck andThen
-                ScalaGen("Query") andThen
-                //dump("Scala") andThen
-                writeScala(dir) //andThen
-                //writeTest(dir) //andThen
-                //scalac("test/gen") andThen
-                //execute("ddbt.gen")
-                // then run 'sbt test'
 
 3. optimize the AST
    - high level optimizations
