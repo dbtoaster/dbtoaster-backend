@@ -1,7 +1,7 @@
 package ddbt.test
 
 /**
- * Automated unsupported queries testing
+ * Automated "unsupported queries" testing.
  *
  * sbt 'test:run-main ddbt.test.AllQueries [opts]'
  *
@@ -49,12 +49,7 @@ object AllQueries {
     try {
       println("Seed = "+seed)
       val (t0,m3) = ns(()=>exec(Array(path_bin,"-l","m3",sql_file))._1)
-      println(m3)
-
       val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen ScalaGen("Zeus",1))(m3)); write(tmp,"Zeus.scala",sc)
-      
-      println(sc)
-      
       val t2 = ns(()=>scalac("Zeus"))._1
       val (t3,r) = ns(()=>scalax("ddbt.generated.Zeus"))
       println("toM3:"+time(t0)+", compile:"+time(t1)+", scalac:"+time(t2)+", run:"+time(t3))

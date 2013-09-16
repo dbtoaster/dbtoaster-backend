@@ -41,11 +41,6 @@ object BrokerSpread extends Helper {
     (new java.io.FileInputStream(path_repo+"/dbtoaster/experiments/data/finance/"+size+"/finance.csv"),new Adaptor.OrderBook(),Split())
   ))._2
 
-  def genRef(size:String="standard") = run[BrokerSpreadRef,Map[Long,Double]](Seq(
-    (new java.io.FileInputStream(path_repo+"/dbtoaster/experiments/data/finance/"+size+"/finance.csv"),new Adaptor.OrderBook(),Split())
-  ))._2
-  
-  
   def main(args:Array[String]) { // takes about 1 min
     def t(size:String) {
       val (r,g)=(ref(size),gen(size))
