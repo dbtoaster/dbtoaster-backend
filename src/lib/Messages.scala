@@ -8,7 +8,7 @@ object Messages {
   final val TupleInsert : TupleOp = 0x01
 
   abstract sealed class StreamEvent
-  case class TupleEvent(op:TupleOp,stream:String,tx:Long,data:List[Any]) extends StreamEvent
+  case class TupleEvent(op:TupleOp,stream:String,tx:Long /*XXX:UNUSED!!!*/ ,data:List[Any]) extends StreamEvent
   case object EndOfStream extends StreamEvent
   case object SystemInit extends StreamEvent
   case object GetSnapshot extends StreamEvent // similar as EndOfStream but does not shut system down

@@ -8,9 +8,11 @@ object BrokerSpread extends Helper {
   import ddbt.Utils._
   import scala.language.implicitConversions
   implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();
-  //implicit def strConv(d:Long):String = ""+d
-
   private val sql = read(path_repo+"/"+path_base+"/test/queries/finance/brokerspread.sql")
+
+  // bin/dbtoaster test/queries/finance/brokerspread.sql -l cpp -o bs.hpp -O1
+  // g++ -Ilib/dbt_c++ -Llib/dbt_c++ -I/opt/local/boost/include/ -L/opt/local/boost/lib/ -lpthread -ldbtoaster -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread lib/dbt_c++/main.cpp -include bs.hpp -o bs
+  // setenv DYLD_LIBRARY_PATH /opt/local/boost/lib/; ./bs
 
   def ref(size:String="standard"):Map[Long,Double] = {
     // GENERATED WITH:
@@ -36,6 +38,10 @@ object BrokerSpread extends Helper {
     scala.collection.JavaConversions.mapAsScalaMap(m).toMap.filter{ case (k,v) => v!=0.0 }
   }
   def gen(size:String="standard") = run[BrokerSpread,Map[Long,Double]](Seq(
+    (new java.io.FileInputStream(path_repo+"/dbtoaster/experiments/data/finance/"+size+"/finance.csv"),new Adaptor.OrderBook(),Split())
+  ))._2
+
+  def genRef(size:String="standard") = run[BrokerSpreadRef,Map[Long,Double]](Seq(
     (new java.io.FileInputStream(path_repo+"/dbtoaster/experiments/data/finance/"+size+"/finance.csv"),new Adaptor.OrderBook(),Split())
   ))._2
   
@@ -70,70 +76,49 @@ class BrokerSpread extends Actor { // Copied from generated code
   import ddbt.lib.Functions._
   
   val BSP = K3Map.make[Long,Double]();
-  val BSP_mBIDS1 = K3Map.make[(Long,Double),Long](List((k:(Long,Double))=>k._1));
-  val BSP_mBIDS5 = K3Map.make[(Long,Double),Double](List((k:(Long,Double))=>k._1));
+  val BSP_mBIDS1 = K3Map.make[(Long,Long),Long](List((k:(Long,Long))=>k._1));
+  val BSP_mBIDS5 = K3Map.make[(Long,Long),Double](List((k:(Long,Long))=>k._1));
   
   var t0:Long = 0
   def receive = {
-    case TupleEvent(TupleInsert,"BIDS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleDelete,"BIDS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0,v1,v2,v3,v4)
-    case SystemInit => onSystemReady(); t0=System.nanoTime()
+    case TupleEvent(TupleInsert,"BIDS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0.toLong,v1,v2,v3,v4)
+    case TupleEvent(TupleDelete,"BIDS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0.toLong,v1,v2,v3,v4)
+    case SystemInit => t0=System.nanoTime()
     case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,BSP.toMap)
   }
   
-  def onAddBIDS(bids_t:Double, bids_id:Long, bids_broker_id:Long, bids_volume:Double, bids_price:Double) {
+  def bsp(bids_t:Long, broker:Long, volume:Double, price:Double):Double = {
     var agg1:Long = 0;
-    BSP_mBIDS1.slice(0,bids_broker_id).foreach { (k1,v1) =>
-      val y_t = k1._2;
-      agg1 += (v1 * (if (bids_t > y_t) 1L else 0L));
-    }
     var agg2:Long = 0;
-    BSP_mBIDS1.slice(0,bids_broker_id).foreach { (k2,v2) =>
-      val x_t = k2._2;
-      agg2 += (v2 * (if (x_t > bids_t) 1L else 0L));
-    }
+    BSP_mBIDS1.foreach { (k,v) => if (k._1==broker) {
+      if (bids_t > k._2) agg1 += v
+      if (bids_t < k._2) agg2 += v
+    }}
     var agg3:Double = 0;
-    BSP_mBIDS5.slice(0,bids_broker_id).foreach { (k3,v3) =>
-      val x_t = k3._2;
-      agg3 += (v3 * (if (x_t > bids_t) 1L else 0L));
-    }
     var agg4:Double = 0;
-    BSP_mBIDS5.slice(0,bids_broker_id).foreach { (k4,v4) =>
-      val y_t = k4._2;
-      agg4 += (v4 * (if (bids_t > y_t) 1L else 0L));
-    }
-    BSP.add(bids_broker_id,(((agg1 + (agg2 * -1L)) * (bids_price * bids_volume)) + (agg3 + (agg4 * -1L))));
-    BSP_mBIDS1.add((bids_broker_id,bids_t),1L);
-    BSP_mBIDS5.add((bids_broker_id,bids_t),(bids_volume * bids_price));
+    BSP_mBIDS5.foreach { (k,v) => if (k._1==broker) {
+      if (bids_t > k._2) agg4 += v
+      if (bids_t < k._2) agg3 += v
+    }}
+    /*
+    var agg1:Long = 0; BSP_mBIDS1.slice(0,broker).foreach { (k,v) => if (bids_t > k._2) agg1 += v }
+    var agg2:Long = 0; BSP_mBIDS1.slice(0,broker).foreach { (k,v) => if (k._2 > bids_t) agg2 += v }
+    var agg3:Double = 0; BSP_mBIDS5.slice(0,broker).foreach { (k,v) => if (k._2 > bids_t) agg3 += v }
+    var agg4:Double = 0; BSP_mBIDS5.slice(0,broker).foreach { (k,v) => if (bids_t > k._2) agg4 += v }
+    */
+    (agg1 - agg2) * price * volume + agg3 - agg4
   }
   
-  def onDelBIDS(bids_t:Double, bids_id:Long, bids_broker_id:Long, bids_volume:Double, bids_price:Double) {
-    var agg5:Long = 0;
-    BSP_mBIDS1.slice(0,bids_broker_id).foreach { (k5,v5) =>
-      val y_t = k5._2;
-      agg5 += (v5 * (if (bids_t > y_t) 1L else 0L));
-    }
-    var agg6:Long = 0;
-    BSP_mBIDS1.slice(0,bids_broker_id).foreach { (k6,v6) =>
-      val x_t = k6._2;
-      agg6 += (v6 * (if (x_t > bids_t) 1L else 0L));
-    }
-    var agg7:Double = 0;
-    BSP_mBIDS5.slice(0,bids_broker_id).foreach { (k7,v7) =>
-      val x_t = k7._2;
-      agg7 += (v7 * (if (x_t > bids_t) 1L else 0L));
-    }
-    var agg8:Double = 0;
-    BSP_mBIDS5.slice(0,bids_broker_id).foreach { (k8,v8) =>
-      val y_t = k8._2;
-      agg8 += (v8 * (if (bids_t > y_t) 1L else 0L));
-    }
-    BSP.add(bids_broker_id,((((agg5 * -1L) + agg6) * (bids_price * bids_volume)) + ((agg7 * -1L) + agg8)));
-    BSP_mBIDS1.add((bids_broker_id,bids_t),-1L);
-    BSP_mBIDS5.add((bids_broker_id,bids_t),(-1L * (bids_volume * bids_price)));
-  }
+  var tx:Long=0
   
-  def onSystemReady() {
-    
+  def onAddBIDS(bids_t:Long, b_id:Long, broker:Long, volume:Double, price:Double) {
+    BSP.add(broker, bsp(bids_t,broker,volume,price));
+    BSP_mBIDS1.add((broker,bids_t),1L);
+    BSP_mBIDS5.add((broker,bids_t),(volume * price));
+  }
+  def onDelBIDS(bids_t:Long, b_id:Long, broker:Long, volume:Double, price:Double) {
+    BSP.add(broker, -bsp(bids_t,broker,volume,price));
+    BSP_mBIDS1.add((broker,bids_t),-1L);
+    BSP_mBIDS5.add((broker,bids_t),-1L * (volume * price));
   }
 }

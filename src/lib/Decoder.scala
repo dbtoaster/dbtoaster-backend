@@ -129,7 +129,7 @@ object Adaptor {
       def red(h:Hist,rel:String) = { val x=h.remove(id)
         if (x==null) Nil else { val nv = x.volume-volume
           TupleEvent(TupleDelete, rel, t, x.toList) :: (if (nv <= 0.0) Nil else {
-            val r = BookRow(t, id, x.brokerId, nv, x.price); h.put(id,r)
+            val r = BookRow(x.t, id, x.brokerId, nv, x.price); h.put(id,r)
             List(TupleEvent(TupleInsert, rel, t, r.toList))
           })
         }

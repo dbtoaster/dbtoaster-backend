@@ -138,7 +138,7 @@ object UnitTest {
     files.map(load).foreach{ t0 =>
       val t = QueryTest(t0.sql,t0.sets.filter(x=>f_ds(x._1))
                  // missedtrades is very slow, brokerspread drifts due to rounding errors, similarly as original DBToaster
-                 .filter{x=> !t0.sql.matches(".*(missedtrades|brokerspread).*") || x._1.matches("tiny.*")})
+                 .filter{x=> !t0.sql.matches(".*missedtrades.*") || x._1.matches("tiny.*")})
       if (t.sets.size>0) try { println("---------------- "+t.sql); makeTest(t,opts) }
       catch { case th:Throwable => println("Compiling '"+t.sql+"' failed because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) } }
     }
