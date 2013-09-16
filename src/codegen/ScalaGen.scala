@@ -138,7 +138,7 @@ case class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => 
     val ms = s0.maps.map(genMap).mkString("\n") // maps
     val ld = { // optional preloading of static tables content
       val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o)=ev(s.schema)
-        "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,_,"+i+")=>"+s.schema.name+".add("+o+",1L) },"+ad+","+sp+")))).read;" }.mkString("\n");
+        "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,"+i+")=>"+s.schema.name+".add("+o+",1L) },"+ad+","+sp+")))).read;" }.mkString("\n");
       if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else ""
     }
     val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tpe(tp)+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
@@ -150,8 +150,8 @@ case class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => 
     "var t0:Long = 0\n"+
     "def receive = {\n"+ind(
       s0.triggers.map(_.evt match {
-        case EvtAdd(s) => val (i,o)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\",tx,"+i+") => onAdd"+s.name+o+"\n"
-        case EvtDel(s) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\",tx,"+i+") => onDel"+s.name+o+"\n"
+        case EvtAdd(s) => val (i,o)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => onAdd"+s.name+o+"\n"
+        case EvtDel(s) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => onDel"+s.name+o+"\n"
         case _ => ""
       }).mkString+
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
@@ -163,7 +163,9 @@ case class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => 
     val in = s.in match { case SourceFile(path) => "new java.io.FileInputStream(\""+path+"\")" }
     val split = "Split"+(s.split match { case SplitLine => "()" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => ".p("+p+")" })
     val adaptor = s.adaptor.name match {
-      case "ORDERBOOK" => "OrderBook()"
+      case "ORDERBOOK" => "OrderBook("+s.adaptor.options.toList.map { case (k,v) => k+"="+(k match {
+        case "brokers" => v case "bids"|"asks" => "\""+v+"\"" case "deterministic" => (v!="no"&&v!="false").toString case _ => ""
+      })}.filter(!_.endsWith("=")).mkString(",")+")"
       case "CSV" => val sep=java.util.regex.Pattern.quote(s.adaptor.options.getOrElse("delimiter",",")).replaceAll("\\\\","\\\\\\\\")
                     "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map{f=>f._2}.mkString(",")+"\",\""+sep+"\")"
     }
@@ -171,9 +173,15 @@ case class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => 
   }
 
   def genStreams(sources:List[Source]) = {
-    // Little fix for libraries variation as 1 stream for OrderBooks generates BOTH asks and bids events.
-    // XXX: fix the names of the streams properly
-    def fixOrderbook(ss:List[Source]):List[Source] = ss.zipWithIndex.filter{case (s,i)=>i==0 || s.adaptor.name!="ORDERBOOK"}.map(_._1)
+    def fixOrderbook(ss:List[Source]):List[Source] = { // Fixes OrderBook as one source generates BOTH asks and bids events.
+      val (os,xs) = ss.partition{_.adaptor.name=="ORDERBOOK"}
+      val ob = new java.util.HashMap[(Boolean,SourceIn),(Schema,Split,Map[String,String])]()
+      os.foreach { case Source(s,sc,in,sp,ad) =>
+        val (k,v) = ((s,in),(ad.options-"book") + ((ad.options.getOrElse("book","bids"),sc.name)))
+        val p=ob.get(k); if (p==null) ob.put(k,(sc,sp,v)) else ob.put(k,(sc,sp,p._3++v))
+      }
+      scala.collection.JavaConversions.mapAsScalaMap(ob).toList.map { case ((s,in),(sc,sp,opts)) => Source(s,sc,in,sp,Adaptor("ORDERBOOK",opts)) } ::: xs
+    }
     "Seq(\n"+ind(fixOrderbook(sources).filter{s=>s.stream}.map{s=> val (in,ad,sp)=genStream(s); "("+in+","+ad+","+sp+")" }.mkString(",\n"))+"\n)"
   }
 

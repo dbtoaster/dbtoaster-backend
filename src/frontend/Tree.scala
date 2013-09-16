@@ -31,7 +31,7 @@ case object OpGe extends OpCmp { override def toString=">=" } // OpGe by reversi
 // ---------- Source definitions, see ddbt.frontend.ExtParser
 case class Source(stream:Boolean, schema:Schema, in:SourceIn, split:Split, adaptor:Adaptor) extends Tree { override def toString = "CREATE "+(if (stream) "STREAM" else "TABLE")+" "+schema+"\n  FROM "+in+" "+split+" "+adaptor+";" }
 case class Schema(name:String, fields:List[(String,Type)]) extends Tree { override def toString=name+" ("+fields.map(x=>x._1+" "+x._2).mkString(", ")+")" }
-case class Adaptor(name:String, options:collection.Map[String,String]) extends Tree { override def toString=name+(if (options.isEmpty) "" else " ("+options.map{case(k,v)=>k+":='"+v+"'"}.mkString(", ")+")") }
+case class Adaptor(name:String, options:Map[String,String]) extends Tree { override def toString=name+(if (options.isEmpty) "" else " ("+options.map{case(k,v)=>k+":='"+v+"'"}.mkString(", ")+")") }
 
 sealed abstract class SourceIn extends Tree
 case class SourceFile(path:String) extends SourceIn { override def toString="FILE '"+path+"'" }
