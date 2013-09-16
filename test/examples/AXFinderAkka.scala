@@ -52,10 +52,10 @@ class AXMaster extends AXWorker with MasterActor {
   import scala.util.continuations._
 
   val dispatch : PartialFunction[TupleEvent,Unit] = {
-    case TupleEvent(TupleInsert,"BIDS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleDelete,"BIDS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleInsert,"ASKS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddASKS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleDelete,"ASKS",tx,List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelASKS(v0,v1,v2,v3,v4)
+    case TupleEvent(TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0,v1,v2,v3,v4)
+    case TupleEvent(TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0,v1,v2,v3,v4)
+    case TupleEvent(TupleInsert,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddASKS(v0,v1,v2,v3,v4)
+    case TupleEvent(TupleDelete,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelASKS(v0,v1,v2,v3,v4)
   }
   def onAddBIDS(bids_t:Double, bids_id:Long, br_id:Long, vol:Double, price:Double) = reset {
     pre(mAX,mB1,mB3)

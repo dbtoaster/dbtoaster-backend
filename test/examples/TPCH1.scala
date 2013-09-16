@@ -38,11 +38,11 @@ class TPCH1 extends Actor {
   var t0:Long = 0
   def receive = {
     case SystemInit => t0=System.nanoTime()
-    case TupleEvent(TupleInsert,"LINEITEM",tx,List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Date,v11:Date,v12:Date,v13:String,v14:String,v15:String)) =>
+    case TupleEvent(TupleInsert,"LINEITEM",List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Date,v11:Date,v12:Date,v13:String,v14:String,v15:String)) =>
       onInsertLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
       onInsertLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
       onDeleteLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
-    case TupleEvent(TupleDelete,"LINEITEM",tx,List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Date,v11:Date,v12:Date,v13:String,v14:String,v15:String)) => onDeleteLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
+    case TupleEvent(TupleDelete,"LINEITEM",List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Date,v11:Date,v12:Date,v13:String,v14:String,v15:String)) => onDeleteLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
     case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,(SUM_QTY.toMap,SUM_BASE_PRICE.toMap,SUM_DISC_PRICE.toMap,SUM_CHARGE.toMap,AVG_QTY.toMap,AVG_PRICE.toMap,AVG_DISC.toMap,COUNT_ORDER.toMap))
   }
 

@@ -101,20 +101,20 @@ object Adaptor {
       }
       case _ => (c:String) => c
     }
-    val ev : Array[String] => (TupleOp,Long,Array[String]) = action.toLowerCase match {
-      case "insert" => (rec:Array[String]) => (TupleInsert,0L,rec)
-      case "delete" => (rec:Array[String]) => (TupleDelete,0L,rec)
-      case _        => (rec:Array[String]) => (if (rec(1)=="1") TupleInsert else TupleDelete, java.lang.Long.parseLong(rec(0)), rec.drop(2))
+    val ev : Array[String] => (TupleOp,Array[String]) = action.toLowerCase match {
+      case "insert" => (rec:Array[String]) => (TupleInsert,rec)
+      case "delete" => (rec:Array[String]) => (TupleDelete,rec)
+      case _        => (rec:Array[String]) => (if (rec(1)=="1") TupleInsert else TupleDelete, rec.drop(2)) // tx=java.lang.Long.parseLong(rec(0))
     }
     def apply(data:Array[Byte],off:Int,len:Int): List[TupleEvent] = {
-      val (op:TupleOp,tx:Long,rec:Array[String]) = ev(new String(data,off,len,"UTF-8").split(delimiter))
-      List(TupleEvent(op,name,tx,rec.zipWithIndex.map{ case(x,i) => tfs(i)(x) }.toList))
+      val (op:TupleOp,rec:Array[String]) = ev(new String(data,off,len,"UTF-8").split(delimiter))
+      List(TupleEvent(op,name,rec.zipWithIndex.map{ case(x,i) => tfs(i)(x) }.toList))
     }
   }
 
   class OrderBook(brokers:Int=10,bids:String="BIDS",asks:String="ASKS",deterministic:Boolean=true) extends Adaptor {
     case class BookRow(t:Long, id:Long, brokerId:Long, volume:Double, price:Double) {
-      def toList = List[Any](t.toDouble, id, brokerId, volume, price)
+      def pack = List[Any](t.toDouble, id, brokerId, volume, price) // XXX: t as Double is a legacy from DBToaster
     }
     type Hist = java.util.HashMap[Long,BookRow]
     val asksMap = new Hist()
@@ -128,9 +128,9 @@ object Adaptor {
       val price = java.lang.Double.parseDouble(col(4))
       def red(h:Hist,rel:String) = { val x=h.remove(id)
         if (x==null) Nil else { val nv = x.volume-volume
-          TupleEvent(TupleDelete, rel, t, x.toList) :: (if (nv <= 0.0) Nil else {
+          TupleEvent(TupleDelete, rel, x.pack) :: (if (nv <= 0.0) Nil else {
             val r = BookRow(x.t, id, x.brokerId, nv, x.price); h.put(id,r)
-            List(TupleEvent(TupleInsert, rel, t, r.toList))
+            List(TupleEvent(TupleInsert, rel, r.pack))
           })
         }
       }
@@ -138,16 +138,16 @@ object Adaptor {
         case "B" if (bids!=null) => // place bid
           val brokerId = (if (deterministic) id else scala.util.Random.nextInt) % brokers
           val row = BookRow(t, id, brokerId, volume, price); bidsMap.put(id,row)
-          List(TupleEvent(TupleInsert, bids, t, row.toList))
+          List(TupleEvent(TupleInsert, bids, row.pack))
         case "S" if (asks!=null) => // place ask
           val brokerId = (if (deterministic) id else scala.util.Random.nextInt) % brokers
           val row = BookRow(t, id, brokerId, volume, price); asksMap.put(id,row)
-          List(TupleEvent(TupleInsert, asks, t, row.toList))
+          List(TupleEvent(TupleInsert, asks, row.pack))
         case "E" => // match
           red(bidsMap,bids) ::: red(asksMap,asks)
         case "D" => // | "F" cancel
-          if (bidsMap.containsKey(id)) List(TupleEvent(TupleDelete, bids, t, bidsMap.remove(id).toList)) else
-          if (asksMap.containsKey(id)) List(TupleEvent(TupleDelete, asks, t, asksMap.remove(id).toList)) else Nil
+          if (bidsMap.containsKey(id)) List(TupleEvent(TupleDelete, bids, bidsMap.remove(id).pack)) else
+          if (asksMap.containsKey(id)) List(TupleEvent(TupleDelete, asks, asksMap.remove(id).pack)) else Nil
         case _ => Nil
       }
     }
