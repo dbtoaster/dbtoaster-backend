@@ -60,7 +60,7 @@ object TypeCheck extends (M3.System => M3.System) {
     },t.stmts))
     val mtp = triggers.flatMap(t=>t.stmts flatMap { case StmtMap(m,_,_,_)=>List(m) }).map(m=>(m.name,m.tp)).toMap ++
               s0.sources.filter{s=> !s.stream}.map{s=>(s.schema.name,TypeLong)}.toMap // constant table are not written
-    val maps = s0.maps.map{ m=> val t0=mtp(m.name); val t1=m.tp;
+    val maps = s0.maps.map{ m=> val t0=mtp.getOrElse(m.name,null); val t1=m.tp;
       val tp=if (t0==null && t1!=null) t1 else if (t1==null && t0!=null) t0 else { 
         if (t0!=t1) sys.error("Map "+m.name+" type differs ("+t0+" != "+t1+")")
         if (t0==null) sys.error("Map "+m.name+" has no type"); t0
