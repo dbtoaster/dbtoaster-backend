@@ -53,6 +53,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
     var exprrrr = ""
     def expr(ex:Expr,ctx:LMSContext):(impl.Rep[_],LMSContext) = ex match {
+      case Mul(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (numeric_times(sl,sr,typeManifest(l.tp, r.tp)),cr)
+      case Add(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (numeric_plus(sl,sr,typeManifest(l.tp, r.tp)),cl++cr)
+      case Cmp(l,r,op) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (cmp(sl,op,sr,typeManifest(l.tp, r.tp)),cl++cr)
+      case Exists(e) => val (se,ce)=expr(e,ctx); (impl.__ifThenElse(impl.notequals(se,impl.unit(0)),impl.unit(1),impl.unit(0)),ce)
       //case Lift(n,e) => val (se,ce)=expr(e,ctx); val (sl,cl)=lift(n,se); (sl,cl++ce) //(sl, ctx + (n -> sl))
       //case AggSum(ks,e) => ks.toSet
       //case Apply(fn,tp,as) => as.flatMap(a=>a.collect(f)).toSet
