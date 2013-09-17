@@ -10,16 +10,7 @@ object BrokerSpread extends Helper {
   implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();
   private val sql = read(path_repo+"/"+path_base+"/test/queries/finance/brokerspread.sql")
 
-  // bin/dbtoaster test/queries/finance/brokerspread.sql -l cpp -o bs.hpp -O1
-  // g++ -Ilib/dbt_c++ -Llib/dbt_c++ -I/opt/local/boost/include/ -L/opt/local/boost/lib/ -lpthread -ldbtoaster -lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread lib/dbt_c++/main.cpp -include bs.hpp -o bs
-  // setenv DYLD_LIBRARY_PATH /opt/local/boost/lib/; ./bs
-
   def ref(size:String="standard"):Map[Long,Double] = {
-    // GENERATED WITH:
-    // bin/dbtoaster_release -l scala test/queries/finance/brokerspread.sql > tmp.scala
-    // fsc -cp lib/dbt_scala/dbtlib.jar tmp.scala lib/dbt_scala/src/org/dbtoaster/RunQuery.scala
-    // scala -cp lib/dbt_scala/dbtlib.jar:. org.dbtoaster.RunQuery
-    // rm -r tmp.scala org
     if (size=="big") return Map[Long,Double]( // BSP, runtime: 9.88339 (Legacy Scala's XML output)
       (0L,-6.24372635E11),  (1L,-1.3733520427E12),
       (2L,-5.35811059E11),  (3L,-2.515149258E11),
