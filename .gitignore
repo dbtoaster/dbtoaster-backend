@@ -11,3 +11,4 @@ benchmarks-*.csv
 *.iml
 *.pdf
 *Temp*
+*.DS_Store
