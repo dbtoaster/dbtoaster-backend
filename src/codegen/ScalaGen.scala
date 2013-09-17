@@ -26,7 +26,7 @@ import ddbt.ast._
  *
  * @author TCK
  */
-case class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => String) {
+class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => String) {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
@@ -173,7 +173,7 @@ case class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => 
   }
 
   def genStreams(sources:List[Source]) = {
-    def fixOrderbook(ss:List[Source]):List[Source] = { // Fixes OrderBook as one source generates BOTH asks and bids events.
+    def fixOrderbook(ss:List[Source]):List[Source] = { // one source generates BOTH asks and bids events
       val (os,xs) = ss.partition{_.adaptor.name=="ORDERBOOK"}
       val ob = new java.util.HashMap[(Boolean,SourceIn),(Schema,Split,Map[String,String])]()
       os.foreach { case Source(s,sc,in,sp,ad) =>

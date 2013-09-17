@@ -60,6 +60,15 @@ object WorkerActor {
   case class Members(master:ActorRef,workers:Array[(ActorRef,List[MapRef])]) // master can also be a worker for some maps
   case class Barrier(en:Boolean) // switch barrier mode
   case class Ack(to:Array[NodeRef],num:Array[Long]) // cumulative ack to master (to, count) : -1 for sent, 1 for recv
+
+  /*  
+  case class TellJoin(master:ActorRef) // ->worker: join the master
+  case object TellLeave // ->worker: ask for departure
+  case class Join(ms:List[MapRef]) // worker->master: join request
+  case object Leave // worker->master: departure request
+  case object Goodbye // worker is allowed to stop responding
+  */
+  
   // Data messages
   case class Get[K](map:MapRef,key:K) // => Val[K,V]
   case class Val[K,V](map:MapRef,key:K,value:V)

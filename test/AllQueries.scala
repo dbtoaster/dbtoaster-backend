@@ -49,7 +49,7 @@ object AllQueries {
     try {
       println("Seed = "+seed)
       val (t0,m3) = ns(()=>exec(Array(path_bin,"-l","m3",sql_file))._1)
-      val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen ScalaGen("Zeus",1))(m3)); write(tmp,"Zeus.scala",sc)
+      val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen new ScalaGen("Zeus",1))(m3)); write(tmp,"Zeus.scala",sc)
       val t2 = ns(()=>scalac("Zeus"))._1
       val (t3,r) = ns(()=>scalax("ddbt.generated.Zeus"))
       println("toM3:"+time(t0)+", compile:"+time(t1)+", scalac:"+time(t2)+", run:"+time(t3))
@@ -80,7 +80,7 @@ object AllQueries {
       if (m3=="" || m3==null) err("front-end failed")
       else try {
           //println("SQL -> M3      : "+time(t0))
-        val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen ScalaGen("NewQuery",1))(m3))
+        val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen new ScalaGen("NewQuery",1))(m3))
         write(tmp,"NewQuery.scala",sc)
         val (t2,(u2,o2,e2)) = ns(()=>captureOut(()=>scalac("NewQuery")))
         if (e2!="") err("scalac: "+e2)

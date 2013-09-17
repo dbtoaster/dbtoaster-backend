@@ -30,7 +30,7 @@ import ddbt.ast._
  *
  * @author TCK
  */
-case class AkkaGen(cls:String="Query") extends (M3.System => String) {
+class AkkaGen(cls:String="Query") extends (M3.System => String) {
   import ddbt.ast.M3._
 
 // 1. before each statement, add pre computation

@@ -76,9 +76,9 @@ object Compiler {
     })
     // Back-end
     lang match {
-      case "scala" => output(ScalaGen(name)(m3))
-      case "akka" => output(AkkaGen(name)(m3))
-      case "lms" => output(LMSGen(name)(m3))
+      case "scala" => output(new ScalaGen(name)(m3))
+      case "akka" => output(new AkkaGen(name)(m3))
+      case "lms" => output(new LMSGen(name)(m3))
       case _ => error("Compilation not supported")
     }
     // Execution

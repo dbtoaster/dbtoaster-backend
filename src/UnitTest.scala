@@ -86,7 +86,7 @@ object UnitTest {
     def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
     val sys = (((f:String)=>toast(f,opts)) andThen M3Parser andThen TypeCheck)(t.sql)
     val cls = clname(t.sql)
-    val gen = ScalaGen(cls)
+    val gen = new ScalaGen(cls)
     val str = gen.genStreams(sys.sources)
     val qid = sys.queries.map{_.name}.zipWithIndex.toMap
     val qt = sys.queries.map{q=>(q.name,sys.mapType(q.m.name)) }.toMap

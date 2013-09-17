@@ -19,12 +19,15 @@ case "$1" in
 # ------------------------------------------------------------------------------
 ""|-h|help|-help|--help)
 	exec cat<<EOF
-`basename $0` <action>
+`basename $0` [options] <action|query>
     create     create postgresql database
     remove     remove postgresql database
     tpch       load TPCH testing datasets
     finance    load financial testing datasets
     help       display available commands
+    <query>    execute test/queries/<query>
+options:
+    -d <set>   change dataset (tiny, standard, ...)
 EOF
 ;;
 # ------------------------------------------------------------------------------
