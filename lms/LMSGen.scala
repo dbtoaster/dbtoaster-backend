@@ -1,13 +1,15 @@
 package ddbt.codegen
+import ddbt.codegen.lms._
 
 import ddbt.ast._
 import ddbt.lib._
-import toasterbooster._
+//import toasterbooster._
 import scala.virtualization.lms.internal._
 import scala.virtualization.lms.common._
 
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
+  val impl = ScalaExpGen
   
   /*
   We need specific LMS nodes for
@@ -19,8 +21,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   */
 
   override def genTrigger(t:Trigger):String = {
-    val outStream = new java.io.StringWriter
-    val impl = new Impl(new java.io.PrintWriter(outStream), "org.dbtoaster", false) with DSL
+    //val outStream = new java.io.StringWriter
+    //val impl = new Impl(new java.io.PrintWriter(outStream), "org.dbtoaster", false) with DSL
+    //val impl = new Impl
     
     val (name,args) = t.evt match {
       case EvtReady => ("SystemReady",Nil)
@@ -85,7 +88,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
     val ctxTrigger: LMSContext=(
           maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) impl.fresh[K3Var[_]] else impl.fresh[K3Map[_,_]]) } union // XXX: we need here name-based k3maps
-          args.map{ case (name,tp) => (name,freshRef(impl, tp)) }).toMap // we need here name-based references of correct type
+          args.map{ case (name,tp) => (name,freshRef(/*impl,*/ tp)) }).toMap // we need here name-based references of correct type
 
     t.stmts.foreach { s =>  s match {
         case StmtMap(m,e,op,oi) => 
@@ -101,18 +104,17 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       }
     }
 
-    impl.emitAll
-
     //maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) name+"[] ++ " else name+"["+keys+"] ++ ") }+
-    "\n\nHiii\n\n%s\n\niiiH\n\n".format(outStream.toString) +
+    //"\n\nHiii\n\n%s\n\niiiH\n\n".format(outStream.toString) +
     "def on"+name+"("+args.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+
+    "  "+impl.emit(impl.unit(1.0))+
     "  hello2"+ //ind(t.stmts.map{s=>genStmt(s,b)}.mkString)
     "\n}"
   }
 
-  def freshRef(impl: Impl,tp: Type): impl.Sym[_] = freshRefManifest(typeManifest(tp), impl)
+  def freshRef(/*impl: Impl,*/tp: Type): impl.Sym[_] = freshRefManifest(typeManifest(tp) /*, impl*/)
 
-  def freshRefManifest[T:Manifest](mf: Manifest[T], impl: Impl): impl.Sym[T] = impl.fresh[T]
+  def freshRefManifest[T:Manifest](mf: Manifest[T] /*, impl: Impl*/): impl.Sym[T] = impl.fresh[T]
 
   def typeManifest(tp:Type):Manifest[_] = tp match {
     case TypeLong => manifest[Long]
