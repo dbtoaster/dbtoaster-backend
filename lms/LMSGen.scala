@@ -8,31 +8,14 @@ import scala.virtualization.lms.common._
 
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
-
-
-  //type Rep[+A] = A // to be replaced
-
-  //type Ctx = Map[String,Rep[_]]
-  //protected val ctx0 = Map[String,Rep[_]]()
-
+  
   /*
-  def mul[T](l:Rep[T],r:Rep[T]):Rep[T] = __mul(l,r)
-  def add[T](l:Rep[T],r:Rep[T]):Rep[T] = __add(l,r)
-  def cmp[T](l:Rep[T],r:Rep[T]):Rep[T]
-  def ex[T](e:Rep[T]):Rep[T]
-  def lift[T](n:String,e:Rep[T]):(Rep[T],Ctx)
-
-  def expr(ex:Expr,ctx:Ctx=ctx0):(Rep[_],Ctx) = ex match {
-    case Mul(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (mul(sl,sr),cr)
-    case Add(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,ctx); (add(sl,sr),cl++cr)
-    case Cmp(l,r,op) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,ctx); (cmp(sl,sr),cl++cr)
-    case Exists(e) => val (se,ce)=expr(e,ctx); (ex(se),ce)
-    case Lift(n,e) => val (se,ce)=expr(e,ctx); val (sl,cl)=lift(n,se); (sl,cl++ce)
-    case AggSum(ks,e) => ks.toSet
-    case Apply(fn,tp,as) => as.flatMap(a=>a.collect(f)).toSet
-    case MapRef(n,tp,ks) => ks.toSet
-    case _ => (xx,ctx0)
-  }
+  We need specific LMS nodes for
+  - K3Map / K3Var / K3Temp : pass key as list of symbols, specific name as a string (automatic for temp)
+    + foreach,get,add/set, ...
+    ==> Need to be adapted from previous version / try to provide common interface for all of them
+  - Named fresh (for function arguments)
+  - Mirror of the user-defined functions library => some functions should be inlined, others not
   */
 
   override def genTrigger(t:Trigger):String = {
@@ -51,6 +34,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     var exprrrr = ""
     // the ctx argument contains all the symbols that are available in the current context
     // the returned context is only _NEW_ symbols that have been added to the original context
+    
+    // XXX: we need a continuation here somewhere that is just one operation done on the variable
     def expr(ex:Expr,ctx:LMSContext):(impl.Rep[_],LMSContext) = ex match {
       case Ref(n) => (ctx(n),ctx0)
       case Const(tp,v) => (ex.tp match {
@@ -135,6 +120,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     case _ => sys.error("No manifest for "+tp)
   }
 
+/*
   def typeManifest(tp:Type, orTp:Type):Manifest[_] = tp match {
     case TypeLong => typeManifest(orTp)
     case _ => typeManifest(tp)
@@ -145,9 +131,35 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val cls:java.lang.Class[_] = Class.forName("scala.Tuple"+ts.size)
     scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
   }
+*/
 
   var maps = List[MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
   override def genSystem(s0:System):String = {
     maps=s0.maps; val r=super.genSystem(s0); maps=Nil; r
   }
+
+  //type Rep[+A] = A // to be replaced
+
+  //type Ctx = Map[String,Rep[_]]
+  //protected val ctx0 = Map[String,Rep[_]]()
+
+  /*
+  def mul[T](l:Rep[T],r:Rep[T]):Rep[T] = __mul(l,r)
+  def add[T](l:Rep[T],r:Rep[T]):Rep[T] = __add(l,r)
+  def cmp[T](l:Rep[T],r:Rep[T]):Rep[T]
+  def ex[T](e:Rep[T]):Rep[T]
+  def lift[T](n:String,e:Rep[T]):(Rep[T],Ctx)
+
+  def expr(ex:Expr,ctx:Ctx=ctx0):(Rep[_],Ctx) = ex match {
+    case Mul(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (mul(sl,sr),cr)
+    case Add(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,ctx); (add(sl,sr),cl++cr)
+    case Cmp(l,r,op) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,ctx); (cmp(sl,sr),cl++cr)
+    case Exists(e) => val (se,ce)=expr(e,ctx); (ex(se),ce)
+    case Lift(n,e) => val (se,ce)=expr(e,ctx); val (sl,cl)=lift(n,se); (sl,cl++ce)
+    case AggSum(ks,e) => ks.toSet
+    case Apply(fn,tp,as) => as.flatMap(a=>a.collect(f)).toSet
+    case MapRef(n,tp,ks) => ks.toSet
+    case _ => (xx,ctx0)
+  }
+  */
 }
