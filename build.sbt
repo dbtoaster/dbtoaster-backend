@@ -95,6 +95,7 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
   val lms = prop.getProperty("ddbt.lms","0")=="1"
   if (!lms) Seq() else Seq(
     sources in Compile ~= (_ filter (x=> !x.toString.endsWith("codegen/LMSGen.scala"))),
+    scalaSource in Compile <<= baseDirectory / "lms", // incorrect; but fixes Compiler->LMSGen dependency with SBT 0.13.0
     unmanagedSourceDirectories in Compile += file("lms"),
     // LMS-specific options
     scalaOrganization := "org.scala-lang.virtualized",
