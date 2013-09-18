@@ -36,12 +36,21 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   */
   
   override def genTrigger(t:Trigger):String = {
+    val (name,args) = t.evt match {
+      case EvtReady => ("SystemReady",Nil)
+      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
+      case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
+    }
+
     val outStream = new java.io.StringWriter
     val impl = new Impl(new java.io.PrintWriter(outStream), "org.dbtoaster", false) with DSL
 
     type Ctx = Map[String, impl.Rep[_]]
+    
+
+    
+    
     val ctx0 : Ctx = {
-      val args = t.evt match { case EvtReady => Nil case EvtAdd(Schema(n,cs)) => cs case EvtDel(Schema(n,cs)) => cs }
       (maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) impl.fresh[K3Var[_]] else impl.fresh[K3Map[_,_]]) } union
        args.map{ case (n,tp) => (n,freshRef(impl, tp)) }).toMap
     }
@@ -125,7 +134,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
 
     //maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) name+"[] ++ " else name+"["+keys+"] ++ ") }+
-    "def on"+n+"("+as.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+
+    "def on"+name+"("+args.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+
     "  hello2"+ //ind(t.stmts.map{s=>genStmt(s,b)}.mkString)
     "\n}"
   }
