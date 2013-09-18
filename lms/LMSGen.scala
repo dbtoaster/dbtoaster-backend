@@ -1,4 +1,5 @@
 package ddbt.codegen
+
 import ddbt.ast._
 import ddbt.lib._
 import toasterbooster._
@@ -7,6 +8,7 @@ import scala.virtualization.lms.common._
 
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
+
 
   //type Rep[+A] = A // to be replaced
 
@@ -32,30 +34,53 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     case _ => (xx,ctx0)
   }
   */
-
+  
   override def genTrigger(t:Trigger):String = {
     val outStream = new java.io.StringWriter
     val impl = new Impl(new java.io.PrintWriter(outStream), "org.dbtoaster", false) with DSL
-    
-    val (n,as) = t.evt match {
-      case EvtReady => ("SystemReady",Nil)
-      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
-      case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
+
+    type Ctx = Map[String, impl.Rep[_]]
+    val ctx0 : Ctx = {
+      val args = t.evt match { case EvtReady => Nil case EvtAdd(Schema(n,cs)) => cs case EvtDel(Schema(n,cs)) => cs }
+      (maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) impl.fresh[K3Var[_]] else impl.fresh[K3Map[_,_]]) } union
+       args.map{ case (n,tp) => (n,freshRef(impl, tp)) }).toMap
     }
 
-    type LMSContext = Map[String, impl.Rep[_]]
-
-    val ctx0: LMSContext=(
-             maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) impl.fresh[K3Var[_]] else impl.fresh[K3Map[_,_]]) }
-             union
-             as.map{ case (n,tp) => (n,freshRef(impl, tp)) }
-            ).toMap
+    // --- Pair operations
+    // Note: using a Long as a Double should be OK as the 2nd stage compiler knows how to handle + and *
+    def mul(l:impl.Rep[Any], r:impl.Rep[Any], tp:Type) = tp match {
+      case TypeLong => impl.numeric_times(l.asInstanceOf[impl.Rep[Long]],r.asInstanceOf[impl.Rep[Long]])
+      case TypeDouble => impl.numeric_times(l.asInstanceOf[impl.Rep[Double]],r.asInstanceOf[impl.Rep[Double]]) // maybe one of the args need to be casted long->double
+      case _ => sys.error("mul")
+    }
+    def add(l:impl.Rep[Any], r:impl.Rep[Any], tp:Type) = tp match {
+      case TypeLong => impl.numeric_plus(l.asInstanceOf[impl.Rep[Long]],r.asInstanceOf[impl.Rep[Long]])
+      case TypeDouble => impl.numeric_plus(l.asInstanceOf[impl.Rep[Double]],r.asInstanceOf[impl.Rep[Double]]) // maybe one of the args need to be casted long->double
+      // XXX: strings and dates
+      case _ => sys.error("add")
+    }
+    def cmp2[T:Ordering:Manifest](l:impl.Rep[T],r:impl.Rep[T],op:OpCmp): impl.Rep[Boolean] = op match {
+      case OpEq => impl.equals(l,r)
+      case OpNe => impl.notequals(l,r)
+      case OpGt => impl.ordering_gt(l,r)
+      case OpGe => impl.ordering_gteq(l,r)
+    }
+    def cmp(l:impl.Rep[Any], r:impl.Rep[Any], tl:Type, tr:Type, op:OpCmp) = {
+      val tp = (tl,tr) match { case (t1,t2) if t1==t2 => t1 case _ => TypeDouble }  
+      tp match {
+        case TypeLong => cmp2(l.asInstanceOf[impl.Rep[Long]],r.asInstanceOf[impl.Rep[Long]],op)
+        case TypeDouble => cmp2(l.asInstanceOf[impl.Rep[Double]],r.asInstanceOf[impl.Rep[Double]],op) // maybe one of the args need to be casted long->double
+        // XXX: strings and dates
+        case _ => sys.error("cmp")
+      }
+    }
+    // ----
 
     var exprrrr = ""
-    def expr(ex:Expr,ctx:LMSContext):(impl.Rep[_],LMSContext) = ex match {
-      case Mul(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (numeric_times(sl,sr,typeManifest(l.tp, r.tp)),cr)
-      case Add(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (numeric_plus(sl,sr,typeManifest(l.tp, r.tp)),cl++cr)
-      case Cmp(l,r,op) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (cmp(sl,op,sr,typeManifest(l.tp, r.tp)),cl++cr)
+    def expr(ex:Expr,ctx:Ctx):(impl.Rep[_],Ctx) = ex match {
+      case Mul(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (mul(sl,sr,ex.tp),cr)
+      case Add(l,r) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (add(sl,sr,ex.tp),cl++cr)
+      case Cmp(l,r,op) => val (sl,cl)=expr(l,ctx); val (sr,cr)=expr(r,cl); (cmp(sl,sr,l.tp,r.tp,op),cl++cr)
       case Exists(e) => val (se,ce)=expr(e,ctx); (impl.__ifThenElse(impl.notequals(se,impl.unit(0)),impl.unit(1),impl.unit(0)),ce)
       //case Lift(n,e) => val (se,ce)=expr(e,ctx); val (sl,cl)=lift(n,se); (sl,cl++ce) //(sl, ctx + (n -> sl))
       //case AggSum(ks,e) => ks.toSet
@@ -64,18 +89,20 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case _ => exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Any], ctx) //sys.error("Unimplemented")
     }
 
-    def numeric_times[T:Numeric:Manifest](l: impl.Rep[T], r: impl.Rep[T], mf: Manifest[T]) = impl.numeric_times(l,r)
+    //def numeric_times[T:Numeric:Manifest](l: impl.Rep[T], r: impl.Rep[T], mf: Manifest[T]) = impl.numeric_times(l,r)
 
-    def numeric_plus[T:Numeric:Manifest](l: impl.Rep[T], r: impl.Rep[T], mf: Manifest[T]) = impl.numeric_plus(l,r)
+    //def numeric_plus[T:Numeric:Manifest](l: impl.Rep[T], r: impl.Rep[T], mf: Manifest[T]) = impl.numeric_plus(l,r)
 
+    /*
     def cmp[T:Ordering:Manifest](l: impl.Rep[T], op: OpCmp, r: impl.Rep[T], mf: Manifest[T]): impl.Rep[Boolean] = op match {
       case OpEq => impl.equals(l,r)
       case OpNe => impl.notequals(l,r)
       case OpGt => impl.ordering_gt(l,r)
       case OpGe => impl.ordering_gteq(l,r)
     }
+    */
 
-    /*def lift[T](name: String, e: impl.Rep[T], ctx: LMSContext) = {
+    /*def lift[T](name: String, e: impl.Rep[T], ctx: Ctx) = {
       if(ctx.contains(name)) {
 
       } else {
