@@ -77,11 +77,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           case _ => sys.error("lift")
         },newCtx)
       )
-      //case Apply(fn,tp,as) =>
-
-      //case Apply(fn,tp,as) =>
-      //  val (vs,cn:LMSContext) = ((List[Rep[_]](),ctx0) /: as) { case ((vs,c1),e) => val (v,c2) = expr(e,ctx); (vs:::v::Nil,c1++c2) }
-      //  ( /* Apply(fn,vs) */ impl.unit(-10),cn) // XXX: call appropriate LMS node
+      case Apply(fn,tp,as) =>
+        val avcs = as.map(co(_,ctx))
+        (impl.k3apply(fn,avcs.map(_._1),tp), avcs.flatMap(_._2))
 
       case MapRef(n,tp,ks) => 
         if(ks.size == 0) { //sure it's a K3Var
@@ -104,13 +102,39 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             (impl.k3foreach(slicedMapRef, keyArg, valueArg , body), newCtx)
           }
         }
-      //case AggSum(ks,e) => ks.toSet
-      //case MapRef(n,tp,ks) => ks.toSet
+      case agg@AggSum(ks,e) => 
+        if(ks.size == 0) { //sure it's a K3Var
+          val acc = newVariable(ex.tp)
+          val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => var_plusequals(acc, v))
+          co(acc, ctx)
+        } else { // otherwise it's a K3Map
+          val acc = impl.k3temp(agg.tks,ex.tp)
+
+          val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => impl.k3add(acc, createTupple(ks.map( (ctx ++ ctxInner) )), v))
+          
+          val keyArg = freshRef(agg.tks)
+          val valueArg = freshRef(ex.tp)
+          val innerCtx = ctx ++ ks.zipWithIndex.map{ case (kPart,i) => (kPart,accessTuple(keyArg,ks.size,i)) }
+          val (body, newCtx) = co(valueArg, innerCtx)
+
+          (impl.k3foreach(acc, keyArg, valueArg , body), newCtx)
+          
+        }
       case _ => exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Unit], ctx) //sys.error("Unimplemented")
     }
 
-    def accessTuple(tuple: Rep[_],sz: Int, idx: Int): Rep[_] = {
+    def newVariable(tp: Type): impl.Var[Any] = tp match {
+      case TypeLong => impl.var_new(impl.unit(0L))
+      case TypeDouble => impl.var_new(impl.unit(0.0))
+      case _ => sys.error("newVariable(tp) only allowed on numeric types")
+    }
 
+    def accessTuple(tuple: Rep[_],sz: Int, idx: Int): Rep[_] = {
+      
+    }
+
+    def createTupple(elems: List[Rep[_]]) = {
+      
     }
     //def extractMapKeyParamType(mapName: String): 
 
