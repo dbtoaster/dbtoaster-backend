@@ -106,7 +106,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
     //maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) name+"[] ++ " else name+"["+keys+"] ++ ") }+
     //"\n\nHiii\n\n%s\n\niiiH\n\n".format(outStream.toString) +
-    "def on"+name+"("+args.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+
+    "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+
     "  "+impl.emit(impl.unit(1.0))+
     "  hello2"+ //ind(t.stmts.map{s=>genStmt(s,b)}.mkString)
     "\n}"

@@ -30,7 +30,6 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-  def tpe(tp:Type):String = { val s=tp.toString; s.substring(0,1).toUpperCase+s.substring(1).toLowerCase }
   def bnd(e:Expr):Set[String] = e.collect { case Lift(n,e) => bnd(e)+n case AggSum(ks,e) => ks.toSet case MapRef(n,tp,ks) => ks.toSet }
 
   // Methods involving only constants are hoisted as global constants
@@ -69,7 +68,7 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks=a.agg.map{x=>x._1}
           val tmp = Some(a.agg)
-          "val "+a0+" = K3Map.temp["+tup(a.agg.map{x=>tpe(x._2)})+","+tpe(ex.tp)+"]()\n"+
+          "val "+a0+" = K3Map.temp["+tup(a.agg.map{x=>x._2.toScala})+","+ex.tp.toScala+"]()\n"+
           cpsExpr(el,b,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"+
           cpsExpr(er,b,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"+
           a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
@@ -78,14 +77,14 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
     case a@AggSum(ks,e) =>
       val fs = ks.filter{k=> !b.contains(k)} // free variables
       val agg=fs.map{f=>(f,(ks zip a.tks).toMap.apply(f)) }
-      if (ks.size==0 || fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+tpe(ex.tp)+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      if (ks.size==0 || fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
         case Some(t) if t==agg => cpsExpr(e,b,co,am)
         case _ =>
           val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
           val a0=fresh("agg")
           val tmp=Some(agg) // declare this as summing target
-          "val "+a0+" = K3Map.temp["+tup(agg.map(x=>tpe(x._2)))+","+tpe(e.tp)+"]()\n"+
+          "val "+a0+" = K3Map.temp["+tup(agg.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
           cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,e.tp,fs),b,co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
@@ -109,7 +108,7 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
     val b=as.map{_._1}.toSet
-    "def on"+n+"("+as.map{a=>a._1+":"+tpe(a._2)} .mkString(", ")+") {\n"+ind(t.stmts.map{s=>genStmt(s,b)}.mkString)+"\n}"
+    "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(t.stmts.map{s=>genStmt(s,b)}.mkString)+"\n}"
   }
 
   // Lazy slicing (secondary) indices computation
@@ -120,19 +119,19 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
   }
 
   def genMap(m:MapDef):String = {
-    if (m.keys.size==0) "val "+m.name+" = new K3Var["+tpe(m.tp)+"]();"
+    if (m.keys.size==0) "val "+m.name+" = new K3Var["+m.tp.toScala+"]();"
     else {
-      val tk = tup(m.keys.map(x=>tpe(x._2)))
+      val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())
       val ix = if (s.size==0) "" else "List("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+")"
-      "val "+m.name+" = K3Map.make["+tk+","+tpe(m.tp)+"]("+ix+");"
+      "val "+m.name+" = K3Map.make["+tk+","+m.tp.toScala+"]("+ix+");"
     }
   }
 
   def genSystem(s0:System):String = {
     def ev(s:Schema,short:Boolean=true):(String,String) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
-      ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+tpe(t)}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
+      ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
     }
     val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
     val ms = s0.maps.map(genMap).mkString("\n") // maps
@@ -141,7 +140,7 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
         "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,"+i+")=>"+s.schema.name+".add("+o+",1L) },"+ad+","+sp+")))).read;" }.mkString("\n");
       if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else ""
     }
-    val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tpe(tp)+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
+    val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
     
     freshClear()
     "class "+cls+" extends Actor {\n"+ind(
@@ -186,7 +185,7 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
   }
 
   // Helper that contains the main and stream generator
-  def genViewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); if (m._1.size==0) tpe(m._2) else "Map["+tup(m._1.map(tpe))+","+tpe(m._2)+"]" })
+  def genViewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); if (m._1.size==0) m._2.toScala else "Map["+tup(m._1.map(_.toScala))+","+m._2.toScala+"]" })
   def genHelper(s0:System) = {
     "package ddbt.generated\nimport ddbt.lib._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind(

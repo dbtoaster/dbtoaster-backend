@@ -9,7 +9,7 @@ package ddbt.ast
 sealed abstract class Tree // Generic AST node
 
 // ---------- Data types
-sealed abstract class Type extends Tree
+sealed abstract class Type extends Tree { def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase }
 //case object TypeChar extends Type /*  8 bit */ { override def toString="char" }
 //case object TypeShort extends Type /*16 bit */ { override def toString="short" }
 //case object TypeInt  extends Type /* 32 bit */ { override def toString="int" }

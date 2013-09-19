@@ -103,11 +103,11 @@ object UnitTest {
         "val (t,res) = run["+cls+","+gen.genViewType(sys)+"]("+mystr+")\n"+
         set.out.map { case (n,o) =>
           val (kt,vt) = qt(n)
-          val qtp = "["+tup(kt.map(gen.tpe))+","+gen.tpe(vt)+"]"
+          val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
           val fmt = (kt:::vt::Nil).mkString(",")
           val kv = if (kt.size==0) "" else {
             val ll=(kt:::vt::Nil).zipWithIndex
-            "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+gen.tpe(t)}.mkString(",")+") => ("+tup(ll.reverse.tail.reverse.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n"
+            "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.reverse.tail.reverse.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n"
           }
           "it(\""+n+" correct\") {"+ind("\n"+kv+
           "diff(res"+(if (sys.queries.size>1) "._"+(qid(n)+1) else "")+", "+(o match {
