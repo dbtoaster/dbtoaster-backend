@@ -89,7 +89,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         if(ks.size == 0) { //sure it's a K3Var
           co(impl.k3get(ctx(n),Nil,tp), ctx0)
         } else { // otherwise it's a K3Map
-          val theMap = maps.filter(_.name == n)(0)
 
           val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
           if (ki.size==0) co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) // all keys are bound
@@ -102,7 +101,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             }
             val keyArg = freshRef(getMapKeyTypes(n))
             val valueArg = freshRef(tp)
-            val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,theMap.keys(i)._2,ks.size,i)) }
+            val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,maps(n).keys(i)._2,ks.size,i)) }
             val (body, newCtx) = co(valueArg, innerCtx)
 
             (impl.k3foreach(slicedMapRef, keyArg, valueArg , body), newCtx)
@@ -149,7 +148,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     // }
     //def extractMapKeyParamType(mapName: String): 
 
-    def getMapKeyTypes(name: String): List[Type] = maps.filter(m=>m.name==name).head.keys.map(_._2)
+    def getMapKeyTypes(name: String): List[Type] = maps(name).keys.map(_._2)
 
     def tup(ks: List[Rep[_]]): Rep[_] = ks.size match {
       case 1 => ks.head
@@ -185,14 +184,14 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
 
     val ctxTrigger: LMSContext=(
-          maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) impl.fresh[K3Var[_]] else impl.fresh[K3Map[_,_]]) } union // XXX: we need here name-based k3maps
+          maps.map{ case (n, MapDef(name,_,keys,_)) => (name, if (keys.size==0) impl.fresh[K3Var[_]] else impl.fresh[K3Map[_,_]]) }.toList union // XXX: we need here name-based k3maps
           args.map{ case (name,tp) => (name,freshRef(/*impl,*/ tp)) }).toMap // we need here name-based references of correct type
 
     var resultSyms: List[Rep[_]] = t.stmts.map {
       case StmtMap(m,e,op,oi) =>
         val co = (r:Rep[_],c:LMSContext) => (op match {
-          case OpAdd => impl.k3add(ctxTrigger(m.name),Nil /*maps(XXX).keys.map(_._1).map(c)*/,r)
-          case OpSet => impl.k3set(ctxTrigger(m.name),Nil /*maps(XXX).keys.map(_._1).map(c)*/,r)
+          case OpAdd => impl.k3add(ctxTrigger(m.name),maps(m.name).keys.map(_._1).map(c),r)
+          case OpSet => impl.k3set(ctxTrigger(m.name),maps(m.name).keys.map(_._1).map(c),r)
         },c)
         expr(e,ctxTrigger,co)._1
 
@@ -220,8 +219,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   def freshRef(tp: List[Type]): impl.Sym[_] = freshRefManifest(man(tp))
   def freshRefManifest[T:Manifest](mf: Manifest[T]): impl.Sym[T] = impl.fresh[T]
 
-  var maps = List[MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
+  var maps = Map[String,MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
   override def genSystem(s0:System):String = {
-    maps=s0.maps; val r=super.genSystem(s0); maps=Nil; r
+    maps=s0.maps.map(m => (m.name,m)).toMap; val r=super.genSystem(s0); maps=Map[String,MapDef](); r
   }
 }
