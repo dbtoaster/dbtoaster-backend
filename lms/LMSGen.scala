@@ -11,6 +11,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   val impl = ScalaExpGen
   import impl.Rep
+  import ManifestHelper.man
   /*
   We need specific LMS nodes for
   - K3Map / K3Var / K3Temp : pass key as list of symbols, specific name as a string (automatic for temp)
@@ -84,23 +85,23 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
       case MapRef(n,tp,ks) => 
         if(ks.size == 0) { //sure it's a K3Var
-          co(k3get(ctx(n),Nil,tp), ctx0)
+          co(impl.k3get(ctx(n),Nil,tp), ctx0)
         } else { // otherwise it's a K3Map
           val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-          if (ki.size==0) co(k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) // all keys are bound
+          if (ki.size==0) co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) // all keys are bound
           else { 
             val mapRef = ctx(n)
             val slicedMapRef = if(ko.size > 0) {
-              k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)}))
+              impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
             } else {
               mapRef
             }
             val keyArg = freshRef(getMapKeyTypes(n))
             val valueArg = freshRef(tp)
-            val innerCtx = ctx ++ ks.zipWithIndex.filter( (k,v) => !ctx.contains(k) ).map( (kPart,i) => (kPart,accessTuple(keyArg,ks.size,i)) )
+            val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,ks.size,i)) }
             val (body, newCtx) = co(valueArg, innerCtx)
 
-            k3foreach(slicedMapRef, keyArg, valueArg , body)
+            (impl.k3foreach(slicedMapRef, keyArg, valueArg , body), newCtx)
           }
         }
       //case AggSum(ks,e) => ks.toSet
@@ -113,7 +114,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
     //def extractMapKeyParamType(mapName: String): 
 
-    def getMapKeyTypes(name: String): List[Type] = maps(name).keys.map(_._2)
+    def getMapKeyTypes(name: String): List[Type] = maps.filter(m=>m.name==name).head.keys.map(_._2)
 
     def tup(ks: List[Rep[_]]): Rep[_] = ks.size match {
       case 1 => ks.head
@@ -175,23 +176,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   def freshRef(tp: Type): impl.Sym[_] = freshRefManifest(man(tp))
-
   def freshRef(tp: List[Type]): impl.Sym[_] = freshRefManifest(man(tp))
-
   def freshRefManifest[T:Manifest](mf: Manifest[T]): impl.Sym[T] = impl.fresh[T]
-
-/*
-  def typeManifest(tp:Type, orTp:Type):Manifest[_] = tp match {
-    case TypeLong => typeManifest(orTp)
-    case _ => typeManifest(tp)
-  }
-  
-  def tupleManifest(ts:List[Type]) = {
-    val ms:List[Manifest[_]] = ts map typeManifest
-    val cls:java.lang.Class[_] = Class.forName("scala.Tuple"+ts.size)
-    scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
-  }
-*/
 
   var maps = List[MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
   override def genSystem(s0:System):String = {
