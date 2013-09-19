@@ -24,8 +24,8 @@ object ManifestHelper {
  * The ExpGen objects instrument the LMS code generation such that we can
  * convert a Rep[T] into its String representation in the target code.
  */
-object ScalaExpGen extends ScalaOpsPkgExp /*with ExpGen*/ { self =>
-  class MyCodeGen extends ScalaCodeGenPkg {
+object ScalaExpGen extends ScalaOpsPkgExp with M3OpsExp { self =>
+  class MyCodeGen extends ScalaCodeGenPkg with ScalaGenM3Ops {
     val IR: self.type = self
     def emitSource[T:Manifest](sym:Exp[T]) : String = {
       val outStream = new java.io.StringWriter

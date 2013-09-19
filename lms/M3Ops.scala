@@ -12,13 +12,13 @@ trait M3Ops extends Base {
 
   // Nodes creation
   def named(name:String,tp:Type):Rep[_]
-  def k3temp(key:List[Type],value:Type):Rep[K3Temp[_,_]]
+  def k3temp(key_tp:List[Type],value_tp:Type):Rep[K3Temp[_,_]]
   // Operations on K3Map, K3Var and K3Temp
   def k3get(map:K3M, key:List[Rep[_]],value_tp:Type):Rep[_]
   def k3set(map:K3M, key:List[Rep[_]],value:Rep[_]):Rep[Unit]
   def k3add(map:K3M, key:List[Rep[_]],value:Rep[_]):Rep[Unit]
-  def k3foreach(map:K3M, f:(Rep[_],Rep[_])=>Rep[Unit]):Rep[Unit]
-  def k3aggr[T:Manifest](map:K3M, f:(Rep[_],Rep[_])=>Rep[T]):Rep[T]
+  def k3foreach(map:K3M, f:(Rep[_],Rep[_])=>Rep[Unit], key_tp:List[Type], value_tp:Type) : Rep[Unit]
+  def k3aggr[T:Manifest](map:K3M, f:(Rep[_],Rep[_])=>Rep[T], key_tp:List[Type], value_tp:Type, res_tp:Type) : Rep[_]
   def k3slice(map:K3M,part:Int,partKey:Rep[_]):K3M
   def k3clear(map:K3M):Rep[Unit]
   // Function application
@@ -32,8 +32,8 @@ trait M3OpsExp extends BaseExp with M3Ops {
   def k3get(map:K3M, key:List[Exp[_]],value_tp:Type) = K3Get(map,key,man(value_tp))
   def k3set(map:K3M, key:List[Exp[_]],value:Exp[_]) = K3Set(map,key,value)
   def k3add(map:K3M, key:List[Exp[_]],value:Exp[_]) = K3Add(map,key,value)
-  def k3foreach[K:Manifest,V:Manifest](map:K3M, f:(Exp[K],Exp[V])=>Exp[Unit]) = K3Foreach(map,f)
-  def k3aggr[T:Manifest](map:K3M, f:(Exp[_],Exp[_])=>Exp[T]) = K3Aggr(map,f)
+  def k3foreach(map:K3M, f:(Exp[_],Exp[_])=>Exp[Unit], key_tp:List[Type], value_tp:Type) = K3Foreach(map,f,man(key_tp),man(value_tp))
+  def k3aggr[T:Manifest](map:K3M, f:(Rep[_],Rep[_])=>Rep[T], key_tp:List[Type], value_tp:Type, res_tp:Type) = K3Aggr(map,f,man(key_tp),man(value_tp),manifest[T])
   def k3slice(map:K3M,part:Int,partKey:Exp[_]) = K3Slice(map,part,partKey)
   def k3clear(map:K3M) = K3Clear(map)
   def k3apply(fn:String,args:List[Rep[_]],tp:Type) = fn match {
@@ -52,8 +52,8 @@ trait M3OpsExp extends BaseExp with M3Ops {
   case class K3Get[T](map:K3M, key:List[Exp[_]],mt:Manifest[T]) extends Def[T]
   case class K3Set(map:K3M, key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
   case class K3Add(map:K3M, key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
-  case class K3Foreach[K:Manifest,V:Manifest](map:K3M, f:(Exp[K],Exp[V])=>Exp[Unit]) extends Def[Unit] { val (k,v)=(fresh[K],fresh[V]); val body=f(k,v) }
-  case class K3Aggr[T:Manifest](map:K3M, f:(Exp[_],Exp[_])=>Exp[T]) extends Def[T] {}
+  case class K3Foreach[K,V](map:K3M, f:(Exp[K],Exp[V])=>Exp[Unit],mK:Manifest[K],mV:Manifest[V]) extends Def[Unit] { val (k,v)=(fresh[K](mK),fresh[V](mV)); val body=f(k,v) }
+  case class K3Aggr[K,V,T](map:K3M, f:(Exp[K],Exp[V])=>Exp[T], mK:Manifest[K],mV:Manifest[V],mT:Manifest[T]) extends Def[T] { val (k,v)=(fresh[K](mK),fresh[V](mV)); val body=f(k,v) }
   case class K3Slice(map:K3M,part:Int,partKey:Exp[_]) extends Def[K3Map[_,_]]
   case class K3Clear(map:K3M) extends Def[Unit]
   case class K3Apply[T](name:String,args:List[Rep[_]],mT:Manifest[T]) extends Def[T]
@@ -70,7 +70,7 @@ trait ScalaGenM3Ops extends ScalaGenBase {
     case K3Get(m,ks,_) => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
     case K3Set(m,ks,v) => stream.println(quote(m)+".set("+tup(ks map quote)+","+quote(v)+")")
     case K3Add(m,ks,v) => stream.println(quote(m)+".add("+tup(ks map quote)+","+quote(v)+")")
-    case f@K3Foreach(m,_) => stream.println(quote(m)+".foreach( ("+quote(f.k)+","+quote(f.v)+") => "+quote(f.body)+")")
+    case f@K3Foreach(m,_,_,_) => stream.println(quote(m)+".foreach( ("+quote(f.k)+","+quote(f.v)+") => "+quote(f.body)+")")
     //case K3Aggr(m,f) => emitValDef(sym, quote(m)+".aggr("+quote(f)+")")
     case K3Slice(m,p,pk) => emitValDef(sym, quote(m)+".slice("+p+","+quote(pk)+")")
     case K3Clear(m) => stream.println(quote(m)+".clear")
