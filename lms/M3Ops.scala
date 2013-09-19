@@ -14,10 +14,10 @@ trait M3Ops extends Base {
   def named(name:String,tp:Type):Rep[_]
   def k3temp(key_tp:List[Type],value_tp:Type):Rep[K3Temp[_,_]]
   // Operations on K3Map, K3Var and K3Temp
-  def k3get(map:K3M, key:List[Rep[_]],value_tp:Type):Rep[_]
+  def k3get(map:K3M, key:List[Rep[_]]=Nil,value_tp:Type):Rep[_]
   def k3set(map:K3M, key:List[Rep[_]],value:Rep[_]):Rep[Unit]
   def k3add(map:K3M, key:List[Rep[_]],value:Rep[_]):Rep[Unit]
-  def k3foreach(map:K3M, f:(Rep[_],Rep[_])=>Rep[Unit], key_tp:List[Type], value_tp:Type) : Rep[Unit]
+  def k3foreach(map:K3M, key: Rep[_], value: Rep[_], body:Rep[Unit]) : Rep[Unit]
   def k3aggr[T:Manifest](map:K3M, f:(Rep[_],Rep[_])=>Rep[T], key_tp:List[Type], value_tp:Type, res_tp:Type) : Rep[_]
   def k3slice(map:K3M,part:Int,partKey:Rep[_]):K3M
   def k3clear(map:K3M):Rep[Unit]
@@ -34,7 +34,7 @@ trait M3OpsExp extends BaseExp with M3Ops {
   def k3add(map:K3M, key:List[Exp[_]],value:Exp[_]) = K3Add(map,key,value)
   def k3foreach(map:K3M, f:(Exp[_],Exp[_])=>Exp[Unit], key_tp:List[Type], value_tp:Type) = K3Foreach(map,f,man(key_tp),man(value_tp))
   def k3aggr[T:Manifest](map:K3M, f:(Rep[_],Rep[_])=>Rep[T], key_tp:List[Type], value_tp:Type, res_tp:Type) = K3Aggr(map,f,man(key_tp),man(value_tp),manifest[T])
-  def k3slice(map:K3M,part:Int,partKey:Exp[_]) = K3Slice(map,part,partKey)
+  def k3slice(map:K3M,part:Int,partKey:List[Exp[_]]) = K3Slice(map,part,partKey)
   def k3clear(map:K3M) = K3Clear(map)
   def k3apply(fn:String,args:List[Rep[_]],tp:Type) = fn match {
     // inline here
