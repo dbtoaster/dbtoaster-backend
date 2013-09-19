@@ -78,13 +78,19 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         },newCtx)
       )
       case Apply(fn,tp,as) =>
-        val avcs = as.map(co(_,ctx))
-        (impl.k3apply(fn,avcs.map(_._1),tp), avcs.flatMap(_._2))
+        def ev2(es:List[Expr],vs:List[Rep[_]],c:LMSContext) : (Rep[Unit],LMSContext) = es match {
+          case x :: xs => expr(x,ctx++c,(v:Rep[_],nc:LMSContext) => ev2(xs,vs:::v::Nil,c++nc))
+          case Nil => co(impl.k3apply(fn,vs,tp),c)
+        }
+        ev2(as,Nil,ctx0)
+
 
       case MapRef(n,tp,ks) => 
         if(ks.size == 0) { //sure it's a K3Var
           co(impl.k3get(ctx(n),Nil,tp), ctx0)
         } else { // otherwise it's a K3Map
+          val theMap = maps.filter(_.name == n)(0)
+
           val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
           if (ki.size==0) co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) // all keys are bound
           else { 
@@ -96,7 +102,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             }
             val keyArg = freshRef(getMapKeyTypes(n))
             val valueArg = freshRef(tp)
-            val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,ks.size,i)) }
+            val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,theMap.keys(i)._2,ks.size,i)) }
             val (body, newCtx) = co(valueArg, innerCtx)
 
             (impl.k3foreach(slicedMapRef, keyArg, valueArg , body), newCtx)
@@ -105,16 +111,16 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case agg@AggSum(ks,e) => 
         if(ks.size == 0) { //sure it's a K3Var
           val acc = newVariable(ex.tp)
-          val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => var_plusequals(acc, v))
+          val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => (impl.var_plusequals(acc, v), ctxInner))
           co(acc, ctx)
         } else { // otherwise it's a K3Map
           val acc = impl.k3temp(agg.tks,ex.tp)
 
-          val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => impl.k3add(acc, createTupple(ks.map( (ctx ++ ctxInner) )), v))
+          val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => (impl.k3add(acc, ks.map( (ctx ++ ctxInner) ), v), ctxInner))
           
           val keyArg = freshRef(agg.tks)
           val valueArg = freshRef(ex.tp)
-          val innerCtx = ctx ++ ks.zipWithIndex.map{ case (kPart,i) => (kPart,accessTuple(keyArg,ks.size,i)) }
+          val innerCtx = ctx ++ ks.zipWithIndex.map{ case (kPart,i) => (kPart,accessTuple(keyArg,agg.tks(i),ks.size,i)) }
           val (body, newCtx) = co(valueArg, innerCtx)
 
           (impl.k3foreach(acc, keyArg, valueArg , body), newCtx)
@@ -129,13 +135,18 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case _ => sys.error("newVariable(tp) only allowed on numeric types")
     }
 
-    def accessTuple(tuple: Rep[_],sz: Int, idx: Int): Rep[_] = {
-      
+    def accessTuple(tuple: Rep[_],elemTp:Type,sz: Int, idx: Int)(implicit pos: scala.reflect.SourceContext): Rep[_] = sz match {
+        case 1 => tuple
+        case _ => impl.getClass.getDeclaredMethod("tuple%d_get%d".format(sz,idx+1),Class.forName("java.lang.Object"), Class.forName("scala.reflect.Manifest"), Class.forName("scala.reflect.SourceContext"))
+                   .invoke(impl, tuple, man(elemTp), pos).asInstanceOf[Rep[_]]
     }
 
-    def createTupple(elems: List[Rep[_]]) = {
-      
-    }
+    // def createTuple(elems: List[Rep[_]]): Rep[_] = elems.size match {
+    //   case 1 => impl.getClass.getDeclaredMethod("make_tuple1",impl.Exp[Any].getClass).invoke(impl,elems(0)).asInstanceOf[Rep[_]]
+    //   case 2 => impl.getClass.getDeclaredMethod("make_tuple2",impl.Exp[Any].getClass).invoke(impl,elems(0),elems(1)).asInstanceOf[Rep[_]]
+    //   case 3 => impl.getClass.getDeclaredMethod("make_tuple3",impl.Exp[Any].getClass).invoke(impl,elems(0),elems(1),elems(2)).asInstanceOf[Rep[_]]
+    //   case _ => sys.error("createTupple(elems) only allowed on tuples of size <= 3")
+    // }
     //def extractMapKeyParamType(mapName: String): 
 
     def getMapKeyTypes(name: String): List[Type] = maps.filter(m=>m.name==name).head.keys.map(_._2)
@@ -177,24 +188,30 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) impl.fresh[K3Var[_]] else impl.fresh[K3Map[_,_]]) } union // XXX: we need here name-based k3maps
           args.map{ case (name,tp) => (name,freshRef(/*impl,*/ tp)) }).toMap // we need here name-based references of correct type
 
-    t.stmts.foreach { s =>  s match {
-        case StmtMap(m,e,op,oi) => 
-          //val fop=op match { case OpAdd => "add" case OpSet => "set" }
-          //val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
-          //val init = (oi match {
-          //  case Some(ie) => cpsExpr(ie,b,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
-          //  case None => ""
-          //})
-          //clear+init+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
-          expr(e, ctxTrigger, (r:Rep[_],c:LMSContext) => (impl.unit(()), c))
-        case _ => sys.error("Unimplemented") // we leave room for other type of events
-      }
+    var resultSyms: List[Rep[_]] = t.stmts.map {
+      case StmtMap(m,e,op,oi) =>
+        val co = (r:Rep[_],c:LMSContext) => (op match {
+          case OpAdd => impl.k3add(ctxTrigger(m.name),Nil /*maps(XXX).keys.map(_._1).map(c)*/,r)
+          case OpSet => impl.k3set(ctxTrigger(m.name),Nil /*maps(XXX).keys.map(_._1).map(c)*/,r)
+        },c)
+        expr(e,ctxTrigger,co)._1
+
+        //val fop=op match { case OpAdd => "add" case OpSet => "set" }
+        //val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
+        //val init = (oi match {
+        //  case Some(ie) => cpsExpr(ie,b,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
+        //  case None => ""
+        //})
+        //clear+init+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
+                
+
+      case _ => sys.error("Unimplemented") // we leave room for other type of events
     }
 
     //maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) name+"[] ++ " else name+"["+keys+"] ++ ") }+
     //"\n\nHiii\n\n%s\n\niiiH\n\n".format(outStream.toString) +
     "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+
-    "  "+impl.emit(impl.unit(1.0))+
+    "  "+resultSyms.map{x => impl.emit(x)}+
     "  hello2"+ //ind(t.stmts.map{s=>genStmt(s,b)}.mkString)
     "\n}"
   }

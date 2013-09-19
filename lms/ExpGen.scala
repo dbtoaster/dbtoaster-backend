@@ -14,10 +14,11 @@ object ManifestHelper {
     case TypeDate => manifest[java.util.Date]
     case _ => sys.error("No manifest for "+tp)
   }
-  def man(ts:List[Type]):Manifest[_] = {
-    val ms:List[Manifest[_]] = ts map man
-    val cls:java.lang.Class[_] = Class.forName("scala.Tuple"+ts.size)
-    scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
+  def man(ts:List[Type]):Manifest[_] = ts.size match {
+    case 1 => man(ts.head)
+    case _ => val ms:List[Manifest[_]] = ts map man
+      val cls:java.lang.Class[_] = Class.forName("scala.Tuple"+ts.size)
+      scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
   }
 }
 
@@ -31,7 +32,7 @@ object ManifestHelper {
 object ScalaExpGen extends ScalaOpsPkgExp with M3OpsExp /*with ExpGen with K3MapExp with K3VarExp*/ { self =>
   class MyCodeGen extends ScalaCodeGenPkg with ScalaGenM3Ops /*with ScalaGenK3Map with ScalaGenK3Var*/ {
     val IR: self.type = self
-    def emitSource[T:Manifest](sym:Exp[T]) : String = {
+    def emitSource[T:Manifest](sym: => Exp[T]) : String = {
       val outStream = new java.io.StringWriter
       val outWriter = new java.io.PrintWriter(outStream)
       val body = reifyBlock(sym)
