@@ -76,8 +76,8 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
       }
     case a@AggSum(ks,e) =>
       val fs = ks.filter{k=> !b.contains(k)} // free variables
-      val agg=fs.map{f=>(f,(ks zip a.tks).toMap.apply(f)) }
-      if (ks.size==0 || fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      val agg = (ks zip a.tks).filter { case(n,t)=>fs.contains(n) } // aggregation keys as (name,type)
+      if (fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
         case Some(t) if t==agg => cpsExpr(e,b,co,am)
         case _ =>

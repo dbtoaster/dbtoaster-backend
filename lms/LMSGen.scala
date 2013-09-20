@@ -84,29 +84,26 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         }
         ev2(as,Nil,ctx0)
 
-
       case MapRef(n,tp,ks) => 
-        if(ks.size == 0) { //sure it's a K3Var
-          co(impl.k3get(ctx(n),Nil,tp), ctx0)
-        } else { // otherwise it's a K3Map
-          val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-          if (ki.size==0) co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) // all keys are bound
-          else { 
-            val mapRef = ctx(n)
-            val slicedMapRef = if(ko.size > 0) {
-              impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
-            } else {
-              mapRef
-            }
-            val keyArg = freshRef(getMapKeyTypes(n))
-            val valueArg = freshRef(tp)
-            val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,maps(n).keys(i)._2,ks.size,i)) }
-            val (body, newCtx) = co(valueArg, innerCtx)
-
-            (impl.k3foreach(slicedMapRef, keyArg, valueArg , body), newCtx)
+        val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
+        if(ki.size == 0) { // all keys are bound
+          co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) 
+        } else { // we need to iterate over all keys not bound (ki)
+          val mapRef = ctx(n)
+          val slicedMapRef = if(ko.size > 0) {
+            impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
+          } else {
+            mapRef
           }
+          val keyArg = freshRef(getMapKeyTypes(n))
+          val valueArg = freshRef(tp)
+          val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,maps(n).keys(i)._2,ks.size,i)) }
+          val (body, newCtx) = co(valueArg, innerCtx)
+
+          (impl.k3foreach(slicedMapRef, keyArg, valueArg , body), newCtx)
         }
-      case agg@AggSum(ks,e) => 
+
+      case agg@AggSum(ks,e) =>
         if(ks.size == 0) { //sure it's a K3Var
           val acc = newVariable(ex.tp)
           val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => (impl.var_plusequals(acc, v), ctxInner))
@@ -170,7 +167,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     def comparison(tp: Type, vl: Rep[_], op: OpCmp, vr: Rep[_]) = tp match {
       case TypeLong => cmp[Long](vl,op,vr)
       case TypeDouble => cmp[Double](vl,op,vr)
-      case _ => sys.error("Add(l,r) only allowed on numeric types")
+      // XXX: case TypeDate => (vl.asDate).getTime op (vr.asDate).getTime
+      case _ => sys.error("Cmp(l,r) only allowed on numeric types")
     }    
 
     def numeric_times[T:Numeric:Manifest](l: Rep[_], r: Rep[_]) = impl.numeric_times[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])

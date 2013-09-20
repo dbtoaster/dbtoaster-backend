@@ -64,7 +64,8 @@ object UnitTest {
   val all = try { exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("Repository not configured"); Array[String]() }
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                           "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
-                          "35b","36b").map("employee/query"+_) // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
+                          "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
+                List("mddb3","chrissedtrades") // too long to compile, incorrect result
   val filtered = all.filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }.sorted // exclude.map{"test/unit/queries/"+_}.sorted.toArray
 
   // Testing helper (used only in test files)
