@@ -21,7 +21,7 @@ trait M3Ops extends Base {
   def k3apply(fn:String,args:List[Rep[_]],tp:Type):Rep[_]
 }
 
-trait M3OpsExp extends BaseExp with M3Ops {
+trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
   import ManifestHelper.man
   def named(name:String,tp:Type) = Named(name,man(tp))
   def k3temp(key:List[Type],value:Type) = NewK3Temp(key,value,man(key),man(value))
