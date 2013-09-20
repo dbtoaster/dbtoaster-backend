@@ -9,6 +9,7 @@ import scala.virtualization.lms.common._
 
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
+  import ddbt.Utils.fresh
   val impl = ScalaExpGen
   import impl.Rep
   import ManifestHelper.man
@@ -93,8 +94,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           } else {
             mapRef
           }
-          val keyArg = freshRef(getMapKeyTypes(n))
-          val valueArg = freshRef(tp)
+          val keyArg = freshRefManifest(man(getMapKeyTypes(n)),fresh("mk"))
+          val valueArg = freshRef(tp,fresh("mv"))
           val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,maps(n).keys(i)._2,ks.size,i)) }
           val (body, newCtx) = co(valueArg, innerCtx)
 
@@ -103,20 +104,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
       case agg@AggSum(ks,e) =>
         val fs = ks.filter{k=> !ctx.contains(k)} // free variables
-/*
-      val fs = ks.filter{k=> !b.contains(k)} // free variables
-      val agg = (ks zip a.tks).filter { case(n,t)=>fs.contains(n) } // aggregation keys as (name,type)
-      if (fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
-      else am match {
-        case Some(t) if t==agg => cpsExpr(e,b,co,am)
-        case _ =>
-          val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
-          val a0=fresh("agg")
-          val tmp=Some(agg) // declare this as summing target
-          "val "+a0+" = K3Map.temp["+tup(agg.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
-          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,e.tp,fs),b,co)
-      }
-*/
         if(fs.size == 0) { //sure it's a K3Var
           val acc = newVariable(ex.tp)
           val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => (impl.var_plusequals(acc, v), ctxInner))
@@ -126,8 +113,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
           val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => (impl.k3add(acc, ks.map( (ctx ++ ctxInner) ), v), ctxInner))
           
-          val keyArg = freshRef(agg.tks)
-          val valueArg = freshRef(ex.tp)
+          val keyArg = impl.named(fresh("ak"))(man(agg.tks))
+          val valueArg = impl.named(fresh("av"))(man(ex.tp))
           val innerCtx = ctx ++ ks.zipWithIndex.map{ case (kPart,i) => (kPart,accessTuple(keyArg,agg.tks(i),ks.size,i)) }
           val (body, newCtx) = co(valueArg, innerCtx)
 
@@ -157,6 +144,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     // }
     //def extractMapKeyParamType(mapName: String): 
 
+    def getMapKeyNames(name: String): List[String] = maps(name).keys.map(_._1)
     def getMapKeyTypes(name: String): List[Type] = maps(name).keys.map(_._2)
 
     def tup(ks: List[Rep[_]]): Rep[_] = ks.size match {
@@ -223,9 +211,15 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     //ddbt.Utils.ind(resultSyms.map{x => impl.emit(x)}.mkString("//----\n"))+"\n}"
   }
 
-  def freshRef(tp: Type): impl.Sym[_] = freshRefManifest(man(tp))
-  def freshRef(tp: List[Type]): impl.Sym[_] = freshRefManifest(man(tp))
-  def freshRefManifest[T:Manifest](mf: Manifest[T]): impl.Sym[T] = impl.fresh[T]
+  def setSymName(s: impl.Sym[Any], name: String): impl.Sym[Any] = {
+    val SymNameAttributeKey = "sn"
+    s.attributes.update(SymNameAttributeKey, name)
+    s
+  }
+
+  def freshRef(tp: Type, name: String): impl.Sym[_] = freshRefManifest(man(tp), name)
+  def freshRef(tp: List[Type], name: String): impl.Sym[_] = freshRefManifest(man(tp), name)
+  def freshRefManifest[T:Manifest](mf: Manifest[T], name: String): impl.Sym[T] = setSymName(impl.fresh[T], name).asInstanceOf[impl.Sym[T]]
 
   var maps = Map[String,MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
   override def genSystem(s0:System):String = {
