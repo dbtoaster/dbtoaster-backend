@@ -184,7 +184,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
     val ctxTrigger: LMSContext=(
           maps.toList.map(_._2).map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) impl.fresh[K3Var[_]] else impl.fresh[K3Map[_,_]]) } union // XXX: we need here name-based k3maps
-          args.map{ case (name,tp) => (name,freshRef(/*impl,*/ tp)) }).toMap // we need here name-based references of correct type
+          args.map{ case (name,tp) => (name,impl.named(name,tp)) }).toMap
 
     var resultSyms: List[Rep[_]] = t.stmts.map {
       case StmtMap(m,e,op,oi) =>
