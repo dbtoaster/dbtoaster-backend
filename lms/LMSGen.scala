@@ -32,8 +32,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
 
-
-
     type LMSContext = Map[String, Rep[_]]
     val ctx0 = Map[String, Rep[_]]() // empty context
 
@@ -104,7 +102,22 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         }
 
       case agg@AggSum(ks,e) =>
-        if(ks.size == 0) { //sure it's a K3Var
+        val fs = ks.filter{k=> !ctx.contains(k)} // free variables
+/*
+      val fs = ks.filter{k=> !b.contains(k)} // free variables
+      val agg = (ks zip a.tks).filter { case(n,t)=>fs.contains(n) } // aggregation keys as (name,type)
+      if (fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      else am match {
+        case Some(t) if t==agg => cpsExpr(e,b,co,am)
+        case _ =>
+          val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
+          val a0=fresh("agg")
+          val tmp=Some(agg) // declare this as summing target
+          "val "+a0+" = K3Map.temp["+tup(agg.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
+          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,e.tp,fs),b,co)
+      }
+*/
+        if(fs.size == 0) { //sure it's a K3Var
           val acc = newVariable(ex.tp)
           val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => (impl.var_plusequals(acc, v), ctxInner))
           co(acc, ctx)
@@ -185,13 +198,13 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       args.map{ case (name,tp) => (name,impl.named(name,tp)) }
     ).toMap
 
-    def stmtExp(s:Stmt):impl.Exp[Unit] = s match {
+    def stmtExp(s:Stmt):impl.Block[Unit] = s match {
       case StmtMap(m,e,op,oi) =>
         val co = (r:Rep[_],c:LMSContext) => (op match {
           case OpAdd => impl.k3add(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
           case OpSet => impl.k3set(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
         },c)
-        expr(e,ctxTrigger,co)._1
+        impl.reifyEffects { expr(e,ctxTrigger,co)._1 }
 
         //val fop=op match { case OpAdd => "add" case OpSet => "set" }
         //val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }

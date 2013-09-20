@@ -26,29 +26,25 @@ object ManifestHelper {
  * The ExpGen objects instrument the LMS code generation such that we can
  * convert a Rep[T] into its String representation in the target code.
  */
-
-//trait ExpGen extends DSLBase with ScalaOpsPkg {}
-
 object ScalaExpGen extends ScalaOpsPkgExp with M3OpsExp /*with ExpGen with K3MapExp with K3VarExp*/ { self =>
   class MyCodeGen extends ScalaCodeGenPkg with ScalaGenM3Ops /*with ScalaGenK3Map with ScalaGenK3Var*/ {
     val IR: self.type = self
-    def emitSource[T:Manifest](sym: => Exp[T]) : String = {
+    def emitSource[T:Manifest](sym: => Exp[T]) : String = emitSource(reifyBlock(sym))
+    def emitSource[T:Manifest](body: Block[T]) : String = {
       val outStream = new java.io.StringWriter
       val outWriter = new java.io.PrintWriter(outStream)
-      val body = reifyBlock(sym)
-      //val staticData = getFreeDataBlock(body)
       withStream(outWriter) {
         val transformedBody = performTransformations(body)
         emitBlock(transformedBody)
-        if (manifest[T]!=manifest[Unit])
-          stream.println(quote(getBlockResult(transformedBody)))
+        if (manifest[T]!=manifest[Unit]) stream.println(quote(getBlockResult(transformedBody)))
       }
-      //staticData
       outStream.toString
     }
   }
   val codegen = new MyCodeGen
   def emit[T:Manifest](sym:Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
+  def emit[T:Manifest](blk:Block[T]) = { assert(codegen ne null); codegen.emitSource(blk) }
+  
 }
 
 // XXX: implement the counterpart for C/C++
