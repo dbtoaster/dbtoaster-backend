@@ -9,6 +9,7 @@ trait M3Ops extends Base {
   // Nodes creation
   def named(name:String,tp:Type):Rep[_]
   def named[T](name:String)(implicit mT:Manifest[T]):Rep[T]
+  def k3var(value:Type) : Rep[K3Var[_]]
   def k3temp(key_tp:List[Type],value_tp:Type):Rep[K3Temp[_,_]]
   // Operations on K3Map, K3Var and K3Temp
   def k3get(map:Rep[_], key:List[Rep[_]]=Nil,value_tp:Type):Rep[_]
@@ -26,6 +27,7 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
   import ManifestHelper.man
   def named(name:String,tp:Type) = Named(name)(man(tp))
   def named[T](name:String)(implicit mT:Manifest[T]) = Named(name)
+  def k3var(value:Type) = NewK3Var(value,man(value))
   def k3temp(key:List[Type],value:Type) = NewK3Temp(key,value,man(key),man(value))
   def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = K3Get(map,key,man(value_tp))
   def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = K3Set(map,key,value)
@@ -50,6 +52,7 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
     case _ => K3Apply(fn,args,man(tp)) // fallback for large or unknown functions
   }
   case class Named[T](n:String)(implicit mT:Manifest[T]) extends Exp[T]
+  case class NewK3Var[K,V](value:Type,mV:Manifest[V]) extends Def[K3Var[_]]
   case class NewK3Temp[K,V](key:List[Type],value:Type,mK:Manifest[K],mV:Manifest[V]) extends Def[K3Temp[_,_]]
   case class K3Get[T](map:Exp[_], key:List[Exp[_]],mt:Manifest[T]) extends Def[T]
   case class K3Set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
@@ -68,6 +71,7 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect {
   import ddbt.Utils.tup
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     //case Named(n,_) => emitValDef(sym, n)
+    case NewK3Var(v,_) => emitValDef(sym, "new K3Var["+v.toScala+"]()")
     case NewK3Temp(ks,v,_,_) => emitValDef(sym, "K3Temp.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
     case K3Get(m,ks,_) => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
     case K3Set(m,ks,v) => stream.println(quote(m)+".set("+tup(ks map quote)+","+quote(v)+")")

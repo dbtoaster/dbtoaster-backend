@@ -103,28 +103,17 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         }
 
       case agg@AggSum(ks,e) =>
-        val fs = ks.filter{k=> !ctx.contains(k)}
-        
-        /* // free variables
-        val (acc,coInner) = if(fs.size==0) { // K3Var (currently a simple value)
-          val acc = newVariable(ex.tp)
-          (acc, (v: Rep[_], ctxInner: LMSContext) => (impl.var_plusequals(acc, v), ctxInner))
-        } else { // K3Map
-        */
-        val acc = impl.k3temp(agg.tks,ex.tp)
+        val agg_keys:List[Type] = (ks zip agg.tks).filter(k=> !ctx.contains(k._1)).map(_._2) // the aggregation is only made on free variables
+        val acc = if (agg_keys.size==0) impl.k3var(ex.tp) else impl.k3temp(agg_keys,ex.tp)
         val coInner = (v: Rep[_], ctxInner: LMSContext) => (impl.k3add(acc, ks.map( (ctx ++ ctxInner) ), v), ctxInner)
-        //}
         
-        //var blkInner = impl.reifyEffects {  }
-        
-        //val (innerBlock, _) = expr(e, ctx, coInner)
-
         val keyArg = impl.named(fresh("ak"))(man(agg.tks))
         val valueArg = impl.named(fresh("av"))(man(ex.tp))
         val innerCtx = ctx ++ ks.zipWithIndex.map{ case (kPart,i) => (kPart,accessTuple(keyArg,agg.tks(i),ks.size,i)) }
         val (body, newCtx) = co(valueArg, innerCtx)
-
-        (impl.k3foreach(acc, keyArg, valueArg , expr(e,ctx,coInner)._1 ), newCtx)
+        
+        lazy val innerBlock = expr(e,ctx,coInner)._1
+        (impl.k3foreach(acc, keyArg, valueArg , innerBlock ), newCtx)
 
       case _ => exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Unit], ctx) //sys.error("Unimplemented")
     }
