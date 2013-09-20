@@ -88,19 +88,24 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         if(ki.size == 0) { // all keys are bound
           co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) 
         } else { // we need to iterate over all keys not bound (ki)
-          println("// Looping over "+n+" with "+ki)
+          //println("// Looping over "+n+" with "+ki)
           val mapRef = ctx(n)
           val slicedMapRef = if(ko.size > 0) {
             impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
           } else {
             mapRef
           }
-          val keyArg = freshRefManifest(man(getMapKeyTypes(n)),fresh("mk"))
-          val valueArg = freshRef(tp,fresh("mv"))
-          val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,maps(n).keys(i)._2,ks.size,i)) }
-          val (body, newCtx) = co(valueArg, innerCtx)
-
-          (impl.k3foreach(slicedMapRef, keyArg, valueArg , body), newCtx)
+          var newCtx = ctx0
+          var keyArg: Rep[_] = null
+          var valArg: Rep[_] = null
+          // XXX: error, we want the body to be inside the k3foreach, not printed before
+          val body = impl.reifyEffects {
+            keyArg = impl.named(fresh("mk"))(man(getMapKeyTypes(n)))
+            valArg = impl.named(fresh("mv"),tp)
+            val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,maps(n).keys(i)._2,ks.size,i)) }
+            val (b,nc) = co(valArg, innerCtx); newCtx=nc; b
+          }
+          (impl.k3foreach(slicedMapRef, keyArg, valArg , body), newCtx)
         }
 
       case agg@AggSum(ks,e) =>
@@ -180,11 +185,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case OpGt => impl.ordering_gt[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
       case OpGe => impl.ordering_gteq[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
     }
-
-
     
     val triggerBlock = impl.reifyEffects {
-      // Initialize context
+      // Trigger context
       val ctxTrigger:LMSContext=(
         maps.map{ case (name,MapDef(_,_,keys,_)) => if (keys.size==0) (name,impl.named[K3Var[_]](name,true)) else (name,impl.named[K3Map[_,_]](name,true)) }.toList union
         args.map{ case (name,tp) => (name,impl.named(name,tp)) }
@@ -197,26 +200,19 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             case OpSet => impl.k3set(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
           },c)
           expr(e,ctxTrigger,co)._1
-
-        //val fop=op match { case OpAdd => "add" case OpSet => "set" }
-        //val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
-        //val init = (oi match {
-        //  case Some(ie) => cpsExpr(ie,b,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
-        //  case None => ""
-        //})
-        //clear+init+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
+          //val fop=op match { case OpAdd => "add" case OpSet => "set" }
+          //val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
+          //val init = (oi match {
+          //  case Some(ie) => cpsExpr(ie,b,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
+          //  case None => ""
+          //})
+          //clear+init+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
 
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
       impl.unit(())
     }
-    
-    //maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) name+"[] ++ " else name+"["+keys+"] ++ ") }+
-    //"\n\nHiii\n\n%s\n\niiiH\n\n".format(outStream.toString) +
-    "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+
-    ddbt.Utils.ind(impl.emit(triggerBlock))+"\n}"
-    //ddbt.Utils.ind(t.stmts.map{s => impl.emit( stmtExp(s) ) }.mkString("// ----\n"))+"\n}"
-    //ddbt.Utils.ind(resultSyms.map{x => impl.emit(x)}.mkString("//----\n"))+"\n}"
+    "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(impl.emit(triggerBlock))+"\n}"
   }
 
   def setSymName(s: impl.Sym[Any], name: String): impl.Sym[Any] = {
@@ -225,9 +221,11 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     s
   }
 
+  /*
   def freshRef(tp: Type, name: String): impl.Sym[_] = freshRefManifest(man(tp), name)
   def freshRef(tp: List[Type], name: String): impl.Sym[_] = freshRefManifest(man(tp), name)
   def freshRefManifest[T:Manifest](mf: Manifest[T], name: String): impl.Sym[T] = setSymName(impl.fresh[T], name).asInstanceOf[impl.Sym[T]]
+  */
 
   var maps = Map[String,MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
   override def genSystem(s0:System):String = {
