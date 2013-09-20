@@ -42,7 +42,7 @@ object ScalaExpGen extends ScalaOpsPkgExp with M3OpsExp /*with ExpGen with K3Map
     }
   }
   val codegen = new MyCodeGen
-  def emit[T:Manifest](sym:Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
+  def emit[T:Manifest](sym: => Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
   def emit[T:Manifest](blk:Block[T]) = { assert(codegen ne null); codegen.emitSource(blk) }
   
 }

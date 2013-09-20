@@ -88,6 +88,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         if(ki.size == 0) { // all keys are bound
           co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) 
         } else { // we need to iterate over all keys not bound (ki)
+          println("// Looping over "+n+" with "+ki)
           val mapRef = ctx(n)
           val slicedMapRef = if(ko.size > 0) {
             impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
@@ -109,11 +110,12 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         val coAcc = (v: Rep[_], ctxAcc: LMSContext) => (impl.k3add(acc, ks.map(ctx ++ ctxAcc), v), ctxAcc)
         expr(e,ctx,coAcc) // returns (Rep[Unit],ctx) and we ignore ctx
         // Iterate over acc and call original continuation
-        val keyArg = impl.named(fresh("ak"))(man(agg.tks))
-        val valueArg = impl.named(fresh("av"))(man(ex.tp))
         
         if (agg_keys.size==0) co(impl.k3get(acc,Nil,ex.tp),ctx) // accumulator is a single result
         else {
+          val keyArg = impl.named(fresh("ak"))(man(agg_keys.map(_._2)))
+          val valueArg = impl.named(fresh("av"))(man(ex.tp))
+
           val iterCtx = ctx ++ agg_keys.zipWithIndex.map{ case ((n,t),i) => (n,accessTuple(keyArg,t,agg_keys.size,i)) }
           lazy val (body, newCtx) = co(valueArg, iterCtx)
           (impl.k3foreach(acc, keyArg, valueArg , body ), newCtx)
@@ -179,18 +181,22 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case OpGe => impl.ordering_gteq[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
     }
 
-    val ctxTrigger: LMSContext=(
-      maps.map{ case (name,MapDef(_,_,keys,_)) => if (keys.size==0) (name,impl.named[K3Var[_]](name)) else (name,impl.named[K3Map[_,_]](name)) }.toList union
-      args.map{ case (name,tp) => (name,impl.named(name,tp)) }
-    ).toMap
 
-    def stmtExp(s:Stmt):impl.Block[Unit] = s match {
-      case StmtMap(m,e,op,oi) =>
-        val co = (r:Rep[_],c:LMSContext) => (op match {
-          case OpAdd => impl.k3add(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
-          case OpSet => impl.k3set(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
-        },c)
-        impl.reifyEffects { expr(e,ctxTrigger,co)._1 }
+    
+    val triggerBlock = impl.reifyEffects {
+      // Initialize context
+      val ctxTrigger:LMSContext=(
+        maps.map{ case (name,MapDef(_,_,keys,_)) => if (keys.size==0) (name,impl.named[K3Var[_]](name,true)) else (name,impl.named[K3Map[_,_]](name,true)) }.toList union
+        args.map{ case (name,tp) => (name,impl.named(name,tp)) }
+      ).toMap
+      // Execute each statement
+      t.stmts.map {
+        case StmtMap(m,e,op,oi) =>
+          val co = (r:Rep[_],c:LMSContext) => (op match {
+            case OpAdd => impl.k3add(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
+            case OpSet => impl.k3set(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
+          },c)
+          expr(e,ctxTrigger,co)._1
 
         //val fop=op match { case OpAdd => "add" case OpSet => "set" }
         //val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
@@ -200,12 +206,16 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         //})
         //clear+init+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
 
-      case _ => sys.error("Unimplemented") // we leave room for other type of events
+        case _ => sys.error("Unimplemented") // we leave room for other type of events
+      }
+      impl.unit(())
     }
+    
     //maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) name+"[] ++ " else name+"["+keys+"] ++ ") }+
     //"\n\nHiii\n\n%s\n\niiiH\n\n".format(outStream.toString) +
     "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+
-    ddbt.Utils.ind(t.stmts.map{s => impl.emit( stmtExp(s) ) }.mkString("// ----\n"))+"\n}"
+    ddbt.Utils.ind(impl.emit(triggerBlock))+"\n}"
+    //ddbt.Utils.ind(t.stmts.map{s => impl.emit( stmtExp(s) ) }.mkString("// ----\n"))+"\n}"
     //ddbt.Utils.ind(resultSyms.map{x => impl.emit(x)}.mkString("//----\n"))+"\n}"
   }
 
