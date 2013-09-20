@@ -30,9 +30,9 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
   def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = K3Get(map,key,man(value_tp))
   def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = K3Set(map,key,value)
   def k3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = K3Add(map,key,value)
-  def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = K3Foreach(map,key,value,reifyEffectsHere(body))
-  def k3aggr(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[_], body_tp:Type) = { //K3Aggr(map,key,value,reifyEffectsHere(body),man(body_tp))
-    def agg[T](implicit mT:Manifest[T]) = K3Aggr(map,key,value,reifyEffectsHere(body.asInstanceOf[Exp[T]]),mT)
+  def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = K3Foreach(map,key,value,reifyEffects(body))
+  def k3aggr(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[_], body_tp:Type) = {
+    def agg[T](implicit mT:Manifest[T]) = K3Aggr(map,key,value,reifyEffects(body.asInstanceOf[Exp[T]]),mT)
     agg(man(body_tp))
   }
   
@@ -83,5 +83,4 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect {
     case Named(n) => n
     case _ => super.quote(x)
   }
-
 }

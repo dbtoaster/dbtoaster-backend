@@ -103,24 +103,29 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         }
 
       case agg@AggSum(ks,e) =>
-        val fs = ks.filter{k=> !ctx.contains(k)} // free variables
-        if(fs.size == 0) { //sure it's a K3Var
+        val fs = ks.filter{k=> !ctx.contains(k)}
+        
+        /* // free variables
+        val (acc,coInner) = if(fs.size==0) { // K3Var (currently a simple value)
           val acc = newVariable(ex.tp)
-          val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => (impl.var_plusequals(acc, v), ctxInner))
-          co(acc, ctx)
-        } else { // otherwise it's a K3Map
-          val acc = impl.k3temp(agg.tks,ex.tp)
+          (acc, (v: Rep[_], ctxInner: LMSContext) => (impl.var_plusequals(acc, v), ctxInner))
+        } else { // K3Map
+        */
+        val acc = impl.k3temp(agg.tks,ex.tp)
+        val coInner = (v: Rep[_], ctxInner: LMSContext) => (impl.k3add(acc, ks.map( (ctx ++ ctxInner) ), v), ctxInner)
+        //}
+        
+        //var blkInner = impl.reifyEffects {  }
+        
+        //val (innerBlock, _) = expr(e, ctx, coInner)
 
-          val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => (impl.k3add(acc, ks.map( (ctx ++ ctxInner) ), v), ctxInner))
-          
-          val keyArg = impl.named(fresh("ak"))(man(agg.tks))
-          val valueArg = impl.named(fresh("av"))(man(ex.tp))
-          val innerCtx = ctx ++ ks.zipWithIndex.map{ case (kPart,i) => (kPart,accessTuple(keyArg,agg.tks(i),ks.size,i)) }
-          val (body, newCtx) = co(valueArg, innerCtx)
+        val keyArg = impl.named(fresh("ak"))(man(agg.tks))
+        val valueArg = impl.named(fresh("av"))(man(ex.tp))
+        val innerCtx = ctx ++ ks.zipWithIndex.map{ case (kPart,i) => (kPart,accessTuple(keyArg,agg.tks(i),ks.size,i)) }
+        val (body, newCtx) = co(valueArg, innerCtx)
 
-          (impl.k3foreach(acc, keyArg, valueArg , body), newCtx)
-          
-        }
+        (impl.k3foreach(acc, keyArg, valueArg , expr(e,ctx,coInner)._1 ), newCtx)
+
       case _ => exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Unit], ctx) //sys.error("Unimplemented")
     }
 
