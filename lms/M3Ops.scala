@@ -8,6 +8,7 @@ import scala.reflect.SourceContext
 trait M3Ops extends Base {
   // Nodes creation
   def named(name:String,tp:Type):Rep[_]
+  def named[T:Manifest](name:String):Rep[T]
   def k3temp(key_tp:List[Type],value_tp:Type):Rep[K3Temp[_,_]]
   // Operations on K3Map, K3Var and K3Temp
   def k3get(map:Rep[_], key:List[Rep[_]]=Nil,value_tp:Type):Rep[_]
@@ -24,6 +25,7 @@ trait M3Ops extends Base {
 trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
   import ManifestHelper.man
   def named(name:String,tp:Type) = Named(name)(man(tp))
+  def named[T:Manifest](name:String) = Named(name)
   def k3temp(key:List[Type],value:Type) = NewK3Temp(key,value,man(key),man(value))
   def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = K3Get(map,key,man(value_tp))
   def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = K3Set(map,key,value)

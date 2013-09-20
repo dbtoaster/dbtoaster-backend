@@ -40,7 +40,8 @@ object ScalaExpGen extends ScalaOpsPkgExp with M3OpsExp /*with ExpGen with K3Map
       withStream(outWriter) {
         val transformedBody = performTransformations(body)
         emitBlock(transformedBody)
-        stream.println(quote(getBlockResult(transformedBody)))
+        if (manifest[T]!=manifest[Unit])
+          stream.println(quote(getBlockResult(transformedBody)))
       }
       //staticData
       outStream.toString

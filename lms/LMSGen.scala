@@ -183,10 +183,11 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
 
     val ctxTrigger: LMSContext=(
-          maps.toList.map(_._2).map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) impl.fresh[K3Var[_]] else impl.fresh[K3Map[_,_]]) } union // XXX: we need here name-based k3maps
-          args.map{ case (name,tp) => (name,impl.named(name,tp)) }).toMap
+      maps.map{ case (name,MapDef(_,_,keys,_)) => if (keys.size==0) (name,impl.named[K3Var[_]](name)) else (name,impl.named[K3Map[_,_]](name)) }.toList union
+      args.map{ case (name,tp) => (name,impl.named(name,tp)) }
+    ).toMap
 
-    var resultSyms: List[Rep[_]] = t.stmts.map {
+    def stmtExp(s:Stmt):impl.Exp[Unit] = s match {
       case StmtMap(m,e,op,oi) =>
         val co = (r:Rep[_],c:LMSContext) => (op match {
           case OpAdd => impl.k3add(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
@@ -204,11 +205,11 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
       case _ => sys.error("Unimplemented") // we leave room for other type of events
     }
-
     //maps.map{ case MapDef(name,_,keys,_) => (name, if (keys.size==0) name+"[] ++ " else name+"["+keys+"] ++ ") }+
     //"\n\nHiii\n\n%s\n\niiiH\n\n".format(outStream.toString) +
     "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+
-    ddbt.Utils.ind(resultSyms.map{x => impl.emit(x)}.mkString("//----\n"))+"\n}"
+    ddbt.Utils.ind(t.stmts.map{s => impl.emit( stmtExp(s) ) }.mkString("// ----\n"))+"\n}"
+    //ddbt.Utils.ind(resultSyms.map{x => impl.emit(x)}.mkString("//----\n"))+"\n}"
   }
 
   def freshRef(tp: Type): impl.Sym[_] = freshRefManifest(man(tp))
