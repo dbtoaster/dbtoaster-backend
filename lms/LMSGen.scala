@@ -9,6 +9,7 @@ import scala.virtualization.lms.common._
 
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
+  import ddbt.Utils.fresh
   val impl = ScalaExpGen
   import impl.Rep
   import ManifestHelper.man
@@ -113,8 +114,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
           val (innerBlock, _) = expr(e, ctx, (v: Rep[_], ctxInner: LMSContext) => (impl.k3add(acc, ks.map( (ctx ++ ctxInner) ), v), ctxInner))
           
-          val keyArg = freshRef(agg.tks)
-          val valueArg = freshRef(ex.tp)
+          val keyArg = freshRef(agg.tks, fresh("ak"))
+          val valueArg = freshRef(ex.tp, fresh("av"))
           val innerCtx = ctx ++ ks.zipWithIndex.map{ case (kPart,i) => (kPart,accessTuple(keyArg,agg.tks(i),ks.size,i)) }
           val (body, newCtx) = co(valueArg, innerCtx)
 
@@ -144,6 +145,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     // }
     //def extractMapKeyParamType(mapName: String): 
 
+    def getMapKeyNames(name: String): List[String] = maps(name).keys.map(_._1)
     def getMapKeyTypes(name: String): List[Type] = maps(name).keys.map(_._2)
 
     def tup(ks: List[Rep[_]]): Rep[_] = ks.size match {
@@ -210,9 +212,15 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     //ddbt.Utils.ind(resultSyms.map{x => impl.emit(x)}.mkString("//----\n"))+"\n}"
   }
 
-  def freshRef(tp: Type): impl.Sym[_] = freshRefManifest(man(tp))
-  def freshRef(tp: List[Type]): impl.Sym[_] = freshRefManifest(man(tp))
-  def freshRefManifest[T:Manifest](mf: Manifest[T]): impl.Sym[T] = impl.fresh[T]
+  def setSymName(s: impl.Sym[Any], name: String): impl.Sym[Any] = {
+    val SymNameAttributeKey = "sn"
+    s.attributes.update(SymNameAttributeKey, name)
+    s
+  }
+
+  def freshRef(tp: Type, name: String): impl.Sym[_] = freshRefManifest(man(tp), name)
+  def freshRef(tp: List[Type], name: String): impl.Sym[_] = freshRefManifest(man(tp), name)
+  def freshRefManifest[T:Manifest](mf: Manifest[T], name: String): impl.Sym[T] = setSymName(impl.fresh[T], name).asInstanceOf[impl.Sym[T]]
 
   var maps = Map[String,MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
   override def genSystem(s0:System):String = {

@@ -22,10 +22,20 @@ import toasterbooster.lifters._
 import scala.reflect.SourceContext
 
 trait ToasterBoosterExpression extends ExtendedExpressions with Effects {
+  val SymNameAttributeKey = "sn"
+
+  def infix_setName(s: Sym[Any], name: String): Sym[Any] = {
+    s.attributes.update(SymNameAttributeKey, name)
+    s
+  }
+
+  def infix_name(s: Sym[Any]): Option[String] = {
+    s.attributes.get(SymNameAttributeKey).asInstanceOf[Option[String]]
+  }
 }
 
-trait ToasterBoosterScalaCodegen extends ScalaConciseCodegen { self =>
-  val IR: ToasterBoosterExpression with Effects
+trait ToasterBoosterScalaCodegen extends ScalaCodegen { self =>
+  val IR: ToasterBoosterExpression
   import IR._
 
   var classArgs: List[Sym[_]] = Nil

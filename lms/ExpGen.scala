@@ -2,6 +2,7 @@ package ddbt.codegen.lms
 
 import scala.virtualization.lms.internal._
 import scala.virtualization.lms.common._
+import toasterbooster._
 import toasterbooster.lifters._
 
 /* Helper to convert AST types into manifests */
@@ -29,10 +30,11 @@ object ManifestHelper {
 
 //trait ExpGen extends DSLBase with ScalaOpsPkg {}
 
-object ScalaExpGen extends ScalaOpsPkgExp with M3OpsExp /*with ExpGen with K3MapExp with K3VarExp*/ { self =>
-  class MyCodeGen extends ScalaCodeGenPkg with ScalaGenM3Ops /*with ScalaGenK3Map with ScalaGenK3Var*/ {
-    val IR: self.type = self
-    def emitSource[T:Manifest](sym: => Exp[T]) : String = {
+object ScalaExpGen extends ScalaOpsPkgExp with M3OpsExp with ToasterBoosterExpression /*with ExpGen with K3MapExp with K3VarExp*/ { self =>
+  trait MyCodeGen extends ScalaCodeGenPkg with ScalaGenM3Ops with ToasterBoosterScalaCodegen /*with ScalaGenK3Map with ScalaGenK3Var*/ {
+    val IR: ScalaOpsPkgExp with M3OpsExp with ToasterBoosterExpression
+
+    def emitSource[T:Manifest](sym: => IR.Exp[T]) : String = {
       val outStream = new java.io.StringWriter
       val outWriter = new java.io.PrintWriter(outStream)
       val body = reifyBlock(sym)
@@ -46,8 +48,56 @@ object ScalaExpGen extends ScalaOpsPkgExp with M3OpsExp /*with ExpGen with K3Map
       //staticData
       outStream.toString
     }
+
+    override def quote(x: IR.Exp[Any], forcePrintSymbol: Boolean) : String = x match {
+      case IR.Const(s: String) => "\""+s.replace("\"", "\\\"").replace("\n", "\\n")+"\"" // TODO: more escapes?
+      case IR.Const(c: Char) => "'"+c+"'"
+      case IR.Const(f: Float) => "%1.10f".format(f) + "f"
+      case IR.Const(l: Long) => l.toString + "L"
+      case IR.Const(null) => "null"
+      case IR.Const(z) => z.toString
+      case s@IR.Sym(n) => infix_name(s.asInstanceOf[Sym[Any]]).getOrElse("x"+n)
+      case _ => throw new RuntimeException("could not quote %s".format(x))
+    }
+
+    /*override def quote(x: IR.Exp[Any], forcePrintSymbol: Boolean) : String = {
+      def printSym(s: IR.Sym[Any]): String = {
+        if(infix_possibleToInline(s.asInstanceOf[Sym[Any]]) || infix_noReference(s.asInstanceOf[Sym[Any]])) {
+          IR.Def.unapply(s) match {
+            case Some(d: IR.Def[Any]) => {
+              val strWriter: java.io.StringWriter = new java.io.StringWriter;
+              val stream = new java.io.PrintWriter(strWriter);
+              withStream(stream) { 
+                emitNode(s, d)
+              }
+              strWriter.toString
+            }
+            case None =>  infix_name(s.asInstanceOf[Sym[Any]]).getOrElse("x"+s.id)
+          }
+        } else {
+          infix_name(s.asInstanceOf[Sym[Any]]).getOrElse("x"+s.id)
+        }
+      }
+      x match {
+        case IR.Const(s: String) => "\""+s.replace("\"", "\\\"").replace("\n", "\\n")+"\"" // TODO: more escapes?
+        case IR.Const(c: Char) => "'"+c+"'"
+        case IR.Const(f: Float) => "%1.10f".format(f) + "f"
+        case IR.Const(l: Long) => l.toString + "L"
+        case IR.Const(null) => "null"
+        case IR.Const(z) => z.toString
+        case s@IR.Sym(n) => if (forcePrintSymbol) {
+          printSym(s)
+        } else { 
+          isVoidType(s.tp) match {
+            case true => "(" + /*"x" + n +*/ ")"
+            case false => printSym(s)
+          }
+        }
+        case _ => throw new RuntimeException("could not quote " + x)
+      }
+    }*/
   }
-  val codegen = new MyCodeGen
+  val codegen = new MyCodeGen {val IR: self.type = self}
   def emit[T:Manifest](sym:Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
 }
 
