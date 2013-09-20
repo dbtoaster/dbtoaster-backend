@@ -103,18 +103,22 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         }
 
       case agg@AggSum(ks,e) =>
-        val agg_keys:List[Type] = (ks zip agg.tks).filter(k=> !ctx.contains(k._1)).map(_._2) // the aggregation is only made on free variables
-        val acc = if (agg_keys.size==0) impl.k3var(ex.tp) else impl.k3temp(agg_keys,ex.tp)
-        val coInner = (v: Rep[_], ctxInner: LMSContext) => (impl.k3add(acc, ks.map( (ctx ++ ctxInner) ), v), ctxInner)
-        
+        val agg_keys = (ks zip agg.tks).filter{ case (n,t)=> !ctx.contains(n) } // the aggregation is only made on free variables
+        val acc = if (agg_keys.size==0) impl.k3var(ex.tp) else impl.k3temp(agg_keys.map(_._2),ex.tp)
+        // Accumulate expr(e) in the acc
+        val coAcc = (v: Rep[_], ctxAcc: LMSContext) => (impl.k3add(acc, ks.map(ctx ++ ctxAcc), v), ctxAcc)
+        expr(e,ctx,coAcc) // returns (Rep[Unit],ctx) and we ignore ctx
+        // Iterate over acc and call original continuation
         val keyArg = impl.named(fresh("ak"))(man(agg.tks))
         val valueArg = impl.named(fresh("av"))(man(ex.tp))
-        val innerCtx = ctx ++ ks.zipWithIndex.map{ case (kPart,i) => (kPart,accessTuple(keyArg,agg.tks(i),ks.size,i)) }
-        val (body, newCtx) = co(valueArg, innerCtx)
         
-        lazy val innerBlock = expr(e,ctx,coInner)._1
-        (impl.k3foreach(acc, keyArg, valueArg , innerBlock ), newCtx)
-
+        if (agg_keys.size==0) co(impl.k3get(acc,Nil,ex.tp),ctx) // accumulator is a single result
+        else {
+          val iterCtx = ctx ++ agg_keys.zipWithIndex.map{ case ((n,t),i) => (n,accessTuple(keyArg,t,agg_keys.size,i)) }
+          lazy val (body, newCtx) = co(valueArg, iterCtx)
+          (impl.k3foreach(acc, keyArg, valueArg , body ), newCtx)
+          sys.error("Continue here")
+        }
       case _ => exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Unit], ctx) //sys.error("Unimplemented")
     }
 

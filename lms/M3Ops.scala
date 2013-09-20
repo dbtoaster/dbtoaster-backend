@@ -27,14 +27,17 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
   import ManifestHelper.man
   def named(name:String,tp:Type) = Named(name)(man(tp))
   def named[T](name:String)(implicit mT:Manifest[T]) = Named(name)
-  def k3var(value:Type) = NewK3Var(value,man(value))
-  def k3temp(key:List[Type],value:Type) = NewK3Temp(key,value,man(key),man(value))
+  def k3var(value:Type) = reflectMutable(NewK3Var(value,man(value)))
+  def k3temp(key:List[Type],value:Type) = reflectMutable(NewK3Temp(key,value,man(key),man(value)))
   def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = K3Get(map,key,man(value_tp))
-  def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = K3Set(map,key,value)
-  def k3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = K3Add(map,key,value)
+  def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = /*reflectWrite(map)*/(K3Set(map,key,value))
+  def k3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = /*reflectWrite(map)*/(K3Add(map,key,value))
   def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = K3Foreach(map,key,value,reifyEffects(body))
   def k3aggr(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[_], body_tp:Type) = {
-    def agg[T](implicit mT:Manifest[T]) = K3Aggr(map,key,value,reifyEffects(body.asInstanceOf[Exp[T]]),mT)
+    def agg[T](implicit mT:Manifest[T]) = {
+      val b = reifyEffects(body.asInstanceOf[Exp[T]])
+      /*reflectEffect(*/K3Aggr(map,key,value,b,mT) /*,summarizeEffects(b).star)*/
+    }
     agg(man(body_tp))
   }
   
