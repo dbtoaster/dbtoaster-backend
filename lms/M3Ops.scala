@@ -85,8 +85,8 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect {
     case NewK3Var(v,_) => emitValDef(sym, "new K3Var["+v.toScala+"]()")
     case NewK3Temp(ks,v,_,_) => emitValDef(sym, "K3Temp.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
     case K3Get(m,ks,_) => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
-    case K3Set(m,ks,v) => stream.println(quote(m)+".set("+tup(ks map quote)+","+quote(v)+")")
-    case K3Add(m,ks,v) => stream.println(quote(m)+".add("+tup(ks map quote)+","+quote(v)+")")
+    case K3Set(m,ks,v) => stream.println(quote(m)+".set("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
+    case K3Add(m,ks,v) => stream.println(quote(m)+".add("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
     case K3Foreach(m,k,v,body) =>
       // Enable both the renaming trick and allow nested block indentation
       val save=stream; val wr=new java.io.StringWriter; stream=new java.io.PrintWriter(wr)

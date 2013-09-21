@@ -1,40 +1,39 @@
 package ddbt.codegen
 import ddbt.codegen.lms._
-
 import ddbt.ast._
 import ddbt.lib._
-//import toasterbooster._
-import scala.virtualization.lms.internal._
-import scala.virtualization.lms.common._
+
+/*
+Test with:
+  sbt ';toast examples/queries/finance/axfinder.sql -l lms -o test/Test.scala;test:run-main ddbt.generated.Test'
+Expected result (tiny):
+  AXFINDER:
+  0 -> 7590.0
+  2 -> -1395.0
+  3 -> 95.0
+  5 -> 1080.0
+  6 -> 490.0
+  7 -> -907.0
+  8 -> 2419.0
+  9 -> 45.0
+*/
 
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.fresh
+  import ManifestHelper.man
+
   val impl = ScalaExpGen
   import impl.Rep
-  import ManifestHelper.man
-  /*
-  We need specific LMS nodes for
-  - K3Map / K3Var / K3Temp : pass key as list of symbols, specific name as a string (automatic for temp)
-    + foreach,get,add/set, ...
-    ==> Need to be adapted from previous version / try to provide common interface for all of them
-  - Named fresh (for function arguments)
-  - Mirror of the user-defined functions library => some functions should be inlined, others not
-  */
+  type LMSContext = Map[String, Rep[_]]
+  val ctx0 = Map[String, Rep[_]]() // empty context
 
   override def genTrigger(t:Trigger):String = {
-    //val outStream = new java.io.StringWriter
-    //val impl = new Impl(new java.io.PrintWriter(outStream), "org.dbtoaster", false) with DSL
-    //val impl = new Impl
-    
     val (name,args) = t.evt match {
       case EvtReady => ("SystemReady",Nil)
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
-
-    type LMSContext = Map[String, Rep[_]]
-    val ctx0 = Map[String, Rep[_]]() // empty context
 
     var exprrrr = ""
     // the ctx argument contains all the symbols that are available in the current context
@@ -96,7 +95,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           var keyArg: Rep[_] = null
           var valArg: Rep[_] = null
           val body = impl.reifyEffects {
-            keyArg = impl.named(fresh("mk"),true)(man(getMapKeyTypes(n)))
+            keyArg = impl.named(fresh("mk"),true)(man(maps(n).keys.map(_._2)))
             valArg = impl.named(fresh("mv"),tp,true)
             val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,maps(n).keys(i)._2,ks.size,i)) }
             val (b,nc) = co(valArg, innerCtx); newCtx=nc; b
@@ -108,7 +107,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         val agg_keys = (ks zip agg.tks).filter{ case (n,t)=> !ctx.contains(n) } // the aggregation is only made on free variables
         val acc = if (agg_keys.size==0) impl.k3var(ex.tp) else impl.k3temp(agg_keys.map(_._2),ex.tp)
         // Accumulate expr(e) in the acc
-        val coAcc = (v: Rep[_], ctxAcc: LMSContext) => (impl.k3add(acc, ks.map(ctx ++ ctxAcc), v), ctxAcc)
+        val coAcc = (v: Rep[_], ctxAcc: LMSContext) => (impl.k3add(acc, agg_keys.map(x=>(ctx ++ ctxAcc)(x._1)), v), ctxAcc)
         expr(e,ctx,coAcc) // returns (Rep[Unit],ctx) and we ignore ctx
         // Iterate over acc and call original continuation
         if (agg_keys.size==0) co(impl.k3get(acc,Nil,ex.tp),ctx) // accumulator is a single result
@@ -135,17 +134,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case _ => impl.getClass.getDeclaredMethod("tuple%d_get%d".format(sz,idx+1),Class.forName("java.lang.Object"), Class.forName("scala.reflect.Manifest"), Class.forName("scala.reflect.SourceContext"))
                    .invoke(impl, tuple, man(elemTp), pos).asInstanceOf[Rep[_]]
     }
-
-    // def createTuple(elems: List[Rep[_]]): Rep[_] = elems.size match {
-    //   case 1 => impl.getClass.getDeclaredMethod("make_tuple1",impl.Exp[Any].getClass).invoke(impl,elems(0)).asInstanceOf[Rep[_]]
-    //   case 2 => impl.getClass.getDeclaredMethod("make_tuple2",impl.Exp[Any].getClass).invoke(impl,elems(0),elems(1)).asInstanceOf[Rep[_]]
-    //   case 3 => impl.getClass.getDeclaredMethod("make_tuple3",impl.Exp[Any].getClass).invoke(impl,elems(0),elems(1),elems(2)).asInstanceOf[Rep[_]]
-    //   case _ => sys.error("createTupple(elems) only allowed on tuples of size <= 3")
-    // }
-    //def extractMapKeyParamType(mapName: String): 
-
-    def getMapKeyNames(name: String): List[String] = maps(name).keys.map(_._1)
-    def getMapKeyTypes(name: String): List[Type] = maps(name).keys.map(_._2)
 
     def tup(ks: List[Rep[_]]): Rep[_] = ks.size match {
       case 1 => ks.head
@@ -210,6 +198,22 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(impl.emit(triggerBlock))+"\n}"
   }
 
+  var maps = Map[String,MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
+  override def genSystem(s0:System):String = {
+    maps=s0.maps.map(m=>(m.name,m)).toMap; val r=super.genSystem(s0); maps=Map(); r
+  }
+}
+
+  // def createTuple(elems: List[Rep[_]]): Rep[_] = elems.size match {
+  //   case 1 => impl.getClass.getDeclaredMethod("make_tuple1",impl.Exp[Any].getClass).invoke(impl,elems(0)).asInstanceOf[Rep[_]]
+  //   case 2 => impl.getClass.getDeclaredMethod("make_tuple2",impl.Exp[Any].getClass).invoke(impl,elems(0),elems(1)).asInstanceOf[Rep[_]]
+  //   case 3 => impl.getClass.getDeclaredMethod("make_tuple3",impl.Exp[Any].getClass).invoke(impl,elems(0),elems(1),elems(2)).asInstanceOf[Rep[_]]
+  //   case _ => sys.error("createTupple(elems) only allowed on tuples of size <= 3")
+  // }
+  //def extractMapKeyParamType(mapName: String): 
+  //def getMapKeyNames(name: String): List[String] = maps(name).keys.map(_._1)
+  //def getMapKeyTypes(name: String): List[Type] = maps(name).keys.map(_._2)
+
   /*
   def setSymName(s: impl.Sym[Any], name: String): impl.Sym[Any] = {
     val SymNameAttributeKey = "sn"
@@ -220,9 +224,3 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   def freshRef(tp: List[Type], name: String): impl.Sym[_] = freshRefManifest(man(tp), name)
   def freshRefManifest[T:Manifest](mf: Manifest[T], name: String): impl.Sym[T] = setSymName(impl.fresh[T], name).asInstanceOf[impl.Sym[T]]
   */
-
-  var maps = Map[String,MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
-  override def genSystem(s0:System):String = {
-    maps=s0.maps.map(m=>(m.name,m)).toMap; val r=super.genSystem(s0); maps=Map(); r
-  }
-}
