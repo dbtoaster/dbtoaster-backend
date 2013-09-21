@@ -88,20 +88,16 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         if(ki.size == 0) { // all keys are bound
           co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) 
         } else { // we need to iterate over all keys not bound (ki)
-          //println("// Looping over "+n+" with "+ki)
           val mapRef = ctx(n)
-          val slicedMapRef = if(ko.size > 0) {
-            impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
-          } else {
-            mapRef
-          }
+          val slicedMapRef = if(ko.size > 0) mapRef
+          else impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
+
           var newCtx = ctx0
           var keyArg: Rep[_] = null
           var valArg: Rep[_] = null
-          // XXX: error, we want the body to be inside the k3foreach, not printed before
           val body = impl.reifyEffects {
-            keyArg = impl.named(fresh("mk"))(man(getMapKeyTypes(n)))
-            valArg = impl.named(fresh("mv"),tp)
+            keyArg = impl.named(fresh("mk"),true)(man(getMapKeyTypes(n)))
+            valArg = impl.named(fresh("mv"),tp,true)
             val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,maps(n).keys(i)._2,ks.size,i)) }
             val (b,nc) = co(valArg, innerCtx); newCtx=nc; b
           }
@@ -115,7 +111,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         val coAcc = (v: Rep[_], ctxAcc: LMSContext) => (impl.k3add(acc, ks.map(ctx ++ ctxAcc), v), ctxAcc)
         expr(e,ctx,coAcc) // returns (Rep[Unit],ctx) and we ignore ctx
         // Iterate over acc and call original continuation
-        
         if (agg_keys.size==0) co(impl.k3get(acc,Nil,ex.tp),ctx) // accumulator is a single result
         else {
           val keyArg = impl.named(fresh("ak"))(man(agg_keys.map(_._2)))
@@ -215,13 +210,12 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(impl.emit(triggerBlock))+"\n}"
   }
 
+  /*
   def setSymName(s: impl.Sym[Any], name: String): impl.Sym[Any] = {
     val SymNameAttributeKey = "sn"
     s.attributes.update(SymNameAttributeKey, name)
     s
   }
-
-  /*
   def freshRef(tp: Type, name: String): impl.Sym[_] = freshRefManifest(man(tp), name)
   def freshRef(tp: List[Type], name: String): impl.Sym[_] = freshRefManifest(man(tp), name)
   def freshRefManifest[T:Manifest](mf: Manifest[T], name: String): impl.Sym[T] = setSymName(impl.fresh[T], name).asInstanceOf[impl.Sym[T]]

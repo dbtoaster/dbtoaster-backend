@@ -16,8 +16,6 @@ trait M3Ops extends Base {
   def k3set(map:Rep[_], key:List[Rep[_]],value:Rep[_]):Rep[Unit]
   def k3add(map:Rep[_], key:List[Rep[_]],value:Rep[_]):Rep[Unit]
   def k3foreach(map:Rep[_], key: Rep[_], value: Rep[_], body: => Rep[Unit]) : Rep[Unit]
-  //def k3foreach(map:Rep[_], key: Rep[_], value: Rep[_], body: Block[Unit]) : Rep[Unit]
-
   def k3slice(map:Rep[_],part:Int,partKey:List[Rep[_]]):Rep[_]
   def k3clear(map:Rep[_]):Rep[Unit]
   // Function application
@@ -26,7 +24,7 @@ trait M3Ops extends Base {
 
 trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
   import ManifestHelper.man
-  def named(name:String,tp:Type,mutable:Boolean=false) = { val n=Named(name)(man(tp)); if (mutable) reflectMutable(n) else n }
+  def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
   def k3var(value:Type) = reflectMutable(NewK3Var(value,man(value)))
   def k3temp(key:List[Type],value:Type) = reflectMutable(NewK3Temp(key,value,man(key),man(value)))
@@ -38,17 +36,10 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
   def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = {
     reflectEffect(K3Foreach(map,key,value,body),summarizeEffects(body).star)
   }
-
-/*
-  def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = {
-    val b = reifyEffects(body)
-    reflectEffect(K3Foreach(map,key,value,b),summarizeEffects(b).star)
-  }
-*/
   def k3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = K3Slice(map,part,partKey)
   def k3clear(map:Exp[_]) = K3Clear(map)
   def k3apply(fn:String,args:List[Exp[_]],tp:Type) = fn match {
-    // inline here
+    // XXX: inline library functions here
     /*
     case "div" => //(x: Double): Double = if (x==0.0) 0.0 else 1.0 / x
     case "listmax" // (v1: Long, v2: Long): Long = Math.max(v1, v2)
@@ -68,22 +59,39 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
   case class K3Slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) extends Def[Exp[_]]
   case class K3Clear(map:Exp[_]) extends Def[Unit]
   case class K3Apply[T](name:String,args:List[Exp[_]],mT:Manifest[T]) extends Def[T]
+
+  override def syms(e: Any): List[Sym[Any]] = e match {
+    case K3Foreach(m,k,v,b) => syms(k):::syms(v):::syms(b)
+    case _ => super.syms(e)
+  }
+  override def boundSyms(e: Any): List[Sym[Any]] = e match {
+    case K3Foreach(m,k,v,b) => effectSyms(k):::effectSyms(v):::effectSyms(b)
+    case _ => super.boundSyms(e)
+  }
+  override def symsFreq(e: Any): List[(Sym[Any], Double)] = e match {
+    case K3Foreach(m,k,v,b) => freqHot(k):::freqHot(v):::freqHot(b)
+    case _ => super.symsFreq(e)
+  }
 }
 
 trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect {
   val IR: M3OpsExp
   import IR._
-  import ddbt.Utils.tup
+  import ddbt.Utils.{ind,tup}
 
   private val nameAttr = "_name"
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case Named(n) => sym.attributes.update(nameAttr,n)
+    case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NewK3Var(v,_) => emitValDef(sym, "new K3Var["+v.toScala+"]()")
     case NewK3Temp(ks,v,_,_) => emitValDef(sym, "K3Temp.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
     case K3Get(m,ks,_) => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
     case K3Set(m,ks,v) => stream.println(quote(m)+".set("+tup(ks map quote)+","+quote(v)+")")
     case K3Add(m,ks,v) => stream.println(quote(m)+".add("+tup(ks map quote)+","+quote(v)+")")
-    case K3Foreach(m,k,v,body) => stream.println(quote(m)+".foreach(("+quote(k)+","+quote(v)+") => {"); emitBlock(body); stream.println("})")
+    case K3Foreach(m,k,v,body) =>
+      // Enable both the renaming trick and allow nested block indentation
+      val save=stream; val wr=new java.io.StringWriter; stream=new java.io.PrintWriter(wr)
+      emitBlock(body); val block=ind(wr.toString); stream=save
+      stream.println(quote(m)+".foreach { ("+quote(k)+","+quote(v)+") =>"); stream.println(block); stream.println("}")
     case K3Slice(m,p,pks) => emitValDef(sym, quote(m)+".slice("+p+","+tup(pks map quote)+")")
     case K3Clear(m) => stream.println(quote(m)+".clear")
     case K3Apply(fn,args,_) => emitValDef(sym,fn+"("+(args map quote).mkString(",")+")")
