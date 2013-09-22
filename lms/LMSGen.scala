@@ -3,21 +3,6 @@ import ddbt.codegen.lms._
 import ddbt.ast._
 import ddbt.lib._
 
-/*
-Test with:
-  sbt ';toast examples/queries/finance/axfinder.sql -l lms -o test/Test.scala;test:run-main ddbt.generated.Test'
-Expected result (tiny):
-  AXFINDER:
-  0 -> 7590.0
-  2 -> -1395.0
-  3 -> 95.0
-  5 -> 1080.0
-  6 -> 490.0
-  7 -> -907.0
-  8 -> 2419.0
-  9 -> 45.0
-*/
-
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.fresh
@@ -35,11 +20,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
 
-    var exprrrr = ""
     // the ctx argument contains all the symbols that are available in the current context
     // the returned context is only _NEW_ symbols that have been added to the original context
-    
-    // XXX: we need a continuation here somewhere that is just one operation done on the variable
     def expr(ex:Expr,ctx:LMSContext, co: (Rep[_], LMSContext) => (Rep[Unit], LMSContext)):(Rep[Unit],LMSContext) = ex match {
       case Ref(n) => co(ctx(n), ctx0)
       case Const(tp,v) => ex.tp match {
@@ -70,8 +52,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         if (!ctx.contains(n))
           co(impl.unit(1) ,newCtx + (n -> ve))
         else co(ex.tp match {
-          case TypeLong => cmp[Long](ctx(n),OpEq,ve)
-          case TypeDouble => cmp[Double](ctx(n),OpEq,ve)
+          case TypeLong => impl.__ifThenElse(cmp[Long](ctx(n),OpEq,ve),impl.unit(1),impl.unit(0))
+          case TypeDouble => impl.__ifThenElse(cmp[Double](ctx(n),OpEq,ve),impl.unit(1),impl.unit(0))
           case _ => sys.error("lift")
         },newCtx)
       )
@@ -88,7 +70,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) 
         } else { // we need to iterate over all keys not bound (ki)
           val mapRef = ctx(n)
-          val slicedMapRef = if(ko.size > 0) mapRef
+          val slicedMapRef = if(ko.size == 0) mapRef
           else impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
 
           var newCtx = ctx0
@@ -120,8 +102,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           (impl.k3foreach(acc, keyArg, valueArg , body ), newCtx)
           sys.error("Continue here")
         }
-      case _ => exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Unit], ctx) //sys.error("Unimplemented")
+      case _ => sys.error("Unimplemented: "+ex) /*exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Unit], ctx)*/ 
     }
+    //var exprrrr = ""
 
     def newVariable(tp: Type): impl.Var[Any] = tp match {
       case TypeLong => impl.var_new(impl.unit(0L))
