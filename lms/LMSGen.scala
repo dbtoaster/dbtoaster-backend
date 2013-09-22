@@ -187,7 +187,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case StmtMap(m,e,op,oi) =>
           val co = (r:Rep[_],c:LMSContext) => (op match {
             case OpAdd => impl.k3add(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
-            case OpSet => impl.k3set(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
+            case OpSet => if (m.keys.size>0) impl.k3clear(ctxTrigger(m.name)); impl.k3set(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
           },c)
           expr(e,ctxTrigger,co)._1
           //val fop=op match { case OpAdd => "add" case OpSet => "set" }

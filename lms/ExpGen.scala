@@ -1,8 +1,7 @@
 package ddbt.codegen.lms
 
-import scala.virtualization.lms.internal._
 import scala.virtualization.lms.common._
-import toasterbooster.lifters._
+//import scala.virtualization.lms.internal._
 
 /* Helper to convert AST types into manifests */
 object ManifestHelper {
@@ -45,7 +44,6 @@ object ScalaExpGen extends ScalaOpsPkgExpOpt with M3OpsExp { self =>
   val codegen = new MyCodeGen
   def emit[T:Manifest](sym: => Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
   def emit[T:Manifest](blk:Block[T]) = { assert(codegen ne null); codegen.emitSource(blk) }
-  
 }
 
 // XXX: implement the counterpart for C/C++
