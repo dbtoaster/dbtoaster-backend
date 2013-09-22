@@ -18,7 +18,7 @@ object Compiler {
   var exec: Boolean = false     // compile and execute immediately
 
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1) }
-  def toast(l:String) = Utils.exec((Utils.path_bin :: "-l" :: l :: in).toArray)._1
+  def toast(l:String) = Utils.exec((Utils.path_bin :: "-O3" :: "-l" :: l :: in).toArray)._1
 
   def parseArgs(args:Array[String]) {
     val l=args.length
@@ -27,7 +27,7 @@ object Compiler {
     while(i<l) {
       args(i) match {
         case "-x" => exec = true
-        case "-l" => eat(s=>s match { case "calc"|"m3"|"scala" => lang=s; case _ => error("Unsupported language: "+s,true) },true)
+        case "-l" => eat(s=>s match { case "calc"|"m3"|"scala"|"lms" => lang=s; case _ => error("Unsupported language: "+s,true) },true)
         case "-o" => eat(s=>out=s)
         case "-n" => eat(s=>name=s)
         case "-L" => eat(s=>libs=s)
@@ -44,7 +44,7 @@ object Compiler {
       error("                - m3    : M3 program")
       error("                - scala : vanilla Scala code")
       error("                - akka  : distributed Akka code")
-      //   ("                - lms   : LMS-optimized Scala")
+      error("                - lms   : LMS-optimized Scala")
       //   ("                - cpp   : C++/LMS-optimized code")
       //   ("                - dcpp  : distributed C/C++ code")
       error("Code generation options:")
@@ -71,17 +71,19 @@ object Compiler {
     // Front-end
     val m3 = (M3Parser andThen TypeCheck) (lang match {
       case "calc"|"m3" => output(toast(lang)); System.exit(0); "" // nothing else to do
+      case _ if in.forall(_.endsWith(".m3")) => in.map(Utils.read(_)).mkString("\n")
       case _ => toast("m3")
     })
     // Back-end
     lang match {
-      case "scala" => output(ScalaGen(name)(m3))
-      case "akka" => output(AkkaGen(name)(m3))
+      case "scala" => output(new ScalaGen(name)(m3))
+      case "akka" => output(new AkkaGen(name)(m3))
+      case "lms" => output(new LMSGen(name)(m3))
       case _ => error("Compilation not supported")
     }
     // Execution
     if (exec) lang match {
-      case "scala"|"akka" =>
+      case "scala"|"akka"|"lms" =>
         val tmp = Utils.makeTempDir()
         Utils.exec(Array("scalac",out,"-cp",libs,"-d",tmp.getPath)) // scala compiler
         val (o,e) = Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name)) // execution
@@ -91,32 +93,11 @@ object Compiler {
   }
 }
 
-  /*
-  // invoke with any filename in finance or tpch : axfinder, query13, query15, query18, ...
-  def findQuery(s:String):File = {
-    val b = "resources/queries/"; val x=".sql"
-    val ps:List[String] = List("","finance/","tpch/","mddb/","simple/").map{d=>b+d+s+x} ::: List(s+x,s)
-    val fs = ps.map{p => new java.io.File(p)}.filter{f=>f.exists}
-    if (fs.size==0) sys.error("File '"+s+"' does not exist") else fs(0)
-  }
+/*
   def dump[T](name:String)(data:T):T = {
     println("======================== "+name+" ========================")
     println(data.toString); data
   }
-
-  // Compilation phases
-  val dir = new File("bin")
-  val compile = Utils.toast _ andThen
-                M3Parser andThen
-                //dump("M3") andThen
-                TypeCheck andThen
-                ScalaGen("Query") andThen
-                //dump("Scala") andThen
-                writeScala(dir) //andThen
-                //writeTest(dir) //andThen
-                //scalac("test/gen") andThen
-                //execute("ddbt.gen")
-                // then run 'sbt test'
 
 3. optimize the AST
    - high level optimizations

@@ -1,0 +1,128 @@
+BIG DATASET (100MB)
+[info] --------------- tpch1
+[info] SQL -> M3      :  0.419
+[info] Scala codegen  :  0.589
+[info] Scala compile  :  5.276
+[info] Scala running  :  6.131 [6.065, 7.952] (sec)
+[info] --------------- tpch2
+[info] SQL -> M3      :  0.796
+[info] Scala codegen  :  0.630
+[info] Scala compile  :  7.761
+[info] Scala running  :  0.566 [0.400, 1.113] (sec)
+[info] --------------- tpch3
+[info] SQL -> M3      :  0.159
+[info] Scala codegen  :  0.470
+[info] Scala compile  :  5.665
+[info] Scala running  :  6.768 [6.708, 8.808] (sec)
+[success] Total time: 79 s, completed 11 sept. 2013 16:24:23
+[info] --------------- tpch4
+[info] SQL -> M3      :  0.070
+[info] Scala codegen  :  0.354
+[info] Scala compile  :  4.937
+[info] Scala running  :  6.633 [6.598, 8.785] (sec)
+
+
+[info] --------------- tpch6
+[info] SQL -> M3      :  0.024
+[info] Scala codegen  :  0.306
+[info] Scala compile  :  4.635
+[info] Scala running  :  5.874 [5.746, 8.181] (sec)
+[info] --------------- tpch7
+[info] SQL -> M3      :  3.258
+[info] Scala codegen  :  0.869
+[info] Scala compile  :  8.909
+[info] Scala running  :  44.634 [33.043, 61.860] (sec)
+[info] --------------- tpch8
+[info] SQL -> M3      : 12.481
+[info] Scala codegen  :  1.606
+[info] Scala compile  : 13.557
+[info] Scala running  :  26.922 [25.536, 41.261] (sec)
+[info] --------------- tpch9
+[info] SQL -> M3      :  2.193
+[info] Scala codegen  :  0.994
+[info] Scala compile  : 10.527
+[info] Scala running  :  21.485 [18.141, 33.180] (sec)
+[info] --------------- tpch10
+[info] SQL -> M3      :  0.222
+[info] Scala codegen  :  0.631
+[info] Scala compile  :  6.491
+[info] Scala running  :  6.877 [6.771, 9.120] (sec)
+
+
+[info] --------------- tpch11a
+[info] SQL -> M3      :  0.015
+[info] Scala codegen  :  0.281
+[info] Scala compile  :  4.237
+[info] Scala running  :  0.584 [0.509, 0.929] (sec)
+[info] --------------- tpch12
+[info] SQL -> M3      :  0.157
+[info] Scala codegen  :  0.455
+[info] Scala compile  :  5.361
+[info] Scala running  :  6.993 [6.900, 9.258] (sec)
+[info] --------------- tpch13
+[info] SQL -> M3      :  0.236
+[info] Scala codegen  :  0.494
+[info] Scala compile  :  5.604
+[info] Scala running  :  40.873 [40.042, 44.468] (sec)
+[info] --------------- tpch14
+[info] SQL -> M3      :  0.301
+[info] Scala codegen  :  0.504
+[info] Scala compile  :  5.080
+[info] Scala running  :  5.873 [5.701, 7.908] (sec)
+[info] --------------- tpch15
+[info] SQL -> M3      :  3.573
+[info] Scala codegen  :  0.912
+[info] Scala compile  :  9.773
+[info] Scala running  :  5.958 [5.898, 8.266] (sec)
+[info] --------------- tpch16
+[info] SQL -> M3      :  0.245
+[info] Scala codegen  :  0.698
+[info] Scala compile  :  7.762
+[info] Scala running  :  155.251 [152.622, 158.476] (sec)
+[info] --------------- tpch17
+[info] SQL -> M3      :  5.086
+[info] Scala codegen  :  0.466
+[info] Scala compile  :  5.337
+[info] Scala running  :  5.971 [5.861, 7.881] (sec)
+[info] --------------- tpch17a
+[info] SQL -> M3      :  0.448
+[info] Scala codegen  :  0.352
+[info] Scala compile  :  4.978
+[info] Scala running  :  6.258 [6.085, 8.218] (sec)
+[info] --------------- tpch18
+[info] SQL -> M3      :  0.160
+[info] Scala codegen  :  0.425
+[info] Scala compile  :  5.873
+[info] Scala running  :  6.894 [6.785, 8.840] (sec)
+[info] --------------- tpch18a
+[info] SQL -> M3      :  3.518
+[info] Scala codegen  :  0.480
+[info] Scala compile  :  5.832
+[info] Scala running  :  7.307 [7.126, 9.159] (sec)
+
+
+[info] --------------- tpch20
+[info] SQL -> M3      :  0.753
+[info] Scala codegen  :  0.559
+[info] Scala compile  :  7.018
+[info] Scala running  :  6.176 [6.130, 8.214] (sec)
+[info] --------------- tpch21
+[info] SQL -> M3      :  1.265
+[info] Scala codegen  :  0.557
+[info] Scala compile  :  6.984
+[info] Scala running  :  7.760 [7.597, 9.370] (sec)
+[info] --------------- tpch22
+[info] SQL -> M3      :  3.238
+[info] Scala codegen  :  1.463
+[info] Scala compile  :  8.757
+[info] Scala running  :  8.547 [8.148, 10.407] (sec)
+[info] --------------- tpch22a
+[info] SQL -> M3      :  0.071
+[info] Scala codegen  :  0.369
+[info] Scala compile  :  4.791
+[info] Scala running  :  12.120 [10.404, 12.809] (sec)
+[info] --------------- tpch/ssb4
+[info] SQL -> M3      :  0.864
+[info] Scala codegen  :  0.662
+[info] Scala compile  :  8.925
+[info] Scala running  :  11.078 [10.383, 12.045] (sec)

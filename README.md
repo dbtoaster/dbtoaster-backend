@@ -1,4 +1,4 @@
-## Distributed DB Toaster
+## Distributed DB Toaster [![Build Status](https://api.travis-ci.org/TCKnet/DDBToaster.png?branch=master)](https://travis-ci.org/TCKnet/DDBToaster)
 DB Toaster allows incremental view maintenance (IVM) by recursively computing
 the delta of each individual modification on the query result. This allow dramatic
 speedup over traditional database systems. More information:
@@ -15,9 +15,10 @@ The goal of Distributed DB Toaster project is to reuse current infrastructure an
   - _Yes:_ Create a file `conf/ddbt.properties` and add the following properties:
      - `ddbt.base_repo` path to DB Toaster repository (required for unit tests)
      - `ddbt.dbtoaster` dbtoaster binary (required if base_repo is not set)
+     - `ddbt.lms = 1` to enable LMS support (files in `lms/` folder)
+     - `ddbt.lib_boost` optional folder for C++ Boost library (for legacy C++)
      - You can run DB Toaster unit tests of  using `$ sbt queries` (takes a while)
-3. (Optional) To remove [Spark](http://spark-project.org) and Scala-actors dependencies (as they are not used), delete `src/examples`, `src/lib/MapsSpark.scala` and comment the appropriate lines in `build.sbt`.
-4. Execute the compiler using `$ sbt 'run-main ddbt.Compiler <options> <sql_input>'`. You get the options description by running the compiler without arguments.
+3. Execute the compiler using `$ sbt 'run-main ddbt.Compiler <options> <sql_input>'`. You get the options description by running the compiler without arguments.
 
 #### Status
 Currently the project is in an early stage. It matches existing DBToaster support for code generation based on M3 (Scala only, without LMS optimization). The code generation will soon be extended to support distributed runtime based on Akka remote actors.

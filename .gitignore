@@ -1,10 +1,15 @@
 project
 target
-examples
+examples/queries
+examples/data
 conf/ddbt.properties
 test/gen
 bin
+lib
+benchmarks-*.csv
 .idea
+*.numbers
 *.iml
 *.pdf
 *Temp*
+*.DS_Store

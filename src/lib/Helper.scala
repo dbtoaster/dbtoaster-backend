@@ -1,6 +1,6 @@
 package ddbt.lib
 
-import akka.actor.{Actor,ActorRef,ActorSystem,Props,Deploy,Address}
+import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import akka.remote.RemoteScope
 import scala.reflect.ClassTag
 import java.io.InputStream
@@ -14,19 +14,17 @@ trait Helper {
   def sys(name:String,host:String,port:Int) = {
     val conf = "akka.loglevel=ERROR\nakka.log-dead-letters-during-shutdown=off\n"+ // disable verbose logging
                "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote.netty {\nhostname=\""+host+"\"\ntcp.port="+port+"\n}\n}\n"
-    val system = ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(conf))
+    val user = { val f="conf/akka.conf"; if (new java.io.File(f).exists) scala.io.Source.fromFile(f).mkString else "" }
+    val system = ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(conf+user))
     Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = { /*println("Stopping "+host+":"+port);*/ system.shutdown() } });
     /*println("Started "+host+":"+port);*/ system
-  }
-  def props[A<:Actor](name:String,host:String,port:Int)(implicit cA:ClassTag[A]) = {
-    Props(cA.runtimeClass).withDeploy(Deploy(scope = RemoteScope(new Address("akka.tcp",name,host,port))))
   }
 
   // ---------------------------------------------------------------------------
   // Run query actor and collect time+resulting map
   // T is usually Map[K,V]. For multiple maps, it is a tuple (Map[K1,V1],Map[K2,V2],...)
 
-  def mux[T](actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,wait:Int=60000) = {
+  def mux[T](actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,wait:Int=6000000) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
     actor ! SystemInit
     // preload existing tables in the query
@@ -42,11 +40,16 @@ trait Helper {
     system.shutdown; res
   }
 
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor,T](port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]):(Long,T) = {
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor,T](nmaps:Int,port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]):(Long,T) = {
     val system:ActorSystem = this.sys("MasterSystem","127.0.0.1",port-1)
     val nodes = (0 until N).map { i => sys("NodeSystem"+i,"127.0.0.1",port+i) }
-    val wprops = (0 until N).map { i=>props[W]("NodeSystem"+i,"127.0.0.1",port+i) }.toArray
-    val master = system.actorOf(Props(cm.runtimeClass,wprops))
+    val workers = nodes.map (_.actorOf(Props[W]()))
+    val master = system.actorOf(Props[M]())
+    // initial membership
+    import WorkerActor._
+    val ms = (0 until nmaps).map { MapRef(_) }.toList
+    master ! Members(master,workers.map{ w => (w,ms) }.toArray)
+    //
     val res = mux[T](master,streams,parallel)
     Thread.sleep(100); nodes.foreach{ _.shutdown }; system.shutdown; Thread.sleep(100); res
   }
@@ -101,7 +104,7 @@ trait Helper {
   // ---------------------------------------------------------------------------
   // Stream definitions (used for manual debugging only)
 
-  private def str(file:String,a:Adaptor) = (new java.io.FileInputStream("resources/data/"+file+".csv"),a,Split())
+  private def str(file:String,a:Adaptor) = (new java.io.FileInputStream("examples/data/"+file+".csv"),a,Split())
   def streamsFinance(s:String="") = Seq(str("finance"+(if (s!="") "-"+s else ""),Adaptor("orderbook",Nil)))
   def streamsRST(ss:Seq[String]=Seq("r")) = ss.map { s=> str("simple/"+s,new Adaptor.CSV(s.toUpperCase,"int,int")) }
 

@@ -20,23 +20,53 @@ object Utils {
     (repo,if (repo!="") repo+"/"+path_base+"/bin/dbtoaster_release" else bin)
   }
 
+  // Gobbles an input stream, used for external processes and loadMain
+  private def gobble(in:InputStream) = new Runnable {
+    var out = new StringBuilder
+    var thr = new Thread(this); thr.start
+    override def toString = { thr.join; out.toString.trim }
+    override def run {
+      val r = new BufferedReader(new InputStreamReader(in))
+      var l = r.readLine; while(l != null) { out.append(l+"\n"); l = r.readLine }; r.close
+    }
+  }
+
   // Execute arbitrary command, return (out,err)
   def exec(cmd:String):(String,String) = exec(cmd.split(" "))
-  def exec(cmd:Array[String],dir:File=null,env:Array[String]=null):(String,String) = {
+  def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true):(String,String) = {
     val p = Runtime.getRuntime.exec(cmd,env,dir)
-    def gobble(in:InputStream) = new Runnable {
-      var out = new StringBuilder
-      var thr = new Thread(this); thr.start
-      override def toString = { thr.join; out.toString.trim }
-      override def run {
-        val r = new BufferedReader(new InputStreamReader(in))
-        var l = r.readLine; while(l != null) { out.append(l+"\n"); l = r.readLine }; r.close
-      }
-    }
     val out=gobble(p.getInputStream); val err=gobble(p.getErrorStream); p.waitFor
     val o=out.toString; val e=err.toString
-    if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); print(o); System.err.print(e); System.exit(1) }
+    if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); print(o); System.err.print(e); if (fatal) System.exit(1) }
     (o,e)
+  }
+  
+  // Capture console/default output and error streams in two strings
+  def captureOut[R](f:()=>R) : (R,String,String) = {
+    val o0=scala.Console.out; val so0=System.out; val po=new PipedOutputStream; scala.Console.setOut(new PrintStream(po)); System.setOut(new PrintStream(po)); val out=gobble(new PipedInputStream(po));
+    val e0=scala.Console.err; val se0=System.err; val pe=new PipedOutputStream; scala.Console.setErr(new PrintStream(pe)); System.setErr(new PrintStream(pe)); val err=gobble(new PipedInputStream(pe));
+    val r = f()
+    scala.Console.setOut(o0); System.setOut(so0); po.close
+    scala.Console.setErr(e0); System.setErr(se0); pe.close
+    (r,out.toString,err.toString)
+  }
+  
+  // Class loader to run a class with main(args:Array[String]) within the same VM
+  def loadMain(cp:File,cls:String,args:Array[String]=Array()) = {
+    val r = captureOut(()=>{
+      try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
+      catch { case t:Throwable => t.printStackTrace(scala.Console.err) }
+    })
+    System.gc(); Thread.sleep(50); System.gc() // call finalize on class loader
+    (r._2,r._3)
+  }
+
+  import java.net.{URL,URLClassLoader}
+  private class CPLoader(cp:File) extends URLClassLoader(Array(cp.toURI.toURL),null) {
+    override def loadClass(name:String, resolve:Boolean) : Class[_] = {
+      try { return super.loadClass(name, resolve); }
+      catch { case e:ClassNotFoundException => Class.forName(name, resolve, Utils.getClass.getClassLoader); }
+    }
   }
 
   // Files I/O

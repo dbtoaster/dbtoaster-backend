@@ -86,6 +86,14 @@ object Functions {
     def *(v:Vector) = Vector(y*v.z-z*v.y, z*v.x-x*v.z, x*v.y-y*v.x)
     def angle(v:Vector) = math.acos ( apply(v) / (length * v.length) )
   }
+  
+  def Uhash(n:Long):Long = { // mddb/query2_full.sql
+    var v:Long = n * 3935559000370003845L + 2691343689449507681L
+    v ^= v >> 21; v^= v << 37; v ^= v >> 4
+    v *= 4768777413237032717L
+    v ^= v >> 20; v^= v << 41; v ^= v >> 5
+    v
+  }
 }
 
 /* UNUSED LEGACY FUNCTIONS
@@ -107,13 +115,6 @@ object Functions {
     val c = java.util.Calendar.getInstance; c.setTime(date)   
     c.get(java.util.Calendar.DAY_OF_MONTH) 
   }    
-  def hash(number:Long):Long = {
-    var v:Long = number * 3935559000370003845L + 2691343689449507681L
-    v ^= v >> 21; v^= v << 37; v ^= v >> 4
-    v *= 4768777413237032717L
-    v ^= v >> 20; v^= v << 41; v ^= v >> 5
-    v
-  }
   val PI = 3.141592653589793238462643383279502884
   def radians(degree:Double) = degree * PI / 180
   def degrees(radian:Double) = radian * 180 / PI 

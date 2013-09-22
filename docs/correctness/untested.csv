@@ -1,0 +1,94 @@
+employee/query00
+employee/query00a
+employee/query15
+employee/query35b
+employee/query36b
+simple/case01/r_adivb
+simple/case01/r_adivconst
+simple/case01/r_anotb
+simple/case01/r_anotorb
+simple/case01/r_aorb
+simple/case01/r_aorb_div
+simple/case01/r_exists
+simple/case01/r_exists_nested
+simple/case01/r_inequal
+simple/case01/r_inequal_ab
+simple/case01/r_inequal_empty
+simple/case01/r_lessthan
+simple/case01/r_multi_tlq
+simple/case01/r_nested_inequal
+simple/case01/r_newcolumn
+simple/case01/r_notexists
+simple/case01/r_simplenested
+simple/case01/r_simplenested2
+simple/case01/r_simplenested_empty
+simple/case01/r_sumab
+simple/case01/r_sumab3
+simple/cust_renaming
+simple/employee_initials
+simple/employee_names_with_j
+simple/external_fn_test
+simple/matrixmult
+simple/order_date_parts
+simple/r_distinct
+simple/r_distincttest
+simple/r_inlist
+simple/r_nestedrename
+simple/rs_example1
+simple/rs_example2
+simple/rs_natjoinnooverlap
+simple/rs_streamvtable
+simple/type_mappings
+simple/zeroes
+tpch/query11_1
+tpch/query11_2
+tpch/query11_2nest_1
+tpch/query11_3
+tpch/query11_4
+tpch/query11_6
+
+ERRORS:
+
+employee/query11,front-end error
+employee/query11a,invalid SELECT statement
+employee/query12,invalid SELECT statement
+employee/query17,invalid boolean predicate
+employee/query18,invalid source declaration in a FROM clause
+employee/query19,invalid source declaration in a FROM clause
+employee/query20,invalid source declaration in a FROM clause
+employee/query21,invalid source declaration in a FROM clause
+employee/query23,MAX is not (yet) supported
+employee/query24,MAX is not (yet) supported
+employee/query25,invalid GROUP BY clause
+employee/query26,invalid GROUP BY clause
+employee/query27,invalid GROUP BY clause
+employee/query28,invalid GROUP BY clause
+employee/query29,invalid GROUP BY clause
+employee/query30,invalid GROUP BY clause
+employee/query31,invalid GROUP BY clause
+employee/query32,invalid GROUP BY clause
+employee/query33,invalid SQL expression
+employee/query34,MAX is not (yet) supported
+employee/query35,ambiguous variable 'DEPARTMENT_ID'
+employee/query35a,ambiguous variable 'DEPARTMENT_ID'
+employee/query36,ambiguous variable 'JOB_ID'
+employee/query36a,ambiguous variable 'JOB_ID'
+employee/query38,front-end error
+employee/query41,target-nested subqueries must produce exactly 1 column
+employee/query43,front-end error
+employee/query44,invalid SQL expression
+employee/query52,invalid GROUP BY clause
+employee/query53,invalid GROUP BY clause
+employee/query56,invalid SQL expression
+employee/query57,invalid GROUP BY clause
+employee/query58,invalid GROUP BY clause
+employee/query62,invalid source declaration in a FROM clause
+employee/query63,invalid source declaration in a FROM clause
+employee/query64,ambiguous variable 'JOB_ID'
+employee/query65,invalid SELECT statement
+employee/query66,invalid boolean predicate
+employee/query66a,front-end error
+simple/selectnesting,front-end error
+tpch/query11_2nest_2,front-end error
+tpch/query11_5,front-end error
+tpch/query11b,nested subqueries not supported outside of aggregates
