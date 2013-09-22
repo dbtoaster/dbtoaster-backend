@@ -22,7 +22,7 @@ trait M3Ops extends Base {
   def k3apply(fn:String,args:List[Rep[_]],tp:Type):Rep[_]
 }
 
-trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
+trait M3OpsExp extends BaseExp with NumericOps with EffectExp with M3Ops {
   import ManifestHelper.man
   def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
@@ -39,6 +39,7 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops {
   def k3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = K3Slice(map,part,partKey)
   def k3clear(map:Exp[_]) = K3Clear(map)
   def k3apply(fn:String,args:List[Exp[_]],tp:Type) = fn match {
+    case "div" => numeric_divide(unit(1.0),args(0).asInstanceOf[Rep[Double]])
     // XXX: inline library functions here
     /*
     case "div" => //(x: Double): Double = if (x==0.0) 0.0 else 1.0 / x
@@ -83,7 +84,7 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect {
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NewK3Var(v,_) => emitValDef(sym, "new K3Var["+v.toScala+"]()")
-    case NewK3Temp(ks,v,_,_) => emitValDef(sym, "K3Temp.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
+    case NewK3Temp(ks,v,_,_) => emitValDef(sym, "K3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
     case K3Get(m,ks,_) => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
     case K3Set(m,ks,v) => stream.println(quote(m)+".set("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
     case K3Add(m,ks,v) => stream.println(quote(m)+".add("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
@@ -94,7 +95,7 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect {
       stream.println(quote(m)+".foreach { ("+quote(k)+","+quote(v)+") =>"); stream.println(block); stream.println("}")
     case K3Slice(m,p,pks) => emitValDef(sym, quote(m)+".slice("+p+","+tup(pks map quote)+")")
     case K3Clear(m) => stream.println(quote(m)+".clear")
-    case K3Apply(fn,args,_) => emitValDef(sym,fn+"("+(args map quote).mkString(",")+")")
+    case K3Apply(fn,args,_) => emitValDef(sym,"U"+fn+"("+(args map quote).mkString(",")+")")
     case _ => super.emitNode(sym,rhs)
   }
   override def quote(x: Exp[Any]) : String = x match {

@@ -3,6 +3,8 @@ import ddbt.codegen.lms._
 import ddbt.ast._
 import ddbt.lib._
 
+// TPCH11c and TPCH16 seem to block forever
+
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.fresh
@@ -46,14 +48,14 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         })
       )
       case Exists(e) => expr(e, ctx, (ve:Rep[_], newCtx: LMSContext) => 
-        co(impl.__ifThenElse(impl.notequals(ve,impl.unit(0)),impl.unit(1),impl.unit(0)),newCtx)
+        co(impl.__ifThenElse(impl.notequals(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L)),newCtx)
       )
       case Lift(n,e) => expr(e, ctx, (ve:Rep[_], newCtx: LMSContext) => 
         if (!ctx.contains(n))
-          co(impl.unit(1) ,newCtx + (n -> ve))
+          co(impl.unit(1L) ,newCtx + (n -> ve))
         else co(ex.tp match {
-          case TypeLong => impl.__ifThenElse(cmp[Long](ctx(n),OpEq,ve),impl.unit(1),impl.unit(0))
-          case TypeDouble => impl.__ifThenElse(cmp[Double](ctx(n),OpEq,ve),impl.unit(1),impl.unit(0))
+          case TypeLong => impl.__ifThenElse(cmp[Long](ctx(n),OpEq,ve),impl.unit(1L),impl.unit(0L))
+          case TypeDouble => impl.__ifThenElse(cmp[Double](ctx(n),OpEq,ve),impl.unit(1L),impl.unit(0L))
           case _ => sys.error("lift")
         },newCtx)
       )
@@ -73,6 +75,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           val slicedMapRef = if(ko.size == 0) mapRef
           else impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
 
+          /*
           var newCtx = ctx0
           var keyArg: Rep[_] = null
           var valArg: Rep[_] = null
@@ -83,6 +86,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             val (b,nc) = co(valArg, innerCtx); newCtx=nc; b
           }
           (impl.k3foreach(slicedMapRef, keyArg, valArg , body), newCtx)
+          */
+          val key = (ks.zip(maps(n).keys.map(_._2))).zipWithIndex map { case ((n,k),i) => (n,k,i) }
+          foreach(slicedMapRef,key,tp,ctx,co,"m")
         }
 
       case agg@AggSum(ks,e) =>
@@ -94,6 +100,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         // Iterate over acc and call original continuation
         if (agg_keys.size==0) co(impl.k3get(acc,Nil,ex.tp),ctx) // accumulator is a single result
         else {
+          val key = agg_keys.zipWithIndex map { case ((n,k),i) => (n,k,i) }
+          foreach(acc,key,agg.tp,ctx,co,"a")
+          
+          /*
           val keyArg = impl.named(fresh("ak"))(man(agg_keys.map(_._2)))
           val valueArg = impl.named(fresh("av"))(man(ex.tp))
 
@@ -101,10 +111,24 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           lazy val (body, newCtx) = co(valueArg, iterCtx)
           (impl.k3foreach(acc, keyArg, valueArg , body ), newCtx)
           sys.error("Continue here")
+          */
         }
       case _ => sys.error("Unimplemented: "+ex) /*exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Unit], ctx)*/ 
     }
     //var exprrrr = ""
+
+    def foreach(map:Rep[_],key:List[(String,Type,Int)],value_tp:Type,ctx:LMSContext,co:(Rep[_],LMSContext)=>(Rep[Unit],LMSContext),prefix:String=""):(Rep[Unit],LMSContext) = {
+      var newCtx = ctx0
+      var keyArg: Rep[_] = null
+      var valArg: Rep[_] = null
+      val body = impl.reifyEffects {
+        keyArg = impl.named(fresh(prefix+"k"),true)(man(key.filter(k=> !ctx.contains(k._1)).map(_._2)))
+        valArg = impl.named(fresh(prefix+"v"),value_tp,true)
+        val innerCtx = ctx ++ key.filter(k=> !ctx.contains(k._1)).map{ case (n,t,i) => (n,accessTuple(keyArg,t,key.size,i)) }
+        val (b,nc) = co(valArg, innerCtx); newCtx=nc; b
+      }
+      (impl.k3foreach(map, keyArg, valArg , body), newCtx)
+    }
 
     def newVariable(tp: Type): impl.Var[Any] = tp match {
       case TypeLong => impl.var_new(impl.unit(0L))

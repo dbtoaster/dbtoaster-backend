@@ -64,6 +64,8 @@ addCommandAlias("check", ";run-main ddbt.UnitTest ")
 
 addCommandAlias("queries", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del;test-only ddbt.test.gen.*")
 
+addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del -mlms;test-only ddbt.test.gen.*")
+
 addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark ")
 
 TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>
