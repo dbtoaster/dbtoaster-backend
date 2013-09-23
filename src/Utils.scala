@@ -87,7 +87,7 @@ object Utils {
 
   // Create a temporary directory that will be removed at shutdown
   def makeTempDir(path:String=null):File = {
-    val tmp = if (path!=null) new File(path) else new File("tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
+    val tmp = if (path!=null) new File(path) else new File("target/tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
     def del(f:File) {
       if (f.isDirectory()) f.listFiles().foreach{c=>del(c)}
       if (!f.delete()) sys.error("Failed to delete file: " + f)

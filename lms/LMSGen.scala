@@ -27,7 +27,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
     // the ctx argument contains all the symbols that are available in the current context
     // the returned context is only _NEW_ symbols that have been added to the original context
-    def expr(ex:Expr,ctx:LMSContext, co: (Rep[_], LMSContext) => (Rep[Unit], LMSContext)):(Rep[Unit],LMSContext) = ex match {
+    def expr(ex:Expr,ctx:LMSContext, co: (Rep[_], LMSContext) => (Rep[Unit], LMSContext),am:Option[List[(String,Type)]]=None):(Rep[Unit],LMSContext) = ex match {
       case Ref(n) => co(ctx(n), ctx0)
       case Const(tp,v) => ex.tp match {
         case TypeLong => co(impl.unit(v.toLong), ctx0)
@@ -36,15 +36,20 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case TypeDate => sys.error("date is not implemented for Const(tp, v)") //co(impl.unit(new java.util.Date())) // XXX: set correct value
       }
       case Mul(l,r) => expr(l, ctx, (vl:Rep[_], newCtx1: LMSContext) => 
-        expr(r, ctx ++ newCtx1, (vr:Rep[_], newCtx2: LMSContext) => {
-          co(muliply(ex.tp,vl,vr), newCtx1 ++ newCtx2)
-        })
-      )
-      case Add(l,r) => expr(l, ctx, (vl:Rep[_], newCtx1: LMSContext) => 
-        expr(r, ctx, (vr:Rep[_], newCtx2: LMSContext) => {
-          co(addition(ex.tp,vl,vr), newCtx1 ++ newCtx2)
-        })
-      )
+                       expr(r, ctx ++ newCtx1, (vr:Rep[_], newCtx2: LMSContext) => co(muliply(ex.tp,vl,vr), newCtx1 ++ newCtx2) ))
+      case a@Add(l,r) =>
+        if (a.agg==Nil) expr(l, ctx, (vl:Rep[_], newCtx1: LMSContext) => 
+                        expr(r, ctx, (vr:Rep[_], newCtx2: LMSContext) => co(addition(ex.tp,vl,vr), newCtx1 ++ newCtx2) ))
+        else am match {
+          case Some(t) if t==a.agg => expr(l,ctx,co,am); expr(r,ctx,co,am)
+          case _ =>
+            val acc = impl.k3temp(a.agg.map(_._2),ex.tp)
+            val inCo = (v:Rep[_],c:LMSContext) => (impl.k3add(acc,a.agg.map(x=>c(x._1)),v),c)
+            expr(l,ctx,inCo,Some(a.agg))
+            expr(r,ctx,inCo,Some(a.agg))
+            foreach(acc,a.agg.zipWithIndex.map{case((k,t),i)=>(k,t,i)},a.tp,ctx,co)
+        }
+
       case Cmp(l,r,op) => expr(l, ctx, (vl:Rep[_], newCtx1: LMSContext) => 
         expr(r, ctx, (vr:Rep[_], newCtx2: LMSContext) => {
           co(comparison(ex.tp,vl,op,vr), newCtx1 ++ newCtx2)
@@ -81,21 +86,22 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           foreach(slicedMapRef,key,tp,ctx,co,"m")
         }
 
-      case agg@AggSum(ks,e) =>
-        val agg_keys = (ks zip agg.tks).filter{ case (n,t)=> !ctx.contains(n) } // the aggregation is only made on free variables
+      case a@AggSum(ks,e) =>
+        val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !ctx.contains(n) } // the aggregation is only made on free variables
         val acc = if (agg_keys.size==0) impl.k3var(ex.tp) else impl.k3temp(agg_keys.map(_._2),ex.tp)
         // Accumulate expr(e) in the acc
         val coAcc = (v: Rep[_], ctxAcc: LMSContext) => (impl.k3add(acc, agg_keys.map(x=>(ctx ++ ctxAcc)(x._1)), v), ctxAcc)
-        expr(e,ctx,coAcc) // returns (Rep[Unit],ctx) and we ignore ctx
+        expr(e,ctx,coAcc,Some(agg_keys)) // returns (Rep[Unit],ctx) and we ignore ctx
         // Iterate over acc and call original continuation
         if (agg_keys.size==0) co(impl.k3get(acc,Nil,ex.tp),ctx) // accumulator is a single result
-        else {
-          val key = agg_keys.zipWithIndex map { case ((n,k),i) => (n,k,i) }
-          foreach(acc,key,agg.tp,ctx,co,"a")
+        else am match {
+          case Some(t) if (t==agg_keys) => expr(e,ctx,co,am)
+          case _ => 
+            val key = agg_keys.zipWithIndex map { case ((n,k),i) => (n,k,i) }
+            foreach(acc,key,a.tp,ctx,co,"a")
         }
-      case _ => sys.error("Unimplemented: "+ex) /*exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Unit], ctx)*/ 
+      case _ => sys.error("Unimplemented: "+ex)
     }
-    //var exprrrr = ""
 
     def foreach(map:Rep[_],key:List[(String,Type,Int)],value_tp:Type,ctx:LMSContext,co:(Rep[_],LMSContext)=>(Rep[Unit],LMSContext),prefix:String=""):(Rep[Unit],LMSContext) = {
       var newCtx = ctx0
@@ -110,22 +116,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       (impl.k3foreach(map, keyArg, valArg , body), newCtx)
     }
 
-    def newVariable(tp: Type): impl.Var[Any] = tp match {
-      case TypeLong => impl.var_new(impl.unit(0L))
-      case TypeDouble => impl.var_new(impl.unit(0.0))
-      case _ => sys.error("newVariable(tp) only allowed on numeric types")
-    }
-
     def accessTuple(tuple: Rep[_],elemTp:Type,sz: Int, idx: Int)(implicit pos: scala.reflect.SourceContext): Rep[_] = sz match {
         case 1 => tuple
         case _ => impl.getClass.getDeclaredMethod("tuple%d_get%d".format(sz,idx+1),Class.forName("java.lang.Object"), Class.forName("scala.reflect.Manifest"), Class.forName("scala.reflect.SourceContext"))
                    .invoke(impl, tuple, man(elemTp), pos).asInstanceOf[Rep[_]]
-    }
-
-    def tup(ks: List[Rep[_]]): Rep[_] = ks.size match {
-      case 1 => ks.head
-      case 2 => impl.make_tuple2((ks(0),ks(1)))
-      case 3 => impl.make_tuple3((ks(0),ks(1),ks(2)))
     }
 
     def muliply(tp: Type, vl: Rep[_], vr: Rep[_]) = tp match {
@@ -190,6 +184,26 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     maps=s0.maps.map(m=>(m.name,m)).toMap; val r=super.apply(s0); maps=Map(); r
   }
 }
+
+    /*
+    def newVariable(tp: Type): impl.Var[Any] = tp match {
+      case TypeLong => impl.var_new(impl.unit(0L))
+      case TypeDouble => impl.var_new(impl.unit(0.0))
+      case _ => sys.error("newVariable(tp) only allowed on numeric types")
+    }
+    */
+    /*
+    def tup(ks: List[Rep[_]]): Rep[_] = ks.size match {
+      case 1 => ks.head
+      case 2 => impl.make_tuple2((ks(0),ks(1)))
+      case 3 => impl.make_tuple3((ks(0),ks(1),ks(2)))
+      case 4 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3)))
+      case 5 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4)))
+      case 6 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4),ks(5)))
+      case 7 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4),ks(5),ks(6)))
+      case 8 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4),ks(5),ks(6),ks(7)))
+    }
+    */
 
   // def createTuple(elems: List[Rep[_]]): Rep[_] = elems.size match {
   //   case 1 => impl.getClass.getDeclaredMethod("make_tuple1",impl.Exp[Any].getClass).invoke(impl,elems(0)).asInstanceOf[Rep[_]]
