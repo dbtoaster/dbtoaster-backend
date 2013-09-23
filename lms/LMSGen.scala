@@ -3,6 +3,8 @@ import ddbt.codegen.lms._
 import ddbt.ast._
 import ddbt.lib._
 
+import java.util.Date
+
 // TPCH11c and TPCH16 seem to block forever
 // Symbol errors in sbt 'toast examples/queries/simple/rs_joinon.sql -l lms'
 
@@ -75,19 +77,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           val mapRef = ctx(n)
           val slicedMapRef = if(ko.size == 0) mapRef
           else impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
-
-          /*
-          var newCtx = ctx0
-          var keyArg: Rep[_] = null
-          var valArg: Rep[_] = null
-          val body = impl.reifyEffects {
-            keyArg = impl.named(fresh("mk"),true)(man(maps(n).keys.map(_._2)))
-            valArg = impl.named(fresh("mv"),tp,true)
-            val innerCtx = ctx ++ ks.zipWithIndex.filter{ case (k,v) => !ctx.contains(k) }.map{ case (kPart,i) => (kPart,accessTuple(keyArg,maps(n).keys(i)._2,ks.size,i)) }
-            val (b,nc) = co(valArg, innerCtx); newCtx=nc; b
-          }
-          (impl.k3foreach(slicedMapRef, keyArg, valArg , body), newCtx)
-          */
           val key = (ks.zip(maps(n).keys.map(_._2))).zipWithIndex map { case ((n,k),i) => (n,k,i) }
           foreach(slicedMapRef,key,tp,ctx,co,"m")
         }
@@ -103,16 +92,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         else {
           val key = agg_keys.zipWithIndex map { case ((n,k),i) => (n,k,i) }
           foreach(acc,key,agg.tp,ctx,co,"a")
-          
-          /*
-          val keyArg = impl.named(fresh("ak"))(man(agg_keys.map(_._2)))
-          val valueArg = impl.named(fresh("av"))(man(ex.tp))
-
-          val iterCtx = ctx ++ agg_keys.zipWithIndex.map{ case ((n,t),i) => (n,accessTuple(keyArg,t,agg_keys.size,i)) }
-          lazy val (body, newCtx) = co(valueArg, iterCtx)
-          (impl.k3foreach(acc, keyArg, valueArg , body ), newCtx)
-          sys.error("Continue here")
-          */
         }
       case _ => sys.error("Unimplemented: "+ex) /*exprrrr = exprrrr + "ex = " + ex + "\n";(impl.fresh[Unit], ctx)*/ 
     }
@@ -164,7 +143,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     def comparison(tp: Type, vl: Rep[_], op: OpCmp, vr: Rep[_]) = tp match {
       case TypeLong => cmp[Long](vl,op,vr)
       case TypeDouble => cmp[Double](vl,op,vr)
-      // XXX: case TypeDate => (vl.asDate).getTime op (vr.asDate).getTime
+      case TypeDate => cmp[Long](impl.dtGetTime(vl.asInstanceOf[Rep[Date]]),op,impl.dtGetTime(vr.asInstanceOf[Rep[Date]]))
       case _ => sys.error("Cmp(l,r) only allowed on numeric types")
     }    
 
