@@ -7,6 +7,8 @@ package ddbt.test
  *
  *    -z <num>  : enable Zeus random queries testing (100)
  *    -s <seed> : test a single Zeus query with given seed
+ *    -v        : enable verbose errors
+ *    -x        : attempt to run after compilation
  *
  */
 
@@ -18,7 +20,9 @@ object AllQueries {
   import ddbt.test.Benchmark.{tmp,scalac,scalax}
   val rbase = new java.io.File(path_repo+"/"+path_base)
   
+  var verbose = false
   var zeus = false
+  var run = false
   var seed:Long = 0
   var num = 100
   
@@ -26,8 +30,10 @@ object AllQueries {
     var i=0; val l=args.length
     while(i<l) {
       args(i) match {
-        case "-z" if (i<l+1) => zeus=true; if (i<l+1) try { num=args(i+1).toInt; i+=1; } catch { case _:Throwable => }
-        case "-s" if (i<l+1) => zeus=true; i+=1; seed=args(i).toLong; num=1;
+        case "-z" if (i<l+1) => zeus=true;run=true; if (i<l+1) try { num=args(i+1).toInt; i+=1; } catch { case _:Throwable => }
+        case "-s" if (i<l+1) => zeus=true;run=true; i+=1; seed=args(i).toLong; num=1;
+        case "-v" => verbose = true
+        case "-x" => run = true
       }
       i+=1
     }
@@ -40,20 +46,35 @@ object AllQueries {
       else { var i=0; while(i<num) { i=i+1; zeus() } }
     } else moreTests() 
   }
-  
+
+  def genTest(query:String,toast_f:()=>String,name:String="Query") = {
+    def info(msg:String) = scala.Console.out.println(query+": "+msg)
+    def err(msg:String) = scala.Console.err.println(query+": "+msg)
+    def dump(out:String,err:String) = if (verbose) { if (out!="") println(out); if (err!="") scala.Console.err.println(err) }
+
+    val (t0,(m3,o0,e0)) = ns(()=>captureOut(toast_f)); dump(o0,e0)
+    if (m3=="" || m3==null) err("front-end failed")
+    else try {
+      import ddbt.ast.M3
+      def gen(m3:M3.System):String = { val g=new ScalaGen(name); g.helper(m3,1)+g(m3) }
+      val (t1,sc) = ns(()=> (M3Parser andThen TypeCheck andThen gen _)(m3)); write(tmp,name+".scala",sc)
+      val (t2,(u2,o2,e2)) = ns(()=>captureOut(()=>scalac(name))); dump(o2,e2)
+      if (e2!="") err("scalac: "+e2)
+      else {
+        val msg="toM3:"+time(t0)+", compile:"+time(t1)+", scalac:"+time(t2)
+        if (!run) info(msg)
+        else { val (t3,out) = ns(()=>scalax("ddbt.generated."+name)); info(msg+", run:"+time(t3)) }
+      }
+    } catch { case t:Throwable => err("compiler: "+t.getMessage) }
+  }
+
   def zeus(s:Long=0) {
     val sql = exec("scripts/zeus.rb"+(if (s!=0) " -s "+s else ""))._1.replaceAll("@@DATA@@",path_repo+"/dbtoaster/experiments/data/simple/tiny")
     val ma = java.util.regex.Pattern.compile(".*seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
     val seed = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
     val sql_file = tmp.getPath+"/zeus.sql"; write(tmp,"zeus.sql",sql)
-    try {
-      println("Seed = "+seed)
-      val (t0,m3) = ns(()=>exec(Array(path_bin,"-l","m3",sql_file))._1)
-      val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen new ScalaGen("Zeus",1))(m3)); write(tmp,"Zeus.scala",sc)
-      val t2 = ns(()=>scalac("Zeus"))._1
-      val (t3,r) = ns(()=>scalax("ddbt.generated.Zeus"))
-      println("toM3:"+time(t0)+", compile:"+time(t1)+", scalac:"+time(t2)+", run:"+time(t3))
-    } catch { case t:Throwable => t.printStackTrace() }
+    println("Seed = "+seed)
+    genTest("Zeus"+seed,()=>exec(Array(path_bin,"-l","m3",sql_file))._1,"Zeus")
   }
 
   /* Lookup for all SQL files in dbt repository tests and try to compile it */
@@ -65,32 +86,14 @@ object AllQueries {
                       ),rbase)._1.split("\n") }
               catch { case e:Exception => println("Repository not configured"); Array[String]() }
     val tested = filtered.map(f=>load(f).sql).toSet
-    
+
     val excl = List(
       "mddb/query3",
       "mddb/query2_full" // very slow
     )
     
     val untested = all.filter(!tested.contains(_)).filter(x=>excl.forall(!x.contains(_))).sorted
-    untested.foreach { t => 
-      def info(msg:String) = scala.Console.out.println(t+": "+msg)
-      def err(msg:String) = scala.Console.err.println(t+": "+msg)
-  
-      val (t0,(m3,o0,e0)) = ns(()=>captureOut(()=>toast(t,List("-l","M3"))))
-      if (m3=="" || m3==null) err("front-end failed")
-      else try {
-          //println("SQL -> M3      : "+time(t0))
-        val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen new ScalaGen("NewQuery",1))(m3))
-        write(tmp,"NewQuery.scala",sc)
-        val (t2,(u2,o2,e2)) = ns(()=>captureOut(()=>scalac("NewQuery")))
-        if (e2!="") err("scalac: "+e2)
-        else {
-          //val excl_exec = List( "mddb/query2_full","mddb/query2_inner_simple","mddb/query2_simplified" )
-          //val (t3,out) = ns(()=>scalax("ddbt.generated.NewQuery"))
-          info("toM3:"+time(t0)+", compile:"+time(t1)+", scalac:"+time(t2) /*+", run:"+time(t3)*/ ) 
-        }
-      } catch { case t:Throwable => err("compiler: "+t.getMessage) }
-    }
+    untested.foreach { t => genTest(t,()=>toast(t,List("-l","M3")),"NewQuery") }
   }
 }
 

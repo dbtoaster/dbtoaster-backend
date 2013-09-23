@@ -17,7 +17,7 @@ object Compiler {
   var name: String = null       // class/structures name (defaults to Query or capitalized filename)
   var exec: Boolean = false     // compile and execute immediately
 
-  def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1) }
+  def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1); null }
   def toast(l:String) = Utils.exec((Utils.path_bin :: "-O3" :: "-l" :: l :: in).toArray)._1
 
   def parseArgs(args:Array[String]) {
@@ -75,12 +75,13 @@ object Compiler {
       case _ => toast("m3")
     })
     // Back-end
-    lang match {
-      case "scala" => output(new ScalaGen(name)(m3))
-      case "akka" => output(new AkkaGen(name)(m3))
-      case "lms" => output(new LMSGen(name)(m3))
-      case _ => error("Compilation not supported")
+    val cg:CodeGen = lang match {
+      case "scala" => new ScalaGen(name)
+      case "akka" => new AkkaGen(name)
+      case "lms" => new LMSGen(name)
+      case _ => error("Code generation for "+lang+" is not supported",true)
     }
+    output(cg.helper(m3)+cg(m3))
     // Execution
     if (exec) lang match {
       case "scala"|"akka"|"lms" =>
@@ -88,7 +89,7 @@ object Compiler {
         Utils.exec(Array("scalac",out,"-cp",libs,"-d",tmp.getPath)) // scala compiler
         val (o,e) = Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name)) // execution
         if (e!="") error(e); println(o);
-      case _ => error("Execution not supported")
+      case _ => error("Execution not supported",true)
     }
   }
 }
@@ -109,4 +110,3 @@ object Compiler {
 6. Distribute over nodes
 7. Evaluate query
 */
-

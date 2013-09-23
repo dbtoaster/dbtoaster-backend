@@ -88,12 +88,12 @@ object UnitTest {
     def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
     val sys = (((f:String)=>toast(f,opts)) andThen M3Parser andThen TypeCheck)(t.sql)
     val cls = clname(t.sql)
-    val gen = mode match { // XXX: provide a common interface for all code generators (?)
+    val gen:CodeGen = mode match {
       case "scala" => new ScalaGen(cls)
       case "lms" => new LMSGen(cls)
-      case _ => scala.sys.error("Unsupported")
+      case _ => scala.sys.error("Generator "+mode+" not supported")
     }
-    val str = gen.genStreams(sys.sources)
+    val str = gen.streams(sys.sources)
     val qid = sys.queries.map{_.name}.zipWithIndex.toMap
     val qt = sys.queries.map{q=>(q.name,sys.mapType(q.m.name)) }.toMap
     val helper =
@@ -106,7 +106,7 @@ object UnitTest {
         // val mystr = (str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) } // seems that set.subs are useless here
         val mystr = (if (sz.endsWith("_del")) str.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else str).replaceAll("/standard/","/"+sz+"/") // streams for this dataset
         "describe(\"Dataset '"+sz+"'\") {"+ind("\n"+
-        "val (t,res) = run["+cls+","+gen.genViewType(sys)+"]("+mystr+")\n"+
+        "val (t,res) = run["+cls+","+gen.viewType(sys)+"]("+mystr+")\n"+
         set.out.map { case (n,o) =>
           val (kt,vt) = qt(n)
           val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
@@ -123,7 +123,7 @@ object UnitTest {
           })+")")+"\n}"
         }.mkString("\n"))+"\n}"
       }.mkString("\n"))+"\n}\n\n"
-      write(dir,cls+".scala",helper+gen.genSystem(sys))
+      write(dir,cls+".scala",helper+gen(sys))
       println("Query "+cls+" generated")
   }
 

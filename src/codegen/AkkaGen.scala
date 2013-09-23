@@ -30,7 +30,7 @@ import ddbt.ast._
  *
  * @author TCK
  */
-class AkkaGen(cls:String="Query") extends (M3.System => String) {
+class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
 
 // 1. before each statement, add pre computation
@@ -70,5 +70,5 @@ From ScalaGen, methods to modify
 
 */
 
-  def apply(s:System) = "unimplemented"
+  override def apply(s:System) = "// unimplemented"
 }

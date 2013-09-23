@@ -4,6 +4,7 @@ import ddbt.ast._
 import ddbt.lib._
 
 // TPCH11c and TPCH16 seem to block forever
+// Symbol errors in sbt 'toast examples/queries/simple/rs_joinon.sql -l lms'
 
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
@@ -206,8 +207,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   var maps = Map[String,MapDef]() // global maps, to be replaced by a Map[String,LMS_K3Map]
-  override def genSystem(s0:System):String = {
-    maps=s0.maps.map(m=>(m.name,m)).toMap; val r=super.genSystem(s0); maps=Map(); r
+  override def apply(s0:System):String = {
+    maps=s0.maps.map(m=>(m.name,m)).toMap; val r=super.apply(s0); maps=Map(); r
   }
 }
 

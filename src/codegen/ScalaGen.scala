@@ -26,7 +26,7 @@ import ddbt.ast._
  *
  * @author TCK
  */
-class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => String) {
+class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
@@ -128,7 +128,7 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
     }
   }
 
-  def genSystem(s0:System):String = {
+  def apply(s0:System):String = {
     def ev(s:Schema,short:Boolean=true):(String,String) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
@@ -171,7 +171,7 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
     (in,"new Adaptor."+adaptor,split)
   }
 
-  def genStreams(sources:List[Source]) = {
+  def streams(sources:List[Source]) = {
     def fixOrderbook(ss:List[Source]):List[Source] = { // one source generates BOTH asks and bids events
       val (os,xs) = ss.partition{_.adaptor.name=="ORDERBOOK"}
       val ob = new java.util.HashMap[(Boolean,SourceIn),(Schema,Split,Map[String,String])]()
@@ -185,13 +185,13 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
   }
 
   // Helper that contains the main and stream generator
-  def genViewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); if (m._1.size==0) m._2.toScala else "Map["+tup(m._1.map(_.toScala))+","+m._2.toScala+"]" })
-  def genHelper(s0:System) = {
+  def viewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); if (m._1.size==0) m._2.toScala else "Map["+tup(m._1.map(_.toScala))+","+m._2.toScala+"]" })
+  def helper(s0:System,numSamples:Int=10) = {
     "package ddbt.generated\nimport ddbt.lib._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind(
-    "def execute() = run["+cls+","+genViewType(s0)+"]("+genStreams(s0.sources)+")\n\n"+
+    "def execute() = run["+cls+","+viewType(s0)+"]("+streams(s0.sources)+")\n\n"+
     "def main(args:Array[String]) {\n"+ind("val res = bench(\"NewGen\","+numSamples+",execute)\n"+
     s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\")\nprintln(K3Helper.toStr(res"+(if (s0.queries.size>1) "._"+(i+1) else "")+")+\"\\n\")" }.mkString("\n"))+"\n}")+"\n}\n\n"
   }
-  def apply(s:System) = genHelper(s)+genSystem(s)
+  //def apply(s:System) = genHelper(s)+genSystem(s)
 }
