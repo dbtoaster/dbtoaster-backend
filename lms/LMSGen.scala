@@ -36,10 +36,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case TypeDate => sys.error("date is not implemented for Const(tp, v)") //co(impl.unit(new java.util.Date())) // XXX: set correct value
       }
       case Mul(l,r) => expr(l, ctx, (vl:Rep[_], newCtx1: LMSContext) => 
-                       expr(r, ctx ++ newCtx1, (vr:Rep[_], newCtx2: LMSContext) => co(muliply(ex.tp,vl,vr), newCtx1 ++ newCtx2) ))
+                       expr(r, ctx ++ newCtx1, (vr:Rep[_], newCtx2: LMSContext) => co(mul(vl,vr,ex.tp), newCtx1 ++ newCtx2) ))
       case a@Add(l,r) =>
         if (a.agg==Nil) expr(l, ctx, (vl:Rep[_], newCtx1: LMSContext) => 
-                        expr(r, ctx, (vr:Rep[_], newCtx2: LMSContext) => co(addition(ex.tp,vl,vr), newCtx1 ++ newCtx2) ))
+                        expr(r, ctx, (vr:Rep[_], newCtx2: LMSContext) => co(add(vl,vr,ex.tp), newCtx1 ++ newCtx2) ))
         else am match {
           case Some(t) if t==a.agg => expr(l,ctx,co,am); expr(r,ctx,co,am)
           case _ =>
@@ -52,20 +52,15 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
       case Cmp(l,r,op) => expr(l, ctx, (vl:Rep[_], newCtx1: LMSContext) => 
         expr(r, ctx, (vr:Rep[_], newCtx2: LMSContext) => {
-          co(comparison(ex.tp,vl,op,vr), newCtx1 ++ newCtx2)
+          co(cmp(vl,op,vr,l.tp), newCtx1 ++ newCtx2)
         })
       )
       case Exists(e) => expr(e, ctx, (ve:Rep[_], newCtx: LMSContext) => 
         co(impl.__ifThenElse(impl.notequals(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L)),newCtx)
       )
       case Lift(n,e) => expr(e, ctx, (ve:Rep[_], newCtx: LMSContext) => 
-        if (!ctx.contains(n))
-          co(impl.unit(1L) ,newCtx + (n -> ve))
-        else co(ex.tp match {
-          case TypeLong => impl.__ifThenElse(cmp[Long](ctx(n),OpEq,ve),impl.unit(1L),impl.unit(0L))
-          case TypeDouble => impl.__ifThenElse(cmp[Double](ctx(n),OpEq,ve),impl.unit(1L),impl.unit(0L))
-          case _ => sys.error("lift")
-        },newCtx)
+        if (!ctx.contains(n)) co(impl.unit(1L),newCtx+(n -> ve))
+        else co(cmp(ctx(n),OpEq,ve,e.tp),newCtx)
       )
       case Apply(fn,tp,as) =>
         def ev2(es:List[Expr],vs:List[Rep[_]],c:LMSContext) : (Rep[Unit],LMSContext) = es match {
@@ -122,32 +117,40 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
                    .invoke(impl, tuple, man(elemTp), pos).asInstanceOf[Rep[_]]
     }
 
-    def muliply(tp: Type, vl: Rep[_], vr: Rep[_]) = tp match {
-      case TypeLong => numeric_times[Long](vl,vr)
-      case TypeDouble => numeric_times[Double](vl,vr)
-      case _ => sys.error("Mul(l,r) only allowed on numeric types")
+    def mul(l:Rep[_], r:Rep[_], tp:Type) = {
+      @inline def times[T:Numeric:Manifest]() = impl.numeric_times[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
+      tp match {
+        case TypeLong => times[Long]()
+        case TypeDouble => times[Double]()
+        case _ => sys.error("Mul(l,r) only allowed on numeric types")
+      }
     }
 
-    def addition(tp: Type, vl: Rep[_], vr: Rep[_]) = tp match {
-      case TypeLong => numeric_plus[Long](vl,vr)
-      case TypeDouble => numeric_plus[Double](vl,vr)
-      case _ => sys.error("Add(l,r) only allowed on numeric types")
+    def add(l:Rep[_], r:Rep[_], tp:Type) = {
+      @inline def plus[T:Numeric:Manifest]() = impl.numeric_plus[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
+      tp match {
+        case TypeLong => plus[Long]()
+        case TypeDouble => plus[Double]()
+        case _ => sys.error("Add(l,r) only allowed on numeric types")
+      }
     }
 
-    def comparison(tp: Type, vl: Rep[_], op: OpCmp, vr: Rep[_]) = tp match {
-      case TypeLong => cmp[Long](vl,op,vr)
-      case TypeDouble => cmp[Double](vl,op,vr)
-      case TypeDate => cmp[Long](impl.dtGetTime(vl.asInstanceOf[Rep[Date]]),op,impl.dtGetTime(vr.asInstanceOf[Rep[Date]]))
-      case _ => sys.error("Cmp(l,r) only allowed on numeric types")
-    }    
-
-    def numeric_times[T:Numeric:Manifest](l: Rep[_], r: Rep[_]) = impl.numeric_times[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
-    def numeric_plus[T:Numeric:Manifest](l: Rep[_], r: Rep[_]) = impl.numeric_plus[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
-    def cmp[T:Ordering:Manifest](l: Rep[_], op: OpCmp, r: Rep[_]): Rep[Boolean] = op match {
-      case OpEq => impl.equals[T,T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
-      case OpNe => impl.notequals[T,T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
-      case OpGt => impl.ordering_gt[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
-      case OpGe => impl.ordering_gteq[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
+    def cmp(l:Rep[_], op:OpCmp, r:Rep[_], tp:Type): Rep[Long] = {
+      @inline def cmp2[T:Ordering:Manifest](vl:Rep[_],vr:Rep[_]): Rep[Boolean] = {
+        val (ll,rr)=(vl.asInstanceOf[Rep[T]],vr.asInstanceOf[Rep[T]])
+        op match {
+          case OpEq => impl.equals[T,T](ll,rr)
+          case OpNe => impl.notequals[T,T](ll,rr)
+          case OpGt => impl.ordering_gt[T](ll,rr)
+          case OpGe => impl.ordering_gteq[T](ll,rr)
+        }
+      }
+      impl.__ifThenElse(tp match {
+        case TypeLong => cmp2[Long](l,r)
+        case TypeDouble => cmp2[Double](l,r)
+        case TypeDate => cmp2[Long](impl.dtGetTime(l.asInstanceOf[Rep[Date]]),impl.dtGetTime(r.asInstanceOf[Rep[Date]]))
+        case _ => sys.error("Cmp(l,r) only allowed on numeric types")
+      },impl.unit(1L),impl.unit(0L))
     }
     
     val triggerBlock = impl.reifyEffects {
