@@ -59,7 +59,7 @@ class TPCH1 extends Actor {
   var AVG_DISC = K3Map.make[(String,String), Double]()
   var AVG_DISC_mLINEITEM5 = K3Map.make[(String,String), Double]()
   var COUNT_ORDER = K3Map.make[(String,String), Long]()
-  
+
   import scala.collection.mutable.Map
 
   def onInsertLINEITEM(l_orderkey: Long,l_partkey: Long,l_suppkey: Long,l_linenumber: Long,l_qty: Double,l_extprice: Double,l_discount: Double,l_tax: Double,l_rf: String,l_ls: String,l_sdate: Date,l_commitdate: Date,l_receiptdate: Date,l_shipinstruct: String,l_shipmode: String,l_comment: String) = {
@@ -68,7 +68,7 @@ class TPCH1 extends Actor {
     val q = AVG_QTY_mLINEITEM1_L3_1.get(k0);
     val dq = (0L != q) * Udiv(Ulistmax(1L,q))
     val dqc = (0L != q+c0) * Udiv(Ulistmax(1L,q+c0))
-    
+
     SUM_QTY.add(k0,c0*l_qty)
     SUM_BASE_PRICE.add(k0, c0 * l_extprice)
     SUM_DISC_PRICE.add(k0, c0 * (1-l_discount) * l_extprice)
@@ -88,7 +88,7 @@ class TPCH1 extends Actor {
     val c0:Long = l_sdate.getTime() <= c1.getTime()
     val q = AVG_QTY_mLINEITEM1_L3_1.get(k0);
     val dqnc = (0L != q-c0) * Udiv(Ulistmax(1L,q-c0))
-    
+
     SUM_QTY.add(k0, -c0 * l_qty)
     SUM_BASE_PRICE.add(k0, -c0 * l_extprice);
     SUM_DISC_PRICE.add(k0, -c0 * l_extprice * (1-l_discount))
@@ -101,10 +101,10 @@ class TPCH1 extends Actor {
       AVG_QTY.add(k, -v * (0L != q1) * Udiv(Ulistmax(1L,q1)) +
                       v * (0L != ac1) * Udiv(Ulistmax(1L,ac1)) )
     }
-    
+
     AVG_QTY_mLINEITEM5.add(k0, -c0 * l_qty);
 
-    AVG_PRICE.add(k0, -c0 * dqnc * l_extprice) 
+    AVG_PRICE.add(k0, -c0 * dqnc * l_extprice)
     AVG_PRICE_mLINEITEM5.foreach{ (k,v) =>
       val q1 = AVG_QTY_mLINEITEM1_L3_1.get(k);
       val ac2:Long = q1 + ((k==k0) * -c0)

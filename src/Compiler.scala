@@ -39,7 +39,7 @@ object Compiler {
       error("Usage: Compiler [options] file1 [file2 [...]]")
       error("Global options:")
       error("  -o <file>     output file (default: stdout)")
-      error("  -l <lang>     defines the target language") 
+      error("  -l <lang>     defines the target language")
       error("                - calc  : relational calculus")
       error("                - m3    : M3 program")
       error("                - scala : vanilla Scala code")
@@ -63,7 +63,7 @@ object Compiler {
       case _ =>
     }
   }
- 
+
   def output(s:String) = if (out==null) println(s) else { val f=new File(out); Utils.write(if (f.getParentFile==null) new File(".") else f.getParentFile,f.getName,s) }
 
   def main(args: Array[String]) {

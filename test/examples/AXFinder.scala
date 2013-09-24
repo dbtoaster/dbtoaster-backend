@@ -20,9 +20,9 @@ object AXFinder extends Helper {
 // -----------------------------------------------------------------------------
 abstract class AXFinderBase extends Actor {
   import Messages._
-  import scala.language.implicitConversions  
+  import scala.language.implicitConversions
   implicit def boolConv(b:Boolean):Long = if (b) 1L else 0L
-  
+
   var t0:Long = 0
   //override def preStart(): Unit = println("Started")
   //override def postStop(): Unit = println("Stopped")
@@ -49,7 +49,7 @@ class AXFinder extends AXFinderBase {
   val mBIDS1 = K3Map.makeIdx[(Long,Double),Long](List(0));
   val mBIDS3 = K3Map.makeIdx[(Long,Double),Double](List(0));
   def result = AXFINDER.toMap
-  
+
   def onAddBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double) {
     val agg1 = mBIDS1.slice(0,BIDS_BROKER_ID).aggr { case (k2,v3) =>
       val A_PRICE = k2._2;
@@ -236,19 +236,19 @@ import scala.collection.mutable.Map;
 
   var AXFINDER = new K3PersistentCollection[(Long), Double]("AXFINDER", Map(), None);
   var AXFINDER_mASKS1 = new K3PersistentCollection[Tuple2[Long,Double], Double]("AXFINDER_mASKS1", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Double](x => x match {
-    case Tuple2(x1,x2) => (x1) 
+    case Tuple2(x1,x2) => (x1)
   }
   ))));
   var AXFINDER_mASKS2 = new K3PersistentCollection[Tuple2[Long,Double], Long]("AXFINDER_mASKS2", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Long](x => x match {
-    case Tuple2(x1,x2) => (x1) 
+    case Tuple2(x1,x2) => (x1)
   }
   ))));
   var AXFINDER_mBIDS1 = new K3PersistentCollection[Tuple2[Long,Double], Long]("AXFINDER_mBIDS1", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Long](x => x match {
-    case Tuple2(x1,x2) => (x1) 
+    case Tuple2(x1,x2) => (x1)
   }
   ))));
   var AXFINDER_mBIDS3 = new K3PersistentCollection[Tuple2[Long,Double], Double]("AXFINDER_mBIDS3", Map(), Some(Map("0" -> SecondaryIndex[(Long),Tuple2[Long,Double], Double](x => x match {
-    case Tuple2(x1,x2) => (x1) 
+    case Tuple2(x1,x2) => (x1)
   }
   ))));
 

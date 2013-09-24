@@ -42,15 +42,15 @@ import akka.actor.{Actor,ActorRef}
 
 /** Internal types and messages */
 object WorkerActor {
-  type MapRef = Byte;  
-  type FunRef = Short; 
+  type MapRef = Byte;
+  type FunRef = Short;
   type NodeRef = Short;
   def MapRef(i:Int) = i.toByte
   def FunRef(i:Int) = i.toShort
   def NodeRef(i:Int) = i.toShort
   private val FunRefMin = java.lang.Short.MIN_VALUE // special functions base id
 
-  // XXX: implement more efficient serializer: see 
+  // XXX: implement more efficient serializer: see
   // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
   // https://github.com/romix/akka-kryo-serialization
   // https://github.com/talex004/akka-kryo-serialization
@@ -61,14 +61,14 @@ object WorkerActor {
   case class Barrier(en:Boolean) // switch barrier mode
   case class Ack(to:Array[NodeRef],num:Array[Long]) // cumulative ack to master (to, count) : -1 for sent, 1 for recv
 
-  /*  
+  /*
   case class TellJoin(master:ActorRef) // ->worker: join the master
   case object TellLeave // ->worker: ask for departure
   case class Join(ms:List[MapRef]) // worker->master: join request
   case object Leave // worker->master: departure request
   case object Goodbye // worker is allowed to stop responding
   */
-  
+
   // Data messages
   case class Get[K](map:MapRef,key:K) // => Val[K,V]
   case class Val[K,V](map:MapRef,key:K,value:V)
@@ -102,7 +102,7 @@ abstract class WorkerActor extends Actor {
   }
   // XXX: protected def addWorker(w:ActorRef,ms:List[Maps]) {}
   // XXX: protected def delWorker(w:ActorRef) {}
-  
+
   // ---- get/continuations matcher
   private object matcherGet {
     private var enabled = true // enable cache
@@ -128,7 +128,7 @@ abstract class WorkerActor extends Actor {
     @inline def ready = cont.size==0
     @inline def clear(en:Boolean=true) = { cache.clear; enabled=en }
   }
-  
+
   // ---- aggregation/continuations matcher
   private object matcherAggr {
     private var enabled = true // enable cache
@@ -216,7 +216,7 @@ abstract class WorkerActor extends Actor {
 
   // ---- map operations
   // Element operation: if key hashes to local, apply locally, otherwise call remote worker
-  def get[K,V](m:MapRef,k:K,co:V=>Unit) = matcherGet.req(m,k,co) 
+  def get[K,V](m:MapRef,k:K,co:V=>Unit) = matcherGet.req(m,k,co)
   def add[K,V](m:MapRef,k:K,v:V) { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].add(k,v) else bar.send(o,Add(m,k,v)) }
   def set[K,V](m:MapRef,k:K,v:V) { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].set(k,v) else bar.send(o,Set(m,k,v)) }
   // Group operations: broadcast to owners, workers then process locally
@@ -291,7 +291,7 @@ trait MasterActor extends WorkerActor {
   }
 
   val dispatch:PartialFunction[TupleEvent,Unit] // to be implemented by subclasses
-  override def receive = masterRecv orElse super.receive  
+  override def receive = masterRecv orElse super.receive
   private val masterRecv : PartialFunction[Any,Unit] = {
     case ev:StreamEvent => val p=(est==0); est=1; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
   }

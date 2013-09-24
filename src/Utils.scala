@@ -40,7 +40,7 @@ object Utils {
     if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); print(o); System.err.print(e); if (fatal) System.exit(1) }
     (o,e)
   }
-  
+
   // Capture console/default output and error streams in two strings
   def captureOut[R](f:()=>R) : (R,String,String) = {
     val o0=scala.Console.out; val so0=System.out; val po=new PipedOutputStream; scala.Console.setOut(new PrintStream(po)); System.setOut(new PrintStream(po)); val out=gobble(new PipedInputStream(po));
@@ -50,7 +50,7 @@ object Utils {
     scala.Console.setErr(e0); System.setErr(se0); pe.close
     (r,out.toString,err.toString)
   }
-  
+
   // Class loader to run a class with main(args:Array[String]) within the same VM
   def loadMain(cp:File,cls:String,args:Array[String]=Array()) = {
     val r = captureOut(()=>{

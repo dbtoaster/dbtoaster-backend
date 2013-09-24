@@ -19,13 +19,13 @@ object AllQueries {
   import ddbt.codegen._
   import ddbt.test.Benchmark.{tmp,scalac,scalax}
   val rbase = new java.io.File(path_repo+"/"+path_base)
-  
+
   var verbose = false
   var zeus = false
   var run = false
   var seed:Long = 0
   var num = 100
-  
+
   def main(args:Array[String]) {
     var i=0; val l=args.length
     while(i<l) {
@@ -44,7 +44,7 @@ object AllQueries {
     if (zeus) {
       if (seed!=0) zeus(seed)
       else { var i=0; while(i<num) { i=i+1; zeus() } }
-    } else moreTests() 
+    } else moreTests()
   }
 
   def genTest(query:String,toast_f:()=>String,name:String="Query") = {
@@ -91,7 +91,7 @@ object AllQueries {
       "mddb/query3",
       "mddb/query2_full" // very slow
     )
-    
+
     val untested = all.filter(!tested.contains(_)).filter(x=>excl.forall(!x.contains(_))).sorted
     untested.foreach { t => genTest(t,()=>toast(t,List("-l","M3")),"NewQuery") }
   }

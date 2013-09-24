@@ -25,7 +25,7 @@ import ddbt.codegen._
  *    sbt ';run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del;test-only * -- -l ddbt.SlowTest'
  *
  *    sbt ';check -dbig -q.*axfinder;test-only ddbt.test.gen.*'
- * 
+ *
  * @author TCK
  */
 object UnitTest {
@@ -38,7 +38,7 @@ object UnitTest {
   case class QueryMap(m:Map[String,String]) extends QueryOut
   case class QueryFile(path:String,sep:String=null) extends QueryOut
   case class QuerySingleton(v:String) extends QueryOut
-  
+
   // Parser for unit testing declarations
   import scala.util.parsing.combinator.RegexParsers
   object UnitParser extends RegexParsers {
@@ -55,13 +55,13 @@ object UnitTest {
     lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (tup(cs),n) }
     def apply(input: String): QueryTest = parseAll(qtest, input) match { case Success(r,_) => r case f => sys.error(f.toString) }
   }
-  
+
   // Repository-specific functions shared with tests (Parsers at least)
   private val rbase = new java.io.File(path_repo+"/"+path_base)
   def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
   def toast(f:String,opts:List[String]=Nil):String = if (path_repo=="") exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)._1 else
     exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase,null,false)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
-  
+
   val all = try { exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("Repository not configured"); Array[String]() }
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                           "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
@@ -79,7 +79,7 @@ object UnitTest {
       else { System.err.println(("@"*80)+"\n@"+(" "*78)+("@\n@ %-76s @".format("WARNING: folder '"+dir+"' does not exist, tests skipped !\n@"+(" "*78))+"@\n"+("@"*80))); Array[String]() }
       (files,files,null)
   }
-  
+
   // ---------------------------------------------------------------------------
 
   // Test generator

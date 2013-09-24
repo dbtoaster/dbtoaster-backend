@@ -141,7 +141,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else ""
     }
     val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
-    
+
     freshClear()
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+

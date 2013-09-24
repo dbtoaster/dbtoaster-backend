@@ -142,7 +142,7 @@ case class K3MapMult[K,V:ClassTag](idxs:List[K3Index[_,K,V]]=Nil) extends K3Map[
     else { elems.put(key,value); if (idxs!=Nil) idxs.foreach(_.set(key,value)) }
   }
   def add(key:K, value:V) { if (value!=v0) set(key, elems.get(key) match { case null => value case v => plus(v,value) }) }
-  def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=>f(k,v) } 
+  def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=>f(k,v) }
   def aggr[R](f:(K,V)=>R)(implicit cR:ClassTag[R]):R = { var r:R = K3Helper.make_zero[R](); val p = K3Helper.make_plus[R]()
     foreach{ case (k,v)=> r = p(r,f(k,v)) }; r
   }

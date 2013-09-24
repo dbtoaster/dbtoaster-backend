@@ -23,7 +23,7 @@ class Worker extends WorkerActor {
   val map0 = K3Map.make[Long,Long]()
   val map1 = K3Map.make[Double,Double]()
   val local = Array[K3Map[_,_]](map0,map1)
-  
+
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = f match {
     case f1 => val n=args(0).asInstanceOf[Int]; for (i<-0 until n) add(m0,i.toLong,1L); co()
   }
@@ -62,7 +62,7 @@ class Master extends Worker with MasterActor {
     }
     case `ev3` => deq // trampoline test
     case `ev4` => println("Trampoline OK"); deq
-    case e:TupleEvent => deq 
+    case e:TupleEvent => deq
   }
 }
 
@@ -225,5 +225,3 @@ case class MsgState(num:Long,mem:Long) extends Msg // worker status (#processed 
 case class MsgRate(state:Long,view:Long) extends Msg // how often nodes send state (to supervisor) and result (to display)
 // case class MsgCheckpoint extends Msg
 */
-
-

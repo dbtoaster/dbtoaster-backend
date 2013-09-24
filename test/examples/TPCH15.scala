@@ -23,14 +23,14 @@ object TPCH15 extends Helper {
 class TPCH15 extends Actor {
   import ddbt.lib.Messages._
   import ddbt.lib.Functions._
-  
+
   val COUNT = K3Map.make[(Long,String,String,String,Double),Long](Nil);
   val COUNT_mLINEITEM1 = K3Map.make[(String,String,String,Long),Long](Nil); // OK
   val COUNT_mLINEITEM1_L2_1 = K3Map.make[Long,Double](Nil); // OK
   val COUNT_mLINEITEM1_L2_3 = K3Map.make[Long,Double](Nil); // OK
   val COUNT_mLINEITEM1_L3_1_E1_1 = K3Map.make[Long,Double](Nil); // OK
   val COUNT_mLINEITEM1_L3_1_E1_3 = K3Map.make[Long,Double](Nil); // OK
-  
+
   var t0:Long = 0
   def receive = {
     case TupleEvent(TupleInsert,"LINEITEM",List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Date,v11:Date,v12:Date,v13:String,v14:String,v15:String)) => onAddLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
@@ -53,12 +53,12 @@ class TPCH15 extends Actor {
       */
       sender ! (time,result)
   }
-  
+
   def result = COUNT.toMap
-  
+
   val c1:Date = Udate("1996-4-1")
   val c2:Date = Udate("1996-1-1")
-  
+
   def onAddLINEITEM(L_ORDERKEY:Long, L_PARTKEY:Long, L_SUPPKEY:Long, L_LINENUMBER:Long, L_QUANTITY:Double, L_EXTENDEDPRICE:Double, L_DISCOUNT:Double, L_TAX:Double, L_RETURNFLAG:String, L_LINESTATUS:String, L_SHIPDATE:Date, L_COMMITDATE:Date, L_RECEIPTDATE:Date, L_SHIPINSTRUCT:String, L_SHIPMODE:String, L_COMMENT:String) {
     COUNT_mLINEITEM1.foreach { case (k1,v1) =>
       val S_NAME = k1._1;
@@ -277,7 +277,7 @@ class TPCH15 extends Actor {
     COUNT_mLINEITEM1_L3_1_E1_1.add(L_SUPPKEY,((L_SHIPDATE >= c2) * ((c1 > L_SHIPDATE) * (L_DISCOUNT * L_EXTENDEDPRICE))));
     COUNT_mLINEITEM1_L3_1_E1_3.add(L_SUPPKEY,((L_SHIPDATE >= c2) * ((c1 > L_SHIPDATE) * L_EXTENDEDPRICE)));
   }
-  
+
   def onDelLINEITEM(L_ORDERKEY:Long, L_PARTKEY:Long, L_SUPPKEY:Long, L_LINENUMBER:Long, L_QUANTITY:Double, L_EXTENDEDPRICE:Double, L_DISCOUNT:Double, L_TAX:Double, L_RETURNFLAG:String, L_LINESTATUS:String, L_SHIPDATE:Date, L_COMMITDATE:Date, L_RECEIPTDATE:Date, L_SHIPINSTRUCT:String, L_SHIPMODE:String, L_COMMENT:String) {
     COUNT_mLINEITEM1.foreach { case (k11,v11) =>
       val S_NAME = k11._1;
@@ -384,10 +384,10 @@ class TPCH15 extends Actor {
     COUNT_mLINEITEM1_L3_1_E1_1.add(L_SUPPKEY,((L_SHIPDATE >= c2) * ((c1 > L_SHIPDATE) * (-1L * (L_DISCOUNT * L_EXTENDEDPRICE)))));
     COUNT_mLINEITEM1_L3_1_E1_3.add(L_SUPPKEY,((L_SHIPDATE >= c2) * ((c1 > L_SHIPDATE) * (-1L * L_EXTENDEDPRICE))));
   }
-  
+
   def onAddSUPPLIER(S_SUPPKEY:Long, S_NAME:String, S_ADDRESS:String, S_NATIONKEY:Long, S_PHONE:String, S_ACCTBAL:Double, S_COMMENT:String) {
 /*
-COUNT(int)[][S_SUPPKEY, S_NAME, S_ADDRESS, S_PHONE, R1_TOTAL_REVENUE] += 
+COUNT(int)[][S_SUPPKEY, S_NAME, S_ADDRESS, S_PHONE, R1_TOTAL_REVENUE] +=
   (S_SUPPKEY ^= S_SUPPKEY) *
   (R1_TOTAL_REVENUE ^= MM) *
   EXISTS(MM) *
@@ -401,7 +401,7 @@ COUNT(int)[][S_SUPPKEY, S_NAME, S_ADDRESS, S_PHONE, R1_TOTAL_REVENUE] +=
   ));
 */
 /*
-	// Original semantics
+    // Original semantics
     val R1_TOTAL_REVENUE:Double = COUNT_mLINEITEM1_L2_3.get(S_SUPPKEY) - COUNT_mLINEITEM1_L2_1.get(S_SUPPKEY);
     var result = Map[Long,Double]();
     def agg(k:Long,v:Double) { result += ((k, (result.get(k) match { case Some(v0) => v0 + v; case _ => v }))) }
@@ -430,7 +430,7 @@ COUNT(int)[][S_SUPPKEY, S_NAME, S_ADDRESS, S_PHONE, R1_TOTAL_REVENUE] +=
     }
     COUNT.add((S_SUPPKEY,S_NAME,S_ADDRESS,S_PHONE,R1_TOTAL_REVENUE), agg==0L)
     COUNT_mLINEITEM1.add((S_NAME,S_ADDRESS,S_PHONE,S_SUPPKEY),1L)
-*/  
+*/
 
     // Generated
     // removed S_SUPPKEY = S_SUPPKEY
@@ -441,7 +441,7 @@ COUNT(int)[][S_SUPPKEY, S_NAME, S_ADDRESS, S_PHONE, R1_TOTAL_REVENUE] +=
     var agg40:Long = 0 // fixed type
     var ex47:Long = 0L
     COUNT_mLINEITEM1_L3_1_E1_1.foreach { case (k18,v18) =>
-      val R2_SUPPKEY = k18;   
+      val R2_SUPPKEY = k18;
       ex47 |= (((v18 * -1L) + COUNT_mLINEITEM1_L3_1_E1_3.get(R2_SUPPKEY)))!=0;
       // --- this was moved --
       val R2_TOTAL_REVENUE = ((COUNT_mLINEITEM1_L3_1_E1_1.get(R2_SUPPKEY) * -1L) + COUNT_mLINEITEM1_L3_1_E1_3.get(R2_SUPPKEY));
@@ -453,7 +453,7 @@ COUNT(int)[][S_SUPPKEY, S_NAME, S_ADDRESS, S_PHONE, R1_TOTAL_REVENUE] +=
     COUNT.add((S_SUPPKEY,S_NAME,S_ADDRESS,S_PHONE,R1_TOTAL_REVENUE),(ex46 * agg39));
     COUNT_mLINEITEM1.add((S_NAME,S_ADDRESS,S_PHONE,S_SUPPKEY),1L);
 
-    
+
 /*
     // Generated
     val R1_TOTAL_REVENUE = COUNT_mLINEITEM1_L2_3.get(S_SUPPKEY) - COUNT_mLINEITEM1_L2_1.get(S_SUPPKEY);
@@ -476,7 +476,7 @@ COUNT(int)[][S_SUPPKEY, S_NAME, S_ADDRESS, S_PHONE, R1_TOTAL_REVENUE] +=
     COUNT_mLINEITEM1.add((S_NAME,S_ADDRESS,S_PHONE,S_SUPPKEY),1L);
 */
   }
-  
+
   def onDelSUPPLIER(S_SUPPKEY:Long, S_NAME:String, S_ADDRESS:String, S_NATIONKEY:Long, S_PHONE:String, S_ACCTBAL:Double, S_COMMENT:String) {
 /*
     ; {
@@ -504,8 +504,8 @@ COUNT(int)[][S_SUPPKEY, S_NAME, S_ADDRESS, S_PHONE, R1_TOTAL_REVENUE] +=
     COUNT_mLINEITEM1.add((S_NAME,S_ADDRESS,S_PHONE,S_SUPPKEY),-1L);
 */
   }
-  
+
   def onSystemReady() {
-    
+
   }
 }

@@ -175,7 +175,7 @@ object SQL {
   case object OpAvg extends OpAgg
   case object OpCount extends OpAgg
   case object OpCountDistinct extends OpAgg
-  
+
   sealed abstract class Join extends SQL
   case object JoinInner extends Join
   case object JoinLeft extends Join
@@ -191,7 +191,7 @@ object SQL {
   case class Inter(q1:Query,q2:Query) extends Query { override def toString="("+q1+") INTERSECT ("+q2+")" }
   case class Select(distinct:Boolean,cs:List[Expr],ts:List[Table],wh:Cond=null,gb:GroupBy=null,ob:OrderBy=null) extends Query {
     override def toString="SELECT "+(if(distinct)"DISTINCT " else "")+cs.mkString(", ")+"\nFROM "+ts.mkString(", ")+
-                          (if(wh!=null) "\nWHERE "+wh else "")+(if(gb!=null) "\n"+gb else "")+(if(ob!=null) "\n"+ob else "") 
+                          (if(wh!=null) "\nWHERE "+wh else "")+(if(gb!=null) "\n"+gb else "")+(if(ob!=null) "\n"+ob else "")
   }
     case class GroupBy(fs:List[Field],cond:Cond=null) extends SQL { override def toString="GROUP BY "+fs.mkString(", ")+(if(cond!=null) " HAVING "+cond else "") }
     case class OrderBy(cs:List[(Field,Boolean)]) extends SQL { override def toString="ORDER BY "+cs.map{case (f,d) => f+" "+(if (d) "DESC" else "ASC") }.mkString(", ") }

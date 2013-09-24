@@ -12,7 +12,7 @@ object TPCH18 extends Helper {
 
 abstract class TPCH18Base extends Actor {
   import Messages._
-  import scala.language.implicitConversions  
+  import scala.language.implicitConversions
   implicit def boolConv(b:Boolean):Long = if (b) 1L else 0L
 
   var t0:Long = 0

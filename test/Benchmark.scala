@@ -20,16 +20,16 @@ import java.io._
  *    sbt 'test:run-main ddbt.test.Benchmark -qaxfinder -mscala -mlcpp -mlscala -mllms -dstandard -csv'
  *
  *    sbt 'test:run-main ddbt.test.Benchmark -csv -q.*axfinder.sql -dbig'
- * 
+ *
  * @author TCK
  */
 
-/** Automated tests */ 
+/** Automated tests */
 class BenchmarkSpec extends FunSpec {
   import ddbt.UnitTest
   import ddbt.Utils._
   val tests = UnitTest.sqlFiles("standard")._2
-  tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t => 
+  tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t =>
     val n = t.replaceAll(".*queries/|/query|\\.sql","")
     it ("Query "+n) {
       val (t0,m3) = ns(()=>UnitTest.toast(t,List("-l","M3")))
@@ -66,7 +66,7 @@ object Benchmark {
   }
   def scalac(fs:String*) { val p=tmp.getAbsolutePath(); try { (new scalac_global.Run).compile(fs.map(f=>p+"/"+f+".scala").toList) } catch { case t:Throwable => t.printStackTrace } }
   def scalax(cl:String) = loadMain(tmp,cl)._1
-  
+
   /*
   // Legacy approach: run everything in external processes, dependencies: none, slower: 370 vs 225 sec
   private val path_cp = { // project classpaths
@@ -116,7 +116,7 @@ object Benchmark {
     }
     // run benchmarks
     if (modes.contains("lscala")||modes.contains("llms")) write(tmp,"RunQuery.scala",legacyHelper)
-    tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t => 
+    tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t =>
       val n = t.replaceAll(".*queries/|/query|\\.sql","")
       println("--------------- "+n)
       val (t0,m3) = ns(()=>UnitTest.toast(t,List("-l","M3")))
@@ -134,7 +134,7 @@ object Benchmark {
     }
     if (csv!=null) csv.close
   }
-  
+
   def csvTime(t_gen:Long,t_comp:Long,t_run:String) { // SQL->Code,Compile,Running: avg [min, max]
     if (csv!=null) csv.print(time(math.max(0,t_gen),0)+","+time(t_comp,0)+","+t_run.replaceAll("^[^:]*: +|\\(sec\\)","").replaceAll(", +| +\\[|\\] +",","))
   }

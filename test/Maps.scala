@@ -50,14 +50,14 @@ class K3Map2[K1,K2,V](v0:V) extends K3Collection[(K1,K2),V] {
   }
   class Slice1(k1:K1,elems:java.util.HashMap[K1,java.util.HashMap[K2,V]]) extends K3Map2[K1,K2,V](v0) {
     override def foreach(f:((K1,K2),V)=>Unit) = { val m=elems.get(k1);
-      if (m!=null) scala.collection.JavaConversions.mapAsScalaMap[K2,V](m).foreach { case (k2,v)=>f((k1,k2),v) } 
+      if (m!=null) scala.collection.JavaConversions.mapAsScalaMap[K2,V](m).foreach { case (k2,v)=>f((k1,k2),v) }
     }
   }
   class Slice2(k2:K2,elems:java.util.HashMap[K1,java.util.HashMap[K2,V]]) extends K3Map2[K1,K2,V](v0) {
     override def foreach(f:((K1,K2),V)=>Unit) = {
       scala.collection.JavaConversions.mapAsScalaMap[K1,java.util.HashMap[K2,V]](elems).foreach {
         case (k1,m)=> val v=m.get(k2); if (v!=null) f((k1,k2),v)
-      } 
+      }
     }
   }
 }
@@ -82,11 +82,11 @@ case class K3Map1[K,V](v0:V,idxs:List[K3Index1[_,K]]=Nil) extends K3Collection[K
     case v:Double => (v+v2.asInstanceOf[Long]).asInstanceOf[V]
     case _ => throw new Exception("No addition property")
   }
-  def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=>f(k,v) } 
+  def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=>f(k,v) }
 
   // a slice share its state(elems,idxs) with the parent, only foreach differs
   class K3Slice(elems:java.util.HashMap[K,V], slice:scala.collection.Set[K]) extends K3Map1[K,V](v0,idxs) {
-    override def foreach(f:(K,V)=>Unit) = slice.foreach{ case k =>f(k,elems.get(k)) } 
+    override def foreach(f:(K,V)=>Unit) = slice.foreach{ case k =>f(k,elems.get(k)) }
   }
   def slice[P](part:Int, partKey:P):K3Map1[K,V] = {
     val ix=idxs(part); if (!ix.isInstanceOf[K3Index1[P,K]]) sys.error("slicing value mismatch")
@@ -112,7 +112,7 @@ object MapsPerf extends FunSpec {
     println("- "+N+" random insertions")
     println("- "+K+"x2 slicing/enumerations (first and second subkeys)")
     println("- median of "+S+" samples")
-    
+
     val m = sMap(K3Map.makeIdx[(Long,Long),Long](List(0,1)))
     println("==> K3Map  : %6d".format(m)+"ms (current)")
 
@@ -127,7 +127,7 @@ object MapsPerf extends FunSpec {
     println("==> K3Map1 : %6d".format(m1)+"ms (sets for secondary indices)")
 
     val j = jMap(new java.util.HashMap[(Long,Long),Long]())
-    println("==> Java HashMap : "+j+"ms") 
+    println("==> Java HashMap : "+j+"ms")
   }
 
   def r = (1000*Math.random).toLong
@@ -165,14 +165,14 @@ package org.dbtoaster.dbtoasterlib {
             (try {
               val keyXML: List[xml.Elem] = (
                 k.asInstanceOf[Product].productIterator.foldLeft(
-                        (0, List[xml.Elem]())) { 
-                    case ((i, l), k) => 
+                        (0, List[xml.Elem]())) {
+                    case ((i, l), k) =>
                         (i + 1, <xml>{ valToStr(k) }</xml>.copy(
-                            label = ("__a" + i)) :: l) 
+                            label = ("__a" + i)) :: l)
                     })._2
               <item> { keyXML.reverse } <__av>{ valToStr(v) }</__av></item>
             } catch {
-              case e: java.lang.ClassCastException => 
+              case e: java.lang.ClassCastException =>
                 <item><__a0>{ valToStr(k) }</__a0>
                 <__av>{ valToStr(v) }</__av></item>
             }) :: l
