@@ -1,7 +1,12 @@
 package ddbt.codegen.lms
 
 import scala.virtualization.lms.common._
-//import scala.virtualization.lms.internal._
+
+/**
+ * Helpers for LMS code generation
+ *
+ * @author Mohammad Dashti, TCK
+ */
 
 /* Helper to convert AST types into manifests */
 object ManifestHelper {

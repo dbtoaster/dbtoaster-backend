@@ -1,9 +1,18 @@
 package ddbt.codegen.lms
 import ddbt.ast._
-import ddbt.lib.{K3Map,K3Temp,K3Var}
+import ddbt.lib.{K3Temp,K3Var}
 
 import scala.virtualization.lms.common._
 import scala.reflect.SourceContext
+
+/**
+ * The following LMS operations are implemented by these traits:
+ * - Named expressions (possibly mutable) to beautify the emitted code
+ * - M3 maps specific operations (get, set, add, foreach, slice, clear)
+ * - Abstraction of user-library function application (inlined in k3apply)
+ *
+ * @author Mohammad Dashti, TCK
+ */
 
 trait M3Ops extends Base {
   // Nodes creation
@@ -79,35 +88,6 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
     case K3Add(m,k,v) => Nil
     case _ => super.aliasSyms(e)
   }
-/*
-  override def containSyms(e: Any): List[Sym[Any]] = e match {
-    case K3Get(m,k,t) => Nil //syms(m):::syms(k)
-    case _ => super.containSyms(e)
-  }
-  override def extractSyms(e: Any): List[Sym[Any]] = e match {
-    case K3Get(m,k,t) => Nil //syms(m):::syms(k)
-    case _ => super.extractSyms(e)
-  }
-  override def copySyms(e: Any): List[Sym[Any]] = e match {
-    case K3Get(m,k,t) => Nil
-    case _ => super.copySyms(e)
-  }
-*/
-/*
-  // alloc = reflectMutable()
-  def rw[A:Manifest](d:Def[A], read:List[Exp[Any]]=Nil, write:List[Exp[Any]]=Nil):Exp[A] = {
-    reflectEffect(d,infix_andAlso(Read(read flatMap syms),Write(write flatMap syms)))
-  }
-  def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = rw(K3Get(map,key,man(value_tp)),List(map),Nil)
-  def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = rw(K3Set(map,key,value),Nil,List(map))
-  def k3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = rw(K3Add(map,key,value),Nil,List(map))
-  def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = k3foreach(map,key,value,reifyEffects(body))
-  def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = {
-    reflectEffect(K3Foreach(map,key,value,body),infix_andAlso(summarizeEffects(body),Read(syms(map))).star)
-  }
-  def k3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = rw(K3Slice(map,part,partKey),List(map),Nil)
-  def k3clear(map:Exp[_]) = rw(K3Clear(map),Nil,List(map))
-*/
 }
 
 trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThenElse {
@@ -122,11 +102,10 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThen
 
   private val nameAttr = "_name"
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    // LMS create useless undeclared Unit symbols, plus we know we only have one branch (initialization)
     case IfThenElse(c,a,b) if (quote(getBlockResult(b))=="()") =>
-        stream.println("if (" + quote(c) + ") {")
+        stream.println("if (" + quote(c) + ") {") // there is only one branch (initialization)
         stream.println(getBlock(a))
-        //stream.println("  "+quote(getBlockResult(a)))
+        //stream.println("  "+quote(getBlockResult(a))) // useless undeclared Unit symbols
         stream.println("}")
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NewK3Var(v,_) => emitValDef(sym, "new K3Var["+v.toScala+"]()")
