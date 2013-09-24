@@ -52,7 +52,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
       case Cmp(l,r,op) => expr(l, ctx, (vl:Rep[_], newCtx1: LMSContext) => 
         expr(r, ctx, (vr:Rep[_], newCtx2: LMSContext) => {
-          co(cmp(vl,op,vr,l.tp), newCtx1 ++ newCtx2)
+          co(cmp(vl,op,vr,ex.tp), newCtx1 ++ newCtx2) // formally, we should take the derived type from left and right, but this makes no difference to LMS
         })
       )
       case Exists(e) => expr(e, ctx, (ve:Rep[_], newCtx: LMSContext) => 
@@ -149,7 +149,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case TypeLong => cmp2[Long](l,r)
         case TypeDouble => cmp2[Double](l,r)
         case TypeDate => cmp2[Long](impl.dtGetTime(l.asInstanceOf[Rep[Date]]),impl.dtGetTime(r.asInstanceOf[Rep[Date]]))
-        case _ => sys.error("Cmp(l,r) only allowed on numeric types")
+        case TypeString => cmp2[String](l,r)
       },impl.unit(1L),impl.unit(0L))
     }
     
@@ -166,8 +166,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           if (op==OpSet && m.keys.size>0) impl.k3clear(mm)
           oi match { case None => case Some(ie) => 
             expr(ie,ctxTrigger,(r:Rep[_],c:LMSContext) => { val keys = m.keys.map(ctxTrigger++c)
-            // XXX: FIX THIS IFTHENELSE INTO SIMPLIFIED IF only and avoid emiting the unit
-   // toast examples/queries/simple/r_count_of_one_prime.sql -l lms
                (impl.__ifThenElse(impl.equals(impl.k3get(mm,keys,m.tp),impl.unit(0L)),impl.k3set(mm,keys,r),impl.unit(())),c)
             })
           }

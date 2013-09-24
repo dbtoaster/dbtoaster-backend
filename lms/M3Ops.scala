@@ -23,34 +23,33 @@ trait M3Ops extends Base {
 }
 
 trait M3OpsExp extends BaseExp with EffectExp with M3Ops
-    with NumericOps with MathOps with DateOps with StringOps with PrimitiveOps with IfThenElseExp {
+    with Equal with NumericOps with MathOps with DateOps with StringOps with PrimitiveOps with IfThenElseExp {
   import ManifestHelper.man
   def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
   def k3var(value:Type) = reflectMutable(NewK3Var(value,man(value)))
   def k3temp(key:List[Type],value:Type) = reflectMutable(NewK3Temp(key,value,man(key),man(value)))
+
   def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = K3Get(map,key,man(value_tp))
   def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(K3Set(map,key,value))
   def k3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(K3Add(map,key,value))
-  
   def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = k3foreach(map,key,value,reifyEffects(body))
-  def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = {
-    reflectEffect(K3Foreach(map,key,value,body),summarizeEffects(body).star)
-  }
+  def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = reflectEffect(K3Foreach(map,key,value,body),summarizeEffects(body).star)
   def k3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = K3Slice(map,part,partKey)
   def k3clear(map:Exp[_]) = K3Clear(map)
+
   def k3apply(fn:String,args:List[Exp[_]],tp:Type) = fn match {
-    case "div" => numeric_divide(unit(1.0),args(0).asInstanceOf[Rep[Double]])
-    case "listmax" => (args(0),args(1)) match { case (x:Rep[Long] @unchecked,y:Rep[Long] @unchecked) => math_max(x,y) } // erased anyway
-    case "listmin" => (args(0),args(1)) match { case (x:Rep[Long] @unchecked,y:Rep[Long] @unchecked) => math_min(x,y) } // erased anyway
+    case "div" => val x=args(0).asInstanceOf[Rep[Double]]; __ifThenElse(__equal(x,unit(0.0)),unit(0.0),numeric_divide(unit(1.0),x))
+    case "listmax" => (args(0),args(1)) match { case (x:Rep[Long] @unchecked,y:Rep[Long] @unchecked) => math_max(x,y) } // type erased anyway
+    case "listmin" => (args(0),args(1)) match { case (x:Rep[Long] @unchecked,y:Rep[Long] @unchecked) => math_min(x,y) } // type erased anyway
     case "substring" =>
       def i(n:Int):Exp[Int] = long_toint(args(n).asInstanceOf[Exp[Long]])
       val s = args(0).asInstanceOf[Exp[String]]
       if (args.size<3) string_substring(s,i(1)) else string_substring(s,i(1),i(2))
     // XXX: inline library functions here
-    // case "vec_length" //(x:Double, y:Double, z:Double):Double = Vector(x,y,z).length
     case _ => K3Apply(fn,args,man(tp)) // fallback for large or unknown functions
   }
+
   case class Named[T](n:String)(implicit mT:Manifest[T]) extends Def[T]
   case class NewK3Var[K,V](value:Type,mV:Manifest[V]) extends Def[K3Var[_]]
   case class NewK3Temp[K,V](key:List[Type],value:Type,mK:Manifest[K],mV:Manifest[V]) extends Def[K3Temp[_,_]]
@@ -76,11 +75,10 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
   }
 
 /*
-  // alloc = reflectMutable
+  // alloc = reflectMutable()
   def rw[A:Manifest](d:Def[A], read:List[Exp[Any]]=Nil, write:List[Exp[Any]]=Nil):Exp[A] = {
     reflectEffect(d,infix_andAlso(Read(read flatMap syms),Write(write flatMap syms)))
   }
-
   def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = rw(K3Get(map,key,man(value_tp)),List(map),Nil)
   def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = rw(K3Set(map,key,value),Nil,List(map))
   def k3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = rw(K3Add(map,key,value),Nil,List(map))
@@ -118,8 +116,7 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThen
     case K3Set(m,ks,v) => stream.println(quote(m)+".set("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
     case K3Add(m,ks,v) => stream.println(quote(m)+".add("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
     case K3Foreach(m,k,v,body) =>
-      // Enable both the renaming trick and allow nested block indentation
-      val block=getBlock(body)
+      val block=getBlock(body) // enables both the renaming trick and allow nested block indentation
       stream.println(quote(m)+".foreach { ("+quote(k)+","+quote(v)+") =>"); stream.println(block); stream.println("}")
     case K3Slice(m,p,pks) => emitValDef(sym, quote(m)+".slice("+p+","+tup(pks map quote)+")")
     case K3Clear(m) => stream.println(quote(m)+".clear")
