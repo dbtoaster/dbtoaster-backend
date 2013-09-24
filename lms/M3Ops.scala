@@ -73,7 +73,26 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
     case K3Foreach(m,k,v,b) => freqHot(k):::freqHot(v):::freqHot(b)
     case _ => super.symsFreq(e)
   }
-
+  override def aliasSyms(e: Any): List[Sym[Any]] = e match {
+    case K3Get(m,k,t) => Nil
+    case K3Set(m,k,v) => Nil
+    case K3Add(m,k,v) => Nil
+    case _ => super.aliasSyms(e)
+  }
+/*
+  override def containSyms(e: Any): List[Sym[Any]] = e match {
+    case K3Get(m,k,t) => Nil //syms(m):::syms(k)
+    case _ => super.containSyms(e)
+  }
+  override def extractSyms(e: Any): List[Sym[Any]] = e match {
+    case K3Get(m,k,t) => Nil //syms(m):::syms(k)
+    case _ => super.extractSyms(e)
+  }
+  override def copySyms(e: Any): List[Sym[Any]] = e match {
+    case K3Get(m,k,t) => Nil
+    case _ => super.copySyms(e)
+  }
+*/
 /*
   // alloc = reflectMutable()
   def rw[A:Manifest](d:Def[A], read:List[Exp[Any]]=Nil, write:List[Exp[Any]]=Nil):Exp[A] = {
