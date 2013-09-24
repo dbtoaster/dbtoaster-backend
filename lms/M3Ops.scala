@@ -23,7 +23,7 @@ trait M3Ops extends Base {
 }
 
 trait M3OpsExp extends BaseExp with EffectExp with M3Ops
-    with NumericOps with MathOps with DateOps with StringOps with PrimitiveOps {
+    with NumericOps with MathOps with DateOps with StringOps with PrimitiveOps with IfThenElseExp {
   import ManifestHelper.man
   def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
@@ -93,13 +93,24 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
 */
 }
 
-trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect {
+trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThenElse {
   val IR: M3OpsExp
   import IR._
   import ddbt.Utils.{ind,tup}
 
+  private def getBlock(blk:Block[_]):String = {
+    val save=stream; val wr=new java.io.StringWriter; stream=new java.io.PrintWriter(wr)
+    emitBlock(blk); val res=ind(wr.toString); stream=save; res
+  }
+
   private val nameAttr = "_name"
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    // LMS create useless undeclared Unit symbols, plus we know we only have one branch (initialization)
+    case IfThenElse(c,a,b) if (quote(getBlockResult(b))=="()") =>
+        stream.println("if (" + quote(c) + ") {")
+        stream.println(getBlock(a))
+        //stream.println("  "+quote(getBlockResult(a)))
+        stream.println("}")
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NewK3Var(v,_) => emitValDef(sym, "new K3Var["+v.toScala+"]()")
     case NewK3Temp(ks,v,_,_) => emitValDef(sym, "K3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
@@ -108,8 +119,7 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect {
     case K3Add(m,ks,v) => stream.println(quote(m)+".add("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
     case K3Foreach(m,k,v,body) =>
       // Enable both the renaming trick and allow nested block indentation
-      val save=stream; val wr=new java.io.StringWriter; stream=new java.io.PrintWriter(wr)
-      emitBlock(body); val block=ind(wr.toString); stream=save
+      val block=getBlock(body)
       stream.println(quote(m)+".foreach { ("+quote(k)+","+quote(v)+") =>"); stream.println(block); stream.println("}")
     case K3Slice(m,p,pks) => emitValDef(sym, quote(m)+".slice("+p+","+tup(pks map quote)+")")
     case K3Clear(m) => stream.println(quote(m)+".clear")

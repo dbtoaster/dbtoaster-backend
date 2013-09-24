@@ -159,19 +159,20 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       // Execute each statement
       t.stmts.map {
         case StmtMap(m,e,op,oi) =>
+          val mm = ctxTrigger(m.name)
+          if (op==OpSet && m.keys.size>0) impl.k3clear(mm)
+          oi match { case None => case Some(ie) => 
+            expr(ie,ctxTrigger,(r:Rep[_],c:LMSContext) => { val keys = m.keys.map(ctxTrigger++c)
+            // XXX: FIX THIS IFTHENELSE INTO SIMPLIFIED IF only and avoid emiting the unit
+   // toast examples/queries/simple/r_count_of_one_prime.sql -l lms
+               (impl.__ifThenElse(impl.equals(impl.k3get(mm,keys,m.tp),impl.unit(0L)),impl.k3set(mm,keys,r),impl.unit(())),c)
+            })
+          }
           val co = (r:Rep[_],c:LMSContext) => (op match {
-            case OpAdd => impl.k3add(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
-            case OpSet => if (m.keys.size>0) impl.k3clear(ctxTrigger(m.name)); impl.k3set(ctxTrigger(m.name),m.keys.map(ctxTrigger++c),r)
+            case OpAdd => impl.k3add(mm,m.keys.map(ctxTrigger++c),r)
+            case OpSet => impl.k3set(mm,m.keys.map(ctxTrigger++c),r)
           },c)
           expr(e,ctxTrigger,co)._1
-          //val fop=op match { case OpAdd => "add" case OpSet => "set" }
-          //val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
-          //val init = (oi match {
-          //  case Some(ie) => cpsExpr(ie,b,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
-          //  case None => ""
-          //})
-          //clear+init+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
-
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
       impl.unit(())
@@ -185,25 +186,23 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 }
 
-    /*
-    def newVariable(tp: Type): impl.Var[Any] = tp match {
-      case TypeLong => impl.var_new(impl.unit(0L))
-      case TypeDouble => impl.var_new(impl.unit(0.0))
-      case _ => sys.error("newVariable(tp) only allowed on numeric types")
-    }
-    */
-    /*
-    def tup(ks: List[Rep[_]]): Rep[_] = ks.size match {
-      case 1 => ks.head
-      case 2 => impl.make_tuple2((ks(0),ks(1)))
-      case 3 => impl.make_tuple3((ks(0),ks(1),ks(2)))
-      case 4 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3)))
-      case 5 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4)))
-      case 6 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4),ks(5)))
-      case 7 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4),ks(5),ks(6)))
-      case 8 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4),ks(5),ks(6),ks(7)))
-    }
-    */
+  /*
+  def newVariable(tp: Type): impl.Var[Any] = tp match {
+    case TypeLong => impl.var_new(impl.unit(0L))
+    case TypeDouble => impl.var_new(impl.unit(0.0))
+    case _ => sys.error("newVariable(tp) only allowed on numeric types")
+  }
+  */
+  /*
+  def tup(ks: List[Rep[_]]): Rep[_] = ks.size match {
+    case 1 => ks.head
+    case 2 => impl.make_tuple2((ks(0),ks(1)))
+    case 3 => impl.make_tuple3((ks(0),ks(1),ks(2)))
+    case 4 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3)))
+    case 5 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4)))
+    case 6 => impl.make_tuple3((ks(0),ks(1),ks(2),ks(3),ks(4),ks(5)))
+  }
+  */
 
   // def createTuple(elems: List[Rep[_]]): Rep[_] = elems.size match {
   //   case 1 => impl.getClass.getDeclaredMethod("make_tuple1",impl.Exp[Any].getClass).invoke(impl,elems(0)).asInstanceOf[Rep[_]]

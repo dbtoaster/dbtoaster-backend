@@ -48,7 +48,7 @@ object Benchmark {
   import ddbt.frontend._
   import ddbt.codegen._
 
-  val tmp = makeTempDir() // new File("tmp")
+  val tmp = makeTempDir()
   private val boost = try { val p=new java.util.Properties(); p.load(new java.io.FileInputStream("conf/ddbt.properties")); p.getProperty("ddbt.lib_boost",null) } catch { case _:Throwable => null }
   private val path_dbt = if (path_repo!="") path_repo+"/"+path_base+"/" else ""
 
