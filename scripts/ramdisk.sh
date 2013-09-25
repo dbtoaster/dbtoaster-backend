@@ -32,6 +32,7 @@ case $OSTYPE in
     diskutil erasevolume HFS+ $rd_name $rd_dev >/dev/null
     diskutil unmount $rd_dev >/dev/null
     diskutil mount -mountPoint $mpoint $rd_dev
+	# chflags hidden $mpoint; killall Finder # nohidden
   ;;
   *) echo 'Sorry, no ramdisk script currently available';;
 esac

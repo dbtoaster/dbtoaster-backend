@@ -80,7 +80,7 @@ TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspat
   println("Creating DDBT library ...")
   val dir=base/"lib"; if (!dir.exists) dir.mkdirs; val lib=dir.getPath()+"/ddbt.jar"
   scala.sys.process.Process(Seq("jar","-cMf",lib,"-C",cd.toString,"ddbt/lib")).!
-  print("Creating DDBT full package "); scala.Console.out.flush; val tmp=IO.createTemporaryDirectory
+  print("Creating DDBT full package "); scala.Console.out.flush; val tmp=new File("target/pkg_tmp"); IO.createDirectory(tmp)
   val jars = (cp.files.absString.split(":").filter(x=>x!=cd.toString).toSet + lib)
   val sc = jars.filter(_.matches(".*/scala-library.*")).map(_.replaceAll("scala-library","scala-compiler"))
   (jars++sc).foreach { j => scala.sys.process.Process(Seq("jar","-xf",j),tmp).!; print("."); scala.Console.out.flush; }
@@ -149,10 +149,5 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
 //)
 // disable publishing of main docs
 //publishArtifact in (Compile, packageDoc) := false
-// continuations
-//autoCompilerPlugins := true
-//libraryDependencies <<= (scalaVersion, libraryDependencies) { (ver, deps) =>
-//    deps :+ compilerPlugin("org.scala-lang.plugins" % "continuations" % ver)
-//}
 //mainClass := Some("Main")
 //selectMainClass := Some("Main")

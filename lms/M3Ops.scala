@@ -83,7 +83,6 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
     case _ => super.symsFreq(e)
   }
   override def aliasSyms(e: Any): List[Sym[Any]] = e match {
-    case K3Get(m,k,t) => Nil
     case K3Set(m,k,v) => Nil
     case K3Add(m,k,v) => Nil
     case _ => super.aliasSyms(e)

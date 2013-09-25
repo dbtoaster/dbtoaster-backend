@@ -33,6 +33,16 @@ import ddbt.ast._
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
 
+/*
+Little problems to solve:
+1. multiple queries => GetSnapshot(Int)
+2. system I/O: returns (time,List[Map[_,_]])
+3. cluster initialization and maps distribution => workers tell master they want to join with their maps (all local but null maps)
+
+4. join and leave cluster => just output message
+*/
+
+
 // 1. before each statement, add pre computation
 // 2. at each foreach point, transform into a remote continuation, possibly with a local aggregation continuation
 
@@ -71,4 +81,5 @@ From ScalaGen, methods to modify
 */
 
   override def apply(s:System) = "// unimplemented"
+  override def helper(s:System,numSamples:Int=10) = "// helper"
 }

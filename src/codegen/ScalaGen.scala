@@ -143,7 +143,6 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
 
     freshClear()
-    helper(s0)+
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+

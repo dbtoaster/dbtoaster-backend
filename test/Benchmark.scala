@@ -52,41 +52,34 @@ object Benchmark {
   private val boost = try { val p=new java.util.Properties(); p.load(new java.io.FileInputStream("conf/ddbt.properties")); p.getProperty("ddbt.lib_boost",null) } catch { case _:Throwable => null }
   private val path_dbt = if (path_repo!="") path_repo+"/"+path_base+"/" else ""
 
-  // New approach: run everything in the same JVM for speed, dependencies: scala-compiler
-  private val scalac_global = {
+  private val scalac2 = {
+    val p=tmp.getAbsolutePath();
     val dbt = path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library")
     val sbt = System.getProperty("sbt.classpath")
     val cp = if (sbt!=null) dbt+":"+sbt else {
       val deps = (System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":").filter(_.matches("(.*)/\\.(sbt|ivy2)/.*"))
-      val vers = util.Properties.versionString.replaceAll(".* |.[0-9]+$","");
-      "target/scala-"+vers+"/classes:"+dbt+":"+deps.mkString(":")
+      val vers = util.Properties.versionString.replaceAll(".* |.[0-9]+$",""); "target/scala-"+vers+"/classes:"+dbt+":"+deps.mkString(":")
     }
-
-    val s=new scala.tools.nsc.Settings(); s.classpath.value=cp; s.outputDirs.setSingleOutput(tmp.getAbsolutePath()); new scala.tools.nsc.Global(s)
+    val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")); } catch { case _:Throwable => }
+    if (prop.getProperty("ddbt.lms","0")!="1") { 
+      // Plain Scala: embedded Scala compiler is used
+      val s=new scala.tools.nsc.Settings(); s.classpath.value=cp; s.outputDirs.setSingleOutput(tmp.getAbsolutePath()); val g=new scala.tools.nsc.Global(s)
+      (fs:List[String]) => try { (new g.Run).compile(fs.map(f=>p+"/"+f+".scala")) } catch { case t:Throwable => t.printStackTrace }
+    } else {
+      // Scala-virtualized: embedded compiler screwed, run FSC / scalac in an external processes
+      (fs:List[String]) => {
+        val args="-cp "+cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
+        val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec("java scala.tools.nsc.Main "+args)._1 }
+        if (err!="") System.err.println(err)
+      }
+    }
   }
-  def scalac(fs:String*) { val p=tmp.getAbsolutePath(); try { (new scalac_global.Run).compile(fs.map(f=>p+"/"+f+".scala").toList) } catch { case t:Throwable => t.printStackTrace } }
+  // New approach: run everything in the same JVM for speed, dependencies: scala-compiler
+  def scalac(fs:String*) = scalac2(fs.toList) 
   def scalax(cl:String) = loadMain(tmp,cl)._1
-
-  /*
-  // Legacy approach: run everything in external processes, dependencies: none, slower: 370 vs 225 sec
-  private val path_cp = { // project classpaths
-    val dbt = path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library")
-    val vers = util.Properties.versionString.replaceAll(".* |.[0-9]+$",""); "target/scala-"+vers+"/classes:"+dbt
-  }
-  private val java_cmd = "java -Xms32M -Xss512m -Xmx2G -Xbootclasspath/a:"+java_deps+" -classpath \"\" -Dscala.usejavacp=true"
-  private val java_deps = {
-    val deps = (System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":")
-    deps.filter(_.matches(".* /\\.(sbt|ivy2)/.*")).mkString(":")
-  }
-  def scalax(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
-    try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 } // fallback for Travis-CI
-  }
-  def scalac(fs:String*) { val p = tmp.getAbsolutePath();
-    val args="-cp "+path_cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
-    val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec(java_cmd+" scala.tools.nsc.Main "+args)._1 }
-    if (err!="") System.err.println(err)
-  }
-  */
+  //def scalax(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
+  //  try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 } // fallback for Travis-CI
+  //}
 
   var dataset="standard"
   var modes = List[String]()
@@ -146,7 +139,7 @@ object Benchmark {
       case "lms" => new LMSGen("NewQuery")
       case _ => scala.sys.error("Generator "+lang+" not supported")
     }
-    val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen gen)(m3))
+    val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen (x=>gen.helper(x)+gen(x)))(m3))
     println(n+" codegen"+sp+" : "+time(t1))
     write(tmp,"NewQuery.scala",(if (dataset.endsWith("_del")) sc.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else sc).replaceAll("/standard/","/"+dataset+"/"))
     val t2 = ns(()=>scalac("NewQuery"))._1
