@@ -66,7 +66,15 @@ addCommandAlias("queries", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard
 
 addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del -mlms;test-only ddbt.test.gen.*")
 
-addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark ")
+addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark -mlms -mllms -mscala -mlscala -csv")
+
+addCommandAlias("bench-lms", ";test:run-main ddbt.test.Benchmark -dstandard -mlms -csv")
+
+addCommandAlias("bench-llms", ";test:run-main ddbt.test.Benchmark -dstandard -mllms -csv")
+
+addCommandAlias("bench-lscala", ";test:run-main ddbt.test.Benchmark -dstandard -mlscala -csv")
+
+addCommandAlias("bench-lcpp", ";test:run-main ddbt.test.Benchmark -dstandard -mlcpp -csv")
 
 TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>
   println("Creating DDBT library ...")

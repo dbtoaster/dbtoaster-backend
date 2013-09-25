@@ -141,13 +141,19 @@ object Benchmark {
 
   def benchScala(lang:String)(m3:String,t0:Long) {
     val (n,sp) = (lang.substring(0,1).toUpperCase+lang.substring(1)," "* (6-lang.length()))
-    val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen new ScalaGen("NewQuery"))(m3))
+    val gen:CodeGen = lang match {
+      case "scala" => new ScalaGen("NewQuery")
+      case "lms" => new LMSGen("NewQuery")
+      case _ => scala.sys.error("Generator "+lang+" not supported")
+    }
+    val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen gen)(m3))
     println(n+" codegen"+sp+" : "+time(t1))
     write(tmp,"NewQuery.scala",(if (dataset.endsWith("_del")) sc.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else sc).replaceAll("/standard/","/"+dataset+"/"))
     val t2 = ns(()=>scalac("NewQuery"))._1
     println(n+" compile"+sp+" : "+time(t2))
     val s=scalax("ddbt.generated.NewQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" : "))
     csvTime(t1,t2,s)
+    if (csv!=null) csv.flush
   }
 
   def legacyScala(lms:Boolean)(t:String,t0:Long) {
@@ -163,6 +169,7 @@ object Benchmark {
     println(n+" compile"+sp+" : "+time(t2))
     val s = scalax("org.dbtoaster.RunQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" :"))
     csvTime(t1-t0,t2,s)
+    if (csv!=null) csv.flush
   }
 
   def legacyCPP(t:String,t0:Long) {
@@ -202,10 +209,11 @@ object RunQuery {
       }
     }
     val r = new QuerySupervisor(q, msgRcvr)
+    r.start
     RunQuery.synchronized { r.start; RunQuery.wait; }
     time
   }
-  def time(ns:Long,n:Int=2) = { val ms=ns/1000000; ("%"+n+"d.%03d").format(ms/1000,ms%1000) }
+  def time(ns:Long,n:Int=2) = { val us=ns/1000; "%d.%06d".format(us/1000000,us%1000000) }
   def main(args: Array[String]) {
     val count = 10
     val ts = (0 until count).map(x=>run1()).sorted

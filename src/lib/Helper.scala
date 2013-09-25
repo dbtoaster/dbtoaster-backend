@@ -54,7 +54,7 @@ trait Helper {
     Thread.sleep(100); nodes.foreach{ _.shutdown }; system.shutdown; Thread.sleep(100); res
   }
 
-  def time(ns:Long) = { val ms=ns/1000000; "%d.%03d".format(ms/1000,ms%1000) }
+  def time(ns:Long) = { val us=ns/1000; "%d.%06d".format(us/1000000,us%1000000) }
   def bench[T](name:String,count:Int,f:()=>(Long,T)):T = {
     val out = (0 until count).map { x => f() }
     val res = out.map(_._2).toList; assert(res.tail.filter{ x=> x!=res.head }.isEmpty)
