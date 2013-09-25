@@ -9,8 +9,7 @@ object Messages {
 
   abstract sealed class StreamEvent
   case class TupleEvent(op:TupleOp,stream:String,data:List[Any]) extends StreamEvent // XXX: stream name as Byte/Int(hashCode?)
-  case object EndOfStream extends StreamEvent
   case object SystemInit extends StreamEvent
-  case object GetSnapshot extends StreamEvent // similar as EndOfStream but does not shut system down
-  // XXX: case object CollectMap(m:MapRef) extends SystemEvent
+  case object EndOfStream extends StreamEvent // get snapshot(0) and shut the system down
+  case class GetSnapshot(view:Int) extends StreamEvent // request a snapshot of some maps
 }

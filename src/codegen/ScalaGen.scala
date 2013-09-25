@@ -154,7 +154,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         case _ => ""
       }).mkString+
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
-      "case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,"+tup(s0.queries.map{q=>q.name+(if (s0.mapType(q.m.name)._1.size>0) ".toMap" else ".get()")})+")"
+      "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! (time,List[Any]("+s0.queries.map{q=>q.name+(if (s0.mapType(q.map.name)._1.size>0) ".toMap" else ".get()")}.mkString(",")+"))"
     )+"\n}\n"+gc+ts+ld)+"\n}\n"
   }
 
@@ -185,13 +185,12 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   }
 
   // Helper that contains the main and stream generator
-  def viewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); if (m._1.size==0) m._2.toScala else "Map["+tup(m._1.map(_.toScala))+","+m._2.toScala+"]" })
   def helper(s0:System,numSamples:Int=10) = {
     "package ddbt.generated\nimport ddbt.lib._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind(
-    "def execute() = run["+cls+","+viewType(s0)+"]("+streams(s0.sources)+")\n\n"+
+    "def execute() = run["+cls+"]("+streams(s0.sources)+")\n\n"+
     "def main(args:Array[String]) {\n"+ind("val res = bench(\"NewGen\","+numSamples+",execute)\n"+
-    s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\")\nprintln(K3Helper.toStr(res"+(if (s0.queries.size>1) "._"+(i+1) else "")+")+\"\\n\")" }.mkString("\n"))+"\n}")+"\n}\n\n"
+    s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\")\nprintln("+
+      (if (q.map.keys.size==0) "res("+i+").toString" else "K3Helper.toStr(res("+i+").asInstanceOf[Map[_,_]])")+"+\"\\n\")" }.mkString("\n"))+"\n}")+"\n}\n\n"
   }
-  //def apply(s:System) = genHelper(s)+genSystem(s)
 }

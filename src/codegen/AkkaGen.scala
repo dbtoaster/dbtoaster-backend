@@ -35,10 +35,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
 /*
 Little problems to solve:
-1. multiple queries => GetSnapshot(Int)
-2. system I/O: returns (time,List[Map[_,_]])
 3. cluster initialization and maps distribution => workers tell master they want to join with their maps (all local but null maps)
-
 4. join and leave cluster => just output message
 */
 

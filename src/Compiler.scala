@@ -87,7 +87,8 @@ object Compiler {
       case "scala"|"akka"|"lms" =>
         val tmp = Utils.makeTempDir()
         Utils.exec(Array("scalac",out,"-cp",libs,"-d",tmp.getPath)) // scala compiler
-        val (o,e) = Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name)) // execution
+        val (o,e) = Utils.loadMain(tmp,"ddbt.generated."+name) // execution
+        //val (o,e) = Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name)) // execution
         if (e!="") error(e); println(o);
       case _ => error("Execution not supported",true)
     }

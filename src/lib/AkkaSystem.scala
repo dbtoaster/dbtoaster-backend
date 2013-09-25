@@ -277,7 +277,7 @@ trait MasterActor extends WorkerActor {
         val (ev,sender)=eq.removeFirst
         ev match {
           case SystemInit => reset { barrier; t0=System.nanoTime(); deq }
-          case EndOfStream|GetSnapshot => val time=System.nanoTime()-t0
+          case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0
             def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
               case 0 => sender ! (time,acc); deq
               case n => toMap(MapRef(n-1),(m:Map[_,_])=>collect(n-1,m::acc) )

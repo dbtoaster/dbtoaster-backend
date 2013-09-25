@@ -62,11 +62,13 @@ addCommandAlias("toast", ";run-main ddbt.Compiler ")
 
 addCommandAlias("check", ";run-main ddbt.UnitTest ")
 
+addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark ")
+
 addCommandAlias("queries", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del;test-only ddbt.test.gen.*")
 
 addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del -mlms;test-only ddbt.test.gen.*")
 
-addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark -mlms -mllms -mscala -mlscala -csv")
+addCommandAlias("bench-all", ";test:run-main ddbt.test.Benchmark -mlms -mllms -mscala -mlscala -mlcpp -csv")
 
 addCommandAlias("bench-lms", ";test:run-main ddbt.test.Benchmark -dstandard -mlms -csv")
 

@@ -20,7 +20,7 @@ object Utils {
     (repo,if (repo!="") repo+"/"+path_base+"/bin/dbtoaster_release" else bin)
   }
 
-  // Gobbles an input stream, used for external processes and loadMain
+  // Gobbles an input stream (used for external processes by loadMain)
   private def gobble(in:InputStream) = new Runnable {
     var out = new StringBuilder
     var thr = new Thread(this); thr.start
