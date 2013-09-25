@@ -105,7 +105,7 @@ object UnitTest {
       t.sets.map { case (sz,set) =>
         // val mystr = (str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) } // seems that set.subs are useless here
         val mystr = (if (sz.endsWith("_del")) str.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else str).replaceAll("/standard/","/"+sz+"/") // streams for this dataset
-        "describe(\"Dataset '"+sz+"'\") {"+ind("\n"+
+        "describe(\"Dataset '"+sz+"'\") {\n"+ind(
         "val (t,res) = run["+cls+"]("+mystr+")\n"+
         set.out.map { case (n,o) =>
           val (kt,vt) = qt(n)
@@ -115,7 +115,7 @@ object UnitTest {
             val ll=(kt:::vt::Nil).zipWithIndex
             "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.reverse.tail.reverse.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n"
           }
-          "it(\""+n+" correct\") {"+ind("\n"+kv+
+          "it(\""+n+" correct\") {\n"+ind(kv+
           "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
             case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
             case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+fmt+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"

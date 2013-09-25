@@ -4,7 +4,7 @@ import java.util.Date
 
 object TPCH18Akka extends Helper {
   def main(args:Array[String]) {
-    val (t,res) = runLocal[Q18Master,Q18Worker, List[Map[_,_]] ](7,2251,4,streamsTPCH18());
+    val (t,res) = runLocal[Q18Master,Q18Worker](7,2251,4,streamsTPCH18());
     println(K3Helper.toStr(res.head)); println("Time:"+time(t))
   }
 }

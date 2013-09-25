@@ -28,9 +28,9 @@ object BrokerSpread extends Helper {
     r.foreach { l => val ma=p.matcher(l); if (ma.matches) m.put(ma.group(1).toLong,ma.group(2).toDouble) }
     scala.collection.JavaConversions.mapAsScalaMap(m).toMap.filter{ case (k,v) => v!=0.0 }
   }
-  def gen(size:String="standard") = run[BrokerSpread,Map[Long,Double]](Seq(
+  def gen(size:String="standard") = run[BrokerSpread](Seq(
     (new java.io.FileInputStream(path_repo+"/dbtoaster/experiments/data/finance/"+size+"/finance.csv"),new Adaptor.OrderBook(),Split())
-  ))._2
+  ))._2(0)
 
   def main(args:Array[String]) { // takes about 1 min
     def t(size:String) {
@@ -70,7 +70,7 @@ class BrokerSpread extends Actor { // Copied from generated code
     case TupleEvent(TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0.toLong,v1,v2,v3,v4)
     case TupleEvent(TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0.toLong,v1,v2,v3,v4)
     case SystemInit => t0=System.nanoTime()
-    case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,BSP.toMap)
+    case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,List(BSP.toMap))
   }
 
   def bsp(bids_t:Long, broker:Long, volume:Double, price:Double):Double = {

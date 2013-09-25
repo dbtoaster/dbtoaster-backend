@@ -12,8 +12,8 @@ object TPCH15 extends Helper {
     println(K3Helper.toStr(r1)); println("Time: "+time(t1))
     */
     println("Mine:")
-    val (t2,r2) = run[TPCH15,Map[Long,Double]](streamsTPCH15(),false);
-    println(K3Helper.toStr(r2)); println("Time: "+time(t2))
+    val (t2,r2) = run[TPCH15](streamsTPCH15(),false);
+    println(K3Helper.toStr(r2.head)); println("Time: "+time(t2))
   }
 }
 
@@ -51,7 +51,7 @@ class TPCH15 extends Actor {
       println("COUNT_mLINEITEM1_L3_1_E1_3")
       println(K3Helper.toStr(COUNT_mLINEITEM1_L3_1_E1_3.toMap))
       */
-      sender ! (time,result)
+      sender ! (time,List(result))
   }
 
   def result = COUNT.toMap
