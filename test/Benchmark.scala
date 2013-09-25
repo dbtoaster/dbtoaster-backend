@@ -112,7 +112,7 @@ object Benchmark {
         case "llms" => "LMS-legacy"
         case "lcpp" => "CPP-legacy"
       }.mkString(",,,,,"))
-      csv.println("Query,SQLtoM3,"+modes.map(m=>"M3toCode,Compile,Min,Max,Avg").mkString(","))
+      csv.println("Query,SQLtoM3,"+modes.map(m=>"M3toCode,Compile,Min,Max,Median").mkString(","))
     }
     // run benchmarks
     if (modes.contains("lscala")||modes.contains("llms")) write(tmp,"RunQuery.scala",legacyHelper)
