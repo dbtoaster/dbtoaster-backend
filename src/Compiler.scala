@@ -86,18 +86,18 @@ object Compiler {
     if (exec) lang match {
       case "scala"|"akka"|"lms" =>
         val tmp = Utils.makeTempDir()
-        Utils.exec(Array("scalac",out,"-cp",libs,"-d",tmp.getPath)) // scala compiler
-        val (o,e) = Utils.loadMain(tmp,"ddbt.generated."+name) // execution
+        
+        // XXX: merge with benchmarks to use internal compiler
+        val (o1,e1) = Utils.exec( // scala compiler
+          if (libs!=null) Array("scalac",out,"-cp",libs,"-d",tmp.getPath)
+          else Array("scalac",out,"-d",tmp.getPath)
+        )
+        if (e1!="") error(e1); if (o1!="") println(o1)
+
+        val (o2,e2) = Utils.loadMain(tmp,"ddbt.generated."+name) // execution
         // Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name))
-        if (e!="") error(e); println(o);
+        if (e2!="") error(e2); if (o1!="") println(o2);
       case _ => error("Execution not supported",true)
     }
   }
 }
-
-/*
-  def dump[T](name:String)(data:T):T = {
-    println("======================== "+name+" ========================")
-    println(data.toString); data
-  }
-*/

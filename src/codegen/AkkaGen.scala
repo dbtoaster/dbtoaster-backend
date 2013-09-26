@@ -33,51 +33,22 @@ import ddbt.ast._
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear}
+  import scala.collection.mutable.HashMap
 
 /*
-Little problems to solve:
-3. cluster initialization and maps distribution => workers tell master they want to join with their maps (all local but null maps)
-4. join and leave cluster => just output message
-*/
-
-
-// 1. before each statement, add pre computation
-// 2. at each foreach point, transform into a remote continuation, possibly with a local aggregation continuation
-
-/*
-  map messages
-  map master triggers
-  map worker continuations triggers
-*/
-/*
-  def genRemote(e:Expr,ctx:Map[String,Type],co:String=>String) // this is the only thing we need to insert ?
-  def genExpr(e:Expr,co:Continuation)
-  def genWorker
-*/
-
-/*
-From ScalaGen, methods to modify
-- respond to more events (receive method)
-- cpsExpr to support remote continuations
-- Tag continuations with 'needs to respond to sender' when needed
-
-- Generate 2 classes:
-  - Master, handles global events streams
-  - Workers: only handle internal messages
-
-- Declare all messages/types in some common place
-
-- Generate coherency information with list of read(option) and written(list) maps
-
-==> move lazy map slicing into the TypeChecking ?
-
+Issues to solve:
+- Maintaining extra (map) information such as type (akka) or symbol (LMS) for each nodes
+- cluster initialization and maps distribution => make workers tell to master they want to join with their maps (all local but null maps)
+- join and leave cluster preparation
+- at each foreach point, possibly transform in a remote continuation if map is not local
+- move lazy map slicing into the TypeChecking ?
 - move a good part of the test generator directly in the code generator
-- move test AST into ddbt.ast package ?
+- move test AST into its own ddbt.ast package ?
+- shall we make unit tests part of the compiler ?
 */
-
   // remote functions as (map,expression,context) => (func_name,body)
-  val aggl = new java.util.HashMap[(String,Expr,List[String]),(String,String)]()
-  //val forl = new java.util.HashMap[(String,Expr,List[String]),(String,String)]()
+  private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
+  private val forl = HashMap[(String,Expr,List[String]),(String,String)]()
 
   // variables being used in the subexpression
   def used(e:Expr):Set[String] = e.collect{ case Ref(n)=>Set(n) case MapRef(n,t,ks)=>ks.toSet case AggSum(ks,e)=>ks.toSet++used(e) }
@@ -95,98 +66,77 @@ From ScalaGen, methods to modify
     case Add(l,r) => val lm=fmap(l,b); if (lm==null) fmap(r,b) else lm
     case _ => null
   }
-
+  
   override def cpsExpr(ex:Expr,b:Set[String]=Set(),co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case MapRef(n,tp,ks) if (n==mapl.head) => super.cpsExpr(ex,b,co)
     case MapRef(n,tp,ks) => co("<XXX>")
     case a@AggSum(ks,e) =>
       val ctx = (b&used(e)).toList // context to be passed remotely
       val m=fmap(e,b); if (m==null) sys.error("No aggregation map")
-      val fn = fresh("fa")
-      println("Ctx = "+ctx," map="+m)
-      
-      pushl(m)
-      // generate aggregation
-      println("case (`"+fn+"`,"+ctx.map(v=>"("+v+":?)::").mkString+"Nil) => <ACCUMULATOR>\n"+cpsExpr(e,b,(s:String)=>"AGG["+s+"]")+"co(ACCUMULATOR)")
-      println
-      popl
-
-/*
-      val fs = ks.filter{k=> !b.contains(k)} // free variables
-      val agg = (ks zip a.tks).filter { case(n,t)=>fs.contains(n) } // aggregation keys as (name,type)
-      if (fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
-      else am match {
-        case Some(t) if t==agg => cpsExpr(e,b,co,am)
-        case _ =>
-          val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
-          val a0=fresh("agg")
-          val tmp=Some(agg) // declare this as summing target
-          "val "+a0+" = K3Map.temp["+tup(agg.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
-          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,e.tp,fs),b,co)
-*/
-
+      val a0=fresh("agg"); val aks=(ks zip a.tks).filter { case(n,t)=> !b.contains(n) } // aggregation keys as (name,type)
+      // remote handler      
+      val (fn,body) = aggl.getOrElseUpdate((m,e,ctx),{ // XXX: rename such that we could match aliases where only bound variable names differ
+        val fn = fresh("fa"); pushl(m)
+        val body = "case (`"+fn+"`,"+ctx.map(v=>"("+v+":?)::").mkString+"Nil) =>\n"+ind(
+          if (aks.size==0) "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
+          else {
+            val r = { val ns=aks.map(v=>(v._1,fresh(v._1))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
+            "val "+a0+" = K3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
+            cpsExpr(e.rename(r),b,(v:String)=>a0+".add("+tup(aks.map(x=>r(x._1)))+","+v+");\n")+"co("+a0+".toMap)"
+          }
+        )
+        popl; (fn,body)
+      })
       // local handler
-      val a0=fresh("agg");
-      val aks = (ks zip a.tks).filter { case(n,t)=> !b.contains(n) } // aggregation keys as (name,type)
-      if (aks.size==0) "val "+a0+" = aggr["+ex.tp.toScala+"]("+(mref.get(m)::fn::ctx).mkString(",")+");\n"+co(a0)
+      if (aks.size==0) "val "+a0+" = aggr["+ex.tp.toScala+"]("+(mref(m)::fn::ctx).mkString(",")+");\n"+co(a0)
       else {
-        "val "+a0+" = aggr[HashMap["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]]("+(mref.get(m)::fn::ctx).mkString(",")+");\n"+
+        "val "+a0+" = aggr[HashMap["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]]("+(mref(m)::fn::ctx).mkString(",")+");\n"+
         cpsExpr(MapRef(a0,e.tp,aks.map(_._1)),b,co)
       }
     case _ => super.cpsExpr(ex,b,co,am)
   }
 
   // Add the pre and deq calls in master's triggers
-  override def genTrigger(t:Trigger) = { val s=super.genTrigger(t); s.substring(0,s.length-2)+"\n  deq\n}" }
+  override def genTrigger(t:Trigger):String = {
+    val (n,as) = t.evt match {
+      case EvtReady => ("SystemReady",Nil)
+      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
+      case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
+    }
+    val b=as.map{_._1}.toSet
+    "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = "+(if (t.stmts.size>0) "reset" else "")+" {\n"+ind(t.stmts.map{s=>genStmt(s,b)}.mkString+"deq")+"\n}"
+  }
+  
   override def genStmt(s:Stmt,b:Set[String]) = s match {
     case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
-      val (mr,read) = (mref.get(m.name),e.collect{ case MapRef(n,t,ks)=>Set(mref.get(n)) }.toList)
+      val (mr,read) = (mref(m.name),e.collect{ case MapRef(n,t,ks)=>Set(mref(n)) }.toList)
       val pre=op match { case OpAdd => "pre("+(mr::read).mkString(",")+"); " case OpSet => "barrier; clear("+mr+"); barrier; " }
       //val init = oi match { case None => "" case Some(ie) => cpsExpr(ie,b,(i:String)=>"if (get("+mr+","+(if (m.keys.size==0) "" else tup(m.keys))+")==0) set("+mr+","+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n" }
       pre+ /*init+*/ cpsExpr(e,b,(v:String) => fop+"("+mr+","+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
     case _ => sys.error("Unimplemented")
   }
   
-  val mref = new java.util.HashMap[String,String]() // map name->map reference
+  val mref = new HashMap[String,String]() // map name->map reference
   override def apply(s:System) = {
     val mrefs = s.maps.zipWithIndex.map{case (m,i)=> mref.put(m.name,"map"+i); "val map"+i+" = MapRef("+i+")\n" }.mkString
     
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
     val ms = s.maps.map(genMap).mkString("\n") // maps
     val (str,ld0,gc) = genInternals(s)
-
-    freshClear(); mref.clear
-    "class "+cls+"Worker extends WorkerActor {\n"+ind(
-    "import WorkerActor._\n// constants\n"+mrefs+ // constants
-"""
-//val f0 = FunRef(0) // XXX : implement all foreach and aggregation function names
-//val f1 = FunRef(1)
-//val f2 = FunRef(2)
-//val f3 = FunRef(3)
-"""+
-    gc+"// maps\n"+ms+"\n"+ 
-    "val local = Array[K3Map[_,_]]("+s.maps.map(m=>m.name).mkString(",")+")\n"+
-    (if (ld0!="") "// tables content preloading\n"+ld0+"\n" else "")+"\n"+
-    "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(
-    // XXX: IMPLEMENT REMOTE FOREACH HERE
-    "case _ => co()")+"\n}\n\n"+
-    "// remote aggregations\ndef aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {\n"+ind(
-    // XXX: IMPLEMENT REMOTE AGGREGATIONS HERE
-"""
-//val a0 = args(0).asInstanceOf[Long] // broker_id XXX
-//val a1 = args(1).asInstanceOf[Double] // price
-//  case `f0` => co(mBIDS1.slice(0,a0).aggr{ (k,v) => val a_price=k._2; val bids_price=a1 // Add/del BIDS
-//    val lift1 = ((if ((a_price + (-1L * bids_price)) > 1000L) 1L else 0L) + (if ((bids_price + (-1L * a_price)) > 1000L) 1L else 0L)); v * (if (lift1 > 0L) 1L else 0L) })
-//  case `f1` => co(mBIDS3.slice(0,a0).aggr{ (k,v) => val a_price=k._2; val bids_price=a1
-//    val lift1 = ((if ((a_price + (-1L * bids_price)) > 1000L) 1L else 0L) + (if ((bids_price + (-1L * a_price)) > 1000L) 1L else 0L)); v * (if (lift1 > 0L) 1L else 0L) })
-//  case `f2` => co(mASKS1.slice(0,a0).aggr{ (k,v) => val b_price=k._2; val asks_price=a1 // Add/del ASKS
-//    val lift5 = ((if ((asks_price + (-1L * b_price)) > 1000L) 1L else 0L) + (if ((b_price + (-1L * asks_price)) > 1000L) 1L else 0L)); v * (if (lift5 > 0L) 1L else 0L) })
-//  case `f3` => co(mASKS2.slice(0,a0).aggr{ (k,v) => val b_price=k._2; val asks_price=a1
-//    val lift5 = ((if ((asks_price + (-1L * b_price)) > 1000L) 1L else 0L) + (if ((b_price + (-1L * asks_price)) > 1000L) 1L else 0L)); v * (if (lift5 > 0L) 1L else 0L) })
-//}
-"""
+    
+    def fs(xs:Iterable[(String,String)]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = FunRef("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
+    val (fds,fbs) = fs(forl.values)
+    val (ads,abs) = fs(aggl.values)
+    
     // XXX: force onSystemReady in the AkkaSystem.scala implementation
-    )+"\n}")+"\n}\n\n"+
+
+    freshClear(); mref.clear; aggl.clear; forl.clear
+    "class "+cls+"Worker extends WorkerActor {\n"+ind(
+    "import WorkerActor._\n// constants\n"+mrefs+fds+ads+gc+ // constants
+    "// maps\n"+ms+"\nval local = Array[K3Map[_,_]]("+s.maps.map(m=>m.name).mkString(",")+")\n"+
+    (if (ld0!="") "// tables content preloading\n"+ld0+"\n" else "")+"\n"+
+    "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(fbs+"case _ => co()")+"\n}\n\n"+
+    "// remote aggregations\ndef aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {\n"+ind(abs+"case _ => co(null)")+"\n}")+"\n}\n\n"+
     "class "+cls+"Master extends "+cls+"Worker with MasterActor {\n"+ind(
     "import WorkerActor._\nimport Messages._\nimport scala.util.continuations._\n\n"+
     "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str)+"\n}\n\n"+ts)+"\n}"
