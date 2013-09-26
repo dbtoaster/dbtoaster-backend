@@ -4,7 +4,7 @@ import ddbt.lib._
 object AXFinderAkka extends Helper {
   import WorkerActor._
   def main(args:Array[String]) {
-    val (t,res) = runLocal[AXMaster,AXWorker,List[Map[_,_]]](5,2251,4,streamsFinance())
+    val (t,res) = runLocal[AXMaster,AXWorker](5,2251,4,streamsFinance())
     println("Time = "+time(t)); println(K3Helper.toStr(res.head))
   }
 }
@@ -93,4 +93,5 @@ class AXMaster extends AXWorker with MasterActor {
     pre(mB3); add(mB3,(br_id,price),(-1L * vol));
     deq
   }
+  def onSystemReady() {}
 }

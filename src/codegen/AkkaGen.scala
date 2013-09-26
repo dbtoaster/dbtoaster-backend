@@ -30,45 +30,149 @@ import ddbt.ast._
  *
  * @author TCK
  */
-class AkkaGen(cls:String="Query") extends (M3.System => String) {
+class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
-
-// 1. before each statement, add pre computation
-// 2. at each foreach point, transform into a remote continuation, possibly with a local aggregation continuation
-
-/*
-  map messages
-  map master triggers
-  map worker continuations triggers
-*/
-/*
-  def genRemote(e:Expr,ctx:Map[String,Type],co:String=>String) // this is the only thing we need to insert ?
-  def genExpr(e:Expr,co:Continuation)
-  def genWorker
-*/
+  import ddbt.Utils.{ind,tup,fresh,freshClear}
+  import scala.collection.mutable.HashMap
 
 /*
-
-From ScalaGen, methods to modify
-- respond to more events (receive method)
-- cpsExpr to support remote continuations
-- Tag continuations with 'needs to respond to sender' when needed
-
-- Generate 2 classes:
-  - Master, handles global events streams
-  - Workers: only handle internal messages
-
-- Declare all messages/types in some common place
-
-- Generate coherency information with list of read(option) and written(list) maps
-
-==> move lazy map slicing into the TypeChecking ?
-
+Issues to solve:
+- Maintaining extra (map) information such as Var->Type (akka) or Var->Symbol (LMS) for each nodes
+- cluster initialization and maps distribution => make workers tell to master they want to join with their maps (all local but null maps)
+- join and leave cluster preparation
+- at each foreach point, possibly transform in a remote continuation if map is not local
+- move lazy map slicing into the TypeChecking ?
 - move a good part of the test generator directly in the code generator
-- move test AST into ddbt.ast package ?
+- move test AST into its own ddbt.ast package ?
+- shall we make unit tests part of the compiler ?
 
-
+Tests previously passing (26):
+Axfinder
+Employee01
+Employee01a
+Employee02
+Employee02a
+Employee03
+Employee03a
+Employee04
+Employee04a
+Employee05
+Employee06
+Employee07
+Employee10
+Employee10a
+Employee12a
+Employee22
+Rgbasumb
+Rimpossibleineq
+Rinstatic
+Rnogroupby
+Rnonjoineq
+Rpossibleineq
+Rselectstar
+Rstarofnested
+Zeus37494577
+Zeus75453299
 */
 
-  def apply(s:System) = "unimplemented"
+  // remote functions as (map,expression,context) => (func_name,body)
+  private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
+  private val forl = HashMap[(String,Expr,List[String]),(String,String)]()
+
+  // variables being used in the subexpression
+  def used(e:Expr):Set[String] = e.collect{ case Ref(n)=>Set(n) case MapRef(n,t,ks)=>ks.toSet case AggSum(ks,e)=>ks.toSet++used(e) }
+
+  // XXX: to be transformed in a map context
+  private var mapl:List[String] = Nil // context stack of 1 map allowed to be used locally
+  def pushl(m:String) { mapl=m::mapl }
+  def popl() { mapl = if (mapl==Nil) Nil else mapl.tail }
+
+  /** Get the first (in evaluation order) map with free variables. (implicit 'ctx' is used to determine free variables) */
+  def fmap(e:Expr):String = e match { // first map with free variables in the evaluation order (using context ctx), to be used as 'aggregation over' map
+    case MapRef(n,tp,ks) if ks.exists(!ctx.contains(_)) => n
+    case Lift(n,e) => fmap(e)
+    case AggSum(ks,e) => fmap(e)
+    case Exists(e) => fmap(e)
+    case Mul(l,r) => val lm=fmap(l); if (lm==null) fmap(r) else lm
+    case Add(l,r) => val lm=fmap(l); if (lm==null) fmap(r) else lm
+    case _ => null
+  }
+  
+  override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
+    case MapRef(n,tp,ks) if (n==mapl.head) => super.cpsExpr(ex,co)
+    case MapRef(n,tp,ks) => co("<XXX>")
+    case a@AggSum(ks,e) =>
+      val rctx = used(e).filter(ctx.contains(_)).toList // context to be passed remotely
+      val m=fmap(e); if (m==null) sys.error("No aggregation map")
+      val a0=fresh("agg"); val aks=(ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
+      // remote handler      
+      val (fn,body) = aggl.getOrElseUpdate((m,e,rctx),{ // XXX: rename such that we could match aliases where only bound variable names differ
+        val fn = fresh("fa"); pushl(m)
+        val body = "case (`"+fn+"`,"+rctx.map(v=>"("+v+":"+ctx(v).toScala+")::").mkString+"Nil) =>\n"+ind(
+          if (aks.size==0) "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
+          else {
+            val r = { val ns=aks.map(v=>(v._1,fresh(v._1))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
+            "val "+a0+" = K3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
+            cpsExpr(e.rename(r),(v:String)=>a0+".add("+tup(aks.map(x=>r(x._1)))+","+v+");\n")+"co("+a0+".toMap)"
+          }
+        )
+        popl; (fn,body)
+      })
+      // local handler
+      if (aks.size==0) "val "+a0+" = aggr["+ex.tp.toScala+"]("+(mref(m)::fn::rctx).mkString(",")+");\n"+co(a0)
+      else {
+        "val "+a0+" = aggr[HashMap["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]]("+(mref(m)::fn::rctx).mkString(",")+");\n"+
+        cpsExpr(MapRef(a0,e.tp,aks.map(_._1)),co)
+      }
+    case _ => super.cpsExpr(ex,co,am)
+  }
+
+  override def genStmt(s:Stmt) = s match {
+    case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
+      val (mr,read) = (mref(m.name),e.collect{ case MapRef(n,t,ks)=>Set(mref(n)) }.toList)
+      val pre=op match { case OpAdd => "pre("+(mr::read).mkString(",")+"); " case OpSet => "barrier; clear("+mr+"); barrier; " }
+      //val init = oi match { case None => "" case Some(ie) => cpsExpr(ie,b,(i:String)=>"if (get("+mr+","+(if (m.keys.size==0) "" else tup(m.keys))+")==0) set("+mr+","+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n" }
+      pre+ /*init+*/ cpsExpr(e,(v:String) => fop+"("+mr+","+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
+    case _ => sys.error("Unimplemented")
+  }
+
+  // Add the pre and deq calls in master's triggers
+  override def genTrigger(t:Trigger):String = {
+    val (n,as,deq) = t.evt match {
+      case EvtReady => ("SystemReady",Nil,"") // no deq as it is handled already
+      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs,"deq")
+      case EvtDel(Schema(n,cs)) => ("Del"+n,cs,"deq")
+    }
+    ctx = Ctx(as.toMap)
+    val res = "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = "+(if (t.stmts.size>0) "reset" else "")+" {\n"+ind(t.stmts.map(genStmt).mkString+deq)+"\n}"
+    ctx = null; res
+  }
+
+  val mref = new HashMap[String,String]() // map's name(local)->reference(remote)
+  override def apply(s:System) = {
+    val mrefs = s.maps.zipWithIndex.map{case (m,i)=> mref.put(m.name,"map"+i); "val map"+i+" = MapRef("+i+")\n" }.mkString
+    val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
+    val ms = s.maps.map(genMap).mkString("\n") // maps
+    val (str,ld0,gc) = genInternals(s)
+    def fs(xs:Iterable[(String,String)]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = FunRef("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
+    val (fds,fbs) = fs(forl.values)
+    val (ads,abs) = fs(aggl.values)
+    freshClear(); mref.clear; aggl.clear; forl.clear
+    "class "+cls+"Worker extends WorkerActor {\n"+ind(
+    "import WorkerActor._\nimport ddbt.lib.Functions._\n// constants\n"+mrefs+fds+ads+gc+ // constants
+    "// maps\n"+ms+"\nval local = Array[K3Map[_,_]]("+s.maps.map(m=>m.name).mkString(",")+")\n"+
+    (if (ld0!="") "// tables content preloading\n"+ld0+"\n" else "")+"\n"+
+    "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(fbs+"case _ => co()")+"\n}\n\n"+
+    "// remote aggregations\ndef aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {\n"+ind(abs+"case _ => co(null)")+"\n}")+"\n}\n\n"+
+    "class "+cls+"Master extends "+cls+"Worker with MasterActor {\n"+ind(
+    "import WorkerActor._\nimport Messages._\nimport scala.util.continuations._\n\n"+
+    "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str)+"\n}\n\n"+ts)+"\n}"
+  }
+
+  override def helper(s:System,numSamples:Int=10) = 
+    "package ddbt.generated\nimport ddbt.lib._\nimport java.util.Date\n\n"+
+    "object "+cls+" extends Helper {\n"+ind("import WorkerActor._\ndef main(args:Array[String]) {\n"+ind(
+    "val (t,res) = runLocal["+cls+"Master,"+cls+"Worker](5,2251,4,"+streams(s.sources)+")\n"+ // XXX: CUSTOMIZE ARGUMENTS
+    s.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+K3Helper.toStr(res("+i+"))"+"+\"\\n\")\n"}.mkString+
+    "println(\"Time = \"+time(t));\n")+"\n}")+"\n}\n\n"
 }

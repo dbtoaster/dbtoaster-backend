@@ -26,78 +26,81 @@ import ddbt.ast._
  *
  * @author TCK
  */
-class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => String) {
+class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-  def bnd(e:Expr):Set[String] = e.collect { case Lift(n,e) => bnd(e)+n case AggSum(ks,e) => ks.toSet case MapRef(n,tp,ks) => ks.toSet }
 
   // Methods involving only constants are hoisted as global constants
   private val cs = HashMap[Apply,String]()
   def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
 
+  var ctx:Ctx[Type] = null // Context: variable->type
+
   // Generate code bottom-up using delimited CPS and a list of bound variables
   //   ex:expression to convert
-  //   b :bound variables
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
-  def cpsExpr(ex:Expr,b:Set[String]=Set(),co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
+  def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => co(n)
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
-    case Exists(e) => cpsExpr(e,b,(v:String)=>co("(if (("+v+")!=0) 1L else 0L)"))
-    case Cmp(l,r,op) => co(cpsExpr(l,b,(ll:String)=>cpsExpr(r,b,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") 1L else 0L)")))
+    case Exists(e) => cpsExpr(e,(v:String)=>co("(if (("+v+")!=0) 1L else 0L)"))
+    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") 1L else 0L)")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
-      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,b,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
-    case MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>b.contains(k)}
+      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
+    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       if (ki.size==0) co(n+".get("+tup(ks)+")") // all keys are bound
       else { val (k0,v0)=(fresh("k"),fresh("v"))
-        val sl = if (ko.size>0) ".slice("+slice(n,ko.map{case (k,i)=>i})+","+tup(ko.map{case (k,i)=>k})+")" else ""
+        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
+        ctx.push((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
         n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
           ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";"}.mkString("\n")+"\n"+co(v0))+"\n}\n" // bind free variables from retrieved key
       }
     case Lift(n,e) =>
-      if (b.contains(n)) cpsExpr(e,b,(v:String)=>co("("+n+" == "+v+")"),am)
-      else cpsExpr(e,b,(v:String)=> if (n.matches("^lift[0-9]+$")) "val "+n+" = "+v+";\n"+co("1") else ";{\n"+ind("val "+n+" = "+v+";\n"+co("1"))+"\n};\n",am)
-    case Mul(el,er) => cpsExpr(el,b,(vl:String)=>cpsExpr(er,b++bnd(el),(vr:String)=>co(if (vl=="1") vr else if (vr=="1") vl else "("+vl+" * "+vr+")"),am),am)
+      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("("+n+" == "+v+")"),am)
+      else { ctx.push(Map((n,ex.tp))); cpsExpr(e,(v:String)=> if (n.matches("^lift[0-9]+$")) "val "+n+" = "+v+";\n"+co("1") else ";{\n"+ind("val "+n+" = "+v+";\n"+co("1"))+"\n};\n",am) }
+    case Mul(el,er) => cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(if (vl=="1") vr else if (vr=="1") vl else "("+vl+" * "+vr+")"),am),am)
     case a@Add(el,er) =>
-      if (a.agg==Nil) cpsExpr(el,b,(vl:String)=>cpsExpr(er,b,(vr:String)=>co("("+vl+" + "+vr+")"),am),am)
+      if (a.agg==Nil) { val cur=ctx.cur; cpsExpr(el,(vl:String)=>{ ctx.pop(cur); cpsExpr(er,(vr:String)=>{ctx.pop(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else am match {
-        case Some(t) if t==a.agg => cpsExpr(el,b,co,am)+"\n"+cpsExpr(er,b,co,am)
+        case Some(t) if t==a.agg => val cur=ctx.cur; val s1=cpsExpr(el,co,am); ctx.pop(cur); val s2=cpsExpr(er,co,am); ctx.pop(cur); s1+"\n"+s2
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
-          val ks=a.agg.map{x=>x._1}
+          val ks = a.agg.map(_._1)
           val tmp = Some(a.agg)
-          "val "+a0+" = K3Map.temp["+tup(a.agg.map{x=>x._2.toScala})+","+ex.tp.toScala+"]()\n"+
-          cpsExpr(el,b,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"+
-          cpsExpr(er,b,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"+
+          val cur = ctx.cur
+          val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"; ctx.pop(cur)
+          val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"; ctx.pop(cur)
+          ctx.push(a.agg.toMap)
+          "val "+a0+" = K3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+
           a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
             (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
       }
     case a@AggSum(ks,e) =>
-      val fs = ks.filter{k=> !b.contains(k)} // free variables
-      val agg = (ks zip a.tks).filter { case(n,t)=>fs.contains(n) } // aggregation keys as (name,type)
-      if (fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
+      if (aks.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
-        case Some(t) if t==agg => cpsExpr(e,b,co,am)
+        case Some(t) if t==aks => cpsExpr(e,co,am)
         case _ =>
-          val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
+          //val r = { val ns=aks.map{case (v,t)=>(v,fresh(v))}.toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
           val a0=fresh("agg")
-          val tmp=Some(agg) // declare this as summing target
-          "val "+a0+" = K3Map.temp["+tup(agg.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
-          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,e.tp,fs),b,co)
+          val tmp=Some(aks) // declare this as summing target
+          val cur = ctx.cur
+          val s1 = "val "+a0+" = K3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=> { a0+".add("+tup(aks.map(_._1))+","+v+");\n" },tmp);
+          ctx.pop(cur); val ma=MapRef(a0,e.tp,aks.map(_._1)); ma.tks=aks.map(_._2); s1+cpsExpr(ma,co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
   }
 
-  def genStmt(s:Stmt,b:Set[String]):String = s match {
+  def genStmt(s:Stmt):String = s match {
     case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
       val init = oi match {
-        case Some(ie) => cpsExpr(ie,b,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
+        case Some(ie) => ctx.pop(); cpsExpr(ie,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
         case None => ""
       }
-      clear+init+cpsExpr(e,b,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
+      ctx.pop(); clear+init+cpsExpr(e,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -107,8 +110,9 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
-    val b=as.map{_._1}.toSet
-    "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(t.stmts.map{s=>genStmt(s,b)}.mkString)+"\n}"
+    ctx = Ctx(as.toMap)
+    val res = "def on"+n+"("+as.map(a=>a._1+":"+a._2.toScala).mkString(", ")+") {\n"+ind(t.stmts.map(genStmt).mkString)+"\n}"
+    ctx = null; res
   }
 
   // Lazy slicing (secondary) indices computation
@@ -128,33 +132,36 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
     }
   }
 
-  def genSystem(s0:System):String = {
+  // Generate (1:stream events handling, 2:table loading, 3:global constants declaration)
+  def genInternals(s0:System) : (String,String,String) = {
     def ev(s:Schema,short:Boolean=true):(String,String) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
     }
+    val str = s0.triggers.map(_.evt match {
+      case EvtAdd(s) => val (i,o)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => onAdd"+s.name+o+"\n"
+      case EvtDel(s) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => onDel"+s.name+o+"\n"
+      case _ => ""
+    }).mkString
+    val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o)=ev(s.schema)
+      "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,"+i+")=>"+s.schema.name+".add("+o+",1L) },"+ad+","+sp+")))).read;" }.mkString("\n");
+    val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
+    (str,ld0,gc)
+  }
+
+  def apply(s0:System):String = {
     val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
     val ms = s0.maps.map(genMap).mkString("\n") // maps
-    val ld = { // optional preloading of static tables content
-      val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o)=ev(s.schema)
-        "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,"+i+")=>"+s.schema.name+".add("+o+",1L) },"+ad+","+sp+")))).read;" }.mkString("\n");
-      if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else ""
-    }
-    val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
-    
+    val (str,ld0,gc) = genInternals(s0)
+    val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
     "var t0:Long = 0\n"+
-    "def receive = {\n"+ind(
-      s0.triggers.map(_.evt match {
-        case EvtAdd(s) => val (i,o)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => onAdd"+s.name+o+"\n"
-        case EvtDel(s) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => onDel"+s.name+o+"\n"
-        case _ => ""
-      }).mkString+
+    "def receive = {\n"+ind(str+
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
-      "case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,"+tup(s0.queries.map{q=>q.name+(if (s0.mapType(q.m.name)._1.size>0) ".toMap" else ".get()")})+")"
+      "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! (time,List[Any]("+s0.queries.map{q=>q.name+(if (s0.mapType(q.map.name)._1.size>0) ".toMap" else ".get()")}.mkString(",")+"))"
     )+"\n}\n"+gc+ts+ld)+"\n}\n"
   }
 
@@ -166,12 +173,12 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
         case "brokers" => v case "bids"|"asks" => "\""+v+"\"" case "deterministic" => (v!="no"&&v!="false").toString case _ => ""
       })}.filter(!_.endsWith("=")).mkString(",")+")"
       case "CSV" => val sep=java.util.regex.Pattern.quote(s.adaptor.options.getOrElse("delimiter",",")).replaceAll("\\\\","\\\\\\\\")
-                    "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map{f=>f._2}.mkString(",")+"\",\""+sep+"\")"
+                    "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map(_._2).mkString(",")+"\",\""+sep+"\")"
     }
     (in,"new Adaptor."+adaptor,split)
   }
 
-  def genStreams(sources:List[Source]) = {
+  def streams(sources:List[Source]) = {
     def fixOrderbook(ss:List[Source]):List[Source] = { // one source generates BOTH asks and bids events
       val (os,xs) = ss.partition{_.adaptor.name=="ORDERBOOK"}
       val ob = new java.util.HashMap[(Boolean,SourceIn),(Schema,Split,Map[String,String])]()
@@ -185,13 +192,12 @@ class ScalaGen(cls:String="Query",numSamples:Int=10) extends (M3.System => Strin
   }
 
   // Helper that contains the main and stream generator
-  def genViewType(s0:System) = tup(s0.queries.map{q=> val m=s0.mapType(q.m.name); if (m._1.size==0) m._2.toScala else "Map["+tup(m._1.map(_.toScala))+","+m._2.toScala+"]" })
-  def genHelper(s0:System) = {
+  def helper(s0:System,numSamples:Int=10) = {
     "package ddbt.generated\nimport ddbt.lib._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind(
-    "def execute() = run["+cls+","+genViewType(s0)+"]("+genStreams(s0.sources)+")\n\n"+
+    "def execute() = run["+cls+"]("+streams(s0.sources)+")\n\n"+
     "def main(args:Array[String]) {\n"+ind("val res = bench(\"NewGen\","+numSamples+",execute)\n"+
-    s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\")\nprintln(K3Helper.toStr(res"+(if (s0.queries.size>1) "._"+(i+1) else "")+")+\"\\n\")" }.mkString("\n"))+"\n}")+"\n}\n\n"
+    s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\")\nprintln("+
+      (if (q.map.keys.size==0) "res("+i+").toString" else "K3Helper.toStr(res("+i+").asInstanceOf[Map[_,_]])")+"+\"\\n\")" }.mkString("\n"))+"\n}")+"\n}\n\n"
   }
-  def apply(s:System) = genHelper(s)+genSystem(s)
 }

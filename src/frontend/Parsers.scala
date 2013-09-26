@@ -7,10 +7,7 @@ import ddbt.ast._
 
 /**
  * These class define the parsers for SQL and M3 languages into corresponding AST.
- * 
- * @TODO: SQL parser is broken: it parses correctly but outputted AST is incorrect.
- * This will not be fixed soon as this composent is not currently used.
- * 
+ *
  * @author TCK
  */
 
@@ -175,7 +172,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   lazy val alias = expr ~ opt("AS"~>ident) ^^ { case e~o => o match { case Some(n) => Alias(e,n) case None => e } }
   lazy val groupBy = "GROUP"~>"BY"~>rep1sep(field,",") ~ opt("HAVING"~>disj) ^^ { case fs~ho => GroupBy(fs,ho.getOrElse(null)) }
   lazy val orderBy = "ORDER"~>"BY"~>rep1sep(field~opt("ASC"|"DESC"),",") ^^ { case fs => OrderBy(fs.map{ case f~o => (f,o.getOrElse("").toUpperCase=="DESC") }) }
-  
+
   lazy val qatom:Parser[Query] = (
     select
   | opt("LIST")~>"("~>repsep(expr,",")<~")" ^^ { Lst(_) }

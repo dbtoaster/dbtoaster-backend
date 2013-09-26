@@ -61,7 +61,7 @@ object TypeCheck extends (M3.System => M3.System) {
     val mtp = triggers.flatMap(t=>t.stmts flatMap { case StmtMap(m,_,_,_)=>List(m) }).map(m=>(m.name,m.tp)).toMap ++
               s0.sources.filter{s=> !s.stream}.map{s=>(s.schema.name,TypeLong)}.toMap // constant table are not written
     val maps = s0.maps.map{ m=> val t0=mtp.getOrElse(m.name,null); val t1=m.tp;
-      val tp=if (t0==null && t1!=null) t1 else if (t1==null && t0!=null) t0 else { 
+      val tp=if (t0==null && t1!=null) t1 else if (t1==null && t0!=null) t0 else {
         if (t0!=t1) sys.error("Map "+m.name+" type differs ("+t0+" != "+t1+")")
         if (t0==null) sys.error("Map "+m.name+" has no type"); t0
       }
@@ -115,6 +115,7 @@ object TypeCheck extends (M3.System => M3.System) {
         case m@MapRef(n,tp,ks) => val mtp=s0.mapType(n); cr=c++(ks zip mtp._1).toMap
           if (tp==null) m.tp=mtp._2 else if (tp!=mtp._2) err("Bad value type: expected "+mtp._2+", got "+tp+" for "+ex)
           (ks zip mtp._1).foreach{ case(k,t)=> if(c.contains(k) && t!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
+          m.tks = mtp._1
         case _ =>
       }
       if (ex.tp==null) err("Untyped: "+ex); cr
@@ -146,7 +147,7 @@ object TypeCheck extends (M3.System => M3.System) {
 object Library {
   // available functions as userName->(callName,retType,minArgs,argTypes)
   // default argument <i> of <f> is a val named <f>$default$<i> where i=1,2,3...
-  private val funs = new java.util.HashMap[String,(String,List[(Type,List[Type])])]() 
+  private val funs = new java.util.HashMap[String,(String,List[(Type,List[Type])])]()
   private val argm = new java.util.HashMap[String,Int]() // min # of arguments
   private def typeof[T](c:Class[T]) = c.toString match {
     case /*"char"|"short"|"int"|*/ "long" => TypeLong
@@ -181,7 +182,7 @@ object Library {
 
   // Implicit castings allowed by second-stage compiler
   private def cast(a:Type,b:Type) = (a==b) || (a==TypeLong && b==TypeDouble)
-  
+
   def typeCheck(name:String,as:List[Type]):Type = {
     if (!funs.containsKey(name)) sys.error("Library: no such function: "+name)
     val ft = funs.get(name)._2
@@ -194,7 +195,7 @@ object Library {
     cs.foreach{ case (r,ats) => if ((true /: (as zip ats)){ case (c,(t1,t2)) => c && cast(t1,t2) }) return r } // matching with cast
     sys.error("Library: bad arguments for "+name+": got <"+as.mkString(",")+"> expected "+ft.map{ case (_,tas) => "<"+tas.mkString(",")+">" }.mkString(",")); null
   }
-  
+
   inspect(ddbt.lib.Functions,"U")
 
   /*
@@ -209,7 +210,7 @@ object Library {
     case "substring" => vs(0)+".substring("+vs(1)+(if (vs.size>2) ","+vs(2) else "")+")"
     case _ => funs.get(name)._1+"("+vs.mkString(",")+")"
   }
-  
+
   // Demo
   def main(args:Array[String]) {
     import collection.JavaConversions._

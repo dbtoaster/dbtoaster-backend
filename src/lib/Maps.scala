@@ -95,7 +95,7 @@ object K3Helper {
     case d:java.util.Date => ft.format(d)
     case x => x.toString
   }
-  def toStr(o:Any) = o.toString
+  def toStr(o:Any):String = { if (o.isInstanceOf[Map[_,_]]) toStr(o.asInstanceOf[Map[_,_]]) else o.toString }
   def toStr[K,V](m:Map[K,V]):String = m.toList.map{case(k,v)=>(str(k),str(v))}.sortBy(x=>x._1).map{case(k,v)=>k+" -> "+v}.mkString("\n")
   def toXML[K,V](m:Map[K,V]): List[xml.Elem] = {
     var l = List[xml.Elem]()
@@ -142,7 +142,7 @@ case class K3MapMult[K,V:ClassTag](idxs:List[K3Index[_,K,V]]=Nil) extends K3Map[
     else { elems.put(key,value); if (idxs!=Nil) idxs.foreach(_.set(key,value)) }
   }
   def add(key:K, value:V) { if (value!=v0) set(key, elems.get(key) match { case null => value case v => plus(v,value) }) }
-  def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=>f(k,v) } 
+  def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=>f(k,v) }
   def aggr[R](f:(K,V)=>R)(implicit cR:ClassTag[R]):R = { var r:R = K3Helper.make_zero[R](); val p = K3Helper.make_plus[R]()
     foreach{ case (k,v)=> r = p(r,f(k,v)) }; r
   }

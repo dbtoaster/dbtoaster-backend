@@ -86,7 +86,7 @@ object Functions {
     def *(v:Vector) = Vector(y*v.z-z*v.y, z*v.x-x*v.z, x*v.y-y*v.x)
     def angle(v:Vector) = math.acos ( apply(v) / (length * v.length) )
   }
-  
+
   def Uhash(n:Long):Long = { // mddb/query2_full.sql
     var v:Long = n * 3935559000370003845L + 2691343689449507681L
     v ^= v >> 21; v^= v << 37; v ^= v >> 4
@@ -104,20 +104,20 @@ object Functions {
   def listmax(v1:Long, v2:Double):Double = max (v1, v2)
   def listmax(v1:Double, v2:Double):Double = max (v1, v2)
   def year_part(date:java.util.Date) = {
-    val c = java.util.Calendar.getInstance; c.setTime(date)   
-    c.get(java.util.Calendar.YEAR) 
+    val c = java.util.Calendar.getInstance; c.setTime(date)
+    c.get(java.util.Calendar.YEAR)
   }
   def month_part(date:java.util.Date) = {
-    val c = java.util.Calendar.getInstance; c.setTime(date)   
-    c.get(java.util.Calendar.MONTH) 
+    val c = java.util.Calendar.getInstance; c.setTime(date)
+    c.get(java.util.Calendar.MONTH)
   }
   def day_part(date:java.util.Date):Long = {
-    val c = java.util.Calendar.getInstance; c.setTime(date)   
-    c.get(java.util.Calendar.DAY_OF_MONTH) 
-  }    
+    val c = java.util.Calendar.getInstance; c.setTime(date)
+    c.get(java.util.Calendar.DAY_OF_MONTH)
+  }
   val PI = 3.141592653589793238462643383279502884
   def radians(degree:Double) = degree * PI / 180
-  def degrees(radian:Double) = radian * 180 / PI 
+  def degrees(radian:Double) = radian * 180 / PI
   def pow(x:Double, y:Double) = math.pow(x, y)
   def sqrt(x:Double):Double = math.sqrt(x)
   def cos(x:Double):Double = math.cos(x)

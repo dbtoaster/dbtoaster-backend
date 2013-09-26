@@ -14,12 +14,13 @@ import java.util.Date
 object TPCH13 extends Helper {
   def main(args:Array[String]) {
     //val ref = bench("ReferenceLMS ",10,()=>run[TPCH13Ref,Map[Long,Long]](streamsTPCH13()))
-    val res = bench("HandOptimized",10,()=>run[TPCH13,Map[Long,Long]](streamsTPCH13()))
-    val gen = bench("TCK-Generated",10,()=>run[TPCH13Gen,Map[Long,Long]](streamsTPCH13()))
+    val res = bench("HandOptimized",10,()=>run[TPCH13](streamsTPCH13()))
+    val gen = bench("TCK-Generated",10,()=>run[TPCH13Gen](streamsTPCH13()))
     def eq(m1:Map[Long,Long],m2:Map[Long,Long]) = m1.filter{case (k,v) => v!=0}==m2.filter{case (k,v) => v!=0}
-    println("Correctness: "+(if(eq(res,gen)) "OK" else "FAILURE !!!!"))
-    println("HandOpt:"); println(K3Helper.toStr(res));
-    if(!eq(res,gen)) { println("Generated:"); println(K3Helper.toStr(gen)); }
+    def m0ll(l:List[Any]):Map[Long,Long] = l.head.asInstanceOf[Map[Long,Long]]
+    println("Correctness: "+(if(eq(m0ll(res),m0ll(gen))) "OK" else "FAILURE !!!!"))
+    println("HandOpt:"); println(K3Helper.toStr(res.head));
+    if(!eq(m0ll(res),m0ll(gen))) { println("Generated:"); println(K3Helper.toStr(gen.head)); }
 
     //println("Correctness: "+(if(eq(ref,res)) "OK" else "FAILURE !!!!"))
     //println("Correctness: "+(if(eq(ref,gen)) "OK" else "FAILURE !!!!"))
@@ -44,7 +45,7 @@ class TPCH13 extends Actor {
        onInsertCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
        onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case TupleEvent(TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
-    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,result.toMap)
+    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,List(result.toMap))
   }
 
   val CUSTDIST = K3Map.make[Long,Long]()
@@ -248,7 +249,7 @@ object TPCH13Gen extends Helper {
     (new java.io.FileInputStream("resources/data/tpch/orders.csv"),new Adaptor.CSV("ORDERS","long,long,string,double,date,string,string,long,string","\\Q|\\E"),Split()),
     (new java.io.FileInputStream("resources/data/tpch/customer.csv"),new Adaptor.CSV("CUSTOMER","long,string,string,long,string,double,string,string","\\Q|\\E"),Split())
   ))
-  
+
   def main(args:Array[String]) {
     val res = bench("NewGen",10,execute)
     println(K3Helper.toStr(res))
@@ -259,12 +260,12 @@ object TPCH13Gen extends Helper {
 class TPCH13Gen extends Actor {
   import ddbt.lib.Messages._
   import ddbt.lib.Functions._
-  
+
   val CUSTDIST = K3Map.make[Long,Long]();
   val CUSTDIST_mORDERS1_E1_4 = K3Map.make[Long,Long]();
   val CUSTDIST_mCUSTOMER1_E1_1 = K3Map.make[Long,Long]();
   val CUSTDIST_mCUSTOMER1_E1_3 = K3Map.make[Long,Long]();
-  
+
   var t0:Long = 0
   def receive = {
     case TupleEvent(TupleInsert,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onAddORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
@@ -272,9 +273,9 @@ class TPCH13Gen extends Actor {
     case TupleEvent(TupleInsert,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onAddCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case TupleEvent(TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDelCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case SystemInit => onSystemReady(); t0=System.nanoTime()
-    case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,CUSTDIST.toMap)
+    case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,List(CUSTDIST.toMap))
   }
-  
+
   def onAddORDERS(orders_orderkey:Long, orders_custkey:Long, orders_orderstatus:String, orders_totalprice:Double, orders_orderdate:Date, orders_orderpriority:String, orders_clerk:String, orders_shippriority:Long, orders_comment:String) {
     val tmp_add1 = K3Map.temp[Long,Long]()
     val tmp_add2 = K3Map.temp[Long,Long]()
@@ -341,7 +342,7 @@ class TPCH13Gen extends Actor {
     CUSTDIST_mCUSTOMER1_E1_1.add(orders_custkey,((0L == Uregexp_match("^.*special.*requests.*$",orders_comment)) * CUSTDIST_mORDERS1_E1_4.get(orders_custkey)));
     CUSTDIST_mCUSTOMER1_E1_3.add(orders_custkey,(0L == Uregexp_match("^.*special.*requests.*$",orders_comment)));
   }
-  
+
   def onDelORDERS(orders_orderkey:Long, orders_custkey:Long, orders_orderstatus:String, orders_totalprice:Double, orders_orderdate:Date, orders_orderpriority:String, orders_clerk:String, orders_shippriority:Long, orders_comment:String) {
     val tmp_add7 = K3Map.temp[Long,Long]()
     val tmp_add8 = K3Map.temp[Long,Long]()
@@ -408,7 +409,7 @@ class TPCH13Gen extends Actor {
     CUSTDIST_mCUSTOMER1_E1_1.add(orders_custkey,((0L == Uregexp_match("^.*special.*requests.*$",orders_comment)) * (CUSTDIST_mORDERS1_E1_4.get(orders_custkey) * -1L)));
     CUSTDIST_mCUSTOMER1_E1_3.add(orders_custkey,((0L == Uregexp_match("^.*special.*requests.*$",orders_comment)) * -1L));
   }
-  
+
   def onAddCUSTOMER(customer_custkey:Long, customer_name:String, customer_address:String, customer_nationkey:Long, customer_phone:String, customer_acctbal:Double, customer_mktsegment:String, customer_comment:String) {
     val tmp_add13 = K3Map.temp[Long,Long]()
     val tmp_add14 = K3Map.temp[Long,Long]()
@@ -475,7 +476,7 @@ class TPCH13Gen extends Actor {
     CUSTDIST_mORDERS1_E1_4.add(customer_custkey,1L);
     CUSTDIST_mCUSTOMER1_E1_1.add(customer_custkey,CUSTDIST_mCUSTOMER1_E1_3.get(customer_custkey));
   }
-  
+
   def onDelCUSTOMER(customer_custkey:Long, customer_name:String, customer_address:String, customer_nationkey:Long, customer_phone:String, customer_acctbal:Double, customer_mktsegment:String, customer_comment:String) {
     val tmp_add19 = K3Map.temp[Long,Long]()
     val tmp_add20 = K3Map.temp[Long,Long]()
@@ -542,9 +543,8 @@ class TPCH13Gen extends Actor {
     CUSTDIST_mORDERS1_E1_4.add(customer_custkey,-1L);
     CUSTDIST_mCUSTOMER1_E1_1.add(customer_custkey,(CUSTDIST_mCUSTOMER1_E1_3.get(customer_custkey) * -1L));
   }
-  
+
   def onSystemReady() {
-    
   }
 }
 
@@ -557,7 +557,7 @@ import org.dbtoaster.dbtoasterlib.K3Collection._
 
 class TPCH13Ref extends Actor {
   import Messages._
-  import scala.language.implicitConversions  
+  import scala.language.implicitConversions
   implicit def boolConv(b:Boolean):Long = if (b) 1L else 0L
 
   var t0:Long = 0

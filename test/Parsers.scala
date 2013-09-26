@@ -13,7 +13,7 @@ class ParserSpec extends FunSpec with ParallelTestExecution {
   import ddbt.Utils
   import ddbt.frontend._
   import ddbt.UnitTest.{sqlFiles,toast}
-  
+
   val (allSQL,allM3,baseSQL) = sqlFiles()
 
   allM3.foreach { file =>

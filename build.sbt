@@ -17,24 +17,12 @@ Seq(
 )
 
 // --------- Dependencies
-// Storm dependencies
-/*
-resolvers ++= Seq(
-  "clojars" at "http://clojars.org/repo/",
-  "clojure-releases" at "http://build.clojure.org/releases"
-)
-*/
 libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.1",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.1",
   "org.scala-lang"     % "scala-actors"   % v,
-  "org.scala-lang"     % "scala-compiler" % v        % "test",
+  "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.M7" % "test"
-  //"com.esotericsoftware.kryo" % "kryo"  % "2.21",
-  //"com.twitter"       %% "chill"        % "0.3.1",
-  //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
-  //"com.github.velvia" %% "scala-storm"  % "0.2.3-SNAPSHOT",
-  //"storm"              % "storm"        % "0.8.2"
 ))
 
 // --------- Compilation options
@@ -54,7 +42,7 @@ Seq(
   fork := true, // required to enable javaOptions
   javaOptions ++= Seq("-Xss128m"), // ,"-Xss512m","-XX:MaxPermSize=2G"
   //javaOptions ++= Seq("-Xmx14G","-Xms14G","-verbose:gc"),parallelExecution in Test := false, // for large benchmarks
-  javaOptions in Test <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
+  javaOptions <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
 )
 
 // --------- Custom tasks
@@ -62,17 +50,29 @@ addCommandAlias("toast", ";run-main ddbt.Compiler ")
 
 addCommandAlias("check", ";run-main ddbt.UnitTest ")
 
+addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark ")
+
 addCommandAlias("queries", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del;test-only ddbt.test.gen.*")
 
 addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del -mlms;test-only ddbt.test.gen.*")
 
-addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark ")
+addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del -makka;test-only ddbt.test.gen.*")
+
+addCommandAlias("bench-all", ";test:run-main ddbt.test.Benchmark -mscala -mlms -mlscala -mllms -csv -dstandard")
+
+addCommandAlias("bench-lms", ";test:run-main ddbt.test.Benchmark -dstandard -mlms -csv")
+
+addCommandAlias("bench-llms", ";test:run-main ddbt.test.Benchmark -dstandard -mllms -csv")
+
+addCommandAlias("bench-lscala", ";test:run-main ddbt.test.Benchmark -dstandard -mlscala -csv")
+
+addCommandAlias("bench-lcpp", ";test:run-main ddbt.test.Benchmark -dstandard -mlcpp -csv")
 
 TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>
   println("Creating DDBT library ...")
   val dir=base/"lib"; if (!dir.exists) dir.mkdirs; val lib=dir.getPath()+"/ddbt.jar"
   scala.sys.process.Process(Seq("jar","-cMf",lib,"-C",cd.toString,"ddbt/lib")).!
-  print("Creating DDBT full package "); scala.Console.out.flush; val tmp=IO.createTemporaryDirectory
+  print("Creating DDBT full package "); scala.Console.out.flush; val tmp=new File("target/pkg_tmp"); IO.createDirectory(tmp)
   val jars = (cp.files.absString.split(":").filter(x=>x!=cd.toString).toSet + lib)
   val sc = jars.filter(_.matches(".*/scala-library.*")).map(_.replaceAll("scala-library","scala-compiler"))
   (jars++sc).foreach { j => scala.sys.process.Process(Seq("jar","-xf",j),tmp).!; print("."); scala.Console.out.flush; }
@@ -141,10 +141,16 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
 //)
 // disable publishing of main docs
 //publishArtifact in (Compile, packageDoc) := false
-// continuations
-//autoCompilerPlugins := true
-//libraryDependencies <<= (scalaVersion, libraryDependencies) { (ver, deps) =>
-//    deps :+ compilerPlugin("org.scala-lang.plugins" % "continuations" % ver)
-//}
 //mainClass := Some("Main")
 //selectMainClass := Some("Main")
+// Storm dependencies:
+//resolvers ++= Seq(
+//  "clojars" at "http://clojars.org/repo/",
+//  "clojure-releases" at "http://build.clojure.org/releases"
+//)
+//
+  //"com.esotericsoftware.kryo" % "kryo"  % "2.21",
+  //"com.twitter"       %% "chill"        % "0.3.1",
+  //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
+  //"com.github.velvia" %% "scala-storm"  % "0.2.3-SNAPSHOT",
+  //"storm"              % "storm"        % "0.8.2"

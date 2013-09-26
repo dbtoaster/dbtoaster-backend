@@ -25,7 +25,7 @@ import ddbt.codegen._
  *    sbt ';run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del;test-only * -- -l ddbt.SlowTest'
  *
  *    sbt ';check -dbig -q.*axfinder;test-only ddbt.test.gen.*'
- * 
+ *
  * @author TCK
  */
 object UnitTest {
@@ -38,7 +38,7 @@ object UnitTest {
   case class QueryMap(m:Map[String,String]) extends QueryOut
   case class QueryFile(path:String,sep:String=null) extends QueryOut
   case class QuerySingleton(v:String) extends QueryOut
-  
+
   // Parser for unit testing declarations
   import scala.util.parsing.combinator.RegexParsers
   object UnitParser extends RegexParsers {
@@ -55,13 +55,18 @@ object UnitTest {
     lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (tup(cs),n) }
     def apply(input: String): QueryTest = parseAll(qtest, input) match { case Success(r,_) => r case f => sys.error(f.toString) }
   }
-  
+
   // Repository-specific functions shared with tests (Parsers at least)
   private val rbase = new java.io.File(path_repo+"/"+path_base)
   def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
-  def toast(f:String,opts:List[String]=Nil):String = if (path_repo=="") exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)._1 else
-    exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase,null,false)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
-  
+  def toast(f:String,opts:List[String]=Nil):String = {
+    val ((out:String,err:String),_,_) = captureOut(()=>if (path_repo=="") exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)
+    else { val (o,e) = exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase,null,false);
+           (o.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data"),e)
+    })
+    if (err!="") { val ex=new Exception(err); ex.setStackTrace(Array[StackTraceElement]()); throw ex }; out
+  }
+
   val all = try { exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("Repository not configured"); Array[String]() }
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                           "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
@@ -74,28 +79,29 @@ object UnitTest {
     val fs = filtered.map(f=>load(f)).filter(t=>t.sets.contains(dataset)).map(t=>t.sql)
     (all.map(x=>load(x).sql),fs,path_repo+"/"+path_base)
   } else {
-      val dir = "examples/queries"
-      val files = if (new java.io.File(dir).exists) Utils.exec(Array("find",dir,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n")
-      else { System.err.println(("@"*80)+"\n@"+(" "*78)+("@\n@ %-76s @".format("WARNING: folder '"+dir+"' does not exist, tests skipped !\n@"+(" "*78))+"@\n"+("@"*80))); Array[String]() }
-      (files,files,null)
+    val dir = "examples/queries"
+    val files = if (new java.io.File(dir).exists) Utils.exec(Array("find",dir,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n")
+    else { System.err.println(("@"*80)+"\n@"+(" "*78)+("@\n@ %-76s @".format("WARNING: folder '"+dir+"' does not exist, tests skipped !\n@"+(" "*78))+"@\n"+("@"*80))); Array[String]() }
+    (files,files,null)
   }
-  
+
   // ---------------------------------------------------------------------------
 
   // Test generator
   private val dir=new java.io.File("test/gen") // output folder
+  private def clname(f:String) = { val s=f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
   def makeTest(t:QueryTest,mode:String="scala",opts:List[String]=Nil) = {
-    def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
     val sys = (((f:String)=>toast(f,opts)) andThen M3Parser andThen TypeCheck)(t.sql)
     val cls = clname(t.sql)
-    val gen = mode match { // XXX: provide a common interface for all code generators (?)
+    val gen:CodeGen = mode match {
       case "scala" => new ScalaGen(cls)
       case "lms" => new LMSGen(cls)
-      case _ => scala.sys.error("Unsupported")
+      case "akka" => new AkkaGen(cls)
+      case _ => scala.sys.error("Generator "+mode+" not supported")
     }
-    val str = gen.genStreams(sys.sources)
+    val str = gen.streams(sys.sources)
     val qid = sys.queries.map{_.name}.zipWithIndex.toMap
-    val qt = sys.queries.map{q=>(q.name,sys.mapType(q.m.name)) }.toMap
+    val qt = sys.queries.map{q=>(q.name,sys.mapType(q.map.name)) }.toMap
     val helper =
       "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
       "class "+cls+"Spec extends FunSpec with Helper {"+ind("\n"+
@@ -105,8 +111,8 @@ object UnitTest {
       t.sets.map { case (sz,set) =>
         // val mystr = (str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) } // seems that set.subs are useless here
         val mystr = (if (sz.endsWith("_del")) str.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else str).replaceAll("/standard/","/"+sz+"/") // streams for this dataset
-        "describe(\"Dataset '"+sz+"'\") {"+ind("\n"+
-        "val (t,res) = run["+cls+","+gen.genViewType(sys)+"]("+mystr+")\n"+
+        "describe(\"Dataset '"+sz+"'\") {\n"+ind(
+        "val (t,res) = run"+(if (mode=="akka") "Local["+cls+"Master,"+cls+"Worker](5,2251,4," else "["+cls+"](")+mystr+")\n"+ // XXX: fix Akka parameters
         set.out.map { case (n,o) =>
           val (kt,vt) = qt(n)
           val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
@@ -115,15 +121,15 @@ object UnitTest {
             val ll=(kt:::vt::Nil).zipWithIndex
             "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.reverse.tail.reverse.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n"
           }
-          "it(\""+n+" correct\") {"+ind("\n"+kv+
-          "diff(res"+(if (sys.queries.size>1) "._"+(qid(n)+1) else "")+", "+(o match {
+          "it(\""+n+" correct\") {\n"+ind(kv+
+          "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
             case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
             case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+fmt+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
             case QuerySingleton(v) => v
           })+")")+"\n}"
         }.mkString("\n"))+"\n}"
       }.mkString("\n"))+"\n}\n\n"
-      write(dir,cls+".scala",helper+gen.genSystem(sys))
+      write(dir,cls+".scala",helper+gen(sys))
       println("Query "+cls+" generated")
   }
 
@@ -146,7 +152,11 @@ object UnitTest {
       val t = QueryTest(t0.sql,t0.sets.filter(x=>f_ds(x._1))
                  .filter{x=> !t0.sql.matches(".*missedtrades.*") || x._1.matches("tiny.*")}) // missedtrades is very slow
       if (t.sets.size>0) try { println("---------------- "+t.sql); makeTest(t,mode,opts) }
-      catch { case th:Throwable => println("Compiling '"+t.sql+"' failed because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) } }
+      catch { case th:Throwable =>
+        val err=th.getMessage+th.getStackTrace.map("\n   "+_).mkString; println("Compiling '"+t.sql+"' failed because:\n"+err);
+        // Dummy failure to please front-end developers
+        val cls = clname(t.sql); write(dir,cls+".scala","package ddbt.test.gen\nimport org.scalatest._\n\nclass "+cls+"Spec extends FunSpec {\nit(\"Generating "+t.sql+"\") {\nfail(\"\"\""+err+"\"\"\")\n}\n}")
+      }
     }
     println("Now run 'test-only ddbt.test.gen.*' to pass tests")
   }

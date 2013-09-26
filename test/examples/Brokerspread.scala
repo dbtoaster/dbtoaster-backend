@@ -4,7 +4,7 @@ import ddbt.lib._
 import akka.actor.Actor
 import java.util.Date
 
-object BrokerSpread extends Helper {  
+object BrokerSpread extends Helper {
   import ddbt.Utils._
   import scala.language.implicitConversions
   implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();
@@ -28,9 +28,9 @@ object BrokerSpread extends Helper {
     r.foreach { l => val ma=p.matcher(l); if (ma.matches) m.put(ma.group(1).toLong,ma.group(2).toDouble) }
     scala.collection.JavaConversions.mapAsScalaMap(m).toMap.filter{ case (k,v) => v!=0.0 }
   }
-  def gen(size:String="standard") = run[BrokerSpread,Map[Long,Double]](Seq(
+  def gen(size:String="standard") = run[BrokerSpread](Seq(
     (new java.io.FileInputStream(path_repo+"/dbtoaster/experiments/data/finance/"+size+"/finance.csv"),new Adaptor.OrderBook(),Split())
-  ))._2
+  ))._2(0)
 
   def main(args:Array[String]) { // takes about 1 min
     def t(size:String) {
@@ -43,7 +43,7 @@ object BrokerSpread extends Helper {
     t("standard")
     t("big")
     t("huge")
-    /*  
+    /*
     val (t,res) = run[BrokerSpread,Map[Long,Double]](Seq((new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/finance/standard/finance.csv"),new Adaptor.OrderBook(),Split())))
     val (t2,ref) = run[BrokerSpreadRef,Map[Long,Double]](Seq((new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/finance/standard/finance.csv"),new Adaptor.OrderBook(),Split())))
     println("---------------- gen:") println(K3Helper.toStr(res))
@@ -60,19 +60,19 @@ object BrokerSpread extends Helper {
 class BrokerSpread extends Actor { // Copied from generated code
   import ddbt.lib.Messages._
   import ddbt.lib.Functions._
-  
+
   val BSP = K3Map.make[Long,Double]();
   val BSP_mBIDS1 = K3Map.make[(Long,Long),Long](List((k:(Long,Long))=>k._1));
   val BSP_mBIDS5 = K3Map.make[(Long,Long),Double](List((k:(Long,Long))=>k._1));
-  
+
   var t0:Long = 0
   def receive = {
     case TupleEvent(TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0.toLong,v1,v2,v3,v4)
     case TupleEvent(TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0.toLong,v1,v2,v3,v4)
     case SystemInit => t0=System.nanoTime()
-    case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,BSP.toMap)
+    case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,List(BSP.toMap))
   }
-  
+
   def bsp(bids_t:Long, broker:Long, volume:Double, price:Double):Double = {
     var agg1:Long = 0;
     var agg2:Long = 0;
@@ -94,9 +94,9 @@ class BrokerSpread extends Actor { // Copied from generated code
     */
     (agg1 - agg2) * price * volume + agg3 - agg4
   }
-  
+
   var tx:Long=0
-  
+
   def onAddBIDS(bids_t:Long, b_id:Long, broker:Long, volume:Double, price:Double) {
     BSP.add(broker, bsp(bids_t,broker,volume,price));
     BSP_mBIDS1.add((broker,bids_t),1L);

@@ -5,14 +5,14 @@ import java.util.Date;
 
 object TPCH18 extends Helper {
   def main(args:Array[String]) {
-    val (t,res) = run[TPCH18,Map[Long,Double]](streamsTPCH18(),false);
-    println(K3Helper.toStr(res)); println("Time: "+time(t))
+    val (t,res) = run[TPCH18](streamsTPCH18(),false);
+    println(K3Helper.toStr(res(0))); println("Time: "+time(t))
   }
 }
 
 abstract class TPCH18Base extends Actor {
   import Messages._
-  import scala.language.implicitConversions  
+  import scala.language.implicitConversions
   implicit def boolConv(b:Boolean):Long = if (b) 1L else 0L
 
   var t0:Long = 0
@@ -24,7 +24,7 @@ abstract class TPCH18Base extends Actor {
     case TupleEvent(TupleDelete,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onDelORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
     case TupleEvent(TupleInsert,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onAddCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case TupleEvent(TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDelCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
-    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,result.toMap)
+    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,List(result.toMap))
   }
   def onAddLINEITEM(L_ORDERKEY: Long,L_PARTKEY: Long,L_SUPPKEY: Long,L_LINENUMBER: Long,L_QUANTITY: Double,L_EXTENDEDPRICE: Double,L_DISCOUNT: Double,L_TAX: Double,L_RETURNFLAG: String,L_LINESTATUS: String,L_SHIPDATE: Date,L_COMMITDATE: Date,L_RECEIPTDATE: Date,L_SHIPINSTRUCT: String,L_SHIPMODE: String,L_COMMENT: String) : Unit
   def onDelLINEITEM(L_ORDERKEY: Long,L_PARTKEY: Long,L_SUPPKEY: Long,L_LINENUMBER: Long,L_QUANTITY: Double,L_EXTENDEDPRICE: Double,L_DISCOUNT: Double,L_TAX: Double,L_RETURNFLAG: String,L_LINESTATUS: String,L_SHIPDATE: Date,L_COMMITDATE: Date,L_RECEIPTDATE: Date,L_SHIPINSTRUCT: String,L_SHIPMODE: String,L_COMMENT: String) : Unit

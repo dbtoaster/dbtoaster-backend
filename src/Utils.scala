@@ -20,7 +20,20 @@ object Utils {
     (repo,if (repo!="") repo+"/"+path_base+"/bin/dbtoaster_release" else bin)
   }
 
-  // Gobbles an input stream, used for external processes and loadMain
+  def scalaCompiler(dir:File,classpath:String=null) : List[String]=>Unit = {
+    val p=dir.getAbsolutePath();
+    val cp = {
+      val deps = System.getProperty("sbt.classpath",System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":")
+      deps /**/ .filter(_.matches("(.*)/(\\.(sbt|ivy2)|target)/.*")) /**/ .mkString(":")+(if (classpath!=null) ":"+classpath else "")
+    }
+    // Embedded Scala compiler
+    val s=new scala.tools.nsc.Settings(); s.classpath.value=cp; s.outputDirs.setSingleOutput(dir.getAbsolutePath()); val g=new scala.tools.nsc.Global(s)
+    (fs:List[String]) => try { (new g.Run).compile(fs) } catch { case t:Throwable => t.printStackTrace }
+    // Fallback with FSC / scalac external processes
+    // (fs:List[String]) => { val args="-cp "+cp+" -d "+p+" "+fs.mkString(" "); val println({ exec("fsc "+args)._1 } catch { case _:IOException => exec("java scala.tools.nsc.Main "+args)._1 }) }
+  }
+
+  // Gobbles an input stream (used for external processes by loadMain)
   private def gobble(in:InputStream) = new Runnable {
     var out = new StringBuilder
     var thr = new Thread(this); thr.start
@@ -40,7 +53,7 @@ object Utils {
     if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); print(o); System.err.print(e); if (fatal) System.exit(1) }
     (o,e)
   }
-  
+
   // Capture console/default output and error streams in two strings
   def captureOut[R](f:()=>R) : (R,String,String) = {
     val o0=scala.Console.out; val so0=System.out; val po=new PipedOutputStream; scala.Console.setOut(new PrintStream(po)); System.setOut(new PrintStream(po)); val out=gobble(new PipedInputStream(po));
@@ -50,7 +63,7 @@ object Utils {
     scala.Console.setErr(e0); System.setErr(se0); pe.close
     (r,out.toString,err.toString)
   }
-  
+
   // Class loader to run a class with main(args:Array[String]) within the same VM
   def loadMain(cp:File,cls:String,args:Array[String]=Array()) = {
     val r = captureOut(()=>{
@@ -87,7 +100,7 @@ object Utils {
 
   // Create a temporary directory that will be removed at shutdown
   def makeTempDir(path:String=null):File = {
-    val tmp = if (path!=null) new File(path) else new File("tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
+    val tmp = if (path!=null) new File(path) else new File("target/tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
     def del(f:File) {
       if (f.isDirectory()) f.listFiles().foreach{c=>del(c)}
       if (!f.delete()) sys.error("Failed to delete file: " + f)

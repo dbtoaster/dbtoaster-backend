@@ -20,16 +20,16 @@ import java.io._
  *    sbt 'test:run-main ddbt.test.Benchmark -qaxfinder -mscala -mlcpp -mlscala -mllms -dstandard -csv'
  *
  *    sbt 'test:run-main ddbt.test.Benchmark -csv -q.*axfinder.sql -dbig'
- * 
+ *
  * @author TCK
  */
 
-/** Automated tests */ 
+/** Automated tests */
 class BenchmarkSpec extends FunSpec {
   import ddbt.UnitTest
   import ddbt.Utils._
   val tests = UnitTest.sqlFiles("standard")._2
-  tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t => 
+  tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t =>
     val n = t.replaceAll(".*queries/|/query|\\.sql","")
     it ("Query "+n) {
       val (t0,m3) = ns(()=>UnitTest.toast(t,List("-l","M3")))
@@ -48,45 +48,15 @@ object Benchmark {
   import ddbt.frontend._
   import ddbt.codegen._
 
-  val tmp = makeTempDir() // new File("tmp")
+  val tmp = new java.io.File("tmp") //makeTempDir()
   private val boost = try { val p=new java.util.Properties(); p.load(new java.io.FileInputStream("conf/ddbt.properties")); p.getProperty("ddbt.lib_boost",null) } catch { case _:Throwable => null }
   private val path_dbt = if (path_repo!="") path_repo+"/"+path_base+"/" else ""
-
+  private val scalac2 = { if(!tmp.exists) tmp.mkdir; val dbt=path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library"); scalaCompiler(tmp,dbt) }
   // New approach: run everything in the same JVM for speed, dependencies: scala-compiler
-  private val scalac_global = {
-    val dbt = path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library")
-    val sbt = System.getProperty("sbt.classpath")
-    val cp = if (sbt!=null) dbt+":"+sbt else {
-      val deps = (System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":").filter(_.matches("(.*)/\\.(sbt|ivy2)/.*"))
-      val vers = util.Properties.versionString.replaceAll(".* |.[0-9]+$","");
-      "target/scala-"+vers+"/classes:"+dbt+":"+deps.mkString(":")
-    }
-
-    val s=new scala.tools.nsc.Settings(); s.classpath.value=cp; s.outputDirs.setSingleOutput(tmp.getAbsolutePath()); new scala.tools.nsc.Global(s)
-  }
-  def scalac(fs:String*) { val p=tmp.getAbsolutePath(); try { (new scalac_global.Run).compile(fs.map(f=>p+"/"+f+".scala").toList) } catch { case t:Throwable => t.printStackTrace } }
+  def scalac(fs:String*) = scalac2(fs.map(f=>tmp.getAbsolutePath()+"/"+f+".scala").toList)
   def scalax(cl:String) = loadMain(tmp,cl)._1
-  
-  /*
-  // Legacy approach: run everything in external processes, dependencies: none, slower: 370 vs 225 sec
-  private val path_cp = { // project classpaths
-    val dbt = path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library")
-    val vers = util.Properties.versionString.replaceAll(".* |.[0-9]+$",""); "target/scala-"+vers+"/classes:"+dbt
-  }
-  private val java_cmd = "java -Xms32M -Xss512m -Xmx2G -Xbootclasspath/a:"+java_deps+" -classpath \"\" -Dscala.usejavacp=true"
-  private val java_deps = {
-    val deps = (System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":")
-    deps.filter(_.matches(".* /\\.(sbt|ivy2)/.*")).mkString(":")
-  }
-  def scalax(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
-    try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 } // fallback for Travis-CI
-  }
-  def scalac(fs:String*) { val p = tmp.getAbsolutePath();
-    val args="-cp "+path_cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
-    val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec(java_cmd+" scala.tools.nsc.Main "+args)._1 }
-    if (err!="") System.err.println(err)
-  }
-  */
+  //def scalax(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
+  //  try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 } }
 
   var dataset="standard"
   var modes = List[String]()
@@ -112,42 +82,54 @@ object Benchmark {
         case "llms" => "LMS-legacy"
         case "lcpp" => "CPP-legacy"
       }.mkString(",,,,,"))
-      csv.println("Query,SQLtoM3,"+modes.map(m=>"M3toCode,Compile,Min,Max,Avg").mkString(","))
+      csv.println("Query,SQLtoM3,"+modes.map(m=>"M3toCode,Compile,Min,Max,Median").mkString(","))
     }
     // run benchmarks
     if (modes.contains("lscala")||modes.contains("llms")) write(tmp,"RunQuery.scala",legacyHelper)
-    tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t => 
+    tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t =>
       val n = t.replaceAll(".*queries/|/query|\\.sql","")
       println("--------------- "+n)
       val (t0,m3) = ns(()=>UnitTest.toast(t,List("-l","M3")))
       println("SQL -> M3      : "+time(t0))
       if (csv!=null) csv.print(n+","+time(t0,0)+",")
-      modes.foreach {
-        case "scala" => benchScala("scala")(m3,t0)
-        case "lms" => benchScala("lms")(m3,t0)
-        case "akka" => benchScala("akka")(m3,t0)
-        case "lscala" => legacyScala(false)(t,t0)
-        case "llms" => legacyScala(true)(t,t0)
-        case "lcpp" => legacyCPP(t,t0)
+      modes.foreach { m => 
+        try {
+          m match {
+            case "scala" => benchScala("scala")(m3,t0)
+            case "lms" => benchScala("lms")(m3,t0)
+            case "akka" => benchScala("akka")(m3,t0)
+            case "lscala" => legacyScala(false)(t,t0)
+            case "llms" => legacyScala(true)(t,t0)
+            case "lcpp" => legacyCPP(t,t0)
+          }
+        } catch { case t:Throwable => t.printStackTrace; Thread.sleep(50) }
       }
+      
       if (csv!=null) csv.println
     }
     if (csv!=null) csv.close
   }
-  
+
   def csvTime(t_gen:Long,t_comp:Long,t_run:String) { // SQL->Code,Compile,Running: avg [min, max]
     if (csv!=null) csv.print(time(math.max(0,t_gen),0)+","+time(t_comp,0)+","+t_run.replaceAll("^[^:]*: +|\\(sec\\)","").replaceAll(", +| +\\[|\\] +",","))
   }
 
   def benchScala(lang:String)(m3:String,t0:Long) {
     val (n,sp) = (lang.substring(0,1).toUpperCase+lang.substring(1)," "* (6-lang.length()))
-    val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen new ScalaGen("NewQuery"))(m3))
+    val gen:CodeGen = lang match {
+      case "scala" => new ScalaGen("NewQuery")
+      case "lms" => new LMSGen("NewQuery")
+      case "akka" => new AkkaGen("NewQuery")
+      case _ => scala.sys.error("Generator "+lang+" not supported")
+    }
+    val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen (x=>gen.helper(x)+gen(x)))(m3))
     println(n+" codegen"+sp+" : "+time(t1))
     write(tmp,"NewQuery.scala",(if (dataset.endsWith("_del")) sc.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else sc).replaceAll("/standard/","/"+dataset+"/"))
     val t2 = ns(()=>scalac("NewQuery"))._1
     println(n+" compile"+sp+" : "+time(t2))
     val s=scalax("ddbt.generated.NewQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" : "))
     csvTime(t1,t2,s)
+    if (csv!=null) csv.flush
   }
 
   def legacyScala(lms:Boolean)(t:String,t0:Long) {
@@ -163,6 +145,7 @@ object Benchmark {
     println(n+" compile"+sp+" : "+time(t2))
     val s = scalax("org.dbtoaster.RunQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" :"))
     csvTime(t1-t0,t2,s)
+    if (csv!=null) csv.flush
   }
 
   def legacyCPP(t:String,t0:Long) {
@@ -202,10 +185,11 @@ object RunQuery {
       }
     }
     val r = new QuerySupervisor(q, msgRcvr)
+    r.start
     RunQuery.synchronized { r.start; RunQuery.wait; }
     time
   }
-  def time(ns:Long,n:Int=2) = { val ms=ns/1000000; ("%"+n+"d.%03d").format(ms/1000,ms%1000) }
+  def time(ns:Long,n:Int=2) = { val ms=ns/1000000; "%d.%03d".format(ms/1000,ms%1000) }
   def main(args: Array[String]) {
     val count = 10
     val ts = (0 until count).map(x=>run1()).sorted
