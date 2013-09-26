@@ -208,7 +208,7 @@ abstract class WorkerActor extends Actor {
     case Set(m,k,v) => local(m).asInstanceOf[K3Map[Any,Any]].set(k,v); bar.recv
     case Clear(m,p,pk) => (if (p<0) local(m) else local(m).slice(p,pk)).clear; bar.recv
     case Foreach(f,as) => forl(f,as,_ => bar.recv)
-    case Aggr(id,fun_collect,Array(m:MapRef)) => sender ! AggrPart(id,local(m).toMap) // collect map data
+    case Aggr(id,fun_collect,Array(m:MapRef)) => sender ! AggrPart(id,local(m).toMap) // collect map data // XXX: convert to HashMap
     case Aggr(id,f,as) => aggl(f,as,(r:Any) => sender ! AggrPart(id,r))
     case AggrPart(id,res) => matcherAggr.res(id,res)
     case m => println("Not understood: "+m.toString)
@@ -224,6 +224,7 @@ abstract class WorkerActor extends Actor {
   def foreach(m:MapRef,f:FunRef,args:Any*) { owns(m).foreach { bar.send(_,Foreach(f,args.toArray)) } }
   def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any],co:R=>Unit,zero:Any=null,plus:(Any,Any)=>Any=null) = {
     val (z,p) = if (zero!=null&&plus!=null) (zero,plus) else (K3Helper.make_zero[R](),K3Helper.make_plus[R]().asInstanceOf[(Any,Any)=>Any])
+    // XXX: implement (zero,plus) for java.util.HashMap
     matcherAggr.req(m,f,args,co,z,p)
   }
 
@@ -254,7 +255,7 @@ trait MasterActor extends WorkerActor {
   def toMap[K,V](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
   def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit) = {
     val plus = (m1:Map[K,V],m2:Map[K,V]) => m1 ++ m2
-    super.aggr(m,fun_collect,Array(m),co,Map[K,V](),plus.asInstanceOf[(Any,Any)=>Any])
+    super.aggr(m,fun_collect,Array(m),co,Map[K,V](),plus.asInstanceOf[(Any,Any)=>Any]) // XXX: convert to HashMap
   }
 
   // ---- coherency mechanism: if a map used is not flushed, flush all

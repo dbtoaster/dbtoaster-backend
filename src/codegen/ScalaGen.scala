@@ -75,17 +75,16 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
             (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
       }
     case a@AggSum(ks,e) =>
-      val fs = ks.filter{k=> !b.contains(k)} // free variables
-      val agg = (ks zip a.tks).filter { case(n,t)=>fs.contains(n) } // aggregation keys as (name,type)
-      if (fs.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      val aks = (ks zip a.tks).filter { case(n,t)=> !b.contains(n) } // aggregation keys as (name,type)
+      if (aks.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
-        case Some(t) if t==agg => cpsExpr(e,b,co,am)
+        case Some(t) if t==aks => cpsExpr(e,b,co,am)
         case _ =>
-          val r = { val ns=fs.map(v=>(v,fresh(v))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
+          val r = { val ns=aks.map{case (v,t)=>(v,fresh(v))}.toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
           val a0=fresh("agg")
-          val tmp=Some(agg) // declare this as summing target
-          "val "+a0+" = K3Map.temp["+tup(agg.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
-          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(agg.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,e.tp,fs),b,co)
+          val tmp=Some(aks) // declare this as summing target
+          "val "+a0+" = K3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
+          cpsExpr(e.rename(r),b,(v:String)=> { a0+".add("+tup(aks.map(x=>r(x._1)))+","+v+");\n" },tmp)+cpsExpr(MapRef(a0,e.tp,aks.map(_._1)),b,co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
   }
@@ -128,31 +127,34 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     }
   }
 
-  def apply(s0:System):String = {
+  // Generate (1:stream events handling, 2:table loading, 3:global constants declaration)
+  def genInternals(s0:System) : (String,String,String) = {
     def ev(s:Schema,short:Boolean=true):(String,String) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")")
     }
+    val str = s0.triggers.map(_.evt match {
+      case EvtAdd(s) => val (i,o)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => onAdd"+s.name+o+"\n"
+      case EvtDel(s) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => onDel"+s.name+o+"\n"
+      case _ => ""
+    }).mkString
+    val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o)=ev(s.schema)
+      "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,"+i+")=>"+s.schema.name+".add("+o+",1L) },"+ad+","+sp+")))).read;" }.mkString("\n");
+    val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
+    (str,ld0,gc)
+  }
+
+  def apply(s0:System):String = {
     val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
     val ms = s0.maps.map(genMap).mkString("\n") // maps
-    val ld = { // optional preloading of static tables content
-      val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o)=ev(s.schema)
-        "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,"+i+")=>"+s.schema.name+".add("+o+",1L) },"+ad+","+sp+")))).read;" }.mkString("\n");
-      if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else ""
-    }
-    val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
-
+    val (str,ld0,gc) = genInternals(s0)
+    val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
     "var t0:Long = 0\n"+
-    "def receive = {\n"+ind(
-      s0.triggers.map(_.evt match {
-        case EvtAdd(s) => val (i,o)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => onAdd"+s.name+o+"\n"
-        case EvtDel(s) => val (i,o)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => onDel"+s.name+o+"\n"
-        case _ => ""
-      }).mkString+
+    "def receive = {\n"+ind(str+
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
       "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! (time,List[Any]("+s0.queries.map{q=>q.name+(if (s0.mapType(q.map.name)._1.size>0) ".toMap" else ".get()")}.mkString(",")+"))"
     )+"\n}\n"+gc+ts+ld)+"\n}\n"

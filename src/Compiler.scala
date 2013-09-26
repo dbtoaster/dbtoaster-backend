@@ -27,7 +27,7 @@ object Compiler {
     while(i<l) {
       args(i) match {
         case "-x" => exec = true
-        case "-l" => eat(s=>s match { case "calc"|"m3"|"scala"|"lms" => lang=s; case _ => error("Unsupported language: "+s,true) },true)
+        case "-l" => eat(s=>s match { case "calc"|"m3"|"scala"|"lms"|"akka" => lang=s; case _ => error("Unsupported language: "+s,true) },true)
         case "-o" => eat(s=>out=s)
         case "-n" => eat(s=>name=s)
         case "-L" => eat(s=>libs=s)
@@ -88,7 +88,7 @@ object Compiler {
         val tmp = Utils.makeTempDir()
         Utils.exec(Array("scalac",out,"-cp",libs,"-d",tmp.getPath)) // scala compiler
         val (o,e) = Utils.loadMain(tmp,"ddbt.generated."+name) // execution
-        //val (o,e) = Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name)) // execution
+        // Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name))
         if (e!="") error(e); println(o);
       case _ => error("Execution not supported",true)
     }
@@ -100,14 +100,4 @@ object Compiler {
     println("======================== "+name+" ========================")
     println(data.toString); data
   }
-
-3. optimize the AST
-   - high level optimizations
-   - simplify arithmetic expression
-4. prepare for distributed system
-   - add node conditionals in the code
-   - replace some read operations by send/receive (depending node)
-5. generate code with LMS
-6. Distribute over nodes
-7. Evaluate query
 */
