@@ -95,7 +95,7 @@ object K3Helper {
     case d:java.util.Date => ft.format(d)
     case x => x.toString
   }
-  def toStr(o:Any) = o.toString
+  def toStr(o:Any):String = { if (o.isInstanceOf[Map[_,_]]) toStr(o.asInstanceOf[Map[_,_]]) else o.toString }
   def toStr[K,V](m:Map[K,V]):String = m.toList.map{case(k,v)=>(str(k),str(v))}.sortBy(x=>x._1).map{case(k,v)=>k+" -> "+v}.mkString("\n")
   def toXML[K,V](m:Map[K,V]): List[xml.Elem] = {
     var l = List[xml.Elem]()

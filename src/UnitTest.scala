@@ -95,7 +95,7 @@ object UnitTest {
     }
     val str = gen.streams(sys.sources)
     val qid = sys.queries.map{_.name}.zipWithIndex.toMap
-    val qt = sys.queries.map{q=>(q.name,sys.mapType(q.m.name)) }.toMap
+    val qt = sys.queries.map{q=>(q.name,sys.mapType(q.map.name)) }.toMap
     val helper =
       "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
       "class "+cls+"Spec extends FunSpec with Helper {"+ind("\n"+
@@ -105,8 +105,8 @@ object UnitTest {
       t.sets.map { case (sz,set) =>
         // val mystr = (str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) } // seems that set.subs are useless here
         val mystr = (if (sz.endsWith("_del")) str.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else str).replaceAll("/standard/","/"+sz+"/") // streams for this dataset
-        "describe(\"Dataset '"+sz+"'\") {"+ind("\n"+
-        "val (t,res) = run["+cls+","+gen.viewType(sys)+"]("+mystr+")\n"+
+        "describe(\"Dataset '"+sz+"'\") {\n"+ind(
+        "val (t,res) = run["+cls+"]("+mystr+")\n"+
         set.out.map { case (n,o) =>
           val (kt,vt) = qt(n)
           val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
@@ -115,8 +115,8 @@ object UnitTest {
             val ll=(kt:::vt::Nil).zipWithIndex
             "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.reverse.tail.reverse.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n"
           }
-          "it(\""+n+" correct\") {"+ind("\n"+kv+
-          "diff(res"+(if (sys.queries.size>1) "._"+(qid(n)+1) else "")+", "+(o match {
+          "it(\""+n+" correct\") {\n"+ind(kv+
+          "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
             case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
             case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+fmt+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
             case QuerySingleton(v) => v

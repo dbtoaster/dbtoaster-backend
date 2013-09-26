@@ -6,14 +6,14 @@ import scala.reflect.ClassTag
 
 object AXFinder extends Helper {
   def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) =
-        bench(name,count,()=>run[Q,Map[Long,Double]](streamsFinance(""),false))
+        bench(name,count,()=>run[Q](streamsFinance(""),false))
 
   def main(args:Array[String]) {
     //val r1=test[AXFinderRef]      ("Reference   ")
     val r2=test[AXFinder]         ("Gen2        "); //assert(r1==r2)
     val r4=test[AXFinderSimpleLMS]("Simple LMS  ")
     val r5=test[AXFinderSimple]   ("Simple Gen2 "); assert(r4==r5)
-    println(K3Helper.toStr(r2))
+    println(K3Helper.toStr(r2(0)))
   }
 }
 
@@ -33,7 +33,7 @@ abstract class AXFinderBase extends Actor {
     case TupleEvent(TupleDelete,"BIDS",List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelBIDS(t,id,b,v,p)
     case TupleEvent(TupleInsert,"ASKS",List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onAddASKS(t,id,b,v,p)
     case TupleEvent(TupleDelete,"ASKS",List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelASKS(t,id,b,v,p)
-    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,result)
+    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,List(result))
   }
   def onAddBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double):Unit
   def onDelBIDS(BIDS_T:Double, BIDS_ID:Long, BIDS_BROKER_ID:Long, BIDS_VOLUME:Double, BIDS_PRICE:Double):Unit

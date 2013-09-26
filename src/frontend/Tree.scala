@@ -104,7 +104,7 @@ object M3 {
   case class MapDef(name:String, tp:Type, keys:List[(String,Type)], expr:Expr) extends M3 {
     override def toString="DECLARE MAP "+name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.map{case (n,t)=>n+":"+t}.mkString(",")+"] :=\n"+ind(expr+";")
   }
-  case class Query(name:String, m:MapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+m+";" }
+  case class Query(name:String, map:MapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+map+";" }
   case class Trigger(evt:EvtTrigger, stmts:List[Stmt]) extends M3 { override def toString="ON "+evt+" {\n"+ind(stmts.mkString("\n"))+"\n}" }
 
   // ---------- Expressions (values)

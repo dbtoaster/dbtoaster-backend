@@ -21,36 +21,32 @@ trait Helper {
   }
 
   // ---------------------------------------------------------------------------
-  // Run query actor and collect time+resulting map
-  // T is usually Map[K,V]. For multiple maps, it is a tuple (Map[K1,V1],Map[K2,V2],...)
+  // Run query actor and collect time + resulting maps or values (for 0-key maps)
+  // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
 
-  def mux[T](actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,wait:Int=6000000) = {
+  def mux(actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,wait:Int=6000000) : (Long,List[Any]) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
-    actor ! SystemInit
-    // preload existing tables in the query
-    mux.read()
-    val timeout = akka.util.Timeout(wait)
-    scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(timeout), timeout.duration).asInstanceOf[(Long,T)]
+    actor ! SystemInit; mux.read(); val timeout = akka.util.Timeout(wait)
+    scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(timeout), timeout.duration).asInstanceOf[(Long,List[Any])]
   }
 
-  def run[Q<:akka.actor.Actor,T](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cq:ClassTag[Q]):(Long,T) = {
+  def run[Q<:akka.actor.Actor](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cq:ClassTag[Q]) = {
     val system = ActorSystem("DDBT")
     val query = system.actorOf(Props[Q],"Query")
-    val res = mux[T](query,streams,parallel)
-    system.shutdown; res
+    val res = mux(query,streams,parallel); system.shutdown; res
   }
 
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor,T](nmaps:Int,port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]):(Long,T) = {
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](nmaps:Int,port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
     val system:ActorSystem = this.sys("MasterSystem","127.0.0.1",port-1)
     val nodes = (0 until N).map { i => sys("NodeSystem"+i,"127.0.0.1",port+i) }
     val workers = nodes.map (_.actorOf(Props[W]()))
     val master = system.actorOf(Props[M]())
-    // initial membership
+    // ---- initial membership
     import WorkerActor._
     val ms = (0 until nmaps).map { MapRef(_) }.toList
     master ! Members(master,workers.map{ w => (w,ms) }.toArray)
-    //
-    val res = mux[T](master,streams,parallel)
+    // ----
+    val res = mux(master,streams,parallel)
     Thread.sleep(100); nodes.foreach{ _.shutdown }; system.shutdown; Thread.sleep(100); res
   }
 

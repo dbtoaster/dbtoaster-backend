@@ -11,10 +11,8 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
   // Generate the system (everything but stream and views I/O)
   def apply(s:M3.System) : String
 
-  // Generate a dummy helper for benchmarking
+  // Generate headers + dummy helper for benchmarking
   def helper(s:M3.System,samples:Int=10) : String
-  // Type of the returned final result
-  def viewType(s:M3.System) : String
   // Stream sources definition
   def streams(sources:List[Source]) : String
 }
