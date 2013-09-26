@@ -3,6 +3,7 @@ import ddbt.ast._
 import ddbt.lib.{K3Temp,K3Var}
 
 import scala.virtualization.lms.common._
+import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
 
 /**
@@ -45,7 +46,7 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
   def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = k3foreach(map,key,value,reifyEffects(body))
   def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = reflectEffect(K3Foreach(map,key,value,body),summarizeEffects(body).star)
   def k3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = K3Slice(map,part,partKey)
-  def k3clear(map:Exp[_]) = K3Clear(map)
+  def k3clear(map:Exp[_]) = reflectWrite(map)(K3Clear(map))
 
   def k3apply(fn:String,args:List[Exp[_]],tp:Type) = fn match {
     case "div" => val x=args(0).asInstanceOf[Rep[Double]]; __ifThenElse(__equal(x,unit(0.0)),unit(0.0),numeric_divide(unit(1.0),x))
@@ -90,7 +91,7 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
 }
 
 trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThenElse {
-  val IR: M3OpsExp
+  val IR: M3OpsExp with ExtendedExpressions
   import IR._
   import ddbt.Utils.{ind,tup}
 
@@ -120,8 +121,50 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThen
     case K3Apply(fn,args,_) => emitValDef(sym,"U"+fn+"("+(args map quote).mkString(",")+")")
     case _ => super.emitNode(sym,rhs)
   }
-  override def quote(x: Exp[Any]) : String = x match {
-    case sym@Sym(_) if sym.attributes.contains(nameAttr) => sym.attributes(nameAttr).toString
-    case _ => super.quote(x)
+
+
+  override def quote(x: Exp[Any], forcePrintSymbol: Boolean) : String = {
+    def printSym(s: Sym[Any]): String = {
+      if(s.possibleToInline || s.noReference) {
+        Def.unapply(s) match {
+          case Some(d: Def[Any]) => d match {
+            case Named(n) => n
+            case _ =>
+              val strWriter: java.io.StringWriter = new java.io.StringWriter;
+              val stream = new java.io.PrintWriter(strWriter);
+              withStream(stream) { 
+                emitNode(s, d)
+              }
+              strWriter.toString
+          }
+          case None => if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+        }
+      } else {
+        if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+      }
+    }
+    x match {
+      case Const(s: String) => "\""+s.replace("\"", "\\\"").replace("\n", "\\n")+"\"" // TODO: more escapes?
+      case Const(c: Char) => "'"+c+"'"
+      case Const(f: Float) => "%1.10f".format(f) + "f"
+      case Const(l: Long) => l.toString + "L"
+      case Const(null) => "null"
+      case Const(z) => z.toString
+      case s@Sym(n) => if (forcePrintSymbol) {
+        printSym(s)
+      } else { 
+        isVoidType(s.tp) match {
+          case true => "(" + /*"x" + n +*/ ")"
+          case false => printSym(s)
+        }
+      }
+      case _ => throw new RuntimeException("could not quote %s".format(x))
+    }
   }
+
+  // 
+  // override def quote(x: Exp[Any]) : String = x match {
+  //   case sym@Sym(_) if sym.attributes.contains(nameAttr) => sym.attributes(nameAttr).toString
+  //   case _ => super.quote(x)
+  // }
 }
