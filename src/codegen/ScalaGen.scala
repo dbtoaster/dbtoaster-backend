@@ -52,7 +52,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>b.contains(k)}
       if (ki.size==0) co(n+".get("+tup(ks)+")") // all keys are bound
       else { val (k0,v0)=(fresh("k"),fresh("v"))
-        val sl = if (ko.size>0) ".slice("+slice(n,ko.map{case (k,i)=>i})+","+tup(ko.map{case (k,i)=>k})+")" else ""
+        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
         n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
           ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";"}.mkString("\n")+"\n"+co(v0))+"\n}\n" // bind free variables from retrieved key
       }
@@ -66,9 +66,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         case Some(t) if t==a.agg => cpsExpr(el,b,co,am)+"\n"+cpsExpr(er,b,co,am)
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
-          val ks=a.agg.map{x=>x._1}
+          val ks=a.agg.map(_._1)
           val tmp = Some(a.agg)
-          "val "+a0+" = K3Map.temp["+tup(a.agg.map{x=>x._2.toScala})+","+ex.tp.toScala+"]()\n"+
+          "val "+a0+" = K3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+
           cpsExpr(el,b,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"+
           cpsExpr(er,b,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"+
           a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
@@ -106,8 +106,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
-    val b=as.map{_._1}.toSet
-    "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(t.stmts.map{s=>genStmt(s,b)}.mkString)+"\n}"
+    val b=as.map(_._1).toSet
+    "def on"+n+"("+as.map(a=>a._1+":"+a._2.toScala).mkString(", ")+") {\n"+ind(t.stmts.map(s=>genStmt(s,b)).mkString)+"\n}"
   }
 
   // Lazy slicing (secondary) indices computation
@@ -168,7 +168,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         case "brokers" => v case "bids"|"asks" => "\""+v+"\"" case "deterministic" => (v!="no"&&v!="false").toString case _ => ""
       })}.filter(!_.endsWith("=")).mkString(",")+")"
       case "CSV" => val sep=java.util.regex.Pattern.quote(s.adaptor.options.getOrElse("delimiter",",")).replaceAll("\\\\","\\\\\\\\")
-                    "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map{f=>f._2}.mkString(",")+"\",\""+sep+"\")"
+                    "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map(_._2).mkString(",")+"\",\""+sep+"\")"
     }
     (in,"new Adaptor."+adaptor,split)
   }

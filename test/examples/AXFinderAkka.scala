@@ -93,4 +93,5 @@ class AXMaster extends AXWorker with MasterActor {
     pre(mB3); add(mB3,(br_id,price),(-1L * vol));
     deq
   }
+  def onSystemReady() {}
 }

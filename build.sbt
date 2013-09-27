@@ -28,7 +28,7 @@ libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.1",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.1",
   "org.scala-lang"     % "scala-actors"   % v,
-  "org.scala-lang"     % "scala-compiler" % v        % "test",
+  "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.M7" % "test"
   //"com.esotericsoftware.kryo" % "kryo"  % "2.21",
   //"com.twitter"       %% "chill"        % "0.3.1",
@@ -54,7 +54,7 @@ Seq(
   fork := true, // required to enable javaOptions
   javaOptions ++= Seq("-Xss128m"), // ,"-Xss512m","-XX:MaxPermSize=2G"
   //javaOptions ++= Seq("-Xmx14G","-Xms14G","-verbose:gc"),parallelExecution in Test := false, // for large benchmarks
-  javaOptions in Test <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
+  javaOptions <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
 )
 
 // --------- Custom tasks

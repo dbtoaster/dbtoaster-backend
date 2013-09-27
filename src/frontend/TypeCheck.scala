@@ -115,6 +115,7 @@ object TypeCheck extends (M3.System => M3.System) {
         case m@MapRef(n,tp,ks) => val mtp=s0.mapType(n); cr=c++(ks zip mtp._1).toMap
           if (tp==null) m.tp=mtp._2 else if (tp!=mtp._2) err("Bad value type: expected "+mtp._2+", got "+tp+" for "+ex)
           (ks zip mtp._1).foreach{ case(k,t)=> if(c.contains(k) && t!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
+          m.tks = mtp._1
         case _ =>
       }
       if (ex.tp==null) err("Untyped: "+ex); cr

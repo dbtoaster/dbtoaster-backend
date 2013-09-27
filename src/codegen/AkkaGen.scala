@@ -37,7 +37,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
 /*
 Issues to solve:
-- Maintaining extra (map) information such as type (akka) or symbol (LMS) for each nodes
+- Maintaining extra (map) information such as Var->Type (akka) or Var->Symbol (LMS) for each nodes
 - cluster initialization and maps distribution => make workers tell to master they want to join with their maps (all local but null maps)
 - join and leave cluster preparation
 - at each foreach point, possibly transform in a remote continuation if map is not local
@@ -67,46 +67,56 @@ Issues to solve:
     case _ => null
   }
   
-  override def cpsExpr(ex:Expr,b:Set[String]=Set(),co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
-    case MapRef(n,tp,ks) if (n==mapl.head) => super.cpsExpr(ex,b,co)
-    case MapRef(n,tp,ks) => co("<XXX>")
-    case a@AggSum(ks,e) =>
-      val ctx = (b&used(e)).toList // context to be passed remotely
-      val m=fmap(e,b); if (m==null) sys.error("No aggregation map")
-      val a0=fresh("agg"); val aks=(ks zip a.tks).filter { case(n,t)=> !b.contains(n) } // aggregation keys as (name,type)
-      // remote handler      
-      val (fn,body) = aggl.getOrElseUpdate((m,e,ctx),{ // XXX: rename such that we could match aliases where only bound variable names differ
-        val fn = fresh("fa"); pushl(m)
-        val body = "case (`"+fn+"`,"+ctx.map(v=>"("+v+":?)::").mkString+"Nil) =>\n"+ind(
-          if (aks.size==0) "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
-          else {
-            val r = { val ns=aks.map(v=>(v._1,fresh(v._1))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
-            "val "+a0+" = K3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
-            cpsExpr(e.rename(r),b,(v:String)=>a0+".add("+tup(aks.map(x=>r(x._1)))+","+v+");\n")+"co("+a0+".toMap)"
-          }
-        )
-        popl; (fn,body)
-      })
-      // local handler
-      if (aks.size==0) "val "+a0+" = aggr["+ex.tp.toScala+"]("+(mref(m)::fn::ctx).mkString(",")+");\n"+co(a0)
-      else {
-        "val "+a0+" = aggr[HashMap["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]]("+(mref(m)::fn::ctx).mkString(",")+");\n"+
-        cpsExpr(MapRef(a0,e.tp,aks.map(_._1)),b,co)
-      }
-    case _ => super.cpsExpr(ex,b,co,am)
+  val ctx_tps = HashMap[String,Type]() // variable->type mapping
+  override def cpsExpr(ex:Expr,b:Set[String]=Set(),co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = {
+    ex match {
+      case Lift(n,e) => ctx_tps+=((n,ex.tp))
+      case a@AggSum(ks,e) => ctx_tps++=(ks zip a.tks)
+      case m@MapRef(n,tp,ks) => ctx_tps++=(ks zip m.tks)
+      case _ =>
+    }
+    ex match {
+      case MapRef(n,tp,ks) if (n==mapl.head) => super.cpsExpr(ex,b,co)
+      case MapRef(n,tp,ks) => co("<XXX>")
+      case a@AggSum(ks,e) =>
+        val ctx = (b&used(e)).toList // context to be passed remotely
+        val m=fmap(e,b); if (m==null) sys.error("No aggregation map")
+        val a0=fresh("agg"); val aks=(ks zip a.tks).filter { case(n,t)=> !b.contains(n) } // aggregation keys as (name,type)
+        // remote handler      
+        val (fn,body) = aggl.getOrElseUpdate((m,e,ctx),{ // XXX: rename such that we could match aliases where only bound variable names differ
+          val fn = fresh("fa"); pushl(m)
+          val body = "case (`"+fn+"`,"+ctx.map(v=>"("+v+":"+ctx_tps(v).toScala+")::").mkString+"Nil) =>\n"+ind(
+            if (aks.size==0) "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
+            else {
+              val r = { val ns=aks.map(v=>(v._1,fresh(v._1))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
+              "val "+a0+" = K3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
+              cpsExpr(e.rename(r),b,(v:String)=>a0+".add("+tup(aks.map(x=>r(x._1)))+","+v+");\n")+"co("+a0+".toMap)"
+            }
+          )
+          popl; (fn,body)
+        })
+        // local handler
+        if (aks.size==0) "val "+a0+" = aggr["+ex.tp.toScala+"]("+(mref(m)::fn::ctx).mkString(",")+");\n"+co(a0)
+        else {
+          "val "+a0+" = aggr[HashMap["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]]("+(mref(m)::fn::ctx).mkString(",")+");\n"+
+          cpsExpr(MapRef(a0,e.tp,aks.map(_._1)),b,co)
+        }
+      case _ => super.cpsExpr(ex,b,co,am)
+    }
   }
 
   // Add the pre and deq calls in master's triggers
   override def genTrigger(t:Trigger):String = {
-    val (n,as) = t.evt match {
-      case EvtReady => ("SystemReady",Nil)
-      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
-      case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
+    val (n,as,deq) = t.evt match {
+      case EvtReady => ("SystemReady",Nil,"") // no deq as it is handled already
+      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs,"deq")
+      case EvtDel(Schema(n,cs)) => ("Del"+n,cs,"deq")
     }
-    val b=as.map{_._1}.toSet
-    "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = "+(if (t.stmts.size>0) "reset" else "")+" {\n"+ind(t.stmts.map{s=>genStmt(s,b)}.mkString+"deq")+"\n}"
+    val b=as.map{_._1}.toSet; ctx_tps++=as.toMap
+    val r = "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = "+(if (t.stmts.size>0) "reset" else "")+" {\n"+ind(t.stmts.map(s=>genStmt(s,b)).mkString+deq)+"\n}"
+    ctx_tps.clear; r
   }
-  
+
   override def genStmt(s:Stmt,b:Set[String]) = s match {
     case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
       val (mr,read) = (mref(m.name),e.collect{ case MapRef(n,t,ks)=>Set(mref(n)) }.toList)
@@ -116,20 +126,15 @@ Issues to solve:
     case _ => sys.error("Unimplemented")
   }
   
-  val mref = new HashMap[String,String]() // map name->map reference
+  val mref = new HashMap[String,String]() // map's name(local)->reference(remote)
   override def apply(s:System) = {
     val mrefs = s.maps.zipWithIndex.map{case (m,i)=> mref.put(m.name,"map"+i); "val map"+i+" = MapRef("+i+")\n" }.mkString
-    
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
     val ms = s.maps.map(genMap).mkString("\n") // maps
     val (str,ld0,gc) = genInternals(s)
-    
     def fs(xs:Iterable[(String,String)]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = FunRef("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
     val (fds,fbs) = fs(forl.values)
     val (ads,abs) = fs(aggl.values)
-    
-    // XXX: force onSystemReady in the AkkaSystem.scala implementation
-
     freshClear(); mref.clear; aggl.clear; forl.clear
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
     "import WorkerActor._\n// constants\n"+mrefs+fds+ads+gc+ // constants

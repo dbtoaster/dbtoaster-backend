@@ -64,6 +64,7 @@ class Master extends Worker with MasterActor {
     case `ev4` => println("Trampoline OK"); deq
     case e:TupleEvent => deq
   }
+  def onSystemReady() {}
 }
 
 class AkkaSys extends FunSpec {

@@ -277,7 +277,7 @@ trait MasterActor extends WorkerActor {
         est=2 // expose trampoline
         val (ev,sender)=eq.removeFirst
         ev match {
-          case SystemInit => reset { barrier; t0=System.nanoTime(); deq }
+          case SystemInit => reset { onSystemReady(); barrier; t0=System.nanoTime(); deq }
           case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0
             def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
               case 0 => sender ! (time,acc); deq
@@ -296,4 +296,6 @@ trait MasterActor extends WorkerActor {
   private val masterRecv : PartialFunction[Any,Unit] = {
     case ev:StreamEvent => val p=(est==0); est=1; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
   }
+  
+  def onSystemReady() // {}
 }

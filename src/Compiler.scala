@@ -86,17 +86,10 @@ object Compiler {
     if (exec) lang match {
       case "scala"|"akka"|"lms" =>
         val tmp = Utils.makeTempDir()
-        
-        // XXX: merge with benchmarks to use internal compiler
-        val (o1,e1) = Utils.exec( // scala compiler
-          if (libs!=null) Array("scalac",out,"-cp",libs,"-d",tmp.getPath)
-          else Array("scalac",out,"-d",tmp.getPath)
-        )
-        if (e1!="") error(e1); if (o1!="") println(o1)
-
-        val (o2,e2) = Utils.loadMain(tmp,"ddbt.generated."+name) // execution
+        Utils.scalaCompiler(tmp,libs)(List(out))
         // Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name))
-        if (e2!="") error(e2); if (o1!="") println(o2);
+        val (o,e) = Utils.loadMain(tmp,"ddbt.generated."+name) // execution
+        if (e!="") error(e); if (o!="") println(o);
       case _ => error("Execution not supported",true)
     }
   }

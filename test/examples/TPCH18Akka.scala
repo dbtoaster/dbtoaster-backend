@@ -119,4 +119,5 @@ class Q18Master extends Q18Worker with MasterActor {
     pre(mLL,mCL); foreach(mCL,f8,c_key,c_name,-1)
     deq
   }
+  def onSystemReady() {}
 }

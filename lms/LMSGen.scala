@@ -67,7 +67,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case Nil => co(impl.k3apply(fn,vs,tp),c)
       }
       ev2(as,Nil,ctx0)
-    case MapRef(n,tp,ks) => 
+    case m@MapRef(n,tp,ks) => 
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       if(ki.size == 0) { // all keys are bound
         co(impl.k3get(ctx(n),ko.map{case (k,i)=>ctx(k)},tp), ctx0) 
@@ -75,7 +75,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         val mapRef = ctx(n)
         val slicedMapRef = if(ko.size == 0) mapRef
         else impl.k3slice(mapRef,slice(n,ko.map{case (k,i)=>i}),ko.map{case (k,i)=>ctx(k)})
-        val key = (ks.zip(maps(n).keys.map(_._2))).zipWithIndex map { case ((n,k),i) => (n,k,i) }
+        val key = (ks zip m.tks).zipWithIndex map { case ((n,k),i) => (n,k,i) }
         foreach(slicedMapRef,key,tp,ctx,co,"m")
       }
 

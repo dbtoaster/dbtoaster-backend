@@ -20,6 +20,29 @@ object Utils {
     (repo,if (repo!="") repo+"/"+path_base+"/bin/dbtoaster_release" else bin)
   }
 
+  def scalaCompiler(dir:File,classpath:String=null) : List[String]=>Unit = {
+    val p=dir.getAbsolutePath();
+    val cp = {
+      val deps = System.getProperty("sbt.classpath",System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":")
+      deps /**/ .filter(_.matches("(.*)/(\\.(sbt|ivy2)|target)/.*")) /**/ .mkString(":")+(if (classpath!=null) ":"+classpath else "")
+    }
+    // val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")); } catch { case _:Throwable => }
+    // if (prop.getProperty("ddbt.lms","0")!="1") {
+      // Plain Scala: embedded Scala compiler is used
+      val s=new scala.tools.nsc.Settings(); s.classpath.value=cp; s.outputDirs.setSingleOutput(dir.getAbsolutePath()); val g=new scala.tools.nsc.Global(s)
+      (fs:List[String]) => try { (new g.Run).compile(fs /*.map(f=>p+"/"+f+".scala")*/ ) } catch { case t:Throwable => t.printStackTrace }
+    /*
+    } else {
+      // Scala-virtualized screws embedded compiler, fallback on FSC / scalac external processes
+      (fs:List[String]) => {
+        val args="-cp "+cp+" -d "+p+fs.map(f=>" "+f).mkString
+        val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec("java scala.tools.nsc.Main "+args)._1 }
+        if (err!="") System.err.println(err)
+      }
+    }
+    */
+  }
+
   // Gobbles an input stream (used for external processes by loadMain)
   private def gobble(in:InputStream) = new Runnable {
     var out = new StringBuilder

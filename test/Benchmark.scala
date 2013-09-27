@@ -48,38 +48,15 @@ object Benchmark {
   import ddbt.frontend._
   import ddbt.codegen._
 
-  val tmp = makeTempDir()
+  val tmp = new java.io.File("tmp") //makeTempDir()
   private val boost = try { val p=new java.util.Properties(); p.load(new java.io.FileInputStream("conf/ddbt.properties")); p.getProperty("ddbt.lib_boost",null) } catch { case _:Throwable => null }
   private val path_dbt = if (path_repo!="") path_repo+"/"+path_base+"/" else ""
-
-  private val scalac2 = {
-    val p=tmp.getAbsolutePath();
-    val dbt = path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library")
-    val sbt = System.getProperty("sbt.classpath")
-    val cp = if (sbt!=null) dbt+":"+sbt else {
-      val deps = (System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":").filter(_.matches("(.*)/\\.(sbt|ivy2)/.*"))
-      val vers = util.Properties.versionString.replaceAll(".* |.[0-9]+$",""); "target/scala-"+vers+"/classes:"+dbt+":"+deps.mkString(":")
-    }
-    val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")); } catch { case _:Throwable => }
-    if (prop.getProperty("ddbt.lms","0")!="1") { 
-      // Plain Scala: embedded Scala compiler is used
-      val s=new scala.tools.nsc.Settings(); s.classpath.value=cp; s.outputDirs.setSingleOutput(tmp.getAbsolutePath()); val g=new scala.tools.nsc.Global(s)
-      (fs:List[String]) => try { (new g.Run).compile(fs.map(f=>p+"/"+f+".scala")) } catch { case t:Throwable => t.printStackTrace }
-    } else {
-      // Scala-virtualized: embedded compiler screwed, run FSC / scalac in an external processes
-      (fs:List[String]) => {
-        val args="-cp "+cp+" -d "+p+fs.map(f=>" "+p+"/"+f+".scala").mkString
-        val err = try { exec("fsc "+args)._1 } catch { case _:IOException => exec("java scala.tools.nsc.Main "+args)._1 }
-        if (err!="") System.err.println(err)
-      }
-    }
-  }
+  private val scalac2 = { val dbt=path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library"); scalaCompiler(tmp,dbt) }
   // New approach: run everything in the same JVM for speed, dependencies: scala-compiler
-  def scalac(fs:String*) = scalac2(fs.toList) 
+  def scalac(fs:String*) = scalac2(fs.map(f=>tmp.getAbsolutePath()+"/"+f+".scala").toList) 
   def scalax(cl:String) = loadMain(tmp,cl)._1
   //def scalax(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
-  //  try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 } // fallback for Travis-CI
-  //}
+  //  try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 } }
 
   var dataset="standard"
   var modes = List[String]()
