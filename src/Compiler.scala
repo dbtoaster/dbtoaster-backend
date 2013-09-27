@@ -10,15 +10,20 @@ import ddbt.codegen._
 object Compiler {
   import java.io._
 
-  var in  : List[String] = Nil  // input files
-  var out : String = null       // output file (defaults to stdout)
-  var lang: String = "scala"    // output language
-  var libs: String = null       // runtime libraries (defaults to lib/ddbt.jar for scala)
-  var name: String = null       // class/structures name (defaults to Query or capitalized filename)
-  var exec: Boolean = false     // compile and execute immediately
+  var in   : List[String] = Nil  // input files
+  var out  : String = null       // output file (defaults to stdout)
+  var lang : String = "scala"    // output language
+  var name : String = null       // class/structures name (defaults to Query or capitalized filename)
+  var depth: Int = -1            // incrementalization depth (-1=infinite)
+  var flags: List[String] = Nil  // front-end flags
+  var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
+  var exec : Boolean = false     // compile and execute immediately
 
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1); null }
-  def toast(l:String) = Utils.exec((Utils.path_bin :: "-O3" :: "-l" :: l :: in).toArray)._1
+  def toast(l:String) = {
+    val opts = (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f))
+    Utils.exec((Utils.path_bin :: "-O3" :: "-l" :: l :: opts ::: in).toArray)._1
+  }
 
   def parseArgs(args:Array[String]) {
     val l=args.length
@@ -30,7 +35,9 @@ object Compiler {
         case "-l" => eat(s=>s match { case "calc"|"m3"|"scala"|"lms"|"akka" => lang=s; case _ => error("Unsupported language: "+s,true) },true)
         case "-o" => eat(s=>out=s)
         case "-n" => eat(s=>name=s)
-        case "-L" => eat(s=>libs=s)
+        case "-L" => eat(s=>libs=s::libs)
+        case "-d" => eat(s=>depth=s.toInt)
+        case "-F" => eat(s=>flags=s::flags)
         case s => in = in ::: List(s)
       }
       i+=1
@@ -47,6 +54,9 @@ object Compiler {
       error("                - lms   : LMS-optimized Scala")
       //   ("                - cpp   : C++/LMS-optimized code")
       //   ("                - dcpp  : distributed C/C++ code")
+      error("Front-end options:")
+      error("  -d <depth>    incrementalization depth (default:infinite)")
+      error("  -F <flag>     set a front-end optimization flag")
       error("Code generation options:")
       error("  -n <name>     name of internal structures (default: Query)")
       error("  -L            libraries for target language")
@@ -57,8 +67,8 @@ object Compiler {
       val n = if (out!=null) out.replaceAll(".*[/\\\\]","").replaceAll("\\..*","") else "query"
       name = n.substring(0,1).toUpperCase+n.substring(1)
     }
-    def lib(s:String):Boolean = if (new File(s).exists) { libs=s; true } else false
-    if (libs==null && exec) lang match {
+    def lib(s:String):Boolean = if (new File(s).exists) { libs=s::Nil; true } else false
+    if (libs==Nil && exec) lang match {
       case "scala" => lib("lib/ddbt.jar") || lib("target/scala-2.10/classes") || ({ error("Cannot find runtime libraries"); exec=false; false })
       case _ =>
     }
@@ -86,9 +96,8 @@ object Compiler {
     if (exec) lang match {
       case "scala"|"akka"|"lms" =>
         val tmp = Utils.makeTempDir()
-        Utils.scalaCompiler(tmp,libs)(List(out))
-        // Utils.exec(Array("scala","-cp",libs+":"+tmp,"ddbt.generated."+name))
-        val (o,e) = Utils.loadMain(tmp,"ddbt.generated."+name) // execution
+        Utils.scalaCompiler(tmp,if (libs!=Nil) libs.mkString(":") else null)(List(out))
+        val (o,e) = Utils.loadMain(tmp,"ddbt.generated."+name)
         if (e!="") error(e); if (o!="") println(o);
       case _ => error("Execution not supported",true)
     }

@@ -17,24 +17,12 @@ Seq(
 )
 
 // --------- Dependencies
-// Storm dependencies
-/*
-resolvers ++= Seq(
-  "clojars" at "http://clojars.org/repo/",
-  "clojure-releases" at "http://build.clojure.org/releases"
-)
-*/
 libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.1",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.1",
   "org.scala-lang"     % "scala-actors"   % v,
   "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.M7" % "test"
-  //"com.esotericsoftware.kryo" % "kryo"  % "2.21",
-  //"com.twitter"       %% "chill"        % "0.3.1",
-  //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
-  //"com.github.velvia" %% "scala-storm"  % "0.2.3-SNAPSHOT",
-  //"storm"              % "storm"        % "0.8.2"
 ))
 
 // --------- Compilation options
@@ -153,3 +141,14 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
 //publishArtifact in (Compile, packageDoc) := false
 //mainClass := Some("Main")
 //selectMainClass := Some("Main")
+// Storm dependencies:
+//resolvers ++= Seq(
+//  "clojars" at "http://clojars.org/repo/",
+//  "clojure-releases" at "http://build.clojure.org/releases"
+//)
+//
+  //"com.esotericsoftware.kryo" % "kryo"  % "2.21",
+  //"com.twitter"       %% "chill"        % "0.3.1",
+  //"org.spark-project" %% "spark-core"   % "0.8.0-SNAPSHOT",
+  //"com.github.velvia" %% "scala-storm"  % "0.2.3-SNAPSHOT",
+  //"storm"              % "storm"        % "0.8.2"
