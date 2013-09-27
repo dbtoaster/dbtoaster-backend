@@ -108,11 +108,20 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThen
         //stream.println("  "+quote(getBlockResult(a))) // useless undeclared Unit symbols
         stream.println("}")
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
-    case NewK3Var(v,_) => emitValDef(sym, "new K3Var["+v.toScala+"]()")
+    case NewK3Var(v,_) => stream.println("var "+quote(sym)+" = "+zeroValue(v))
     case NewK3Temp(ks,v,_,_) => emitValDef(sym, "K3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
-    case K3Get(m,ks,_) => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
-    case K3Set(m,ks,v) => stream.println(quote(m)+".set("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
-    case K3Add(m,ks,v) => stream.println(quote(m)+".add("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
+    case K3Get(m,ks,_) => Def.unapply(m) match {
+      case Some(NewK3Var(_,_)) => emitValDef(sym, quote(m))
+      case _ => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
+    }
+    case K3Set(m,ks,v) => Def.unapply(m) match {
+      case Some(NewK3Var(_,_)) => stream.println(quote(m)+" = "+quote(v))
+      case _ => stream.println(quote(m)+".set("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
+    }
+    case K3Add(m,ks,v) => Def.unapply(m) match {
+      case Some(NewK3Var(_,_)) => stream.println(quote(m)+" += "+quote(v))
+      case _ => stream.println(quote(m)+".add("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
+    }
     case K3Foreach(m,k,v,body) =>
       val block=getBlock(body) // enables both the renaming trick and allow nested block indentation
       stream.println(quote(m)+".foreach { ("+quote(k)+","+quote(v)+") =>"); stream.println(block); stream.println("}")
@@ -120,6 +129,13 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThen
     case K3Clear(m) => stream.println(quote(m)+".clear")
     case K3Apply(fn,args,_) => emitValDef(sym,"U"+fn+"("+(args map quote).mkString(",")+")")
     case _ => super.emitNode(sym,rhs)
+  }
+
+  def zeroValue(v: Type) = v match {
+    case TypeLong => "0L"
+    case TypeDouble => "0.0"
+    case TypeString => ""
+    case TypeDate => "new Date()"
   }
 
 
