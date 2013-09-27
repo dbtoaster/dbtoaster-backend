@@ -18,6 +18,7 @@ object Compiler {
   var flags: List[String] = Nil  // front-end flags
   var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
   var exec : Boolean = false     // compile and execute immediately
+  var tqev : Boolean = false     // traditional (on demand) query evaluation (implies depth=0)
 
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1); null }
   def toast(l:String) = {
@@ -38,6 +39,7 @@ object Compiler {
         case "-L" => eat(s=>libs=s::libs)
         case "-d" => eat(s=>depth=s.toInt)
         case "-F" => eat(s=>flags=s::flags)
+        case "-tqev" => tqev=true; depth=0; flags=Nil
         case s => in = in ::: List(s)
       }
       i+=1
@@ -57,6 +59,7 @@ object Compiler {
       error("Front-end options:")
       error("  -d <depth>    incrementalization depth (default:infinite)")
       error("  -F <flag>     set a front-end optimization flag")
+      error("  -tqev         traditional (on demand) query evaluation")
       error("Code generation options:")
       error("  -n <name>     name of internal structures (default: Query)")
       error("  -L            libraries for target language")
@@ -91,6 +94,17 @@ object Compiler {
       case "lms" => new LMSGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }
+    // ---- TQEV START
+    if (tqev) { import ddbt.ast._; import M3._
+      val (qns,qss) = (m3.queries.map{q=>q.map.name},scala.collection.mutable.HashMap[String,Stmt]())
+      val triggers=m3.triggers.map(t=>Trigger(t.evt,t.stmts.filter {
+        case s@StmtMap(m,e,op,i) => if (qns.contains(m.name)) { qss += ((m.name,s)); false } else true
+        case _ => true
+      }))
+      val r = cg.helper(m3)+cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__ndbt",Nil)), qss.map(_._2).toList)::triggers))
+      output(r.replaceAll("GetSnapshot\\(_\\) => ","GetSnapshot(_) => onAdd__ndbt(); ")) // Scala transforms
+    } else
+    // ---- TQEV ENDS
     output(cg.helper(m3)+cg(m3))
     // Execution
     if (exec) lang match {
