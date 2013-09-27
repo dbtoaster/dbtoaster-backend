@@ -45,6 +45,34 @@ Issues to solve:
 - move a good part of the test generator directly in the code generator
 - move test AST into its own ddbt.ast package ?
 - shall we make unit tests part of the compiler ?
+
+Tests passing (26):
+Axfinder
+Employee01
+Employee01a
+Employee02
+Employee02a
+Employee03
+Employee03a
+Employee04
+Employee04a
+Employee05
+Employee06
+Employee07
+Employee10
+Employee10a
+Employee12a
+Employee22
+Rgbasumb
+Rimpossibleineq
+Rinstatic
+Rnogroupby
+Rnonjoineq
+Rpossibleineq
+Rselectstar
+Rstarofnested
+Zeus37494577
+Zeus75453299
 */
   // remote functions as (map,expression,context) => (func_name,body)
   private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
@@ -137,7 +165,7 @@ Issues to solve:
     val (ads,abs) = fs(aggl.values)
     freshClear(); mref.clear; aggl.clear; forl.clear
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
-    "import WorkerActor._\n// constants\n"+mrefs+fds+ads+gc+ // constants
+    "import WorkerActor._\nimport ddbt.lib.Functions._\n// constants\n"+mrefs+fds+ads+gc+ // constants
     "// maps\n"+ms+"\nval local = Array[K3Map[_,_]]("+s.maps.map(m=>m.name).mkString(",")+")\n"+
     (if (ld0!="") "// tables content preloading\n"+ld0+"\n" else "")+"\n"+
     "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(fbs+"case _ => co()")+"\n}\n\n"+

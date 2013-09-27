@@ -114,6 +114,7 @@ object Benchmark {
     val gen:CodeGen = lang match {
       case "scala" => new ScalaGen("NewQuery")
       case "lms" => new LMSGen("NewQuery")
+      case "akka" => new AkkaGen("NewQuery")
       case _ => scala.sys.error("Generator "+lang+" not supported")
     }
     val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen (x=>gen.helper(x)+gen(x)))(m3))
