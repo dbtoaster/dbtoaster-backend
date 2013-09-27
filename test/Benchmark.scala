@@ -51,9 +51,9 @@ object Benchmark {
   val tmp = new java.io.File("tmp") //makeTempDir()
   private val boost = try { val p=new java.util.Properties(); p.load(new java.io.FileInputStream("conf/ddbt.properties")); p.getProperty("ddbt.lib_boost",null) } catch { case _:Throwable => null }
   private val path_dbt = if (path_repo!="") path_repo+"/"+path_base+"/" else ""
-  private val scalac2 = { val dbt=path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library"); scalaCompiler(tmp,dbt) }
+  private val scalac2 = { if(!tmp.exists) tmp.mkdir; val dbt=path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library"); scalaCompiler(tmp,dbt) }
   // New approach: run everything in the same JVM for speed, dependencies: scala-compiler
-  def scalac(fs:String*) = scalac2(fs.map(f=>tmp.getAbsolutePath()+"/"+f+".scala").toList) 
+  def scalac(fs:String*) = scalac2(fs.map(f=>tmp.getAbsolutePath()+"/"+f+".scala").toList)
   def scalax(cl:String) = loadMain(tmp,cl)._1
   //def scalax(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
   //  try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 } }
@@ -92,14 +92,19 @@ object Benchmark {
       val (t0,m3) = ns(()=>UnitTest.toast(t,List("-l","M3")))
       println("SQL -> M3      : "+time(t0))
       if (csv!=null) csv.print(n+","+time(t0,0)+",")
-      modes.foreach {
-        case "scala" => benchScala("scala")(m3,t0)
-        case "lms" => benchScala("lms")(m3,t0)
-        case "akka" => benchScala("akka")(m3,t0)
-        case "lscala" => legacyScala(false)(t,t0)
-        case "llms" => legacyScala(true)(t,t0)
-        case "lcpp" => legacyCPP(t,t0)
+      modes.foreach { m => 
+        try {
+          m match {
+            case "scala" => benchScala("scala")(m3,t0)
+            case "lms" => benchScala("lms")(m3,t0)
+            case "akka" => benchScala("akka")(m3,t0)
+            case "lscala" => legacyScala(false)(t,t0)
+            case "llms" => legacyScala(true)(t,t0)
+            case "lcpp" => legacyCPP(t,t0)
+          }
+        } catch { case t:Throwable => t.printStackTrace; Thread.sleep(50) }
       }
+      
       if (csv!=null) csv.println
     }
     if (csv!=null) csv.close
