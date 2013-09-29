@@ -3,7 +3,16 @@ import java.util.*;
 import scala.Tuple2;
 import scala.Tuple3;
 
-class HashMap {
+/*
+---- @TCK ----
+Add       : 0.215072
+Clear     : 0.000783
+Aggr      : 0.021762
+Update    : 0.072890
+Update2   : 0.337194
+*/
+
+class HashMapPerf {
   static final int N = 1000000;
 
   static long t() { return System.nanoTime(); }
