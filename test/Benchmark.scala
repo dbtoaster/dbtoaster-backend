@@ -189,7 +189,7 @@ object RunQuery {
     RunQuery.synchronized { r.start; RunQuery.wait; }
     time
   }
-  def time(ns:Long,n:Int=2) = { val us=ns/1000; "%d.%06d".format(us/1000000,us%1000000) }
+  def time(ns:Long,n:Int=2) = { val ms=ns/1000000; "%d.%03d".format(ms/1000,ms%1000) }
   def main(args: Array[String]) {
     val count = 10
     val ts = (0 until count).map(x=>run1()).sorted
