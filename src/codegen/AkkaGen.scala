@@ -46,7 +46,7 @@ Issues to solve:
 - move test AST into its own ddbt.ast package ?
 - shall we make unit tests part of the compiler ?
 
-Tests passing (26):
+Tests previously passing (26):
 Axfinder
 Employee01
 Employee01a
@@ -74,6 +74,7 @@ Rstarofnested
 Zeus37494577
 Zeus75453299
 */
+
   // remote functions as (map,expression,context) => (func_name,body)
   private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
   private val forl = HashMap[(String,Expr,List[String]),(String,String)]()
@@ -81,56 +82,58 @@ Zeus75453299
   // variables being used in the subexpression
   def used(e:Expr):Set[String] = e.collect{ case Ref(n)=>Set(n) case MapRef(n,t,ks)=>ks.toSet case AggSum(ks,e)=>ks.toSet++used(e) }
 
+  // XXX: to be transformed in a map context
   private var mapl:List[String] = Nil // context stack of 1 map allowed to be used locally
   def pushl(m:String) { mapl=m::mapl }
   def popl() { mapl = if (mapl==Nil) Nil else mapl.tail }
 
-  def fmap(e:Expr,b:Set[String]):String = e match { // first map with free variables in the evaluation order, to be used as 'aggregation over' map
-    case MapRef(n,tp,ks) if (ks.toSet &~ b).size>0 => n
-    case Lift(n,e) => fmap(e,b)
-    case AggSum(ks,e) => fmap(e,b)
-    case Exists(e) => fmap(e,b)
-    case Mul(l,r) => val lm=fmap(l,b); if (lm==null) fmap(r,b) else lm
-    case Add(l,r) => val lm=fmap(l,b); if (lm==null) fmap(r,b) else lm
+  /** Get the first (in evaluation order) map with free variables. (implicit 'ctx' is used to determine free variables) */
+  def fmap(e:Expr):String = e match { // first map with free variables in the evaluation order (using context ctx), to be used as 'aggregation over' map
+    case MapRef(n,tp,ks) if ks.exists(!ctx.contains(_)) => n
+    case Lift(n,e) => fmap(e)
+    case AggSum(ks,e) => fmap(e)
+    case Exists(e) => fmap(e)
+    case Mul(l,r) => val lm=fmap(l); if (lm==null) fmap(r) else lm
+    case Add(l,r) => val lm=fmap(l); if (lm==null) fmap(r) else lm
     case _ => null
   }
   
-  val ctx_tps = HashMap[String,Type]() // variable->type mapping
-  override def cpsExpr(ex:Expr,b:Set[String]=Set(),co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = {
-    ex match {
-      case Lift(n,e) => ctx_tps+=((n,ex.tp))
-      case a@AggSum(ks,e) => ctx_tps++=(ks zip a.tks)
-      case m@MapRef(n,tp,ks) => ctx_tps++=(ks zip m.tks)
-      case _ =>
-    }
-    ex match {
-      case MapRef(n,tp,ks) if (n==mapl.head) => super.cpsExpr(ex,b,co)
-      case MapRef(n,tp,ks) => co("<XXX>")
-      case a@AggSum(ks,e) =>
-        val ctx = (b&used(e)).toList // context to be passed remotely
-        val m=fmap(e,b); if (m==null) sys.error("No aggregation map")
-        val a0=fresh("agg"); val aks=(ks zip a.tks).filter { case(n,t)=> !b.contains(n) } // aggregation keys as (name,type)
-        // remote handler      
-        val (fn,body) = aggl.getOrElseUpdate((m,e,ctx),{ // XXX: rename such that we could match aliases where only bound variable names differ
-          val fn = fresh("fa"); pushl(m)
-          val body = "case (`"+fn+"`,"+ctx.map(v=>"("+v+":"+ctx_tps(v).toScala+")::").mkString+"Nil) =>\n"+ind(
-            if (aks.size==0) "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,b,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
-            else {
-              val r = { val ns=aks.map(v=>(v._1,fresh(v._1))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
-              "val "+a0+" = K3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
-              cpsExpr(e.rename(r),b,(v:String)=>a0+".add("+tup(aks.map(x=>r(x._1)))+","+v+");\n")+"co("+a0+".toMap)"
-            }
-          )
-          popl; (fn,body)
-        })
-        // local handler
-        if (aks.size==0) "val "+a0+" = aggr["+ex.tp.toScala+"]("+(mref(m)::fn::ctx).mkString(",")+");\n"+co(a0)
-        else {
-          "val "+a0+" = aggr[HashMap["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]]("+(mref(m)::fn::ctx).mkString(",")+");\n"+
-          cpsExpr(MapRef(a0,e.tp,aks.map(_._1)),b,co)
-        }
-      case _ => super.cpsExpr(ex,b,co,am)
-    }
+  override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
+    case MapRef(n,tp,ks) if (n==mapl.head) => super.cpsExpr(ex,co)
+    case MapRef(n,tp,ks) => co("<XXX>")
+    case a@AggSum(ks,e) =>
+      val rctx = used(e).filter(ctx.contains(_)).toList // context to be passed remotely
+      val m=fmap(e); if (m==null) sys.error("No aggregation map")
+      val a0=fresh("agg"); val aks=(ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
+      // remote handler      
+      val (fn,body) = aggl.getOrElseUpdate((m,e,rctx),{ // XXX: rename such that we could match aliases where only bound variable names differ
+        val fn = fresh("fa"); pushl(m)
+        val body = "case (`"+fn+"`,"+rctx.map(v=>"("+v+":"+ctx(v).toScala+")::").mkString+"Nil) =>\n"+ind(
+          if (aks.size==0) "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
+          else {
+            val r = { val ns=aks.map(v=>(v._1,fresh(v._1))).toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
+            "val "+a0+" = K3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+
+            cpsExpr(e.rename(r),(v:String)=>a0+".add("+tup(aks.map(x=>r(x._1)))+","+v+");\n")+"co("+a0+".toMap)"
+          }
+        )
+        popl; (fn,body)
+      })
+      // local handler
+      if (aks.size==0) "val "+a0+" = aggr["+ex.tp.toScala+"]("+(mref(m)::fn::rctx).mkString(",")+");\n"+co(a0)
+      else {
+        "val "+a0+" = aggr[HashMap["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]]("+(mref(m)::fn::rctx).mkString(",")+");\n"+
+        cpsExpr(MapRef(a0,e.tp,aks.map(_._1)),co)
+      }
+    case _ => super.cpsExpr(ex,co,am)
+  }
+
+  override def genStmt(s:Stmt) = s match {
+    case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
+      val (mr,read) = (mref(m.name),e.collect{ case MapRef(n,t,ks)=>Set(mref(n)) }.toList)
+      val pre=op match { case OpAdd => "pre("+(mr::read).mkString(",")+"); " case OpSet => "barrier; clear("+mr+"); barrier; " }
+      //val init = oi match { case None => "" case Some(ie) => cpsExpr(ie,b,(i:String)=>"if (get("+mr+","+(if (m.keys.size==0) "" else tup(m.keys))+")==0) set("+mr+","+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n" }
+      pre+ /*init+*/ cpsExpr(e,(v:String) => fop+"("+mr+","+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
+    case _ => sys.error("Unimplemented")
   }
 
   // Add the pre and deq calls in master's triggers
@@ -140,20 +143,11 @@ Zeus75453299
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs,"deq")
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs,"deq")
     }
-    val b=as.map{_._1}.toSet; ctx_tps++=as.toMap
-    val r = "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = "+(if (t.stmts.size>0) "reset" else "")+" {\n"+ind(t.stmts.map(s=>genStmt(s,b)).mkString+deq)+"\n}"
-    ctx_tps.clear; r
+    ctx = Ctx(as.toMap)
+    val res = "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = "+(if (t.stmts.size>0) "reset" else "")+" {\n"+ind(t.stmts.map(genStmt).mkString+deq)+"\n}"
+    ctx = null; res
   }
 
-  override def genStmt(s:Stmt,b:Set[String]) = s match {
-    case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
-      val (mr,read) = (mref(m.name),e.collect{ case MapRef(n,t,ks)=>Set(mref(n)) }.toList)
-      val pre=op match { case OpAdd => "pre("+(mr::read).mkString(",")+"); " case OpSet => "barrier; clear("+mr+"); barrier; " }
-      //val init = oi match { case None => "" case Some(ie) => cpsExpr(ie,b,(i:String)=>"if (get("+mr+","+(if (m.keys.size==0) "" else tup(m.keys))+")==0) set("+mr+","+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n" }
-      pre+ /*init+*/ cpsExpr(e,b,(v:String) => fop+"("+mr+","+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
-    case _ => sys.error("Unimplemented")
-  }
-  
   val mref = new HashMap[String,String]() // map's name(local)->reference(remote)
   override def apply(s:System) = {
     val mrefs = s.maps.zipWithIndex.map{case (m,i)=> mref.put(m.name,"map"+i); "val map"+i+" = MapRef("+i+")\n" }.mkString
