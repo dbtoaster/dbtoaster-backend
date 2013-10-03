@@ -44,7 +44,7 @@ do_update() { # return "" if no update, nonempty otherwise
       cd virtualization-lms-core; git checkout booster-develop-0.3; sbt publish-local; cd ..
     else
       cd virtualization-lms-core; r1=`git_vers`; git pull >/dev/null; r2=`git_vers`;
-      if [ "$r1" != "$r2" ]; then echo UP; sbt publish-local;
+      if [ "$r1" != "$r2" ]; then echo UP; sbt publish-local; fi
     fi; cd $BASE
   fi
   # Front-end
