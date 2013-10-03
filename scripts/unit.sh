@@ -85,6 +85,14 @@ if [ "$live" ]; then while true; do
     echo ' updated. New build...';
     subj=`date "+DDBT build %Y-%m-%d %H:%M:%S"`
     dest="thierry.coppey@epfl.ch andres.noetzli@epfl.ch"
-    do_exec | tee /dev/stdout | mail -s "$subj" $dest;
+    (
+    echo Front-end latest commit:
+    cd $REPO; svn info | grep Last | sed 's/^/   /g'
+    echo -----------------------------------------------------------------
+    echo DDBToaster latest commit:
+    cd $BASE; git log -1 | sed 's/^/   /g'
+    echo -----------------------------------------------------------------
+    do_exec
+    ) | tee /dev/stderr | mail -s "$subj" $dest;
   else echo ' up to date.'; fi
 done; fi
