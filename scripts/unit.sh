@@ -84,7 +84,7 @@ if [ "$live" ]; then while true; do
   if [ "$updt" ]; then
     echo ' updated. New build...';
     subj=`date "+DDBT build %Y-%m-%d %H:%M:%S"`
-    dest="thierry.coppey@epfl.ch andres.noetzli@epfl.ch"
+    dest="thierry.coppey@epfl.ch andres.notzli@epfl.ch"
     (
     echo Front-end latest commit:
     cd $REPO; svn info | grep Last | sed 's/^/   /g'
