@@ -41,14 +41,15 @@ do_update() { # return "" if no update, nonempty otherwise
     cd $BASE; cd ..
     if [ ! -d "virtualization-lms-core" ]; then
       git clone https://github.com/TiarkRompf/virtualization-lms-core.git
-      cd virtualization-lms-core; git checkout booster-develop-0.3; cd ..
-    fi
-    cd virtualization-lms-core; r1=`git_vers`; git pull >/dev/null; r2=`git_vers`;
-    if [ "$r1" != "$r2" ]; then echo UP; sbt publish-local; fi; cd $BASE
+      cd virtualization-lms-core; git checkout booster-develop-0.3; sbt publish-local; cd ..
+    else
+      cd virtualization-lms-core; r1=`git_vers`; git pull >/dev/null; r2=`git_vers`;
+      if [ "$r1" != "$r2" ]; then echo UP; sbt publish-local;
+    fi; cd $BASE
   fi
   # Front-end
   if [ "$REPO" ]; then
-    cd $REPO; r1=`svn_vers`; svn update >/dev/null; r2=`svn_vers`
+    cd $REPO/dbtoaster/compiler/alpha5; r1=`svn_vers`; svn update >/dev/null; r2=`svn_vers`
     if [ "$r1" != "$r2" ]; then echo UP; make clean; make; fi; cd $BASE
   fi
 }
@@ -93,6 +94,6 @@ if [ "$live" ]; then while true; do
     cd $BASE; git log -1 | sed 's/^/   /g'
     echo -----------------------------------------------------------------
     do_exec
-    ) | tee /dev/stderr | mail -s "$subj" $dest;
+    ) | tee /dev/stderr | perl -p -e 's/\x1B\[[0-9]+m//g' | mail -s "$subj" $dest;
   else echo ' up to date.'; fi
 done; fi
