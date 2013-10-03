@@ -47,8 +47,6 @@ do_update() { # return "" if no update, nonempty otherwise
     if [ "$r1" != "$r2" ]; then echo UP; sbt publish-local; fi; cd $BASE
   fi
   # Front-end
-  echo "REPO"
-
   if [ "$REPO" ]; then
     cd $REPO; r1=`svn_vers`; svn update >/dev/null; r2=`svn_vers`
     if [ "$r1" != "$r2" ]; then echo UP; make clean; make; fi; cd $BASE
@@ -83,6 +81,10 @@ do_exec
 if [ "$live" ]; then while true; do
   sleep 120;
   printf "Polling..."; updt=`do_update`
-  if [ "$updt" ]; then echo ' updated. New build...'; do_exec;
+  if [ "$updt" ]; then
+    echo ' updated. New build...';
+    subj=`date "+DDBT build %Y-%m-%d %H:%M:%S"`
+    dest="thierry.coppey@epfl.ch andres.noetzli@epfl.ch"
+    do_exec | tee /dev/stdout | mail -s "$subj" $dest;
   else echo ' up to date.'; fi
 done; fi
