@@ -59,8 +59,13 @@ object UnitTest {
   // Repository-specific functions shared with tests (Parsers at least)
   private val rbase = new java.io.File(path_repo+"/"+path_base)
   def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
-  def toast(f:String,opts:List[String]=Nil):String = if (path_repo=="") exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)._1 else
-    exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase,null,false)._1.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data")
+  def toast(f:String,opts:List[String]=Nil):String = {
+    val ((out:String,err:String),_,_) = captureOut(()=>if (path_repo=="") exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)
+    else { val (o,e) = exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase,null,false);
+           (o.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data"),e)
+    })
+    if (err!="") { val ex=new Exception(err); ex.setStackTrace(Array[StackTraceElement]()); throw ex }; out
+  }
 
   val all = try { exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),rbase)._1.split("\n") } catch { case e:Exception => println("Repository not configured"); Array[String]() }
   val exclude = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
@@ -74,18 +79,18 @@ object UnitTest {
     val fs = filtered.map(f=>load(f)).filter(t=>t.sets.contains(dataset)).map(t=>t.sql)
     (all.map(x=>load(x).sql),fs,path_repo+"/"+path_base)
   } else {
-      val dir = "examples/queries"
-      val files = if (new java.io.File(dir).exists) Utils.exec(Array("find",dir,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n")
-      else { System.err.println(("@"*80)+"\n@"+(" "*78)+("@\n@ %-76s @".format("WARNING: folder '"+dir+"' does not exist, tests skipped !\n@"+(" "*78))+"@\n"+("@"*80))); Array[String]() }
-      (files,files,null)
+    val dir = "examples/queries"
+    val files = if (new java.io.File(dir).exists) Utils.exec(Array("find",dir,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n")
+    else { System.err.println(("@"*80)+"\n@"+(" "*78)+("@\n@ %-76s @".format("WARNING: folder '"+dir+"' does not exist, tests skipped !\n@"+(" "*78))+"@\n"+("@"*80))); Array[String]() }
+    (files,files,null)
   }
 
   // ---------------------------------------------------------------------------
 
   // Test generator
   private val dir=new java.io.File("test/gen") // output folder
+  private def clname(f:String) = { val s=f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
   def makeTest(t:QueryTest,mode:String="scala",opts:List[String]=Nil) = {
-    def clname(f:String) = { val s = f.replaceAll("test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
     val sys = (((f:String)=>toast(f,opts)) andThen M3Parser andThen TypeCheck)(t.sql)
     val cls = clname(t.sql)
     val gen:CodeGen = mode match {
@@ -147,7 +152,11 @@ object UnitTest {
       val t = QueryTest(t0.sql,t0.sets.filter(x=>f_ds(x._1))
                  .filter{x=> !t0.sql.matches(".*missedtrades.*") || x._1.matches("tiny.*")}) // missedtrades is very slow
       if (t.sets.size>0) try { println("---------------- "+t.sql); makeTest(t,mode,opts) }
-      catch { case th:Throwable => println("Compiling '"+t.sql+"' failed because "+th.getMessage); th.getStackTrace.foreach { l => println("   "+l) } }
+      catch { case th:Throwable =>
+        val err=th.getMessage+th.getStackTrace.map("\n   "+_).mkString; println("Compiling '"+t.sql+"' failed because:\n"+err);
+        // Dummy failure to please front-end developers
+        val cls = clname(t.sql); write(dir,cls+".scala","package ddbt.test.gen\nimport org.scalatest._\n\nclass "+cls+"Spec extends FunSpec {\nit(\"Generating "+t.sql+"\") {\nfail(\"\"\""+err+"\"\"\")\n}\n}")
+      }
     }
     println("Now run 'test-only ddbt.test.gen.*' to pass tests")
   }
