@@ -9,7 +9,7 @@ jdk:
 #  system_site_packages: true
 #before_install:
 # - sudo apt-get install scala
-before_script: ./.travis.sh
-script:
-#- sbt 'test:run-main ddbt.test.Benchmark'
-- sbt test
+#before_script: ./.travis.sh
+script: scripts/unit.sh
+# - sbt 'test:run-main ddbt.test.Benchmark'
+# - sbt test
