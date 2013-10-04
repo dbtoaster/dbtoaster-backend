@@ -74,17 +74,18 @@ lms_set() { # $1 = 1/0 to enable/disable LMS
   if [ ! "`lms_get`" ]; then echo "ddbt.lms=$1\n" >> $CONF; fi
   perl -pi -e 's/ddbt.lms *=[^#]*/ddbt.lms='"$1"'\n/g' $CONF
 }
+sep() { echo -------------------------------------------------------------------; }
 do_exec() {
   if [ ! "$REPO" ]; then
     # Travis-CI / standalone
     lms_set 0; sbt test
-    if [ "$lms" ]; then ddbt_lms 1; sbt test; fi
+    if [ "$lms" ]; then lms_set 1; sbt test; fi
   else
     # DBToaster developers
     lms_bk="`lms_get`"
-    lms_set 0; sbt queries
-    if [ "$lms" ]; then lms_set 1; sbt queries-lms; fi
-    if [ "$akka" ]; then lms_set 0; sbt queries-akka; fi
+    lms_set 0; echo 'Scala'; sep; sbt queries; sep;
+    if [ "$lms" ]; then lms_set 1; echo 'LMS'; sep; sbt queries-lms; sep; fi
+    if [ "$akka" ]; then lms_set 0; echo 'Akka'; sep; sbt queries-akka; sep; fi
     lms_set "$lms_bk"
   fi
 }
@@ -94,16 +95,13 @@ do_live() {
   subj=`date "+DDBT build %Y-%m-%d %H:%M:%S"`
   dest="thierry.coppey@epfl.ch andres.notzli@epfl.ch"
   (
-  echo Front-end latest commit:
-  cd $REPO; svn info | grep Last | sed 's/^/   /g'
-  echo -----------------------------------------------------------------
-  echo DDBToaster latest commit:
-  cd $BASE; git log -1 | sed 's/^/   /g'
-  echo -----------------------------------------------------------------
+  echo 'Front-end latest commit:'; cd $REPO; svn info | grep Last | sed 's/^/   /g'; sep;
+  echo 'DDBToaster latest commit:'; cd $BASE; git log -1 | sed 's/^/   /g'; sep;
   do_exec
-  ) | tee /dev/stderr | perl -p -e 's/\x1B\[([0-9]+m|2K.*\n)//g' \
+  ) | tee /dev/stderr | perl -p -e 's/(\x1B\[[0-9]+m|\x1BM\x1B\[2K.*\n)//g' \
     | sed 's/\[info\] //g' | grep -vEe '(-+ test/queries|Query .* generated|- .* correct|Dataset )' \
     | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
+    | grep -vEe '^(Set current|Updating|Resolving|nVars=)' \
     | scripts/pushover.sh \
     | mail -s "$subj" $dest;
 }
