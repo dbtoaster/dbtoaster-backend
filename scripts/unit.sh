@@ -108,8 +108,8 @@ EOF
     | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
     | grep -vEe '^(Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |$)' \
     | scripts/pushover.sh \
-    | sed -e 's/\[error\]/\[<div color="red">error<\/div>\]/g' \
-    | sed -e 's/\[success\]/\[<div color="green">success<\/div>\]/g' \
+    | sed -e 's/\[error\]/\[<span style="color:red">error<\/span>\]/g' \
+    | sed -e 's/\[success\]/\[<span style="color:green">success<\/span>\]/g'
   ) | sendmail thierry.coppey@epfl.ch andres.notzli@epfl.ch mohammad.dashti@epfl.ch;
 }
 
