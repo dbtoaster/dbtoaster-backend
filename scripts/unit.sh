@@ -108,7 +108,7 @@ EOF
     | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
     | grep -vEe '^(Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |$)' \
     | scripts/pushover.sh \
-  ) | sendmail thierry.coppey@epfl.ch andres.notzli@epfl.ch;
+  ) | sendmail thierry.coppey@epfl.ch andres.notzli@epfl.ch mohammad.dashti@epfl.ch;
 }
 
 printf "Setup..."; do_setup; echo ' done.';
