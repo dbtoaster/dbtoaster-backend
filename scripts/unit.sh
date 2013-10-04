@@ -20,11 +20,14 @@ DIST="http://www.dbtoaster.org/dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz"
 lms=""
 akka=""
 live=""
+build=""
+args="scripts/unit.sh `echo $@ | sed 's/ *-build//g'` -build"
 
 while [ "$1" ]; do case "$1" in
   "-lms") lms=1;;
   "-akka") akka=1;;
   "-live") live=1;;
+  "-build") build=1;;
 esac; shift; done
 
 ###### SETUP DEFAULT SETTINGS
@@ -78,7 +81,7 @@ do_exec() {
     if [ "$lms" ]; then ddbt_lms 1; sbt test; fi
   else
     # DBToaster developers
-    lms_bk=`lms_get`
+    lms_bk="`lms_get`"
     lms_set 0; sbt queries
     if [ "$lms" ]; then lms_set 1; sbt queries-lms; fi
     if [ "$akka" ]; then lms_set 0; sbt queries-akka; fi
@@ -86,27 +89,35 @@ do_exec() {
   fi
 }
 
-printf "Setup..."; do_setup; echo '';
-printf "Update..."; do_update; echo '';
-do_exec
+###### CONTINUOUS INTEGRATION
+do_live() {
+  subj=`date "+DDBT build %Y-%m-%d %H:%M:%S"`
+  dest="thierry.coppey@epfl.ch andres.notzli@epfl.ch"
+  (
+  echo Front-end latest commit:
+  cd $REPO; svn info | grep Last | sed 's/^/   /g'
+  echo -----------------------------------------------------------------
+  echo DDBToaster latest commit:
+  cd $BASE; git log -1 | sed 's/^/   /g'
+  echo -----------------------------------------------------------------
+  do_exec
+  ) | tee /dev/stderr | perl -p -e 's/\x1B\[([0-9]+m|2K.*\n)//g' \
+    | sed 's/\[info\] //g' | grep -vEe '(-+ test/queries|Query .* generated|- .* correct|Dataset )' \
+    | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
+    | mail -s "$subj" $dest;
+}
 
+printf "Setup..."; do_setup; echo ' done.';
+
+if [ "$build" ]; then echo 'New build...'; do_live; fi
 if [ "$live" ]; then while true; do
   sleep 120;
   printf "Polling..."; updt=`do_update`
-  if [ "$updt" ]; then
-    echo ' updated. New build...';
-    subj=`date "+DDBT build %Y-%m-%d %H:%M:%S"`
-    dest="thierry.coppey@epfl.ch andres.notzli@epfl.ch"
-    (
-    echo Front-end latest commit:
-    cd $REPO; svn info | grep Last | sed 's/^/   /g'
-    echo -----------------------------------------------------------------
-    echo DDBToaster latest commit:
-    cd $BASE; git log -1 | sed 's/^/   /g'
-    echo -----------------------------------------------------------------
-    do_exec
-    ) | tee /dev/stderr | perl -p -e 's/\x1B\[[0-9]+m//g' \
-      | grep -vEe '(-+ test/queries|Query .* generated|- .* correct|Dataset )' \
-      | sed 's/\[info\] //g' |  mail -s "$subj" $dest;
+  if [ "$updt" ]; then echo ' updated.';
+    cd $BASE; exec $args
+    #do_live
   else echo ' up to date.'; fi
-done; fi
+done; else
+  printf "Update..."; do_update; echo '';
+  do_exec
+fi
