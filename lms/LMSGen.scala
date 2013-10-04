@@ -48,13 +48,13 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     case Cmp(l,r,op) => expr(l,(vl:Rep[_]) => expr(r,(vr:Rep[_]) => co(cmp(vl,op,vr,ex.tp)) )) // formally, we should take the derived type from left and right, but this makes no difference to LMS
     case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.notequals(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
     case Lift(n,e) => expr(e,(ve:Rep[_]) => if (cx.contains(n)) co(cmp(cx(n),OpEq,ve,e.tp)) else { cx.add(Map((n,ve))); co(impl.unit(1L)) })
-    case Apply(fn,tp,as) =>
-      // XXX: handle application over constant expressions
+    case a@Apply(fn,tp,as) =>
       def app(es:List[Expr],vs:List[Rep[_]]):Rep[Unit] = es match {
         case x :: xs => expr(x,(v:Rep[_]) => app(xs,v::vs))
         case Nil => co(impl.k3apply(fn,vs.reverse,tp))
       }
-      app(as,Nil)
+      if (as.forall(_.isInstanceOf[Const])) co(impl.named(constApply(a),tp,false)) // hoist constants resulting from function application
+      else app(as,Nil)
     case m@MapRef(n,tp,ks) =>
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
       if(ki.size == 0) { // all keys are bound
