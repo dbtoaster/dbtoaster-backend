@@ -5,6 +5,7 @@ import ddbt.lib.{K3Temp,K3Var}
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
+import toasterbooster.lifters._
 
 /**
  * The following LMS operations are implemented by these traits:
@@ -33,7 +34,7 @@ trait M3Ops extends Base {
 }
 
 trait M3OpsExp extends BaseExp with EffectExp with M3Ops
-    with Equal with NumericOps with MathOps with DateOps with StringOps with PrimitiveOps with IfThenElseExp {
+    with Equal with NumericOps with MathOps with DateOps with StringOps with PrimitiveOps with IfThenElseExp with StdFunctionsOps{
   import ManifestHelper.man
   def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
@@ -48,16 +49,21 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
   def k3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = K3Slice(map,part,partKey)
   def k3clear(map:Exp[_]) = reflectWrite(map)(K3Clear(map))
 
-  def k3apply(fn:String,args:List[Exp[_]],tp:Type) = fn match {
-    case "div" => val x=args(0).asInstanceOf[Rep[Double]]; __ifThenElse(__equal(x,unit(0.0)),unit(0.0),numeric_divide(unit(1.0),x))
-    case "listmax" => (args(0),args(1)) match { case (x:Rep[Long] @unchecked,y:Rep[Long] @unchecked) => math_max(x,y) } // type erased anyway
-    case "listmin" => (args(0),args(1)) match { case (x:Rep[Long] @unchecked,y:Rep[Long] @unchecked) => math_min(x,y) } // type erased anyway
-    case "substring" =>
-      def i(n:Int):Exp[Int] = long_toint(args(n).asInstanceOf[Exp[Long]])
-      val s = args(0).asInstanceOf[Exp[String]]
-      if (args.size<3) string_substring(s,i(1)) else string_substring(s,i(1),i(2))
-    // XXX: inline library functions here
-    case _ => K3Apply(fn,args,man(tp)) // fallback for large or unknown functions
+  def k3apply(fn:String,args:List[Exp[_]],tp:Type) = {
+    System.out.println("Func: %s (arg0: %s)".format(fn,args(0)))
+    fn match {
+      case "div" => div(args(0).asInstanceOf[Rep[Double]])
+      case "listmax" => max(args(0).asInstanceOf[Rep[Double]],args(1).asInstanceOf[Rep[Double]])
+      case "listmin" => min(args(0).asInstanceOf[Rep[Double]],args(1).asInstanceOf[Rep[Double]])
+      case "substring" => substring(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[Long]],args(2).asInstanceOf[Rep[Long]])
+      case "regexp_match" => regexp_match(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[String]])
+      case "date_part" => date_part(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[java.util.Date]])
+      case "date" => args(0) match {
+        case Const(strDate) => Const(ddbt.lib.Functions.Udate(strDate.asInstanceOf[String]))
+        case _ => K3Apply(fn,args,man(tp))
+      }
+      case _ => K3Apply(fn,args,man(tp)) // fallback for large or unknown functions
+    }
   }
 
   case class Named[T](n:String)(implicit mT:Manifest[T]) extends Def[T]
