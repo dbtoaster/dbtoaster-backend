@@ -103,13 +103,14 @@ EOF
     echo 'Front-end latest commit:'; cd $REPO; svn info | grep Last | sed 's/^/   /g'; sep;
     echo 'DDBToaster latest commit:'; cd $BASE; git log -1 | sed 's/^/   /g'; sep;
     do_exec
-  ) | tee /dev/stderr | perl -p -e 's/(\x1B\[[0-9]+m|\x1BM\x1B\[2K.*\n)//g' \
-    | sed 's/\[info\] //g' | grep -vEe '(-+ test/queries|Query .* generated|- .* correct|Dataset )' \
-    | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
-    | grep -vEe '^(Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |$)' \
+  ) | tee /dev/stderr \
+    | perl -pe 's/(\x1B\[[0-9]+m|\x1BM\x1B\[2K.*\n)//g' | sed -e 's/\[info\] //g' \
+    | grep -vEe '^(-+ test/queries|Query .* generated|- .* correct|Dataset |Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |\[GC| *$)' \
+    | perl -0pe 's/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:|Run completed)/\n\2/g' \
     | scripts/pushover.sh \
-    | sed -e 's/\[error\]/\[<span style="color:red">error<\/span>\]/g' \
-    | sed -e 's/\[success\]/\[<span style="color:green">success<\/span>\]/g'
+    | perl -pe 's/\[error\](.*)/<b style="color:red">\1<\/b>/g' \
+    | perl -pe 's/\[success\](.*)/<b style="color:green">\1<\/b>/g' \
+    | sed -e 's/$/<br>/g'
   ) | sendmail thierry.coppey@epfl.ch andres.notzli@epfl.ch mohammad.dashti@epfl.ch;
 }
 
