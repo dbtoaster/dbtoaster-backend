@@ -34,20 +34,20 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
     case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)) ))
     case a@Add(l,r) =>
-      if (a.agg==Nil) { val cur=cx.cur; expr(l,(vl:Rep[_])=>{ cx.pop(cur); expr(r,(vr:Rep[_])=>{ cx.pop(cur); co(add(vl,vr,ex.tp)) },am)},am) }
+      if (a.agg==Nil) { val cur=cx.save; expr(l,(vl:Rep[_])=>{ cx.load(cur); expr(r,(vr:Rep[_])=>{ cx.load(cur); co(add(vl,vr,ex.tp)) },am)},am) }
       else am match {
-        case Some(t) if t==a.agg => val cur=cx.cur; expr(l,co,am); cx.pop(cur); expr(r,co,am); cx.pop(cur);
+        case Some(t) if t==a.agg => val cur=cx.save; expr(l,co,am); cx.load(cur); expr(r,co,am); cx.load(cur);
         case _ =>
           val acc = impl.k3temp(a.agg.map(_._2),ex.tp)
           val inCo = (v:Rep[_]) => impl.k3add(acc,a.agg.map(x=>cx(x._1)),v)
-          val cur = cx.cur
-          expr(l,inCo,Some(a.agg)); cx.pop(cur)
-          expr(r,inCo,Some(a.agg)); cx.pop(cur)
+          val cur = cx.save
+          expr(l,inCo,Some(a.agg)); cx.load(cur)
+          expr(r,inCo,Some(a.agg)); cx.load(cur)
           foreach(acc,a.agg,a.tp,co)
       }
     case Cmp(l,r,op) => expr(l,(vl:Rep[_]) => expr(r,(vr:Rep[_]) => co(cmp(vl,op,vr,ex.tp)) )) // formally, we should take the derived type from left and right, but this makes no difference to LMS
     case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.notequals(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
-    case Lift(n,e) => expr(e,(ve:Rep[_]) => if (cx.contains(n)) co(cmp(cx(n),OpEq,ve,e.tp)) else { cx.push(Map((n,ve))); co(impl.unit(1L)) })
+    case Lift(n,e) => expr(e,(ve:Rep[_]) => if (cx.contains(n)) co(cmp(cx(n),OpEq,ve,e.tp)) else { cx.add(Map((n,ve))); co(impl.unit(1L)) })
     case Apply(fn,tp,as) =>
       // XXX: handle application over constant expressions
       def app(es:List[Expr],vs:List[Rep[_]]):Rep[Unit] = es match {
@@ -69,10 +69,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
       val acc = if (agg_keys.size==0) impl.k3var(ex.tp) else impl.k3temp(agg_keys.map(_._2),ex.tp)
       // Accumulate expr(e) in the acc
-      val cur = cx.cur
+      val cur = cx.save
       val coAcc = (v:Rep[_]) => impl.k3add(acc, agg_keys.map(x=>cx(x._1)), v)
       expr(e,coAcc,Some(agg_keys)) // returns (Rep[Unit],ctx) and we ignore ctx
-      cx.pop(cur)
+      cx.load(cur)
       // Iterate over acc and call original continuation
       if (agg_keys.size==0) co(impl.k3get(acc,Nil,ex.tp)) // accumulator is a single result
       else am match {
@@ -89,7 +89,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       keyArg = impl.named(fresh(prefix+"k"),true)(man(keys.map(_._2)))
       valArg = impl.named(fresh(prefix+"v"),value_tp,true)
       val inKeys = keys.zipWithIndex.filter(k=> !cx.contains(k._1._1)).map{ case ((n,t),i) => (n,accessTuple(keyArg,t,keys.size,i)) }
-      cx.push(inKeys.toMap); co(valArg)
+      cx.add(inKeys.toMap); co(valArg)
     }
     impl.k3foreach(map, keyArg, valArg, body)
   }
@@ -152,7 +152,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       ).toMap)
       // Execute each statement
       t.stmts.map {
-        case StmtMap(m,e,op,oi) => cx.pop()
+        case StmtMap(m,e,op,oi) => cx.load()
           val mm = cx(m.name)
           if (op==OpSet && m.keys.size>0) impl.k3clear(mm)
           oi match { case None => case Some(ie) => 
@@ -160,7 +160,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
                impl.__ifThenElse(impl.equals(impl.k3get(mm,keys,m.tp),impl.unit(0L)),impl.k3set(mm,keys,r),impl.unit(()))
             })
           }
-          cx.pop()
+          cx.load()
           expr(e,(r:Rep[_]) => op match {
             case OpAdd => impl.k3add(mm,m.keys.map(cx),r)
             case OpSet => impl.k3set(mm,m.keys.map(cx),r)

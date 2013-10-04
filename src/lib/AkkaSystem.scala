@@ -51,6 +51,7 @@ object WorkerActor {
   private val FunRefMin = java.lang.Short.MIN_VALUE // special functions base id
 
   // XXX: implement more efficient serializer: see
+  // http://code.google.com/p/fast-serialization/
   // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
   // https://github.com/romix/akka-kryo-serialization
   // https://github.com/talex004/akka-kryo-serialization

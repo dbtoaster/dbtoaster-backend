@@ -1,4 +1,14 @@
 #!/bin/sh
+#
+# Continuous integration script that automate setup and periodic updates for
+# the unit tests. It also sends mails to developers when a build has finished.
+#
+# Options:
+#    -lms     enable unit tests for LMS code generator
+#    -akka    enable unit tests for Akka code generator
+#    -live    periodically poll repositories for new updates and send mail
+#             with the results of the compilation
+#
 
 cd `dirname $0`; cd ..;
 BASE=`pwd`
