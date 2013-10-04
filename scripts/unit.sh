@@ -71,8 +71,8 @@ do_update() { # return "" if no update, nonempty otherwise
 ###### EXECUTING TESTS
 lms_get() { cat $CONF | sed 's/#.*//g' | grep ddbt.lms | sed 's/.*= *//g'; }
 lms_set() { # $1 = 1/0 to enable/disable LMS
-  if [ ! "`lms_get`" ]; then echo "ddbt.lms = $1" >> $CONF; fi
-  perl -pi -e 's/ddbt.lms *=[^#]*/ddbt.lms = '"$1"' /g' $CONF
+  if [ ! "`lms_get`" ]; then echo "ddbt.lms=$1\n" >> $CONF; fi
+  perl -pi -e 's/ddbt.lms *=[^#]*/ddbt.lms='"$1"'\n/g' $CONF
 }
 do_exec() {
   if [ ! "$REPO" ]; then
