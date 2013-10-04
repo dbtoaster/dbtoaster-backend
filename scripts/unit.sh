@@ -111,7 +111,7 @@ EOF
     | perl -pe 's/\[error\](.*)/<b style="color:red">\1<\/b>/g' \
     | perl -pe 's/\[success\](.*)/<b style="color:green">\1<\/b>/g' \
     | sed -e 's/$/<br>/g'
-  ) | sendmail thierry.coppey@epfl.ch andres.notzli@epfl.ch mohammad.dashti@epfl.ch;
+  ) | sendmail "thierry.coppey@epfl.ch,andres.notzli@epfl.ch,mohammad.dashti@epfl.ch";
 }
 
 printf "Setup..."; do_setup; echo ' done.';
