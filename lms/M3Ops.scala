@@ -50,7 +50,6 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
   def k3clear(map:Exp[_]) = reflectWrite(map)(K3Clear(map))
 
   def k3apply(fn:String,args:List[Exp[_]],tp:Type) = {
-    System.out.println("Func: %s (arg0: %s)".format(fn,args(0)))
     fn match {
       case "div" => div(args(0).asInstanceOf[Rep[Double]])
       case "listmax" => max(args(0).asInstanceOf[Rep[Double]],args(1).asInstanceOf[Rep[Double]])
