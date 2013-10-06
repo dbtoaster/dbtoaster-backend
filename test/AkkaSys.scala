@@ -40,24 +40,24 @@ class Master extends Worker with MasterActor {
   val dispatch : PartialFunction[TupleEvent,Unit] = {
     case `ev1` => reset {
       add(m0,1L,1L); add(m0,2L,2L); add(m1,1.0,1.0)
-      barrier; barrier; barrier; // sequential multi-barriers test
-      assert(1==get[Long,Long](m0,1L),"Remote add")
-      assert(2==get[Long,Long](m0,2L),"Remote add")
-      assert(1.0==get[Double,Double](m1,1.0),"Remote add")
-      clear(m0); barrier
-      assert(0==(get[Long,Long](m0,1L)+get[Long,Long](m0,2L)),"Clearing")
-      assert(1.0==get[Double,Double](m1,1.0),"Clean one")
+      _barrier; _barrier; _barrier; // sequential multi-barriers test
+      assert(1==_get[Long,Long](m0,1L),"Remote add")
+      assert(2==_get[Long,Long](m0,2L),"Remote add")
+      assert(1.0==_get[Double,Double](m1,1.0),"Remote add")
+      clear(m0); _barrier
+      assert(0==(_get[Long,Long](m0,1L)+_get[Long,Long](m0,2L)),"Clearing")
+      assert(1.0==_get[Double,Double](m1,1.0),"Clean one")
       deq
     }
     case `ev2` => reset {
       clear(m0)
       val n = 500
       foreach(m0,f1,n) // remote call test
-      barrier // count, we should have 1000, (not true if we remove barrier)
-      val n2 = aggr[Long](m0,f2) // remote aggregation test
+      _barrier // count, we should have 1000, (not true if we remove barrier)
+      val n2 = _aggr[Long](m0,f2) // remote aggregation test
       println("Added "+n+"*workers elements")
       println("Remote aggregation : "+n2)
-      println("Collect+local count: "+(0L /: toMap(m0).asInstanceOf[Map[Long,Long]]){ case (a,(k,v)) => a+v})
+      println("Collect+local count: "+(0L /: _toMap(m0).asInstanceOf[Map[Long,Long]]){ case (a,(k,v)) => a+v})
       deq
     }
     case `ev3` => deq // trampoline test

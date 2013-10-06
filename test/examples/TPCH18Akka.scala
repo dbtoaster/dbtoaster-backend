@@ -70,53 +70,66 @@ class Q18Master extends Q18Worker with MasterActor {
   }
 
   def onAddLINEITEM(l_okey:Long,l_pkey:Long,l_skey:Long,l_linenum:Long,l_qty:Double,l_extprice:Double,l_discount:Double,l_tax:Double,l_retflag:String,l_status:String,
-                    l_shipdate:Date,l_commitdate:Date,l_receiptdate:Date,l_shipinstruct:String,l_shipmode:String,l_comm:String) = reset {
-    pre(mC,mCL); foreach(mCL,f0,l_okey,l_qty,1)
-    pre(mL,mLL); foreach(mLL,f1,l_okey,l_qty,1)
-    pre(mLE); add(mLE,l_okey, l_qty)
-    clear(mQ18); barrier; pre(mQ18,mL); foreach(mL,f2)
+                    l_shipdate:Date,l_commitdate:Date,l_receiptdate:Date,l_shipinstruct:String,l_shipmode:String,l_comm:String) = /*reset*/ {
+    pre(mC,Array(mCL),(u:Unit)=> {
+    foreach(mCL,f0,l_okey,l_qty,1)
+    pre(mL,Array(mLL),(u:Unit)=> {
+    foreach(mLL,f1,l_okey,l_qty,1)
+    pre(mLE,Array[MapRef](),(u:Unit)=> {
+    add(mLE,l_okey, l_qty)
+    clear(mQ18);
+    barrier((u:Unit)=>{
+    pre(mQ18,Array(mL),(u:Unit)=> {
+    foreach(mL,f2)
+    deq }) }) }) }) })
+    /*
+    _pre(mC,mCL); foreach(mCL,f0,l_okey,l_qty,1)
+    _pre(mL,mLL); foreach(mLL,f1,l_okey,l_qty,1)
+    _pre(mLE); add(mLE,l_okey, l_qty)
+    clear(mQ18); _barrier; _pre(mQ18,mL); foreach(mL,f2)
     deq
+    */
   }
   def onDelLINEITEM(l_okey:Long,l_pkey:Long,l_skey:Long,l_linenum:Long,l_qty:Double,l_extprice:Double,l_discount:Double,l_tax:Double,l_retflag:String,l_status:String,
                     l_shipdate:Date,l_commitdate:Date,l_receiptdate:Date,l_shipinstruct:String,l_shipmode:String,l_comm:String) = reset {
-    pre(mC,mCL); foreach(mCL,f0,l_okey,l_qty,-1)
-    pre(mL,mLL); foreach(mLL,f1,l_okey,l_qty,-1)
-    pre(mLE); add(mLE,l_okey, -l_qty)
-    clear(mQ18); barrier; pre(mQ18,mL); foreach(mL,f2)
+    _pre(mC,mCL); foreach(mCL,f0,l_okey,l_qty,-1)
+    _pre(mL,mLL); foreach(mLL,f1,l_okey,l_qty,-1)
+    _pre(mLE); add(mLE,l_okey, -l_qty)
+    clear(mQ18); _barrier; _pre(mQ18,mL); foreach(mL,f2)
     deq
   }
 
   def onAddORDERS(o_key:Long,c_key:Long,O_ORDERSTATUS:String,o_total:Double,o_date:Date,o_pri:String,o_clerk:String,o_shippri:Long,o_comm:String) = reset {
-    pre(-1,mLE); val l3_qty:Double = get[Long,Double](mLE,o_key)
-    pre(mQ18,mO); if (l3_qty!=0.0) { foreach(mO,f3,l3_qty,c_key,o_key,o_date,o_total,1) }
-    pre(mC); add(mC,(o_key,c_key,o_date,o_total), l3_qty)
-    pre(mCL); add(mCL,(o_key,c_key,o_date,o_total), 1L)
-    pre(mL,mO); if (l3_qty!=0.0) { foreach(mO,f4,l3_qty,c_key,o_key,o_date,o_total,1) }
-    pre(mLL,mO); foreach(mO,f5,l3_qty,c_key,o_key,o_date,o_total,1)
+    _pre(-1,mLE); val l3_qty:Double = _get[Long,Double](mLE,o_key)
+    _pre(mQ18,mO); if (l3_qty!=0.0) { foreach(mO,f3,l3_qty,c_key,o_key,o_date,o_total,1) }
+    _pre(mC); add(mC,(o_key,c_key,o_date,o_total), l3_qty)
+    _pre(mCL); add(mCL,(o_key,c_key,o_date,o_total), 1L)
+    _pre(mL,mO); if (l3_qty!=0.0) { foreach(mO,f4,l3_qty,c_key,o_key,o_date,o_total,1) }
+    _pre(mLL,mO); foreach(mO,f5,l3_qty,c_key,o_key,o_date,o_total,1)
     deq
   }
   def onDelORDERS(o_key:Long,c_key:Long,O_ORDERSTATUS:String,o_total:Double,o_date:Date,o_pri:String,o_clerk:String,o_shippri:Long,o_comm:String) = reset {
-    pre(-1,mLE); val l3_qty:Double = get[Long,Double](mLE,o_key)
-    pre(mQ18,mO); if (l3_qty!=0.0) { foreach(mO,f3,l3_qty,c_key,o_key,o_date,o_total,-1) }
-    pre(mC); add(mC,(o_key,c_key,o_date,o_total), -l3_qty)
-    pre(mCL); add(mCL,(o_key,c_key,o_date,o_total), -1L)
-    pre(mL,mO); if (l3_qty!=0.0) { foreach(mO,f4,l3_qty,c_key,o_key,o_date,o_total,-1) }
-    pre(mLL,mO); foreach(mO,f5,l3_qty,c_key,o_key,o_date,o_total,-1)
+    _pre(-1,mLE); val l3_qty:Double = _get[Long,Double](mLE,o_key)
+    _pre(mQ18,mO); if (l3_qty!=0.0) { foreach(mO,f3,l3_qty,c_key,o_key,o_date,o_total,-1) }
+    _pre(mC); add(mC,(o_key,c_key,o_date,o_total), -l3_qty)
+    _pre(mCL); add(mCL,(o_key,c_key,o_date,o_total), -1L)
+    _pre(mL,mO); if (l3_qty!=0.0) { foreach(mO,f4,l3_qty,c_key,o_key,o_date,o_total,-1) }
+    _pre(mLL,mO); foreach(mO,f5,l3_qty,c_key,o_key,o_date,o_total,-1)
     deq
   }
 
   def onAddCUSTOMER(c_key:Long,c_name:String,c_addr:String,c_nat:Long,c_phone:String,c_acctbal:Double,c_mktseg:String,c_comm:String) = reset {
-    pre(mQ18,mC,mLE); foreach(mC,f6,c_key,c_name,1)
+    _pre(mQ18,mC,mLE); foreach(mC,f6,c_key,c_name,1)
     add(mO,(c_name,c_key), 1L)
-    pre(mL,mC); foreach(mC,f7,c_key,c_name,1)
-    pre(mLL,mCL); foreach(mCL,f8,c_key,c_name,1)
+    _pre(mL,mC); foreach(mC,f7,c_key,c_name,1)
+    _pre(mLL,mCL); foreach(mCL,f8,c_key,c_name,1)
     deq
   }
   def onDelCUSTOMER(c_key:Long,c_name:String,c_addr:String,c_nat:Long,c_phone:String,c_acctbal:Double,c_mktseg:String,c_comm:String) = reset {
-    pre(mQ18,mC,mLE); foreach(mC,f6,c_key,c_name,-1)
+    _pre(mQ18,mC,mLE); foreach(mC,f6,c_key,c_name,-1)
     add(mO,(c_name,c_key), -1L)
-    pre(mL,mC); foreach(mC,f7,c_key,c_name,-1)
-    pre(mLL,mCL); foreach(mCL,f8,c_key,c_name,-1)
+    _pre(mL,mC); foreach(mC,f7,c_key,c_name,-1)
+    _pre(mLL,mCL); foreach(mCL,f8,c_key,c_name,-1)
     deq
   }
   def onSystemReady() {}

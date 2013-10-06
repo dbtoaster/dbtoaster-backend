@@ -50,7 +50,10 @@ object WorkerActor {
   def NodeRef(i:Int) = i.toShort
   private val FunRefMin = java.lang.Short.MIN_VALUE // special functions base id
 
-  // XXX: implement more efficient serializer: see
+  // ----------------------------------------------------------
+  // TODO: implement more efficient serializer
+  // - possibly exchange 2 Arrays(Key,Val) instead of Scala Map
+  // ----------------------------------------------------------
   // http://code.google.com/p/fast-serialization/
   // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
   // https://github.com/romix/akka-kryo-serialization
@@ -223,9 +226,11 @@ abstract class WorkerActor extends Actor {
   // Group operations: broadcast to owners, workers then process locally
   def clear[P](m:MapRef,p:Int= -1,pk:P=null) = owns(m).foreach { bar.send(_,Clear(m,p,pk)) }
   def foreach(m:MapRef,f:FunRef,args:Any*) { owns(m).foreach { bar.send(_,Foreach(f,args.toArray)) } }
-  def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any],co:R=>Unit,zero:Any=null,plus:(Any,Any)=>Any=null) = {
+  def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,plus:(Any,Any)=>Any=null,co:R=>Unit) = {
     val (z,p) = if (zero!=null&&plus!=null) (zero,plus) else (K3Helper.make_zero[R](),K3Helper.make_plus[R]().asInstanceOf[(Any,Any)=>Any])
+    
     // XXX: implement (zero,plus) for java.util.HashMap
+    
     matcherAggr.req(m,f,args,co,z,p)
   }
 
@@ -250,19 +255,17 @@ trait MasterActor extends WorkerActor {
   import scala.util.continuations._
 
   // --- sequential to CPS conversion
-  def get[K,V](m:MapRef,k:K):V @cps[Unit] = shift { co:(V=>Unit) => super.get(m,k,co) }
-  def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Any*) = shift { co:(R=>Unit) => super.aggr(m,f,args.toArray,co) }
-  def barrier = shift { co:(Unit=>Unit) => bar.set(true,co); }
-  def toMap[K,V](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
-  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit) = {
-    val plus = (m1:Map[K,V],m2:Map[K,V]) => m1 ++ m2
-    super.aggr(m,fun_collect,Array(m),co,Map[K,V](),plus.asInstanceOf[(Any,Any)=>Any]) // XXX: convert to HashMap
-  }
+  // XXX: to go away as it is more complicated to generate
+  def _get[K,V](m:MapRef,k:K):V @cps[Unit] = shift { co:(V=>Unit) => super.get(m,k,co) }
+  def _aggr[R:ClassTag](m:MapRef,f:FunRef,args:Any*) = shift { co:(R=>Unit) => super.aggr(m,f,args.toArray,null,null,co) }
+  def _barrier = shift { co:(Unit=>Unit) => bar.set(true,co); }
+  def _toMap[K,V](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
+  def _pre(write:MapRef,read:MapRef*) = shift { co:(Unit=>Unit) => pre(write,read.toArray,co) }
 
   // ---- coherency mechanism: if a map used is not flushed, flush all
   private val invalid = scala.collection.mutable.Set[MapRef]()
-  def pre(write:MapRef,read:MapRef*) = shift { co:(Unit=>Unit) =>
-    if (read.filter{r=>invalid.contains(r)}.isEmpty) { invalid += write; co() }
+  def pre(write:MapRef,read:Array[MapRef],co:Unit=>Unit) = {
+    if (read.filter{r=>invalid.contains(r)}.isEmpty) { invalid+=write; co() }
     else { invalid.clear; invalid+=write; bar.set(true,co) }
   }
 
@@ -278,7 +281,7 @@ trait MasterActor extends WorkerActor {
         est=2 // expose trampoline
         val (ev,sender)=eq.removeFirst
         ev match {
-          case SystemInit => reset { onSystemReady(); barrier; t0=System.nanoTime(); deq }
+          case SystemInit => reset { onSystemReady(); _barrier; t0=System.nanoTime(); deq }
           case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0
             def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
               case 0 => sender ! (time,acc); deq
@@ -290,6 +293,12 @@ trait MasterActor extends WorkerActor {
         if (est==2) est=1 // disable trampoline
       }
     } while(est==3) // trampoline
+  }
+
+  def barrier(co:Unit=>Unit) = bar.set(true,co);
+  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit) = {
+    val plus = (m1:Map[K,V],m2:Map[K,V]) => m1 ++ m2 // ERROR; THIS IS INCORRECT
+    super.aggr(m,fun_collect,Array(m),Map[K,V](),plus.asInstanceOf[(Any,Any)=>Any],co) // XXX: convert to HashMap
   }
 
   val dispatch:PartialFunction[TupleEvent,Unit] // to be implemented by subclasses

@@ -20,13 +20,27 @@ import scala.reflect.ClassTag
  */
 
 /** K3Var encapsulates a mutable variable. */
-case class K3Var[V:ClassTag]() {
+case class K3Var[V:ClassTag]() extends K3Map[Unit,V] {
   private val plus = K3Helper.make_plus[V]()
   var v = K3Helper.make_zero[V]()
   def get() = v
   def set(v1:V) { v=v1 }
   def add(v1:V) { v=plus(v,v1) }
   override def toString = v.toString
+  
+  // To comply with K3Map protocol (for Akka)
+  def get(k:Unit) = v
+  def set(k:Unit,v1:V) { v=v1 }
+  def add(k:Unit,v1:V) { v=plus(v,v1) }
+  def foreach(f:(Unit,V)=>Unit) = f((),v)
+  def aggr[R](f:(Unit,V)=>R)(implicit cR:ClassTag[R]) = f((),v)
+  def slice[P](part:Int, partKey:P) = this
+  def clear() {}
+  def size = 1
+  def toMap = Map(((),v))
+  def toXML = K3Helper.toXML(toMap)
+  def toStr = v.toString
+
 }
 
 /** K3Map is a HashMap with O(1) slice operation. */

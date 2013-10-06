@@ -57,40 +57,52 @@ class AXMaster extends AXWorker with MasterActor {
     case TupleEvent(TupleInsert,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddASKS(v0,v1,v2,v3,v4)
     case TupleEvent(TupleDelete,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelASKS(v0,v1,v2,v3,v4)
   }
-  def onAddBIDS(bids_t:Double, bids_id:Long, br_id:Long, vol:Double, price:Double) = reset {
-    pre(mAX,mB1,mB3)
-    val agg1 = aggr[Long](mB1,f0,br_id,price);
-    val agg2 = aggr[Double](mB3,f1,br_id,price);
+  def onAddBIDS(bids_t:Double, bids_id:Long, br_id:Long, vol:Double, price:Double) = /*reset*/ {
+    // New format: no CPS plug-in required
+    pre(mAX,Array(mB1,mB3),(u:Unit)=>{
+    aggr(mB1,f0,Array[Any](br_id,price),null,null,(agg1:Long)=>{
+    aggr(mB3,f1,Array[Any](br_id,price),null,null,(agg2:Double)=>{
     add(mAX,br_id,((agg1 * (-1L * vol)) + agg2));
-    pre(mA1); add(mA1,(br_id,price),vol);
-    pre(mA2); add(mA2,(br_id,price),1L);
+    pre(mA1,Array[MapRef](),(u:Unit)=>{
+    add(mA1,(br_id,price),vol)
+    pre(mA2,Array[MapRef](),(u:Unit)=>{
+    add(mA2,(br_id,price),1L)
+    deq }) }) }) }) })
+    /*
+    _pre(mAX,mB1,mB3)
+    val agg1 = _aggr[Long](mB1,f0,br_id,price);
+    val agg2 = _aggr[Double](mB3,f1,br_id,price);
+    add(mAX,br_id,((agg1 * (-1L * vol)) + agg2));
+    _pre(mA1); add(mA1,(br_id,price),vol);
+    _pre(mA2); add(mA2,(br_id,price),1L);
     deq
+    */
   }
   def onDelBIDS(bids_t:Double, bids_id:Long, br_id:Long, vol:Double, price:Double) = reset {
-    pre(mAX,mB1,mB3)
-    val agg3 = aggr[Long](mB1,f0,br_id,price);
-    val agg4 = aggr[Double](mB3,f1,br_id,price);
+    _pre(mAX,mB1,mB3)
+    val agg3 = _aggr[Long](mB1,f0,br_id,price);
+    val agg4 = _aggr[Double](mB3,f1,br_id,price);
     add(mAX,br_id,((agg3 * vol) + (agg4 * -1L)));
-    pre(mA1); add(mA1,(br_id,price),(-1L * vol));
-    pre(mA2); add(mA2,(br_id,price),-1L);
+    _pre(mA1); add(mA1,(br_id,price),(-1L * vol));
+    _pre(mA2); add(mA2,(br_id,price),-1L);
     deq
   }
   def onAddASKS(asks_t:Double, asks_id:Long, br_id:Long, vol:Double, price:Double) = reset {
-    pre(mAX,mA1,mA2)
-    val agg5 = aggr[Double](mA1,f2,br_id,price);
-    val agg6 = aggr[Long](mA2,f3,br_id,price);
+    _pre(mAX,mA1,mA2)
+    val agg5 = _aggr[Double](mA1,f2,br_id,price);
+    val agg6 = _aggr[Long](mA2,f3,br_id,price);
     add(mAX,br_id,((agg5 * -1L) + (agg6 * vol)));
-    pre(mB1); add(mB1,(br_id,price),1L);
-    pre(mB3); add(mB3,(br_id,price),vol);
+    _pre(mB1); add(mB1,(br_id,price),1L);
+    _pre(mB3); add(mB3,(br_id,price),vol);
     deq
   }
   def onDelASKS(asks_t:Double, asks_id:Long, br_id:Long, vol:Double, price:Double) = reset {
-    pre(mAX,mA1,mA2)
-    val agg7 = aggr[Double](mA1,f2,br_id,price);
-    val agg8 = aggr[Long](mA2,f3,br_id,price);
+    _pre(mAX,mA1,mA2)
+    val agg7 = _aggr[Double](mA1,f2,br_id,price);
+    val agg8 = _aggr[Long](mA2,f3,br_id,price);
     add(mAX,br_id,(agg7 + (agg8 * (-1L * vol))));
-    pre(mB1); add(mB1,(br_id,price),-1L);
-    pre(mB3); add(mB3,(br_id,price),(-1L * vol));
+    _pre(mB1); add(mB1,(br_id,price),-1L);
+    _pre(mB3); add(mB3,(br_id,price),(-1L * vol));
     deq
   }
   def onSystemReady() {}
