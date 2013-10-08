@@ -13,10 +13,11 @@ benchmarks-*.csv
 *.pdf
 *Temp*
 *.DS_Store
-docs/presentations/LMSinDDBToaster/LMSinDDBToaster.aux
+*.aux
 docs/presentations/LMSinDDBToaster/LMSinDDBToaster.log
-docs/presentations/LMSinDDBToaster/LMSinDDBToaster.nav
+*.nav
 docs/presentations/LMSinDDBToaster/LMSinDDBToaster.out
-docs/presentations/LMSinDDBToaster/LMSinDDBToaster.snm
-docs/presentations/LMSinDDBToaster/LMSinDDBToaster.synctex.gz
-docs/presentations/LMSinDDBToaster/LMSinDDBToaster.toc
+*.snm
+*.synctex.gz
+*.toc
+tmp/*
