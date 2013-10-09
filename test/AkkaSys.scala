@@ -22,7 +22,7 @@ class Worker extends WorkerActor {
 
   val map0 = K3Map.make[Long,Long]()
   val map1 = K3Map.make[Double,Double]()
-  val local = Array[K3Map[_,_]](map0,map1)
+  val local = Array[Any](map0,map1)
 
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = f match {
     case f1 => val n=args(0).asInstanceOf[Int]; for (i<-0 until n) add(m0,i.toLong,1L); co()

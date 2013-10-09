@@ -27,7 +27,7 @@ class AXWorker extends WorkerActor {
   val mASKS2 = K3Map.makeIdx[(Long,Double),Long](List(0))
   val mBIDS1 = K3Map.makeIdx[(Long,Double),Long](List(0))
   val mBIDS3 = K3Map.makeIdx[(Long,Double),Double](List(0))
-  val local = Array[K3Map[_,_]](AXFINDER,mASKS1,mASKS2,mBIDS1,mBIDS3)
+  val local = Array[Any](AXFINDER,mASKS1,mASKS2,mBIDS1,mBIDS3)
   // aggregations
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = { co() }
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = {

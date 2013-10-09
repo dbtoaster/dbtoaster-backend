@@ -36,7 +36,7 @@ class Q18Worker extends WorkerActor {
   val mLINEITEM1 = K3Map.make[(Long,String,Long,Date,Double), Double]()
   val mLINEITEM1_L1 = K3Map.make[(Long,String,Long,Date,Double), Long](List((x:(Long,String,Long,Date,Double))=>x._1)) // 0=List(0)
   val mLINEITEM1_E11 = K3Map.make[Long,Double]()
-  val local = Array[K3Map[_,_]](QUERY18,mORDERS2,mCUSTOMER1,mCUSTOMER1_L1,mLINEITEM1,mLINEITEM1_L1,mLINEITEM1_E11)
+  val local = Array[Any](QUERY18,mORDERS2,mCUSTOMER1,mCUSTOMER1_L1,mLINEITEM1,mLINEITEM1_L1,mLINEITEM1_E11)
   // foreach
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args) match {
     // Lineitem triggers

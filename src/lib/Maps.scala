@@ -20,27 +20,13 @@ import scala.reflect.ClassTag
  */
 
 /** K3Var encapsulates a mutable variable. */
-case class K3Var[V:ClassTag]() extends K3Map[Unit,V] {
+case class K3Var[V:ClassTag]() {
   private val plus = K3Helper.make_plus[V]()
   var v = K3Helper.make_zero[V]()
   def get() = v
   def set(v1:V) { v=v1 }
   def add(v1:V) { v=plus(v,v1) }
   override def toString = v.toString
-  
-  // To comply with K3Map protocol (for Akka)
-  def get(k:Unit) = v
-  def set(k:Unit,v1:V) { v=v1 }
-  def add(k:Unit,v1:V) { v=plus(v,v1) }
-  def foreach(f:(Unit,V)=>Unit) = f((),v)
-  def aggr[R](f:(Unit,V)=>R)(implicit cR:ClassTag[R]) = f((),v)
-  def slice[P](part:Int, partKey:P) = this
-  def clear() {}
-  def size = 1
-  def toMap = Map(((),v))
-  def toXML = K3Helper.toXML(toMap)
-  def toStr = v.toString
-
 }
 
 /** K3Map is a HashMap with O(1) slice operation. */
@@ -65,6 +51,7 @@ trait K3Temp[K,V] {
   def set(k:K,v:V)
   def get(k:K):V
   def foreach(f:(K,V)=>Unit)
+  def toMap:Map[K,V]
 }
 
 /** Helper object to construct maps. Examples:
@@ -123,6 +110,17 @@ object K3Helper {
     }
     l.sortBy(_.toString)
   }
+
+  // Local destructive union (Akka)
+  def union[K,V:ClassTag](m1:Map[K,V],m2:Map[K,V]):K3Temp[K,V] = {
+    val t=new K3TempImp[K,V]();
+    m1.foreach{case (k,v)=>t.add(k,v)}
+    m2.foreach{case (k,v)=>t.add(k,v)}
+    t
+  }
+  def union[K,V:ClassTag](t1:K3Temp[K,V],m2:Map[K,V]):K3Temp[K,V] = { m2.foreach{case (k,v)=>t1.add(k,v)}; t1 }
+  def union[K,V:ClassTag](m1:Map[K,V],t2:K3Temp[K,V]):K3Temp[K,V] = { m1.foreach{case (k,v)=>t2.add(k,v)}; t2 }
+  def union[K,V:ClassTag](t1:K3Temp[K,V],t2:K3Temp[K,V]):K3Temp[K,V] = { t1.foreach{case (k,v)=>t2.add(k,v)}; t2 }
 }
 
 /** A regular HashMap with extra add and get-or-zero behaviors. */
@@ -134,6 +132,7 @@ class K3TempImp[K,V:ClassTag]() extends K3Temp[K,V] {
   def set(key:K,value:V) { elems.put(key,value); }
   def get(key:K):V = { val v=elems.get(key); if (v==null) v0 else v }
   def foreach(f:(K,V)=>Unit) { scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).foreach{ case (k,v)=> f(k,v) } }
+  def toMap:Map[K,V] = scala.collection.JavaConversions.mapAsScalaMap[K,V](elems).toMap
 };
 
 /**

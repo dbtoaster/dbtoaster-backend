@@ -39,39 +39,33 @@ import akka.actor.{Actor,ActorRef}
  *
  * @author TCK
  */
+ 
+/*
+ * Current Issues: 
+ * - K3Vars need to be put on a single host/stored on all hosts, acks need to be corrected
+ * - Broadcast to all workers within the same host => worker < host < cluster hierarchy
+ * - OnSystemReady needs not to go through network and ignore non-local updates
+ * - Batching update and lookups (with timeout/explicit end-of-batch?)
+ * - Use multiple timestamps and queue updates in front of maps?
+ *   -> If so, use maps as timed key-value store?
+ *   -> Expunge previous versions when timestamp completed
+ */
 
 /** Internal types and messages */
 object WorkerActor {
-  type MapRef = Byte;
-  type FunRef = Short;
-  type NodeRef = Short;
-  def MapRef(i:Int) = i.toByte
-  def FunRef(i:Int) = i.toShort
-  def NodeRef(i:Int) = i.toShort
-  private val FunRefMin = java.lang.Short.MIN_VALUE // special functions base id
-
-  // ----------------------------------------------------------
-  // TODO: implement more efficient serializer
-  // - possibly exchange 2 Arrays(Key,Val) instead of Scala Map
-  // ----------------------------------------------------------
-  // http://code.google.com/p/fast-serialization/
-  // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
-  // https://github.com/romix/akka-kryo-serialization
-  // https://github.com/talex004/akka-kryo-serialization
-  // https://github.com/twitter/chill
-
+  type MapRef = Byte;    def MapRef(i:Int):MapRef = i.toByte
+  type FunRef = Short;   def FunRef(i:Int,internal:Boolean=false):FunRef = (if (internal) java.lang.Short.MIN_VALUE+i else i).toShort
+  type NodeRef = Short;  def NodeRef(i:Int):NodeRef = i.toShort
+  
   // Internal messages
   case class Members(master:ActorRef,workers:Array[(ActorRef,List[MapRef])]) // master can also be a worker for some maps
   case class Barrier(en:Boolean) // switch barrier mode
   case class Ack(to:Array[NodeRef],num:Array[Long]) // cumulative ack to master (to, count) : -1 for sent, 1 for recv
-
-  /*
-  case class TellJoin(master:ActorRef) // ->worker: join the master
-  case object TellLeave // ->worker: ask for departure
-  case class Join(ms:List[MapRef]) // worker->master: join request
-  case object Leave // worker->master: departure request
-  case object Goodbye // worker is allowed to stop responding
-  */
+  //case class TellJoin(master:ActorRef) // ->worker: join the master
+  //case object TellLeave // ->worker: ask for departure
+  //case class Join(ms:List[MapRef]) // worker->master: join request
+  //case object Leave // worker->master: departure request
+  //case object Goodbye // worker is allowed to stop responding
 
   // Data messages
   case class Get[K](map:MapRef,key:K) // => Val[K,V]
@@ -89,7 +83,7 @@ abstract class WorkerActor extends Actor {
   import scala.collection.JavaConversions.mapAsScalaMap
   import WorkerActor._
   // ---- concrete maps and local operations
-  val local:Array[K3Map[_,_]] // local maps
+  val local:Array[Any] // ref->local maps conversion
   def hash(m:MapRef,k:Any) = k.hashCode
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) // local foreach
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) // local aggregation
@@ -106,6 +100,16 @@ abstract class WorkerActor extends Actor {
   }
   // XXX: protected def addWorker(w:ActorRef,ms:List[Maps]) {}
   // XXX: protected def delWorker(w:ActorRef) {}
+
+  // ----------------------------------------------------------
+  // TODO: implement more efficient serializer
+  // - possibly exchange 2 Arrays(Key,Val) instead of Scala Map
+  // ----------------------------------------------------------
+  // http://code.google.com/p/fast-serialization/
+  // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
+  // https://github.com/romix/akka-kryo-serialization
+  // https://github.com/talex004/akka-kryo-serialization
+  // https://github.com/twitter/chill
 
   // ---- get/continuations matcher
   private object matcherGet {
@@ -201,18 +205,22 @@ abstract class WorkerActor extends Actor {
   }
 
   // ---- message passing
-  protected val fun_collect = FunRefMin
+  protected val fun_collect = FunRef(0,true)
+  private var local_map : Array[K3Map[Any,Any]] = null // avoid runtime castings
+  private var local_var : Array[K3Var[Any]] = null
   def receive = {
     case Members(m,ws) => members(m,ws)
+      local_map = local.map{ x => (if (x.isInstanceOf[K3Map[_,_]]) x else null).asInstanceOf[K3Map[Any,Any]] }
+      local_var = local.map{ x => (if (x.isInstanceOf[K3Var[_]]) x else null).asInstanceOf[K3Var[Any]] }
     case Barrier(en) => bar.set(en) // assert(self!=master)
     case Ack(to,num) => bar.sumAck(to,num) // assert(self==master)
-    case Get(m,k) => sender ! Val(m,k,local(m).asInstanceOf[K3Map[Any,Any]].get(k))
+    case Get(m,k) => sender ! Val(m,k,local_map(m).get(k)) // get(K3Var) is handled locally
     case Val(m,k,v) => matcherGet.res(m,k,v)
-    case Add(m,k,v) => local(m).asInstanceOf[K3Map[Any,Any]].add(k,v); bar.recv
-    case Set(m,k,v) => local(m).asInstanceOf[K3Map[Any,Any]].set(k,v); bar.recv
-    case Clear(m,p,pk) => (if (p<0) local(m) else local(m).slice(p,pk)).clear; bar.recv
+    case Add(m,k,v) => if (k==null) local_var(m).add(v) else local_map(m).add(k,v); bar.recv
+    case Set(m,k,v) => if (k==null) local_var(m).set(v) else local_map(m).set(k,v); bar.recv
+    case Clear(m,p,pk) => val mm=local_map(m); if (mm!=null) { (if (p<0) mm else mm.slice(p,pk)).clear }; bar.recv
     case Foreach(f,as) => forl(f,as,_ => bar.recv)
-    case Aggr(id,fun_collect,Array(m:MapRef)) => sender ! AggrPart(id,local(m).toMap) // collect map data // XXX: convert to HashMap
+    case Aggr(id,fun_collect,Array(m:MapRef)) => val mm=local_map(m); sender ! AggrPart(id,if (mm==null) local_var(m).get() else mm.toMap) // collect map data // XXX: convert to HashMap
     case Aggr(id,f,as) => aggl(f,as,(r:Any) => sender ! AggrPart(id,r))
     case AggrPart(id,res) => matcherAggr.res(id,res)
     case m => println("Not understood: "+m.toString)
@@ -220,17 +228,26 @@ abstract class WorkerActor extends Actor {
 
   // ---- map operations
   // Element operation: if key hashes to local, apply locally, otherwise call remote worker
-  def get[K,V](m:MapRef,k:K,co:V=>Unit) = matcherGet.req(m,k,co)
-  def add[K,V](m:MapRef,k:K,v:V) { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].add(k,v) else bar.send(o,Add(m,k,v)) }
-  def set[K,V](m:MapRef,k:K,v:V) { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].set(k,v) else bar.send(o,Set(m,k,v)) }
+  def get[K,V](m:MapRef,k:K,co:V=>Unit) = if (k==null) co(local(m).asInstanceOf[K3Var[V]].get) else matcherGet.req(m,k,co)
+  def add[K,V](m:MapRef,k:K,v:V) {
+    if (k==null) { local(m).asInstanceOf[K3Var[V]].add(v); workers.foreach(w => if (w!=self) bar.send(w,Add(m,k,v))) }
+    else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].add(k,v) else bar.send(o,Add(m,k,v)) }
+  }
+  def set[K,V](m:MapRef,k:K,v:V) {
+    if (k==null) { local(m).asInstanceOf[K3Var[V]].set(v); workers.foreach(w => if (w!=self) bar.send(w,Set(m,k,v))) }
+    else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].set(k,v) else bar.send(o,Set(m,k,v)) }
+  }
   // Group operations: broadcast to owners, workers then process locally
   def clear[P](m:MapRef,p:Int= -1,pk:P=null) = owns(m).foreach { bar.send(_,Clear(m,p,pk)) }
   def foreach(m:MapRef,f:FunRef,args:Any*) { owns(m).foreach { bar.send(_,Foreach(f,args.toArray)) } }
-  def aggr[R:ClassTag](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,plus:(Any,Any)=>Any=null,co:R=>Unit) = {
-    val (z,p) = if (zero!=null&&plus!=null) (zero,plus) else (K3Helper.make_zero[R](),K3Helper.make_plus[R]().asInstanceOf[(Any,Any)=>Any])
-    
-    // XXX: implement (zero,plus) for java.util.HashMap
-    
+  
+  // XXX: idea = create multiple functions instead of only 1
+  def aggr[R](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,plus:(Any,Any)=>Any=null,co:R=>Unit)(implicit cR:ClassTag[R]) = {
+    val (z,p) = if (zero!=null&&plus!=null) (zero,plus)
+    else if (cR.toString=="scala.collection.immutable.Map") {
+      // XXX: implement (zero,plus) for java.util.HashMap
+      sys.error("Implement zero for Maps")
+    } else (K3Helper.make_zero[R](),K3Helper.make_plus[R]().asInstanceOf[(Any,Any)=>Any])
     matcherAggr.req(m,f,args,co,z,p)
   }
 
@@ -253,6 +270,12 @@ trait MasterActor extends WorkerActor {
   import WorkerActor._
   import Messages._
   import scala.util.continuations._
+
+  def barrier(co:Unit=>Unit) = bar.set(true,co);
+  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit) = {
+    val plus = (m1:Map[K,V],m2:Map[K,V]) => m1 ++ m2 // XXX: ERROR; THIS IS INCORRECT
+    super.aggr(m,fun_collect,Array(m),Map[K,V](),plus.asInstanceOf[(Any,Any)=>Any],co) // XXX: convert to HashMap
+  }
 
   // --- sequential to CPS conversion
   // XXX: to go away as it is more complicated to generate
@@ -281,7 +304,7 @@ trait MasterActor extends WorkerActor {
         est=2 // expose trampoline
         val (ev,sender)=eq.removeFirst
         ev match {
-          case SystemInit => reset { onSystemReady(); _barrier; t0=System.nanoTime(); deq }
+          case SystemInit => reset { onSystemReady(); println("Pre"); _barrier; println("Post"); t0=System.nanoTime(); deq }
           case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0
             def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
               case 0 => sender ! (time,acc); deq
@@ -293,12 +316,6 @@ trait MasterActor extends WorkerActor {
         if (est==2) est=1 // disable trampoline
       }
     } while(est==3) // trampoline
-  }
-
-  def barrier(co:Unit=>Unit) = bar.set(true,co);
-  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit) = {
-    val plus = (m1:Map[K,V],m2:Map[K,V]) => m1 ++ m2 // ERROR; THIS IS INCORRECT
-    super.aggr(m,fun_collect,Array(m),Map[K,V](),plus.asInstanceOf[(Any,Any)=>Any],co) // XXX: convert to HashMap
   }
 
   val dispatch:PartialFunction[TupleEvent,Unit] // to be implemented by subclasses
