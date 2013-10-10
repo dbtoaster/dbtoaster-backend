@@ -16,8 +16,40 @@ import toasterbooster.lifters._
  * @author Mohammad Dashti
  */
 
+object K3MapCommons {
+  /**
+   * The default initial capacity - MUST be a power of two.
+   */
+  final val DEFAULT_INITIAL_CAPACITY: Int = 512
+  /**
+   * The maximum capacity, used if a higher value is implicitly specified
+   * by either of the constructors with arguments.
+   * MUST be a power of two <= 1<<30.
+   */
+  final val MAXIMUM_CAPACITY: Int = 1 << 30
+  /**
+   * The load factor used when none specified in constructor.
+   */
+  final val DEFAULT_LOAD_FACTOR: Float = 0.75f
+  /**
+   * The load factor used when none specified in constructor.
+   */
+  final val INITIAL_THRESHOLD: Int = (DEFAULT_INITIAL_CAPACITY * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
+
+  def zeroValue(v: Type) = v match {
+    case TypeLong => "0L"
+    case TypeDouble => "0.0"
+    case TypeString => ""
+    case TypeDate => "new Date()"
+  }
+}
+
 trait K3MapOps extends Base {
   // Nodes creation
+  def named(name:String,tp:Type,mutable:Boolean=false):Rep[_]
+  def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]):Rep[T]
+  def namedK3Var[T](name: String)(implicit mT:Manifest[T]): Rep[K3Var[T]]
+  def namedK3Map[K,V](name: String)(implicit mK:Manifest[K], mV:Manifest[V]): Rep[K3Temp[K,V]]
   def k3var(value:Type) : Rep[K3Var[_]]
   def k3temp(key_tp:List[Type],value_tp:Type):Rep[K3Temp[_,_]]
   // Operations on K3Map, K3Var and K3Temp
@@ -31,8 +63,12 @@ trait K3MapOps extends Base {
 
 trait K3MapOpsExp extends BaseExp with EffectExp with K3MapOps{
   import ManifestHelper.man
+  def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
+  def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
+  def namedK3Var[T](name: String)(implicit mT:Manifest[T]) = reflectMutable(NamedK3Var(name)(mT))
+  def namedK3Map[K, V](name: String)(implicit mK:Manifest[K], mV:Manifest[V]) = reflectMutable(NamedK3Map(name)(mK,mV))
   def k3var(value:Type) = reflectMutable(NewK3Var(value,man(value)))
-  def k3temp(key:List[Type],value:Type) = reflectMutable(NewK3Temp(key,value,man(key),man(value)))
+  def k3temp(key:List[Type],value:Type) = reflectMutable(NewK3Map(key,value,man(key),man(value)))
 
   def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = K3Get(map,key,man(value_tp))
   def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(K3Set(map,key,value))
@@ -41,9 +77,12 @@ trait K3MapOpsExp extends BaseExp with EffectExp with K3MapOps{
   def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = reflectEffect(K3Foreach(map,key,value,body),summarizeEffects(body).star)
   def k3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = K3Slice(map,part,partKey)
   def k3clear(map:Exp[_]) = reflectWrite(map)(K3Clear(map))
-  
+
+  case class Named[T](n:String)(implicit mT:Manifest[T]) extends Def[T]
+  case class NamedK3Var[T](n:String)(implicit mT:Manifest[T]) extends Def[K3Var[T]]
+  case class NamedK3Map[K,V](n:String)(implicit mK:Manifest[K], mV:Manifest[V]) extends Def[K3Temp[K,V]]
   case class NewK3Var[K,V](value:Type,mV:Manifest[V]) extends Def[K3Var[_]]
-  case class NewK3Temp[K,V](key:List[Type],value:Type,mK:Manifest[K],mV:Manifest[V]) extends Def[K3Temp[_,_]]
+  case class NewK3Map[K,V](key:List[Type],value:Type,mK:Manifest[K],mV:Manifest[V]) extends Def[K3Temp[_,_]]
   case class K3Get[T](map:Exp[_], key:List[Exp[_]],mt:Manifest[T]) extends Def[T]
   case class K3Set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
   case class K3Add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
@@ -80,19 +119,23 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     emitBlock(blk); val res=ind(wr.toString); stream=save; res
   }
 
+  private val nameAttr = "_name"
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case NewK3Var(v,_) => stream.println("var "+quote(sym)+" = "+zeroValue(v))
-    case NewK3Temp(ks,v,_,_) => emitValDef(sym, "K3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
+    case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
+    case NamedK3Var(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
+    case NamedK3Map(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
+    case NewK3Var(v,_) => stream.println("var "+quote(sym)+" = "+K3MapCommons.zeroValue(v))
+    case NewK3Map(ks,v,_,_) => emitValDef(sym, "K3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
     case K3Get(m,ks,_) => Def.unapply(m) match {
-      case Some(Reflect(NewK3Var(_,_),_,_)) => emitValDef(sym, quote(m))
+      case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_),_,_)) => emitValDef(sym, quote(m))
       case _ => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
     }
     case K3Set(m,ks,v) => Def.unapply(m) match {
-      case Some(Reflect(NewK3Var(_,_),_,_)) => stream.println(quote(m)+" = "+quote(v))
+      case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_),_,_)) => stream.println(quote(m)+" = "+quote(v))
       case _ => stream.println(quote(m)+".set("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
     }
     case K3Add(m,ks,v) => Def.unapply(m) match {
-      case Some(Reflect(NewK3Var(_,_),_,_)) => stream.println(quote(m)+" += "+quote(v))
+      case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_),_,_)) => stream.println(quote(m)+" += "+quote(v))
       case _ => stream.println(quote(m)+".add("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
     }
     case K3Foreach(m,k,v,body) =>
@@ -103,10 +146,50 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     case _ => super.emitNode(sym,rhs)
   }
 
-  def zeroValue(v: Type) = v match {
-    case TypeLong => "0L"
-    case TypeDouble => "0.0"
-    case TypeString => ""
-    case TypeDate => "new Date()"
+  override def quote(x: Exp[Any], forcePrintSymbol: Boolean) : String = {
+    def printSym(s: Sym[Any]): String = {
+      if(s.possibleToInline || s.noReference) {
+        Def.unapply(s) match {
+          case Some(d: Def[Any]) => d match {
+            case Named(n) => n
+            case NamedK3Var(n) => n
+            case NamedK3Map(n) => n
+            case _ =>
+              val strWriter: java.io.StringWriter = new java.io.StringWriter;
+              val stream = new java.io.PrintWriter(strWriter);
+              withStream(stream) { 
+                emitNode(s, d)
+              }
+              strWriter.toString
+          }
+          case None => if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+        }
+      } else {
+        if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+      }
+    }
+    x match {
+      case Const(s: String) => "\""+s.replace("\"", "\\\"").replace("\n", "\\n")+"\"" // TODO: more escapes?
+      case Const(c: Char) => "'"+c+"'"
+      case Const(f: Float) => "%1.10f".format(f) + "f"
+      case Const(l: Long) => l.toString + "L"
+      case Const(null) => "null"
+      case Const(z) => z.toString
+      case s@Sym(n) => if (forcePrintSymbol) {
+        printSym(s)
+      } else { 
+        isVoidType(s.tp) match {
+          case true => "(" + /*"x" + n +*/ ")"
+          case false => printSym(s)
+        }
+      }
+      case _ => throw new RuntimeException("could not quote %s".format(x))
+    }
   }
+
+  // 
+  // override def quote(x: Exp[Any]) : String = x match {
+  //   case sym@Sym(_) if sym.attributes.contains(nameAttr) => sym.attributes(nameAttr).toString
+  //   case _ => super.quote(x)
+  // }
 }

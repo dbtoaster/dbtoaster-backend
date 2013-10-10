@@ -117,7 +117,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   }
 
   // Lazy slicing (secondary) indices computation
-  private val sx = HashMap[String,List[List[Int]]]() // slicing indices
+  protected val sx = HashMap[String,List[List[Int]]]() // slicing indices
   def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
     val s=sx.getOrElse(m,List[List[Int]]()); val n=s.indexOf(i)
     if (n != -1) n else { sx.put(m,s ::: List(i)); s.size }

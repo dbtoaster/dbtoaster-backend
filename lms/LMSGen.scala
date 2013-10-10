@@ -12,7 +12,7 @@ import ddbt.lib._
 
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
-  import ddbt.Utils.fresh
+  import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
   import ManifestHelper.man
 
   val impl = ScalaExpGen
@@ -147,7 +147,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val triggerBlock = impl.reifyEffects {
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
-        maps.map{ case (name,MapDef(_,_,keys,_)) => if (keys.size==0) (name,impl.named[K3Var[_]](name,true)) else (name,impl.named[K3Map[_,_]](name,true)) }.toList union
+        maps.map{ case (name,MapDef(_,_,keys,_)) => if (keys.size==0) (name,impl.namedK3Var(name)(manifest[Any])) else (name,impl.namedK3Map(name)(manifest[Any],manifest[Any])) }.toList union
         args.map{ case (name,tp) => (name,impl.named(name,tp)) }
       ).toMap)
       // Execute each statement
@@ -173,9 +173,35 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     cx = null; res
   }
 
+  override def genMap(m:MapDef):String = {
+    if (m.keys.size==0) "var "+m.name+":"+m.tp.toScala+" = "+K3MapCommons.zeroValue(m.tp)+";"
+    else {
+      val tk = tup(m.keys.map(x=>x._2.toScala))
+      val s = sx.getOrElse(m.name,List[List[Int]]())
+      val ix = if (s.size==0) "" else "List("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+")"
+      "val "+m.name+" = K3Map.make["+tk+","+m.tp.toScala+"]("+ix+");"
+    }
+  }
+
+  def overridenApply(s0:System):String = {
+    val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
+    val ms = s0.maps.map(genMap).mkString("\n") // maps
+    val (str,ld0,gc) = genInternals(s0)
+    val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
+    freshClear()
+    "class "+cls+" extends Actor {\n"+ind(
+    "import ddbt.lib.Messages._\n"+
+    "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
+    "var t0:Long = 0\n"+
+    "def receive = {\n"+ind(str+
+      "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
+      "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! (time,List[Any]("+s0.queries.map{q=>q.name+(if (s0.mapType(q.map.name)._1.size>0) ".toMap" else "")}.mkString(",")+"))"
+    )+"\n}\n"+gc+ts+ld)+"\n}\n"
+  }
+
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
   override def apply(s0:System):String = {
-    maps=s0.maps.map(m=>(m.name,m)).toMap; val r=super.apply(s0); maps=Map(); r
+    maps=s0.maps.map(m=>(m.name,m)).toMap; val r=overridenApply(s0); maps=Map(); r
   }
 }
