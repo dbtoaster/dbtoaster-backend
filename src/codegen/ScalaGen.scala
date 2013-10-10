@@ -150,6 +150,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     (str,ld0,gc)
   }
 
+  def printK3VarGetMethod = ".get()"
+
   def apply(s0:System):String = {
     val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
     val ms = s0.maps.map(genMap).mkString("\n") // maps
@@ -162,7 +164,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     "var t0:Long = 0\n"+
     "def receive = {\n"+ind(str+
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
-      "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! (time,List[Any]("+s0.queries.map{q=>q.name+(if (s0.mapType(q.map.name)._1.size>0) ".toMap" else ".get()")}.mkString(",")+"))"
+      "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! (time,List[Any]("+s0.queries.map{q=>q.name+(if (s0.mapType(q.map.name)._1.size>0) ".toMap" else printK3VarGetMethod)}.mkString(",")+"))"
     )+"\n}\n"+gc+ts+ld)+"\n}\n"
   }
 

@@ -183,25 +183,11 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
   }
 
-  def overridenApply(s0:System):String = {
-    val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
-    val ms = s0.maps.map(genMap).mkString("\n") // maps
-    val (str,ld0,gc) = genInternals(s0)
-    val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
-    freshClear()
-    "class "+cls+" extends Actor {\n"+ind(
-    "import ddbt.lib.Messages._\n"+
-    "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
-    "var t0:Long = 0\n"+
-    "def receive = {\n"+ind(str+
-      "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
-      "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! (time,List[Any]("+s0.queries.map{q=>q.name+(if (s0.mapType(q.map.name)._1.size>0) ".toMap" else "")}.mkString(",")+"))"
-    )+"\n}\n"+gc+ts+ld)+"\n}\n"
-  }
+  override def printK3VarGetMethod = ""
 
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
   override def apply(s0:System):String = {
-    maps=s0.maps.map(m=>(m.name,m)).toMap; val r=overridenApply(s0); maps=Map(); r
+    maps=s0.maps.map(m=>(m.name,m)).toMap; val r=super.apply(s0); maps=Map(); r
   }
 }
