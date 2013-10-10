@@ -81,7 +81,7 @@ trait K3MapOpsExp extends BaseExp with EffectExp with K3MapOps{
   def namedK3Var[T](name: String)(implicit mT:Manifest[T]) = reflectMutable(NamedK3Var(name)(mT))
   def namedK3Map[K, V](name: String)(implicit mK:Manifest[K], mV:Manifest[V]) = reflectMutable(NamedK3Map(name)(mK,mV))
   def k3var(value:Type) = reflectMutable(NewK3Var(value,man(value)))
-  def k3temp(key:List[Type],value:Type) = reflectMutable(NewK3Map(key,value,man(key),man(value)))
+  def k3temp(key:List[Type],value:Type) = reflectMutable(NewK3Temp(key,value,man(key),man(value)))
 
   def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = K3Get(map,key,man(value_tp))
   def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(K3Set(map,key,value))
@@ -95,7 +95,7 @@ trait K3MapOpsExp extends BaseExp with EffectExp with K3MapOps{
   case class NamedK3Var[T](n:String)(implicit mT:Manifest[T]) extends Def[K3Var[T]]
   case class NamedK3Map[K,V](n:String)(implicit mK:Manifest[K], mV:Manifest[V]) extends Def[K3Temp[K,V]]
   case class NewK3Var[K,V](value:Type,mV:Manifest[V]) extends Def[K3Var[_]]
-  case class NewK3Map[K,V](key:List[Type],value:Type,mK:Manifest[K],mV:Manifest[V]) extends Def[K3Temp[_,_]]
+  case class NewK3Temp[K,V](key:List[Type],value:Type,mK:Manifest[K],mV:Manifest[V]) extends Def[K3Temp[_,_]]
   case class K3Get[T](map:Exp[_], key:List[Exp[_]],mt:Manifest[T]) extends Def[T]
   case class K3Set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
   case class K3Add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
@@ -138,7 +138,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     case NamedK3Var(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NamedK3Map(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NewK3Var(v,_) => stream.println(K3MapCommons.createK3VarDefinition(quote(sym), v))
-    case NewK3Map(ks,v,_,_) => emitValDef(sym, K3MapCommons.createK3TempDefinition(v,ks))
+    case NewK3Temp(ks,v,_,_) => emitValDef(sym, K3MapCommons.createK3TempDefinition(v,ks))
     case K3Get(m,ks,_) => Def.unapply(m) match {
       case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_),_,_)) => emitValDef(sym, quote(m))
       case _ => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
