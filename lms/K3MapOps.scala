@@ -39,8 +39,21 @@ object K3MapCommons {
   def zeroValue(v: Type) = v match {
     case TypeLong => "0L"
     case TypeDouble => "0.0"
-    case TypeString => ""
+    case TypeString => "\"\""
     case TypeDate => "new Date()"
+  }
+
+  def createK3VarDefinition(name: String, value:Type) = "var "+name+" = "+zeroValue(value)
+
+  def createK3MapDefinition(name: String, value:Type, key:List[Type], indexList: List[List[Int]]) = {
+    val tk = ddbt.Utils.tup(key.map(_.toScala))
+    val ix = if (indexList.size==0) "" else "List("+indexList.map{is=>"(k:"+tk+")=>"+ddbt.Utils.tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+")"
+    "val "+name+" = K3Map.make["+tk+","+value.toScala+"]("+ix+");"
+  }
+
+  def createK3TempDefinition(value:Type, key:List[Type]) = {
+    val tk = ddbt.Utils.tup(key.map(_.toScala))
+    "K3Map.temp["+tk+","+value.toScala+"]();"
   }
 }
 
@@ -124,8 +137,8 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NamedK3Var(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NamedK3Map(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
-    case NewK3Var(v,_) => stream.println("var "+quote(sym)+" = "+K3MapCommons.zeroValue(v))
-    case NewK3Map(ks,v,_,_) => emitValDef(sym, "K3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
+    case NewK3Var(v,_) => stream.println(K3MapCommons.createK3VarDefinition(quote(sym), v))
+    case NewK3Map(ks,v,_,_) => emitValDef(sym, K3MapCommons.createK3TempDefinition(v,ks))
     case K3Get(m,ks,_) => Def.unapply(m) match {
       case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_),_,_)) => emitValDef(sym, quote(m))
       case _ => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")

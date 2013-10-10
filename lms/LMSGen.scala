@@ -174,12 +174,11 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def genMap(m:MapDef):String = {
-    if (m.keys.size==0) "var "+m.name+":"+m.tp.toScala+" = "+K3MapCommons.zeroValue(m.tp)+";"
+    if (m.keys.size==0) K3MapCommons.createK3VarDefinition(m.name, m.tp)+";"
     else {
-      val tk = tup(m.keys.map(x=>x._2.toScala))
+      val keys = m.keys.map(_._2)
       val s = sx.getOrElse(m.name,List[List[Int]]())
-      val ix = if (s.size==0) "" else "List("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+")"
-      "val "+m.name+" = K3Map.make["+tk+","+m.tp.toScala+"]("+ix+");"
+      K3MapCommons.createK3MapDefinition(m.name,m.tp,keys,s)
     }
   }
 
