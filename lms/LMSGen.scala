@@ -187,6 +187,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
   override def apply(s0:System):String = {
-    maps=s0.maps.map(m=>(m.name,m)).toMap; val r=super.apply(s0); maps=Map(); r
+    maps=s0.maps.map(m=>(m.name,m)).toMap; s0.triggers.map(super.genTrigger); val r=super.apply(s0); maps=Map(); r
   }
 }
