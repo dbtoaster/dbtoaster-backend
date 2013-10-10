@@ -28,7 +28,8 @@ libraryDependencies <++= scalaVersion(v=>Seq(
 // --------- Compilation options
 Seq(
   scalaVersion := "2.10.2",
-  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings") // ,"-target:jvm-1.7"
+  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings"), // ,"-target:jvm-1.7"
+  javacOptions ++= Seq("-Xlint:unchecked")
 )
 
 Seq(
