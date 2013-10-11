@@ -182,9 +182,18 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
   }
 
+  override def generateDataStructures = K3MapCommons.generateAllEntryClasses
+
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
   override def apply(s0:System):String = {
-    maps=s0.maps.map(m=>(m.name,m)).toMap; s0.triggers.map(super.genTrigger); val r=super.apply(s0); maps=Map(); r
+    maps=s0.maps.map(m=>(m.name,m)).toMap
+    //TODO: this should be replaced by a specific traversal
+    //for completing the slice information 
+    s0.triggers.map(super.genTrigger)
+    val r=super.apply(s0)
+    maps=Map()
+    K3MapCommons.clear
+    r
   }
 }
