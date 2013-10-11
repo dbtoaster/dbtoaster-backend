@@ -5,7 +5,6 @@ examples/data
 conf/ddbt.properties
 test/gen
 bin
-lib
 benchmarks-*.csv
 .idea
 *.numbers
@@ -14,9 +13,9 @@ benchmarks-*.csv
 *Temp*
 *.DS_Store
 *.aux
-docs/presentations/LMSinDDBToaster/LMSinDDBToaster.log
+*.log
 *.nav
-docs/presentations/LMSinDDBToaster/LMSinDDBToaster.out
+*.out
 *.snm
 *.synctex.gz
 *.toc

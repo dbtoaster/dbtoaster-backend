@@ -1,0 +1,154 @@
+/*
+JAVA:
+[info] M Set     : 0.106475
+[info] M Clear   : 0.000797
+[info] M Add     : 0.135846
+SCALA:
+[info] M Set     : 0.114166 +7%
+[info] M Clear   : 0.000794
+[info] M Add     : 0.168210 +23%
+Java HashMap
+[info] J Set     : 0.106084
+[info] J Clear   : 0.000771
+[info] J Add     : 0.126898
+*/
+
+// -----------------------------------------------------------------------------
+// Implementation
+
+object M3MapBase {
+  class Entry[K,/*@specialized(Long,Double)*/ V](final val hash:Int, final val key:K, var value:V, var next:Entry[K,V])  extends Comparable[Entry[K,V]] {
+    final def equals(e:Entry[K,V]) = hash==e.hash && key==e.key
+    def compareTo(e:Entry[K,V]) = if (key.isInstanceOf[Comparable[K]]) key.asInstanceOf[Comparable[K]].compareTo(e.key) else 0
+  }
+  private final val INITIAL_CAPACITY = 1024;
+  private final val MAXIMUM_CAPACITY = 1 << 30;
+  private final val LOAD_FACTOR = 0.75f;
+  private final def indexFor(h:Int, length:Int):Int = h & (length-1)
+  private final def hash(k:Any):Int = { var h=k.hashCode; h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4) }
+}
+class M3MapBase[K,/*@specialized(Long,Double)*/ V]
+    (final val zero:V,final val skipZero:Boolean, @transient projections:Array[K=>_])
+    (implicit cV:ClassTag[V]) extends M3Map[K,V] with Cloneable with Serializable {
+  import java.util.Date
+  import M3MapBase._
+  @transient /*private*/ var data = new Array[Entry[K,V]](INITIAL_CAPACITY)
+  @transient private var count = 0
+  @transient private var threshold = (INITIAL_CAPACITY * LOAD_FACTOR).toInt
+  @transient private final val indices : Array[Index[_]] = projections.map(new Index(_))
+  @transient private final val plus = (cV.toString match {
+    case "Long" => (a:Long, b:Long) => a+b
+    case "Double" => (a:Double, b:Double) => a+b
+    case "java.lang.String" => (a:String, b:String) => a+b
+    case "java.util.Date" => (a:Date, b:Date) => new Date(a.getTime+b.getTime)    
+    case _ => null
+  }).asInstanceOf[Function2[V,V,V]]
+  
+  private final def find(key:K):Entry[K,V] = { val h=hash(key); val b=indexFor(h,data.length); var e=data(b);
+    if (e!=null) do { if (h==e.hash && key==e.key) return e; e=e.next } while (e!=null); null
+  }
+  private final def resize(newCapacity:Int) { if (data.length==MAXIMUM_CAPACITY) { threshold=MAXIMUM_CAPACITY + 1; return }
+    val newData=new Array[Entry[K,V]](newCapacity); var b=0
+    do { var e=data(b); if (e!=null) do { val next=e.next; val b=indexFor(e.hash, newCapacity); e.next=newData(b); newData(b)=e; e=next } while(e!=null); b+=1 } while(b<data.size)
+    data=newData; threshold=Math.min((newCapacity * LOAD_FACTOR).toInt, MAXIMUM_CAPACITY + 1);
+  }
+  private def createEntry(hash:Int, key:K, value:V, bucket:Int) { val e=new Entry(hash,key,value,data(bucket)); data(bucket)=e; count+=1; if (indices!=null) indices.foreach(_.add(e)) }
+  /*private*/ def putNoResize(key:K, value:V) { val h=hash(key); val b=indexFor(h,data.length); var e=data(b)
+    if (e!=null) do { if (h==e.hash && key==e.key) { e.value=value; return }; e=e.next } while(e!=null); createEntry(h, key, value, b)
+  }
+  // Minimal conventional Map interface
+  def size = count
+  def put(key:K, value:V) { 
+    var h=hash(key); var b=indexFor(h,data.length); var e=data(b)
+    if (e!=null) do { if (h==e.hash && key==e.key) { e.value=value; return; }; e=e.next } while(e!=null)
+    if ((size >= threshold) && (data(b)!=null)) { resize(2*data.length); h=hash(key); b=indexFor(h,data.length) }; createEntry(h,key,value,b);
+  }
+  def remove(key:K):V = { val h=hash(key); val b=indexFor(h,data.length); var e=data(b); var prev=e
+    if (e!=null) do { val next=e.next;
+      if (h==e.hash && key==e.key) { if (prev==e) data(b)=next; else prev.next=next; count-=1; if (indices!=null) indices.foreach(_.del(e)); return e.value }
+      prev=e; e=next;
+    } while (e!=null); null.asInstanceOf[V]
+  }
+  // M3Map interface
+  def get(key:K):V = { val e=find(key); if (e==null) zero else e.value }
+  def set(key:K, value:V) { if (skipZero && value==zero) remove(key); else put(key,value); }
+  def add(key:K, value:V) { if (skipZero && value==zero) return; val e=find(key);
+    if (e==null) put(key,value); else { e.value=plus(e.value,value); if (skipZero && e.value==zero) remove(key); }
+  }
+  def slice[T](index:Int, subKey:T):M3Map[K,V] = new Slice(indices(index).slice(subKey));
+  def sum(acc:M3Map[K,V]) { var b=0; do { var e=data(b); if (e!=null) do { acc.add(e.key,e.value); e=e.next } while(e!=null); b+=1 } while(b<data.size) }
+  def clear { var b=0; do { data(b)=null; b+=1 } while(b<data.length); if (indices!=null) indices.foreach(_.clear); count=0 }
+  def foreach(f:(K,V)=>Unit) { var b=0; do { var e=data(b); if (e!=null) do { f(e.key,e.value); e=e.next } while(e!=null); b+=1 } while(b<data.size) }
+  override def toString = { val sb=new StringBuilder; val ls=new Array[Entry[K,V]](count); var b=0; var i=0;
+    do { var e=data(b); if (e!=null) do { ls(i)=e; i+=1; e=e.next } while(e!=null); b+=1 } while(b<data.size)
+    ls.sorted.foreach(e=>sb.append(e.key.toString+" -> "+e.value.toString+"\n")); sb.setLength(sb.length-1); sb.toString
+  }
+
+  // Serialization IGNORE INDICES as the main purpose is only to transfer efficiently
+  // A more efficient serialization should however be adopted:
+  // - http://code.google.com/p/fast-serialization/
+  // - http://code.google.com/p/kryo/
+  private final val serialVersionUID = 631812653624988207L
+  private def writeObject(s:java.io.ObjectOutputStream) { s.defaultWriteObject(); s.writeInt(count);
+    if (count>0) { var b=0; do { var e=data(b); if (e!=null) do { s.writeObject(e.key); s.writeObject(e.value); e=e.next } while(e!=null); b+=1 } while(b<data.size) }
+  }
+  private def readObject(s:java.io.ObjectInputStream) {
+    s.defaultReadObject(); val n=s.readInt();
+    val initialCapacity = Math.min((n * Math.min(1 / LOAD_FACTOR, 4.0f)).toInt, MAXIMUM_CAPACITY);
+    var capacity=1; while (capacity<initialCapacity) capacity <<= 1
+    data = new Array[Entry[K,V]](capacity); threshold=Math.min((capacity * LOAD_FACTOR).toInt, MAXIMUM_CAPACITY + 1);
+    var i=0; if (i<n) do { val key=s.readObject.asInstanceOf[K]; val value=s.readObject.asInstanceOf[V]; putNoResize(key, value); i+=1 } while(i<n);
+  }
+  override def clone = {
+    val res=new M3MapBase[K,V](zero,skipZero,indices.map(i=>i.proj))
+    res.data=new Array[Entry[K,V]](data.length); res.threshold=threshold; // fast insertion
+    var b=0; do { var e=data(b); if (e!=null) do { res.putNoResize(e.key,e.value); e=e.next } while(e!=null); b+=1 } while(b<data.size)
+    res
+  }
+
+  // A slice behaves mostly like the original map but only on 1 of its partition.
+  class Slice(val data:Set[Entry[K,V]]) extends M3Map[K,V] {
+    // Faked operations (to be better implemented)
+    def set(key:K, value:V) = M3MapBase.this.set(key,value)
+    def add(key:K, value:V) = M3MapBase.this.add(key,value)
+    def slice[T](index:Int, subKey:T):M3Map[K,V] = this
+    // Slice-specific operations
+    def get(key:K):V = { var e=find(key); if (e!=null && data.contains(e)) e.value else null.asInstanceOf[V] }
+    def size = data.size
+    def clear { data.foreach(e=>remove(e.key)) }
+    def foreach(f:(K,V)=>Unit) { data.foreach(e=>f.apply(e.key,e.value)) }
+    def sum(acc:M3Map[K,V]) { data.foreach(e=>acc.add(e.key,e.value)) }
+  }
+
+  // Secondary index storage for slicing. Matching elements are stored in a Hash or a Tree.
+  class Index[P](val proj:K=>P) {
+    def add(e:Entry[K,V]) {}
+    def del(e:Entry[K,V]) {}
+    def clear() {}
+    def slice[P](part:P):Set[Entry[K,V]] = null
+  }
+  /*
+  class Index<P> {
+    private final Function1<K,P> proj;        // 1st level (might map all at the same place)
+    private final Comparator<Entry<K,V>> cmp; // 2nd level (hash or tree structure)
+    private HashMap<P,Set<Entry<K,V>>> data;
+    Index(Function1<K,P> projection) { this(projection,null); }
+    Index(Function1<K,P> projection, Comparator<K> comparator) { proj=projection;
+      final Comparator<K> c = comparator!=null ? comparator : ((projection instanceof Comparator<?>) ? (Comparator<K>)projection : null);
+      cmp = c==null ? null : new Comparator<Entry<K,V>>() { public int compare(Entry<K,V> e1, Entry<K,V> e2) { return c.compare(e1.key,e2.key); } };
+      data = new HashMap<P,Set<Entry<K,V>>>();
+    }
+    void add(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s==null) s=new TreeSet<Entry<K,V>>(cmp); s.add(e); }
+    void del(Entry<K,V> e) {
+      P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); s.remove(e);
+      if (s.size()==0) data.remove(p);
+    }
+    Set<Entry<K,V>> slice(Object part) { Set<Entry<K,V>> s=data.get((P)part); if (s==null) s=new HashSet<Entry<K,V>>(); return s; }
+    Set<Entry<K,V>> slice(Object part, K low, K high, boolean lowIn, boolean highIn) { // assert(cmp!=null);
+      TreeSet<Entry<K,V>> s=(TreeSet<Entry<K,V>>)data.get((P)part); Entry<K,V> l = new Entry<>(0,low,zero,null); Entry<K,V> h = new Entry<>(0,high,zero,null);
+      if (s==null) s=new TreeSet<Entry<K,V>>(); return s.subSet(l, lowIn, h, highIn);
+    }
+  }
+*/
+}
+
