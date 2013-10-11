@@ -14,6 +14,7 @@ import scala.Function2;
  * - Secondary indices are more efficiently maintained by a HashTree than a HashSet
  * - Fully key+value specialized Scala allows us to gain about 8% over non-specialized
  *   but Scala performs worse than Java when non-specialized (+7% set, +23% add).
+ * - Specializing the interface functions (add/set) does not improve performance.
  *
  * Implementation notes:
  * - Partial support for range indices is included in the implementation.
@@ -124,6 +125,11 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   public void sum(M3Map<K,V> acc) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) acc.add(e.key,e.value); }
   public void clear() { for (int i=0;i<data.length;++i) data[i]=null; size=0; if (indices!=null) for(Index<?> i:indices) { i.clear(); } }
   public void foreach(Function2<K,V,scala.runtime.BoxedUnit> f) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) { f.apply(e.key,e.value); } }
+  public scala.collection.immutable.Map<K,V> toMap() {
+    scala.collection.immutable.HashMap<K,V> m = new scala.collection.immutable.HashMap<K,V>();
+    for(Entry<K,V> e:data) for(;e!=null;e=e.next) { m=m.$plus(new scala.Tuple2<K,V>(e.key,e.value)); }
+    return m;
+  }
 
   public String toString() {
     StringBuilder sb=new StringBuilder();
@@ -172,6 +178,10 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     public void clear() { for(Entry<K,V> e : data) M3MapBase.this.remove(e.key); }
     public void foreach(Function2<K,V,scala.runtime.BoxedUnit> f) { for(Entry<K,V> e : data) f.apply(e.key,e.value); }
     public void sum(M3Map<K,V> acc) { for(Entry<K,V> e : data) acc.add(e.key,e.value); }
+    public scala.collection.immutable.Map<K,V> toMap() {
+      scala.collection.immutable.HashMap<K,V> m = new scala.collection.immutable.HashMap<K,V>();
+      for(Entry<K,V> e:data) m=m.$plus(new scala.Tuple2<K,V>(e.key,e.value)); return m;
+    }
   }
 
   // Secondary index storage for slicing. Matching elements are stored in a Hash or a Tree.

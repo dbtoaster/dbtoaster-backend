@@ -74,7 +74,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"; ctx.load(cur)
           val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"; ctx.load(cur)
           ctx.add(a.agg.toMap)
-          "val "+a0+" = K3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+
+          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+
           a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
             (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
       }
@@ -88,7 +88,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
-          val s1 = "val "+a0+" = K3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=> { a0+".add("+tup(aks.map(_._1))+","+v+");\n" },tmp);
+          val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=> { a0+".add("+tup(aks.map(_._1))+","+v+");\n" },tmp);
           ctx.load(cur); val ma=MapRef(a0,e.tp,aks.map(_._1)); ma.tks=aks.map(_._2); s1+cpsExpr(ma,co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
@@ -128,8 +128,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     else {
       val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())
-      val ix = if (s.size==0) "" else "List("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+")"
-      "val "+m.name+" = K3Map.make["+tk+","+m.tp.toScala+"]("+ix+");"
+      "val "+m.name+" = M3Map.make["+tk+","+m.tp.toScala+"]("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+");"
     }
   }
 

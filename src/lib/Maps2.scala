@@ -16,8 +16,9 @@ trait M3Map[K,V] {
   def foreach(f:(K,V)=>Unit); // iterates through all non-zero values of the map
   def slice[T](index:Int,subKey:T):M3Map[K,V]; // partition where the secondary index is equal to subKey
   def sum(acc:M3Map[K,V]);    // accumulate in acc: acc <- element_wise_sum(this,acc)
-  def clear;                  // erases all elements of the map or slice
+  def clear();                // erases all elements of the map or slice
   def size:Int;               // number of key-value mappings in the map
+  def toMap:Map[K,V];         // convert to a Scala map
 }
 
 /**
@@ -42,12 +43,6 @@ object M3Map {
     case n => sys.error("No zero for "+n)
   }).asInstanceOf[V]
   // Convert a map into XML (for debug purposes)
-  private val ft = new java.text.SimpleDateFormat("yyyyMMdd")
-  private def str(v:Any) = v match {
-    case p:Product => "("+(0 until p.productArity).map{x=>p.productElement(x)}.mkString(",")+")"
-    case d:java.util.Date => ft.format(d)
-    case x => x.toString
-  }
   def toXML[K,V](m:Map[K,V]): List[xml.Elem] = {
     var l = List[xml.Elem]()
     m.foreach{case (k,v) =>
@@ -59,5 +54,11 @@ object M3Map {
       l = <item>{ key }<__av>{ str(v) }</__av></item> :: l
     }
     l.sortBy(_.toString)
+  }
+  private val ft = new java.text.SimpleDateFormat("yyyyMMdd")
+  private def str(v:Any) = v match {
+    case p:Product => "("+(0 until p.productArity).map{x=>p.productElement(x)}.mkString(",")+")"
+    case d:java.util.Date => ft.format(d)
+    case x => x.toString
   }
 }

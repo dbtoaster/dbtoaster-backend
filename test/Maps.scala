@@ -14,21 +14,51 @@ case class Key(_1:Long, _2:Double) extends Ordered[Key] {
 object MapsPerf /*extends FunSpec*/ {
   import scala.collection.JavaConversions._
   val N = 1000000; // insertions
-  //val K = 1000; // foreach mapping
   val S = 25; // number of samples
   
-  val mj = new java.util.HashMap[Key,Long]()
-  val mm = M3Map.make[Key,Long]((k:Key)=>k._1,(k:Key)=>k._2)
-  val mm0 = M3Map.make[Key,Long]()
-  val mk = K3Map.make[Key,Long](List[Key=>_]((k:Key)=>k._1,(k:Key)=>k._2));
-  val m1 = new K3Map1[Key,Long](0L,List(new K3Index1[Long,Key]((k:Key)=>k._1),new K3Index1[Double,Key]((k:Key)=>k._2)));
-  val m2 = new K3Map2[Long,Double,Long](0L)
-  val mt = K3Map.temp[Key,Long]()
-  val ms = new M3MapMin()
-
   def t = System.nanoTime()
   def time(n:String, t0:Array[Long], t1:Array[Long]) { val ts=(t0 zip t1).map(x=>x._2-x._1); val us:Long=ts.sorted.apply(ts.size/2)/1000; printf("   %s:%4d.%03d",n,us/1000,us%1000); }
   def main(args:Array[String]) {
+    checks();
+    bench();
+  }
+  
+  def checks() {
+    val mm = M3Map.make[Key,Long]((k:Key)=>k._1,(k:Key)=>k._2)
+    mm.set(Key(3L,4.0),8L); assert(mm.get(Key(3L,4.0))==8L)
+    mm.set(Key(7L,2.0),5L); assert(mm.get(Key(7L,2.0))==5L)
+    var a=0L;
+    a=0; mm.foreach((k,v)=>a+=v); assert(a==13);
+    a=0; mm.slice(0,3L).foreach((k,v)=>a+=v); assert(a==8L);
+    a=0; mm.slice(1,2.0).foreach((k,v)=>a+=v); assert(a==5L);
+    assert(mm.size==2); mm.clear; assert(mm.size==0)
+    for (i <- 0 until 5; j <- 0 until 5) yield { mm.add(Key(i,j),1); mm.add(Key(j,i),-1) }; assert(mm.size==0)
+    for (i <- 0 until 5; j <- 0 until 5) yield { mm.add(Key(i,j),1); mm.add(Key(j,i),1) }; assert(mm.size==25)
+    a=0; mm.foreach((k,v)=>a+=v); assert(a==50);
+    val m2=M3Map.make[Key,Long](); mm.sum(m2); assert(m2.size==25)
+    a=0; m2.foreach((k,v)=>a+=v); assert(a==50);
+    // Serialization and conversion
+    import java.io._
+	val os = new PipedOutputStream();
+    val is = new BufferedInputStream(new PipedInputStream(os));
+    val oos = new ObjectOutputStream(os);
+    val ois = new ObjectInputStream(is);
+    oos.writeObject(mm);
+    val m3=ois.readObject().asInstanceOf[M3Map[Key,Long]]
+    assert(m3.toMap==mm.toMap)
+  }
+
+  def bench() {
+    val mj = new java.util.HashMap[Key,Long]()
+    val mm = M3Map.make[Key,Long]((k:Key)=>k._1,(k:Key)=>k._2)
+    val mm0 = M3Map.make[Key,Long]()
+    val mk = K3Map.make[Key,Long](List[Key=>_]((k:Key)=>k._1,(k:Key)=>k._2));
+
+    val m1 = new K3Map1[Key,Long](0L,List(new K3Index1[Long,Key]((k:Key)=>k._1),new K3Index1[Double,Key]((k:Key)=>k._2)));
+    val m2 = new K3Map2[Long,Double,Long](0L)
+    val mt = K3Map.temp[Key,Long]()
+    val ms = new M3MapMin()
+
     var s=0; var i=0; var j=0; var a0:Long=0; var a1:Long=0;
     val t0 = new Array[Long](_length=S)
     val t1 = new Array[Long](_length=S)
@@ -72,16 +102,42 @@ object MapsPerf /*extends FunSpec*/ {
     s=0; do { t0(s)=t; i=0; a0=0; ms.foreach((k,v)=>a0+=v.toLong); t1(s)=t; s+=1 } while(s<S); time("Acc",t0,t1);
     ms.clear; System.gc; println
   }
-  /*
-    val m = sMap(K3Map.makeIdx[(Long,Long),Long](List(0,1)))
-    val m2 = sColl(new K3Map2[Long,Long,Long](0))
-    val m2first = sColl(new K3Map2[Long,Long,Long](0),List(0,0))
-    val m1 = sColl(new K3Map1[(Long,Long),Long](0,List(
-                   K3Index1((x:(Long,Long))=>{x._1}) , K3Index1((x:(Long,Long))=>{x._2}) )))
-  */
 }
 
 // -----------------------------------------------------------------------------
+
+/*
+Possible way towards Java specialization:
+abstract class M3E<K,V> {
+  protected int hash;
+  abstract public K key();
+  abstract public V value();
+  M3E<K,V> next;
+}
+
+class M3EII extends M3E<Integer,Integer> {
+  public Integer key() { return 0; }
+  public Integer value() { return 0; }
+  M3EII next;
+}
+
+@SuppressWarnings("unchecked")
+abstract class M3T<K,V,E extends M3E> {
+  E[] data;
+  M3T(Class<E> cls) {
+    data = (E[])java.lang.reflect.Array.newInstance(cls,5);
+    for (int i=0;i<5;++i) data[i]=e();
+    System.out.println(data[2].key());
+  }
+  abstract E e();
+}
+
+class M3TII extends M3T<Integer,Integer,M3EII> {
+  M3TII() { super(M3EII.class); }
+  M3EII e() { return new M3EII(); }
+}
+*/
+
 
 // Scala specialized
 abstract class M3Entry[K,@specialized(Long,Double) V] {
