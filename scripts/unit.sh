@@ -105,7 +105,9 @@ do_live() {
     | sed 's/\[info\] //g' | grep -vEe '(-+ test/queries|Query .* generated|- .* correct|Dataset )' \
     | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
     | scripts/pushover.sh \
-    | mail -s "$subj" $dest;
+    | sed -e 's/\[error\]/\[<div color="red">error<\/div>\]/g'
+    | sed -e 's/\[success\]/\[<div color="green">success<\/div>\]/g'
+    | mail -a "Content-type: text/html" -s "$subj" $dest;
 }
 
 printf "Setup..."; do_setup; echo ' done.';
