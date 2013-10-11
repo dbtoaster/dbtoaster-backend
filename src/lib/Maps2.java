@@ -200,7 +200,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     void del(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s!=null) { s.remove(e); if (s.size()==0) data.remove(s); } }
     Set<Entry<K,V>> slice(Object part) { Set<Entry<K,V>> s=data.get((P)part); if (s==null) s=new HashSet<Entry<K,V>>(); return s; }
     Set<Entry<K,V>> slice(Object part, K low, K high, boolean lowIn, boolean highIn) { // assert(cmp!=null);
-      TreeSet<Entry<K,V>> s=(TreeSet<Entry<K,V>>)data.get((P)part); Entry<K,V> l = new Entry<>(0,low,zero,null); Entry<K,V> h = new Entry<>(0,high,zero,null);
+      TreeSet<Entry<K,V>> s=(TreeSet<Entry<K,V>>)data.get((P)part); Entry<K,V> l = new Entry<K,V>(0,low,zero,null); Entry<K,V> h = new Entry<K,V>(0,high,zero,null);
       if (s==null) s=new TreeSet<Entry<K,V>>(); return s.subSet(l,lowIn,h,highIn);
     }
   }
