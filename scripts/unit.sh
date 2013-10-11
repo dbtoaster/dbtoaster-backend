@@ -104,7 +104,7 @@ do_live() {
   ) | tee /dev/stderr | perl -p -e 's/\x1B\[([0-9]+m|2K.*\n)//g' \
     | sed 's/\[info\] //g' | grep -vEe '(-+ test/queries|Query .* generated|- .* correct|Dataset )' \
     | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
-    | scripts/pushover.sh
+    | scripts/pushover.sh \
     | mail -s "$subj" $dest;
 }
 
