@@ -96,25 +96,20 @@ do_live() {
   cat<<EOF
 From: ddbt-ci@end-of-transmission.org
 Subject: `date "+DDBT build %Y-%m-%d %H:%M:%S"`
-Content-type: text/plain
+Content-type: text/html
 
 EOF
   (
-    echo "Subject: Build"; 
-    echo "Content-type: text/html";
-
-    (
-      echo 'Front-end latest commit:'; cd $REPO; svn info | grep Last | sed 's/^/   /g'; sep;
-      echo 'DDBToaster latest commit:'; cd $BASE; git log -1 | sed 's/^/   /g'; sep;
-      do_exec
-    ) | tee /dev/stderr | perl -p -e 's/(\x1B\[[0-9]+m|\x1BM\x1B\[2K.*\n)//g' \
-      | sed 's/\[info\] //g' | grep -vEe '(-+ test/queries|Query .* generated|- .* correct|Dataset )' \
-      | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
-      | grep -vEe '^(Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |$)' \
-      | scripts/pushover.sh \
-      | sed -e 's/\[error\]/\[<div color="red">error<\/div>\]/g' \
-      | sed -e 's/\[success\]/\[<div color="green">success<\/div>\]/g' \
-    )
+    echo 'Front-end latest commit:'; cd $REPO; svn info | grep Last | sed 's/^/   /g'; sep;
+    echo 'DDBToaster latest commit:'; cd $BASE; git log -1 | sed 's/^/   /g'; sep;
+    do_exec
+  ) | tee /dev/stderr | perl -p -e 's/(\x1B\[[0-9]+m|\x1BM\x1B\[2K.*\n)//g' \
+    | sed 's/\[info\] //g' | grep -vEe '(-+ test/queries|Query .* generated|- .* correct|Dataset )' \
+    | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
+    | grep -vEe '^(Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |$)' \
+    | scripts/pushover.sh \
+    | sed -e 's/\[error\]/\[<div color="red">error<\/div>\]/g' \
+    | sed -e 's/\[success\]/\[<div color="green">success<\/div>\]/g' \
   ) | sendmail thierry.coppey@epfl.ch andres.notzli@epfl.ch mohammad.dashti@epfl.ch;
 }
 
