@@ -1,4 +1,14 @@
 #!/bin/sh
+#
+# Continuous integration script that automate setup and periodic updates for
+# the unit tests. It also sends mails to developers when a build has finished.
+#
+# Options:
+#    -lms     enable unit tests for LMS code generator
+#    -akka    enable unit tests for Akka code generator
+#    -live    periodically poll repositories for new updates and send mail
+#             with the results of the compilation
+#
 
 cd `dirname $0`; cd ..;
 BASE=`pwd`
@@ -10,11 +20,14 @@ DIST="http://www.dbtoaster.org/dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz"
 lms=""
 akka=""
 live=""
+build=""
+args="scripts/unit.sh `echo $@ | sed 's/ *-build//g'` -build"
 
 while [ "$1" ]; do case "$1" in
   "-lms") lms=1;;
   "-akka") akka=1;;
   "-live") live=1;;
+  "-build") build=1;;
 esac; shift; done
 
 ###### SETUP DEFAULT SETTINGS
@@ -41,14 +54,16 @@ do_update() { # return "" if no update, nonempty otherwise
     cd $BASE; cd ..
     if [ ! -d "virtualization-lms-core" ]; then
       git clone https://github.com/TiarkRompf/virtualization-lms-core.git
-      cd virtualization-lms-core; git checkout booster-develop-0.3; cd ..
-    fi
-    cd virtualization-lms-core; r1=`git_vers`; git pull >/dev/null; r2=`git_vers`;
-    if [ "$r1" != "$r2" ]; then echo UP; sbt publish-local; fi; cd $BASE
+      cd virtualization-lms-core; git checkout booster-develop-0.3;
+      echo 'sbt.version=0.13.0' > project/build.properties; sbt publish-local;
+    else
+      cd virtualization-lms-core; r1=`git_vers`; git pull >/dev/null; r2=`git_vers`;
+      if [ "$r1" != "$r2" ]; then echo UP; sbt publish-local; fi
+    fi; cd $BASE
   fi
   # Front-end
   if [ "$REPO" ]; then
-    cd $REPO; r1=`svn_vers`; svn update >/dev/null; r2=`svn_vers`
+    cd $REPO/dbtoaster/compiler/alpha5; r1=`svn_vers`; svn update >/dev/null; r2=`svn_vers`
     if [ "$r1" != "$r2" ]; then echo UP; make clean; make; fi; cd $BASE
   fi
 }
@@ -66,7 +81,7 @@ do_exec() {
     if [ "$lms" ]; then ddbt_lms 1; sbt test; fi
   else
     # DBToaster developers
-    lms_bk=`lms_get`
+    lms_bk="`lms_get`"
     lms_set 0; sbt queries
     if [ "$lms" ]; then lms_set 1; sbt queries-lms; fi
     if [ "$akka" ]; then lms_set 0; sbt queries-akka; fi
@@ -74,25 +89,36 @@ do_exec() {
   fi
 }
 
-printf "Setup..."; do_setup; echo '';
-printf "Update..."; do_update; echo '';
-do_exec
+###### CONTINUOUS INTEGRATION
+do_live() {
+  subj=`date "+DDBT build %Y-%m-%d %H:%M:%S"`
+  dest="thierry.coppey@epfl.ch andres.notzli@epfl.ch"
+  (
+  echo Front-end latest commit:
+  cd $REPO; svn info | grep Last | sed 's/^/   /g'
+  echo -----------------------------------------------------------------
+  echo DDBToaster latest commit:
+  cd $BASE; git log -1 | sed 's/^/   /g'
+  echo -----------------------------------------------------------------
+  do_exec
+  ) | tee /dev/stderr | perl -p -e 's/\x1B\[([0-9]+m|2K.*\n)//g' \
+    | sed 's/\[info\] //g' | grep -vEe '(-+ test/queries|Query .* generated|- .* correct|Dataset )' \
+    | perl -p -e 'undef $/; $_=<>; s/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:)/\n\2/g;' \
+    | scripts/pushover.sh
+    | mail -s "$subj" $dest;
+}
 
+printf "Setup..."; do_setup; echo ' done.';
+
+if [ "$build" ]; then echo 'New build...'; do_live; fi
 if [ "$live" ]; then while true; do
   sleep 120;
   printf "Polling..."; updt=`do_update`
-  if [ "$updt" ]; then
-    echo ' updated. New build...';
-    subj=`date "+DDBT build %Y-%m-%d %H:%M:%S"`
-    dest="thierry.coppey@epfl.ch andres.noetzli@epfl.ch"
-    (
-    echo Front-end latest commit:
-    cd $REPO; svn info | grep Last | sed 's/^/   /g'
-    echo -----------------------------------------------------------------
-    echo DDBToaster latest commit:
-    cd $BASE; git log -1 | sed 's/^/   /g'
-    echo -----------------------------------------------------------------
-    do_exec
-    ) | tee /dev/stderr | ./scripts/pushover.sh | mail -s "$subj" $dest;
+  if [ "$updt" ]; then echo ' updated.';
+    cd $BASE; exec $args
+    #do_live
   else echo ' up to date.'; fi
-done; fi
+done; else
+  printf "Update..."; do_update; echo '';
+  do_exec
+fi

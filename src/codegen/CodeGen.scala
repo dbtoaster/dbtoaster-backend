@@ -16,20 +16,21 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
   // Stream sources definition
   def streams(sources:List[Source]) : String
 
-  // Stack of contexts abstraction
+  // Context abstractions
   case class Ctx[T](ctx0:Map[String,T]=Map()) extends Function1[String,T] {
-    private var stack = List[Map[String,T]]()
-    def push(ctx:Map[String,T]) { stack=ctx::stack }
-    def pop(ctx:Int=0) { while (stack.size>ctx) stack=stack.tail }
-    def cur:Int = stack.size
-
+    private var ctx = scala.collection.mutable.HashMap[String,T]()
+    def add(c:Map[String,T]) = c.foreach(x=>ctx.put(x._1,x._2))
+    def load(c:Map[String,T]=Map()) { ctx.clear; add(c) }
+    def save = ctx.toMap
     def contains(name:String):Boolean = apply(name)!=null
-    def apply(name:String):T = {
-      def g(s:List[Map[String,T]]):T = s match {
-        case ctx::xs => ctx.getOrElse(name,g(xs))
-        case Nil => ctx0.getOrElse(name,null.asInstanceOf[T])
-      }
-      g(stack)
-    }
+    def apply(name:String) = ctx.getOrElse(name,ctx0.getOrElse(name,null.asInstanceOf[T]))
+  }
+  case class CtxSet(ctx0:Set[String]=Set()) extends Function1[String,Boolean] {
+    private var ctx = scala.collection.mutable.HashSet[String]()
+    def add(c:Set[String]) { ctx = ctx ++ c }
+    def load(c:Set[String]=Set()) { ctx.clear; c.foreach{ ctx+=_ } }
+    def save = ctx.toSet
+    def contains(name:String) = apply(name)
+    def apply(name:String) = ctx.contains(name) || ctx0.contains(name)
   }
 }

@@ -155,7 +155,7 @@ object UnitTest {
       catch { case th:Throwable =>
         val err=th.getMessage+th.getStackTrace.map("\n   "+_).mkString; println("Compiling '"+t.sql+"' failed because:\n"+err);
         // Dummy failure to please front-end developers
-        val cls = clname(t.sql); write(dir,cls+".scala","package ddbt.test.gen\nimport org.scalatest._\n\nclass "+cls+"Spec extends FunSpec {\nit(\"Generating "+t.sql+"\") {\nfail(\"\"\""+err+"\"\"\")\n}\n}")
+        // val cls = clname(t.sql); write(dir,cls+"Fail.scala","package ddbt.test.gen\nimport org.scalatest._\n\nclass "+cls+"Fail extends FunSpec {\nit(\"Generating "+t.sql+"\") {\nfail(\"\"\""+err+"\"\"\")\n}\n}")
       }
     }
     println("Now run 'test-only ddbt.test.gen.*' to pass tests")
