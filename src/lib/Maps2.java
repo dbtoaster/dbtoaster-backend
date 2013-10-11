@@ -83,7 +83,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   }
   private void createEntry(int hash, K key, V value, int bucketIndex) {
     Entry<K,V> e = new Entry<K,V>(hash, key, value, data[bucketIndex]); data[bucketIndex]=e; ++size;
-    if (indices!=null) { for (Index<?> i : indices) i.add(e); }
+    if (indices!=null) { for (Index<?> i:indices) i.add(e); }
   }
   private void putNoResize(K key, V value) {
     int h=hash(key); int i=indexFor(h,data.length);
@@ -122,7 +122,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   }
   public M3Map<K,V> slice(int index, Object subKey) { return new Slice(indices[index].slice(subKey)); }
   public void sum(M3Map<K,V> acc) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) acc.add(e.key,e.value); }
-  public void clear() { for (int i=0;i<data.length;++i) data[i]=null; size=0; }
+  public void clear() { for (int i=0;i<data.length;++i) data[i]=null; size=0; if (indices!=null) for(Index<?> i:indices) { i.clear(); } }
   public void foreach(Function2<K,V,scala.runtime.BoxedUnit> f) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) { f.apply(e.key,e.value); } }
 
   public String toString() {
@@ -185,8 +185,9 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
       cmp = c==null ? null : new Comparator<Entry<K,V>>() { public int compare(Entry<K,V> e1, Entry<K,V> e2) { return c.compare(e1.key,e2.key); } };
       data = new HashMap<P,Set<Entry<K,V>>>();
     }
-    void add(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s==null) s=new TreeSet<Entry<K,V>>(cmp); s.add(e); }
-    void del(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); s.remove(e); if (s.size()==0) data.remove(p); }
+    void clear() { data.clear(); }
+    void add(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s==null) { s=(cmp!=null)?new TreeSet<Entry<K,V>>(cmp):new HashSet<Entry<K,V>>(); data.put(p,s); } s.add(e); }
+    void del(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s!=null) { s.remove(e); if (s.size()==0) data.remove(s); } }
     Set<Entry<K,V>> slice(Object part) { Set<Entry<K,V>> s=data.get((P)part); if (s==null) s=new HashSet<Entry<K,V>>(); return s; }
     Set<Entry<K,V>> slice(Object part, K low, K high, boolean lowIn, boolean highIn) { // assert(cmp!=null);
       TreeSet<Entry<K,V>> s=(TreeSet<Entry<K,V>>)data.get((P)part); Entry<K,V> l = new Entry<>(0,low,zero,null); Entry<K,V> h = new Entry<>(0,high,zero,null);
