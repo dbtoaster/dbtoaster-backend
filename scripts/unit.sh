@@ -93,6 +93,6 @@ if [ "$live" ]; then while true; do
     cd $BASE; git log -1 | sed 's/^/   /g'
     echo -----------------------------------------------------------------
     do_exec
-    ) | tee /dev/stderr | mail -s "$subj" $dest;
+    ) | tee /dev/stderr | ./scripts/pushover.sh | mail -s "$subj" $dest;
   else echo ' up to date.'; fi
 done; fi
