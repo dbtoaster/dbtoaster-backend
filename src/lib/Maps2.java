@@ -78,7 +78,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   }
   private void resize(int newCapacity) { if (data.length==MAXIMUM_CAPACITY) { threshold=Integer.MAX_VALUE; return; }
     Entry[] newData=new Entry[newCapacity]; Entry<K,V> next=null;
-    for (Entry<K,V> e:data) if (e!=null) do { next=e.next; int b=indexFor(e.hash, newCapacity); e.next=newData[b]; newData[b]=e; e=next; } while((e=next)!=null);
+    for (Entry<K,V> e:data) if (e!=null) do { next=e.next; int b=indexFor(e.hash, newCapacity); e.next=newData[b]; newData[b]=e; } while((e=next)!=null);
     data=newData; threshold=(int)Math.min(newCapacity * LOAD_FACTOR, MAXIMUM_CAPACITY + 1);
   }
   private void createEntry(int hash, K key, V value, int bucketIndex) {
@@ -96,7 +96,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   public void put(K key, V value) {
     int h = hash(key); int b = indexFor(h, data.length);
     for(Entry<K,V> e=data[b];e!=null;e=e.next) if (h==e.hash && key.equals(e.key)) { e.value=value; return; }
-    if ((size >= threshold) && (data[b]!=null)) { resize(2*data.length); h=hash(key); b=indexFor(h,data.length); }
+    if ((size >= threshold) && (data[b]!=null)) { resize(2*data.length); b=indexFor(h,data.length); }
     createEntry(h,key,value,b);
   }
   public V remove(K key) {
@@ -186,7 +186,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
       data = new HashMap<P,Set<Entry<K,V>>>();
     }
     void clear() { data.clear(); }
-    void add(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s==null) { s=(cmp!=null)?new TreeSet<Entry<K,V>>(cmp):new HashSet<Entry<K,V>>(); data.put(p,s); } s.add(e); }
+    void add(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s==null) { s=(cmp!=null)?new TreeSet<Entry<K,V>>(cmp):new /*HashSet<Entry<K,V>>*/ HESet<K,V>(); data.put(p,s); } s.add(e); }
     void del(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s!=null) { s.remove(e); if (s.size()==0) data.remove(s); } }
     Set<Entry<K,V>> slice(Object part) { Set<Entry<K,V>> s=data.get((P)part); if (s==null) s=new HashSet<Entry<K,V>>(); return s; }
     Set<Entry<K,V>> slice(Object part, K low, K high, boolean lowIn, boolean highIn) { // assert(cmp!=null);
@@ -194,5 +194,52 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
       if (s==null) s=new TreeSet<Entry<K,V>>(); return s.subSet(l,lowIn,h,highIn);
     }
   }
-}
 
+  // Lightweight specialized HashSet<Entry<K,E>>, that reuses data structures from the enclosing M3MapBase
+  static class HEntry<K,V> { Entry<K,V> e; HEntry<K,V> next; HEntry(Entry<K,V> e, HEntry<K,V> next) { this.e=e; this.next=next; } }
+  static class HESet<K,V> extends AbstractSet<Entry<K,V>> implements Set<Entry<K,V>> {
+    private static final int INITIAL_CAPACITY = 1024;
+    private transient HEntry<K,V>[] data;
+    private transient int size;
+    private transient int threshold;
+    public HESet() { threshold=(int)(INITIAL_CAPACITY * LOAD_FACTOR); data=new HEntry[INITIAL_CAPACITY]; }
+    private final HEntry<K,V> find(Entry<K,V> key) {
+      int h=hash(key); int b=indexFor(h,data.length); HEntry<K,V> he=data[b];
+      if (he!=null) do { if (h==he.e.hash && key.equals(he.e.key)) return he; } while ((he=he.next)!=null); return null;
+    }
+    private void createEntry(Entry<K,V> e, int bucket) { data[bucket]=new HEntry<K,V>(e,data[bucket]); ++size; }
+    private void resize(int newCapacity) { if (data.length==MAXIMUM_CAPACITY) { threshold=Integer.MAX_VALUE; return; }
+      HEntry[] newData=new HEntry[newCapacity]; HEntry<K,V> next=null;
+      for (HEntry<K,V> he:data) if (he!=null) do { next=he.next; int b=indexFor(he.e.hash, newCapacity); he.next=newData[b]; newData[b]=he; } while((he=next)!=null);
+      data=newData; threshold=(int)Math.min(newCapacity * LOAD_FACTOR, MAXIMUM_CAPACITY + 1);
+    }
+
+    // Set methods
+    public int size() { return size; }
+    public boolean isEmpty() { return size==0; }
+    public void clear() { for (int i=0;i<data.length;++i) data[i]=null; size=0; }
+    public boolean contains(Object o) { return find((Entry<K,V>)o)!=null; }
+    
+    // Iterator
+    public Iterator<Entry<K,V>> iterator() { return new HIterator(); }
+    public boolean add(Entry<K,V> e) { int h=e.hash; int b=indexFor(h, data.length);
+      for(HEntry<K,V> eh=data[b];eh!=null;eh=eh.next) if (h==eh.e.hash && e.key.equals(eh.e.key)) return false;
+      if ((size >= threshold) && (data[b]!=null)) { resize(2*data.length); b=indexFor(h,data.length); }
+      createEntry(e,b); return true;
+    }
+    public boolean remove(Object o) {
+      Entry<K,V> e = (Entry<K,V>)o;
+      int h=hash(e.key); int b=indexFor(h, data.length); HEntry<K,V> prev=data[b],he=prev;
+      while (he!=null) { HEntry<K,V> next=he.next; if (h==he.e.hash && e.key.equals(he.e.key)) { if (prev==he) data[b]=next; else prev.next=next; size--; return true; } prev=he; he=next; }
+      return false;
+    }
+    private final class HIterator implements Iterator<Entry<K,V>> {
+      private int bucket=0;
+      private HEntry<K,V> cur=null,next=null;
+      HIterator() { while (bucket<data.length && (next=data[bucket])==null) ++bucket; }
+      public final boolean hasNext() { return next!=null; }
+      public void remove() { HESet.this.remove(cur.e); }
+      public Entry<K,V> next() { cur=next; if (cur.next!=null) next=cur.next; else { next=null; ++bucket; while (bucket<data.length && (next=data[bucket])==null) ++bucket; } return cur.e; }
+    }
+  }
+}
