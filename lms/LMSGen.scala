@@ -182,8 +182,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
   }
 
-  override def printK3VarGetMethod = ""
-
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
   override def apply(s0:System):String = {

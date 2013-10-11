@@ -51,7 +51,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
       else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-      if (ki.size==0) co(n+".get("+tup(ks)+")") // all keys are bound
+      if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks)+")" else "")) // all keys are bound
       else { val (k0,v0)=(fresh("k"),fresh("v"))
         val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
         ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
@@ -95,13 +95,16 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   }
 
   def genStmt(s:Stmt):String = s match {
-    case StmtMap(m,e,op,oi) => val fop=op match { case OpAdd => "add" case OpSet => "set" }
+    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("set","=") }
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
       val init = oi match {
-        case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>"if ("+m.name+".get("+(if (m.keys.size==0) "" else tup(m.keys))+")==0) "+m.name+".set("+(if (m.keys.size==0) "" else tup(m.keys)+",")+i+");")+"\n"
+        case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>
+          if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i
+          else "if ("+m.name+".get("+tup(m.keys)+")==0) "+m.name+".set("+tup(m.keys)+","+i+")"
+        )+";\n"
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+"."+fop+"("+(if (m.keys.size==0) "" else tup(m.keys)+",")+v+");")+"\n"
+      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+tup(m.keys)+","+v+")")+";")+"\n"
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -124,7 +127,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   }
 
   def genMap(m:MapDef):String = {
-    if (m.keys.size==0) "val "+m.name+" = new K3Var["+m.tp.toScala+"]();"
+    if (m.keys.size==0) "var "+m.name+":"+m.tp.toScala+" = "+(m.tp match { case TypeLong=>"0L" case TypeDouble=>"0.0" case TypeString=>"\"\"" case TypeDate=>"new Date(0)" })
     else {
       val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())
@@ -149,8 +152,6 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     (str,ld0,gc)
   }
 
-  def printK3VarGetMethod = ".get()"
-
   def apply(s0:System):String = {
     val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
     val ms = s0.maps.map(genMap).mkString("\n") // maps
@@ -163,7 +164,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     "var t0:Long = 0\n"+
     "def receive = {\n"+ind(str+
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
-      "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! (time,List[Any]("+s0.queries.map{q=>q.name+(if (s0.mapType(q.map.name)._1.size>0) ".toMap" else printK3VarGetMethod)}.mkString(",")+"))"
+      "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! (time,List[Any]("+s0.queries.map{q=>q.name+(if (s0.mapType(q.map.name)._1.size>0) ".toMap" else "")}.mkString(",")+"))"
     )+"\n}\n"+gc+ts+ld)+"\n}\n"
   }
 
