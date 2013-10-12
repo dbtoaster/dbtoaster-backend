@@ -59,7 +59,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";"}.mkString("\n")+"\n"+co(v0))+"\n}\n" // bind free variables from retrieved key
       }
     case Lift(n,e) =>
-      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("("+n+" == "+v+")"),am)
+      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
       else { ctx.add(Map((n,ex.tp))); cpsExpr(e,(v:String)=> if (n.matches("^lift[0-9]+$")) "val "+n+" = "+v+";\n"+co("1L") else ";{\n"+ind("val "+n+" = "+v+";\n"+co("1L"))+"\n};\n",am) }
     case Mul(el,er) => cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"),am),am)
     case a@Add(el,er) =>

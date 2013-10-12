@@ -53,11 +53,11 @@ addCommandAlias("check", ";run-main ddbt.UnitTest ")
 
 addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark ")
 
-addCommandAlias("queries", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del;test-only ddbt.test.gen.*")
+addCommandAlias("queries", ";run-main ddbt.UnitTest -dd;test-only ddbt.test.gen.*")
 
-addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del -mlms;test-only ddbt.test.gen.*")
+addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dd -mlms;test-only ddbt.test.gen.*")
 
-addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dtiny -dtiny_del -dstandard -dstandard_del -makka;test-only ddbt.test.gen.*")
+addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -makka;test-only ddbt.test.gen.*")
 
 addCommandAlias("bench-all", ";test:run-main ddbt.test.Benchmark -mscala -mlms -mlscala -mllms -csv -dstandard")
 
