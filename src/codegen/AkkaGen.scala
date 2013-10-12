@@ -88,7 +88,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case MapRef(n,tp,ks) if local(n) => inuse.add(ks.toSet); super.cpsExpr(ex,co)
     case Lift(n,e) =>
       if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("("+n+" == "+v+")"),am)
-      else { ctx.add(Map((n,ex.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1")) }
+      else { ctx.add(Map((n,ex.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
     case MapRef(n,tp,ks) if local(n) || ks.size==0 => super.cpsExpr(ex,co,am)
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       // XXX: use CPS@execution
@@ -183,17 +183,18 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   override def genStmt(s:Stmt) = s match {
     case StmtMap(m,e,op,oi) => val r=ref(m.name); val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("set","=") }
       def rd(ex:Expr):List[String] = ex.collect{ case MapRef(n,t,ks)=>Set(ref(n)) }.toList
-      def set():String = if (m.keys.size>0) { cl(2); "pre(-1,Array("+r+"),(u:Unit)=> {\nclear("+r+");\nbarrier((u:Unit)=> {\n" } else ""
-      def mop(o:String,v:String) = if (m.keys.size==0) m.name+" "+sop+" "+v+";" else fop+"("+r+","+tup(m.keys)+","+v+");"
-      // preparation (synchronization) for map operation
-      val pre=op match { case OpAdd => cl(1); "pre("+r+",Array[MapRef]("+rd(e).mkString(",")+"),(u:Unit)=> {\n" case OpSet => set() }
+      def pre(o:OpMap,e:Expr) = o match { // preparation (synchronization) for map operation
+        case OpSet if m.keys.size>0 => cl(2); "pre(-1,Array("+r+"),(u:Unit)=> {\nclear("+r+");\nbarrier((u:Unit)=> {\n"
+        case _ => cl(1); "pre("+r+",Array[MapRef]("+rd(e).mkString(",")+"),(u:Unit)=> {\n"
+      }
+      def mop(o:String,v:String) = o+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+","+v+");"
       val init = oi match { case None => "" case Some(ie) => inuse.load(m.keys.toSet); cl(3)
         "pre(-1,Array("+(r::rd(ie)).mkString(",")+"),(u:Unit)=>\n"+
         "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+", (z:"+m.tp.toScala+") => if (z==0) {\n"+ind(cpsExpr(ie,(v:String)=>mop("set",v)))+"\n}"+
         "barrier((u:Unit)=> {\n"
-      }
+      }      
       inuse.load(m.keys.toSet)
-      pre+init+cpsExpr(e,(v:String)=>mop(fop,v))+"\n"
+      init+pre(op,e)+cpsExpr(e,(v:String)=>mop(fop,v))+"\n"
     case _ => sys.error("Unimplemented")
   }
 
@@ -205,7 +206,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs,"deq ")
     }
     clctr=0; ctx = Ctx(as.toMap)
-    val res = "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = {\n"+ind(t.stmts.map(genStmt).mkString+deq+("})"*clctr)) /*.replaceAll("\n","; println(\"x"+n+"\");\n")*/ +"\n}"
+    val res = "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = {\n"+ind(t.stmts.map(genStmt).mkString+deq+("})"*clctr)) +"\n}"
     ctx = null; clctr=0; res
   }
 
@@ -218,10 +219,17 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     def fs(xs:Iterable[(String,String)]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = FunRef("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
     val (fds,fbs) = fs(forl.values)
     val (ads,abs) = fs(aggl.values)
+    val local_vars:String = {
+      val vs = s.maps.filter(_.keys.size==0); if (vs.size==0) "" else
+      "override def local_wr(m:MapRef,v:Any,add:Boolean) = m match {\n"+ind(vs.map{m=>
+        val add = if (m.tp==TypeDate) m.name+" = new Date("+m.name+".getTime+vv.getTime)" else m.name+" += vv"
+        "case `"+ref(m.name)+"` => val vv=v.asInstanceOf["+m.tp.toScala+"]; if (add) "+add+" else "+m.name+" = vv\n"}.mkString+"case _ =>\n")+"\n}\n"+
+      "override def local_rd(m:MapRef):Any = m match {\n"+ind(vs.map(m=> "case `"+ref(m.name)+"` => "+m.name+"\n").mkString+"case _ => sys.error(\"Var(\"+m+\") not found\")")+"\n}\n"
+    }
     freshClear(); ref.clear; aggl.clear; forl.clear; local=null
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
     "import WorkerActor._\nimport ddbt.lib.Functions._\n// constants\n"+refs+fds+ads+gc+ // constants
-    "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+
+    "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
     // XXX: missing read and write functions
     (if (ld0!="") "// tables content preloading\n"+ld0+"\n" else "")+"\n"+
     "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(fbs+(if (fbs!="") "\n" else "")+"case _ => co()")+"\n}\n\n"+

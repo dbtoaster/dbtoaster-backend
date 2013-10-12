@@ -85,7 +85,7 @@ trait Helper {
       }
       b1.foreach { case (k,v) => err.append("Extra key: "+k+" -> "+v+"\n") }
       b2.foreach { case (k,v) => err.append("Missing key: "+k+" -> "+v+"\n") }
-      val s = err.toString; if (s!="") throw new Exception("Result differs:\n"+s)
+      val s = err.toString; if (s!="") { val e=new Exception("Result differs:\n"+s); e.setStackTrace(Array[StackTraceElement]()); throw e }
     }
   }
 

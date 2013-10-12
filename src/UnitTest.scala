@@ -17,6 +17,7 @@ import ddbt.codegen._
  * Arguments:
  *   -q<pattern> : queries filtering, any matching pattern will select the query
  *   -d<dataset> : set filtering, name must be exact, takes the union
+ *   -dd         : equivalent to -dtiny -dtiny_del -dstandard -dstandard_del
  *   -o<option>  : add an option that is directly passed to dbtoaster
  *   -m<mode>    : test a particular generator: scala, akka, lms
  *
@@ -135,7 +136,10 @@ object UnitTest {
 
   // Generate all tests
   def main(args: Array[String]) {
-    val f_ds = { val ds = args.filter(_.startsWith("-d")).map(_.substring(2)); if (ds.length>0) (s:String)=>ds.contains(s) else (s:String)=>true }
+    val f_ds = { val ds = args.filter(_.startsWith("-d")).map(_.substring(2));
+      val dds = if (ds.contains("d")) ((ds.toSet-"d")++Set("tiny","tiny_del","standard","standard_del")).toArray else ds
+      if (dds.length>0) (s:String)=>dds.contains(s) else (s:String)=>true
+    }
     val f_qs = { val ps = args.filter(_.startsWith("-q")).map(p=>java.util.regex.Pattern.compile(p.substring(2)))
       if (ps.length>0) (s:String)=>ps.exists(p=>p.matcher(s).matches()) else (s:String)=>true
     }
