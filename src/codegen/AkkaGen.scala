@@ -30,6 +30,26 @@ import ddbt.ast._
  *
  * @author TCK
  */
+ 
+
+/*
+Issues to solve:
+- cluster initialization and maps distribution => make workers tell to master they want to join with their maps (all local but null maps)
+- join and leave cluster preparation
+- at each foreach point, possibly transform in a remote continuation if map is not local
+- move lazy map slicing into the TypeChecking ?
+- move a good part of the test generator directly in the code generator
+- move test AST into its own ddbt.ast package ?
+- shall we make unit tests part of the compiler ?
+
+Results:
+- Syntax    :  60
+- Semantics :  28
+- FailExec  :   9
+- Wrong     :   3
+- Correct   :  82
+*/
+
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear}
@@ -40,12 +60,14 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   val inuse = CtxSet() // set of variables used in the current continuation/used
   var clctr : Int=0; // closures counter "how many closures to close" (no pun intended)
   def cl(n:Int=1) { clctr+=n }
+  def cl_bk() = { val c=clctr; clctr=0; c }
+  def cl_rs(b:Int) = { val c=" "+("})"*clctr); clctr=b; c }
 
-  // remote functions as (map,expression,context) => (func_name,body)
   val ref = new HashMap[String,String]() // map: name(local)->reference(remote)
+  // remote functions as (map,expression,context) => (func_name,body)
   private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
   private val forl = HashMap[(String,Expr,List[String]),(String,String)]()
-
+  private def anon(e:Expr):Expr = e.rename((n:String)=>n.replaceAll("[0-9]+","")) // anonymize the function (for use in hash key)
 
   /** Get the first (in evaluation order) map with free variables. (implicit 'ctx' is used to determine free variables) */
   def fmap(e:Expr):String = e match { // first map with free variables in the evaluation order (using context ctx), to be used as 'aggregation over' map
@@ -70,18 +92,21 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   // Remote aggregation
   def ragg(a0:String,m:String,key:List[(String,Type)],e:Expr):String = {
     // remote handler
-    val fn = fresh("fa");
-    val (body:String,rc:List[String])=remote(m,fn,()=>{ inuse.add(key.map(_._1).toSet)
+    val fn0 = fresh("fa");
+    val (body0:String,rc:List[String])=remote(m,fn0,()=>{ inuse.add(key.map(_._1).toSet)
       if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
       else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
              cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n")+"co("+a0+")" }
     })
-    aggl.put((m,e,rc),(fn,body))
+    //aggl.put((m,e,rc),(fn0,body0))
+    val (fn,body) = aggl.getOrElseUpdate((m,anon(e),rc),(fn0,body0))
+
     // local handler
     val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
     val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
     cl(1); "aggr("+ref(m)+","+fn+",Array[Any]("+rc.mkString(",")+"),"+acc+",("+a0+":"+rt+") => {\n"
   }
+  
 
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
@@ -92,12 +117,13 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case MapRef(n,tp,ks) if local(n) || ks.size==0 => super.cpsExpr(ex,co,am)
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       // XXX: use CPS@execution
-      if (ki.size==0) { cl(1); val v=fresh("v"); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) /*+"\n});\n"*/ }
+      if (ki.size==0) { cl(1); val v=fresh("v"); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) }
       else {
         // remote handler
-        val fn = fresh("ff");
-        val (body,rc)=remote(n,fn,()=>super.cpsExpr(ex,co))
-        forl.put((n,ex,rc),(fn,body))
+        val fn0 = fresh("ff");
+        val (body0,rc)=remote(n,fn0,()=>{ val cc=cl_bk; val co2=(v:String)=>co(v)+cl_rs(cc); super.cpsExpr(ex,co2)+"co()"}) // XXX: apply the same trick (cl) for aggregations ?
+        //forl.put((n,ex,rc),(fn0,body0))
+        val (fn,body) = forl.getOrElseUpdate((n,anon(ex),rc),(fn0,body0))
         // local handler
         "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
       }
@@ -114,18 +140,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case a@Add(el,er) =>
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else {
-        // ;toast examples/queries/simple/r_btimesa.sql -l akka -o test/x.scala;test:run-main ddbt.generated.X
-        // ON - R(R_A, R_B) {
-        //    mSSA[][R1_A] += (R1_A ^= R_A) * R_B * (R_A - mSSA_mR8[][]) - (mSSA_mR4[][R1_A] * R_A);
-        
-        // XXX: issue with onSystemReady: it should only fill local maps
-        
-        // XXX: introduce a semantic change such that K3Var are stored everywhere for faster access !!!!
-        // XXX: rework map distribution and API
-        
-
         val cur = ctx.save
-        
         def add(a0:String,e:Expr):String = {
           val m = fmap(e)
           var r = if (m!=null) ragg(a0,m,a.agg,e);
@@ -136,46 +151,13 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
           ctx.load(cur); r
         }
         // XXX: what if one side has no unbound map => call super.cpsExpr(...)
-        val al=fresh("add_l"); val rl=add(al,el); //ragg(al,"__SQL_SUM_AGGREGATE_2",a.agg,el); ctx.load(cur)
-        val ar=fresh("add_r"); val rr=add(ar,er); //ragg(ar,"__SQL_SUM_AGGREGATE_2",a.agg,er); ctx.load(cur)
+        val al=fresh("add_l"); val rl=add(al,el);
+        val ar=fresh("add_r"); val rr=add(ar,er);
         val (k0,v0)=(fresh("k"),fresh("v"))
         ctx.add(a.agg.toMap)
         val ks=a.agg.map(_._1)
-        rl+rr+{
-          ar+".sum("+al+");\n"+
-          al+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+
-            co(v0))+"\n}"
-        }
-      
-        //sys.error("Union semantics")
-        /*
-        // XXX: use CPS@execution => get rid of (most) CPS transforms during plugin/compilation
-        // XXX: use CPS@execution => get rid of (most) CPS transforms during plugin/compilation
-        // XXX: use CPS@execution => get rid of (most) CPS transforms during plugin/compilation
-
-        // aggregate left and right then merge together XXX: only if local
-        val (k0,v0)=(fresh("k"),fresh("v"))
-        val ks = a.agg.map(_._1)
-        ral+rar+
-        "("+al+"++"+ar+").foreach{ ("+k0+","+v0+") =>\n"+ind(
-          (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
-        
-        //sys.error("Union required")
-        // make zero and add manually
-        /*
-        val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
-        val ks = a.agg.map(_._1)
-        val tmp = Some(a.agg)
-        val cur = ctx.save
-        val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"; ctx.load(cur)
-        val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"; ctx.load(cur)
-        ctx.add(a.agg.toMap)
-        "val "+a0+" = K3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+
-        a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-          (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
-        */
-        */
+        rl+rr+ar+".sum("+al+");\n"+al+".foreach{ ("+k0+","+v0+") =>\n"+ind(
+            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
       }
     case _ => super.cpsExpr(ex,co,am)
   }
@@ -201,7 +183,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   // Add the pre and deq calls in master's triggers
   override def genTrigger(t:Trigger):String = {
     val (n,as,deq) = t.evt match {
-      case EvtReady => ("SystemReady",Nil,"") // no deq as it is handled already
+      case EvtReady => ("SystemReady",Nil,"") // deq it already handled 
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs,"deq ")
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs,"deq ")
     }
@@ -230,7 +212,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
     "import WorkerActor._\nimport ddbt.lib.Functions._\n// constants\n"+refs+fds+ads+gc+ // constants
     "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
-    // XXX: missing read and write functions
     (if (ld0!="") "// tables content preloading\n"+ld0+"\n" else "")+"\n"+
     "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(fbs+(if (fbs!="") "\n" else "")+"case _ => co()")+"\n}\n\n"+
     "// remote aggregations\ndef aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {\n"+ind(abs+(if (abs!="") "\n" else "")+"case _ => co(null)")+"\n}")+"\n}\n\n"+
@@ -246,43 +227,3 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     s.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))"+"+\"\\n\")\n"}.mkString+
     "println(\"Time = \"+time(t));\n")+"\n}")+"\n}\n\n"
 }
-
-/*
-Issues to solve:
-- Maintaining extra (map) information such as Var->Type (akka) or Var->Symbol (LMS) for each nodes
-- cluster initialization and maps distribution => make workers tell to master they want to join with their maps (all local but null maps)
-- join and leave cluster preparation
-- at each foreach point, possibly transform in a remote continuation if map is not local
-- move lazy map slicing into the TypeChecking ?
-- move a good part of the test generator directly in the code generator
-- move test AST into its own ddbt.ast package ?
-- shall we make unit tests part of the compiler ?
-
-Tests previously passing (26):
-Axfinder
-Employee01
-Employee01a
-Employee02
-Employee02a
-Employee03
-Employee03a
-Employee04
-Employee04a
-Employee05
-Employee06
-Employee07
-Employee10
-Employee10a
-Employee12a
-Employee22
-Rgbasumb
-Rimpossibleineq
-Rinstatic
-Rnogroupby
-Rnonjoineq
-Rpossibleineq
-Rselectstar
-Rstarofnested
-Zeus37494577
-Zeus75453299
-*/
