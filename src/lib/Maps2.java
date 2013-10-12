@@ -59,6 +59,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     else if (zero instanceof Date) plus = (Plus<V>) new Plus<Date>() { Date apply(Date a, Date b) { return new Date(a.getTime()+b.getTime()); } };
     else plus=null;
   }
+  protected M3MapBase<K,V> acc() { return new M3MapBase<K,V>(zero,false,null); } // accumulator for Akka
 
   private abstract class Plus<T> { abstract T apply(T a, T b); }
   private static class Entry<K,V> implements Comparable<Entry> {
@@ -125,7 +126,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   public void sum(M3Map<K,V> acc) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) acc.add(e.key,e.value); }
   public void clear() { for (int i=0;i<data.length;++i) data[i]=null; size=0; if (indices!=null) for(Index<?> i:indices) { i.clear(); } }
   public void foreach(Function2<K,V,scala.runtime.BoxedUnit> f) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) { f.apply(e.key,e.value); } }
-  public scala.collection.immutable.Map<K,V> toMap() {
+  public scala.collection.immutable.Map<K,V> toMap() { // XXX: is this very efficient?
     scala.collection.immutable.HashMap<K,V> m = new scala.collection.immutable.HashMap<K,V>();
     for(Entry<K,V> e:data) for(;e!=null;e=e.next) { m=m.$plus(new scala.Tuple2<K,V>(e.key,e.value)); }
     return m;
@@ -133,9 +134,9 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
 
   public String toString() {
     StringBuilder sb=new StringBuilder();
-    Entry[] l=(Entry[])new Object[size]; int i=0; for(Entry<K,V> e:data) for(;e!=null;e=e.next) { l[i]=e; ++i; }
+    Entry[] l=(Entry[])new Entry[size]; int i=0; for(Entry<K,V> e:data) for(;e!=null;e=e.next) { l[i]=e; ++i; }
     java.util.Arrays.sort(l); for(Entry e:l) { sb.append(e.key.toString()+" -> "+e.value.toString()+"\n"); }
-    sb.setLength(sb.length()-1); return sb.toString();
+    int len=sb.length(); if (len>0) sb.setLength(len-1); return sb.toString();
   }
 
   // Serialization: INDICES are IGNORED as the main purpose is only to transfer efficiently
@@ -162,6 +163,10 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     M3MapBase<K,V> result=new M3MapBase<K,V>(zero, skipZero, ps);
     result.data=new Entry[data.length]; result.threshold=threshold; // fast insertion
     for(Entry<K,V> e:data) for(;e!=null;e=e.next) { result.putNoResize(e.key,e.value); } return result;
+  }
+  public boolean equals(Object that) {
+    if (that==null || !(that instanceof M3Map)) return false;
+    return toMap().equals(((M3Map<K,V>)that).toMap()); // XXX: is this very efficient?
   }
 
   // A slice behaves mostly like the original map but only on 1 of its partition.

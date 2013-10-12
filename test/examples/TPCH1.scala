@@ -47,18 +47,18 @@ class TPCH1 extends Actor {
   }
 
   val c1 = new java.util.GregorianCalendar(1997,9 - 1,1).getTime()
-  var SUM_QTY = K3Map.make[(String,String), Double]()
-  var SUM_BASE_PRICE = K3Map.make[(String,String), Double]()
-  var SUM_DISC_PRICE = K3Map.make[(String,String), Double]()
-  var SUM_CHARGE = K3Map.make[(String,String), Double]()
-  var AVG_QTY = K3Map.make[(String,String), Double]()
-  var AVG_QTY_mLINEITEM1_L3_1 = K3Map.make[(String,String), Long]()
-  var AVG_QTY_mLINEITEM5 = K3Map.make[(String,String), Double]()
-  var AVG_PRICE = K3Map.make[(String,String), Double]()
-  var AVG_PRICE_mLINEITEM5 = K3Map.make[(String,String), Double]()
-  var AVG_DISC = K3Map.make[(String,String), Double]()
-  var AVG_DISC_mLINEITEM5 = K3Map.make[(String,String), Double]()
-  var COUNT_ORDER = K3Map.make[(String,String), Long]()
+  var SUM_QTY = M3Map.make[(String,String), Double]()
+  var SUM_BASE_PRICE = M3Map.make[(String,String), Double]()
+  var SUM_DISC_PRICE = M3Map.make[(String,String), Double]()
+  var SUM_CHARGE = M3Map.make[(String,String), Double]()
+  var AVG_QTY = M3Map.make[(String,String), Double]()
+  var AVG_QTY_mLINEITEM1_L3_1 = M3Map.make[(String,String), Long]()
+  var AVG_QTY_mLINEITEM5 = M3Map.make[(String,String), Double]()
+  var AVG_PRICE = M3Map.make[(String,String), Double]()
+  var AVG_PRICE_mLINEITEM5 = M3Map.make[(String,String), Double]()
+  var AVG_DISC = M3Map.make[(String,String), Double]()
+  var AVG_DISC_mLINEITEM5 = M3Map.make[(String,String), Double]()
+  var COUNT_ORDER = M3Map.make[(String,String), Long]()
 
   import scala.collection.mutable.Map
 

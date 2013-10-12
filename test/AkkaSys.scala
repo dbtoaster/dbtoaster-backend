@@ -20,15 +20,15 @@ import Consts._
 class Worker extends WorkerActor {
   import WorkerActor._
 
-  val map0 = K3Map.make[Long,Long]()
-  val map1 = K3Map.make[Double,Double]()
-  val local = Array[Any](map0,map1)
+  val map0 = M3Map.make[Long,Long]()
+  val map1 = M3Map.make[Double,Double]()
+  val local = Array[M3Map[_,_]](map0,map1)
 
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = f match {
     case f1 => val n=args(0).asInstanceOf[Int]; for (i<-0 until n) add(m0,i.toLong,1L); co()
   }
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = f match {
-    case f2 => co(map0.aggr((k:Long,v:Long)=>v))
+    case f2 => var a:Long=0L; map0.foreach((k:Long,v:Long)=>a+=v); co(a)
   }
 }
 
@@ -57,7 +57,7 @@ class Master extends Worker with MasterActor {
       val n2 = _aggr[Long](m0,f2) // remote aggregation test
       println("Added "+n+"*workers elements")
       println("Remote aggregation : "+n2)
-      println("Collect+local count: "+(0L /: _toMap(m0).asInstanceOf[Map[Long,Long]]){ case (a,(k,v)) => a+v})
+      println("Collect+local count: "+(0L /: _toMap[Long,Long](m0).asInstanceOf[Map[Long,Long]]){ case (a,(k,v)) => a+v})
       deq
     }
     case `ev3` => deq // trampoline test

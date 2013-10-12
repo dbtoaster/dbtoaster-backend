@@ -61,9 +61,9 @@ class BrokerSpread extends Actor { // Copied from generated code
   import ddbt.lib.Messages._
   import ddbt.lib.Functions._
 
-  val BSP = K3Map.make[Long,Double]();
-  val BSP_mBIDS1 = K3Map.make[(Long,Long),Long](List((k:(Long,Long))=>k._1));
-  val BSP_mBIDS5 = K3Map.make[(Long,Long),Double](List((k:(Long,Long))=>k._1));
+  val BSP = M3Map.make[Long,Double]();
+  val BSP_mBIDS1 = M3Map.make[(Long,Long),Long]((k:(Long,Long))=>k._1);
+  val BSP_mBIDS5 = M3Map.make[(Long,Long),Double]((k:(Long,Long))=>k._1);
 
   var t0:Long = 0
   def receive = {

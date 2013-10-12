@@ -13,7 +13,7 @@ object TPCH15 extends Helper {
     */
     println("Mine:")
     val (t2,r2) = run[TPCH15](streamsTPCH15(),false);
-    println(K3Helper.toStr(r2.head)); println("Time: "+time(t2))
+    println(r2.head); println("Time: "+time(t2))
   }
 }
 
@@ -24,12 +24,12 @@ class TPCH15 extends Actor {
   import ddbt.lib.Messages._
   import ddbt.lib.Functions._
 
-  val COUNT = K3Map.make[(Long,String,String,String,Double),Long](Nil);
-  val COUNT_mLINEITEM1 = K3Map.make[(String,String,String,Long),Long](Nil); // OK
-  val COUNT_mLINEITEM1_L2_1 = K3Map.make[Long,Double](Nil); // OK
-  val COUNT_mLINEITEM1_L2_3 = K3Map.make[Long,Double](Nil); // OK
-  val COUNT_mLINEITEM1_L3_1_E1_1 = K3Map.make[Long,Double](Nil); // OK
-  val COUNT_mLINEITEM1_L3_1_E1_3 = K3Map.make[Long,Double](Nil); // OK
+  val COUNT = M3Map.make[(Long,String,String,String,Double),Long]();
+  val COUNT_mLINEITEM1 = M3Map.make[(String,String,String,Long),Long](); // OK
+  val COUNT_mLINEITEM1_L2_1 = M3Map.make[Long,Double](); // OK
+  val COUNT_mLINEITEM1_L2_3 = M3Map.make[Long,Double](); // OK
+  val COUNT_mLINEITEM1_L3_1_E1_1 = M3Map.make[Long,Double](); // OK
+  val COUNT_mLINEITEM1_L3_1_E1_3 = M3Map.make[Long,Double](); // OK
 
   var t0:Long = 0
   def receive = {

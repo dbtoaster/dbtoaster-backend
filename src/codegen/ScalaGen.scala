@@ -200,7 +200,6 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     "object "+cls+" extends Helper {\n"+ind(
     "def execute() = run["+cls+"]("+streams(s0.sources)+")\n\n"+
     "def main(args:Array[String]) {\n"+ind("val res = bench(\"NewGen\","+numSamples+",execute)\n"+
-    s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\")\nprintln("+
-      (if (q.map.keys.size==0) "res("+i+").toString" else "K3Helper.toStr(res("+i+").asInstanceOf[Map[_,_]])")+"+\"\\n\")" }.mkString("\n"))+"\n}")+"\n}\n\n"
+    s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+"\n}")+"\n}\n\n"
   }
 }

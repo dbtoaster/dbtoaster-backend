@@ -11,5 +11,5 @@ object Messages {
   case class TupleEvent(op:TupleOp,stream:String,data:List[Any]) extends StreamEvent // XXX: stream name as Byte/Int(hashCode?)
   case object SystemInit extends StreamEvent
   case object EndOfStream extends StreamEvent // get snapshot(0) and shut the system down
-  case class GetSnapshot(view:Int) extends StreamEvent // request a snapshot of some maps
+  case class GetSnapshot(view:List[Int]) extends StreamEvent // request a snapshot of some maps
 }

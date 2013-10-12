@@ -49,6 +49,7 @@ import akka.actor.{Actor,ActorRef}
  * - Use multiple timestamps and queue updates in front of maps?
  *   -> If so, use maps as timed key-value store?
  *   -> Expunge previous versions when timestamp completed
+ * XXX: _INFER_ (encode) functional dependencies in the maps(?)
  */
 
 /** Internal types and messages */
@@ -83,7 +84,8 @@ abstract class WorkerActor extends Actor {
   import scala.collection.JavaConversions.mapAsScalaMap
   import WorkerActor._
   // ---- concrete maps and local operations
-  val local:Array[Any] // ref->local maps conversion
+  val local:Array[M3Map[_,_]] // ref->local maps conversion
+  def local_wr(m:MapRef,v:Any,add:Boolean) {} // write in local variable
   def hash(m:MapRef,k:Any) = k.hashCode
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) // local foreach
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) // local aggregation
@@ -118,7 +120,7 @@ abstract class WorkerActor extends Actor {
     private val cont = new java.util.HashMap[(MapRef,Any),List[Any=>Unit]]()
     @inline def req[K,V](map:MapRef,key:K,co:V=>Unit) { // map.get(key,continuation)
       val o=owner(map,key);
-      if (o==self) co(local(map).asInstanceOf[K3Map[K,V]].get(key)) // resolves locally
+      if (o==self) co(local(map).asInstanceOf[M3Map[K,V]].get(key)) // resolves locally
       else {
         val k=(map,key); val v=if (enabled) cache.get(k) else null;
         if (v!=null) co(v.asInstanceOf[V]) // cached
@@ -206,21 +208,18 @@ abstract class WorkerActor extends Actor {
 
   // ---- message passing
   protected val fun_collect = FunRef(0,true)
-  private var local_map : Array[K3Map[Any,Any]] = null // avoid runtime castings
-  private var local_var : Array[K3Var[Any]] = null
+  protected var local_map:Array[M3Map[Any,Any]] = null 
   def receive = {
-    case Members(m,ws) => members(m,ws)
-      local_map = local.map{ x => (if (x.isInstanceOf[K3Map[_,_]]) x else null).asInstanceOf[K3Map[Any,Any]] }
-      local_var = local.map{ x => (if (x.isInstanceOf[K3Var[_]]) x else null).asInstanceOf[K3Var[Any]] }
+    case Members(m,ws) => members(m,ws); local_map=local.asInstanceOf[Array[M3Map[Any,Any]]] // fix initialization order
     case Barrier(en) => bar.set(en) // assert(self!=master)
     case Ack(to,num) => bar.sumAck(to,num) // assert(self==master)
-    case Get(m,k) => sender ! Val(m,k,local_map(m).get(k)) // get(K3Var) is handled locally
+    case Get(m,k) => sender ! Val(m,k,local_map(m).get(k)) // get(var) is handled locally
     case Val(m,k,v) => matcherGet.res(m,k,v)
-    case Add(m,k,v) => if (k==null) local_var(m).add(v) else local_map(m).add(k,v); bar.recv
-    case Set(m,k,v) => if (k==null) local_var(m).set(v) else local_map(m).set(k,v); bar.recv
-    case Clear(m,p,pk) => val mm=local_map(m); if (mm!=null) { (if (p<0) mm else mm.slice(p,pk)).clear }; bar.recv
+    case Add(m,k,v) => if (k==null) local_wr(m,v,true) else local_map(m).add(k,v); bar.recv
+    case Set(m,k,v) => if (k==null) local_wr(m,v,false) else local_map(m).set(k,v); bar.recv
+    case Clear(m,p,pk) => val mm=local(m); (if (p<0) mm else mm.slice(p,pk)).clear; bar.recv
     case Foreach(f,as) => forl(f,as,_ => bar.recv)
-    case Aggr(id,fun_collect,Array(m:MapRef)) => val mm=local_map(m); sender ! AggrPart(id,if (mm==null) local_var(m).get() else mm.toMap) // collect map data // XXX: convert to HashMap
+    case Aggr(id,fun_collect,Array(m:MapRef)) => sender ! AggrPart(id,local(m)) // collect map data
     case Aggr(id,f,as) => aggl(f,as,(r:Any) => sender ! AggrPart(id,r))
     case AggrPart(id,res) => matcherAggr.res(id,res)
     case m => println("Not understood: "+m.toString)
@@ -228,14 +227,14 @@ abstract class WorkerActor extends Actor {
 
   // ---- map operations
   // Element operation: if key hashes to local, apply locally, otherwise call remote worker
-  def get[K,V](m:MapRef,k:K,co:V=>Unit) = if (k==null) co(local(m).asInstanceOf[K3Var[V]].get) else matcherGet.req(m,k,co)
+  def get[K,V](m:MapRef,k:K,co:V=>Unit) = matcherGet.req(m,k,co)
   def add[K,V](m:MapRef,k:K,v:V) {
-    if (k==null) { local(m).asInstanceOf[K3Var[V]].add(v); workers.foreach(w => if (w!=self) bar.send(w,Add(m,k,v))) }
-    else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].add(k,v) else bar.send(o,Add(m,k,v)) }
+    if (k==null) { local_wr(m,v,true); workers.foreach(w => if (w!=self) bar.send(w,Add(m,k,v))) }
+    else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[M3Map[K,V]].add(k,v) else bar.send(o,Add(m,k,v)) }
   }
   def set[K,V](m:MapRef,k:K,v:V) {
-    if (k==null) { local(m).asInstanceOf[K3Var[V]].set(v); workers.foreach(w => if (w!=self) bar.send(w,Set(m,k,v))) }
-    else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[K3Map[K,V]].set(k,v) else bar.send(o,Set(m,k,v)) }
+    if (k==null) { local_wr(m,v,false); workers.foreach(w => if (w!=self) bar.send(w,Set(m,k,v))) }
+    else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[M3Map[K,V]].set(k,v) else bar.send(o,Set(m,k,v)) }
   }
   // Group operations: broadcast to owners, workers then process locally
   def clear[P](m:MapRef,p:Int= -1,pk:P=null) = owns(m).foreach { bar.send(_,Clear(m,p,pk)) }
@@ -244,10 +243,13 @@ abstract class WorkerActor extends Actor {
   // XXX: idea = create multiple functions instead of only 1
   def aggr[R](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,plus:(Any,Any)=>Any=null,co:R=>Unit)(implicit cR:ClassTag[R]) = {
     val (z,p) = if (zero!=null&&plus!=null) (zero,plus)
-    else if (cR.toString=="scala.collection.immutable.Map") {
-      // XXX: implement (zero,plus) for java.util.HashMap
-      sys.error("Implement zero for Maps")
-    } else (K3Helper.make_zero[R](),K3Helper.make_plus[R]().asInstanceOf[(Any,Any)=>Any])
+    else (M3Map.zero[R](),(cR.toString match {
+      case "Long" => (v0:Long,v1:Long)=>v0+v1
+      case "Double" => (v0:Double,v1:Double)=>v0+v1
+      case "java.lang.String" => (v0:String,v1:String)=>v0+v1
+      case "java.util.Date" => (v0:java.util.Date,v1:java.util.Date)=> new java.util.Date(v0.getTime+v1.getTime)
+      case n => sys.error("No additivity for "+n)
+    }).asInstanceOf[(Any,Any)=>Any])
     matcherAggr.req(m,f,args,co,z,p)
   }
 
@@ -272,9 +274,10 @@ trait MasterActor extends WorkerActor {
   import scala.util.continuations._
 
   def barrier(co:Unit=>Unit) = bar.set(true,co);
-  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit) = {
-    val plus = (m1:Map[K,V],m2:Map[K,V]) => m1 ++ m2 // XXX: ERROR; THIS IS INCORRECT
-    super.aggr(m,fun_collect,Array(m),Map[K,V](),plus.asInstanceOf[(Any,Any)=>Any],co) // XXX: convert to HashMap
+  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = {
+    val z = if (cV.toString=="Object"||cV.toString=="Any") local(m).asInstanceOf[M3MapBase[K,V]].acc else M3Map.temp[K,V]()
+    val p = ((m1:M3Map[K,V],m2:M3Map[K,V])=>{m2.sum(m1); m1}).asInstanceOf[(Any,Any)=>Any]
+    super.aggr(m,fun_collect,Array(m),z,p,(mm:M3Map[K,V])=>co(mm.toMap))
   }
 
   // --- sequential to CPS conversion
@@ -282,7 +285,7 @@ trait MasterActor extends WorkerActor {
   def _get[K,V](m:MapRef,k:K):V @cps[Unit] = shift { co:(V=>Unit) => super.get(m,k,co) }
   def _aggr[R:ClassTag](m:MapRef,f:FunRef,args:Any*) = shift { co:(R=>Unit) => super.aggr(m,f,args.toArray,null,null,co) }
   def _barrier = shift { co:(Unit=>Unit) => bar.set(true,co); }
-  def _toMap[K,V](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
+  def _toMap[K,V:ClassTag](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
   def _pre(write:MapRef,read:MapRef*) = shift { co:(Unit=>Unit) => pre(write,read.toArray,co) }
 
   // ---- coherency mechanism: if a map used is not flushed, flush all
@@ -308,7 +311,7 @@ trait MasterActor extends WorkerActor {
           case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0
             def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
               case 0 => sender ! (time,acc); deq
-              case n => toMap(MapRef(n-1),(m:Map[_,_])=>collect(n-1,m::acc) )
+              case n => toMap(MapRef(n-1),(m:Map[_,_])=>collect(n-1,m::acc))
             }
             collect(local.length,Nil)
           case e:TupleEvent => dispatch(e)

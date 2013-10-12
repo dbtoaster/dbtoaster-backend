@@ -5,7 +5,7 @@ object AXFinderAkka extends Helper {
   import WorkerActor._
   def main(args:Array[String]) {
     val (t,res) = runLocal[AXMaster,AXWorker](5,2251,4,streamsFinance())
-    println("Time = "+time(t)); println(K3Helper.toStr(res.head))
+    println("Time = "+time(t)); println(M3Map.toStr(res.head))
   }
 }
 
@@ -22,26 +22,27 @@ class AXWorker extends WorkerActor {
   val f2 = FunRef(2)
   val f3 = FunRef(3)
   // maps
-  val AXFINDER = K3Map.make[Long,Double]();
-  val mASKS1 = K3Map.makeIdx[(Long,Double),Double](List(0))
-  val mASKS2 = K3Map.makeIdx[(Long,Double),Long](List(0))
-  val mBIDS1 = K3Map.makeIdx[(Long,Double),Long](List(0))
-  val mBIDS3 = K3Map.makeIdx[(Long,Double),Double](List(0))
-  val local = Array[Any](AXFINDER,mASKS1,mASKS2,mBIDS1,mBIDS3)
+  val AXFINDER = M3Map.make[Long,Double]();
+  val mASKS1 = M3Map.makeIdx[(Long,Double),Double](0)
+  val mASKS2 = M3Map.makeIdx[(Long,Double),Long](0)
+  val mBIDS1 = M3Map.makeIdx[(Long,Double),Long](0)
+  val mBIDS3 = M3Map.makeIdx[(Long,Double),Double](0)
+  val local = Array[M3Map[_,_]](AXFINDER,mASKS1,mASKS2,mBIDS1,mBIDS3)
+
   // aggregations
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = { co() }
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = {
     val a0 = args(0).asInstanceOf[Long] // broker_id
     val a1 = args(1).asInstanceOf[Double] // price
     f match {
-      case `f0` => co(mBIDS1.slice(0,a0).aggr{ (k,v) => val a_price=k._2; val bids_price=a1 // Add/del BIDS
-        val lift1 = ((if ((a_price + (-1L * bids_price)) > 1000L) 1L else 0L) + (if ((bids_price + (-1L * a_price)) > 1000L) 1L else 0L)); v * (if (lift1 > 0L) 1L else 0L) })
-      case `f1` => co(mBIDS3.slice(0,a0).aggr{ (k,v) => val a_price=k._2; val bids_price=a1
-        val lift1 = ((if ((a_price + (-1L * bids_price)) > 1000L) 1L else 0L) + (if ((bids_price + (-1L * a_price)) > 1000L) 1L else 0L)); v * (if (lift1 > 0L) 1L else 0L) })
-      case `f2` => co(mASKS1.slice(0,a0).aggr{ (k,v) => val b_price=k._2; val asks_price=a1 // Add/del ASKS
-        val lift5 = ((if ((asks_price + (-1L * b_price)) > 1000L) 1L else 0L) + (if ((b_price + (-1L * asks_price)) > 1000L) 1L else 0L)); v * (if (lift5 > 0L) 1L else 0L) })
-      case `f3` => co(mASKS2.slice(0,a0).aggr{ (k,v) => val b_price=k._2; val asks_price=a1
-        val lift5 = ((if ((asks_price + (-1L * b_price)) > 1000L) 1L else 0L) + (if ((b_price + (-1L * asks_price)) > 1000L) 1L else 0L)); v * (if (lift5 > 0L) 1L else 0L) })
+      case `f0` => co{var a:Long=0; mBIDS1.slice(0,a0).foreach{ (k,v) => val a_price=k._2; val bids_price=a1 // Add/del BIDS
+        val lift1 = ((if ((a_price + (-1L * bids_price)) > 1000L) 1L else 0L) + (if ((bids_price + (-1L * a_price)) > 1000L) 1L else 0L)); a += v * (if (lift1 > 0L) 1L else 0L) }; a}
+      case `f1` => co{var a:Double=0; mBIDS3.slice(0,a0).foreach{ (k,v) => val a_price=k._2; val bids_price=a1
+        val lift1 = ((if ((a_price + (-1L * bids_price)) > 1000L) 1L else 0L) + (if ((bids_price + (-1L * a_price)) > 1000L) 1L else 0L)); a += v * (if (lift1 > 0L) 1L else 0L) }; a}
+      case `f2` => co{var a:Double=0; mASKS1.slice(0,a0).foreach{ (k,v) => val b_price=k._2; val asks_price=a1 // Add/del ASKS
+        val lift5 = ((if ((asks_price + (-1L * b_price)) > 1000L) 1L else 0L) + (if ((b_price + (-1L * asks_price)) > 1000L) 1L else 0L)); a += v * (if (lift5 > 0L) 1L else 0L) }; a}
+      case `f3` => co{var a:Long=0; mASKS2.slice(0,a0).foreach{ (k,v) => val b_price=k._2; val asks_price=a1
+        val lift5 = ((if ((asks_price + (-1L * b_price)) > 1000L) 1L else 0L) + (if ((b_price + (-1L * asks_price)) > 1000L) 1L else 0L)); a += v * (if (lift5 > 0L) 1L else 0L) }; a}
     }
   }
 }

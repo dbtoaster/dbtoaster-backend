@@ -6,7 +6,7 @@ import java.util.Date;
 object TPCH18 extends Helper {
   def main(args:Array[String]) {
     val (t,res) = run[TPCH18](streamsTPCH18(),false);
-    println(K3Helper.toStr(res(0))); println("Time: "+time(t))
+    println(res.head.toString); println("Time: "+time(t))
   }
 }
 
@@ -24,7 +24,7 @@ abstract class TPCH18Base extends Actor {
     case TupleEvent(TupleDelete,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onDelORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
     case TupleEvent(TupleInsert,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onAddCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case TupleEvent(TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDelCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
-    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,List(result.toMap))
+    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,List(result))
   }
   def onAddLINEITEM(L_ORDERKEY: Long,L_PARTKEY: Long,L_SUPPKEY: Long,L_LINENUMBER: Long,L_QUANTITY: Double,L_EXTENDEDPRICE: Double,L_DISCOUNT: Double,L_TAX: Double,L_RETURNFLAG: String,L_LINESTATUS: String,L_SHIPDATE: Date,L_COMMITDATE: Date,L_RECEIPTDATE: Date,L_SHIPINSTRUCT: String,L_SHIPMODE: String,L_COMMENT: String) : Unit
   def onDelLINEITEM(L_ORDERKEY: Long,L_PARTKEY: Long,L_SUPPKEY: Long,L_LINENUMBER: Long,L_QUANTITY: Double,L_EXTENDEDPRICE: Double,L_DISCOUNT: Double,L_TAX: Double,L_RETURNFLAG: String,L_LINESTATUS: String,L_SHIPDATE: Date,L_COMMITDATE: Date,L_RECEIPTDATE: Date,L_SHIPINSTRUCT: String,L_SHIPMODE: String,L_COMMENT: String) : Unit
@@ -36,16 +36,16 @@ abstract class TPCH18Base extends Actor {
 }
 
 class TPCH18 extends TPCH18Base {
-  val QUERY18 = K3Map.make[(String,Long,Long,Date,Double), Double]()
-  val mORDERS2 = K3Map.make[(String,Long), Long](List((x:(String,Long))=>x._2)) // 0=List(1)
-  val mCUSTOMER1 = K3Map.make[(Long,Long,Date,Double), Double](List((x:(Long,Long,Date,Double))=>x._2)) // 0=List(1)
-  val mCUSTOMER1_mLINEITEM1 = K3Map.make[(Long,Long,Date,Double), Long](List(
+  val QUERY18 = M3Map.make[(String,Long,Long,Date,Double), Double]()
+  val mORDERS2 = M3Map.make[(String,Long), Long]((x:(String,Long))=>x._2) // 0=List(1)
+  val mCUSTOMER1 = M3Map.make[(Long,Long,Date,Double), Double]((x:(Long,Long,Date,Double))=>x._2) // 0=List(1)
+  val mCUSTOMER1_mLINEITEM1 = M3Map.make[(Long,Long,Date,Double), Long](
     (x:(Long,Long,Date,Double))=>x._1, // 0=List(0)
     (x:(Long,Long,Date,Double))=>x._2  // 1=List(1)
-  ))
-  val mLINEITEM1 = K3Map.make[(Long,String,Long,Date,Double), Double]()
-  val mLINEITEM1_mLINEITEM1 = K3Map.make[(Long,String,Long,Date,Double), Long](List((x:(Long,String,Long,Date,Double))=>x._1)) // 0=List(0)
-  val mLINEITEM1_E1_1_L1_1 = K3Map.make[Long,Double]()
+  )
+  val mLINEITEM1 = M3Map.make[(Long,String,Long,Date,Double), Double]()
+  val mLINEITEM1_mLINEITEM1 = M3Map.make[(Long,String,Long,Date,Double), Long]((x:(Long,String,Long,Date,Double))=>x._1) // 0=List(0)
+  val mLINEITEM1_E1_1_L1_1 = M3Map.make[Long,Double]()
   def result = QUERY18.toMap
 
   // ---------------------------------------------------------------------------

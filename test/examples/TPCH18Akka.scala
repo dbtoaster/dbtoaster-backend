@@ -5,7 +5,7 @@ import java.util.Date
 object TPCH18Akka extends Helper {
   def main(args:Array[String]) {
     val (t,res) = runLocal[Q18Master,Q18Worker](7,2251,4,streamsTPCH18());
-    println(K3Helper.toStr(res.head)); println("Time:"+time(t))
+    println(M3Map.toStr(res.head)); println("Time:"+time(t))
   }
 }
 
@@ -29,14 +29,15 @@ class Q18Worker extends WorkerActor {
   val f7 = FunRef(7)
   val f8 = FunRef(8)
   // maps
-  val QUERY18 = K3Map.make[(String,Long,Long,Date,Double), Double]()
-  val mORDERS2 = K3Map.make[(String,Long), Long](List((x:(String,Long))=>x._2)) // 0=List(1)
-  val mCUSTOMER1 = K3Map.make[(Long,Long,Date,Double), Double](List((x:(Long,Long,Date,Double))=>x._2)) // 0=List(1)
-  val mCUSTOMER1_L1 = K3Map.make[(Long,Long,Date,Double), Long](List((x:(Long,Long,Date,Double))=>x._1,(x:(Long,Long,Date,Double))=>x._2))
-  val mLINEITEM1 = K3Map.make[(Long,String,Long,Date,Double), Double]()
-  val mLINEITEM1_L1 = K3Map.make[(Long,String,Long,Date,Double), Long](List((x:(Long,String,Long,Date,Double))=>x._1)) // 0=List(0)
-  val mLINEITEM1_E11 = K3Map.make[Long,Double]()
-  val local = Array[Any](QUERY18,mORDERS2,mCUSTOMER1,mCUSTOMER1_L1,mLINEITEM1,mLINEITEM1_L1,mLINEITEM1_E11)
+  val QUERY18 = M3Map.make[(String,Long,Long,Date,Double), Double]()
+  val mORDERS2 = M3Map.make[(String,Long), Long]((x:(String,Long))=>x._2) // 0=List(1)
+  val mCUSTOMER1 = M3Map.make[(Long,Long,Date,Double), Double]((x:(Long,Long,Date,Double))=>x._2) // 0=List(1)
+  val mCUSTOMER1_L1 = M3Map.make[(Long,Long,Date,Double), Long]((x:(Long,Long,Date,Double))=>x._1,(x:(Long,Long,Date,Double))=>x._2)
+  val mLINEITEM1 = M3Map.make[(Long,String,Long,Date,Double), Double]()
+  val mLINEITEM1_L1 = M3Map.make[(Long,String,Long,Date,Double), Long]((x:(Long,String,Long,Date,Double))=>x._1) // 0=List(0)
+  val mLINEITEM1_E11 = M3Map.make[Long,Double]()
+  val local = Array[M3Map[_,_]](QUERY18,mORDERS2,mCUSTOMER1,mCUSTOMER1_L1,mLINEITEM1,mLINEITEM1_L1,mLINEITEM1_E11)
+
   // foreach
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args) match {
     // Lineitem triggers

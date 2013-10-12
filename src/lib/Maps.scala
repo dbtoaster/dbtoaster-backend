@@ -1,6 +1,15 @@
 package ddbt.lib
 import scala.reflect.ClassTag
 
+/*@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  @@                                                                        @@
+  @@  THESE CLASS ARE DEPRECATED AND WILL BE REMOVED AS SOON ALL CODE       @@
+  @@  DEPENDING ON THEM IS UPDATED. PLEASE USE THE FOLLOWING CONVERSION:    @@
+  @@                                                                        @@
+  @@  K3Var->Scala var,  K3Map->M3Map.make,  K3Temp->M3Map.temp             @@
+  @@                                                                        @@
+  @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@*/
+
 /**
  * This file encloses all the logic related to internal maps being used in the
  * generated program. The main difference with regular HashMaps are:

@@ -19,8 +19,8 @@ object TPCH13 extends Helper {
     def eq(m1:Map[Long,Long],m2:Map[Long,Long]) = m1.filter{case (k,v) => v!=0}==m2.filter{case (k,v) => v!=0}
     def m0ll(l:List[Any]):Map[Long,Long] = l.head.asInstanceOf[Map[Long,Long]]
     println("Correctness: "+(if(eq(m0ll(res),m0ll(gen))) "OK" else "FAILURE !!!!"))
-    println("HandOpt:"); println(K3Helper.toStr(res.head));
-    if(!eq(m0ll(res),m0ll(gen))) { println("Generated:"); println(K3Helper.toStr(gen.head)); }
+    println("HandOpt:"); println(res.head.toString);
+    if(!eq(m0ll(res),m0ll(gen))) { println("Generated:"); println(gen.head.toString); }
 
     //println("Correctness: "+(if(eq(ref,res)) "OK" else "FAILURE !!!!"))
     //println("Correctness: "+(if(eq(ref,gen)) "OK" else "FAILURE !!!!"))
@@ -45,17 +45,17 @@ class TPCH13 extends Actor {
        onInsertCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
        onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case TupleEvent(TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
-    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,List(result.toMap))
+    case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,List(result))
   }
 
-  val CUSTDIST = K3Map.make[Long,Long]()
-  val CUSTDIST_mORDERS1_E1_4 = K3Map.make[Long,Long]()
-  val CUSTDIST_mCUSTOMER1_E1_1 = K3Map.make[Long,Long]()
-  val CUSTDIST_mCUSTOMER1_E1_3 = K3Map.make[Long,Long]()
+  val CUSTDIST = M3Map.make[Long,Long]()
+  val CUSTDIST_mORDERS1_E1_4 = M3Map.make[Long,Long]()
+  val CUSTDIST_mCUSTOMER1_E1_1 = M3Map.make[Long,Long]()
+  val CUSTDIST_mCUSTOMER1_E1_3 = M3Map.make[Long,Long]()
   def result:Map[Long,Long] = CUSTDIST.toMap
 
   def onInsertORDERS(x6: Long, x7: Long, x8: String, x9: Double, x10: Date, x11: String, x12: String, x13: Long, x14: String): Unit = {
-    val temp = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val temp = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
     val l0 = CUSTDIST_mCUSTOMER1_E1_1.get(x7)
     val l4 = CUSTDIST_mORDERS1_E1_4.get(x7)
     val x64 = 0L == Uregexp_match("^.*special.*requests.*$", x14)
@@ -68,7 +68,7 @@ class TPCH13 extends Actor {
     temp.add(l0 + (x64 * l4), x70 != 0L)
     temp.foreach { case (k,v) =>
         CUSTDIST.set(k, (if (CUSTDIST.get(k)!=0) CUSTDIST.get(k) else {
-          CUSTDIST_mCUSTOMER1_E1_1.aggr((k2:Long,v2:Long) => (v2!=0L)*(v2==k))
+          var a:Long = 0L; CUSTDIST_mCUSTOMER1_E1_1.foreach((k2:Long,v2:Long) => a += (v2!=0L)*(v2==k)); a
         }) + v)
     }
     CUSTDIST_mCUSTOMER1_E1_1.add(x7, x70)
@@ -77,29 +77,29 @@ class TPCH13 extends Actor {
 
   // unoptimized as not used
   def onDeleteCUSTOMER(x265: Long, x266: String, x267: String, x268: Long, x269: String, x270: Double, x271: String, x272: String): Unit = {
-    val x279 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
-    val x280 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
-    val x281 = K3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
+    val x279 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x280 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x281 = M3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
     CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x281.add(v, v != 0L) }
     x281.foreach { case (k,v) => x280.add(k, v) }
-    val x310 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x310 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
     CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x310.add(k, v) }
     val x325 = CUSTDIST_mCUSTOMER1_E1_3.get(x265) * -1L
     x310.add(x265, x325)
-    val x330 = K3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
+    val x330 = M3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
     x310.foreach { case (k,v) => x330.add(CUSTDIST_mCUSTOMER1_E1_1.get(k), v != 0L) }
     x330.foreach { case (k,v) => x280.add(k, v) }
     x280.foreach { case (k,v) => x279.add(k,-v) }
-    val x369 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x369 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
     CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x369.add(k, v) }
     x369.add(x265, x325)
-    val x383 = K3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
+    val x383 = M3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
     x369.foreach { case (k,v) => x383.add(CUSTDIST_mCUSTOMER1_E1_1.get(k), v != 0L) }
     x383.foreach { case (k,v) => x279.add(k,v) }
-    val x412 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x412 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
     CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x412.add(k, v) }
     x412.add(x265, x325)
-    val x426 = K3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
+    val x426 = M3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
     x412.foreach { case (k,v) =>
       val x445 = CUSTDIST_mCUSTOMER1_E1_1.get(k) + (((x265 == k) * CUSTDIST_mCUSTOMER1_E1_3.get(x265)) * -1L)
       x426.add(x445, v != 0L)
@@ -120,34 +120,34 @@ class TPCH13 extends Actor {
     val e = CUSTDIST_mCUSTOMER1_E1_3.get(c_custkey)
 
     // manually optimized version
-    val tmp = K3Map.temp[Long, Long]()
+    val tmp = M3Map.temp[Long, Long]()
     def gen(k:Long,v:Long) { val x=v+(k==c_custkey)*e; tmp.add(v,-(v!=0)); tmp.add(x,x!=0) }
     CUSTDIST_mCUSTOMER1_E1_1.foreach(gen)
     if (CUSTDIST_mCUSTOMER1_E1_1.get(c_custkey)==0L) gen(c_custkey,0L)
     tmp.foreach{ (k,v) =>
-      if (CUSTDIST.get(k)==0L) CUSTDIST.set(k,CUSTDIST_mCUSTOMER1_E1_1.aggr { (k2,v2) => (v2!=0L)*(v2==k) })
+      if (CUSTDIST.get(k)==0L) CUSTDIST.set(k,{ var a:Long=0L; CUSTDIST_mCUSTOMER1_E1_1.foreach { (k2,v2) => a+=(v2!=0L)*(v2==k) }; a})
       CUSTDIST.add(k, v)
     }
-    // XXX: for network, create a K3MapWrapper that executes remotely and contains code for executing locally, then chain responder for messages
+    // XXX: for network, create a M3MapWrapper that executes remotely and contains code for executing locally, then chain responder for messages
 
     /*
     // (A + B) * -1 + C + D
-    val x526 = K3Map.temp[Long, Long]()
+    val x526 = M3Map.temp[Long, Long]()
     // (A + B)
-    val x527 = K3Map.temp[Long, Long]()
+    val x527 = M3Map.temp[Long, Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x527.add(v, v != 0L) }
-    val x557 = K3Map.temp[Long, Long]()
+    val x557 = M3Map.temp[Long, Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x557.add(k, v) }
     x557.add(c_custkey, e)
     x557.foreach { (k,v) => val x585 = CUSTDIST_mCUSTOMER1_E1_1.get(k); x527.add(x585, v != 0L) }
     x527.foreach { (k,v) => x526.add(k, v * -1L) }
     // C
-    val x614 = K3Map.temp[Long, Long]()
+    val x614 = M3Map.temp[Long, Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x614.add(k, v) }
     x614.add(c_custkey, e)
     x614.foreach { (k,v) => val x638 = CUSTDIST_mCUSTOMER1_E1_1.get(k); x526.add(x638, v != 0L) }
     // D
-    val x657 = K3Map.temp[Long, Long]()
+    val x657 = M3Map.temp[Long, Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k,v) => x657.add(k, v) }
     x657.add(c_custkey, e)
     x657.foreach { (k,v) =>
@@ -191,37 +191,37 @@ class TPCH13 extends Actor {
 
   // unoptimized as not used
   def onDeleteORDERS(x756: Long, x757: Long, x758: String, x759: Double, x760: Date, x761: String, x762: String, x763: Long, x764: String): Unit = {
-    val x771 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
-    val x772 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
-    val x773 = K3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
+    val x771 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x772 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x773 = M3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
     CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x773.add(v, v != 0L) }
     x773.foreach { case (k,v) => x772.add(k, v) }
-    val x802 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x802 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
     CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x802.add(k, v) }
     val x814 = 0L == Uregexp_match("^.*special.*requests.*$", x764)
     val x822 = (x814 * CUSTDIST_mORDERS1_E1_4.get(x757)) * -1L
     x802.add(x757, x822)
-    val x827 = K3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
+    val x827 = M3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
     x802.foreach { case (k,v) =>
       val x837 = CUSTDIST_mCUSTOMER1_E1_1.get(k)
       x827.add(x837, v != 0L)
     }
     x827.foreach { case (k,v) => x772.add(k, v) }
     x772.foreach { case (k,v) => x771.add(k, v * -1L) }
-    val x866 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x866 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
     CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x866.add(k, v) }
     x866.add(x757, x822)
-    val x880 = K3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
+    val x880 = M3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
     x866.foreach { case (k,v) =>
       val x882 = k
       val x890 = CUSTDIST_mCUSTOMER1_E1_1.get(x882)
       x880.add(x890, v != 0L)
     }
     x880.foreach { case (k,v) => x771.add(k, v) }
-    val x909 = K3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
+    val x909 = M3Map.make[Long,Long]() // INTERMEDIATE_WITH_UPDATE
     CUSTDIST_mCUSTOMER1_E1_1.foreach { case (k,v) => x909.add(k, v) }
     x909.add(x757, x822)
-    val x923 = K3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
+    val x923 = M3Map.make[Long,Long]() // GROUP_BY_AGGREGATE
     x909.foreach { case (k,v) =>
       val x943 = CUSTDIST_mCUSTOMER1_E1_1.get(k) + ((((x757 == k) * x814) * CUSTDIST_mORDERS1_E1_4.get(x757)) * -1L)
       x923.set(x943, ((x923.get(x943)) + (v != 0L)))
@@ -261,10 +261,10 @@ class TPCH13Gen extends Actor {
   import ddbt.lib.Messages._
   import ddbt.lib.Functions._
 
-  val CUSTDIST = K3Map.make[Long,Long]();
-  val CUSTDIST_mORDERS1_E1_4 = K3Map.make[Long,Long]();
-  val CUSTDIST_mCUSTOMER1_E1_1 = K3Map.make[Long,Long]();
-  val CUSTDIST_mCUSTOMER1_E1_3 = K3Map.make[Long,Long]();
+  val CUSTDIST = M3Map.make[Long,Long]();
+  val CUSTDIST_mORDERS1_E1_4 = M3Map.make[Long,Long]();
+  val CUSTDIST_mCUSTOMER1_E1_1 = M3Map.make[Long,Long]();
+  val CUSTDIST_mCUSTOMER1_E1_3 = M3Map.make[Long,Long]();
 
   var t0:Long = 0
   def receive = {
@@ -277,14 +277,14 @@ class TPCH13Gen extends Actor {
   }
 
   def onAddORDERS(orders_orderkey:Long, orders_custkey:Long, orders_orderstatus:String, orders_totalprice:Double, orders_orderdate:Date, orders_orderpriority:String, orders_clerk:String, orders_shippriority:Long, orders_comment:String) {
-    val tmp_add1 = K3Map.temp[Long,Long]()
-    val tmp_add2 = K3Map.temp[Long,Long]()
+    val tmp_add1 = M3Map.temp[Long,Long]()
+    val tmp_add2 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k3,v3) =>
       val c_orders_c_custkey = k3;
       val c_orders_c_count = v3;
       tmp_add2.add(c_orders_c_count,(c_orders_c_count != 0));
     }
-    val tmp_add3 = K3Map.temp[Long,Long]()
+    val tmp_add3 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k5,v5) =>
       val c_orders_c_custkey = k5;
       tmp_add3.add(c_orders_c_custkey,v5)
@@ -299,8 +299,8 @@ class TPCH13Gen extends Actor {
       val c_orders_c_count = k2
       tmp_add1.add(c_orders_c_count,(v2 * -1L))
     }
-    val tmp_add4 = K3Map.temp[Long,Long]()
-    val tmp_add5 = K3Map.temp[Long,Long]()
+    val tmp_add4 = M3Map.temp[Long,Long]()
+    val tmp_add5 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k8,v8) =>
       val c_orders_c_custkey = k8;
       tmp_add5.add(c_orders_c_custkey,v8)
@@ -311,7 +311,7 @@ class TPCH13Gen extends Actor {
       val c_orders_c_count = CUSTDIST_mCUSTOMER1_E1_1.get(c_orders_c_custkey);
       tmp_add4.add(c_orders_c_count,(v7 != 0));
     }
-    val tmp_add6 = K3Map.temp[Long,Long]()
+    val tmp_add6 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k10,v10) =>
       val c_orders_c_custkey = k10;
       tmp_add6.add(c_orders_c_custkey,v10)
@@ -328,7 +328,7 @@ class TPCH13Gen extends Actor {
     }
     tmp_add1.foreach{ (k1,v1) =>
       val c_orders_c_count = k1
-      val tmp1 = K3Map.make[Long,Long]()
+      val tmp1 = M3Map.make[Long,Long]()
       CUSTDIST_mCUSTOMER1_E1_1.foreach { (k11,v11) =>
         val c_orders_c_custkey = k11;
         val c_orders_c_count1 = v11;
@@ -344,14 +344,14 @@ class TPCH13Gen extends Actor {
   }
 
   def onDelORDERS(orders_orderkey:Long, orders_custkey:Long, orders_orderstatus:String, orders_totalprice:Double, orders_orderdate:Date, orders_orderpriority:String, orders_clerk:String, orders_shippriority:Long, orders_comment:String) {
-    val tmp_add7 = K3Map.temp[Long,Long]()
-    val tmp_add8 = K3Map.temp[Long,Long]()
+    val tmp_add7 = M3Map.temp[Long,Long]()
+    val tmp_add8 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k14,v14) =>
       val c_orders_c_custkey = k14;
       val c_orders_c_count = v14;
       tmp_add8.add(c_orders_c_count,(c_orders_c_count != 0));
     }
-    val tmp_add9 = K3Map.temp[Long,Long]()
+    val tmp_add9 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k16,v16) =>
       val c_orders_c_custkey = k16;
       tmp_add9.add(c_orders_c_custkey,v16)
@@ -366,8 +366,8 @@ class TPCH13Gen extends Actor {
       val c_orders_c_count = k13
       tmp_add7.add(c_orders_c_count,(v13 * -1L))
     }
-    val tmp_add10 = K3Map.temp[Long,Long]()
-    val tmp_add11 = K3Map.temp[Long,Long]()
+    val tmp_add10 = M3Map.temp[Long,Long]()
+    val tmp_add11 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k19,v19) =>
       val c_orders_c_custkey = k19;
       tmp_add11.add(c_orders_c_custkey,v19)
@@ -378,7 +378,7 @@ class TPCH13Gen extends Actor {
       val c_orders_c_count = CUSTDIST_mCUSTOMER1_E1_1.get(c_orders_c_custkey);
       tmp_add10.add(c_orders_c_count,(v18 != 0));
     }
-    val tmp_add12 = K3Map.temp[Long,Long]()
+    val tmp_add12 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k21,v21) =>
       val c_orders_c_custkey = k21;
       tmp_add12.add(c_orders_c_custkey,v21)
@@ -395,7 +395,7 @@ class TPCH13Gen extends Actor {
     }
     tmp_add7.foreach{ (k12,v12) =>
       val c_orders_c_count = k12
-      val tmp2 = K3Map.make[Long,Long]()
+      val tmp2 = M3Map.make[Long,Long]()
       CUSTDIST_mCUSTOMER1_E1_1.foreach { (k22,v22) =>
         val c_orders_c_custkey = k22;
         val c_orders_c_count2 = v22;
@@ -411,14 +411,14 @@ class TPCH13Gen extends Actor {
   }
 
   def onAddCUSTOMER(customer_custkey:Long, customer_name:String, customer_address:String, customer_nationkey:Long, customer_phone:String, customer_acctbal:Double, customer_mktsegment:String, customer_comment:String) {
-    val tmp_add13 = K3Map.temp[Long,Long]()
-    val tmp_add14 = K3Map.temp[Long,Long]()
+    val tmp_add13 = M3Map.temp[Long,Long]()
+    val tmp_add14 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k25,v25) =>
       val c_orders_c_custkey = k25;
       val c_orders_c_count = v25;
       tmp_add14.add(c_orders_c_count,(c_orders_c_count != 0));
     }
-    val tmp_add15 = K3Map.temp[Long,Long]()
+    val tmp_add15 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k27,v27) =>
       val c_orders_c_custkey = k27;
       tmp_add15.add(c_orders_c_custkey,v27)
@@ -433,8 +433,8 @@ class TPCH13Gen extends Actor {
       val c_orders_c_count = k24
       tmp_add13.add(c_orders_c_count,(v24 * -1L))
     }
-    val tmp_add16 = K3Map.temp[Long,Long]()
-    val tmp_add17 = K3Map.temp[Long,Long]()
+    val tmp_add16 = M3Map.temp[Long,Long]()
+    val tmp_add17 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k30,v30) =>
       val c_orders_c_custkey = k30;
       tmp_add17.add(c_orders_c_custkey,v30)
@@ -445,7 +445,7 @@ class TPCH13Gen extends Actor {
       val c_orders_c_count = CUSTDIST_mCUSTOMER1_E1_1.get(c_orders_c_custkey);
       tmp_add16.add(c_orders_c_count,(v29 != 0));
     }
-    val tmp_add18 = K3Map.temp[Long,Long]()
+    val tmp_add18 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k32,v32) =>
       val c_orders_c_custkey = k32;
       tmp_add18.add(c_orders_c_custkey,v32)
@@ -462,7 +462,7 @@ class TPCH13Gen extends Actor {
     }
     tmp_add13.foreach{ (k23,v23) =>
       val c_orders_c_count = k23
-      val tmp3 = K3Map.make[Long,Long]()
+      val tmp3 = M3Map.make[Long,Long]()
       CUSTDIST_mCUSTOMER1_E1_1.foreach { (k33,v33) =>
         val c_orders_c_custkey = k33;
         val c_orders_c_count3 = v33;
@@ -478,14 +478,14 @@ class TPCH13Gen extends Actor {
   }
 
   def onDelCUSTOMER(customer_custkey:Long, customer_name:String, customer_address:String, customer_nationkey:Long, customer_phone:String, customer_acctbal:Double, customer_mktsegment:String, customer_comment:String) {
-    val tmp_add19 = K3Map.temp[Long,Long]()
-    val tmp_add20 = K3Map.temp[Long,Long]()
+    val tmp_add19 = M3Map.temp[Long,Long]()
+    val tmp_add20 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k36,v36) =>
       val c_orders_c_custkey = k36;
       val c_orders_c_count = v36;
       tmp_add20.add(c_orders_c_count,(c_orders_c_count != 0));
     }
-    val tmp_add21 = K3Map.temp[Long,Long]()
+    val tmp_add21 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k38,v38) =>
       val c_orders_c_custkey = k38;
       tmp_add21.add(c_orders_c_custkey,v38)
@@ -500,8 +500,8 @@ class TPCH13Gen extends Actor {
       val c_orders_c_count = k35
       tmp_add19.add(c_orders_c_count,(v35 * -1L))
     }
-    val tmp_add22 = K3Map.temp[Long,Long]()
-    val tmp_add23 = K3Map.temp[Long,Long]()
+    val tmp_add22 = M3Map.temp[Long,Long]()
+    val tmp_add23 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k41,v41) =>
       val c_orders_c_custkey = k41;
       tmp_add23.add(c_orders_c_custkey,v41)
@@ -512,7 +512,7 @@ class TPCH13Gen extends Actor {
       val c_orders_c_count = CUSTDIST_mCUSTOMER1_E1_1.get(c_orders_c_custkey);
       tmp_add22.add(c_orders_c_count,(v40 != 0));
     }
-    val tmp_add24 = K3Map.temp[Long,Long]()
+    val tmp_add24 = M3Map.temp[Long,Long]()
     CUSTDIST_mCUSTOMER1_E1_1.foreach { (k43,v43) =>
       val c_orders_c_custkey = k43;
       tmp_add24.add(c_orders_c_custkey,v43)
@@ -529,7 +529,7 @@ class TPCH13Gen extends Actor {
     }
     tmp_add19.foreach{ (k34,v34) =>
       val c_orders_c_count = k34
-      val tmp4 = K3Map.make[Long,Long]()
+      val tmp4 = M3Map.make[Long,Long]()
       CUSTDIST_mCUSTOMER1_E1_1.foreach { (k44,v44) =>
         val c_orders_c_custkey = k44;
         val c_orders_c_count4 = v44;

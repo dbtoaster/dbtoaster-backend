@@ -33,15 +33,17 @@ object M3Map {
   def makeIdx[K<:Product,V:ClassTag](projs:Int *):M3Map[K,V] = {
     new M3MapBase(zero[V](),true,projs.map(i => (k:K)=>k.productElement(i)).toArray)
   }
-
-  // Implicit default zero of the Abelian group.
-  private def zero[V]()(implicit cV:ClassTag[V]):V = (cV.toString match {
+  // Implicit default zero
+  def zero[V]()(implicit cV:ClassTag[V]):V = (cV.toString match {
     case "Long" => 0L
     case "Double" => 0.0
     case "java.lang.String" => ""
     case "java.util.Date" => new java.util.Date(0)
     case n => sys.error("No zero for "+n)
   }).asInstanceOf[V]
+  // Pretty-print a map
+  def toStr(o:Any):String = if (o.isInstanceOf[Map[_,_]]) toStr(o.asInstanceOf[Map[_,_]]) else o.toString
+  def toStr[K,V](m:Map[K,V]):String = m.toList.map{case(k,v)=>(str(k),str(v))}.sortBy(x=>x._1).map{case(k,v)=>k+" -> "+v}.mkString("\n")
   // Convert a map into XML (for debug purposes)
   def toXML[K,V](m:Map[K,V]): List[xml.Elem] = {
     var l = List[xml.Elem]()

@@ -34,7 +34,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear}
   import scala.collection.mutable.HashMap
-  
+
   // Context informations
   var local : CtxSet = null // locally available maps
   val inuse = CtxSet() // set of variables used in the current continuation/used
@@ -228,7 +228,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str)+"\n}\n\n"+ts)+"\n}"
   }
 
-  override def helper(s:System,numSamples:Int=10) = 
+  override def helper(s:System,numSamples:Int=10) =
     "package ddbt.generated\nimport ddbt.lib._\nimport java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind("import WorkerActor._\ndef main(args:Array[String]) {\n"+ind(
     "val (t,res) = runLocal["+cls+"Master,"+cls+"Worker](5,2251,4,"+streams(s.sources)+")\n"+ // XXX: CUSTOMIZE ARGUMENTS
