@@ -20,7 +20,9 @@ object K3MapCommons {
   /**
    * The default initial capacity - MUST be a power of two.
    */
-  final val DEFAULT_INITIAL_CAPACITY: Int = 512
+  final val DEFAULT_INITIAL_CAPACITY: Int = 1024
+  final val DEFAULT_INITIAL_CAPACITY_INDEX: Int = 512
+  final val DEFAULT_INITIAL_CAPACITY_INDEX_INNER: Int = 16
   /**
    * The maximum capacity, used if a higher value is implicitly specified
    * by either of the constructors with arguments.
@@ -35,6 +37,89 @@ object K3MapCommons {
    * The load factor used when none specified in constructor.
    */
   final val INITIAL_THRESHOLD: Int = (DEFAULT_INITIAL_CAPACITY * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
+  final val INITIAL_THRESHOLD_INDEX: Int = (DEFAULT_INITIAL_CAPACITY_INDEX * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
+  final val INITIAL_THRESHOLD_INDEX_INNER: Int = (DEFAULT_INITIAL_CAPACITY_INDEX_INNER * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
+
+  var entryClasses = scala.collection.mutable.HashMap[String,(Type,List[Type])]()
+  var indexEntryClasses = scala.collection.mutable.HashMap[String,(Type,List[Type],List[Int])]()
+
+  def entryClassName(value:Type, key:List[Type]) = "EntryK"+key.map(x => shortName(x)).mkString+"_V"+shortName(value)
+  def indexEntryClassName(value:Type, key:List[Type], indexLoc: List[Int]) = "IdxEntryK"+key.map(x => shortName(x)).mkString+"_V"+shortName(value)+"_I"+indexLoc.mkString("_")
+  def indexMapName(map: String, indexLoc: List[Int]) = map+"_Idx"+indexLoc.mkString("_")
+
+  def generateAllEntryClasses = generateEntryClasses + "\n" + generateIndexEntryClasses
+  def generateEntryClasses = entryClasses.map { case (name, kv) =>
+    val value = kv._1
+    val key = kv._2
+    "  class " + name + "(" +
+      key.zipWithIndex.map{case (ktp, i) => "val _"+(i+1)+":"+ktp.toScala+", "}.mkString +
+      "var v:" + value.toScala + ") {\n" +
+    "    val hs: Int = " + hashFunction(key.zipWithIndex, "    ") + "\n" +
+    "    var next:" + name + " = null\n" +
+    "  }\n"
+  }.mkString
+
+  def generateIndexEntryClasses = indexEntryClasses.map { case (name, kv) =>
+    val value = kv._1
+    val key = kv._2
+    val indexLoc = kv._3
+    val entryCls = entryClassName(value, key)
+    "  class " + name + " (" +
+      indexLoc.map(i => "val _"+(i+1)+":"+key(i).toScala).mkString(", ") + ") {\n" +
+    "    var elems: Array["+entryCls+"] = new Array["+entryCls+"]("+DEFAULT_INITIAL_CAPACITY_INDEX_INNER+");\n" +
+    "    var elems__sz: Int = 0;\n" +
+    "    var elems__ts: Int = "+INITIAL_THRESHOLD_INDEX_INNER+";\n" +
+    "    val hs: Int = " + hashFunction(indexLoc.map(i => (key(i), i)), "    ") + "\n" +
+    "    var next:" + name + " = null\n" +
+    "  }\n"
+  }.mkString
+
+  /*
+   * Implementation of MurmurHash3
+   * based on scala.util.hashing.MurmurHash3
+   * for Products
+   * 
+   * https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
+   */
+  def hashFunction(keyWithIndex: List[(Type,Int)], linePrefix: String) = {
+    //TODO: Is it better to do MurmurHash3 for single values?
+    if(keyWithIndex.size == 1) {
+      val i = keyWithIndex(0)._2
+      "_"+(i+1)+".##"
+    } else {
+      val tupleHashSeed = "0xcafebabe"
+      def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
+      var counter:Int = 0
+      linePrefix + "{\n"+
+      linePrefix + "  var hash:Int = "+tupleHashSeed+"\n" +
+      keyWithIndex.map { case (key, i) =>
+        counter+=1
+        //TODO: Check whether hashCode works better compared to ##
+        //      as we know that everything is type-checked
+        linePrefix + (if(counter == 1) "  var mix:Int" else "  mix") + " = _"+(i+1)+".## * 0xcc9e2d51\n" +
+        linePrefix + "  mix = " + rotl("mix", "15")+"\n" +
+        linePrefix + "  mix *= 0x1b873593\n" +
+        linePrefix + "  mix ^= hash\n" +
+        linePrefix + "  mix = " + rotl("mix", "13")+"\n" +
+        linePrefix + "  hash = mix * 5 + 0xe6546b64\n"
+      }.mkString +
+      linePrefix + "  hash ^= " + keyWithIndex.size + "\n" +
+      linePrefix + "  hash ^= hash >>> 16\n" +
+      linePrefix + "  hash *= 0x85ebca6b\n" +
+      linePrefix + "  hash ^= hash >>> 13\n" +
+      linePrefix + "  hash *= 0xc2b2ae35\n" +
+      linePrefix + "  hash ^= hash >>> 16\n" +
+      linePrefix + "  hash\n" +
+      linePrefix + "}"
+    }
+  }
+
+  def shortName(tp: Type) = tp match {
+    case TypeLong => "L"
+    case TypeDouble => "D"
+    case TypeString => "S"
+    case TypeDate => "A"
+  }
 
   def zeroValue(v: Type) = v match {
     case TypeLong => "0L"
