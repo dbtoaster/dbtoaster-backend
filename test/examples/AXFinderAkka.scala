@@ -61,8 +61,8 @@ class AXMaster extends AXWorker with MasterActor {
   def onAddBIDS(bids_t:Double, bids_id:Long, br_id:Long, vol:Double, price:Double) = /*reset*/ {
     // New format: no CPS plug-in required
     pre(mAX,Array(mB1,mB3),(u:Unit)=>{
-    aggr(mB1,f0,Array[Any](br_id,price),null,null,(agg1:Long)=>{
-    aggr(mB3,f1,Array[Any](br_id,price),null,null,(agg2:Double)=>{
+    aggr(mB1,f0,Array[Any](br_id,price),null,(agg1:Long)=>{
+    aggr(mB3,f1,Array[Any](br_id,price),null,(agg2:Double)=>{
     add(mAX,br_id,((agg1 * (-1L * vol)) + agg2));
     pre(mA1,Array[MapRef](),(u:Unit)=>{
     add(mA1,(br_id,price),vol)

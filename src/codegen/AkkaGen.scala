@@ -73,13 +73,14 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val fn = fresh("fa");
     val (body:String,rc:List[String])=remote(m,fn,()=>{ inuse.add(key.map(_._1).toSet)
       if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
-      else { "val "+a0+" = K3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
-             cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n")+"co("+a0+".toMap)" }
+      else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
+             cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n")+"co("+a0+")" }
     })
     aggl.put((m,e,rc),(fn,body))
     // local handler
-    val rt = if (key.size==0) e.tp.toScala else "Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
-    cl(1); "aggr("+ref(m)+","+fn+",Array[Any]("+rc.mkString(",")+"),null,null,("+a0+":"+rt+") => {\n"
+    val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
+    val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
+    cl(1); "aggr("+ref(m)+","+fn+",Array[Any]("+rc.mkString(",")+"),"+acc+",("+a0+":"+rt+") => {\n"
   }
 
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
@@ -88,7 +89,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case Lift(n,e) =>
       if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("("+n+" == "+v+")"),am)
       else { ctx.add(Map((n,ex.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1")) }
-    case MapRef(n,tp,ks) if local(n) => super.cpsExpr(ex,co,am)
+    case MapRef(n,tp,ks) if local(n) || ks.size==0 => super.cpsExpr(ex,co,am)
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       // XXX: use CPS@execution
       if (ki.size==0) { cl(1); val v=fresh("v"); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) /*+"\n});\n"*/ }
@@ -129,7 +130,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
           val m = fmap(e)
           var r = if (m!=null) ragg(a0,m,a.agg,e);
           else {
-            "val "+a0+" = K3Map.temp["+tup(a.agg.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
+            "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
             super.cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(_._1))+","+v+");\n")
           }
           ctx.load(cur); r
@@ -141,7 +142,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         ctx.add(a.agg.toMap)
         val ks=a.agg.map(_._1)
         rl+rr+{
-          "K3Helper.union("+al+","+ar+").foreach{ ("+k0+","+v0+") =>\n"+ind(
+          ar+".sum("+al+");\n"+
+          al+".foreach{ ("+k0+","+v0+") =>\n"+ind(
             (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+
             co(v0))+"\n}"
         }
@@ -179,10 +181,10 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def genStmt(s:Stmt) = s match {
-    case StmtMap(m,e,op,oi) => val r=ref(m.name); val fop=op match { case OpAdd => "add" case OpSet => "set" }
+    case StmtMap(m,e,op,oi) => val r=ref(m.name); val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("set","=") }
       def rd(ex:Expr):List[String] = ex.collect{ case MapRef(n,t,ks)=>Set(ref(n)) }.toList
-      def set():String = { cl(2); "pre(-1,Array("+r+"),(u:Unit)=> {\nclear("+r+");\nbarrier((u:Unit)=> {\n" }
-      def mop(o:String,v:String) = fop+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+","+v+");"
+      def set():String = if (m.keys.size>0) { cl(2); "pre(-1,Array("+r+"),(u:Unit)=> {\nclear("+r+");\nbarrier((u:Unit)=> {\n" } else ""
+      def mop(o:String,v:String) = if (m.keys.size==0) m.name+" "+sop+" "+v+";" else fop+"("+r+","+tup(m.keys)+","+v+");"
       // preparation (synchronization) for map operation
       val pre=op match { case OpAdd => cl(1); "pre("+r+",Array[MapRef]("+rd(e).mkString(",")+"),(u:Unit)=> {\n" case OpSet => set() }
       val init = oi match { case None => "" case Some(ie) => inuse.load(m.keys.toSet); cl(3)
@@ -219,7 +221,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     freshClear(); ref.clear; aggl.clear; forl.clear; local=null
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
     "import WorkerActor._\nimport ddbt.lib.Functions._\n// constants\n"+refs+fds+ads+gc+ // constants
-    "// maps\n"+ms+"\nval local = Array[Any]("+s.maps.map(m=>m.name).mkString(",")+")\n"+
+    "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+
+    // XXX: missing read and write functions
     (if (ld0!="") "// tables content preloading\n"+ld0+"\n" else "")+"\n"+
     "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(fbs+(if (fbs!="") "\n" else "")+"case _ => co()")+"\n}\n\n"+
     "// remote aggregations\ndef aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {\n"+ind(abs+(if (abs!="") "\n" else "")+"case _ => co(null)")+"\n}")+"\n}\n\n"+
@@ -232,7 +235,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     "package ddbt.generated\nimport ddbt.lib._\nimport java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind("import WorkerActor._\ndef main(args:Array[String]) {\n"+ind(
     "val (t,res) = runLocal["+cls+"Master,"+cls+"Worker](5,2251,4,"+streams(s.sources)+")\n"+ // XXX: CUSTOMIZE ARGUMENTS
-    s.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+K3Helper.toStr(res("+i+"))"+"+\"\\n\")\n"}.mkString+
+    s.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))"+"+\"\\n\")\n"}.mkString+
     "println(\"Time = \"+time(t));\n")+"\n}")+"\n}\n\n"
 }
 

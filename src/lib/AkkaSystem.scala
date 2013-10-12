@@ -86,6 +86,7 @@ abstract class WorkerActor extends Actor {
   // ---- concrete maps and local operations
   val local:Array[M3Map[_,_]] // ref->local maps conversion
   def local_wr(m:MapRef,v:Any,add:Boolean) {} // write in local variable
+  def local_rd(m:MapRef):Any = "<???>" // generic read a local variable
   def hash(m:MapRef,k:Any) = k.hashCode
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) // local foreach
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) // local aggregation
@@ -241,8 +242,8 @@ abstract class WorkerActor extends Actor {
   def foreach(m:MapRef,f:FunRef,args:Any*) { owns(m).foreach { bar.send(_,Foreach(f,args.toArray)) } }
   
   // XXX: idea = create multiple functions instead of only 1
-  def aggr[R](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,plus:(Any,Any)=>Any=null,co:R=>Unit)(implicit cR:ClassTag[R]) = {
-    val (z,p) = if (zero!=null&&plus!=null) (zero,plus)
+  def aggr[R](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,co:R=>Unit)(implicit cR:ClassTag[R]) = {
+    val (z,p) = if (zero!=null) (zero,((m1:M3Map[Any,Any],m2:M3Map[Any,Any])=>{m2.sum(m1); m1}).asInstanceOf[(Any,Any)=>Any])
     else (M3Map.zero[R](),(cR.toString match {
       case "Long" => (v0:Long,v1:Long)=>v0+v1
       case "Double" => (v0:Double,v1:Double)=>v0+v1
@@ -275,15 +276,14 @@ trait MasterActor extends WorkerActor {
 
   def barrier(co:Unit=>Unit) = bar.set(true,co);
   def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = {
-    val z = if (cV.toString=="Object"||cV.toString=="Any") local(m).asInstanceOf[M3MapBase[K,V]].acc else M3Map.temp[K,V]()
-    val p = ((m1:M3Map[K,V],m2:M3Map[K,V])=>{m2.sum(m1); m1}).asInstanceOf[(Any,Any)=>Any]
-    super.aggr(m,fun_collect,Array(m),z,p,(mm:M3Map[K,V])=>co(mm.toMap))
+    val zero = if (cV.toString=="Object"||cV.toString=="Any") local(m).asInstanceOf[M3MapBase[K,V]].acc else M3Map.temp[K,V]()
+    super.aggr(m,fun_collect,Array(m),zero,(mm:M3Map[K,V])=>co(mm.toMap))
   }
 
   // --- sequential to CPS conversion
   // XXX: to go away as it is more complicated to generate
   def _get[K,V](m:MapRef,k:K):V @cps[Unit] = shift { co:(V=>Unit) => super.get(m,k,co) }
-  def _aggr[R:ClassTag](m:MapRef,f:FunRef,args:Any*) = shift { co:(R=>Unit) => super.aggr(m,f,args.toArray,null,null,co) }
+  def _aggr[R:ClassTag](m:MapRef,f:FunRef,args:Any*) = shift { co:(R=>Unit) => super.aggr(m,f,args.toArray,null,co) }
   def _barrier = shift { co:(Unit=>Unit) => bar.set(true,co); }
   def _toMap[K,V:ClassTag](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
   def _pre(write:MapRef,read:MapRef*) = shift { co:(Unit=>Unit) => pre(write,read.toArray,co) }
@@ -309,9 +309,11 @@ trait MasterActor extends WorkerActor {
         ev match {
           case SystemInit => reset { onSystemReady(); println("Pre"); _barrier; println("Post"); t0=System.nanoTime(); deq }
           case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0
-            def collect(n:Int,acc:List[Map[_,_]]):Unit = n match {
+            def collect(n:Int,acc:List[Any]):Unit = n match {
               case 0 => sender ! (time,acc); deq
-              case n => toMap(MapRef(n-1),(m:Map[_,_])=>collect(n-1,m::acc))
+              case n => val r=MapRef(n-1)
+                if (local(r)==null) collect(n-1,local_rd(r)::acc)
+                else toMap(r,(m:Map[_,_])=>collect(n-1,m::acc))
             }
             collect(local.length,Nil)
           case e:TupleEvent => dispatch(e)
