@@ -56,7 +56,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
         ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
         n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
-          ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";"}.mkString("\n")+"\n"+co(v0))+"\n}\n" // bind free variables from retrieved key
+          ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co(v0))+"\n}\n" // bind free variables from retrieved key
       }
     case Lift(n,e) =>
       if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
@@ -65,14 +65,14 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case a@Add(el,er) =>
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else am match {
-        case Some(t) if t==a.agg => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+"\n"+s2
+        case Some(t) if t==a.agg => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
           val tmp = Some(a.agg)
           val cur = ctx.save
-          val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"; ctx.load(cur)
-          val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp)+"\n"; ctx.load(cur)
+          val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp); ctx.load(cur)
+          val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks)+","+v+")",tmp); ctx.load(cur)
           ctx.add(a.agg.toMap)
           "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+
           a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
@@ -88,7 +88,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
-          val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=> { a0+".add("+tup(aks.map(_._1))+","+v+");\n" },tmp);
+          val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(_._1))+","+v+");\n",tmp);
           ctx.load(cur); val ma=MapRef(a0,e.tp,aks.map(_._1)); ma.tks=aks.map(_._2); s1+cpsExpr(ma,co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
@@ -99,12 +99,11 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
       val init = oi match {
         case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>
-          if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i
-          else "if ("+m.name+".get("+tup(m.keys)+")==0) "+m.name+".set("+tup(m.keys)+","+i+")"
-        )+";\n"
+          if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
+          else "if ("+m.name+".get("+tup(m.keys)+")==0) "+m.name+".set("+tup(m.keys)+","+i+");\n")
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+tup(m.keys)+","+v+")")+";")+"\n"
+      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+tup(m.keys)+","+v+")")+";\n")
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -114,9 +113,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
-    ctx = Ctx(as.toMap)
-    val res = "def on"+n+"("+as.map(a=>a._1+":"+a._2.toScala).mkString(", ")+") {\n"+ind(t.stmts.map(genStmt).mkString)+"\n}"
-    ctx = null; res
+    ctx=Ctx(as.toMap); val body=t.stmts.map(genStmt).mkString; ctx=null;
+    "def on"+n+"("+as.map(a=>a._1+":"+a._2.toScala).mkString(", ")+") "+(if (body=="") "{ }" else "{\n"+ind(body)+"\n}")
   }
 
   // Lazy slicing (secondary) indices computation

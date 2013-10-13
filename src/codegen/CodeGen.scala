@@ -16,7 +16,7 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
   // Stream sources definition
   def streams(sources:List[Source]) : String
 
-  // Context abstractions
+  // Context maintenance helpers
   case class Ctx[T](ctx0:Map[String,T]=Map()) extends Function1[String,T] {
     private var ctx = scala.collection.mutable.HashMap[String,T]()
     def add(c:Map[String,T]) = c.foreach(x=>ctx.put(x._1,x._2))
@@ -32,5 +32,12 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
     def save = ctx.toSet
     def contains(name:String) = apply(name)
     def apply(name:String) = ctx.contains(name) || ctx0.contains(name)
+  }
+  case class CtxCtr[T](f:Int=>T=(i:Int)=>i) extends Function0[T] {
+    private var ctr=0;
+    def add(n:Int=1) { ctr=ctr+n; }
+    def save = { val c=ctr; ctr=0; c }
+    def load(c:Int=0) { ctr=c }
+    def apply() = f(ctr)
   }
 }
