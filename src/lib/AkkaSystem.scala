@@ -147,9 +147,10 @@ abstract class WorkerActor extends Actor {
     private val cont = new java.util.HashMap[Int,List[Any=>Unit]]
     private val sum = new java.util.HashMap[Int,(Int/*count_down*/,Any/*sum*/,(Any,Any)=>Any/*plus*/)]
     private val params = new java.util.HashMap[Int,(FunRef,Array[Any])]()
+    private val params_r = new java.util.HashMap[(FunRef,Array[Any]),Int]()
     private val uniq:Long = math.abs(self.path.toString.hashCode) // unique among the cluster and membership-independent
     private var ctr:Int = 0
-    @inline private def getId(f:FunRef,args:Array[Any]):Int = { params.foreach{ case (k,v) => if (v==(f,args)) return k; }; ctr=ctr+1; (ctr*uniq).toInt }
+    @inline private def getId(f:FunRef,args:Array[Any]):Int = { val r=params_r.get((f,args)); if (r!=0) r else { ctr+=1; (ctr*uniq).toInt } }
     @inline def req[R](m:MapRef,f:FunRef,args:Array[Any],co:R=>Unit,zero:Any,plus:(Any,Any)=>Any) { // call aggregation ("f(args)",continuation) on map m (m used only to restrict broadcasting)
       val k=(f,args); val v=if (enabled) cache.get(k) else null;
       if (v!=null) co(v.asInstanceOf[R]) // cached
@@ -157,7 +158,7 @@ abstract class WorkerActor extends Actor {
         val k=getId(f,args); val cs=cont.get(k); val c=co.asInstanceOf[Any=>Unit];
         cont.put(k,c::(if (cs!=null) cs else Nil))
         if (cs==null) { // new request, create all structures and broadcast request to workers owning map m
-          params.put(k,(f,args))
+          params.put(k,(f,args)); params_r.put((f,args),k)
           val os = owns.get(m)
           sum.put(k,(os.length,zero,plus))
           os.foreach{ w=> w!Aggr(k,f,args) } // send
@@ -170,7 +171,7 @@ abstract class WorkerActor extends Actor {
       if (r._1>0) sum.put(id,r) // incomplete aggregation, wait...
       else {
         if (enabled) cache.put(params.get(id),r._2); cont.remove(id).foreach { _(r._2) }
-        sum.remove(id); params.remove(id) // cleanup other entries
+        sum.remove(id); { params_r.remove(params.remove(id)) } // cleanup other entries
         if (self!=master) bar.ack // ack pending barrier if needed
       }
     }
@@ -290,11 +291,11 @@ trait MasterActor extends WorkerActor {
   def _toMap[K,V:ClassTag](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
   def _pre(write:MapRef,read:MapRef*) = shift { co:(Unit=>Unit) => pre(write,read.toArray,co) }
 
-  // ---- coherency mechanism: RAW and WAR dependency tracking (XXX: maybe WAW is also needed)
+  // ---- coherency mechanism: RAW, WAR and WAW dependency tracking
   private val pre_wr = scala.collection.mutable.Set[MapRef]() // written maps
   private val pre_rd = scala.collection.mutable.Set[MapRef]() // read maps
   def pre(write:MapRef,read:Array[MapRef],co:Unit=>Unit) = {
-    if (!pre_rd.contains(write) && read.filter{r=>pre_wr.contains(r)}.isEmpty) { pre_wr+=write; pre_rd++=read; co() }
+    if (!pre_rd.contains(write) && !pre_wr.contains(write) && read.filter{r=>pre_wr.contains(r)}.isEmpty) { pre_wr+=write; pre_rd++=read; co() }
     else { pre_wr.clear; pre_rd.clear; pre_wr+=write; pre_rd++=read; bar.set(true,co) }
   }
 

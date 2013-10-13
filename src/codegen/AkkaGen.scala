@@ -31,7 +31,6 @@ import ddbt.ast._
  * @author TCK
  */
  
-
 /*
 Issues to solve:
 - cluster initialization and maps distribution => make workers tell to master they want to join with their maps (all local but null maps)
@@ -42,12 +41,16 @@ Issues to solve:
 - move test AST into its own ddbt.ast package ?
 - shall we make unit tests part of the compiler ?
 
+XXX: problem: the same map can be accessed locally in a foreach but again acessed with another key which might not be on the host (Runiquecountsbya) 
+XXX: warning, some test are incorrect but get correct if they are run first (Rseqineq, ...)
+
+;check -q.*ltalldynamic -dd -makka;test-only ddbt.test.gen.*
+
 Results:
-- Syntax    :  60
-- Semantics :  28
-- FailExec  :   9
-- Wrong     :   3
-- Correct   :  82
+- Syntax    :  44
+- Semantics :  38
+- Wrong/fail:   5
+- Correct   :  95
 */
 
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
@@ -58,19 +61,18 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   // Context informations
   var local : CtxSet = null // locally available maps
   val inuse = CtxSet() // set of variables used in the current continuation/used
-  var clctr : Int=0; // closures counter "how many closures to close" (no pun intended)
-  def cl(n:Int=1) { clctr+=n }
-  def cl_bk() = { val c=clctr; clctr=0; c }
-  def cl_rs(b:Int) = { val c=" "+("})"*clctr); clctr=b; c }
+  val cl = CtxCtr((i:Int)=>" })"*i) // continuation closing
+  def cl_rs(b:Int) = { val c=cl(); cl.load(b); c }
 
   val ref = new HashMap[String,String]() // map: name(local)->reference(remote)
+
   // remote functions as (map,expression,context) => (func_name,body)
   private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
   private val forl = HashMap[(String,Expr,List[String]),(String,String)]()
-  private def anon(e:Expr):Expr = e.rename((n:String)=>n.replaceAll("[0-9]+","")) // anonymize the function (for use in hash key)
+  private def anon(e:Expr):Expr = e.rename((n:String)=>n.replaceAll("[0-9]+","")) // anonymize the function (for use as hash key)
 
-  /** Get the first (in evaluation order) map with free variables. (implicit 'ctx' is used to determine free variables) */
-  def fmap(e:Expr):String = e match { // first map with free variables in the evaluation order (using context ctx), to be used as 'aggregation over' map
+  /** Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables. */
+  def fmap(e:Expr):String = e match {
     case MapRef(n,tp,ks) if ks.exists(!ctx.contains(_)) => n
     case Lift(n,e) => fmap(e)
     case AggSum(ks,e) => fmap(e)
@@ -93,20 +95,17 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   def ragg(a0:String,m:String,key:List[(String,Type)],e:Expr):String = {
     // remote handler
     val fn0 = fresh("fa");
-    val (body0:String,rc:List[String])=remote(m,fn0,()=>{ inuse.add(key.map(_._1).toSet)
-      if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
+    val (body0:String,rc:List[String])=remote(m,fn0,()=>{ val cc=cl.save; inuse.add(key.map(_._1).toSet)
+      if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"+cl_rs(cc)
       else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
-             cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n")+"co("+a0+")" }
+             cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n")+"co("+a0+")"+cl_rs(cc) }
     })
-    //aggl.put((m,e,rc),(fn0,body0))
     val (fn,body) = aggl.getOrElseUpdate((m,anon(e),rc),(fn0,body0))
-
     // local handler
     val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
     val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
-    cl(1); "aggr("+ref(m)+","+fn+",Array[Any]("+rc.mkString(",")+"),"+acc+",("+a0+":"+rt+") => {\n"
+    cl.add(1); "aggr("+ref(m)+","+fn+",Array[Any]("+rc.mkString(",")+"),"+acc+",("+a0+":"+rt+") => {\n"
   }
-  
 
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
@@ -116,46 +115,34 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       else { ctx.add(Map((n,e.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
     case MapRef(n,tp,ks) if local(n) || ks.size==0 => super.cpsExpr(ex,co,am)
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-      // XXX: use CPS@execution
-      if (ki.size==0) { cl(1); val v=fresh("v"); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) }
+      if (ki.size==0) { cl.add(1); val v=fresh("v"); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) }
       else {
         // remote handler
         val fn0 = fresh("ff");
-        val (body0,rc)=remote(n,fn0,()=>{ val cc=cl_bk; val co2=(v:String)=>co(v)+cl_rs(cc); super.cpsExpr(ex,co2)+"co()"}) // XXX: apply the same trick (cl) for aggregations ?
-        //forl.put((n,ex,rc),(fn0,body0))
+        val (body0,rc)=remote(n,fn0,()=>{ val cc=cl.save; val co2=(v:String)=>co(v)+cl_rs(cc); super.cpsExpr(ex,co2)+"co()"})
         val (fn,body) = forl.getOrElseUpdate((n,anon(ex),rc),(fn0,body0))
         // local handler
         "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
       }
-    case a@AggSum(ks,e) => inuse.add(ks.toSet);
-      val m=fmap(e);
-      if (m==null) super.cpsExpr(ex,co,am) // projection only
+    case a@AggSum(ks,e) => val m=fmap(e); inuse.add(ks.toSet);
+      if (m==null /*|| local(m)!=null but not always !! */) super.cpsExpr(ex,co,am) // projection only
       else {
-        val a0=fresh("agg"); val aks=(ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-        ragg(a0,m,aks,e)+
-        (if (aks.size==0) co(a0) else { // XXX: make zero and plus for Map[_,_]
-          val ma=MapRef(a0,e.tp,aks.map(_._1)); ma.tks=aks.map(_._2); cpsExpr(ma,co)
-        })
+        val a0=fresh("agg"); val aks=(ks zip a.tks).filter{ case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
+        ragg(a0,m,aks,e)+(if (aks.size==0) co(a0) else { val ma=MapRef(a0,e.tp,aks.map(_._1)); ma.tks=aks.map(_._2); cpsExpr(ma,co) })
       }
     case a@Add(el,er) =>
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else {
-        val cur = ctx.save
-        def add(a0:String,e:Expr):String = {
-          val m = fmap(e)
-          var r = if (m!=null) ragg(a0,m,a.agg,e);
-          else {
+        def add(a0:String,e:Expr):String = { val cur=ctx.save; val m=fmap(e)
+          var r = if (m!=null) ragg(a0,m,a.agg,e) else {
             "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
             super.cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(_._1))+","+v+");\n")
           }
           ctx.load(cur); r
         }
-        // XXX: what if one side has no unbound map => call super.cpsExpr(...)
         val al=fresh("add_l"); val rl=add(al,el);
         val ar=fresh("add_r"); val rr=add(ar,er);
-        val (k0,v0)=(fresh("k"),fresh("v"))
-        ctx.add(a.agg.toMap)
-        val ks=a.agg.map(_._1)
+        val (k0,v0)=(fresh("k"),fresh("v")); val ks=a.agg.map(_._1); ctx.add(a.agg.toMap)
         rl+rr+ar+".sum("+al+");\n"+al+".foreach{ ("+k0+","+v0+") =>\n"+ind(
             (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
       }
@@ -165,12 +152,12 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   override def genStmt(s:Stmt) = s match {
     case StmtMap(m,e,op,oi) => val r=ref(m.name); val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("set","=") }
       def rd(ex:Expr):List[String] = ex.collect{ case MapRef(n,t,ks)=>Set(ref(n)) }.toList
-      def pre(o:OpMap,e:Expr) = o match { // preparation (synchronization) for map operation
-        case OpSet if m.keys.size>0 => cl(2); "pre(-1,Array("+r+"),(u:Unit)=> {\nclear("+r+");\nbarrier((u:Unit)=> {\n"
-        case _ => cl(1); "pre("+r+",Array[MapRef]("+rd(e).mkString(",")+"),(u:Unit)=> {\n"
+      def pre(o:OpMap,e:Expr) = o match { // preparation (optional barrier) for map operation
+        case OpSet if m.keys.size>0 => cl.add(2); "pre(-1,Array("+r+"),(u:Unit)=> {\nclear("+r+");\nbarrier((u:Unit)=> {\n"
+        case _ => cl.add(1); "pre("+r+",Array[MapRef]("+rd(e).mkString(",")+"),(u:Unit)=> {\n"
       }
       def mop(o:String,v:String) = o+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+","+v+");"
-      val init = oi match { case None => "" case Some(ie) => inuse.load(m.keys.toSet); cl(3)
+      val init = oi match { case None => "" case Some(ie) => inuse.load(m.keys.toSet); cl.add(3)
         "pre(-1,Array("+(r::rd(ie)).mkString(",")+"),(u:Unit)=>\n"+
         "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+", (z:"+m.tp.toScala+") => if (z==0) {\n"+ind(cpsExpr(ie,(v:String)=>mop("set",v)))+"\n}"+
         "barrier((u:Unit)=> {\n"
@@ -180,20 +167,14 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case _ => sys.error("Unimplemented")
   }
 
-  // Add the pre and deq calls in master's triggers
-  override def genTrigger(t:Trigger):String = {
-    val (n,as,deq) = t.evt match {
-      case EvtReady => ("SystemReady",Nil,"ready")
-      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs,"deq")
-      case EvtDel(Schema(n,cs)) => ("Del"+n,cs,"deq")
-    }
-    clctr=0; ctx = Ctx(as.toMap)
-    val res = "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = {\n"+ind(t.stmts.map(genStmt).mkString+deq+(" })"*clctr)) +"\n}"
-    ctx = null; clctr=0; res
+  override def genTrigger(t:Trigger):String = { // add pre and deq/ready calls in master's triggers
+    val (n,as,deq) = t.evt match { case EvtReady=>("SystemReady",Nil,"ready") case EvtAdd(Schema(n,cs))=>("Add"+n,cs,"deq") case EvtDel(Schema(n,cs))=>("Del"+n,cs,"deq") }
+    cl.load(); ctx=Ctx(as.toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = {\n"+ind(t.stmts.map(genStmt).mkString+deq+cl()) +"\n}"
+    cl.load(); ctx=null; res
   }
 
   override def apply(s:System) = {
-    local = CtxSet(s.sources.filter(s=> !s.stream).map(_.schema.name).toSet)
+    local = CtxSet(s.sources.filter(s=> !s.stream).map(_.schema.name).toSet ++ s.maps.filter(m=>m.keys.size==0).map(_.name).toSet) // tables and vars
     val refs = s.maps.zipWithIndex.map{case (m,i)=> ref.put(m.name,"map"+i); "val map"+i+" = MapRef("+i+")\n" }.mkString
     val qs = { val mn=s.maps.zipWithIndex.map{case (m,i)=>(m.name,i)}.toMap; "val queries = List("+s.queries.map(q=>mn(q.map.name)).mkString(",")+")\n" } // queries as map indices
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
