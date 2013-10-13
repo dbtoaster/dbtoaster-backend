@@ -37,6 +37,7 @@ class Master extends Worker with MasterActor {
   import Messages._
   import scala.util.continuations._
 
+  val queries = List(0)
   val dispatch : PartialFunction[TupleEvent,Unit] = {
     case `ev1` => reset {
       add(m0,1L,1L); add(m0,2L,2L); add(m1,1.0,1.0)
@@ -64,7 +65,7 @@ class Master extends Worker with MasterActor {
     case `ev4` => println("Trampoline OK"); deq
     case e:TupleEvent => deq
   }
-  def onSystemReady() {}
+  def onSystemReady() { ready }
 }
 
 class AkkaSys extends FunSpec {

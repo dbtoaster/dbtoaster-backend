@@ -24,7 +24,7 @@ trait Helper {
   // Run query actor and collect time + resulting maps or values (for 0-key maps)
   // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
 
-  def mux(actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,wait:Int=6000000) : (Long,List[Any]) = {
+  def mux(actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,wait:Int=6000) : (Long,List[Any]) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
     actor ! SystemInit; mux.read(); val timeout = akka.util.Timeout(wait)
     scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(timeout), timeout.duration).asInstanceOf[(Long,List[Any])]

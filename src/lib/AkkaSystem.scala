@@ -86,7 +86,7 @@ abstract class WorkerActor extends Actor {
   // ---- concrete maps and local operations
   val local:Array[M3Map[_,_]] // ref->local maps conversion
   def local_wr(m:MapRef,v:Any,add:Boolean) {} // write in local variable
-  def local_rd(m:MapRef):Any = "<???>" // generic read a local variable
+  def local_rd(m:MapRef):Any = sys.error("local_rd unspecified") // generic read a local variable
   def hash(m:MapRef,k:Any) = k.hashCode
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) // local foreach
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) // local aggregation
@@ -242,7 +242,7 @@ abstract class WorkerActor extends Actor {
   def foreach(m:MapRef,f:FunRef,args:Any*) { owns(m).foreach { bar.send(_,Foreach(f,args.toArray)) } }
   
   // XXX: idea = create multiple functions instead of only 1
-  def aggr[R](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,co:R=>Unit)(implicit cR:ClassTag[R]) = {
+  def aggr[R](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,co:R=>Unit)(implicit cR:ClassTag[R]) {
     val (z,p) = if (zero!=null) (zero,((m1:M3Map[Any,Any],m2:M3Map[Any,Any])=>{m2.sum(m1); m1}).asInstanceOf[(Any,Any)=>Any])
     else (M3Map.zero[R](),(cR.toString match {
       case "Long" => (v0:Long,v1:Long)=>v0+v1
@@ -262,9 +262,9 @@ abstract class WorkerActor extends Actor {
 
 /**
  * Master is an additional role for a worker: it acts as streams entry point. It
- * processes external events sequentially, keeps track of 'invalid' maps and enforce
- * writing in-flight messages with a barrier when necessary. To provide a blocking
- * execution, we use a continuation that fetch next events when finished.
+ * processes external events sequentially, keeps track of read and written maps and
+ * enforce writing in-flight messages with a barrier when necessary. To provide a
+ * blocking execution, we use a continuation that fetch next events when finished.
  * To write imperative-style in a CPS environment, use the continuations plug-in:
  * http://www.scala-lang.org/api/current/index.html#scala.util.continuations.package
  */
@@ -273,6 +273,8 @@ trait MasterActor extends WorkerActor {
   import WorkerActor._
   import Messages._
   import scala.util.continuations._
+
+  val queries:List[Int]
 
   def barrier(co:Unit=>Unit) = bar.set(true,co);
   def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = {
@@ -288,11 +290,12 @@ trait MasterActor extends WorkerActor {
   def _toMap[K,V:ClassTag](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
   def _pre(write:MapRef,read:MapRef*) = shift { co:(Unit=>Unit) => pre(write,read.toArray,co) }
 
-  // ---- coherency mechanism: if a map used is not flushed, flush all
-  private val invalid = scala.collection.mutable.Set[MapRef]()
+  // ---- coherency mechanism: RAW and WAR dependency tracking (XXX: maybe WAW is also needed)
+  private val pre_wr = scala.collection.mutable.Set[MapRef]() // written maps
+  private val pre_rd = scala.collection.mutable.Set[MapRef]() // read maps
   def pre(write:MapRef,read:Array[MapRef],co:Unit=>Unit) = {
-    if (read.filter{r=>invalid.contains(r)}.isEmpty) { invalid+=write; co() }
-    else { invalid.clear; invalid+=write; bar.set(true,co) }
+    if (!pre_rd.contains(write) && read.filter{r=>pre_wr.contains(r)}.isEmpty) { pre_wr+=write; pre_rd++=read; co() }
+    else { pre_wr.clear; pre_rd.clear; pre_wr+=write; pre_rd++=read; bar.set(true,co) }
   }
 
   // ---- handle stream events
@@ -306,16 +309,16 @@ trait MasterActor extends WorkerActor {
       else {
         est=2 // expose trampoline
         val (ev,sender)=eq.removeFirst
+        def collect(time:Long,rqs:List[Int],acc:List[Any]):Unit = rqs match {
+          case q::qs => val r=MapRef(q)
+            if (local(r)==null) collect(time,qs,local_rd(r)::acc)
+            else toMap(r,(m:Map[_,_])=>collect(time,qs,m::acc))
+          case Nil => sender ! (time,acc); deq
+        }
         ev match {
-          case SystemInit => reset { onSystemReady(); println("Pre"); _barrier; println("Post"); t0=System.nanoTime(); deq }
-          case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0
-            def collect(n:Int,acc:List[Any]):Unit = n match {
-              case 0 => sender ! (time,acc); deq
-              case n => val r=MapRef(n-1)
-                if (local(r)==null) collect(n-1,local_rd(r)::acc)
-                else toMap(r,(m:Map[_,_])=>collect(n-1,m::acc))
-            }
-            collect(local.length,Nil)
+          case SystemInit => onSystemReady() //reset { onSystemReady(); println("Pre"); _barrier; println("Post"); t0=System.nanoTime(); deq }
+          case EndOfStream => val time=System.nanoTime()-t0; collect(time,queries.reverse,Nil)
+          case GetSnapshot(qs:List[Int]) => val time=System.nanoTime()-t0; collect(time,qs.reverse,Nil)
           case e:TupleEvent => dispatch(e)
         }
         if (est==2) est=1 // disable trampoline
@@ -330,4 +333,5 @@ trait MasterActor extends WorkerActor {
   }
   
   def onSystemReady() // {}
+  def ready() { bar.set(true,(u:Unit)=>{ t0=System.nanoTime(); deq }) } // callback for onSystemReady
 }

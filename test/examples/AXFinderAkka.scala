@@ -52,6 +52,8 @@ class AXMaster extends AXWorker with MasterActor {
   import Messages._
   import scala.util.continuations._
 
+  val queries = List(0)
+
   val dispatch : PartialFunction[TupleEvent,Unit] = {
     case TupleEvent(TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0,v1,v2,v3,v4)
     case TupleEvent(TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0,v1,v2,v3,v4)
@@ -106,5 +108,5 @@ class AXMaster extends AXWorker with MasterActor {
     _pre(mB3); add(mB3,(br_id,price),(-1L * vol));
     deq
   }
-  def onSystemReady() {}
+  def onSystemReady() { ready }
 }

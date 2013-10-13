@@ -113,7 +113,7 @@ object UnitTest {
         // val mystr = (str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) } // seems that set.subs are useless here
         val mystr = (if (sz.endsWith("_del")) str.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else str).replaceAll("/standard/","/"+sz+"/") // streams for this dataset
         "describe(\"Dataset '"+sz+"'\") {\n"+ind(
-        "val (t,res) = run"+(if (mode=="akka") "Local["+cls+"Master,"+cls+"Worker](5,2251,4," else "["+cls+"](")+mystr+")\n"+ // XXX: fix Akka parameters
+        "val (t,res) = run"+(if (mode=="akka") "Local["+cls+"Master,"+cls+"Worker]("+sys.maps.size+",2251,4," else "["+cls+"](")+mystr+")\n"+ // XXX: fix Akka parameters
         set.out.map { case (n,o) =>
           val (kt,vt) = qt(n)
           val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"

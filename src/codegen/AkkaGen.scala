@@ -113,7 +113,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case MapRef(n,tp,ks) if local(n) => inuse.add(ks.toSet); super.cpsExpr(ex,co)
     case Lift(n,e) =>
       if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
-      else { ctx.add(Map((n,ex.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
+      else { ctx.add(Map((n,e.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
     case MapRef(n,tp,ks) if local(n) || ks.size==0 => super.cpsExpr(ex,co,am)
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       // XXX: use CPS@execution
@@ -183,18 +183,19 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   // Add the pre and deq calls in master's triggers
   override def genTrigger(t:Trigger):String = {
     val (n,as,deq) = t.evt match {
-      case EvtReady => ("SystemReady",Nil,"") // deq it already handled 
-      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs,"deq ")
-      case EvtDel(Schema(n,cs)) => ("Del"+n,cs,"deq ")
+      case EvtReady => ("SystemReady",Nil,"ready")
+      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs,"deq")
+      case EvtDel(Schema(n,cs)) => ("Del"+n,cs,"deq")
     }
     clctr=0; ctx = Ctx(as.toMap)
-    val res = "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = {\n"+ind(t.stmts.map(genStmt).mkString+deq+("})"*clctr)) +"\n}"
+    val res = "def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = {\n"+ind(t.stmts.map(genStmt).mkString+deq+(" })"*clctr)) +"\n}"
     ctx = null; clctr=0; res
   }
 
   override def apply(s:System) = {
     local = CtxSet(s.sources.filter(s=> !s.stream).map(_.schema.name).toSet)
     val refs = s.maps.zipWithIndex.map{case (m,i)=> ref.put(m.name,"map"+i); "val map"+i+" = MapRef("+i+")\n" }.mkString
+    val qs = { val mn=s.maps.zipWithIndex.map{case (m,i)=>(m.name,i)}.toMap; "val queries = List("+s.queries.map(q=>mn(q.map.name)).mkString(",")+")\n" } // queries as map indices
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
     val ms = s.maps.map(genMap).mkString("\n") // maps
     val (str,ld0,gc) = genInternals(s)
@@ -216,14 +217,14 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(fbs+(if (fbs!="") "\n" else "")+"case _ => co()")+"\n}\n\n"+
     "// remote aggregations\ndef aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {\n"+ind(abs+(if (abs!="") "\n" else "")+"case _ => co(null)")+"\n}")+"\n}\n\n"+
     "class "+cls+"Master extends "+cls+"Worker with MasterActor {\n"+ind(
-    "import WorkerActor._\nimport Messages._\nimport Functions._\nimport scala.util.continuations._\n\n"+
-    "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str)+"\n}\n\n"+ts)+"\n}"
+    "import WorkerActor._\nimport Messages._\nimport Functions._\nimport scala.util.continuations._\n\n"+qs+
+    "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str+"case _ => deq")+"\n}\n\n"+ts)+"\n}"
   }
 
   override def helper(s:System,numSamples:Int=10) =
     "package ddbt.generated\nimport ddbt.lib._\nimport java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind("import WorkerActor._\ndef main(args:Array[String]) {\n"+ind(
-    "val (t,res) = runLocal["+cls+"Master,"+cls+"Worker](5,2251,4,"+streams(s.sources)+")\n"+ // XXX: CUSTOMIZE ARGUMENTS
+    "val (t,res) = runLocal["+cls+"Master,"+cls+"Worker]("+s.maps.size+",2251,4,"+streams(s.sources)+")\n"+ // XXX: CUSTOMIZE ARGUMENTS
     s.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))"+"+\"\\n\")\n"}.mkString+
     "println(\"Time = \"+time(t));\n")+"\n}")+"\n}\n\n"
 }
