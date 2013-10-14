@@ -9,7 +9,7 @@ trait Helper {
   import Messages._
 
   // ---------------------------------------------------------------------------
-  // Akka remoting helpers
+  // Akka helpers
   private def sys(name:String,host:String=null,port:Int=0) = {
     val conf = "akka.loglevel=ERROR\nakka.log-dead-letters-during-shutdown=off\n"+ // disable verbose logging
                (if (host!=null) "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote.netty {\nhostname=\""+host+"\"\ntcp.port="+port+"\n}\n}\n" else "")

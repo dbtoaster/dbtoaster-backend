@@ -222,7 +222,7 @@ abstract class WorkerActor extends Actor {
     case Clear(m,p,pk) => val mm=local(m); (if (p<0) mm else mm.slice(p,pk)).clear; bar.recv
     case Foreach(f,as) => forl(f,as,_ => bar.recv)
     case Aggr(id,fun_collect,Array(m:MapRef)) => sender ! AggrPart(id,local(m)) // collect map data
-    case Aggr(id,f,as) => aggl(f,as,(r:Any) => sender ! AggrPart(id,r))
+    case Aggr(id,f,as) => val s=sender; aggl(f,as,(r:Any)=>s!AggrPart(id,r))
     case AggrPart(id,res) => matcherAggr.res(id,res)
     case m => println("Not understood: "+m.toString)
   }
@@ -254,9 +254,8 @@ abstract class WorkerActor extends Actor {
   }
 
   // ---- debugging
-  def msg(m:Any) { val s=self.path.toString; val p0=s.indexOf("System"); val p1=s.indexOf("/user/");
-    println((if(p0>=0) s.substring(p0+6,p1) else "")+s.substring(p1+5)+": "+m.toString);
-  }
+  // def msg(m: =>Any) { println(_a(self)+": "+m.toString); }
+  // def _a(a:ActorRef) = { val s=a.path.toString; val p0=s.indexOf("System"); val p1=s.indexOf("/user/"); (if(p0>=0 && p0+6<p1) s.substring(p0+6,p1) else "#")+s.substring(p1+5) }
 }
 
 /**
@@ -316,8 +315,8 @@ trait MasterActor extends WorkerActor {
         }
         ev match {
           case SystemInit => onSystemReady() //reset { onSystemReady(); println("Pre"); _barrier; println("Post"); t0=System.nanoTime(); deq }
-          case EndOfStream => val time=System.nanoTime()-t0; collect(time,queries.reverse,Nil)
-          case GetSnapshot(qs:List[Int]) => val time=System.nanoTime()-t0; collect(time,qs.reverse,Nil)
+          case EndOfStream => barrier{(u:Unit)=> val time=System.nanoTime()-t0; collect(time,queries.reverse,Nil)}
+          case GetSnapshot(qs:List[Int]) => barrier{(u:Unit)=> val time=System.nanoTime()-t0; collect(time,qs.reverse,Nil)}
           case e:TupleEvent => dispatch(e)
         }
         if (est==2) est=1 // disable trampoline

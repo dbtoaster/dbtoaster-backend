@@ -75,7 +75,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   def fmap(e:Expr):String = e match {
     case MapRef(n,tp,ks) if ks.exists(!ctx.contains(_)) => n
     case Lift(n,e) => fmap(e)
-    case AggSum(ks,e) => fmap(e)
     case Exists(e) => fmap(e)
     case Mul(l,r) => val lm=fmap(l); if (lm==null) fmap(r) else lm
     case Add(l,r) => val lm=fmap(l); if (lm==null) fmap(r) else lm
@@ -144,7 +143,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         val ar=fresh("add_r"); val rr=add(ar,er);
         val (k0,v0)=(fresh("k"),fresh("v")); val ks=a.agg.map(_._1); ctx.add(a.agg.toMap)
         rl+rr+ar+".sum("+al+");\n"+al+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"
+            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
       }
     case _ => super.cpsExpr(ex,co,am)
   }
