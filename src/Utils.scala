@@ -68,7 +68,7 @@ object Utils {
   def loadMain(cp:File,cls:String,args:Array[String]=Array()) = {
     val r = captureOut(()=>{
       try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
-      catch { case t:Throwable => t.printStackTrace(scala.Console.err) }
+      catch { case t:Throwable => val c=t.getCause; (if (c!=null) c else t).printStackTrace(scala.Console.err) }
     })
     System.gc(); Thread.sleep(50); System.gc() // call finalize on class loader
     (r._2,r._3)
