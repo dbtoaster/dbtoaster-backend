@@ -43,35 +43,38 @@ Issues to solve:
 
 XXX: problem: the same map can be accessed locally in a foreach but again acessed with another key which might not be on the host (Runiquecountsbya) 
 XXX: warning, some test are incorrect but get correct if they are run first (Rseqineq, ...)
-
 ;check -q.*ltalldynamic -dd -makka;test-only ddbt.test.gen.*
 
 Results:
-- Syntax    :  44
-- Semantics :  38
-- Wrong/fail:   5
-- Correct   :  95
+- Syntax    :  36
+- Semantics :  42
+- Incorrect :   7
+- Correct   :  97
 */
 
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear}
   import scala.collection.mutable.HashMap
-
-  // Context informations
-  var local : CtxSet = null // locally available maps
-  val inuse = CtxSet() // set of variables used in the current continuation/used
-  val cl = CtxCtr((i:Int)=>" })"*i) // continuation closing
-  def cl_rs(b:Int) = { val c=cl(); cl.load(b); c }
-
-  val ref = new HashMap[String,String]() // map: name(local)->reference(remote)
-
-  // remote functions as (map,expression,context) => (func_name,body)
+  
+  // Context additional informations
+  private val ref = new HashMap[String,String]() // map: name(local)->reference(remote)
+  private val inuse = CtxSet() // set of variables used in the current continuation/used
+  private var local = Set[String]() // locally available maps (tables+vars)
+  private var local_r:String = null // map over which delegation happens (can be used only once to generate a foreach)
+  private object cl { // continuation closing
+    var ctr=0;
+    var master=true;
+    def add(n:Int=1) { ctr=ctr+n; }
+    def save = { val s=(ctr,master); ctr=0; master=false; s }
+    def apply(b:(Int,Boolean)=(0,true),force:Boolean=false) = { val (s,c) = if (!master||force) (" })"*ctr,b._1) else ("",ctr+b._1); ctr=c; master=b._2; s }
+  }
+  // Remote functions as (map,expression,context) => (func_name,body)
   private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
   private val forl = HashMap[(String,Expr,List[String]),(String,String)]()
   private def anon(e:Expr):Expr = e.rename((n:String)=>n.replaceAll("[0-9]+","")) // anonymize the function (for use as hash key)
 
-  /** Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables. */
+  // Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables.
   def fmap(e:Expr):String = e match {
     case MapRef(n,tp,ks) if ks.exists(!ctx.contains(_)) => n
     case Lift(n,e) => fmap(e)
@@ -81,11 +84,11 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case _ => null
   }
 
-  /** Wrapper for remote code generation, return body and context */
+  // Wrapper for remote code generation, return body and context
   def remote(m:String,fn:String,f:()=>String):(String,List[String]) = {
-    val l0=local.save; local.load(Set(m)); val u0=inuse.save; val c=ctx.save ++ ctx.ctx0
-    val body=f()
-    val u=inuse.save; local.load(l0); inuse.load(u0)
+    local_r=m; val u0=inuse.save; val c=ctx.save ++ ctx.ctx0
+    val cls=cl.save; val b=f(); val body = b+cl(cls)
+    val u=inuse.save; local_r=null; inuse.load(u0)
     val rc = (c.map(_._1).toSet & u).toList // remote context
     ("case (`"+fn+"`,List("+rc.map(v=>v+":"+c(v).toScala).mkString(",")+")) =>\n"+ind(body),rc)
   }
@@ -94,10 +97,10 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   def ragg(a0:String,m:String,key:List[(String,Type)],e:Expr):String = {
     // remote handler
     val fn0 = fresh("fa");
-    val (body0:String,rc:List[String])=remote(m,fn0,()=>{ val cc=cl.save; inuse.add(key.map(_._1).toSet)
-      if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"+cl_rs(cc)
+    val (body0:String,rc:List[String])=remote(m,fn0,()=>{ inuse.add(key.map(_._1).toSet)
+      if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
       else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
-             cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n")+"co("+a0+")"+cl_rs(cc) }
+             cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n")+"co("+a0+")" }
     })
     val (fn,body) = aggl.getOrElseUpdate((m,anon(e),rc),(fn0,body0))
     // local handler
@@ -108,26 +111,25 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
-    case MapRef(n,tp,ks) if local(n) => inuse.add(ks.toSet); super.cpsExpr(ex,co)
-    case Lift(n,e) =>
-      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
-      else { ctx.add(Map((n,e.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
-    case MapRef(n,tp,ks) if local(n) || ks.size==0 => super.cpsExpr(ex,co,am)
+    case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
+                      else { ctx.add(Map((n,e.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
+    case MapRef(n,tp,ks) if ks.size==0 || local(n) || n==local_r => if (n==local_r) local_r=null; val cls=cl.save; super.cpsExpr(ex,(s:String)=>co(s)+cl(cls))
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       if (ki.size==0) { cl.add(1); val v=fresh("v"); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) }
       else {
         // remote handler
         val fn0 = fresh("ff");
-        val (body0,rc)=remote(n,fn0,()=>{ val cc=cl.save; val co2=(v:String)=>co(v)+cl_rs(cc); super.cpsExpr(ex,co2)+"co()"})
+        val (body0,rc)=remote(n,fn0,()=>{ val cls=cl.save; super.cpsExpr(ex,(s:String)=>co(s)+cl(cls))+"co()"})
         val (fn,body) = forl.getOrElseUpdate((n,anon(ex),rc),(fn0,body0))
         // local handler
         "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
       }
     case a@AggSum(ks,e) => val m=fmap(e); inuse.add(ks.toSet);
-      if (m==null /*|| local(m)!=null but not always !! */) super.cpsExpr(ex,co,am) // projection only
+      if (m==null || local(m)) super.cpsExpr(ex,co,am) // projection only
       else {
         val a0=fresh("agg"); val aks=(ks zip a.tks).filter{ case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-        ragg(a0,m,aks,e)+(if (aks.size==0) co(a0) else { val ma=MapRef(a0,e.tp,aks.map(_._1)); ma.tks=aks.map(_._2); cpsExpr(ma,co) })
+        val r=ragg(a0,m,aks,e)+(if (aks.size==0) co(a0) else { val ma=MapRef(a0,e.tp,aks.map(_._1)); ma.tks=aks.map(_._2); local_r=a0; cpsExpr(ma,co) })
+        if (aks.size>0) r.substring(0,r.length-1)+cl()+"\n" else r
       }
     case a@Add(el,er) =>
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
@@ -139,11 +141,12 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
           }
           ctx.load(cur); r
         }
+        val cc=cl.save
         val al=fresh("add_l"); val rl=add(al,el);
         val ar=fresh("add_r"); val rr=add(ar,er);
         val (k0,v0)=(fresh("k"),fresh("v")); val ks=a.agg.map(_._1); ctx.add(a.agg.toMap)
         rl+rr+ar+".sum("+al+");\n"+al+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
+            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}"+cl(cc)+"\n"
       }
     case _ => super.cpsExpr(ex,co,am)
   }
@@ -168,12 +171,11 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   override def genTrigger(t:Trigger):String = { // add pre and deq/ready calls in master's triggers
     val (n,as,deq) = t.evt match { case EvtReady=>("SystemReady",Nil,"ready") case EvtAdd(Schema(n,cs))=>("Add"+n,cs,"deq") case EvtDel(Schema(n,cs))=>("Del"+n,cs,"deq") }
-    cl.load(); ctx=Ctx(as.toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(t.stmts.map(genStmt).mkString+deq+cl()) +"\n}"
-    cl.load(); ctx=null; res
+    cl(); ctx=Ctx(as.toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(t.stmts.map(genStmt).mkString+deq+cl(force=true))+"\n}"; ctx=null; res
   }
 
   override def apply(s:System) = {
-    local = CtxSet(s.sources.filter(s=> !s.stream).map(_.schema.name).toSet ++ s.maps.filter(m=>m.keys.size==0).map(_.name).toSet) // tables and vars
+    local = s.sources.filter(s=> !s.stream).map(_.schema.name).toSet ++ s.maps.filter(m=>m.keys.size==0).map(_.name).toSet
     val refs = s.maps.zipWithIndex.map{case (m,i)=> ref.put(m.name,"map"+i); "val map"+i+" = MapRef("+i+")\n" }.mkString
     val qs = { val mn=s.maps.zipWithIndex.map{case (m,i)=>(m.name,i)}.toMap; "val queries = List("+s.queries.map(q=>mn(q.map.name)).mkString(",")+")\n" } // queries as map indices
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
@@ -189,7 +191,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         "case `"+ref(m.name)+"` => val vv=v.asInstanceOf["+m.tp.toScala+"]; if (add) "+add+" else "+m.name+" = vv\n"}.mkString+"case _ =>\n")+"\n}\n"+
       "override def local_rd(m:MapRef):Any = m match {\n"+ind(vs.map(m=> "case `"+ref(m.name)+"` => "+m.name+"\n").mkString+"case _ => sys.error(\"Var(\"+m+\") not found\")")+"\n}\n"
     }
-    freshClear(); ref.clear; aggl.clear; forl.clear; local=null
+    freshClear(); ref.clear; aggl.clear; forl.clear; local=Set()
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
     "import WorkerActor._\nimport ddbt.lib.Functions._\n// constants\n"+refs+fds+ads+gc+ // constants
     "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
