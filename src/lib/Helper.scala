@@ -10,13 +10,12 @@ trait Helper {
 
   // ---------------------------------------------------------------------------
   // Akka remoting helpers
-
-  def sys(name:String,host:String,port:Int) = {
+  private def sys(name:String,host:String=null,port:Int=0) = {
     val conf = "akka.loglevel=ERROR\nakka.log-dead-letters-during-shutdown=off\n"+ // disable verbose logging
-               "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote.netty {\nhostname=\""+host+"\"\ntcp.port="+port+"\n}\n}\n"
+               (if (host!=null) "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote.netty {\nhostname=\""+host+"\"\ntcp.port="+port+"\n}\n}\n" else "")
     val user = { val f="conf/akka.conf"; if (new java.io.File(f).exists) scala.io.Source.fromFile(f).mkString else "" }
     val system = ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(conf+user))
-    Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = { /*println("Stopping "+host+":"+port);*/ system.shutdown() } });
+    //Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = { /*println("Stopping "+host+":"+port);*/ system.shutdown() } });
     /*println("Started "+host+":"+port);*/ system
   }
 
@@ -24,30 +23,35 @@ trait Helper {
   // Run query actor and collect time + resulting maps or values (for 0-key maps)
   // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
 
-  def mux(actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,wait:Int=6000000) : (Long,List[Any]) = {
+  def mux(actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0) : (Long,List[Any]) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
-    actor ! SystemInit; mux.read(); val timeout = akka.util.Timeout(wait)
-    scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(timeout), timeout.duration).asInstanceOf[(Long,List[Any])]
+    actor ! SystemInit; mux.read(); val tout = akka.util.Timeout(if (timeout==0) (1L<<42) /*139 years*/ else timeout)
+    scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(tout), tout.duration).asInstanceOf[(Long,List[Any])]
   }
 
-  def run[Q<:akka.actor.Actor](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cq:ClassTag[Q]) = {
-    val system = ActorSystem("DDBT")
+  def run[Q<:akka.actor.Actor](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0)(implicit cq:ClassTag[Q]) = {
+    val system = sys("DDBT")
     val query = system.actorOf(Props[Q],"Query")
-    val res = mux(query,streams,parallel); system.shutdown; res
+    try { mux(query,streams,parallel,timeout); } finally { system.shutdown }
   }
 
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](nmaps:Int,port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
-    val system:ActorSystem = this.sys("MasterSystem","127.0.0.1",port-1)
-    val nodes = (0 until N).map { i => sys("NodeSystem"+i,"127.0.0.1",port+i) }
-    val workers = nodes.map (_.actorOf(Props[W]()))
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](nmaps:Int,port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0,debug:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
+    val (system,nodes,workers) = if (debug) {
+      val system = sys("DDBT")
+      (system,Seq[ActorSystem](),(0 until N).map (i=>system.actorOf(Props[W]())))
+    } else {
+      val system = sys("MasterSystem","127.0.0.1",port-1)
+      val nodes = (0 until N).map { i => sys("NodeSystem"+i,"127.0.0.1",port+i) }
+      val workers = nodes.map (_.actorOf(Props[W]()))
+      (system,nodes,workers)
+    }
     val master = system.actorOf(Props[M]())
     // ---- initial membership
-    import WorkerActor._
+    import WorkerActor.{Members,MapRef}
     val ms = (0 until nmaps).map { MapRef(_) }.toList
     master ! Members(master,workers.map{ w => (w,ms) }.toArray)
     // ----
-    val res = try { mux(master,streams,parallel) } catch { case _:Throwable => (0L,List[Any]()) }
-    finally { Thread.sleep(100); nodes.foreach{ _.shutdown }; system.shutdown; Thread.sleep(100); }; res
+    val res = try { mux(master,streams,parallel,timeout) } finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
   }
 
   def time(ns:Long) = { val ms=ns/1000000; "%d.%03d".format(ms/1000,ms%1000) }

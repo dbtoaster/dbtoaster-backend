@@ -156,20 +156,20 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         case OpSet if m.keys.size>0 => cl.add(2); "pre(-1,Array("+r+"),(u:Unit)=> {\nclear("+r+");\nbarrier((u:Unit)=> {\n"
         case _ => cl.add(1); "pre("+r+",Array[MapRef]("+rd(e).mkString(",")+"),(u:Unit)=> {\n"
       }
-      def mop(o:String,v:String) = o+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+","+v+");"
+      def mop(o:String,v:String) = o+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+","+v+");\n"
       val init = oi match { case None => "" case Some(ie) => inuse.load(m.keys.toSet); cl.add(3)
         "pre(-1,Array("+(r::rd(ie)).mkString(",")+"),(u:Unit)=>\n"+
         "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+", (z:"+m.tp.toScala+") => if (z==0) {\n"+ind(cpsExpr(ie,(v:String)=>mop("set",v)))+"\n}"+
         "barrier((u:Unit)=> {\n"
       }      
       inuse.load(m.keys.toSet)
-      init+pre(op,e)+cpsExpr(e,(v:String)=>mop(fop,v))+"\n"
+      init+pre(op,e)+cpsExpr(e,(v:String)=>mop(fop,v))
     case _ => sys.error("Unimplemented")
   }
 
   override def genTrigger(t:Trigger):String = { // add pre and deq/ready calls in master's triggers
     val (n,as,deq) = t.evt match { case EvtReady=>("SystemReady",Nil,"ready") case EvtAdd(Schema(n,cs))=>("Add"+n,cs,"deq") case EvtDel(Schema(n,cs))=>("Del"+n,cs,"deq") }
-    cl.load(); ctx=Ctx(as.toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") = {\n"+ind(t.stmts.map(genStmt).mkString+deq+cl()) +"\n}"
+    cl.load(); ctx=Ctx(as.toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(t.stmts.map(genStmt).mkString+deq+cl()) +"\n}"
     cl.load(); ctx=null; res
   }
 

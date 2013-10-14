@@ -133,7 +133,7 @@ abstract class WorkerActor extends Actor {
       }
     }
     @inline def res[K,V](map:MapRef,key:K,value:V) { // onReceive Val(map,key,value)
-      val k=(map,key); if (enabled) cache.put(k,value); cont.remove(k).foreach{ _(value) }
+      val k=(map,key); if (enabled) cache.put(k,value); cont.remove(k).foreach(_(value))
       if (self!=master) bar.ack // ack pending barrier if needed
     }
     @inline def ready = cont.size==0
@@ -241,8 +241,6 @@ abstract class WorkerActor extends Actor {
   // Group operations: broadcast to owners, workers then process locally
   def clear[P](m:MapRef,p:Int= -1,pk:P=null) = owns(m).foreach { bar.send(_,Clear(m,p,pk)) }
   def foreach(m:MapRef,f:FunRef,args:Any*) { owns(m).foreach { bar.send(_,Foreach(f,args.toArray)) } }
-  
-  // XXX: idea = create multiple functions instead of only 1
   def aggr[R](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,co:R=>Unit)(implicit cR:ClassTag[R]) {
     val (z,p) = if (zero!=null) (zero,((m1:M3Map[Any,Any],m2:M3Map[Any,Any])=>{m2.sum(m1); m1}).asInstanceOf[(Any,Any)=>Any])
     else (M3Map.zero[R](),(cR.toString match {
