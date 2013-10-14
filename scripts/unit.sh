@@ -98,19 +98,23 @@ From: ddbt-ci@end-of-transmission.org
 Subject: `date "+DDBT build %Y-%m-%d %H:%M:%S"`
 Content-type: text/html
 
+<html><head><style type="text/css"><!-- body { font-family:helvetica,arial,sans-serif; } h1 {
+  margin:2px 10px 2px -10px;padding:3px 10px;border-top:solid 3px #ccc;font-size:1em;color:#333;
+  background:#eee;border-radius:0px 30px 0px 0px;background:-webkit-linear-gradient(top, #eee, #fff);
+} --></style></head><body>
 EOF
   (
     echo 'Front-end latest commit:'; cd $REPO; svn info | grep Last | sed 's/^/   /g'; sep;
     echo 'DDBToaster latest commit:'; cd $BASE; git log -1 | sed 's/^/   /g'; sep;
     do_exec
   ) | tee /dev/stderr \
-    | perl -pe 's/(\x1B\[[0-9]+m|\x1BM\x1B\[2K.*\n)//g' | sed -e 's/\[info\] //g' \
-    | grep -vEe '^(-+ test/queries|Query .* generated|- .* correct|Dataset |Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |\[GC| *$)' \
+    | perl -pe 's/(\x1B\[[0-9]+m|\x1BM\x1B\[2K.*\n)//g; s/\[info\] //g;' \
+    | grep -vEe '^(-+ test/queries|Query .* generated|- .* correct|Dataset |Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |\[GC|^$)' \
     | perl -0pe 's/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:|Run completed)/\n\2/g' \
     | scripts/pushover.sh \
-    | perl -pe 's/\[error\](.*)/<b style="color:red">\1<\/b>/g' \
-    | perl -pe 's/\[success\](.*)/<b style="color:green">\1<\/b>/g' \
-    | sed -e 's/$/<br>/g'
+    | perl -pe 's/\[error\](.*)/<b style="color:red">\1<\/b>/g; s/\[success\](.*)/<b style="color:green">\1<\/b>/g; s/\n/<br>\n/g;' \
+    | perl -pe 's/^-*<br>\n$//g; s/^(Akka|Scala|LMS|.*latest commit:)<br>$/<br><h1>\1<\/h1>/g;'
+  echo '</body></html>'
   ) | sendmail "thierry.coppey@epfl.ch,andres.notzli@epfl.ch,mohammad.dashti@epfl.ch";
 }
 
