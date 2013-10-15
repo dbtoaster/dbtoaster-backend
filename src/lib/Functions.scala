@@ -94,6 +94,72 @@ object Functions {
     v ^= v >> 20; v^= v << 41; v ^= v >> 5
     v
   }
+
+  /**
+   * Rehashes the contents of this map into a new array with a
+   * larger capacity.  This method is called automatically when the
+   * number of keys in this map reaches its threshold.
+   *
+   * If current capacity is MAXIMUM_CAPACITY, this method does not
+   * resize the map, but sets threshold to Integer.MAX_VALUE.
+   * This has the effect of preventing future calls.
+   *
+   * @param newCapacity the new capacity, MUST be a power of two;
+   *                    must be greater than current capacity unless current
+   *                    capacity is MAXIMUM_CAPACITY (in which case value
+   *                    is irrelevant).
+   */
+  // def __resizeHashMap[A<:IEntry:Manifest](oldTable:Array[A], newCapacity: Int): Array[A] = {
+  //   val oldCapacity: Int = oldTable.length
+    // TODO: make this work properly
+    // if (oldCapacity == MAXIMUM_CAPACITY) {
+    //   threshold = Integer.MAX_VALUE
+    //   return
+    // }
+    // val newTable: Array[A] = new Array[A](newCapacity)
+    // transferHashMap[A](oldTable,newTable)
+    // newTable
+  // }
+
+  /**
+   * Transfers all entries from current table to newTable.
+   */
+  def __transferHashMap[A<:IEntry:Manifest](src:Array[A], newTable: Array[A]): Array[A] = {
+    val newCapacity: Int = newTable.length
+    var j: Int = 0
+    while (j < src.length) {
+      var e: A = src(j)
+      if (e != null) {
+        src(j) = null.asInstanceOf[A]
+        do {
+          val next: A = e.nextEntry.asInstanceOf[A]
+          val i: Int = __indexForHashMap(e.hashVal, newCapacity)
+          e.setNextEntry(newTable(i))
+          newTable(i) = e
+          e = next
+        } while (e != null)
+      }
+      j += 1; j - 1
+    }
+    newTable
+  }
+
+  /**
+   * Returns index for hash code h.
+   */
+  private def __indexForHashMap(h: Int, length: Int): Int = {
+    return h & (length - 1)
+  }
+
+  def __deleteEntryHashMap[A<:IEntry:Manifest](map: Array[A], target: A) {
+    
+  }
+}
+
+trait IEntry { self =>
+  def hashVal: Int
+  def nextEntry: IEntry
+  def setNextEntry(n:IEntry): Unit
 }
 
 /* UNUSED LEGACY FUNCTIONS
