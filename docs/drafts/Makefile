@@ -3,10 +3,10 @@ BIB_CMD=bibtex
 
 all: morgol.pdf
 
-morgol.pdf: morgol.tex ../inc/style.sty ../inc/bibliography.bib
-	$(TEX_CMD) morgol;
-	$(BIB_CMD) morgol;
-	$(TEX_CMD) morgol;	
+m4.pdf: m4.tex ../inc/style.sty ../inc/bibliography.bib
+	$(TEX_CMD) m4;
+	$(BIB_CMD) m4;
+	$(TEX_CMD) m4;
 
 clean:
-	rm -f morgol.pdf *.aux *.log *.out *.bbl *.blg *.toc;
+	rm -f m4.pdf *.aux *.log *.out *.bbl *.blg *.toc;
