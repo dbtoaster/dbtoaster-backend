@@ -119,7 +119,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
                       else { ctx.add(Map((n,e.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-      if (local(n) || n==local_r) { if (n==local_r) local_r=null;
+      if (local(n) || n==local_r || !ref.contains(n)) { if (n==local_r) local_r=null;
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
         if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks)+")" else "")) // all keys are bound
         else { val (k0,v0)=(fresh("k"),fresh("v")); var async=false
