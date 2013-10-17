@@ -65,7 +65,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   private val inuse = CtxSet() // set of variables used in the current continuation/used
   private var local = Set[String]() // locally available maps (tables+vars)
   private var local_r:String = null // map over which delegation happens (can be used only once to generate a foreach)
-  private var local_a:String = null // aggregation accumulator
   
   var cl_ctr=0;
   def cl_add(n:Int=1) { cl_ctr+=n; }
@@ -119,6 +118,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   }
   
   // Ensures that all continuations in the loop over the intermediate map are terminated
+  // ENRICH TO SUPPORT SLICING
+  /*
   def agg_co(a0:String,keys:List[(String,Type)],co:String=>String):String = {
     var async=false
     val (k0,v0)=(fresh("k"),fresh("v"))
@@ -127,15 +128,45 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       (if (keys.size==1) "val "+keys(0)._1+" = "+k0+"\n" else keys.map(_._1).zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co1)+"\n}\n"+
       (if (async) { cl_add(1); a0+"_c((_:Unit) => {\n" } else "")
   }
-  
-  // XXX: add a flag to decide whether the statement is SYNC or ASYNC
+  */
+
+  /*  
+    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
+      if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks)+")" else "")) // all keys are bound
+      else { val (k0,v0)=(fresh("k"),fresh("v"))
+        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
+        ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
+        n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
+          ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co(v0))+"\n}\n" // bind free variables from retrieved key
+      }
+  */
+
+  // XXX: add a flag to decide whether the continuation is sequential or does not need to be so
+  // sequentiality is enforced by aggregations and on master
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
                       else { ctx.add(Map((n,e.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
-    case m@MapRef(n,tp,ks) =>
-      if (local(n) || n==local_r) { if (n==local_r) local_r=null; super.cpsExpr(ex,(v:String)=>close(()=>co(v))) }
-      else if (ks.filter(!ctx.contains(_)).size==0) { val v=fresh("v"); cl_add(1); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) }
+    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
+      if (local(n) || n==local_r) { if (n==local_r) local_r=null;
+      
+      
+        //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
+        
+        if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks)+")" else "")) // all keys are bound
+        else { val (k0,v0)=(fresh("k"),fresh("v")); var async=false
+          val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
+          ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
+
+          val co1=close(()=>{ val r=co(v0); if (cl_ctr>0) { async=true; n+"_c.i // <---\n"+r+n+"_c.d // <---\n" } else r })
+
+          (if (async) "val "+n+"_c = Acc()\n" else "")+
+          n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
+            ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co1)+"\n}\n"+ // bind free variables from retrieved key
+            (if (async) { cl_add(1); n+"_c((_:Unit) => {\n" } else "")
+        }
+      }
+      else if (ki.size==0) { val v=fresh("v"); cl_add(1); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) }
       else {
         // remote handler
         val fn0 = fresh("ff"); local_r=n;
@@ -148,7 +179,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       if (m==null || local(m)) super.cpsExpr(ex,co,am) // 1-tuple projection or map available locally
       else {
         val a0=fresh("agg"); val aks=(ks zip a.tks).filter{ case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-        remote_agg(a0,m,aks,e)+(if (aks.size==0) co(a0) else { val ma=MapRef(a0,e.tp,aks.map(_._1)); ma.tks=aks.map(_._2); local_r=a0; cpsExpr(ma,co) })
+        remote_agg(a0,m,aks,e)+(if (aks.size==0) co(a0) else { local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),co) })
       }
     case a@Add(el,er) =>
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
@@ -156,43 +187,9 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         case Some(t) if t==a.agg => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ => val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           def add(a0:String,e:Expr):String = { val cur=ctx.save; val m=fmap(e)
-            val r = if (m!=null) remote_agg(a0,m,a.agg,e,true) else super.cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(_._1))+","+v+");\n")
-            ctx.load(cur); r
+            val r = if (m!=null) remote_agg(a0,m,a.agg,e,true) else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(_._1))+","+v+");\n",am); ctx.load(cur); r
           }
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+"// ---------\n"+add(a0,el)+"\n// ---------\n"+add(a0,er)+"\n// ---------\n"+
-          agg_co(a0,a.agg,co)
-
-/*
-// XXX: distinguish when in an aggregation and when not
-          / *
-          val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
-          val ks = a.agg.map(_._1)
-          val tmp = Some(a.agg)
-          val cur = ctx.save
-          val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks)+","+v+");\n",tmp); ctx.load(cur)
-          val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks)+","+v+");\n",tmp); ctx.load(cur)
-          ctx.add(a.agg.toMap)
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+
-          "val "+a0+"_acc = Acc()\n"+
-          s1+s2+
-          a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
-          * /
-
-        def add(a0:String,e:Expr):String = { val cur=ctx.save; val m=fmap(e)
-          var r = if (m!=null) ragg(a0,m,a.agg,e) else {
-            "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
-            super.cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(_._1))+","+v+");\n")
-          }
-          ctx.load(cur); r
-        }
-        val al=fresh("add_l"); val rl=add(al,el);
-        val ar=fresh("add_r"); val rr=add(ar,er);
-        val (k0,v0)=(fresh("k"),fresh("v")); val ks=a.agg.map(_._1); ctx.add(a.agg.toMap)
-        rl+rr+ar+".sum("+al+");\n"+al+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
-
-*/
+          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(a0,el)+add(a0,er)+{ local_r=a0; cpsExpr(mapRef(a0,ex.tp,a.agg),co) }
       }
     case _ => super.cpsExpr(ex,co,am)
   }

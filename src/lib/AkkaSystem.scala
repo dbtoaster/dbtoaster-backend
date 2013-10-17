@@ -251,7 +251,7 @@ abstract class WorkerActor extends Actor {
     matcherAggr.req(m,f,args,co,z,p)
   }
   
-  // ---- helper for local aggregation (this happen when aggregating in a local
+  // ---- helper for local aggregation (in a local variable, and that needs to be sequential)
   case class Acc() { // applies a continuation when the internal counter is zero
     private var ctr = 0
     private var co:Unit=>Unit = null

@@ -98,10 +98,10 @@ class RidMaster extends RidWorker with MasterActor {
     val add1 = M3Map.temp[(Long,Long),Long]()
     val add2 = M3Map.temp[Long,Long]()
     //COUNT_mR4.slice(0,r_a).foreach { (k3,v3) => add2.add(k3._1,v3) }
-    val acc2=Acc()
-    acc2.i
-    aggr(map2,fa2,Array[Any](r_a),add2,(z:M3Map[Long,Long]) => { acc2.d })
-    acc2(_=>{
+    //val acc2=Acc()
+    //acc2.i
+    aggr(map2,fa2,Array[Any](r_a),add2,(_:M3Map[Long,Long]) => { //acc2.d })
+    //acc2(_=>{
         
     add2.add(r_a,(if (r_a == r_b) 1L else 0L));
     add2.foreach{ (k2,v2) =>

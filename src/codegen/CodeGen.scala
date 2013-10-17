@@ -33,6 +33,7 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
     def contains(name:String) = apply(name)
     def apply(name:String) = ctx.contains(name) || ctx0.contains(name)
   }
+  /*
   case class CtxCtr[T](f:Int=>T=(i:Int)=>i) extends Function0[T] {
     private var ctr=0;
     def add(n:Int=1) { ctr=ctr+n; }
@@ -40,4 +41,5 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
     def load(c:Int=0) { ctr=c }
     def apply() = f(ctr)
   }
+  */
 }

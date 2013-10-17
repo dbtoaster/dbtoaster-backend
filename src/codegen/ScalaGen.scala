@@ -30,6 +30,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
+  def mapRef(n:String,tp:Type,keys:List[(String,Type)]) = { val m=M3.MapRef(n,tp,keys.map(_._1)); m.tks=keys.map(_._2); m }
 
   // Methods involving only constants are hoisted as global constants
   private val cs = HashMap[Apply,String]()
@@ -73,13 +74,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val cur = ctx.save
           val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks)+","+v+");\n",tmp); ctx.load(cur)
           val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks)+","+v+");\n",tmp); ctx.load(cur)
-          //ctx.add(a.agg.toMap)
-          val ma=MapRef(a0,ex.tp,a.agg.map(_._1)); ma.tks=a.agg.map(_._2);
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+cpsExpr(ma,co)
-          /*
-          a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
-          */
+          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+cpsExpr(mapRef(a0,ex.tp,a.agg),co)
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
@@ -87,12 +82,11 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       else am match {
         case Some(t) if t==aks => cpsExpr(e,co,am)
         case _ =>
-          //val r = { val ns=aks.map{case (v,t)=>(v,fresh(v))}.toMap; (n:String)=>ns.getOrElse(n,n) } // renaming function
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
           val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(_._1))+","+v+");\n",tmp);
-          ctx.load(cur); val ma=MapRef(a0,e.tp,aks.map(_._1)); ma.tks=aks.map(_._2); s1+cpsExpr(ma,co)
+          ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
   }
