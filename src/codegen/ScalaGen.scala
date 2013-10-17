@@ -73,10 +73,13 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val cur = ctx.save
           val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks)+","+v+");\n",tmp); ctx.load(cur)
           val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks)+","+v+");\n",tmp); ctx.load(cur)
-          ctx.add(a.agg.toMap)
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+
+          //ctx.add(a.agg.toMap)
+          val ma=MapRef(a0,ex.tp,a.agg.map(_._1)); ma.tks=a.agg.map(_._2);
+          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+cpsExpr(ma,co)
+          /*
           a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
             (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co(v0))+"\n}\n"
+          */
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
@@ -137,6 +140,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
   // Generate (1:stream events handling, 2:table loading, 3:global constants declaration)
   def genInternals(s0:System) : (String,String,String) = {
+    // XXX: reduce as much as possible the overhead here to decode data, use Decoder's internals and inline the SourceMux here
     def ev(s:Schema,short:Boolean=true):(String,String,List[(String,Type)]) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
