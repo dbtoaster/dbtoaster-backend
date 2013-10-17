@@ -2,8 +2,6 @@ package ddbt.codegen
 import ddbt.ast._
 import ddbt.lib.{K3Temp,K3Var}
 
-import scala.reflect.SourceContext
-import toasterbooster.lifters._
 import ddbt.Utils.ind
 
 /**
