@@ -20,6 +20,7 @@ Seq(
 libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.1",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.1",
+  "com.typesafe.akka" %% "akka-cluster"   % "2.2.1",
   "org.scala-lang"     % "scala-actors"   % v,
   "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.M7" % "test"
@@ -70,15 +71,18 @@ addCommandAlias("bench-lscala", ";test:run-main ddbt.test.Benchmark -dstandard -
 addCommandAlias("bench-lcpp", ";test:run-main ddbt.test.Benchmark -dstandard -mlcpp -csv")
 
 TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>
-  println("Creating DDBT library ...")
-  val dir=base/"lib"; if (!dir.exists) dir.mkdirs; val lib=dir.getPath()+"/ddbt.jar"
-  scala.sys.process.Process(Seq("jar","-cMf",lib,"-C",cd.toString,"ddbt/lib")).!
-  print("Creating DDBT full package "); scala.Console.out.flush; val tmp=new File("target/pkg_tmp"); IO.createDirectory(tmp)
-  val jars = (cp.files.absString.split(":").filter(x=>x!=cd.toString).toSet + lib)
-  val sc = jars.filter(_.matches(".*/scala-library.*")).map(_.replaceAll("scala-library","scala-compiler"))
-  (jars++sc).foreach { j => scala.sys.process.Process(Seq("jar","-xf",j),tmp).!; print("."); scala.Console.out.flush; }
-  scala.sys.process.Process(Seq("jar","-cMf",dir.getPath()+"/ddbt_full.jar","-C",tmp.getAbsolutePath(),".")).!; IO.delete(tmp)
-  println(" done.")
+  val dir=base/"pkg"; if (!dir.exists) dir.mkdirs;
+  println("Packaging DDBT runtime library ...")
+  val lib=dir/"ddbt_lib.jar"; scala.sys.process.Process(Seq("jar","-cMf",lib.getPath,"-C",cd.toString,"ddbt/lib")).!
+  println("Packaging DDBT compiler ...")
+  val all=dir/"ddbt.jar"; scala.sys.process.Process(Seq("jar","-cMf",all.getPath,"-C",cd.toString,"ddbt")).!
+  val dep=dir/"ddbt_deps.jar"; if (!dep.exists) {
+    print("Packaging dependencies "); scala.Console.out.flush; val tmp=new File("target/pkg_tmp"); IO.createDirectory(tmp)
+    val jars = (cp.files.absString.split(":").filter(x=>x!=cd.toString).toSet + lib.getPath)
+    val sc = jars.filter(_.matches(".*/scala-library.*")).map(_.replaceAll("scala-library","scala-compiler"))
+    (jars++sc).foreach { j => scala.sys.process.Process(Seq("jar","-xf",j),tmp).!; print("."); scala.Console.out.flush; }
+    scala.sys.process.Process(Seq("jar","-cMf",dep.getPath,"-C",tmp.getAbsolutePath(),".")).!; IO.delete(tmp); println(" done.")
+  }
 }
 
 TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (base, cp) =>
