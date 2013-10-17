@@ -103,6 +103,7 @@ trait Helper {
 
   // ---------------------------------------------------------------------------
   // Stream definitions (used for manual debugging only)
+  // XXX: remove this
 
   private def str(file:String,a:Adaptor) = (new java.io.FileInputStream("examples/data/"+file+".csv"),a,Split())
   def streamsFinance(s:String="") = Seq(str("finance"+(if (s!="") "-"+s else ""),Adaptor("orderbook",Nil)))

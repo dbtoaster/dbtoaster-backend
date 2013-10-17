@@ -137,6 +137,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
   // Generate (1:stream events handling, 2:table loading, 3:global constants declaration)
   def genInternals(s0:System) : (String,String,String) = {
+    // XXX: reduce as much as possible the overhead here to decode data, use Decoder's internals and inline the SourceMux here
     def ev(s:Schema,short:Boolean=true):(String,String,List[(String,Type)]) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
