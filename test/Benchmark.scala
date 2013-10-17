@@ -73,13 +73,14 @@ object Benchmark {
           if (ps.length>0) (s:String)=>ps.exists(p=>p.matcher(s).matches()) else (s:String)=>true
         }
         val tests = UnitTest.sqlFiles(dataset)._2.filter(f_qs)
-        modes = args.filter(_.startsWith("-m")).map(_.substring(2)).filter(m=>m match { case "scala"|"lms"|"lms_inlineall"|"akka"|"lscala"|"llms"|"lcpp" => true case _ => false }).toList
+        modes = args.filter(_.startsWith("-m")).map(_.substring(2)).filter(m=>m match { case "scala"|"lms"|"lms_specialized"|"lms_inlineall"|"akka"|"lscala"|"llms"|"lcpp" => true case _ => false }).toList
         if (modes==Nil) modes = List("scala")
         if (args.contains("-csv")) {
           csv = new PrintWriter (new File ("benchmarks-"+dataset+".csv"));
           csv.println("Dataset,"+dataset+","+modes.map {
             case "scala" => "Scala"
             case "lms" => "LMS"
+            case "lms_specialized" => "LMS-Specialized"
             case "lms_inlineall" => "LMS-Inline-All"
             case "akka" => "Akka"
             case "lscala" => "Scala-legacy"
@@ -101,6 +102,7 @@ object Benchmark {
               m match {
                 case "scala" => benchScala("scala")(m3,t0)
                 case "lms" => benchScala("lms")(m3,t0)
+                case "lms_specialized" => benchScala("lms_specialized")(m3,t0)
                 case "lms_inlineall" => benchScala("lms_inlineall")(m3,t0)
                 case "akka" => benchScala("akka")(m3,t0)
                 case "lscala" => legacyScala(false)(t,t0)
@@ -126,6 +128,7 @@ object Benchmark {
     val gen:CodeGen = lang match {
       case "scala" => new ScalaGen("NewQuery")
       case "lms" => K3MapCommons.InliningLevel = K3MapCommons.InliningLevelNone; new LMSGen("NewQuery")
+      case "lms_specialized" => K3MapCommons.InliningLevel = K3MapCommons.InliningLevelSpecialized; new LMSGen("NewQuery")
       case "lms_inlineall" => K3MapCommons.InliningLevel = K3MapCommons.InliningLevelMax; new LMSGen("NewQuery")
       case "akka" => new AkkaGen("NewQuery")
       case _ => scala.sys.error("Generator "+lang+" not supported")
@@ -136,7 +139,7 @@ object Benchmark {
     val t2 = ns(()=>scalac("NewQuery"))._1
     println(n+" compile"+sp+" : "+time(t2))
     val s=scalax("ddbt.generated.NewQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" : "))
-    csvTime(t1-t0,t2,s)
+    csvTime(t1,t2,s)
     if (csv!=null) csv.flush
   }
 

@@ -11,7 +11,10 @@ import ddbt.Utils.ind
  */
 object K3MapCommons {
   final val InliningLevelMax = 10
+  final val InliningLevelSpecialized = 5
   final val InliningLevelNone = 0
+
+  def isInliningInSpecializedLevel = (InliningLevel == InliningLevelSpecialized)
 
   var InliningLevel = InliningLevelNone
 
@@ -87,6 +90,12 @@ object K3MapCommons {
    * used in DBToaster program.
    */
   def generateEntryClasses = entryClasses.map { case (name, (value, key, idxList)) =>
+    val keyNames = key.zipWithIndex.map{case (ktp, i) => "ek"+i}
+    val valueName = "ev"
+
+    val keyArguments = key.zipWithIndex.map{case (ktp, i) => "ek"+i+":"+ktp.toScala}.mkString(", ")
+    val valueArgument = "ev:"+value.toScala
+
     "  class " + name + "(val hs:Int, " +
       key.zipWithIndex.map{case (ktp, i) => "val _"+(i+1)+":"+ktp.toScala+", "}.mkString +
       "var v:" + value.toScala + ", var next:" + name + "=null) extends IEntry {\n" +
@@ -100,7 +109,12 @@ object K3MapCommons {
       "    def setNextEntry(n:IEntry): Unit = next = n.asInstanceOf["+name+"]\n" +
     //"    val hs: Int = " + hashFunction(key.zipWithIndex.map{case (k,i) => "_"+(i+1)}, "    ") + "\n" +
     //"    var next:" + name + " = null\n" +
+    "  }\n" + (if(K3MapCommons.isInliningInSpecializedLevel) {
+    "  object " + name + "Ops {\n" +
+      "    def get(map:Array["+name+"], "+keyArguments+"): "+value.toScala+" = " +
+      ind(genGenericGetMap("", "n", "map", name, value.toScala+" = "+zeroValue(value), (0 until keyNames.size).toList, keyNames),2) + "\n" +
     "  }\n"
+    } else "")
   }.mkString
 
   /**
@@ -108,6 +122,12 @@ object K3MapCommons {
    * used in DBToaster program.
    */
   def generateIndexEntryClasses = indexEntryClasses.map { case (name, (value, key, indexList, indexLoc)) =>
+    val keyNames = key.zipWithIndex.map{case (ktp, i) => "ek"+i}
+    val valueName = "ev"
+
+    val keyArguments = key.zipWithIndex.map{case (ktp, i) => "ek"+i+":"+ktp.toScala}.mkString(", ")
+    val valueArgument = "ev:"+value.toScala
+
     val entryCls = entryClassName(value, key, indexList)
     "  class " + name + " (val hs:Int, " +
       indexLoc.map(i => "val _"+(i+1)+":"+key(i).toScala).mkString(", ") + ", var next:" + name + "=null) extends IEntry {\n" +
@@ -119,7 +139,12 @@ object K3MapCommons {
     //"    var v__ts: Int = "+INITIAL_THRESHOLD_INDEX_INNER+";\n" +
     //"    val hs: Int = " + hashFunction(indexLoc.map(i => "_"+(i+1)), "    ") + "\n" +
     //"    var next:" + name + " = null\n" +
+    "  }\n" + (if(K3MapCommons.isInliningInSpecializedLevel) {
+    "  object " + name + "Ops {\n" +
+      "    def get(map:Array["+name+"], "+keyArguments+"): "+value.toScala+" = " +
+      ind(genGenericGetMap("", "n", "map", name, "scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"](0)", indexLoc, filterExprAtElementLoc(keyNames,indexLoc)),2) + "\n" +
     "  }\n"
+    } else "")
   }.mkString
 
   /*
@@ -635,6 +660,30 @@ object K3MapCommons {
     "    "+prev+" = "+e+"\n" +
     "    "+e+" = "+next+"\n" +
     "  }\n"
+  }
+
+  def genGenericGetMap(prefixKey: String, nodeName:String, map:String, entryClsName:String, valueTypeAndZeroVal:String, keyIndicesInEntery:List[Int], keyNames:List[String]) = {
+    //g = get
+    val hash = nodeName+"_ghash"
+    val e = nodeName+"_ge"
+    val found = nodeName+"_gfound"
+    val result = nodeName+"_gresult"
+    "{\n" +
+    "  //K3GET\n" +
+    prefixKey +
+    "  val "+hash+" =" + ind(K3MapCommons.hashFunction(keyNames)) + "\n" +
+    "  var "+e+":" + entryClsName + " = " + map + "(" + K3MapCommons.indexForFunction(hash, map+".length") + ")\n" +
+    "  var "+found+":Boolean = false\n" +
+    "  var "+result+":"+valueTypeAndZeroVal+"\n" +
+    "  while(!"+found+" && "+e+" != null) {\n" +
+    "    if("+e+".hs == "+hash+" && "+keyNames.zip(keyIndicesInEntery).map{case (x, i) => e+"._"+(i+1)+" == "+x}.mkString(" && ")+") {\n"+
+    "      "+found+" = true\n"+
+    "      "+result+" = "+e+".v\n" +
+    "    }\n" +
+    "    "+e+" = "+e+".next\n" +
+    "  }\n" +
+    "  "+result+"\n" +
+    "}"
   }
 
   /**

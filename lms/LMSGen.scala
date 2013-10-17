@@ -174,7 +174,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def toMapFunction(q: Query) = {
-    if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelMax) {
+    if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
       //m = map
       val map = q.name
       val nodeName = map+"_node"
@@ -206,7 +206,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def genMap(m:MapDef):String = {
-    if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelMax) {
+    if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
       if (m.keys.size==0) K3MapCommons.createK3VarDefinition(m.name, m.tp)+";"
       else {
         val keys = m.keys.map(_._2)
@@ -219,7 +219,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = {
-    if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelMax) {
+    if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
       //val theMap = maps(map)
       //val mapKeys = theMap.keys.map(_._2)
       val indexList = sx.getOrElse(map,List[List[Int]]())
@@ -229,7 +229,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
   }
 
-  override def generateDataStructures = if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelMax) {
+  override def generateDataStructures = if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
     K3MapCommons.generateAllEntryClasses
   } else {
     super.generateDataStructures
