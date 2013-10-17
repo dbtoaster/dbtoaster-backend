@@ -1,6 +1,5 @@
 package ddbt.codegen
 import ddbt.ast._
-import ddbt.lib.{K3Temp,K3Var}
 
 import ddbt.Utils.ind
 
