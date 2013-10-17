@@ -90,10 +90,10 @@ object K3MapCommons {
    * used in DBToaster program.
    */
   def generateEntryClasses = entryClasses.map { case (name, (value, key, idxList)) =>
-    val keyNames = key.zipWithIndex.map{case (ktp, i) => "ek"+i}
+    val keyNames = key.zipWithIndex.map{case (ktp, i) => "ek"+(i+1)}
     val valueName = "ev"
 
-    val keyArguments = key.zipWithIndex.map{case (ktp, i) => "ek"+i+":"+ktp.toScala}.mkString(", ")
+    val keyArguments = key.zipWithIndex.map{case (ktp, i) => "ek"+(i+1)+":"+ktp.toScala}.mkString(", ")
     val valueArgument = "ev:"+value.toScala
 
     "  class " + name + "(val hs:Int, " +
@@ -122,10 +122,10 @@ object K3MapCommons {
    * used in DBToaster program.
    */
   def generateIndexEntryClasses = indexEntryClasses.map { case (name, (value, key, indexList, indexLoc)) =>
-    val keyNames = key.zipWithIndex.map{case (ktp, i) => "ek"+i}
+    val keyNames = key.zipWithIndex.map{case (ktp, i) => "ek"+(i+1)}
     val valueName = "ev"
 
-    val keyArguments = key.zipWithIndex.map{case (ktp, i) => "ek"+i+":"+ktp.toScala}.mkString(", ")
+    val keyArguments = key.zipWithIndex.filter(indexLoc contains _._2).map{case (ktp, i) => "ek"+(i+1)+":"+ktp.toScala}.mkString(", ")
     val valueArgument = "ev:"+value.toScala
 
     val entryCls = entryClassName(value, key, indexList)
@@ -141,7 +141,7 @@ object K3MapCommons {
     //"    var next:" + name + " = null\n" +
     "  }\n" + (if(K3MapCommons.isInliningInSpecializedLevel) {
     "  object " + name + "Ops {\n" +
-      "    def get(map:Array["+name+"], "+keyArguments+"): "+value.toScala+" = " +
+      "    def get(map:Array["+name+"], "+keyArguments+"): scala.collection.mutable.ArrayBuffer["+entryCls+"] = " +
       ind(genGenericGetMap("", "n", "map", name, "scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"](0)", indexLoc, filterExprAtElementLoc(keyNames,indexLoc)),2) + "\n" +
     "  }\n"
     } else "")
