@@ -174,50 +174,66 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def toMapFunction(q: Query) = {
-    //m = map
-    val map = q.name
-    val nodeName = map+"_node"
-    val mapKeys = maps(q.name).keys.map(_._2)
-    //val entryCls = K3MapCommons.entryClassName(q.tp, q.keys, sx.getOrElse(q.name,List[List[Int]]()))
-    val entryCls = "("+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+")"
-    val res = nodeName+"_mres"
-    val i = nodeName+"_mi"
-    val len = nodeName+"_mlen"
-    val e = nodeName+"_me"
-    "{\n" +
-    "  //TOMAP\n" +
-    "  var "+res+": scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"]("+map+"__sz);\n" +
-    "  var "+i+" = 0\n" +
-    "  val "+len+" = "+map+".length\n" +
-    "  while("+i+" < "+len+") {\n" +
-    "    var "+e+" = "+map+"("+i+")\n" +
-    "    while("+e+" != null) {\n"+
-    "      "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => e+"._"+(i+1) })+" -> "+e+".v)\n"+
-    "      "+e+" = "+e+".next\n" +
-    "    }\n" +
-    "    "+i+" += 1\n" +
-    "  }\n" +
-    "  " + res + "\n" +
-    "}.toMap"
+    if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelMax) {
+      //m = map
+      val map = q.name
+      val nodeName = map+"_node"
+      val mapKeys = maps(q.name).keys.map(_._2)
+      //val entryCls = K3MapCommons.entryClassName(q.tp, q.keys, sx.getOrElse(q.name,List[List[Int]]()))
+      val entryCls = "("+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+")"
+      val res = nodeName+"_mres"
+      val i = nodeName+"_mi"
+      val len = nodeName+"_mlen"
+      val e = nodeName+"_me"
+      "{\n" +
+      "  //TOMAP\n" +
+      "  var "+res+": scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"]("+map+"__sz);\n" +
+      "  var "+i+" = 0\n" +
+      "  val "+len+" = "+map+".length\n" +
+      "  while("+i+" < "+len+") {\n" +
+      "    var "+e+" = "+map+"("+i+")\n" +
+      "    while("+e+" != null) {\n"+
+      "      "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => e+"._"+(i+1) })+" -> "+e+".v)\n"+
+      "      "+e+" = "+e+".next\n" +
+      "    }\n" +
+      "    "+i+" += 1\n" +
+      "  }\n" +
+      "  " + res + "\n" +
+      "}.toMap"
+    } else {
+      super.toMapFunction(q)
+    }
   }
 
   override def genMap(m:MapDef):String = {
-    if (m.keys.size==0) K3MapCommons.createK3VarDefinition(m.name, m.tp)+";"
-    else {
-      val keys = m.keys.map(_._2)
-      val indexList = sx.getOrElse(m.name,List[List[Int]]())
-      K3MapCommons.createK3MapDefinition(m.name,m.tp,keys,indexList)
+    if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelMax) {
+      if (m.keys.size==0) K3MapCommons.createK3VarDefinition(m.name, m.tp)+";"
+      else {
+        val keys = m.keys.map(_._2)
+        val indexList = sx.getOrElse(m.name,List[List[Int]]())
+        K3MapCommons.createK3NamedMapDefinition(m.name,m.tp,keys,indexList)
+      }
+    } else {
+      super.genMap(m)
     }
   }
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = {
-    //val theMap = maps(map)
-    //val mapKeys = theMap.keys.map(_._2)
-    val indexList = sx.getOrElse(map,List[List[Int]]())
-    K3MapCommons.genGenericAddNamedMap(true,false,"","",map+"_node",map,keyNames.map(_._2),TypeLong,(0 until keyNames.size).toList,keyNames.map(_._1),"1",indexList)
+    if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelMax) {
+      //val theMap = maps(map)
+      //val mapKeys = theMap.keys.map(_._2)
+      val indexList = sx.getOrElse(map,List[List[Int]]())
+      K3MapCommons.genGenericAddNamedMap(true,false,"","",map+"_node",map,keyNames.map(_._2),TypeLong,indexList,keyNames.map(_._1),"1")
+    } else {
+      super.genInitializationFor(map, keyNames, keyNamesConcat)
+    }
   }
 
-  override def generateDataStructures = K3MapCommons.generateAllEntryClasses
+  override def generateDataStructures = if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelMax) {
+    K3MapCommons.generateAllEntryClasses
+  } else {
+    super.generateDataStructures
+  }
 
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
