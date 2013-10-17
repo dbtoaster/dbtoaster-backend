@@ -106,8 +106,6 @@ abstract class WorkerActor extends Actor {
 
   // ----------------------------------------------------------
   // TODO: implement more efficient serializer
-  // - possibly exchange 2 Arrays(Key,Val) instead of Scala Map
-  // ----------------------------------------------------------
   // http://code.google.com/p/fast-serialization/
   // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
   // https://github.com/romix/akka-kryo-serialization
@@ -251,6 +249,15 @@ abstract class WorkerActor extends Actor {
       case n => sys.error("No additivity for "+n)
     }).asInstanceOf[(Any,Any)=>Any])
     matcherAggr.req(m,f,args,co,z,p)
+  }
+  
+  // ---- helper for local aggregation (this happen when aggregating in a local
+  case class Acc() { // applies a continuation when the internal counter is zero
+    private var ctr = 0
+    private var co:Unit=>Unit = null
+    def i { ctr+=1; } // increment
+    def d { ctr-=1; if (ctr==0 && co!=null) { val c=co; co=null; c() } } // decrement
+    def apply(f:Unit=>Unit) { if (ctr==0) f() else co=f; } // define the continuation
   }
 
   // ---- debugging
