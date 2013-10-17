@@ -7,6 +7,7 @@ import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
 import toasterbooster.lifters._
 import ddbt.Utils.ind
+import ddbt.codegen.K3MapCommons
 
 /**
  * The following LMS operations are implemented by these traits:

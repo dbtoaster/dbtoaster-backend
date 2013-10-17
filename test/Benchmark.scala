@@ -65,49 +65,56 @@ object Benchmark {
   // Merge argument parsing with unit test ?
 
   def main(args:Array[String]) {
-    args.foreach { a => if (a.startsWith("-d")) dataset=a.substring(2) }
-    val f_qs = { val ps = args.filter(_.startsWith("-q")).map(p=>java.util.regex.Pattern.compile(".*"+p.substring(2)+"(\\.sql)?"))
-      if (ps.length>0) (s:String)=>ps.exists(p=>p.matcher(s).matches()) else (s:String)=>true
-    }
-    val tests = UnitTest.sqlFiles(dataset)._2.filter(f_qs)
-    modes = args.filter(_.startsWith("-m")).map(_.substring(2)).filter(m=>m match { case "scala"|"lms"|"akka"|"lscala"|"llms"|"lcpp" => true case _ => false }).toList
-    if (modes==Nil) modes = List("scala")
-    if (args.contains("-csv")) {
-      csv = new PrintWriter (new File ("benchmarks-"+dataset+".csv"));
-      csv.println("Dataset,"+dataset+","+modes.map {
-        case "scala" => "Scala"
-        case "lms" => "LMS"
-        case "akka" => "Akka"
-        case "lscala" => "Scala-legacy"
-        case "llms" => "LMS-legacy"
-        case "lcpp" => "CPP-legacy"
-      }.mkString(",,,,,"))
-      csv.println("Query,SQLtoM3,"+modes.map(m=>"M3toCode,Compile,Min,Max,Median").mkString(","))
-    }
-    // run benchmarks
-    if (modes.contains("lscala")||modes.contains("llms")) write(tmp,"RunQuery.scala",legacyHelper)
-    tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t =>
-      val n = t.replaceAll(".*queries/|/query|\\.sql","")
-      println("--------------- "+n)
-      val (t0,m3) = ns(()=>UnitTest.toast(t,List("-l","M3")))
-      println("SQL -> M3      : "+time(t0))
-      if (csv!=null) csv.print(n+","+time(t0,0)+",")
-      modes.foreach { m => 
-        try {
-          m match {
-            case "scala" => benchScala("scala")(m3,t0)
-            case "lms" => benchScala("lms")(m3,t0)
-            case "akka" => benchScala("akka")(m3,t0)
-            case "lscala" => legacyScala(false)(t,t0)
-            case "llms" => legacyScala(true)(t,t0)
-            case "lcpp" => legacyCPP(t,t0)
+    args.foreach { a =>
+      if (a.startsWith("-d")) {
+        dataset=a.substring(2)
+        println("Current Dataset : "+dataset)
+        val f_qs = { val ps = args.filter(_.startsWith("-q")).map(p=>java.util.regex.Pattern.compile(".*"+p.substring(2)+"(\\.sql)?"))
+          if (ps.length>0) (s:String)=>ps.exists(p=>p.matcher(s).matches()) else (s:String)=>true
+        }
+        val tests = UnitTest.sqlFiles(dataset)._2.filter(f_qs)
+        modes = args.filter(_.startsWith("-m")).map(_.substring(2)).filter(m=>m match { case "scala"|"lms"|"lms_inlineall"|"akka"|"lscala"|"llms"|"lcpp" => true case _ => false }).toList
+        if (modes==Nil) modes = List("scala")
+        if (args.contains("-csv")) {
+          csv = new PrintWriter (new File ("benchmarks-"+dataset+".csv"));
+          csv.println("Dataset,"+dataset+","+modes.map {
+            case "scala" => "Scala"
+            case "lms" => "LMS"
+            case "lms_inlineall" => "LMS-Inline-All"
+            case "akka" => "Akka"
+            case "lscala" => "Scala-legacy"
+            case "llms" => "LMS-legacy"
+            case "lcpp" => "CPP-legacy"
+          }.mkString(",,,,,"))
+          csv.println("Query,SQLtoM3,"+modes.map(m=>"M3toCode,Compile,Median,Min,Max").mkString(","))
+        }
+        // run benchmarks
+        if (modes.contains("lscala")||modes.contains("llms")) write(tmp,"RunQuery.scala",legacyHelper)
+        tests.filter{x=> !x.endsWith("missedtrades.sql")}.foreach { t =>
+          val n = t.replaceAll(".*queries/|/query|\\.sql","")
+          println("--------------- "+n)
+          val (t0,m3) = ns(()=>UnitTest.toast(t,List("-l","M3")))
+          println("SQL -> M3      : "+time(t0))
+          if (csv!=null) csv.print(n+","+time(t0,0)+",")
+          modes.foreach { m => 
+            try {
+              m match {
+                case "scala" => benchScala("scala")(m3,t0)
+                case "lms" => benchScala("lms")(m3,t0)
+                case "lms_inlineall" => benchScala("lms_inlineall")(m3,t0)
+                case "akka" => benchScala("akka")(m3,t0)
+                case "lscala" => legacyScala(false)(t,t0)
+                case "llms" => legacyScala(true)(t,t0)
+                case "lcpp" => legacyCPP(t,t0)
+              }
+            } catch { case t:Throwable => t.printStackTrace; Thread.sleep(50) }
           }
-        } catch { case t:Throwable => t.printStackTrace; Thread.sleep(50) }
+          
+          if (csv!=null) csv.println
+        }
+        if (csv!=null) csv.close
       }
-      
-      if (csv!=null) csv.println
     }
-    if (csv!=null) csv.close
   }
 
   def csvTime(t_gen:Long,t_comp:Long,t_run:String) { // SQL->Code,Compile,Running: avg [min, max]
@@ -118,7 +125,8 @@ object Benchmark {
     val (n,sp) = (lang.substring(0,1).toUpperCase+lang.substring(1)," "* (6-lang.length()))
     val gen:CodeGen = lang match {
       case "scala" => new ScalaGen("NewQuery")
-      case "lms" => new LMSGen("NewQuery")
+      case "lms" => K3MapCommons.InliningLevel = K3MapCommons.InliningLevelNone; new LMSGen("NewQuery")
+      case "lms_inlineall" => K3MapCommons.InliningLevel = K3MapCommons.InliningLevelMax; new LMSGen("NewQuery")
       case "akka" => new AkkaGen("NewQuery")
       case _ => scala.sys.error("Generator "+lang+" not supported")
     }
@@ -128,7 +136,7 @@ object Benchmark {
     val t2 = ns(()=>scalac("NewQuery"))._1
     println(n+" compile"+sp+" : "+time(t2))
     val s=scalax("ddbt.generated.NewQuery").split("\n")(0); println(s.replaceAll(".*:",n+" running"+sp+" : "))
-    csvTime(t1,t2,s)
+    csvTime(t1-t0,t2,s)
     if (csv!=null) csv.flush
   }
 

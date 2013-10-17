@@ -1,9 +1,7 @@
-package ddbt.codegen.lms
+package ddbt.codegen
 import ddbt.ast._
 import ddbt.lib.{K3Temp,K3Var}
 
-import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
 import toasterbooster.lifters._
 import ddbt.Utils.ind
@@ -18,7 +16,7 @@ object K3MapCommons {
   final val InliningLevelMax = 10
   final val InliningLevelNone = 0
 
-  final val InliningLevel = InliningLevelNone
+  var InliningLevel = InliningLevelNone
 
   /**
    * The default initial capacity - MUST be a power of two.
