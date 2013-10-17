@@ -1,6 +1,6 @@
 package ddbt.test
 import ddbt.lib._
-//import org.scalatest._
+import org.scalatest._
 import scala.reflect.ClassTag
 
 // Testing the special case: (Long,Double) -> Long
@@ -9,21 +9,19 @@ case class Key(_1:Long, _2:Double) extends Ordered[Key] {
   def compare(k:Key) = if (_1<k._1) -1 else if (_1>k._1) 1 else if (_2<k._2) -1 else if (_2>k._2) 1 else 0;
 }
 
-// Run this test with:
-// sbt 'test:run-main ddbt.tests.MapsPerf'
-object MapsPerf /*extends FunSpec*/ {
-  import scala.collection.JavaConversions._
-  val N = 1000000; // insertions
-  val S = 25; // number of samples
-  
-  def t = System.nanoTime()
-  def time(n:String, t0:Array[Long], t1:Array[Long]) { val ts=(t0 zip t1).map(x=>x._2-x._1); val us:Long=ts.sorted.apply(ts.size/2)/1000; printf("   %s:%4d.%03d",n,us/1000,us%1000); }
-  def main(args:Array[String]) {
-    checks();
-    bench();
+class Maps extends FunSpec {
+  import java.io._
+  def toB[T](obj:T) = {
+    val bos=new ByteArrayOutputStream(); val out=new ObjectOutputStream(bos)
+    out.writeObject(obj); val bytes=bos.toByteArray; out.close; bos.close; bytes
   }
-  
-  def checks() {
+  def fromB[T](bytes:Array[Byte]):T = {
+    val bis=new ByteArrayInputStream(bytes); val in=new ObjectInputStream(bis)
+    val obj=in.readObject(); bis.close; in.close; obj.asInstanceOf[T]
+  }
+  def srlz[T](obj:T) = fromB[T](toB(obj))
+
+  describe("M3Maps") {
     val mm = M3Map.make[Key,Long]((k:Key)=>k._1,(k:Key)=>k._2)
     mm.set(Key(3L,4.0),8L); assert(mm.get(Key(3L,4.0))==8L)
     mm.set(Key(7L,2.0),5L); assert(mm.get(Key(7L,2.0))==5L)
@@ -38,17 +36,31 @@ object MapsPerf /*extends FunSpec*/ {
     val m2=M3Map.make[Key,Long](); mm.sum(m2); assert(m2.size==25)
     a=0; m2.foreach((k,v)=>a+=v); assert(a==50);
     // Serialization and conversion
-    import java.io._
-	val os = new PipedOutputStream();
-    val is = new BufferedInputStream(new PipedInputStream(os));
-    val oos = new ObjectOutputStream(os);
-    val ois = new ObjectInputStream(is);
-    oos.writeObject(mm);
-    val m3=ois.readObject().asInstanceOf[M3Map[Key,Long]]
-    assert(m3.toMap==mm.toMap)
+    assert(srlz(mm).toMap==mm.toMap)
+    val m1=M3Map.temp[(Long,Long),Long](); m1.add((3,3),0); m1.add((3,5),1); m1.add((3,1),1)
+    assert(srlz(m1).toMap==m1.toMap)
+    println(srlz(m1))
+    info("Passed")
   }
+}
 
-  def bench() {
+
+
+// Run this test with:
+// sbt 'test:run-main ddbt.tests.MapsPerf'
+object MapsPerf /*extends FunSpec*/ {
+  import scala.collection.JavaConversions._
+  val N = 1000000; // insertions
+  val S = 25; // number of samples
+  
+  def t = System.nanoTime()
+  def time(n:String, t0:Array[Long], t1:Array[Long]) { val ts=(t0 zip t1).map(x=>x._2-x._1); val us:Long=ts.sorted.apply(ts.size/2)/1000; printf("   %s:%4d.%03d",n,us/1000,us%1000); }
+  def main(args:Array[String]) {
+    //checks();
+    //bench();
+  //}
+
+  //def bench() {
     val mj = new java.util.HashMap[Key,Long]()
     val mm = M3Map.make[Key,Long]((k:Key)=>k._1,(k:Key)=>k._2)
     val mm0 = M3Map.make[Key,Long]()

@@ -85,14 +85,13 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case Lift(n,e) => fmap(e,c2)
     case Exists(e) => fmap(e,c2)
     case Mul(l,r) => val lm=fmap(l,c2); if (lm==null) fmap(r,c2++l.collect{ case Lift(n,e) => Set(n) }) else lm
-    case Add(l,r) => val lm=fmap(l,c2); if (lm==null) fmap(r,c2) else lm
+    case a@Add(l,r) => if (a.agg!=Nil) null else { val lm=fmap(l,c2); if (lm==null) fmap(r,c2) else lm }
     case _ => null
   }
 
   // Wrapper for remote code generation, return body and context
   def remote(m:String,fn:String,f:()=>String):(String,List[String]) = {
-    local_r=m; val u0=inuse.save; val c=ctx.save ++ ctx.ctx0
-    val body=close(f);
+    local_r=m; val u0=inuse.save; val c=ctx.save ++ ctx.ctx0; val body=close(f);
     val u=inuse.save; local_r=null; inuse.load(u0)
     val rc = (c.map(_._1).toSet & u).toList // remote context
     ("case (`"+fn+"`,List("+rc.map(v=>v+":"+c(v).toScala).mkString(",")+")) =>\n"+ind(body),rc)
@@ -104,62 +103,29 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val fn0 = fresh("fa");
     val (body0:String,rc:List[String])=remote(m,fn0,()=>{ inuse.add(key.map(_._1).toSet)
       if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
-      else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+
-             //XXX: ensure here coherency
-             cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+"); /*HERE*/\n")+"co("+a0+")" }
+      else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n")+"co("+a0+")" }
     })
     val (fn,body) = aggl.getOrElseUpdate((m,anon(e),rc),(fn0,body0))
     // local handler
     val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
     val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
-    cl_add(1);
-    if (add) "aggr("+ref(m)+","+fn+",Array[Any]("+rc.mkString(",")+"),"+a0+",(_:"+rt+") => {\n"
-    else "aggr("+ref(m)+","+fn+",Array[Any]("+rc.mkString(",")+"),"+acc+",("+a0+":"+rt+") => {\n"
+    cl_add(1); "aggr("+ref(m)+","+fn+",Array[Any]("+rc.mkString(",")+"),"+(if (add) a0+",(_" else acc+",("+a0)+":"+rt+") => {\n"
   }
   
-  // Ensures that all continuations in the loop over the intermediate map are terminated
-  // ENRICH TO SUPPORT SLICING
-  /*
-  def agg_co(a0:String,keys:List[(String,Type)],co:String=>String):String = {
-    var async=false
-    val (k0,v0)=(fresh("k"),fresh("v"))
-    val co1=close(()=>{ val r=co(v0); if (cl_ctr>0) { async=true; a0+"_c.i // <---\n"+r+a0+"_c.d // <---\n" } else r })
-    (if (async) "val "+a0+"_c = Acc()\n" else "")+a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-      (if (keys.size==1) "val "+keys(0)._1+" = "+k0+"\n" else keys.map(_._1).zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co1)+"\n}\n"+
-      (if (async) { cl_add(1); a0+"_c((_:Unit) => {\n" } else "")
-  }
-  */
-
-  /*  
-    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-      if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks)+")" else "")) // all keys are bound
-      else { val (k0,v0)=(fresh("k"),fresh("v"))
-        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
-        ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
-        n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
-          ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co(v0))+"\n}\n" // bind free variables from retrieved key
-      }
-  */
-
-  // XXX: add a flag to decide whether the continuation is sequential or does not need to be so
-  // sequentiality is enforced by aggregations and on master
+  // XXX: distinguish between forced sequentiality (master and in aggregation/sum) and parallel execution(pure foreach)
+  // XXX: make both parts of an Add work in parallel
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
                       else { ctx.add(Map((n,e.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       if (local(n) || n==local_r) { if (n==local_r) local_r=null;
-      
-      
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
-        
         if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks)+")" else "")) // all keys are bound
         else { val (k0,v0)=(fresh("k"),fresh("v")); var async=false
           val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
           ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
-
-          val co1=close(()=>{ val r=co(v0); if (cl_ctr>0) { async=true; n+"_c.i // <---\n"+r+n+"_c.d // <---\n" } else r })
-
+          val co1=close(()=>{ val r=co(v0); if (cl_ctr>0) { async=true; n+"_c.i\n"+r+n+"_c.d\n" } else r })
           (if (async) "val "+n+"_c = Acc()\n" else "")+
           n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
             ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co1)+"\n}\n"+ // bind free variables from retrieved key
@@ -185,11 +151,11 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else am match {
         case Some(t) if t==a.agg => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
-        case _ => val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
-          def add(a0:String,e:Expr):String = { val cur=ctx.save; val m=fmap(e)
+        case _ => val a0=fresh("add")
+          def add(e:Expr):String = { val cur=ctx.save; val m=fmap(e)
             val r = if (m!=null) remote_agg(a0,m,a.agg,e,true) else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(_._1))+","+v+");\n",am); ctx.load(cur); r
           }
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(a0,el)+add(a0,er)+{ local_r=a0; cpsExpr(mapRef(a0,ex.tp,a.agg),co) }
+          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ local_r=a0; cpsExpr(mapRef(a0,ex.tp,a.agg),co) }
       }
     case _ => super.cpsExpr(ex,co,am)
   }
@@ -207,8 +173,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+", (z:"+m.tp.toScala+") => if (z==0) {\n"+ind(cpsExpr(ie,(v:String)=>mop("set",v)))+"\n}\n"+
         "barrier((_:Unit)=> {\n"
       }
-      inuse.load(m.keys.toSet)
-      init+pre(op,e)+cpsExpr(e,(v:String)=>mop(fop,v))
+      inuse.load(m.keys.toSet); init+pre(op,e)+cpsExpr(e,(v:String)=>mop(fop,v))
     case _ => sys.error("Unimplemented")
   }
 
