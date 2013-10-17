@@ -128,6 +128,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       (if (async) { cl_add(1); a0+"_c((_:Unit) => {\n" } else "")
   }
   
+  // XXX: add a flag to decide whether the statement is SYNC or ASYNC
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
@@ -160,21 +161,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
           }
           "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+"// ---------\n"+add(a0,el)+"\n// ---------\n"+add(a0,er)+"\n// ---------\n"+
           agg_co(a0,a.agg,co)
-          
-          /*
-          var async=false
-          val co1=close(()=>{ val r=co(v0); if (cl_ctr>0) { async=true; a0+"_c.i // <---\n"+r+a0+"_c.d // <---\n" } else r })
-          
-          if (async) cl_add(1)
-          
-          val ks = a.agg.map(_._1)
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+"// ---------\n"+add(a0,el)+"\n// ---------\n"+add(a0,er)+"\n// ---------\n"+
-          (if (async) "val "+a0+"_c = Acc()\n" else "")+
-          // HERE WE MUST ENSURE THAT WE ADD CORRECTLY
-          a0+".foreach{ ("+k0+","+v0+") =>\n"+ind(
-            (if (ks.size==1) "val "+ks(0)+" = "+k0+"\n" else ks.zipWithIndex.map{ case (v,i) => "val "+v+" = "+k0+"._"+(i+1)+"\n" }.mkString)+co1)+"\n}\n"+
-          (if (async) a0+"_c((_:Unit) => {\n" else "")
-          */
 
 /*
 // XXX: distinguish when in an aggregation and when not
