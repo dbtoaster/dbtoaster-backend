@@ -91,8 +91,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   // Wrapper for remote code generation, return body and context
   def remote(m:String,fn:String,f:()=>String):(String,List[String]) = {
-    local_r=m; val u0=inuse.save; val c=ctx.save ++ ctx.ctx0; val body=close(f);
-    val u=inuse.save; local_r=null; inuse.load(u0)
+    local_r=m; /*val u0=inuse.save;*/ val c=ctx.save ++ ctx.ctx0; val body=close(f);
+    val u=inuse.save; local_r=null; //inuse.load(u0)
     val rc = (c.map(_._1).toSet & u).toList // remote context
     ("case (`"+fn+"`,List("+rc.map(v=>v+":"+c(v).toScala).mkString(",")+")) =>\n"+ind(body),rc)
   }
@@ -169,13 +169,11 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         case _ => cl_add(1); "pre("+r+",Array[MapRef]("+rd(e).mkString(",")+"),(_:Unit)=> {\n"
       }
       def mop(o:String,v:String) = o+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+","+v+");\n"
-      val init = oi match { case None => "" case Some(ie) => inuse.load(m.keys.toSet); cl_add(3); val v0=fresh("v")
-        "pre(-1,Array("+(r::rd(ie)).mkString(",")+"),(_:Unit)=> {\n"+
-        cpsExpr(ie,(v:String)=>"get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+", ("+v0+":"+m.tp.toScala+") => { if ("+v0+"==0) "+mop("set",v))+
-        //"get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+", (z:"+m.tp.toScala+") => { if (z==0) {\n"+ind(close(()=>cpsExpr(ie,(v:String)=>mop("set",v))))+"\n}\n"+
-        "barrier((_:Unit)=> {\n"
+      val init = oi match { case None => "" case Some(ie) => ctx.load(); inuse.load(m.keys.toSet); cl_add(2); 
+        val co=(v:String)=> { val v0=fresh("v"); val o=mop("set",v); "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+",("+v0+":"+m.tp.toScala+")=> { if ("+v0+"==0) "+o.substring(0,o.length-1)+" })\n" }
+        "pre(-1,Array("+(r::rd(ie)).mkString(",")+"),(_:Unit)=> {\n"+cpsExpr(ie,co)+"barrier((_:Unit)=> {\n"
       }
-      inuse.load(m.keys.toSet); init+pre(op,e)+cpsExpr(e,(v:String)=>mop(fop,v))
+      ctx.load(); inuse.load(m.keys.toSet); init+pre(op,e)+cpsExpr(e,(v:String)=>mop(fop,v))
     case _ => sys.error("Unimplemented")
   }
 
