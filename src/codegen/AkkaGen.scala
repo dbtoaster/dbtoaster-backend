@@ -118,11 +118,12 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am)
                       else { ctx.add(Map((n,e.tp))); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
-    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-      if (local(n) || n==local_r || !ref.contains(n)) { if (n==local_r) local_r=null;
+    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)};
+      if (local(n) || n==local_r || !ref.contains(n)) { if (n==local_r) local_r=null; 
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
         if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks)+")" else "")) // all keys are bound
         else { val (k0,v0)=(fresh("k"),fresh("v")); var async=false
+          inuse.add(ko.map(_._1).toSet)
           val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
           ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
           val co1=close(()=>{ val r=co(v0); if (cl_ctr>0) { async=true; n+"_c.i\n"+r+n+"_c.d\n" } else r })
@@ -141,18 +142,18 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         // local handler
         "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
       }
-    case a@AggSum(ks,e) => val m=fmap(e); inuse.add(ks.toSet);
+    case a@AggSum(ks,e) => val m=fmap(e); val cur=ctx.save; inuse.add(ks.toSet);
       if (m==null || local(m)) super.cpsExpr(ex,co,am) // 1-tuple projection or map available locally
       else {
         val a0=fresh("agg"); val aks=(ks zip a.tks).filter{ case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-        remote_agg(a0,m,aks,e)+(if (aks.size==0) co(a0) else { local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),co) })
+        remote_agg(a0,m,aks,e)+(if (aks.size==0) co(a0) else { ctx.load(cur); local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),co) })
       }
-    case a@Add(el,er) =>
-      if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
+    case a@Add(el,er) => val cur=ctx.save;
+      if (a.agg==Nil) { cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else am match {
-        case Some(t) if t==a.agg => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
+        case Some(t) if t==a.agg => val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ => val a0=fresh("add")
-          def add(e:Expr):String = { val cur=ctx.save; val m=fmap(e)
+          def add(e:Expr):String = { val m=fmap(e)
             val r = if (m!=null) remote_agg(a0,m,a.agg,e,true) else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(_._1))+","+v+");\n",am); ctx.load(cur); r
           }
           "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ local_r=a0; cpsExpr(mapRef(a0,ex.tp,a.agg),co) }

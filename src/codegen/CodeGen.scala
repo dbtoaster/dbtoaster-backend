@@ -45,9 +45,11 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
   
   /*
   Need for an optimization phase:
+  ==> phase after TypeCheck: union/add is disambiguated with Add.agg
   - simplifying aliases where possible
   - propagating constants
   - taking out constants
+  - moving to enclosing class constant subexpressions
   - providing correct zero for types
   - mapref construction
   - avoiding duplicate get (benefitial for akka)

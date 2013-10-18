@@ -23,12 +23,12 @@ libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-cluster"   % "2.2.1",
   "org.scala-lang"     % "scala-actors"   % v,
   "org.scala-lang"     % "scala-compiler" % v,
-  "org.scalatest"     %% "scalatest"      % "2.0.M7" % "test"
+  "org.scalatest"     %% "scalatest"      % "2.0.RC2" % "test"
 ))
 
 // --------- Compilation options
 Seq(
-  scalaVersion := "2.10.2",
+  scalaVersion := "2.10.3",
   scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings"), // ,"-target:jvm-1.7"
   javacOptions ++= Seq("-Xlint:unchecked")
 )
