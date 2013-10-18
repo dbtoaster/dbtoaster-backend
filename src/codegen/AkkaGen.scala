@@ -168,9 +168,10 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         case _ => cl_add(1); "pre("+r+",Array[MapRef]("+rd(e).mkString(",")+"),(_:Unit)=> {\n"
       }
       def mop(o:String,v:String) = o+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+","+v+");\n"
-      val init = oi match { case None => "" case Some(ie) => inuse.load(m.keys.toSet); cl_add(3)
-        "pre(-1,Array("+(r::rd(ie)).mkString(",")+"),(_:Unit)=>\n"+
-        "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+", (z:"+m.tp.toScala+") => if (z==0) {\n"+ind(cpsExpr(ie,(v:String)=>mop("set",v)))+"\n}\n"+
+      val init = oi match { case None => "" case Some(ie) => inuse.load(m.keys.toSet); cl_add(3); val v0=fresh("v")
+        "pre(-1,Array("+(r::rd(ie)).mkString(",")+"),(_:Unit)=> {\n"+
+        cpsExpr(ie,(v:String)=>"get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+", ("+v0+":"+m.tp.toScala+") => { if ("+v0+"==0) "+mop("set",v))+
+        //"get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+", (z:"+m.tp.toScala+") => { if (z==0) {\n"+ind(close(()=>cpsExpr(ie,(v:String)=>mop("set",v))))+"\n}\n"+
         "barrier((_:Unit)=> {\n"
       }
       inuse.load(m.keys.toSet); init+pre(op,e)+cpsExpr(e,(v:String)=>mop(fop,v))

@@ -42,4 +42,18 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
     def apply() = f(ctr)
   }
   */
+  
+  /*
+  Need for an optimization phase:
+  - simplifying aliases where possible
+  - propagating constants
+  - taking out constants
+  - providing correct zero for types
+  - mapref construction
+  - avoiding duplicate get (benefitial for akka)
+  - reducing aggregation of one element
+  - disambiguate add/union at optimization phase ?
+  */
+  
+  
 }
