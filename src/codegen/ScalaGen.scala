@@ -200,10 +200,11 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   // Helper that contains the main and stream generator
   def helper(s0:System,pkg:String) = {
     "package "+pkg+"\nimport ddbt.lib._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-    "object "+cls+" extends Helper {\n"+ind("def main(args:Array[String]) {\n"+ind(
-    "bench2(args,(d:String,p:Boolean)=>run["+cls+"]("+
+    "object "+cls+" extends Helper {\n"+ind(
+    "def execute(args:Array[String],f:List[Any]=>Unit) = bench2(args,(d:String,p:Boolean)=>run["+cls+"]("+
     streams(s0.sources).replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")")
-                       .replaceAll("/standard/","/\"+d+\"/")+",p),(res:List[Any])=>{\n"+
+                       .replaceAll("/standard/","/\"+d+\"/")+",p),f)\n\n"+
+    "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
     "\n})")+"\n}")+"\n}\n\n"
   }
