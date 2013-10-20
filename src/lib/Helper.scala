@@ -76,7 +76,7 @@ trait Helper {
       (0 until math.max(1,count)).foreach { x => val (t,res)=run(d,parallel);
         ts=t::ts; if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res)
       }
-      ts = ts.sorted; if (!args.contains("-h")) println(d+": "+time(if (count%2==0) (ts(count/2)+ts(count/2-1))/2 else ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec)")
+      ts = ts.sorted; if (!args.contains("-h")) println(d+": "+time(if (count%2==0) (ts(count/2)+ts(count/2-1))/2 else ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec, "+ts.size+" samples)")
       if (!args.contains("-s") && res0!=null && print!=null) print(res0)
     }
   }

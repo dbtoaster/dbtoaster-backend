@@ -57,7 +57,7 @@ object UnitTest {
         e("  -qx <filter>  add an exclusion filter for queries")
         e("  -qskip        skip queries that are known to fail")
         e("Benchmarking options:")
-        e("  -v            verification against reference result") // self-check is always enabled XXX: not implemented
+        e("  -v            verification against reference result") // consistency verification is always enabled
         e("  -x            enable benchmarks (compile and execute)")
         e("  -samples <n>  number of samples to take (default=10)")
         e("  -csv <file>   store benchmarking results in a file")
@@ -85,20 +85,20 @@ object UnitTest {
     val sel = all.filter(q=>q_f(q.sql)).map{q=>QueryTest(q.sql,q.sets.filterKeys{d=>d_f(d)})}.filter(q=>q.sets.size>0)
     println("Tests selected : %6d".format(sel.size))
     if (sel.size==0) { System.err.println("No tests selected, exiting."); return; }
-
+    val dir = new File(path_sources); if (dir.isDirectory()) dir.listFiles().foreach { f=>f.delete() } else dir.mkdirs() // directory cleanup (erase previous tests)
     if (csvFile!=null) csv=new PrintWriter(new File (csvFile+(if(csvFile.endsWith(".csv")) "" else ".csv")))
     val modes = List("scala","lms","akka","lscala","lcpp","llms").filter(m=>m_f(m))
     val mn = Map(("scala","Scala"),("lms","LMS"),("akka","Akka"),("lscala","lScala"),("lcpp","lCPP"),("llms","lLMS"))
-    if (csv!=null) {
-      // CSV format : query_name,sql->m3,[codegen_M,compile_M,[med_D1,min_D1,max_D1],[med_D2,min_D2,max_D2],... ][codegen_M2...
-      csv.print(",,"); for (m<-modes) if (m_f(m)) csv.println(mn(m)+",,"+datasets.filter(d=>d_f(d)).map(d=>d+",,,").mkString)
+    if (csv!=null) { // CSV format: query,sql->m3,(codegen,compile,(med,min,max,)*)*
+      csv.print(samples+",samples,"); for (m<-modes) if (m_f(m)) csv.println(mn(m)+",,"+datasets.filter(d=>d_f(d)).map(d=>d+",,,").mkString)
       csv.print("Query,SQLtoM3,"); for (m<-modes) if (m_f(m)) csv.println("M3toCode,Compile,"+datasets.filter(d=>d_f(d)).map(d=>"Med,Min,Max,").mkString)
     }
+    
     for (q <- sel) {
       println("--------[[ "+name(q.sql)+" ]]--------")
       val (t0,m3) = toast(q.sql,"m3")
       println("SQL -> M3           : "+time(t0))
-      csv.print(name(q.sql)+","+time(t0,0)+",")
+      if (csv!=null) csv.print(name(q.sql)+","+time(t0,0)+",")
       for (m <- modes) if (m_f(m)) m match {
         case "scala"|"lms"|"akka" => genQuery(q,new Printer(mn(m)),m3,m)
         case "lscala"|"llms" if (repo!=null && benchmark) => legacyScala(q,new Printer("LScala"),t0,m=="llms")
@@ -117,48 +117,51 @@ object UnitTest {
     // XXX: e("  -cluster      use script/cluster.sh to execute Akka tests") to be moved in the compiler
   }
 
+  // ---------------------------------------------------------------------------
+  // Query generator
   def genQuery(q:QueryTest,p:Printer,m3:String,mode:String) {
+    val cls = name(q.sql)
     // Correctness
-    def genSpec(sys:ddbt.ast.M3.System) {
+    def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
       val qid = sys.queries.map{_.name}.zipWithIndex.toMap
       val qt = sys.queries.map{q=>(q.name,sys.mapType(q.map.name)) }.toMap
-      val cls = name(q.sql)
-      val helper = "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-      "class "+cls+"Spec extends FunSpec with Helper {"+ind("\n"+
-      "import scala.language.implicitConversions\n"+
+      val body = "import scala.language.implicitConversions\n"+
       "implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();\n"+
       "implicit def strConv(d:Long):String = \"\"+d\n"+ // fix for TPCH22
       q.sets.map { case (sz,set) =>
-        ""+cls+".execute(Array(\"-n1\",\"-d"+sz+"\",\"-h\"),(res:List[Any])=>describe(\"Dataset '"+sz+"'\") {\n"+ind(
-        set.out.map { case (n,o) =>
-          val (kt,vt) = qt(n)
-          val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
-          val fmt = (kt:::vt::Nil).mkString(",")
-          val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex
-            "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.reverse.tail.reverse.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n"
-          }
-          "it(\""+n+" correct\") {\n"+ind(kv+
-          "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
+        (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-d"+sz+"\",\"-h\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
+        set.out.map { case (n,o) => val (kt,vt) = qt(n); val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
+          val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
             case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
-            case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+fmt+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
+            case QueryFile(path,sep) => (if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex
+              "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map(l=>"v"+l._2))+",v"+ll.last._2+") }\n" })+
+              "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
             case QuerySingleton(v) => v
-          })+")")+"\n}"
+          })+")"
+          (if (full) "it(\""+n+" correct\") " else "")+"{\n"+ind(cmp)+"\n}"
         }.mkString("\n"))+"\n})"
-      }.mkString("\n"))+"\n}\n\n"
-      write(new File(path_sources),cls+"Spec.scala",helper)
+      }.mkString("\n")
+      if (full) "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
+      "class "+cls+"Spec extends FunSpec with Helper {\n"+ind(body)+"\n}\n\n" else body
+    }
+    def genSpec(sys:ddbt.ast.M3.System) {
+      write(new File(path_sources),cls+"Spec.scala",spec(sys,true))
+      if (verify) {
+        val src = read(path_sources+"/"+cls+".scala").split("  def execute\\(args")
+        write(new File(path_sources),cls+".scala",src(0)+ind(spec(sys,false))+"\n  def execute(args"+src(1))
+      }
     }
     // Benchmark
     Compiler.pkg = "ddbt.test.gen"
-    Compiler.name = name(q.sql)
-    Compiler.out = path_sources+"/"+name(q.sql)+".scala"
+    Compiler.name = cls
+    Compiler.out = path_sources+"/"+cls+".scala"
     Compiler.exec = benchmark
     Compiler.exec_dir = path_classes
     Compiler.exec_args = "-n"+samples :: "-s" :: datasets.filter(d=>d_f(d)&&q.sets.contains(d)).map(d=>"-d"+d).toList
-    val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3,genSpec))
-    p.gen(t_gen);
+    val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3,genSpec)); p.gen(t_gen)
     if (benchmark) { p.comp(t_comp)
       if (err!="") System.err.println(err)
-      else out.split("\n").foreach{ l => val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),e.slice(1,4)) }
+      else out.split("\n").foreach{ l => val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),e.slice(1,4),e(5)) }
       p.close
     }
   }
@@ -230,15 +233,12 @@ object UnitTest {
     private def med(ts:Seq[Long]) = if (ts.size==0) 0L else { val s=ts.sorted; val n=ts.size; if (n%2==0) (s(n/2)+s(n/2-1))/2 else ts(n/2) }
     def gen(t:Long) { println("%-20s: ".format(name+" codegen")+time(t)); tg=tg:+t; }
     def comp(t:Long) { println("%-20s: ".format(name+" compile")+time(t)); tc=tc:+t; }
-
-    def run(set:String,ts:Array[String]) { println("%-20s: ".format(name+" "+set)+ts(0)+" ["+ts(1)+", "+ts(2)+"] (sec)"); tr+=ts(0)+","+ts(1)+","+ts(2)+"," }
+    def run(set:String,ts:Array[String],n:String) { println("%-20s: ".format(name+" "+set)+ts(0)+" ["+ts(1)+", "+ts(2)+"] (sec, "+n+" samples)"); tr+=ts(0)+","+ts(1)+","+ts(2)+"," }
     def run(set:String,t_runs:Seq[Long]) { val ts=t_runs.sorted; val(t0,t1,t2)=(med(ts),ts(0),ts(ts.size-1))
-      println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec)"); tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
+      println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec, "+ts.size+" samples)"); tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
     }
     def all(q:QueryTest)(f:String=>Unit) { datasets.filter(d=>d_f(d)).foreach { d=> if (!q.sets.contains(d)) tr+=",,," else f(d) }; close }
-    def close {
-      var s=time(med(tg),0)+","+time(med(tc),0)+","+tr; if (csv!=null) csv.print(s)
-    }
+    def close { var s=time(med(tg),0)+","+time(med(tc),0)+","+tr; if (csv!=null) csv.print(s) }
   }
   
   // ---------------------------------------------------------------------------
