@@ -62,16 +62,21 @@ trait Helper {
     println(name+": "+time(if (count%2==0) (ts(count/2)+ts(count/2-1))/2 else ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec)"); res.head
   }
 
-  // to supersede bench
+  // Query benchmark, supported arguments:
+  //   -n<num>       number of samples (default=1)
+  //   -d<set>       dataset selection (can be repeated), (default=standard)
+  //   -h            hide the benchmark time
+  //   -s            silent the query output
+  //   -p            use parallel streams
   def bench2(args:Array[String],run:(String,Boolean)=>(Long,List[Any]),print:List[Any]=>Unit=null) {
     val parallel=args.contains("-p")
-    var count:Int=10; args.filter(a=>a.startsWith("-n")).foreach { a=>count=a.substring(2).toInt }
+    var count:Int=1; args.filter(a=>a.startsWith("-n")).foreach { a=>count=a.substring(2).toInt }
     var ds=List[String](); args.filter(a=>a.startsWith("-d")).foreach { a=>ds=ds:::List(a.substring(2)) }; if (ds.size==0) ds=List("standard")
     ds.foreach { d=> var res0:List[Any]=null; var ts:List[Long]=Nil
       (0 until math.max(1,count)).foreach { x => val (t,res)=run(d,parallel);
         ts=t::ts; if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res)
       }
-      ts = ts.sorted; println(d+": "+time(if (count%2==0) (ts(count/2)+ts(count/2-1))/2 else ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec)")
+      ts = ts.sorted; if (!args.contains("-h")) println(d+": "+time(if (count%2==0) (ts(count/2)+ts(count/2-1))/2 else ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec)")
       if (!args.contains("-s") && res0!=null && print!=null) print(res0)
     }
   }

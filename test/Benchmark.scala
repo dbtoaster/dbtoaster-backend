@@ -133,7 +133,7 @@ object Benchmark {
       case "akka" => new AkkaGen("NewQuery")
       case _ => scala.sys.error("Generator "+lang+" not supported")
     }
-    val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen (x=>gen.helper(x)+gen(x)))(m3))
+    val (t1,sc) = ns(()=>(M3Parser andThen TypeCheck andThen (x=>gen.helper(x,"ddbt.generated")+gen(x)))(m3))
     println(n+" codegen"+sp+" : "+time(t1))
     write(tmp,"NewQuery.scala",(if (dataset.endsWith("_del")) sc.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else sc).replaceAll("/standard/","/"+dataset+"/"))
     val t2 = ns(()=>scalac("NewQuery"))._1

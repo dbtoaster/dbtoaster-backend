@@ -98,7 +98,7 @@ object Compiler {
   def output(s:String) = if (out==null) println(s) else { val f=new File(out); Utils.write(if (f.getParentFile==null) new File(".") else f.getParentFile,f.getName,s) }
 
   // M3 -> execution phase, returns (gen,compile) time
-  def compile(m3_src:String):(Long,Long) = {
+  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null):(Long,Long) = {
     val t0=System.nanoTime
     // Front-end phases
     val m3 = (M3Parser andThen TypeCheck) (m3_src)
@@ -109,7 +109,6 @@ object Compiler {
       case "lms" => new LMSGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }
-    val t1=System.nanoTime
     // ---- TQEV START
     if (tqev) { import ddbt.ast._; import M3._
       val (qns,qss) = (m3.queries.map{q=>q.map.name},scala.collection.mutable.HashMap[String,Stmt]())
@@ -123,6 +122,8 @@ object Compiler {
     } else
     // ---- TQEV ENDS
     output(cg.helper(m3,pkg)+cg(m3))
+    val t1=System.nanoTime
+    if (post_gen!=null) post_gen(m3)
     // Execution
     var t2=0L
     if (exec) lang match {

@@ -56,7 +56,7 @@ object AllQueries {
     if (m3=="" || m3==null) err("front-end failed")
     else try {
       import ddbt.ast.M3
-      def gen(m3:M3.System):String = { val g=new ScalaGen(name); g.helper(m3,1)+g(m3) }
+      def gen(m3:M3.System):String = { val g=new ScalaGen(name); g.helper(m3,"ddbt.generated")+g(m3) }
       val (t1,sc) = ns(()=> (M3Parser andThen TypeCheck andThen gen _)(m3)); write(tmp,name+".scala",sc)
       val (t2,(u2,o2,e2)) = ns(()=>captureOut(()=>scalac(name))); dump(o2,e2)
       if (e2!="") err("scalac: "+e2)

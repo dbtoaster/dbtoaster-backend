@@ -10,7 +10,7 @@ import java.io._
  *
  * @author TCK
  */
-object Unit {
+object UnitTest {
   import Utils._
   val path_examples = "examples/queries"
   val path_sources = "test/gen"
@@ -112,43 +112,25 @@ object Unit {
     //println("Internal:"); val c2=scalaCompiler(new File("target/scala-2.10/test-classes"),"target/scala-2.10/classes",false); c2(List("test/examples/AXFinder.scala"))
     //val (o,e)=scalaExec(new File("target/scala-2.10/classes"),"ddbt.unit.Unit",external=true) println(o); System.err.println(e);
   }
-  
+
   def genQuery(q:QueryTest,p:Printer,m3:String,mode:String) {
-    Compiler.pkg = "ddbt.test.gen"
-    Compiler.name = name(q.sql)
-    Compiler.out = path_sources+"/"+name(q.sql)+".scala"
-    Compiler.exec = benchmark
-    Compiler.exec_dir = path_classes
-    Compiler.exec_args = "-s":: datasets.filter(d=>d_f(d)&&q.sets.contains(d)).map(d=>"-d"+d).toList
-    val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3))
-    p.gen(t_gen); p.comp(t_comp)
-    if (err!="") System.err.println(err)
-    else out.split("\n").foreach{ l => val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),e.slice(1,4)) }
-    p.close
-    
-    // XXX: generate verification test
-    
-    /*
-    val str = gen.streams(sys.sources)
-    val qid = sys.queries.map{_.name}.zipWithIndex.toMap
-    val qt = sys.queries.map{q=>(q.name,sys.mapType(q.map.name)) }.toMap
-    val helper =
-      "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
+    // Correctness
+    def genSpec(sys:ddbt.ast.M3.System) {
+      val qid = sys.queries.map{_.name}.zipWithIndex.toMap
+      val qt = sys.queries.map{q=>(q.name,sys.mapType(q.map.name)) }.toMap
+      val cls = name(q.sql)
+      val helper = "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
       "class "+cls+"Spec extends FunSpec with Helper {"+ind("\n"+
       "import scala.language.implicitConversions\n"+
       "implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();\n"+
       "implicit def strConv(d:Long):String = \"\"+d\n"+ // fix for TPCH22
-      t.sets.map { case (sz,set) =>
-        // val mystr = (str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) } // seems that set.subs are useless here
-        val mystr = (if (sz.endsWith("_del")) str.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else str).replaceAll("/standard/","/"+sz+"/") // streams for this dataset
-        "describe(\"Dataset '"+sz+"'\") {\n"+ind(
-        "val (t,res) = run"+(if (mode=="akka") "Local["+cls+"Master,"+cls+"Worker]("+sys.maps.size+",2251,4," else "["+cls+"](")+mystr+")\n"+ // XXX: fix Akka parameters
+      q.sets.map { case (sz,set) =>
+        ""+cls+".execute(Array(\"-n1\",\"-d"+sz+"\",\"-h\"),(res:List[Any])=>describe(\"Dataset '"+sz+"'\") {\n"+ind(
         set.out.map { case (n,o) =>
           val (kt,vt) = qt(n)
           val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
           val fmt = (kt:::vt::Nil).mkString(",")
-          val kv = if (kt.size==0) "" else {
-            val ll=(kt:::vt::Nil).zipWithIndex
+          val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex
             "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.reverse.tail.reverse.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n"
           }
           "it(\""+n+" correct\") {\n"+ind(kv+
@@ -157,11 +139,24 @@ object Unit {
             case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+fmt+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
             case QuerySingleton(v) => v
           })+")")+"\n}"
-        }.mkString("\n"))+"\n}"
+        }.mkString("\n"))+"\n})"
       }.mkString("\n"))+"\n}\n\n"
-      write(dir,cls+".scala",helper+gen(sys))
-      println("Query "+cls+" generated")
-      */
+      write(new File(path_sources),cls+"Spec.scala",helper)
+    }
+    // Benchmark
+    Compiler.pkg = "ddbt.test.gen"
+    Compiler.name = name(q.sql)
+    Compiler.out = path_sources+"/"+name(q.sql)+".scala"
+    Compiler.exec = benchmark
+    Compiler.exec_dir = path_classes
+    Compiler.exec_args = "-n"+samples :: "-s" :: datasets.filter(d=>d_f(d)&&q.sets.contains(d)).map(d=>"-d"+d).toList
+    val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3,genSpec))
+    p.gen(t_gen);
+    if (benchmark) { p.comp(t_comp)
+      if (err!="") System.err.println(err)
+      else out.split("\n").foreach{ l => val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),e.slice(1,4)) }
+      p.close
+    }
   }
 
   // CSV format : test,sql->m3,codegen_M,compile_M,med_D1,min_D1,max_D1,med_D2,min_D2,max_D2,...
@@ -298,14 +293,6 @@ Options:
 - default compiler options (reuse the compiler output)
 
 Enrich the compiler
-- options to pass to DBToaster front-end (-F)
-
 - selection of the datasets to use
-
-- inlining level
 - order : by test or by backend first
-- multiple backend
-
-- verbose to print calc/m3
-
 */
