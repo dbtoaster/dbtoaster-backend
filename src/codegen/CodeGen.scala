@@ -12,7 +12,7 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
   def apply(s:M3.System) : String
 
   // Generate headers + dummy helper for benchmarking
-  def helper(s:M3.System,samples:Int=10) : String
+  def helper(s:M3.System,pkg:String) : String
   // Stream sources definition
   def streams(sources:List[Source]) : String
 

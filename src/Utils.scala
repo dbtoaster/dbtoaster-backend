@@ -7,30 +7,53 @@ import java.io._
  * @author TCK
  */
 object Utils {
-  // Paths related to DBToaster
-  val path_base = "dbtoaster/compiler/alpha5"
-  val (path_repo,path_bin) = {
-    val prop = new java.util.Properties()
-    try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable =>
-      println("@@@\n@@@ Warning: conf/ddbt.properties does not exist.\n@@@ Please configure at least ddbt.dbtoaster to dbtoaster_release binary path.")
-      println("@@@ Set ddbt.base_repo if you have access to DBToaster's repository.\n@@@")
-    }
-    val repo = prop.getProperty("ddbt.base_repo","")
-    val bin  = prop.getProperty("ddbt.dbtoaster","bin/dbtoaster_release")
-    (repo,if (repo!="") repo+"/"+path_base+"/bin/dbtoaster_release" else bin)
+  // Display a warning to the user
+  def warning(msg:String) = {
+    val sb=new StringBuilder(("@"*80)+"\n@"+(" "*78)+"@\n")
+    ("WARNING: "+msg).split("\n").foreach { l => sb.append("@  %-74s  @\n".format(l)) }
+    sb.append("@"+(" "*78)+"@\n"+("@"*80)); System.err.println(sb.toString)
   }
 
-  def scalaCompiler(dir:File,classpath:String=null) : List[String]=>Unit = {
-    val p=dir.getAbsolutePath();
-    val cp = {
-      val deps = System.getProperty("sbt.classpath",System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":")
-      deps /**/ .filter(_.matches("(.*)/(\\.(sbt|ivy2)|target)/.*")) /**/ .mkString(":")+(if (classpath!=null) ":"+classpath else "")
+  private val prop_ = new java.util.Properties
+  try { prop_.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => warning("conf/ddbt.properties does not exist.\n"+
+        "Please configure at least ddbt.dbtoaster to dbtoaster_release binary path.\nSet ddbt.base_repo if you have access to DBToaster's repository.") }
+  def prop(name:String,d:String="") = prop_.getProperty("ddbt."+name,d)
+  //val scalaVersion = util.Properties.versionString.replaceAll("^.* ([0-9]+\\.[0-9]+).*$","$1")
+
+  // Paths related to DBToaster
+  val path_base = "dbtoaster/compiler/alpha5"
+  val path_repo = prop("base_repo",null)
+  val path_bin  = if (path_repo!=null) path_repo+"/"+path_base+"/bin/dbtoaster_release" else prop("dbtoaster","bin/dbtoaster_release")
+  private lazy val (path_cp,path_jvm) = {
+    val deps = System.getProperty("sbt.classpath",System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":")
+    val cp = deps /**/ .filter(_.matches("(.*)/(\\.(sbt|ivy2)|target)/.*")).filter(_.indexOf("virtualized")== -1) /**/ .mkString(":")
+    val boot_cp=cp.split(":").filter(_.matches(".*scala-(library|compiler|reflect).*")).mkString(":")
+    (cp,"java "+prop("jvm")+" -Xbootclasspath/a:"+boot_cp)
+  }
+
+  // Scala compiler wrapper
+  def scalaCompiler(dir:File,classpath:String=null,external:Boolean=false) : List[String]=>Unit = {
+    val path_dir=dir.getAbsolutePath; val cp=(if(classpath!=null) classpath+":" else "")+path_cp
+    val opts=prop("scalac").split(" +").toList
+    if (!external) { // Embedded Scala compiler
+      val s=new scala.tools.nsc.Settings(); s.processArguments(opts,true)
+      s.classpath.value=cp; s.outputDirs.setSingleOutput(path_dir); val g=new scala.tools.nsc.Global(s)
+      (fs:List[String]) => try { (new g.Run).compile(fs) } catch { case t:Throwable => t.printStackTrace }
+    } else { // FSC external processes
+      def execOut(cmd:String) {
+        def gob(i:InputStream,o:PrintStream) = new Thread() { val r=new BufferedReader(new InputStreamReader(i)); override def run() { var l=r.readLine; while(l!=null) { o.println(l); l=r.readLine }; } }.start
+        val p = Runtime.getRuntime.exec(cmd.split(" +"),null,null); gob(p.getInputStream,scala.Console.out); gob(p.getErrorStream,scala.Console.err); p.waitFor
+      }
+      val args="-cp "+cp+" -d "+path_dir+" "+opts.mkString(" ")+" "
+      val fsc="fsc "+prop("jvm").split(" +").map("-J"+_).mkString(" ")+" "+args
+      (fs:List[String]) => try { execOut(fsc+fs.mkString(" ")) } catch { case _:IOException => execOut(path_jvm+" scala.tools.nsc.Main "+args+fs.mkString(" ")) }
     }
-    // Embedded Scala compiler
-    val s=new scala.tools.nsc.Settings(); s.classpath.value=cp; s.outputDirs.setSingleOutput(dir.getAbsolutePath()); val g=new scala.tools.nsc.Global(s)
-    (fs:List[String]) => try { (new g.Run).compile(fs) } catch { case t:Throwable => t.printStackTrace }
-    // Fallback with FSC / scalac external processes
-    // (fs:List[String]) => { val args="-cp "+cp+" -d "+p+" "+fs.mkString(" "); val println({ exec("fsc "+args)._1 } catch { case _:IOException => exec("java scala.tools.nsc.Main "+args)._1 }) }
+  }
+
+  // Execute Scala a program
+  def scalaExec(cp:List[File],cls:String,args:Array[String]=Array(),external:Boolean=false) = {
+    if (!external) loadMain(cp,cls,args)
+    else exec(path_jvm+" -cp "+cp.map(p=>p.getAbsolutePath).mkString(":")+":"+path_cp+" "+cls+" "+args.mkString(" "))
   }
 
   // Gobbles an input stream (used for external processes by loadMain)
@@ -45,37 +68,35 @@ object Utils {
   }
 
   // Execute arbitrary command, return (out,err)
-  def exec(cmd:String):(String,String) = exec(cmd.split(" "))
+  def exec(cmd:String):(String,String) = exec(cmd.split(" +"))
   def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true):(String,String) = {
     val p = Runtime.getRuntime.exec(cmd,env,dir)
     val out=gobble(p.getInputStream); val err=gobble(p.getErrorStream); p.waitFor
     val o=out.toString; val e=err.toString
-    if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); print(o); System.err.print(e); if (fatal) System.exit(1) }
+    if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); scala.Console.out.print(o); scala.Console.err.print(e); if (fatal) System.exit(1) }
     (o,e)
   }
 
   // Capture console/default output and error streams in two strings
-  def captureOut[R](f:()=>R) : (R,String,String) = {
-    val o0=scala.Console.out; val so0=System.out; val po=new PipedOutputStream; scala.Console.setOut(new PrintStream(po)); System.setOut(new PrintStream(po)); val out=gobble(new PipedInputStream(po));
-    val e0=scala.Console.err; val se0=System.err; val pe=new PipedOutputStream; scala.Console.setErr(new PrintStream(pe)); System.setErr(new PrintStream(pe)); val err=gobble(new PipedInputStream(pe));
+  def captureOut[R](f:()=>R) : (R,String,String) = { val c=scala.Console;
+    val o0=c.out; val so0=System.out; val po=new PipedOutputStream; c.setOut(new PrintStream(po)); System.setOut(new PrintStream(po)); val out=gobble(new PipedInputStream(po));
+    val e0=c.err; val se0=System.err; val pe=new PipedOutputStream; c.setErr(new PrintStream(pe)); System.setErr(new PrintStream(pe)); val err=gobble(new PipedInputStream(pe));
     val r = f()
-    scala.Console.setOut(o0); System.setOut(so0); po.close
-    scala.Console.setErr(e0); System.setErr(se0); pe.close
+    c.setOut(o0); System.setOut(so0); po.close
+    c.setErr(e0); System.setErr(se0); pe.close
     (r,out.toString,err.toString)
   }
 
   // Class loader to run a class with main(args:Array[String]) within the same VM
-  def loadMain(cp:File,cls:String,args:Array[String]=Array()) = {
+  def loadMain(cp:List[File],cls:String,args:Array[String]=Array()) = {
     val r = captureOut(()=>{
       try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
       catch { case t:Throwable => val c=t.getCause; (if (c!=null) c else t).printStackTrace(scala.Console.err) }
     })
-    System.gc(); Thread.sleep(50); System.gc() // call finalize on class loader
-    (r._2,r._3)
+    System.gc; Thread.sleep(50); System.gc; (r._2,r._3) // call finalize on class loader
   }
-
   import java.net.{URL,URLClassLoader}
-  private class CPLoader(cp:File) extends URLClassLoader(Array(cp.toURI.toURL),null) {
+  private class CPLoader(cp:List[File]) extends URLClassLoader(cp.map(_.toURI.toURL).toArray,null) {
     override def loadClass(name:String, resolve:Boolean) : Class[_] = {
       try { return super.loadClass(name, resolve); }
       catch { case e:ClassNotFoundException => Class.forName(name, resolve, Utils.getClass.getClassLoader); }

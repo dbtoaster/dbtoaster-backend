@@ -123,7 +123,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
         if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks)+")" else "")) // all keys are bound
         else { val (k0,v0)=(fresh("k"),fresh("v")); var async=false
-          inuse.add(ko.map(_._1).toSet)
+          inuse.add(ko.map(_._1).toSet); ctx.add(Map((v0,ex.tp))); inuse.add(Set(v0));
           val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else ""
           ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
           val co1=close(()=>{ val r=co(v0); if (cl_ctr>0) { async=true; n+"_c.i\n"+r+n+"_c.d\n" } else r })
@@ -133,7 +133,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
             (if (async) { cl_add(1); n+"_c((_:Unit) => {\n" } else "")
         }
       }
-      else if (ki.size==0) { val v=fresh("v"); cl_add(1); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) }
+      else if (ki.size==0) { val v=fresh("v"); cl_add(1); inuse.add(ks.toSet); ctx.add(Map((v,ex.tp))); inuse.add(Set(v)); "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v) }
       else {
         // remote handler
         val fn0 = fresh("ff"); local_r=n;
@@ -201,7 +201,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     }
     freshClear(); ref.clear; aggl.clear; forl.clear; local=Set()
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
-    "import WorkerActor._\nimport ddbt.lib.Functions._\n// constants\n"+refs+fds+ads+gc+ // constants
+    "import WorkerActor._\nimport ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+refs+fds+ads+gc+ // constants
     "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
     (if (ld0!="") "// tables content preloading\n"+ld0+"\n" else "")+"\n"+
     "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(fbs+(if (fbs!="") "\n" else "")+"case _ => co()")+"\n}\n\n"+
@@ -211,7 +211,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str+"case _ => deq")+"\n}\n\n"+ts)+"\n}"
   }
 
-  override def helper(s:System,numSamples:Int=10) =
+  override def helper(s:System,pkg:String) =
+    // XXX: normalize with ScalaGen helper
     "package ddbt.generated\nimport ddbt.lib._\nimport java.util.Date\n\n"+
     "object "+cls+" extends Helper {\n"+ind("import WorkerActor._\ndef main(args:Array[String]) {\n"+ind(
     "val (t,res) = runLocal["+cls+"Master,"+cls+"Worker]("+s.maps.size+",2251,4,"+streams(s.sources)+")\n"+ // XXX: CUSTOMIZE ARGUMENTS

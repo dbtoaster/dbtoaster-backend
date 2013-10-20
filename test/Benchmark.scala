@@ -50,11 +50,11 @@ object Benchmark {
 
   val tmp = new java.io.File("tmp") //makeTempDir()
   private val boost = try { val p=new java.util.Properties(); p.load(new java.io.FileInputStream("conf/ddbt.properties")); p.getProperty("ddbt.lib_boost",null) } catch { case _:Throwable => null }
-  private val path_dbt = if (path_repo!="") path_repo+"/"+path_base+"/" else ""
+  private val path_dbt = if (path_repo!=null) path_repo+"/"+path_base+"/" else ""
   private val scalac2 = { if(!tmp.exists) tmp.mkdir; val dbt=path_dbt+"lib/dbt_scala/dbtlib.jar"; if (!new File(dbt).exists) sys.error("Cannot find the DBToaster Scala library"); scalaCompiler(tmp,dbt) }
   // New approach: run everything in the same JVM for speed, dependencies: scala-compiler
   def scalac(fs:String*) = scalac2(fs.map(f=>tmp.getAbsolutePath()+"/"+f+".scala").toList)
-  def scalax(cl:String) = loadMain(tmp,cl)._1
+  def scalax(cl:String) = loadMain(List(tmp),cl)._1
   //def scalax(cl:String) = { val args="-cp "+tmp.getAbsolutePath()+":"+path_cp+" "+cl // -J-verbose:gc
   //  try { exec("scala -J-Xss512m -J-Xmx2G "+args)._1 } catch { case _:IOException => exec(java_cmd+" "+args)._1 } }
 

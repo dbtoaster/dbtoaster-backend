@@ -61,7 +61,7 @@ object UnitTest {
   private val rbase = new java.io.File(path_repo+"/"+path_base)
   def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
   def toast(f:String,opts:List[String]=Nil):String = {
-    val ((out:String,err:String),_,_) = captureOut(()=>if (path_repo=="") exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)
+    val ((out:String,err:String),_,_) = captureOut(()=>if (path_repo!=null) exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)
     else { val (o,e) = exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase,null,false);
            (o.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data"),e)
     })
@@ -76,7 +76,7 @@ object UnitTest {
   val filtered = all.filter{ f=> !exclude.exists{ e=>f.endsWith(e) } }.sorted // exclude.map{"test/unit/queries/"+_}.sorted.toArray
 
   // Testing helper (used only in test files)
-  def sqlFiles(dataset:String="standard"):(Array[String],Array[String],String) = if (Utils.path_repo!="") {
+  def sqlFiles(dataset:String="standard"):(Array[String],Array[String],String) = if (Utils.path_repo!=null) {
     val fs = filtered.map(f=>load(f)).filter(t=>t.sets.contains(dataset)).map(t=>t.sql)
     (all.map(x=>load(x).sql),fs,path_repo+"/"+path_base)
   } else {

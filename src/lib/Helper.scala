@@ -56,10 +56,24 @@ trait Helper {
 
   def time(ns:Long) = { val ms=ns/1000000; "%d.%03d".format(ms/1000,ms%1000) }
   def bench[T](name:String,count:Int,f:()=>(Long,T)):T = {
-    val out = (0 until count).map { x => f() }
-    val res = out.map(_._2).toList; assert(res.tail.filter{ x=> x!=res.head }.isEmpty)
+    val out = (0 until math.max(1,count)).map { x => f() }
+    val res = out.map(_._2).toList; res.tail.foreach(r=> assert(r==res.head,"Inconsistent results: "+res.head+" != "+r))
     val ts = out.map(_._1).sorted;
-    println(name+" : "+time(ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec)"); res.head
+    println(name+": "+time(if (count%2==0) (ts(count/2)+ts(count/2-1))/2 else ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec)"); res.head
+  }
+
+  // to supersede bench
+  def bench2(args:Array[String],run:(String,Boolean)=>(Long,List[Any]),print:List[Any]=>Unit=null) {
+    val parallel=args.contains("-p")
+    var count:Int=10; args.filter(a=>a.startsWith("-n")).foreach { a=>count=a.substring(2).toInt }
+    var ds=List[String](); args.filter(a=>a.startsWith("-d")).foreach { a=>ds=ds:::List(a.substring(2)) }; if (ds.size==0) ds=List("standard")
+    ds.foreach { d=> var res0:List[Any]=null; var ts:List[Long]=Nil
+      (0 until math.max(1,count)).foreach { x => val (t,res)=run(d,parallel);
+        ts=t::ts; if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res)
+      }
+      ts = ts.sorted; println(d+": "+time(if (count%2==0) (ts(count/2)+ts(count/2-1))/2 else ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec)")
+      if (!args.contains("-s") && res0!=null && print!=null) print(res0)
+    }
   }
 
   // ---------------------------------------------------------------------------

@@ -14,12 +14,19 @@ object Compiler {
   var out  : String = null       // output file (defaults to stdout)
   var lang : String = "scala"    // output language
   var name : String = null       // class/structures name (defaults to Query or capitalized filename)
+  var pkg  : String = "ddbt.gen" // class package
   var depth: Int = -1            // incrementalization depth (-1=infinite)
   var flags: List[String] = Nil  // front-end flags
   var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
-  var exec : Boolean = false     // compile and execute immediately
   var tqev : Boolean = false     // traditional (on demand) query evaluation (implies depth=0)
-
+  var inl  : Int = 0             // inlining level, in range [0-10]
+  // Execution
+  var exec    : Boolean = false  // compile and execute immediately
+  var exec_dir: String  = null   // execution classpath
+  var exec_sc : Boolean = false  // compile using fsc / external scalac
+  var exec_vm : Boolean = false  // execute in a fresh JVM
+  var exec_args = List[String]() // arguments passed for execution
+  
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1); null }
   def toast(l:String) = {
     val opts = (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f))
@@ -32,14 +39,19 @@ object Compiler {
     def eat(f:String=>Unit,s:Boolean=false) { i+=1; if (i<l) f(if(s) args(i).toLowerCase else args(i)) }
     while(i<l) {
       args(i) match {
-        case "-x" => exec = true
         case "-l" => eat(s=>s match { case "calc"|"m3"|"scala"|"lms"|"akka" => lang=s; case _ => error("Unsupported language: "+s,true) },true)
         case "-o" => eat(s=>out=s)
-        case "-n" => eat(s=>name=s)
+        case "-n" => eat(s=>{ val p=s.lastIndexOf('.'); if (p!= -1) { pkg=s.substring(0,p); name=s.substring(p+1) } else name=s})
         case "-L" => eat(s=>libs=s::libs)
         case "-d" => eat(s=>depth=s.toInt)
         case "-F" => eat(s=>flags=s::flags)
+        case "-inl" => eat(s=>inl=math.min(10,math.max(0,s.toInt)))
         case "-tqev" => tqev=true; depth=0; flags=Nil
+        case "-x" => exec = true
+        case "-xd" => eat(s=>exec_dir=s)
+        case "-xa" => eat(s=>exec_args=exec_args:::List(s))
+        case "-xsc" => exec_sc=true;
+        case "-xvm" => exec_vm=true;
         case s => in = in ::: List(s)
       }
       i+=1
@@ -63,7 +75,13 @@ object Compiler {
       error("Code generation options:")
       error("  -n <name>     name of internal structures (default: Query)")
       error("  -L            libraries for target language")
-      error("  -x            compile and execute immediately",true)
+      error("  -inl <level>  inlining level (0-10)")
+      error("Execution options:")
+      error("  -x            compile and execute immediately")
+      error("  -xd <path>    destination for generated binaries")
+      error("  -xsc          use external fsc/scalac compiler")
+      error("  -xvm          execute in a new JVM instance")
+      error("  -xa <arg>     pass an argument to generated program",true)
     }
     if (out==null && exec) { error("Execution disabled, specify an output file"); exec=false }
     if (name==null) {
@@ -79,14 +97,11 @@ object Compiler {
 
   def output(s:String) = if (out==null) println(s) else { val f=new File(out); Utils.write(if (f.getParentFile==null) new File(".") else f.getParentFile,f.getName,s) }
 
-  def main(args: Array[String]) {
-    parseArgs(args)
-    // Front-end
-    val m3 = (M3Parser andThen TypeCheck) (lang match {
-      case "calc"|"m3" => output(toast(lang)); System.exit(0); "" // nothing else to do
-      case _ if in.forall(_.endsWith(".m3")) => in.map(Utils.read(_)).mkString("\n")
-      case _ => toast("m3")
-    })
+  // M3 -> execution phase, returns (gen,compile) time
+  def compile(m3_src:String):(Long,Long) = {
+    val t0=System.nanoTime
+    // Front-end phases
+    val m3 = (M3Parser andThen TypeCheck) (m3_src)
     // Back-end
     val cg:CodeGen = lang match {
       case "scala" => new ScalaGen(name)
@@ -94,6 +109,7 @@ object Compiler {
       case "lms" => new LMSGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }
+    val t1=System.nanoTime
     // ---- TQEV START
     if (tqev) { import ddbt.ast._; import M3._
       val (qns,qss) = (m3.queries.map{q=>q.map.name},scala.collection.mutable.HashMap[String,Stmt]())
@@ -101,19 +117,31 @@ object Compiler {
         case s@StmtMap(m,e,op,i) => if (qns.contains(m.name)) { qss += ((m.name,s)); false } else true
         case _ => true
       }))
-      val r = cg.helper(m3)+cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__ndbt",Nil)), qss.map(_._2).toList)::triggers))
-      output(r.replaceAll("GetSnapshot\\(_\\) => ","GetSnapshot(_) => onAdd__ndbt(); ")) // Scala transforms
+      val r = cg.helper(m3,pkg)+cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__execute__",Nil)), qss.map(_._2).toList)::triggers))
+      // XXX: improve this RegExp
+      output(r.replaceAll("GetSnapshot\\(_\\) => ","GetSnapshot(_) => onAdd__execute__(); ")) // Scala transforms
     } else
     // ---- TQEV ENDS
-    output(cg.helper(m3)+cg(m3))
+    output(cg.helper(m3,pkg)+cg(m3))
     // Execution
+    var t2=0L
     if (exec) lang match {
       case "scala"|"akka"|"lms" =>
-        val tmp = Utils.makeTempDir()
-        Utils.scalaCompiler(tmp,if (libs!=Nil) libs.mkString(":") else null)(List(out))
-        val (o,e) = Utils.loadMain(tmp,"ddbt.generated."+name)
+        val dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
+        t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
+        val (o,e) = Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
         if (e!="") error(e); if (o!="") println(o);
       case _ => error("Execution not supported",true)
+    }
+    (t1-t0,t2)
+  }
+
+  def main(args: Array[String]) {
+    parseArgs(args)
+    lang match {
+      case "calc"|"m3" => output(toast(lang))
+      case _ if in.forall(_.endsWith(".m3")) => compile(in.map(Utils.read(_)).mkString("\n"))
+      case _ => compile(toast("m3"))
     }
   }
 }
