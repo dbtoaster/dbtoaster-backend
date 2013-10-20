@@ -20,8 +20,9 @@ object UnitTest {
                   "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                   "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
              List("mddb3","chrissedtrades") // too long to compile, incorrect result
-  var csv:String = null
-  val tmp = makeTempDir() // { val t=new File("tmp"); if (!t.exists) t.mkdirs; t }
+  var csv:PrintWriter = null
+  var csvFile:String = null
+  val tmp = makeTempDir()
   var benchmark = false
   var samples = 10
   var verify  = false
@@ -31,7 +32,6 @@ object UnitTest {
 
   def parseArgs(args:Array[String]) {
     import scala.collection.mutable.{Set=>MSet}
-    var csvFile:String = null
     val dsets=MSet[String](); val modes=MSet[String](); val qinc=MSet[String](); val qexcl=MSet[String](); var qskip=false
     var i=0; val l=args.length; var as=List[String]()
     def eat(f:String=>Unit,s:Boolean=false) { i+=1; if (i<l) f(if(s) args(i).toLowerCase else args(i)) }
@@ -45,7 +45,7 @@ object UnitTest {
       case "-x" => benchmark=true
       case "-v" => verify=true
       case "-samples" => eat(s=>samples=s.toInt)
-      case "-csv" => eat(s=>csv=s)
+      case "-csv" => eat(s=>csvFile=s)
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
         e("Filtering options:")
@@ -57,11 +57,10 @@ object UnitTest {
         e("  -qx <filter>  add an exclusion filter for queries")
         e("  -qskip        skip queries that are known to fail")
         e("Benchmarking options:")
-        e("  -v            verification against reference result") // self-check is always enabled
+        e("  -v            verification against reference result") // self-check is always enabled XXX: not implemented
         e("  -x            enable benchmarks (compile and execute)")
         e("  -samples <n>  number of samples to take (default=10)")
         e("  -csv <file>   store benchmarking results in a file")
-        //e("  -cluster      use script/cluster.sh to execute Akka tests") to be moved in the compiler
         e("")
         e("Other options are forwarded to the compiler:")
         Compiler.parseArgs(Array[String]())
@@ -87,30 +86,35 @@ object UnitTest {
     println("Tests selected : %6d".format(sel.size))
     if (sel.size==0) { System.err.println("No tests selected, exiting."); return; }
 
-    //if (csvFile!=null) csv = new PrintWriter (new File (csvFile+(if csvFile.endsWith(".csv") "" else ".csv")))
-    
+    if (csvFile!=null) csv=new PrintWriter(new File (csvFile+(if(csvFile.endsWith(".csv")) "" else ".csv")))
     val modes = List("scala","lms","akka","lscala","lcpp","llms").filter(m=>m_f(m))
+    val mn = Map(("scala","Scala"),("lms","LMS"),("akka","Akka"),("lscala","lScala"),("lcpp","lCPP"),("llms","lLMS"))
+    if (csv!=null) {
+      // CSV format : query_name,sql->m3,[codegen_M,compile_M,[med_D1,min_D1,max_D1],[med_D2,min_D2,max_D2],... ][codegen_M2...
+      csv.print(",,"); for (m<-modes) if (m_f(m)) csv.println(mn(m)+",,"+datasets.filter(d=>d_f(d)).map(d=>d+",,,").mkString)
+      csv.print("Query,SQLtoM3,"); for (m<-modes) if (m_f(m)) csv.println("M3toCode,Compile,"+datasets.filter(d=>d_f(d)).map(d=>"Med,Min,Max,").mkString)
+    }
     for (q <- sel) {
       println("--------[[ "+name(q.sql)+" ]]--------")
       val (t0,m3) = toast(q.sql,"m3")
       println("SQL -> M3           : "+time(t0))
+      csv.print(name(q.sql)+","+time(t0,0)+",")
       for (m <- modes) if (m_f(m)) m match {
-        case "scala" => genQuery(q,new Printer("Scala"),m3,m)
-        case "lms" => genQuery(q,new Printer("LMS"),m3,m)
-        case "akka" => genQuery(q,new Printer("Akka"),m3,m)
-        case "lscala" if (repo!=null && benchmark) => legacyScala(q,new Printer("LScala"),t0,false)
+        case "scala"|"lms"|"akka" => genQuery(q,new Printer(mn(m)),m3,m)
+        case "lscala"|"llms" if (repo!=null && benchmark) => legacyScala(q,new Printer("LScala"),t0,m=="llms")
         case "lcpp" if (repo!=null && benchmark) => legacyCPP(q,new Printer("LCPP"),t0)
-        case "llms" if (repo!=null && benchmark) => legacyScala(q,new Printer("LLMS"),t0,true)
         case _ => sys.error("Bad mode "+m)
       }
+      if (csv!=null) csv.println
     }
+    if (csv!=null) csv.close
 
     // XXX: Zeus mode
-    // XXX: Untested mode
-
-    //println("External:"); val c=scalaCompiler(new File("target/scala-2.10/test-classes"),"target/scala-2.10/classes",true); c(List("test/examples/AXFinder.scala"))
-    //println("Internal:"); val c2=scalaCompiler(new File("target/scala-2.10/test-classes"),"target/scala-2.10/classes",false); c2(List("test/examples/AXFinder.scala"))
-    //val (o,e)=scalaExec(new File("target/scala-2.10/classes"),"ddbt.unit.Unit",external=true) println(o); System.err.println(e);
+    // XXX: Untested mode (execute non-tested queries)
+    // XXX: option for HTML report with bar graphs?
+    // XXX: Use tags to filter test sizes in ScalaTest
+    // XXX: Order by test or by backend first
+    // XXX: e("  -cluster      use script/cluster.sh to execute Akka tests") to be moved in the compiler
   }
 
   def genQuery(q:QueryTest,p:Printer,m3:String,mode:String) {
@@ -158,8 +162,6 @@ object UnitTest {
       p.close
     }
   }
-
-  // CSV format : test,sql->m3,codegen_M,compile_M,med_D1,min_D1,max_D1,med_D2,min_D2,max_D2,...
 
   // ---------------------------------------------------------------------------
   // Legacy testing
@@ -235,8 +237,7 @@ object UnitTest {
     }
     def all(q:QueryTest)(f:String=>Unit) { datasets.filter(d=>d_f(d)).foreach { d=> if (!q.sets.contains(d)) tr+=",,," else f(d) }; close }
     def close {
-      var s=time(med(tg),0)+","+time(med(tc),0)+","+tr; //if (csv!=null) csv.print(s)
-      println(s)
+      var s=time(med(tg),0)+","+time(med(tc),0)+","+tr; if (csv!=null) csv.print(s)
     }
   }
   
@@ -266,33 +267,3 @@ object UnitTest {
     def apply(input: String): QueryTest = parseAll(qtest, input) match { case Success(r,_) => r case f => sys.error(f.toString) }
   }
 }
-
-// XXX: option for HTML report with bar graphs?
-
-/*
-execute non-working tests
-execute in a distinct JVM
-execute on cluster using the scripts/cluster.sh script
-
-Goal: combine the power of unit testing and benchmarking in a single package
-Reuse the compiler pipeline (do not build parallel pipelines)
-
-Content of the emitted file:
-- Actor class
-- Companion object/benchmark : accepts argument for
-  - benchmarking (# iterations, dataset, ...)
-  - displaying results
-  - logging in CSV
-- Scala spec test class (added on top of the file)
-
-Options:
-- test sizes to pass using Scalatest tags
-- number of benchmarking iterations
-- 1+ codegen
-- filter on the queries
-- default compiler options (reuse the compiler output)
-
-Enrich the compiler
-- selection of the datasets to use
-- order : by test or by backend first
-*/

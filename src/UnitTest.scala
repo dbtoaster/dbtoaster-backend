@@ -61,7 +61,7 @@ object UnitTest {
   private val rbase = new java.io.File(path_repo+"/"+path_base)
   def load(file:String) = UnitParser(read(path_repo+"/"+path_base+"/"+file))
   def toast(f:String,opts:List[String]=Nil):String = {
-    val ((out:String,err:String),_,_) = captureOut(()=>if (path_repo!=null) exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)
+    val ((out:String,err:String),_,_) = captureOut(()=>if (path_repo==null) exec((List(path_bin,"-l","m3"):::opts:::List(f)).toArray)
     else { val (o,e) = exec((List("bin/dbtoaster_release","-l","m3"):::opts:::List(f)).toArray,rbase,null,false);
            (o.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data"),e)
     })
