@@ -45,7 +45,7 @@ object Compiler {
         case "-L" => eat(s=>libs=s::libs)
         case "-d" => eat(s=>depth=s.toInt)
         case "-F" => eat(s=>flags=s::flags)
-        case "-inl" => eat(s=>inl=math.min(10,math.max(0,s.toInt)))
+        case "-inl" => eat(s=>inl = if (s=="none") 0 else if (s=="spec") 5 else if (s=="full") 10 else math.min(10,math.max(0,s.toInt)))
         case "-tqev" => tqev=true; depth=0; flags=Nil
         case "-x" => exec = true
         case "-xd" => eat(s=>exec_dir=s)
@@ -75,7 +75,7 @@ object Compiler {
       error("Code generation options:")
       error("  -n <name>     name of internal structures (default: Query)")
       error("  -L            libraries for target language")
-      error("  -inl <level>  inlining level (0-10)")
+      error("  -inl <level>  inlining level (0-10,none,spec,full,default:none)")
       error("Execution options:")
       error("  -x            compile and execute immediately")
       error("  -xd <path>    destination for generated binaries")

@@ -50,7 +50,7 @@ Seq(
 // --------- Custom tasks
 addCommandAlias("toast", ";run-main ddbt.Compiler ")
 
-addCommandAlias("check", ";run-main ddbt.unit.UnitTest ")
+addCommandAlias("unit", ";run-main ddbt.unit.UnitTest ")
 
 addCommandAlias("queries", ";run-main ddbt.unit.UnitTest -dd -qskip;test-only ddbt.test.gen.*")
 

@@ -81,9 +81,7 @@ object Utils {
   def captureOut[R](f:()=>R) : (R,String,String) = { val c=scala.Console;
     val o0=c.out; val so0=System.out; val po=new PipedOutputStream; c.setOut(new PrintStream(po)); System.setOut(new PrintStream(po)); val out=gobble(new PipedInputStream(po));
     val e0=c.err; val se0=System.err; val pe=new PipedOutputStream; c.setErr(new PrintStream(pe)); System.setErr(new PrintStream(pe)); val err=gobble(new PipedInputStream(pe));
-    val r = f()
-    c.setOut(o0); System.setOut(so0); po.close
-    c.setErr(e0); System.setErr(se0); pe.close
+    val r = try { f() } finally { c.setOut(o0); System.setOut(so0); po.close; c.setErr(e0); System.setErr(se0); pe.close }
     (r,out.toString,err.toString)
   }
 
