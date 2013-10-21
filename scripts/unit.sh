@@ -109,7 +109,7 @@ EOF
     do_exec
   ) | tee /dev/stderr \
     | perl -pe 's/(\x1B\[[0-9]+m|\x1BM\x1B\[2K.*\n)//g; s/\[info\] //g;' \
-    | grep -vEe '^(-+ test/queries|Query .* generated|- .* correct|Dataset |Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |\[GC|^$)' \
+    | grep -vEe '^(-+\[\[|SQL.*M3|[a-zA-Z]+ codegen|- .* correct|Dataset |Set current|Updating|Resolving|nVars=|Done updating|Compiling |Now run |\[GC|^$)' \
     | perl -0pe 's/(\n[a-zA-Z0-9]+Spec:)+\n([a-zA-Z0-9]+Spec:|Run completed)/\n\2/g' \
     | scripts/pushover.sh \
     | perl -pe 's/\[error\](.*)/<b style="color:red">\1<\/b>/g; s/\[success\](.*)/<b style="color:green">\1<\/b>/g; s/\n/<br>\n/g;' \

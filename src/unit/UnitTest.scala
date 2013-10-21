@@ -108,6 +108,7 @@ object UnitTest {
       if (csv!=null) csv.println
     }
     if (csv!=null) csv.close
+    if (!benchmark) println("Now run 'test-only ddbt.test.gen.*' to pass tests")
 
     // XXX: Zeus mode
     // XXX: Untested mode (execute non-tested queries)
@@ -147,8 +148,9 @@ object UnitTest {
     def genSpec(sys:ddbt.ast.M3.System) {
       write(new File(path_sources),cls+"Spec.scala",spec(sys,true))
       if (verify) {
-        val src = read(path_sources+"/"+cls+".scala").split("  def execute\\(args")
-        write(new File(path_sources),cls+".scala",src(0)+ind(spec(sys,false))+"\n  def execute(args"+src(1))
+        def spl = "  def main(args:Array[String]) {\n"
+        val src = read(path_sources+"/"+cls+".scala").split("\\Q"+spl+"\\E")
+        write(new File(path_sources),cls+".scala",src(0)+spl+ind(spec(sys,false),2)+"\n"+src(1))
       }
     }
     // Benchmark
@@ -233,7 +235,7 @@ object UnitTest {
     private def med(ts:Seq[Long]) = if (ts.size==0) 0L else { val s=ts.sorted; val n=ts.size; if (n%2==0) (s(n/2)+s(n/2-1))/2 else ts(n/2) }
     def gen(t:Long) { println("%-20s: ".format(name+" codegen")+time(t)); tg=tg:+t; }
     def comp(t:Long) { println("%-20s: ".format(name+" compile")+time(t)); tc=tc:+t; }
-    def run(set:String,ts:Array[String],n:String) { println("%-20s: ".format(name+" "+set)+ts(0)+" ["+ts(1)+", "+ts(2)+"] (sec, "+n+" samples)"); tr+=ts(0)+","+ts(1)+","+ts(2)+"," }
+    def run(set:String,ts:Array[String],n:String) { println("%-20s: %6s".format(name+" "+set,ts(0))+" ["+ts(1)+", "+ts(2)+"] (sec, "+n+" samples)"); tr+=ts(0)+","+ts(1)+","+ts(2)+"," }
     def run(set:String,t_runs:Seq[Long]) { val ts=t_runs.sorted; val(t0,t1,t2)=(med(ts),ts(0),ts(ts.size-1))
       println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec, "+ts.size+" samples)"); tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
     }
