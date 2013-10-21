@@ -187,7 +187,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       val e = nodeName+"_me"
       "{\n" +
       "  //TOMAP\n" +
-      "  var "+res+": scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"]("+map+"__sz);\n" +
+      "  var "+res+": scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"]("+K3MapCommons.genMapSize(map)+");\n" +
       "  var "+i+" = 0\n" +
       "  val "+len+" = "+map+".length\n" +
       "  while("+i+" < "+len+") {\n" +

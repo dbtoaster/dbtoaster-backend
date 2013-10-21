@@ -283,13 +283,14 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
         case Some(Reflect(NewK3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+K3MapCommons.zeroValue(tp))
         case Some(Reflect(NamedK3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+K3MapCommons.zeroValue(tp))
         case Some(Reflect(NewK3Temp(_,_,_,_),_,_)) => stream.println({
-          genClearMap(createNodeName(sym), quote(m))+"\n"
+          val map = quote(m)
+          genClearMap(createNodeName(sym), map, K3MapCommons.genMapSize(map), K3MapCommons.genMapThreshold(map))+"\n"
         })
         case Some(Reflect(NamedK3Map(_,_,_,indexList,_,_),_,_)) => stream.println({
           val map = quote(m)
           val nodeName = createNodeName(sym)
-          genClearMap(nodeName, map)+"\n"+
-          indexList.map(is => genClearMap(nodeName+K3MapCommons.indexNamePostfix(is), K3MapCommons.indexMapName(map,is))+"\n").mkString
+          genClearMap(nodeName, map, K3MapCommons.genMapSize(map), K3MapCommons.genMapThreshold(map))+"\n"+
+          indexList.zipWithIndex.map{case (is, i) => genClearMap(nodeName+K3MapCommons.indexNamePostfix(is), K3MapCommons.indexMapName(map,is), K3MapCommons.genIndexMapSize(map,i), K3MapCommons.genIndexMapThreshold(map,i))+"\n"}.mkString
         })
         case _ => stream.println(quote(m)+".clearonly")
       }
@@ -342,49 +343,81 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
       case _ => ()
     }
 
-    val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
     val valueName = genQuoteExpr(List(inputValueSymbol),nodeName).apply(0)
-    val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
     val prefixValue = genValDefForNonInlinableExpr(List(inputValueSymbol),nodeName)
-    K3MapCommons.genGenericAddNamedMap(isConstant,isZero,prefixValue,prefixKey,nodeName,map,key,value,indexList,keyNames,valueName)
+
+    if(isZero) {
+      "//K3ADDNAMED_CANCELLED"
+    } else {
+      "//K3ADDNAMED\n" +
+      prefixValue +
+      (if(isConstant) {
+        genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true)
+      } else {
+        "if("+valueName+" != "+K3MapCommons.zeroValue(value)+") {\n" +
+        ind(genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true))+"\n" +
+        "}"
+      })
+    }
   }
 
-  def genSetNamedMap(nodeName:String, map:String, key:List[Type], value:Type, indexList: List[List[Int]], inputKeySymbols:List[Exp[_]], inputValueSymbol:Exp[_], operation: String="") = {
+  def genSetNamedMap(nodeName:String, map:String, key:List[Type], value:Type, indexList: List[List[Int]], inputKeySymbols:List[Exp[_]], inputValueSymbol:Exp[_]) = {
     //sn = set named map
-    val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
+    //val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
     val valueName = genQuoteExpr(List(inputValueSymbol),nodeName).apply(0)
-    val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
+    //val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
     val prefixValue = genValDefForNonInlinableExpr(List(inputValueSymbol),nodeName)
 
-    K3MapCommons.genGenericSetNamedMap(prefixValue,prefixKey,nodeName,map,key,value,indexList,keyNames,valueName,operation)
+    //sn = set named map
+    "//K3SETNAMED\n" +
+    prefixValue +
+    "if("+valueName+" == "+K3MapCommons.zeroValue(value)+") {\n" +
+    genDelNamedMap(nodeName,map,key,value,indexList,(0 until inputKeySymbols.size).toList,inputKeySymbols)+ "\n" +
+    "} else {\n" +
+    ind(genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true))+"\n" +
+    "}"
   }
 
-  def genDelNamedMap(nodeName:String, map:String, key:List[Type], value:Type, keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]], inputValueSymbol:Exp[_], indexList: List[List[Int]], operation: String="") = {
-    //d = del
-    val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
-    val valueName = genQuoteExpr(List(inputValueSymbol),nodeName).apply(0)
-    val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
+  def genDelNamedMap(nodeName:String, map:String, key:List[Type], value:Type, indexList: List[List[Int]], keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]]) = {
+    if(K3MapCommons.isInliningInSpecializedLevel) {
+      K3MapCommons.entryClassName(value, key, indexList) + "Ops.remove(" + map + ", " + map + "__md, " + (inputKeySymbols map quote).mkString(", ") + ")"
+    } else {
+      //d = del
+      val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
+      val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
 
-    K3MapCommons.genGenericDelNamedMap(prefixKey,nodeName,map,key,value,indexList,keyIndicesInEntery,keyNames)
+      K3MapCommons.genGenericDelNamedMap(prefixKey,nodeName,map,key,value,indexList,keyIndicesInEntery,keyNames)
+    }
   }
 
   def genAddTempMap(nodeName:String, map:String, value:Type, entryClsName:String, keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]], inputValueSymbol:Exp[_]) : String = {
     //at = add temp map
     val valueName = genQuoteExpr(List(inputValueSymbol),nodeName).apply(0)
+    val prefixValue = genValDefForNonInlinableExpr(List(inputValueSymbol),nodeName)
 
     "//K3ADDTEMP\n" +
-    genValDefForNonInlinableExpr(List(inputValueSymbol),nodeName) +
+    prefixValue +
     "if("+valueName+" != "+K3MapCommons.zeroValue(value)+") {\n" +
-    ind(genSetTempMap(nodeName,map,entryClsName,keyIndicesInEntery,inputKeySymbols,inputValueSymbol,false,"+="))+"\n" +
+    ind(genSetDetailedTempMap("",nodeName,map,entryClsName,keyIndicesInEntery,inputKeySymbols,valueName,false,"+="))+"\n" +
     "}"
   }
 
   def genSetTempMap(nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]], inputValueSymbol:Exp[_],insideBlock: Boolean=true, operation: String="=", indexList: List[List[Int]] = List[List[Int]](), indexEntryClsName: List[String]=List[String]()) : String = {
-    val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
     val valueName = genQuoteExpr(List(inputValueSymbol),nodeName).apply(0)
-    val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
     val prefixValue = genValDefForNonInlinableExpr(List(inputValueSymbol),nodeName)
-    K3MapCommons.genGenericSetTempMap(prefixValue, prefixKey, nodeName, map, entryClsName, keyIndicesInEntery, keyNames, valueName, insideBlock, operation, indexList, indexEntryClsName)
+
+    genSetDetailedTempMap(prefixValue,nodeName,map,entryClsName,keyIndicesInEntery,inputKeySymbols,valueName,insideBlock, operation, indexList,indexEntryClsName)
+  }
+
+  def genSetDetailedTempMap(prefixValue:String, nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]], valueName:String, insideBlock: Boolean=true, operation: String="=", indexList: List[List[Int]] = List[List[Int]](), indexEntryClsName: List[String]=List[String](), fromNamedMap: Boolean=false) : String = {
+    if(K3MapCommons.isInliningInSpecializedLevel) {
+      prefixValue + entryClsName + "Ops."+(if (fromNamedMap) "putRemoveOnZero" else "put")+"("+ (if(operation == "=") "false" else "true") + "," + map + ", " + map + "__md, " + (inputKeySymbols map quote).mkString(", ") + ", " + valueName + indexList.map(idx => ", "+K3MapCommons.indexMapName(map,idx)).mkString + ")\n" +
+      K3MapCommons.genIncreaseMapAndIndicesCapacity(nodeName,map,entryClsName,indexList,indexEntryClsName)
+    } else {
+      val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
+      val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
+      K3MapCommons.genGenericSetTempMap(prefixValue, prefixKey, nodeName, map, entryClsName, keyIndicesInEntery, keyNames, valueName, insideBlock, operation, indexList, indexEntryClsName)
+    }
   }
 
   def genGetMap(nodeName:String, map:String, entryClsName:String, valueTypeAndZeroVal:String, keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]]) = {
@@ -397,7 +430,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     }
   }
 
-  def genClearMap(nodeName:String, map:String) = {
+  def genClearMap(nodeName:String, map:String, mapSizeVar:String, mapThresholdVar:String) = {
     val currentSize = nodeName + "__csz"
     val currentCounter = nodeName + "__ctr"
     "; {\n" +
@@ -408,8 +441,8 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     "    "+map+"("+currentCounter+")=null\n" +
     "    "+currentCounter+"+=1\n" +
     "  }\n" +
-    "  "+map+"__sz = 0\n" +
-    "  "+map+"__ts = (" + currentSize + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
+    "  "+mapSizeVar+" = 0\n" +
+    "  "+mapThresholdVar+"= (" + currentSize + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
     "}"
   }
 
