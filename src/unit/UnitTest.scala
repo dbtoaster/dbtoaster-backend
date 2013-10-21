@@ -20,9 +20,6 @@ object UnitTest {
                   "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
              List("mddb/query3","chrissedtrades") // too long to compile, incorrect result
              // Also note that TPCH11c is incorrect with -O3 front-end
-             
-             // XXX: problem if 
-             
   var csv:PrintWriter = null
   var csvFile:String = null
   val tmp = makeTempDir()
@@ -183,7 +180,6 @@ object UnitTest {
     val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3,genSpec)); p.gen(t_gen)
     if (benchmark) { p.comp(t_comp)
       if (err!="") System.err.println(err)
-      // XXX: here problem  bench-all
       else out.split("\n").foreach{ l => val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),e.slice(1,4),e(5)) }
       p.close
     }

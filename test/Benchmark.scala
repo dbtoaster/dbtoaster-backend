@@ -127,9 +127,9 @@ object Benchmark {
     val (n,sp) = (lang.substring(0,1).toUpperCase+lang.substring(1)," "* (6-lang.length()))
     val gen:CodeGen = lang match {
       case "scala" => new ScalaGen("NewQuery")
-      case "lms" => /*K3MapCommons.InliningLevel = K3MapCommons.InliningLevelNone;*/ ddbt.Compiler.inl=0; new LMSGen("NewQuery")
-      case "lms_specialized" => /*K3MapCommons.InliningLevel = K3MapCommons.InliningLevelSpecialized;*/ ddbt.Compiler.inl=5; new LMSGen("NewQuery")
-      case "lms_inlineall" => /*K3MapCommons.InliningLevel = K3MapCommons.InliningLevelMax;*/ ddbt.Compiler.inl=10; new LMSGen("NewQuery")
+      case "lms" => ddbt.Compiler.inl = K3MapCommons.InliningLevelNone; new LMSGen("NewQuery")
+      case "lms_specialized" => ddbt.Compiler.inl = K3MapCommons.InliningLevelSpecialized; ddbt.Compiler.inl=5; new LMSGen("NewQuery")
+      case "lms_inlineall" => ddbt.Compiler.inl = K3MapCommons.InliningLevelMax; ddbt.Compiler.inl=10; new LMSGen("NewQuery")
       case "akka" => new AkkaGen("NewQuery")
       case _ => scala.sys.error("Generator "+lang+" not supported")
     }

@@ -136,6 +136,7 @@ object UnitTest {
 
   // Generate all tests
   def main(args: Array[String]) {
+    ddbt.Compiler.inl = ddbt.codegen.K3MapCommons.InliningLevelSpecialized
     val f_ds = { val ds = args.filter(_.startsWith("-d")).map(_.substring(2));
       val dds = if (ds.contains("d")) ((ds.toSet-"d")++Set("tiny","tiny_del","standard","standard_del")).toArray else ds
       if (dds.length>0) (s:String)=>dds.contains(s) else (s:String)=>true
