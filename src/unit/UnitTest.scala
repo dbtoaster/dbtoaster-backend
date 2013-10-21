@@ -20,6 +20,9 @@ object UnitTest {
                   "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
              List("mddb/query3","chrissedtrades") // too long to compile, incorrect result
              // Also note that TPCH11c is incorrect with -O3 front-end
+             
+             // XXX: problem if 
+             
   var csv:PrintWriter = null
   var csvFile:String = null
   val tmp = makeTempDir()
@@ -49,9 +52,9 @@ object UnitTest {
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
         e("Filtering options:")
-        e("  -d <dataset>  add a dataset: /(tiny|standard|big|huge)(_del)?/")
+        e("  -d <dataset>  add a dataset: tiny, standard, big, huge (_del)?")
         e("  -dd           add tiny,tiny_del,standard,standard_del datasets")
-        e("  -m <mode>     add mode : scala, lms, akka / *_spec, *_full")
+        e("  -m <mode>     add mode : scala, lms, akka (_spec|_full|_0-10)?")
         e("                           lscala, lcpp, llms")
         e("  -q <filter>   add an inclusion filter for queries")
         e("  -qx <filter>  add an exclusion filter for queries")
@@ -99,7 +102,7 @@ object UnitTest {
     
     for (q <- sel) {
       println("--------[[ "+name(q.sql)+" ]]--------")
-      val (t0,m3) = toast(q.sql,"m3")
+      val (t0,m3) = Compiler.toast("m3",List(q.sql))
       println("SQL -> M3           : "+time(t0))
       if (csv!=null) csv.print(name(q.sql)+","+time(t0,0)+",")
       for (m <- modes) m match {
@@ -169,7 +172,7 @@ object UnitTest {
     }
     // Benchmark (and codegen)
     val m=mode.split("_"); // Specify the inlining as a suffix of the mode
-    Compiler.inl = if (m.length==1) 0 else if (m(1)=="spec") 5 else if (m(1)=="full") 10 else 0
+    Compiler.inl = if (m.length==1) 0 else if (m(1)=="spec") 5 else if (m(1)=="full") 10 else try { m(1).toInt } catch { case _:Throwable => 0 }
     Compiler.lang = m(0)
     Compiler.name = cls
     Compiler.pkg = "ddbt.test.gen"
@@ -180,6 +183,7 @@ object UnitTest {
     val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3,genSpec)); p.gen(t_gen)
     if (benchmark) { p.comp(t_comp)
       if (err!="") System.err.println(err)
+      // XXX: here problem  bench-all
       else out.split("\n").foreach{ l => val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),e.slice(1,4),e(5)) }
       p.close
     }
@@ -209,8 +213,8 @@ object UnitTest {
       "  }\n"+
       "  def main(args: Array[String]) = (0 until "+samples+").foreach { x=> println(run1) }\n}\n")
     }
-    val (t1,sc) = if (!lms) toast(q.sql,"scala") else {
-      val f="tmp.scala"; val (t1,_) = toast(q.sql,"scala","-O4","-o",f);
+    val (t1,sc) = if (!lms) Compiler.toast("scala",List(q.sql)) else {
+      val f="tmp.scala"; val (t1,_) = Compiler.toast("scala",List("-O4","-o",f,q.sql));
       val fl=if (repo!=null) new File(repo,f) else new File(f); val s=read(fl.getPath); fl.delete;
       (t1,s.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data"))
     }
@@ -224,7 +228,7 @@ object UnitTest {
 
   def legacyCPP(q:QueryTest,p:Printer,t0:Long) {
     val boost = prop("lib_boost",null)
-    val (t1,cc) = toast(q.sql,"cpp"); p.gen(math.max(0,t1-t0))
+    val (t1,cc) = Compiler.toast("cpp",List(q.sql)); p.gen(math.max(0,t1-t0))
     p.all(q){dataset=> write(tmp,"query.hpp",cc.replaceAll("/standard/","/"+dataset+"/"))
       val pl = path_repo+"/"+path_base+"/lib/dbt_c++"
       val po = tmp.getPath+"/query"
@@ -243,12 +247,6 @@ object UnitTest {
   val all = if (repo!=null) exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),repo)._1.split("\n").sorted.map(x=>UnitParser(read(repo.getPath+"/"+x)))
             else if (!new java.io.File(path_examples).exists) { warning("folder '"+path_examples+"' does not exist, tests skipped !"); Array[QueryTest]() }
             else exec(Array("find",path_examples,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n").sorted.map(f=>QueryTest(f,Map(("standard",QuerySet()))))
-
-  def toast(sql:String,lang:String*):(Long,String) = {
-    val opts = (if (Compiler.depth>=0) List("--depth",""+Compiler.depth) else Nil) ::: Compiler.flags.flatMap(f=>List("-F",f))
-    val (t0,m3) = ns(()=>exec(((if (repo!=null) "bin/dbtoaster_release" else path_bin) :: "-O2" :: "-l" :: lang.toList ::: opts ::: List[String](sql)).toArray,repo)._1)
-    (t0, if (repo!=null) m3.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data") else m3)
-  }
 
   // Helper for displaying information and emitting a CSV file
   class Printer(name:String) { var tg=Seq[Long](); var tc=Seq[Long](); var tr=""

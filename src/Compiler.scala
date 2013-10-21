@@ -15,6 +15,7 @@ object Compiler {
   var lang : String = "scala"    // output language
   var name : String = null       // class/structures name (defaults to Query or capitalized filename)
   var pkg  : String = "ddbt.gen" // class package
+  var optm3: String = "-O2"      // optimization level
   var depth: Int = -1            // incrementalization depth (-1=infinite)
   var flags: List[String] = Nil  // front-end flags
   var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
@@ -28,9 +29,11 @@ object Compiler {
   var exec_args = List[String]() // arguments passed for execution
   
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1); null }
-  def toast(l:String) = {
+  def toast(l:String,args:List[String]=null):(Long,String) = {
     val opts = (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f))
-    Utils.exec((Utils.path_bin :: "-O2" :: "-l" :: l :: opts ::: in).toArray)._1
+    val (dir,bin) = if (args!=null) (new File(Utils.path_repo+"/"+Utils.path_base),"bin/dbtoaster_release") else (null,Utils.path_bin)
+    val (t0:Long,m3:String) = Utils.ns(()=>Utils.exec((bin :: optm3 :: "-l" :: l :: opts ::: (if (args!=null) args else in)).toArray,dir)._1)
+    (t0, if (args!=null) m3.replaceAll("../../experiments/data",Utils.path_repo+"/dbtoaster/experiments/data") else m3)
   }
 
   def parseArgs(args:Array[String]) {
@@ -45,13 +48,14 @@ object Compiler {
         case "-L" => eat(s=>libs=s::libs)
         case "-d" => eat(s=>depth=s.toInt)
         case "-F" => eat(s=>flags=s::flags)
-        case "-inl" => eat(s=>inl = if (s=="none") 0 else if (s=="spec") 5 else if (s=="full") 10 else math.min(10,math.max(0,s.toInt)))
+        case "-inl" => eat(s=>inl = if (s=="spec") 5 else if (s=="full") 10 else try { math.min(10,math.max(0,s.toInt)) } catch { case _:Throwable => 0 })
         case "-tqev" => tqev=true; depth=0; flags=Nil
         case "-x" => exec = true
         case "-xd" => eat(s=>exec_dir=s)
         case "-xa" => eat(s=>exec_args=exec_args:::List(s))
         case "-xsc" => exec_sc=true;
         case "-xvm" => exec_vm=true;
+        case s if s.matches("-O[123]") => optm3=s;
         case s => in = in ::: List(s)
       }
       i+=1
@@ -69,7 +73,8 @@ object Compiler {
       //   ("                - cpp   : C++/LMS-optimized code")
       //   ("                - dcpp  : distributed C/C++ code")
       error("Front-end options:")
-      error("  -d <depth>    incrementalization depth (default:infinite)")
+      error("  -d <depth>    incrementalization depth (default: infinite)")
+      error("  -O[123]       optimization level for M3 (default: -O2)")
       error("  -F <flag>     set a front-end optimization flag")
       error("  -tqev         traditional (on demand) query evaluation")
       error("Code generation options:")
@@ -140,9 +145,9 @@ object Compiler {
   def main(args: Array[String]) {
     parseArgs(args)
     lang match {
-      case "calc"|"m3" => output(toast(lang))
+      case "calc"|"m3" => output(toast(lang)._2)
       case _ if in.forall(_.endsWith(".m3")) => compile(in.map(Utils.read(_)).mkString("\n"))
-      case _ => compile(toast("m3"))
+      case _ => compile(toast("m3")._2)
     }
   }
 }

@@ -16,8 +16,8 @@ object K3MapCommons {
 
   def isInliningInSpecializedLevel = (InliningLevel == InliningLevelSpecialized)
 
-  var InliningLevel = InliningLevelSpecialized
-  //def InliningLevel = ddbt.Compiler.inl
+  //var InliningLevel = InliningLevelSpecialized
+  def InliningLevel = ddbt.Compiler.inl
 
   /**
    * The default initial capacity - MUST be a power of two.
