@@ -16,8 +16,8 @@ object K3MapCommons {
 
   def isInliningInSpecializedLevel = (InliningLevel == InliningLevelSpecialized)
 
-  //var InliningLevel = InliningLevelNone
-  def InliningLevel = ddbt.Compiler.inl
+  var InliningLevel = InliningLevelSpecialized
+  //def InliningLevel = ddbt.Compiler.inl
 
   /**
    * The default initial capacity - MUST be a power of two.
@@ -93,9 +93,11 @@ object K3MapCommons {
   def generateEntryClasses = entryClasses.map { case (name, (value, key, idxList)) =>
     val keyNames = key.zipWithIndex.map{case (ktp, i) => "ek"+(i+1)}
     val valueName = "ev"
+    val indexNames = idxList.zipWithIndex.map{case (idx, i) => K3MapCommons.indexMapName("map",idx)}
 
-    val keyArguments = key.zipWithIndex.map{case (ktp, i) => "ek"+(i+1)+":"+ktp.toScala}.mkString(", ")
+    val keyArguments = key.zipWithIndex.map{case (ktp, i) => keyNames(i)+":"+ktp.toScala}.mkString(", ")
     val valueArgument = "ev:"+value.toScala
+    val indexArguments = idxList.zipWithIndex.map{case (idx, i) => ", "+indexNames(i)+":Array["+indexEntryClassName(name, idx)+"]" }.mkString
 
     "  class " + name + "(val hs:Int, " +
       key.zipWithIndex.map{case (ktp, i) => "val _"+(i+1)+":"+ktp.toScala+", "}.mkString +
@@ -113,7 +115,16 @@ object K3MapCommons {
     "  }\n" + (if(K3MapCommons.isInliningInSpecializedLevel) {
     "  object " + name + "Ops {\n" +
       "    def get(map:Array["+name+"], "+keyArguments+"): "+value.toScala+" = " +
-      ind(genGenericGetMap("", "n", "map", name, value.toScala+" = "+zeroValue(value), (0 until keyNames.size).toList, keyNames),2) + "\n" +
+      ind(genGenericGetMap("", "n", "map", name, value.toScala+" = "+zeroValue(value), (0 until keyNames.size).toList, keyNames),3) + "\n" +
+      "    def put(isAdd:Boolean, map:Array["+name+"], map__md:Array[Int], "+keyArguments+", "+valueArgument+indexArguments+"): Unit = {\n" +
+      ind(genGenericSetTempMap("","", "n", "map", K3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(K3MapCommons.indexEntryClassName(value,key,idxList,_)), false, zeroValue(value)),3) + "\n" +
+      "    }\n" +
+      "    def putRemoveOnZero(isAdd:Boolean, map:Array["+name+"], map__md:Array[Int], "+keyArguments+", "+valueArgument+indexArguments+"): Unit = {\n" +
+      ind(genGenericSetTempMap("","", "n", "map", K3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(K3MapCommons.indexEntryClassName(value,key,idxList,_)), true, zeroValue(value)),3) + "\n" +
+      "    }\n" +
+      "    def remove(map:Array["+name+"], map__md:Array[Int], "+keyArguments+"): Unit = {\n" +
+      ind(genGenericDelNamedMap("", "n", "map", key, value, idxList, (0 until keyNames.size).toList, keyNames),3) + "\n" +
+      "    }\n" +
     "  }\n"
     } else "")
   }.mkString
@@ -266,16 +277,26 @@ object K3MapCommons {
     entryClasses += (entryCls -> (value,key,indexList))
 
     "var "+name+": Array["+entryCls+"] = new Array["+entryCls+"]("+DEFAULT_INITIAL_CAPACITY+");\n" +
-    "var "+name+"__sz: Int = 0;\n" +
-    "var "+name+"__ts: Int = "+INITIAL_THRESHOLD+";\n" +
+    (
+    // if(!isInliningInSpecializedLevel)
+    //   "var "+name+"__sz: Int = 0;\n" +
+    //   "var "+name+"__ts: Int = "+INITIAL_THRESHOLD+";\n"
+    // else
+      // map__md(0) == map size
+      // map__md(1) == map threshold
+      "var "+name+"__md: Array[Int] = Array[Int]("+((0 until indexList.size+1).toList.map(x => "0, "+INITIAL_THRESHOLD)).mkString(" ,")+");\n") +
     (if (indexList.size>0) {
       indexList.map{ is => 
         val idxEntryCls = indexEntryClassName(value, key, indexList, is)
         indexEntryClasses += (idxEntryCls -> (value,key,indexList,is))
 
-        "var "+indexMapName(name, is)+": Array["+idxEntryCls+"] = new Array["+idxEntryCls+"]("+DEFAULT_INITIAL_CAPACITY_INDEX+");\n" +
-        "var "+indexMapName(name, is)+"__sz: Int = 0;\n" +
-        "var "+indexMapName(name, is)+"__ts: Int = "+INITIAL_THRESHOLD_INDEX+";"
+        "var "+indexMapName(name, is)+": Array["+idxEntryCls+"] = new Array["+idxEntryCls+"]("+DEFAULT_INITIAL_CAPACITY_INDEX+");" +
+        (
+        // if(!isInliningInSpecializedLevel)
+        //   "\nvar "+indexMapName(name, is)+"__sz: Int = 0;\n" +
+        //   "var "+indexMapName(name, is)+"__ts: Int = "+INITIAL_THRESHOLD_INDEX+";"
+        // else
+        "")
       }.mkString("\n")+"\n"
     } else "")
   }
@@ -295,8 +316,14 @@ object K3MapCommons {
     entryClasses += (entryCls -> (value,key,List[List[Int]]()))
 
     "var "+name+": Array["+entryCls+"] = new Array["+entryCls+"]("+DEFAULT_INITIAL_CAPACITY+");\n" +
-    "var "+name+"__sz: Int = 0;\n" +
-    "var "+name+"__ts: Int = "+INITIAL_THRESHOLD+";"
+    (
+    // if(!isInliningInSpecializedLevel)
+    //   "var "+name+"__sz: Int = 0;\n" +
+    //   "var "+name+"__ts: Int = "+INITIAL_THRESHOLD+";"
+    // else
+      // map__md(0) == map size
+      // map__md(1) == map threshold
+      "var "+name+"__md: Array[Int] = Array[Int](0, "+INITIAL_THRESHOLD+");")
   }
 
   /**
@@ -377,7 +404,7 @@ object K3MapCommons {
    * @param keyNames is a list of input key args
    * @param valueName is the input value arg to be added
    */
-  def genGenericSetNamedMap(prefixValue: String, prefixKey: String, nodeName:String, map:String, key:List[Type], value:Type, indexList: List[List[Int]], keyNames:List[String], valueName:String, operation: String="") = {
+  def genGenericSetNamedMap(prefixValue: String, prefixKey: String, nodeName:String, map:String, key:List[Type], value:Type, indexList: List[List[Int]], keyNames:List[String], valueName:String) = {
     //sn = set named map
     "//K3SETNAMED\n" +
     prefixValue +
@@ -410,7 +437,7 @@ object K3MapCommons {
    * @param keyNames is a list of input key args
    * @param valueName is the input value arg to be added
    */
-  def genGenericSetTempMap(prefixValue: String, prefixKey: String, nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], keyNames:List[String], valueName:String,insideBlock: Boolean=true, operation: String="=", indexList: List[List[Int]] = List[List[Int]](), indexEntryClsName: List[String]=List[String](), fromNamedMap:Boolean = false, zeroValue: String = "") : String = {
+  def genGenericSetTempMap(prefixValue: String, prefixKey: String, nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], keyNames:List[String], valueName:String, insideBlock: Boolean=true, operation: String="=", indexList: List[List[Int]] = List[List[Int]](), indexEntryClsName: List[String]=List[String](), fromNamedMap:Boolean = false, zeroValue: String = "") : String = {
     //st = set temp
     val hash = nodeName+"_sthash"
     val e = nodeName+"_ste"
@@ -440,15 +467,24 @@ object K3MapCommons {
     }) +
     "  if("+e+".hs == "+hash+" && "+keyNames.zip(keyIndicesInEntery).map{case (x, i) => e+"._"+(i+1)+" == "+x}.mkString(" && ")+") {\n"+
     "    "+found+" = true\n"+
-    "    "+e+".v "+operation+" "+valueName+"\n" +
+    (if(operation == "isAdd") {
+    "    if("+operation+") {\n" +
+    "      "+e+".v += "+valueName+"\n" +
+    "    } else {" +
+    "      "+e+".v = "+valueName+"\n" +
+    "    }\n"
+    } else {
+    "    "+e+".v "+operation+" "+valueName+"\n"
+    }) +
     (if(fromNamedMap) {
       "    if("+e+".v == "+zeroValue + ") {\n" +
       indexList.map{ indexLoc =>
         val idxEntryCls = K3MapCommons.indexEntryClassName(entryClsName, indexLoc)
         val field = e+".ptr"+idxEntryCls
+        //TODO we should change this value update to null, into a smarter impl
         "      "+field+".v.update("+field+"_idx, null)\n"
       }.mkString +
-      "      "+ map + "__sz -= 1\n" +
+      "      "+ genMapSize(map) + " -= 1\n" +
       "      if("+prev+" == "+e+") "+map+"("+i+") = "+next+"\n" +
       "      else "+prev+".next = "+next+"\n" +
       "    }\n"
@@ -466,11 +502,27 @@ object K3MapCommons {
     "if(!"+found+") {\n" +
     genAddEntryMap(nodeName,map,entryClsName,keyIndicesInEntery,keyNames,valueName,e,hash,i)+"\n"+
     ind(indexList.zipWithIndex.map{ case (idx, i) =>
-      genSetIndexMap(K3MapCommons.indexMapName(nodeName,idx), K3MapCommons.indexMapName(map,idx), indexEntryClsName(i), idx, filterExprAtElementLoc(keyNames, idx) , e, false) + "\n"
+      genSetIndexMap(i, map, K3MapCommons.indexMapName(nodeName,idx), K3MapCommons.indexMapName(map,idx), indexEntryClsName(i), idx, filterExprAtElementLoc(keyNames, idx) , e, false) + "\n"
     }.mkString) +
     "\n}"
 
     if(insideBlock) "; {\n"+ind(content)+"\n}" else content
+  }
+
+  def genMapSize(map: String) = {
+    map + "__md" + "(0)"
+  }
+
+  def genMapThreshold(map: String) = {
+    map + "__md" + "(1)"
+  }
+
+  def genIndexMapSize(map: String, indexSeq: Int) = {
+    map + "__md" + "("+((indexSeq+1) << 1)+")"
+  }
+
+  def genIndexMapThreshold(map: String, indexSeq: Int) = {
+    map + "__md" + "("+(((indexSeq+1) << 1)+1)+")"
   }
 
   /**
@@ -496,22 +548,39 @@ object K3MapCommons {
    *        new element should be inserted in it.
    */
   def genAddEntryMap(nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], keyNames:List[String], valueName:String, e:String, hash: String, bucketIndex:String) = {
-    val newCapacity = nodeName+"_nc"
     val tmp = e+"_atmp"
 
     "  val " + tmp + ":" + entryClsName + " = " + map + "(" + bucketIndex + ")\n" +
     "  " + e + " = new " + entryClsName + "("+hash+","+keyNames.mkString(",")+","+valueName+","+tmp+")\n" +
     "  " + map + "(" + bucketIndex + ") = "+e+"\n"+
-    "  " + map + "__sz += 1\n" +
-    "  if(" + map + "__sz-1 >= " + map + "__ts) {\n" +
-    "    val "+newCapacity+" = 2 * "+map+".length\n" +
+    "  " + genMapSize(map) + " += 1" +
+    (if(isInliningInSpecializedLevel) "" else "\n"+genIncreaseCapacity(nodeName, map, entryClsName))
+  }
+
+  def genIncreaseCapacity(nodeName:String, map:String, entryClsName:String) = {
+    val newCapacity = nodeName+"_nc"
+
+    "  if(" + genMapSize(map) + " >= " + genMapThreshold(map) + ") {\n" +
+    "    val "+newCapacity+" = ("+map+".length << 1)\n" +
     "    "+map+" = __transferHashMap["+entryClsName+"]("+map+",new Array["+entryClsName+"]("+newCapacity+"))\n" +
-    "    "+map+"__ts = (" + newCapacity + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
+    "    "+genMapThreshold(map)+" = (" + newCapacity + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
     "  }"
+  }
+
+  def genIncreaseMapAndIndicesCapacity(nodeName:String, map:String, entryClsName:String, indexList: List[List[Int]], indexEntryClsName: List[String]) = {
+    genIncreaseCapacity(nodeName, map, entryClsName) + "\n" +
+    indexList.zipWithIndex.map { case (idx, i) =>
+      genIncreaseIndexCapacity(i,map,nodeName, K3MapCommons.indexMapName(map,idx), indexEntryClsName(i))
+    }.mkString("\n")
   }
 
   /**
    * Generates Index HashMap SET function
+   *
+   * @param indexSeq is the sequence number of target
+   *        index among other indices for the map
+   * @param parentMap is the base map that we are setting
+   *        one of its indices here
    *
    * @param nodeName is unique name for this statement
    *        (if you view it as one command)
@@ -529,7 +598,7 @@ object K3MapCommons {
    * @param insideBlock indicates whether the generated code
    *        should be out inside a block or not
    */
-  def genSetIndexMap(nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], keyNames:List[String], valueName:String,insideBlock: Boolean=true) : String = {
+  def genSetIndexMap(indexSeq:Int, parentMap:String, nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], keyNames:List[String], valueName:String,insideBlock: Boolean=true) : String = {
     //st = set index
     val hash = nodeName+"_sithash"
     val e = nodeName+"_site"
@@ -553,7 +622,7 @@ object K3MapCommons {
     "  "+e+" = "+e+".next\n" +
     "}\n" +
     "if(!"+found+") {\n" +
-    genAddEntryIndexMap(nodeName,map,entryClsName,keyNames,e,hash,i)+"\n"+
+    genAddEntryIndexMap(indexSeq,parentMap,nodeName,map,entryClsName,keyNames,e,hash,i)+"\n"+
     "  "+valueName+"."+currentIndexPointerName+" = "+e+"\n"+
     "  "+valueName+"."+currentIndexPointerName+"_idx = "+e+".v.length\n"+
     "  "+e+".v += "+valueName+"\n" +
@@ -564,6 +633,11 @@ object K3MapCommons {
 
   /**
    * Generates Index HashMap ADD ENTRY function
+   *
+   * @param indexSeq is the sequence number of target
+   *        index among other indices for the map
+   * @param parentMap is the base map that we are setting
+   *        one of its indices here
    *
    * @param nodeName is unique name for this statement
    *        (if you view it as one command)
@@ -581,18 +655,23 @@ object K3MapCommons {
    * @param bucketIndex is the table index of HashMap that
    *        new element should be inserted in it.
    */
-  def genAddEntryIndexMap(nodeName:String, map:String, entryClsName:String, keyNames:List[String], e:String, hash: String, bucketIndex:String) = {
-    val newCapacity = nodeName+"_nic"
+  def genAddEntryIndexMap(indexSeq:Int, parentMap:String, nodeName:String, map:String, entryClsName:String, keyNames:List[String], e:String, hash: String, bucketIndex:String) = {
     val tmp = e+"_aitmp"
 
     "  val " + tmp + ":"+entryClsName+" = " + map + "(" + bucketIndex + ")\n" +
     "  " + e + " = new " + entryClsName + "("+hash+","+keyNames.mkString(",")+","+tmp+")\n" +
     "  " + map + "(" + bucketIndex + ") = "+e+"\n"+
-    "  " + map + "__sz += 1\n" +
-    "  if(" + map + "__sz-1 >= " + map + "__ts) {\n" +
-    "    val "+newCapacity+" = 2 * "+map+".length\n" +
+    "  " + genIndexMapSize(parentMap, indexSeq) + " += 1" +
+    (if(isInliningInSpecializedLevel) "" else "\n"+genIncreaseIndexCapacity(indexSeq, parentMap, nodeName, map, entryClsName))
+  }
+
+  def genIncreaseIndexCapacity(indexSeq:Int, parentMap:String, nodeName:String, map:String, entryClsName:String) = {
+    val newCapacity = nodeName+"_nic"
+
+    "  if(" + genIndexMapSize(parentMap, indexSeq) + " >= " + genIndexMapThreshold(parentMap, indexSeq) + ") {\n" +
+    "    val "+newCapacity+" = ("+map+".length << 1)\n" +
     "    "+map+" = __transferHashMap["+entryClsName+"]("+map+",new Array["+entryClsName+"]("+newCapacity+"))\n" +
-    "    "+map+"__ts = (" + newCapacity + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
+    "    "+genIndexMapThreshold(parentMap, indexSeq)+" = (" + newCapacity + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
     "  }"
   }
 
@@ -654,7 +733,7 @@ object K3MapCommons {
       // and then we should correct the index info for the moved element
 
     }.mkString +
-    "      "+ map + "__sz -= 1\n" +
+    "      "+ genMapSize(map) + " -= 1\n" +
     "      if("+prev+" == "+e+") "+map+"("+i+") = "+next+"\n" +
     "      else "+prev+".next = "+next+"\n"+
     "    }\n" +
