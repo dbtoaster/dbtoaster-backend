@@ -52,15 +52,15 @@ addCommandAlias("toast", ";run-main ddbt.Compiler ")
 
 addCommandAlias("check", ";run-main ddbt.unit.UnitTest ")
 
-addCommandAlias("queries", ";run-main ddbt.unit.UnitTest -dd;test-only ddbt.test.gen.*")
+addCommandAlias("queries", ";run-main ddbt.unit.UnitTest -dd -qskip;test-only ddbt.test.gen.*")
 
-addCommandAlias("queries-lms", ";run-main ddbt.unit.UnitTest -dd -m lms;test-only ddbt.test.gen.*")
+addCommandAlias("queries-lms", ";run-main ddbt.unit.UnitTest -dd -qskip -m lms;test-only ddbt.test.gen.*")
 
-addCommandAlias("queries-akka", ";run-main ddbt.unit.UnitTest -dd -m akka;test-only ddbt.test.gen.*")
+addCommandAlias("queries-akka", ";run-main ddbt.unit.UnitTest -dd -qskip -m akka;test-only ddbt.test.gen.*")
 
-addCommandAlias("bench", ";test:run-main ddbt.test.Benchmark -dstandard -csv bench.csv -m ") // usage: sbt 'bench lms'
+addCommandAlias("bench", ";test:run-main ddbt.unit.UnitTest -qskip -csv bench.csv -m ") // usage: sbt 'bench lms'
 
-addCommandAlias("bench-all", ";run-main ddbt.unit.UnitTest -m scala -m lms -m lscala -m llms -csv bench-all.csv -x -xvm")
+addCommandAlias("bench-all", ";run-main ddbt.unit.UnitTest -qskip -m scala -m lms -m lscala -m llms -csv bench-all.csv -x -xvm")
 
 
 TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>
