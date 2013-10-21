@@ -180,7 +180,10 @@ object UnitTest {
     val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3,genSpec)); p.gen(t_gen)
     if (benchmark) { p.comp(t_comp)
       if (err!="") System.err.println(err)
-      else out.split("\n").foreach{ l => val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),e.slice(1,4),e(5)) }
+      else out.split("\n").foreach{ l =>
+        if (!l.matches("[a-z]+: [0-9.]+ \\[[0-9.]+, [0-9.]+\\] \\(sec, [0-9]+ samples\\)$")) println(l)
+        else { val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),e.slice(1,4),e(5)) }
+      }
       p.close
     }
     // Now append correctness test
