@@ -7,7 +7,8 @@ import java.util.Date
 
 // r_indynamic
 
-class RidSpec extends FunSpec with Helper {  
+class RidSpec extends FunSpec {
+  import Helper._
   import scala.language.implicitConversions
   implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();
   implicit def strConv(d:Long):String = ""+d

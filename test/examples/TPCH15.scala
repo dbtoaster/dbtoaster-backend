@@ -3,8 +3,8 @@ import ddbt.lib._
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import java.util.Date;
 
-
-object TPCH15 extends Helper {
+object TPCH15 {
+  import Helper._
   def main(args:Array[String]) {
     /*
     println("Reference:")

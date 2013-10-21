@@ -3,7 +3,8 @@ import ddbt.lib._
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import java.util.Date;
 
-object TPCH1 extends Helper {
+object TPCH1 {
+  import Helper._
   def main(args:Array[String]) {
     val (t,res) = run[TPCH1](Seq(
       (new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/tpch/standard/lineitem.csv"),new Adaptor.CSV("LINEITEM","long,long,long,long,double,double,double,double,string,string,date,date,date,string,string,string","\\Q|\\E"),Split())

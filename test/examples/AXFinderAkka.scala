@@ -1,7 +1,8 @@
 package ddbt.test.examples
 import ddbt.lib._
 
-object AXFinderAkka extends Helper {
+object AXFinderAkka {
+  import Helper._
   import WorkerActor._
   def main(args:Array[String]) {
     val (t,res) = runLocal[AXMaster,AXWorker](5,2251,4,streamsFinance())

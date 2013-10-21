@@ -200,7 +200,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   // Helper that contains the main and stream generator
   def helper(s0:System,pkg:String) = {
     "package "+pkg+"\nimport ddbt.lib._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-    "object "+cls+" extends Helper {\n"+ind(
+    "object "+cls+" {\n"+ind("import Helper._\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench2(args,(d:String,p:Boolean)=>run["+cls+"]("+
     streams(s0.sources).replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")")
                        .replaceAll("/standard/","/\"+d+\"/")+",p),f)\n\n"+

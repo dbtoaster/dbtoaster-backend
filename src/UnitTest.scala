@@ -105,7 +105,7 @@ object UnitTest {
     val qt = sys.queries.map{q=>(q.name,sys.mapType(q.map.name)) }.toMap
     val helper =
       "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-      "class "+cls+"Spec extends FunSpec with Helper {"+ind("\n"+
+      "class "+cls+"Spec extends FunSpec {\n"+ind("import Helper._\n"+
       "import scala.language.implicitConversions\n"+
       "implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();\n"+
       "implicit def strConv(d:Long):String = \"\"+d\n"+ // fix for TPCH22
@@ -113,7 +113,7 @@ object UnitTest {
         // val mystr = (str /: set.subs){ case (s,(o,n)) => s.replaceAll("\\Q"+o+"\\E",n) } // seems that set.subs are useless here
         val mystr = (if (sz.endsWith("_del")) str.replaceAll("\\),Split\\(\\)",",\"add+del\""+"),Split()") else str).replaceAll("/standard/","/"+sz+"/") // streams for this dataset
         "describe(\"Dataset '"+sz+"'\") {\n"+ind(
-        "val (t,res) = run"+(if (mode=="akka") "Local["+cls+"Master,"+cls+"Worker]("+sys.maps.size+",2251,4," else "["+cls+"](")+mystr+")\n"+ // XXX: fix Akka parameters
+        "val (t,res) = Helper.run"+(if (mode=="akka") "Local["+cls+"Master,"+cls+"Worker]("+sys.maps.size+",2251,4," else "["+cls+"](")+mystr+")\n"+ // XXX: fix Akka parameters
         set.out.map { case (n,o) =>
           val (kt,vt) = qt(n)
           val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"

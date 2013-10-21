@@ -11,7 +11,8 @@ import java.util.Date
  * 2. We do a foreach on the map and execute the continuation.
  */
 
-object TPCH13 extends Helper {
+object TPCH13 {
+  import Helper._
   def main(args:Array[String]) {
     //val ref = bench("ReferenceLMS ",10,()=>run[TPCH13Ref,Map[Long,Long]](streamsTPCH13()))
     val res = bench("HandOptimized",10,()=>run[TPCH13](streamsTPCH13()))

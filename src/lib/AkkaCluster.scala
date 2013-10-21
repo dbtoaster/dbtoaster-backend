@@ -70,7 +70,8 @@ object ClusterApp {
 }
 
 // Acts as the main object
-class Streamer(master:ActorRef,workers:Int) extends Actor with Helper {
+class Streamer(master:ActorRef,workers:Int) extends Actor {
+  import Helper._
   val cluster = Cluster(context.system)
   override def preStart(): Unit = cluster.subscribe(self, classOf[ClusterDomainEvent])
   override def postStop(): Unit = cluster.unsubscribe(self)

@@ -4,7 +4,8 @@ import ddbt.lib._
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import scala.reflect.ClassTag
 
-object AXFinder extends Helper {
+object AXFinder {
+  import Helper._
   def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) =
         bench(name,count,()=>run[Q](streamsFinance(""),false))
 

@@ -5,7 +5,7 @@ import akka.remote.RemoteScope
 import scala.reflect.ClassTag
 import java.io.InputStream
 
-trait Helper {
+object Helper {
   import Messages._
 
   // ---------------------------------------------------------------------------

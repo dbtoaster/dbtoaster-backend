@@ -30,7 +30,7 @@ object Compiler {
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1); null }
   def toast(l:String) = {
     val opts = (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f))
-    Utils.exec((Utils.path_bin :: "-O3" :: "-l" :: l :: opts ::: in).toArray)._1
+    Utils.exec((Utils.path_bin :: "-O2" :: "-l" :: l :: opts ::: in).toArray)._1
   }
 
   def parseArgs(args:Array[String]) {

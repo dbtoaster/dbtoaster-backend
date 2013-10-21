@@ -19,7 +19,8 @@ object UnitTest {
   val skip = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                   "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                   "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
-             List("mddb3","chrissedtrades") // too long to compile, incorrect result
+             List("mddb/query3","chrissedtrades") // too long to compile, incorrect result
+             // Also note that TPCH11c is incorrect with -O3 front-end
   var csv:PrintWriter = null
   var csvFile:String = null
   val tmp = makeTempDir()
@@ -82,7 +83,9 @@ object UnitTest {
     // Regular mode
     println("Tests total    : %6d".format(all.size))
     println("Front-end skip : %6d".format(skip.size))
-    val sel = all.filter(q=>q_f(q.sql)).map{q=>QueryTest(q.sql,q.sets.filterKeys{d=>d_f(d)})}.filter(q=>q.sets.size>0)
+    val sel = all.filter(q=>q_f(q.sql)).map{ q=> QueryTest(q.sql,q.sets.filterKeys{d=>d_f(d)}
+                                                    .filterKeys{d=>q.sql.indexOf("missedtrades")== -1 || d.matches("tiny.*")}) // missedtrades is very slow
+    }.filter(q=>q.sets.size>0)
     println("Tests selected : %6d".format(sel.size))
     if (sel.size==0) { System.err.println("No tests selected, exiting."); return; }
     val dir = new File(path_sources); if (dir.isDirectory()) dir.listFiles().foreach { f=>f.delete() } else dir.mkdirs() // directory cleanup (erase previous tests)
@@ -116,6 +119,9 @@ object UnitTest {
     // XXX: Use tags to filter test sizes in ScalaTest
     // XXX: Order by test or by backend first
     // XXX: e("  -cluster      use script/cluster.sh to execute Akka tests") to be moved in the compiler
+    
+    // XXX: ;run-main ddbt.unit.UnitTest -q.*tpch11c -dd;test-only ddbt.test.gen.*
+    // XXX: ;run-main ddbt.UnitTest -q.*tpch11c -dd;test-only ddbt.test.gen.*
   }
 
   // ---------------------------------------------------------------------------
@@ -132,18 +138,17 @@ object UnitTest {
       q.sets.map { case (sz,set) =>
         (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-d"+sz+"\",\"-h\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
         set.out.map { case (n,o) => val (kt,vt) = qt(n); val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
+          val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
           val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
             case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
-            case QueryFile(path,sep) => (if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex
-              "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map(l=>"v"+l._2))+",v"+ll.last._2+") }\n" })+
-              "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
+            case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path_base+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
             case QuerySingleton(v) => v
           })+")"
-          (if (full) "it(\""+n+" correct\") " else "")+"{\n"+ind(cmp)+"\n}"
+          (if (full) "it(\""+n+" correct\") " else "")+"{\n"+ind(kv+cmp)+"\n}"
         }.mkString("\n"))+"\n})"
       }.mkString("\n")
       if (full) "package ddbt.test.gen\nimport ddbt.lib._\n\nimport org.scalatest._\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-      "class "+cls+"Spec extends FunSpec with Helper {\n"+ind(body)+"\n}\n\n" else body
+      "class "+cls+"Spec extends FunSpec {\n"+ind("import Helper._\n"+body)+"\n}\n\n" else body
     }
     def genSpec(sys:ddbt.ast.M3.System) {
       write(new File(path_sources),cls+"Spec.scala",spec(sys,true))
@@ -226,7 +231,7 @@ object UnitTest {
 
   def toast(sql:String,lang:String*):(Long,String) = {
     val opts = (if (Compiler.depth>=0) List("--depth",""+Compiler.depth) else Nil) ::: Compiler.flags.flatMap(f=>List("-F",f))
-    val (t0,m3) = ns(()=>exec(((if (repo!=null) "bin/dbtoaster_release" else path_bin) :: "-O3" :: "-l" :: lang.toList ::: opts ::: List[String](sql)).toArray,repo)._1)
+    val (t0,m3) = ns(()=>exec(((if (repo!=null) "bin/dbtoaster_release" else path_bin) :: "-O2" :: "-l" :: lang.toList ::: opts ::: List[String](sql)).toArray,repo)._1)
     (t0, if (repo!=null) m3.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data") else m3)
   }
 

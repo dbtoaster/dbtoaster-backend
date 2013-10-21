@@ -4,7 +4,8 @@ import ddbt.lib._
 import akka.actor.Actor
 import java.util.Date
 
-object BrokerSpread extends Helper {
+object BrokerSpread {
+  import Helper._
   import ddbt.Utils._
   import scala.language.implicitConversions
   implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();

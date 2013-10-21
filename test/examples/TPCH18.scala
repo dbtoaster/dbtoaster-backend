@@ -3,7 +3,8 @@ import ddbt.lib._
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import java.util.Date;
 
-object TPCH18 extends Helper {
+object TPCH18 {
+  import Helper._
   def main(args:Array[String]) {
     val (t,res) = run[TPCH18](streamsTPCH18(),false);
     println(res.head.toString); println("Time: "+time(t))
