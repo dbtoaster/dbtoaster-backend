@@ -37,9 +37,11 @@ Issues to solve:
 - join and leave cluster preparation
 - at each foreach point, possibly transform in a remote continuation if map is not local
 - move lazy map slicing into the TypeChecking ?
-- move a good part of the test generator directly in the code generator
 - move test AST into its own ddbt.ast package ?
-- shall we make unit tests part of the compiler ?
+
+Failing   : rs_columnmapping_1, rs_columnmapping_2, tpch/query(9|10)
+No compile: -qx employee/query(61|63a|64a|65a) -qx mddb/* -qx tpch/query(2|18|21) -qx zeus/(11564068|48183500|52548748|96434723)
+            -qx (inequality_selfjoin|invalid_schema_fn|r_agtb|r_multinest|rs_columnmapping3|rs_ineqwithnestedagg|ss_math|pricespread)
 
 XXX: problem: the same map can be accessed locally in a foreach but again acessed with another key which might not be on the host (Runiquecountsbya) 
 XXX: warning, some test are incorrect but get correct if they are run first (Rseqineq, ...)
@@ -47,12 +49,6 @@ XXX: warning, some test are incorrect but get correct if they are run first (Rse
 
 XXX: for union, instead of shipping both maps to 3rd party, why not ship one to another and make union there ? (would increase locality)
 XXX: for union, instead of shipping both maps to 3rd party, why not ship one to another and make union there ? (would increase locality)
-
-Results:
-- Syntax    :  36
-- Semantics :  42
-- Incorrect :   7
-- Correct   :  97
 */
 
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
@@ -211,11 +207,14 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str+"case _ => deq")+"\n}\n\n"+ts)+"\n}"
   }
 
-  override def helper(s:System,pkg:String) =
-    // XXX: normalize with ScalaGen helper
-    "package ddbt.generated\nimport ddbt.lib._\nimport java.util.Date\n\n"+
-    "object "+cls+" {\n"+ind("import Helper._\nimport WorkerActor._\ndef main(args:Array[String]) {\n"+ind(
-    "val (t,res) = runLocal["+cls+"Master,"+cls+"Worker]("+s.maps.size+",2251,4,"+streams(s.sources)+")\n"+ // XXX: CUSTOMIZE ARGUMENTS
-    s.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))"+"+\"\\n\")\n"}.mkString+
-    "println(\"Time = \"+time(t));\n")+"\n}")+"\n}\n\n"
+  override def helper(s0:System,pkg:String) =
+    "package "+pkg+"\nimport ddbt.lib._\nimport java.util.Date\n\n"+
+    "object "+cls+" {\n"+ind("import Helper._\nimport WorkerActor._\n"+
+    "def execute(args:Array[String],f:List[Any]=>Unit) = bench2(args,(d:String,p:Boolean)=>runLocal["+cls+"Master,"+cls+"Worker]("+s0.maps.size+",2251,4,"+
+    streams(s0.sources).replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")")
+                       .replaceAll("/standard/","/\"+d+\"/")+",p),f)\n\n"+
+    "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
+    ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
+    "\n})")+"\n}")+"\n}\n\n"
+
 }

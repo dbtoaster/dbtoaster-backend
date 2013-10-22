@@ -64,17 +64,19 @@ addCommandAlias("bench-all", ";run-main ddbt.unit.UnitTest -qskip -m scala -m lm
 
 
 TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>
+  import scala.sys.process.Process
   val dir=base/"pkg"; if (!dir.exists) dir.mkdirs;
   println("Packaging DDBT runtime library ...")
-  val lib=dir/"ddbt_lib.jar"; scala.sys.process.Process(Seq("jar","-cMf",lib.getPath,"-C",cd.toString,"ddbt/lib")).!
+  val lib=dir/"ddbt_lib.jar"; Process(Seq("jar","-cMf",lib.getPath,"-C",cd.toString,"ddbt/lib")).!
   println("Packaging DDBT compiler ...")
-  val all=dir/"ddbt.jar"; scala.sys.process.Process(Seq("jar","-cMf",all.getPath,"-C",cd.toString,"ddbt")).!
+  val all=dir/"ddbt.jar"; Process(Seq("jar","-cMf",all.getPath,"-C",cd.toString,"ddbt")).!
   val dep=dir/"ddbt_deps.jar"; if (!dep.exists) {
     print("Packaging dependencies "); scala.Console.out.flush; val tmp=new File("target/pkg_tmp"); IO.createDirectory(tmp)
     val jars = (cp.files.absString.split(":").filter(x=>x!=cd.toString).toSet + lib.getPath)
     val sc = jars.filter(_.matches(".*/scala-library.*")).map(_.replaceAll("scala-library","scala-compiler"))
-    (jars++sc).foreach { j => scala.sys.process.Process(Seq("jar","-xf",j),tmp).!; print("."); scala.Console.out.flush; }
-    scala.sys.process.Process(Seq("jar","-cMf",dep.getPath,"-C",tmp.getAbsolutePath(),".")).!; IO.delete(tmp); println(" done.")
+    val r=tmp/"reference.conf"; val rs=tmp/"refs.conf"; IO.write(rs,"")
+    (jars++sc).foreach { j => Process(Seq("jar","-xf",j),tmp).!; if (r.exists) IO.append(rs,IO.read(r)); print("."); scala.Console.out.flush; }
+    if (r.exists) r.delete; rs.renameTo(r); Process(Seq("jar","-cMf",dep.getPath,"-C",tmp.getAbsolutePath(),".")).!; IO.delete(tmp); println(" done.")
   }
 }
 

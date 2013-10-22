@@ -34,7 +34,7 @@ case "$1" in
       $CMD_CPY "$pkgdir/ddbt_deps.jar" $CMD_USER@$w:"$CMD_DIR/ddbt_deps.jar" >/dev/null
       $CMD_CPY "$pkgdir/ddbt_lib.jar" $CMD_USER@$w:"$CMD_DIR/ddbt_lib.jar" >/dev/null
       printf "#!/bin/sh\ncd \"\`dirname \$0\`\"\n" >$pkgdir/launcher
-      echo "exec $CMD_JAVA -cp ddbt_lib.jar:ddbt_deps.jar ddbt.lib.ClusterApp -m $MASTER:$PORT -n $wn \"\$@\"" >> "$pkgdir/launcher";
+      echo "exec $CMD_JAVA -Djava.awt.headless=true -cp ddbt_lib.jar:ddbt_deps.jar ddbt.lib.ClusterApp -m $MASTER:$PORT -n $wn \"\$@\"" >> "$pkgdir/launcher";
       chmod +x "$pkgdir/launcher"
       $CMD_CPY "$pkgdir/launcher" $CMD_USER@$w:"$CMD_DIR/launcher" >/dev/null
       rm "$pkgdir/launcher"
