@@ -214,7 +214,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   override def helper(s:System,pkg:String) =
     // XXX: normalize with ScalaGen helper
     "package ddbt.generated\nimport ddbt.lib._\nimport java.util.Date\n\n"+
-    "object "+cls+" extends Helper {\n"+ind("import WorkerActor._\ndef main(args:Array[String]) {\n"+ind(
+    "object "+cls+" {\n"+ind("import Helper._\nimport WorkerActor._\ndef main(args:Array[String]) {\n"+ind(
     "val (t,res) = runLocal["+cls+"Master,"+cls+"Worker]("+s.maps.size+",2251,4,"+streams(s.sources)+")\n"+ // XXX: CUSTOMIZE ARGUMENTS
     s.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))"+"+\"\\n\")\n"}.mkString+
     "println(\"Time = \"+time(t));\n")+"\n}")+"\n}\n\n"
