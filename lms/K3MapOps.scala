@@ -105,7 +105,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
    */
   def genValDefForNonInlinableExpr(exprList: List[Exp[_]], nodeName: String) = exprList.map{ expr => expr match {
       case s@Sym(x) => if(isPossibleToInlineExpr(expr)) {
-        "val x"+x+"_"+nodeName+" = "+quote(expr)+"\n"
+        "val x"+x+"_"+nodeName+getSymTypeStr(s)+" = "+quote(expr)+"\n"
       } else {
         ""
       }
@@ -134,12 +134,12 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     case NamedK3Var(n,_) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NamedK3Map(n,_,_,_,_,_) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
     case NewK3Var(v,_) => stream.println(K3MapCommons.createK3VarDefinition(quote(sym), v))
-    case NewK3Temp(ks,v,_,_) => if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
+    case NewK3Temp(ks,v,_,_) => if(K3MapCommons.isInliningHigherThanNone) {
       stream.println(K3MapCommons.createK3TempDefinition(quote(sym),v,ks))
     } else {
       emitValDef(sym, "K3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
     }
-    case K3Get(m,ks,_) => if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
+    case K3Get(m,ks,_) => if(K3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
         case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_,_),_,_)) => emitValDef(sym, quote(m))
         case Some(Reflect(NewK3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
@@ -161,7 +161,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
       }
 
     }
-    case K3Set(m,ks,v) => if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
+    case K3Set(m,ks,v) => if(K3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
         case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_,_),_,_)) => stream.println(quote(m)+" = "+quote(v))
         case Some(Reflect(NewK3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
@@ -182,7 +182,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
         case _ => stream.println(quote(m)+".set("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
       }
     }
-    case K3Add(m,ks,v) => if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
+    case K3Add(m,ks,v) => if(K3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
         case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_,_),_,_)) => stream.println(quote(m)+" += "+quote(v))
         case Some(Reflect(NewK3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
@@ -205,32 +205,29 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     }
     case K3Foreach(m,k,v,body) => {
       val block=getBlockContents(body) // enables both the renaming trick and allow nested block indentation
-      if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
+      if(K3MapCommons.isInliningHigherThanNone) {
         Def.unapply(m) match {
-          case Some(Reflect(NewK3Temp(key,_,_,_),_,_)) => stream.println({
+          case Some(Reflect(NewK3Temp(key,value,_,_),_,_)) => stream.println({
             val map = quote(m)
             val nodeName = createNodeName(sym)
             
-            genForeachMap(nodeName, map, quote(k), quote(v), block, key.size == 1)
+            genForeachMap(nodeName, map, quote(k), quote(v), block, key, value, K3MapCommons.entryClassName(value, key, List[List[Int]]()))
           })
-          case Some(Reflect(NamedK3Map(_,key,_,_,_,_),_,_)) => stream.println({
+          case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => stream.println({
             val map = quote(m)
             val nodeName = createNodeName(sym)
             
-            genForeachMap(nodeName, map, quote(k), quote(v), block, key.size == 1)
+            genForeachMap(nodeName, map, quote(k), quote(v), block, key, value, K3MapCommons.entryClassName(value, key, indexList))
           })
           case Some(Reflect(K3Slice(name,part,partKey),_,_)) => stream.println({
             val nodeName = createNodeName(sym)
             val map = genQuoteExpr(List(m),nodeName).apply(0)
 
-            val elemKeyPostfix = Def.unapply(m) match {
-              case Some(Reflect(NamedK3Map(_,_,_,indexList,_,_),_,_)) => stream.println({
-                val indexLoc = indexList(part)
-                if(indexLoc.size == 1) {
-                  "._"+indexLoc(0)
-                } else ""
-              })
-              case _ => ""
+            val (entryClsName, elemValueType) = Def.unapply(name) match {
+              case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => {
+                (":"+K3MapCommons.entryClassName(value,key,indexList),":"+value.toScala)
+              }
+              case m => ("","")
             }
             
             //f= foreach
@@ -244,10 +241,10 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
             "  var "+i+":Int = 0\n" +
             "  val "+len+":Int = "+map+".length\n" +
             "  while("+i+" < "+len+") {\n" +
-            "    val "+e+" = "+map+"("+i+")\n" +
+            "    val "+e+entryClsName+" = "+map+"("+i+")\n" +
             "    if("+e+" != null) {\n"+
-            "      val "+quote(k)+" = "+e+elemKeyPostfix+"\n"+
-            "      val "+quote(v)+" = "+e+".v\n" +
+            "      val "+quote(k)+entryClsName+" = "+e+"\n"+
+            "      val "+quote(v)+elemValueType+" = "+e+".v\n" +
             ind(block,2)+"\n" +
             "    }\n" +
             "    "+i+" += 1\n" +
@@ -260,7 +257,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
         stream.println(quote(m)+".foreach { ("+quote(k)+","+quote(v)+") =>"); stream.println(block); stream.println("}")
       }
     }
-    case K3Slice(m,p,pks) => if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
+    case K3Slice(m,p,pks) => if(K3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
         case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
@@ -278,7 +275,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     } else {
       emitValDef(sym, quote(m)+".slice("+p+","+tup(pks map quote)+")")
     }
-    case K3Clear(m) => if(K3MapCommons.InliningLevel >= K3MapCommons.InliningLevelNone) {
+    case K3Clear(m) => if(K3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
         case Some(Reflect(NewK3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+K3MapCommons.zeroValue(tp))
         case Some(Reflect(NamedK3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+K3MapCommons.zeroValue(tp))
@@ -306,20 +303,21 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
 
   def createNodeName(s: Sym[_]) = "x"+s.id
 
-  def genForeachMap(nodeName:String, map:String, k:String, v:String, block: String, singleValueKey: Boolean) = {
+  def genForeachMap(nodeName:String, map:String, k:String, v:String, block: String, key:List[Type], value:Type, entryClsName: String) = {
     //f= foreach
     val i = nodeName+"_fi"
     val len = nodeName+"_flen"
     val e = nodeName+"_fe"
+    val singleValueKey: Boolean = (key.size == 1)
     "; {\n" +
     "  //K3FOREACH\n" +
-    "  var "+i+" = 0\n" +
-    "  val "+len+" = "+map+".length\n" +
+    "  var "+i+":Int = 0\n" +
+    "  val "+len+":Int = "+map+".length\n" +
     "  while("+i+" < "+len+") {\n" +
-    "    var "+e+" = "+map+"("+i+")\n" +
+    "    var "+e+":"+entryClsName+" = "+map+"("+i+")\n" +
     "    while("+e+" != null) {\n"+
-    "      val "+k+" = "+e+(if(singleValueKey) "._1" else "")+"\n"+
-    "      val "+v+" = "+e+".v\n" +
+    "      val "+k+":"+(if(singleValueKey) key(0).toScala else entryClsName)+" = "+e+(if(singleValueKey) "._1" else "")+"\n"+
+    "      val "+v+":"+value.toScala+" = "+e+".v\n" +
     ind(block,2)+"\n" +
     "      "+e+" = "+e+".next\n" +
     "    }\n" +
@@ -485,6 +483,45 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
       }
       case _ => throw new RuntimeException("could not quote %s".format(x))
     }
+  }
+
+  override def emitValDef(sym: Sym[Any], rhs: String): Unit = {
+    val extra = if ((Config.sourceinfo < 2) || sym.pos.isEmpty) "" else {
+      val context = sym.pos(0)
+      "      // " + relativePath(context.fileName) + ":" + context.line
+    }
+    sym match {
+      case s@Sym(n) => isVoidType(s.tp) match {
+        case true => stream.println("" + rhs + extra)
+        case false => if(s.possibleToInline || s.noReference) {
+            stream.print("("+rhs+")")
+          } else {
+            stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
+          }
+      }
+      case _ => stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
+    }
+  }
+
+  def getSymTypeStr(s:Sym[_]):String = {
+    val typeStr:String = remap(s.tp)
+    var theType = ""
+    if((typeStr.contains("Any")) || (typeStr.contains("$")) || (typeStr.contains("@"))) {
+      Def.unapply(s) match {
+        case Some(Reflect(K3Slice(name,part,partKey),_,_)) => {
+          val elemKeyType = Def.unapply(name) match {
+            case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => {
+              theType = (if(K3MapCommons.isInliningHigherThanNone) ":scala.collection.mutable.ArrayBuffer["+K3MapCommons.entryClassName(value,key,indexList)+"]" else ":M3Map["+tup(key map (_.toScala))+","+value.toScala+"]")
+            }
+            case _ => theType = ""
+          }
+        }
+        case _ => theType = ""
+      }
+    } else {
+      theType = ":"+typeStr
+    }
+    theType
   }
 
   // 

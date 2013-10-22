@@ -15,9 +15,9 @@ object K3MapCommons {
   final val InliningLevelNone = 0
 
   def isInliningInSpecializedLevel = (InliningLevel == InliningLevelSpecialized)
+  def isInliningHigherThanNone = (InliningLevel > InliningLevelNone)
 
   def InliningLevel = ddbt.Compiler.inl
-
   /**
    * The default initial capacity - MUST be a power of two.
    */
@@ -106,7 +106,7 @@ object K3MapCommons {
         "    var ptr"+idxMapName+":"+idxMapName+" = null\n" +
         "    var ptr"+idxMapName+"_idx:Int = -1\n"
       }.mkString +
-      "    def hashVal: Int = hs\n" +
+      "    def hashVal:Int = hs\n" +
       "    def nextEntry: IEntry = next\n" +
       "    def setNextEntry(n:IEntry): Unit = next = n.asInstanceOf["+name+"]\n" +
     //"    val hs: Int = " + hashFunction(key.zipWithIndex.map{case (k,i) => "_"+(i+1)}, "    ") + "\n" +
@@ -143,8 +143,8 @@ object K3MapCommons {
     "  class " + name + " (val hs:Int, " +
       indexLoc.map(i => "val _"+(i+1)+":"+key(i).toScala).mkString(", ") + ", var next:" + name + "=null) extends IEntry {\n" +
     "    var v: scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"]("+DEFAULT_INITIAL_CAPACITY_INDEX_INNER+");\n" +
-    "    def hashVal: Int = hs\n" +
-    "    def nextEntry: IEntry = next\n" +
+    "    def hashVal:Int = hs\n" +
+    "    def nextEntry:IEntry = next\n" +
     "    def setNextEntry(n:IEntry): Unit = next = n.asInstanceOf["+name+"]\n" +
     //"    var v__sz: Int = 0;\n" +
     //"    var v__ts: Int = "+INITIAL_THRESHOLD_INDEX_INNER+";\n" +
@@ -257,7 +257,7 @@ object K3MapCommons {
    * @param name is the name of variable
    * @param value is the type of variable
    */
-  def createK3VarDefinition(name: String, value:Type) = "var "+name+" = "+zeroValue(value)
+  def createK3VarDefinition(name: String, value:Type) = "var "+name+":"+value.toScala+" = "+zeroValue(value)
 
   /**
    * Generates K3Map definition statements.
@@ -560,7 +560,7 @@ object K3MapCommons {
     val newCapacity = nodeName+"_nc"
 
     "  if(" + genMapSize(map) + " >= " + genMapThreshold(map) + ") {\n" +
-    "    val "+newCapacity+" = ("+map+".length << 1)\n" +
+    "    val "+newCapacity+":Int = ("+map+".length << 1)\n" +
     "    "+map+" = __transferHashMap["+entryClsName+"]("+map+",new Array["+entryClsName+"]("+newCapacity+"))\n" +
     "    "+genMapThreshold(map)+" = (" + newCapacity + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
     "  }"
@@ -668,7 +668,7 @@ object K3MapCommons {
     val newCapacity = nodeName+"_nic"
 
     "  if(" + genIndexMapSize(parentMap, indexSeq) + " >= " + genIndexMapThreshold(parentMap, indexSeq) + ") {\n" +
-    "    val "+newCapacity+" = ("+map+".length << 1)\n" +
+    "    val "+newCapacity+":Int = ("+map+".length << 1)\n" +
     "    "+map+" = __transferHashMap["+entryClsName+"]("+map+",new Array["+entryClsName+"]("+newCapacity+"))\n" +
     "    "+genIndexMapThreshold(parentMap, indexSeq)+" = (" + newCapacity + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
     "  }"
@@ -706,7 +706,7 @@ object K3MapCommons {
 
     "//K3DELNAMED\n" +
     prefixKey +
-    "  val "+hash+" = " + K3MapCommons.hashFunction(keyNames) + "\n" +
+    "  val "+hash+":Int = " + K3MapCommons.hashFunction(keyNames) + "\n" +
     "  val "+i+":Int = "+K3MapCommons.indexForFunction(hash, map+".length")+"\n" +
     "  var "+prev+":" + entryClsName + " = " + map + "(" + i + ")\n" +
     "  var "+e+":" + entryClsName + " = " + prev + "\n" +
@@ -750,7 +750,7 @@ object K3MapCommons {
     "{\n" +
     "  //K3GET\n" +
     prefixKey +
-    "  val "+hash+" =" + ind(K3MapCommons.hashFunction(keyNames)) + "\n" +
+    "  val "+hash+":Int =" + ind(K3MapCommons.hashFunction(keyNames)) + "\n" +
     "  var "+e+":" + entryClsName + " = " + map + "(" + K3MapCommons.indexForFunction(hash, map+".length") + ")\n" +
     "  var "+found+":Boolean = false\n" +
     "  var "+result+":"+valueTypeAndZeroVal+"\n" +
