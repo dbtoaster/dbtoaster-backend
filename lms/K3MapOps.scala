@@ -350,10 +350,10 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
       "//K3ADDNAMED\n" +
       prefixValue +
       (if(isConstant) {
-        genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true)
+        genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true, K3MapCommons.zeroValue(value))
       } else {
         "if("+valueName+" != "+K3MapCommons.zeroValue(value)+") {\n" +
-        ind(genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true))+"\n" +
+        ind(genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true, K3MapCommons.zeroValue(value)))+"\n" +
         "}"
       })
     }
@@ -372,7 +372,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     "if("+valueName+" == "+K3MapCommons.zeroValue(value)+") {\n" +
     genDelNamedMap(nodeName,map,key,value,indexList,(0 until inputKeySymbols.size).toList,inputKeySymbols)+ "\n" +
     "} else {\n" +
-    ind(genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true))+"\n" +
+    ind(genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true, K3MapCommons.zeroValue(value)))+"\n" +
     "}"
   }
 
@@ -407,14 +407,14 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     genSetDetailedTempMap(prefixValue,nodeName,map,entryClsName,keyIndicesInEntery,inputKeySymbols,valueName,insideBlock, operation, indexList,indexEntryClsName)
   }
 
-  def genSetDetailedTempMap(prefixValue:String, nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]], valueName:String, insideBlock: Boolean=true, operation: String="=", indexList: List[List[Int]] = List[List[Int]](), indexEntryClsName: List[String]=List[String](), fromNamedMap: Boolean=false) : String = {
+  def genSetDetailedTempMap(prefixValue:String, nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]], valueName:String, insideBlock: Boolean=true, operation: String="=", indexList: List[List[Int]] = List[List[Int]](), indexEntryClsName: List[String]=List[String](), fromNamedMap: Boolean=false, zeroValue: String = "") : String = {
     if(K3MapCommons.isInliningInSpecializedLevel) {
       prefixValue + entryClsName + "Ops."+(if (fromNamedMap) "putRemoveOnZero" else "put")+"("+ (if(operation == "=") "false" else "true") + "," + map + ", " + map + "__md, " + (inputKeySymbols map quote).mkString(", ") + ", " + valueName + indexList.map(idx => ", "+K3MapCommons.indexMapName(map,idx)).mkString + ")\n" +
       K3MapCommons.genIncreaseMapAndIndicesCapacity(nodeName,map,entryClsName,indexList,indexEntryClsName)
     } else {
       val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
       val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
-      K3MapCommons.genGenericSetTempMap(prefixValue, prefixKey, nodeName, map, entryClsName, keyIndicesInEntery, keyNames, valueName, insideBlock, operation, indexList, indexEntryClsName)
+      K3MapCommons.genGenericSetTempMap(prefixValue, prefixKey, nodeName, map, entryClsName, keyIndicesInEntery, keyNames, valueName, insideBlock, operation, indexList, indexEntryClsName, fromNamedMap, zeroValue)
     }
   }
 
