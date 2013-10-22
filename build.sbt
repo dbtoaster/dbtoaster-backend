@@ -50,17 +50,18 @@ Seq(
 // --------- Custom tasks
 addCommandAlias("toast", ";run-main ddbt.Compiler ")
 
-addCommandAlias("unit", ";run-main ddbt.unit.UnitTest ")
+addCommandAlias("unit", ";run-main ddbt.UnitTest ")
 
-addCommandAlias("queries", ";run-main ddbt.unit.UnitTest -dd -qskip;test-only ddbt.test.gen.*")
+addCommandAlias("queries", ";run-main ddbt.UnitTest -dd -qskip;test-only ddbt.test.gen.*")
 
-addCommandAlias("queries-lms", ";run-main ddbt.unit.UnitTest -dd -qskip -m lms;test-only ddbt.test.gen.*")
+addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dd -qskip -m lms;test-only ddbt.test.gen.*")
 
-addCommandAlias("queries-akka", ";run-main ddbt.unit.UnitTest -dd -qskip -m akka;test-only ddbt.test.gen.*")
+//addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -qskip -m akka;test-only ddbt.test.gen.*")
+addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -qskip -m akka -qx employee/query(61|63a|64a|65a) -qx mddb/.* -qx tpch/query(2|18|21) -qx zeus/(11564068|48183500|52548748|96434723) -qx (inequality_selfjoin|invalid_schema_fn|r_agtb|r_multinest|rs_column_mapping_3|rs_ineqwithnestedagg|ss_math|pricespread);test-only ddbt.test.gen.*")
 
-addCommandAlias("bench", ";test:run-main ddbt.unit.UnitTest -qskip -csv bench.csv -m ") // usage: sbt 'bench lms'
+addCommandAlias("bench", ";test:run-main ddbt.UnitTest -qskip -csv bench.csv -m ") // usage: sbt 'bench lms'
 
-addCommandAlias("bench-all", ";run-main ddbt.unit.UnitTest -qskip -m scala -m lms -m lscala -m llms -csv bench-all.csv -x -xvm")
+addCommandAlias("bench-all", ";run-main ddbt.UnitTest -qskip -m scala -m lms -m lscala -m llms -csv bench-all.csv -x -xvm")
 
 
 TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>

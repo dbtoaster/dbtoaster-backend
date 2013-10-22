@@ -1,12 +1,11 @@
-package ddbt.unit
-import ddbt.{Utils,Compiler}
+package ddbt
 import java.io._
 
 /**
  * Benchmarking and correctness verification generator. Instruments the
  * compiler such that options can be shared. To get more information:
  *
- * Usage: sbt 'run-main ddbt.unit.Unit -help'
+ * Usage: sbt 'run-main ddbt.UnitTest -help'
  *
  * @author TCK
  */

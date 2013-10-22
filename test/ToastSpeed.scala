@@ -5,7 +5,7 @@ import org.scalatest._
 object ToastSpeed {
   import ddbt.Utils._
   import ddbt.Compiler.toast
-  import ddbt.unit.UnitTest.sqlFiles
+  import ddbt.UnitTest.sqlFiles
 
   def main(args:Array[String]) {
     sqlFiles().foreach { file =>

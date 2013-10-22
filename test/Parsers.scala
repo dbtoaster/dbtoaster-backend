@@ -13,7 +13,7 @@ class ParserSpec extends FunSpec with ParallelTestExecution {
   import ddbt.Utils._
   import ddbt.frontend._
   import ddbt.Compiler.toast
-  import ddbt.unit.UnitTest.sqlFiles
+  import ddbt.UnitTest.sqlFiles
 
 
   sqlFiles(true).foreach { file =>

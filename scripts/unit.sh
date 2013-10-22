@@ -115,7 +115,7 @@ EOF
     | perl -pe 's/\[error\](.*)/<b style="color:red">\1<\/b>/g; s/\[success\](.*)/<b style="color:green">\1<\/b>/g; s/\n/<br>\n/g;' \
     | perl -pe 's/^-*<br>\n$//g; s/^(Akka|Scala|LMS|.*latest commit:)<br>$/<br><h1>\1<\/h1>/g;'
   echo '</body></html>'
-  ) | sendmail "thierry.coppey@epfl.ch,andres.notzli@epfl.ch,mohammad.dashti@epfl.ch";
+  ) | sendmail "thierry.coppey@epfl.ch,andres.notzli@epfl.ch,mohammad.dashti@epfl.ch,christoph.koch@epfl.ch";
 }
 
 printf "Setup..."; do_setup; echo ' done.';

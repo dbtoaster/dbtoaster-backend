@@ -14,9 +14,9 @@ package ddbt.test
 object AllQueries {
   import ddbt.Utils._
   import ddbt.Compiler
-  import ddbt.unit.UnitTest
   import ddbt.Compiler.toast
-  import ddbt.unit.UnitTest.{tmp,all,genQuery,Printer,QueryTest}
+  import ddbt.UnitTest
+  import ddbt.UnitTest.{tmp,all,genQuery,Printer,QueryTest}
   UnitTest.tmp=makeTempDir("tmp",false)
 
   var verbose = false

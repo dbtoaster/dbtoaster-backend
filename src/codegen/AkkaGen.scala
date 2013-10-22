@@ -38,18 +38,16 @@ Issues to solve:
 - at each foreach point, possibly transform in a remote continuation if map is not local
 - move lazy map slicing into the TypeChecking ?
 - move test AST into its own ddbt.ast package ?
-
-Failing   : rs_columnmapping_1, rs_columnmapping_2, tpch/query(9|10)
-No compile: -qx employee/query(61|63a|64a|65a) -qx mddb/* -qx tpch/query(2|18|21) -qx zeus/(11564068|48183500|52548748|96434723)
-            -qx (inequality_selfjoin|invalid_schema_fn|r_agtb|r_multinest|rs_columnmapping3|rs_ineqwithnestedagg|ss_math|pricespread)
-
 XXX: problem: the same map can be accessed locally in a foreach but again acessed with another key which might not be on the host (Runiquecountsbya) 
 XXX: warning, some test are incorrect but get correct if they are run first (Rseqineq, ...)
 ;check -q.*ltalldynamic -dd -makka;test-only ddbt.test.gen.*
-
 XXX: for union, instead of shipping both maps to 3rd party, why not ship one to another and make union there ? (would increase locality)
 XXX: for union, instead of shipping both maps to 3rd party, why not ship one to another and make union there ? (would increase locality)
 */
+
+// Failing   : rs_columnmapping_1, rs_columnmapping_2, tpch/query(9|10)
+// No compile: -qx employee/query(61|63a|64a|65a) -qx mddb/* -qx tpch/query(2|18|21) -qx zeus/(11564068|48183500|52548748|96434723)
+//             -qx (inequality_selfjoin|invalid_schema_fn|r_agtb|r_multinest|rs_columnmapping3|rs_ineqwithnestedagg|ss_math|pricespread)
 
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._

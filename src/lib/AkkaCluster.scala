@@ -78,16 +78,15 @@ class Streamer(master:ActorRef,workers:Int) extends Actor {
 
   private val members = scala.collection.mutable.Set[Member]()
   def register(m:Member) {
-    members += m; println("Member registered : "+m.address)
+    members += m; println("New member: "+m.address)
     if (members.size==workers+1) {
       println("Ready to begin")
-      implicit val timeout = akka.util.Timeout(1000*10) // 10 seconds
-      val workers = members.map{ m=> scala.concurrent.Await.result(context.actorSelection(RootActorPath(m.address)/"user"/"node").resolveOne(),timeout.duration) }.filter(a=>a!=master)
+      implicit val timeout = akka.util.Timeout(1000*5) // 5 seconds
+      val workers = members.map{ m=> println("Lookup at "+m.address); val a=scala.concurrent.Await.result(context.actorSelection(RootActorPath(m.address)/"user"/"node").resolveOne(),timeout.duration); println("Got1"); a }.filter(a=>a!=master)
       println("Master : "+master)
       println("Workers: "+workers.mkString(", "))
 
       import WorkerActor.{Members,MapRef}
-      //import ddbt.lib.Helper._
       val nmaps = 5;
       val ms = (0 until nmaps).map { MapRef(_) }.toList
       master ! Members(master,workers.map{ w => (w,ms) }.toArray)
@@ -99,7 +98,7 @@ class Streamer(master:ActorRef,workers:Int) extends Actor {
   }
 
   def receive = {
-    case state: CurrentClusterState => state.members.filter(_.status == MemberStatus.Up) foreach register
+    //case state: CurrentClusterState => state.members.filter(_.status == MemberStatus.Up) foreach register
     case MemberUp(m) => register(m)
     case UnreachableMember(member) => println("Member detected as unreachable: "+member)
     case MemberRemoved(member, previousStatus) => println("Member "+member.address+" is removed after "+previousStatus)
