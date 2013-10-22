@@ -21,9 +21,8 @@ object Utils {
   //val scalaVersion = util.Properties.versionString.replaceAll("^.* ([0-9]+\\.[0-9]+).*$","$1")
 
   // Paths related to DBToaster
-  val path_base = "dbtoaster/compiler/alpha5"
-  val path_repo = prop("base_repo",null)
-  val path_bin  = if (path_repo!=null) path_repo+"/"+path_base+"/bin/dbtoaster_release" else prop("dbtoaster","bin/dbtoaster_release")
+  val path_repo = { val r=prop("base_repo",null); if (r==null) null else r+"/dbtoaster/compiler/alpha5" }
+  val path_bin  = if (path_repo!=null) path_repo+"/bin/dbtoaster_release" else prop("dbtoaster","bin/dbtoaster_release")
   private lazy val (path_cp,path_jvm) = {
     val deps = System.getProperty("sbt.classpath",System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":")
     val cp = deps /**/ .filter(_.matches("(.*)/(\\.(sbt|ivy2)|target)/.*")).filter(_.indexOf("virtualized")== -1) /**/ .mkString(":")
@@ -73,7 +72,7 @@ object Utils {
     val p = Runtime.getRuntime.exec(cmd,env,dir)
     val out=gobble(p.getInputStream); val err=gobble(p.getErrorStream); p.waitFor
     val o=out.toString; val e=err.toString
-    if (e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); scala.Console.out.print(o); scala.Console.err.print(e); if (fatal) System.exit(1) }
+    if (fatal && e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); scala.Console.out.print(o); scala.Console.err.print(e); System.exit(1) }
     (o,e)
   }
 
@@ -118,14 +117,14 @@ object Utils {
   def freshClear() = counter.clear
 
   // Create a temporary directory that will be removed at shutdown
-  def makeTempDir(path:String=null):File = {
+  def makeTempDir(path:String=null,auto_delete:Boolean=true):File = {
     val tmp = if (path!=null) new File(path) else new File("target/tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
     def del(f:File) {
       if (f.isDirectory()) f.listFiles().foreach{c=>del(c)}
       if (!f.delete()) sys.error("Failed to delete file: " + f)
     }
     if (tmp.exists) del(tmp); tmp.mkdirs // have a fresh folder
-    Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = del(tmp) });
+    if (auto_delete) Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = del(tmp) });
     tmp
   }
 

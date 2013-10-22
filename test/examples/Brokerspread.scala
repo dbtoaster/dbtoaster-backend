@@ -9,7 +9,7 @@ object BrokerSpread {
   import ddbt.Utils._
   import scala.language.implicitConversions
   implicit def dateConv(d:Long):Date = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();
-  private val sql = read(path_repo+"/"+path_base+"/test/queries/finance/brokerspread.sql")
+  private val sql = read(path_repo+"/test/queries/finance/brokerspread.sql")
 
   def ref(size:String="standard"):Map[Long,Double] = {
     if (size=="big") return Map[Long,Double]( // BSP, runtime: 9.88339 (Legacy Scala's XML output)
@@ -21,9 +21,9 @@ object BrokerSpread {
     )
     if (size=="huge") return Map[Long,Double](
     )
-    val (b,f) = (new java.io.File(path_repo+"/"+path_base),"tmp.sql"); write(b,f,sql.replaceAll("/standard/","/"+size+"/"))
+    val (b,f) = (new java.io.File(path_repo),"tmp.sql"); write(b,f,sql.replaceAll("/standard/","/"+size+"/"))
     val r = exec(Array("bin/dbtoaster_release",f).toArray,b)._1.split("\n")
-    new java.io.File(path_repo+"/"+path_base+"/"+f).delete;
+    new java.io.File(path_repo+"/"+f).delete;
     val m=new java.util.HashMap[Long,Double]()
     val p = java.util.regex.Pattern.compile(".*\\[([0-9]+)\\]->([\\-0-9\\.]+);.*")
     r.foreach { l => val ma=p.matcher(l); if (ma.matches) m.put(ma.group(1).toLong,ma.group(2).toDouble) }

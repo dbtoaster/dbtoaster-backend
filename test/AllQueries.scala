@@ -11,14 +11,13 @@ package ddbt.test
  *    -x        : attempt to run after compilation
  *
  */
-
 object AllQueries {
   import ddbt.Utils._
-  import ddbt.UnitTest.{toast,load,filtered}
-  import ddbt.frontend.{M3Parser,TypeCheck}
-  import ddbt.codegen._
-  import ddbt.test.Benchmark.{tmp,scalac,scalax}
-  val rbase = new java.io.File(path_repo+"/"+path_base)
+  import ddbt.Compiler
+  import ddbt.unit.UnitTest
+  import ddbt.Compiler.toast
+  import ddbt.unit.UnitTest.{tmp,all,genQuery,Printer,QueryTest}
+  UnitTest.tmp=makeTempDir("tmp",false)
 
   var verbose = false
   var zeus = false
@@ -37,66 +36,49 @@ object AllQueries {
       }
       i+=1
     }
-
-    // 89938332 front-end: translated to different type (int) from its expected type (float)
-    // 36688054 front-end: translated to different type (int) from its expected type (float) 
-    // 18817471 front-end: generate syntactically correct M3, but not semantically correct: unbound variable
     if (zeus) {
       if (seed!=0) zeus(seed)
       else { var i=0; while(i<num) { i=i+1; zeus() } }
     } else moreTests()
   }
 
-  def genTest(query:String,toast_f:()=>String,name:String="Query") = {
-    def info(msg:String) = scala.Console.out.println(query+": "+msg)
-    def err(msg:String) = scala.Console.err.println(query+": "+msg)
-    def dump(out:String,err:String) = if (verbose) { if (out!="") println(out); if (err!="") scala.Console.err.println(err) }
-
-    val (t0,(m3,o0,e0)) = ns(()=>captureOut(toast_f)); dump(o0,e0)
-    if (m3=="" || m3==null) err("front-end failed")
-    else try {
-      import ddbt.ast.M3
-      def gen(m3:M3.System):String = { val g=new ScalaGen(name); g.helper(m3,"ddbt.generated")+g(m3) }
-      val (t1,sc) = ns(()=> (M3Parser andThen TypeCheck andThen gen _)(m3)); write(tmp,name+".scala",sc)
-      val (t2,(u2,o2,e2)) = ns(()=>captureOut(()=>scalac(name))); dump(o2,e2)
-      if (e2!="") err("scalac: "+e2)
-      else {
-        val msg="toM3:"+time(t0)+", compile:"+time(t1)+", scalac:"+time(t2)
-        if (!run) info(msg)
-        else { val (t3,out) = ns(()=>scalax("ddbt.generated."+name)); info(msg+", run:"+time(t3)) }
-      }
-    } catch { case t:Throwable => err("compiler: "+t.getMessage) }
-  }
-
-  def zeus(s:Long=0) {
-    val sql = exec("scripts/zeus.rb"+(if (s!=0) " -s "+s else ""))._1.replaceAll("@@DATA@@",path_repo+"/dbtoaster/experiments/data/simple/tiny")
-    val ma = java.util.regex.Pattern.compile(".*seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
-    val seed = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
-    val sql_file = tmp.getPath+"/zeus.sql"; write(tmp,"zeus.sql",sql)
-    println("Seed = "+seed)
-    genTest("Zeus"+seed,()=>exec(Array(path_bin,"-l","m3",sql_file))._1,"Zeus")
+  def genTest(q:String,repo:Boolean) {
+    println("-------------- "+q)
+    val m3 = try {
+      val m3 = if (repo) toast("m3",q)._2 else { ddbt.Compiler.in=List(q); toast("m3")._2 }
+      if (verbose) println(m3)
+      UnitTest.benchmark=run; genQuery(QueryTest(q),new Printer("Scala"),m3,"scala",false)
+    } catch { case t:Throwable => t.setStackTrace(t.getStackTrace.take(10)); t.printStackTrace(System.out); null}
   }
 
   /* Lookup for all SQL files in dbt repository tests and try to compile it */
   def moreTests() {
-    val all = try { exec(Array("find","test","-type","f","-and","-name","*.sql","-and","-not","-name","schemas*",
+    val sql = try { exec(Array("find","test","-type","f","-and","-name","*.sql","-and","-not","-name","schemas*",
                       "-and","-not","-path","*/.*",
                       "-and","-not","-path","*/postgres/*",
                       "-and","-not","-path","*/agendas/*"
-                      ),rbase)._1.split("\n") }
+                      ),new java.io.File(path_repo))._1.split("\n") }
               catch { case e:Exception => println("Repository not configured"); Array[String]() }
-    val tested = filtered.map(f=>load(f).sql).toSet
-
     val excl = List(
+      "mddb/query2_inner_simple","mddb/query2_simplified", // long-ish
       "mddb/query3",
       "mddb/query2_full" // very slow
     )
+    val untested = sql.filter(s=>all.forall(_.sql!=s)).filter(x=>excl.forall(!x.contains(_))).sorted
+    untested.foreach(q=>genTest(q,true))
+  }
 
-    val untested = all.filter(!tested.contains(_)).filter(x=>excl.forall(!x.contains(_))).sorted
-    untested.foreach { t => genTest(t,()=>toast(t,List("-l","M3")),"NewQuery") }
+  def zeus(s:Long=0) {
+    val sql = exec("scripts/zeus.rb"+(if (s!=0) " -s "+s else ""))._1.replaceAll("@@DATA@@",path_repo+"/../../experiments/data/simple/tiny")
+    val ma = java.util.regex.Pattern.compile(".*seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
+    val seed = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
+    write(tmp,"zeus"+seed+".sql",sql); genTest(tmp.getPath+"/zeus"+seed+".sql",false)
   }
 }
 
+// 89938332 front-end: translated to different type (int) from its expected type (float)
+// 36688054 front-end: translated to different type (int) from its expected type (float)
+// 18817471 front-end: generate syntactically correct M3, but not semantically correct: unbound variable
 /*
 POSSIBLE FUTURE TEST CASES:
 

@@ -29,11 +29,12 @@ object Compiler {
   var exec_args = List[String]() // arguments passed for execution
   
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1); null }
-  def toast(l:String,args:List[String]=null):(Long,String) = {
-    val opts = (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f))
-    val (dir,bin) = if (args!=null) (new File(Utils.path_repo+"/"+Utils.path_base),"bin/dbtoaster_release") else (null,Utils.path_bin)
-    val (t0:Long,m3:String) = Utils.ns(()=>Utils.exec((bin :: optm3 :: "-l" :: l :: opts ::: (if (args!=null) args else in)).toArray,dir)._1)
-    (t0, if (args!=null) m3.replaceAll("../../experiments/data",Utils.path_repo+"/dbtoaster/experiments/data") else m3)
+  def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
+    val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f)) ::: (if (!opts.isEmpty) opts.toList else in)
+    val repo = if (Utils.path_repo!=null && !opts.isEmpty) new File(Utils.path_repo) else null
+    val (t0,(m3,err)) = Utils.ns(()=>Utils.exec(((if (repo!=null) "bin/dbtoaster_release" else Utils.path_bin) :: os).toArray,repo,fatal=false))
+    if (err.trim!="") { val e=new Exception("dbtoaster "+os.mkString(" ")+" failed because:\n"+err); e.setStackTrace(Array()); throw e }
+    (t0, if (repo!=null) m3.replaceAll("../../experiments/data",repo.getParentFile.getParent+"/experiments/data") else m3)
   }
 
   def parseArgs(args:Array[String]) {
@@ -137,17 +138,19 @@ object Compiler {
         t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
         val (o,e) = Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
         if (e!="") error(e); if (o!="") println(o);
-      case _ => error("Execution not supported",true)
+      case _ => error("Execution not supported for "+lang,true)
     }
     (t1-t0,t2)
   }
 
   def main(args: Array[String]) {
     parseArgs(args)
-    lang match {
-      case "calc"|"m3" => output(toast(lang)._2)
-      case _ if in.forall(_.endsWith(".m3")) => compile(in.map(Utils.read(_)).mkString("\n"))
-      case _ => compile(toast("m3")._2)
-    }
+    try {
+      lang match {
+        case "calc"|"m3" => output(toast(lang)._2)
+        case _ if in.forall(_.endsWith(".m3")) => compile(in.map(Utils.read(_)).mkString("\n"))
+        case _ => compile(toast("m3")._2)
+      }
+    } catch { case t:Throwable => error(t.getMessage,true) }
   }
 }
