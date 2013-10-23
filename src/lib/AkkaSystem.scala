@@ -42,8 +42,7 @@ import akka.actor.{Actor,ActorRef}
  
 /*
  * Current Issues: 
- * - K3Vars need to be put on a single host/stored on all hosts, acks need to be corrected
- * - Broadcast to all workers within the same host => worker < host < cluster hierarchy
+ * - Broadcast to all workers within the same host => worker < host < cluster hierarchy?
  * - OnSystemReady needs not to go through network and ignore non-local updates
  * - Batching update and lookups (with timeout/explicit end-of-batch?)
  * - Use multiple timestamps and queue updates in front of maps?
