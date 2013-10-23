@@ -5,7 +5,7 @@ import java.util.Date
 object TPCH18Akka {
   import Helper._
   def main(args:Array[String]) {
-    val (t,res) = runLocal[Q18Master,Q18Worker](7,2251,4,streamsTPCH18());
+    val (t,res) = runLocal[Q18Master,Q18Worker](2251,4,streamsTPCH18());
     println(M3Map.toStr(res.head)); println("Time:"+time(t))
   }
 }

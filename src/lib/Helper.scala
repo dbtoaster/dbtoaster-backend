@@ -35,7 +35,7 @@ object Helper {
     try { mux(query,streams,parallel,timeout); } finally { system.shutdown }
   }
 
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](nmaps:Int,port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0,debug:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0,debug:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
     val (system,nodes,workers) = if (debug) {
       val system = actorSys("DDBT")
       (system,Seq[ActorSystem](),(0 until N).map (i=>system.actorOf(Props[W]())))
@@ -47,9 +47,7 @@ object Helper {
     }
     val master = system.actorOf(Props[M]())
     // ---- initial membership
-    import WorkerActor.{Members,MapRef}
-    val ms = (0 until nmaps).map { MapRef(_) }.toList
-    master ! Members(master,workers.map{ w => (w,ms) }.toArray)
+    master ! WorkerActor.Members(master,workers.toArray)
     // ----
     val res = try { mux(master,streams,parallel,timeout) } finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
   }

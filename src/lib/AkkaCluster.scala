@@ -16,12 +16,19 @@ import akka.actor._
  *
  *   -w <host>:<port>     master only: define the worker nodes
  *   -w <host>:<port>:<N>
+ *
+ * Examples:
+ *   scripts/cluster.sh pkg && scripts/cluster.sh
+ *   scripts/cluster.sh pkg && scripts/cluster.sh -cp target/scala-2.10/test-classes -b ddbt.test.examples.AX
+ *   [curently failing]
+ *
  */
 object ClusterApp {
+  import WorkerActor._
   private var system:ActorSystem = null
-  private var nodes:List[(Address,Int)]=Nil // master: workers nodes(+partitons)
+  private var nodes:Array[(Address,Int)] = null // master: workers nodes(+partitons)
   private var parts = 1 // worker: number of local partitions
-  private var base = "ddbt.lib.My"
+  private var base = "ddbt.lib.Test"
   private var loader:Loader = null
 
   import java.net.{URLClassLoader} // Duplicated from compiler utils (but anyway different context)
@@ -48,70 +55,73 @@ object ClusterApp {
     }; i+=1 }
     if (cp!=null) loader=new Loader(cp) else ClusterApp.getClass.getClassLoader
     system = Helper.actorSys(name,my_host,my_port)
-    nodes = hosts.map { case (host,port,num) => (new Address("akka.tcp",name,host,port),num) }
+    nodes = hosts.map { case (host,port,num) => (new Address("akka.tcp",name,host,port),num) }.toArray
     rest.toArray
   }
   
-  private def props(cls:String) = Props(if (loader!=null) loader.loadClass(base+cls) else Class.forName(base+cls))
-  
+  private def cls(name:String) = if (loader!=null) loader.loadClass(base+name) else Class.forName(base+name)
   def main(args:Array[String]) {
     val as=parseArgs(args)
-    if (nodes!=Nil) {
-      try {
-        system.actorOf(props("Master"),name="master") ! Nodes(nodes)
-        println("MasterNode: "+system)
-      } catch { case t:Throwable => system.shutdown; throw t }
-    } else {
-      try {
-        val p=props("Worker"); (0 until parts).foreach { i=>system.actorOf(p,name="worker"+i) }
-        println("WorkerNode: "+system+", "+parts+" workers")
-      } catch { case t:Throwable => system.shutdown; throw t }
-    }
-  }
-  
-  def actors(ctx:ActorContext,ns:Nodes):List[ActorRef] = {
-    implicit val timeout = akka.util.Timeout(1000*5) // 5 seconds
-    ns.nodes.flatMap{ case (n,c) => (0 until c).map { i=>
-      scala.concurrent.Await.result(ctx.actorSelection(RootActorPath(n)/"user"/("worker"+i)).resolveOne,timeout.duration)
-    }}
-  }
-}
+    try {
+      if (nodes!=null && nodes.size>0) {
+        val master = system.actorOf(Props(cls("Master")),name="master")
+        master ! ClusterNodes(nodes)
+        println("MasterNode @ "+system)
 
-case class Nodes(nodes:List[(Address,Int)])
+        // Stream data to the master
+        var dataset="standard"
+        var parallel=false
+        var i=0; val l=args.size; while(i<l) { args(i) match {
+          case "-d" if i<l-1 => i+=1; dataset=args(i)
+          case "-p" => parallel = true
+          case _ =>
+        }; i+=1 }
+
+        try {
+          val cl = cls("$")
+          val fn = cl.getMethod("streams","".getClass)
+          val obj = cl.getField("MODULE$").get(null) 
+          val streams = fn.invoke(obj,dataset).asInstanceOf[Seq[(java.io.InputStream,Adaptor,Split)]]
+          Thread.sleep(1000) // make sure all workers are resolved
+          Helper.mux(master,streams,parallel)
+        } catch { case t:Throwable => System.err.println("Companion object "+base+".streams() not found") }
+      } else {
+        val p=Props(cls("Worker")); (0 until parts).foreach { i=>system.actorOf(p,name="worker"+i) }
+        println("WorkerNode @ "+system+" with "+parts+" workers")
+      }
+    } catch { case t:Throwable => system.shutdown; throw t }
+  }  
+}
 
 // ------------------------------------------------------
 // Cluster testing
-class MyMaster() extends Actor {
-  var ws:List[ActorRef]=Nil
+//object Test { def streams(ds:String) = Helper.streamsFinance(ds) }
+class TestMaster() extends Actor {
+  import WorkerActor._
+  var ws:Array[ActorRef]=null
   var ctr=0
   println("Master ready: "+self)
   def receive = {
-    case ns:Nodes => ws=ClusterApp.actors(context,ns); ws.foreach( _ ! "Ping" )
-    case "Pong" => println("Got pong from "+sender); ctr=ctr+1
-      if (ctr==ws.size) { ws.foreach( _ ! PoisonPill ); Thread.sleep(500); context.system.shutdown }
+    case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(5000)
+      ws=nodes.flatMap{ case (n,c) => (0 until c).map { i=>
+        scala.concurrent.Await.result(context.actorSelection(akka.actor.RootActorPath(n)/"user"/("worker"+i)).resolveOne,timeout.duration)
+      }}; ws.foreach( _ ! "Ping" )
+    case "Pong" => println("Got pong from "+sender); ctr=ctr+1; if (ctr==ws.size) { ws.foreach( _ ! PoisonPill ); Thread.sleep(500); context.system.shutdown }
   }
   override def postStop() = context.system.shutdown
 }
-class MyWorker() extends Actor {
+class TestWorker() extends Actor {
   println("Worker ready: "+self)
-  def receive = {
-    case "Ping" => println("Got ping"); sender ! "Pong"
-  }
+  def receive = { case "Ping" => println("Got ping"); sender ! "Pong" }
   override def postStop() = context.system.shutdown
 }
 // ------------------------------------------------------
-
-// Dumb tester
-/*
-case class Ask(nodes:List[Address])
-*/
 
 /*
 import akka.cluster.Cluster
 import akka.cluster.ClusterEvent._
 import akka.cluster.MemberStatus
 import akka.cluster.Member
-
 
 object ClusterApp {
   var master=false // if this node is the master

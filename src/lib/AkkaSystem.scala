@@ -1,7 +1,7 @@
 package ddbt.lib
 
 import scala.reflect.ClassTag
-import akka.actor.{Actor,ActorRef}
+import akka.actor.{Actor,ActorRef,Address}
 
 /**
  * Model: fully asynchronous nodes. To provide a sequential-like model, the
@@ -58,14 +58,10 @@ object WorkerActor {
   type NodeRef = Short;  def NodeRef(i:Int):NodeRef = i.toShort
   
   // Internal messages
-  case class Members(master:ActorRef,workers:Array[(ActorRef,List[MapRef])]) // master can also be a worker for some maps
+  case class Members(master:ActorRef,workers:Array[ActorRef]) // master can also be a worker for some maps
   case class Barrier(en:Boolean) // switch barrier mode
   case class Ack(to:Array[NodeRef],num:Array[Long]) // cumulative ack to master (to, count) : -1 for sent, 1 for recv
-  //case class TellJoin(master:ActorRef) // ->worker: join the master
-  //case object TellLeave // ->worker: ask for departure
-  //case class Join(ms:List[MapRef]) // worker->master: join request
-  //case object Leave // worker->master: departure request
-  //case object Goodbye // worker is allowed to stop responding
+  case class ClusterNodes(nodes:Array[(Address,Int)]) // initialization sent to the master as (hosts, #workers)
 
   // Data messages
   case class Get[K](map:MapRef,key:K) // => Val[K,V]
@@ -93,13 +89,8 @@ abstract class WorkerActor extends Actor {
   // ---- membership management
   private var master : ActorRef = null
   private var workers : Array[ActorRef] = null
-  private val owns = new java.util.HashMap[MapRef,Array[ActorRef]]()
-  @inline private def owner(m:MapRef,k:Any):ActorRef = { val o=owns.get(m); val n=o.length; val h=hash(m,k); o((h%n+n)%n) }
-  @inline private def members(m:ActorRef,ws:Array[(ActorRef,List[MapRef])]) {
-    master=m; workers=ws.map(_._1); owns.clear;
-    ws.flatMap(_._2).toSet.foreach { m:MapRef => owns.put(m,ws.filter(w=>w._2.contains(m)).map(_._1).toArray) }
-    if (master==self) workers.foreach { w => w!Members(m,ws) }
-  }
+  @inline private def owner(m:MapRef,k:Any):ActorRef = { val n=workers.length; val h=hash(m,k); workers((h%n+n)%n) }
+  @inline private def members(m:ActorRef,ws:Array[ActorRef]) { master=m; workers=ws; if (master==self) workers.foreach { w => w!Members(m,ws) } }
   // XXX: protected def addWorker(w:ActorRef,ms:List[Maps]) {}
   // XXX: protected def delWorker(w:ActorRef) {}
 
@@ -156,9 +147,8 @@ abstract class WorkerActor extends Actor {
         cont.put(k,c::(if (cs!=null) cs else Nil))
         if (cs==null) { // new request, create all structures and broadcast request to workers owning map m
           params.put(k,(f,args)); params_r.put((f,args),k)
-          val os = owns.get(m)
-          sum.put(k,(os.length,zero,plus))
-          os.foreach{ w=> w!Aggr(k,f,args) } // send
+          sum.put(k,(workers.length,zero,plus))
+          workers.foreach{ w=> w!Aggr(k,f,args) } // send
         }
       }
     }
@@ -209,6 +199,10 @@ abstract class WorkerActor extends Actor {
   protected val fun_collect = FunRef(0,true)
   protected var local_map:Array[M3Map[Any,Any]] = null 
   def receive = {
+    case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(5000) // sent only to master
+      val ws = nodes.flatMap{ case (n,c) => (0 until c).map { i=>
+        scala.concurrent.Await.result(context.actorSelection(akka.actor.RootActorPath(n)/"user"/("worker"+i)).resolveOne,timeout.duration)
+      }}; self ! Members(self,ws.toArray)
     case Members(m,ws) => members(m,ws); local_map=local.asInstanceOf[Array[M3Map[Any,Any]]] // fix initialization order
     case Barrier(en) => bar.set(en) // assert(self!=master)
     case Ack(to,num) => bar.sumAck(to,num) // assert(self==master)
@@ -236,8 +230,8 @@ abstract class WorkerActor extends Actor {
     else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[M3Map[K,V]].set(k,v) else bar.send(o,Set(m,k,v)) }
   }
   // Group operations: broadcast to owners, workers then process locally
-  def clear[P](m:MapRef,p:Int= -1,pk:P=null) = owns(m).foreach { bar.send(_,Clear(m,p,pk)) }
-  def foreach(m:MapRef,f:FunRef,args:Any*) { owns(m).foreach { bar.send(_,Foreach(f,args.toArray)) } }
+  def clear[P](m:MapRef,p:Int= -1,pk:P=null) = workers.foreach { bar.send(_,Clear(m,p,pk)) }
+  def foreach(m:MapRef,f:FunRef,args:Any*) { workers.foreach { bar.send(_,Foreach(f,args.toArray)) } }
   def aggr[R](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,co:R=>Unit)(implicit cR:ClassTag[R]) {
     val (z,p) = if (zero!=null) (zero,((m1:M3Map[Any,Any],m2:M3Map[Any,Any])=>{m2.sum(m1); m1}).asInstanceOf[(Any,Any)=>Any])
     else (M3Map.zero[R](),(cR.toString match {

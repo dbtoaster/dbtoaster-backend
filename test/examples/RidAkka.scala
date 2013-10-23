@@ -15,7 +15,7 @@ class RidSpec extends FunSpec {
   describe("Dataset 'standard'") {
     it("COUNT correct") {
       (0 until 5).foreach{ x=>  
-        val (t,res) = runLocal[RidMaster,RidWorker](3,2251,4,Seq(
+        val (t,res) = runLocal[RidMaster,RidWorker](2251,4,Seq(
           (new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/simple/tiny/r.dat"),new Adaptor.CSV("R","long,long","\\Q,\\E"),Split())
         ))
         def kv(l:List[Any]) = l match { case List(v0:Long,v1:Long,v2:Long) => ((v0,v1),v2) }

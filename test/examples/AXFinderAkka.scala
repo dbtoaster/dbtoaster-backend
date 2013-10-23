@@ -1,11 +1,12 @@
 package ddbt.test.examples
 import ddbt.lib._
 
+object AX { def streams(ds:String) = Helper.streamsFinance() }
 object AXFinderAkka {
   import Helper._
   import WorkerActor._
   def main(args:Array[String]) {
-    val (t,res) = runLocal[AXMaster,AXWorker](5,2251,4,streamsFinance())
+    val (t,res) = runLocal[AXMaster,AXWorker](2251,4,streamsFinance())
     println("Time = "+time(t)); println(M3Map.toStr(res.head))
   }
 }
