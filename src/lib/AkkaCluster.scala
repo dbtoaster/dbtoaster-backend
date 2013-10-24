@@ -21,20 +21,19 @@ import akka.actor._
  *   -d <dataset>         dataset to use (default:standard)
  *   -p                   parallel streams
  *   -samples <num>       number of samples
- *
- *
- * Examples:
- *   scripts/cluster.sh pkg && scripts/cluster.sh
- *   scripts/cluster.sh pkg && scripts/cluster.sh -cp target/scala-2.10/test-classes -b ddbt.test.examples.AX -samples 20
- *
  */
 object ClusterApp {
   import WorkerActor._
   private var system:ActorSystem = null
-  private var nodes:Array[(Address,Int)] = null // master: workers nodes(+partitons)
-  private var parts = 1 // worker: number of local partitions
   private var base = "ddbt.lib.Test"
   private var loader:Loader = null
+  // Worker
+  private var parts = 1 // number of local partitions
+  // Master
+  private var nodes:Array[(Address,Int)] = null // workers nodes(+partitons)
+  private var dataset = "standard"
+  private var parallel = false
+  private var samples = 1
 
   import java.net.{URLClassLoader} // Duplicated from compiler utils (but anyway different context)
   private class Loader(cp:String) extends URLClassLoader(cp.split(":").map(p=>new java.io.File(p).toURI.toURL),null) {
@@ -56,6 +55,9 @@ object ClusterApp {
       case "-n" if i<l-1 => i+=1; name=args(i)
       case "-b" if i<l-1 => i+=1; base=args(i)
       case "-cp" if i<l-1 => i+=1; cp=args(i)
+      case "-d" if i<l-1 => i+=1; dataset=args(i)
+      case "-samples" if i<l-1 => i+=1; samples=math.max(1,args(i).toInt)
+      case "-p" => parallel = true
       case s => rest = rest:+s // invalid arguments are passed further down
     }; i+=1 }
     if (cp!=null) loader=new Loader(cp) else ClusterApp.getClass.getClassLoader
@@ -80,17 +82,7 @@ object ClusterApp {
         } catch { case t:Throwable => throw new Exception("Companion object "+base+".streams() not found") }
 
         // Stream data to the master
-        var dataset="standard"
-        var parallel=false
-        var samples = 1
-        var i=0; val l=args.size; while(i<l) { args(i) match {
-          case "-d" if i<l-1 => i+=1; dataset=args(i)
-          case "-samples" if i<l-1 => i+=1; samples=math.max(1,args(i).toInt)
-          case "-p" => parallel = true
-          case _ =>
-        }; i+=1 }
-
-        i=0; do {
+        var i=0; do {
           Thread.sleep(1000); // make sure all workers are resolved
           val (t,res)=Helper.mux(master,streams(dataset),parallel)
           println("Time: "+Helper.time(t))
@@ -108,14 +100,14 @@ object ClusterApp {
 
 // ------------------------------------------------------
 // Cluster testing
-//object Test { def streams(ds:String) = Helper.streamsFinance(ds) }
+object Test { def streams(s:String) = Seq[(java.io.InputStream,Adaptor,Split)]() }
 class TestMaster() extends Actor {
   import WorkerActor._
   var ws:Array[ActorRef]=null
   var ctr=0
   println("Master ready: "+self)
   def receive = {
-    case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(5000)
+    case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(10000) // 10 secs
       ws=nodes.flatMap{ case (n,c) => (0 until c).map { i=>
         scala.concurrent.Await.result(context.actorSelection(akka.actor.RootActorPath(n)/"user"/("worker"+i)).resolveOne,timeout.duration)
       }}; ws.foreach( _ ! "Ping" )
@@ -128,214 +120,3 @@ class TestWorker() extends Actor {
   def receive = { case "Ping" => println("Got ping"); sender ! "Pong" }
   override def postStop() = context.system.shutdown
 }
-// ------------------------------------------------------
-
-/*
-import akka.cluster.Cluster
-import akka.cluster.ClusterEvent._
-import akka.cluster.MemberStatus
-import akka.cluster.Member
-
-object ClusterApp {
-  var master=false // if this node is the master
-  var workers=0      // number of worker nodes in the cluster
-  var system:ActorSystem=null
-
-  private def read_args(args:Array[String]) { var i=0; val l=args.length
-    var ma_host:String=null; var ma_port=0
-    var my_host:String=null; var my_port=0
-    while(i<l) { args(i) match {
-      case "-m" if i<l-1 => i+=1; val s=args(i).split(":"); ma_host=s(0); ma_port=s(1).toInt
-      case "-h" if i<l-1 => i+=1; val s=args(i).split(":"); my_host=s(0); my_port=s(1).toInt
-      case "-n" if i<l-1 => i+=1; workers=args(i).toInt
-      case "-M" => master=true
-      case _ => // XXX: call the appropriate class
-    }; i+=1 }
-    if (master) { my_host=ma_host; my_port=ma_port }
-    val name = "ClusterSystem"
-    val conf =
-      "akka {\n"+
-      "  loglevel=off\nstdout-loglevel=off\n"+
-      "  log-dead-letters-during-shutdown=off\n"+
-      "  actor.provider=\"akka.cluster.ClusterActorRefProvider\"\n"+
-      "  remote {\n"+
-      "    log-remote-lifecycle-events = off\n"+
-      "    netty.tcp {\n"+
-      (if (my_host!=null) "hostname=\""+my_host+"\"\n" else "")+
-      (if (my_port>0) "port="+my_port+"\n" else "")+
-      "    }\n"+
-      "  }\n"+
-      "  cluster {\n"+
-      "    seed-nodes = [\"akka.tcp://"+name+"@"+ma_host+":"+ma_port+"\"]\n"+
-      "    auto-down = on\n"+
-      "  }\n"+
-      "}\n"
-    system = ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(conf))
-  }
-
-  def main(args:Array[String]) {
-    read_args(args)
-    // println("Master = "+master+" nodes = "+nodes)
-    // Class.forName("com.duke.MyLocaleServiceProvider");
-    // val clusterListener = system.actorOf(Props[SimpleClusterListener], name = "clusterListener")
-    // Cluster(system).subscribe(clusterListener, classOf[ClusterDomainEvent])
-
-    val path="target/scala-2.10/test-classes"
-    val base="ddbt.test.examples.AX"
-
-    val loader=new Loader(path);
-    val c_master=loader.loadClass(base+"Master")
-    val c_worker=loader.loadClass(base+"Worker")
-
-    val actor = system.actorOf(if (master) Props(c_master) else Props(c_worker),"node")
-    println("My actor is ready: "+actor)
-    if (master) system.actorOf(Props(classOf[Streamer],actor,workers))
-  }
-
-  import java.net.{URL,URLClassLoader} // Duplicated from compiler utils (but anyway different context)
-  private class Loader(cp:String) extends URLClassLoader(Array(new java.io.File(cp).toURI.toURL),null) {
-    override def loadClass(name:String, resolve:Boolean) : Class[_] = {
-      try { return super.loadClass(name, resolve); }
-      catch { case e:ClassNotFoundException => Class.forName(name, resolve, ClusterApp.getClass.getClassLoader); }
-    }
-  }
-}
-
-// Acts as the main object
-class Streamer(master:ActorRef,workers:Int) extends Actor {
-  import Helper._
-  val cluster = Cluster(context.system)
-  override def preStart(): Unit = cluster.subscribe(self, classOf[ClusterDomainEvent])
-  override def postStop(): Unit = cluster.unsubscribe(self)
-
-  private val members = scala.collection.mutable.Set[Member]()
-  def register(m:Member) {
-    members += m; println("New member: "+m.address)
-    if (members.size==workers+1) {
-      println("Ready to begin")
-      implicit val timeout = akka.util.Timeout(1000*5) // 5 seconds
-      val workers = members.map{ m=> println("Lookup for "+m.address); val a=scala.concurrent.Await.result(context.actorSelection(RootActorPath(m.address)/"user"/"node").resolveOne(),timeout.duration); println("Got1"); a }.filter(a=>a!=master)
-      println("Master : "+master)
-      println("Workers: "+workers.mkString(", "))
-
-      import WorkerActor.{Members,MapRef}
-      val nmaps = 5;
-      val ms = (0 until nmaps).map { MapRef(_) }.toList
-      master ! Members(master,workers.map{ w => (w,ms) }.toArray)
-      val (t,res) = mux(master,Seq(
-        (new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/finance/tiny/finance.csv"),new Adaptor.OrderBook(brokers=10,deterministic=true,bids="BIDS",asks="ASKS"),Split())
-      ))
-      println("Time = "+time(t)); println(M3Map.toStr(res.head))
-    }
-  }
-
-  def receive = {
-    //case state: CurrentClusterState => state.members.filter(_.status == MemberStatus.Up) foreach register
-    case MemberUp(m) => register(m)
-    case UnreachableMember(member) => println("Member detected as unreachable: "+member)
-    case MemberRemoved(member, previousStatus) => println("Member "+member.address+" is removed after "+previousStatus)
-  }
-}
-
-/*
-object ClusterHelper {
-  def sys(name:String,port:Int=0) = {
-    val conf = """
-akka.loglevel = "OFF"
-akka.stdout-loglevel = "OFF"
-akka.log-dead-letters-during-shutdown=off
-akka {
-  actor.provider = "akka.cluster.ClusterActorRefProvider"
-  remote {
-    log-remote-lifecycle-events = off
-    netty.tcp {
-      hostname = "127.0.0.1"
-      port = """+port+"""
-    }
-  }
-  cluster {
-    seed-nodes = ["akka.tcp://ClusterSystem@127.0.0.1:2551"]
-    auto-down = on
-  }
-}
-"""
-    ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(conf))
-  }
-}
-
-class SimpleClusterListener extends Actor {
-  def receive = {
-    case state: CurrentClusterState => println("Current members: "+state.members.mkString(", "))
-    case MemberUp(member) => println("Member is Up: "+member.address)
-    case UnreachableMember(member) => println("Member detected as unreachable: "+member)
-    case MemberRemoved(member, previousStatus) => println("Member is Removed: "+member.address+" after "+previousStatus)
-    case _: ClusterDomainEvent => // ignore
-  }
-}
- 
-object SimpleClusterApp {
-  def main(args: Array[String]): Unit = {
-    val system = ClusterHelper.sys("ClusterSystem", if (args.nonEmpty) args(0).toInt else 0)
-    val clusterListener = system.actorOf(Props[SimpleClusterListener], name = "clusterListener")
-    Cluster(system).subscribe(clusterListener, classOf[ClusterDomainEvent])
-  }
-}
-
-// run-main sample.cluster.simple.SimpleClusterApp 2551
-// run-main sample.cluster.simple.SimpleClusterApp 2552
-// run-main sample.cluster.simple.SimpleClusterApp
-
-// -----------------------------------------------------------------------------
-
-case class TransformationJob(text: String)
-case class TransformationResult(text: String)
-case class JobFailed(reason: String, job: TransformationJob)
-case object BackendRegistration
-
-class TransformationBackend extends Actor { 
-  val cluster = Cluster(context.system)
-  // subscribe to cluster changes, MemberUp
-  // re-subscribe when restart
-  override def preStart(): Unit = cluster.subscribe(self, classOf[MemberUp])
-  override def postStop(): Unit = cluster.unsubscribe(self)
- 
-  def receive = {
-    case TransformationJob(text) => sender ! TransformationResult(text.toUpperCase)
-    case state: CurrentClusterState =>
-      state.members.filter(_.status == MemberStatus.Up) foreach register
-    case MemberUp(m) => register(m)
-  }
- 
-  def register(member: Member): Unit =
-    if (member.hasRole("frontend"))
-      context.actorSelection(RootActorPath(member.address) / "user" / "frontend") !
-        BackendRegistration
-}
-
-class TransformationFrontend extends Actor {
-  var backends = IndexedSeq.empty[ActorRef]
-  var jobCounter = 0
- 
-  def receive = {
-    case job: TransformationJob if backends.isEmpty =>
-      sender ! JobFailed("Service unavailable, try again later", job)
- 
-    case job: TransformationJob =>
-      jobCounter += 1
-      backends(jobCounter % backends.size) forward job
- 
-    case BackendRegistration if !backends.contains(sender) =>
-      context watch sender
-      backends = backends :+ sender
- 
-    case Terminated(a) => backends = backends.filterNot(_ == a)
-  }
-}
-
-run-main ddbt.cluster.TransformationFrontend 2551
-run-main ddbt.cluster.TransformationBackend 2552
-run-main ddbt.cluster.TransformationBackend
-run-main ddbt.cluster.TransformationBackend
-run-main ddbt.cluster.TransformationFrontend
-*/
-*/

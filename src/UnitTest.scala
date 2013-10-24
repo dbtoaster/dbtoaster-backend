@@ -232,16 +232,18 @@ object UnitTest {
   def sqlFiles(valid:Boolean=true) = { val qs=all.map(q=>q.sql); if (valid) qs.filter(s=> !skip.exists(e=>s.endsWith(e+".sql"))) else qs }
 
   // Helper for displaying information and emitting a CSV file
-  class Printer(name:String) { var tg=Seq[Long](); var tc=Seq[Long](); var tr=""; var ds=0;
+  class Printer(name:String) {
+    var tg=Seq[Long](); var tc=Seq[Long](); var tr=""; var ds=0;
     private def med(ts:Seq[Long]) = if (ts.size==0) 0L else { val s=ts.sorted; val n=ts.size; if (n%2==0) (s(n/2)+s(n/2-1))/2 else ts(n/2) }
-    def gen(t:Long) { println("%-20s: ".format(name+" codegen")+time(t)); tg=tg:+t; }
-    def comp(t:Long) { println("%-20s: ".format(name+" compile")+time(t)); tc=tc:+t; }
+    private def flush { scala.Console.out.flush }
+    def gen(t:Long) { println("%-20s: ".format(name+" codegen")+time(t)); tg=tg:+t; flush }
+    def comp(t:Long) { println("%-20s: ".format(name+" compile")+time(t)); tc=tc:+t; flush }
     def run(set:String,ts:Array[String],n:String) {
-      println("%-20s: %6s".format(name+" "+set,ts(0))+" ["+ts(1)+", "+ts(2)+"] (sec, "+n+" samples)");
+      println("%-20s: %6s".format(name+" "+set,ts(0))+" ["+ts(1)+", "+ts(2)+"] (sec, "+n+" samples)"); flush
       while(ds<datasets.size && set!=datasets(ds)) { tr+=",,,"; ds+=1 }; tr+=ts(0)+","+ts(1)+","+ts(2)+","; ds+=1
     }
     def run(set:String,t_runs:Seq[Long]) { val ts=t_runs.sorted; val(t0,t1,t2)=(med(ts),ts(0),ts(ts.size-1))
-      println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec, "+ts.size+" samples)"); tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
+      println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec, "+ts.size+" samples)"); flush; tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
     }
     def all(q:QueryTest)(f:String=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) tr+=",,," else f(d) }; ds=datasets.size; close }
     def close { tr+=(",,,"*(datasets.size-ds)); var s=time(med(tg),0)+","+time(med(tc),0)+","+tr; if (csv!=null) { csv.print(s); csv.flush } }

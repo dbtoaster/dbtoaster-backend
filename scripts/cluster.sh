@@ -21,11 +21,16 @@ CMD_SBT="/usr/local/bin/sbt"          # SBT path and options (debug mode only)
 # Remotes
 #
 CMD_DIR="/Users/tck/ddbt"; DEBUG=""
-#MASTER="192.168.0.2"; WORKERS="192.168.0.3 192.168.0.2"
-#MASTER="128.179.149.67"; WORKERS="128.179.149.67 128.178.116.160" # icdhcp-1-160.epfl.ch
+MASTER="192.168.0.2"; WORKERS="192.168.0.3 192.168.0.2"
+#MASTER="128.179.150.85"; WORKERS="128.178.116.160 128.179.150.85"
 #
 # End
 #
+# Examples:
+# scripts/cluster.sh pkg && scripts/cluster.sh
+# scripts/cluster.sh pkg && scripts/cluster.sh -cp target/scala-2.10/test-classes -b ddbt.test.examples.AX -samples 20
+
+
 
 cd `dirname $0`; cd ..; base=`pwd`; 
 pkgdir="$base/pkg"
