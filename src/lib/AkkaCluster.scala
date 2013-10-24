@@ -14,13 +14,18 @@ import akka.actor._
  *   -h <host>:<port>     address:port for the local system
  *   -h <host>:<port>:<N> where N is the number of local actors/partitions
  *
+ * Master-only arguments:
  *   -w <host>:<port>     master only: define the worker nodes
  *   -w <host>:<port>:<N>
  *
+ *   -d <dataset>         dataset to use (default:standard)
+ *   -p                   parallel streams
+ *   -samples <num>       number of samples
+ *
+ *
  * Examples:
  *   scripts/cluster.sh pkg && scripts/cluster.sh
- *   scripts/cluster.sh pkg && scripts/cluster.sh -cp target/scala-2.10/test-classes -b ddbt.test.examples.AX
- *   [curently failing]
+ *   scripts/cluster.sh pkg && scripts/cluster.sh -cp target/scala-2.10/test-classes -b ddbt.test.examples.AX -samples 20
  *
  */
 object ClusterApp {
@@ -67,24 +72,32 @@ object ClusterApp {
         val master = system.actorOf(Props(cls("Master")),name="master")
         master ! ClusterNodes(nodes)
         println("MasterNode @ "+system)
+        val streams:String=>Seq[(java.io.InputStream,Adaptor,Split)] = try {
+          val cl = cls("$") // companion object
+          val fn = cl.getMethod("streams","".getClass)
+          val obj = cl.getField("MODULE$").get(null) 
+          (set:String) => fn.invoke(obj,set).asInstanceOf[Seq[(java.io.InputStream,Adaptor,Split)]]
+        } catch { case t:Throwable => throw new Exception("Companion object "+base+".streams() not found") }
 
         // Stream data to the master
         var dataset="standard"
         var parallel=false
+        var samples = 1
         var i=0; val l=args.size; while(i<l) { args(i) match {
           case "-d" if i<l-1 => i+=1; dataset=args(i)
+          case "-samples" if i<l-1 => i+=1; samples=math.max(1,args(i).toInt)
           case "-p" => parallel = true
           case _ =>
         }; i+=1 }
 
-        try {
-          val cl = cls("$")
-          val fn = cl.getMethod("streams","".getClass)
-          val obj = cl.getField("MODULE$").get(null) 
-          val streams = fn.invoke(obj,dataset).asInstanceOf[Seq[(java.io.InputStream,Adaptor,Split)]]
-          Thread.sleep(1000) // make sure all workers are resolved
-          Helper.mux(master,streams,parallel)
-        } catch { case t:Throwable => System.err.println("Companion object "+base+".streams() not found") }
+        i=0; do {
+          Thread.sleep(1000); // make sure all workers are resolved
+          val (t,res)=Helper.mux(master,streams(dataset),parallel)
+          println("Time: "+Helper.time(t))
+          println("Result:\n"+res.mkString("\n\n"))
+          master ! ClusterReset; i+=1;
+        } while(i<samples);
+        master ! ClusterShutdown
       } else {
         val p=Props(cls("Worker")); (0 until parts).foreach { i=>system.actorOf(p,name="worker"+i) }
         println("WorkerNode @ "+system+" with "+parts+" workers")

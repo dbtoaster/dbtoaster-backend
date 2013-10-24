@@ -1,7 +1,14 @@
 package ddbt.test.examples
 import ddbt.lib._
 
-object AX { def streams(ds:String) = Helper.streamsFinance() }
+object AX { 
+  //def streams(ds:String) = Helper.streamsFinance()
+  def streams(d:String) = Seq(
+    (new java.io.FileInputStream("/Documents/EPFL/Data/cornell_db_maybms/dbtoaster/experiments/data/finance/"+d+"/finance.csv"),
+     new Adaptor.OrderBook(brokers=10,deterministic=true,bids="BIDS",asks="ASKS"),Split())
+  )
+}
+
 object AXFinderAkka {
   import Helper._
   import WorkerActor._

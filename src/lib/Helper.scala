@@ -46,9 +46,7 @@ object Helper {
       (system,nodes,workers)
     }
     val master = system.actorOf(Props[M]())
-    // ---- initial membership
-    master ! WorkerActor.Members(master,workers.toArray)
-    // ----
+    master ! WorkerActor.Members(master,workers.toArray) // initial membership
     val res = try { mux(master,streams,parallel,timeout) } finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
   }
 

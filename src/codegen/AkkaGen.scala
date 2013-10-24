@@ -33,11 +33,8 @@ import ddbt.ast._
  
 /*
 Issues to solve:
-- cluster initialization and maps distribution => make workers tell to master they want to join with their maps (all local but null maps)
-- join and leave cluster preparation
-- at each foreach point, possibly transform in a remote continuation if map is not local
 - move lazy map slicing into the TypeChecking ?
-- move test AST into its own ddbt.ast package ?
+- move tests (TestUnit) AST into its own ddbt.ast package ?
 XXX: problem: the same map can be accessed locally in a foreach but again acessed with another key which might not be on the host (Runiquecountsbya) 
 XXX: warning, some test are incorrect but get correct if they are run first (Rseqineq, ...)
 ;check -q.*ltalldynamic -dd -makka;test-only ddbt.test.gen.*
@@ -188,16 +185,15 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val (ads,abs) = fs(aggl.values)
     val local_vars:String = {
       val vs = s.maps.filter(_.keys.size==0); if (vs.size==0) "" else
-      "override def local_wr(m:MapRef,v:Any,add:Boolean) = m match {\n"+ind(vs.map{m=>
-        val add = if (m.tp==TypeDate) m.name+" = new Date("+m.name+".getTime+vv.getTime)" else m.name+" += vv"
-        "case `"+ref(m.name)+"` => val vv=v.asInstanceOf["+m.tp.toScala+"]; if (add) "+add+" else "+m.name+" = vv\n"}.mkString+"case _ =>\n")+"\n}\n"+
+      "override def local_wr(m:MapRef,v:Any,add:Boolean) = m match {\n"+ind(vs.map{m=> val add=if (m.tp==TypeDate) m.name+" = new Date("+m.name+".getTime+vv.getTime)" else m.name+" += vv"
+        "case `"+ref(m.name)+"` => val vv=if (v==null) "+m.tp.zeroScala+" else v.asInstanceOf["+m.tp.toScala+"]; if (add) "+add+" else "+m.name+" = vv\n"}.mkString+"case _ =>\n")+"\n}\n"+
       "override def local_rd(m:MapRef):Any = m match {\n"+ind(vs.map(m=> "case `"+ref(m.name)+"` => "+m.name+"\n").mkString+"case _ => sys.error(\"Var(\"+m+\") not found\")")+"\n}\n"
     }
     freshClear(); ref.clear; aggl.clear; forl.clear; local=Set()
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
     "import WorkerActor._\nimport ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+refs+fds+ads+gc+ // constants
     "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
-    (if (ld0!="") "// tables content preloading\n"+ld0+"\n" else "")+"\n"+
+    (if (ld0!="") "// tables content preloading\noverride def loadTables() {\n"+ind(ld0)+"\n}\nloadTables()\n" else "")+"\n"+
     "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = (f,args.toList) match {\n"+ind(fbs+(if (fbs!="") "\n" else "")+"case _ => co()")+"\n}\n\n"+
     "// remote aggregations\ndef aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {\n"+ind(abs+(if (abs!="") "\n" else "")+"case _ => co(null)")+"\n}")+"\n}\n\n"+
     "class "+cls+"Master extends "+cls+"Worker with MasterActor {\n"+ind(

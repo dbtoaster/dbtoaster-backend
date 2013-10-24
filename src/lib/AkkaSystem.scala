@@ -1,7 +1,7 @@
 package ddbt.lib
 
 import scala.reflect.ClassTag
-import akka.actor.{Actor,ActorRef,Address}
+import akka.actor.{Actor,ActorRef,Address,PoisonPill}
 
 /**
  * Model: fully asynchronous nodes. To provide a sequential-like model, the
@@ -62,6 +62,8 @@ object WorkerActor {
   case class Barrier(en:Boolean) // switch barrier mode
   case class Ack(to:Array[NodeRef],num:Array[Long]) // cumulative ack to master (to, count) : -1 for sent, 1 for recv
   case class ClusterNodes(nodes:Array[(Address,Int)]) // initialization sent to the master as (hosts, #workers)
+  case object ClusterShutdown // tear down all cluster nodes
+  case object ClusterReset // clear all maps and reload tables
 
   // Data messages
   case class Get[K](map:MapRef,key:K) // => Val[K,V]
@@ -85,6 +87,7 @@ abstract class WorkerActor extends Actor {
   def hash(m:MapRef,k:Any) = k.hashCode
   def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) // local foreach
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) // local aggregation
+  def loadTables() {}
 
   // ---- membership management
   private var master : ActorRef = null
@@ -199,13 +202,7 @@ abstract class WorkerActor extends Actor {
   protected val fun_collect = FunRef(0,true)
   protected var local_map:Array[M3Map[Any,Any]] = null 
   def receive = {
-    case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(5000) // sent only to master
-      val ws = nodes.flatMap{ case (n,c) => (0 until c).map { i=>
-        scala.concurrent.Await.result(context.actorSelection(akka.actor.RootActorPath(n)/"user"/("worker"+i)).resolveOne,timeout.duration)
-      }}; self ! Members(self,ws.toArray)
-    case Members(m,ws) => members(m,ws); local_map=local.asInstanceOf[Array[M3Map[Any,Any]]] // fix initialization order
-    case Barrier(en) => bar.set(en) // assert(self!=master)
-    case Ack(to,num) => bar.sumAck(to,num) // assert(self==master)
+    // Data messages
     case Get(m,k) => sender ! Val(m,k,local_map(m).get(k)) // get(var) is handled locally
     case Val(m,k,v) => matcherGet.res(m,k,v)
     case Add(m,k,v) => if (k==null) local_wr(m,v,true) else local_map(m).add(k,v); bar.recv
@@ -215,8 +212,22 @@ abstract class WorkerActor extends Actor {
     case Aggr(id,fun_collect,Array(m:MapRef)) => sender ! AggrPart(id,local(m)) // collect map data
     case Aggr(id,f,as) => val s=sender; aggl(f,as,(r:Any)=>s!AggrPart(id,r))
     case AggrPart(id,res) => matcherAggr.res(id,res)
+    // Management messages
+    case Members(m,ws) => members(m,ws); local_map=local.asInstanceOf[Array[M3Map[Any,Any]]] // fix initialization order issue XXX: lazy val ?
+    case Barrier(en) => bar.set(en) // assert(self!=master)
+    case Ack(to,num) => bar.sumAck(to,num) // assert(self==master)
+    case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(5000) // sent only to master
+      val ws = nodes.flatMap{ case (n,c) => (0 until c).map { i=>
+        scala.concurrent.Await.result(context.actorSelection(akka.actor.RootActorPath(n)/"user"/("worker"+i)).resolveOne,timeout.duration)
+      }}; self ! Members(self,ws.toArray)
+    case ClusterReset => if (self==master) workers.foreach{ _ ! ClusterReset;  }
+      local.zipWithIndex.foreach { case (l,i) => if (l!=null) l.clear() else local_wr(MapRef(i),null,false) }
+      loadTables();
+      // XXX: barrier(?)
+    case ClusterShutdown => workers.foreach{ _ ! PoisonPill }; self ! PoisonPill // assert(self==master)
     case m => println("Not understood: "+m.toString)
   }
+  override def postStop() = context.system.shutdown
 
   // ---- map operations
   // Element operation: if key hashes to local, apply locally, otherwise call remote worker

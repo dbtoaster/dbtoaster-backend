@@ -20,13 +20,9 @@ CMD_SBT="/usr/local/bin/sbt"          # SBT path and options (debug mode only)
 #
 # Remotes
 #
-DEBUG=""
-CMD_DIR="/Users/tck/ddbt"
-#MASTER="192.168.0.2"
-#WORKERS="192.168.0.3 192.168.0.2 192.168.0.3 192.168.0.2"
-# andres / icdhcp-1-160.epfl.ch
-#MASTER="128.179.149.67"
-#WORKERS="128.179.149.67 128.179.149.67 128.178.116.160 128.178.116.160"
+CMD_DIR="/Users/tck/ddbt"; DEBUG=""
+#MASTER="192.168.0.2"; WORKERS="192.168.0.3 192.168.0.2"
+#MASTER="128.179.149.67"; WORKERS="128.179.149.67 128.178.116.160" # icdhcp-1-160.epfl.ch
 #
 # End
 #
@@ -73,8 +69,8 @@ EOF
     sbt compile || exit
     if [ "$DEBUG" ]; then trap "pkill java; exit 0" 0 1 2 3 9 15; fi
     for w in $WORKERS; do $CMD_SSH $CMD_USER@$w "killall java"; done
-    ws=""; i=1
-    for w in $WORKERS; do p="`expr $PORT + $i`"; i=`expr $i + 1`
+    ws=""; i=0
+    for w in $WORKERS; do i=`expr $i + 1`; p="`expr $PORT + $i`"
       ws="$ws -w $w:$p:$PARTS"
       cmd_launch $w -h $w:$p:$PARTS "$@" | sed 's/^/'$i': /g' &
     done

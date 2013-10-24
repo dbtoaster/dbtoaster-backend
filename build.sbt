@@ -20,8 +20,8 @@ Seq(
 libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.1",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.1",
-  "com.typesafe.akka" %% "akka-cluster"   % "2.2.1",
-  "org.scala-lang"     % "scala-actors"   % v,
+  //"com.typesafe.akka" %% "akka-cluster"   % "2.2.1",
+  "org.scala-lang"     % "scala-actors"   % v, // XXX: legacy from previous back-end
   "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.RC2" % "test"
 ))
