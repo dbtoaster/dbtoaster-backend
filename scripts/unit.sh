@@ -104,7 +104,7 @@ Content-type: text/html
 } --></style></head><body>
 EOF
   (
-    echo 'Front-end latest commit:'; cd $REPO; svn info | grep Last | sed 's/^/   /g'; sep;
+    echo 'Front-end latest commit:'; cd $REPO; svn log -r HEAD | grep -v '[-]-'; sep;
     echo 'DDBToaster latest commit:'; cd $BASE; git log -1 | sed 's/^/   /g'; sep;
     do_exec
   ) | tee /dev/stderr \
