@@ -175,12 +175,12 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   override def apply(s:System) = {
     local = s.sources.filter(s=> !s.stream).map(_.schema.name).toSet ++ s.maps.filter(m=>m.keys.size==0).map(_.name).toSet
-    val refs = s.maps.zipWithIndex.map{case (m,i)=> ref.put(m.name,"map"+i); "val map"+i+" = MapRef("+i+")\n" }.mkString
+    val refs = s.maps.zipWithIndex.map{case (m,i)=> ref.put(m.name,"map"+i); "val map"+i+" = /*MapRef*/("+i+")\n" }.mkString
     val qs = { val mn=s.maps.zipWithIndex.map{case (m,i)=>(m.name,i)}.toMap; "val queries = List("+s.queries.map(q=>mn(q.map.name)).mkString(",")+")\n" } // queries as map indices
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
     val ms = s.maps.map(genMap).mkString("\n") // maps
     val (str,ld0,gc) = genInternals(s)
-    def fs(xs:Iterable[(String,String)]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = FunRef("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
+    def fs(xs:Iterable[(String,String)]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = /*FunRef*/("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
     val (fds,fbs) = fs(forl.values)
     val (ads,abs) = fs(aggl.values)
     val local_vars:String = {

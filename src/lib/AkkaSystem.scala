@@ -4,6 +4,46 @@ import scala.reflect.ClassTag
 import akka.actor.{Actor,ActorRef,Address,PoisonPill}
 
 /**
+ * Model: fully asynchronous nodes. Serializable execution is provided by the
+ * master waiting for in-flight messages to be acknowledged. Messages types:
+ * 1. Request/response (get,aggr): response=ack. The continuation is stored
+ *    locally and executed on reception.
+ * 2. Remote calls: (add,set,foreach): when the remote procedure is completed
+ *    ack(#messages ack'ed, workers->#messages to ack) is sent to the master.
+ * 3. When master has a count of 0 (#messages-#ack) for all workers, there is
+ *    a serialization point. The count might be negative but can be continued
+ *    only when exactly 0.
+ *
+ * There is a 1-1 mapping from NodeRef to ActorRef. We convert as much ActorRef
+ * as possible into NodeRef, the idea behind that is that we can free ourselves
+ * from Akka (towards plain C) if there is need to do so.
+ *
+ * @author TCK
+ */
+
+/** Cluster management messages */
+object WorkerActor {
+  // External
+  case class ClusterNodes(nodes:Array[(Address,Int)]) // initialization sent to the master as (hosts, #workers)
+  case object ClusterShutdown // tear down all cluster nodes
+  case object ClusterReset // clear all maps and reload tables
+  // Internal
+  case class Members(master:ActorRef,workers:Array[ActorRef]) // master->workers initialization
+
+  // XXX: to be removed
+  case class Barrier(en:Boolean) // switch barrier mode
+}
+
+
+
+
+
+
+
+/**
+ *
+ * LEGACY-LEGACY-LEGACY-LEGACY-LEGACY:
+ *
  * Model: fully asynchronous nodes. To provide a sequential-like model, the
  * master must execute event handlers on a separate (blocking) thread.
  * Distributed operations:
@@ -51,35 +91,19 @@ import akka.actor.{Actor,ActorRef,Address,PoisonPill}
  * XXX: _INFER_ (encode) functional dependencies in the maps(?)
  */
 
-/** Internal types and messages */
-object WorkerActor {
-  type MapRef = Byte;    def MapRef(i:Int):MapRef = i.toByte
-  type FunRef = Short;   def FunRef(i:Int,internal:Boolean=false):FunRef = (if (internal) java.lang.Short.MIN_VALUE+i else i).toShort
-  type NodeRef = Short;  def NodeRef(i:Int):NodeRef = i.toShort
-  
-  // Internal messages
-  case class Members(master:ActorRef,workers:Array[ActorRef]) // master can also be a worker for some maps
-  case class Barrier(en:Boolean) // switch barrier mode
-  case class Ack(to:Array[NodeRef],num:Array[Long]) // cumulative ack to master (to, count) : -1 for sent, 1 for recv
-  case class ClusterNodes(nodes:Array[(Address,Int)]) // initialization sent to the master as (hosts, #workers)
-  case object ClusterShutdown // tear down all cluster nodes
-  case object ClusterReset // clear all maps and reload tables
-
-  // Data messages
-  case class Get[K](map:MapRef,key:K) // => Val[K,V]
-  case class Val[K,V](map:MapRef,key:K,value:V)
-  case class Add[K,V](map:MapRef,key:K,value:V)
-  case class Set[K,V](map:MapRef,key:K,value:V)
-  case class Clear[P](map:MapRef,part:Int,partKey:P)
-  case class Foreach(f:FunRef,args:Array[Any])
-  case class Aggr(id:Int,f:FunRef,args:Array[Any]) // => Sum
-  case class AggrPart[R](id:Int,res:R)
-}
 
 /** Worker, owns portions of all maps determined by hash() function. */
 abstract class WorkerActor extends Actor {
   import scala.collection.JavaConversions.mapAsScalaMap
   import WorkerActor._
+  import Messages._
+
+
+//  import Messages._
+  def MapRef(i:Int):MapRef = i
+  def FunRef(i:Int,internal:Boolean=false):FunRef = if (internal) java.lang.Short.MIN_VALUE+i else i
+  def NodeRef(i:Int):NodeRef = i
+
   // ---- concrete maps and local operations
   val local:Array[M3Map[_,_]] // ref->local maps conversion
   def local_wr(m:MapRef,v:Any,add:Boolean) {} // write in local variable
@@ -94,16 +118,6 @@ abstract class WorkerActor extends Actor {
   private var workers : Array[ActorRef] = null
   @inline private def owner(m:MapRef,k:Any):ActorRef = { val n=workers.length; val h=hash(m,k); workers((h%n+n)%n) }
   @inline private def members(m:ActorRef,ws:Array[ActorRef]) { master=m; workers=ws; if (master==self) workers.foreach { w => w!Members(m,ws) } }
-  // XXX: protected def addWorker(w:ActorRef,ms:List[Maps]) {}
-  // XXX: protected def delWorker(w:ActorRef) {}
-
-  // ----------------------------------------------------------
-  // TODO: implement more efficient serializer
-  // http://code.google.com/p/fast-serialization/
-  // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
-  // https://github.com/romix/akka-kryo-serialization
-  // https://github.com/talex004/akka-kryo-serialization
-  // https://github.com/twitter/chill
 
   // ---- get/continuations matcher
   private object matcherGet {
@@ -132,7 +146,8 @@ abstract class WorkerActor extends Actor {
   }
 
   // ---- aggregation/continuations matcher
-  private object matcherAggr {
+  // XXX: distinguish the hosts from which the part come => idea: allow duplicated messages without compromising result integrity
+  private object matcherAgg {
     private var enabled = true // enable cache
     private val cache = new java.util.HashMap[(FunRef,Array[Any]),Any]()
     private val cont = new java.util.HashMap[Int,List[Any=>Unit]]
@@ -151,11 +166,11 @@ abstract class WorkerActor extends Actor {
         if (cs==null) { // new request, create all structures and broadcast request to workers owning map m
           params.put(k,(f,args)); params_r.put((f,args),k)
           sum.put(k,(workers.length,zero,plus))
-          workers.foreach{ w=> w!Aggr(k,f,args) } // send
+          workers.foreach{ w=> w!Agg(k,f,args) } // send
         }
       }
     }
-    @inline def res[R](id:Int,res:R) { // onReceive AggrPart(id,res)
+    @inline def res[R](id:Int,res:R) { // onReceive AggPart(id,res)
       val s = sum.get(id)
       val r = (s._1-1,s._3(s._2,res.asInstanceOf[Any]),s._3)
       if (r._1>0) sum.put(id,r) // incomplete aggregation, wait...
@@ -170,23 +185,27 @@ abstract class WorkerActor extends Actor {
   }
 
   // ---- barrier and counters management
+  // XXX: replace this by 'ack always on' strategy instead
+  // XXX: step 2 : introduce batching as prepared in Messages.scala
   protected object bar {
     private var bco: Unit=>Unit = null
     private var enabled = false
     private val count = new java.util.HashMap[ActorRef,Long]() // destination, count (-1 for sent, 1 for recv)
     @inline private def add(a:ActorRef,v:Long) { if (count.containsKey(a)) { val n=count.get(a)+v; if (n==0) count.remove(a) else count.put(a,n) } else if (v!=0) count.put(a,v) }
-    @inline def ack = if (enabled && matcherGet.ready && matcherAggr.ready && count.size>0) {
+    @inline def ack = if (enabled && matcherGet.ready && matcherAgg.ready && count.size>0) {
       var ds : List[NodeRef] = Nil
-      var cs : List[Long] = Nil
-      count.foreach { case (a,n) => ds=NodeRef(workers.indexOf(a))::ds; cs=n::cs }
-      master ! Ack(ds.toArray,cs.toArray); count.clear
+      var cs : List[Int] = Nil
+      count.foreach { case (a,n) => ds=NodeRef(workers.indexOf(a))::ds; cs=n.toInt::cs }
+      master ! Ack(ds.toArray,cs.toArray);
+      //master ! Ack(1,count.map{ case (a,n) => (NodeRef(workers.indexOf(a)),n) }.toArray);
+      count.clear
     }
     @inline def sumAck(to:Array[NodeRef],num:Array[Long]) {
       (to.map(workers(_)) zip num).foreach { case (w,n) => add(w,n) }
       if (enabled && count.size==0) { set(false); if (bco!=null) { val co=bco; bco=null; co(); } }
     }
     def set(en:Boolean,co:(Unit=>Unit)=null) {
-      if (enabled==en) return; enabled=en; matcherGet.clear(!en); matcherAggr.clear(!en)
+      if (enabled==en) return; enabled=en; matcherGet.clear(!en); matcherAgg.clear(!en)
       if (self!=master) { if (en) add(self,1); ack }
       else {
         if (en && co!=null) bco=co;
@@ -209,13 +228,13 @@ abstract class WorkerActor extends Actor {
     case Set(m,k,v) => if (k==null) local_wr(m,v,false) else local_map(m).set(k,v); bar.recv
     case Clear(m,p,pk) => val mm=local(m); (if (p<0) mm else mm.slice(p,pk)).clear; bar.recv
     case Foreach(f,as) => forl(f,as,_ => bar.recv)
-    case Aggr(id,fun_collect,Array(m:MapRef)) => sender ! AggrPart(id,local(m)) // collect map data
-    case Aggr(id,f,as) => val s=sender; aggl(f,as,(r:Any)=>s!AggrPart(id,r))
-    case AggrPart(id,res) => matcherAggr.res(id,res)
+    case Agg(id,fun_collect,Array(m:MapRef)) => sender ! AggPart(id,local(m)) // collect map data
+    case Agg(id,f,as) => val s=sender; aggl(f,as,(r:Any)=>s!AggPart(id,r))
+    case AggPart(id,res) => matcherAgg.res(id,res)
     // Management messages
     case Members(m,ws) => members(m,ws); local_map=local.asInstanceOf[Array[M3Map[Any,Any]]] // fix initialization order issue XXX: lazy val ?
     case Barrier(en) => bar.set(en) // assert(self!=master)
-    case Ack(to,num) => bar.sumAck(to,num) // assert(self==master)
+    case Ack(to,num) => bar.sumAck(to,num.map(_.toLong)) // assert(self==master)
     case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(5000) // sent only to master
       val ws = nodes.flatMap{ case (n,c) => (0 until c).map { i=>
         scala.concurrent.Await.result(context.actorSelection(akka.actor.RootActorPath(n)/"user"/("worker"+i)).resolveOne,timeout.duration)
@@ -252,7 +271,7 @@ abstract class WorkerActor extends Actor {
       case "java.util.Date" => (v0:java.util.Date,v1:java.util.Date)=> new java.util.Date(v0.getTime+v1.getTime)
       case n => sys.error("No additivity for "+n)
     }).asInstanceOf[(Any,Any)=>Any])
-    matcherAggr.req(m,f,args,co,z,p)
+    matcherAgg.req(m,f,args,co,z,p)
   }
   
   // ---- helper for local aggregation (in a local variable, and that needs to be sequential)
@@ -287,7 +306,9 @@ trait MasterActor extends WorkerActor {
 
   def barrier(co:Unit=>Unit) = bar.set(true,co);
   def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = {
-    val zero = if (cV.toString=="Object"||cV.toString=="Any") local(m).asInstanceOf[M3MapBase[K,V]].acc else M3Map.temp[K,V]()
+    val zero = if (cV.toString=="Object"||cV.toString=="Any")
+          new M3MapBase[K,V](local(m).asInstanceOf[M3MapBase[K,V]].zero,false,null)
+          else M3Map.temp[K,V]()
     super.aggr(m,fun_collect,Array(m),zero,(mm:M3Map[K,V])=>co(mm.toMap))
   }
 
@@ -300,6 +321,7 @@ trait MasterActor extends WorkerActor {
   def _pre(write:MapRef,read:MapRef*) = shift { co:(Unit=>Unit) => pre(write,read.toArray,co) }
 
   // ---- coherency mechanism: RAW, WAR and WAW dependency tracking
+  // XXX: to mitigate WAW dependencies, use 2 levels of writing: writing commutative and non-commutative
   private val pre_wr = scala.collection.mutable.Set[MapRef]() // written maps
   private val pre_rd = scala.collection.mutable.Set[MapRef]() // read maps
   def pre(write:MapRef,read:Array[MapRef],co:Unit=>Unit) = {

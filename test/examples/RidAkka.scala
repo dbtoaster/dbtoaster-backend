@@ -27,7 +27,8 @@ class RidSpec extends FunSpec {
 
 class RidWorker extends WorkerActor {
   import WorkerActor._
-  import ddbt.lib.Functions._
+  import Messages._
+  import Functions._
   // constants
   val map0 = MapRef(0)
   val map1 = MapRef(1)

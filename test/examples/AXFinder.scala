@@ -7,7 +7,10 @@ import scala.reflect.ClassTag
 object AXFinder {
   import Helper._
   def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) =
-        bench(name,count,()=>run[Q](streamsFinance(""),false))
+        bench(name,count,()=>run[Q](Seq(
+    (new java.io.FileInputStream("/Documents/EPFL/Data/cornell_db_maybms/dbtoaster/experiments/data/finance/standard/finance.csv"),
+     new Adaptor.OrderBook(brokers=10000,deterministic=true,bids="BIDS",asks="ASKS"),Split())
+  ),false))
 
   def main(args:Array[String]) {
     //val r1=test[AXFinderRef]      ("Reference   ")

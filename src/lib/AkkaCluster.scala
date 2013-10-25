@@ -107,7 +107,7 @@ class TestMaster() extends Actor {
   var ctr=0
   println("Master ready: "+self)
   def receive = {
-    case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(10000) // 10 secs
+    case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(5000)
       ws=nodes.flatMap{ case (n,c) => (0 until c).map { i=>
         scala.concurrent.Await.result(context.actorSelection(akka.actor.RootActorPath(n)/"user"/("worker"+i)).resolveOne,timeout.duration)
       }}; ws.foreach( _ ! "Ping" )

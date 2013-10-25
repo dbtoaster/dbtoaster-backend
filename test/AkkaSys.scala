@@ -3,22 +3,22 @@ import ddbt.lib._
 import org.scalatest._
 
 object Consts {
-  import WorkerActor._
   import Messages._
-  val m0 = MapRef(0)
-  val m1 = MapRef(1)
+  val m0 = /*MapRef*/(0)
+  val m1 = /*MapRef*/(1)
   val ev1 = TupleEvent(TupleInsert,"S",List(1))
   val ev2 = TupleEvent(TupleInsert,"T",List(2))
   val ev3 = TupleEvent(TupleInsert,"U",List(3))
   val ev4 = TupleEvent(TupleInsert,"V",List(4))
-  val f1 = FunRef(1)
-  val f2 = FunRef(2)
-  val f3 = FunRef(3)
+  val f1 = /*FunRef*/(1)
+  val f2 = /*FunRef*/(2)
+  val f3 = /*FunRef*/(3)
 }
 import Consts._
 
 class Worker extends WorkerActor {
   import WorkerActor._
+  import Messages._
 
   val map0 = M3Map.make[Long,Long]()
   val map1 = M3Map.make[Double,Double]()

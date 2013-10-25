@@ -3,9 +3,9 @@ import ddbt.lib._
 
 object AX { 
   //def streams(ds:String) = Helper.streamsFinance()
-  def streams(d:String) = Seq(
+  def streams(d:String="standard") = Seq(
     (new java.io.FileInputStream("/Documents/EPFL/Data/cornell_db_maybms/dbtoaster/experiments/data/finance/"+d+"/finance.csv"),
-     new Adaptor.OrderBook(brokers=10,deterministic=true,bids="BIDS",asks="ASKS"),Split())
+     new Adaptor.OrderBook(brokers=10000,deterministic=true,bids="BIDS",asks="ASKS"),Split())
   )
 }
 
@@ -13,13 +13,17 @@ object AXFinderAkka {
   import Helper._
   import WorkerActor._
   def main(args:Array[String]) {
-    val (t,res) = runLocal[AXMaster,AXWorker](2251,4,streamsFinance())
-    println("Time = "+time(t)); println(M3Map.toStr(res.head))
+    var i=0; do {
+      val (t,res) = runLocal[AXMaster,AXWorker](2251,4,AX.streams(),debug=true)
+      println("Time = "+time(t)); // println(M3Map.toStr(res.head))
+    i+=1; } while (i<10);
   }
 }
 
 class AXWorker extends WorkerActor {
   import WorkerActor._
+  import Messages._
+  import Functions._
   // constants
   val mAX = MapRef(0)
   val mA1 = MapRef(1)

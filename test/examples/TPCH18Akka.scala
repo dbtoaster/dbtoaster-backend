@@ -12,6 +12,8 @@ object TPCH18Akka {
 
 class Q18Worker extends WorkerActor {
   import WorkerActor._
+  import Messages._
+  import Functions._
   // constants
   val mQ18 = MapRef(0)
   val mO = MapRef(1)
