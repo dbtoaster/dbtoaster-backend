@@ -29,6 +29,8 @@ import scala.Function2;
  * @author TCK
  */
 
+// XXX: use buckets of binary_trees to mitigate bias issues?
+
 /** Base implementation. */
 @SuppressWarnings("unchecked")
 class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
@@ -59,7 +61,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     else if (zero instanceof Date) plus = (Plus<V>) new Plus<Date>() { Date apply(Date a, Date b) { return new Date(a.getTime()+b.getTime()); } };
     else plus=null;
   }
-  protected M3MapBase<K,V> acc() { return new M3MapBase<K,V>(zero,false,null); } // accumulator for Akka
+  protected V zero() { return zero; } // exposed for Akka (accumulator for partial aggregations)
 
   private abstract class Plus<T> { abstract T apply(T a, T b); }
   private static class Entry<K,V> implements Comparable<Entry> {

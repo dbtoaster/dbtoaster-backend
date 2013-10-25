@@ -20,8 +20,8 @@ Seq(
 libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.1",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.1",
-  "com.typesafe.akka" %% "akka-cluster"   % "2.2.1",
-  "org.scala-lang"     % "scala-actors"   % v,
+  //"com.typesafe.akka" %% "akka-cluster"   % "2.2.1",
+  "org.scala-lang"     % "scala-actors"   % v, // XXX: legacy to compile previous Scala back-end
   "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.RC2" % "test"
 ))
@@ -31,12 +31,6 @@ Seq(
   scalaVersion := "2.10.3",
   scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings"), // ,"-target:jvm-1.7"
   javacOptions ++= Seq("-Xlint:unchecked")
-)
-
-Seq(
-  autoCompilerPlugins := true,
-  libraryDependencies <+= scalaVersion(v=>compilerPlugin("org.scala-lang.plugins" % "continuations" % v)),
-  scalacOptions += "-P:continuations:enable"
 )
 
 // --------- Execution options
@@ -125,6 +119,12 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
 //}
 // jar -cf foo.jar -C target/scala-2.10/classes ddbt/lib
 // TaskKey[Unit]("test-queries") := { scala.sys.process.Process(Seq("sbt", "test-only ddbt.test.gen.*")).! }
+//
+// Seq(
+//   autoCompilerPlugins := true,
+//   libraryDependencies <+= scalaVersion(v=>compilerPlugin("org.scala-lang.plugins" % "continuations" % v)),
+//   scalacOptions += "-P:continuations:enable"
+// )
 //
 // http://grokbase.com/t/gg/simple-build-tool/133xb2khew/sbt-external-process-syntax-in-build-sbt
 // http://stackoverflow.com/questions/15494508/bash-vs-scala-sys-process-process-with-command-line-arguments

@@ -10,9 +10,10 @@ object Helper {
 
   // ---------------------------------------------------------------------------
   // Akka helpers
-  private def sys(name:String,host:String=null,port:Int=0) = {
+  def actorSys(name:String,host:String=null,port:Int=0) = {
     val conf = "akka.loglevel=ERROR\nakka.log-dead-letters-during-shutdown=off\n"+ // disable verbose logging
-               (if (host!=null) "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote.netty {\nhostname=\""+host+"\"\ntcp.port="+port+"\n}\n}\n" else "")
+               (if (host!=null) "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote {\n"+
+                "enabled-transports=[\"akka.remote.netty.tcp\"]\nnetty.tcp {\nhostname=\""+host+"\"\nport="+port+"\n}\n"+"}\n}\n" else "")
     val user = { val f="conf/akka.conf"; if (new java.io.File(f).exists) scala.io.Source.fromFile(f).mkString else "" }
     val system = ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(conf+user))
     //Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = { /*println("Stopping "+host+":"+port);*/ system.shutdown() } });
@@ -30,27 +31,23 @@ object Helper {
   }
 
   def run[Q<:akka.actor.Actor](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0)(implicit cq:ClassTag[Q]) = {
-    val system = sys("DDBT")
+    val system = actorSys("DDBT")
     val query = system.actorOf(Props[Q],"Query")
     try { mux(query,streams,parallel,timeout); } finally { system.shutdown }
   }
 
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](nmaps:Int,port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0,debug:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0,debug:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
     val (system,nodes,workers) = if (debug) {
-      val system = sys("DDBT")
+      val system = actorSys("DDBT")
       (system,Seq[ActorSystem](),(0 until N).map (i=>system.actorOf(Props[W]())))
     } else {
-      val system = sys("MasterSystem","127.0.0.1",port-1)
-      val nodes = (0 until N).map { i => sys("NodeSystem"+i,"127.0.0.1",port+i) }
+      val system = actorSys("MasterSystem","127.0.0.1",port-1)
+      val nodes = (0 until N).map { i => actorSys("NodeSystem"+i,"127.0.0.1",port+i) }
       val workers = nodes.map (_.actorOf(Props[W]()))
       (system,nodes,workers)
     }
     val master = system.actorOf(Props[M]())
-    // ---- initial membership
-    import WorkerActor.{Members,MapRef}
-    val ms = (0 until nmaps).map { MapRef(_) }.toList
-    master ! Members(master,workers.map{ w => (w,ms) }.toArray)
-    // ----
+    master ! WorkerActor.Members(master,workers.toArray) // initial membership
     val res = try { mux(master,streams,parallel,timeout) } finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
   }
 

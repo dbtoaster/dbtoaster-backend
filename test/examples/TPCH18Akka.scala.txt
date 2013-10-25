@@ -5,13 +5,15 @@ import java.util.Date
 object TPCH18Akka {
   import Helper._
   def main(args:Array[String]) {
-    val (t,res) = runLocal[Q18Master,Q18Worker](7,2251,4,streamsTPCH18());
+    val (t,res) = runLocal[Q18Master,Q18Worker](2251,4,streamsTPCH18());
     println(M3Map.toStr(res.head)); println("Time:"+time(t))
   }
 }
 
 class Q18Worker extends WorkerActor {
   import WorkerActor._
+  import Messages._
+  import Functions._
   // constants
   val mQ18 = MapRef(0)
   val mO = MapRef(1)

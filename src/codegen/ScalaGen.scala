@@ -122,7 +122,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   }
 
   def genMap(m:MapDef):String = {
-    if (m.keys.size==0) "var "+m.name+":"+m.tp.toScala+" = "+(m.tp match { case TypeLong=>"0L" case TypeDouble=>"0.0" case TypeString=>"\"\"" case TypeDate=>"new Date(0)" })
+    if (m.keys.size==0) "var "+m.name+":"+m.tp.toScala+" = "+m.tp.zeroScala
     else {
       val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())
