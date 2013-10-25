@@ -129,7 +129,6 @@ object Messages {
         case _ => sys.error("Encoding error")
       }; i+=1; } while (i<n); is.close; is=null; res
     }
-
   }
 
   /**

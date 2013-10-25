@@ -24,7 +24,7 @@ class Worker extends WorkerActor {
   val map1 = M3Map.make[Double,Double]()
   val local = Array[M3Map[_,_]](map0,map1)
 
-  def forl(f:FunRef,args:Array[Any],co:Unit=>Unit) = f match {
+  def forl(f:FunRef,args:Array[Any],co:()=>Unit) = f match {
     case f1 => val n=args(0).asInstanceOf[Int]; for (i<-0 until n) add(m0,i.toLong,1L); co()
   }
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = f match {
@@ -39,28 +39,39 @@ class Master extends Worker with MasterActor {
 
   val queries = List(0)
   val dispatch : PartialFunction[TupleEvent,Unit] = {
-    case `ev1` => reset {
+    case `ev1` =>
       add(m0,1L,1L); add(m0,2L,2L); add(m1,1.0,1.0)
-      _barrier; _barrier; _barrier; // sequential multi-barriers test
-      assert(1==_get[Long,Long](m0,1L),"Remote add")
-      assert(2==_get[Long,Long](m0,2L),"Remote add")
-      assert(1.0==_get[Double,Double](m1,1.0),"Remote add")
-      clear(m0); _barrier
-      assert(0==(_get[Long,Long](m0,1L)+_get[Long,Long](m0,2L)),"Clearing")
-      assert(1.0==_get[Double,Double](m1,1.0),"Clean one")
+      barrier(()=>{
+      barrier(()=>{
+      barrier(()=>{ // sequential multi-barriers test
+      
+      get(m0,1L,(v1:Long)=>{
+      assert(1==v1,"Remote add")
+      get(m0,2L,(v2:Long)=>{
+      assert(2==v2,"Remote add")
+      get(m1,1.0,(v3:Double)=>{
+      assert(1.0==v3,"Remote add")
+      clear(m0);
+      barrier(()=>{
+      
+      get(m0,1L,(v1:Long)=>{
+      get(m0,1L,(v2:Long)=>{
+      assert(0==v1+v2,"Clearing")
+      get(m1,1.0,(v3:Double)=>{
+      assert(1.0==v3,"Clean one")
       deq
-    }
-    case `ev2` => reset {
+      }) }) }) }) }) }) }) }) }) })
+    case `ev2` =>
       clear(m0)
       val n = 500
       foreach(m0,f1,n) // remote call test
-      _barrier // count, we should have 1000, (not true if we remove barrier)
-      val n2 = _aggr[Long](m0,f2) // remote aggregation test
+      barrier(()=>{ // count, we should have 1000, (not true if we remove barrier)
+      aggr(m0,f2,Array(),null,(n2:Long)=>{
       println("Added "+n+"*workers elements")
       println("Remote aggregation : "+n2)
-      println("Collect+local count: "+(0L /: _toMap[Long,Long](m0).asInstanceOf[Map[Long,Long]]){ case (a,(k,v)) => a+v})
+      //println("Collect+local count: "+(0L /: _toMap[Long,Long](m0).asInstanceOf[Map[Long,Long]]){ case (a,(k,v)) => a+v})
       deq
-    }
+      }) })
     case `ev3` => deq // trampoline test
     case `ev4` => println("Trampoline OK"); deq
     case e:TupleEvent => deq
@@ -74,7 +85,7 @@ class AkkaSys extends FunSpec {
   import WorkerActor._
 
   it("Akka simple tests") {
-    val system = ActorSystem("DDBT")
+    val system = Helper.actorSys("DDBT")
     val m = system.actorOf(Props[Master])
     val ws = (0 until 5).map { i => system.actorOf(Props[Worker]) }
     // setup members
@@ -86,12 +97,42 @@ class AkkaSys extends FunSpec {
     (0 until 20000).foreach { _ => m ! ev3 }
     m ! ev4
     // finalize
-
     val wait = 10000
     val timeout = akka.util.Timeout(wait)
     val r = scala.concurrent.Await.result(akka.pattern.ask(m,EndOfStream)(timeout), timeout.duration).asInstanceOf[(Long,Any)]._1
     info("Test passed in "+ddbt.Utils.time(r)+"s")
     system.shutdown()
+  }
+
+  // Also see serialization frameworks:
+  // http://code.google.com/p/fast-serialization/
+  // http://code.google.com/p/kryo/
+  // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
+
+  it("Batches") {
+    import java.util.Date
+    val b=new Batch()
+
+    val m=M3Map.temp[(Long,Long),Double]()
+    m.add((3L,3L),6.0)
+    m.add((4L,3L),5.0)
+
+    val ms=Array[Msg](
+      Get(1,33L),
+      Get(2,66L),
+      Set(2,(2.0,3L,"foo"),new Date(3000)),
+      AggPart(123,m)
+    ).toList
+    ms.foreach(b.add(_))
+    val t = b.pack
+    
+    val s=new java.io.ByteArrayOutputStream; val os=new java.io.ObjectOutputStream(s);
+    os.writeObject(ms); os.close; 
+    val sz = s.toByteArray.size
+    info("Unpacked size = "+sz)
+    info("Packed size = "+t.size+" (%.2fx reduction)".format(sz*1.0/t.size) )
+    //println(b.unpack(t).toList)
+    assert(b.unpack(t).toList==ms.toList)
   }
 }
 

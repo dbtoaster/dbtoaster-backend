@@ -60,10 +60,11 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   private var local = Set[String]() // locally available maps (tables+vars)
   private var local_r:String = null // map over which delegation happens (can be used only once to generate a foreach)
   
-  var cl_ctr=0;
-  def cl_add(n:Int=1) { cl_ctr+=n; }
-  def close(f:()=>String) = {
-    val b=cl_ctr; cl_ctr=0; val s=f(); val n=cl_ctr; cl_ctr=b;
+  var cl_stm=0; // pre (sequentiality) closing
+  var cl_ctr=0; // nested closing
+  def cl_add(n:Int=1,stm:Boolean=false) { if (stm) cl_stm+=n; else cl_ctr+=n; }
+  def close(f:()=>String,stm:Boolean=false) = {
+    val b=cl_ctr; cl_ctr=0; val s=f(); val n=cl_ctr+(if(stm) cl_stm else 0); cl_ctr=b; if (stm) cl_stm=0;
     if (n>0) s+(0 until n).map(x=>"})").mkString(" ")+"\n" else s
   }
 
@@ -163,11 +164,11 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case StmtMap(m,e,op,oi) => val r=ref(m.name); val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("set","=") }
       def rd(ex:Expr):List[String] = ex.collect{ case MapRef(n,t,ks)=>Set(ref(n)) }.toList
       def pre(o:OpMap,e:Expr,clear:Boolean=true):String = { // preparation (conditional barrier) for map operation
-        (if (o==OpSet && m.keys.size>0 && clear) { cl_add(1); "pre("+r+",true,Array[MapRef](),()=> {\nclear("+r+");\n" } else "")+
-        ({ cl_add(1); "pre("+r+","+(if (o==OpSet) "true" else "false" )+",Array[MapRef]("+rd(e).mkString(",")+"),()=> {\n" })
+        (if (o==OpSet && m.keys.size>0 && clear) { cl_add(1,true); "pre("+r+",true,Array[MapRef](),()=> {\nclear("+r+");\n" } else "")+
+        ({ cl_add(1,true); "pre("+r+","+(if (o==OpSet) "true" else "false" )+",Array[MapRef]("+rd(e).mkString(",")+"),()=> {\n" })
       }
       def mop(o:String,v:String) = o+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+","+v+");\n"
-      val init = oi match { case None => "" case Some(ie) => ctx.load(); inuse.load(m.keys.toSet); cl_add(2); 
+      val init = oi match { case None => "" case Some(ie) => ctx.load(); inuse.load(m.keys.toSet); cl_add(2,true); 
         val co=(v:String)=> { val v0=fresh("v"); val o=mop("set",v); "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys))+",("+v0+":"+m.tp.toScala+")=> { if ("+v0+"==0) "+o.substring(0,o.length-1)+" })\n" }
         pre(OpSet,ie,false)+cpsExpr(ie,co)
       }
@@ -177,7 +178,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   override def genTrigger(t:Trigger):String = { // add pre and deq/ready calls in master's triggers
     val (n,as,deq) = t.evt match { case EvtReady=>("SystemReady",Nil,"ready\n") case EvtAdd(Schema(n,cs))=>("Add"+n,cs,"deq\n") case EvtDel(Schema(n,cs))=>("Del"+n,cs,"deq\n") }
-    ctx=Ctx(as.toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(close(()=>t.stmts.map(genStmt).mkString+deq))+"\n}"; ctx=null; res
+    ctx=Ctx(as.toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(close(()=>t.stmts.map(s=>close(()=>genStmt(s))).mkString+deq,true))+"\n}"; ctx=null; res
   }
 
   override def apply(s:System) = {
