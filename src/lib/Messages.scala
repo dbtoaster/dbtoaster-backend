@@ -157,26 +157,4 @@ object Messages {
       if (buf(N).size>0) send_f(N,buf(N).pack)
     }
   }
-
-  // Also see serialization frameworks:
-  // http://code.google.com/p/fast-serialization/
-  // http://code.google.com/p/kryo/
-  // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
-
-  // XXX: To be moved in test cases
-  def main(args:Array[String]) {
-    val b=new Batch()
-    b.add(Get(1,33L))
-    b.add(Get(2,66L))
-    b.add(Set(2,(2.0,3L,"foo"),new Date(3000)))
-    val m=M3Map.temp[(Long,Long),Double]()
-    m.add((3L,3L),6.0)
-    m.add((4L,3L),5.0)
-    b.add(AggPart(123,m))
-    println(m.toString)
-    val t = b.pack
-    println("Size = "+t.size)
-    println(t.map(_=>'.').mkString)
-    println(b.unpack(t).mkString("\n"))
-  }
 }
