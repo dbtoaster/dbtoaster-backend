@@ -80,12 +80,13 @@ object OrderStatus {
       output.append("+-----------------------------------------------------------------+\n\n")
       println(output.toString)
       0
+    }
+  }
 /**
  * Payment Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-  }
 
   object OrderStatusTxOps {
     def findCustomerByName(c_w_id: Int, c_d_id: Int, input_c_last: String) = {
