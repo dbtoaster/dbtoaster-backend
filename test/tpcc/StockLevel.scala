@@ -8,7 +8,7 @@ import java.util.Date
  *
  * @author Mohammad Dashti
  */
-class StockLevel {
+object StockLevel {
 
   //Partial Tables (containing all rows, but not all columns)
   //removed columns are commented out
