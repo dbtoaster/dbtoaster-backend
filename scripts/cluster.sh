@@ -28,11 +28,11 @@ MASTER="128.178.116.136"; WORKERS="128.178.116.160 $MASTER"
 # scripts/cluster.sh pkg && scripts/cluster.sh -cp target/scala-2.10/test-classes -b ddbt.test.examples.AX -samples 20
 # ping AndresMacPro.local
 
-cd `dirname $0`; cd ..; base=`pwd`; 
+cd `dirname $0`; cd ..; base=`pwd`;
 pkgdir="$base/pkg"
 cmd_launch() { # $1=host $2,...=arguments
   local host="$1"; shift
-  if [ "$DEBUG" ]; then nohup $CMD_SSH $CMD_USER@$host "$CMD_DIR/scripts/cluster.sh launcher $@"; 
+  if [ "$DEBUG" ]; then nohup $CMD_SSH $CMD_USER@$host "$CMD_DIR/scripts/cluster.sh launcher $@";
   else nohup $CMD_SSH $CMD_USER@$host "$CMD_DIR/launcher $@"; fi
 }
 

@@ -18,9 +18,9 @@ Seq(
 
 // --------- Dependencies
 libraryDependencies <++= scalaVersion(v=>Seq(
-  "com.typesafe.akka" %% "akka-actor"     % "2.2.1",
-  "com.typesafe.akka" %% "akka-remote"    % "2.2.1",
-  //"com.typesafe.akka" %% "akka-cluster"   % "2.2.1",
+  "com.typesafe.akka" %% "akka-actor"     % "2.2.3",
+  "com.typesafe.akka" %% "akka-remote"    % "2.2.3",
+  //"com.typesafe.akka" %% "akka-cluster"   % "2.2.3",
   "org.scala-lang"     % "scala-actors"   % v, // XXX: legacy to compile previous Scala back-end
   "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.RC2" % "test"
@@ -103,13 +103,13 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
       "EPFL" % "lms_2.10" % "0.3-SNAPSHOT"
     ),
     scalacOptions ++= List("-Yvirtualize")
-  ) 
+  )
 }
 
 // show full-classpath
 //{
 //  val t=TaskKey[Unit]("queries-gen2")
-//  val q=TaskKey[Unit]("queries-test2") 
+//  val q=TaskKey[Unit]("queries-test2")
 //  Seq(
 //    fullRunTask(t in Compile, Compile, "ddbt.UnitTest", "tiny","tiny_del","standard","standard_del"),
 //    q <<= (t in Compile) map { x => scala.sys.process.Process(Seq("sbt", "test-only ddbt.test.gen.*")).!; }
@@ -136,7 +136,7 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
 //scalaOrganization := "org.scala-lang.virtualized"
 //scalaVersion := Option(System.getenv("SCALA_VIRTUALIZED_VERSION")).getOrElse("2.10.2-RC1")
 //resolvers ++= Seq(
-//    ScalaToolsSnapshots, 
+//    ScalaToolsSnapshots,
 //    "Sonatype Public" at "https://oss.sonatype.org/content/groups/public",
 //	Classpaths.typesafeSnapshots
 //)
