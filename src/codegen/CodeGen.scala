@@ -21,6 +21,7 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
   case class Ctx[T](ctx0:Map[String,T]=Map()) extends Function1[String,T] {
     private var ctx = scala.collection.mutable.HashMap[String,T]()
     def add(c:Map[String,T]) = c.foreach(x=>ctx.put(x._1,x._2))
+    def add(n:String,t:T) { ctx.put(n,t) }
     def load(c:Map[String,T]=Map()) { ctx.clear; add(c) }
     def save = ctx.toMap
     def contains(name:String):Boolean = apply(name)!=null
@@ -28,7 +29,8 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
   }
   case class CtxSet(ctx0:Set[String]=Set()) extends Function1[String,Boolean] {
     private var ctx = scala.collection.mutable.HashSet[String]()
-    def add(c:Set[String]) { ctx = ctx ++ c }
+    def add(c:Set[String]) { ctx++=c }
+    def add(s:String) { ctx+=s }
     def load(c:Set[String]=Set()) { ctx.clear; c.foreach{ ctx+=_ } }
     def save = ctx.toSet
     def contains(name:String) = apply(name)

@@ -1,7 +1,7 @@
 package ddbt.test.examples
 import ddbt.lib._
 
-object AX { 
+object AX {
   //def streams(ds:String) = Helper.streamsFinance()
   def streams(d:String="standard") = Seq(
     (new java.io.FileInputStream("/Documents/EPFL/Data/cornell_db_maybms/dbtoaster/experiments/data/finance/"+d+"/finance.csv"),
@@ -43,7 +43,7 @@ class AXWorker extends WorkerActor {
   val fa2 = /*FunRef*/(1)
   val fa5 = /*FunRef*/(2)
   val fa6 = /*FunRef*/(3)
-  
+
   // maps
   val AXFINDER = M3Map.make[Long,Double]();
   val AXFINDER_mASKS1 = M3Map.make[(Long,Double),Double]((k:(Long,Double))=>k._1);
@@ -51,12 +51,12 @@ class AXWorker extends WorkerActor {
   val AXFINDER_mBIDS1 = M3Map.make[(Long,Double),Long]((k:(Long,Double))=>k._1);
   val AXFINDER_mBIDS3 = M3Map.make[(Long,Double),Double]((k:(Long,Double))=>k._1);
   val local = Array[M3Map[_,_]](AXFINDER,AXFINDER_mASKS1,AXFINDER_mASKS2,AXFINDER_mBIDS1,AXFINDER_mBIDS3)
-  
+
   // remote foreach
   def forl(f:FunRef,args:Array[Any],co:()=>Unit) = (f,args.toList) match {
     case _ => co()
   }
-  
+
   // remote aggregations
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {
     case (`fa1`,List(bids_price:Double,bids_broker_id:Long)) =>
@@ -99,7 +99,7 @@ class AXMaster extends AXWorker with MasterActor {
   import WorkerActor._
   import Messages._
   import Functions._
-  
+
   val queries = List(0)
   val dispatch : PartialFunction[TupleEvent,Unit] = {
     case TupleEvent(TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0,v1,v2,v3,v4)
@@ -108,13 +108,17 @@ class AXMaster extends AXWorker with MasterActor {
     case TupleEvent(TupleDelete,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelASKS(v0,v1,v2,v3,v4)
     case _ => deq
   }
-  
+
   def onAddBIDS(bids_t:Double, bids_id:Long, bids_broker_id:Long, bids_volume:Double, bids_price:Double) {
     pre(map0,false,Array[MapRef](map3,map4),()=> {
-    aggr(map3,fa1,Array[Any](bids_price,bids_broker_id),null,(agg1:Long) => {
-    aggr(map4,fa2,Array[Any](bids_price,bids_volume,bids_broker_id),null,(agg2:Double) => {
-    add(map0,bids_broker_id,((agg1 * (-1L * bids_volume)) + agg2));
-    }) })
+
+    val acc = Acc(); acc.i; acc.i
+    var agg1:Long = 0L
+    var agg2:Double = 0.0
+    aggr(map3,fa1,Array[Any](bids_price,bids_broker_id),null,(v:Long) => { agg1=v; acc.d })
+    aggr(map4,fa2,Array[Any](bids_price,bids_volume,bids_broker_id),null,(v:Double) => { agg2=v; acc.d })
+    acc(()=>{ add(map0,bids_broker_id,((agg1 * (-1L * bids_volume)) + agg2)); })
+
     pre(map1,false,Array[MapRef](),()=> {
     add(map1,(bids_broker_id,bids_price),bids_volume);
     pre(map2,false,Array[MapRef](),()=> {
@@ -122,41 +126,60 @@ class AXMaster extends AXWorker with MasterActor {
     deq
     }) }) })
   }
-  
+
   def onDelBIDS(bids_t:Double, bids_id:Long, bids_broker_id:Long, bids_volume:Double, bids_price:Double) {
     pre(map0,false,Array[MapRef](map3,map4),()=> {
-    aggr(map3,fa1,Array[Any](bids_price,bids_broker_id),null,(agg3:Long) => {
-    aggr(map4,fa2,Array[Any](bids_price,bids_volume,bids_broker_id),null,(agg4:Double) => {
-    add(map0,bids_broker_id,((agg3 * bids_volume) + (agg4 * -1L)));
-    }) }) 
-    pre(map1,false,Array[MapRef](),()=> {
+
+    val acc = Acc(); acc.i; acc.i
+    var agg3:Long = 0L
+    var agg4:Double = 0.0
+    aggr(map3,fa1,Array(bids_price,bids_broker_id),null,(v:Long) => { agg3=v; acc.d })
+    aggr(map4,fa2,Array(bids_price,bids_volume,bids_broker_id),null,(v:Double) => { agg4=v; acc.d })
+    acc(()=>{ add(map0,bids_broker_id,((agg3 * bids_volume) + (agg4 * -1L))); })
+
+    pre(map1,false,Array(),()=> {
     add(map1,(bids_broker_id,bids_price),(-1L * bids_volume));
-    pre(map2,false,Array[MapRef](),()=> {
+    pre(map2,false,Array(),()=> {
     add(map2,(bids_broker_id,bids_price),-1L);
     deq
     }) }) })
   }
-  
+
   def onAddASKS(asks_t:Double, asks_id:Long, asks_broker_id:Long, asks_volume:Double, asks_price:Double) {
     pre(map0,false,Array[MapRef](map1,map2),()=> {
-    aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(agg5:Double) => {
-    aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(agg6:Long) => {
-    add(map0,asks_broker_id,((agg5 * -1L) + (agg6 * asks_volume)));
-    }) })
-    pre(map3,false,Array[MapRef](),()=> {
+
+    val acc = Acc(); acc.i; acc.i
+    var agg5:Double = 0.0
+    var agg6:Long = 0L
+    aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; acc.d })
+    aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; acc.d })
+    acc(()=>{ add(map0,asks_broker_id,((agg5 * -1L) + (agg6 * asks_volume))); })
+
+    pre(map3,false,Array(),()=> {
     add(map3,(asks_broker_id,asks_price),1L);
-    pre(map4,false,Array[MapRef](),()=> {
+    pre(map4,false,Array(),()=> {
     add(map4,(asks_broker_id,asks_price),asks_volume);
     deq
     }) }) })
   }
-  
+
   def onDelASKS(asks_t:Double, asks_id:Long, asks_broker_id:Long, asks_volume:Double, asks_price:Double) {
     pre(map0,false,Array[MapRef](map1,map2),()=> {
+
+    val acc = Acc(); acc.i; acc.i
+    var agg5:Double = 0.0
+    var agg6:Long = 0L
+    aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; acc.d })
+    aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; acc.d })
+    acc(()=>{ add(map0,asks_broker_id,(agg5 +  -1L * (agg6 * asks_volume))); })
+
+
+/*
     aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(agg7:Double) => {
     aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(agg8:Long) => {
     add(map0,asks_broker_id,(agg7 + (agg8 * (-1L * asks_volume))));
     }) })
+*/
     pre(map3,false,Array[MapRef](),()=> {
     add(map3,(asks_broker_id,asks_price),-1L);
     pre(map4,false,Array[MapRef](),()=> {
@@ -164,7 +187,7 @@ class AXMaster extends AXWorker with MasterActor {
     deq
     }) }) })
   }
-  
+
   def onSystemReady() {
     ready
   }

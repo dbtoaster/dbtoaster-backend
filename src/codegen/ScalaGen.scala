@@ -78,7 +78,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-      if (aks.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      if (aks.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = "+ex.tp.zeroScala+";\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
         case Some(t) if t==aks => cpsExpr(e,co,am)
         case _ =>
@@ -163,7 +163,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
-    "var t0:Long = 0\n"+
+    "var t0:Long = 0L\n"+
     "def receive = {\n"+ind(str+
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
       "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! ((time,List[Any]("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+")))"

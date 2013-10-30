@@ -99,7 +99,7 @@ object Messages {
     def clear = data.clear
     def pack():Array[Byte] = {
       val s=new ByteArrayOutputStream; os=new ObjectOutputStream(s); var n=data.size; os.writeInt(n)
-      if (n>0) do { data.remove match { 
+      if (n>0) do { data.remove match {
         case Get(m,k) => os.writeByte('g'); os.writeShort(m); wr(k)
         case Val(m,k,v) => os.writeByte('v'); os.writeShort(m); wr(k); wr(v)
         case Add(m,k,v) => os.writeByte('a'); os.writeShort(m); wr(k); wr(v)
@@ -146,7 +146,7 @@ object Messages {
     def flush() {
       // send to all workers
       var i=0; var n=0; do { if (buf(i).size>0) { send_f(i,buf(i).pack) }; if (ctr(i)!=0) n+=1; } while (i<N)
-      // piggyback acknowledgements for master 
+      // piggyback acknowledgements for master
       if (n>0) {
         val to=new Array[NodeRef](n); val num=new Array[NodeRef](n)
         i=0; var j=0; do { val c=ctr(i); if (c!=0) { ctr(i)=0; to(j)=i; num(j)=c; j+=1 } } while (i<n)

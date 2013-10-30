@@ -78,9 +78,9 @@ object WorkerActor {
  *
  * @author TCK
  */
- 
+
 /*
- * Current Issues: 
+ * Current Issues:
  * - Broadcast to all workers within the same host => worker < host < cluster hierarchy?
  * - OnSystemReady needs not to go through network and ignore non-local updates
  * - Batching update and lookups (with timeout/explicit end-of-batch?)
@@ -195,7 +195,7 @@ abstract class WorkerActor extends Actor {
 
   // ---- message passing
   protected val fun_collect = FunRef(0,true)
-  protected var local_map:Array[M3Map[Any,Any]] = null 
+  protected var local_map:Array[M3Map[Any,Any]] = null
   def receive = {
     // Data messages
     case Get(m,k) => sender ! Val(m,k,local_map(m).get(k)) // get(var) is handled locally
@@ -248,11 +248,12 @@ abstract class WorkerActor extends Actor {
     }).asInstanceOf[(Any,Any)=>Any])
     matcherAgg.req(m,f,args,co,z,p)
   }
-  
+
   // ---- helper for local aggregation (in a local variable, and that needs to be sequential)
   case class Acc() { // applies a continuation when the internal counter is zero
     private var ctr = 0
     private var co:()=>Unit = null
+    def inc(n:Int) { ctr+=n; }
     def i { ctr+=1; } // increment
     def d { ctr-=1; if (ctr==0 && co!=null) { val c=co; co=null; c() } } // decrement
     def apply(f:()=>Unit) { if (ctr==0) f() else co=f; } // define the continuation
@@ -302,7 +303,7 @@ trait MasterActor extends WorkerActor {
   //   (m_wr&4)!=0           --> WAW (previous non-commutative)
   //   (m_wr&2)!=0 && seq!=0 --> WAW (this non-commutative)
   //   (m_rd&6)!=            --> RAW
-  private var pre_map:Array[Int]=null 
+  private var pre_map:Array[Int]=null
   def pre(write:MapRef,sequential:Boolean,read:Array[MapRef],co:()=>Unit) {
     val seq=if (sequential) 1 else 0; var i=0; val t=pre_map.size; val n=read.size;
     var flush = if (write== -1) false else (pre_map(write)&(5|(1<<seq)))!=0 // check dependencies
@@ -346,7 +347,7 @@ trait MasterActor extends WorkerActor {
   private val masterRecv : PartialFunction[Any,Unit] = {
     case ev:StreamEvent => val p=(est==0); est=1; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
   }
-  
+
   def onSystemReady() // {}
   def ready() { bar.set(()=>{ t0=System.nanoTime(); deq }) } // callback for onSystemReady
 }

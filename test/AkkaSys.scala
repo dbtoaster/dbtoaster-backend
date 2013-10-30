@@ -44,7 +44,7 @@ class Master extends Worker with MasterActor {
       barrier(()=>{
       barrier(()=>{
       barrier(()=>{ // sequential multi-barriers test
-      
+
       get(m0,1L,(v1:Long)=>{
       assert(1==v1,"Remote add")
       get(m0,2L,(v2:Long)=>{
@@ -53,7 +53,7 @@ class Master extends Worker with MasterActor {
       assert(1.0==v3,"Remote add")
       clear(m0);
       barrier(()=>{
-      
+
       get(m0,1L,(v1:Long)=>{
       get(m0,1L,(v2:Long)=>{
       assert(0==v1+v2,"Clearing")
@@ -125,9 +125,9 @@ class AkkaSys extends FunSpec {
     ).toList
     ms.foreach(b.add(_))
     val t = b.pack
-    
+
     val s=new java.io.ByteArrayOutputStream; val os=new java.io.ObjectOutputStream(s);
-    os.writeObject(ms); os.close; 
+    os.writeObject(ms); os.close;
     val sz = s.toByteArray.size
     info("Unpacked size = "+sz)
     info("Packed size = "+t.size+" (%.2fx reduction)".format(sz*1.0/t.size) )
@@ -198,7 +198,7 @@ nodes that need to communicate.
 The STORAGE has two roles:
 - storage (database) for static relations (used at initialization)
 - traditional database (preferably: compactness, easy recovery) or (WAL) log
-  storing the stream. Purpose: recover from nodes crash, if necessary. 
+  storing the stream. Purpose: recover from nodes crash, if necessary.
 
 The work is distributed to WORKERS that are responsible for processing the tuple
 applying the deltas it generates to their local storage and exchange messages
