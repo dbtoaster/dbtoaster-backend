@@ -91,7 +91,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(n); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) { inuse.add(n); cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am) }
-                      else { ctx.add(n,e.tp); cpsExpr(e,(v:String)=> "val "+n+" = "+v+";\n"+co("1L")) }
+                      else { ctx.add(n,e.tp); cpsExpr(e,(v:String)=> "lazy val "+n+" = "+v+";\n"+co("1L")) } // we are lazy to avoid evaluation before 'v' is valid
+                      // XXX: 'push' in dep instead
 
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)};
       if (local(n) || n==local_r || !ref.contains(n)) { if (n==local_r) local_r=null;
