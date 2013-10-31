@@ -65,6 +65,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   private var local = Set[String]() // locally available maps (tables+vars)
   private var local_r:String = null // map over which delegation happens (can be used only once to generate a foreach)
   var dep : Dep = null // contextual dependency tracker
+  var dep2: Dep = null // aggregation dependency tracking 
 
   // Dependency-tracking closure
   case class Dep(co:String=>String,var parent:Dep=null) extends Function1[String,String] {
@@ -100,15 +101,16 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
           val (k0,v0)=(fresh("k"),fresh("v"));
           
  // create a new outer, use dep as inner
+          val kis = ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString
+          "//dep2="+dep2+"\n"+
           n+(if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(_._1))+")" else "")+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
-            ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co(v0) // bind free variables from retrieved key
+            if (dep2!=null) { val r=dep2.wrap(()=>kis+co(v0)); dep2=null; r } else kis+co(v0) // bind free variables from retrieved key
           )+"\n}\n"
-
 
         }
       } else if (ki.size==0) { // remote get (in a M3Map)
         val v=fresh("v"); inuse.add(ks.toSet+v); ctx.add(Map((v,ex.tp)));
-        genVar(v,ex.tp)+dep.op((x:String)=>{ "get("+ref(n)+","+tup(ks)+",("+v+"r:"+ex.tp.toScala+")=>{ "+v+"="+v+"r; "+x+" })\n"+co(v) })
+        genVar(v,ex.tp)+(if (dep2!=null) dep2 else dep).op((x:String)=>{ "get("+ref(n)+","+tup(ks)+",("+v+"r:"+ex.tp.toScala+")=>{ "+v+"="+v+"r; "+x+" })\n"+co(v) })
       } else { // remote foreach (no dependency)
         val fn0 = fresh("ff"); local_r=n; // remote handler
         val (body0,rc)=remote(n,fn0,()=>cpsExpr(ex,co)+"co()\n")
@@ -133,7 +135,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       val co2=(v:String)=>if (ks.size==0) { inuse.add(Set(v)); ctx.add(Map((v,e.tp))); co(v) } else co(v)
       if (m==null || local(m)) {
         //super.cpsExpr(ex,co2,am) // 1-tuple projection or map available locally
-        if (aks.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = "+ex.tp.zeroScala+";\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co2(a0) }
+        if (aks.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = "+ex.tp.zeroScala+";\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co2(a0) } // XXX: dep2 here too for both cases
         else am match {
           case Some(t) if t==aks => cpsExpr(e,co2,am)
           case _ =>
@@ -144,12 +146,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
             ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co2)
         }
       } else {
-        val d0 = dep
-        dep = Dep(co2,d0)
-        val a0=fresh("agg_r");
-        val r = dep.wrap(()=>genVar(a0,ex.tp,aks.map(_._2))+remote_agg(a0,m,aks,e)+(if (aks.size==0) dep(a0) else { ctx.load(cur); local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),dep) }))
-        dep=d0
-        r
+        val a0=fresh("agg_r"); genVar(a0,ex.tp,aks.map(_._2))+remote_agg(a0,m,aks,e)+(if (aks.size==0) co2(a0) else { ctx.load(cur); local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),co2) })
       }
 
 // ------------------------------------
@@ -172,18 +169,21 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val fn0 = fresh("fa");
     val (body0:String,rc:List[String])=remote(m,fn0,()=>{ inuse.add(key.map(_._1).toSet)
       val d0=dep; dep=Dep((v:String)=>"co("+v+")\n")
+      val d2=dep2; dep2=Dep(if(key.size==0) (v:String)=>a0+" += "+v+";\n" else (v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n",dep)
       val r = dep.wrap(()=>{
-        val body = (if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")
-        else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(_._1))+","+v+");\n") })
+        val body = (if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,dep2)
+        else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,dep2) })
         body+dep(a0)
       })
-      dep=d0; r
+      dep=d0;
+      dep2=d2
+      r
     })
     val (fn,body) = aggl.getOrElseUpdate((m,anon(e),rc),(fn0,body0))
     // local handler
     val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
     val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
-    dep.op((x:String)=> "aggr("+ref(m)+","+fn+",Array("+rc.mkString(",")+"),"+(if (add) a0+",(_" else acc+",("+a0)+"v:"+rt+") => {\n"+ind((if (add) "" else a0+" = "+a0+"v; ")+"\n"+x)+"\n})\n")
+    (if (dep2!=null) dep2 else dep).op((x:String)=> "aggr("+ref(m)+","+fn+",Array("+rc.mkString(",")+"),"+(if (add) a0+",(_" else acc+",("+a0)+"v:"+rt+") => {\n"+ind((if (add) "" else a0+" = "+a0+"v; ")+"\n"+x)+"\n})\n")
   }
 // ------------------------------------
 
