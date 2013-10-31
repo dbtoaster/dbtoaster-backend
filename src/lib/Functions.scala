@@ -152,7 +152,7 @@ object Functions {
   }
 
   def __deleteEntryHashMap[A<:IEntry:Manifest](map: Array[A], target: A) {
-    
+
   }
 }
 

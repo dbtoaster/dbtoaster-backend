@@ -65,7 +65,7 @@ object ClusterApp {
     nodes = hosts.map { case (host,port,num) => (new Address("akka.tcp",name,host,port),num) }.toArray
     rest.toArray
   }
-  
+
   private def cls(name:String) = if (loader!=null) loader.loadClass(base+name) else Class.forName(base+name)
   def main(args:Array[String]) {
     val as=parseArgs(args)
@@ -77,7 +77,7 @@ object ClusterApp {
         val streams:String=>Seq[(java.io.InputStream,Adaptor,Split)] = try {
           val cl = cls("$") // companion object
           val fn = cl.getMethod("streams","".getClass)
-          val obj = cl.getField("MODULE$").get(null) 
+          val obj = cl.getField("MODULE$").get(null)
           (set:String) => fn.invoke(obj,set).asInstanceOf[Seq[(java.io.InputStream,Adaptor,Split)]]
         } catch { case t:Throwable => throw new Exception("Companion object "+base+".streams() not found") }
 
@@ -95,7 +95,7 @@ object ClusterApp {
         println("WorkerNode @ "+system+" with "+parts+" workers")
       }
     } catch { case t:Throwable => system.shutdown; throw t }
-  }  
+  }
 }
 
 // ------------------------------------------------------

@@ -45,7 +45,7 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
     def apply() = f(ctr)
   }
   */
-  
+
   /*
   Need for an optimization phase:
   ==> phase after TypeCheck: union/add is disambiguated with Add.agg
@@ -59,6 +59,4 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
   - disambiguate add/union at optimization phase ?
   - adding map slicing information
   */
-  
-  
 }

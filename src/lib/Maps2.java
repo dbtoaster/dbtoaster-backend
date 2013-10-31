@@ -236,7 +236,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     public boolean isEmpty() { return size==0; }
     public void clear() { for (int i=0;i<data.length;++i) data[i]=null; size=0; }
     public boolean contains(Object o) { return find((Entry<K,V>)o)!=null; }
-    
+
     // Iterator
     public Iterator<Entry<K,V>> iterator() { return new HIterator(); }
     public boolean add(Entry<K,V> e) { int h=e.hash; int b=indexFor(h, data.length);

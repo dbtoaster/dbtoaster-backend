@@ -65,7 +65,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   private var local = Set[String]() // locally available maps (tables+vars)
   private var local_r:String = null // map over which delegation happens (can be used only once to generate a foreach)
   var dep : Dep = null // contextual dependency tracker
-  var dep2: Dep = null // aggregation dependency tracking 
+  var dep2: Dep = null // aggregation dependency tracking
 
   // Dependency-tracking closure
   case class Dep(co:String=>String,var parent:Dep=null) extends Function1[String,String] {
@@ -87,7 +87,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   def genVar(n:String,tp:Type,ks:List[Type]=Nil) = "var "+n+(if (ks==Nil) ":"+tp.toScala+" = "+tp.zeroScala else ":M3Map["+tup(ks.map(_.toScala))+","+tp.toScala+"] = null")+"\n"
-  
+
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(n); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) { inuse.add(n); cpsExpr(e,(v:String)=>co("(if ("+n+" == "+v+") 1L else 0L)"),am) }
@@ -100,7 +100,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         else { // local foreach
           ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).toMap)
           val (k0,v0)=(fresh("k"),fresh("v"));
-          
+
  // create a new outer, use dep as inner
           val kis = ki.map{case (k,i)=>"val "+k+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString
           "//dep2="+dep2+"\n"+
@@ -295,7 +295,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
     val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
     dep.wrap(()=>"aggr("+ref(m)+","+fn+",Array("+rc.mkString(",")+"),"+(if (add) a0+",(_" else acc+",("+a0)+"v:"+rt+") => { "+(if (add) "" else a0+" = "+a0+"v; ")+"dep"+(if(dep.loop) "_loop" else "")+".d })\n")
-    
+
   }
 
   def genVar0(n:String,tp:Type,ks:List[Type]=Nil) = "var "+n+(if (ks==Nil) ":"+tp.toScala+" = "+tp.zeroScala else ":M3Map["+tup(ks.map(_.toScala))+","+tp.toScala+"] = null")+"\n"

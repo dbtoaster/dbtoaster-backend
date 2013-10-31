@@ -23,7 +23,7 @@ libraryDependencies <++= scalaVersion(v=>Seq(
   //"com.typesafe.akka" %% "akka-cluster"   % "2.2.3",
   "org.scala-lang"     % "scala-actors"   % v, // XXX: legacy to compile previous Scala back-end
   "org.scala-lang"     % "scala-compiler" % v,
-  "org.scalatest"     %% "scalatest"      % "2.0.RC2" % "test"
+  "org.scalatest"     %% "scalatest"      % "2.0.RC3" % "test"
 ))
 
 // --------- Compilation options
@@ -96,11 +96,11 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
     //unmanagedSourceDirectories in Compile += file("lms"),
     // LMS-specific options
     scalaOrganization := "org.scala-lang.virtualized",
-    scalaVersion := "2.10.1",
+    scalaVersion := "2.10.2-RC1",
     libraryDependencies ++= Seq(
-      "org.scala-lang.virtualized" % "scala-library" % "2.10.1",
-      "org.scala-lang.virtualized" % "scala-compiler" % "2.10.1",
-      "EPFL" % "lms_2.10" % "0.3-SNAPSHOT"
+      "org.scala-lang.virtualized" % "scala-library" % "2.10.2-RC1",
+      "org.scala-lang.virtualized" % "scala-compiler" % "2.10.2-RC1",
+      "EPFL" %% "lms" % "0.3-SNAPSHOT"
     ),
     scalacOptions ++= List("-Yvirtualize")
   )

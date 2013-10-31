@@ -248,7 +248,7 @@ object UnitTest {
     def all(q:QueryTest)(f:String=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) tr+=",,," else f(d) }; ds=datasets.size; close }
     def close { tr+=(",,,"*(datasets.size-ds)); var s=time(med(tg),0)+","+time(med(tc),0)+","+tr; if (csv!=null) { csv.print(s); csv.flush } }
   }
-  
+
   // ---------------------------------------------------------------------------
   // AST of query unit tests
   case class QueryTest(sql:String,sets:Map[String,QuerySet]=Map(("standard",QuerySet()))) { override def toString = sql+ind(sets.map{case (k,v)=>"\n - "+k+": "+v.out.toString}.mkString) }

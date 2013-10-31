@@ -186,7 +186,7 @@ case class K3MapMult[K,V:ClassTag](idxs:List[K3Index[_,K,V]]=Nil) extends K3Map[
   // Note: A slice might become incoherent if was empty at creation or if it has been emptied.
   //       This should not be a problem as no slice are maintained between operations.
   class K3Slice(elems:java.util.HashMap[K,V], slice:java.util.HashMap[K,V]) extends K3MapMult[K,V](idxs) {
-    override def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](slice).foreach{ case (k,v)=>f(k,v) } 
+    override def foreach(f:(K,V)=>Unit) = scala.collection.JavaConversions.mapAsScalaMap[K,V](slice).foreach{ case (k,v)=>f(k,v) }
     override def clear() = foreach { case (k,v)=> elems.remove(k); idxs.foreach(_.del(k)) }
     // Debug
     override def toMap = scala.collection.JavaConversions.mapAsScalaMap(slice).toMap

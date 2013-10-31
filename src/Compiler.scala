@@ -27,7 +27,7 @@ object Compiler {
   var exec_sc : Boolean = false  // compile using fsc / external scalac
   var exec_vm : Boolean = false  // execute in a fresh JVM
   var exec_args = List[String]() // arguments passed for execution
-  
+
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1); null }
   def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
     val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f)) ::: (if (!opts.isEmpty) opts.toList else in)

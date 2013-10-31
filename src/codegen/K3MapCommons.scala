@@ -46,14 +46,14 @@ object K3MapCommons {
 
   /**
    * Generates the class name for HashMap entries, given
-   * value type, key type, and list of indices used for 
+   * value type, key type, and list of indices used for
    * indexing data inside the map
    */
   def entryClassName(value:Type, key:List[Type], indexList: List[List[Int]] = List[List[Int]]()): String = "EntryK"+key.map(x => shortName(x)).mkString+"_V"+shortName(value)+"_X"+indexList.map(x => x.mkString("_")).mkString("N")
 
   /**
    * Generates the class name for Index HashMap entries, given
-   * value type, key type, and list of indices used for 
+   * value type, key type, and list of indices used for
    * indexing data inside the index target, and current index
    * information
    */
@@ -102,7 +102,7 @@ object K3MapCommons {
       key.zipWithIndex.map{case (ktp, i) => "val _"+(i+1)+":"+ktp.toScala+", "}.mkString +
       "var v:" + value.toScala + ", var next:" + name + "=null) extends IEntry {\n" +
       idxList.map{ x =>
-        val idxMapName = indexEntryClassName(name, x) 
+        val idxMapName = indexEntryClassName(name, x)
         "    var ptr"+idxMapName+":"+idxMapName+" = null\n" +
         "    var ptr"+idxMapName+"_idx:Int = -1\n"
       }.mkString +
@@ -162,7 +162,7 @@ object K3MapCommons {
    * Implementation of MurmurHash3
    * based on scala.util.hashing.MurmurHash3
    * for Products
-   * 
+   *
    * https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
    */
   def hashFunction(keyNames: List[String], prefix: String = "") = {
@@ -262,7 +262,7 @@ object K3MapCommons {
   /**
    * Generates K3Map definition statements.
    * These maps will be created once for a DBToaster
-   * program and will store the final results and 
+   * program and will store the final results and
    * intermediate results required between separate
    * trigger definitions.
    *
@@ -285,7 +285,7 @@ object K3MapCommons {
       // map__md(1) == map threshold
       "var "+name+"__md: Array[Int] = Array[Int]("+((0 until indexList.size+1).toList.map(x => "0, "+INITIAL_THRESHOLD)).mkString(" ,")+");\n") +
     (if (indexList.size>0) {
-      indexList.map{ is => 
+      indexList.map{ is =>
         val idxEntryCls = indexEntryClassName(value, key, indexList, is)
         indexEntryClasses += (idxEntryCls -> (value,key,indexList,is))
 
@@ -356,7 +356,7 @@ object K3MapCommons {
    * @param key is the list of key parts types
    * @param value is the value type
    * @param keyIndicesInEntery which parts of key are
-   *        are used 
+   *        are used
    * @param indexList is the list of indices for this map
    *
    * Input arguments:
@@ -396,7 +396,7 @@ object K3MapCommons {
    * @param key is the list of key parts types
    * @param value is the value type
    * @param keyIndicesInEntery which parts of key are
-   *        are used 
+   *        are used
    * @param indexList is the list of indices for this map
    *
    * Input arguments:
@@ -489,7 +489,7 @@ object K3MapCommons {
       "    }\n"
     } else {
       ""
-    }) + 
+    }) +
     "  }\n" +
     (if(fromNamedMap) {
       "  "+prev+" = "+e+"\n" +
@@ -689,7 +689,7 @@ object K3MapCommons {
    * @param value is the value type
    * @param indexList is the list of indices for this map
    * @param keyIndicesInEntery which parts of key are
-   *        are used 
+   *        are used
    *
    * Input arguments:
    * @param keyNames is a list of input key args
