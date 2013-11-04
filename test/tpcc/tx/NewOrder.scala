@@ -1,7 +1,8 @@
-package ddbt.experimental
+package ddbt.tpcc.tx
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
+import ddbt.tpcc.loadtest.TpccUnitTest._
 
 /**
  * NewOrder Transaction for TPC-C Benchmark
@@ -12,18 +13,18 @@ object NewOrder {
   val r = new scala.util.Random
 
   //Tables
-  val stockTbl: Map[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)] = new HashMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
-  val newOrderTbl = new HashSet[(Int,Int,Int)]
+  //val stockTbl: Map[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)] = new HashMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
+  //val newOrderTbl = new HashSet[(Int,Int,Int)]
 
   //Partial Tables (containing all rows, but not all columns)
   //removed columns are commented out
-  val districtPartialTbl = new HashMap[(Int,Int),(/*String,String,String,String,String,String,*/Double,/*Double,*/Int)]
-  val orderPartialTbl = new HashMap[(Int,Int,Int),(Int,Date/*,Option[Int]*/,Int,Boolean)]
-  val itemPartialTbl = new HashMap[Int,(/*Int,*/String,Double,String)]
-  val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(Int,Int/*,Date*/,Int,Double,String)]
+  //val districtPartialTbl = new HashMap[(Int,Int),(/*String,String,String,String,String,String,*/Double,/*Double,*/Int)]
+  //val orderPartialTbl = new HashMap[(Int,Int,Int),(Int,Date/*,Option[Int]*/,Int,Boolean)]
+  //val itemPartialTbl = new HashMap[Int,(/*Int,*/String,Double,String)]
+  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(Int,Int/*,Date*/,Int,Double,String)]
 
   //Materialized query results
-  val customerWarehouseFinancialInfoMap = new HashMap[(Int,Int,Int),(Double, String, String, Double)]
+  //val customerWarehouseFinancialInfoMap = new HashMap[(Int,Int,Int),(Double, String, String, Double)]
 
   /**
    * @param w_id is warehouse id
@@ -53,26 +54,23 @@ object NewOrder {
    *      + insertOrderLine
    *
    */
-  def newOrderTx(w_id:Int, d_id:Int, c_id:Int, itemid:Array[Int], supware:Array[Int], quantity:Array[Int], price:Array[Double], iname:Array[String], stock:Array[Int], bg:Array[Char], amt:Array[Double]): Int = {
+  def newOrderTx(datetime:Date, w_id:Int, d_id:Int, c_id:Int, o_all_local:Boolean, o_ol_count:Int, itemid:Array[Int], supware:Array[Int], quantity:Array[Int], price:Array[Double], iname:Array[String], stock:Array[Int], bg:Array[Char], amt:Array[Double]): Int = {
     try {
       printMapInfo
       println("Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
 
-      val datetime = new java.util.Date()
-
       val (c_discount, c_last, c_credit, w_tax) = NewOrderTxOps.findCustomerWarehouseFinancialInfo(w_id,d_id,c_id)
 
-      val (d_tax, d_next_o_id) = NewOrderTxOps.findDistrictInfo(w_id,d_id)
+      val (_,_,_,_,_,_,d_tax,_,d_next_o_id) = NewOrderTxOps.findDistrictInfo(w_id,d_id)
 
       NewOrderTxOps.updateDistrictNextOrderId(w_id,d_id,d_tax,d_next_o_id+1)
 
       //no need to copy
       val o_id = d_next_o_id
       
-      var o_all_local:Boolean = true
-      supware.foreach { s_w_id => if(s_w_id != w_id) o_all_local = false }
-
-      val o_ol_count = supware.length
+      //var o_all_local:Boolean = true
+      //supware.foreach { s_w_id => if(s_w_id != w_id) o_all_local = false }
+      //val o_ol_count = supware.length
 
       NewOrderTxOps.insertOrder(o_id, w_id, d_id, c_id, datetime, o_ol_count, o_all_local)
 
@@ -96,7 +94,7 @@ object NewOrder {
           i_price = ti_price
         } catch {
           case nsee: java.util.NoSuchElementException => {
-            println("An item was not found in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
+            println("An item was not found in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d, items=%s".format(w_id,d_id,c_id, java.util.Arrays.toString(itemid)))
             failed = true
           }
         }
@@ -134,7 +132,7 @@ object NewOrder {
         NewOrderTxOps.updateStock(ol_supply_w_id, ol_i_id, new_s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,
           s_ytd+ol_quantity,s_order_cnt+1,s_remote_cnt+s_remote_cnt_increment, s_data)
 
-        val ol_amount = ol_quantity * i_price * (1+w_tax+d_tax)
+        val ol_amount = ol_quantity * i_price * (1+w_tax+d_tax) * (1 - c_discount)
         amt(ol_number) =  ol_amount
         total += ol_amount
 
@@ -153,6 +151,7 @@ object NewOrder {
     } catch {
       case e: Throwable => {
         println("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
+        throw e
         1
       }
     }
@@ -173,7 +172,7 @@ object NewOrder {
      * @return (c_discount, c_last, c_credit, w_tax)
      */
     def findCustomerWarehouseFinancialInfo(w_id:Int, d_id:Int, c_id:Int) = {
-      customerWarehouseFinancialInfoMap(w_id,d_id,c_id)
+      SharedData.customerWarehouseFinancialInfoMap(c_id,d_id,w_id)
     }
 
     /**
@@ -182,7 +181,7 @@ object NewOrder {
      * @return (d_next_o_id, d_tax)
      */
     def findDistrictInfo(w_id:Int, d_id:Int) = {
-      districtPartialTbl(w_id,d_id)
+      SharedData.districtTbl(d_id,w_id)
     }
 
     /**
@@ -193,7 +192,7 @@ object NewOrder {
      * @param d_tax is the district tax value for this dirstrict
      */
     def updateDistrictNextOrderId(w_id:Int, d_id:Int, d_tax:Double, new_d_next_o_id:Int): Unit = {
-      districtPartialTbl.update((w_id,d_id), (d_tax,new_d_next_o_id))
+      SharedData.onUpdate_District_forNewOrder(d_id, w_id, d_tax,new_d_next_o_id)
     }
 
     /**
@@ -201,7 +200,7 @@ object NewOrder {
      * @param d_id is district id
      */
     def insertOrder(o_id:Int, w_id:Int, d_id:Int, c_id:Int, o_entry_d:Date, o_ol_cnt:Int, o_all_local:Boolean): Unit = {
-      orderPartialTbl += (o_id,w_id,d_id) -> ((c_id, o_entry_d/*, None*/, o_ol_cnt, o_all_local))
+      SharedData.onInsert_Order(o_id,d_id,w_id , c_id, o_entry_d, None, o_ol_cnt, o_all_local)
     }
 
     /**
@@ -209,28 +208,28 @@ object NewOrder {
      * @param d_id is district id
      */
     def insertNewOrder(o_id:Int, w_id:Int, d_id:Int): Unit = {
-      newOrderTbl += ((o_id,w_id,d_id))
+      SharedData.onInsert_NewOrder(o_id,d_id,w_id)
     }
 
     /**
      * @param item_id is the item id
      */
     def findItem(item_id:Int) = {
-      itemPartialTbl(item_id)
+      SharedData.itemPartialTbl(item_id)
     }
 
     /**
      * @param w_id is warehouse id
      */
     def findStock(w_id:Int, item_id:Int) = {
-      stockTbl((w_id,item_id))
+      SharedData.stockTbl((item_id,w_id))
     }
 
     /**
      * @param w_id is warehouse id
      */
     def updateStock(w_id:Int, item_id:Int, s_quantity:Int, s_dist_01:String, s_dist_02:String, s_dist_03:String, s_dist_04:String, s_dist_05:String, s_dist_06:String, s_dist_07:String, s_dist_08:String, s_dist_09:String, s_dist_10:String, s_ytd:Int, s_order_cnt:Int, s_remote_cnt:Int, s_data:String) = {
-      stockTbl.update((w_id,item_id), (s_quantity, s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data))
+      SharedData.onUpdateStock(item_id,w_id, s_quantity, s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data)
     }
 
     /**
@@ -238,38 +237,38 @@ object NewOrder {
      * @param d_id is district id
      */
     def insertOrderLine(w_id:Int, d_id:Int, o_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_quantity:Int, ol_amount:Double, ol_dist_info:String): Unit = {
-      orderLinePartialTbl += (o_id, d_id, w_id, ol_number) -> (ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_dist_info)
+      SharedData.onInsertOrderLine(o_id, d_id, w_id, ol_number, ol_i_id, ol_supply_w_id, None, ol_quantity, ol_amount, ol_dist_info)
     }
   }
 
-  def main(args: Array[String]) {
-    val w_id = 1
-    val d_id = 2
-    val c_id = 3
-    val item_id = Array[Int](4,5,6)
-    val supply_w_id = Array[Int](1,1,1)
-    //orderQuantities
-    val quantity = Array[Int](10,11,12)
-    //itemPrices
-    val price = new Array[Double](3)
-    //itemNames
-    val iname = new Array[String](3)
-    //stockQuantities
-    val stock = new Array[Int](3)
-    //brandGeneric
-    val bg = new Array[Char](3)
-    //orderLineAmounts
-    val amount = new Array[Double](3)
+  // def main(args: Array[String]) {
+  //   val w_id = 1
+  //   val d_id = 2
+  //   val c_id = 3
+  //   val item_id = Array[Int](4,5,6)
+  //   val supply_w_id = Array[Int](1,1,1)
+  //   //orderQuantities
+  //   val quantity = Array[Int](10,11,12)
+  //   //itemPrices
+  //   val price = new Array[Double](3)
+  //   //itemNames
+  //   val iname = new Array[String](3)
+  //   //stockQuantities
+  //   val stock = new Array[Int](3)
+  //   //brandGeneric
+  //   val bg = new Array[Char](3)
+  //   //orderLineAmounts
+  //   val amount = new Array[Double](3)
 
-    loadDataTables(w_id,d_id,c_id)
-    newOrderTx(w_id,d_id,c_id,item_id,supply_w_id,quantity,price,iname,stock,bg,amount)
-  }
+  //   // loadDataTables(w_id,d_id,c_id)
+  //   // newOrderTx(w_id,d_id,c_id,item_id,supply_w_id,quantity,price,iname,stock,bg,amount)
+  // }
 
-  def loadDataTables(w_id:Int, d_id:Int, c_id:Int) {
-    val (c_discount, c_last, c_credit, w_tax) = (r.nextDouble, r.nextString(10), if(r.nextBoolean) "BC" else "GC",r.nextDouble)
-    val (d_next_o_id, d_tax) = (r.nextInt(10000000), r.nextDouble)
+  // def loadDataTables(w_id:Int, d_id:Int, c_id:Int) {
+  //   val (c_discount, c_last, c_credit, w_tax) = (r.nextDouble, r.nextString(10), if(r.nextBoolean) "BC" else "GC",r.nextDouble)
+  //   val (d_next_o_id, d_tax) = (r.nextInt(10000000), r.nextDouble)
 
-    customerWarehouseFinancialInfoMap += ((w_id,d_id,c_id) -> (c_discount, c_last, c_credit, w_tax))
-    districtPartialTbl += ((w_id,d_id) -> (d_tax,d_next_o_id))
-  }
+  //   customerWarehouseFinancialInfoMap += ((w_id,d_id,c_id) -> (c_discount, c_last, c_credit, w_tax))
+  //   districtPartialTbl += ((w_id,d_id) -> (d_tax,d_next_o_id))
+  // }
 }

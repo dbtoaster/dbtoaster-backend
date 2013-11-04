@@ -1,7 +1,8 @@
-package ddbt.experimental
+package ddbt.tpcc.tx
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
+import ddbt.tpcc.loadtest.TpccUnitTest._
 
 /**
  * Payment Transaction for TPC-C Benchmark
@@ -10,13 +11,13 @@ import java.util.Date
  */
 object Payment {
   //Tables
-  val historyPartialTbl = new HashSet[(Int,Int,Int,Int,Int,Date,Double,String)]
+  //val historyTbl = new HashSet[(Int,Int,Int,Int,Int,Date,Double,String)]
 
   //Partial Tables (containing all rows, but not all columns)
   //removed columns are commented out
-  val warehousePartialTbl = new HashMap[Int,(String,String,String,String,String,String,/*Double,*/Double)]
-  val districtPartialTbl = new HashMap[(Int,Int),(String,String,String,String,String,String/*,Double*/,Double/*,Int*/)]
-  val customerPartialTbl = new HashMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int/*,Int*/,String)]
+  //val warehousePartialTbl = new HashMap[Int,(String,String,String,String,String,String,/*Double,*/Double)]
+  //val districtPartialTbl = new HashMap[(Int,Int),(String,String,String,String,String,String/*,Double*/,Double/*,Int*/)]
+  //val customerPartialTbl = new HashMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int/*,Int*/,String)]
 
 
   /**
@@ -58,9 +59,9 @@ object Payment {
 
       var c: (String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int/*,Int,String*/,Int) = null
       if (c_by_name) {
-        c = NewOrderTxOps.findCustomerByName(c_w_id, c_d_id, c_last)
+        c = SharedData.findCustomerByName(c_w_id, c_d_id, c_last)
       } else {
-        c = NewOrderTxOps.findCustomerById(c_w_id, c_d_id, c_id)
+        c = SharedData.findCustomerById(c_w_id, c_d_id, c_id)
       }
       val found_c_id = c._17
       var c_data:String = null
@@ -142,62 +143,35 @@ object Payment {
   }
   object NewOrderTxOps {
     def updateWarehouseYtd(w_id:Int, h_amount:Double) = {
-      val (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_ytd) = warehousePartialTbl(w_id)
-      warehousePartialTbl.update(w_id,(w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_ytd+h_amount))
+      val (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd) = SharedData.warehouseTbl(w_id)
+      SharedData.onUpdate_Warehouse(w_id,w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd+h_amount)
     }
     def findWarehouse(w_id:Int) = {
-      val (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_ytd) = warehousePartialTbl(w_id)
+      val (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,_,w_ytd) = SharedData.warehouseTbl(w_id)
       (w_name,w_street_1,w_street_2,w_city,w_state,w_zip)
     }
     def updateDistrict(w_id:Int, d_id:Int, h_amount:Double) = {
-      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_ytd) = districtPartialTbl((w_id,d_id))
-      districtPartialTbl.update((w_id,d_id),(d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_ytd+h_amount))
+      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id) = SharedData.districtTbl((w_id,d_id))
+      SharedData.onUpdate_District(w_id,d_id, d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd+h_amount,d_next_o_id)
     }
     def findDistrict(w_id:Int, d_id:Int) = {
-      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_ytd) = districtPartialTbl((w_id,d_id))
+      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,_,d_ytd,_) = SharedData.districtTbl((w_id,d_id))
       (d_name,d_street_1,d_street_2,d_city,d_state,d_zip)
     }
-    def findCustomerByName(c_w_id: Int, c_d_id: Int, input_c_last: String) = {
-      class MiniCustomer(val cust_id:Int, val cust_first:String) extends Ordered[MiniCustomer] {
-        def compare(that: MiniCustomer) = this.cust_first.compareTo(that.cust_first)
-      } 
-      var customers = new ArrayBuffer[MiniCustomer]
-      //we should slice over input_c_last
-      customerPartialTbl.foreach { case (c_k,c_v) =>
-        if(c_v._3 == input_c_last) {
-          customers += new MiniCustomer(c_k._1,c_v._1)
-        }
-      }
-      if (customers.size == 0) {
-        throw new RuntimeException("The customer C_LAST=" + input_c_last + " C_D_ID=" + c_d_id + " C_W_ID=" + c_w_id + " not found!")
-      }
-      customers = customers.sorted
-      var index: Int = customers.size / 2
-      if (customers.size % 2 == 0) {
-        index -= 1
-      }
-      val c_id = customers(index).cust_id
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_) = customerPartialTbl((c_id,c_d_id,c_w_id))
-      (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_id)
-    }
-    def findCustomerById(c_w_id: Int, c_d_id: Int, c_id: Int) = {
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_) = customerPartialTbl((c_id,c_d_id,c_w_id))
-      (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_id)
-    }
     def findCustomerData(c_w_id: Int, c_d_id: Int, c_id: Int) = {
-      val (_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,c_data) = customerPartialTbl(c_id,c_d_id,c_w_id)
+      val (_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,c_data) = SharedData.customerTbl(c_id,c_d_id,c_w_id)
       c_data
     }
     def updateCustomerBalance(c_w_id: Int, c_d_id: Int, c_id: Int, c_balance:Double, c_ytd_payment:Double, c_payment_cnt:Int) = {
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,_,_,_,c_data) = customerPartialTbl((c_id,c_d_id,c_w_id))
-      customerPartialTbl.update((c_id,c_d_id,c_w_id),(c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_data))
+      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,_,_,_,c_delivery_cnt,c_data) = SharedData.customerTbl((c_id,c_d_id,c_w_id))
+      SharedData.onUpdateCustomer(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)
     }
     def updateCustomerBalanceAndData(c_w_id: Int, c_d_id: Int, c_id: Int, c_balance:Double, c_ytd_payment:Double, c_payment_cnt:Int, c_data:String) = {
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,_,_,_,_) = customerPartialTbl((c_id,c_d_id,c_w_id))
-      customerPartialTbl.update((c_id,c_d_id,c_w_id),(c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_data))
+      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,_,_,_,c_delivery_cnt,_) = SharedData.customerTbl((c_id,c_d_id,c_w_id))
+      SharedData.onUpdateCustomer(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)
     }
     def insertHistory(h_c_id:Int,h_c_d_id:Int,h_c_w_id:Int,h_d_id:Int,h_w_id:Int,h_date:Date,h_amount:Double,h_data:String) = {
-      historyPartialTbl += ((h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,h_date,h_amount,h_data))
+      SharedData.onInsert_HistoryTbl(h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,h_date,h_amount,h_data)
     }
   }
 }
