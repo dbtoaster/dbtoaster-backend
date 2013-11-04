@@ -274,26 +274,27 @@ class NewOrder(var pStmts: TpccStatements) extends TpccConstants {
         ol_num_seq(i) = i
         i += 1
       }
-      i = 0
-      while (i < (o_ol_cnt - 1)) {
-        tmp = (MAXITEMS + 1) * supware(ol_num_seq(i)) + itemid(ol_num_seq(i))
-        min_num = i
-        j = i + 1
-        while (j < o_ol_cnt) {
-          if ((MAXITEMS + 1) * supware(ol_num_seq(j)) + itemid(ol_num_seq(j)) < 
-            tmp) {
-            tmp = (MAXITEMS + 1) * supware(ol_num_seq(j)) + itemid(ol_num_seq(j))
-            min_num = j
-          }
-          j += 1
-        }
-        if (min_num != i) {
-          swp = ol_num_seq(min_num)
-          ol_num_seq(min_num) = ol_num_seq(i)
-          ol_num_seq(i) = swp
-        }
-        i += 1
-      }
+      //TODO - if we want this odering, we should implement it on the other side
+      // i = 0
+      // while (i < (o_ol_cnt - 1)) {
+      //   tmp = (MAXITEMS + 1) * supware(ol_num_seq(i)) + itemid(ol_num_seq(i))
+      //   min_num = i
+      //   j = i + 1
+      //   while (j < o_ol_cnt) {
+      //     if ((MAXITEMS + 1) * supware(ol_num_seq(j)) + itemid(ol_num_seq(j)) < 
+      //       tmp) {
+      //       tmp = (MAXITEMS + 1) * supware(ol_num_seq(j)) + itemid(ol_num_seq(j))
+      //       min_num = j
+      //     }
+      //     j += 1
+      //   }
+      //   if (min_num != i) {
+      //     swp = ol_num_seq(min_num)
+      //     ol_num_seq(min_num) = ol_num_seq(i)
+      //     ol_num_seq(i) = swp
+      //   }
+      //   i += 1
+      // }
       var ol_number = 1
       while (ol_number <= o_ol_cnt) {
         ol_supply_w_id = supware(ol_num_seq(ol_number - 1))

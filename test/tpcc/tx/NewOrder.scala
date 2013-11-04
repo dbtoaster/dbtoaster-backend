@@ -129,8 +129,10 @@ object NewOrder {
         var s_remote_cnt_increment = 0
         if(ol_supply_w_id != w_id) s_remote_cnt_increment = 1
 
+        //TODO this is the correct version
+        //but is not implemented in the correctness test
         NewOrderTxOps.updateStock(ol_supply_w_id, ol_i_id, new_s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,
-          s_ytd+ol_quantity,s_order_cnt+1,s_remote_cnt+s_remote_cnt_increment, s_data)
+          s_ytd/*+ol_quantity*/,s_order_cnt/*+1*/,s_remote_cnt/*+s_remote_cnt_increment*/, s_data)
 
         val ol_amount = ol_quantity * i_price * (1+w_tax+d_tax) * (1 - c_discount)
         amt(ol_number) =  ol_amount
