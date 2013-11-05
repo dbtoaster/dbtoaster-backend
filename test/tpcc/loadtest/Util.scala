@@ -1,5 +1,6 @@
 package ddbt.tpcc.loadtest
 
+import java.util.Date
 import java.util.Random
 
 object Util extends TpccConstants{
@@ -207,5 +208,17 @@ object Util extends TpccConstants{
     name = name + n((num / 10) % 10)
     name = name + n(num % 10)
     name
+  }
+
+  def roundDate(d:Date):Date = {
+    val c = java.util.Calendar.getInstance();
+    c.setTime(d);
+    val mil = c.get(java.util.Calendar.MILLISECOND);
+    c.set(java.util.Calendar.MILLISECOND, 0);
+    //TODO Date rounding is required for some versions of MySQL
+    // if(mil >= 500) {
+    //  c.set(java.util.Calendar.SECOND, c.get(java.util.Calendar.SECOND)+1);
+    // }
+    c.getTime()
   }
 }

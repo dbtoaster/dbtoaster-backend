@@ -32,7 +32,7 @@ class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
       if (DEBUG) logger.debug("Transaction: ORDER STAT")
       val w_id = w_id_arg
       val d_id = d_id_arg
-      val c_id = c_id_arg
+      var c_id = c_id_arg
       val c_d_id = d_id
       val c_w_id = w_id
       var c_first: String = null
@@ -79,7 +79,7 @@ class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
           pStmts.getStatement(21).setInt(1, c_w_id)
           pStmts.getStatement(21).setInt(2, c_d_id)
           pStmts.getStatement(21).setString(3, c_last)
-          if (TRACE) logger.trace("SELECT c_balance, c_first, c_middle, c_last FROM customer WHERE " + 
+          if (TRACE) logger.trace("SELECT c_balance, c_first, c_middle, c_id FROM customer WHERE " + 
             "c_w_id = " + 
             c_w_id + 
             " AND c_d_id = " + 
@@ -97,14 +97,13 @@ class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
             c_balance = rs.getFloat(1)
             c_first = rs.getString(2)
             c_middle = rs.getString(3)
-            c_last = rs.getString(4)
-            n += 1
+            c_id = rs.getInt(4)
             n += 1
           }
           rs.close()
         } catch {
           case e: SQLException => {
-            logger.error("SELECT c_balance, c_first, c_middle, c_last FROM customer WHERE " + 
+            logger.error("SELECT c_balance, c_first, c_middle, c_id FROM customer WHERE " + 
               "c_w_id = " + 
               c_w_id + 
               " AND c_d_id = " + 
@@ -168,7 +167,7 @@ class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
           " AND o_d_id = " + 
           c_d_id + 
           " AND o_c_id = " + 
-          c_id)
+          c_id  + ")")
         val rs = pStmts.getStatement(23).executeQuery()
         if (rs.next()) {
           o_id = rs.getInt(1)
@@ -191,7 +190,7 @@ class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
             " AND o_d_id = " + 
             c_d_id + 
             " AND o_c_id = " + 
-            c_id, e)
+            c_id + ")", e)
           throw new Exception("OrderState select transaction error", e)
         }
       }

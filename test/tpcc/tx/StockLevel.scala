@@ -64,9 +64,8 @@ object StockLevel {
 
       def findOrderLineStockRecentItemsUnderThresholds(w_id:Int, d_id:Int, o_id:Int, threshold:Int) = {
         val unique_ol_i_id = new HashSet[Int]
-
         SharedData.orderLineTbl.foreach { case ((ol_o_id,ol_d_id,ol_w_id,_) ,(ol_i_id,_,_,_,_,_)) =>
-          if(ol_w_id==w_id && ol_d_id==d_id && ol_o_id < o_id && ol_o_id>=o_id) {
+          if(ol_w_id==w_id && ol_d_id==d_id && ol_o_id < o_id && ol_o_id>=(o_id-20)) {
             val (s_quantity,_,_,_,_,_,_,_,_,_,_,_,_,_,_) = SharedData.stockTbl(ol_i_id,ol_w_id)
             if(s_quantity < threshold) {
               unique_ol_i_id += ol_i_id

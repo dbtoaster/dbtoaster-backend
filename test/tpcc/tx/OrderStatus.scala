@@ -42,16 +42,18 @@ object OrderStatus {
       }
       val found_c_id = c._17
       val (o_id,o_entry_d,o_carrier_id) = OrderStatusTxOps.findNewestOrder(w_id,d_id,found_c_id)
-      val orderLineResults = OrderStatusTxOps.findOrderLines(w_id,d_id,o_id)
       val orderLines: ArrayBuffer[String] = new ArrayBuffer[String]
-      orderLineResults.foreach { case (ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _) =>
-        val orderLine: StringBuilder = new StringBuilder
-        orderLine.append("[").append(ol_supply_w_id).append(" - ").append(ol_i_id).append(" - ").append(ol_quantity).append(" - ").append(ol_amount).append(" - ")
-        //if (ol_delivery_d != null) orderLine.append(ol_delivery_d)
-        //else orderLine.append("99-99-9999")
-        orderLine.append(ol_delivery_d.getOrElse("99-99-9999"))
-        orderLine.append("]")
-        orderLines += orderLine.toString
+      if(o_id != -1) {
+        val orderLineResults = OrderStatusTxOps.findOrderLines(w_id,d_id,o_id)
+        orderLineResults.foreach { case (ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _) =>
+          val orderLine: StringBuilder = new StringBuilder
+          orderLine.append("[").append(ol_supply_w_id).append(" - ").append(ol_i_id).append(" - ").append(ol_quantity).append(" - ").append(ol_amount).append(" - ")
+          //if (ol_delivery_d != null) orderLine.append(ol_delivery_d)
+          //else orderLine.append("99-99-9999")
+          orderLine.append(ol_delivery_d.getOrElse("99-99-9999"))
+          orderLine.append("]")
+          orderLines += orderLine.toString
+        }
       }
       val output: StringBuilder = new StringBuilder
       output.append("\n")
@@ -84,6 +86,7 @@ object OrderStatus {
     } catch {
       case e: Throwable => {
         println("An error occurred in handling OrderStatus transaction for warehouse=%d, district=%d".format(w_id,d_id))
+        e.printStackTrace
         1
       }
     }
@@ -99,8 +102,12 @@ object OrderStatus {
           }
         }
       }
-      val (_,o_entry_d,o_carrier_id,_,_) = SharedData.orderTbl((max_o_id,o_d_id_arg,o_w_id_arg))
-      (max_o_id,o_entry_d,o_carrier_id)
+      if(max_o_id == -1) {
+        (-1,null,None)
+      } else {
+        val (_,o_entry_d,o_carrier_id,_,_) = SharedData.orderTbl((max_o_id,o_d_id_arg,o_w_id_arg))
+        (max_o_id,o_entry_d,o_carrier_id)
+      }
     }
 
     def findOrderLines(ol_w_id_arg:Int, ol_d_id_arg:Int, ol_o_id_arg:Int) = {

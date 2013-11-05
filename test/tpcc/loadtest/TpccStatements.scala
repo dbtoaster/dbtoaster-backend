@@ -13,7 +13,7 @@ object TpccStatements {
 
   private val logger = LoggerFactory.getLogger(classOf[TpccStatements])
 
-  var STMT_COUNT: Int = 35
+  var STMT_COUNT: Int = 34
 }
 
 class TpccStatements(var conn: Connection, var fetchSize: Int) {
@@ -44,7 +44,7 @@ class TpccStatements(var conn: Connection, var fetchSize: Int) {
     pStmts(18) = prepareStatement("UPDATE customer SET c_balance = ? WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?")
     pStmts(19) = prepareStatement("INSERT INTO history(h_c_d_id, h_c_w_id, h_c_id, h_d_id, h_w_id, h_date, h_amount, h_data) VALUES(?, ?, ?, ?, ?, ?, ?, ?)")
     pStmts(20) = prepareStatement("SELECT count(c_id) FROM customer WHERE c_w_id = ? AND c_d_id = ? AND c_last = ?")
-    pStmts(21) = prepareStatement("SELECT c_balance, c_first, c_middle, c_last FROM customer WHERE c_w_id = ? AND c_d_id = ? AND c_last = ? ORDER BY c_first")
+    pStmts(21) = prepareStatement("SELECT c_balance, c_first, c_middle, c_id FROM customer WHERE c_w_id = ? AND c_d_id = ? AND c_last = ? ORDER BY c_first")
     pStmts(22) = prepareStatement("SELECT c_balance, c_first, c_middle, c_last FROM customer WHERE c_w_id = ? AND c_d_id = ? AND c_id = ?")
     pStmts(23) = prepareStatement("SELECT o_id, o_entry_d, COALESCE(o_carrier_id,0) FROM orders WHERE o_w_id = ? AND o_d_id = ? AND o_c_id = ? AND o_id = (SELECT MAX(o_id) FROM orders WHERE o_w_id = ? AND o_d_id = ? AND o_c_id = ?)")
     pStmts(24) = prepareStatement("SELECT ol_i_id, ol_supply_w_id, ol_quantity, ol_amount, ol_delivery_d FROM order_line WHERE ol_w_id = ? AND ol_d_id = ? AND ol_o_id = ?")
@@ -56,8 +56,9 @@ class TpccStatements(var conn: Connection, var fetchSize: Int) {
     pStmts(30) = prepareStatement("SELECT SUM(ol_amount) FROM order_line WHERE ol_o_id = ? AND ol_d_id = ? AND ol_w_id = ?")
     pStmts(31) = prepareStatement("UPDATE customer SET c_balance = c_balance + ? , c_delivery_cnt = c_delivery_cnt + 1 WHERE c_id = ? AND c_d_id = ? AND c_w_id = ?")
     pStmts(32) = prepareStatement("SELECT d_next_o_id FROM district WHERE d_id = ? AND d_w_id = ?")
-    pStmts(33) = prepareStatement("SELECT DISTINCT ol_i_id FROM order_line WHERE ol_w_id = ? AND ol_d_id = ? AND ol_o_id < ? AND ol_o_id >= (? - 20)")
-    pStmts(34) = prepareStatement("SELECT count(*) FROM stock WHERE s_w_id = ? AND s_i_id = ? AND s_quantity < ?")
+    pStmts(33) = prepareStatement("SELECT COUNT(DISTINCT (s_i_id)) FROM order_line, stock WHERE ol_w_id = ? AND ol_d_id = ? AND ol_o_id < ? AND ol_o_id >= (? - 20) AND s_w_id=ol_w_id AND s_i_id=ol_i_id AND s_quantity < ?")
+    // pStmts(33) = prepareStatement("SELECT DISTINCT ol_i_id FROM order_line WHERE ol_w_id = ? AND ol_d_id = ? AND ol_o_id < ? AND ol_o_id >= (? - 20)")
+    // pStmts(34) = prepareStatement("SELECT count(*) FROM stock WHERE s_w_id = ? AND s_i_id = ? AND s_quantity < ?")
     for (i <- 0 until pStmts.length) {
       pStmts(i).setFetchSize(fetchSize)
     }
