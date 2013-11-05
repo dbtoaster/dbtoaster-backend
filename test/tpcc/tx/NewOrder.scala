@@ -56,8 +56,7 @@ object NewOrder {
    */
   def newOrderTx(datetime:Date, w_id:Int, d_id:Int, c_id:Int, o_all_local:Boolean, o_ol_count:Int, itemid:Array[Int], supware:Array[Int], quantity:Array[Int], price:Array[Double], iname:Array[String], stock:Array[Int], bg:Array[Char], amt:Array[Double]): Int = {
     try {
-      printMapInfo
-      println("Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
+      println("- Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
 
       var ol_number = 0
       var failed = false
@@ -146,7 +145,7 @@ object NewOrder {
         ol_number += 1
       }
 
-      println("Finished NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
+      println("- Finished NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
       printMapInfo
 
 

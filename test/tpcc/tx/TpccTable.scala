@@ -6,6 +6,7 @@ import java.sql.Connection
 import java.sql.Statement
 import java.sql.ResultSet
 import ddbt.tpcc.loadtest.DatabaseConnector
+import ddbt.tpcc.loadtest.Util.roundDate
 
 /**
  * Delivery Transaction for TPC-C Benchmark
@@ -36,17 +37,6 @@ class TpccTable extends DatabaseConnector{
 
 	def onDelete_NewOrder(no_o_id:Int, no_d_id:Int, no_w_id:Int) = {
 		newOrderTbl -= ((no_o_id, no_d_id, no_w_id))
-	}
-
-	def roundDate(d:Date):Date = {
-		val c = java.util.Calendar.getInstance();
-		c.setTime(d);
-		val mil = c.get(java.util.Calendar.MILLISECOND);
-		c.set(java.util.Calendar.MILLISECOND, 0);
-		// if(mil >= 500) {
-		// 	c.set(java.util.Calendar.SECOND, c.get(java.util.Calendar.SECOND)+1);
-		// }
-		c.getTime()
 	}
 
 	def onInsert_HistoryTbl(h_c_id:Int, h_c_d_id:Int, h_c_w_id:Int, h_d_id:Int, h_w_id:Int, h_date:Date, h_amount:Double, h_data:String) = {

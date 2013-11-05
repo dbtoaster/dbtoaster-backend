@@ -32,7 +32,7 @@ class Slev(pStms: TpccStatements) extends TpccConstants {
       val d_id = d_id_arg
       val level = level_arg
       var d_next_o_id = 0
-      var i_count = 0
+      var stock_count = 0
       var ol_i_id = 0
       try {
         pStmts.getStatement(32).setInt(1, d_id)
@@ -97,7 +97,7 @@ class Slev(pStms: TpccStatements) extends TpccConstants {
           level)
         val rs = pStmts.getStatement(34).executeQuery()
         if (rs.next()) {
-          i_count = rs.getInt(1)
+          stock_count = rs.getInt(1)
         }
         rs.close()
       } catch {
@@ -111,6 +111,16 @@ class Slev(pStms: TpccStatements) extends TpccConstants {
         }
       }
       pStmts.commit()
+
+      val output: StringBuilder = new StringBuilder
+        output.append("\n+########################## STOCK-LEVEL ##########################+")
+        output.append("\n Warehouse: ").append(w_id)
+        output.append("\n District:  ").append(d_id)
+        output.append("\n\n Stock Level Threshold: ").append(level)
+        output.append("\n Low Stock Count:       ").append(stock_count)
+        output.append("\n+#################################################################+\n\n")
+        println(output.toString)
+
       1
     } catch {
       case e: Exception => try {

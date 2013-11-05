@@ -6,6 +6,7 @@ import java.sql.SQLException
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
 import OrderStat._
+import scala.collection.mutable._
 
 object OrderStat {
 
@@ -24,7 +25,8 @@ class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
       byname: Int, 
       c_id_arg: Int, 
       c_last_arg: String): Int = {
-    ddbt.tpcc.tx.OrderStatus.orderStatusTx(w_id_arg, d_id_arg, c_id_arg, c_last_arg, byname > 0)
+    val datetime = new java.util.Date()
+    ddbt.tpcc.tx.OrderStatus.orderStatusTx(datetime, w_id_arg, d_id_arg, c_id_arg, c_last_arg, byname > 0)
     try {
       pStmts.setAutoCommit(false)
       if (DEBUG) logger.debug("Transaction: ORDER STAT")
@@ -193,6 +195,7 @@ class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
           throw new Exception("OrderState select transaction error", e)
         }
       }
+      val orderLines: ArrayBuffer[String] = new ArrayBuffer[String]
       try {
         pStmts.getStatement(24).setInt(1, c_w_id)
         pStmts.getStatement(24).setInt(2, c_d_id)
@@ -211,6 +214,14 @@ class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
           ol_quantity = rs.getInt(3)
           ol_amount = rs.getFloat(4)
           ol_delivery_d = rs.getString(5)
+
+          val orderLine: StringBuilder = new StringBuilder
+          orderLine.append("[").append(ol_supply_w_id).append(" - ").append(ol_i_id).append(" - ").append(ol_quantity).append(" - ").append(ol_amount).append(" - ")
+          if (ol_delivery_d != null) orderLine.append(ol_delivery_d)
+          else orderLine.append("99-99-9999")
+          // orderLine.append(ol_delivery_d.getOrElse("99-99-9999"))
+          orderLine.append("]")
+          orderLines += orderLine.toString
         }
         rs.close()
       } catch {
@@ -226,6 +237,35 @@ class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
         }
       }
       pStmts.commit()
+
+      val output: StringBuilder = new StringBuilder
+      output.append("\n")
+      output.append("+########################## ORDER-STATUS #########################+\n")
+      output.append(" Date: ").append(datetime)
+      output.append("\n\n Warehouse: ").append(w_id)
+      output.append("\n District:  ").append(d_id)
+      output.append("\n\n Customer:  ").append(c_id)
+      output.append("\n   Name:    ").append(c_first).append(" ").append(c_middle).append(" ").append(c_last)
+      output.append("\n   Balance: ").append(c_balance).append("\n\n")
+      if (o_id == 0) {
+        output.append(" Customer has no orders placed.\n")
+      } else {
+        output.append(" Order-Number: ").append(o_id)
+        output.append("\n    Entry-Date: ").append(o_entry_d)
+        output.append("\n    Carrier-Number: ").append(o_carrier_id).append("\n\n")
+        if (orderLines.size != 0) {
+          output.append(" [Supply_W - Item_ID - Qty - Amount - Delivery-Date]\n")
+          for (orderLine <- orderLines) {
+            output.append(" ").append(orderLine).append("\n")
+          }
+        }
+        else {
+          println(" This Order has no Order-Lines.\n")
+        }
+      }
+      output.append("+#################################################################+\n\n")
+      println(output.toString)
+
       1
     } catch {
       case e: Exception => try {

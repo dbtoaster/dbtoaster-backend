@@ -31,9 +31,8 @@ object OrderStatus {
    *   - [OrderLine: R] in
    *      + findOrderLines
    */
-  def orderStatusTx(w_id: Int, d_id: Int, c_id: Int, c_last: String, c_by_name: Boolean):Int = {
+  def orderStatusTx(datetime:Date, w_id: Int, d_id: Int, c_id: Int, c_last: String, c_by_name: Boolean):Int = {
     try {
-      val datetime = new java.util.Date()
 
       var c: (String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int/*,Int,String*/,Int) = null
       if (c_by_name) {
@@ -42,7 +41,7 @@ object OrderStatus {
         c = SharedData.findCustomerById(w_id, d_id, c_id)
       }
       val found_c_id = c._17
-      val (o_id,entdate,o_carrier_id) = OrderStatusTxOps.findNewestOrder(w_id,d_id,found_c_id)
+      val (o_id,o_entry_d,o_carrier_id) = OrderStatusTxOps.findNewestOrder(w_id,d_id,found_c_id)
       val orderLineResults = OrderStatusTxOps.findOrderLines(w_id,d_id,o_id)
       val orderLines: ArrayBuffer[String] = new ArrayBuffer[String]
       orderLineResults.foreach { case (ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _) =>
@@ -67,7 +66,7 @@ object OrderStatus {
         output.append(" Customer has no orders placed.\n")
       } else {
         output.append(" Order-Number: ").append(o_id)
-        output.append("\n    Entry-Date: ").append(entdate)
+        output.append("\n    Entry-Date: ").append(o_entry_d)
         output.append("\n    Carrier-Number: ").append(o_carrier_id).append("\n\n")
         if (orderLines.size != 0) {
           output.append(" [Supply_W - Item_ID - Qty - Amount - Delivery-Date]\n")

@@ -384,7 +384,7 @@ class Payment(var pStmts: TpccStatements) extends TpccConstants {
         pStmts.getStatement(19).setInt(3, c_id)
         pStmts.getStatement(19).setInt(4, d_id)
         pStmts.getStatement(19).setInt(5, w_id)
-        pStmts.getStatement(19).setString(6, currentTimeStamp.toString)
+        pStmts.getStatement(19).setString(6, new Timestamp(Util.roundDate(currentTimeStamp).getTime()).toString)
         pStmts.getStatement(19).setFloat(7, h_amount)
         pStmts.getStatement(19).setString(8, h_data)
         if (TRACE) logger.trace("INSERT INTO history(h_c_d_id, h_c_w_id, h_c_id, h_d_id, h_w_id, h_date, h_amount, h_data)" + 
@@ -426,6 +426,58 @@ class Payment(var pStmts: TpccStatements) extends TpccConstants {
         }
       }
       pStmts.commit()
+
+      val output: StringBuilder = new StringBuilder
+      output.append("\n+############################ PAYMENT ############################+")
+      .append("\n Date: " + currentTimeStamp)
+      .append("\n\n Warehouse: ").append(w_id)
+      .append("\n   Street:  ").append(w_street_1)
+      .append("\n   Street:  ").append(w_street_2)
+      .append("\n   City:    ").append(w_city)
+      .append("   State: ").append(w_state)
+      .append("  Zip: ").append(w_zip)
+      .append("\n\n District:  ").append(d_id)
+      .append("\n   Street:  ").append(d_street_1)
+      .append("\n   Street:  ").append(d_street_2)
+      .append("\n   City:    ").append(d_city)
+      .append("   State: ").append(d_state)
+      .append("  Zip: ").append(d_zip)
+      .append("\n\n Customer:  ").append(c_id)
+      .append("\n   Name:    ").append(c_first).append(" ").append(c_middle).append(" ").append(c_last)
+      .append("\n   Street:  ").append(c_street_1)
+      .append("\n   Street:  ").append(c_street_2)
+      .append("\n   City:    ").append(c_city)
+      .append("   State: ").append(c_state)
+      .append("  Zip: ").append(c_zip)
+      .append("\n   Since:   ")
+      if (c_since != null) {
+        output.append(c_since)
+      }
+      else {
+        output.append("")
+      }
+      output.append("\n   Credit:  ").append(c_credit)
+      .append("\n   %Disc:   ").append(c_discount)
+      .append("\n   Phone:   ").append(c_phone)
+      .append("\n\n Amount Paid:      ").append(h_amount)
+      .append("\n Credit Limit:     ").append(c_credit_lim)
+      .append("\n New Cust-Balance: ").append(c_balance)
+      if (c_credit == "BC") {
+        if (c_data.length > 50) {
+          output.append("\n\n Cust-Data: ").append(c_data.substring(0, 50))
+          val data_chunks: Int = (if (c_data.length > 200) 4 else c_data.length / 50)
+          var n: Int = 1
+          while (n < data_chunks) {
+            output.append("\n            ").append(c_data.substring(n * 50, (n + 1) * 50))
+            n += 1
+          }
+        } else {
+          output.append("\n\n Cust-Data: " + c_data)
+        }
+      }
+      output.append("\n+#################################################################+\n\n")
+      println(output.toString)
+
       1
     } catch {
       case e: Exception => try {

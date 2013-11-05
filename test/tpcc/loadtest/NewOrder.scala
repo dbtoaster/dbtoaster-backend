@@ -80,6 +80,7 @@ class NewOrder(var pStmts: TpccStatements) extends TpccConstants {
 
     try {
       pStmts.setAutoCommit(false)
+      println("# Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id_arg,d_id_arg,c_id_arg))
       if (DEBUG) logger.debug("Transaction:	New Order")
       val w_id = w_id_arg
       val d_id = d_id_arg
@@ -448,6 +449,7 @@ class NewOrder(var pStmts: TpccStatements) extends TpccConstants {
         ol_number += 1
       }
       pStmts.commit()
+      println("# Finished NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id_arg,d_id_arg,c_id_arg))
       1
     } catch {
       case ate: AbortedTransactionException => {
