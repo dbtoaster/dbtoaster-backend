@@ -40,11 +40,10 @@ object Delivery {
    *   - [Customer: W] in
    *      + updateCustomerBalance
    */
-  def deliveryTx(w_id: Int, o_carrier_id: Int): Int = {
+  def deliveryTx(datetime:Date, w_id: Int, o_carrier_id: Int): Int = {
     try {
       val DIST_PER_WAREHOUSE = 10
       val orderIDs = new Array[Int](10)
-      val datetime = new java.util.Date()
       var d_id = 1
       while (d_id <= DIST_PER_WAREHOUSE) {
         DeliveryTxOps.findFirstNewOrder(w_id,d_id) match {
@@ -88,6 +87,7 @@ object Delivery {
         i += 1
       }
       output.append("+-----------------------------------------------------------------+\n\n")
+      println(output.toString)
       skippedDeliveries
     } catch {
       case e: Throwable => {
@@ -98,15 +98,17 @@ object Delivery {
   }
 
   object DeliveryTxOps {
-    def findFirstNewOrder(no_w_id:Int, no_d_id:Int):Option[Int] = {
-      var no_o_id:Option[Int] = None
-      SharedData.newOrderTbl.foreach { no =>
-        no_o_id match {
-          case None => no_o_id = Some(no._1)
-          case Some(x) => if(no._1 < x) no_o_id = Some(no._1)
+    def findFirstNewOrder(no_w_id_input:Int, no_d_id_input:Int):Option[Int] = {
+      var first_no_o_id:Option[Int] = None
+      SharedData.newOrderTbl.foreach { case (no_o_id, no_d_id, no_w_id) =>
+        if(no_d_id == no_d_id_input && no_w_id == no_w_id_input) {
+          first_no_o_id match {
+            case None => first_no_o_id = Some(no_o_id)
+            case Some(x) => if(no_o_id < x) first_no_o_id = Some(no_o_id)
+          }
         }
       }
-      no_o_id
+      first_no_o_id
     }
 
     def deleteNewOrder(no_w_id:Int, no_d_id:Int, no_o_id:Int) = {

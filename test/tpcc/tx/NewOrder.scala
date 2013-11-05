@@ -59,6 +59,22 @@ object NewOrder {
       printMapInfo
       println("Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
 
+      var ol_number = 0
+      var failed = false
+
+      while(ol_number < o_ol_count) {
+        try {
+          NewOrderTxOps.findItem(itemid(ol_number))
+        } catch {
+          case nsee: java.util.NoSuchElementException => {
+            println("An item was not found in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d, items=%s".format(w_id,d_id,c_id, java.util.Arrays.toString(itemid)))
+            failed = true
+          }
+        }
+        if(failed) return rollBack
+        ol_number += 1
+      }
+
       val (c_discount, c_last, c_credit, w_tax) = NewOrderTxOps.findCustomerWarehouseFinancialInfo(w_id,d_id,c_id)
 
       val (_,_,_,_,_,_,d_tax,_,d_next_o_id) = NewOrderTxOps.findDistrictInfo(w_id,d_id)
@@ -76,29 +92,17 @@ object NewOrder {
 
       NewOrderTxOps.insertNewOrder(o_id, w_id, d_id)
 
-      var ol_number = 0
       var total = 0.0
-      var failed = false
+
+      ol_number = 0
       while(ol_number < o_ol_count) {
         val ol_supply_w_id = supware(ol_number)
         val ol_i_id = itemid(ol_number)
         val ol_quantity = quantity(ol_number)
         
-        var i_data:String = null
-        var i_price:Double = 0.0
-        try {
-          val (/*_, */i_name, ti_price, ti_data) = NewOrderTxOps.findItem(ol_i_id)
-          price(ol_number) = i_price
-          iname(ol_number) = i_name
-          i_data = ti_data
-          i_price = ti_price
-        } catch {
-          case nsee: java.util.NoSuchElementException => {
-            println("An item was not found in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d, items=%s".format(w_id,d_id,c_id, java.util.Arrays.toString(itemid)))
-            failed = true
-          }
-        }
-        if(failed) return rollBack
+        val (/*_, */i_name, i_price, i_data) = NewOrderTxOps.findItem(ol_i_id)
+        price(ol_number) = i_price
+        iname(ol_number) = i_name
 
         val (s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data) = NewOrderTxOps.findStock(ol_supply_w_id, ol_i_id)
 
@@ -129,8 +133,7 @@ object NewOrder {
         var s_remote_cnt_increment = 0
         if(ol_supply_w_id != w_id) s_remote_cnt_increment = 1
 
-        //TODO this is the correct version
-        //but is not implemented in the correctness test
+        //TODO this is the correct version but is not implemented in the correctness test
         NewOrderTxOps.updateStock(ol_supply_w_id, ol_i_id, new_s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,
           s_ytd/*+ol_quantity*/,s_order_cnt/*+1*/,s_remote_cnt/*+s_remote_cnt_increment*/, s_data)
 

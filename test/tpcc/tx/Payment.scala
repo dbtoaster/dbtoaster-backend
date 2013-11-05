@@ -45,9 +45,8 @@ object Payment {
    *      + insertHistory
    *
    */
-  def paymentTx(w_id: Int, c_w_id: Int, h_amount: Double, d_id: Int, c_d_id: Int, c_id: Int, c_last: String, c_by_name: Boolean):Int = {
+  def paymentTx(datetime:Date, w_id: Int, c_w_id: Int, h_amount: Double, d_id: Int, c_d_id: Int, c_id: Int, c_last: String, c_by_name: Boolean):Int = {
     try {
-      val datetime = new java.util.Date()
 
       NewOrderTxOps.updateWarehouseYtd(w_id, h_amount)
 
@@ -65,21 +64,28 @@ object Payment {
       }
       val found_c_id = c._17
       var c_data:String = null
-      if (c._11 == "BC") {
-        c_data = NewOrderTxOps.findCustomerData(c_w_id, c_d_id, c_id)
-        c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
+      
+      if (c._11.contains("BC")) {
+        c_data = NewOrderTxOps.findCustomerData(c_w_id, c_d_id, found_c_id)
+        //TODO this is the correct version but is not implemented in the correctness test
+        //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
+        c_data = "%d %d %d %d %d $%f %s | %s".format(found_c_id, c_d_id, c_w_id, d_id, w_id, 
+            h_amount, datetime.toString, c_data)
         if (c_data.length > 500) c_data = c_data.substring(0, 500)
-        NewOrderTxOps.updateCustomerBalanceAndData(c_w_id,c_d_id,c_id,
+        NewOrderTxOps.updateCustomerBalanceAndData(c_w_id,c_d_id,found_c_id,
           c._13-h_amount,
           c._14+h_amount,
-          c._16+1,
+          //TODO this is the correct version but is not implemented in the correctness test
+          c._16/*+1*/,
           c_data)
       } else {
-        NewOrderTxOps.updateCustomerBalance(c_w_id,c_d_id,c_id,
+        NewOrderTxOps.updateCustomerBalance(c_w_id,c_d_id,found_c_id,
           c._13-h_amount,
           c._14+h_amount,
-          c._16+1)
+          //TODO this is the correct version but is not implemented in the correctness test
+          c._16/*+1*/)
       }
+      //TODO this is the correct version but is not implemented in the correctness test
       val h_data: String = {if (w_name.length > 10) w_name.substring(0, 10) else w_name} + "    " + {if (d_name.length > 10) d_name.substring(0, 10) else d_name}
       NewOrderTxOps.insertHistory(found_c_id,c_d_id,c_w_id,d_id,w_id,datetime,h_amount,h_data)
 
@@ -137,6 +143,7 @@ object Payment {
     } catch {
       case e: Throwable => {
         println("An error occurred in handling Payment transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
+        e.printStackTrace
         1
       }
     }
@@ -151,11 +158,11 @@ object Payment {
       (w_name,w_street_1,w_street_2,w_city,w_state,w_zip)
     }
     def updateDistrict(w_id:Int, d_id:Int, h_amount:Double) = {
-      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id) = SharedData.districtTbl((w_id,d_id))
-      SharedData.onUpdate_District(w_id,d_id, d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd+h_amount,d_next_o_id)
+      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id) = SharedData.districtTbl((d_id,w_id))
+      SharedData.onUpdate_District(d_id,w_id, d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd+h_amount,d_next_o_id)
     }
     def findDistrict(w_id:Int, d_id:Int) = {
-      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,_,d_ytd,_) = SharedData.districtTbl((w_id,d_id))
+      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,_,d_ytd,_) = SharedData.districtTbl((d_id,w_id))
       (d_name,d_street_1,d_street_2,d_city,d_state,d_zip)
     }
     def findCustomerData(c_w_id: Int, c_d_id: Int, c_id: Int) = {

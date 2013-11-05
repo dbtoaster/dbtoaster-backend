@@ -38,8 +38,19 @@ class TpccTable extends DatabaseConnector{
 		newOrderTbl -= ((no_o_id, no_d_id, no_w_id))
 	}
 
+	def roundDate(d:Date):Date = {
+		val c = java.util.Calendar.getInstance();
+		c.setTime(d);
+		val mil = c.get(java.util.Calendar.MILLISECOND);
+		c.set(java.util.Calendar.MILLISECOND, 0);
+		// if(mil >= 500) {
+		// 	c.set(java.util.Calendar.SECOND, c.get(java.util.Calendar.SECOND)+1);
+		// }
+		c.getTime()
+	}
+
 	def onInsert_HistoryTbl(h_c_id:Int, h_c_d_id:Int, h_c_w_id:Int, h_d_id:Int, h_w_id:Int, h_date:Date, h_amount:Double, h_data:String) = {
-		historyTbl += ((h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,h_date,h_amount,h_data))
+		historyTbl += ((h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,roundDate(h_date),h_amount,h_data))
 	}
 
 	def onInsert_Item(i_id:Int, i_im_id:Int, i_name:String, i_price:Double, i_data:String) = {
@@ -102,31 +113,36 @@ class TpccTable extends DatabaseConnector{
       stockTbl.update((s_i_id,s_w_id), (s_quantity, s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data))
     }
 
-    def findCustomerByName(c_w_id: Int, c_d_id: Int, input_c_last: String) = {
+    def findCustomerByName(input_c_w_id: Int, input_c_d_id: Int, input_c_last: String) = {
       class MiniCustomer(val cust_id:Int, val cust_first:String) extends Ordered[MiniCustomer] {
-        def compare(that: MiniCustomer) = this.cust_first.compareTo(that.cust_first)
+        def compare(that: MiniCustomer) = this.cust_first.compareToIgnoreCase(that.cust_first)
+        override def toString = "MiniCustomer(%s,%s)".format(cust_id, cust_first)
       } 
       var customers = new ArrayBuffer[MiniCustomer]
       //we should slice over input_c_last
-      customerTbl.foreach { case (c_k,c_v) =>
-        if(c_v._3 == input_c_last) {
-          customers += new MiniCustomer(c_k._1,c_v._1)
+      customerTbl.foreach { case ((c_id,c_d_id,c_w_id) , (c_first,_,c_last,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)) =>
+        if(c_w_id == input_c_w_id && c_d_id == input_c_d_id && c_last == input_c_last) {
+          customers += new MiniCustomer(c_id,c_first)
         }
       }
       if (customers.size == 0) {
-        throw new RuntimeException("The customer C_LAST=" + input_c_last + " C_D_ID=" + c_d_id + " C_W_ID=" + c_w_id + " not found!")
+        throw new RuntimeException("The customer C_LAST=" + input_c_last + " C_D_ID=" + input_c_d_id + " C_W_ID=" + input_c_w_id + " not found!")
       }
+      // println("**********************************")
+      // println("Customers before:",customers)
       customers = customers.sorted
+      // println("Customers after:",customers)
+      // println("**********************************")
       var index: Int = customers.size / 2
       if (customers.size % 2 == 0) {
         index -= 1
       }
       val c_id = customers(index).cust_id
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_,_) = customerTbl((c_id,c_d_id,c_w_id))
+      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_,_) = customerTbl((c_id,input_c_d_id,input_c_w_id))
       (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_id)
     }
-    def findCustomerById(c_w_id: Int, c_d_id: Int, c_id: Int) = {
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_,_) = customerTbl((c_id,c_d_id,c_w_id))
+    def findCustomerById(input_c_w_id: Int, input_c_d_id: Int, c_id: Int) = {
+      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_,_) = customerTbl((c_id,input_c_d_id,input_c_w_id))
       (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_id)
     }
 
@@ -184,7 +200,27 @@ class TpccTable extends DatabaseConnector{
 	def customerCmp(t1:Product, t2:Product) = {
 		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int,Int,String)]
 		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int,Int,String)]
-		((v1._1 eq v2._1) && (v1._2 eq v2._2) && (v1._3 eq v2._3) && (v1._4 eq v2._4) && (v1._5 eq v2._5) && (v1._6 eq v2._6) && (v1._7 eq v2._7) && (v1._8 eq v2._8) && (v1._9 eq v2._9) && dateEq(v1._10, v2._10) && (v1._11 eq v2._11) && doubleEq(v1._12, v2._12) && doubleEq(v1._13, v2._13) && doubleEq(v1._14, v2._14) && doubleEq(v1._15, v2._15) && (v1._16 == v2._16) && (v1._17 == v2._17) && (v1._18 eq v2._18))
+		// println("\t------------------------------------------")
+		// println("\t(v1._1(%s) equals v2._1(%s)) = %s".format(v1._1, v2._1,(v1._1 equals v2._1)))
+		// println("\t(v1._2(%s) equals v2._2(%s)) = %s".format(v1._2, v2._2,(v1._2 equals v2._2)))
+		// println("\t(v1._3(%s) equals v2._3(%s)) = %s".format(v1._3, v2._3,(v1._3 equals v2._3)))
+		// println("\t(v1._4(%s) equals v2._4(%s)) = %s".format(v1._4, v2._4,(v1._4 equals v2._4)))
+		// println("\t(v1._5(%s) equals v2._5(%s)) = %s".format(v1._5, v2._5,(v1._5 equals v2._5)))
+		// println("\t(v1._6(%s) equals v2._6(%s)) = %s".format(v1._6, v2._6,(v1._6 equals v2._6)))
+		// println("\t(v1._7(%s) equals v2._7(%s)) = %s".format(v1._7, v2._7,(v1._7 equals v2._7)))
+		// println("\t(v1._8(%s) equals v2._8(%s)) = %s".format(v1._8, v2._8,(v1._8 equals v2._8)))
+		// println("\t(v1._9(%s) equals v2._9(%s)) = %s".format(v1._9, v2._9,(v1._9 equals v2._9)))
+		// println("\tdateEq(v1._10(%s), v2._10(%s)) = %s".format(v1._10, v2._10, dateEq(v1._10, v2._10)))
+		// println("\t(v1._11(%s) equals v2._11(%s)) = %s".format(v1._11, v2._11, (v1._11 equals v2._11)))
+		// println("\tdoubleEq(v1._12(%.2f), v2._12(%.2f)) = %s".format(v1._12, v2._12, doubleEq(v1._12, v2._12)))
+		// println("\tdoubleEq(v1._13(%.2f), v2._13(%.2f)) = %s".format(v1._13, v2._13, doubleEq(v1._13, v2._13)))
+		// println("\tdoubleEq(v1._14(%.2f), v2._14(%.2f)) = %s".format(v1._14, v2._14, doubleEq(v1._14, v2._14)))
+		// println("\tdoubleEq(v1._15(%.2f), v2._15(%.2f)) = %s".format(v1._15, v2._15, doubleEq(v1._15, v2._15)))
+		// println("\t(v1._16(%s) == v2._16(%s)) = %s".format(v1._16, v2._16, (v1._16 == v2._16)))
+		// println("\t(v1._17(%s) == v2._17(%s)) = %s".format(v1._17, v2._17, (v1._17 == v2._17)))
+		// println("\t(v1._18(%s) equals v2._18(%s)) = %s".format(v1._18, v2._18, (v1._18 equals v2._18)))
+		// println("\t##########################################")
+		((v1._1 equals v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && (v1._7 equals v2._7) && (v1._8 equals v2._8) && (v1._9 equals v2._9) && dateEq(v1._10, v2._10) && (v1._11 equals v2._11) && doubleEq(v1._12, v2._12) && doubleEq(v1._13, v2._13) && doubleEq(v1._14, v2._14) && doubleEq(v1._15, v2._15) && (v1._16 == v2._16) && (v1._17 == v2._17) && (v1._18 equals v2._18))
 	}
 
 	def stockCmp(t1:Product, t2:Product) = {
@@ -224,48 +260,48 @@ class TpccTable extends DatabaseConnector{
 				((stockTbl equals other.stockTbl) || deepEqual(stockTbl, other.stockTbl, stockCmp))
 			) true else {
 				println("\n(newOrderTbl equals other.newOrderTbl) => %s".format((newOrderTbl equals other.newOrderTbl)))
-				// if(!(newOrderTbl equals other.newOrderTbl)) {
-				// 	showDiff(newOrderTbl , other.newOrderTbl)
-				// }
+				if(!(newOrderTbl equals other.newOrderTbl)) {
+					showDiff(newOrderTbl , other.newOrderTbl)
+				}
 				println("(historyTbl equals other.historyTbl) => %s".format((historyTbl equals other.historyTbl)))
-				// if(!(historyTbl equals other.historyTbl)) {
-				// 	showDiff(historyTbl , other.historyTbl)
-				// }
+				if(!(historyTbl equals other.historyTbl)) {
+					showDiff(historyTbl , other.historyTbl)
+				}
 				var valx = false
 				valx = ((warehouseTbl equals other.warehouseTbl) || deepEqual(warehouseTbl, other.warehouseTbl, wareHouseCmp))
 				println("(warehouseTbl equals other.warehouseTbl) => %s".format(valx))
 				if(!valx) {
-					showDiff(warehouseTbl , other.warehouseTbl)
+					showDiff(warehouseTbl , other.warehouseTbl, wareHouseCmp)
 				}
 				valx = ((itemPartialTbl equals other.itemPartialTbl) || deepEqual(itemPartialTbl, other.itemPartialTbl, itemCmp))
 				println("(itemPartialTbl equals other.itemPartialTbl) => %s".format(valx))
 				if(!valx) {
-					showDiff(itemPartialTbl , other.itemPartialTbl)
+					showDiff(itemPartialTbl , other.itemPartialTbl, itemCmp)
 				}
 				valx = ((orderTbl equals other.orderTbl) || deepEqual(orderTbl, other.orderTbl, orderCmp))
 				println("(orderTbl equals other.orderTbl) => %s".format(valx))
 				if(!valx) {
-					showDiff(orderTbl , other.orderTbl)
+					showDiff(orderTbl , other.orderTbl, orderCmp)
 				}
 				valx = ((districtTbl equals other.districtTbl) || deepEqual(districtTbl, other.districtTbl, districtCmp))
 				println("(districtTbl equals other.districtTbl) => %s".format(valx))
 				if(!valx) {
-					showDiff(districtTbl , other.districtTbl)
+					showDiff(districtTbl , other.districtTbl, districtCmp)
 				}
 				valx = ((orderLineTbl equals other.orderLineTbl) || deepEqual(orderLineTbl, other.orderLineTbl, orderLineCmp))
 				println("(orderLineTbl equals other.orderLineTbl) => %s".format(valx))
 				if(!valx) {
-					showDiff(orderLineTbl , other.orderLineTbl)
+					showDiff(orderLineTbl , other.orderLineTbl, orderLineCmp)
 				}
 				valx = ((customerTbl equals other.customerTbl) || deepEqual(customerTbl, other.customerTbl, customerCmp))
 				println("(customerTbl equals other.customerTbl) => %s".format(valx))
 				if(!valx) {
-					showDiff(customerTbl , other.customerTbl)
+					showDiff(customerTbl , other.customerTbl, customerCmp)
 				}
 				valx = ((stockTbl equals other.stockTbl) || deepEqual(stockTbl, other.stockTbl, stockCmp))
 				println("(stockTbl equals other.stockTbl) => %s".format(valx))
 				if(!valx) {
-					showDiff(stockTbl , other.stockTbl)
+					showDiff(stockTbl , other.stockTbl, stockCmp)
 				}
 	    		false
 	    	}
@@ -444,13 +480,13 @@ class TpccTable extends DatabaseConnector{
     }
 
     def deepEqual[K,V](map1:HashMap[K,_ <:Product],map2:HashMap[K,_ <:Product], f:((Product,Product) => Boolean)):Boolean = {
-    	println("In deep equal!!!")
+    	// println("In deep equal!!!")
     	var equals_res = true
     	map2.foreach{ case (k,v) =>
     		if(!map1.contains(k) || (!(map1(k) equals v) && !f(v, map1(k)))) {
     			equals_res = false
-			 val v2 = map1(k)
-				println("%s <> %s".format(v,v2))
+			 	//val v2 = map1(k)
+				//println("%s <> %s".format(v,v2))
 			// v.productIterator.zipWithIndex.foreach { case (t, i) =>
 			// 		if(t.isInstanceOf[Double]) {
 			// 			if(Math.abs(t.asInstanceOf[Double] - v2.productElement(i).asInstanceOf[Double]) > 0.1) {
@@ -466,8 +502,8 @@ class TpccTable extends DatabaseConnector{
     	map1.foreach{ case (k,v) =>
     		if(!map2.contains(k) || (!(map2(k) equals v) && !f(v, map2(k)))) {
     			equals_res = false
-				val v2 = map2(k)
-				println("%s ## %s".format(v,v2))
+				//val v2 = map2(k)
+				//println("%s ## %s".format(v,v2))
 				// v.productIterator.zipWithIndex.foreach { case (t, i) =>
 				// 	if(t.isInstanceOf[Double]) {
 				// 		if(Math.abs(t.asInstanceOf[Double] - v2.productElement(i).asInstanceOf[Double]) > 0.1) {
@@ -482,17 +518,34 @@ class TpccTable extends DatabaseConnector{
     	equals_res
     }
 
-    def showDiff[K,V](map1:HashMap[K,V],map2:HashMap[K,V]) {
+    def showDiff[K,V](map1:HashMap[K,V],map2:HashMap[K,V], f:((Product,Product) => Boolean)) {
     	val addedElements: HashMap[K,V] = new HashMap[K,V]
     	val removedElements: HashMap[K,V] = new HashMap[K,V]
     	map2.foreach{ case (k,v) =>
-    		if(!map1.contains(k) || !(map1(k) equals v)) {
+    		if(!map1.contains(k) || (!(map1(k) equals v) && !f(v.asInstanceOf[Product], map1(k).asInstanceOf[Product]))) {
     			addedElements += (k -> v)
     		}
     	}
     	map1.foreach{ case (k,v) =>
-    		if(!map2.contains(k) || !(map2(k) equals v)) {
+    		if(!map2.contains(k) || (!(map2(k) equals v) && !f(v.asInstanceOf[Product], map2(k).asInstanceOf[Product]))) {
     			removedElements += (k -> v)
+    		}
+    	}
+    	println("added elements => %s".format(addedElements))
+    	println("removed elements => %s".format(removedElements))
+    }
+
+    def showDiff[K](map1:HashSet[K],map2:HashSet[K]/*, f:((Product,Product) => Boolean)*/) {
+    	val addedElements: HashSet[K] = new HashSet[K]
+    	val removedElements: HashSet[K] = new HashSet[K]
+    	map2.foreach{ k =>
+    		if(!map1.contains(k)) {
+    			addedElements += k
+    		}
+    	}
+    	map1.foreach{ k =>
+    		if(!map2.contains(k)) {
+    			removedElements += k
     		}
     	}
     	println("added elements => %s".format(addedElements))

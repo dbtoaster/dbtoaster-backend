@@ -59,15 +59,15 @@ object StockLevel {
 
   object StockLevelTxOps {
       def findDistrictnextOrderId(w_id:Int, d_id:Int) = {
-        SharedData.districtTbl(w_id,d_id)._9
+        SharedData.districtTbl(d_id,w_id)._9
       }
 
       def findOrderLineStockRecentItemsUnderThresholds(w_id:Int, d_id:Int, o_id:Int, threshold:Int) = {
         val unique_ol_i_id = new HashSet[Int]
 
-        SharedData.orderLineTbl.foreach { case ((ol_o_id, ol_d_id, ol_w_id, ol_number) , (ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info)) =>
+        SharedData.orderLineTbl.foreach { case ((ol_o_id,ol_d_id,ol_w_id,_) ,(ol_i_id,_,_,_,_,_)) =>
           if(ol_w_id==w_id && ol_d_id==d_id && ol_o_id < o_id && ol_o_id>=o_id) {
-            val (s_quantity,_,_,_,_,_,_,_,_,_,_,_,_,_,_) = SharedData.stockTbl(ol_i_id, ol_w_id)
+            val (s_quantity,_,_,_,_,_,_,_,_,_,_,_,_,_,_) = SharedData.stockTbl(ol_i_id,ol_w_id)
             if(s_quantity < threshold) {
               unique_ol_i_id += ol_i_id
             }
