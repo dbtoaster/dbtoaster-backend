@@ -2,14 +2,14 @@ package ddbt.tpcc.tx
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
-import ddbt.tpcc.loadtest.TpccUnitTest._
+import ddbt.tpcc.itx.INewOrder
 
 /**
  * NewOrder Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-object NewOrder {
+class NewOrder(val SharedData: TpccTable) extends INewOrder {
   val r = new scala.util.Random
 
   //Tables
@@ -18,13 +18,13 @@ object NewOrder {
 
   //Partial Tables (containing all rows, but not all columns)
   //removed columns are commented out
-  //val districtPartialTbl = new HashMap[(Int,Int),(/*String,String,String,String,String,String,*/Double,/*Double,*/Int)]
+  //val districtPartialTbl = new HashMap[(Int,Int),(/*String,String,String,String,String,String,*/Float,/*Float,*/Int)]
   //val orderPartialTbl = new HashMap[(Int,Int,Int),(Int,Date/*,Option[Int]*/,Int,Boolean)]
-  //val itemPartialTbl = new HashMap[Int,(/*Int,*/String,Double,String)]
-  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(Int,Int/*,Date*/,Int,Double,String)]
+  //val itemPartialTbl = new HashMap[Int,(/*Int,*/String,Float,String)]
+  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(Int,Int/*,Date*/,Int,Float,String)]
 
   //Materialized query results
-  //val customerWarehouseFinancialInfoMap = new HashMap[(Int,Int,Int),(Double, String, String, Double)]
+  //val customerWarehouseFinancialInfoMap = new HashMap[(Int,Int,Int),(Float, String, String, Float)]
 
   /**
    * @param w_id is warehouse id
@@ -54,7 +54,7 @@ object NewOrder {
    *      + insertOrderLine
    *
    */
-  def newOrderTx(datetime:Date, w_id:Int, d_id:Int, c_id:Int, o_all_local:Boolean, o_ol_count:Int, itemid:Array[Int], supware:Array[Int], quantity:Array[Int], price:Array[Double], iname:Array[String], stock:Array[Int], bg:Array[Char], amt:Array[Double]): Int = {
+  override def newOrderTx(datetime:Date, t_num: Int, w_id:Int, d_id:Int, c_id:Int, o_ol_count:Int, o_all_local:Int, itemid:Array[Int], supware:Array[Int], quantity:Array[Int], price:Array[Float], iname:Array[String], stock:Array[Int], bg:Array[Char], amt:Array[Float]): Int = {
     try {
       println("- Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
 
@@ -87,11 +87,11 @@ object NewOrder {
       //supware.foreach { s_w_id => if(s_w_id != w_id) o_all_local = false }
       //val o_ol_count = supware.length
 
-      NewOrderTxOps.insertOrder(o_id, w_id, d_id, c_id, datetime, o_ol_count, o_all_local)
+      NewOrderTxOps.insertOrder(o_id, w_id, d_id, c_id, datetime, o_ol_count, o_all_local > 0)
 
       NewOrderTxOps.insertNewOrder(o_id, w_id, d_id)
 
-      var total = 0.0
+      var total = 0f
 
       ol_number = 0
       while(ol_number < o_ol_count) {
@@ -136,7 +136,7 @@ object NewOrder {
         NewOrderTxOps.updateStock(ol_supply_w_id, ol_i_id, new_s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,
           s_ytd/*+ol_quantity*/,s_order_cnt/*+1*/,s_remote_cnt/*+s_remote_cnt_increment*/, s_data)
 
-        val ol_amount = ol_quantity * i_price * (1+w_tax+d_tax) * (1 - c_discount)
+        val ol_amount = (ol_quantity * i_price * (1+w_tax+d_tax) * (1 - c_discount)).asInstanceOf[Float]
         amt(ol_number) =  ol_amount
         total += ol_amount
 
@@ -151,17 +151,17 @@ object NewOrder {
 
       
 
-      0
+      1
     } catch {
       case e: Throwable => {
         println("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
         throw e
-        1
+        0
       }
     }
   }
 
-  def rollBack = { 2 }
+  def rollBack = { -2 }
 
   def printMapInfo {
     // println("customerWarehouseFinancialInfoMap = %s".format(customerWarehouseFinancialInfoMap))
@@ -195,7 +195,7 @@ object NewOrder {
      * @param new_d_next_o_id is the next order id
      * @param d_tax is the district tax value for this dirstrict
      */
-    def updateDistrictNextOrderId(w_id:Int, d_id:Int, d_tax:Double, new_d_next_o_id:Int): Unit = {
+    def updateDistrictNextOrderId(w_id:Int, d_id:Int, d_tax:Float, new_d_next_o_id:Int): Unit = {
       SharedData.onUpdate_District_forNewOrder(d_id, w_id, d_tax,new_d_next_o_id)
     }
 
@@ -240,7 +240,7 @@ object NewOrder {
      * @param w_id is warehouse id
      * @param d_id is district id
      */
-    def insertOrderLine(w_id:Int, d_id:Int, o_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_quantity:Int, ol_amount:Double, ol_dist_info:String): Unit = {
+    def insertOrderLine(w_id:Int, d_id:Int, o_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_quantity:Int, ol_amount:Float, ol_dist_info:String): Unit = {
       SharedData.onInsertOrderLine(o_id, d_id, w_id, ol_number, ol_i_id, ol_supply_w_id, None, ol_quantity, ol_amount, ol_dist_info)
     }
   }
@@ -254,7 +254,7 @@ object NewOrder {
   //   //orderQuantities
   //   val quantity = Array[Int](10,11,12)
   //   //itemPrices
-  //   val price = new Array[Double](3)
+  //   val price = new Array[Float](3)
   //   //itemNames
   //   val iname = new Array[String](3)
   //   //stockQuantities
@@ -262,15 +262,15 @@ object NewOrder {
   //   //brandGeneric
   //   val bg = new Array[Char](3)
   //   //orderLineAmounts
-  //   val amount = new Array[Double](3)
+  //   val amount = new Array[Float](3)
 
   //   // loadDataTables(w_id,d_id,c_id)
   //   // newOrderTx(w_id,d_id,c_id,item_id,supply_w_id,quantity,price,iname,stock,bg,amount)
   // }
 
   // def loadDataTables(w_id:Int, d_id:Int, c_id:Int) {
-  //   val (c_discount, c_last, c_credit, w_tax) = (r.nextDouble, r.nextString(10), if(r.nextBoolean) "BC" else "GC",r.nextDouble)
-  //   val (d_next_o_id, d_tax) = (r.nextInt(10000000), r.nextDouble)
+  //   val (c_discount, c_last, c_credit, w_tax) = (r.nextFloat, r.nextString(10), if(r.nextBoolean) "BC" else "GC",r.nextFloat)
+  //   val (d_next_o_id, d_tax) = (r.nextInt(10000000), r.nextFloat)
 
   //   customerWarehouseFinancialInfoMap += ((w_id,d_id,c_id) -> (c_discount, c_last, c_credit, w_tax))
   //   districtPartialTbl += ((w_id,d_id) -> (d_tax,d_next_o_id))

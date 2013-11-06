@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory
 import org.slf4j.Logger
 import TpccThread._
 import scala.collection.JavaConversions._
+import ddbt.tpcc.itx._
 
 object TpccThread {
 
@@ -39,15 +40,22 @@ class TpccThread(val number: Int,
     val success2: Array[Array[Int]], 
     val late2: Array[Array[Int]], 
     val retry2: Array[Array[Int]], 
-    val failure2: Array[Array[Int]]) extends Thread with DatabaseConnector{
+    val failure2: Array[Array[Int]],
+    var conn: Connection,
+    val newOrder: INewOrder,
+    val payment: IPayment,
+    val orderStat: IOrderStatus,
+    val slev: IStockLevel,
+    val delivery: IDelivery,
+    loopConditionChecker: (Int => Boolean)) extends Thread /*with DatabaseConnector*/{
 
   /**
    * Dedicated JDBC connection for this thread.
    */
-  var conn: Connection = connectToDatabase
+  // var conn: Connection = connectToDatabase
 
   var driver: Driver = new Driver(conn, fetchSize, success, late, retry, failure, success2, late2, retry2, 
-    failure2)
+    failure2, newOrder, payment, orderStat, slev, delivery)
 
   override def run() {
     try {
@@ -57,11 +65,11 @@ class TpccThread(val number: Int,
           " num_conn: " + 
           num_conn)
       }
-      driver.runTransaction(number, num_ware, num_conn)
+      driver.runTransaction(number, num_ware, num_conn, loopConditionChecker)
     } catch {
       case e: Throwable => logger.error("Unhandled exception", e)
     }
   }
 
-  private def connectToDatabase:Connection = connectToDB(driverClassName, jdbcUrl, db_user, db_password)
+  // private def connectToDatabase:Connection = connectToDB(driverClassName, jdbcUrl, db_user, db_password)
 }

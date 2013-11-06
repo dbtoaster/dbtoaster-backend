@@ -2,14 +2,14 @@ package ddbt.tpcc.tx
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
-import ddbt.tpcc.loadtest.TpccUnitTest._
+import ddbt.tpcc.itx.IDelivery
 
 /**
  * Delivery Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-object Delivery {
+class Delivery(val SharedData: TpccTable) extends IDelivery {
 
   //Tables
   //val newOrderTbl = new HashSet[(Int,Int,Int)]
@@ -18,8 +18,8 @@ object Delivery {
   //removed columns are commented out
   //val orderPartialTbl = new HashMap[(Int,Int,Int),(Int/*,Date*/,Option[Int]/*,Int,Boolean*/)]
   //only the slice over first three key parts is used
-  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(/*Int,Int,*/Option[Date]/*,Int*/,Double/*,String*/)]
-  //val customerPartialTbl = new HashMap[(Int,Int,Int),(/*String,String,String,String,String,String,String,String,String,Date,String,Double,Double,*/Double/*,Double,Int*/,Int/*,String*/)]
+  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(/*Int,Int,*/Option[Date]/*,Int*/,Float/*,String*/)]
+  //val customerPartialTbl = new HashMap[(Int,Int,Int),(/*String,String,String,String,String,String,String,String,String,Date,String,Float,Float,*/Float/*,Float,Int*/,Int/*,String*/)]
   /**
    * @param w_id is warehouse id
    * @param o_carrier_id is the carrier id for this warehouse
@@ -40,7 +40,7 @@ object Delivery {
    *   - [Customer: W] in
    *      + updateCustomerBalance
    */
-  def deliveryTx(datetime:Date, w_id: Int, o_carrier_id: Int): Int = {
+  override def deliveryTx(datetime:Date, w_id: Int, o_carrier_id: Int): Int = {
     try {
       val DIST_PER_WAREHOUSE = 10
       val orderIDs = new Array[Int](10)
@@ -88,11 +88,12 @@ object Delivery {
       }
       output.append("+-----------------------------------------------------------------+\n\n")
       println(output.toString)
-      skippedDeliveries
+      // skippedDeliveries
+      1
     } catch {
       case e: Throwable => {
         println("An error occurred in handling Delivery transaction for warehouse=%d, carrier=%d".format(w_id,o_carrier_id))
-        1
+        0
       }
     }
   }
@@ -124,7 +125,7 @@ object Delivery {
     }
 
     def updateOrderLineDeliveryDate(ol_w_id:Int, ol_d_id:Int, ol_o_id:Int, ol_delivery_d:Date) {
-      val ol_numbers = new ArrayBuffer[(Int,Date,Double)]
+      val ol_numbers = new ArrayBuffer[(Int,Date,Float)]
       //should be replaced by a slice over first three key parts
       SharedData.orderLineTbl.foreach{ ol =>
         if(ol._1._1 == ol_o_id && ol._1._2 == ol_d_id && ol._1._3 == ol_w_id) {
@@ -133,8 +134,8 @@ object Delivery {
       }
     }
 
-    def findOrderLineTotalAmount(ol_w_id:Int, ol_d_id:Int, ol_o_id:Int):Double = {
-      var ol_total = 0.0
+    def findOrderLineTotalAmount(ol_w_id:Int, ol_d_id:Int, ol_o_id:Int):Float = {
+      var ol_total = 0f
       //should be replaced by a slice over first three key parts
       SharedData.orderLineTbl.foreach{ ol =>
         if(ol._1._1 == ol_o_id && ol._1._2 == ol_d_id && ol._1._3 == ol_w_id) {
@@ -144,7 +145,7 @@ object Delivery {
       ol_total
     }
 
-    def updateCustomerBalance(c_w_id:Int, c_d_id:Int, c_id:Int, ol_total:Double) = {
+    def updateCustomerBalance(c_w_id:Int, c_d_id:Int, c_id:Int, ol_total:Float) = {
       val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data) = SharedData.customerTbl((c_id,c_d_id,c_w_id))
       SharedData.onUpdateCustomer(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance+ol_total,c_ytd_payment,c_payment_cnt,c_delivery_cnt+1,c_data)
     }

@@ -11,9 +11,9 @@ object RtHist {
 
   private var cur_hist = Array.ofDim[Int](5, MAXREC * REC_PER_SEC)
 
-  var max_rt: Array[Double] = new Array[Double](10)
+  var max_rt: Array[Float] = new Array[Float](10)
 
-  var cur_max_rt: Array[Double] = new Array[Double](10)
+  var cur_max_rt: Array[Float] = new Array[Float](10)
 
   def histInit() {
     var i = 0
@@ -30,9 +30,9 @@ object RtHist {
     }
   }
 
-  def histInc(transaction: Int, rtclk: Double) {
+  def histInc(transaction: Int, rtclk: Float) {
     var i = 0
-    i = (rtclk * REC_PER_SEC.toDouble).toInt
+    i = (rtclk * REC_PER_SEC.toFloat).toInt
     if (i >= (MAXREC * REC_PER_SEC)) {
       i = (MAXREC * REC_PER_SEC) - 1
     }
@@ -42,7 +42,7 @@ object RtHist {
     cur_hist(transaction)(i)
   }
 
-  def histCkp(transaction: Int): Double = {
+  def histCkp(transaction: Int): Float = {
     var i: Int = 0
     var total: Int = 0
     var tmp: Int = 0
@@ -65,7 +65,7 @@ object RtHist {
       }
       i += 1
     }
-    ((line).toDouble / (REC_PER_SEC).toDouble)
+    ((line).toFloat / (REC_PER_SEC).toFloat)
   }
 
   def histReport() {

@@ -6,7 +6,9 @@ import java.util.Calendar
 import java.util.Date
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
+import ddbt.tpcc.itx.IDelivery
 import Delivery._
+import TpccConstants._
 
 object Delivery {
 
@@ -17,14 +19,10 @@ object Delivery {
   private val TRACE = logger.isTraceEnabled
 }
 
-class Delivery(var pStmts: TpccStatements) extends TpccConstants {
+class Delivery(var pStmts: TpccStatements) extends IDelivery {
 
-  def delivery(w_id_arg: Int, o_carrier_id_arg: Int): Int = {
-    val calendar = Calendar.getInstance
-    val now = calendar.getTime
-    val currentTimeStamp = new Timestamp(now.getTime)
+  override def deliveryTx(currentTimeStamp:Date, w_id_arg: Int, o_carrier_id_arg: Int): Int = {
     val orderIDs = new Array[Int](10)
-    ddbt.tpcc.tx.Delivery.deliveryTx(currentTimeStamp, w_id_arg, o_carrier_id_arg)
     try {
       pStmts.setAutoCommit(false)
       if (DEBUG) logger.debug("Transaction:	Delivery")

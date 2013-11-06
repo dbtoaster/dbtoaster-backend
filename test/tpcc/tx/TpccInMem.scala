@@ -1,4 +1,4 @@
-package ddbt.tpcc.loadtest
+package ddbt.tpcc.tx
 
 import java.io.FileInputStream
 import java.io.IOException
@@ -11,18 +11,16 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
-import ddbt.tpcc.tx.TpccTable
-import TpccUnitTest._
-import ddbt.tpcc.mtx._
-import ddbt.tpcc.itx._
+import ddbt.tpcc.loadtest._
 import DatabaseConnector._
+import TpccInMem._
 import TpccConstants._
+import ddbt.tpcc.itx._
+import java.sql.Connection
 
-object TpccUnitTest {
+object TpccInMem {
 
-  private val NUMBER_OF_TX_TESTS = 100
-
-  private val logger = LoggerFactory.getLogger(classOf[Tpcc])
+  private val logger = LoggerFactory.getLogger(classOf[TpccInMem])
 
   private val DEBUG = logger.isDebugEnabled
 
@@ -61,11 +59,11 @@ object TpccUnitTest {
     for (s <- sysProp) {
       logger.info("System Property: " + s + " = " + System.getProperty(s))
     }
-    val df = new DecimalFormat("#,##0.0")
+    val df = new DecimalFormat("#,##0f")
     println("maxMemory = " + 
       df.format(Runtime.getRuntime.totalMemory() / (1024.0 * 1024.0)) + 
       " MB")
-    val tpcc = new TpccUnitTest()
+    val tpcc = new TpccInMem()
     var ret = 0
     if (argv.length == 0) {
       println("Using the properties file for configuration.")
@@ -97,7 +95,7 @@ object TpccUnitTest {
   }
 }
 
-class TpccUnitTest {
+class TpccInMem {
 
   private var javaDriver: String = _
 
@@ -167,6 +165,8 @@ class TpccUnitTest {
   private var properties: Properties = _
 
   private var inputStream: InputStream = _
+
+  def activeTransactionChecker(counter:Int) = (Tpcc.activate_transaction == 1)
 
   private def init() {
     logger.info("Loading properties from: " + PROPERTIESFILE)
@@ -293,43 +293,147 @@ class TpccUnitTest {
     System.out.print("    [measure]: %d (sec.)\n".format(measureTime))
     Util.seqInit(10, 10, 1, 1, 1)
     if (DEBUG) logger.debug("Creating TpccThread")
+    val executor = Executors.newFixedThreadPool(numConn, new NamedThreadFactory("tpcc-thread"))
 
-    val conn = connectToDB(javaDriver, jdbcUrl, dbUser, dbPassword)
-    val pStmts: TpccStatements = new TpccStatements(conn, fetchSize)
     val SharedData: TpccTable = new TpccTable
     SharedData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
-    // val initialData = new TpccTable
-    // initialData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
 
-    // if(initialData equals SharedData) {
-    //   println("\n1- initialData equals SharedData")
-    // } else {
-    //   println("\n1- initialData is not equal to SharedData")
-    // }
-    val newOrder: INewOrder = new NewOrderMixedImpl(new ddbt.tpcc.loadtest.NewOrder(pStmts), new ddbt.tpcc.tx.NewOrder(SharedData))
-    val payment: IPayment = new PaymentMixedImpl(new ddbt.tpcc.loadtest.Payment(pStmts), new ddbt.tpcc.tx.Payment(SharedData))
-    val orderStat: IOrderStatus = new OrderStatusMixedImpl(new ddbt.tpcc.loadtest.OrderStat(pStmts), new ddbt.tpcc.tx.OrderStatus(SharedData))
-    val slev: IStockLevel = new StockLevelMixedImpl(new ddbt.tpcc.loadtest.Slev(pStmts), new ddbt.tpcc.tx.StockLevel(SharedData))
-    val delivery: IDelivery = new DeliveryMixedImpl(new ddbt.tpcc.loadtest.Delivery(pStmts), new ddbt.tpcc.tx.Delivery(SharedData))
+    for (i <- 0 until numConn) {
+      val conn: Connection = connectToDB(javaDriver, jdbcUrl, dbUser, dbPassword)
+      // val pStmts: TpccStatements = new TpccStatements(conn, fetchSize)
+      // val newOrder: NewOrder = new NewOrder(pStmts)
+      // val payment: Payment = new Payment(pStmts)
+      // val orderStat: OrderStat = new OrderStat(pStmts)
+      // val slev: Slev = new Slev(pStmts)
+      // val delivery: Delivery = new Delivery(pStmts)
+      val newOrder: INewOrder = new ddbt.tpcc.tx.NewOrder(SharedData)
+      val payment: IPayment = new ddbt.tpcc.tx.Payment(SharedData)
+      val orderStat: IOrderStatus = new ddbt.tpcc.tx.OrderStatus(SharedData)
+      val slev: IStockLevel = new ddbt.tpcc.tx.StockLevel(SharedData)
+      val delivery: IDelivery = new ddbt.tpcc.tx.Delivery(SharedData)
 
-    val driver = new Driver(conn, fetchSize, success, late, retry, failure, success2, late2, retry2, 
-      failure2, newOrder, payment, orderStat, slev, delivery)
-
-    val number = 100
-
-    try {
-      if (DEBUG) {
-        logger.debug("Starting driver with: number: " + number + " num_ware: " + 
-          numWare + 
-          " num_conn: " + 
-          numConn)
-      }
-      driver.runTransaction(number, numWare, numConn, transactionCountChecker)
-    } catch {
-      case e: Throwable => logger.error("Unhandled exception", e)
+      val worker = new TpccThread(i, port, 1, dbUser, dbPassword, numWare, numConn, javaDriver, jdbcUrl, 
+        fetchSize, success, late, retry, failure, success2, late2, retry2, failure2, conn, newOrder, payment, orderStat, slev, delivery, activeTransactionChecker)
+      executor.execute(worker)
     }
+    if (rampupTime > 0) {
+      System.out.print("\nRAMPUP START.\n\n")
+      try {
+        Thread.sleep(rampupTime * 1000)
+      } catch {
+        case e: InterruptedException => logger.error("Rampup wait interrupted", e)
+      }
+      System.out.print("\nRAMPUP END.\n\n")
+    }
+    System.out.print("\nMEASURING START.\n\n")
+    counting_on = true
+    val startTime = System.currentTimeMillis()
+    val df = new DecimalFormat("#,##0f")
+    var runTime = 0L
+    while ({(runTime = System.currentTimeMillis() - startTime); runTime} < measureTime * 1000) {
+      println("Current execution time lapse: " + df.format(runTime / 1000f) + 
+        " seconds")
+      try {
+        Thread.sleep(1000)
+      } catch {
+        case e: InterruptedException => logger.error("Sleep interrupted", e)
+      }
+    }
+    val actualTestTime = System.currentTimeMillis() - startTime
+    println("---------------------------------------------------")
+    println("<Raw Results>")
+    for (i <- 0 until TRANSACTION_COUNT) {
+      System.out.print("  |%s| sc:%d  lt:%d  rt:%d  fl:%d \n".format(TRANSACTION_NAME(i), success(i), late(i), 
+        retry(i), failure(i)))
+    }
+    System.out.print(" in %f sec.\n".format(actualTestTime / 1000f))
+    println("<Raw Results2(sum ver.)>")
+    for (i <- 0 until TRANSACTION_COUNT) {
+      success2_sum(i) = 0
+      late2_sum(i) = 0
+      retry2_sum(i) = 0
+      failure2_sum(i) = 0
+      for (k <- 0 until numConn) {
+        success2_sum(i) += success2(i)(k)
+        late2_sum(i) += late2(i)(k)
+        retry2_sum(i) += retry2(i)(k)
+        failure2_sum(i) += failure2(i)(k)
+      }
+    }
+    for (i <- 0 until TRANSACTION_COUNT) {
+      System.out.print("  |%s| sc:%d  lt:%d  rt:%d  fl:%d \n".format(TRANSACTION_NAME(i), success2_sum(i), 
+        late2_sum(i), retry2_sum(i), failure2_sum(i)))
+    }
+    println("<Constraint Check> (all must be [OK])\n [transaction percentage]")
+    var j = 0
+    var i: Int = 0
+    i = 0
+    while (i < TRANSACTION_COUNT) {
+      j += (success(i) + late(i))
+      i += 1
+    }
+    var f = 100f * (success(1) + late(1)).toFloat / j.toFloat
+    System.out.print("        Payment: %f%% (>=43.0%%)".format(f))
+    if (f >= 43.0) {
+      System.out.print(" [OK]\n")
+    } else {
+      System.out.print(" [NG] *\n")
+    }
+    f = 100f * (success(2) + late(2)).toFloat / j.toFloat
+    System.out.print("   Order-Status: %f%% (>= 4.0%%)".format(f))
+    if (f >= 4.0) {
+      System.out.print(" [OK]\n")
+    } else {
+      System.out.print(" [NG] *\n")
+    }
+    f = 100f * (success(3) + late(3)).toFloat / j.toFloat
+    System.out.print("       Delivery: %f%% (>= 4.0%%)".format(f))
+    if (f >= 4.0) {
+      System.out.print(" [OK]\n")
+    } else {
+      System.out.print(" [NG] *\n")
+    }
+    f = 100f * (success(4) + late(4)).toFloat / j.toFloat
+    System.out.print("    Stock-Level: %f%% (>= 4.0%%)".format(f))
+    if (f >= 4.0) {
+      System.out.print(" [OK]\n")
+    } else {
+      System.out.print(" [NG] *\n")
+    }
+    System.out.print(" [response time (at least 90%% passed)]\n")
+    for (n <- 0 until TRANSACTION_NAME.length) {
+      f = 100f * success(n).toFloat / (success(n) + late(n)).toFloat
+      if (DEBUG) logger.debug("f: " + f + " success[" + n + "]: " + success(n) + " late[" + 
+        n + 
+        "]: " + 
+        late(n))
+      System.out.print("      %s: %f%% ".format(TRANSACTION_NAME(n), f))
+      if (f >= 90f) {
+        System.out.print(" [OK]\n")
+      } else {
+        System.out.print(" [NG] *\n")
+      }
+    }
+    var total = 0f
+    j = 0
+    while (j < TRANSACTION_COUNT) {
+      total = total + success(j) + late(j)
+      println(" " + TRANSACTION_NAME(j) + " Total: " + (success(j) + late(j)))
+      j += 1
+    }
+    val tpcm = (success(0) + late(0)) * 60000f / actualTestTime
+    println()
+    println("<TpmC>")
+    println(tpcm + " TpmC")
+    System.out.print("\nSTOPPING THREADS\n")
+    activate_transaction = 0
 
     {
+      try {
+        Thread.sleep(5000)
+      } catch {
+        case e: InterruptedException => logger.error("Sleep interrupted", e)
+      }
       val newData = new TpccTable
       newData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
 
@@ -340,9 +444,12 @@ class TpccUnitTest {
       }
     }
 
+    executor.shutdown()
+    try {
+      executor.awaitTermination(30, TimeUnit.SECONDS)
+    } catch {
+      case e: InterruptedException => println("Timed out waiting for executor to terminate")
+    }
     0
   }
-
-  def transactionCountChecker(counter:Int) = (counter < NUMBER_OF_TX_TESTS)
-
 }

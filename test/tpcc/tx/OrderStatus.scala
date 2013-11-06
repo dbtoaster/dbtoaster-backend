@@ -2,20 +2,20 @@ package ddbt.tpcc.tx
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
-import ddbt.tpcc.loadtest.TpccUnitTest._
+import ddbt.tpcc.itx.IOrderStatus
 
 /**
  * OrderStatus Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-object OrderStatus {
+class OrderStatus(val SharedData: TpccTable) extends IOrderStatus {
 
   //Partial Tables (containing all rows, but not all columns)
   //removed columns are commented out
-  //val customerPartialTbl = new HashMap[(Int,Int,Int),(String,String,String/*,String,String,String,String,String,String,Date,String,Double,Double*/,Double/*,Double,Int,Int,String*/)]
+  //val customerPartialTbl = new HashMap[(Int,Int,Int),(String,String,String/*,String,String,String,String,String,String,Date,String,Float,Float*/,Float/*,Float,Int,Int,String*/)]
   //val orderPartialTbl = new HashMap[(Int,Int,Int),(Int,Date,Option[Int]/*,Int,Boolean*/)]
-  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Double/*,String*/)]
+  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float/*,String*/)]
 
   /**
    * @param w_id is warehouse id
@@ -31,11 +31,11 @@ object OrderStatus {
    *   - [OrderLine: R] in
    *      + findOrderLines
    */
-  def orderStatusTx(datetime:Date, w_id: Int, d_id: Int, c_id: Int, c_last: String, c_by_name: Boolean):Int = {
+  override def orderStatusTx(datetime:Date, t_num: Int, w_id: Int, d_id: Int, c_by_name: Int, c_id: Int, c_last: String):Int = {
     try {
 
-      var c: (String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int/*,Int,String*/,Int) = null
-      if (c_by_name) {
+      var c: (String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int/*,Int,String*/,Int) = null
+      if (c_by_name > 0) {
         c = SharedData.findCustomerByName(w_id, d_id, c_last)
       } else {
         c = SharedData.findCustomerById(w_id, d_id, c_id)
@@ -82,12 +82,12 @@ object OrderStatus {
       }
       output.append("+-----------------------------------------------------------------+\n\n")
       println(output.toString)
-      0
+      1
     } catch {
       case e: Throwable => {
         println("An error occurred in handling OrderStatus transaction for warehouse=%d, district=%d".format(w_id,d_id))
         e.printStackTrace
-        1
+        0
       }
     }
   }
@@ -111,7 +111,7 @@ object OrderStatus {
     }
 
     def findOrderLines(ol_w_id_arg:Int, ol_d_id_arg:Int, ol_o_id_arg:Int) = {
-      val result = new ArrayBuffer[(Int,Int,Option[Date],Int,Double,String)]
+      val result = new ArrayBuffer[(Int,Int,Option[Date],Int,Float,String)]
       //slice over first three parts of key
       SharedData.orderLineTbl.foreach { case ((ol_o_id, ol_d_id, ol_w_id, _) , ol_val) =>
         if(ol_o_id == ol_o_id_arg && ol_d_id == ol_d_id_arg && ol_w_id == ol_w_id_arg) {

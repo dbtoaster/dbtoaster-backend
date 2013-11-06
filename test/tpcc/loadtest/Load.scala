@@ -7,8 +7,9 @@ import java.sql.Connection
 import java.sql.SQLException
 import java.util.Calendar
 import java.util.Date
+import TpccConstants._
 
-object Load extends TpccConstants{
+object Load{
 
   private var optionDebug: Boolean = false
 
@@ -47,7 +48,7 @@ object Load extends TpccConstants{
         println("I_name null.")
         System.exit(1)
       }
-      i_price = ((Util.randomNumber(100, 10000)).toInt / 100.0).toFloat
+      i_price = ((Util.randomNumber(100, 10000)).toInt / 100f).toFloat
       i_data = Util.makeAlphaString(26, 50)
       if (orig(i_id) != 0) {
         pos = Util.randomNumber(0, i_data.length - 8)
@@ -107,8 +108,8 @@ object Load extends TpccConstants{
         w_city = Util.makeAlphaString(10, 20)
         w_state = Util.makeAlphaString(2, 2)
         w_zip = Util.makeAlphaString(9, 9)
-        w_tax = (Util.randomNumber(10, 20).toDouble / 100.0)
-        w_ytd = 3000000.00
+        w_tax = (Util.randomNumber(10, 20).toFloat / 100f)
+        w_ytd = 3000000.00f
         System.out.print("WID = %d, Name= %s, Tax = %f\n".format(w_id, w_name, w_tax))
         warehouseRecord.reset()
         warehouseRecord.add(w_id)
@@ -255,13 +256,13 @@ object Load extends TpccConstants{
     var d_city: String = null
     var d_state: String = null
     var d_zip: String = null
-    var d_tax: Float = 0.0f
-    var d_ytd: Float = 0.0f
+    var d_tax: Float = 0f
+    var d_ytd: Float = 0f
     var d_next_o_id: Int = 0
     val error = false
     System.out.print("Loading District\n")
     d_w_id = w_id
-    d_ytd = 30000.0.toFloat
+    d_ytd = 30000f.toFloat
     d_next_o_id = 3001
     val DISTRICT_COLUMN_NAME = Array("d_id", " d_w_id", " d_name", " d_street_1", " d_street_2", " d_city", " d_state", " d_zip", " d_tax", " d_ytd", " d_next_o_id")
     val districtRecord = new Record(11)
@@ -274,7 +275,7 @@ object Load extends TpccConstants{
       d_city = Util.makeAlphaString(10, 20)
       d_state = Util.makeAlphaString(2, 2)
       d_zip = Util.makeAlphaString(9, 9)
-      d_tax = (Util.randomNumber(10, 20).toFloat / 100.0).toFloat
+      d_tax = (Util.randomNumber(10, 20).toFloat / 100f).toFloat
       districtRecord.reset()
       districtRecord.add(d_id)
       districtRecord.add(d_w_id)
@@ -318,7 +319,7 @@ object Load extends TpccConstants{
     var c_discount = 0f
     var c_balance = 0f
     var c_data: String = null
-    var h_amount = 0.0
+    var h_amount = 0f
     var h_data: String = null
     System.out.print("Loading Customer for DID=%d, WID=%d\n".format(d_id, w_id))
     var currentShard = 0
@@ -351,8 +352,8 @@ object Load extends TpccConstants{
         c_credit = if (Util.randomNumber(0, 1) == 1) "G" else "B"
         c_credit += "C"
         c_credit_lim = 50000
-        c_discount = (Util.randomNumber(0, 50).toFloat / 100.0).toFloat
-        c_balance = -10.0.toFloat
+        c_discount = (Util.randomNumber(0, 50).toFloat / 100f).toFloat
+        c_balance = -10f.toFloat
         c_data = Util.makeAlphaString(300, 500)
         val calendar = Calendar.getInstance
         val date = new java.sql.Date(calendar.getTimeInMillis)
@@ -374,12 +375,12 @@ object Load extends TpccConstants{
         customerRecord.add(c_credit_lim)
         customerRecord.add(c_discount)
         customerRecord.add(c_balance)
-        customerRecord.add(10.0)
+        customerRecord.add(10f)
         customerRecord.add(1)
         customerRecord.add(0)
         customerRecord.add(c_data)
         customerLoader.load(customerRecord)
-        h_amount = 10.0
+        h_amount = 10f
         h_data = Util.makeAlphaString(12, 24)
         historyRecord.reset()
         historyRecord.add(c_id)
@@ -421,9 +422,9 @@ object Load extends TpccConstants{
     var ol_i_id: Int = 0
     var ol_supply_w_id: Int = 0
     var ol_quantity: Int = 0
-    var ol_amount: Float = 0.0f
+    var ol_amount: Float = 0f
     var ol_dist_info: String = null
-    var tmp_float: Float = 0.0f
+    var tmp_float: Float = 0f
     var currentShard = 0
     if (shardCount > 0) {
       currentShard = (w_id % shardCount)
@@ -486,9 +487,9 @@ object Load extends TpccConstants{
           ol_i_id = Util.randomNumber(1, MAXITEMS)
           ol_supply_w_id = o_w_id
           ol_quantity = 5
-          ol_amount = 0.0.toFloat
+          ol_amount = 0f.toFloat
           ol_dist_info = Util.makeAlphaString(24, 24)
-          tmp_float = ((Util.randomNumber(10, 10000)).toFloat / 100.0).toFloat
+          tmp_float = ((Util.randomNumber(10, 10000)).toFloat / 100f).toFloat
           if (o_id > 2100) {
             orderLineRecord.reset()
             orderLineRecord.add(o_id)

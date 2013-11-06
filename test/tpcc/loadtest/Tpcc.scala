@@ -13,9 +13,13 @@ import org.slf4j.LoggerFactory
 import org.slf4j.Logger
 import ddbt.tpcc.tx.TpccTable
 import Tpcc._
+import DatabaseConnector._
+import TpccConstants._
+import ddbt.tpcc.mtx._
+import ddbt.tpcc.itx._
+import java.sql.Connection
 
 object Tpcc {
-  val SharedData = new TpccTable
 
   private val logger = LoggerFactory.getLogger(classOf[Tpcc])
 
@@ -92,7 +96,7 @@ object Tpcc {
   }
 }
 
-class Tpcc extends TpccConstants {
+class Tpcc {
 
   private var javaDriver: String = _
 
@@ -153,15 +157,17 @@ class Tpcc extends TpccConstants {
   java.util.Arrays.fill(prev_s, 0)
   java.util.Arrays.fill(prev_l, 0)
 
-  private var max_rt: Array[Double] = new Array[Double](5)
+  private var max_rt: Array[Float] = new Array[Float](5)
 
-  java.util.Arrays.fill(max_rt, 0.0)
+  java.util.Arrays.fill(max_rt, 0f)
 
   private var port: Int = 3306
 
   private var properties: Properties = _
 
   private var inputStream: InputStream = _
+
+  def activeTransactionChecker(counter:Int) = (Tpcc.activate_transaction == 1)
 
   private def init() {
     logger.info("Loading properties from: " + PROPERTIESFILE)
@@ -183,7 +189,7 @@ class Tpcc extends TpccConstants {
       failure(i) = 0
       prev_s(i) = 0
       prev_l(i) = 0
-      max_rt(i) = 0.0
+      max_rt(i) = 0f
     }
     num_node = 0
     if (overridePropertiesFile) {
@@ -290,12 +296,25 @@ class Tpcc extends TpccConstants {
     if (DEBUG) logger.debug("Creating TpccThread")
     val executor = Executors.newFixedThreadPool(numConn, new NamedThreadFactory("tpcc-thread"))
 
-    
+    val SharedData: TpccTable = new TpccTable
     SharedData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
 
     for (i <- 0 until numConn) {
+      val conn: Connection = connectToDB(javaDriver, jdbcUrl, dbUser, dbPassword)
+      val pStmts: TpccStatements = new TpccStatements(conn, fetchSize)
+      val newOrder: NewOrder = new NewOrder(pStmts)
+      val payment: Payment = new Payment(pStmts)
+      val orderStat: OrderStat = new OrderStat(pStmts)
+      val slev: Slev = new Slev(pStmts)
+      val delivery: Delivery = new Delivery(pStmts)
+      // val newOrder: INewOrder = new NewOrderMixedImpl(new ddbt.tpcc.loadtest.NewOrder(pStmts), new ddbt.tpcc.tx.NewOrder(SharedData))
+      // val payment: IPayment = new PaymentMixedImpl(new ddbt.tpcc.loadtest.Payment(pStmts), new ddbt.tpcc.tx.Payment(SharedData))
+      // val orderStat: IOrderStatus = new OrderStatusMixedImpl(new ddbt.tpcc.loadtest.OrderStat(pStmts), new ddbt.tpcc.tx.OrderStatus(SharedData))
+      // val slev: IStockLevel = new StockLevelMixedImpl(new ddbt.tpcc.loadtest.Slev(pStmts), new ddbt.tpcc.tx.StockLevel(SharedData))
+      // val delivery: IDelivery = new DeliveryMixedImpl(new ddbt.tpcc.loadtest.Delivery(pStmts), new ddbt.tpcc.tx.Delivery(SharedData))
+
       val worker = new TpccThread(i, port, 1, dbUser, dbPassword, numWare, numConn, javaDriver, jdbcUrl, 
-        fetchSize, success, late, retry, failure, success2, late2, retry2, failure2)
+        fetchSize, success, late, retry, failure, success2, late2, retry2, failure2, conn, newOrder, payment, orderStat, slev, delivery, activeTransactionChecker)
       executor.execute(worker)
     }
     if (rampupTime > 0) {
@@ -354,28 +373,28 @@ class Tpcc extends TpccConstants {
       j += (success(i) + late(i))
       i += 1
     }
-    var f = 100.0 * (success(1) + late(1)).toFloat / j.toFloat
+    var f = 100f * (success(1) + late(1)).toFloat / j.toFloat
     System.out.print("        Payment: %f%% (>=43.0%%)".format(f))
     if (f >= 43.0) {
       System.out.print(" [OK]\n")
     } else {
       System.out.print(" [NG] *\n")
     }
-    f = 100.0 * (success(2) + late(2)).toFloat / j.toFloat
+    f = 100f * (success(2) + late(2)).toFloat / j.toFloat
     System.out.print("   Order-Status: %f%% (>= 4.0%%)".format(f))
     if (f >= 4.0) {
       System.out.print(" [OK]\n")
     } else {
       System.out.print(" [NG] *\n")
     }
-    f = 100.0 * (success(3) + late(3)).toFloat / j.toFloat
+    f = 100f * (success(3) + late(3)).toFloat / j.toFloat
     System.out.print("       Delivery: %f%% (>= 4.0%%)".format(f))
     if (f >= 4.0) {
       System.out.print(" [OK]\n")
     } else {
       System.out.print(" [NG] *\n")
     }
-    f = 100.0 * (success(4) + late(4)).toFloat / j.toFloat
+    f = 100f * (success(4) + late(4)).toFloat / j.toFloat
     System.out.print("    Stock-Level: %f%% (>= 4.0%%)".format(f))
     if (f >= 4.0) {
       System.out.print(" [OK]\n")
@@ -384,19 +403,19 @@ class Tpcc extends TpccConstants {
     }
     System.out.print(" [response time (at least 90%% passed)]\n")
     for (n <- 0 until TRANSACTION_NAME.length) {
-      f = 100.0 * success(n).toFloat / (success(n) + late(n)).toFloat
+      f = 100f * success(n).toFloat / (success(n) + late(n)).toFloat
       if (DEBUG) logger.debug("f: " + f + " success[" + n + "]: " + success(n) + " late[" + 
         n + 
         "]: " + 
         late(n))
       System.out.print("      %s: %f%% ".format(TRANSACTION_NAME(n), f))
-      if (f >= 90.0) {
+      if (f >= 90f) {
         System.out.print(" [OK]\n")
       } else {
         System.out.print(" [NG] *\n")
       }
     }
-    var total = 0.0
+    var total = 0f
     j = 0
     while (j < TRANSACTION_COUNT) {
       total = total + success(j) + late(j)
@@ -411,14 +430,12 @@ class Tpcc extends TpccConstants {
     activate_transaction = 0
 
     {
-      val newData = new TpccTable
-
-      if(newData equals SharedData) {
-        println("\n1- new Data equals SharedData")
-      } else {
-        println("\n1- new Data is not equal to SharedData")
+      try {
+        Thread.sleep(5000)
+      } catch {
+        case e: InterruptedException => logger.error("Sleep interrupted", e)
       }
-
+      val newData = new TpccTable
       newData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
 
       if(newData equals SharedData) {

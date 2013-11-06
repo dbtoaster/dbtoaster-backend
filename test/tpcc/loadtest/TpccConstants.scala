@@ -1,7 +1,7 @@
 package ddbt.tpcc.loadtest
 
 
-trait TpccConstants {
+object TpccConstants {
 
   var TRANSACTION_COUNT: Int = 5
 

@@ -10,6 +10,7 @@ import java.util.Properties
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
 import TpccLoad._
+import TpccConstants._
 
 object TpccLoad {
 
@@ -84,7 +85,7 @@ object TpccLoad {
   }
 }
 
-class TpccLoad extends TpccConstants {
+class TpccLoad {
 
   private var mode: String = _
 

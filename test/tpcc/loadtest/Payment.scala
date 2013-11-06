@@ -9,7 +9,9 @@ import java.util.Calendar
 import java.util.Date
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
+import ddbt.tpcc.itx.IPayment
 import Payment._
+import TpccConstants._
 
 object Payment {
 
@@ -20,9 +22,9 @@ object Payment {
   private val TRACE = logger.isTraceEnabled
 }
 
-class Payment(var pStmts: TpccStatements) extends TpccConstants {
+class Payment(var pStmts: TpccStatements) extends IPayment {
 
-  def payment(t_num: Int, 
+  override def paymentTx(currentTimeStamp:Date, t_num: Int, 
       w_id_arg: Int, 
       d_id_arg: Int, 
       byname: Int, 
@@ -31,8 +33,6 @@ class Payment(var pStmts: TpccStatements) extends TpccConstants {
       c_id_arg: Int, 
       c_last_arg: String, 
       h_amount_arg: Float): Int = {
-    val currentTimeStamp = new Timestamp(System.currentTimeMillis())
-    ddbt.tpcc.tx.Payment.paymentTx(currentTimeStamp, w_id_arg, c_w_id_arg, h_amount_arg, d_id_arg, c_d_id_arg, c_id_arg, c_last_arg, byname >= 1)
     try {
       pStmts.setAutoCommit(false)
       if (DEBUG) logger.debug("Transaction:	PAYMENT")
@@ -457,7 +457,7 @@ class Payment(var pStmts: TpccStatements) extends TpccConstants {
         output.append("")
       }
       output.append("\n   Credit:  ").append(c_credit)
-      .append("\n   %Disc:   ").append(c_discount)
+      .append("\n   Disc:    ").append(c_discount * 100).append("%")
       .append("\n   Phone:   ").append(c_phone)
       .append("\n\n Amount Paid:      ").append(h_amount)
       .append("\n Credit Limit:     ").append(c_credit_lim)

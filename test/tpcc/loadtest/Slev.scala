@@ -5,7 +5,9 @@ import java.sql.ResultSet
 import java.sql.SQLException
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
+import ddbt.tpcc.itx.IStockLevel
 import Slev._
+import TpccConstants._
 
 object Slev {
 
@@ -16,15 +18,14 @@ object Slev {
   private val TRACE = logger.isTraceEnabled
 }
 
-class Slev(pStms: TpccStatements) extends TpccConstants {
+class Slev(pStms: TpccStatements) extends IStockLevel {
 
   private var pStmts: TpccStatements = pStms
 
-  def slev(t_num: Int, 
+  override def stockLevelTx(t_num: Int, 
       w_id_arg: Int, 
       d_id_arg: Int, 
       level_arg: Int): Int = {
-    ddbt.tpcc.tx.StockLevel.stockLevelTx(w_id_arg, d_id_arg, level_arg)
     try {
       pStmts.setAutoCommit(false)
       if (DEBUG) logger.debug("Transaction: 	SLEV")

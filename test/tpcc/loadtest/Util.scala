@@ -2,8 +2,9 @@ package ddbt.tpcc.loadtest
 
 import java.util.Date
 import java.util.Random
+import TpccConstants._
 
-object Util extends TpccConstants{
+object Util{
 
   var no: Int = _
 
@@ -209,6 +210,10 @@ object Util extends TpccConstants{
     name = name + n(num % 10)
     name
   }
+  def doubleEq(d1:Double, d2:Double):Boolean = (Math.abs(d1-d2) < 0.1f)
+  def doubleEq(d1:Float, d2:Float):Boolean = (Math.abs(d1-d2) < 0.1f)
+  def dateEq(d1:Date, d2:Date):Boolean = (((d1.getTime - d2.getTime) / 1000) == 0)
+
 
   def roundDate(d:Date):Date = {
     val c = java.util.Calendar.getInstance();

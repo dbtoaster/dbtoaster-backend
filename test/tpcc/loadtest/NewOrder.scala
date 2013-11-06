@@ -5,7 +5,9 @@ import java.util.Calendar
 import java.util.Date
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
+import ddbt.tpcc.itx.INewOrder
 import NewOrder._
+import TpccConstants._
 
 object NewOrder {
 
@@ -16,7 +18,7 @@ object NewOrder {
   private val TRACE = logger.isTraceEnabled
 }
 
-class NewOrder(var pStmts: TpccStatements) extends TpccConstants {
+class NewOrder(var pStmts: TpccStatements) extends INewOrder {
 
   private var s_dist_01: String = null
 
@@ -38,16 +40,6 @@ class NewOrder(var pStmts: TpccStatements) extends TpccConstants {
 
   private var s_dist_10: String = null
 
-  var iname: Array[String] = new Array[String](MAX_NUM_ITEMS)
-
-  var bg: Array[String] = new Array[String](MAX_NUM_ITEMS)
-
-  var amt: Array[Float] = new Array[Float](MAX_NUM_ITEMS)
-
-  var price: Array[Float] = new Array[Float](MAX_NUM_ITEMS)
-
-  var stock: Array[Int] = new Array[Int](MAX_NUM_ITEMS)
-
   var ol_num_seq: Array[Int] = new Array[Int](MAX_NUM_ITEMS)
 
   private def pickDistInfo(ol_dist_info: String, ol_supply_w_id: Int): String = {
@@ -66,7 +58,7 @@ class NewOrder(var pStmts: TpccStatements) extends TpccConstants {
     new_ol_dist_info
 }
 
-  def neword(t_num: Int, 
+  override def newOrderTx(time:Date, t_num: Int, 
       w_id_arg: Int, 
       d_id_arg: Int, 
       c_id_arg: Int, 
@@ -74,10 +66,12 @@ class NewOrder(var pStmts: TpccStatements) extends TpccConstants {
       o_all_local_arg: Int, 
       itemid: Array[Int], 
       supware: Array[Int], 
-      qty: Array[Int]): Int = {
-    val time = new java.sql.Timestamp(System.currentTimeMillis())
-    ddbt.tpcc.tx.NewOrder.newOrderTx(time, w_id_arg, d_id_arg, c_id_arg, o_all_local_arg > 0, o_ol_cnt_arg, itemid, supware, qty, new Array[Double](o_ol_cnt_arg), new Array[String](o_ol_cnt_arg), new Array[Int](o_ol_cnt_arg), new Array[Char](o_ol_cnt_arg), new Array[Double](o_ol_cnt_arg))
-
+      qty: Array[Int],
+      price: Array[Float],
+      iname: Array[String],
+      stock: Array[Int],
+      bg: Array[Char],
+      amt: Array[Float]): Int = {
     try {
       pStmts.setAutoCommit(false)
       println("# Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id_arg,d_id_arg,c_id_arg))
@@ -366,7 +360,7 @@ class NewOrder(var pStmts: TpccStatements) extends TpccConstants {
         }
         ol_dist_info = pickDistInfo(ol_dist_info, d_id)
         stock(ol_num_seq(ol_number - 1)) = s_quantity
-        bg(ol_num_seq(ol_number - 1)) = if ((i_data.contains("original")) && (s_data.contains("original"))) "B" else "G"
+        bg(ol_num_seq(ol_number - 1)) = if ((i_data.contains("original")) && (s_data.contains("original"))) 'B' else 'G'
         s_quantity = if (s_quantity > ol_quantity) s_quantity - ol_quantity else s_quantity - ol_quantity + 91
         try {
           val pstmt7 = pStmts.getStatement(7)

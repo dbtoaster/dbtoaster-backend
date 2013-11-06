@@ -2,24 +2,24 @@ package ddbt.tpcc.tx
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
-import ddbt.tpcc.loadtest.TpccUnitTest._
+import ddbt.tpcc.itx.IStockLevel
 
 /**
  * StockLevel Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-object StockLevel {
+class StockLevel(val SharedData: TpccTable) extends IStockLevel {
 
   //Partial Tables (containing all rows, but not all columns)
   //removed columns are commented out
-  //val districtPartialTbl = new HashMap[(Int,Int),(/*String,String,String,String,String,String,Double,Double,*/Int)]
+  //val districtPartialTbl = new HashMap[(Int,Int),(/*String,String,String,String,String,String,Float,Float,*/Int)]
 
   //Materialized query results
 
   //Key: orderLine key
   //Value: (ol_i_id,s_quantity)
-  //val orderLineStockJoin = new HashMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Double,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
+  //val orderLineStockJoin = new HashMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Float,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
 
   /**
    * @param w_id is warehouse id
@@ -35,7 +35,7 @@ object StockLevel {
    *      + findOrderLineStockRecentItemsUnderThresholds
    *
    */
-  def stockLevelTx(w_id: Int, d_id: Int, threshold: Int):Int= {
+  override def stockLevelTx(t_num: Int, w_id: Int, d_id: Int, threshold: Int):Int= {
     try {
         val o_id = StockLevelTxOps.findDistrictnextOrderId(w_id,d_id)
         val stock_count = StockLevelTxOps.findOrderLineStockRecentItemsUnderThresholds(w_id, d_id, o_id, threshold)
@@ -52,7 +52,7 @@ object StockLevel {
     } catch {
       case e: Throwable => {
         println("An error occurred in handling StockLevel transaction for warehouse=%d, district=%d, threshold=%d".format(w_id,d_id,threshold))
-        1
+        0
       }
     }
   }

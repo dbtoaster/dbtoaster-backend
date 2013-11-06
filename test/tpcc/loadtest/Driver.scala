@@ -4,10 +4,15 @@ import java.io.PrintWriter
 import java.sql.Connection
 import java.sql.SQLException
 import java.util.Arrays
+import java.util.Calendar
+import java.util.Date
+import java.sql.Timestamp
 import java.util.concurrent._
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
+import ddbt.tpcc.itx._
 import Driver._
+import TpccConstants._
 
 object Driver {
 
@@ -28,14 +33,19 @@ object Driver {
 
 class Driver(var conn: java.sql.Connection, 
     fetchSize: Int, 
-    var success: Array[Int], 
-    var late: Array[Int], 
-    var retry: Array[Int], 
-    var failure: Array[Int], 
-    var success2: Array[Array[Int]], 
-    var late2: Array[Array[Int]], 
-    var retry2: Array[Array[Int]], 
-    var failure2: Array[Array[Int]]) extends TpccConstants {
+    val success: Array[Int], 
+    val late: Array[Int], 
+    val retry: Array[Int], 
+    val failure: Array[Int], 
+    val success2: Array[Array[Int]], 
+    val late2: Array[Array[Int]], 
+    val retry2: Array[Array[Int]], 
+    val failure2: Array[Array[Int]],
+    val newOrder: INewOrder,
+    val payment: IPayment,
+    val orderStat: IOrderStatus,
+    val slev: IStockLevel,
+    val delivery: IDelivery) {
 
   var num_ware: Int = _
 
@@ -43,7 +53,10 @@ class Driver(var conn: java.sql.Connection,
 
   var num_node: Int = _
 
-  var max_rt: Array[Double] = new Array[Double](TRANSACTION_COUNT)
+  var max_rt: Array[Float] = new Array[Float](TRANSACTION_COUNT)
+  for (i <- 0 until TRANSACTION_COUNT) {
+    max_rt(i) = 0f
+  }
 
   private val MAX_RETRY = 2000
 
@@ -57,46 +70,14 @@ class Driver(var conn: java.sql.Connection,
 
   private val RTIME_SLEV = 20 * 1000
 
-  private var pStmts: TpccStatements = _
-
-  private var newOrder: NewOrder = _
-
-  private var payment: Payment = _
-
-  private var orderStat: OrderStat = _
-
-  private var slev: Slev = _
-
-  private var delivery: Delivery = _
-
-  {
-    pStmts = new TpccStatements(conn, fetchSize)
-    newOrder = new NewOrder(pStmts)
-    payment = new Payment(pStmts)
-    orderStat = new OrderStat(pStmts)
-    slev = new Slev(pStmts)
-    delivery = new Delivery(pStmts)
-    this.success = success
-    this.late = late
-    this.retry = retry
-    this.failure = failure
-    this.success2 = success2
-    this.late2 = late2
-    this.retry2 = retry2
-    this.failure2 = failure2
-    for (i <- 0 until TRANSACTION_COUNT) {
-      max_rt(i) = 0.0
-    }
-  }
-
   private val exec = Executors.newSingleThreadExecutor()
 
-  def runTransaction(t_num: Int, numWare: Int, numConn: Int): Int = {
+  def runTransaction(t_num: Int, numWare: Int, numConn: Int, loopConditionChecker: (Int => Boolean)): Int = {
     num_ware = numWare
     num_conn = numConn
     var count = 0
     var sequence = Util.seqGet()
-    while (Tpcc.activate_transaction == 1) {
+    while (loopConditionChecker(count)) {
       try {
         if (DEBUG) logger.debug("BEFORE runTransaction: sequence: " + sequence)
         if (DETECT_LOCK_WAIT_TIMEOUTS) {
@@ -169,7 +150,7 @@ class Driver(var conn: java.sql.Connection,
     var c_num = 0
     var i = 0
     var ret = 0
-    var rt = 0.0
+    var rt = 0f
     var beginTime = 0L
     var endTime = 0L
     var w_id = 0
@@ -182,6 +163,12 @@ class Driver(var conn: java.sql.Connection,
     val itemid = Array.ofDim[Int](MAX_NUM_ITEMS)
     val supware = Array.ofDim[Int](MAX_NUM_ITEMS)
     val qty = Array.ofDim[Int](MAX_NUM_ITEMS)
+    var price = Array.ofDim[Float](MAX_NUM_ITEMS)
+    var amt = Array.ofDim[Float](MAX_NUM_ITEMS)
+    var iname = Array.ofDim[String](MAX_NUM_ITEMS)
+    var bg = Array.ofDim[Char](MAX_NUM_ITEMS)
+    var stock = Array.ofDim[Int](MAX_NUM_ITEMS)
+
     if (num_node == 0) {
       w_id = Util.randomNumber(1, num_ware)
     } else {
@@ -224,10 +211,12 @@ class Driver(var conn: java.sql.Connection,
         all_local + 
         " qty: " + 
         Arrays.toString(qty))
-      ret = newOrder.neword(t_num, w_id, d_id, c_id, ol_cnt, all_local, itemid, supware, qty)
+
+      val time = new java.sql.Timestamp(System.currentTimeMillis())
+      ret = newOrder.newOrderTx(time, t_num, w_id, d_id, c_id, ol_cnt, all_local, itemid, supware, qty, price, iname, stock, bg, amt)
       endTime = System.currentTimeMillis()
       if (ret == 1) {
-        rt = (endTime - beginTime).toDouble
+        rt = (endTime - beginTime).toFloat
         if (DEBUG) logger.debug("BEFORE rt value: " + rt + " max_rt[0] value: " + max_rt(0))
         if (rt > max_rt(0)) max_rt(0) = rt
         if (DEBUG) logger.debug("AFTER rt value: " + rt + " max_rt[0] value: " + max_rt(0))
@@ -276,7 +265,7 @@ class Driver(var conn: java.sql.Connection,
     var byname = 0
     var i = 0
     var ret = 0
-    var rt = 0.0
+    var rt = 0f
     var beginTime = 0L
     var endTime = 0L
     var w_id = 0
@@ -312,10 +301,11 @@ class Driver(var conn: java.sql.Connection,
     beginTime = System.currentTimeMillis()
     i = 0
     while (i < MAX_RETRY) {
-      ret = payment.payment(t_num, w_id, d_id, byname, c_w_id, c_d_id, c_id, c_last, h_amount)
+      val currentTimeStamp = new Timestamp(System.currentTimeMillis())
+      ret = payment.paymentTx(currentTimeStamp, t_num, w_id, d_id, byname, c_w_id, c_d_id, c_id, c_last, h_amount)
       endTime = System.currentTimeMillis()
       if (ret >= 1) {
-        rt = (endTime - beginTime).toDouble
+        rt = (endTime - beginTime).toFloat
         if (rt > max_rt(1)) max_rt(1) = rt
         RtHist.histInc(1, rt)
         if (Tpcc.counting_on) {
@@ -350,7 +340,7 @@ class Driver(var conn: java.sql.Connection,
     var byname = 0
     var i = 0
     var ret = 0
-    var rt = 0.0
+    var rt = 0f
     var beginTime = 0L
     var endTime = 0L
     var w_id = 0
@@ -370,10 +360,11 @@ class Driver(var conn: java.sql.Connection,
     beginTime = System.currentTimeMillis()
     i = 0
     while (i < MAX_RETRY) {
-      ret = orderStat.ordStat(t_num, w_id, d_id, byname, c_id, c_last)
+      val datetime = new java.util.Date()
+      ret = orderStat.orderStatusTx(datetime, t_num, w_id, d_id, byname, c_id, c_last)
       endTime = System.currentTimeMillis()
       if (ret >= 1) {
-        rt = (endTime - beginTime).toDouble
+        rt = (endTime - beginTime).toFloat
         if (rt > max_rt(2)) max_rt(2) = rt
         RtHist.histInc(2, rt)
         if (Tpcc.counting_on) {
@@ -407,7 +398,7 @@ class Driver(var conn: java.sql.Connection,
     var c_num = 0
     var i = 0
     var ret = 0
-    var rt = 0.0
+    var rt = 0f
     var beginTime = 0L
     var endTime = 0L
     var w_id = 0
@@ -422,10 +413,13 @@ class Driver(var conn: java.sql.Connection,
     beginTime = System.currentTimeMillis()
     i = 0
     while (i < MAX_RETRY) {
-      ret = delivery.delivery(w_id, o_carrier_id)
+      val calendar = Calendar.getInstance
+      val now = calendar.getTime
+      val currentTimeStamp = new Timestamp(now.getTime)
+      ret = delivery.deliveryTx(currentTimeStamp, w_id, o_carrier_id)
       endTime = System.currentTimeMillis()
       if (ret >= 1) {
-        rt = (endTime - beginTime).toDouble
+        rt = (endTime - beginTime).toFloat
         if (rt > max_rt(3)) max_rt(3) = rt
         RtHist.histInc(3, rt)
         if (Tpcc.counting_on) {
@@ -459,7 +453,7 @@ class Driver(var conn: java.sql.Connection,
     var c_num = 0
     var i = 0
     var ret = 0
-    var rt = 0.0
+    var rt = 0f
     var beginTime = 0L
     var endTime = 0L
     var w_id = 0
@@ -476,10 +470,10 @@ class Driver(var conn: java.sql.Connection,
     beginTime = System.currentTimeMillis()
     i = 0
     while (i < MAX_RETRY) {
-      ret = slev.slev(t_num, w_id, d_id, level)
+      ret = slev.stockLevelTx(t_num, w_id, d_id, level)
       endTime = System.currentTimeMillis()
       if (ret >= 1) {
-        rt = (endTime - beginTime).toDouble
+        rt = (endTime - beginTime).toFloat
         if (rt > max_rt(4)) max_rt(4) = rt
         RtHist.histInc(4, rt)
         if (Tpcc.counting_on) {

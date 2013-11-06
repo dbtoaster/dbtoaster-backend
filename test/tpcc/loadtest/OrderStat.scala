@@ -7,6 +7,9 @@ import org.slf4j.LoggerFactory
 import org.slf4j.Logger
 import OrderStat._
 import scala.collection.mutable._
+import ddbt.tpcc.itx.IOrderStatus
+import java.util.Date
+import TpccConstants._
 
 object OrderStat {
 
@@ -17,16 +20,14 @@ object OrderStat {
   private val TRACE = logger.isTraceEnabled
 }
 
-class OrderStat(var pStmts: TpccStatements) extends TpccConstants {
+class OrderStat(var pStmts: TpccStatements) extends IOrderStatus {
 
-  def ordStat(t_num: Int, 
+  override def orderStatusTx(datetime:Date, t_num: Int, 
       w_id_arg: Int, 
       d_id_arg: Int, 
       byname: Int, 
       c_id_arg: Int, 
       c_last_arg: String): Int = {
-    val datetime = new java.util.Date()
-    ddbt.tpcc.tx.OrderStatus.orderStatusTx(datetime, w_id_arg, d_id_arg, c_id_arg, c_last_arg, byname > 0)
     try {
       pStmts.setAutoCommit(false)
       if (DEBUG) logger.debug("Transaction: ORDER STAT")

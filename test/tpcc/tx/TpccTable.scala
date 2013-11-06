@@ -5,31 +5,31 @@ import java.util.Date
 import java.sql.Connection
 import java.sql.Statement
 import java.sql.ResultSet
-import ddbt.tpcc.loadtest.DatabaseConnector
-import ddbt.tpcc.loadtest.Util.roundDate
+import ddbt.tpcc.loadtest.Util._
+import ddbt.tpcc.loadtest.DatabaseConnector._
 
 /**
  * Delivery Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-class TpccTable extends DatabaseConnector{
+class TpccTable {
 	//NewOrder: W
 	//Delivery: RW
 	val newOrderTbl = new HashSet[(Int,Int,Int)]
-	val historyTbl = new HashSet[(Int,Int,Int,Int,Int,Date,Double,String)]
+	val historyTbl = new HashSet[(Int,Int,Int,Int,Int,Date,Float,String)]
 
-	val warehouseTbl = new HashMap[Int,(String,String,String,String,String,String,Double,Double)]
-	val itemPartialTbl = new HashMap[Int,(/*Int,*/String,Double,String)]
+	val warehouseTbl = new HashMap[Int,(String,String,String,String,String,String,Float,Double)]
+	val itemPartialTbl = new HashMap[Int,(/*Int,*/String,Float,String)]
 	val orderTbl = new HashMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)]
-	val districtTbl = new HashMap[(Int,Int),(String,String,String,String,String,String,Double,Double,Int)]
+	val districtTbl = new HashMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]
 
-	val orderLineTbl = new HashMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Double,String)]
-	val customerTbl = new HashMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int,Int,String)]
+	val orderLineTbl = new HashMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)]
+	val customerTbl = new HashMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)]
 	val stockTbl = new HashMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
 
-	//val orderLineStockJoin = new HashMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Double,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
-	val customerWarehouseFinancialInfoMap = new HashMap[(Int,Int,Int),(Double,String,String,Double)]
+	//val orderLineStockJoin = new HashMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Float,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
+	val customerWarehouseFinancialInfoMap = new HashMap[(Int,Int,Int),(Float,String,String,Float)]
 
 	def onInsert_NewOrder(no_o_id:Int, no_d_id:Int, no_w_id:Int) = {
 		newOrderTbl += ((no_o_id, no_d_id, no_w_id))
@@ -39,11 +39,11 @@ class TpccTable extends DatabaseConnector{
 		newOrderTbl -= ((no_o_id, no_d_id, no_w_id))
 	}
 
-	def onInsert_HistoryTbl(h_c_id:Int, h_c_d_id:Int, h_c_w_id:Int, h_d_id:Int, h_w_id:Int, h_date:Date, h_amount:Double, h_data:String) = {
+	def onInsert_HistoryTbl(h_c_id:Int, h_c_d_id:Int, h_c_w_id:Int, h_d_id:Int, h_w_id:Int, h_date:Date, h_amount:Float, h_data:String) = {
 		historyTbl += ((h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,roundDate(h_date),h_amount,h_data))
 	}
 
-	def onInsert_Item(i_id:Int, i_im_id:Int, i_name:String, i_price:Double, i_data:String) = {
+	def onInsert_Item(i_id:Int, i_im_id:Int, i_name:String, i_price:Float, i_data:String) = {
 		itemPartialTbl += (i_id -> ((/*i_im_id,*/i_name,i_price,i_data)))
 	}
 
@@ -56,42 +56,42 @@ class TpccTable extends DatabaseConnector{
 		orderTbl.update((o_id,o_d_id,o_w_id),(o_c_id,currentVal._2,o_carrier_id,currentVal._4,currentVal._5))
 	}
 
-	def onInsert_Warehouse(w_id:Int, w_name:String, w_street_1:String, w_street_2:String, w_city:String, w_state:String, w_zip:String, w_tax:Double, w_ytd:Double) = {
+	def onInsert_Warehouse(w_id:Int, w_name:String, w_street_1:String, w_street_2:String, w_city:String, w_state:String, w_zip:String, w_tax:Float, w_ytd:Double) = {
 		warehouseTbl += (w_id -> (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd))
 	}
 
-	def onUpdate_Warehouse(w_id:Int, w_name:String, w_street_1:String, w_street_2:String, w_city:String, w_state:String, w_zip:String, w_tax:Double, w_ytd:Double) = {
+	def onUpdate_Warehouse(w_id:Int, w_name:String, w_street_1:String, w_street_2:String, w_city:String, w_state:String, w_zip:String, w_tax:Float, w_ytd:Double) = {
 		warehouseTbl.update(w_id,(w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd))
 	}
 
-	def onInsert_District(d_id:Int, d_w_id:Int, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String, d_tax:Double, d_ytd:Double, d_next_o_id:Int) = {
+	def onInsert_District(d_id:Int, d_w_id:Int, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String, d_tax:Float, d_ytd:Double, d_next_o_id:Int) = {
 		districtTbl += ((d_id,d_w_id) -> (d_name,d_street1,d_street2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id))
 	}
 
-	def onUpdate_District(d_id:Int, d_w_id:Int, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String, d_tax:Double, d_ytd:Double, d_next_o_id:Int) = {
+	def onUpdate_District(d_id:Int, d_w_id:Int, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String, d_tax:Float, d_ytd:Double, d_next_o_id:Int) = {
 		districtTbl.update((d_id,d_w_id), (d_name,d_street1,d_street2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id))
 	}
 
-	def onUpdate_District_forNewOrder(d_id:Int, d_w_id:Int/*, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String*/, d_tax:Double/*, d_ytd:Double*/, d_next_o_id:Int) = {
+	def onUpdate_District_forNewOrder(d_id:Int, d_w_id:Int/*, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String*/, d_tax:Float/*, d_ytd:Float*/, d_next_o_id:Int) = {
 		val (d_name,d_street1,d_street2,d_city,d_state,d_zip,_,d_ytd,_) = districtTbl(d_id,d_w_id)
 		onUpdate_District(d_id,d_w_id, d_name,d_street1,d_street2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id)
 	}
 
-	def onInsertOrderLine(ol_o_id:Int, ol_d_id:Int, ol_w_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_delivery_d:Option[Date], ol_quantity:Int, ol_amount:Double, ol_dist_info:String): Unit = {
+	def onInsertOrderLine(ol_o_id:Int, ol_d_id:Int, ol_w_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_delivery_d:Option[Date], ol_quantity:Int, ol_amount:Float, ol_dist_info:String): Unit = {
       orderLineTbl += ((ol_o_id, ol_d_id, ol_w_id, ol_number) -> (ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info))
     }
 
-	def onUpdateOrderLine(ol_o_id:Int, ol_d_id:Int, ol_w_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_delivery_d:Option[Date], ol_quantity:Int, ol_amount:Double, ol_dist_info:String): Unit = {
+	def onUpdateOrderLine(ol_o_id:Int, ol_d_id:Int, ol_w_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_delivery_d:Option[Date], ol_quantity:Int, ol_amount:Float, ol_dist_info:String): Unit = {
       orderLineTbl.update((ol_o_id, ol_d_id, ol_w_id, ol_number) , (ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info))
     }
 
-    def onInsertCustomer(c_id: Int, c_d_id: Int, c_w_id: Int, c_first:String, c_middle:String, c_last:String, c_street_1:String, c_street_2:String, c_city:String, c_state:String, c_zip:String, c_phone:String, c_since:Date, c_credit:String, c_credit_lim:Double, c_discount:Double, c_balance:Double, c_ytd_payment:Double, c_payment_cnt:Int, c_delivery_cnt:Int, c_data:String) = {
+    def onInsertCustomer(c_id: Int, c_d_id: Int, c_w_id: Int, c_first:String, c_middle:String, c_last:String, c_street_1:String, c_street_2:String, c_city:String, c_state:String, c_zip:String, c_phone:String, c_since:Date, c_credit:String, c_credit_lim:Float, c_discount:Float, c_balance:Float, c_ytd_payment:Float, c_payment_cnt:Int, c_delivery_cnt:Int, c_data:String) = {
       customerTbl += ((c_id,c_d_id,c_w_id) -> (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data))
       val (_,_,_,_,_,_,w_tax,_) = warehouseTbl(c_w_id)
       customerWarehouseFinancialInfoMap += ((c_id,c_d_id,c_w_id) -> (c_discount, c_last, c_credit, w_tax))
     }
 
-    def onUpdateCustomer(c_id: Int, c_d_id: Int, c_w_id: Int, c_first:String, c_middle:String, c_last:String, c_street_1:String, c_street_2:String, c_city:String, c_state:String, c_zip:String, c_phone:String, c_since:Date, c_credit:String, c_credit_lim:Double, c_discount:Double, c_balance:Double, c_ytd_payment:Double, c_payment_cnt:Int, c_delivery_cnt:Int, c_data:String) = {
+    def onUpdateCustomer(c_id: Int, c_d_id: Int, c_w_id: Int, c_first:String, c_middle:String, c_last:String, c_street_1:String, c_street_2:String, c_city:String, c_state:String, c_zip:String, c_phone:String, c_since:Date, c_credit:String, c_credit_lim:Float, c_discount:Float, c_balance:Float, c_ytd_payment:Float, c_payment_cnt:Int, c_delivery_cnt:Int, c_data:String) = {
       customerTbl.update((c_id,c_d_id,c_w_id),(c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data))
     }
 
@@ -136,19 +136,26 @@ class TpccTable extends DatabaseConnector{
       (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_id)
     }
 
-    def doubleEq(d1:Double, d2:Double) = true //Math.abs(d1-d2) < 0.1
-    def dateEq(d1:Date, d2:Date) = true //((d1.getTime - d2.getTime) / 1000) == 0
-
     def wareHouseCmp(t1:Product, t2:Product) = {
-		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,Double,Double)]
-		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,Double,Double)]
-		((v1._1 eq v2._1) && (v1._2 eq v2._2) && (v1._3 eq v2._3) && (v1._4 eq v2._4) && (v1._5 eq v2._5) && (v1._6 eq v2._6) && doubleEq(v1._7,v2._7) && doubleEq(v1._8,v2._8))
+		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,Float,Float)]
+		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,Float,Float)]
+		// println("\t------------------------------------------")
+		// println("\t(v1._1(%s) equals v2._1(%s)) = %s".format(v1._1, v2._1,(v1._1 equals v2._1)))
+		// println("\t(v1._2(%s) equals v2._2(%s)) = %s".format(v1._2, v2._2,(v1._2 equals v2._2)))
+		// println("\t(v1._3(%s) equals v2._3(%s)) = %s".format(v1._3, v2._3,(v1._3 equals v2._3)))
+		// println("\t(v1._4(%s) equals v2._4(%s)) = %s".format(v1._4, v2._4,(v1._4 equals v2._4)))
+		// println("\t(v1._5(%s) equals v2._5(%s)) = %s".format(v1._5, v2._5,(v1._5 equals v2._5)))
+		// println("\t(v1._6(%s) equals v2._6(%s)) = %s".format(v1._6, v2._6,(v1._6 equals v2._6)))
+		// println("\tdoubleEq(v1._7(%s), v2._7(%s)) = %s".format(v1._7, v2._7,doubleEq(v1._7,v2._7)))
+		// println("\tdoubleEq(v1._8(%s), v2._8(%s)) = %s , Math.abs(v1._8-v2._8) = %s".format(v1._8, v2._8,doubleEq(v1._8,v2._8),Math.abs(v1._8-v2._8)))
+		// println("\t##########################################")
+		((v1._1 equals v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && doubleEq(v1._7,v2._7) && doubleEq(v1._8,v2._8))
 	}
 
 	def itemCmp(t1:Product, t2:Product) = {
-		val v1 = t1.asInstanceOf[(/*Int,*/String,Double,String)]
-		val v2 = t2.asInstanceOf[(/*Int,*/String,Double,String)]
-		((v1._1 eq v2._1) && (v1._3 eq v2._3) && doubleEq(v1._2,v2._2))
+		val v1 = t1.asInstanceOf[(/*Int,*/String,Float,String)]
+		val v2 = t2.asInstanceOf[(/*Int,*/String,Float,String)]
+		((v1._1 equals v2._1) && doubleEq(v1._2,v2._2) && (v1._3 equals v2._3))
 	}
 
 	def orderCmp(t1:Product, t2:Product) = {
@@ -158,14 +165,25 @@ class TpccTable extends DatabaseConnector{
 	}
 
 	def districtCmp(t1:Product, t2:Product) = {
-		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,Double,Double,Int)]
-		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,Double,Double,Int)]
-		((v1._1 eq v2._1) && (v1._2 eq v2._2) && (v1._3 eq v2._3) && (v1._4 eq v2._4) && (v1._5 eq v2._5) && (v1._6 eq v2._6) && (v1._9 == v2._9) && doubleEq(v1._7,v2._7) && doubleEq(v1._8,v2._8))
+		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,Float,Float,Int)]
+		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,Float,Float,Int)]
+		// println("\t------------------------------------------")
+		// println("\t(v1._1(%s) equals v2._1(%s)) = %s".format(v1._1, v2._1,(v1._1 equals v2._1)))
+		// println("\t(v1._2(%s) equals v2._2(%s)) = %s".format(v1._2, v2._2,(v1._2 equals v2._2)))
+		// println("\t(v1._3(%s) equals v2._3(%s)) = %s".format(v1._3, v2._3,(v1._3 equals v2._3)))
+		// println("\t(v1._4(%s) equals v2._4(%s)) = %s".format(v1._4, v2._4,(v1._4 equals v2._4)))
+		// println("\t(v1._5(%s) equals v2._5(%s)) = %s".format(v1._5, v2._5,(v1._5 equals v2._5)))
+		// println("\t(v1._6(%s) equals v2._6(%s)) = %s".format(v1._6, v2._6,(v1._6 equals v2._6)))
+		// println("\tdoubleEq(v1._7(%s), v2._7(%s)) = %s".format(v1._7, v2._7,doubleEq(v1._7,v2._7)))
+		// println("\tdoubleEq(v1._8(%s), v2._8(%s)) = %s , Math.abs(v1._8-v2._8) = %s".format(v1._8, v2._8,doubleEq(v1._8,v2._8),Math.abs(v1._8-v2._8)))
+		// println("\t(v1._9(%s) == v2._9(%s)) = %s".format(v1._9, v2._9,(v1._9 == v2._9)))
+		// println("\t##########################################")
+		((v1._1 equals v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && doubleEq(v1._7,v2._7) && doubleEq(v1._8,v2._8) && (v1._9 == v2._9))
 	}
 
 	def orderLineCmp(t1:Product, t2:Product) = {
-		val v1 = t1.asInstanceOf[(Int,Int,Option[Date],Int,Double,String)]
-		val v2 = t2.asInstanceOf[(Int,Int,Option[Date],Int,Double,String)]
+		val v1 = t1.asInstanceOf[(Int,Int,Option[Date],Int,Float,String)]
+		val v2 = t2.asInstanceOf[(Int,Int,Option[Date],Int,Float,String)]
 		if((v1._1 == v2._1) && (v1._2 == v2._2) && (v1._4 == v2._4) && doubleEq(v1._5,v2._5) && (v1._6 equals v2._6)) {
 			((v1._3,v2._3)) match {
 				case (Some(d1), Some(d2)) => dateEq(d1,d2)
@@ -188,8 +206,8 @@ class TpccTable extends DatabaseConnector{
 	}
 
 	def customerCmp(t1:Product, t2:Product) = {
-		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int,Int,String)]
-		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,String,String,String,Date,String,Double,Double,Double,Double,Int,Int,String)]
+		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)]
+		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)]
 		// println("\t------------------------------------------")
 		// println("\t(v1._1(%s) equals v2._1(%s)) = %s".format(v1._1, v2._1,(v1._1 equals v2._1)))
 		// println("\t(v1._2(%s) equals v2._2(%s)) = %s".format(v1._2, v2._2,(v1._2 equals v2._2)))
@@ -316,7 +334,7 @@ class TpccTable extends DatabaseConnector{
 					rs.getString("w_city"),
 					rs.getString("w_state"),
 					rs.getString("w_zip"),
-					rs.getDouble("w_tax"),
+					rs.getFloat("w_tax"),
 					rs.getDouble("w_ytd")
 	        	)
 	        }
@@ -339,10 +357,10 @@ class TpccTable extends DatabaseConnector{
 					rs.getString("c_phone"),
 					rs.getTimestamp("c_since"),
 					rs.getString("c_credit"),
-					rs.getDouble("c_credit_lim"),
-					rs.getDouble("c_discount"),
-					rs.getDouble("c_balance"),
-					rs.getDouble("c_ytd_payment"),
+					rs.getFloat("c_credit_lim"),
+					rs.getFloat("c_discount"),
+					rs.getFloat("c_balance"),
+					rs.getFloat("c_ytd_payment"),
 					rs.getInt("c_payment_cnt"),
 					rs.getInt("c_delivery_cnt"),
 					rs.getString("c_data")
@@ -361,7 +379,7 @@ class TpccTable extends DatabaseConnector{
 					rs.getString("d_city"),
 					rs.getString("d_state"),
 					rs.getString("d_zip"),
-					rs.getDouble("d_tax"),
+					rs.getFloat("d_tax"),
 					rs.getDouble("d_ytd"),
 					rs.getInt("d_next_o_id")
 	        	)
@@ -377,7 +395,7 @@ class TpccTable extends DatabaseConnector{
 					rs.getInt("h_d_id"),
 					rs.getInt("h_w_id"),
 					rs.getTimestamp("h_date"),
-					rs.getDouble("h_amount"),
+					rs.getFloat("h_amount"),
 					rs.getString("h_data")
 	        	)
 	        }
@@ -389,7 +407,7 @@ class TpccTable extends DatabaseConnector{
 	        		rs.getInt("i_id"),
 					rs.getInt("i_im_id"),
 					rs.getString("i_name"),
-					rs.getDouble("i_price"),
+					rs.getFloat("i_price"),
 					rs.getString("i_data")
 	        	)
 	        }
@@ -417,7 +435,7 @@ class TpccTable extends DatabaseConnector{
 					rs.getInt("ol_supply_w_id"),
 					(if(ol_delivery_d == null) None else Some(ol_delivery_d)),
 					rs.getInt("ol_quantity"),
-					rs.getDouble("ol_amount"),
+					rs.getFloat("ol_amount"),
 					rs.getString("ol_dist_info")
 	        	)
 	        }
@@ -464,6 +482,9 @@ class TpccTable extends DatabaseConnector{
 	        	)
 	        }
 	        rs.close
+
+	        // println("All Tables loaded...")
+	        // println("Warehouse => " + warehouseTbl)
 	    } finally {
 	        if (stmt != null) { stmt.close(); }
 	    }
@@ -478,9 +499,9 @@ class TpccTable extends DatabaseConnector{
 			 	//val v2 = map1(k)
 				//println("%s <> %s".format(v,v2))
 			// v.productIterator.zipWithIndex.foreach { case (t, i) =>
-			// 		if(t.isInstanceOf[Double]) {
-			// 			if(Math.abs(t.asInstanceOf[Double] - v2.productElement(i).asInstanceOf[Double]) > 0.1) {
-			// 				println("DIFF (%s-%s) => %s",t,v2.productElement(i),Math.abs(t.asInstanceOf[Double] - v2.productElement(i).asInstanceOf[Double]) > 0.1)
+			// 		if(t.isInstanceOf[Float]) {
+			// 			if(Math.abs(t.asInstanceOf[Float] - v2.productElement(i).asInstanceOf[Float]) > 0.1) {
+			// 				println("DIFF (%s-%s) => %s",t,v2.productElement(i),Math.abs(t.asInstanceOf[Float] - v2.productElement(i).asInstanceOf[Float]) > 0.1)
 			// 				equals_res = false
 			// 			}
 			// 		} else {
@@ -495,8 +516,8 @@ class TpccTable extends DatabaseConnector{
 				//val v2 = map2(k)
 				//println("%s ## %s".format(v,v2))
 				// v.productIterator.zipWithIndex.foreach { case (t, i) =>
-				// 	if(t.isInstanceOf[Double]) {
-				// 		if(Math.abs(t.asInstanceOf[Double] - v2.productElement(i).asInstanceOf[Double]) > 0.1) {
+				// 	if(t.isInstanceOf[Float]) {
+				// 		if(Math.abs(t.asInstanceOf[Float] - v2.productElement(i).asInstanceOf[Float]) > 0.1) {
 				// 			equals_res = false
 				// 		}
 				// 	} else {
