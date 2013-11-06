@@ -15,6 +15,7 @@ import ddbt.tpcc.tx.TpccTable
 import TpccUnitTest._
 import ddbt.tpcc.mtx._
 import ddbt.tpcc.itx._
+import ddbt.tpcc.tx1._
 import DatabaseConnector._
 import TpccConstants._
 
@@ -50,6 +51,8 @@ object TpccUnitTest {
 
   private val TRANSACTION_NAME = Array("NewOrder", "Payment", "Order Stat", "Delivery", "Slev")
 
+  private val IMPL_VERSION_UNDER_TEST = 1
+
   @volatile var counting_on: Boolean = false
 
   @volatile var activate_transaction: Int = 0
@@ -65,7 +68,23 @@ object TpccUnitTest {
     println("maxMemory = " + 
       df.format(Runtime.getRuntime.totalMemory() / (1024.0 * 1024.0)) + 
       " MB")
-    val tpcc = new TpccUnitTest()
+    var newOrder: INewOrderInMem = null
+    var payment: IPaymentInMem = null
+    var orderStat: IOrderStatusInMem = null
+    var delivery: IDeliveryInMem = null
+    var slev: IStockLevelInMem = null
+
+    if(IMPL_VERSION_UNDER_TEST == 1) {
+      newOrder = new ddbt.tpcc.tx1.NewOrder
+      payment = new ddbt.tpcc.tx1.Payment
+      orderStat = new ddbt.tpcc.tx1.OrderStatus
+      delivery = new ddbt.tpcc.tx1.Delivery
+      slev = new ddbt.tpcc.tx1.StockLevel
+    } else {
+      throw new RuntimeException("No in-memory implementation selected.")
+    }
+
+    val tpcc = new TpccUnitTest(newOrder,payment,orderStat,delivery,slev)
     var ret = 0
     if (argv.length == 0) {
       println("Using the properties file for configuration.")
@@ -97,7 +116,11 @@ object TpccUnitTest {
   }
 }
 
-class TpccUnitTest {
+class TpccUnitTest(val newOrder: INewOrderInMem, 
+                val payment: IPaymentInMem, 
+                val orderStat: IOrderStatusInMem, 
+                val delivery: IDeliveryInMem, 
+                val slev: IStockLevelInMem) {
 
   private var javaDriver: String = _
 
@@ -306,14 +329,14 @@ class TpccUnitTest {
     // } else {
     //   println("\n1- initialData is not equal to SharedData")
     // }
-    val newOrder: INewOrder = new NewOrderMixedImpl(new ddbt.tpcc.loadtest.NewOrder(pStmts), new ddbt.tpcc.tx.NewOrder(SharedData))
-    val payment: IPayment = new PaymentMixedImpl(new ddbt.tpcc.loadtest.Payment(pStmts), new ddbt.tpcc.tx.Payment(SharedData))
-    val orderStat: IOrderStatus = new OrderStatusMixedImpl(new ddbt.tpcc.loadtest.OrderStat(pStmts), new ddbt.tpcc.tx.OrderStatus(SharedData))
-    val slev: IStockLevel = new StockLevelMixedImpl(new ddbt.tpcc.loadtest.Slev(pStmts), new ddbt.tpcc.tx.StockLevel(SharedData))
-    val delivery: IDelivery = new DeliveryMixedImpl(new ddbt.tpcc.loadtest.Delivery(pStmts), new ddbt.tpcc.tx.Delivery(SharedData))
+    val newOrderMix: INewOrder = new NewOrderMixedImpl(new ddbt.tpcc.loadtest.NewOrder(pStmts), newOrder.setSharedData(SharedData))
+    val paymentMix: IPayment = new PaymentMixedImpl(new ddbt.tpcc.loadtest.Payment(pStmts), payment.setSharedData(SharedData))
+    val orderStatMix: IOrderStatus = new OrderStatusMixedImpl(new ddbt.tpcc.loadtest.OrderStat(pStmts), orderStat.setSharedData(SharedData))
+    val slevMix: IStockLevel = new StockLevelMixedImpl(new ddbt.tpcc.loadtest.Slev(pStmts), slev.setSharedData(SharedData))
+    val deliveryMix: IDelivery = new DeliveryMixedImpl(new ddbt.tpcc.loadtest.Delivery(pStmts), delivery.setSharedData(SharedData))
 
     val driver = new Driver(conn, fetchSize, success, late, retry, failure, success2, late2, retry2, 
-      failure2, newOrder, payment, orderStat, slev, delivery)
+      failure2, newOrderMix, paymentMix, orderStatMix, slevMix, deliveryMix)
 
     val number = 100
 

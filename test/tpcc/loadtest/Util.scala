@@ -211,7 +211,7 @@ object Util{
     name
   }
   def doubleEq(d1:Double, d2:Double):Boolean = (Math.abs(d1-d2) < 0.1f)
-  def doubleEq(d1:Float, d2:Float):Boolean = (Math.abs(d1-d2) < 0.1f)
+  def floatEq(d1:Float, d2:Float):Boolean = (Math.abs(d1-d2) < 0.1f)
   def dateEq(d1:Date, d2:Date):Boolean = (((d1.getTime - d2.getTime) / 1000) == 0)
 
 

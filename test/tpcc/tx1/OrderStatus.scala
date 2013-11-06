@@ -1,15 +1,15 @@
-package ddbt.tpcc.tx
+package ddbt.tpcc.tx1
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
-import ddbt.tpcc.itx.IOrderStatus
+import ddbt.tpcc.itx._
 
 /**
  * OrderStatus Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-class OrderStatus(val SharedData: TpccTable) extends IOrderStatus {
+class OrderStatus extends InMemoryTxImpl with IOrderStatusInMem {
 
   //Partial Tables (containing all rows, but not all columns)
   //removed columns are commented out

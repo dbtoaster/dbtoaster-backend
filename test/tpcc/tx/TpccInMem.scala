@@ -13,9 +13,10 @@ import org.slf4j.LoggerFactory
 import org.slf4j.Logger
 import ddbt.tpcc.loadtest._
 import DatabaseConnector._
-import TpccInMem._
+import Tpcc._
 import TpccConstants._
 import ddbt.tpcc.itx._
+import ddbt.tpcc.tx1._
 import java.sql.Connection
 
 object TpccInMem {
@@ -48,6 +49,8 @@ object TpccInMem {
 
   private val TRANSACTION_NAME = Array("NewOrder", "Payment", "Order Stat", "Delivery", "Slev")
 
+  private val IMPL_VERSION_UNDER_TEST = 1
+
   @volatile var counting_on: Boolean = false
 
   @volatile var activate_transaction: Int = 0
@@ -63,7 +66,21 @@ object TpccInMem {
     println("maxMemory = " + 
       df.format(Runtime.getRuntime.totalMemory() / (1024.0 * 1024.0)) + 
       " MB")
-    val tpcc = new TpccInMem()
+    var newOrder: INewOrderInMem = null
+    var payment: IPaymentInMem = null
+    var orderStat: IOrderStatusInMem = null
+    var delivery: IDeliveryInMem = null
+    var slev: IStockLevelInMem = null
+
+    if(IMPL_VERSION_UNDER_TEST == 1) {
+      newOrder = new ddbt.tpcc.tx1.NewOrder
+      payment = new ddbt.tpcc.tx1.Payment
+      orderStat = new ddbt.tpcc.tx1.OrderStatus
+      delivery = new ddbt.tpcc.tx1.Delivery
+      slev = new ddbt.tpcc.tx1.StockLevel
+    }
+
+    val tpcc = new TpccInMem(newOrder,payment,orderStat,delivery,slev)
     var ret = 0
     if (argv.length == 0) {
       println("Using the properties file for configuration.")
@@ -95,7 +112,11 @@ object TpccInMem {
   }
 }
 
-class TpccInMem {
+class TpccInMem(val newOrder: INewOrderInMem, 
+                val payment: IPaymentInMem, 
+                val orderStat: IOrderStatusInMem, 
+                val delivery: IDeliveryInMem, 
+                val slev: IStockLevelInMem) {
 
   private var javaDriver: String = _
 
@@ -306,14 +327,14 @@ class TpccInMem {
       // val orderStat: OrderStat = new OrderStat(pStmts)
       // val slev: Slev = new Slev(pStmts)
       // val delivery: Delivery = new Delivery(pStmts)
-      val newOrder: INewOrder = new ddbt.tpcc.tx.NewOrder(SharedData)
-      val payment: IPayment = new ddbt.tpcc.tx.Payment(SharedData)
-      val orderStat: IOrderStatus = new ddbt.tpcc.tx.OrderStatus(SharedData)
-      val slev: IStockLevel = new ddbt.tpcc.tx.StockLevel(SharedData)
-      val delivery: IDelivery = new ddbt.tpcc.tx.Delivery(SharedData)
+      // val newOrder: INewOrder = new ddbt.tpcc.tx.NewOrder(SharedData)
+      // val payment: IPayment = new ddbt.tpcc.tx.Payment(SharedData)
+      // val orderStat: IOrderStatus = new ddbt.tpcc.tx.OrderStatus(SharedData)
+      // val slev: IStockLevel = new ddbt.tpcc.tx.StockLevel(SharedData)
+      // val delivery: IDelivery = new ddbt.tpcc.tx.Delivery(SharedData)
 
       val worker = new TpccThread(i, port, 1, dbUser, dbPassword, numWare, numConn, javaDriver, jdbcUrl, 
-        fetchSize, success, late, retry, failure, success2, late2, retry2, failure2, conn, newOrder, payment, orderStat, slev, delivery, activeTransactionChecker)
+        fetchSize, success, late, retry, failure, success2, late2, retry2, failure2, conn, newOrder.setSharedData(SharedData), payment.setSharedData(SharedData), orderStat.setSharedData(SharedData), slev.setSharedData(SharedData), delivery.setSharedData(SharedData), activeTransactionChecker)
       executor.execute(worker)
     }
     if (rampupTime > 0) {
@@ -427,22 +448,6 @@ class TpccInMem {
     println(tpcm + " TpmC")
     System.out.print("\nSTOPPING THREADS\n")
     activate_transaction = 0
-
-    {
-      try {
-        Thread.sleep(5000)
-      } catch {
-        case e: InterruptedException => logger.error("Sleep interrupted", e)
-      }
-      val newData = new TpccTable
-      newData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
-
-      if(newData equals SharedData) {
-        println("\n2- new Data equals SharedData")
-      } else {
-        println("\n2- new Data is not equal to SharedData")
-      }
-    }
 
     executor.shutdown()
     try {

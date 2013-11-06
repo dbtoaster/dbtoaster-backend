@@ -137,8 +137,8 @@ class TpccTable {
     }
 
     def wareHouseCmp(t1:Product, t2:Product) = {
-		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,Float,Float)]
-		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,Float,Float)]
+		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,Float,Double)]
+		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,Float,Double)]
 		// println("\t------------------------------------------")
 		// println("\t(v1._1(%s) equals v2._1(%s)) = %s".format(v1._1, v2._1,(v1._1 equals v2._1)))
 		// println("\t(v1._2(%s) equals v2._2(%s)) = %s".format(v1._2, v2._2,(v1._2 equals v2._2)))
@@ -146,16 +146,16 @@ class TpccTable {
 		// println("\t(v1._4(%s) equals v2._4(%s)) = %s".format(v1._4, v2._4,(v1._4 equals v2._4)))
 		// println("\t(v1._5(%s) equals v2._5(%s)) = %s".format(v1._5, v2._5,(v1._5 equals v2._5)))
 		// println("\t(v1._6(%s) equals v2._6(%s)) = %s".format(v1._6, v2._6,(v1._6 equals v2._6)))
-		// println("\tdoubleEq(v1._7(%s), v2._7(%s)) = %s".format(v1._7, v2._7,doubleEq(v1._7,v2._7)))
-		// println("\tdoubleEq(v1._8(%s), v2._8(%s)) = %s , Math.abs(v1._8-v2._8) = %s".format(v1._8, v2._8,doubleEq(v1._8,v2._8),Math.abs(v1._8-v2._8)))
+		// println("\tfloatEq(v1._7(%s), v2._7(%s)) = %s".format(v1._7, v2._7,floatEq(v1._7,v2._7)))
+		// println("\tfloatEq(v1._8(%s), v2._8(%s)) = %s , Math.abs(v1._8-v2._8) = %s".format(v1._8, v2._8,floatEq(v1._8,v2._8),Math.abs(v1._8-v2._8)))
 		// println("\t##########################################")
-		((v1._1 equals v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && doubleEq(v1._7,v2._7) && doubleEq(v1._8,v2._8))
+		((v1._1 equals v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && floatEq(v1._7,v2._7) && doubleEq(v1._8,v2._8))
 	}
 
 	def itemCmp(t1:Product, t2:Product) = {
 		val v1 = t1.asInstanceOf[(/*Int,*/String,Float,String)]
 		val v2 = t2.asInstanceOf[(/*Int,*/String,Float,String)]
-		((v1._1 equals v2._1) && doubleEq(v1._2,v2._2) && (v1._3 equals v2._3))
+		((v1._1 equals v2._1) && floatEq(v1._2,v2._2) && (v1._3 equals v2._3))
 	}
 
 	def orderCmp(t1:Product, t2:Product) = {
@@ -165,8 +165,8 @@ class TpccTable {
 	}
 
 	def districtCmp(t1:Product, t2:Product) = {
-		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,Float,Float,Int)]
-		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,Float,Float,Int)]
+		val v1 = t1.asInstanceOf[(String,String,String,String,String,String,Float,Double,Int)]
+		val v2 = t2.asInstanceOf[(String,String,String,String,String,String,Float,Double,Int)]
 		// println("\t------------------------------------------")
 		// println("\t(v1._1(%s) equals v2._1(%s)) = %s".format(v1._1, v2._1,(v1._1 equals v2._1)))
 		// println("\t(v1._2(%s) equals v2._2(%s)) = %s".format(v1._2, v2._2,(v1._2 equals v2._2)))
@@ -174,17 +174,17 @@ class TpccTable {
 		// println("\t(v1._4(%s) equals v2._4(%s)) = %s".format(v1._4, v2._4,(v1._4 equals v2._4)))
 		// println("\t(v1._5(%s) equals v2._5(%s)) = %s".format(v1._5, v2._5,(v1._5 equals v2._5)))
 		// println("\t(v1._6(%s) equals v2._6(%s)) = %s".format(v1._6, v2._6,(v1._6 equals v2._6)))
-		// println("\tdoubleEq(v1._7(%s), v2._7(%s)) = %s".format(v1._7, v2._7,doubleEq(v1._7,v2._7)))
-		// println("\tdoubleEq(v1._8(%s), v2._8(%s)) = %s , Math.abs(v1._8-v2._8) = %s".format(v1._8, v2._8,doubleEq(v1._8,v2._8),Math.abs(v1._8-v2._8)))
+		// println("\tfloatEq(v1._7(%s), v2._7(%s)) = %s".format(v1._7, v2._7,floatEq(v1._7,v2._7)))
+		// println("\tfloatEq(v1._8(%s), v2._8(%s)) = %s , Math.abs(v1._8-v2._8) = %s".format(v1._8, v2._8,floatEq(v1._8,v2._8),Math.abs(v1._8-v2._8)))
 		// println("\t(v1._9(%s) == v2._9(%s)) = %s".format(v1._9, v2._9,(v1._9 == v2._9)))
 		// println("\t##########################################")
-		((v1._1 equals v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && doubleEq(v1._7,v2._7) && doubleEq(v1._8,v2._8) && (v1._9 == v2._9))
+		((v1._1 equals v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && floatEq(v1._7,v2._7) && doubleEq(v1._8,v2._8) && (v1._9 == v2._9))
 	}
 
 	def orderLineCmp(t1:Product, t2:Product) = {
 		val v1 = t1.asInstanceOf[(Int,Int,Option[Date],Int,Float,String)]
 		val v2 = t2.asInstanceOf[(Int,Int,Option[Date],Int,Float,String)]
-		if((v1._1 == v2._1) && (v1._2 == v2._2) && (v1._4 == v2._4) && doubleEq(v1._5,v2._5) && (v1._6 equals v2._6)) {
+		if((v1._1 == v2._1) && (v1._2 == v2._2) && (v1._4 == v2._4) && floatEq(v1._5,v2._5) && (v1._6 equals v2._6)) {
 			((v1._3,v2._3)) match {
 				case (Some(d1), Some(d2)) => dateEq(d1,d2)
 				case (None, None) => true
@@ -199,7 +199,7 @@ class TpccTable {
 			// 	case (None, None) => true
 			// 	case _ => false
 			// }}))
-			// println("\t(v1._5,v2._5) = %s".format(doubleEq(v1._5,v2._5)))
+			// println("\t(v1._5,v2._5) = %s".format(floatEq(v1._5,v2._5)))
 			// println("\t(v1._6 eq v2._6) = %s".format((v1._6 equals v2._6)))
 			false
 		}
@@ -220,15 +220,15 @@ class TpccTable {
 		// println("\t(v1._9(%s) equals v2._9(%s)) = %s".format(v1._9, v2._9,(v1._9 equals v2._9)))
 		// println("\tdateEq(v1._10(%s), v2._10(%s)) = %s".format(v1._10, v2._10, dateEq(v1._10, v2._10)))
 		// println("\t(v1._11(%s) equals v2._11(%s)) = %s".format(v1._11, v2._11, (v1._11 equals v2._11)))
-		// println("\tdoubleEq(v1._12(%.2f), v2._12(%.2f)) = %s".format(v1._12, v2._12, doubleEq(v1._12, v2._12)))
-		// println("\tdoubleEq(v1._13(%.2f), v2._13(%.2f)) = %s".format(v1._13, v2._13, doubleEq(v1._13, v2._13)))
-		// println("\tdoubleEq(v1._14(%.2f), v2._14(%.2f)) = %s".format(v1._14, v2._14, doubleEq(v1._14, v2._14)))
-		// println("\tdoubleEq(v1._15(%.2f), v2._15(%.2f)) = %s".format(v1._15, v2._15, doubleEq(v1._15, v2._15)))
+		// println("\tfloatEq(v1._12(%.2f), v2._12(%.2f)) = %s".format(v1._12, v2._12, floatEq(v1._12, v2._12)))
+		// println("\tfloatEq(v1._13(%.2f), v2._13(%.2f)) = %s".format(v1._13, v2._13, floatEq(v1._13, v2._13)))
+		// println("\tfloatEq(v1._14(%.2f), v2._14(%.2f)) = %s".format(v1._14, v2._14, floatEq(v1._14, v2._14)))
+		// println("\tfloatEq(v1._15(%.2f), v2._15(%.2f)) = %s".format(v1._15, v2._15, floatEq(v1._15, v2._15)))
 		// println("\t(v1._16(%s) == v2._16(%s)) = %s".format(v1._16, v2._16, (v1._16 == v2._16)))
 		// println("\t(v1._17(%s) == v2._17(%s)) = %s".format(v1._17, v2._17, (v1._17 == v2._17)))
 		// println("\t(v1._18(%s) equals v2._18(%s)) = %s".format(v1._18, v2._18, (v1._18 equals v2._18)))
 		// println("\t##########################################")
-		((v1._1 equals v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && (v1._7 equals v2._7) && (v1._8 equals v2._8) && (v1._9 equals v2._9) && dateEq(v1._10, v2._10) && (v1._11 equals v2._11) && doubleEq(v1._12, v2._12) && doubleEq(v1._13, v2._13) && doubleEq(v1._14, v2._14) && doubleEq(v1._15, v2._15) && (v1._16 == v2._16) && (v1._17 == v2._17) && (v1._18 equals v2._18))
+		((v1._1 equals v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && (v1._7 equals v2._7) && (v1._8 equals v2._8) && (v1._9 equals v2._9) && dateEq(v1._10, v2._10) && (v1._11 equals v2._11) && floatEq(v1._12, v2._12) && floatEq(v1._13, v2._13) && floatEq(v1._14, v2._14) && floatEq(v1._15, v2._15) && (v1._16 == v2._16) && (v1._17 == v2._17) && (v1._18 equals v2._18))
 	}
 
 	def stockCmp(t1:Product, t2:Product) = {

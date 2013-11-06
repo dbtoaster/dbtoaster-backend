@@ -1,17 +1,15 @@
-package ddbt.tpcc.tx
+package ddbt.tpcc.tx1
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
-import ddbt.tpcc.itx.INewOrder
+import ddbt.tpcc.itx._
 
 /**
  * NewOrder Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-class NewOrder(val SharedData: TpccTable) extends INewOrder {
-  val r = new scala.util.Random
-
+class NewOrder extends InMemoryTxImpl with INewOrderInMem {
   //Tables
   //val stockTbl: Map[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)] = new HashMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
   //val newOrderTbl = new HashSet[(Int,Int,Int)]
@@ -71,7 +69,7 @@ class NewOrder(val SharedData: TpccTable) extends INewOrder {
           }
         }
         if(failed) return rollBack
-        ol_number += 1
+       ol_number += 1
       }
 
       val (c_discount, c_last, c_credit, w_tax) = NewOrderTxOps.findCustomerWarehouseFinancialInfo(w_id,d_id,c_id)
@@ -161,7 +159,7 @@ class NewOrder(val SharedData: TpccTable) extends INewOrder {
     }
   }
 
-  def rollBack = { -2 }
+  def rollBack = { 2 }
 
   def printMapInfo {
     // println("customerWarehouseFinancialInfoMap = %s".format(customerWarehouseFinancialInfoMap))
@@ -244,35 +242,4 @@ class NewOrder(val SharedData: TpccTable) extends INewOrder {
       SharedData.onInsertOrderLine(o_id, d_id, w_id, ol_number, ol_i_id, ol_supply_w_id, None, ol_quantity, ol_amount, ol_dist_info)
     }
   }
-
-  // def main(args: Array[String]) {
-  //   val w_id = 1
-  //   val d_id = 2
-  //   val c_id = 3
-  //   val item_id = Array[Int](4,5,6)
-  //   val supply_w_id = Array[Int](1,1,1)
-  //   //orderQuantities
-  //   val quantity = Array[Int](10,11,12)
-  //   //itemPrices
-  //   val price = new Array[Float](3)
-  //   //itemNames
-  //   val iname = new Array[String](3)
-  //   //stockQuantities
-  //   val stock = new Array[Int](3)
-  //   //brandGeneric
-  //   val bg = new Array[Char](3)
-  //   //orderLineAmounts
-  //   val amount = new Array[Float](3)
-
-  //   // loadDataTables(w_id,d_id,c_id)
-  //   // newOrderTx(w_id,d_id,c_id,item_id,supply_w_id,quantity,price,iname,stock,bg,amount)
-  // }
-
-  // def loadDataTables(w_id:Int, d_id:Int, c_id:Int) {
-  //   val (c_discount, c_last, c_credit, w_tax) = (r.nextFloat, r.nextString(10), if(r.nextBoolean) "BC" else "GC",r.nextFloat)
-  //   val (d_next_o_id, d_tax) = (r.nextInt(10000000), r.nextFloat)
-
-  //   customerWarehouseFinancialInfoMap += ((w_id,d_id,c_id) -> (c_discount, c_last, c_credit, w_tax))
-  //   districtPartialTbl += ((w_id,d_id) -> (d_tax,d_next_o_id))
-  // }
 }

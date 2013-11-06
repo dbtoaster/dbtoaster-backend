@@ -21,33 +21,33 @@ import java.sql.Connection
 
 object Tpcc {
 
-  private val logger = LoggerFactory.getLogger(classOf[Tpcc])
+  val logger = LoggerFactory.getLogger(classOf[Tpcc])
 
-  private val DEBUG = logger.isDebugEnabled
+  val DEBUG = logger.isDebugEnabled
 
   val VERSION = "1.0.1"
 
-  private val DRIVER = "DRIVER"
+  val DRIVER = "DRIVER"
 
-  private val WAREHOUSECOUNT = "WAREHOUSECOUNT"
+  val WAREHOUSECOUNT = "WAREHOUSECOUNT"
 
-  private val DATABASE = "DATABASE"
+  val DATABASE = "DATABASE"
 
-  private val USER = "USER"
+  val USER = "USER"
 
-  private val PASSWORD = "PASSWORD"
+  val PASSWORD = "PASSWORD"
 
-  private val CONNECTIONS = "CONNECTIONS"
+  val CONNECTIONS = "CONNECTIONS"
 
-  private val RAMPUPTIME = "RAMPUPTIME"
+  val RAMPUPTIME = "RAMPUPTIME"
 
-  private val DURATION = "DURATION"
+  val DURATION = "DURATION"
 
-  private val JDBCURL = "JDBCURL"
+  val JDBCURL = "JDBCURL"
 
-  private val PROPERTIESFILE = "tpcc.properties"
+  val PROPERTIESFILE = "tpcc.properties"
 
-  private val TRANSACTION_NAME = Array("NewOrder", "Payment", "Order Stat", "Delivery", "Slev")
+  val TRANSACTION_NAME = Array("NewOrder", "Payment", "Order Stat", "Delivery", "Slev")
 
   @volatile var counting_on: Boolean = false
 

@@ -1,15 +1,15 @@
-package ddbt.tpcc.tx
+package ddbt.tpcc.tx1
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
-import ddbt.tpcc.itx.IPayment
+import ddbt.tpcc.itx._
 
 /**
  * Payment Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-class Payment(val SharedData: TpccTable) extends IPayment {
+class Payment extends InMemoryTxImpl with IPaymentInMem {
   //Tables
   //val historyTbl = new HashSet[(Int,Int,Int,Int,Int,Date,Float,String)]
 

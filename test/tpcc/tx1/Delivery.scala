@@ -1,15 +1,15 @@
-package ddbt.tpcc.tx
+package ddbt.tpcc.tx1
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
-import ddbt.tpcc.itx.IDelivery
+import ddbt.tpcc.itx._
 
 /**
  * Delivery Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-class Delivery(val SharedData: TpccTable) extends IDelivery {
+class Delivery extends InMemoryTxImpl with IDeliveryInMem {
 
   //Tables
   //val newOrderTbl = new HashSet[(Int,Int,Int)]

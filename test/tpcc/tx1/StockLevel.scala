@@ -1,15 +1,15 @@
-package ddbt.tpcc.tx
+package ddbt.tpcc.tx1
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
-import ddbt.tpcc.itx.IStockLevel
+import ddbt.tpcc.itx._
 
 /**
  * StockLevel Transaction for TPC-C Benchmark
  *
  * @author Mohammad Dashti
  */
-class StockLevel(val SharedData: TpccTable) extends IStockLevel {
+class StockLevel extends InMemoryTxImpl with IStockLevelInMem {
 
   //Partial Tables (containing all rows, but not all columns)
   //removed columns are commented out
