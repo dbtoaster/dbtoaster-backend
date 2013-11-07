@@ -13,11 +13,13 @@ import TpccConstants._
 
 object OrderStat {
 
-  private val logger = LoggerFactory.getLogger(classOf[Driver])
+  private val logger = LoggerFactory.getLogger(classOf[OrderStat])
 
   private val DEBUG = logger.isDebugEnabled
 
   private val TRACE = logger.isTraceEnabled
+
+  private val SHOW_OUTPUT = TpccConstants.SHOW_OUTPUT
 }
 
 class OrderStat(var pStmts: TpccStatements) extends IOrderStatus {
@@ -260,11 +262,11 @@ class OrderStat(var pStmts: TpccStatements) extends IOrderStatus {
           }
         }
         else {
-          println(" This Order has no Order-Lines.\n")
+          output.append(" This Order has no Order-Lines.\n")
         }
       }
       output.append("+#################################################################+\n\n")
-      println(output.toString)
+      if(OrderStat.SHOW_OUTPUT) logger.info(output.toString)
 
       1
     } catch {

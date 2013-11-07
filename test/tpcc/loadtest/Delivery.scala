@@ -12,11 +12,13 @@ import TpccConstants._
 
 object Delivery {
 
-  private val logger = LoggerFactory.getLogger(classOf[Driver])
+  private val logger = LoggerFactory.getLogger(classOf[Delivery])
 
   private val DEBUG = logger.isDebugEnabled
 
   private val TRACE = logger.isTraceEnabled
+
+  private val SHOW_OUTPUT = TpccConstants.SHOW_OUTPUT
 }
 
 class Delivery(var pStmts: TpccStatements) extends IDelivery {
@@ -208,7 +210,6 @@ class Delivery(var pStmts: TpccStatements) extends IDelivery {
       }
       pStmts.commit()
 
-
       val output: StringBuilder = new StringBuilder
       output.append("\n+############################ DELIVERY ###########################+\n")
       output.append(" Date: ").append(currentTimeStamp)
@@ -236,7 +237,7 @@ class Delivery(var pStmts: TpccStatements) extends IDelivery {
         i += 1
       }
       output.append("+#################################################################+\n\n")
-      println(output.toString)
+      if(Delivery.SHOW_OUTPUT) logger.info(output.toString)
 
       1
     } catch {

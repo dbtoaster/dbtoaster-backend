@@ -357,9 +357,9 @@ class TpccUnitTest(val newOrder: INewOrderInMem,
       newData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
 
       if(newData equals SharedData) {
-        println("\n2- new Data equals SharedData")
+        println("\nAll transactions completed successfully and the result is correct.")
       } else {
-        println("\n2- new Data is not equal to SharedData")
+        println("\nThere is some error in transactions, as the results does not match.")
       }
     }
 

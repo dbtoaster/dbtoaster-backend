@@ -18,4 +18,6 @@ object TpccConstants {
   var MAX_NUM_ITEMS: Int = 15
 
   var MAX_ITEM_LEN: Int = 24
+
+  val SHOW_OUTPUT = false
 }

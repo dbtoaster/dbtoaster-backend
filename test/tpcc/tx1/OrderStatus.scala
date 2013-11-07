@@ -3,6 +3,19 @@ import java.io._
 import scala.collection.mutable._
 import java.util.Date
 import ddbt.tpcc.itx._
+import org.slf4j.LoggerFactory
+import OrderStatus._
+
+object OrderStatus {
+
+  private val logger = LoggerFactory.getLogger(classOf[OrderStatus])
+
+  private val DEBUG = logger.isDebugEnabled
+
+  private val TRACE = logger.isTraceEnabled
+
+  private val SHOW_OUTPUT = ddbt.tpcc.loadtest.TpccConstants.SHOW_OUTPUT
+}
 
 /**
  * OrderStatus Transaction for TPC-C Benchmark
@@ -77,16 +90,15 @@ class OrderStatus extends InMemoryTxImpl with IOrderStatusInMem {
           }
         }
         else {
-          println(" This Order has no Order-Lines.\n")
+          output.append(" This Order has no Order-Lines.\n")
         }
       }
       output.append("+-----------------------------------------------------------------+\n\n")
-      println(output.toString)
+      if(SHOW_OUTPUT) logger.info(output.toString)
       1
     } catch {
       case e: Throwable => {
-        println("An error occurred in handling OrderStatus transaction for warehouse=%d, district=%d".format(w_id,d_id))
-        e.printStackTrace
+        logger.error("An error occurred in handling OrderStatus transaction for warehouse=%d, district=%d".format(w_id,d_id))
         0
       }
     }

@@ -11,11 +11,13 @@ import TpccConstants._
 
 object Slev {
 
-  private val logger = LoggerFactory.getLogger(classOf[Driver])
+  private val logger = LoggerFactory.getLogger(classOf[Slev])
 
   private val DEBUG = logger.isDebugEnabled
 
   private val TRACE = logger.isTraceEnabled
+
+  private val SHOW_OUTPUT = TpccConstants.SHOW_OUTPUT
 }
 
 class Slev(pStms: TpccStatements) extends IStockLevel {
@@ -148,13 +150,13 @@ class Slev(pStms: TpccStatements) extends IStockLevel {
       pStmts.commit()
 
       val output: StringBuilder = new StringBuilder
-        output.append("\n+########################## STOCK-LEVEL ##########################+")
-        output.append("\n Warehouse: ").append(w_id)
-        output.append("\n District:  ").append(d_id)
-        output.append("\n\n Stock Level Threshold: ").append(level)
-        output.append("\n Low Stock Count:       ").append(stock_count)
-        output.append("\n+#################################################################+\n\n")
-        println(output.toString)
+      output.append("\n+########################## STOCK-LEVEL ##########################+")
+      output.append("\n Warehouse: ").append(w_id)
+      output.append("\n District:  ").append(d_id)
+      output.append("\n\n Stock Level Threshold: ").append(level)
+      output.append("\n Low Stock Count:       ").append(stock_count)
+      output.append("\n+#################################################################+\n\n")
+      if(Slev.SHOW_OUTPUT) logger.info(output.toString)
 
       1
     } catch {

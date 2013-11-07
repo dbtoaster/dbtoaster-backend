@@ -3,6 +3,19 @@ import java.io._
 import scala.collection.mutable._
 import java.util.Date
 import ddbt.tpcc.itx._
+import org.slf4j.LoggerFactory
+import StockLevel._
+
+object StockLevel {
+
+  private val logger = LoggerFactory.getLogger(classOf[StockLevel])
+
+  private val DEBUG = logger.isDebugEnabled
+
+  private val TRACE = logger.isTraceEnabled
+
+  private val SHOW_OUTPUT = ddbt.tpcc.loadtest.TpccConstants.SHOW_OUTPUT
+}
 
 /**
  * StockLevel Transaction for TPC-C Benchmark
@@ -47,11 +60,11 @@ class StockLevel extends InMemoryTxImpl with IStockLevelInMem {
         output.append("\n\n Stock Level Threshold: ").append(threshold)
         output.append("\n Low Stock Count:       ").append(stock_count)
         output.append("\n+-----------------------------------------------------------------+\n\n")
-        println(output.toString)
+        if(SHOW_OUTPUT) logger.info(output.toString)
         1
     } catch {
       case e: Throwable => {
-        println("An error occurred in handling StockLevel transaction for warehouse=%d, district=%d, threshold=%d".format(w_id,d_id,threshold))
+        logger.error("An error occurred in handling StockLevel transaction for warehouse=%d, district=%d, threshold=%d".format(w_id,d_id,threshold))
         0
       }
     }

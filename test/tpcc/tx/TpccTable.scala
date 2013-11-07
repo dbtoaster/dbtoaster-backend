@@ -7,6 +7,8 @@ import java.sql.Statement
 import java.sql.ResultSet
 import ddbt.tpcc.loadtest.Util._
 import ddbt.tpcc.loadtest.DatabaseConnector._
+import ddbt.tpcc.lib.SHMap
+import ddbt.tpcc.lib.SEntry
 
 /**
  * Delivery Transaction for TPC-C Benchmark
@@ -16,23 +18,23 @@ import ddbt.tpcc.loadtest.DatabaseConnector._
 class TpccTable {
 	//NewOrder: W
 	//Delivery: RW
-	val newOrderTbl = new HashSet[(Int,Int,Int)]
-	val historyTbl = new HashSet[(Int,Int,Int,Int,Int,Date,Float,String)]
+	val newOrderTbl = new SHMap[(Int,Int,Int),Boolean]
+	val historyTbl = new SHMap[(Int,Int,Int,Int,Int,Date,Float,String),Boolean]
 
-	val warehouseTbl = new HashMap[Int,(String,String,String,String,String,String,Float,Double)]
-	val itemPartialTbl = new HashMap[Int,(/*Int,*/String,Float,String)]
-	val orderTbl = new HashMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)]
-	val districtTbl = new HashMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]
+	val warehouseTbl = new SHMap[Int,(String,String,String,String,String,String,Float,Double)]
+	val itemPartialTbl = new SHMap[Int,(/*Int,*/String,Float,String)]
+	val orderTbl = new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)]
+	val districtTbl = new SHMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]
 
-	val orderLineTbl = new HashMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)]
-	val customerTbl = new HashMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)]
-	val stockTbl = new HashMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
+	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)]
+	val customerTbl = new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)]
+	val stockTbl = new SHMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
 
-	//val orderLineStockJoin = new HashMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Float,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
-	val customerWarehouseFinancialInfoMap = new HashMap[(Int,Int,Int),(Float,String,String,Float)]
+	//val orderLineStockJoin = new SHMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Float,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
+	val customerWarehouseFinancialInfoMap = new SHMap[(Int,Int,Int),(Float,String,String,Float)]
 
 	def onInsert_NewOrder(no_o_id:Int, no_d_id:Int, no_w_id:Int) = {
-		newOrderTbl += ((no_o_id, no_d_id, no_w_id))
+		newOrderTbl += ((no_o_id, no_d_id, no_w_id) -> (true))
 	}
 
 	def onDelete_NewOrder(no_o_id:Int, no_d_id:Int, no_w_id:Int) = {
@@ -40,7 +42,7 @@ class TpccTable {
 	}
 
 	def onInsert_HistoryTbl(h_c_id:Int, h_c_d_id:Int, h_c_w_id:Int, h_d_id:Int, h_w_id:Int, h_date:Date, h_amount:Float, h_data:String) = {
-		historyTbl += ((h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,roundDate(h_date),h_amount,h_data))
+		historyTbl += ((h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,roundDate(h_date),h_amount,h_data) -> (true))
 	}
 
 	def onInsert_Item(i_id:Int, i_im_id:Int, i_name:String, i_price:Float, i_data:String) = {
@@ -250,15 +252,19 @@ class TpccTable {
 		// println("\t(v1._14 == v2._14) = %s".format((v1._14 == v2._14)))
 		// println("\t(v1._15 equals v2._15) = %s".format((v1._15 equals v2._15)))
 		// ((v1._1 == v2._1) && (v1._2 equals v2._2) && (v1._3 equals v2._3) && (v1._4 equals v2._4) && (v1._5 equals v2._5) && (v1._6 equals v2._6) && (v1._7 equals v2._7) && (v1._8 equals v2._8) && (v1._9 equals v2._9) && (v1._10 equals v2._10) && (v1._11 equals v2._11) && (v1._12 == v2._12) && (v1._13 == v2._13) && (v1._14 == v2._14) && (v1._15 equals v2._15))
-		t1 equals t2
+		defaultCmp(t1,t2)
 	}
+
+	def defaultCmp(t1:Product, t2:Product) = (t1 equals t2)
+
+	def defaultCmpSimpleVal[V](t1:V, t2:V) = (t1 == t2)
 
     override def equals(o: Any) : Boolean = {
     	if(o.isInstanceOf[TpccTable]) {
 	    	val other = o.asInstanceOf[TpccTable]
 	    	if(
-	    		((newOrderTbl equals other.newOrderTbl)) &&
-				((historyTbl equals other.historyTbl)) &&
+	    		((newOrderTbl equals other.newOrderTbl) || deepEqual(newOrderTbl, other.newOrderTbl, defaultCmpSimpleVal[Boolean])) &&
+				((historyTbl equals other.historyTbl) || deepEqual(historyTbl, other.historyTbl, defaultCmpSimpleVal[Boolean])) &&
 				((warehouseTbl equals other.warehouseTbl) || deepEqual(warehouseTbl, other.warehouseTbl, wareHouseCmp)) &&
 				((itemPartialTbl equals other.itemPartialTbl) || deepEqual(itemPartialTbl, other.itemPartialTbl, itemCmp)) &&
 				((orderTbl equals other.orderTbl) || deepEqual(orderTbl, other.orderTbl, orderCmp)) &&
@@ -268,12 +274,12 @@ class TpccTable {
 				((stockTbl equals other.stockTbl) || deepEqual(stockTbl, other.stockTbl, stockCmp))
 			) true else {
 				println("\n(newOrderTbl equals other.newOrderTbl) => %s".format((newOrderTbl equals other.newOrderTbl)))
-				if(!(newOrderTbl equals other.newOrderTbl)) {
-					showDiff(newOrderTbl , other.newOrderTbl)
+				if(!(newOrderTbl equals other.newOrderTbl) || deepEqual(newOrderTbl, other.newOrderTbl, defaultCmpSimpleVal[Boolean])) {
+					showDiff(newOrderTbl , other.newOrderTbl, defaultCmp)
 				}
 				println("(historyTbl equals other.historyTbl) => %s".format((historyTbl equals other.historyTbl)))
-				if(!(historyTbl equals other.historyTbl)) {
-					showDiff(historyTbl , other.historyTbl)
+				if(!(historyTbl equals other.historyTbl) || deepEqual(historyTbl, other.historyTbl, defaultCmpSimpleVal[Boolean])) {
+					showDiff(historyTbl , other.historyTbl, defaultCmp)
 				}
 				var valx = false
 				valx = ((warehouseTbl equals other.warehouseTbl) || deepEqual(warehouseTbl, other.warehouseTbl, wareHouseCmp))
@@ -490,7 +496,7 @@ class TpccTable {
 	    }
     }
 
-    def deepEqual[K,V](map1:HashMap[K,_ <:Product],map2:HashMap[K,_ <:Product], f:((Product,Product) => Boolean)):Boolean = {
+    def deepEqual[K,V](map1:SHMap[K,V],map2:SHMap[K,V], f:((V,V) => Boolean)):Boolean = {
     	// println("In deep equal!!!")
     	var equals_res = true
     	map2.foreach{ case (k,v) =>
@@ -529,9 +535,9 @@ class TpccTable {
     	equals_res
     }
 
-    def showDiff[K,V](map1:HashMap[K,V],map2:HashMap[K,V], f:((Product,Product) => Boolean)) {
-    	val addedElements: HashMap[K,V] = new HashMap[K,V]
-    	val removedElements: HashMap[K,V] = new HashMap[K,V]
+    def showDiff[K,V](map1:SHMap[K,V],map2:SHMap[K,V], f:((Product,Product) => Boolean)) {
+    	val addedElements: SHMap[K,V] = new SHMap[K,V]
+    	val removedElements: SHMap[K,V] = new SHMap[K,V]
     	map2.foreach{ case (k,v) =>
     		if(!map1.contains(k) || (!(map1(k) equals v) && !f(v.asInstanceOf[Product], map1(k).asInstanceOf[Product]))) {
     			addedElements += (k -> v)
@@ -546,22 +552,22 @@ class TpccTable {
     	println("removed elements => %s".format(removedElements))
     }
 
-    def showDiff[K](map1:HashSet[K],map2:HashSet[K]/*, f:((Product,Product) => Boolean)*/) {
-    	val addedElements: HashSet[K] = new HashSet[K]
-    	val removedElements: HashSet[K] = new HashSet[K]
-    	map2.foreach{ k =>
-    		if(!map1.contains(k)) {
-    			addedElements += k
-    		}
-    	}
-    	map1.foreach{ k =>
-    		if(!map2.contains(k)) {
-    			removedElements += k
-    		}
-    	}
-    	println("added elements => %s".format(addedElements))
-    	println("removed elements => %s".format(removedElements))
-    }
+    // def showDiff[K](map1:HashSet[K],map2:HashSet[K]/*, f:((Product,Product) => Boolean)*/) {
+    // 	val addedElements: HashSet[K] = new HashSet[K]
+    // 	val removedElements: HashSet[K] = new HashSet[K]
+    // 	map2.foreach{ k =>
+    // 		if(!map1.contains(k)) {
+    // 			addedElements += k
+    // 		}
+    // 	}
+    // 	map1.foreach{ k =>
+    // 		if(!map2.contains(k)) {
+    // 			removedElements += k
+    // 		}
+    // 	}
+    // 	println("added elements => %s".format(addedElements))
+    // 	println("removed elements => %s".format(removedElements))
+    // }
 }
 
 object TpccSelectQueries {

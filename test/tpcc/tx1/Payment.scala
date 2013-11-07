@@ -3,6 +3,19 @@ import java.io._
 import scala.collection.mutable._
 import java.util.Date
 import ddbt.tpcc.itx._
+import org.slf4j.LoggerFactory
+import Payment._
+
+object Payment {
+
+  private val logger = LoggerFactory.getLogger(classOf[Payment])
+
+  private val DEBUG = logger.isDebugEnabled
+
+  private val TRACE = logger.isTraceEnabled
+
+  private val SHOW_OUTPUT = ddbt.tpcc.loadtest.TpccConstants.SHOW_OUTPUT
+}
 
 /**
  * Payment Transaction for TPC-C Benchmark
@@ -141,12 +154,11 @@ class Payment extends InMemoryTxImpl with IPaymentInMem {
         }
       }
       output.append("\n+-----------------------------------------------------------------+\n\n")
-      println(output.toString)
+      if(SHOW_OUTPUT) logger.info(output.toString)
       1
     } catch {
       case e: Throwable => {
-        println("An error occurred in handling Payment transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
-        e.printStackTrace
+        logger.error("An error occurred in handling Payment transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
         0
       }
     }

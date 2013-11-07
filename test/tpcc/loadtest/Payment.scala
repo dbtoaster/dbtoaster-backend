@@ -15,11 +15,13 @@ import TpccConstants._
 
 object Payment {
 
-  private val logger = LoggerFactory.getLogger(classOf[Driver])
+  private val logger = LoggerFactory.getLogger(classOf[Payment])
 
   private val DEBUG = logger.isDebugEnabled
 
   private val TRACE = logger.isTraceEnabled
+
+  private val SHOW_OUTPUT = TpccConstants.SHOW_OUTPUT
 }
 
 class Payment(var pStmts: TpccStatements) extends IPayment {
@@ -476,7 +478,7 @@ class Payment(var pStmts: TpccStatements) extends IPayment {
         }
       }
       output.append("\n+#################################################################+\n\n")
-      println(output.toString)
+      if(Payment.SHOW_OUTPUT) logger.info(output.toString)
 
       1
     } catch {

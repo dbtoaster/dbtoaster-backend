@@ -3,6 +3,19 @@ import java.io._
 import scala.collection.mutable._
 import java.util.Date
 import ddbt.tpcc.itx._
+import org.slf4j.LoggerFactory
+import Delivery._
+
+object Delivery {
+
+  private val logger = LoggerFactory.getLogger(classOf[Delivery])
+
+  private val DEBUG = logger.isDebugEnabled
+
+  private val TRACE = logger.isTraceEnabled
+
+  private val SHOW_OUTPUT = ddbt.tpcc.loadtest.TpccConstants.SHOW_OUTPUT
+}
 
 /**
  * Delivery Transaction for TPC-C Benchmark
@@ -60,6 +73,7 @@ class Delivery extends InMemoryTxImpl with IDeliveryInMem {
         }
         d_id += 1
       }
+
       val output: StringBuilder = new StringBuilder
       output.append("\n+---------------------------- DELIVERY ---------------------------+\n")
       output.append(" Date: ").append(datetime)
@@ -87,12 +101,12 @@ class Delivery extends InMemoryTxImpl with IDeliveryInMem {
         i += 1
       }
       output.append("+-----------------------------------------------------------------+\n\n")
-      println(output.toString)
+      if(SHOW_OUTPUT) logger.info(output.toString)
       // skippedDeliveries
       1
     } catch {
       case e: Throwable => {
-        println("An error occurred in handling Delivery transaction for warehouse=%d, carrier=%d".format(w_id,o_carrier_id))
+        logger.error("An error occurred in handling Delivery transaction for warehouse=%d, carrier=%d".format(w_id,o_carrier_id))
         0
       }
     }
@@ -101,7 +115,7 @@ class Delivery extends InMemoryTxImpl with IDeliveryInMem {
   object DeliveryTxOps {
     def findFirstNewOrder(no_w_id_input:Int, no_d_id_input:Int):Option[Int] = {
       var first_no_o_id:Option[Int] = None
-      SharedData.newOrderTbl.foreach { case (no_o_id, no_d_id, no_w_id) =>
+      SharedData.newOrderTbl.foreach { case ((no_o_id, no_d_id, no_w_id),_) =>
         if(no_d_id == no_d_id_input && no_w_id == no_w_id_input) {
           first_no_o_id match {
             case None => first_no_o_id = Some(no_o_id)

@@ -3,6 +3,19 @@ import java.io._
 import scala.collection.mutable._
 import java.util.Date
 import ddbt.tpcc.itx._
+import org.slf4j.LoggerFactory
+import NewOrder._
+
+object NewOrder {
+
+  private val logger = LoggerFactory.getLogger(classOf[NewOrder])
+
+  private val DEBUG = logger.isDebugEnabled
+
+  private val TRACE = logger.isTraceEnabled
+
+  private val SHOW_OUTPUT = ddbt.tpcc.loadtest.TpccConstants.SHOW_OUTPUT
+}
 
 /**
  * NewOrder Transaction for TPC-C Benchmark
@@ -54,7 +67,7 @@ class NewOrder extends InMemoryTxImpl with INewOrderInMem {
    */
   override def newOrderTx(datetime:Date, t_num: Int, w_id:Int, d_id:Int, c_id:Int, o_ol_count:Int, o_all_local:Int, itemid:Array[Int], supware:Array[Int], quantity:Array[Int], price:Array[Float], iname:Array[String], stock:Array[Int], bg:Array[Char], amt:Array[Float]): Int = {
     try {
-      println("- Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
+      if(SHOW_OUTPUT) logger.info("- Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
 
       var ol_number = 0
       var failed = false
@@ -64,11 +77,11 @@ class NewOrder extends InMemoryTxImpl with INewOrderInMem {
           NewOrderTxOps.findItem(itemid(ol_number))
         } catch {
           case nsee: java.util.NoSuchElementException => {
-            println("An item was not found in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d, items=%s".format(w_id,d_id,c_id, java.util.Arrays.toString(itemid)))
+            if(SHOW_OUTPUT) logger.info("An item was not found in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d, items=%s".format(w_id,d_id,c_id, java.util.Arrays.toString(itemid)))
             failed = true
           }
         }
-        if(failed) return rollBack
+        if(failed) return 1
        ol_number += 1
       }
 
@@ -143,27 +156,15 @@ class NewOrder extends InMemoryTxImpl with INewOrderInMem {
         ol_number += 1
       }
 
-      println("- Finished NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
-      printMapInfo
-
-
-      
-
+      if(SHOW_OUTPUT) logger.info("- Finished NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
       1
     } catch {
       case e: Throwable => {
-        println("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
+        logger.error("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
         throw e
         0
       }
     }
-  }
-
-  def rollBack = { 2 }
-
-  def printMapInfo {
-    // println("customerWarehouseFinancialInfoMap = %s".format(customerWarehouseFinancialInfoMap))
-    // println("districtPartialTbl = %s".format(districtPartialTbl))
   }
 
   object NewOrderTxOps {
