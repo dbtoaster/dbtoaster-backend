@@ -20,4 +20,6 @@ object TpccConstants {
   var MAX_ITEM_LEN: Int = 24
 
   val SHOW_OUTPUT = false
+
+  val IN_MEMORY_IMPL_VERSION_UNDER_TEST = 3
 }

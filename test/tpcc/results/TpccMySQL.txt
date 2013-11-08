@@ -1,0 +1,131 @@
+[info] Running ddbt.tpcc.loadtest.Tpcc 
+[info] TPCC version 1.0.1 Number of Arguments: 0
+[info] 2013-11-08 12:23:14,982 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.name = Mac OS X
+[info]  2013-11-08 12:23:14,983 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.arch = x86_64
+[info]  2013-11-08 12:23:14,983 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.version = 10.8.5
+[info]  2013-11-08 12:23:14,983 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.runtime.name = Java(TM) SE Runtime Environment
+[info]  2013-11-08 12:23:14,984 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.vm.version = 20.65-b04-462
+[info]  2013-11-08 12:23:14,984 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.library.path = .:/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java
+[info]  maxMemory = 3,069.9 MB
+[info] Using the properties file for configuration.
+[info] 2013-11-08 12:23:14,984 INFO d.t.l.Tpcc [main] Loading properties from: ./conf/tpcc.properties
+[info]  ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 1
+[info]  [connection]: 1
+[info]      [rampup]: 45 (sec.)
+[info]     [measure]: 60 (sec.)
+[info] TOTAL:232013-11-08 12:23:15,010 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-11-08 12:23:15,016 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/DDBToaster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] Current execution time lapse: 5.0 seconds
+[info] Current execution time lapse: 6.0 seconds
+[info] Current execution time lapse: 7.0 seconds
+[info] Current execution time lapse: 8.0 seconds
+[info] Current execution time lapse: 9.0 seconds
+[info] Current execution time lapse: 10.0 seconds
+[info] Current execution time lapse: 11.0 seconds
+[info] Current execution time lapse: 12.0 seconds
+[info] Current execution time lapse: 13.0 seconds
+[info] Current execution time lapse: 14.0 seconds
+[info] Current execution time lapse: 15.0 seconds
+[info] Current execution time lapse: 16.0 seconds
+[info] Current execution time lapse: 17.0 seconds
+[info] Current execution time lapse: 18.0 seconds
+[info] Current execution time lapse: 19.0 seconds
+[info] Current execution time lapse: 20.0 seconds
+[info] Current execution time lapse: 21.0 seconds
+[info] Current execution time lapse: 22.0 seconds
+[info] Current execution time lapse: 23.0 seconds
+[info] Current execution time lapse: 24.0 seconds
+[info] Current execution time lapse: 25.0 seconds
+[info] Current execution time lapse: 26.0 seconds
+[info] Current execution time lapse: 27.0 seconds
+[info] Current execution time lapse: 28.0 seconds
+[info] Current execution time lapse: 29.0 seconds
+[info] Current execution time lapse: 30.0 seconds
+[info] Current execution time lapse: 31.0 seconds
+[info] Current execution time lapse: 32.0 seconds
+[info] Current execution time lapse: 33.0 seconds
+[info] Current execution time lapse: 34.0 seconds
+[info] Current execution time lapse: 35.0 seconds
+[info] Current execution time lapse: 36.0 seconds
+[info] Current execution time lapse: 37.0 seconds
+[info] Current execution time lapse: 38.0 seconds
+[info] Current execution time lapse: 39.0 seconds
+[info] Current execution time lapse: 40.0 seconds
+[info] Current execution time lapse: 41.0 seconds
+[info] Current execution time lapse: 42.0 seconds
+[info] Current execution time lapse: 43.0 seconds
+[info] Current execution time lapse: 44.0 seconds
+[info] Current execution time lapse: 45.0 seconds
+[info] Current execution time lapse: 46.0 seconds
+[info] Current execution time lapse: 47.0 seconds
+[info] Current execution time lapse: 48.0 seconds
+[info] Current execution time lapse: 49.0 seconds
+[info] Current execution time lapse: 50.0 seconds
+[info] Current execution time lapse: 51.0 seconds
+[info] Current execution time lapse: 52.0 seconds
+[info] Current execution time lapse: 53.0 seconds
+[info] Current execution time lapse: 54.0 seconds
+[info] Current execution time lapse: 55.0 seconds
+[info] Current execution time lapse: 56.0 seconds
+[info] Current execution time lapse: 57.0 seconds
+[info] Current execution time lapse: 58.0 seconds
+[info] Current execution time lapse: 59.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:3492  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:3491  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:350  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:350  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:349  lt:0  rt:0  fl:0 
+[info]  in 60.044998 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:3492  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:3491  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:350  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:350  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:349  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.463646% (>=43.0%) [OK]
+[info]    Order-Status: 4.357570% (>= 4.0%) [OK]
+[info]        Delivery: 4.357570% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.345119% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 3492
+[info]  Payment Total: 3491
+[info]  Order Stat Total: 350
+[info]  Delivery Total: 350
+[info]  Slev Total: 349
+[info] 
+[info] <TpmC>
+[info] 3489.383 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] Terminating process now

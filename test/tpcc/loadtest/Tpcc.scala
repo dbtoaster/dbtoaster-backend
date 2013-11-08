@@ -45,7 +45,7 @@ object Tpcc {
 
   val JDBCURL = "JDBCURL"
 
-  val PROPERTIESFILE = "tpcc.properties"
+  val PROPERTIESFILE = "./conf/tpcc.properties"
 
   val TRANSACTION_NAME = Array("NewOrder", "Payment", "Order Stat", "Delivery", "Slev")
 
@@ -296,8 +296,8 @@ class Tpcc {
     if (DEBUG) logger.debug("Creating TpccThread")
     val executor = Executors.newFixedThreadPool(numConn, new NamedThreadFactory("tpcc-thread"))
 
-    val SharedData: TpccTable = new TpccTable
-    SharedData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
+    // val SharedData: TpccTable = new TpccTable
+    // SharedData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
 
     for (i <- 0 until numConn) {
       val conn: Connection = connectToDB(javaDriver, jdbcUrl, dbUser, dbPassword)
@@ -435,14 +435,13 @@ class Tpcc {
       } catch {
         case e: InterruptedException => logger.error("Sleep interrupted", e)
       }
-      val newData = new TpccTable
-      newData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
-
-      if(newData equals SharedData) {
-        println("\n2- new Data equals SharedData")
-      } else {
-        println("\n2- new Data is not equal to SharedData")
-      }
+      // val newData = new TpccTable
+      // newData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
+      // if(newData equals SharedData) {
+      //   println("\n2- new Data equals SharedData")
+      // } else {
+      //   println("\n2- new Data is not equal to SharedData")
+      // }
     }
 
     executor.shutdown()

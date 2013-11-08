@@ -47,11 +47,11 @@ object TpccUnitTest {
 
   private val JDBCURL = "JDBCURL"
 
-  private val PROPERTIESFILE = "tpcc.properties"
+  private val PROPERTIESFILE = "./conf/tpcc.properties"
 
   private val TRANSACTION_NAME = Array("NewOrder", "Payment", "Order Stat", "Delivery", "Slev")
 
-  private val IMPL_VERSION_UNDER_TEST = 1
+  private val IMPL_VERSION_UNDER_TEST = IN_MEMORY_IMPL_VERSION_UNDER_TEST
 
   @volatile var counting_on: Boolean = false
 
@@ -80,6 +80,12 @@ object TpccUnitTest {
       orderStat = new ddbt.tpcc.tx1.OrderStatus
       delivery = new ddbt.tpcc.tx1.Delivery
       slev = new ddbt.tpcc.tx1.StockLevel
+    } else if(IMPL_VERSION_UNDER_TEST == 2) {
+      newOrder = new ddbt.tpcc.tx2.NewOrder
+      payment = new ddbt.tpcc.tx2.Payment
+      orderStat = new ddbt.tpcc.tx2.OrderStatus
+      delivery = new ddbt.tpcc.tx2.Delivery
+      slev = new ddbt.tpcc.tx2.StockLevel
     } else {
       throw new RuntimeException("No in-memory implementation selected.")
     }

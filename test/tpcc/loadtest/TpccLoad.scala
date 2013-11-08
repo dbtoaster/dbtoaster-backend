@@ -44,7 +44,7 @@ object TpccLoad {
 
   private val SHARDID = "SHARDID"
 
-  private val PROPERTIESFILE = "tpcc.properties"
+  private val PROPERTIESFILE = "./conf/tpcc.properties"
 
   def main(argv: Array[String]) {
     val sysProp = Array("os.name", "os.arch", "os.version", "java.runtime.name", "java.vm.version", "java.library.path")
@@ -58,7 +58,7 @@ object TpccLoad {
     val tpccLoad = new TpccLoad()
     var ret = 0
     if (argv.length == 0) {
-      println("Using the tpcc.properties file for the load configuration.")
+      println("Using the ./conf/tpcc.properties file for the load configuration.")
       tpccLoad.init()
       ret = tpccLoad.runLoad(false, argv)
     } else {
