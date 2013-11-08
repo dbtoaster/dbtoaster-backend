@@ -58,6 +58,10 @@ class TpccTable {
 		orderTbl.update((o_id,o_d_id,o_w_id),(currentVal/*:(Int, java.util.Date, Option[Int], Int, Boolean))*/ => ((o_c_id,currentVal._2,o_carrier_id,currentVal._4,currentVal._5))))
 	}
 
+	def onUpdate_Order_byFunc(o_id:Int, o_d_id:Int, o_w_id:Int, updateFunc:((Int, Date, Option[Int], Int, Boolean)) => (Int, Date, Option[Int], Int, Boolean)) = {
+		orderTbl.update((o_id,o_d_id,o_w_id),updateFunc)
+	}
+
 	def onInsert_Warehouse(w_id:Int, w_name:String, w_street_1:String, w_street_2:String, w_city:String, w_state:String, w_zip:String, w_tax:Float, w_ytd:Double) = {
 		warehouseTbl += (w_id -> (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd))
 	}
@@ -125,6 +129,33 @@ class TpccTable {
 		def compare(that: MiniCustomer) = this.cust_first.compareToIgnoreCase(that.cust_first)
 		override def toString = "MiniCustomer(%s,%s)".format(cust_id, cust_first)
 	} 
+
+    def findCustomerEntryByName(input_c_w_id: Int, input_c_d_id: Int, input_c_last: String) = {
+      var customers = new ArrayBuffer[MiniCustomer]
+      //we should slice over input_c_last
+      customerTbl.slice(0, (input_c_d_id, input_c_w_id)).foreach { case ((c_id,_,_) , (c_first,_,c_last,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)) =>
+        if(c_last == input_c_last) {
+          customers += new MiniCustomer(c_id,c_first)
+        }
+      }
+      if (customers.size == 0) {
+        throw new RuntimeException("The customer C_LAST=" + input_c_last + " C_D_ID=" + input_c_d_id + " C_W_ID=" + input_c_w_id + " not found!")
+      }
+      // println("**********************************")
+      // println("Customers before:",customers)
+      customers = customers.sorted
+      // println("Customers after:",customers)
+      // println("**********************************")
+      var index: Int = customers.size / 2
+      if (customers.size % 2 == 0) {
+        index -= 1
+      }
+      val c_id = customers(index).cust_id
+      customerTbl.getEntry((c_id,input_c_d_id,input_c_w_id))
+    }
+    def findCustomerEntryById(input_c_w_id: Int, input_c_d_id: Int, c_id: Int) = {
+      customerTbl.getEntry((c_id,input_c_d_id,input_c_w_id))
+    }
 
     def findCustomerByName(input_c_w_id: Int, input_c_d_id: Int, input_c_last: String) = {
       var customers = new ArrayBuffer[MiniCustomer]

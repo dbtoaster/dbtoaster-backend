@@ -176,6 +176,17 @@ class SHMap[K,V](projs:K=>_ *) {
     throw new java.util.NoSuchElementException
   }
   def get(key: K): V = apply(key)
+  def getEntry(key: K): SEntry[K,V] = {
+    // if (key == null) return getForNullKey
+    val hs: Int = hash(key.hashCode)
+    var e: SEntry[K, V] = table(indexFor(hs, table.length))
+    while (e != null) {
+      val k: K = e.key
+      if (e.hash == hs && key == k) return e
+      e = e.next
+    }
+    throw new java.util.NoSuchElementException
+  }
 
   /**
    * Offloaded version of get() to look up null keys.  Null keys map

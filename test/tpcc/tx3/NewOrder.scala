@@ -91,12 +91,9 @@ class NewOrder extends InMemoryTxImpl with INewOrderInMem {
 
       val (c_discount, c_last, c_credit, w_tax) = NewOrderTxOps.findCustomerWarehouseFinancialInfo(w_id,d_id,c_id)
 
-      val (_,_,_,_,_,_,d_tax,_,d_next_o_id) = NewOrderTxOps.findDistrictInfo(w_id,d_id)
-
-      NewOrderTxOps.updateDistrictNextOrderId(w_id,d_id,d_tax,d_next_o_id+1)
-
-      //no need to copy
-      val o_id = d_next_o_id
+      var d_tax = 0f
+      var o_id = 0
+      NewOrderTxOps.updateDistrictNextOrderId(w_id,d_id,cv => { d_tax=cv._7; o_id=cv._9; (cv._1,cv._2,cv._3,cv._4,cv._5,cv._6,d_tax,cv._8,o_id+1) })
       
       //var o_all_local:Boolean = true
       //supware.foreach { s_w_id => if(s_w_id != w_id) o_all_local = false }
@@ -181,21 +178,12 @@ class NewOrder extends InMemoryTxImpl with INewOrderInMem {
     /**
      * @param w_id is warehouse id
      * @param d_id is district id
-     * @return (d_next_o_id, d_tax)
-     */
-    def findDistrictInfo(w_id:Int, d_id:Int) = {
-      SharedData.districtTbl(d_id,w_id)
-    }
-
-    /**
-     * @param w_id is warehouse id
-     * @param d_id is district id
      *
      * @param new_d_next_o_id is the next order id
      * @param d_tax is the district tax value for this dirstrict
      */
-    def updateDistrictNextOrderId(w_id:Int, d_id:Int, d_tax:Float, new_d_next_o_id:Int): Unit = {
-      SharedData.onUpdate_District_byFunc(d_id, w_id, cv => (cv._1,cv._2,cv._3,cv._4,cv._5,cv._6,d_tax,cv._8,new_d_next_o_id))
+    def updateDistrictNextOrderId(w_id:Int, d_id:Int, updateFunc:((String, String, String, String, String, String, Float, Double, Int)) => (String, String, String, String, String, String, Float, Double, Int)): Unit = {
+      SharedData.onUpdate_District_byFunc(d_id, w_id, updateFunc)
     }
 
     /**

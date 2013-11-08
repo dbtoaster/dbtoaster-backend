@@ -42,7 +42,7 @@ class Payment extends InMemoryTxImpl with IPaymentInMem {
    *   - [Warehouse: RW] where R in
    *      + findWarehouse
    *     and W in
-   *      + updateWarehouseYtd
+   *      + updateWarehouse
    *   - [District: RW] where R in
    *      + findDistrict
    *     and W in
@@ -61,44 +61,58 @@ class Payment extends InMemoryTxImpl with IPaymentInMem {
   override def paymentTx(datetime:Date, t_num: Int, w_id: Int, d_id: Int, c_by_name: Int, c_w_id: Int, c_d_id: Int, c_id: Int, c_last_input: String, h_amount: Float):Int = {
     try {
 
-      PaymentTxOps.updateWarehouseYtd(w_id, h_amount)
+      var w_name = ""
+      var w_street_1 = ""
+      var w_street_2 = ""
+      var w_city = ""
+      var w_state = ""
+      var w_zip = ""
+      PaymentTxOps.updateWarehouse(w_id, cv => {
+        w_name = cv._1
+        w_street_1 = cv._2
+        w_street_2 = cv._3
+        w_city = cv._4
+        w_state = cv._5
+        w_zip = cv._6
+        cv.copy(_8 = cv._8+h_amount)
+      })
 
-      val (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,_,_) = PaymentTxOps.findWarehouse(w_id)
+      var d_name = ""
+      var d_street_1 = ""
+      var d_street_2 = ""
+      var d_city = ""
+      var d_state = ""
+      var d_zip = ""
+      PaymentTxOps.updateDistrict(w_id,d_id,cv => { 
+        d_name = cv._1
+        d_street_1 = cv._2
+        d_street_2 = cv._3
+        d_city = cv._4
+        d_state = cv._5
+        d_zip = cv._6
+        cv.copy(_8 = cv._8+h_amount)
+      })
 
-      PaymentTxOps.updateDistrict(w_id,d_id,h_amount)
-
-      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,_,_,_) = PaymentTxOps.findDistrict(w_id,d_id)
-
-      var c: (String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String,Int) = null
+      var c: ddbt.tpcc.lib.SEntry[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] = null
       if (c_by_name > 0) {
-        c = SharedData.findCustomerByName(c_w_id, c_d_id, c_last_input)
+        c = SharedData.findCustomerEntryByName(c_w_id, c_d_id, c_last_input)
       } else {
-        c = SharedData.findCustomerById(c_w_id, c_d_id, c_id)
+        c = SharedData.findCustomerEntryById(c_w_id, c_d_id, c_id)
       }
 
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_,found_c_data,found_c_id) = c
+      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,found_c_data) = c.value
+      val found_c_id = c.key._1
       var c_data:String = found_c_data
 
       if (c_credit.contains("BC")) {
-        //TODO this is the correct version but is not implemented in the correctness test
-        //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
         c_data = "%d %d %d %d %d $%f %s | %s".format(found_c_id, c_d_id, c_w_id, d_id, w_id, 
             h_amount, datetime.toString, c_data)
         if (c_data.length > 500) c_data = c_data.substring(0, 500)
-        PaymentTxOps.updateCustomerBalanceAndData(c_w_id,c_d_id,found_c_id,
-          c_balance+h_amount,
-          //TODO this is the correct version but is not implemented in the correctness test
-          c_ytd_payment/*+h_amount*/,
-          //TODO this is the correct version but is not implemented in the correctness test
-          c_payment_cnt/*+1*/,
-          c_data)
+        //TODO this is the correct version but is not implemented in the correctness test
+        c.value = (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance+h_amount,c_ytd_payment/*+h_amount*/,c_payment_cnt/*+1*/,c_delivery_cnt,c_data)
       } else {
-        PaymentTxOps.updateCustomerBalance(c_w_id,c_d_id,found_c_id,
-          c_balance+h_amount,
-          //TODO this is the correct version but is not implemented in the correctness test
-          c_ytd_payment/*+h_amount*/,
-          //TODO this is the correct version but is not implemented in the correctness test
-          c_payment_cnt/*+1*/)
+        //TODO this is the correct version but is not implemented in the correctness test
+        c.value = (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance+h_amount,c_ytd_payment/*+h_amount*/,c_payment_cnt/*+1*/,c_delivery_cnt,found_c_data)
       }
       //TODO this is the correct version but is not implemented in the correctness test
       val h_data: String = {if (w_name.length > 10) w_name.substring(0, 10) else w_name} + "    " + {if (d_name.length > 10) d_name.substring(0, 10) else d_name}
@@ -163,14 +177,14 @@ class Payment extends InMemoryTxImpl with IPaymentInMem {
     }
   }
   object PaymentTxOps {
-    def updateWarehouseYtd(w_id:Int, h_amount:Float) = {
-      SharedData.onUpdate_Warehouse_byFunc(w_id,cv => (cv._1,cv._2,cv._3,cv._4,cv._5,cv._6,cv._7,cv._8+h_amount))
+    def updateWarehouse(w_id:Int, updateFunc:((String, String, String, String, String, String, Float, Double)) => (String, String, String, String, String, String, Float, Double)) = {
+      SharedData.onUpdate_Warehouse_byFunc(w_id,updateFunc)
     }
     def findWarehouse(w_id:Int) = {
       SharedData.warehouseTbl(w_id)
     }
-    def updateDistrict(w_id:Int, d_id:Int, h_amount:Float) = {
-      SharedData.onUpdate_District_byFunc(d_id,w_id, cv => (cv._1,cv._2,cv._3,cv._4,cv._5,cv._6,cv._7,cv._8+h_amount,cv._9))
+    def updateDistrict(w_id:Int, d_id:Int, updateFunc:((String, String, String, String, String, String, Float, Double, Int)) => (String, String, String, String, String, String, Float, Double, Int)) = {
+      SharedData.onUpdate_District_byFunc(d_id,w_id, updateFunc)
     }
     def findDistrict(w_id:Int, d_id:Int) = {
       SharedData.districtTbl((d_id,w_id))

@@ -43,9 +43,7 @@ class Delivery extends InMemoryTxImpl with IDeliveryInMem {
    *     and W in
    *      + deleteNewOrder
    *   - [Order: RW] where R in
-   *      + findOrderCID
-   *     and W in
-   *      + updateOrderCarrier
+   *      + updateOrderCarrierAndFindCID
    *   - [OrderLine: RW] where R in
    *      + findOrderLineTotalAmount
    *     and W in
@@ -63,10 +61,9 @@ class Delivery extends InMemoryTxImpl with IDeliveryInMem {
           case Some(no_o_id) => {
             orderIDs(d_id - 1) = no_o_id
             DeliveryTxOps.deleteNewOrder(w_id,d_id,no_o_id)
-            val c_id = DeliveryTxOps.findOrderCID(w_id,d_id,no_o_id)
-            DeliveryTxOps.updateOrderCarrier(w_id,d_id,no_o_id,c_id,o_carrier_id)
-            DeliveryTxOps.updateOrderLineDeliveryDate(w_id,d_id,no_o_id,datetime)
-            val ol_total = DeliveryTxOps.findOrderLineTotalAmount(w_id,d_id,no_o_id)
+            var c_id = 0
+            DeliveryTxOps.updateOrderCarrierAndFindCID(w_id,d_id,no_o_id,(cv => { c_id = cv._1; ((cv._1,cv._2,Some(o_carrier_id),cv._4,cv._5)) }))
+            val ol_total = DeliveryTxOps.updateOrderLineDeliveryDateAndFindOrderLineTotalAmount(w_id,d_id,no_o_id,datetime)
             DeliveryTxOps.updateCustomerBalance(w_id,d_id,c_id,ol_total)
           }
           case None => orderIDs(d_id - 1) = 0
@@ -131,23 +128,16 @@ class Delivery extends InMemoryTxImpl with IDeliveryInMem {
       SharedData.orderTbl((o_id,o_d_id,o_w_id))._1
     }
 
-    def updateOrderCarrier(o_w_id:Int, o_d_id:Int, o_id:Int, o_c_id:Int, o_carrier_id:Int) {
-      SharedData.onUpdate_Order_forDelivery(o_id,o_d_id,o_w_id, o_c_id,Some(o_carrier_id))
+    def updateOrderCarrierAndFindCID(o_w_id:Int, o_d_id:Int, o_id:Int, updateFunc:((Int, Date, Option[Int], Int, Boolean)) => (Int, Date, Option[Int], Int, Boolean)) {
+      SharedData.onUpdate_Order_byFunc(o_id,o_d_id,o_w_id, updateFunc)
     }
 
-    def updateOrderLineDeliveryDate(ol_w_id_input:Int, ol_d_id_input:Int, ol_o_id_input:Int, ol_delivery_d_input:Date) {
-      val ol_numbers = new ArrayBuffer[(Int,Date,Float)]
-      //should be replaced by a slice over first three key parts
-      SharedData.orderLineTbl.slice(0, (ol_o_id_input, ol_d_id_input, ol_w_id_input)).foreachEntry { cv => 
-        cv.key.value = cv.key.value.copy(_3 = Some(ol_delivery_d_input))
-      }
-    }
-
-    def findOrderLineTotalAmount(ol_w_id_input:Int, ol_d_id_input:Int, ol_o_id_input:Int):Float = {
+    def updateOrderLineDeliveryDateAndFindOrderLineTotalAmount(ol_w_id_input:Int, ol_d_id_input:Int, ol_o_id_input:Int, ol_delivery_d_input:Date):Float = {
       var ol_total = 0f
-      //should be replaced by a slice over first three key parts
-      SharedData.orderLineTbl.slice(0, (ol_o_id_input, ol_d_id_input, ol_w_id_input)).foreach {
-        case (_,(_,_,_,_,ol_amount,_)) => ol_total += ol_amount
+      SharedData.orderLineTbl.slice(0, (ol_o_id_input, ol_d_id_input, ol_w_id_input)).foreachEntry { cv => 
+        val k = cv.key
+        k.value = k.value.copy(_3 = Some(ol_delivery_d_input))
+        ol_total += k.value._5
       }
       ol_total
     }
