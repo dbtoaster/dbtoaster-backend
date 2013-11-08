@@ -47,13 +47,13 @@ class OrderStatus extends InMemoryTxImpl with IOrderStatusInMem {
   override def orderStatusTx(datetime:Date, t_num: Int, w_id: Int, d_id: Int, c_by_name: Int, c_id: Int, c_last: String):Int = {
     try {
 
-      var c: (String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int/*,Int,String*/,Int) = null
+      var c: (String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String,Int) = null
       if (c_by_name > 0) {
         c = SharedData.findCustomerByName(w_id, d_id, c_last)
       } else {
         c = SharedData.findCustomerById(w_id, d_id, c_id)
       }
-      val found_c_id = c._17
+      val found_c_id = c._19
       val (o_id,o_entry_d,o_carrier_id) = OrderStatusTxOps.findNewestOrder(w_id,d_id,found_c_id)
       val orderLines: ArrayBuffer[String] = new ArrayBuffer[String]
       if(o_id != -1) {

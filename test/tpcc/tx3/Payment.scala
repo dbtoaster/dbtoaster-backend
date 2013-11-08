@@ -1,4 +1,4 @@
-package ddbt.tpcc.tx2
+package ddbt.tpcc.tx3
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
@@ -61,13 +61,13 @@ class Payment extends InMemoryTxImpl with IPaymentInMem {
   override def paymentTx(datetime:Date, t_num: Int, w_id: Int, d_id: Int, c_by_name: Int, c_w_id: Int, c_d_id: Int, c_id: Int, c_last_input: String, h_amount: Float):Int = {
     try {
 
-      NewOrderTxOps.updateWarehouseYtd(w_id, h_amount)
+      PaymentTxOps.updateWarehouseYtd(w_id, h_amount)
 
-      val (w_name,w_street_1,w_street_2,w_city,w_state,w_zip) = NewOrderTxOps.findWarehouse(w_id)
+      val (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,_,_) = PaymentTxOps.findWarehouse(w_id)
 
-      NewOrderTxOps.updateDistrict(w_id,d_id,h_amount)
+      PaymentTxOps.updateDistrict(w_id,d_id,h_amount)
 
-      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip) = NewOrderTxOps.findDistrict(w_id,d_id)
+      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,_,_,_) = PaymentTxOps.findDistrict(w_id,d_id)
 
       var c: (String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String,Int) = null
       if (c_by_name > 0) {
@@ -77,16 +77,15 @@ class Payment extends InMemoryTxImpl with IPaymentInMem {
       }
 
       val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_,found_c_data,found_c_id) = c
-      var c_data:String = null
+      var c_data:String = found_c_data
 
-      if (c._11.contains("BC")) {
-        c_data = NewOrderTxOps.findCustomerData(c_w_id, c_d_id, found_c_id)
+      if (c_credit.contains("BC")) {
         //TODO this is the correct version but is not implemented in the correctness test
         //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
         c_data = "%d %d %d %d %d $%f %s | %s".format(found_c_id, c_d_id, c_w_id, d_id, w_id, 
             h_amount, datetime.toString, c_data)
         if (c_data.length > 500) c_data = c_data.substring(0, 500)
-        NewOrderTxOps.updateCustomerBalanceAndData(c_w_id,c_d_id,found_c_id,
+        PaymentTxOps.updateCustomerBalanceAndData(c_w_id,c_d_id,found_c_id,
           c_balance+h_amount,
           //TODO this is the correct version but is not implemented in the correctness test
           c_ytd_payment/*+h_amount*/,
@@ -94,7 +93,7 @@ class Payment extends InMemoryTxImpl with IPaymentInMem {
           c_payment_cnt/*+1*/,
           c_data)
       } else {
-        NewOrderTxOps.updateCustomerBalance(c_w_id,c_d_id,found_c_id,
+        PaymentTxOps.updateCustomerBalance(c_w_id,c_d_id,found_c_id,
           c_balance+h_amount,
           //TODO this is the correct version but is not implemented in the correctness test
           c_ytd_payment/*+h_amount*/,
@@ -103,7 +102,7 @@ class Payment extends InMemoryTxImpl with IPaymentInMem {
       }
       //TODO this is the correct version but is not implemented in the correctness test
       val h_data: String = {if (w_name.length > 10) w_name.substring(0, 10) else w_name} + "    " + {if (d_name.length > 10) d_name.substring(0, 10) else d_name}
-      NewOrderTxOps.insertHistory(found_c_id,c_d_id,c_w_id,d_id,w_id,datetime,h_amount,h_data)
+      PaymentTxOps.insertHistory(found_c_id,c_d_id,c_w_id,d_id,w_id,datetime,h_amount,h_data)
 
       val output: StringBuilder = new StringBuilder
       output.append("\n+---------------------------- PAYMENT ----------------------------+")
@@ -163,34 +162,29 @@ class Payment extends InMemoryTxImpl with IPaymentInMem {
       }
     }
   }
-  object NewOrderTxOps {
+  object PaymentTxOps {
     def updateWarehouseYtd(w_id:Int, h_amount:Float) = {
-      val (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd) = SharedData.warehouseTbl(w_id)
-      SharedData.onUpdate_Warehouse(w_id,w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd+h_amount)
+      SharedData.onUpdate_Warehouse_byFunc(w_id,cv => (cv._1,cv._2,cv._3,cv._4,cv._5,cv._6,cv._7,cv._8+h_amount))
     }
     def findWarehouse(w_id:Int) = {
-      val (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,_,w_ytd) = SharedData.warehouseTbl(w_id)
-      (w_name,w_street_1,w_street_2,w_city,w_state,w_zip)
+      SharedData.warehouseTbl(w_id)
     }
     def updateDistrict(w_id:Int, d_id:Int, h_amount:Float) = {
-      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id) = SharedData.districtTbl((d_id,w_id))
-      SharedData.onUpdate_District(d_id,w_id, d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd+h_amount,d_next_o_id)
+      SharedData.onUpdate_District_byFunc(d_id,w_id, cv => (cv._1,cv._2,cv._3,cv._4,cv._5,cv._6,cv._7,cv._8+h_amount,cv._9))
     }
     def findDistrict(w_id:Int, d_id:Int) = {
-      val (d_name,d_street_1,d_street_2,d_city,d_state,d_zip,_,d_ytd,_) = SharedData.districtTbl((d_id,w_id))
-      (d_name,d_street_1,d_street_2,d_city,d_state,d_zip)
+      SharedData.districtTbl((d_id,w_id))
     }
-    def findCustomerData(c_w_id: Int, c_d_id: Int, c_id: Int) = {
-      val (_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,c_data) = SharedData.customerTbl(c_id,c_d_id,c_w_id)
-      c_data
+    def findCustomerData(c_w_id: Int, c_d_id: Int, c_id: Int):String = {
+      SharedData.customerTbl(c_id,c_d_id,c_w_id)._18
     }
     def updateCustomerBalance(c_w_id: Int, c_d_id: Int, c_id: Int, c_balance:Float, c_ytd_payment:Float, c_payment_cnt:Int) = {
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,_,_,_,c_delivery_cnt,c_data) = SharedData.customerTbl((c_id,c_d_id,c_w_id))
-      SharedData.onUpdateCustomer(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)
+      SharedData.onUpdateCustomer_byFunc(c_id,c_d_id,c_w_id,
+        cv => (cv._1,cv._2,cv._3,cv._4,cv._5,cv._6,cv._7,cv._8,cv._9,cv._10,cv._11,cv._12,cv._13,c_balance,c_ytd_payment,c_payment_cnt,cv._17,cv._18))
     }
     def updateCustomerBalanceAndData(c_w_id: Int, c_d_id: Int, c_id: Int, c_balance:Float, c_ytd_payment:Float, c_payment_cnt:Int, c_data:String) = {
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,_,_,_,c_delivery_cnt,_) = SharedData.customerTbl((c_id,c_d_id,c_w_id))
-      SharedData.onUpdateCustomer(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)
+      SharedData.onUpdateCustomer_byFunc(c_id,c_d_id,c_w_id,
+        cv => (cv._1,cv._2,cv._3,cv._4,cv._5,cv._6,cv._7,cv._8,cv._9,cv._10,cv._11,cv._12,cv._13,c_balance,c_ytd_payment,c_payment_cnt,cv._17,c_data))
     }
     def insertHistory(h_c_id:Int,h_c_d_id:Int,h_c_w_id:Int,h_d_id:Int,h_w_id:Int,h_date:Date,h_amount:Float,h_data:String) = {
       SharedData.onInsert_HistoryTbl(h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,h_date,h_amount,h_data)

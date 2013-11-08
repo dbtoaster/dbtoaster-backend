@@ -1,4 +1,4 @@
-package ddbt.tpcc.tx1
+package ddbt.tpcc.tx3
 import java.io._
 import scala.collection.mutable._
 import java.util.Date
@@ -107,11 +107,9 @@ class OrderStatus extends InMemoryTxImpl with IOrderStatusInMem {
   object OrderStatusTxOps {
     def findNewestOrder(o_w_id_arg:Int, o_d_id_arg:Int, c_id_arg:Int) = {
       var max_o_id = -1
-      SharedData.orderTbl.foreach { case ((o_id,o_d_id,o_w_id), (o_c_id,_,_,_,_)) =>
-        if(o_d_id_arg == o_d_id && o_w_id_arg == o_w_id && c_id_arg == o_c_id) {
-          if(o_id > max_o_id) {
-            max_o_id = o_id
-          }
+      SharedData.orderTbl.slice(0,(o_d_id_arg,o_w_id_arg)).foreach { case ((o_id,_,_), (o_c_id,_,_,_,_)) =>
+        if(c_id_arg == o_c_id && o_id > max_o_id) {
+          max_o_id = o_id
         }
       }
       if(max_o_id == -1) {
@@ -125,10 +123,8 @@ class OrderStatus extends InMemoryTxImpl with IOrderStatusInMem {
     def findOrderLines(ol_w_id_arg:Int, ol_d_id_arg:Int, ol_o_id_arg:Int) = {
       val result = new ArrayBuffer[(Int,Int,Option[Date],Int,Float,String)]
       //slice over first three parts of key
-      SharedData.orderLineTbl.foreach { case ((ol_o_id, ol_d_id, ol_w_id, _) , ol_val) =>
-        if(ol_o_id == ol_o_id_arg && ol_d_id == ol_d_id_arg && ol_w_id == ol_w_id_arg) {
-          result += ol_val
-        }
+      SharedData.orderLineTbl.slice(0, (ol_o_id_arg, ol_d_id_arg, ol_w_id_arg)).foreach { case (_,ol_val) =>
+        result += ol_val
       }
       result
     }

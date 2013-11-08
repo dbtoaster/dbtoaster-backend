@@ -255,7 +255,25 @@ class SHMap[K,V](projs:K=>_ *) {
 
   def +=(kv: (K, V)): V = put(kv._1, kv._2)
 
-  def update(key: K, value: V): V = put(key, value)
+  def updateVal(key: K, value: V): V = put(key, value)
+
+  def update(key: K, valueUpdateFunc: V=>V): V = {
+    // if (key == null) return putForNullKey(value)
+    val hs: Int = hash(key.hashCode)
+    val i: Int = indexFor(hs, table.length)
+    var e: SEntry[K, V] = table(i)
+    while (e != null) {
+      val k: K = e.key
+      if (e.hash == hs && key == k) {
+        val oldValue: V = e.value
+        e.value = valueUpdateFunc(oldValue)
+        if (idxs!=Nil) idxs.foreach(_.set(e))
+        return oldValue
+      }
+      e = e.next
+    }
+    null.asInstanceOf[V]
+  }
 
   /**
    * Offloaded version of put for null keys
@@ -669,6 +687,8 @@ class SHSet[K] {
 
   def foreach(f: K => Unit): Unit = map.foreachEntry(e => f(e.key))
 
+  def foreachEntry(f: SEntry[K, Boolean] => Unit): Unit = map.foreachEntry(e => f(e))
+
   override def toString: String = {
     var res = new StringBuilder("[")
     var first = true
@@ -686,6 +706,8 @@ class SIndexEntry[K,V] {
   val s:SHSet[SEntry[K,V]] = new SHSet[SEntry[K,V]]
 
   def foreach(f: ((K, V)) => Unit): Unit = s.foreach(e => f(e.key, e.value))
+
+  def foreachEntry(f: SEntry[SEntry[K,V], Boolean] => Unit): Unit = s.foreachEntry(e => f(e))
 }
 
 class SIndex[P,K,V](proj:K=>P) {

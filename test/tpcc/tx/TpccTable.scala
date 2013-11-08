@@ -28,7 +28,7 @@ class TpccTable {
 	val districtTbl = new SHMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]
 
 	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)]( (k:(Int,Int,Int,Int)) => ((k._1, k._2, k._3)) )
-	val customerTbl = new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)]
+	val customerTbl = new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] ( (k:(Int,Int,Int)) => ((k._2, k._3)) )
 	val stockTbl = new SHMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
 
 	//val orderLineStockJoin = new SHMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Float,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
@@ -55,8 +55,7 @@ class TpccTable {
 	}
 
 	def onUpdate_Order_forDelivery(o_id:Int, o_d_id:Int, o_w_id:Int, o_c_id:Int/*, o_entry_d:Date*/, o_carrier_id:Option[Int]/*, o_ol_cnt:Int, o_all_local:Boolean*/) = {
-		val currentVal = orderTbl(o_id,o_d_id,o_w_id)
-		orderTbl.update((o_id,o_d_id,o_w_id),(o_c_id,currentVal._2,o_carrier_id,currentVal._4,currentVal._5))
+		orderTbl.update((o_id,o_d_id,o_w_id),(currentVal/*:(Int, java.util.Date, Option[Int], Int, Boolean))*/ => ((o_c_id,currentVal._2,o_carrier_id,currentVal._4,currentVal._5))))
 	}
 
 	def onInsert_Warehouse(w_id:Int, w_name:String, w_street_1:String, w_street_2:String, w_city:String, w_state:String, w_zip:String, w_tax:Float, w_ytd:Double) = {
@@ -64,7 +63,11 @@ class TpccTable {
 	}
 
 	def onUpdate_Warehouse(w_id:Int, w_name:String, w_street_1:String, w_street_2:String, w_city:String, w_state:String, w_zip:String, w_tax:Float, w_ytd:Double) = {
-		warehouseTbl.update(w_id,(w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd))
+		warehouseTbl.updateVal(w_id,(w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd))
+	}
+
+	def onUpdate_Warehouse_byFunc(w_id:Int, updateFunc:((String, String, String, String, String, String, Float, Double)) => (String, String, String, String, String, String, Float, Double)) = {
+		warehouseTbl.update(w_id,updateFunc)
 	}
 
 	def onInsert_District(d_id:Int, d_w_id:Int, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String, d_tax:Float, d_ytd:Double, d_next_o_id:Int) = {
@@ -72,7 +75,7 @@ class TpccTable {
 	}
 
 	def onUpdate_District(d_id:Int, d_w_id:Int, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String, d_tax:Float, d_ytd:Double, d_next_o_id:Int) = {
-		districtTbl.update((d_id,d_w_id), (d_name,d_street1,d_street2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id))
+		districtTbl.updateVal((d_id,d_w_id), (d_name,d_street1,d_street2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id))
 	}
 
 	def onUpdate_District_forNewOrder(d_id:Int, d_w_id:Int/*, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String*/, d_tax:Float/*, d_ytd:Float*/, d_next_o_id:Int) = {
@@ -80,12 +83,16 @@ class TpccTable {
 		onUpdate_District(d_id,d_w_id, d_name,d_street1,d_street2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id)
 	}
 
+	def onUpdate_District_byFunc(d_id:Int, d_w_id:Int, updateFunc:((String, String, String, String, String, String, Float, Double, Int)) => (String, String, String, String, String, String, Float, Double, Int)) = {
+		districtTbl.update((d_id,d_w_id), updateFunc)
+	}
+
 	def onInsertOrderLine(ol_o_id:Int, ol_d_id:Int, ol_w_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_delivery_d:Option[Date], ol_quantity:Int, ol_amount:Float, ol_dist_info:String): Unit = {
       orderLineTbl += ((ol_o_id, ol_d_id, ol_w_id, ol_number) -> (ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info))
     }
 
 	def onUpdateOrderLine(ol_o_id:Int, ol_d_id:Int, ol_w_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_delivery_d:Option[Date], ol_quantity:Int, ol_amount:Float, ol_dist_info:String): Unit = {
-      orderLineTbl.update((ol_o_id, ol_d_id, ol_w_id, ol_number) , (ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info))
+      orderLineTbl.updateVal((ol_o_id, ol_d_id, ol_w_id, ol_number) , (ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info))
     }
 
     def onInsertCustomer(c_id: Int, c_d_id: Int, c_w_id: Int, c_first:String, c_middle:String, c_last:String, c_street_1:String, c_street_2:String, c_city:String, c_state:String, c_zip:String, c_phone:String, c_since:Date, c_credit:String, c_credit_lim:Float, c_discount:Float, c_balance:Float, c_ytd_payment:Float, c_payment_cnt:Int, c_delivery_cnt:Int, c_data:String) = {
@@ -95,7 +102,11 @@ class TpccTable {
     }
 
     def onUpdateCustomer(c_id: Int, c_d_id: Int, c_w_id: Int, c_first:String, c_middle:String, c_last:String, c_street_1:String, c_street_2:String, c_city:String, c_state:String, c_zip:String, c_phone:String, c_since:Date, c_credit:String, c_credit_lim:Float, c_discount:Float, c_balance:Float, c_ytd_payment:Float, c_payment_cnt:Int, c_delivery_cnt:Int, c_data:String) = {
-      customerTbl.update((c_id,c_d_id,c_w_id),(c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data))
+      customerTbl.updateVal((c_id,c_d_id,c_w_id),(c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data))
+    }
+
+    def onUpdateCustomer_byFunc(c_id: Int, c_d_id: Int, c_w_id: Int, updateFunc:((String, String, String, String, String, String, String, String, String, Date, String, Float, Float, Float, Float, Int, Int, String)) => (String, String, String, String, String, String, String, String, String, Date, String, Float, Float, Float, Float, Int, Int, String)) = {
+      customerTbl.update((c_id,c_d_id,c_w_id),updateFunc)
     }
 
     def onInsertStock(s_i_id:Int, s_w_id:Int, s_quantity:Int, s_dist_01:String, s_dist_02:String, s_dist_03:String, s_dist_04:String, s_dist_05:String, s_dist_06:String, s_dist_07:String, s_dist_08:String, s_dist_09:String, s_dist_10:String, s_ytd:Int, s_order_cnt:Int, s_remote_cnt:Int, s_data:String) = {
@@ -103,18 +114,23 @@ class TpccTable {
     }
 
     def onUpdateStock(s_i_id:Int, s_w_id:Int, s_quantity:Int, s_dist_01:String, s_dist_02:String, s_dist_03:String, s_dist_04:String, s_dist_05:String, s_dist_06:String, s_dist_07:String, s_dist_08:String, s_dist_09:String, s_dist_10:String, s_ytd:Int, s_order_cnt:Int, s_remote_cnt:Int, s_data:String) = {
-      stockTbl.update((s_i_id,s_w_id), (s_quantity, s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data))
+      stockTbl.updateVal((s_i_id,s_w_id), (s_quantity, s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data))
     }
 
+    def onUpdateStock_byFunc(s_i_id:Int, s_w_id:Int, updateFunc:((Int, String, String, String, String, String, String, String, String, String, String, Int, Int, Int, String)) => (Int, String, String, String, String, String, String, String, String, String, String, Int, Int, Int, String)) = {
+      stockTbl.update((s_i_id,s_w_id), updateFunc)
+    }
+
+	class MiniCustomer(val cust_id:Int, val cust_first:String) extends Ordered[MiniCustomer] {
+		def compare(that: MiniCustomer) = this.cust_first.compareToIgnoreCase(that.cust_first)
+		override def toString = "MiniCustomer(%s,%s)".format(cust_id, cust_first)
+	} 
+
     def findCustomerByName(input_c_w_id: Int, input_c_d_id: Int, input_c_last: String) = {
-      class MiniCustomer(val cust_id:Int, val cust_first:String) extends Ordered[MiniCustomer] {
-        def compare(that: MiniCustomer) = this.cust_first.compareToIgnoreCase(that.cust_first)
-        override def toString = "MiniCustomer(%s,%s)".format(cust_id, cust_first)
-      } 
       var customers = new ArrayBuffer[MiniCustomer]
       //we should slice over input_c_last
-      customerTbl.foreach { case ((c_id,c_d_id,c_w_id) , (c_first,_,c_last,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)) =>
-        if(c_w_id == input_c_w_id && c_d_id == input_c_d_id && c_last == input_c_last) {
+      customerTbl.slice(0, (input_c_d_id, input_c_w_id)).foreach { case ((c_id,_,_) , (c_first,_,c_last,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)) =>
+        if(c_last == input_c_last) {
           customers += new MiniCustomer(c_id,c_first)
         }
       }
@@ -131,12 +147,12 @@ class TpccTable {
         index -= 1
       }
       val c_id = customers(index).cust_id
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_,_) = customerTbl((c_id,input_c_d_id,input_c_w_id))
-      (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_id)
+      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data) = customerTbl((c_id,input_c_d_id,input_c_w_id))
+      (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data,c_id)
     }
     def findCustomerById(input_c_w_id: Int, input_c_d_id: Int, c_id: Int) = {
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,_,_) = customerTbl((c_id,input_c_d_id,input_c_w_id))
-      (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_id)
+      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data) = customerTbl((c_id,input_c_d_id,input_c_w_id))
+      (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data,c_id)
     }
 
     def wareHouseCmp(t1:Product, t2:Product) = {
