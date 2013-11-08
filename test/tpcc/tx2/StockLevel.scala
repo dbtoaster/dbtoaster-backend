@@ -76,14 +76,16 @@ class StockLevel extends InMemoryTxImpl with IStockLevelInMem {
       }
 
       def findOrderLineStockRecentItemsUnderThresholds(w_id:Int, d_id:Int, o_id:Int, threshold:Int) = {
-        val unique_ol_i_id = new HashSet[Int]
-        SharedData.orderLineTbl.slice(1, (d_id, w_id)).foreach { case ((ol_o_id,_,_,_) ,(ol_i_id,_,_,_,_,_)) =>
-          if(ol_o_id < o_id && ol_o_id>=(o_id-20)) {
+        val unique_ol_i_id = new ddbt.tpcc.lib.SHSet[Int]
+        var i = o_id-20
+        while(i < o_id) {
+          SharedData.orderLineTbl.slice(0, (i, d_id, w_id)).foreach { case (_,(ol_i_id,_,_,_,_,_)) =>
             val (s_quantity,_,_,_,_,_,_,_,_,_,_,_,_,_,_) = SharedData.stockTbl(ol_i_id,w_id)
             if(s_quantity < threshold) {
               unique_ol_i_id += ol_i_id
             }
           }
+          i+=1
         }
 
         unique_ol_i_id.size

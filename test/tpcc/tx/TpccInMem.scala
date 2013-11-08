@@ -362,7 +362,7 @@ class TpccInMem(val newOrder: INewOrderInMem,
     System.out.print("\nMEASURING START.\n\n")
     counting_on = true
     val startTime = System.currentTimeMillis()
-    val df = new DecimalFormat("#,##0f")
+    val df = new DecimalFormat("#,##0.0")
     var runTime = 0L
     while ({(runTime = System.currentTimeMillis() - startTime); runTime} < measureTime * 1000) {
       println("Current execution time lapse: " + df.format(runTime / 1000f) + 

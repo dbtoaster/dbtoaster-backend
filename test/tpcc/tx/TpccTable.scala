@@ -27,7 +27,7 @@ class TpccTable {
 	val orderTbl = new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)]( (k:(Int,Int,Int)) => ((k._2, k._3)) )
 	val districtTbl = new SHMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]
 
-	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)]( (k:(Int,Int,Int,Int)) => ((k._1, k._2, k._3)), (k:(Int,Int,Int,Int)) => ((k._2, k._3)) )
+	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)]( (k:(Int,Int,Int,Int)) => ((k._1, k._2, k._3)) )
 	val customerTbl = new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)]
 	val stockTbl = new SHMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
 
