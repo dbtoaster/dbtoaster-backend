@@ -87,7 +87,7 @@ class SEntry[K,V](final val hash: Int, final val key: K, var value: V, var next:
   }
 }
 
-class SHMap[K,V](projs:K=>_ *) {
+class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[K=>_]) {
   /**
    * Constructs an empty <tt>SHMap</tt> with the specified initial
    * capacity and load factor.
@@ -122,6 +122,18 @@ class SHMap[K,V](projs:K=>_ *) {
   // def this(initialCapacity: Int) {
   //   this(initialCapacity, DEFAULT_LOAD_FACTOR)
   // }
+
+  def this(loadFactor: Float, initialCapacity: Int, projs:K=>_ *) {
+    this(initialCapacity, loadFactor, projs)
+  }
+
+  def this(initialCapacity: Int, projs:K=>_ *) {
+    this(initialCapacity, DEFAULT_LOAD_FACTOR, projs)
+  }
+
+  def this(projs:K=>_ *) {
+    this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, projs)
+  }
 
   /**
    * Initialization hook for subclasses. This method is called
@@ -571,7 +583,7 @@ class SHMap[K,V](projs:K=>_ *) {
   /**
    * The table, resized as necessary. Length MUST Always be a power of two.
    */
-  var table: Array[SEntry[K, V]] = new Array[SEntry[K, V]](DEFAULT_INITIAL_CAPACITY)
+  var table: Array[SEntry[K, V]] = new Array[SEntry[K, V]](initialCapacity)
   /**
    * The number of key-value mappings contained in this map.
    */
@@ -580,13 +592,7 @@ class SHMap[K,V](projs:K=>_ *) {
    * The next size value at which to resize (capacity * load factor).
    * @serial
    */
-  var threshold: Int = (DEFAULT_INITIAL_CAPACITY * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
-  /**
-   * The load factor for the hash table.
-   *
-   * @serial
-   */
-  val loadFactor: Float = DEFAULT_LOAD_FACTOR
+  var threshold: Int = (initialCapacity * loadFactor).asInstanceOf[Int]
 
   //init
 
@@ -598,6 +604,32 @@ class SHMap[K,V](projs:K=>_ *) {
   def slice[P](part:Int, partKey:P):SIndexEntry[K,V] = {
     val ix=idxs(part)
     ix.asInstanceOf[SIndex[P,K,V]].slice(partKey) // type information P is erased anyway
+  }
+
+  def getInfoStr:String = {
+    val res = new StringBuilder("MapInfo => {\n")
+    res.append("\tsize => ").append(size).append("\n")
+    .append("\tcapacity => ").append(capacity).append("\n")
+    .append("\tthreshold => ").append(threshold).append("\n")
+    var i = 0
+    var elemCount = 0
+    val contentSize = new Array[Int](table.length)
+    while(i < table.length) {
+      var counter = 0
+      var e: SEntry[K, V] = table(i)
+      while(e != null) {
+        counter += 1
+        e = e.next
+      }
+      elemCount += counter
+      contentSize(i) = counter
+      i += 1
+    }
+    res.append("\telemCount => ").append(elemCount).append("\n")
+    .append("\tmaxElemsInCell => ").append(contentSize.max).append("\n")
+    .append("\tavgElemsInCell => ").append("%.2f".format(elemCount/(table.length).asInstanceOf[Double])).append("\n")
+    //.append("\tcontentSize => ").append(java.util.Arrays.toString(contentSize)).append("\n")
+    .append("}").toString
   }
 }
 

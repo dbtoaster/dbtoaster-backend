@@ -19,17 +19,17 @@ class TpccTable {
 	//NewOrder: W
 	//Delivery: RW
 
-	val newOrderTbl = new SHMap[(Int,Int,Int),Boolean]( (k:(Int,Int,Int)) => ((k._2, k._3)) )
-	val historyTbl = new SHMap[(Int,Int,Int,Int,Int,Date,Float,String),Boolean]
+	val newOrderTbl = new SHMap[(Int,Int,Int),Boolean](/*0.9f, 32768, */(k:(Int,Int,Int)) => ((k._2, k._3)) )
+	val historyTbl = new SHMap[(Int,Int,Int,Int,Int,Date,Float,String),Boolean]/*(0.9f, 524288)*/
 
 	val warehouseTbl = new SHMap[Int,(String,String,String,String,String,String,Float,Double)]
-	val itemPartialTbl = new SHMap[Int,(/*Int,*/String,Float,String)]
-	val orderTbl = new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)]( (k:(Int,Int,Int)) => ((k._2, k._3)) )
+	val itemPartialTbl = new SHMap[Int,(/*Int,*/String,Float,String)]/*(1f, 262144)*/
+	val orderTbl = new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)](/*0.9f, 524288,*/ (k:(Int,Int,Int)) => ((k._2, k._3)) )
 	val districtTbl = new SHMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]
 
-	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)]( (k:(Int,Int,Int,Int)) => ((k._1, k._2, k._3)) )
-	val customerTbl = new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] ( (k:(Int,Int,Int)) => ((k._2, k._3)) )
-	val stockTbl = new SHMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
+	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)](/*0.9f, 4194304,*/ (k:(Int,Int,Int,Int)) => ((k._1, k._2, k._3)) )
+	val customerTbl = new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] (/*1f, 65536,*/ (k:(Int,Int,Int)) => ((k._2, k._3)) )
+	val stockTbl = new SHMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]/*(1f, 262144)*/
 
 	//val orderLineStockJoin = new SHMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Float,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
 	val customerWarehouseFinancialInfoMap = new SHMap[(Int,Int,Int),(Float,String,String,Float)]
@@ -616,6 +616,18 @@ class TpccTable {
     // 	println("added elements => %s".format(addedElements))
     // 	println("removed elements => %s".format(removedElements))
     // }
+
+    def getAllMapsInfoStr:String = {
+	    new StringBuilder("\nTables Info:\nnewOrderTbl => ").append(newOrderTbl.getInfoStr).append("\n")
+		.append("historyTbl => ").append(historyTbl.getInfoStr).append("\n")
+		.append("warehouseTbl => ").append(warehouseTbl.getInfoStr).append("\n")
+		.append("itemPartialTbl => ").append(itemPartialTbl.getInfoStr).append("\n")
+		.append("orderTbl => ").append(orderTbl.getInfoStr).append("\n")
+		.append("districtTbl => ").append(districtTbl.getInfoStr).append("\n")
+		.append("orderLineTbl => ").append(orderLineTbl.getInfoStr).append("\n")
+		.append("customerTbl => ").append(customerTbl.getInfoStr).append("\n")
+		.append("stockTbl => ").append(stockTbl.getInfoStr).toString
+	}
 }
 
 object TpccSelectQueries {

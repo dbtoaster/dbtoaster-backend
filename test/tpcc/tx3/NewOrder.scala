@@ -23,19 +23,6 @@ object NewOrder {
  * @author Mohammad Dashti
  */
 class NewOrder extends InMemoryTxImpl with INewOrderInMem {
-  //Tables
-  //val stockTbl: Map[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)] = new HashMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]
-  //val newOrderTbl = new HashSet[(Int,Int,Int)]
-
-  //Partial Tables (containing all rows, but not all columns)
-  //removed columns are commented out
-  //val districtPartialTbl = new HashMap[(Int,Int),(/*String,String,String,String,String,String,*/Float,/*Float,*/Int)]
-  //val orderPartialTbl = new HashMap[(Int,Int,Int),(Int,Date/*,Option[Int]*/,Int,Boolean)]
-  //val itemPartialTbl = new HashMap[Int,(/*Int,*/String,Float,String)]
-  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(Int,Int/*,Date*/,Int,Float,String)]
-
-  //Materialized query results
-  //val customerWarehouseFinancialInfoMap = new HashMap[(Int,Int,Int),(Float, String, String, Float)]
 
   /**
    * @param w_id is warehouse id
@@ -45,9 +32,7 @@ class NewOrder extends InMemoryTxImpl with INewOrderInMem {
    * Table interactions:
    *   - [Warehouse: R] in
    *      + findCustomerWarehouseFinancialInfo
-   *   - [District: RW] where R in
-   *      + findDistrictInfo
-   *     and W in
+   *   - [District: RW] in
    *      + updateDistrictNextOrderId
    *   - [Customer: R] in
    *      + findCustomerWarehouseFinancialInfo
@@ -57,9 +42,7 @@ class NewOrder extends InMemoryTxImpl with INewOrderInMem {
    *      + insertNewOrder
    *   - [Item: R] in
    *      + findItem
-   *   - [Stock: RW] where R in
-   *      + findStock
-   *     and W in
+   *   - [Stock: RW] in
    *      + updateStock
    *   - [OrderLine: W] in
    *      + insertOrderLine

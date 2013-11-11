@@ -24,15 +24,6 @@ object Delivery {
  */
 class Delivery extends InMemoryTxImpl with IDeliveryInMem {
 
-  //Tables
-  //val newOrderTbl = new HashSet[(Int,Int,Int)]
-
-  //Partial Tables (containing all rows, but not all columns)
-  //removed columns are commented out
-  //val orderPartialTbl = new HashMap[(Int,Int,Int),(Int/*,Date*/,Option[Int]/*,Int,Boolean*/)]
-  //only the slice over first three key parts is used
-  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(/*Int,Int,*/Option[Date]/*,Int*/,Float/*,String*/)]
-  //val customerPartialTbl = new HashMap[(Int,Int,Int),(/*String,String,String,String,String,String,String,String,String,Date,String,Float,Float,*/Float/*,Float,Int*/,Int/*,String*/)]
   /**
    * @param w_id is warehouse id
    * @param o_carrier_id is the carrier id for this warehouse
@@ -124,10 +115,6 @@ class Delivery extends InMemoryTxImpl with IDeliveryInMem {
       SharedData.onDelete_NewOrder(no_o_id,no_d_id,no_w_id)
     }
 
-    def findOrderCID(o_w_id:Int, o_d_id:Int, o_id:Int) = {
-      SharedData.orderTbl((o_id,o_d_id,o_w_id))._1
-    }
-
     def updateOrderCarrierAndFindCID(o_w_id:Int, o_d_id:Int, o_id:Int, updateFunc:((Int, Date, Option[Int], Int, Boolean)) => (Int, Date, Option[Int], Int, Boolean)) {
       SharedData.onUpdate_Order_byFunc(o_id,o_d_id,o_w_id, updateFunc)
     }
@@ -143,8 +130,7 @@ class Delivery extends InMemoryTxImpl with IDeliveryInMem {
     }
 
     def updateCustomerBalance(c_w_id:Int, c_d_id:Int, c_id:Int, ol_total:Float) = {
-      val (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data) = SharedData.customerTbl((c_id,c_d_id,c_w_id))
-      SharedData.onUpdateCustomer(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance+ol_total,c_ytd_payment,c_payment_cnt,c_delivery_cnt+1,c_data)
+      SharedData.onUpdateCustomer_byFunc(c_id,c_d_id,c_w_id, { case (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data) => (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance+ol_total,c_ytd_payment,c_payment_cnt,c_delivery_cnt+1,c_data) })
     }
   }
 }

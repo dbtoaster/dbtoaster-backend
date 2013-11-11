@@ -331,6 +331,7 @@ class TpccInMem(val newOrder: INewOrderInMem,
 
     val SharedData: TpccTable = new TpccTable
     SharedData.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
+    logger.info(SharedData.getAllMapsInfoStr)
 
     for (i <- 0 until numConn) {
       val conn: Connection = connectToDB(javaDriver, jdbcUrl, dbUser, dbPassword)
@@ -461,7 +462,7 @@ class TpccInMem(val newOrder: INewOrderInMem,
     println(tpcm + " TpmC")
     System.out.print("\nSTOPPING THREADS\n")
     activate_transaction = 0
-
+    logger.info(SharedData.getAllMapsInfoStr)
     executor.shutdown()
     try {
       executor.awaitTermination(30, TimeUnit.SECONDS)

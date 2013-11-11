@@ -23,17 +23,6 @@ object StockLevel {
  * @author Mohammad Dashti
  */
 class StockLevel extends InMemoryTxImpl with IStockLevelInMem {
-
-  //Partial Tables (containing all rows, but not all columns)
-  //removed columns are commented out
-  //val districtPartialTbl = new HashMap[(Int,Int),(/*String,String,String,String,String,String,Float,Float,*/Int)]
-
-  //Materialized query results
-
-  //Key: orderLine key
-  //Value: (ol_i_id,s_quantity)
-  //val orderLineStockJoin = new HashMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Float,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
-
   /**
    * @param w_id is warehouse id
    * @param d_id is district id

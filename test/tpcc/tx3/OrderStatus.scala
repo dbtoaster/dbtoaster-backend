@@ -24,12 +24,6 @@ object OrderStatus {
  */
 class OrderStatus extends InMemoryTxImpl with IOrderStatusInMem {
 
-  //Partial Tables (containing all rows, but not all columns)
-  //removed columns are commented out
-  //val customerPartialTbl = new HashMap[(Int,Int,Int),(String,String,String/*,String,String,String,String,String,String,Date,String,Float,Float*/,Float/*,Float,Int,Int,String*/)]
-  //val orderPartialTbl = new HashMap[(Int,Int,Int),(Int,Date,Option[Int]/*,Int,Boolean*/)]
-  //val orderLinePartialTbl = new HashMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float/*,String*/)]
-
   /**
    * @param w_id is warehouse id
    * @param d_id is district id
