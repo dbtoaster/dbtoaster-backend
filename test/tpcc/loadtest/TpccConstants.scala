@@ -21,5 +21,5 @@ object TpccConstants {
 
   val SHOW_OUTPUT = false
 
-  val IN_MEMORY_IMPL_VERSION_UNDER_TEST = 3
+  val IN_MEMORY_IMPL_VERSION_UNDER_TEST = 4
 }

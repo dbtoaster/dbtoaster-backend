@@ -19,19 +19,18 @@ class TpccTable {
 	//NewOrder: W
 	//Delivery: RW
 
-	val newOrderTbl = new SHMap[(Int,Int,Int),Boolean](/*0.9f, 32768, */(k:(Int,Int,Int)) => ((k._2, k._3)) )
+	val newOrderTbl = new SHMap[(Int,Int,Int),Boolean](/*0.9f, 32768, */(k:(Int,Int,Int),v:Boolean) => ((k._2, k._3)) )
 	val historyTbl = new SHMap[(Int,Int,Int,Int,Int,Date,Float,String),Boolean]/*(0.9f, 524288)*/
 
 	val warehouseTbl = new SHMap[Int,(String,String,String,String,String,String,Float,Double)]
 	val itemPartialTbl = new SHMap[Int,(/*Int,*/String,Float,String)]/*(1f, 262144)*/
-	val orderTbl = new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)](/*0.9f, 524288,*/ (k:(Int,Int,Int)) => ((k._2, k._3)) )
+	val orderTbl = new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)](/*0.9f, 524288,*/ (k:(Int,Int,Int), v:(Int,Date,Option[Int],Int,Boolean)) => ((k._2, k._3, v._1)) )
 	val districtTbl = new SHMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]
 
-	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)](/*0.9f, 4194304,*/ (k:(Int,Int,Int,Int)) => ((k._1, k._2, k._3)) )
-	val customerTbl = new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] (/*1f, 65536,*/ (k:(Int,Int,Int)) => ((k._2, k._3)) )
+	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)](/*0.9f, 4194304,*/ (k:(Int,Int,Int,Int), v:(Int,Int,Option[Date],Int,Float,String)) => ((k._1, k._2, k._3)) )
+	val customerTbl = new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] (/*1f, 65536,*/ (k:(Int,Int,Int), v:(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)) => ((k._2, k._3, v._3)) )
 	val stockTbl = new SHMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]/*(1f, 262144)*/
 
-	//val orderLineStockJoin = new SHMap[(Int,Int,Int,Int),(/**OrderLine Fields**/Int/*,Int,Date,Int,Float,String*//**Stock Fields**/,Int/*,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String*/)]
 	val customerWarehouseFinancialInfoMap = new SHMap[(Int,Int,Int),(Float,String,String,Float)]
 
 	def onInsert_NewOrder(no_o_id:Int, no_d_id:Int, no_w_id:Int) = {
@@ -133,10 +132,8 @@ class TpccTable {
     def findCustomerEntryByName(input_c_w_id: Int, input_c_d_id: Int, input_c_last: String) = {
       var customers = new ArrayBuffer[MiniCustomer]
       //we should slice over input_c_last
-      customerTbl.slice(0, (input_c_d_id, input_c_w_id)).foreach { case ((c_id,_,_) , (c_first,_,c_last,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)) =>
-        if(c_last == input_c_last) {
+      customerTbl.slice(0, (input_c_d_id, input_c_w_id, input_c_last)).foreach { case ((c_id,_,_) , (c_first,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)) =>
           customers += new MiniCustomer(c_id,c_first)
-        }
       }
       if (customers.size == 0) {
         throw new RuntimeException("The customer C_LAST=" + input_c_last + " C_D_ID=" + input_c_d_id + " C_W_ID=" + input_c_w_id + " not found!")
@@ -160,10 +157,8 @@ class TpccTable {
     def findCustomerByName(input_c_w_id: Int, input_c_d_id: Int, input_c_last: String) = {
       var customers = new ArrayBuffer[MiniCustomer]
       //we should slice over input_c_last
-      customerTbl.slice(0, (input_c_d_id, input_c_w_id)).foreach { case ((c_id,_,_) , (c_first,_,c_last,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)) =>
-        if(c_last == input_c_last) {
-          customers += new MiniCustomer(c_id,c_first)
-        }
+      customerTbl.slice(0, (input_c_d_id, input_c_w_id, input_c_last)).foreach { case ((c_id,_,_) , (c_first,_,c_last,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_)) =>
+        customers += new MiniCustomer(c_id,c_first)
       }
       if (customers.size == 0) {
         throw new RuntimeException("The customer C_LAST=" + input_c_last + " C_D_ID=" + input_c_d_id + " C_W_ID=" + input_c_w_id + " not found!")

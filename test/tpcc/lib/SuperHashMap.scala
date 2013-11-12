@@ -87,7 +87,7 @@ class SEntry[K,V](final val hash: Int, final val key: K, var value: V, var next:
   }
 }
 
-class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[K=>_]) {
+class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]) {
   /**
    * Constructs an empty <tt>SHMap</tt> with the specified initial
    * capacity and load factor.
@@ -123,15 +123,15 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[K=>_]) {
   //   this(initialCapacity, DEFAULT_LOAD_FACTOR)
   // }
 
-  def this(loadFactor: Float, initialCapacity: Int, projs:K=>_ *) {
+  def this(loadFactor: Float, initialCapacity: Int, projs:(K,V)=>_ *) {
     this(initialCapacity, loadFactor, projs)
   }
 
-  def this(initialCapacity: Int, projs:K=>_ *) {
+  def this(initialCapacity: Int, projs:(K,V)=>_ *) {
     this(initialCapacity, DEFAULT_LOAD_FACTOR, projs)
   }
 
-  def this(projs:K=>_ *) {
+  def this(projs:(K,V)=>_ *) {
     this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, projs)
   }
 
@@ -187,7 +187,7 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[K=>_]) {
     }
     throw new java.util.NoSuchElementException
   }
-  def get(key: K): V = apply(key)
+  // def get(key: K): V = apply(key)
   def getEntry(key: K): SEntry[K,V] = {
     // if (key == null) return getForNullKey
     val hs: Int = hash(key.hashCode)
@@ -198,6 +198,17 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[K=>_]) {
       e = e.next
     }
     throw new java.util.NoSuchElementException
+  }
+  def getNullOnNotFound(key: K): V = {
+    // if (key == null) return getForNullKey
+    val hs: Int = hash(key.hashCode)
+    var e: SEntry[K, V] = table(indexFor(hs, table.length))
+    while (e != null) {
+      val k: K = e.key
+      if (e.hash == hs && key == k) return e.value
+      e = e.next
+    }
+    null.asInstanceOf[V]
   }
 
   /**
@@ -264,7 +275,15 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[K=>_]) {
       if (e.hash == hs && key == k) {
         val oldValue: V = e.value
         e.value = value
-        if (idxs!=Nil) idxs.foreach(_.set(e))
+        if (idxs != Nil) idxs.foreach{ idx => {
+            val pOld = idx.proj(k,oldValue)
+            val pNew = idx.proj(k,value)
+            if(pNew != pOld) {
+              idx.del(e, oldValue)
+              idx.set(e)
+            }
+          }
+        }
         return oldValue
       }
       e = e.next
@@ -289,8 +308,17 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[K=>_]) {
       val k: K = e.key
       if (e.hash == hs && key == k) {
         val oldValue: V = e.value
-        e.value = valueUpdateFunc(oldValue)
-        if (idxs!=Nil) idxs.foreach(_.set(e))
+        val value:V = valueUpdateFunc(oldValue)
+        e.value = value
+        if (idxs != Nil) idxs.foreach{ idx => {
+            val pOld = idx.proj(k,oldValue)
+            val pNew = idx.proj(k,value)
+            if(pNew != pOld) {
+              idx.del(e, oldValue)
+              idx.set(e)
+            }
+          }
+        }
         return oldValue
       }
       e = e.next
@@ -597,7 +625,7 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[K=>_]) {
   //init
 
   val idxs:List[SIndex[_,K,V]] = {
-    def idx[P](f:K=>P) = new SIndex[P,K,V](f)
+    def idx[P](f:(K,V)=>P) = new SIndex[P,K,V](f)
     projs.toList.map(idx(_))
   }
 
@@ -753,30 +781,33 @@ class SIndexEntry[K,V] {
   def foreachEntry(f: SEntry[SEntry[K,V], Boolean] => Unit): Unit = s.foreachEntry(e => f(e))
 }
 
-class SIndex[P,K,V](proj:K=>P) {
+class SIndex[P,K,V](val proj:(K,V)=>P) {
   val idx = new SHMap[P,SIndexEntry[K,V]]
 
-  def set(entry: SEntry[K,V]) {
-    val p=proj(entry.key)
-    if (!idx.contains(p)) {
+  def set(entry: SEntry[K,V]):Unit = {
+    val p:P = proj(entry.key, entry.value)
+    val s = idx.getNullOnNotFound(p)
+    if (s==null) {
       val newIdx = new SIndexEntry[K,V]
       newIdx.s.add(entry)
       idx.put(p,newIdx)
     } else {
-      idx.get(p).s.add(entry)
+      s.s.add(entry)
     }
   }
 
-  def del(entry: SEntry[K,V]) { 
-    val p=proj(entry.key)
-    val s=idx.get(p)
+  def del(entry: SEntry[K,V]):Unit = del(entry, entry.value)
+
+  def del(entry: SEntry[K,V], v:V):Unit = {
+    val p:P = proj(entry.key, v)
+    val s=idx.getNullOnNotFound(p)
     if (s!=null) { 
       s.s.remove(entry)
       if (s.s.size==0) idx.remove(p)
     }
   }
 
-  def slice(part:P):SIndexEntry[K,V] = idx.get(part) match { 
+  def slice(part:P):SIndexEntry[K,V] = idx.getNullOnNotFound(part) match { 
     case null => new SIndexEntry[K,V]
     case s=>s
   }
