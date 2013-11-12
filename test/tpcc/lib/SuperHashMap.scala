@@ -608,6 +608,24 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]
     res.toString
   }
 
+  override def equals(other:Any):Boolean = {
+    if(!other.isInstanceOf[SHMap[K,V]]) false
+    else {
+      val map2 = other.asInstanceOf[SHMap[K,V]]
+      map2.foreach{ case (k,v) =>
+        if(!contains(k) || (!(apply(k) equals v) && (v != apply(k)))) {
+          return false
+        }
+      }
+      foreach{ case (k,v) =>
+        if(!map2.contains(k) || (!(map2(k) equals v) && (v != map2(k)))) {
+          return false
+        }
+      }
+      true
+    }
+  }
+
   /**
    * The table, resized as necessary. Length MUST Always be a power of two.
    */

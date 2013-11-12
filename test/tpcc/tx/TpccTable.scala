@@ -9,6 +9,9 @@ import ddbt.tpcc.loadtest.Util._
 import ddbt.tpcc.loadtest.DatabaseConnector._
 import ddbt.tpcc.lib.SHMap
 import ddbt.tpcc.lib.SEntry
+import scala.collection.mutable.SortedSet
+import scala.collection.mutable.TreeSet
+import ddbt.tpcc.loadtest.TpccConstants._
 
 /**
  * Delivery Transaction for TPC-C Benchmark
@@ -19,12 +22,29 @@ class TpccTable {
 	//NewOrder: W
 	//Delivery: RW
 
-	val newOrderTbl = new SHMap[(Int,Int,Int),Boolean](/*0.9f, 32768, */(k:(Int,Int,Int),v:Boolean) => ((k._2, k._3)) )
+	val newOrderTbl:SHMap[(Int,Int,Int),Boolean] = if(testSpecialDsUsed) {
+		new SHMap[(Int,Int,Int),Boolean]/*(0.9f, 32768)*/
+	} else {
+		new SHMap[(Int,Int,Int),Boolean](/*0.9f, 32768, */(k:(Int,Int,Int),v:Boolean) => ((k._2, k._3)) )
+	}
+	val newOrderSetImpl = new SHMap[/*(no_d_id, no_w_id)*/(Int,Int),SortedSet[Int]]
+	if(testSpecialDsUsed) {
+		for(i <- 1 to 10) {
+			newOrderSetImpl += ((i,1) -> new TreeSet[Int])
+		}
+	}
+
 	val historyTbl = new SHMap[(Int,Int,Int,Int,Int,Date,Float,String),Boolean]/*(0.9f, 524288)*/
 
 	val warehouseTbl = new SHMap[Int,(String,String,String,String,String,String,Float,Double)]
 	val itemPartialTbl = new SHMap[Int,(/*Int,*/String,Float,String)]/*(1f, 262144)*/
-	val orderTbl = new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)](/*0.9f, 524288,*/ (k:(Int,Int,Int), v:(Int,Date,Option[Int],Int,Boolean)) => ((k._2, k._3, v._1)) )
+	val orderTbl:SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)] = if(testSpecialDsUsed) {
+		new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)]/*(0.9f, 524288)*/
+	} else {
+		new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)](/*0.9f, 524288,*/ (k:(Int,Int,Int), v:(Int,Date,Option[Int],Int,Boolean)) => ((k._2, k._3, v._1)) )
+	}
+	val orderMaxOrderSetImpl = new SHMap[/*(o_d_id, o_w_id, o_c_id)*/(Int,Int,Int),SortedSet[Int]]
+
 	val districtTbl = new SHMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]
 
 	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)](/*0.9f, 4194304,*/ (k:(Int,Int,Int,Int), v:(Int,Int,Option[Date],Int,Float,String)) => ((k._1, k._2, k._3)) )
@@ -33,12 +53,22 @@ class TpccTable {
 
 	val customerWarehouseFinancialInfoMap = new SHMap[(Int,Int,Int),(Float,String,String,Float)]
 
+	def testSpecialDsUsed = IN_MEMORY_IMPL_VERSION_UNDER_TEST >= 5
+
 	def onInsert_NewOrder(no_o_id:Int, no_d_id:Int, no_w_id:Int) = {
-		newOrderTbl += ((no_o_id, no_d_id, no_w_id) -> (true))
+		if(testSpecialDsUsed) {
+			newOrderSetImpl((no_d_id, no_w_id)) += no_o_id
+		} else {
+			newOrderTbl += ((no_o_id, no_d_id, no_w_id) -> (true))
+		}
 	}
 
 	def onDelete_NewOrder(no_o_id:Int, no_d_id:Int, no_w_id:Int) = {
-		newOrderTbl -= ((no_o_id, no_d_id, no_w_id))
+		if(testSpecialDsUsed) {
+			newOrderSetImpl((no_d_id, no_w_id)) -= no_o_id
+		} else {
+			newOrderTbl -= ((no_o_id, no_d_id, no_w_id))
+		}
 	}
 
 	def onInsert_HistoryTbl(h_c_id:Int, h_c_d_id:Int, h_c_w_id:Int, h_d_id:Int, h_w_id:Int, h_date:Date, h_amount:Float, h_data:String) = {
@@ -51,6 +81,9 @@ class TpccTable {
 
 	def onInsert_Order(o_id:Int, o_d_id:Int, o_w_id:Int, o_c_id:Int, o_entry_d:Date, o_carrier_id:Option[Int], o_ol_cnt:Int, o_all_local:Boolean) = {
 		orderTbl += ((o_id,o_d_id,o_w_id) -> (o_c_id,o_entry_d,o_carrier_id,o_ol_cnt,o_all_local))
+		if(testSpecialDsUsed) {
+			orderMaxOrderSetImpl((o_d_id, o_w_id,o_c_id)) += o_id
+		}
 	}
 
 	def onUpdate_Order_forDelivery(o_id:Int, o_d_id:Int, o_w_id:Int, o_c_id:Int/*, o_entry_d:Date*/, o_carrier_id:Option[Int]/*, o_ol_cnt:Int, o_all_local:Boolean*/) = {
@@ -102,6 +135,12 @@ class TpccTable {
       customerTbl += ((c_id,c_d_id,c_w_id) -> (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data))
       val (_,_,_,_,_,_,w_tax,_) = warehouseTbl(c_w_id)
       customerWarehouseFinancialInfoMap += ((c_id,c_d_id,c_w_id) -> (c_discount, c_last, c_credit, w_tax))
+
+      if(testSpecialDsUsed) {
+        for(i <- 1 to 10) {
+          orderMaxOrderSetImpl += ((i,1,c_id) -> new TreeSet[Int])
+        }
+      }
     }
 
     def onUpdateCustomer(c_id: Int, c_d_id: Int, c_w_id: Int, c_first:String, c_middle:String, c_last:String, c_street_1:String, c_street_2:String, c_city:String, c_state:String, c_zip:String, c_phone:String, c_since:Date, c_credit:String, c_credit_lim:Float, c_discount:Float, c_balance:Float, c_ytd_payment:Float, c_payment_cnt:Int, c_delivery_cnt:Int, c_data:String) = {
@@ -306,7 +345,7 @@ class TpccTable {
     	if(o.isInstanceOf[TpccTable]) {
 	    	val other = o.asInstanceOf[TpccTable]
 	    	if(
-	    		((newOrderTbl equals other.newOrderTbl) || deepEqual(newOrderTbl, other.newOrderTbl, defaultCmpSimpleVal[Boolean])) &&
+	    		( (testSpecialDsUsed && (newOrderSetImpl equals other.newOrderSetImpl)) || (!testSpecialDsUsed && ((newOrderTbl equals other.newOrderTbl) || deepEqual(newOrderTbl, other.newOrderTbl, defaultCmpSimpleVal[Boolean]))) ) &&
 				((historyTbl equals other.historyTbl) || deepEqual(historyTbl, other.historyTbl, defaultCmpSimpleVal[Boolean])) &&
 				((warehouseTbl equals other.warehouseTbl) || deepEqual(warehouseTbl, other.warehouseTbl, wareHouseCmp)) &&
 				((itemPartialTbl equals other.itemPartialTbl) || deepEqual(itemPartialTbl, other.itemPartialTbl, itemCmp)) &&
@@ -316,15 +355,32 @@ class TpccTable {
 				((customerTbl equals other.customerTbl) || deepEqual(customerTbl, other.customerTbl, customerCmp)) &&
 				((stockTbl equals other.stockTbl) || deepEqual(stockTbl, other.stockTbl, stockCmp))
 			) true else {
-				println("\n(newOrderTbl equals other.newOrderTbl) => %s".format((newOrderTbl equals other.newOrderTbl)))
-				if(!(newOrderTbl equals other.newOrderTbl) || deepEqual(newOrderTbl, other.newOrderTbl, defaultCmpSimpleVal[Boolean])) {
+				var valx = false
+				valx = (!testSpecialDsUsed && ((newOrderTbl equals other.newOrderTbl) || deepEqual(newOrderTbl, other.newOrderTbl, defaultCmpSimpleVal[Boolean])) ) || (testSpecialDsUsed && (newOrderSetImpl equals other.newOrderSetImpl))
+				println("\n(newOrderTbl equals other.newOrderTbl) => %s".format(valx))
+				if(!testSpecialDsUsed && !valx) {
 					showDiff(newOrderTbl , other.newOrderTbl, defaultCmp)
+				} else if(testSpecialDsUsed) {
+					val addedElements: SHMap[(Int,Int),SortedSet[Int]] = new SHMap[(Int,Int),SortedSet[Int]]
+			    	val removedElements: SHMap[(Int,Int),SortedSet[Int]] = new SHMap[(Int,Int),SortedSet[Int]]
+			    	other.newOrderSetImpl.foreach{ case (k,v) =>
+			    		if(!newOrderSetImpl.contains(k) || (!(newOrderSetImpl(k) equals v) && (v != newOrderSetImpl(k)))) {
+			    			addedElements += (k -> v)
+			    		}
+			    	}
+			    	newOrderSetImpl.foreach{ case (k,v) =>
+			    		if(!other.newOrderSetImpl.contains(k) || (!(other.newOrderSetImpl(k) equals v) && (v != newOrderSetImpl(k)))) {
+			    			removedElements += (k -> v)
+			    		}
+			    	}
+			    	println("added elements => %s".format(addedElements))
+			    	println("removed elements => %s".format(removedElements))
 				}
-				println("(historyTbl equals other.historyTbl) => %s".format((historyTbl equals other.historyTbl)))
-				if(!(historyTbl equals other.historyTbl) || deepEqual(historyTbl, other.historyTbl, defaultCmpSimpleVal[Boolean])) {
+				valx = (historyTbl equals other.historyTbl) || deepEqual(historyTbl, other.historyTbl, defaultCmpSimpleVal[Boolean])
+				println("(historyTbl equals other.historyTbl) => %s".format(valx))
+				if(!valx) {
 					showDiff(historyTbl , other.historyTbl, defaultCmp)
 				}
-				var valx = false
 				valx = ((warehouseTbl equals other.warehouseTbl) || deepEqual(warehouseTbl, other.warehouseTbl, wareHouseCmp))
 				println("(warehouseTbl equals other.warehouseTbl) => %s".format(valx))
 				if(!valx) {
@@ -540,42 +596,17 @@ class TpccTable {
     }
 
     def deepEqual[K,V](map1:SHMap[K,V],map2:SHMap[K,V], f:((V,V) => Boolean)):Boolean = {
-    	// println("In deep equal!!!")
-    	var equals_res = true
     	map2.foreach{ case (k,v) =>
     		if(!map1.contains(k) || (!(map1(k) equals v) && !f(v, map1(k)))) {
-    			equals_res = false
-			 	//val v2 = map1(k)
-				//println("%s <> %s".format(v,v2))
-			// v.productIterator.zipWithIndex.foreach { case (t, i) =>
-			// 		if(t.isInstanceOf[Float]) {
-			// 			if(Math.abs(t.asInstanceOf[Float] - v2.productElement(i).asInstanceOf[Float]) > 0.1) {
-			// 				println("DIFF (%s-%s) => %s",t,v2.productElement(i),Math.abs(t.asInstanceOf[Float] - v2.productElement(i).asInstanceOf[Float]) > 0.1)
-			// 				equals_res = false
-			// 			}
-			// 		} else {
-			// 			equals_res = false
-			// 		}
-			// 	}
+    			return false
      		}
     	}
     	map1.foreach{ case (k,v) =>
     		if(!map2.contains(k) || (!(map2(k) equals v) && !f(v, map2(k)))) {
-    			equals_res = false
-				//val v2 = map2(k)
-				//println("%s ## %s".format(v,v2))
-				// v.productIterator.zipWithIndex.foreach { case (t, i) =>
-				// 	if(t.isInstanceOf[Float]) {
-				// 		if(Math.abs(t.asInstanceOf[Float] - v2.productElement(i).asInstanceOf[Float]) > 0.1) {
-				// 			equals_res = false
-				// 		}
-				// 	} else {
-				// 		equals_res = false
-				// 	}
-				// }
+    			return false
     		}
     	}
-    	equals_res
+    	true
     }
 
     def showDiff[K,V](map1:SHMap[K,V],map2:SHMap[K,V], f:((Product,Product) => Boolean)) {
@@ -613,7 +644,7 @@ class TpccTable {
     // }
 
     def getAllMapsInfoStr:String = {
-	    new StringBuilder("\nTables Info:\nnewOrderTbl => ").append(newOrderTbl.getInfoStr).append("\n")
+	    new StringBuilder("\nTables Info:\nnewOrderTbl => ").append({if(testSpecialDsUsed) "---" else newOrderTbl.getInfoStr}).append("\n")
 		.append("historyTbl => ").append(historyTbl.getInfoStr).append("\n")
 		.append("warehouseTbl => ").append(warehouseTbl.getInfoStr).append("\n")
 		.append("itemPartialTbl => ").append(itemPartialTbl.getInfoStr).append("\n")

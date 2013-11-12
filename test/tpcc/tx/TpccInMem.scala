@@ -95,6 +95,12 @@ object TpccInMem {
       orderStat = new ddbt.tpcc.tx4.OrderStatus
       delivery = new ddbt.tpcc.tx4.Delivery
       slev = new ddbt.tpcc.tx4.StockLevel
+    } else if(IMPL_VERSION_UNDER_TEST == 5) {
+      newOrder = new ddbt.tpcc.tx5.NewOrder
+      payment = new ddbt.tpcc.tx5.Payment
+      orderStat = new ddbt.tpcc.tx5.OrderStatus
+      delivery = new ddbt.tpcc.tx5.Delivery
+      slev = new ddbt.tpcc.tx5.StockLevel
     } else {
       throw new RuntimeException("No in-memory implementation selected.")
     }
