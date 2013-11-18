@@ -8,46 +8,113 @@ object BinaryHeap {
 
 class BinaryHeap[T:Manifest](reverse: Boolean=false)(implicit ord1: Ordering[T]) /*extends PriorityQueue[T]*/ {
   /**
-   * Adds a value to the min-heap.
+   * Insert into the priority queue, maintaining heap order.
+   * Duplicates are allowed.
+   * @param x the item to insert.
+   * @exception Overflow if container is full.
    */
-  /*override*/ def add(value: T): Boolean = {
-    if (size >= array.length - 1) {
-      array = this.resize
+  def add(x: T) {
+    if (isFull) doubleArray
+    var hole: Int = ({
+      currentSize += 1; currentSize
+    })
+    while (hole > 1 && ord.compare(x, array(hole / 2)) < 0) {
+      array(hole) = array(hole / 2)
+      hole /= 2
     }
-    size += 1
-    val index: Int = size
-    array(index) = value
-    bubbleUp
-    return true
+    array(hole) = x
   }
 
   /**
-   * Returns true if the heap has no elements; false otherwise.
+   * Find the smallest item in the priority queue.
+   * @return the smallest item, or null, if empty.
    */
-  /*override*/ def isEmpty: Boolean = {
-    return size == 0
+  def peek: T = {
+    if (isEmpty) throw new java.util.NoSuchElementException
+    array(1)
   }
 
   /**
-   * Returns (but does not remove) the minimum element in the heap.
+   * Remove the smallest item from the priority queue.
+   * @return the smallest item, or null, if empty.
    */
-  /*override*/ def peek: T = {
-    if (this.isEmpty) {
-      throw new IllegalStateException
+  def remove: T = {
+    if (isEmpty) new java.util.NoSuchElementException
+    val minItem: T = peek
+    array(1) = array(currentSize)
+    currentSize -= 1
+    percolateDown(1)
+    return minItem
+  }
+
+  /**
+   * Establish heap order property from an arbitrary
+   * arrangement of items. Runs in linear time.
+   */
+  private def buildHeap {
+    {
+      var i: Int = currentSize / 2
+      while (i > 0) {
+        percolateDown(i)
+        i -= 1
+      }
     }
-    return array(1)
   }
 
   /**
-   * Removes and returns the minimum element in the heap.
+   * Test if the priority queue is logically empty.
+   * @return true if empty, false otherwise.
    */
-  /*override*/ def remove: T = {
-    val result: T = peek
-    array(1) = array(size)
-    array(size) = null.asInstanceOf[T]
-    size -= 1
-    bubbleDown
-    return result
+  def isEmpty: Boolean = {
+    return currentSize == 0
+  }
+
+  /**
+   * Test if the priority queue is logically full.
+   * @return true if full, false otherwise.
+   */
+  def isFull: Boolean = {
+    return currentSize == array.length - 1
+  }
+
+  /**
+   * Make the priority queue logically empty.
+   */
+  def makeEmpty {
+    currentSize = 0
+  }
+
+  /**
+   * Internal method to percolate down in the heap.
+   * @param hole the index at which the percolate begins.
+   */
+  private def percolateDown(holeInput: Int) {
+    var hole = holeInput
+    var child: Int = 0
+    val tmp: T = array(hole)
+    while (hole * 2 <= currentSize) {
+      child = hole * 2
+      if (child != currentSize && ord.compare(array(child + 1), array(child)) < 0) {
+        child += 1
+      }
+      if (ord.compare(array(child), tmp) < 0) array(hole) = array(child)
+      else { 
+        array(hole) = tmp
+        return;
+      }
+      hole = child
+    }
+    array(hole) = tmp
+  }
+
+  private def doubleArray = {
+    val tmpArray = array
+    array = new Array[T]( array.length * 2 )
+    var i = 0
+    while(i < tmpArray.length) {
+      array(i) = tmpArray(i)
+      i += 1
+    }
   }
 
   /**
@@ -56,108 +123,45 @@ class BinaryHeap[T:Manifest](reverse: Boolean=false)(implicit ord1: Ordering[T])
    */
   override def toString: String = {
     val res = new StringBuilder("(")
-    var i = 0
-    while(i < size) {
-      res.append(array(i))
-      i += 1
-      if(i < size) res.append(", ")
+    val thisArr = array.clone
+    val thisSize = currentSize
+    while(!isEmpty) {
+      res.append(remove)
+      if(!isEmpty) res.append(", ")
     }
+    array = thisArr
+    currentSize = thisSize
     res.append(")")
-    return res.toString
+    res.toString
   }
 
   override def equals(o: Any): Boolean = {
-    //if (!(o.isInstanceOf[T])) return false
-    val e: T = o.asInstanceOf[T]
-    var i = 0
-    while(i < size) {
-      if(ord.compare(array(i), e) != 0) return false
-      i+=1
+    //if (!(o.isInstanceOf[BinaryHeap[T]])) return false
+    val e: BinaryHeap[T] = o.asInstanceOf[BinaryHeap[T]]
+    if(currentSize != e.currentSize) return false
+    val eArr = e.array.clone
+    val thisArr = array.clone
+    val eSize = e.currentSize
+    val thisSize = currentSize
+    while(!isEmpty) {
+      val thisVal = remove
+      val eVal = e.remove
+      println("thisVal = %s <==> eVal = %s".format(thisVal, eVal))
+      if(ord.compare(thisVal, eVal) != 0) {
+        println("\t\tOHOHOHOHOHO!!!!")
+        e.array = eArr
+        array = thisArr
+        return false
+      }
     }
+    e.array = eArr
+    e.currentSize = eSize
+    array = thisArr
+    currentSize = thisSize
     true
   }
 
-  /**
-   * Performs the "bubble down" operation to place the element that is at the
-   * root of the heap in its correct place so that the heap maintains the
-   * min-heap order property.
-   */
-  protected def bubbleDown {
-    var index: Int = 1
-    while (hasLeftChild(index)) {
-      var smallerChild: Int = leftIndex(index)
-      if (hasRightChild(index) && ord.compare(array(leftIndex(index)), array(rightIndex(index))) > 0) {
-        smallerChild = rightIndex(index)
-      }
-      if (ord.compare(array(index), array(smallerChild)) > 0) {
-        swap(index, smallerChild)
-      }
-      else {
-        return;
-      }
-      index = smallerChild
-    }
-  }
-
-  /**
-   * Performs the "bubble up" operation to place a newly inserted element
-   * (i.e. the element that is at the size index) in its correct place so
-   * that the heap maintains the min-heap order property.
-   */
-  protected def bubbleUp {
-    var index: Int = this.size
-    while (hasParent(index) && ord.compare(parent(index), array(index)) > 0) {
-      swap(index, parentIndex(index))
-      index = parentIndex(index)
-    }
-  }
-
-  protected def hasParent(i: Int): Boolean = {
-    i > 1
-  }
-
-  protected def leftIndex(i: Int): Int = {
-    i * 2
-  }
-
-  protected def rightIndex(i: Int): Int = {
-    i * 2 + 1
-  }
-
-  protected def hasLeftChild(i: Int): Boolean = {
-    leftIndex(i) <= size
-  }
-
-  protected def hasRightChild(i: Int): Boolean = {
-    rightIndex(i) <= size
-  }
-
-  protected def parent(i: Int): T = {
-    array(parentIndex(i))
-  }
-
-  protected def parentIndex(i: Int): Int = {
-    i / 2
-  }
-
-  protected def resize: Array[T] = {
-    val tmpArr = array
-    array = new Array[T](array.length * 2)
-    var i = 0
-    while(i < size) {
-      array(i) = tmpArr(i)
-      i += 1
-    }
-    array
-  }
-
-  protected def swap(index1: Int, index2: Int) {
-    val tmp: T = array(index1)
-    array(index1) = array(index2)
-    array(index2) = tmp
-  }
-
-  protected var array: Array[T] = new Array[T](DEFAULT_CAPACITY)
-  protected var size: Int = 0
+  private var currentSize: Int = 0
+  private var array: Array[T] = new Array[T](DEFAULT_CAPACITY + 1)
   val ord: Ordering[T] = if(reverse) ord1.reverse else ord1
 }
