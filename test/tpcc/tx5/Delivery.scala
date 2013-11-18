@@ -104,7 +104,7 @@ class Delivery extends InMemoryTxImpl with IDeliveryInMem {
     def findFirstNewOrder(no_w_id_input:Int, no_d_id_input:Int):Option[Int] = {
       val noSet = SharedData.newOrderSetImpl(no_d_id_input, no_w_id_input)
       if(noSet.isEmpty) None
-      else Some(noSet.firstKey)
+      else Some(noSet.peek)
     }
 
     def deleteNewOrder(no_w_id:Int, no_d_id:Int, no_o_id:Int) = {

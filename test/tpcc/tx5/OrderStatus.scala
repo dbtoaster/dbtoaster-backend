@@ -104,7 +104,7 @@ class OrderStatus extends InMemoryTxImpl with IOrderStatusInMem {
       val oSet = SharedData.orderMaxOrderSetImpl(o_d_id_arg,o_w_id_arg, c_id_arg)
       val max_o_id = {
         if(oSet.isEmpty) -1
-        else oSet.lastKey
+        else oSet.peek
       }
 
       if(max_o_id == -1) {
