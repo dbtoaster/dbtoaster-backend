@@ -39,6 +39,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
   var ctx:Ctx[Type] = null // Context: variable->type
 
+  // Create a variable declaration
+  def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+tp.zeroScala+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+tp.toScala+"]()\n"
+
   // Generate code bottom-up using delimited CPS and a list of bound variables
   //   ex:expression to convert
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
@@ -74,11 +77,11 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val cur = ctx.save
           val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks)+","+v+");\n",tmp); ctx.load(cur)
           val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks)+","+v+");\n",tmp); ctx.load(cur)
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+s1+s2+cpsExpr(mapRef(a0,ex.tp,a.agg),co)
+          genVar(a0,ex.tp,a.agg.map(_._2))+s1+s2+cpsExpr(mapRef(a0,ex.tp,a.agg),co)
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-      if (aks.size==0) { val a0=fresh("agg"); "var "+a0+":"+ex.tp.toScala+" = "+ex.tp.zeroScala+";\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      if (aks.size==0) { val a0=fresh("agg"); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
         case Some(t) if t==aks => cpsExpr(e,co,am)
         case _ =>
@@ -122,7 +125,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   }
 
   def genMap(m:MapDef):String = {
-    if (m.keys.size==0) "var "+m.name+":"+m.tp.toScala+" = "+m.tp.zeroScala
+    if (m.keys.size==0) genVar(m.name,m.tp)
     else {
       val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())

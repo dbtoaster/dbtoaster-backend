@@ -26,7 +26,11 @@ MASTER="128.178.116.136"; WORKERS="128.178.116.160 $MASTER"
 # Examples:
 # scripts/cluster.sh pkg && scripts/cluster.sh
 # scripts/cluster.sh pkg && scripts/cluster.sh -cp target/scala-2.10/test-classes -b ddbt.test.examples.AX -samples 20
-# ping AndresMacPro.local
+
+# scripts/cluster.sh pkg && scripts/cluster.sh -cp target/scala-2.10/test-classes -b ddbt.test.gen.Axfinder -samples 20
+
+# ifconfig en0 | grep 'inet ' | cut -d ' ' -f 2
+# ping -c 1 andresmacpro.local | head -n 1 | cut -d ' ' -f 3 | sed 's/[():]//g'
 
 cd `dirname $0`; cd ..; base=`pwd`;
 pkgdir="$base/pkg"
