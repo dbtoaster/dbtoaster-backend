@@ -1,0 +1,264 @@
+> test:run-main ddbt.tpcc.tx.TpccInMem
+[info] Running ddbt.tpcc.tx.TpccInMem 
+[info] TPCC version 1.0.1 Number of Arguments: 0
+[info] 2013-11-15 15:37:09,023 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.name = Linux
+[info]  2013-11-15 15:37:09,025 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.arch = amd64
+[info]  2013-11-15 15:37:09,025 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.version = 2.6.32-358.23.2.el6.x86_64
+[info]  2013-11-15 15:37:09,025 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.runtime.name = OpenJDK Runtime Environment
+[info]  2013-11-15 15:37:09,025 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.vm.version = 24.45-b08
+[info]  2013-11-15 15:37:09,026 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.library.path = /usr/java/packages/lib/amd64:/usr/lib64:/lib64:/lib:/usr/lib
+[info]  maxMemory = 9,814f MB
+[info] Using the properties file for configuration.
+[info] 2013-11-15 15:37:09,030 INFO d.t.t.TpccInMem [main] Loading properties from: ./conf/tpcc.properties
+[info]  ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: ROOT
+[info]   [warehouse]: 1
+[info]  [connection]: 1
+[info]      [rampup]: 45 (sec.)
+[info]     [measure]: 60 (sec.)
+[info] TOTAL:232013-11-15 15:37:09,116 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-11-15 15:37:09,122 WARN d.t.l.DatabaseConnector$ [main] /home/dashti/DDBToaster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-11-15 15:37:13,823 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 30000
+[info] 	capacity => 65536
+[info] 	threshold => 49152
+[info] 	elemCount => 30000
+[info] 	maxElemsInCell => 5
+[info] 	avgElemsInCell => 0.46
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 1
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 1
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.06
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 30000
+[info] 	capacity => 65536
+[info] 	threshold => 49152
+[info] 	elemCount => 30000
+[info] 	maxElemsInCell => 5
+[info] 	avgElemsInCell => 0.46
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 10
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 10
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.63
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 300740
+[info] 	capacity => 524288
+[info] 	threshold => 393216
+[info] 	elemCount => 300740
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 30000
+[info] 	capacity => 65536
+[info] 	threshold => 49152
+[info] 	elemCount => 30000
+[info] 	maxElemsInCell => 5
+[info] 	avgElemsInCell => 0.46
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 5
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info]  2013-11-15 15:37:13,825 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-11-15 15:37:13,825 WARN d.t.l.DatabaseConnector$ [main] /home/dashti/DDBToaster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.3 seconds
+[info] Current execution time lapse: 2.3 seconds
+[info] Current execution time lapse: 3.3 seconds
+[info] Current execution time lapse: 4.3 seconds
+[info] Current execution time lapse: 5.3 seconds
+[info] Current execution time lapse: 6.3 seconds
+[info] Current execution time lapse: 7.3 seconds
+[info] Current execution time lapse: 8.3 seconds
+[info] Current execution time lapse: 9.3 seconds
+[info] Current execution time lapse: 10.7 seconds
+[info] Current execution time lapse: 11.7 seconds
+[info] Current execution time lapse: 12.7 seconds
+[info] Current execution time lapse: 13.7 seconds
+[info] Current execution time lapse: 14.7 seconds
+[info] Current execution time lapse: 16.5 seconds
+[info] Current execution time lapse: 17.5 seconds
+[info] Current execution time lapse: 18.5 seconds
+[info] Current execution time lapse: 19.5 seconds
+[info] Current execution time lapse: 20.5 seconds
+[info] Current execution time lapse: 21.5 seconds
+[info] Current execution time lapse: 22.5 seconds
+[info] Current execution time lapse: 24.0 seconds
+[info] Current execution time lapse: 25.0 seconds
+[info] Current execution time lapse: 26.0 seconds
+[info] Current execution time lapse: 27.0 seconds
+[info] Current execution time lapse: 28.0 seconds
+[info] Current execution time lapse: 30.0 seconds
+[info] Current execution time lapse: 31.0 seconds
+[info] Current execution time lapse: 32.0 seconds
+[info] Current execution time lapse: 33.0 seconds
+[info] Current execution time lapse: 34.0 seconds
+[info] Current execution time lapse: 36.3 seconds
+[info] Current execution time lapse: 37.3 seconds
+[info] Current execution time lapse: 38.3 seconds
+[info] Current execution time lapse: 39.3 seconds
+[info] Current execution time lapse: 40.3 seconds
+[info] Current execution time lapse: 42.3 seconds
+[info] Current execution time lapse: 43.3 seconds
+[info] Current execution time lapse: 44.3 seconds
+[info] Current execution time lapse: 45.3 seconds
+[info] Current execution time lapse: 46.3 seconds
+[info] Current execution time lapse: 47.7 seconds
+[info] Current execution time lapse: 48.7 seconds
+[info] Current execution time lapse: 49.7 seconds
+[info] Current execution time lapse: 50.7 seconds
+[info] Current execution time lapse: 51.7 seconds
+[info] Current execution time lapse: 52.8 seconds
+[info] Current execution time lapse: 53.8 seconds
+[info] Current execution time lapse: 54.8 seconds
+[info] Current execution time lapse: 55.8 seconds
+[info] Current execution time lapse: 56.8 seconds
+[info] Current execution time lapse: 57.9 seconds
+[info] Current execution time lapse: 58.9 seconds
+[info] Current execution time lapse: 59.9 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:1166102  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:1166108  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:116611  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:116611  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:116611  lt:0  rt:0  fl:0 
+[info]  in 60.903999 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:1166157  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:1166153  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:116615  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:116615  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:116616  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.478275% (>=43.0%) [OK]
+[info]    Order-Status: 4.347854% (>= 4.0%) [OK]
+[info]        Delivery: 4.347854% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.347891% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 1166226
+[info]  Payment Total: 1166227
+[info]  Order Stat Total: 116623
+[info]  Delivery Total: 116623
+[info]  Slev Total: 116623
+[info] 
+[info] <TpmC>
+[info] 1148923.5 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-11-15 15:39:00,874 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 2014287
+[info] 	capacity => 4194304
+[info] 	threshold => 3145728
+[info] 	elemCount => 2014288
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 1
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 1
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.06
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 1995443
+[info] 	capacity => 4194304
+[info] 	threshold => 3145728
+[info] 	elemCount => 1995443
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 10
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 10
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.63
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 19951144
+[info] 	capacity => 33554432
+[info] 	threshold => 25165824
+[info] 	elemCount => 19951144
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.59
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 30000
+[info] 	capacity => 65536
+[info] 	threshold => 49152
+[info] 	elemCount => 30000
+[info] 	maxElemsInCell => 5
+[info] 	avgElemsInCell => 0.46
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 5
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info]  Terminating process now
+[success] Total time: 113 s, completed Nov 15, 2013 3:39:00 PM

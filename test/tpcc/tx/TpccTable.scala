@@ -9,8 +9,8 @@ import ddbt.tpcc.loadtest.Util._
 import ddbt.tpcc.loadtest.DatabaseConnector._
 import ddbt.tpcc.lib.SHMap
 import ddbt.tpcc.lib.SEntry
-import scala.collection.mutable.SortedSet
-import scala.collection.mutable.TreeSet
+import ddbt.tpcc.lib.SHMapPooled
+import ddbt.tpcc.lib.BinaryHeap
 import ddbt.tpcc.loadtest.TpccConstants._
 
 /**
@@ -23,66 +23,111 @@ class TpccTable {
 	//Delivery: RW
 
 	val newOrderTbl:SHMap[(Int,Int,Int),Boolean] = if(testSpecialDsUsed) {
-		new SHMap[(Int,Int,Int),Boolean]/*(0.9f, 32768)*/
+		null.asInstanceOf[SHMap[(Int,Int,Int),Boolean]]
 	} else {
-		new SHMap[(Int,Int,Int),Boolean](/*0.9f, 32768, */(k:(Int,Int,Int),v:Boolean) => ((k._2, k._3)) )
+		new SHMap[(Int,Int,Int),Boolean](0.9f, 262144, (k:(Int,Int,Int),v:Boolean) => ((k._2, k._3)) )
 	}
-	val newOrderSetImpl = new SHMap[/*(no_d_id, no_w_id)*/(Int,Int),SortedSet[Int]]
+	val newOrderSetImpl:SHMap[(Int,Int),BinaryHeap[Int]] = if(testSpecialDsUsed) {
+		new SHMapPooled[/*(no_d_id, no_w_id)*/(Int,Int),BinaryHeap[Int]](0.9f, 32)
+	} else {
+		null.asInstanceOf[SHMap[(Int,Int),BinaryHeap[Int]]]
+	}
 	if(testSpecialDsUsed) {
 		for(i <- 1 to 10) {
-			newOrderSetImpl += ((i,1) -> new TreeSet[Int])
+			newOrderSetImpl += ((i,1), new BinaryHeap[Int])
 		}
 	}
 
-	val historyTbl = new SHMap[(Int,Int,Int,Int,Int,Date,Float,String),Boolean]/*(0.9f, 524288)*/
-
-	val warehouseTbl = new SHMap[Int,(String,String,String,String,String,String,Float,Double)]
-	val itemPartialTbl = new SHMap[Int,(/*Int,*/String,Float,String)]/*(1f, 262144)*/
-	val orderTbl:SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)] = if(testSpecialDsUsed) {
-		new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)]/*(0.9f, 524288)*/
+	val historyTbl:SHMap[(Int,Int,Int,Int,Int,Date,Float,String),Boolean] = if(testSpecialDsUsed) {
+		new SHMapPooled[(Int,Int,Int,Int,Int,Date,Float,String),Boolean](0.9f, 4194304)
 	} else {
-		new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)](/*0.9f, 524288,*/ (k:(Int,Int,Int), v:(Int,Date,Option[Int],Int,Boolean)) => ((k._2, k._3, v._1)) )
+		new SHMap[(Int,Int,Int,Int,Int,Date,Float,String),Boolean]/*(0.9f, 4194304)*/
 	}
-	val orderMaxOrderSetImpl = new SHMap[/*(o_d_id, o_w_id, o_c_id)*/(Int,Int,Int),SortedSet[Int]]
 
-	val districtTbl = new SHMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]
+	val warehouseTbl:SHMap[Int,(String,String,String,String,String,String,Float,Double)] = if(testSpecialDsUsed) {
+		new SHMapPooled[Int,(String,String,String,String,String,String,Float,Double)]
+	} else {
+		new SHMap[Int,(String,String,String,String,String,String,Float,Double)]
+	}
 
-	val orderLineTbl = new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)](/*0.9f, 4194304,*/ (k:(Int,Int,Int,Int), v:(Int,Int,Option[Date],Int,Float,String)) => ((k._1, k._2, k._3)) )
-	val customerTbl = new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] (/*1f, 65536,*/ (k:(Int,Int,Int), v:(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)) => ((k._2, k._3, v._3)) )
-	val stockTbl = new SHMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]/*(1f, 262144)*/
+	val itemPartialTbl:SHMap[Int,(/*Int,*/String,Float,String)] = if(testSpecialDsUsed) {
+		new SHMapPooled[Int,(/*Int,*/String,Float,String)](1f, 262144)
+	} else {
+		new SHMap[Int,(/*Int,*/String,Float,String)]/*(1f, 262144)*/
+	}
 
-	val customerWarehouseFinancialInfoMap = new SHMap[(Int,Int,Int),(Float,String,String,Float)]
+	val orderTbl:SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)] = if(testSpecialDsUsed) {
+		new SHMapPooled[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)](0.9f, 4194304)
+	} else {
+		new SHMap[(Int,Int,Int),(Int,Date,Option[Int],Int,Boolean)](/*0.9f, 4194304,*/ (k:(Int,Int,Int), v:(Int,Date,Option[Int],Int,Boolean)) => ((k._2, k._3, v._1)) )
+	}
+
+	val orderMaxOrderSetImpl:SHMap[/*(o_d_id, o_w_id, o_c_id)*/(Int,Int,Int),BinaryHeap[Int]] = if(testSpecialDsUsed) {
+		new SHMapPooled[/*(o_d_id, o_w_id, o_c_id)*/(Int,Int,Int),BinaryHeap[Int]](0.9f, 65536)
+	} else {
+		new SHMap[/*(o_d_id, o_w_id, o_c_id)*/(Int,Int,Int),BinaryHeap[Int]]/*(0.9f, 65536)*/
+	}
+
+	val districtTbl:SHMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)] = if(testSpecialDsUsed) {
+		new SHMapPooled[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)](1f, 32)
+	} else {
+		new SHMap[(Int,Int),(String,String,String,String,String,String,Float,Double,Int)]/*(1f, 32)*/
+	}
+
+	val orderLineTbl:SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)] = if(testSpecialDsUsed) {
+		new SHMapPooled[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)](0.9f, 33554432, List((0.9f, 4194304)), (k:(Int,Int,Int,Int), v:(Int,Int,Option[Date],Int,Float,String)) => ((k._1, k._2, k._3)) )
+	} else {
+		new SHMap[(Int,Int,Int,Int),(Int,Int,Option[Date],Int,Float,String)](/*0.9f, 33554432, List((0.9f, 4194304)),*/ (k:(Int,Int,Int,Int), v:(Int,Int,Option[Date],Int,Float,String)) => ((k._1, k._2, k._3)) )
+	}
+	val customerTbl:SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] = if(testSpecialDsUsed) {
+		new SHMapPooled[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] (/*1f, 65536, List((1f, 16384)),*/ (k:(Int,Int,Int), v:(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)) => ((k._2, k._3, v._3)) )
+	} else {
+		new SHMap[(Int,Int,Int),(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)] (/*1f, 65536, List((1f, 16384)),*/ (k:(Int,Int,Int), v:(String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String)) => ((k._2, k._3, v._3)) )
+	}
+	val stockTbl:SHMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)] = if(testSpecialDsUsed) {
+		new SHMapPooled[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)](1f, 262144)
+	} else {
+		new SHMap[(Int,Int),(Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String)]/*(1f, 262144)*/
+	}
+
+	val customerWarehouseFinancialInfoMap:SHMap[(Int,Int,Int),(Float,String,String,Float)] = if(testSpecialDsUsed) {
+		new SHMapPooled[(Int,Int,Int),(Float,String,String,Float)](1f, 65536)
+	} else {
+		new SHMap[(Int,Int,Int),(Float,String,String,Float)]/*(1f, 65536)*/
+	}
 
 	def testSpecialDsUsed = IN_MEMORY_IMPL_VERSION_UNDER_TEST >= 5
 
 	def onInsert_NewOrder(no_o_id:Int, no_d_id:Int, no_w_id:Int) = {
 		if(testSpecialDsUsed) {
-			newOrderSetImpl((no_d_id, no_w_id)) += no_o_id
+			newOrderSetImpl((no_d_id, no_w_id)).add(no_o_id)
 		} else {
-			newOrderTbl += ((no_o_id, no_d_id, no_w_id) -> (true))
+			newOrderTbl += ((no_o_id, no_d_id, no_w_id), (true))
 		}
 	}
 
 	def onDelete_NewOrder(no_o_id:Int, no_d_id:Int, no_w_id:Int) = {
 		if(testSpecialDsUsed) {
-			newOrderSetImpl((no_d_id, no_w_id)) -= no_o_id
+			if(newOrderSetImpl((no_d_id, no_w_id)).remove != no_o_id) {
+				throw new RuntimeException("Some operations executed out of order => newOrderSetImpl((%d,%d)).remove != %d".format(no_d_id, no_w_id, no_o_id))
+			}
 		} else {
 			newOrderTbl -= ((no_o_id, no_d_id, no_w_id))
 		}
 	}
 
 	def onInsert_HistoryTbl(h_c_id:Int, h_c_d_id:Int, h_c_w_id:Int, h_d_id:Int, h_w_id:Int, h_date:Date, h_amount:Float, h_data:String) = {
-		historyTbl += ((h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,roundDate(h_date),h_amount,h_data) -> (true))
+		historyTbl += ((h_c_id,h_c_d_id,h_c_w_id,h_d_id,h_w_id,roundDate(h_date),h_amount,h_data), (true))
 	}
 
 	def onInsert_Item(i_id:Int, i_im_id:Int, i_name:String, i_price:Float, i_data:String) = {
-		itemPartialTbl += (i_id -> ((/*i_im_id,*/i_name,i_price,i_data)))
+		itemPartialTbl += (i_id, ((/*i_im_id,*/i_name,i_price,i_data)))
 	}
 
 	def onInsert_Order(o_id:Int, o_d_id:Int, o_w_id:Int, o_c_id:Int, o_entry_d:Date, o_carrier_id:Option[Int], o_ol_cnt:Int, o_all_local:Boolean) = {
-		orderTbl += ((o_id,o_d_id,o_w_id) -> (o_c_id,o_entry_d,o_carrier_id,o_ol_cnt,o_all_local))
+		orderTbl += ((o_id,o_d_id,o_w_id), (o_c_id,o_entry_d,o_carrier_id,o_ol_cnt,o_all_local))
 		if(testSpecialDsUsed) {
-			orderMaxOrderSetImpl((o_d_id, o_w_id,o_c_id)) += o_id
+			orderMaxOrderSetImpl((o_d_id, o_w_id,o_c_id)).add(o_id)
 		}
 	}
 
@@ -95,7 +140,7 @@ class TpccTable {
 	}
 
 	def onInsert_Warehouse(w_id:Int, w_name:String, w_street_1:String, w_street_2:String, w_city:String, w_state:String, w_zip:String, w_tax:Float, w_ytd:Double) = {
-		warehouseTbl += (w_id -> (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd))
+		warehouseTbl += (w_id, (w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd))
 	}
 
 	def onUpdate_Warehouse(w_id:Int, w_name:String, w_street_1:String, w_street_2:String, w_city:String, w_state:String, w_zip:String, w_tax:Float, w_ytd:Double) = {
@@ -107,7 +152,7 @@ class TpccTable {
 	}
 
 	def onInsert_District(d_id:Int, d_w_id:Int, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String, d_tax:Float, d_ytd:Double, d_next_o_id:Int) = {
-		districtTbl += ((d_id,d_w_id) -> (d_name,d_street1,d_street2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id))
+		districtTbl += ((d_id,d_w_id), (d_name,d_street1,d_street2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id))
 	}
 
 	def onUpdate_District(d_id:Int, d_w_id:Int, d_name:String, d_street1:String, d_street2:String, d_city:String, d_state:String, d_zip:String, d_tax:Float, d_ytd:Double, d_next_o_id:Int) = {
@@ -124,7 +169,7 @@ class TpccTable {
 	}
 
 	def onInsertOrderLine(ol_o_id:Int, ol_d_id:Int, ol_w_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_delivery_d:Option[Date], ol_quantity:Int, ol_amount:Float, ol_dist_info:String): Unit = {
-      orderLineTbl += ((ol_o_id, ol_d_id, ol_w_id, ol_number) -> (ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info))
+      orderLineTbl += ((ol_o_id, ol_d_id, ol_w_id, ol_number), (ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info))
     }
 
 	def onUpdateOrderLine(ol_o_id:Int, ol_d_id:Int, ol_w_id:Int, ol_number:Int, ol_i_id:Int, ol_supply_w_id:Int, ol_delivery_d:Option[Date], ol_quantity:Int, ol_amount:Float, ol_dist_info:String): Unit = {
@@ -132,13 +177,13 @@ class TpccTable {
     }
 
     def onInsertCustomer(c_id: Int, c_d_id: Int, c_w_id: Int, c_first:String, c_middle:String, c_last:String, c_street_1:String, c_street_2:String, c_city:String, c_state:String, c_zip:String, c_phone:String, c_since:Date, c_credit:String, c_credit_lim:Float, c_discount:Float, c_balance:Float, c_ytd_payment:Float, c_payment_cnt:Int, c_delivery_cnt:Int, c_data:String) = {
-      customerTbl += ((c_id,c_d_id,c_w_id) -> (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data))
+      customerTbl += ((c_id,c_d_id,c_w_id), (c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data))
       val (_,_,_,_,_,_,w_tax,_) = warehouseTbl(c_w_id)
-      customerWarehouseFinancialInfoMap += ((c_id,c_d_id,c_w_id) -> (c_discount, c_last, c_credit, w_tax))
+      customerWarehouseFinancialInfoMap += ((c_id,c_d_id,c_w_id), (c_discount, c_last, c_credit, w_tax))
 
       if(testSpecialDsUsed) {
         for(i <- 1 to 10) {
-          orderMaxOrderSetImpl += ((i,1,c_id) -> new TreeSet[Int])
+          orderMaxOrderSetImpl += ((i,1,c_id), new BinaryHeap[Int](true))
         }
       }
     }
@@ -152,7 +197,7 @@ class TpccTable {
     }
 
     def onInsertStock(s_i_id:Int, s_w_id:Int, s_quantity:Int, s_dist_01:String, s_dist_02:String, s_dist_03:String, s_dist_04:String, s_dist_05:String, s_dist_06:String, s_dist_07:String, s_dist_08:String, s_dist_09:String, s_dist_10:String, s_ytd:Int, s_order_cnt:Int, s_remote_cnt:Int, s_data:String) = {
-      stockTbl += ((s_i_id,s_w_id) -> (s_quantity, s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data))
+      stockTbl += ((s_i_id,s_w_id), (s_quantity, s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data))
     }
 
     def onUpdateStock(s_i_id:Int, s_w_id:Int, s_quantity:Int, s_dist_01:String, s_dist_02:String, s_dist_03:String, s_dist_04:String, s_dist_05:String, s_dist_06:String, s_dist_07:String, s_dist_08:String, s_dist_09:String, s_dist_10:String, s_ytd:Int, s_order_cnt:Int, s_remote_cnt:Int, s_data:String) = {
@@ -361,16 +406,16 @@ class TpccTable {
 				if(!testSpecialDsUsed && !valx) {
 					showDiff(newOrderTbl , other.newOrderTbl, defaultCmp)
 				} else if(testSpecialDsUsed) {
-					val addedElements: SHMap[(Int,Int),SortedSet[Int]] = new SHMap[(Int,Int),SortedSet[Int]]
-			    	val removedElements: SHMap[(Int,Int),SortedSet[Int]] = new SHMap[(Int,Int),SortedSet[Int]]
+					val addedElements: SHMap[(Int,Int),BinaryHeap[Int]] = new SHMap[(Int,Int),BinaryHeap[Int]]
+			    	val removedElements: SHMap[(Int,Int),BinaryHeap[Int]] = new SHMap[(Int,Int),BinaryHeap[Int]]
 			    	other.newOrderSetImpl.foreach{ case (k,v) =>
 			    		if(!newOrderSetImpl.contains(k) || (!(newOrderSetImpl(k) equals v) && (v != newOrderSetImpl(k)))) {
-			    			addedElements += (k -> v)
+			    			addedElements += (k, v)
 			    		}
 			    	}
 			    	newOrderSetImpl.foreach{ case (k,v) =>
 			    		if(!other.newOrderSetImpl.contains(k) || (!(other.newOrderSetImpl(k) equals v) && (v != newOrderSetImpl(k)))) {
-			    			removedElements += (k -> v)
+			    			removedElements += (k, v)
 			    		}
 			    	}
 			    	println("added elements => %s".format(addedElements))
@@ -614,12 +659,12 @@ class TpccTable {
     	val removedElements: SHMap[K,V] = new SHMap[K,V]
     	map2.foreach{ case (k,v) =>
     		if(!map1.contains(k) || (!(map1(k) equals v) && !f(v.asInstanceOf[Product], map1(k).asInstanceOf[Product]))) {
-    			addedElements += (k -> v)
+    			addedElements += (k, v)
     		}
     	}
     	map1.foreach{ case (k,v) =>
     		if(!map2.contains(k) || (!(map2(k) equals v) && !f(v.asInstanceOf[Product], map2(k).asInstanceOf[Product]))) {
-    			removedElements += (k -> v)
+    			removedElements += (k, v)
     		}
     	}
     	println("added elements => %s".format(addedElements))
@@ -645,10 +690,12 @@ class TpccTable {
 
     def getAllMapsInfoStr:String = {
 	    new StringBuilder("\nTables Info:\nnewOrderTbl => ").append({if(testSpecialDsUsed) "---" else newOrderTbl.getInfoStr}).append("\n")
+		.append("newOrderSetImpl => ").append(if(testSpecialDsUsed) newOrderSetImpl.getInfoStr else "---").append("\n")
 		.append("historyTbl => ").append(historyTbl.getInfoStr).append("\n")
 		.append("warehouseTbl => ").append(warehouseTbl.getInfoStr).append("\n")
 		.append("itemPartialTbl => ").append(itemPartialTbl.getInfoStr).append("\n")
 		.append("orderTbl => ").append(orderTbl.getInfoStr).append("\n")
+		.append("orderMaxOrderSetImpl => ").append(if(testSpecialDsUsed) orderMaxOrderSetImpl.getInfoStr else "---").append("\n")
 		.append("districtTbl => ").append(districtTbl.getInfoStr).append("\n")
 		.append("orderLineTbl => ").append(orderLineTbl.getInfoStr).append("\n")
 		.append("customerTbl => ").append(customerTbl.getInfoStr).append("\n")
