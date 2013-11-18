@@ -86,7 +86,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     ("case (`"+fn+"`,List("+rc.map(v=>v+":"+c(v).toScala).mkString(",")+")) =>\n"+ind(body),rc)
   }
 
-  def genVar(n:String,tp:Type,ks:List[Type]=Nil) = "var "+n+(if (ks==Nil) ":"+tp.toScala+" = "+tp.zeroScala else ":M3Map["+tup(ks.map(_.toScala))+","+tp.toScala+"] = null")+"\n"
+  override def genVar(n:String,tp:Type,ks:List[Type]=Nil) = "var "+n+(if (ks==Nil) ":"+tp.toScala+" = "+tp.zeroScala else ":M3Map["+tup(ks.map(_.toScala))+","+tp.toScala+"] = null")+"\n"
 
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(n); super.cpsExpr(ex,co,am) // 'inuse' maintenance
