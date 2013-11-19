@@ -19,7 +19,7 @@ object Compiler {
   var depth: Int = -1            // incrementalization depth (-1=infinite)
   var flags: List[String] = Nil  // front-end flags
   var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
-  var tqev : Boolean = false     // traditional (on demand) query evaluation (implies depth=0)
+  var ni   : Boolean = false     // non-incremental query evaluation (implies depth=0)
   var inl  : Int = 0             // inlining level, in range [0-10]
   // Execution
   var exec    : Boolean = false  // compile and execute immediately
@@ -50,7 +50,7 @@ object Compiler {
         case "-d" => eat(s=>depth=s.toInt)
         case "-F" => eat(s=>flags=s::flags)
         case "-inl" => eat(s=>inl = if (s=="spec") 5 else if (s=="full") 10 else try { math.min(10,math.max(0,s.toInt)) } catch { case _:Throwable => 0 })
-        case "-tqev" => tqev=true; depth=0; flags=Nil
+        case "-ni" => ni=true; depth=0; flags=Nil
         case "-x" => exec = true
         case "-xd" => eat(s=>exec_dir=s)
         case "-xa" => eat(s=>exec_args=exec_args:::List(s))
@@ -77,7 +77,7 @@ object Compiler {
       error("  -d <depth>    incrementalization depth (default: infinite)")
       error("  -O[123]       optimization level for M3 (default: -O2)")
       error("  -F <flag>     set a front-end optimization flag")
-      error("  -tqev         traditional (on demand) query evaluation")
+      error("  -ni           non-incremental (on-demand) query evaluation")
       error("Code generation options:")
       error("  -n <name>     name of internal structures (default: Query)")
       error("  -L            libraries for target language")
@@ -115,8 +115,8 @@ object Compiler {
       case "lms" => new LMSGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }
-    // ---- TQEV START
-    if (tqev) { import ddbt.ast._; import M3._
+    // ---- NON-INCREMENTAL START
+    if (ni) { import ddbt.ast._; import M3._
       val (qns,qss) = (m3.queries.map{q=>q.map.name},scala.collection.mutable.HashMap[String,Stmt]())
       val triggers=m3.triggers.map(t=>Trigger(t.evt,t.stmts.filter {
         case s@StmtMap(m,e,op,i) => if (qns.contains(m.name)) { qss += ((m.name,s)); false } else true
@@ -124,9 +124,9 @@ object Compiler {
       }))
       val r = cg.helper(m3,pkg)+cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__execute__",Nil)), qss.map(_._2).toList)::triggers))
       // XXX: improve this RegExp
-      output(r.replaceAll("GetSnapshot\\(_\\) => ","GetSnapshot(_) => onAdd__execute__(); ")) // Scala transforms
+      output(r.replaceAll("GetSnapshot\\(_\\) => ","GetSnapshot(_) => onAdd__execute__(); ").replaceAll("onAdd__execute__","onExecute")) // Scala transforms
     } else
-    // ---- TQEV ENDS
+    // ---- NON-INCREMENTAL ENDS
     output(cg.helper(m3,pkg)+cg(m3))
     val t1=System.nanoTime
     if (post_gen!=null) post_gen(m3)

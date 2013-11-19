@@ -32,6 +32,20 @@ import ddbt.ast._
  */
 
 /*
+Roadmap:
+---------------------------------
+1. Re-introduce dependencies trackers (inlined in functions)
+2. Add a 'pending local dependencies' counter on every node (similar to get/aggr):
+   + Incremented when a (remote) continuation is created
+   + Decremented when a remote continuation has completed
+   + The barrier will wait for it
+3. Sub-statement parallelism (lift/aggregation/get/add branches)
+   + Annotate all candidates blocks with (read+written) variables + isRemote => dependency graph
+   + Group all independent blocks (remote and local) in 1st round
+   + In 2nd round, all non-remote depending on 1st + all block dependents on 1st + 2nd-non-remote
+   + ...
+   + finally when completed, release the barrier
+
 Issues to solve:
 - move lazy map slicing into the TypeChecking ?
 - move tests (TestUnit) AST into its own ddbt.ast package ?
@@ -65,6 +79,24 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val b=cl_ctr; cl_ctr=0; val s=f(); val n=cl_ctr; cl_ctr=b;
     if (n>0) s+(0 until n).map(x=>"})").mkString(" ")+"\n" else s
   }
+
+  // XXX: dependency tracking
+  /*
+  case class Dep(var co:String=>String, co_end:String, parent:Dep=null) extends (String=>String) {
+    private var en = false // remote dependency tracking enabled
+    private lazy val name = fresh("dep")
+    // introduce an operation that create a dependency (hole at completion)
+    def op(f:String=>String):String = { en=true; name+"c += 1\n"+f(name+"c -=1; if ("+name+"c==0) "+name+"\n") }
+    // apply the continuation (wrapping if dependencies)
+    def apply(v:String) = if (en) "def "+name+" {\n"+ind(co(v)+co_end)+"\n}\n" else co(v)+co_end
+    //XXX: support parent: def apply(s:String):String = { val c=co(s); if (en) { if (parent!=null) parent.op((x:String)=>name+"(()=>{\n"+ind(c+x)+"\n})\n") else name+"(()=>{\n"+ind(c)+"\n})\n" } else c }
+
+    // wrap to create declarations ahead of dependencies
+    def wrap(f:()=>String) = { val r=f(); if (en) "var "+name+"c = 1\n"+r+name+"\n" else r }
+    // put a wrapper around the inner continuation [use:foreach]
+    def in(f:(String=>String)=>(String=>String)) { val co0=co; co=f(co0) }
+  }
+  */
 
   // XXX: context is incomplete
   override def rn(n:String):String = try { ctx(n)._2 } catch { case _:Throwable => n } // get unique name (avoids nesting Lifts)
@@ -108,6 +140,9 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     cl_add(1); "aggr("+ref(m)+","+fn+",Array[Any]("+rc.map(rn).mkString(",")+"),"+(if (add) a0+",(_" else acc+",("+a0)+":"+rt+") => {\n"
   }
 
+  // local accumulator to handle aggregation in nested (remote) loops
+  var localAcc : (String,Type,List[Type]) = null
+
   // XXX: distinguish between forced sequentiality (master and in aggregation/sum) and parallel execution(pure foreach)
   // XXX: make both parts of an Add work in parallel
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
@@ -140,9 +175,11 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         val (body0,rc)=remote(n,fn0,()=>close(()=>cpsExpr(ex,co)+"co()"))
         val (fn,body) = forl.getOrElseUpdate((n,anon(ex),rc),(fn0,body0))
         // local handler
+        (if (localAcc!=null) "// XXX:localAcc = "+localAcc+"\n" else "")+ // XXX: handle nested loop with dependency tracking
         "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
       }
     case a@AggSum(ks,e) => val m=fmap(e); val cur=ctx.save; inuse.add(ks.toSet);
+      // XXX: introduce nested loops aggregation in localAcc
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (m==null || local(m)) {
         if (aks.size==0) { val a0=fresh("agg"); inuse.add(a0); ctx.add(a0,(e.tp,a0)); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) } // context/use mainenance
@@ -156,7 +193,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         case Some(t) if t==a.agg => val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ => val a0=fresh("add")
           def add(e:Expr):String = { val m=fmap(e)
-            val r = if (m!=null) remote_agg(a0,m,a.agg,e,true) else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
+            val r = if (m!=null) { localAcc = (a0,e.tp,a.agg.map(_._2)); val r=remote_agg(a0,m,a.agg,e,true); localAcc=null; r }
+                    else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
           }
           "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ local_r=a0; cpsExpr(mapRef(a0,ex.tp,a.agg),co) }
       }
