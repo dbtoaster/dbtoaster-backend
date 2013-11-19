@@ -42,11 +42,9 @@ XXX: for union, instead of shipping both maps to 3rd party, why not ship one to 
 XXX: for union, instead of shipping both maps to 3rd party, why not ship one to another and make union there ? (would increase locality)
 */
 
-// Failing   : rs_columnmapping_1, rs_columnmapping_2, tpch/query(9|10)
-// No compile: -qx mddb/* -qx tpch/query(2|18|21) -qx zeus/(48183500|52548748)
-//             -qx (invalid_schema_fn|r_multinest|rs_columnmapping3|rs_ineqwithnestedagg|pricespread)
-
-// Fixed     : -qx employee/query(61|63a|64a|65a) -qx zeus/(11564068|96434723) -qx (inequality_selfjoin|r_agtb|ss_math)
+// No compile: -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx (invalid_schema_fn|r_multinest|rs_ineqwithnestedagg)
+// Failing   : rs_column_mapping_(1|2), tpch/query(9|10|18)
+// Correct   : 169
 
 // TODO: re-introduce intra-statement parallelization with library-level support for pending continuations (in barrier) to guarantee correctness
 
@@ -70,7 +68,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   // XXX: context is incomplete
   override def rn(n:String):String = try { ctx(n)._2 } catch { case _:Throwable => n } // get unique name (avoids nesting Lifts)
-
 
   // Remote functions as (map,expression,context) => (func_name,body)
   private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
@@ -116,23 +113,25 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
-                      else { ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L")) }
+                      else { val s=ctx.save; ctx.add(n,(e.tp,fresh("l"))); val r=cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L")); ctx.load(s); r }
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)};
       if (local(n) || n==local_r || !ref.contains(n)) { if (n==local_r) local_r=null;
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
         if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks map rn)+")" else "")) // all keys are bound
         else { val (k0,v0)=(fresh("k"),fresh("v")); var async=false
+          val s=ctx.save
           inuse.add(ko.map(_._1).toSet); ctx.add(v0,(ex.tp,v0)); inuse.add(Set(v0));
           val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else ""
           ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
           val co1=close(()=>{ val r=co(v0); if (cl_ctr>0) { async=true; n+"_c.i\n"+r+n+"_c.d\n" } else r })
-          (if (async) "val "+n+"_c = Acc()\n" else "")+
+          val r = (if (async) "val "+n+"_c = Acc()\n" else "")+
           n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
             ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co1)+"\n}\n"+ // bind free variables from retrieved key
             (if (async) { cl_add(1); n+"_c(() => {\n" } else "")
+          ctx.load(s)
+          r
         }
-      }
-      else if (ki.size==0) {
+      } else if (ki.size==0) {
         val v=fresh("v"); cl_add(1); inuse.add(ks.toSet); ctx.add(v,(ex.tp,v)); inuse.add(Set(v));
         "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks map rn) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v)
       } else {

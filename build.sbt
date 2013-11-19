@@ -51,7 +51,7 @@ addCommandAlias("queries", ";run-main ddbt.UnitTest -dd -qskip;test-only ddbt.te
 addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dd -qskip -m lms;test-only ddbt.test.gen.*")
 
 //addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -qskip -m akka;test-only ddbt.test.gen.*")
-addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -qskip -m akka -qx employee/query(61|63a|64a|65a) -qx mddb/.* -qx tpch/query(2|18|21) -qx zeus/(11564068|48183500|52548748|96434723) -qx (inequality_selfjoin|invalid_schema_fn|r_agtb|r_multinest|rs_column_mapping_3|rs_ineqwithnestedagg|ss_math|pricespread);test-only ddbt.test.gen.*")
+addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -qskip -m akka -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx (invalid_schema_fn|r_multinest|rs_ineqwithnestedagg);test-only ddbt.test.gen.*")
 
 addCommandAlias("bench", ";test:run-main ddbt.UnitTest -qskip -csv bench.csv -m ") // usage: sbt 'bench lms'
 
