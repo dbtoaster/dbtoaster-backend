@@ -63,7 +63,7 @@ class NewOrder extends InMemoryTxImpl with INewOrderInMem {
           iname(ol_number) = i_name
           idata(ol_number) = i_data
         } catch {
-          case nsee: java.util.NoSuchElementException => {
+          case nsee: Exception => {
             if(SHOW_OUTPUT) logger.info("An item was not found in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d, items=%s".format(w_id,d_id,c_id, java.util.Arrays.toString(itemid)))
             failed = true
           }
@@ -189,7 +189,7 @@ class NewOrder extends InMemoryTxImpl with INewOrderInMem {
      * @param item_id is the item id
      */
     def findItem(item_id:Int) = {
-      SharedData.itemPartialTbl(item_id)
+      SharedData.itemPartialArr(item_id)
     }
 
     /**

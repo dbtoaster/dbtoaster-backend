@@ -1,6 +1,7 @@
 package ddbt.tpcc.lib
 
 import SHMap._
+import ddbt.Utils.ind
 
 /**
  * Super Hash Map
@@ -44,14 +45,13 @@ object SHMap {
    * The load factor used when none specified in constructor.
    */
   final val DEFAULT_LOAD_FACTOR: Float = 0.75f
-
-  /**
-   * Default value for inner SHMap in SHSet
-   */
-  val DEFAULT_PRESENT_VALUE: Boolean = true
 }
 
-class SEntry[K,V](final val hash: Int, final val key: K, var value: V, var next: SEntry[K, V]) {
+class SEntry[K,V](var hash: Int, var key: K, var value: V, var next: SEntry[K, V]) { self =>
+
+  def this() {
+    this(0,null.asInstanceOf[K],null.asInstanceOf[V],null.asInstanceOf[SEntry[K, V]])
+  }
 
   def getKey: K = {
     return key
@@ -65,6 +65,14 @@ class SEntry[K,V](final val hash: Int, final val key: K, var value: V, var next:
     val oldValue: V = value
     value = newValue
     return oldValue
+  }
+
+  def setAll(h: Int, k: K, v: V, n: SEntry[K, V]):SEntry[K, V] = {
+    hash = h
+    key = k
+    value = v
+    next = n
+    self
   }
 
   override def equals(o: Any): Boolean = {
@@ -87,7 +95,7 @@ class SEntry[K,V](final val hash: Int, final val key: K, var value: V, var next:
   }
 }
 
-class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]) {
+class SHMap[K,V](initialCapacity: Int, val loadFactor: Float, lfInitIndex: List[(Float,Int)], projs:Seq[(K,V)=>_]) {
   /**
    * Constructs an empty <tt>SHMap</tt> with the specified initial
    * capacity and load factor.
@@ -123,16 +131,20 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]
   //   this(initialCapacity, DEFAULT_LOAD_FACTOR)
   // }
 
+  def this(loadFactor: Float, initialCapacity: Int, lfInitIndex: List[(Float,Int)], projs:(K,V)=>_ *) {
+    this(initialCapacity, loadFactor, lfInitIndex, projs)
+  }
+
   def this(loadFactor: Float, initialCapacity: Int, projs:(K,V)=>_ *) {
-    this(initialCapacity, loadFactor, projs)
+    this(initialCapacity, loadFactor, projs.map{p => ((DEFAULT_LOAD_FACTOR, DEFAULT_INITIAL_CAPACITY))}.toList, projs)
   }
 
   def this(initialCapacity: Int, projs:(K,V)=>_ *) {
-    this(initialCapacity, DEFAULT_LOAD_FACTOR, projs)
+    this(initialCapacity, DEFAULT_LOAD_FACTOR, projs.map{p => ((DEFAULT_LOAD_FACTOR, DEFAULT_INITIAL_CAPACITY))}.toList, projs)
   }
 
   def this(projs:(K,V)=>_ *) {
-    this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, projs)
+    this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, projs.map{p => ((DEFAULT_LOAD_FACTOR, DEFAULT_INITIAL_CAPACITY))}.toList, projs)
   }
 
   /**
@@ -265,7 +277,7 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]
    *         (A <tt>null</tt> return can also indicate that the map
    *         previously associated <tt>null</tt> with <tt>key</tt>.)
    */
-  def put(key: K, value: V): V = {
+  def +=(key: K, value: V): V = {
     // if (key == null) return putForNullKey(value)
     val hs: Int = hash(key.hashCode)
     val i: Int = indexFor(hs, table.length)
@@ -293,11 +305,11 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]
     null.asInstanceOf[V]
   }
 
-  def +=(key: K, value: V): V = put(key, value)
+  def put(key: K, value: V): V = +=(key, value)
 
-  def +=(kv: (K, V)): V = put(kv._1, kv._2)
+  //def +=(kv: (K, V)): V = put(kv._1, kv._2)
 
-  def updateVal(key: K, value: V): V = put(key, value)
+  def update(key: K, value: V): V = put(key, value)
 
   def update(key: K, valueUpdateFunc: V=>V): V = {
     // if (key == null) return putForNullKey(value)
@@ -497,10 +509,9 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]
    * The map will be empty after this call returns.
    */
   def clear:Unit = {
-    val tab: Array[SEntry[K, V]] = table
     var i: Int = 0
-    while (i < tab.length) {
-      tab(i) = null
+    while (i < table.length) {
+      table(i) = null
       i += 1
     }
     size = 0
@@ -555,6 +566,7 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]
    */
   def addSEntry(hash: Int, key: K, value: V, bucketIndex: Int):SEntry[K, V] = {
     val tmp: SEntry[K, V] = table(bucketIndex)
+
     val e = new SEntry[K, V](hash, key, value, tmp)
     table(bucketIndex) = e
     if (size >= threshold) resize(2 * table.length)
@@ -643,8 +655,8 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]
   //init
 
   val idxs:List[SIndex[_,K,V]] = {
-    def idx[P](f:(K,V)=>P) = new SIndex[P,K,V](f)
-    projs.toList.map(idx(_))
+    def idx[P](f:(K,V)=>P, lf:Float, initC:Int) = new SIndex[P,K,V](f,lf,initC)
+    projs.zip(lfInitIndex).toList.map{case (p, (lf, initC)) => idx(p , lf, initC)}
   }
 
   def slice[P](part:Int, partKey:P):SIndexEntry[K,V] = {
@@ -675,160 +687,18 @@ class SHMap[K,V](initialCapacity: Int, val loadFactor: Float,projs:Seq[(K,V)=>_]
     .append("\tmaxElemsInCell => ").append(contentSize.max).append("\n")
     .append("\tavgElemsInCell => ").append("%.2f".format(elemCount/(table.length).asInstanceOf[Double])).append("\n")
     //.append("\tcontentSize => ").append(java.util.Arrays.toString(contentSize)).append("\n")
-    .append("}").toString
-  }
-}
-
-class SHSet[K] {
-  var map: SHMap[K,Boolean] = new SHMap[K,Boolean]
-
-  // def this(initialCapacity: Int, lf: Float) {
-  //   this()
-  //   map = new SHMap[K,Boolean](initialCapacity, lf)
-  // }
-
-  // def this(initialCapacity: Int) {
-  //   this(initialCapacity, DEFAULT_LOAD_FACTOR)
-  // }
-
-  /**
-   * Initialization hook for subclasses. This method is called
-   * in all constructors and pseudo-constructors (clone, readObject)
-   * after SHMap has been initialized but before any entries have
-   * been inserted.  (In the absence of this method, readObject would
-   * require explicit knowledge of subclasses.)
-   */
-  // def init:Unit = {
-  // }
-
-  /**
-   * Returns the number of key-value mappings in this map.
-   *
-   * @return the number of key-value mappings in this map
-   */
-  // def size: Int = size
-
-  /**
-   * Returns <tt>true</tt> if this map contains no key-value mappings.
-   *
-   * @return <tt>true</tt> if this map contains no key-value mappings
-   */
-  def isEmpty: Boolean = (map.size == 0)
-
-  /**
-   * Returns <tt>true</tt> if this map contains a mapping for the
-   * specified key.
-   *
-   * @param   key   The key whose presence in this map is to be tested
-   * @return <tt>true</tt> if this map contains a mapping for the specified
-   *         key.
-   */
-  def contains(key: K): Boolean = map.contains(key)
-
-  /**
-   * Associates the specified value with the specified key in this map.
-   * If the map previously contained a mapping for the key, the old
-   * value is replaced.
-   *
-   * @param key key with which the specified value is to be associated
-   * @param value value to be associated with the specified key
-   * @return the previous value associated with <tt>key</tt>, or
-   *         <tt>null</tt> if there was no mapping for <tt>key</tt>.
-   *         (A <tt>null</tt> return can also indicate that the map
-   *         previously associated <tt>null</tt> with <tt>key</tt>.)
-   */
-  def add(key: K): Boolean = {
-    val e: Boolean = map.put(key,DEFAULT_PRESENT_VALUE)
-    (e == DEFAULT_PRESENT_VALUE)
-  }
-
-  def +=(key: K): Boolean = add(key)
-
-  /**
-   * Removes the mapping for the specified key from this map if present.
-   *
-   * @param  key key whose mapping is to be removed from the map
-   * @return the previous value associated with <tt>key</tt>, or
-   *         <tt>null</tt> if there was no mapping for <tt>key</tt>.
-   *         (A <tt>null</tt> return can also indicate that the map
-   *         previously associated <tt>null</tt> with <tt>key</tt>.)
-   */
-  def remove(key: K): Boolean = {
-    val e: Boolean = map.remove(key)
-    (e == DEFAULT_PRESENT_VALUE)
-  }
-
-  def -=(key: K): Boolean = remove(key)
-
-  /**
-   * Removes all of the mappings from this map.
-   * The map will be empty after this call returns.
-   */
-  def clear:Unit = map.clear
-
-  def capacity: Int = map.table.length
-
-  def size:Int = map.size
-
-  // def loadFactor: Float = {
-  //   return loadFactor
-  // }
-
-  def foreach(f: K => Unit): Unit = map.foreachEntry(e => f(e.key))
-
-  def foreachEntry(f: SEntry[K, Boolean] => Unit): Unit = map.foreachEntry(e => f(e))
-
-  override def toString: String = {
-    var res = new StringBuilder("[")
-    var first = true
-    map.foreachEntry { e =>
-      if(first) first = false
-      else res.append(", ")
-      res.append(e.key.toString)
+    i = 0
+    if(i < idxs.size) {
+      res.append("\tindices => ")
     }
-    res.append("]")
-    res.toString
-  }
-}
 
-class SIndexEntry[K,V] {
-  val s:SHSet[SEntry[K,V]] = new SHSet[SEntry[K,V]]
-
-  def foreach(f: ((K, V)) => Unit): Unit = s.foreach(e => f(e.key, e.value))
-
-  def foreachEntry(f: SEntry[SEntry[K,V], Boolean] => Unit): Unit = s.foreachEntry(e => f(e))
-}
-
-class SIndex[P,K,V](val proj:(K,V)=>P) {
-  val idx = new SHMap[P,SIndexEntry[K,V]]
-
-  def set(entry: SEntry[K,V]):Unit = {
-    val p:P = proj(entry.key, entry.value)
-    val s = idx.getNullOnNotFound(p)
-    if (s==null) {
-      val newIdx = new SIndexEntry[K,V]
-      newIdx.s.add(entry)
-      idx.put(p,newIdx)
-    } else {
-      s.s.add(entry)
+    while(i < idxs.size) {
+      res.append("\n\tind(%d) ".format(i+1)).append(ind(idxs(i).idx.getInfoStr))
+      i += 1
+      if(!(i < idxs.size)) {
+        res.append("\n")
+      }
     }
+    res.append("}").toString
   }
-
-  def del(entry: SEntry[K,V]):Unit = del(entry, entry.value)
-
-  def del(entry: SEntry[K,V], v:V):Unit = {
-    val p:P = proj(entry.key, v)
-    val s=idx.getNullOnNotFound(p)
-    if (s!=null) { 
-      s.s.remove(entry)
-      if (s.s.size==0) idx.remove(p)
-    }
-  }
-
-  def slice(part:P):SIndexEntry[K,V] = idx.getNullOnNotFound(part) match { 
-    case null => new SIndexEntry[K,V]
-    case s=>s
-  }
-
-  def clear:Unit = idx.clear
 }
