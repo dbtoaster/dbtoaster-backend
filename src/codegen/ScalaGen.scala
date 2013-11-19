@@ -65,7 +65,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       }
     case Lift(n,e) =>
       if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
-      else { ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L"),am) }
+      else e match {
+        case Ref(n2) => ctx.add(n,(e.tp,rn(n2))); co("1L") // de-aliasing
+        case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L"),am)
+      }
     case Mul(el,er) => cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"),am),am)
     case a@Add(el,er) =>
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
@@ -172,7 +175,6 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
       "case EndOfStream | GetSnapshot(_) => val time=System.nanoTime()-t0; sender ! ((time,List[Any]("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+")))"
     )+"\n}\n"+gc+ts+ld)+"\n"+generateDataStructures+"}\n"
-
   }
 
   private def genStream(s:Source): (String,String,String) = {

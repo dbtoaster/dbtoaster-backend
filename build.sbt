@@ -21,6 +21,7 @@ libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.3",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.3",
   //"com.typesafe.akka" %% "akka-cluster"   % "2.2.3",
+  // XXX: use scripts/regress.sh to compile legacy Scala back-end instead
   "org.scala-lang"     % "scala-actors"   % v, // XXX: legacy to compile previous Scala back-end
   "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.RC3" % "test"
@@ -37,7 +38,7 @@ Seq(
 Seq(
   fork := true, // required to enable javaOptions
   javaOptions ++= Seq("-Xss128m"), // ,"-Xss512m","-XX:MaxPermSize=2G"
-  //javaOptions ++= Seq("-Xmx14G","-Xms14G","-verbose:gc"),parallelExecution in Test := false, // for large benchmarks
+  javaOptions ++= Seq("-Xmx14G","-Xms14G","-verbose:gc"),parallelExecution in Test := false, // for large benchmarks
   javaOptions <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
 )
 
