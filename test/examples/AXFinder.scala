@@ -71,7 +71,7 @@ class AXFinder extends AXFinderBase {
     mASKS1.add((bids_broker_id,bids_price),bids_volume);
     mASKS2.add((bids_broker_id,bids_price),1L);
   }
-  
+
   def onDelBIDS(bids_t:Double, bids_id:Long, bids_broker_id:Long, bids_volume:Double, bids_price:Double) {
     var agg3:Long = 0;
     mBIDS1.slice(0,bids_broker_id).foreach { (k3,v3) =>
@@ -89,7 +89,7 @@ class AXFinder extends AXFinderBase {
     mASKS1.add((bids_broker_id,bids_price),(-1L * bids_volume));
     mASKS2.add((bids_broker_id,bids_price),-1L);
   }
-  
+
   def onAddASKS(asks_t:Double, asks_id:Long, asks_broker_id:Long, asks_volume:Double, asks_price:Double) {
     var agg5:Double = 0;
     mASKS1.slice(0,asks_broker_id).foreach { (k5,v5) =>
@@ -107,7 +107,7 @@ class AXFinder extends AXFinderBase {
     mBIDS1.add((asks_broker_id,asks_price),1L);
     mBIDS3.add((asks_broker_id,asks_price),asks_volume);
   }
-  
+
   def onDelASKS(asks_t:Double, asks_id:Long, asks_broker_id:Long, asks_volume:Double, asks_price:Double) {
     var agg7:Double = 0;
     mASKS1.slice(0,asks_broker_id).foreach { (k7,v7) =>
@@ -239,4 +239,3 @@ class AXFinderSimpleLMS extends AXFinderBase {
     COUNT_mBIDS2 = COUNT1
    }
 }
-

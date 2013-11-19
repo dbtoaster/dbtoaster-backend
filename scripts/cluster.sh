@@ -20,7 +20,7 @@ CMD_SBT="/usr/local/bin/sbt"          # SBT path and options (debug mode only)
 # --- Remotes
 CMD_DIR="/Users/tck/ddbt"; DEBUG=""
 #MASTER="192.168.0.2"; WORKERS="192.168.0.3 192.168.0.2"
-MASTER="128.178.116.136"; WORKERS="128.178.116.160 $MASTER"
+MASTER="128.178.116.123"; WORKERS="128.178.116.160 $MASTER"
 # --- End
 
 # Examples:

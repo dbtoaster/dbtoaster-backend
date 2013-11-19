@@ -304,14 +304,26 @@ trait MasterActor extends WorkerActor {
   //   (m_wr&2)!=0 && seq!=0 --> WAW (this non-commutative)
   //   (m_rd&6)!=            --> RAW
   private var pre_map:Array[Int]=null
-  def pre(write:MapRef,sequential:Boolean,read:Array[MapRef],co:()=>Unit) {
-    val seq=if (sequential) 1 else 0; var i=0; val t=pre_map.size; val n=read.size;
+  def pre(write:MapRef,commute:Boolean,read:Array[MapRef],co:()=>Unit) {
+    val seq=if (commute) 0 else 1; var i=0; val t=pre_map.size; val n=read.size;
     var flush = if (write== -1) false else (pre_map(write)&(5|(1<<seq)))!=0 // check dependencies
     if (!flush && n>0) { i=0; do { flush=(pre_map(read(i))&6)>0; i+=1; } while(i<n && !flush) }
     if (flush) { i=0; do { pre_map(i)=0; i+=1; } while(i<t) } // clear
     if (write != -1) pre_map(write) |= 1<<(1+seq); if (n>0) { i=0; do { pre_map(read(i)) |= 1; i+=1; } while(i<n); } // dependencies
     if (!flush) co() else bar.set(co) // now proceed
   }
+  // Multiple statements
+  def pre2(write:Array[MapRef],commute:Array[Boolean],read:Array[MapRef],co:()=>Unit) {
+    var flush = false
+    var i=0; val nw=write.length; val nr=read.length; val n=pre_map.length
+    while(i<nw && !flush) { flush=(pre_map(write(i)) & (if (commute(i)) 5 else 7)) != 0; i+=1 }; i=0;
+    while(i<nr && !flush) { flush=(pre_map(read(i))&6) != 0; i+=1; }; i=0;
+    if (flush) { i=0; do { pre_map(i)=0; i+=1; } while(i<n) } // clear
+    while(i<nw && !flush) { pre_map(write(i)) |= (if (commute(i)) 2 else 4); i+=1 }; i=0;
+    while(i<nr && !flush) { pre_map(read(i)) |= 1; i+=1; }
+    if (flush) bar.set(co) else co() // now proceed
+  }
+
   def barrier(co:()=>Unit) = { var i=0; val t=pre_map.size; do { pre_map(i)=0; i+=1; } while(i<t); bar.set(co); }
 
   // ---- handle stream events

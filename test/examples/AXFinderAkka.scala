@@ -14,20 +14,11 @@ object AXFinderAkka {
   import WorkerActor._
   def main(args:Array[String]) {
     var i=0; do {
-      val (t,res) = runLocal[AXMaster,AXWorker](2251,4,AX.streams(),debug=true)
+      val (t,res) = runLocal[AXMaster,AXWorker](2251,4,AX.streams() /*,debug=true*/)
       println("Time = "+time(t)); // println(M3Map.toStr(res.head))
     i+=1; } while (i<10);
   }
 }
-
-
-
-
-
-
-
-
-
 
 class AXWorker extends WorkerActor {
   import WorkerActor._
@@ -109,6 +100,81 @@ class AXMaster extends AXWorker with MasterActor {
     case _ => deq
   }
 
+  // time=5.848s / rtt=0.484ms, 5000 records, 0.220s locally
+  def onAddBIDS(bids_t:Double, bids_id:Long, bids_broker_id:Long, bids_volume:Double, bids_price:Double) {
+    pre2(Array(map0,map1,map2),Array(true,true,true),Array(map3,map4),()=>{
+      var ctr = 2 // + 1 to avoid in-loop depletion
+      var ctr2 = 2
+      var agg1:Long = 0L
+      var agg2:Double = 0.0
+      aggr(map3,fa1,Array[Any](bids_price,bids_broker_id),null,(v:Long) => { agg1=v; ctr-=1; if (ctr==0) op })
+      aggr(map4,fa2,Array[Any](bids_price,bids_volume,bids_broker_id),null,(v:Double) => { agg2=v; ctr-=1; if (ctr==0) op })
+      def op { add(map0,bids_broker_id,((agg1 * (-1L * bids_volume)) + agg2)); ctr2-=1; if (ctr2==0) deq }
+      add(map1,(bids_broker_id,bids_price),bids_volume)
+      add(map2,(bids_broker_id,bids_price),1L)
+      ctr2-=1; if (ctr2==0) deq
+    })
+  }
+  def onDelBIDS(bids_t:Double, bids_id:Long, bids_broker_id:Long, bids_volume:Double, bids_price:Double) {
+    pre2(Array(map0,map1,map2),Array(true,true,true),Array(map3,map4),()=>{
+      var ctr = 2 // + 1 to avoid in-loop depletion
+      var ctr2 = 2
+      var agg1:Long = 0L
+      var agg2:Double = 0.0
+      aggr(map3,fa1,Array[Any](bids_price,bids_broker_id),null,(v:Long) => { agg1=v; ctr-=1; if (ctr==0) op })
+      aggr(map4,fa2,Array[Any](bids_price,bids_volume,bids_broker_id),null,(v:Double) => { agg2=v; ctr-=1; if (ctr==0) op })
+      def op { add(map0,bids_broker_id,((agg1 * bids_volume) - agg2)); ctr2-=1; if (ctr2==0) deq }
+      add(map1,(bids_broker_id,bids_price),-bids_volume)
+      add(map2,(bids_broker_id,bids_price),-1L)
+      ctr2-=1; if (ctr2==0) deq
+    })
+  }
+  def onAddASKS(asks_t:Double, asks_id:Long, asks_broker_id:Long, asks_volume:Double, asks_price:Double) {
+    pre2(Array(map0,map3,map4),Array(true,true,true),Array(map1,map2),()=>{
+      var ctr = 2 // + 1 to avoid in-loop depletion
+      var ctr2 = 2
+      var agg5:Double = 0.0
+      var agg6:Long = 0L
+      aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; ctr-=1; if (ctr==0) op })
+      aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; ctr-=1; if (ctr==0) op })
+      def op { add(map0,asks_broker_id,((agg5 * -1L) + (agg6 * asks_volume))); ctr2-=1; if (ctr2==0) deq }
+      add(map3,(asks_broker_id,asks_price),1L);
+      add(map4,(asks_broker_id,asks_price),asks_volume);
+      ctr2-=1; if (ctr2==0) deq
+    })
+  }
+  def onDelASKS(asks_t:Double, asks_id:Long, asks_broker_id:Long, asks_volume:Double, asks_price:Double) {
+    pre2(Array(map0,map3,map4),Array(true,true,true),Array(map1,map2),()=>{
+      var ctr = 2 // + 1 to avoid in-loop depletion
+      var ctr2 = 2
+      var agg5:Double = 0.0
+      var agg6:Long = 0L
+      aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; ctr-=1; if (ctr==0) op })
+      aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; ctr-=1; if (ctr==0) op })
+      def op { add(map0,asks_broker_id,(agg5 - (agg6 * asks_volume))); ctr2-=1; if (ctr2==0) deq }
+      add(map3,(asks_broker_id,asks_price),-1L);
+      add(map4,(asks_broker_id,asks_price),-asks_volume);
+      ctr2-=1; if (ctr2==0) deq
+    })
+/*
+    s1
+    def s1 = pre(map0,false,Array[MapRef](map1,map2),()=> {
+      val acc = Acc(); acc.i; acc.i
+      var agg5:Double = 0.0
+      var agg6:Long = 0L
+      aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; acc.d })
+      aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; acc.d })
+      acc(()=>{ add(map0,asks_broker_id,agg5 - (agg6 * asks_volume)); s2 })
+    })
+    def s2 = pre(map3,false,Array(),()=> { add(map3,(asks_broker_id,asks_price),-1L); s3 })
+    def s3 = pre(map4,false,Array(),()=> { add(map4,(asks_broker_id,asks_price),-asks_volume); deq })
+*/
+  }
+
+
+
+
+  /*
   def onAddBIDS(bids_t:Double, bids_id:Long, bids_broker_id:Long, bids_volume:Double, bids_price:Double) {
     pre(map0,false,Array[MapRef](map3,map4),()=> {
 
@@ -187,6 +253,7 @@ class AXMaster extends AXWorker with MasterActor {
     deq
     }) }) })
   }
+  */
 
   def onSystemReady() {
     ready
