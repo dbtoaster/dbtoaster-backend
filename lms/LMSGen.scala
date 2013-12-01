@@ -32,7 +32,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case TypeString => co(impl.unit(v))
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
     }
-    case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)) ,am),am)
+    case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)),am),am)
     case a@Add(l,r) =>
       if (a.agg==Nil) { val cur=cx.save; expr(l,(vl:Rep[_])=>{ cx.load(cur); expr(r,(vr:Rep[_])=>{ cx.load(cur); co(add(vl,vr,ex.tp)) },am)},am) }
       else am match {
@@ -164,7 +164,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           expr(e,(r:Rep[_]) => op match {
             case OpAdd => impl.k3add(mm,m.keys.map(cx),r)
             case OpSet => impl.k3set(mm,m.keys.map(cx),r)
-          },Some(m.keys zip m.tks))
+          }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
       impl.unit(())
