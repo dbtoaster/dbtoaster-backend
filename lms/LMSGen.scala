@@ -32,7 +32,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case TypeString => co(impl.unit(v))
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
     }
-    case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)) ))
+    case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)) ,am),am)
     case a@Add(l,r) =>
       if (a.agg==Nil) { val cur=cx.save; expr(l,(vl:Rep[_])=>{ cx.load(cur); expr(r,(vr:Rep[_])=>{ cx.load(cur); co(add(vl,vr,ex.tp)) },am)},am) }
       else am match {
