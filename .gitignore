@@ -5,6 +5,7 @@ examples/data
 conf/ddbt.properties
 test/gen
 bin
+pkg
 benchmarks-*.csv
 .idea
 *.numbers
