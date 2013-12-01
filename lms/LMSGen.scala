@@ -36,7 +36,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     case a@Add(l,r) =>
       if (a.agg==Nil) { val cur=cx.save; expr(l,(vl:Rep[_])=>{ cx.load(cur); expr(r,(vr:Rep[_])=>{ cx.load(cur); co(add(vl,vr,ex.tp)) },am)},am) }
       else am match {
-        case Some(t) if t==a.agg => val cur=cx.save; expr(l,co,am); cx.load(cur); expr(r,co,am); cx.load(cur);
+        case Some(t) if t.toSet==a.agg.toSet => val cur=cx.save; expr(l,co,am); cx.load(cur); expr(r,co,am); cx.load(cur);
         case _ =>
           val acc = impl.k3temp(a.agg.map(_._2),ex.tp)
           val inCo = (v:Rep[_]) => impl.k3add(acc,a.agg.map(x=>cx(x._1)),v)
@@ -76,7 +76,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       // Iterate over acc and call original continuation
       if (agg_keys.size==0) co(impl.k3get(acc,Nil,ex.tp)) // accumulator is a single result
       else am match {
-        case Some(t) if (t==agg_keys) => expr(e,co,am)
+        case Some(t) if (t.toSet==agg_keys.toSet) => expr(e,co,am)
         case _ => foreach(acc,agg_keys,a.tp,co,"a")
       }
     case _ => sys.error("Unimplemented: "+ex)
@@ -155,7 +155,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case StmtMap(m,e,op,oi) => cx.load()
           val mm = cx(m.name)
           if (op==OpSet && m.keys.size>0) impl.k3clear(mm)
-          oi match { case None => case Some(ie) => 
+          oi match { case None => case Some(ie) =>
             expr(ie,(r:Rep[_]) => { val keys = m.keys.map(cx)
                impl.__ifThenElse(impl.equals(impl.k3get(mm,keys,m.tp),impl.unit(0L)),impl.k3set(mm,keys,r),impl.unit(()))
             })
@@ -164,7 +164,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           expr(e,(r:Rep[_]) => op match {
             case OpAdd => impl.k3add(mm,m.keys.map(cx),r)
             case OpSet => impl.k3set(mm,m.keys.map(cx),r)
-          })
+          },Some(m.keys zip m.tks))
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
       impl.unit(())
@@ -244,7 +244,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   override def apply(s0:System):String = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
     //TODO: this should be replaced by a specific traversal
-    //for completing the slice information 
+    //for completing the slice information
     s0.triggers.map(super.genTrigger)
     val r=super.apply(s0)
     maps=Map()
