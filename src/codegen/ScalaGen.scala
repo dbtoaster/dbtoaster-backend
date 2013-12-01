@@ -47,7 +47,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   //   ex:expression to convert
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
-  def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
+  def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
     case Ref(n) => co(rn(n))
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
     case Exists(e) => cpsExpr(e,(v:String)=>co("(if (("+v+")!=0) 1L else 0L)"))
@@ -73,7 +73,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case a@Add(el,er) =>
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else am match {
-        case Some(t) if t==a.agg => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
+        case Some(t) if t.toSet==a.agg.toSet => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
@@ -87,7 +87,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (aks.size==0) { val a0=fresh("agg"); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
-        case Some(t) if t==aks => cpsExpr(e,co,am)
+        case Some(t) if t.toSet==aks.toSet => cpsExpr(e,co,am)
         case _ =>
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
@@ -107,7 +107,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           else "if ("+m.name+".get("+tup(m.keys map rn)+")==0) "+m.name+".set("+tup(m.keys map rn)+","+i+");\n")
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+tup(m.keys map rn)+","+v+")")+";\n")
+      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+tup(m.keys map rn)+","+v+")")+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 

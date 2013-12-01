@@ -120,7 +120,7 @@ object TypeCheck extends (M3.System => M3.System) {
       }
       if (ex.tp==null) err("Untyped: "+ex); cr
     }
-    def ist(s:Stmt,b:Map[String,Type]=Map()) = s match { case StmtMap(m,e,op,in) => ie(e,b); in.map(e=>ie(e,b)) }
+    def ist(s:Stmt,b:Map[String,Type]=Map()) = s match { case StmtMap(m,e,op,in) => ie(e,b); in.map(e=>ie(e,b)); ie(m,b) }
     s0.triggers.foreach { t=> t.stmts foreach (x=>ist(x,t.evt.args.toMap)) }
     s0
   }
