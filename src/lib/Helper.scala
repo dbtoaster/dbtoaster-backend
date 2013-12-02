@@ -24,10 +24,10 @@ object Helper {
   // Run query actor and collect time + resulting maps or values (for 0-key maps)
   // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
 
-  def mux(actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0) : (Long,List[Any]) = {
+  def mux(actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0) : ((Long,Boolean,Int),List[Any]) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
     actor ! SystemInit; mux.read(); val tout = akka.util.Timeout(if (timeout==0) (1L<<42) /*139 years*/ else timeout)
-    scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(tout), tout.duration).asInstanceOf[(Long,List[Any])]
+    scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(tout), tout.duration).asInstanceOf[((Long,Boolean,Int),List[Any])]
   }
 
   def run[Q<:akka.actor.Actor](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,timeout:Long=0)(implicit cq:ClassTag[Q]) = {
@@ -51,7 +51,7 @@ object Helper {
     val res = try { mux(master,streams,parallel,timeout) } finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
   }
 
-  def time(ns:Long) = { val ms=ns/1000000; "%d.%03d".format(ms/1000,ms%1000) }
+  def time(ns:Long) = { val us=ns/1000; ("%d.%06d").format(us/1000000,us%1000000) }
   def bench[T](name:String,count:Int,f:()=>(Long,T)):T = {
     val out = (0 until math.max(1,count)).map { x => f() }
     val res = out.map(_._2).toList; res.tail.foreach(r=> assert(r==res.head,"Inconsistent results: "+res.head+" != "+r))
@@ -65,15 +65,17 @@ object Helper {
   //   -h            hide the benchmark time
   //   -s            silent the query output
   //   -p            use parallel streams
-  def bench2(args:Array[String],run:(String,Boolean)=>(Long,List[Any]),print:List[Any]=>Unit=null) {
+  def bench2(args:Array[String],run:(String,Boolean)=>((Long,Boolean,Int),List[Any]),print:List[Any]=>Unit=null) {
     val parallel=args.contains("-p")
     var count:Int=1; args.filter(a=>a.startsWith("-n")).foreach { a=>count=a.substring(2).toInt }
     var ds=List[String](); args.filter(a=>a.startsWith("-d")).foreach { a=>ds=ds:::List(a.substring(2)) }; if (ds.size==0) ds=List("standard")
-    ds.foreach { d=> var res0:List[Any]=null; var ts:List[Long]=Nil
-      (0 until math.max(1,count)).foreach { x => val (t,res)=run(d,parallel);
-        ts=t::ts; if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res)
+    ds.foreach { d=> var res0:List[Any]=null; var ts:List[(Long,Boolean,Int)]=Nil
+      (0 until math.max(1,count)).foreach { x => val ((t,finished,tupProc),res)=run(d,parallel);
+        ts=(t,finished,tupProc)::ts; if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res)
       }
-      ts = ts.sorted; if (!args.contains("-h")) println(d+": "+time(if (count%2==0) (ts(count/2)+ts(count/2-1))/2 else ts(count/2))+" ["+time(ts(0))+", "+time(ts(count-1))+"] (sec, "+ts.size+" samples)")
+      ts = scala.util.Sorting.stableSort(ts, (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double]).toList
+      val tsMed = ddbt.Utils.med3(ts)
+      if (!args.contains("-h")) println(d+": ("+time(tsMed._1)+","+tsMed._2+","+tsMed._3+") [("+time(ts(0)._1)+","+ts(0)._2+","+ts(0)._3+"), ("+time(ts(count-1)._1)+","+ts(count-1)._2+","+ts(count-1)._3+")] (sec, "+ts.size+" samples)")
       if (!args.contains("-s") && res0!=null && print!=null) print(res0)
     }
   }

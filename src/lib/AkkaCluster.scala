@@ -85,7 +85,7 @@ object ClusterApp {
         var i=0; do {
           Thread.sleep(1000); // make sure all workers are resolved
           val (t,res)=Helper.mux(master,streams(dataset),parallel)
-          println("Time: "+Helper.time(t))
+          println("Time: "+Helper.time(t._1))
           println("Result:\n"+res.mkString("\n\n"))
           master ! ClusterReset; i+=1;
         } while(i<samples);

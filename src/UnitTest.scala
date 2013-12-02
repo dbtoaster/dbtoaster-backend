@@ -1,5 +1,6 @@
 package ddbt
 import java.io._
+import Utils.{med, med3}
 
 /**
  * Benchmarking and correctness verification generator. Instruments the
@@ -11,6 +12,7 @@ import java.io._
  */
 object UnitTest {
   import Utils._
+  val max_benchmark_runtime_nanosec = 20L * 60L * 1000L * 1000L * 1000L //20 min
   val path_examples = "examples/queries"
   val path_sources = "test/gen"
   val path_classes = "target/scala-2.10/test-classes"
@@ -97,9 +99,11 @@ object UnitTest {
       println("--------[[ "+name(q.sql)+" ]]--------")
       val (t0,m3) = Compiler.toast("m3",q.sql)
       println("SQL -> M3           : "+time(t0))
+      ;
       if (csv!=null) csv.print(name(q.sql)+","+time(t0,0)+",")
+      ;
       for (m <- modes) m match {
-        case "lscala"|"llms" if (repo!=null && benchmark) => legacyScala(q,new Printer("LScala"),t0,m=="llms")
+        case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
         case "lcpp" if (repo!=null && benchmark) => legacyCPP(q,new Printer("LCPP"),t0)
         case _ => genQuery(q,new Printer(mn(m)),m3,m)
       }
@@ -159,8 +163,8 @@ object UnitTest {
     if (benchmark) { p.comp(t_comp)
       if (err!="") System.err.println(err)
       else out.split("\n").foreach{ l =>
-        if (!l.matches("[a-z_]+: [0-9.]+ \\[[0-9.]+, [0-9.]+\\] \\(sec, [0-9]+ samples\\)$")) println(l)
-        else { val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),e.slice(1,4),e(5)) }
+        if (!l.matches("[a-z_]+: \\([0-9.]+,[a-z_]+,[0-9]+\\) \\[\\([0-9.]+,[a-z_]+,[0-9]+\\), \\([0-9.]+,[a-z_]+,[0-9]+\\)\\] \\(sec, [0-9]+ samples\\)$")) println(" l2 =>> " + l)
+        else { val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),Array(e.slice(1,4).mkString(","),e.slice(4,7).mkString(","),e.slice(7,10).mkString(",")),e(11)) }
       }
       p.close
     }
@@ -177,44 +181,50 @@ object UnitTest {
   // Legacy testing
   private var legacySC:List[String]=>Unit = null
   def legacyScala(q:QueryTest,p:Printer,t0:Long,lms:Boolean=false) {
+    
     val libs = (if (path_repo!=null) path_repo+"/" else "")+"lib/dbt_scala/dbtlib.jar"
     if (legacySC==null) {
+    
       legacySC=scalaCompiler(tmp,libs,Compiler.exec_sc)
+    
       write(tmp,"RunQuery.scala","package org.dbtoaster\n"+
       "import org.dbtoaster.dbtoasterlib.DBToasterExceptions._\n"+
       "import org.dbtoaster.dbtoasterlib.QueryInterface._\n"+
       "object RunQuery {\n"+
       "  def run1 = {\n"+
-      "    val q = new Query(); var time=0L; val timeStart=System.nanoTime()\n"+
+      "    val q = new Query(); var time=0L; var tuplesProcessed=0; var finished=false; var earlyExit=false; val timeStart=System.nanoTime()\n"+
       "    val msgRcvr = new DBTMessageReceiver {\n"+
-      "      def onTupleProcessed {}\n"+
-      "      def onQueryDone { time=System.nanoTime()-timeStart; RunQuery.synchronized { RunQuery.notifyAll } }\n"+
+      "      def onTupleProcessed { if(!earlyExit) { tuplesProcessed += 1; if(tuplesProcessed % 1000 == 0) { val tmpTime=System.nanoTime()-timeStart; if(tmpTime > "+max_benchmark_runtime_nanosec+"L) { earlyExit = true; time = tmpTime; RunQuery.synchronized { RunQuery.notifyAll }; q ! org.dbtoaster.dbtoasterlib.StreamAdaptor.EndOfStream } } } }\n"+
+      "      def onQueryDone { if(!earlyExit) { time=System.nanoTime()-timeStart; finished=true; RunQuery.synchronized { RunQuery.notifyAll } } }\n"+
       "    }\n"+
-      "    val r = new QuerySupervisor(q, msgRcvr); r.start; RunQuery.synchronized { r.start; RunQuery.wait; }; time\n"+
+      "    val r = new QuerySupervisor(q, msgRcvr); /*r.start;*/ RunQuery.synchronized { r.start; RunQuery.wait; }\n"+
+      "    (\"%d,%s,%d\".format(time,finished,tuplesProcessed))"+
       "  }\n"+
-      "  def main(args: Array[String]) = (0 until "+samples+").foreach { x=> println(run1) }\n}\n")
+      "  def main(args: Array[String]) = (0 until "+samples+").foreach { x=> { println(run1); System.gc(); Thread.sleep(1000) } }\n}\n")
     }
+    
     val (t1,sc) = if (!lms) Compiler.toast("scala",q.sql) else {
       val f="tmp.scala"; val (t1,_) = Compiler.toast("scala","-O4","-o",f,q.sql);
       val fl=if (repo!=null) new File(repo,f) else new File(f); val s=read(fl.getPath); fl.delete;
-      (t1,s.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data"))
+      (t1,s.replaceAll("../../experiments/data",path_repo+"/../../experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone\nthrow DBTFatalError(\"Event could not be dispatched: \" + event)"))
     }
     p.gen(math.max(0,t1-t0))
-    p.all(q){dataset=> write(tmp,"Query.scala",sc.replaceAll("/standard/","/"+dataset+"/"))
+    
+    p.all(q){dataset=> write(tmp,"Query.scala",{ val res = sc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace(", delimiter = \"\\\\|\")", ", deletions = \"true\", delimiter = \"\\\\|\")") else res })
       val t2 = ns(()=>legacySC(List(tmp.getPath+"/Query.scala",tmp.getPath+"/RunQuery.scala")))._1; p.comp(t2)
-      val rt = scalaExec(List(tmp,new File(libs)),"org.dbtoaster.RunQuery",Array(),Compiler.exec_vm)._1.split("\n").filter(x=>x.trim!="").map(x=>x.toLong);
-      p.run(dataset,rt)
+      val rt = scalaExec(List(tmp,new File(libs)),"org.dbtoaster.RunQuery",Array(),Compiler.exec_vm)._1.split("\n").filter(x=>x.trim!="").map(x=> { val xtup = x.split(","); (xtup(0).toLong,xtup(1).toBoolean,xtup(2).toInt) });
+      p.run(rt,dataset)
     }
   }
 
   def legacyCPP(q:QueryTest,p:Printer,t0:Long) {
     val boost = prop("lib_boost",null)
     val (t1,cc) = Compiler.toast("cpp",q.sql); p.gen(math.max(0,t1-t0))
-    p.all(q){dataset=> write(tmp,"query.hpp",cc.replaceAll("/standard/","/"+dataset+"/"))
+    p.all(q){dataset=> write(tmp,"query.hpp", { val res=cc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else res } )
       val pl = path_repo+"/lib/dbt_c++"
       val po = tmp.getPath+"/query"
       val as = List("g++",pl+"/main.cpp","-include",po+".hpp","-o",po,"-O3","-lpthread","-ldbtoaster","-I"+pl,"-L"+pl) :::
-               List("program_options","serialization","system","filesystem","chrono","thread").map("-lboost_"+_) :::
+               List("program_options","serialization","system","filesystem","chrono","thread-mt").map("-lboost_"+_) :::
                (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
       val t2 = ns(()=>exec(as.toArray))._1; p.comp(t2)
       def run() = exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)._1
@@ -234,16 +244,26 @@ object UnitTest {
   // Helper for displaying information and emitting a CSV file
   class Printer(name:String) {
     var tg=Seq[Long](); var tc=Seq[Long](); var tr=""; var ds=0;
-    private def med(ts:Seq[Long]) = if (ts.size==0) 0L else { val s=ts.sorted; val n=ts.size; if (n%2==0) (s(n/2)+s(n/2-1))/2 else ts(n/2) }
     private def flush { scala.Console.out.flush }
     def gen(t:Long) { println("%-20s: ".format(name+" codegen")+time(t)); tg=tg:+t; flush }
     def comp(t:Long) { println("%-20s: ".format(name+" compile")+time(t)); tc=tc:+t; flush }
     def run(set:String,ts:Array[String],n:String) {
-      println("%-20s: %6s".format(name+" "+set,ts(0))+" ["+ts(1)+", "+ts(2)+"] (sec, "+n+" samples)"); flush
-      while(ds<datasets.size && set!=datasets(ds)) { tr+=",,,"; ds+=1 }; tr+=ts(0)+","+ts(1)+","+ts(2)+","; ds+=1
+      println("%-20s: (%6s)".format(name+" "+set,ts(0))+" [("+ts(1)+"), ("+ts(2)+")] (sec, "+n+" samples)"); flush
+      while(ds < datasets.size && set!=datasets(ds)) { tr+=",,,"; ds+=1 }; tr+=ts(0)+","+ts(1)+","+ts(2)+","; ds+=1
     }
-    def run(set:String,t_runs:Seq[Long]) { val ts=t_runs.sorted; val(t0,t1,t2)=(med(ts),ts(0),ts(ts.size-1))
-      println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec, "+ts.size+" samples)"); flush; tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
+    def run(set:String,t_runs:Seq[Long]) { 
+      val ts=t_runs.sorted; val(t0,t1,t2)=(med(ts),ts(0),ts(ts.size-1))
+      println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec, "+ts.size+" samples)");
+      flush
+      tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
+    }
+    def run(t_runs:Seq[(Long,Boolean,Int)],set:String) { 
+      val ts = scala.util.Sorting.stableSort(t_runs, (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double])
+      val (t0tup,t1tup,t2tup)=(med3(ts),ts(0),ts(ts.size-1))
+      val (t0,t1,t2)=((t0tup._1,t1tup._1,t2tup._1))
+      println("%-20s: ".format(name+" "+set)+"("+time(t0,0)+","+t0tup._2+","+t0tup._3+") [("+time(t1,0)+","+t1tup._2+","+t1tup._3+"), ("+time(t2,0)+","+t2tup._2+","+t2tup._3+")] (sec, "+ts.size+" samples)");
+      flush
+      tr+=time(t0,0)+","+t0tup._2+","+t0tup._3+","+time(t1,0)+","+t1tup._2+","+t1tup._3+","+time(t2,0)+","+t2tup._2+","+t2tup._3+","
     }
     def all(q:QueryTest)(f:String=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) tr+=",,," else f(d) }; ds=datasets.size; close }
     def close { tr+=(",,,"*(datasets.size-ds)); var s=time(med(tg),0)+","+time(med(tc),0)+","+tr; if (csv!=null) { csv.print(s); csv.flush } }

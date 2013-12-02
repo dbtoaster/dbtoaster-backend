@@ -129,6 +129,8 @@ object Utils {
   }
 
   // Time measurement
-  def time(ns:Long,n:Int=2) = { val ms=ns/1000000; ("%"+(if (n==0)"" else n)+"d.%03d").format(ms/1000,ms%1000) }
+  def time(ns:Long,n:Int=2) = { val us=ns/1000; ("%"+(if (n==0)"" else n)+"d.%06d").format(us/1000000,us%1000000) }
   def ns[T](f:()=>T) = { val t0=System.nanoTime(); var r=f(); val t1=System.nanoTime(); (t1-t0,r) }
+  def med(ts:Seq[Long]) = if (ts.size==0) 0L else { val s=ts.sorted; val n=ts.size; if (n%2==0) (s(n/2)+s(n/2-1))/2 else ts(n/2) }
+  def med3(ts:Seq[(Long,Boolean,Int)]) = if (ts.size==0) ((0L,false,0)) else { val s=ts.sorted; val n=ts.size; if (n%2==0 && (s(n/2)._2 == s(n/2-1)._2) && (s(n/2)._3 == s(n/2-1)._3)) (((s(n/2)._1+s(n/2-1)._1)/2,s(n/2)._2,s(n/2)._3)) else ts(n/2) }
 }
