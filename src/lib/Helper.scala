@@ -71,12 +71,11 @@ object Helper {
     var ds=List[String](); args.filter(a=>a.startsWith("-d")).foreach { a=>ds=ds:::List(a.substring(2)) }; if (ds.size==0) ds=List("standard")
     ds.foreach { d=> var res0:List[Any]=null; var ts:List[(Long,Boolean,Int)]=Nil
       (0 until math.max(1,count)).foreach { x => val ((t,finished,tupProc),res)=run(d,parallel);
-        ts=(t,finished,tupProc)::ts; if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res)
+        if(x >= 2 && count > 2) { ts=(t,finished,tupProc)::ts; }; if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res)
       }
-      ts = scala.util.Sorting.stableSort(ts.takeRight(ddbt.UnitTest.WarmUpRounds), (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double]).toList
+      ts = scala.util.Sorting.stableSort(ts, (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double]).toList
       val tsMed = ddbt.Utils.med3(ts)
-      val tsEnd = ts(count- ddbt.UnitTest.WarmUpRounds -1)
-      if (!args.contains("-h")) println(d+": ("+time(tsMed._1)+","+tsMed._2+","+tsMed._3+") [("+time(ts(0)._1)+","+ts(0)._2+","+ts(0)._3+"), ("+time(tsEnd._1)+","+tsEnd._2+","+tsEnd._3+")] (sec, "+ts.size+" samples)")
+      if (!args.contains("-h")) println(d+": ("+time(tsMed._1)+","+tsMed._2+","+tsMed._3+") [("+time(ts(0)._1)+","+ts(0)._2+","+ts(0)._3+"), ("+time(ts(ts.size-1)._1)+","+ts(ts.size-1)._2+","+ts(ts.size-1)._3+")] (sec, "+ts.size+" samples)")
       if (!args.contains("-s") && res0!=null && print!=null) print(res0)
     }
   }
