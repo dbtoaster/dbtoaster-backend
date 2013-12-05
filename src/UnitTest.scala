@@ -12,7 +12,8 @@ import Utils.{med, med3}
  */
 object UnitTest {
   import Utils._
-  val max_benchmark_runtime_nanosec = 20L * 60L * 1000L * 1000L * 1000L //20 min
+  val max_benchmark_runtime_nanosec = 1L * 60L * 1000L * 1000L * 1000L //1 min
+  val WarmUpRounds = 2
   val path_examples = "examples/queries"
   val path_sources = "test/gen"
   val path_classes = "target/scala-2.10/test-classes"
@@ -252,17 +253,18 @@ object UnitTest {
       while(ds < datasets.size && set!=datasets(ds)) { tr+=",,,"; ds+=1 }; tr+=ts(0)+","+ts(1)+","+ts(2)+","; ds+=1
     }
     def run(set:String,t_runs:Seq[Long]) { 
-      val ts=t_runs.sorted; val(t0,t1,t2)=(med(ts),ts(0),ts(ts.size-1))
+      val ts=t_runs.takeRight(t_runs.size - WarmUpRounds).sorted; val(t0,t1,t2)=(med(ts),ts(0),ts(ts.size-1))
       println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec, "+ts.size+" samples)");
       flush
       tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
     }
     def run(t_runs:Seq[(Long,Boolean,Int)],set:String) { 
-      val ts = scala.util.Sorting.stableSort(t_runs, (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double])
+      val ts = scala.util.Sorting.stableSort(t_runs.takeRight(t_runs.size - WarmUpRounds), (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double])
       val (t0tup,t1tup,t2tup)=(med3(ts),ts(0),ts(ts.size-1))
       val (t0,t1,t2)=((t0tup._1,t1tup._1,t2tup._1))
       println("%-20s: ".format(name+" "+set)+"("+time(t0,0)+","+t0tup._2+","+t0tup._3+") [("+time(t1,0)+","+t1tup._2+","+t1tup._3+"), ("+time(t2,0)+","+t2tup._2+","+t2tup._3+")] (sec, "+ts.size+" samples)");
       flush
+      System.out.flush
       tr+=time(t0,0)+","+t0tup._2+","+t0tup._3+","+time(t1,0)+","+t1tup._2+","+t1tup._3+","+time(t2,0)+","+t2tup._2+","+t2tup._3+","
     }
     def all(q:QueryTest)(f:String=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) tr+=",,," else f(d) }; ds=datasets.size; close }
