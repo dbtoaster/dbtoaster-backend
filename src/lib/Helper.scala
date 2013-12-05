@@ -69,9 +69,11 @@ object Helper {
     val parallel=args.contains("-p")
     var count:Int=1; args.filter(a=>a.startsWith("-n")).foreach { a=>count=a.substring(2).toInt }
     var ds=List[String](); args.filter(a=>a.startsWith("-d")).foreach { a=>ds=ds:::List(a.substring(2)) }; if (ds.size==0) ds=List("standard")
-    ds.foreach { d=> var res0:List[Any]=null; var ts:List[(Long,Boolean,Int)]=Nil
+    ds.foreach { d=> var res0:List[Any]=null; var ts:List[(Long,Boolean,Int)]=Nil;
+       // XXX: fix this
+      val warm = 2
       (0 until math.max(1,count)).foreach { x => val ((t,finished,tupProc),res)=run(d,parallel);
-        if(x >= 2 && count > 2) { ts=(t,finished,tupProc)::ts; }; if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res)
+        if(x >= warm && count > warm) { ts=(t,finished,tupProc)::ts; }; if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res)
       }
       ts = scala.util.Sorting.stableSort(ts, (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double]).toList
       val tsMed = ddbt.Utils.med3(ts)

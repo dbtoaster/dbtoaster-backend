@@ -170,7 +170,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
-    "var t0:Long = 0L; var time=0L; var tuplesProcessed=0; var earlyExit=false; var round = 0;\n"+
+    "var t0:Long = 0L; var time=0L; var tuplesProcessed=0; var earlyExit=false;\n"+
     "def receive = {\n"+ind(str+
       "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
       "case EndOfStream | GetSnapshot(_) => if(!earlyExit) { time=System.nanoTime()-t0; }; sender ! (((time,!earlyExit,tuplesProcessed),List[Any]("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+")))"
