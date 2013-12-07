@@ -124,7 +124,7 @@ object Utils {
       if (!f.delete()) sys.error("Failed to delete file: " + f)
     }
     if (tmp.exists) del(tmp); tmp.mkdirs // have a fresh folder
-    if (auto_delete) Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = del(tmp) });
+    //if (auto_delete) Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = del(tmp) });
     tmp
   }
 

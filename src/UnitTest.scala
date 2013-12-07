@@ -195,7 +195,7 @@ object UnitTest {
       "  def run1 = {\n"+
       "    val q = new Query(); var time=0L; var tuplesProcessed=0; var finished=false; var earlyExit=false; val timeStart=System.nanoTime()\n"+
       "    val msgRcvr = new DBTMessageReceiver {\n"+
-      "      def onTupleProcessed { if(!earlyExit) { tuplesProcessed += 1; if(tuplesProcessed % 1000 == 0) { val tmpTime=System.nanoTime()-timeStart; if(tmpTime > "+max_benchmark_runtime_nanosec+"L) { earlyExit = true; time = tmpTime; RunQuery.synchronized { RunQuery.notifyAll }; q ! org.dbtoaster.dbtoasterlib.StreamAdaptor.EndOfStream } } } }\n"+
+      "      def onTupleProcessed { if(!earlyExit) { tuplesProcessed += 1; if(tuplesProcessed % 100 == 0) { val tmpTime=System.nanoTime()-timeStart; if(tmpTime > "+max_benchmark_runtime_nanosec+"L) { earlyExit = true; time = tmpTime; RunQuery.synchronized { RunQuery.notifyAll }; q.doExit } } } }\n"+
       "      def onQueryDone { if(!earlyExit) { time=System.nanoTime()-timeStart; finished=true; RunQuery.synchronized { RunQuery.notifyAll } } }\n"+
       "    }\n"+
       "    val r = new QuerySupervisor(q, msgRcvr); /*r.start;*/ RunQuery.synchronized { r.start; RunQuery.wait; }\n"+
@@ -203,11 +203,15 @@ object UnitTest {
       "  }\n"+
       "  def main(args: Array[String]) = (0 until "+samples+").foreach { x=> { println(run1); System.gc(); Thread.sleep(1000) } }\n}\n")
     }
+
+    def replaceSourceStr(src:String):String = {
+      src.replace("def act(): Unit ={","var isExit = false\n    def doExit {\n      isExit = true\n    }\n\n    def act(): Unit ={").replace("case e: DBTEvent => dispatcher(e)", "case e: DBTEvent => if(isExit) {\n            supervisor ! DBTDone;\n            exit();\n          } else {\n            dispatcher(e)\n          }")
+    }
     
-    val (t1,sc) = if (!lms) Compiler.toast("scala",q.sql) else {
+    val (t1,sc) = if (!lms) { val (t1,src) = Compiler.toast("scala",q.sql); (t1,replaceSourceStr(src)) } else {
       val f="tmp.scala"; val (t1,_) = Compiler.toast("scala","-O4","-o",f,q.sql);
       val fl=if (repo!=null) new File(repo,f) else new File(f); val s=read(fl.getPath); fl.delete;
-      (t1,s.replaceAll("../../experiments/data",path_repo+"/../../experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone\nthrow DBTFatalError(\"Event could not be dispatched: \" + event)"))
+      (t1,replaceSourceStr(s.replaceAll("../../experiments/data",path_repo+"/../../experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)")))
     }
     p.gen(math.max(0,t1-t0))
     

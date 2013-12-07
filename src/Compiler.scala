@@ -34,7 +34,7 @@ object Compiler {
     val repo = if (Utils.path_repo!=null && !opts.isEmpty) new File(Utils.path_repo) else null
     val (t0,(m3,err)) = Utils.ns(()=>Utils.exec(((if (repo!=null) "bin/dbtoaster_release" else Utils.path_bin) :: os).toArray,repo,fatal=false))
     if (err.trim!="") { val e=new Exception("dbtoaster "+os.mkString(" ")+" failed because:\n"+err); e.setStackTrace(Array()); throw e }
-    (t0, if (repo!=null) m3.replaceAll("../../experiments/data",repo.getParentFile.getParent+"/experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone\nthrow DBTFatalError(\"Event could not be dispatched: \" + event)") else m3)
+    (t0, if (repo!=null) m3.replaceAll("../../experiments/data",repo.getParentFile.getParent+"/experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)") else m3)
   }
 
   def parseArgs(args:Array[String]) {
