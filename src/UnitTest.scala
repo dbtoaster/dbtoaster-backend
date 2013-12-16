@@ -222,6 +222,8 @@ object UnitTest {
     }
   }
 
+  val cppResultPattern = "THERESULTIS\\(([0-9]+),([a-z_]+),([0-9]+)\\)".r
+
   def legacyCPP(q:QueryTest,p:Printer,t0:Long) {
     val boost = prop("lib_boost",null)
     val (t1,cc) = Compiler.toast("cpp",q.sql); p.gen(math.max(0,t1-t0))
@@ -233,7 +235,7 @@ object UnitTest {
                (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
       val t2 = ns(()=>exec(as.toArray))._1; p.comp(t2)
       def run() = exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)._1
-      p.run(dataset,(0 until samples).map(x=>ns(run)._1))
+      p.run((0 until samples).map{x=> val str=ns(run)._2; val strIdx=str.indexOf("THERESULTIS");val cppResultPattern(timeElapsed,isFinished,tuplesProc) = str.substring(strIdx, str.indexOf(")",strIdx)+1); (timeElapsed.toLong,isFinished.toBoolean,tuplesProc.toInt)},dataset)
     }
   }
 

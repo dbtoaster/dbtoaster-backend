@@ -147,8 +147,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
     }
     val str = s0.triggers.map(_.evt match {
-      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => { onAdd"+s.name+o+"; if(!earlyExit) { tuplesProcessed += 1; if(tuplesProcessed % 1000 == 0) { val tmpTime=System.nanoTime()-t0; if(tmpTime > "+ddbt.UnitTest.max_benchmark_runtime_nanosec+"L) { earlyExit = true; time = tmpTime } } } } \n"
-      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => { onDel"+s.name+o+"; if(!earlyExit) { tuplesProcessed += 1; if(tuplesProcessed % 1000 == 0) { val tmpTime=System.nanoTime()-t0; if(tmpTime > "+ddbt.UnitTest.max_benchmark_runtime_nanosec+"L) { earlyExit = true; time = tmpTime } } } } \n"
+      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => { if(!earlyExit) { onAdd"+s.name+o+"; tuplesProcessed += 1; if(tuplesProcessed % 100 == 0) { val tmpTime=System.nanoTime()-t0; if(tmpTime > "+ddbt.UnitTest.max_benchmark_runtime_nanosec+"L) { earlyExit = true; time = tmpTime } } } } \n"
+      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => { if(!earlyExit) { onDel"+s.name+o+"; tuplesProcessed += 1; if(tuplesProcessed % 100 == 0) { val tmpTime=System.nanoTime()-t0; if(tmpTime > "+ddbt.UnitTest.max_benchmark_runtime_nanosec+"L) { earlyExit = true; time = tmpTime } } } } \n"
       case _ => ""
     }).mkString
     val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o,pl)=ev(s.schema)
