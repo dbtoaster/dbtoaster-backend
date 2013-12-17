@@ -46,6 +46,9 @@ Roadmap:
    + ...
    + finally when completed, release the barrier
 
+XXX: Move 'inuse' maintenance in Scala code generator => strip unnecessary key parts creation in foreach
+
+
 Issues to solve:
 - move lazy map slicing into the TypeChecking ?
 - move tests (TestUnit) AST into its own ddbt.ast package ?
