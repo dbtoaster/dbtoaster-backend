@@ -12,8 +12,8 @@ object TPCH15 {
     println(K3Helper.toStr(r1)); println("Time: "+time(t1))
     */
     println("Mine:")
-    val (t2,r2) = run[TPCH15](streamsTPCH15(),false);
-    println(r2.head); println("Time: "+time(t2))
+    val (t2,r2) = run[TPCH15](Compat.streamsTPCH15(),false);
+    println(r2.head); println("Time: "+t2.t)
   }
 }
 

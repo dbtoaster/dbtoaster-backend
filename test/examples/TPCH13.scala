@@ -13,10 +13,12 @@ import java.util.Date
 
 object TPCH13 {
   import Helper._
+// XXX: update this and make it a unit test
+/*
   def main(args:Array[String]) {
     //val ref = bench("ReferenceLMS ",10,()=>run[TPCH13Ref,Map[Long,Long]](streamsTPCH13()))
-    val res = bench("HandOptimized",10,()=>run[TPCH13](streamsTPCH13()))
-    val gen = bench("TCK-Generated",10,()=>run[TPCH13Gen](streamsTPCH13()))
+    val res = bench(Array("-hHandOptimized","-n10"),(d:String,p:Boolean,t:Long)=>run[TPCH13](streamsTPCH13()))
+    val gen = bench(Array("-hTCK-Generated","-n10"),(d:String,p:Boolean,t:Long)=>run[TPCH13Gen](streamsTPCH13()))
     def eq(m1:Map[Long,Long],m2:Map[Long,Long]) = m1.filter{case (k,v) => v!=0}==m2.filter{case (k,v) => v!=0}
     def m0ll(l:List[Any]):Map[Long,Long] = l.head.asInstanceOf[Map[Long,Long]]
     println("Correctness: "+(if(eq(m0ll(res),m0ll(gen))) "OK" else "FAILURE !!!!"))
@@ -29,7 +31,9 @@ object TPCH13 {
     //if(!eq(ref,res)) { println("HandOpt:"); println(K3Helper.toStr(res)); }
     //if(!eq(ref,gen)) { println("Generated:"); println(K3Helper.toStr(gen)); }
   }
+*/
 }
+
 
 // NB: only inserts have been optimized
 class TPCH13 extends Actor {
@@ -573,7 +577,7 @@ class TPCH13Ref extends Actor {
 
    val CUSTDIST = new K3PersistentCollection[(Long), Long]("CUSTDIST", new java.util.HashMap[(Long), Long], None); // == x2
    val CUSTDIST_mORDERS1_E1_4 = new K3PersistentCollection[(Long), Long]("CUSTDIST_mORDERS1_E1_4", new java.util.HashMap[(Long), Long], None); // ==x3
-   val CUSTDIST_mCUSTOMER1_E1_1 = new K3PersistentCollection[(Long), Long]("CUSTDIST_mCUSTOMER1_E1_1", new java.util.HashMap[(Long), Long], None); // ==CUSTDIST_mCUSTOMER1_E1_1 
+   val CUSTDIST_mCUSTOMER1_E1_1 = new K3PersistentCollection[(Long), Long]("CUSTDIST_mCUSTOMER1_E1_1", new java.util.HashMap[(Long), Long], None); // ==CUSTDIST_mCUSTOMER1_E1_1
    val CUSTDIST_mCUSTOMER1_E1_3 = new K3PersistentCollection[(Long), Long]("CUSTDIST_mCUSTOMER1_E1_3", new java.util.HashMap[(Long), Long], None); // ==x5
    def result:Map[Long,Long] = CUSTDIST.elems.toMap
 

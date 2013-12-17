@@ -26,7 +26,7 @@ object TPCH1 {
     { def kv(l:List[Any]) = l match { case List(v0:String,v1:String,v2:Double) => ((v0,v1),v2) }
       diff(res(6).asInstanceOf[Map[(String,String),Double]], Map[(String,String),Double]((("N","O"),0.05012458073790129372),(("R","F"),0.05002745367192862045),(("A","F"),0.05086603518267929635),(("N","F"),0.04289473684210526316))) }
     println("OK")
-    println("Time: "+time(t))
+    println("Time: "+t.t)
   }
 }
 

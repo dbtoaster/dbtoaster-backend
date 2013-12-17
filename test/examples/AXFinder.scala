@@ -6,11 +6,22 @@ import scala.reflect.ClassTag
 
 object AXFinder {
   import Helper._
+
+  def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) = {
+    var r:List[Any] = null
+    bench(Array("-n"+count,"-h"+name),(d:String,p:Boolean,t:Long)=>run[Q](Seq(
+      (new java.io.FileInputStream("examples/data/finance.csv"),new Adaptor.OrderBook(brokers=10,deterministic=true,bids="BIDS",asks="ASKS"),Split())
+    ),p),l=>r=l)
+    r
+  }
+
+/*
   def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) =
         bench(name,count,()=>run[Q](Seq(
     (new java.io.FileInputStream("/Documents/EPFL/Data/cornell_db_maybms/dbtoaster/experiments/data/finance/standard/finance.csv"),
      new Adaptor.OrderBook(brokers=10000,deterministic=true,bids="BIDS",asks="ASKS"),Split())
   ),false))
+*/
 
   def main(args:Array[String]) {
     //val r1=test[AXFinderRef]      ("Reference   ")

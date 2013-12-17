@@ -6,8 +6,8 @@ import java.util.Date;
 object TPCH18 {
   import Helper._
   def main(args:Array[String]) {
-    val (t,res) = run[TPCH18](streamsTPCH18(),false);
-    println(res.head.toString); println("Time: "+time(t))
+    val (t,res) = run[TPCH18](Compat.streamsTPCH18(),false);
+    println(res.head.toString); println("Time: "+t.t)
   }
 }
 

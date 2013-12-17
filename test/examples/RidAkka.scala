@@ -22,7 +22,7 @@ object Rid {
   def streams(d:String) = Seq(
     (new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/simple/tiny/r.dat"),new Adaptor.CSV("R","long,long","\\Q,\\E",if(d.endsWith("_del")) "ins+del" else "insert"),Split())
   )
-  def execute(args:Array[String],f:List[Any]=>Unit) = bench2(args,(d:String,p:Boolean)=>runLocal[RidMaster,RidWorker](22550,4,streams(d),p),f)
+  def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal[RidMaster,RidWorker](22550,4,streams(d),p),f)
   def main(args:Array[String]) {
     execute(args,(res:List[Any])=>{
       println("COUNT:\n"+M3Map.toStr(res(0))+"\n")
@@ -40,18 +40,18 @@ class RidWorker extends WorkerActor {
   val map2 = /*MapRef*/(2)
   val fa1 = /*FunRef*/(0)
   val fa2 = /*FunRef*/(1)
-  
+
   // maps
   val COUNT = M3Map.make[(Long,Long),Long]();
   val COUNT_mR2_E2_1 = M3Map.make[Long,Long]();
   val COUNT_mR4 = M3Map.make[(Long,Long),Long]((k:(Long,Long))=>k._2);
   val local = Array[M3Map[_,_]](COUNT,COUNT_mR2_E2_1,COUNT_mR4)
-  
+
   // remote foreach
   def forl(f:FunRef,args:Array[Any],co:()=>Unit) = (f,args.toList) match {
     case _ => co()
   }
-  
+
   // remote aggregations
   def aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {
     case (`fa1`,List(r2_b:Long,r_a:Long)) =>
@@ -84,14 +84,14 @@ class RidMaster extends RidWorker with MasterActor {
   import WorkerActor._
   import Messages._
   import Functions._
-  
+
   val queries = List(0)
   val dispatch : PartialFunction[TupleEvent,Unit] = {
     case TupleEvent(TupleInsert,"R",List(v0:Long,v1:Long)) => onAddR(v0,v1)
     case TupleEvent(TupleDelete,"R",List(v0:Long,v1:Long)) => onDelR(v0,v1)
     case _ => deq
   }
-  
+
   def onAddR(r_a:Long, r_b:Long) {
     pre(map0,false,Array[MapRef](map2,map1),()=> {
     val add1 = M3Map.temp[(Long,Long),Long]()
@@ -127,7 +127,7 @@ class RidMaster extends RidWorker with MasterActor {
     deq
     }) }) }) }) }) })
   }
-  
+
   def onDelR(r_a:Long, r_b:Long) {
     pre(map0,false,Array[MapRef](map1,map2),()=> {
     val add3 = M3Map.temp[(Long,Long),Long]()
@@ -148,7 +148,7 @@ class RidMaster extends RidWorker with MasterActor {
     deq
     }) }) }) }) })
   }
-  
+
   def onSystemReady() {
     ready
   }
