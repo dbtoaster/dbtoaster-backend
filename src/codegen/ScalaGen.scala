@@ -146,9 +146,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
     }
+    val skip="if (t1>0 && (tN&0xf)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; ";
     val str = s0.triggers.map(_.evt match {
-      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => { if(!earlyExit) { onAdd"+s.name+o+"; tuplesProcessed += 1; if(tuplesProcessed % 100 == 0) { val tmpTime=System.nanoTime()-t0; if(tmpTime > "+ddbt.UnitTest.max_benchmark_runtime_nanosec+"L) { earlyExit = true; time = tmpTime } } } } \n"
-      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => { if(!earlyExit) { onDel"+s.name+o+"; tuplesProcessed += 1; if(tuplesProcessed % 100 == 0) { val tmpTime=System.nanoTime()-t0; if(tmpTime > "+ddbt.UnitTest.max_benchmark_runtime_nanosec+"L) { earlyExit = true; time = tmpTime } } } } \n"
+      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => "+skip+" onAdd"+s.name+o+"\n"
+      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => "+skip+" onDel"+s.name+o+"\n"
       case _ => ""
     }).mkString
     val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o,pl)=ev(s.schema)
@@ -167,13 +168,15 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     val (str,ld0,gc) = genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
+    val snap="sender ! (StreamStat(t1-t0,tN,0),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+"))"
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+
-    "var t0:Long = 0L; var time=0L; var tuplesProcessed=0; var earlyExit=false;\n"+
+    "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
+    "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap+" case _ => tS+=1 }\n"+
     "def receive = {\n"+ind(str+
-      "case SystemInit =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime()\n"+
-      "case EndOfStream | GetSnapshot(_) => if(!earlyExit) { time=System.nanoTime()-t0; }; sender ! (((time,!earlyExit,tuplesProcessed),List[Any]("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+")))"
+      "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+
+      "case EndOfStream | GetSnapshot(_) => t1=System.nanoTime; "+snap
     )+"\n}\n"+gc+ts+ld)+"\n"+generateDataStructures+"}\n"
   }
 

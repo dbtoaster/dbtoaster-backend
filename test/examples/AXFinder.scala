@@ -43,7 +43,7 @@ abstract class AXFinderBase extends Actor {
   //override def postStop(): Unit = println("Stopped")
   def result:Any
   def receive = {
-    case SystemInit => t0=System.nanoTime()
+    case StreamInit(_) => t0=System.nanoTime()
     case TupleEvent(TupleInsert,"BIDS",List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onAddBIDS(t,id,b,v,p)
     case TupleEvent(TupleDelete,"BIDS",List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onDelBIDS(t,id,b,v,p)
     case TupleEvent(TupleInsert,"ASKS",List(t:Double,id:Long,b:Long,v:Double,p:Double)) => onAddASKS(t,id,b,v,p)

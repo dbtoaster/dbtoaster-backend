@@ -90,7 +90,7 @@ class AkkaSys extends FunSpec {
     val ws = (0 until 5).map { i => system.actorOf(Props[Worker]) }
     // setup members
     m ! Members(m,ws.toArray)
-    m ! SystemInit
+    m ! StreamInit()
     // custom external events
     m ! ev1
     m ! ev2

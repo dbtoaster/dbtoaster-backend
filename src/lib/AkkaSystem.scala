@@ -345,7 +345,7 @@ trait MasterActor extends WorkerActor {
         }
         ev match {
           case e:TupleEvent => dispatch(e)
-          case SystemInit(t) => pre_map=new Array[Int](local.size); onSystemReady()
+          case StreamInit(timeout) => pre_map=new Array[Int](local.size); onSystemReady()
           case EndOfStream => barrier{()=> val time=System.nanoTime()-t0; collect(time,queries.reverse,Nil)}
           case GetSnapshot(qs:List[Int]) => barrier{()=> val time=System.nanoTime()-t0; collect(time,qs.reverse,Nil)}
         }

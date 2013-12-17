@@ -37,7 +37,7 @@ class TPCH15 extends Actor {
     case TupleEvent(TupleDelete,"LINEITEM",List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Date,v11:Date,v12:Date,v13:String,v14:String,v15:String)) => onDelLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
     case TupleEvent(TupleInsert,"SUPPLIER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String)) => onAddSUPPLIER(v0,v1,v2,v3,v4,v5,v6)
     case TupleEvent(TupleDelete,"SUPPLIER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String)) => onDelSUPPLIER(v0,v1,v2,v3,v4,v5,v6)
-    case SystemInit => onSystemReady(); t0=System.nanoTime()
+    case StreamInit(_) => onSystemReady(); t0=System.nanoTime()
     case EndOfStream => val time=System.nanoTime()-t0;
       /*
       println("COUNT_mLINEITEM1")

@@ -1,4 +1,4 @@
-package ddbt.test.gen
+package ddbt.test.examples
 import ddbt.lib._
 import java.util.Date
 import org.scalatest._
