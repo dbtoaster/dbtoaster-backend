@@ -159,11 +159,13 @@ object UnitTest {
     Compiler.out = tmp.getPath+"/"+cls+".scala"
     Compiler.exec = benchmark
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = "-n"+samples :: "-s" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    Compiler.exec_args = "-n"+samples :: "-s" :: "-h"+mode :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
     val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3,post)); p.gen(t_gen)
     if (benchmark) { p.comp(t_comp)
       if (err!="") System.err.println(err)
       else out.split("\n").foreach{ l =>
+         println("GOT "+l)
+
         if (!l.matches("[a-z_]+: \\([0-9.]+,[a-z_]+,[0-9]+\\) \\[\\([0-9.]+,[a-z_]+,[0-9]+\\), \\([0-9.]+,[a-z_]+,[0-9]+\\)\\] \\(sec, [0-9]+ samples\\)$")) println(" l2 =>> " + l)
         else { val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),Array(e.slice(1,4).mkString(","),e.slice(4,7).mkString(","),e.slice(7,10).mkString(",")),e(11)) }
       }
@@ -182,12 +184,12 @@ object UnitTest {
   // Legacy testing
   private var legacySC:List[String]=>Unit = null
   def legacyScala(q:QueryTest,p:Printer,t0:Long,lms:Boolean=false) {
-    
+
     val libs = (if (path_repo!=null) path_repo+"/" else "")+"lib/dbt_scala/dbtlib.jar"
     if (legacySC==null) {
-    
+
       legacySC=scalaCompiler(tmp,libs,Compiler.exec_sc)
-    
+
       write(tmp,"RunQuery.scala","package org.dbtoaster\n"+
       "import org.dbtoaster.dbtoasterlib.DBToasterExceptions._\n"+
       "import org.dbtoaster.dbtoasterlib.QueryInterface._\n"+
@@ -207,14 +209,14 @@ object UnitTest {
     def replaceSourceStr(src:String):String = {
       src.replace("def act(): Unit ={","var isExit = false\n    def doExit {\n      isExit = true\n    }\n\n    def act(): Unit ={").replace("case e: DBTEvent => dispatcher(e)", "case e: DBTEvent => if(isExit) {\n            supervisor ! DBTDone;\n            exit();\n          } else {\n            dispatcher(e)\n          }")
     }
-    
+
     val (t1,sc) = if (!lms) { val (t1,src) = Compiler.toast("scala",q.sql); (t1,replaceSourceStr(src)) } else {
       val f="tmp.scala"; val (t1,_) = Compiler.toast("scala","-O4","-o",f,q.sql);
       val fl=if (repo!=null) new File(repo,f) else new File(f); val s=read(fl.getPath); fl.delete;
       (t1,replaceSourceStr(s.replaceAll("../../experiments/data",path_repo+"/../../experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)")))
     }
     p.gen(math.max(0,t1-t0))
-    
+
     p.all(q){dataset=> write(tmp,"Query.scala",{ val res = sc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace(", delimiter = \"\\\\|\")", ", deletions = \"true\", delimiter = \"\\\\|\")") else res })
       val t2 = ns(()=>legacySC(List(tmp.getPath+"/Query.scala",tmp.getPath+"/RunQuery.scala")))._1; p.comp(t2)
       val rt = scalaExec(List(tmp,new File(libs)),"org.dbtoaster.RunQuery",Array(),Compiler.exec_vm)._1.split("\n").filter(x=>x.trim!="").map(x=> { val xtup = x.split(","); (xtup(0).toLong,xtup(1).toBoolean,xtup(2).toInt) });
@@ -258,13 +260,13 @@ object UnitTest {
       println("%-20s: (%6s)".format(name+" "+set,ts(0))+" [("+ts(1)+"), ("+ts(2)+")] (sec, "+n+" samples)"); flush
       while(ds < datasets.size && set!=datasets(ds)) { tr+=",,,"; ds+=1 }; tr+=ts(0)+","+ts(1)+","+ts(2)+","; ds+=1
     }
-    def run(set:String,t_runs:Seq[Long]) { 
+    def run(set:String,t_runs:Seq[Long]) {
       val ts=t_runs.takeRight(t_runs.size - WarmUpRounds).sorted; val(t0,t1,t2)=(med(ts),ts(0),ts(ts.size-1))
       println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec, "+ts.size+" samples)");
       flush
       tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
     }
-    def run(t_runs:Seq[(Long,Boolean,Int)],set:String) { 
+    def run(t_runs:Seq[(Long,Boolean,Int)],set:String) {
       val ts = scala.util.Sorting.stableSort(t_runs.takeRight(t_runs.size - WarmUpRounds), (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double])
       val (t0tup,t1tup,t2tup)=(med3(ts),ts(0),ts(ts.size-1))
       val (t0,t1,t2)=((t0tup._1,t1tup._1,t2tup._1))

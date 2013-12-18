@@ -40,7 +40,7 @@ object Utils {
       s.classpath.value=cp; s.outputDirs.setSingleOutput(path_dir); val g=new scala.tools.nsc.Global(s)
       (fs:List[String]) => try { (new g.Run).compile(fs) } catch { case t:Throwable => t.printStackTrace }
     } else { // FSC external processes
-      def execOut(cmd:String) = exec(cmd.split(" +"),buf=false)
+      def execOut(cmd:String) = exec(cmd.split(" +"),prefix="")
       val args="-cp "+cp+" -d "+path_dir+" "+opts.mkString(" ")+" "
       val fsc="fsc "+prop("jvm").split(" +").map("-J"+_).mkString(" ")+" "+args
       (fs:List[String]) => try { execOut(fsc+fs.mkString(" ")) } catch { case _:IOException => execOut(path_jvm+" scala.tools.nsc.Main "+args+fs.mkString(" ")) }
@@ -52,17 +52,23 @@ object Utils {
     if (!external) execMain(cp,cls,args)
     else {
       val env = ("JAVA_HOME="+path_jdk :: scala.collection.JavaConversions.mapAsScalaMap(System.getenv).filter(x=>x._1.toUpperCase!="JAVA_HOME").map(x=>x._1+"="+x._2).toList).toArray
-      exec((path_jvm+" -cp "+cp.map(_.getAbsolutePath).mkString(":")+":"+path_cp+" "+cls+" "+args.mkString(" ")).split(" +"),env=env,buf=false)
+      exec((path_jvm+" -cp "+cp.map(_.getAbsolutePath).mkString(":")+":"+path_cp+" "+cls+" "+args.mkString(" ")).split(" +"),env=env,prefix="EXEC_CSV=")
     }
   }
 
-  // Gobbles an input stream (used for external processes by execMain)
-  private def gobble(in:InputStream,out:PrintStream=null) = new Thread {
+  // Gobbles an input stream (lines not matching prefix are sent to out, null matches all, "" matches none)
+  private def gobble(in:InputStream,out:PrintStream=null,prefix:String=null) = new Thread {
     private var buf = new StringBuilder
     override def toString = { join; buf.toString.trim }
     override def run {
       val r = new BufferedReader(new InputStreamReader(in)); var l=r.readLine
-      while(l!=null) { if (out!=null) out.println(l); else buf.append(l+"\n"); l = r.readLine }
+      val n = if (prefix==null) 0 else prefix.length
+      while(l!=null) {
+        if (prefix==null || out==null) buf.append(l+"\n")
+        else if (n>0 && l.startsWith(prefix)) buf.append(l.substring(0,n)+"\n")
+        else out.println(l)
+        l = r.readLine
+      }
       r.close
     }
     start
@@ -70,27 +76,28 @@ object Utils {
 
   // Execute arbitrary command, return (out,err)
   def exec(cmd:String):(String,String) = exec(cmd.split(" +"))
-  def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true,buf:Boolean=true):(String,String) = {
+  def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true,prefix:String=null):(String,String) = {
     val p = Runtime.getRuntime.exec(cmd,env,dir)
-    val out=gobble(p.getInputStream,if (buf) null else scala.Console.out); val err=gobble(p.getErrorStream,if (buf) null else scala.Console.err); p.waitFor
+    val out=gobble(p.getInputStream,scala.Console.out,prefix); val err=gobble(p.getErrorStream,scala.Console.err,null); p.waitFor
     val o=out.toString; val e=err.toString
     if (fatal && e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); scala.Console.out.print(o); scala.Console.err.print(e); System.exit(1) }
     (o,e)
   }
 
   // Capture console/default output and error streams in two strings
-  def captureOut[R](f:()=>R) : (R,String,String) = { val c=scala.Console;
-    val o0=c.out; val so0=System.out; val po=new PipedOutputStream; c.setOut(new PrintStream(po)); System.setOut(new PrintStream(po)); val out=gobble(new PipedInputStream(po));
-    val e0=c.err; val se0=System.err; val pe=new PipedOutputStream; c.setErr(new PrintStream(pe)); System.setErr(new PrintStream(pe)); val err=gobble(new PipedInputStream(pe));
+  def captureOut[R](f:()=>R,prefix:String=null) : (R,String,String) = { val c=scala.Console
+    val o0=c.out; val so0=System.out; val po=new PipedOutputStream; c.setOut(new PrintStream(po)); System.setOut(new PrintStream(po)); val out=gobble(new PipedInputStream(po),o0,prefix)
+    val e0=c.err; val se0=System.err; val pe=new PipedOutputStream; c.setErr(new PrintStream(pe)); System.setErr(new PrintStream(pe)); val err=gobble(new PipedInputStream(pe),e0,prefix)
     val r = try { f() } finally { c.setOut(o0); System.setOut(so0); po.close; c.setErr(e0); System.setErr(se0); pe.close }
     (r,out.toString,err.toString)
   }
 
   // Class loader to run a class with main(args:Array[String]) within the same VM
-  def execMain(cp:List[File],cls:String,args:Array[String]=Array(),capture:Boolean=false) = {
-    def f() = try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
-              catch { case t:Throwable => val c=t.getCause; (if (c!=null) c else t).printStackTrace(scala.Console.err) }
-    val r = if (capture) captureOut(f) else (f(),"","")
+  def execMain(cp:List[File],cls:String,args:Array[String]=Array(),prefix:String=null) = {
+    val r = captureOut(()=>{
+      try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
+      catch { case t:Throwable => val c=t.getCause; (if (c!=null) c else t).printStackTrace(scala.Console.err) }
+    },prefix)
     System.gc; Thread.sleep(50); System.gc; (r._2,r._3) // call finalize on class loader
   }
   import java.net.{URL,URLClassLoader}
