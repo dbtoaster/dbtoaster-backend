@@ -30,8 +30,8 @@ libraryDependencies <++= scalaVersion(v=>Seq(
 // --------- Compilation options
 Seq(
   scalaVersion := "2.10.3",
-  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings"), // ,"-target:jvm-1.7"
-  javacOptions ++= Seq("-Xlint:unchecked")
+  scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-optimise","-Yinline-warnings"), // ,"-target:jvm-1.7"
+  javacOptions ++= Seq("-Xlint:unchecked","-Xlint:-options","-source","1.6","-target","1.6") // forces JVM 1.6 compatibility for JDK 1.7 compiler
 )
 
 // --------- Execution options
@@ -108,6 +108,8 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
 }
 
 // show full-classpath
+//javaHome := Some(file("/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home"))
+//javaHome := Some(file("/Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home"))
 //{
 //  val t=TaskKey[Unit]("queries-gen2")
 //  val q=TaskKey[Unit]("queries-test2")

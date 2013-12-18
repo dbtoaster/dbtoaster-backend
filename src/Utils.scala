@@ -23,6 +23,7 @@ object Utils {
   // Paths related to DBToaster
   val path_repo = { val r=prop("base_repo",null); if (r==null) null else r+"/dbtoaster/compiler/alpha5" }
   val path_bin  = if (path_repo!=null) path_repo+"/bin/dbtoaster_release" else prop("dbtoaster","bin/dbtoaster_release")
+  private lazy val path_jdk = { var p=prop("jdk",null); if (p!=null) { val r=prop(p,null); if (r!=null) p=r; }; if (p==null) System.getProperty("java.home") else p }
   private lazy val (path_cp,path_jvm) = {
     val deps = System.getProperty("sbt.classpath",System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":")
     val cp = deps /**/ .filter(_.matches("(.*)/(\\.(sbt|ivy2)|target)/.*")).filter(_.indexOf("virtualized")== -1) /**/ .mkString(":")
@@ -39,10 +40,7 @@ object Utils {
       s.classpath.value=cp; s.outputDirs.setSingleOutput(path_dir); val g=new scala.tools.nsc.Global(s)
       (fs:List[String]) => try { (new g.Run).compile(fs) } catch { case t:Throwable => t.printStackTrace }
     } else { // FSC external processes
-      def execOut(cmd:String) {
-        def gob(i:InputStream,o:PrintStream) = new Thread() { val r=new BufferedReader(new InputStreamReader(i)); override def run() { var l=r.readLine; while(l!=null) { o.println(l); l=r.readLine }; } }.start
-        val p = Runtime.getRuntime.exec(cmd.split(" +"),null,null); gob(p.getInputStream,scala.Console.out); gob(p.getErrorStream,scala.Console.err); p.waitFor
-      }
+      def execOut(cmd:String) = exec(cmd.split(" +"),buf=false)
       val args="-cp "+cp+" -d "+path_dir+" "+opts.mkString(" ")+" "
       val fsc="fsc "+prop("jvm").split(" +").map("-J"+_).mkString(" ")+" "+args
       (fs:List[String]) => try { execOut(fsc+fs.mkString(" ")) } catch { case _:IOException => execOut(path_jvm+" scala.tools.nsc.Main "+args+fs.mkString(" ")) }
@@ -51,26 +49,30 @@ object Utils {
 
   // Execute Scala a program
   def scalaExec(cp:List[File],cls:String,args:Array[String]=Array(),external:Boolean=false) = {
-    if (!external) loadMain(cp,cls,args)
-    else exec(path_jvm+" -cp "+cp.map(p=>p.getAbsolutePath).mkString(":")+":"+path_cp+" "+cls+" "+args.mkString(" "))
+    if (!external) execMain(cp,cls,args)
+    else {
+      val env = ("JAVA_HOME="+path_jdk :: scala.collection.JavaConversions.mapAsScalaMap(System.getenv).filter(x=>x._1.toUpperCase!="JAVA_HOME").map(x=>x._1+"="+x._2).toList).toArray
+      exec((path_jvm+" -cp "+cp.map(_.getAbsolutePath).mkString(":")+":"+path_cp+" "+cls+" "+args.mkString(" ")).split(" +"),env=env,buf=false)
+    }
   }
 
-  // Gobbles an input stream (used for external processes by loadMain)
-  private def gobble(in:InputStream) = new Runnable {
-    var out = new StringBuilder
-    var thr = new Thread(this); thr.start
-    override def toString = { thr.join; out.toString.trim }
+  // Gobbles an input stream (used for external processes by execMain)
+  private def gobble(in:InputStream,out:PrintStream=null) = new Thread {
+    private var buf = new StringBuilder
+    override def toString = { join; buf.toString.trim }
     override def run {
-      val r = new BufferedReader(new InputStreamReader(in))
-      var l = r.readLine; while(l != null) { out.append(l+"\n"); l = r.readLine }; r.close
+      val r = new BufferedReader(new InputStreamReader(in)); var l=r.readLine
+      while(l!=null) { if (out!=null) out.println(l); else buf.append(l+"\n"); l = r.readLine }
+      r.close
     }
+    start
   }
 
   // Execute arbitrary command, return (out,err)
   def exec(cmd:String):(String,String) = exec(cmd.split(" +"))
-  def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true):(String,String) = {
+  def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true,buf:Boolean=true):(String,String) = {
     val p = Runtime.getRuntime.exec(cmd,env,dir)
-    val out=gobble(p.getInputStream); val err=gobble(p.getErrorStream); p.waitFor
+    val out=gobble(p.getInputStream,if (buf) null else scala.Console.out); val err=gobble(p.getErrorStream,if (buf) null else scala.Console.err); p.waitFor
     val o=out.toString; val e=err.toString
     if (fatal && e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); scala.Console.out.print(o); scala.Console.err.print(e); System.exit(1) }
     (o,e)
@@ -85,11 +87,10 @@ object Utils {
   }
 
   // Class loader to run a class with main(args:Array[String]) within the same VM
-  def loadMain(cp:List[File],cls:String,args:Array[String]=Array()) = {
-    val r = captureOut(()=>{
-      try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
-      catch { case t:Throwable => val c=t.getCause; (if (c!=null) c else t).printStackTrace(scala.Console.err) }
-    })
+  def execMain(cp:List[File],cls:String,args:Array[String]=Array(),capture:Boolean=false) = {
+    def f() = try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
+              catch { case t:Throwable => val c=t.getCause; (if (c!=null) c else t).printStackTrace(scala.Console.err) }
+    val r = if (capture) captureOut(f) else (f(),"","")
     System.gc; Thread.sleep(50); System.gc; (r._2,r._3) // call finalize on class loader
   }
   import java.net.{URL,URLClassLoader}

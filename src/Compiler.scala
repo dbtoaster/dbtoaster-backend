@@ -28,7 +28,7 @@ object Compiler {
   var exec_vm : Boolean = false  // execute in a fresh JVM
   var exec_args = List[String]() // arguments passed for execution
 
-  def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(1); null }
+  def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(0); null }
   def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
     val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f)) ::: (if (!opts.isEmpty) opts.toList else in)
     val repo = if (Utils.path_repo!=null && !opts.isEmpty) new File(Utils.path_repo) else null
@@ -57,6 +57,7 @@ object Compiler {
         case "-xsc" => exec_sc=true;
         case "-xvm" => exec_vm=true;
         case s if s.matches("-O[123]") => optm3=s;
+        case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1))
         case s => in = in ::: List(s)
       }
       i+=1
@@ -87,7 +88,12 @@ object Compiler {
       error("  -xd <path>    destination for generated binaries")
       error("  -xsc          use external fsc/scalac compiler")
       error("  -xvm          execute in a new JVM instance")
-      error("  -xa <arg>     pass an argument to generated program",true)
+      error("  -xa <arg>     pass an argument to generated program") // legacy
+      error("Second-stage options:")
+      error("  --n<samples>  number of samples (default=1)")
+      error("  --w<count>    number of warmup transients to remove (default=0)")
+      error("  --d<set>      dataset selection (can be repeated)")
+      error("  --t<sec>      execution timeout (in seconds)",true)
     }
     if (out==null && exec) { error("Execution disabled, specify an output file"); exec=false }
     if (name==null) {

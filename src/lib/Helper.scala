@@ -48,9 +48,16 @@ object Helper {
     }
     val master = system.actorOf(Props[M]())
     master ! WorkerActor.Members(master,workers.toArray) // initial membership
-    val res = try { mux(master,streams,parallel,timeout) } finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
+    val res = try mux(master,streams,parallel,timeout) finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
   }
 
+  def showInfos = {
+    val r=Runtime.getRuntime
+    println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ","")+", "+r.availableProcessors+" cpus, "+"%.2f".format(r.totalMemory/1073741824.0)+"GB mem")
+    println
+  }
+
+  // ---------------------------------------------------------------------------
   // Query benchmark, supported arguments:
   //   -n<num>       number of samples (default=1)
   //   -w<num>       number of warmup transients to remove (default=0)
@@ -63,31 +70,32 @@ object Helper {
   //   -o<csv_file>  dump "med,min,max," for each dataset file
   //   -l<log_file>  dump "dataset,time_ns,count,skip\n" for each sample in the file
   def bench(args:Array[String],run:(String,Boolean,Long)=>(StreamStat,List[Any]),print:List[Any]=>Unit=null) {
-    def append(file:String,data:String) { val fw=new java.io.FileWriter(file,true); try fw.write(data) finally fw.close }
     def ad[T](s:String,d:T,f:String=>T) = args.filter(x=>x.startsWith(s)).lastOption.map(x=>f(x.substring(2))).getOrElse(d)
+    def ap(file:String) = if (file==null) (data:String)=>{} else (data:String) => { val fw=new java.io.FileWriter(file,true); try fw.write(data) finally fw.close }
     val parallel=ad("-dp",true,x=>false)
     val count = ad("-n",1,x=>x.toInt)
     val trans = ad("-w",0,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)
     var ds=args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
-    val out=ad("-o",null,x=>x)
-    val log=ad("-l",null,x=>x)
+    val out=ap(ad("-o",null,x=>x))
+    val log=ap(ad("-l",null,x=>x))
     val fmt=ad("-h",null,x=>x)
+    if (!args.contains("-h")) showInfos
     ds.foreach { d=> var res0:List[Any]=null;
       def f(x:Int) = { val (t,res)=run(d,parallel,timeout); if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); t }
       (0 until math.max(0,trans)).foreach(f)
-      val ts = (0 until math.max(1,count)).map{x=>val r=f(x); if (log!=null) append(log,d+","+r.ns+","+r.count+","+r.skip+"\n"); r}.sorted.toList
+      val ts = (0 until math.max(1,count)).map{x=>val r=f(x); log(d+","+r.ns+","+r.count+","+r.skip+"\n"); r}.sorted.toList
       val mid = if (count%2==0) { val (a,b)=(ts(count/2),ts(count/2-1)); StreamStat((a.ns+b.ns)/2,(a.count+b.count)/2,(a.skip+b.skip)/2) } else ts(count/2)
       val (min,max)=(ts(0),ts(count-1))
       def cf(s:StreamStat) = "\""+s.count+"/"+(s.ns/1000000000)+".06d".format(s.ns/1000)+"\""
-      if (out!=null) append(out,cf(mid)+","+cf(min)+","+cf(max)+",")
+      out(cf(mid)+","+cf(min)+","+cf(max)+",")
       if (!args.contains("-h")) println((if (fmt!=null) "%-20s".format(fmt+" "+d) else d)+": "+mid.f+" ["+min.f+", "+max.f+"] (views/sec, "+count+" samples)")
       if (!args.contains("-s") && res0!=null && print!=null) print(res0)
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Unit testing helpers
+  // Correctness helpers
 
   val precision = 7 // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)
   private val diff_p = Math.pow(0.1,precision)
