@@ -26,7 +26,7 @@ object Helper {
 
   def mux(actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=true,timeout:Long=0) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
-    actor ! StreamInit(timeout); mux.read(); val tout = akka.util.Timeout(if (timeout==0) (1L<<42) /*139 years*/ else timeout)
+    actor ! StreamInit(timeout); mux.read(); val tout = akka.util.Timeout(if (timeout==0) (1L<<42) /*139 years*/ else timeout+5000 /*extra time*/ )
     scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(tout), tout.duration).asInstanceOf[(StreamStat,List[Any])]
   }
 
@@ -52,59 +52,43 @@ object Helper {
   }
 
   // ---------------------------------------------------------------------------
+  @inline private def mmm(ss:List[StreamStat]) = { val ts=ss.sorted; val n=ts.size; val m=ts(n/2); (if (n%2==1) m else { val b=ts(n/2-1); StreamStat((m.ns+b.ns)/2,(m.count+b.count)/2,(m.skip+b.skip+1)/2) },ts(0),ts(n-1)) } // mid: if 1 skip, result must skip
+  @inline private def showInfos = { val r=Runtime.getRuntime; println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ","")+", "+r.availableProcessors+" cpus, "+"%.2f".format(r.totalMemory/1073741824.0)+"GB mem") }
+
   // Query benchmark, supported arguments:
-  //   -n<num>       number of samples (default=1)
+  //   -s<num>       number of samples (default=1)
   //   -w<num>       number of warmup transients to remove (default=0)
   //   -d<set>       dataset selection (can be repeated), (default=standard)
   //   -t<num>       set execution timeout (in miliseconds)
-  //   -h            hide the benchmark time
-  //   -h<str>       display the header
-  //   -s            silent the query output
+  //   -h            hide output (verification mode)
+  //   -h<str>       display the header (benchmark mode)
   //   -dp           disable parallel input streams
   //   -l<file>      dumps "dataset,time_ns,count,skip\n" for each sample in the file
   def bench(args:Array[String],run:(String,Boolean,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
     def ad[T](s:String,d:T,f:String=>T) = args.filter(x=>x.startsWith(s)).lastOption.map(x=>f(x.substring(2))).getOrElse(d)
     val parallel=ad("-dp",true,x=>false)
-    val count = ad("-n",1,x=>x.toInt)
+    val samples = ad("-s",1,x=>x.toInt)
     val trans = ad("-w",0,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)
     var ds=args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
     val log=ad("-l",(data:String)=>{},file=>(data:String) => { val fw=new java.io.FileWriter(file,true); try fw.write(data) finally fw.close })
     val fmt=ad("-h",null,x=>x)
-    if (args.filter(_.startsWith("-h")).size==0) showInfos
-
+    if (fmt==null) showInfos
     ds.foreach { d=> var res0:List[Any]=null; var ts=List[StreamStat](); var i=0
       def f() = { val (t,res)=run(d,parallel,timeout); if (t.skip==0) { if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); }; (t,res) }
       i=0; while (i<trans) { i+=1; f() }
-      i=0; while(i<math.max(1,count)) { i+=1; val (t,res)=f(); ts=t::ts; log(d+","+t.ns+","+t.count+","+t.skip+"\n")
-        val (mid,min,max)=mmm(ts)
-        if (ts.size>1) print("\033[F"+"[info] ") // assumes terminal + SBT
-        println((if (fmt!=null) "%-20s".format(fmt+" "+d) else d)+": "+mid.f+" ["+min.f+", "+max.f+"] (views/sec, "+ts.size+(if (ts.size<count) "/"+count else "")+" samples)"+(" "*20))
-        //def cf(s:StreamStat) = "\""+s.count+"/"+(s.ns/1000000000)+".06d".format(s.ns/1000)+"\""
-        //if (ts.size==count) out(cf(mid)+","+cf(min)+","+cf(max)+",")
+      i=0; while(i<math.max(1,samples)) { i+=1; val (t,res)=f(); ts=t::ts; log(d+","+t.ns+","+t.count+","+t.skip+"\n")
+        if (fmt!="") {
+          val (mid,min,max)=mmm(ts)
+          val oo = if (timeout==0L) mid.t+" ["+min.t+", "+max.t+"] (sec, " else mid.f+" ["+min.f+", "+max.f+"] (views/sec, "
+          println((if (fmt!=null) "%-20s".format(fmt+" "+d) else d)+": "+oo+ts.size+(if (ts.size<samples) "/"+samples else "")+" samples)"+(" "*20))
+          if (ts.size<samples) print("\033[F"+"[info] ") // assumes terminal + SBT
+        }
       }
-      val (mid,min,max)=mmm(ts)
-      if (fmt!=null) println("EXEC_CSV="+mid+min+max)
-
-
-//  //   -o<csv_file>  dump "med,min,max," for each dataset file
-//    val out=ap(ad("-o",null,x=>x))
-
-/*
-      def f(x:Int) = { val (t,res)=run(d,parallel,timeout); if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); t }
-      (0 until math.max(1,count)).map{x=>val r=f(x); log(d+","+r.ns+","+r.count+","+r.skip+"\n"); r}.sorted.toList
-
-      val ts = (0 until math.max(1,count)).map{x=>val r=f(x); log(d+","+r.ns+","+r.count+","+r.skip+"\n"); r}.sorted.toList
-      val mid = if (count%2==0) { val (a,b)=(ts(count/2),ts(count/2-1)); StreamStat((a.ns+b.ns)/2,(a.count+b.count)/2,(a.skip+b.skip)/2) } else ts(count/2)
-      val (min,max)=(ts(0),ts(count-1))
-      def cf(s:StreamStat) = "\""+s.count+"/"+(s.ns/1000000000)+".06d".format(s.ns/1000)+"\""
-      if (!args.contains("-h")) println((if (fmt!=null) "%-20s".format(fmt+" "+d) else d)+": "+mid.f+" ["+min.f+", "+max.f+"] (views/sec, "+count+" samples)")
-*/
-      if (!args.contains("-s") && res0!=null && op!=null) op(res0)
+      if (fmt!=null && fmt.size>0) { val (mid,min,max)=mmm(ts); println("EXEC_CSV="+mid+min+max) }
+      else if (res0!=null && op!=null) op(res0)
     }
   }
-  private def mmm(ss:List[StreamStat]) = { val ts=ss.sorted; val n=ts.size; val m=ts(n/2); val mid = if (n%2==0) { val b=ts(n/2-1); StreamStat((m.ns+b.ns)/2,(m.count+b.count)/2,(m.skip+b.skip+1)/2) } else m; (mid,ts(0),ts(n-1)) } // mid: if one skips, result must skip
-  private def showInfos = { val r=Runtime.getRuntime; println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ","")+", "+r.availableProcessors+" cpus, "+"%.2f".format(r.totalMemory/1073741824.0)+"GB mem") }
 
   // ---------------------------------------------------------------------------
   // Correctness helpers

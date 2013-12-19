@@ -100,7 +100,7 @@ class AkkaSys extends FunSpec {
     val wait = 10000
     val timeout = akka.util.Timeout(wait)
     val r = scala.concurrent.Await.result(akka.pattern.ask(m,EndOfStream)(timeout), timeout.duration).asInstanceOf[(Long,Any)]._1
-    info("Test passed in "+ddbt.Utils.time(r)+"s")
+    info("Test passed in "+r+"us")
     system.shutdown()
   }
 

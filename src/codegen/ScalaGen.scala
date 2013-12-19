@@ -146,10 +146,11 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
       ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
     }
-    val skip="if (t1>0 && (tN&0xf)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; ";
+    val step = 128 // periodicity of timeout verification, must be a power of 2
+    val skip = "if (t1>0 && (tN&"+(step-1)+")==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; "
     val str = s0.triggers.map(_.evt match {
-      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => "+skip+" onAdd"+s.name+o+"\n"
-      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => "+skip+" onDel"+s.name+o+"\n"
+      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => "+skip+"onAdd"+s.name+o+"\n"
+      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => "+skip+"onDel"+s.name+o+"\n"
       case _ => ""
     }).mkString
     val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o,pl)=ev(s.schema)
@@ -168,7 +169,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     val (str,ld0,gc) = genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
-    val snap="sender ! (StreamStat(t1-t0,tN,0),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+"))"
+    val snap="sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+"))"
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+ms+"\n\n"+

@@ -57,7 +57,7 @@ object Compiler {
         case "-xsc" => exec_sc=true;
         case "-xvm" => exec_vm=true;
         case s if s.matches("-O[123]") => optm3=s;
-        case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1))
+        case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
         case s => in = in ::: List(s)
       }
       i+=1
@@ -88,12 +88,7 @@ object Compiler {
       error("  -xd <path>    destination for generated binaries")
       error("  -xsc          use external fsc/scalac compiler")
       error("  -xvm          execute in a new JVM instance")
-      error("  -xa <arg>     pass an argument to generated program") // legacy
-      error("Second-stage options:")
-      error("  --n<samples>  number of samples (default=1)")
-      error("  --w<count>    number of warmup transients to remove (default=0)")
-      error("  --d<set>      dataset selection (can be repeated)")
-      error("  --t<sec>      execution timeout (in seconds)",true)
+      error("  -xa <arg>     pass an argument to generated program",true)
     }
     if (out==null && exec) { error("Execution disabled, specify an output file"); exec=false }
     if (name==null) {
@@ -142,8 +137,7 @@ object Compiler {
       case "scala"|"akka"|"lms" =>
         val dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
         t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
-        val (o,e) = Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
-        if (e!="") error(e); if (o!="") println(o);
+        Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
       case _ => error("Execution not supported for "+lang,true)
     }
     (t1-t0,t2)

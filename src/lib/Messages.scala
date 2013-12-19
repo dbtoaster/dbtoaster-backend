@@ -23,7 +23,7 @@ object Messages {
 
   /** Snapshot timing result */
   case class StreamStat(ns:Long,count:Long,skip:Long) extends Ordered[StreamStat] {
-    override def toString = (ns/1000000000L)+".%06d".format((ns/1000)%1000000)+","+count+","+skip+"," // CSV format
+    override def toString = { val us=ns/1000; (us/1000000L)+".%06d".format(us%1000000L)+","+count+","+skip+"," } // CSV format
     def compare(s:StreamStat) = { val (a,b) = (count*s.ns,s.count*ns); if (a<b) -1 else if (a>b) 1 else 0 }
     def t = { val ms=math.round(ns/1000000.0); "%d.%03d".format(ms/1000,ms%1000) } // time in seconds
     def f = { val tps=if (ns==0) 0 else count/(ns/1000000000.0); val t=math.round(tps*10); "%d.%01d".format(t/10,t%10) } // frequency in views/sec

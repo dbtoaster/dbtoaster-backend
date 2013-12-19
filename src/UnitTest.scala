@@ -1,6 +1,5 @@
 package ddbt
 import java.io._
-import Utils.{med, med3}
 
 /**
  * Benchmarking and correctness verification generator. Instruments the
@@ -11,6 +10,10 @@ import Utils.{med, med3}
  * @author TCK
  */
 object UnitTest {
+  def med(ts:Seq[Long]) = if (ts.size==0) 0L else { val s=ts.sorted; val n=ts.size; if (n%2==0) (s(n/2)+s(n/2-1))/2 else ts(n/2) }
+  def med3(ts:Seq[(Long,Boolean,Int)]) = if (ts.size==0) ((0L,false,0)) else { val s=ts; val n=ts.size; if (n%2==0 && (s(n/2)._2 == s(n/2-1)._2) && (s(n/2)._3 == s(n/2-1)._3)) (((s(n/2)._1+s(n/2-1)._1)/2,s(n/2)._2,s(n/2)._3)) else ts(n/2) }
+  def time(ns:Long,n:Int=2) = { val us=ns/1000; ("%"+(if (n==0)"" else n)+"d.%06d").format(us/1000000,us%1000000) }
+
   import Utils._
   val max_benchmark_runtime_nanosec = 1L * 60L * 1000L * 1000L * 1000L //1 min
   val WarmUpRounds = 2
@@ -27,6 +30,8 @@ object UnitTest {
   var tmp = makeTempDir()
   var benchmark = false // enable benchmarks
   var samples = 10      // number of samples to take in the benchmark
+  var warmup = 0        // number of warm-up transients to remove
+  var timeout = 0L      // test duration timeout
   var verify = false    // enforce correctness verification in benchmark
   var modes = List[String]() // selected modes
   var datasets = List[String]() // selected datasets
@@ -46,7 +51,9 @@ object UnitTest {
       case "-qskip" => qskip=true
       case "-x" => benchmark=true
       case "-v" => verify=true
-      case "-samples" => eat(s=>samples=s.toInt)
+      case "-s" => eat(s=>samples=s.toInt)
+      case "-w" => eat(s=>warmup=s.toInt)
+      case "-t" => eat(s=>timeout=s.toLong)
       case "-csv" => eat(s=>csvFile=s)
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
@@ -59,10 +66,13 @@ object UnitTest {
         e("  -qx <filter>  add an exclusion filter for queries")
         e("  -qskip        skip queries that are known to fail")
         e("Benchmarking options:")
-        e("  -v            verification against reference result") // consistency verification is always enabled
         e("  -x            enable benchmarks (compile and execute)")
-        e("  -samples <n>  number of samples to take (default=10)")
+        e("  -v            verification against reference result") // consistency verification is always enabled
+        e("  -s <n>        number of samples to take (default=10)")
+        e("  -w <n>        number of warm-up transients to remove (default=0)")
+        e("  -t <ms>       test duration timeout (in milliseconds, default=0)")
         e("  -csv <file>   store benchmarking results in a file")
+        e("  -dump <dir>   dump individual benchmark results")
         e("")
         e("Other options are forwarded to the compiler:")
         Compiler.parseArgs(Array[String]())
@@ -93,8 +103,8 @@ object UnitTest {
     def mn(s:String) = (s(0)+"").toUpperCase+s.substring(1)
 
     if (csv!=null) { // CSV format: query,sql->m3,(codegen,compile,(med,min,max,)*)*
-      csv.print(samples+",samples,"); for (m<-modes) csv.println(mn(m)+",,"+datasets.map(d=>d+",,,").mkString)
-      csv.print("Query,SQLtoM3,"); for (m<-modes) csv.println("M3toCode,Compile,"+datasets.map(d=>"Med,Min,Max,").mkString)
+      csv.print(samples+",samples,"); for (m<-modes) csv.println(mn(m)+",,"+datasets.map(d=>d+",,,,,,,,,").mkString)
+      csv.print("Query,SQLtoM3,"); for (m<-modes) csv.println("M3toCode,Compile,"+datasets.map(d=>"MedT,MedN,_,MinT,MinN,_,MaxT,MaxN,_,").mkString)
     }
     for (q <- sel) {
       println("--------[[ "+name(q.sql)+" ]]--------")
@@ -134,7 +144,7 @@ object UnitTest {
       "implicit def dateConv(d:Long) = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime();\n"+
       "implicit def strConv(d:Long) = \"\"+d\n"+ // fix for TPCH22
       q.sets.map { case (sz,set) =>
-        (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-d"+sz+"\",\"-h\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
+        (if (full) cls+"." else "")+"execute(Array(\"-s1\",\"-d"+sz+"\",\"-h\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
         set.out.map { case (n,o) => val (kt,vt) = qt(n); val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
           val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
           val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
@@ -159,16 +169,11 @@ object UnitTest {
     Compiler.out = tmp.getPath+"/"+cls+".scala"
     Compiler.exec = benchmark
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = "-n"+samples :: "-s" :: "-h"+mode :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
-    val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3,post)); p.gen(t_gen)
+    Compiler.exec_args = "-s"+samples :: "-w"+warmup :: "-t"+timeout :: "-h"+p.name :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    val ((t_gen,t_comp),out,err) = captureOut(()=>Compiler.compile(m3,post),"EXEC_CSV="); p.gen(t_gen)
     if (benchmark) { p.comp(t_comp)
       if (err!="") System.err.println(err)
-      else out.split("\n").foreach{ l =>
-         println("GOT "+l)
-
-        if (!l.matches("[a-z_]+: \\([0-9.]+,[a-z_]+,[0-9]+\\) \\[\\([0-9.]+,[a-z_]+,[0-9]+\\), \\([0-9.]+,[a-z_]+,[0-9]+\\)\\] \\(sec, [0-9]+ samples\\)$")) println(" l2 =>> " + l)
-        else { val e=l.split("[^-a-z_0-9.]+"); p.run(e(0),Array(e.slice(1,4).mkString(","),e.slice(4,7).mkString(","),e.slice(7,10).mkString(",")),e(11)) }
-      }
+      else out.split("\n").foreach{ l=>p.run(l.trim) }
       p.close
     }
     // Append correctness spec and move to test/gen/
@@ -219,7 +224,7 @@ object UnitTest {
 
     p.all(q){dataset=> write(tmp,"Query.scala",{ val res = sc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace(", delimiter = \"\\\\|\")", ", deletions = \"true\", delimiter = \"\\\\|\")") else res })
       val t2 = ns(()=>legacySC(List(tmp.getPath+"/Query.scala",tmp.getPath+"/RunQuery.scala")))._1; p.comp(t2)
-      val rt = scalaExec(List(tmp,new File(libs)),"org.dbtoaster.RunQuery",Array(),Compiler.exec_vm)._1.split("\n").filter(x=>x.trim!="").map(x=> { val xtup = x.split(","); (xtup(0).toLong,xtup(1).toBoolean,xtup(2).toInt) });
+      val rt = captureOut(()=>scalaExec(List(tmp,new File(libs)),"org.dbtoaster.RunQuery",Array(),Compiler.exec_vm))._2.split("\n").filter(x=>x.trim!="").map(x=> { val xtup = x.split(","); (xtup(0).toLong,xtup(1).toBoolean,xtup(2).toInt) });
       p.run(rt,dataset)
     }
   }
@@ -251,21 +256,25 @@ object UnitTest {
   def sqlFiles(valid:Boolean=true) = { val qs=all.map(q=>q.sql); if (valid) qs.filter(s=> !skip.exists(e=>s.endsWith(e+".sql"))) else qs }
 
   // Helper for displaying information and emitting a CSV file
-  class Printer(name:String) {
+  class Printer(val name:String) {
     var tg=Seq[Long](); var tc=Seq[Long](); var tr=""; var ds=0;
-    private def flush { scala.Console.out.flush }
+    @inline private def flush { scala.Console.out.flush; System.out.flush }
     def gen(t:Long) { println("%-20s: ".format(name+" codegen")+time(t)); tg=tg:+t; flush }
     def comp(t:Long) { println("%-20s: ".format(name+" compile")+time(t)); tc=tc:+t; flush }
     def run(set:String,ts:Array[String],n:String) {
       println("%-20s: (%6s)".format(name+" "+set,ts(0))+" [("+ts(1)+"), ("+ts(2)+")] (sec, "+n+" samples)"); flush
       while(ds < datasets.size && set!=datasets(ds)) { tr+=",,,"; ds+=1 }; tr+=ts(0)+","+ts(1)+","+ts(2)+","; ds+=1
     }
+    def run(raw:String) { tr+=raw }
+
     def run(set:String,t_runs:Seq[Long]) {
       val ts=t_runs.takeRight(t_runs.size - WarmUpRounds).sorted; val(t0,t1,t2)=(med(ts),ts(0),ts(ts.size-1))
       println("%-20s: ".format(name+" "+set)+time(t0)+" ["+time(t1,0)+", "+time(t2,0)+"] (sec, "+ts.size+" samples)");
       flush
       tr+=time(t0,0)+","+time(t1,0)+","+time(t2,0)+","
     }
+
+    // drop this
     def run(t_runs:Seq[(Long,Boolean,Int)],set:String) {
       val ts = scala.util.Sorting.stableSort(t_runs.takeRight(t_runs.size - WarmUpRounds), (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double])
       val (t0tup,t1tup,t2tup)=(med3(ts),ts(0),ts(ts.size-1))

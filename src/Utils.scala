@@ -47,12 +47,12 @@ object Utils {
     }
   }
 
-  // Execute Scala a program
-  def scalaExec(cp:List[File],cls:String,args:Array[String]=Array(),external:Boolean=false) = {
-    if (!external) execMain(cp,cls,args)
+  // Executes a Scala program
+  def scalaExec(cp:List[File],cls:String,args:Array[String]=Array(),external:Boolean=false) {
+    if (!external) runMain(cp,cls,args)
     else {
       val env = ("JAVA_HOME="+path_jdk :: scala.collection.JavaConversions.mapAsScalaMap(System.getenv).filter(x=>x._1.toUpperCase!="JAVA_HOME").map(x=>x._1+"="+x._2).toList).toArray
-      exec((path_jvm+" -cp "+cp.map(_.getAbsolutePath).mkString(":")+":"+path_cp+" "+cls+" "+args.mkString(" ")).split(" +"),env=env,prefix="EXEC_CSV=")
+      exec((path_jvm+" -cp "+cp.map(_.getAbsolutePath).mkString(":")+":"+path_cp+" "+cls+" "+args.mkString(" ")).split(" +"),env=env,prefix="")
     }
   }
 
@@ -62,10 +62,10 @@ object Utils {
     override def toString = { join; buf.toString.trim }
     override def run {
       val r = new BufferedReader(new InputStreamReader(in)); var l=r.readLine
-      val n = if (prefix==null) 0 else prefix.length
+      val n = if (prefix==null || out==null) -1 else prefix.length
       while(l!=null) {
-        if (prefix==null || out==null) buf.append(l+"\n")
-        else if (n>0 && l.startsWith(prefix)) buf.append(l.substring(0,n)+"\n")
+        if (n== -1) buf.append(l+"\n")
+        else if (n>0 && l.startsWith(prefix)) buf.append(l.substring(n)+"\n")
         else out.println(l)
         l = r.readLine
       }
@@ -78,10 +78,8 @@ object Utils {
   def exec(cmd:String):(String,String) = exec(cmd.split(" +"))
   def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true,prefix:String=null):(String,String) = {
     val p = Runtime.getRuntime.exec(cmd,env,dir)
-    val out=gobble(p.getInputStream,scala.Console.out,prefix); val err=gobble(p.getErrorStream,scala.Console.err,null); p.waitFor
-    val o=out.toString; val e=err.toString
-    if (fatal && e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); scala.Console.out.print(o); scala.Console.err.print(e); System.exit(1) }
-    (o,e)
+    val out=gobble(p.getInputStream,scala.Console.out,prefix); val err=gobble(p.getErrorStream,scala.Console.err,prefix); p.waitFor; val o=out.toString; val e=err.toString
+    if (fatal && e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); scala.Console.out.print(o); scala.Console.err.print(e); System.exit(1) }; (o,e)
   }
 
   // Capture console/default output and error streams in two strings
@@ -93,12 +91,10 @@ object Utils {
   }
 
   // Class loader to run a class with main(args:Array[String]) within the same VM
-  def execMain(cp:List[File],cls:String,args:Array[String]=Array(),prefix:String=null) = {
-    val r = captureOut(()=>{
-      try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
-      catch { case t:Throwable => val c=t.getCause; (if (c!=null) c else t).printStackTrace(scala.Console.err) }
-    },prefix)
-    System.gc; Thread.sleep(50); System.gc; (r._2,r._3) // call finalize on class loader
+  def runMain(cp:List[File],cls:String,args:Array[String]=Array()) = {
+    try { val l=new CPLoader(cp); val c=l.loadClass(cls); val m = c.getMethod("main",args.getClass); m.invoke(null,args) }
+    catch { case t:Throwable => val c=t.getCause; (if (c!=null) c else t).printStackTrace(scala.Console.err) }
+    finally { System.gc; Thread.sleep(50); System.gc }
   }
   import java.net.{URL,URLClassLoader}
   private class CPLoader(cp:List[File]) extends URLClassLoader(cp.map(_.toURI.toURL).toArray,null) {
@@ -137,8 +133,5 @@ object Utils {
   }
 
   // Time measurement
-  def time(ns:Long,n:Int=2) = { val us=ns/1000; ("%"+(if (n==0)"" else n)+"d.%06d").format(us/1000000,us%1000000) }
   def ns[T](f:()=>T) = { val t0=System.nanoTime; var r=f(); val t1=System.nanoTime; (t1-t0,r) }
-  def med(ts:Seq[Long]) = if (ts.size==0) 0L else { val s=ts.sorted; val n=ts.size; if (n%2==0) (s(n/2)+s(n/2-1))/2 else ts(n/2) }
-  def med3(ts:Seq[(Long,Boolean,Int)]) = if (ts.size==0) ((0L,false,0)) else { val s=ts; val n=ts.size; if (n%2==0 && (s(n/2)._2 == s(n/2-1)._2) && (s(n/2)._3 == s(n/2-1)._3)) (((s(n/2)._1+s(n/2-1)._1)/2,s(n/2)._2,s(n/2)._3)) else ts(n/2) }
 }
