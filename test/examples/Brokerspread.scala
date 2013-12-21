@@ -21,7 +21,7 @@ object BrokerSpread {
     )
     if (size=="huge") return Map[Long,Double](
     )
-    val (b,f) = (new java.io.File(path_repo),"tmp.sql"); write(b,f,sql.replaceAll("/standard/","/"+size+"/"))
+    val (b,f) = (new java.io.File(path_repo),"tmp.sql"); write(b+"/"+f,sql.replaceAll("/standard/","/"+size+"/"))
     val r = exec(Array("bin/dbtoaster_release",f).toArray,b)._1.split("\n")
     new java.io.File(path_repo+"/"+f).delete;
     val m=new java.util.HashMap[Long,Double]()

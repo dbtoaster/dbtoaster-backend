@@ -67,23 +67,21 @@ object Helper {
   def bench(args:Array[String],run:(String,Boolean,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
     def ad[T](s:String,d:T,f:String=>T) = args.filter(x=>x.startsWith(s)).lastOption.map(x=>f(x.substring(2))).getOrElse(d)
     val parallel=ad("-dp",true,x=>false)
-    val samples = ad("-s",1,x=>x.toInt)
-    val trans = ad("-w",0,x=>x.toInt)
+    val samples = ad("-s",1,x=>math.max(1,x.toInt))
+    val trans = ad("-w",0,x=>math.max(0,x.toInt))
     val timeout = ad("-t",0L,x=>x.toLong)
     var ds=args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
     val log=ad("-l",(data:String)=>{},file=>(data:String) => { val fw=new java.io.FileWriter(file,true); try fw.write(data) finally fw.close })
     val fmt=ad("-h",null,x=>x)
     if (fmt==null) showInfos
     ds.foreach { d=> var res0:List[Any]=null; var ts=List[StreamStat](); var i=0
+      def pr(s:String,c:Boolean=true) = if (fmt!="") { println("%-70s".format((if (fmt!=null) "%-20s".format(fmt+" "+d) else d)+": "+s)); if (c) print("\033[F"+"[info] ") } // assumes terminal + SBT
       def f() = { val (t,res)=run(d,parallel,timeout); if (t.skip==0) { if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); }; (t,res) }
-      i=0; while (i<trans) { i+=1; f() }
-      i=0; while(i<math.max(1,samples)) { i+=1; val (t,res)=f(); ts=t::ts; log(d+","+t.ns+","+t.count+","+t.skip+"\n")
-        if (fmt!="") {
-          val (mid,min,max)=mmm(ts)
-          val oo = if (timeout==0L) mid.t+" ["+min.t+", "+max.t+"] (sec, " else mid.f+" ["+min.f+", "+max.f+"] (views/sec, "
-          println((if (fmt!=null) "%-20s".format(fmt+" "+d) else d)+": "+oo+ts.size+(if (ts.size<samples) "/"+samples else "")+" samples)"+(" "*20))
-          if (ts.size<samples) print("\033[F"+"[info] ") // assumes terminal + SBT
-        }
+      i=0; while (i<trans) { i+=1; f(); pr("."*i) }
+      i=0; while(i<samples) { i+=1; val (t,res)=f(); ts=t::ts; log(d+","+t.ns+","+t.count+","+t.skip+"\n")
+        val (med,min,max)=mmm(ts)
+        val abs_time = timeout==0L || min.skip==0 && med.skip==0 && max.skip==0
+        pr((if (abs_time) "%7s".format(med.t)+" ["+max.t+", "+min.t+"] (" else med.f+" ["+min.f+", "+max.f+"] (views/")+"sec, "+ts.size+(if (ts.size<samples) "/"+samples else "")+" samples)",ts.size<samples)
       }
       if (fmt!=null && fmt.size>0) { val (mid,min,max)=mmm(ts); println("EXEC_CSV="+mid+min+max) }
       else if (res0!=null && op!=null) op(res0)

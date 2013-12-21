@@ -49,14 +49,14 @@ addCommandAlias("unit", ";run-main ddbt.UnitTest ")
 
 addCommandAlias("queries", ";run-main ddbt.UnitTest -dd -qskip;test-only ddbt.test.gen.*")
 
-addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dd -qskip -m lms;test-only ddbt.test.gen.*")
+addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dd -qskip -l lms;test-only ddbt.test.gen.*")
 
 //addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -qskip -m akka;test-only ddbt.test.gen.*")
-addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -qskip -m akka -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx (invalid_schema_fn|r_multinest|rs_ineqwithnestedagg);test-only ddbt.test.gen.*")
+addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -qskip -l akka -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx (invalid_schema_fn|r_multinest|rs_ineqwithnestedagg);test-only ddbt.test.gen.*")
 
-addCommandAlias("bench", ";test:run-main ddbt.UnitTest -qskip -csv bench.csv -m ") // usage: sbt 'bench lms'
+addCommandAlias("bench", ";test:run-main ddbt.UnitTest -qskip -csv bench.csv -x -xsc -xvm -l ") // usage: sbt 'bench lms'
 
-addCommandAlias("bench-all", ";run-main ddbt.UnitTest -qskip -m scala -m lms -m lscala -m llms -csv bench-all.csv -x -xvm")
+addCommandAlias("bench-all", ";run-main ddbt.UnitTest -qskip -l scala -l lms -l lscala -l llms -csv bench-all.csv -x -xvm")
 
 
 TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>

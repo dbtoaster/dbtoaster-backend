@@ -72,7 +72,7 @@ object AllQueries {
     val sql = exec("scripts/zeus.rb"+(if (s!=0) " -s "+s else ""))._1.replaceAll("@@DATA@@",path_repo+"/../../experiments/data/simple/tiny")
     val ma = java.util.regex.Pattern.compile(".*seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
     val seed = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
-    write(tmp,"zeus"+seed+".sql",sql); genTest(tmp.getPath+"/zeus"+seed+".sql",false)
+    write(tmp+"/zeus"+seed+".sql",sql); genTest(tmp.getPath+"/zeus"+seed+".sql",false)
   }
 }
 

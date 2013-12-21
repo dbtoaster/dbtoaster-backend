@@ -18,7 +18,6 @@ object Utils {
   try { prop_.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => warning("conf/ddbt.properties does not exist.\n"+
         "Please configure at least ddbt.dbtoaster to dbtoaster_release binary path.\nSet ddbt.base_repo if you have access to DBToaster's repository.") }
   def prop(name:String,d:String="") = prop_.getProperty("ddbt."+name,d)
-  //val scalaVersion = util.Properties.versionString.replaceAll("^.* ([0-9]+\\.[0-9]+).*$","$1")
 
   // Paths related to DBToaster
   val path_repo = { val r=prop("base_repo",null); if (r==null) null else r+"/dbtoaster/compiler/alpha5" }
@@ -66,7 +65,7 @@ object Utils {
       while(l!=null) {
         if (n== -1) buf.append(l+"\n")
         else if (n>0 && l.startsWith(prefix)) buf.append(l.substring(n)+"\n")
-        else out.println(l)
+        else if (out!=null) out.println(l)
         l = r.readLine
       }
       r.close
@@ -105,11 +104,8 @@ object Utils {
   }
 
   // Files I/O
-  def read(file:String) = scala.io.Source.fromFile(file).mkString
-  def write(dir:File,name:String,data:String) {
-    if (!dir.exists) dir.mkdirs; val f=new File(dir,name)
-    val o = new PrintWriter(f); o.write(data); o.close();
-  }
+  def read(file:String) = { val f=new File(file); val cs=new Array[Char](f.length.toInt); val r=new FileReader(f); r.read(cs); r.close; new String(cs) }
+  def write(file:String,data:String) { val f=new File(file); val dir=f.getParentFile; if (dir!=null && !dir.exists) dir.mkdirs; val o=new PrintWriter(f); o.write(data); o.close() }
 
   // String manipulation
   def ind(s:String,n:Int=1) = { val i="  "*n; i+s.replaceAll("\n? *$","").replaceAll("\n","\n"+i) }
@@ -134,4 +130,5 @@ object Utils {
 
   // Time measurement
   def ns[T](f:()=>T) = { val t0=System.nanoTime; var r=f(); val t1=System.nanoTime; (t1-t0,r) }
+  def time(ns:Long,p:Boolean=true) = if (p) { val us=ns/1000; ("%d.%06d").format(us/1000000,us%1000000) } else { val ms=math.round(ns/1000000.0); ("%d.%03d").format(ms/1000,ms%1000) }
 }

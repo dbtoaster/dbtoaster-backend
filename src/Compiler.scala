@@ -102,10 +102,10 @@ object Compiler {
     }
   }
 
-  def output(s:String) = if (out==null) println(s) else { val f=new File(out); Utils.write(if (f.getParentFile==null) new File(".") else f.getParentFile,f.getName,s) }
+  def output(s:String) = if (out==null) println(s) else Utils.write(out,s)
 
   // M3 -> execution phase, returns (gen,compile) time
-  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null):(Long,Long) = {
+  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null) {
     val t0=System.nanoTime
     // Front-end phases
     val m3 = (M3Parser andThen TypeCheck) (m3_src)
@@ -129,18 +129,17 @@ object Compiler {
     } else
     // ---- NON-INCREMENTAL ENDS
     output(cg.helper(m3,pkg)+cg(m3))
-    val t1=System.nanoTime
+    if (t_gen!=null) t_gen(System.nanoTime-t0)
     if (post_gen!=null) post_gen(m3)
     // Execution
-    var t2=0L
     if (exec) lang match {
       case "scala"|"akka"|"lms" =>
         val dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
-        t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
+        val t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
+        if (t_comp!=null) t_comp(t2)
         Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
       case _ => error("Execution not supported for "+lang,true)
     }
-    (t1-t0,t2)
   }
 
   def main(args: Array[String]) {
