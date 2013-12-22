@@ -53,7 +53,6 @@ object Helper {
 
   // ---------------------------------------------------------------------------
   @inline private def mmm(ss:List[StreamStat]) = { val ts=ss.sorted; val n=ts.size; val m=ts(n/2); (if (n%2==1) m else { val b=ts(n/2-1); StreamStat((m.ns+b.ns)/2,(m.count+b.count)/2,(m.skip+b.skip+1)/2) },ts(0),ts(n-1)) } // mid: if 1 skip, result must skip
-  @inline private def showInfos = { val r=Runtime.getRuntime; println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ","")+", "+r.availableProcessors+" cpus, "+"%.2f".format(r.totalMemory/1073741824.0)+"GB mem") }
 
   // Query benchmark, supported arguments:
   //   -s<num>       number of samples (default=1)
@@ -73,7 +72,7 @@ object Helper {
     var ds=args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
     val log=ad("-l",(data:String)=>{},file=>(data:String) => { val fw=new java.io.FileWriter(file,true); try fw.write(data) finally fw.close })
     val fmt=ad("-h",null,x=>x)
-    if (fmt==null) showInfos
+    if (fmt==null) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
     ds.foreach { d=> var res0:List[Any]=null; var ts=List[StreamStat](); var i=0
       def pr(s:String,c:Boolean=true) = if (fmt!="") { println("%-70s".format((if (fmt!=null) "%-20s".format(fmt+" "+d) else d)+": "+s)); if (c) print("\033[F"+"[info] ") } // assumes terminal + SBT
       def f() = { val (t,res)=run(d,parallel,timeout); if (t.skip==0) { if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); }; (t,res) }
@@ -83,7 +82,7 @@ object Helper {
         val abs_time = timeout==0L || min.skip==0 && med.skip==0 && max.skip==0
         pr((if (abs_time) "%7s".format(med.t)+" ["+max.t+", "+min.t+"] (" else med.f+" ["+min.f+", "+max.f+"] (views/")+"sec, "+ts.size+(if (ts.size<samples) "/"+samples else "")+" samples)",ts.size<samples)
       }
-      if (fmt!=null && fmt.size>0) { val (mid,min,max)=mmm(ts); println("EXEC_CSV="+mid+min+max) }
+      if (fmt!=null && fmt.size>0) { val (mid,min,max)=mmm(ts); println("EXEC_CSV="+d+":"+mid+min+max) }
       else if (res0!=null && op!=null) op(res0)
     }
   }

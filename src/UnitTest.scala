@@ -104,8 +104,8 @@ object UnitTest {
     def mn(s:String) = (s(0)+"").toUpperCase+s.substring(1)
 
     if (csv!=null) { // CSV format: query,sql->m3,(codegen,compile,(med,min,max,)*)*
-      csv.print("s"+samples+"_w"+warmup+"_t"+timeout+",,"); for (m<-modes) csv.println(mn(m)+",,"+datasets.map(d=>d+",,,,,,,,,").mkString)
-      csv.print("Query,SQLtoM3,"); for (m<-modes) csv.println("M3toCode,Compile,"+datasets.map(d=>"MedT,MedN,_,MinT,MinN,_,MaxT,MaxN,_,").mkString)
+      csv.print("s"+samples+"_w"+warmup+"_t"+timeout+",,"); for (m<-modes) csv.print(mn(m)+",,"+datasets.map(d=>d+",,,,,,,,,").mkString); csv.println
+      csv.print("Query,SQLtoM3,"); for (m<-modes) csv.print("M3toCode,Compile,"+datasets.map(d=>"MedT,MedN,_,MinT,MinN,_,MaxT,MaxN,_,").mkString); csv.println
     }
     for (q <- sel) {
       println("--------[[ "+name(q.sql)+" ]]--------")
@@ -171,12 +171,8 @@ object UnitTest {
     Compiler.exec = benchmark
     Compiler.exec_dir = path_classes
     Compiler.exec_args = "-s"+samples :: "-w"+warmup :: "-t"+timeout :: "-h"+p.name :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
-    val (_,out,err) = captureOut(()=>Compiler.compile(m3,post,p.gen,p.comp),"EXEC_CSV=");
-    if (benchmark) {
-      if (err!="") System.err.println(err)
-      else out.split("\n").foreach{ l=>p.run(l.trim) }
-      p.close
-    }
+    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp))
+    p.close
     // Append correctness spec and move to test/gen/
     if (genSpec) {
       inject("import java.util.Date\n",sp)
@@ -218,14 +214,10 @@ object UnitTest {
     p.gen(math.max(0,t1-t0))
     p.all(q){dataset=> write(tmp+"/Query.scala",{ val res = sc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace(", delimiter = \"\\\\|\")", ", deletions = \"true\", delimiter = \"\\\\|\")") else res })
       val t2 = ns(()=>legacySC(List(tmp.getPath+"/Query.scala",tmp.getPath+"/RunQuery.scala")))._1; p.comp(t2)
-      val args = ("-s"+samples :: "-w"+warmup :: "-t"+timeout :: "-h"+p.name :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList).toArray
-      val rt = captureOut(()=>scalaExec(List(tmp,new File(libs)),"org.dbtoaster.RunQuery",args,Compiler.exec_vm),"EXEC_CSV=")._2
-      rt.split("\n").foreach{ l=>p.run(l.trim) }
-      p.close
+      val args = Array("-s"+samples,"-w"+warmup,"-t"+timeout,"-h"+p.name,"-d"+dataset)
+      p.run(()=>scalaExec(List(tmp,new File(libs)),"org.dbtoaster.RunQuery",args,Compiler.exec_vm))
     }
   }
-
-  //val cppResultPattern = "THERESULTIS\\(([0-9]+),([a-z_]+),([0-9]+)\\)".r
 
   def legacyCPP(q:QueryTest,p:Printer,t0:Long) {
     val boost = prop("lib_boost",null)
@@ -236,7 +228,7 @@ object UnitTest {
         val res=cc.replaceAll("/standard/","/"+dataset+"/")
                 .replaceAll("tlq_t().*\n +\\{\\}","struct timeval t0,t; long tT,tN,tS; tlq_t() { tN=0; tS=0; gettimeofday(&t0,NULL); }")
                 .replaceAll("(BEGIN_TRIGGER.*\n +\\{)","$1 "+(if (timeout>0) "if (tS>0) { ++tS; return; } if (tN%100==0) { "+tc()+" if (tT>"+(timeout*1000L)+"L) { tS=1; return; } }" else "")+" ++tN;")
-                .replaceAll("(snapshot_t take_snapshot\\(\\)\\{)","$1 tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"EXEC_CSV=%ld,%ld,%ld\\\\n\",d.tT,d.tN,d.tS);")
+                .replaceAll("(snapshot_t take_snapshot\\(\\)\\{)","$1 tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE=%ld,%ld,%ld\\\\n\",d.tT,d.tN,d.tS);")
         if(dataset.contains("_del")) res.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else res
       })
       val pl = path_repo+"/lib/dbt_c++"
@@ -247,52 +239,11 @@ object UnitTest {
       val t2 = ns(()=>exec(as.toArray))._1; p.comp(t2)
 
       import ddbt.lib.Messages.StreamStat
-
-      def run1() = {
+      def run1(d:String,p:Boolean,t:Long) = {
         val (out,err)=exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
-        out.split("\n").filter(l=>l.startsWith("EXEC_CSV=")).map{l=> val x=l.substring(9).split(",").map(_.toLong); StreamStat(x(0),x(1),x(2)) }.last
+        (out.split("\n").filter(l=>l.startsWith("SAMPLE=")).map{l=> val x=l.substring(9).split(",").map(_.toLong); StreamStat(x(0)*1000L,x(1),x(2)) }.last,Nil)
       }
-      var ss=List[StreamStat](); var i=0;
-      i=0; while (i<warmup) { i+=1; run1() }
-      i=0; while (i<samples) { i+=1; ss=run1()::ss }
-
-      println(ss)
-
-
-
-
-//      p.run((0 until StreamStat).map{x=>run()},dataset)
-
-/*
-      def run() = {
-        val to=System.nanoTime + timeout * 1000000L; var log:String=null
-        val p=Runtime.getRuntime.exec(Array(po,"--log-count","100"),env,null)
-        @inline def rd(in:InputStream,f:String=>Unit) = (new Thread { override def run { val r=new BufferedReader(new InputStreamReader(in));
-          try { var l=r.readLine; while(l!=null) { f(l); l=r.readLine } } catch { case e:Exception=> } finally r.close
-        }}).start
-        rd(p.getErrorStream,(s:String)=>System.err.println(s))
-        rd(p.getInputStream,(s:String)=>{ if (s.indexOf("tuples processed at")>0) { log=s; if (System.nanoTime>to) p.destroy } })
-        p.waitFor; log
-      }
-      val o=run()
-      println(o)
-*/
-
-/*
-      val (t0,(out,err))=ns(()=>exec(if (timeout>0) Array(po,"--log-count","100") else Array(po),null,env))
-      if (err.trim!="") System.err.println(err)
-
-      println(out)
-*/
-
-/*
-      // XXX: put a way to kill the program
-
-      println(out.split("\n").filter(l=>l.indexOf("tuples processed at")>0).last)
-  */
-
-      //def run() = exec(Array(po,"--log-count","100"),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)._1
-      //p.run((0 until samples).map{x=> val str=ns(run)._2; val strIdx=str.indexOf("THERESULTIS");val cppResultPattern(timeElapsed,isFinished,tuplesProc) = str.substring(strIdx, str.indexOf(")",strIdx)+1); (timeElapsed.toLong,isFinished.toBoolean,tuplesProc.toInt)},dataset)
+      p.run(()=>ddbt.lib.Helper.bench(Array("-s"+samples,"-w"+warmup,"-h"+p.name,"-d"+dataset),run1))
     }
   }
 
@@ -309,28 +260,12 @@ object UnitTest {
   class Printer(val name:String) {
     var tg=Seq[Long](); var tc=Seq[Long](); var tr=""; var ds=0;
     @inline private def flush { scala.Console.out.flush; System.out.flush }
+    @inline private def add(s:String=",,,,,,,,,") { tr+=s; ds+=1 }
     def gen(t:Long) { println("%-20s: ".format(name+" codegen")+tf(t)); tg=tg:+t; flush }
     def comp(t:Long) { println("%-20s: ".format(name+" compile")+tf(t)); tc=tc:+t; flush }
-    def run(set:String,ts:Array[String],n:String) {
-      println("%-20s: (%6s)".format(name+" "+set,ts(0))+" [("+ts(1)+"), ("+ts(2)+")] (sec, "+n+" samples)"); flush
-      while(ds < datasets.size && set!=datasets(ds)) { tr+=",,,"; ds+=1 }; tr+=ts(0)+","+ts(1)+","+ts(2)+","; ds+=1
-    }
-    def run(raw:String) { tr+=raw; ds+=1 }
-
-    // drop this
-    def run(t_runs:Seq[(Long,Boolean,Int)],set:String) {
-     val WarmUpRounds = 2
-
-      val ts = scala.util.Sorting.stableSort(t_runs.takeRight(t_runs.size - WarmUpRounds), (e1: (Long,Boolean,Int), e2: (Long,Boolean,Int)) => e1._3.asInstanceOf[Double]/e1._1.asInstanceOf[Double] < e2._3.asInstanceOf[Double]/e2._1.asInstanceOf[Double])
-      val (t0tup,t1tup,t2tup)=(med3(ts),ts(0),ts(ts.size-1))
-      val (t0,t1,t2)=((t0tup._1,t1tup._1,t2tup._1))
-      println("%-20s: ".format(name+" "+set)+"("+time(t0)+","+t0tup._2+","+t0tup._3+") [("+time(t1)+","+t1tup._2+","+t1tup._3+"), ("+time(t2)+","+t2tup._2+","+t2tup._3+")] (sec, "+ts.size+" samples)");
-      flush
-      System.out.flush
-      tr+=time(t0)+","+t0tup._2+","+t0tup._3+","+time(t1)+","+t1tup._2+","+t1tup._3+","+time(t2)+","+t2tup._2+","+t2tup._3+","
-    }
-    def all(q:QueryTest)(f:String=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) tr+=",,,,,,,,," else f(d) }; ds=datasets.size; close }
-    def close { tr+=(",,,,,,,,,"*(datasets.size-ds)); var s=time(med(tg))+","+time(med(tc))+","+tr; if (csv!=null) { csv.print(s); csv.flush } }
+    def run(f:()=>Unit) = captureOut(f,"EXEC_CSV=")._2.split("\n").foreach{ l=> val d=l.trim.split(":"); while (ds<datasets.size && d(0)!=datasets(ds)) add(); add(d(1)) }
+    def all(q:QueryTest)(f:String=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) add() else f(d) }; close }
+    def close { while (ds<datasets.size) add(); var s=time(med(tg))+","+time(med(tc))+","+tr; if (csv!=null) { csv.print(s); csv.flush } }
   }
 
   // ---------------------------------------------------------------------------
