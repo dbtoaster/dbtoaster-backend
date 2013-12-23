@@ -241,7 +241,7 @@ object UnitTest {
       import ddbt.lib.Messages.StreamStat
       def run1(d:String,p:Boolean,t:Long) = {
         val (out,err)=exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
-        (out.split("\n").filter(l=>l.startsWith("SAMPLE=")).map{l=> val x=l.substring(9).split(",").map(_.toLong); StreamStat(x(0)*1000L,x(1),x(2)) }.last,Nil)
+        (out.split("\n").filter(l=>l.startsWith("SAMPLE=")).map{l=> val x=l.substring(7).split(",").map(_.toLong); StreamStat(x(0)*1000L,x(1),x(2)) }.last,Nil)
       }
       p.run(()=>ddbt.lib.Helper.bench(Array("-s"+samples,"-w"+warmup,"-h"+p.name,"-d"+dataset),run1))
     }

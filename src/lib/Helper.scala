@@ -79,7 +79,7 @@ object Helper {
       i=0; while (i<trans) { i+=1; f(); pr("."*i) }
       i=0; while(i<samples) { i+=1; val (t,res)=f(); ts=t::ts; log(d+","+t.ns+","+t.count+","+t.skip+"\n")
         val (med,min,max)=mmm(ts)
-        val abs_time = timeout==0L || min.skip==0 && med.skip==0 && max.skip==0
+        val abs_time = min.skip==0 && med.skip==0 && max.skip==0
         pr((if (abs_time) "%7s".format(med.t)+" ["+max.t+", "+min.t+"] (" else med.f+" ["+min.f+", "+max.f+"] (views/")+"sec, "+ts.size+(if (ts.size<samples) "/"+samples else "")+" samples)",ts.size<samples)
       }
       if (fmt!=null && fmt.size>0) { val (mid,min,max)=mmm(ts); println("EXEC_CSV="+d+":"+mid+min+max) }
