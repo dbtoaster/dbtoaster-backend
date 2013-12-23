@@ -11,8 +11,6 @@ import java.io._
  */
 object UnitTest {
   def med(ts:Seq[Long]) = if (ts.size==0) 0L else { val s=ts.sorted; val n=ts.size; if (n%2==0) (s(n/2)+s(n/2-1))/2 else ts(n/2) }
-  def med3(ts:Seq[(Long,Boolean,Int)]) = if (ts.size==0) ((0L,false,0)) else { val s=ts; val n=ts.size; if (n%2==0 && (s(n/2)._2 == s(n/2-1)._2) && (s(n/2)._3 == s(n/2-1)._3)) (((s(n/2)._1+s(n/2-1)._1)/2,s(n/2)._2,s(n/2)._3)) else ts(n/2) }
-//  def time(ns:Long,n:Int=2) = { val us=ns/1000; ("%"+(if (n==0)"" else n)+"d.%06d").format(us/1000000,us%1000000) }
 
   import Utils._
   val path_examples = "examples/queries"
@@ -84,7 +82,6 @@ object UnitTest {
     if (qskip) { val q0=q_f; q_f=(s:String)=> !skip.exists(e=>s.endsWith(e+".sql")) && q0(s) }
     Compiler.in=List(""); Compiler.parseArgs(as.reverse.toArray)
   }
-
 
   private def tf(ns:Long) = "%7s".format(time(ns,false))
 
