@@ -52,38 +52,27 @@ object Helper {
   }
 
   // ---------------------------------------------------------------------------
-  @inline private def mmm(ss:List[StreamStat]) = { val ts=ss.sorted; val n=ts.size; val m=ts(n/2); (if (n%2==1) m else { val b=ts(n/2-1); StreamStat((m.ns+b.ns)/2,(m.count+b.count)/2,(m.skip+b.skip+1)/2) },ts(0),ts(n-1)) } // mid: if 1 skip, result must skip
-
   // Query benchmark, supported arguments:
-  //   -s<num>       number of samples (default=1)
-  //   -w<num>       number of warmup transients to remove (default=0)
+  //   -n<num>       number of samples (default=1)
   //   -d<set>       dataset selection (can be repeated), (default=standard)
   //   -t<num>       set execution timeout (in miliseconds)
-  //   -h            hide output (verification mode)
-  //   -h<str>       display the header (benchmark mode)
+  //   -m<num>       0=hide output (verification mode), 1=sampling (benchmark mode)
   //   -dp           disable parallel input streams
-  //   -l<file>      dumps "dataset,time_ns,count,skip\n" for each sample in the file
   def bench(args:Array[String],run:(String,Boolean,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
     def ad[T](s:String,d:T,f:String=>T) = args.filter(x=>x.startsWith(s)).lastOption.map(x=>f(x.substring(2))).getOrElse(d)
-    val parallel=ad("-dp",true,x=>false)
-    val samples = ad("-s",1,x=>math.max(1,x.toInt))
-    val trans = ad("-w",0,x=>math.max(0,x.toInt))
+    val num = ad("-n",1,x=>math.max(1,x.toInt))
+    val mode = ad("-m",-1,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)
-    var ds=args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
-    val log=ad("-l",(data:String)=>{},file=>(data:String) => { val fw=new java.io.FileWriter(file,true); try fw.write(data) finally fw.close })
-    val fmt=ad("-h",null,x=>x)
-    if (fmt==null) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
-    ds.foreach { d=> var res0:List[Any]=null; var ts=List[StreamStat](); var i=0
-      def pr(s:String,c:Boolean=true) = if (fmt!="") { println("%-70s".format((if (fmt!=null) "%-20s".format(fmt+" "+d) else d)+": "+s)); if (c) print("\033[F"+"[info] ") } // assumes terminal + SBT
-      def f() = { val (t,res)=run(d,parallel,timeout); if (t.skip==0) { if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); }; (t,res) }
-      i=0; while (i<trans) { i+=1; f(); pr("."*i) }
-      i=0; while(i<samples) { i+=1; val (t,res)=f(); ts=t::ts; log(d+","+t.ns+","+t.count+","+t.skip+"\n")
-        val (med,min,max)=mmm(ts)
-        val abs_time = min.skip==0 && med.skip==0 && max.skip==0
-        pr((if (abs_time) "%7s".format(med.t)+" ["+max.t+", "+min.t+"] (" else med.f+" ["+min.f+", "+max.f+"] (views/")+"sec, "+ts.size+(if (ts.size<samples) "/"+samples else "")+" samples)",ts.size<samples)
+    val parallel = ad("-dp",true,x=>false)
+    var ds = args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
+    if (mode<0) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
+    ds.foreach { d=> var i=0; var res0:List[Any]=null
+      while (i<num) { i+=1;
+        val (t,res)=run(d,parallel,timeout); if (t.skip==0) { if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); }
+        if (mode==1) println("SAMPLE="+d+","+(t.ns/1000)+","+t.count+","+t.skip)
+        if (mode<0) println("Time: "+t)
       }
-      if (fmt!=null && fmt.size>0) { val (mid,min,max)=mmm(ts); println("EXEC_CSV="+d+":"+mid+min+max) }
-      else if (res0!=null && op!=null) op(res0)
+      if (mode!=1 && res0!=null && op!=null) op(res0)
     }
   }
 

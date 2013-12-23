@@ -13,7 +13,7 @@ object TPCH15 {
     */
     println("Mine:")
     val (t2,r2) = run[TPCH15](Compat.streamsTPCH15(),false);
-    println(r2.head); println("Time: "+t2.t)
+    println(r2.head); println("Time: "+t2)
   }
 }
 
