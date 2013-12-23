@@ -88,8 +88,8 @@ object Adaptor {
     }
   }
 
-  val dfp = new java.text.SimpleDateFormat("yyyy-MM-dd")
   class CSV(name:String,schema:String,delimiter:String=",",action:String="insert") extends Adaptor {
+    private val dfp = new java.text.SimpleDateFormat("yyyy-MM-dd")
     val tfs:Array[String=>_]=schema.split(",").map{
       case "int"|"long" => (c:String) => java.lang.Long.parseLong(c)
       case "float"|"double" => (c:String) => java.lang.Double.parseDouble(c)
