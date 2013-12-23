@@ -23,6 +23,8 @@ object UnitTest {
              // Also TPCH11c is incorrect with -O3 (front-end) option
   var csv:PrintWriter = null
   var csvFile:String = null
+  var dump:PrintWriter = null
+  var dumpFile:String = null
   var tmp = makeTempDir(auto_delete=false) // XXX
   var benchmark = false // enable benchmarks
   var samples = 10      // number of samples to take in the benchmark
@@ -51,6 +53,7 @@ object UnitTest {
       case "-w" => eat(s=>warmup=s.toInt)
       case "-t" => eat(s=>timeout=s.toLong)
       case "-csv" => eat(s=>csvFile=s)
+      case "-dump" => eat(s=>dumpFile=s)
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
         e("Filtering options:")
@@ -67,8 +70,8 @@ object UnitTest {
         e("  -s <n>        number of samples to take (default=10)")
         e("  -w <n>        number of warm-up transients to remove (default=0)")
         e("  -t <ms>       test duration timeout (in milliseconds, default=0)")
-        e("  -csv <file>   store benchmarking results in a file")
-        e("  -dump <dir>   dump individual benchmark results")
+        e("  -csv <file>   store benchmark results in a file")
+        e("  -dump <file>  dump raw benchmark samples in a file")
         e("")
         e("Other options are forwarded to the compiler:")
         Compiler.parseArgs(Array[String]())
@@ -98,6 +101,7 @@ object UnitTest {
     if (sel.size==0) { System.err.println("No tests selected, exiting."); return; }
     val dir = new File(path_sources); if (dir.isDirectory()) dir.listFiles().foreach { f=>f.delete() } else dir.mkdirs() // directory cleanup (erase previous tests)
     if (csvFile!=null) csv=new PrintWriter(new File (csvFile+(if(csvFile.endsWith(".csv")) "" else ".csv")))
+    if (dumpFile!=null) { dump=new PrintWriter(new File (dumpFile)); dump.println("Mode,Dataset,Time,Processed,Skipped") }
     def mn(s:String) = (s(0)+"").toUpperCase+s.substring(1)
 
     if (csv!=null) { // CSV format: query,sql->m3,(codegen,compile,(med,min,max,)*)*
@@ -119,6 +123,7 @@ object UnitTest {
       if (csv!=null) csv.println
     }
     if (csv!=null) csv.close
+    if (dump!=null) dump.close
     if (!benchmark) println("Now run 'test-only ddbt.test.gen.*' to pass tests")
 
     // XXX: Zeus mode
@@ -268,6 +273,7 @@ object UnitTest {
       val (r,o) = { val p=new PipedOutputStream; (new BufferedReader(new InputStreamReader(new PipedInputStream(p))),new PrintStream(p)) }
       var w=0; var dn=""; var ts=List[Sample]();
       val t = new Thread { override def run { var l=r.readLine; while(l!=null) { if (l.startsWith("SAMPLE=")) { val d=l.trim.substring(7).split(",")
+        if (dump!=null) { dump.println(name+","+l.trim.substring(7)); dump.flush }
         if (d(0)!=dn) { w=0; ts=Nil; dn=d(0) }
         if (w<warmup) { w+=1; pr(d(0),"  "+("."*w),true) }
         else {
