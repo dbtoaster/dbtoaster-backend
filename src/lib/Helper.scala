@@ -57,13 +57,13 @@ object Helper {
   //   -d<set>       dataset selection (can be repeated), (default=standard)
   //   -t<num>       set execution timeout (in miliseconds)
   //   -m<num>       0=hide output (verification mode), 1=sampling (benchmark mode)
-  //   -dp           disable parallel input streams
+  //   -p            une parallel input streams
   def bench(args:Array[String],run:(String,Boolean,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
     def ad[T](s:String,d:T,f:String=>T) = args.filter(x=>x.startsWith(s)).lastOption.map(x=>f(x.substring(2))).getOrElse(d)
     val num = ad("-n",1,x=>math.max(1,x.toInt))
     val mode = ad("-m",-1,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)
-    val parallel = ad("-dp",true,x=>false)
+    val parallel = ad("-p",false,x=>true)
     var ds = args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
     if (mode<0) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
     ds.foreach { d=> var i=0; var res0:List[Any]=null
