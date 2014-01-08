@@ -1,0 +1,33 @@
+#!/bin/sh
+
+SCALA_HOME=/Developer/Scala
+JAVA_INCLUDE="$JAVA_HOME/include"
+
+# get base dir
+if [ "`echo $0 | grep '^/'`" != "" ]; then BASE="$0"; else BASE="$PWD/$0"; fi
+BASE="`echo $BASE | sed 's/\/[^/]*$/\//g' | sed 's/\/.\//\//g' | sed 's/\/$//g'`";
+
+# cleanup
+rm -r "$BASE/bin" 2>/dev/null
+mkdir -p "$BASE/bin"
+
+# compile scala
+scalac -d "$BASE/bin" "$BASE/src/"*.scala
+
+# get the class signature
+javah -classpath "$SCALA_HOME/lib/scala-library.jar:$BASE/bin" -d "$BASE/src" Vec3
+
+# compile C library
+if [ "$OSTYPE" = "darwin" ]; then
+	JAVA_INCLUDE="/System/Library/Frameworks/JavaVM.framework/Headers"
+fi
+
+gcc -I"$JAVA_INCLUDE" -shared "$BASE/src/Vec3.c" -o "$BASE/bin/libVec3.jnilib"
+
+# and execute
+
+scala -cp "$BASE/bin" Toy
+# java -Djava.library.path=bin -cp /Developer/Scala/lib/scala-library.jar:bin Toy
+
+# javap on the .class file -> get text
+# javah on the .class file -> get header file
