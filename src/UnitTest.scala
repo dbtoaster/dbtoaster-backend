@@ -109,7 +109,7 @@ object UnitTest {
       csv.print("Query,SQLtoM3,"); for (m<-modes) csv.print("M3toCode,Compile,"+datasets.map(d=>"MedT,MedN,_,MinT,MinN,_,MaxT,MaxN,_,").mkString); csv.println
     }
     for (q <- sel) {
-      println("--------[[ "+name(q.sql)+" ]]--------")
+      println("---------[[ "+name(q.sql)+" ]]---------")
       val (t0,m3) = Compiler.toast("m3",q.sql)
       println("SQL -> M3           : "+tf(t0))
       ;
@@ -199,7 +199,7 @@ object UnitTest {
       "    val to = timeout * 1000000L;\n"+
       "    val q = new Query(); var time=0L; val t0=System.nanoTime; var tN=0L; var tS=0L;\n"+
       "    val msgRcvr = new DBTMessageReceiver {\n"+
-      "      def onTupleProcessed { if (q.skip) tS+=1; else tN+=1; if(to>0 && (tN & 0xf)==0) { val t=System.nanoTime-t0; if(t>to) { time=t; q.skip=true } } }\n"+
+      "      def onTupleProcessed { "+(if (timeout==0) "tN+=1" else "if (q.skip) tS+=1; else tN+=1; if(to>0 && (tN & 0xf)==0) { val t=System.nanoTime-t0; if(t>to) { time=t; q.skip=true } }")+" }\n"+
       "      def onQueryDone { if (tS==0) time=System.nanoTime-t0; RunQuery.synchronized { RunQuery.notifyAll } }\n"+
       "    }\n"+
       "    val r = new QuerySupervisor(q, msgRcvr); RunQuery.synchronized { r.start; RunQuery.wait; }\n"+

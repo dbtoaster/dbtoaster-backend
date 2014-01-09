@@ -23,6 +23,55 @@ class MessageSerializer extends Serializer {
   }
 }
 
+import akka.actor.ActorRef
+import akka.actor.ActorSystem
+import akka.dispatch.Envelope
+import akka.dispatch.MailboxType
+import akka.dispatch.MessageQueue
+import akka.dispatch.ProducesMessageQueue
+import com.typesafe.config.Config
+import java.util.concurrent.ConcurrentLinkedQueue
+//import scala.Option
+
+// Marker trait used for mailbox requirements mapping
+trait MyUnboundedMessageQueueSemantics
+object MyUnboundedMailbox {
+
+  class MyMessageQueue extends MessageQueue with akka.dispatch.UnboundedMessageQueueSemantics {
+    private val a = new java.util.concurrent.atomic.AtomicReference(List[Envelope]())
+    private var r = List[Envelope]()
+    @inline private def pop = { var l=List[Envelope](); do { l=a.get } while(!a.compareAndSet(l,Nil)); r=l.reverse }
+    def enqueue(receiver: ActorRef, handle: Envelope): Unit = { var l=List[Envelope](); do { l=a.get } while(!a.compareAndSet(l,handle::l)) }
+    def dequeue:Envelope = if (r!=Nil) { val e=r.head; r=r.tail; e } else { pop; if (r!=Nil) { val e=r.head; r=r.tail; e } else null.asInstanceOf[Envelope]
+    }
+    def numberOfMessages: Int = r.size + a.get.size
+    def hasMessages: Boolean = (r.size>0) || { pop; r.size>0 }
+    def cleanUp(owner: ActorRef, deadLetters: MessageQueue) {
+      while (hasMessages) deadLetters.enqueue(owner, dequeue())
+    }
+  }
+  /*
+  class MyMessageQueue extends MessageQueue with akka.dispatch.UnboundedMessageQueueSemantics {
+    private final val queue = new ConcurrentLinkedQueue[Envelope]()
+    def enqueue(receiver: ActorRef, handle: Envelope): Unit = queue.offer(handle)
+    def dequeue(): Envelope = queue.poll()
+    def numberOfMessages: Int = queue.size
+    def hasMessages: Boolean = !queue.isEmpty
+    def cleanUp(owner: ActorRef, deadLetters: MessageQueue) {
+      while (hasMessages) deadLetters.enqueue(owner, dequeue())
+    }
+  }
+  */
+}
+
+// This is the Mailbox implementation
+class MyUnboundedMailbox extends MailboxType with ProducesMessageQueue[MyUnboundedMailbox.MyMessageQueue] {
+  import MyUnboundedMailbox._
+  def this(settings: ActorSystem.Settings, config: Config) = this()
+  final override def create(owner: Option[ActorRef], system: Option[ActorSystem]): MessageQueue = new MyMessageQueue()
+}
+
+
 object AkkaTest {
   def actorSys(name:String,host:String=null,port:Int=0) = ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(
     "akka.loglevel=ERROR\nakka.log-dead-letters-during-shutdown=off\n"+
@@ -30,6 +79,11 @@ object AkkaTest {
 "akka.actor {\n"+
 "  serializers { msg = \"MessageSerializer\" }\n"+
 "  serialization-bindings { \"Message\" = msg }\n"+
+"}\n"+
+*/
+/*
+"akka.actor.default-mailbox {\n"+
+"  mailbox-type = \"MyUnboundedMailbox\"\n"+
 "}\n"+
 */
     (if (host!=null) "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote {\n"+
@@ -60,6 +114,8 @@ object AkkaTest {
 
   def main(args:Array[String]) {
     test(1,1,1)
+    println("----------------------------")
+    test(1,1,1)
     test(4,1,1)
     test(1,4,1)
     test(4,4,1)
@@ -88,17 +144,6 @@ Testing 1 hosts X 4 cores (4 messages) -> 27250716 messages in 5.000739s, throug
 Testing 4 hosts X 4 cores (4 messages) ->  5208597 messages in 5.000198s, throughput = 1'041'678msg/sec <--
 */
   }
-/*
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=true,timeout:Long=0,debug:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
-      val system = actorSys("MasterSystem","127.0.0.1",port-1)
-      val nodes = (0 until N).map { i => actorSys("NodeSystem"+i,"127.0.0.1",port+i) }
-      val workers = nodes.map (_.actorOf(Props[W]()))
-
-    val master = system.actorOf(Props[M]())
-    master ! WorkerActor.Members(master,workers.toArray) // initial membership
-    val res = try mux(master,streams,parallel,timeout) finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
-  }
-*/
 }
 
 class Worker extends Actor {

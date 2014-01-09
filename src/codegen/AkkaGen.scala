@@ -229,7 +229,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val qs = { val mn=s.maps.zipWithIndex.map{case (m,i)=>(m.name,i)}.toMap; "val queries = List("+s.queries.map(q=>mn(q.map.name)).mkString(",")+")\n" } // queries as map indices
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
     val ms = s.maps.map(genMap).mkString("\n") // maps
-    val (str,ld0,gc) = genInternals(s)
+    val (str,ld0,gc) = genInternals(s,"skip=true")
     def fs(xs:Iterable[(String,String)]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = /*FunRef*/("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
     val (fds,fbs) = fs(forl.values)
     val (ads,abs) = fs(aggl.values)
@@ -256,7 +256,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     "object "+cls+" {\n"+ind("import Helper._\nimport WorkerActor._\n"+
     "def streams(d:String) = "+streams(s0.sources).replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")")
                                                   .replaceAll("/standard/","/\"+d+\"/")+"\n"+
-    "def execute(args:Array[String],f:List[Any]=>Unit) = bench2(args,(d:String,p:Boolean)=>runLocal["+cls+"Master,"+cls+"Worker](22550,4,streams(d),p),f)\n"+
+    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal["+cls+"Master,"+cls+"Worker](22550,4,streams(d),p,t),f)\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
     "\n})")+"\n}")+"\n}\n\n"

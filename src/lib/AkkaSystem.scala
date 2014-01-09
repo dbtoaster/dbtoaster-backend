@@ -32,13 +32,6 @@ object WorkerActor {
 }
 
 
-
-
-
-
-
-
-
 /**
  *
  * LEGACY-LEGACY-LEGACY-LEGACY-LEGACY:
@@ -327,27 +320,40 @@ trait MasterActor extends WorkerActor {
   def barrier(co:()=>Unit) = { var i=0; val t=pre_map.size; do { pre_map(i)=0; i+=1; } while(i<t); bar.set(co); }
 
   // ---- handle stream events
-  private var t0:Long = 0 // startup time
+  private var t0=0L // startup time
+  protected var t1=0L // finish time
+  protected var tN=0L // counter
+  protected var tS=0L // skipped
+  protected var skip=false
+
+  /*
+  def receive_skip:Receive = {
+    case EndOfStream => barrier(()=>collect(queries.reverse))
+    case GetSnapshot(qs:List[Int]) => barrier(()=>collect(qs.reverse))
+    case _ => tS+=1
+  }
+  */
+
   private val eq = new java.util.LinkedList[(StreamEvent,ActorRef)]() // external event queue
   private var est = 0 // state: 0=no loop, 1=loop pending, 2=trampoline, 3=bounce
   protected def deq {
     if (est==2) est=3; // bounce
     else do {
-      if (eq.size==0) est=0 // loop exits
+      if (eq.isEmpty) est=0 // loop exits
       else {
         est=2 // expose trampoline
         val (ev,sender)=eq.removeFirst
-        def collect(time:Long,rqs:List[Int],acc:List[Any]):Unit = rqs match {
+        def collect(rqs:List[Int],acc:List[Any]=Nil):Unit = rqs match {
           case q::qs => val r=MapRef(q)
-            if (local(r)==null) collect(time,qs,local_rd(r)::acc)
-            else toMap(r,(m:Map[_,_])=>collect(time,qs,m::acc))
-          case Nil => sender ! (time,acc); deq
+            if (local(r)==null) collect(qs,local_rd(r)::acc)
+            else toMap(r,(m:Map[_,_])=>collect(qs,m::acc))
+          case Nil => sender ! (StreamStat(t1-t0,tN,tS),acc); deq
         }
         ev match {
-          case e:TupleEvent => dispatch(e)
+          case e:TupleEvent => if (skip) tS+=1 else dispatch(e)
           case StreamInit(timeout) => pre_map=new Array[Int](local.size); onSystemReady()
-          case EndOfStream => barrier{()=> val time=System.nanoTime()-t0; collect(time,queries.reverse,Nil)}
-          case GetSnapshot(qs:List[Int]) => barrier{()=> val time=System.nanoTime()-t0; collect(time,qs.reverse,Nil)}
+          case EndOfStream => barrier{()=> t1=System.nanoTime(); collect(queries.reverse)}
+          case GetSnapshot(qs:List[Int]) => barrier{()=> t1=System.nanoTime; collect(qs.reverse)}
         }
         if (est==2) est=1 // disable trampoline
       }
@@ -357,7 +363,7 @@ trait MasterActor extends WorkerActor {
   val dispatch:PartialFunction[TupleEvent,Unit] // to be implemented by subclasses
   override def receive = masterRecv orElse super.receive
   private val masterRecv : PartialFunction[Any,Unit] = {
-    case ev:StreamEvent => val p=(est==0); est=1; eq.add((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
+    case ev:StreamEvent => val p=(est==0); est=1; eq.offer((ev,if (ev.isInstanceOf[TupleEvent]) null else sender)); if (p) deq;
   }
 
   def onSystemReady() // {}

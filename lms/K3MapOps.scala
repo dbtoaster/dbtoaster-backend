@@ -1,6 +1,8 @@
 package ddbt.codegen.lms
 import ddbt.ast._
-import ddbt.lib.{K3Temp,K3Var}
+// Legacy classes are now renamed:
+class K3Temp[K,V] {} // -> M3Map[K,V]
+class K3Var[T] {} // -> Var[T]
 
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
@@ -137,7 +139,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     case NewK3Temp(ks,v,_,_) => if(K3MapCommons.isInliningHigherThanNone) {
       stream.println(K3MapCommons.createK3TempDefinition(quote(sym),v,ks))
     } else {
-      emitValDef(sym, "K3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
+      emitValDef(sym, "M3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
     }
     case K3Get(m,ks,_) => if(K3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
@@ -210,13 +212,13 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
           case Some(Reflect(NewK3Temp(key,value,_,_),_,_)) => stream.println({
             val map = quote(m)
             val nodeName = createNodeName(sym)
-            
+
             genForeachMap(nodeName, map, quote(k), quote(v), block, key, value, K3MapCommons.entryClassName(value, key, List[List[Int]]()))
           })
           case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => stream.println({
             val map = quote(m)
             val nodeName = createNodeName(sym)
-            
+
             genForeachMap(nodeName, map, quote(k), quote(v), block, key, value, K3MapCommons.entryClassName(value, key, indexList))
           })
           case Some(Reflect(K3Slice(name,part,partKey),_,_)) => stream.println({
@@ -229,7 +231,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
               }
               case m => ("","")
             }
-            
+
             //f= foreach
             val i = nodeName+"_fi"
             val len = nodeName+"_flen"
@@ -455,7 +457,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
             case _ =>
               val strWriter: java.io.StringWriter = new java.io.StringWriter;
               val stream = new java.io.PrintWriter(strWriter);
-              withStream(stream) { 
+              withStream(stream) {
                 emitNode(s, d)
               }
               strWriter.toString
@@ -475,7 +477,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
       case Const(z) => z.toString
       case s@Sym(n) => if (forcePrintSymbol) {
         printSym(s)
-      } else { 
+      } else {
         isVoidType(s.tp) match {
           case true => "(" + /*"x" + n +*/ ")"
           case false => printSym(s)
@@ -524,7 +526,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     theType
   }
 
-  // 
+  //
   // override def quote(x: Exp[Any]) : String = x match {
   //   case sym@Sym(_) if sym.attributes.contains(nameAttr) => sym.attributes(nameAttr).toString
   //   case _ => super.quote(x)
