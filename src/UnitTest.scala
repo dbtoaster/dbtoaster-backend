@@ -25,19 +25,21 @@ object UnitTest {
   var csvFile:String = null
   var dump:PrintWriter = null
   var dumpFile:String = null
-  var tmp = makeTempDir(auto_delete=false) // XXX
+  var tmp = makeTempDir() //(auto_delete=false)
   var benchmark = false // enable benchmarks
   var samples = 10      // number of samples to take in the benchmark
   var warmup = 0        // number of warm-up transients to remove
   var timeout = 0L      // test duration timeout (milliseconds)
   var verify = false    // enforce correctness verification in benchmark
+  var zeus = false      // zeus mode
+  var seed = 0          // zeus seed
   var modes = List[String]() // selected modes
   var datasets = List[String]() // selected datasets
   var q_f = (s:String)=>true // query filter (sql file name)
 
   def parseArgs(args:Array[String]) {
     import scala.collection.mutable.{Set=>MSet}
-    val qinc=MSet[String](); val qexcl=MSet[String](); var qskip=false
+    val qinc=MSet[String](); val qexcl=MSet[String](); var qfail=false
     var i=0; val l=args.length; var as=List[String]()
     def eat(f:String=>Unit,s:Boolean=false) { i+=1; if (i<l) f(if(s) args(i).toLowerCase else args(i)) }
     while(i<l) { args(i) match {
@@ -46,9 +48,11 @@ object UnitTest {
       case "-m"|"-l" => eat(s=>if(!modes.contains(s)) modes=modes:+s,true)
       case "-q" => eat(s=>qinc+=s)
       case "-qx" => eat(s=>qexcl+=s)
-      case "-qskip" => qskip=true
+      case "-qfail" => qfail=true
       case "-x" => benchmark=true
       case "-v" => verify=true
+      case "-z" => zeus=true
+      case "-seed" => eat(s=>seed=s.toInt)
       case "-s" => eat(s=>samples=s.toInt)
       case "-w" => eat(s=>warmup=s.toInt)
       case "-t" => eat(s=>timeout=s.toLong)
@@ -56,6 +60,10 @@ object UnitTest {
       case "-dump" => eat(s=>dumpFile=s)
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
+        e("Zeus mode:")
+        e("  -z            enable zeus mode")
+        e("  -s <n>        number of samples to test (default: 10, 0=infinite)")
+        e("  -seed <int>   set the seed to test (implies 1 sample)")
         e("Filtering options:")
         e("  -d <dataset>  add a dataset: tiny, standard, big, huge (_del)?")
         e("  -dd           add tiny,tiny_del,standard,standard_del datasets")
@@ -63,7 +71,7 @@ object UnitTest {
         e("                          lscala, lcpp, llms")
         e("  -q <filter>   add an inclusion filter for queries")
         e("  -qx <filter>  add an exclusion filter for queries")
-        e("  -qskip        skip queries that are known to fail")
+        e("  -qfail        also include queries that are known to fail")
         e("Benchmarking options:")
         e("  -x            enable benchmarks (compile and execute)")
         e("  -v            verification against reference result") // consistency verification is always enabled
@@ -82,7 +90,7 @@ object UnitTest {
     def re(set:MSet[String]) = java.util.regex.Pattern.compile(".*("+set.mkString("|")+")(\\.sql)?")
     if (qinc.size>0) { val pi=re(qinc); q_f=(s:String)=>pi.matcher(s).matches }
     if (qexcl.size>0) { val px=re(qexcl); val q0=q_f; q_f=(s:String)=> q0(s) && !px.matcher(s).matches }
-    if (qskip) { val q0=q_f; q_f=(s:String)=> !skip.exists(e=>s.endsWith(e+".sql")) && q0(s) }
+    if (!qfail) { val q0=q_f; q_f=(s:String)=> !skip.exists(e=>s.endsWith(e+".sql")) && q0(s) }
     Compiler.in=List(""); Compiler.parseArgs(as.reverse.toArray)
   }
 
@@ -91,6 +99,8 @@ object UnitTest {
   def name(f:String) = { val s=f.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]",""); (s(0)+"").toUpperCase+s.substring(1) }
   def main(args:Array[String]) {
     parseArgs(args)
+    // Zeus mode
+    if (zeus) { genZeus; return; }
     // Regular mode
     val sel = all.filter(q=>q_f(q.sql)).map{ q=> QueryTest(q.sql,q.sets.filterKeys(datasets.contains(_))
                                                     .filterKeys{d=>q.sql.indexOf("missedtrades")== -1 || d.matches("tiny.*")}) // missedtrades is very slow
@@ -126,12 +136,25 @@ object UnitTest {
     if (dump!=null) dump.close
     if (!benchmark) println("Now run 'test-only ddbt.test.gen.*' to pass tests")
 
-    // XXX: Zeus mode
     // XXX: Untested mode (execute non-tested queries)
     // XXX: option for HTML report with bar graphs?
     // XXX: Use tags to filter test sizes in ScalaTest
-    // XXX: Order by test or by backend first
     // XXX: use script/cluster.sh to execute Akka tests ==> to be moved in the compiler
+  }
+
+  // ---------------------------------------------------------------------------
+  // Zeus mode
+  def genZeus {
+    val num=if(seed!=0) 1 else samples; samples=1; warmup=0; timeout=0; benchmark=true
+    var i=0; while(i<num) { i+=1
+      val sql = exec("scripts/zeus.rb"+(if (seed!=0) " -s "+seed else ""))._1.replaceAll("@@DATA@@",path_repo+"/../../experiments/data/simple/tiny")
+      val ma = java.util.regex.Pattern.compile("^-- seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
+      val id = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
+      println("---------[[ Zeus "+id+" ]]---------")
+      val f=tmp+"/zeus"+id+".sql";
+      val m3={ write(f,sql); Compiler.in=List(f); Compiler.toast("m3")._2 }
+      genQuery(QueryTest(f),new Printer("Scala"),m3,"scala")
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -217,7 +240,7 @@ object UnitTest {
     p.all(q){dataset=> write(tmp+"/Query.scala",{ val res = sc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace(", delimiter = \"\\\\|\")", ", deletions = \"true\", delimiter = \"\\\\|\")") else res })
       val t2 = ns(()=>legacySC(List(tmp.getPath+"/Query.scala",tmp.getPath+"/RunQuery.scala")))._1; p.comp(t2)
       val args = Array("-n"+(samples+warmup),"-m1","-t"+timeout,"-d"+dataset)
-      p.run(()=>scalaExec(List(tmp,new File(libs)),"org.dbtoaster.RunQuery",args,Compiler.exec_vm))
+      p.run(()=>scalaExec(tmp :: libs.split(":").map(new File(_)).toList,"org.dbtoaster.RunQuery",args,Compiler.exec_vm))
     }
   }
 
