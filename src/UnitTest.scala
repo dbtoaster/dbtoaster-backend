@@ -16,6 +16,7 @@ object UnitTest {
   val path_examples = "examples/queries"
   val path_sources = "test/gen"
   val path_classes = "target/scala-2.10/test-classes"
+  val path_cache = "target/m3"
   val skip = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                   "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                   "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
@@ -26,6 +27,7 @@ object UnitTest {
   var dump:PrintWriter = null
   var dumpFile:String = null
   var tmp = makeTempDir() //(auto_delete=false)
+  var cache = true      // cache is enabled
   var benchmark = false // enable benchmarks
   var samples = 10      // number of samples to take in the benchmark
   var warmup = 0        // number of warm-up transients to remove
@@ -58,6 +60,7 @@ object UnitTest {
       case "-t" => eat(s=>timeout=s.toLong)
       case "-csv" => eat(s=>csvFile=s)
       case "-dump" => eat(s=>dumpFile=s)
+      case "-nocache" => cache=false
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
         e("Zeus mode:")
@@ -80,6 +83,7 @@ object UnitTest {
         e("  -t <ms>       test duration timeout (in ms, default: 0)")
         e("  -csv <file>   store benchmark results in a file")
         e("  -dump <file>  dump raw benchmark samples in a file")
+        e("  -nocache      disable M3 cache")
         e("")
         e("Other options are forwarded to the compiler:")
         Compiler.parseArgs(Array[String]())
@@ -118,10 +122,19 @@ object UnitTest {
       csv.print("s"+samples+"_w"+warmup+"_t"+timeout+",,"); for (m<-modes) csv.print(mn(m)+",,"+datasets.map(d=>d+",,,,,,,,,").mkString); csv.println
       csv.print("Query,SQLtoM3,"); for (m<-modes) csv.print("M3toCode,Compile,"+datasets.map(d=>"MedT,MedN,_,MinT,MinN,_,MaxT,MaxN,_,").mkString); csv.println
     }
+
+    if (cache) new File(path_cache).mkdirs;
     for (q <- sel) {
       println("---------[[ "+name(q.sql)+" ]]---------")
-      val (t0,m3) = Compiler.toast("m3",q.sql)
-      println("SQL -> M3           : "+tf(t0))
+      val (t0,m3) = {
+        val f = "target/m3/"+name(q.sql)+".m3"
+        if (cache && new File(f).exists) ns(()=>Utils.read(f))
+        else {
+          val r=Compiler.toast("m3",q.sql); Utils.write(f,r._2);
+          println("SQL -> M3           : "+tf(r._1))
+          r
+        }
+      }
       ;
       if (csv!=null) csv.print(name(q.sql)+","+time(t0)+",")
       ;
@@ -131,6 +144,7 @@ object UnitTest {
         case _ => genQuery(q,new Printer(mn(m)),m3,m)
       }
       if (csv!=null) csv.println
+      System.gc
     }
     if (csv!=null) csv.close
     if (dump!=null) dump.close
@@ -184,7 +198,7 @@ object UnitTest {
       if (full) "import org.scalatest._\n\n"+
       "class "+cls+"Spec extends FunSpec {\n"+ind("import Helper._\n"+body)+"\n}\n" else body
     }
-    def inject(pre:String,str:String) { val src=read(tmp.getPath+"/"+cls+".scala").split("\\Q"+pre+"\\E"); write(tmp+"/"+cls+".scala",src(0)+pre+str+src(1)) }
+    def inject(pre:String,str:String,dir:String=null) { val src=read(tmp.getPath+"/"+cls+".scala").split("\\Q"+pre+"\\E"); write((if (dir!=null) dir else tmp)+"/"+cls+".scala",src(0)+pre+str+src(1)) }
     def post(sys:ddbt.ast.M3.System) { sp=spec(sys,true); if (verify) inject("  def main(args:Array[String]) {\n",ind(spec(sys,false),2)+"\n") }
     // Benchmark (and codegen)
     val m=mode.split("_"); // Specify the inlining as a suffix of the mode
@@ -199,12 +213,7 @@ object UnitTest {
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp))
     p.close
     // Append correctness spec and move to test/gen/
-    if (genSpec) {
-      inject("import java.util.Date\n",sp)
-      val f1=new File(tmp,cls+".scala")
-      val f2=new File(path_sources,cls+".scala")
-      if (f2.exists) f2.delete; f1.renameTo(f2)
-    }
+    if (genSpec) inject("import java.util.Date\n",sp,path_sources)
   }
 
   // ---------------------------------------------------------------------------

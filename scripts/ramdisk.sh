@@ -19,7 +19,7 @@ if [ "$rd_dev" != "" ]; then
       *) echo "Maybe try this command: umount $rd_dev";;
     esac;
     # remove redirections
-    rm "$base/test/gen"
+    # rm "$base/test/gen"
   fi
   exit
 fi
@@ -44,4 +44,4 @@ redirect() { # $1=source $2=rd_folder
   if [ ! -e "$1" ]; then ln -s "$mpoint/$dir" "$1"; fi
 }
 
-redirect "$base/test/gen"
+#redirect "$base/test/gen"

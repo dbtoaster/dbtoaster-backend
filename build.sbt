@@ -48,6 +48,7 @@ addCommandAlias("toast", ";run-main ddbt.Compiler ")
 addCommandAlias("unit", ";run-main ddbt.UnitTest ")
 
 addCommandAlias("queries", ";run-main ddbt.UnitTest -dd;test-only ddbt.test.gen.*")
+// alternatively: unit -dd -v -x -s 0
 
 addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dd -l lms;test-only ddbt.test.gen.*")
 
