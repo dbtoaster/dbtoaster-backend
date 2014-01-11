@@ -104,7 +104,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   // XXX: context is incomplete
   override def rn(n:String):String = try { ctx(n)._2 } catch { case _:Throwable => n } // get unique name (avoids nesting Lifts)
 
-  type RFun = (String,String,String) // Remote functions as (func_name,body,semi_normalized_body[remove context])
+  type RFun = (String,String,String) // Remote functions as (func_name,body,context_insensitive_body)
   private var aggl = List[RFun]()
   private var forl = List[RFun]()
   private def rfun(agg:Boolean,fn:String,body:String,rc:List[String]) : (String,String) ={
@@ -130,7 +130,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       } while(true)
       false
     }
-    var b=body; rc.zipWithIndex.foreach{case(n,i)=>b.replace(n,"$"+i+"$")} // semi normalize body
+    var b=body.replace(fn,"$$$"); rc.zipWithIndex.foreach{case(n,i)=>b=b.replace(n,"$"+i+"$")} // semi normalize body
     (if (agg) aggl else forl).find(x=>cmp(x._3,b)) match {
       case Some(r) => (r._1,r._2)
       case None => if (agg) aggl=(fn,body,b)::aggl else forl=(fn,body,b)::forl; (fn,body)
@@ -143,12 +143,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   // plus the continuation encodes some context variables which might be
   // reset some variables after each trigger ? (k,v,l,agg,add
   // reset some variables when crossing 'remote' boundary?
-
-
-
-
-
-
+  // XXX: replace local variables by integer constants refs and tag the invocation site
 
   // Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables.
   // On top of that, c2 defines additional evaluation context
@@ -266,23 +261,23 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   override def apply(s:System) = {
     local = s.sources.filter(s=> !s.stream).map(_.schema.name).toSet ++ s.maps.filter(m=>m.keys.size==0).map(_.name).toSet
-    val refs = s.maps.zipWithIndex.map{case (m,i)=> ref.put(m.name,"map"+i); "val map"+i+" = /*MapRef*/("+i+")\n" }.mkString
+    s.maps.zipWithIndex.map{case (m,i)=> ref.put(m.name,""+i); }
     val qs = { val mn=s.maps.zipWithIndex.map{case (m,i)=>(m.name,i)}.toMap; "val queries = List("+s.queries.map(q=>mn(q.map.name)).mkString(",")+")\n" } // queries as map indices
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
-    val ms = s.maps.map(genMap).mkString("\n") // maps
+    val ms = s.maps.zipWithIndex.map(m=>genMap(m._1)+" // map"+m._2).mkString("\n") // maps
     val (str,ld0,gc) = genInternals(s,"skip=true")
-    def fs(xs:List[RFun]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = /*FunRef*/("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
+    def fs(xs:List[RFun]) = { val s=xs.reverse; (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+"="+i+";" }.mkString(" ")+(if (s.size>0) "\n" else ""),s.map(_._2).mkString("\n")) }
     val (fds,fbs) = fs(forl)
     val (ads,abs) = fs(aggl)
     val local_vars:String = {
       val vs = s.maps.filter(_.keys.size==0); if (vs.size==0) "" else
       "override def local_wr(m:MapRef,v:Any,add:Boolean) = m match {\n"+ind(vs.map{m=> val add=if (m.tp==TypeDate) m.name+" = new Date("+m.name+".getTime+vv.getTime)" else m.name+" += vv"
-        "case `"+ref(m.name)+"` => val vv=if (v==null) "+m.tp.zeroScala+" else v.asInstanceOf["+m.tp.toScala+"]; if (add) "+add+" else "+m.name+" = vv\n"}.mkString+"case _ =>\n")+"\n}\n"+
-      "override def local_rd(m:MapRef):Any = m match {\n"+ind(vs.map(m=> "case `"+ref(m.name)+"` => "+m.name+"\n").mkString+"case _ => sys.error(\"Var(\"+m+\") not found\")")+"\n}\n"
+        "case "+ref(m.name)+" => val vv=if (v==null) "+m.tp.zeroScala+" else v.asInstanceOf["+m.tp.toScala+"]; if (add) "+add+" else "+m.name+" = vv\n"}.mkString+"case _ =>\n")+"\n}\n"+
+      "override def local_rd(m:MapRef):Any = m match {\n"+ind(vs.map(m=> "case "+ref(m.name)+" => "+m.name+"\n").mkString+"case _ => sys.error(\"Var(\"+m+\") not found\")")+"\n}\n"
     }
     freshClear(); ref.clear; aggl=Nil; forl=Nil; local=Set()
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
-    "import WorkerActor._\nimport ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+refs+fds+ads+gc+ // constants
+    "import WorkerActor._\nimport ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+fds+ads+gc+ // constants
     "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
     (if (ld0!="") "// tables content preloading\noverride def loadTables() {\n"+ind(ld0)+"\n}\nloadTables()\n" else "")+"\n"+
     "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:()=>Unit) = (f,args.toList) match {\n"+ind(fbs+(if (fbs!="") "\n" else "")+"case _ => co()")+"\n}\n\n"+
