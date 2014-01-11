@@ -94,7 +94,7 @@ object UnitTest {
     def re(set:MSet[String]) = java.util.regex.Pattern.compile(".*("+set.mkString("|")+")(\\.sql)?")
     if (qinc.size>0) { val pi=re(qinc); q_f=(s:String)=>pi.matcher(s).matches }
     if (qexcl.size>0) { val px=re(qexcl); val q0=q_f; q_f=(s:String)=> q0(s) && !px.matcher(s).matches }
-    if (!qfail) { val q0=q_f; q_f=(s:String)=> !skip.exists(e=>s.endsWith(e+".sql")) && q0(s) }
+    if (!qfail) { val q0=q_f; println("Front-end skip : %4d".format(skip.size)); q_f=(s:String)=> !skip.exists(e=>s.endsWith(e+".sql")) && q0(s) }
     Compiler.in=List(""); Compiler.parseArgs(as.reverse.toArray)
   }
 
@@ -110,7 +110,6 @@ object UnitTest {
                                                     .filterKeys{d=>q.sql.indexOf("missedtrades")== -1 || d.matches("tiny.*")}) // missedtrades is very slow
     }.filter(q=>q.sets.size>0)
     println("Tests total    : %4d".format(all.size))
-    println("Front-end skip : %4d".format(skip.size))
     println("Tests selected : %4d".format(sel.size))
     if (sel.size==0) { System.err.println("No tests selected, exiting."); return; }
     val dir = new File(path_sources); if (dir.isDirectory()) dir.listFiles().foreach { f=>f.delete() } else dir.mkdirs() // directory cleanup (erase previous tests)

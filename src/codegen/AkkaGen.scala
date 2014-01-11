@@ -266,7 +266,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
     val ms = s.maps.zipWithIndex.map(m=>genMap(m._1)+" // map"+m._2).mkString("\n") // maps
     val (str,ld0,gc) = genInternals(s,"skip=true")
-    def fs(xs:List[RFun]) = { val s=xs.reverse; (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+"="+i+";" }.mkString(" ")+(if (s.size>0) "\n" else ""),s.map(_._2).mkString("\n")) }
+    def fs(xs:List[RFun]) = { val s=xs.reverse; (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+"="+i+";" }.mkString(" ")+(if (s.size>0) "\n" else ""),s.map(_._2) ) }
     val (fds,fbs) = fs(forl)
     val (ads,abs) = fs(aggl)
     val local_vars:String = {
@@ -275,16 +275,24 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         "case "+ref(m.name)+" => val vv=if (v==null) "+m.tp.zeroScala+" else v.asInstanceOf["+m.tp.toScala+"]; if (add) "+add+" else "+m.name+" = vv\n"}.mkString+"case _ =>\n")+"\n}\n"+
       "override def local_rd(m:MapRef):Any = m match {\n"+ind(vs.map(m=> "case "+ref(m.name)+" => "+m.name+"\n").mkString+"case _ => sys.error(\"Var(\"+m+\") not found\")")+"\n}\n"
     }
+    def longFun(n:String,co:String,co0:String,bs:List[String],thr:Int=10):String = {
+      val h = "def "+n+"(f:FunRef,args:Array[Any],co:"+co+") = "
+      if (bs.size<=thr) h+"(f,args.toList) match {\n"+ind(bs.map(_+"\n").mkString+"case _ => "+co0)+"\n}\n"
+      else { val m=bs.size/thr+(if (bs.size%thr!=0) 1 else 0); h+(0 until m-1).map(o=> "if (f<"+((o+1)*thr)+") "+n+o+"(f,args,co) else ").mkString+n+(m-1)+"(f,args,co)\n"+
+        (0 until m).map { o=> longFun(n+o,co,co0,bs.slice(o*thr,math.min((o+1)*thr,bs.size)),thr) }.mkString
+      }
+    }
     freshClear(); ref.clear; aggl=Nil; forl=Nil; local=Set()
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
-    "import WorkerActor._\nimport ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+fds+ads+gc+ // constants
-    "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
-    (if (ld0!="") "// tables content preloading\noverride def loadTables() {\n"+ind(ld0)+"\n}\nloadTables()\n" else "")+"\n"+
-    "// remote foreach\ndef forl(f:FunRef,args:Array[Any],co:()=>Unit) = (f,args.toList) match {\n"+ind(fbs+(if (fbs!="") "\n" else "")+"case _ => co()")+"\n}\n\n"+
-    "// remote aggregations\ndef aggl(f:FunRef,args:Array[Any],co:Any=>Unit) = (f,args.toList) match {\n"+ind(abs+(if (abs!="") "\n" else "")+"case _ => co(null)")+"\n}")+"\n}\n\n"+
-    "class "+cls+"Master extends "+cls+"Worker with MasterActor {\n"+ind(
-    "import WorkerActor._\nimport Messages._\nimport Functions._\nimport scala.util.continuations._\n\n"+qs+
-    "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str+"case _ => deq")+"\n}\n\n"+ts)+"\n}"
+      "import WorkerActor._\nimport ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+fds+ads+gc+ // constants
+      "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
+      (if (ld0!="") "// tables content preloading\noverride def loadTables() {\n"+ind(ld0)+"\n}\nloadTables()\n" else "")+"\n"+
+      "// remote foreach\n"+longFun("forl","()=>Unit","co()",fbs)+"\n"+
+      "// remote aggregations\n"+longFun("aggl","Any=>Unit","co(null)",abs)
+    )+"\n}\n\nclass "+cls+"Master extends "+cls+"Worker with MasterActor {\n"+ind(
+      "import WorkerActor._\nimport Messages._\nimport Functions._\nimport scala.util.continuations._\n\n"+qs+
+      "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str+"case _ => deq")+"\n}\n\n"+ts
+    )+"\n}"
   }
 
   override def helper(s0:System,pkg:String) =

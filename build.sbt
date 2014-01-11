@@ -37,8 +37,8 @@ Seq(
 // --------- Execution options
 Seq(
   fork := true, // required to enable javaOptions
-  javaOptions ++= Seq("-Xss128m"), // ,"-Xss512m","-XX:MaxPermSize=2G"
   //javaOptions ++= Seq("-Xmx14G","-Xms14G","-verbose:gc"),parallelExecution in Test := false, // for large benchmarks
+  javaOptions ++= Seq("-Xss128m","-XX:-DontCompileHugeMethods"), // ,"-Xss512m","-XX:MaxPermSize=2G"
   javaOptions <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
 )
 
@@ -47,7 +47,7 @@ addCommandAlias("toast", ";run-main ddbt.Compiler ") ++
 addCommandAlias("unit", ";run-main ddbt.UnitTest ") ++
 addCommandAlias("queries", ";unit -dd;test-only ddbt.test.gen.*") ++
 addCommandAlias("queries-lms", ";unit -dd -l lms;test-only ddbt.test.gen.*") ++
-addCommandAlias("queries-akka", ";unit -dd -l akka"+" -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx rs_ineqwithnestedagg"+";test-only ddbt.test.gen.*")
+addCommandAlias("queries-akka", "unit -dd -v -x -s 0 -l akka -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx rs_ineqwithnestedagg")
 
 // Akka individual queries testing
 addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ") ++
