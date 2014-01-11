@@ -43,25 +43,19 @@ Seq(
 )
 
 // --------- Custom tasks
-addCommandAlias("toast", ";run-main ddbt.Compiler ")
+addCommandAlias("toast", ";run-main ddbt.Compiler ") ++
+addCommandAlias("unit", ";run-main ddbt.UnitTest ") ++
+addCommandAlias("queries", ";unit -dd;test-only ddbt.test.gen.*") ++
+addCommandAlias("queries-lms", ";unit -dd -l lms;test-only ddbt.test.gen.*") ++
+addCommandAlias("queries-akka", ";unit -dd -l akka"+" -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx rs_ineqwithnestedagg"+";test-only ddbt.test.gen.*")
 
-addCommandAlias("unit", ";run-main ddbt.UnitTest ")
+// Akka individual queries testing
+addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ") ++
+addCommandAlias("bad", ";unit -dd -v -x -s 0 -l akka -q rs_column_mapping_[12] -q tpch/query(9|10|18);test-only ddbt.test.gen.*") // known incorrect results: incorrect remote call alias detection
+// ../dbt/bin/dbtoaster_release ../dbt/test/queries/simple/rs_column_mapping_1.sql -l m3
 
-addCommandAlias("queries", ";run-main ddbt.UnitTest -dd;test-only ddbt.test.gen.*")
-// alternatively: unit -dd -v -x -s 0
-
-addCommandAlias("queries-lms", ";run-main ddbt.UnitTest -dd -l lms;test-only ddbt.test.gen.*")
-
-//addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -m akka;test-only ddbt.test.gen.*")
-// Known incorrect results: Rscolumnmapping(1|2)Spec, Tpch(9|10|18)Spec
-addCommandAlias("queries-akka", ";run-main ddbt.UnitTest -dd -l akka -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx (invalid_schema_fn|r_multinest|rs_ineqwithnestedagg);test-only ddbt.test.gen.*")
-
-addCommandAlias("queries-bad", ";run-main ddbt.UnitTest -dd -l akka -q rs_column_mapping_[12] -q tpch/query(9|10|18);test-only ddbt.test.gen.*")
-
-addCommandAlias("bench", ";test:run-main ddbt.UnitTest -csv bench.csv -x -xsc -xvm -l ") // usage: sbt 'bench lms'
-
-addCommandAlias("bench-all", ";run-main ddbt.UnitTest -l scala -l lms -l lscala -l llms -csv bench-all.csv -x -xvm")
-
+addCommandAlias("bench", ";unit -v -x -xsc -xvm -csv bench.csv -l ") ++ // usage: sbt 'bench lms'
+addCommandAlias("bench-all", ";unit -v -x -xsc -xvm -csv bench-all.csv -l scala -l lms -l lscala -l llms")
 
 TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>
   import scala.sys.process.Process

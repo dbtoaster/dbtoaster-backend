@@ -108,6 +108,13 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
   private val forl = HashMap[(String,Expr,List[String]),(String,String)]()
   private def anon(e:Expr):Expr = e.rename((n:String)=>n.replaceAll("[0-9]+","")) // anonymize the function (for use as hash key)
+  // XXX: this is wrong (!) but if we remove this simplification, scalac might crash
+  // We might create duplicates but to avoid them we must compare (expression \ arguments) and (effect-free) continuation
+  // plus the continuation encodes some context variables which might be
+  // reset some variables after each trigger ? (k,v,l,agg,add
+  // reset some variables when crossing 'remote' boundary?
+
+
 
   // Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables.
   // On top of that, c2 defines additional evaluation context
@@ -151,7 +158,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
-                      else { val s=ctx.save; ctx.add(n,(e.tp,fresh("l"))); val r=cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L")); ctx.load(s); r }
+                      else { val s=ctx.save; val r=cpsExpr(e,(v:String)=>{ ctx.add(n,(e.tp,fresh("l"))); "val "+rn(n)+" = "+v+";\n"+co("1L")}); ctx.load(s); r }
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)};
       if (local(n) || n==local_r || !ref.contains(n)) { if (n==local_r) local_r=null;
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
@@ -185,10 +192,10 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       // XXX: introduce nested loops aggregation in localAcc
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (m==null || local(m)) {
-        if (aks.size==0) { val a0=fresh("agg"); inuse.add(a0); ctx.add(a0,(e.tp,a0)); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) } // context/use mainenance
+        if (aks.size==0) { val a0=fresh("agg"); ctx.add(a0,(e.tp,a0)); inuse.add(a0); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) } // context/use mainenance
         else super.cpsExpr(ex,co,am) // 1-tuple projection or map available locally
       } else {
-        val a0=fresh("agg"); remote_agg(a0,m,aks,e)+(if (aks.size==0) co(a0) else { ctx.load(cur); local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),co) })
+        val a0=fresh("agg"); remote_agg(a0,m,aks,e)+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),co) })
       }
     case a@Add(el,er) => val cur=ctx.save;
       if (a.agg==Nil) { cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
@@ -256,7 +263,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     "object "+cls+" {\n"+ind("import Helper._\nimport WorkerActor._\n"+
     "def streams(d:String) = "+streams(s0.sources).replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")")
                                                   .replaceAll("/standard/","/\"+d+\"/")+"\n"+
-    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal["+cls+"Master,"+cls+"Worker](22550,4,streams(d),p,t),f)\n"+
+    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal["+cls+"Master,"+cls+"Worker](22550,4,streams(d),p,t,true),f)\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
     "\n})")+"\n}")+"\n}\n\n"

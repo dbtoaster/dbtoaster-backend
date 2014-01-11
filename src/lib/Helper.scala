@@ -60,7 +60,7 @@ object Helper {
   //   -p            une parallel input streams
   def bench(args:Array[String],run:(String,Boolean,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
     def ad[T](s:String,d:T,f:String=>T) = args.filter(x=>x.startsWith(s)).lastOption.map(x=>f(x.substring(2))).getOrElse(d)
-    val num = ad("-n",1,x=>math.max(1,x.toInt))
+    val num = ad("-n",1,x=>math.max(0,x.toInt))
     val mode = ad("-m",-1,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)
     val parallel = ad("-p",false,x=>true)
