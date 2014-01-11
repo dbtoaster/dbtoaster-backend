@@ -104,15 +104,49 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   // XXX: context is incomplete
   override def rn(n:String):String = try { ctx(n)._2 } catch { case _:Throwable => n } // get unique name (avoids nesting Lifts)
 
-  // Remote functions as (map,expression,context) => (func_name,body)
-  private val aggl = HashMap[(String,Expr,List[String]),(String,String)]()
-  private val forl = HashMap[(String,Expr,List[String]),(String,String)]()
-  private def anon(e:Expr):Expr = e.rename((n:String)=>n.replaceAll("[0-9]+","")) // anonymize the function (for use as hash key)
+  type RFun = (String,String,String) // Remote functions as (func_name,body,semi_normalized_body[remove context])
+  private var aggl = List[RFun]()
+  private var forl = List[RFun]()
+  private def rfun(agg:Boolean,fn:String,body:String,rc:List[String]) : (String,String) ={
+    val deny0 = List("Long","Double","Date","String") ::: ref.keys.toList
+    def ch(c:Char) = (c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') || c=='_'
+    def cmp(b1:String,b2:String):Boolean = { // compare semi-normalized body of two functions
+      var p=0; var s2=b2; var deny=deny0
+      do {
+        val l=math.min(b1.length,s2.length); while(p<l && b1(p)==s2(p)) p+=1
+        if (p==l) return b1==s2 // if (b1==s2) { println("\n\nEQUALITY:\n"+b1+"\n"+b2); true } else false
+        // find variable
+        while(p>0 && ch(b1(p-1))) p-=1
+        var p1=p; while (p1<b1.length-1 && ch(b1(p1))) p1+=1
+        var p2=p; while (p2<s2.length-1 && ch(s2(p2))) p2+=1
+        if (p1==p || p2==p) return false
+        // replace
+        val v1=b1.substring(p,p1)
+        val v2=s2.substring(p,p2)
+        // do not allow remote calls [recursively renamed] types and maps renaming
+        if (v1==v2 || v1.startsWith("ff") || v1.startsWith("fa") || deny.contains(v1)) return false
+        deny = v1::deny // avoid loops
+        s2=s2.replace(v2,v1)
+      } while(true)
+      false
+    }
+    var b=body; rc.zipWithIndex.foreach{case(n,i)=>b.replace(n,"$"+i+"$")} // semi normalize body
+    (if (agg) aggl else forl).find(x=>cmp(x._3,b)) match {
+      case Some(r) => (r._1,r._2)
+      case None => if (agg) aggl=(fn,body,b)::aggl else forl=(fn,body,b)::forl; (fn,body)
+    }
+  }
+
+  //private def anon(e:Expr):Expr = Ref(fresh("fool")) //e.rename((n:String)=>n.replaceAll("[0-9]+","")) // anonymize the function (for use as hash key)
   // XXX: this is wrong (!) but if we remove this simplification, scalac might crash
   // We might create duplicates but to avoid them we must compare (expression \ arguments) and (effect-free) continuation
   // plus the continuation encodes some context variables which might be
   // reset some variables after each trigger ? (k,v,l,agg,add
   // reset some variables when crossing 'remote' boundary?
+
+
+
+
 
 
 
@@ -143,7 +177,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
       else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(x=>rn(x._1)))+","+v+");\n")+"co("+a0+")" }
     })
-    val (fn,body) = aggl.getOrElseUpdate((m,anon(e),rc),(fn0,body0))
+    val (fn,body) = rfun(true,fn0,body0,rc)
     // local handler
     val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
     val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
@@ -183,7 +217,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         // remote handler
         val fn0 = fresh("ff"); local_r=n;
         val (body0,rc)=remote(n,fn0,()=>close(()=>cpsExpr(ex,co)+"co()"))
-        val (fn,body) = forl.getOrElseUpdate((n,anon(ex),rc),(fn0,body0))
+        val (fn,body) = rfun(false,fn0,body0,rc)
         // local handler
         (if (localAcc!=null) "// XXX:localAcc = "+localAcc+"\n" else "")+ // XXX: handle nested loop with dependency tracking
         "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
@@ -237,16 +271,16 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
     val ms = s.maps.map(genMap).mkString("\n") // maps
     val (str,ld0,gc) = genInternals(s,"skip=true")
-    def fs(xs:Iterable[(String,String)]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = /*FunRef*/("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
-    val (fds,fbs) = fs(forl.values)
-    val (ads,abs) = fs(aggl.values)
+    def fs(xs:List[RFun]) = { val s=xs.toList.sortBy(_._1); (s.map(_._1).zipWithIndex.map{case (n,i)=>"val "+n+" = /*FunRef*/("+i+")\n" }.mkString,s.map(_._2).mkString("\n")) }
+    val (fds,fbs) = fs(forl)
+    val (ads,abs) = fs(aggl)
     val local_vars:String = {
       val vs = s.maps.filter(_.keys.size==0); if (vs.size==0) "" else
       "override def local_wr(m:MapRef,v:Any,add:Boolean) = m match {\n"+ind(vs.map{m=> val add=if (m.tp==TypeDate) m.name+" = new Date("+m.name+".getTime+vv.getTime)" else m.name+" += vv"
         "case `"+ref(m.name)+"` => val vv=if (v==null) "+m.tp.zeroScala+" else v.asInstanceOf["+m.tp.toScala+"]; if (add) "+add+" else "+m.name+" = vv\n"}.mkString+"case _ =>\n")+"\n}\n"+
       "override def local_rd(m:MapRef):Any = m match {\n"+ind(vs.map(m=> "case `"+ref(m.name)+"` => "+m.name+"\n").mkString+"case _ => sys.error(\"Var(\"+m+\") not found\")")+"\n}\n"
     }
-    freshClear(); ref.clear; aggl.clear; forl.clear; local=Set()
+    freshClear(); ref.clear; aggl=Nil; forl=Nil; local=Set()
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
     "import WorkerActor._\nimport ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+refs+fds+ads+gc+ // constants
     "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
