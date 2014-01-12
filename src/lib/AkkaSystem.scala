@@ -74,7 +74,6 @@ object WorkerActor {
 
 /*
  * Current Issues:
- * - Broadcast to all workers within the same host => worker < host < cluster hierarchy?
  * - OnSystemReady needs not to go through network and ignore non-local updates
  * - Batching update and lookups (with timeout/explicit end-of-batch?)
  * - Use multiple timestamps and queue updates in front of maps?
@@ -82,7 +81,6 @@ object WorkerActor {
  *   -> Expunge previous versions when timestamp completed
  * XXX: _INFER_ (encode) functional dependencies in the maps(?)
  */
-
 
 /** Worker, owns portions of all maps determined by hash() function. */
 abstract class WorkerActor extends Actor {
@@ -218,7 +216,7 @@ abstract class WorkerActor extends Actor {
 
   // ---- map operations
   // Element operation: if key hashes to local, apply locally, otherwise call remote worker
-  def get[K,V](m:MapRef,k:K,co:V=>Unit) = matcherGet.req(m,k,co)
+  def get[K,V](m:MapRef,k:K)(co:V=>Unit) = matcherGet.req(m,k,co)
   def add[K,V](m:MapRef,k:K,v:V) {
     if (k==null) { local_wr(m,v,true); workers.foreach(w => if (w!=self) bar.send(w,Add(m,k,v))) }
     else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[M3Map[K,V]].add(k,v) else bar.send(o,Add(m,k,v)) }
@@ -230,7 +228,7 @@ abstract class WorkerActor extends Actor {
   // Group operations: broadcast to owners, workers then process locally
   def clear[P](m:MapRef,p:Int= -1,pk:P=null) = workers.foreach { bar.send(_,Clear(m,p,pk)) }
   def foreach(m:MapRef,f:FunRef,args:Any*) { workers.foreach { bar.send(_,Foreach(f,args.toArray)) } }
-  def aggr[R](m:MapRef,f:FunRef,args:Array[Any],zero:Any=null,co:R=>Unit)(implicit cR:ClassTag[R]) {
+  def aggr[R](m:MapRef,f:FunRef,args:Any*)(zero:Any=null)(co:R=>Unit)(implicit cR:ClassTag[R]) {
     val (z,p) = if (zero!=null) (zero,((m1:M3Map[Any,Any],m2:M3Map[Any,Any])=>{m2.sum(m1); m1}).asInstanceOf[(Any,Any)=>Any])
     else (M3Map.zero[R](),(cR.toString match {
       case "Long" => (v0:Long,v1:Long)=>v0+v1
@@ -239,7 +237,7 @@ abstract class WorkerActor extends Actor {
       case "java.util.Date" => (v0:java.util.Date,v1:java.util.Date)=> new java.util.Date(v0.getTime+v1.getTime)
       case n => sys.error("No additivity for "+n)
     }).asInstanceOf[(Any,Any)=>Any])
-    matcherAgg.req(m,f,args,co,z,p)
+    matcherAgg.req(m,f,args.toArray,co,z,p)
   }
 
   // ---- helper for local aggregation (in a local variable, and that needs to be sequential)
@@ -249,7 +247,7 @@ abstract class WorkerActor extends Actor {
     def inc(n:Int) { ctr+=n; }
     def i { ctr+=1; } // increment
     def d { ctr-=1; if (ctr==0 && co!=null) { val c=co; co=null; c() } } // decrement
-    def apply(f:()=>Unit) { if (ctr==0) f() else co=f; } // define the continuation
+    def apply(f: =>Unit) { if (ctr==0) f else co=()=>f; } // define the continuation
   }
 
   // ---- debugging
@@ -276,7 +274,7 @@ trait MasterActor extends WorkerActor {
     val zero = if (cV.toString=="Object"||cV.toString=="Any")
           new M3MapBase[K,V](local(m).asInstanceOf[M3MapBase[K,V]].zero,false,null)
           else M3Map.temp[K,V]()
-    super.aggr(m,fun_collect,Array(m),zero,(mm:M3Map[K,V])=>co(mm.toMap))
+    super.aggr(m,fun_collect,m)(zero)((mm:M3Map[K,V])=>co(mm.toMap))
   }
 
   // --- sequential to CPS conversion
@@ -297,6 +295,7 @@ trait MasterActor extends WorkerActor {
   //   (m_wr&2)!=0 && seq!=0 --> WAW (this non-commutative)
   //   (m_rd&6)!=            --> RAW
   private var pre_map:Array[Int]=null
+  def pre(write:MapRef,commute:Boolean,read:MapRef*)(co: =>Unit) { pre(write,commute,read.toArray,()=>co) }
   def pre(write:MapRef,commute:Boolean,read:Array[MapRef],co:()=>Unit) {
     val seq=if (commute) 0 else 1; var i=0; val t=pre_map.size; val n=read.size;
     var flush = if (write== -1) false else (pre_map(write)&(5|(1<<seq)))!=0 // check dependencies
@@ -305,6 +304,7 @@ trait MasterActor extends WorkerActor {
     if (write != -1) pre_map(write) |= 1<<(1+seq); if (n>0) { i=0; do { pre_map(read(i)) |= 1; i+=1; } while(i<n); } // dependencies
     if (!flush) co() else bar.set(co) // now proceed
   }
+
   // Multiple statements
   def pre2(write:Array[MapRef],commute:Array[Boolean],read:Array[MapRef],co:()=>Unit) {
     var flush = false
@@ -324,15 +324,7 @@ trait MasterActor extends WorkerActor {
   protected var t1=0L // finish time
   protected var tN=0L // counter
   protected var tS=0L // skipped
-  protected var skip=false
-
-  /*
-  def receive_skip:Receive = {
-    case EndOfStream => barrier(()=>collect(queries.reverse))
-    case GetSnapshot(qs:List[Int]) => barrier(()=>collect(qs.reverse))
-    case _ => tS+=1
-  }
-  */
+  protected var skip=false // skipping state (due to timeout)
 
   private val eq = new java.util.LinkedList[(StreamEvent,ActorRef)]() // external event queue
   private var est = 0 // state: 0=no loop, 1=loop pending, 2=trampoline, 3=bounce

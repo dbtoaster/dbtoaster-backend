@@ -46,6 +46,10 @@ Roadmap:
    + ...
    + finally when completed, release the barrier
 
+Observations:
+- variadic arguments are 5x faster than array for Any, Array is 20x faster than variadic for primitive types
+
+
 Issues to solve (big XXX list):
 - Move 'inuse' maintenance in Scala code generator => strip unnecessary key parts creation in foreach
 - move lazy map slicing into the TypeChecking ?
@@ -72,7 +76,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   def cl_add(n:Int=1) { cl_ctr+=n; }
   def close(f:()=>String) = {
     val b=cl_ctr; cl_ctr=0; val s=f(); val n=cl_ctr; cl_ctr=b;
-    if (n>0) s+(0 until n).map(x=>"})").mkString(" ")+"\n" else s
+    if (n>0) s+("}"*n)+"\n" else s
   }
 
   // XXX: dependency tracking
@@ -92,6 +96,9 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     def in(f:(String=>String)=>(String=>String)) { val co0=co; co=f(co0) }
   }
   */
+
+  // XXX: simplify the get for no-key local values (K3Var)
+  // XXX: rename K3 => M3 in LMS
 
   override def rn(n:String):String = try { ctx(n)._2 } catch { case _:Throwable => n } // get unique name (avoids nesting Lifts)
 
@@ -159,7 +166,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     // local handler
     val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
     val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
-    cl_add(1); "aggr("+ref(m)+","+fn+",Array[Any]("+rc.map(rn).mkString(",")+"),"+(if (add) a0+",(_" else acc+",("+a0)+":"+rt+") => {\n"
+    cl_add(1); "aggr("+ref(m)+","+fn+rc.map(x=>","+rn(x)).mkString+")("+(if (add) a0+"){(_" else acc+"){("+a0)+":"+rt+") =>\n"
   }
 
   // local accumulator to handle aggregation in nested (remote) loops
@@ -181,13 +188,13 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
           val r = (if (async) "val "+n+"_c = Acc()\n" else "")+
           n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
             ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co1)+"\n}\n"+ // bind free variables from retrieved key
-            (if (async) { cl_add(1); n+"_c(() => {\n" } else "")
+            (if (async) { cl_add(1); n+"_c{\n" } else "")
           ctx.load(s)
           r
         }
       } else if (ki.size==0) {
         val v=fresh("v"); cl_add(1); inuse.add(ks.toSet); ctx.add(v,(ex.tp,v)); inuse.add(Set(v));
-        "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks map rn) else "null")+",("+v+":"+ex.tp.toScala+")=>{\n"+co(v)
+        "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks map rn) else "null")+"){("+v+":"+ex.tp.toScala+")=>\n"+co(v)
       } else {
         // remote handler
         val fn0 = fresh("ff"); local_r=n;
@@ -222,13 +229,13 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   override def genStmt(s:Stmt) = s match {
     case StmtMap(m,e,op,oi) => val r=ref(m.name);
-      def rd(ex:Expr,self:Boolean=false) = "Array("+((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks)=>Set(ref(n)) }.toList).mkString(",")+")"
-      def pre(o:OpMap,e:Expr) = (if (o==OpSet && m.keys.size>0) { cl_add(1); "pre("+r+",false,Array(),()=> {\nclear("+r+");\n" } else "")+
-                                ({ cl_add(1); "pre("+r+","+(o==OpAdd)+","+rd(e)+",()=> {\n" })
+      def rd(ex:Expr,self:Boolean=false) = ((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks)=>Set(ref(n)) }.toList).map(x=>","+x).mkString
+      def pre(o:OpMap,e:Expr) = (if (o==OpSet && m.keys.size>0) { cl_add(1); "pre("+r+",false){\nclear("+r+");\n" } else "")+
+                                ({ cl_add(1); "pre("+r+","+(o==OpAdd)+rd(e)+"){\n" })
       def mo(o:OpMap,v:String) = (if (o==OpSet) "set" else "add")+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map rn))+","+v+");\n"
       val init = oi match { case None => "" case Some(ie) => ctx.load(); inuse.load(m.keys.toSet);
-        val co=(v:String)=> { val v0=fresh("v"); val o=mo(OpSet,v); "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map rn))+",("+v0+":"+m.tp.toScala+")=> { if ("+v0+"==0) "+o.substring(0,o.length-1)+" })\n" }
-        cl_add(1); "pre("+r+",false,"+rd(ie,true)+",()=> {\n"+cpsExpr(ie,co)
+        val co=(v:String)=> { val v0=fresh("v"); val o=mo(OpSet,v); "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map rn))+"){("+v0+":"+m.tp.toScala+")=> if ("+v0+"==0) "+o.substring(0,o.length-1)+" }\n" }
+        cl_add(1); "pre("+r+",false"+rd(ie,true)+"){\n"+cpsExpr(ie,co)
       }
       ctx.load(); inuse.load(m.keys.toSet); init+pre(op,e)+cpsExpr(e,(v:String)=>mo(op,v))
     case _ => sys.error("Unimplemented")
