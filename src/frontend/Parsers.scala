@@ -11,8 +11,6 @@ import ddbt.ast._
  * @author TCK
  */
 
-// -----------------------------------------------------------------------------
-
 class ExtParser extends StandardTokenParsers {
   class CaseInsensitiveLexical extends StdLexical {
     override protected def processIdent(name: String) = {

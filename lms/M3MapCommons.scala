@@ -5,11 +5,13 @@ import ddbt.Utils.ind
 
 /**
  * This class has the responsibility for code generation
- * of different k3 operations, for inlining targets.
+ * of different M3Map operations, for inlining targets.
  *
  * The operations implemented here will be used by both LMS and LMSGen.
+ *
+ * @author Mohammad Dashti
  */
-object K3MapCommons {
+object M3MapCommons {
   final val InliningLevelMax = 10
   final val InliningLevelSpecialized = 5
   final val InliningLevelNone = 0
@@ -17,19 +19,19 @@ object K3MapCommons {
   def isInliningInSpecializedLevel = (InliningLevel == InliningLevelSpecialized)
   def isInliningHigherThanNone = (InliningLevel > InliningLevelNone)
 
-  def InliningLevel = ddbt.Compiler.inl
+  private def InliningLevel = ddbt.Compiler.inl
   /**
    * The default initial capacity - MUST be a power of two.
    */
-  final val DEFAULT_INITIAL_CAPACITY: Int = 16
-  final val DEFAULT_INITIAL_CAPACITY_INDEX: Int = 16
-  final val DEFAULT_INITIAL_CAPACITY_INDEX_INNER: Int = 16
+  private final val DEFAULT_INITIAL_CAPACITY: Int = 16
+  private final val DEFAULT_INITIAL_CAPACITY_INDEX: Int = 16
+  private final val DEFAULT_INITIAL_CAPACITY_INDEX_INNER: Int = 16
   /**
    * The maximum capacity, used if a higher value is implicitly specified
    * by either of the constructors with arguments.
    * MUST be a power of two <= 1<<30.
    */
-  final val MAXIMUM_CAPACITY: Int = 1 << 30
+  //final val MAXIMUM_CAPACITY: Int = 1 << 30
   /**
    * The load factor used when none specified in constructor.
    */
@@ -37,12 +39,12 @@ object K3MapCommons {
   /**
    * The load factor used when none specified in constructor.
    */
-  final val INITIAL_THRESHOLD: Int = (DEFAULT_INITIAL_CAPACITY * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
-  final val INITIAL_THRESHOLD_INDEX: Int = (DEFAULT_INITIAL_CAPACITY_INDEX * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
-  final val INITIAL_THRESHOLD_INDEX_INNER: Int = (DEFAULT_INITIAL_CAPACITY_INDEX_INNER * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
+  private final val INITIAL_THRESHOLD: Int = (DEFAULT_INITIAL_CAPACITY * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
+  private final val INITIAL_THRESHOLD_INDEX: Int = (DEFAULT_INITIAL_CAPACITY_INDEX * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
+  private final val INITIAL_THRESHOLD_INDEX_INNER: Int = (DEFAULT_INITIAL_CAPACITY_INDEX_INNER * DEFAULT_LOAD_FACTOR).asInstanceOf[Int]
 
-  var entryClasses = scala.collection.mutable.HashMap[String,(Type,List[Type],List[List[Int]])]()
-  var indexEntryClasses = scala.collection.mutable.HashMap[String,(Type,List[Type],List[List[Int]],List[Int])]()
+  private var entryClasses = scala.collection.mutable.HashMap[String,(Type,List[Type],List[List[Int]])]()
+  private var indexEntryClasses = scala.collection.mutable.HashMap[String,(Type,List[Type],List[List[Int]],List[Int])]()
 
   /**
    * Generates the class name for HashMap entries, given
@@ -89,10 +91,10 @@ object K3MapCommons {
    * Generates specialized HashMap entry classes for maps
    * used in DBToaster program.
    */
-  def generateEntryClasses = entryClasses.map { case (name, (value, key, idxList)) =>
+  private def generateEntryClasses = entryClasses.map { case (name, (value, key, idxList)) =>
     val keyNames = key.zipWithIndex.map{case (ktp, i) => "ek"+(i+1)}
     val valueName = "ev"
-    val indexNames = idxList.zipWithIndex.map{case (idx, i) => K3MapCommons.indexMapName("map",idx)}
+    val indexNames = idxList.zipWithIndex.map{case (idx, i) => M3MapCommons.indexMapName("map",idx)}
 
     val keyArguments = key.zipWithIndex.map{case (ktp, i) => keyNames(i)+":"+ktp.toScala}.mkString(", ")
     val valueArgument = "ev:"+value.toScala
@@ -111,15 +113,15 @@ object K3MapCommons {
       "    def setNextEntry(n:IEntry): Unit = next = n.asInstanceOf["+name+"]\n" +
     //"    val hs: Int = " + hashFunction(key.zipWithIndex.map{case (k,i) => "_"+(i+1)}, "    ") + "\n" +
     //"    var next:" + name + " = null\n" +
-    "  }\n" + (if(K3MapCommons.isInliningInSpecializedLevel) {
+    "  }\n" + (if(M3MapCommons.isInliningInSpecializedLevel) {
     "  object " + name + "Ops {\n" +
       "    def get(map:Array["+name+"], "+keyArguments+"): "+value.toScala+" = " +
       ind(genGenericGetMap("", "n", "map", name, value.toScala+" = "+zeroValue(value), (0 until keyNames.size).toList, keyNames),3) + "\n" +
       "    def put(isAdd:Boolean, map:Array["+name+"], map__md:Array[Int], "+keyArguments+", "+valueArgument+indexArguments+"): Unit = {\n" +
-      ind(genGenericSetTempMap("","", "n", "map", K3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(K3MapCommons.indexEntryClassName(value,key,idxList,_)), false, zeroValue(value)),3) + "\n" +
+      ind(genGenericSetTempMap("","", "n", "map", M3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(M3MapCommons.indexEntryClassName(value,key,idxList,_)), false, zeroValue(value)),3) + "\n" +
       "    }\n" +
       "    def putRemoveOnZero(isAdd:Boolean, map:Array["+name+"], map__md:Array[Int], "+keyArguments+", "+valueArgument+indexArguments+"): Unit = {\n" +
-      ind(genGenericSetTempMap("","", "n", "map", K3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(K3MapCommons.indexEntryClassName(value,key,idxList,_)), true, zeroValue(value)),3) + "\n" +
+      ind(genGenericSetTempMap("","", "n", "map", M3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(M3MapCommons.indexEntryClassName(value,key,idxList,_)), true, zeroValue(value)),3) + "\n" +
       "    }\n" +
       "    def remove(map:Array["+name+"], map__md:Array[Int], "+keyArguments+"): Unit = {\n" +
       ind(genGenericDelNamedMap("", "n", "map", key, value, idxList, (0 until keyNames.size).toList, keyNames),3) + "\n" +
@@ -132,7 +134,7 @@ object K3MapCommons {
    * Generates specialized Index HashMap entry classes for index maps
    * used in DBToaster program.
    */
-  def generateIndexEntryClasses = indexEntryClasses.map { case (name, (value, key, indexList, indexLoc)) =>
+  private def generateIndexEntryClasses = indexEntryClasses.map { case (name, (value, key, indexList, indexLoc)) =>
     val keyNames = key.zipWithIndex.map{case (ktp, i) => "ek"+(i+1)}
     val valueName = "ev"
 
@@ -150,7 +152,7 @@ object K3MapCommons {
     //"    var v__ts: Int = "+INITIAL_THRESHOLD_INDEX_INNER+";\n" +
     //"    val hs: Int = " + hashFunction(indexLoc.map(i => "_"+(i+1)), "    ") + "\n" +
     //"    var next:" + name + " = null\n" +
-    "  }\n" + (if(K3MapCommons.isInliningInSpecializedLevel) {
+    "  }\n" + (if(M3MapCommons.isInliningInSpecializedLevel) {
     "  object " + name + "Ops {\n" +
       "    def get(map:Array["+name+"], "+keyArguments+"): scala.collection.mutable.ArrayBuffer["+entryCls+"] = " +
       ind(genGenericGetMap("", "n", "map", name, "scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"](0)", indexLoc, filterExprAtElementLoc(keyNames,indexLoc)),2) + "\n" +
@@ -165,7 +167,7 @@ object K3MapCommons {
    *
    * https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
    */
-  def hashFunction(keyNames: List[String], prefix: String = "") = {
+  private def hashFunction(keyNames: List[String], prefix: String = "") = {
     //TODO: Is it better to do MurmurHash3 for single values?
     if(keyNames.size == 1) {
       val i = keyNames(0)
@@ -208,7 +210,7 @@ object K3MapCommons {
    * otherwise encounter collisions for hashCodes that do not differ
    * in lower bits. Note: Null keys always map to hash 0, thus index 0.
    */
-  def javaHashMapHashFunc(hash: String, prefix: String) = {
+  private def javaHashMapHashFunc(hash: String, prefix: String) = {
     prefix + "  "+hash+" ^= ("+hash+" >>> 20) ^ ("+hash+" >>> 12)\n" +
     prefix + "  "+hash+" ^ ("+hash+" >>> 7) ^ ("+hash+" >>> 4)\n"
   }
@@ -216,7 +218,7 @@ object K3MapCommons {
   /**
    * Returns index for hash code h.
    */
-  def indexForFunction(h: String, len: String) = h+" & ("+len+"-1)"
+  private def indexForFunction(h: String, len: String) = h+" & ("+len+"-1)"
 
   /**
    * Returns short name for a given Type.
@@ -224,7 +226,7 @@ object K3MapCommons {
    * The result of this function is currently used in generating
    * HashMap entry class names.
    */
-  def shortName(tp: Type) = tp match {
+  private def shortName(tp: Type) = tp match {
     case TypeLong => "L"
     case TypeDouble => "D"
     case TypeString => "S"
@@ -234,12 +236,12 @@ object K3MapCommons {
   /**
    * Returns the String zero value for a given Type
    */
-  def zeroValue(v: Type) = v match {
+  def zeroValue(v: Type) = v.zero /*v match {
     case TypeLong => "0L"
     case TypeDouble => "0.0"
     case TypeString => "\"\""
     case TypeDate => "new Date()"
-  }
+  }*/
 
   /**
    * Returns the zero value for a given Type
@@ -252,15 +254,15 @@ object K3MapCommons {
   }
 
   /**
-   * Generates K3Var definition statement.
+   * Generates M3Var definition statement.
    *
    * @param name is the name of variable
    * @param value is the type of variable
    */
-  def createK3VarDefinition(name: String, value:Type) = "var "+name+":"+value.toScala+" = "+zeroValue(value)
+  def createM3VarDefinition(name: String, value:Type) = "var "+name+":"+value.toScala+" = "+zeroValue(value)
 
   /**
-   * Generates K3Map definition statements.
+   * Generates M3Map definition statements.
    * These maps will be created once for a DBToaster
    * program and will store the final results and
    * intermediate results required between separate
@@ -271,7 +273,7 @@ object K3MapCommons {
    * @param key is the types of map element key parts
    * @param indexList if the list of indices on the map
    */
-  def createK3NamedMapDefinition(name: String, value:Type, key:List[Type], indexList: List[List[Int]]) = {
+  def createM3NamedMapDefinition(name: String, value:Type, key:List[Type], indexList: List[List[Int]]) = {
     val entryCls = entryClassName(value, key,indexList)
     entryClasses += (entryCls -> (value,key,indexList))
 
@@ -301,7 +303,7 @@ object K3MapCommons {
   }
 
   /**
-   * Generates temporary K3Map definition statements.
+   * Generates temporary M3Map definition statements.
    * These maps will be created inside triggers for
    * storing intermediate results.
    *
@@ -310,7 +312,7 @@ object K3MapCommons {
    * @param key is the types of map element key parts
    * @param indexList if the list of indices on the map
    */
-  def createK3TempDefinition(name: String, value:Type, key:List[Type]) = {
+  def createM3TempDefinition(name: String, value:Type, key:List[Type]) = {
     val entryCls = entryClassName(value, key,List[List[Int]]())
     entryClasses += (entryCls -> (value,key,List[List[Int]]()))
 
@@ -365,15 +367,15 @@ object K3MapCommons {
    */
   def genGenericAddNamedMap(isConstant: Boolean, isZero: Boolean, prefixValue: String, prefixKey: String, nodeName:String, map:String, key:List[Type], value:Type, indexList: List[List[Int]], keyNames:List[String], valueName:String) = {
     if(isZero) {
-      "//K3ADDNAMED_CANCELLED"
+      "//M3ADDNAMED_CANCELLED"
     } else {
-      "//K3ADDNAMED\n" +
+      "//M3ADDNAMED\n" +
       prefixValue +
       (if(isConstant) {
-        genGenericSetTempMap("",prefixKey,nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)),true,zeroValue(value))
+        genGenericSetTempMap("",prefixKey,nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)),true,zeroValue(value))
       } else {
-        "if("+valueName+" != "+K3MapCommons.zeroValue(value)+") {\n" +
-        ind(genGenericSetTempMap("",prefixKey,nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)),true,zeroValue(value)))+"\n" +
+        "if("+valueName+" != "+M3MapCommons.zeroValue(value)+") {\n" +
+        ind(genGenericSetTempMap("",prefixKey,nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)),true,zeroValue(value)))+"\n" +
         "}"
       })
     }
@@ -403,16 +405,18 @@ object K3MapCommons {
    * @param keyNames is a list of input key args
    * @param valueName is the input value arg to be added
    */
+  /*
   def genGenericSetNamedMap(prefixValue: String, prefixKey: String, nodeName:String, map:String, key:List[Type], value:Type, indexList: List[List[Int]], keyNames:List[String], valueName:String) = {
     //sn = set named map
-    "//K3SETNAMED\n" +
+    "//M3SETNAMED\n" +
     prefixValue +
-    "if("+valueName+" == "+K3MapCommons.zeroValue(value)+") {\n" +
+    "if("+valueName+" == "+M3MapCommons.zeroValue(value)+") {\n" +
     genGenericDelNamedMap(prefixKey,nodeName,map,key,value,indexList,(0 until keyNames.size).toList,keyNames)+ "\n" +
     "} else {\n" +
-    ind(genGenericSetTempMap("",prefixKey,nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_))))+"\n" +
+    ind(genGenericSetTempMap("",prefixKey,nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_))))+"\n" +
     "}"
   }
+  */
 
   /**
    * Generates Temporary HashMap SET function
@@ -448,9 +452,9 @@ object K3MapCommons {
 
     val content = prefixKey +
     prefixValue +
-    "//K3SETTEMP\n" +
-    "val "+hash+":Int = " + K3MapCommons.hashFunction(keyNames) + "\n" +
-    "val "+i+":Int = "+K3MapCommons.indexForFunction(hash, map+".length")+"\n" +
+    "//M3SETTEMP\n" +
+    "val "+hash+":Int = " + M3MapCommons.hashFunction(keyNames) + "\n" +
+    "val "+i+":Int = "+M3MapCommons.indexForFunction(hash, map+".length")+"\n" +
     (if(fromNamedMap) {
       "var "+prev+":" + entryClsName + " = " + map + "(" + i + ")\n" +
       "var "+e+":" + entryClsName + " = " + prev + "\n"
@@ -478,7 +482,7 @@ object K3MapCommons {
     (if(fromNamedMap) {
       "    if("+e+".v == "+zeroValue + ") {\n" +
       indexList.map{ indexLoc =>
-        val idxEntryCls = K3MapCommons.indexEntryClassName(entryClsName, indexLoc)
+        val idxEntryCls = M3MapCommons.indexEntryClassName(entryClsName, indexLoc)
         val field = e+".ptr"+idxEntryCls
         //TODO we should change this value update to null, into a smarter impl
         "      "+field+".v.update("+field+"_idx, null)\n"
@@ -501,7 +505,7 @@ object K3MapCommons {
     "if(!"+found+") {\n" +
     genAddEntryMap(nodeName,map,entryClsName,keyIndicesInEntery,keyNames,valueName,e,hash,i)+"\n"+
     ind(indexList.zipWithIndex.map{ case (idx, i) =>
-      genSetIndexMap(i, map, K3MapCommons.indexMapName(nodeName,idx), K3MapCommons.indexMapName(map,idx), indexEntryClsName(i), idx, filterExprAtElementLoc(keyNames, idx) , e, false) + "\n"
+      genSetIndexMap(i, map, M3MapCommons.indexMapName(nodeName,idx), M3MapCommons.indexMapName(map,idx), indexEntryClsName(i), idx, filterExprAtElementLoc(keyNames, idx) , e, false) + "\n"
     }.mkString) +
     "\n}"
 
@@ -546,7 +550,7 @@ object K3MapCommons {
    * @param bucketIndex is the table index of HashMap that
    *        new element should be inserted in it.
    */
-  def genAddEntryMap(nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], keyNames:List[String], valueName:String, e:String, hash: String, bucketIndex:String) = {
+  private def genAddEntryMap(nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], keyNames:List[String], valueName:String, e:String, hash: String, bucketIndex:String) = {
     val tmp = e+"_atmp"
 
     "  val " + tmp + ":" + entryClsName + " = " + map + "(" + bucketIndex + ")\n" +
@@ -556,20 +560,20 @@ object K3MapCommons {
     (if(isInliningInSpecializedLevel) "" else "\n"+genIncreaseCapacity(nodeName, map, entryClsName))
   }
 
-  def genIncreaseCapacity(nodeName:String, map:String, entryClsName:String) = {
+  private def genIncreaseCapacity(nodeName:String, map:String, entryClsName:String) = {
     val newCapacity = nodeName+"_nc"
 
     "  if(" + genMapSize(map) + " >= " + genMapThreshold(map) + ") {\n" +
     "    val "+newCapacity+":Int = ("+map+".length << 1)\n" +
     "    "+map+" = __transferHashMap["+entryClsName+"]("+map+",new Array["+entryClsName+"]("+newCapacity+"))\n" +
-    "    "+genMapThreshold(map)+" = (" + newCapacity + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
+    "    "+genMapThreshold(map)+" = (" + newCapacity + "*" + M3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
     "  }"
   }
 
   def genIncreaseMapAndIndicesCapacity(nodeName:String, map:String, entryClsName:String, indexList: List[List[Int]], indexEntryClsName: List[String]) = {
     genIncreaseCapacity(nodeName, map, entryClsName) + "\n" +
     indexList.zipWithIndex.map { case (idx, i) =>
-      genIncreaseIndexCapacity(i,map,nodeName, K3MapCommons.indexMapName(map,idx), indexEntryClsName(i))
+      genIncreaseIndexCapacity(i,map,nodeName, M3MapCommons.indexMapName(map,idx), indexEntryClsName(i))
     }.mkString("\n")
   }
 
@@ -606,9 +610,9 @@ object K3MapCommons {
     val i = nodeName+"_siti"
     val currentIndexPointerName = "ptr"+entryClsName
 
-    val content = "//K3SETINDEX\n" +
-    "val "+hash+":Int = " + K3MapCommons.hashFunction(keyNames) + "\n" +
-    "val "+i+":Int = "+K3MapCommons.indexForFunction(hash, map+".length")+"\n" +
+    val content = "//M3SETINDEX\n" +
+    "val "+hash+":Int = " + M3MapCommons.hashFunction(keyNames) + "\n" +
+    "val "+i+":Int = "+M3MapCommons.indexForFunction(hash, map+".length")+"\n" +
     "var "+e+":" + entryClsName + " = " + map + "(" + i + ")\n" +
     "var "+found+":Boolean = false\n" +
     "while(!"+found+" && "+e+" != null) {\n" +
@@ -654,7 +658,7 @@ object K3MapCommons {
    * @param bucketIndex is the table index of HashMap that
    *        new element should be inserted in it.
    */
-  def genAddEntryIndexMap(indexSeq:Int, parentMap:String, nodeName:String, map:String, entryClsName:String, keyNames:List[String], e:String, hash: String, bucketIndex:String) = {
+  private def genAddEntryIndexMap(indexSeq:Int, parentMap:String, nodeName:String, map:String, entryClsName:String, keyNames:List[String], e:String, hash: String, bucketIndex:String) = {
     val tmp = e+"_aitmp"
 
     "  val " + tmp + ":"+entryClsName+" = " + map + "(" + bucketIndex + ")\n" +
@@ -664,13 +668,13 @@ object K3MapCommons {
     (if(isInliningInSpecializedLevel) "" else "\n"+genIncreaseIndexCapacity(indexSeq, parentMap, nodeName, map, entryClsName))
   }
 
-  def genIncreaseIndexCapacity(indexSeq:Int, parentMap:String, nodeName:String, map:String, entryClsName:String) = {
+  private def genIncreaseIndexCapacity(indexSeq:Int, parentMap:String, nodeName:String, map:String, entryClsName:String) = {
     val newCapacity = nodeName+"_nic"
 
     "  if(" + genIndexMapSize(parentMap, indexSeq) + " >= " + genIndexMapThreshold(parentMap, indexSeq) + ") {\n" +
     "    val "+newCapacity+":Int = ("+map+".length << 1)\n" +
     "    "+map+" = __transferHashMap["+entryClsName+"]("+map+",new Array["+entryClsName+"]("+newCapacity+"))\n" +
-    "    "+genIndexMapThreshold(parentMap, indexSeq)+" = (" + newCapacity + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
+    "    "+genIndexMapThreshold(parentMap, indexSeq)+" = (" + newCapacity + "*" + M3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
     "  }"
   }
 
@@ -702,12 +706,12 @@ object K3MapCommons {
     val prev = nodeName+"_dprev"
     val next = nodeName+"_dnext"
     val found = nodeName+"_dfound"
-    val entryClsName = K3MapCommons.entryClassName(value, key, indexList)
+    val entryClsName = M3MapCommons.entryClassName(value, key, indexList)
 
-    "//K3DELNAMED\n" +
+    "//M3DELNAMED\n" +
     prefixKey +
-    "  val "+hash+":Int = " + K3MapCommons.hashFunction(keyNames) + "\n" +
-    "  val "+i+":Int = "+K3MapCommons.indexForFunction(hash, map+".length")+"\n" +
+    "  val "+hash+":Int = " + M3MapCommons.hashFunction(keyNames) + "\n" +
+    "  val "+i+":Int = "+M3MapCommons.indexForFunction(hash, map+".length")+"\n" +
     "  var "+prev+":" + entryClsName + " = " + map + "(" + i + ")\n" +
     "  var "+e+":" + entryClsName + " = " + prev + "\n" +
     "  var "+found+":Boolean = false\n" +
@@ -716,7 +720,7 @@ object K3MapCommons {
     "    if("+e+".hs == "+hash+" && "+keyNames.zip(keyIndicesInEntery).map{case (x, i) => e+"._"+(i+1)+" == "+x}.mkString(" && ")+") {\n"+
     "      "+found+" = true\n" +
     indexList.map{ indexLoc =>
-      val idxEntryCls = K3MapCommons.indexEntryClassName(entryClsName, indexLoc)
+      val idxEntryCls = M3MapCommons.indexEntryClassName(entryClsName, indexLoc)
       val field = e+".ptr"+idxEntryCls
       "      "+field+".v.update("+field+"_idx, null)\n"
 
@@ -748,10 +752,10 @@ object K3MapCommons {
     val found = nodeName+"_gfound"
     val result = nodeName+"_gresult"
     "{\n" +
-    "  //K3GET\n" +
+    "  //M3GET\n" +
     prefixKey +
-    "  val "+hash+":Int =" + ind(K3MapCommons.hashFunction(keyNames)) + "\n" +
-    "  var "+e+":" + entryClsName + " = " + map + "(" + K3MapCommons.indexForFunction(hash, map+".length") + ")\n" +
+    "  val "+hash+":Int =" + ind(M3MapCommons.hashFunction(keyNames)) + "\n" +
+    "  var "+e+":" + entryClsName + " = " + map + "(" + M3MapCommons.indexForFunction(hash, map+".length") + ")\n" +
     "  var "+found+":Boolean = false\n" +
     "  var "+result+":"+valueTypeAndZeroVal+"\n" +
     "  while(!"+found+" && "+e+" != null) {\n" +
@@ -773,5 +777,5 @@ object K3MapCommons {
    * @param keyNames is a list of input key args
    * @param indexLoc is key part indices
    */
-  def filterExprAtElementLoc(keyNames: List[String], indexLoc: List[Int]): List[String] = keyNames.zipWithIndex.filter{ case (_, ki) => indexLoc contains ki }.map(_._1)
+  private def filterExprAtElementLoc(keyNames: List[String], indexLoc: List[Int]): List[String] = keyNames.zipWithIndex.filter{ case (_, ki) => indexLoc contains ki }.map(_._1)
 }

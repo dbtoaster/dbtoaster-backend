@@ -1,12 +1,16 @@
-package toasterbooster.lifters
+package ddbt.codegen.lms
+
 
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 
 /**
  * Lifter Classes for StdFunctions
+ * Copied from package toasterbooster.lifters
+ *
+ * @author Mohammad Dashti
  */
-trait StdFunctionsOps extends IfThenElse with OrderingOps with NumericOps 
+trait StdFunctionsOps extends IfThenElse with OrderingOps with NumericOps
   with StringOps with PrimitiveOps with MathOps with CastingOps
   with ObjectOps with SimpleDateFormatOps with Equal{
 
@@ -19,30 +23,30 @@ trait StdFunctionsOps extends IfThenElse with OrderingOps with NumericOps
   def listmax(v1: Rep[Double], v2: Rep[Long])(implicit o: Overloaded2): Rep[Double] = if(v1 > v2.asInstanceOf[Rep[Double]]) v1 else rep_asinstanceof[Long, Double](v2, manifest[Long], manifest[Double])
   def listmax(v1: Rep[Long], v2: Rep[Double])(implicit o: Overloaded3): Rep[Double] = if(v1.asInstanceOf[Rep[Double]] > v2) rep_asinstanceof[Long, Double](v1, manifest[Long], manifest[Double]) else v2
   def listmax(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = if(v1 > v2) v1 else v2
-        
+
   def year_part(date: Rep[java.util.Date]): Rep[Long]
 
   def month_part(date: Rep[java.util.Date]): Rep[Long]
-  
+
   def day_part(date: Rep[java.util.Date]): Rep[Long]
-  
+
   def date_part(field: Rep[String], date: Rep[java.util.Date]): Rep[Long]
 
   def regexp_match(regexp: Rep[String], str: Rep[String]): Rep[Int]
-  
+
   def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] =
     infix_substring (str, rep_asinstanceof[Long, Int](start, manifest[Long], manifest[Int]), rep_asinstanceof[Long, Int](start + length, manifest[Long], manifest[Int]))
-    
-    
-  def vec_length(x: Rep[Double], y: Rep[Double], z: Rep[Double]): Rep[Double] = 
+
+
+  def vec_length(x: Rep[Double], y: Rep[Double], z: Rep[Double]): Rep[Double] =
     Math.sqrt(x*x + y*y + z*z)
 
   def vec_dot(x1: Rep[Double], y1: Rep[Double], z1: Rep[Double],
-                x2: Rep[Double], y2: Rep[Double], z2: Rep[Double]): Rep[Double] = 
+                x2: Rep[Double], y2: Rep[Double], z2: Rep[Double]): Rep[Double] =
     x1*x2 + y1*y2 + z1*z2
 
   def vector_angle(x1: Rep[Double], y1: Rep[Double], z1: Rep[Double],
-                x2: Rep[Double], y2: Rep[Double], z2: Rep[Double]): Rep[Double] = 
+                x2: Rep[Double], y2: Rep[Double], z2: Rep[Double]): Rep[Double] =
     Math.acos (
       vec_dot(x1,y1,z1,x2,y2,z2) / (
         vec_length(x1,y1,z1) * vec_length(x2,y2,z2)
@@ -75,7 +79,7 @@ trait StdFunctionsOps extends IfThenElse with OrderingOps with NumericOps
 
     Math.atan2 ( vec_length(v2x,v2y,v2z) *  vec_dot(v1x,v1y,v1z, n2x,n2y,n2z), vec_dot(n1x,n1y,n1z, n2x,n2y,n2z))
   }
-  
+
   def hash(number: Rep[Long]): Rep[Long] = {
     val v1 = number * unit(3935559000370003845L + 2691343689449507681L)
     val v2 = long_binaryxor(v1, (v1 >> unit(21)))
@@ -87,10 +91,10 @@ trait StdFunctionsOps extends IfThenElse with OrderingOps with NumericOps
     val v8 = long_binaryxor(v7, (v7 >> unit(5)))
     v8
   }
-  
+
   def PI: Rep[Double] = unit(3.141592653589793238462643383279502884)
   def radians(degree: Rep[Double]): Rep[Double] = (degree * PI) / unit(180.0)
-  def degrees(radian: Rep[Double]): Rep[Double] = (radian * unit(180.0)) / PI 
+  def degrees(radian: Rep[Double]): Rep[Double] = (radian * unit(180.0)) / PI
   def pow(x: Rep[Double], y: Rep[Double]): Rep[Double] = Math.pow(x, y)
   def sqrt(x: Rep[Double]): Rep[Double] = Math.sqrt(x)
   def cos(x: Rep[Double]): Rep[Double] = Math.cos(x)
@@ -99,11 +103,11 @@ trait StdFunctionsOps extends IfThenElse with OrderingOps with NumericOps
   def cast_int(l: Rep[Long]): Rep[Long] = l
   def cast_int(d: Rep[Double])(implicit o: Overloaded1): Rep[Long] = rep_asinstanceof[Double, Long](d, manifest[Double], manifest[Long])
   def cast_int(s: Rep[String])(implicit o: Overloaded2): Rep[Long] = s.toLong
-  
+
   def cast_float(l: Rep[Long])(implicit o: Overloaded1): Rep[Double] = rep_asinstanceof[Long, Double](l, manifest[Long], manifest[Double])
   def cast_float(d: Rep[Double]): Rep[Double] = d
   def cast_float(s: Rep[String])(implicit o: Overloaded2): Rep[Double] = s.toDouble
-  
+
   def cast_string(a: Rep[Any]): Rep[String] = object_tostring(a)
   def cast_string(d: Rep[java.util.Date])(implicit o: Overloaded1): Rep[String] = {
     val dateFormat = newSimpleDateFormat(unit("yyyy-MM-dd"))
@@ -150,7 +154,7 @@ trait StdFunctionsExpOpt extends StdFunctionsExp {
   override def year_part(x: Exp[java.util.Date]): Exp[Long] = x match {
     case Const(d: java.util.Date) => unit({
       val c = java.util.Calendar.getInstance
-      c.setTime(d)   
+      c.setTime(d)
       c.get(java.util.Calendar.YEAR)
     })
     case _ => super.year_part(x)
@@ -159,7 +163,7 @@ trait StdFunctionsExpOpt extends StdFunctionsExp {
   override def month_part(x: Exp[java.util.Date]): Exp[Long] = x match {
     case Const(d: java.util.Date) => unit({
       val c = java.util.Calendar.getInstance
-      c.setTime(d)   
+      c.setTime(d)
       c.get(java.util.Calendar.MONTH)
     })
     case _ => super.month_part(x)
@@ -168,7 +172,7 @@ trait StdFunctionsExpOpt extends StdFunctionsExp {
   override def day_part(x: Exp[java.util.Date]): Exp[Long] = x match {
     case Const(d: java.util.Date) => unit({
       val c = java.util.Calendar.getInstance
-      c.setTime(d)   
+      c.setTime(d)
       c.get(java.util.Calendar.DAY_OF_MONTH)
     })
     case _ => super.day_part(x)

@@ -38,8 +38,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       else am match {
         case Some(t) if t.toSet==a.agg.toSet => val cur=cx.save; expr(l,co,am); cx.load(cur); expr(r,co,am); cx.load(cur);
         case _ =>
-          val acc = impl.k3temp(a.agg.map(_._2),ex.tp)
-          val inCo = (v:Rep[_]) => impl.k3add(acc,a.agg.map(x=>cx(x._1)),v)
+          val acc = impl.m3temp(a.agg.map(_._2),ex.tp)
+          val inCo = (v:Rep[_]) => impl.m3add(acc,a.agg.map(x=>cx(x._1)),v)
           val cur = cx.save
           expr(l,inCo,Some(a.agg)); cx.load(cur)
           expr(r,inCo,Some(a.agg)); cx.load(cur)
@@ -51,30 +51,30 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     case a@Apply(fn,tp,as) =>
       def app(es:List[Expr],vs:List[Rep[_]]):Rep[Unit] = es match {
         case x :: xs => expr(x,(v:Rep[_]) => app(xs,v::vs))
-        case Nil => co(impl.k3apply(fn,vs.reverse,tp))
+        case Nil => co(impl.m3apply(fn,vs.reverse,tp))
       }
       if (as.forall(_.isInstanceOf[Const])) co(impl.named(constApply(a),tp,false)) // hoist constants resulting from function application
       else app(as,Nil)
     case m@MapRef(n,tp,ks) =>
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
       if(ki.size == 0) { // all keys are bound
-        co(impl.k3get(cx(n),ko.map{case (k,i)=>cx(k)},tp))
+        co(impl.m3get(cx(n),ko.map{case (k,i)=>cx(k)},tp))
       } else { // we need to iterate over all keys not bound (ki)
         val mapRef = cx(n)
         val slicedMapRef = if(ko.size == 0) mapRef
-        else impl.k3slice(mapRef,slice(n,ko.map(_._2)),ko.map{case (k,i)=>cx(k)})
+        else impl.m3slice(mapRef,slice(n,ko.map(_._2)),ko.map{case (k,i)=>cx(k)})
         foreach(slicedMapRef,(ks zip m.tks),tp,co,"m")
       }
     case a@AggSum(ks,e) =>
       val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
-      val acc = if (agg_keys.size==0) impl.k3var(ex.tp) else impl.k3temp(agg_keys.map(_._2),ex.tp)
+      val acc = if (agg_keys.size==0) impl.m3var(ex.tp) else impl.m3temp(agg_keys.map(_._2),ex.tp)
       // Accumulate expr(e) in the acc
       val cur = cx.save
-      val coAcc = (v:Rep[_]) => impl.k3add(acc, agg_keys.map(x=>cx(x._1)), v)
+      val coAcc = (v:Rep[_]) => impl.m3add(acc, agg_keys.map(x=>cx(x._1)), v)
       expr(e,coAcc,Some(agg_keys)) // returns (Rep[Unit],ctx) and we ignore ctx
       cx.load(cur)
       // Iterate over acc and call original continuation
-      if (agg_keys.size==0) co(impl.k3get(acc,Nil,ex.tp)) // accumulator is a single result
+      if (agg_keys.size==0) co(impl.m3get(acc,Nil,ex.tp)) // accumulator is a single result
       else am match {
         case Some(t) if (t.toSet==agg_keys.toSet) => expr(e,co,am)
         case _ => foreach(acc,agg_keys,a.tp,co,"a")
@@ -91,7 +91,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       val inKeys = keys.zipWithIndex.filter(k=> !cx.contains(k._1._1)).map{ case ((n,t),i) => (n,accessTuple(keyArg,t,keys.size,i)) }
       cx.add(inKeys.toMap); co(valArg)
     }
-    impl.k3foreach(map, keyArg, valArg, body)
+    impl.m3foreach(map, keyArg, valArg, body)
   }
 
   def accessTuple(tuple: Rep[_],elemTp:Type,sz: Int, idx: Int)(implicit pos: scala.reflect.SourceContext): Rep[_] = sz match {
@@ -147,23 +147,23 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val triggerBlock = impl.reifyEffects {
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
-        maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.namedK3Var(name,tp)(manifest[Any])) else (name,impl.namedK3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any])) }.toList union
+        maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.namedM3Var(name,tp)(manifest[Any])) else (name,impl.namedM3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any])) }.toList union
         args.map{ case (name,tp) => (name,impl.named(name,tp)) }
       ).toMap)
       // Execute each statement
       t.stmts.map {
         case StmtMap(m,e,op,oi) => cx.load()
           val mm = cx(m.name)
-          if (op==OpSet && m.keys.size>0) impl.k3clear(mm)
+          if (op==OpSet && m.keys.size>0) impl.m3clear(mm)
           oi match { case None => case Some(ie) =>
             expr(ie,(r:Rep[_]) => { val keys = m.keys.map(cx)
-               impl.__ifThenElse(impl.equals(impl.k3get(mm,keys,m.tp),impl.unit(0L)),impl.k3set(mm,keys,r),impl.unit(()))
+               impl.__ifThenElse(impl.equals(impl.m3get(mm,keys,m.tp),impl.unit(0L)),impl.m3set(mm,keys,r),impl.unit(()))
             })
           }
           cx.load()
           expr(e,(r:Rep[_]) => op match {
-            case OpAdd => impl.k3add(mm,m.keys.map(cx),r)
-            case OpSet => impl.k3set(mm,m.keys.map(cx),r)
+            case OpAdd => impl.m3add(mm,m.keys.map(cx),r)
+            case OpSet => impl.m3set(mm,m.keys.map(cx),r)
           }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
@@ -174,7 +174,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def toMapFunction(q: Query) = {
-    if(K3MapCommons.isInliningHigherThanNone) {
+    if(M3MapCommons.isInliningHigherThanNone) {
       //m = map
       val map = q.name
       val nodeName = map+"_node"
@@ -183,7 +183,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       val mapValue = m.tp
       val indexList = sx.getOrElse(map,List[List[Int]]())
 
-      //val entryCls = K3MapCommons.entryClassName(q.tp, q.keys, sx.getOrElse(q.name,List[List[Int]]()))
+      //val entryCls = M3MapCommons.entryClassName(q.tp, q.keys, sx.getOrElse(q.name,List[List[Int]]()))
       val entryCls = "("+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+")"
       val res = nodeName+"_mres"
       val i = nodeName+"_mi"
@@ -191,11 +191,11 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       val e = nodeName+"_me"
       "{\n" +
       "  //TOMAP\n" +
-      "  var "+res+":scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"]("+K3MapCommons.genMapSize(map)+");\n" +
+      "  var "+res+":scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"]("+M3MapCommons.genMapSize(map)+");\n" +
       "  var "+i+":Int = 0\n" +
       "  val "+len+":Int = "+map+".length\n" +
       "  while("+i+" < "+len+") {\n" +
-      "    var "+e+":"+K3MapCommons.entryClassName(mapValue,mapKeys,indexList)+" = "+map+"("+i+")\n" +
+      "    var "+e+":"+M3MapCommons.entryClassName(mapValue,mapKeys,indexList)+" = "+map+"("+i+")\n" +
       "    while("+e+" != null) {\n"+
       "      "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => e+"._"+(i+1) })+" -> "+e+".v)\n"+
       "      "+e+" = "+e+".next\n" +
@@ -210,12 +210,12 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def genMap(m:MapDef):String = {
-    if(K3MapCommons.isInliningHigherThanNone) {
-      if (m.keys.size==0) K3MapCommons.createK3VarDefinition(m.name, m.tp)+";"
+    if(M3MapCommons.isInliningHigherThanNone) {
+      if (m.keys.size==0) M3MapCommons.createM3VarDefinition(m.name, m.tp)+";"
       else {
         val keys = m.keys.map(_._2)
         val indexList = sx.getOrElse(m.name,List[List[Int]]())
-        K3MapCommons.createK3NamedMapDefinition(m.name,m.tp,keys,indexList)
+        M3MapCommons.createM3NamedMapDefinition(m.name,m.tp,keys,indexList)
       }
     } else {
       super.genMap(m)
@@ -223,18 +223,18 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = {
-    if(K3MapCommons.isInliningHigherThanNone) {
+    if(M3MapCommons.isInliningHigherThanNone) {
       //val theMap = maps(map)
       //val mapKeys = theMap.keys.map(_._2)
       val indexList = sx.getOrElse(map,List[List[Int]]())
-      K3MapCommons.genGenericAddNamedMap(true,false,"","",map+"_node",map,keyNames.map(_._2),TypeLong,indexList,keyNames.map(_._1),"1")
+      M3MapCommons.genGenericAddNamedMap(true,false,"","",map+"_node",map,keyNames.map(_._2),TypeLong,indexList,keyNames.map(_._1),"1")
     } else {
       super.genInitializationFor(map, keyNames, keyNamesConcat)
     }
   }
 
-  override def generateDataStructures = if(K3MapCommons.isInliningHigherThanNone) {
-    K3MapCommons.generateAllEntryClasses
+  override def generateDataStructures = if(M3MapCommons.isInliningHigherThanNone) {
+    M3MapCommons.generateAllEntryClasses
   } else {
     super.generateDataStructures
   }
@@ -248,7 +248,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     s0.triggers.map(super.genTrigger)
     val r=super.apply(s0)
     maps=Map()
-    K3MapCommons.clear
+    M3MapCommons.clear
     r
   }
 }

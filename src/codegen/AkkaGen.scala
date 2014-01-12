@@ -74,10 +74,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   var cl_ctr=0;
   def cl_add(n:Int=1) { cl_ctr+=n; }
-  def close(f:()=>String) = {
-    val b=cl_ctr; cl_ctr=0; val s=f(); val n=cl_ctr; cl_ctr=b;
-    if (n>0) s+("}"*n)+"\n" else s
-  }
+  def close(f:()=>String) = { val b=cl_ctr; cl_ctr=0; val s=f(); val n=cl_ctr; cl_ctr=b; if (n>0) s+("}"*n)+"\n" else s }
 
   // XXX: dependency tracking
   /*
@@ -96,9 +93,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     def in(f:(String=>String)=>(String=>String)) { val co0=co; co=f(co0) }
   }
   */
-
-  // XXX: simplify the get for no-key local values (K3Var)
-  // XXX: rename K3 => M3 in LMS
 
   override def rn(n:String):String = try { ctx(n)._2 } catch { case _:Throwable => n } // get unique name (avoids nesting Lifts)
 

@@ -2,7 +2,6 @@ package ddbt.codegen.lms
 
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
-import toasterbooster.lifters._
 
 /**
  * Helpers for LMS code generation

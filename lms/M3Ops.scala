@@ -4,27 +4,26 @@ import ddbt.ast._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
-import toasterbooster.lifters._
 
 /**
  * The following LMS operations are implemented by these traits:
  * - Named expressions (possibly mutable) to beautify the emitted code
  * - M3 maps specific operations (get, set, add, foreach, slice, clear)
- * - Abstraction of user-library function application (inlined in k3apply)
+ * - Abstraction of user-library function application (inlined in m3apply)
  *
  * @author Mohammad Dashti, TCK
  */
 
-trait M3Ops extends K3MapOps {
+trait M3Ops extends M3MapOps {
   // Function application
-  def k3apply(fn:String,args:List[Rep[_]],tp:Type):Rep[_]
+  def m3apply(fn:String,args:List[Rep[_]],tp:Type):Rep[_]
 }
 
 trait M3OpsExp extends BaseExp with EffectExp with M3Ops
-    with Equal with NumericOps with MathOps with DateOps with StringOps with PrimitiveOps with IfThenElseExp with StdFunctionsOps with K3MapOpsExp{
+    with Equal with NumericOps with MathOps with DateOps with StringOps with PrimitiveOps with IfThenElseExp with StdFunctionsOps with M3MapOpsExp{
   import ManifestHelper.man
 
-  def k3apply(fn:String,args:List[Exp[_]],tp:Type) = {
+  def m3apply(fn:String,args:List[Exp[_]],tp:Type) = {
     fn match {
       case "div" => div(args(0).asInstanceOf[Rep[Double]])
       case "listmax" => max(args(0).asInstanceOf[Rep[Double]],args(1).asInstanceOf[Rep[Double]])
@@ -34,16 +33,16 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops
       case "date_part" => date_part(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[java.util.Date]])
       case "date" => args(0) match {
         case Const(strDate) => Const(ddbt.lib.Functions.Udate(strDate.asInstanceOf[String]))
-        case _ => K3Apply(fn,args,man(tp))
+        case _ => M3Apply(fn,args,man(tp))
       }
-      case _ => K3Apply(fn,args,man(tp)) // fallback for large or unknown functions
+      case _ => M3Apply(fn,args,man(tp)) // fallback for large or unknown functions
     }
   }
 
-  case class K3Apply[T](name:String,args:List[Exp[_]],mT:Manifest[T]) extends Def[T]
+  case class M3Apply[T](name:String,args:List[Exp[_]],mT:Manifest[T]) extends Def[T]
 }
 
-trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThenElse with ScalaGenK3MapOps {
+trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThenElse with ScalaGenM3MapOps {
   val IR: M3OpsExp with ExtendedExpressions
   import IR._
 
@@ -54,7 +53,7 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThen
         //stream.println("  "+quote(getBlockResult(a))) // useless undeclared Unit symbols
         stream.println("}")
 
-    case K3Apply(fn,args,_) => emitValDef(sym,"U"+fn+"("+(args map quote).mkString(",")+")")
+    case M3Apply(fn,args,_) => emitValDef(sym,"U"+fn+"("+(args map quote).mkString(",")+")")
     case _ => super.emitNode(sym,rhs)
   }
 }

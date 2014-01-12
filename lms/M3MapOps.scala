@@ -1,91 +1,90 @@
 package ddbt.codegen.lms
 import ddbt.ast._
 // Legacy classes are now renamed:
-class K3Temp[K,V] {} // -> M3Map[K,V]
-class K3Var[T] {} // -> Var[T]
+class M3Temp[K,V] {} // -> M3Map[K,V]
+class M3Var[T] {} // -> Var[T]
 
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
-import toasterbooster.lifters._
 import ddbt.Utils.ind
-import ddbt.codegen.K3MapCommons
+import ddbt.codegen.M3MapCommons
 
 /**
  * The following LMS operations are implemented by these traits:
  * - Named expressions (possibly mutable) to beautify the emitted code
  * - M3 maps specific operations (get, set, add, foreach, slice, clear)
- * - Abstraction of user-library function application (inlined in k3apply)
+ * - Abstraction of user-library function application (inlined in m3apply)
  *
  * @author Mohammad Dashti
  */
-trait K3MapOps extends Base {
+trait M3MapOps extends Base {
   // Nodes creation
   def named(name:String,tp:Type,mutable:Boolean=false):Rep[_]
   def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]):Rep[T]
-  def namedK3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]): Rep[K3Var[T]]
-  def namedK3Map[K,V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]): Rep[K3Temp[K,V]]
-  def k3var(value:Type) : Rep[K3Var[_]]
-  def k3temp(key_tp:List[Type],value_tp:Type):Rep[K3Temp[_,_]]
-  // Operations on K3Map, K3Var and K3Temp
-  def k3get(map:Rep[_], key:List[Rep[_]]=Nil,value_tp:Type):Rep[_]
-  def k3set(map:Rep[_], key:List[Rep[_]],value:Rep[_]):Rep[Unit]
-  def k3add(map:Rep[_], key:List[Rep[_]],value:Rep[_]):Rep[Unit]
-  def k3foreach(map:Rep[_], key: Rep[_], value: Rep[_], body: => Rep[Unit]) : Rep[Unit]
-  def k3slice(map:Rep[_],part:Int,partKey:List[Rep[_]]):Rep[_]
-  def k3clear(map:Rep[_]):Rep[Unit]
+  def namedM3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]): Rep[M3Var[T]]
+  def namedM3Map[K,V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]): Rep[M3Temp[K,V]]
+  def m3var(value:Type) : Rep[M3Var[_]]
+  def m3temp(key_tp:List[Type],value_tp:Type):Rep[M3Temp[_,_]]
+  // Operations on M3Map, M3Var and M3Temp
+  def m3get(map:Rep[_], key:List[Rep[_]]=Nil,value_tp:Type):Rep[_]
+  def m3set(map:Rep[_], key:List[Rep[_]],value:Rep[_]):Rep[Unit]
+  def m3add(map:Rep[_], key:List[Rep[_]],value:Rep[_]):Rep[Unit]
+  def m3foreach(map:Rep[_], key: Rep[_], value: Rep[_], body: => Rep[Unit]) : Rep[Unit]
+  def m3slice(map:Rep[_],part:Int,partKey:List[Rep[_]]):Rep[_]
+  def m3clear(map:Rep[_]):Rep[Unit]
 }
 
-trait K3MapOpsExp extends BaseExp with EffectExp with K3MapOps{
+trait M3MapOpsExp extends BaseExp with EffectExp with M3MapOps{
   import ManifestHelper.man
   def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
-  def namedK3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]) = reflectMutable(NamedK3Var(name,tp)(mT))
-  def namedK3Map[K, V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]) = reflectMutable(NamedK3Map(name,key,value,indexList,mK,mV))
-  def k3var(value:Type) = reflectMutable(NewK3Var(value,man(value)))
-  def k3temp(key:List[Type],value:Type) = reflectMutable(NewK3Temp(key,value,man(key),man(value)))
+  def namedM3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]) = reflectMutable(NamedM3Var(name,tp)(mT))
+  def namedM3Map[K, V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]) = reflectMutable(NamedM3Map(name,key,value,indexList,mK,mV))
+  def m3var(value:Type) = reflectMutable(NewM3Var(value,man(value)))
+  def m3temp(key:List[Type],value:Type) = reflectMutable(NewM3Temp(key,value,man(key),man(value)))
 
-  def k3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = K3Get(map,key,man(value_tp))
-  def k3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(K3Set(map,key,value))
-  def k3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(K3Add(map,key,value))
-  def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = k3foreach(map,key,value,reifyEffects(body))
-  def k3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = reflectEffect(K3Foreach(map,key,value,body),summarizeEffects(body).star)
-  def k3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = K3Slice(map,part,partKey)
-  def k3clear(map:Exp[_]) = reflectWrite(map)(K3Clear(map))
+  def m3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = M3Get(map,key,man(value_tp))
+  def m3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(M3Set(map,key,value))
+  def m3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(M3Add(map,key,value))
+  def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = m3foreach(map,key,value,reifyEffects(body))
+  def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = reflectEffect(M3Foreach(map,key,value,body),summarizeEffects(body).star)
+  def m3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = M3Slice(map,part,partKey)
+  def m3clear(map:Exp[_]) = reflectWrite(map)(M3Clear(map))
 
   case class Named[T](n:String)(implicit mT:Manifest[T]) extends Def[T]
-  case class NamedK3Var[T](n:String,tp:Type)(implicit mT:Manifest[T]) extends Def[K3Var[T]]
-  case class NamedK3Map[K,V](n:String,key:List[Type],value:Type,indexList: List[List[Int]],mK:Manifest[K],mV:Manifest[V]) extends Def[K3Temp[K,V]]
-  case class NewK3Var[K,V](value:Type,mV:Manifest[V]) extends Def[K3Var[_]]
-  case class NewK3Temp[K,V](key:List[Type],value:Type,mK:Manifest[K],mV:Manifest[V]) extends Def[K3Temp[_,_]]
-  case class K3Get[T](map:Exp[_], key:List[Exp[_]],mt:Manifest[T]) extends Def[T]
-  case class K3Set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
-  case class K3Add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
-  case class K3Foreach(map:Exp[_], key:Exp[_], value:Exp[_], body:Block[Unit]) extends Def[Unit]
-  case class K3Slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) extends Def[Exp[_]]
-  case class K3Clear(map:Exp[_]) extends Def[Unit]
+  case class NamedM3Var[T](n:String,tp:Type)(implicit mT:Manifest[T]) extends Def[M3Var[T]]
+  case class NamedM3Map[K,V](n:String,key:List[Type],value:Type,indexList: List[List[Int]],mK:Manifest[K],mV:Manifest[V]) extends Def[M3Temp[K,V]]
+  case class NewM3Var[K,V](value:Type,mV:Manifest[V]) extends Def[M3Var[_]]
+  case class NewM3Temp[K,V](key:List[Type],value:Type,mK:Manifest[K],mV:Manifest[V]) extends Def[M3Temp[_,_]]
+  case class M3Get[T](map:Exp[_], key:List[Exp[_]],mt:Manifest[T]) extends Def[T]
+  case class M3Set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
+  case class M3Add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) extends Def[Unit]
+  case class M3Foreach(map:Exp[_], key:Exp[_], value:Exp[_], body:Block[Unit]) extends Def[Unit]
+  case class M3Slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) extends Def[Exp[_]]
+  case class M3Clear(map:Exp[_]) extends Def[Unit]
 
   override def syms(e: Any): List[Sym[Any]] = e match {
-    case K3Foreach(m,k,v,b) => syms(k):::syms(v):::syms(b)
+    case M3Foreach(m,k,v,b) => syms(k):::syms(v):::syms(b)
     case _ => super.syms(e)
   }
   override def boundSyms(e: Any): List[Sym[Any]] = e match {
-    case K3Foreach(m,k,v,b) => effectSyms(k):::effectSyms(v):::effectSyms(b)
+    case M3Foreach(m,k,v,b) => effectSyms(k):::effectSyms(v):::effectSyms(b)
     case _ => super.boundSyms(e)
   }
   override def symsFreq(e: Any): List[(Sym[Any], Double)] = e match {
-    case K3Foreach(m,k,v,b) => freqHot(k):::freqHot(v):::freqHot(b)
+    case M3Foreach(m,k,v,b) => freqHot(k):::freqHot(v):::freqHot(b)
     case _ => super.symsFreq(e)
   }
   override def aliasSyms(e: Any): List[Sym[Any]] = e match {
-    case K3Set(m,k,v) => Nil
-    case K3Add(m,k,v) => Nil
+    case M3Set(m,k,v) => Nil
+    case M3Add(m,k,v) => Nil
     case _ => super.aliasSyms(e)
   }
 }
 
-trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
-  val IR: K3MapOpsExp with ExtendedExpressions
+trait ScalaGenM3MapOps extends ScalaGenBase with ScalaGenEffect {
+  val IR: M3MapOpsExp with ExtendedExpressions
   import IR._
   import ddbt.Utils.{ind,tup}
 
@@ -133,45 +132,45 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
   private val nameAttr = "_name"
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
-    case NamedK3Var(n,_) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
-    case NamedK3Map(n,_,_,_,_,_) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
-    case NewK3Var(v,_) => stream.println(K3MapCommons.createK3VarDefinition(quote(sym), v))
-    case NewK3Temp(ks,v,_,_) => if(K3MapCommons.isInliningHigherThanNone) {
-      stream.println(K3MapCommons.createK3TempDefinition(quote(sym),v,ks))
+    case NamedM3Var(n,_) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
+    case NamedM3Map(n,_,_,_,_,_) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
+    case NewM3Var(v,_) => stream.println(M3MapCommons.createM3VarDefinition(quote(sym), v))
+    case NewM3Temp(ks,v,_,_) => if(M3MapCommons.isInliningHigherThanNone) {
+      stream.println(M3MapCommons.createM3TempDefinition(quote(sym),v,ks))
     } else {
       emitValDef(sym, "M3Map.temp["+tup(ks map (_.toScala))+","+v.toScala+"]()")
     }
-    case K3Get(m,ks,_) => if(K3MapCommons.isInliningHigherThanNone) {
+    case M3Get(m,ks,_) => if(M3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
-        case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_,_),_,_)) => emitValDef(sym, quote(m))
-        case Some(Reflect(NewK3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
+        case Some(Reflect(NewM3Var(_,_),_,_)) | Some(Reflect(NamedM3Var(_,_),_,_)) => emitValDef(sym, quote(m))
+        case Some(Reflect(NewM3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
           val nodeName = createNodeName(sym)
-          genGetMap(nodeName, map, K3MapCommons.entryClassName(value, key),value.toScala+" = "+K3MapCommons.zeroValue(value), (0 until ks.size).toList, ks)
+          genGetMap(nodeName, map, M3MapCommons.entryClassName(value, key),value.toScala+" = "+M3MapCommons.zeroValue(value), (0 until ks.size).toList, ks)
         })
-        case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
+        case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
           val nodeName = createNodeName(sym)
-          genGetMap(nodeName, map, K3MapCommons.entryClassName(value, key, indexList),value.toScala+" = "+K3MapCommons.zeroValue(value), (0 until ks.size).toList, ks)
+          genGetMap(nodeName, map, M3MapCommons.entryClassName(value, key, indexList),value.toScala+" = "+M3MapCommons.zeroValue(value), (0 until ks.size).toList, ks)
         })
         case _ => emitValDef(sym, quote(m)+".getonly("+tup(ks map quote)+")")
       }
     } else {
       Def.unapply(m) match {
-        case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_,_),_,_)) => emitValDef(sym, quote(m))
+        case Some(Reflect(NewM3Var(_,_),_,_)) | Some(Reflect(NamedM3Var(_,_),_,_)) => emitValDef(sym, quote(m))
         case _ => emitValDef(sym, quote(m)+".get("+tup(ks map quote)+")")
       }
 
     }
-    case K3Set(m,ks,v) => if(K3MapCommons.isInliningHigherThanNone) {
+    case M3Set(m,ks,v) => if(M3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
-        case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_,_),_,_)) => stream.println(quote(m)+" = "+quote(v))
-        case Some(Reflect(NewK3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
+        case Some(Reflect(NewM3Var(_,_),_,_)) | Some(Reflect(NamedM3Var(_,_),_,_)) => stream.println(quote(m)+" = "+quote(v))
+        case Some(Reflect(NewM3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
           val nodeName = createNodeName(sym)
-          genSetTempMap(nodeName, map, K3MapCommons.entryClassName(value, key, List[List[Int]]()), (0 until ks.size).toList, ks, v)
+          genSetTempMap(nodeName, map, M3MapCommons.entryClassName(value, key, List[List[Int]]()), (0 until ks.size).toList, ks, v)
         })
-        case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
+        case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
           val nodeName = createNodeName(sym)
           genSetNamedMap(nodeName, map, key, value, indexList, ks, v)
@@ -180,19 +179,19 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
       }
     } else {
       Def.unapply(m) match {
-        case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_,_),_,_)) => stream.println(quote(m)+" = "+quote(v))
+        case Some(Reflect(NewM3Var(_,_),_,_)) | Some(Reflect(NamedM3Var(_,_),_,_)) => stream.println(quote(m)+" = "+quote(v))
         case _ => stream.println(quote(m)+".set("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
       }
     }
-    case K3Add(m,ks,v) => if(K3MapCommons.isInliningHigherThanNone) {
+    case M3Add(m,ks,v) => if(M3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
-        case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_,_),_,_)) => stream.println(quote(m)+" += "+quote(v))
-        case Some(Reflect(NewK3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
+        case Some(Reflect(NewM3Var(_,_),_,_)) | Some(Reflect(NamedM3Var(_,_),_,_)) => stream.println(quote(m)+" += "+quote(v))
+        case Some(Reflect(NewM3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
           val nodeName = createNodeName(sym)
-          genAddTempMap(nodeName, map, value, K3MapCommons.entryClassName(value, key, List[List[Int]]()), (0 until ks.size).toList, ks, v)
+          genAddTempMap(nodeName, map, value, M3MapCommons.entryClassName(value, key, List[List[Int]]()), (0 until ks.size).toList, ks, v)
         })
-        case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
+        case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
           val nodeName = createNodeName(sym)
           genAddNamedMap(nodeName, map, key, value, indexList, ks, v)
@@ -201,33 +200,33 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
       }
     } else {
       Def.unapply(m) match {
-        case Some(Reflect(NewK3Var(_,_),_,_)) | Some(Reflect(NamedK3Var(_,_),_,_)) => stream.println(quote(m)+" += "+quote(v))
+        case Some(Reflect(NewM3Var(_,_),_,_)) | Some(Reflect(NamedM3Var(_,_),_,_)) => stream.println(quote(m)+" += "+quote(v))
         case _ => stream.println(quote(m)+".add("+(if (ks.size==0) "" else tup(ks map quote)+",")+quote(v)+")")
       }
     }
-    case K3Foreach(m,k,v,body) => {
+    case M3Foreach(m,k,v,body) => {
       val block=getBlockContents(body) // enables both the renaming trick and allow nested block indentation
-      if(K3MapCommons.isInliningHigherThanNone) {
+      if(M3MapCommons.isInliningHigherThanNone) {
         Def.unapply(m) match {
-          case Some(Reflect(NewK3Temp(key,value,_,_),_,_)) => stream.println({
+          case Some(Reflect(NewM3Temp(key,value,_,_),_,_)) => stream.println({
             val map = quote(m)
             val nodeName = createNodeName(sym)
 
-            genForeachMap(nodeName, map, quote(k), quote(v), block, key, value, K3MapCommons.entryClassName(value, key, List[List[Int]]()))
+            genForeachMap(nodeName, map, quote(k), quote(v), block, key, value, M3MapCommons.entryClassName(value, key, List[List[Int]]()))
           })
-          case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => stream.println({
+          case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => stream.println({
             val map = quote(m)
             val nodeName = createNodeName(sym)
 
-            genForeachMap(nodeName, map, quote(k), quote(v), block, key, value, K3MapCommons.entryClassName(value, key, indexList))
+            genForeachMap(nodeName, map, quote(k), quote(v), block, key, value, M3MapCommons.entryClassName(value, key, indexList))
           })
-          case Some(Reflect(K3Slice(name,part,partKey),_,_)) => stream.println({
+          case Some(Reflect(M3Slice(name,part,partKey),_,_)) => stream.println({
             val nodeName = createNodeName(sym)
             val map = genQuoteExpr(List(m),nodeName).apply(0)
 
             val (entryClsName, elemValueType) = Def.unapply(name) match {
-              case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => {
-                (":"+K3MapCommons.entryClassName(value,key,indexList),":"+value.toScala)
+              case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => {
+                (":"+M3MapCommons.entryClassName(value,key,indexList),":"+value.toScala)
               }
               case m => ("","")
             }
@@ -239,7 +238,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
             val sliceValDef = ind(genValDefForNonInlinableExpr(List(m),nodeName))
             "; {\n" +
             (if(sliceValDef.length > 2) sliceValDef+"\n" else "") +
-            "  //SLICEK3FOREACH\n" +
+            "  //SLICEM3FOREACH\n" +
             "  var "+i+":Int = 0\n" +
             "  val "+len+":Int = "+map+".length\n" +
             "  while("+i+" < "+len+") {\n" +
@@ -259,15 +258,15 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
         stream.println(quote(m)+".foreach { ("+quote(k)+","+quote(v)+") =>"); stream.println(block); stream.println("}")
       }
     }
-    case K3Slice(m,p,pks) => if(K3MapCommons.isInliningHigherThanNone) {
+    case M3Slice(m,p,pks) => if(M3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
-        case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
+        case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
-          val mapClass = K3MapCommons.entryClassName(value,key,indexList)
+          val mapClass = M3MapCommons.entryClassName(value,key,indexList)
           val nodeName = createNodeName(sym)
           val indexLoc = indexList(p)
-          val targetIndex = K3MapCommons.indexMapName(map,indexLoc)
-          val targetIndexClass = K3MapCommons.indexEntryClassName(mapClass,indexLoc)
+          val targetIndex = M3MapCommons.indexMapName(map,indexLoc)
+          val targetIndexClass = M3MapCommons.indexEntryClassName(mapClass,indexLoc)
           //TODOOOO
           //emitValDef(sym, quote(m)+".namedmapslice("+p+","+tup(pks map quote)+")")
           genGetMap(nodeName, targetIndex, targetIndexClass,"scala.collection.mutable.ArrayBuffer["+mapClass+"] = new scala.collection.mutable.ArrayBuffer["+mapClass+"](0)", indexLoc, pks)
@@ -277,26 +276,26 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     } else {
       emitValDef(sym, quote(m)+".slice("+p+","+tup(pks map quote)+")")
     }
-    case K3Clear(m) => if(K3MapCommons.isInliningHigherThanNone) {
+    case M3Clear(m) => if(M3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
-        case Some(Reflect(NewK3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+K3MapCommons.zeroValue(tp))
-        case Some(Reflect(NamedK3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+K3MapCommons.zeroValue(tp))
-        case Some(Reflect(NewK3Temp(_,_,_,_),_,_)) => stream.println({
+        case Some(Reflect(NewM3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+M3MapCommons.zeroValue(tp))
+        case Some(Reflect(NamedM3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+M3MapCommons.zeroValue(tp))
+        case Some(Reflect(NewM3Temp(_,_,_,_),_,_)) => stream.println({
           val map = quote(m)
-          genClearMap(createNodeName(sym), map, K3MapCommons.genMapSize(map), K3MapCommons.genMapThreshold(map))+"\n"
+          genClearMap(createNodeName(sym), map, M3MapCommons.genMapSize(map), M3MapCommons.genMapThreshold(map))+"\n"
         })
-        case Some(Reflect(NamedK3Map(_,_,_,indexList,_,_),_,_)) => stream.println({
+        case Some(Reflect(NamedM3Map(_,_,_,indexList,_,_),_,_)) => stream.println({
           val map = quote(m)
           val nodeName = createNodeName(sym)
-          genClearMap(nodeName, map, K3MapCommons.genMapSize(map), K3MapCommons.genMapThreshold(map))+"\n"+
-          indexList.zipWithIndex.map{case (is, i) => genClearMap(nodeName+K3MapCommons.indexNamePostfix(is), K3MapCommons.indexMapName(map,is), K3MapCommons.genIndexMapSize(map,i), K3MapCommons.genIndexMapThreshold(map,i))+"\n"}.mkString
+          genClearMap(nodeName, map, M3MapCommons.genMapSize(map), M3MapCommons.genMapThreshold(map))+"\n"+
+          indexList.zipWithIndex.map{case (is, i) => genClearMap(nodeName+M3MapCommons.indexNamePostfix(is), M3MapCommons.indexMapName(map,is), M3MapCommons.genIndexMapSize(map,i), M3MapCommons.genIndexMapThreshold(map,i))+"\n"}.mkString
         })
         case _ => stream.println(quote(m)+".clearonly")
       }
     } else {
       Def.unapply(m) match {
-        case Some(Reflect(NewK3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+K3MapCommons.zeroValue(tp))
-        case Some(Reflect(NamedK3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+K3MapCommons.zeroValue(tp))
+        case Some(Reflect(NewM3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+M3MapCommons.zeroValue(tp))
+        case Some(Reflect(NamedM3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+M3MapCommons.zeroValue(tp))
         case _ => stream.println(quote(m)+".clear")
       }
     }
@@ -312,7 +311,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     val e = nodeName+"_fe"
     val singleValueKey: Boolean = (key.size == 1)
     "; {\n" +
-    "  //K3FOREACH\n" +
+    "  //M3FOREACH\n" +
     "  var "+i+":Int = 0\n" +
     "  val "+len+":Int = "+map+".length\n" +
     "  while("+i+" < "+len+") {\n" +
@@ -336,7 +335,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     inputValueSymbol match {
       case Const(c) => {
         isConstant = true
-        if(c == K3MapCommons.actualZeroValue(value)) {
+        if(c == M3MapCommons.actualZeroValue(value)) {
           isZero = true
         }
       }
@@ -347,15 +346,15 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     val prefixValue = genValDefForNonInlinableExpr(List(inputValueSymbol),nodeName)
 
     if(isZero) {
-      "//K3ADDNAMED_CANCELLED"
+      "//M3ADDNAMED_CANCELLED"
     } else {
-      "//K3ADDNAMED\n" +
+      "//M3ADDNAMED\n" +
       prefixValue +
       (if(isConstant) {
-        genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true, K3MapCommons.zeroValue(value))
+        genSetDetailedTempMap("",nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)), true, M3MapCommons.zeroValue(value))
       } else {
-        "if("+valueName+" != "+K3MapCommons.zeroValue(value)+") {\n" +
-        ind(genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true, K3MapCommons.zeroValue(value)))+"\n" +
+        "if("+valueName+" != "+M3MapCommons.zeroValue(value)+") {\n" +
+        ind(genSetDetailedTempMap("",nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)), true, M3MapCommons.zeroValue(value)))+"\n" +
         "}"
       })
     }
@@ -369,24 +368,24 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     val prefixValue = genValDefForNonInlinableExpr(List(inputValueSymbol),nodeName)
 
     //sn = set named map
-    "//K3SETNAMED\n" +
+    "//M3SETNAMED\n" +
     prefixValue +
-    "if("+valueName+" == "+K3MapCommons.zeroValue(value)+") {\n" +
+    "if("+valueName+" == "+M3MapCommons.zeroValue(value)+") {\n" +
     genDelNamedMap(nodeName,map,key,value,indexList,(0 until inputKeySymbols.size).toList,inputKeySymbols)+ "\n" +
     "} else {\n" +
-    ind(genSetDetailedTempMap("",nodeName,map,K3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"=",indexList,indexList.map(K3MapCommons.indexEntryClassName(value,key,indexList,_)), true, K3MapCommons.zeroValue(value)))+"\n" +
+    ind(genSetDetailedTempMap("",nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)), true, M3MapCommons.zeroValue(value)))+"\n" +
     "}"
   }
 
   def genDelNamedMap(nodeName:String, map:String, key:List[Type], value:Type, indexList: List[List[Int]], keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]]) = {
-    if(K3MapCommons.isInliningInSpecializedLevel) {
-      K3MapCommons.entryClassName(value, key, indexList) + "Ops.remove(" + map + ", " + map + "__md, " + (inputKeySymbols map quote).mkString(", ") + ")"
+    if(M3MapCommons.isInliningInSpecializedLevel) {
+      M3MapCommons.entryClassName(value, key, indexList) + "Ops.remove(" + map + ", " + map + "__md, " + (inputKeySymbols map quote).mkString(", ") + ")"
     } else {
       //d = del
       val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
       val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
 
-      K3MapCommons.genGenericDelNamedMap(prefixKey,nodeName,map,key,value,indexList,keyIndicesInEntery,keyNames)
+      M3MapCommons.genGenericDelNamedMap(prefixKey,nodeName,map,key,value,indexList,keyIndicesInEntery,keyNames)
     }
   }
 
@@ -395,9 +394,9 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     val valueName = genQuoteExpr(List(inputValueSymbol),nodeName).apply(0)
     val prefixValue = genValDefForNonInlinableExpr(List(inputValueSymbol),nodeName)
 
-    "//K3ADDTEMP\n" +
+    "//M3ADDTEMP\n" +
     prefixValue +
-    "if("+valueName+" != "+K3MapCommons.zeroValue(value)+") {\n" +
+    "if("+valueName+" != "+M3MapCommons.zeroValue(value)+") {\n" +
     ind(genSetDetailedTempMap("",nodeName,map,entryClsName,keyIndicesInEntery,inputKeySymbols,valueName,false,"+="))+"\n" +
     "}"
   }
@@ -410,23 +409,23 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
   }
 
   def genSetDetailedTempMap(prefixValue:String, nodeName:String, map:String, entryClsName:String, keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]], valueName:String, insideBlock: Boolean=true, operation: String="=", indexList: List[List[Int]] = List[List[Int]](), indexEntryClsName: List[String]=List[String](), fromNamedMap: Boolean=false, zeroValue: String = "") : String = {
-    if(K3MapCommons.isInliningInSpecializedLevel) {
-      prefixValue + entryClsName + "Ops."+(if (fromNamedMap) "putRemoveOnZero" else "put")+"("+ (if(operation == "=") "false" else "true") + "," + map + ", " + map + "__md, " + (inputKeySymbols map quote).mkString(", ") + ", " + valueName + indexList.map(idx => ", "+K3MapCommons.indexMapName(map,idx)).mkString + ")\n" +
-      K3MapCommons.genIncreaseMapAndIndicesCapacity(nodeName,map,entryClsName,indexList,indexEntryClsName)
+    if(M3MapCommons.isInliningInSpecializedLevel) {
+      prefixValue + entryClsName + "Ops."+(if (fromNamedMap) "putRemoveOnZero" else "put")+"("+ (if(operation == "=") "false" else "true") + "," + map + ", " + map + "__md, " + (inputKeySymbols map quote).mkString(", ") + ", " + valueName + indexList.map(idx => ", "+M3MapCommons.indexMapName(map,idx)).mkString + ")\n" +
+      M3MapCommons.genIncreaseMapAndIndicesCapacity(nodeName,map,entryClsName,indexList,indexEntryClsName)
     } else {
       val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
       val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
-      K3MapCommons.genGenericSetTempMap(prefixValue, prefixKey, nodeName, map, entryClsName, keyIndicesInEntery, keyNames, valueName, insideBlock, operation, indexList, indexEntryClsName, fromNamedMap, zeroValue)
+      M3MapCommons.genGenericSetTempMap(prefixValue, prefixKey, nodeName, map, entryClsName, keyIndicesInEntery, keyNames, valueName, insideBlock, operation, indexList, indexEntryClsName, fromNamedMap, zeroValue)
     }
   }
 
   def genGetMap(nodeName:String, map:String, entryClsName:String, valueTypeAndZeroVal:String, keyIndicesInEntery:List[Int], inputKeySymbols:List[Exp[_]]) = {
-    if(K3MapCommons.isInliningInSpecializedLevel) {
+    if(M3MapCommons.isInliningInSpecializedLevel) {
       entryClsName + "Ops.get(" + map + ", " + (inputKeySymbols map quote).mkString(", ") + ")"
     } else {
       val keyNames = genQuoteExpr(inputKeySymbols,nodeName)
       val prefixKey = genValDefForNonInlinableExpr(inputKeySymbols,nodeName)
-      K3MapCommons.genGenericGetMap(prefixKey, nodeName, map, entryClsName, valueTypeAndZeroVal, keyIndicesInEntery, keyNames)
+      M3MapCommons.genGenericGetMap(prefixKey, nodeName, map, entryClsName, valueTypeAndZeroVal, keyIndicesInEntery, keyNames)
     }
   }
 
@@ -434,7 +433,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     val currentSize = nodeName + "__csz"
     val currentCounter = nodeName + "__ctr"
     "; {\n" +
-    "  //K3CLEAR\n" +
+    "  //M3CLEAR\n" +
     "  val " + currentSize + ":Int = " + map + ".length\n" +
     "  var " + currentCounter + ":Int = 0\n" +
     "  while("+currentCounter+" < "+currentSize+") {\n" +
@@ -442,7 +441,7 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     "    "+currentCounter+"+=1\n" +
     "  }\n" +
     "  "+mapSizeVar+" = 0\n" +
-    "  "+mapThresholdVar+"= (" + currentSize + "*" + K3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
+    "  "+mapThresholdVar+"= (" + currentSize + "*" + M3MapCommons.DEFAULT_LOAD_FACTOR + ").toInt\n" +
     "}"
   }
 
@@ -452,8 +451,8 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
         Def.unapply(s) match {
           case Some(d: Def[Any]) => d match {
             case Named(n) => n
-            case NamedK3Var(n,_) => n
-            case NamedK3Map(n,_,_,_,_,_) => n
+            case NamedM3Var(n,_) => n
+            case NamedM3Map(n,_,_,_,_,_) => n
             case _ =>
               val strWriter: java.io.StringWriter = new java.io.StringWriter;
               val stream = new java.io.PrintWriter(strWriter);
@@ -510,10 +509,10 @@ trait ScalaGenK3MapOps extends ScalaGenBase with ScalaGenEffect {
     var theType = ""
     if((typeStr.contains("Any")) || (typeStr.contains("$")) || (typeStr.contains("@"))) {
       Def.unapply(s) match {
-        case Some(Reflect(K3Slice(name,part,partKey),_,_)) => {
+        case Some(Reflect(M3Slice(name,part,partKey),_,_)) => {
           val elemKeyType = Def.unapply(name) match {
-            case Some(Reflect(NamedK3Map(_,key,value,indexList,_,_),_,_)) => {
-              theType = (if(K3MapCommons.isInliningHigherThanNone) ":scala.collection.mutable.ArrayBuffer["+K3MapCommons.entryClassName(value,key,indexList)+"]" else ":M3Map["+tup(key map (_.toScala))+","+value.toScala+"]")
+            case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => {
+              theType = (if(M3MapCommons.isInliningHigherThanNone) ":scala.collection.mutable.ArrayBuffer["+M3MapCommons.entryClassName(value,key,indexList)+"]" else ":M3Map["+tup(key map (_.toScala))+","+value.toScala+"]")
             }
             case _ => theType = ""
           }
