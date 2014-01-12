@@ -116,12 +116,12 @@ object M3MapCommons {
     "  }\n" + (if(M3MapCommons.isInliningInSpecializedLevel) {
     "  object " + name + "Ops {\n" +
       "    def get(map:Array["+name+"], "+keyArguments+"): "+value.toScala+" = " +
-      ind(genGenericGetMap("", "n", "map", name, value.toScala+" = "+zeroValue(value), (0 until keyNames.size).toList, keyNames),3) + "\n" +
+      ind(genGenericGetMap("", "n", "map", name, value.toScala+" = "+value.zero, (0 until keyNames.size).toList, keyNames),3) + "\n" +
       "    def put(isAdd:Boolean, map:Array["+name+"], map__md:Array[Int], "+keyArguments+", "+valueArgument+indexArguments+"): Unit = {\n" +
-      ind(genGenericSetTempMap("","", "n", "map", M3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(M3MapCommons.indexEntryClassName(value,key,idxList,_)), false, zeroValue(value)),3) + "\n" +
+      ind(genGenericSetTempMap("","", "n", "map", M3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(M3MapCommons.indexEntryClassName(value,key,idxList,_)), false, value.zero),3) + "\n" +
       "    }\n" +
       "    def putRemoveOnZero(isAdd:Boolean, map:Array["+name+"], map__md:Array[Int], "+keyArguments+", "+valueArgument+indexArguments+"): Unit = {\n" +
-      ind(genGenericSetTempMap("","", "n", "map", M3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(M3MapCommons.indexEntryClassName(value,key,idxList,_)), true, zeroValue(value)),3) + "\n" +
+      ind(genGenericSetTempMap("","", "n", "map", M3MapCommons.entryClassName(value, key, idxList), (0 until keyNames.size).toList, keyNames, valueName, false, "isAdd", idxList, idxList.map(M3MapCommons.indexEntryClassName(value,key,idxList,_)), true, value.zero),3) + "\n" +
       "    }\n" +
       "    def remove(map:Array["+name+"], map__md:Array[Int], "+keyArguments+"): Unit = {\n" +
       ind(genGenericDelNamedMap("", "n", "map", key, value, idxList, (0 until keyNames.size).toList, keyNames),3) + "\n" +
@@ -234,19 +234,9 @@ object M3MapCommons {
   }
 
   /**
-   * Returns the String zero value for a given Type
-   */
-  def zeroValue(v: Type) = v.zero /*v match {
-    case TypeLong => "0L"
-    case TypeDouble => "0.0"
-    case TypeString => "\"\""
-    case TypeDate => "new Date()"
-  }*/
-
-  /**
    * Returns the zero value for a given Type
    */
-  def actualZeroValue(v: Type) = v match {
+  def actualZeroValue(tp: Type) = tp match {
     case TypeLong => 0
     case TypeDouble => 0.0
     case TypeString => ""
@@ -257,9 +247,9 @@ object M3MapCommons {
    * Generates M3Var definition statement.
    *
    * @param name is the name of variable
-   * @param value is the type of variable
+   * @param tp is the type of variable
    */
-  def createM3VarDefinition(name: String, value:Type) = "var "+name+":"+value.toScala+" = "+zeroValue(value)
+  def createM3VarDefinition(name: String, tp:Type) = "var "+name+":"+tp.toScala+" = "+tp.zero
 
   /**
    * Generates M3Map definition statements.
@@ -372,10 +362,10 @@ object M3MapCommons {
       "//M3ADDNAMED\n" +
       prefixValue +
       (if(isConstant) {
-        genGenericSetTempMap("",prefixKey,nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)),true,zeroValue(value))
+        genGenericSetTempMap("",prefixKey,nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)),true,value.zero)
       } else {
-        "if("+valueName+" != "+M3MapCommons.zeroValue(value)+") {\n" +
-        ind(genGenericSetTempMap("",prefixKey,nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)),true,zeroValue(value)))+"\n" +
+        "if("+valueName+" != "+value.zero+") {\n" +
+        ind(genGenericSetTempMap("",prefixKey,nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)),true,value.zero))+"\n" +
         "}"
       })
     }
@@ -410,7 +400,7 @@ object M3MapCommons {
     //sn = set named map
     "//M3SETNAMED\n" +
     prefixValue +
-    "if("+valueName+" == "+M3MapCommons.zeroValue(value)+") {\n" +
+    "if("+valueName+" == "+value.zero+") {\n" +
     genGenericDelNamedMap(prefixKey,nodeName,map,key,value,indexList,(0 until keyNames.size).toList,keyNames)+ "\n" +
     "} else {\n" +
     ind(genGenericSetTempMap("",prefixKey,nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until keyNames.size).toList,keyNames,valueName,false,"=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_))))+"\n" +

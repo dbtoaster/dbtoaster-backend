@@ -146,12 +146,12 @@ trait ScalaGenM3MapOps extends ScalaGenBase with ScalaGenEffect {
         case Some(Reflect(NewM3Temp(key,value,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
           val nodeName = createNodeName(sym)
-          genGetMap(nodeName, map, M3MapCommons.entryClassName(value, key),value.toScala+" = "+M3MapCommons.zeroValue(value), (0 until ks.size).toList, ks)
+          genGetMap(nodeName, map, M3MapCommons.entryClassName(value, key),value.toScala+" = "+value.zero, (0 until ks.size).toList, ks)
         })
         case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => emitValDef(sym, {
           val map = quote(m)
           val nodeName = createNodeName(sym)
-          genGetMap(nodeName, map, M3MapCommons.entryClassName(value, key, indexList),value.toScala+" = "+M3MapCommons.zeroValue(value), (0 until ks.size).toList, ks)
+          genGetMap(nodeName, map, M3MapCommons.entryClassName(value, key, indexList),value.toScala+" = "+value.zero, (0 until ks.size).toList, ks)
         })
         case _ => emitValDef(sym, quote(m)+".getonly("+tup(ks map quote)+")")
       }
@@ -278,8 +278,8 @@ trait ScalaGenM3MapOps extends ScalaGenBase with ScalaGenEffect {
     }
     case M3Clear(m) => if(M3MapCommons.isInliningHigherThanNone) {
       Def.unapply(m) match {
-        case Some(Reflect(NewM3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+M3MapCommons.zeroValue(tp))
-        case Some(Reflect(NamedM3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+M3MapCommons.zeroValue(tp))
+        case Some(Reflect(NewM3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+tp.zero)
+        case Some(Reflect(NamedM3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+tp.zero)
         case Some(Reflect(NewM3Temp(_,_,_,_),_,_)) => stream.println({
           val map = quote(m)
           genClearMap(createNodeName(sym), map, M3MapCommons.genMapSize(map), M3MapCommons.genMapThreshold(map))+"\n"
@@ -294,8 +294,8 @@ trait ScalaGenM3MapOps extends ScalaGenBase with ScalaGenEffect {
       }
     } else {
       Def.unapply(m) match {
-        case Some(Reflect(NewM3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+M3MapCommons.zeroValue(tp))
-        case Some(Reflect(NamedM3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+M3MapCommons.zeroValue(tp))
+        case Some(Reflect(NewM3Var(tp,_),_,_)) => stream.println(quote(m)+" = "+tp.zero)
+        case Some(Reflect(NamedM3Var(_,tp),_,_)) => stream.println(quote(m)+" = "+tp.zero)
         case _ => stream.println(quote(m)+".clear")
       }
     }
@@ -351,10 +351,10 @@ trait ScalaGenM3MapOps extends ScalaGenBase with ScalaGenEffect {
       "//M3ADDNAMED\n" +
       prefixValue +
       (if(isConstant) {
-        genSetDetailedTempMap("",nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)), true, M3MapCommons.zeroValue(value))
+        genSetDetailedTempMap("",nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)), true, value.zero)
       } else {
-        "if("+valueName+" != "+M3MapCommons.zeroValue(value)+") {\n" +
-        ind(genSetDetailedTempMap("",nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)), true, M3MapCommons.zeroValue(value)))+"\n" +
+        "if("+valueName+" != "+value.zero+") {\n" +
+        ind(genSetDetailedTempMap("",nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"+=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)), true, value.zero))+"\n" +
         "}"
       })
     }
@@ -370,10 +370,10 @@ trait ScalaGenM3MapOps extends ScalaGenBase with ScalaGenEffect {
     //sn = set named map
     "//M3SETNAMED\n" +
     prefixValue +
-    "if("+valueName+" == "+M3MapCommons.zeroValue(value)+") {\n" +
+    "if("+valueName+" == "+value.zero+") {\n" +
     genDelNamedMap(nodeName,map,key,value,indexList,(0 until inputKeySymbols.size).toList,inputKeySymbols)+ "\n" +
     "} else {\n" +
-    ind(genSetDetailedTempMap("",nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)), true, M3MapCommons.zeroValue(value)))+"\n" +
+    ind(genSetDetailedTempMap("",nodeName,map,M3MapCommons.entryClassName(value, key, indexList),(0 until inputKeySymbols.size).toList,inputKeySymbols,valueName,false,"=",indexList,indexList.map(M3MapCommons.indexEntryClassName(value,key,indexList,_)), true, value.zero))+"\n" +
     "}"
   }
 
@@ -396,7 +396,7 @@ trait ScalaGenM3MapOps extends ScalaGenBase with ScalaGenEffect {
 
     "//M3ADDTEMP\n" +
     prefixValue +
-    "if("+valueName+" != "+M3MapCommons.zeroValue(value)+") {\n" +
+    "if("+valueName+" != "+value.zero+") {\n" +
     ind(genSetDetailedTempMap("",nodeName,map,entryClsName,keyIndicesInEntery,inputKeySymbols,valueName,false,"+="))+"\n" +
     "}"
   }

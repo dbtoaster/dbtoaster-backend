@@ -45,8 +45,8 @@ Seq(
 // --------- Custom tasks
 addCommandAlias("toast", ";run-main ddbt.Compiler ") ++
 addCommandAlias("unit", ";run-main ddbt.UnitTest ") ++
-addCommandAlias("queries", ";unit -dd;test-only ddbt.test.gen.*") ++
-addCommandAlias("queries-lms", ";unit -dd -l lms;test-only ddbt.test.gen.*") ++
+addCommandAlias("queries", "unit -dd -v -x -s 0 -l scala") ++
+addCommandAlias("queries-lms", "unit -dd -v -x -s 0 -l lms -xsc") ++
 addCommandAlias("queries-akka", "unit -dd -v -x -s 0 -l akka -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx rs_ineqwithnestedagg")
 
 // Akka individual queries testing
