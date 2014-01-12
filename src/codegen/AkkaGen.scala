@@ -46,24 +46,16 @@ Roadmap:
    + ...
    + finally when completed, release the barrier
 
-XXX: Move 'inuse' maintenance in Scala code generator => strip unnecessary key parts creation in foreach
-
-
-Issues to solve:
+Issues to solve (big XXX list):
+- Move 'inuse' maintenance in Scala code generator => strip unnecessary key parts creation in foreach
 - move lazy map slicing into the TypeChecking ?
 - move tests (TestUnit) AST into its own ddbt.ast package ?
-XXX: problem: the same map can be accessed locally in a foreach but again acessed with another key which might not be on the host (Runiquecountsbya)
-XXX: warning, some test are incorrect but get correct if they are run first (Rseqineq, ...)
-;check -q.*ltalldynamic -dd -makka;test-only ddbt.test.gen.*
-XXX: for union, instead of shipping both maps to 3rd party, why not ship one to another and make union there ? (would increase locality)
-XXX: for union, instead of shipping both maps to 3rd party, why not ship one to another and make union there ? (would increase locality)
+- problem: the same map can be accessed locally in a foreach but again acessed with another key which might not be on the host (Runiquecountsbya)
+- for union, instead of shipping both maps to 3rd party, why not ship one to another and make union there ? (would increase locality)
+- re-introduce intra-statement parallelization with library-level support for pending continuations (in barrier) to guarantee correctness
+- distinguish between forced sequentiality (master and in aggregation/sum) and parallel execution(pure foreach)
+- make both parts of an Add work in parallel
 */
-
-// No compile: -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx (invalid_schema_fn|r_multinest|rs_ineqwithnestedagg)
-// Failing   : rs_column_mapping_(1|2), tpch/query(9|10|18)
-// Correct   : 169
-
-// TODO: re-introduce intra-statement parallelization with library-level support for pending continuations (in barrier) to guarantee correctness
 
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
@@ -92,7 +84,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     def op(f:String=>String):String = { en=true; name+"c += 1\n"+f(name+"c -=1; if ("+name+"c==0) "+name+"\n") }
     // apply the continuation (wrapping if dependencies)
     def apply(v:String) = if (en) "def "+name+" {\n"+ind(co(v)+co_end)+"\n}\n" else co(v)+co_end
-    //XXX: support parent: def apply(s:String):String = { val c=co(s); if (en) { if (parent!=null) parent.op((x:String)=>name+"(()=>{\n"+ind(c+x)+"\n})\n") else name+"(()=>{\n"+ind(c)+"\n})\n" } else c }
+    // support parent: def apply(s:String):String = { val c=co(s); if (en) { if (parent!=null) parent.op((x:String)=>name+"(()=>{\n"+ind(c+x)+"\n})\n") else name+"(()=>{\n"+ind(c)+"\n})\n" } else c }
 
     // wrap to create declarations ahead of dependencies
     def wrap(f:()=>String) = { val r=f(); if (en) "var "+name+"c = 1\n"+r+name+"\n" else r }
@@ -101,7 +93,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   }
   */
 
-  // XXX: context is incomplete
   override def rn(n:String):String = try { ctx(n)._2 } catch { case _:Throwable => n } // get unique name (avoids nesting Lifts)
 
   type RFun = (String,String,String) // Remote functions as (func_name,body,context_insensitive_body)
@@ -136,14 +127,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       case None => if (agg) aggl=(fn,body,b)::aggl else forl=(fn,body,b)::forl; (fn,body)
     }
   }
-
-  //private def anon(e:Expr):Expr = Ref(fresh("fool")) //e.rename((n:String)=>n.replaceAll("[0-9]+","")) // anonymize the function (for use as hash key)
-  // XXX: this is wrong (!) but if we remove this simplification, scalac might crash
-  // We might create duplicates but to avoid them we must compare (expression \ arguments) and (effect-free) continuation
-  // plus the continuation encodes some context variables which might be
-  // reset some variables after each trigger ? (k,v,l,agg,add
-  // reset some variables when crossing 'remote' boundary?
-  // XXX: replace local variables by integer constants refs and tag the invocation site
 
   // Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables.
   // On top of that, c2 defines additional evaluation context
@@ -180,10 +163,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   // local accumulator to handle aggregation in nested (remote) loops
-  var localAcc : (String,Type,List[Type]) = null
-
-  // XXX: distinguish between forced sequentiality (master and in aggregation/sum) and parallel execution(pure foreach)
-  // XXX: make both parts of an Add work in parallel
+  var localAcc : (String,Type,List[Type]) = null // name, result, key types
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
@@ -232,7 +212,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         case Some(t) if t==a.agg => val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ => val a0=fresh("add")
           def add(e:Expr):String = { val m=fmap(e)
-            val r = if (m!=null) { localAcc = (a0,e.tp,a.agg.map(_._2)); val r=remote_agg(a0,m,a.agg,e,true); localAcc=null; r }
+            val r = if (m!=null) { localAcc=(a0,e.tp,a.agg.map(_._2)); val r=remote_agg(a0,m,a.agg,e,true); localAcc=null; r }
                     else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
           }
           "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ local_r=a0; cpsExpr(mapRef(a0,ex.tp,a.agg),co) }

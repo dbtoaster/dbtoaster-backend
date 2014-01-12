@@ -50,9 +50,7 @@ addCommandAlias("queries-lms", ";unit -dd -l lms;test-only ddbt.test.gen.*") ++
 addCommandAlias("queries-akka", "unit -dd -v -x -s 0 -l akka -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx rs_ineqwithnestedagg")
 
 // Akka individual queries testing
-addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ") ++
-addCommandAlias("bad", ";unit -dd -v -x -s 0 -l akka -q rs_column_mapping_[12] -q tpch/query(9|10|18);test-only ddbt.test.gen.*") // known incorrect results: incorrect remote call alias detection
-// ../dbt/bin/dbtoaster_release ../dbt/test/queries/simple/rs_column_mapping_1.sql -l m3
+addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ")
 
 addCommandAlias("bench", ";unit -v -x -xsc -xvm -csv bench.csv -l ") ++ // usage: sbt 'bench lms'
 addCommandAlias("bench-all", ";unit -v -x -xsc -xvm -csv bench-all.csv -l scala -l lms -l lscala -l llms")
@@ -106,6 +104,7 @@ TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (ba
 }
 
 // show full-classpath
+//commands += Command.args("cmd","")((state: State, args: Seq[String]) => { println(args.toList); state })
 //javaHome := Some(file("/System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home"))
 //javaHome := Some(file("/Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home"))
 //{
