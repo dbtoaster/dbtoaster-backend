@@ -68,8 +68,8 @@ class RidWorker extends WorkerActor {
         val r2_a = k4._1;
         val r2_b = k4._2;
         COUNT_mR4_c.i
-        get(map1,r2_b,(v9:Long)=>{
-        get(map1,r2_b,(v10:Long)=>{
+        get(map1,r2_b)((v9:Long)=>{
+        get(map1,r2_b)((v10:Long)=>{
         add3.add((r2_a,r2_b),(v8 * ((if (((v9 + ((if (r2_b == r_a) 1L else 0L) * -1L)))!=0) 1L else 0L) + ((if ((v10)!=0) 1L else 0L) * -1L))));
         COUNT_mR4_c.d
         }) })
@@ -97,15 +97,15 @@ class RidMaster extends RidWorker with MasterActor {
     val add1 = M3Map.temp[(Long,Long),Long]()
     val r2_b = r_a;
     val add2 = M3Map.temp[Long,Long]()
-    aggr(map2,fa1,Array[Any](r2_b,r_a),add2,(_:M3Map[Long,Long]) => {
+    aggr(map2,fa1,r2_b,r_a)(add2)((_:M3Map[Long,Long]) => {
     val r2_a = r_a;
     add2.add(r2_a,(if (r2_b == r_b) 1L else 0L));
     val add2_c = Acc()
     add2.foreach { (k2,v2) =>
       val r2_a = k2;
       add2_c.i
-      get(map1,r2_b,(v3:Long)=>{
-      get(map1,r2_b,(v4:Long)=>{
+      get(map1,r2_b)((v3:Long)=>{
+      get(map1,r2_b)((v4:Long)=>{
       add1.add((r2_b,r2_a),(v2 * (((if ((v3)!=0) 1L else 0L) * -1L) + (if (((v4 + 1L))!=0) 1L else 0L))));
       add2_c.d
       }) })
@@ -113,7 +113,7 @@ class RidMaster extends RidWorker with MasterActor {
     add2_c(() => {
     val r2_a = r_a;
     val r2_b = r_b;
-    get(map1,r2_b,(v5:Long)=>{
+    get(map1,r2_b)((v5:Long)=>{
     add1.add((r2_b,r2_a),(if ((v5)!=0) 1L else 0L));
     add1.foreach { (k3,v6) =>
       val r2_b = k3._1;
@@ -133,9 +133,9 @@ class RidMaster extends RidWorker with MasterActor {
     val add3 = M3Map.temp[(Long,Long),Long]()
     val r2_a = r_a;
     val r2_b = r_b;
-    get(map1,r2_b,(v7:Long)=>{
+    get(map1,r2_b)((v7:Long)=>{
     add3.add((r2_a,r2_b),((if (((v7 + ((if (r2_b == r_a) 1L else 0L) * -1L)))!=0) 1L else 0L) * -1L));
-    aggr(map2,fa2,Array[Any](r_a,r_b),add3,(_:M3Map[(Long,Long),Long]) => {
+    aggr(map2,fa2,r_a,r_b)(add3)((_:M3Map[(Long,Long),Long]) => {
     add3.foreach { (k5,v11) =>
       val r2_a = k5._1;
       val r2_b = k5._2;

@@ -271,7 +271,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       "// remote foreach\n"+longFun("forl","()=>Unit","co()",fbs)+"\n"+
       "// remote aggregations\n"+longFun("aggl","Any=>Unit","co(null)",abs)
     )+"\n}\n\nclass "+cls+"Master extends "+cls+"Worker with MasterActor {\n"+ind(
-      "import WorkerActor._\nimport Messages._\nimport Functions._\nimport scala.util.continuations._\n\n"+qs+
+      "import WorkerActor._\nimport Messages._\nimport Functions._\n\n"+qs+
       "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str+"case _ => deq")+"\n}\n\n"+ts
     )+"\n}"
   }

@@ -267,7 +267,6 @@ trait MasterActor extends WorkerActor {
   import scala.collection.JavaConversions.mapAsScalaMap
   import WorkerActor._
   import Messages._
-  import scala.util.continuations._
   val queries:List[Int]
 
   def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = {

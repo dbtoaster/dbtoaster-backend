@@ -259,4 +259,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
       public Entry<K,V> next() { cur=next; if (cur.next!=null) next=cur.next; else { next=null; ++bucket; while (bucket<data.length && (next=data[bucket])==null) ++bucket; } return cur.e; }
     }
   }
+  // Java helpers (used for serialization)
+  abstract class Fun2 { public abstract void apply(K key, V value); }
+  public void foreach(Fun2 f) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) { f.apply(e.key,e.value); } }
 }

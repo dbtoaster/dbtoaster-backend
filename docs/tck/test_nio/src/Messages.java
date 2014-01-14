@@ -7,7 +7,8 @@ import java.util.HashMap;
  * - Reflection (newInstance) is extremely slow: 217'384us vs 55us (1M calls)
  * - Having a creator function reconciles immutability and serialization
  */
-abstract class Message {
+abstract class Message implements java.io.Serializable {
+
   abstract public short m_id(); // unique identifier for the class (for deserialization)
   abstract public int m_size(); // data size
   abstract public void m_write(ByteBuffer buffer); // serialize in buffer

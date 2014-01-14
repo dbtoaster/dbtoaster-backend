@@ -107,8 +107,8 @@ class AXMaster extends AXWorker with MasterActor {
       var ctr2 = 2
       var agg1:Long = 0L
       var agg2:Double = 0.0
-      aggr(map3,fa1,Array[Any](bids_price,bids_broker_id),null,(v:Long) => { agg1=v; ctr-=1; if (ctr==0) op })
-      aggr(map4,fa2,Array[Any](bids_price,bids_volume,bids_broker_id),null,(v:Double) => { agg2=v; ctr-=1; if (ctr==0) op })
+      aggr(map3,fa1,bids_price,bids_broker_id)(null)((v:Long) => { agg1=v; ctr-=1; if (ctr==0) op })
+      aggr(map4,fa2,bids_price,bids_volume,bids_broker_id)(null)((v:Double) => { agg2=v; ctr-=1; if (ctr==0) op })
       def op { add(map0,bids_broker_id,((agg1 * (-1L * bids_volume)) + agg2)); ctr2-=1; if (ctr2==0) deq }
       add(map1,(bids_broker_id,bids_price),bids_volume)
       add(map2,(bids_broker_id,bids_price),1L)
@@ -121,8 +121,8 @@ class AXMaster extends AXWorker with MasterActor {
       var ctr2 = 2
       var agg1:Long = 0L
       var agg2:Double = 0.0
-      aggr(map3,fa1,Array[Any](bids_price,bids_broker_id),null,(v:Long) => { agg1=v; ctr-=1; if (ctr==0) op })
-      aggr(map4,fa2,Array[Any](bids_price,bids_volume,bids_broker_id),null,(v:Double) => { agg2=v; ctr-=1; if (ctr==0) op })
+      aggr(map3,fa1,bids_price,bids_broker_id)(null)((v:Long) => { agg1=v; ctr-=1; if (ctr==0) op })
+      aggr(map4,fa2,bids_price,bids_volume,bids_broker_id)(null)((v:Double) => { agg2=v; ctr-=1; if (ctr==0) op })
       def op { add(map0,bids_broker_id,((agg1 * bids_volume) - agg2)); ctr2-=1; if (ctr2==0) deq }
       add(map1,(bids_broker_id,bids_price),-bids_volume)
       add(map2,(bids_broker_id,bids_price),-1L)
@@ -135,8 +135,8 @@ class AXMaster extends AXWorker with MasterActor {
       var ctr2 = 2
       var agg5:Double = 0.0
       var agg6:Long = 0L
-      aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; ctr-=1; if (ctr==0) op })
-      aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; ctr-=1; if (ctr==0) op })
+      aggr(map1,fa5,asks_broker_id,asks_price)(null)((v:Double) => { agg5=v; ctr-=1; if (ctr==0) op })
+      aggr(map2,fa6,asks_broker_id,asks_price)(null)((v:Long) => { agg6=v; ctr-=1; if (ctr==0) op })
       def op { add(map0,asks_broker_id,((agg5 * -1L) + (agg6 * asks_volume))); ctr2-=1; if (ctr2==0) deq }
       add(map3,(asks_broker_id,asks_price),1L);
       add(map4,(asks_broker_id,asks_price),asks_volume);
@@ -149,8 +149,8 @@ class AXMaster extends AXWorker with MasterActor {
       var ctr2 = 2
       var agg5:Double = 0.0
       var agg6:Long = 0L
-      aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; ctr-=1; if (ctr==0) op })
-      aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; ctr-=1; if (ctr==0) op })
+      aggr(map1,fa5,asks_broker_id,asks_price)(null)((v:Double) => { agg5=v; ctr-=1; if (ctr==0) op })
+      aggr(map2,fa6,asks_broker_id,asks_price)(null)((v:Long) => { agg6=v; ctr-=1; if (ctr==0) op })
       def op { add(map0,asks_broker_id,(agg5 - (agg6 * asks_volume))); ctr2-=1; if (ctr2==0) deq }
       add(map3,(asks_broker_id,asks_price),-1L);
       add(map4,(asks_broker_id,asks_price),-asks_volume);
@@ -162,8 +162,8 @@ class AXMaster extends AXWorker with MasterActor {
       val acc = Acc(); acc.i; acc.i
       var agg5:Double = 0.0
       var agg6:Long = 0L
-      aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; acc.d })
-      aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; acc.d })
+      aggr(map1,fa5,Array[Any](asks_broker_id,asks_price)(null)((v:Double) => { agg5=v; acc.d })
+      aggr(map2,fa6,Array[Any](asks_broker_id,asks_price)(null)((v:Long) => { agg6=v; acc.d })
       acc(()=>{ add(map0,asks_broker_id,agg5 - (agg6 * asks_volume)); s2 })
     })
     def s2 = pre(map3,false,Array(),()=> { add(map3,(asks_broker_id,asks_price),-1L); s3 })
@@ -181,8 +181,8 @@ class AXMaster extends AXWorker with MasterActor {
     val acc = Acc(); acc.i; acc.i
     var agg1:Long = 0L
     var agg2:Double = 0.0
-    aggr(map3,fa1,Array[Any](bids_price,bids_broker_id),null,(v:Long) => { agg1=v; acc.d })
-    aggr(map4,fa2,Array[Any](bids_price,bids_volume,bids_broker_id),null,(v:Double) => { agg2=v; acc.d })
+    aggr(map3,fa1,Array[Any](bids_price,bids_broker_id)(null)((v:Long) => { agg1=v; acc.d })
+    aggr(map4,fa2,Array[Any](bids_price,bids_volume,bids_broker_id)(null)((v:Double) => { agg2=v; acc.d })
     acc(()=>{ add(map0,bids_broker_id,((agg1 * (-1L * bids_volume)) + agg2)); })
 
     pre(map1,false,Array[MapRef](),()=> {
@@ -199,8 +199,8 @@ class AXMaster extends AXWorker with MasterActor {
     val acc = Acc(); acc.i; acc.i
     var agg3:Long = 0L
     var agg4:Double = 0.0
-    aggr(map3,fa1,Array(bids_price,bids_broker_id),null,(v:Long) => { agg3=v; acc.d })
-    aggr(map4,fa2,Array(bids_price,bids_volume,bids_broker_id),null,(v:Double) => { agg4=v; acc.d })
+    aggr(map3,fa1,Array(bids_price,bids_broker_id)(null)((v:Long) => { agg3=v; acc.d })
+    aggr(map4,fa2,Array(bids_price,bids_volume,bids_broker_id)(null)((v:Double) => { agg4=v; acc.d })
     acc(()=>{ add(map0,bids_broker_id,((agg3 * bids_volume) + (agg4 * -1L))); })
 
     pre(map1,false,Array(),()=> {
@@ -217,8 +217,8 @@ class AXMaster extends AXWorker with MasterActor {
     val acc = Acc(); acc.i; acc.i
     var agg5:Double = 0.0
     var agg6:Long = 0L
-    aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; acc.d })
-    aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; acc.d })
+    aggr(map1,fa5,Array[Any](asks_broker_id,asks_price)(null)((v:Double) => { agg5=v; acc.d })
+    aggr(map2,fa6,Array[Any](asks_broker_id,asks_price)(null)((v:Long) => { agg6=v; acc.d })
     acc(()=>{ add(map0,asks_broker_id,((agg5 * -1L) + (agg6 * asks_volume))); })
 
     pre(map3,false,Array(),()=> {
@@ -235,14 +235,14 @@ class AXMaster extends AXWorker with MasterActor {
     val acc = Acc(); acc.i; acc.i
     var agg5:Double = 0.0
     var agg6:Long = 0L
-    aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(v:Double) => { agg5=v; acc.d })
-    aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(v:Long) => { agg6=v; acc.d })
+    aggr(map1,fa5,Array[Any](asks_broker_id,asks_price)(null)((v:Double) => { agg5=v; acc.d })
+    aggr(map2,fa6,Array[Any](asks_broker_id,asks_price)(null)((v:Long) => { agg6=v; acc.d })
     acc(()=>{ add(map0,asks_broker_id,(agg5 +  -1L * (agg6 * asks_volume))); })
 
 
 /*
-    aggr(map1,fa5,Array[Any](asks_broker_id,asks_price),null,(agg7:Double) => {
-    aggr(map2,fa6,Array[Any](asks_broker_id,asks_price),null,(agg8:Long) => {
+    aggr(map1,fa5,Array[Any](asks_broker_id,asks_price)(null)((agg7:Double) => {
+    aggr(map2,fa6,Array[Any](asks_broker_id,asks_price)(null)((agg8:Long) => {
     add(map0,asks_broker_id,(agg7 + (agg8 * (-1L * asks_volume))));
     }) })
 */
@@ -334,8 +334,8 @@ class AXMaster extends AXWorker with MasterActor {
   def onAddBIDS(bids_t:Double, bids_id:Long, br_id:Long, vol:Double, price:Double) = / *reset* / {
     // New format: no CPS plug-in required
     pre(mAX,Array(mB1,mB3),(u:Unit)=>{
-    aggr(mB1,f0,Array[Any](br_id,price),null,(agg1:Long)=>{
-    aggr(mB3,f1,Array[Any](br_id,price),null,(agg2:Double)=>{
+    aggr(mB1,f0,Array[Any](br_id,price)(null)((agg1:Long)=>{
+    aggr(mB3,f1,Array[Any](br_id,price)(null)((agg2:Double)=>{
     add(mAX,br_id,((agg1 * (-1L * vol)) + agg2));
     }) })
     pre(mA1,Array[MapRef](),(u:Unit)=>{

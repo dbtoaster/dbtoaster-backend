@@ -75,12 +75,11 @@ class MyUnboundedMailbox extends MailboxType with ProducesMessageQueue[MyUnbound
 object AkkaTest {
   def actorSys(name:String,host:String=null,port:Int=0) = ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(
     "akka.loglevel=ERROR\nakka.log-dead-letters-during-shutdown=off\n"+
-/*
 "akka.actor {\n"+
-"  serializers { msg = \"MessageSerializer\" }\n"+
-"  serialization-bindings { \"Message\" = msg }\n"+
+"  serialize-messages = on\n"+
+//"  serializers { msg = \"MessageSerializer\" }\n"+
+//"  serialization-bindings { \"Message\" = msg }\n"+
 "}\n"+
-*/
 /*
 "akka.actor.default-mailbox {\n"+
 "  mailbox-type = \"MyUnboundedMailbox\"\n"+
@@ -113,6 +112,24 @@ object AkkaTest {
   }
 
   def main(args:Array[String]) {
+    test(2,2,1,2000)
+    test(2,2,1,2000)
+
+/*
+Custom:
+4 hosts X 1 cores:throughput = 133'227msg/sec
+1 hosts X 4 cores:throughput = 546'062msg/sec
+Default:
+4 hosts X 1 cores:throughput = 24'387msg/sec
+1 hosts X 4 cores:throughput = 33'138msg/sec
+*/
+
+    test(4,1,1,2000)
+    test(1,4,1,2000)
+    test(4,1,1,2000)
+    test(1,4,1,2000)
+    return
+
     test(1,1,1)
     println("----------------------------")
     test(1,1,1)

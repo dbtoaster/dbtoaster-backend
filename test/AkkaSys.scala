@@ -45,19 +45,19 @@ class Master extends Worker with MasterActor {
       barrier(()=>{
       barrier(()=>{ // sequential multi-barriers test
 
-      get(m0,1L,(v1:Long)=>{
+      get(m0,1L)((v1:Long)=>{
       assert(1==v1,"Remote add")
-      get(m0,2L,(v2:Long)=>{
+      get(m0,2L)((v2:Long)=>{
       assert(2==v2,"Remote add")
-      get(m1,1.0,(v3:Double)=>{
+      get(m1,1.0)((v3:Double)=>{
       assert(1.0==v3,"Remote add")
       clear(m0);
       barrier(()=>{
 
-      get(m0,1L,(v1:Long)=>{
-      get(m0,1L,(v2:Long)=>{
+      get(m0,1L)((v1:Long)=>{
+      get(m0,1L)((v2:Long)=>{
       assert(0==v1+v2,"Clearing")
-      get(m1,1.0,(v3:Double)=>{
+      get(m1,1.0)((v3:Double)=>{
       assert(1.0==v3,"Clean one")
       deq
       }) }) }) }) }) }) }) }) }) })
@@ -66,7 +66,7 @@ class Master extends Worker with MasterActor {
       val n = 500
       foreach(m0,f1,n) // remote call test
       barrier(()=>{ // count, we should have 1000, (not true if we remove barrier)
-      aggr(m0,f2,Array(),null,(n2:Long)=>{
+      aggr(m0,f2)(null)((n2:Long)=>{
       println("Added "+n+"*workers elements")
       println("Remote aggregation : "+n2)
       //println("Collect+local count: "+(0L /: _toMap[Long,Long](m0).asInstanceOf[Map[Long,Long]]){ case (a,(k,v)) => a+v})
@@ -108,7 +108,7 @@ class AkkaSys extends FunSpec {
   // http://code.google.com/p/fast-serialization/
   // http://code.google.com/p/kryo/
   // http://doc.akka.io/docs/akka/snapshot/java/serialization.html
-
+  /*
   it("Batches") {
     import java.util.Date
     val b=new Batch()
@@ -134,6 +134,7 @@ class AkkaSys extends FunSpec {
     //println(b.unpack(t).toList)
     assert(b.unpack(t).toList==ms.toList)
   }
+  */
 }
 
 // =============================================================================
