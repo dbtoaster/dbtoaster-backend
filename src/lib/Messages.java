@@ -23,6 +23,21 @@ class MessageSerializer extends JSerializer {
   public boolean includeManifest() { return false; }
   public int identifier() { return 54321; }
 
+  private static class BBInputStream extends InputStream {
+    private ByteBuffer buf;
+    public BBInputStream(ByteBuffer buf) { this.buf=buf; }
+    public int read() throws IOException { if (!buf.hasRemaining()) { return -1; } return buf.get() & 0xFF; }
+    public int read(byte[] bytes, int off, int len) throws IOException { if (!buf.hasRemaining()) return -1;
+        len=Math.min(len,buf.remaining()); buf.get(bytes,off,len); return len;
+    }
+  }
+  private static class BBOutputStream extends OutputStream {
+    private ByteBuffer buf;
+    public BBOutputStream(ByteBuffer buf) { this.buf=buf; }
+    public void write(int b) throws IOException { buf.put((byte) b); }
+    public void write(byte[] bytes, int off, int len) throws IOException { buf.put(bytes, off, len); }
+  }
+
   private static class Sz { int s; };
   private int sz(Object obj) {
     if (obj==null) return 1;
@@ -34,9 +49,7 @@ class MessageSerializer extends JSerializer {
       final Sz s=new Sz(); s.s=5+sz(m.zero()); m.foreach(m.new Fun2() { public void apply(Object k, Object v) { s.s+=sz(k)+sz(v); }}); return s.s;
     }
     if (obj instanceof scala.Product) { scala.Product p=(scala.Product)obj; int a=p.productArity(); if (a<=10) { int s=1; for (int i=0;i<a;++i) s+=sz(p.productElement(i)); return s; } }
-    int ss=-1; try {
-      ByteArrayOutputStream s=new ByteArrayOutputStream(); ObjectOutputStream os=new ObjectOutputStream(s); os.writeObject(obj); os.close(); ss=1+s.toByteArray().length;
-    } catch(Exception e) {} return ss;
+    try { ByteArrayOutputStream s=new ByteArrayOutputStream(); ObjectOutputStream os=new ObjectOutputStream(s); os.writeObject(obj); os.close(); return 1+s.toByteArray().length; } catch(Exception e) { return -1; }
   }
   private void wr(final ByteBuffer bb, Object obj) {
     if (obj==null) bb.put((byte)'N');
@@ -50,13 +63,11 @@ class MessageSerializer extends JSerializer {
       bb.put((byte)'M'); wr(bb,m.zero()); bb.putInt(m.size());
       m.foreach(m.new Fun2() { public void apply(Object k, Object v) { wr(bb,k); wr(bb,v); }});
     } else {
-      boolean tuple=false;
-      if (obj instanceof scala.Product) { scala.Product p=(scala.Product)obj; int a=p.productArity(); if (a<=10) { tuple=true; bb.put((byte)a); for (int i=0;i<a;++i) wr(bb,p.productElement(i)); } }
-      if (!tuple) { bb.put((byte)'O'); try {
-        ByteArrayOutputStream s=new ByteArrayOutputStream(); ObjectOutputStream os=new ObjectOutputStream(s); os.writeObject(obj); os.close(); bb.put(s.toByteArray());
-      } catch(Exception e) {} }
+      if (obj instanceof scala.Product) { scala.Product p=(scala.Product)obj; int a=p.productArity(); if (a<=10) { bb.put((byte)a); for (int i=0;i<a;++i) wr(bb,p.productElement(i)); return; } }
+      bb.put((byte)'O'); try { new ObjectOutputStream(new BBOutputStream(bb)).writeObject(obj); } catch(Exception e) {}
     }
   }
+
   private Object rd(ByteBuffer bb) {
     int tp = bb.get();
     if (tp=='N') return null;
@@ -66,7 +77,7 @@ class MessageSerializer extends JSerializer {
     if (tp=='S') { byte[] bs=new byte[bb.getInt()]; bb.get(bs); return new String(bs); }
     if (tp=='A') { int n=bb.getInt(); Object[] a=new Object[n]; for (int i=0;i<n;++i) a[i]=rd(bb); return a; }
     if (tp=='M') { Object z=rd(bb); M3MapBase<Object,Object> m=new M3MapBase<Object,Object>(z,false,null); int n=bb.getInt(); for (int i=0;i<n;++i) m.put(rd(bb),rd(bb)); return m; }
-    if (tp=='O') { Object o=null; try { ObjectInputStream is=new ObjectInputStream(new ByteArrayInputStream(bb.slice().array())); o=is.readObject(); is.close(); } catch(Exception e) {} return o; }
+    if (tp=='O') { Object o=null; try { o=new ObjectInputStream(new BBInputStream(bb)).readObject(); } catch(Exception e) { System.err.println(e); } return o; }
     switch(tp) {
       //(1 to 10).foreach(i=> println("      case "+i+": return new scala.Tuple"+i+"<"+(0 until i).map(x=>"Object").mkString(",")+">("+(0 until i).map(x=>"rd(bb)").mkString(",")+");"))
       case 1: return new scala.Tuple1<Object>(rd(bb));
@@ -84,7 +95,6 @@ class MessageSerializer extends JSerializer {
     return null;
   }
   public byte[] toBinary(Object obj) {
-    System.out.println("toBin");
     if (obj instanceof Get) { Get o=(Get)obj; Object k=o.key(); ByteBuffer bb=ByteBuffer.allocate(3+sz(k)).put((byte)'g').putShort((short)o.map()); wr(bb,k); return bb.array(); }
     if (obj instanceof Val) { Val o=(Val)obj; Object k=o.key(); Object v=o.value(); ByteBuffer bb=ByteBuffer.allocate(3+sz(k)+sz(v)).put((byte)'v').putShort((short)o.map()); wr(bb,k); wr(bb,v); return bb.array(); }
     if (obj instanceof Add) { Add o=(Add)obj; Object k=o.key(); Object v=o.value(); ByteBuffer bb=ByteBuffer.allocate(3+sz(k)+sz(v)).put((byte)'a').putShort((short)o.map()); wr(bb,k); wr(bb,v); return bb.array(); }
@@ -97,7 +107,6 @@ class MessageSerializer extends JSerializer {
     System.err.println("Unsupported serialization: "+obj); return null;
   }
   public Object fromBinaryJava(byte[] bytes, Class<?> clazz) {
-    System.out.println("fromBin");
     ByteBuffer bb=ByteBuffer.wrap(bytes); byte h=bb.get();
     switch(h) {
       case 'g': return new Get<Object>(bb.getShort(),rd(bb));

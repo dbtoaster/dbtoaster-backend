@@ -24,20 +24,24 @@ object Helper {
   // ---------------------------------------------------------------------------
   // Run query actor and collect time + resulting maps or values (for 0-key maps)
   // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
-
-  def mux(actor:ActorRef,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=true,timeout:Long=0) = {
+  type Streams = Seq[(InputStream,Adaptor,Split)]
+  def mux(actor:ActorRef,streams:Streams,parallel:Boolean=true,timeout:Long=0) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
     actor ! StreamInit(timeout); mux.read(); val tout = akka.util.Timeout(if (timeout==0) (1L<<42) /*139 years*/ else timeout+5000 /*extra time*/ )
     scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(tout), tout.duration).asInstanceOf[(StreamStat,List[Any])]
   }
 
-  def run[Q<:akka.actor.Actor](streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=true,timeout:Long=0)(implicit cq:ClassTag[Q]) = {
+  def run[Q<:akka.actor.Actor](streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cq:ClassTag[Q]) = {
     val system = actorSys("DDBT")
     val query = system.actorOf(Props[Q],"Query")
     try { mux(query,streams,parallel,timeout); } finally { system.shutdown }
   }
 
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](port:Int,N:Int,streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=true,timeout:Long=0,debug:Boolean=false)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](args:Array[String])(streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
+    val port:Int = 22550
+    val N = 4
+    val debug = true
+
     val (system,nodes,workers) = if (debug) {
       val system = actorSys("DDBT")
       (system,Seq[ActorSystem](),(0 until N).map (i=>system.actorOf(Props[W]())))

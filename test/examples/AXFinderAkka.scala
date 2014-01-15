@@ -14,7 +14,7 @@ object AXFinderAkka {
   import WorkerActor._
   def main(args:Array[String]) {
     var i=0; do {
-      val (t,res) = runLocal[AXMaster,AXWorker](2251,4,AX.streams() /*,debug=true*/)
+      val (t,res) = runLocal[AXMaster,AXWorker](args)(AX.streams())
       println("Time = "+t); // println(M3Map.toStr(res.head))
     i+=1; } while (i<10);
   }

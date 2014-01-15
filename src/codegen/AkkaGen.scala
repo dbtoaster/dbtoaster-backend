@@ -281,7 +281,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     "object "+cls+" {\n"+ind("import Helper._\nimport WorkerActor._\n"+
     "def streams(d:String) = "+streams(s0.sources).replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")")
                                                   .replaceAll("/standard/","/\"+d+\"/")+"\n"+
-    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal["+cls+"Master,"+cls+"Worker](22550,4,streams(d),p,t,true),f)\n"+
+    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal["+cls+"Master,"+cls+"Worker](args)(streams(d),p,t),f)\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
     "\n})")+"\n}")+"\n}\n\n"

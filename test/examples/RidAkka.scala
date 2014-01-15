@@ -22,7 +22,7 @@ object Rid {
   def streams(d:String) = Seq(
     (new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/simple/tiny/r.dat"),new Adaptor.CSV("R","long,long","\\Q,\\E",if(d.endsWith("_del")) "ins+del" else "insert"),Split())
   )
-  def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal[RidMaster,RidWorker](22550,4,streams(d),p),f)
+  def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal[RidMaster,RidWorker](args)(streams(d),p,t),f)
   def main(args:Array[String]) {
     execute(args,(res:List[Any])=>{
       println("COUNT:\n"+M3Map.toStr(res(0))+"\n")

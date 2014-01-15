@@ -21,8 +21,7 @@ libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.3",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.3",
   //"com.typesafe.akka" %% "akka-cluster"   % "2.2.3",
-  // XXX: use scripts/regress.sh to compile legacy Scala back-end instead
-  "org.scala-lang"     % "scala-actors"   % v, // XXX: legacy to compile previous Scala back-end
+  "org.scala-lang"     % "scala-actors"   % v, // to compile legacy Scala
   "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.RC3" % "test"
 ))
