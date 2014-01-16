@@ -71,6 +71,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   private val inuse = CtxSet() // set of variables used in the current continuation/used
   private var local = Set[String]() // locally available maps (tables+vars)
   private var local_r:String = null // map over which delegation happens (can be used only once to generate a foreach)
+  private var lacc : (String,Type,List[(String,Type)]) = null // local accumulator to handle aggregation in nested (remote) loops as (name, result, key types)
 
   var cl_ctr=0;
   def cl_add(n:Int=1) { cl_ctr+=n; }
@@ -163,8 +164,6 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     cl_add(1); "aggr("+ref(m)+","+fn+rc.map(x=>","+rn(x)).mkString+")("+(if (add) a0+"){(_" else acc+"){("+a0)+":"+rt+") =>\n"
   }
 
-  // local accumulator to handle aggregation in nested (remote) loops
-  var localAcc : (String,Type,List[Type]) = null // name, result, key types
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
@@ -189,13 +188,17 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       } else if (ki.size==0) {
         val v=fresh("v"); cl_add(1); inuse.add(ks.toSet); ctx.add(v,(ex.tp,v)); inuse.add(Set(v));
         "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks map rn) else "null")+"){("+v+":"+ex.tp.toScala+")=>\n"+co(v)
+      } else if (lacc!=null) {
+        // XXX: introduce a projection for only the relevant variables (?)
+        val n0=fresh("m"); val v=fresh("v")
+        remote_agg(n0,n,ki.map(x=>(x._1,m.tks(x._2))),m)+n0+".foreach{ case ("+tup(ki.map(_._1))+","+v+") =>\n"+ind(co(v))+"\n}\n"
       } else {
         // remote handler
         val fn0 = fresh("ff"); local_r=n;
         val (body0,rc)=remote(n,fn0,()=>close(()=>cpsExpr(ex,co)+"co()"))
         val (fn,body) = rfun(false,fn0,body0,rc)
         // local handler
-        (if (localAcc!=null) "// XXX:localAcc = "+localAcc+"\n" else "")+ // XXX: handle nested loop with dependency tracking
+        (if (lacc!=null) "// XXX:lacc = "+lacc+"\n" else "")+ // XXX: handle nested loop with dependency tracking
         "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
       }
     case a@AggSum(ks,e) => val m=fmap(e); val cur=ctx.save; inuse.add(ks.toSet);
@@ -205,7 +208,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         if (aks.size==0) { val a0=fresh("agg"); ctx.add(a0,(e.tp,a0)); inuse.add(a0); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) } // context/use mainenance
         else super.cpsExpr(ex,co,am) // 1-tuple projection or map available locally
       } else {
-        val a0=fresh("agg"); remote_agg(a0,m,aks,e)+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),co) })
+        val a0=fresh("agg"); val l0=lacc; lacc=(a0,e.tp,aks); val r =remote_agg(a0,m,aks,e); lacc=l0
+        r+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),co) })
       }
     case a@Add(el,er) => val cur=ctx.save;
       if (a.agg==Nil) { cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
@@ -213,7 +217,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         case Some(t) if t==a.agg => val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ => val a0=fresh("add")
           def add(e:Expr):String = { val m=fmap(e)
-            val r = if (m!=null) { localAcc=(a0,e.tp,a.agg.map(_._2)); val r=remote_agg(a0,m,a.agg,e,true); localAcc=null; r }
+            val r = if (m!=null) { val l0=lacc; lacc=(a0,e.tp,a.agg); val r=remote_agg(a0,m,a.agg,e,true); lacc=l0; r }
                     else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
           }
           "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ local_r=a0; cpsExpr(mapRef(a0,ex.tp,a.agg),co) }

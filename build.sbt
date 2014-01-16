@@ -46,7 +46,7 @@ addCommandAlias("toast", ";run-main ddbt.Compiler ") ++
 addCommandAlias("unit", ";run-main ddbt.UnitTest ") ++
 addCommandAlias("queries", "unit -dd -v -x -s 0 -l scala") ++
 addCommandAlias("queries-lms", "unit -dd -v -x -s 0 -l lms -xsc") ++
-addCommandAlias("queries-akka", "unit -dd -v -x -s 0 -l akka -qx mddb/.* -qx tpch/query(2|21) -qx zeus/(48183500|52548748) -qx rs_ineqwithnestedagg")
+addCommandAlias("queries-akka", "unit -dd -v -x -s 0 -l akka -qx mddb/query2 -qx tpch/query21") // too long to compile/execute
 
 // Akka individual queries testing
 addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ")
@@ -64,9 +64,8 @@ TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspat
   val dep=dir/"ddbt_deps.jar"; if (!dep.exists) {
     print("Packaging dependencies "); scala.Console.out.flush; val tmp=new File("target/pkg_tmp"); IO.createDirectory(tmp)
     val jars = (cp.files.absString.split(":").filter(x=>x!=cd.toString).toSet + lib.getPath)
-    val sc = jars.filter(_.matches(".*/scala-library.*")).map(_.replaceAll("scala-library","scala-compiler"))
     val r=tmp/"reference.conf"; val rs=tmp/"refs.conf"; IO.write(rs,"")
-    (jars++sc).foreach { j => Process(Seq("jar","-xf",j),tmp).!; if (r.exists) IO.append(rs,IO.read(r)); print("."); scala.Console.out.flush; }
+    jars.foreach { j => Process(Seq("jar","-xf",j),tmp).!; if (r.exists) IO.append(rs,IO.read(r)); print("."); scala.Console.out.flush; }
     if (r.exists) r.delete; rs.renameTo(r); Process(Seq("jar","-cMf",dep.getPath,"-C",tmp.getAbsolutePath(),".")).!; IO.delete(tmp); println(" done.")
   }
 }
