@@ -15,7 +15,7 @@ object Utils {
   }
 
   private val prop_ = new java.util.Properties
-  try { prop_.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => warning("conf/ddbt.properties does not exist.\n"+
+  try { prop_.load(this.getClass.getResource("/ddbt.properties").openStream()) } catch { case _:Throwable => warning("conf/ddbt.properties does not exist.\n"+
         "Please configure at least ddbt.dbtoaster to dbtoaster_release binary path.\nSet ddbt.base_repo if you have access to DBToaster's repository.") }
   def prop(name:String,d:String="") = prop_.getProperty("ddbt."+name,d)
 

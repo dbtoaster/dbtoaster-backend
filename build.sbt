@@ -20,7 +20,6 @@ Seq(
 libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.3",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.3",
-  //"com.typesafe.akka" %% "akka-cluster"   % "2.2.3",
   "org.scala-lang"     % "scala-actors"   % v, // to compile legacy Scala
   "org.scala-lang"     % "scala-compiler" % v,
   "org.scalatest"     %% "scalatest"      % "2.0.RC3" % "test"
@@ -54,29 +53,28 @@ addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ")
 addCommandAlias("bench", ";unit -v -x -xsc -xvm -csv bench.csv -l ") ++ // usage: sbt 'bench lms'
 addCommandAlias("bench-all", ";unit -v -x -xsc -xvm -csv bench-all.csv -l scala -l lms -l lscala -l llms")
 
-TaskKey[Unit]("pkg") <<= (baseDirectory, classDirectory in Compile, fullClasspath in Runtime) map { (base,cd,cp) =>
-  import scala.sys.process.Process
-  val dir=base/"pkg"; if (!dir.exists) dir.mkdirs;
-  println("Packaging DDBT runtime library ...")
-  val lib=dir/"ddbt_lib.jar"; Process(Seq("jar","-cMf",lib.getPath,"-C",cd.toString,"ddbt/lib")).!
-  println("Packaging DDBT compiler ...")
-  val all=dir/"ddbt.jar"; Process(Seq("jar","-cMf",all.getPath,"-C",cd.toString,"ddbt")).!
-  val dep=dir/"ddbt_deps.jar"; if (!dep.exists) {
-    print("Packaging dependencies "); scala.Console.out.flush; val tmp=new File("target/pkg_tmp"); IO.createDirectory(tmp)
-    val jars = (cp.files.absString.split(":").filter(x=>x!=cd.toString).toSet + lib.getPath)
-    val r=tmp/"reference.conf"; val rs=tmp/"refs.conf"; IO.write(rs,"")
-    jars.foreach { j => Process(Seq("jar","-xf",j),tmp).!; if (r.exists) IO.append(rs,IO.read(r)); print("."); scala.Console.out.flush; }
-    if (r.exists) r.delete; rs.renameTo(r); Process(Seq("jar","-cMf",dep.getPath,"-C",tmp.getAbsolutePath(),".")).!; IO.delete(tmp); println(" done.")
+InputKey[Unit]("pkg") <<= InputTask(_ => Def.spaceDelimited("<args>")) { result =>
+ (result, baseDirectory, classDirectory in Compile, classDirectory in Test, fullClasspath in Runtime, compile in Compile, compile in Test, copyResources in Compile) map {
+  (args,base,cls,test,cp,_,_,_) =>
+    val dir=base/"pkg"; if (!dir.exists) dir.mkdirs; print("Packaging DDBT libraries: ")
+    val jars = cp.files.absString.split(":").filter(_!=cls.toString).distinct.sorted // all dependencies
+    def mk_jar(name:String,root:File,path:String=".") { Process(Seq("jar","-cMf",(dir/(name+".jar")).getPath,"-C",root.getPath,path)).!; print(".") }
+    def mk_script(name:String,cmd:String) {
+      val out=dir/name; IO.write(out,"#!/bin/sh\ncd `dirname $0`\nCP_DEPS=\""+jars.mkString(":")+"\"\n"+
+      "if [ -f ddbt_deps.jar ]; then CP_DEPS=\"ddbt_deps.jar\"; fi\n"+cmd+"\n"); out.setExecutable(true)
+    }
+    mk_jar("ddbt_lib",cls,"ddbt/lib") // runtime libraries
+    mk_jar("ddbt_gen",test,"ddbt/test/gen") // tests
+    mk_script("run","java -classpath \"$CP_DEPS:ddbt_lib.jar:ddbt_gen.jar\" \"$@\"")
+    if (args.contains("full")) { mk_jar("ddbt",cls) // compiler
+      val tmp=base/"target"/"pkg_tmp"; tmp.mkdirs; val r=tmp/"reference.conf"; val rs=tmp/"refs.conf"; IO.write(rs,"")
+      jars.foreach { j => Process(Seq("jar","-xf",j),tmp).!; if (r.exists) IO.append(rs,IO.read(r)); print(".") }
+      if (r.exists) r.delete; rs.renameTo(r); mk_jar("ddbt_deps",tmp); IO.delete(tmp)
+      mk_script("toast","java -classpath \"$CP_DEPS:ddbt.jar\" ddbt.Compiler \"$@\"")
+      mk_script("unit","java -classpath \"$CP_DEPS:ddbt.jar\" ddbt.UnitTest \"$@\"")
+    }
+    println //("Result = "+args+" base="+base)
   }
-}
-
-TaskKey[Unit]("scripts") <<= (baseDirectory, fullClasspath in Runtime) map { (base, cp) =>
-  def s(file:String,main:String) {
-    val content = "#!/bin/sh\njava -classpath \""+cp.files.absString+"\" "+main+" \"$@\"\n"
-    val out = base/file; IO.write(out,content); out.setExecutable(true)
-  }
-  s("toast.sh","ddbt.Compiler")
-  s("unit.sh","ddbt.UnitTest")
 }
 
 // --------- LMS conditional inclusion
