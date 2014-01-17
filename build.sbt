@@ -53,37 +53,68 @@ addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ")
 addCommandAlias("bench", ";unit -v -x -xsc -xvm -csv bench.csv -l ") ++ // usage: sbt 'bench lms'
 addCommandAlias("bench-all", ";unit -v -x -xsc -xvm -csv bench-all.csv -l scala -l lms -l lscala -l llms")
 
+// --------- Packaging: full (packages all dependencies), dist (ship on all cluster hosts)
 InputKey[Unit]("pkg") <<= InputTask(_ => Def.spaceDelimited("<args>")) { result =>
  (result, baseDirectory, classDirectory in Compile, classDirectory in Test, fullClasspath in Runtime, compile in Compile, compile in Test, copyResources in Compile) map {
   (args,base,cls,test,cp,_,_,_) =>
+    val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
+    def pr(n:String,d:String="") = prop.getProperty("ddbt."+n,d)
+    import scala.collection.JavaConversions._
+    import scala.sys.process._
+    // Packaging
     val dir=base/"pkg"; if (!dir.exists) dir.mkdirs; print("Packaging DDBT libraries: ")
     val jars = cp.files.absString.split(":").filter(_!=cls.toString).distinct.sorted // all dependencies
-    def mk_jar(name:String,root:File,path:String=".") { Process(Seq("jar","-cMf",(dir/(name+".jar")).getPath,"-C",root.getPath,path)).!; print(".") }
-    def mk_script(name:String,cmd:String) {
+    def mk_jar(name:String,root:File,path:String*) { Process(Seq("jar","-cMf",(dir/(name+".jar")).getPath) ++ path.flatMap(p=>Seq("-C",root.getPath,p)) ).!; print(".") }
+    def mk_script(name:String,args:String) {
       val out=dir/name; IO.write(out,"#!/bin/sh\ncd `dirname $0`\nCP_DEPS=\""+jars.mkString(":")+"\"\n"+
-      "if [ -f ddbt_deps.jar ]; then CP_DEPS=\"ddbt_deps.jar\"; fi\n"+cmd+"\n"); out.setExecutable(true)
+      "if [ -f ddbt_deps.jar ]; then CP_DEPS=\"ddbt_deps.jar\"; fi\n"+{ val x=pr("cmd_extra").trim; if (x!="") x+"\n" else "" }+
+      pr("cmd_java","java")+" "+args+"\n"); out.setExecutable(true)
     }
-    mk_jar("ddbt_lib",cls,"ddbt/lib") // runtime libraries
+    mk_jar("ddbt_lib",cls,"ddbt/lib","ddbt.properties") // runtime libraries
     mk_jar("ddbt_gen",test,"ddbt/test/gen") // tests
-    mk_script("run","java -classpath \"$CP_DEPS:ddbt_lib.jar:ddbt_gen.jar\" \"$@\"")
-    if (args.contains("full")) { mk_jar("ddbt",cls) // compiler
+    mk_script("run","-classpath \"$CP_DEPS:ddbt_lib.jar:ddbt_gen.jar\" \"$@\"")
+    if (args.contains("full")) { mk_jar("ddbt",cls,".") // compiler
       val tmp=base/"target"/"pkg_tmp"; tmp.mkdirs; val r=tmp/"reference.conf"; val rs=tmp/"refs.conf"; IO.write(rs,"")
       jars.foreach { j => Process(Seq("jar","-xf",j),tmp).!; if (r.exists) IO.append(rs,IO.read(r)); print(".") }
-      if (r.exists) r.delete; rs.renameTo(r); mk_jar("ddbt_deps",tmp); IO.delete(tmp)
-      mk_script("toast","java -classpath \"$CP_DEPS:ddbt.jar\" ddbt.Compiler \"$@\"")
-      mk_script("unit","java -classpath \"$CP_DEPS:ddbt.jar\" ddbt.UnitTest \"$@\"")
+      if (r.exists) r.delete; rs.renameTo(r); mk_jar("ddbt_deps",tmp,"."); IO.delete(tmp)
+      mk_script("toast","-classpath \"$CP_DEPS:ddbt.jar\" ddbt.Compiler \"$@\"")
+      mk_script("unit","-classpath \"$CP_DEPS:ddbt.jar\" ddbt.UnitTest \"$@\"")
     }
-    println //("Result = "+args+" base="+base)
+    println
+    // Distribution over cluster nodes
+    if (args.contains("dist")) { print("Distribution: ")
+      val hs=(prop.stringPropertyNames.filter(_.matches("^ddbt.host[0-9]+$")).map(x=>prop.getProperty(x,null))+pr("master","127.0.0.1")).map(_.split(":")(0)).toSet
+      val (cmd,path)=(pr("cmd_scp","rsync -av")+" "+dir+"/ "+pr("cmd_user","root")+"@",":"+pr("cmd_path","")+"/")
+      hs.foreach { h => print(h); print(if ( (cmd+h+path).!(ProcessLogger(l=>(),l=>println("\nTransfer to "+h+" error: "+l.trim))) ==0) "." else "<!>") }; println
+    }
   }
 }
 
-// --------- LMS conditional inclusion
+// --------- Cluster execution
+commands += Command.args("exec","")((state:State, args:Seq[String]) => {
+  val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
+  def pr(n:String,d:String) = prop.getProperty("ddbt."+n,d)
+  import scala.collection.JavaConversions._
+  import scala.sys.process._
+  val w=pr("workers","1").toInt; val m={ val m=pr("master","127.0.0.1").split(":"); (m(0),if (m.length>1) m(1).toInt else 8800) }
+  val hosts=prop.stringPropertyNames.filter(x=>x.matches("^ddbt.host[0-9]+$")).toList.sorted.zipWithIndex.map{ case (x,i)=> val h=prop.getProperty(x,null).split(":")
+    (h(0),if (h.length>1 && h(1)!="") h(1).toInt else m._2+1+i,if (h.length>2) h(2).toInt else w,i)
+  }
+  if (args.size<1) println("Usage: exec <class>") else {
+    val (cmd,path)=(pr("cmd_ssh","ssh")+" "+pr("cmd_user","root")+"@"," echo "+pr("cmd_path","")+"/run "+args(0))
+    def exec(host:String,args:String,prefix:String) = new Thread(){ override def run() { (cmd+host+path+" "+args) ! ProcessLogger(l=>println(prefix+":"+l),l=>println(prefix+"[ERR]:"+l)) }}.start
+    exec(m._1,"-H"+m._1+":"+m._2+" -C"+hosts.map(_._3).sum,"M") // launch master
+    Thread.sleep(100)
+    hosts.foreach { h => exec(h._1,"-H"+h._1+":"+h._2+" -W"+h._3+" -M"+m._1+":"+m._2,""+h._4) } // launch workers
+    // XXX: join jobs?
+  }
+  state
+})
+
+// --------- LMS codegen, enabled with ddbt.lms = 1 in conf/ddbt.properties
 {
-  // set ddbt.lms = 1 in conf/ddbt.properties to enable LMS
-  val prop = new java.util.Properties()
-  try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
-  val lms = prop.getProperty("ddbt.lms","0")=="1"
-  if (!lms) Seq() else Seq(
+  val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
+  if (prop.getProperty("ddbt.lms","0")!="1") Seq() else Seq(
     sources in Compile ~= (fs => fs.filter(f=> !f.toString.endsWith("codegen/LMSGen.scala"))), // ++ (new java.io.File("lms") ** "*.scala").get
     scalaSource in Compile <<= baseDirectory / "lms", // incorrect; but fixes dependency and allows incremental compilation (SBT 0.13.0)
     //unmanagedSourceDirectories in Compile += file("lms"),
