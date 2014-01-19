@@ -198,11 +198,9 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         val (body0,rc)=remote(n,fn0,()=>close(()=>cpsExpr(ex,co)+"co()"))
         val (fn,body) = rfun(false,fn0,body0,rc)
         // local handler
-        (if (lacc!=null) "// XXX:lacc = "+lacc+"\n" else "")+ // XXX: handle nested loop with dependency tracking
         "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
       }
     case a@AggSum(ks,e) => val m=fmap(e); val cur=ctx.save; inuse.add(ks.toSet);
-      // XXX: introduce nested loops aggregation in localAcc
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (m==null || local(m)) {
         if (aks.size==0) { val a0=fresh("agg"); ctx.add(a0,(e.tp,a0)); inuse.add(a0); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) } // context/use mainenance
@@ -269,20 +267,20 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     }
     freshClear(); ref.clear; aggl=Nil; forl=Nil; local=Set()
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
-      "import WorkerActor._\nimport ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+fds+ads+gc+ // constants
+      "import ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+fds+ads+gc+ // constants
       "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
       (if (ld0!="") "// tables content preloading\noverride def loadTables() {\n"+ind(ld0)+"\n}\nloadTables()\n" else "")+"\n"+
       "// remote foreach\n"+longFun("forl","()=>Unit","co()",fbs)+"\n"+
       "// remote aggregations\n"+longFun("aggl","Any=>Unit","co(null)",abs)
     )+"\n}\n\nclass "+cls+"Master extends "+cls+"Worker with MasterActor {\n"+ind(
-      "import WorkerActor._\nimport Messages._\nimport Functions._\n\n"+qs+
+      "import Messages._\nimport Functions._\n\n"+qs+
       "val dispatch : PartialFunction[TupleEvent,Unit] = {\n"+ind(str+"case _ => deq")+"\n}\n\n"+ts
     )+"\n}"
   }
 
   override def helper(s0:System,pkg:String) =
     "package "+pkg+"\nimport ddbt.lib._\nimport java.util.Date\n\n"+
-    "object "+cls+" {\n"+ind("import Helper._\nimport WorkerActor._\n"+
+    "object "+cls+" {\n"+ind("import Helper._\n"+
     "def streams(d:String) = "+streams(s0.sources).replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")")
                                                   .replaceAll("/standard/","/\"+d+\"/")+"\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal["+cls+"Master,"+cls+"Worker](args)(streams(d),p,t),f)\n"+

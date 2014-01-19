@@ -21,16 +21,6 @@ import akka.actor.{Actor,ActorRef,Address,PoisonPill}
  * @author TCK
  */
 
-/** Cluster management messages */
-object WorkerActor {
-  // External
-  case class ClusterNodes(nodes:Array[(Address,Int)]) // initialization sent to the master as (hosts, #workers)
-  case object ClusterShutdown // tear down all cluster nodes
-  case object ClusterReset // clear all maps and reload tables
-  // Internal
-  case class Members(master:ActorRef,workers:Array[ActorRef]) // master->workers initialization
-}
-
 
 /**
  *
@@ -86,12 +76,7 @@ object WorkerActor {
 abstract class WorkerActor extends Actor {
   import java.util.HashMap
   import scala.collection.JavaConversions.mapAsScalaMap
-  import WorkerActor._
   import Messages._
-
-  def MapRef(i:Int):MapRef = i
-  def FunRef(i:Int,internal:Boolean=false):FunRef = if (internal) java.lang.Short.MIN_VALUE+i else i
-  def NodeRef(i:Int):NodeRef = i
 
   // ---- concrete maps and local operations
   val local:Array[M3Map[_,_]] // ref->local maps conversion
@@ -159,7 +144,7 @@ abstract class WorkerActor extends Actor {
   }
 
   // ---- barrier and counters management
-  // XXX: introduce batching as prepared in Messages.scala
+  // XXX: introduce batching (see Messages.java)
   protected object bar {
     private var bco: ()=>Unit = null
     private val count = new HashMap[ActorRef,Long]() // destination, count (-1 for sent, 1 for recv)
@@ -201,15 +186,11 @@ abstract class WorkerActor extends Actor {
     // Management messages
     case Members(m,ws) => members(m,ws); local_map=local.asInstanceOf[Array[M3Map[Any,Any]]] // fix initialization order issue XXX: lazy val ?
     case Ack(to,num) => bar.sumAck(to,num.map(_.toLong)) // assert(self==master)
-    case ClusterNodes(nodes) => implicit val timeout = akka.util.Timeout(5000) // sent only to master
-      val ws = nodes.flatMap{ case (n,c) => (0 until c).map { i=>
-        scala.concurrent.Await.result(context.actorSelection(akka.actor.RootActorPath(n)/"user"/("worker"+i)).resolveOne,timeout.duration)
-      }}; self ! Members(self,ws.toArray)
-    case ClusterReset => if (self==master) workers.foreach{ _ ! ClusterReset;  }
+    case Reset => if (self==master) workers.foreach{ _ ! Reset;  }
       local.zipWithIndex.foreach { case (l,i) => if (l!=null) l.clear() else local_wr(MapRef(i),null,false) }
       loadTables();
-      // XXX: barrier(?)
-    case ClusterShutdown => workers.foreach{ _ ! PoisonPill }; self ! PoisonPill // assert(self==master)
+      // XXX: barrier(?) => have a synchronous blocking call
+    case Shutdown => workers.foreach{ _ ! PoisonPill }; self ! PoisonPill // assert(self==master)
     case m => println("Not understood: "+m.toString)
   }
   override def postStop() = context.system.shutdown
@@ -265,7 +246,6 @@ abstract class WorkerActor extends Actor {
  */
 trait MasterActor extends WorkerActor {
   import scala.collection.JavaConversions.mapAsScalaMap
-  import WorkerActor._
   import Messages._
   val queries:List[MapRef]
 
@@ -275,16 +255,6 @@ trait MasterActor extends WorkerActor {
           else M3Map.temp[K,V]()
     super.aggr(m,fun_collect,m)(zero)((mm:M3Map[K,V])=>co(mm.toMap))
   }
-
-  // --- sequential to CPS conversion
-  // XXX: to go away as it is more complicated to generate
-  /*
-  def _get[K,V](m:MapRef,k:K):V @cps[Unit] = shift { co:(V=>Unit) => super.get(m,k,co) }
-  def _aggr[R:ClassTag](m:MapRef,f:FunRef,args:Any*) = shift { co:(R=>Unit) => super.aggr(m,f,args.toArray,null,co) }
-  def _barrier = shift { co:(Unit=>Unit) => bar.set(co); }
-  def _toMap[K,V:ClassTag](m:MapRef):Map[K,V] @cps[Unit] = shift { co:(Map[K,V]=>Unit) => toMap(m,co) }
-  def _pre(write:MapRef,sequential:Boolean,read:MapRef*) = shift { co:(Unit=>Unit) => pre(write,sequential,read.toArray,co) }
-  */
 
   // ---- coherency mechanism: RAW, WAR and WAW dependency tracking
   // To mitigate WAW dependencies, we differentiate commutative and non-commutative (sequential) writes

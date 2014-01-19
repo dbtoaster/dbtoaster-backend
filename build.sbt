@@ -29,7 +29,7 @@ libraryDependencies <++= scalaVersion(v=>Seq(
 Seq(
   scalaVersion := "2.10.3",
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-optimise","-Yinline-warnings"), // ,"-target:jvm-1.7"
-  javacOptions ++= Seq("-Xlint:unchecked","-Xlint:-options","-source","1.6","-target","1.6") // forces JVM 1.6 compatibility for JDK 1.7 compiler
+  javacOptions ++= Seq("-Xlint:unchecked","-Xlint:-options","-source","1.6","-target","1.6") // forces JVM 1.6 compatibility with JDK 1.7 compiler
 )
 
 // --------- Execution options
@@ -91,6 +91,7 @@ InputKey[Unit]("pkg") <<= InputTask(_ => Def.spaceDelimited("<args>")) { result 
 }
 
 // --------- Cluster execution
+// XXX: this needs to be integrated in UnitTest.scala instead
 // -H = local host:port
 // -M = master host:port
 // -W = number of (local@worker/total@master) workers

@@ -18,7 +18,6 @@ class RidSpec extends FunSpec {
 
 object Rid {
   import Helper._
-  import WorkerActor._
   def streams(d:String) = Seq(
     (new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/simple/tiny/r.dat"),new Adaptor.CSV("R","long,long","\\Q,\\E",if(d.endsWith("_del")) "ins+del" else "insert"),Split())
   )
@@ -31,7 +30,6 @@ object Rid {
 }
 
 class RidWorker extends WorkerActor {
-  import WorkerActor._
   import ddbt.lib.Functions._
   import ddbt.lib.Messages._
   // constants
@@ -81,7 +79,6 @@ class RidWorker extends WorkerActor {
 }
 
 class RidMaster extends RidWorker with MasterActor {
-  import WorkerActor._
   import Messages._
   import Functions._
 

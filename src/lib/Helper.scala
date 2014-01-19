@@ -25,14 +25,13 @@ object Helper {
   // Run query actor and collect time + resulting maps or values (for 0-key maps)
   // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
   private type Streams = Seq[(InputStream,Adaptor,Split)]
-  private def askWait[T](actor:ActorRef,msg:Any,timeout:Long=0L) = {
-    val to=akka.util.Timeout(if (timeout<=0) (1L<<42) /*139 years*/ else timeout)
+  @inline private def askWait[T](actor:ActorRef,msg:Any,timeout:Long=0L) = {
+    val to=akka.util.Timeout(if (timeout<=0) (1L<<42) /*139 years*/ else timeout+2000)
     scala.concurrent.Await.result(akka.pattern.ask(actor,msg)(to), to.duration).asInstanceOf[T]
   }
-
   def mux(actor:ActorRef,streams:Streams,parallel:Boolean=true,timeout:Long=0) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
-    actor ! StreamInit(timeout); mux.read(); askWait[(StreamStat,List[Any])](actor,EndOfStream,if (timeout==0) 0 else timeout+2000)
+    actor ! StreamInit(timeout); mux.read(); askWait[(StreamStat,List[Any])](actor,EndOfStream,timeout)
   }
 
   def run[Q<:akka.actor.Actor](streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cq:ClassTag[Q]) = {
@@ -41,103 +40,49 @@ object Helper {
     try { mux(query,streams,parallel,timeout); } finally { system.shutdown }
   }
 
-
-  // 0|1: -Hhost:port -Wworkers -Ccluster_mode:hosts_num
-  // 2|3: -Hhost:port -Wworkers -Mhost:port (worker)
-  //      -Hhost:port -Wworkers             (master)
+  // ---------------------------------------------------------------------------
+  // Akka helper, reuse the same nodes across samples. Uses additional arguments to configure:
+  // 0|1: -H<host:port> -W<workers> -C<cluster_mode>:<hosts_num>  [debug]
+  // 2|3: -H<host:port> -W<workers> -M<master_host>:<master_port> [worker]
+  //      -H<host:port> -W<total_expected_workers>                [master]
   private var runMaster:ActorRef = null
   private var runCount = 0
   def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](args:Array[String])(streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cm:ClassTag[M],cw:ClassTag[W]) : (StreamStat,List[Any]) = {
-
-    val master:ActorRef = if (runCount>0 && runMaster!=null) { runCount-=1; runMaster }
-    else { runCount=args.filter(_.startsWith("-n")).lastOption.map(x=>math.max(0,x.substring(2).toInt-1)).getOrElse(0)
-
-    // SINGLE RUN ---------------------
     def ad[T](s:String,d:T,f:Array[String]=>T) = args.filter(_.startsWith(s)).lastOption.map(x=>f(x.substring(s.length).split(":"))).getOrElse(d)
-    def ac(s:String) = args.filter(_.startsWith(s)).size>0
-    val (debug,hosts_num)=ad("-C",(if (ac("-H")) 2 else 0,1),x=>(x(0).toInt,x(1).toInt))
-    val (host,port)=ad("-H",("127.0.0.1",8800),x=>(x(0),x(1).toInt))
-    val wnum = ad("-W",1,x=>x(0).toInt)
-    val isMaster = args.filter(_.startsWith("-M")).size==0 || debug <= 1
-    val system = if (debug==0) actorSys() else actorSys(host=host,port=port)
-    val workers:Seq[ActorRef] = debug match {
-      case 0 => (0 until hosts_num * wnum).map(i=>system.actorOf(Props[W]())) // launch all in one system
-      case 1 => (0 until hosts_num).flatMap { h=> val s=actorSys("DDBT"+h,host,port+1+h); (0 until wnum).map(i=>s.actorOf(Props[W]())) } // launch one system for each node group
-      case _ => if (isMaster) Seq() else (0 until wnum).map(i=>system.actorOf(Props[W]()))
-    }
-    val master = if (isMaster) system.actorOf(Props[M](),name="master") else null
-
-    // Refactor a bit below
-    import WorkerActor._
-    debug match {
-      case 0|1 => master ! Members(master,workers.toArray)
-      case _ =>
-        if (isMaster) askWait[Any](system.actorOf(Props(classOf[HelperActor],master,wnum),name="helper"),"ready")
-        else {
-          val (h,p)=ad("-M",(host,port),x=>(x(0),x(1).toInt)); system.actorSelection("akka.tcp://DDBT@"+h+":"+p+"/user/helper") ! workers.toArray
-          println("Worker ready"); system.awaitTermination; println("Worker stopped"); System.exit(0); return (StreamStat(0,0,0),Nil)
-        }
-    }
-    class HelperActor(master:ActorRef,waiting:Int) extends Actor {
-      var workers = new Array[ActorRef](0)
-      var watcher = null.asInstanceOf[ActorRef]
-      def receive = {
-        case "ready" => watcher=sender; if (workers.size==waiting) watcher ! ()
-        case as:Array[ActorRef] => workers++=as; if (workers.size==waiting) { master ! WorkerActor.Members(master,workers.toArray); if (watcher!=null) watcher ! () }
+    val master:ActorRef = if (runCount>0 && runMaster!=null) { runCount-=1; runMaster }
+    else { runCount=ad("-n",0,x=>math.min(0,x(0).toInt-1))
+      val (debug,hosts_num)=ad("-C",(ad("-H",0,x=>2),1),x=>(x(0).toInt,x(1).toInt))
+      val (host,port)=ad("-H",("127.0.0.1",8800),x=>(x(0),x(1).toInt))
+      val wnum = ad("-W",1,x=>x(0).toInt)
+      val isMaster = debug <= 1 || ad("-M",false,x=>true)
+      val system = if (debug==0) actorSys() else actorSys(host=host,port=port)
+      val workers:Seq[ActorRef] = debug match {
+        case 0 => (0 until hosts_num * wnum).map(i=>system.actorOf(Props[W]())) // launch all in one system
+        case 1 => (0 until hosts_num).flatMap { h=> val s=actorSys("DDBT"+h,host,port+1+h); (0 until wnum).map(i=>s.actorOf(Props[W]())) } // launch one system for each node group
+        case _ => if (isMaster) Seq() else (0 until wnum).map(i=>system.actorOf(Props[W]()))
       }
+      val master = if (isMaster) system.actorOf(Props[M](),name="master") else null
+      debug match {
+        case 0|1 => master ! Members(master,workers.toArray)
+        case _ if isMaster =>askWait[Any](system.actorOf(Props(classOf[HelperActor],master,wnum),name="helper"),"ready")
+        case _ => val (h,p)=ad("-M",(host,port),x=>(x(0),x(1).toInt)); system.actorSelection("akka.tcp://DDBT@"+h+":"+p+"/user/helper") ! workers.toArray
+          println(wnum+" workers started"); system.awaitTermination; println("Shutdown"); System.exit(0); return (StreamStat(0,0,0),Nil)
+      }
+      class HelperActor(master:ActorRef,waiting:Int) extends Actor {
+        private var workers = new Array[ActorRef](0)      // Collects all workers advertisements and forward them to the master.
+        private var watcher = null.asInstanceOf[ActorRef] // Responds to "ready" when all workers are available.
+        def receive = {
+          case "ready" => watcher=sender; if (workers.size==waiting) watcher ! ()
+          case as:Array[ActorRef] => workers++=as; if (workers.size==waiting) { master ! Members(master,workers.toArray); if (watcher!=null) watcher ! () }
+        }
+      }
+      //try mux(master,streams,parallel,timeout) finally { master ! ClusterShutdown; Thread.sleep(100); System.gc; Thread.sleep(100) }
+      master
     }
-    //try mux(master,streams,parallel,timeout) finally { master ! ClusterShutdown; Thread.sleep(100); System.gc; Thread.sleep(100) }
-    // SINGLE RUN ---------------------
-    master
-    }
-
-    import WorkerActor._
     try mux(master,streams,parallel,timeout) finally {
-      if (runCount>0) { master ! ClusterReset; runMaster=master; }
-      else { master ! ClusterShutdown; runMaster=null; }
+      if (runCount>0) { runMaster=master; master ! Reset } else { runMaster=null; master ! Shutdown }
       Thread.sleep(100); System.gc; Thread.sleep(100)
     }
-
-    // DEBUG ----------------------
-    /*
-    def m(d:String="tiny") = SourceMux(Seq((
-      new java.io.FileInputStream("/Documents/EPFL/Data/cornell_db_maybms/dbtoaster/experiments/data/finance/"+d+"/finance.csv"),
-      Decoder((ev:TupleEvent)=>{ master ! ev },new Adaptor.OrderBook(brokers=10,deterministic=true,bids="BIDS",asks="ASKS"))
-    )))
-    println("Ev1")
-    master ! StreamInit(); m().read()
-    println(askWait[(StreamStat,List[Any])](master,EndOfStream))
-    master ! ClusterReset;
-    println("Ev2")
-    master ! StreamInit(); m().read()
-    println(askWait[(StreamStat,List[Any])](master,EndOfStream))
-    println("Ev3")
-    */
-    // DEBUG ----------------------
-
-
-/*
-*/
-    /*
-    // test:run-main ddbt.test.gen.Axfinder
-    // println(args.toList)
-    val port:Int = 22550
-    val N = 4
-    val debug = true
-
-    val (system,nodes,workers) = if (debug) {
-      val system = actorSys("DDBT")
-      (system,Seq[ActorSystem](),(0 until N).map (i=>system.actorOf(Props[W]())))
-    } else {
-      val system = actorSys("MasterSystem","127.0.0.1",port-1)
-      val nodes = (0 until N).map { i => actorSys("NodeSystem"+i,"127.0.0.1",port+i) }
-      val workers = nodes.map (_.actorOf(Props[W]()))
-      (system,nodes,workers)
-    }
-    val master = system.actorOf(Props[M]())
-    master ! WorkerActor.Members(master,workers.toArray) // initial membership
-    val res = try mux(master,streams,parallel,timeout) finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
-    */
   }
 
   // ---------------------------------------------------------------------------

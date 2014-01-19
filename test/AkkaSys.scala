@@ -17,7 +17,6 @@ object Consts {
 import Consts._
 
 class Worker extends WorkerActor {
-  import WorkerActor._
   import Messages._
 
   val map0 = M3Map.make[Long,Long]()
@@ -33,7 +32,6 @@ class Worker extends WorkerActor {
 }
 
 class Master extends Worker with MasterActor {
-  import WorkerActor._
   import Messages._
   import scala.util.continuations._
 
@@ -82,7 +80,6 @@ class Master extends Worker with MasterActor {
 class AkkaSys extends FunSpec {
   import akka.actor.{Props,ActorSystem}
   import Messages._
-  import WorkerActor._
 
   it("Akka simple tests") {
     val system = Helper.actorSys("DDBT")

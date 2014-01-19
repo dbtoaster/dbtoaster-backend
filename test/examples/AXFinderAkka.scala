@@ -11,7 +11,6 @@ object AX {
 
 object AXFinderAkka {
   import Helper._
-  import WorkerActor._
   def main(args:Array[String]) {
     var i=0; do {
       val (t,res) = runLocal[AXMaster,AXWorker](args)(AX.streams())
@@ -21,7 +20,6 @@ object AXFinderAkka {
 }
 
 class AXWorker extends WorkerActor {
-  import WorkerActor._
   import ddbt.lib.Functions._
   import ddbt.lib.Messages._
   // constants
@@ -87,7 +85,6 @@ class AXWorker extends WorkerActor {
 }
 
 class AXMaster extends AXWorker with MasterActor {
-  import WorkerActor._
   import Messages._
   import Functions._
 

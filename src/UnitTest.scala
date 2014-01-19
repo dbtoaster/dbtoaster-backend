@@ -152,7 +152,7 @@ object UnitTest {
     // XXX: Untested mode (execute non-tested queries)
     // XXX: option for HTML report with bar graphs?
     // XXX: Use tags to filter test sizes in ScalaTest
-    // XXX: use script/cluster.sh to execute Akka tests ==> to be moved in the compiler
+    // XXX: use sbt ';reload;pkg;exec ddbt.test.gen.Axfinder -n10' to execute Akka distributed tests
   }
 
   // ---------------------------------------------------------------------------

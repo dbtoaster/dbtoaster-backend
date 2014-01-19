@@ -32,7 +32,9 @@ object Messages {
   type MapRef = Int  // map reference
   type FunRef = Int  // function reference
   type NodeRef = Int // node reference: workers are 0..N-1, master_ref = # workers
-  def FunRef0(i:Int):FunRef = java.lang.Short.MIN_VALUE+i // for internal functions
+  def MapRef(i:Int):MapRef = i
+  def FunRef(i:Int,internal:Boolean=false):FunRef = if (internal) java.lang.Short.MIN_VALUE+i else i
+  def NodeRef(i:Int):NodeRef = i
 
   // Note: by using NodeRef instead of ActorRef, we decouple from Akka architecture
   // and possibly allow replication by having virtual nodes spanning over multiple
@@ -50,4 +52,11 @@ object Messages {
   case class Agg(id:Int,f:FunRef,args:Array[Any]) extends Msg // => AggPart(id,_)
   case class AggPart[R](id:Int,res:R) extends Msg
   case class Ack(to:Array[NodeRef],num:Array[Int]) extends Msg // workers->master
+
+  /** Management (internal) messages */
+  import akka.actor.ActorRef
+  case class Members(master:ActorRef,workers:Array[ActorRef]) // master->workers initialization
+  case object Shutdown // tears down cluster nodes
+  case object Reset // clear all maps and reload tables
+
 }
