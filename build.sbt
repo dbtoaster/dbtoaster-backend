@@ -22,7 +22,7 @@ libraryDependencies <++= scalaVersion(v=>Seq(
   "com.typesafe.akka" %% "akka-remote"    % "2.2.3",
   "org.scala-lang"     % "scala-actors"   % v, // to compile legacy Scala
   "org.scala-lang"     % "scala-compiler" % v,
-  "org.scalatest"     %% "scalatest"      % "2.0.RC3" % "test"
+  "org.scalatest"     %% "scalatest"      % "2.0" % "test"
 ))
 
 // --------- Compilation options

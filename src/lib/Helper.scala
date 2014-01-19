@@ -50,11 +50,11 @@ object Helper {
   def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](args:Array[String])(streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cm:ClassTag[M],cw:ClassTag[W]) : (StreamStat,List[Any]) = {
     def ad[T](s:String,d:T,f:Array[String]=>T) = args.filter(_.startsWith(s)).lastOption.map(x=>f(x.substring(s.length).split(":"))).getOrElse(d)
     val master:ActorRef = if (runCount>0 && runMaster!=null) { runCount-=1; runMaster }
-    else { runCount=ad("-n",0,x=>math.min(0,x(0).toInt-1))
+    else { runCount=ad("-n",0,x=>math.max(0,x(0).toInt-1))
       val (debug,hosts_num)=ad("-C",(ad("-H",0,x=>2),1),x=>(x(0).toInt,x(1).toInt))
       val (host,port)=ad("-H",("127.0.0.1",8800),x=>(x(0),x(1).toInt))
       val wnum = ad("-W",1,x=>x(0).toInt)
-      val isMaster = debug <= 1 || ad("-M",false,x=>true)
+      val isMaster = debug <= 1 || ad("-M",true,x=>false)
       val system = if (debug==0) actorSys() else actorSys(host=host,port=port)
       val workers:Seq[ActorRef] = debug match {
         case 0 => (0 until hosts_num * wnum).map(i=>system.actorOf(Props[W]())) // launch all in one system
@@ -66,7 +66,7 @@ object Helper {
         case 0|1 => master ! Members(master,workers.toArray)
         case _ if isMaster =>askWait[Any](system.actorOf(Props(classOf[HelperActor],master,wnum),name="helper"),"ready")
         case _ => val (h,p)=ad("-M",(host,port),x=>(x(0),x(1).toInt)); system.actorSelection("akka.tcp://DDBT@"+h+":"+p+"/user/helper") ! workers.toArray
-          println(wnum+" workers started"); system.awaitTermination; println("Shutdown"); System.exit(0); return (StreamStat(0,0,0),Nil)
+          println(wnum+" workers started"); system.awaitTermination; println("Shutdown"); System.exit(0)
       }
       class HelperActor(master:ActorRef,waiting:Int) extends Actor {
         private var workers = new Array[ActorRef](0)      // Collects all workers advertisements and forward them to the master.

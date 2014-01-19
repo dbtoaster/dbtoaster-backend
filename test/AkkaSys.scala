@@ -96,8 +96,8 @@ class AkkaSys extends FunSpec {
     // finalize
     val wait = 10000
     val timeout = akka.util.Timeout(wait)
-    val r = scala.concurrent.Await.result(akka.pattern.ask(m,EndOfStream)(timeout), timeout.duration).asInstanceOf[(Long,Any)]._1
-    info("Test passed in "+r+"us")
+    val r = scala.concurrent.Await.result(akka.pattern.ask(m,EndOfStream)(timeout), timeout.duration).asInstanceOf[(StreamStat,Any)]._1
+    info("Test passed: "+r)
     system.shutdown()
   }
 
