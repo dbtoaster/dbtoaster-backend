@@ -68,7 +68,7 @@ InputKey[Unit]("pkg") <<= InputTask(_ => Def.spaceDelimited("<args>")) { result 
     def mk_script(name:String,args:String) {
       val out=dir/name; IO.write(out,"#!/bin/sh\ncd `dirname $0`\nCP_DEPS=\""+jars.mkString(":")+"\"\n"+
       "if [ -f ddbt_deps.jar ]; then CP_DEPS=\"ddbt_deps.jar\"; fi\n"+{ val x=pr("cmd_extra").trim; if (x!="") x+"\n" else "" }+
-      pr("cmd_java","java")+" "+args+"\n"); out.setExecutable(true)
+      "exec "+pr("cmd_java","java")+" "+args+"\n"); out.setExecutable(true)
     }
     mk_jar("ddbt_lib",cls,"ddbt/lib","ddbt.properties") // runtime libraries
     mk_jar("ddbt_gen",test,"ddbt/test/gen") // tests
@@ -91,22 +91,36 @@ InputKey[Unit]("pkg") <<= InputTask(_ => Def.spaceDelimited("<args>")) { result 
 }
 
 // --------- Cluster execution
+// -H = local host:port
+// -M = master host:port
+// -W = number of (local@worker/total@master) workers
+// -C = cluster_mode:hosts_count
 commands += Command.args("exec","")((state:State, args:Seq[String]) => {
   val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
   def pr(n:String,d:String) = prop.getProperty("ddbt."+n,d)
   import scala.collection.JavaConversions._
   import scala.sys.process._
-  val w=pr("workers","1").toInt; val m={ val m=pr("master","127.0.0.1").split(":"); (m(0),if (m.length>1) m(1).toInt else 8800) }
+  val lo="127.0.0.1"
+  val cl=pr("cluster","2").toInt; val w=pr("workers","1").toInt; val m={ val m=pr("master",lo).split(":"); (m(0),if (m.length>1) m(1).toInt else 8800) }
   val hosts=prop.stringPropertyNames.filter(x=>x.matches("^ddbt.host[0-9]+$")).toList.sorted.zipWithIndex.map{ case (x,i)=> val h=prop.getProperty(x,null).split(":")
-    (h(0),if (h.length>1 && h(1)!="") h(1).toInt else m._2+1+i,if (h.length>2) h(2).toInt else w,i)
+    (h(0),if (h.length>1 && h(1)!="") h(1).toInt else m._2+1+i,if (h.length>2) h(2).toInt else w,x.substring(9).toInt)
   }
-  if (args.size<1) println("Usage: exec <class>") else {
-    val (cmd,path)=(pr("cmd_ssh","ssh")+" "+pr("cmd_user","root")+"@"," echo "+pr("cmd_path","")+"/run "+args(0))
-    def exec(host:String,args:String,prefix:String) = new Thread(){ override def run() { (cmd+host+path+" "+args) ! ProcessLogger(l=>println(prefix+":"+l),l=>println(prefix+"[ERR]:"+l)) }}.start
-    exec(m._1,"-H"+m._1+":"+m._2+" -C"+hosts.map(_._3).sum,"M") // launch master
-    Thread.sleep(100)
-    hosts.foreach { h => exec(h._1,"-H"+h._1+":"+h._2+" -W"+h._3+" -M"+m._1+":"+m._2,""+h._4) } // launch workers
-    // XXX: join jobs?
+  val hn=pr("hosts","1").toInt
+  if (args.size<1) println("Usage: exec <class>") else cl match {
+    case 0|1 => ("pkg/run "+args.mkString(" ")+" -H"+m._1+":"+m._2+" -W"+w+" -C"+cl+":"+hn).! // launch in the same JVM
+    case 2 => // launch all JVMs locally
+      def exec(as:String,p:String) = { val t=new Thread(){ override def run() { ("pkg/run "+args.mkString(" ")+" "+as) ! ProcessLogger(l=>println(p+": "+l),l=>System.err.println(p+": "+l)) }}; t.start; t }
+      val nh=pr("hosts","1").toInt
+      val tm=exec("-H"+lo+":"+m._2+" -W"+(nh*w),"M"); Thread.sleep(100) // launch master
+      val ths=(0 until nh) map { i=> exec("-H"+lo+":"+(m._2+1+i)+" -W"+w+" -M"+lo+":"+m._2,""+(i+1)) }
+      (ths:+tm).foreach(_.join)
+    case 3 => // launch remotely with SSH
+      val (cmd,path)=(pr("cmd_ssh","ssh")+" "+pr("cmd_user","root")+"@"," "+pr("cmd_path","")+"/run "+args.mkString(" "))
+      def exec(host:String,as:String,p:String) = { val t=new Thread(){ override def run() { (cmd+host+path+" "+as) ! ProcessLogger(l=>println(p+": "+l),l=>System.err.println(p+": "+l)) }}; t.start; t }
+      val tm=exec(m._1,"-H"+m._1+":"+m._2+" -W"+hosts.map(_._3).sum,"M"); Thread.sleep(100) // launch master
+      val ths=hosts.map { h => exec(h._1,"-H"+h._1+":"+h._2+" -W"+h._3+" -M"+m._1+":"+m._2,""+h._4) } // launch workers
+      (ths:+tm).foreach(_.join)
+    case _ => System.err.println("Unrecognized 'ddbt.cluster' value")
   }
   state
 })

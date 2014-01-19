@@ -55,6 +55,7 @@ object Utils {
     }
   }
 
+  // XXX: use scala.sys.process.Process and scala.sys.process.ProcessLogger instead
   // Gobbles an input stream (lines not matching prefix are sent to out, null matches all, "" matches none)
   private def gobble(in:InputStream,out:PrintStream=null,prefix:String=null) = new Thread {
     private var buf = new StringBuilder

@@ -10,7 +10,7 @@ object Helper {
 
   // ---------------------------------------------------------------------------
   // Akka helpers
-  def actorSys(name:String,host:String=null,port:Int=0) = {
+  def actorSys(name:String="DDBT",host:String=null,port:Int=0) = {
     val conf = "akka.loglevel=ERROR\nakka.log-dead-letters-during-shutdown=off\n"+ // disable verbose logging
                MessageSerializer.conf()+ // custom serializer
                (if (host!=null) "akka {\nactor.provider=\"akka.remote.RemoteActorRefProvider\"\nremote {\n"+
@@ -24,20 +24,103 @@ object Helper {
   // ---------------------------------------------------------------------------
   // Run query actor and collect time + resulting maps or values (for 0-key maps)
   // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
-  type Streams = Seq[(InputStream,Adaptor,Split)]
+  private type Streams = Seq[(InputStream,Adaptor,Split)]
+  private def askWait[T](actor:ActorRef,msg:Any,timeout:Long=0L) = {
+    val to=akka.util.Timeout(if (timeout<=0) (1L<<42) /*139 years*/ else timeout)
+    scala.concurrent.Await.result(akka.pattern.ask(actor,msg)(to), to.duration).asInstanceOf[T]
+  }
+
   def mux(actor:ActorRef,streams:Streams,parallel:Boolean=true,timeout:Long=0) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
-    actor ! StreamInit(timeout); mux.read(); val tout = akka.util.Timeout(if (timeout==0) (1L<<42) /*139 years*/ else timeout+5000 /*extra time*/ )
-    scala.concurrent.Await.result(akka.pattern.ask(actor,EndOfStream)(tout), tout.duration).asInstanceOf[(StreamStat,List[Any])]
+    actor ! StreamInit(timeout); mux.read(); askWait[(StreamStat,List[Any])](actor,EndOfStream,if (timeout==0) 0 else timeout+2000)
   }
 
   def run[Q<:akka.actor.Actor](streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cq:ClassTag[Q]) = {
-    val system = actorSys("DDBT")
+    val system = actorSys()
     val query = system.actorOf(Props[Q],"Query")
     try { mux(query,streams,parallel,timeout); } finally { system.shutdown }
   }
 
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](args:Array[String])(streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cm:ClassTag[M],cw:ClassTag[W]) = {
+
+  // 0|1: -Hhost:port -Wworkers -Ccluster_mode:hosts_num
+  // 2|3: -Hhost:port -Wworkers -Mhost:port (worker)
+  //      -Hhost:port -Wworkers             (master)
+  private var runMaster:ActorRef = null
+  private var runCount = 0
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](args:Array[String])(streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cm:ClassTag[M],cw:ClassTag[W]) : (StreamStat,List[Any]) = {
+
+    val master:ActorRef = if (runCount>0 && runMaster!=null) { runCount-=1; runMaster }
+    else { runCount=args.filter(_.startsWith("-n")).lastOption.map(x=>math.max(0,x.substring(2).toInt-1)).getOrElse(0)
+
+    // SINGLE RUN ---------------------
+    def ad[T](s:String,d:T,f:Array[String]=>T) = args.filter(_.startsWith(s)).lastOption.map(x=>f(x.substring(s.length).split(":"))).getOrElse(d)
+    def ac(s:String) = args.filter(_.startsWith(s)).size>0
+    val (debug,hosts_num)=ad("-C",(if (ac("-H")) 2 else 0,1),x=>(x(0).toInt,x(1).toInt))
+    val (host,port)=ad("-H",("127.0.0.1",8800),x=>(x(0),x(1).toInt))
+    val wnum = ad("-W",1,x=>x(0).toInt)
+    val isMaster = args.filter(_.startsWith("-M")).size==0 || debug <= 1
+    val system = if (debug==0) actorSys() else actorSys(host=host,port=port)
+    val workers:Seq[ActorRef] = debug match {
+      case 0 => (0 until hosts_num * wnum).map(i=>system.actorOf(Props[W]())) // launch all in one system
+      case 1 => (0 until hosts_num).flatMap { h=> val s=actorSys("DDBT"+h,host,port+1+h); (0 until wnum).map(i=>s.actorOf(Props[W]())) } // launch one system for each node group
+      case _ => if (isMaster) Seq() else (0 until wnum).map(i=>system.actorOf(Props[W]()))
+    }
+    val master = if (isMaster) system.actorOf(Props[M](),name="master") else null
+
+    // Refactor a bit below
+    import WorkerActor._
+    debug match {
+      case 0|1 => master ! Members(master,workers.toArray)
+      case _ =>
+        if (isMaster) askWait[Any](system.actorOf(Props(classOf[HelperActor],master,wnum),name="helper"),"ready")
+        else {
+          val (h,p)=ad("-M",(host,port),x=>(x(0),x(1).toInt)); system.actorSelection("akka.tcp://DDBT@"+h+":"+p+"/user/helper") ! workers.toArray
+          println("Worker ready"); system.awaitTermination; println("Worker stopped"); System.exit(0); return (StreamStat(0,0,0),Nil)
+        }
+    }
+    class HelperActor(master:ActorRef,waiting:Int) extends Actor {
+      var workers = new Array[ActorRef](0)
+      var watcher = null.asInstanceOf[ActorRef]
+      def receive = {
+        case "ready" => watcher=sender; if (workers.size==waiting) watcher ! ()
+        case as:Array[ActorRef] => workers++=as; if (workers.size==waiting) { master ! WorkerActor.Members(master,workers.toArray); if (watcher!=null) watcher ! () }
+      }
+    }
+    //try mux(master,streams,parallel,timeout) finally { master ! ClusterShutdown; Thread.sleep(100); System.gc; Thread.sleep(100) }
+    // SINGLE RUN ---------------------
+    master
+    }
+
+    import WorkerActor._
+    try mux(master,streams,parallel,timeout) finally {
+      if (runCount>0) { master ! ClusterReset; runMaster=master; }
+      else { master ! ClusterShutdown; runMaster=null; }
+      Thread.sleep(100); System.gc; Thread.sleep(100)
+    }
+
+    // DEBUG ----------------------
+    /*
+    def m(d:String="tiny") = SourceMux(Seq((
+      new java.io.FileInputStream("/Documents/EPFL/Data/cornell_db_maybms/dbtoaster/experiments/data/finance/"+d+"/finance.csv"),
+      Decoder((ev:TupleEvent)=>{ master ! ev },new Adaptor.OrderBook(brokers=10,deterministic=true,bids="BIDS",asks="ASKS"))
+    )))
+    println("Ev1")
+    master ! StreamInit(); m().read()
+    println(askWait[(StreamStat,List[Any])](master,EndOfStream))
+    master ! ClusterReset;
+    println("Ev2")
+    master ! StreamInit(); m().read()
+    println(askWait[(StreamStat,List[Any])](master,EndOfStream))
+    println("Ev3")
+    */
+    // DEBUG ----------------------
+
+
+/*
+*/
+    /*
+    // test:run-main ddbt.test.gen.Axfinder
+    // println(args.toList)
     val port:Int = 22550
     val N = 4
     val debug = true
@@ -54,6 +137,7 @@ object Helper {
     val master = system.actorOf(Props[M]())
     master ! WorkerActor.Members(master,workers.toArray) // initial membership
     val res = try mux(master,streams,parallel,timeout) finally { Thread.sleep(100); nodes.foreach(_.shutdown); system.shutdown; Thread.sleep(100); }; res
+    */
   }
 
   // ---------------------------------------------------------------------------
@@ -64,7 +148,7 @@ object Helper {
   //   -m<num>       0=hide output (verification mode), 1=sampling (benchmark mode)
   //   -p            une parallel input streams
   def bench(args:Array[String],run:(String,Boolean,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
-    def ad[T](s:String,d:T,f:String=>T) = args.filter(x=>x.startsWith(s)).lastOption.map(x=>f(x.substring(2))).getOrElse(d)
+    def ad[T](s:String,d:T,f:String=>T) = args.filter(_.startsWith(s)).lastOption.map(x=>f(x.substring(s.length))).getOrElse(d)
     val num = ad("-n",1,x=>math.max(0,x.toInt))
     val mode = ad("-m",-1,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)

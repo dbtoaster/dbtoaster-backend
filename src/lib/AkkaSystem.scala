@@ -267,7 +267,7 @@ trait MasterActor extends WorkerActor {
   import scala.collection.JavaConversions.mapAsScalaMap
   import WorkerActor._
   import Messages._
-  val queries:List[Int]
+  val queries:List[MapRef]
 
   def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = {
     val zero = if (cV.toString=="Object"||cV.toString=="Any")
@@ -305,6 +305,7 @@ trait MasterActor extends WorkerActor {
   }
 
   // Multiple statements
+  // XXX: use this in codegen instead of pre?
   def pre2(write:Array[MapRef],commute:Array[Boolean],read:Array[MapRef],co:()=>Unit) {
     var flush = false
     var i=0; val nw=write.length; val nr=read.length; val n=pre_map.length
@@ -334,17 +335,17 @@ trait MasterActor extends WorkerActor {
       else {
         est=2 // expose trampoline
         val (ev,sender)=eq.removeFirst
-        def collect(rqs:List[Int],acc:List[Any]=Nil):Unit = rqs match {
-          case q::qs => val r=MapRef(q)
-            if (local(r)==null) collect(qs,local_rd(r)::acc)
-            else toMap(r,(m:Map[_,_])=>collect(qs,m::acc))
+        def collect(rqs:List[MapRef],acc:List[Any]=Nil):Unit = rqs match {
+          case q::qs =>
+            if (local(q)==null) collect(qs,local_rd(q)::acc)
+            else toMap(q,(m:Map[_,_])=>collect(qs,m::acc))
           case Nil => sender ! (StreamStat(t1-t0,tN,tS),acc); deq
         }
         ev match {
-          case e:TupleEvent => if (skip) tS+=1 else dispatch(e)
-          case StreamInit(timeout) => pre_map=new Array[Int](local.size); onSystemReady()
+          case e:TupleEvent => if (skip) { tS+=1; deq } else dispatch(e)
+          case StreamInit(timeout) => pre_map=new Array[Int](local.size); t0=0L; t1=timeout; tN=0L; tS=0L; skip=false; onSystemReady()
           case EndOfStream => barrier{()=> t1=System.nanoTime(); collect(queries.reverse)}
-          case GetSnapshot(qs:List[Int]) => barrier{()=> t1=System.nanoTime; collect(qs.reverse)}
+          case GetSnapshot(qs:List[Int]) => barrier{()=> t1=System.nanoTime; collect(qs.map(MapRef(_)).reverse)}
         }
         if (est==2) est=1 // disable trampoline
       }
@@ -358,5 +359,5 @@ trait MasterActor extends WorkerActor {
   }
 
   def onSystemReady() // {}
-  def ready() { bar.set(()=>{ t0=System.nanoTime(); deq }) } // callback for onSystemReady
+  def ready() { bar.set(()=>{ t0=System.nanoTime(); if (t1>0) t1=t0+t1*1000000L; deq }) } // callback for onSystemReady
 }
