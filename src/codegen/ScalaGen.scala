@@ -204,18 +204,16 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       }
       scala.collection.JavaConversions.mapAsScalaMap(ob).toList.map { case ((s,in),(sc,sp,opts)) => Source(s,sc,in,sp,Adaptor("ORDERBOOK",opts)) } ::: xs
     }
-    "Seq(\n"+ind(fixOrderbook(sources).filter{s=>s.stream}.map{s=> val (in,ad,sp)=genStream(s); "("+in+","+ad+","+sp+")" }.mkString(",\n"))+"\n)"
+    val ss=fixOrderbook(sources).filter{s=>s.stream}.map{s=> val (in,ad,sp)=genStream(s); "("+in+","+ad+","+sp+")" }.mkString(",\n")
+    "Seq(\n"+ind(ss.replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")").replaceAll("/standard/","/\"+d+\"/"))+"\n)"
   }
 
   // Helper that contains the main and stream generator
-  def helper(s0:System,pkg:String) = {
+  def helper(s0:System,pkg:String) =
     "package "+pkg+"\nimport ddbt.lib._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" {\n"+ind("import Helper._\n"+
-    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>run["+cls+"]("+
-    streams(s0.sources).replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")")
-                       .replaceAll("/standard/","/\"+d+\"/")+",p,t),f)\n\n"+
+    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
     "\n})")+"\n}")+"\n}\n\n"
-  }
 }

@@ -91,7 +91,7 @@ object Helper {
   //   -d<set>       dataset selection (can be repeated), (default=standard)
   //   -t<num>       set execution timeout (in miliseconds)
   //   -m<num>       0=hide output (verification mode), 1=sampling (benchmark mode)
-  //   -p            une parallel input streams
+  //   -p            use parallel input streams
   def bench(args:Array[String],run:(String,Boolean,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
     def ad[T](s:String,d:T,f:String=>T) = args.filter(_.startsWith(s)).lastOption.map(x=>f(x.substring(s.length))).getOrElse(d)
     val num = ad("-n",1,x=>math.max(0,x.toInt))
