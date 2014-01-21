@@ -5,8 +5,8 @@
 #  regress.sh [-d dataset] query
 #
 
-#DBT='bin/dbtoaster_release'
-DBT='./dbtoaster_ref' # reference released version
+DBT='bin/dbtoaster_release'
+#DBT='./dbtoaster_ref' # reference released version
 
 cd `dirname $0`; cd ..
 BOOST="`sed 's/#.*//g' conf/ddbt.properties | grep ddbt.lib_boost | sed 's/.*= *//g'`"
