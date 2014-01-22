@@ -19,7 +19,7 @@ import Messages._
  */
 
 /* Decode a tuple by splitting binary data, decoding it and calling f on each generated event */
-case class Decoder(f:TupleEvent=>Unit,adaptor:Adaptor=Adaptor("ORDERBOOK",Nil),splitter:Split=Split()) {
+case class Decoder(var f:TupleEvent=>Unit,adaptor:Adaptor=Adaptor("ORDERBOOK",Nil),splitter:Split=Split()) {
   private var data=Array[Byte]()
   def add(b:Array[Byte],n:Int) { if (n<=0) return;
     val l=data.length; val d=new Array[Byte](l+n);
@@ -161,19 +161,23 @@ object Adaptor {
  *   and usually small, so thread switching penalty should be low.
  */
 import java.io.InputStream
-case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Boolean=false,bufferSize:Int=32*1024) {
+case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Int=0,bufferSize:Int=32*1024) {
   private def read1(in:InputStream,d:Decoder) {
     val buf = new Array[Byte](bufferSize)
     var n:Int = 0
     do { n=in.read(buf); d.add(buf,n); } while (n>0);
     d.eof(); in.close()
   }
-  def read() {
-    if (!parallel) streams.foreach { case(in,d) => read1(in,d) }
-    else {
+  def read() = parallel match {
+    case 0 => streams.foreach { case(in,d) => read1(in,d) }
+    case 1 =>
       val ts = streams.map { case (in,d) => new Thread{ override def run() { read1(in,d) }} }
       ts.foreach(_.start()); ts.foreach(_.join())
-    }
+    case 2 =>
+      //streams.map{ case (i,d) => val f=d.f; val q=new java.util.LinkedList[TupleEvent]; d.f=(e:TupleEvent)=>q.offer(e); (i,d,q,f) }
+      // XXX: implement
+
+    case _ => sys.error("Unsupported parallel mode")
   }
 }
 
@@ -182,7 +186,8 @@ case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Boolean=false,b
  * calling the next() function. next() returns either the next TupleEvent or
  * EndOfStream if all streams have been exhausted.
  */
-case class SourceMuxPull(streams:Seq[(InputStream,Adaptor,Split)],parallel:Boolean=false,bufferSize:Int=32*1024) {
+/*
+case class SourceMuxPull(streams:Seq[(InputStream,Adaptor,Split)],parallel:Int=0,bufferSize:Int=32*1024) {
   type TQueue = scala.collection.mutable.Queue[TupleEvent]
   case class State(buf:Array[Byte],q:TQueue,in:InputStream,d:Decoder)
   private val st = streams.map { s=> val q=new TQueue; State(new Array[Byte](bufferSize),q,s._1,Decoder((ev:TupleEvent)=>{ q.enqueue(ev) },s._2, s._3)) }.toArray
@@ -199,8 +204,9 @@ case class SourceMuxPull(streams:Seq[(InputStream,Adaptor,Split)],parallel:Boole
     }
   }
   private def close(i:Int) { st(i).in.close; valid=valid-1; if (i<valid) st(i)=st(valid); st(valid)=null; }
-  def next():StreamEvent = read(if (parallel) r.nextInt(valid) else 0)
+  def next():StreamEvent = read(if (parallel!=0) r.nextInt(valid) else 0)
 }
+*/
 
 // http://www.cafeaulait.org/slides/javapolis/toptenmyths/14.html
 // http://docs.oracle.com/javase/7/docs/api/java/nio/channels/AsynchronousFileChannel.html
