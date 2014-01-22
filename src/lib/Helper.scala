@@ -29,12 +29,12 @@ object Helper {
     val to=akka.util.Timeout(if (timeout<=0) (1L<<42) /*139 years*/ else timeout+2000)
     scala.concurrent.Await.result(akka.pattern.ask(actor,msg)(to), to.duration).asInstanceOf[T]
   }
-  def mux(actor:ActorRef,streams:Streams,parallel:Boolean=true,timeout:Long=0) = {
+  def mux(actor:ActorRef,streams:Streams,parallel:Int=0,timeout:Long=0L) = {
     val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
     actor ! StreamInit(timeout); mux.read(); askWait[(StreamStat,List[Any])](actor,EndOfStream,timeout)
   }
 
-  def run[Q<:akka.actor.Actor](streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cq:ClassTag[Q]) = {
+  def run[Q<:akka.actor.Actor](streams:Streams,parallel:Int=0,timeout:Long=0L)(implicit cq:ClassTag[Q]) = {
     val system = actorSys()
     val query = system.actorOf(Props[Q],"Query")
     try { mux(query,streams,parallel,timeout); } finally { system.shutdown }
@@ -47,7 +47,7 @@ object Helper {
   //      -H<host:port> -W<total_expected_workers>                [master]
   private var runMaster:ActorRef = null
   private var runCount = 0
-  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](args:Array[String])(streams:Streams,parallel:Boolean=true,timeout:Long=0)(implicit cm:ClassTag[M],cw:ClassTag[W]) : (StreamStat,List[Any]) = {
+  def runLocal[M<:akka.actor.Actor,W<:akka.actor.Actor](args:Array[String])(streams:Streams,parallel:Int=0,timeout:Long=0L)(implicit cm:ClassTag[M],cw:ClassTag[W]) : (StreamStat,List[Any]) = {
     def ad[T](s:String,d:T,f:Array[String]=>T) = args.filter(_.startsWith(s)).lastOption.map(x=>f(x.substring(s.length).split(":"))).getOrElse(d)
     val master:ActorRef = if (runCount>0 && runMaster!=null) { runCount-=1; runMaster }
     else { runCount=ad("-n",0,x=>math.max(0,x(0).toInt-1))
@@ -91,13 +91,13 @@ object Helper {
   //   -d<set>       dataset selection (can be repeated), (default=standard)
   //   -t<num>       set execution timeout (in miliseconds)
   //   -m<num>       0=hide output (verification mode), 1=sampling (benchmark mode)
-  //   -p            use parallel input streams
-  def bench(args:Array[String],run:(String,Boolean,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
+  //   -p<num>       parallel input streams 0=disabled 1=threads 2=deterministic
+  def bench(args:Array[String],run:(String,Int,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
     def ad[T](s:String,d:T,f:String=>T) = args.filter(_.startsWith(s)).lastOption.map(x=>f(x.substring(s.length))).getOrElse(d)
     val num = ad("-n",1,x=>math.max(0,x.toInt))
     val mode = ad("-m",-1,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)
-    val parallel = ad("-p",false,x=>true)
+    val parallel = ad("-p",0,x=>x.toInt)
     var ds = args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
     if (mode<0) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
     ds.foreach { d=> var i=0; var res0:List[Any]=null

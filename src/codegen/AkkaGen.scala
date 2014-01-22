@@ -281,7 +281,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   override def helper(s0:System,pkg:String) =
     "package "+pkg+"\nimport ddbt.lib._\nimport java.util.Date\n\n"+
     "object "+cls+" {\n"+ind("import Helper._\n"+
-    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Boolean,t:Long)=>runLocal["+cls+"Master,"+cls+"Worker](args)("+streams(s0.sources)+",p,t),f)\n"+
+    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>runLocal["+cls+"Master,"+cls+"Worker](args)("+streams(s0.sources)+",p,t),f)\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
     "\n})")+"\n}")+"\n}\n\n"

@@ -9,7 +9,7 @@ object AXFinder {
 
   def test[Q<:akka.actor.Actor](name:String,count:Int=10)(implicit cq:ClassTag[Q]) = {
     var r:List[Any] = null
-    bench(Array("-n"+count,"-h"+name),(d:String,p:Boolean,t:Long)=>run[Q](Seq(
+    bench(Array("-n"+count,"-h"+name),(d:String,p:Int,t:Long)=>run[Q](Seq(
       (new java.io.FileInputStream("examples/data/finance.csv"),new Adaptor.OrderBook(brokers=10,deterministic=true,bids="BIDS",asks="ASKS"),Split())
     ),p),l=>r=l)
     r

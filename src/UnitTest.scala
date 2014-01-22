@@ -33,7 +33,7 @@ object UnitTest {
   var warmup = 0        // number of warm-up transients to remove
   var timeout = 0L      // test duration timeout (milliseconds)
   var verify = false    // enforce correctness verification in benchmark
-  var parallel = false  // use parallel streams
+  var parallel = 0      // parallel streams mode
   var zeus = false      // zeus mode
   var seed = 0          // zeus seed
   var modes = List[String]() // selected modes
@@ -54,7 +54,7 @@ object UnitTest {
       case "-qfail" => qfail=true
       case "-x" => benchmark=true
       case "-v" => verify=true
-      case "-p" => parallel=true
+      case "-p" => eat(s=>parallel=s.toInt)
       case "-z" => zeus=true
       case "-seed" => eat(s=>seed=s.toInt)
       case "-s" => eat(s=>samples=s.toInt)
@@ -80,7 +80,7 @@ object UnitTest {
         e("Benchmarking options:")
         e("  -x            enable benchmarks (compile and execute)")
         e("  -v            verification against reference result") // consistency verification is always enabled
-        e("  -p            use parallel streams (default: disabled)")
+        e("  -p <mode>     parallel streams (0=off, 1=thread, 2=deterministic)")
         e("  -s <n>        number of samples to take (default: 10)")
         e("  -w <n>        number of warm-up transients (default: 0)")
         e("  -t <ms>       test duration timeout (in ms, default: 0)")
@@ -211,7 +211,7 @@ object UnitTest {
     Compiler.out = tmp.getPath+"/"+cls+".scala"
     Compiler.exec = benchmark
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-m1" :: (if (parallel) List("-p") else Nil) ::: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp))
     p.close
     // Append correctness spec and move to test/gen/
@@ -229,7 +229,7 @@ object UnitTest {
       "import org.dbtoaster.dbtoasterlib.DBToasterExceptions._\n"+
       "import org.dbtoaster.dbtoasterlib.QueryInterface._\n"+
       "object RunQuery {\n"+
-      "  def run1(set:String,p:Boolean,timeout:Long) = {\n"+
+      "  def run1(set:String,p:Int,timeout:Long) = {\n"+
       "    val to = timeout * 1000000L;\n"+
       "    val q = new Query(); var time=0L; val t0=System.nanoTime; var tN=0L; var tS=0L;\n"+
       "    val msgRcvr = new DBTMessageReceiver {\n"+

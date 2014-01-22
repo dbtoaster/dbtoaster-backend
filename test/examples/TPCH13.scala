@@ -17,8 +17,8 @@ object TPCH13 {
 /*
   def main(args:Array[String]) {
     //val ref = bench("ReferenceLMS ",10,()=>run[TPCH13Ref,Map[Long,Long]](streamsTPCH13()))
-    val res = bench(Array("-hHandOptimized","-n10"),(d:String,p:Boolean,t:Long)=>run[TPCH13](streamsTPCH13()))
-    val gen = bench(Array("-hTCK-Generated","-n10"),(d:String,p:Boolean,t:Long)=>run[TPCH13Gen](streamsTPCH13()))
+    val res = bench(Array("-hHandOptimized","-n10"),(d:String,p:Int,t:Long)=>run[TPCH13](streamsTPCH13()))
+    val gen = bench(Array("-hTCK-Generated","-n10"),(d:String,p:Int,t:Long)=>run[TPCH13Gen](streamsTPCH13()))
     def eq(m1:Map[Long,Long],m2:Map[Long,Long]) = m1.filter{case (k,v) => v!=0}==m2.filter{case (k,v) => v!=0}
     def m0ll(l:List[Any]):Map[Long,Long] = l.head.asInstanceOf[Map[Long,Long]]
     println("Correctness: "+(if(eq(m0ll(res),m0ll(gen))) "OK" else "FAILURE !!!!"))
