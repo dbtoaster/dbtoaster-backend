@@ -244,7 +244,7 @@ object UnitTest {
     var (t1,sc) = if (!lms) Compiler.toast("scala",q.sql) else {
       val f="tmp.scala"; val (t1,_) = Compiler.toast("scala","-O4","-o",f,q.sql);
       val fl=if (repo!=null) new File(repo,f) else new File(f); val s=read(fl.getPath); fl.delete;
-      (t1,s.replaceAll("../../experiments/data",path_repo+"/dbtoaster/experiments/data"))
+      (t1,s.replaceAll("../../experiments/data",path_repo+"/../../experiments/data"))
     }
     if (timeout>0) sc=sc.replaceAll("(case StreamEvent.*=>)","$1 if (!skip)").replace("def act(): Unit","var skip = false;\n    def act(): Unit")
     p.gen(math.max(0,t1-t0))
