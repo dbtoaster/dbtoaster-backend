@@ -33,6 +33,7 @@ object UnitTest {
   var warmup = 0        // number of warm-up transients to remove
   var timeout = 0L      // test duration timeout (milliseconds)
   var verify = false    // enforce correctness verification in benchmark
+  var parallel = false  // use parallel streams
   var zeus = false      // zeus mode
   var seed = 0          // zeus seed
   var modes = List[String]() // selected modes
@@ -53,6 +54,7 @@ object UnitTest {
       case "-qfail" => qfail=true
       case "-x" => benchmark=true
       case "-v" => verify=true
+      case "-p" => parallel=true
       case "-z" => zeus=true
       case "-seed" => eat(s=>seed=s.toInt)
       case "-s" => eat(s=>samples=s.toInt)
@@ -78,6 +80,7 @@ object UnitTest {
         e("Benchmarking options:")
         e("  -x            enable benchmarks (compile and execute)")
         e("  -v            verification against reference result") // consistency verification is always enabled
+        e("  -p            use parallel streams (default: disabled)")
         e("  -s <n>        number of samples to take (default: 10)")
         e("  -w <n>        number of warm-up transients (default: 0)")
         e("  -t <ms>       test duration timeout (in ms, default: 0)")
@@ -208,7 +211,7 @@ object UnitTest {
     Compiler.out = tmp.getPath+"/"+cls+".scala"
     Compiler.exec = benchmark
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-m1" :: (if (parallel) List("-p") else Nil) ::: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp))
     p.close
     // Append correctness spec and move to test/gen/
