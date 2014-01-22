@@ -19,7 +19,7 @@ import Messages._
  */
 
 /* Decode a tuple by splitting binary data, decoding it and calling f on each generated event */
-case class Decoder(var f:TupleEvent=>Unit,adaptor:Adaptor=Adaptor("ORDERBOOK",Nil),splitter:Split=Split()) {
+case class Decoder(f:TupleEvent=>Unit,adaptor:Adaptor=Adaptor("ORDERBOOK",Nil),splitter:Split=Split()) {
   private var data=Array[Byte]()
   def add(b:Array[Byte],n:Int) { if (n<=0) return;
     val l=data.length; val d=new Array[Byte](l+n);
@@ -168,15 +168,24 @@ case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Int=0,bufferSiz
     do { n=in.read(buf); d.add(buf,n); } while (n>0);
     d.eof(); in.close()
   }
+
+  // Preload in alternating order
+  import java.util.LinkedList
+  private val q=new LinkedList[TupleEvent]()
+  private val f=streams(0)._2.f
+  if (parallel==2) {
+    val qq = new LinkedList[LinkedList[TupleEvent]]()
+    streams.foreach { case (in,d) => val iq=new LinkedList[TupleEvent]; read1(in,Decoder((e:TupleEvent)=>iq.offer(e),d.adaptor,d.splitter)); qq.offer(iq) }
+    var p=qq.poll; while (p!=null) { val e=p.poll; if (e!=null) { q.offer(e); qq.offer(p) }; p=qq.poll }
+  }
+
+
   def read() = parallel match {
     case 0 => streams.foreach { case(in,d) => read1(in,d) }
     case 1 =>
       val ts = streams.map { case (in,d) => new Thread{ override def run() { read1(in,d) }} }
       ts.foreach(_.start()); ts.foreach(_.join())
-    case 2 =>
-      //streams.map{ case (i,d) => val f=d.f; val q=new java.util.LinkedList[TupleEvent]; d.f=(e:TupleEvent)=>q.offer(e); (i,d,q,f) }
-      // XXX: implement
-
+    case 2 => var e=q.poll; while (e!=null) { f(e); e=q.poll }
     case _ => sys.error("Unsupported parallel mode")
   }
 }
