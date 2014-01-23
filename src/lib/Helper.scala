@@ -26,7 +26,7 @@ object Helper {
   // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
   private type Streams = Seq[(InputStream,Adaptor,Split)]
   @inline private def askWait[T](actor:ActorRef,msg:Any,timeout:Long=0L) = {
-    val to=akka.util.Timeout(if (timeout<=0) (1L<<42) /*139 years*/ else timeout+2000)
+    val to=akka.util.Timeout(if (timeout<=0) (1L<<42) /*139 years*/ else timeout+200000)
     scala.concurrent.Await.result(akka.pattern.ask(actor,msg)(to), to.duration).asInstanceOf[T]
   }
   def mux(actor:ActorRef,streams:Streams,parallel:Int=0,timeout:Long=0L) = {
