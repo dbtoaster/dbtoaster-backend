@@ -169,23 +169,21 @@ case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Int=0,bufferSiz
     d.eof(); in.close()
   }
 
-  // Preload in alternating order
+  // Preload in deterministic alternating order
   import java.util.LinkedList
-  private val q=new LinkedList[TupleEvent]()
-  private val f=streams(0)._2.f
+  private var q : LinkedList[TupleEvent] = null
   if (parallel==2) {
+    q=new LinkedList[TupleEvent]()
     val qq = new LinkedList[LinkedList[TupleEvent]]()
     streams.foreach { case (in,d) => val iq=new LinkedList[TupleEvent]; read1(in,Decoder((e:TupleEvent)=>iq.offer(e),d.adaptor,d.splitter)); qq.offer(iq) }
     var p=qq.poll; while (p!=null) { val e=p.poll; if (e!=null) { q.offer(e); qq.offer(p) }; p=qq.poll }
   }
 
-
   def read() = parallel match {
     case 0 => streams.foreach { case(in,d) => read1(in,d) }
-    case 1 =>
-      val ts = streams.map { case (in,d) => new Thread{ override def run() { read1(in,d) }} }
-      ts.foreach(_.start()); ts.foreach(_.join())
-    case 2 => var e=q.poll; while (e!=null) { f(e); e=q.poll }
+    case 1 => val ts = streams.map { case (in,d) => new Thread{ override def run() { read1(in,d) }} }
+              ts.foreach(_.start); ts.foreach(_.join)
+    case 2 => if (streams.size>0) { val f=streams(0)._2.f; var e=q.poll; while (e!=null) { f(e); e=q.poll } }
     case _ => sys.error("Unsupported parallel mode")
   }
 }

@@ -58,10 +58,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks.map(rn))+")" else "")) // all keys are bound
       else { val (k0,v0)=(fresh("k"),fresh("v"))
-        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else ""
+        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else "" // slice on bound variables
         ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
-        n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
-          ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co(v0))+"\n}\n" // bind free variables from retrieved key
+        n+sl+".foreach { ("+(if (ks.size==1) rn(ks.head) else k0)+","+v0+") =>\n"+ind(
+          (if (ks.size>1) ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString else "")+co(v0))+"\n}\n" // bind free variables from retrieved key
       }
     case Lift(n,e) =>
       if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
