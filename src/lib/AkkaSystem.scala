@@ -188,7 +188,7 @@ abstract class WorkerActor extends Actor {
     case Ack(to,num) => bar.sumAck(to,num.map(_.toLong)) // assert(self==master)
     case Reset => if (self==master) workers.foreach{ _ ! Reset;  }
       local.zipWithIndex.foreach { case (l,i) => if (l!=null) l.clear() else local_wr(MapRef(i),null,false) }
-      loadTables();
+      System.gc; loadTables(); System.gc;
       // XXX: barrier(?) => have a synchronous blocking call
     case Shutdown => workers.foreach{ _ ! PoisonPill }; self ! PoisonPill // assert(self==master)
     case m => println("Not understood: "+m.toString)
@@ -220,6 +220,9 @@ abstract class WorkerActor extends Actor {
     }).asInstanceOf[(Any,Any)=>Any])
     matcherAgg.req(m,f,args.toArray,co,z,p)
   }
+
+  // XXX: Experimental RPC call
+  def rpc(m:MapRef,k:Any,op:FunRef,args:Any*) { val n=workers.length; val h=hash(m,k); bar.send(workers((h%n+n)%n),Foreach(op,args.toArray)) }
 
   // ---- helper for local aggregation (in a local variable, and that needs to be sequential)
   case class Acc() { // applies a continuation when the internal counter is zero
@@ -276,6 +279,7 @@ trait MasterActor extends WorkerActor {
 
   // Multiple statements
   // XXX: use this in codegen instead of pre?
+  def pre2(write:MapRef*)(commute:Boolean*)(read:MapRef*)(co: =>Unit) { pre2(write.toArray,commute.toArray,read.toArray,()=>co) }
   def pre2(write:Array[MapRef],commute:Array[Boolean],read:Array[MapRef],co:()=>Unit) {
     var flush = false
     var i=0; val nw=write.length; val nr=read.length; val n=pre_map.length

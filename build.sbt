@@ -1,4 +1,4 @@
-// --------- project informations
+// --------- Project informations
 Seq(
   name := "DistributedDBtoaster",
   organization := "ch.epfl.data",
@@ -17,13 +17,13 @@ Seq(
 )
 
 // --------- Dependencies
-libraryDependencies <++= scalaVersion(v=>Seq(
+libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.3",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.3",
-  "org.scala-lang"     % "scala-actors"   % v, // to compile legacy Scala
-  "org.scala-lang"     % "scala-compiler" % v,
+  "org.scala-lang"     % "scala-actors"   % scalaVersion.value, // to compile legacy Scala
+  "org.scala-lang"     % "scala-compiler" % scalaVersion.value,
   "org.scalatest"     %% "scalatest"      % "2.0" % "test"
-))
+)
 
 // --------- Compilation options
 Seq(
@@ -53,16 +53,16 @@ addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ")
 addCommandAlias("bench", ";unit -v -x -xsc -xvm -csv bench.csv -l ") ++ // usage: sbt 'bench lms'
 addCommandAlias("bench-all", ";unit -v -x -xsc -xvm -csv bench-all.csv -l scala -l lms -l lscala -l llms")
 
-// --------- Packaging: full (packages all dependencies), dist (ship on all cluster hosts)
+// --------- Packaging: fake (to use SBT paths for debugging), full (packages all dependencies), dist (ship on all cluster hosts)
 InputKey[Unit]("pkg") <<= InputTask(_ => Def.spaceDelimited("<args>")) { result =>
- (result, baseDirectory, classDirectory in Compile, classDirectory in Test, fullClasspath in Runtime, compile in Compile, compile in Test, copyResources in Compile) map {
-  (args,base,cls,test,cp,_,_,_) =>
+ (result, baseDirectory, classDirectory in Compile, classDirectory in Test, fullClasspath in Runtime, scalaVersion, compile in Compile, compile in Test, copyResources in Compile) map {
+  (args,base,cls,test,cp,vers,_,_,_) =>
     val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
     def pr(n:String,d:String="") = prop.getProperty("ddbt."+n,d)
     import scala.collection.JavaConversions._
     import scala.sys.process._
     // Packaging
-    val dir=base/"pkg"; if (!dir.exists) dir.mkdirs; print("Packaging DDBT libraries: ")
+    val dir=base/"pkg"; if (!dir.exists) dir.mkdirs
     val jars = cp.files.absString.split(":").filter(_!=cls.toString).distinct.sorted // all dependencies
     def mk_jar(name:String,root:File,path:String*) { Process(Seq("jar","-cMf",(dir/(name+".jar")).getPath) ++ path.flatMap(p=>Seq("-C",root.getPath,p)) ).!; print(".") }
     def mk_script(name:String,args:String) {
@@ -70,22 +70,28 @@ InputKey[Unit]("pkg") <<= InputTask(_ => Def.spaceDelimited("<args>")) { result 
       "if [ -f ddbt_deps.jar ]; then CP_DEPS=\"ddbt_deps.jar\"; fi\n"+{ val x=pr("cmd_extra").trim; if (x!="") x+"\n" else "" }+
       "exec "+pr("cmd_java","java")+" "+args+"\n"); out.setExecutable(true)
     }
-    mk_jar("ddbt_lib",cls,"ddbt/lib","ddbt.properties") // runtime libraries
-    mk_jar("ddbt_gen",test,"ddbt/test/gen") // tests
-    mk_script("run","-classpath \"$CP_DEPS:ddbt_lib.jar:ddbt_gen.jar\" \"$@\"")
-    if (args.contains("full")) { mk_jar("ddbt",cls,".") // compiler
-      val tmp=base/"target"/"pkg_tmp"; tmp.mkdirs; val r=tmp/"reference.conf"; val rs=tmp/"refs.conf"; IO.write(rs,"")
-      jars.foreach { j => Process(Seq("jar","-xf",j),tmp).!; if (r.exists) IO.append(rs,IO.read(r)); print(".") }
-      if (r.exists) r.delete; rs.renameTo(r); mk_jar("ddbt_deps",tmp,"."); IO.delete(tmp)
-      mk_script("toast","-classpath \"$CP_DEPS:ddbt.jar\" ddbt.Compiler \"$@\"")
-      mk_script("unit","-classpath \"$CP_DEPS:ddbt.jar\" ddbt.UnitTest \"$@\"")
-    }
-    println
-    // Distribution over cluster nodes
-    if (args.contains("dist")) { print("Distribution: ")
-      val hs=(prop.stringPropertyNames.filter(_.matches("^ddbt.host[0-9]+$")).map(x=>prop.getProperty(x,null))+pr("master","127.0.0.1")).map(_.split(":")(0)).toSet
-      val (cmd,path)=(pr("cmd_scp","rsync -av")+" "+dir+"/ "+pr("cmd_user","root")+"@",":"+pr("cmd_path","")+"/")
-      hs.foreach { h => print(h); print(if ( (cmd+h+path).!(ProcessLogger(l=>(),l=>println("\nTransfer to "+h+" error: "+l.trim))) ==0) "." else "<!>") }; println
+    if (args.contains("fake")) { // fake runner for debug
+      val cp0="../target/scala-"+vers.replaceAll(".[0-9]$","")+"/"
+      mk_script("run","-classpath \"$CP_DEPS:"+cp0+"classes:"+cp0+"test-classes\" \"$@\"")
+    } else {
+      print("Packaging DDBT libraries: ")
+      mk_jar("ddbt_lib",cls,"ddbt/lib","ddbt.properties") // runtime libraries
+      mk_jar("ddbt_gen",test,"ddbt/test/gen") // tests
+      mk_script("run","-classpath \"$CP_DEPS:ddbt_lib.jar:ddbt_gen.jar\" \"$@\"")
+      if (args.contains("full")) { mk_jar("ddbt",cls,".") // compiler
+        val tmp=base/"target"/"pkg_tmp"; tmp.mkdirs; val r=tmp/"reference.conf"; val rs=tmp/"refs.conf"; IO.write(rs,"")
+        jars.foreach { j => Process(Seq("jar","-xf",j),tmp).!; if (r.exists) IO.append(rs,IO.read(r)); print(".") }
+        if (r.exists) r.delete; rs.renameTo(r); mk_jar("ddbt_deps",tmp,"."); IO.delete(tmp)
+        mk_script("toast","-classpath \"$CP_DEPS:ddbt.jar\" ddbt.Compiler \"$@\"")
+        mk_script("unit","-classpath \"$CP_DEPS:ddbt.jar\" ddbt.UnitTest \"$@\"")
+      }
+      println
+      // Distribution over cluster nodes
+      if (args.contains("dist")) { print("Distribution: ")
+        val hs=(prop.stringPropertyNames.filter(_.matches("^ddbt.host[0-9]+$")).map(x=>prop.getProperty(x,null))+pr("master","127.0.0.1")).map(_.split(":")(0)).toSet
+        val (cmd,path)=(pr("cmd_scp","rsync -av")+" "+dir+"/ "+pr("cmd_user","root")+"@",":"+pr("cmd_path","")+"/")
+        hs.foreach { h => print(h); print(if ( (cmd+h+path).!(ProcessLogger(l=>(),l=>println("\nTransfer to "+h+" error: "+l.trim))) ==0) "." else "<!>") }; println
+      }
     }
   }
 }
