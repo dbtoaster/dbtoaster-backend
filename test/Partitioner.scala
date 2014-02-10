@@ -1,7 +1,7 @@
 package ddbt.test
 import ddbt.frontend._
 
-object PartitionerTest {
+object Partitioner {
   import ddbt.Utils._
   def main(args: Array[String]) {
     // Dirty front-end
@@ -12,9 +12,9 @@ object PartitionerTest {
     if (qs.size>1) return printf("Too many queries, refine your pattern:"+qs.map(x=>"\n - "+x).mkString)
     val m3_src = ddbt.Compiler.toast("m3",qs(0))._2
     val m3 = (M3Parser andThen TypeCheck)(m3_src)
-    val p=ddbt.frontend.Partitioner.apply(m3)
+    val (p,h)=Partitioning(m3)
     println(p)
-    println(p.hash(m3))
+    println(h)
   }
 }
 

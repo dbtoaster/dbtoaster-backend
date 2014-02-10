@@ -43,9 +43,9 @@ Seq(
 // --------- Custom tasks
 addCommandAlias("toast", ";run-main ddbt.Compiler ") ++
 addCommandAlias("unit", ";run-main ddbt.UnitTest ") ++
-addCommandAlias("queries", "unit -dd -v -x -s 0 -l scala") ++
-addCommandAlias("queries-lms", "unit -dd -v -x -s 0 -l lms -xsc") ++
-addCommandAlias("queries-akka", "unit -dd -v -x -s 0 -l akka -qx mddb/query2 -qx tpch/query21") // too long to compile/execute
+addCommandAlias("queries", "unit -dd -v -x -s 0 -l scala ") ++
+addCommandAlias("queries-lms", "unit -dd -v -x -s 0 -l lms -xsc ") ++
+addCommandAlias("queries-akka", "unit -dd -v -x -s 0 -l akka -qx mddb/query2 -qx tpch/query21 ") // too long to compile/execute
 
 // Akka individual queries testing
 addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ")

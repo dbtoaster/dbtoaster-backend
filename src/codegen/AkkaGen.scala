@@ -49,12 +49,10 @@ Roadmap:
 Observations:
 - variadic arguments are 5x faster than array for Any, Array is 20x faster than variadic for primitive types
 
-
 Issues to solve (big XXX list):
 - Move 'inuse' maintenance in Scala code generator => strip unnecessary key parts creation in foreach
 - move lazy map slicing into the TypeChecking ?
 - move tests (TestUnit) AST into its own ddbt.ast package ?
-- problem: the same map can be accessed locally in a foreach but again acessed with another key which might not be on the host (Runiquecountsbya)
 - for union, instead of shipping both maps to 3rd party, why not ship one to another and make union there ? (would increase locality)
 - re-introduce intra-statement parallelization with library-level support for pending continuations (in barrier) to guarantee correctness
 - distinguish between forced sequentiality (master and in aggregation/sum) and parallel execution(pure foreach)
@@ -62,15 +60,15 @@ Issues to solve (big XXX list):
 */
 
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
-  import ddbt.ast.M3._
+  import M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear}
   import scala.collection.mutable.HashMap
+  import ddbt.frontend.Partitioning
 
   // Context additional informations
   private val ref = new HashMap[String,String]() // map: name(local)->reference(remote)
   private val inuse = CtxSet() // set of variables used in the current continuation/used
-  private var local = Set[String]() // locally available maps (tables+vars)
-  private var local_r:String = null // map over which delegation happens (can be used only once to generate a foreach)
+  private var part : Partitioning = null // locally available partitions
   private var lacc : (String,Type,List[(String,Type)]) = null // local accumulator to handle aggregation in nested (remote) loops as (name, result, key types)
 
   var cl_ctr=0;
@@ -132,8 +130,8 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   // Get the first map with free variables (in evaluation order). Implicit 'ctx' is used to determine free variables.
   // On top of that, c2 defines additional evaluation context
-  def fmap(e:Expr,c2:Set[String]=Set()):String = e match {
-    case MapRef(n,tp,ks) if ks.exists(k=> !ctx.contains(k) && !c2.contains(k)) => n
+  def fmap(e:Expr,c2:Set[String]=Set()):MapRef = e match {
+    case m@MapRef(n,tp,ks) if ks.exists(k=> !ctx.contains(k) && !c2.contains(k)) => m
     case Lift(n,e) => fmap(e,c2)
     case Exists(e) => fmap(e,c2)
     case Mul(l,r) => val lm=fmap(l,c2); if (lm==null) fmap(r,c2++l.collect{ case Lift(n,e) => Set(n) }) else lm
@@ -142,15 +140,15 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   // Wrapper for remote code generation, return body and context
-  def remote(m:String,fn:String,f:()=>String):(String,List[String]) = {
-    local_r=m; /*val u0=inuse.save;*/ val c=ctx.save ++ ctx.ctx0; val body=close(f);
-    val u=inuse.save; local_r=null; //inuse.load(u0)
+  def remote(m:MapRef,fn:String,f:()=>String):(String,List[String]) = {
+    val p0=part; part=p0.setLocal(m); /*val u0=inuse.save;*/ val c=ctx.save++ctx.ctx0; val body=close(f);
+    val u=inuse.save; part=p0; //inuse.load(u0)
     val rc = (c.map(_._1).toSet & u).toList // remote context
     ("case (`"+fn+"`,List("+rc.map(v=>rn(v)+":"+c(v)._1.toScala).mkString(",")+")) =>\n"+ind(body),rc map rn)
   }
 
   // Remote aggregation
-  def remote_agg(a0:String,m:String,key:List[(String,Type)],e:Expr,add:Boolean=false):String = {
+  def remote_agg(a0:String,m:MapRef,key:List[(String,Type)],e:Expr,add:Boolean=false):String = {
     // remote handler
     val fn0 = fresh("fa");
     val (body0:String,rc:List[String])=remote(m,fn0,()=>{ inuse.add(key.map(_._1).toSet)
@@ -161,7 +159,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     // local handler
     val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
     val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
-    cl_add(1); "aggr("+ref(m)+","+fn+rc.map(x=>","+rn(x)).mkString+")("+(if (add) a0+"){(_" else acc+"){("+a0)+":"+rt+") =>\n"
+    cl_add(1); "aggr("+ref(m.name)+","+fn+rc.map(x=>","+rn(x)).mkString+")("+(if (add) a0+"){(_" else acc+"){("+a0)+":"+rt+") =>\n"
   }
 
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
@@ -169,9 +167,9 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
                       else { val s=ctx.save; val r=cpsExpr(e,(v:String)=>{ ctx.add(n,(e.tp,fresh("l"))); "val "+rn(n)+" = "+v+";\n"+co("1L")}); ctx.load(s); r }
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)};
-      if (local(n) || n==local_r || !ref.contains(n)) { if (n==local_r) local_r=null;
+      if (part.local(m) || !ref.contains(n)) {
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
-        if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks map rn)+")" else "")) // all keys are bound
+        if (ki.size==0) { inuse.add(ks.toSet); co(n+(if (ks.size>0) ".get("+tup(ks map rn)+")" else "")) } // all keys are bound
         else { val (k0,v0)=(fresh("k"),fresh("v")); var async=false
           val s=ctx.save
           inuse.add(ko.map(_._1).toSet); ctx.add(v0,(ex.tp,v0)); inuse.add(Set(v0));
@@ -191,23 +189,23 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       } else if (lacc!=null) {
         // XXX: introduce a projection for only the relevant variables (?)
         val n0=fresh("m"); val v=fresh("v")
-        remote_agg(n0,n,ki.map(x=>(x._1,m.tks(x._2))),m)+n0+".foreach{ case ("+tup(ki.map(_._1))+","+v+") =>\n"+ind(co(v))+"\n}\n"
+        remote_agg(n0,m,ki.map(x=>(x._1,m.tks(x._2))),m)+n0+".foreach{ case ("+tup(ki.map(_._1))+","+v+") =>\n"+ind(co(v))+"\n}\n"
       } else {
         // remote handler
-        val fn0 = fresh("ff"); local_r=n;
-        val (body0,rc)=remote(n,fn0,()=>close(()=>cpsExpr(ex,co)+"co()"))
+        val fn0 = fresh("ff");
+        val (body0,rc)=remote(m,fn0,()=>close(()=>cpsExpr(ex,co)+"co()"))
         val (fn,body) = rfun(false,fn0,body0,rc)
         // local handler
         "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
       }
     case a@AggSum(ks,e) => val m=fmap(e); val cur=ctx.save; inuse.add(ks.toSet);
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-      if (m==null || local(m)) {
+      if (m==null || part.local(m)) {
         if (aks.size==0) { val a0=fresh("agg"); ctx.add(a0,(e.tp,a0)); inuse.add(a0); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) } // context/use mainenance
         else super.cpsExpr(ex,co,am) // 1-tuple projection or map available locally
       } else {
         val a0=fresh("agg"); val l0=lacc; lacc=(a0,e.tp,aks); val r =remote_agg(a0,m,aks,e); lacc=l0
-        r+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); local_r=a0; cpsExpr(mapRef(a0,e.tp,aks),co) })
+        r+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); cpsExpr(mapRef(a0,e.tp,aks),co) })
       }
     case a@Add(el,er) => val cur=ctx.save;
       if (a.agg==Nil) { cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
@@ -218,7 +216,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
             val r = if (m!=null) { val l0=lacc; lacc=(a0,e.tp,a.agg); val r=remote_agg(a0,m,a.agg,e,true); lacc=l0; r }
                     else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
           }
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ local_r=a0; cpsExpr(mapRef(a0,ex.tp,a.agg),co) }
+          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ cpsExpr(mapRef(a0,ex.tp,a.agg),co) }
       }
     case _ => super.cpsExpr(ex,co,am)
   }
@@ -243,7 +241,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def apply(s:System) = {
-    local = s.sources.filter(s=> !s.stream).map(_.schema.name).toSet ++ s.maps.filter(m=>m.keys.size==0).map(_.name).toSet
+    val (pa,hash)=Partitioning(s); part=pa;
     s.maps.zipWithIndex.map{case (m,i)=> ref.put(m.name,""+i); }
     val qs = { val mn=s.maps.zipWithIndex.map{case (m,i)=>(m.name,i)}.toMap; "val queries = List("+s.queries.map(q=>mn(q.map.name)).mkString(",")+")\n" } // queries as map indices
     val ts = s.triggers.map(genTrigger).mkString("\n\n") // triggers
@@ -265,10 +263,10 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         (0 until m).map { o=> longFun(n+o,co,co0,bs.slice(o*thr,math.min((o+1)*thr,bs.size)),thr) }.mkString
       }
     }
-    freshClear(); ref.clear; aggl=Nil; forl=Nil; local=Set()
+    freshClear(); ref.clear; aggl=Nil; forl=Nil; part=null
     "class "+cls+"Worker extends WorkerActor {\n"+ind(
       "import ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+fds+ads+gc+ // constants
-      "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+local_vars+
+      "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+hash+local_vars+
       (if (ld0!="") "// tables content preloading\noverride def loadTables() {\n"+ind(ld0)+"\n}\nloadTables()\n" else "")+"\n"+
       "// remote foreach\n"+longFun("forl","()=>Unit","co()",fbs)+"\n"+
       "// remote aggregations\n"+longFun("aggl","Any=>Unit","co(null)",abs)

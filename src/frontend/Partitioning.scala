@@ -2,7 +2,7 @@ package ddbt.frontend
 import ddbt.ast._
 
 /**
- * Experimental partitioner. Algorithm is as follows:
+ * Experimental partitioning. Algorithm is as follows:
  * 1. Detect all co-partitioning and count them (currently weight:=1)
  * 2. Merge non-colliding co-partitioning by descending weight according to the
  *    following rules order:
@@ -13,30 +13,20 @@ import ddbt.ast._
  *
  * @author TCK
  */
-object Partitioner {
-  import M3._
+case class Partitioning(cps:List[Partitioning.CoPart],score:Double,loc:Set[String]=Set(),cur:Option[(Partitioning.CoPart,List[String])]=None) {
+  override def toString = "Partitioning (score=%.2f%%):\n".format(score*100)+cps.map(p=>" - "+p+"\n").mkString
+  def setLocal(m:M3.MapRef) = Partitioning(cps,score,loc,Some(cps.find(p=>p.contains(m.name)) match {
+    case None => val p=Partitioning.CoPart(); p.put(m.name,(0 until m.keys.size).toList); (p,m.keys) // selected a non-existing partition
+    case Some(p) => (p,p(m.name).map(x=>m.keys(x)))
+  }))
+  def local(m:M3.MapRef) = if (m.keys.size==0 || loc(m.name)) true else cur match { case None=>false case Some((p,ks))=>p.get(m.name) match { case None=>false case Some(is)=>is.map(x=>m.keys(x))==ks } }
+}
+
+object Partitioning extends (M3.System => (Partitioning,String)) {
   import ddbt.Utils.{ind,tup}
-  private type CP = scala.collection.mutable.HashMap[String,List[Int]]
-  // The partitioner returns a partitioning
-  case class Partitioning(cps:List[CoPart],score:Double,cur:Option[(CoPart,List[String])]=None) {
-    override def toString = "Partitioning (score=%.2f%%):\n".format(score*100)+cps.map(p=>" - "+p+"\n").mkString
-    def hash(s:System) = {
-      val pks = (cps.head.asInstanceOf[CP] /: cps.tail)((a,b)=>a++b)
-      val imp = scala.collection.mutable.HashMap[String,List[Int]]() // body => map_num
-      s.maps.zipWithIndex.map{ case (m,i)=> val ks=m.keys.map(_._2)
-        val ps=pks(m.name).map(i=> (if (ks.size>1) "t._"+(i+1) else "t")+(ks(i) match { case TypeLong=>"" case TypeDate=>".getTime" case _=>".##" }))
-        val b = "val t=k.asInstanceOf["+tup(ks.map(_.toScala))+"]; r="+ps.head+"; "+ps.tail.map(p=>"r*=0xcc9e2d51; r^=(r>>>13)^("+p+"); ").mkString
-        imp.put(b,i::imp.getOrElse(b,Nil))
-      }
-      "def hash(m:MapRef,k:Any) = {\n"+ind("var r=0L;\nm match {\n"+ind(imp.toList.map{ case (b,is)=>"case "+is.reverse.mkString("|")+" => "+b+"\n" }.mkString+"case _ => r=k.##")+"\n}\nr^=(r>>>33)^(r>>>15); (r^(r>>>3)^(r>>>7)).toInt")+
-      "\n}\n"
-    }
-    def setLocal(m:MapRef) = Partitioning(cps,score,cps.find(p=>p.get(m.name)!=None).map(p=>(p,p(m.name).map(x=>m.keys(x)))))
-    def isLocal(m:MapRef,s:System) = if (m.keys.size==0 || s.sources.exists(s=> !s.stream && s.schema.name==m.name)) true
-      else cps.find(p=>p.get(m.name)!=null).map(p=>(p,p(m.name).map(x=>m.keys(x)))) match { case None => false case s => s==cur }
-  }
+  import M3._
   // A co-partitioning is given by a mapping relation->partitioning keys and a frequency.
-  case class CoPart(var freq:Int=0) extends CP with Ordered[CoPart] {
+  case class CoPart(var freq:Int=0) extends scala.collection.mutable.HashMap[String,List[Int]] with Ordered[CoPart] {
     override def toString = "CoPart["+freq+"] "+map{ case (m,k)=>m+"("+k.mkString(",")+")"}.mkString(", ")
     def compare(o:CoPart) = o.freq - freq // descending frequency
     def add(o:CoPart) = if (this==o) { freq+=o.freq; true } else false // freq is not verified in equality
@@ -78,7 +68,7 @@ object Partitioner {
     case _ => ctx
   }
 
-  def apply(s0:System):Partitioning = {
+  def apply(s0:System):(Partitioning,String) = {
     sys0=s0; parts=Nil
     s0.triggers.foreach { t => cm0=Nil
       ctx0 = (t.evt match { case EvtReady=>Nil case EvtAdd(s)=>s.fields case EvtDel(s)=>s.fields }).map(_._1)
@@ -106,7 +96,19 @@ object Partitioner {
       if (n>0) { val p=CoPart(p0.freq*(n-1)/(o-1)); p++=ms; parts=(p::parts).sorted }
     }
     val r1 = parts.map(_.freq).sum // selected constraints (approximation)
-    val p = Partitioning(parts,if (r0==0) 1 else r1*1.0/r0)
-    sys0=null; parts=Nil; p
+    // partitioning
+    val part = Partitioning(parts,if (r0==0) 1 else r1*1.0/r0,s0.sources.filter(!_.stream).map(s=>s.schema.name).toSet);
+    // hashing function
+    val its = s0.maps.zipWithIndex.map{ case (m,i)=>(m.name,(i,m.keys.map(_._2))) }.toMap // name=>(index,tps)
+    val imp = scala.collection.mutable.HashMap[String,List[Int]]() // body => maprefs
+    parts.foreach(_.foreach{ case (n,is) => val (i,ts)=its(n)
+      val ks=is.map(i=>(if (ts.size>1) "t._"+(i+1) else "t")+(ts(i) match { case TypeLong=>"" case TypeDate=>".getTime" case _=>".##" }))
+      val b="val t=k.asInstanceOf["+tup(ts.map(_.toScala))+"]; r="+ks.head+";"+ks.tail.map(k=>" r*=0xcc9e2d51; r^=(r>>>13)^("+k+");").mkString
+      imp.put(b,i::imp.getOrElse(b,Nil))
+    })
+    val hash = if (imp.size==0) "" else "override def hash(m:MapRef,k:Any) = {\n"+ind("var r=0L;\nm match {\n"+ind(
+        imp.toList.map{ case (b,is)=>"case "+is.reverse.mkString("|")+" => "+b+"\n" }.mkString+"case _ => r=k.##"
+      )+"\n}\nr^=(r>>>33)^(r>>>15); (r^(r>>>3)^(r>>>7)).toInt")+"\n}\n"
+    sys0=null; parts=Nil; (part,hash)
   }
 }
