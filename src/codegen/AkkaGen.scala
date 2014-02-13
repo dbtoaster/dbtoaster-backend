@@ -33,18 +33,27 @@ import ddbt.ast._
 
 /*
 Roadmap:
----------------------------------
-1. Re-introduce dependencies trackers (inlined in functions)
-2. Add a 'pending local dependencies' counter on every node (similar to get/aggr):
-   + Incremented when a (remote) continuation is created
-   + Decremented when a remote continuation has completed
-   + The barrier will wait for it
+--------------------------------
+1. De-aliasing and smarter condition filtering
+   - Break add's aliased variables C[x]:=A[x]+B[x] ==> C[x]=A[a]*(a=x) + B[b]*(b=x)
+   - Multi-elements Add( an Mul() nodes
+   - Reorder conditions in a multiplication (to put as many related to map as possible in
+   - MapRef should swallow as many conditions as possible
+   - Heading conditions should be transformed into "if"s
+2. Group non-colliding operations in a single multi-map pre() verification
+   - Re-introduce dependency trackers where necessary (inlined in functions)
+   - AxFinder's statements should be reordered and tracker should be avoided (only deq in continuation)
+   - Add a 'pending local dependencies' counter on every node (similar to get/aggr):
+     + Incremented when a (remote) continuation is created
+     + Decremented when a remote continuation has completed
+     + The barrier will wait for it
 3. Sub-statement parallelism (lift/aggregation/get/add branches)
    + Annotate all candidates blocks with (read+written) variables + isRemote => dependency graph
    + Group all independent blocks (remote and local) in 1st round
    + In 2nd round, all non-remote depending on 1st + all block dependents on 1st + 2nd-non-remote
    + ...
    + finally when completed, release the barrier
+4. Idea: out-of-order execution of triggers/intra-triggers statements?
 
 Observations:
 - variadic arguments are 5x faster than array for Any, Array is 20x faster than variadic for primitive types

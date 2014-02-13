@@ -54,14 +54,20 @@ object Functions {
   def Usubstring(s:String,b:Long,e:Long= -1) = if (e== -1) s.substring(b.toInt) else s.substring(b.toInt,e.toInt)
 
   def Uvec_length(x:Double, y:Double, z:Double):Double = Vector(x,y,z).length
-  /*
-  def Uvec_dot(x1:Double, y1:Double, z1:Double, x2:Double, y2:Double, z2:Double) = Vector(x1,y1,z1) * Vector(x2,y2,z2)
+  // def Uvec_dot(x1:Double, y1:Double, z1:Double, x2:Double, y2:Double, z2:Double) = Vector(x1,y1,z1) * Vector(x2,y2,z2)
+
+  // MDDB3
+  private val PI = 3.141592653589793238462643383279502884
+  def Uradians(degree:Double) = degree * PI / 180
+  def Udegrees(radian:Double) = radian * 180 / PI
+  def Upow(x:Double, y:Double) = math.pow(x, y)
+  // def Usqrt(x:Double):Double = math.sqrt(x)
+  def Ucos(x:Double):Double = math.cos(x)
   def Uvector_angle(x1:Double, y1:Double, z1:Double, x2:Double, y2:Double, z2:Double):Double = {
     val v1 = Vector(x1, y1, z1)
     val v2 = Vector(x2, y2, z2)
     v1.angle(v2)
   }
-  */
 
   def Udihedral_angle(x1:Double, y1:Double, z1:Double,
                       x2:Double, y2:Double, z2:Double,
@@ -181,12 +187,6 @@ trait IEntry { self =>
     val c = java.util.Calendar.getInstance; c.setTime(date)
     c.get(java.util.Calendar.DAY_OF_MONTH)
   }
-  val PI = 3.141592653589793238462643383279502884
-  def radians(degree:Double) = degree * PI / 180
-  def degrees(radian:Double) = radian * 180 / PI
-  def pow(x:Double, y:Double) = math.pow(x, y)
-  def sqrt(x:Double):Double = math.sqrt(x)
-  def cos(x:Double):Double = math.cos(x)
   def cast_int(l:Long) = l
   def cast_int(d:Double) = d.toInt
   def cast_int(s:String) = s.toLong

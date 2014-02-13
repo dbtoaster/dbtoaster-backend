@@ -20,6 +20,7 @@ case object TypeDate   extends Type              { override def toString="date";
 //case object TypeTime extends Type              { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string"; val zero="\"\"" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
+case class TypeTuple(ts:List[Type]) extends Type { override def toString="<"+ts.mkString(",")+">"; val zero="<"+ts.map(_.zero).mkString(",")+">"; override val zeroScala="<"+ts.map(_.zeroScala).mkString(",")+">"; }
 
 // ---------- Comparison operators
 sealed abstract class OpCmp extends Tree { def toM3=toString; def toSQL=toString } // toString is C/Scala notation
@@ -147,7 +148,7 @@ object M3 {
   case class Ref(name:String) extends Expr { override def toString=name; var tp:Type=null }
   case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]"; var tks:List[Type]=Nil }
   case class Lift(name:String, e:Expr) extends Expr { override def toString="( "+name+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
-  case class Tuple(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=TypeLong } // appear in Map definition and constant table lookups
+  case class MapRefConst(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=TypeLong } // appear in Map definition and constant table lookups
   // Operations
   case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+ind(e.toString)+"\n)"; def tp=e.tp; var tks:List[Type]=Nil } // (grouping_keys)->sum relation
   case class Mul(l:Expr,r:Expr) extends Expr { override def toString="("+l+" * "+r+")"; var tp:Type=null } // cross-product semantics
@@ -155,6 +156,9 @@ object M3 {
   case class Exists(e:Expr) extends Expr { override def toString="EXISTS("+e+")"; val tp=TypeLong } // returns 0 or 1 (check that there is at least one tuple)
   case class Apply(fun:String,var tp:Type /*=>typeCheck*/,args:List[Expr]) extends Expr { override def toString="["+fun+":"+tp+"]("+args.mkString(",")+")" } // function application
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op.toM3+" "+r+"}"; val tp=TypeLong } // comparison, returns 0 or 1
+  // Tupling
+  case class Tuple(es:List[Expr]) extends Expr { override def toString="<"+es.mkString(",")+">"; var tp:Type=null }
+  case class TupleLift(ns:List[String], e:Expr) extends Expr { override def toString="(<"+ns.mkString(",")+"> ^= "+e+")"; val tp=TypeLong }
 
   // ---------- Statements (no return)
   sealed abstract class Stmt extends M3

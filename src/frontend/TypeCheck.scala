@@ -15,7 +15,7 @@ object TypeCheck extends (M3.System => M3.System) {
   def addTables(s0:System) = {
     val tabs = s0.sources.filter{!_.stream}.map{ s=>(s.schema.name,s.schema.fields) }.toMap
     var used = Set[String]() // accessed tables
-    def re(e:Expr):Expr = e.replace { case Tuple(t,ks) => used+=t; MapRef(t, TypeLong, ks) }
+    def re(e:Expr):Expr = e.replace { case MapRefConst(t,ks) => used+=t; MapRef(t, TypeLong, ks) }
     def rst(s:Stmt):Stmt = s match { case StmtMap(m,e,op,in) => StmtMap(m,re(e),op,in map re) }
     val triggers = s0.triggers.map(t=>Trigger(t.evt,t.stmts map rst))
     val tabMaps = s0.sources.filter{s=> !s.stream && used.contains(s.schema.name) }.map{ so=>
@@ -116,6 +116,9 @@ object TypeCheck extends (M3.System => M3.System) {
           if (tp==null) m.tp=mtp._2 else if (tp!=mtp._2) err("Bad value type: expected "+mtp._2+", got "+tp+" for "+ex)
           (ks zip mtp._1).foreach{ case(k,t)=> if(c.contains(k) && t!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
           m.tks = mtp._1
+        // Tupling
+        case Tuple(es) => es.foreach(e=>cr=ie(e,cr))
+        case TupleLift(ns,e) => cr=ie(e,c)
         case _ =>
       }
       if (ex.tp==null) err("Untyped: "+ex); cr
@@ -156,6 +159,9 @@ object Library {
     case "class java.util.Date" => TypeDate
     case _ => null
   }
+
+  // Tests whether a name is part of the library functions (used by parser)
+  def apply(s:String):Boolean = funs.get(s.toLowerCase)!=null
 
   private def inspect[T](obj:T, namePrefix:String=null, callPrefix:String=null) {
     val c = obj.getClass

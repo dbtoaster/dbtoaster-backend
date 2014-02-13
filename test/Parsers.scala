@@ -15,7 +15,6 @@ class ParserSpec extends FunSpec with ParallelTestExecution {
   import ddbt.Compiler.toast
   import ddbt.UnitTest.sqlFiles
 
-
   sqlFiles(true).foreach { file =>
     it("parse M3: "+file,M3Test) {
       val m3 = toast("m3",file)._2
@@ -24,6 +23,7 @@ class ParserSpec extends FunSpec with ParallelTestExecution {
       assert(ast2==ast1,"Double parsing does not preserve semantics")
     }
   }
+
   sqlFiles(false).foreach { file =>
     it("parse SQL: "+file,SQLTest) {
       val sql1=SQLParser.load(file,path_repo)

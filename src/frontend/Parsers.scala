@@ -6,8 +6,7 @@ import scala.util.parsing.combinator.token.StdTokens
 import ddbt.ast._
 
 /**
- * These class define the parsers for SQL and M3 languages into corresponding AST.
- *
+ * These classes define the parsers for SQL and M3 languages into corresponding AST.
  * @author TCK
  */
 
@@ -34,7 +33,10 @@ class ExtParser extends StandardTokenParsers {
 
   import lexical._
   //lexical.reserved ++= List("")
-  lexical.delimiters ++= List("(",")",",",".",";","+","-",":=")
+  lexical.delimiters ++= List("(",")",",",".",";","+","-",":=","<",">")
+
+  // Verifies that the parse result matches a predicate
+  // def check[T](p:Parser[T],pred:T=>Boolean,msg:String) = new Parser[T] { def apply(i:Input) = p(i) match { case Success(res,next) => if (pred(res)) Success(res,next) else new Failure(msg,i) case f=>f } }
 
   // ------------ Literals
   lazy val longLit = opt("+"|"-") ~ numericLit ^^ { case s~n => s.getOrElse("")+n }
@@ -44,8 +46,14 @@ class ExtParser extends StandardTokenParsers {
   lazy val tpe: Parser[Type] = (("string" | ("char"|"varchar") ~> "(" ~> numericLit <~  ")") ^^^ TypeString
   | ("char"|"short"|"int"|"long") ^^^ TypeLong //| "char" ^^^ TypeChar | "short" ^^^ TypeShort | "int" ^^^ TypeInt | "long" ^^^ TypeLong
   | ("float"|"decimal"|"double") ^^^ TypeDouble // | ("float"|"decimal") ^^^ TypeFloat | "double" ^^^ TypeDouble
-  | "date" ^^^ TypeDate | failure("Bad type")
+  | "date" ^^^ TypeDate
+  // Tupling
+  | "<"~> repsep(tpe,",") <~">" ^^ { TypeTuple(_) }
+  | failure("Bad type")
   )
+
+  // ------------ Library function (validates name)
+  lazy val func: Parser[String] = acceptIf(x=>Library(x.chars.toLowerCase))(x=>"No such function '"+x.chars+"'") ^^ (_.chars.toLowerCase)
 
   // ------------ Source declaration
   lazy val source = "CREATE" ~> ("STREAM"|"TABLE") ~ schema ~ ("FROM" ~> sourceIn) ~ split ~ adaptor <~ ";" ^^ { case t~s~i~b~a => Source(t=="STREAM",s,i,b,a) }
@@ -78,9 +86,9 @@ object M3Parser extends ExtParser with (String => M3.System) {
   lazy val atom = (
     ("AggSum" ~> "(" ~> "[" ~> repsep(ident,",") <~  "]" <~ ",") ~ expr <~ ")"  ^^ { case ks~e => AggSum(ks,e) }
   | mapref
-  | ident ~ ("(" ~> repsep(ident, ",") <~ ")") ^^ { case n~f => Tuple(n,f) } // only in map declaration
+  | ident ~ ("(" ~> repsep(ident, ",") <~ ")") ^^ { case n~f => MapRefConst(n,f) } // only in map declaration
   | ("[" ~> "/" ~> ":" ~> tpe <~ "]") ~ ("(" ~> expr <~ ")") ^^ { case t~e => Apply("/",t,List(e)) }
-  | ("[" ~> ident <~ ":") ~ (tpe <~ "]") ~ ("(" ~> repsep(expr,",") <~ ")") ^^ { case n~t~as => Apply(n,t,as) }
+  | ("[" ~> func <~ ":") ~ (tpe <~ "]") ~ ("(" ~> repsep(expr,",") <~ ")") ^^ { case n~t~as => Apply(n,t,as) }
   | "EXISTS" ~> "(" ~> expr <~ ")" ^^ { Exists(_) }
   | "DATE" ~> "(" ~> expr <~ ")" ^^ { case e => Apply("date",TypeDate,List(e)) }
   | ("(" ~> ident <~ "^=") ~ (expr <~ ")") ^^ { case n~v => Lift(n,v) }
@@ -93,6 +101,9 @@ object M3Parser extends ExtParser with (String => M3.System) {
   | doubleLit ^^ { Const(TypeDouble,_) }
   | longLit ^^ { Const(TypeLong,_) }
   | stringLit ^^ { Const(TypeString,_) }
+  // Tupling
+  | ("(" ~> "<" ~> repsep(ident,",") <~ ">" <~ "^=") ~ (expr <~ ")") ^^ { case ns~v => TupleLift(ns,v) }
+  | ("<" ~> repsep(expr,",") <~ ">") ^^ { Tuple(_) }
   )
 
   // ------------ System definition
@@ -127,9 +138,10 @@ object SQLParser extends ExtParser with (String => SQL.System) {
   lazy val prod = atom ~ rep(("*"|"/"|"%") ~ atom) ^^ { case a~l => (a/:l) { case (l,o~r)=> o match { case "*" => Mul(l,r) case "/" => Div(l,r) case "%" => Mod(l,r) }} }
   lazy val atom:Parser[Expr] = (
     "COUNT" ~> "(" ~>"DISTINCT" ~> expr <~ ")" ^^ { Agg(_,OpCountDistinct) }
+  //| "INTERVAL" ~> stringLit ~ ("year"|"month"|"day"|"hours"|"minute"|"second") ^^ { case e~u => Const(e+";"+u, TypeDate) }
   | ("SUM"^^^OpSum|"AVG"^^^OpAvg|"COUNT"^^^OpCount|"MIN"^^^OpMin|"MAX"^^^OpMax) ~ ("(" ~> expr <~ ")") ^^ { case f~e => Agg(e,f) }
   | ("ALL"|"SOME") ~ ("(" ~> query <~ ")") ^^ { case op~e => op match { case "ALL"=> All(e) case "SOME"=> Som(e) } }
-  | ("DATE"|"SUBSTRING"|("SUBSTR"^^^"substring")|"YEAR"|"MONTH"|"DAY"|"vec_length"|"dihedral_angle"|"listmin"|"listmax") ~ ("(" ~> rep1sep(expr,",") <~ ")") ^^ { case n~as => Apply(n.toLowerCase,as) }
+  | ("DATE"|"SUBSTRING"|("SUBSTR"^^^"substring")|"YEAR"|"MONTH"|"DAY"|func) ~ ("(" ~> rep1sep(expr,",") <~ ")") ^^ { case n~as => Apply(n.toLowerCase,as) }
   | "CASE"~> rep1(("WHEN"~>cond) ~ ("THEN"~>expr)) ~ ("ELSE"~>expr) <~"END" ^^ { case ct~e=>Case(ct.map{case c~t => (c,t)}.toList,e) }
   | ("CASE"~>expr) ~ rep1(("WHEN"~>expr) ~ ("THEN"~>expr)) ~ ("ELSE"~>expr) <~"END" ^^ { case c~vt~e=>Case(vt.map{ case v~t => (Cmp(c,v,OpEq),t)}.toList,e) }
   | ( ("DATE_PART"~>"("~>stringLit)~(","~>expr<~")") | ("EXTRACT"~>"("~>ident)~("FROM"~>expr<~")")) ^^ { case p~e => Apply(p.toLowerCase,List(e)) }
