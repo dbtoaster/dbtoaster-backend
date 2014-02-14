@@ -137,14 +137,14 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   // Trigger code generation
-  override def genTrigger(t:Trigger):String = {
+  def genTriggerLMS(t:Trigger) = {
     val (name,args) = t.evt match {
       case EvtReady => ("SystemReady",Nil)
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
 
-    val triggerBlock = impl.reifyEffects {
+    val block = impl.reifyEffects {
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
         maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.namedM3Var(name,tp)(manifest[Any])) else (name,impl.namedM3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any])) }.toList union
@@ -169,8 +169,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       }
       impl.unit(())
     }
-    val res = "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(impl.emit(triggerBlock))+"\n}"
-    cx = null; res
+    cx = null; ("on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+")",block)
   }
 
   override def toMapFunction(q: Query) = {
@@ -233,24 +232,18 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
   }
 
-/*
-  override def generateDataStructures = if(M3MapCommons.isInliningHigherThanNone) {
-    M3MapCommons.generateAllEntryClasses
-  } else {
-    super.generateDataStructures
-  }
-*/
-
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
   override def genLMS(s0:System):String = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
 
-    //TODO: this should be replaced by a specific traversal
-    //for completing the slice information
-    s0.triggers.map(super.genTrigger)
+    //TODO: this should be replaced by a specific traversal for completing the slice information
+    // s0.triggers.map(super.genTrigger)
 
-    val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
+    val tsResBlks = s0.triggers.map(genTriggerLMS) // triggers (need to be generated before maps)
+    val ts = tsResBlks.map{ case (s,b) =>
+      "def "+s+" {\n"+ddbt.Utils.ind(impl.emit(b))+"\n}"
+    }.mkString("\n\n")
     val ms = s0.maps.map(genMap).mkString("\n") // maps
     val ds = if(M3MapCommons.isInliningHigherThanNone) M3MapCommons.generateAllEntryClasses else ""
     val r=ms+"\n"+ts+"\n"+ds
