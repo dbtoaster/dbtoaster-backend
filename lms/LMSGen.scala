@@ -233,20 +233,27 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
   }
 
+/*
   override def generateDataStructures = if(M3MapCommons.isInliningHigherThanNone) {
     M3MapCommons.generateAllEntryClasses
   } else {
     super.generateDataStructures
   }
+*/
 
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
-  override def apply(s0:System):String = {
+  override def genLMS(s0:System):String = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
+
     //TODO: this should be replaced by a specific traversal
     //for completing the slice information
     s0.triggers.map(super.genTrigger)
-    val r=super.apply(s0)
+
+    val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
+    val ms = s0.maps.map(genMap).mkString("\n") // maps
+    val ds = if(M3MapCommons.isInliningHigherThanNone) M3MapCommons.generateAllEntryClasses else ""
+    val r=ms+"\n"+ts+"\n"+ds
     maps=Map()
     M3MapCommons.clear
     r
