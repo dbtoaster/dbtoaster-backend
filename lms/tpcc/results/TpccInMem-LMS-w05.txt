@@ -1,0 +1,629 @@
+> test:run-main ddbt.tpcc.tx.TpccInMem -i -1
+[info] Running ddbt.tpcc.tx.TpccInMem -i -1
+[info] TPCC version 1.0.1 Number of Arguments: 2
+[info] 2013-12-08 18:21:04,836 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.name = Mac OS X
+[info]  2013-12-08 18:21:04,838 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.arch = x86_64
+[info]  2013-12-08 18:21:04,838 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.version = 10.8.5
+[info]  2013-12-08 18:21:04,838 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.runtime.name = Java(TM) SE Runtime Environment
+[info]  2013-12-08 18:21:04,838 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.vm.version = 24.45-b08
+[info]  2013-12-08 18:21:04,839 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.library.path = /Users/dashti/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
+[info]  maxMemory = 9,814f MB
+[info] 2013-12-08 18:21:04,841 INFO d.t.t.TpccInMem [main] Loading properties from: ./conf/tpcc.properties
+[info]  Using the command line arguments for configuration.
+[info] ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:21:05,995 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:21:05,999 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:21:16,068 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  2013-12-08 18:21:16,069 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:21:16,069 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:34400  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:34402  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:3441  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:3441  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:3441  lt:0  rt:0  fl:0 
+[info]  in 5.005000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:34406  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:34407  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:3441  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:3441  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:3441  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.478317% (>=43.0%) [OK]
+[info]    Order-Status: 4.348211% (>= 4.0%) [OK]
+[info]        Delivery: 4.348211% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.348211% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 34419
+[info]  Payment Total: 34415
+[info]  Order Stat Total: 3441
+[info]  Delivery Total: 3442
+[info]  Slev Total: 3441
+[info] 
+[info] <TpmC>
+[info] 412615.38 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:21:26,098 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 44131
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 229996
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 2298211
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  tpmc array = [412615.38, 0.0, 0.0, 0.0, 0.0]
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:21:29,949 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:21:29,950 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:21:37,569 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  2013-12-08 18:21:37,569 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:21:37,569 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:97534  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:97535  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:9754  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:9753  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:9754  lt:0  rt:0  fl:0 
+[info]  in 5.006000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:97534  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:97535  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:9754  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:9753  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:9754  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.478359% (>=43.0%) [OK]
+[info]    Order-Status: 4.348059% (>= 4.0%) [OK]
+[info]        Delivery: 4.347613% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.348059% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 97534
+[info]  Payment Total: 97535
+[info]  Order Stat Total: 9754
+[info]  Delivery Total: 9753
+[info]  Slev Total: 9754
+[info] 
+[info] <TpmC>
+[info] 1169005.2 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:21:47,590 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 44032
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 246571
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 2465057
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  tpmc array = [412615.38, 1169005.2, 0.0, 0.0, 0.0]
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:21:51,696 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:21:51,697 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:21:58,616 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  2013-12-08 18:21:58,616 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:21:58,616 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.2 seconds
+[info] Current execution time lapse: 4.2 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:100886  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:100887  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:10089  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:10088  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:10089  lt:0  rt:0  fl:0 
+[info]  in 5.217000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:100886  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:100887  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:10089  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:10088  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:10089  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.478466% (>=43.0%) [OK]
+[info]    Order-Status: 4.347976% (>= 4.0%) [OK]
+[info]        Delivery: 4.347976% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.347976% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 100894
+[info]  Payment Total: 100894
+[info]  Order Stat Total: 10089
+[info]  Delivery Total: 10089
+[info]  Slev Total: 10089
+[info] 
+[info] <TpmC>
+[info] 1160368.1 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:22:08,846 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 43988
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 249881
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 2498584
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  tpmc array = [412615.38, 1169005.2, 1160368.1, 0.0, 0.0]
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:22:12,741 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:22:12,741 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:22:19,749 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  2013-12-08 18:22:19,749 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:22:19,749 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:105193  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:105197  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:10520  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:10519  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:10519  lt:0  rt:0  fl:0 
+[info]  in 5.005000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:105193  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:105197  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:10520  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:10519  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:10519  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.479176% (>=43.0%) [OK]
+[info]    Order-Status: 4.348042% (>= 4.0%) [OK]
+[info]        Delivery: 4.347629% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.347629% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 105193
+[info]  Payment Total: 105197
+[info]  Order Stat Total: 10520
+[info]  Delivery Total: 10519
+[info]  Slev Total: 10519
+[info] 
+[info] <TpmC>
+[info] 1261055.0 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:22:29,769 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 43918
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 254115
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 2541502
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  tpmc array = [412615.38, 1169005.2, 1160368.1, 1261055.0, 0.0]
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:22:33,113 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:22:33,113 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:22:40,031 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  2013-12-08 18:22:40,031 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:22:40,031 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.5 seconds
+[info] Current execution time lapse: 2.5 seconds
+[info] Current execution time lapse: 3.5 seconds
+[info] Current execution time lapse: 4.5 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:113708  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:113709  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:11370  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:11370  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:11371  lt:0  rt:0  fl:0 
+[info]  in 5.520000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:113708  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:113709  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:11370  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:11370  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:11371  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.478710% (>=43.0%) [OK]
+[info]    Order-Status: 4.347527% (>= 4.0%) [OK]
+[info]        Delivery: 4.347527% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.347909% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 113708
+[info]  Payment Total: 113709
+[info]  Order Stat Total: 11370
+[info]  Delivery Total: 11371
+[info]  Slev Total: 11371
+[info] 
+[info] <TpmC>
+[info] 1235978.2 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:22:50,562 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 43865
+[info] }
+[info] historyTbl => MapInfo => {
+[info] 	size => 0
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 262575
+[info] }
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 2625959
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] }
+[info]  tpmc array = [412615.38, 1169005.2, 1160368.1, 1261055.0, 1235978.2]
+[info] TpmC<min,max,median> = (412615.38,1261055.00,1169005.25)
+[info] Terminating process now
+[success] Total time: 107 s, completed Dec 8, 2013 6:22:51 PM
+> 

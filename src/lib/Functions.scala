@@ -56,7 +56,6 @@ object Functions {
   def Uvec_length(x:Double, y:Double, z:Double):Double = Vector(x,y,z).length
   // def Uvec_dot(x1:Double, y1:Double, z1:Double, x2:Double, y2:Double, z2:Double) = Vector(x1,y1,z1) * Vector(x2,y2,z2)
 
-  // MDDB3
   private val PI = 3.141592653589793238462643383279502884
   def Uradians(degree:Double) = degree * PI / 180
   def Udegrees(radian:Double) = radian * 180 / PI

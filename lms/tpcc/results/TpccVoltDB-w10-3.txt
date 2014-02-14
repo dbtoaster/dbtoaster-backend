@@ -1,0 +1,78 @@
+[~/Documents/MyWorkspaces/voltdb/tests/test_apps/tpcc 16:38:21]$ ./run.sh client
+Connecting to servers: localhost
+Connected.  Starting benchmark.
+6.667% Complete | Allowing 200,000 SP calls/sec: made 16,938 SP calls at 4,234.50 SP/sec | outstanding = 2108 (2108) | min = 0 | max = 1727 | avg = 504.13
+     Stock Level:        547 total,        Delivery:        621 total,    Order Status:        611 total,         Payment:       6371 total,       New Order:       6681 total, Reset Warehouse:          0 total,
+13.333% Complete | Allowing 200,000 SP calls/sec: made 41,106 SP calls at 5,138.25 SP/sec | outstanding = 2078 (-30) | min = 0 | max = 1727 | avg = 407.55
+     Stock Level:       1570 total,        Delivery:       1600 total,    Order Status:       1588 total,         Payment:      16711 total,       New Order:      17560 total, Reset Warehouse:          0 total,
+20.000% Complete | Allowing 200,000 SP calls/sec: made 66,277 SP calls at 5,523.08 SP/sec | outstanding = 2090 (12) | min = 0 | max = 1727 | avg = 378.42
+     Stock Level:       2551 total,        Delivery:       2551 total,    Order Status:       2580 total,         Payment:      27503 total,       New Order:      29003 total, Reset Warehouse:          0 total,
+26.667% Complete | Allowing 200,000 SP calls/sec: made 91,893 SP calls at 5,743.31 SP/sec | outstanding = 2104 (14) | min = 0 | max = 1727 | avg = 363.84
+     Stock Level:       3602 total,        Delivery:       3601 total,    Order Status:       3561 total,         Payment:      38509 total,       New Order:      40517 total, Reset Warehouse:          0 total,
+33.333% Complete | Allowing 200,000 SP calls/sec: made 117,196 SP calls at 5,859.80 SP/sec | outstanding = 2075 (-29) | min = 0 | max = 1727 | avg = 356.76
+     Stock Level:       4581 total,        Delivery:       4606 total,    Order Status:       4524 total,         Payment:      49263 total,       New Order:      52148 total, Reset Warehouse:          0 total,
+40.000% Complete | Allowing 200,000 SP calls/sec: made 141,676 SP calls at 5,903.17 SP/sec | outstanding = 2080 (5) | min = 0 | max = 1727 | avg = 353.91
+     Stock Level:       5630 total,        Delivery:       5552 total,    Order Status:       5501 total,         Payment:      59868 total,       New Order:      63046 total, Reset Warehouse:          0 total,
+46.667% Complete | Allowing 200,000 SP calls/sec: made 167,206 SP calls at 5,971.64 SP/sec | outstanding = 2073 (-7) | min = 0 | max = 1727 | avg = 350.01
+     Stock Level:       6664 total,        Delivery:       6590 total,    Order Status:       6524 total,         Payment:      70952 total,       New Order:      74404 total, Reset Warehouse:          0 total,
+53.333% Complete | Allowing 200,000 SP calls/sec: made 192,975 SP calls at 6,030.47 SP/sec | outstanding = 2085 (12) | min = 0 | max = 1727 | avg = 346.61
+     Stock Level:       7686 total,        Delivery:       7651 total,    Order Status:       7495 total,         Payment:      82062 total,       New Order:      85997 total, Reset Warehouse:          0 total,
+60.000% Complete | Allowing 200,000 SP calls/sec: made 219,064 SP calls at 6,085.11 SP/sec | outstanding = 2095 (10) | min = 0 | max = 1727 | avg = 343.46
+     Stock Level:       8724 total,        Delivery:       8648 total,    Order Status:       8527 total,         Payment:      93326 total,       New Order:      97745 total, Reset Warehouse:          0 total,
+66.668% Complete | Allowing 200,000 SP calls/sec: made 245,032 SP calls at 6,125.65 SP/sec | outstanding = 2056 (-39) | min = 0 | max = 1727 | avg = 341.25
+     Stock Level:       9775 total,        Delivery:       9733 total,    Order Status:       9563 total,         Payment:     104444 total,       New Order:     109462 total, Reset Warehouse:          0 total,
+73.335% Complete | Allowing 200,000 SP calls/sec: made 271,209 SP calls at 6,163.70 SP/sec | outstanding = 2105 (49) | min = 0 | max = 1727 | avg = 339.30
+     Stock Level:      10731 total,        Delivery:      10828 total,    Order Status:      10667 total,         Payment:     115669 total,       New Order:     121210 total, Reset Warehouse:          0 total,
+80.002% Complete | Allowing 200,000 SP calls/sec: made 296,736 SP calls at 6,181.87 SP/sec | outstanding = 2085 (-20) | min = 0 | max = 1727 | avg = 338.22
+     Stock Level:      11749 total,        Delivery:      11912 total,    Order Status:      11663 total,         Payment:     126647 total,       New Order:     132681 total, Reset Warehouse:          0 total,
+86.668% Complete | Allowing 200,000 SP calls/sec: made 321,407 SP calls at 6,180.79 SP/sec | outstanding = 2107 (22) | min = 0 | max = 1727 | avg = 338.37
+     Stock Level:      12774 total,        Delivery:      12868 total,    Order Status:      12627 total,         Payment:     137302 total,       New Order:     143730 total, Reset Warehouse:          0 total,
+93.335% Complete | Allowing 200,000 SP calls/sec: made 346,766 SP calls at 6,192.14 SP/sec | outstanding = 2089 (-18) | min = 0 | max = 1727 | avg = 337.74
+     Stock Level:      13805 total,        Delivery:      13872 total,    Order Status:      13667 total,         Payment:     148256 total,       New Order:     155078 total, Reset Warehouse:          0 total,
+============================== BENCHMARK RESULTS ==============================
+Time: 60318 ms
+Total transactions: 371396
+Transactions per second: 6157.30
+            Stock Level:      14834 total       245.93 txn/s     14755.79 txn/m
+               Delivery:      14916 total       247.29 txn/s     14837.36 txn/m
+           Order Status:      14726 total       244.14 txn/s     14648.36 txn/m
+                Payment:     159660 total      2646.97 txn/s    158818.27 txn/m
+              New Order:     167260 total      2772.97 txn/s    166378.19 txn/m
+        Reset Warehouse:          0 total         0.00 txn/s         0.00 txn/m
+===============================================================================
+
+
+
+*************************************************************************
+System Statistics
+*************************************************************************
+ - Ran for 60.32 seconds
+ - Performed 371,396 Stored Procedure calls
+ - At 6,157.30 calls per second
+ - Average Latency = 337.87 ms
+ -   Latency   0ms -  25ms = 408
+ -   Latency  25ms -  50ms = 207
+ -   Latency  50ms -  75ms = 173
+ -   Latency  75ms - 100ms = 324
+ -   Latency 100ms - 125ms = 268
+ -   Latency 125ms - 150ms = 241
+ -   Latency 150ms - 175ms = 252
+ -   Latency 175ms - 200ms = 319
+ -   Latency 200ms+        = 369,204
+
+
+-------------------------------------------------------------------------------------
+ System Statistics
+-------------------------------------------------------------------------------------
+
+
+-------------------------------------------------------------------------------------
+Final:   | Txn.:     371,396 [!      1,726] @     6,158.9 TPS | Lat. =       0 <   337.87 <    1727
+-------------------------------------------------------------------------------------
+Lat.:     25 <     50 <     75 <    100 <    150 <    200 <    250 <    300 <    300+
+-------------------------------------------------------------------------------------
+%       0.11 |   0.06 |   0.05 |   0.09 |   0.14 |   0.15 |   0.05 |   0.00 |  99.36
+log4j:WARN No appenders could be found for logger (NETWORK).
+log4j:WARN Please initialize the log4j system properly.
+log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
+[~/Documents/MyWorkspaces/voltdb/tests/test_apps/tpcc 16:39:51]$ 

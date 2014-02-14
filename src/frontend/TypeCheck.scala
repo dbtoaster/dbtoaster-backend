@@ -135,10 +135,10 @@ object TypeCheck extends (M3.System => M3.System) {
     val vn = (s:String)=>s.toLowerCase
     val fn = { val map=Map(("/","div")); (s:String)=>map.getOrElse(s,s) } // renaming of functions
     val phases = addTables _ andThen
-                 renameVarsAndFuns(vn,fn) _ andThen
-                 typeMaps _ andThen
+                 renameVarsAndFuns(vn,fn) andThen
+                 typeMaps andThen
                  renameLifts andThen
-                 typeCheck _
+                 typeCheck
     phases(s)
   }
 }

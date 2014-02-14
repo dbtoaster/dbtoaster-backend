@@ -146,7 +146,8 @@ object Compiler {
     parseArgs(args)
     try {
       lang match {
-        case "calc"|"m3" => output(toast(lang)._2)
+        case "calc" => output(toast(lang)._2)
+        case "m3" => output(TypeCheck(M3Parser(toast(lang)._2)).toString)
         case _ if in.forall(_.endsWith(".m3")) => compile(in.map(Utils.read(_)).mkString("\n"))
         case _ => compile(toast("m3")._2)
       }

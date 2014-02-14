@@ -1,0 +1,1461 @@
+[~/Dropbox/workspaces/toasterbooster 18:13:29]$ sbt
+[info] Set current project to ToasterBooster (in build file:/Users/dashti/Dropbox/workspaces/toasterbooster/)
+> test:run-main ddbt.tpcc.tx.TpccInMem -i 1
+[info] Running ddbt.tpcc.tx.TpccInMem -i 1
+[info] TPCC version 1.0.1 Number of Arguments: 2
+[info] 2013-12-08 18:14:07,884 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.name = Mac OS X
+[info]  2013-12-08 18:14:07,886 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.arch = x86_64
+[info]  2013-12-08 18:14:07,886 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.version = 10.8.5
+[info]  2013-12-08 18:14:07,886 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.runtime.name = Java(TM) SE Runtime Environment
+[info]  2013-12-08 18:14:07,886 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.vm.version = 24.45-b08
+[info]  2013-12-08 18:14:07,887 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.library.path = /Users/dashti/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
+[info]  maxMemory = 9,814f MB
+[info] 2013-12-08 18:14:07,891 INFO d.t.t.TpccInMem [main] Loading properties from: ./conf/tpcc.properties
+[info]  Using the command line arguments for configuration.
+[info] ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:14:09,031 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:14:09,039 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:14:20,660 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 45000
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112489
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112489
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1499909
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150000
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150000
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  2013-12-08 18:14:20,661 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:14:20,661 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:25  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:25  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:2  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:2  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:2  lt:0  rt:0  fl:0 
+[info]  in 5.012000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:25  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:25  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:2  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:2  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:2  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 44.642857% (>=43.0%) [OK]
+[info]    Order-Status: 3.571429% (>= 4.0%) [NG] *
+[info]        Delivery: 3.571429% (>= 4.0%) [NG] *
+[info]     Stock-Level: 3.571429% (>= 4.0%) [NG] *
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 25
+[info]  Payment Total: 25
+[info]  Order Stat Total: 2
+[info]  Delivery Total: 2
+[info]  Slev Total: 2
+[info] 
+[info] <TpmC>
+[info] 299.28174 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:14:30,787 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 44998
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 44998
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150038
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150038
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150038
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150038
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112498
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112498
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1500284
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1500284
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150038
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150038
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  tpmc array = [299.28174, 0.0, 0.0, 0.0, 0.0]
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:14:35,527 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:14:35,528 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:14:43,393 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 45000
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112489
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112489
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1499909
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150000
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150000
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  2013-12-08 18:14:43,393 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:14:43,393 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:31  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:30  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:3  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:3  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:3  lt:0  rt:0  fl:0 
+[info]  in 5.006000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:31  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:30  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:3  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:3  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:3  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 42.857143% (>=43.0%) [NG] *
+[info]    Order-Status: 4.285714% (>= 4.0%) [OK]
+[info]        Delivery: 4.285714% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.285714% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 31
+[info]  Payment Total: 30
+[info]  Order Stat Total: 3
+[info]  Delivery Total: 3
+[info]  Slev Total: 3
+[info] 
+[info] <TpmC>
+[info] 371.55414 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:14:53,510 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 44993
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 44993
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150030
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150030
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150031
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150031
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112495
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112495
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1500238
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1500238
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150031
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150031
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  tpmc array = [299.28174, 371.55414, 0.0, 0.0, 0.0]
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:14:58,073 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:14:58,074 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:15:05,703 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 45000
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112489
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112489
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1499909
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150000
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150000
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  2013-12-08 18:15:05,703 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:15:05,703 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:37  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:38  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:3  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:3  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:4  lt:0  rt:0  fl:0 
+[info]  in 5.003000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:37  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:38  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:3  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:3  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:4  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 44.705883% (>=43.0%) [OK]
+[info]    Order-Status: 3.529412% (>= 4.0%) [NG] *
+[info]        Delivery: 3.529412% (>= 4.0%) [NG] *
+[info]     Stock-Level: 4.705883% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 37
+[info]  Payment Total: 38
+[info]  Order Stat Total: 3
+[info]  Delivery Total: 3
+[info]  Slev Total: 4
+[info] 
+[info] <TpmC>
+[info] 443.73376 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:15:15,817 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 45000
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150038
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150038
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150037
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150037
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112499
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112499
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1500252
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1500252
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150037
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150037
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  tpmc array = [299.28174, 371.55414, 443.73376, 0.0, 0.0]
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:15:20,574 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:15:20,574 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:15:28,192 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 45000
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112489
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112489
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1499909
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150000
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150000
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  2013-12-08 18:15:28,193 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:15:28,193 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:40  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:38  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:4  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:4  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:3  lt:0  rt:0  fl:0 
+[info]  in 5.005000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:40  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:38  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:4  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:4  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:3  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 42.696629% (>=43.0%) [NG] *
+[info]    Order-Status: 4.494382% (>= 4.0%) [OK]
+[info]        Delivery: 4.494382% (>= 4.0%) [OK]
+[info]     Stock-Level: 3.370786% (>= 4.0%) [NG] *
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 40
+[info]  Payment Total: 38
+[info]  Order Stat Total: 4
+[info]  Delivery Total: 4
+[info]  Slev Total: 3
+[info] 
+[info] <TpmC>
+[info] 479.52048 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:15:38,298 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 45000
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150038
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150038
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150040
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150040
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112495
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112495
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1500289
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1500289
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150040
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150040
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  tpmc array = [299.28174, 371.55414, 443.73376, 479.52048, 0.0]
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:15:42,228 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:15:42,229 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-12-08 18:15:50,672 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 45000
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 45000
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112489
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112489
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1499909
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1499909
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150000
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150000
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  2013-12-08 18:15:50,672 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:15:50,673 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:31  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:33  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:3  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:3  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:3  lt:0  rt:0  fl:0 
+[info]  in 5.005000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:31  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:33  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:3  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:3  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:3  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 45.205479% (>=43.0%) [OK]
+[info]    Order-Status: 4.109589% (>= 4.0%) [OK]
+[info]        Delivery: 4.109589% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.109589% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 31
+[info]  Payment Total: 33
+[info]  Order Stat Total: 3
+[info]  Delivery Total: 3
+[info]  Slev Total: 3
+[info] 
+[info] <TpmC>
+[info] 371.62836 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] 2013-12-08 18:16:00,783 INFO d.t.t.TpccInMem [main] 
+[info] Tables Info:
+[info] newOrderTbl => MapInfo => {
+[info] 	size => 44990
+[info] 	capacity => 262144
+[info] 	threshold => 235929
+[info] 	elemCount => 44990
+[info] 	maxElemsInCell => 4
+[info] 	avgElemsInCell => 0.17
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50
+[info]   	capacity => 128
+[info]   	threshold => 96
+[info]   	elemCount => 50
+[info]   	maxElemsInCell => 2
+[info]   	avgElemsInCell => 0.39
+[info]   }
+[info] }
+[info] newOrderSetImpl => ---
+[info] historyTbl => MapInfo => {
+[info] 	size => 150033
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150033
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] }
+[info] warehouseTbl => MapInfo => {
+[info] 	size => 5
+[info] 	capacity => 16
+[info] 	threshold => 12
+[info] 	elemCount => 5
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.31
+[info] }
+[info] itemPartialTbl => MapInfo => {
+[info] 	size => 100000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 100000
+[info] 	maxElemsInCell => 1
+[info] 	avgElemsInCell => 0.38
+[info] }
+[info] orderTbl => MapInfo => {
+[info] 	size => 150030
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150030
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 112499
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 112499
+[info]   	maxElemsInCell => 6
+[info]   	avgElemsInCell => 0.43
+[info]   }
+[info] }
+[info] orderMaxOrderSetImpl => ---
+[info] districtTbl => MapInfo => {
+[info] 	size => 50
+[info] 	capacity => 128
+[info] 	threshold => 96
+[info] 	elemCount => 50
+[info] 	maxElemsInCell => 2
+[info] 	avgElemsInCell => 0.39
+[info] }
+[info] orderLineTbl => MapInfo => {
+[info] 	size => 1500238
+[info] 	capacity => 2097152
+[info] 	threshold => 1572864
+[info] 	elemCount => 1500238
+[info] 	maxElemsInCell => 8
+[info] 	avgElemsInCell => 0.72
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 150030
+[info]   	capacity => 262144
+[info]   	threshold => 196608
+[info]   	elemCount => 150030
+[info]   	maxElemsInCell => 7
+[info]   	avgElemsInCell => 0.57
+[info]   }
+[info] }
+[info] customerTbl => MapInfo => {
+[info] 	size => 150000
+[info] 	capacity => 262144
+[info] 	threshold => 196608
+[info] 	elemCount => 150000
+[info] 	maxElemsInCell => 7
+[info] 	avgElemsInCell => 0.57
+[info] 	indices => 
+[info] 	ind(1)   MapInfo => {
+[info]   	size => 50000
+[info]   	capacity => 131072
+[info]   	threshold => 98304
+[info]   	elemCount => 50000
+[info]   	maxElemsInCell => 5
+[info]   	avgElemsInCell => 0.38
+[info]   }
+[info] }
+[info] stockTbl => MapInfo => {
+[info] 	size => 500000
+[info] 	capacity => 1048576
+[info] 	threshold => 786432
+[info] 	elemCount => 500000
+[info] 	maxElemsInCell => 6
+[info] 	avgElemsInCell => 0.48
+[info] }
+[info]  tpmc array = [299.28174, 371.55414, 443.73376, 479.52048, 371.62836]
+[info] TpmC<min,max,median> = (299.28,479.52,371.63)
+[info] Terminating process now
+[success] Total time: 116 s, completed Dec 8, 2013 6:16:01 PM
+> 

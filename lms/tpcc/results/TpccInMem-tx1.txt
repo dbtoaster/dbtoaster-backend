@@ -1,0 +1,133 @@
+[info] Running ddbt.tpcc.tx.TpccInMem 
+[info] TPCC version 1.0.1 Number of Arguments: 0
+[info] 2013-11-08 12:40:27,161 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.name = Mac OS X
+[info]  2013-11-08 12:40:27,162 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.arch = x86_64
+[info]  2013-11-08 12:40:27,163 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: os.version = 10.8.5
+[info]  2013-11-08 12:40:27,163 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.runtime.name = Java(TM) SE Runtime Environment
+[info]  2013-11-08 12:40:27,163 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.vm.version = 20.65-b04-462
+[info]  2013-11-08 12:40:27,163 INFO d.t.t.TpccInMem$$anonfun$main$1 [main] System Property: java.library.path = .:/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java
+[info]  maxMemory = 3,070f MB
+[info] Using the properties file for configuration.
+[info] 2013-11-08 12:40:27,166 INFO d.t.t.TpccInMem [main] Loading properties from: ./conf/tpcc.properties
+[info]  ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 1
+[info]  [connection]: 1
+[info]      [rampup]: 45 (sec.)
+[info]     [measure]: 60 (sec.)
+[info] TOTAL:232013-11-08 12:40:27,201 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-11-08 12:40:27,206 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/DDBToaster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  2013-11-08 12:40:30,835 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-11-08 12:40:30,836 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/DDBToaster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0f seconds
+[info] Current execution time lapse: 1f seconds
+[info] Current execution time lapse: 2f seconds
+[info] Current execution time lapse: 3f seconds
+[info] Current execution time lapse: 4f seconds
+[info] Current execution time lapse: 5f seconds
+[info] Current execution time lapse: 6f seconds
+[info] Current execution time lapse: 7f seconds
+[info] Current execution time lapse: 8f seconds
+[info] Current execution time lapse: 9f seconds
+[info] Current execution time lapse: 10f seconds
+[info] Current execution time lapse: 11f seconds
+[info] Current execution time lapse: 12f seconds
+[info] Current execution time lapse: 13f seconds
+[info] Current execution time lapse: 14f seconds
+[info] Current execution time lapse: 15f seconds
+[info] Current execution time lapse: 16f seconds
+[info] Current execution time lapse: 17f seconds
+[info] Current execution time lapse: 18f seconds
+[info] Current execution time lapse: 19f seconds
+[info] Current execution time lapse: 20f seconds
+[info] Current execution time lapse: 21f seconds
+[info] Current execution time lapse: 22f seconds
+[info] Current execution time lapse: 23f seconds
+[info] Current execution time lapse: 24f seconds
+[info] Current execution time lapse: 25f seconds
+[info] Current execution time lapse: 26f seconds
+[info] Current execution time lapse: 27f seconds
+[info] Current execution time lapse: 28f seconds
+[info] Current execution time lapse: 29f seconds
+[info] Current execution time lapse: 30f seconds
+[info] Current execution time lapse: 31f seconds
+[info] Current execution time lapse: 32f seconds
+[info] Current execution time lapse: 33f seconds
+[info] Current execution time lapse: 34f seconds
+[info] Current execution time lapse: 35f seconds
+[info] Current execution time lapse: 36f seconds
+[info] Current execution time lapse: 37f seconds
+[info] Current execution time lapse: 38f seconds
+[info] Current execution time lapse: 39f seconds
+[info] Current execution time lapse: 40f seconds
+[info] Current execution time lapse: 41f seconds
+[info] Current execution time lapse: 42f seconds
+[info] Current execution time lapse: 43f seconds
+[info] Current execution time lapse: 44f seconds
+[info] Current execution time lapse: 45f seconds
+[info] Current execution time lapse: 46f seconds
+[info] Current execution time lapse: 47f seconds
+[info] Current execution time lapse: 48f seconds
+[info] Current execution time lapse: 49f seconds
+[info] Current execution time lapse: 50f seconds
+[info] Current execution time lapse: 51f seconds
+[info] Current execution time lapse: 52f seconds
+[info] Current execution time lapse: 53f seconds
+[info] Current execution time lapse: 54f seconds
+[info] Current execution time lapse: 55f seconds
+[info] Current execution time lapse: 56f seconds
+[info] Current execution time lapse: 57f seconds
+[info] Current execution time lapse: 58f seconds
+[info] Current execution time lapse: 59f seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:835  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:831  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:84  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:82  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:83  lt:0  rt:0  fl:0 
+[info]  in 60.048000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:835  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:831  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:84  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:82  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:83  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.394257% (>=43.0%) [OK]
+[info]    Order-Status: 4.386423% (>= 4.0%) [OK]
+[info]        Delivery: 4.281984% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.334204% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 835
+[info]  Payment Total: 831
+[info]  Order Stat Total: 84
+[info]  Delivery Total: 82
+[info]  Slev Total: 83
+[info] 
+[info] <TpmC>
+[info] 834.3325 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] Terminating process now

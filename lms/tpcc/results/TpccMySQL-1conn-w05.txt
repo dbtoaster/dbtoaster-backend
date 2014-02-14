@@ -1,0 +1,391 @@
+> test:run-main ddbt.tpcc.loadtest.Tpcc
+[info] Running ddbt.tpcc.loadtest.Tpcc 
+[info] TPCC version 1.0.1 Number of Arguments: 0
+[info] 2013-12-08 18:26:11,886 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.name = Mac OS X
+[info]  2013-12-08 18:26:11,888 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.arch = x86_64
+[info]  2013-12-08 18:26:11,888 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.version = 10.8.5
+[info]  2013-12-08 18:26:11,888 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.runtime.name = Java(TM) SE Runtime Environment
+[info]  2013-12-08 18:26:11,888 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.vm.version = 24.45-b08
+[info]  2013-12-08 18:26:11,889 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.library.path = /Users/dashti/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
+[info]  maxMemory = 9,814.0 MB
+[info] Using the properties file for configuration.
+[info] 2013-12-08 18:26:11,890 INFO d.t.l.Tpcc [main] Loading properties from: ./conf/tpcc.properties
+[info]  ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:26:11,924 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:26:11,929 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:272  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:278  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:28  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:28  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:27  lt:0  rt:0  fl:0 
+[info]  in 5.005000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:273  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:278  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:28  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:28  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:27  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.848579% (>=43.0%) [OK]
+[info]    Order-Status: 4.416404% (>= 4.0%) [OK]
+[info]        Delivery: 4.416404% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.258675% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 273
+[info]  Payment Total: 278
+[info]  Order Stat Total: 28
+[info]  Delivery Total: 28
+[info]  Slev Total: 27
+[info] 
+[info] <TpmC>
+[info] 3272.7273 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] Terminating process now
+[success] Total time: 16 s, completed Dec 8, 2013 6:26:27 PM
+> test:run-main ddbt.tpcc.loadtest.Tpcc
+[info] Running ddbt.tpcc.loadtest.Tpcc 
+[info] TPCC version 1.0.1 Number of Arguments: 0
+[info] 2013-12-08 18:26:29,703 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.name = Mac OS X
+[info]  2013-12-08 18:26:29,705 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.arch = x86_64
+[info]  2013-12-08 18:26:29,705 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.version = 10.8.5
+[info]  2013-12-08 18:26:29,705 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.runtime.name = Java(TM) SE Runtime Environment
+[info]  2013-12-08 18:26:29,705 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.vm.version = 24.45-b08
+[info]  2013-12-08 18:26:29,705 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.library.path = /Users/dashti/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
+[info]  maxMemory = 9,814.0 MB
+[info] Using the properties file for configuration.
+[info] 2013-12-08 18:26:29,706 INFO d.t.l.Tpcc [main] Loading properties from: ./conf/tpcc.properties
+[info]  ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:26:29,738 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:26:29,743 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:284  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:285  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:29  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:27  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:28  lt:0  rt:0  fl:0 
+[info]  in 5.006000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:284  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:285  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:29  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:27  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:28  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.730888% (>=43.0%) [OK]
+[info]    Order-Status: 4.434251% (>= 4.0%) [OK]
+[info]        Delivery: 4.128440% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.281345% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 284
+[info]  Payment Total: 286
+[info]  Order Stat Total: 29
+[info]  Delivery Total: 27
+[info]  Slev Total: 28
+[info] 
+[info] <TpmC>
+[info] 3403.9153 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] Terminating process now
+[success] Total time: 16 s, completed Dec 8, 2013 6:26:45 PM
+> test:run-main ddbt.tpcc.loadtest.Tpcc
+[info] Running ddbt.tpcc.loadtest.Tpcc 
+[info] TPCC version 1.0.1 Number of Arguments: 0
+[info] 2013-12-08 18:26:49,077 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.name = Mac OS X
+[info]  2013-12-08 18:26:49,078 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.arch = x86_64
+[info]  2013-12-08 18:26:49,079 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.version = 10.8.5
+[info]  2013-12-08 18:26:49,079 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.runtime.name = Java(TM) SE Runtime Environment
+[info]  2013-12-08 18:26:49,079 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.vm.version = 24.45-b08
+[info]  2013-12-08 18:26:49,079 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.library.path = /Users/dashti/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
+[info]  maxMemory = 9,814.0 MB
+[info] Using the properties file for configuration.
+[info] 2013-12-08 18:26:49,080 INFO d.t.l.Tpcc [main] Loading properties from: ./conf/tpcc.properties
+[info]  ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:26:49,112 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:26:49,117 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:283  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:283  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:28  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:28  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:28  lt:0  rt:0  fl:0 
+[info]  in 5.005000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:283  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:283  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:28  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:28  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:28  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.538460% (>=43.0%) [OK]
+[info]    Order-Status: 4.307693% (>= 4.0%) [OK]
+[info]        Delivery: 4.307693% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.307693% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 283
+[info]  Payment Total: 283
+[info]  Order Stat Total: 28
+[info]  Delivery Total: 28
+[info]  Slev Total: 28
+[info] 
+[info] <TpmC>
+[info] 3392.6074 TpmC
+[info] 
+[info] STOPPING THREADS
+^[[A[info] Terminating process now
+[success] Total time: 16 s, completed Dec 8, 2013 6:27:04 PM
+> test:run-main ddbt.tpcc.loadtest.Tpcc
+[info] Running ddbt.tpcc.loadtest.Tpcc 
+[info] TPCC version 1.0.1 Number of Arguments: 0
+[info] 2013-12-08 18:27:06,246 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.name = Mac OS X
+[info]  2013-12-08 18:27:06,248 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.arch = x86_64
+[info]  2013-12-08 18:27:06,248 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.version = 10.8.5
+[info]  2013-12-08 18:27:06,248 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.runtime.name = Java(TM) SE Runtime Environment
+[info]  2013-12-08 18:27:06,248 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.vm.version = 24.45-b08
+[info]  2013-12-08 18:27:06,248 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.library.path = /Users/dashti/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
+[info]  maxMemory = 9,814.0 MB
+[info] Using the properties file for configuration.
+[info] 2013-12-08 18:27:06,249 INFO d.t.l.Tpcc [main] Loading properties from: ./conf/tpcc.properties
+[info]  ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:27:06,282 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:27:06,286 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:275  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:277  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:27  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:26  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:27  lt:0  rt:0  fl:0 
+[info]  in 5.005000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:275  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:277  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:27  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:26  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:27  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.829113% (>=43.0%) [OK]
+[info]    Order-Status: 4.272152% (>= 4.0%) [OK]
+[info]        Delivery: 4.113924% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.272152% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 275
+[info]  Payment Total: 277
+[info]  Order Stat Total: 27
+[info]  Delivery Total: 26
+[info]  Slev Total: 27
+[info] 
+[info] <TpmC>
+[info] 3296.7034 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] Terminating process now
+[success] Total time: 16 s, completed Dec 8, 2013 6:27:21 PM
+> test:run-main ddbt.tpcc.loadtest.Tpcc
+[info] Running ddbt.tpcc.loadtest.Tpcc 
+[info] TPCC version 1.0.1 Number of Arguments: 0
+[info] 2013-12-08 18:27:23,258 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.name = Mac OS X
+[info]  2013-12-08 18:27:23,259 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.arch = x86_64
+[info]  2013-12-08 18:27:23,259 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: os.version = 10.8.5
+[info]  2013-12-08 18:27:23,260 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.runtime.name = Java(TM) SE Runtime Environment
+[info]  2013-12-08 18:27:23,260 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.vm.version = 24.45-b08
+[info]  2013-12-08 18:27:23,260 INFO d.t.l.Tpcc$$anonfun$main$1 [main] System Property: java.library.path = /Users/dashti/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:.
+[info]  maxMemory = 9,814.0 MB
+[info] Using the properties file for configuration.
+[info] 2013-12-08 18:27:23,261 INFO d.t.l.Tpcc [main] Loading properties from: ./conf/tpcc.properties
+[info]  ***************************************
+[info] ****** Java TPC-C Load Generator ******
+[info] ***************************************
+[info] <Parameters>
+[info]      [driver]: com.mysql.jdbc.Driver
+[info]         [URL]: jdbc:mysql://localhost:3306/tpcctest
+[info]        [user]: root
+[info]        [pass]: 
+[info]   [warehouse]: 5
+[info]  [connection]: 1
+[info]      [rampup]: 5 (sec.)
+[info]     [measure]: 5 (sec.)
+[info] TOTAL:232013-12-08 18:27:23,293 INFO d.t.l.DatabaseConnector$ [main] Connection to database: driver: com.mysql.jdbc.Driver url: jdbc:mysql://localhost:3306/tpcctest
+[info]  2013-12-08 18:27:23,298 WARN d.t.l.DatabaseConnector$ [main] /Users/dashti/Dropbox/workspaces/toasterbooster/conf/jdbc-connection.properties does not exist! Using default connection properties
+[info]  
+[info] RAMPUP START.
+[info] 
+[info] 
+[info] RAMPUP END.
+[info] 
+[info] 
+[info] MEASURING START.
+[info] 
+[info] Current execution time lapse: 0.0 seconds
+[info] Current execution time lapse: 1.0 seconds
+[info] Current execution time lapse: 2.0 seconds
+[info] Current execution time lapse: 3.0 seconds
+[info] Current execution time lapse: 4.0 seconds
+[info] ---------------------------------------------------
+[info] <Raw Results>
+[info]   |NewOrder| sc:280  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:283  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:27  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:27  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:29  lt:0  rt:0  fl:0 
+[info]  in 5.006000 sec.
+[info] <Raw Results2(sum ver.)>
+[info]   |NewOrder| sc:280  lt:0  rt:0  fl:0 
+[info]   |Payment| sc:283  lt:0  rt:0  fl:0 
+[info]   |Order Stat| sc:27  lt:0  rt:0  fl:0 
+[info]   |Delivery| sc:27  lt:0  rt:0  fl:0 
+[info]   |Slev| sc:29  lt:0  rt:0  fl:0 
+[info] <Constraint Check> (all must be [OK])
+[info]  [transaction percentage]
+[info]         Payment: 43.808048% (>=43.0%) [OK]
+[info]    Order-Status: 4.179566% (>= 4.0%) [OK]
+[info]        Delivery: 4.179566% (>= 4.0%) [OK]
+[info]     Stock-Level: 4.489164% (>= 4.0%) [OK]
+[info]  [response time (at least 90%% passed)]
+[info]       NewOrder: 100.000000%  [OK]
+[info]       Payment: 100.000000%  [OK]
+[info]       Order Stat: 100.000000%  [OK]
+[info]       Delivery: 100.000000%  [OK]
+[info]       Slev: 100.000000%  [OK]
+[info]  NewOrder Total: 280
+[info]  Payment Total: 283
+[info]  Order Stat Total: 27
+[info]  Delivery Total: 27
+[info]  Slev Total: 29
+[info] 
+[info] <TpmC>
+[info] 3355.973 TpmC
+[info] 
+[info] STOPPING THREADS
+[info] Terminating process now
+[success] Total time: 16 s, completed Dec 8, 2013 6:27:38 PM
+> 

@@ -1,0 +1,116 @@
+[~/Dropbox/workspaces/benchmark-vldb2007 18:58:59]$ ./test W 5
+TPCC Data Load Started...
+Loading Item 
+Item Done. (size in bytes: 7900444) 
+Loading Warehouse 
+Loading Stock .....
+Warehouse Done. (size in bytes: 418) 
+Stock Done. (size in bytes: 159001327) 
+District Done. (size in bytes: 5010) 
+Loading Customer .....
+Customer Done. (size in bytes: 86999506) 
+History Done. (size in bytes: 11098114) 
+Loading Orders .....
+Orders Done. (size in bytes: 10050000) 
+New Orders Done. (size in bytes: 1080000) 
+Order-lines Done. (size in bytes: 142571345) 
+
+...DATA LOADING COMPLETED SUCCESSFULLY.
+user time=0.270000
+system time=0.010000
+real time=0.270000
+Committed 39814 transactions, TP = 147459.259259
+Committed 18049 new order transactions, TP = 66848.148148
+[~/Dropbox/workspaces/benchmark-vldb2007 19:01:01]$ ./test W 5
+TPCC Data Load Started...
+Loading Item 
+Item Done. (size in bytes: 7900444) 
+Loading Warehouse 
+Loading Stock .....
+Warehouse Done. (size in bytes: 418) 
+Stock Done. (size in bytes: 159001327) 
+District Done. (size in bytes: 5010) 
+Loading Customer .....
+Customer Done. (size in bytes: 86999506) 
+History Done. (size in bytes: 11098114) 
+Loading Orders .....
+Orders Done. (size in bytes: 10050000) 
+New Orders Done. (size in bytes: 1080000) 
+Order-lines Done. (size in bytes: 142571345) 
+
+...DATA LOADING COMPLETED SUCCESSFULLY.
+user time=0.280000
+system time=0.010000
+real time=0.290000
+Committed 39814 transactions, TP = 137289.655172
+Committed 18049 new order transactions, TP = 62237.931034
+[~/Dropbox/workspaces/benchmark-vldb2007 19:01:10]$ ./test W 5
+TPCC Data Load Started...
+Loading Item 
+Item Done. (size in bytes: 7900444) 
+Loading Warehouse 
+Loading Stock .....
+Warehouse Done. (size in bytes: 418) 
+Stock Done. (size in bytes: 159001327) 
+District Done. (size in bytes: 5010) 
+Loading Customer .....
+Customer Done. (size in bytes: 86999506) 
+History Done. (size in bytes: 11098114) 
+Loading Orders .....
+Orders Done. (size in bytes: 10050000) 
+New Orders Done. (size in bytes: 1080000) 
+Order-lines Done. (size in bytes: 142571345) 
+
+...DATA LOADING COMPLETED SUCCESSFULLY.
+user time=0.260000
+system time=0.010000
+real time=0.270000
+Committed 39814 transactions, TP = 147459.259259
+Committed 18049 new order transactions, TP = 66848.148148
+[~/Dropbox/workspaces/benchmark-vldb2007 19:01:18]$ ./test W 5
+TPCC Data Load Started...
+Loading Item 
+Item Done. (size in bytes: 7900444) 
+Loading Warehouse 
+Loading Stock .....
+Warehouse Done. (size in bytes: 418) 
+Stock Done. (size in bytes: 159001327) 
+District Done. (size in bytes: 5010) 
+Loading Customer .....
+Customer Done. (size in bytes: 86999506) 
+History Done. (size in bytes: 11098114) 
+Loading Orders .....
+Orders Done. (size in bytes: 10050000) 
+New Orders Done. (size in bytes: 1080000) 
+Order-lines Done. (size in bytes: 142571345) 
+
+...DATA LOADING COMPLETED SUCCESSFULLY.
+user time=0.260000
+system time=0.010000
+real time=0.270000
+Committed 39814 transactions, TP = 147459.259259
+Committed 18049 new order transactions, TP = 66848.148148
+[~/Dropbox/workspaces/benchmark-vldb2007 19:01:26]$ ./test W 5
+TPCC Data Load Started...
+Loading Item 
+Item Done. (size in bytes: 7900444) 
+Loading Warehouse 
+Loading Stock .....
+Warehouse Done. (size in bytes: 418) 
+Stock Done. (size in bytes: 159001327) 
+District Done. (size in bytes: 5010) 
+Loading Customer .....
+Customer Done. (size in bytes: 86999506) 
+History Done. (size in bytes: 11098114) 
+Loading Orders .....
+Orders Done. (size in bytes: 10050000) 
+New Orders Done. (size in bytes: 1080000) 
+Order-lines Done. (size in bytes: 142571345) 
+
+...DATA LOADING COMPLETED SUCCESSFULLY.
+user time=0.280000
+system time=0.010000
+real time=0.290000
+Committed 39814 transactions, TP = 137289.655172
+Committed 18049 new order transactions, TP = 62237.931034
+[~/Dropbox/workspaces/benchmark-vldb2007 19:01:33]$ 

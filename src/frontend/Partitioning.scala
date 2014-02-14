@@ -97,7 +97,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     }
     val r1 = parts.map(_.freq).sum // selected constraints (approximation)
     // partitioning
-    val part = Partitioning(parts,if (r0==0) 1 else r1*1.0/r0,s0.sources.filter(!_.stream).map(s=>s.schema.name).toSet);
+    val part = Partitioning(parts,if (r0==0 || r0==r1) 1 else r1*1.0/r0,s0.sources.filter(!_.stream).map(s=>s.schema.name).toSet);
     // hashing function
     val its = s0.maps.zipWithIndex.map{ case (m,i)=>(m.name,(i,m.keys.map(_._2))) }.toMap // name=>(index,tps)
     val imp = scala.collection.mutable.HashMap[String,List[Int]]() // body => maprefs
