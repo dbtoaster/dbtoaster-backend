@@ -31,6 +31,19 @@ object ManifestHelper {
       scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
   }
   def manEntry(kts:List[Type],vt:Type):Manifest[_] = manEntry(kts:::List(vt))
+  def zero(tp: Type) = tp match {
+    case TypeLong => 0
+    case TypeDouble => 0.0
+    case TypeString => ""
+    case TypeDate => new java.util.Date()
+  }
+  def zero(m: Manifest[_]) = m.toString match {
+    case "Long" => 0
+    case "Double" => 0.0
+    case "String" => ""
+    case "java.util.Date" => new java.util.Date()
+    case _ => sys.error("Bad manifest")
+  }
 }
 
 /*

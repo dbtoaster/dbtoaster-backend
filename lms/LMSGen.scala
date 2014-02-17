@@ -13,7 +13,7 @@ import ddbt.lib._
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-  import ManifestHelper.man
+  import ManifestHelper.{man,zero}
 
   val impl = ScalaExpGen
   import impl.Rep
@@ -69,17 +69,18 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       }
     case a@AggSum(ks,e) =>
       val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
-      val acc = if (agg_keys.size==0) impl.m3var(ex.tp) else impl.m3temp(agg_keys.map(_._2),ex.tp)
-      // Accumulate expr(e) in the acc
-      val cur = cx.save
-      val coAcc = (v:Rep[_]) => impl.m3add(acc, agg_keys.map(x=>cx(x._1)), v)
-      expr(e,coAcc,Some(agg_keys)) // returns (Rep[Unit],ctx) and we ignore ctx
-      cx.load(cur)
-      // Iterate over acc and call original continuation
-      if (agg_keys.size==0) co(impl.m3get(acc,Nil,ex.tp)) // accumulator is a single result
-      else am match {
-        case Some(t) if (t.toSet==agg_keys.toSet) => expr(e,co,am)
-        case _ => foreach(acc,agg_keys,a.tp,co,"a")
+      if (agg_keys.size==0) { // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
+        val acc:impl.Var[_] = impl.var_new(impl.unit(zero(ex.tp)))
+        val cur=cx.save; expr(e,(v:Rep[_]) => impl.var_plusequals(acc, v),None); cx.load(cur); co(acc)
+      } else {
+        val acc = impl.m3temp(agg_keys.map(_._2),ex.tp)
+        val cur = cx.save
+        val coAcc = (v:Rep[_]) => impl.m3add(acc, agg_keys.map(x=>cx(x._1)), v)
+        expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
+        am match {
+          case Some(t) if (t.toSet==agg_keys.toSet) => expr(e,co,am)
+          case _ => foreach(acc,agg_keys,a.tp,co,"a")
+        }
       }
     case _ => sys.error("Unimplemented: "+ex)
   }
