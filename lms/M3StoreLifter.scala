@@ -55,7 +55,7 @@ trait M3StoreOps extends StoreOps {
   // def m3clear[E<:SEntry:Manifest](map:Rep[Store[E]]):Rep[Unit]
 }
 
-trait M3StoreOpsExp extends BaseExp with EffectExp with M3MapOps with StoreExp {
+trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp {
   import ManifestHelper.man
 
   def newM3Store[E<:Entry](implicit tp:Manifest[E]):Rep[Store[E]] = {
