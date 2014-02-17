@@ -5,7 +5,7 @@ import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import dbtoptimizer._
 import oltp.opt.lifters._
-import storage._
+import ddbt.lib.store._
 import scala.language.implicitConversions
 
 object TpccXactGenerator {
@@ -152,7 +152,7 @@ object TpccXactGenerator {
       }
     }
     toplevel16("newOrderTx") {
-      newOrderTx 
+      newOrderTx
     }
 
     def paymentTx(showOutput:Rep[Boolean], datetime:Rep[Date], t_num:Rep[Int], w_id:Rep[Int], d_id:Rep[Int], c_by_name:Rep[Int], c_w_id:Rep[Int], c_d_id:Rep[Int], c_id:Rep[Int], c_last_input:Rep[String], h_amount:Rep[Float]):Rep[Int] = {
@@ -195,7 +195,7 @@ object TpccXactGenerator {
       if (customerEntry._14.contains("BC")) { //c_credit
         //TODO this is the correct version but is not implemented in the correctness test
         //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-        c_data = "%d %d %d %d %d $%f %s | %s".format(customerEntry._1, c_d_id, c_w_id, d_id, w_id, 
+        c_data = "%d %d %d %d %d $%f %s | %s".format(customerEntry._1, c_d_id, c_w_id, d_id, w_id,
             h_amount, datetime, c_data)
         if (c_data.length > 500) c_data = c_data.substring(0, 500)
         customerEntry += (17 /*c_balance*/, h_amount)
@@ -245,7 +245,7 @@ object TpccXactGenerator {
         }
         else {
           ""
-        }) + "\n   Credit:  " + /*c_credit*/customerEntry._14 + 
+        }) + "\n   Credit:  " + /*c_credit*/customerEntry._14 +
         "\n   Disc:    " + /*c_discount*/(customerEntry._16 * 100) + "%" +
         "\n   Phone:   " + /*c_phone*/customerEntry._12 +
         "\n\n Amount Paid:      " + h_amount +
@@ -271,7 +271,7 @@ object TpccXactGenerator {
       1
     }
     toplevel11("paymentTx") {
-      paymentTx 
+      paymentTx
     }
 
     def orderStatusTx(showOutput:Rep[Boolean], datetime:Rep[Date], t_num:Rep[Int], w_id:Rep[Int], d_id:Rep[Int], c_by_name:Rep[Int], c_id:Rep[Int], c_last:Rep[String]):Rep[Int] = {
@@ -305,17 +305,17 @@ object TpccXactGenerator {
       val found_c_id = customerEntry._3
 
       val newestOrderEntry/*(o_id,o_d_id_arg,o_w_id_arg,o_c_id,o_entry_d,o_carrier_id,_,_)*/ = orderTbl.getSliceMax(sampleEntry[OrderEntry]((2,d_id),(3,w_id),(4,found_c_id)), 1 /*o_id*/)
-      
+
       var dceBlocker = 0
       if(!showOutput) {
-        if(newestOrderEntry != null) { //o_id != -1 
+        if(newestOrderEntry != null) { //o_id != -1
           orderLineTbl.slice(sampleEntry[OrderLineEntry]((1,newestOrderEntry._1/*o_id*/),(2,d_id),(3,w_id)),{ case orderLineEntry/*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
             dceBlocker = 1 // fooling the effect system, in order not to remove this part, because that's not fare in benchmarking results!
           })
         }
       } else {
         val orderLines = ArrayBuffer[String]()
-        if(newestOrderEntry != null) { //o_id != -1 
+        if(newestOrderEntry != null) { //o_id != -1
           orderLineTbl.slice(sampleEntry[OrderLineEntry]((1,newestOrderEntry._1/*o_id*/),(2,d_id),(3,w_id)),{ case orderLineEntry/*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
             orderLines += "[%d - %d - %d - %f - %s]".format(orderLineEntry._6/*ol_supply_w_id*/, orderLineEntry._5/*ol_i_id*/, orderLineEntry._8/*ol_quantity*/, orderLineEntry._9/*ol_amount*/, if(orderLineEntry._7 == unit(null)) unit("99-99-9999") else cast_string(orderLineEntry._7.asInstanceOf[Rep[Date]]))
           })
@@ -354,7 +354,7 @@ object TpccXactGenerator {
       1
     }
     toplevel8("orderStatusTx") {
-      orderStatusTx 
+      orderStatusTx
     }
 
     def deliveryTx(showOutput:Rep[Boolean], datetime:Rep[Date], w_id:Rep[Int], o_carrier_id:Rep[Int]):Rep[Int] = {
@@ -430,7 +430,7 @@ object TpccXactGenerator {
       1
     }
     toplevel4("deliveryTx") {
-      deliveryTx 
+      deliveryTx
     }
 
     def stockLevelTx(showOutput:Rep[Boolean], datetime:Rep[Date], t_num:Rep[Int], w_id:Rep[Int], d_id:Rep[Int], threshold:Rep[Int]):Rep[Int] = {
@@ -472,11 +472,11 @@ object TpccXactGenerator {
       1
     }
     toplevel6("stockLevelTx") {
-      stockLevelTx 
+      stockLevelTx
     }
   };
 
   def main(args: Array[String]): Unit = {
-    (new Impl("./test/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()  
+    (new Impl("./test/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()
   }
 }

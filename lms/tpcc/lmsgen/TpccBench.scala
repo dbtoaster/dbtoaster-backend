@@ -1,4 +1,4 @@
-import storage._
+import ddbt.lib.store._
 import DummyPrint._
 package tpcc.lmsgen {
 
@@ -8,7 +8,7 @@ package tpcc.lmsgen {
  * Emitting Generated Code
  * *****************************************
  */
-class newOrderTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_IIIIIAFS], x2: storage.Store[SEntry9_ISSSSSSFD], x3: storage.Store[SEntry5_IISFS], x4: storage.Store[SEntry8_IIIIAIIB], x5: storage.Store[SEntry11_IISSSSSSFDI], x6: storage.Store[SEntry10_IIIIIIAIFS], x7: storage.Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: storage.Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Float], Array[java.lang.String], Array[Int], Array[Char], Array[Float]) => (Int)) {
+class newOrderTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Store[SEntry9_ISSSSSSFD], x3: Store[SEntry5_IISFS], x4: Store[SEntry8_IIIIAIIB], x5: Store[SEntry11_IISSSSSSFDI], x6: Store[SEntry10_IIIIIIAIFS], x7: Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Float], Array[java.lang.String], Array[Int], Array[Char], Array[Float]) => (Int)) {
   def apply(x9: Boolean, x10: java.util.Date, x11: Int, x12: Int, x13: Int, x14: Int, x15: Int, x16: Int, x17: Array[Int], x18: Array[Int], x19: Array[Int], x20: Array[Float], x21: Array[java.lang.String], x22: Array[Int], x23: Array[Char], x24: Array[Float]): Int = {
     if (x9) {
       println(("- Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(x12, x13, x14)))
@@ -198,7 +198,7 @@ class newOrderTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_IIIII
  * Emitting Generated Code
  * *****************************************
  */
-class paymentTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_IIIIIAFS], x2: storage.Store[SEntry9_ISSSSSSFD], x3: storage.Store[SEntry5_IISFS], x4: storage.Store[SEntry8_IIIIAIIB], x5: storage.Store[SEntry11_IISSSSSSFDI], x6: storage.Store[SEntry10_IIIIIIAIFS], x7: storage.Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: storage.Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int, Int, Int, Int, Int, Int, java.lang.String, Float) => (Int)) {
+class paymentTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Store[SEntry9_ISSSSSSFD], x3: Store[SEntry5_IISFS], x4: Store[SEntry8_IIIIAIIB], x5: Store[SEntry11_IISSSSSSFDI], x6: Store[SEntry10_IIIIIIAIFS], x7: Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int, Int, Int, Int, Int, Int, java.lang.String, Float) => (Int)) {
   def apply(x451: Boolean, x452: java.util.Date, x453: Int, x454: Int, x455: Int, x456: Int, x457: Int, x458: Int, x459: Int, x460: java.lang.String, x461: Float): Int = {
     val x463 = x1 /*store made mutable*/
     val x464 = x2 /*store made mutable*/
@@ -345,7 +345,7 @@ class paymentTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_IIIIIA
  * Emitting Generated Code
  * *****************************************
  */
-class orderStatusTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_IIIIIAFS], x2: storage.Store[SEntry9_ISSSSSSFD], x3: storage.Store[SEntry5_IISFS], x4: storage.Store[SEntry8_IIIIAIIB], x5: storage.Store[SEntry11_IISSSSSSFDI], x6: storage.Store[SEntry10_IIIIIIAIFS], x7: storage.Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: storage.Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int, Int, Int, Int, java.lang.String) => (Int)) {
+class orderStatusTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Store[SEntry9_ISSSSSSFD], x3: Store[SEntry5_IISFS], x4: Store[SEntry8_IIIIAIIB], x5: Store[SEntry11_IISSSSSSFDI], x6: Store[SEntry10_IIIIIIAIFS], x7: Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int, Int, Int, Int, java.lang.String) => (Int)) {
   def apply(x689: Boolean, x690: java.util.Date, x691: Int, x692: Int, x693: Int, x694: Int, x695: Int, x696: java.lang.String): Int = {
     val x701 = x4 /*store made mutable*/
     val x703 = x6 /*store made mutable*/
@@ -456,7 +456,7 @@ class orderStatusTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_II
  * Emitting Generated Code
  * *****************************************
  */
-class deliveryTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_IIIIIAFS], x2: storage.Store[SEntry9_ISSSSSSFD], x3: storage.Store[SEntry5_IISFS], x4: storage.Store[SEntry8_IIIIAIIB], x5: storage.Store[SEntry11_IISSSSSSFDI], x6: storage.Store[SEntry10_IIIIIIAIFS], x7: storage.Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: storage.Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int) => (Int)) {
+class deliveryTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Store[SEntry9_ISSSSSSFD], x3: Store[SEntry5_IISFS], x4: Store[SEntry8_IIIIAIIB], x5: Store[SEntry11_IISSSSSSFDI], x6: Store[SEntry10_IIIIIIAIFS], x7: Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int) => (Int)) {
   def apply(x872: Boolean, x873: java.util.Date, x874: Int, x875: Int): Int = {
     val x876 = x0 /*store made mutable*/
     val x880 = x4 /*store made mutable*/
@@ -567,7 +567,7 @@ class deliveryTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_IIIII
  * Emitting Generated Code
  * *****************************************
  */
-class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_IIIIIAFS], x2: storage.Store[SEntry9_ISSSSSSFD], x3: storage.Store[SEntry5_IISFS], x4: storage.Store[SEntry8_IIIIAIIB], x5: storage.Store[SEntry11_IISSSSSSFDI], x6: storage.Store[SEntry10_IIIIIIAIFS], x7: storage.Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: storage.Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int, Int, Int) => (Int)) {
+class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Store[SEntry9_ISSSSSSFD], x3: Store[SEntry5_IISFS], x4: Store[SEntry8_IIIIAIIB], x5: Store[SEntry11_IISSSSSSFDI], x6: Store[SEntry10_IIIIIIAIFS], x7: Store[SEntry21_IIISSSSSSSSSASFFFFIIS], x8: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, java.util.Date, Int, Int, Int, Int) => (Int)) {
   def apply(x997: Boolean, x998: java.util.Date, x999: Int, x1000: Int, x1001: Int, x1002: Int): Int = {
     val x1008 = x5 /*store made mutable*/
     val x1009 = x6 /*store made mutable*/
@@ -618,7 +618,7 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
  * *****************************************
  */
 
-  case class SEntry11_IISSSSSSFDI(var _1:Int = 0, var _2:Int = 0, var _3:java.lang.String = null, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:java.lang.String = null, var _9:Float = 0f, var _10:Double = 0D, var _11:Int = 0) extends storage.Entry(11) {
+  case class SEntry11_IISSSSSSFDI(var _1:Int = 0, var _2:Int = 0, var _3:java.lang.String = null, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:java.lang.String = null, var _9:Float = 0f, var _10:Double = 0D, var _11:Int = 0) extends Entry(11) {
     def hash(i: Int):Int = {
       //println("hash is district => " + ((_2-1) * ddbt.tpcc.loadtest.TpccConstants.DIST_PER_WARE + (_1-1)))
       (_2-1) * ddbt.tpcc.loadtest.TpccConstants.DIST_PER_WARE + (_1-1)
@@ -629,7 +629,7 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
     }
     def copy = SEntry11_IISSSSSSFDI(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11)
   }
-  case class SEntry8_IIIIIAFS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:Int = 0, var _5:Int = 0, var _6:java.util.Date = null, var _7:Float = 0f, var _8:java.lang.String = null) extends storage.Entry(8) {
+  case class SEntry8_IIIIIAFS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:Int = 0, var _5:Int = 0, var _6:java.util.Date = null, var _7:Float = 0f, var _8:java.lang.String = null) extends Entry(8) {
     def hash(i: Int):Int = {
       var hash:Int = 0xcafebabe
       if(i == 0) {
@@ -699,7 +699,7 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
     }
     def copy = SEntry8_IIIIIAFS(_1, _2, _3, _4, _5, _6, _7, _8)
   }
-  case class SEntry8_IIIIAIIB(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:Int = 0, var _5:java.util.Date = null, var _6:Int = 0, var _7:Int = 0, var _8:Boolean = false) extends storage.Entry(8) {
+  case class SEntry8_IIIIAIIB(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:Int = 0, var _5:java.util.Date = null, var _6:Int = 0, var _7:Int = 0, var _8:Boolean = false) extends Entry(8) {
     def hash(i: Int):Int = {
       var hash:Int = 0xcafebabe
       if(i == 0) {
@@ -783,7 +783,7 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
     }
     def copy = SEntry8_IIIIAIIB(_1, _2, _3, _4, _5, _6, _7, _8)
   }
-  case class SEntry17_IIISSSSSSSSSSIIIS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:java.lang.String = null, var _9:java.lang.String = null, var _10:java.lang.String = null, var _11:java.lang.String = null, var _12:java.lang.String = null, var _13:java.lang.String = null, var _14:Int = 0, var _15:Int = 0, var _16:Int = 0, var _17:java.lang.String = null) extends storage.Entry(17) {
+  case class SEntry17_IIISSSSSSSSSSIIIS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:java.lang.String = null, var _9:java.lang.String = null, var _10:java.lang.String = null, var _11:java.lang.String = null, var _12:java.lang.String = null, var _13:java.lang.String = null, var _14:Int = 0, var _15:Int = 0, var _16:Int = 0, var _17:java.lang.String = null) extends Entry(17) {
     def hash(i: Int):Int = {
       //println("hash is stock => " + ((_2-1) * ddbt.tpcc.loadtest.TpccConstants.MAXITEMS + (_1-1)))
       (_2-1) * ddbt.tpcc.loadtest.TpccConstants.MAXITEMS + (_1-1)
@@ -794,7 +794,7 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
     }
     def copy = SEntry17_IIISSSSSSSSSSIIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17)
   }
-  case class SEntry21_IIISSSSSSSSSASFFFFIIS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:java.lang.String = null, var _9:java.lang.String = null, var _10:java.lang.String = null, var _11:java.lang.String = null, var _12:java.lang.String = null, var _13:java.util.Date = null, var _14:java.lang.String = null, var _15:Float = 0f, var _16:Float = 0f, var _17:Float = 0f, var _18:Float = 0f, var _19:Int = 0, var _20:Int = 0, var _21:java.lang.String = null) extends storage.Entry(21) {
+  case class SEntry21_IIISSSSSSSSSASFFFFIIS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:java.lang.String = null, var _9:java.lang.String = null, var _10:java.lang.String = null, var _11:java.lang.String = null, var _12:java.lang.String = null, var _13:java.util.Date = null, var _14:java.lang.String = null, var _15:Float = 0f, var _16:Float = 0f, var _17:Float = 0f, var _18:Float = 0f, var _19:Int = 0, var _20:Int = 0, var _21:java.lang.String = null) extends Entry(21) {
     def hash(i: Int):Int = {
       var hash:Int = 0xcafebabe
       if(i == 0) {
@@ -839,7 +839,7 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
     }
     def copy = SEntry21_IIISSSSSSSSSASFFFFIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21)
   }
-  case class SEntry10_IIIIIIAIFS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:Int = 0, var _5:Int = 0, var _6:Int = 0, var _7:java.util.Date = null, var _8:Int = 0, var _9:Float = 0f, var _10:java.lang.String = null) extends storage.Entry(10) {
+  case class SEntry10_IIIIIIAIFS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:Int = 0, var _5:Int = 0, var _6:Int = 0, var _7:java.util.Date = null, var _8:Int = 0, var _9:Float = 0f, var _10:java.lang.String = null) extends Entry(10) {
     def hash(i: Int):Int = {
       var hash:Int = 0xcafebabe
       if(i == 0) {
@@ -879,7 +879,7 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
     }
     def copy = SEntry10_IIIIIIAIFS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10)
   }
-  case class SEntry3_III(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0) extends storage.Entry(3) {
+  case class SEntry3_III(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0) extends Entry(3) {
     def hash(i: Int):Int = {
       var hash:Int = 0xcafebabe
       if(i == 0) {
@@ -929,7 +929,7 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
     }
     def copy = SEntry3_III(_1, _2, _3)
   }
-  case class SEntry5_IISFS(var _1:Int = 0, var _2:Int = 0, var _3:java.lang.String = null, var _4:Float = 0f, var _5:java.lang.String = null) extends storage.Entry(5) {
+  case class SEntry5_IISFS(var _1:Int = 0, var _2:Int = 0, var _3:java.lang.String = null, var _4:Float = 0f, var _5:java.lang.String = null) extends Entry(5) {
     def hash(i: Int):Int = {
       //println("hash is item => " + _1)
       _1
@@ -940,7 +940,7 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
     }
     def copy = SEntry5_IISFS(_1, _2, _3, _4, _5)
   }
-  case class SEntry9_ISSSSSSFD(var _1:Int = 0, var _2:java.lang.String = null, var _3:java.lang.String = null, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:Float = 0f, var _9:Double = 0D) extends storage.Entry(9) {
+  case class SEntry9_ISSSSSSFD(var _1:Int = 0, var _2:java.lang.String = null, var _3:java.lang.String = null, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:Float = 0f, var _9:Double = 0D) extends Entry(9) {
     def hash(i: Int):Int = {
       //println("hash is warehouse => " + _1)
       _1
@@ -952,35 +952,35 @@ class stockLevelTx(x0: storage.Store[SEntry3_III], x1: storage.Store[SEntry8_III
     def copy = SEntry9_ISSSSSSFD(_1, _2, _3, _4, _5, _6, _7, _8, _9)
   }
   class EfficientExecutor {
-    val x0 = new storage.Store[SEntry3_III](2)
+    val x0 = new Store[SEntry3_III](2)
     x0.index(0,INone,false)
     x0.index(1,ISliceMin,false,0)
-    
-    val x1 = new storage.Store[SEntry8_IIIIIAFS](1)
+
+    val x1 = new Store[SEntry8_IIIIIAFS](1)
     x1.index(0,IList,false)
 
-    val x2 = new storage.Store[SEntry9_ISSSSSSFD](1)
+    val x2 = new Store[SEntry9_ISSSSSSFD](1)
     x2.index(0,IHash,true)
 
-    val x3 = new storage.Store[SEntry5_IISFS](1)
+    val x3 = new Store[SEntry5_IISFS](1)
     x3.index(0,IHash,true)
 
-    val x4 = new storage.Store[SEntry8_IIIIAIIB](3)
+    val x4 = new Store[SEntry8_IIIIAIIB](3)
     x4.index(0,INone,false)
     x4.index(1,ISliceMax,false,0)
     x4.index(2,IHash,true)
 
-    val x5 = new storage.Store[SEntry11_IISSSSSSFDI](1)
+    val x5 = new Store[SEntry11_IISSSSSSFDI](1)
     x5.index(0,IHash,true)
 
-    val x6 = new storage.Store[SEntry10_IIIIIIAIFS](1)
+    val x6 = new Store[SEntry10_IIIIIIAIFS](1)
     x6.index(0,IHash,false)
 
-    val x7 = new storage.Store[SEntry21_IIISSSSSSSSSASFFFFIIS](2)
+    val x7 = new Store[SEntry21_IIISSSSSSSSSASFFFFIIS](2)
     x7.index(0,IHash,true)
     x7.index(1,IHash,false)
 
-    val x8 = new storage.Store[SEntry17_IIISSSSSSSSSSIIIS](1)
+    val x8 = new Store[SEntry17_IIISSSSSSSSSSIIIS](1)
     x8.index(0,IHash,true)
 
     def gotoOperationalStage = {

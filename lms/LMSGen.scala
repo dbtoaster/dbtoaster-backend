@@ -57,7 +57,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       else app(as,Nil)
     case m@MapRef(n,tp,ks) =>
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
-      if(ki.size == 0) { // all keys are bound
+      if(ks.size == 0) { // variable
+        co(cx(n))
+      } else if(ki.size == 0) { // all keys are bound
         co(impl.m3get(cx(n),ko.map{case (k,i)=>cx(k)},tp))
       } else { // we need to iterate over all keys not bound (ki)
         val mapRef = cx(n)
@@ -162,8 +164,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           }
           cx.load()
           expr(e,(r:Rep[_]) => op match {
-            case OpAdd => impl.m3add(mm,m.keys.map(cx),r)
-            case OpSet => impl.m3set(mm,m.keys.map(cx),r)
+            case OpAdd => if (m.keys.size==0) impl.var_plusequals(mm.asInstanceOf[impl.Var[_]],r) else impl.m3add(mm,m.keys.map(cx),r)
+            case OpSet => if (m.keys.size==0) impl.__assign(mm,r) else impl.m3set(mm,m.keys.map(cx),r)
           }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }

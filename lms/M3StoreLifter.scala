@@ -1,10 +1,12 @@
 package ddbt.codegen.lms
 import ddbt.ast._
 import oltp.opt.lifters._
-import 
+import ddbt.lib.store._
+import ManifestHelper._
+
 // Legacy classes are now renamed:
-class M3Temp[K,V] {} // -> M3Map[K,V]
-class M3Var[T] {} // -> Var[T]
+//class M3Temp[K,V] {} // -> M3Map[K,V]
+//class M3Var[T] {} // -> Var[T]
 
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
@@ -20,8 +22,8 @@ import ddbt.codegen.M3MapCommons
  *
  * @author Mohammad Dashti
  */
-trait M3StoreOps extends Base {
-  // class M3StoreOpsCls[E<:SEntry:Manifest](x: Rep[E]) {
+trait M3StoreOps extends StoreOps {
+  // class M3StoreOpsCls[E<:Entry:Manifest](x: Rep[E]) {
   //   def get(key:K):V;           // returns the value or zero if it is not present
   //   def set(key:K, value:V);    // inserts or set the value
   //   def add(key:K, value:V);    // combines new value with existing one using 'plus'
@@ -33,39 +35,41 @@ trait M3StoreOps extends Base {
   //   def toMap:Map[K,V];         // convert to a Scala map
   // }
   // Nodes creatio
-  def newM3Store(key_tp:List[Type],value_tp:Type):Rep[Store[_]] = newM3Store(manEntry(key_tp, value_tp))
-  def newM3Store[E<:SEntry:Manifest]()(implicit tp:E):Rep[Store[E]]
+
+  def newM3Store(key_tp:List[Type],value_tp:Type):Rep[Store[_]] = newM3Store()(manEntry(key_tp, value_tp).asInstanceOf[Manifest[Entry]])
+  def newM3Store[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]]
   // def named(name:String,tp:Type,mutable:Boolean=false):Rep[_]
   // def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]):Rep[T]
   // def namedM3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]): Rep[M3Var[T]]
   // def namedM3Map[K,V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]): Rep[M3Temp[K,V]]
   // def m3var(value:Type) : Rep[M3Var[_]]
-  def m3temp(key_tp:List[Type],value_tp:Type):Rep[Store[_]] = m3temp(manEntry(key_tp, value_tp))
-  def m3temp[E<:SEntry:Manifest]()(implicit tp:E):Rep[Store[E]]
+
+  def m3temp(key_tp:List[Type],value_tp:Type):Rep[Store[_]] = m3temp()(manEntry(key_tp, value_tp).asInstanceOf[Manifest[Entry]])
+  def m3temp[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]]
   // Operations on M3Map, M3Var and M3Temp
-  // def m3get[E<:SEntry:Manifest](map:Rep[Store[E]], key:Rep[E]):Rep[E]
-  // def m3set[E<:SEntry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
-  // def m3add[E<:SEntry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
-  // def m3foreach[E<:SEntry:Manifest](map:Rep[Store[E]], body: Rep[E] => Rep[Unit]):Rep[Unit]
-  // def m3slice[E<:SEntry:Manifest](map:Rep[Store[E]],part:Int,partKey:Rep[E],body: Rep[E] => Rep[Unit]):Rep[Unit]
-  // def m3clear[E<:SEntry:Manifest](map:Rep[Store[E]]):Rep[Unit]
+  // def m3get[E<:Entry:Manifest](map:Rep[Store[E]], key:Rep[E]):Rep[E]
+  // def m3set[E<:Entry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
+  // def m3add[E<:Entry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
+  // def m3foreach[E<:Entry:Manifest](map:Rep[Store[E]], body: Rep[E] => Rep[Unit]):Rep[Unit]
+  // def m3slice[E<:Entry:Manifest](map:Rep[Store[E]],part:Int,partKey:Rep[E],body: Rep[E] => Rep[Unit]):Rep[Unit]
+  // def m3clear[E<:Entry:Manifest](map:Rep[Store[E]]):Rep[Unit]
 }
 
-trait M3StoreOpsExp extends BaseExp with EffectExp with M3MapOps{
+trait M3StoreOpsExp extends BaseExp with EffectExp with M3MapOps with StoreExp {
   import ManifestHelper.man
 
-  def newM3Store[E<:SEntry:Manifest](implicit tp:E):Rep[Store[E]] = {
+  def newM3Store[E<:Entry](implicit tp:Manifest[E]):Rep[Store[E]] = {
     newStore[E]
   }
   // def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   // def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
   // def namedM3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]) = reflectMutable(NamedM3Var(name,tp)(mT))
   // def namedM3Map[K, V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]) = reflectMutable(NamedM3Map(name,key,value,indexList,mK,mV))
-  def m3temp[E<:SEntry:Manifest]()(implicit tp:E):Rep[Store[E]] = {
+  def m3temp[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]] = {
     val sym = newM3Store[E]
     sym match {
-      case Def(Reflect(s@StNewStore(),_,_)) => s.attributes.put("_isTemp",true)
-      case s => s.attributes.put("_isTemp",true)
+      case Def(Reflect(s@StNewStore(_),_,_)) => s.asInstanceOf[Sym[_]].attributes.put("_isTemp",true)
+      case s:Sym[_] => s.attributes.put("_isTemp",true)
     }
     sym
   }

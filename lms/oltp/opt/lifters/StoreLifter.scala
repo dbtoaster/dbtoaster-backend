@@ -323,7 +323,7 @@ trait StoreOps extends Base with SEntryOps {
 
   implicit def store2StoreOpsCls[E<:Entry:Manifest](x: Rep[Store[E]]): StoreOpsCls[E] = new StoreOpsCls[E](x)
 
-  def newStore     [E<:Entry:Manifest](sndIdx: Rep[Array[Idx[E]]]):Rep[Store[E]]
+  def newStore     [E<:Entry:Manifest]():Rep[Store[E]]
   //def newStore     [E<:Entry:Manifest]():Rep[Store[E]] = newStore[E](null.asInstanceOf[Rep[Array[Idx[E]]]])
   def stInsert     [E<:Entry:Manifest](x: Rep[Store[E]], e: Rep[E]):Rep[Unit]
   def stUpdate     [E<:Entry:Manifest](x: Rep[Store[E]], e: Rep[E]):Rep[Unit]
@@ -551,7 +551,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen {
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case StNewStore(mE, sndIdx) => emitValDef(sym, "new Store[" + remap(mE) + "]("+quote(sndIdx)+")")
+    case StNewStore(mE) => emitValDef(sym, "new Store[" + remap(mE) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
     case StInsert(x,e) => emitValDef(sym, quote(x)+".insert("+quote(e)+")")
     case StUpdate(x,e) => emitValDef(sym, quote(x)+".update("+quote(e)+")")
     case StDelete(x,e) => emitValDef(sym, quote(x)+".delete("+quote(e)+")")
