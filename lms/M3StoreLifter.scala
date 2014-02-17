@@ -47,12 +47,12 @@ trait M3StoreOps extends StoreOps {
   def m3temp(key_tp:List[Type],value_tp:Type):Rep[Store[_]] = m3temp()(manEntry(key_tp, value_tp).asInstanceOf[Manifest[Entry]])
   def m3temp[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]]
   // Operations on M3Map, M3Var and M3Temp
-  // def m3get[E<:Entry:Manifest](map:Rep[Store[E]], key:Rep[E]):Rep[E]
-  // def m3set[E<:Entry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
-  // def m3add[E<:Entry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
-  // def m3foreach[E<:Entry:Manifest](map:Rep[Store[E]], body: Rep[E] => Rep[Unit]):Rep[Unit]
-  // def m3slice[E<:Entry:Manifest](map:Rep[Store[E]],part:Int,partKey:Rep[E],body: Rep[E] => Rep[Unit]):Rep[Unit]
-  // def m3clear[E<:Entry:Manifest](map:Rep[Store[E]]):Rep[Unit]
+  // def m3get[E<:SEntry:Manifest](map:Rep[Store[E]], key:Rep[E]):Rep[E]
+  // def m3set[E<:SEntry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
+  def m3add[E<:Entry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
+  // def m3foreach[E<:SEntry:Manifest](map:Rep[Store[E]], body: Rep[E] => Rep[Unit]):Rep[Unit]
+  // def m3slice[E<:SEntry:Manifest](map:Rep[Store[E]],part:Int,partKey:Rep[E],body: Rep[E] => Rep[Unit]):Rep[Unit]
+  // def m3clear[E<:SEntry:Manifest](map:Rep[Store[E]]):Rep[Unit]
 }
 
 trait M3StoreOpsExp extends BaseExp with EffectExp with M3MapOps with StoreExp {
@@ -76,6 +76,40 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3MapOps with StoreExp {
   // def m3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = M3Get(map,key,man(value_tp))
   // def m3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(M3Set(map,key,value))
   // def m3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(M3Add(map,key,value))
+  def m3add[E<:Entry:Manifest](map:Rep[Store[E]], ent:Rep[E]) = {
+    val isTemp = map match {
+      case Def(Reflect(s@StNewStore(_),_,_)) => s.asInstanceOf[Sym[_]].attributes.get("_isTemp").asInstanceOf[Boolean]
+      case s:Sym[_] =>  s.attributes.get("_isTemp").asInstanceOf[Boolean]
+    }
+
+    val m = manifest[E];
+    val n = m.typeArguments.size
+    val lastMan = m.typeArguments.last
+    if(isTemp) {
+      val entVal = ent.get(n)
+      __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
+        ///////
+        val currentEnt = map.get(ent)
+        __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
+          val entVal = ent.get(n)
+          currentEnt += (n, entVal)
+          val currentEntVal = currentEnt.get(n)
+          __ifThenElse(__equal(entVal,unit(zero(lastMan))),map.delete(currentEnt),unit(()))
+        })
+        ///////
+
+      })
+    } else {
+      ///////
+      val currentEnt = map.get(ent)
+      __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
+        val entVal = ent.get(n)
+        currentEnt += (n, entVal)
+      })
+      ///////
+    }
+    unit(())
+  }
   // def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = m3foreach(map,key,value,reifyEffects(body))
   // def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = reflectEffect(M3Foreach(map,key,value,body),summarizeEffects(body).star)
   // def m3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = M3Slice(map,part,partKey)
