@@ -348,7 +348,7 @@ trait StoreOps extends Base with SEntryOps {
 }
 
 trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp with SEntryExp {
-  case class StNewStore   [E<:Entry:Manifest](mE: Manifest[E], sndIdx: Exp[Array[Idx[E]]]) extends Def[Store[E]]
+  case class StNewStore   [E<:Entry:Manifest](mE: Manifest[E]/*, sndIdx: Exp[Array[Idx[E]]]*/) extends Def[Store[E]]
 
   case class StInsert     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
   case class StUpdate     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
@@ -388,7 +388,8 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     storeEntryClasses(manifest[E].toString)._2 += xx
   }
 
-  def newStore     [E<:Entry:Manifest](sndIdx: Exp[Array[Idx[E]]]):Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E], sndIdx)) }
+  // def newStore     [E<:Entry:Manifest](sndIdx: Exp[Array[Idx[E]]]):Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E], sndIdx)) }
+  def newStore     [E<:Entry:Manifest]():Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E])) }
   def stInsert     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StInsert[E](x, e))
   def stUpdate     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StUpdate[E](x, e))
   def stDelete     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StDelete[E](x, e))
