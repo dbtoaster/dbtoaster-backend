@@ -145,6 +145,11 @@ abstract class Entry(n:Int) {
 //   }
 // }
 
+object Store {
+  // DBToaster: create n+1 hash indexes (n=# projections)
+  def apply[E<:Entry](n:Int)(implicit cE:ClassTag[E]) = new Store((0 to n).map(i=>new IdxHash[E](i,i==0)).toArray.asInstanceOf[Array[Idx[E]]])
+}
+
 class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
   assert(idxs.size>0)
   def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n))

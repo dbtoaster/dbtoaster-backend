@@ -43,7 +43,7 @@ object ScalaExpGen extends ScalaOpsPkgExpOpt with M3OpsExp with ExtendedExpressi
         emitBlock(transformedBody)
         if (manifest[T]!=manifest[Unit]) stream.println(quote(getBlockResult(transformedBody)))
       }
-      reset // reset the whole LMS subsystem
+      // reset // reset the whole LMS subsystem
       outStream.toString
     }
   }
