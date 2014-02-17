@@ -8,7 +8,6 @@ import scala.virtualization.lms.internal.{GenericNestedCodegen, GenerationFailed
 import scala.reflect.SourceContext
 import scala.language.implicitConversions
 
-import storage._
 import ddbt.lib.store._
 
 trait SEntryOps extends Base{
@@ -69,7 +68,7 @@ trait SEntryOps extends Base{
   def sampleEntry[E<:Entry:Manifest](args:(Int,Rep[Any])*):Rep[E]
   def sampleFullEntry[E<:Entry:Manifest](args:Rep[Any]*):Rep[E]
   def steMakeMutable[E<:Entry:Manifest](x: Rep[E]):Rep[E]
-  
+
   def steUpdate[E<:Entry:Manifest](x: Rep[E], i: Int, v: Rep[Any]):Rep[Unit]
   def steIncrease[E<:Entry:Manifest](x: Rep[E], i: Int, v: Rep[Any]):Rep[Unit]
   def steDecrease[E<:Entry:Manifest](x: Rep[E], i: Int, v: Rep[Any]):Rep[Unit]
@@ -171,7 +170,7 @@ trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaC
   }
 
   override def remap[A](m: Manifest[A]): String = m match {
-    case _ if classOf[oltp.opt.lifters.SEntry[_]] isAssignableFrom m.runtimeClass => 
+    case _ if classOf[SEntry[_]] isAssignableFrom m.runtimeClass =>
       // call remap on all type arguments
       val targs = m.typeArguments
       if (targs.length > 0) {
@@ -499,7 +498,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit pos: SourceContext): Exp[A] = (e match {
     // case e@StNewStore(mE, sndIdx) => newStore(f(sndIdx))(e.mE)
     // case e@StMutableEntry(elem) => StMutableEntry(f(elem))
-    
+
     // case K3Contains(x, key) => k3Contains(f(x), f(key))
     // case e@K3Lookup(x, key) => k3Lookup(f(x), f(key))(mtype(e.mV))
     // case e@K3LookupOrDefault(x, key, defaultVal) => k3LookupOrDefault(f(x).asInstanceOf[Exp[Store[Any, A]]], f(key), f(defaultVal))(mtype(e.mV)) //why cast is needed?
@@ -507,18 +506,18 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     // case K3Remove(x, key) => k3Remove(f(x), f(key))
     // case K3Clear(x) => k3Clear(f(x))
     // case K3Mutable(x) => k3Mutable(f(x))
-    // case e@K3Slice(x, kp, idx) => k3Slice(f(x), f(kp), f(idx))(mtype(e.mK),mtype(e.mV),mtype(e.mK2)) 
+    // case e@K3Slice(x, kp, idx) => k3Slice(f(x), f(kp), f(idx))(mtype(e.mK),mtype(e.mV),mtype(e.mK2))
     // case K3Foreach(a, x, body) => K3Foreach(f(a),x,f(body))
     // case Reflect(e@StNewStore(mK, mV, name, elems, sndIdx), u, es) => reflectMirrored(Reflect(StNewStore(mtype(mK), mtype(mV), f(name), f(elems), f(sndIdx)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     // case Reflect(K3Contains(x, key), u, es) => reflectMirrored(Reflect(K3Contains(f(x), f(key)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     // case Reflect(e@K3Lookup(x, key), u, es) => reflectMirrored(Reflect(K3Lookup(f(x), f(key))(mtype(e.mV)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     // case Reflect(e@K3LookupOrDefault(x, key, defaultVal), u, es) => reflectMirrored(Reflect(K3LookupOrDefault(f(x).asInstanceOf[Exp[Store[Any, A]]], f(key), f(defaultVal))(mtype(e.mV)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     // case Reflect(K3UpdateValue(x, key, value), u, es) => reflectMirrored(Reflect(K3UpdateValue(f(x), f(key), f(value)), mapOver(f,u), f(es)))(mtype(manifest[A]))
-    // case Reflect(K3Remove(x, key), u, es) => reflectMirrored(Reflect(K3Remove(f(x), f(key)), mapOver(f,u), f(es)))(mtype(manifest[A]))  
-    // case Reflect(K3Clear(x), u, es) => reflectMirrored(Reflect(K3Clear(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))  
-    // case Reflect(K3Mutable(x), u, es) => reflectMirrored(Reflect(K3Mutable(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))  
-    // case Reflect(e@K3Slice(x, kp, idx), u, es) => reflectMirrored(Reflect(K3Slice(f(x), f(kp), f(idx))(mtype(e.mK),mtype(e.mV),mtype(e.mK2)), mapOver(f,u), f(es)))(mtype(manifest[A]))  
-    // case Reflect(K3Foreach(a, x, body), u, es) => reflectMirrored(Reflect(K3Foreach(f(a), x, f(body)), mapOver(f,u), f(es)))(mtype(manifest[A]))  
+    // case Reflect(K3Remove(x, key), u, es) => reflectMirrored(Reflect(K3Remove(f(x), f(key)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    // case Reflect(K3Clear(x), u, es) => reflectMirrored(Reflect(K3Clear(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    // case Reflect(K3Mutable(x), u, es) => reflectMirrored(Reflect(K3Mutable(f(x)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    // case Reflect(e@K3Slice(x, kp, idx), u, es) => reflectMirrored(Reflect(K3Slice(f(x), f(kp), f(idx))(mtype(e.mK),mtype(e.mV),mtype(e.mK2)), mapOver(f,u), f(es)))(mtype(manifest[A]))
+    // case Reflect(K3Foreach(a, x, body), u, es) => reflectMirrored(Reflect(K3Foreach(f(a), x, f(body)), mapOver(f,u), f(es)))(mtype(manifest[A]))
     case _ => super.mirror(e,f)
   }).asInstanceOf[Exp[A]] // why??
 
@@ -566,7 +565,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen {
     //case StGetMin(x,idx) => emitValDef(sym, quote(x)+".getMin("+{if(idx == (-1)) "1" else ""+idx}+")")
     //case StGetMax(x,idx) => emitValDef(sym, quote(x)+".getMax("+{if(idx == (-1)) "1" else ""+idx}+")")
     //case StGetMedian(x,idx) => emitValDef(sym, quote(x)+".getMedian("+{if(idx == (-1)) "1" else ""+idx}+")")
-    // case StForeach(x, blockSym, block) => emitValDef(sym, quote(x)+".idxs(0).foreach{")   
+    // case StForeach(x, blockSym, block) => emitValDef(sym, quote(x)+".idxs(0).foreach{")
     //   stream.println(quote(blockSym) + " => ")
     //   emitBlock(block)
     //   stream.println("}")
@@ -575,12 +574,12 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen {
       stream.println(quote(blockSym) + " => ")
       emitBlock(block)
       stream.println("}")
-    //case StSlice(x, idx, key, blockSym, block) => emitValDef(sym, quote(x)+".slice("+{if(idx == (-1)) "1" else ""+idx}+","+quote(key)+",{")   
-    case StSlice(x, idx, key, blockSym, block) => emitValDef(sym, quote(x)+".idxs("+{if(idx == (-1)) "1" else ""+idx}+").slice("+quote(key)+",{")   
+    //case StSlice(x, idx, key, blockSym, block) => emitValDef(sym, quote(x)+".slice("+{if(idx == (-1)) "1" else ""+idx}+","+quote(key)+",{")
+    case StSlice(x, idx, key, blockSym, block) => emitValDef(sym, quote(x)+".idxs("+{if(idx == (-1)) "1" else ""+idx}+").slice("+quote(key)+",{")
       stream.println(quote(blockSym) + " => ")
       emitBlock(block)
       stream.println("})")
-    //case StRange(x, idx, min, max, withMin, withMax, blockSym, block) => emitValDef(sym, quote(x)+".range("+{if(idx == (-1)) "1" else ""+idx}+","+quote(min)+","+quote(max)+","+quote(withMin)+","+quote(withMax)+",{")   
+    //case StRange(x, idx, min, max, withMin, withMax, blockSym, block) => emitValDef(sym, quote(x)+".range("+{if(idx == (-1)) "1" else ""+idx}+","+quote(min)+","+quote(max)+","+quote(withMin)+","+quote(withMax)+",{")
     //  stream.println(quote(blockSym) + " => ")
     //  emitBlock(block)
     //  stream.println("})")
