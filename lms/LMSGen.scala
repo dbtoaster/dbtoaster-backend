@@ -31,6 +31,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case TypeDouble => co(impl.unit(v.toDouble))
       case TypeString => co(impl.unit(v))
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
+      case _ => sys.error("Unsupported type "+tp)
     }
     case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)),am),am)
     case a@Add(l,r) =>
@@ -136,6 +137,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case TypeDouble => cmp2[Double](l,r)
       case TypeString => cmp2[String](l,r)
       case TypeDate => cmp2[Long](impl.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]),impl.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
+      case _ => sys.error("Unsupported type")
     },impl.unit(1L),impl.unit(0L))
   }
 
