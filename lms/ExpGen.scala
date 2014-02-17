@@ -25,6 +25,12 @@ object ManifestHelper {
       val cls:java.lang.Class[_] = Class.forName("scala.Tuple"+ts.size)
       scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
   }
+  def manEntry(ts:List[Type]):Manifest[_] = {
+    val ms:List[Manifest[_]] = ts map man
+    val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.SEntry"+ts.size)
+      scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
+  }
+  def manEntry(kts:List[Type],vt:Type):Manifest[_] = manEntry(kts:::List(vt))
 }
 
 /*

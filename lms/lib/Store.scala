@@ -1,4 +1,4 @@
-package storage
+package ddbt.lib.store
 import scala.reflect._
 
 import dbtoptimizer.Utils.ind
