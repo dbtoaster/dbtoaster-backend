@@ -154,10 +154,10 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect {
   import IR._
   import ddbt.Utils.{ind,tup}
 
-  // protected def getBlockContents(blk:Block[_]):String = {
-  //   val save=stream; val wr=new java.io.StringWriter; stream=new java.io.PrintWriter(wr)
-  //   emitBlock(blk); val res=ind(wr.toString); stream=save; res
-  // }
+  protected def getBlockContents(blk:Block[_]):String = {
+    val save=stream; val wr=new java.io.StringWriter; stream=new java.io.PrintWriter(wr)
+    emitBlock(blk); val res=ind(wr.toString); stream=save; res
+  }
 
   // def isPossibleToInlineExpr(expr: Exp[_]) = expr match {
   //   case s@Sym(x) => s.possibleToInline

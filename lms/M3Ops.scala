@@ -14,13 +14,13 @@ import scala.reflect.SourceContext
  * @author Mohammad Dashti, TCK
  */
 
-trait M3Ops extends M3MapOps {
+trait M3Ops extends M3StoreOps {
   // Function application
   def m3apply(fn:String,args:List[Rep[_]],tp:Type):Rep[_]
 }
 
 trait M3OpsExp extends BaseExp with EffectExp with M3Ops with Equal with NumericOps with MathOps
- with DateOps with StringOps with PrimitiveOps with IfThenElseExp with M3MapOpsExp with CastingOps with OrderingOps {
+ with DateOps with StringOps with PrimitiveOps with IfThenElseExp with M3StoreOpsExp with CastingOps with OrderingOps {
   import ManifestHelper.man
 
   def div(x: Rep[Double]): Rep[Double] = __ifThenElse(equals(x,unit(0.0)),unit(0.0),numeric_divide(unit(1.0),x))
@@ -48,7 +48,7 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops with Equal with Numeric
   case class M3Apply[T](name:String,args:List[Exp[_]],mT:Manifest[T]) extends Def[T]
 }
 
-trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThenElse with ScalaGenM3MapOps {
+trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThenElse with ScalaGenM3StoreOps {
   val IR: M3OpsExp with ExtendedExpressions
   import IR._
 
