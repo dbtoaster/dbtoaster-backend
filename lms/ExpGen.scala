@@ -30,7 +30,6 @@ object ManifestHelper {
     val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.SEntry"+ts.size)
       scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
   }
-  def manEntry(kts:List[Type],vt:Type):Manifest[_] = manEntry(kts:::List(vt))
   def zero(tp: Type) = tp match {
     case TypeLong => 0
     case TypeDouble => 0.0

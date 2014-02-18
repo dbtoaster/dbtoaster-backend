@@ -14,6 +14,8 @@ import scala.reflect.SourceContext
  * @author Mohammad Dashti, TCK
  */
 
+// M3StoreOps / M3MapOps are interchangeable
+
 trait M3Ops extends M3StoreOps {
   // Function application
   def m3apply(fn:String,args:List[Rep[_]],tp:Type):Rep[_]

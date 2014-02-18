@@ -13,12 +13,15 @@ import ddbt.lib._
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-  import ManifestHelper.{man,zero}
+  import ManifestHelper.{man,zero,manEntry}
 
   val impl = ScalaExpGen
   import impl.Rep
 
   var cx : Ctx[Rep[_]] = null
+
+  import ddbt.lib.store._
+  def me(ks:List[Type],v:Type=null):Manifest[Entry] = manEntry(if (v==null) ks else ks:::List(v)).asInstanceOf[Manifest[Entry]]
 
   // Expression CPS transformation from M3 AST to LMS graph representation
   //   ex : expression to convert
@@ -39,8 +42,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       else am match {
         case Some(t) if t.toSet==a.agg.toSet => val cur=cx.save; expr(l,co,am); cx.load(cur); expr(r,co,am); cx.load(cur);
         case _ =>
-          val acc = impl.m3temp(a.agg.map(_._2),ex.tp)
-          val inCo = (v:Rep[_]) => impl.m3add(acc,a.agg.map(x=>cx(x._1)),v)
+          implicit val mE=me(a.agg.map(_._2),a.tp)
+          val acc = impl.m3temp()(mE)
+          val inCo = (v:Rep[_]) => impl.m3add(acc,impl.newEntry( (a.agg.map(x=>cx(x._1))++List(v)) : _*)(mE))(mE)
           val cur = cx.save
           expr(l,inCo,Some(a.agg)); cx.load(cur)
           expr(r,inCo,Some(a.agg)); cx.load(cur)
@@ -58,15 +62,22 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       else app(as,Nil)
     case m@MapRef(n,tp,ks) =>
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
+      val proxy = impl.store2StoreOpsCls(cx(n).asInstanceOf[Rep[Store[Entry]]])
       if(ks.size == 0) { // variable
         co(cx(n))
       } else if(ki.size == 0) { // all keys are bound
-        co(impl.m3get(cx(n),ko.map{case (k,i)=>cx(k)},tp))
+        val z = impl.unit(tp.zero)
+        val vs:List[Rep[_]] = ks.map(cx).toList ::: List(z)
+        val e = impl.newEntry(vs : _*)
+        val r = proxy.get(e,0)
+        impl.__ifThenElse(impl.__equals(r,unit(null)),z,co(r).get(ks.size+1))
       } else { // we need to iterate over all keys not bound (ki)
-        val mapRef = cx(n)
-        val slicedMapRef = if(ko.size == 0) mapRef
-        else impl.m3slice(mapRef,slice(n,ko.map(_._2)),ko.map{case (k,i)=>cx(k)})
-        foreach(slicedMapRef,(ks zip m.tks),tp,co,"m")
+        if (ko.size==0) proxy.foreach(co)
+        else {
+          implicit val mE=me(m.tks,tp)
+          val vs = (ks zip m.tks).map{ case (n,t)=>if(cx.contains(n)) cx(n) else impl.unit(t.zero) }.toList ::: List(impl.unit(tp.zero))
+          proxy.slice(impl.newEntry(vs : _*)(mE),co) // XXX: figure out the slice id
+        }
       }
     case a@AggSum(ks,e) =>
       val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
@@ -159,6 +170,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       t.stmts.map {
         case StmtMap(m,e,op,oi) => cx.load()
           val mm = cx(m.name)
+          val proxy = store2StoreOpsCls(mm)
+
           if (op==OpSet && m.keys.size>0) impl.m3clear(mm)
           oi match { case None => case Some(ie) =>
             expr(ie,(r:Rep[_]) => { val keys = m.keys.map(cx)
@@ -244,7 +257,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
-
     val tsResBlks = s0.triggers.map(genTriggerLMS) // triggers (need to be generated before maps)
     val ts = tsResBlks.map{ case (s,b) =>
       "def "+s+" {\n"+ddbt.Utils.ind(impl.emit(b))+"\n}"

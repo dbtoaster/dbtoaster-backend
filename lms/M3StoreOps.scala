@@ -34,22 +34,24 @@ trait M3StoreOps extends StoreOps {
   //   def size:Int;               // number of key-value mappings in the map
   //   def toMap:Map[K,V];         // convert to a Scala map
   // }
-  // Nodes creatio
+  // Nodes creation
 
-  def newM3Store(key_tp:List[Type],value_tp:Type):Rep[Store[_]] = newM3Store()(manEntry(key_tp, value_tp).asInstanceOf[Manifest[Entry]])
-  def newM3Store[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]]
+//  def newEntry[E](vs:List[Rep[_]], m:Manifest[E]):E
+
+  //def newM3Store[E<:Entry](key_tp:List[Type],value_tp:Type):Rep[Store[E]] = newM3Store()(manEntry(key_tp, value_tp).asInstanceOf[Manifest[E]])
+  //def newM3Store[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]]
   // def named(name:String,tp:Type,mutable:Boolean=false):Rep[_]
   // def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]):Rep[T]
   // def namedM3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]): Rep[M3Var[T]]
   // def namedM3Map[K,V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]): Rep[M3Temp[K,V]]
   // def m3var(value:Type) : Rep[M3Var[_]]
 
-  def m3temp(key_tp:List[Type],value_tp:Type):Rep[Store[_]] = m3temp()(manEntry(key_tp, value_tp).asInstanceOf[Manifest[Entry]])
+  //def m3temp[E<:Entry](key_tp:List[Type],value_tp:Type):Rep[Store[E]] = m3temp()(manEntry(key_tp, value_tp).asInstanceOf[Manifest[E]])
   def m3temp[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]]
   // Operations on M3Map, M3Var and M3Temp
   // def m3get[E<:SEntry:Manifest](map:Rep[Store[E]], key:Rep[E]):Rep[E]
   // def m3set[E<:SEntry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
-  def m3add[E<:Entry:Manifest](map:Rep[Store[E]], ent:Rep[E]):Rep[Unit]
+  def m3add[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]):Rep[Unit]
   // def m3foreach[E<:SEntry:Manifest](map:Rep[Store[E]], body: Rep[E] => Rep[Unit]):Rep[Unit]
   // def m3slice[E<:SEntry:Manifest](map:Rep[Store[E]],part:Int,partKey:Rep[E],body: Rep[E] => Rep[Unit]):Rep[Unit]
   // def m3clear[E<:SEntry:Manifest](map:Rep[Store[E]]):Rep[Unit]
@@ -58,15 +60,16 @@ trait M3StoreOps extends StoreOps {
 trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp {
   import ManifestHelper.man
 
-  def newM3Store[E<:Entry](implicit tp:Manifest[E]):Rep[Store[E]] = {
-    newStore[E]
-  }
+//  case class M3Entry[E<:Entry](vs:List[Rep[_]], m:Manifest[E]) extends Exp[E]
+
+//  def newEntry[E<:Entry](vs:List[Rep[_]], m:Manifest[E]):Rep[E] = M3Entry(vs,m)
+  //def newM3Store[E<:Entry](implicit tp:Manifest[E]):Rep[Store[E]] = newStore[E]
   // def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   // def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
   // def namedM3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]) = reflectMutable(NamedM3Var(name,tp)(mT))
   // def namedM3Map[K, V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]) = reflectMutable(NamedM3Map(name,key,value,indexList,mK,mV))
   def m3temp[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]] = {
-    val sym = newM3Store[E]
+    val sym = newStore[E]
     sym match {
       case Def(Reflect(s@StNewStore(_),_,_)) => s.asInstanceOf[Sym[_]].attributes.put("_isTemp",true)
       case s:Sym[_] => s.attributes.put("_isTemp",true)
@@ -76,13 +79,11 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
   // def m3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = M3Get(map,key,man(value_tp))
   // def m3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(M3Set(map,key,value))
   // def m3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(M3Add(map,key,value))
-  def m3add[E<:Entry:Manifest](map:Rep[Store[E]], ent:Rep[E]) = {
+  def m3add[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]) = {
     val isTemp = map match {
       case Def(Reflect(s@StNewStore(_),_,_)) => s.asInstanceOf[Sym[_]].attributes.get("_isTemp").asInstanceOf[Boolean]
       case s:Sym[_] =>  s.attributes.get("_isTemp").asInstanceOf[Boolean]
     }
-
-    val m = manifest[E];
     val n = m.typeArguments.size
     val lastMan = m.typeArguments.last
     if(isTemp) {
@@ -149,7 +150,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
   // }
 }
 
-trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect {
+trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenStore {
   val IR: M3StoreOpsExp with ExtendedExpressions
   import IR._
   import ddbt.Utils.{ind,tup}
@@ -195,6 +196,10 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect {
   //   }
   // }
 
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    //case M3Entry(vs,m) => emitValDef(sym, "new "+m.toString+"("+(vs map quote).mkString(",")+")")
+    case _ => super.emitNode(sym,rhs)
+  }
   // private val nameAttr = "_name"
   // override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
   //   case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
