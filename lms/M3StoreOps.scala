@@ -81,7 +81,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
   // def m3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(M3Add(map,key,value))
   def m3add[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]) = {
     val isTemp = map match {
-      case Def(Reflect(s@StNewStore(_),_,_)) => s.asInstanceOf[Sym[_]].attributes.get("_isTemp").asInstanceOf[Boolean]
+      case Def(Reflect(s@StNewStore(_),_,_)) => toAtom(s).asInstanceOf[Sym[_]].attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
       case s:Sym[_] =>  s.attributes.get("_isTemp").asInstanceOf[Boolean]
     }
     val n = m.typeArguments.size

@@ -79,8 +79,15 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         if (ko.size==0) proxy.foreach(co)
         else {
           implicit val mE=me(m.tks,tp)
+
+//          val x = null.asInstanceOf[mE.runtimeClass]
+
           val vs = (ks zip m.tks).map{ case (n,t)=>if(cx.contains(n)) cx(n) else impl.unit(t.zero) }.toList ::: List(impl.unit(tp.zero))
-          proxy.slice(impl.sampleFullEntry(vs : _*)(mE),co) // XXX: figure out the slice id
+          impl.stSlice(cx(n).asInstanceOf[Rep[Store[Entry]]] ,0/*XXX*/ ,impl.sampleFullEntry(vs : _*)(mE),co)(mE) // XXX: figure out the slice id
+
+//  def stSlice      [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,key:Rep[E],f:Rep[E]=>Rep[Unit]):Rep[Unit]
+
+
         }
       }
     case a@AggSum(ks,e) =>
@@ -169,7 +176,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val block = impl.reifyEffects {
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
-        //maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.namedM3Var(name,tp)(manifest[Any])) else (name,impl.namedM3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any])) }.toList union
+        maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.fresh(man(tp))) else { val m = me(keys.map(_._2),tp); (name,impl.newStore()(m)) } // XXX missing indexes
+        //  impl.namedM3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any]))
+        }.toList union
         args.map{ case (name,tp) => (name,impl.named(name,tp)) }
       ).toMap)
       // Execute each statement
@@ -187,8 +196,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 */
           expr(e,(r:Rep[_]) => op match {
             case OpAdd => if (m.keys.size==0) impl.var_plusequals(mm.asInstanceOf[impl.Var[_]],r) else {
+              implicit val mE = manEntry(m.tks ::: List(m.tp)).asInstanceOf[Manifest[Entry]]
               val vs:List[Rep[_]] = m.keys.map(cx).toList ::: List(r)
-              impl.m3add(mm.asInstanceOf[Rep[Store[Entry]]], impl.newEntry(vs : _*))
+              impl.m3add(mm.asInstanceOf[Rep[Store[Entry]]], impl.newEntry(vs : _*))(mE)
             }
             case OpSet => if (m.keys.size==0) impl.__assign(mm,r) else {
               val vs:List[Rep[_]] = m.keys.map(cx).toList ::: List(r)
