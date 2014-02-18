@@ -71,7 +71,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       } else if(ki.size == 0) { // all keys are bound
         val z = impl.unit(zero(tp))
         val vs:List[Rep[_]] = ks.map(cx).toList ::: List(z)
-        val e = impl.newEntry(vs : _*)
+        //XXX remove value using sampleEntry
+        val e = impl.sampleFullEntry(vs : _*)
         val r = proxy.get(e,0)
         impl.__ifThenElse(impl.__equal(r,impl.unit(null)),co(z),co(r.get(ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
@@ -79,7 +80,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         else {
           implicit val mE=me(m.tks,tp)
           val vs = (ks zip m.tks).map{ case (n,t)=>if(cx.contains(n)) cx(n) else impl.unit(t.zero) }.toList ::: List(impl.unit(tp.zero))
-          proxy.slice(impl.newEntry(vs : _*)(mE),co) // XXX: figure out the slice id
+          proxy.slice(impl.sampleFullEntry(vs : _*)(mE),co) // XXX: figure out the slice id
         }
       }
     case a@AggSum(ks,e) =>
