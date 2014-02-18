@@ -22,6 +22,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
   import ddbt.lib.store._
   def me(ks:List[Type],v:Type=null):Manifest[Entry] = manEntry(if (v==null) ks else ks:::List(v)).asInstanceOf[Manifest[Entry]]
+  def mapProxy(m:Rep[_]) = impl.store2StoreOpsCls(m.asInstanceOf[Rep[Store[Entry]]])
+
 
   // Expression CPS transformation from M3 AST to LMS graph representation
   //   ex : expression to convert
@@ -58,19 +60,20 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case x :: xs => expr(x,(v:Rep[_]) => app(xs,v::vs))
         case Nil => co(impl.m3apply(fn,vs.reverse,tp))
       }
-      if (as.forall(_.isInstanceOf[Const])) co(impl.named(constApply(a),tp,false)) // hoist constants resulting from function application
-      else app(as,Nil)
+      //if (as.forall(_.isInstanceOf[Const])) co(impl.named(constApply(a),tp,false)) // hoist constants resulting from function application
+      //else
+       app(as,Nil)
     case m@MapRef(n,tp,ks) =>
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
-      val proxy = impl.store2StoreOpsCls(cx(n).asInstanceOf[Rep[Store[Entry]]])
+      val proxy = mapProxy(cx(n))
       if(ks.size == 0) { // variable
         co(cx(n))
       } else if(ki.size == 0) { // all keys are bound
-        val z = impl.unit(tp.zero)
+        val z = impl.unit(zero(tp))
         val vs:List[Rep[_]] = ks.map(cx).toList ::: List(z)
         val e = impl.newEntry(vs : _*)
         val r = proxy.get(e,0)
-        impl.__ifThenElse(impl.__equals(r,unit(null)),z,co(r).get(ks.size+1))
+        impl.__ifThenElse(impl.__equal(r,impl.unit(null)),co(z),co(r.get(ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
         if (ko.size==0) proxy.foreach(co)
         else {
@@ -85,9 +88,14 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         val acc:impl.Var[_] = impl.var_new(impl.unit(zero(ex.tp)))
         val cur=cx.save; expr(e,(v:Rep[_]) => impl.var_plusequals(acc, v),None); cx.load(cur); co(acc)
       } else {
-        val acc = impl.m3temp(agg_keys.map(_._2),ex.tp)
+        implicit val mE=me(a.tks,ex.tp)
+        val acc = impl.m3temp()(mE)
         val cur = cx.save
-        val coAcc = (v:Rep[_]) => impl.m3add(acc, agg_keys.map(x=>cx(x._1)), v)
+
+        val coAcc = (v:Rep[_]) => {
+          val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
+          impl.m3add(acc, impl.newEntry(vs : _*))
+        }
         expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
         am match {
           case Some(t) if (t.toSet==agg_keys.toSet) => expr(e,co,am)
@@ -98,15 +106,12 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   def foreach(map:Rep[_],keys:List[(String,Type)],value_tp:Type,co:Rep[_]=>Rep[Unit],prefix:String=""):Rep[Unit] = {
-    var keyArg: Rep[_] = null
-    var valArg: Rep[_] = null
-    val body = impl.reifyEffects {
-      keyArg = impl.named(fresh(prefix+"k"),true)(man(keys.map(_._2)))
-      valArg = impl.named(fresh(prefix+"v"),value_tp,true)
-      val inKeys = keys.zipWithIndex.filter(k=> !cx.contains(k._1._1)).map{ case ((n,t),i) => (n,accessTuple(keyArg,t,keys.size,i)) }
-      cx.add(inKeys.toMap); co(valArg)
+    implicit val mE = manEntry(keys.map(_._2) ::: List(value_tp))
+    val proxy = mapProxy(map)
+    proxy.foreach{ e:Rep[Entry] =>
+      cx.add(keys.zipWithIndex.filter(x=> !cx.contains(x._1._1)).map { case ((n,t),i) => (n,e.get(i)) }.toMap)
+      co(e.get(keys.size+1))
     }
-    impl.m3foreach(map, keyArg, valArg, body)
   }
 
   def accessTuple(tuple: Rep[_],elemTp:Type,sz: Int, idx: Int)(implicit pos: scala.reflect.SourceContext): Rep[_] = sz match {
@@ -163,25 +168,33 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val block = impl.reifyEffects {
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
-        maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.namedM3Var(name,tp)(manifest[Any])) else (name,impl.namedM3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any])) }.toList union
+        //maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.namedM3Var(name,tp)(manifest[Any])) else (name,impl.namedM3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any])) }.toList union
         args.map{ case (name,tp) => (name,impl.named(name,tp)) }
       ).toMap)
       // Execute each statement
       t.stmts.map {
         case StmtMap(m,e,op,oi) => cx.load()
           val mm = cx(m.name)
-          val proxy = store2StoreOpsCls(mm)
-
-          if (op==OpSet && m.keys.size>0) impl.m3clear(mm)
+          if (op==OpSet && m.keys.size>0) mapProxy(mm).clear
+/*
           oi match { case None => case Some(ie) =>
             expr(ie,(r:Rep[_]) => { val keys = m.keys.map(cx)
-               impl.__ifThenElse(impl.equals(impl.m3get(mm,keys,m.tp),impl.unit(0L)),impl.m3set(mm,keys,r),impl.unit(()))
+               impl.__ifThenElse(impl.equals(  impl.m3get(mm,keys,m.tp),impl.unit(0L)),impl.m3set(mm,keys,r),impl.unit(()))
             })
           }
           cx.load()
+*/
           expr(e,(r:Rep[_]) => op match {
-            case OpAdd => if (m.keys.size==0) impl.var_plusequals(mm.asInstanceOf[impl.Var[_]],r) else impl.m3add(mm,m.keys.map(cx),r)
-            case OpSet => if (m.keys.size==0) impl.__assign(mm,r) else impl.m3set(mm,m.keys.map(cx),r)
+            case OpAdd => if (m.keys.size==0) impl.var_plusequals(mm.asInstanceOf[impl.Var[_]],r) else {
+              val vs:List[Rep[_]] = m.keys.map(cx).toList ::: List(r)
+              impl.m3add(mm.asInstanceOf[Rep[Store[Entry]]], impl.newEntry(vs : _*))
+            }
+            case OpSet => if (m.keys.size==0) impl.__assign(mm,r) else {
+              val vs:List[Rep[_]] = m.keys.map(cx).toList ::: List(r)
+              // XXX: delete previous value
+              impl.stInsert(mm.asInstanceOf[Rep[Store[Entry]]], impl.newEntry(vs : _*))
+              //impl.m3set(mm,m.keys.map(cx),r)
+            }
           }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
