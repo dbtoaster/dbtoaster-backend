@@ -4,7 +4,7 @@ import org.dbtoaster.dbtoasterlib.K3Collection._
 import scala.collection.mutable.Map
 import xml._
 import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericNestedCodegen, GenerationFailedException, Effects}
+import scala.virtualization.lms.internal.{GenericNestedCodegen, GenerationFailedException, ExtendedExpressions, Effects}
 import scala.reflect.SourceContext
 import scala.language.implicitConversions
 
@@ -119,7 +119,7 @@ trait SEntryExp extends StoreOps with BaseExp with EffectExp with VariablesExp {
 trait SEntryExpOpt extends SEntryExp
 
 trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaCodegen {
-  val IR: SEntryExp with dbtoptimizer.ToasterBoosterExpression with Effects
+  val IR: SEntryExp with ExtendedExpressions with Effects
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
@@ -546,8 +546,8 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
 
 trait StoreExpOpt extends StoreExp with SEntryExpOpt
 
-trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen {
-  val IR: StoreExp
+trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGenSEntry {
+  val IR: StoreExp with ExtendedExpressions with Effects
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {

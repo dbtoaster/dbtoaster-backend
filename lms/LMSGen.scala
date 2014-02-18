@@ -70,9 +70,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         co(cx(n))
       } else if(ki.size == 0) { // all keys are bound
         val z = impl.unit(zero(tp))
-        val vs:List[Rep[_]] = ks.map(cx).toList ::: List(z)
-        //XXX remove value using sampleEntry
-        val e = impl.sampleFullEntry(vs : _*)
+        val vs = ks.zipWithIndex.map{ case (n,i) => (i,cx(n))}
+        val e = impl.sampleEntry(vs : _*)
         val r = proxy.get(e,0)
         impl.__ifThenElse(impl.__equal(r,impl.unit(null)),co(z),co(r.get(ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
@@ -82,8 +81,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
 //          val x = null.asInstanceOf[mE.runtimeClass]
 
-          val vs = (ks zip m.tks).map{ case (n,t)=>if(cx.contains(n)) cx(n) else impl.unit(t.zero) }.toList ::: List(impl.unit(tp.zero))
-          impl.stSlice(cx(n).asInstanceOf[Rep[Store[Entry]]] ,0/*XXX*/ ,impl.sampleFullEntry(vs : _*)(mE),co)(mE) // XXX: figure out the slice id
+          val vs = (ks zip m.tks).zipWithIndex.filter{ case ((n,t),i) => cx.contains(n) }.map{ case ((n,t),i)=> (i,cx(n)) }
+          impl.stSlice(cx(n).asInstanceOf[Rep[Store[Entry]]], -1 /*index will be figured out automatically*/, impl.sampleEntry(vs : _*)(mE),co)(mE)
 
 //  def stSlice      [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,key:Rep[E],f:Rep[E]=>Rep[Unit]):Rep[Unit]
 

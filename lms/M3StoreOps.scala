@@ -90,7 +90,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
       val entVal = ent.get(n)
       __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
         ///////
-        val currentEnt = map.get(ent)
+        val currentEnt = sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*) //map.get(ent)
         __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
           val entVal = ent.get(n)
           currentEnt += (n, entVal)
@@ -102,7 +102,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
       })
     } else {
       ///////
-      val currentEnt = map.get(ent)
+        val currentEnt = sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*) //map.get(ent)
       __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
         val entVal = ent.get(n)
         currentEnt += (n, entVal)
@@ -151,7 +151,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
 }
 
 trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenStore {
-  val IR: M3StoreOpsExp with ExtendedExpressions
+  val IR: M3StoreOpsExp with ExtendedExpressions with Effects
   import IR._
   import ddbt.Utils.{ind,tup}
 

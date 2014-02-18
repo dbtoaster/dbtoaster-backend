@@ -21,11 +21,8 @@ import dbtoptimizer._
 import dbtoptimizer.lifters._
 import scala.reflect.SourceContext
 
-trait ToasterBoosterExpression extends ExtendedExpressions with Effects {
-}
-
 trait ToasterBoosterScalaCodegen extends ScalaConciseCodegen { self =>
-  val IR: ToasterBoosterExpression with Effects
+  val IR: ExtendedExpressions with Effects
   import IR._
 
   var classArgs: List[Sym[_]] = Nil

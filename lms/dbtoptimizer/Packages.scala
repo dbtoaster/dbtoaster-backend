@@ -29,7 +29,7 @@ trait ToasterBoosterOpsPkg extends ScalaOpsPkg with ExtendedExpressions
 
 trait ToasterBoosterOpsPkgExp extends ScalaOpsPkgExp with ToasterBoosterOpsPkg
   with SimpleValExp with ListContainerExp with K3PersistentCollectionExp
-  with StdFunctionsExp with ToasterBoosterExpression with StoreExp with SEntryExp
+  with StdFunctionsExp with StoreExp with SEntryExp
 
 trait ToasterBoosterOpsPkgExpOpt extends ScalaOpsPkgExpOpt with ToasterBoosterOpsPkgExp
   with K3PersistentCollectionExpOpt with StdFunctionsExpOpt with StoreExpOpt with SEntryExpOpt
