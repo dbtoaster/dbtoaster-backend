@@ -36,12 +36,10 @@ trait M3StoreOps extends StoreOps {
   // }
   // Nodes creation
 
-//  def newEntry[E](vs:List[Rep[_]], m:Manifest[E]):E
-
-  //def newM3Store[E<:Entry](key_tp:List[Type],value_tp:Type):Rep[Store[E]] = newM3Store()(manEntry(key_tp, value_tp).asInstanceOf[Manifest[E]])
-  //def newM3Store[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]]
-  // def named(name:String,tp:Type,mutable:Boolean=false):Rep[_]
-  // def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]):Rep[T]
+  // def newM3Store(key_tp:List[Type],value_tp:Type):Rep[Store[_]] = newM3Store()(manEntry(key_tp, value_tp).asInstanceOf[Manifest[Entry]])
+  // def newM3Store[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]]
+  def named(name:String,tp:Type,mutable:Boolean=false):Rep[_]
+  def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]):Rep[T]
   // def namedM3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]): Rep[M3Var[T]]
   // def namedM3Map[K,V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]): Rep[M3Temp[K,V]]
   // def m3var(value:Type) : Rep[M3Var[_]]
@@ -63,9 +61,11 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
 //  case class M3Entry[E<:Entry](vs:List[Rep[_]], m:Manifest[E]) extends Exp[E]
 
 //  def newEntry[E<:Entry](vs:List[Rep[_]], m:Manifest[E]):Rep[E] = M3Entry(vs,m)
-  //def newM3Store[E<:Entry](implicit tp:Manifest[E]):Rep[Store[E]] = newStore[E]
-  // def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
-  // def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
+  // def newM3Store[E<:Entry](implicit tp:Manifest[E]):Rep[Store[E]] = {
+  //   newStore[E]
+  // }
+  def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
+  def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
   // def namedM3Var[T](name: String,tp:Type)(implicit mT:Manifest[T]) = reflectMutable(NamedM3Var(name,tp)(mT))
   // def namedM3Map[K, V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]) = reflectMutable(NamedM3Map(name,key,value,indexList,mK,mV))
   def m3temp[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]] = {
@@ -116,7 +116,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
   // def m3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = M3Slice(map,part,partKey)
   // def m3clear(map:Exp[_]) = reflectWrite(map)(M3Clear(map))
 
-  // case class Named[T](n:String)(implicit mT:Manifest[T]) extends Def[T]
+  case class Named[T](n:String)(implicit mT:Manifest[T]) extends Def[T]
   // case class NamedM3Var[T](n:String,tp:Type)(implicit mT:Manifest[T]) extends Def[M3Var[T]]
   // case class NamedM3Map[K,V](n:String,key:List[Type],value:Type,indexList: List[List[Int]],mK:Manifest[K],mV:Manifest[V]) extends Def[M3Temp[K,V]]
   // case class NewM3Var[K,V](value:Type,mV:Manifest[V]) extends Def[M3Var[_]]
@@ -196,13 +196,10 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
   //   }
   // }
 
+  private val nameAttr = "_name"
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     //case M3Entry(vs,m) => emitValDef(sym, "new "+m.toString+"("+(vs map quote).mkString(",")+")")
-    case _ => super.emitNode(sym,rhs)
-  }
-  // private val nameAttr = "_name"
-  // override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-  //   case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
+    case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
   //   case NamedM3Var(n,_) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
   //   case NamedM3Map(n,_,_,_,_,_) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
   //   case NewM3Var(v,_) => stream.println(M3MapCommons.createM3VarDefinition(quote(sym), v))
@@ -370,8 +367,8 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
   //       case _ => stream.println(quote(m)+".clear")
   //     }
   //   }
-  //   case _ => super.emitNode(sym,rhs)
-  // }
+    case _ => super.emitNode(sym,rhs)
+  }
 
   // def createNodeName(s: Sym[_]) = "x"+s.id
 
