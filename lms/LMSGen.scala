@@ -46,7 +46,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case _ =>
           implicit val mE=me(a.agg.map(_._2),a.tp)
           val acc = impl.m3temp()(mE)
-          val inCo = (v:Rep[_]) => impl.m3add(acc,impl.newEntry( (a.agg.map(x=>cx(x._1))++List(v)) : _*)(mE))(mE)
+          val inCo = (v:Rep[_]) => impl.m3add(acc,acc.newEntry( (a.agg.map(x=>cx(x._1))++List(v)) : _*))(mE)
           val cur = cx.save
           expr(l,inCo,Some(a.agg)); cx.load(cur)
           expr(r,inCo,Some(a.agg)); cx.load(cur)
@@ -71,14 +71,15 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       } else if(ki.size == 0) { // all keys are bound
         val z = impl.unit(zero(tp))
         val vs = ks.zipWithIndex.map{ case (n,i) => (i,cx(n))}
-        val e = impl.sampleEntry(vs : _*)
+        val e = proxy.sampleEntry(vs : _*)
         val r = proxy.get(e,0)
         impl.__ifThenElse(impl.__equal(r,impl.unit(null)),co(z),co(r.get(ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
         if (ko.size==0) proxy.foreach(co)
         else {
           implicit val mE=me(m.tks,tp)
-          impl.stSlice(cx(n).asInstanceOf[Rep[Store[Entry]]], -1 /*index will be figured out automatically*/, impl.sampleEntry(ko.map{ case (k,i) => (i,cx(k)) } : _*)(mE),{
+          val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
+          impl.stSlice(mm, -1 /*index will be figured out automatically*/, mm.sampleEntry(ko.map{ case (k,i) => (i,cx(k)) } : _*),{
             (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,e.get(i)) }.toMap); co(e.get(ks.size+1))
           })(mE)
         }
@@ -95,7 +96,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
         val coAcc = (v:Rep[_]) => {
           val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
-          impl.m3add(acc, impl.newEntry(vs : _*))
+          impl.m3add(acc, acc.newEntry(vs : _*))
         }
         expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
         am match {
@@ -186,13 +187,13 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             if (op==OpSet) impl.stClear(mm)
             oi match { case None => case Some(ie) =>
               expr(ie,(r:Rep[_]) => {
-                val ent = impl.newEntry((m.keys.map(cx) ++ List(r)) : _*)
+                val ent = mm.newEntry((m.keys.map(cx) ++ List(r)) : _*)
                 impl.__ifThenElse(impl.equals(mapProxy(mm).get(ent),impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
               })
             }
             cx.load()
             expr(e,(r:Rep[_]) => {
-              val ent = impl.newEntry((m.keys.map(cx) ++ List(r)) : _*)
+              val ent = mm.newEntry((m.keys.map(cx) ++ List(r)) : _*)
               op match { case OpAdd => impl.m3add(mm, ent)(mE) case OpSet => impl.m3set(mm, ent)(mE) }
             }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
           }

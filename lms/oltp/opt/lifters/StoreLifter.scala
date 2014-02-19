@@ -64,9 +64,6 @@ trait SEntryOps extends Base{
     (x.get(1).asInstanceOf[Rep[T1]],x.get(2).asInstanceOf[Rep[T2]],x.get(3).asInstanceOf[Rep[T3]],x.get(4).asInstanceOf[Rep[T4]],x.get(5).asInstanceOf[Rep[T5]],x.get(6).asInstanceOf[Rep[T6]],x.get(7).asInstanceOf[Rep[T7]],x.get(8).asInstanceOf[Rep[T8]],x.get(9).asInstanceOf[Rep[T9]],x.get(10).asInstanceOf[Rep[T10]],x.get(11).asInstanceOf[Rep[T11]],x.get(12).asInstanceOf[Rep[T12]],x.get(13).asInstanceOf[Rep[T13]],x.get(14).asInstanceOf[Rep[T14]],x.get(15).asInstanceOf[Rep[T15]],x.get(16).asInstanceOf[Rep[T16]],x.get(17).asInstanceOf[Rep[T17]],x.get(18).asInstanceOf[Rep[T18]],x.get(19).asInstanceOf[Rep[T19]],x.get(20).asInstanceOf[Rep[T20]],x.get(21).asInstanceOf[Rep[T21]],x.get(22).asInstanceOf[Rep[T22]])
 
   implicit def storeEntry2SEntryOpsCls[E<:Entry:Manifest](x: Rep[E]): SEntryOpsCls[E] = new SEntryOpsCls[E](x)
-  def newEntry[E<:Entry:Manifest](args:Rep[Any]*):Rep[E]
-  def sampleEntry[E<:Entry:Manifest](args:(Int,Rep[Any])*):Rep[E]
-  def sampleFullEntry[E<:Entry:Manifest](args:Rep[Any]*):Rep[E]
   def steMakeMutable[E<:Entry:Manifest](x: Rep[E]):Rep[E]
 
   def steUpdate[E<:Entry:Manifest](x: Rep[E], i: Int, v: Rep[Any]):Rep[Unit]
@@ -79,18 +76,12 @@ trait SEntryOps extends Base{
 
 trait SEntryExp extends StoreOps with BaseExp with EffectExp with VariablesExp {
 
-  case class SteNewSEntry   [E<:Entry:Manifest](mE: Manifest[E], args:Seq[Rep[Any]]) extends Def[E]
-  case class SteSampleSEntry[E<:Entry:Manifest](mE: Manifest[E], args:Seq[(Int,Rep[Any])]) extends Def[E]
-
   case class SteMakeMutable [E<:Entry:Manifest](x: Exp[E]) extends Def[E]
   case class SteUpdate      [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
   case class SteIncrease    [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
   case class SteDecrease    [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
   case class SteGet         [E<:Entry:Manifest](x: Exp[E], i: Int) extends Def[Any]
 
-  def newEntry       [E<:Entry:Manifest](args:Rep[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](manifest[E], args)) }
-  def sampleEntry    [E<:Entry:Manifest](args:(Int,Rep[Any])*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args) }
-  def sampleFullEntry[E<:Entry:Manifest](args:Rep[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args.zipWithIndex.map{case (arg, i) => ((i+1, arg))}) }
   def steMakeMutable [E<:Entry:Manifest](x: Exp[E]):Exp[E] = reflectMutable(SteMakeMutable[E](x))
   def steUpdate      [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]):Exp[Unit] = reflectWrite(x)(SteUpdate[E](x, i, v))
   def steIncrease    [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]):Exp[Unit] = reflectWrite(x)(SteIncrease[E](x, i, v))
@@ -123,14 +114,6 @@ trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaC
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case SteNewSEntry(mE, args) => emitValDef(sym, /*"new " + */ remap(mE) + "("+args.map(quote(_)).mkString(", ")+")")
-    case SteSampleSEntry(mE, args) => {
-      val symName = "se%d".format(sym.id)
-      staticFields += ("SEntryOps."+symName -> "val %s = new %s".format(symName, remap(mE)))
-      emitValDef(sym, "{ "+args.map{
-        case (i, v) => symName+"._"+i+" = "+quote(v)+"; "
-      }.mkString +" "+symName+" }")
-    }
     case SteMakeMutable(x) => emitValDef(sym, quote(x)+" /*made mutable*/")
     case SteUpdate(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" = "+quote(v))
     case SteIncrease(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" += "+quote(v))
@@ -170,7 +153,7 @@ trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaC
   }
 
   override def remap[A](m: Manifest[A]): String = m match {
-    case _ if classOf[SEntry[_]] isAssignableFrom m.runtimeClass =>
+    case _ if classOf[Entry] isAssignableFrom m.runtimeClass =>
       // call remap on all type arguments
       val targs = m.typeArguments
       if (targs.length > 0) {
@@ -302,15 +285,19 @@ trait StoreOps extends Base with SEntryOps {
     def insert(e: Rep[E]):Rep[Unit] = stInsert[E](x, e)
     def update(e: Rep[E]):Rep[Unit] = stUpdate[E](x, e)
     def delete(e: Rep[E]):Rep[Unit] = stDelete[E](x, e)
+    // def get(args:(Int,Rep[Any])*):Rep[E] = get(stSampleEntry(x, args),-1)
     def get(key:Rep[E],idx:Int=(-1)):Rep[E] = stGet(x, idx, key)
     //def getOrPrev(key:Rep[E],idx:Int=(-1)):Rep[E] = stGetOrPrev(x, idx, key)
     //def getOrNext(key:Rep[E],idx:Int=(-1)):Rep[E] = stGetOrNext(x, idx, key)
+    // def getSliceMin(targetField:Int, args:(Int,Rep[Any])*):Rep[E] = getSliceMin(stSampleEntry(x, args), targetField, -1, -1)
     def getSliceMin(key:Rep[E],targetField:Int,sliceIdx:Int=(-1),minIdx:Int=(-1)):Rep[E] = stGetSliceMin(x, key, targetField, sliceIdx, minIdx)
+    // def getSliceMax(targetField:Int, args:(Int,Rep[Any])*):Rep[E] = getSliceMax(stSampleEntry(x, args), targetField, -1, -1)
     def getSliceMax(key:Rep[E],targetField:Int,sliceIdx:Int=(-1),maxIdx:Int=(-1)):Rep[E] = stGetSliceMax(x, key, targetField, sliceIdx, maxIdx)
     //def getMin(idx:Int=(-1)):Rep[E] = stGetMin(x, idx)
     //def getMax(idx:Int=(-1)):Rep[E] = stGetMax(x, idx)
     //def getMedian(idx:Int=(-1)):Rep[E] = stGetMedian(x, idx)
     def foreach(f:Rep[E]=>Rep[Unit]):Rep[Unit] = stForeach(x, f)
+    // def slice(f:Rep[E]=>Rep[Unit], args:(Int,Rep[Any])*):Rep[Unit] = slice(stSampleEntry(x, args),f,-1)
     def slice(key:Rep[E],f:Rep[E]=>Rep[Unit],idx:Int=(-1)):Rep[Unit] = stSlice(x,idx,key,f)
     //def range(min:Rep[E],max:Rep[E],f:Rep[E]=>Rep[Unit],withMin:Rep[Boolean]=unit(true),withMax:Rep[Boolean]=unit(true),idx:Int=(-1)):Rep[Unit] = stRange(x,idx,min,max,withMin,withMax,f)
     def delete(key:Rep[E],idx:Int=(-1)):Rep[Unit] = stDelete(x,idx,key)
@@ -318,12 +305,19 @@ trait StoreOps extends Base with SEntryOps {
     def size:Rep[Int] = stSize(x)
     def index(tp:Rep[IndexType],unique:Rep[Boolean],idx:Int=(-1)):Rep[Unit] = stIndex(x, idx, tp, unique)
     def mutable = stMutable(x)
+    def newEntry(args:Rep[Any]*):Rep[E] = stNewEntry[E](x, args)
+    def sampleEntry(args:(Int,Rep[Any])*):Rep[E] = stSampleEntry[E](x, args)
+    def sampleFullEntry(args:Rep[Any]*):Rep[E] = stSampleEntry[E](x, args.zipWithIndex.map{case (arg, i) => ((i+1, arg))})
     //def idxs(idx:Int):Rep[Array[Idx[E]]] = stIdxs(x, idx)
   }
 
   implicit def store2StoreOpsCls[E<:Entry:Manifest](x: Rep[Store[E]]): StoreOpsCls[E] = new StoreOpsCls[E](x)
 
   def newStore     [E<:Entry:Manifest]():Rep[Store[E]]
+
+  def stNewEntry[E<:Entry:Manifest](x: Rep[Store[E]], args:Seq[Rep[Any]]):Rep[E]
+  def stSampleEntry[E<:Entry:Manifest](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]):Rep[E]
+  // def stSampleFullEntry[E<:Entry:Manifest](x: Rep[Store[E]], args:Rep[Any]*):Rep[E]
   //def newStore     [E<:Entry:Manifest]():Rep[Store[E]] = newStore[E](null.asInstanceOf[Rep[Array[Idx[E]]]])
   def stInsert     [E<:Entry:Manifest](x: Rep[Store[E]], e: Rep[E]):Rep[Unit]
   def stUpdate     [E<:Entry:Manifest](x: Rep[Store[E]], e: Rep[E]):Rep[Unit]
@@ -349,7 +343,10 @@ trait StoreOps extends Base with SEntryOps {
 
 trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp with SEntryExp {
   case class StNewStore   [E<:Entry:Manifest](mE: Manifest[E]/*, sndIdx: Exp[Array[Idx[E]]]*/) extends Def[Store[E]]
-
+  
+  case class SteNewSEntry   [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]) extends Def[E]
+  case class SteSampleSEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]) extends Def[E]
+  
   case class StInsert     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
   case class StUpdate     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
   case class StDelete     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
@@ -390,13 +387,16 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
 
   // def newStore     [E<:Entry:Manifest](sndIdx: Exp[Array[Idx[E]]]):Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E], sndIdx)) }
   def newStore     [E<:Entry:Manifest]():Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E])) }
+  def stNewEntry       [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](x, args)) }
+  def stSampleEntry    [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](x, args) }
+  // def stSampleFullEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Rep[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args.zipWithIndex.map{case (arg, i) => ((i+1, arg))}) }
   def stInsert     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StInsert[E](x, e))
   def stUpdate     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StUpdate[E](x, e))
   def stDelete     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StDelete[E](x, e))
   def stGet        [E<:Entry:Manifest](x: Exp[Store[E]], idx_in:Int,key:Exp[E]):Exp[E] = {
     var idx = idx_in
     key match {
-      case Def(SteSampleSEntry(mE, args)) => addIndicesToEntryClass[E](x, (xx, m) => {
+      case Def(Reflect(SteSampleSEntry(mE, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
         val tupVal = ((IHash,args.map(_._1),true,-1))
         idx = m.indexOf(tupVal)
         if(idx < 0) {
@@ -415,7 +415,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     var sliceIdx = sliceIdx_in
     var minIdx = minIdx_in
     key match {
-      case Def(SteSampleSEntry(mE, args)) => addIndicesToEntryClass[E](x, (xx, m) => {
+      case Def(Reflect(SteSampleSEntry(mE, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
         val sliceIdxTupVal = ((IHash,args.map(_._1),false,-1))
         sliceIdx = m.indexOf(sliceIdxTupVal)
         if(sliceIdx < 0) {
@@ -438,7 +438,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     var sliceIdx = sliceIdx_in
     var maxIdx = maxIdx_in
     key match {
-      case Def(SteSampleSEntry(mE, args)) => addIndicesToEntryClass[E](x, (xx, m) => {
+      case Def(Reflect(SteSampleSEntry(mE, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
         val sliceIdxTupVal = ((IHash,args.map(_._1),false,-1))
         sliceIdx = m.indexOf(sliceIdxTupVal)
         if(sliceIdx < 0) {
@@ -468,7 +468,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   def stSlice      [E<:Entry:Manifest](x: Exp[Store[E]], idx_in:Int,key:Exp[E],f:Exp[E]=>Exp[Unit]):Exp[Unit] = {
     var idx = idx_in
     key match {
-      case Def(SteSampleSEntry(mE, args)) => addIndicesToEntryClass[E](x, (xx, m) => {
+      case Def(Reflect(SteSampleSEntry(mE, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
         val tupVal = ((IHash,args.map(_._1),false,-1))
         idx = m.indexOf(tupVal)
         if(idx < 0) {
@@ -476,7 +476,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
           idx = m.size - 1
         }
       })
-      case _ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.slice")
+      case tp@_ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.slice, not a " + Def.unapply(tp))
     }
     val blkSym = fresh[E]
     val blk = reifyEffects(f(blkSym))
@@ -526,6 +526,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     case StForeach(x, blockSym, block) => syms(x):::syms(block)
     case StSlice(x, idx, key, blockSym, block) => syms(x):::syms(idx):::syms(key):::syms(block)
     //case StRange(x, idx, min, max, withMin, withMax, blockSym, block) => syms(x):::syms(idx):::syms(min):::syms(max):::syms(withMin):::syms(withMax):::syms(block)
+    // case SteSampleSEntry(x, args) => syms(args)
     case _ => super.syms(e)
   }
 
@@ -533,6 +534,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     case StForeach(x, blockSym, block) => blockSym :: effectSyms(block)
     case StSlice(x, idx, key, blockSym, block) => blockSym :: effectSyms(block)
     //case StRange(x, idx, min, max, withMin, withMax, blockSym, block) => blockSym :: effectSyms(block)
+    // case SteSampleSEntry(x, args) => boundSyms(args)
     case _ => super.boundSyms(e)
   }
 
@@ -540,8 +542,40 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     case StForeach(x, blockSym, block) => freqNormal(x):::freqHot(block)
     case StSlice(x, idx, key, blockSym, block) => freqNormal(x):::freqNormal(idx):::freqNormal(key):::freqHot(block)
     //case StRange(x, idx, min, max, withMin, withMax, blockSym, block) => freqNormal(x):::freqNormal(idx):::freqNormal(min):::freqNormal(max):::freqNormal(withMin):::freqNormal(withMax):::freqHot(block)
+    // case SteSampleSEntry(x, args) => symsFreq(args)
     case _ => super.symsFreq(e)
   }
+
+  // symbols of effectful components of a definition
+  /*override def effectSyms(x: Any): List[Sym[Any]] = x match {
+    case SteSampleSEntry(x, args) => effectSyms(args)
+    case _ => super.effectSyms(x)
+  }
+
+  override def aliasSyms(e: Any): List[Sym[Any]] = e match {
+    case SteSampleSEntry(x, args) => aliasSyms(args)
+    case _ => super.aliasSyms(e)
+  }
+
+  override def containSyms(e: Any): List[Sym[Any]] = e match {
+    case SteSampleSEntry(x, args) => containSyms(args)
+    case _ => super.containSyms(e)
+  }
+
+  override def extractSyms(e: Any): List[Sym[Any]] = e match {
+    case SteSampleSEntry(x, args) => extractSyms(args)
+    case _ => super.extractSyms(e)
+  }
+
+  override def copySyms(e: Any): List[Sym[Any]] = e match {
+    case SteSampleSEntry(x, args) => copySyms(args)
+    case _ => super.copySyms(e)
+  }
+
+  override def rsyms[T](e: Any)(f: Any => List[T]): List[T] = e match { // stack overflow ...
+    case SteSampleSEntry(x, args) => rsyms(args)(f)
+    case _ => super.rsyms(e)(f)
+  }*/
 }
 
 trait StoreExpOpt extends StoreExp with SEntryExpOpt
@@ -552,6 +586,14 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case StNewStore(mE) => emitValDef(sym, "new Store[" + remap(mE) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
+    case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ "ENTRY_XXX("+args.map(quote(_)).mkString(", ")+")")
+    case SteSampleSEntry(x, args) => {
+      val symName = "se%d".format(sym.id)
+      staticFields += ("SEntryOps."+symName -> "val %s = new %s".format(symName, "ENTRY_XXX"/*remap(mE)*/))
+      emitValDef(sym, "{ "+args.map{
+        case (i, v) => symName+"._"+i+" = "+quote(v)+"; "
+      }.mkString +" "+symName+" }")
+    }
     case StInsert(x,e) => emitValDef(sym, quote(x)+".insert("+quote(e)+")")
     case StUpdate(x,e) => emitValDef(sym, quote(x)+".update("+quote(e)+")")
     case StDelete(x,e) => emitValDef(sym, quote(x)+".delete("+quote(e)+")")
