@@ -87,6 +87,11 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     val n = m.typeArguments.size
     val lastMan = m.typeArguments.last
     if(isTemp) {
+      // we don't remove 0-elements
+      val currentEnt = map.get(sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*)) //map.get(ent)
+      __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt += (n, ent.get(n)))
+    } else {
+      // we remove 0-elements
       val entVal = ent.get(n)
       __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
         ///////
@@ -99,15 +104,6 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
         ///////
 
       })
-    } else {
-      ///////
-        val entVal = ent.get(n)
-        val currentEnt = map.get(map.sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*)) //map.get(ent)
-        __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
-          currentEnt += (n, entVal)
-          val currentEntVal = currentEnt.get(n)
-        })
-      ///////
     }
     unit(())
   }
