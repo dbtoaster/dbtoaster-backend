@@ -90,23 +90,22 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
       val entVal = ent.get(n)
       __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
         ///////
-        val currentEnt = sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*) //map.get(ent)
+        val currentEnt = map.get(sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*)) //map.get(ent)
         __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
-          val entVal = ent.get(n)
           currentEnt += (n, entVal)
           val currentEntVal = currentEnt.get(n)
-          __ifThenElse(__equal(entVal,unit(zero(lastMan))),map.delete(currentEnt),unit(()))
+          __ifThenElse(__equal(currentEntVal,unit(zero(lastMan))),map.delete(currentEnt),unit(()))
         })
         ///////
 
       })
     } else {
       ///////
-        val currentEnt = sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*) //map.get(ent)
-      __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
-        val entVal = ent.get(n)
-        currentEnt += (n, entVal)
-      })
+        val currentEnt = map.get(sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*)) //map.get(ent)
+        __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
+          currentEnt += (n, entVal)
+          val currentEntVal = currentEnt.get(n)
+        })
       ///////
     }
     unit(())
