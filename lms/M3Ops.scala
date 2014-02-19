@@ -55,11 +55,11 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThen
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case IfThenElse(c,a,b) if (quote(getBlockResult(b))=="()") =>
-        stream.println("if (" + quote(c) + ") {") // there is only one branch (initialization)
-        stream.println(getBlockContents(a))
+    // case IfThenElse(c,a,b) if (quote(getBlockResult(b))=="()") =>
+        // stream.println("if (" + quote(c) + ") {") // there is only one branch (initialization)
+        // stream.println(getBlockContents(a))
         //stream.println("  "+quote(getBlockResult(a))) // useless undeclared Unit symbols
-        stream.println("}")
+        // stream.println("}")
 
     case M3Apply(fn,args,_) => emitValDef(sym,"U"+fn+"("+(args map quote).mkString(",")+")")
     case _ => super.emitNode(sym,rhs)

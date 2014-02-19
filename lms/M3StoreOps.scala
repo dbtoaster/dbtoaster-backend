@@ -22,7 +22,7 @@ import ddbt.codegen.M3MapCommons
  *
  * @author Mohammad Dashti
  */
-trait M3StoreOps extends StoreOps {
+trait M3StoreOps extends StoreOps with Equal with IfThenElse {
   // class M3StoreOpsCls[E<:Entry:Manifest](x: Rep[E]) {
   //   def get(key:K):V;           // returns the value or zero if it is not present
   //   def set(key:K, value:V);    // inserts or set the value
@@ -55,7 +55,7 @@ trait M3StoreOps extends StoreOps {
   // def m3clear[E<:SEntry:Manifest](map:Rep[Store[E]]):Rep[Unit]
 }
 
-trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp {
+trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp with EqualExp with IfThenElseExp {
   import ManifestHelper.man
 
 //  case class M3Entry[E<:Entry](vs:List[Rep[_]], m:Manifest[E]) extends Exp[E]

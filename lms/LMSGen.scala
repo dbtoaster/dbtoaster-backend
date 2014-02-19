@@ -169,9 +169,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val block = impl.reifyEffects {
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
-        maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.fresh(man(tp))) else { val m = me(keys.map(_._2),tp); (name,impl.newStore()(m)) } // XXX missing indexes
+        // maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.fresh(man(tp))) else { val m = me(keys.map(_._2),tp); (name,impl.newStore()(m)) } // XXX missing indexes
         //  impl.namedM3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any]))
-        }.toList union
+        //}
+        ctx0.toList union
         args.map{ case (name,tp) => (name,impl.named(name,tp)) }
       ).toMap)
       // Execute each statement
@@ -265,8 +266,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
+  var ctx0 = Map[String,Rep[_]]()
   override def genLMS(s0:System):String = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
+    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.fresh(man(tp))) else { val m = me(keys.map(_._2),tp); (name,impl.newStore()(m)) } } // XXX missing indexes
 
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
