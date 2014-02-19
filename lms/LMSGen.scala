@@ -177,29 +177,25 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       // Execute each statement
       t.stmts.map {
         case StmtMap(m,e,op,oi) => cx.load()
-          val mm = cx(m.name)
-          if (op==OpSet && m.keys.size>0) mapProxy(mm).clear
-/*
-          oi match { case None => case Some(ie) =>
-            expr(ie,(r:Rep[_]) => { val keys = m.keys.map(cx)
-               impl.__ifThenElse(impl.equals(  impl.m3get(mm,keys,m.tp),impl.unit(0L)),impl.m3set(mm,keys,r),impl.unit(()))
-            })
+          if (m.keys.size==0) {
+            val mm = cx(m.name).asInstanceOf[impl.Var[_]]
+            expr(e,(r:Rep[_]) => op match { case OpAdd => impl.var_plusequals(mm,r) case OpSet => impl.__assign(mm,r) })
+          } else {
+            val mm = cx(m.name).asInstanceOf[Rep[Store[Entry]]]
+            implicit val mE = manEntry(m.tks ++ List(m.tp)).asInstanceOf[Manifest[Entry]]
+            if (op==OpSet) impl.stClear(mm)
+            oi match { case None => case Some(ie) =>
+              expr(ie,(r:Rep[_]) => {
+                val ent = impl.newEntry((m.keys.map(cx) ++ List(r)) : _*)
+                impl.__ifThenElse(impl.equals(mapProxy(mm).get(ent),impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
+              })
+            }
+            cx.load()
+            expr(e,(r:Rep[_]) => {
+              val ent = impl.newEntry((m.keys.map(cx) ++ List(r)) : _*)
+              op match { case OpAdd => impl.m3add(mm, ent)(mE) case OpSet => impl.m3set(mm, ent)(mE) }
+            }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
           }
-          cx.load()
-*/
-          expr(e,(r:Rep[_]) => op match {
-            case OpAdd => if (m.keys.size==0) impl.var_plusequals(mm.asInstanceOf[impl.Var[_]],r) else {
-              implicit val mE = manEntry(m.tks ::: List(m.tp)).asInstanceOf[Manifest[Entry]]
-              val vs:List[Rep[_]] = m.keys.map(cx).toList ::: List(r)
-              impl.m3add(mm.asInstanceOf[Rep[Store[Entry]]], impl.newEntry(vs : _*))(mE)
-            }
-            case OpSet => if (m.keys.size==0) impl.__assign(mm,r) else {
-              val vs:List[Rep[_]] = m.keys.map(cx).toList ::: List(r)
-              // XXX: delete previous value
-              impl.stInsert(mm.asInstanceOf[Rep[Store[Entry]]], impl.newEntry(vs : _*))
-              //impl.m3set(mm,m.keys.map(cx),r)
-            }
-          }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
       impl.unit(())
