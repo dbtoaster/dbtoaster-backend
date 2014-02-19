@@ -78,15 +78,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         if (ko.size==0) proxy.foreach(co)
         else {
           implicit val mE=me(m.tks,tp)
-
-//          val x = null.asInstanceOf[mE.runtimeClass]
-
-          val vs = (ks zip m.tks).zipWithIndex.filter{ case ((n,t),i) => cx.contains(n) }.map{ case ((n,t),i)=> (i,cx(n)) }
-          impl.stSlice(cx(n).asInstanceOf[Rep[Store[Entry]]], -1 /*index will be figured out automatically*/, impl.sampleEntry(vs : _*)(mE),co)(mE)
-
-//  def stSlice      [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,key:Rep[E],f:Rep[E]=>Rep[Unit]):Rep[Unit]
-
-
+          impl.stSlice(cx(n).asInstanceOf[Rep[Store[Entry]]], -1 /*index will be figured out automatically*/, impl.sampleEntry(ko.map{ case (k,i) => (i,cx(k)) } : _*)(mE),{
+            (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,e.get(i)) }.toMap); co(e.get(ks.size+1))
+          })(mE)
         }
       }
     case a@AggSum(ks,e) =>
