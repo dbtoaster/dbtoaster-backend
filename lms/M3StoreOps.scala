@@ -111,6 +111,13 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     }
     unit(())
   }
+  def m3set[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]) = {
+    val currentEnt = map.sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*) //map.get(ent)
+    __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
+      val entVal = ent.get(n)
+      currentEnt.update(n, entVal)
+    })
+  }
   // def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = m3foreach(map,key,value,reifyEffects(body))
   // def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = reflectEffect(M3Foreach(map,key,value,body),summarizeEffects(body).star)
   // def m3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = M3Slice(map,part,partKey)
