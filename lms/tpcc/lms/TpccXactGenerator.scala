@@ -57,7 +57,7 @@ object TpccXactGenerator {
 
       var all_items_exist = true
       while((ol_number < o_ol_count) && all_items_exist) {
-        val itemEntry /*(i_id, _, i_name, i_price, i_data)*/ = itemTbl.get(itemTbl.sampleEntry((1,itemid(ol_number))))
+        val itemEntry /*(i_id, _, i_name, i_price, i_data)*/ = itemTbl.get((1,itemid(ol_number)))
         if(itemEntry == null) {
           all_items_exist = false
         } else {
@@ -71,9 +71,9 @@ object TpccXactGenerator {
         1
       } else {
         /*(c_id,d_id,w_id, c_discount, c_last, c_credit, w_tax)*/
-        val customerEntry /*(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = customerTbl.get(customerTbl.sampleEntry((1, c_id),(2, d_id),(3, w_id)))
-        val warehouseEntry /*(w_id,w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd)*/ = warehouseTbl.get(warehouseTbl.sampleEntry((1, w_id)))
-        val districtEntry /*(d_d_id,d_w_id,_,_,_,_,_,_,d_tax,_,d_next_o_id)*/ = districtTbl.get(districtTbl.sampleEntry((1, d_id),(2, w_id)))
+        val customerEntry /*(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = customerTbl.get((1, c_id),(2, d_id),(3, w_id))
+        val warehouseEntry /*(w_id,w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd)*/ = warehouseTbl.get((1, w_id))
+        val districtEntry /*(d_d_id,d_w_id,_,_,_,_,_,_,d_tax,_,d_next_o_id)*/ = districtTbl.get((1, d_id),(2, w_id))
         val o_id = districtEntry._11
         districtEntry += (11, 1) //d_next_o_id+1
         districtTbl.update(districtEntry)
@@ -91,7 +91,7 @@ object TpccXactGenerator {
           val ol_i_id = itemid(ol_number)
           val ol_quantity = quantity(ol_number)
 
-          val stockEntry /*(s_i_id,s_w_id,s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data)*/ = stockTbl.get(stockTbl.sampleEntry((1, ol_i_id), (2, ol_supply_w_id)))
+          val stockEntry /*(s_i_id,s_w_id,s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data)*/ = stockTbl.get((1, ol_i_id), (2, ol_supply_w_id))
 
           val ol_dist_info = if(d_id == 1) {
             stockEntry._4 //s_dist_01
@@ -166,27 +166,27 @@ object TpccXactGenerator {
       val customerTbl = customerTbl_orig.mutable
       val stockTbl = stockTbl_orig.mutable
 
-      val warehouseEntry/*(w_id,w_name,w_street_1,w_street_2,w_city,w_state,w_zip,_,w_ytd)*/ = warehouseTbl.get(warehouseTbl.sampleEntry((1, w_id)))
+      val warehouseEntry/*(w_id,w_name,w_street_1,w_street_2,w_city,w_state,w_zip,_,w_ytd)*/ = warehouseTbl.get((1, w_id))
       warehouseEntry += (9, h_amount) //w_ytd
       warehouseTbl.update(warehouseEntry)
 
-      val districtEntry /*(d_id,d_w_id,d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id)*/ = districtTbl.get(districtTbl.sampleEntry((1, d_id),(2, w_id)))
+      val districtEntry /*(d_id,d_w_id,d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id)*/ = districtTbl.get((1, d_id),(2, w_id))
       districtEntry += (10, h_amount)
       districtTbl.update(districtEntry)
 
       var customerEnt /*(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = unit(null.asInstanceOf[CustomerEntry])
       if (c_by_name > 0) {
         val customersWithLastName = ArrayBuffer[CustomerEntry]()
-        customerTbl.slice(customerTbl.sampleEntry((2,c_d_id), (3,c_w_id), (6,c_last_input)), {
+        customerTbl.slice({
           case custEntry => customersWithLastName += custEntry
-        })
+        }, (2,c_d_id), (3,c_w_id), (6,c_last_input))
         var index = customersWithLastName.size / 2
         if (customersWithLastName.size % 2 == 0) {
           index -= 1
         }
         customerEnt = customersWithLastName(index)
       } else {
-        customerEnt = customerTbl.get(customerTbl.sampleEntry((1,c_id),(2,c_d_id), (3,c_w_id)))
+        customerEnt = customerTbl.get((1,c_id),(2,c_d_id), (3,c_w_id))
       }
 
       val customerEntry = readVar( customerEnt )
@@ -288,37 +288,37 @@ object TpccXactGenerator {
       var customerEnt /*(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = unit(null.asInstanceOf[CustomerEntry])
       if (c_by_name > 0) {
         val customersWithLastName = ArrayBuffer[CustomerEntry]()
-        customerTbl.slice(customerTbl.sampleEntry((2,d_id), (3,w_id), (6,c_last)), {
+        customerTbl.slice({
           case custEntry => customersWithLastName += custEntry
-        })
+        }, (2,d_id), (3,w_id), (6,c_last))
         var index = customersWithLastName.size / 2
         if (customersWithLastName.size % 2 == 0) {
           index -= 1
         }
         customerEnt = customersWithLastName(index)
       } else {
-        customerEnt = customerTbl.get(customerTbl.sampleEntry((1,c_id),(2,d_id), (3,w_id)))
+        customerEnt = customerTbl.get((1,c_id),(2,d_id), (3,w_id))
       }
 
       val customerEntry = readVar( customerEnt )
 
       val found_c_id = customerEntry._3
 
-      val newestOrderEntry/*(o_id,o_d_id_arg,o_w_id_arg,o_c_id,o_entry_d,o_carrier_id,_,_)*/ = orderTbl.getSliceMax(orderTbl.sampleEntry((2,d_id),(3,w_id),(4,found_c_id)), 1 /*o_id*/)
+      val newestOrderEntry/*(o_id,o_d_id_arg,o_w_id_arg,o_c_id,o_entry_d,o_carrier_id,_,_)*/ = orderTbl.getSliceMax(1 /*o_id*/, (2,d_id),(3,w_id),(4,found_c_id))
 
       var dceBlocker = 0
       if(!showOutput) {
         if(newestOrderEntry != null) { //o_id != -1
-          orderLineTbl.slice(orderLineTbl.sampleEntry((1,newestOrderEntry._1/*o_id*/),(2,d_id),(3,w_id)),{ case orderLineEntry/*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
+          orderLineTbl.slice({ case orderLineEntry/*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
             dceBlocker = 1 // fooling the effect system, in order not to remove this part, because that's not fare in benchmarking results!
-          })
+          }, (1,newestOrderEntry._1/*o_id*/),(2,d_id),(3,w_id))
         }
       } else {
         val orderLines = ArrayBuffer[String]()
         if(newestOrderEntry != null) { //o_id != -1
-          orderLineTbl.slice(orderLineTbl.sampleEntry((1,newestOrderEntry._1/*o_id*/),(2,d_id),(3,w_id)),{ case orderLineEntry/*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
+          orderLineTbl.slice({ case orderLineEntry/*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
             orderLines += "[%d - %d - %d - %f - %s]".format(orderLineEntry._6/*ol_supply_w_id*/, orderLineEntry._5/*ol_i_id*/, orderLineEntry._8/*ol_quantity*/, orderLineEntry._9/*ol_amount*/, if(orderLineEntry._7 == unit(null)) unit("99-99-9999") else cast_string(orderLineEntry._7.asInstanceOf[Rep[Date]]))
-          })
+          }, (1,newestOrderEntry._1/*o_id*/),(2,d_id),(3,w_id))
         }
         val output = "\n+-------------------------- ORDER-STATUS -------------------------+\n" +
         " Date: " + datetime +
@@ -372,24 +372,24 @@ object TpccXactGenerator {
       val orderIDs = NewArray[Int](10)
       var d_id = 1
       while (d_id <= DIST_PER_WAREHOUSE) {
-        val firstOrderEntry /*(no_o_id,no_d_id,no_w_id)*/ = newOrderTbl.getSliceMin(newOrderTbl.sampleEntry((2,d_id),(3,w_id)), 1 /*no_o_id*/)
+        val firstOrderEntry /*(no_o_id,no_d_id,no_w_id)*/ = newOrderTbl.getSliceMin(1 /*no_o_id*/, (2,d_id),(3,w_id))
         if((firstOrderEntry != null)){ // found
           val no_o_id = firstOrderEntry._1
           orderIDs(d_id - 1) = no_o_id
           newOrderTbl.delete(firstOrderEntry)
-          val orderEntry = orderTbl.get(orderTbl.sampleEntry((1,no_o_id),(2,d_id),(3,w_id)))
+          val orderEntry = orderTbl.get((1,no_o_id),(2,d_id),(3,w_id))
           val c_id = orderEntry._4
           orderEntry.update(6 /*o_carrier_id*/, o_carrier_id)
           orderTbl.update(orderEntry)
 
           var ol_total = 0f
-          orderLineTbl.slice(orderLineTbl.sampleEntry((1,no_o_id),(2,d_id),(3,w_id)), { case orderLineEntry /*(o_id,d_id,w_id,ol_number, ol_i_id, ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, ol_dist_info)*/ =>
+          orderLineTbl.slice({ case orderLineEntry /*(o_id,d_id,w_id,ol_number, ol_i_id, ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, ol_dist_info)*/ =>
             orderLineEntry.update(7, datetime) //ol_delivery_d
             ol_total += orderLineEntry._9 //ol_amount
             orderLineTbl.update(orderLineEntry)
-          })
+          }, (1,no_o_id),(2,d_id),(3,w_id))
 
-          val customerEntry /*(c_id, c_d_id, c_w_id, c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = customerTbl.get(customerTbl.sampleEntry((1,c_id),(2,d_id),(3,w_id)))
+          val customerEntry /*(c_id, c_d_id, c_w_id, c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = customerTbl.get((1,c_id),(2,d_id),(3,w_id))
           customerEntry += (17/*c_balance*/, ol_total)
           customerEntry += (20/*c_delivery_cnt*/, 1)
           customerTbl.update(customerEntry)
@@ -444,19 +444,19 @@ object TpccXactGenerator {
       val customerTbl = customerTbl_orig.mutable
       val stockTbl = stockTbl_orig.mutable
 
-      val districtEntry /*(d_id,d_w_id,d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id)*/ = districtTbl.get(districtTbl.sampleEntry((1,d_id),(2,w_id)))
+      val districtEntry /*(d_id,d_w_id,d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id)*/ = districtTbl.get((1,d_id),(2,w_id))
       val o_id = districtEntry._11
       var i = o_id-20
       val unique_ol_i_id = Set[Int]()
       while(i < o_id) {
-        orderLineTbl.slice(orderLineTbl.sampleEntry((1,i),(2,d_id),(3,w_id)), { case orderLineEntry /*(ol_o_id, ol_d_id, ol_w_id, ol_number,   ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info)*/=>
+        orderLineTbl.slice({ case orderLineEntry /*(ol_o_id, ol_d_id, ol_w_id, ol_number,   ol_i_id, ol_supply_w_id, ol_delivery_d, ol_quantity, ol_amount, ol_dist_info)*/=>
           val ol_i_id = orderLineEntry._5
-          val stockEntry /*(s_i_id,s_w_id,s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data)*/ = stockTbl.get(stockTbl.sampleEntry((1,ol_i_id),(2,w_id)))
+          val stockEntry /*(s_i_id,s_w_id,s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data)*/ = stockTbl.get((1,ol_i_id),(2,w_id))
           val s_quantity = stockEntry._3
           if(s_quantity < threshold) {
             unique_ol_i_id.add(ol_i_id)
           }
-        })
+        }, (1,i),(2,d_id),(3,w_id))
         i += 1
       }
       val stock_count = unique_ol_i_id.size

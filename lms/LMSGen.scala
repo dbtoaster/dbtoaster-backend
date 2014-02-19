@@ -71,17 +71,16 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       } else if(ki.size == 0) { // all keys are bound
         val z = impl.unit(zero(tp))
         val vs = ks.zipWithIndex.map{ case (n,i) => (i,cx(n))}
-        val e = proxy.sampleEntry(vs : _*)
-        val r = proxy.get(e,0)
+        val r = proxy.get(vs : _*)
         impl.__ifThenElse(impl.__equal(r,impl.unit(null)),co(z),co(r.get(ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
         if (ko.size==0) proxy.foreach(co)
         else {
           implicit val mE=me(m.tks,tp)
           val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
-          impl.stSlice(mm, -1 /*index will be figured out automatically*/, mm.sampleEntry(ko.map{ case (k,i) => (i,cx(k)) } : _*),{
+          mm.slice({
             (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,e.get(i)) }.toMap); co(e.get(ks.size+1))
-          })(mE)
+          },ko.map{ case (k,i) => (i,cx(k)) } : _*)
         }
       }
     case a@AggSum(ks,e) =>
@@ -188,7 +187,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             oi match { case None => case Some(ie) =>
               expr(ie,(r:Rep[_]) => {
                 val ent = mm.newEntry((m.keys.map(cx) ++ List(r)) : _*)
-                impl.__ifThenElse(impl.equals(mapProxy(mm).get(ent),impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
+                impl.__ifThenElse(impl.equals(mapProxy(mm).get(m.keys.zipWithIndex.map{ case (n,i) => (i,cx(n))} : _*),impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
               })
             }
             cx.load()
