@@ -112,6 +112,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     unit(())
   }
   def m3set[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]) = {
+    val n = m.typeArguments.size
     val currentEnt = map.sampleEntry((0 to n).map(i => (i, ent.get(i))) : _*) //map.get(ent)
     __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
       val entVal = ent.get(n)
