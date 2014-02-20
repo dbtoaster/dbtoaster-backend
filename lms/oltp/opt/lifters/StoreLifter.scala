@@ -339,6 +339,7 @@ trait StoreOps extends Base with SEntryOps {
   def stIndex      [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,tp:Rep[IndexType],unique:Rep[Boolean]):Rep[Unit]
   //def stIdxs     [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int):Rep[Array[Idx[E]]]
   def stMutable    [E<:Entry:Manifest](x: Rep[Store[E]]):Rep[Store[E]]
+  def allMutable   [E:Manifest](x: Rep[E]):Rep[E]
 }
 
 trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp with SEntryExp {
@@ -367,6 +368,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   case class StIndex      [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int, tp:Exp[IndexType], unique:Exp[Boolean]) extends Def[Unit]
   //case class StIdxs     [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int) extends Def[Array[Idx[E]]]
   case class StMutable    [E<:Entry:Manifest](x: Exp[Store[E]]) extends Def[Store[E]]
+  case class AllMutable    [E:Manifest](x: Exp[E]) extends Def[E]
 
   def addIndicesToEntryClass[E<:Entry:Manifest](x:Exp[Store[E]], fn: ((Sym[_],collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]) => Unit)) = {
     var xx = x.asInstanceOf[Sym[_]]
@@ -396,7 +398,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   def stGet        [E<:Entry:Manifest](x: Exp[Store[E]], idx_in:Int,key:Exp[E]):Exp[E] = {
     var idx = idx_in
     key match {
-      case Def(Reflect(SteSampleSEntry(mE, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
+      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
         val tupVal = ((IHash,args.map(_._1),true,-1))
         idx = m.indexOf(tupVal)
         if(idx < 0) {
@@ -415,7 +417,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     var sliceIdx = sliceIdx_in
     var minIdx = minIdx_in
     key match {
-      case Def(Reflect(SteSampleSEntry(mE, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
+      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
         val sliceIdxTupVal = ((IHash,args.map(_._1),false,-1))
         sliceIdx = m.indexOf(sliceIdxTupVal)
         if(sliceIdx < 0) {
@@ -438,7 +440,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     var sliceIdx = sliceIdx_in
     var maxIdx = maxIdx_in
     key match {
-      case Def(Reflect(SteSampleSEntry(mE, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
+      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
         val sliceIdxTupVal = ((IHash,args.map(_._1),false,-1))
         sliceIdx = m.indexOf(sliceIdxTupVal)
         if(sliceIdx < 0) {
@@ -468,7 +470,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   def stSlice      [E<:Entry:Manifest](x: Exp[Store[E]], idx_in:Int,key:Exp[E],f:Exp[E]=>Exp[Unit]):Exp[Unit] = {
     var idx = idx_in
     key match {
-      case Def(Reflect(SteSampleSEntry(mE, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
+      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
         val tupVal = ((IHash,args.map(_._1),false,-1))
         idx = m.indexOf(tupVal)
         if(idx < 0) {
@@ -493,6 +495,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   def stIndex      [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int,tp:Exp[IndexType],unique:Exp[Boolean]):Exp[Unit] = reflectWrite(x)(StIndex[E](x, idx, tp, unique))
   //def stIdxs     [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int):Exp[Array[Idx[E]]] = ...
   def stMutable    [E<:Entry:Manifest](x: Exp[Store[E]]):Exp[Store[E]] = reflectMutable(StMutable[E](x))
+  def allMutable   [E:Manifest](x: Rep[E]):Rep[E] = reflectMutable(AllMutable[E](x))
 
   //////////////
   // mirroring
@@ -631,6 +634,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     case StSize(x) => emitValDef(sym, quote(x)+".size")
     case StIndex(x, idx, tp, unique) => emitValDef(sym,  quote(x)+".get("+{if(idx == (-1)) "0" else ""+idx}+", "+quote(tp)+", "+quote(unique)+")")
     case StMutable(x) => emitValDef(sym, quote(x)+" /*store made mutable*/")
+    case AllMutable(x) => emitValDef(sym, quote(x)+" /*made mutable*/")
     case _ => super.emitNode(sym, rhs)
   }
 }

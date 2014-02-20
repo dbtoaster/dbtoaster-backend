@@ -20,15 +20,15 @@ object TpccXactGenerator {
   type StockEntry             = SEntry17[Int,Int,         Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String]
 
   trait Prog extends DSL {
-    val newOrderTbl_orig = newStore[NewOrderEntry]
-    val historyTbl_orig = newStore[HistoryEntry]
-    val warehouseTbl_orig = newStore[WarehouseEntry]
-    val itemTbl_orig = newStore[ItemEntry]
-    val orderTbl_orig = newStore[OrderEntry]
-    val districtTbl_orig = newStore[DistrictEntry]
-    val orderLineTbl_orig = newStore[OrderLineEntry]
-    val customerTbl_orig = newStore[CustomerEntry]
-    val stockTbl_orig = newStore[StockEntry]
+    val newOrderTbl_orig = newSStore[NewOrderEntry]
+    val historyTbl_orig = newSStore[HistoryEntry]
+    val warehouseTbl_orig = newSStore[WarehouseEntry]
+    val itemTbl_orig = newSStore[ItemEntry]
+    val orderTbl_orig = newSStore[OrderEntry]
+    val districtTbl_orig = newSStore[DistrictEntry]
+    val orderLineTbl_orig = newSStore[OrderLineEntry]
+    val customerTbl_orig = newSStore[CustomerEntry]
+    val stockTbl_orig = newSStore[StockEntry]
 
     def newOrderTx(showOutput:Rep[Boolean], datetime:Rep[Date], t_num:Rep[Int], w_id:Rep[Int], d_id:Rep[Int], c_id:Rep[Int], o_ol_count:Rep[Int], o_all_local:Rep[Int], itemid_input:Rep[Array[Int]], supware_input:Rep[Array[Int]], quantity_input:Rep[Array[Int]], price_input:Rep[Array[Float]], iname_input:Rep[Array[String]], stock_input:Rep[Array[Int]], bg_input:Rep[Array[Char]], amt_input:Rep[Array[Float]]):Rep[Int] = {
       if(showOutput) println("- Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id,d_id,c_id))
@@ -477,6 +477,6 @@ object TpccXactGenerator {
   };
 
   def main(args: Array[String]): Unit = {
-    (new Impl("./test/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()
+    (new Impl("./lms/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()
   }
 }

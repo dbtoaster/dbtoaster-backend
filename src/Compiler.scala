@@ -151,6 +151,6 @@ object Compiler {
         case _ if in.forall(_.endsWith(".m3")) => compile(in.map(Utils.read(_)).mkString("\n"))
         case _ => compile(toast("m3")._2)
       }
-    } catch { case t:Throwable => error(t.getMessage,true) }
+    } catch { case t:Throwable => val sw = new StringWriter(); val pw = new PrintWriter(sw); t.printStackTrace(pw); error(sw.toString(),true) }
   }
 }

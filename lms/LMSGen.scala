@@ -168,11 +168,18 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
     val block = impl.reifyEffects {
       // Trigger context: global maps + trigger arguments
+      val ctx0Mutable = ctx0.map{ case (name,(sym,keys,tp)) => if (keys.size==0) { tp match {
+        case TypeLong => (name, impl.allMutable[Long](sym.asInstanceOf[Rep[Long]]))
+        case TypeDouble => (name, impl.allMutable[Double](sym.asInstanceOf[Rep[Double]]))
+        case TypeString => (name, impl.allMutable[String](sym.asInstanceOf[Rep[String]]))
+        case TypeDate => (name, impl.allMutable[java.util.Date](sym.asInstanceOf[Rep[java.util.Date]]))
+        case _ => sys.error("No manifest for "+tp)
+      } } else { val m = me(keys.map(_._2),tp); (name,impl.stMutable(sym.asInstanceOf[Rep[Store[Entry]]])(m)) } }
       cx = Ctx((
         // maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.fresh(man(tp))) else { val m = me(keys.map(_._2),tp); (name,impl.newStore()(m)) } // XXX missing indexes
         //  impl.namedM3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any]))
         //}
-        ctx0.toList union
+        ctx0Mutable.toList union
         args.map{ case (name,tp) => (name,impl.named(name,tp)) }
       ).toMap)
       // Execute each statement
@@ -266,10 +273,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
-  var ctx0 = Map[String,Rep[_]]()
+  var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
   override def genLMS(s0:System):String = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
-    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.fresh(man(tp))) else { val m = me(keys.map(_._2),tp); (name,impl.newStore()(m)) } } // XXX missing indexes
+    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.fresh(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); (name,(/*impl.newSStore()(m)*/impl.named(name,true)(m),keys,tp)) } } // XXX missing indexes
 
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)

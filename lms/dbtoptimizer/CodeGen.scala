@@ -17,7 +17,6 @@ import scala.virtualization.lms.util.ReflectionUtil
 import scalariform.formatter.preferences._
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
-import dbtoptimizer._
 import dbtoptimizer.lifters._
 import scala.reflect.SourceContext
 
