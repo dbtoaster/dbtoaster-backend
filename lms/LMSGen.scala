@@ -86,7 +86,13 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     case a@AggSum(ks,e) =>
       val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
       if (agg_keys.size==0) { // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
-        val acc:impl.Var[_] = impl.var_new(impl.unit(zero(ex.tp)))
+        val acc:impl.Var[_] = ex.tp match {
+          case TypeLong => impl.var_new[Long](impl.unit(0L))
+          case TypeDouble => impl.var_new[Double](impl.unit(0.0))
+          case TypeString => impl.var_new[String](impl.unit(""))
+          case TypeDate => impl.var_new[java.util.Date](impl.unit(new java.util.Date()))
+          case _ => sys.error("Unsupported type "+ex.tp)
+        }
         val cur=cx.save; expr(e,(v:Rep[_]) => impl.var_plusequals(acc, v),None); cx.load(cur); co(acc)
       } else {
         implicit val mE=me(a.tks,ex.tp)

@@ -82,7 +82,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
   def m3add[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]) = {
     val isTemp = map match {
       case Def(Reflect(s@StNewStore(_),_,_)) => toAtom(s).asInstanceOf[Sym[_]].attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
-      case s:Sym[_] =>  s.attributes.get("_isTemp").asInstanceOf[Boolean]
+      case s:Sym[_] =>  s.attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
     }
     val n = m.typeArguments.size
     val lastMan = m.typeArguments.last
@@ -517,87 +517,86 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
   //   "}"
   // }
 
-  // override def quote(x: Exp[Any], forcePrintSymbol: Boolean) : String = {
-  //   def printSym(s: Sym[Any]): String = {
-  //     if(s.possibleToInline || s.noReference) {
-  //       Def.unapply(s) match {
-  //         case Some(d: Def[Any]) => d match {
-  //           case Named(n) => n
-  //           case NamedM3Var(n,_) => n
-  //           case NamedM3Map(n,_,_,_,_,_) => n
-  //           case _ =>
-  //             val strWriter: java.io.StringWriter = new java.io.StringWriter;
-  //             val stream = new java.io.PrintWriter(strWriter);
-  //             withStream(stream) {
-  //               emitNode(s, d)
-  //             }
-  //             strWriter.toString
-  //         }
-  //         case None => if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
-  //       }
-  //     } else {
-  //       if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
-  //     }
-  //   }
-  //   x match {
-  //     case Const(s: String) => "\""+s.replace("\"", "\\\"").replace("\n", "\\n")+"\"" // TODO: more escapes?
-  //     case Const(c: Char) => "'"+c+"'"
-  //     case Const(f: Float) => "%1.10f".format(f) + "f"
-  //     case Const(l: Long) => l.toString + "L"
-  //     case Const(null) => "null"
-  //     case Const(z) => z.toString
-  //     case s@Sym(n) => if (forcePrintSymbol) {
-  //       printSym(s)
-  //     } else {
-  //       isVoidType(s.tp) match {
-  //         case true => "(" + /*"x" + n +*/ ")"
-  //         case false => printSym(s)
-  //       }
-  //     }
-  //     case _ => throw new RuntimeException("could not quote %s".format(x))
-  //   }
-  // }
+  override def quote(x: Exp[Any], forcePrintSymbol: Boolean) : String = {
+    def printSym(s: Sym[Any]): String = {
+      if(s.possibleToInline || s.noReference) {
+        Def.unapply(s) match {
+          case Some(d: Def[Any]) => d match {
+            case Named(n) => n
+            // case NamedM3Var(n,_) => n
+            // case NamedM3Map(n,_,_,_,_,_) => n
+            case _ =>
+              val strWriter: java.io.StringWriter = new java.io.StringWriter;
+              val stream = new java.io.PrintWriter(strWriter);
+              withStream(stream) {
+                emitNode(s, d)
+              }
+              strWriter.toString
+          }
+          case None => if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+        }
+      } else {
+        if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+      }
+    }
+    x match {
+      case Const(s: String) => "\""+s.replace("\"", "\\\"").replace("\n", "\\n")+"\"" // TODO: more escapes?
+      case Const(c: Char) => "'"+c+"'"
+      case Const(f: Float) => "%1.10f".format(f) + "f"
+      case Const(l: Long) => l.toString + "L"
+      case Const(null) => "null"
+      case Const(z) => z.toString
+      case s@Sym(n) => if (forcePrintSymbol) {
+        printSym(s)
+      } else {
+        isVoidType(s.tp) match {
+          case true => "(" + /*"x" + n +*/ ")"
+          case false => printSym(s)
+        }
+      }
+      case _ => throw new RuntimeException("could not quote %s".format(x))
+    }
+  }
 
-  // override def emitValDef(sym: Sym[Any], rhs: String): Unit = {
-  //   val extra = if ((Config.sourceinfo < 2) || sym.pos.isEmpty) "" else {
-  //     val context = sym.pos(0)
-  //     "      // " + relativePath(context.fileName) + ":" + context.line
-  //   }
-  //   sym match {
-  //     case s@Sym(n) => isVoidType(s.tp) match {
-  //       case true => stream.println("" + rhs + extra)
-  //       case false => if(s.possibleToInline || s.noReference) {
-  //           stream.print("("+rhs+")")
-  //         } else {
-  //           stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
-  //         }
-  //     }
-  //     case _ => stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
-  //   }
-  // }
+  override def emitValDef(sym: Sym[Any], rhs: String): Unit = {
+    val extra = if ((Config.sourceinfo < 2) || sym.pos.isEmpty) "" else {
+      val context = sym.pos(0)
+      "      // " + relativePath(context.fileName) + ":" + context.line
+    }
+    sym match {
+      case s@Sym(n) => isVoidType(s.tp) match {
+        case true => stream.println("" + rhs + extra)
+        case false => if(s.possibleToInline || s.noReference) {
+            stream.print("("+rhs+")")
+          } else {
+            stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
+          }
+      }
+      case _ => stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
+    }
+  }
 
-  // def getSymTypeStr(s:Sym[_]):String = {
-  //   val typeStr:String = remap(s.tp)
-  //   var theType = ""
-  //   if((typeStr.contains("Any")) || (typeStr.contains("$")) || (typeStr.contains("@"))) {
-  //     Def.unapply(s) match {
-  //       case Some(Reflect(M3Slice(name,part,partKey),_,_)) => {
-  //         val elemKeyType = Def.unapply(name) match {
-  //           case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => {
-  //             theType = (if(M3MapCommons.isInliningHigherThanNone) ":scala.collection.mutable.ArrayBuffer["+M3MapCommons.entryClassName(value,key,indexList)+"]" else ":M3Map["+tup(key map (_.toScala))+","+value.toScala+"]")
-  //           }
-  //           case _ => theType = ""
-  //         }
-  //       }
-  //       case _ => theType = ""
-  //     }
-  //   } else {
-  //     theType = ":"+typeStr
-  //   }
-  //   theType
-  // }
+  def getSymTypeStr(s:Sym[_]):String = {
+    val typeStr:String = remap(s.tp)
+    var theType = ""
+    // if((typeStr.contains("Any")) || (typeStr.contains("$")) || (typeStr.contains("@"))) {
+    //   Def.unapply(s) match {
+    //     case Some(Reflect(M3Slice(name,part,partKey),_,_)) => {
+    //       val elemKeyType = Def.unapply(name) match {
+    //         case Some(Reflect(NamedM3Map(_,key,value,indexList,_,_),_,_)) => {
+    //           theType = (if(M3MapCommons.isInliningHigherThanNone) ":scala.collection.mutable.ArrayBuffer["+M3MapCommons.entryClassName(value,key,indexList)+"]" else ":M3Map["+tup(key map (_.toScala))+","+value.toScala+"]")
+    //         }
+    //         case _ => theType = ""
+    //       }
+    //     }
+    //     case _ => theType = ""
+    //   }
+    // } else {
+      theType = ":"+typeStr
+    // }
+    theType
+  }
 
-  //
   // override def quote(x: Exp[Any]) : String = x match {
   //   case sym@Sym(_) if sym.attributes.contains(nameAttr) => sym.attributes(nameAttr).toString
   //   case _ => super.quote(x)
