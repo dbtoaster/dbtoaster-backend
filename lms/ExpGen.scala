@@ -70,7 +70,7 @@ object ScalaExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressi
 
       var staticFieldsStr = ""
       staticFields.map { case (key, staticFldDef) =>
-        staticFieldsStr += ("  " + staticFldDef) + "\n"
+        staticFieldsStr += staticFldDef + "\n"
       }
       staticFields.clear
 
