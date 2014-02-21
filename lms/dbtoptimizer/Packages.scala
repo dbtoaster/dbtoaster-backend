@@ -46,5 +46,5 @@ trait DSL extends DSLBase with ScalaOpsPkg
   with ToasterBoosterOpsPkg {
     var classArgs: List[Sym[_]] = Nil
 
-    def newSStore[E<:Entry:Manifest]():Rep[Store[E]] = { val s = fresh[Store[E]]; checkOrInsertEntryClass[E](manifest[E]); classArgs = classArgs :+ s; s }
+    def newSStore[E<:Entry:Manifest]():Rep[Store[E]] = { val s = fresh[Store[E]]; collectStore[E](s); classArgs = classArgs :+ s; s }
 }

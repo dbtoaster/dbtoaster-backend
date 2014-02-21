@@ -70,8 +70,6 @@ trait SEntryOps extends Base{
   def steIncrease[E<:Entry:Manifest](x: Rep[E], i: Int, v: Rep[Any]):Rep[Unit]
   def steDecrease[E<:Entry:Manifest](x: Rep[E], i: Int, v: Rep[Any]):Rep[Unit]
   def steGet[E<:Entry:Manifest](x: Rep[E], i: Int):Rep[Any]
-
-  def checkOrInsertEntryClass[E](m:Manifest[E]):Unit
 }
 
 trait SEntryExp extends StoreOps with BaseExp with EffectExp with VariablesExp {
@@ -94,16 +92,9 @@ trait SEntryExp extends StoreOps with BaseExp with EffectExp with VariablesExp {
     case _ => super.mirror(e,f)
   }).asInstanceOf[Exp[A]] // why??
 
-  def checkOrInsertEntryClass[E](m:Manifest[E]):Unit = {
-    val ms = m.toString
-    storeEntryClasses.get(ms) match {
-      case None => storeEntryClasses += (ms -> (m, new collection.mutable.HashSet[Sym[_]]))
-      case _ => ()
-    }
-  }
   //this hashmap will map (entry manifest string) -> ((entry class name),(list of argument type names),(list of Store[E] symbols, containing entry of the type given as key))
-  val storeEntryClasses: collection.mutable.Map[String, (Manifest[_],collection.mutable.Set[Sym[_]])] = new collection.mutable.HashMap[String, (Manifest[_],collection.mutable.Set[Sym[_]])]()
-
+  //val storeEntryClasses: collection.mutable.Map[String, (Manifest[_],collection.mutable.Set[Sym[_]])] = new collection.mutable.HashMap[String, (Manifest[_],collection.mutable.Set[Sym[_]])]()
+  val storeSyms = List[Sym[Store[Entry]]]()
   val ENTRY_INDICES_KEY = "StoreOps.Entry.indices"
 }
 
@@ -120,162 +111,6 @@ trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaC
     case SteDecrease(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" -= "+quote(v))
     case SteGet(x,i) => emitValDef(sym, quote(x)+"._"+i)
     case _ => super.emitNode(sym, rhs)
-  }
-
-  def extractEntryClassName[E](m:Manifest[E]) = {
-    val ms = m.toString
-    val targs = m.typeArguments
-    val fullClsName = ms.take(ms.indexOf("["))
-    val baseClsName = fullClsName.takeRight(fullClsName.size - fullClsName.lastIndexOf('.') - 1)
-    val targsStrList = targs.map(tp => remap(tp))
-    val clsName = baseClsName+"_"+targsStrList.map(tp => simplifyTypeName(tp)).mkString
-    (clsName, targsStrList)
-  }
-
-  def simplifyTypeName(tp:String):String = tp match {
-    case "Int" => "I"
-    case "Long" => "L"
-    case "Float" => "F"
-    case "Double" => "D"
-    case "Boolean" => "B"
-    case "java.util.Date" => "A"
-    case "java.lang.String" => "S"
-    case _ => tp.replace(".","_")
-  }
-
-  def zeroValue(tp:String):String = tp match {
-    case "Int" => "0"
-    case "Long" => "0L"
-    case "Float" => "0f"
-    case "Double" => "0D"
-    case "Boolean" => "false"
-    case _ => "null"
-  }
-
-  override def remap[A](m: Manifest[A]): String = m match {
-    case _ if classOf[Entry] isAssignableFrom m.runtimeClass =>
-      // call remap on all type arguments
-      val targs = m.typeArguments
-      if (targs.length > 0) {
-        extractEntryClassName[A](m)._1
-      }
-      else super.remap[A](m)
-    case _ => super.remap[A](m)
-  }
-
-  override def emitDataStructures(out: java.io.PrintWriter): Unit = {
-    storeEntryClasses.foreach { case (_, (m, storeSyms)) =>
-      val (clsName, argTypes) = extractEntryClassName(m)
-      val indices: collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)] = if(storeSyms.size > 1) {
-        throw new GenerationFailedException("Mutiple storeSyms for an entry class is not supported yet => " + storeSyms)
-      } else if(storeSyms.size <= 0) {
-        val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
-        m += ((IList, (1 to argTypes.size), false, -1))
-      } else {
-        val sym = storeSyms.iterator.next
-        sym.attributes(ENTRY_INDICES_KEY).asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
-      }
-      out.println("  case class %s(%s) extends storage.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
-        "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
-      }.mkString(", "), argTypes.size))
-      val tupleHashSeed = "0xcafebabe"
-      out.println("    def hash(i: Int):Int = {\n      var hash:Int = %s\n      %s\n      hash\n    }".format(tupleHashSeed,indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
-        "if(i == %d) {\n%s\n      }".format(j, genHashFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx,argTypes))
-      }.mkString(" else ")))
-      out.println("    def cmp(i: Int, e0:Entry):Int = {\n      val e=e0.asInstanceOf[%s]\n      %s else { 0 }\n    }".format(clsName, indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
-        "if(i == %d) {\n%s\n      }".format(j, genCmpFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx))
-      }.mkString(" else ")))
-      out.println("    def copy = %s(%s)".format(clsName, argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")))
-      out.println("  }")
-    }
-  }
-
-  override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
-    classArgs.foreach { c =>
-      val idxArr = c.attributes.get(ENTRY_INDICES_KEY) match {
-        case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
-        case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
-                     m += ((IList, (1 to c.tp.typeArguments.size),false,-1))
-      }
-      val cName = quote(c, true)
-      out.println("    val %s = new %s(%d)".format(cName, remap(c.tp), idxArr.size))
-      idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
-        case IList => out.println("    %s.index(%d,IList,%s)".format(cName, i, idxUniq))
-        case IHash => out.println("    %s.index(%d,IHash,%s)".format(cName, i, idxUniq))
-        case ISliceHeapMax => out.println("    %s.index(%d,ISliceHeapMax,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
-        case ISliceHeapMin => out.println("    %s.index(%d,ISliceHeapMin,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
-        case _ => out.println("    ... not supported ...")
-      }}
-      out.println()
-    }
-    functionNames.foreach { fn =>
-      out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
-        quote(c, true)
-      }.mkString(", ")))
-    }
-  }
-
-  /*
-   * Implementation of MurmurHash3
-   * based on scala.util.hashing.MurmurHash3
-   * for Products
-   *
-   * https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
-   */
-  def genHashFunc(prefix:String, idxType: IndexType, idxLoc: Seq[Int], idxUniq: Boolean, idxSliceIdx:Int, argTypes:Seq[String]):String = {
-    def elemHashFunc(tp:String) = tp match {
-      case "Int" => ""
-      case _ => ".##"
-    }
-    def genHashFuncInternal(idxLocations: Seq[Int]) = {
-      def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
-      var counter:Int = 0
-      idxLocations.map { i =>
-        counter+=1
-        //TODO: Check whether hashCode works better compared to ##
-        //      as we know that everything is type-checked
-        prefix + (if(counter == 1) "var mix:Int" else "mix") + " = _"+i+elemHashFunc(argTypes(i-1))+" * 0xcc9e2d51\n" +
-        prefix + "mix = " + rotl("mix", "15")+"\n" +
-        prefix + "mix *= 0x1b873593\n" +
-        prefix + "mix ^= hash\n" +
-        prefix + "mix = " + rotl("mix", "13")+"\n" +
-        prefix + "hash = (mix << 1) + mix + 0xe6546b64\n"
-      }.mkString +
-      prefix + "hash ^= " + idxLocations.size + "\n" +
-      prefix + "hash ^= hash >>> 16\n" +
-      prefix + "hash *= 0x85ebca6b\n" +
-      prefix + "hash ^= hash >>> 13\n" +
-      prefix + "hash *= 0xc2b2ae35\n" +
-      prefix + "hash ^= hash >>> 16\n" //+
-      //currently we are doing it in IHash index, so it is
-      //better not to do it here again
-      //javaHashMapHashFunc("hash", prefix)
-    }
-
-    idxType match {
-      case IHash | IList => genHashFuncInternal(idxLoc)
-      case ISliceHeapMax | ISliceHeapMin => genHashFuncInternal(List(idxLoc(0)))
-      case _ => prefix+"... not supported ..."
-    }
-  }
-
-  /**
-   * Applies a supplemental hash function to a given hashCode, which
-   * defends against poor quality hash functions.  This is critical
-   * because HashMap uses power-of-two length hash tables, that
-   * otherwise encounter collisions for hashCodes that do not differ
-   * in lower bits. Note: Null keys always map to hash 0, thus index 0.
-   */
-  def javaHashMapHashFunc(hash: String, prefix: String) = {
-    prefix + hash+" ^= ("+hash+" >>> 20) ^ ("+hash+" >>> 12)\n" +
-    prefix + hash+" ^= ("+hash+" >>> 7) ^ ("+hash+" >>> 4)"
-  }
-
-  def genCmpFunc(prefix:String, idxType: IndexType, idxLoc: Seq[Int], idxUniq: Boolean, idxSliceIdx:Int):String = idxType match {
-    case IHash | IList => "%sif(%s) 0 else 1".format(prefix,idxLoc.map(i => "_%d == e._%d".format(i,i)).mkString(" && "))
-    case ISliceHeapMin => val i = idxLoc(0); "%sif(_%s < e._%s) { -1 } else if(_%s > e._%s) { 1 } else { 0 }".format(prefix,i,i,i,i)
-    case ISliceHeapMax => val i = idxLoc(0); "%sif(_%s < e._%s) { 1 } else if(_%s > e._%s) { -1 } else { 0 }".format(prefix,i,i,i,i)
-    case _ => prefix+"... not supported ..."
   }
 }
 
@@ -340,6 +175,8 @@ trait StoreOps extends Base with SEntryOps {
   //def stIdxs     [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int):Rep[Array[Idx[E]]]
   def stMutable    [E<:Entry:Manifest](x: Rep[Store[E]]):Rep[Store[E]]
   def allMutable   [E:Manifest](x: Rep[E]):Rep[E]
+
+  def collectStore [E<:Entry:Manifest](x:Rep[Store[E]]):Unit
 }
 
 trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp with SEntryExp {
@@ -370,12 +207,17 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   case class StMutable    [E<:Entry:Manifest](x: Exp[Store[E]]) extends Def[Store[E]]
   case class AllMutable    [E:Manifest](x: Exp[E]) extends Def[E]
 
+  def getStoreSym(s:Rep[_]) = (s match {
+    case Def(Reflect(StMutable(sym),_,_)) => sym
+    case sym => sym
+  }).asInstanceOf[Sym[_]]
+
   def addIndicesToEntryClass[E<:Entry:Manifest](x:Exp[Store[E]], fn: ((Sym[_],collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]) => Unit)) = {
-    var xx = x.asInstanceOf[Sym[_]]
-    x match {
-      case Def(Reflect(StMutable(xy),_,_)) => xx = xy.asInstanceOf[Sym[_]]
-      case _ => ()
-    }
+    var xx = getStoreSym(x).asInstanceOf[Sym[Store[E]]]
+    // x match {
+    //   case Def(Reflect(StMutable(xy),_,_)) => xx = xy.asInstanceOf[Sym[_]]
+    //   case _ => ()
+    // }
     xx.attributes.get(ENTRY_INDICES_KEY) match {
       case Some(m) => fn(xx, m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]])
       case None => {
@@ -384,13 +226,13 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
         xx.attributes.put(ENTRY_INDICES_KEY, m)
       }
     }
-    storeEntryClasses(manifest[E].toString)._2 += xx
+    // storeEntryClasses(manifest[E].toString)._2 += xx
   }
 
   // def newStore     [E<:Entry:Manifest](sndIdx: Exp[Array[Idx[E]]]):Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E], sndIdx)) }
-  def newStore     [E<:Entry:Manifest]():Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E])) }
-  def stNewEntry       [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](x, args)) }
-  def stSampleEntry    [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](x, args) }
+  def newStore     [E<:Entry:Manifest]():Exp[Store[E]] = { val s:Exp[Store[E]]=reflectMutable(StNewStore[E](manifest[E])); collectStore[E](s); getStoreSym(s).asInstanceOf[Exp[Store[E]]] } //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E])) }
+  def stNewEntry       [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]):Exp[E] = reflectMutable(SteNewSEntry[E](x, args)) //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](x, args)) }
+  def stSampleEntry    [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]):Exp[E] = SteSampleSEntry[E](x, args) //{ checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](x, args) }
   // def stSampleFullEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Rep[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args.zipWithIndex.map{case (arg, i) => ((i+1, arg))}) }
   def stInsert     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StInsert[E](x, e))
   def stUpdate     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StUpdate[E](x, e))
@@ -497,6 +339,9 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   def stMutable    [E<:Entry:Manifest](x: Exp[Store[E]]):Exp[Store[E]] = reflectMutable(StMutable[E](x))
   def allMutable   [E:Manifest](x: Rep[E]):Rep[E] = reflectMutable(AllMutable[E](x))
 
+  def collectStore[E<:Entry:Manifest](x:Rep[Store[E]]):Unit = {
+    storeSyms = x.asInstanceOf[Sym[Store[E]]] :: storeSyms
+  }
   //////////////
   // mirroring
   override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit pos: SourceContext): Exp[A] = (e match {
@@ -588,11 +433,11 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case StNewStore(mE) => emitValDef(sym, "new Store[" + remap(mE) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
-    case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ "ENTRY_XXX("+args.map(quote(_)).mkString(", ")+")")
+    case StNewStore(mE) => emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
+    case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ storeEntryType(getStoreSym(x)) + "("+args.map(quote(_)).mkString(", ")+")")
     case SteSampleSEntry(x, args) => {
       val symName = "se%d".format(sym.id)
-      staticFields += ("SEntryOps."+symName -> "val %s = new %s".format(symName, "ENTRY_XXX"/*remap(mE)*/))
+      staticFields += ("SEntryOps."+symName -> "val %s = new %s".format(symName, storeEntryType(getStoreSym(x))/*remap(mE)*/))
       emitValDef(sym, "{ "+args.map{
         case (i, v) => symName+"._"+i+" = "+quote(v)+"; "
       }.mkString +" "+symName+" }")
@@ -636,5 +481,145 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     case StMutable(x) => emitValDef(sym, quote(x)+" /*store made mutable*/")
     case AllMutable(x) => emitValDef(sym, quote(x)+" /*made mutable*/")
     case _ => super.emitNode(sym, rhs)
+  }
+
+  def storeEntryType(sym:Rep[_]) = extractEntryClassName(sym)._1
+
+  def extractEntryClassName(sym:Rep[_]) = {
+    val m = sym.asInstanceOf[Sym[Store[Entry]]].tp
+    val ms = m.toString
+    val targs = m.typeArguments
+    val fullClsName = ms.take(ms.indexOf("["))
+    val baseClsName = fullClsName.takeRight(fullClsName.size - fullClsName.lastIndexOf('.') - 1)
+    val targsStrList = targs.map(tp => remap(tp))
+    val clsName = baseClsName+"_"+targsStrList.map(tp => simplifyTypeName(tp)).mkString
+    (clsName, targsStrList)
+  }
+
+  def simplifyTypeName(tp:String):String = tp match {
+    case "Int" => "I"
+    case "Long" => "L"
+    case "Float" => "F"
+    case "Double" => "D"
+    case "Boolean" => "B"
+    case "java.util.Date" => "A"
+    case "java.lang.String" => "S"
+    case _ => tp.replace(".","_")
+  }
+
+  def zeroValue(tp:String):String = tp match {
+    case "Int" => "0"
+    case "Long" => "0L"
+    case "Float" => "0f"
+    case "Double" => "0D"
+    case "Boolean" => "false"
+    case _ => "null"
+  }
+
+  override def emitDataStructures(out: java.io.PrintWriter): Unit = {
+    storeSyms.foreach{ sym =>
+      val (clsName, argTypes) = extractEntryClassName(sym)
+      val indices = sym.attributes(ENTRY_INDICES_KEY).asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
+      out.println("  case class %s(%s) extends storage.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
+        "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
+      }.mkString(", "), argTypes.size))
+      val tupleHashSeed = "0xcafebabe"
+      out.println("    def hash(i: Int):Int = {\n      var hash:Int = %s\n      %s\n      hash\n    }".format(tupleHashSeed,indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
+        "if(i == %d) {\n%s\n      }".format(j, genHashFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx,argTypes))
+      }.mkString(" else ")))
+      out.println("    def cmp(i: Int, e0:Entry):Int = {\n      val e=e0.asInstanceOf[%s]\n      %s else { 0 }\n    }".format(clsName, indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
+        "if(i == %d) {\n%s\n      }".format(j, genCmpFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx))
+      }.mkString(" else ")))
+      out.println("    def copy = %s(%s)".format(clsName, argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")))
+      out.println("  }")
+    }
+  }
+
+  override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
+    classArgs.foreach { c =>
+      val idxArr = c.attributes.get(ENTRY_INDICES_KEY) match {
+        case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
+        case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
+                     m += ((IList, (1 to c.tp.typeArguments.size),false,-1))
+      }
+      val cName = quote(c, true)
+      out.println("    val %s = new %s(%d)".format(cName, remap(c.tp), idxArr.size))
+      idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
+        case IList => out.println("    %s.index(%d,IList,%s)".format(cName, i, idxUniq))
+        case IHash => out.println("    %s.index(%d,IHash,%s)".format(cName, i, idxUniq))
+        case ISliceHeapMax => out.println("    %s.index(%d,ISliceHeapMax,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
+        case ISliceHeapMin => out.println("    %s.index(%d,ISliceHeapMin,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
+        case _ => out.println("    ... not supported ...")
+      }}
+      out.println()
+    }
+    functionNames.foreach { fn =>
+      out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
+        quote(c, true)
+      }.mkString(", ")))
+    }
+  }
+
+  /*
+   * Implementation of MurmurHash3
+   * based on scala.util.hashing.MurmurHash3
+   * for Products
+   *
+   * https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
+   */
+  def genHashFunc(prefix:String, idxType: IndexType, idxLoc: Seq[Int], idxUniq: Boolean, idxSliceIdx:Int, argTypes:Seq[String]):String = {
+    def elemHashFunc(tp:String) = tp match {
+      case "Int" => ""
+      case _ => ".##"
+    }
+    def genHashFuncInternal(idxLocations: Seq[Int]) = {
+      def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
+      var counter:Int = 0
+      idxLocations.map { i =>
+        counter+=1
+        //TODO: Check whether hashCode works better compared to ##
+        //      as we know that everything is type-checked
+        prefix + (if(counter == 1) "var mix:Int" else "mix") + " = _"+i+elemHashFunc(argTypes(i-1))+" * 0xcc9e2d51\n" +
+        prefix + "mix = " + rotl("mix", "15")+"\n" +
+        prefix + "mix *= 0x1b873593\n" +
+        prefix + "mix ^= hash\n" +
+        prefix + "mix = " + rotl("mix", "13")+"\n" +
+        prefix + "hash = (mix << 1) + mix + 0xe6546b64\n"
+      }.mkString +
+      prefix + "hash ^= " + idxLocations.size + "\n" +
+      prefix + "hash ^= hash >>> 16\n" +
+      prefix + "hash *= 0x85ebca6b\n" +
+      prefix + "hash ^= hash >>> 13\n" +
+      prefix + "hash *= 0xc2b2ae35\n" +
+      prefix + "hash ^= hash >>> 16\n" //+
+      //currently we are doing it in IHash index, so it is
+      //better not to do it here again
+      //javaHashMapHashFunc("hash", prefix)
+    }
+
+    idxType match {
+      case IHash | IList => genHashFuncInternal(idxLoc)
+      case ISliceHeapMax | ISliceHeapMin => genHashFuncInternal(List(idxLoc(0)))
+      case _ => prefix+"... not supported ..."
+    }
+  }
+
+  /**
+   * Applies a supplemental hash function to a given hashCode, which
+   * defends against poor quality hash functions.  This is critical
+   * because HashMap uses power-of-two length hash tables, that
+   * otherwise encounter collisions for hashCodes that do not differ
+   * in lower bits. Note: Null keys always map to hash 0, thus index 0.
+   */
+  def javaHashMapHashFunc(hash: String, prefix: String) = {
+    prefix + hash+" ^= ("+hash+" >>> 20) ^ ("+hash+" >>> 12)\n" +
+    prefix + hash+" ^= ("+hash+" >>> 7) ^ ("+hash+" >>> 4)"
+  }
+
+  def genCmpFunc(prefix:String, idxType: IndexType, idxLoc: Seq[Int], idxUniq: Boolean, idxSliceIdx:Int):String = idxType match {
+    case IHash | IList => "%sif(%s) 0 else 1".format(prefix,idxLoc.map(i => "_%d == e._%d".format(i,i)).mkString(" && "))
+    case ISliceHeapMin => val i = idxLoc(0); "%sif(_%s < e._%s) { -1 } else if(_%s > e._%s) { 1 } else { 0 }".format(prefix,i,i,i,i)
+    case ISliceHeapMax => val i = idxLoc(0); "%sif(_%s < e._%s) { 1 } else if(_%s > e._%s) { -1 } else { 0 }".format(prefix,i,i,i,i)
+    case _ => prefix+"... not supported ..."
   }
 }
