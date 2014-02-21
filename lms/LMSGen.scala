@@ -292,10 +292,15 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val ts = tsResBlks.map{ case (s,b) =>
       "def "+s+" {\n"+ddbt.Utils.ind(impl.emit(b))+"\n}"
     }.mkString("\n\n")
-    val ms = s0.maps.map(genMap).mkString("\n") // maps
+    var outStream = new java.io.StringWriter
+    var outWriter = new java.io.PrintWriter(outStream)
+    //val ms = s0.maps.map(genMap).mkString("\n") // maps
+    impl.codegen.generateClassArgsDefs(outWriter,Nil)
+    val ms = outStream.toString
+
+    outStream = new java.io.StringWriter
+    outWriter = new java.io.PrintWriter(outStream)
     //val ds = if(M3MapCommons.isInliningHigherThanNone) M3MapCommons.generateAllEntryClasses else ""
-    val outStream = new java.io.StringWriter
-    val outWriter = new java.io.PrintWriter(outStream)
     impl.codegen.emitDataStructures(outWriter)
     val ds = outStream.toString
     val r=ms+"\n"+ts+"\n"+ds

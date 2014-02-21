@@ -526,14 +526,14 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
       val indices = sym.attributes(ENTRY_INDICES_KEY).asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
-      out.println("  case class %s(%s) extends storage.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
+      out.println("  case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
         "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
       }.mkString(", "), argTypes.size))
       val tupleHashSeed = "0xcafebabe"
       out.println("    def hash(i: Int):Int = {\n      var hash:Int = %s\n      %s\n      hash\n    }".format(tupleHashSeed,indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
         "if(i == %d) {\n%s\n      }".format(j, genHashFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx,argTypes))
       }.mkString(" else ")))
-      out.println("    def cmp(i: Int, e0:Entry):Int = {\n      val e=e0.asInstanceOf[%s]\n      %s else { 0 }\n    }".format(clsName, indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
+      out.println("    def cmp(i: Int, e0:ddbt.lib.store.Entry):Int = {\n      val e=e0.asInstanceOf[%s]\n      %s else { 0 }\n    }".format(clsName, indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
         "if(i == %d) {\n%s\n      }".format(j, genCmpFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx))
       }.mkString(" else ")))
       out.println("    def copy = %s(%s)".format(clsName, argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")))
@@ -542,14 +542,14 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
   }
 
   override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
-    classArgs.foreach { c =>
+    storeSyms.foreach { c =>
       val idxArr = c.attributes.get(ENTRY_INDICES_KEY) match {
         case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
         case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
                      m += ((IList, (1 to c.tp.typeArguments.size),false,-1))
       }
       val cName = quote(c, true)
-      out.println("    val %s = new %s(%d)".format(cName, remap(c.tp), idxArr.size))
+      out.println("    val %s = new Store[%s](%d)".format(cName, storeEntryType(c), idxArr.size))
       idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
         case IList => out.println("    %s.index(%d,IList,%s)".format(cName, i, idxUniq))
         case IHash => out.println("    %s.index(%d,IHash,%s)".format(cName, i, idxUniq))

@@ -225,7 +225,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
   // Helper that contains the main and stream generator
   def helper(s0:System,pkg:String) =
-    "package "+pkg+"\nimport ddbt.lib._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
+    "package "+pkg+"\nimport ddbt.lib._\nimport ddbt.lib.store._\n\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" {\n"+ind("import Helper._\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+

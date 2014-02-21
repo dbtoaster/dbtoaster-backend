@@ -56,13 +56,19 @@ object ScalaExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressi
     def emitSource[T:Manifest](body: Block[T]) : String = {
       val outStream = new java.io.StringWriter
       val outWriter = new java.io.PrintWriter(outStream)
+      var staticFieldsStr = ""
       withStream(outWriter) {
         val transformedBody = performTransformations(body)
         emitBlock(transformedBody)
+        staticFields.map { case (key, staticFldDef) =>
+          staticFieldsStr += ("  " + staticFldDef) + "\n"
+        }
+        staticFields.clear
         if (manifest[T]!=manifest[Unit]) stream.println(quote(getBlockResult(transformedBody)))
       }
       // reset // reset the whole LMS subsystem
-      outStream.toString
+
+      staticFieldsStr + outStream.toString
     }
   }
   val codegen = new MyCodeGen
