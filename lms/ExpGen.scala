@@ -2,6 +2,7 @@ package ddbt.codegen.lms
 
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
+import ddbt.ast._
 
 /**
  * Helpers for LMS code generation
@@ -11,7 +12,6 @@ import scala.virtualization.lms.internal._
 
 /* Helper to convert AST types into manifests */
 object ManifestHelper {
-  import ddbt.ast._
   def man(tp:Type):Manifest[_] = tp match {
     case TypeLong => manifest[Long]
     case TypeDouble => manifest[Double]
@@ -56,24 +56,31 @@ object ScalaExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressi
     def emitSource[T:Manifest](body: Block[T]) : String = {
       val outStream = new java.io.StringWriter
       val outWriter = new java.io.PrintWriter(outStream)
-      var staticFieldsStr = ""
       withStream(outWriter) {
         val transformedBody = performTransformations(body)
         emitBlock(transformedBody)
-        staticFields.map { case (key, staticFldDef) =>
-          staticFieldsStr += ("  " + staticFldDef) + "\n"
-        }
-        staticFields.clear
         if (manifest[T]!=manifest[Unit]) stream.println(quote(getBlockResult(transformedBody)))
       }
       // reset // reset the whole LMS subsystem
 
-      staticFieldsStr + outStream.toString
+      outStream.toString
+    }
+    def emitTriggerSource[T:Manifest](body: Block[T],name:String,args:List[(String,Type)]) : String = {
+      val funDef = "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(emitSource(body))+"\n}"
+
+      var staticFieldsStr = ""
+      staticFields.map { case (key, staticFldDef) =>
+        staticFieldsStr += ("  " + staticFldDef) + "\n"
+      }
+      staticFields.clear
+
+      staticFieldsStr + "\n" + funDef
     }
   }
   val codegen = new MyCodeGen
   def emit[T:Manifest](sym: => Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
   def emit[T:Manifest](blk:Block[T]) = { assert(codegen ne null); codegen.emitSource(blk) }
+  def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]) = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args) }
 }
 
 // XXX: implement the counterpart for C/C++

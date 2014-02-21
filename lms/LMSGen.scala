@@ -214,7 +214,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       }
       impl.unit(())
     }
-    cx = null; ("on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+")",block)
+    cx = null; (name,args,block)
   }
 
   override def toMapFunction(q: Query) = {
@@ -288,8 +288,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
     val tsResBlks = s0.triggers.map(genTriggerLMS) // triggers (need to be generated before maps)
-    val ts = tsResBlks.map{ case (s,b) =>
-      "def "+s+" {\n"+ddbt.Utils.ind(impl.emit(b))+"\n}"
+    val ts = tsResBlks.map{ case (name,args,b) =>
+      impl.emitTrigger(b,name,args)
     }.mkString("\n\n")
     var outStream = new java.io.StringWriter
     var outWriter = new java.io.PrintWriter(outStream)
