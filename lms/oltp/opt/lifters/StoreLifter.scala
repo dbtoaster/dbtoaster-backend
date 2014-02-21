@@ -176,7 +176,7 @@ trait StoreOps extends Base with SEntryOps {
   def stMutable    [E<:Entry:Manifest](x: Rep[Store[E]]):Rep[Store[E]]
   def allMutable   [E:Manifest](x: Rep[E]):Rep[E]
 
-  def collectStore [E<:Entry:Manifest](x:Rep[Store[E]]):Unit
+  def collectStore [E<:Entry:Manifest](x:Rep[_]):Unit
 }
 
 trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp with SEntryExp {
@@ -339,8 +339,8 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   def stMutable    [E<:Entry:Manifest](x: Exp[Store[E]]):Exp[Store[E]] = reflectMutable(StMutable[E](x))
   def allMutable   [E:Manifest](x: Rep[E]):Rep[E] = reflectMutable(AllMutable[E](x))
 
-  def collectStore[E<:Entry:Manifest](x:Rep[Store[E]]):Unit = {
-    storeSyms = x.asInstanceOf[Sym[Store[E]]] :: storeSyms
+  def collectStore[E<:Entry:Manifest](x:Rep[_]):Unit = {
+    storeSyms = storeSyms :+ x.asInstanceOf[Sym[Store[E]]]
   }
   //////////////
   // mirroring
@@ -434,10 +434,10 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case StNewStore(mE) => emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
-    case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ storeEntryType(getStoreSym(x)) + "("+args.map(quote(_)).mkString(", ")+")")
+    case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ storeEntryType(x) + "("+args.map(quote(_)).mkString(", ")+")")
     case SteSampleSEntry(x, args) => {
       val symName = "se%d".format(sym.id)
-      staticFields += ("SEntryOps."+symName -> "val %s = new %s".format(symName, storeEntryType(getStoreSym(x))/*remap(mE)*/))
+      staticFields += ("SEntryOps."+symName -> "val %s = new %s".format(symName, storeEntryType(x)/*remap(mE)*/))
       emitValDef(sym, "{ "+args.map{
         case (i, v) => symName+"._"+i+" = "+quote(v)+"; "
       }.mkString +" "+symName+" }")
@@ -483,16 +483,22 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     case _ => super.emitNode(sym, rhs)
   }
 
-  def storeEntryType(sym:Rep[_]) = extractEntryClassName(sym)._1
+  def getStoreSym(s:Rep[_]) = (s match {
+    case Def(Reflect(StMutable(sym),_,_)) => sym
+    case sym => sym
+  }).asInstanceOf[Sym[_]]
 
-  def extractEntryClassName(sym:Rep[_]) = {
-    val m = sym.asInstanceOf[Sym[Store[Entry]]].tp
+  def storeEntryType(sym:Rep[_]) = extractEntryClassName(getStoreSym(sym))._1
+
+  def extractEntryClassName(n:Rep[_]) = {
+    val sym = n.asInstanceOf[Sym[Store[Entry]]]
+    val m = sym.tp
     val ms = m.toString
     val targs = m.typeArguments
     val fullClsName = ms.take(ms.indexOf("["))
     val baseClsName = fullClsName.takeRight(fullClsName.size - fullClsName.lastIndexOf('.') - 1)
     val targsStrList = targs.map(tp => remap(tp))
-    val clsName = baseClsName+"_"+targsStrList.map(tp => simplifyTypeName(tp)).mkString
+    val clsName = baseClsName+"_x"+sym.id+"_"+targsStrList.map(tp => simplifyTypeName(tp)).mkString
     (clsName, targsStrList)
   }
 

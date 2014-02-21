@@ -88,14 +88,14 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     val lastMan = m.typeArguments.last
     if(isTemp) {
       // we don't remove 0-elements
-      val currentEnt = map.get((0 to n).map(i => (i, ent.get(i))) : _*)
+      val currentEnt = map.get((1 to n).map(i => (i, ent.get(i))) : _*)
       __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt += (n, ent.get(n)))
     } else {
       // we remove 0-elements
       val entVal = ent.get(n)
       __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
         ///////
-        val currentEnt = map.get((0 to n).map(i => (i, ent.get(i))) : _*)
+        val currentEnt = map.get((1 to n).map(i => (i, ent.get(i))) : _*)
         __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
           currentEnt += (n, entVal)
           val currentEntVal = currentEnt.get(n)
@@ -109,7 +109,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
   }
   def m3set[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]) = {
     val n = m.typeArguments.size
-    val currentEnt = map.get((0 to n).map(i => (i, ent.get(i))) : _*)
+    val currentEnt = map.get((1 to n).map(i => (i, ent.get(i))) : _*)
     __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
       val entVal = ent.get(n)
       currentEnt.update(n, entVal)
@@ -579,6 +579,9 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
   def getSymTypeStr(s:Sym[_]):String = {
     val typeStr:String = remap(s.tp)
     var theType = ""
+    if(typeStr.startsWith("ddbt.lib.store.Store[")) {
+      theType = ":Store["+storeEntryType(s)+"]"
+    }
     // if((typeStr.contains("Any")) || (typeStr.contains("$")) || (typeStr.contains("@"))) {
     //   Def.unapply(s) match {
     //     case Some(Reflect(M3Slice(name,part,partKey),_,_)) => {
@@ -592,7 +595,7 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
     //     case _ => theType = ""
     //   }
     // } else {
-      theType = ":"+typeStr
+    //   theType = ":"+typeStr
     // }
     theType
   }

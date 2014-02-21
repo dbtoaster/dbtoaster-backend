@@ -70,7 +70,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         co(cx(n))
       } else if(ki.size == 0) { // all keys are bound
         val z = impl.unit(zero(tp))
-        val vs = ks.zipWithIndex.map{ case (n,i) => (i,cx(n))}
+        val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
+        println("vs11 = " + vs)
         val r = proxy.get(vs : _*)
         impl.__ifThenElse(impl.__equal(r,impl.unit(null)),co(z),co(r.get(ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
@@ -80,7 +81,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
           mm.slice({
             (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,e.get(i)) }.toMap); co(e.get(ks.size+1))
-          },ko.map{ case (k,i) => (i,cx(k)) } : _*)
+          },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
         }
       }
     case a@AggSum(ks,e) =>
@@ -201,7 +202,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             oi match { case None => case Some(ie) =>
               expr(ie,(r:Rep[_]) => {
                 val ent = mm.newEntry((m.keys.map(cx) ++ List(r)) : _*)
-                impl.__ifThenElse(impl.equals(mapProxy(mm).get(m.keys.zipWithIndex.map{ case (n,i) => (i,cx(n))} : _*),impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
+                println("vs22 = " + m.keys.zipWithIndex)
+                impl.__ifThenElse(impl.equals(mapProxy(mm).get(m.keys.zipWithIndex.map{ case (n,i) => (i+1,cx(n))} : _*),impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
               })
             }
             cx.load()
@@ -282,7 +284,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
   override def genLMS(s0:System):String = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
-    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.fresh(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); (name,(/*impl.newSStore()(m)*/impl.named(name,true)(m),keys,tp)) } } // XXX missing indexes
+    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.fresh(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(m); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
 
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
