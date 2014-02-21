@@ -71,7 +71,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       } else if(ki.size == 0) { // all keys are bound
         val z = impl.unit(zero(tp))
         val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
-        println("vs11 = " + vs)
         val r = proxy.get(vs : _*)
         impl.__ifThenElse(impl.__equal(r,impl.unit(null)),co(z),co(r.get(ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
@@ -202,7 +201,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             oi match { case None => case Some(ie) =>
               expr(ie,(r:Rep[_]) => {
                 val ent = mm.newEntry((m.keys.map(cx) ++ List(r)) : _*)
-                println("vs22 = " + m.keys.zipWithIndex)
                 impl.__ifThenElse(impl.equals(mapProxy(mm).get(m.keys.zipWithIndex.map{ case (n,i) => (i+1,cx(n))} : _*),impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
               })
             }
@@ -220,18 +218,18 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   override def toMapFunction(q: Query) = {
+    val map = q.name
+    val m = maps(map)
+    val mapKeys = m.keys.map(_._2)
+    val nodeName = map+"_node"
+    val res = nodeName+"_mres"
     if(M3MapCommons.isInliningHigherThanNone) {
       //m = map
-      val map = q.name
-      val nodeName = map+"_node"
-      val m = maps(q.name)
-      val mapKeys = m.keys.map(_._2)
       val mapValue = m.tp
       val indexList = sx.getOrElse(map,List[List[Int]]())
 
       //val entryCls = M3MapCommons.entryClassName(q.tp, q.keys, sx.getOrElse(q.name,List[List[Int]]()))
       val entryCls = "("+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+")"
-      val res = nodeName+"_mres"
       val i = nodeName+"_mi"
       val len = nodeName+"_mlen"
       val e = nodeName+"_me"
@@ -251,22 +249,23 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       "  " + res + "\n" +
       "}.toMap"
     } else {
-      super.toMapFunction(q)
+      "{ val "+res+":scala.collection.Map = new scala.collection.mutable.HashMap(); "+map+".foreach{e => res += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) })+" -> e._"+(mapKeys.size+1)+") }; "+res+" }"
+      //super.toMapFunction(q)
     }
   }
 
-  override def genMap(m:MapDef):String = {
-    if(M3MapCommons.isInliningHigherThanNone) {
-      if (m.keys.size==0) M3MapCommons.createM3VarDefinition(m.name, m.tp)+";"
-      else {
-        val keys = m.keys.map(_._2)
-        val indexList = sx.getOrElse(m.name,List[List[Int]]())
-        M3MapCommons.createM3NamedMapDefinition(m.name,m.tp,keys,indexList)
-      }
-    } else {
-      super.genMap(m)
-    }
-  }
+  // override def genMap(m:MapDef):String = {
+  //   if(M3MapCommons.isInliningHigherThanNone) {
+  //     if (m.keys.size==0) M3MapCommons.createM3VarDefinition(m.name, m.tp)+";"
+  //     else {
+  //       val keys = m.keys.map(_._2)
+  //       val indexList = sx.getOrElse(m.name,List[List[Int]]())
+  //       M3MapCommons.createM3NamedMapDefinition(m.name,m.tp,keys,indexList)
+  //     }
+  //   } else {
+  //     super.genMap(m)
+  //   }
+  // }
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = {
     if(M3MapCommons.isInliningHigherThanNone) {
@@ -304,8 +303,11 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     impl.codegen.emitDataStructures(outWriter)
     val ds = outStream.toString
     val r=ms+"\n"+ts+"\n"+ds
+    r
+  }
+
+  override def clearOut = {
     maps=Map()
     M3MapCommons.clear
-    r
   }
 }
