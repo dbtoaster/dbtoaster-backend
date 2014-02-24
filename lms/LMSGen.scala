@@ -317,4 +317,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     impl.reset
 
   }
+
+  override def additionalImports():String = "import ddbt.lib.store._\n"
 }
