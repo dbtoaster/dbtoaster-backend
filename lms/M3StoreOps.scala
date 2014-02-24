@@ -71,7 +71,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
   def m3temp[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]] = {
     val sym = newStore[E]
     sym match {
-      case Def(Reflect(s@StNewStore(_),_,_)) => s.asInstanceOf[Sym[_]].attributes.put("_isTemp",true)
+      case Def(Reflect(s@StNewStore(_),_,_)) => val innerSym:Rep[_] = s; innerSym.asInstanceOf[Sym[_]].attributes.put("_isTemp",true)
       case s:Sym[_] => s.attributes.put("_isTemp",true)
     }
     sym

@@ -230,7 +230,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   }
 
   // def newStore     [E<:Entry:Manifest](sndIdx: Exp[Array[Idx[E]]]):Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E], sndIdx)) }
-  def newStore     [E<:Entry:Manifest]():Exp[Store[E]] = { val s:Exp[Store[E]]=reflectMutable(StNewStore[E](manifest[E])); collectStore[E](s); getStoreSym(s).asInstanceOf[Exp[Store[E]]] } //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E])) }
+  def newStore     [E<:Entry:Manifest]():Exp[Store[E]] = { val s:Exp[Store[E]]=reflectMutable(StNewStore[E](manifest[E])); collectStore[E](s); s } //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E])) }
   def stNewEntry       [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]):Exp[E] = reflectMutable(SteNewSEntry[E](x, args)) //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](x, args)) }
   def stSampleEntry    [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]):Exp[E] = SteSampleSEntry[E](x, args) //{ checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](x, args) }
   // def stSampleFullEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Rep[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args.zipWithIndex.map{case (arg, i) => ((i+1, arg))}) }
@@ -340,7 +340,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   def allMutable   [E:Manifest](x: Rep[E]):Rep[E] = reflectMutable(AllMutable[E](x))
 
   def collectStore[E<:Entry:Manifest](x:Rep[_]):Unit = {
-    storeSyms = storeSyms :+ x.asInstanceOf[Sym[Store[E]]]
+    storeSyms = storeSyms :+ getStoreSym(x).asInstanceOf[Sym[Store[E]]]
   }
   //////////////
   // mirroring
@@ -433,7 +433,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case StNewStore(mE) => emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
+    case StNewStore(mE) => stream.println(generateNewStore(sym)) //emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
     case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ storeEntryType(x) + "("+args.map(quote(_)).mkString(", ")+")")
     case SteSampleSEntry(x, args) => {
       val symName = "se%d".format(sym.id)
@@ -493,8 +493,8 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
   def extractEntryClassName(n:Rep[_]) = {
     val sym = n.asInstanceOf[Sym[Store[Entry]]]
     val m = sym.tp
-    val ms = m.toString
-    val targs = m.typeArguments
+    val ms = m.typeArguments(0).toString
+    val targs = m.typeArguments(0).typeArguments
     val fullClsName = ms.take(ms.indexOf("["))
     val baseClsName = fullClsName.takeRight(fullClsName.size - fullClsName.lastIndexOf('.') - 1)
     val targsStrList = targs.map(tp => remap(tp))
@@ -542,28 +542,33 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
   }
 
   override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
-    storeSyms.foreach { c =>
-      val idxArr = c.attributes.get(ENTRY_INDICES_KEY) match {
-        case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
-        case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
-                     m += ((IList, (1 to c.tp.typeArguments.size),false,-1))
-      }
-      val cName = quote(c, true)
-      out.println("    val %s = new Store[%s](%d)".format(cName, storeEntryType(c), idxArr.size))
-      idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
-        case IList => out.println("    %s.index(%d,IList,%s)".format(cName, i, idxUniq))
-        case IHash => out.println("    %s.index(%d,IHash,%s)".format(cName, i, idxUniq))
-        case ISliceHeapMax => out.println("    %s.index(%d,ISliceHeapMax,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
-        case ISliceHeapMin => out.println("    %s.index(%d,ISliceHeapMin,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
-        case _ => out.println("    ... not supported ...")
-      }}
-      out.println()
-    }
+    storeSyms.foreach { c => out.println(dbtoptimizer.Utils.ind(generateNewStore(c),2)) }
     functionNames.foreach { fn =>
       out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
         quote(c, true)
       }.mkString(", ")))
     }
+  }
+
+  def generateNewStore(c: Sym[_]):String = {
+    val outStream = new java.io.StringWriter
+    val out = new java.io.PrintWriter(outStream)
+
+    val idxArr = c.attributes.get(ENTRY_INDICES_KEY) match {
+      case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
+      case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
+                   m += ((IList, (1 to c.tp.typeArguments.size),false,-1))
+    }
+    val cName = quote(c, true)
+    out.println("val %s = new Store[%s](%d)".format(cName, storeEntryType(c), idxArr.size))
+    idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
+      case IList => out.println("%s.index(%d,IList,%s)".format(cName, i, idxUniq))
+      case IHash => out.println("%s.index(%d,IHash,%s)".format(cName, i, idxUniq))
+      case ISliceHeapMax => out.println("%s.index(%d,ISliceHeapMax,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
+      case ISliceHeapMin => out.println("%s.index(%d,ISliceHeapMin,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
+      case _ => out.println("... not supported ...")
+    }}
+    outStream.toString
   }
 
   /*

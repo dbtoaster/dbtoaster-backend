@@ -13,7 +13,7 @@ import ddbt.lib._
 class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-  import ManifestHelper.{man,zero,manEntry}
+  import ManifestHelper.{man,zero,manEntry,manStore}
 
   val impl = ScalaExpGen
   import impl.Rep
@@ -21,7 +21,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   var cx : Ctx[Rep[_]] = null
 
   import ddbt.lib.store._
-  def me(ks:List[Type],v:Type=null):Manifest[Entry] = manEntry(if (v==null) ks else ks:::List(v)).asInstanceOf[Manifest[Entry]]
+  def me(ks:List[Type],v:Type=null) = manEntry(if (v==null) ks else ks:::List(v))
   def mapProxy(m:Rep[_]) = impl.store2StoreOpsCls(m.asInstanceOf[Rep[Store[Entry]]])
 
 
@@ -288,7 +288,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
   override def genLMS(s0:System):String = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
-    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.fresh(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(m); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
+    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.fresh(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
 
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
