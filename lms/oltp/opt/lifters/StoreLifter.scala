@@ -525,7 +525,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
   override def emitDataStructures(out: java.io.PrintWriter): Unit = {
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
-      val indices = sym.attributes(ENTRY_INDICES_KEY).asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
+      val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
       out.println("  case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
         "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
       }.mkString(", "), argTypes.size))
@@ -533,9 +533,9 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
       out.println("    def hash(i: Int):Int = {\n      var hash:Int = %s\n      %s\n      hash\n    }".format(tupleHashSeed,indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
         "if(i == %d) {\n%s\n      }".format(j, genHashFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx,argTypes))
       }.mkString(" else ")))
-      out.println("    def cmp(i: Int, e0:ddbt.lib.store.Entry):Int = {\n      val e=e0.asInstanceOf[%s]\n      %s else { 0 }\n    }".format(clsName, indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
+      out.println("    def cmp(i: Int, e0:ddbt.lib.store.Entry):Int = {\n      val e=e0.asInstanceOf[%s]\n      %s %s\n    }".format(clsName, indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
         "if(i == %d) {\n%s\n      }".format(j, genCmpFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx))
-      }.mkString(" else ")))
+      }.mkString(" else "),if(indices.size > 0) "else { 0 }" else "0"))
       out.println("    def copy = %s(%s)".format(clsName, argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")))
       out.println("  }")
     }

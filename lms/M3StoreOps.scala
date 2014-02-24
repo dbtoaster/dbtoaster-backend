@@ -70,20 +70,14 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
   // def namedM3Map[K, V](name: String,key:List[Type],value:Type,indexList: List[List[Int]])(implicit mK:Manifest[K], mV:Manifest[V]) = reflectMutable(NamedM3Map(name,key,value,indexList,mK,mV))
   def m3temp[E<:Entry]()(implicit tp:Manifest[E]):Rep[Store[E]] = {
     val sym = newStore[E]
-    sym match {
-      case Def(Reflect(s@StNewStore(_),_,_)) => val innerSym:Rep[_] = s; innerSym.asInstanceOf[Sym[_]].attributes.put("_isTemp",true)
-      case s:Sym[_] => s.attributes.put("_isTemp",true)
-    }
+    sym.asInstanceOf[Sym[_]].attributes.put("_isTemp",true)
     sym
   }
   // def m3get(map:Exp[_], key:List[Exp[_]],value_tp:Type) = M3Get(map,key,man(value_tp))
   // def m3set(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(M3Set(map,key,value))
   // def m3add(map:Exp[_], key:List[Exp[_]],value:Exp[_]) = reflectWrite(map)(M3Add(map,key,value))
   def m3add[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]) = {
-    val isTemp = map match {
-      case Def(Reflect(s@StNewStore(_),_,_)) => toAtom(s).asInstanceOf[Sym[_]].attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
-      case s:Sym[_] =>  s.attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
-    }
+    val isTemp = map.asInstanceOf[Sym[_]].attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
     val n = m.typeArguments.size
     val lastMan = m.typeArguments.last
     if(isTemp) {

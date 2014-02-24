@@ -179,25 +179,21 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
     val block = impl.reifyEffects {
       // Trigger context: global maps + trigger arguments
-      val ctx0Mutable = ctx0.map{ case (name,(sym,keys,tp)) => if (keys.size==0) { tp match {
-        case TypeLong => (name, impl.allMutable[Long](sym.asInstanceOf[Rep[Long]]))
-        case TypeDouble => (name, impl.allMutable[Double](sym.asInstanceOf[Rep[Double]]))
-        case TypeString => (name, impl.allMutable[String](sym.asInstanceOf[Rep[String]]))
-        case TypeDate => (name, impl.allMutable[java.util.Date](sym.asInstanceOf[Rep[java.util.Date]]))
-        case _ => sys.error("No manifest for "+tp)
-      } } else { val m = me(keys.map(_._2),tp); (name,impl.stMutable(sym.asInstanceOf[Rep[Store[Entry]]])(m)) } }
       cx = Ctx((
-        // maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) (name,impl.fresh(man(tp))) else { val m = me(keys.map(_._2),tp); (name,impl.newStore()(m)) } // XXX missing indexes
-        //  impl.namedM3Map(name,keys.map(_._2),tp,sx.getOrElse(name,List[List[Int]]()))(manifest[Any],manifest[Any]))
-        //}
-        ctx0Mutable.toList union
+        ctx0.map{ case (name,(sym,keys,tp)) => (name, sym) }.toList union
         args.map{ case (name,tp) => (name,impl.named(name,tp)) }
       ).toMap)
       // Execute each statement
       t.stmts.map {
         case StmtMap(m,e,op,oi) => cx.load()
           if (m.keys.size==0) {
-            val mm = cx(m.name).asInstanceOf[impl.Var[_]]
+            val mm = m.tp match {
+              case TypeLong => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Long]]])
+              case TypeDouble => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Double]]])
+              case TypeString => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[String]]])
+              //case TypeDate => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[java.util.Date]]])
+              case _ => sys.error("Unsupported type "+m.tp)
+            }
             expr(e,(r:Rep[_]) => op match { case OpAdd => impl.var_plusequals(mm,r) case OpSet => impl.__assign(mm,r) })
           } else {
             val mm = cx(m.name).asInstanceOf[Rep[Store[Entry]]]
@@ -259,37 +255,37 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }
   }
 
-  // override def genMap(m:MapDef):String = {
-  //   if(M3MapCommons.isInliningHigherThanNone) {
-  //     if (m.keys.size==0) M3MapCommons.createM3VarDefinition(m.name, m.tp)+";"
-  //     else {
-  //       val keys = m.keys.map(_._2)
-  //       val indexList = sx.getOrElse(m.name,List[List[Int]]())
-  //       M3MapCommons.createM3NamedMapDefinition(m.name,m.tp,keys,indexList)
-  //     }
-  //   } else {
-  //     super.genMap(m)
-  //   }
-  // }
+  override def genMap(m:MapDef):String = {
+    if (m.keys.size==0) M3MapCommons.createM3VarDefinition(m.name, m.tp)+";"
+    else {
+      impl.codegen.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]])
+    }
+  }
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = {
-    if(M3MapCommons.isInliningHigherThanNone) {
-      //val theMap = maps(map)
-      //val mapKeys = theMap.keys.map(_._2)
-      val indexList = sx.getOrElse(map,List[List[Int]]())
-      M3MapCommons.genGenericAddNamedMap(true,false,"","",map+"_node",map,keyNames.map(_._2),TypeLong,indexList,keyNames.map(_._1),"1")
-    } else {
-      super.genInitializationFor(map, keyNames, keyNamesConcat)
+    val (a, keys, tp) = ctx0(map)
+    val acc = a.asInstanceOf[Rep[Store[Entry]]]
+    val mE = me(keys.map(_._2),tp)
+    val block = impl.reifyEffects {
+      impl.m3add(acc,acc.newEntry( ((keyNames.map{ case (n,t) => impl.named(n,false)(mE) })++List(impl.unit(1))) : _*))(mE)
     }
+    val initCode = impl.emit(block)
+    var staticFieldsStr = ""
+    impl.codegen.staticFields.map { case (key, staticFldDef) =>
+      staticFieldsStr += staticFldDef.trim + "\n"
+    }
+    impl.codegen.staticFields.clear
+
+    staticFieldsStr + "\n" + initCode
   }
 
   // Expose the maps of the system being generated
   var maps = Map[String,MapDef]() // declared global maps
   var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
-  override def genLMS(s0:System):String = {
+  override def genLMS(s0:System):(String,String,String,String) = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
-    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.fresh(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
-
+    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.named(name,false)(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
+    val (str,ld0,gc) = genInternals(s0)
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
     val tsResBlks = s0.triggers.map(genTriggerLMS) // triggers (need to be generated before maps)
@@ -298,17 +294,13 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     }.mkString("\n\n")
     var outStream = new java.io.StringWriter
     var outWriter = new java.io.PrintWriter(outStream)
-    //val ms = s0.maps.map(genMap).mkString("\n") // maps
-    impl.codegen.generateClassArgsDefs(outWriter,Nil)
-    val ms = outStream.toString
+    val ms = s0.maps.map(genMap).mkString("\n") // maps
+    //impl.codegen.generateClassArgsDefs(outWriter,Nil)
 
-    outStream = new java.io.StringWriter
-    outWriter = new java.io.PrintWriter(outStream)
-    //val ds = if(M3MapCommons.isInliningHigherThanNone) M3MapCommons.generateAllEntryClasses else ""
     impl.codegen.emitDataStructures(outWriter)
     val ds = outStream.toString
     val r=ms+"\n"+ts+"\n"+ds
-    r
+    (r,str,ld0,gc)
   }
 
   override def clearOut = {

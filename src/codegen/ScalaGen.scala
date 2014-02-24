@@ -170,19 +170,19 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     (str,ld0,gc)
   }
 
-  def genLMS(s0:System):String = null
+  def genLMS(s0:System):(String,String,String,String) = (null,null,null,null)
 
   def toMapFunction(q: Query) = q.name+".toMap"
   def clearOut = {}
 
   def apply(s0:System):String = {
-    val lms = genLMS(s0)
+    val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
     val body = if (lms!=null) lms else {
       val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
       val ms = s0.maps.map(genMap).mkString("\n") // maps
       ms+"\n\n"+ts
     }
-    val (str,ld0,gc) = genInternals(s0)
+    val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
     val snap="sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+"))"
