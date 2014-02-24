@@ -25,7 +25,10 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops with Equal with Numeric
  with DateOps with StringOps with PrimitiveOps with IfThenElseExp with M3StoreOpsExp with CastingOps with OrderingOps {
   import ManifestHelper.man
 
-  def div(x: Rep[Double]): Rep[Double] = __ifThenElse(equals(x,unit(0.0)),unit(0.0),numeric_divide(unit(1.0),x))
+  def div(x: Rep[Double]): Rep[Double] = x match {
+    case Const(v) if x.tp.toString=="Long" => div(Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)) // unit(1.0/x.x.toDouble)
+    case _ => __ifThenElse(equals(x,unit(0.0)),unit(0.0),numeric_divide(unit(1.0),x))
+  }
   def max(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = if(v1 > v2) v1 else v2
   def min(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = if(v1 < v2) v1 else v2
   def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] =
@@ -33,7 +36,7 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops with Equal with Numeric
 
   def m3apply(fn:String,args:List[Exp[_]],tp:Type) = {
     fn match {
-      case "div" => div(args(0).asInstanceOf[Rep[Double]])
+      //case "div" => println("div(args(0)) => div(%s)".format(args(0)));div(args(0).asInstanceOf[Rep[Double]])
       case "listmax" => max(args(0).asInstanceOf[Rep[Double]],args(1).asInstanceOf[Rep[Double]])
       case "listmin" => min(args(0).asInstanceOf[Rep[Double]],args(1).asInstanceOf[Rep[Double]])
       case "substring" => substring(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[Long]],args(2).asInstanceOf[Rep[Long]])

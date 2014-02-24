@@ -94,7 +94,7 @@ trait SEntryExp extends StoreOps with BaseExp with EffectExp with VariablesExp {
 
   //this hashmap will map (entry manifest string) -> ((entry class name),(list of argument type names),(list of Store[E] symbols, containing entry of the type given as key))
   //val storeEntryClasses: collection.mutable.Map[String, (Manifest[_],collection.mutable.Set[Sym[_]])] = new collection.mutable.HashMap[String, (Manifest[_],collection.mutable.Set[Sym[_]])]()
-  val storeSyms = List[Sym[Store[Entry]]]()
+  var storeSyms = List[Sym[Store[Entry]]]()
   val ENTRY_INDICES_KEY = "StoreOps.Entry.indices"
 }
 

@@ -38,6 +38,8 @@ object Functions {
   }).matcher(str).find) 1L else 0L
 
   def Udiv(x: Double): Double = if (x==0.0) 0.0 else 1.0 / x
+  def UmulDbl(x: Double, y:Double): Double = x * y
+  def UmulLng(x: Long, y:Long): Long = x * y
   def Ulistmax(v1: Long, v2: Long): Long = Math.max(v1, v2)
   def Ulistmax(v1: Double, v2: Double): Double = Math.max(v1, v2)
 

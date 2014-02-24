@@ -31,13 +31,13 @@ object ManifestHelper {
       scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
   }
   def zero(tp: Type) = tp match {
-    case TypeLong => 0
+    case TypeLong => 10000L
     case TypeDouble => 0.0
     case TypeString => ""
     case TypeDate => new java.util.Date()
   }
   def zero(m: Manifest[_]) = m.toString match {
-    case "Long" => 0
+    case "Long" => 0L
     case "Double" => 0.0
     case "String" => ""
     case "java.util.Date" => new java.util.Date()
@@ -70,7 +70,7 @@ object ScalaExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressi
 
       var staticFieldsStr = ""
       staticFields.map { case (key, staticFldDef) =>
-        staticFieldsStr += staticFldDef + "\n"
+        staticFieldsStr += staticFldDef.trim + "\n"
       }
       staticFields.clear
 
@@ -78,6 +78,7 @@ object ScalaExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressi
     }
   }
   val codegen = new MyCodeGen
+  override def reset = { storeSyms = Nil; super.reset }
   def emit[T:Manifest](sym: => Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
   def emit[T:Manifest](blk:Block[T]) = { assert(codegen ne null); codegen.emitSource(blk) }
   def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]) = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args) }
