@@ -31,7 +31,7 @@ object ManifestHelper {
       scala.reflect.ManifestFactory.classType(cls,ms.head,ms.tail:_*)
   }
   def zero(tp: Type) = tp match {
-    case TypeLong => 10000L
+    case TypeLong => 0L
     case TypeDouble => 0.0
     case TypeString => ""
     case TypeDate => new java.util.Date()

@@ -54,10 +54,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       }
     case Cmp(l,r,op) => expr(l,(vl:Rep[_]) => expr(r,(vr:Rep[_]) => co(cmp(vl,op,vr,ex.tp)) )) // formally, we should take the derived type from left and right, but this makes no difference to LMS
     case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.notequals(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
-    case Lift(n,e) => println("Lift(n,e) = Lift(%s,%s)".format(n,e))
+    case Lift(n,e) =>
       e match {
-        case Ref(n2) => println("\tRef(%s)".format(n2)); cx.add(n,cx(n2)); co(impl.unit(1L))
-        case _ => println("\t____"); expr(e,(ve:Rep[_]) => if (cx.contains(n)) {println("\t\tOpEq(%s,%s)".format(cx(n),ve)); co(cmp(cx(n),OpEq,ve,e.tp)) } else { cx.add(n,ve); co(impl.unit(1L)) })
+        case Ref(n2) => cx.add(n,cx(n2)); co(impl.unit(1L))
+        case _ => expr(e,(ve:Rep[_]) => if (cx.contains(n)) { co(cmp(cx(n),OpEq,ve,e.tp)) } else { cx.add(n,ve); co(impl.unit(1L)) })
       }
     case a@Apply(fn,tp,as) =>
       def app(es:List[Expr],vs:List[Rep[_]]):Rep[Unit] = es match {
@@ -76,7 +76,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         val z = impl.unit(zero(tp))
         val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
         val r = proxy.get(vs : _*)
-        impl.__ifThenElse(impl.__equal(r,impl.unit(null)),co(z),co(r.get(ks.size+1)))
+        co(impl.__ifThenElse(impl.__equal(r,impl.unit(null)),z,r.get(ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
         if (ko.size==0) proxy.foreach((e:Rep[Entry])=> {
             cx.add(ki.map{ case (k,i) => (k,e.get(i+1)) }.toMap); co(e.get(ks.size+1))
@@ -89,7 +89,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
         }
       }
-    case a@AggSum(ks,e) => println("AggSum(ks,e) = AggSum(%s,%s)".format(ks,e))
+    case a@AggSum(ks,e) =>
       val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
       if (agg_keys.size==0) { // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
         val cur=cx.save;
@@ -135,21 +135,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   def mul(l:Rep[_], r:Rep[_], tp:Type) = {
-    @inline def times[T:Numeric:Manifest]() = impl.numeric_times[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
     tp match {
-      case TypeLong => impl.m3apply("mulLng",List(l,r),TypeLong) //times[Long]()
-      case TypeDouble =>impl.m3apply("mulDbl",List(l,r),TypeDouble)
-        // dirty patch for LMS
-        // val ll = (l match {
-        //   case impl.Const(v) if l.tp.toString=="Long" => impl.Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
-        //   case _ => l
-        // }).asInstanceOf[Rep[Double]]
-        // val rr = (r match {
-        //   case impl.Const(v) if r.tp.toString=="Long" => impl.Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
-        //   case _ => r
-        // }).asInstanceOf[Rep[Double]]
-        // impl.numeric_times[Double](ll,rr)
-        //times[Double]()
+      case TypeLong | TypeDouble => impl.m3apply("mul",List(l,r),tp)
       case _ => sys.error("Mul(l,r) only allowed on numeric types")
     }
   }
