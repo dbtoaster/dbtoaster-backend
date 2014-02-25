@@ -68,9 +68,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         case x :: xs => expr(x,(v:Rep[_]) => app(xs,v::vs))
         case Nil => co(impl.m3apply(fn,vs.reverse,tp))
       }
-      //if (as.forall(_.isInstanceOf[Const])) co(impl.named(constApply(a),tp,false)) // hoist constants resulting from function application
-      //else
-       app(as,Nil)
+      if (as.forall(_.isInstanceOf[Const])) co(impl.named(constApply(a),tp,false)) // hoist constants resulting from function application
+      else app(as,Nil)
     case m@MapRef(n,tp,ks) =>
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
       val proxy = mapProxy(cx(n))
@@ -289,7 +288,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   override def genLMS(s0:System):(String,String,String,String) = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
     ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.named(name,false)(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
-    val (str,ld0,gc) = genInternals(s0)
+    val (str,ld0,_) = genInternals(s0)
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
     val tsResBlks = s0.triggers.map(genTriggerLMS) // triggers (need to be generated before maps)
@@ -304,7 +303,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     impl.codegen.emitDataStructures(outWriter)
     val ds = outStream.toString
     val r=ms+"\n"+ts+"\n"+ds
-    (r,str,ld0,gc)
+    (r,str,ld0,consts)
   }
 
   override def clearOut = {
