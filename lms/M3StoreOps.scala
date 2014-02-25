@@ -102,6 +102,21 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     unit(())
   }
   def m3set[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]) = {
+    val isTemp = map.asInstanceOf[Sym[_]].attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
+    val n = m.typeArguments.size
+    val lastMan = m.typeArguments.last
+    val currentEnt = map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+    val entVal = ent.get(n)
+    if(isTemp) {
+      __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt.update(n, entVal)) // same
+    } else {
+      __ifThenElse(__equal(entVal,unit(zero(lastMan))),{
+        __ifThenElse(__equal(currentEnt,unit(null)),unit(()),map.delete(currentEnt))
+      },{
+        __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt.update(n, entVal)) // same
+      })
+    }
+    /*
     val n = m.typeArguments.size
     val lastMan = m.typeArguments.last
     val entVal = ent.get(n)
@@ -112,6 +127,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
         currentEnt.update(n, entVal)
       })
     })
+    */
   }
   // def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = m3foreach(map,key,value,reifyEffects(body))
   // def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = reflectEffect(M3Foreach(map,key,value,body),summarizeEffects(body).star)
