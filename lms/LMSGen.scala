@@ -105,7 +105,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         }
         cx.load(cur); co(accRes)
       } else {
-        implicit val mE=me(a.tks,ex.tp)
+        implicit val mE=me(agg_keys.map(_._2),ex.tp)
         val acc = impl.m3temp()(mE)
         val cur = cx.save
 
