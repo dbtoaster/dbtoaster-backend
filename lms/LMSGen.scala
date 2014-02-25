@@ -54,8 +54,12 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       }
     case Cmp(l,r,op) => expr(l,(vl:Rep[_]) => expr(r,(vr:Rep[_]) => co(cmp(vl,op,vr,ex.tp)) )) // formally, we should take the derived type from left and right, but this makes no difference to LMS
     case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.notequals(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
+
+
+
     case Lift(n,e) =>
-      e match {
+      if (cx.contains(n)) expr(e,(ve:Rep[_])=>co(   impl.__ifThenElse(impl.equals(ve,cx(n)),impl.unit(1L),impl.unit(0L))  ),am)
+      else e match {
         case Ref(n2) => cx.add(n,cx(n2)); co(impl.unit(1L))
         case _ => expr(e,(ve:Rep[_]) => if (cx.contains(n)) { co(cmp(cx(n),OpEq,ve,e.tp)) } else { cx.add(n,ve); co(impl.unit(1L)) })
       }
