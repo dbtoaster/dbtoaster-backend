@@ -103,10 +103,14 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
   }
   def m3set[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]) = {
     val n = m.typeArguments.size
-    val currentEnt = map.get((1 until n).map(i => (i, ent.get(i))) : _*)
-    __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
-      val entVal = ent.get(n)
-      currentEnt.update(n, entVal)
+    val lastMan = m.typeArguments.last
+    val entVal = ent.get(n)
+    __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
+      val currentEnt = map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+      __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
+        val entVal = ent.get(n)
+        currentEnt.update(n, entVal)
+      })
     })
   }
   // def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = m3foreach(map,key,value,reifyEffects(body))
