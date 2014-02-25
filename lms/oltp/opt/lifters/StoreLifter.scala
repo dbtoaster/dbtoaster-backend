@@ -234,6 +234,13 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   def stNewEntry       [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]):Exp[E] = reflectMutable(SteNewSEntry[E](x, args)) //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](x, args)) }
   def stSampleEntry    [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]):Exp[E] = SteSampleSEntry[E](x, args) //{ checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](x, args) }
   // def stSampleFullEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Rep[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args.zipWithIndex.map{case (arg, i) => ((i+1, arg))}) }
+  override def steGet         [E<:Entry:Manifest](x: Exp[E], i: Int):Exp[Any] = x match {
+    case Def(SteNewSEntry(_, args)) => args(i-1)
+    case Def(Reflect(SteNewSEntry(_, args),_,_)) => args(i-1)
+    case Def(SteSampleSEntry(_, args)) => (args.filter(_._1 == i))(0)._2
+    case Def(Reflect(SteSampleSEntry(_, args),_,_)) => (args.filter(_._1 == i))(0)._2
+    case _ => SteGet[E](x, i)
+  }
   def stInsert     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StInsert[E](x, e))
   def stUpdate     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StUpdate[E](x, e))
   def stDelete     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StDelete[E](x, e))
