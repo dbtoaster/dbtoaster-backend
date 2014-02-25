@@ -12,7 +12,6 @@ import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
 import ddbt.Utils.ind
-import ddbt.codegen.M3MapCommons
 
 /**
  * The following LMS operations are implemented by these traits:

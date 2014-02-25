@@ -227,43 +227,17 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val mapKeys = m.keys.map(_._2)
     val nodeName = map+"_node"
     val res = nodeName+"_mres"
-    if(M3MapCommons.isInliningHigherThanNone) {
-      //m = map
-      val mapValue = m.tp
-      val indexList = sx.getOrElse(map,List[List[Int]]())
+    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) })+" -> e._"+(mapKeys.size+1)+") }; "+res+".toMap }"
 
-      //val entryCls = M3MapCommons.entryClassName(q.tp, q.keys, sx.getOrElse(q.name,List[List[Int]]()))
-      val entryCls = "("+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+")"
-      val i = nodeName+"_mi"
-      val len = nodeName+"_mlen"
-      val e = nodeName+"_me"
-      "{\n" +
-      "  //TOMAP\n" +
-      "  var "+res+":scala.collection.mutable.ArrayBuffer["+entryCls+"] = new scala.collection.mutable.ArrayBuffer["+entryCls+"]("+M3MapCommons.genMapSize(map)+");\n" +
-      "  var "+i+":Int = 0\n" +
-      "  val "+len+":Int = "+map+".length\n" +
-      "  while("+i+" < "+len+") {\n" +
-      "    var "+e+":"+M3MapCommons.entryClassName(mapValue,mapKeys,indexList)+" = "+map+"("+i+")\n" +
-      "    while("+e+" != null) {\n"+
-      "      "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => e+"._"+(i+1) })+" -> "+e+".v)\n"+
-      "      "+e+" = "+e+".next\n" +
-      "    }\n" +
-      "    "+i+" += 1\n" +
-      "  }\n" +
-      "  " + res + "\n" +
-      "}.toMap"
-    } else {
-      "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) })+" -> e._"+(mapKeys.size+1)+") }; "+res+".toMap }"
-      //super.toMapFunction(q)
-    }
   }
 
   override def genMap(m:MapDef):String = {
-    if (m.keys.size==0) M3MapCommons.createM3VarDefinition(m.name, m.tp)+";"
+    if (m.keys.size==0) createVarDefinition(m.name, m.tp)+";"
     else {
       impl.codegen.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]])
     }
   }
+  def createVarDefinition(name: String, tp:Type) = "var "+name+":"+tp.toScala+" = "+tp.zero
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = {
     val (a, keys, tp) = ctx0(map)
@@ -308,7 +282,6 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
   override def clearOut = {
     maps=Map()
-    M3MapCommons.clear
     impl.reset
 
   }

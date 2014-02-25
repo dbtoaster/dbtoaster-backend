@@ -1,7 +1,7 @@
 package ddbt.lib.store
 import scala.reflect._
 
-import dbtoptimizer.Utils.ind
+import ddbt.Utils.ind
 
 /**
  * A store contrains entries and allow access through multiple indices.
