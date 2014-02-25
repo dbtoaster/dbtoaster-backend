@@ -35,6 +35,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   // Methods involving only constants are hoisted as global constants
   private val cs = HashMap[Apply,String]()
   def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
+  def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
+
   // XXX: enlarge the definition to generalized constants
 
   var ctx:Ctx[(Type,String)] = null // Context: variable->(type,unique_name)
@@ -166,8 +168,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     }).mkString
     val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o,pl)=ev(s.schema)
       "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,"+i+")=>"+genInitializationFor(s.schema.name,pl,o)+" },"+ad+","+sp+")))).read;" }.mkString("\n");
-    val gc = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
-    (str,ld0,gc)
+    (str,ld0,consts)
   }
 
   def genLMS(s0:System):(String,String,String,String) = (null,null,null,null)
