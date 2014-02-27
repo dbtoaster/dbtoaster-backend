@@ -248,9 +248,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     var idx = idx_in
     key match {
       case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
-        val xSym = getStoreSym(x).asInstanceOf[Sym[Store[E]]]
-        val isTemp = xSym.attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
-        val tupVal = if(isTemp) ((IHash,args.map(_._1),false,-1)) else ((IHash,args.map(_._1),true,-1))
+        val tupVal = ((IHash,args.map(_._1),true,-1))
         idx = m.indexOf(tupVal)
         if(idx < 0) {
           m += tupVal

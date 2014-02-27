@@ -128,6 +128,25 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     })
     */
   }
+
+  def stGet        [E<:Entry:Manifest](x: Exp[Store[E]], idx_in:Int,key:Exp[E]):Exp[E] = {
+    var idx = idx_in
+    key match {
+      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
+        // val xSym = getStoreSym(x).asInstanceOf[Sym[Store[E]]]
+        // val isTemp = xSym.attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
+        val tupVal = ((IHash,args.map(_._1),false,-1)) //if(isTemp) ((IHash,args.map(_._1),false,-1)) else ((IHash,args.map(_._1),true,-1))
+        idx = m.indexOf(tupVal)
+        if(idx < 0) {
+          m += tupVal
+          idx = m.size - 1
+        }
+      })
+      case _ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.get")
+    }
+    val elem:Exp[E]=StGet[E](x,idx,key)
+    steMakeMutable(elem)
+  }
   // def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body: => Exp[Unit]) = m3foreach(map,key,value,reifyEffects(body))
   // def m3foreach(map:Exp[_], key: Exp[_], value: Exp[_], body:Block[Unit]) = reflectEffect(M3Foreach(map,key,value,body),summarizeEffects(body).star)
   // def m3slice(map:Exp[_],part:Int,partKey:List[Exp[_]]) = M3Slice(map,part,partKey)
