@@ -15,7 +15,7 @@ if [ "$rd_dev" != "" ]; then
   if [ "$1" = "" ]; then echo "Disk $rd_dev already mounted"
   else
     case $OSTYPE in
-      darwin) diskutil eject $rd_dev;;
+      darwin*) diskutil eject $rd_dev;;
       *) echo "Maybe try this command: umount $rd_dev";;
     esac;
     # remove redirections
@@ -25,7 +25,7 @@ if [ "$rd_dev" != "" ]; then
 fi
 
 case $OSTYPE in
-  darwin)
+  darwin*)
     rd_size=`expr $SIZE_MB '*' 2048`
     rd_name=`basename $mpoint`
     rd_dev=`/usr/bin/hdiutil attach -nomount ram://$rd_size`
