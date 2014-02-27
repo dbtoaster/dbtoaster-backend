@@ -4,6 +4,9 @@ import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import ddbt.ast._
 import ddbt.lib.store._
+import scalariform.formatter.preferences._
+import scalariform.formatter.ScalaFormatter
+import scalariform.parser.ScalaParserException
 
 /**
  * Helpers for LMS code generation
@@ -70,7 +73,12 @@ object ScalaExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressi
       }
       // reset // reset the whole LMS subsystem
 
-      outStream.toString
+      val unformattedScala = outStream.toString
+      try {
+        ScalaFormatter.format(unformattedScala)
+      } catch {
+        case e: ScalaParserException => unformattedScala
+      }
     }
     def emitTriggerSource[T:Manifest](body: Block[T],name:String,args:List[(String,Type)]) : String = {
       val funDef = "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(emitSource(body))+"\n}"
