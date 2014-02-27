@@ -266,7 +266,7 @@ class IdxHash[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends
   private var data = new Array[E](init_capacity)
   private var threshold = (init_capacity * load_factor).toInt
   // Inlined functions
-  @inline private def _hash(e:E) = { var h=e.hash(idx); h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
+  @inline private def _hash(e:E) = e.hash(idx) //{ var h=e.hash(idx); h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
   @inline private def _meta(e:E) = e.data(idx).asInstanceOf[IdxHashEntry[E]]
   @inline private def _uniq(e:E,h:Int,e2:E):Unit = if (unique) { // remove duplicate that is already in this bucket
     var p=e; var c=e2; // (previous,current) node

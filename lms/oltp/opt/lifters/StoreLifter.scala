@@ -593,26 +593,29 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     def genHashFuncInternal(idxLocations: Seq[Int]) = {
       def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
       var counter:Int = 0
-      idxLocations.map { i =>
-        counter+=1
-        //TODO: Check whether hashCode works better compared to ##
-        //      as we know that everything is type-checked
-        prefix + (if(counter == 1) "var mix:Int" else "mix") + " = _"+i+elemHashFunc(argTypes(i-1))+" * 0xcc9e2d51\n" +
-        prefix + "mix = " + rotl("mix", "15")+"\n" +
-        prefix + "mix *= 0x1b873593\n" +
-        prefix + "mix ^= hash\n" +
-        prefix + "mix = " + rotl("mix", "13")+"\n" +
-        prefix + "hash = (mix << 1) + mix + 0xe6546b64\n"
-      }.mkString +
-      prefix + "hash ^= " + idxLocations.size + "\n" +
-      prefix + "hash ^= hash >>> 16\n" +
-      prefix + "hash *= 0x85ebca6b\n" +
-      prefix + "hash ^= hash >>> 13\n" +
-      prefix + "hash *= 0xc2b2ae35\n" +
-      prefix + "hash ^= hash >>> 16\n" //+
-      //currently we are doing it in IHash index, so it is
-      //better not to do it here again
-      //javaHashMapHashFunc("hash", prefix)
+      if(idxLocations.size > 1) {
+        idxLocations.map { i =>
+          counter+=1
+          //TODO: Check whether hashCode works better compared to ##
+          //      as we know that everything is type-checked
+          prefix + (if(counter == 1) "var mix:Int" else "mix") + " = _"+i+elemHashFunc(argTypes(i-1))+" * 0xcc9e2d51\n" +
+          prefix + "mix = " + rotl("mix", "15")+"\n" +
+          prefix + "mix *= 0x1b873593\n" +
+          prefix + "mix ^= hash\n" +
+          prefix + "mix = " + rotl("mix", "13")+"\n" +
+          prefix + "hash = (mix << 1) + mix + 0xe6546b64\n"
+        }.mkString +
+        prefix + "hash ^= " + idxLocations.size + "\n" +
+        prefix + "hash ^= hash >>> 16\n" +
+        prefix + "hash *= 0x85ebca6b\n" +
+        prefix + "hash ^= hash >>> 13\n" +
+        prefix + "hash *= 0xc2b2ae35\n" +
+        prefix + "hash ^= hash >>> 16\n" //+
+      } else {
+        //currently we are doing it in IHash index, so it is
+        //better not to do it here again
+        javaHashMapHashFunc("hash", prefix)
+      }
     }
 
     idxType match {
