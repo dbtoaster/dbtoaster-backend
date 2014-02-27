@@ -259,7 +259,7 @@ abstract class Idx[E<:Entry](idx:Int,unique:Boolean) {
  */
 class IdxHashEntry[E<:Entry](var hash:Int, var next:E)
 class IdxHash[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](idx,unique) {
-  private final val init_capacity = 1024
+  private final val init_capacity = 16
   private final val max_capacity = 1 << 30
   private final val load_factor = 0.75f;
   private final val compact_factor = 0.05f
