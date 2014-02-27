@@ -129,7 +129,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     */
   }
 
-  def stGet        [E<:Entry:Manifest](x: Exp[Store[E]], idx_in:Int,key:Exp[E]):Exp[E] = {
+  override def stGet        [E<:Entry:Manifest](x: Exp[Store[E]], idx_in:Int,key:Exp[E]):Exp[E] = {
     var idx = idx_in
     key match {
       case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
