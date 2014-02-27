@@ -16,6 +16,36 @@ import ddbt.Utils.ind
  * @author TCK
  */
 
+// ------------------------------------------
+// Temporary-only map
+abstract class TempEntry[E<:TempEntry[_]] {
+  final val hval = { var h=hash; h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
+  var next:E = null.asInstanceOf[E]
+  def hash: Int // hash function
+}
+class TempStore[E<:TempEntry[E]](implicit cE:ClassTag[E]) {
+  private final val init_capacity = 16
+  private final val max_capacity = 1 << 30
+  private final val load_factor = 0.75f;
+  private var size = 0
+  private var data = new Array[E](init_capacity)
+  private var threshold = (init_capacity * load_factor).toInt
+  def insert(e:E) {
+    if (size==threshold) {
+      val n=data.size;
+      if (n==max_capacity) threshold=java.lang.Integer.MAX_VALUE
+      else {
+        val new_capacity = n << 1; val d=new Array[E](new_capacity)
+        var i=0; while(i < n) { var e=data(i); while (e!=null) { val ne=e.next; val b=e.hval&(new_capacity-1); e.next=d(b); d(b)=e; e=ne }; i+=1 }
+        data=d; threshold=Math.min((new_capacity*load_factor).toInt, max_capacity+1);
+      }
+    }
+    val b=e.hval&(data.length-1); e.next=data(b); data(b)=e; size+=1;
+  }
+  def foreach(f:E=>Unit) { val n=data.length; var i=0; while(i < n) { var e=data(i); while (e!=null) { f(e); e=e.next }; i+=1 } }
+}
+// ------------------------------------------
+
 // XXX: throw an exception if update/delete/insert during foreach ?
 // XXX: do we want/require the fallback to packed mode for IDirect ?
 // XXX: ignore strict comparison [cmp] to use only hash comparison in IDirect?
