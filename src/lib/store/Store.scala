@@ -16,36 +16,6 @@ import ddbt.Utils.ind
  * @author TCK
  */
 
-// ------------------------------------------
-// Temporary-only map
-abstract class TempEntry[E<:TempEntry[_]] {
-  final val hval = { var h=hash; h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
-  var next:E = null.asInstanceOf[E]
-  def hash: Int // hash function
-}
-class TempStore[E<:TempEntry[E]](implicit cE:ClassTag[E]) {
-  private final val init_capacity = 16
-  private final val max_capacity = 1 << 30
-  private final val load_factor = 0.75f;
-  private var size = 0
-  private var data = new Array[E](init_capacity)
-  private var threshold = (init_capacity * load_factor).toInt
-  def insert(e:E) {
-    if (size==threshold) {
-      val n=data.size;
-      if (n==max_capacity) threshold=java.lang.Integer.MAX_VALUE
-      else {
-        val new_capacity = n << 1; val d=new Array[E](new_capacity)
-        var i=0; while(i < n) { var e=data(i); while (e!=null) { val ne=e.next; val b=e.hval&(new_capacity-1); e.next=d(b); d(b)=e; e=ne }; i+=1 }
-        data=d; threshold=Math.min((new_capacity*load_factor).toInt, max_capacity+1);
-      }
-    }
-    val b=e.hval&(data.length-1); e.next=data(b); data(b)=e; size+=1;
-  }
-  def foreach(f:E=>Unit) { val n=data.length; var i=0; while(i < n) { var e=data(i); while (e!=null) { f(e); e=e.next }; i+=1 } }
-}
-// ------------------------------------------
-
 // XXX: throw an exception if update/delete/insert during foreach ?
 // XXX: do we want/require the fallback to packed mode for IDirect ?
 // XXX: ignore strict comparison [cmp] to use only hash comparison in IDirect?
@@ -76,6 +46,9 @@ abstract class Entry(n:Int) {
   def copy:Entry // returns a copy of the entry, for B-Trees only
   // Note: some indices may require order(entries)=order(hash(entries)) to work
   // correctly. Make sure you define it properly or don't use these indices.
+
+  //def isZero:Boolean
+  //def add(e:Entry):Unit
 }
 
 /**
@@ -284,7 +257,7 @@ class IdxHash[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends
     p=i.diff; if (p!=null) { i.hash=p.hash; i.same=p.same; i.diff=p.diff; i.data=p.data; p.data.data(idx)=i; return true } // eat diff child
     // delete from parent (i is a leaf)
     val h=i.hash; val b=h&(data.length-1); p=data(b);
-    if (i.eq(p)) data(b)=null; // it's the root
+    if (i.eq(p)) { data(b)=null; return true } // it's the root
     else do {
       if (i.eq(p.diff)) { p.diff=null; return true } // leaf of diff branch
       else if (p.hash==h && e.cmp(idx,p.data)==0) do { val s=p.same; if (i.eq(s)) { p.same=null; return true }; p=s } while (p!=null) // leaf of same branch
@@ -834,3 +807,37 @@ class IdxList[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends
   override def clear { head=nil; tail=nil }
   override def compact {} // nothing to do
 }
+
+
+// ------------------------------------------
+/*
+// Temporary-only map
+abstract class TempEntry[E<:TempEntry[_]] {
+  final val hval = { var h=hash; h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
+  var next:E = null.asInstanceOf[E]
+  def hash: Int // hash function
+}
+class TempStore[E<:TempEntry[E]](implicit cE:ClassTag[E]) {
+  private final val init_capacity = 16
+  private final val max_capacity = 1 << 30
+  private final val load_factor = 0.75f;
+  private var size = 0
+  private var data = new Array[E](init_capacity)
+  private var threshold = (init_capacity * load_factor).toInt
+  def insert(e:E) {
+    if (size==threshold) {
+      val n=data.size;
+      if (n==max_capacity) threshold=java.lang.Integer.MAX_VALUE
+      else {
+        val new_capacity = n << 1; val d=new Array[E](new_capacity)
+        var i=0; while(i < n) { var e=data(i); while (e!=null) { val ne=e.next; val b=e.hval&(new_capacity-1); e.next=d(b); d(b)=e; e=ne }; i+=1 }
+        data=d; threshold=Math.min((new_capacity*load_factor).toInt, max_capacity+1);
+      }
+    }
+    val b=e.hval&(data.length-1); e.next=data(b); data(b)=e; size+=1;
+  }
+  def foreach(f:E=>Unit) { val n=data.length; var i=0; while(i < n) { var e=data(i); while (e!=null) { f(e); e=e.next }; i+=1 } }
+}
+*/
+// ------------------------------------------
+

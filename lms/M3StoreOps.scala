@@ -81,21 +81,20 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     val lastMan = m.typeArguments.last
     if(isTemp) {
       // we don't remove 0-elements
-      val currentEnt = map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+      val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
       __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt += (n, ent.get(n)))
     } else {
       // we remove 0-elements
       val entVal = ent.get(n)
       __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
         ///////
-        val currentEnt = map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+        val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
         __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
           currentEnt += (n, entVal)
           val currentEntVal = currentEnt.get(n)
           __ifThenElse(__equal(currentEntVal,unit(zero(lastMan))),map.delete(currentEnt),unit(()))
         })
         ///////
-
       })
     }
     unit(())
@@ -104,9 +103,10 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     val isTemp = map.asInstanceOf[Sym[_]].attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
     val n = m.typeArguments.size
     val lastMan = m.typeArguments.last
-    val currentEnt = map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+    val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
     val entVal = ent.get(n)
     if(isTemp) {
+      // this never happens in practice
       __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt.update(n, entVal)) // same
     } else {
       __ifThenElse(__equal(entVal,unit(zero(lastMan))),{
@@ -142,7 +142,13 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
           idx = m.size - 1
         }
       })
-      case _ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.get")
+      case _ =>
+        val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
+        addIndicesToEntryClass[E](x, (xx, m) => {
+          idx = m.indexOf(tupVal)
+          if(idx < 0) { m+=tupVal; idx=m.size-1 }
+        })
+        //throw new GenerationFailedException("You should provide a sample entry to this method: Store.get")
     }
     val elem:Exp[E]=StGet[E](x,idx,key)
     steMakeMutable(elem)
