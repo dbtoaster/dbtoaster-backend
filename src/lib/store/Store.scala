@@ -270,7 +270,7 @@ class IdxHash[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends
   private var threshold = (init_capacity * load_factor).toInt
 
   // Inlined functions
-  @inline private def _hash(e:E) = e.hash(idx)
+  @inline private def _hash(e:E) = { var h=e.hash(idx); h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
   @inline private def _meta(e:E) = e.data(idx).asInstanceOf[IdxHashEntry[E]]
   @inline private def _resize(new_capacity:Int) { val d=new Array[IdxHashEntry[E]](new_capacity)
     var i=0; val n=data.size; while(i < n) { var e=data(i)

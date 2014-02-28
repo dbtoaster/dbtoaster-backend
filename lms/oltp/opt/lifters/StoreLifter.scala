@@ -593,7 +593,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     def genHashFuncInternal(idxLocations: Seq[Int]) = {
       def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
       var counter:Int = 0
-      if(idxLocations.size > 1) {
+      // if(idxLocations.size > 1) {
         idxLocations.map { i =>
           counter+=1
           //TODO: Check whether hashCode works better compared to ##
@@ -611,11 +611,11 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
         prefix + "hash ^= hash >>> 13\n" +
         prefix + "hash *= 0xc2b2ae35\n" +
         prefix + "hash ^= hash >>> 16\n" //+
-      } else {
+      // } else {
         //currently we are doing it in IHash index, so it is
         //better not to do it here again
-        javaHashMapHashFunc("hash", prefix)
-      }
+        // javaHashMapHashFunc("hash", prefix)
+      // }
     }
 
     idxType match {
