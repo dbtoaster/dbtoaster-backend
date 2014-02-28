@@ -203,8 +203,8 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
                              if (tp==IDirect) new IdxDirect[E](idx,unique,data) else new IdxArray[E](idx,unique,data)
       case IBTree => new IdxBTree(idx,unique)
       case IList => new IdxList(idx,unique)
-      case ISliceMin => new IdxSliced(idx,this,sliceIdx,false)
-      case ISliceMax => new IdxSliced(idx,this,sliceIdx,true)
+      //case ISliceMin => new IdxSliced(idx,this,sliceIdx,false)
+      //case ISliceMax => new IdxSliced(idx,this,sliceIdx,true)
       case ISliceHeapMin => new IdxSlicedHeap(idx,this,sliceIdx,false)
       case ISliceHeapMax => new IdxSlicedHeap(idx,this,sliceIdx,true)
     }
@@ -253,10 +253,91 @@ abstract class Idx[E<:Entry](idx:Int,unique:Boolean) {
 
 /**
  * IdxHash is a hashed index. It suports all but no range operations.
+ * We have a tree with children (same, diff). Invariant: the sub-nodes of a
+ * same branch do not have diff children. That is we have a list of list(same)
+ * by iterating over diff, in each bucket of data.
  * Supported operations:
  * + insert,delete,update = O(1) / get=O(1)
  * + foreach,slice / clear,size
  */
+class IdxHashEntry[E<:Entry](var hash:Int, var same:IdxHashEntry[E], var diff:IdxHashEntry[E], var data:E)
+class IdxHash[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](idx,unique) {
+  private final val init_capacity = 16
+  private final val max_capacity = 1 << 30
+  private final val load_factor = if (unique) 0.75f else 4.0f;
+  private final val compact_factor = 0.05f
+  private var data = new Array[IdxHashEntry[E]](init_capacity)
+  private var threshold = (init_capacity * load_factor).toInt
+
+  // Inlined functions
+  @inline private def _hash(e:E) = e.hash(idx)
+  @inline private def _meta(e:E) = e.data(idx).asInstanceOf[IdxHashEntry[E]]
+  @inline private def _resize(new_capacity:Int) { val d=new Array[IdxHashEntry[E]](new_capacity)
+    var i=0; val n=data.size; while(i < n) { var e=data(i)
+      while (e!=null) { val n=e.diff; val b=e.hash&(new_capacity-1); e.diff=d(b); d(b)=e; e=n }; i+=1
+    }
+    data=d; threshold=Math.min((new_capacity*load_factor).toInt, max_capacity+1)
+  }
+
+  @inline private def _del(e:E,i:IdxHashEntry[E]):Boolean = {
+    var p=i.same; if (p!=null) { i.same=p.same; i.data=p.data; p.data.data(idx)=i; return true } // eat same child
+    p=i.diff; if (p!=null) { i.hash=p.hash; i.same=p.same; i.diff=p.diff; i.data=p.data; p.data.data(idx)=i; return true } // eat diff child
+    // delete from parent (i is a leaf)
+    val h=i.hash; val b=h&(data.length-1); p=data(b);
+    if (i.eq(p)) data(b)=null; // it's the root
+    else do {
+      if (i.eq(p.diff)) { p.diff=null; return true } // leaf of diff branch
+      else if (p.hash==h && e.cmp(idx,p.data)==0) do { val s=p.same; if (i.eq(s)) { p.same=null; return true }; p=s } while (p!=null) // leaf of same branch
+      p=p.diff
+    } while(p!=null)
+    false
+  }
+
+  // Public interface
+  override def insert(e:E) {
+    if (size==threshold) { val n=data.length; if (n==max_capacity) threshold=java.lang.Integer.MAX_VALUE; else _resize(n << 1) }
+    val h=_hash(e)
+    val i=new IdxHashEntry(h,null,null,e); e.data(idx)=i
+    val b=h&(data.length-1);
+    var p=data(b)
+    if (p==null) { data(b)=i; size+=1 }
+    else do {
+      if (p.hash==h && e.cmp(idx,p.data)==0) {
+        if (unique) { p.data=e; e.data(idx)=p }
+        else { i.same=p.same; p.same=i; size+=1 }
+        return
+      }
+      if (p.diff==null) { p.diff=i; size+=1; return }
+      p=p.diff
+    } while(p!=null)
+  }
+  override def delete(e:E) { val i=_meta(e); if (i!=null && _del(e,i)) size-=1 }
+  override def update(e:E) { val i=_meta(e); if (i!=null && i.hash!=_hash(e) && _del(e,i)) { size-=1; insert(e); } }
+  override def get(key:E):E = { val h=_hash(key); var e=data(h&(data.length-1));
+    while (e!=null && (e.hash!=h || key.cmp(idx,e.data)!=0)) e=e.diff; if (e!=null) e.data else nil
+  }
+  override def foreach(f:E=>Unit) { val n=data.length; var i=0
+    while(i < n) { var e=data(i); while(e!=null) { val m=e.diff; while (e!=null) { val n=e.same; f(e.data); e=n }; e=m }; i+=1 }
+  }
+  override def slice(key:E,f:E=>Unit) { val h=_hash(key); var e=data(h&(data.length-1));
+    while (e!=null && (e.hash!=h || key.cmp(idx,e.data)!=0)) e=e.diff;
+    if (e!=null) do { val n=e.same; f(e.data); e=n; } while (e!=null)
+  }
+  override def range(min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) {
+    val cMin=if (withMin) -1 else 0; val cMax =if (withMax) 1 else 0; val n=data.length; var i=0
+    while(i < n) { var e=data(i); while (e!=null) {
+        val n=e.diff; if (e.data.cmp(idx,min) > cMin && e.data.cmp(idx,max) < cMax) do { val m=e.same; f(e.data); e=m } while (e!=null); e=n
+    }; i+=1 }
+  }
+  override def clear { var i=0; val n=data.length; val z=null.asInstanceOf[IdxHashEntry[E]]; while(i < n) { data(i)=z; i+=1; }; size=0 }
+  override def compact = if (data.size*compact_factor>size) _resize(math.max(init_capacity,1<<(1+(math.log((size/load_factor))/math.log(2)).ceil.toInt)))
+  override def getInfoStr = {
+    var max=0; val n=data.length; var i=0
+    while(i < n) { var e=data(i); var c=0; while(e!=null) { val m=e.diff; while (e!=null) { val n=e.same; c+=1; e=n }; e=m }; if (max<c) max=c; i+=1 }
+    "{\n"+ddbt.Utils.ind(List(("idx",idx),("unique",unique),("type","hash"),("elements",size),("buckets",data.size),("occupancyMax",max),("occupancy",size*1.0/data.size)).map{ case (l,v) => "\t"+l+" => "+v }.mkString("\n"))+"\n}"
+  }
+}
+/*
 class IdxHashEntry[E<:Entry](var hash:Int, var next:E)
 class IdxHash[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](idx,unique) {
   private final val init_capacity = 16
@@ -337,6 +418,7 @@ class IdxHash[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends
     res.append("}").toString
   }
 }
+*/
 
 /**
  * IdxDirect is usually an index over an integer where the hash is equal to the value. It can be
@@ -436,6 +518,7 @@ class IdxArray[E<:Entry](idx:Int,unique:Boolean,var data:Array[E])(implicit cE:C
  * + insert,delete,update = O(1)/O(N) if min/max / get=O(1)
  * + clear,size
  */
+/*
 class IdxSliced[E<:Entry](idx:Int,s:Store[E],sliceIdx:Int,max:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](idx,true) {
   private final val init_capacity = 128
   private final val max_capacity = 1 << 30
@@ -483,6 +566,7 @@ class IdxSliced[E<:Entry](idx:Int,s:Store[E],sliceIdx:Int,max:Boolean)(implicit 
   override def clear { var i=0; val n=data.length; while(i<n) { data(i)=nil; i+=1; }; size=0 }
   override def compact = if (data.size*compact_factor>size) _resize(math.max(init_capacity,1<<(1+(math.log((size/load_factor))/math.log(2)).ceil.toInt)))
 }
+*/
 
 /**
  * B+Tree based on the original H-Store paper implementation.

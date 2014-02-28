@@ -35,6 +35,7 @@ Seq(
 // --------- Execution options
 Seq(
   fork := true, // required to enable javaOptions
+  //javaOptions ++= Seq("-agentpath:"+"/Applications/Tools/YourKit Profiler.app/bin/mac/libyjpagent.jnilib"+"=sampling,onexit=snapshot,builtinprobes=all"),
   javaOptions ++= Seq("-Xss128m","-XX:-DontCompileHugeMethods"), // ,"-Xss512m","-XX:MaxPermSize=2G"
   javaOptions ++= Seq("-Xmx14G","-Xms14G"/*,"-verbose:gc"*/), parallelExecution in Test := false, // for large benchmarks
   javaOptions <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
