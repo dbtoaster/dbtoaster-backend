@@ -31,6 +31,7 @@ case $OSTYPE in
     rd_dev=`/usr/bin/hdiutil attach -nomount ram://$rd_size`
     diskutil erasevolume HFS+ $rd_name $rd_dev >/dev/null
     diskutil unmount $rd_dev >/dev/null
+    mkdir -p $mpoint;
     diskutil mount -mountPoint $mpoint $rd_dev
 	# chflags hidden $mpoint; killall Finder # nohidden
   ;;

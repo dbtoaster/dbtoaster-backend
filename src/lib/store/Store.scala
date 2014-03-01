@@ -158,8 +158,8 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
                              if (tp==IDirect) new IdxDirect[E](idx,unique,data) else new IdxArray[E](idx,unique,data)
       case IBTree => new IdxBTree(idx,unique)
       case IList => new IdxList(idx,unique)
-      //case ISliceMin => new IdxSliced(idx,this,sliceIdx,false)
-      //case ISliceMax => new IdxSliced(idx,this,sliceIdx,true)
+      case ISliceMin => new IdxSliced(idx,this.idxs,sliceIdx,false)
+      case ISliceMax => new IdxSliced(idx,this.idxs,sliceIdx,true)
       case ISliceHeapMin => new IdxSlicedHeap(idx,this,sliceIdx,false)
       case ISliceHeapMax => new IdxSlicedHeap(idx,this,sliceIdx,true)
     }
@@ -276,64 +276,6 @@ class IdxArray[E<:Entry](idx:Int,unique:Boolean,var data:Array[E])(implicit cE:C
     while (s<size) { val d=data(s); if (max.cmp(idx,d)<r) return; f(d); s+=1 }
   }
 }
-
-/**
- * IdxSliced maintains either minimum or maximum of each slice. Slicing is provided by sliceIdx
- * which correspond to another index structure that is able to do slice operations.
- * Use case: min/max is rarely deleted
- * Supported operations:
- * + insert,delete,update = O(1)/O(N) if min/max / get=O(1)
- * + clear,size
- */
-/*
-class IdxSliced[E<:Entry](idx:Int,s:Store[E],sliceIdx:Int,max:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](idx,true) {
-  private final val init_capacity = 128
-  private final val max_capacity = 1 << 30
-  private final val load_factor = 0.75f;
-  private final val compact_factor = 0.05f
-  private var data = new Array[E](init_capacity)
-  private var threshold = (init_capacity * load_factor).toInt
-  // Inlined functions
-  @inline private def _hash(e:E) = { var h=e.hash(sliceIdx); h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
-  @inline private def _meta(e:E) = e.data(idx).asInstanceOf[IdxHashEntry[E]]
-  @inline private def _resize(new_capacity:Int) { val d=new Array[E](new_capacity)
-    var i=0; val n=data.size; while(i<n) { var e=data(i); while (e!=null) { val m=_meta(e); val ne=m.next; val b=m.hash&(new_capacity-1); m.next=d(b); d(b)=e; e=ne }; i+=1 }
-    data=d; threshold=Math.min((new_capacity*load_factor).toInt, max_capacity+1);
-  }
-  @inline private def _del(e:E,m:IdxHashEntry[E]): Boolean = {
-    val h=m.hash; val b=h&(data.length-1); var p=data(b); if (p.eq(e)) { data(b)=m.next; true }
-    else { while(!p.eq(null)) { val pm=_meta(p); if (pm.next.eq(e)) { pm.next=m.next; return true; } else p=pm.next }; false }
-  }
-  override def insert(e:E) {
-    if (size==threshold) { val n=data.length; if (n==max_capacity) threshold=java.lang.Integer.MAX_VALUE; else _resize(n<<1) }
-    val h=_hash(e); val b = h&(data.length-1); var p=nil; var r=data(b);
-    // replace unique value if exists
-    while (r!=null) { val m=_meta(r);
-      if (m.hash==h && e.cmp(sliceIdx,r)==0) { // found previous element of slice
-        if (e.cmp(idx,r)==(if (max) 1 else -1)) { // new best, replace(r->e)
-          val i=new IdxHashEntry[E](h,m.next); e.data(idx)=i
-          if (p==null) data(b)=e; else _meta(p).next=e
-        }
-        return
-      }
-      p=r; r=m.next;
-    }
-    // new slice
-    e.data(idx)=new IdxHashEntry[E](h,data(b)); data(b)=e; size+=1
-  }
-  override def delete(e:E) { if (!_del(e,_meta(e))) return; var r=nil
-    s.idxs(sliceIdx).slice(e,x=>if (r==null || x.cmp(idx,r)==(if (max) 1 else -1)) r=x)
-    if (r!=null) insert(r) else size-=1;
-  }
-  override def update(e:E) {
-    val m=_meta(e); val h=m.hash; val h2=_hash(e); if (((h2^h) & (data.length-1))==0) { if (h2!=h) m.hash=h2; return; } // did not change bucket
-    else { if (_del(e,_meta(e))) { size-=1; insert(e) } }
-  }
-  override def get(e:E):E = { val h=_hash(e); var r=data(h&(data.length-1)); while (r!=null) { val m=_meta(r); if (m.hash==h && e.cmp(sliceIdx,r)==0) return r; r=m.next; }; nil }
-  override def clear { var i=0; val n=data.length; while(i<n) { data(i)=nil; i+=1; }; size=0 }
-  override def compact = if (data.size*compact_factor>size) _resize(math.max(init_capacity,1<<(1+(math.log((size/load_factor))/math.log(2)).ceil.toInt)))
-}
-*/
 
 /**
  * B+Tree based on the original H-Store paper implementation.
@@ -576,35 +518,6 @@ class IdxSlicedHeap[E<:Entry](idx:Int,s:Store[E],sliceIdx:Int,max:Boolean)(impli
     // def get = array(1)
   }
 }
-
-/**
- * Lightweight singe-linked list, unique should be turned false for best insertion performance.
- * Supported operations:
- * + insert O(1)/O(N),delete O(N),update O(1)/O(N) / get=O(1)
- * + clear,size
- */
-class IdxList[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](idx,unique) {
-  private final val nil = null.asInstanceOf[E]
-  var head:E=nil
-  var tail:E=nil
-  @inline private def _next(e:E) = e.data(idx).asInstanceOf[E]
-  override def insert(e:E) {
-    if (unique && head!=null) { if (e.eq(head)) { head=_next(head); if (e.eq(tail)) tail=nil }
-      else { var p=head; do { val n=_next(p); if (e.eq(n)) { p.data(idx)=n.data(idx); if (n.eq(tail)) tail=p; p=nil } else p=n } while(p!=null) }
-    }
-    if (tail!=null) { tail.data(idx)=e; tail=e; } else { head=e; tail=e }
-  }
-  override def delete(e:E) { if (head==nil) return; if (e.eq(head)) { head=_next(head); if (e.eq(tail)) tail=nil }
-    else { var p=head; do { val n=_next(p); if (e.eq(n)) { p.data(idx)=n.data(idx); if (n.eq(tail)) tail=p; p=nil } else p=n } while(p!=null) }; e.data(idx)=null
-  }
-  override def update(e:E) = if (unique) { delete(e); insert(e) }
-  override def get(key:E):E = { var p=head; if (p!=null) do { if (key.cmp(idx,p)==0) return p; p=_next(p) } while(p!=null); nil }
-  override def foreach(f:E=>Unit) { var c=head; if (c!=null) do { val n=c.data(idx).asInstanceOf[E]; f(c); c=n } while(c!=null) }
-  override def slice(key:E,f:E=>Unit) { var c=head; if (c!=null) do { val n=c.data(idx).asInstanceOf[E]; if (key.cmp(idx,c)==0) f(c); c=n } while(c!=null) }
-  override def clear { head=nil; tail=nil }
-  override def compact {} // nothing to do
-}
-
 
 // ------------------------------------------
 /*

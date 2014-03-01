@@ -9,13 +9,13 @@ import scala.Unit;
  *
  * @author TCK
  */
-abstract class Idx<E extends Entry> {
-  Idx(int i,boolean u) { idx=i; unique=u; }
+public abstract class Idx<E extends Entry> {
+  Idx(int idx, boolean unique) { this.idx=idx; this.unique=unique; }
   protected final int idx;
   protected final boolean unique;
   protected int size;
 
-  protected void w(String n) {}//println(this.getClass.getName+": "+n+" not supported")
+  protected void w(String n) {} //println(this.getClass.getName+": "+n+" not supported")
   public void insert(E e) { w("insert"); }
   public void delete(E e) { w("delete"); }
   public void update(E e) { w("update"); } // reposition the entry if key/hash modified
@@ -25,7 +25,7 @@ abstract class Idx<E extends Entry> {
   public void range(E min, E max, boolean withMin, boolean withMax, Function1<E,Unit> f) { w("range"); }
   public void clear() { w("clear"); }
   public void compact() { w("compact"); }
-  public String info() { return "Idx("+idx+","+(unique?"unique":"multiple")+"){\n  type => ?\n}"; }
+  public String info() { return this.getClass().getName()+"("+idx+","+(unique?"unique":"multiple")+")"; }
 }
 
 class IdxHashEntry<E extends Entry> {
@@ -41,6 +41,8 @@ class IdxHashEntry<E extends Entry> {
  * - If unique, a bucket is a simple list along 'diff'
  * - If non-unique, all elements along the 'same' branch are equal.
  *
+ * Use case: default, unless special operations are required.
+ *
  * Supported operations:
  * + insert,delete,update,get = O(1)
  * + range = O(n)
@@ -51,11 +53,11 @@ class IdxHash<E extends Entry> extends Idx<E> {
   private static final int max_capacity = 1 << 30;
   private static final float compact_factor = 0.05f;
   private final float load_factor;
-  private IdxHashEntry<E>[] data = new IdxHashEntry[init_capacity];
-  private int threshold;
+  protected IdxHashEntry<E>[] data = new IdxHashEntry[init_capacity];
+  protected int threshold;
 
-  IdxHash(int i, boolean u) { super(i,u);
-    load_factor = u ? 0.75f : 4.0f;
+  IdxHash(int idx, boolean unique) { super(idx,unique);
+    load_factor = unique ? 0.75f : 4.0f;
     threshold = Math.round(init_capacity * load_factor);
   }
   // Private/inlined functions
@@ -67,7 +69,8 @@ class IdxHash<E extends Entry> extends Idx<E> {
     }
     data=d; threshold=Math.min(Math.round(new_capacity*load_factor), max_capacity+1);
   }
-  private boolean _del(E e,IdxHashEntry<E> i) {
+  protected void _resize() { int n=data.length; if (n==max_capacity) threshold=Integer.MAX_VALUE; else _resize(n<<1); }
+  protected boolean _del(E e,IdxHashEntry<E> i) {
     IdxHashEntry<E> p=i.same; if (p!=null) { i.same=p.same; i.data=p.data; p.data.data[idx]=i; return true; } // eat same child
     p=i.diff; if (p!=null) { i.hash=p.hash; i.same=p.same; i.diff=p.diff; i.data=p.data; p.data.data[idx]=i; return true; } // eat diff child
     // delete from parent (i is a leaf)
@@ -82,21 +85,21 @@ class IdxHash<E extends Entry> extends Idx<E> {
   }
   // Public
   @Override public void insert(E e) {
-    if (size==threshold) { int n=data.length; if (n==max_capacity) threshold=Integer.MAX_VALUE; else _resize(n << 1); }
+    if (size==threshold) _resize();
     int h=e.hash(idx), b=h&(data.length-1);
     IdxHashEntry<E> p=data[b], i=new IdxHashEntry<E>(h,e); e.data[idx]=i;
     if (p==null) { data[b]=i; size+=1; return; }
     else do {
       if (p.hash==h && e.cmp(idx,p.data)==0) {
         if (unique) { p.data=e; e.data[idx]=p; }
-        else { i.same=p.same; p.same=i; size+=1; return; }
+        else { i.same=p.same; p.same=i; size+=1; }
         return;
       }
       if (p.diff==null) { p.diff=i; size+=1; return; }
       p=p.diff;
     } while(p!=null);
   }
-  @Override public void delete(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && _del(e,i)) size-=1; }
+  @Override public void delete(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && _del(e,i)) { e.data[idx]=null; size-=1; } }
   @Override public void update(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && i.hash!=e.hash(idx) && _del(e,i)) { size-=1; insert(e); } }
   @Override public E get(E key) { int h=key.hash(idx); IdxHashEntry<E> e=data[h&(data.length-1)];
     while (e!=null && (e.hash!=h || key.cmp(idx,e.data)!=0)) e=e.diff; return e!=null ? e.data : null;
@@ -122,4 +125,80 @@ class IdxHash<E extends Entry> extends Idx<E> {
     for (int i=0;i<n;++i) { e=data[i]; int c=0; if (e!=null) do { en=e.diff; do { ++c; e=e.same; } while(e!=null); e=en; } while(e!=null); if (c>max) max=c; }
     return "IdxHash("+idx+","+(unique?"unique":"multiple")+") {\n  elements => "+size+"\n  buckets => "+n+"\n  occupancy => "+(size*1.0/n)+"\n  occupancyMax => "+max+"\n  loadFactor => "+load_factor+"\n}";
   }
+}
+
+/**
+ * IdxSliced maintains 1 element (min or max) for each slice.
+ * IdxSliced maintains minimum or maximum of each slice. Slicing is provided by
+ * sliceIdx which correspond to another _implemented_ index supporting slice op.
+ * When min/max is deleted, a new min/max is looked up in the sliceIdx index.
+ *
+ * Use case: min/max is rarely deleted.
+ *
+ * Supported operations:
+ * + insert,delete,update = O(1)/O(N) if min/max / get=O(1)
+ * + clear,size
+ */
+@SuppressWarnings("unchecked")
+class IdxSliced<E extends Entry> extends IdxHash<E> {
+  private int cmpRes;
+  private int cmpIdx;
+  private E cmpE=null;
+  private Idx<E>[] idxs;
+  IdxSliced(int cmpIdx, Idx<E>[] indexes, int sliceIdx, boolean max) { super(sliceIdx,true); this.idxs=indexes; cmpIdx=cmpIdx; cmpRes=max?1:-1; }
+  @Override public void insert(E e) {
+    if (size==threshold) _resize();
+    int h=e.hash(idx), b=h&(data.length-1);
+    IdxHashEntry<E> p=data[b], i=new IdxHashEntry<E>(h,e); e.data[idx]=i;
+    if (p==null) { data[b]=i; size+=1; return; }
+    else do {
+      if (p.hash==h && e.cmp(idx,p.data)==0) {
+        if (e.cmp(cmpIdx,p.data)==cmpRes) { p.data=e; e.data[idx]=p; }
+        return;
+      }
+      if (p.diff==null) { p.diff=i; size+=1; return; }
+      p=p.diff;
+    } while(p!=null);
+  }
+  @Override public void delete(E e) {
+    IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i==null || !_del(e,i)) return; e.data[idx]=null;
+    // Find a replacement candidate
+    Function1<E,Unit> f = new JFun1<E,Unit>() { @Override public Unit apply(E e) { if (cmpE==null || e.cmp(idx,cmpE)==cmpRes) cmpE=e; return (Unit)null; } };
+    idxs[idx].slice(e,f); if (cmpE!=null) insert(cmpE); else size-=1; cmpE=null;
+  }
+}
+
+/**
+ * IdxList is a simple sequential storage reminiscent of the disk era.
+ * Lightweight singe-linked list (head --> tail), unique should be disabled
+ * for best insertion performance (avoid checking duplicates).
+ *
+ * Use case: WAL log or temporary storage, sorted by least recently inserted.
+ *
+ * Supported operations:
+ * + insert O(1)/O(N),delete O(N),update O(1)/O(N) / get=O(1)
+ * + clear,size
+ */
+@SuppressWarnings("unchecked")
+class IdxList<E extends Entry> extends Idx<E> {
+  IdxList(int idx, boolean unique) { super(idx,unique); }
+  private E head=null;
+  private E tail=null;
+  @Override public void insert(E e) {
+    if (unique && head!=null) { if (e==head) { head=(E)head.data[idx]; if (e==tail) tail=null; }
+      else { E p=head; do { E n=(E)p.data[idx]; if (e==n) { p.data[idx]=n.data[idx]; if (n==tail) tail=p; return; } p=n; } while(p!=null); }
+    }
+    if (tail!=null) { tail.data[idx]=e; tail=e; } else { head=e; tail=e; }
+  }
+  @Override public void delete(E e) { if (head==null) return;
+    if (e==head) { head=(E)head.data[idx]; if (e==tail) tail=null; }
+    else { E p=head; do { E n=(E)p.data[idx]; if (e==n) { p.data[idx]=n.data[idx]; if (n==tail) tail=p; p=null; } else p=n; } while(p!=null); }
+    e.data[idx]=null;
+  }
+  @Override public void update(E e) { if (unique) { delete(e); insert(e); } }
+  @Override public E get(E key) { E p=head; if (p!=null) do { if (key.cmp(idx,p)==0) return p; p=(E)p.data[idx]; } while(p!=null); return null; }
+  @Override public void foreach(Function1<E,Unit> f) { E p=head; if (p!=null) do { E n=(E)p.data[idx]; f.apply(p); p=n; } while(p!=null); }
+  @Override public void slice(E key,Function1<E,Unit> f) { E p=head; if (p!=null) do { E n=(E)p.data[idx]; if (key.cmp(idx,p)==0) f.apply(p); p=n; } while(p!=null); }
+  @Override public void clear() { head=null; tail=null; }
+  @Override public void compact() {} // nothing to do
 }

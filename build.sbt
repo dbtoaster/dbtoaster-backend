@@ -148,8 +148,8 @@ commands += Command.args("exec","")((state:State, args:Seq[String]) => {
     libraryDependencies ++= Seq(
       "org.scala-lang.virtualized" % "scala-library" % scalaVersion.value,
       "org.scala-lang.virtualized" % "scala-compiler" % scalaVersion.value,
-      "org.apache.logging.log4j" % "log4j-api" % "2.0-beta9",
-      "org.apache.logging.log4j" % "log4j-core" % "2.0-beta9",
+      "org.apache.logging.log4j" % "log4j-api" % "2.0-rc1",
+      "org.apache.logging.log4j" % "log4j-core" % "2.0-rc1",
       "org.slf4j" % "slf4j-api" % "1.7.2",
       "org.slf4j" % "slf4j-ext" % "1.7.2",
       "mysql" % "mysql-connector-java" % "5.1.28",

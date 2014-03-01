@@ -210,6 +210,7 @@ object UnitTest {
     Compiler.pkg = "ddbt.test.gen"
     Compiler.out = tmp.getPath+"/"+cls+".scala"
     Compiler.exec = benchmark
+    Compiler.exec_sc |= Utils.prop("lms")=="1"
     Compiler.exec_dir = path_classes
     Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp))
