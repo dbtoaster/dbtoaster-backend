@@ -1,4 +1,4 @@
-package storage
+package ddbt.test.store
 import org.scalatest.FunSpec
 import ddbt.lib.store._
 

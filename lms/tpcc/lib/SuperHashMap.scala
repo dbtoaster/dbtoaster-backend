@@ -1,7 +1,7 @@
 package ddbt.tpcc.lib
 
 import SHMap._
-import dbtoptimizer.Utils.ind
+import ddbt.Utils.ind
 
 /**
  * Super Hash Map

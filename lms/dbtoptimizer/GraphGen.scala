@@ -1,23 +1,7 @@
 package dbtoptimizer
 
 import java.io._
-import org.dbtoaster.dbtoasterlib.StreamAdaptor._
-import org.dbtoaster.dbtoasterlib.K3Collection._
-import org.dbtoaster.dbtoasterlib.Source._
-import org.dbtoaster.dbtoasterlib.DBToasterExceptions._
-import org.dbtoaster.dbtoasterlib.ImplicitConversions._
-import org.dbtoaster.dbtoasterlib.StdFunctions._
-import org.dbtoaster.dbtoasterlib.QueryInterface._
-import scala.collection.mutable.Map
-import xml._
-import scala.actors.Actor._
-import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
-import scala.virtualization.lms.util.ReflectionUtil
-import scalariform.formatter.preferences._
-import scalariform.formatter.ScalaFormatter
-import scalariform.parser.ScalaParserException
-import dbtoptimizer._
 import dbtoptimizer.lifters._
 import scala.reflect.SourceContext
 

@@ -1,7 +1,7 @@
 package ddbt.tpcc.lib
 
 import SHMap._
-import dbtoptimizer.Utils.ind
+import ddbt.Utils.ind
 
 class SHMapPooled[K,V](initialCapacity: Int, loadFactor: Float, lfInitIndex: List[(Float,Int)], projs:Seq[(K,V)=>_]) extends SHMap[K,V](initialCapacity, loadFactor, lfInitIndex, projs) {
 

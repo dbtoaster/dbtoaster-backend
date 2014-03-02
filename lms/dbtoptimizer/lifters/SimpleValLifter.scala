@@ -1,10 +1,9 @@
 package dbtoptimizer.lifters
 
-import xml._
-import scala.actors.Actor._
 import scala.virtualization.lms.common._
-import org.dbtoaster.dbtoasterlib.K3Collection._
 import scala.reflect.SourceContext
+
+class SimpleVal[T]() // used only as proxy
 
 /**
  * Lifter Classes for SimpleVal

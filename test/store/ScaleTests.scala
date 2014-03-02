@@ -1,10 +1,8 @@
-package storage
+package ddbt.test.store
 import ddbt.lib.store._
 
 object ScaleTests {
-  // Time measurement
-  def ns[T](f:()=>T) = { val t0=System.nanoTime; var r=f(); val t1=System.nanoTime; (t1-t0,r) }
-  def time(ns:Long,p:Boolean=true) = if (p) { val us=ns/1000; ("%d.%06d").format(us/1000000,us%1000000) } else { val ms=math.round(ns/1000000.0); ("%d.%03d").format(ms/1000,ms%1000) }
+  import ddbt.Utils.{ns,time}
 
   val s = new Store[SEntry3_III](2)
   s.index(0,IHash,false)

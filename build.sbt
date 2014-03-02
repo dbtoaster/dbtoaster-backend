@@ -36,7 +36,7 @@ Seq(
 Seq(
   fork := true, // required to enable javaOptions
   //javaOptions ++= Seq("-agentpath:"+"/Applications/Tools/YourKit Profiler.app/bin/mac/libyjpagent.jnilib"+"=sampling,onexit=snapshot,builtinprobes=all"),
-  javaOptions ++= Seq("-Xss128m","-XX:-DontCompileHugeMethods"), // ,"-Xss512m","-XX:MaxPermSize=2G"
+  javaOptions ++= Seq("-Xss128m","-XX:-DontCompileHugeMethods","-XX:+CMSClassUnloadingEnabled"), // ,"-Xss512m","-XX:MaxPermSize=2G"
   javaOptions ++= Seq("-Xmx14G","-Xms14G"/*,"-verbose:gc"*/), parallelExecution in Test := false, // for large benchmarks
   javaOptions <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
 )
@@ -53,8 +53,8 @@ addCommandAlias("aq","unit -dd -v -x -s 0 -l akka -q ")
 
 addCommandAlias("bench", ";unit -v -x -xsc -xvm -csv bench.csv -l ") ++ // usage: sbt 'bench lms'
 addCommandAlias("bench-all", ";unit -v -x -xsc -xvm -csv bench-all.csv -l scala -l lms -l lscala -l llms") ++ // usage: sbt 'bench-all'
-//addCommandAlias("bench-all-tpch", ";unit -p 2 -x -xsc -xvm -csv bench-all.csv -dump bench-all-dump.txt -l lscala -l llms -l scala -l lms_0 -l lms_spec -l lcpp -w 2 -s 3 -t 60000 -d big_del -q tpch.*query(1|2|3|4|5|6|7|8|9|(10)|(11)|(12)|(13)|(14)|(15)|(16)|(17)|(18)|(19)|(20)|(21)|(22)).sql")
-addCommandAlias("bench-all-tpch", ";unit -p 2 -x -xsc -xvm -csv bench-all.csv -dump bench-all-dump.txt -l scala -l llms -l scala -l lms_0 -l lms_spec -l lcpp -w 2 -s 3 -t 60000 -d big_del -q tpch.*query[0-9]+")
+//addCommandAlias("bench-all-tpch", ";unit -p 2 -x -xsc -xvm -csv bench-all.csv -dump bench-all-dump.txt -l lscala -l llms -l scala -l lms_0 -l lms_spec -l lcpp -w 2 -s 3 -t 60000 -d big_del -q tpch.*query[0-9]+.sql")
+addCommandAlias("bench-all-tpch", ";unit -x -xsc -xvm -p 2 -w 2 -s 3 -t 60000 -csv bench-all.csv -dump bench-all-dump.txt -l scala -l lms_0 -l lms_spec -d big_del -q tpch.*query[0-9]+")
 
 // --------- Packaging: fake (to use SBT paths for debugging), full (packages all dependencies), dist (ship on all cluster hosts)
 InputKey[Unit]("pkg") <<= InputTask(_ => Def.spaceDelimited("<args>")) { result =>

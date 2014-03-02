@@ -1,20 +1,9 @@
 package dbtoptimizer
 
 import java.io._
-import org.dbtoaster.dbtoasterlib.StreamAdaptor._
-import org.dbtoaster.dbtoasterlib.K3Collection._
-import org.dbtoaster.dbtoasterlib.Source._
-import org.dbtoaster.dbtoasterlib.DBToasterExceptions._
-import org.dbtoaster.dbtoasterlib.ImplicitConversions._
-import org.dbtoaster.dbtoasterlib.StdFunctions._
-import org.dbtoaster.dbtoasterlib.QueryInterface._
-import scala.collection.mutable.Map
-import xml._
 import scala.actors.Actor._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
-import scala.virtualization.lms.util.ReflectionUtil
-import scalariform.formatter.preferences._
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
 import dbtoptimizer.lifters._
@@ -60,7 +49,7 @@ trait ToasterBoosterScalaCodegen extends ScalaConciseCodegen { self =>
   }
 
   def generateClassArgsDefs(out: PrintWriter, functionNames:Seq[String]) {
-    
+
   }
 }
 
@@ -165,7 +154,7 @@ class Impl(val clsWriter: PrintWriter, val pkg: String, val closeWriterAtTheEnd:
 
 class ValDefImpl(val path: String, val pkg: String) extends DSL with ToasterBoosterOpsPkgExpOpt { self =>
   val codegen = new ScalaCodeGenPkg with ScalaGenSimpleVal
-  with ScalaGenK3PersistentCollection with ScalaGenDate
+  /*with ScalaGenK3PersistentCollection*/ with ScalaGenDate
   with ScalaGenGregorianCalendar with ScalaGenStdFunctions with ScalaCodegen { val IR: self.type = self }
 
   def emitSource(x: TopLevel, stream: java.io.PrintWriter): Unit = {
@@ -216,7 +205,7 @@ class ValDefImpl(val path: String, val pkg: String) extends DSL with ToasterBoos
         emitSource(x, stream)
 
         val unformattedScala = strWriter.toString
-        
+
         try {
           //val preferences:FormattingPreferences = FormattingPreferences().setPreference(IndentSpaces, 3)
           val formattedScala = ScalaFormatter.format(unformattedScala/*, preferences*/)

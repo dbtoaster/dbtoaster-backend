@@ -119,9 +119,9 @@ object TpccXactGenerator {
           stock(ol_number) = s_quantity
 
           if(/*c_credit*/customerEntry._14.contains("original") && /*s_data*/stockEntry._17.contains("original")) {
-            bg(ol_number) = 'B'
+            bg(ol_number) = unit('B')
           } else {
-            bg(ol_number) = 'G'
+            bg(ol_number) = unit('G')
           }
 
           stockEntry.update(3, s_quantity - ol_quantity)

@@ -1,14 +1,5 @@
 package dbtoptimizer.lifters
 
-import org.dbtoaster.dbtoasterlib.StreamAdaptor._
-import org.dbtoaster.dbtoasterlib.K3Collection._
-import org.dbtoaster.dbtoasterlib.Source._
-import org.dbtoaster.dbtoasterlib.DBToasterExceptions._
-import org.dbtoaster.dbtoasterlib.ImplicitConversions._
-import org.dbtoaster.dbtoasterlib.StdFunctions._
-import org.dbtoaster.dbtoasterlib.QueryInterface._
-import xml._
-import scala.actors.Actor._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 

@@ -1,8 +1,5 @@
 package oltp.opt.lifters
 
-import org.dbtoaster.dbtoasterlib.K3Collection._
-import scala.collection.mutable.Map
-import xml._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal.{GenericNestedCodegen, GenerationFailedException, ExtendedExpressions, Effects}
 import scala.reflect.SourceContext
@@ -181,10 +178,10 @@ trait StoreOps extends Base with SEntryOps {
 
 trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp with SEntryExp {
   case class StNewStore   [E<:Entry:Manifest](mE: Manifest[E]/*, sndIdx: Exp[Array[Idx[E]]]*/) extends Def[Store[E]]
-  
+
   case class SteNewSEntry   [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]) extends Def[E]
   case class SteSampleSEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]) extends Def[E]
-  
+
   case class StInsert     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
   case class StUpdate     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
   case class StDelete     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
@@ -549,7 +546,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
   }
 
   override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
-    storeSyms.foreach { c => out.println(dbtoptimizer.Utils.ind(generateNewStore(c),2)) }
+    storeSyms.foreach { c => out.println(ddbt.Utils.ind(generateNewStore(c),2)) }
     functionNames.foreach { fn =>
       out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
         quote(c, true)
