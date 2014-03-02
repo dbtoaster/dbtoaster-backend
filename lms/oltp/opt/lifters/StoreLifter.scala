@@ -8,6 +8,8 @@ import scala.language.implicitConversions
 import ddbt.lib.store._
 
 trait SEntryOps extends Base{
+  val GATHER_STATISTICS=false
+
   class SEntryOpsCls[E<:Entry:Manifest](x: Rep[E]) {
     def update(i: Int, v:Rep[Any]) = steUpdate[E](x , i ,v)
     def increase(i: Int, v:Rep[Any]) = steIncrease[E](x , i ,v)
@@ -449,14 +451,23 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     case StInsert(x,e) => emitValDef(sym, quote(x)+".insert("+quote(e)+")")
     case StUpdate(x,e) => emitValDef(sym, quote(x)+".update("+quote(e)+")")
     case StDelete(x,e) => emitValDef(sym, quote(x)+".delete("+quote(e)+")")
-    //case StGet(x,idx,key) => emitValDef(sym, quote(x)+".get("+{if(idx == (-1)) "0" else ""+idx}+","+quote(key)+")")
-    case StGet(x,idx,key) => emitValDef(sym, quote(x)+".idxs("+{if(idx == (-1)) "0" else ""+idx}+").get("+quote(key)+")")
+    case StGet(x,idx,key) => if(GATHER_STATISTICS) {
+      emitValDef(sym, quote(x)+".get("+{if(idx == (-1)) "0" else ""+idx}+","+quote(key)+")")
+    } else {
+      emitValDef(sym, quote(x)+".idxs("+{if(idx == (-1)) "0" else ""+idx}+").get("+quote(key)+")")
+    }
     //case StGetOrPrev(x,idx,key) => emitValDef(sym, quote(x)+".getOrPrev("+{if(idx == (-1)) "1" else ""+idx}+", "+quote(key)+")")
     //case StGetOrNext(x,idx,key) => emitValDef(sym, quote(x)+".getOrNext("+{if(idx == (-1)) "1" else ""+idx}+", "+quote(key)+")")
-    //case StGetSliceMin(x,key,targetField,sliceIdx,minIdx) => emitValDef(sym, quote(x)+".get("+{if(minIdx == (-1)) "1" else minIdx}+","+quote(key)+") /* min */")
-    case StGetSliceMin(x,key,targetField,sliceIdx,minIdx) => emitValDef(sym, quote(x)+".idxs("+{if(minIdx == (-1)) "1" else minIdx}+").get("+quote(key)+") /* min */")
-    //case StGetSliceMax(x,key,targetField,sliceIdx,maxIdx) => emitValDef(sym, quote(x)+".get("+{if(maxIdx == (-1)) "1" else maxIdx}+","+quote(key)+") /* max */")
-    case StGetSliceMax(x,key,targetField,sliceIdx,maxIdx) => emitValDef(sym, quote(x)+".idxs("+{if(maxIdx == (-1)) "1" else maxIdx}+").get("+quote(key)+") /* max */")
+    case StGetSliceMin(x,key,targetField,sliceIdx,minIdx) => if(GATHER_STATISTICS) {
+        emitValDef(sym, quote(x)+".get("+{if(minIdx == (-1)) "1" else minIdx}+","+quote(key)+") /* min */")
+      } else {
+        emitValDef(sym, quote(x)+".idxs("+{if(minIdx == (-1)) "1" else minIdx}+").get("+quote(key)+") /* min */")
+      }
+    case StGetSliceMax(x,key,targetField,sliceIdx,maxIdx) => if(GATHER_STATISTICS) {
+        emitValDef(sym, quote(x)+".get("+{if(maxIdx == (-1)) "1" else maxIdx}+","+quote(key)+") /* max */")
+      } else {
+        emitValDef(sym, quote(x)+".idxs("+{if(maxIdx == (-1)) "1" else maxIdx}+").get("+quote(key)+") /* max */")
+      }
     //case StGetMin(x,idx) => emitValDef(sym, quote(x)+".getMin("+{if(idx == (-1)) "1" else ""+idx}+")")
     //case StGetMax(x,idx) => emitValDef(sym, quote(x)+".getMax("+{if(idx == (-1)) "1" else ""+idx}+")")
     //case StGetMedian(x,idx) => emitValDef(sym, quote(x)+".getMedian("+{if(idx == (-1)) "1" else ""+idx}+")")
@@ -464,13 +475,19 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     //   stream.println(quote(blockSym) + " => ")
     //   emitBlock(block)
     //   stream.println("}")
-    //case StForeach(x, blockSym, block) => emitValDef(sym, quote(x)+".foreach{")
-    case StForeach(x, blockSym, block) => emitValDef(sym, quote(x)+".idxs(0).foreach{")
+    case StForeach(x, blockSym, block) => if(GATHER_STATISTICS) {
+        emitValDef(sym, quote(x)+".foreach{")
+      } else {
+        emitValDef(sym, quote(x)+".idxs(0).foreach{")
+      }
       stream.println(quote(blockSym) + " => ")
       emitBlock(block)
       stream.println("}")
-    //case StSlice(x, idx, key, blockSym, block) => emitValDef(sym, quote(x)+".slice("+{if(idx == (-1)) "1" else ""+idx}+","+quote(key)+",{")
-    case StSlice(x, idx, key, blockSym, block) => emitValDef(sym, quote(x)+".idxs("+{if(idx == (-1)) "1" else ""+idx}+").slice("+quote(key)+",{")
+    case StSlice(x, idx, key, blockSym, block) => if(GATHER_STATISTICS) {
+        emitValDef(sym, quote(x)+".slice("+{if(idx == (-1)) "1" else ""+idx}+","+quote(key)+",{")
+      } else {
+        emitValDef(sym, quote(x)+".idxs("+{if(idx == (-1)) "1" else ""+idx}+").slice("+quote(key)+",{")
+      }
       stream.println(quote(blockSym) + " => ")
       emitBlock(block)
       stream.println("})")
