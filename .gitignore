@@ -4,6 +4,7 @@ examples/queries
 examples/data
 conf/ddbt.properties
 test/gen
+test/queries
 bin
 pkg
 benchmarks-*.csv
