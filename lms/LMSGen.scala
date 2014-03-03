@@ -180,6 +180,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
 
+    impl.localStoreSyms = List[impl.Sym[Store[Entry]]]()
     val block = impl.reifyEffects {
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
@@ -218,7 +219,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
       }
       impl.unit(())
     }
-    cx = null; (name,args,block)
+    val localSyms = impl.localStoreSyms
+    impl.localStoreSyms = List[impl.Sym[Store[Entry]]]()
+    cx = null; (name,args,block,localSyms)
   }
 
   override def toMapFunction(q: Query) = {
@@ -261,13 +264,13 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   override def genLMS(s0:System):(String,String,String,String) = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
     ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.named(name,false)(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
-    val printInfoDef = "def printMapsInfo() = {\n" + maps.map{ case (m,_) => "  System.out.println(\""+m+" => \" + "+m+".getInfoStr)\n" }.mkString + "}"
+    val printInfoDef = "def printMapsInfo() = {\n" + maps.map{ case (m,MapDef(_,_,keys,_)) => if (keys.size>0) "  System.out.println(\""+m+" => \" + "+m+".getInfoStr)\n  Store.addTimersFromStore(\""+m+"\", "+m+".totalTimers, "+m+".timersPerIndex)\n" }.mkString +"System.out.println(\"Timers Info => {\\n%s\\n%s}\".format(Store.printTimersInfo,Store.printTimersInfoCSV))\n"+ "}"
     val (str,ld0,_) = genInternals(s0)
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
     val tsResBlks = s0.triggers.map(genTriggerLMS) // triggers (need to be generated before maps)
-    val ts = tsResBlks.map{ case (name,args,b) =>
-      impl.emitTrigger(b,name,args)
+    val ts = tsResBlks.map{ case (name,args,b,localSyms) =>
+      impl.emitTrigger(b,name,args,localSyms)
     }.mkString("\n\n")
     var outStream = new java.io.StringWriter
     var outWriter = new java.io.PrintWriter(outStream)

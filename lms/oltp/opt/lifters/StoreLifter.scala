@@ -94,6 +94,7 @@ trait SEntryExp extends StoreOps with BaseExp with EffectExp with VariablesExp {
   //this hashmap will map (entry manifest string) -> ((entry class name),(list of argument type names),(list of Store[E] symbols, containing entry of the type given as key))
   //val storeEntryClasses: collection.mutable.Map[String, (Manifest[_],collection.mutable.Set[Sym[_]])] = new collection.mutable.HashMap[String, (Manifest[_],collection.mutable.Set[Sym[_]])]()
   var storeSyms = List[Sym[Store[Entry]]]()
+  var localStoreSyms = List[Sym[Store[Entry]]]()
   val ENTRY_INDICES_KEY = "StoreOps.Entry.indices"
 }
 
@@ -346,7 +347,9 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   def allMutable   [E:Manifest](x: Rep[E]):Rep[E] = reflectMutable(AllMutable[E](x))
 
   def collectStore[E<:Entry:Manifest](x:Rep[_]):Unit = {
-    storeSyms = storeSyms :+ getStoreSym(x).asInstanceOf[Sym[Store[E]]]
+    val currentSym = getStoreSym(x).asInstanceOf[Sym[Store[E]]]
+    storeSyms = storeSyms :+ currentSym
+    localStoreSyms = localStoreSyms :+ currentSym
   }
   //////////////
   // mirroring
@@ -439,7 +442,12 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case StNewStore(mE) => stream.println(generateNewStore(sym)) //emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
+    case StNewStore(mE) => {
+      val symName = quote(sym)
+      staticFields += ("StoreOps."+symName -> generateNewStore(sym))
+      stream.println(symName+".clear")
+      //stream.println(generateNewStore(sym)) //emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
+    }
     case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ storeEntryType(x) + "("+args.map(quote(_)).mkString(", ")+")")
     case SteSampleSEntry(x, args) => {
       val symName = "se%d".format(sym.id)

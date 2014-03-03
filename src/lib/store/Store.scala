@@ -2,6 +2,7 @@ package ddbt.lib.store
 import scala.reflect._
 
 import ddbt.Utils.ind
+import scala.collection.mutable.HashMap
 
 /**
  * A store contrains entries and allow access through multiple indices.
@@ -39,12 +40,132 @@ abstract class EntryIdx[E<:Entry] {
   def hash(e:E):Int; // hash function for Hash, index for Array
 }
 
-/*
 object Store {
   // DBToaster: create n+1 hash indexes (n=# projections)
-  def apply[E<:Entry](n:Int,ops:EntryOps[E]=null)(implicit cE:ClassTag[E]) = new Store((0 to n).map(i=>new IdxHash[E](ops,i,i==0)).toArray.asInstanceOf[Array[Idx[E]]])
+  //def apply[E<:Entry](n:Int,ops:EntryOps[E]=null)(implicit cE:ClassTag[E]) = new Store((0 to n).map(i=>new IdxHash[E](ops,i,i==0)).toArray.asInstanceOf[Array[Idx[E]]])
+  
+  val totalTimersForStores:HashMap[String,HashMap[String,(Long,Int)]] = new HashMap[String,HashMap[String,(Long,Int)]]()
+  val timersPerIndexForStores:HashMap[String,HashMap[String,HashMap[Int,(Long,Int)]]] = new HashMap[String,HashMap[String,HashMap[Int,(Long,Int)]]]()
+  def printTimersInfo = {
+    val res = new StringBuilder
+    totalTimersForStores.foreach { case (store,totalTimer) =>
+      res.append(store).append(": {\n")
+      totalTimer.foreach{ case (op, (time,count)) =>
+        res.append("  ").append(op).append(" (total time, # of calls, average time): (%d,%d,%d)".format(time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
+      }
+      timersPerIndexForStores.get(store) match {
+        case Some(timersPerIndex) => timersPerIndex.foreach { case (op, indexTimers) =>
+          indexTimers.foreach { case (idx, (time,count)) =>
+            res.append("  ").append(op).append("(%d) (total time, # of calls, average time): (%d,%d,%d)".format(idx,time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
+          }
+        }
+        case None => //don't care
+      }
+      res.append("}\n")
+    }
+    timersPerIndexForStores.foreach { case (store, timersPerIndex) =>
+      totalTimersForStores.get(store) match {
+        case Some(_) => //don't care
+        case None => {
+          res.append(store).append(": {\n")
+          timersPerIndex.foreach { case (op, indexTimers) =>
+            indexTimers.foreach { case (idx, (time,count)) =>
+              res.append("  ").append(op).append("(%d) (total time, # of calls, average time): (%d,%d,%d)".format(idx,time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
+            }
+          }
+          res.append("}\n")
+        }
+      }
+    }
+    ind(res.toString)
+  }
+  def printTimersInfoCSV = {
+    val res = new StringBuilder
+    totalTimersForStores.foreach { case (store,totalTimer) =>
+      totalTimer.foreach{ case (op, (time,count)) =>
+        res.append(store).append(",").append(op).append(",%d,%d,%d".format(time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
+      }
+      timersPerIndexForStores.get(store) match {
+        case Some(timersPerIndex) => timersPerIndex.foreach { case (op, indexTimers) =>
+          indexTimers.foreach { case (idx, (time,count)) =>
+            res.append(store).append(",").append(op).append("(%d),%d,%d,%d".format(idx,time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
+          }
+        }
+        case None => //don't care
+      }
+    }
+    timersPerIndexForStores.foreach { case (store, timersPerIndex) =>
+      totalTimersForStores.get(store) match {
+        case Some(_) => //don't care
+        case None => {
+          timersPerIndex.foreach { case (op, indexTimers) =>
+            indexTimers.foreach { case (idx, (time,count)) =>
+              res.append(store).append(",").append(op).append("(%d),%d,%d,%d".format(idx,time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
+            }
+          }
+        }
+      }
+    }
+    ind(res.toString)+"\n"
+  }
+  def addTimersFromStore(storeName:String, totalTimer:HashMap[String,(Long,Int)], timersPerIndex:HashMap[String,HashMap[Int,(Long,Int)]]) = {
+    totalTimersForStores.get(storeName) match {
+      case Some(currentTotalTimer) => {
+        currentTotalTimer.foreach{ case (op, (currentTime,currentCount)) =>
+          totalTimer.get(op) match {
+            case Some((time,count)) => totalTimer.update(op, (time+currentTime,count+currentCount))
+            case None => //don't care
+          }
+        }
+        totalTimer.foreach{ case (op, (time,count)) =>
+          currentTotalTimer.get(op) match {
+            case Some(_) => //don't care
+            case None => currentTotalTimer += (op -> (time,count))
+          }
+        }
+      }
+      case None => totalTimersForStores += (storeName -> totalTimer)
+    }
+
+    timersPerIndexForStores.get(storeName) match {
+      case Some(currentTimersPerIndex) => {
+        currentTimersPerIndex.foreach{ case (op, currentIndexTimers) =>
+          timersPerIndex.get(op) match {
+            case Some(indexTimers) => {
+              currentIndexTimers.foreach{ case (idx, (currentTime,currentCount)) =>
+                indexTimers.get(idx) match {
+                  case Some((time,count)) => currentIndexTimers.update(idx, (time+currentTime,count+currentCount))
+                  case None => //don't care
+                }
+              }
+              indexTimers.foreach{ case (idx, timeCount) =>
+                currentIndexTimers.get(idx) match {
+                  case Some(_) => //don't care
+                  case None => currentIndexTimers += (idx -> timeCount)
+                }
+              }
+            }
+            case None => //don't care
+          }
+        }
+
+        timersPerIndex.foreach{ case (op, indexTimers) =>
+          currentTimersPerIndex.get(op) match {
+            case Some(_) => //don't care
+            case None => {
+              val currentIndexTimers = new HashMap[Int,(Long,Int)]
+              indexTimers.foreach{ case (idx, timeCount) =>
+                currentIndexTimers += (idx -> timeCount)
+              }
+              currentTimersPerIndex += (op -> currentIndexTimers)
+            }
+          }
+        }
+      }
+      case None => totalTimersForStores += (storeName -> totalTimer)
+    }
+  }
 }
-*/
 
 /**
  * The store is the main structure to store entries. It requires at least one
@@ -57,8 +178,8 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
   def startPerfCounters = { perfMeasurement = true }
   def stopPerfCounters = { perfMeasurement = false }
   var perfMeasurement = true
-  val totalTimers = new scala.collection.mutable.HashMap[String,(Long,Int)]
-  val timersPerIndex = new scala.collection.mutable.HashMap[String,scala.collection.mutable.HashMap[Int,(Long,Int)]]
+  val totalTimers = new HashMap[String,(Long,Int)]
+  val timersPerIndex = new HashMap[String,HashMap[Int,(Long,Int)]]
   def time[R](f: String)(block: => R): R = if(perfMeasurement) {
     val t0 = System.nanoTime()
     val result = block    // call-by-name
@@ -77,7 +198,7 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
     val result = block    // call-by-name
     val t1 = System.nanoTime()
     if(!timersPerIndex.contains(f)) {
-      timersPerIndex += (f -> new scala.collection.mutable.HashMap[Int,(Long,Int)])
+      timersPerIndex += (f -> new HashMap[Int,(Long,Int)])
     }
     val fMap = timersPerIndex(f)
     if(!fMap.contains(idx)) {
