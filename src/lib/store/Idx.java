@@ -10,7 +10,7 @@ import scala.Unit;
  * @author TCK
  */
 public abstract class Idx<E extends Entry> {
-  Idx(int idx, boolean unique) { this.idx=idx; this.unique=unique; }
+  Idx(Store<E> st, int idx, boolean unique) { this.idx=idx; this.unique=unique; }
   protected final int idx;
   protected final boolean unique;
   protected int size;
@@ -56,7 +56,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
   protected IdxHashEntry<E>[] data = new IdxHashEntry[init_capacity];
   protected int threshold;
 
-  IdxHash(int idx, boolean unique) { super(idx,unique);
+  IdxHash(Store<E> st, int idx, boolean unique) { super(st,idx,unique);
     load_factor = unique ? 0.75f : 4.0f;
     threshold = Math.round(init_capacity * load_factor);
   }
@@ -145,7 +145,7 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
   private int cmpIdx;
   private E cmpE=null;
   private Idx<E>[] idxs;
-  IdxSliced(int cmpIdx, Idx<E>[] indexes, int sliceIdx, boolean max) { super(sliceIdx,true); this.idxs=indexes; cmpIdx=cmpIdx; cmpRes=max?1:-1; }
+  IdxSliced(Store<E> st, int cmpIdx, int sliceIdx, boolean max) { super(st,sliceIdx,true); this.idxs=st.idxs(); cmpIdx=cmpIdx; cmpRes=max?1:-1; }
   @Override public void insert(E e) {
     if (size==threshold) _resize();
     int h=e.hash(idx), b=h&(data.length-1);
@@ -181,7 +181,7 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
  */
 @SuppressWarnings("unchecked")
 class IdxList<E extends Entry> extends Idx<E> {
-  IdxList(int idx, boolean unique) { super(idx,unique); }
+  IdxList(Store<E> st, int idx, boolean unique) { super(st,idx,unique); }
   private E head=null;
   private E tail=null;
   @Override public void insert(E e) {

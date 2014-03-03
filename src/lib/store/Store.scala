@@ -34,15 +34,17 @@ case object ISliceHeapMin extends IndexType // Operate over a slicing index and 
 case object ISliceHeapMax extends IndexType // O(N) to delete any, O(log N) to delete min/max
 
 /** Map-specific operations on entries */
-abstract class EntryOps[E<:Entry] {
-  def cmp(i:Int): (E,E)=>Int; // key comparison between entries
-  def hash(i:Int): E=>Int; // hash function for Hash, index for Array
+abstract class EntryIdx[E<:Entry] {
+  def cmp(e1:E,e2:E):Int; // key comparison between entries
+  def hash(e:E):Int; // hash function for Hash, index for Array
 }
 
+/*
 object Store {
   // DBToaster: create n+1 hash indexes (n=# projections)
-  def apply[E<:Entry](n:Int)(implicit cE:ClassTag[E]) = new Store((0 to n).map(i=>new IdxHash[E](i,i==0)).toArray.asInstanceOf[Array[Idx[E]]])
+  def apply[E<:Entry](n:Int,ops:EntryOps[E]=null)(implicit cE:ClassTag[E]) = new Store((0 to n).map(i=>new IdxHash[E](ops,i,i==0)).toArray.asInstanceOf[Array[Idx[E]]])
 }
+*/
 
 /**
  * The store is the main structure to store entries. It requires at least one
@@ -50,7 +52,7 @@ object Store {
  * Index 0 should retain all data (and possibly be one of the fastest index).
  * Indices data structure can be dynamically adapted using the index() function.
  */
-class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:EntryOps[E]=null)(implicit cE:ClassTag[E]) {
+class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) {
   assert(idxs.size > 0)
   def startPerfCounters = { perfMeasurement = true }
   def stopPerfCounters = { perfMeasurement = false }
@@ -87,7 +89,8 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:EntryOps[E]=null)(implicit
   } else {
     block
   }
-  def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n))
+  def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),null)(cE)
+  def this(n:Int,ops:Array[EntryIdx[E]])(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),ops)(cE)
   private val n = idxs.length
   def insert(e:E):Unit = time("insert") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; } }
   def update(e:E):Unit = time("update") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
@@ -103,15 +106,15 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:EntryOps[E]=null)(implicit
   def index(idx:Int,tp:IndexType,unique:Boolean=false,sliceIdx:Int= -1) { // sliceIdx is the underlying slice index for IBound
     val i:Idx[E] = tp match {
       case INone => null.asInstanceOf[Idx[E]]
-      case IHash => new IdxHash[E](idx,unique)
+      case IHash => new IdxHash[E](this,idx,unique)
       case IDirect|IArray => val data = if (idxs(0)==null) new Array[E](0) else { val d=new Array[E](idxs(0).size); var x=0; idxs(0).foreach{e=>d(x)=e; x+=1}; d }
-                             if (tp==IDirect) new IdxDirect[E](idx,unique,data) else new IdxArray[E](idx,unique,data)
-      case IBTree => new IdxBTree(idx,unique)
-      case IList => new IdxList(idx,unique)
-      case ISliceMin => new IdxSliced(idx,this.idxs,sliceIdx,false)
-      case ISliceMax => new IdxSliced(idx,this.idxs,sliceIdx,true)
-      case ISliceHeapMin => new IdxSlicedHeap(idx,this,sliceIdx,false)
-      case ISliceHeapMax => new IdxSlicedHeap(idx,this,sliceIdx,true)
+                             if (tp==IDirect) new IdxDirect[E](this,idx,unique,data) else new IdxArray[E](this,idx,unique,data)
+      case IBTree => new IdxBTree(this,idx,unique)
+      case IList => new IdxList(this,idx,unique)
+      case ISliceMin => new IdxSliced(this,idx,sliceIdx,false)
+      case ISliceMax => new IdxSliced(this,idx,sliceIdx,true)
+      case ISliceHeapMin => new IdxSlicedHeap(this,idx,sliceIdx,false)
+      case ISliceHeapMax => new IdxSlicedHeap(this,idx,sliceIdx,true)
     }
     if (idxs(0)!=null) tp match {
       case INone|IDirect|IArray => // nothing to do
@@ -162,7 +165,7 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:EntryOps[E]=null)(implicit
  * + implicit update(key cannot be modified)=O(1) / get=O(1)[immediate]_O(log(N))[packed] / min,max=O(1),median=O(N)[immediate]_O(1)[packed]
  * + foreach,slice,range / size
  */
-class IdxDirect[E<:Entry](idx:Int,unique:Boolean,var data:Array[E])(implicit cE:ClassTag[E]) extends Idx[E](idx,unique) {
+class IdxDirect[E<:Entry](st:Store[E],idx:Int,unique:Boolean,var data:Array[E])(implicit cE:ClassTag[E]) extends Idx[E](st,idx,unique) {
   private final val nil = null.asInstanceOf[E]
   private final val min_density = 0.2 // minimal array density to consider it for immediate election
   private var imm = false // immediate: hash=array_key
@@ -223,7 +226,7 @@ class IdxDirect[E<:Entry](idx:Int,unique:Boolean,var data:Array[E])(implicit cE:
  * + implicit update(key cannot be modified)=O(1) / get=O(log(N)) / min,max,median=O(1)
  * + foreach,slice,range / size
  */
-class IdxArray[E<:Entry](idx:Int,unique:Boolean,var data:Array[E])(implicit cE:ClassTag[E]) extends Idx[E](idx,unique) {
+class IdxArray[E<:Entry](st:Store[E],idx:Int,unique:Boolean,var data:Array[E])(implicit cE:ClassTag[E]) extends Idx[E](st,idx,unique) {
   private final val nil = null.asInstanceOf[E]
   size=data.length
   data=data.sortWith((l:E,r:E)=>l.cmp(idx,r)<=0)
@@ -252,7 +255,7 @@ class IdxArray[E<:Entry](idx:Int,unique:Boolean,var data:Array[E])(implicit cE:C
  * + foreach,slice,range / size
  */
 // XXX: use System.arraycopy
-class IdxBTree[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](idx,unique) {
+class IdxBTree[E<:Entry](st:Store[E],idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](st,idx,unique) {
   private final val nil = null.asInstanceOf[E]
   private final val N = 8; assert(N>2) // N must be greater than two to make the split of two inner nodes sensible.
   private final val M = 8; assert(M>0) // Leaf nodes must be able to hold at least one element
@@ -408,7 +411,7 @@ class IdxBTree[E<:Entry](idx:Int,unique:Boolean)(implicit cE:ClassTag[E]) extend
  * + insert,delete,update = O(log N) / get=O(1)
  * + clear,size
  */
-class IdxSlicedHeap[E<:Entry](idx:Int,s:Store[E],sliceIdx:Int,max:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](idx,true) {
+class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](st,idx,true) {
   private final val nil = null.asInstanceOf[E]
   private final val default_capacity = 16
   private final val cRes = if (max) 1 else -1 // comparison result: "better"
