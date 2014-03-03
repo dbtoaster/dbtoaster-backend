@@ -6,9 +6,9 @@ import scala.reflect.SourceContext
 import scala.language.implicitConversions
 
 import ddbt.lib.store._
+import Store._
 
 trait SEntryOps extends Base{
-  val GATHER_STATISTICS=true
 
   class SEntryOpsCls[E<:Entry:Manifest](x: Rep[E]) {
     def update(i: Int, v:Rep[Any]) = steUpdate[E](x , i ,v)

@@ -41,6 +41,7 @@ abstract class EntryIdx[E<:Entry] {
 }
 
 object Store {
+  val GATHER_STATISTICS=false
   // DBToaster: create n+1 hash indexes (n=# projections)
   //def apply[E<:Entry](n:Int,ops:EntryOps[E]=null)(implicit cE:ClassTag[E]) = new Store((0 to n).map(i=>new IdxHash[E](ops,i,i==0)).toArray.asInstanceOf[Array[Idx[E]]])
   
@@ -175,54 +176,65 @@ object Store {
  */
 class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) {
   assert(idxs.size > 0)
-  def startPerfCounters = { perfMeasurement = true }
-  def stopPerfCounters = { perfMeasurement = false }
-  var perfMeasurement = true
-  val totalTimers = new HashMap[String,(Long,Int)]
-  val timersPerIndex = new HashMap[String,HashMap[Int,(Long,Int)]]
-  def time[R](f: String)(block: => R): R = if(perfMeasurement) {
-    val t0 = System.nanoTime()
-    val result = block    // call-by-name
-    val t1 = System.nanoTime()
-    if(!totalTimers.contains(f)) {
-      totalTimers += (f -> (0L,0))
-    }
-    val (currentTime,currentCount) = totalTimers(f)
-    totalTimers.update(f, (currentTime+(t1 - t0),currentCount+1))
-    result
-  } else {
-    block
-  }
-  def time[R](f: String, idx:Int)(block: => R): R = if(perfMeasurement) {
-    val t0 = System.nanoTime()
-    val result = block    // call-by-name
-    val t1 = System.nanoTime()
-    if(!timersPerIndex.contains(f)) {
-      timersPerIndex += (f -> new HashMap[Int,(Long,Int)])
-    }
-    val fMap = timersPerIndex(f)
-    if(!fMap.contains(idx)) {
-      fMap += (idx -> (0L,0))
-    }
-    val (currentTime,currentCount) = fMap(idx)
-    fMap.update(idx, (currentTime+(t1 - t0),currentCount+1))
-    result
-  } else {
-    block
-  }
+  // def startPerfCounters = { perfMeasurement = true }
+  // def stopPerfCounters = { perfMeasurement = false }
+  // var perfMeasurement = Store.GATHER_STATISTICS
+  // val totalTimers = new HashMap[String,(Long,Int)]
+  // val timersPerIndex = new HashMap[String,HashMap[Int,(Long,Int)]]
+  // def time[R](f: String)(block: => R): R = if(perfMeasurement) {
+  //   val t0 = System.nanoTime()
+  //   val result = block    // call-by-name
+  //   val t1 = System.nanoTime()
+  //   if(!totalTimers.contains(f)) {
+  //     totalTimers += (f -> (0L,0))
+  //   }
+  //   val (currentTime,currentCount) = totalTimers(f)
+  //   totalTimers.update(f, (currentTime+(t1 - t0),currentCount+1))
+  //   result
+  // } else {
+  //   block
+  // }
+  // def time[R](f: String, idx:Int)(block: => R): R = if(perfMeasurement) {
+  //   val t0 = System.nanoTime()
+  //   val result = block    // call-by-name
+  //   val t1 = System.nanoTime()
+  //   if(!timersPerIndex.contains(f)) {
+  //     timersPerIndex += (f -> new HashMap[Int,(Long,Int)])
+  //   }
+  //   val fMap = timersPerIndex(f)
+  //   if(!fMap.contains(idx)) {
+  //     fMap += (idx -> (0L,0))
+  //   }
+  //   val (currentTime,currentCount) = fMap(idx)
+  //   fMap.update(idx, (currentTime+(t1 - t0),currentCount+1))
+  //   result
+  // } else {
+  //   block
+  // }
+  // def insert(e:E):Unit = time("insert") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; } }
+  // def update(e:E):Unit = time("update") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
+  // def delete(e:E):Unit = time("delete") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } } // e already in the Store
+  // def get(idx:Int,key:E):E = time("get",idx) { if (key==null) return key; idxs(idx).get(key) }
+  // def foreach(f:E=>Unit):Unit = time("foreach") { idxs(0).foreach(f) } // assumes idxs(0) is the most efficient index
+  // def slice(idx:Int,key:E,f:E=>Unit) = time("slice",idx) { if (key!=null) idxs(idx).slice(key,f) }
+  // def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = time("range", idx) { idxs(idx).range(min,max,withMin,withMax,f) }
+  // def delete(idx:Int,key:E):Unit = time("delete", idx) { slice(idx,key,e=>delete(e)) }
+  // def clear = time("clear") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }
+  // def compact = time("compact") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).compact; i+=1; } }
+  
   def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),null)(cE)
   def this(n:Int,ops:Array[EntryIdx[E]])(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),ops)(cE)
   private val n = idxs.length
-  def insert(e:E):Unit = time("insert") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; } }
-  def update(e:E):Unit = time("update") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
-  def delete(e:E):Unit = time("delete") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } } // e already in the Store
-  def get(idx:Int,key:E):E = time("get",idx) { if (key==null) return key; idxs(idx).get(key) }
-  def foreach(f:E=>Unit):Unit = time("foreach") { idxs(0).foreach(f) } // assumes idxs(0) is the most efficient index
-  def slice(idx:Int,key:E,f:E=>Unit) = time("slice",idx) { if (key!=null) idxs(idx).slice(key,f) }
-  def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = time("range", idx) { idxs(idx).range(min,max,withMin,withMax,f) }
-  def delete(idx:Int,key:E):Unit = time("delete", idx) { slice(idx,key,e=>delete(e)) }
-  def clear = time("clear") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }
-  def compact = time("compact") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).compact; i+=1; } }
+  def insert(e:E):Unit = /*time("insert")*/ { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; } }
+  def update(e:E):Unit = /*time("update")*/ { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
+  def delete(e:E):Unit = /*time("delete")*/ { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } } // e already in the Store
+  def get(idx:Int,key:E):E = /*time("get",idx)*/ { if (key==null) return key; idxs(idx).get(key) }
+  def foreach(f:E=>Unit):Unit = /*time("foreach")*/ { idxs(0).foreach(f) } // assumes idxs(0) is the most efficient index
+  def slice(idx:Int,key:E,f:E=>Unit) = /*time("slice",idx)*/ { if (key!=null) idxs(idx).slice(key,f) }
+  def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = /*time("range", idx)*/ { idxs(idx).range(min,max,withMin,withMax,f) }
+  def delete(idx:Int,key:E):Unit = /*time("delete", idx)*/ { slice(idx,key,e=>delete(e)) }
+  def clear = /*time("clear")*/ { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }
+  def compact = /*time("compact")*/ { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).compact; i+=1; } }
   def size = idxs(0).size
   def index(idx:Int,tp:IndexType,unique:Boolean=false,sliceIdx:Int= -1) { // sliceIdx is the underlying slice index for IBound
     val i:Idx[E] = tp match {
@@ -246,27 +258,25 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
 
   def getInfoStr:String = {
     val res = new StringBuilder("MapInfo => {\n")
-    //val perfStat = new StringBuilder("")
     res.append("  size => ").append(if(idxs(0) == null) idxs(1).size else size).append("\n")
     res.append("  idxs => [\n")
-    totalTimers.foreach{ case (f,(t,count)) =>
-      //perfStat.append(f).append(",").append(t/1000000).append(".").append((t/1000)%1000).append("\n")
-      val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
-      res.append("    time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
-    }
+    // totalTimers.foreach{ case (f,(t,count)) =>
+    //   val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
+    //   res.append("    time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
+    // }
     idxs.zipWithIndex.foreach { case (idx, idxID) =>
       if(idx == null) res.append(ind(ind("INone"))).append(",\n")
       else {
-        res.append(ind(ind(idx.info))).append(" --> {\n")
-        timersPerIndex.foreach{ case (f,fMap) =>
-          if(fMap.contains(idxID)) {
-            val (t,count) = fMap(idxID)
-            val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
-            res.append("      time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
-            //perfStat.append(f).append(",").append(t/1000000).append(".").append((t/1000)%1000).append("\n")
-          }
-        }
-        res.append("    }\n")//.append(ind(ind(perfStat.toString))).append(", \n")
+        res.append(ind(ind(idx.info)))
+        // res.append(" --> {\n")
+        // timersPerIndex.foreach{ case (f,fMap) =>
+        //   if(fMap.contains(idxID)) {
+        //     val (t,count) = fMap(idxID)
+        //     val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
+        //     res.append("      time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
+        //   }
+        // }
+        // res.append("    }\n")
       }
     }
     res.append("]")

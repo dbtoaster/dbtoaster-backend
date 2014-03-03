@@ -275,11 +275,13 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
     impl.codegen.emitDataStructures(outWriter)
     val ds = outStream.toString
-    val printInfoDef = "def printMapsInfo() = {\n" + 
-      maps.map{ case (m,MapDef(_,_,keys,_)) => if (keys.size>0) "  System.out.println(\""+m+" => \" + "+m+".getInfoStr)\n  Store.addTimersFromStore(\""+m+"\", "+m+".totalTimers, "+m+".timersPerIndex)\n" else "" }.mkString +
-      impl.storeSyms.map{ map => if(map.attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)) { val m = impl.codegen.quote(map); "  Store.addTimersFromStore(\""+m+"\", "+m+".totalTimers, "+m+".timersPerIndex)\n" } else "" }.mkString +
-      "  System.out.println(\"Timers Info => {\\n%s\\n%s}\".format(Store.printTimersInfo,Store.printTimersInfoCSV))\n"+
-      "}"
+    val printInfoDef = if(Store.GATHER_STATISTICS) {
+      "def printMapsInfo() = {\n" + 
+        maps.map{ case (m,MapDef(_,_,keys,_)) => if (keys.size>0) "  System.out.println(\""+m+" => \" + "+m+".getInfoStr)\n  Store.addTimersFromStore(\""+m+"\", "+m+".totalTimers, "+m+".timersPerIndex)\n" else "" }.mkString +
+        impl.storeSyms.map{ map => if(map.attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)) { val m = impl.codegen.quote(map); "  Store.addTimersFromStore(\""+m+"\", "+m+".totalTimers, "+m+".timersPerIndex)\n" } else "" }.mkString +
+        "  System.out.println(\"Timers Info => {\\n%s\\n%s}\".format(Store.printTimersInfo,Store.printTimersInfoCSV))\n"+
+        "}"
+    } else "def printMapsInfo() = {}"
     val r=ms+"\n"+ts+"\n"+ds+"\n"+printInfoDef
     (r,str,ld0,consts)
   }
