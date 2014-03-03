@@ -544,19 +544,21 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
   }
 
   override def emitDataStructures(out: java.io.PrintWriter): Unit = {
+    import ddbt.Utils.ind
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
       val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
       out.println("  case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
         "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
       }.mkString(", "), argTypes.size))
+      // If there is only one index defined, ignores the index argument (i)
       val tupleHashSeed = "0xcafebabe"
-      out.println("    def hash(i: Int):Int = {\n      var hash:Int = %s\n      %s\n      hash\n    }".format(tupleHashSeed,indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
-        "if(i == %d) {\n%s\n      }".format(j, genHashFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx,argTypes))
-      }.mkString(" else ")))
-      out.println("    def cmp(i: Int, e0:ddbt.lib.store.Entry):Int = {\n      val e=e0.asInstanceOf[%s]\n      %s %s\n    }".format(clsName, indices.zipWithIndex.map{ case ((idxType,idxLoc,idxUniq,idxSliceIdx), j) =>
-        "if(i == %d) {\n%s\n      }".format(j, genCmpFunc("        ",idxType,idxLoc,idxUniq,idxSliceIdx))
-      }.mkString(" else "),if(indices.size > 0) "else { 0 }" else "0"))
+      val tupleHash = indices.map{ case (idxType,idxLoc,idxUniq,idxSliceIdx) => genHashFunc("  ",idxType,idxLoc,idxUniq,idxSliceIdx,argTypes) }
+      val tupH = (if (indices.size==1) tupleHash(0) else "i match {\n"+ind(tupleHash.zipWithIndex.map{ case (s,i) => "case "+i+" =>\n"+s }.mkString+"case _ =>")+"\n}\n")
+      out.println("    def hash(i: Int):Int = {\n"+ind("var hash:Int = "+tupleHashSeed+"\n"+tupH+"hash",3)+"\n    }")
+      val tupleCmp = indices.map{ case (idxType,idxLoc,idxUniq,idxSliceIdx) => genCmpFunc("",idxType,idxLoc,idxUniq,idxSliceIdx) }
+      val tupC = (if (indices.size==1) tupleCmp(0) else "i match {\n"+ind(tupleCmp.zipWithIndex.map{ case (s,i) => "case "+i+" => "+s+"\n" }.mkString+"case _ => 0")+"\n}\n")
+      out.println("    def cmp(i: Int, e0:ddbt.lib.store.Entry):Int = {\n"+ind("val e=e0.asInstanceOf["+clsName+"]\n"+tupC,3)+"\n    }")
       out.println("    def copy = %s(%s)".format(clsName, argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")))
       out.println("  }")
     }
