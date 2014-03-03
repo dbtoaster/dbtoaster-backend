@@ -162,7 +162,7 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
     totalTimers.foreach{ case (f,(t,count)) => 
       //perfStat.append(f).append(",").append(t/1000000).append(".").append((t/1000)%1000).append("\n")
       val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
-      res.append("    time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms, ").append(count).append(") in average -> ").append(avg).append(" ns").append("\n")
+      res.append("    time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
     }
     idxs.zipWithIndex.foreach { case (idx, idxID) =>
       if(idx == null) res.append(ind(ind("INone"))).append(",\n")
@@ -172,7 +172,7 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
           if(fMap.contains(idxID)) {
             val (t,count) = fMap(idxID)
             val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
-            res.append("      time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms, ").append(count).append(") in average -> ").append(avg).append(" ns").append("\n")
+            res.append("      time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
             //perfStat.append(f).append(",").append(t/1000000).append(".").append((t/1000)%1000).append("\n")
           }
         }
