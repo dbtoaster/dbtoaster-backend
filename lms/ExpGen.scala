@@ -80,8 +80,8 @@ object ScalaExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressi
         case e: ScalaParserException => unformattedScala
       }
     }
-    def emitTriggerSource[T:Manifest](body: Block[T],name:String,args:List[(String,Type)],localSyms:List[Sym[Store[Entry]]]) : String = {
-      val funDef = "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(emitSource(body))+localSyms.map{s => "\nStore.addTimersFromStore(\""+quote(s)+"\", "+quote(s)+".totalTimers, "+quote(s)+".timersPerIndex)"}.mkString+"\n}"
+    def emitTriggerSource[T:Manifest](body: Block[T],name:String,args:List[(String,Type)]) : String = {
+      val funDef = "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(emitSource(body))+"\n}"
 
       var staticFieldsStr = ""
       staticFields.map { case (key, staticFldDef) =>
@@ -96,7 +96,7 @@ object ScalaExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressi
   override def reset = { storeSyms = Nil; super.reset }
   def emit[T:Manifest](sym: => Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
   def emit[T:Manifest](blk:Block[T]) = { assert(codegen ne null); codegen.emitSource(blk) }
-  def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)],localSyms:List[Sym[Store[Entry]]]) = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args,localSyms) }
+  def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]) = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args) }
 }
 
 // XXX: implement the counterpart for C/C++

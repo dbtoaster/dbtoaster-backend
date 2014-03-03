@@ -113,14 +113,14 @@ object Store {
       case Some(currentTotalTimer) => {
         currentTotalTimer.foreach{ case (op, (currentTime,currentCount)) =>
           totalTimer.get(op) match {
-            case Some((time,count)) => totalTimer.update(op, (time+currentTime,count+currentCount))
+            case Some((time,count)) => currentTotalTimer.update(op, (time+currentTime,count+currentCount))
             case None => //don't care
           }
         }
-        totalTimer.foreach{ case (op, (time,count)) =>
+        totalTimer.foreach{ case (op, timeCount) =>
           currentTotalTimer.get(op) match {
             case Some(_) => //don't care
-            case None => currentTotalTimer += (op -> (time,count))
+            case None => currentTotalTimer += (op -> timeCount)
           }
         }
       }
@@ -162,7 +162,7 @@ object Store {
           }
         }
       }
-      case None => totalTimersForStores += (storeName -> totalTimer)
+      case None => timersPerIndexForStores += (storeName -> timersPerIndex)
     }
   }
 }
