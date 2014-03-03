@@ -49,16 +49,17 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
   def startPerfCounters = { perfMeasurement = true }
   def stopPerfCounters = { perfMeasurement = false }
   var perfMeasurement = true
-  val totalTimers = new scala.collection.mutable.HashMap[String,Long]
-  val timersPerIndex = new scala.collection.mutable.HashMap[String,scala.collection.mutable.HashMap[Int,Long]]
+  val totalTimers = new scala.collection.mutable.HashMap[String,(Long,Int)]
+  val timersPerIndex = new scala.collection.mutable.HashMap[String,scala.collection.mutable.HashMap[Int,(Long,Int)]]
   def time[R](f: String)(block: => R): R = if(perfMeasurement) {
     val t0 = System.nanoTime()
     val result = block    // call-by-name
     val t1 = System.nanoTime()
     if(!totalTimers.contains(f)) {
-      totalTimers += (f -> 0)
+      totalTimers += (f -> (0L,0))
     }
-    totalTimers.update(f, totalTimers(f)+(t1 - t0))
+    val (currentTime,currentCount) = totalTimers(f)
+    totalTimers.update(f, (currentTime+(t1 - t0),currentCount+1))
     result
   } else {
     block
@@ -68,13 +69,14 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
     val result = block    // call-by-name
     val t1 = System.nanoTime()
     if(!timersPerIndex.contains(f)) {
-      timersPerIndex += (f -> new scala.collection.mutable.HashMap[Int,Long])
+      timersPerIndex += (f -> new scala.collection.mutable.HashMap[Int,(Long,Int)])
     }
     val fMap = timersPerIndex(f)
     if(!fMap.contains(idx)) {
-      fMap += (idx -> 0L)
+      fMap += (idx -> (0L,0))
     }
-    fMap.update(idx, fMap(idx)+(t1 - t0))
+    val (currentTime,currentCount) = fMap(idx)
+    fMap.update(idx, (currentTime+(t1 - t0),currentCount+1))
     result
   } else {
     block
@@ -157,9 +159,10 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
     //val perfStat = new StringBuilder("")
     res.append("  size => ").append(if(idxs(0) == null) idxs(1).size else size).append("\n")
     res.append("  idxs => [\n")
-    totalTimers.foreach{ case (f,t) => 
+    totalTimers.foreach{ case (f,(t,count)) => 
       //perfStat.append(f).append(",").append(t/1000000).append(".").append((t/1000)%1000).append("\n")
-      res.append("    time in ").append(f).append(" => ").append(t/1000000).append(".").append((t/1000)%1000).append(" ms").append("\n")
+      val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
+      res.append("    time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms, ").append(count).append(") in average -> ").append(avg).append(" ns").append("\n")
     }
     idxs.zipWithIndex.foreach { case (idx, idxID) =>
       if(idx == null) res.append(ind(ind("INone"))).append(",\n")
@@ -167,8 +170,9 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
         res.append(ind(ind(idx.info))).append(" --> {\n")
         timersPerIndex.foreach{ case (f,fMap) =>
           if(fMap.contains(idxID)) {
-            val t = fMap(idxID)
-            res.append("      time in ").append(f).append(" => ").append(t/1000000).append(".").append((t/1000)%1000).append(" ms").append("\n")
+            val (t,count) = fMap(idxID)
+            val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
+            res.append("      time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms, ").append(count).append(") in average -> ").append(avg).append(" ns").append("\n")
             //perfStat.append(f).append(",").append(t/1000000).append(".").append((t/1000)%1000).append("\n")
           }
         }
