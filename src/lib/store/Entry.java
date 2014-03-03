@@ -21,8 +21,8 @@ public abstract class Entry {
   // Note: some indices may require order(entries)=order(hash(entries)) to work
   // correctly. Make sure you define it properly or don't use these indices.
 
-  //abstract public boolean zero(); // the tuple can safely be deleted from the map
-  //abstract public void combine(Entry e); // combine e in this (some kine of aggregation)
+  // public boolean zero() { return false; } // the tuple can safely be deleted from the map
+  // public void combine(Entry e) {} // combine e in this (some kine of aggregation)
 
   // TODO: decouple cmp() and hash() such that the same Entry can be reused in maps with different indexes
 }

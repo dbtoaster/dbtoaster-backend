@@ -548,6 +548,33 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
       val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
+
+      // ------------- EntryOps (hash)
+      def h(tp:String) = if (tp=="Int") "" else ".##"
+      def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
+      val tupHash = indices.map{ case (idxType,idxLoc,idxUniq,idxSliceIdx) =>
+        def genHFunc(idxLocations: Seq[Int]) = idxLocations.zipWithIndex.map { case (i,n) =>
+          (if(n==0) "(e:"+clsName+") => { var hash=0xcafebabe; var mix" else "  mix") + "=e._"+i+h(argTypes(i-1))+" * 0xcc9e2d51 "+
+          "mix=" + rotl("mix", "15")+"; mix*=0x1b873593; mix^=hash; mix=" + rotl("mix", "13")+"; hash=(mix << 1)+mix+0xe6546b64\n"
+        }.mkString+"  hash^="+idxLocations.size+"; hash^=hash>>>16; hash*=0x85ebca6b; hash^=hash >>> 13; hash*=0xc2b2ae35; hash^=hash>>>16; hash\n}\n"
+        idxType match {
+          case IHash|IList => genHFunc(idxLoc)
+          case ISliceHeapMax|ISliceHeapMin => genHFunc(List(idxLoc(0)))
+          case _ => sys.error("index_hash not supported")
+        }
+      }
+      val tupCmp = indices.map{ case (idxType,idxLoc,idxUniq,idxSliceIdx) => "(e1:"+clsName+",e2:"+clsName+") => "+(idxType match {
+        case IHash | IList => "if(%s) 0 else 1".format(idxLoc.map(i => "e1._%d==e2._%d".format(i,i)).mkString(" && "))
+        case ISliceHeapMin => val i = idxLoc(0); "if(e1._%s < e2._%s) -1 else if(e1._%s > e2._%s) 1 else 0".format(i,i,i,i)
+        case ISliceHeapMax => val i = idxLoc(0); "if(e1._%s < e2._%s) 1 else if(e1._%s > e2._%s) -1 else 0".format(i,i,i,i)
+        case _ => sys.error("index_cmp not supported")
+      })+"\n"}
+      out.println(ind("object "+clsName+"_Ops extends EntryOps["+clsName+"] {\n"+ind(
+        "def hash(i: Int) = "+(if (tupHash.size==1) tupHash(0) else "i match {\n"+ind(tupHash.zipWithIndex.map{ case (s,i) => "case "+i+" => "+s }.mkString+"case _ => (e:"+clsName+") => 0")+"\n}")+"\n"+
+        "def cmp(i: Int) = "+(if (tupCmp.size==1) tupCmp(0) else "i match {\n"+ind(tupCmp.zipWithIndex.map{ case (s,i) => "case "+i+" => "+s }.mkString+"case _ => (e1:"+clsName+",e2:"+clsName+") => 0")+"\n}")
+      )+"\n}"))
+      // -------------------------
+
       out.println("  case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
         "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
       }.mkString(", "), argTypes.size))
@@ -583,7 +610,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
                    m += ((IList, (1 to c.tp.typeArguments.size),false,-1))
     }
     val cName = quote(c, true)
-    out.println("val %s = new Store[%s](%d)".format(cName, storeEntryType(c), idxArr.size))
+    out.println("val %s = Store[%s](%d,%s_Ops)".format(cName, storeEntryType(c), idxArr.size, storeEntryType(c)))
     idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
       case IList => out.println("%s.index(%d,IList,%s)".format(cName, i, idxUniq))
       case IHash => out.println("%s.index(%d,IHash,%s)".format(cName, i, idxUniq))

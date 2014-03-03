@@ -33,6 +33,12 @@ case object ISliceMax extends IndexType // O(1) to delete any, O(N) to delete mi
 case object ISliceHeapMin extends IndexType // Operate over a slicing index and store all elements in a heap
 case object ISliceHeapMax extends IndexType // O(N) to delete any, O(log N) to delete min/max
 
+/** Map-specific operations on entries */
+abstract class EntryOps[E<:Entry] {
+  def cmp(i:Int): (E,E)=>Int; // key comparison between entries
+  def hash(i:Int): E=>Int; // hash function for Hash, index for Array
+}
+
 object Store {
   // DBToaster: create n+1 hash indexes (n=# projections)
   def apply[E<:Entry](n:Int)(implicit cE:ClassTag[E]) = new Store((0 to n).map(i=>new IdxHash[E](i,i==0)).toArray.asInstanceOf[Array[Idx[E]]])
@@ -44,7 +50,7 @@ object Store {
  * Index 0 should retain all data (and possibly be one of the fastest index).
  * Indices data structure can be dynamically adapted using the index() function.
  */
-class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
+class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:EntryOps[E]=null)(implicit cE:ClassTag[E]) {
   assert(idxs.size > 0)
   def startPerfCounters = { perfMeasurement = true }
   def stopPerfCounters = { perfMeasurement = false }
@@ -83,56 +89,16 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
   }
   def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n))
   private val n = idxs.length
-  def insert(e:E):Unit = {
-    time("insert"){
-      if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; }
-    }
-  }
-  def update(e:E):Unit = {
-    time("update"){
-      if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } // e already in the Store, update in foreach is _NOT_ supported
-    }
-  }
-  def delete(e:E):Unit = {
-    time("delete"){
-      if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } // e already in the Store
-    }
-  }
-  def get(idx:Int,key:E):E = {
-    time("get",idx){
-      if (key==null) return key; idxs(idx).get(key)
-    }
-  }
-  def foreach(f:E=>Unit):Unit = {
-    time("foreach"){
-      idxs(0).foreach(f) // assumes idxs(0) is the most efficient index
-    }
-  }
-  def slice(idx:Int,key:E,f:E=>Unit) = {
-    time("slice",idx) {
-      if (key!=null) idxs(idx).slice(key,f)
-    }
-  }
-  def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = {
-    time("range", idx) {
-      idxs(idx).range(min,max,withMin,withMax,f)
-    }
-  }
-  def delete(idx:Int,key:E):Unit = {
-    time("delete", idx) {
-      slice(idx,key,e=>delete(e))
-    }
-  }
-  def clear = {
-    time("clear"){
-      var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; }
-    }
-  }
-  def compact = {
-    time("compact"){
-      var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).compact; i+=1; }
-    }
-  }
+  def insert(e:E):Unit = time("insert") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; } }
+  def update(e:E):Unit = time("update") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
+  def delete(e:E):Unit = time("delete") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } } // e already in the Store
+  def get(idx:Int,key:E):E = time("get",idx) { if (key==null) return key; idxs(idx).get(key) }
+  def foreach(f:E=>Unit):Unit = time("foreach") { idxs(0).foreach(f) } // assumes idxs(0) is the most efficient index
+  def slice(idx:Int,key:E,f:E=>Unit) = time("slice",idx) { if (key!=null) idxs(idx).slice(key,f) }
+  def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = time("range", idx) { idxs(idx).range(min,max,withMin,withMax,f) }
+  def delete(idx:Int,key:E):Unit = time("delete", idx) { slice(idx,key,e=>delete(e)) }
+  def clear = time("clear") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }
+  def compact = time("compact") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).compact; i+=1; } }
   def size = idxs(0).size
   def index(idx:Int,tp:IndexType,unique:Boolean=false,sliceIdx:Int= -1) { // sliceIdx is the underlying slice index for IBound
     val i:Idx[E] = tp match {
@@ -159,7 +125,7 @@ class Store[E<:Entry](val idxs:Array[Idx[E]])(implicit cE:ClassTag[E]) {
     //val perfStat = new StringBuilder("")
     res.append("  size => ").append(if(idxs(0) == null) idxs(1).size else size).append("\n")
     res.append("  idxs => [\n")
-    totalTimers.foreach{ case (f,(t,count)) => 
+    totalTimers.foreach{ case (f,(t,count)) =>
       //perfStat.append(f).append(",").append(t/1000000).append(".").append((t/1000)%1000).append("\n")
       val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
       res.append("    time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
