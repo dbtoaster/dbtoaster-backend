@@ -83,12 +83,12 @@ object Store {
     val res = new StringBuilder
     totalTimersForStores.foreach { case (store,totalTimer) =>
       totalTimer.foreach{ case (op, (time,count)) =>
-        res.append(store).append(",").append(op).append(",%d,%d,%d".format(time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
+        res.append(store).append(",").append(op).append(",-1,%d,%d,%d".format(time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
       }
       timersPerIndexForStores.get(store) match {
         case Some(timersPerIndex) => timersPerIndex.foreach { case (op, indexTimers) =>
           indexTimers.foreach { case (idx, (time,count)) =>
-            res.append(store).append(",").append(op).append("(%d),%d,%d,%d".format(idx,time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
+            res.append(store).append(",").append(op).append(",%d,%d,%d,%d".format(idx,time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
           }
         }
         case None => //don't care
@@ -100,7 +100,7 @@ object Store {
         case None => {
           timersPerIndex.foreach { case (op, indexTimers) =>
             indexTimers.foreach { case (idx, (time,count)) =>
-              res.append(store).append(",").append(op).append("(%d),%d,%d,%d".format(idx,time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
+              res.append(store).append(",").append(op).append(",%d,%d,%d,%d".format(idx,time,count,(time.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int])).append("\n")
             }
           }
         }
