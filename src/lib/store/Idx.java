@@ -10,7 +10,8 @@ import scala.Unit;
  * @author TCK
  */
 public abstract class Idx<E extends Entry> {
-  Idx(Store<E> st, int idx, boolean unique) { this.idx=idx; this.unique=unique; }
+  Idx(Store<E> st, int idx, boolean unique) { this.ops=st.ops()[idx]; this.idx=idx; this.unique=unique; }
+  protected final EntryIdx<E> ops;
   protected final int idx;
   protected final boolean unique;
   protected int size;
@@ -78,7 +79,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
     if (i==p) { data[b]=null; return true; } // it's the root
     else do {
       if (i==p.diff) { p.diff=null; return true; } // leaf of diff branch
-      else if (p.hash==h && e.cmp(idx,p.data)==0) do { IdxHashEntry<E> s=p.same; if (i==s) { p.same=null; return true; }; p=s; } while (p!=null); // leaf of same branch
+      else if (p.hash==h && ops.cmp(e,p.data)==0) do { IdxHashEntry<E> s=p.same; if (i==s) { p.same=null; return true; }; p=s; } while (p!=null); // leaf of same branch
       p=p.diff;
     } while(p!=null);
     return false;
@@ -86,11 +87,11 @@ class IdxHash<E extends Entry> extends Idx<E> {
   // Public
   @Override public void insert(E e) {
     if (size==threshold) _resize();
-    int h=e.hash(idx), b=h&(data.length-1);
+    int h=ops.hash(e), b=h&(data.length-1);
     IdxHashEntry<E> p=data[b], i=new IdxHashEntry<E>(h,e); e.data[idx]=i;
     if (p==null) { data[b]=i; size+=1; return; }
     else do {
-      if (p.hash==h && e.cmp(idx,p.data)==0) {
+      if (p.hash==h && ops.cmp(e,p.data)==0) {
         if (unique) { p.data=e; e.data[idx]=p; }
         else { i.same=p.same; p.same=i; size+=1; }
         return;
@@ -100,23 +101,23 @@ class IdxHash<E extends Entry> extends Idx<E> {
     } while(p!=null);
   }
   @Override public void delete(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && _del(e,i)) { e.data[idx]=null; size-=1; } }
-  @Override public void update(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && i.hash!=e.hash(idx) && _del(e,i)) { size-=1; insert(e); } }
-  @Override public E get(E key) { int h=key.hash(idx); IdxHashEntry<E> e=data[h&(data.length-1)];
-    while (e!=null && (e.hash!=h || key.cmp(idx,e.data)!=0)) e=e.diff; return e!=null ? e.data : null;
+  @Override public void update(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && i.hash!=ops.hash(e) && _del(e,i)) { size-=1; insert(e); } }
+  @Override public E get(E key) { int h=ops.hash(key); IdxHashEntry<E> e=data[h&(data.length-1)];
+    while (e!=null && (e.hash!=h || ops.cmp(key,e.data)!=0)) e=e.diff; return e!=null ? e.data : null;
   }
   @Override public void foreach(Function1<E,Unit> f) { E d; IdxHashEntry<E> e,en;
     for (int i=0,n=data.length;i<n;++i) { e=data[i];
       if (e!=null) do { en=e.diff; do { d=e.data; e=e.same; f.apply(d); } while(e!=null); e=en; } while(e!=null);
     }
   }
-  @Override public void slice(E key,Function1<E,Unit> f) { int h=key.hash(idx); IdxHashEntry<E> e=data[h&(data.length-1)];
-    while (e!=null && (e.hash!=h || key.cmp(idx,e.data)!=0)) e=e.diff;
+  @Override public void slice(E key,Function1<E,Unit> f) { int h=ops.hash(key); IdxHashEntry<E> e=data[h&(data.length-1)];
+    while (e!=null && (e.hash!=h || ops.cmp(key,e.data)!=0)) e=e.diff;
     if (e!=null) do { E d=e.data; e=e.same; f.apply(d); } while (e!=null);
   }
   @Override public void range(E min, E max, boolean withMin, boolean withMax, Function1<E,Unit> f) {
     int cMin=withMin?-1:0; int cMax=withMax?1:0;
     for (int i=0,n=data.length;i<n;++i) { IdxHashEntry<E> e=data[i],em,en;
-      while (e!=null) { en=e.diff; if (e.data.cmp(idx,min)>cMin && e.data.cmp(idx,max)<cMax) do { em=e.same; f.apply(e.data); e=em; } while (e!=null); e=en; }
+      while (e!=null) { en=e.diff; if (ops.cmp(e.data,min)>cMin && ops.cmp(e.data,max)<cMax) do { em=e.same; f.apply(e.data); e=em; } while (e!=null); e=en; }
     }
   }
   @Override public void clear() { IdxHashEntry<E> z=null; for(int i=0,n=data.length;i<n;++i) { data[i]=z; } size=0; }
@@ -145,15 +146,16 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
   private int cmpIdx;
   private E cmpE=null;
   private Idx<E>[] idxs;
-  IdxSliced(Store<E> st, int cmpIdx, int sliceIdx, boolean max) { super(st,sliceIdx,true); this.idxs=st.idxs(); cmpIdx=cmpIdx; cmpRes=max?1:-1; }
+  private EntryIdx<E> ops2;
+  IdxSliced(Store<E> st, int cmpIdx, int sliceIdx, boolean max) { super(st,sliceIdx,true); ops2=st.ops()[cmpIdx]; this.idxs=st.idxs(); cmpIdx=cmpIdx; cmpRes=max?1:-1; }
   @Override public void insert(E e) {
     if (size==threshold) _resize();
-    int h=e.hash(idx), b=h&(data.length-1);
+    int h=ops.hash(e), b=h&(data.length-1);
     IdxHashEntry<E> p=data[b], i=new IdxHashEntry<E>(h,e); e.data[idx]=i;
     if (p==null) { data[b]=i; size+=1; return; }
     else do {
-      if (p.hash==h && e.cmp(idx,p.data)==0) {
-        if (e.cmp(cmpIdx,p.data)==cmpRes) { p.data=e; e.data[idx]=p; }
+      if (p.hash==h && ops.cmp(e,p.data)==0) {
+        if (ops2.cmp(e,p.data)==cmpRes) { p.data=e; e.data[idx]=p; }
         return;
       }
       if (p.diff==null) { p.diff=i; size+=1; return; }
@@ -163,7 +165,7 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
   @Override public void delete(E e) {
     IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i==null || !_del(e,i)) return; e.data[idx]=null;
     // Find a replacement candidate
-    Function1<E,Unit> f = new JFun1<E,Unit>() { @Override public Unit apply(E e) { if (cmpE==null || e.cmp(idx,cmpE)==cmpRes) cmpE=e; return (Unit)null; } };
+    Function1<E,Unit> f = new JFun1<E,Unit>() { @Override public Unit apply(E e) { if (cmpE==null || ops.cmp(e,cmpE)==cmpRes) cmpE=e; return (Unit)null; } };
     idxs[idx].slice(e,f); if (cmpE!=null) insert(cmpE); else size-=1; cmpE=null;
   }
 }
@@ -196,9 +198,9 @@ class IdxList<E extends Entry> extends Idx<E> {
     e.data[idx]=null;
   }
   @Override public void update(E e) { if (unique) { delete(e); insert(e); } }
-  @Override public E get(E key) { E p=head; if (p!=null) do { if (key.cmp(idx,p)==0) return p; p=(E)p.data[idx]; } while(p!=null); return null; }
+  @Override public E get(E key) { E p=head; if (p!=null) do { if (ops.cmp(key,p)==0) return p; p=(E)p.data[idx]; } while(p!=null); return null; }
   @Override public void foreach(Function1<E,Unit> f) { E p=head; if (p!=null) do { E n=(E)p.data[idx]; f.apply(p); p=n; } while(p!=null); }
-  @Override public void slice(E key,Function1<E,Unit> f) { E p=head; if (p!=null) do { E n=(E)p.data[idx]; if (key.cmp(idx,p)==0) f.apply(p); p=n; } while(p!=null); }
+  @Override public void slice(E key,Function1<E,Unit> f) { E p=head; if (p!=null) do { E n=(E)p.data[idx]; if (ops.cmp(key,p)==0) f.apply(p); p=n; } while(p!=null); }
   @Override public void clear() { head=null; tail=null; }
   @Override public void compact() {} // nothing to do
 }

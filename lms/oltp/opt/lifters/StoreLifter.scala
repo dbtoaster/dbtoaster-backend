@@ -545,17 +545,23 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
 
   override def emitDataStructures(out: java.io.PrintWriter): Unit = {
     import ddbt.Utils.ind
+    out.println
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
-      val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
 
-      // ------------- EntryOps (hash)
+      out.print("case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
+        "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
+      }.mkString(", "), argTypes.size))
+      out.println(" def copy = "+clsName+"("+argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")+") }")
+
+      val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
+      // ------------- EntryIdx
       def h(tp:String) = if (tp=="Int") "" else ".##"
       def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
       def genHFunc(idxLocations: Seq[Int]) = idxLocations.zipWithIndex.map { case (i,n) =>
         (if(n==0) "def hash(e:"+clsName+") = { var h=0xcafebabe; var mix" else "  mix") + "=e._"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
-        "mix=" + rotl("mix", "15")+"; mix*=0x1b873593; mix^=h; mix=" + rotl("mix", "13")+"; h=(mix << 1)+mix+0xe6546b64\n"
-      }.mkString+"  h^="+idxLocations.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h^=h>>>16; h\n}\n"
+        "mix=("+rotl("mix", "15")+")*0x1b873593 ^ h; mix=" + rotl("mix", "13")+"; h=(mix << 1)+mix+0xe6546b64; "
+      }.mkString+"h^="+idxLocations.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h ^ (h>>>16) }\n"
       indices.zipWithIndex.foreach{ case ((idxType,idxLoc,idxUniq,idxSliceIdx),i) =>
         out.println("object "+clsName+"_Idx"+i+" extends EntryIdx["+clsName+"] {\n"+ind(
           (idxType match {
@@ -571,35 +577,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
           })
         )+"\n}")
       }
-      /*
-      val tupHash = indices.map{ case (idxType,idxLoc,idxUniq,idxSliceIdx) =>
-      }
-      val tupCmp = indices.map{ case (idxType,idxLoc,idxUniq,idxSliceIdx) => "(e1:"+clsName+",e2:"+clsName+") => "+(idxType match {
-        case IHash | IList => "if(%s) 0 else 1".format(idxLoc.map(i => "e1._%d==e2._%d".format(i,i)).mkString(" && "))
-        case ISliceHeapMin => val i = idxLoc(0); "if(e1._%s < e2._%s) -1 else if(e1._%s > e2._%s) 1 else 0".format(i,i,i,i)
-        case ISliceHeapMax => val i = idxLoc(0); "if(e1._%s < e2._%s) 1 else if(e1._%s > e2._%s) -1 else 0".format(i,i,i,i)
-        case _ => sys.error("index_cmp not supported")
-      })+"\n"}
-      out.println(ind("object "+clsName+"_Ops extends EntryIdx["+clsName+"] {\n"+ind(
-        "def hash(i: Int) = "+(if (tupHash.size==1) tupHash(0) else "i match {\n"+ind(tupHash.zipWithIndex.map{ case (s,i) => "case "+i+" => "+s }.mkString+"case _ => (e:"+clsName+") => 0")+"\n}")+"\n"+
-        "def cmp(i: Int) = "+(if (tupCmp.size==1) tupCmp(0) else "i match {\n"+ind(tupCmp.zipWithIndex.map{ case (s,i) => "case "+i+" => "+s }.mkString+"case _ => (e1:"+clsName+",e2:"+clsName+") => 0")+"\n}")
-      )+"\n}"))
-      */
-      // -------------------------
-
-      out.println("  case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
-        "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
-      }.mkString(", "), argTypes.size))
-      // If there is only one index defined, ignores the index argument (i)
-      val tupleHashSeed = "0xcafebabe"
-      val tupleHash = indices.map{ case (idxType,idxLoc,idxUniq,idxSliceIdx) => genHashFunc("  ",idxType,idxLoc,idxUniq,idxSliceIdx,argTypes) }
-      val tupH = (if (indices.size==1) tupleHash(0) else "i match {\n"+ind(tupleHash.zipWithIndex.map{ case (s,i) => "case "+i+" =>\n"+s }.mkString+"case _ =>")+"\n}\n")
-      out.println("    def hash(i: Int):Int = {\n"+ind("var hash:Int = "+tupleHashSeed+"\n"+tupH+"hash",3)+"\n    }")
-      val tupleCmp = indices.map{ case (idxType,idxLoc,idxUniq,idxSliceIdx) => genCmpFunc("",idxType,idxLoc,idxUniq,idxSliceIdx) }
-      val tupC = (if (indices.size==1) tupleCmp(0) else "i match {\n"+ind(tupleCmp.zipWithIndex.map{ case (s,i) => "case "+i+" => "+s+"\n" }.mkString+"case _ => 0")+"\n}\n")
-      out.println("    def cmp(i: Int, e0:ddbt.lib.store.Entry):Int = {\n"+ind("val e=e0.asInstanceOf["+clsName+"]\n"+tupC,3)+"\n    }")
-      out.println("    def copy = %s(%s)".format(clsName, argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")))
-      out.println("  }")
+      out.println
     }
   }
 

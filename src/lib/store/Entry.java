@@ -11,8 +11,8 @@ package ddbt.lib.store;
 public abstract class Entry {
   final Object[] data;
   public Entry(int n) { data = new Object[n]; }
-  abstract public int cmp(int i, Entry e); // key comparison between entries
-  abstract public int hash(int i); // hash function for Hash, index for Array
+  //abstract public int cmp(int i, Entry e); // key comparison between entries
+  //abstract public int hash(int i); // hash function for Hash, index for Array
   abstract public Entry copy(); // returns a copy of the entry, for B-Trees only
 
   // Note: the hash function must take care of shuffling LSBs enough, no

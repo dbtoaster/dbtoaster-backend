@@ -171,16 +171,16 @@ class IdxDirect[E<:Entry](st:Store[E],idx:Int,unique:Boolean,var data:Array[E])(
   private var imm = false // immediate: hash=array_key
   private var off=0 // offset ajustement for minimal hash value in immediate mode
   private def prepare() { // O(n*log(n))
-    size=data.length; if (size==0) return; data=data.sortWith((l:E,r:E)=>l.hash(idx) < r.hash(idx))
-    imm = data(size-1).hash(idx)-data(0).hash(idx) < size/min_density; // compactness
-    var i=1; while (i < size && imm) { imm &&= data(i-1).hash(idx) < data(i).hash(idx); i+=1 } // at most 1 element per cell
-    if (imm) { off=data(0).hash(idx); val d=new Array[E](data(size-1).hash(idx)+1-off); data.foreach(e => d(e.hash(idx)-off)=e); data=d }
+    size=data.length; if (size==0) return; data=data.sortWith((l:E,r:E)=>ops.hash(l) < ops.hash(r))
+    imm = ops.hash(data(size-1))-ops.hash(data(0)) < size/min_density; // compactness
+    var i=1; while (i < size && imm) { imm &&= ops.hash(data(i-1)) < ops.hash(data(i)); i+=1 } // at most 1 element per cell
+    if (imm) { off=ops.hash(data(0)); val d=new Array[E](ops.hash(data(size-1))+1-off); data.foreach(e => d(ops.hash(e)-off)=e); data=d }
     else w("data is note dense, immediate mode")
   }
   prepare
-  override def insert(e:E) { val h=e.hash(idx); if (imm && h>=off && h<=off+size-1) data(h-off)=e else w("insert") }
-  override def delete(e:E) { val h=e.hash(idx); if (imm && h>=off && h<=off+size-1) data(h-off)=nil else w("delete") }
-  override def get(key:E):E = if (data.length==0) nil else { val h=key.hash(idx)
+  override def insert(e:E) { val h=ops.hash(e); if (imm && h>=off && h<=off+size-1) data(h-off)=e else w("insert") }
+  override def delete(e:E) { val h=ops.hash(e); if (imm && h>=off && h<=off+size-1) data(h-off)=nil else w("delete") }
+  override def get(key:E):E = if (data.length==0) nil else { val h=ops.hash(key)
     //println("(%s) data(%s-%s)".format(imm, h,off))
     if (imm) {
       val x = h-off
@@ -188,11 +188,11 @@ class IdxDirect[E<:Entry](st:Store[E],idx:Int,unique:Boolean,var data:Array[E])(
     }
     else { // binary search, finds position of leftmost element with the same hash
       val n=data.length; var s=0; var e=n; var m=0
-      while (s < e) { m=(s+e)/2; val d=data(m); val h2=d.hash(idx)
-        if (h2 < h) s=m+1; else if (h==h2 && key.cmp(idx,d)==0) return d; else e=m;
+      while (s < e) { m=(s+e)/2; val d=data(m); val h2=ops.hash(d)
+        if (h2 < h) s=m+1; else if (h==h2 && ops.cmp(key,d)==0) return d; else e=m;
       }
       s+=1; // we already hit that element and failed
-      while (s < data.size) { val d=data(s); if (d.hash(idx)!=h) return nil; else if (key.cmp(idx,d)==0) return d; s+=1 }
+      while (s < data.size) { val d=data(s); if (ops.hash(d)!=h) return nil; else if (ops.cmp(key,d)==0) return d; s+=1 }
       nil
     }
   }
@@ -200,21 +200,21 @@ class IdxDirect[E<:Entry](st:Store[E],idx:Int,unique:Boolean,var data:Array[E])(
     if (imm) while (i < n) { val e=data(i); if (e!=null) f(e); i+=1; }
     else while (i < n) { f(data(i)); i+=1; }
   }
-  override def slice(key:E,f:E=>Unit) { val h=key.hash(idx)
+  override def slice(key:E,f:E=>Unit) { val h=ops.hash(key)
     if (imm) { val d=data(h-off); if (d!=null) f(d) }
     else {
       val n=data.length; var s=0; var e=n; var m=0
-      while (s < e) { m=(s+e)/2; val d=data(m); val h2=d.hash(idx); if (h2 < h) s=m+1; else e=m }
-      do { val d=data(s); if (key.cmp(idx,d)!=0) return; f(d); s+=1 } while (s < size)
+      while (s < e) { m=(s+e)/2; val d=data(m); val h2=ops.hash(d); if (h2 < h) s=m+1; else e=m }
+      do { val d=data(s); if (ops.cmp(key,d)!=0) return; f(d); s+=1 } while (s < size)
     }
   }
   override def range(min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) {
-    val h0=min.hash(idx)+(if (withMin) 0 else 1); val h1=max.hash(idx)+(if (withMax) 1 else 0)
+    val h0=ops.hash(min)+(if (withMin) 0 else 1); val h1=ops.hash(max)+(if (withMax) 1 else 0)
     if (imm) { var p=h0-off; val u=h1-off; while (p<u) { val d=data(p); if (d!=null) f(d); p+=1 } }
     else {
       val n=data.length; var s=0; var e=n; var m=0
-      while (s < e) { m=(s+e)/2; val d=data(m); val h2=d.hash(idx); if (h2 < h0) s=m+1; else e=m }
-      do { val d=data(s); if (d.hash(idx)>=h1) return; f(d); s+=1 } while (s < data.size)
+      while (s < e) { m=(s+e)/2; val d=data(m); val h2=ops.hash(d); if (h2 < h0) s=m+1; else e=m }
+      do { val d=data(s); if (ops.hash(d)>=h1) return; f(d); s+=1 } while (s < data.size)
     }
   }
 }
@@ -229,21 +229,21 @@ class IdxDirect[E<:Entry](st:Store[E],idx:Int,unique:Boolean,var data:Array[E])(
 class IdxArray[E<:Entry](st:Store[E],idx:Int,unique:Boolean,var data:Array[E])(implicit cE:ClassTag[E]) extends Idx[E](st,idx,unique) {
   private final val nil = null.asInstanceOf[E]
   size=data.length
-  data=data.sortWith((l:E,r:E)=>l.cmp(idx,r)<=0)
+  data=data.sortWith((l:E,r:E)=>ops.cmp(l,r)<=0)
   override def get(key:E):E = if (size==0) nil else { var s=0; var e=size; var m=0
-    while (s < e) { m=(s+e)/2; val d=data(m); val c=key.cmp(idx,d); if (c>0) s=m+1; else if (c==0) return d; else e=m; }; nil
+    while (s < e) { m=(s+e)/2; val d=data(m); val c=ops.cmp(key,d); if (c>0) s=m+1; else if (c==0) return d; else e=m; }; nil
   }
   override def foreach(f:E=>Unit) { val n=data.size; var i=0; while (i < n) { f(data(i)); i+=1; } }
   override def slice(key:E,f:E=>Unit) { var s=0; var e=size; var m=0
-    while (s < e) { m=(s+e)/2; val c=key.cmp(idx,data(m)); if (c>0) s=m+1; else e=m }
-    do { val d=data(s); if (key.cmp(idx,d)!=0) return; f(d); s+=1 } while (s < size)
+    while (s < e) { m=(s+e)/2; val c=ops.cmp(key,data(m)); if (c>0) s=m+1; else e=m }
+    do { val d=data(s); if (ops.cmp(key,d)!=0) return; f(d); s+=1 } while (s < size)
   }
   override def range(min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) {
     var s=0; var e=size; var m=0
-    while (s < e) { m=(s+e)/2; val c=min.cmp(idx,data(m)); if (c>0) s=m+1; else e=m }
-    if (!withMin) while (s < size && min.cmp(idx,data(s))==0) s+=1
+    while (s < e) { m=(s+e)/2; val c=ops.cmp(min,data(m)); if (c>0) s=m+1; else e=m }
+    if (!withMin) while (s < size && ops.cmp(min,data(s))==0) s+=1
     val r=if (withMax) 0 else 1
-    while (s < size) { val d=data(s); if (max.cmp(idx,d) < r) return; f(d); s+=1 }
+    while (s < size) { val d=data(s); if (ops.cmp(max,d) < r) return; f(d); s+=1 }
   }
 }
 
@@ -284,9 +284,9 @@ class IdxBTree[E<:Entry](st:Store[E],idx:Int,unique:Boolean)(implicit cE:ClassTa
   // XXX: test with binary search
 
   // Leftmost element or next
-  @inline private def _pos(e:E,n:Node,inner:Int):Int = { val data=n.data; val num=n.num; var k=0; while(k < num && data(k).cmp(idx,e) < inner) k+=1; k } // inner=0,1
+  @inline private def _pos(e:E,n:Node,inner:Int):Int = { val data=n.data; val num=n.num; var k=0; while(k < num && ops.cmp(data(k),e) < inner) k+=1; k } // inner=0,1
   @inline private def leaf_insert_nonfull(node:LeafNode, e:E, index:Int) { // assert(index<=node.num); assert(node.num<M)
-    if(index < M && node.data(index)!=null && unique && e.cmp(idx,node.data(index))==0) node.data(index)=e // Inserting a duplicate, overwrite the old one
+    if(index < M && node.data(index)!=null && unique && ops.cmp(e,node.data(index))==0) node.data(index)=e // Inserting a duplicate, overwrite the old one
     else { var i=node.num; while (i>index) { node.data(i)=node.data(i-1); i-=1 }; node.num+=1; size+=1; node.data(index)=e } // Inserted key is unique
     e.data(idx)=node
   }
@@ -320,7 +320,7 @@ class IdxBTree[E<:Entry](st:Store[E],idx:Int,unique:Boolean)(implicit cE:ClassTa
       n.num=treshold-1
       // Set up the return variable
       val k=n.data(treshold-1);
-      inner_insert_nonfull(if(e.cmp(idx,k) < 0) n else n2, e)
+      inner_insert_nonfull(if(ops.cmp(e,k) < 0) n else n2, e)
       Split(k,node,n2)
     } else { inner_insert_nonfull(n,e); null }
   } else { // leaf node
@@ -345,7 +345,7 @@ class IdxBTree[E<:Entry](st:Store[E],idx:Int,unique:Boolean)(implicit cE:ClassTa
   }
   override def get(key:E):E = { var n=root
     while (n.isInstanceOf[InnerNode]) { val ni=n.asInstanceOf[InnerNode]; n=ni.children(_pos(key,ni,1)) }
-    val p=_pos(key,n,0); if(p < n.num && key.cmp(idx,n.data(p))==0) n.data(p) else nil
+    val p=_pos(key,n,0); if(p < n.num && ops.cmp(key,n.data(p))==0) n.data(p) else nil
   }
   override def delete(e:E) {
     val n = e.data(idx).asInstanceOf[LeafNode]; if (n==null) return; var found=false; var i=0
@@ -356,7 +356,7 @@ class IdxBTree[E<:Entry](st:Store[E],idx:Int,unique:Boolean)(implicit cE:ClassTa
     val n = e.data(idx).asInstanceOf[LeafNode]; if (n==null) return;
     if (!e.eq(n.data(0)) && !e.eq(n.data(n.num-1))) { // we might get lazy if the element is correctly positioned in the array
       var i=1; while(i < n.num-1 && !e.eq(n.data(i))) { i+=1 }; if (i==n.num-1) return; // not found, ignore
-      if (n.data(i-1).cmp(idx,n.data(i)) < 1 && n.data(i).cmp(idx,n.data(i+1)) < 1) return; // well positionned
+      if (ops.cmp(n.data(i-1),n.data(i)) < 1 && ops.cmp(n.data(i),n.data(i+1)) < 1) return; // well positionned
     }
     delete(e); insert(e)
   }
@@ -381,25 +381,25 @@ class IdxBTree[E<:Entry](st:Store[E],idx:Int,unique:Boolean)(implicit cE:ClassTa
 
   private def _slice(key:E,f:E=>Unit,n:Node): Unit = if (n.isInstanceOf[InnerNode]) {
     val vs=n.data; val num=n.num; val cs=n.asInstanceOf[InnerNode].children
-    var pc= -1; var nc=key.cmp(idx,vs(0)); if (nc<=0) _slice(key,f,cs(0))
-    var i=0; while(i < num) { pc=nc; nc=key.cmp(idx,vs(i)); if (pc>=0 && nc<=0) _slice(key,f,cs(i)); i+=1 }
+    var pc= -1; var nc=ops.cmp(key,vs(0)); if (nc<=0) _slice(key,f,cs(0))
+    var i=0; while(i < num) { pc=nc; nc=ops.cmp(key,vs(i)); if (pc>=0 && nc<=0) _slice(key,f,cs(i)); i+=1 }
     if (nc>=0) _slice(key,f,cs(i))
   } else {
     val vs=n.data; val num=n.num; var i=0;
-    while(i < num && key.cmp(idx,vs(i))>0) i+=1
-    while(i < num && key.cmp(idx,vs(i))==0) { f(vs(i)); i+=1; }
+    while(i < num && ops.cmp(key,vs(i))>0) i+=1
+    while(i < num && ops.cmp(key,vs(i))==0) { f(vs(i)); i+=1; }
   }
   override def slice(key:E,f:E=>Unit) = _slice(key,f,root)
 
   private def _range(min:E,max:E,cMin:Int,cMax:Int,f:E=>Unit,n:Node): Unit = if (n.isInstanceOf[InnerNode]) {
     val vs=n.data; val num=n.num; val cs=n.asInstanceOf[InnerNode].children
-    if (min.cmp(idx,vs(0))<cMin) _range(min,max,cMin,cMax,f,cs(0));
-    var i=1; while (i < num) { if (max.cmp(idx,vs(i-1))>cMax && min.cmp(idx,vs(i))<cMin) _range(min,max,cMin,cMax,f,cs(i)); i+=1; }
-    if (max.cmp(idx,vs(i-1))>cMax) _range(min,max,cMin,cMax,f,cs(i));
+    if (ops.cmp(min,vs(0))<cMin) _range(min,max,cMin,cMax,f,cs(0));
+    var i=1; while (i < num) { if (ops.cmp(max,vs(i-1))>cMax && ops.cmp(min,vs(i))<cMin) _range(min,max,cMin,cMax,f,cs(i)); i+=1; }
+    if (ops.cmp(max,vs(i-1))>cMax) _range(min,max,cMin,cMax,f,cs(i));
   } else {
     val vs=n.data; val num=n.num; var i=0;
-    while(i < num && min.cmp(idx,vs(i))>=cMin) i+=1
-    while(i < num && max.cmp(idx,vs(i))>cMax) { f(vs(i)); i+=1; }
+    while(i < num && ops.cmp(min,vs(i))>=cMin) i+=1
+    while(i < num && ops.cmp(max,vs(i))>cMax) { f(vs(i)); i+=1; }
   }
   override def range(min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = _range(min,max,if (withMin) 1 else 0,if (withMax) -1 else 0,f,root)
   override def clear() { root=new LeafNode(); size=0 }
@@ -411,7 +411,8 @@ class IdxBTree[E<:Entry](st:Store[E],idx:Int,unique:Boolean)(implicit cE:ClassTa
  * + insert,delete,update = O(log N) / get=O(1)
  * + clear,size
  */
-class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](st,idx,true) {
+class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(implicit cE:ClassTag[E]) extends Idx[E](st,sliceIdx,true) {
+  private final val ops2 = st.ops(idx)
   private final val nil = null.asInstanceOf[E]
   private final val default_capacity = 16
   private final val cRes = if (max) 1 else -1 // comparison result: "better"
@@ -426,7 +427,7 @@ class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(impl
   private var data = new Array[Heap](init_capacity)
   private var threshold = (init_capacity * load_factor).toInt
   // Inlined functions
-  @inline private def _hash(e:E) = { var h=e.hash(sliceIdx); h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
+  @inline private def _hash(e:E) = { var h=ops.hash(e); h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
   @inline private def _resize(new_capacity:Int) { val d=new Array[Heap](new_capacity)
     var i=0; val n=data.size; while(i < n) { var q=data(i); while (q!=null) { val nq=q.next; val b=q.hash&(new_capacity-1); q.next=d(b); d(b)=q; q=nq }; i+=1 }
     data=d; threshold=Math.min((new_capacity*load_factor).toInt, max_capacity+1);
@@ -446,7 +447,7 @@ class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(impl
     val h=_hash(e); val b = h&(data.length-1); var p=nil; var q=data(b);
     // add value to slice heap if exists
     while (q!=null) {
-      if (q.hash==h && e.cmp(sliceIdx,q.get)==0) { q.add(e); return } // found slice's heap
+      if (q.hash==h && ops.cmp(e,q.get)==0) { q.add(e); return } // found slice's heap
       q=q.next
     }
     // new slice
@@ -457,7 +458,7 @@ class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(impl
     val q=_meta(e); val h=q.hash; val h2=_hash(e); if (h2==h) return; // did not change partition
     else if (_del(e)) { size-=1; insert(e) }
   }
-  override def get(e:E):E = { val h=_hash(e); var q=data(h&(data.length-1)); while (q!=null) { if (q.hash==h && e.cmp(sliceIdx,q.get)==0) return q.get; q=q.next; }; nil }
+  override def get(e:E):E = { val h=_hash(e); var q=data(h&(data.length-1)); while (q!=null) { if (q.hash==h && ops.cmp(e,q.get)==0) return q.get; q=q.next; }; nil }
   override def clear { var i=0; val n=data.length; while(i < n) { data(i)=hnil; i+=1; }; size=0 }
   override def compact = if (data.size*compact_factor>size) _resize(math.max(init_capacity,1 << (1+(math.log((size/load_factor))/math.log(2)).ceil.toInt)))
 
@@ -469,8 +470,8 @@ class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(impl
       var hole = holeInput; var child = hole << 1 // invariant: child = hole*2
       val tmp = array(hole)
       while (child <= size) {
-        if (child!=size && array(child+1).cmp(idx,array(child))==cRes) child+=1
-        if (array(child).cmp(idx,tmp)==cRes) array(hole)=array(child) else { array(hole)=tmp; return }
+        if (child!=size && ops2.cmp(array(child+1),array(child))==cRes) child+=1
+        if (ops2.cmp(array(child),tmp)==cRes) array(hole)=array(child) else { array(hole)=tmp; return }
         hole=child; child=hole << 1
       }
       array(hole)=tmp
@@ -478,7 +479,7 @@ class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(impl
     def get = array(1)
     def add(x:E) { if (size==array.length-1) _double; size+=1; x.data(idx)=this
       var hole=size; var h=hole>>1 // invariant: h = hole/2
-      while (hole>1 && x.cmp(idx,array(h))==cRes) { array(hole)=array(h); hole=h; h=hole>>1 }
+      while (hole>1 && ops2.cmp(x,array(h))==cRes) { array(hole)=array(h); hole=h; h=hole>>1 }
       array(hole)=x
     }
     def remove(x:E) {
