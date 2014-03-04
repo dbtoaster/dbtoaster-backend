@@ -551,6 +551,17 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     case _ => "null"
   }
 
+  // Implementation of MurmurHash3 based on scala.util.hashing.MurmurHash3 for Products
+  // https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
+  def hashFun(argTypes:List[String],locs:Seq[Int],obj:String=null) = {
+    def h(tp:String) = if (tp=="Int") "" else ".##"
+    def rotl(i:String, dist:Int) = "("+i+" << "+dist+") | ("+i+" >>> "+(-dist)+")"
+    locs.zipWithIndex.map { case (i,n) =>
+      (if(n==0) "{ var h=0xcafebabe; var mix" else "  mix") + "="+(if (obj!=null) obj+"." else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
+      "mix=("+rotl("mix",15)+")*0x1b873593 ^ h; mix=" + rotl("mix", 13)+"; h=(mix << 1)+mix+0xe6546b64; "
+    }.mkString+"h^="+locs.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h ^ (h>>>16) }"
+  }
+
   override def emitDataStructures(out: java.io.PrintWriter): Unit = {
     import ddbt.Utils.ind
     out.println
@@ -569,19 +580,21 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
       // ------------- EntryIdx
       // Implementation of MurmurHash3 based on scala.util.hashing.MurmurHash3 for Products
       // https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
+      /*
       def h(tp:String) = if (tp=="Int") "" else ".##"
       def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
       def genHFunc(idxLocations: Seq[Int]) = idxLocations.zipWithIndex.map { case (i,n) =>
         (if(n==0) "def hash(e:"+clsName+") = { var h=0xcafebabe; var mix" else "  mix") + "=e._"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
         "mix=("+rotl("mix", "15")+")*0x1b873593 ^ h; mix=" + rotl("mix", "13")+"; h=(mix << 1)+mix+0xe6546b64; "
       }.mkString+"h^="+idxLocations.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h ^ (h>>>16) }\n"
+      */
       indices.zipWithIndex.foreach{ case ((idxType,idxLoc,idxUniq,idxSliceIdx),i) =>
         out.println("object "+clsName+"_Idx"+i+" extends EntryIdx["+clsName+"] {\n"+ind(
-          (idxType match {
-            case IHash|IList => genHFunc(idxLoc)
-            case ISliceHeapMax|ISliceHeapMin => genHFunc(List(idxLoc(0)))
+          "def hash(e:"+clsName+") = "+(idxType match {
+            case IHash|IList => hashFun(argTypes,idxLoc,"e")
+            case ISliceHeapMax|ISliceHeapMin => hashFun(argTypes,List(idxLoc(0)),"e")
             case _ => sys.error("index_hash not supported")
-          })+
+          })+"\n"+
           "def cmp(e1:"+clsName+",e2:"+clsName+") = "+(idxType match {
             case IHash | IList => "if(%s) 0 else 1".format(idxLoc.map(i => "e1._%d==e2._%d".format(i,i)).mkString(" && "))
             case ISliceHeapMin => val i = idxLoc(0); "if(e1._%s < e2._%s) -1 else if(e1._%s > e2._%s) 1 else 0".format(i,i,i,i)

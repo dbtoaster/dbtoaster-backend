@@ -631,7 +631,7 @@ class Store1[E<:Entry1[E]]()(implicit cE:ClassTag[E]) {
   private var size = 0
   private var data = new Array[E](init_capacity)
   private var threshold = (init_capacity * load_factor).toInt
-  def insert(e:E) {
+  def add(e:E) {
     // resize array if needed
     if (size==threshold) {
       val n=data.size; if (n==max_capacity) threshold=java.lang.Integer.MAX_VALUE
@@ -650,4 +650,5 @@ class Store1[E<:Entry1[E]]()(implicit cE:ClassTag[E]) {
     } while (p!=null)
   }
   def foreach(f:E=>Unit) { val n=data.length; var i=0; while(i < n) { var e=data(i); while (e!=null) { f(e); e=e.next }; i+=1 } }
+  def clear() { data=new Array[E](init_capacity); threshold=(init_capacity * load_factor).toInt }
 }
