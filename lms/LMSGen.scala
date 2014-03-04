@@ -227,8 +227,10 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val mapKeys = m.keys.map(_._2)
     val nodeName = map+"_node"
     val res = nodeName+"_mres"
-    "{ printMapsInfo(); val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) })+" -> e._"+(mapKeys.size+1)+") }; "+res+".toMap }"
+    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) })+" -> e._"+(mapKeys.size+1)+") }; "+res+".toMap }"
   }
+
+  override def onEndStream = "printMapsInfo();"
 
   override def genMap(m:MapDef):String = {
     if (m.keys.size==0) createVarDefinition(m.name, m.tp)+";"
