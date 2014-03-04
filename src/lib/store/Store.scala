@@ -649,6 +649,6 @@ class Store1[E<:Entry1[E]]()(implicit cE:ClassTag[E]) {
       var n=p.next; if (n==null) { p.next=e; size+=1; return; }; p=n;
     } while (p!=null)
   }
-  def foreach(f:E=>Unit) { println("Size="+size); val n=data.length; var i=0; while(i < n) { var e=data(i); while (e!=null) { f(e); e=e.next }; i+=1 } }
+  def foreach(f:E=>Unit) { val n=data.length; var i=0; while(i < n) { var e=data(i); while (e!=null) { f(e); e=e.next }; i+=1 } }
   def clear() { data=new Array[E](init_capacity); size=0; threshold=(init_capacity * load_factor).toInt }
 }
