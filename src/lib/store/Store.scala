@@ -38,13 +38,16 @@ case object ISliceHeapMax extends IndexType // O(N) to delete any, O(log N) to d
 abstract class EntryIdx[E<:Entry] {
   def cmp(e1:E,e2:E):Int; // key comparison between entries
   def hash(e:E):Int; // hash function for Hash, index for Array
+  // Note: The hash function must take care of shuffling LSBs enough, no
+  // re-shuffling is done in the Store. Some indices (IdxDirect) require
+  // order(entries)=order(hash(entries)) to work correctly.
 }
 
 object Store {
   val GATHER_STATISTICS=false
   // DBToaster: create n+1 hash indexes (n=# projections)
   //def apply[E<:Entry](n:Int,ops:EntryOps[E]=null)(implicit cE:ClassTag[E]) = new Store((0 to n).map(i=>new IdxHash[E](ops,i,i==0)).toArray.asInstanceOf[Array[Idx[E]]])
-  
+
   val totalTimersForStores:HashMap[String,HashMap[String,(Long,Int)]] = new HashMap[String,HashMap[String,(Long,Int)]]()
   val timersPerIndexForStores:HashMap[String,HashMap[String,HashMap[Int,(Long,Int)]]] = new HashMap[String,HashMap[String,HashMap[Int,(Long,Int)]]]()
   def printTimersInfo = {
@@ -211,30 +214,22 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
   // } else {
   //   block
   // }
-  // def insert(e:E):Unit = time("insert") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; } }
-  // def update(e:E):Unit = time("update") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
-  // def delete(e:E):Unit = time("delete") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } } // e already in the Store
-  // def get(idx:Int,key:E):E = time("get",idx) { if (key==null) return key; idxs(idx).get(key) }
-  // def foreach(f:E=>Unit):Unit = time("foreach") { idxs(0).foreach(f) } // assumes idxs(0) is the most efficient index
-  // def slice(idx:Int,key:E,f:E=>Unit) = time("slice",idx) { if (key!=null) idxs(idx).slice(key,f) }
-  // def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = time("range", idx) { idxs(idx).range(min,max,withMin,withMax,f) }
-  // def delete(idx:Int,key:E):Unit = time("delete", idx) { slice(idx,key,e=>delete(e)) }
-  // def clear = time("clear") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }
-  // def compact = time("compact") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).compact; i+=1; } }
-  
+  @inline private def time[R](f:String)(block: => R):R = { block }
+  @inline private def time[R](f:String, idx:Int)(block: => R):R = { block }
+
   def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),null)(cE)
   def this(n:Int,ops:Array[EntryIdx[E]])(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),ops)(cE)
   private val n = idxs.length
-  def insert(e:E):Unit = /*time("insert")*/ { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; } }
-  def update(e:E):Unit = /*time("update")*/ { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
-  def delete(e:E):Unit = /*time("delete")*/ { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } } // e already in the Store
-  def get(idx:Int,key:E):E = /*time("get",idx)*/ { if (key==null) return key; idxs(idx).get(key) }
-  def foreach(f:E=>Unit):Unit = /*time("foreach")*/ { idxs(0).foreach(f) } // assumes idxs(0) is the most efficient index
-  def slice(idx:Int,key:E,f:E=>Unit) = /*time("slice",idx)*/ { if (key!=null) idxs(idx).slice(key,f) }
-  def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = /*time("range", idx)*/ { idxs(idx).range(min,max,withMin,withMax,f) }
-  def delete(idx:Int,key:E):Unit = /*time("delete", idx)*/ { slice(idx,key,e=>delete(e)) }
-  def clear = /*time("clear")*/ { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }
-  def compact = /*time("compact")*/ { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).compact; i+=1; } }
+  def insert(e:E):Unit = time("insert") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; } }
+  def update(e:E):Unit = time("update") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
+  def delete(e:E):Unit = time("delete") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } } // e already in the Store
+  def get(idx:Int,key:E):E = time("get",idx) { if (key==null) return key; idxs(idx).get(key) }
+  def foreach(f:E=>Unit):Unit = time("foreach") { idxs(0).foreach(f) } // assumes idxs(0) is the most efficient index
+  def slice(idx:Int,key:E,f:E=>Unit) = time("slice",idx) { if (key!=null) idxs(idx).slice(key,f) }
+  def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = time("range", idx) { idxs(idx).range(min,max,withMin,withMax,f) }
+  def delete(idx:Int,key:E):Unit = time("delete", idx) { slice(idx,key,e=>delete(e)) }
+  def clear = time("clear") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }
+  def compact = time("compact") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).compact; i+=1; } }
   def size = idxs(0).size
   def index(idx:Int,tp:IndexType,unique:Boolean=false,sliceIdx:Int= -1) { // sliceIdx is the underlying slice index for IBound
     val i:Idx[E] = tp match {
@@ -622,32 +617,37 @@ class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(impl
 }
 
 // ------------------------------------------
-/*
-// Temporary-only map
-abstract class TempEntry[E<:TempEntry[_]] {
-  final val hval = { var h=hash; h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
+// Single hash-index entries
+abstract class Entry1[E<:Entry1[E]] {
+  val hash:Int // hash function
   var next:E = null.asInstanceOf[E]
-  def hash: Int // hash function
+  def merge(e:E):Boolean // combine in this the value of e if keys are equal
 }
-class TempStore[E<:TempEntry[E]](implicit cE:ClassTag[E]) {
+
+class Store1[E<:Entry1[E]]()(implicit cE:ClassTag[E]) {
   private final val init_capacity = 16
   private final val max_capacity = 1 << 30
-  private final val load_factor = 0.75f;
+  private final val load_factor = 0.75f
   private var size = 0
   private var data = new Array[E](init_capacity)
   private var threshold = (init_capacity * load_factor).toInt
   def insert(e:E) {
+    // resize array if needed
     if (size==threshold) {
-      val n=data.size;
-      if (n==max_capacity) threshold=java.lang.Integer.MAX_VALUE
-      else {
-        val new_capacity = n << 1; val d=new Array[E](new_capacity)
-        var i=0; while(i < n) { var e=data(i); while (e!=null) { val ne=e.next; val b=e.hval&(new_capacity-1); e.next=d(b); d(b)=e; e=ne }; i+=1 }
+      val n=data.size; if (n==max_capacity) threshold=java.lang.Integer.MAX_VALUE
+      else { val new_capacity = n << 1; val d=new Array[E](new_capacity)
+        var i=0; while(i < n) { var e=data(i); while (e!=null) { val ne=e.next; val b=e.hash&(new_capacity-1); e.next=d(b); d(b)=e; e=ne }; i+=1 }
         data=d; threshold=Math.min((new_capacity*load_factor).toInt, max_capacity+1);
       }
     }
-    val b=e.hval&(data.length-1); e.next=data(b); data(b)=e; size+=1;
+    // insert and merge equivalent entries
+    val b=e.hash&(data.length-1);
+    var p=data(b);
+    if (p==null) data(b)=e;
+    else do {
+      if (p.merge(e)) return
+      var n=p.next; if (n==null) { p.next=e; return; }; p=n;
+    } while (p!=null)
   }
   def foreach(f:E=>Unit) { val n=data.length; var i=0; while(i < n) { var e=data(i); while (e!=null) { f(e); e=e.next }; i+=1 } }
 }
-*/

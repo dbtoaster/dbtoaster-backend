@@ -556,14 +556,19 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     out.println
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
-
-      out.print("case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
+      out.println("case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
         "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
       }.mkString(", "), argTypes.size))
-      out.println(" def copy = "+clsName+"("+argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")+") }")
+      out.println("  def copy = "+clsName+"("+argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")+")")
+      //val l="_"+argTypes.size
+      //out.println("  override def zero = "+l+" == "+zeroValue(argTypes.last))
+      //out.println("  override def merge(e0:Entry) { val e=e0.asInstanceOf["+clsName+"]; "+l+" "+(argTypes.last match { case "java.util.Date" => "= new Date("+l+".getTime + e."+l+".getTime)" case _ => "+= e."+l })+" }")
+      out.println("}")
 
       val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
       // ------------- EntryIdx
+      // Implementation of MurmurHash3 based on scala.util.hashing.MurmurHash3 for Products
+      // https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
       def h(tp:String) = if (tp=="Int") "" else ".##"
       def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
       def genHFunc(idxLocations: Seq[Int]) = idxLocations.zipWithIndex.map { case (i,n) =>
@@ -615,56 +620,9 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
       case IHash => out.println("%s.index(%d,IHash,%s)".format(cName, i, idxUniq))
       case ISliceHeapMax => out.println("%s.index(%d,ISliceHeapMax,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
       case ISliceHeapMin => out.println("%s.index(%d,ISliceHeapMin,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
-      case _ => out.println("... not supported ...")
+      case _ => sys.error("Index type "+idxType+" not supported")
     }}
     outStream.toString
-  }
-
-  /*
-   * Implementation of MurmurHash3
-   * based on scala.util.hashing.MurmurHash3
-   * for Products
-   *
-   * https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
-   */
-  def genHashFunc(prefix:String, idxType: IndexType, idxLoc: Seq[Int], idxUniq: Boolean, idxSliceIdx:Int, argTypes:Seq[String]):String = {
-    def elemHashFunc(tp:String) = tp match {
-      case "Int" => ""
-      case _ => ".##"
-    }
-    def genHashFuncInternal(idxLocations: Seq[Int]) = {
-      def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
-      var counter:Int = 0
-      // if(idxLocations.size > 1) {
-        idxLocations.map { i =>
-          counter+=1
-          //TODO: Check whether hashCode works better compared to ##
-          //      as we know that everything is type-checked
-          prefix + (if(counter == 1) "var mix:Int" else "mix") + " = _"+i+elemHashFunc(argTypes(i-1))+" * 0xcc9e2d51\n" +
-          prefix + "mix = " + rotl("mix", "15")+"\n" +
-          prefix + "mix *= 0x1b873593\n" +
-          prefix + "mix ^= hash\n" +
-          prefix + "mix = " + rotl("mix", "13")+"\n" +
-          prefix + "hash = (mix << 1) + mix + 0xe6546b64\n"
-        }.mkString +
-        prefix + "hash ^= " + idxLocations.size + "\n" +
-        prefix + "hash ^= hash >>> 16\n" +
-        prefix + "hash *= 0x85ebca6b\n" +
-        prefix + "hash ^= hash >>> 13\n" +
-        prefix + "hash *= 0xc2b2ae35\n" +
-        prefix + "hash ^= hash >>> 16\n" //+
-      // } else {
-        //currently we are doing it in IHash index, so it is
-        //better not to do it here again
-        // javaHashMapHashFunc("hash", prefix)
-      // }
-    }
-
-    idxType match {
-      case IHash | IList => genHashFuncInternal(idxLoc)
-      case ISliceHeapMax | ISliceHeapMin => genHashFuncInternal(List(idxLoc(0)))
-      case _ => prefix+"... not supported ..."
-    }
   }
 
   /**
@@ -674,15 +632,10 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
    * otherwise encounter collisions for hashCodes that do not differ
    * in lower bits. Note: Null keys always map to hash 0, thus index 0.
    */
+  /*
   def javaHashMapHashFunc(hash: String, prefix: String) = {
     prefix + hash+" ^= ("+hash+" >>> 20) ^ ("+hash+" >>> 12)\n" +
     prefix + hash+" ^= ("+hash+" >>> 7) ^ ("+hash+" >>> 4)"
   }
-
-  def genCmpFunc(prefix:String, idxType: IndexType, idxLoc: Seq[Int], idxUniq: Boolean, idxSliceIdx:Int):String = idxType match {
-    case IHash | IList => "%sif(%s) 0 else 1".format(prefix,idxLoc.map(i => "_%d == e._%d".format(i,i)).mkString(" && "))
-    case ISliceHeapMin => val i = idxLoc(0); "%sif(_%s < e._%s) { -1 } else if(_%s > e._%s) { 1 } else { 0 }".format(prefix,i,i,i,i)
-    case ISliceHeapMax => val i = idxLoc(0); "%sif(_%s < e._%s) { 1 } else if(_%s > e._%s) { -1 } else { 0 }".format(prefix,i,i,i,i)
-    case _ => prefix+"... not supported ..."
-  }
+  */
 }

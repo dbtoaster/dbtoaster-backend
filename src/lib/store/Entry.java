@@ -10,19 +10,12 @@ package ddbt.lib.store;
  */
 public abstract class Entry {
   final Object[] data;
-  public Entry(int n) { data = new Object[n]; }
-  //abstract public int cmp(int i, Entry e); // key comparison between entries
-  //abstract public int hash(int i); // hash function for Hash, index for Array
+  public Entry(int n) { data=new Object[n]; }
   abstract public Entry copy(); // returns a copy of the entry, for B-Trees only
+  //abstract public boolean zero(); // the tuple can safely be deleted from the map
+  //abstract public void merge(Entry e); // combine e in this (some kine of aggregation)
 
-  // Note: the hash function must take care of shuffling LSBs enough, no
-  // re-shuffling is done in the store
-
-  // Note: some indices may require order(entries)=order(hash(entries)) to work
-  // correctly. Make sure you define it properly or don't use these indices.
-
-  // public boolean zero() { return false; } // the tuple can safely be deleted from the map
-  // public void combine(Entry e) {} // combine e in this (some kine of aggregation)
-
-  // TODO: decouple cmp() and hash() such that the same Entry can be reused in maps with different indexes
+  // backward compatibility
+  //public boolean zero() { return false; }
+  //public void merge(Entry e) {} // again we create typing issues here
 }
