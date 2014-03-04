@@ -28,7 +28,7 @@ trait M3StoreOps extends StoreOps with Equal with IfThenElse {
 
 trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp with EqualExp with IfThenElseExp {
   import ManifestHelper.man
-  val USE_STORE1 = false // whether we specialize temporary maps in Store1
+  val USE_STORE1 = true // whether we specialize temporary maps in Store1
 
   def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
@@ -46,7 +46,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
       if (USE_STORE1) {
         val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
         addIndicesToEntryClass[E](map, (xx, m) => { val idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
-        M3Add(map,ent)
+        reflectWrite(map)(M3Add(map,ent))
       } else {
         val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
         __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt += (n, ent.get(n)))
@@ -146,7 +146,8 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
   private val nameAttr = "_name"
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
-    case M3Add(s,e) => stream.println(quote(s)+".add("+quote(e)+")")
+    case M3Add(s,e) =>
+      stream.println(quote(s)+".add("+quote(e)+")")
     case StForeach(x, blockSym, block) if (USE_STORE1 && isTemp(x.asInstanceOf[Sym[Store[Entry]]])) =>
       emitValDef(sym, quote(x)+".foreach{ ")
       stream.println(quote(blockSym) + " => ")
@@ -161,14 +162,10 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
         Def.unapply(s) match {
           case Some(d: Def[Any]) => d match {
             case Named(n) => n
-            // case NamedM3Var(n,_) => n
-            // case NamedM3Map(n,_,_,_,_,_) => n
             case _ =>
               val strWriter: java.io.StringWriter = new java.io.StringWriter;
               val stream = new java.io.PrintWriter(strWriter);
-              withStream(stream) {
-                emitNode(s, d)
-              }
+              withStream(stream) { emitNode(s, d) }
               strWriter.toString
           }
           case None => if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
@@ -204,11 +201,8 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
     sym match {
       case s@Sym(n) => isVoidType(s.tp) match {
         case true => stream.println("" + rhs + extra)
-        case false => if(s.possibleToInline || s.noReference) {
-            stream.print("("+rhs+")")
-          } else {
-            stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
-          }
+        case false => if(s.possibleToInline || s.noReference) stream.print("("+rhs+")")
+                      else stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
       }
       case _ => stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
     }

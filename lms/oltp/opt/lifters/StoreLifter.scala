@@ -557,7 +557,7 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
     def h(tp:String) = if (tp=="Int") "" else ".##"
     def rotl(i:String, dist:Int) = "("+i+" << "+dist+") | ("+i+" >>> "+(-dist)+")"
     locs.zipWithIndex.map { case (i,n) =>
-      (if(n==0) "{ var h=0xcafebabe; var mix" else "  mix") + "="+(if (obj!=null) obj+"." else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
+      (if(n==0) "{ var h:Int=0xcafebabe; var mix:Int" else "  mix") + "="+(if (obj!=null) obj+"." else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
       "mix=("+rotl("mix",15)+")*0x1b873593 ^ h; mix=" + rotl("mix", 13)+"; h=(mix << 1)+mix+0xe6546b64; "
     }.mkString+"h^="+locs.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h ^ (h>>>16) }"
   }
@@ -578,16 +578,6 @@ trait ScalaGenStore extends ScalaGenBase with GenericNestedCodegen with ScalaGen
 
       val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
       // ------------- EntryIdx
-      // Implementation of MurmurHash3 based on scala.util.hashing.MurmurHash3 for Products
-      // https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
-      /*
-      def h(tp:String) = if (tp=="Int") "" else ".##"
-      def rotl(i: String, distance: String) = "("+i+" << "+distance+") | ("+i+" >>> -"+distance+")"
-      def genHFunc(idxLocations: Seq[Int]) = idxLocations.zipWithIndex.map { case (i,n) =>
-        (if(n==0) "def hash(e:"+clsName+") = { var h=0xcafebabe; var mix" else "  mix") + "=e._"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
-        "mix=("+rotl("mix", "15")+")*0x1b873593 ^ h; mix=" + rotl("mix", "13")+"; h=(mix << 1)+mix+0xe6546b64; "
-      }.mkString+"h^="+idxLocations.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h ^ (h>>>16) }\n"
-      */
       indices.zipWithIndex.foreach{ case ((idxType,idxLoc,idxUniq,idxSliceIdx),i) =>
         out.println("object "+clsName+"_Idx"+i+" extends EntryIdx["+clsName+"] {\n"+ind(
           "def hash(e:"+clsName+") = "+(idxType match {
