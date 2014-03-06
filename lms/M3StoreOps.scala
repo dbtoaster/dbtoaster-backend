@@ -41,15 +41,19 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     val tmp = isTemp(map.asInstanceOf[Sym[_]])
     val n = m.typeArguments.size
     val lastMan = m.typeArguments.last
+
+    val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
+    var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
+
     if(tmp) {
       // we don't remove 0-elements
       if (USE_STORE1) {
-        val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
-        addIndicesToEntryClass[E](map, (xx, m) => { val idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
+        //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
+        //addIndicesToEntryClass[E](map, (xx, m) => { val idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
         reflectWrite(map)(M3Add(map,ent))
       } else {
         val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
-        __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt += (n, ent.get(n)))
+        __ifThenElse(__equal(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),currentEnt += (n, ent.get(n)))
       }
     } else {
       // we remove 0-elements
@@ -57,7 +61,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
       __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
         ///////
         val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
-        __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),{
+        __ifThenElse(__equal(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),{
           currentEnt += (n, entVal)
           val currentEntVal = currentEnt.get(n)
           __ifThenElse(__equal(currentEntVal,unit(zero(lastMan))),map.delete(currentEnt),unit(()))
@@ -73,13 +77,17 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     val lastMan = m.typeArguments.last
     val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
     val entVal = ent.get(n)
+
+    val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
+    var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
+
     if(tmp) { // this never happens in practice
-      __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt.update(n, entVal)) // same
+      __ifThenElse(__equal(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),currentEnt.update(n, entVal)) // same
     } else {
       __ifThenElse(__equal(entVal,unit(zero(lastMan))),{
         __ifThenElse(__equal(currentEnt,unit(null)),unit(()),map.delete(currentEnt))
       },{
-        __ifThenElse(__equal(currentEnt,unit(null)),map.insert(ent),currentEnt.update(n, entVal)) // same
+        __ifThenElse(__equal(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),currentEnt.update(n, entVal)) // same
       })
     }
   }
@@ -109,6 +117,9 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
 
   case class Named[T](n:String)(implicit mT:Manifest[T]) extends Def[T]
   case class M3Add[E<:Entry:Manifest](s: Exp[Store[E]], e:Exp[E]) extends Def[Unit]
+
+  def stUnsafeInsert[E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E], idx:Int):Exp[Unit] = reflectWrite(x)(StUnsafeInsert[E](x, e, idx))
+  case class StUnsafeInsert[E<:Entry:Manifest](s: Exp[Store[E]], e:Exp[E],idx:Int) extends Def[Unit]
 }
 
 trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenStore {
@@ -146,6 +157,7 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
   private val nameAttr = "_name"
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
+    case StUnsafeInsert(x,e,i) => emitValDef(sym, quote(x)+".unsafeInsert("+i+","+quote(e)+")")
     case M3Add(s,e) =>
       stream.println(quote(s)+".add("+quote(e)+")")
     case StForeach(x, blockSym, block) if (USE_STORE1 && isTemp(x.asInstanceOf[Sym[Store[Entry]]])) =>

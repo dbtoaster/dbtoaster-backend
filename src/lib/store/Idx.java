@@ -17,6 +17,7 @@ public abstract class Idx<E extends Entry> {
   protected int size;
 
   protected void w(String n) {} //println(this.getClass.getName+": "+n+" not supported")
+  public void unsafeInsert(E e) { w("unsafeInsert"); }
   public void insert(E e) { w("insert"); }
   public void delete(E e) { w("delete"); }
   public void update(E e) { w("update"); } // reposition the entry if key/hash modified
@@ -85,6 +86,11 @@ class IdxHash<E extends Entry> extends Idx<E> {
     return false;
   }
   // Public
+  @Override public void unsafeInsert(E e) {
+    if (size==threshold) _resize();
+    int h=ops.hash(e), b=h&(data.length-1);
+    IdxHashEntry<E> i=new IdxHashEntry<E>(h,e); i.diff=data[b]; data[b]=i; size+=1;
+  }
   @Override public void insert(E e) {
     if (size==threshold) _resize();
     int h=ops.hash(e), b=h&(data.length-1);

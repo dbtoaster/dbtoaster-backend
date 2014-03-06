@@ -220,6 +220,7 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
   def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),null)(cE)
   def this(n:Int,ops:Array[EntryIdx[E]])(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),ops)(cE)
   private val n = idxs.length
+  def unsafeInsert(idx:Int,e:E):Unit = time("unsafeInsert") { if (e==null) return; idxs(idx).unsafeInsert(e); var i=0; while(i < n) { if (idx!=i && idxs(i)!=null) idxs(i).insert(e); i+=1; } }
   def insert(e:E):Unit = time("insert") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).insert(e); i+=1; } }
   def update(e:E):Unit = time("update") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
   def delete(e:E):Unit = time("delete") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } } // e already in the Store
