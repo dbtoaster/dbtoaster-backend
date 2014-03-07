@@ -57,9 +57,12 @@ class IdxHash<E extends Entry> extends Idx<E> {
   private final float load_factor;
   protected IdxHashEntry<E>[] data = new IdxHashEntry[init_capacity];
   protected int threshold;
-
-  IdxHash(Store<E> st, int idx, boolean unique) { super(st,idx,unique);
-    load_factor = unique ? 0.75f : 4.0f;
+  IdxHash(Store<E> st, int idx, boolean unique, float factor) {
+    super(st,idx,unique); load_factor = factor;
+    threshold = Math.round(init_capacity * load_factor);
+  }
+  IdxHash(Store<E> st, int idx, boolean unique) {
+    super(st,idx,unique); load_factor = unique ? 0.75f : 4.0f;
     threshold = Math.round(init_capacity * load_factor);
   }
   // Private/inlined functions

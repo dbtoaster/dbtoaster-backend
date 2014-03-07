@@ -232,6 +232,7 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
   def clear = time("clear") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }
   def compact = time("compact") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).compact; i+=1; } }
   def size = idxs(0).size
+  def index(idx:Int,i:Idx[E]) { idxs(idx) = i }
   def index(idx:Int,tp:IndexType,unique:Boolean=false,sliceIdx:Int= -1) { // sliceIdx is the underlying slice index for IBound
     val i:Idx[E] = tp match {
       case INone => null.asInstanceOf[Idx[E]]

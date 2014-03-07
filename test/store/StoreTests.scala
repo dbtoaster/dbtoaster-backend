@@ -2,15 +2,9 @@ package ddbt.test.store
 import org.scalatest.FunSpec
 import ddbt.lib.store._
 
-case class E(var _1:Int, var _2:Int, var _3:String) extends Entry(2) {
-  def cmp(i:Int, e0:Entry) = { val e=e0.asInstanceOf[E]; if (i==0) (if (_1<e._1) -1 else if (_1==e._1) 0 else 1) else if (i==1) (if (_2<e._2) -1 else if (_2==e._2) 0 else 1) else 0 }
-  def hash(i:Int) = if (i==0) _1 else if (i==1) _2 else 0
-  def copy = E(_1,_2,_3)
-}
-
 class StoreTests extends FunSpec {
   val N = 5
-  val ks = (0 until N).map(x=>E(x,x,""))
+  val ks = (0 until N).map(x=>E(x,x,0.0))
   val ts = Array[IndexType](IHash, IDirect, IArray, IBTree)
   def test_access(s:Store[E],sl_n:Int) {
     assert(s.size==N*N,"size()")
@@ -57,12 +51,14 @@ class StoreTests extends FunSpec {
   }
   */
   // XXX: test prev and next
-  def text_prev_next(s:Store[E]) {}
+  def text_prev_next(s:Store[E]) {
+
+  }
 
   def store(t:IndexType,uniq:Boolean,n:Int=1) = {
     val s = new Store[E](n);
     s.index(0,t match { case IHash|IBTree=>t case _ => IHash } ,uniq)
-    (0 until N*N) foreach { x => s.insert(if (uniq) E(x,x,"foo") else E(x%N,x/N,"foo")) }
+    (0 until N*N) foreach { x => s.insert(if (uniq) E(x,x,3.4) else E(x%N,x/N,3.4)) }
     s.index(0,t,uniq); s
   }
   def test(uniq:Boolean) {
@@ -99,7 +95,7 @@ class StoreTests extends FunSpec {
   }
   describe("List") {
     val s = new Store[E](1); s.index(0,IList,false);
-    (0 until N*N) foreach { x => s.insert(E(x,x,"foo")) }
+    (0 until N*N) foreach { x => s.insert(E(x,x,3.4)) }
     var es:List[E]=Nil; (0 until N) foreach { x => es=s.get(0,ks(x))::es }; es.foreach { e=> s.delete(e) }
     var n=0; s.foreach{ x=>n+=1 }; assert(n==N*(N-1))
   }
@@ -137,7 +133,7 @@ class StoreTests extends FunSpec {
     val s = new Store[E](2);
     s.index(0,IHash);
     s.index(1,INone);
-    (0 until 100) foreach { x => s.insert(E(x%10,x/10,"foo")) }
+    (0 until 100) foreach { x => s.insert(E(x%10,x/10,3.4)) }
     s.index(1,IHash);
     it("Count elements") {
       assert(s.size==100)
