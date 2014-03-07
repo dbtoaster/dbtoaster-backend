@@ -25,33 +25,33 @@ object IndexBench {
   }
   // Assumes 80% read / 20% write workload
   def work(s:Store[E], a:Array[E], M:Int) = {
-    s.clear; System.gc();
-    ns(()=>{
-      val N = a.size; s.clear
-      var i=0
-      var e:E=null.asInstanceOf[E]
-      i=0; while(i<N) { s.insert(a(i)); i+=1; } // 10% insert
-      i=0; while(i<N) { e=s.get(0,s.get(1,s.get(2,a(i)))); i+=1 } // 30% get
-      i=0; val L=N/M;
+    val N=a.size; val L=N/M; var i=0
+    var e:E=null.asInstanceOf[E]; s.clear; System.gc();
+    i=0; while(i<N) { s.insert(a(i)); i+=1; } // 10% insert
+    // i=0; while(i<N) { e=s.get(0,s.get(1,s.get(2,a(i)))); i+=1 } // 30% get
+    val t = ns(()=>{
+      i=0;
       (0 until 10).foreach { x => while(i<L) {
         //s.slice(0,a(i),x => e=x) // ~50% slicing (well a bit less with slice 0)
         //s.slice(2,a(i),x => e=x)
         //s.slice(2,a(i),x => e=x)
         s.slice(1,a(i),x => e=x)
+        /*
         s.slice(1,a(i),x => e=x)
         s.slice(1,a(i),x => e=x)
         s.slice(1,a(i),x => e=x)
         s.slice(1,a(i),x => e=x)
+        */
         i+=1
       }}
-      i=0; while(i<N) { s.delete(a(i)); i+=1; } // 10% delete
     })._1
+    //i=0; while(i<N) { s.delete(a(i)); i+=1; } // 10% delete
+    t
   }
 
   def test(S:Int,N:Int,M:Int,lf_u:Double,lf_nu:Double,out:PrintStream=null) {
     val L=N/M // Keep elements in an array (to refer after)
     val a=new Array[E](N); var i=0; while (i<N) { a(i)=E(i%L,i,i); i+=1; }
-
     val s1 = store(false,lf_u,lf_nu)
     val s2 = store(true,lf_u,lf_nu)
     val ts1 = (0 until S).map { x => work(s1,a,M) }.sorted
