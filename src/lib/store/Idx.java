@@ -57,12 +57,13 @@ class IdxHash<E extends Entry> extends Idx<E> {
   private final float load_factor;
   protected IdxHashEntry<E>[] data = new IdxHashEntry[init_capacity];
   protected int threshold;
+
   IdxHash(Store<E> st, int idx, boolean unique, float factor) {
     super(st,idx,unique); load_factor = factor;
     threshold = Math.round(init_capacity * load_factor);
   }
   IdxHash(Store<E> st, int idx, boolean unique) {
-    super(st,idx,unique); load_factor = unique ? 0.75f : 4.0f;
+    super(st,idx,unique); load_factor = 0.75f;
     threshold = Math.round(init_capacity * load_factor);
   }
   // Private/inlined functions
@@ -76,14 +77,18 @@ class IdxHash<E extends Entry> extends Idx<E> {
   }
   protected void _resize() { int n=data.length; if (n==max_capacity) threshold=Integer.MAX_VALUE; else _resize(n<<1); }
   protected boolean _del(E e,IdxHashEntry<E> i) {
-    IdxHashEntry<E> p=i.same; if (p!=null) { i.same=p.same; i.data=p.data; p.data.data[idx]=i; return true; } // eat same child
-    p=i.diff; if (p!=null) { i.hash=p.hash; i.same=p.same; i.diff=p.diff; i.data=p.data; p.data.data[idx]=i; return true; } // eat diff child
+    // 1) do not decrement size
+    IdxHashEntry<E> p=i.same; if (p!=null) { i.same=p.same; i.data=p.data; p.data.data[idx]=i; /*size-=1;*/ return true; } // eat same child
+    // 2) decrement size
+    p=i.diff; if (p!=null) { i.hash=p.hash; i.same=p.same; i.diff=p.diff; i.data=p.data; p.data.data[idx]=i; size-=1; return true; } // eat diff child
     // delete from parent (i is a leaf)
     int h=i.hash, b=h&(data.length-1); p=data[b];
-    if (i==p) { data[b]=null; return true; } // it's the root
+    if (i==p) { data[b]=null; size-=1; return true; } // it's the root
     else do {
-      if (i==p.diff) { p.diff=null; return true; } // leaf of diff branch
-      else if (p.hash==h && ops.cmp(e,p.data)==0) do { IdxHashEntry<E> s=p.same; if (i==s) { p.same=null; return true; }; p=s; } while (p!=null); // leaf of same branch
+      // 4) decrement size
+      if (i==p.diff) { p.diff=null; size-=1; return true; } // leaf of diff branch
+      // 3) dont decrement size
+      else if (p.hash==h && ops.cmp(e,p.data)==0) do { IdxHashEntry<E> s=p.same; if (i==s) { p.same=null; /*size-=1;*/ return true; }; p=s; } while (p!=null); // leaf of same branch
       p=p.diff;
     } while(p!=null);
     return false;
@@ -102,15 +107,15 @@ class IdxHash<E extends Entry> extends Idx<E> {
     else do {
       if (p.hash==h && ops.cmp(e,p.data)==0) {
         if (unique) { p.data=e; e.data[idx]=p; }
-        else { i.same=p.same; p.same=i; size+=1; }
+        else { i.same=p.same; p.same=i; /*size+=1;*/ }
         return;
       }
       if (p.diff==null) { p.diff=i; size+=1; return; }
       p=p.diff;
     } while(p!=null);
   }
-  @Override public void delete(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && _del(e,i)) { e.data[idx]=null; size-=1; } }
-  @Override public void update(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && i.hash!=ops.hash(e) && _del(e,i)) { size-=1; insert(e); } }
+  @Override public void delete(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && _del(e,i)) { e.data[idx]=null; /*size-=1;*/ } }
+  @Override public void update(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && i.hash!=ops.hash(e) && _del(e,i)) { /*size-=1;*/ insert(e); } }
   @Override public E get(E key) { int h=ops.hash(key); IdxHashEntry<E> e=data[h&(data.length-1)];
     while (e!=null && (e.hash!=h || ops.cmp(key,e.data)!=0)) e=e.diff; return e!=null ? e.data : null;
   }
