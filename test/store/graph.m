@@ -12,9 +12,9 @@ x=M;
 
 figure;
 hold on;
-plot(x,data(:, 6),'r-.'); % IdxHash
+plot(x,data(:, 6),'r-.'); % IdxHashTree - red
 plot(x,data(:, 7),'r');
 plot(x,data(:, 8),'r-.')
-plot(x,data(:, 9),'b-.'); % IdxHashL
+plot(x,data(:, 9),'b-.'); % IdxHashList - blue
 plot(x,data(:,10),'b');
 plot(x,data(:,11),'b-.');

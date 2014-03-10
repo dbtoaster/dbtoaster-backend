@@ -30,25 +30,21 @@ public abstract class Idx<E extends Entry> {
   public String info() { return this.getClass().getName()+"("+idx+","+(unique?"unique":"multiple")+")"; }
 }
 
-class IdxHashEntry<E extends Entry> {
-  IdxHashEntry(int h, E d) { hash=h; data=d; }
-  int hash; E data; IdxHashEntry<E> same, diff;
-}
 
 /**
  * IdxHash is a hashed index.
- * Buckets elements are stored in a special tree (invariant: sub-nodes of a same
- * branch do not have diff children). A bucket can be seen of a list(diff) of
- * list(same) of identical elements (a.cmp(idx,b)==0).
- * - If unique, a bucket is a simple list along 'diff'
- * - If non-unique, all elements along the 'same' branch are equal.
- *
+ * Buckets elements are stored in a list.
  * Use case: default, unless special operations are required.
  *
  * Supported operations:
  * + insert,delete,update,get = O(1)
  * + range = O(n)
  */
+class IdxHashEntry<E extends Entry> {
+  IdxHashEntry(int h, E d) { hash=h; data=d; }
+  int hash; E data; IdxHashEntry<E> next;
+}
+
 @SuppressWarnings("unchecked")
 class IdxHash<E extends Entry> extends Idx<E> {
   private static final int init_capacity = 16;
@@ -63,84 +59,70 @@ class IdxHash<E extends Entry> extends Idx<E> {
     threshold = Math.round(init_capacity * load_factor);
   }
   IdxHash(Store<E> st, int idx, boolean unique) {
-    super(st,idx,unique); load_factor = 0.75f;
+    super(st,idx,unique); load_factor = unique ? 0.75f : 4.0f;
     threshold = Math.round(init_capacity * load_factor);
   }
   // Private/inlined functions
-  // @inline private def _hash(e:E) = { var h=e.hash(idx); h^=(h>>>20)^(h>>>12)^(h<<9); h^(h>>>7)^(h>>>4); }
   private void _resize(int new_capacity) {
     IdxHashEntry<E>[] d=new IdxHashEntry[new_capacity];
     for (int i=0,n=data.length;i<n;++i) { IdxHashEntry<E> e=data[i], en;
-      while (e!=null) { en=e.diff; int b=e.hash&(new_capacity-1); e.diff=d[b]; d[b]=e; e=en; }
+      while (e!=null) { en=e.next; int b=e.hash&(new_capacity-1); e.next=d[b]; d[b]=e; e=en; }
     }
     data=d; threshold=Math.min(Math.round(new_capacity*load_factor), max_capacity+1);
   }
   protected void _resize() { int n=data.length; if (n==max_capacity) threshold=Integer.MAX_VALUE; else _resize(n<<1); }
   protected boolean _del(E e,IdxHashEntry<E> i) {
-    // 1) do not decrement size
-    IdxHashEntry<E> p=i.same; if (p!=null) { i.same=p.same; i.data=p.data; p.data.data[idx]=i; /*size-=1;*/ return true; } // eat same child
-    // 2) decrement size
-    p=i.diff; if (p!=null) { i.hash=p.hash; i.same=p.same; i.diff=p.diff; i.data=p.data; p.data.data[idx]=i; size-=1; return true; } // eat diff child
-    // delete from parent (i is a leaf)
+    IdxHashEntry<E> p=i.next; if (p!=null) { i.hash=p.hash; i.next=p.next; i.data=p.data; p.data.data[idx]=i; return true; } // eat next child
     int h=i.hash, b=h&(data.length-1); p=data[b];
-    if (i==p) { data[b]=null; size-=1; return true; } // it's the root
-    else do {
-      // 4) decrement size
-      if (i==p.diff) { p.diff=null; size-=1; return true; } // leaf of diff branch
-      // 3) dont decrement size
-      else if (p.hash==h && ops.cmp(e,p.data)==0) do { IdxHashEntry<E> s=p.same; if (i==s) { p.same=null; /*size-=1;*/ return true; }; p=s; } while (p!=null); // leaf of same branch
-      p=p.diff;
-    } while(p!=null);
+    if (i==p) { data[b]=null; return true; } // head of list
+    else do { if (i==p.next) { p.next=null; return true; } p=p.next; } while(p!=null); // tail
     return false;
   }
   // Public
   @Override public void unsafeInsert(E e) {
     if (size==threshold) _resize();
     int h=ops.hash(e), b=h&(data.length-1);
-    IdxHashEntry<E> i=new IdxHashEntry<E>(h,e); i.diff=data[b]; data[b]=i; size+=1;
+    IdxHashEntry<E> i=new IdxHashEntry<E>(h,e); i.next=data[b]; data[b]=i; size+=1;
   }
   @Override public void insert(E e) {
     if (size==threshold) _resize();
     int h=ops.hash(e), b=h&(data.length-1);
     IdxHashEntry<E> p=data[b], i=new IdxHashEntry<E>(h,e); e.data[idx]=i;
     if (p==null) { data[b]=i; size+=1; return; }
-    else do {
-      if (p.hash==h && ops.cmp(e,p.data)==0) {
-        if (unique) { p.data=e; e.data[idx]=p; }
-        else { i.same=p.same; p.same=i; /*size+=1;*/ }
-        return;
-      }
-      if (p.diff==null) { p.diff=i; size+=1; return; }
-      p=p.diff;
+    else if (!unique) { i.next=data[b]; data[b]=i; size+=1; return; }
+    else do { // unique
+      if (p.hash==h && ops.cmp(e,p.data)==0) { p.data=e; e.data[idx]=p; return; }
+      if (p.next==null) { p.next=i; size+=1; return; }
+      p=p.next;
     } while(p!=null);
   }
-  @Override public void delete(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && _del(e,i)) { e.data[idx]=null; /*size-=1;*/ } }
-  @Override public void update(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && i.hash!=ops.hash(e) && _del(e,i)) { /*size-=1;*/ insert(e); } }
+  @Override public void delete(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && _del(e,i)) { e.data[idx]=null; size-=1; } }
+  @Override public void update(E e) { IdxHashEntry<E> i=(IdxHashEntry<E>)e.data[idx]; if (i!=null && i.hash!=ops.hash(e) && _del(e,i)) { size-=1; insert(e); } }
   @Override public E get(E key) { int h=ops.hash(key); IdxHashEntry<E> e=data[h&(data.length-1)];
-    while (e!=null && (e.hash!=h || ops.cmp(key,e.data)!=0)) e=e.diff; return e!=null ? e.data : null;
+    while (e!=null && (e.hash!=h || ops.cmp(key,e.data)!=0)) e=e.next; return e!=null ? e.data : null;
   }
   @Override public void foreach(Function1<E,Unit> f) { E d; IdxHashEntry<E> e,en;
     for (int i=0,n=data.length;i<n;++i) { e=data[i];
-      if (e!=null) do { en=e.diff; do { d=e.data; e=e.same; f.apply(d); } while(e!=null); e=en; } while(e!=null);
+      if (e!=null) do { en=e.next; d=e.data; f.apply(d); e=en; } while(e!=null);
     }
   }
   @Override public void slice(E key,Function1<E,Unit> f) { int h=ops.hash(key); IdxHashEntry<E> e=data[h&(data.length-1)];
-    while (e!=null && (e.hash!=h || ops.cmp(key,e.data)!=0)) e=e.diff;
-    if (e!=null) do { E d=e.data; e=e.same; f.apply(d); } while (e!=null);
+    if (e!=null) do { if (e.hash==h && ops.cmp(key,e.data)==0) f.apply(e.data); e=e.next; } while(e!=null);
   }
   @Override public void range(E min, E max, boolean withMin, boolean withMax, Function1<E,Unit> f) {
     int cMin=withMin?-1:0; int cMax=withMax?1:0;
     for (int i=0,n=data.length;i<n;++i) { IdxHashEntry<E> e=data[i],em,en;
-      while (e!=null) { en=e.diff; if (ops.cmp(e.data,min)>cMin && ops.cmp(e.data,max)<cMax) do { em=e.same; f.apply(e.data); e=em; } while (e!=null); e=en; }
+      while (e!=null) { en=e.next; if (ops.cmp(e.data,min)>cMin && ops.cmp(e.data,max)<cMax) f.apply(e.data); e=en; }
     }
   }
   @Override public void clear() { IdxHashEntry<E> z=null; for(int i=0,n=data.length;i<n;++i) { data[i]=z; } size=0; }
   @Override public void compact() { if (data.length*compact_factor>size) _resize(Math.max(init_capacity, 1 << ((int)Math.ceil(1+(Math.log((size/load_factor))/Math.log(2)))) )); }
   @Override public String info() { IdxHashEntry<E> e,en; int max=0; int n=data.length;
-    for (int i=0;i<n;++i) { e=data[i]; int c=0; if (e!=null) do { en=e.diff; do { ++c; e=e.same; } while(e!=null); e=en; } while(e!=null); if (c>max) max=c; }
+    for (int i=0;i<n;++i) { e=data[i]; int c=0; if (e!=null) do { en=e.next; ++c; e=en; } while(e!=null); if (c>max) max=c; }
     return "IdxHash("+idx+","+(unique?"unique":"multiple")+") {\n  elements => "+size+"\n  buckets => "+n+"\n  occupancy => "+(size*1.0/n)+"\n  occupancyMax => "+max+"\n  loadFactor => "+load_factor+"\n}";
   }
 }
+
 
 /**
  * IdxSliced maintains 1 element (min or max) for each slice.
@@ -172,8 +154,8 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
         if (ops2.cmp(e,p.data)==cmpRes) { p.data=e; e.data[idx]=p; }
         return;
       }
-      if (p.diff==null) { p.diff=i; size+=1; return; }
-      p=p.diff;
+      if (p.next==null) { p.next=i; size+=1; return; }
+      p=p.next;
     } while(p!=null);
   }
   @Override public void delete(E e) {
