@@ -30,7 +30,6 @@ public abstract class Idx<E extends Entry> {
   public String info() { return this.getClass().getName()+"("+idx+","+(unique?"unique":"multiple")+")"; }
 }
 
-
 /**
  * IdxHash is a hashed index.
  * Buckets elements are stored in a list.
@@ -122,7 +121,6 @@ class IdxHash<E extends Entry> extends Idx<E> {
     return "IdxHash("+idx+","+(unique?"unique":"multiple")+") {\n  elements => "+size+"\n  buckets => "+n+"\n  occupancy => "+(size*1.0/n)+"\n  occupancyMax => "+max+"\n  loadFactor => "+load_factor+"\n}";
   }
 }
-
 
 /**
  * IdxSliced maintains 1 element (min or max) for each slice.
