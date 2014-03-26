@@ -41,6 +41,15 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
   var ctx:Ctx[(Type,String)] = null // Context: variable->(type,unique_name)
   def rn(n:String):String = ctx(n)._2 // get unique name (avoids nesting Lifts)
+  /*
+  Here you need to rename variable to avoid putting individual statements in separated blocks
+  M[x] = Add( Mul(Lift(x,2),A[x]), Mul(Lift(x,3),B[x]) )
+  { x=A[2]; x } + { x=B[3]; x }
+  but we want
+  val x1=A[2]
+  val x2=B[3]
+  x1+x2
+  */
 
   // Create a variable declaration
   def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+tp.zeroScala+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+tp.toScala+"]()\n"
@@ -57,6 +66,19 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
       else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
+    //ki : inner key
+    //ko : outer key
+    //Example: 
+    //  f(A) {
+    //    Mul(M[A,B],ex)
+    //  }
+    // will be translated to:
+    // f(A) {
+    //   M.slice(A).foreach{ case (k,v) => // here A is ko
+    //     val B = k._2 // here B is ki
+    //     v * ex
+    //   }
+    // }
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks.map(rn))+")" else "")) // all keys are bound
       else { val (k0,v0)=(fresh("k"),fresh("v"))
@@ -65,16 +87,28 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         n+sl+".foreach { ("+(if (ks.size==1) rn(ks.head) else k0)+","+v0+") =>\n"+ind(
           (if (ks.size>1) ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString else "")+co(v0))+"\n}\n" // bind free variables from retrieved key
       }
+    // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n,e) =>
+    // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
       if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
       else e match {
         case Ref(n2) => ctx.add(n,(e.tp,rn(n2))); co("1L") // de-aliasing
+        //This renaming is required. As an example:
+        //
+        //C[x] = Add(A[x,y], B[x,y])
+        //D[x] = E[x]
+        //
+        // will fail without a renaming.
         case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L"),am)
       }
     case Mul(el,er) => //cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"),am),am)
       def mul(vl:String,vr:String) = { // simplifies (vl * vr)
+        // extract cond and then branch of "if (c) t else 0"
+        // no better way for finding boolean type
+        // TODO: add Boolean type
         def cx(s:String):Option[(String,String)] = if (!s.startsWith("(if (")) None else { var d=1; var p=5; while(d>0) { if (s(p)=='(') d+=1 else if (s(p)==')') d-=1; p+=1; }; Some(s.substring(5,p-1),s.substring(p+1,s.lastIndexOf("else")-1)) }
         def vx(vl:String,vr:String) = if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"
+        //pulling out the conditionals from a multiplication
         (cx(vl),cx(vr)) match {
           case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+ex.tp.zeroScala+")"
           case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+ex.tp.zeroScala+")"

@@ -25,7 +25,7 @@ object TypeCheck extends (M3.System => M3.System) {
   }
 
   // 2. Prettify variable names (not streams, not maps) using a renaming function
-  // 3. Rename M3 functions into implementation functions
+  // 3. Rename M3 functions into implementation functions: converting to lower case
   def renameVarsAndFuns(r:String=>String, fn:String=>String)(s0:System) = {
     def rs(s:Schema) = Schema(s.name,s.fields.map{case(n,t)=>(r(n),t)})
     def re(e:Expr):Expr = e.replace {
@@ -72,6 +72,8 @@ object TypeCheck extends (M3.System => M3.System) {
 
   // 6. Rename lifted variables to avoid name clashes when code gets flattened.
   // We "lock" input args, output keys and aggregation variables from being renamed
+  // Example:
+  // Mul(Lift(a,3),Mul(a,Mul(Lift(a,2),a))) => 6
   def renameLifts(s0:System) = {
     def re(e:Expr,locked:Set[String]):Expr = e.replace {
       case Mul(Lift(n,e),r) if !locked.contains(n) => e match {
@@ -98,6 +100,7 @@ object TypeCheck extends (M3.System => M3.System) {
       case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
       case _ => err("Bad operands ("+t1+","+t2+"): "+ex)
     }
+    //c: context
     def ie(ex:Expr,c:Map[String,Type]):Map[String,Type] = {
       var cr=c; // new bindings
       ex match { // gives a type to all untyped nodes

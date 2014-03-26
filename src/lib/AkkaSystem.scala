@@ -301,6 +301,9 @@ trait MasterActor extends WorkerActor {
   protected var skip=false // skipping state (due to timeout)
 
   private val eq = new java.util.LinkedList[(StreamEvent,ActorRef)]() // external event queue
+  /**
+   * est: state
+   */
   private var est = 0 // state: 0=no loop, 1=loop pending, 2=trampoline, 3=bounce
   protected def deq {
     if (est==2) est=3; // bounce
