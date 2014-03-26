@@ -194,7 +194,7 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
       case Const(null) => "null"
       case Const(z) => z.toString
       case s@Sym(n) => if (forcePrintSymbol) {
-        printSym(s)
+        if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
       } else {
         isVoidType(s.tp) match {
           case true => "(" + /*"x" + n +*/ ")"
