@@ -97,7 +97,7 @@ object Helper {
     val num = ad("-n",1,x=>math.max(0,x.toInt))
     val mode = ad("-m",-1,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)
-    val parallel = ad("-p",0,x=>x.toInt)
+    val parallel = ad("-p",2,x=>x.toInt)
     var ds = args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
     if (mode<0) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
     ds.foreach { d=> var i=0; var res0:List[Any]=null
