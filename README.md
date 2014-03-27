@@ -37,6 +37,18 @@ Currently the project matches original DBToaster code generation based on M3 and
    - Options to run unit tests and benchmarking: `$ sbt 'unit --help'`
    - Tests queries using `$ sbt queries`, `$ sbt queries-lms`, `$ sbt queries-akka`
 
+#### Instructions for running the distributed version
+1. Generate the code for distributed execution of your query, using:
+   - `sbt unit -q <SQL FILE PATH> -l akka`
+2. Configure distributed execution parameters in "conf/ddbt.properties"
+   - `make sure that you can connect from this machine to all master/worker nodes via SSH without the need for entering the password.`
+3. Open sbt, and run:
+   - `"pkg full" to create a package containing all dependencies in "pkg" folder`
+   - `"test:compile" to compile your generated code for distributed execution`
+   - `"pkg dist" to ship the packages to the cluster`
+4. Executing the distributed program, using:
+   - `"sbt exec <TARGET_CLASS_NAME>"`
+
 #### Roadmap
 __Codegen__
 

@@ -44,6 +44,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
   }
 
   private var parts = List[CoPart]() // co-located maps
+  //create a new CoPart in parts or increase its weight if exists
   private def join(m1:MapRef,m2:MapRef) {
     val in = (m1.keys.toSet & m2.keys.toSet) // also ignores maps with 0-keys (variables)
     if (!in.isEmpty) {
@@ -54,7 +55,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
 
   private var sys0:System = null // system reference to access map definitions
   private var ctx0 = List[String]() // trigger context
-  private var cm0 = List[MapRef]() // maps joining the context
+  private var cm0 = List[MapRef]() // maps joining the context (common map: maps that share sth with the context)
   private def expr(ex:Expr,ctx:List[MapRef]):List[MapRef] = ex match {
     case Exists(e) => expr(e,ctx)
     case Mul(l,r) => expr(r,expr(l,ctx))
@@ -80,6 +81,8 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     }
     // merge without and with key reduction
     do { while (m(1)) {} } while (m(2)); m(0)
+    //merge
+    //r: reduction defined in merge
     def m(r:Int) = { var res=false; var ps=parts.sorted; parts=Nil
       ps.foreach { p0 =>
         var found=false; parts.foreach { p=> if (!found) found=p.merge(p0,r) }
@@ -88,7 +91,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
       res
     }
     // solve colliding co-partitions by dropping least frequent constraints
-    val r0 = parts.map(_.freq).sum // all constraints
+    val r0 = parts.map(_.freq).sum // sum of weights of all constraints
     val ps=parts; parts=Nil;
     ps.foreach { p0 =>
       val ms = p0.filter{ case (m,is)=> !parts.exists(p=>p.contains(m)) }
