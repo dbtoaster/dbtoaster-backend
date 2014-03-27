@@ -101,6 +101,11 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         // will fail without a renaming.
         case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L"),am)
       }
+    // Mul(el,er)
+    // ==
+    //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) ) 
+    //    ==>
+    //   (v=vl*vr , ctx2)
     case Mul(el,er) => //cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"),am),am)
       def mul(vl:String,vr:String) = { // simplifies (vl * vr)
         // extract cond and then branch of "if (c) t else 0"
@@ -117,6 +122,17 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         }
       }
       cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(mul(vl,vr)),am),am)
+    // Add(el,er)
+    // ==
+    //   Add( (el,ctx0) -> (vl,ctx1) , (er,ctx0) -> (vr,ctx2) ) 
+    //         <-------- L -------->    <-------- R -------->
+    //    (add - if there's no free variable) ==>
+    //   (v=vl+vr , ctx0)
+    //    (union - if there are some free variables) ==>
+    //   T = Map[....]
+    //   foreach vl in L, T += vl
+    //   foreach vr in R, T += vr
+    //   foreach t in T, co(t) 
     case a@Add(el,er) =>
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else am match {
