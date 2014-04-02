@@ -15,6 +15,7 @@ import ddbt.ast._
  */
 case class Partitioning(cps:List[Partitioning.CoPart],score:Double,loc:Set[String]=Set(),cur:Option[(Partitioning.CoPart,List[String])]=None) {
   override def toString = "Partitioning (score=%.2f%%):\n".format(score*100)+cps.map(p=>" - "+p+"\n").mkString
+  // XXX: to be done after the code generation renaming
   def setLocal(m:M3.MapRef) = Partitioning(cps,score,loc,Some(cps.find(p=>p.contains(m.name)) match {
     case None => val p=Partitioning.CoPart(); p.put(m.name,(0 until m.keys.size).toList); (p,m.keys) // selected a non-existing partition
     case Some(p) => (p,p(m.name).map(x=>m.keys(x)))
