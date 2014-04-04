@@ -14,8 +14,8 @@ object Partitioner {
       val m3_src = ddbt.Compiler.toast("m3",q)._2
       val m3 = (M3Parser andThen TypeCheck)(m3_src)
       val (p,h)=Partitioning(m3)
-      println(p)
-      println(h)
+      //println(p)
+      //println(h)
     }
   }
 }

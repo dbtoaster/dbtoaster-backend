@@ -94,6 +94,24 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     // solve colliding co-partitions by dropping least frequent constraints
     val r0 = parts.map(_.freq).sum // sum of weights of all constraints
     val ps=parts; parts=Nil;
+
+    /*
+    // --- debug: count how many distinct partitioning must exist
+    // test:run-main ddbt.test.Partitioner (finance/.*|tpch/query[0-9]+[a-z]?|mddb/query[12])\.sql
+    val ctr = new scala.collection.mutable.HashMap[String,Set[Set[Int]]]()
+    ps.foreach { p => p.foreach { case (n,is) =>
+      val s = ctr.getOrElse(n,Set[Set[Int]]())
+      ctr.put(n,s + is.toSet)
+    }}
+    var max=0
+    var sum=0
+    ctr.foreach { case (n,ix) => if (max<ix.size) max=ix.size; sum+=ix.size
+      println("- "+n+" => "+ix.map(_.mkString(",")).mkString("; "))
+    }
+    println("Max: "+max+" average: %.1f".format(sum*1.0/ctr.size))
+    // --- debug end
+    */
+
     ps.foreach { p0 =>
       val ms = p0.filter{ case (m,is)=> !parts.exists(p=>p.contains(m)) }
       val (n,o)=(ms.size,p0.size) //if (n<o) perfect=false
