@@ -143,7 +143,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case m@MapRef(n,tp,ks) if ks.exists(k=> !ctx.contains(k) && !c2.contains(k)) => m
     case Lift(n,e) => fmap(e,c2)
     case Exists(e) => fmap(e,c2)
-    case Mul(l,r) => val lm=fmap(l,c2); if (lm==null) fmap(r,c2++l.collect{ case Lift(n,e) => Set(n) }) else lm
+    case Mul(l,r) => val lm=fmap(l,c2); if (lm==null) fmap(r,c2++l.collect{ case Lift(n,e) => ??? }) else lm
     case a@Add(l,r) => if (a.agg!=Nil) null else { val lm=fmap(l,c2); if (lm==null) fmap(r,c2) else lm }
     case _ => null
   }
@@ -173,8 +173,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
 
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
     case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
-    case Lift(n,e) => if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
-                      else { val s=ctx.save; val r=cpsExpr(e,(v:String)=>{ ctx.add(n,(e.tp,fresh("l"))); "val "+rn(n)+" = "+v+";\n"+co("1L")}); ctx.load(s); r }
+    case Lift(n,e) => ???
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)};
       if (part.local(m) || !ref.contains(n)) {
         //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))

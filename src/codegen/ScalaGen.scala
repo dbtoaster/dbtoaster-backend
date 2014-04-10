@@ -88,7 +88,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           (if (ks.size>1) ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString else "")+co(v0))+"\n}\n" // bind free variables from retrieved key
       }
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
-    case Lift(n,e) =>
+    case Lift(n::Nil,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
       if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
       else e match {
@@ -101,6 +101,13 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         // will fail without a renaming.
         case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L"),am)
       }
+    case Lift(ns,e) =>
+      // XXX: What about the special cases?
+      // XXX: Can we merge the simple lift and the multilift case?
+      val tps = e.tp match { case TypeTuple(ts) => ts case _ => sys.error("Expected tuple type") } 
+      (ns zip tps).foreach { case (n,t) => ctx.add(n,(t,fresh("l"))) }
+      val t = fresh("t"); ctx.add(t,(e.tp,t))
+      cpsExpr(e,(v:String)=> ns.zipWithIndex.foldLeft("val "+t+" = "+v+";\n"){case (r,(n,i)) => r+"val "+rn(n)+" = "+t+"._"+(i+1)+";\n"}+co("1L"),am)
     // Mul(el,er)
     // ==
     //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) )
@@ -158,6 +165,13 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
           ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
+    case Tuple(es) => 
+      def tuple(vs:List[String],esp:List[Expr]):String = esp match {
+        case e::Nil => cpsExpr(e,(v:String)=>co("("+(vs:::List(v)).mkString(",")+")"),am)
+        case e::es => cpsExpr(e,(v:String)=>tuple(vs:::List(v),es),am)
+      }
+      tuple(Nil,es)
+    case Neg(e) => cpsExpr(e,(v:String) => co("-1L * "+v),am) 
     case _ => sys.error("Don't know how to generate "+ex)
   }
 

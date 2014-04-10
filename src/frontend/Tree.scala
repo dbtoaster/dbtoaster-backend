@@ -20,7 +20,7 @@ case object TypeDate   extends Type              { override def toString="date";
 //case object TypeTime extends Type              { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string"; val zero="\"\"" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
-case class TypeTuple(ts:List[Type]) extends Type { override def toString="<"+ts.mkString(",")+">"; val zero="<"+ts.map(_.zero).mkString(",")+">"; override val zeroScala="<"+ts.map(_.zeroScala).mkString(",")+">"; }
+case class TypeTuple(ts:List[Type]) extends Type { override def toString="<"+ts.mkString(",")+">"; val zero="("+ts.map(_.zero).mkString(",")+")"; override val zeroScala="("+ts.map(_.zeroScala).mkString(",")+")"; }
 
 // ---------- Comparison operators
 sealed abstract class OpCmp extends Tree { def toM3=toString; def toSQL=toString } // toString is C/Scala notation
@@ -119,6 +119,8 @@ object M3 {
       case Lift(n,e) => e.collect(f)
       case AggSum(ks,e) => e.collect(f)
       case Apply(fn,tp,as) => as.flatMap(a=>a.collect(f)).toSet
+      case Tuple(es) => es.flatMap(e=>e.collect(f)).toSet
+      case Neg(e) => e.collect(f)
       case _ => Set()
     })
     def replace(f:PartialFunction[Expr,Expr]):Expr = f.applyOrElse(this,(ex:Expr)=>ex match { // also preserve types
@@ -129,12 +131,14 @@ object M3 {
       case Lift(n,e) => Lift(n,e.replace(f))
       case a@AggSum(ks,e) => val t=AggSum(ks,e.replace(f)); t.tks=a.tks; t
       case Apply(fn,tp,as) => Apply(fn,tp,as.map(e=>e.replace(f)))
+      case Tuple(es) => Tuple(es.map(e=>e.replace(f)))
+      case Neg(e) => Neg(e.replace(f))
       case _ => ex
     })
     def rename(r:String=>String):Expr = replace {
       case Ref(n) => val t=Ref(r(n)); t.tp=tp; t
       case MapRef(n,tp,ks) => val t=MapRef(n,tp,ks.map(r)); t.tp=tp; t
-      case Lift(n,e) => val t=Lift(r(n),e.rename(r)); t
+      case Lift(ns,e) => val t=Lift(ns.map(r(_)),e.rename(r)); t
       case a@AggSum(ks,e) => val t=AggSum(ks map r,e.rename(r)); t.tks=a.tks; t
       case a@Add(el,er) => val t=Add(el.rename(r),er.rename(r)); t.tp=tp; t.agg=a.agg.map{case(n,t)=>(r(n),t)}; t
     }
@@ -147,7 +151,7 @@ object M3 {
   // Variables
   case class Ref(name:String) extends Expr { override def toString=name; var tp:Type=null }
   case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]"; var tks:List[Type]=Nil }
-  case class Lift(name:String, e:Expr) extends Expr { override def toString="("+name+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
+  case class Lift(ns:List[String], e:Expr) extends Expr { override def toString="("+(ns match { case n::Nil => n case _ => "<"+ns.mkString(",")+">"})+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
   case class MapRefConst(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=TypeLong } // appear in Map definition and constant table lookups
   // Operations
   case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+ind(e.toString)+"\n)"; def tp=e.tp; var tks:List[Type]=Nil } // (grouping_keys)->sum relation
@@ -158,7 +162,8 @@ object M3 {
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op.toM3+" "+r+"}"; val tp=TypeLong } // comparison, returns 0 or 1
   // Tupling
   case class Tuple(es:List[Expr]) extends Expr { override def toString="<"+es.mkString(",")+">"; var tp:Type=null }
-  case class TupleLift(ns:List[String], e:Expr) extends Expr { override def toString="(<"+ns.mkString(",")+"> ^= "+e+")"; val tp=TypeLong }
+   // Additive Inverse
+  case class Neg(e:Expr) extends Expr { override def toString="-("+e+")"; var tp:Type=null }
 
   // ---------- Statements (no return)
   sealed abstract class Stmt extends M3

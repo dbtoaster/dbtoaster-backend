@@ -14,6 +14,12 @@ object Utils {
     sb.append("@"+(" "*78)+"@\n"+("@"*80)); System.err.println(sb.toString)
   }
 
+  var dbg_args = List[String]()  // debug arguments
+  def log(dbg_arg:String,msg:String) = {
+    if(dbg_args contains dbg_arg)
+      System.out.println(msg)
+  }
+
   private val prop_ = new java.util.Properties
   try { prop_.load(this.getClass.getResource("/ddbt.properties").openStream()) } catch { case _:Throwable => warning("conf/ddbt.properties does not exist.\n"+
         "Please configure at least ddbt.dbtoaster to dbtoaster_release binary path.\nSet ddbt.base_repo if you have access to DBToaster's repository.") }
