@@ -229,12 +229,12 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     else {
       val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())
-      val proj = if(s.isEmpty) "" else ","+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ") 
+      val proj = if(s.isEmpty) "" else s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ") 
       val pluszero = m.tp match { 
         case TypeTuple(_) => m.tp.zero+", (v1:"+m.tp.toScala+",v2:"+m.tp.toScala+") => "+genOp("v1","v2","+",m.tp,m.tp) 
         case _ => ""
       }
-      "val "+m.name+" = M3Map.make["+tk+","+m.tp.toScala+"]("+pluszero+(if(pluszero != "" && proj != "") "," else "")+proj+");"
+      "val "+m.name+" = M3Map.make["+tk+","+m.tp.toScala+"]("+pluszero+(if(!pluszero.isEmpty && !proj.isEmpty) "," else "")+proj+");"
     }
   }
 

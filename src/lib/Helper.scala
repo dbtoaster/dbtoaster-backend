@@ -116,9 +116,9 @@ object Helper {
   val precision = 7 // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)
   private val diff_p = Math.pow(0.1,precision)
   private def eq_v[V](v1:V,v2:V) = v1==v2 || ((v1,v2) match { case (d1:Double,d2:Double) => (Math.abs(2*(d1-d2)/(d1+d2))<diff_p) case _ => false })
-  private def eq_p(p1:Product,p2:Product) = { val n=p1.productArity; assert(n==p2.productArity); var r=true; for (i <- 0 until n) { r = r && eq_v(p1.productElement(i),p2.productElement(i)) }; r }
+  private def eq_p(p1:Product,p2:Product) = { val n=p1.productArity; assert(n==p2.productArity);  List.range(0,n).forall(i => eq_v(p1.productElement(i), p2.productElement(i))) }
 
-  def diff[V](v1:V,v2:V) = if (!eq_v(v1,v2)) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
+  def diff[V](v1:V,v2:V) = if (!((v1,v2) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case _ => eq_v(v1,v2) })) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
   def diff[K,V](map1:Map[K,V],map2:Map[K,V]) = { // map1 is the test result, map2 is the reference
     import scala.collection.mutable.HashMap
     import java.util.Date
@@ -143,7 +143,7 @@ object Helper {
       b1.toMap.foreach { case (k1,v1) =>
         b2.toMap.foreach { case (k2,v2) =>
           if (b1.contains(k1) && b2.contains(k2)) {
-            val (k,v) = ((k1,k2) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case _ => eq_v(k1,k2) }, eq_v(v1,v2))
+            val (k,v) = ((k1,k2) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case _ => eq_v(k1,k2) }, (v1,v2) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case _ => eq_v(v1,v2) })
             if (k) { b1.remove(k1); b2.remove(k2); if (!v) err.append("Bad value: "+k1+" -> "+v1+" (expected "+v2+")\n") }
           }
         }

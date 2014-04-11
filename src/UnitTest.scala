@@ -178,6 +178,7 @@ object UnitTest {
   def genQuery(q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
     val cls = name(q.sql)
     var sp=""
+
     // Correctness
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
       val qid = sys.queries.map{_.name}.zipWithIndex.toMap
@@ -190,7 +191,7 @@ object UnitTest {
         set.out.map { case (n,o) => val (kt,vt) = qt(n); val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
           val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
           val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
-            case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
+            case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+",("+v.mkString(",")+"))" }.mkString(",")+")"// inline in the code
             case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
             case QuerySingleton(v) => v
           })+")"
@@ -332,9 +333,17 @@ object UnitTest {
   case class QueryTest(sql:String,sets:Map[String,QuerySet]=Map(("standard",QuerySet()))) { override def toString = sql+ind(sets.map{case (k,v)=>"\n - "+k+": "+v.out.toString}.mkString) }
   case class QuerySet(subs:List[(String,String)]=Nil,out:Map[String,QueryOut]=Map())
   abstract sealed class QueryOut
-  case class QueryMap(m:Map[String,String]) extends QueryOut
+  case class QueryMap(m:Map[String,List[String]]) extends QueryOut
   case class QueryFile(path:String,sep:String=null) extends QueryOut
-  case class QuerySingleton(v:String) extends QueryOut
+  case class QuerySingleton(v:List[String]) extends QueryOut
+
+  def mergeQueryOuts(out1:QueryOut,out2:QueryOut):QueryOut = {
+    (out1,out2) match {
+      case (QueryMap(m1),QueryMap(m2)) => QueryMap(m1.map({ case (k,v) => (k,v:::m2(k))}))
+      case (QuerySingleton(vs1),QuerySingleton(vs2)) => QuerySingleton(vs1:::vs2)
+      case (_,_) => sys.error("Cannot merge query outputs") 
+    }
+  }
 
   // Parser for unit tests declarations
   import scala.util.parsing.combinator.RegexParsers
@@ -342,14 +351,14 @@ object UnitTest {
     lazy val str = "\"" ~> """(\\.|[^\"])*""".r <~ "\"" | "'" ~> """(\\.|[^'])*""".r <~ "'"
     lazy val num = "-?[0-9]+(\\.[0-9]*)?([eE][\\-+]?[0-9]+)?".r ^^ { case x => if (x.matches("^-?[0-9]+$")) x+"L" else x }
     lazy val pat = "/" ~> """(\\.|[^/])*""".r <~ "/" ^^ { x=>x.replaceAll("\\\\/","/") } // might need a better solution
-    private def map[T](p:Parser[T]) = "{" ~> repsep((str <~ "=>") ~ p,",") <~ "}" ^^ { case rs => rs.map{case n~v=>(n,v)}.toMap } // JSON-like map String -> T
-    lazy val qtest = ("{" ~> ":path" ~> "=>" ~> str <~ ",") ~ (":datasets" ~> "=>" ~> map(qset) <~ "}") ^^ { case n~qs => QueryTest(n,qs) }
-    lazy val qset = "{" ~> opt(":subs" ~> "=>" ~> "[" ~> repsep(qsub,",") <~ "]" <~ ",") ~ (":toplevels" ~> "=>" ~> map(qout)) <~ "}" ^^ { case ss ~os => QuerySet(ss match { case Some(s)=>s case None=>Nil },os) }
+    private def map[T](p:Parser[T]) = "{" ~> repsep((str <~ "=>") ~ p,",") <~ "}" ^^ { case rs => rs.map{case n~v=>(n,v)} } // JSON-like map String -> T
+    lazy val qtest = ("{" ~> ":path" ~> "=>" ~> str <~ ",") ~ (":datasets" ~> "=>" ~> map(qset) <~ "}") ^^ { case n~qs => QueryTest(n,qs.toMap) }
+    lazy val qset = "{" ~> opt(":subs" ~> "=>" ~> "[" ~> repsep(qsub,",") <~ "]" <~ ",") ~ (":toplevels" ~> "=>" ~> map(qout)) <~ "}" ^^ { case ss ~os => val mos:QueryOut=os.map(_._2).reduce(mergeQueryOuts); QuerySet(ss match { case Some(s)=>s case None=>Nil },Map(("QUERY_0" -> mos))) }
     lazy val qsub = ("[" ~> pat <~ ",") ~ (str <~ "]") ^^ { case p~r => (p,r) }
-    lazy val qout = "{"~>":type"~>"=>"~>((":onelevel"~>","~>":expected"~"=>"~>(qfile|qmap)) | (":singleton"~>","~>":expected"~>"=>"~>num ^^ { case n => QuerySingleton(n) })) <~ opt(",") <~"}" ^^ { case q => q }
+    lazy val qout = "{"~>":type"~>"=>"~>((":onelevel"~>","~>":expected"~"=>"~>(qfile|qmap)) | (":singleton"~>","~>":expected"~>"=>"~>num ^^ { case n => QuerySingleton(List(n)) })) <~ opt(",") <~"}" ^^ { case q => q }
     lazy val qfile:Parser[QueryOut] = ("results_file" ~> "(" ~> str) ~ (opt("," ~> pat) <~ ")") ^^ { case f~op => QueryFile(f,op match { case Some(p)=>p case None => null}) }
     lazy val qmap:Parser[QueryOut] = "{" ~> repsep(qrow,",") <~ opt(",") <~ "}" ^^ { case rs => QueryMap(rs.toMap) }
-    lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (tup(cs),n) }
+    lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (tup(cs),List(n)) }
     def apply(input: String): QueryTest = parseAll(qtest, input) match { case Success(r,_) => r case f => sys.error(f.toString) }
   }
 }
