@@ -24,6 +24,8 @@ import ddbt.ast._
  * - Lift alone has only bound variables.
  * - In Exists*Lift, Exists binds variables for the Lift
  *
+ * Future improvements:
+ * - Make code dealing with operations on tuples (+, *) cleaner
  * @author TCK
  */
 class ScalaGen(cls:String="Query") extends CodeGen(cls) {
@@ -53,6 +55,21 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
   // Create a variable declaration
   def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+tp.zeroScala+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+tp.toScala+"]()\n"
+
+  def genOp(vl:String,vr:String,op:String,t1:Type,t2:Type) = {
+    (t1,t2) match {
+      case (TypeTuple(ts1),TypeTuple(ts2)) =>
+        val t1=fresh("t");val t2=fresh("t")
+        "{ val "+t1+" = "+vl+"; val "+t2+" = "+vr+"; ("+(List.range(1,ts1.length+1).map(i => t1+"._"+i+op+t2+"._"+i)).mkString(",")+") }"
+      case (t1,TypeTuple(ts2)) =>
+        val t2=fresh("t")
+        "{ val "+t2+" = "+vr+"; ("+(List.range(1,ts2.length+1).map(i => vl+op+t2+"._"+i)).mkString(", ")+") }"
+      case (TypeTuple(ts1),t2) =>
+        val t1=fresh("t")
+        "{ val "+t1+" = "+vl+"; ("+(List.range(1,ts1.length+1).map(i => t1+"._"+i+op+vr)).mkString(", ")+") }"
+      case (_,_) => "("+vl+op+vr+")"
+    }
+  }
 
   // Generate code bottom-up using delimited CPS and a list of bound variables
   //   ex:expression to convert
@@ -106,7 +123,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       // XXX: Can we merge the simple lift and the multilift case?
       val tps = e.tp match { case TypeTuple(ts) => ts case _ => sys.error("Expected tuple type") } 
       (ns zip tps).foreach { case (n,t) => ctx.add(n,(t,fresh("l"))) }
-      val t = fresh("t"); ctx.add(t,(e.tp,t))
+      val t=fresh("t"); ctx.add(t,(e.tp,t))
       cpsExpr(e,(v:String)=> ns.zipWithIndex.foldLeft("val "+t+" = "+v+";\n"){case (r,(n,i)) => r+"val "+rn(n)+" = "+t+"._"+(i+1)+";\n"}+co("1L"),am)
     // Mul(el,er)
     // ==
@@ -119,7 +136,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         // no better way for finding boolean type
         // TODO: add Boolean type
         def cx(s:String):Option[(String,String)] = if (!s.startsWith("(if (")) None else { var d=1; var p=5; while(d>0) { if (s(p)=='(') d+=1 else if (s(p)==')') d-=1; p+=1; }; Some(s.substring(5,p-1),s.substring(p+1,s.lastIndexOf("else")-1)) }
-        def vx(vl:String,vr:String) = if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"
+        def vx(vl:String,vr:String) = {
+          if (vl=="1L") vr else if (vr=="1L") vl else genOp(vl,vr,"*",el.tp,er.tp) 
+        }
         //pulling out the conditionals from a multiplication
         (cx(vl),cx(vr)) match {
           case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+ex.tp.zeroScala+")"
@@ -155,7 +174,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-      if (aks.size==0) { val a0=fresh("agg"); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      if (aks.size==0) { val a0=fresh("agg"); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" = "+genOp(a0,v,"+",ex.tp,ex.tp)+";\n")+co(a0) }
       else am match {
         case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
         case _ =>
@@ -171,12 +190,12 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         case e::es => cpsExpr(e,(v:String)=>tuple(vs:::List(v),es),am)
       }
       tuple(Nil,es)
-    case Neg(e) => cpsExpr(e,(v:String) => co("-1L * "+v),am) 
+    case Neg(e) => cpsExpr(e,(v:String) => co(genOp("-1L",v,"*",TypeLong,e.tp)),am)
     case _ => sys.error("Don't know how to generate "+ex)
   }
 
   def genStmt(s:Stmt):String = s match {
-    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("add","=") }
+    case StmtMap(m,e,op,oi) => val sop=((m:String,v:String) => m+"="+(op match { case OpAdd => genOp(m,v,"+",e.tp,e.tp) case OpSet => v }))
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
       val init = oi match {
         case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>
@@ -184,7 +203,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           else "if ("+m.name+".get("+tup(m.keys map rn)+")==0) "+m.name+".set("+tup(m.keys map rn)+","+i+");\n")
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+tup(m.keys map rn)+","+v+")")+";\n",Some(m.keys zip m.tks))
+      ctx.load(); clear+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) sop(m.name,v) else m.name+".add("+tup(m.keys map rn)+","+v+")")+";\n",Some(m.keys zip m.tks))
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -210,7 +229,12 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     else {
       val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())
-      "val "+m.name+" = M3Map.make["+tk+","+m.tp.toScala+"]("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+");"
+      val proj = if(s.isEmpty) "" else ","+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ") 
+      val pluszero = m.tp match { 
+        case TypeTuple(_) => m.tp.zero+", (v1:"+m.tp.toScala+",v2:"+m.tp.toScala+") => "+genOp("v1","v2","+",m.tp,m.tp) 
+        case _ => ""
+      }
+      "val "+m.name+" = M3Map.make["+tk+","+m.tp.toScala+"]("+pluszero+(if(pluszero != "" && proj != "") "," else "")+proj+");"
     }
   }
 

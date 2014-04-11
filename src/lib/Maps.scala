@@ -28,10 +28,15 @@ trait M3Map[K,V] {
  *   val tmp1 = M3Map.temp[Long,Long]();
  */
 object M3Map {
-  def temp[K,V:ClassTag]():M3Map[K,V] = new M3MapBase[K,V](zero[V](),false,null)
-  def make[K,V:ClassTag](projs:K=>_ *):M3Map[K,V] = new M3MapBase(zero[V](),true,projs.toArray)
+  def temp[K,V:ClassTag]():M3Map[K,V] = new M3MapBase[K,V](zero[V](),plus[V](),false,null)
+  def make[K,V:ClassTag](projs:K=>_ *):M3Map[K,V] = new M3MapBase(zero[V](),plus[V](),true,projs.toArray)
   def makeIdx[K<:Product,V:ClassTag](projs:Int *):M3Map[K,V] = {
-    new M3MapBase(zero[V](),true,projs.map(i => (k:K)=>k.productElement(i)).toArray)
+    new M3MapBase(zero[V](),plus[V](),true,projs.map(i => (k:K)=>k.productElement(i)).toArray)
+  }
+  def temp[K,V:ClassTag](z:V,plus:(V,V)=>V):M3Map[K,V] = new M3MapBase[K,V](z,plus,false,null)
+  def make[K,V:ClassTag](z:V,plus:(V,V)=>V,projs:K=>_ *):M3Map[K,V] = new M3MapBase(z,plus,true,projs.toArray)
+  def makeIdx[K<:Product,V:ClassTag](z:V,plus:(V,V)=>V,projs:Int *):M3Map[K,V] = {
+    new M3MapBase(z,plus,true,projs.map(i => (k:K)=>k.productElement(i)).toArray)
   }
   // Implicit default zero
   def zero[V]()(implicit cV:ClassTag[V]):V = (cV.toString match {
@@ -41,6 +46,13 @@ object M3Map {
     case "java.util.Date" => new java.util.Date(0)
     case n => sys.error("No zero for "+n)
   }).asInstanceOf[V]
+  // Implicit default addition
+  def plus[V]()(implicit cV:ClassTag[V]):(V,V)=>V = (cV.toString match {
+    case "Long" => (v1:Long,v2:Long)=>v1+v2
+    case "Double" => (v1:Double,v2:Double)=>v1+v2
+    case "java.util.Date" => (v1:java.util.Date,v2:java.util.Date)=>new java.util.Date(v1.getTime()+v2.getTime())
+    case n => sys.error("No zero for "+n)
+  }).asInstanceOf[(V,V)=>V]
   // Pretty-print a map
   def toStr(o:Any):String = if (o.isInstanceOf[Map[_,_]]) toStr(o.asInstanceOf[Map[_,_]]) else o.toString
   def toStr[K,V](m:Map[K,V]):String = m.toList.map{case(k,v)=>(str(k),str(v))}.sortBy(x=>x._1).map{case(k,v)=>k+" -> "+v}.mkString("\n")

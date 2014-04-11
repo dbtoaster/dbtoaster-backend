@@ -41,25 +41,19 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   private transient int size;
   private transient int threshold;
   private transient final V zero;
-  private transient final Plus<V> plus; // inferred from zero
+  private transient final Function2<V,V,V> plus; // inferred from zero
   private transient boolean skipZero = false;
   private transient final Index<?>[] indices;
 
-  public M3MapBase() { this((V)new Long(0L),false,null); }
-  public M3MapBase(V zero, boolean skipZero, Function1<K,?>[] projections) {
+  public M3MapBase(V zero, Function2<V,V,V> plus, boolean skipZero, Function1<K,?>[] projections) {
     threshold = (int)(INITIAL_CAPACITY * LOAD_FACTOR);
     data = new Entry[INITIAL_CAPACITY];
-    this.zero=zero; this.skipZero = skipZero;
+    this.zero=zero; this.skipZero = skipZero; this.plus = plus;
     if (projections==null) indices=null;
     else {
       indices = (Index<?>[])java.lang.reflect.Array.newInstance(Index.class, projections.length);
       for(int i=0;i<projections.length;++i) indices[i] = new Index(projections[i]);
     }
-    if (zero instanceof Long) plus = (Plus<V>) new Plus<Long>() { Long apply(Long a, Long b) { return a+b; } };
-    else if (zero instanceof Double) plus = (Plus<V>) new Plus<Double>() { Double apply(Double a, Double b) { return a+b; } };
-    else if (zero instanceof String) plus = (Plus<V>) new Plus<String>() { String apply(String a, String b) { return a+b; } };
-    else if (zero instanceof Date) plus = (Plus<V>) new Plus<Date>() { Date apply(Date a, Date b) { return new Date(a.getTime()+b.getTime()); } };
-    else plus=null;
   }
   protected V zero() { return zero; } // exposed for Akka (accumulator for partial aggregations)
 
@@ -162,7 +156,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     if (indices!=null) { ps=(Function1[])java.lang.reflect.Array.newInstance(Function1.class, indices.length);
       for (int i=0;i<indices.length;++i) ps[i] = indices[i].proj;
     }
-    M3MapBase<K,V> result=new M3MapBase<K,V>(zero, skipZero, ps);
+    M3MapBase<K,V> result=new M3MapBase<K,V>(zero, plus, skipZero, ps);
     result.data=new Entry[data.length]; result.threshold=threshold; // fast insertion
     for(Entry<K,V> e:data) for(;e!=null;e=e.next) { result.putNoResize(e.key,e.value); } return result;
   }

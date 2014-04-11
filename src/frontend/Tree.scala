@@ -20,7 +20,7 @@ case object TypeDate   extends Type              { override def toString="date";
 //case object TypeTime extends Type              { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string"; val zero="\"\"" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
-case class TypeTuple(ts:List[Type]) extends Type { override def toString="<"+ts.mkString(",")+">"; val zero="("+ts.map(_.zero).mkString(",")+")"; override val zeroScala="("+ts.map(_.zeroScala).mkString(",")+")"; }
+case class TypeTuple(ts:List[Type]) extends Type { override def toScala="("+ts.map(_.toScala).mkString(",")+")"; override def toString="<"+ts.mkString(",")+">"; val zero="("+ts.map(_.zero).mkString(",")+")"; override val zeroScala="("+ts.map(_.zeroScala).mkString(",")+")"; }
 
 // ---------- Comparison operators
 sealed abstract class OpCmp extends Tree { def toM3=toString; def toSQL=toString } // toString is C/Scala notation

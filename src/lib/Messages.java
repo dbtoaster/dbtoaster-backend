@@ -76,7 +76,7 @@ class MessageSerializer extends JSerializer {
     if (tp=='D') return new Date(bb.getLong());
     if (tp=='S') { byte[] bs=new byte[bb.getInt()]; bb.get(bs); return new String(bs); }
     if (tp=='A') { int n=bb.getInt(); Object[] a=new Object[n]; for (int i=0;i<n;++i) a[i]=rd(bb); return a; }
-    if (tp=='M') { Object z=rd(bb); M3MapBase<Object,Object> m=new M3MapBase<Object,Object>(z,false,null); int n=bb.getInt(); for (int i=0;i<n;++i) m.put(rd(bb),rd(bb)); return m; }
+    if (tp=='M') { Object z=rd(bb); M3MapBase<Object,Object> m=new M3MapBase<Object,Object>(z,null,false,null); int n=bb.getInt(); for (int i=0;i<n;++i) m.put(rd(bb),rd(bb)); return m; }
     if (tp=='O') { Object o=null; try { o=new ObjectInputStream(new BBInputStream(bb)).readObject(); } catch(Exception e) { System.err.println(e); } return o; }
     switch(tp) {
       //(1 to 10).foreach(i=> println("      case "+i+": return new scala.Tuple"+i+"<"+(0 until i).map(x=>"Object").mkString(",")+">("+(0 until i).map(x=>"rd(bb)").mkString(",")+");"))

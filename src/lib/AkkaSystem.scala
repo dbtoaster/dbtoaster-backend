@@ -252,12 +252,7 @@ trait MasterActor extends WorkerActor {
   import Messages._
   val queries:List[MapRef]
 
-  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = {
-    val zero = if (cV.toString=="Object"||cV.toString=="Any")
-          new M3MapBase[K,V](local(m).asInstanceOf[M3MapBase[K,V]].zero,false,null)
-          else M3Map.temp[K,V]()
-    super.aggr(m,fun_collect,m)(zero)((mm:M3Map[K,V])=>co(mm.toMap))
-  }
+  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = ???
 
   // ---- coherency mechanism: RAW, WAR and WAW dependency tracking
   // To mitigate WAW dependencies, we differentiate commutative and non-commutative (sequential) writes

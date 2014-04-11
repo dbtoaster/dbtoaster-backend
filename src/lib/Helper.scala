@@ -127,7 +127,7 @@ object Helper {
     def rekey(m:Map[K,V]):HashMap[K,V] = { // merges similar keys within one map (using sorting)
       val l0 = m.toList.sortBy(_._1.toString) // not nicest but works
       val z = if (l0.size==0) null else l0(0)._2 match { case x:Long=>0L case x:Double=>0.0 case x:String=>"" case x:Date=>new Date(0) case _ => null }
-      val mm = new M3MapBase[K,V](z.asInstanceOf[V],true,null)
+      val mm = new M3MapBase[K,V](z.asInstanceOf[V],null,true,null)
       def re(l:List[(K,V)]):Unit = l match {
         case a::b::ls if ((a._1,b._1) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case (k1,k2) => eq_v(k1,k2) }) => mm.add(a._1,a._2); mm.add(a._1,b._2); re(ls)
         case a::ls => mm.add(a._1,a._2); re(ls)
