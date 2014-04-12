@@ -337,10 +337,10 @@ object UnitTest {
   case class QueryFile(path:String,sep:String=null) extends QueryOut
   case class QuerySingleton(v:List[String]) extends QueryOut
 
-  def mergeQueryOuts(out1:QueryOut,out2:QueryOut):QueryOut = {
+  def mergeQueryOuts(out1:(String,QueryOut),out2:(String,QueryOut)):(String,QueryOut) = {
     (out1,out2) match {
-      case (QueryMap(m1),QueryMap(m2)) => QueryMap(m1.map({ case (k,v) => (k,v:::m2(k))}))
-      case (QuerySingleton(vs1),QuerySingleton(vs2)) => QuerySingleton(vs1:::vs2)
+      case ((s1,QueryMap(m1)),(s2,QueryMap(m2))) => (s1+"_"+s2,QueryMap(m1.map({ case (k,v) => (k,v:::m2(k))})))
+      case ((s1,QuerySingleton(vs1)),(s2,QuerySingleton(vs2))) => (s1+"_"+s2,QuerySingleton(vs1:::vs2))
       case (_,_) => sys.error("Cannot merge query outputs") 
     }
   }
@@ -353,7 +353,7 @@ object UnitTest {
     lazy val pat = "/" ~> """(\\.|[^/])*""".r <~ "/" ^^ { x=>x.replaceAll("\\\\/","/") } // might need a better solution
     private def map[T](p:Parser[T]) = "{" ~> repsep((str <~ "=>") ~ p,",") <~ "}" ^^ { case rs => rs.map{case n~v=>(n,v)} } // JSON-like map String -> T
     lazy val qtest = ("{" ~> ":path" ~> "=>" ~> str <~ ",") ~ (":datasets" ~> "=>" ~> map(qset) <~ "}") ^^ { case n~qs => QueryTest(n,qs.toMap) }
-    lazy val qset = "{" ~> opt(":subs" ~> "=>" ~> "[" ~> repsep(qsub,",") <~ "]" <~ ",") ~ (":toplevels" ~> "=>" ~> map(qout)) <~ "}" ^^ { case ss ~os => val mos:QueryOut=os.map(_._2).reduce(mergeQueryOuts); QuerySet(ss match { case Some(s)=>s case None=>Nil },Map(("QUERY_0" -> mos))) }
+    lazy val qset = "{" ~> opt(":subs" ~> "=>" ~> "[" ~> repsep(qsub,",") <~ "]" <~ ",") ~ (":toplevels" ~> "=>" ~> map(qout)) <~ "}" ^^ { case ss ~os => val mos=os.reduceLeft(mergeQueryOuts); QuerySet(ss match { case Some(s)=>s case None=>Nil },Map(mos)) }
     lazy val qsub = ("[" ~> pat <~ ",") ~ (str <~ "]") ^^ { case p~r => (p,r) }
     lazy val qout = "{"~>":type"~>"=>"~>((":onelevel"~>","~>":expected"~"=>"~>(qfile|qmap)) | (":singleton"~>","~>":expected"~>"=>"~>num ^^ { case n => QuerySingleton(List(n)) })) <~ opt(",") <~"}" ^^ { case q => q }
     lazy val qfile:Parser[QueryOut] = ("results_file" ~> "(" ~> str) ~ (opt("," ~> pat) <~ ")") ^^ { case f~op => QueryFile(f,op match { case Some(p)=>p case None => null}) }
