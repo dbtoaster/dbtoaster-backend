@@ -60,14 +60,14 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     (t1,t2) match {
       case (TypeTuple(ts1),TypeTuple(ts2)) =>
         val t1=fresh("t");val t2=fresh("t")
-        "{ val "+t1+" = "+vl+"; val "+t2+" = "+vr+"; ("+(List.range(1,ts1.length+1).map(i => t1+"._"+i+op+t2+"._"+i)).mkString(",")+") }"
+        "{ val "+t1+" = "+vl+"; val "+t2+" = "+vr+"; ("+(List.range(1,ts1.length+1).map(i => t1+"._"+i+" "+op+" "+t2+"._"+i)).mkString(",")+") }"
       case (t1,TypeTuple(ts2)) =>
         val t2=fresh("t")
-        "{ val "+t2+" = "+vr+"; ("+(List.range(1,ts2.length+1).map(i => vl+op+t2+"._"+i)).mkString(", ")+") }"
+        "{ val "+t2+" = "+vr+"; ("+(List.range(1,ts2.length+1).map(i => vl+" "+op+" "+t2+"._"+i)).mkString(", ")+") }"
       case (TypeTuple(ts1),t2) =>
         val t1=fresh("t")
-        "{ val "+t1+" = "+vl+"; ("+(List.range(1,ts1.length+1).map(i => t1+"._"+i+op+vr)).mkString(", ")+") }"
-      case (_,_) => "("+vl+op+vr+")"
+        "{ val "+t1+" = "+vl+"; ("+(List.range(1,ts1.length+1).map(i => t1+"._"+i+" "+op+" "+vr)).mkString(", ")+") }"
+      case (_,_) => "("+vl+" "+op+" "+vr+")"
     }
   }
 
