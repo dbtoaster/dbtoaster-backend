@@ -19,6 +19,9 @@ object Utils {
         "Please configure at least ddbt.dbtoaster to dbtoaster_release binary path.\nSet ddbt.base_repo if you have access to DBToaster's repository.") }
   def prop(name:String,d:String="") = prop_.getProperty("ddbt."+name,d)
 
+  val LMS_PROPERTY = "lms"
+  def isLMSTurnedOn = prop(LMS_PROPERTY)=="1"
+
   // Paths related to DBToaster
   val path_repo = { val r=prop("base_repo",null); if (r==null) null else r+"/dbtoaster/compiler/alpha5" }
   val path_bin  = (if (path_repo!=null) path_repo+"/" else "")+prop("dbtoaster","bin/dbtoaster_release")

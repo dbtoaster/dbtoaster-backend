@@ -10,9 +10,20 @@ import ddbt.codegen._
 object Compiler {
   import java.io._
 
+  val LANG_CALC = "calc"
+  val LANG_M3 = "m3"
+  val LANG_SCALA = "scala"
+  val LANG_CPP = "cpp"
+  val LANG_AKKA = "akka"
+  val LANG_LMS = "lms"
+  val LANG_CPP_LMS = "cpplms"
+  val LANG_SCALA_LMS = "scalalms"
+
+  val M3_FILE_SUFFIX = ".m3"
+
   var in   : List[String] = Nil  // input files
   var out  : String = null       // output file (defaults to stdout)
-  var lang : String = "scala"    // output language
+  var lang : String = LANG_SCALA    // output language
   var name : String = null       // class/structures name (defaults to Query or capitalized filename)
   var pkg  : String = "ddbt.gen" // class package
   var optm3: String = "-O2"      // optimization level
@@ -43,7 +54,7 @@ object Compiler {
     def eat(f:String=>Unit,s:Boolean=false) { i+=1; if (i<l) f(if(s) args(i).toLowerCase else args(i)) }
     while(i<l) {
       args(i) match {
-        case "-l" => eat(s=>s match { case "calc"|"m3"|"scala"|"lms"|"akka" => lang=s; case _ => error("Unsupported language: "+s,true) },true)
+        case "-l" => eat(s=>s match { case LANG_CALC|LANG_M3|LANG_SCALA|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS|LANG_AKKA => lang=s; case _ => error("Unsupported language: "+s,true) },true)
         case "-o" => eat(s=>out=s)
         case "-n" => eat(s=>{ val p=s.lastIndexOf('.'); if (p!= -1) { pkg=s.substring(0,p); name=s.substring(p+1) } else name=s})
         case "-L" => eat(s=>libs=s::libs)
@@ -67,12 +78,13 @@ object Compiler {
       error("Global options:")
       error("  -o <file>     output file (default: stdout)")
       error("  -l <lang>     defines the target language")
-      error("                - calc  : relational calculus")
-      error("                - m3    : M3 program")
-      error("                - scala : vanilla Scala code")
-      error("                - akka  : distributed Akka code")
-      error("                - lms   : LMS-optimized Scala")
-      //   ("                - cpp   : C++/LMS-optimized code")
+      error("                - "+LANG_CALC     +"  : relational calculus")
+      error("                - "+LANG_M3       +"    : M3 program")
+      error("                - "+LANG_SCALA    +" : vanilla Scala code")
+      error("                - "+LANG_CPP      +"   : vanilla C++ code")
+      error("                - "+LANG_AKKA     +"  : distributed Akka code")
+      error("                - "+LANG_CPP_LMS  +"   : LMS-optimized C++")
+      error("                - "+LANG_SCALA_LMS+"   : LMS-optimized Scala")
       //   ("                - dcpp  : distributed C/C++ code")
       error("Front-end options:")
       error("  -d <depth>    incrementalization depth (default: infinite)")
@@ -97,7 +109,7 @@ object Compiler {
     }
     def lib(s:String):Boolean = if (new File(s).exists) { libs=s::Nil; true } else false
     if (libs==Nil && exec) lang match {
-      case "scala" => lib("lib/ddbt.jar") || lib("target/scala-2.10/classes") || ({ error("Cannot find runtime libraries"); exec=false; false })
+      case LANG_SCALA => lib("lib/ddbt.jar") || lib("target/scala-2.10/classes") || ({ error("Cannot find runtime libraries"); exec=false; false })
       case _ =>
     }
   }
@@ -111,9 +123,12 @@ object Compiler {
     val m3 = (M3Parser andThen TypeCheck) (m3_src)
     // Back-end
     val cg:CodeGen = lang match {
-      case "scala" => new ScalaGen(name)
-      case "akka" => new AkkaGen(name)
-      case "lms" => new LMSGen(name)
+      case LANG_SCALA => new ScalaGen(name)
+      case LANG_CPP => new CppGen(name)
+      case LANG_AKKA => new AkkaGen(name)
+      case LANG_LMS => new LMSGen(name,ddbt.codegen.lms.CppExpGen)
+      case LANG_CPP_LMS => new LMSGen(name,ddbt.codegen.lms.CppExpGen)
+      case LANG_SCALA_LMS => new LMSGen(name,ddbt.codegen.lms.ScalaExpGen)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }
     // ---- NON-INCREMENTAL START
@@ -133,7 +148,7 @@ object Compiler {
     if (post_gen!=null) post_gen(m3)
     // Execution
     if (exec) lang match {
-      case "scala"|"akka"|"lms" =>
+      case LANG_SCALA|LANG_AKKA|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS =>
         val dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
         val t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
         if (t_comp!=null) t_comp(t2)
@@ -146,10 +161,10 @@ object Compiler {
     parseArgs(args)
     try {
       lang match {
-        case "calc" => output(toast(lang)._2)
-        case "m3" => output(TypeCheck(M3Parser(toast(lang)._2)).toString)
-        case _ if in.forall(_.endsWith(".m3")) => compile(in.map(Utils.read(_)).mkString("\n"))
-        case _ => compile(toast("m3")._2)
+        case LANG_CALC => output(toast(lang)._2)
+        case LANG_M3 => output(TypeCheck(M3Parser(toast(lang)._2)).toString)
+        case _ if in.forall(_.endsWith(M3_FILE_SUFFIX)) => compile(in.map(Utils.read(_)).mkString("\n"))
+        case _ => compile(toast(LANG_M3)._2)
       }
     } catch { case t:Throwable => val sw = new StringWriter(); val pw = new PrintWriter(sw); t.printStackTrace(pw); error(sw.toString(),true) }
   }

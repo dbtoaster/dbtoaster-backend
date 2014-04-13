@@ -72,7 +72,7 @@ object UnitTest {
         e("Filtering options:")
         e("  -d <dataset>  add a dataset: tiny, standard, big, huge (_del)?")
         e("  -dd           add tiny,tiny_del,standard,standard_del datasets")
-        e("  -m <mode>     add mode: scala, lms, akka (_spec|_full|_0-10)?")
+        e("  -m <mode>     add mode: "+Compiler.LANG_SCALA+", "+Compiler.LANG_CPP+", "+Compiler.LANG_CPP_LMS+", "+Compiler.LANG_SCALA_LMS+", "+Compiler.LANG_AKKA+" (_spec|_full|_0-10)?")
         e("                          lscala, lcpp, llms")
         e("  -q <filter>   add an inclusion filter for queries")
         e("  -qx <filter>  add an exclusion filter for queries")
@@ -210,7 +210,7 @@ object UnitTest {
     Compiler.pkg = "ddbt.test.gen"
     Compiler.out = tmp.getPath+"/"+cls+".scala"
     Compiler.exec = benchmark
-    Compiler.exec_sc |= Utils.prop("lms")=="1"
+    Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp))

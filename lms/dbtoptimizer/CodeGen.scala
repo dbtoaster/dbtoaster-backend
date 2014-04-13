@@ -10,7 +10,51 @@ import dbtoptimizer.lifters._
 import scala.reflect.SourceContext
 
 trait ToasterBoosterScalaCodegen extends ScalaConciseCodegen { self =>
-  val IR: ExtendedExpressions with Effects
+  val IR: Base with ExtendedExpressions with Effects
+  import IR._
+
+  var classArgs: List[Sym[_]] = Nil
+
+  override def emitSource[A : Manifest](args: List[Sym[_]], body: Block[A], className: String, out: PrintWriter, dynamicReturnType: String = null, serializable: Boolean = false): List[(Sym[Any], Any)] = { // return free static data in block
+
+    val sA = remap(manifest[A])
+
+    val staticData = getFreeDataBlock(body)
+
+    withStream(out) {
+      stream.println("/*****************************************\n"+
+                     "  Emitting Generated Code                  \n"+
+                     "*******************************************/")
+      emitFileHeader()
+
+      val transformedBody = performTransformations(body)
+
+      // TODO: separate concerns, should not hard code "pxX" name scheme for static data here
+      stream.println("class "+className+(if (staticData.isEmpty && classArgs.isEmpty) "" else "("+staticData.map(p=>"p"+quote(p._1, true)+":"+p._1.tp).mkString(", ")+(if(!staticData.isEmpty && !classArgs.isEmpty) ", " else "") +classArgs.map(a => quote(a, true) + ":" + remap(a.tp)).mkString(", ")+")")+" extends (("+args.map( a => remap(a.tp)).mkString(", ")+")=>("+sA+")) {")
+      stream.println("  def apply("+args.map(a => quote(a, true) + ":" + remap(a.tp)).mkString(", ")+"): "+sA+" = {")
+      emitBlock(transformedBody)
+      stream.println(quote(getBlockResult(transformedBody)))
+      stream.println("  }")
+      staticFields.map { case (key, staticFldDef) =>
+        stream.println("  " + staticFldDef)
+      }
+      staticFields.clear
+      stream.println("}")
+      stream.println("/*****************************************\n"+
+                     "  End of Generated Code                  \n"+
+                     "*******************************************/")
+    }
+
+    staticData
+  }
+
+  def generateClassArgsDefs(out: PrintWriter, functionNames:Seq[String]) {
+
+  }
+}
+
+trait ToasterBoosterCCodegen extends CConciseCodegen { self =>
+  val IR: Base with ExtendedExpressions with Effects
   import IR._
 
   var classArgs: List[Sym[_]] = Nil

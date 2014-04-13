@@ -26,6 +26,8 @@ trait ToasterBoosterScalaCodeGenPkg extends ScalaCodeGenPkg with ScalaGenSimpleV
     import IR._
 }
 
+trait ToasterBoosterCCodeGenPkg extends ToasterBoosterScalaCodeGenPkg
+
 trait DSL extends DSLBase with ScalaOpsPkg
   with LiftPrimitives with LiftString with LiftVariables
   with ToasterBoosterOpsPkg {
