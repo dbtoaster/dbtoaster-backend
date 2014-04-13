@@ -458,6 +458,26 @@ trait GenericGenStore extends GenericNestedCodegen {
   import IR._
   
   def generateNewStore(c: Sym[_]):String
+
+  def simplifyTypeName(tp:String):String = tp match {
+    case "Int" | "int" => "I"
+    case "Long" | "long" => "L"
+    case "Float" | "float" => "F"
+    case "Double" | "double" => "D"
+    case "Boolean" | "boolean" => "B"
+    case "java.util.Date" => "A"
+    case "java.lang.String" | "char*" => "S"
+    case _ => tp.replace(".","_")
+  }
+
+  def zeroValue(tp:String):String = tp match {
+    case "Int" | "int" => "0"
+    case "Long" | "long" => "0L"
+    case "Float" | "float" => "0f"
+    case "Double" | "double" => "0D"
+    case "Boolean" | "boolean" => "false"
+    case _ => "null"
+  }
 }
 
 trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStore {
@@ -552,26 +572,6 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     val targsStrList = targs.map(tp => remap(tp))
     val clsName = baseClsName+"_x"+sym.id+"_"+targsStrList.map(tp => simplifyTypeName(tp)).mkString
     (clsName, targsStrList)
-  }
-
-  def simplifyTypeName(tp:String):String = tp match {
-    case "Int" => "I"
-    case "Long" => "L"
-    case "Float" => "F"
-    case "Double" => "D"
-    case "Boolean" => "B"
-    case "java.util.Date" => "A"
-    case "java.lang.String" => "S"
-    case _ => tp.replace(".","_")
-  }
-
-  def zeroValue(tp:String):String = tp match {
-    case "Int" => "0"
-    case "Long" => "0L"
-    case "Float" => "0f"
-    case "Double" => "0D"
-    case "Boolean" => "false"
-    case _ => "null"
   }
 
   // Implementation of MurmurHash3 based on scala.util.hashing.MurmurHash3 for Products
@@ -759,26 +759,6 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
     val targsStrList = targs.map(tp => remap(tp))
     val clsName = baseClsName+"_x"+sym.id+"_"+targsStrList.map(tp => simplifyTypeName(tp)).mkString
     (clsName, targsStrList)
-  }
-
-  def simplifyTypeName(tp:String):String = tp match {
-    case "Int" => "I"
-    case "Long" => "L"
-    case "Float" => "F"
-    case "Double" => "D"
-    case "Boolean" => "B"
-    case "java.util.Date" => "A"
-    case "java.lang.String" => "S"
-    case _ => tp.replace(".","_")
-  }
-
-  def zeroValue(tp:String):String = tp match {
-    case "Int" => "0"
-    case "Long" => "0L"
-    case "Float" => "0f"
-    case "Double" => "0D"
-    case "Boolean" => "false"
-    case _ => "null"
   }
 
   // Implementation of MurmurHash3 based on scala.util.hashing.MurmurHash3 for Products
