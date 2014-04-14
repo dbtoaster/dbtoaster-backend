@@ -9,17 +9,31 @@ trait Ring[V] {
 
 object Ring {
   implicit object LongRing extends Ring[Long] {
-    val zero=0L
-    val one=1L
+    val zero = 0L
+    val one = 1L
     def +(x:Long,y:Long):Long = x+y
     def *(x:Long,y:Long):Long = x*y
   }
 
   implicit object DoubleRing extends Ring[Double] {
-    val zero=0.0
-    val one=1.0
+    val zero = 0.0
+    val one = 1.0
     def +(x:Double,y:Double):Double = x+y
     def *(x:Double,y:Double):Double = x*y
+  }
+
+  implicit object StringRing extends Ring[String] {
+    val zero = ""
+    val one = ???
+    def +(v1: String,v2: String): String = ???
+    def *(v1: String,v2: String): String = ??? 
+  }
+
+  implicit object DateRing extends Ring[java.util.Date] {
+    val zero = ???
+    val one = ???
+    def +(v1: java.util.Date,v2: java.util.Date): java.util.Date = ???
+    def *(v1: java.util.Date,v2: java.util.Date): java.util.Date = ???
   }
 }
 
