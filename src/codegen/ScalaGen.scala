@@ -54,7 +54,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   */
 
   // Create a variable declaration
-  def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+mapval(tp.zeroScala)+"\n" else "val "+n+" = M3Map.temp["+tupv(ks.map(_.toScala))+","+tp.toScala+"]()\n"
+  def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+mapval(tp.zeroScala)+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+tp.toScala+"]()\n"
 
   def genOp(vl:String,vr:String,op:String,t1:Type,t2:Type) = {
     (t1,t2) match {
@@ -79,10 +79,16 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case Ref(n) => co("MapVal("+rn(n)+")")
     case Const(tp,v) => tp match { case TypeLong => co(mapval(v+"L")) case TypeString => co(mapval("\""+v+"\"")) case _ => co(mapval(v)) }
     case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+".m != 0) MapVal.one else MapVal.zero)"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") MapVal.one else MapVal.zero)")))
+    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") MapVal.one[Long] else MapVal.zero[Long])")))
     case app@Apply(fn,tp,as) =>
-      if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
-      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
+      if (as.forall(_.isInstanceOf[Const])) co(mapval(constApply(app))) // hoist constants resulting from function application
+      else { 
+        def app(vs:List[String],as:List[Expr]):String = as match {
+          case a::Nil => cpsExpr(a,(v:String)=>co(mapval("U"+fn+"("+(vs:::List(v)).map(v=>v+".v").mkString(",")+")")),am)
+          case a::as => cpsExpr(a,(v:String)=>app(vs:::List(v),as),am)
+        }
+        app(Nil,as)
+      }
     //ki : inner key
     //ko : outer key
     //Example:
@@ -141,9 +147,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         }
         //pulling out the conditionals from a multiplication
         (cx(vl),cx(vr)) match {
-          case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+ex.tp.zeroScala+")"
-          case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+ex.tp.zeroScala+")"
-          case (_,Some((cr,tr))) => "(if ("+cr+") "+vx(vl,tr)+" else "+ex.tp.zeroScala+")"
+          case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+mapval(ex.tp.zeroScala)+")"
+          case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+mapval(ex.tp.zeroScala)+")"
+          case (_,Some((cr,tr))) => "(if ("+cr+") "+vx(vl,tr)+" else "+mapval(ex.tp.zeroScala)+")"
           case _ => vx(vl,vr)
         }
       }
@@ -238,7 +244,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     }
   }
 
-  def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = map+".add("+keyNamesConcat+",1L)"
+  def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = map+".add("+keyNamesConcat+",MapVal.one[Long])"
 
   // Generate (1:stream events handling, 2:table loading, 3:global constants declaration)
   def genInternals(s0:System,nextSkip:String="context.become(receive_skip)") : (String,String,String) = {

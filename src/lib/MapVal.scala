@@ -3,43 +3,67 @@ package ddbt.lib
 trait Ring[V] {
   val zero:V
   val one:V
-  def +(v1:V,v2:V):V
-  def *(v1:V,v2:V):V
+  def +(x:V,y:V):V
+  def *(x:V,y:V):V
+  def >(x:V,y:V):Boolean
+  def <(x:V,y:V):Boolean
+  def <=(x:V,y:V):Boolean
+  def >=(x:V,y:V):Boolean
 }
 
 object Ring {
   implicit object LongRing extends Ring[Long] {
     val zero = 0L
     val one = 1L
-    def +(x:Long,y:Long):Long = x+y
-    def *(x:Long,y:Long):Long = x*y
+    def +(x:Long,y:Long):Long = x + y
+    def *(x:Long,y:Long):Long = x * y
+    def >(x:Long,y:Long):Boolean = x > y
+    def <(x:Long,y:Long):Boolean = x < y
+    def <=(x:Long,y:Long):Boolean = x <= y
+    def >=(x:Long,y:Long):Boolean = x >= y
   }
 
   implicit object DoubleRing extends Ring[Double] {
     val zero = 0.0
     val one = 1.0
-    def +(x:Double,y:Double):Double = x+y
-    def *(x:Double,y:Double):Double = x*y
+    def +(x:Double,y:Double):Double = x + y
+    def *(x:Double,y:Double):Double = x * y
+    def >(x:Double,y:Double):Boolean = x > y
+    def <(x:Double,y:Double):Boolean = x < y
+    def <=(x:Double,y:Double):Boolean = x <= y
+    def >=(x:Double,y:Double):Boolean = x >= y
   }
 
   implicit object StringRing extends Ring[String] {
     val zero = ""
-    val one = ???
-    def +(v1: String,v2: String): String = ???
-    def *(v1: String,v2: String): String = ??? 
+    val one = ""
+    def +(x: String,y: String): String = ???
+    def *(x: String,y: String): String = ??? 
+    def >(x:String,y:String):Boolean = ???
+    def <(x:String,y:String):Boolean = ???
+    def <=(x:String,y:String):Boolean = ???
+    def >=(x:String,y:String):Boolean = ???
   }
 
   implicit object DateRing extends Ring[java.util.Date] {
     val zero = ???
     val one = ???
-    def +(v1: java.util.Date,v2: java.util.Date): java.util.Date = ???
-    def *(v1: java.util.Date,v2: java.util.Date): java.util.Date = ???
+    def +(x: java.util.Date,y: java.util.Date): java.util.Date = ???
+    def *(x: java.util.Date,y: java.util.Date): java.util.Date = ???
+    def >(x:java.util.Date,y:java.util.Date):Boolean = x.getTime > y.getTime
+    def <(x:java.util.Date,y:java.util.Date):Boolean = x.getTime < y.getTime
+    def <=(x:java.util.Date,y:java.util.Date):Boolean = x.getTime <= y.getTime
+    def >=(x:java.util.Date,y:java.util.Date):Boolean = x.getTime >= y.getTime
   }
 }
 
 case class MapVal[V](val m:Int, val v:V)(implicit ring:Ring[V]) {
   def +(that:MapVal[V]) = { MapVal(m+that.m,ring.+(this.v,that.v)) }
   def *(that:MapVal[V]) = { MapVal(m*that.m,ring.*(this.v,that.v)) }
+  def >(that:MapVal[V]) = { ring.>(this.v, that.v) }
+  def <(that:MapVal[V]) = { ring.<(this.v, that.v) }
+  def <=(that:MapVal[V]) = { ring.<=(this.v, that.v) }
+  def >=(that:MapVal[V]) = { ring.>=(this.v, that.v) }
   def unary_-() = { MapVal(-m,v) }
 }
 
