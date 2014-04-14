@@ -10,15 +10,15 @@ import scala.reflect.ClassTag
  */
 
 trait M3Map[K,V] {
-  def get(key:K):V;           // returns the value or zero if it is not present
-  def set(key:K, value:V);    // inserts or set the value
-  def add(key:K, value:V);    // combines new value with existing one using 'plus'
-  def foreach(f:(K,V)=>Unit); // iterates through all non-zero values of the map
+  def get(key:K):MapVal[V];           // returns the value or zero if it is not present
+  def set(key:K, value:MapVal[V]);    // inserts or set the value
+  def add(key:K, value:MapVal[V]);    // combines new value with existing one using 'plus'
+  def foreach(f:(K,MapVal[V])=>Unit); // iterates through all non-zero values of the map
   def slice[T](index:Int,subKey:T):M3Map[K,V]; // partition where the secondary index is equal to subKey
   def sum(acc:M3Map[K,V]);    // accumulate in acc: acc <- element_wise_sum(this,acc)
   def clear();                // erases all elements of the map or slice
   def size:Int;               // number of key-value mappings in the map
-  def toMap:Map[K,V];         // convert to a Scala map
+  def toMap:Map[K,MapVal[V]];         // convert to a Scala map
 }
 
 /**
@@ -28,31 +28,11 @@ trait M3Map[K,V] {
  *   val tmp1 = M3Map.temp[Long,Long]();
  */
 object M3Map {
-  def temp[K,V:ClassTag]():M3Map[K,V] = new M3MapBase[K,V](zero[V](),plus[V](),false,null)
-  def make[K,V:ClassTag](projs:K=>_ *):M3Map[K,V] = new M3MapBase(zero[V](),plus[V](),true,projs.toArray)
-  def makeIdx[K<:Product,V:ClassTag](projs:Int *):M3Map[K,V] = {
-    new M3MapBase(zero[V](),plus[V](),true,projs.map(i => (k:K)=>k.productElement(i)).toArray)
+  def temp[K,V:ClassTag]()(implicit ring:Ring[V]):M3Map[K,V] = new M3MapBase[K,V](ring,false,null)
+  def make[K,V:ClassTag](projs:K=>_ *)(implicit ring:Ring[V]):M3Map[K,V] = new M3MapBase(ring,true,projs.toArray)
+  def makeIdx[K<:Product,V:ClassTag](projs:Int *)(implicit ring:Ring[V]):M3Map[K,V] = {
+    new M3MapBase(ring,true,projs.map(i => (k:K)=>k.productElement(i)).toArray)
   }
-  def temp[K,V:ClassTag](z:V,plus:(V,V)=>V):M3Map[K,V] = new M3MapBase[K,V](z,plus,false,null)
-  def make[K,V:ClassTag](z:V,plus:(V,V)=>V,projs:K=>_ *):M3Map[K,V] = new M3MapBase(z,plus,true,projs.toArray)
-  def makeIdx[K<:Product,V:ClassTag](z:V,plus:(V,V)=>V,projs:Int *):M3Map[K,V] = {
-    new M3MapBase(z,plus,true,projs.map(i => (k:K)=>k.productElement(i)).toArray)
-  }
-  // Implicit default zero
-  def zero[V]()(implicit cV:ClassTag[V]):V = (cV.toString match {
-    case "Long" => 0L
-    case "Double" => 0.0
-    case "java.lang.String" => ""
-    case "java.util.Date" => new java.util.Date(0)
-    case n => sys.error("No zero for "+n)
-  }).asInstanceOf[V]
-  // Implicit default addition
-  def plus[V]()(implicit cV:ClassTag[V]):(V,V)=>V = (cV.toString match {
-    case "Long" => (v1:Long,v2:Long)=>v1+v2
-    case "Double" => (v1:Double,v2:Double)=>v1+v2
-    case "java.util.Date" => (v1:java.util.Date,v2:java.util.Date)=>new java.util.Date(v1.getTime()+v2.getTime())
-    case n => sys.error("No zero for "+n)
-  }).asInstanceOf[(V,V)=>V]
   // Pretty-print a map
   def toStr(o:Any):String = if (o.isInstanceOf[Map[_,_]]) toStr(o.asInstanceOf[Map[_,_]]) else o.toString
   def toStr[K,V](m:Map[K,V]):String = m.toList.map{case(k,v)=>(str(k),str(v))}.sortBy(x=>x._1).map{case(k,v)=>k+" -> "+v}.mkString("\n")

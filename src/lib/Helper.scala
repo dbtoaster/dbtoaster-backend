@@ -119,27 +119,28 @@ object Helper {
   private def eq_p(p1:Product,p2:Product) = { val n=p1.productArity; assert(n==p2.productArity);  List.range(0,n).forall(i => eq_v(p1.productElement(i), p2.productElement(i))) }
 
   def diff[V](v1:V,v2:V) = if (!((v1,v2) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case _ => eq_v(v1,v2) })) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
-  def diff[K,V](map1:Map[K,V],map2:Map[K,V]) = { // map1 is the test result, map2 is the reference
+  def diff[K,V:ClassTag](map1:Map[K,MapVal[V]],map2:Map[K,MapVal[V]])(implicit ring:Ring[V]) = { // map1 is the test result, map2 is the reference
     import scala.collection.mutable.HashMap
     import java.util.Date
     val m1 = map1.filter{ case (k,v) => map2.get(k) match { case Some(v2) => v2!=v case None => true } }
     val m2 = map2.filter{ case (k,v) => map1.get(k) match { case Some(v2) => v2!=v case None => true } }
-    def rekey(m:Map[K,V]):HashMap[K,V] = { // merges similar keys within one map (using sorting)
+    def rekey(m:Map[K,MapVal[V]]):HashMap[K,MapVal[V]] = { // merges similar keys within one map (using sorting)
       val l0 = m.toList.sortBy(_._1.toString) // not nicest but works
-      val z = if (l0.size==0) null else l0(0)._2 match { case x:Long=>0L case x:Double=>0.0 case x:String=>"" case x:Date=>new Date(0) case _ => null }
-      val mm = new M3MapBase[K,V](z.asInstanceOf[V],null,true,null)
-      def re(l:List[(K,V)]):Unit = l match {
+      val z = if (l0.size==0) null else l0(0)._2 == MapVal.zero[V]
+      val mm = M3Map.make[K,V](null)
+      def re(l:List[(K,MapVal[V])]):Unit = l match {
         case a::b::ls if ((a._1,b._1) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case (k1,k2) => eq_v(k1,k2) }) => mm.add(a._1,a._2); mm.add(a._1,b._2); re(ls)
         case a::ls => mm.add(a._1,a._2); re(ls)
         case Nil =>
       }
-      re(l0); val r=new HashMap[K,V](); r ++= mm.toMap;
+      re(l0); 
+      val r=new HashMap[K,MapVal[V]](); r ++= mm.toMap;
     }
     if (m1.size>0 || m2.size>0) {
       val err=new StringBuilder()
       val b1 = rekey(m1)
       val b2 = rekey(m2)
-      b1.toMap.foreach { x=> x._2 match { case d1:Double => if (Math.abs(d1)<diff_p) b1.remove(x._1) case _ => }} // ignore 'almost zero' values
+      b1.toMap.foreach { x=> x._2 match { case MapVal(_,d1:Double) => if (Math.abs(d1)<diff_p) b1.remove(x._1) case _ => }} // ignore 'almost zero' values
       b1.toMap.foreach { case (k1,v1) =>
         b2.toMap.foreach { case (k2,v2) =>
           if (b1.contains(k1) && b2.contains(k2)) {

@@ -45,8 +45,6 @@ class MessageSerializer extends JSerializer {
     else if (obj instanceof String) return 5+((String)obj).getBytes().length;
     else if (obj instanceof Object[]) { Object[]a=(Object[])obj; int n=a.length; int s=5; for (int i=0;i<n;++i) s+=sz(a[i]); return s; }
     else if (obj instanceof M3MapBase) {
-      @SuppressWarnings("unchecked") M3MapBase<Object,Object> m=(M3MapBase<Object,Object>)obj;
-      final Sz s=new Sz(); s.s=5+sz(m.zero()); m.foreach(m.new Fun2() { public void apply(Object k, Object v) { s.s+=sz(k)+sz(v); }}); return s.s;
     }
     if (obj instanceof scala.Product) { scala.Product p=(scala.Product)obj; int a=p.productArity(); if (a<=10) { int s=1; for (int i=0;i<a;++i) s+=sz(p.productElement(i)); return s; } }
     try { ByteArrayOutputStream s=new ByteArrayOutputStream(); ObjectOutputStream os=new ObjectOutputStream(s); os.writeObject(obj); os.close(); return 1+s.toByteArray().length; } catch(Exception e) { return -1; }
@@ -59,9 +57,6 @@ class MessageSerializer extends JSerializer {
     else if (obj instanceof String) { byte[] bs=((String)obj).getBytes(); bb.put((byte)'S').putInt(bs.length).put(bs); }
     else if (obj instanceof Object[]) { Object[]a=(Object[])obj; int n=a.length; bb.put((byte)'A').putInt(n); for (int i=0;i<n;++i) wr(bb,a[i]); }
     else if (obj instanceof M3MapBase) {
-      @SuppressWarnings("unchecked") M3MapBase<Object,Object> m=(M3MapBase<Object,Object>)obj;
-      bb.put((byte)'M'); wr(bb,m.zero()); bb.putInt(m.size());
-      m.foreach(m.new Fun2() { public void apply(Object k, Object v) { wr(bb,k); wr(bb,v); }});
     } else {
       if (obj instanceof scala.Product) { scala.Product p=(scala.Product)obj; int a=p.productArity(); if (a<=10) { bb.put((byte)a); for (int i=0;i<a;++i) wr(bb,p.productElement(i)); return; } }
       bb.put((byte)'O'); try { new ObjectOutputStream(new BBOutputStream(bb)).writeObject(obj); } catch(Exception e) {}
@@ -76,7 +71,7 @@ class MessageSerializer extends JSerializer {
     if (tp=='D') return new Date(bb.getLong());
     if (tp=='S') { byte[] bs=new byte[bb.getInt()]; bb.get(bs); return new String(bs); }
     if (tp=='A') { int n=bb.getInt(); Object[] a=new Object[n]; for (int i=0;i<n;++i) a[i]=rd(bb); return a; }
-    if (tp=='M') { Object z=rd(bb); M3MapBase<Object,Object> m=new M3MapBase<Object,Object>(z,null,false,null); int n=bb.getInt(); for (int i=0;i<n;++i) m.put(rd(bb),rd(bb)); return m; }
+    if (tp=='M') { return null; }
     if (tp=='O') { Object o=null; try { o=new ObjectInputStream(new BBInputStream(bb)).readObject(); } catch(Exception e) { System.err.println(e); } return o; }
     switch(tp) {
       //(1 to 10).foreach(i=> println("      case "+i+": return new scala.Tuple"+i+"<"+(0 until i).map(x=>"Object").mkString(",")+">("+(0 until i).map(x=>"rd(bb)").mkString(",")+");"))
