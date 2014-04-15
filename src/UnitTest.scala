@@ -188,12 +188,12 @@ object UnitTest {
       "implicit def strConv(d:Long) = \"\"+d\n"+ // fix for TPCH22
       q.sets.map { case (sz,set) =>
         (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-m0\",\"-d"+sz+"\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
-        set.out.map { case (n,o) => val (kt,vt) = qt(n); val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
+        set.out.map { case (n,o) => val (kt,vt) = qt(n); val qtp = "["+tup(kt.map(_.toScala))+",MapVal["+vt.toScala+"]]"
           val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
-          val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
+          val cmp = "diff["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"](res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else "MapVal["+vt.toScala+"]")+"], "+(o match {
             case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+",("+v.mkString(",")+"))" }.mkString(",")+")"// inline in the code
             case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
-            case QuerySingleton(vs) => "("+vs.mkString(",")+")"
+            case QuerySingleton(vs) => tup(vs)
           })+")"
           (if (full) "it(\""+n+" correct\") " else "")+"{\n"+ind(kv+cmp)+"\n}"
         }.mkString("\n"))+"\n})"
