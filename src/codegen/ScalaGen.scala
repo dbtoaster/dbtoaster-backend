@@ -78,7 +78,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
     case Ref(n) => co("MapVal("+rn(n)+")")
     case Const(tp,v) => tp match { case TypeLong => co(mapval(v+"L")) case TypeString => co(mapval("\""+v+"\"")) case _ => co(mapval(v)) }
-    case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+".m != 0) MapVal.one else MapVal.zero)"))
+    case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+".m != 0) MapVal.one[Long] else MapVal.zero[Long])"))
     case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") MapVal.one[Long] else MapVal.zero[Long])")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(mapval(constApply(app))) // hoist constants resulting from function application

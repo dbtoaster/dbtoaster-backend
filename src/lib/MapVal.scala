@@ -46,8 +46,8 @@ object Ring {
   }
 
   implicit object DateRing extends Ring[java.util.Date] {
-    val zero = ???
-    val one = ???
+    val zero = new java.util.Date(0)
+    val one = new java.util.Date(0)
     def +(x: java.util.Date,y: java.util.Date): java.util.Date = ???
     def *(x: java.util.Date,y: java.util.Date): java.util.Date = ???
     def >(x:java.util.Date,y:java.util.Date):Boolean = x.getTime > y.getTime
