@@ -53,20 +53,38 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   x1+x2
   */
 
+  var tupleClasses:Map[String,String] = Map()
+  def tupleClass(ts:List[Type]):String = {
+    val ops = List("+", "*")    
+    val invalidOps = List(">", "<", ">=", "<=")
+    val scalarOps = List("*")
+    val scalarTypes = List(TypeLong,TypeDouble)
+    val name = "T"+ts.map(_.toString).mkString("_")
+
+    if(!tupleClasses.contains(name)) {
+      val vals = Range(0,ts.length).map(i => "_"+i)
+      def rings(postfix:String) = ts.map(_.toScala+"Ring"+postfix).mkString(",")
+      val caseClass = "case class "+name+"("+(vals zip ts).map({case (v,t) => "val "+v+":"+t.toScala}).mkString(",")+");"
+      val zero = "val zero = "+name+"("+rings(".zero")+")"
+      val one = "val one = "+name+"("+rings(".one")+")"
+      val opsDef = ops.map(op => "def "+op+"(x:"+name+",y:"+name+") = "+name+"("+ts.zipWithIndex.map({ case(t,i) => t.toScala+"Ring"+"."+op+"(x._"+i+",y._"+i+")"}).mkString(",")+")").mkString("\n")
+      val stubs = invalidOps.map(op => "def "+op+"(x:"+name+",y:"+name+") = ???").mkString("\n")
+      //val scalarOpsDef = scalarOps.map(op => scalarTypes.map(t => "def "+op+"(x:"+name+",y:"+t+") = "+name+"("+ts.zipWithIndex.map({ case(t,i) => t.toScala+"Ring"+"."+op+"(x._"+i+",y._"+i+")"}).mkString(",")+")").mkString("\n")).mkString("\n")
+      val obj = "implicit object "+name+"Ring extends Ring["+name+"] {"+List(zero,one,opsDef,stubs).mkString("\n")+"}"
+      val code = caseClass+obj
+      tupleClasses += (name -> code) 
+    }
+
+    name
+  }
+
   // Create a variable declaration
   def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+mapval(tp.zeroScala)+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+tp.toScala+"]()\n"
 
-  def genOp(vl:String,vr:String,op:String,t1:Type,t2:Type) = {
+  def genOp(vl:String,vr:String,op:String,t1:Type,t2:Type):String = {
     (t1,t2) match {
-      case (TypeTuple(ts1),TypeTuple(ts2)) =>
-        val t1=fresh("t");val t2=fresh("t")
-        "{ val "+t1+" = "+vl+"; val "+t2+" = "+vr+"; ("+(List.range(1,ts1.length+1).map(i => t1+"._"+i+" "+op+" "+t2+"._"+i)).mkString(",")+") }"
-      case (t1,TypeTuple(ts2)) =>
-        val t2=fresh("t")
-        "{ val "+t2+" = "+vr+"; ("+(List.range(1,ts2.length+1).map(i => vl+" "+op+" "+t2+"._"+i)).mkString(", ")+") }"
-      case (TypeTuple(ts1),t2) =>
-        val t1=fresh("t")
-        "{ val "+t1+" = "+vl+"; ("+(List.range(1,ts1.length+1).map(i => t1+"._"+i+" "+op+" "+vr)).mkString(", ")+") }"
+      case (TypeTuple(_),TypeTuple(_)) => "("+vl+" "+op+" "+vr+")"
+      case (_,TypeTuple(_)) => genOp(vr,vl,op,t2,t1)
       case (_,_) => "("+vl+" "+op+" "+vr+")"
     }
   }
@@ -190,9 +208,14 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
           ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
-    case Tuple(es) => 
+    case t@Tuple(es) => 
+      val tp =
+        t.tp match {
+          case TypeTuple(ts) => tupleClass(ts)
+          case _ => sys.error("Expected tuple type")
+        }
       def tuple(vs:List[String],esp:List[Expr]):String = esp match {
-        case e::Nil => cpsExpr(e,(v:String)=>co(tupv(vs:::List(v))),am)
+        case e::Nil => cpsExpr(e,(v:String)=>co(mapval(tp+tupv(vs:::List(v)))),am)
         case e::es => cpsExpr(e,(v:String)=>tuple(vs:::List(v),es),am)
       }
       tuple(Nil,es)
@@ -235,12 +258,18 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     else {
       val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())
-      val proj = if(s.isEmpty) "" else s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ") 
-      val pluszero = m.tp match { 
-        case TypeTuple(_) => m.tp.zero+", (v1:"+m.tp.toScala+",v2:"+m.tp.toScala+") => "+genOp("v1","v2","+",m.tp,m.tp) 
-        case _ => ""
-      }
-      "val "+m.name+" = M3Map.make["+tk+","+m.tp.toScala+"]("+pluszero+(if(!pluszero.isEmpty && !proj.isEmpty) "," else "")+proj+");"
+      val proj = if(s.isEmpty) "null" else s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ") 
+      val implicitArg = 
+        m.tp match {
+          case TypeTuple(ts) => "("+tupleClass(ts)+"Ring)" 
+          case _ => ""
+        }
+      val tp = 
+        m.tp match {
+          case TypeTuple(ts) => tupleClass(ts) 
+          case _ => m.tp.toScala
+        }
+      "val "+m.name+" = M3Map.make["+tk+","+tp+"]("+proj+");"//+implicitArg+";"
     }
   }
 
@@ -285,7 +314,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     clearOut
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
-    "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
+    "import ddbt.lib.Functions._\n\n"+
+    tupleClasses.values.mkString("\n")+"\n\n"+
+    body+"\n\n"+
     "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
     "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap+" case _ => tS+=1 }\n"+
     "def receive = {\n"+ind(str+
@@ -323,7 +354,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
   // Helper that contains the main and stream generator
   def helper(s0:System,pkg:String) =
-    "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
+    "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\nimport ddbt.lib.Ring._\n\n"+
     "object "+cls+" {\n"+ind("import Helper._\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+

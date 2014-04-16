@@ -1,4 +1,5 @@
 package ddbt.lib
+import scala.reflect.ClassTag
 
 trait Ring[V] {
   val zero:V
