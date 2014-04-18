@@ -84,8 +84,23 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   def genOp(vl:String,vr:String,op:String,t1:Type,t2:Type):String = {
     (t1,t2) match {
       case (TypeTuple(_),TypeTuple(_)) => "("+vl+" "+op+" "+vr+")"
-      case (_,TypeTuple(_)) => genOp(vr,vl,op,t2,t1)
+      case (_,TypeTuple(ts)) => {
+        val v=fresh("v")
+        "{ val "+v+"="+vl+".v;"+mapval(tupleClass(ts)+"("+(List.fill(ts.length)(v)).mkString(",")+")")+op+" "+vr+" }"
+      }
+      case (TypeTuple(ts),_) => {
+        val v=fresh("v")
+        "{ val "+v+"="+vr+".v;"+vl+" "+op+" "+mapval(tupleClass(ts)+"("+(List.fill(ts.length)(v)).mkString(",")+")")+" }"
+      }
+      case (TypeLong,TypeDouble) => "("+vr+" "+op+" "+vl+")"
       case (_,_) => "("+vl+" "+op+" "+vr+")"
+    }
+  }
+
+  def genZero(t:Type) = {
+    t match {
+      case TypeTuple(ts) => tupleClass(ts) + t.zeroScala
+      case _ => t.zeroScala
     }
   }
 
@@ -148,7 +163,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val tps = e.tp match { case TypeTuple(ts) => ts case _ => sys.error("Expected tuple type") } 
       (ns zip tps).foreach { case (n,t) => ctx.add(n,(t,fresh("l"))) }
       val t=fresh("t"); ctx.add(t,(e.tp,t))
-      cpsExpr(e,(v:String)=> ns.zipWithIndex.foldLeft("val "+t+" = "+v+";\n"){case (r,(n,i)) => r+"val "+rn(n)+" = "+t+"._"+(i+1)+";\n"}+co("MapVal.one[Long]"),am)
+      cpsExpr(e,(v:String)=> ns.zipWithIndex.foldLeft("val "+t+" = "+v+";\n"){case (r,(n,i)) => r+"val "+rn(n)+" = "+t+".v._"+i+";\n"}+co("MapVal.one[Long]"),am)
     // Mul(el,er)
     // ==
     //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) )
@@ -165,9 +180,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         }
         //pulling out the conditionals from a multiplication
         (cx(vl),cx(vr)) match {
-          case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+mapval(ex.tp.zeroScala)+")"
-          case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+mapval(ex.tp.zeroScala)+")"
-          case (_,Some((cr,tr))) => "(if ("+cr+") "+vx(vl,tr)+" else "+mapval(ex.tp.zeroScala)+")"
+          case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+mapval(genZero(ex.tp))+")"
+          case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+mapval(genZero(ex.tp))+")"
+          case (_,Some((cr,tr))) => "(if ("+cr+") "+vx(vl,tr)+" else "+mapval(genZero(ex.tp))+")"
           case _ => vx(vl,vr)
         }
       }
@@ -184,7 +199,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     //   foreach vr in R, T += vr
     //   foreach t in T, co(t)
     case a@Add(el,er) =>
-      if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
+      if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co(genOp(vl,vr,"+",el.tp,er.tp))},am)},am) }
       else am match {
         case Some(t) if t.toSet.subsetOf(a.agg.toSet) => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ =>
@@ -219,7 +234,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         case e::es => cpsExpr(e,(v:String)=>tuple(vs:::List(v),es),am)
       }
       tuple(Nil,es)
-    case Neg(e) => cpsExpr(e,(v:String) => co("-("+v+")"),am)
+    case Neg(e) => cpsExpr(e,(v:String) => co(" -("+v+")"),am)
     case _ => sys.error("Don't know how to generate "+ex)
   }
 
@@ -258,18 +273,13 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     else {
       val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())
-      val proj = if(s.isEmpty) "null" else s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ") 
-      val implicitArg = 
-        m.tp match {
-          case TypeTuple(ts) => "("+tupleClass(ts)+"Ring)" 
-          case _ => ""
-        }
+      val proj = if(s.isEmpty) "" else s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ") 
       val tp = 
         m.tp match {
           case TypeTuple(ts) => tupleClass(ts) 
           case _ => m.tp.toScala
         }
-      "val "+m.name+" = M3Map.make["+tk+","+tp+"]("+proj+");"//+implicitArg+";"
+      "val "+m.name+" = M3Map.make["+tk+","+tp+"]("+proj+");"
     }
   }
 
