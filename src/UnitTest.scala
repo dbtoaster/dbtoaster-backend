@@ -44,8 +44,8 @@ object UnitTest {
     import scala.collection.mutable.{Set=>MSet}
     val qinc=MSet[String](); val qexcl=MSet[String](); var qfail=false
     var i=0; val l=args.length; var as=List[String]()
-    def eat(f:String=>Unit,s:Boolean=false) { i+=1; if (i<l) f(if(s) args(i).toLowerCase else args(i)) }
-    while(i<l) { args(i) match {
+    def eat(f:String=>Unit,s:Boolean=false) { i+=1; if (i < l) f(if(s) args(i).toLowerCase else args(i)) }
+    while(i < l) { args(i) match {
       case "-d" => eat(s=>if(!datasets.contains(s)) datasets=datasets:+s,true)
       case "-dd"=> val ds=List("tiny","tiny_del","standard","standard_del"); datasets=ds:::datasets.filter(!ds.contains(_))
       case "-m"|"-l" => eat(s=>if(!modes.contains(s)) modes=modes:+s,true)
@@ -274,7 +274,7 @@ object UnitTest {
                List("program_options","serialization","system","filesystem","chrono","thread").map("-lboost_"+_) ::: // thread-mt
                (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
       val t2 = ns(()=>exec(as.toArray))._1; p.comp(t2)
-      p.run(()=>{ var i=0; while (i<warmup+samples) { i+=1
+      p.run(()=>{ var i=0; while (i < warmup+samples) { i+=1
         val (out,err)=exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
         if (err!="") System.err.println(err); println(out)
       }})
@@ -293,7 +293,7 @@ object UnitTest {
   // Helper for displaying information and emitting a CSV file
   case class Sample(us:Long,count:Long,skip:Long) extends Ordered[Sample] {
     override def toString = { (us/1000000L)+".%06d".format(us%1000000L)+","+count+","+skip+"," } // CSV format
-    def compare(s:Sample) = { val (a,b) = (count*s.us,s.count*us); if (a<b) -1 else if (a>b) 1 else 0 }
+    def compare(s:Sample) = { val (a,b) = (count*s.us,s.count*us); if (a < b) -1 else if (a>b) 1 else 0 }
     def t = { val ms=math.round(us/1000.0); "%d.%03d".format(ms/1000,ms%1000) } // time in seconds
     def f = { val tps=if (us==0) 0 else count*1000000.0/us; val t=math.round(tps*10); "%d.%01d".format(t/10,t%10) } // frequency in views/sec
   }
@@ -310,21 +310,21 @@ object UnitTest {
       val t = new Thread { override def run { var l=r.readLine; while(l!=null) { if (l.startsWith("SAMPLE=")) { val d=l.trim.substring(7).split(",")
         if (dump!=null) { dump.println(name+","+l.trim.substring(7)); dump.flush }
         if (d(0)!=dn) { w=0; ts=Nil; dn=d(0) }
-        if (w<warmup) { w+=1; pr(d(0),"  "+("."*w),true) }
+        if (w < warmup) { w+=1; pr(d(0),"  "+("."*w),true) }
         else {
           ts = (Sample(d(1).toLong,d(2).toLong,d(3).toLong) :: ts).sorted
           val n=ts.size; val m=ts(n/2);
           val med = if (n%2==1) m else { val b=ts(n/2-1); Sample((m.us+b.us)/2,(m.count+b.count)/2,(m.skip+b.skip+1)/2) } // if 1 skip, result must skip
           val (min,max) = (ts(0),ts(n-1))
           val abs_time = min.skip==0 && med.skip==0 && max.skip==0
-          pr(d(0),(if (abs_time) "%7s".format(med.t)+" ["+max.t+", "+min.t+"] (" else med.f+" ["+min.f+", "+max.f+"] (views/sec, ")+""+ts.size+(if (ts.size<samples) "/"+samples else "")+" samples)",n<samples)
-          if (ts.size==samples) { while (ds<datasets.size && d(0)!=datasets(ds)) add(); add(""+med+min+max) }
+          pr(d(0),(if (abs_time) "%7s".format(med.t)+" ["+max.t+", "+min.t+"] (" else med.f+" ["+min.f+", "+max.f+"] (views/sec, ")+""+ts.size+(if (ts.size < samples) "/"+samples else "")+" samples)",n < samples)
+          if (ts.size==samples) { while (ds < datasets.size && d(0)!=datasets(ds)) add(); add(""+med+min+max) }
         }
       }; l=r.readLine }}}
       t.start; try { scala.Console.setOut(o); System.setOut(o); f() } finally { scala.Console.setOut(c0); System.setOut(s0); o.close }; t.join
     }
     def all(q:QueryTest)(f:String=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) add() else f(d) }; close }
-    def close { while (ds<datasets.size) add(); var s=time(med(tg))+","+time(med(tc))+","+tr; if (csv!=null) { csv.print(s); csv.flush } }
+    def close { while (ds < datasets.size) add(); var s=time(med(tg))+","+time(med(tc))+","+tr; if (csv!=null) { csv.print(s); csv.flush } }
   }
 
   // ---------------------------------------------------------------------------
