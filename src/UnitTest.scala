@@ -29,8 +29,8 @@ object UnitTest {
   var tmp = makeTempDir() //(auto_delete=false)
   var cache = true      // cache is enabled
   var benchmark = false // enable benchmarks
-  var samples = 10      // number of samples to take in the benchmark
-  var warmup = 0        // number of warm-up transients to remove
+  var samples = 3       // number of samples to take in the benchmark
+  var warmup = 2        // number of warm-up transients to remove
   var timeout = 0L      // test duration timeout (milliseconds)
   var verify = false    // enforce correctness verification in benchmark
   var parallel = 0      // parallel streams mode
