@@ -64,9 +64,9 @@ trait LMSExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressions
 
   val codegen: MyGenericCodegen
   override def reset = { storeSyms = Nil; super.reset }
-  def emit[T:Manifest](sym: => Exp[T])
-  def emit[T:Manifest](blk:Block[T])
-  def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)])
+  def emit[T:Manifest](sym: => Exp[T]):String
+  def emit[T:Manifest](blk:Block[T]):String
+  def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]):String
 }
 
 /*
@@ -74,7 +74,7 @@ trait LMSExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressions
  * convert a Rep[T] into its String representation in the target code.
  */
 object ScalaExpGen extends LMSExpGen { self =>
-  class MyCodeGen extends ScalaCodeGenPkg with ScalaConciseCodegen with ScalaGenM3Ops with ScalaGenSEntryInlined with ScalaGenStoreInlined with MyGenericCodegen {
+  class MyCodeGen extends ScalaCodeGenPkg with ScalaConciseCodegen with ScalaGenM3Ops with ScalaGenSEntry with ScalaGenStore with MyGenericCodegen {
     override val IR: self.type = self
     def emitSource[T:Manifest](sym: => Exp[T]) : String = emitSource(reifyBlock(sym))
     def emitSource[T:Manifest](body: Block[T]) : String = {
@@ -107,13 +107,13 @@ object ScalaExpGen extends LMSExpGen { self =>
     }
   }
   val codegen = new MyCodeGen
-  override def emit[T:Manifest](sym: => Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
-  override def emit[T:Manifest](blk:Block[T]) = { assert(codegen ne null); codegen.emitSource(blk) }
-  override def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]) = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args) }
+  override def emit[T:Manifest](sym: => Exp[T]):String = { assert(codegen ne null); codegen.emitSource(sym) }
+  override def emit[T:Manifest](blk:Block[T]):String = { assert(codegen ne null); codegen.emitSource(blk) }
+  override def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]):String = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args) }
 }
 
 object CppExpGen extends LMSExpGen with COpsPkgExpOpt { self =>
-  class MyCodeGen extends CCodeGenPkg with CCodegen with CConciseCodegen with CGenM3Ops with CGenSEntryInlined with CGenStoreInlined with MyGenericCodegen {
+  class MyCodeGen extends CCodeGenPkg with CCodegen with CConciseCodegen with CGenM3Ops with CGenSEntry with CGenStore with MyGenericCodegen {
     override val IR: self.type = self
     def emitSource[T:Manifest](sym: => Exp[T]) : String = emitSource(reifyBlock(sym))
     def emitSource[T:Manifest](body: Block[T]) : String = {
@@ -146,9 +146,9 @@ object CppExpGen extends LMSExpGen with COpsPkgExpOpt { self =>
     }
   }
   val codegen = new MyCodeGen
-  override def emit[T:Manifest](sym: => Exp[T]) = { assert(codegen ne null); codegen.emitSource(sym) }
-  override def emit[T:Manifest](blk:Block[T]) = { assert(codegen ne null); codegen.emitSource(blk) }
-  override def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]) = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args) }
+  override def emit[T:Manifest](sym: => Exp[T]):String = { assert(codegen ne null); codegen.emitSource(sym) }
+  override def emit[T:Manifest](blk:Block[T]):String = { assert(codegen ne null); codegen.emitSource(blk) }
+  override def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]):String = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args) }
 }
 
 // XXX: implement the counterpart for C/C++

@@ -16,29 +16,6 @@ class LMSGen(cls:String="Query", val impl: LMSExpGen) extends ScalaGen(cls) {
   import ManifestHelper.{man,zero,manEntry,manStore}
   import impl.Rep
   implicit val overloaded1 = impl.overloaded1
-  implicit val overloaded2 = impl.overloaded2
-  implicit val overloaded3 = impl.overloaded3
-  implicit val overloaded4 = impl.overloaded4
-  implicit val overloaded5 = impl.overloaded5
-  implicit val overloaded6 = impl.overloaded6
-  implicit val overloaded7 = impl.overloaded7
-  implicit val overloaded8 = impl.overloaded8
-  implicit val overloaded9 = impl.overloaded9
-  implicit val overloaded10 = impl.overloaded10
-  implicit val overloaded11 = impl.overloaded11
-  implicit val overloaded12 = impl.overloaded12
-  implicit val overloaded13 = impl.overloaded13
-  implicit val overloaded14 = impl.overloaded14
-  implicit val overloaded15 = impl.overloaded15
-  implicit val overloaded16 = impl.overloaded16
-  implicit val overloaded17 = impl.overloaded17
-  implicit val overloaded18 = impl.overloaded18
-  implicit val overloaded19 = impl.overloaded19
-  implicit val overloaded20 = impl.overloaded20
-  implicit val overloaded21 = impl.overloaded21
-  implicit val overloaded22 = impl.overloaded22
-  implicit val overloaded23 = impl.overloaded23
-  implicit val overloaded24 = impl.overloaded24
 
   var cx : Ctx[Rep[_]] = null
 
@@ -284,7 +261,7 @@ class LMSGen(cls:String="Query", val impl: LMSExpGen) extends ScalaGen(cls) {
   var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
   override def genLMS(s0:System):(String,String,String,String) = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
-    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.named(name,false)(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
+    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); val s = impl.named(name,false)(m); s.emitted = true; (name,(s,keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
     val (str,ld0,_) = genInternals(s0)
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
@@ -292,9 +269,9 @@ class LMSGen(cls:String="Query", val impl: LMSExpGen) extends ScalaGen(cls) {
     val ts = tsResBlks.map{ case (name,args,b) =>
       impl.emitTrigger(b,name,args)
     }.mkString("\n\n")
+    val ms = s0.maps.map(genMap).mkString("\n") // maps
     var outStream = new java.io.StringWriter
     var outWriter = new java.io.PrintWriter(outStream)
-    val ms = s0.maps.map(genMap).mkString("\n") // maps
     //impl.codegen.generateClassArgsDefs(outWriter,Nil)
 
     impl.codegen.emitDataStructures(outWriter)
