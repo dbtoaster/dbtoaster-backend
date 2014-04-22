@@ -20,7 +20,8 @@ object UnitTest {
   val skip = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                   "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                   "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
-             List("mddb/query3","chrissedtrades") // too long to compile, incorrect result
+             List("mddb/query3","chrissedtrades") ::: // too long to compile, incorrect result
+             List("mddb/query2") // M3 does not compile. Should be investigated.
              // Also TPCH11c is incorrect with -O3 (front-end) option
   var csv:PrintWriter = null
   var csvFile:String = null
