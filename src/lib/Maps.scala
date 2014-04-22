@@ -19,6 +19,7 @@ trait M3Map[K,V] {
   def clear();                // erases all elements of the map or slice
   def size:Int;               // number of key-value mappings in the map
   def toMap:Map[K,MapVal[V]];         // convert to a Scala map
+  def toListMap:Map[K,List[Any]]; // converts the map to a Scala map where the values are in an untyped list
 }
 
 /**

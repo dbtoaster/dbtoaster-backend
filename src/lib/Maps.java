@@ -191,6 +191,11 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     public scala.collection.immutable.Map<K,MapVal<V>> toMap() {
       scala.collection.immutable.HashMap<K,MapVal<V>> m = new scala.collection.immutable.HashMap<K,MapVal<V>>();
       for(Entry<K,V> e:data) m=m.$plus(new scala.Tuple2<K,MapVal<V>>(e.key,e.value)); return m;
+    }  
+    public scala.collection.immutable.Map<K,scala.collection.immutable.List<Object>> toListMap() { // XXX: is this very efficient?
+      scala.collection.immutable.HashMap<K,scala.collection.immutable.List<Object>> m = new scala.collection.immutable.HashMap<K,scala.collection.immutable.List<Object>>();
+      for(Entry<K,V> e:data) for(;e!=null;e=e.next) { m=m.$plus(new scala.Tuple2<K,scala.collection.immutable.List<Object>>(e.key,e.value.toList())); }
+      return m;
     }
   }
 

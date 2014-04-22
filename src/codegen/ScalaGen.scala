@@ -322,7 +322,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
-    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) q.name+".toListMap" else q.name+".toList")}.mkString(",")+"))"
+    val snap=onEndStream+" sender ! Tuple2(StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) q.name+".toListMap" else q.name+".toList")}.mkString(",")+"))"
     clearOut
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
