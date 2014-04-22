@@ -118,8 +118,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
     case Ref(n) => co("MapVal("+rn(n)+")")
     case Const(tp,v) => tp match { case TypeLong => co(mapval(v+"L")) case TypeString => co(mapval("\""+v+"\"")) case _ => co(mapval(v)) }
-    case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+".m != 0) MapVal.one[Long] else MapVal.zero[Long])"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") MapVal.one[Long] else MapVal.zero[Long])")))
+    case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+".m != 0) MapVal(1L) else MapVal(0L))"))
+    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") MapVal(1L) else MapVal(0L))")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(mapval(constApply(app))) // hoist constants resulting from function application
       else { 
@@ -153,16 +153,16 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n::Nil,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
-      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") MapVal.one[Long] else MapVal.zero[Long])"),am)
+      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") MapVal(1L) else MapVal(0L))"),am)
       else e match {
-        case Ref(n2) => ctx.add(n,(e.tp,rn(n2))); co("MapVal.one[Long]") // de-aliasing
+        case Ref(n2) => ctx.add(n,(e.tp,rn(n2))); co("MapVal(1L)") // de-aliasing
         //This renaming is required. As an example:
         //
         //C[x] = Add(A[x,y], B[x,y])
         //D[x] = E[x]
         //
         // will fail without a renaming.
-        case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("MapVal.one[Long]"),am)
+        case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("MapVal(1L)"),am)
       }
     case Lift(ns,e) =>
       // XXX: What about the special cases?
@@ -170,7 +170,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val tps = e.tp match { case TypeTuple(ts) => ts case _ => sys.error("Expected tuple type") } 
       (ns zip tps).foreach { case (n,t) => ctx.add(n,(t,fresh("l"))) }
       val t=fresh("t"); ctx.add(t,(e.tp,t))
-      cpsExpr(e,(v:String)=> ns.zipWithIndex.foldLeft("val "+t+" = "+v+";\n"){case (r,(n,i)) => r+"val "+rn(n)+" = "+t+".v._"+i+";\n"}+co("MapVal.one[Long]"),am)
+      cpsExpr(e,(v:String)=> ns.zipWithIndex.foldLeft("val "+t+" = "+v+";\n"){case (r,(n,i)) => r+"val "+rn(n)+" = "+t+".v._"+i+";\n"}+co("MapVal(1L)"),am)
     // Mul(el,er)
     // ==
     //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) )
@@ -322,7 +322,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
-    val snap=onEndStream+" sender ! Tuple2(StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) q.name+".toListMap" else q.name+".toList")}.mkString(",")+"))"
+    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) q.name+".toListMap" else q.name+".toList")}.mkString(",")+"))"
     clearOut
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
