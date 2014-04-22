@@ -102,7 +102,13 @@ object Helper {
     if (mode<0) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
     ds.foreach { d=> var i=0; var res0:List[Any]=null
       while (i<num) { i+=1;
-        val (t,res)=run(d,parallel,timeout); if (t.skip==0) { if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); }
+        val (t,res)=run(d,parallel,timeout); 
+        if (t.skip==0) { 
+          if (res0==null) 
+            res0=res 
+          else 
+            assert(res0==res,"Inconsistent results: "+res0+" != "+res); 
+        }
         if (mode==1) println("SAMPLE="+d+","+(t.ns/1000)+","+t.count+","+t.skip)
         if (mode<0) println("Time: "+t)
       }
@@ -118,7 +124,7 @@ object Helper {
   private def eq_v[V](v1:V,v2:V) = v1==v2 || ((v1,v2) match { case (d1:Double,d2:Double) => (Math.abs(2*(d1-d2)/(d1+d2))<diff_p) case _ => false })
   private def eq_p(p1:Product,p2:Product) = { val n=p1.productArity; assert(n==p2.productArity);  List.range(0,n).forall(i => eq_v(p1.productElement(i), p2.productElement(i))) }
 
-  def diff[V](v1:MapVal[V],v2:V) = if (!((v1,v2) match { case (MapVal(_,p1:Product),p2:Product) => eq_p(p1,p2) case (MapVal(_,v1),_) => eq_v(v1,v2) })) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
+  def diff(v1:Product,v2:Product) = if (!eq_p(v1,v2)) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
   def diff[K,V:ClassTag](map1:Map[K,MapVal[V]],map2:Map[K,MapVal[V]])(implicit ring:Ring[V]) = { // map1 is the test result, map2 is the reference
     import scala.collection.mutable.HashMap
     import java.util.Date

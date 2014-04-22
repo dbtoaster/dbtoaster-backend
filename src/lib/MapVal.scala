@@ -10,6 +10,7 @@ trait Ring[V] {
   def <(x:V,y:V):Boolean
   def <=(x:V,y:V):Boolean
   def >=(x:V,y:V):Boolean
+  def toList(x:V):List[Any]
 }
 
 object Ring {
@@ -22,6 +23,7 @@ object Ring {
     def <(x:Long,y:Long):Boolean = x < y
     def <=(x:Long,y:Long):Boolean = x <= y
     def >=(x:Long,y:Long):Boolean = x >= y
+    def toList(x:Long):List[Any] = List(x)
   }
 
   implicit object DoubleRing extends Ring[Double] {
@@ -33,6 +35,7 @@ object Ring {
     def <(x:Double,y:Double):Boolean = x < y
     def <=(x:Double,y:Double):Boolean = x <= y
     def >=(x:Double,y:Double):Boolean = x >= y
+    def toList(x:Double):List[Any] = List(x)
   }
 
   implicit object StringRing extends Ring[String] {
@@ -44,6 +47,7 @@ object Ring {
     def <(x:String,y:String):Boolean = ???
     def <=(x:String,y:String):Boolean = ???
     def >=(x:String,y:String):Boolean = ???
+    def toList(x:String):List[Any] = List(x)
   }
 
   implicit object DateRing extends Ring[java.util.Date] {
@@ -55,6 +59,7 @@ object Ring {
     def <(x:java.util.Date,y:java.util.Date):Boolean = x.getTime < y.getTime
     def <=(x:java.util.Date,y:java.util.Date):Boolean = x.getTime <= y.getTime
     def >=(x:java.util.Date,y:java.util.Date):Boolean = x.getTime >= y.getTime
+    def toList(x:java.util.Date):List[Any] = List(x)
   }
 }
 
@@ -69,6 +74,7 @@ case class MapVal[V](val m:Int, val v:V)(implicit ring:Ring[V]) {
   def isZero() = v == ring.zero
   def exists() = m != 0
   def isNoVal() = isZero && !exists
+  def toList() = ring.toList(v)
 }
 
 object MapVal {

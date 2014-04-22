@@ -70,7 +70,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val opsDef = ops.map(op => "def "+op+"(x:"+name+",y:"+name+") = "+name+"("+ts.zipWithIndex.map({ case(t,i) => t.toScala+"Ring"+"."+op+"(x._"+i+",y._"+i+")"}).mkString(",")+")").mkString("\n")
       val stubs = invalidOps.map(op => "def "+op+"(x:"+name+",y:"+name+") = ???").mkString("\n")
       //val scalarOpsDef = scalarOps.map(op => scalarTypes.map(t => "def "+op+"(x:"+name+",y:"+t+") = "+name+"("+ts.zipWithIndex.map({ case(t,i) => t.toScala+"Ring"+"."+op+"(x._"+i+",y._"+i+")"}).mkString(",")+")").mkString("\n")).mkString("\n")
-      val obj = "implicit object "+name+"Ring extends Ring["+name+"] {"+List(zero,one,opsDef,stubs).mkString("\n")+"}"
+      val toList = "def toList(x:"+name+") = List("+vals.map(v => "x."+v).mkString(",")+")"
+      val obj = "implicit object "+name+"Ring extends Ring["+name+"] {"+List(zero,one,opsDef,stubs,toList).mkString("\n")+"}"
       val code = caseClass+obj
       tupleClasses += (name -> code) 
     }
@@ -308,7 +309,6 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
   def genLMS(s0:System):(String,String,String,String) = (null,null,null,null)
 
-  def toMapFunction(q: Query) = q.name+".toMap"
   def clearOut = {}
   def onEndStream = ""
 
@@ -322,7 +322,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
-    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+"))"
+    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) q.name+".toListMap" else q.name+".toList")}.mkString(",")+"))"
     clearOut
     "class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
