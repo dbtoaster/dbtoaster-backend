@@ -48,7 +48,7 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   public M3MapBase(Ring<V> ring, boolean skipZero, Function1<K,?>[] projections) {
     threshold = (int)(INITIAL_CAPACITY * LOAD_FACTOR);
     data = new Entry[INITIAL_CAPACITY];
-    this.zero=MapVal$.MODULE$.<V>zero(ring);
+    this.zero=MapVal$.MODULE$.<V>noVal(ring);
     this.skipZero = skipZero;
     this.ring = ring;
     if (projections==null) indices=null;

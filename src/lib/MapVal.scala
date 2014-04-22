@@ -66,10 +66,14 @@ case class MapVal[V](val m:Int, val v:V)(implicit ring:Ring[V]) {
   def <=(that:MapVal[V]) = { ring.<=(this.v, that.v) }
   def >=(that:MapVal[V]) = { ring.>=(this.v, that.v) }
   def unary_-() = { MapVal(-m,v) }
+  def isZero() = v == ring.zero
+  def exists() = m != 0
+  def isNoVal() = isZero && !exists
 }
 
 object MapVal {
   def apply[V](v:V)(implicit ring:Ring[V]):MapVal[V] = MapVal[V](1,v)
   def zero[V](implicit ring:Ring[V]) = MapVal[V](1,ring.zero)
+  def noVal[V](implicit ring:Ring[V]) = MapVal[V](0,ring.zero)
   def one[V](implicit ring:Ring[V]) = MapVal[V](1,ring.one)
 }
