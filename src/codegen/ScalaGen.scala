@@ -250,7 +250,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val init = oi match {
         case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>
           if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-          else "if ("+m.name+".get("+tupv(m.keys map rn)+")==0) "+m.name+".set("+tupv(m.keys map rn)+","+i+");\n")
+          else "if ("+m.name+".get("+tup(m.keys map rn)+")==0) "+m.name+".set("+tup(m.keys map rn)+","+i+");\n")
         case None => ""
       }
       ctx.load(); clear+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) sop(m.name,v) else m.name+".add("+tup(m.keys map rn)+","+v+")")+";\n",Some(m.keys zip m.tks))
