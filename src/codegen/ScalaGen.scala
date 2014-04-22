@@ -78,8 +78,14 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     name
   }
 
+  def genType(t:Type):String =
+    t match {
+      case TypeTuple(ts) => tupleClass(ts) 
+      case _ => t.toScala
+    }
+ 
   // Create a variable declaration
-  def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+mapval(tp.zeroScala)+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+tp.toScala+"]()\n"
+  def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+mapval(genZero(tp))+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+genType(tp)+"]()\n"
 
   def genOp(vl:String,vr:String,op:String,t1:Type,t2:Type):String = {
     (t1,t2) match {
@@ -220,7 +226,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
-          val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
+          val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+genType(e.tp)+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
           ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
     case t@Tuple(es) => 
@@ -274,12 +280,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val tk = tup(m.keys.map(x=>x._2.toScala))
       val s = sx.getOrElse(m.name,List[List[Int]]())
       val proj = if(s.isEmpty) "" else s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ") 
-      val tp = 
-        m.tp match {
-          case TypeTuple(ts) => tupleClass(ts) 
-          case _ => m.tp.toScala
-        }
-      "val "+m.name+" = M3Map.make["+tk+","+tp+"]("+proj+");"
+      "val "+m.name+" = M3Map.make["+tk+","+genType(m.tp)+"]("+proj+");"
     }
   }
 
