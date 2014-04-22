@@ -126,9 +126,9 @@ object Compiler {
       case LANG_SCALA => new ScalaGen(name)
       //case LANG_CPP => new CppGen(name)
       case LANG_AKKA => new AkkaGen(name)
-      case LANG_LMS => new LMSGen(name,ddbt.codegen.lms.CppExpGen)
-      case LANG_CPP_LMS => new LMSGen(name,ddbt.codegen.lms.CppExpGen)
-      case LANG_SCALA_LMS => new LMSGen(name,ddbt.codegen.lms.ScalaExpGen)
+      case LANG_LMS => new LMSCppGen(name)
+      case LANG_CPP_LMS => new LMSCppGen(name)
+      case LANG_SCALA_LMS => new LMSScalaGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }
     // ---- NON-INCREMENTAL START

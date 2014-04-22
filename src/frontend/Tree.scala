@@ -9,14 +9,14 @@ package ddbt.ast
 sealed abstract class Tree // Generic AST node
 
 // ---------- Data types
-sealed abstract class Type extends Tree { def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase; def zero:String; def zeroScala=zero }
+sealed abstract class Type extends Tree { def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase; def toCpp=toString; def zero:String; def zeroScala=zero; def zeroCpp=zero }
 //case object TypeChar extends Type /*  8 bit */ { override def toString="char" }
 //case object TypeShort extends Type /*16 bit */ { override def toString="short" }
 //case object TypeInt  extends Type /* 32 bit */ { override def toString="int" }
 case object TypeLong   extends Type /* 64 bit */ { override def toString="long"; val zero="0L" }
 //case object TypeFloat extends Type /*32 bit */ { override def toString="float" }
 case object TypeDouble extends Type /* 64 bit */ { override def toString="double"; val zero="0.0" }
-case object TypeDate   extends Type              { override def toString="date"; val zero="0L"; override def zeroScala="new Date(0L)"; }
+case object TypeDate   extends Type              { override def toString="date"; val zero="0L"; override def zeroScala="new Date(0L)"; override def toCpp="time_t"; override def zeroCpp="time(NULL)" }
 //case object TypeTime extends Type              { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string"; val zero="\"\"" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used

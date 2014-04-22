@@ -2,85 +2,35 @@ package ddbt.codegen
 import ddbt.ast._
 
 /**
- * ScalaGen is responsible to transform a typed AST into vanilla Scala code (String).
- * It should be quite straightforward to use LMS to do that instead.
+ * CppGen is responsible to transform a typed AST into vanilla C++ code (String).
  *
- * Implementation notes:
- * ---------------------------------------------
- * 1. We shall understand the multiply as a continuation of the left operand in the right one.
- *
- * 2. Add is more complicated than Mul as it does set union of lhs and rhs.
- *    If a free variable is present in both sides, iterate these. Concretely:
- *       f(A*B) --> A.foreach{ (k_a,v_a) => B.foreach { (k_b,v_b) => f(v_a * v_b) } }
- *       f(A+B) --> val dom=A.keySet++B.keySet; dom.foreach { k => f(A.get(k) + B.get(k)) }
- *
- *    An lighter approach to set union is:
- *       val tmp = Temp[domA(k_a)=domB(k_b)=dom -> tp(A)=tp(B)]
- *       A.foreach{ (k_a,v_a) => tmp.add(domA(k_a),v_a) }
- *       B.foreach{ (k_b,v_b) => tmp.add(domB(k_b),v_b) }
- *       tmp.foreach { (k,v) => f(v) }
- *
- * Constraints inherited from M3:
- * - Lift alone has only bound variables.
- * - In Exists*Lift, Exists binds variables for the Lift
- *
- * @author TCK
+ * @author Mohammad Dashti
  */
-class ScalaGen(override val cls:String="Query") extends IScalaGen
+class CppGen(override val cls:String="Query") extends ICppGen
 
-trait IScalaGen extends CodeGen {
+trait ICppGen extends IScalaGen {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-  def mapRef(n:String,tp:Type,keys:List[(String,Type)]) = { val m=M3.MapRef(n,tp,keys.map(_._1)); m.tks=keys.map(_._2); m }
 
-  // Methods involving only constants are hoisted as global constants
-  protected val cs = HashMap[Apply,String]()
-  override def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
-  override def consts:String = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
-
-  // XXX: enlarge the definition to generalized constants
-
-  var ctx:Ctx[(Type,String)] = null // Context: variable->(type,unique_name)
-  def rn(n:String):String = ctx(n)._2 // get unique name (avoids nesting Lifts)
-  /*
-  Here you need to rename variable to avoid putting individual statements in separated blocks
-  M[x] = Add( Mul(Lift(x,2),A[x]), Mul(Lift(x,3),B[x]) )
-  { x=A[2]; x } + { x=B[3]; x }
-  but we want
-  val x1=A[2]
-  val x2=B[3]
-  x1+x2
-  */
+  override def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); tp.toCpp+" "+n+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
 
   // Create a variable declaration
-  def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+tp.zeroScala+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+tp.toScala+"]()\n"
+  //XXXXX TODO
+  override def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) tp.toCpp+" "+n+" = "+tp.zeroCpp+"\n" else tp.toCpp+" "+n+" = M3Map.temp["+tup(ks.map(_.toCpp))+","+tp.toCpp+"]()\n"
 
   // Generate code bottom-up using delimited CPS and a list of bound variables
   //   ex:expression to convert
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
-  def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
+  override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
     case Ref(n) => co(rn(n))
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
-    case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+" != 0) 1L else 0L)"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") 1L else 0L)")))
+    case Exists(e) => cpsExpr(e,(v:String)=>co("("+v+" != 0)"))
+    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
       else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
-    //ki : inner key
-    //ko : outer key
-    //Example:
-    //  f(A) {
-    //    Mul(M[A,B],ex)
-    //  }
-    // will be translated to:
-    // f(A) {
-    //   M.slice(A).foreach{ case (k,v) => // here A is ko
-    //     val B = k._2 // here B is ki
-    //     v * ex
-    //   }
-    // }
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks.map(rn))+")" else "")) // all keys are bound
       else { val (k0,v0)=(fresh("k"),fresh("v"))
@@ -105,7 +55,7 @@ trait IScalaGen extends CodeGen {
       }
     // Mul(el,er)
     // ==
-    //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) )
+    //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) ) 
     //    ==>
     //   (v=vl*vr , ctx2)
     case Mul(el,er) => //cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"),am),am)
@@ -117,16 +67,16 @@ trait IScalaGen extends CodeGen {
         def vx(vl:String,vr:String) = if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"
         //pulling out the conditionals from a multiplication
         (cx(vl),cx(vr)) match {
-          case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+ex.tp.zeroScala+")"
-          case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+ex.tp.zeroScala+")"
-          case (_,Some((cr,tr))) => "(if ("+cr+") "+vx(vl,tr)+" else "+ex.tp.zeroScala+")"
+          case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+ex.tp.zeroCpp+")"
+          case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+ex.tp.zeroCpp+")"
+          case (_,Some((cr,tr))) => "(if ("+cr+") "+vx(vl,tr)+" else "+ex.tp.zeroCpp+")"
           case _ => vx(vl,vr)
         }
       }
       cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(mul(vl,vr)),am),am)
     // Add(el,er)
     // ==
-    //   Add( (el,ctx0) -> (vl,ctx1) , (er,ctx0) -> (vr,ctx2) )
+    //   Add( (el,ctx0) -> (vl,ctx1) , (er,ctx0) -> (vr,ctx2) ) 
     //         <-------- L -------->    <-------- R -------->
     //    (add - if there's no free variable) ==>
     //   (v=vl+vr , ctx0)
@@ -134,11 +84,11 @@ trait IScalaGen extends CodeGen {
     //   T = Map[....]
     //   foreach vl in L, T += vl
     //   foreach vr in R, T += vr
-    //   foreach t in T, co(t)
+    //   foreach t in T, co(t) 
     case a@Add(el,er) =>
       if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else am match {
-        case Some(t) if t.toSet.subsetOf(a.agg.toSet) => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
+        case Some(t) if t.toSet==a.agg.toSet => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
@@ -152,19 +102,19 @@ trait IScalaGen extends CodeGen {
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (aks.size==0) { val a0=fresh("agg"); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
-        case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
+        case Some(t) if t.toSet==aks.toSet => cpsExpr(e,co,am)
         case _ =>
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
-          val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
+          val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toCpp))+","+e.tp.toCpp+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
           ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
   }
 
-  def genStmt(s:Stmt):String = s match {
-    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("add","=") }
+  override def genStmt(s:Stmt):String = s match {
+    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("set","=") }
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
       val init = oi match {
         case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>
@@ -172,23 +122,21 @@ trait IScalaGen extends CodeGen {
           else "if ("+m.name+".get("+tup(m.keys map rn)+")==0) "+m.name+".set("+tup(m.keys map rn)+","+i+");\n")
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+tup(m.keys map rn)+","+v+")")+";\n",Some(m.keys zip m.tks))
+      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+tup(m.keys map rn)+","+v+")")+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
-  def genTrigger(t:Trigger):String = {
+  override def genTrigger(t:Trigger):String = {
     val (n,as) = t.evt match {
       case EvtReady => ("SystemReady",Nil)
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
     ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val body=t.stmts.map(genStmt).mkString; ctx=null;
-    "def on"+n+"("+as.map(a=>a._1+":"+a._2.toScala).mkString(", ")+") "+(if (body=="") "{ }" else "{\n"+ind(body)+"\n}")
+    "def on"+n+"("+as.map(a=>a._1+":"+a._2.toCpp).mkString(", ")+") "+(if (body=="") "{ }" else "{\n"+ind(body)+"\n}")
   }
 
-  // Lazy slicing (secondary) indices computation
-  protected val sx = HashMap[String,List[List[Int]]]() // slicing indices
-  def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
+  override def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
     val s=sx.getOrElse(m,List[List[Int]]()); val n=s.indexOf(i)
     if (n != -1) n else { sx.put(m,s ::: List(i)); s.size }
   }
@@ -196,9 +144,9 @@ trait IScalaGen extends CodeGen {
   override def genMap(m:MapDef):String = {
     if (m.keys.size==0) genVar(m.name,m.tp).trim
     else {
-      val tk = tup(m.keys.map(x=>x._2.toScala))
+      val tk = tup(m.keys.map(x=>x._2.toCpp))
       val s = sx.getOrElse(m.name,List[List[Int]]())
-      "val "+m.name+" = M3Map.make["+tk+","+m.tp.toScala+"]("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+");"
+      "val "+m.name+" = M3Map.make["+tk+","+m.tp.toCpp+"]("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+");"
     }
   }
 
@@ -209,7 +157,7 @@ trait IScalaGen extends CodeGen {
     // XXX: reduce as much as possible the overhead here to decode data, use Decoder's internals and inline the SourceMux here
     def ev(s:Schema,short:Boolean=true):(String,String,List[(String,Type)]) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
-      ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
+      ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toCpp}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
     }
     val step = 128 // periodicity of timeout verification, must be a power of 2
     val skip = "if (t1>0 && (tN&"+(step-1)+")==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=1 } else tN+=1; "
@@ -229,7 +177,7 @@ trait IScalaGen extends CodeGen {
   override def clearOut = {}
   override def onEndStream = ""
 
-  def apply(s0:System):String = {
+  override def apply(s0:System):String = {
     val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
     val body = if (lms!=null) lms else {
       val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
@@ -265,7 +213,7 @@ trait IScalaGen extends CodeGen {
     (in,"new Adaptor."+adaptor,split)
   }
 
-  def streams(sources:List[Source]) = {
+  override def streams(sources:List[Source]) = {
     def fixOrderbook(ss:List[Source]):List[Source] = { // one source generates BOTH asks and bids events
       val (os,xs) = ss.partition{_.adaptor.name=="ORDERBOOK"}
       val ob = new java.util.HashMap[(Boolean,SourceIn),(Schema,Split,Map[String,String])]()
@@ -280,7 +228,7 @@ trait IScalaGen extends CodeGen {
   }
 
   // Helper that contains the main and stream generator
-  def helper(s0:System,pkg:String) =
+  override def helper(s0:System,pkg:String) =
     "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" {\n"+ind("import Helper._\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+

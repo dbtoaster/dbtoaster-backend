@@ -10,7 +10,7 @@ import ddbt.lib._
  * @author Mohammad Dashti, TCK
  */
 
-class LMSGen(cls:String="Query", val impl: LMSExpGen) extends ScalaGen(cls) {
+abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) extends CodeGen {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
   import ManifestHelper.{man,zero,manEntry,manStore}
@@ -295,3 +295,7 @@ class LMSGen(cls:String="Query", val impl: LMSExpGen) extends ScalaGen(cls) {
 
   override def additionalImports():String = "import ddbt.lib.store._\n"
 }
+
+class LMSScalaGen(cls:String="Query") extends LMSGen(cls,ScalaExpGen) with IScalaGen
+
+class LMSCppGen(cls:String="Query") extends LMSGen(cls,CppExpGen) with ICppGen
