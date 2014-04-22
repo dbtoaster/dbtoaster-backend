@@ -166,8 +166,9 @@ trait ICppGen extends IScalaGen {
       case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => "+skip+"onDel"+s.name+o+"\n"
       case _ => ""
     }).mkString
-    val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o,pl)=ev(s.schema)
-      "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,"+i+")=>"+genInitializationFor(s.schema.name,pl,o)+" },"+ad+","+sp+")))).read;" }.mkString("\n");
+    //TODO XXX tables should be processed separately
+    val ld0 = ""//s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o,pl)=ev(s.schema)
+      // "SourceMux(Seq(("+in+",Decoder({ case TupleEvent(TupleInsert,_,"+i+")=>"+genInitializationFor(s.schema.name,pl,o)+" },"+ad+","+sp+")))).read;" }.mkString("\n");
     (str,ld0,consts)
   }
 
@@ -200,17 +201,47 @@ trait ICppGen extends IScalaGen {
     )+"\n}\n"+gc+ld)+"\n"+"}\n"
   }
 
-  private def genStream(s:Source): (String,String,String) = {
-    val in = s.in match { case SourceFile(path) => "new java.io.FileInputStream(\""+path+"\")" }
-    val split = "Split"+(s.split match { case SplitLine => "()" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => ".p("+p+")" })
+  private def genStream(s:Source): String = {
+    val sourceId = fresh("source");
+    val sourceSplitVar = sourceId + "_fd"
+    val adaptorsArrVar = sourceId+"_adaptors_arr"
+    val adaptorsListVar = sourceId+"_adaptors_list"
+    val sourceFileVar = sourceId+"_file"
+    val in = s.in match { case SourceFile(path) => "boost::shared_ptr<dbt_file_source> "+sourceFileVar+"(new dbt_file_source(\""+path+"\","+sourceSplitVar+","+adaptorsListVar+"));\n" }
+    val split = "frame_descriptor "+sourceSplitVar+(s.split match { case SplitLine => "()" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => "XXXXX("+p+")" })+";\n" //XXXX for SplitPrefix
+    
+    val schema_param = s.schema.fields.map{case (_,tp) => tp.toCpp}.mkString(",")
     val adaptor = s.adaptor.name match {
-      case "ORDERBOOK" => "OrderBook("+s.adaptor.options.toList.map { case (k,v) => k+"="+(k match {
-        case "brokers" => v case "bids"|"asks" => "\""+v+"\"" case "deterministic" => (v!="no"&&v!="false").toString case _ => ""
-      })}.filter(!_.endsWith("=")).mkString(",")+")"
-      case "CSV" => val sep=java.util.regex.Pattern.quote(s.adaptor.options.getOrElse("delimiter",",")).replaceAll("\\\\","\\\\\\\\")
-                    "CSV(\""+s.schema.name.toUpperCase+"\",\""+s.schema.fields.map(_._2).mkString(",")+"\",\""+sep+"\")"
+      case "ORDERBOOK" => {
+        val bidsAndAsks = List("bids","asks")
+        val a_opts = s.adaptor.options.filter{case (k,_) => !bidsAndAsks.contains(k)} ++ Map("schema" -> schema_param)
+        val a_def = bidsAndAsks.map{ x =>  
+          val adaptorVar = sourceId+"_adaptor_"+x
+          val paramsVar = adaptorVar+"_params"
+          val numParams = a_opts.size+1
+          "pair<string,string> "+paramsVar+"[] = { make_pair(\"book\",\""+x+"\"), "+a_opts.map{case (k,v) => "make_pair(\""+k+"\",\""+v+"\")"}.mkString(", ")+" };\n"+
+          "boost::shared_ptr<order_books::order_book_adaptor> "+adaptorVar+"(new order_books::order_book_adaptor(get_relation_id(\""+s.adaptor.options(x)+"\"),"+numParams+","+paramsVar+"));\n"
+        }.mkString
+
+        a_def+split+
+        "boost::shared_ptr<stream_adaptor> "+adaptorsArrVar+"[] = { "+bidsAndAsks.map{ x => sourceId+"_adaptor_"+x}.mkString(", ")+" };\n"
+      }      
+      case "CSV" => {
+        val a_opts = s.adaptor.options ++ Map("schema" -> schema_param)
+        val adaptorVar = sourceId+"_adaptor"
+        val paramsVar = adaptorVar+"_params"
+        val numParams = a_opts.size
+        val a_def = "pair<string,string> "+paramsVar+"[] = { "+a_opts.map{case (k,v) => "make_pair(\""+k+"\",\""+v+"\")"}.mkString(", ")+" };\n"+
+          "boost::shared_ptr<csv_adaptor> "+adaptorVar+"(new csv_adaptor(get_relation_id(\""+s.schema.name+"\"),"+numParams+","+paramsVar+"));\n"
+
+        a_def+split+
+        "boost::shared_ptr<stream_adaptor> "+adaptorsArrVar+"[] = { "+adaptorVar+" };\n"
+      }
     }
-    (in,"new Adaptor."+adaptor,split)
+
+    adaptor+
+    "std::list<boost::shared_ptr<stream_adaptor> > "+adaptorsListVar+"("+adaptorsArrVar+", "+adaptorsArrVar+" + sizeof("+adaptorsArrVar+") / sizeof(boost::shared_ptr<stream_adaptor>));\n"+
+    in+"add_source("+sourceFileVar+");\n"
   }
 
   override def streams(sources:List[Source]) = {
@@ -223,18 +254,47 @@ trait ICppGen extends IScalaGen {
       }
       scala.collection.JavaConversions.mapAsScalaMap(ob).toList.map { case ((s,in),(sc,sp,opts)) => Source(s,sc,in,sp,Adaptor("ORDERBOOK",opts)) } ::: xs
     }
-    val ss=fixOrderbook(sources).filter{s=>s.stream}.map{s=> val (in,ad,sp)=genStream(s); "("+in+","+ad+","+sp+")" }.mkString(",\n")
-    "Seq(\n"+ind(ss.replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")").replaceAll("/standard/","/\"+d+\"/"))+"\n)"
+    val ss="\n/* Specifying data sources */\n\n"+fixOrderbook(sources)/*.filter{s=>s.stream}*/.map(genStream).mkString("\n")
+    ss.replaceAll("/standard/","/DATASETPLACEHOLDER/")
   }
 
   // Helper that contains the main and stream generator
-  override def helper(s0:System,pkg:String) =
-    "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-    "object "+cls+" {\n"+ind("import Helper._\n"+
-    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
-    "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
-    ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
-    "\n})")+"\n}")+"\n}\n\n"
+  override def helper(s0:System) = {
+    val dataset = "DATASETPLACEHOLDER" //XXXX
+    "/* Type definition providing a way to execute the sql program */\n"+
+    "class Program : public ProgramBase\n"+
+    "{\n"+
+    "  public:\n"+
+    "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
+    "      data.register_data(*this);\n"+
+           ind(streams(s0.sources),3)+"\n"+
+    "    }\n"+
+    "\n"+
+    "    /* Imports data for static tables and performs view initialization based on it. */\n"+
+    "    void init() {\n"+
+    "        process_tables();\n"+
+    "        data.on_system_ready_event();\n"+
+    "    }\n"+
+    "\n"+
+    "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
+    "    snapshot_t take_snapshot(){ tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\\\n\",d.tT,d.tN,d.tS);\n"+
+    "        return snapshot_t( new tlq_t((tlq_t&)data) );\n"+
+    "    }"+
+    "\n"+
+    "  protected:\n"+
+    "    data_t data;\n"+
+    "};\n"
+  }
+
+  override def pkgWrapper(pkg:String, body:String) = "#include \"program_base.hpp\"\n"+additionalImports()+"\n\n"+"namespace dbtoaster {\n"+ind(body)+"\n}\n"
+
+    // "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
+    // "object "+cls+" {\n"+ind("import Helper._\n"+
+    // "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
+    // "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
+    // ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
+    // "\n})")+"\n}")+"\n}\n\n"
+  def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
 
   override def additionalImports():String = ""
 }

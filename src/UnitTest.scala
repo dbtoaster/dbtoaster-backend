@@ -143,7 +143,8 @@ object UnitTest {
       for (m <- modes) m match {
         case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
         case "lcpp" if (repo!=null && benchmark) => legacyCPP(q,new Printer("LCPP"),t0)
-        case _ => genQuery(q,new Printer(mn(m)),m3,m)
+        case "scala"|"scalalms" => genQueryScala(q,new Printer(mn(m)),m3,m)
+        case _ => genQueryCpp(q,new Printer(mn(m)),m3,m)
       }
       if (csv!=null) csv.println
       System.gc
@@ -169,13 +170,19 @@ object UnitTest {
       println("---------[[ Zeus "+id+" ]]---------")
       val f=tmp+"/zeus"+id+".sql";
       val m3={ write(f,sql); Compiler.in=List(f); Compiler.toast("m3")._2 }
-      genQuery(QueryTest(f),new Printer("Scala"),m3,"scala")
+
+      for (m <- modes) m match {
+        case "scala"|"scalalms" => genQueryScala(QueryTest(f),new Printer("Scala"),m3,m)
+        case "cpp"|"cpplms"|"lms" => genQueryCpp(QueryTest(f),new Printer("Cpp"),m3,m)
+        case _ => ()
+      }
+      
     }
   }
 
   // ---------------------------------------------------------------------------
   // Query generator
-  def genQuery(q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
+  def genQueryScala(q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
     val cls = name(q.sql)
     var sp=""
     // Correctness
@@ -217,6 +224,51 @@ object UnitTest {
     p.close
     // Append correctness spec and move to test/gen/
     if (genSpec) inject("import java.util.Date\n",sp,path_sources)
+  }
+
+
+  def genQueryCpp(q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
+    val CPP_SUFFIX = ".hpp"
+    val cls = name(q.sql)
+    var sp=""
+    // Correctness
+    // def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
+    //   val qid = sys.queries.map{_.name}.zipWithIndex.toMap
+    //   val qt = sys.queries.map{q=>(q.name,sys.mapType(q.map.name)) }.toMap
+    //   val body = ""
+    //   q.sets.map { case (sz,set) =>
+    //     (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-m0\",\"-d"+sz+"\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
+    //     set.out.map { case (n,o) => val (kt,vt) = qt(n); val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
+    //       val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
+    //       val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
+    //         case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
+    //         case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
+    //         case QuerySingleton(v) => v
+    //       })+")"
+    //       (if (full) "it(\""+n+" correct\") " else "")+"{\n"+ind(kv+cmp)+"\n}"
+    //     }.mkString("\n"))+"\n})"
+    //   }.mkString("\n")
+    //   if (full) "import org.scalatest._\n\n"+
+    //   "class "+cls+"Spec extends FunSpec {\n"+ind("import Helper._\n"+body)+"\n}\n" else body
+    // }
+    // def inject(pre:String,str:String,dir:String=null) { val src=read(tmp.getPath+"/"+cls+CPP_SUFFIX).split("\\Q"+pre+"\\E"); write((if (dir!=null) dir else tmp)+"/"+cls+CPP_SUFFIX,src(0)+pre+str+src(1)) }
+    def post(sys:ddbt.ast.M3.System) { } //sp=spec(sys,true); /*if (verify) inject("  def main(args:Array[String]) {\n",ind(spec(sys,false),2)+"\n")*/ }
+
+    // Benchmark (and codegen)
+    val m=mode.split("_"); // Specify the inlining as a suffix of the mode
+    Compiler.inl = if (m.length==1) 0 else if (m(1)=="spec") 5 else if (m(1)=="full") 10 else try { m(1).toInt } catch { case _:Throwable => 0 }
+    Compiler.lang = m(0)
+    Compiler.name = cls
+    Compiler.pkg = "ddbt.test.gen"
+    Compiler.out = tmp.getPath+"/"+cls+CPP_SUFFIX
+    Compiler.exec = benchmark
+    Compiler.exec_sc |= Utils.isLMSTurnedOn
+    Compiler.exec_dir = path_classes
+    Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp))
+    p.close
+    // Append correctness spec and move to test/gen/
+    // if (genSpec) inject("import java.util.Date\n",sp,path_sources)
   }
 
   // ---------------------------------------------------------------------------

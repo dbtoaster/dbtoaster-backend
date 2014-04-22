@@ -13,7 +13,7 @@ trait CodeGen extends (M3.System => String) {
   def apply(s:M3.System) : String
 
   // Generate headers + dummy helper for benchmarking
-  def helper(s:M3.System,pkg:String) : String
+  def helper(s:M3.System) : String
 
   // Stream sources definition
   def streams(sources:List[Source]) : String
@@ -58,6 +58,8 @@ trait CodeGen extends (M3.System => String) {
   def clearOut:Unit
 
   def additionalImports():String
+
+  def pkgWrapper(pkg:String, body:String):String
 
   /*
   case class CtxCtr[T](f:Int=>T=(i:Int)=>i) extends Function0[T] {

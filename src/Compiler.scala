@@ -81,7 +81,7 @@ object Compiler {
       error("                - "+LANG_CALC     +"  : relational calculus")
       error("                - "+LANG_M3       +"    : M3 program")
       error("                - "+LANG_SCALA    +" : vanilla Scala code")
-      //error("                - "+LANG_CPP      +"   : vanilla C++ code")
+      error("                - "+LANG_CPP      +"   : vanilla C++ code")
       error("                - "+LANG_AKKA     +"  : distributed Akka code")
       error("                - "+LANG_CPP_LMS  +"   : LMS-optimized C++")
       error("                - "+LANG_SCALA_LMS+"   : LMS-optimized Scala")
@@ -124,7 +124,7 @@ object Compiler {
     // Back-end
     val cg:CodeGen = lang match {
       case LANG_SCALA => new ScalaGen(name)
-      //case LANG_CPP => new CppGen(name)
+      case LANG_CPP => new CppGen(name)
       case LANG_AKKA => new AkkaGen(name)
       case LANG_LMS => new LMSCppGen(name)
       case LANG_CPP_LMS => new LMSCppGen(name)
@@ -138,12 +138,12 @@ object Compiler {
         case s@StmtMap(m,e,op,i) => if (qns.contains(m.name)) { qss += ((m.name,s)); false } else true
         case _ => true
       }))
-      val r = cg.helper(m3,pkg)+cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__execute__",Nil)), qss.map(_._2).toList)::triggers))
+      val r = cg.pkgWrapper(pkg,cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__execute__",Nil)), qss.map(_._2).toList)::triggers))+cg.helper(m3))
       // XXX: improve this RegExp
       output(r.replaceAll("GetSnapshot\\(_\\) => ","GetSnapshot(_) => onAdd__execute__(); ").replaceAll("onAdd__execute__","onExecute")) // Scala transforms
     } else
     // ---- NON-INCREMENTAL ENDS
-    output(cg.helper(m3,pkg)+cg(m3))
+    output(cg.pkgWrapper(pkg,cg(m3)+cg.helper(m3)))
     if (t_gen!=null) t_gen(System.nanoTime-t0)
     if (post_gen!=null) post_gen(m3)
     // Execution
