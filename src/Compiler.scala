@@ -167,6 +167,7 @@ object Compiler {
                      List("program_options","serialization","system","filesystem","chrono",Utils.prop("lib_boost_thread","thread")).map("-lboost_"+_) ::: // thread-mt
                      (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
             java.lang.System.err.println("as => " + as.mkString(" "))
+            Utils.exec(Array("make","-C",pl))
             val t2 = Utils.ns(()=>Utils.exec(as.toArray))._1; if (t_comp!=null) t_comp(t2)
             t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
               val (out,err)=Utils.exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
