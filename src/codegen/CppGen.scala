@@ -259,7 +259,7 @@ trait ICppGen extends IScalaGen {
   }
 
   // Helper that contains the main and stream generator
-  override def helper(s0:System) = {
+  private def helper(s0:System) = {
     val dataset = "DATASETPLACEHOLDER" //XXXX
     "/* Type definition providing a way to execute the sql program */\n"+
     "class Program : public ProgramBase\n"+

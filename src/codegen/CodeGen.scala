@@ -12,9 +12,6 @@ trait CodeGen extends (M3.System => String) {
   // Generate the system (everything but stream and views I/O)
   def apply(s:M3.System) : String
 
-  // Generate headers + dummy helper for benchmarking
-  def helper(s:M3.System) : String
-
   // Stream sources definition
   def streams(sources:List[Source]) : String
 
