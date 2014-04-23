@@ -146,7 +146,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
             val c=fresh("c")
             "{ val "+c+"="+v+";"+mapval(tupleClass(rts)+"("+(List.fill(rts.length)(c)).mkString(",")+")",rt)+" }"
           }
-          case (_,_) => mapval(getVal(v,ivt)._1,rt)._1 
+          case (_,_) => 
+            val (sv,tv) = getVal(v,ivt)
+            mapval(sv,tv)._1 
         }
       }
       else
@@ -159,6 +161,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     }
     val vl = castIfNeeded(rvl,tl,ct)
     val vr = castIfNeeded(rvr,tr,ct) 
+    if(op == "+") println(List(vl,vr,tl,tr,ct).mkString(","))
     ("("+vl+" "+op+" "+vr+")",ct match { case TypeMapVal(_) => ct case _ => TypeMapVal(ct) })
   }
 
@@ -211,7 +214,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks.map(rnv))+")" else ""),rt) // all keys are bound
       else { 
         val (k0,v0)=(fresh("k"),fresh("v"))
-        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rnv(x._1)))+")" else "" // slice on bound variables
+        // slice on bound variables
+        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rnv(x._1)))+")" else "" 
         ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
         // bind free variables from retrieved key
         (n+sl+".foreach { ("+(if (ks.size==1) rn(ks.head)._1 else k0)+","+v0+") =>\n"+ind(
