@@ -129,11 +129,11 @@ trait ICppGen extends IScalaGen {
   override def genTrigger(t:Trigger):String = {
     val (n,as) = t.evt match {
       case EvtReady => ("SystemReady",Nil)
-      case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
-      case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
+      case EvtAdd(Schema(n,cs)) => ("insert_"+n,cs)
+      case EvtDel(Schema(n,cs)) => ("delete_"+n,cs)
     }
     ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val body=t.stmts.map(genStmt).mkString; ctx=null;
-    "def on"+n+"("+as.map(a=>a._1+":"+a._2.toCpp).mkString(", ")+") "+(if (body=="") "{ }" else "{\n"+ind(body)+"\n}")
+    "void on_"+n+"("+as.map(a=>a._2.toCpp+" "+a._1).mkString(", ")+") "+(if (body=="") "{ }" else "{\n"+ind(body)+"\n}")
   }
 
   override def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
@@ -179,6 +179,51 @@ trait ICppGen extends IScalaGen {
   override def onEndStream = ""
 
   override def apply(s0:System):String = {
+    def register_maps = s0.maps.map{m=>"pb.add_map<"+m.toCppType+">( \""+m.name+"\", "+m.name+" );\n"}.mkString
+
+    def register_relations = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ", true") + ");\n"}.mkString
+
+    def register_table_triggers = s0.sources.filter(!_.stream).map{ s => 
+      "pb.add_trigger(\""+s.schema.name+"\", insert_tuple, boost::bind(&data_t::unwrap_insert_"+s.schema.name+", this, ::boost::lambda::_1));\n"
+    }.mkString
+
+    def register_stream_triggers = s0.triggers.filter(_.evt != EvtReady).map{ t=>t.evt match {
+        case EvtAdd(Schema(n,_)) => "pb.add_trigger(\""+n+"\", insert_tuple, boost::bind(&data_t::unwrap_insert_"+n+", this, ::boost::lambda::_1));\n"
+        case EvtDel(Schema(n,_)) => "pb.add_trigger(\""+n+"\", delete_tuple, boost::bind(&data_t::unwrap_delete_"+n+", this, ::boost::lambda::_1));\n"
+        case _ => ""
+      }
+    }.mkString
+
+    def init_stats = {
+      "#ifdef DBT_PROFILE\n"+
+      "exec_stats = pb.exec_stats;\n"+
+      "ivc_stats = pb.ivc_stats;\n"+
+      //TODO XXX should be completed
+      "#endif // DBT_PROFILE\n"
+    }
+
+    def generateDataStructureRefs = s0.maps.map{m=>m.toCppType+" "+m.name+";\n"}.mkString
+
+    def genTableTriggers = s0.sources.filter(!_.stream).map{ s =>
+      generateUnwrapFunction(EvtAdd(s.schema))
+    }.mkString
+
+    def genStreamTriggers = s0.triggers.map(t =>
+      genTrigger(t)+"\n\n"+
+      (if(t.evt != EvtReady) generateUnwrapFunction(t.evt) else "")
+    ).mkString
+
+    def generateUnwrapFunction(evt:EvtTrigger) = {
+      val (op,name,fields) = evt match {
+        case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
+        case EvtDel(Schema(n,cs)) => ("delete",n,cs)
+        case _ => sys.error("Unsupported trigger event "+evt)
+      }
+      "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
+      "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "any_cast<"+tp.toCpp+">(ea["+i+"])"}.mkString(", ")+");\n"+
+      "}\n\n"
+    }
+
     val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
     val body = if (lms!=null) lms else {
       val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
@@ -213,70 +258,47 @@ trait ICppGen extends IScalaGen {
     "  /* Registering relations and trigger functions */\n"+
     "  void register_data(ProgramBase& pb) {\n"+
     "\n"+
-         ind(register_maps(s0),2)+
+         ind(register_maps,2)+
     "\n\n"+
-         ind(register_relations(s0),2)+
+         ind(register_relations,2)+
     "\n\n"+
-         ind(register_table_triggers(s0),2)+
+         ind(register_table_triggers,2)+
     "\n\n"+
-         ind(register_stream_triggers(s0),2)+
+         ind(register_stream_triggers,2)+
     "\n\n"+
-         ind(init_stats(s0),2)+
+         ind(init_stats,2)+
     "\n\n"+
     "  }\n"+
     "\n"+
     "  /* Trigger functions for table relations */\n"+
-    "\n"+
+       ind(genTableTriggers)+
+    "\n\n"+
     "  /* Trigger functions for stream relations */\n"+
-    "\n"+
+       ind(genStreamTriggers)+
+    "\n\n"+
     "private:\n"+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
-         ind(generateDataStructureRefs(s0))+
+       ind(generateDataStructureRefs)+
     "\n\n"+
     "};\n"+
     "\n"+
     helper(s0)
   }
 
-  private def register_maps(s0:System) = s0.maps.map{m=>"pb.add_map<"+m.toCppType+">( \""+m.name+"\", "+m.name+" );\n"}.mkString
-
-  private def register_relations(s0:System) = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ", true") + ");\n"}.mkString
-
-  private def register_table_triggers(s0:System) = s0.sources.filter(!_.stream).map{s => 
-    "pb.add_trigger(\""+s.schema.name+"\", insert_tuple, boost::bind(&data_t::unwrap_insert_"+s.schema.name+", this, ::boost::lambda::_1));\n"
-  }.mkString
-
-  private def register_stream_triggers(s0:System) = s0.triggers.filter(_.evt != EvtReady).map{t=>t.evt match {
-      case EvtAdd(Schema(n,cs)) => "pb.add_trigger(\""+n+"\", insert_tuple, boost::bind(&data_t::unwrap_insert_"+n+", this, ::boost::lambda::_1));\n"
-      case EvtDel(Schema(n,cs)) => "pb.add_trigger(\""+n+"\", delete_tuple, boost::bind(&data_t::unwrap_delete_"+n+", this, ::boost::lambda::_1));\n"
-      case _ => ""
-    }
-  }.mkString
-
-  private def init_stats(s0:System) = {
-    "#ifdef DBT_PROFILE\n"+
-    "exec_stats = pb.exec_stats;\n"+
-    "ivc_stats = pb.ivc_stats;\n"+
-    //TODO XXX should be completed
-    "#endif // DBT_PROFILE\n"
-  }
-
-  private def generateDataStructureRefs(s0:System) = s0.maps.map{m=>m.toCppType+" "+m.name+";\n"}.mkString
-
   private def helperResultAccessor(s0:System) = {
-    def compile_serialization(s0:System) = s0.queries.map{q =>
+    def compile_serialization = s0.queries.map{q =>
       q.toCppRefType + " _"+q.name+" = get_"+q.name+"();\n"+
       "ar & boost::serialization::make_nvp(BOOST_PP_STRINGIZE("+q.name+"), _"+q.name+");\n"
     }.mkString
 
-    def compile_tlqs(s0:System) = s0.queries.map{q =>
+    def compile_tlqs = s0.queries.map{q =>
       q.toCppRefType + " get_"+q.name+"(){\n"+
       "  return "+q.name+";\n"+
       "}\n"
     }.mkString
 
-    def compile_tlqs_decls(s0:System) = s0.queries.map{q =>
+    def compile_tlqs_decls = s0.queries.map{q =>
       q.toCppType + " "+q.name+";\n"
     }.mkString
 
@@ -291,17 +313,17 @@ trait ICppGen extends IScalaGen {
     "  template<class Archive>\n"+
     "  void serialize(Archive& ar, const unsigned int version) {\n"+
     "\n"+
-         ind(compile_serialization(s0),2)+
+         ind(compile_serialization,2)+
     "\n"+
     "  }\n"+
     "\n"+
     "  /* Functions returning / computing the results of top level queries */\n"+
-         ind(compile_tlqs(s0),2)+
+         ind(compile_tlqs,2)+
     "\n\n"+
     "protected:\n"+
     "\n"+
     "  /* Data structures used for storing / computing top level queries */\n"+
-         ind(compile_tlqs_decls(s0),2)+
+         ind(compile_tlqs_decls,2)+
     "\n\n"+
     "};\n"+
     "\n"
