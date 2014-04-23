@@ -190,15 +190,43 @@ trait ICppGen extends IScalaGen {
     freshClear()
     val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+"))"
     clearOut
-    "class "+cls+" extends Actor {\n"+ind(
-    "import ddbt.lib.Messages._\n"+
-    "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
-    "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
-    "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap+" case _ => tS+=1 }\n"+
-    "def receive = {\n"+ind(str+
-      "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+
-      "case EndOfStream | GetSnapshot(_) => t1=System.nanoTime; "+snap
-    )+"\n}\n"+gc+ld)+"\n"+"}\n"+helper(s0)
+    helperResultAccessor(s0)+
+    // "class "+cls+" extends Actor {\n"+ind(
+    // "import ddbt.lib.Messages._\n"+
+    // "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
+    // "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
+    // "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap+" case _ => tS+=1 }\n"+
+    // "def receive = {\n"+ind(str+
+    //   "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+
+    //   "case EndOfStream | GetSnapshot(_) => t1=System.nanoTime; "+snap
+    // )+"\n}\n"+gc+ld)+"\n"+"}\n"+
+    "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
+    "struct data_t : tlq_t{\n"+
+    "  data_t()\n"+
+    "  {}\n"+
+    "\n"+
+    "  #ifdef DBT_PROFILE\n"+
+    "  boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> exec_stats;\n"+
+    "  boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> ivc_stats;\n"+
+    "  #endif\n"+
+    "\n"+
+    "  /* Registering relations and trigger functions */\n"+
+    "  void register_data(ProgramBase& pb) {\n"+
+    "\n"+
+    "\n"+
+    "  }\n"+
+    "\n"+
+    "  /* Trigger functions for table relations */\n"+
+    "\n"+
+    "  /* Trigger functions for stream relations */\n"+
+    "\n"+
+    "private:\n"+
+    "\n"+
+    "  /* Data structures used for storing materialized views */\n"+
+    "\n"+
+    "};\n"+
+    "\n"+
+    helper(s0)
   }
 
   private def genStream(s:Source): String = {
@@ -258,6 +286,32 @@ trait ICppGen extends IScalaGen {
     ss.replaceAll("/standard/","/DATASETPLACEHOLDER/")
   }
 
+
+  private def helperResultAccessor(s0:System) = {
+    "\n"+
+    "/* Definitions of auxiliary maps for storing materialized views. */\n"+
+    "\n"+
+    "/* Type definition providing a way to access the results of the sql program */\n"+
+    "struct tlq_t{\n"+
+    "  struct timeval t0,t; long tT,tN,tS; tlq_t() { tN=0; tS=0; gettimeofday(&t0,NULL); }\n"+
+    "\n"+
+    "/* Serialization Code */\n"+
+    "  template<class Archive>\n"+
+    "  void serialize(Archive& ar, const unsigned int version) {\n"+
+    "\n"+
+    "\n"+
+    "  }\n"+
+    "\n"+
+    "  /* Functions returning / computing the results of top level queries */\n"+
+    "\n"+
+    "protected:\n"+
+    "\n"+
+    "  /* Data structures used for storing / computing top level queries */\n"+
+    "\n"+
+    "};\n"+
+    "\n"
+  }
+
   // Helper that contains the main and stream generator
   private def helper(s0:System) = {
     val dataset = "DATASETPLACEHOLDER" //XXXX
@@ -267,7 +321,7 @@ trait ICppGen extends IScalaGen {
     "  public:\n"+
     "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
     "      data.register_data(*this);\n"+
-           ind(streams(s0.sources),3)+"\n"+
+           ind(streams(s0.sources),3)+"\n\n"+
     "    }\n"+
     "\n"+
     "    /* Imports data for static tables and performs view initialization based on it. */\n"+
@@ -279,14 +333,14 @@ trait ICppGen extends IScalaGen {
     "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
     "    snapshot_t take_snapshot(){ tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\\\n\",d.tT,d.tN,d.tS);\n"+
     "        return snapshot_t( new tlq_t((tlq_t&)data) );\n"+
-    "    }"+
+    "    }\n"+
     "\n"+
     "  protected:\n"+
     "    data_t data;\n"+
     "};\n"
   }
 
-  override def pkgWrapper(pkg:String, body:String) = "#include \"program_base.hpp\"\n"+additionalImports()+"\n\n"+"namespace dbtoaster {\n"+ind(body)+"\n}\n"
+  override def pkgWrapper(pkg:String, body:String) = "#include \"program_base.hpp\"\n"+additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
 
     // "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     // "object "+cls+" {\n"+ind("import Helper._\n"+
