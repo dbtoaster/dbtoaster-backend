@@ -31,7 +31,7 @@ import ddbt.ast._
 class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
-  import ddbt.Utils.{ind,tup,tupv,fresh,freshClear,mapval} // common functions
+  import ddbt.Utils.{ind,tup,tupv,fresh,freshClear} // common functions
   def mapRef(n:String,tp:Type,keys:List[(String,Type)]) = { val m=M3.MapRef(n,tp,keys.map(_._1)); m.tks=keys.map(_._2); m }
 
   // Methods involving only constants are hoisted as global constants
@@ -52,6 +52,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   val x2=B[3]
   x1+x2
   */
+
+  def mapval(v:String) = "MapVal("+v+")"
+  def mapval(v:String,t:Type) = "MapVal["+genType(t)+"]("+v+")"
 
   var tupleClasses:Map[String,String] = Map()
   def tupleClass(ts:List[Type]):String = {
@@ -88,14 +91,27 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   // Create a variable declaration
   def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+mapval(genZero(tp))+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+genType(tp)+"]()\n"
 
-  def genOp(vl:String,vr:String,op:String,t1:Type,t2:Type):String = {
-    (t1,t2) match {
+  def genOp(rvl:String,rvr:String,op:String,tl:Type,tr:Type):String = {
+    def castIfNeeded(v:String,vt:Type,rt:Type):String = {
+      if(vt != rt) {
+        (vt,rt) match {
+          case (TypeTuple(vts),TypeTuple(rts)) => val c=fresh("c"); "{"+c+"="+v+".v;"+mapval(tupleClass(rts)+"("+Range(0,rts.length).map(i => c+"._"+i).mkString(",")+")")+"}"
+          case (_,_) => mapval("("+v+").v",rt) 
+        }
+      }
+      else
+        v
+    }
+    val resTp = op match { case "*" => Type.tpMul(tl,tr) case _ => Type.tpRes(tl,tr) }
+    val vl = castIfNeeded(rvl,tl,resTp)
+    val vr = castIfNeeded(rvr,tr,resTp) 
+    (tl,tr) match {
       case (TypeTuple(_),TypeTuple(_)) => "("+vl+" "+op+" "+vr+")"
-      case (_,TypeTuple(ts)) => {
+      case (_,TypeTuple(ts)) if op=="*" => {
         val v=fresh("v")
         "{ val "+v+"="+vl+".v;"+mapval(tupleClass(ts)+"("+(List.fill(ts.length)(v)).mkString(",")+")")+op+" "+vr+" }"
       }
-      case (TypeTuple(ts),_) => {
+      case (TypeTuple(ts),_) if op=="*" => {
         val v=fresh("v")
         "{ val "+v+"="+vr+".v;"+vl+" "+op+" "+mapval(tupleClass(ts)+"("+(List.fill(ts.length)(v)).mkString(",")+")")+" }"
       }
