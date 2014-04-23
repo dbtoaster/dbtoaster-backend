@@ -166,7 +166,7 @@ object Compiler {
             val as = List("g++",pl+"/main.cpp","-include",out,"-o",po,"-O3","-lpthread","-ldbtoaster","-I"+pl,"-L"+pl) :::
                      List("program_options","serialization","system","filesystem","chrono",Utils.prop("lib_boost_thread","thread")).map("-lboost_"+_) ::: // thread-mt
                      (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
-            java.lang.System.err.println("as => " + as.mkString(" "))
+            //make DBT c++ library
             Utils.exec(Array("make","-C",pl))
             val t2 = Utils.ns(()=>Utils.exec(as.toArray))._1; if (t_comp!=null) t_comp(t2)
             t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
