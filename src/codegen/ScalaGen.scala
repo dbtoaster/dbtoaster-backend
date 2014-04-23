@@ -102,9 +102,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       else
         v
     }
-    val resTp = op match { case "*" => Type.tpMul(tl,tr) case _ => Type.tpRes(tl,tr) }
-    val vl = castIfNeeded(rvl,tl,resTp)
-    val vr = castIfNeeded(rvr,tr,resTp) 
+    val ct = op match { case "*" => Type.tpMul(tl,tr) case _ => Type.tpRes(tl,tr) }
+    val vl = castIfNeeded(rvl,tl,ct)
+    val vr = castIfNeeded(rvr,tr,ct) 
     (tl,tr) match {
       case (TypeTuple(_),TypeTuple(_)) => "("+vl+" "+op+" "+vr+")"
       case (_,TypeTuple(ts)) if op=="*" => {
@@ -135,7 +135,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case Ref(n) => co("MapVal("+rn(n)+")")
     case Const(tp,v) => tp match { case TypeLong => co(mapval(v+"L")) case TypeString => co(mapval("\""+v+"\"")) case _ => co(mapval(v)) }
     case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+".m != 0) MapVal(1L) else MapVal(0L))"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") MapVal(1L) else MapVal(0L))")))
+    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+genOp(ll,rr,op.toString,l.tp,r.tp)+") MapVal(1L) else MapVal(0L))")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(mapval(constApply(app))) // hoist constants resulting from function application
       else { 
