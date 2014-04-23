@@ -159,7 +159,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     }
     val vl = castIfNeeded(rvl,tl,ct)
     val vr = castIfNeeded(rvr,tr,ct) 
-    ("("+vl+" "+op+" "+vr+")",ct)
+    ("("+vl+" "+op+" "+vr+")",ct match { case TypeMapVal(_) => ct case _ => TypeMapVal(ct) })
   }
 
   def genZero(t:Type) = {
@@ -220,7 +220,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n::Nil,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
-      if (ctx.contains(n)) cpsExpr(e,(v:String,t:Type)=>co("(if ("+rn(n)+" == "+v+") MapVal(1L) else MapVal(0L))",TypeMapVal(TypeLong)),am)
+      if (ctx.contains(n)) 
+        cpsExpr(e,(v:String,t:Type)=>co("(if ("+rn(n)+" == "+v+") MapVal(1L) else MapVal(0L))",TypeMapVal(TypeLong)),am)
       else e match {
         case Ref(n2) => 
           val (rn2,rn2t) = rn(n2)
@@ -235,7 +236,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         case _ => 
           ctx.add(n,(e.tp,fresh("l")))
           val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
-          cpsExpr(e,(v:String,t:Type)=> ("val "+rn(n)+" = "+v+";\n"+cov,cot),am)
+          cpsExpr(e,(v:String,t:Type) => ("val "+rn(n)._1+" = "+v+";\n"+cov,cot),am)
       }
     case Lift(ns,e) =>
       // XXX: What about the special cases?
@@ -263,7 +264,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         def cx(s:String):Option[(String,String)] = if (!s.startsWith("(if (")) None else { var d=1; var p=5; while(d>0) { if (s(p)=='(') d+=1 else if (s(p)==')') d-=1; p+=1; }; Some(s.substring(5,p-1),s.substring(p+1,s.lastIndexOf("else")-1)) }
 
         def vx(cond:String,vl:String,vr:String) = {
-          val (v,t) = if (vl=="1L") (vr,TypeLong) else if (vr=="1L") (vl,TypeLong) else genOp(vl,vr,"*",tl,tr) 
+          val (v,t) = if (vl=="1L") (vr,tr) else if (vr=="1L") (vl,tl) else genOp(vl,vr,"*",tl,tr) 
           val zero = t match { case TypeMapVal(tv) => mapval(genZero(tv),tv) case _ => genZero(t) } 
           val (strIf,strElse) = if (cond != null) ("if("+cond+")"," else "+zero) else ("","")
           ("("+strIf+v+strElse+")",t)
