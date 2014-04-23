@@ -70,7 +70,6 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val neg = "def -(x:"+name+") = "+name+"("+(ts zip vals).map({ case (t,v) => t.toScala+"Ring.-(x."+v+")"}).mkString(",")+")"
       val opsDef = ops.map(op => "def "+op+"(x:"+name+",y:"+name+") = "+name+"("+ts.zipWithIndex.map({ case(t,i) => t.toScala+"Ring."+op+"(x._"+i+",y._"+i+")"}).mkString(",")+")").mkString("\n")
       val stubs = invalidOps.map(op => "def "+op+"(x:"+name+",y:"+name+") = ???").mkString("\n")
-      //val scalarOpsDef = scalarOps.map(op => scalarTypes.map(t => "def "+op+"(x:"+name+",y:"+t+") = "+name+"("+ts.zipWithIndex.map({ case(t,i) => t.toScala+"Ring"+"."+op+"(x._"+i+",y._"+i+")"}).mkString(",")+")").mkString("\n")).mkString("\n")
       val toList = "def toList(x:"+name+") = List("+vals.map(v => "x."+v).mkString(",")+")"
       val obj = "implicit object "+name+"Ring extends Ring["+name+"] {"+List(zero,one,neg,opsDef,stubs,toList).mkString("\n")+"}"
       val code = caseClass+obj

@@ -109,36 +109,21 @@ object TypeCheck extends (M3.System => M3.System) {
 
   // 7. Resolve missing types (and also make sure operations are correctly typed)
   def typeCheck(s0:System) = {
-    def tpRes(t1:Type,t2:Type,ex:Expr):Type = (t1,t2) match {
-      case (t1,t2) if t1==t2 => t1
-      case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
-      case (TypeTuple(t1 :: Nil),t2) => tpRes(t1,t2,ex) 
-      case _ => err("Bad operands ("+t1+","+t2+"): "+ex)
-    }
-    def tpMul(t1:Type,t2:Type,ex:Expr):Type = (t1,t2) match {
-      case (t1,t2) if t1==t2 => t1
-      case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
-      case (TypeTuple(t1 :: Nil),t2) => tpRes(t1,t2,ex) 
-      case (TypeTuple(t1s),TypeTuple(t2s)) => TypeTuple((t1s zip t2s).map{ case(t1,t2)=>tpMul(t1,t2,ex)})
-      case (TypeTuple(t1s), t2) => TypeTuple(t1s.map(tpMul(_,t2,ex)))
-      case (t1, TypeTuple(t2s)) => TypeTuple(t2s.map(tpMul(t1,_,ex)))
-      case _ => err("Bad operands ("+t1+","+t2+"): "+ex)
-    }
     //c: context
     def ie(ex:Expr,c:Map[String,Type]):Map[String,Type] = {
       var cr=c; // new bindings
       ex match { // gives a type to all untyped nodes
-        case m@Mul(l,r) => cr=ie(r,ie(l,c)); m.tp=tpMul(l.tp,r.tp,ex)
+        case m@Mul(l,r) => cr=ie(r,ie(l,c)); m.tp=Type.tpMul(l.tp,r.tp)
         case a@Add(l,r) =>
           val (fl,fr)=(ie(l,c).filter{x=> !c.contains(x._1)},ie(r,c).filter{x=> !c.contains(x._1)}) // free(l), free(r)
           a.agg=fl.filter{x=>fr.contains(x._1)}.toList // sorted(free(l) & free(r)) : a variable is bound differently in l and r => set union
-          cr=c++fl++fr; a.tp=tpRes(l.tp,r.tp,ex);
-        case Cmp(l,r,_) => cr=c++ie(l,c)++ie(r,c); tpRes(l.tp,r.tp,ex)
+          cr=c++fl++fr; a.tp=Type.tpRes(l.tp,r.tp);
+        case Cmp(l,r,_) => cr=c++ie(l,c)++ie(r,c); Type.tpRes(l.tp,r.tp)
         case Exists(e) => cr=ie(e,c)
         case Lift(ns,e) => 
           cr=ie(e,c)
           val ts = e.tp match { case TypeTuple(ts) => ts case t => List(t) } 
-          (ns zip ts) map { case (n,t) => c.get(n) match { case Some(ct) => try { tpRes(t,ct,ex) } catch { case _:Throwable => err("Value "+n+" lifted as "+ct+" compared with "+t) } case None => cr=cr+((n,t)) }
+          (ns zip ts) map { case (n,t) => c.get(n) match { case Some(ct) => try { Type.tpRes(t,ct) } catch { case _:Throwable => err("Value "+n+" lifted as "+ct+" compared with "+t) } case None => cr=cr+((n,t)) }
           }
         case a@AggSum(ks,e) => val in=ie(e,c); cr=c++ks.map{k=>(k,in(k))}; a.tks=ks.map(cr)
         case a@Apply(n,_,as) => as.map(ie(_,c)); a.tp=Library.typeCheck(n,as.map(_.tp))

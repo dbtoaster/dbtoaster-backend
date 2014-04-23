@@ -22,6 +22,24 @@ case object TypeString extends Type              { override def toString="string
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
 case class TypeTuple(ts:List[Type]) extends Type { override def toScala="("+ts.map(_.toScala).mkString(",")+")"; override def toString="<"+ts.mkString(",")+">"; val zero="("+ts.map(_.zero).mkString(",")+")"; override val zeroScala="("+ts.map(_.zeroScala).mkString(",")+")"; }
 
+object Type {
+  def tpRes(t1:Type,t2:Type):Type = (t1,t2) match {
+    case (t1,t2) if t1==t2 => t1
+    case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
+    case (TypeTuple(t1 :: Nil),t2) => tpRes(t1,t2) 
+    case _ => sys.error("Bad operands ("+t1+","+t2+")")
+  }
+  def tpMul(t1:Type,t2:Type):Type = (t1,t2) match {
+    case (t1,t2) if t1==t2 => t1
+    case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
+    case (TypeTuple(t1 :: Nil),t2) => tpRes(t1,t2) 
+    case (TypeTuple(t1s),TypeTuple(t2s)) => TypeTuple((t1s zip t2s).map{ case(t1,t2)=>tpMul(t1,t2)})
+    case (TypeTuple(t1s), t2) => TypeTuple(t1s.map(tpMul(_,t2)))
+    case (t1, TypeTuple(t2s)) => TypeTuple(t2s.map(tpMul(t1,_)))
+    case _ => sys.error("Bad operands ("+t1+","+t2+")")
+  }
+}
+
 // ---------- Comparison operators
 sealed abstract class OpCmp extends Tree { def toM3=toString; def toSQL=toString } // toString is C/Scala notation
 case object OpEq extends OpCmp { override def toString="=="; override def toM3="="; override def toSQL="=" }
