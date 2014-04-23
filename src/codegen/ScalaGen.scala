@@ -95,7 +95,14 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     def castIfNeeded(v:String,vt:Type,rt:Type):String = {
       if(vt != rt) {
         (vt,rt) match {
-          case (TypeTuple(vts),TypeTuple(rts)) => val c=fresh("c"); "{"+c+"="+v+".v;"+mapval(tupleClass(rts)+"("+Range(0,rts.length).map(i => c+"._"+i).mkString(",")+")")+"}"
+          case (TypeTuple(vts),TypeTuple(rts)) => {
+            val c=fresh("c"); 
+            "{"+c+"="+v+".v;"+mapval(tupleClass(rts)+"("+Range(0,rts.length).map(i => c+"._"+i).mkString(",")+")")+"}"
+          }
+          case (_,TypeTuple(rts)) => {
+            val c=fresh("c")
+            "{ val "+c+"="+v+".v;"+mapval(tupleClass(rts)+"("+(List.fill(rts.length)(c)).mkString(",")+")")+" }"
+          }
           case (_,_) => mapval("("+v+").v",rt) 
         }
       }
@@ -105,19 +112,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     val ct = op match { case "*" => Type.tpMul(tl,tr) case _ => Type.tpRes(tl,tr) }
     val vl = castIfNeeded(rvl,tl,ct)
     val vr = castIfNeeded(rvr,tr,ct) 
-    (tl,tr) match {
-      case (TypeTuple(_),TypeTuple(_)) => "("+vl+" "+op+" "+vr+")"
-      case (_,TypeTuple(ts)) if op=="*" => {
-        val v=fresh("v")
-        "{ val "+v+"="+vl+".v;"+mapval(tupleClass(ts)+"("+(List.fill(ts.length)(v)).mkString(",")+")")+op+" "+vr+" }"
-      }
-      case (TypeTuple(ts),_) if op=="*" => {
-        val v=fresh("v")
-        "{ val "+v+"="+vr+".v;"+vl+" "+op+" "+mapval(tupleClass(ts)+"("+(List.fill(ts.length)(v)).mkString(",")+")")+" }"
-      }
-      case (TypeLong,TypeDouble) => "("+vr+" "+op+" "+vl+")"
-      case (_,_) => "("+vl+" "+op+" "+vr+")"
-    }
+    "("+vl+" "+op+" "+vr+")"
   }
 
   def genZero(t:Type) = {
