@@ -233,18 +233,73 @@ trait ICppGen extends IScalaGen {
       "}\n\n"
     }
 
-    val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
-    val body = if (lms!=null) lms else {
-      val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
-      val ms = s0.maps.map(genMap).mkString("\n") // maps
-      ms+"\n\n"+ts
+    val VALUE_NAME = "__av"
+
+    def genMapStructDef(m:MapDef) = {
+      val mapName = m.name
+      val mapType = m.name+"_map"
+      val mapEntry = mapName+"_entry"
+      val fields = m.keys ++ List(VALUE_NAME -> m.tp)
+      val fieldsWithIdx = fields.zipWithIndex
+      val indices = sx.getOrElse(m.name,List[List[Int]]())
+      val allIndices = ((0 until m.keys.size).toList -> true /*unique*/) :: indices.map(is => (is -> false /*non_unique*/))
+      val allIndicesWithIndex = allIndices.zipWithIndex
+      val multiKeyIndices = allIndicesWithIndex.filter{case ((is,_),_) => is.size > 1}
+
+      def genEntryStruct = 
+        "struct "+mapEntry+" {\n"+
+        "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+"\n"+
+        "  "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => tp.toCpp+" c"+i}.mkString(", ")+") {"+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
+        "  "+mapEntry+"(std::pair<const boost::fusion::tuple<"+m.keys.map{_._2.toCpp}.mkString(",")+" > , "+m.tp.toCpp+">& p) { "+m.keys.zipWithIndex.map{case ((fld,_),i) => fld+" = at_c<"+i+">(p.first); "}.mkString+VALUE_NAME+" = p.second; }\n"+
+        "  operator const std::pair<const boost::fusion::tuple<"+m.keys.map{_._2.toCpp}.mkString(",")+" > , "+m.tp.toCpp+">() const { return std::make_pair(boost::fusion::make_tuple("+m.keys.map{case (fld,_) => fld}.mkString(",")+"), "+VALUE_NAME+"); }\n"+
+        "  template<class Archive>\n"+
+        "  void serialize(Archive& ar, const unsigned int version)\n"+
+        "  {\n"+
+        fields.map{case (fld,_) => "    ar & BOOST_SERIALIZATION_NVP("+fld+");\n"}.mkString+
+        "  }\n"+
+        "};"
+      
+      def genPatternStructs = 
+        indices.map{is => "struct "+mapName+"_pat"+is.mkString+" {};"}.mkString("\n")
+
+      def genTypeDefs =
+        "typedef multi_index_container<"+mapEntry+", indexed_by<\n"+
+        allIndicesWithIndex.map{case((is,unique),i) => "  hashed_"+(if(unique) "unique<" else "non_unique<tag<"+mapName+"_pat"+is.mkString+">, ")+(if(is.size > 1) mapType+"key"+i+"_extractor,"+mapType+"key"+i+"_hasher" else "member<"+mapEntry+","+fields(is(0))._2.toCpp+",&"+mapEntry+"::"+fields(is(0))._1+"> ")+">"}.mkString(",\n")+"\n"+
+        " > > "+mapType+";\n"+
+        indices.map{is => "typedef "+mapType+"::index<"+mapName+"_pat"+is.mkString+">::type "+mapName+"_index"+is.mkString+";"}.mkString("\n")
+
+      def genExtractorsAndHashers = multiKeyIndices.map{ case((is,unique),i) =>
+        "struct "+mapType+"key"+i+"_extractor {\n"+
+        "  typedef boost::fusion::tuple<"+m.keys.map{case (_,tp) => tp.toCpp}.mkString(",")+" >  result_type;\n"+
+        "  result_type operator()(const "+mapEntry+"& e) const {\n"+
+        "    return boost::fusion::make_tuple("+m.keys.map{case (fld,_) => "e."+fld}.mkString(",")+");\n"+
+        "  }\n"+
+        "};\n"+
+        "struct "+mapType+"key"+i+"_hasher {\n"+
+        "  size_t operator()(const "+mapEntry+"& e) const {\n"+
+        "    size_t seed = 0;\n"+
+        is.map{ isIndex => "    boost::hash_combine(seed, e."+fields(is(isIndex))._1+");\n" }.mkString +
+        "    return seed;\n"+
+        "  }\n"+
+        "  size_t operator()(boost::fusion::tuple<"+m.keys.map{case (_,tp) => tp.toCpp}.mkString(",")+" >  k) const {\n"+
+        "    return boost::fusion::fold(k, 0, fold_hash());\n"+
+        "  }\n"+
+        "};"
+      }.mkString("\n")
+      genEntryStruct+"\n"+genPatternStructs+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs
     }
-    val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
-    val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
-    freshClear()
-    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+"))"
-    clearOut
-    helperResultAccessor(s0)+
+
+    // val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
+    // val body = if (lms!=null) lms else {
+    //   val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
+    //   val ms = s0.maps.map(genMap).mkString("\n") // maps
+    //   ms+"\n\n"+ts
+    // }
+    // val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
+    // val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
+    // val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+"))"
+    
+
     // "class "+cls+" extends Actor {\n"+ind(
     // "import ddbt.lib.Messages._\n"+
     // "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
@@ -254,6 +309,20 @@ trait ICppGen extends IScalaGen {
     //   "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+
     //   "case EndOfStream | GetSnapshot(_) => t1=System.nanoTime; "+snap
     // )+"\n}\n"+gc+ld)+"\n"+"}\n"+
+    freshClear
+    clearOut
+    val ts =
+      "/* Trigger functions for table relations */\n"+
+      genTableTriggers+
+      "\n\n"+
+      "/* Trigger functions for stream relations */\n"+
+      genStreamTriggers
+    val ms = s0.maps.filter(_.keys.size > 0).map(genMapStructDef).mkString("\n") // maps
+
+    "\n/* Definitions of auxiliary maps for storing materialized views. */\n"+
+    ms +
+    "\n\n"+
+    helperResultAccessor(s0)+
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
     "struct data_t : tlq_t{\n"+
     "  data_t()\n"+
@@ -279,11 +348,7 @@ trait ICppGen extends IScalaGen {
     "\n\n"+
     "  }\n"+
     "\n"+
-    "  /* Trigger functions for table relations */\n"+
-       ind(genTableTriggers)+
-    "\n\n"+
-    "  /* Trigger functions for stream relations */\n"+
-       ind(genStreamTriggers)+
+       ind(ts)+
     "\n\n"+
     "private:\n"+
     "\n"+
@@ -311,9 +376,6 @@ trait ICppGen extends IScalaGen {
       q.toCppType + " "+q.name+";\n"
     }.mkString
 
-    "\n"+
-    "/* Definitions of auxiliary maps for storing materialized views. */\n"+
-    "\n"+
     "/* Type definition providing a way to access the results of the sql program */\n"+
     "struct tlq_t{\n"+
     "  struct timeval t0,t; long tT,tN,tS; tlq_t() { tN=0; tS=0; gettimeofday(&t0,NULL); }\n"+
