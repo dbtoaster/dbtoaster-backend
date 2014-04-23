@@ -262,12 +262,6 @@ trait ICppGen extends IScalaGen {
       def genPatternStructs = 
         indices.map{is => "struct "+mapName+"_pat"+is.mkString+" {};"}.mkString("\n")
 
-      def genTypeDefs =
-        "typedef multi_index_container<"+mapEntry+", indexed_by<\n"+
-        allIndicesWithIndex.map{case((is,unique),i) => "  hashed_"+(if(unique) "unique<" else "non_unique<tag<"+mapName+"_pat"+is.mkString+">, ")+(if(is.size > 1) mapType+"key"+i+"_extractor,"+mapType+"key"+i+"_hasher" else "member<"+mapEntry+","+fields(is(0))._2.toCpp+",&"+mapEntry+"::"+fields(is(0))._1+"> ")+">"}.mkString(",\n")+"\n"+
-        " > > "+mapType+";\n"+
-        indices.map{is => "typedef "+mapType+"::index<"+mapName+"_pat"+is.mkString+">::type "+mapName+"_index"+is.mkString+";"}.mkString("\n")
-
       def genExtractorsAndHashers = multiKeyIndices.map{ case((is,unique),i) =>
         "struct "+mapType+"key"+i+"_extractor {\n"+
         "  typedef boost::fusion::tuple<"+m.keys.map{case (_,tp) => tp.toCpp}.mkString(",")+" >  result_type;\n"+
@@ -286,6 +280,13 @@ trait ICppGen extends IScalaGen {
         "  }\n"+
         "};"
       }.mkString("\n")
+
+      def genTypeDefs =
+        "typedef multi_index_container<"+mapEntry+", indexed_by<\n"+
+        allIndicesWithIndex.map{case((is,unique),i) => "  hashed_"+(if(unique) "unique<" else "non_unique<tag<"+mapName+"_pat"+is.mkString+">, ")+(if(is.size > 1) mapType+"key"+i+"_extractor,"+mapType+"key"+i+"_hasher" else "member<"+mapEntry+","+fields(is(0))._2.toCpp+",&"+mapEntry+"::"+fields(is(0))._1+"> ")+">"}.mkString(",\n")+"\n"+
+        " > > "+mapType+";\n"+
+        indices.map{is => "typedef "+mapType+"::index<"+mapName+"_pat"+is.mkString+">::type "+mapName+"_index"+is.mkString+";"}.mkString("\n")
+
       genEntryStruct+"\n"+genPatternStructs+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs
     }
 
