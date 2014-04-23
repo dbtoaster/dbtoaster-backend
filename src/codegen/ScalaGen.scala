@@ -42,7 +42,19 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   // XXX: enlarge the definition to generalized constants
 
   var ctx:Ctx[(Type,String)] = null // Context: variable->(type,unique_name)
-  def rn(n:String):String = ctx(n)._2 // get unique name (avoids nesting Lifts)
+  
+  /** Gets the unique name of a variable in the context
+    *  
+    *  @param n Name of the variable 
+    *  
+    *  @return The unique name of the variable
+    */
+  def rn(n:String):String = {
+    if(ctx contains n)
+      ctx(n)._2
+    else
+      sys.error("Could not find "+n+" in context: "+ctx)
+  }
   /*
   Here you need to rename variable to avoid putting individual statements in separated blocks
   M[x] = Add( Mul(Lift(x,2),A[x]), Mul(Lift(x,3),B[x]) )
