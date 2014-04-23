@@ -9,6 +9,7 @@ package ddbt.ast
 sealed abstract class Tree // Generic AST node
 
 // ---------- Data types
+// TODO: put zeroScala and toScala in ScalaGen
 sealed abstract class Type extends Tree { def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase; def zero:String; def zeroScala=zero }
 //case object TypeChar extends Type /*  8 bit */ { override def toString="char" }
 //case object TypeShort extends Type /*16 bit */ { override def toString="short" }
@@ -21,6 +22,11 @@ case object TypeDate   extends Type              { override def toString="date";
 case object TypeString extends Type              { override def toString="string"; val zero="\"\"" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
 case class TypeTuple(ts:List[Type]) extends Type { override def toScala="("+ts.map(_.toScala).mkString(",")+")"; override def toString="<"+ts.mkString(",")+">"; val zero="("+ts.map(_.zero).mkString(",")+")"; override val zeroScala="("+ts.map(_.zeroScala).mkString(",")+")"; }
+case class TypeMapVal(t:Type) extends Type { 
+  override def toScala="MapVal["+t.toScala+"]"
+  val zero = "MapVal("+t.zero+")"
+}
+case object TypeUnit extends Type { override def toString="()"; val zero="()" }
 
 object Type {
   def tpRes(t1:Type,t2:Type):Type = (t1,t2) match {
@@ -29,13 +35,28 @@ object Type {
     case (TypeTuple(t1 :: Nil),t2) => tpRes(t1,t2) 
     case _ => sys.error("Bad operands ("+t1+","+t2+")")
   }
+
   def tpMul(t1:Type,t2:Type):Type = (t1,t2) match {
     case (t1,t2) if t1==t2 => t1
+    case (TypeMapVal(t1),TypeMapVal(t2)) => TypeMapVal(tpMul(t1,t2))
+    case (TypeMapVal(t1),t2) => TypeMapVal(tpMul(t1,t2))
+    case (t1,TypeMapVal(t2)) => TypeMapVal(tpMul(t1,t2))
     case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
     case (TypeTuple(t1 :: Nil),t2) => tpRes(t1,t2) 
     case (TypeTuple(t1s),TypeTuple(t2s)) => TypeTuple((t1s zip t2s).map{ case(t1,t2)=>tpMul(t1,t2)})
     case (TypeTuple(t1s), t2) => TypeTuple(t1s.map(tpMul(_,t2)))
     case (t1, TypeTuple(t2s)) => TypeTuple(t2s.map(tpMul(t1,_)))
+    case _ => sys.error("Bad operands ("+t1+","+t2+")")
+  }
+
+  def tpAdd(t1:Type,t2:Type):Type = (t1,t2) match {
+    case (t1,t2) if t1==t2 => t1
+    case (TypeMapVal(t1),TypeMapVal(t2)) => TypeMapVal(tpAdd(t1,t2))
+    case (TypeMapVal(t1),t2) => TypeMapVal(tpAdd(t1,t2))
+    case (t1,TypeMapVal(t2)) => TypeMapVal(tpAdd(t1,t2))
+    case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
+    case (TypeTuple(t1 :: Nil),t2) => tpRes(t1,t2) 
+    case (TypeTuple(t1s),TypeTuple(t2s)) => TypeTuple((t1s zip t2s).map{ case(t1,t2)=>tpMul(t1,t2)})
     case _ => sys.error("Bad operands ("+t1+","+t2+")")
   }
 }

@@ -102,7 +102,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   }
   */
 
-  override def rn(n:String):String = try { ctx(n)._2 } catch { case _:Throwable => n } // get unique name (avoids nesting Lifts)
+  override def rn(n:String) = ???
 
   type RFun = (String,String,String) // Remote functions as (func_name,body,context_insensitive_body)
   private var aggl = List[RFun]()
@@ -149,97 +149,16 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   }
 
   // Wrapper for remote code generation, return body and context
-  def remote(m:MapRef,fn:String,f:()=>String):(String,List[String]) = {
-    val p0=part; part=p0.setLocal(m); /*val u0=inuse.save;*/ val c=ctx.save++ctx.ctx0; val body=close(f);
-    val u=inuse.save; part=p0; //inuse.load(u0)
-    val rc = (c.map(_._1).toSet & u).toList // remote context
-    ("case (`"+fn+"`,List("+rc.map(v=>rn(v)+":"+c(v)._1.toScala).mkString(",")+")) =>\n"+ind(body),rc map rn)
-  }
-
+  def remote(m:MapRef,fn:String,f:()=>String):(String,List[String]) = ???
+  
   // Remote aggregation
-  def remote_agg(a0:String,m:MapRef,key:List[(String,Type)],e:Expr,add:Boolean=false):String = {
-    // remote handler
-    val fn0 = fresh("fa");
-    val (body0:String,rc:List[String])=remote(m,fn0,()=>{ inuse.add(key.map(_._1).toSet)
-      if (key.size==0) "var "+a0+":"+e.tp.toScala+" = 0;\n"+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+"co("+a0+")"
-      else { "val "+a0+" = M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(key.map(x=>rn(x._1)))+","+v+");\n")+"co("+a0+")" }
-    })
-    val (fn,body) = rfun(true,fn0,body0,rc)
-    // local handler
-    val rt = if (key.size==0) e.tp.toScala else "M3Map["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]"
-    val acc = if (key.size==0) "null" else "M3Map.temp["+tup(key.map(_._2.toScala))+","+e.tp.toScala+"]()"
-    cl_add(1); "aggr("+ref(m.name)+","+fn+rc.map(x=>","+rn(x)).mkString+")("+(if (add) a0+"){(_" else acc+"){("+a0)+":"+rt+") =>\n"
-  }
-
-  override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match {
-    case Ref(n) => inuse.add(Set(n)); super.cpsExpr(ex,co,am) // 'inuse' maintenance
-    case Lift(n,e) => ???
-    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)};
-      if (part.local(m) || !ref.contains(n)) {
-        //super.cpsExpr(ex,(v:String)=>close(()=>co(v)))
-        if (ki.size==0) { inuse.add(ks.toSet); co(n+(if (ks.size>0) ".get("+tup(ks map rn)+")" else "")) } // all keys are bound
-        else { val (k0,v0)=(fresh("k"),fresh("v")); var async=false
-          val s=ctx.save
-          inuse.add(ko.map(_._1).toSet); ctx.add(v0,(ex.tp,v0)); inuse.add(Set(v0));
-          val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else ""
-          ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
-          val co1=close(()=>{ val r=co(v0); if (cl_ctr>0) { async=true; n+"_c.i\n"+r+n+"_c.d\n" } else r })
-          val r = (if (async) "val "+n+"_c = Acc()\n" else "")+
-          n+sl+".foreach { ("+k0+","+v0+") =>\n"+ind( // slice on bound variables
-            ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+(if (ks.size>1) "._"+(i+1) else "")+";\n"}.mkString+co1)+"\n}\n"+ // bind free variables from retrieved key
-            (if (async) { cl_add(1); n+"_c{\n" } else "")
-          ctx.load(s)
-          r
-        }
-      } else if (ki.size==0) {
-        val v=fresh("v"); cl_add(1); inuse.add(ks.toSet); ctx.add(v,(ex.tp,v)); inuse.add(Set(v));
-        "get("+ref.getOrElse(n,n)+","+(if(ks.size>0) tup(ks map rn) else "null")+"){("+v+":"+ex.tp.toScala+")=>\n"+co(v)
-      } else if (lacc!=null) {
-        // XXX: introduce a projection for only the relevant variables (?)
-        val n0=fresh("m"); val v=fresh("v")
-        remote_agg(n0,m,ki.map(x=>(x._1,m.tks(x._2))),m)+n0+".foreach{ case ("+tup(ki.map(_._1))+","+v+") =>\n"+ind(co(v))+"\n}\n"
-      } else {
-        // remote handler
-        val fn0 = fresh("ff");
-        val (body0,rc)=remote(m,fn0,()=>close(()=>cpsExpr(ex,co)+"co()"))
-        val (fn,body) = rfun(false,fn0,body0,rc)
-        // local handler
-        "foreach("+(ref(n)::fn::rc).mkString(",")+");\n"
-      }
-    case a@AggSum(ks,e) => val m=fmap(e); val cur=ctx.save; inuse.add(ks.toSet);
-      val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-      if (m==null || part.local(m)) {
-        if (aks.size==0) { val a0=fresh("agg"); ctx.add(a0,(e.tp,a0)); inuse.add(a0); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) } // context/use mainenance
-        else super.cpsExpr(ex,co,am) // 1-tuple projection or map available locally
-      } else {
-        val a0=fresh("agg"); val l0=lacc; lacc=(a0,e.tp,aks); val r =remote_agg(a0,m,aks,e); lacc=l0
-        r+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); cpsExpr(mapRef(a0,e.tp,aks),co) })
-      }
-    case a@Add(el,er) => val cur=ctx.save;
-      if (a.agg==Nil) { cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
-      else am match {
-        case Some(t) if t==a.agg => val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
-        case _ => val a0=fresh("add")
-          def add(e:Expr):String = { val m=fmap(e)
-            val r = if (m!=null) { val l0=lacc; lacc=(a0,e.tp,a.agg); val r=remote_agg(a0,m,a.agg,e,true); lacc=l0; r }
-                    else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
-          }
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ cpsExpr(mapRef(a0,ex.tp,a.agg),co) }
-      }
-    case _ => super.cpsExpr(ex,co,am)
+  def remote_agg(a0:String,m:MapRef,key:List[(String,Type)],e:Expr,add:Boolean=false):String = ???
+ 
+  override def cpsExpr(ex:Expr,co:(String,Type)=>(String,Type)=(v:String,t:Type)=>(v,t),am:Option[List[(String,Type)]]=None):(String,Type) = ex match { // XXX: am should be a Set instead of a List
+    case _ => ???
   }
 
   override def genStmt(s:Stmt) = s match {
-    case StmtMap(m,e,op,oi) => val r=ref(m.name);
-      def rd(ex:Expr,self:Boolean=false) = ((if (self) List(r) else Nil):::ex.collect{ case MapRef(n,t,ks)=>Set(ref(n)) }.toList).map(x=>","+x).mkString
-      def pre(o:OpMap,e:Expr) = (if (o==OpSet && m.keys.size>0) { cl_add(1); "pre("+r+",false){\nclear("+r+");\n" } else "")+
-                                ({ cl_add(1); "pre("+r+","+(o==OpAdd)+rd(e)+"){\n" })
-      def mo(o:OpMap,v:String) = (if (o==OpSet) "set" else "add")+"("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map rn))+","+v+");\n"
-      val init = oi match { case None => "" case Some(ie) => ctx.load(); inuse.load(m.keys.toSet);
-        val co=(v:String)=> { val v0=fresh("v"); val o=mo(OpSet,v); "get("+r+","+(if (m.keys.size==0) "null" else tup(m.keys map rn))+"){("+v0+":"+m.tp.toScala+")=> if ("+v0+"==0) "+o.substring(0,o.length-1)+" }\n" }
-        cl_add(1); "pre("+r+",false"+rd(ie,true)+"){\n"+cpsExpr(ie,co)
-      }
-      ctx.load(); inuse.load(m.keys.toSet); init+pre(op,e)+cpsExpr(e,(v:String)=>mo(op,v))
     case _ => sys.error("Unimplemented")
   }
 
