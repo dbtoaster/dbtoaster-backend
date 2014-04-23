@@ -241,7 +241,7 @@ trait ICppGen extends IScalaGen {
 
   private def register_maps(s0:System) = s0.maps.map{m=>"pb.add_map<"+m.toCppType+">( \""+m.name+"\", "+m.name+" );\n"}.mkString
 
-  private def register_relations(s0:System) = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ",true") + ");\n"}.mkString
+  private def register_relations(s0:System) = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ", true") + ");\n"}.mkString
 
   private def register_table_triggers(s0:System) = s0.sources.filter(!_.stream).map{s => 
     "pb.add_trigger(\""+s.schema.name+"\", insert_tuple, boost::bind(&data_t::unwrap_insert_"+s.schema.name+", this, ::boost::lambda::_1));\n"
