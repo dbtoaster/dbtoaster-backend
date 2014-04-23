@@ -104,8 +104,9 @@ object M3 {
   }
   case class MapDef(name:String, tp:Type, keys:List[(String,Type)], expr:Expr) extends M3 {
     override def toString="DECLARE MAP "+name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.map{case (n,t)=>n+":"+t}.mkString(",")+"] :=\n"+ind(expr+";")
+    def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"
   }
-  case class Query(name:String, map:MapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+map+";" }
+  case class Query(name:String, map:MapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+map+";"; def toCppType=map.toCppType; def toCppRefType=map.toCppRefType}
   case class Trigger(evt:EvtTrigger, stmts:List[Stmt]) extends M3 { override def toString="ON "+evt+" {\n"+ind(stmts.mkString("\n"))+"\n}" }
 
   // ---------- Expressions (values)
@@ -146,7 +147,7 @@ object M3 {
   case class Const(tp:Type,v:String) extends Expr { override def toString=if (tp==TypeString) "'"+v+"'" else v }
   // Variables
   case class Ref(name:String) extends Expr { override def toString=name; var tp:Type=null }
-  case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]"; var tks:List[Type]=Nil }
+  case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]"; var tks:List[Type]=Nil; def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"}
   case class Lift(name:String, e:Expr) extends Expr { override def toString="("+name+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
   case class MapRefConst(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=TypeLong } // appear in Map definition and constant table lookups
   // Operations

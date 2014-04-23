@@ -213,7 +213,16 @@ trait ICppGen extends IScalaGen {
     "  /* Registering relations and trigger functions */\n"+
     "  void register_data(ProgramBase& pb) {\n"+
     "\n"+
-    "\n"+
+         ind(register_maps(s0),2)+
+    "\n\n"+
+         ind(register_relations(s0),2)+
+    "\n\n"+
+         ind(register_table_triggers(s0),2)+
+    "\n\n"+
+         ind(register_stream_triggers(s0),2)+
+    "\n\n"+
+         ind(init_stats(s0),2)+
+    "\n\n"+
     "  }\n"+
     "\n"+
     "  /* Trigger functions for table relations */\n"+
@@ -223,10 +232,107 @@ trait ICppGen extends IScalaGen {
     "private:\n"+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
-    "\n"+
+         ind(generateDataStructureRefs(s0))+
+    "\n\n"+
     "};\n"+
     "\n"+
     helper(s0)
+  }
+
+  private def register_maps(s0:System) = s0.maps.map{m=>"pb.add_map<"+m.toCppType+">( \""+m.name+"\", "+m.name+" );\n"}.mkString
+
+  private def register_relations(s0:System) = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ",true") + ");\n"}.mkString
+
+  private def register_table_triggers(s0:System) = s0.sources.filter(!_.stream).map{s => 
+    "pb.add_trigger(\""+s.schema.name+"\", insert_tuple, boost::bind(&data_t::unwrap_insert_"+s.schema.name+", this, ::boost::lambda::_1));\n"
+  }.mkString
+
+  private def register_stream_triggers(s0:System) = s0.triggers.filter(_.evt != EvtReady).map{t=>t.evt match {
+      case EvtAdd(Schema(n,cs)) => "pb.add_trigger(\""+n+"\", insert_tuple, boost::bind(&data_t::unwrap_insert_"+n+", this, ::boost::lambda::_1));\n"
+      case EvtDel(Schema(n,cs)) => "pb.add_trigger(\""+n+"\", delete_tuple, boost::bind(&data_t::unwrap_delete_"+n+", this, ::boost::lambda::_1));\n"
+      case _ => ""
+    }
+  }.mkString
+
+  private def init_stats(s0:System) = {
+    "#ifdef DBT_PROFILE\n"+
+    "exec_stats = pb.exec_stats;\n"+
+    "ivc_stats = pb.ivc_stats;\n"+
+    //TODO XXX should be completed
+    "#endif // DBT_PROFILE\n"
+  }
+
+  private def generateDataStructureRefs(s0:System) = s0.maps.map{m=>m.toCppType+" "+m.name+";\n"}.mkString
+
+  private def helperResultAccessor(s0:System) = {
+    def compile_serialization(s0:System) = s0.queries.map{q =>
+      q.toCppRefType + " _"+q.name+" = get_"+q.name+"();\n"+
+      "ar & boost::serialization::make_nvp(BOOST_PP_STRINGIZE("+q.name+"), _"+q.name+");\n"
+    }.mkString
+
+    def compile_tlqs(s0:System) = s0.queries.map{q =>
+      q.toCppRefType + " get_"+q.name+"(){\n"+
+      "  return "+q.name+";\n"+
+      "}\n"
+    }.mkString
+
+    def compile_tlqs_decls(s0:System) = s0.queries.map{q =>
+      q.toCppType + " "+q.name+";\n"
+    }.mkString
+
+    "\n"+
+    "/* Definitions of auxiliary maps for storing materialized views. */\n"+
+    "\n"+
+    "/* Type definition providing a way to access the results of the sql program */\n"+
+    "struct tlq_t{\n"+
+    "  struct timeval t0,t; long tT,tN,tS; tlq_t() { tN=0; tS=0; gettimeofday(&t0,NULL); }\n"+
+    "\n"+
+    "/* Serialization Code */\n"+
+    "  template<class Archive>\n"+
+    "  void serialize(Archive& ar, const unsigned int version) {\n"+
+    "\n"+
+         ind(compile_serialization(s0),2)+
+    "\n"+
+    "  }\n"+
+    "\n"+
+    "  /* Functions returning / computing the results of top level queries */\n"+
+         ind(compile_tlqs(s0),2)+
+    "\n\n"+
+    "protected:\n"+
+    "\n"+
+    "  /* Data structures used for storing / computing top level queries */\n"+
+         ind(compile_tlqs_decls(s0),2)+
+    "\n\n"+
+    "};\n"+
+    "\n"
+  }
+
+  // Helper that contains the main and stream generator
+  private def helper(s0:System) = {
+    val dataset = "DATASETPLACEHOLDER" //XXXX
+    "/* Type definition providing a way to execute the sql program */\n"+
+    "class Program : public ProgramBase\n"+
+    "{\n"+
+    "  public:\n"+
+    "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
+    "      data.register_data(*this);\n"+
+           ind(streams(s0.sources),3)+"\n\n"+
+    "    }\n"+
+    "\n"+
+    "    /* Imports data for static tables and performs view initialization based on it. */\n"+
+    "    void init() {\n"+
+    "        process_tables();\n"+
+    "        data.on_system_ready_event();\n"+
+    "    }\n"+
+    "\n"+
+    "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
+    "    snapshot_t take_snapshot(){ tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\\\n\",d.tT,d.tN,d.tS);\n"+
+    "        return snapshot_t( new tlq_t((tlq_t&)data) );\n"+
+    "    }\n"+
+    "\n"+
+    "  protected:\n"+
+    "    data_t data;\n"+
+    "};\n"
   }
 
   private def genStream(s:Source): String = {
@@ -284,60 +390,6 @@ trait ICppGen extends IScalaGen {
     }
     val ss="\n/* Specifying data sources */\n\n"+fixOrderbook(sources)/*.filter{s=>s.stream}*/.map(genStream).mkString("\n")
     ss.replaceAll("/standard/","/DATASETPLACEHOLDER/")
-  }
-
-
-  private def helperResultAccessor(s0:System) = {
-    "\n"+
-    "/* Definitions of auxiliary maps for storing materialized views. */\n"+
-    "\n"+
-    "/* Type definition providing a way to access the results of the sql program */\n"+
-    "struct tlq_t{\n"+
-    "  struct timeval t0,t; long tT,tN,tS; tlq_t() { tN=0; tS=0; gettimeofday(&t0,NULL); }\n"+
-    "\n"+
-    "/* Serialization Code */\n"+
-    "  template<class Archive>\n"+
-    "  void serialize(Archive& ar, const unsigned int version) {\n"+
-    "\n"+
-    "\n"+
-    "  }\n"+
-    "\n"+
-    "  /* Functions returning / computing the results of top level queries */\n"+
-    "\n"+
-    "protected:\n"+
-    "\n"+
-    "  /* Data structures used for storing / computing top level queries */\n"+
-    "\n"+
-    "};\n"+
-    "\n"
-  }
-
-  // Helper that contains the main and stream generator
-  private def helper(s0:System) = {
-    val dataset = "DATASETPLACEHOLDER" //XXXX
-    "/* Type definition providing a way to execute the sql program */\n"+
-    "class Program : public ProgramBase\n"+
-    "{\n"+
-    "  public:\n"+
-    "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
-    "      data.register_data(*this);\n"+
-           ind(streams(s0.sources),3)+"\n\n"+
-    "    }\n"+
-    "\n"+
-    "    /* Imports data for static tables and performs view initialization based on it. */\n"+
-    "    void init() {\n"+
-    "        process_tables();\n"+
-    "        data.on_system_ready_event();\n"+
-    "    }\n"+
-    "\n"+
-    "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
-    "    snapshot_t take_snapshot(){ tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\\\n\",d.tT,d.tN,d.tS);\n"+
-    "        return snapshot_t( new tlq_t((tlq_t&)data) );\n"+
-    "    }\n"+
-    "\n"+
-    "  protected:\n"+
-    "    data_t data;\n"+
-    "};\n"
   }
 
   override def pkgWrapper(pkg:String, body:String) = "#include \"program_base.hpp\"\n"+additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
