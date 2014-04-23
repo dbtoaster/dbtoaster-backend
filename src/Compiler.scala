@@ -138,12 +138,12 @@ object Compiler {
         case s@StmtMap(m,e,op,i) => if (qns.contains(m.name)) { qss += ((m.name,s)); false } else true
         case _ => true
       }))
-      val r = cg.pkgWrapper(pkg,cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__execute__",Nil)), qss.map(_._2).toList)::triggers))+cg.helper(m3))
+      val r = cg.pkgWrapper(pkg,cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__execute__",Nil)), qss.map(_._2).toList)::triggers)))
       // XXX: improve this RegExp
       output(r.replaceAll("GetSnapshot\\(_\\) => ","GetSnapshot(_) => onAdd__execute__(); ").replaceAll("onAdd__execute__","onExecute")) // Scala transforms
     } else
     // ---- NON-INCREMENTAL ENDS
-    output(cg.pkgWrapper(pkg,cg(m3)+cg.helper(m3)))
+    output(cg.pkgWrapper(pkg,cg(m3)))
     if (t_gen!=null) t_gen(System.nanoTime-t0)
     if (post_gen!=null) post_gen(m3)
     // Execution

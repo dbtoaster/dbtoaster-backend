@@ -198,7 +198,7 @@ trait ICppGen extends IScalaGen {
     "def receive = {\n"+ind(str+
       "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+
       "case EndOfStream | GetSnapshot(_) => t1=System.nanoTime; "+snap
-    )+"\n}\n"+gc+ld)+"\n"+"}\n"
+    )+"\n}\n"+gc+ld)+"\n"+"}\n"+helper(s0)
   }
 
   private def genStream(s:Source): String = {

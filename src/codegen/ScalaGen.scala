@@ -241,7 +241,7 @@ trait IScalaGen extends CodeGen {
     freshClear()
     val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) toMapFunction(q) else q.name)}.mkString(",")+"))"
     clearOut
-    "class "+cls+" extends Actor {\n"+ind(
+    helper(s0)+"class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
     "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
@@ -288,7 +288,7 @@ trait IScalaGen extends CodeGen {
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
     "\n})")+"\n}")+"\n}\n"
 
-  override def pkgWrapper(pkg:String, body:String) = "package "+pkg+"\n"+ind(body)+"\n"
+  override def pkgWrapper(pkg:String, body:String) = "package "+pkg+"\n"+body+"\n"
 
   override def additionalImports():String = ""
 }
