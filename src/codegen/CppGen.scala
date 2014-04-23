@@ -128,12 +128,21 @@ trait ICppGen extends IScalaGen {
 
   override def genTrigger(t:Trigger):String = {
     val (n,as) = t.evt match {
-      case EvtReady => ("SystemReady",Nil)
+      case EvtReady => ("system_ready_event",Nil)
       case EvtAdd(Schema(n,cs)) => ("insert_"+n,cs)
       case EvtDel(Schema(n,cs)) => ("delete_"+n,cs)
     }
-    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val body=t.stmts.map(genStmt).mkString; ctx=null;
-    "void on_"+n+"("+as.map(a=>a._2.toCpp+" "+a._1).mkString(", ")+") "+(if (body=="") "{ }" else "{\n"+ind(body)+"\n}")
+    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap)
+    val preBody="BEGIN_TRIGGER(exec_stats,\""+n+"\")\n"+
+                "BEGIN_TRIGGER(ivc_stats,\""+n+"\")\n"+
+                "{  ++tN;\n"
+    val body=ind(t.stmts.map(genStmt).mkString)
+    val pstBody="\n}\n"+
+                "END_TRIGGER(exec_stats,\""+n+"\")\n"+
+                "END_TRIGGER(ivc_stats,\""+n+"\")\n"
+    ctx=null
+
+    "void on_"+n+"("+as.map(a=>a._2.toCpp+" "+a._1).mkString(", ")+") {\n"+ind(preBody+body+pstBody)+"\n}"
   }
 
   override def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
@@ -202,14 +211,14 @@ trait ICppGen extends IScalaGen {
       "#endif // DBT_PROFILE\n"
     }
 
-    def generateDataStructureRefs = s0.maps.map{m=>m.toCppType+" "+m.name+";\n"}.mkString
+    def genTmpDataStructureRefs = s0.maps.filter{m=>s0.queries.filter(_.name==m.name).size == 0}.map{m=>m.toCppType+" "+m.name+";\n"}.mkString
 
     def genTableTriggers = s0.sources.filter(!_.stream).map{ s =>
       generateUnwrapFunction(EvtAdd(s.schema))
     }.mkString
 
     def genStreamTriggers = s0.triggers.map(t =>
-      genTrigger(t)+"\n\n"+
+      genTrigger(t)+"\n"+
       (if(t.evt != EvtReady) generateUnwrapFunction(t.evt) else "")
     ).mkString
 
@@ -279,7 +288,7 @@ trait ICppGen extends IScalaGen {
     "private:\n"+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
-       ind(generateDataStructureRefs)+
+       ind(genTmpDataStructureRefs)+
     "\n\n"+
     "};\n"+
     "\n"+
@@ -314,7 +323,7 @@ trait ICppGen extends IScalaGen {
     "  void serialize(Archive& ar, const unsigned int version) {\n"+
     "\n"+
          ind(compile_serialization,2)+
-    "\n"+
+    "\n\n"+
     "  }\n"+
     "\n"+
     "  /* Functions returning / computing the results of top level queries */\n"+
@@ -364,7 +373,7 @@ trait ICppGen extends IScalaGen {
     val adaptorsListVar = sourceId+"_adaptors_list"
     val sourceFileVar = sourceId+"_file"
     val in = s.in match { case SourceFile(path) => "boost::shared_ptr<dbt_file_source> "+sourceFileVar+"(new dbt_file_source(\""+path+"\","+sourceSplitVar+","+adaptorsListVar+"));\n" }
-    val split = "frame_descriptor "+sourceSplitVar+(s.split match { case SplitLine => "()" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => "XXXXX("+p+")" })+";\n" //XXXX for SplitPrefix
+    val split = "frame_descriptor "+sourceSplitVar+(s.split match { case SplitLine => "(\"\\n\")" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => "XXXXX("+p+")" })+";\n" //XXXX for SplitPrefix
     
     val schema_param = s.schema.fields.map{case (_,tp) => tp.toCpp}.mkString(",")
     val adaptor = s.adaptor.name match {

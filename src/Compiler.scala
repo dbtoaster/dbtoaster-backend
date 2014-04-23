@@ -117,7 +117,7 @@ object Compiler {
   def output(s:String) = if (out==null) println(s) else Utils.write(out,s)
 
   // M3 -> execution phase, returns (gen,compile) time
-  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null) {
+  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null,t_datasets:(String=>Unit)=>Unit=null,t_run:(()=>Unit)=>Unit=null,samplesAndWarmupRounds:Int=0) {
     val t0=System.nanoTime
     // Front-end phases
     val m3 = (M3Parser andThen TypeCheck) (m3_src)
@@ -131,8 +131,9 @@ object Compiler {
       case LANG_SCALA_LMS => new LMSScalaGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }
-    // ---- NON-INCREMENTAL START
-    if (ni) { import ddbt.ast._; import M3._
+    if (ni) {
+      // ---- NON-INCREMENTAL START
+      import ddbt.ast._; import M3._
       val (qns,qss) = (m3.queries.map{q=>q.map.name},scala.collection.mutable.HashMap[String,Stmt]())
       val triggers=m3.triggers.map(t=>Trigger(t.evt,t.stmts.filter {
         case s@StmtMap(m,e,op,i) => if (qns.contains(m.name)) { qss += ((m.name,s)); false } else true
@@ -141,19 +142,39 @@ object Compiler {
       val r = cg.pkgWrapper(pkg,cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__execute__",Nil)), qss.map(_._2).toList)::triggers)))
       // XXX: improve this RegExp
       output(r.replaceAll("GetSnapshot\\(_\\) => ","GetSnapshot(_) => onAdd__execute__(); ").replaceAll("onAdd__execute__","onExecute")) // Scala transforms
-    } else
-    // ---- NON-INCREMENTAL ENDS
-    output(cg.pkgWrapper(pkg,cg(m3)))
+      // ---- NON-INCREMENTAL ENDS
+    } else {
+      output(cg.pkgWrapper(pkg,cg(m3)))
+    }
     if (t_gen!=null) t_gen(System.nanoTime-t0)
     if (post_gen!=null) post_gen(m3)
     // Execution
-    if (exec) lang match {
-      case LANG_SCALA|LANG_AKKA|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS =>
-        val dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
-        val t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
-        if (t_comp!=null) t_comp(t2)
-        Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
-      case _ => error("Execution not supported for "+lang,true)
+    if (exec) {
+      val dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
+      lang match {
+        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
+          val t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
+          if (t_comp!=null) t_comp(t2)
+          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
+
+        case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
+          val boost = Utils.prop("lib_boost",null)
+          t_datasets{dataset=>
+            val src=Utils.read(out).replace("DATASETPLACEHOLDER",dataset); Utils.write(out,src)
+            val pl = "srccpp/lib"
+            val po = out.substring(0,out.lastIndexOf("."))
+            val as = List("g++",pl+"/main.cpp","-include",out,"-o",po,"-O3","-lpthread","-ldbtoaster","-I"+pl,"-L"+pl) :::
+                     List("program_options","serialization","system","filesystem","chrono",Utils.prop("lib_boost_thread","thread")).map("-lboost_"+_) ::: // thread-mt
+                     (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
+            java.lang.System.err.println("as => " + as.mkString(" "))
+            val t2 = Utils.ns(()=>Utils.exec(as.toArray))._1; if (t_comp!=null) t_comp(t2)
+            t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
+              val (out,err)=Utils.exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
+              if (err!="") System.err.println(err); println(out)
+            }})
+          }
+        case _ => error("Execution not supported for "+lang,true)
+      }
     }
   }
 

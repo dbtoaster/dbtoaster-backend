@@ -144,7 +144,9 @@ object UnitTest {
         case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
         case "lcpp" if (repo!=null && benchmark) => legacyCPP(q,new Printer("LCPP"),t0)
         case "scala"|"scalalms" => genQueryScala(q,new Printer(mn(m)),m3,m)
-        case _ => genQueryCpp(q,new Printer(mn(m)),m3,m)
+        case "cpp" | "scalacpp" => genQueryCpp(q,new Printer(mn(m)),m3,m)
+        case _ => sys.error("Mode is not supported: "+m)
+
       }
       if (csv!=null) csv.println
       System.gc
@@ -265,7 +267,7 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
-    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp))
+    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.all(q),p.run,samples+warmup))
     p.close
     // Append correctness spec and move to test/gen/
     // if (genSpec) inject("import java.util.Date\n",sp,path_sources)
