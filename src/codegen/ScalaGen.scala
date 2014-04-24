@@ -77,10 +77,11 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   x1+x2
   */
 
-  def mapval(v:String,t:Type) = 
+  def mapval(v:String,t:Type,m:Int=1) = 
     t match {
       case TypeMapVal(_) => (v,t)
-      case _ => ("MapVal["+genType(t)+"]("+v+")",TypeMapVal(t))
+      case _ if m==1 => ("MapVal["+genType(t)+"]("+v+")",TypeMapVal(t))
+      case _ => ("MapVal["+genType(t)+"]("+m+","+v+")",TypeMapVal(t))
     }
 
   /* Gets the value of a MapVal or just returns the value itself if it is not
@@ -183,12 +184,12 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val (nn,nt)=rn(n)
       co(nn,nt)
     case Const(tp,v) => tp match { case TypeLong => co(v+"L",tp) case TypeString => co("\""+v+"\"",tp) case _ => co(v,tp) }
-    case Exists(e) => cpsExpr(e,(v:String,t:Type)=>co("(if ("+v+".m != 0) MapVal(1L) else MapVal(0L))",TypeMapVal(TypeLong)))
+    case Exists(e) => cpsExpr(e,(v:String,t:Type)=>co("(if ("+v+".m != 0) MapVal(1L) else MapVal(0,0L))",TypeMapVal(TypeLong)))
     case Cmp(l,r,op) => 
       val cmpt = TypeMapVal(TypeLong)
       co(cpsExpr(l,(ll:String,lt:Type) =>
         cpsExpr(r,(rr:String,rt:Type) =>
-          ("(if ("+genOp(ll,rr,op.toString,lt,rt)._1+") MapVal(1L) else MapVal(0L))",cmpt)))._1,cmpt)
+          ("(if ("+genOp(ll,rr,op.toString,lt,rt)._1+") MapVal(1L) else MapVal(0,0L))",cmpt)))._1,cmpt)
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app),tp) // hoist constants resulting from function application
       else { 
@@ -290,7 +291,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
         def vx(cond:String,vl:String,vr:String) = {
           val (v,t) = if (vl=="1L") (vr,tr) else if (vr=="1L") (vl,tl) else genOp(vl,vr,"*",tl,tr) 
-          val zero = t match { case TypeMapVal(tv) => mapval(genZero(tv),tv)._1 case _ => genZero(t) } 
+          val zero = t match { case TypeMapVal(tv) => mapval(genZero(tv),tv,0)._1 case _ => genZero(t) } 
           val (strIf,strElse) = if (cond != null) ("if ("+cond+") "," else "+zero) else ("","")
           ("("+strIf+v+strElse+")",t)
         }
