@@ -121,32 +121,42 @@ object Helper {
 
   val precision = 7 // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)
   private val diff_p = Math.pow(0.1,precision)
-  private def eq_v[V](v1:V,v2:V) = v1==v2 || ((v1,v2) match { case (d1:Double,d2:Double) => (Math.abs(2*(d1-d2)/(d1+d2))<diff_p) case _ => false })
+  private def eq_v[V](v1:V,v2:V) = ((v1,v2) match { case (d1:Double,d2:Double) => (Math.abs(2*(d1-d2)/(d1+d2))<diff_p) case _ => v1==v2 })
   private def eq_p(p1:Product,p2:Product) = { val n=p1.productArity; assert(n==p2.productArity);  List.range(0,n).forall(i => eq_v(p1.productElement(i), p2.productElement(i))) }
 
   def diff(v1:Product,v2:Product) = if (!eq_p(v1,v2)) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
-  def diff[K,V:ClassTag](map1:Map[K,MapVal[V]],map2:Map[K,MapVal[V]])(implicit ring:Ring[V]) = { // map1 is the test result, map2 is the reference
+
+  /* Checks whether the test result is the same as the reference. 
+   * 
+   * @param map1 The map containing the test result
+   *
+   * @param map2 The map containing the reference result
+   */
+  def diff[K](map1:Map[K,List[Any]],map2:Map[K,List[Any]]) = {
     import scala.collection.mutable.HashMap
     import java.util.Date
     val m1 = map1.filter{ case (k,v) => map2.get(k) match { case Some(v2) => v2!=v case None => true } }
     val m2 = map2.filter{ case (k,v) => map1.get(k) match { case Some(v2) => v2!=v case None => true } }
-    def rekey(m:Map[K,MapVal[V]]):HashMap[K,MapVal[V]] = { // merges similar keys within one map (using sorting)
+
+    // merges similar keys within one map (using sorting)
+    def rekey(m:Map[K,List[Any]]):HashMap[K,List[Any]] = {
       val l0 = m.toList.sortBy(_._1.toString) // not nicest but works
-      val z = if (l0.size==0) null else l0(0)._2 == MapVal.zero[V]
-      val mm = M3Map.make[K,V](null)
-      def re(l:List[(K,MapVal[V])]):Unit = l match {
-        case a::b::ls if ((a._1,b._1) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case (k1,k2) => eq_v(k1,k2) }) => mm.add(a._1,a._2); mm.add(a._1,b._2); re(ls)
-        case a::ls => mm.add(a._1,a._2); re(ls)
+      val z = if (l0.size==0) null else l0(0)._2.map(v => v match { case d:Double => 0.0 case _ => 0L })
+      val mm = HashMap[K,List[Any]]() 
+      def re(l:List[(K,List[Any])]):Unit = l match {
+        case a::b::ls if ((a._1,b._1) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case (k1,k2) => eq_v(k1,k2) }) => mm += (a._1 -> (a._2 zip b._2).map({ case (v1,v2) => (v1,v2) match { case (d1:Double,d2:Double) => d1+d2 case (l1:Long,l2:Long) => l1+l2 case _ => sys.error("Expected long or double") } })); re(ls)
+        case a::ls => mm += (a._1 -> a._2); re(ls)
         case Nil =>
       }
       re(l0); 
-      val r=new HashMap[K,MapVal[V]](); r ++= mm.toMap;
+      mm
     }
     if (m1.size>0 || m2.size>0) {
       val err=new StringBuilder()
       val b1 = rekey(m1)
       val b2 = rekey(m2)
-      b1.toMap.foreach { x=> x._2 match { case MapVal(_,d1:Double) => if (Math.abs(d1)<diff_p) b1.remove(x._1) case _ => }} // ignore 'almost zero' values
+      // ignore 'almost zero' values
+      // b1.toMap.foreach { x=> x._2 match { case d1:Double => if (Math.abs(d1)<diff_p) b1.remove(x._1) case _ => }}       
       b1.toMap.foreach { case (k1,v1) =>
         b2.toMap.foreach { case (k2,v2) =>
           if (b1.contains(k1) && b2.contains(k2)) {
