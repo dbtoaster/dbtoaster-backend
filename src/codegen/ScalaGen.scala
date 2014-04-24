@@ -189,11 +189,15 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app),tp) // hoist constants resulting from function application
       else { 
-        def app(vs:List[String],as:List[Expr]):(String,Type) = as match {
-          case a::Nil => cpsExpr(a,(v:String,t:Type)=>co("U"+fn+"("+(vs:::List(v)).map(v=>v+".v").mkString(",")+")",tp),am)
-          case a::as => cpsExpr(a,(v:String,t:Type)=>app(vs:::List(v),as),am)
+        def app(vs:List[String],ts:List[Type],as:List[Expr]):(String,Type) = as match {
+          case a::Nil => 
+            cpsExpr(a,(v:String,t:Type) => {
+              val vss = ((vs:::List(v)) zip (ts:::List(t))).map({ case (v,t) => getVal(v,t)._1 })
+              co("U"+fn+"("+vss.mkString(",")+")",tp)
+            },am)
+          case a::as => cpsExpr(a,(v:String,t:Type)=>app(vs:::List(v),ts:::List(t),as),am)
         }
-        app(Nil,as)
+        app(Nil,Nil,as)
       }
     //ki : inner key
     //ko : outer key
