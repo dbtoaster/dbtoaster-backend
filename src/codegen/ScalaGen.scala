@@ -228,7 +228,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case Lift(n::Nil,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
       if (ctx.contains(n)) 
-        cpsExpr(e,(v:String,t:Type)=>co("(if ("+rn(n)+" == "+v+") MapVal(1L) else MapVal(0L))",TypeMapVal(TypeLong)),am)
+        cpsExpr(e,(v:String,t:Type)=>co("(if ("+rnv(n)+" == "+v+") MapVal(1L) else MapVal(0,0L))",TypeMapVal(TypeLong)),am)
       else e match {
         case Ref(n2) => 
           val (rn2,rn2t) = rn(n2)
@@ -250,12 +250,26 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       // XXX: What about the special cases?
       // XXX: Can we merge the simple lift and the multilift case?
       val tps = e.tp match { case TypeTuple(ts) => ts case _ => sys.error("Expected tuple type") } 
+      val cmpVars = ns.filter(ctx.contains(_))
       (ns zip tps).foreach { case (n,t) => ctx.add(n,(t,fresh("l"))) }
       val t=fresh("t")
       ctx.add(t,(e.tp,t))
       cpsExpr(e,(v:String,vt:Type) => { 
         val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
-        (ns.zipWithIndex.foldLeft("val "+t+" = "+mapval(v,vt)._1+";\n"){case (r,(n,i)) => r+"val "+rn(n)._1+" = "+t+".v._"+i+";\n"}+cov,TypeMapVal(TypeLong)) },am)
+        val tStr = "val "+t+" = "+mapval(v,vt)._1+";\n"
+        val (cmps,r) = ns.zipWithIndex.foldLeft((List[String](),"")){ case ((cmps,r),(n,i)) => {
+          if (cmpVars.contains(n)) 
+            ("("+rnv(n)+" == "+t+".v._"+i+")"::cmps,r)
+          else
+            (cmps,r+"val "+rn(n)._1+" = "+t+".v._"+i+";\n")
+        }}
+        val strExp = 
+          if(cmps.length>0) 
+            "(if ("+cmps.mkString(" && ")+") {\n"+ind(r+cov)+"\n} else MapVal(0,0L))" 
+          else 
+            r+cov
+        (tStr+strExp,TypeMapVal(TypeLong)) 
+      },am)
 
     // Mul(el,er)
     // ==
@@ -385,7 +399,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       clear+init+cpsExpr(e,(v:String,t:Type) => {
         lazy val sop = m.name+"="+(op match { case OpAdd => genOp(m.name,v,"+",TypeMapVal(e.tp),t)._1 case OpSet => v })
         ((if (m.keys.size==0) sop else m.name+".add("+tup(m.keys map rnv)+","+mapval(v,t)._1+")")+";\n",TypeUnit)
-      },Some(m.keys zip m.tks))._1
+      },Some(m.keys zip m.tks))._1+"\n"
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
