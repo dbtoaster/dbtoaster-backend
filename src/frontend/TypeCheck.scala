@@ -117,13 +117,13 @@ object TypeCheck extends (M3.System => M3.System) {
         case a@Add(l,r) =>
           val (fl,fr)=(ie(l,c).filter{x=> !c.contains(x._1)},ie(r,c).filter{x=> !c.contains(x._1)}) // free(l), free(r)
           a.agg=fl.filter{x=>fr.contains(x._1)}.toList // sorted(free(l) & free(r)) : a variable is bound differently in l and r => set union
-          cr=c++fl++fr; a.tp=Type.tpRes(l.tp,r.tp);
-        case Cmp(l,r,_) => cr=c++ie(l,c)++ie(r,c); Type.tpRes(l.tp,r.tp)
+          cr=c++fl++fr; a.tp=Type.tpAdd(l.tp,r.tp);
+        case Cmp(l,r,op) => cr=c++ie(l,c)++ie(r,c); Type.tpRes(l.tp,r.tp,op.toString)
         case Exists(e) => cr=ie(e,c)
         case Lift(ns,e) => 
           cr=ie(e,c)
           val ts = e.tp match { case TypeTuple(ts) => ts case t => List(t) } 
-          (ns zip ts) map { case (n,t) => c.get(n) match { case Some(ct) => try { Type.tpRes(t,ct) } catch { case _:Throwable => err("Value "+n+" lifted as "+ct+" compared with "+t) } case None => cr=cr+((n,t)) }
+          (ns zip ts) map { case (n,t) => c.get(n) match { case Some(ct) => try { Type.tpRes(t,ct,"") } catch { case _:Throwable => err("Value "+n+" lifted as "+ct+" compared with "+t) } case None => cr=cr+((n,t)) }
           }
         case a@AggSum(ks,e) => val in=ie(e,c); cr=c++ks.map{k=>(k,in(k))}; a.tks=ks.map(cr)
         case a@Apply(n,_,as) => as.map(ie(_,c)); a.tp=Library.typeCheck(n,as.map(_.tp))

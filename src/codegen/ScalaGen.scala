@@ -136,9 +136,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
   def genOp(rvl:String,rvr:String,op:String,tl:Type,tr:Type):(String,Type) = {
     def castIfNeeded(iv:String,ivt:Type,rt:Type):String = {
       def mapValIfNeeded(v:String,rt:Type) = rt match { case TypeMapVal(r) => mapval(v,r)._1 case _ => v }
+      val puret = rt match { case TypeMapVal(r) => r case _ => rt }
       if(ivt != rt) {
         val (v,vt) = getVal(iv,ivt)
-        (vt,rt) match {
+        (vt,puret) match {
           case (TypeTuple(vts),TypeTuple(rts)) => {
             val c=fresh("c"); 
             "{"+c+"="+v+";"+mapValIfNeeded(tupleClass(rts)+"("+Range(0,rts.length).map(i => c+"._"+i).mkString(",")+")",rt)+"}"
@@ -154,11 +155,13 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       else
         iv 
     }
-    val ct = op match { 
-      case "*" => Type.tpMul(tl,tr) 
-      case "+" => Type.tpAdd(tl,tr)
-      case _ => Type.tpRes(tl,tr) 
-    }
+    val ct = try {
+      op match { 
+        case "*" => Type.tpMul(tl,tr) 
+        case "+" => Type.tpAdd(tl,tr)
+        case _ => Type.tpRes(tl,tr,op) 
+      }
+    } catch { case _:Throwable => sys.error("Could not find common type of "+rvl+op+rvr) }    
     val vl = castIfNeeded(rvl,tl,ct)
     val vr = castIfNeeded(rvr,tr,ct) 
     ("("+vl+" "+op+" "+vr+")",ct)
@@ -334,7 +337,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           ctx.load(cur)
           val s2=cpsExpr(er,co,am)
           ctx.load(cur)
-          (s1._1+s2._1,Type.tpAdd(s1._2,s2._2))
+          (s1._1+s2._1,s2._2)
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
