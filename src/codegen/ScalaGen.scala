@@ -168,9 +168,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     ("("+vl+" "+op+" "+vr+")",ct)
   }
 
-  def genZero(t:Type) = {
+  def genZero(t:Type):String = {
     t match {
       case TypeTuple(ts) => tupleClass(ts) + t.zeroScala
+      case TypeMapVal(vt) => mapval(genZero(vt),vt,0)._1
       case _ => t.zeroScala
     }
   }
