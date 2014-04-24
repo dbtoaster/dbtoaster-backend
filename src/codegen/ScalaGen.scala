@@ -93,7 +93,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
    */
   def getVal(v:String,t:Type) = 
     t match {
-      case TypeMapVal(rt) => ("("+v+").v",rt)
+      case TypeMapVal(rt) => (v+".v",rt)
       case _ => ("("+v+")",t) 
     }
 
@@ -135,24 +135,24 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
   def genOp(rvl:String,rvr:String,op:String,tl:Type,tr:Type):(String,Type) = {
     def castIfNeeded(iv:String,ivt:Type,rt:Type):String = {
+      def mapValIfNeeded(v:String,rt:Type) = rt match { case TypeMapVal(r) => mapval(v,r)._1 case _ => v }
       if(ivt != rt) {
         val (v,vt) = getVal(iv,ivt)
         (vt,rt) match {
           case (TypeTuple(vts),TypeTuple(rts)) => {
             val c=fresh("c"); 
-            "{"+c+"="+v+";"+mapval(tupleClass(rts)+"("+Range(0,rts.length).map(i => c+"._"+i).mkString(",")+")",rt)+"}"
+            "{"+c+"="+v+";"+mapValIfNeeded(tupleClass(rts)+"("+Range(0,rts.length).map(i => c+"._"+i).mkString(",")+")",rt)+"}"
           }
           case (_,TypeTuple(rts)) => {
             val c=fresh("c")
-            "{ val "+c+"="+v+";"+mapval(tupleClass(rts)+"("+(List.fill(rts.length)(c)).mkString(",")+")",rt)+" }"
+            "{ val "+c+"="+v+";"+mapValIfNeeded(tupleClass(rts)+"("+(List.fill(rts.length)(c)).mkString(",")+")",rt)+" }"
           }
           case (_,_) => 
-            val (sv,tv) = getVal(v,ivt)
-            mapval(sv,tv)._1 
+            mapValIfNeeded(v,rt)
         }
       }
       else
-        mapval(iv,ivt)._1
+        iv 
     }
     val ct = op match { 
       case "*" => Type.tpMul(tl,tr) 
@@ -161,8 +161,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     }
     val vl = castIfNeeded(rvl,tl,ct)
     val vr = castIfNeeded(rvr,tr,ct) 
-    if(op == "+") println(List(vl,vr,tl,tr,ct).mkString(","))
-    ("("+vl+" "+op+" "+vr+")",ct match { case TypeMapVal(_) => ct case _ => TypeMapVal(ct) })
+    ("("+vl+" "+op+" "+vr+")",ct)
   }
 
   def genZero(t:Type) = {
@@ -183,10 +182,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case Const(tp,v) => tp match { case TypeLong => co(v+"L",tp) case TypeString => co("\""+v+"\"",tp) case _ => co(v,tp) }
     case Exists(e) => cpsExpr(e,(v:String,t:Type)=>co("(if ("+v+".m != 0) MapVal(1L) else MapVal(0L))",TypeMapVal(TypeLong)))
     case Cmp(l,r,op) => 
-      val rt = TypeMapVal(TypeLong)
+      val cmpt = TypeMapVal(TypeLong)
       co(cpsExpr(l,(ll:String,lt:Type) =>
         cpsExpr(r,(rr:String,rt:Type) =>
-          ("(if ("+genOp(ll,rr,op.toString,l.tp,r.tp)._1+") MapVal(1L) else MapVal(0L))",rt)))._1,rt)
+          ("(if ("+genOp(ll,rr,op.toString,lt,rt)._1+") MapVal(1L) else MapVal(0L))",cmpt)))._1,cmpt)
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app),tp) // hoist constants resulting from function application
       else { 
@@ -238,9 +237,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         //
         // will fail without a renaming.
         case _ => 
-          ctx.add(n,(e.tp,fresh("l")))
+          val tp = TypeMapVal(e.tp)
+          ctx.add(n,(tp,fresh("l")))
           val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
-          cpsExpr(e,(v:String,t:Type) => ("val "+rn(n)._1+" = "+v+";\n"+cov,cot),am)
+          cpsExpr(e,(v:String,t:Type) => ("val "+rn(n)._1+" = "+mapval(v,t)._1+";\n"+cov,cot),am)
       }
     case Lift(ns,e) =>
       // XXX: What about the special cases?
@@ -251,7 +251,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       ctx.add(t,(e.tp,t))
       cpsExpr(e,(v:String,vt:Type) => { 
         val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
-        (ns.zipWithIndex.foldLeft("val "+t+" = "+v+";\n"){case (r,(n,i)) => r+"val "+rn(n)._1+" = "+t+".v._"+i+";\n"}+cov,TypeMapVal(TypeLong)) },am)
+        (ns.zipWithIndex.foldLeft("val "+t+" = "+mapval(v,vt)._1+";\n"){case (r,(n,i)) => r+"val "+rn(n)._1+" = "+t+".v._"+i+";\n"}+cov,TypeMapVal(TypeLong)) },am)
 
     // Mul(el,er)
     // ==
@@ -269,8 +269,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
 
         def vx(cond:String,vl:String,vr:String) = {
           val (v,t) = if (vl=="1L") (vr,tr) else if (vr=="1L") (vl,tl) else genOp(vl,vr,"*",tl,tr) 
-          val zero = t match { case TypeMapVal(tv) => mapval(genZero(tv),tv) case _ => genZero(t) } 
-          val (strIf,strElse) = if (cond != null) ("if("+cond+")"," else "+zero) else ("","")
+          val zero = t match { case TypeMapVal(tv) => mapval(genZero(tv),tv)._1 case _ => genZero(t) } 
+          val (strIf,strElse) = if (cond != null) ("if ("+cond+") "," else "+zero) else ("","")
           ("("+strIf+v+strElse+")",t)
         }
         //pulling out the conditionals from a multiplication
@@ -333,9 +333,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (aks.size==0) { 
         val a0=fresh("agg")
-        (genVar(a0,ex.tp)+cpsExpr(e,(v:String,t:Type) => {
-          (a0+" = "+genOp(a0,v,"+",ex.tp,t)._1+";\n",TypeUnit)
-        })._1+co(a0,ex.tp)._1,ex.tp) 
+        val tp=TypeMapVal(ex.tp)
+        (genVar(a0,tp)+cpsExpr(e,(v:String,t:Type) => {
+          (a0+" = "+genOp(a0,v,"+",tp,t)._1+";\n",TypeUnit)
+        })._1+co(a0,tp)._1,tp) 
       }
       else am match {
         case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
