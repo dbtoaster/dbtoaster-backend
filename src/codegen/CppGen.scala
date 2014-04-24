@@ -214,6 +214,13 @@ trait ICppGen extends IScalaGen {
     def genTmpDataStructureRefs = s0.maps.filter{m=>s0.queries.filter(_.name==m.name).size == 0}.map{m=>m.toCppType+" "+m.name+";\n"}.mkString
 
     def genTableTriggers = s0.sources.filter(!_.stream).map{ s =>
+      val name = s.schema.name
+      val fields = s.schema.fields
+      "void on_insert_"+name+"("+fields.map{case (fld,tp) => tp.toCpp+" "+fld }.mkString(", ")+") {\n"+
+      "  "+name+"_entry e("+fields.map{case (fld,_) => fld }.mkString(", ")+", 1);\n"+
+      "  pair<"+name+"_map::iterator,bool> ret = "+name+".insert(e);\n"+
+      "  if( !ret.second ) "+name+".modify( ret.first, boost::lambda::bind(&"+name+"_entry::__av, boost::lambda::_1) = ret.first->__av+1 );\n"+
+      "}\n"+
       generateUnwrapFunction(EvtAdd(s.schema))
     }.mkString
 
