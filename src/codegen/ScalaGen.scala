@@ -32,7 +32,7 @@ trait IScalaGen extends CodeGen {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-  def mapRef(n:String,tp:Type,keys:List[(String,Type)]) = { val m=M3.MapRef(n,tp,keys.map(_._1)); m.tks=keys.map(_._2); m }
+  def mapRef(n:String,tp:Type,keys:List[(String,Type)]) = { val m=M3.MapRef(n,tp,keys.map(_._1)); m.tks=keys.map(_._2); m.isTemp=true; m }
 
   // Methods involving only constants are hoisted as global constants
   protected val cs = HashMap[Apply,String]()
