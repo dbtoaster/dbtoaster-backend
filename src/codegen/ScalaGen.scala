@@ -255,18 +255,31 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       // XXX: What about the special cases?
       // XXX: Can we merge the simple lift and the multilift case?
       val tps = e.tp match { case TypeTuple(ts) => ts case _ => sys.error("Expected tuple type") } 
+      val refs = e match { case Tuple(es) => es.map(e => e match { case Ref(n) => Some(n) case _ => None }) case _ => List.fill(ns.length)(None) }
       val cmpVars = ns.filter(ctx.contains(_))
-      (ns zip tps).foreach { case (n,t) => ctx.add(n,(t,fresh("l"))) }
+      (ns zip refs zip tps).foreach { 
+        case ((n,ref),t) => 
+          ref match {
+            case Some(n2) => 
+              val (rn2,rn2t) = rn(n2)
+              ctx.add(n,(rn2t,rn2)); 
+            case None => ctx.add(n,(t,fresh("l"))) 
+          }
+      }
       val t=fresh("t")
       ctx.add(t,(e.tp,t))
       cpsExpr(e,(v:String,vt:Type) => { 
         val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
         val tStr = "val "+t+" = "+mapval(v,vt)._1+";\n"
-        val (cmps,r) = ns.zipWithIndex.foldLeft((List[String](),"")){ case ((cmps,r),(n,i)) => {
+        val (cmps,r) = (ns zip refs).zipWithIndex.foldLeft((List[String](),"")){ case ((cmps,r),((n,ref),i)) => {
           if (cmpVars.contains(n)) 
             ("("+rnv(n)+" == "+t+".v._"+i+")"::cmps,r)
-          else
-            (cmps,r+"val "+rn(n)._1+" = "+t+".v._"+i+";\n")
+          else {
+            ref match {
+              case Some(_) => (cmps,r)
+              case None => (cmps,r+"val "+rn(n)._1+" = "+t+".v._"+i+";\n")
+            }
+          }
         }}
         val strExp = 
           if(cmps.length>0) 
