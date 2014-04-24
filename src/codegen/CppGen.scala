@@ -64,17 +64,15 @@ trait ICppGen extends IScalaGen {
           (if (ko.size>0) { //slice
             slice(n,is)
             "std::pair<"+idxIterator+","+idxIterator+"> "+lup0+" = "+n+".get<"+patternName+">().equal_range("+tup(iKeys)+"); //slice\n"+
-            // expanded mode
+            //expanded mode
             // idxIterator+" "+lupItr0+" = "+lup0+".first;\n"+
             // idxIterator+" "+lupEnd0+" = "+lup0+".second;\n"
-
             //compact mode
             idxIterator+" "+lupItr0+" = "+lup0+".first, "+lupEnd0+" = "+lup0+".second;\n"
           } else { //foreach
-            // expanded mode
+            //expanded mode
             // idxIterator+" "+lupItr0+" = "+n+".get<"+patternName+">().begin(); //foreach\n"+
             // idxIterator+" "+lupEnd0+" = "+n+".get<"+patternName+">().end();\n"
-            
             //compact mode
             idxIterator+" "+lupItr0+" = "+n+".get<"+patternName+">().begin(), "+lupEnd0+" = "+n+".get<"+patternName+">().end(); //foreach\n"
           })+
@@ -92,10 +90,9 @@ trait ICppGen extends IScalaGen {
           val mapType = "map<"+tupType(m.tks.map(_.toCpp))+" ,"+tp.toCpp+">"
           val idxIterator = mapType+"::iterator"
 
-          // expanded mode
+          //expanded mode
           // idxIterator+" "+lupItr0+" = "+n+".begin(); //temp foreach\n"+
           // idxIterator+" "+lupEnd0+" = "+n+".end();\n"+
-            
           //compact mode
           idxIterator+" "+lupItr0+" = "+n+".begin(), "+lupEnd0+" = "+n+".end(); //temp foreach\n"
           // idxIterator+" "+lupItrNext0+" = "+lupItr0+";\n"+
@@ -114,7 +111,7 @@ trait ICppGen extends IScalaGen {
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
-      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
+      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(/*if */("+rn(n)+" == "+v+") ? 1L : 0L)"),am)
       else e match {
         case Ref(n2) => ctx.add(n,(e.tp,rn(n2))); co("1L") // de-aliasing
         //This renaming is required. As an example:
@@ -123,7 +120,7 @@ trait ICppGen extends IScalaGen {
         //D[x] = E[x]
         //
         // will fail without a renaming.
-        case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L"),am)
+        case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> e.tp.toCpp+" "+rn(n)+" = "+v+";\n"+co("1L"),am)
       }
     // Mul(el,er)
     // ==
@@ -135,13 +132,13 @@ trait ICppGen extends IScalaGen {
         // extract cond and then branch of "if (c) t else 0"
         // no better way for finding boolean type
         // TODO: add Boolean type
-        def cx(s:String):Option[(String,String)] = if (!s.startsWith("(if (")) None else { var d=1; var p=5; while(d>0) { if (s(p)=='(') d+=1 else if (s(p)==')') d-=1; p+=1; }; Some(s.substring(5,p-1),s.substring(p+1,s.lastIndexOf("else")-1)) }
+        def cx(s:String):Option[(String,String)] = if (!s.startsWith("(/*if */(")) None else { var d=1; val pInit="(/*if */(".length; var p=pInit; while(d>0) { if (s(p)=='(') d+=1 else if (s(p)==')') d-=1; p+=1; }; Some(s.substring(pInit,p-1),s.substring(p+3,s.lastIndexOf(":")-1)) }
         def vx(vl:String,vr:String) = if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"
         //pulling out the conditionals from a multiplication
         (cx(vl),cx(vr)) match {
-          case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+ex.tp.zeroCpp+")"
-          case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+ex.tp.zeroCpp+")"
-          case (_,Some((cr,tr))) => "(if ("+cr+") "+vx(vl,tr)+" else "+ex.tp.zeroCpp+")"
+          case (Some((cl,tl)),Some((cr,tr))) => "(/*if */("+cl+" && "+cr+") ? "+vx(tl,tr)+" : "+ex.tp.zeroCpp+")"
+          case (Some((cl,tl)),_) => "(/*if */("+cl+") ? "+vx(tl,vr)+" : "+ex.tp.zeroCpp+")"
+          case (_,Some((cr,tr))) => "(/*if */("+cr+") ? "+vx(vl,tr)+" : "+ex.tp.zeroCpp+")"
           case _ => vx(vl,vr)
         }
       }
