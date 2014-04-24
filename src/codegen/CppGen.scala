@@ -11,14 +11,20 @@ class CppGen(override val cls:String="Query") extends ICppGen
 trait ICppGen extends IScalaGen {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
-  import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
+  import ddbt.Utils.{ind,fresh,freshClear} // common functions
+  val VALUE_NAME = "__av"
 
-  override def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); tp.toCpp+" "+n+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
+  def tup(vs:List[String]) = { val v=vs.mkString(","); if (vs.size>1) "boost::fusion::make_tuple("+v+")" else v }
+  def tupType(vs:List[String]):String = { val v=vs.mkString(","); if (vs.size>1) "boost::fusion::tuple<"+v+" >" else v }
+
+  override def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); tp.toCpp+" "+n+" = "+/*"U"+*/f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
 
   // Create a variable declaration
   //XXXXX TODO
-  override def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) tp.toCpp+" "+n+" = "+tp.zeroCpp+"\n" else tp.toCpp+" "+n+" = M3Map.temp["+tup(ks.map(_.toCpp))+","+tp.toCpp+"]()\n"
+  override def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) tp.toCpp+" "+n+" = "+tp.zeroCpp+";\n" else "map<"+tupType(ks.map(_.toCpp))+" ,"+tp.toCpp+"> "+n+";\n"
 
+  def getIndexId(m:String,is:List[Int]):String = getIndexPattern(is) //slice(m,is)
+  def getIndexPattern(is:List[Int]):String = is.mkString
   // Generate code bottom-up using delimited CPS and a list of bound variables
   //   ex:expression to convert
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
@@ -26,18 +32,84 @@ trait ICppGen extends IScalaGen {
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
     case Ref(n) => co(rn(n))
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
-    case Exists(e) => cpsExpr(e,(v:String)=>co("("+v+" != 0)"))
+    case Exists(e) => cpsExpr(e,(v:String)=>co("("+v+" != 0 ? 1L : 0L)"))
     case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
-      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
-    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-      if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks.map(rn))+")" else "")) // all keys are bound
-      else { val (k0,v0)=(fresh("k"),fresh("v"))
-        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else "" // slice on bound variables
-        ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
-        n+sl+".foreach { ("+(if (ks.size==1) rn(ks.head) else k0)+","+v0+") =>\n"+ind(
-          (if (ks.size>1) ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString else "")+co(v0))+"\n}\n" // bind free variables from retrieved key
+      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c(/*"U"+*/fn) }
+    case m@MapRef(n,tp,ks) =>
+      val kswt = (ks zip m.tks) //ks with type
+      val (ko,ki) = kswt.zipWithIndex.partition{case((k,ktp),i)=>ctx.contains(k)}
+      if (ki.size==0) co((if (ks.size>0) "(*"+n+".find("+tup(ks.map(rn))+"))."+VALUE_NAME else n)) // all keys are bound
+      else {
+        val lup0 = fresh("lkup") //lookup
+        val lupItr0 = lup0+"_it"
+        val lupItrNext0 = "next_"+lupItr0
+        val lupEnd0 = lup0+"_end"
+        val is = ko.map(_._2)
+        val iKeys = ko.map(x=>rn(x._1._1))
+        val (k0,v0)=(fresh("k"),fresh("v"))
+
+        ctx.add(kswt.filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
+
+        if (!m.isTemp) { // slice or foreach
+          //TODO XXX is it always required to create a unique index?
+          //If not, we should change here to reuse an exisiting index
+          //or create an index if nothing is available
+          val idxType = n+"_index"+getIndexId(n,if(ko.size > 0) is else (0 until ks.size).toList )
+          val idxIterator = idxType+"::iterator"
+          val patternName = n+"_pat"+getIndexPattern(is)
+
+          //TODO XXX make sure that next pointer is not required (see commented code below)
+          (if (ko.size>0) { //slice
+            slice(n,is)
+            "std::pair<"+idxIterator+","+idxIterator+"> "+lup0+" = "+n+".get<"+patternName+">().equal_range("+tup(iKeys)+"); //slice\n"+
+            // expanded mode
+            // idxIterator+" "+lupItr0+" = "+lup0+".first;\n"+
+            // idxIterator+" "+lupEnd0+" = "+lup0+".second;\n"
+
+            //compact mode
+            idxIterator+" "+lupItr0+" = "+lup0+".first, "+lupEnd0+" = "+lup0+".second;\n"
+          } else { //foreach
+            // expanded mode
+            // idxIterator+" "+lupItr0+" = "+n+".get<"+patternName+">().begin(); //foreach\n"+
+            // idxIterator+" "+lupEnd0+" = "+n+".get<"+patternName+">().end();\n"
+            
+            //compact mode
+            idxIterator+" "+lupItr0+" = "+n+".get<"+patternName+">().begin(), "+lupEnd0+" = "+n+".get<"+patternName+">().end(); //foreach\n"
+          })+
+          // idxIterator+" "+lupItrNext0+" = "+lupItr0+";\n"+
+          "while("+lupItr0+"!="+lupEnd0+") {\n"+
+          // "  ++"+lupItrNext0+";\n"+
+             ki.map{case ((k,ktp),i)=>"  "+ktp+" "+rn(k)+" = (*"+lupItr0+")."+k+";\n"}.mkString+
+          "  "+tp.toCpp+" "+v0+" = "+"(*"+lupItr0+")."+VALUE_NAME+";\n"+
+             ind(co(v0))+
+          "\n"+
+          // "  "+lupItr0+" = "+lupItrNext0+";\n"+
+          "  ++"+lupItr0+";\n"+
+          "}\n"
+        } else { //only foreach for Temp map
+          val mapType = "map<"+tupType(m.tks.map(_.toCpp))+" ,"+tp.toCpp+">"
+          val idxIterator = mapType+"::iterator"
+
+          // expanded mode
+          // idxIterator+" "+lupItr0+" = "+n+".begin(); //temp foreach\n"+
+          // idxIterator+" "+lupEnd0+" = "+n+".end();\n"+
+            
+          //compact mode
+          idxIterator+" "+lupItr0+" = "+n+".begin(), "+lupEnd0+" = "+n+".end(); //temp foreach\n"
+          // idxIterator+" "+lupItrNext0+" = "+lupItr0+";\n"+
+          "while("+lupItr0+"!="+lupEnd0+") {\n"+
+          // "  ++"+lupItrNext0+";\n"+
+          "  "+tupType(m.tks.map(_.toCpp))+" "+(if(ks.size==1) rn(ks.head) else k0)+" = "+"(*"+lupItr0+").first;\n"+
+          "  "+tp.toCpp+" "+v0+" = "+"(*"+lupItr0+").second;\n"+
+             (if(ks.size > 1) ki.map{case ((k,ktp),i)=>"  "+ktp+" "+rn(k)+" = at_c<"+i+">("+k0+");\n"}.mkString else "")+
+             ind(co(v0))+
+          "\n"+
+          // "  "+lupItr0+" = "+lupItrNext0+";\n"+
+          "  ++"+lupItr0+";\n"+
+          "}\n"
+        }
       }
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n,e) =>
@@ -107,7 +179,7 @@ trait ICppGen extends IScalaGen {
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
-          val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toCpp))+","+e.tp.toCpp+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
+          val s1 = genVar(a0,e.tp,aks.map(_._2))+"\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
           ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
@@ -151,12 +223,13 @@ trait ICppGen extends IScalaGen {
   }
 
   override def genMap(m:MapDef):String = {
-    if (m.keys.size==0) genVar(m.name,m.tp).trim
-    else {
-      val tk = tup(m.keys.map(x=>x._2.toCpp))
-      val s = sx.getOrElse(m.name,List[List[Int]]())
-      "val "+m.name+" = M3Map.make["+tk+","+m.tp.toCpp+"]("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+");"
-    }
+    // if (m.keys.size==0) genVar(m.name,m.tp).trim
+    // else {
+    //   val tk = tup(m.keys.map(x=>x._2.toCpp))
+    //   val s = sx.getOrElse(m.name,List[List[Int]]())
+    //   "val "+m.name+" = M3Map.make["+tk+","+m.tp.toCpp+"]("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+");"
+    // }
+    ""
   }
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = map+".add("+keyNamesConcat+",1L)"
@@ -240,8 +313,6 @@ trait ICppGen extends IScalaGen {
       "}\n\n"
     }
 
-    val VALUE_NAME = "__av"
-
     def genMapStructDef(m:MapDef) = {
       val mapName = m.name
       val mapType = m.name+"_map"
@@ -249,16 +320,16 @@ trait ICppGen extends IScalaGen {
       val fields = m.keys ++ List(VALUE_NAME -> m.tp)
       val fieldsWithIdx = fields.zipWithIndex
       val indices = sx.getOrElse(m.name,List[List[Int]]())
+      //TODO XXX is it always required to create a unique index?
       val allIndices = ((0 until m.keys.size).toList -> true /*unique*/) :: indices.map(is => (is -> false /*non_unique*/))
-      val allIndicesWithIndex = allIndices.zipWithIndex
-      val multiKeyIndices = allIndicesWithIndex.filter{case ((is,_),_) => is.size > 1}
+      val multiKeyIndices = allIndices.filter{case (is,_) => is.size > 1}
 
       def genEntryStruct = 
         "struct "+mapEntry+" {\n"+
         "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+"\n"+
         "  "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => tp.toCpp+" c"+i}.mkString(", ")+") {"+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
-        "  "+mapEntry+"(std::pair<const boost::fusion::tuple<"+m.keys.map{_._2.toCpp}.mkString(",")+" > , "+m.tp.toCpp+">& p) { "+m.keys.zipWithIndex.map{case ((fld,_),i) => fld+" = at_c<"+i+">(p.first); "}.mkString+VALUE_NAME+" = p.second; }\n"+
-        "  operator const std::pair<const boost::fusion::tuple<"+m.keys.map{_._2.toCpp}.mkString(",")+" > , "+m.tp.toCpp+">() const { return std::make_pair(boost::fusion::make_tuple("+m.keys.map{case (fld,_) => fld}.mkString(",")+"), "+VALUE_NAME+"); }\n"+
+        "  "+mapEntry+"(std::pair<const "+tupType(m.keys.map{_._2.toCpp})+" , "+m.tp.toCpp+">& p) { "+m.keys.zipWithIndex.map{case ((fld,_),i) => fld+" = at_c<"+i+">(p.first); "}.mkString+VALUE_NAME+" = p.second; }\n"+
+        "  operator const std::pair<const "+tupType(m.keys.map{_._2.toCpp})+" , "+m.tp.toCpp+">() const { return std::make_pair("+tup(m.keys.map{case (fld,_) => fld})+", "+VALUE_NAME+"); }\n"+
         "  template<class Archive>\n"+
         "  void serialize(Archive& ar, const unsigned int version)\n"+
         "  {\n"+
@@ -267,22 +338,22 @@ trait ICppGen extends IScalaGen {
         "};"
       
       def genPatternStructs = 
-        indices.map{is => "struct "+mapName+"_pat"+is.mkString+" {};"}.mkString("\n")
+        indices.map{is => "struct "+mapName+"_pat"+getIndexPattern(is)+" {};"}.mkString("\n")
 
-      def genExtractorsAndHashers = multiKeyIndices.map{ case((is,unique),i) =>
-        "struct "+mapType+"key"+i+"_extractor {\n"+
-        "  typedef boost::fusion::tuple<"+m.keys.map{case (_,tp) => tp.toCpp}.mkString(",")+" >  result_type;\n"+
+      def genExtractorsAndHashers = multiKeyIndices.map{ case (is,unique) =>
+        "struct "+mapType+"key"+getIndexId(mapName,is)+"_extractor {\n"+
+        "  typedef "+tupType(m.keys.map{case (_,tp) => tp.toCpp})+"  result_type;\n"+
         "  result_type operator()(const "+mapEntry+"& e) const {\n"+
-        "    return boost::fusion::make_tuple("+m.keys.map{case (fld,_) => "e."+fld}.mkString(",")+");\n"+
+        "    return "+tup(m.keys.map{case (fld,_) => "e."+fld})+";\n"+
         "  }\n"+
         "};\n"+
-        "struct "+mapType+"key"+i+"_hasher {\n"+
+        "struct "+mapType+"key"+getIndexId(mapName,is)+"_hasher {\n"+
         "  size_t operator()(const "+mapEntry+"& e) const {\n"+
         "    size_t seed = 0;\n"+
         is.map{ isIndex => "    boost::hash_combine(seed, e."+fields(is(isIndex))._1+");\n" }.mkString +
         "    return seed;\n"+
         "  }\n"+
-        "  size_t operator()(boost::fusion::tuple<"+m.keys.map{case (_,tp) => tp.toCpp}.mkString(",")+" >  k) const {\n"+
+        "  size_t operator()("+tupType(m.keys.map{case (_,tp) => tp.toCpp})+"  k) const {\n"+
         "    return boost::fusion::fold(k, 0, fold_hash());\n"+
         "  }\n"+
         "};"
@@ -290,9 +361,9 @@ trait ICppGen extends IScalaGen {
 
       def genTypeDefs =
         "typedef multi_index_container<"+mapEntry+", indexed_by<\n"+
-        allIndicesWithIndex.map{case((is,unique),i) => "  hashed_"+(if(unique) "unique<" else "non_unique<tag<"+mapName+"_pat"+is.mkString+">, ")+(if(is.size > 1) mapType+"key"+i+"_extractor,"+mapType+"key"+i+"_hasher" else "member<"+mapEntry+","+fields(is(0))._2.toCpp+",&"+mapEntry+"::"+fields(is(0))._1+"> ")+">"}.mkString(",\n")+"\n"+
+        allIndices.map{case (is,unique) => "  hashed_"+(if(unique) "unique<" else "non_unique<tag<"+mapName+"_pat"+getIndexPattern(is)+">, ")+(if(is.size > 1) mapType+"key"+getIndexId(mapName,is)+"_extractor,"+mapType+"key"+getIndexId(mapName,is)+"_hasher" else "member<"+mapEntry+","+fields(is(0))._2.toCpp+",&"+mapEntry+"::"+fields(is(0))._1+"> ")+">"}.mkString(",\n")+"\n"+
         " > > "+mapType+";\n"+
-        indices.map{is => "typedef "+mapType+"::index<"+mapName+"_pat"+is.mkString+">::type "+mapName+"_index"+is.mkString+";"}.mkString("\n")
+        indices.map{is => "typedef "+mapType+"::index<"+mapName+"_pat"+getIndexPattern(is)+">::type "+mapName+"_index"+getIndexId(mapName,is)+";"}.mkString("\n")
 
       genEntryStruct+"\n"+genPatternStructs+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs
     }
