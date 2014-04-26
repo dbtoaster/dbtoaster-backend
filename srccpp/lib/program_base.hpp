@@ -230,26 +230,37 @@ public:
 
 
 namespace boost {namespace serialization {
+    template<class Archive>
+    struct serialize_tuple
+    {
+        Archive& ar;
 
-template<class Archive>
-struct serialize_tuple
-{
-    Archive& ar;
+        serialize_tuple(Archive& _ar);
 
-    serialize_tuple(Archive& _ar);
+        template<typename T>
+        void operator()(T& t) const;
+    };
 
-    template<typename T>
-    void operator()(T& t) const;
-};
-
-template <class Archive, BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
-                                               typename T)>
-void serialize (Archive& ar, 
-        boost::fusion::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
-                                                    T) >& p, 
-        const unsigned int/* file_version */);
+    template <class Archive, BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
+                                                   typename T)>
+    void serialize (Archive& ar, 
+            boost::fusion::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
+                                                        T) >& p, 
+            const unsigned int/* file_version */);
 
 }} //namespace serialization, namespace boost
 
+namespace dbtoaster {
+    template<typename K,typename V>
+    void add_to_temp_map(map<K,V>& m, const K& k, const V& v)
+    {
+        typename map<K,V>::iterator lkup = m.find(k);
+        if (lkup!=m.end()) {
+            m[k] = v + (*lkup).second;
+        } else {
+            m[k] = v;
+        }
+    }
+}
 
 #endif /* DBTOASTER_DBT_PROGRAM_BASE_H */
