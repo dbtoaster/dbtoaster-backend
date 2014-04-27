@@ -140,6 +140,12 @@ int regexp_match(const char *regex, string &s){
 	regfree(&preg);
 }
 
+double div(double x) { return ((x==0.0) ? 0.0 : (1.0 / x)); }
+double mulDbl(double x, double y) { return x * y; }
+long mulLng(long x, long y) { return x * y; }
+long listmax(long v1,  long v2) { return ((v1 > v2) ? v1 : v2 ); }
+double listmax(double v1, double v2) { return ((v1 > v2) ? v1 : v2); }
+
 // Type conversion functions
 template <class T> 
 string cast_string(const T &t) {

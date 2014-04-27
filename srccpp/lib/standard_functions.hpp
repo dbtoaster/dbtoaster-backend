@@ -41,6 +41,11 @@ namespace dbtoaster {
   float pow(int a, float b);
   float pow(int a, int b);
  */
+  double div(double x);
+  double mulDbl(double x, double y);
+  long mulLng(long x, long y);
+  long listmax(long v1,  long v2);
+  double listmax(double v1, double v2);
   
   // Type conversion functions
   inline long cast_int_from_float(double           d) { return (long)d; };
