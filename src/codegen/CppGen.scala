@@ -62,13 +62,13 @@ trait ICppGen extends IScalaGen {
           //TODO XXX is it always required to create a unique index?
           //If not, we should change here to reuse an exisiting index
           //or create an index if nothing is available
-          val idxType = n+"_index"+getIndexId(n,is)
-          val idxIterator = idxType+"::iterator"
           val patternName = n+"_pat"+getIndexPattern(n,is)
           val mapDef = mapDefs(n)
 
           //TODO XXX make sure that next pointer is not required (see commented code below)
           (if (ko.size>0) { //slice
+            val idxType = n+"_index"+getIndexId(n,is)
+            val idxIterator = idxType+"::iterator"
             slice(n,is)
             "std::pair<"+idxIterator+","+idxIterator+"> "+lup0+" = "+n+".get<"+patternName+">().equal_range("+tup(iKeys)+"); //slice\n"+
             //expanded mode
@@ -77,11 +77,13 @@ trait ICppGen extends IScalaGen {
             //compact mode
             idxIterator+" "+lupItr0+" = "+lup0+".first, "+lupEnd0+" = "+lup0+".second;\n"
           } else { //foreach
+            val mapType = n+"_map"
+            val idxIterator = mapType+"::iterator"
             //expanded mode
-            // idxIterator+" "+lupItr0+" = "+n+".get<"+patternName+">().begin(); //foreach\n"+
-            // idxIterator+" "+lupEnd0+" = "+n+".get<"+patternName+">().end();\n"
+            // idxIterator+" "+lupItr0+" = "+n+".begin(); //foreach\n"+
+            // idxIterator+" "+lupEnd0+" = "+n+".end();\n"
             //compact mode
-            idxIterator+" "+lupItr0+" = "+n+".get<"+patternName+">().begin(), "+lupEnd0+" = "+n+".get<"+patternName+">().end(); //foreach\n"
+            idxIterator+" "+lupItr0+" = "+n+".begin(), "+lupEnd0+" = "+n+".end(); //foreach\n"
           })+
           // idxIterator+" "+lupItrNext0+" = "+lupItr0+";\n"+
           "while("+lupItr0+"!="+lupEnd0+") {\n"+
@@ -198,7 +200,7 @@ trait ICppGen extends IScalaGen {
           else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+m.name+", "+tup(m.keys map rn)+")==0) "+SET_IN_MAP_FUNC(m.name)+"("+m.name+", "+tup(m.keys map rn)+","+i+");\n")
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) m.name+" "+sop+" "+v else fop+"("+m.name+", "+tup(m.keys map rn)+","+v+")")+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
+      ctx.load(); clear+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+m.name+", "+tup(m.keys map rn)+","+v+")"})+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -345,7 +347,7 @@ trait ICppGen extends IScalaGen {
         "};"
       
       def genPatternStructs = 
-        allIndices.map{case (is,unique) => "struct "+mapName+"_pat"+getIndexPattern(mapName,is)+" {};"}.mkString("\n")
+        indices.map{is => "struct "+mapName+"_pat"+getIndexPattern(mapName,is)+" {};"}.mkString("\n")
 
       def genExtractorsAndHashers = multiKeyIndices.map{ case (is,unique) =>
         "struct "+mapType+"key"+getIndexId(mapName,is)+"_extractor {\n"+
@@ -369,26 +371,26 @@ trait ICppGen extends IScalaGen {
 
       def genTypeDefs =
         "typedef multi_index_container<"+mapEntry+", indexed_by<\n"+
-        allIndices.map{case (is,unique) => "  hashed_"+(if(unique) "unique" else "non_unique")+"<tag<"+mapName+"_pat"+getIndexPattern(mapName,is)+">, "+(if(is.size > 1) mapType+"key"+getIndexId(mapName,is)+"_extractor,"+mapType+"key"+getIndexId(mapName,is)+"_hasher" else "member<"+mapEntry+","+fields(is(0))._2.toCpp+",&"+mapEntry+"::"+fields(is(0))._1+"> ")+">"}.mkString(",\n")+"\n"+
+        allIndices.map{case (is,unique) => "  hashed_"+(if(unique) "unique<" else "non_unique<tag<"+mapName+"_pat"+getIndexPattern(mapName,is)+">, ")+(if(is.size > 1) mapType+"key"+getIndexId(mapName,is)+"_extractor,"+mapType+"key"+getIndexId(mapName,is)+"_hasher" else "member<"+mapEntry+","+fields(is(0))._2.toCpp+",&"+mapEntry+"::"+fields(is(0))._1+"> ")+">"}.mkString(",\n")+"\n"+
         " > > "+mapType+";\n"+
-        allIndices.map{case (is,unique) => "typedef "+mapType+"::index<"+mapName+"_pat"+getIndexPattern(mapName,is)+">::type "+mapName+"_index"+getIndexId(mapName,is)+";"}.mkString("\n")
+        indices.map{is => "typedef "+mapType+"::index<"+mapName+"_pat"+getIndexPattern(mapName,is)+">::type "+mapName+"_index"+getIndexId(mapName,is)+";"}.mkString("\n")
 
       def genHelperFunctions =
         mapValueType+" "+FIND_IN_MAP_FUNC(mapName)+"(const "+mapType+"& m, const "+mapKeyType+"& k) {\n"+
+        "  "+mapValueType+" res;\n"+ 
         "  "+mapType+"::iterator lkup = m.find(k);\n"+
-        "  if (lkup!=m.end()) return (*lkup)."+VALUE_NAME+"; else return "+m.tp.zeroCpp+";\n"+
+        "  if (lkup!=m.end()) res = (*lkup)."+VALUE_NAME+"; else res = "+m.tp.zeroCpp+";\n"+
+        "  return res;\n"+
         "}\n"+
         "void "+SET_IN_MAP_FUNC(mapName)+"("+mapType+"& m, const "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
-        "  "+mapType+"::iterator lkup = m.find(k);\n"+
-        "  "+mapType+"::iterator end = m.end();\n"+
+        "  "+mapType+"::iterator lkup = m.find(k), end = m.end();\n"+
         "  if (v == "+m.tp.zeroCpp+") { if(lkup != end) m.erase(lkup); /*else \"nothing should be done\"*/ }\n"+
         "  else if(/*v != "+m.tp.zeroCpp+" &&*/ lkup != end) m.modify(lkup,boost::lambda::bind(&"+mapEntry+"::__av, boost::lambda::_1) = v);\n"+
         "  else /*if(v != "+m.tp.zeroCpp+" && lkup == end)*/ { "+mapEntry+" ent(k,v); m.insert(ent); }\n"+
         "}\n"+
         "void "+ADD_TO_MAP_FUNC(mapName)+"("+mapType+"& m, const "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
         "  if (v != "+m.tp.zeroCpp+") {\n"+
-        "    "+mapType+"::iterator lkup = m.find(k);\n"+
-        "    "+mapType+"::iterator end = m.end();\n"+
+        "    "+mapType+"::iterator lkup = m.find(k), end = m.end();\n"+
         "    if(lkup != end) { "+mapValueType+" newV = (v+(*lkup)."+VALUE_NAME+"); m.modify(lkup,boost::lambda::bind(&"+mapEntry+"::__av, boost::lambda::_1) = newV); }\n"+
         "    else { "+mapEntry+" ent(k,v); m.insert(ent); }\n"+
         "  }\n"+
