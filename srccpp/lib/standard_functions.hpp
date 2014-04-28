@@ -46,6 +46,8 @@ namespace dbtoaster {
   long UmulLng(long x, long y);
   long Ulistmax(long v1,  long v2);
   double Ulistmax(double v1, double v2);
+  double Ulistmax(long v1, double v2);
+  double Ulistmax(double v1, long v2);
   
   // Type conversion functions
   inline long cast_int_from_float(double           d) { return (long)d; };

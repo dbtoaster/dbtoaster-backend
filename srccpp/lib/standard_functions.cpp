@@ -145,6 +145,8 @@ double UmulDbl(double x, double y) { return x * y; }
 long UmulLng(long x, long y) { return x * y; }
 long Ulistmax(long v1,  long v2) { return ((v1 > v2) ? v1 : v2 ); }
 double Ulistmax(double v1, double v2) { return ((v1 > v2) ? v1 : v2); }
+double Ulistmax(long v1, double v2) { return ((v1 > v2) ? v1 : v2); }
+double Ulistmax(double v1, long v2) { return ((v1 > v2) ? v1 : v2); }
 
 // Type conversion functions
 template <class T> 
