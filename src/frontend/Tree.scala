@@ -16,7 +16,7 @@ sealed abstract class Type extends Tree { def toScala=toString.substring(0,1).to
 case object TypeLong   extends Type /* 64 bit */ { override def toString="long"; val zero="0L" }
 //case object TypeFloat extends Type /*32 bit */ { override def toString="float" }
 case object TypeDouble extends Type /* 64 bit */ { override def toString="double"; val zero="0.0" }
-case object TypeDate   extends Type              { override def toString="date"; val zero="0L"; override def zeroScala="new Date(0L)"; override def toCpp="time_t"; override def zeroCpp="time(NULL)" }
+case object TypeDate   extends Type              { override def toString="date"; val zero="0L"; override def zeroScala="new Date(0L)"; override def zeroCpp="00000000" }
 //case object TypeTime extends Type              { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string"; val zero="\"\"" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used

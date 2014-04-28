@@ -21,7 +21,8 @@ trait ICppGen extends IScalaGen {
   def tup(vs:List[String]) = { val v=vs.mkString(","); if (vs.size>1) "boost::fusion::make_tuple("+v+")" else v }
   def tupType(vs:List[String]):String = { val v=vs.mkString(","); if (vs.size>1) "boost::fusion::tuple<"+v+" >" else v }
 
-  override def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); tp.toCpp+" "+n+" = "+/*"U"+*/f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
+  override def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "/*const static*/ "+tp.toCpp+" "+n+";\n" }.mkString+"\n" // constant member definition
+  def constsInit = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); n+" = "+"U"+f+"("+vs.mkString(",")+");\n" }.mkString+"\n" // constant member initilization
 
   private val mapDefs = HashMap[String,MapDef]() //mapName => MapDef
 
@@ -42,7 +43,7 @@ trait ICppGen extends IScalaGen {
     case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
-      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c(/*"U"+*/fn) }
+      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
     case m@MapRef(n,tp,ks) =>
       val kswt = (ks zip m.tks) //ks with type
       val (ko,ki) = kswt.zipWithIndex.partition{case((k,ktp),i)=>ctx.contains(k)}
@@ -437,8 +438,9 @@ trait ICppGen extends IScalaGen {
     helperResultAccessor(s0)+
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
     "struct data_t : tlq_t{\n"+
-    "  data_t()\n"+
-    "  {}\n"+
+    "  data_t() {\n"+
+         ind(constsInit,2)+"\n"+
+    "  }\n"+
     "\n"+
     "  #ifdef DBT_PROFILE\n"+
     "  boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> exec_stats;\n"+
@@ -465,7 +467,8 @@ trait ICppGen extends IScalaGen {
     "private:\n"+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
-       ind(genTmpDataStructureRefs)+
+       ind(genTmpDataStructureRefs)+"\n"+
+       ind(consts)+
     "\n\n"+
     "};\n"+
     "\n"+
