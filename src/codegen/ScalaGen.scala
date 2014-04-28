@@ -23,9 +23,7 @@ import ddbt.ast._
  * Constraints inherited from M3:
  * - Lift alone has only bound variables.
  * - In Exists*Lift, Exists binds variables for the Lift
- *
- * Future improvements:
- * - Make code dealing with operations on tuples (+, *) cleaner
+ * 
  * @author TCK
  */
 class ScalaGen(cls:String="Query") extends CodeGen(cls) {
@@ -217,7 +215,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     //     v * ex
     //   }
     // }
-    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
+    case m@MapRef(n,tp,ks) => 
+      val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       val rt = TypeMapVal(tp)
       if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks.map(rnv))+")" else ""),rt) // all keys are bound
       else { 
@@ -229,7 +228,6 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         (n+sl+".foreach { ("+(if (ks.size==1) rn(ks.head)._1 else k0)+","+v0+") =>\n"+ind(
           (if (ks.size>1) ki.map{case (k,i)=>"val "+rn(k)._1+" = "+k0+"._"+(i+1)+";\n"}.mkString else "")+co(v0,rt)._1)+"\n}\n",rt)
       }
-    // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n::Nil,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
       if (ctx.contains(n)) { 
@@ -267,7 +265,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
             case Some(n2) => 
               val (rn2,rn2t) = rn(n2)
               ctx.add(n,(rn2t,rn2)); 
-            case None => ctx.add(n,(t,fresh("l"))) 
+            case None => 
+              val l = fresh("l")
+              ctx.add(n,(t,l)) 
           }
       }
       val t=fresh("t")
@@ -313,7 +313,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val (strIf,strElse) = if (cond != null) ("if ("+cond+") "," else "+zero) else ("","")
           ("("+strIf+v+strElse+")",t)
         }
-        //pulling out the conditionals from a multiplication
+        // pulling out the conditionals from a multiplication
         (cx(vl),cx(vr)) match {
           case (Some((cl,tl)),Some((cr,tr))) => vx(cl+" && "+cr,tl,tr)
           case (Some((cl,tl)),_) => vx(cl,tl,vr)
@@ -325,7 +325,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         cpsExpr(er,(vr:String,tr:Type) => {
           val (mv,mt) = mul(vl,vr,tl,tr)
           co(mv,mt) 
-        },am),am)
+        }))
     // Add(el,er)
     // ==
     //   Add( (el,ctx0) -> (vl,ctx1) , (er,ctx0) -> (vr,ctx2) )
@@ -370,16 +370,18 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           (genVar(a0,ex.tp,a.agg.map(_._2))+s1+s2+r,rt)
       }
     case a@AggSum(ks,e) =>
-      val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
+      // aggregation keys as (name,type)
+      val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } 
       if (aks.size==0) { 
         val a0=fresh("agg")
         val tp=TypeMapVal(ex.tp)
         (genVar(a0,tp)+cpsExpr(e,(v:String,t:Type) => {
-          (a0+" = "+genOp(a0,v,"+",tp,t)._1+";\n",TypeUnit)
+          (a0+" = "+genOp(a0,v,"+",tp,t)._1+"\n",TypeUnit)
         })._1+"\n"+co(a0,tp)._1,tp) 
       }
       else am match {
-        case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
+        case Some(t) if t.toSet.subsetOf(aks.toSet) => 
+          cpsExpr(e,co,am)
         case _ =>
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
