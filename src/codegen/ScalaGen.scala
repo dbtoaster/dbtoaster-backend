@@ -232,8 +232,12 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n::Nil,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
-      if (ctx.contains(n)) 
-        cpsExpr(e,(v:String,t:Type)=>co("(if ("+rnv(n)+" == "+v+") MapVal(1L) else MapVal(0,0L))",TypeMapVal(TypeLong)),am)
+      if (ctx.contains(n)) { 
+        cpsExpr(e,(v:String,t:Type)=> {
+          val (un,unt) = rn(n)
+          co("(if ("+genOp(un,v,"==",unt,t)._1+") MapVal(1L) else MapVal(0,0L))",TypeMapVal(TypeLong))
+        },am)
+      }
       else e match {
         case Ref(n2) => 
           val (rn2,rn2t) = rn(n2)
