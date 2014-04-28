@@ -352,19 +352,19 @@ trait ICppGen extends IScalaGen {
 
       def genExtractorsAndHashers = multiKeyIndices.map{ case (is,unique) =>
         "struct "+mapType+"key"+getIndexId(mapName,is)+"_extractor {\n"+
-        "  typedef "+tupType(is.map{ isIndex => fields(is(isIndex))._2.toCpp})+"  result_type;\n"+
+        "  typedef "+tupType(is.map{ isIndex => fields(isIndex)._2.toCpp})+"  result_type;\n"+
         "  result_type operator()(const "+mapEntry+"& e) const {\n"+
-        "    return "+tup(is.map{ isIndex => "e."+fields(is(isIndex))._1})+";\n"+
+        "    return "+tup(is.map{ isIndex => "e."+fields(isIndex)._1})+";\n"+
         "  }\n"+
         "};\n"+
         //TODO XXX we can implement a better hasher, e.g. using murmur hash
         "struct "+mapType+"key"+getIndexId(mapName,is)+"_hasher {\n"+
         "  size_t operator()(const "+mapEntry+"& e) const {\n"+
         "    size_t seed = 0;\n"+
-        is.map{ isIndex => "    boost::hash_combine(seed, e."+fields(is(isIndex))._1+");\n" }.mkString +
+        is.map{ isIndex => "    boost::hash_combine(seed, e."+fields(isIndex)._1+");\n" }.mkString +
         "    return seed;\n"+
         "  }\n"+
-        "  size_t operator()("+tupType(is.map{ isIndex => fields(is(isIndex))._2.toCpp})+"  k) const {\n"+
+        "  size_t operator()("+tupType(is.map{ isIndex => fields(isIndex)._2.toCpp})+"  k) const {\n"+
         "    return boost::fusion::fold(k, 0, fold_hash());\n"+
         "  }\n"+
         "};"
