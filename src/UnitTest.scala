@@ -314,9 +314,10 @@ object UnitTest {
 
   def legacyCPP(q:QueryTest,p:Printer,t0:Long) {
     val boost = prop("lib_boost",null)
+    val qName = name(q.sql)+"_LCPP"
     val (t1,cc) = Compiler.toast("cpp",q.sql); p.gen(math.max(0,t1-t0))
     p.all(q){dataset=>
-      write(tmp+"/query.hpp", {
+      write(tmp+"/"+qName+".hpp", {
         def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
         val res=cc.replaceAll("/standard/","/"+dataset+"/")
                 .replaceAll("tlq_t().*\n +\\{\\}","struct timeval t0,t; long tT,tN,tS; tlq_t() { tN=0; tS=0; gettimeofday(&t0,NULL); }")
@@ -325,14 +326,14 @@ object UnitTest {
         if(dataset.contains("_del")) res.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else res
       })
       val pl = path_repo+"/lib/dbt_c++"
-      val po = tmp.getPath+"/query"
+      val po = tmp.getPath+"/"+qName
       val as = List("g++",pl+"/main.cpp","-include",po+".hpp","-o",po,"-O3","-lpthread","-ldbtoaster","-I"+pl,"-L"+pl) :::
                List("program_options","serialization","system","filesystem","chrono",prop("lib_boost_thread","thread")).map("-lboost_"+_) ::: // thread-mt
                (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
       val t2 = ns(()=>exec(as.toArray))._1; p.comp(t2)
       p.run(()=>{ var i=0; while (i < warmup+samples) { i+=1
         val (out,err)=exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
-        if (err!="") System.err.println(err); println(out)
+        if (err!="") System.err.println(err); Utils.write(po+"_lcpp.txt",out); println(out)
       }})
     }
   }

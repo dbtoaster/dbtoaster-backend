@@ -174,7 +174,7 @@ object Compiler {
             val t2 = Utils.ns(()=>Utils.exec(as.toArray))._1; if (t_comp!=null) t_comp(t2)
             t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
               val (out,err)=Utils.exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
-              if (err!="") System.err.println(err); println(out)
+              if (err!="") System.err.println(err); Utils.write(po+"_"+lang+".txt",out); println(out)
             }})
           }
         case _ => error("Execution not supported for "+lang,true)
