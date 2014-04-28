@@ -160,7 +160,10 @@ object Compiler {
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
           val boost = Utils.prop("lib_boost",null)
           t_datasets{dataset=>
-            val src=Utils.read(out).replace("DATASETPLACEHOLDER",dataset); Utils.write(out,src)
+            val srcTmp=Utils.read(out).replace("DATASETPLACEHOLDER",dataset)
+            //TODO XXX dataset should be an argument to the program
+            val src = if(dataset.contains("_del")) srcTmp.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else srcTmp
+            Utils.write(out,src)
             val pl = "srccpp/lib"
             val po = out.substring(0,out.lastIndexOf("."))
             val as = List("g++",pl+"/main.cpp","-include",out,"-o",po,"-O3","-lpthread","-ldbtoaster","-I"+pl,"-L"+pl) :::
