@@ -112,6 +112,8 @@ object UnitTest {
     val sel = all.filter(q=>q_f(q.sql)).map{ q=> QueryTest(q.sql,q.sets.filterKeys(datasets.contains(_))
                                                     .filterKeys{d=>q.sql.indexOf("missedtrades")== -1 || d.matches("tiny.*")}) // missedtrades is very slow
     }.filter(q=>q.sets.size>0)
+    scala.util.Sorting.quickSort(sel)(OrdQueryTest)
+
     println("Tests total    : %4d".format(all.size))
     println("Tests selected : %4d".format(sel.size))
     if (sel.size==0) { System.err.println("No tests selected, exiting."); return; }
@@ -389,6 +391,25 @@ object UnitTest {
   case class QueryMap(m:Map[String,String]) extends QueryOut
   case class QueryFile(path:String,sep:String=null) extends QueryOut
   case class QuerySingleton(v:String) extends QueryOut
+
+  object OrdQueryTest extends Ordering[QueryTest] {
+    def compare(q1:QueryTest, q2:QueryTest) = {
+      val cmp = q1.sql.compare(q2.sql)
+      if(cmp == 0) 0 else {
+        def qName(start:Int,n:String)=n.substring(start,n.lastIndexOf('.'))
+        val commonPrefix = q1.sql.zip(q2.sql).takeWhile(Function.tupled(_ == _)).map(_._1).mkString
+        val (q1Name, q2Name) = (qName(commonPrefix.length,q1.sql),qName(commonPrefix.length,q2.sql))
+        if(q1Name.length == 0 || q2Name.length == 0) cmp
+        else if(Character.isDigit(q1Name(0)) && Character.isDigit(q2Name(0))) {
+          val NumQ = "(\\d+).*".r
+          val NumQ(q1Num) = q1Name
+          val NumQ(q2Num) = q2Name
+          q1Num.toInt - q2Num.toInt
+        }
+        else cmp
+      }
+    }
+  }
 
   // Parser for unit tests declarations
   import scala.util.parsing.combinator.RegexParsers
