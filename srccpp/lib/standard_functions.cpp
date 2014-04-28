@@ -11,31 +11,31 @@ namespace dbtoaster {
 // Date extraction functions
 // ImperativeCompiler synthesizes calls to the following from calls to 
 // date_part
-long year_part(date d) { 
+long Uyear_part(date d) { 
 	return (d / 10000) % 10000;
 }
-long month_part(date d) { 
+long Umonth_part(date d) { 
 	return (d / 100) % 100;
 }
-long day_part(date d) { 
+long Uday_part(date d) { 
 	return d % 100;
 }
 
 // String functions
-string substring(string &s, long start, long len){
+string Usubstring(string &s, long start, long len){
 	return s.substr(start, len);
 }
 
-float vec_length(float x, float y, float z){
+float Uvec_length(float x, float y, float z){
   return sqrt(x*x+y*y+z*z);
 }
 
-float vec_dot(float x1, float y1, float z1, 
+float Uvec_dot(float x1, float y1, float z1, 
               float x2, float y2, float z2){
   return x1*x2+y1*y2+z1*z2;
 }
 
-void vec_cross(float x1, float y1, float z1, 
+void Uvec_cross(float x1, float y1, float z1, 
                float x2, float y2, float z2,
                float& x, float& y, float& z){
   x = (y1*z2-z1*y2);
@@ -43,13 +43,13 @@ void vec_cross(float x1, float y1, float z1,
   z = (x1*y2-y1*x2);
 }
 
-float vector_angle(float x1, float y1, float z1, 
+float Uvector_angle(float x1, float y1, float z1, 
               float x2, float y2, float z2){
-  return acos(vec_dot(x1,y1,z1,x2,y2,z2) /
-               (vec_length(x1,y1,z1)*vec_length(x2,y2,z2)));
+  return acos(Uvec_dot(x1,y1,z1,x2,y2,z2) /
+               (Uvec_length(x1,y1,z1)*Uvec_length(x2,y2,z2)));
 }
 
-float dihedral_angle(float x1, float y1, float z1, 
+float Udihedral_angle(float x1, float y1, float z1, 
                     float x2, float y2, float z2,
                     float x3, float y3, float z3,
                     float x4, float y4, float z4){
@@ -71,18 +71,18 @@ float dihedral_angle(float x1, float y1, float z1,
   v3_y = y4-y3;
   v3_z = z4-z3;
 
-  vec_cross(v1_x, v1_y, v1_z,
+  Uvec_cross(v1_x, v1_y, v1_z,
             v2_x, v2_y, v2_z,
             n1_x, n1_y, n1_z);
-  vec_cross(v2_x, v2_y, v2_z,
+  Uvec_cross(v2_x, v2_y, v2_z,
             v3_x, v3_y, v3_z,
             n2_x, n2_y, n2_z);
   
-  return atan2(vec_length(v2_x, v2_y, v2_z)*vec_dot(v1_x,v1_y,v1_z,n2_x,n2_y,n2_z), 
-                vec_dot(n1_x, n1_y, n1_z, n2_x, n2_y, n2_z));
+  return atan2(Uvec_length(v2_x, v2_y, v2_z)*Uvec_dot(v1_x,v1_y,v1_z,n2_x,n2_y,n2_z), 
+                Uvec_dot(n1_x, n1_y, n1_z, n2_x, n2_y, n2_z));
 }
 
-long long hash(long long v) {
+long long Uhash(long long v) {
    
    v = v * 3935559000370003845 + 2691343689449507681;
    v ^= v >> 21; v^= v << 37; v ^= v >> 4;
@@ -94,15 +94,15 @@ long long hash(long long v) {
 
 const float PI = 3.141592653589793238462643383279502884;
 
-float radians(float degree) {
+float Uradians(float degree) {
   return degree * PI / 180;
 }
 
-float degrees(float radian) {
+float Udegrees(float radian) {
   return radian * 180 / PI;
 }
 
-float pow(float a, float b) {
+float Upow(float a, float b) {
   return ::pow(a, b);
 }
 /*float pow(float a, int b) {
@@ -115,7 +115,7 @@ float pow(int a, int b) {
   return ::pow((float)a, (float)b);
 }*/
 
-int regexp_match(const char *regex, string &s){
+int Uregexp_match(const char *regex, string &s){
 	//TODO: Caching regexes, or possibly inlining regex construction
 	regex_t preg;
 	int ret;
@@ -140,11 +140,11 @@ int regexp_match(const char *regex, string &s){
 	regfree(&preg);
 }
 
-double div(double x) { return ((x==0.0) ? 0.0 : (1.0 / x)); }
-double mulDbl(double x, double y) { return x * y; }
-long mulLng(long x, long y) { return x * y; }
-long listmax(long v1,  long v2) { return ((v1 > v2) ? v1 : v2 ); }
-double listmax(double v1, double v2) { return ((v1 > v2) ? v1 : v2); }
+double Udiv(double x) { return ((x==0.0) ? 0.0 : (1.0 / x)); }
+double UmulDbl(double x, double y) { return x * y; }
+long UmulLng(long x, long y) { return x * y; }
+long Ulistmax(long v1,  long v2) { return ((v1 > v2) ? v1 : v2 ); }
+double Ulistmax(double v1, double v2) { return ((v1 > v2) ? v1 : v2); }
 
 // Type conversion functions
 template <class T> 
@@ -160,7 +160,7 @@ string cast_string_from_date(date ymd)   {
 	   << ((ymd        ) % 100);
 	return ss.str();
 }
-date cast_date_from_string(const char *c) { 
+date Udate(const char *c) { //cast_date_from_string
 	unsigned int y, m, d;
 	if(sscanf(c, "%u-%u-%u", &y, &m, &d) < 3){
 	  cerr << "Invalid date string: "<< c << endl;
