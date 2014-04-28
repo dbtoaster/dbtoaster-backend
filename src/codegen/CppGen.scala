@@ -293,6 +293,10 @@ trait ICppGen extends IScalaGen {
       "exec_stats = pb.exec_stats;\n"+
       "ivc_stats = pb.ivc_stats;\n"+
       //TODO XXX should be completed
+      s0.triggers.map{ trg => trg.stmts.zipWithIndex.map { case (stmt,i) =>
+          "exec_stats->register_probe("+stmt.stmtId+", \""+trg.evt.evtName+"_s"+i+"\");\n"
+        }.mkString
+      }.mkString+
       "#endif // DBT_PROFILE\n"
     }
 

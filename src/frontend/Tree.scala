@@ -51,10 +51,10 @@ case object OpSet extends OpMap { override def toString=":=" }
 case object OpAdd extends OpMap { override def toString="+=" }
 
 // ---------- Trigger events
-sealed abstract class EvtTrigger extends Tree { def args=List[(String,Type)]() }
-case object EvtReady extends EvtTrigger { override def toString="SYSTEM READY" }
-case class EvtAdd(schema:Schema) extends EvtTrigger { override def toString="+ "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields }
-case class EvtDel(schema:Schema) extends EvtTrigger { override def toString="- "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields }
+sealed abstract class EvtTrigger extends Tree { def args=List[(String,Type)](); def evtName:String }
+case object EvtReady extends EvtTrigger { override def toString="SYSTEM READY"; override val evtName="system_ready" }
+case class EvtAdd(schema:Schema) extends EvtTrigger { override def toString="+ "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields; override val evtName="insert_"+schema.name }
+case class EvtDel(schema:Schema) extends EvtTrigger { override def toString="- "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields; override val evtName="delete_"+schema.name }
 // Cleanup/Failure/Shutdown/Checkpoint
 
 // -----------------------------------------------------------------------------
@@ -162,7 +162,7 @@ object M3 {
   case class TupleLift(ns:List[String], e:Expr) extends Expr { override def toString="(<"+ns.mkString(",")+"> ^= "+e+")"; val tp=TypeLong }
 
   // ---------- Statements (no return)
-  sealed abstract class Stmt extends M3
+  sealed abstract class Stmt extends M3 { var stmtId:Int=(-1) }
   case class StmtMap(m:MapRef,e:Expr,op:OpMap,init:Option[Expr]) extends Stmt { override def toString=m+(init match { case Some(i) => ":("+i+")" case None => ""} )+" "+op+" "+e+";" }
   // case class StmtCall(external function) extend Stmt
 }

@@ -120,7 +120,8 @@ object Compiler {
   def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null,t_datasets:(String=>Unit)=>Unit=null,t_run:(()=>Unit)=>Unit=null,samplesAndWarmupRounds:Int=0) {
     val t0=System.nanoTime
     // Front-end phases
-    val m3 = (M3Parser andThen TypeCheck) (m3_src)
+    val m3 = postProc((M3Parser andThen TypeCheck) (m3_src))
+
     // Back-end
     val cg:CodeGen = lang match {
       case LANG_SCALA => new ScalaGen(name)
@@ -180,6 +181,18 @@ object Compiler {
         case _ => error("Execution not supported for "+lang,true)
       }
     }
+  }
+
+  def postProc(s0:ast.M3.System) = {
+    //fixing the unique id for each statement
+    //used in debugging and performance measurements
+    var stmtId = 0
+    s0.triggers.foreach{ trg => trg.stmts.map { stmt =>
+        stmt.stmtId = stmtId
+        stmtId += 1
+      }
+    }
+    s0
   }
 
   def main(args: Array[String]) {
