@@ -121,7 +121,11 @@ object Helper {
 
   val precision = 7 // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)
   private val diff_p = Math.pow(0.1,precision)
-  private def eq_v[V](v1:V,v2:V) = ((v1,v2) match { case (d1:Double,d2:Double) => (Math.abs(2*(d1-d2)/(d1+d2))<diff_p) case _ => v1==v2 })
+  private def eq_v[V](v1:V,v2:V) = ((v1,v2) match { 
+    case (d1:Double,d2:Double) => (Math.abs(2*(d1-d2)/(d1+d2))<diff_p) 
+    case (l:Long,d:Double) => (Math.abs(2*(d-l)/(d+l))<diff_p) 
+    case (d:Double,l:Long) => (Math.abs(2*(d-l)/(d+l))<diff_p) 
+    case _ => v1==v2 })
   private def eq_p(p1:Product,p2:Product) = { val n=p1.productArity; assert(n==p2.productArity);  List.range(0,n).forall(i => eq_v(p1.productElement(i), p2.productElement(i))) }
 
   def diff(v1:Product,v2:Product) = if (!eq_p(v1,v2)) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
