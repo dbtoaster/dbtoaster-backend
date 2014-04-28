@@ -144,7 +144,7 @@ object UnitTest {
         case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
         case "lcpp" if (repo!=null && benchmark) => legacyCPP(q,new Printer("LCPP"),t0)
         case "scala"|"scalalms" => genQueryScala(q,new Printer(mn(m)),m3,m)
-        case "cpp" | "scalacpp" => genQueryCpp(q,new Printer(mn(m)),m3,m)
+        case "cpp" | "cpplms" | "lms" => genQueryCpp(q,new Printer(mn(m)),m3,m)
         case _ => sys.error("Mode is not supported: "+m)
 
       }
