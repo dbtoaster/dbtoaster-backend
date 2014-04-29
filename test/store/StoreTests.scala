@@ -5,7 +5,7 @@ import ddbt.lib.store._
 class StoreTests extends FunSpec {
   val N = 5
   val ks = (0 until N).map(x=>E(x,x,0.0))
-  val ts = Array[IndexType](IHash, IDirect, IArray, IBTree)
+  val ts = Array[IndexType](IHash, /*IDirect,*/ IArray, IBTree)
   def test_access(s:Store[E],sl_n:Int) {
     assert(s.size==N*N,"size()")
     var n=0; s.foreach(x=>n+=1); assert(n==N*N,"foreach()")
@@ -56,7 +56,7 @@ class StoreTests extends FunSpec {
   }
 
   def store(t:IndexType,uniq:Boolean,n:Int=1) = {
-    val s = new Store[E](n);
+    val s = new Store[E](n, Array[EntryIdx[E]](E_I0,E_I1,E_I2));
     s.index(0,t match { case IHash|IBTree=>t case _ => IHash } ,uniq)
     (0 until N*N) foreach { x => s.insert(if (uniq) E(x,x,3.4) else E(x%N,x/N,3.4)) }
     s.index(0,t,uniq); s
@@ -94,7 +94,7 @@ class StoreTests extends FunSpec {
     it("HeapMax") { sl(ISliceHeapMax,N-2) }
   }
   describe("List") {
-    val s = new Store[E](1); s.index(0,IList,false);
+    val s = new Store[E](1,Array[EntryIdx[E]](E_I0)); s.index(0,IList,false);
     (0 until N*N) foreach { x => s.insert(E(x,x,3.4)) }
     var es:List[E]=Nil; (0 until N) foreach { x => es=s.get(0,ks(x))::es }; es.foreach { e=> s.delete(e) }
     var n=0; s.foreach{ x=>n+=1 }; assert(n==N*(N-1))
