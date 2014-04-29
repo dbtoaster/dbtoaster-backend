@@ -49,16 +49,16 @@ abstract class Split extends Function2[Array[Byte],Int,(Int,Int,Int)] // buffer,
 object Split {
   def apply(p:Array[Byte]) = new Split { def apply(buf:Array[Byte],off:Int=0) = find(p,buf,off) match { case -1 => (-1,-1,-1) case x => (off,x,x+p.length) } }
   def apply(s:String="\n"):Split = apply(s.getBytes)
-  def apply(n:Int):Split = new Split { def apply(buf:Array[Byte],off:Int=0) = { val l=buf.length-off; if (l<n) (-1,-1,-1) else (off,n+off,n+off) } }
-  def p(bytes:Int=4):Split = new Split { def apply(buf:Array[Byte],off:Int=0) = { val l=buf.length; if (l<bytes) (-1,-1,-1) else {
-    var i=off+bytes-1; var n:Int=0; while(i>=off) { n=(n<<8)|buf(i); i=i-1; }; if (l-off-bytes<n) (-1,-1,-1) else (off+bytes,off+bytes+n,off+bytes+n)
+  def apply(n:Int):Split = new Split { def apply(buf:Array[Byte],off:Int=0) = { val l=buf.length-off; if (l < n) (-1,-1,-1) else (off,n+off,n+off) } }
+  def p(bytes:Int=4):Split = new Split { def apply(buf:Array[Byte],off:Int=0) = { val l=buf.length; if (l < bytes) (-1,-1,-1) else {
+    var i=off+bytes-1; var n:Int=0; while(i >= off) { n=(n << 8)|buf(i); i=i-1; }; if (l-off-bytes < n) (-1,-1,-1) else (off+bytes,off+bytes+n,off+bytes+n)
   }}}
   // Knuth-Morris-Pratt algorithm (O(data)+O(pattern))
   private def find(pattern:Array[Byte], data:Array[Byte], off:Int=0):Int = if (data.length==0 || pattern.length==0) -1 else { val skip=failure(pattern); var i=off; var j=0;
-    while (i<data.length) { val di=data(i); while (j>0 && pattern(j)!=di) j=skip(j-1); if (pattern(j)==di) j=j+1; if (j==pattern.length) return i-pattern.length+1; i=i+1 }; -1
+    while (i < data.length) { val di=data(i); while (j>0 && pattern(j)!=di) j=skip(j-1); if (pattern(j)==di) j=j+1; if (j==pattern.length) return i-pattern.length+1; i=i+1 }; -1
   }
   private def failure(pattern:Array[Byte]):Array[Int] = { val skip=new Array[Int](pattern.length); var i=1; var j=0;
-    while (i<pattern.length) { val pi=pattern(i); while (j>0 && pattern(j)!=pi) j=skip(j-1); if (pattern(j)==pi) j=j+1; skip(i)=j; i=i+1 }; skip
+    while (i < pattern.length) { val pi=pattern(i); while (j>0 && pattern(j)!=pi) j=skip(j-1); if (pattern(j)==pi) j=j+1; skip(i)=j; i=i+1 }; skip
   }
 }
 
