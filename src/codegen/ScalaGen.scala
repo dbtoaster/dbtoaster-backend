@@ -218,7 +218,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     case m@MapRef(n,tp,ks) => 
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       val rt = TypeMapVal(tp)
-      if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks.map(rnv))+")" else ""),rt) // all keys are bound
+      // if all keys are bound      
+      if (ki.size==0) {
+        co(n+(if (ks.size>0) ".get("+tup(ks.map(rnv))+")" else ""),rt) 
+      }
       else { 
         val (k0,v0)=(fresh("k"),fresh("v"))
         // slice on bound variables
@@ -271,7 +274,9 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       val t=fresh("t")
       ctx.add(t,(e.tp,t))
       cpsExpr(e,(v:String,vt:Type) => { 
+        val cur = ctx.save 
         val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
+        ctx.load(cur)
         val tStr = "val "+t+" = "+mapval(v,vt)._1+";\n"
         val (cmps,r) = (ns zip refs).zipWithIndex.foldLeft((List[String](),"")){ case ((cmps,r),((n,ref),i)) => {
           if (cmpVars.contains(n)) 
