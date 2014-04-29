@@ -254,8 +254,6 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           cpsExpr(e,(v:String,t:Type) => ("val "+rn(n)._1+" = "+mapval(v,t)._1+";\n"+cov,cot),am)
       }
     case Lift(ns,e) =>
-      // XXX: What about the special cases?
-      // XXX: Can we merge the simple lift and the multilift case?
       val tps = e.tp match { case TypeTuple(ts) => ts case _ => sys.error("Expected tuple type") } 
       val refs = e match { case Tuple(es) => es.map(e => e match { case Ref(n) => Some(n) case _ => None }) case _ => List.fill(ns.length)(None) }
       val cmpVars = ns.filter(ctx.contains(_))
@@ -356,7 +354,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           ctx.load(cur)
           val s2=cpsExpr(er,co,am)
           ctx.load(cur)
-          (s1._1+s2._1,s2._2)
+          (s1._1+"\n"+s2._1,s2._2)
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
@@ -367,7 +365,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val s2 = cpsExpr(er,(v:String,t:Type)=> (a0+".add("+tup(ks map rnv)+","+v+");\n",TypeUnit),tmp)._1
           ctx.load(cur)
           val (r,rt) = cpsExpr(mapRef(a0,ex.tp,a.agg),co)
-          (genVar(a0,ex.tp,a.agg.map(_._2))+s1+s2+r,rt)
+          (genVar(a0,ex.tp,a.agg.map(_._2))+s1+"\n"+s2+r,rt)
       }
     case a@AggSum(ks,e) =>
       // aggregation keys as (name,type)
@@ -388,7 +386,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val cur = ctx.save
           val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+genType(e.tp)+"]()\n"+cpsExpr(e,(v:String,t:Type)=>(a0+".add("+tup(aks.map(x=>rnv(x._1)))+","+v+");\n",TypeUnit),tmp)._1
           ctx.load(cur)
-          (s1+cpsExpr(mapRef(a0,e.tp,aks),co)._1,ex.tp)
+          (s1+"\n"+cpsExpr(mapRef(a0,e.tp,aks),co)._1,ex.tp)
       }
     case t@Tuple(es) => 
       def tuple(vs:List[String],ts:List[Type],esp:List[Expr]):(String,Type) = esp match {
@@ -420,7 +418,8 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         case None => ""
       }
       ctx.load(); 
-      clear+init+cpsExpr(e,(v:String,t:Type) => {
+      clear+init+"\n"+
+      cpsExpr(e,(v:String,t:Type) => {
         lazy val sop = m.name+"="+(op match { case OpAdd => genOp(m.name,v,"+",TypeMapVal(e.tp),t)._1 case OpSet => v })+";\n"
         ((if (m.keys.size==0) sop else m.name+".add("+tup(m.keys map rnv)+","+mapval(v,t)._1+")")+";\n",TypeUnit)
       },Some(m.keys zip m.tks))._1+"\n"
