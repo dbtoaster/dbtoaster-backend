@@ -319,11 +319,11 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           case _ => vx(null,vl,vr)
         }
       }
-      cpsExpr(el,(vl:String,tl:Type) =>
+      cpsExpr(el,(vl:String,tl:Type) => {
         cpsExpr(er,(vr:String,tr:Type) => {
           val (mv,mt) = mul(vl,vr,tl,tr)
           co(mv,mt) 
-        }))
+        })})
     // Add(el,er)
     // ==
     //   Add( (el,ctx0) -> (vl,ctx1) , (er,ctx0) -> (vr,ctx2) )
