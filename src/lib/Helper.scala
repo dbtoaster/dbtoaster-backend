@@ -126,9 +126,10 @@ object Helper {
     case (l:Long,d:Double) => (Math.abs(2*(d-l)/(d+l))<diff_p) 
     case (d:Double,l:Long) => (Math.abs(2*(d-l)/(d+l))<diff_p) 
     case _ => v1==v2 })
+  private def eq_l(l1:List[Any],l2:List[Any]) = { (l1 zip l2).forall{ case (v1,v2) => eq_v(v1,v2) } }
   private def eq_p(p1:Product,p2:Product) = { val n=p1.productArity; assert(n==p2.productArity);  List.range(0,n).forall(i => eq_v(p1.productElement(i), p2.productElement(i))) }
 
-  def diff(v1:Product,v2:Product) = if (!eq_p(v1,v2)) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
+  def diff(v1:List[Any],v2:List[Any]) = if (!eq_p(v1,v2)) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
 
   /* Checks whether the test result is the same as the reference. 
    * 
@@ -148,7 +149,9 @@ object Helper {
       val z = if (l0.size==0) null else l0(0)._2.map(v => v match { case d:Double => 0.0 case _ => 0L })
       val mm = HashMap[K,List[Any]]() 
       def re(l:List[(K,List[Any])]):Unit = l match {
-        case a::b::ls if ((a._1,b._1) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case (k1,k2) => eq_v(k1,k2) }) => mm += (a._1 -> (a._2 zip b._2).map({ case (v1,v2) => (v1,v2) match { case (d1:Double,d2:Double) => d1+d2 case (l1:Long,l2:Long) => l1+l2 case _ => sys.error("Expected long or double") } })); re(ls)
+        case a::b::ls if ((a._1,b._1) match { case (p1:Product,p2:Product) => 
+          eq_p(p1,p2) case (k1,k2) => eq_v(k1,k2) }) => mm += (a._1 -> (a._2 zip b._2).map({ case (v1,v2) => (v1,v2) match { case (d1:Double,d2:Double) => d1+d2 case (l1:Long,l2:Long) => l1+l2 case _ => sys.error("Expected long or double") } })) 
+          re(ls)
         case a::ls => mm += (a._1 -> a._2); re(ls)
         case Nil =>
       }
@@ -164,7 +167,7 @@ object Helper {
       b1.toMap.foreach { case (k1,v1) =>
         b2.toMap.foreach { case (k2,v2) =>
           if (b1.contains(k1) && b2.contains(k2)) {
-            val (k,v) = ((k1,k2) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case _ => eq_v(k1,k2) }, (v1,v2) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case _ => eq_v(v1,v2) })
+            val (k,v) = ((k1,k2) match { case (p1:Product,p2:Product) => eq_p(p1,p2) case _ => eq_v(k1,k2) }, (v1,v2) match { case (p1:List[Any],p2:List[Any]) => eq_l(p1,p2) case _ => eq_v(v1,v2) })
             if (k) { b1.remove(k1); b2.remove(k2); if (!v) err.append("Bad value: "+k1+" -> "+v1+" (expected "+v2+")\n") }
           }
         }
