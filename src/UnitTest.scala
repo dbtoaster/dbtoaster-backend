@@ -188,12 +188,12 @@ object UnitTest {
       "implicit def strConv(d:Long) = \"\"+d\n"+ // fix for TPCH22
       q.sets.map { case (sz,set) =>
         (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-m0\",\"-d"+sz+"\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
-        set.out.map { case (n,o) => 
-          val (kt,vt) = qt(n); 
+        set.out.map { case (n,o) =>
+          val (kt,vt) = qt(n);
           val qtp = "["+tup(kt.map(_.toScala))+",List[Any]]"
-          val kv = 
-            if (kt.size==0) "" 
-            else { 
+          val kv =
+            if (kt.size==0) ""
+            else {
               val ll=(kt:::vt::Nil).zipWithIndex
               "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",List[Any](v"+ll.last._2+")) }\n" }
           val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else "List[Any]")+"], "+(o match {
@@ -292,9 +292,15 @@ object UnitTest {
   // ---------------------------------------------------------------------------
   // Common helpers
   private val repo = if (path_repo!=null) new File(path_repo) else null
-  val all = if (repo!=null) exec(Array("find","test/unit/queries","-type","f","-and","-not","-path","*/.*"),repo)._1.split("\n").sorted.map(x=>UnitParser(read(repo.getPath+"/"+x)))
-            else if (!new java.io.File(path_examples).exists) { warning("folder '"+path_examples+"' does not exist, tests skipped !"); Array[QueryTest]() }
-            else exec(Array("find",path_examples,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n").sorted.map(f=>QueryTest(f))
+  val all =
+    if (repo!=null) {
+      exec(Array("find","test/unit/queries","-follow","-type","f","-and","-not","-path","*/.*"),repo)._1.split("\n").sorted.map(x=>UnitParser(read(repo.getPath+"/"+x)))
+    }
+    else if (!new java.io.File(path_examples).exists) {
+      warning("folder '"+path_examples+"' does not exist, tests skipped !"); Array[QueryTest]() 
+    }
+    else
+      exec(Array("find",path_examples,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n").sorted.map(f=>QueryTest(f))
   // Helper for other tests
   def sqlFiles(valid:Boolean=true) = { val qs=all.map(q=>q.sql); if (valid) qs.filter(s=> !skip.exists(e=>s.endsWith(e+".sql"))) else qs }
 
