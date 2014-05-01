@@ -425,7 +425,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       ctx.load(); 
       clear+init+"\n"+
       cpsExpr(e,(v:String,t:Type) => {
-        lazy val sop = m.name+"="+(op match { case OpAdd => genOp(m.name,v,"+",TypeMapVal(e.tp),t)._1 case OpSet => v })+";\n"
+        lazy val sop = {
+          val (ope,opt) = (op match { case OpAdd => genOp(m.name,v,"+",TypeMapVal(e.tp),t) case OpSet => (v,t) })
+          m.name+"="+mapval(ope,opt)._1+";\n"
+        }
         ((if (m.keys.size==0) sop else m.name+".add("+tup(m.keys map rnv)+","+mapval(v,t)._1+")")+";\n",TypeUnit)
       },Some(m.keys zip m.tks))._1+"\n"
     case _ => sys.error("Unimplemented") // we leave room for other type of events
