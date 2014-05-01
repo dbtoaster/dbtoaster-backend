@@ -178,11 +178,12 @@ object Helper {
     }
   }
 
-  def loadCSV[K,V](kv:List[Any]=>(K,V),file:String,fmt:String,sep:String=","):Map[K,V] = {
-    val m = new java.util.HashMap[K,V]()
+  def loadCSV[K,V](kv:List[Any]=>(K,List[Any]),file:String,fmt:String,sep:String=","):Map[K,List[Any]] = {
+    val m = new java.util.HashMap[K,List[Any]]()
     def f(e:TupleEvent) = { val (k,v)=kv(e.data); m.put(k,v) }
     val d = Decoder(f,new Adaptor.CSV("REF",fmt,sep),Split())
     val s = SourceMux(Seq((new java.io.FileInputStream(file),d)))
-    s.read; scala.collection.JavaConversions.mapAsScalaMap(m).toMap
+    s.read
+    scala.collection.JavaConversions.mapAsScalaMap(m).toMap
   }
 }
