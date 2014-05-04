@@ -130,6 +130,7 @@ struct dbt_file_source : public source
     typedef stream<file_source> file_stream;
     boost::shared_ptr<file_stream> source_stream;
     boost::shared_ptr<string> buffer;
+    size_t bufferPos;
 	
     dbt_file_source(const string& path, frame_descriptor& f, adaptor_list& a);
 

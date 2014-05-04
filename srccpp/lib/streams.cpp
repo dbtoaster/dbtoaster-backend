@@ -199,14 +199,15 @@ dbt_file_source::dbt_file_source(
 	else
 		cerr << "File not found: " << path << endl;
 	buffer = boost::shared_ptr<string>(new string());
+	bufferPos = 0;
 }
 
 bool dbt_file_source::has_frame() {
 	bool r = false;
 	if ( frame_info.type == fixed_size ) {
-		r = buffer && buffer->size() >= frame_info.size;
+		r = buffer && (buffer->size()-bufferPos) > frame_info.size;
 	} else if ( frame_info.type == delimited ) {
-		r = buffer && (buffer->find(frame_info.delimiter) != string::npos);
+		r = buffer && (buffer->find(frame_info.delimiter, bufferPos) != string::npos);
 	}
 	return r;
 }
@@ -215,16 +216,18 @@ boost::shared_ptr<string> dbt_file_source::frame_from_buffer() {
 	boost::shared_ptr<string> r;
 	if (frame_info.type == fixed_size) {
 		r = boost::shared_ptr<string>(
-				new string(buffer->substr(0,frame_info.size)));
-		buffer = boost::shared_ptr<string>(
-				new string(buffer->substr(frame_info.size, string::npos)));
+				new string(buffer->substr(bufferPos,frame_info.size)));
+		bufferPos += frame_info.size;
+		// buffer = boost::shared_ptr<string>(
+		// 		new string(buffer->substr(frame_info.size, string::npos)));
 	} else if ( frame_info.type == delimited ) {
-		size_t delim_pos = buffer->find(frame_info.delimiter);
-		r = boost::shared_ptr<string>(new string(buffer->substr(0, delim_pos)));
-		buffer = boost::shared_ptr<string>(
-				new string(buffer->substr(
-						delim_pos+frame_info.delimiter.size(),
-						string::npos)));
+		size_t delim_pos = buffer->find(frame_info.delimiter,bufferPos);
+		r = boost::shared_ptr<string>(new string(buffer->substr(bufferPos, delim_pos)));
+		bufferPos = delim_pos+frame_info.delimiter.size();
+		// buffer = boost::shared_ptr<string>(
+		// 		new string(buffer->substr(
+		// 				delim_pos+frame_info.delimiter.size(),
+		// 				string::npos)));
 	}
 	return r;
 }
@@ -232,7 +235,8 @@ boost::shared_ptr<string> dbt_file_source::frame_from_buffer() {
 boost::shared_ptr<string> dbt_file_source::next_frame() {
 	boost::shared_ptr<string> r;
 
-	char buf[((frame_info.size<1024) ? 1024 : frame_info.size)];
+	int frmSize = ((frame_info.size<1024) ? (frame_info.size > 0 ? frame_info.size * 10 : 1024) : frame_info.size);
+	char buf[frmSize];
 
 	if (frame_info.type == fixed_size) {
 		while ( source_stream->good() && !has_frame() ) {
@@ -249,12 +253,12 @@ boost::shared_ptr<string> dbt_file_source::next_frame() {
 		}
 
 		if( !source_stream->good() &&
-				buffer->find(frame_info.delimiter) != 
+				buffer->find(frame_info.delimiter,bufferPos) != 
 				(buffer->size()-frame_info.delimiter.size()) )
 			(*buffer) += frame_info.delimiter;
 
 
-		size_t dd_index = 0;
+		size_t dd_index = bufferPos;
 		string ddelimiter = frame_info.delimiter+frame_info.delimiter;
 		while ( (dd_index = buffer->find(ddelimiter,dd_index)) !=
 				string::npos )

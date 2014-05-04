@@ -234,8 +234,6 @@ void ProgramBase::process_streams() {
 		}
 	}
 
-	trace(run_opts->get_output_file(), false);
-
 #ifdef DBT_PROFILE
 	exec_stats->save_now();
 #endif // DBT_PROFILE
