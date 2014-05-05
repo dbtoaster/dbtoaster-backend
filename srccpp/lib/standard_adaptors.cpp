@@ -111,9 +111,6 @@ void csv_adaptor::validate_schema() {
 		delete[] schema;
 		schema = new char[1];
 		schema[0] = '\0';
-		cout << "failed" << endl;
-	} else {
-		cout << "success" << endl;
 	}
 }
 
@@ -127,12 +124,13 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 	char* date_m_field;
 	char* date_d_field;
 	
-	event_args_t tuple;
+	event_args_t tuple(strlen(schema_it));
+	size_t tupleIdx = 0;
 	bool valid = true;
 
 	// Default to the adaptor's event type, and override with an event
 	// field in the schema.
-	bool insert = type == insert_tuple;\
+	bool insert = type == insert_tuple;
 
 	const char * delim = delimiter.c_str();
     size_t delimSize = delimiter.size();
@@ -145,9 +143,9 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
         // cout << "  handling schema => " << *schema_it << endl;
         switch (*schema_it) {
 			case 'e': ins=atoi(field_start); insert = ins; break;
-			case 'l': l=atol(field_start); tuple.push_back(l); break;
-			case 'f': f=atof(field_start); tuple.push_back(f); break;
-			case 'h': tuple.push_back(static_cast<int>(field_hash(string(field_start))));
+			case 'l': l=atol(field_start); tuple[tupleIdx++]=l; break;
+			case 'f': f=atof(field_start); tuple[tupleIdx++]=f; break;
+			case 'h': tuple[tupleIdx++]=static_cast<int>(field_hash(string(field_start)));
 					  break;
 			case 'd': 
 				date_y_field = strtok (field_start,"-");
@@ -160,7 +158,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 							m = atoi(date_m_field);
 							d = atoi(date_d_field);
 							if ( 0 < m && m < 13 && 0 < d && d <= 31) {
-								tuple.push_back(date(y*10000+m*100+d));
+								tuple[tupleIdx++]=date(y*10000+m*100+d);
 							}
         					// cout << "  date is => " << date(y*10000+m*100+d) << endl;
 						} else valid = false;
@@ -170,7 +168,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 			case 'o':
 				event_order=atoi(field_start);
 				break;
-			case 's': tuple.push_back(string(field_start));   break;
+			case 's': tuple[tupleIdx++]=string(field_start);   break;
 			default: valid = false; break;
 		}
 
