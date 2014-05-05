@@ -41,11 +41,6 @@ namespace dbtoaster {
       // Interpret the schema.
       tuple<bool, bool, unsigned int, event_args_t> interpret_event(const char* schema,
                                                        char* data);
-      // void process(const string& data, boost::shared_ptr<list<event_t> > dest);
-      // void finalize(boost::shared_ptr<list<event_t> > dest);      
-      // bool has_buffered_events();      
-      // void get_buffered_events(boost::shared_ptr<list<event_t> > dest);
-      
     };
   }
 
@@ -109,10 +104,6 @@ namespace dbtoaster {
         bool parse_message(char* data, order_book_message& r);
         void process_message(const order_book_message& msg,
                              boost::shared_ptr<list<event_t> > dest);
-        // void process(const string& data, boost::shared_ptr<list<event_t> > dest);
-        // void finalize(boost::shared_ptr<list<event_t> > dest) {}        
-        // bool has_buffered_events() { return false; }        
-        // void get_buffered_events(boost::shared_ptr<list<event_t> > dest) {}         
       };
     }
   }

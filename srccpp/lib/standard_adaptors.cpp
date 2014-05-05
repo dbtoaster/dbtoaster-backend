@@ -206,51 +206,6 @@ void csv_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eve
 	}
 }
 
-// void csv_adaptor::process(const string& data, boost::shared_ptr<list<event_t> > dest)
-// {
-// 	// Flush any buffered tuple.
-// 	get_buffered_events(dest);
-
-// 	if ( dest && schema != "" ) {
-// 	  // Interpret the schema.
-// 	  unsigned int order_before = current_order;
-// 	  tuple<bool, bool, unsigned int, event_args_t> evt = interpret_event(schema, data);
-// 	  bool valid = get<0>(evt);
-// 	  bool insert = get<1>(evt);
-// 	  unsigned int event_order = get<2>(evt);
-
-// 	  if ( valid )  {
-// 		event_t e(insert? insert_tuple : delete_tuple, id, event_order, get<3>(evt));
-// 		// Buffer on change of order.
-// 		if ( current_order > order_before ) {
-// 		  saved_event = boost::shared_ptr<event_t>(new event_t(e));
-// 		} else {
-// 		  dest->push_back(e);
-// 		}
-// 	  } else {
-// 		cerr << "adaptor could not process " << data << endl;
-// 		cerr << "schema: " << schema << endl;
-// 	  }
-// 	} else if ( runtime_options::verbose() ) {
-// 	   cerr << "Skipping event, no "
-// 			<< (schema == ""? "schema" : "buffer") << " found." << endl;
-// 	}
-// }
-
-// void csv_adaptor::finalize(boost::shared_ptr<list<event_t> > dest) { }
-
-// bool csv_adaptor::has_buffered_events() {
-// 	return (saved_event ? true : false);
-// }
-
-// void csv_adaptor::get_buffered_events(boost::shared_ptr<list<event_t> > dest) {
-// 	// Flush any buffered tuple.
-// 	if ( saved_event ) {
-// 		dest->push_back(*saved_event);
-// 		saved_event = boost::shared_ptr<event_t>();
-// 	}
-// }
-
 }
 
 namespace datasets

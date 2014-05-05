@@ -40,17 +40,6 @@ struct stream_adaptor
     stream_adaptor() {}
 
     virtual void read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) = 0;
-
-    // processes the data, adding all stream events generated to the list.
-    // virtual void process(const string& data,
-    //         shared_ptr<list<event_t> > dest) = 0;
-
-    // virtual void finalize(shared_ptr<list<event_t> > dest) = 0;
-    
-    // virtual bool has_buffered_events() = 0;
-    
-    // virtual void get_buffered_events(shared_ptr<list<event_t> > dest) = 0;
-
 };
 
 // Framing
@@ -80,46 +69,20 @@ struct source
     // Process adaptors in the first stage, accumulating and returning
     // stream events
     virtual void read_source_events(shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) = 0;
-    // bool has_buffered_events() {
-    //     return adaptor.has_buffered_events();
-    // }
 
     virtual void init_source() = 0;
-    // virtual bool has_inputs() = 0;
-    // virtual shared_ptr<list<event_t> > next_inputs() = 0;
 };
 
 struct dbt_file_source : public source
 {
     typedef std::ifstream file_stream;
     shared_ptr<file_stream> source_stream;
-    // shared_ptr<string> buffer;
-	
+
     dbt_file_source(const string& path, frame_descriptor& f, shared_ptr<stream_adaptor> a);
 
     void read_source_events(shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue);
 
     void init_source() {}
-
-    // bool has_inputs() { 
-    //     return has_frame_inputs() || has_buffered_events(); 
-    // }
-    
-    // bool has_frame_inputs() {
-    //     return has_frame() || (source_stream && source_stream->good());
-    // }
-
-    // bool has_frame();
-
-    // shared_ptr<string> frame_from_buffer();
-    // shared_ptr<string> next_frame();
-
-    // // Finalize all adaptors, accumulating stream events.
-    // void finalize_adaptor(shared_ptr<list<event_t> >& r);
-
-    // // Get buffered events from all adaptors
-    // void collect_buffered_events(shared_ptr<list<event_t> >& r);
-    // shared_ptr<list<event_t> > next_inputs();
 };
 
 struct source_multiplexer
@@ -137,9 +100,6 @@ struct source_multiplexer
     void remove_source(shared_ptr<source> s);
 
     void init_source();
-    // void process_events(ProgramBase* p, bool process_tabl);
-    // bool has_inputs();
-    // shared_ptr<list<event_t> > next_inputs();
 };
 
 }

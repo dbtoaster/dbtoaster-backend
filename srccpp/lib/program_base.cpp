@@ -220,70 +220,52 @@ ProgramBase::ProgramBase(int argc, char* argv[]) :
 }
 
 void ProgramBase::process_streams() {
-// cout << "process_streams" << std::endl;
-// 	while( stream_multiplexer.has_inputs() ) {
-// 		boost::shared_ptr<std::list<event_t> > events = 
-// 				stream_multiplexer.next_inputs();
-
-// 		if( !events )   continue;
-
-// 		std::list<event_t>::iterator ev_it = events->begin();
-// 		for( ; ev_it != events->end(); ev_it++)
-// 		{
-// 			process_stream_event(&(*ev_it));
-// 		}
-// 	}
-
-// 	trace(run_opts->get_output_file(), false);
-
-// #ifdef DBT_PROFILE
-// 	exec_stats->save_now();
-// #endif // DBT_PROFILE
 	// cerr << "  s process list" << std::endl;
-	while(!stream_multiplexer.eventList->empty()) {
-		process_event(stream_multiplexer.eventList->front(), false);
-		stream_multiplexer.eventList->pop_front();
+	std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
+	std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
+	for(;it != it_end; ++it) {
+		process_event(*it,false);
 	}
 	// cerr << "  s process queue" << std::endl;
 	if(!stream_multiplexer.eventQue->empty()) {
+		it = stream_multiplexer.eventQue->begin();
+		it_end = stream_multiplexer.eventQue->end();
 		stream_multiplexer.eventQue->sort(compare_event_timestamp_order);
-		do {
-			process_event(stream_multiplexer.eventQue->front(), false);
-			stream_multiplexer.eventQue->pop_front();
-		} while (!stream_multiplexer.eventQue->empty());
+		for(;it != it_end; ++it) {
+			process_event(*it,false);
+		}
 	}
+	// XXX memory leak
+	// but if we assume that program finishes at this point
+	// we can ignore it
+	// stream_multiplexer.eventList->clear();
+	// stream_multiplexer.eventQue->clear();
 #ifdef DBT_PROFILE
 	exec_stats->save_now();
 #endif // DBT_PROFILE
 }
 
 void ProgramBase::process_tables() {
-// cout << "process_tables" << std::endl;
-	// while( table_multiplexer.has_inputs() ) {
-	// 	boost::shared_ptr<std::list<event_t> > events = 
-	// 			table_multiplexer.next_inputs();
-
-	// 	if( !events )   continue;
-
-	// 	std::list<event_t>::iterator ev_it = events->begin();
-	// 	for( ; ev_it != events->end(); ev_it++)
-	// 	{
-	// 		process_event(&(*ev_it), true);
-	// 	}
-	// }
 	// cerr << "  t process list" << std::endl;
-	while(!table_multiplexer.eventList->empty()) {
-		process_event(table_multiplexer.eventList->front(),true);
-		table_multiplexer.eventList->pop_front();
+	std::list<event_t>::iterator it = table_multiplexer.eventList->begin();
+	std::list<event_t>::iterator it_end = table_multiplexer.eventList->end();
+	for(;it != it_end; ++it) {
+		process_event(*it,true);
 	}
 	// cerr << "  t process queue" << std::endl;
 	if(!table_multiplexer.eventQue->empty()) {
+		it = table_multiplexer.eventQue->begin();
+		it_end = table_multiplexer.eventQue->end();
 		table_multiplexer.eventQue->sort(compare_event_timestamp_order);
-		do {
-			process_event(table_multiplexer.eventQue->front(),true);
-			table_multiplexer.eventQue->pop_front();
-		} while (!table_multiplexer.eventQue->empty());
+		for(;it != it_end; ++it) {
+			process_event(*it,true);
+		}
 	}
+	// XXX memory leak
+	// but if we assume that program finishes at this point
+	// we can ignore it
+	// table_multiplexer.eventList->clear();
+	// table_multiplexer.eventQue->clear();
 }
 
 void ProgramBase::set_log_count_every(
