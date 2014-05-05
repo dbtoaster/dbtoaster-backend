@@ -253,8 +253,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         case _ => 
           val tp = TypeMapVal(e.tp)
           ctx.add(n,(tp,fresh("l")))
-          val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
-          cpsExpr(e,(v:String,t:Type) => ("val "+rn(n)._1+" = "+mapval(v,t)._1+";\n"+cov,cot),am)
+          cpsExpr(e,(v:String,t:Type) => {
+            val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
+            ("val "+rn(n)._1+" = "+mapval(v,t)._1+";\n"+cov,cot)
+          },am)
       }
     case Lift(ns,e) =>
       val tps = e.tp match { case TypeTuple(ts) => ts case _ => sys.error("Expected tuple type") } 
