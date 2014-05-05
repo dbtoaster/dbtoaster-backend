@@ -16,14 +16,23 @@ Seq(
   resourceDirectory in Compile <<= baseDirectory / "conf"
 )
 
+resolvers += "Sonatype OSS Snapshots" at
+  "https://oss.sonatype.org/content/repositories/snapshots"
+
 // --------- Dependencies
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.3",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.3",
   "org.scala-lang"     % "scala-actors"   % scalaVersion.value, // to compile legacy Scala
   "org.scala-lang"     % "scala-compiler" % scalaVersion.value,
-  "org.scalatest"     %% "scalatest"      % "2.0" % "test"
+  "org.scalatest"     %% "scalatest"      % "2.0" % "test",
+  "com.github.axel22" %% "scalameter" % "0.4"
 )
+
+testFrameworks += new TestFramework(
+  "org.scalameter.ScalaMeterFramework")
+
+logBuffered := false
 
 // --------- Compilation options
 Seq(

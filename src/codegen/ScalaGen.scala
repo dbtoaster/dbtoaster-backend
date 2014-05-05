@@ -155,10 +155,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
         iv 
     }
     val ct = try {
-      op match { 
-        case "*" => Type.tpMul(tl,tr) 
+      op match {
+        case "*" => Type.tpMul(tl,tr)
         case "+" => Type.tpAdd(tl,tr)
-        case _ => Type.tpRes(tl,tr,op) 
+        case _ => Type.tpRes(tl,tr,op)
       }
     } catch { case _:Throwable => sys.error("Could not find common type of "+rvl+op+rvr) }    
     val vl = castIfNeeded(rvl,tl,ct)
@@ -370,7 +370,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
           val s2 = cpsExpr(er,(v:String,t:Type)=> (a0+".add("+tup(ks map rnv)+","+v+");\n",TypeUnit),tmp)._1
           ctx.load(cur)
           val (r,rt) = cpsExpr(mapRef(a0,ex.tp,a.agg),co)
-          (genVar(a0,ex.tp,a.agg.map(_._2))+s1+"\n"+s2+r,rt)
+          (genVar(a0,ex.tp,a.agg.map(_._2))+"\n"+s1+"\n"+s2+"\n"+r,rt)
       }
     case a@AggSum(ks,e) =>
       // aggregation keys as (name,type)
