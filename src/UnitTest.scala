@@ -33,7 +33,7 @@ object UnitTest {
   var warmup = 2        // number of warm-up transients to remove
   var timeout = 0L      // test duration timeout (milliseconds)
   var verify = false    // enforce correctness verification in benchmark
-  var parallel = 0      // parallel streams mode
+  var parallel = 2      // parallel streams mode
   var zeus = false      // zeus mode
   var seed = 0          // zeus seed
   var modes = List[String]() // selected modes
