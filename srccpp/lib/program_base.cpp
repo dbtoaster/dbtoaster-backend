@@ -220,7 +220,7 @@ ProgramBase::ProgramBase(int argc, char* argv[]) :
 }
 
 void ProgramBase::process_streams() {
-cerr << "process_streams" << std::endl;
+// cout << "process_streams" << std::endl;
 // 	while( stream_multiplexer.has_inputs() ) {
 // 		boost::shared_ptr<std::list<event_t> > events = 
 // 				stream_multiplexer.next_inputs();
@@ -241,13 +241,16 @@ cerr << "process_streams" << std::endl;
 // #endif // DBT_PROFILE
 	// cerr << "  s process list" << std::endl;
 	while(!stream_multiplexer.eventList->empty()) {
-		process_stream_event(stream_multiplexer.eventList->front());
+		process_event(stream_multiplexer.eventList->front(), false);
 		stream_multiplexer.eventList->pop_front();
 	}
 	// cerr << "  s process queue" << std::endl;
-	while (!stream_multiplexer.eventQue->empty()) {
-		process_stream_event(stream_multiplexer.eventQue->top());
-		stream_multiplexer.eventQue->pop();
+	if(!stream_multiplexer.eventQue->empty()) {
+		stream_multiplexer.eventQue->sort(compare_event_timestamp_order);
+		do {
+			process_event(stream_multiplexer.eventQue->front(), false);
+			stream_multiplexer.eventQue->pop_front();
+		} while (!stream_multiplexer.eventQue->empty());
 	}
 #ifdef DBT_PROFILE
 	exec_stats->save_now();
@@ -255,7 +258,7 @@ cerr << "process_streams" << std::endl;
 }
 
 void ProgramBase::process_tables() {
-cerr << "process_tables" << std::endl;
+// cout << "process_tables" << std::endl;
 	// while( table_multiplexer.has_inputs() ) {
 	// 	boost::shared_ptr<std::list<event_t> > events = 
 	// 			table_multiplexer.next_inputs();
@@ -274,9 +277,12 @@ cerr << "process_tables" << std::endl;
 		table_multiplexer.eventList->pop_front();
 	}
 	// cerr << "  t process queue" << std::endl;
-	while (!table_multiplexer.eventQue->empty()) {
-		process_event(table_multiplexer.eventQue->top(),true);
-		table_multiplexer.eventQue->pop();
+	if(!table_multiplexer.eventQue->empty()) {
+		table_multiplexer.eventQue->sort(compare_event_timestamp_order);
+		do {
+			process_event(table_multiplexer.eventQue->front(),true);
+			table_multiplexer.eventQue->pop_front();
+		} while (!table_multiplexer.eventQue->empty());
 	}
 }
 

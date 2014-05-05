@@ -8,7 +8,7 @@
 
 using namespace boost::filesystem;
 using namespace boost::lambda;
-
+// #include <time.h>
 
 using namespace ::dbtoaster::runtime;
 
@@ -73,9 +73,11 @@ dbt_file_source::dbt_file_source(
 	// buffer = boost::shared_ptr<std::string>(new std::string());
 }
 
-void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > eventQue) {
+void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) {
 	//read the whole file
 	// string buffer;
+	// clock_t tStart = clock();
+
 	source_stream->seekg(0, std::ios::end);
 	size_t bufferLength = source_stream->tellg();
 	char* buffer = new char[bufferLength+1];
@@ -83,6 +85,9 @@ void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, s
 	source_stream->seekg(0, std::ios::beg);
 	source_stream->read(buffer,bufferLength);
 	source_stream->close();
+    // printf("Time taken to read input file: %.2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
+    
+	// tStart = clock();
 
 	char* start_event_pos = buffer;
 	char* end_event_pos = buffer;
@@ -132,6 +137,7 @@ void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, s
 	else {
 		cerr << "invalid frame type" << endl;
 	}
+    // printf("Time taken to parse input: %.2fs\n", (double)(clock() - tStart)/CLOCKS_PER_SEC);
 	delete[] buffer;
 }
 // bool dbt_file_source::has_frame() {
@@ -264,7 +270,7 @@ source_multiplexer::source_multiplexer(int seed, int st)
 {
 	srandom(seed);
 	eventList = boost::shared_ptr<list<event_t> >(new list<event_t>());
-	eventQue = shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> >(new priority_queue<event_t, deque<event_t>, event_timestamp_order>());
+	eventQue = shared_ptr<list<event_t> >(new list<event_t>());
 }
 
 source_multiplexer::source_multiplexer(int seed, int st, 

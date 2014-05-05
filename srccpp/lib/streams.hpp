@@ -34,11 +34,12 @@ std::ostream& operator<<(std::ostream &strm, const vector<boost::any> &args);
 namespace streams {
 
 // Adaptor and stream interfaces.
+
 struct stream_adaptor
 {
     stream_adaptor() {}
 
-    virtual void read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > eventQue) = 0;
+    virtual void read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) = 0;
 
     // processes the data, adding all stream events generated to the list.
     // virtual void process(const string& data,
@@ -78,7 +79,7 @@ struct source
     
     // Process adaptors in the first stage, accumulating and returning
     // stream events
-    virtual void read_source_events(shared_ptr<list<event_t> > eventList, shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > eventQue) = 0;
+    virtual void read_source_events(shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) = 0;
     // bool has_buffered_events() {
     //     return adaptor.has_buffered_events();
     // }
@@ -96,7 +97,7 @@ struct dbt_file_source : public source
 	
     dbt_file_source(const string& path, frame_descriptor& f, shared_ptr<stream_adaptor> a);
 
-    void read_source_events(shared_ptr<list<event_t> > eventList, shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > eventQue);
+    void read_source_events(shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue);
 
     void init_source() {}
 
@@ -127,7 +128,7 @@ struct source_multiplexer
     shared_ptr<source> current;
     int step, remaining, block;
     shared_ptr<list<event_t> > eventList;
-    shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > eventQue;
+    shared_ptr<list<event_t> > eventQue;
 
     source_multiplexer(int seed, int st);
     source_multiplexer(int seed, int st, set<shared_ptr<source> >& s);

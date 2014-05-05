@@ -15,12 +15,17 @@ namespace adaptors {
 ******************************************************************************/
 
 csv_adaptor::csv_adaptor(relation_id_t _id) 
-		: id(_id), type(insert_tuple), schema(""), delimiter(",") 
-{}
+		: id(_id), type(insert_tuple), delimiter(",") 
+{
+	schema = new char[1];
+	schema[0] = '\0';
+}
 
 csv_adaptor::csv_adaptor(relation_id_t _id, string sch)
-		: id(_id), type(insert_tuple), schema(sch), delimiter(",")
+		: id(_id), type(insert_tuple), delimiter(",")
 {
+	schema = new char[sch.size()+1];
+	std::copy(sch.begin(), sch.end(), schema);
 	validate_schema();
 }
 
@@ -43,7 +48,7 @@ void csv_adaptor::parse_params(int num_params,
 		cerr << "csv params: " << k << ": " << v << endl;
 
 	  if ( k == "delimiter" ) {
-		delimiter = v;
+		delimiter = (char*)(v.c_str());
 	  } else if ( k == "schema" ) {
 		param_schema = v;
 	  } else if ( k == "eventtype" ) {
@@ -54,7 +59,10 @@ void csv_adaptor::parse_params(int num_params,
 	  // TODO: handle parameterized events, via 'triggers' key as seen
 	  // in OCaml adaptors.
 	}
-	schema = parse_schema(param_schema_prefix + param_schema);
+	param_schema.assign(parse_schema(param_schema_prefix + param_schema));
+	schema = new char[param_schema.size()+1];
+	std::copy(param_schema.begin(), param_schema.end(), schema);
+	schema[param_schema.size()] = '\0';
 }
 
 string csv_adaptor::parse_schema(string s)
@@ -81,13 +89,13 @@ string csv_adaptor::parse_schema(string s)
 		break;
 	  }
 	}
-	return r;
+	return (char*)(r.c_str());
 }
 
 void csv_adaptor::validate_schema() {
 	bool valid = true;
-	string::iterator it = schema.begin();
-	for (; valid && it != schema.end(); ++it) {
+	char* it = schema;
+	for (; valid && ((*it) != '\0'); ++it) {
 	  switch(*it) {
 		case 'e':  // event type
 		case 'o':  // order field type
@@ -99,12 +107,19 @@ void csv_adaptor::validate_schema() {
 		default: valid = false; break;
 	  }
 	}
-	if ( !valid ) schema = "";
+	if ( !valid ) {
+		delete[] schema;
+		schema = new char[1];
+		schema[0] = '\0';
+		cout << "failed" << endl;
+	} else {
+		cout << "success" << endl;
+	}
 }
 
 // Interpret the schema.
 tuple<bool, bool, unsigned int, event_args_t> 
-csv_adaptor::interpret_event(const string& schema, char* data)
+csv_adaptor::interpret_event(const char* schema_it, char* data)
 {
 	boost::hash<std::string> field_hash;
 	bool ins; unsigned int event_order=0; int y,m,d; double f; long l;
@@ -113,7 +128,6 @@ csv_adaptor::interpret_event(const string& schema, char* data)
 	char* date_d_field;
 	
 	event_args_t tuple;
-	const char* schema_it = schema.c_str();
 	bool valid = true;
 
 	// Default to the adaptor's event type, and override with an event
@@ -170,8 +184,8 @@ csv_adaptor::interpret_event(const string& schema, char* data)
 	return make_tuple(valid, insert, event_order, tuple);
 }
 
-void csv_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > eventQue) {
-	if ( schema != "" ) {
+void csv_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) {
+	if ( (*schema) != '\0' ) {
 	  // Interpret the schema.
 	  tuple<bool, bool, unsigned int, event_args_t> evt = interpret_event(schema, data);
 	  bool valid = get<0>(evt);
@@ -182,7 +196,7 @@ void csv_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eve
 		if(e.event_order == 0) {
 			eventList->push_back(e);
 		} else {
-			eventQue->push(e);
+			eventQue->push_back(e);
 		}
 	  } else {
 		cerr << "adaptor could not process " << data << endl;
@@ -190,7 +204,7 @@ void csv_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eve
 	  }
 	} else if ( runtime_options::verbose() ) {
 		cerr << "Skipping event, no "
-			<< (schema == ""? "schema" : "buffer") << " found." << endl;
+			<< ((*schema) == '\0'? "schema" : "buffer") << " found." << endl;
 	}
 }
 
@@ -371,7 +385,7 @@ bool order_book_adaptor::parse_message(char* data, order_book_message& r) {
 }
 
 void order_book_adaptor::process_message(const order_book_message& msg,
-					 shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > dest)
+					 shared_ptr<list<event_t> > dest)
 {
 	bool valid = true;
 	order_book_tuple r(msg);
@@ -425,7 +439,7 @@ void order_book_adaptor::process_message(const order_book_message& msg,
 		event_args_t fields(5);
 		x(fields);
 		event_t y(delete_tuple, rel_id, event_order-1, fields);
-		dest->push(y);
+		dest->push_back(y);
 	  }
 	  t = insert_tuple;
 	}
@@ -466,12 +480,12 @@ void order_book_adaptor::process_message(const order_book_message& msg,
 	  r(fields);
 	  if ( !(t == delete_tuple && insert_only) ) {
 		event_t e(t, rel_id, event_order, fields);
-		dest->push(e);
+		dest->push_back(e);
 	  }
 	}
 }
 
-void order_book_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > eventQue) {
+void order_book_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) {
 	// Grab a message from the data.
 	order_book_message r;
 	bool valid = parse_message(data, r);

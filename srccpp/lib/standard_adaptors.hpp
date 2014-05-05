@@ -22,7 +22,7 @@ namespace dbtoaster {
     {
       relation_id_t id;
       event_type type;
-      string schema;
+      char* schema;
       string delimiter;
       
       boost::shared_ptr<event_t> saved_event;
@@ -33,13 +33,13 @@ namespace dbtoaster {
                   const pair<string,string> params[]);
 
 
-      void read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > eventQue);
+      void read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue);
       void parse_params(int num_params, const pair<string, string> params[]);
       virtual string parse_schema(string s);
       void validate_schema();
 
       // Interpret the schema.
-      tuple<bool, bool, unsigned int, event_args_t> interpret_event(const string& schema,
+      tuple<bool, bool, unsigned int, event_args_t> interpret_event(const char* schema,
                                                        char* data);
       // void process(const string& data, boost::shared_ptr<list<event_t> > dest);
       // void finalize(boost::shared_ptr<list<event_t> > dest);      
@@ -102,13 +102,13 @@ namespace dbtoaster {
         order_book_adaptor(relation_id_t bids_rel_sid, relation_id_t asks_rel_sid, int num_params,
                            pair<string, string> params[]);
 
-        void read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > eventQue);						   
+        void read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue);						   
         bool parse_error(const char* data, int field);
 
         // Expected message format: t, id, action, volume, price
         bool parse_message(char* data, order_book_message& r);
         void process_message(const order_book_message& msg,
-                             boost::shared_ptr<priority_queue<event_t, deque<event_t>, event_timestamp_order> > dest);
+                             boost::shared_ptr<list<event_t> > dest);
         // void process(const string& data, boost::shared_ptr<list<event_t> > dest);
         // void finalize(boost::shared_ptr<list<event_t> > dest) {}        
         // bool has_buffered_events() { return false; }        
