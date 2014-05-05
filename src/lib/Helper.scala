@@ -26,11 +26,11 @@ object Helper {
   // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
   private type Streams = Seq[(InputStream,Adaptor,Split)]
   @inline private def askWait[T](actor:ActorRef,msg:Any,timeout:Long=0L) = {
-    val to=akka.util.Timeout(if (timeout<=0) (1L<<42) /*139 years*/ else timeout+200000)
+    val to=akka.util.Timeout(if (timeout<=0) (1L << 42) /*139 years*/ else timeout+200000)
     scala.concurrent.Await.result(akka.pattern.ask(actor,msg)(to), to.duration).asInstanceOf[T]
   }
   def mux(actor:ActorRef,streams:Streams,parallel:Int=0,timeout:Long=0L) = {
-    val mux = SourceMux(streams.map {case (in,ad,sp) => (in,Decoder((ev:TupleEvent)=>{ actor ! ev },ad,sp))},parallel)
+    val mux = SourceMux((ev:TupleEvent)=>{ actor ! ev },streams.map {case (in,ad,sp) => (in,ad,sp)},parallel)
     actor ! StreamInit(timeout); mux.read(); askWait[(StreamStat,List[Any])](actor,EndOfStream,timeout)
   }
 
@@ -99,12 +99,12 @@ object Helper {
     val timeout = ad("-t",0L,x=>x.toLong)
     val parallel = ad("-p",2,x=>x.toInt)
     var ds = args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
-    if (mode<0) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
+    if (mode < 0) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
     ds.foreach { d=> var i=0; var res0:List[Any]=null
-      while (i<num) { i+=1;
+      while (i < num) { i+=1;
         val (t,res)=run(d,parallel,timeout); if (t.skip==0) { if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); }
         if (mode==1) println("SAMPLE="+d+","+(t.ns/1000)+","+t.count+","+t.skip)
-        if (mode<0) println("Time: "+t)
+        if (mode < 0) println("Time: "+t)
       }
       if (mode!=1 && res0!=null && op!=null) op(res0)
     }

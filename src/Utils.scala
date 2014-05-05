@@ -121,7 +121,7 @@ object Utils {
   def freshClear() = counter.clear
 
   // Create a temporary directory that will be removed at shutdown
-  def makeTempDir(path:String=null,auto_delete:Boolean=true):File = {
+  def makeTempDir(path:String=null,auto_delete:Boolean=false):File = {
     val tmp = if (path!=null) new File(path) else new File("target/tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
     def del(f:File) {
       if (f.isDirectory()) f.listFiles().foreach{c=>del(c)}

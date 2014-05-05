@@ -283,7 +283,7 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
         "  System.out.println(\"Timers Info => {\\n%s\\n%s}\".format(Store.printTimersInfo,Store.printTimersInfoCSV))\n"+
         "}"
     } else "def printMapsInfo() = {}"
-    val r=ms+"\n"+ts+"\n"+ds+"\n"+printInfoDef
+    val r=ds+"\n"+ms+"\n"+ts+"\n"+printInfoDef
     (r,str,ld0,consts)
   }
 
