@@ -132,7 +132,7 @@ public:
         bool log_event_type;
 
         logger_t(const path& fp, bool ln = false, bool le = false);
-        void log(string& relation_name, event_t& evt);
+        void log(string& relation_name, const event_t& evt);
     };
 
     struct trigger_t {
@@ -142,7 +142,7 @@ public:
 
         trigger_t(string r_name, event_type ev_type, trigger_fn_t t_fn,
                     boost::shared_ptr<logger_t> t_logger);
-        void log(string& relation_name, event_t& evt);
+        void log(string& relation_name, const event_t& evt);
     };
 
     struct relation_t {
@@ -192,8 +192,8 @@ public:
 protected:
 	void set_log_count_every(unsigned int _log_count_every);
 	
-    void process_event(event_t* _evt, bool process_table);
-    void process_stream_event(event_t* _evt);
+    void process_event(const event_t& evt, bool process_table);
+    void process_stream_event(const event_t& evt);
 	
 	
     boost::shared_ptr<runtime::runtime_options> run_opts;

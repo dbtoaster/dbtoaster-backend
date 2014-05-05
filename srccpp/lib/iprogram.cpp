@@ -50,7 +50,7 @@ IProgram::snapshot_t IProgram::get_snapshot()
  * call their base class variants.
  * @param ev The event being processed.
  */
-void IProgram::process_stream_event(event_t* ev)
+void IProgram::process_stream_event(const event_t& ev)
 {
 	process_snapshot();
 }  

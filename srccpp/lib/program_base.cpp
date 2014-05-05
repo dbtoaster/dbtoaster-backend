@@ -30,7 +30,7 @@ ProgramBase::logger_t::logger_t(const path& fp, bool ln, bool le) :
 	}
 }
 
-void ProgramBase::logger_t::log(string& relation_name, event_t& evt) {
+void ProgramBase::logger_t::log(string& relation_name, const event_t& evt) {
 	if (!log_stream)
 		return;
 
@@ -62,7 +62,7 @@ ProgramBase::trigger_t::trigger_t(
 
 void ProgramBase::trigger_t::trigger_t::log(
 			string& relation_name, 
-			event_t& evt) {
+			const event_t& evt) {
 	if (!logger)
 		return;
 	logger->log(relation_name, evt);
@@ -220,37 +220,63 @@ ProgramBase::ProgramBase(int argc, char* argv[]) :
 }
 
 void ProgramBase::process_streams() {
+cerr << "process_streams" << std::endl;
+// 	while( stream_multiplexer.has_inputs() ) {
+// 		boost::shared_ptr<std::list<event_t> > events = 
+// 				stream_multiplexer.next_inputs();
 
-	while( stream_multiplexer.has_inputs() ) {
-		boost::shared_ptr<std::list<event_t> > events = 
-				stream_multiplexer.next_inputs();
+// 		if( !events )   continue;
 
-		if( !events )   continue;
+// 		std::list<event_t>::iterator ev_it = events->begin();
+// 		for( ; ev_it != events->end(); ev_it++)
+// 		{
+// 			process_stream_event(&(*ev_it));
+// 		}
+// 	}
 
-		std::list<event_t>::iterator ev_it = events->begin();
-		for( ; ev_it != events->end(); ev_it++)
-		{
-			process_stream_event(&(*ev_it));
-		}
+// 	trace(run_opts->get_output_file(), false);
+
+// #ifdef DBT_PROFILE
+// 	exec_stats->save_now();
+// #endif // DBT_PROFILE
+	// cerr << "  s process list" << std::endl;
+	while(!stream_multiplexer.eventList->empty()) {
+		process_stream_event(stream_multiplexer.eventList->front());
+		stream_multiplexer.eventList->pop_front();
 	}
-
+	// cerr << "  s process queue" << std::endl;
+	while (!stream_multiplexer.eventQue->empty()) {
+		process_stream_event(stream_multiplexer.eventQue->top());
+		stream_multiplexer.eventQue->pop();
+	}
 #ifdef DBT_PROFILE
 	exec_stats->save_now();
 #endif // DBT_PROFILE
 }
 
 void ProgramBase::process_tables() {
-	while( table_multiplexer.has_inputs() ) {
-		boost::shared_ptr<std::list<event_t> > events = 
-				table_multiplexer.next_inputs();
+cerr << "process_tables" << std::endl;
+	// while( table_multiplexer.has_inputs() ) {
+	// 	boost::shared_ptr<std::list<event_t> > events = 
+	// 			table_multiplexer.next_inputs();
 
-		if( !events )   continue;
+	// 	if( !events )   continue;
 
-		std::list<event_t>::iterator ev_it = events->begin();
-		for( ; ev_it != events->end(); ev_it++)
-		{
-			process_event(&(*ev_it), true);
-		}
+	// 	std::list<event_t>::iterator ev_it = events->begin();
+	// 	for( ; ev_it != events->end(); ev_it++)
+	// 	{
+	// 		process_event(&(*ev_it), true);
+	// 	}
+	// }
+	// cerr << "  t process list" << std::endl;
+	while(!table_multiplexer.eventList->empty()) {
+		process_event(table_multiplexer.eventList->front(),true);
+		table_multiplexer.eventList->pop_front();
+	}
+	// cerr << "  t process queue" << std::endl;
+	while (!table_multiplexer.eventQue->empty()) {
+		process_event(table_multiplexer.eventQue->top(),true);
+		table_multiplexer.eventQue->pop();
 	}
 }
 
@@ -259,9 +285,8 @@ void ProgramBase::set_log_count_every(
 	log_count_every = _log_count_every;
 }
 
-void ProgramBase::process_event(event_t* _evt, bool process_table) {
-	event_t& evt(*_evt);
-	
+void ProgramBase::process_event(const event_t& evt, bool process_table) {
+	// cerr << "    event_order=" << evt.event_order << ", rel_id=" << get_relation_name(evt.id) << std::endl;
 	map<relation_id_t, 
 				 boost::shared_ptr<ProgramBase::relation_t> >::iterator r_it =
 			relations_by_id.find(evt.id);
@@ -289,7 +314,7 @@ void ProgramBase::process_event(event_t* _evt, bool process_table) {
 	}
 }
 
-void ProgramBase::process_stream_event(event_t* _evt) {
+void ProgramBase::process_stream_event(const event_t& _evt) {
 	#ifdef DBT_TRACE
 	trace(cout, false);
 	#else
@@ -307,7 +332,7 @@ void ProgramBase::process_stream_event(event_t* _evt) {
 	}
 	tuple_count += 1;
 
-	IProgram::process_stream_event(_evt);
+	// IProgram::process_stream_event(_evt);
 }
 
 void ProgramBase::trace(const path& trace_file, bool debug) {

@@ -80,7 +80,7 @@ object UnitTest {
         e("Benchmarking options:")
         e("  -x            enable benchmarks (compile and execute)")
         e("  -v            verification against reference result") // consistency verification is always enabled
-        e("  -p <mode>     parallel streams (0=off, 1=thread, 2=deterministic)")
+        // e("  -p <mode>     parallel streams (0=off, 1=thread, 2=deterministic)")
         e("  -s <n>        number of samples to take (default: 10)")
         e("  -w <n>        number of warm-up transients (default: 0)")
         e("  -t <ms>       test duration timeout (in ms, default: 0)")

@@ -3,12 +3,11 @@ namespace dbtoaster{
     class CustomProgram_1 : public Program
     {
     public:
-        void process_stream_event(event_t* _ev) {
-			event_t& ev(*_ev);
+        void process_stream_event(const event_t& ev) {
             cout << "on_" << dbtoaster::event_name[ev.type] << "_";
             cout << get_relation_name(ev.id) << "(" << ev.data << ")" << endl;
 
-            Program::process_stream_event(_ev);
+            Program::process_stream_event(ev);
         }
     };
 
@@ -20,9 +19,9 @@ namespace dbtoaster{
                 event_args_t ev_args;
                 ev_args.push_back(i);
                 ev_args.push_back(i+10);
-                event_t ev( insert_tuple, get_relation_id("S"), ev_args);
+                event_t ev( insert_tuple, get_relation_id("S"), 0, ev_args);
 
-                process_stream_event(&ev);
+                process_stream_event(ev);
             }
         }
     };

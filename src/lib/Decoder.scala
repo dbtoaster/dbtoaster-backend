@@ -1,5 +1,6 @@
 package ddbt.lib
 import Messages._
+import scala.collection.mutable.PriorityQueue
 
 /**
  * These class helps creating a stream of events from a record data.
@@ -101,19 +102,20 @@ object Adaptor {
       }
       case _ => (c:String) => c
     }
-    val ev : Array[String] => (TupleOp,Array[String]) = action.toLowerCase match {
-      case "insert" => (rec:Array[String]) => (TupleInsert,rec)
-      case "delete" => (rec:Array[String]) => (TupleDelete,rec)
-      case _        => (rec:Array[String]) => (if (rec(1)=="1") TupleInsert else TupleDelete, rec.drop(2)) // tx=java.lang.Long.parseLong(rec(0))
+    val ev : Array[String] => (Int,TupleOp,Array[String]) = action.toLowerCase match {
+      case "insert" => (rec:Array[String]) => (0,TupleInsert,rec)
+      case "delete" => (rec:Array[String]) => (0,TupleDelete,rec)
+      case _        => (rec:Array[String]) => (java.lang.Integer.parseInt(rec(0)),if (rec(1)=="1") TupleInsert else TupleDelete, rec.drop(2)) // tx=java.lang.Long.parseLong(rec(0))
     }
     def apply(data:Array[Byte],off:Int,len:Int): List[TupleEvent] = {
-      val (op:TupleOp,rec:Array[String]) = ev(new String(data,off,len,"UTF-8").split(delimiter))
-      List(TupleEvent(op,name,rec.zipWithIndex.map{ case(x,i) => tfs(i)(x) }.toList))
+      val (ord:Int,op:TupleOp,rec:Array[String]) = ev(new String(data,off,len,"UTF-8").split(delimiter))
+      // java.lang.System.err.println("%5d - %10s => ".format(ord,name)+ new String(data,off,len,"UTF-8"))
+      List(TupleEvent(ord,op,name,rec.zipWithIndex.map{ case(x,i) => tfs(i)(x) }.toList))
     }
   }
 
   class OrderBook(brokers:Int=10,bids:String="BIDS",asks:String="ASKS",deterministic:Boolean=true) extends Adaptor {
-    case class BookRow(t:Long, id:Long, brokerId:Long, volume:Double, price:Double) {
+    case class BookRow(t:Int, id:Long, brokerId:Long, volume:Double, price:Double) {
       def pack = List[Any](t.toDouble, id, brokerId, volume, price) // XXX: t as Double is a legacy from DBToaster
     }
     type Hist = java.util.HashMap[Long,BookRow]
@@ -122,15 +124,16 @@ object Adaptor {
 
     def apply(data:Array[Byte],off:Int,len:Int): List[TupleEvent] = {
       val col = new String(data,off,len,"UTF-8").split(",")
-      val t = java.lang.Long.parseLong(col(0))
+      val t = java.lang.Integer.parseInt(col(0)) //order or timestamp
+      // java.lang.System.err.println("%5d => ".format(t)+ new String(data,off,len,"UTF-8"))
       val id = java.lang.Long.parseLong(col(1))
       val volume = java.lang.Double.parseDouble(col(3))
       val price = java.lang.Double.parseDouble(col(4))
       def red(h:Hist,rel:String) = { val x=h.remove(id)
         if (x==null) Nil else { val nv = x.volume-volume
-          TupleEvent(TupleDelete, rel, x.pack) :: (if (nv <= 0.0) Nil else {
+          TupleEvent(t,TupleDelete, rel, x.pack) :: (if (nv <= 0.0) Nil else {
             val r = BookRow(x.t, id, x.brokerId, nv, x.price); h.put(id,r)
-            List(TupleEvent(TupleInsert, rel, r.pack))
+            List(TupleEvent(t,TupleInsert, rel, r.pack))
           })
         }
       }
@@ -138,16 +141,16 @@ object Adaptor {
         case "B" if (bids!=null) => // place bid
           val brokerId = (if (deterministic) id else scala.util.Random.nextInt) % brokers
           val row = BookRow(t, id, brokerId, volume, price); bidsMap.put(id,row)
-          List(TupleEvent(TupleInsert, bids, row.pack))
+          List(TupleEvent(t,TupleInsert, bids, row.pack))
         case "S" if (asks!=null) => // place ask
           val brokerId = (if (deterministic) id else scala.util.Random.nextInt) % brokers
           val row = BookRow(t, id, brokerId, volume, price); asksMap.put(id,row)
-          List(TupleEvent(TupleInsert, asks, row.pack))
+          List(TupleEvent(t,TupleInsert, asks, row.pack))
         case "E" => // match
           red(bidsMap,bids) ::: red(asksMap,asks)
-        case "D" => // | "F" cancel
-          if (bidsMap.containsKey(id)) List(TupleEvent(TupleDelete, bids, bidsMap.remove(id).pack)) else
-          if (asksMap.containsKey(id)) List(TupleEvent(TupleDelete, asks, asksMap.remove(id).pack)) else Nil
+        case "D" | "F" => // cancel
+          if (bidsMap.containsKey(id)) List(TupleEvent(t,TupleDelete, bids, bidsMap.remove(id).pack)) else
+          if (asksMap.containsKey(id)) List(TupleEvent(t,TupleDelete, asks, asksMap.remove(id).pack)) else Nil
         case _ => Nil
       }
     }
@@ -161,7 +164,7 @@ object Adaptor {
  *   and usually small, so thread switching penalty should be low.
  */
 import java.io.InputStream
-case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Int=0,bufferSize:Int=32*1024) {
+case class SourceMux(f:TupleEvent=>Unit,streams:Seq[(InputStream,Adaptor,Split)],parallel:Int=0,bufferSize:Int=32*1024) {
   private def read1(in:InputStream,d:Decoder) {
     val buf = new Array[Byte](bufferSize)
     var n:Int = 0
@@ -171,20 +174,41 @@ case class SourceMux(streams:Seq[(InputStream,Decoder)],parallel:Int=0,bufferSiz
 
   // Preload in deterministic alternating order
   import java.util.LinkedList
-  private var q : LinkedList[TupleEvent] = null
-  if (parallel==2) {
-    q=new LinkedList[TupleEvent]()
-    val qq = new LinkedList[LinkedList[TupleEvent]]()
-    streams.foreach { case (in,d) => val iq=new LinkedList[TupleEvent]; read1(in,Decoder((e:TupleEvent)=>iq.offer(e),d.adaptor,d.splitter)); qq.offer(iq) }
-    var p=qq.poll; while (p!=null) { val e=p.poll; if (e!=null) { q.offer(e); qq.offer(p) }; p=qq.poll }
+  private val que : PriorityQueue[TupleEvent] = new PriorityQueue[TupleEvent]()(Ordering.by(-_.ord))
+  private val queuedTuplesFromStreams = new Array[Int](streams.length)
+  private def processQ(streamId:Int, e:TupleEvent) = que.synchronized {
+    e.streamId = streamId
+    que.enqueue(e)
+    queuedTuplesFromStreams(streamId) += 1
+    var i = queuedTuplesFromStreams.min
+    while((i > 0) && que.nonEmpty) {
+      i -= 1
+      val e1 = que.dequeue()
+      queuedTuplesFromStreams(e1.streamId) -= 1
+      f(e1)
+    }
   }
 
-  def read() = parallel match {
-    case 0 => streams.foreach { case(in,d) => read1(in,d) }
-    case 1 => val ts = streams.map { case (in,d) => new Thread{ override def run() { read1(in,d) }} }
-              ts.foreach(_.start); ts.foreach(_.join)
-    case 2 => if (streams.size>0) { val f=streams(0)._2.f; var e=q.poll; while (e!=null) { f(e); e=q.poll } }
-    case _ => sys.error("Unsupported parallel mode")
+  private def processQTail = {que.foreach(f); que.clear}
+
+  private var lst : LinkedList[TupleEvent] = null
+  if (parallel==2) {
+    lst=new LinkedList[TupleEvent]()
+    val qq = new LinkedList[LinkedList[TupleEvent]]()
+    streams.foreach { case (in,adp,splt) => val iq=new LinkedList[TupleEvent]; read1(in,Decoder((e:TupleEvent)=>iq.offer(e),adp,splt)); qq.offer(iq) }
+    var p=qq.poll; while (p!=null) { val e=p.poll; if (e!=null) { if(e.ord == 0) lst.offer(e) else que.enqueue(e); qq.offer(p) }; p=qq.poll }
+  }
+  // java.lang.System.err.println("q ---> %s".format(q));
+  def read() = {
+    parallel match {
+      // case 0 => streams.foreach { case (in,adp,splt) => read1(in,Decoder((e:TupleEvent)=>if(e.ord == 0) f(e) else que.enqueue(e),adp,splt)) }
+      // case 1 => val ts = streams.zipWithIndex.map { case ((in,adp,splt),i) => new Thread{ override def run() { read1(in,Decoder((e:TupleEvent)=>if(e.ord == 0) f(e) else processQ(i,e),adp,splt)); queuedTuplesFromStreams(i) = Int.MaxValue }} }
+      //           ts.foreach(_.start); ts.foreach(_.join)
+      case 2 => var e=lst.poll; while (e!=null) { f(e); e=lst.poll }
+      case _ => sys.error("Unsupported parallel mode")
+    }
+
+    processQTail
   }
 }
 

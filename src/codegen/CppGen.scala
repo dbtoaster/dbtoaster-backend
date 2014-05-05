@@ -256,8 +256,8 @@ trait ICppGen extends IScalaGen {
     val step = 128 // periodicity of timeout verification, must be a power of 2
     val skip = "if (t1>0 && (tN&"+(step-1)+")==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=1 } else tN+=1; "
     val str = s0.triggers.map(_.evt match {
-      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleInsert,\""+s.name+"\","+i+") => "+skip+"onAdd"+s.name+o+"\n"
-      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(TupleDelete,\""+s.name+"\","+i+") => "+skip+"onDel"+s.name+o+"\n"
+      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(_,TupleInsert,\""+s.name+"\","+i+") => "+skip+"onAdd"+s.name+o+"\n"
+      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(_,TupleDelete,\""+s.name+"\","+i+") => "+skip+"onDel"+s.name+o+"\n"
       case _ => ""
     }).mkString
     //TODO XXX tables should be processed separately
@@ -538,6 +538,8 @@ trait ICppGen extends IScalaGen {
     "\n"+
     "    /* Imports data for static tables and performs view initialization based on it. */\n"+
     "    void init() {\n"+
+    "        table_multiplexer.init_source();\n"+
+    "        stream_multiplexer.init_source();\n"+
     "        process_tables();\n"+
     "        data.on_system_ready_event();\n"+
     "    }\n"+
@@ -555,44 +557,41 @@ trait ICppGen extends IScalaGen {
   private def genStream(s:Source): String = {
     val sourceId = fresh("source");
     val sourceSplitVar = sourceId + "_fd"
-    val adaptorsArrVar = sourceId+"_adaptors_arr"
-    val adaptorsListVar = sourceId+"_adaptors_list"
+    val adaptorVar = sourceId+"_adaptor"
+    val paramsVar = adaptorVar+"_params"
     val sourceFileVar = sourceId+"_file"
-    val in = s.in match { case SourceFile(path) => "boost::shared_ptr<dbt_file_source> "+sourceFileVar+"(new dbt_file_source(\""+path+"\","+sourceSplitVar+","+adaptorsListVar+"));\n" }
+    val in = s.in match { case SourceFile(path) => "boost::shared_ptr<dbt_file_source> "+sourceFileVar+"(new dbt_file_source(\""+path+"\","+sourceSplitVar+","+adaptorVar+"));\n" }
     val split = "frame_descriptor "+sourceSplitVar+(s.split match { case SplitLine => "(\"\\n\")" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => "XXXXX("+p+")" })+";\n" //XXXX for SplitPrefix
     
     val schema_param = s.schema.fields.map{case (_,tp) => tp.toCpp}.mkString(",")
     val adaptor = s.adaptor.name match {
       case "ORDERBOOK" => {
-        val bidsAndAsks = List("bids","asks").filter(s.adaptor.options.contains)
-        val a_opts = s.adaptor.options.filter{case (k,_) => !bidsAndAsks.contains(k)} ++ Map("schema" -> schema_param)
-        val a_def = bidsAndAsks.map{ x =>  
-          val adaptorVar = sourceId+"_adaptor_"+x
-          val paramsVar = adaptorVar+"_params"
-          val numParams = a_opts.size+1
-          "pair<string,string> "+paramsVar+"[] = { make_pair(\"book\",\""+x+"\"), "+a_opts.map{case (k,v) => "make_pair(\""+k+"\",\""+v+"\")"}.mkString(", ")+" };\n"+
-          "boost::shared_ptr<order_books::order_book_adaptor> "+adaptorVar+"(new order_books::order_book_adaptor(get_relation_id(\""+s.adaptor.options(x)+"\"),"+numParams+","+paramsVar+"));\n"
-        }.mkString
+        java.lang.System.err.println("s.adaptor.options => " + s.adaptor.options)
+        val bidsAndAsks = List("bids","asks")
+        val orderBookTypesList = bidsAndAsks.filter(s.adaptor.options.contains)
+        val orderBookType = orderBookTypesList.size match {
+          case 1 => orderBookTypesList(0)
+          case 2 => "both"
+        }
+        val a_opts = s.adaptor.options.filter{case (k,_) => !orderBookTypesList.contains(k)} ++ Map("schema" -> schema_param)
+        val numParams = a_opts.size+1
+        val a_def = "pair<string,string> "+paramsVar+"[] = { make_pair(\"book\",\""+orderBookType+"\"), "+a_opts.map{case (k,v) => "make_pair(\""+k+"\",\""+v+"\")"}.mkString(", ")+" };\n"+
+          "boost::shared_ptr<order_books::order_book_adaptor> "+adaptorVar+"(new order_books::order_book_adaptor("+bidsAndAsks.map{ x => {if(s.adaptor.options.contains(x)) "get_relation_id(\""+s.adaptor.options(x)+"\")" else "-1"}+","}.mkString+numParams+","+paramsVar+"));\n"
 
-        a_def+split+
-        "boost::shared_ptr<stream_adaptor> "+adaptorsArrVar+"[] = { "+bidsAndAsks.map{ x => sourceId+"_adaptor_"+x}.mkString(", ")+" };\n"
+        a_def
       }      
       case "CSV" => {
         val a_opts = s.adaptor.options ++ Map("schema" -> schema_param)
-        val adaptorVar = sourceId+"_adaptor"
-        val paramsVar = adaptorVar+"_params"
         val numParams = a_opts.size
         val a_def = "pair<string,string> "+paramsVar+"[] = { "+a_opts.map{case (k,v) => "make_pair(\""+k+"\",\""+v+"\")"}.mkString(", ")+" };\n"+
           "boost::shared_ptr<csv_adaptor> "+adaptorVar+"(new csv_adaptor(get_relation_id(\""+s.schema.name+"\"),"+numParams+","+paramsVar+"));\n"
 
-        a_def+split+
-        "boost::shared_ptr<stream_adaptor> "+adaptorsArrVar+"[] = { "+adaptorVar+" };\n"
+        a_def
       }
     }
 
-    adaptor+
-    "std::list<boost::shared_ptr<stream_adaptor> > "+adaptorsListVar+"("+adaptorsArrVar+", "+adaptorsArrVar+" + sizeof("+adaptorsArrVar+") / sizeof(boost::shared_ptr<stream_adaptor>));\n"+
-    in+"add_source("+sourceFileVar+(if(s.stream) "" else ", true")+");\n"
+    adaptor+split+in+
+    "add_source("+sourceFileVar+(if(s.stream) "" else ", true")+");\n"
   }
 
   override def streams(sources:List[Source]) = {

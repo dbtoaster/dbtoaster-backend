@@ -84,7 +84,7 @@ protected:
      * call their base class variants.
      * @param ev The event being processed.
      */
-    virtual void process_stream_event(event_t* ev);
+    virtual void process_stream_event(const event_t& ev);
 
     /**
      * Virtual function that should implement the functionality of taking

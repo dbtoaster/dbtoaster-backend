@@ -36,11 +36,19 @@ struct event_t
 {
     event_type type;
     relation_id_t id;
+    unsigned int event_order;
     event_args_t data;
 
-    event_t(event_type t, relation_id_t i, event_args_t& d)
-    : type(t), id(i), data(d)
+    event_t(event_type t, relation_id_t i, unsigned int ord, event_args_t& d)
+    : type(t), id(i), event_order(ord), data(d)
     {}
+};
+
+struct event_timestamp_order
+{
+	bool operator()(event_t const & p1, event_t const & p2) {
+        return p1.event_order > p2.event_order;
+    }
 };
 
 
