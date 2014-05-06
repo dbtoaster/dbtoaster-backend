@@ -194,8 +194,10 @@ object UnitTest {
           val kv =
             if (kt.size==0) ""
             else {
-              val ll=(kt:::vt::Nil).zipWithIndex
-              "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",List[Any](v"+ll.last._2+")) }\n" }
+              val ll=(kt:::Nil).zipWithIndex
+              val vti = kt.length
+              val llStr=ll.map { case (t,i) => "v"+i+":"+t.toScala }.mkString(",")+",v"+vti+":List[Any]"
+              "def kv(l:List[Any]) = l match { case List("+llStr+") => ("+tup(ll.map{ case (t,i)=>"v"+i })+",List[Any](v"+vti+")) }\n" }
           val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else "List[Any]")+"], "+(o match {
             case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+",List[Any]("+v.mkString(",")+"))" }.mkString(",")+")"// inline in the code
             case QueryFile(path,sep) => 
