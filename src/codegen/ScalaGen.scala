@@ -445,7 +445,9 @@ trait IScalaGen extends CodeGen {
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
-    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val body=t.stmts.map(genStmt).mkString; ctx=null;
+    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap)
+    val body=t.stmts.map(genStmt).mkString
+    ctx=null
     "def on"+n+"("+as.map(a=>a._1+":"+a._2.toScala).mkString(", ")+") "+(if (body=="") "{ }" else "{\n"+ind(body)+"\n}")
   }
 
