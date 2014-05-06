@@ -281,7 +281,6 @@ trait IScalaGen extends CodeGen {
       ctx.add(t,(e.tp,t))
       cpsExpr(e,(v:String,vt:Type) => { 
         val cur = ctx.save 
-        val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
         ctx.load(cur)
         val tStr = "val "+t+" = "+mapval(v,vt)._1+";\n"
         val (cmps,r) = (ns zip refs).zipWithIndex.foldLeft((List[String](),"")){ case ((cmps,r),((n,ref),i)) => {
@@ -294,11 +293,11 @@ trait IScalaGen extends CodeGen {
             }
           }
         }}
-        val strExp = 
-          if(cmps.length>0) 
-            "(if ("+cmps.mkString(" && ")+") {\n"+ind(r+cov)+"\n} else MapVal(0,0L))" 
-          else 
-            r+cov
+        val strExp = r+
+          (if(cmps.length>0)
+            co("(if ("+cmps.mkString(" && ")+") MapVal(1,1L) else MapVal(0,0L))",TypeMapVal(TypeLong))
+          else
+            co("MapVal(1L)",TypeMapVal(TypeLong)))._1
         (tStr+strExp,TypeMapVal(TypeLong)) 
       },am)
 
