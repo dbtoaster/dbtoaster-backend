@@ -16,7 +16,7 @@ object AllQueries {
   import ddbt.Compiler
   import ddbt.Compiler.toast
   import ddbt.UnitTest
-  import ddbt.UnitTest.{tmp,all,genQuery,Printer,QueryTest}
+  import ddbt.UnitTest.{tmp,all,genQueryScala,Printer,QueryTest}
   UnitTest.tmp=makeTempDir("tmp",false)
 
   var verbose = false
@@ -47,7 +47,7 @@ object AllQueries {
     val m3 = try {
       val m3 = if (repo) toast("m3",q)._2 else { ddbt.Compiler.in=List(q); toast("m3")._2 }
       if (verbose) println(m3)
-      UnitTest.benchmark=run; genQuery(QueryTest(q),new Printer("Scala"),m3,"scala",false)
+      UnitTest.benchmark=run; genQueryScala(QueryTest(q),new Printer("Scala"),m3,"scala",false)
     } catch { case t:Throwable => t.setStackTrace(t.getStackTrace.take(10)); t.printStackTrace(System.out); null}
   }
 

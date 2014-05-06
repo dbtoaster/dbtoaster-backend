@@ -8,16 +8,24 @@ package ddbt.ast
  */
 sealed abstract class Tree // Generic AST node
 
-// ---------- Data types
-// TODO: put zeroScala and toScala in ScalaGen
-sealed abstract class Type extends Tree { def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase; def zero:String; def zeroScala=zero }
+/*
+ * Interface of the data types
+ */
+sealed abstract class Type extends Tree {
+  def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase
+  def toCpp=toString
+  def zero:String
+  def zeroScala=zero;
+  def zeroCpp=zero
+}
+
 //case object TypeChar extends Type /*  8 bit */ { override def toString="char" }
 //case object TypeShort extends Type /*16 bit */ { override def toString="short" }
 //case object TypeInt  extends Type /* 32 bit */ { override def toString="int" }
 case object TypeLong   extends Type /* 64 bit */ { override def toString="long"; val zero="0L" }
 //case object TypeFloat extends Type /*32 bit */ { override def toString="float" }
 case object TypeDouble extends Type /* 64 bit */ { override def toString="double"; val zero="0.0" }
-case object TypeDate   extends Type              { override def toString="date"; val zero="0L"; override def zeroScala="new Date(0L)"; }
+case object TypeDate   extends Type              { override def toString="date"; val zero="0L"; override def zeroScala="new Date(0L)"; override def zeroCpp="00000000" }
 //case object TypeTime extends Type              { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string"; val zero="\"\"" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
@@ -93,10 +101,10 @@ case object OpSet extends OpMap { override def toString=":=" }
 case object OpAdd extends OpMap { override def toString="+=" }
 
 // ---------- Trigger events
-sealed abstract class EvtTrigger extends Tree { def args=List[(String,Type)]() }
-case object EvtReady extends EvtTrigger { override def toString="SYSTEM READY" }
-case class EvtAdd(schema:Schema) extends EvtTrigger { override def toString="+ "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields }
-case class EvtDel(schema:Schema) extends EvtTrigger { override def toString="- "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields }
+sealed abstract class EvtTrigger extends Tree { def args=List[(String,Type)](); def evtName:String }
+case object EvtReady extends EvtTrigger { override def toString="SYSTEM READY"; override val evtName="system_ready" }
+case class EvtAdd(schema:Schema) extends EvtTrigger { override def toString="+ "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields; override val evtName="insert_"+schema.name }
+case class EvtDel(schema:Schema) extends EvtTrigger { override def toString="- "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields; override val evtName="delete_"+schema.name }
 // Cleanup/Failure/Shutdown/Checkpoint
 
 // -----------------------------------------------------------------------------
@@ -146,8 +154,9 @@ object M3 {
   }
   case class MapDef(name:String, tp:Type, keys:List[(String,Type)], expr:Expr) extends M3 {
     override def toString="DECLARE MAP "+name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.map{case (n,t)=>n+":"+t}.mkString(",")+"] :=\n"+ind(expr+";")
+    def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"
   }
-  case class Query(name:String, map:MapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+map+";" }
+  case class Query(name:String, map:MapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+map+";"; def toCppType=map.toCppType; def toCppRefType=map.toCppRefType}
   case class Trigger(evt:EvtTrigger, stmts:List[Stmt]) extends M3 { override def toString="ON "+evt+" {\n"+ind(stmts.mkString("\n"))+"\n}" }
 
   // ---------- Expressions (values)
@@ -192,7 +201,7 @@ object M3 {
   case class Const(tp:Type,v:String) extends Expr { override def toString=if (tp==TypeString) "'"+v+"'" else v }
   // Variables
   case class Ref(name:String) extends Expr { override def toString=name; var tp:Type=null }
-  case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]"; var tks:List[Type]=Nil }
+  case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]"; var tks:List[Type]=Nil; var isTemp:Boolean=false; def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"}
   case class Lift(ns:List[String], e:Expr) extends Expr { override def toString="("+(ns match { case n::Nil => n case _ => "<"+ns.mkString(",")+">"})+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
   case class MapRefConst(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=TypeLong } // appear in Map definition and constant table lookups
   // Operations
@@ -208,7 +217,7 @@ object M3 {
   case class Neg(e:Expr) extends Expr { override def toString="-("+e+")"; var tp:Type=null }
 
   // ---------- Statements (no return)
-  sealed abstract class Stmt extends M3
+  sealed abstract class Stmt extends M3 { var stmtId:Int=(-1) }
   case class StmtMap(m:MapRef,e:Expr,op:OpMap,init:Option[Expr]) extends Stmt { override def toString=m+(init match { case Some(i) => ":("+i+")" case None => ""} )+" "+op+" "+e+";" }
   // case class StmtCall(external function) extend Stmt
 }

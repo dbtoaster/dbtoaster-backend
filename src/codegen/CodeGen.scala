@@ -1,5 +1,5 @@
 package ddbt.codegen
-import ddbt.ast.{M3,Source}
+import ddbt.ast.{M3,Source,Type}
 
 /**
  * An abstraction of the code generator. Because we want to instrument generated
@@ -7,12 +7,10 @@ import ddbt.ast.{M3,Source}
  *
  * @author TCK
  */
-abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
+trait CodeGen extends (M3.System => String) {
+  val cls:String="Query"
   // Generate the system (everything but stream and views I/O)
   def apply(s:M3.System) : String
-
-  // Generate headers + dummy helper for benchmarking
-  def helper(s:M3.System,pkg:String) : String
 
   // Stream sources definition
   def streams(sources:List[Source]) : String
@@ -38,6 +36,30 @@ abstract class CodeGen(cls:String="Query") extends (M3.System => String) {
     def apply(name:String) = ctx.contains(name) || ctx0.contains(name)
     override def toString() = (ctx0 ++ ctx).toString
   }
+
+  def consts:String
+
+  def constApply(a:M3.Apply):String
+
+  // Generate (1:stream events handling, 2:table loading, 3:global constants declaration)
+  def genInternals(s0:M3.System,nextSkip:String="context.become(receive_skip)") : (String,String,String)
+
+  def toMapFunction(q: M3.Query):String
+
+  def onEndStream:String
+
+  def genMap(m:M3.MapDef):String
+
+  def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String):String
+
+  def genLMS(s0:M3.System):(String,String,String,String)
+
+  def clearOut:Unit
+
+  def additionalImports():String
+
+  def pkgWrapper(pkg:String, body:String):String
+
   /*
   case class CtxCtr[T](f:Int=>T=(i:Int)=>i) extends Function0[T] {
     private var ctr=0;

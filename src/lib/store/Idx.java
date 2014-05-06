@@ -81,7 +81,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
   @Override public void unsafeInsert(E e) {
     if (size==threshold) _resize();
     int h=ops.hash(e), b=h&(data.length-1);
-    IdxHashEntry<E> i=new IdxHashEntry<E>(h,e); i.next=data[b]; data[b]=i; size+=1;
+    IdxHashEntry<E> i=new IdxHashEntry<E>(h,e); e.data[idx]=i; i.next=data[b]; data[b]=i; size+=1;
   }
   @Override public void insert(E e) {
     if (size==threshold) _resize();

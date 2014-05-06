@@ -191,7 +191,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
       }
     }
     freshClear(); ref.clear; aggl=Nil; forl=Nil; part=null
-    "class "+cls+"Worker extends WorkerActor {\n"+ind(
+    helper(s)+"class "+cls+"Worker extends WorkerActor {\n"+ind(
       "import ddbt.lib.Functions._\nimport ddbt.lib.Messages._\n// constants\n"+fds+ads+gc+ // constants
       "// maps\n"+ms+"\nval local = Array[M3Map[_,_]]("+s.maps.map(m=>if (m.keys.size>0) m.name else "null").mkString(",")+")\n"+hash+local_vars+
       (if (ld0!="") "// tables content preloading\noverride def loadTables() {\n"+ind(ld0)+"\n}\nloadTables()\n" else "")+"\n"+
@@ -203,11 +203,11 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     )+"\n}"
   }
 
-  override def helper(s0:System,pkg:String) =
-    "package "+pkg+"\nimport ddbt.lib._\nimport java.util.Date\n\n"+
+  private def helper(s0:System) =
+    "import ddbt.lib._\nimport java.util.Date\n\n"+
     "object "+cls+" {\n"+ind("import Helper._\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>runLocal["+cls+"Master,"+cls+"Worker](args)("+streams(s0.sources)+",p,t),f)\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
-    "\n})")+"\n}")+"\n}\n\n"
+    "\n})")+"\n}")+"\n}\n"
 }

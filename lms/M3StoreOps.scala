@@ -224,3 +224,109 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
     if(remap(s.tp).startsWith("ddbt.lib.store.Store[")) ":Store["+storeEntryType(s)+"]" else ""
   }
 }
+
+
+trait CGenM3StoreOps extends CGenBase with CGenEffect with CGenStore {
+  val IR: M3StoreOpsExp with ExtendedExpressions with Effects
+  import IR._
+  import ddbt.Utils.{ind,tup}
+
+  // Specialization of temporary maps into Entry1 / Store1
+  override def generateNewStore(s: Sym[_]):String =
+    if (USE_STORE1 && isTemp(s)) "val "+quote(s,true)+" = new Store1["+storeEntryType(s)+"]()\n"
+    else super.generateNewStore(s)
+  override def emitDataStructures(out: java.io.PrintWriter): Unit = {
+    if (USE_STORE1) {
+      val (temp,global) = storeSyms.partition(s => isTemp(s))
+      out.println
+      temp.foreach { sym =>
+        val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
+        val idx0loc = indices(0)._2
+        val (clsName, argTypes) = extractEntryClassName(sym)
+        val n = argTypes.size
+        out.println("case class "+clsName+"("+argTypes.zipWithIndex.map{ case (tp,i) => "var _"+(i+1)+":"+tp+" = "+zeroValue(tp) }.mkString(", ")+") extends Entry1["+clsName+"] {")
+        out.println("  val hash = "+hashFun(argTypes,idx0loc))
+        out.println("  def merge(e:"+clsName+") = if("+idx0loc.map(i=>"_"+i+"==e._"+i).mkString(" && ")+") { _"+n+" += e._"+n+"; true } else false");
+        out.println("}")
+      }
+      storeSyms = global
+    }
+    super.emitDataStructures(out)
+  }
+  protected def getBlockContents(blk:Block[_]):String = {
+    val save=stream; val wr=new java.io.StringWriter; stream=new java.io.PrintWriter(wr)
+    emitBlock(blk); val res=ind(wr.toString); stream=save; res
+  }
+
+  private val nameAttr = "_name"
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr,n)
+    case StUnsafeInsert(x,e,i) => emitValDef(sym, quote(x)+".unsafeInsert("+i+","+quote(e)+")")
+    case M3Add(s,e) =>
+      stream.println(quote(s)+".add("+quote(e)+")")
+    case StForeach(x, blockSym, block) if (USE_STORE1 && isTemp(x.asInstanceOf[Sym[Store[Entry]]])) =>
+      emitValDef(sym, quote(x)+".foreach{ ")
+      stream.println(quote(blockSym) + " => ")
+      emitBlock(block)
+      stream.println("}")
+    case _ => super.emitNode(sym,rhs)
+  }
+
+  override def quote(x: Exp[Any], forcePrintSymbol: Boolean) : String = {
+    //System.out.println("quote(" + x + ", "+forcePrintSymbol+") => " + Def.unapply(x))
+    def printSym(s: Sym[Any]): String = {
+      //System.out.println("printSym(" + s + ") => " + Def.unapply(s))
+      if(s.possibleToInline || s.noReference) {
+        Def.unapply(s) match {
+          case Some(d: Def[Any]) => d match {
+            case Named(n) => n
+            case _ =>
+              val strWriter: java.io.StringWriter = new java.io.StringWriter;
+              val stream = new java.io.PrintWriter(strWriter);
+              withStream(stream) { emitNode(s, d) }
+              strWriter.toString
+          }
+          case None => if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+        }
+      } else {
+        if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+      }
+    }
+    x match {
+      case Const(s: String) => "\""+s.replace("\"", "\\\"").replace("\n", "\\n")+"\"" // TODO: more escapes?
+      case Const(c: Char) => "'"+c+"'"
+      case Const(f: Float) => "%1.10f".format(f) + "f"
+      case Const(l: Long) => l.toString + "L"
+      case Const(null) => "null"
+      case Const(z) => z.toString
+      case s@Sym(n) => if (forcePrintSymbol) {
+        if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+      } else {
+        isVoidType(s.tp) match {
+          case true => "(" + /*"x" + n +*/ ")"
+          case false => printSym(s)
+        }
+      }
+      case _ => throw new RuntimeException("could not quote %s".format(x))
+    }
+  }
+
+  override def emitValDef(sym: Sym[Any], rhs: String): Unit = {
+    val extra = if ((Config.sourceinfo < 2) || sym.pos.isEmpty) "" else {
+      val context = sym.pos(0)
+      "      // " + relativePath(context.fileName) + ":" + context.line
+    }
+    sym match {
+      case s@Sym(n) => isVoidType(s.tp) match {
+        case true => stream.println("" + rhs + extra)
+        case false => if(s.possibleToInline || s.noReference) stream.print("("+rhs+")")
+                      else stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
+      }
+      case _ => stream.println("val " + quote(sym) + getSymTypeStr(sym) + " = " + rhs + extra)
+    }
+  }
+
+  def getSymTypeStr(s:Sym[_]):String = {
+    if(remap(s.tp).startsWith("ddbt.lib.store.Store[")) ":Store["+storeEntryType(s)+"]" else ""
+  }
+}

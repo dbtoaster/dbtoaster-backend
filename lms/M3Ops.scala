@@ -96,6 +96,22 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThen
   }
 }
 
+trait CGenM3Ops extends CGenBase with CGenEffect with CGenIfThenElse with CGenM3StoreOps {
+  val IR: M3OpsExp with ExtendedExpressions
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    // case IfThenElse(c,a,b) if (quote(getBlockResult(b))=="()") =>
+        // stream.println("if (" + quote(c) + ") {") // there is only one branch (initialization)
+        // stream.println(getBlockContents(a))
+        //stream.println("  "+quote(getBlockResult(a))) // useless undeclared Unit symbols
+        // stream.println("}")
+
+    case M3Apply(fn,args,_) => emitValDef(sym,"U"+fn+"("+(args map quote).mkString(",")+")")
+    case _ => super.emitNode(sym,rhs)
+  }
+}
+
 /*
  * Lifter Classes for StdFunctions
  * Copied from package toasterbooster.lifters

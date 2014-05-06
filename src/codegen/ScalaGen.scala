@@ -26,21 +26,24 @@ import ddbt.ast._
  * 
  * @author TCK
  */
-class ScalaGen(cls:String="Query") extends CodeGen(cls) {
+class ScalaGen(override val cls:String="Query") extends IScalaGen
+
+trait IScalaGen extends CodeGen {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-  def mapRef(n:String,tp:Type,keys:List[(String,Type)]) = { val m=M3.MapRef(n,tp,keys.map(_._1)); m.tks=keys.map(_._2); m }
+  def mapRef(n:String,tp:Type,keys:List[(String,Type)]) = { val m=M3.MapRef(n,tp,keys.map(_._1)); m.tks=keys.map(_._2); m.isTemp=true; m }
 
   // Methods involving only constants are hoisted as global constants
-  private val cs = HashMap[Apply,String]()
-  def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
-  def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.map({ case (v,t) => getVal(v,t)._1 }).mkString(",")+")\n" }.mkString+"\n" // constant function applications
+  protected val cs = HashMap[Apply,String]()
+  override def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
+  override def consts:String = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.map({ case (v,t) => getVal(v,t)._1 }).mkString(",")+")\n" }.mkString+"\n" // constant function applications
 
   // XXX: enlarge the definition to generalized constants
 
-  var ctx:Ctx[(Type,String)] = null // Context: variable->(type,unique_name)
-  
+  // Context: variable->(type,unique_name)
+  var ctx:Ctx[(Type,String)] = null 
+
   /** Gets the unique name of a variable in the context
     *  
     *  @param n Name of the variable 
@@ -128,7 +131,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
       case TypeTuple(ts) => tupleClass(ts) 
       case _ => t.toScala
     }
- 
+
   // Create a variable declaration
   def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+mapval(genZero(tp),tp)._1+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+genType(tp)+"]()\n"
 
@@ -453,7 +456,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     if (n != -1) n else { sx.put(m,s ::: List(i)); s.size }
   }
 
-  def genMap(m:MapDef):String = {
+  override def genMap(m:MapDef):String = {
     if (m.keys.size==0) genVar(m.name,m.tp).trim
     else {
       val tk = tup(m.keys.map(x=>x._2.toScala))
@@ -463,10 +466,10 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     }
   }
 
-  def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = map+".add("+keyNamesConcat+",MapVal.one[Long])"
+  override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = map+".add("+keyNamesConcat+",MapVal.one[Long])"
 
   // Generate (1:stream events handling, 2:table loading, 3:global constants declaration)
-  def genInternals(s0:System,nextSkip:String="context.become(receive_skip)") : (String,String,String) = {
+  override def genInternals(s0:System,nextSkip:String="context.become(receive_skip)") : (String,String,String) = {
     // XXX: reduce as much as possible the overhead here to decode data, use Decoder's internals and inline the SourceMux here
     def ev(s:Schema,short:Boolean=true):(String,String,List[(String,Type)]) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
@@ -484,10 +487,11 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     (str,ld0,consts)
   }
 
-  def genLMS(s0:System):(String,String,String,String) = (null,null,null,null)
+  override def genLMS(s0:System):(String,String,String,String) = (null,null,null,null)
 
-  def clearOut = {}
-  def onEndStream = ""
+  override def toMapFunction(q: Query) = q.name+".toMap"
+  override def clearOut = {}
+  override def onEndStream = ""
 
   def apply(s0:System):String = {
     val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
@@ -501,7 +505,7 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     freshClear()
     val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map{q=>(if (s0.mapType(q.map.name)._1.size>0) q.name+".toListMap" else q.name+".toList")}.mkString(",")+"))"
     clearOut
-    "class "+cls+" extends Actor {\n"+ind(
+    helper(s0)+"class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
     "import ddbt.lib.Functions._\n\n"+
     tupleClasses.values.mkString("\n")+"\n\n"+
@@ -541,14 +545,21 @@ class ScalaGen(cls:String="Query") extends CodeGen(cls) {
     "Seq(\n"+ind(ss.replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")").replaceAll("/standard/","/\"+d+\"/"))+"\n)"
   }
 
-  // Helper that contains the main and stream generator
-  def helper(s0:System,pkg:String) =
-    "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\nimport ddbt.lib.Ring._\n\n"+
+  /*
+   * Generates a main function and streams from files.
+   *
+   * @param  s0 System Generates code for this system
+   * @return The generated code
+   */
+  private def helper(s0:System) =
+    "import ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\nimport ddbt.lib.Ring._\n\n"+
     "object "+cls+" {\n"+ind("import Helper._\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
-    "\n})")+"\n}")+"\n}\n\n"
+    "\n})")+"\n}")+"\n}\n"
 
-  def additionalImports():String = ""
+  override def pkgWrapper(pkg:String, body:String) = "package "+pkg+"\n"+body+"\n"
+
+  override def additionalImports():String = ""
 }

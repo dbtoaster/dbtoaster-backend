@@ -10,13 +10,12 @@ import ddbt.lib._
  * @author Mohammad Dashti, TCK
  */
 
-class LMSGen(cls:String="Query") extends ScalaGen(cls) {
+abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) extends CodeGen {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
   import ManifestHelper.{man,zero,manEntry,manStore}
-
-  val impl = ScalaExpGen
   import impl.Rep
+  implicit val overloaded1 = impl.overloaded1
 
   var cx : Ctx[Rep[_]] = null
 
@@ -42,11 +41,11 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     case a@Add(l,r) =>
       if (a.agg==Nil) { val cur=cx.save; expr(l,(vl:Rep[_])=>{ cx.load(cur); expr(r,(vr:Rep[_])=>{ cx.load(cur); co(add(vl,vr,ex.tp)) },am)},am) }
       else am match {
-        case Some(t) if t.toSet==a.agg.toSet => val cur=cx.save; expr(l,co,am); cx.load(cur); expr(r,co,am); cx.load(cur);
+        case Some(t) if t.toSet==a.agg.toSet => val cur=cx.save; expr(l,co,am); cx.load(cur); expr(r,co,am); cx.load(cur); impl.unit(())
         case _ =>
           implicit val mE=me(a.agg.map(_._2),a.tp)
           val acc = impl.m3temp()(mE)
-          val inCo = (v:Rep[_]) => impl.m3add(acc,acc.newEntry( (a.agg.map(x=>cx(x._1))++List(v)) : _*))(mE)
+          val inCo = (v:Rep[_]) => impl.m3add(acc,impl.stNewEntry2(acc, (a.agg.map(x=>cx(x._1))++List(v)) : _*))(mE)
           val cur = cx.save
           expr(l,inCo,Some(a.agg)); cx.load(cur)
           expr(r,inCo,Some(a.agg)); cx.load(cur)
@@ -79,16 +78,16 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
         val z = impl.unit(zero(tp))
         val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
         val r = proxy.get(vs : _*)
-        co(impl.__ifThenElse(impl.__equal(r,impl.unit(null)),z,r.get(ks.size+1)))
+        co(impl.__ifThenElse(impl.__equal(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
         if (ko.size==0) proxy.foreach((e:Rep[Entry])=> {
-            cx.add(ki.map{ case (k,i) => (k,e.get(i+1)) }.toMap); co(e.get(ks.size+1))
+            cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
           })
         else {
           implicit val mE=me(m.tks,tp)
           val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
-          mm.slice({
-            (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,e.get(i+1)) }.toMap); co(e.get(ks.size+1))
+          impl.stSlice(mm, {
+            (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
           },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
         }
       }
@@ -103,7 +102,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
           //case TypeDate => val acc:impl.Var[java.util.Date] = impl.var_new[java.util.Date](impl.unit(new java.util.Date())); expr(e,(v:Rep[_]) => impl.var_assign[java.util.Date](acc.asInstanceOf[impl.Var[java.util.Date]], impl.numeric_plus[java.util.Date](impl.readVar[java.util.Date](acc.asInstanceOf[impl.Var[java.util.Date]]),v.asInstanceOf[Rep[java.util.Date]])),None); acc
           case _ => sys.error("Unsupported type "+ex.tp)
         }
-        cx.load(cur); co(accRes)
+        cx.load(cur); co(impl.readVar(accRes))
       } else {
         implicit val mE=me(agg_keys.map(_._2),ex.tp)
         val acc = impl.m3temp()(mE)
@@ -111,7 +110,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
         val coAcc = (v:Rep[_]) => {
           val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
-          impl.m3add(acc, acc.newEntry(vs : _*))
+          impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))
         }
         expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
         am match {
@@ -126,8 +125,8 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     implicit val mE = manEntry(keys.map(_._2) ::: List(value_tp))
     val proxy = mapProxy(map)
     proxy.foreach{ e:Rep[Entry] =>
-      cx.add(keys.zipWithIndex.filter(x=> !cx.contains(x._1._1)).map { case ((n,t),i) => (n,e.get(i+1)) }.toMap)
-      co(e.get(keys.size+1))
+      cx.add(keys.zipWithIndex.filter(x=> !cx.contains(x._1._1)).map { case ((n,t),i) => (n,impl.steGet(e, i+1)) }.toMap)
+      co(impl.steGet(e, keys.size+1))
     }
   }
 
@@ -204,13 +203,13 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
             if (op==OpSet) impl.stClear(mm)
             oi match { case None => case Some(ie) =>
               expr(ie,(r:Rep[_]) => {
-                val ent = mm.newEntry((m.keys.map(cx) ++ List(r)) : _*)
+                val ent = impl.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)) : _*)
                 impl.__ifThenElse(impl.equals(mapProxy(mm).get(m.keys.zipWithIndex.map{ case (n,i) => (i+1,cx(n))} : _*),impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
               })
             }
             cx.load()
             expr(e,(r:Rep[_]) => {
-              val ent = mm.newEntry((m.keys.map(cx) ++ List(r)) : _*)
+              val ent = impl.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)) : _*)
               op match { case OpAdd => impl.m3add(mm, ent)(mE) case OpSet => impl.m3set(mm, ent)(mE) }
             }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
           }
@@ -245,7 +244,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val acc = a.asInstanceOf[Rep[Store[Entry]]]
     val mE = me(keys.map(_._2),tp)
     val block = impl.reifyEffects {
-      impl.m3add(acc,acc.newEntry( ((keyNames.map{ case (n,t) => impl.named(n,false)(mE) })++List(impl.unit(1))) : _*))(mE)
+      impl.m3add(acc,impl.stNewEntry2(acc,  ((keyNames.map{ case (n,t) => impl.named(n,false)(mE) })++List(impl.unit(1))) : _*))(mE)
     }
     val initCode = impl.emit(block)
     var staticFieldsStr = ""
@@ -262,7 +261,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
   var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
   override def genLMS(s0:System):(String,String,String,String) = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
-    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); (name,(impl.named(name,false)(m),keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
+    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); val s = impl.named(name,false)(m); s.emitted = true; (name,(s,keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
     val (str,ld0,_) = genInternals(s0)
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
@@ -270,9 +269,9 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
     val ts = tsResBlks.map{ case (name,args,b) =>
       impl.emitTrigger(b,name,args)
     }.mkString("\n\n")
+    val ms = s0.maps.map(genMap).mkString("\n") // maps
     var outStream = new java.io.StringWriter
     var outWriter = new java.io.PrintWriter(outStream)
-    val ms = s0.maps.map(genMap).mkString("\n") // maps
     //impl.codegen.generateClassArgsDefs(outWriter,Nil)
 
     impl.codegen.emitDataStructures(outWriter)
@@ -296,3 +295,7 @@ class LMSGen(cls:String="Query") extends ScalaGen(cls) {
 
   override def additionalImports():String = "import ddbt.lib.store._\n"
 }
+
+class LMSScalaGen(cls:String="Query") extends LMSGen(cls,ScalaExpGen) with IScalaGen
+
+class LMSCppGen(cls:String="Query") extends LMSGen(cls,CppExpGen) with ICppGen

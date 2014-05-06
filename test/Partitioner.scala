@@ -6,15 +6,17 @@ object Partitioner {
   def main(args: Array[String]) {
     // Dirty front-end
     if (path_repo==null) return printf("DBT repository must be configured.")
-    if (args.size<1) return printf("Usage: ddbt.Parititoner <query_sql_file>")
+    if (args.size<1) return printf("Usage: ddbt.Parititoner <query_pattern>")
     val qs = exec(Array("find","test/queries","-type","f","-and","-not","-path","*/.*"),new java.io.File(path_repo))._1.split("\n").filter(x=>x.matches(".*"+args(0)+"(\\.sql)?")).sorted
     if (qs.size==0) return printf("No query selected, relax your pattern")
-    if (qs.size>1) return printf("Too many queries, refine your pattern:"+qs.map(x=>"\n - "+x).mkString)
-    val m3_src = ddbt.Compiler.toast("m3",qs(0))._2
-    val m3 = (M3Parser andThen TypeCheck)(m3_src)
-    val (p,h)=Partitioning(m3)
-    println(p)
-    println(h)
+    qs.foreach{ q =>
+      println("------ "+q)
+      val m3_src = ddbt.Compiler.toast("m3",q)._2
+      val m3 = (M3Parser andThen TypeCheck)(m3_src)
+      val (p,h)=Partitioning(m3)
+      //println(p)
+      //println(h)
+    }
   }
 }
 
