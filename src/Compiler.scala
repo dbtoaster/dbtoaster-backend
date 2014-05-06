@@ -117,7 +117,7 @@ object Compiler {
   def output(s:String) = if (out==null) println(s) else Utils.write(out,s)
 
   // M3 -> execution phase, returns (gen,compile) time
-  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null,t_datasets:(String=>Unit)=>Unit=null,t_run:(()=>Unit)=>Unit=null,samplesAndWarmupRounds:Int=0) {
+  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null,t_datasets:((String,Int,Long)=>Unit)=>Unit=null,t_run:(()=>Unit)=>Unit=null,samplesAndWarmupRounds:Int=0) {
     val t0=System.nanoTime
     // Front-end phases
     val m3 = postProc((M3Parser andThen TypeCheck) (m3_src))
@@ -160,7 +160,7 @@ object Compiler {
 
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
           val boost = Utils.prop("lib_boost",null)
-          t_datasets{dataset=>
+          t_datasets{ case (dataset,pMode,timeout) =>
             val srcTmp=Utils.read(out).replace("DATASETPLACEHOLDER",dataset)
             //TODO XXX dataset should be an argument to the program
             val src = if(dataset.contains("_del")) srcTmp.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else srcTmp

@@ -80,7 +80,7 @@ object UnitTest {
         e("Benchmarking options:")
         e("  -x            enable benchmarks (compile and execute)")
         e("  -v            verification against reference result") // consistency verification is always enabled
-        // e("  -p <mode>     parallel streams (0=off, 1=thread, 2=deterministic)")
+        e("  -p <mode>     parallel streams (0=off"/*+", 1=thread"*/+", 2=deterministic)")
         e("  -s <n>        number of samples to take (default: 10)")
         e("  -w <n>        number of warm-up transients (default: 0)")
         e("  -t <ms>       test duration timeout (in ms, default: 0)")
@@ -305,7 +305,7 @@ object UnitTest {
     }
     if (timeout>0) sc=sc.replaceAll("(case StreamEvent.*=>)","$1 if (!skip)").replace("def act(): Unit","var skip = false;\n    def act(): Unit")
     p.gen(math.max(0,t1-t0))
-    p.all(q){dataset=> write(tmp+"/Query.scala",{ val res = sc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace(", delimiter = \"\\\\|\")", ", deletions = \"true\", delimiter = \"\\\\|\")") else res })
+    p.all(q){case (dataset,_,_)=> write(tmp+"/Query.scala",{ val res = sc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace(", delimiter = \"\\\\|\")", ", deletions = \"true\", delimiter = \"\\\\|\")") else res })
       val t2 = ns(()=>legacySC(List(tmp.getPath+"/Query.scala",tmp.getPath+"/RunQuery.scala")))._1; p.comp(t2)
       val args = Array("-n"+(samples+warmup),"-m1","-t"+timeout,"-d"+dataset)
       p.run(()=>scalaExec(tmp :: libs.split(":").map(new File(_)).toList,"org.dbtoaster.RunQuery",args,Compiler.exec_vm))
@@ -316,7 +316,7 @@ object UnitTest {
     val boost = prop("lib_boost",null)
     val qName = name(q.sql)+"_LCPP"
     val (t1,cc) = Compiler.toast("cpp",q.sql); p.gen(math.max(0,t1-t0))
-    p.all(q){dataset=>
+    p.all(q){case (dataset,_,_)=>
       write(tmp+"/"+qName+".hpp", {
         def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
         val res=cc.replaceAll("/standard/","/"+dataset+"/")
@@ -380,7 +380,7 @@ object UnitTest {
       }; l=r.readLine }}}
       t.start; try { scala.Console.setOut(o); System.setOut(o); f() } finally { scala.Console.setOut(c0); System.setOut(s0); o.close }; t.join
     }
-    def all(q:QueryTest)(f:String=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) add() else f(d) }; close }
+    def all(q:QueryTest)(f:(String,Int,Long)=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) add() else f(d,parallel,timeout) }; close }
     def close { while (ds < datasets.size) add(); var s=time(med(tg))+","+time(med(tc))+","+tr; if (csv!=null) { csv.print(s); csv.flush } }
   }
 
