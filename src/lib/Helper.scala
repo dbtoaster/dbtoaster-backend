@@ -178,9 +178,9 @@ object Helper {
     }
   }
 
-  def loadCSV[K,V](kv:List[Any]=>(K,List[Any]),file:String,fmt:String,sep:String=","):Map[K,List[Any]] = {
+  def loadCSV[K](kv:List[Any]=>(K,List[Any]),file:String,fmt:String,sep:String=","):Map[K,List[Any]] = {
     val m = new java.util.HashMap[K,List[Any]]()
-    def f(e:TupleEvent) = { val (k,v)=kv(e.data); m.put(k,v) }
+    def f(e:TupleEvent) = { val (k,v)=kv(e.data.init ::: List(List[Any](e.data.last))); m.put(k,v) }
     val s = SourceMux(f,Seq((new java.io.FileInputStream(file),new Adaptor.CSV("REF",fmt,sep),Split())))
     s.read; scala.collection.JavaConversions.mapAsScalaMap(m).toMap
   }
