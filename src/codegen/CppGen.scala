@@ -526,7 +526,7 @@ trait ICppGen extends IScalaGen {
 
   // Helper that contains the main and stream generator
   private def helper(s0:System) = {
-    val dataset = "DATASETPLACEHOLDER" //XXXX
+    val dataset = "standard" //XXXX
     "/* Type definition providing a way to execute the sql program */\n"+
     "class Program : public ProgramBase\n"+
     "{\n"+
@@ -608,7 +608,7 @@ trait ICppGen extends IScalaGen {
     }
     val src = fixOrderbook(sources)
     val ss="\n/* Specifying data sources */\n\n"+src.filter{!_.stream}.map(genStream).mkString("\n")+"\n"+src.filter{_.stream}.map(genStream).mkString("\n")
-    ss.replaceAll("/standard/","/DATASETPLACEHOLDER/")
+    ss
   }
 
   override def pkgWrapper(pkg:String, body:String) = "#include \"program_base.hpp\"\n"+additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"

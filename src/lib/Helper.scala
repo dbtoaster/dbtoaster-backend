@@ -92,17 +92,27 @@ object Helper {
   //   -t<num>       set execution timeout (in miliseconds)
   //   -m<num>       0=hide output (verification mode), 1=sampling (benchmark mode)
   //   -p<num>       parallel input streams 0=disabled 1=threads 2=deterministic
-  def bench(args:Array[String],run:(String,Int,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
+  def extractExecArgs(args:Array[String]) = {
     def ad[T](s:String,d:T,f:String=>T) = args.filter(_.startsWith(s)).lastOption.map(x=>f(x.substring(s.length))).getOrElse(d)
     val num = ad("-n",1,x=>math.max(0,x.toInt))
     val mode = ad("-m",-1,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)
     val parallel = ad("-p",2,x=>x.toInt)
     var ds = args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
+    (num, mode, timeout, parallel, ds)
+  }
+  def bench(args:Array[String],run:(String,Int,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
+    val (num, mode, timeout, parallel, ds) = extractExecArgs(args)
     if (mode < 0) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
     ds.foreach { d=> var i=0; var res0:List[Any]=null
       while (i < num) { i+=1;
-        val (t,res)=run(d,parallel,timeout); if (t.skip==0) { if (res0==null) res0=res else assert(res0==res,"Inconsistent results: "+res0+" != "+res); }
+        val (t,res)=run(d,parallel,timeout);
+        if (t.skip==0) { 
+          if (res0==null) 
+            res0=res 
+          else 
+            assert(res0==res,"Inconsistent results: "+res0+" != "+res);
+        }
         if (mode==1) println("SAMPLE="+d+","+(t.ns/1000)+","+t.count+","+t.skip)
         if (mode < 0) println("Time: "+t)
       }
