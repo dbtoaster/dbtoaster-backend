@@ -449,18 +449,6 @@ void order_book_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t
 	}
 }
 
-// void order_book_adaptor::process(const string& data, boost::shared_ptr<list<event_t> > dest)
-// {
-// 	// Grab a message from the data.
-// 	order_book_message r;
-// 	bool valid = parse_message(data, r);
-	  
-// 	if ( valid ) {
-// 	  // Process its action, updating the internal book.
-// 	  process_message(r, dest);
-// 	}
-// }
-
 }
 }
 }
