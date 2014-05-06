@@ -36,30 +36,34 @@ trait ICppGen extends IScalaGen {
   //   ex:expression to convert
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
-  override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
-    case Ref(n) => co(rn(n))
-    case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
-    case Exists(e) => cpsExpr(e,(v:String)=>co("("+v+" != 0 ? 1L : 0L)"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
+  // XXX: am should be a Set instead of a List
+  override def cpsExpr(ex:Expr,co:(String,Type)=>(String,Type)=(v:String,t:Type)=>(v,t),am:Option[List[(String,Type)]]=None):(String,Type) = ex match {
+    case Ref(n) =>
+      val (nn,nt)=rn(n)
+      co(nn,nt)
+    case Const(tp,v) => tp match { case TypeLong => co(v+"L",tp) case TypeString => co("\""+v+"\"",tp) case _ => co(v,tp) }
+    case Exists(e) => cpsExpr(e,(v:String,t:Type)=>co("("+v+" != 0 ? 1L : 0L)",TypeLong))
+    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String,llt:Type)=>cpsExpr(r,(rr:String,rrt:Type)=>("("+ll+" "+op+" "+rr+")",TypeLong)))._1,TypeLong)
     case app@Apply(fn1,tp,as1) => {
       val (as, fn) = (fn1 match {
         case "date_part" if as1.head.isInstanceOf[Const] => (as1.tail, as1.head.asInstanceOf[Const].v.toLowerCase+"_part")
         case _ => (as1, fn1)
       })
-      if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
-      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
+      if (as.forall(_.isInstanceOf[Const])) co(constApply(app),tp) // hoist constants resulting from function application
+      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String,pt:Type)=>cpsExpr(a,(v:String,vt:Type)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""),tp)) }; c("U"+fn,tp) }
     }
     case m@MapRef(n,tp,ks) =>
       val kswt = (ks zip m.tks) //ks with type
+      val rt = tp
       val (ko,ki) = kswt.zipWithIndex.partition{case((k,ktp),i)=>ctx.contains(k)}
-      if (ki.size==0) co((if (ks.size>0) FIND_IN_MAP_FUNC(n)+"("+n+", "+tup(ks.map(rn))+")" else n)) // all keys are bound
+      if (ki.size==0) co((if (ks.size>0) FIND_IN_MAP_FUNC(n)+"("+n+", "+tup(ks.map(rnv))+")" else n),tp) // all keys are bound
       else {
         val lup0 = fresh("lkup") //lookup
         val lupItr0 = lup0+"_it"
         val lupItrNext0 = "next_"+lupItr0
         val lupEnd0 = lup0+"_end"
         val is = ko.map(_._2)
-        val iKeys = ko.map(x=>rn(x._1._1))
+        val iKeys = ko.map(x=>rnv(x._1._1))
         val (k0,v0)=(fresh("k"),fresh("v"))
 
         ctx.add(kswt.filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
@@ -72,7 +76,7 @@ trait ICppGen extends IScalaGen {
           val mapDef = mapDefs(n)
 
           //TODO XXX make sure that next pointer is not required (see commented code below)
-          (if (ko.size>0) { //slice
+          ((if (ko.size>0) { //slice
             val idxType = n+"_index"+getIndexId(n,is)
             val idxIterator = idxType+"::iterator"
             slice(n,is)
@@ -96,11 +100,11 @@ trait ICppGen extends IScalaGen {
           // "  ++"+lupItrNext0+";\n"+
              ki.map{case ((k,ktp),i)=>"  "+ktp+" "+rn(k)+" = (*"+lupItr0+")."+mapDef.keys(i)._1+";\n"}.mkString+
           "  "+tp.toCpp+" "+v0+" = "+"(*"+lupItr0+")."+VALUE_NAME+";\n"+
-             ind(co(v0))+
+             ind(co(v0,tp)._1)+
           "\n"+
           // "  "+lupItr0+" = "+lupItrNext0+";\n"+
           "  ++"+lupItr0+";\n"+
-          "}\n"
+          "}\n",rt)
         } else { //only foreach for Temp map
           val mapType = "map<"+tupType(m.tks.map(_.toCpp))+" ,"+tp.toCpp+">"
           val idxIterator = mapType+"::iterator"
@@ -109,33 +113,38 @@ trait ICppGen extends IScalaGen {
           // idxIterator+" "+lupItr0+" = "+n+".begin(); //temp foreach\n"+
           // idxIterator+" "+lupEnd0+" = "+n+".end();\n"+
           //compact mode
-          idxIterator+" "+lupItr0+" = "+n+".begin(), "+lupEnd0+" = "+n+".end(); //temp foreach\n"+
+          (idxIterator+" "+lupItr0+" = "+n+".begin(), "+lupEnd0+" = "+n+".end(); //temp foreach\n"+
           // idxIterator+" "+lupItrNext0+" = "+lupItr0+";\n"+
           "while("+lupItr0+"!="+lupEnd0+") {\n"+
           // "  ++"+lupItrNext0+";\n"+
           "  "+tupType(m.tks.map(_.toCpp))+" "+(if(ks.size==1) rn(ks.head) else k0)+" = "+"(*"+lupItr0+").first;\n"+
           "  "+tp.toCpp+" "+v0+" = "+"(*"+lupItr0+").second;\n"+
              (if(ks.size > 1) ki.map{case ((k,ktp),i)=>"  "+ktp+" "+rn(k)+" = at_c<"+i+">("+k0+");\n"}.mkString else "")+
-             ind(co(v0))+
+             ind(co(v0,tp)._1)+
           "\n"+
           // "  "+lupItr0+" = "+lupItrNext0+";\n"+
           "  ++"+lupItr0+";\n"+
-          "}\n"
+          "}\n",rt)
         }
       }
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
-    case Lift(n,e) =>
+    case Lift(n :: Nil,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
-      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(/*if */("+rn(n)+" == "+v+") ? 1L : 0L)"),am)
+      if (ctx.contains(n)) cpsExpr(e,(v:String,t:Type)=>co("(/*if */("+rn(n)+" == "+v+") ? 1L : 0L)",TypeLong),am)
       else e match {
-        case Ref(n2) => ctx.add(n,(e.tp,rn(n2))); co("1L") // de-aliasing
+        case Ref(n2) => ctx.add(n,(e.tp,rnv(n2))); co("1L",TypeLong) // de-aliasing
         //This renaming is required. As an example:
         //
         //C[x] = Add(A[x,y], B[x,y])
         //D[x] = E[x]
         //
         // will fail without a renaming.
-        case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> e.tp.toCpp+" "+rn(n)+" = "+v+";\n"+co("1L"),am)
+        case _ => 
+          ctx.add(n,(e.tp,fresh("l")))
+          cpsExpr(e,(v:String,t:Type) => {
+            val (cov,cot) = co("1L",TypeLong)
+            (e.tp.toCpp+" "+rn(n)+" = "+v+";\n"+cov,cot)
+          },am)
       }
     // Mul(el,er)
     // ==
@@ -157,7 +166,7 @@ trait ICppGen extends IScalaGen {
           case _ => vx(vl,vr)
         }
       }
-      cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(mul(vl,vr)),am),am)
+      cpsExpr(el,(vl:String,vlt:Type)=>cpsExpr(er,(vr:String,vrt:Type)=>co(mul(vl,vr),Type.tpMul(vlt,vrt)),am),am)
     // Add(el,er)
     // ==
     //   Add( (el,ctx0) -> (vl,ctx1) , (er,ctx0) -> (vr,ctx2) ) 
@@ -170,29 +179,52 @@ trait ICppGen extends IScalaGen {
     //   foreach vr in R, T += vr
     //   foreach t in T, co(t) 
     case a@Add(el,er) =>
-      if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
+      if (a.agg==Nil) { 
+        val cur=ctx.save
+        cpsExpr(el,(vl:String,vlt:Type) => {
+          ctx.load(cur)
+          cpsExpr(er,(vr:String,vrt:Type) => {
+            ctx.load(cur)
+            co("("+vl+" + "+vr+")",Type.tpAdd(vlt,vrt))
+          },am)
+        },am)
+      }
       else am match {
-        case Some(t) if t.toSet==a.agg.toSet => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
+        case Some(t) if t.toSet==a.agg.toSet => 
+          val cur=ctx.save
+          val (s1,_)=cpsExpr(el,co,am)
+          ctx.load(cur)
+          val (s2,rt)=cpsExpr(er,co,am)
+          ctx.load(cur)
+          (s1+s2,rt)
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
           val tmp = Some(a.agg)
           val cur = ctx.save
-          val s1 = cpsExpr(el,(v:String)=>ADD_TO_TEMP_MAP_FUNC(tupType(a.agg.map(_._2.toCpp)),ex.tp.toCpp)+"("+a0+", "+tup(ks map rn)+","+v+");\n",tmp); ctx.load(cur)
-          val s2 = cpsExpr(er,(v:String)=>ADD_TO_TEMP_MAP_FUNC(tupType(a.agg.map(_._2.toCpp)),ex.tp.toCpp)+"("+a0+", "+tup(ks map rn)+","+v+");\n",tmp); ctx.load(cur)
-          genVar(a0,ex.tp,a.agg.map(_._2))+s1+s2+cpsExpr(mapRef(a0,ex.tp,a.agg),co)
+          val s1 = cpsExpr(el,(v:String,t:Type)=>(ADD_TO_TEMP_MAP_FUNC(tupType(a.agg.map(_._2.toCpp)),ex.tp.toCpp)+"("+a0+", "+tup(ks map rnv)+","+v+");\n",TypeUnit),tmp)._1
+          ctx.load(cur)
+          val s2 = cpsExpr(er,(v:String,t:Type)=>(ADD_TO_TEMP_MAP_FUNC(tupType(a.agg.map(_._2.toCpp)),ex.tp.toCpp)+"("+a0+", "+tup(ks map rnv)+","+v+");\n",TypeUnit),tmp)._1
+          ctx.load(cur)
+          val (r,rt) = cpsExpr(mapRef(a0,ex.tp,a.agg),co)
+          (genVar(a0,ex.tp,a.agg.map(_._2))+s1+s2+r,rt)
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-      if (aks.size==0) { val a0=fresh("agg"); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      if (aks.size==0) {
+        val a0=fresh("agg")
+        (genVar(a0,ex.tp)+cpsExpr(e,(v:String,t:Type)=>(a0+" += "+v+";\n",TypeUnit))._1+co(a0,a.tp)._1,a.tp)
+      }
       else am match {
         case Some(t) if t.toSet==aks.toSet => cpsExpr(e,co,am)
         case _ =>
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
-          val s1 = genVar(a0,e.tp,aks.map(_._2))+"\n"+cpsExpr(e,(v:String)=>ADD_TO_TEMP_MAP_FUNC(tupType(aks.map(_._2.toCpp)),e.tp.toCpp)+"("+a0+", "+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
-          ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
+          val s1 = genVar(a0,e.tp,aks.map(_._2))+"\n"+
+            cpsExpr(e,(v:String,t:Type)=>(ADD_TO_TEMP_MAP_FUNC(tupType(aks.map(_._2.toCpp)),e.tp.toCpp)+"("+a0+", "+tup(aks.map(x=>rnv(x._1)))+","+v+");\n",TypeUnit),tmp);
+          ctx.load(cur)
+          (s1+cpsExpr(mapRef(a0,e.tp,aks),co),a.tp)
       }
     case _ => sys.error("Don't know how to generate "+ex)
   }
@@ -201,12 +233,15 @@ trait ICppGen extends IScalaGen {
     case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => (ADD_TO_MAP_FUNC(m.name),"+=") case OpSet => (SET_IN_MAP_FUNC(m.name),"=") }
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear();\n" else "" }
       val init = oi match {
-        case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>
-          if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-          else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+m.name+", "+tup(m.keys map rn)+")==0) "+SET_IN_MAP_FUNC(m.name)+"("+m.name+", "+tup(m.keys map rn)+","+i+");\n")
+        case Some(ie) => 
+          ctx.load()
+          cpsExpr(ie,(i:String,it:Type) =>
+          (if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
+          else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+m.name+", "+tup(m.keys map rnv)+")==0) "+SET_IN_MAP_FUNC(m.name)+"("+m.name+", "+tup(m.keys map rnv)+","+i+");\n",TypeUnit))
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+m.name+", "+tup(m.keys map rn)+","+v+")"})+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
+      ctx.load()
+      clear+init+cpsExpr(e,(v:String,t:Type) => ((if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+m.name+", "+tup(m.keys map rnv)+","+v+")"})+";\n",TypeUnit),if (op==OpAdd) Some(m.keys zip m.tks) else None)
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 

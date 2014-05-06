@@ -181,7 +181,8 @@ trait IScalaGen extends CodeGen {
   //   ex:expression to convert
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
-  def cpsExpr(ex:Expr,co:(String,Type)=>(String,Type)=(v:String,t:Type)=>(v,t),am:Option[List[(String,Type)]]=None):(String,Type) = ex match { // XXX: am should be a Set instead of a List
+  // XXX: am should be a Set instead of a List
+  def cpsExpr(ex:Expr,co:(String,Type)=>(String,Type)=(v:String,t:Type)=>(v,t),am:Option[List[(String,Type)]]=None):(String,Type) = ex match {
     case Ref(n) => 
       val (nn,nt)=rn(n)
       co(nn,nt)
@@ -194,7 +195,7 @@ trait IScalaGen extends CodeGen {
           ("(if ("+genOp(ll,rr,op.toString,lt,rt)._1+") MapVal(1L) else MapVal(0,0L))",cmpt)))._1,cmpt)
     case app@Apply(fn,tp,as) =>
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app),tp) // hoist constants resulting from function application
-      else { 
+      else {
         def app(vs:List[String],ts:List[Type],as:List[Expr]):(String,Type) = as match {
           case a::Nil => 
             cpsExpr(a,(v:String,t:Type) => {
@@ -359,12 +360,12 @@ trait IScalaGen extends CodeGen {
       }
       else am match {
         case Some(t) if t.toSet.subsetOf(a.agg.toSet) => 
-          val cur=ctx.save 
-          val s1=cpsExpr(el,co,am)
+          val cur=ctx.save
+          val (s1,_)=cpsExpr(el,co,am)
           ctx.load(cur)
-          val s2=cpsExpr(er,co,am)
+          val (s2,rt)=cpsExpr(er,co,am)
           ctx.load(cur)
-          (s1._1+"\n"+s2._1,s2._2)
+          (s1+s2,rt)
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
