@@ -1,8 +1,8 @@
 // --------- Project informations
 Seq(
-  name := "DistributedDBtoaster",
+  name := "DBtoaster",
   organization := "ch.epfl.data",
-  version := "0.1"
+  version := "2.1"
 )
 
 // --------- Paths
