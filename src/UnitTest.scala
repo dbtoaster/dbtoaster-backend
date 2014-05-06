@@ -234,7 +234,7 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
-    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp))
+    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run))
     p.close
     // Append correctness spec and move to test/gen/
     if (genSpec) inject("import java.util.Date\n",sp,path_sources)
@@ -279,7 +279,7 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
-    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.all(q),p.run,samples+warmup))
+    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run))
     p.close
     // Append correctness spec and move to test/gen/
     // if (genSpec) inject("import java.util.Date\n",sp,path_sources)

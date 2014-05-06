@@ -23,7 +23,8 @@ object Compiler {
 
   var in   : List[String] = Nil  // input files
   var out  : String = null       // output file (defaults to stdout)
-  var lang : String = LANG_SCALA    // output language
+  var lang : String = LANG_SCALA // output language
+  var cPath: String = null       // path for putting the compiled program
   var name : String = null       // class/structures name (defaults to Query or capitalized filename)
   var pkg  : String = "ddbt.gen" // class package
   var optm3: String = "-O2"      // optimization level
@@ -55,8 +56,9 @@ object Compiler {
     def eat(f:String=>Unit,s:Boolean=false) { i+=1; if (i<l) f(if(s) args(i).toLowerCase else args(i)) }
     while(i<l) {
       args(i) match {
-        case "-l" => eat(s=>s match { case LANG_CALC|LANG_M3|LANG_SCALA|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS|LANG_AKKA => lang=s; case _ => error("Unsupported language: "+s,true) },true)
+        case "-l" => eat(s=>s match { case LANG_CALC|LANG_M3|LANG_SCALA|LANG_CPP|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS|LANG_AKKA => lang=s; case _ => error("Unsupported language: "+s,true) },true)
         case "-o" => eat(s=>out=s)
+        case "-c" => eat(s=>cPath=s)
         case "-n" => eat(s=>{ val p=s.lastIndexOf('.'); if (p!= -1) { pkg=s.substring(0,p); name=s.substring(p+1) } else name=s})
         case "-L" => eat(s=>libs=s::libs)
         case "-d" => eat(s=>depth=s.toInt)
@@ -79,6 +81,7 @@ object Compiler {
       error("Usage: Compiler [options] file1 [file2 [...]]")
       error("Global options:")
       error("  -o <file>     output file (default: stdout)")
+      error("  -c <file>     invoke a second stage compiler on the source file")
       error("  -l <lang>     defines the target language")
       error("                - "+LANG_CALC     +"  : relational calculus")
       error("                - "+LANG_M3       +"    : M3 program")
@@ -119,7 +122,7 @@ object Compiler {
   def output(s:String) = if (out==null) println(s) else Utils.write(out,s)
 
   // M3 -> execution phase, returns (gen,compile) time
-  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null,t_datasets:((String,Int,Long)=>Unit)=>Unit=null,t_run:(()=>Unit)=>Unit=null,samplesAndWarmupRounds:Int=0) {
+  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null,t_run:(()=>Unit)=>Unit=null) {
     val t0=System.nanoTime
     // Front-end phases
     val m3 = postProc((M3Parser andThen TypeCheck) (m3_src))
@@ -151,20 +154,31 @@ object Compiler {
     }
     if (t_gen!=null) t_gen(System.nanoTime-t0)
     if (post_gen!=null) post_gen(m3)
-    // Execution
-    if (exec) {
-      val dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
+    var dir:File = null
+    if (cPath!=null || exec) {
+      dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
       lang match {
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
           val t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
           if (t_comp!=null) t_comp(t2)
-          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
-
-        case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
+          // TODO XXX should generate jar file in cPath
+        case LANG_CPP|LANG_LMS|LANG_CPP_LMS => if(cPath!=null) {
+          val pl = "srccpp/lib"
           val boost = Utils.prop("lib_boost",null)
-          t_datasets{ case (dataset,pMode,timeout) =>
+          val t2 = Utils.ns(()=>Utils.cppCompiler(out,cPath,boost,pl))._1; if (t_comp!=null) t_comp(t2)
+        }
+      }
+    }
+    // Execution
+    if (exec) {
+      lang match {
+        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
+          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
+        case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
+          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets) = ddbt.lib.Helper.extractExecArgs(exec_args.toArray)
+          datasets.foreach{ dataset =>
             def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
-            val srcTmp=Utils.read(out).replace("DATASETPLACEHOLDER",dataset)
+            val srcTmp=Utils.read(out).replace("standard",dataset)
                             .replace("++tN;",(if (timeout>0) "if (tS>0) { ++tS; return; } if (tN%100==0) { "+tc()+" if (tT>"+(timeout*1000L)+"L) { tS=1; return; } } " else "")+"++tN;")
                             .replace("//P"+pMode+"_PLACE_HOLDER",
                                       "struct timeval t0;\n"+
@@ -174,13 +188,9 @@ object Compiler {
             val src = if(dataset.contains("_del")) srcTmp.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else srcTmp
             Utils.write(out,src)
             val pl = "srccpp/lib"
-            val po = out.substring(0,out.lastIndexOf("."))
-            val as = List("g++",pl+"/main.cpp","-include",out,"-o",po,"-O3","-lpthread","-ldbtoaster","-I"+pl,"-L"+pl) :::
-                     List("program_options","serialization","system","filesystem","chrono",Utils.prop("lib_boost_thread","thread")).map("-lboost_"+_) ::: // thread-mt
-                     (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
-            //make DBT c++ library
-            Utils.exec(Array("make","-C",pl))
-            val t2 = Utils.ns(()=>Utils.exec(as.toArray))._1; if (t_comp!=null) t_comp(t2)
+            val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
+            val boost = Utils.prop("lib_boost",null)
+            val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),boost,pl))._1; if (t_comp!=null) t_comp(t2)
             t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
               val (out,err)=Utils.exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
               if (err!="") System.err.println(err); Utils.write(po+"_"+lang+".txt",out); println(out)
