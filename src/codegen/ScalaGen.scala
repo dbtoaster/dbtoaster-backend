@@ -266,20 +266,20 @@ trait IScalaGen extends CodeGen {
       val tps = e.tp match { case TypeTuple(ts) => ts case _ => sys.error("Expected tuple type") } 
       val refs = e match { case Tuple(es) => es.map(e => e match { case Ref(n) => Some(n) case _ => None }) case _ => List.fill(ns.length)(None) }
       val cmpVars = ns.filter(ctx.contains(_))
-      (ns zip refs zip tps).foreach { 
-        case ((n,ref),t) => 
+      (ns zip refs zip tps).foreach {
+        case ((n,ref),t) =>
           ref match {
-            case Some(n2) => 
+            case Some(n2) =>
               val (rn2,rn2t) = rn(n2)
-              ctx.add(n,(rn2t,rn2)); 
+              ctx.add(n,(rn2t,rn2));
             case None => 
               val l = fresh("l")
-              ctx.add(n,(t,l)) 
+              ctx.add(n,(t,l))
           }
       }
       val t=fresh("t")
       ctx.add(t,(e.tp,t))
-      cpsExpr(e,(v:String,vt:Type) => { 
+      cpsExpr(e,(v:String,vt:Type) => {
         val cur = ctx.save 
         ctx.load(cur)
         val tStr = "val "+t+" = "+mapval(v,vt)._1+";\n"
@@ -298,7 +298,7 @@ trait IScalaGen extends CodeGen {
             co("(if ("+cmps.mkString(" && ")+") MapVal(1,1L) else MapVal(0,0L))",TypeMapVal(TypeLong))
           else
             co("MapVal(1L)",TypeMapVal(TypeLong)))._1
-        (tStr+strExp,TypeMapVal(TypeLong)) 
+        (tStr+strExp,TypeMapVal(TypeLong))
       },am)
 
     // Mul(el,er)
