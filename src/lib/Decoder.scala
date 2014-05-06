@@ -201,7 +201,7 @@ case class SourceMux(f:TupleEvent=>Unit,streams:Seq[(InputStream,Adaptor,Split)]
   // java.lang.System.err.println("q ---> %s".format(q));
   def read() = {
     parallel match {
-      // case 0 => streams.foreach { case (in,adp,splt) => read1(in,Decoder((e:TupleEvent)=>if(e.ord == 0) f(e) else que.enqueue(e),adp,splt)) }
+      case 0 => streams.foreach { case (in,adp,splt) => read1(in,Decoder((e:TupleEvent)=>if(e.ord == 0) f(e) else que.enqueue(e),adp,splt)) }
       // case 1 => val ts = streams.zipWithIndex.map { case ((in,adp,splt),i) => new Thread{ override def run() { read1(in,Decoder((e:TupleEvent)=>if(e.ord == 0) f(e) else processQ(i,e),adp,splt)); queuedTuplesFromStreams(i) = Int.MaxValue }} }
       //           ts.foreach(_.start); ts.foreach(_.join)
       case 2 => var e=lst.poll; while (e!=null) { f(e); e=lst.poll }

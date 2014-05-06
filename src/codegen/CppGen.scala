@@ -211,16 +211,16 @@ trait ICppGen extends IScalaGen {
   }
 
   override def genTrigger(t:Trigger):String = {
-    val (n,as) = t.evt match {
-      case EvtReady => ("system_ready_event",Nil)
-      case EvtAdd(Schema(n,cs)) => ("insert_"+n,cs)
-      case EvtDel(Schema(n,cs)) => ("delete_"+n,cs)
+    val (n,as, xActCounter) = t.evt match {
+      case EvtReady => ("system_ready_event",Nil,"")
+      case EvtAdd(Schema(n,cs)) => ("insert_"+n,cs,"++tN;")
+      case EvtDel(Schema(n,cs)) => ("delete_"+n,cs,"++tN;")
     }
     ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap)
     val preBody="BEGIN_TRIGGER(exec_stats,\""+n+"\")\n"+
                 "BEGIN_TRIGGER(ivc_stats,\""+n+"\")\n"+
-                "{  ++tN;\n"
     val body=ind(t.stmts.map(genStmt).mkString)
+                "{  "+xActCounter+"\n"
     val pstBody="\n}\n"+
                 "END_TRIGGER(exec_stats,\""+n+"\")\n"+
                 "END_TRIGGER(ivc_stats,\""+n+"\")\n"
@@ -538,10 +538,12 @@ trait ICppGen extends IScalaGen {
     "\n"+
     "    /* Imports data for static tables and performs view initialization based on it. */\n"+
     "    void init() {\n"+
+    "        //P0_PLACE_HOLDER\n"+
     "        table_multiplexer.init_source();\n"+
     "        stream_multiplexer.init_source();\n"+
     "        process_tables();\n"+
     "        data.on_system_ready_event();\n"+
+    "        //P2_PLACE_HOLDER\n"+
     "    }\n"+
     "\n"+
     "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+

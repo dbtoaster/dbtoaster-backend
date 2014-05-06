@@ -161,7 +161,13 @@ object Compiler {
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
           val boost = Utils.prop("lib_boost",null)
           t_datasets{ case (dataset,pMode,timeout) =>
+            def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
             val srcTmp=Utils.read(out).replace("DATASETPLACEHOLDER",dataset)
+                            .replace("++tN;",(if (timeout>0) "if (tS>0) { ++tS; return; } if (tN%100==0) { "+tc()+" if (tT>"+(timeout*1000L)+"L) { tS=1; return; } } " else "")+"++tN;")
+                            .replace("//P"+pMode+"_PLACE_HOLDER",
+                                      "struct timeval t0;\n"+
+                            "          gettimeofday(&t0,NULL);\n"+
+                            "          data.t0 = t0;\n")
             //TODO XXX dataset should be an argument to the program
             val src = if(dataset.contains("_del")) srcTmp.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else srcTmp
             Utils.write(out,src)
