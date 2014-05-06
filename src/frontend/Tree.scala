@@ -8,8 +8,17 @@ package ddbt.ast
  */
 sealed abstract class Tree // Generic AST node
 
-// ---------- Data types
-sealed abstract class Type extends Tree { def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase; def toCpp=toString; def zero:String; def zeroScala=zero; def zeroCpp=zero }
+/*
+ * Interface of the data types
+ */
+sealed abstract class Type extends Tree {
+  def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase
+  def toCpp=toString
+  def zero:String
+  def zeroScala=zero;
+  def zeroCpp=zero
+}
+
 //case object TypeChar extends Type /*  8 bit */ { override def toString="char" }
 //case object TypeShort extends Type /*16 bit */ { override def toString="short" }
 //case object TypeInt  extends Type /* 32 bit */ { override def toString="int" }
@@ -20,7 +29,48 @@ case object TypeDate   extends Type              { override def toString="date";
 //case object TypeTime extends Type              { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string"; val zero="\"\"" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
-case class TypeTuple(ts:List[Type]) extends Type { override def toString="<"+ts.mkString(",")+">"; val zero="<"+ts.map(_.zero).mkString(",")+">"; override val zeroScala="<"+ts.map(_.zeroScala).mkString(",")+">"; }
+case class TypeTuple(ts:List[Type]) extends Type { override def toScala="("+ts.map(_.toScala).mkString(",")+")"; override def toString="<"+ts.mkString(",")+">"; val zero="("+ts.map(_.zero).mkString(",")+")"; override val zeroScala="("+ts.map(_.zeroScala).mkString(",")+")"; }
+case class TypeMapVal(t:Type) extends Type { 
+  override def toScala="MapVal["+t.toScala+"]"
+  val zero = "MapVal("+t.zero+")"
+}
+case object TypeUnit extends Type { override def toString="()"; val zero="()" }
+
+object Type {
+  def tpRes(t1:Type,t2:Type,op:String):Type = (t1,t2) match {
+    case (t1,t2) if t1==t2 => t1
+    case (TypeMapVal(t1),TypeMapVal(t2)) => TypeMapVal(tpRes(t1,t2,op))
+    case (TypeMapVal(t1),t2) => TypeMapVal(tpRes(t1,t2,op))
+    case (t1,TypeMapVal(t2)) => TypeMapVal(tpRes(t1,t2,op))
+    case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
+    case (TypeTuple(t1 :: Nil),t2) => tpRes(t1,t2,op) 
+    case _ => sys.error("Bad operands ("+t1+" "+op+" "+t2+")")
+  }
+
+  def tpMul(t1:Type,t2:Type):Type = (t1,t2) match {
+    case (t1,t2) if t1==t2 => t1
+    case (TypeMapVal(t1),TypeMapVal(t2)) => TypeMapVal(tpMul(t1,t2))
+    case (TypeMapVal(t1),t2) => TypeMapVal(tpMul(t1,t2))
+    case (t1,TypeMapVal(t2)) => TypeMapVal(tpMul(t1,t2))
+    case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
+    case (TypeTuple(t1 :: Nil),t2) => tpMul(t1,t2) 
+    case (TypeTuple(t1s),TypeTuple(t2s)) => TypeTuple((t1s zip t2s).map{ case(t1,t2)=>tpMul(t1,t2)})
+    case (TypeTuple(t1s), t2) => TypeTuple(t1s.map(tpMul(_,t2)))
+    case (t1, TypeTuple(t2s)) => TypeTuple(t2s.map(tpMul(t1,_)))
+    case _ => sys.error("Bad operands ("+t1+" * "+t2+")")
+  }
+
+  def tpAdd(t1:Type,t2:Type):Type = (t1,t2) match {
+    case (t1,t2) if t1==t2 => t1
+    case (TypeMapVal(t1),TypeMapVal(t2)) => TypeMapVal(tpAdd(t1,t2))
+    case (TypeMapVal(t1),t2) => TypeMapVal(tpAdd(t1,t2))
+    case (t1,TypeMapVal(t2)) => TypeMapVal(tpAdd(t1,t2))
+    case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
+    case (TypeTuple(t1 :: Nil),t2) => tpAdd(t1,t2) 
+    case (TypeTuple(t1s),TypeTuple(t2s)) => TypeTuple((t1s zip t2s).map{ case(t1,t2)=>tpMul(t1,t2)})
+    case _ => sys.error("Bad operands ("+t1+" + "+t2+")")
+  }
+}
 
 // ---------- Comparison operators
 sealed abstract class OpCmp extends Tree { def toM3=toString; def toSQL=toString } // toString is C/Scala notation
@@ -120,6 +170,8 @@ object M3 {
       case Lift(n,e) => e.collect(f)
       case AggSum(ks,e) => e.collect(f)
       case Apply(fn,tp,as) => as.flatMap(a=>a.collect(f)).toSet
+      case Tuple(es) => es.flatMap(e=>e.collect(f)).toSet
+      case Neg(e) => e.collect(f)
       case _ => Set()
     })
     def replace(f:PartialFunction[Expr,Expr]):Expr = f.applyOrElse(this,(ex:Expr)=>ex match { // also preserve types
@@ -130,12 +182,14 @@ object M3 {
       case Lift(n,e) => Lift(n,e.replace(f))
       case a@AggSum(ks,e) => val t=AggSum(ks,e.replace(f)); t.tks=a.tks; t
       case Apply(fn,tp,as) => Apply(fn,tp,as.map(e=>e.replace(f)))
+      case Tuple(es) => Tuple(es.map(e=>e.replace(f)))
+      case Neg(e) => Neg(e.replace(f))
       case _ => ex
     })
     def rename(r:String=>String):Expr = replace {
       case Ref(n) => val t=Ref(r(n)); t.tp=tp; t
       case MapRef(n,tp,ks) => val t=MapRef(n,tp,ks.map(r)); t.tp=tp; t
-      case Lift(n,e) => val t=Lift(r(n),e.rename(r)); t
+      case Lift(ns,e) => val t=Lift(ns.map(r(_)),e.rename(r)); t
       case a@AggSum(ks,e) => val t=AggSum(ks map r,e.rename(r)); t.tks=a.tks; t
       case a@Add(el,er) => val t=Add(el.rename(r),er.rename(r)); t.tp=tp; t.agg=a.agg.map{case(n,t)=>(r(n),t)}; t
     }
@@ -148,7 +202,7 @@ object M3 {
   // Variables
   case class Ref(name:String) extends Expr { override def toString=name; var tp:Type=null }
   case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]"; var tks:List[Type]=Nil; var isTemp:Boolean=false; def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"}
-  case class Lift(name:String, e:Expr) extends Expr { override def toString="("+name+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
+  case class Lift(ns:List[String], e:Expr) extends Expr { override def toString="("+(ns match { case n::Nil => n case _ => "<"+ns.mkString(",")+">"})+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
   case class MapRefConst(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=TypeLong } // appear in Map definition and constant table lookups
   // Operations
   case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+ind(e.toString)+"\n)"; def tp=e.tp; var tks:List[Type]=Nil } // (grouping_keys)->sum relation
@@ -159,7 +213,8 @@ object M3 {
   case class Cmp(l:Expr,r:Expr,op:OpCmp) extends Expr { override def toString="{"+l+" "+op.toM3+" "+r+"}"; val tp=TypeLong } // comparison, returns 0 or 1
   // Tupling
   case class Tuple(es:List[Expr]) extends Expr { override def toString="<"+es.mkString(",")+">"; var tp:Type=null }
-  case class TupleLift(ns:List[String], e:Expr) extends Expr { override def toString="(<"+ns.mkString(",")+"> ^= "+e+")"; val tp=TypeLong }
+   // Additive Inverse
+  case class Neg(e:Expr) extends Expr { override def toString="-("+e+")"; var tp:Type=null }
 
   // ---------- Statements (no return)
   sealed abstract class Stmt extends M3 { var stmtId:Int=(-1) }

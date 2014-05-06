@@ -96,15 +96,7 @@ abstract class WorkerActor extends Actor {
   // ---- get/continuations matcher
   private object matcherGet {
     private val cont = new HashMap[(MapRef,Any),List[Any=>Unit]]()
-    @inline def req[K,V](map:MapRef,key:K,co:V=>Unit) { // map.get(key,continuation)
-      val o=owner(map,key);
-      if (o==self) co(local(map).asInstanceOf[M3Map[K,V]].get(key)) // resolves locally
-      else {
-        val k=(map,key); val cs=cont.get(k); val c=co.asInstanceOf[Any=>Unit];
-        cont.put(k,c::(if (cs!=null) cs else Nil))
-        if (cs==null) o ! Get(map,key) // send request
-      }
-    }
+    @inline def req[K,V](map:MapRef,key:K,co:V=>Unit) { ??? }
     @inline def res[K,V](map:MapRef,key:K,value:V) { // onReceive Val(map,key,value)
       val k=(map,key); cont.remove(k).foreach(_(value)); if (self!=master) bar.ack // ack pending barrier if needed
     }
@@ -176,8 +168,8 @@ abstract class WorkerActor extends Actor {
     // Data messages
     case Get(m,k) => sender ! Val(m,k,local_map(m).get(k)) // get(var) is handled locally
     case Val(m,k,v) => matcherGet.res(m,k,v)
-    case Add(m,k,v) => if (k==null) local_wr(m,v,true) else local_map(m).add(k,v); bar.recv
-    case Set(m,k,v) => if (k==null) local_wr(m,v,false) else local_map(m).set(k,v); bar.recv
+    case Add(m,k,v) => ??? 
+    case Set(m,k,v) => ???
     case Clear(m,p,pk) => val mm=local(m); (if (p<0) mm else mm.slice(p,pk)).clear; bar.recv
     case Foreach(f,as) => forl(f,as,()=>bar.recv)
     case Agg(id,fun_collect,Array(m:MapRef)) => sender ! AggPart(id,local(m)) // collect map data
@@ -199,26 +191,16 @@ abstract class WorkerActor extends Actor {
   // Element operation: if key hashes to local, apply locally, otherwise call remote worker
   def get[K,V](m:MapRef,k:K)(co:V=>Unit) = matcherGet.req(m,k,co)
   def add[K,V](m:MapRef,k:K,v:V) {
-    if (k==null) { local_wr(m,v,true); workers.foreach(w => if (w!=self) bar.send(w,Add(m,k,v))) }
-    else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[M3Map[K,V]].add(k,v) else bar.send(o,Add(m,k,v)) }
+    ???
   }
   def set[K,V](m:MapRef,k:K,v:V) {
-    if (k==null) { local_wr(m,v,false); workers.foreach(w => if (w!=self) bar.send(w,Set(m,k,v))) }
-    else { val o=owner(m,k); if (o==self) local(m).asInstanceOf[M3Map[K,V]].set(k,v) else bar.send(o,Set(m,k,v)) }
+    ???
   }
   // Group operations: broadcast to owners, workers then process locally
   def clear[P](m:MapRef,p:Int= -1,pk:P=null) = workers.foreach { bar.send(_,Clear(m,p,pk)) }
   def foreach(m:MapRef,f:FunRef,args:Any*) { workers.foreach { bar.send(_,Foreach(f,args.toArray)) } }
   def aggr[R](m:MapRef,f:FunRef,args:Any*)(zero:Any=null)(co:R=>Unit)(implicit cR:ClassTag[R]) {
-    val (z,p) = if (zero!=null) (zero,((m1:M3Map[Any,Any],m2:M3Map[Any,Any])=>{m2.sum(m1); m1}).asInstanceOf[(Any,Any)=>Any])
-    else (M3Map.zero[R](),(cR.toString match {
-      case "Long" => (v0:Long,v1:Long)=>v0+v1
-      case "Double" => (v0:Double,v1:Double)=>v0+v1
-      case "java.lang.String" => (v0:String,v1:String)=>v0+v1
-      case "java.util.Date" => (v0:java.util.Date,v1:java.util.Date)=> new java.util.Date(v0.getTime+v1.getTime)
-      case n => sys.error("No additivity for "+n)
-    }).asInstanceOf[(Any,Any)=>Any])
-    matcherAgg.req(m,f,args.toArray,co,z,p)
+    ???
   }
 
   // XXX: Experimental RPC call
@@ -252,12 +234,7 @@ trait MasterActor extends WorkerActor {
   import Messages._
   val queries:List[MapRef]
 
-  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = {
-    val zero = if (cV.toString=="Object"||cV.toString=="Any")
-          new M3MapBase[K,V](local(m).asInstanceOf[M3MapBase[K,V]].zero,false,null)
-          else M3Map.temp[K,V]()
-    super.aggr(m,fun_collect,m)(zero)((mm:M3Map[K,V])=>co(mm.toMap))
-  }
+  def toMap[K,V](m:MapRef,co:Map[K,V]=>Unit)(implicit cV:ClassTag[V]) = ???
 
   // ---- coherency mechanism: RAW, WAR and WAW dependency tracking
   // To mitigate WAW dependencies, we differentiate commutative and non-commutative (sequential) writes

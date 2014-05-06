@@ -24,6 +24,7 @@ trait CodeGen extends (M3.System => String) {
     def save = ctx.toMap
     def contains(name:String):Boolean = apply(name)!=null
     def apply(name:String) = ctx.getOrElse(name,ctx0.getOrElse(name,null.asInstanceOf[T]))
+    override def toString() = (ctx0 ++ ctx).toString
   }
   case class CtxSet(ctx0:Set[String]=Set()) extends Function1[String,Boolean] {
     private var ctx = scala.collection.mutable.HashSet[String]()
@@ -33,6 +34,7 @@ trait CodeGen extends (M3.System => String) {
     def save = ctx.toSet
     def contains(name:String) = apply(name)
     def apply(name:String) = ctx.contains(name) || ctx0.contains(name)
+    override def toString() = (ctx0 ++ ctx).toString
   }
 
   def consts:String

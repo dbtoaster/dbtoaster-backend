@@ -40,36 +40,33 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   private transient Entry<K,V>[] data;
   private transient int size;
   private transient int threshold;
-  private transient final V zero;
-  private transient final Plus<V> plus; // inferred from zero
+  private transient final MapVal<V> zero;
+  private transient final Ring<V> ring;
   private transient boolean skipZero = false;
   private transient final Index<?>[] indices;
 
-  public M3MapBase() { this((V)new Long(0L),false,null); }
-  public M3MapBase(V zero, boolean skipZero, Function1<K,?>[] projections) {
+  public M3MapBase(Ring<V> ring, boolean skipZero, Function1<K,?>[] projections) {
     threshold = (int)(INITIAL_CAPACITY * LOAD_FACTOR);
     data = new Entry[INITIAL_CAPACITY];
-    this.zero=zero; this.skipZero = skipZero;
+    this.zero=MapVal$.MODULE$.<V>noVal(ring);
+    this.skipZero = skipZero;
+    this.ring = ring;
     if (projections==null) indices=null;
     else {
       indices = (Index<?>[])java.lang.reflect.Array.newInstance(Index.class, projections.length);
       for(int i=0;i<projections.length;++i) indices[i] = new Index(projections[i]);
     }
-    if (zero instanceof Long) plus = (Plus<V>) new Plus<Long>() { Long apply(Long a, Long b) { return a+b; } };
-    else if (zero instanceof Double) plus = (Plus<V>) new Plus<Double>() { Double apply(Double a, Double b) { return a+b; } };
-    else if (zero instanceof String) plus = (Plus<V>) new Plus<String>() { String apply(String a, String b) { return a+b; } };
-    else if (zero instanceof Date) plus = (Plus<V>) new Plus<Date>() { Date apply(Date a, Date b) { return new Date(a.getTime()+b.getTime()); } };
-    else plus=null;
   }
-  protected V zero() { return zero; } // exposed for Akka (accumulator for partial aggregations)
+  protected MapVal<V> zero() { return zero; } // exposed for Akka (accumulator for partial aggregations)
+  public Ring<V> ring() { return ring; } // exposed for Akka (accumulator for partial aggregations)
 
   private abstract class Plus<T> { abstract T apply(T a, T b); }
   private static class Entry<K,V> implements Comparable<Entry> {
     private final int hash;
     public final K key;
-    public V value;
+    public MapVal<V> value;
     private Entry<K,V> next;
-    private Entry(int h, K k, V v, Entry<K,V> n) { hash=h; key=k; value=v; next=n; }
+    private Entry(int h, K k, MapVal<V> v, Entry<K,V> n) { hash=h; key=k; value=v; next=n; }
     public boolean equals(Entry that) { return hash==that.hash && key.equals(that.key); }
     public int compareTo(Entry that) { return (key instanceof Comparable<?>) ? ((Comparable<K>)key).compareTo((K)that.key) : 0; }
   }
@@ -85,11 +82,11 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     for (Entry<K,V> e:data) if (e!=null) do { next=e.next; int b=indexFor(e.hash, newCapacity); e.next=newData[b]; newData[b]=e; } while((e=next)!=null);
     data=newData; threshold=(int)Math.min(newCapacity * LOAD_FACTOR, MAXIMUM_CAPACITY + 1);
   }
-  private void createEntry(int hash, K key, V value, int bucketIndex) {
+  private void createEntry(int hash, K key, MapVal<V> value, int bucketIndex) {
     Entry<K,V> e = new Entry<K,V>(hash, key, value, data[bucketIndex]); data[bucketIndex]=e; ++size;
     if (indices!=null) { for (Index<?> i:indices) i.add(e); }
   }
-  private void putNoResize(K key, V value) {
+  private void putNoResize(K key, MapVal<V> value) {
     int h=hash(key); int i=indexFor(h,data.length);
     for (Entry<K,V> e=data[i]; e!=null; e=e.next) if (h==e.hash && key.equals(e.key)) { e.value = value; return; }
     createEntry(h, key, value, i);
@@ -97,13 +94,13 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
 
   // Minimal conventional Map interface
   public int size() { return size; }
-  public void put(K key, V value) {
+  public void put(K key, MapVal<V> value) {
     int h = hash(key); int b = indexFor(h, data.length);
     for(Entry<K,V> e=data[b];e!=null;e=e.next) if (h==e.hash && key.equals(e.key)) { e.value=value; return; }
     if ((size >= threshold) && (data[b]!=null)) { resize(2*data.length); b=indexFor(h,data.length); }
     createEntry(h,key,value,b);
   }
-  public V remove(K key) {
+  public MapVal<V> remove(K key) {
     int h=hash(key); int b=indexFor(h, data.length);
     Entry<K,V> prev=data[b],e=prev;
     while (e!=null) {
@@ -119,18 +116,24 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
   }
 
   // M3Map interface
-  public V get(K key) { Entry<K,V> e=find(key); return e==null ? zero : e.value; }
-  public void set(K key, V value) { if (skipZero && value.equals(zero)) remove(key); else put(key,value); }
-  public void add(K key, V value) { if (skipZero && value.equals(zero)) return; Entry<K,V> e=find(key);
-    if (e==null) put(key,value); else { e.value=plus.apply(e.value,value); if (skipZero && e.value.equals(zero)) remove(key); }
+  public MapVal<V> get(K key) { Entry<K,V> e=find(key); return e==null ? zero : e.value; }
+  public void set(K key, MapVal<V> value) { if (skipZero && value.equals(zero)) remove(key); else put(key,value); }
+  public void add(K key, MapVal<V> value) { if (skipZero && value.equals(zero)) return; Entry<K,V> e=find(key);
+    if (e==null) put(key,value); else { e.value=e.value.$plus(value); if (skipZero && e.value.equals(zero)) remove(key); }
   }
   public M3Map<K,V> slice(int index, Object subKey) { return new Slice(indices[index].slice(subKey)); }
   public void sum(M3Map<K,V> acc) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) acc.add(e.key,e.value); }
   public void clear() { for (int i=0;i<data.length;++i) data[i]=null; size=0; if (indices!=null) for(Index<?> i:indices) { i.clear(); } }
-  public void foreach(Function2<K,V,scala.runtime.BoxedUnit> f) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) { f.apply(e.key,e.value); } }
-  public scala.collection.immutable.Map<K,V> toMap() { // XXX: is this very efficient?
-    scala.collection.immutable.HashMap<K,V> m = new scala.collection.immutable.HashMap<K,V>();
-    for(Entry<K,V> e:data) for(;e!=null;e=e.next) { m=m.$plus(new scala.Tuple2<K,V>(e.key,e.value)); }
+  public void foreach(Function2<K,MapVal<V>,scala.runtime.BoxedUnit> f) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) { f.apply(e.key,e.value); } }
+  public scala.collection.immutable.Map<K,MapVal<V>> toMap() { // XXX: is this very efficient?
+    scala.collection.immutable.HashMap<K,MapVal<V>> m = new scala.collection.immutable.HashMap<K,MapVal<V>>();
+    for(Entry<K,V> e:data) for(;e!=null;e=e.next) { m=m.$plus(new scala.Tuple2<K,MapVal<V>>(e.key,e.value)); }
+    return m;
+  }
+
+  public scala.collection.immutable.Map<K,scala.collection.immutable.List<Object>> toListMap() { // XXX: is this very efficient?
+    scala.collection.immutable.HashMap<K,scala.collection.immutable.List<Object>> m = new scala.collection.immutable.HashMap<K,scala.collection.immutable.List<Object>>();
+    for(Entry<K,V> e:data) for(;e!=null;e=e.next) { m=m.$plus(new scala.Tuple2<K,scala.collection.immutable.List<Object>>(e.key,e.value.toList())); }
     return m;
   }
 
@@ -155,14 +158,14 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     int initialCapacity = (int) Math.min(num * Math.min(1 / LOAD_FACTOR, 4.0f), MAXIMUM_CAPACITY);
     int capacity=1; while (capacity<initialCapacity) { capacity <<= 1; }
     data = new Entry[capacity]; threshold=(int) Math.min(capacity * LOAD_FACTOR, MAXIMUM_CAPACITY + 1);
-    for (int i=0;i<num;++i) { K key=(K) s.readObject(); V value=(V) s.readObject(); putNoResize(key, value); }
+    for (int i=0;i<num;++i) { K key=(K) s.readObject(); MapVal<V> value=(MapVal<V>) s.readObject(); putNoResize(key, value); }
   }
   public Object clone() {
     Function1<K,?>[] ps=null;
     if (indices!=null) { ps=(Function1[])java.lang.reflect.Array.newInstance(Function1.class, indices.length);
       for (int i=0;i<indices.length;++i) ps[i] = indices[i].proj;
     }
-    M3MapBase<K,V> result=new M3MapBase<K,V>(zero, skipZero, ps);
+    M3MapBase<K,V> result=new M3MapBase<K,V>(ring, skipZero, ps);
     result.data=new Entry[data.length]; result.threshold=threshold; // fast insertion
     for(Entry<K,V> e:data) for(;e!=null;e=e.next) { result.putNoResize(e.key,e.value); } return result;
   }
@@ -176,18 +179,23 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     private final Set<Entry<K,V>> data;
     Slice(Set<Entry<K,V>> set) { data=set; }
     // Faked operations (to be better implemented)
-    public void set(K key, V value) { M3MapBase.this.set(key,value); }
-    public void add(K key, V value) { M3MapBase.this.add(key,value); }
+    public void set(K key, MapVal<V> value) { M3MapBase.this.set(key,value); }
+    public void add(K key, MapVal<V> value) { M3MapBase.this.add(key,value); }
     public M3Map<K,V> slice(int index, Object subKey) { return this; }
     // Slice-specific operations
-    public V get(K key) { Entry<K,V> e=M3MapBase.this.find(key); if (e!=null && !data.contains(e)) e=null; return e!=null ? e.value : null; }
+    public MapVal<V> get(K key) { Entry<K,V> e=M3MapBase.this.find(key); if (e!=null && !data.contains(e)) e=null; return e!=null ? e.value : null; }
     public int size() { return data.size(); }
     public void clear() { for(Entry<K,V> e : data) M3MapBase.this.remove(e.key); }
-    public void foreach(Function2<K,V,scala.runtime.BoxedUnit> f) { for(Entry<K,V> e : data) f.apply(e.key,e.value); }
+    public void foreach(Function2<K,MapVal<V>,scala.runtime.BoxedUnit> f) { for(Entry<K,V> e : data) f.apply(e.key,e.value); }
     public void sum(M3Map<K,V> acc) { for(Entry<K,V> e : data) acc.add(e.key,e.value); }
-    public scala.collection.immutable.Map<K,V> toMap() {
-      scala.collection.immutable.HashMap<K,V> m = new scala.collection.immutable.HashMap<K,V>();
-      for(Entry<K,V> e:data) m=m.$plus(new scala.Tuple2<K,V>(e.key,e.value)); return m;
+    public scala.collection.immutable.Map<K,MapVal<V>> toMap() {
+      scala.collection.immutable.HashMap<K,MapVal<V>> m = new scala.collection.immutable.HashMap<K,MapVal<V>>();
+      for(Entry<K,V> e:data) m=m.$plus(new scala.Tuple2<K,MapVal<V>>(e.key,e.value)); return m;
+    }  
+    public scala.collection.immutable.Map<K,scala.collection.immutable.List<Object>> toListMap() { // XXX: is this very efficient?
+      scala.collection.immutable.HashMap<K,scala.collection.immutable.List<Object>> m = new scala.collection.immutable.HashMap<K,scala.collection.immutable.List<Object>>();
+      for(Entry<K,V> e:data) for(;e!=null;e=e.next) { m=m.$plus(new scala.Tuple2<K,scala.collection.immutable.List<Object>>(e.key,e.value.toList())); }
+      return m;
     }
   }
 
@@ -203,7 +211,13 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
       data = new HashMap<P,Set<Entry<K,V>>>();
     }
     void clear() { data.clear(); }
-    void add(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s==null) { s=(cmp!=null)?new TreeSet<Entry<K,V>>(cmp):new /*HashSet<Entry<K,V>>*/ HESet<K,V>(); data.put(p,s); } s.add(e); }
+    void add(Entry<K,V> e) { 
+      P p=proj.apply(e.key); 
+      Set<Entry<K,V>> s=data.get(p); 
+      if (s==null) { 
+         s=(cmp!=null)?new TreeSet<Entry<K,V>>(cmp):new /*HashSet<Entry<K,V>>*/ HESet<K,V>(); data.put(p,s); 
+      } s.add(e); 
+    }
     void del(Entry<K,V> e) { P p=proj.apply(e.key); Set<Entry<K,V>> s=data.get(p); if (s!=null) { s.remove(e); if (s.size()==0) data.remove(s); } }
     Set<Entry<K,V>> slice(Object part) { Set<Entry<K,V>> s=data.get((P)part); if (s==null) s=new HashSet<Entry<K,V>>(); return s; }
     Set<Entry<K,V>> slice(Object part, K low, K high, boolean lowIn, boolean highIn) { // assert(cmp!=null);
@@ -260,6 +274,6 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     }
   }
   // Java helpers (used for serialization)
-  abstract class Fun2 { public abstract void apply(K key, V value); }
+  abstract class Fun2 { public abstract void apply(K key, MapVal<V> value); }
   public void foreach(Fun2 f) { for(Entry<K,V> e:data) for(;e!=null;e=e.next) { f.apply(e.key,e.value); } }
 }
