@@ -219,8 +219,8 @@ trait ICppGen extends IScalaGen {
     ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap)
     val preBody="BEGIN_TRIGGER(exec_stats,\""+n+"\")\n"+
                 "BEGIN_TRIGGER(ivc_stats,\""+n+"\")\n"+
-    val body=ind(t.stmts.map(genStmt).mkString)
                 "{  "+xActCounter+"\n"
+    val body=ind(t.stmts.map(genStmt).mkString)
     val pstBody="\n}\n"+
                 "END_TRIGGER(exec_stats,\""+n+"\")\n"+
                 "END_TRIGGER(ivc_stats,\""+n+"\")\n"
