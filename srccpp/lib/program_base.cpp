@@ -228,9 +228,10 @@ void ProgramBase::process_streams() {
 	}
 	// cerr << "  s process queue" << std::endl;
 	if(!stream_multiplexer.eventQue->empty()) {
+		stream_multiplexer.eventQue->sort(compare_event_timestamp_order);
 		it = stream_multiplexer.eventQue->begin();
 		it_end = stream_multiplexer.eventQue->end();
-		stream_multiplexer.eventQue->sort(compare_event_timestamp_order);
+		int i = 0;
 		for(;it != it_end; ++it) {
 			process_event(*it,false);
 		}
@@ -254,9 +255,9 @@ void ProgramBase::process_tables() {
 	}
 	// cerr << "  t process queue" << std::endl;
 	if(!table_multiplexer.eventQue->empty()) {
+		table_multiplexer.eventQue->sort(compare_event_timestamp_order);
 		it = table_multiplexer.eventQue->begin();
 		it_end = table_multiplexer.eventQue->end();
-		table_multiplexer.eventQue->sort(compare_event_timestamp_order);
 		for(;it != it_end; ++it) {
 			process_event(*it,true);
 		}
