@@ -75,7 +75,12 @@ void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, s
 	//read the whole file
 	source_stream->seekg(0, std::ios::end);
 	size_t bufferLength = source_stream->tellg();
-	char* buffer = new char[bufferLength+1];
+	size_t extra_buffer = 0;
+	//reserving some buffer for a possible missing delimiter at the end
+	if ( frame_info.type == delimited ) {
+		extra_buffer = frame_info.delimiter.size();
+	}
+	char* buffer = new char[bufferLength+1+extra_buffer];
 	char* buffer_end = buffer + bufferLength;
 	*buffer_end = '\0';
 	source_stream->seekg(0, std::ios::beg);
@@ -98,6 +103,20 @@ void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, s
 	else if ( frame_info.type == delimited ) {
 		const char* delim = frame_info.delimiter.c_str();
 		size_t delim_size = frame_info.delimiter.size();
+
+		//add delimeter at the end, is it does not exist
+		bool foundDelimAtTheEnd = true;
+		for(int delim_idx = 0; delim_idx < delim_size; delim_idx++) {
+			if(*(buffer_end-1-delim_idx) != *(delim+delim_size-1)) {
+				for(delim_idx = 0; delim_idx < delim_size; delim_idx++) {
+					*buffer_end = *(delim+delim_idx);
+					buffer_end+=1;
+				}
+				*buffer_end = '\0';
+				break;
+			}
+		}
+
 		while(start_event_pos) {
 			end_event_pos = strstr(start_event_pos, delim);
 			if(!end_event_pos || end_event_pos == buffer_end) break;
