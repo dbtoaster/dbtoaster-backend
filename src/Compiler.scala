@@ -36,7 +36,7 @@ object Compiler {
   // Execution
   var exec    : Boolean = false  // compile and execute immediately
   var exec_dir: String  = null   // execution classpath
-  var exec_sc : Boolean = false // compile using fsc / external scalac
+  var exec_sc : Boolean = false  // compile using fsc / external scalac
   var exec_vm : Boolean = false  // execute in a fresh JVM
   var exec_args = List[String]() // arguments passed for execution
 

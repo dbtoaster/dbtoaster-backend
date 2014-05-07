@@ -568,7 +568,6 @@ trait ICppGen extends IScalaGen {
     val schema_param = s.schema.fields.map{case (_,tp) => tp.toCpp}.mkString(",")
     val adaptor = s.adaptor.name match {
       case "ORDERBOOK" => {
-        java.lang.System.err.println("s.adaptor.options => " + s.adaptor.options)
         val bidsAndAsks = List("bids","asks")
         val orderBookTypesList = bidsAndAsks.filter(s.adaptor.options.contains)
         val orderBookType = orderBookTypesList.size match {

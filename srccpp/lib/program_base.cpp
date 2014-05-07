@@ -220,13 +220,11 @@ ProgramBase::ProgramBase(int argc, char* argv[]) :
 }
 
 void ProgramBase::process_streams() {
-	// cerr << "  s process list" << std::endl;
 	std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
 	std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
 	for(;it != it_end; ++it) {
 		process_event(*it,false);
 	}
-	// cerr << "  s process queue" << std::endl;
 	if(!stream_multiplexer.eventQue->empty()) {
 		stream_multiplexer.eventQue->sort(compare_event_timestamp_order);
 		it = stream_multiplexer.eventQue->begin();
@@ -247,13 +245,11 @@ void ProgramBase::process_streams() {
 }
 
 void ProgramBase::process_tables() {
-	// cerr << "  t process list" << std::endl;
 	std::list<event_t>::iterator it = table_multiplexer.eventList->begin();
 	std::list<event_t>::iterator it_end = table_multiplexer.eventList->end();
 	for(;it != it_end; ++it) {
 		process_event(*it,true);
 	}
-	// cerr << "  t process queue" << std::endl;
 	if(!table_multiplexer.eventQue->empty()) {
 		table_multiplexer.eventQue->sort(compare_event_timestamp_order);
 		it = table_multiplexer.eventQue->begin();
@@ -275,7 +271,6 @@ void ProgramBase::set_log_count_every(
 }
 
 void ProgramBase::process_event(const event_t& evt, bool process_table) {
-	// cerr << "    event_order=" << evt.event_order << ", rel_id=" << get_relation_name(evt.id) << std::endl;
 	map<relation_id_t, 
 				 boost::shared_ptr<ProgramBase::relation_t> >::iterator r_it =
 			relations_by_id.find(evt.id);
