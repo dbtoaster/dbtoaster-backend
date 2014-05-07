@@ -77,6 +77,7 @@ void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, s
 	size_t bufferLength = source_stream->tellg();
 	char* buffer = new char[bufferLength+1];
 	char* buffer_end = buffer + bufferLength;
+	*buffer_end = '\0';
 	source_stream->seekg(0, std::ios::beg);
 	source_stream->read(buffer,bufferLength);
 	source_stream->close();
