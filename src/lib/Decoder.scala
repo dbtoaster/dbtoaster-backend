@@ -109,7 +109,6 @@ object Adaptor {
     }
     def apply(data:Array[Byte],off:Int,len:Int): List[TupleEvent] = {
       val (ord:Int,op:TupleOp,rec:Array[String]) = ev(new String(data,off,len,"UTF-8").split(delimiter))
-      // java.lang.System.err.println("%5d - %10s => ".format(ord,name)+ new String(data,off,len,"UTF-8"))
       List(TupleEvent(ord,op,name,rec.zipWithIndex.map{ case(x,i) => tfs(i)(x) }.toList))
     }
   }
@@ -125,7 +124,6 @@ object Adaptor {
     def apply(data:Array[Byte],off:Int,len:Int): List[TupleEvent] = {
       val col = new String(data,off,len,"UTF-8").split(",")
       val t = java.lang.Integer.parseInt(col(0)) //order or timestamp
-      // java.lang.System.err.println("%5d => ".format(t)+ new String(data,off,len,"UTF-8"))
       val id = java.lang.Long.parseLong(col(1))
       val volume = java.lang.Double.parseDouble(col(3))
       val price = java.lang.Double.parseDouble(col(4))
@@ -198,7 +196,6 @@ case class SourceMux(f:TupleEvent=>Unit,streams:Seq[(InputStream,Adaptor,Split)]
     streams.foreach { case (in,adp,splt) => val iq=new LinkedList[TupleEvent]; read1(in,Decoder((e:TupleEvent)=>iq.offer(e),adp,splt)); qq.offer(iq) }
     var p=qq.poll; while (p!=null) { val e=p.poll; if (e!=null) { if(e.ord == 0) lst.offer(e) else que.enqueue(e); qq.offer(p) }; p=qq.poll }
   }
-  // java.lang.System.err.println("q ---> %s".format(q));
   def read() = {
     parallel match {
       case 0 => streams.foreach { case (in,adp,splt) => read1(in,Decoder((e:TupleEvent)=>if(e.ord == 0) f(e) else que.enqueue(e),adp,splt)) }
