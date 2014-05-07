@@ -130,7 +130,7 @@ trait ICppGen extends IScalaGen {
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n :: Nil,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
-      if (ctx.contains(n)) cpsExpr(e,(v:String,t:Type)=>co("(/*if */("+rn(n)+" == "+v+") ? 1L : 0L)",TypeLong),am)
+      if (ctx.contains(n)) cpsExpr(e,(v:String,t:Type)=>co(/*"(/*if */"+*/"("+rn(n)+" == "+v+")"/*+" ? 1L : 0L)"*/,TypeLong),am)
       else e match {
         case Ref(n2) => ctx.add(n,(e.tp,rnv(n2))); co("1L",TypeLong) // de-aliasing
         //This renaming is required. As an example:
