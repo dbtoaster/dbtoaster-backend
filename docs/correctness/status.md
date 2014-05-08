@@ -121,13 +121,13 @@ Rsmallstar | OK
 Rstarofnested | OK
 Rstarofnestedagg | OK
 Rsumgballoutofaggregate | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
-Rsumgboutofaggregate | Issue #50
-Rsumoutofaggregate | Issue #50
-Rsumadivsumb | Issue #50
+Rsumgboutofaggregate | Issue #46
+Rsumoutofaggregate | Issue #46
+Rsumadivsumb | Issue #46
 Rsumdivgrp | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
 Rsumnestedintarget | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/358-error---cannot-produce-one-of-type---int---#/activity/ticket:
 Rsumnestedintargetwitheq | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
-Rsumoutsideofagg | Issue #50
+Rsumoutsideofagg | Issue #46
 Rsumstar | OK
 Runion | Issue #51
 Runiquecountsbya | Issue #52
