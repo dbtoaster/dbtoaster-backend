@@ -78,7 +78,7 @@ Query | Status
 ---|---
 Inequalityselfjoin | Issue #45
 Invalidschemafn | OK
-M3k3unable2escalate | Issue #46
+M3k3unable2escalate | OK
 Miraculousminus | OK
 Miraculousminus2 | OK
 Raggcomparison | OK
@@ -121,13 +121,13 @@ Rsmallstar | OK
 Rstarofnested | OK
 Rstarofnestedagg | OK
 Rsumgballoutofaggregate | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
-Rsumgboutofaggregate | Issue #46
-Rsumoutofaggregate | Issue #46
-Rsumadivsumb | Issue #46
+Rsumgboutofaggregate | OK
+Rsumoutofaggregate | OK
+Rsumadivsumb | OK
 Rsumdivgrp | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
 Rsumnestedintarget | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/358-error---cannot-produce-one-of-type---int---#/activity/ticket:
 Rsumnestedintargetwitheq | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
-Rsumoutsideofagg | Issue #46
+Rsumoutsideofagg | OK
 Rsumstar | OK
 Runion | Issue #51
 Runiquecountsbya | Issue #52
