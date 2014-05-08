@@ -68,8 +68,8 @@ class BrokerSpread extends Actor { // Copied from generated code
 
   var t0:Long = 0
   def receive = {
-    case TupleEvent(TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0.toLong,v1,v2,v3,v4)
-    case TupleEvent(TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0.toLong,v1,v2,v3,v4)
+    case TupleEvent(_,TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onAddBIDS(v0.toLong,v1,v2,v3,v4)
+    case TupleEvent(_,TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => onDelBIDS(v0.toLong,v1,v2,v3,v4)
     case StreamInit(_) => t0=System.nanoTime()
     case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,List(BSP.toMap))
   }

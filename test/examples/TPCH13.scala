@@ -43,13 +43,13 @@ class TPCH13 extends Actor {
   var t0:Long = 0
   def receive = {
     case StreamInit(_) => t0=System.nanoTime()
-    case TupleEvent(TupleInsert,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onInsertORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
-    case TupleEvent(TupleDelete,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onDeleteORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
-    case TupleEvent(TupleInsert,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) =>
+    case TupleEvent(_,TupleInsert,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onInsertORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
+    case TupleEvent(_,TupleDelete,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onDeleteORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
+    case TupleEvent(_,TupleInsert,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) =>
        onInsertCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
        onInsertCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
        onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
-    case TupleEvent(TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
+    case TupleEvent(_,TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,List(result))
   }
 
@@ -273,10 +273,10 @@ class TPCH13Gen extends Actor {
 
   var t0:Long = 0
   def receive = {
-    case TupleEvent(TupleInsert,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onAddORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
-    case TupleEvent(TupleDelete,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onDelORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
-    case TupleEvent(TupleInsert,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onAddCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
-    case TupleEvent(TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDelCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
+    case TupleEvent(_,TupleInsert,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onAddORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
+    case TupleEvent(_,TupleDelete,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onDelORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
+    case TupleEvent(_,TupleInsert,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onAddCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
+    case TupleEvent(_,TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDelCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case StreamInit(_) => onSystemReady(); t0=System.nanoTime()
     case EndOfStream | GetSnapshot => val time=System.nanoTime()-t0; sender ! (time,List(CUSTDIST.toMap))
   }
@@ -568,10 +568,10 @@ class TPCH13Ref extends Actor {
   var t0:Long = 0
   def receive = {
     case StreamInit(_) => t0=System.nanoTime()
-    case TupleEvent(TupleInsert,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onInsertORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
-    case TupleEvent(TupleDelete,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onDeleteORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
-    case TupleEvent(TupleInsert,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onInsertCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
-    case TupleEvent(TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
+    case TupleEvent(_,TupleInsert,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onInsertORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
+    case TupleEvent(_,TupleDelete,"ORDERS",List(v0:Long,v1:Long,v2:String,v3:Double,v4:Date,v5:String,v6:String,v7:Long,v8:String)) => onDeleteORDERS(v0,v1,v2,v3,v4,v5,v6,v7,v8)
+    case TupleEvent(_,TupleInsert,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onInsertCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
+    case TupleEvent(_,TupleDelete,"CUSTOMER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String,v7:String)) => onDeleteCUSTOMER(v0,v1,v2,v3,v4,v5,v6,v7)
     case EndOfStream => val time = System.nanoTime()-t0; sender ! (time,result.toMap)
   }
 

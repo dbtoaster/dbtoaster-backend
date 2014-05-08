@@ -33,10 +33,10 @@ class Axfinder0 extends Actor {
   var t0=0L; var t1=0L; var tN=0L; var tS=0L
   def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => sender ! (StreamStat(t1-t0,tN,tS),List(AXFINDER.toMap)) case _ => tS+=1 }
   def receive = {
-    case TupleEvent(TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onAddBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onDelBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleInsert,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onAddASKS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleDelete,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onDelASKS(v0,v1,v2,v3,v4)
+    case TupleEvent(_,TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onAddBIDS(v0,v1,v2,v3,v4)
+    case TupleEvent(_,TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onDelBIDS(v0,v1,v2,v3,v4)
+    case TupleEvent(_,TupleInsert,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onAddASKS(v0,v1,v2,v3,v4)
+    case TupleEvent(_,TupleDelete,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onDelASKS(v0,v1,v2,v3,v4)
     case StreamInit(timeout) => onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L
     case EndOfStream | GetSnapshot(_) => t1=System.nanoTime; sender ! (StreamStat(t1-t0,tN,tS),List(AXFINDER.toMap))
   }

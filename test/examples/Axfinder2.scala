@@ -84,10 +84,10 @@ class Axfinder2Master extends Axfinder2Worker with MasterActor {
 
   val queries = List(0)
   val dispatch : PartialFunction[TupleEvent,Unit] = {
-    case TupleEvent(TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onAddBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onDelBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleInsert,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onAddASKS(v0,v1,v2,v3,v4)
-    case TupleEvent(TupleDelete,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onDelASKS(v0,v1,v2,v3,v4)
+    case TupleEvent(_,TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onAddBIDS(v0,v1,v2,v3,v4)
+    case TupleEvent(_,TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onDelBIDS(v0,v1,v2,v3,v4)
+    case TupleEvent(_,TupleInsert,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onAddASKS(v0,v1,v2,v3,v4)
+    case TupleEvent(_,TupleDelete,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onDelASKS(v0,v1,v2,v3,v4)
     case _ => deq
   }
 
