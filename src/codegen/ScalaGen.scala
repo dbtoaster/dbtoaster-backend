@@ -256,9 +256,10 @@ trait IScalaGen extends CodeGen {
         // will fail without a renaming.
         case _ => 
           val tp = TypeMapVal(e.tp)
-          ctx.add(n,(tp,fresh("l")))
+          val l = fresh("l")
+          ctx.add(n,(tp,l))
           cpsExpr(e,(v:String,t:Type) => {
-            val (cov,cot) = co("MapVal(1L)",TypeMapVal(TypeLong))
+            val (cov,cot) = co("(if("+l+".exists) MapVal(1L) else MapVal(0,0L))",TypeMapVal(TypeLong))
             ("val "+rn(n)._1+" = "+mapval(v,t)._1+";\n"+cov,cot)
           },am)
       }
@@ -297,7 +298,7 @@ trait IScalaGen extends CodeGen {
           (if(cmps.length>0)
             co("(if ("+cmps.mkString(" && ")+") MapVal(1,1L) else MapVal(0,0L))",TypeMapVal(TypeLong))
           else
-            co("MapVal(1L)",TypeMapVal(TypeLong)))._1
+            co("(if("+t+".exists) MapVal(1L) else MapVal(0,0L))",TypeMapVal(TypeLong)))._1
         (tStr+strExp,TypeMapVal(TypeLong))
       },am)
 
