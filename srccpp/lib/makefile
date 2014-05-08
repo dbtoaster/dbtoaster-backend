@@ -44,7 +44,7 @@ $(LIB_OBJ) : $(OBJ_FILES)
 	
 $(OBJ_FILES) : %.o : %.cpp $(HDR_FILES)
 	@echo Compiling $<
-	@$(G++) $(CPP_FLAGS) $(patsubst %,-I %,$(CPP_HDR_PATH)) -O3 -c $<
+	@$(G++) -Wall $(CPP_FLAGS) $(patsubst %,-I %,$(CPP_HDR_PATH)) -O3 -c $<
 
 clean: 
 	rm -f *.o $(LIB_OBJ)

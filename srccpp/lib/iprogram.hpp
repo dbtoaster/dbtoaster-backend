@@ -31,8 +31,8 @@ public:
     IProgram() :
         running(false)
         , finished(false)
-        , snapshot_request(false)
         , snapshot_ready(true)
+        , snapshot_request(false)
     {}
     virtual ~IProgram() {
     }
