@@ -23,6 +23,7 @@ SRC_FILES := event.cpp \
 FILES := $(HDR_FILES) $(SRC_FILES)
 OBJ_FILES := $(patsubst %.cpp,%.o,$(SRC_FILES))
 
+# OSX 10.9: G++ := g++-4.9
 G++ := g++
 LIB_OBJ := libdbtoaster.a
 TARGET:=$(shell which $(G++) &>/dev/null && echo $(LIB_OBJ) || echo warn)
