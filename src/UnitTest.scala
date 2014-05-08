@@ -129,28 +129,33 @@ object UnitTest {
 
     if (cache) new File(path_cache).mkdirs;
     for (q <- sel) {
-      println("---------[[ "+name(q.sql)+" ]]---------")
-      val (t0,m3) = {
-        val f = "target/m3/"+name(q.sql)+".m3"
-        if (cache && new File(f).exists) ns(()=>Utils.read(f))
-        else {
-          val r=Compiler.toast("m3",q.sql); Utils.write(f,r._2);
-          println("SQL -> M3           : "+tf(r._1))
-          r
+      try {
+        println("---------[[ "+name(q.sql)+" ]]---------")
+        val (t0,m3) = {
+          val f = "target/m3/"+name(q.sql)+".m3"
+          if (cache && new File(f).exists) ns(()=>Utils.read(f))
+          else {
+            val r=Compiler.toast("m3",q.sql); Utils.write(f,r._2);
+            println("SQL -> M3           : "+tf(r._1))
+            r
+          }
         }
-      }
-      ;
-      if (csv!=null) csv.print(name(q.sql)+","+time(t0)+",")
-      ;
-      for (m <- modes) m match {
-        case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
-        case "lcpp" if (repo!=null && benchmark) => legacyCPP(q,new Printer("LCPP"),t0)
-        case "scala"|"scalalms" => genQueryScala(q,new Printer(mn(m)),m3,m)
-        case "cpp" | "cpplms" | "lms" => genQueryCpp(q,new Printer(mn(m)),m3,m)
-        case _ => sys.error("Mode is not supported: "+m)
+        ;
+        if (csv!=null) csv.print(name(q.sql)+","+time(t0)+",")
+        ;
+        for (m <- modes) m match {
+          case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
+          case "lcpp" if (repo!=null && benchmark) => legacyCPP(q,new Printer("LCPP"),t0)
+          case "scala"|"scalalms" => genQueryScala(q,new Printer(mn(m)),m3,m)
+          case "cpp" | "cpplms" | "lms" => genQueryCpp(q,new Printer(mn(m)),m3,m)
+          case _ => sys.error("Mode is not supported: "+m)
 
+        }
+        if (csv!=null) csv.println
+      } catch {
+        case e: Exception => e.printStackTrace
       }
-      if (csv!=null) csv.println
+
       System.gc
     }
     if (csv!=null) csv.close
