@@ -1,5 +1,5 @@
 Query | Status
--|-
+---|---
 Employee01 | OK
 Employee01a | OK
 Employee02 | OK
@@ -41,8 +41,8 @@ Employee48 | OK
 Employee49 | OK
 Employee50 | OK
 Employee51 | OK
-Employee52a | #32
-Employee53a | #32
+Employee52a | Issue #32
+Employee53a | Issue #32
 Employee54 | OK
 Employee55 | OK
 Employee56a | OK
