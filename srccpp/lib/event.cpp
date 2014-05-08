@@ -9,6 +9,6 @@ namespace dbtoaster {
 	};
 	bool compare_event_timestamp_order (event_t const & p1, event_t const & p2)
 	{
-	    return p1.event_order > p2.event_order;
+	    return p1.event_order < p2.event_order;
 	}
 }
