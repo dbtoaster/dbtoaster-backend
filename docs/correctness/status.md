@@ -128,3 +128,32 @@ Rsumdivgrp | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-er
 Rsumnestedintarget | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/358-error---cannot-produce-one-of-type---int---#/activity/ticket:
 Rsumnestedintargetwitheq | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
 Rsumoutsideofagg | Issue #50
+Rsumstar | OK
+Runion | Issue #51
+Runiquecountsbya | Issue #52
+Rrormyself | OK
+Rs | OK
+Rscmpnest | OK
+Rscolumnmapping1 | OK
+Rscolumnmapping2 | OK
+Rscolumnmapping3 | Issue #53
+Rseqineq | OK
+Rsineqonnestedagg | OK
+Rsinequality | OK
+Rsineqwithnestedagg | OK
+Rsjoinon | OK
+Rsjoinwithnestedagg | OK
+Rsnatjoin | OK
+Rsnatjoinineq | OK
+Rsnatjoinpartstar | OK
+Rsselectconstcmp | OK
+Rsselectpartstar | OK
+Rsselectstar | OK
+Rssimple | OK
+Rsstringjoin | OK
+Rst | OK
+Rstar | OK
+Rttorwithstars | OK
+Singletonrenamingconflict | OK
+Ssmath | OK
+Tlifttype | OK
