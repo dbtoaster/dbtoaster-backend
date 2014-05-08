@@ -1,3 +1,7 @@
+# Status
+
+## Employee
+
 Query | Status
 ---|---
 Employee01 | OK
@@ -55,3 +59,13 @@ Employee62a | OK
 Employee63a | OK
 Employee64a | OK
 Employee65a | OK
+
+## Finance
+
+Query | Status
+---|---
+Axfinder | OK
+Brokerspread | OK
+Brokervariance |OK
+Pricespread | OK
+Vwap | OK
