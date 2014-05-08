@@ -157,3 +157,47 @@ Rttorwithstars | OK
 Singletonrenamingconflict | OK
 Ssmath | OK
 Tlifttype | OK
+
+## Scientific
+
+### Standard
+
+Query | Status
+---|---
+Mddb1 | Issue #53
+Mddb2 | OK
+
+## TPCH
+
+### Standard
+
+Query | Status
+---|---
+Tpch1 | OK
+Tpch2 | OK
+Tpch3 | OK
+Tpch4 | OK
+Tpch5 | OK
+Tpch6 | OK
+Tpch7 | OK
+Tpch8 | Issue #53
+Tpch9 | Issue #53
+Tpch10 | OK
+Tpch11 | OK
+Tpch11a | OK
+Tpch11c | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
+Tpch12 | Issue #53
+Tpch13 | OK
+Tpch14 | OK
+Tpch15 | Issue #54
+Tpch16 | Issue #55
+Tpch17 | Issue #56
+Tpch17a | Issue #57
+Tpch18 | OK
+Tpch18a | OK
+Tpch19 | OK (but Issue #58)
+Tpch20 | OK
+Tpch21 | Issue #57
+Tpch22 | Issue #59
+Tpch22a | Issue #60
+Tpchssb4 | OK
