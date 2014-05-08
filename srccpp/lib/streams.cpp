@@ -105,8 +105,7 @@ void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, s
 		size_t delim_size = frame_info.delimiter.size();
 
 		//add delimeter at the end, is it does not exist
-		bool foundDelimAtTheEnd = true;
-		for(int delim_idx = 0; delim_idx < delim_size; delim_idx++) {
+		for(size_t delim_idx = 0; delim_idx < delim_size; delim_idx++) {
 			if(*(buffer_end-1-delim_idx) != *(delim+delim_size-1)) {
 				for(delim_idx = 0; delim_idx < delim_size; delim_idx++) {
 					*buffer_end = *(delim+delim_idx);

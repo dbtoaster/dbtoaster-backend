@@ -229,7 +229,6 @@ void ProgramBase::process_streams() {
 		stream_multiplexer.eventQue->sort(compare_event_timestamp_order);
 		it = stream_multiplexer.eventQue->begin();
 		it_end = stream_multiplexer.eventQue->end();
-		int i = 0;
 		for(;it != it_end; ++it) {
 			process_event(*it,false);
 		}
