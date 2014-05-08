@@ -62,6 +62,8 @@ Employee65a | OK
 
 ## Finance
 
+### Standard
+
 Query | Status
 ---|---
 Axfinder | OK
@@ -69,3 +71,60 @@ Brokerspread | OK
 Brokervariance |OK
 Pricespread | OK
 Vwap | OK
+
+## Simple
+
+Query | Status
+---|---
+Inequalityselfjoin | Issue #45
+Invalidschemafn | OK
+M3k3unable2escalate | Issue #46
+Miraculousminus | OK
+Miraculousminus2 | OK
+Raggcomparison | OK
+Raggofnested | OK
+Raggofnestedagg |OK
+Ragtb | OK
+Ragtbexists | OK
+Ravg | OK
+Rbigsumstar | OK
+Rbtimesa | Issue #47
+Rbtimesacorrelated | Issue #47
+Rcount | OK
+Rcountofone | OK
+Rcountofoneprime | Issue #32
+Rdeepscoping | OK
+Rdivb | OK
+Rexistsnestedagg | OK
+Rgbasumb | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
+Rgtealldynamic | Issue #48
+Rgtesomedynamic | OK
+Rgtsomedynamic | OK
+Rimpossibleineq | OK
+Rindynamic | OK
+Rineqandeq | OK
+Rinstatic | OK
+Rliftofcount | OK
+Rltallagg | OK
+Rltallavg | OK
+Rltallcorravg | OK
+Rltalldynamic | OK
+Rmultinest | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/357-error--rel_lift_expr-is-not-covered-by-the-scope--#/activity/ticket:
+Rnatselfjoin | OK
+Rnogroupby | OK
+Rnonjoineq | OK
+Rpossibleineq | OK
+Rpossibleineqwitheq | OK
+Rselectstar | OK
+Rsimplenest | OK
+Rsmallstar | OK
+Rstarofnested | OK
+Rstarofnestedagg | OK
+Rsumgballoutofaggregate | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
+Rsumgboutofaggregate | Issue #50
+Rsumoutofaggregate | Issue #50
+Rsumadivsumb | Issue #50
+Rsumdivgrp | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
+Rsumnestedintarget | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/358-error---cannot-produce-one-of-type---int---#/activity/ticket:
+Rsumnestedintargetwitheq | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
+Rsumoutsideofagg | Issue #50
