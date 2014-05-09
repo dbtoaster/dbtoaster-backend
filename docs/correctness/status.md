@@ -125,7 +125,7 @@ Rsumgboutofaggregate | OK
 Rsumoutofaggregate | OK
 Rsumadivsumb | OK
 Rsumdivgrp | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
-Rsumnestedintarget | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/358-error---cannot-produce-one-of-type---int---#/activity/ticket:
+Rsumnestedintarget | Issue #47
 Rsumnestedintargetwitheq | https://www.assembla.com/spaces/cornell_db_dbtoaster/tickets/356-error---bug---unsupported-query--cannot-materialize-ivc-inline-(yet)--#/activity/ticket:
 Rsumoutsideofagg | OK
 Rsumstar | OK
