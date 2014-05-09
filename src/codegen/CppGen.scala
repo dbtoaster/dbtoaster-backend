@@ -230,7 +230,7 @@ trait ICppGen extends IScalaGen {
   }
 
   override def genStmt(s:Stmt):String = s match {
-    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => (ADD_TO_MAP_FUNC(m.name),"+=") case OpSet => (SET_IN_MAP_FUNC(m.name),"=") }
+    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => (ADD_TO_MAP_FUNC(m.name),"+=") case OpSet => (ADD_TO_MAP_FUNC(m.name),"=") }
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear();\n" else "" }
       val init = oi match {
         case Some(ie) => 
