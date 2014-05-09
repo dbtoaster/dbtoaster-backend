@@ -230,7 +230,7 @@ trait ICppGen extends IScalaGen {
   }
 
   override def genStmt(s:Stmt):String = s match {
-    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => (ADD_TO_MAP_FUNC(m.name),"+=") case OpSet => (SET_IN_MAP_FUNC(m.name),"=") }
+    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => (ADD_TO_MAP_FUNC(m.name),"+=") case OpSet => (ADD_TO_MAP_FUNC(m.name),"=") }
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear();\n" else "" }
       val init = oi match {
         case Some(ie) => 
@@ -482,7 +482,7 @@ trait ICppGen extends IScalaGen {
     helperResultAccessor(s0)+
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
     "struct data_t : tlq_t{\n"+
-    "  data_t() {\n"+
+    "  data_t()"+{ val tempVars = s0.maps.filter{m=>(s0.queries.filter(_.name==m.name).size == 0) && (m.keys.size == 0)}; (if(!tempVars.isEmpty) ": " else "")+tempVars.map{m=>m.name+"(" + m.tp.zeroCpp + ")"}.mkString(", ") }+" {\n"+
          ind(constsInit,2)+"\n"+
     "  }\n"+
     "\n"+
