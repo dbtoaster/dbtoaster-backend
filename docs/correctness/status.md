@@ -195,7 +195,7 @@ Tpch17 | Issue #56
 Tpch17a | Issue #57
 Tpch18 | OK
 Tpch18a | OK
-Tpch19 | OK (but Issue #58)
+Tpch19 | OK
 Tpch20 | OK
 Tpch21 | Issue #57
 Tpch22 | Issue #59
