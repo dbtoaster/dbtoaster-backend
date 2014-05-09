@@ -189,7 +189,7 @@ trait IScalaGen extends CodeGen {
     case Const(tp,v) => tp match { case TypeLong => co(v+"L",tp) case TypeString => co("\""+v+"\"",tp) case _ => co(v,tp) }
     case Exists(e) => cpsExpr(e, (v:String,t:Type) => {
       t match {
-        case TypeMapVal(x) => co("(if ("+getVal(v,t)._1+" != 0) MapVal(1L) else MapVal(0,0L))",TypeMapVal(TypeLong))
+        case TypeMapVal(x) => co("(if (("+getVal(v,t)._1+").exists) MapVal(1L) else MapVal(0,0L))",TypeMapVal(TypeLong))
         case _ => co("MapVal(1L)",TypeMapVal(TypeLong))
       }
     })

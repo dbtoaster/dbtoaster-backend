@@ -125,15 +125,34 @@ object Helper {
 
   val precision = 7 // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)
   private val diff_p = Math.pow(0.1,precision)
-  private def eq_v[V](v1:V,v2:V) = ((v1,v2) match { 
-    case (d1:Double,d2:Double) => (Math.abs(2*(d1-d2)/(d1+d2))<diff_p) 
-    case (l:Long,d:Double) => (Math.abs(2*(d-l)/(d+l))<diff_p) 
-    case (d:Double,l:Long) => (Math.abs(2*(d-l)/(d+l))<diff_p) 
+
+  /*
+   * Checks whether two double values are the same or very close to each other.
+   * @param  d1 Double First value
+   * @param  d2 Double Second value
+   * @return True if they are close enough, false otherwise
+   */
+  private def cmpDoubles(d1:Double,d2:Double) = {
+    val ds = d1+d2
+    if(ds+d2 < 1.0)
+      Math.abs(2*(d1-d2))<diff_p
+    else
+      Math.abs(2*(d1-d2)/(d1+d2))<diff_p
+  }
+
+  private def eq_v[V](v1:V,v2:V) = ((v1,v2) match {
+    case (d1:Double,d2:Double) => cmpDoubles(d1,d2)
+    case (l:Long,d:Double) => cmpDoubles(l,d)
+    case (d:Double,l:Long) => cmpDoubles(d,l)
     case _ => v1==v2 })
-  private def eq_l(l1:List[Any],l2:List[Any]) = { (l1 zip l2).forall{ case (v1,v2) => eq_v(v1,v2) } }
+
+  private def eq_l(l1:List[Any],l2:List[Any]) = {
+    (l1 zip l2).forall{ case (v1,v2) => eq_v(v1,v2) }
+  }
+
   private def eq_p(p1:Product,p2:Product) = { val n=p1.productArity; assert(n==p2.productArity);  List.range(0,n).forall(i => eq_v(p1.productElement(i), p2.productElement(i))) }
 
-  def diff(v1:List[Any],v2:List[Any]) = if (!eq_p(v1,v2)) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
+  def diff(v1:List[Any],v2:List[Any]) = if (!eq_l(v1,v2)) throw new Exception("Bad value: "+v1+" (expected "+v2+")")
 
   /* Checks whether the test result is the same as the reference. 
    * 
