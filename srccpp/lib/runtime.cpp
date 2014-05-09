@@ -69,7 +69,7 @@ void runtime_options::process_options(
 		notify(m);
 	} catch (unknown_option& o) {
 	  cerr << "unknown option: \"" 
-		   << o.get_option_name() << "\"" << endl;
+		   << o.what() << "\"" << endl;
 	  cerr << *opt_desc << endl;
 	  exit(1);
 	} catch (error& e) {
@@ -93,7 +93,7 @@ void runtime_options::setup_tracing(options_description& o) {
 	  else traced = false;
 	} catch (unknown_option& uo) {
 		cerr << "unknown option: \"" 
-			 << uo.get_option_name() << "\"" << endl;
+			 << uo.what() << "\"" << endl;
 		cerr << o << endl;
 		exit(1);
 	} catch (error& e) {
