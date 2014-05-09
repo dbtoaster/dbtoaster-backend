@@ -19,7 +19,7 @@ ProgramBase::map_t::map_t(ProgramBase::serialize_fn_t _serialize_fn) :
 ******************************************************************************/
 
 ProgramBase::logger_t::logger_t(const path& fp, bool ln, bool le) :
-		log_stream(new ProgramBase::logger_t::file_stream_t(fp.c_str()))
+		log_stream(new ProgramBase::logger_t::file_stream_t(fp.filename().string().c_str()))
 		, log_relation_name(ln)
 		, log_event_type(le) 
 {
@@ -319,8 +319,8 @@ void ProgramBase::process_stream_event(const event_t& _evt) {
 }
 
 void ProgramBase::trace(const path& trace_file, bool debug) {
-	if (strcmp(trace_file.c_str(), "-")) {
-		std::ofstream ofs(trace_file.c_str());
+	if (strcmp(trace_file.filename().string().c_str(), "-")) {
+		std::ofstream ofs(trace_file.filename().string().c_str());
 		trace(ofs, debug);
 	} else {
 		trace(cout, debug);
