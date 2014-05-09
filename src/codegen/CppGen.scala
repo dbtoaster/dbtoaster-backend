@@ -482,7 +482,7 @@ trait ICppGen extends IScalaGen {
     helperResultAccessor(s0)+
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
     "struct data_t : tlq_t{\n"+
-    "  data_t()"+{ val tempVars = s0.maps.filter{m=>(s0.queries.filter(_.name==m.name).size == 0) && (m.keys.size == 0)}; (if(!tempVars.isEmpty) ": " else "")+tempVars.map{m=>m.name+"(" + m.tp.zeroCpp + ")"}.mkString(", ") }+" {\n"+
+    "  data_t()"+{ val tempVars = s0.maps.filter{m=>(m.keys.size == 0)}; (if(!tempVars.isEmpty) ": " else "")+tempVars.map{m=>m.name+"(" + m.tp.zeroCpp + ")"}.mkString(", ") }+" {\n"+
          ind(constsInit,2)+"\n"+
     "  }\n"+
     "\n"+
