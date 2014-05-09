@@ -187,7 +187,7 @@ case class SourceMux(f:TupleEvent=>Unit,streams:Seq[(InputStream,Adaptor,Split)]
     }
   }
 
-  private def processQTail = {que.foreach(f); que.clear}
+  private def processQTail = while(que.nonEmpty) f(que.dequeue())
 
   private var lst : LinkedList[TupleEvent] = null
   if (parallel==2) {
