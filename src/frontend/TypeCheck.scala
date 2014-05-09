@@ -128,7 +128,8 @@ object TypeCheck extends (M3.System => M3.System) {
         case a@AggSum(ks,e) => val in=ie(e,c); cr=c++ks.map{k=>(k,in(k))}; a.tks=ks.map(cr)
         case a@Apply(n,_,as) => as.map(ie(_,c)); a.tp=Library.typeCheck(n,as.map(_.tp))
         case r@Ref(n) => if(c contains n) r.tp=c(n) else err("Missing reference "+n+", Context: "+c)
-        case m@MapRef(n,tp,ks) => val mtp=s0.mapType(n); cr=c++(ks zip mtp._1).toMap
+        case m@MapRef(n,tp,ks) => 
+          val mtp=s0.mapType(n); cr=c++(ks zip mtp._1).toMap
           if (tp==null) m.tp=mtp._2 else if (tp!=mtp._2) err("Bad value type: expected "+mtp._2+", got "+tp+" for "+ex)
           (ks zip mtp._1).foreach{ case(k,t)=> if(c.contains(k) && t!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
           m.tks = mtp._1

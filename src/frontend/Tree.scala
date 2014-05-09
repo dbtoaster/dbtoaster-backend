@@ -39,9 +39,9 @@ case object TypeUnit extends Type { override def toString="()"; val zero="()" }
 object Type {
   def tpRes(t1:Type,t2:Type,op:String):Type = (t1,t2) match {
     case (t1,t2) if t1==t2 => t1
-    case (TypeMapVal(t1),TypeMapVal(t2)) => TypeMapVal(tpRes(t1,t2,op))
-    case (TypeMapVal(t1),t2) => TypeMapVal(tpRes(t1,t2,op))
-    case (t1,TypeMapVal(t2)) => TypeMapVal(tpRes(t1,t2,op))
+    case (TypeMapVal(t1),TypeMapVal(t2)) => tpRes(t1,t2,op)
+    case (TypeMapVal(t1),t2) => tpRes(t1,t2,op)
+    case (t1,TypeMapVal(t2)) => tpRes(t1,t2,op)
     case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
     case (TypeTuple(t1 :: Nil),t2) => tpRes(t1,t2,op) 
     case _ => sys.error("Bad operands ("+t1+" "+op+" "+t2+")")

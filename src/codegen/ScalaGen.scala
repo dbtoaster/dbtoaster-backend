@@ -227,7 +227,7 @@ trait IScalaGen extends CodeGen {
     case m@MapRef(n,tp,ks) => 
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       val rt = TypeMapVal(tp)
-      // if all keys are bound      
+      // if all keys are bound
       if (ki.size==0) {
         co(n+(if (ks.size>0) ".get("+tup(ks.map(rnv))+")" else ""),rt) 
       }
@@ -386,7 +386,7 @@ trait IScalaGen extends CodeGen {
     case a@AggSum(ks,e) =>
       // aggregation keys as (name,type)
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } 
-      if (aks.size==0) { 
+      if (aks.size==0) {
         val a0=fresh("agg")
         val tp=TypeMapVal(ex.tp)
         (genVar(a0,tp)+cpsExpr(e,(v:String,t:Type) => {
