@@ -8,7 +8,7 @@ import ddbt.ast._
  */
 object TypeCheck extends (M3.System => M3.System) {
   import ddbt.ast.M3._
-  import ddbt.Utils.{fresh,freshClear}
+  import ddbt.Utils.{fresh,freshClear,log}
   @inline def err(msg:String) = sys.error("Type checking error: "+msg)
 
   // 1. Add used (constant) tables in maps, replace access by MapRefs (M3 fix?)
@@ -31,7 +31,7 @@ object TypeCheck extends (M3.System => M3.System) {
     def re(e:Expr):Expr = e.replace {
       case Ref(n) => Ref(r(n))
       case MapRef(n,tp,ks) => MapRef(n,tp,ks.map(r))
-      case Lift(n,e) => Lift(r(n),re(e))
+      case Lift(ns,e) => Lift(ns.map(r(_)),re(e))
       case AggSum(ks,e) => AggSum(ks map r,re(e))
       case Apply(f,tp,as) => Apply(fn(f),tp,as.map(re))
     }
@@ -42,7 +42,9 @@ object TypeCheck extends (M3.System => M3.System) {
       case EvtDel(sc) => EvtDel(rs(sc))
       case e => e
     }, t.stmts map rst))
-    System(sources,s0.maps,s0.queries,triggers)
+    val res:System = System(sources,s0.maps,s0.queries,triggers)
+    log("typecheck", res.toString)
+    res
   }
 
   // 4. Type trigger arguments by binding to the corresponding input schema
@@ -76,10 +78,20 @@ object TypeCheck extends (M3.System => M3.System) {
   // Mul(Lift(a,3),Mul(a,Mul(Lift(a,2),a))) => 6
   def renameLifts(s0:System) = {
     def re(e:Expr,locked:Set[String]):Expr = e.replace {
-      case Mul(Lift(n,e),r) if !locked.contains(n) => e match {
-        case Ref(m) if (locked.contains(m)) => Mul(re(Lift(n,e),locked),re(r,locked))
-        case _ => val f=fresh("lift"); Mul(Lift(f,re(e.rename(n,f),locked+f)),re(r.rename(n,f),locked+f))
-      }
+      case Mul(Lift(ns,e),r) => 
+        val (nns,ne,nr,_) = ns.foldRight((List[String](),e,r,locked)) { case (n,(nns,e,r,locked)) =>
+          if (locked.contains(n)) (n::nns,e,r,locked) else { 
+            e match {
+              // XXX: What do we do with locked variables in tuples?
+              case Ref(m) if (locked.contains(m)) => (n::nns,e,r,locked)
+              case _ => 
+                val f=fresh("lift"); 
+                val nlocked=locked+f;
+                (f::nns,re(e.rename(n,f),nlocked),re(r.rename(n,f),nlocked),nlocked)
+            }
+          }
+        }
+        Mul(Lift(nns, ne), nr)
       case AggSum(ks,e) => AggSum(ks,re(e,locked++ks.toSet))
     }
     def rst(s:Stmt,locked:Set[String]=Set()):Stmt = s match {
@@ -90,38 +102,39 @@ object TypeCheck extends (M3.System => M3.System) {
       Trigger(e,ss.map(x=>rst(x,locked)))
     }
     freshClear
-    System(s0.sources,s0.maps,s0.queries,triggers)
+    val res:System = System(s0.sources,s0.maps,s0.queries,triggers)
+    log("typecheck", res.toString)
+    res
   }
 
   // 7. Resolve missing types (and also make sure operations are correctly typed)
   def typeCheck(s0:System) = {
-    def tpRes(t1:Type,t2:Type,ex:Expr):Type = (t1,t2) match {
-      case (t1,t2) if t1==t2 => t1
-      case (TypeDouble,TypeLong) | (TypeLong,TypeDouble) => TypeDouble
-      case _ => err("Bad operands ("+t1+","+t2+"): "+ex)
-    }
     //c: context
     def ie(ex:Expr,c:Map[String,Type]):Map[String,Type] = {
       var cr=c; // new bindings
       ex match { // gives a type to all untyped nodes
-        case m@Mul(l,r) => cr=ie(r,ie(l,c)); m.tp=tpRes(l.tp,r.tp,ex)
+        case m@Mul(l,r) => cr=ie(r,ie(l,c)); m.tp=Type.tpMul(l.tp,r.tp)
         case a@Add(l,r) =>
           val (fl,fr)=(ie(l,c).filter{x=> !c.contains(x._1)},ie(r,c).filter{x=> !c.contains(x._1)}) // free(l), free(r)
           a.agg=fl.filter{x=>fr.contains(x._1)}.toList // sorted(free(l) & free(r)) : a variable is bound differently in l and r => set union
-          cr=c++fl++fr; a.tp=tpRes(l.tp,r.tp,ex);
-        case Cmp(l,r,_) => cr=c++ie(l,c)++ie(r,c); tpRes(l.tp,r.tp,ex)
+          cr=c++fl++fr; a.tp=Type.tpAdd(l.tp,r.tp);
+        case Cmp(l,r,op) => cr=c++ie(l,c)++ie(r,c); Type.tpRes(l.tp,r.tp,op.toString)
         case Exists(e) => cr=ie(e,c)
-        case Lift(n,e) => ie(e,c); c.get(n) match { case Some(t) => try { tpRes(t,e.tp,ex) } catch { case _:Throwable=> err("Value "+n+" lifted as "+t+" compared with "+e.tp) } case None => cr=c+((n,e.tp)) }
+        case Lift(ns,e) => 
+          cr=ie(e,c)
+          val ts = e.tp match { case TypeTuple(ts) => ts case t => List(t) } 
+          (ns zip ts) map { case (n,t) => c.get(n) match { case Some(ct) => try { Type.tpRes(t,ct,"") } catch { case _:Throwable => err("Value "+n+" lifted as "+ct+" compared with "+t) } case None => cr=cr+((n,t)) }
+          }
         case a@AggSum(ks,e) => val in=ie(e,c); cr=c++ks.map{k=>(k,in(k))}; a.tks=ks.map(cr)
         case a@Apply(n,_,as) => as.map(ie(_,c)); a.tp=Library.typeCheck(n,as.map(_.tp))
-        case r@Ref(n) => r.tp=c(n)
+        case r@Ref(n) => if(c contains n) r.tp=c(n) else err("Missing reference "+n+", Context: "+c)
         case m@MapRef(n,tp,ks) => val mtp=s0.mapType(n); cr=c++(ks zip mtp._1).toMap
           if (tp==null) m.tp=mtp._2 else if (tp!=mtp._2) err("Bad value type: expected "+mtp._2+", got "+tp+" for "+ex)
           (ks zip mtp._1).foreach{ case(k,t)=> if(c.contains(k) && t!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
           m.tks = mtp._1
         // Tupling
-        case Tuple(es) => es.foreach(e=>cr=ie(e,cr))
-        case TupleLift(ns,e) => cr=ie(e,c)
+        case t@Tuple(es) => es.foreach(e=>cr=ie(e,cr)); t.tp=if(es.length>1) TypeTuple(es.map(_.tp)) else es.head.tp
+        case n@Neg(e) => cr=ie(e,c); n.tp=e.tp
         case _ =>
       }
       if (ex.tp==null) err("Untyped: "+ex); cr

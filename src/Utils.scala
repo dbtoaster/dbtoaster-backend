@@ -14,6 +14,12 @@ object Utils {
     sb.append("@"+(" "*78)+"@\n"+("@"*80)); System.err.println(sb.toString)
   }
 
+  var dbg_args = List[String]()  // debug arguments
+  def log(dbg_arg:String,msg:String) = {
+    if(dbg_args contains dbg_arg)
+      System.out.println(msg)
+  }
+
   private val prop_ = new java.util.Properties
   try { prop_.load(this.getClass.getResource("/ddbt.properties").openStream()) } catch { case _:Throwable => warning("conf/ddbt.properties does not exist.\n"+
         "Please configure at least ddbt.dbtoaster to dbtoaster_release binary path.\nSet ddbt.base_repo if you have access to DBToaster's repository.") }
@@ -23,7 +29,7 @@ object Utils {
   def isLMSTurnedOn = prop(LMS_PROPERTY)=="1"
 
   // Paths related to DBToaster
-  val path_repo = { val r=prop("base_repo",null); if (r==null) null else r+"/dbtoaster/compiler/alpha5" }
+  val path_repo = { val r=prop("base_repo",null); if (r==null) null else r+"/dbtoaster/compiler/alpha6" }
   val path_bin  = (if (path_repo!=null) path_repo+"/" else "")+prop("dbtoaster","bin/dbtoaster_release")
   private lazy val path_jdk = { var p=prop("jdk",null); if (p!=null) { val r=prop(p,null); if (r!=null) p=r; }; if (p==null) System.getProperty("java.home") else p }
   private lazy val (path_cp,path_jvm) = {

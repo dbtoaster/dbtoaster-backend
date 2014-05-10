@@ -91,7 +91,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
   | ("[" ~> "/" ~> ":" ~> tpe <~ "]") ~ ("(" ~> expr <~ ")") ^^ { case t~e => Apply("/",t,List(e)) }
   | ("[" ~> func <~ ":") ~ (tpe <~ "]") ~ ("(" ~> repsep(expr,",") <~ ")") ^^ { case n~t~as => Apply(n,t,as) }
   | "DATE" ~> "(" ~> expr <~ ")" ^^ { case e => Apply("date",TypeDate,List(e)) }
-  | ("(" ~> ident <~ "^=") ~ (expr <~ ")") ^^ { case n~v => Lift(n,v) }
+  | ("(" ~> ident <~ "^=") ~ (expr <~ ")") ^^ { case n~v => Lift(List(n),v) }
   |  "(" ~> expr <~ ")"
   | "{" ~> expr ~ opt(("="|"!="|">"|"<"|">="|"<=") ~ expr) <~ "}" ^^ {
     case l~Some(op~r) => op match { case "="=>Cmp(l,r,OpEq) case "!="=>Cmp(l,r,OpNe) case ">"=>Cmp(l,r,OpGt) case ">="=>Cmp(l,r,OpGe) case "<"=>Cmp(r,l,OpGt) case "<="=>Cmp(r,l,OpGe) }
@@ -102,8 +102,9 @@ object M3Parser extends ExtParser with (String => M3.System) {
   | longLit ^^ { Const(TypeLong,_) }
   | stringLit ^^ { Const(TypeString,_) }
   // Tupling
-  | ("(" ~> "<" ~> repsep(ident,",") <~ ">" <~ "^=") ~ (expr <~ ")") ^^ { case ns~v => TupleLift(ns,v) }
-  | ("<" ~> repsep(expr,",") <~ ">") ^^ { Tuple(_) }
+  | ("(" ~> "<" ~> repsep(ident,",") <~ ">" <~ "^=") ~ (expr <~ ")") ^^ { case ns~v => Lift(ns,v) }
+  | ("<" ~> repsep(expr,",") <~ ">") ^^ { es => es match { case e::Nil => e case _ => Tuple(es) } }
+  | ("-" ~> expr) ^^ { Neg(_) }
   )
 
   // ------------ System definition

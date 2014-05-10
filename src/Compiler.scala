@@ -41,6 +41,7 @@ object Compiler {
   var exec_args = List[String]() // arguments passed for execution
 
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(0); null }
+
   def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
     val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f)) ::: (if (!opts.isEmpty) opts.toList else in)
     val repo = if (Utils.path_repo!=null && !opts.isEmpty) new File(Utils.path_repo) else null
@@ -69,6 +70,7 @@ object Compiler {
         case "-xa" => eat(s=>exec_args=exec_args:::List(s))
         case "-xsc" => exec_sc=true;
         case "-xvm" => exec_vm=true;
+        case "-dbg" => eat(s=>Utils.dbg_args=s::Utils.dbg_args);
         case s if s.matches("-O[123]") => optm3=s;
         case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
         case s => in = in ::: List(s)
