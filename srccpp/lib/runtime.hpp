@@ -1,6 +1,8 @@
 #ifndef DBTOASTER_RUNTIME_H
 #define DBTOASTER_RUNTIME_H
 
+#include <iostream>
+
 #include <string>
 #include <vector>
 
