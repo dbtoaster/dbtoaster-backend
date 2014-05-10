@@ -22,6 +22,8 @@ object Utils {
   val LMS_PROPERTY = "lms"
   def isLMSTurnedOn = prop(LMS_PROPERTY)=="1"
 
+  val find_bin=prop("find_bin","find");
+  
   // Paths related to DBToaster
   val path_repo = { val r=prop("base_repo",null); if (r==null) null else r+"/dbtoaster/compiler/alpha5" }
   val path_bin  = (if (path_repo!=null) path_repo+"/" else "")+prop("dbtoaster","bin/dbtoaster_release")
