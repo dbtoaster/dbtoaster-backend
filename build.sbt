@@ -5,6 +5,18 @@ Seq(
   version := "2.1"
 )
 
+com.github.retronym.SbtOneJar.oneJarSettings
+
+mainClass in oneJar := Some("ddbt.Compiler")
+
+// assemblySettings
+
+// mainClass in assembly := Some("ddbt.Compiler")
+
+// jarName in assembly := "dbtoaster-2.1.jar"
+
+// test in assembly := {}
+
 // --------- Paths
 Seq(
   scalaSource in Compile <<= baseDirectory / "src",
@@ -139,6 +151,7 @@ commands += Command.args("exec","")((state:State, args:Seq[String]) => {
 {
   val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
   if (prop.getProperty("ddbt.lms","0")!="1") Seq() else Seq(
+    // assemblyOption in assembly ~= { _.copy(includeScala = false) }
     sources in Compile ~= (fs => fs.filter(f=> !f.toString.endsWith("codegen/LMSGen.scala"))), // ++ (new java.io.File("lms") ** "*.scala").get
     scalaSource in Compile <<= baseDirectory / "lms", // incorrect; but fixes dependency and allows incremental compilation (SBT 0.13.0)
     //unmanagedSourceDirectories in Compile += file("lms"),
