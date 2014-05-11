@@ -153,6 +153,7 @@ object Compiler {
     if (t_gen!=null) t_gen(System.nanoTime-t0)
     if (post_gen!=null) post_gen(m3)
     var dir:File = null
+    val boost = Utils.prop("lib_boost",null)
     if (cPath!=null || exec) {
       dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
       lang match {
@@ -162,7 +163,6 @@ object Compiler {
           // TODO XXX should generate jar file in cPath
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS => if(cPath!=null) {
           val pl = "srccpp/lib"
-          val boost = Utils.prop("lib_boost",null)
           val t2 = Utils.ns(()=>Utils.cppCompiler(out,cPath,boost,pl))._1; if (t_comp!=null) t_comp(t2)
         }
       }
@@ -187,7 +187,6 @@ object Compiler {
             Utils.write(out,src)
             val pl = "srccpp/lib"
             val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
-            val boost = Utils.prop("lib_boost",null)
             val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),boost,pl))._1; if (t_comp!=null) t_comp(t2)
             t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
               val (out,err)=Utils.exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
