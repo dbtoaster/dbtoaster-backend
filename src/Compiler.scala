@@ -21,6 +21,7 @@ object Compiler {
 
   val M3_FILE_SUFFIX = ".m3"
 
+  var frontend_path_bin = null   // the path to DBToaster's frontend
   var in   : List[String] = Nil  // input files
   var out  : String = null       // output file (defaults to stdout)
   var lang : String = LANG_SCALA // output language
@@ -44,7 +45,7 @@ object Compiler {
   def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
     val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f)) ::: (if (!opts.isEmpty) opts.toList else in)
     val repo = if (Utils.path_repo!=null && !opts.isEmpty) new File(Utils.path_repo) else null
-    val (t0,(m3,err)) = Utils.ns(()=>Utils.exec((Utils.path_bin :: os).toArray,repo,fatal=false))
+    val (t0,(m3,err)) = Utils.ns(()=>Utils.exec(((if(frontend_path_bin == null) Utils.path_bin else frontend_path_bin) :: os).toArray,repo,fatal=false))
     if (err.trim!="") { val e=new Exception("dbtoaster "+os.mkString(" ")+" failed because:\n"+err); e.setStackTrace(Array()); throw e }
     (t0, if (repo!=null) m3.replaceAll("../../experiments/data",repo.getParentFile.getParent+"/experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)") else m3)
   }
@@ -56,6 +57,7 @@ object Compiler {
     while(i<l) {
       args(i) match {
         case "-l" => eat(s=>s match { case LANG_CALC|LANG_M3|LANG_SCALA|LANG_CPP|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS|LANG_AKKA => lang=s; case _ => error("Unsupported language: "+s,true) },true)
+        case "--frontend" => eat(s=>frontend_path_bin=s)
         case "-o" => eat(s=>out=s)
         case "-c" => eat(s=>cPath=s)
         case "-n" => eat(s=>{ val p=s.lastIndexOf('.'); if (p!= -1) { pkg=s.substring(0,p); name=s.substring(p+1) } else name=s})
