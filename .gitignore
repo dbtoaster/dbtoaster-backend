@@ -28,3 +28,5 @@ srccpp/lib/*.a
 release/examples
 release/lib
 dbtoaster_release
+release/LICENSE
+release/README
