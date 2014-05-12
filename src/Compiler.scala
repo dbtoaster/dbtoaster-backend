@@ -21,7 +21,7 @@ object Compiler {
 
   val M3_FILE_SUFFIX = ".m3"
 
-  var frontend_path_bin = null   // the path to DBToaster's frontend
+  var frontend_path_bin:String = null // the path to DBToaster's frontend
   var in   : List[String] = Nil  // input files
   var out  : String = null       // output file (defaults to stdout)
   var lang : String = LANG_SCALA // output language
