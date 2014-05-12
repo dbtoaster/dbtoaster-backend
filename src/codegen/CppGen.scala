@@ -241,7 +241,7 @@ trait ICppGen extends IScalaGen {
         case None => ""
       }
       ctx.load()
-      clear+init+cpsExpr(e,(v:String,t:Type) => ((if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+m.name+", "+tup(m.keys map rnv)+","+v+")"})+";\n",TypeUnit),if (op==OpAdd) Some(m.keys zip m.tks) else None)
+      clear+init+cpsExpr(e,(v:String,t:Type) => ((if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+m.name+", "+tup(m.keys map rnv)+","+v+")"})+";\n",TypeUnit),Some(m.keys zip m.tks))
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -538,7 +538,7 @@ trait ICppGen extends IScalaGen {
     "/* Type definition providing a way to access the results of the sql program */\n"+
     "struct tlq_t{\n"+
     "  struct timeval t0,t; long tT,tN,tS;\n"+
-    "  tlq_t()"+{ val tempVars = s0.maps.filter{m=>(s0.queries.filter(_.name==m.name).size != 0) && (m.keys.size == 0)}; (if(!tempVars.isEmpty) ": " else "")+tempVars.map{m=>m.name+"(" + m.tp.zeroCpp + ")"}.mkString(", ") }+" { tN=0; tS=0; gettimeofday(&t0,NULL); }\n"+
+    "  tlq_t(): "+s0.maps.filter{m=>(s0.queries.filter(_.name==m.name).size != 0) && (m.keys.size == 0)}.map{m=>m.name+"(" + m.tp.zeroCpp + "), "}.mkString+"tN(0), tS(0) { gettimeofday(&t0,NULL); }\n"+
     "\n"+
     "/* Serialization Code */\n"+
     "  template<class Archive>\n"+
