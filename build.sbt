@@ -5,17 +5,11 @@ Seq(
   version := "2.1"
 )
 
-com.github.retronym.SbtOneJar.oneJarSettings
+mainClass in run in Compile := Some("ddbt.Compiler")
 
-mainClass in oneJar := Some("ddbt.Compiler")
+packSettings
 
-// assemblySettings
-
-// mainClass in assembly := Some("ddbt.Compiler")
-
-// jarName in assembly := "dbtoaster-2.1.jar"
-
-// test in assembly := {}
+packMain := Map("compiler" -> "ddbt.Compiler")
 
 // --------- Paths
 Seq(
@@ -143,6 +137,28 @@ commands += Command.args("exec","")((state:State, args:Seq[String]) => {
       val ths=hosts.map { h => exec(h._1,"-H"+h._1+":"+h._2+" -W"+h._3+" -M"+m._1+":"+m._2,""+h._4) } // launch workers
       (ths:+tm).foreach(_.join)
     case _ => System.err.println("Unrecognized 'ddbt.cluster' value")
+  }
+  state
+})
+
+commands += Command.command("release")((state:State) => {
+  Project.evaluateTask(pack, state)
+  val base = baseDirectory.value
+  val sourceDir=base/"target"/"pack"/"lib";
+  if (sourceDir.exists) {
+    val targetDir=base/"release"/"lib"/"dbt_scala";
+    targetDir.mkdirs
+    IO.copyDirectory(sourceDir,targetDir,true)
+    val ddbtJar = targetDir/"dbtoaster_2.10-2.1.jar"
+    val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
+    if (prop.getProperty("ddbt.lms","0")!="1") { //vanilla scala
+      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-scala.jar")
+    } else { //lms
+      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-lms.jar")
+    }
+    IO.delete(ddbtJar)
+  } else {
+    println("Libraries (in "+sourceDir+") are not created via pack command.")
   }
   state
 })

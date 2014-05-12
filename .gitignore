@@ -23,3 +23,7 @@ benchmarks-*.csv
 *.synctex.gz
 *.toc
 tmp/*
+srccpp/lib/*.o
+srccpp/lib/*.a
+release/examples
+release/lib
