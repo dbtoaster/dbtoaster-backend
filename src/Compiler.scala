@@ -105,7 +105,8 @@ object Compiler {
       // error("  -xd <path>    destination for generated binaries")
       // error("  -xsc          use external fsc/scalac compiler")
       // error("  -xvm          execute in a new JVM instance")
-      // error("  -xa <arg>     pass an argument to generated program",true)
+      // error("  -xa <arg>     pass an argument to generated program")
+      error("", true)
     }
     if (out==null && exec) { error("Execution disabled, specify an output file"); exec=false }
     if (name==null) {
