@@ -87,7 +87,7 @@ object Compiler {
       error("                - "+LANG_M3       +"    : M3 program")
       error("                - "+LANG_SCALA    +" : vanilla Scala code")
       error("                - "+LANG_CPP      +"   : vanilla C++ code")
-      error("                - "+LANG_AKKA     +"  : distributed Akka code")
+      // error("                - "+LANG_AKKA     +"  : distributed Akka code")
       // error("                - "+LANG_CPP_LMS  +"   : LMS-optimized C++")
       error("                - "+LANG_SCALA_LMS+"   : LMS-optimized Scala")
       //   ("                - dcpp  : distributed C/C++ code")
