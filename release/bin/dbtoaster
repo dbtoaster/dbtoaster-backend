@@ -1,0 +1,180 @@
+#!/bin/bash
+
+in_list() {
+   local search="$1"
+   shift
+   local list=("$@")
+   for elem in "${list[@]}" ; do
+	   [[ "$elem" == "$search" ]] && return 0
+   done
+   return 1
+}
+
+
+BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if [[ $( uname -s ) == CYGWIN* ]]; then
+	BINDIR="$( cygpath --windows $BINDIR )"
+fi
+BINDIR="\"$BINDIR\""
+CPP_LIBDIR="$BINDIR/../lib/dbt_c++"
+SCALA_LIBDIR="$BINDIR/../lib/dbt_scala"
+
+out_src_file="-"
+out_src_lang="-"
+out_bin_file="-"
+tmp_out_src_file=""
+
+option="-"
+filter_options="-c -d -D -I -L"
+new_args=""
+
+compile_cmd=""
+
+def_flags=""
+inc_flags=`echo "$DBT_HDR" | sed 's/:/ -I/g'`
+[[ $inc_flags != "" ]] && { inc_flags="-I$inc_flags"; }
+inc_flags="-I$CPP_LIBDIR $inc_flags"
+lib_flags=`echo "$DBT_LIB" | sed 's/:/ -L/g'`
+[[ $lib_flags != "" ]] && { lib_flags="-L$lib_flags"; }
+lib_flags="-L$CPP_LIBDIR $lib_flags"
+
+gpp="g++"
+cpp_compile_flags=""
+cpp_opt_flag="-O3"
+boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
+cpp_libs="-ldbtoaster $boost_libs -lpthread"
+
+jvm_exec_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath $SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-scala.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
+scala_compile_flags="-deprecation -unchecked -feature -Yinline-warnings -classpath $SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-scala.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
+lms_compile_flags="-deprecation -unchecked -feature -Yinline-warnings -classpath $SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-lms.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
+scala_opt_flag="-optimise"
+
+compile_log=""
+log_gcc=1
+log_scala=1
+log_dbtoaster=1
+
+for arg in "$@"; do
+    if ! in_list $arg $filter_options && ! in_list $option $filter_options; then
+	    new_args="$new_args $arg";
+    fi
+	
+	if [ $option = "-o" ]; then
+		out_src_file=$arg
+	elif [ $option = "-l" ]; then
+		out_src_lang=$arg
+	elif [ $option = "-c" ]; then
+		out_bin_file=$arg
+	elif [ $option = "-D" ]; then
+		def_flags="$def_flags -D $arg"
+	elif [ $option = "-I" ]; then
+		inc_flags="$inc_flags -I\"$arg\""
+	elif [ $option = "-L" ]; then
+		lib_flags="$lib_flags -L\"$arg\""
+	elif [ $option = "-g" ]; then
+		cpp_compile_flags="$cpp_compile_flags \"$arg\""
+	elif [ $option = "-d" ]; then
+		debug_flag=$(echo $arg | tr '[:lower:]' '[:upper:]')
+        if [ $debug_flag = "COMPILE-WITH-PROFILE" ]; then
+			cpp_compile_flags="$cpp_compile_flags -pg"
+		elif [ $debug_flag = "COMPILE-WITH-GDB" ]; then
+			cpp_compile_flags="$cpp_compile_flags -g"
+		elif [ $debug_flag = "COMPILE-WITHOUT-OPT" ]; then
+			cpp_opt_flag=""
+			scala_opt_flag=""
+		elif [ $debug_flag = "COMPILE-WITH-STATIC" ]; then
+			cpp_compile_flags="$cpp_compile_flags -static"
+		elif [ $debug_flag = "MT" ]; then
+			cpp_libs="-ldbtoaster";
+			for lib in $boost_libs; do
+				cpp_libs="$cpp_libs ${lib}-mt";
+			done;
+            cpp_libs="$cpp_libs -lpthread"
+		elif [ $debug_flag = "LOG-DBTOASTER" ]; then
+			log_dbtoaster=1
+		elif [ $debug_flag = "LOG-GCC" ]; then
+			log_gcc=1
+		elif [ $debug_flag = "LOG-SCALA" ]; then
+			log_scala=1
+		else
+			new_args="$new_args -d $arg"
+		fi
+	fi
+	option="-"
+
+	if [ ${arg:0:1} = "-" ]; then
+		option=$arg
+    fi
+done
+    
+if [ $out_bin_file != "-" ]; then
+    #echo "------------ Compiling $out_bin_file ----------------"
+
+    src_extension="hpp"
+    if [ $out_src_lang != "-" ]; then
+        [ $out_src_lang != "cpp" -a $out_src_lang != "scala" ] && \
+            { echo "$0: Binaries can be created only for C++ and Scala languages , exiting..." ; exit 1; }
+        [ $out_src_lang == "scala" ] && { src_extension="scala"; }
+
+    elif [ ${out_src_file} != "-" ]; then
+        out_src_file_ext=${out_src_file##*.}
+        [[ $out_src_file_ext && $out_src_file_ext == "scala" ]] && { src_extension="scala"; }
+    fi
+  
+    if [ ${out_src_file} = "-" ]; then
+        tmp_out_src_file=`mktemp -q /tmp/dbtoaster.XXXXXX`
+        [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
+        
+        out_src_file=${tmp_out_src_file}.${src_extension}
+        tmp_out_src_file="${tmp_out_src_file} ${out_src_file}"
+        new_args="$new_args -o $out_src_file"       
+    fi
+
+    if [ $src_extension == "hpp" ]; then
+		! which g++ &>/dev/null && { echo "Unable to compile C++ code: g++ not found!"; exit 1; }
+        main_file="$CPP_LIBDIR/main.cpp"
+
+        compile_flags="$cpp_compile_flags $cpp_opt_flag $def_flags $inc_flags $lib_flags $cpp_libs"
+        compile_cmd="$gpp $main_file -include $out_src_file -o $out_bin_file $compile_flags"
+		[ $log_gcc -eq 1 ] && { compile_log="$compile_log $compile_cmd"; }
+    fi
+
+    if [ $src_extension == "scala" ]; then
+		! which scalac &>/dev/null && { echo "Unable to compile Scala code: scalac not found!"; exit 1; }
+		jar_file="$SCALA_LIBDIR/dbtlib.jar"
+		eval [ ! -f $jar_file ] && { echo "$0: dbtlib.jar not built, exiting..." ; exit 1; }
+
+        out_bin_file_ext=${out_bin_file##*.}
+		out_bin_file_ext=$(echo $out_bin_file_ext | tr '[:upper:]' '[:lower:]')
+        [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; }
+        
+		if [[ $( uname -s ) == CYGWIN* ]]; then
+			out_src_file="$( cygpath --windows $out_src_file )"
+			out_src_file="\"$out_src_file\""
+		fi
+		if [ -f $out_bin_file ]; then
+			rm $out_bin_file
+		fi
+		compile_flags="$scala_compile_flags $scala_opt_flag"
+        compile_cmd="scalac $out_src_file -d $out_bin_file $compile_flags"
+		[ $log_scala -eq 1 ] && { compile_log="$compile_log $compile_cmd"; }
+    fi
+
+    mkdir -p $(dirname "$out_bin_file")
+fi
+
+
+#echo
+#echo $0 $@
+
+dbtoaster_cmd="java $jvm_exec_flags ddbt.Compiler --frontend $BINDIR/dbtoaster_release $new_args"
+[ $log_dbtoaster -eq 1 ] && { echo $dbtoaster_cmd; }
+eval $dbtoaster_cmd;
+
+[ "$compile_log" ] && { echo $compile_log; }
+eval $compile_cmd;
+
+# Delete any temporary files 
+[ "$tmp_out_src_file" ] && { rm -fr $tmp_out_src_file; }
+
+exit 0;

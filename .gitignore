@@ -6,7 +6,7 @@ examples/data
 conf/ddbt.properties
 test/gen
 test/queries
-bin
+bin/*
 pkg
 benchmarks-*.csv
 .idea
@@ -27,3 +27,4 @@ srccpp/lib/*.o
 srccpp/lib/*.a
 release/examples
 release/lib
+dbtoaster_release

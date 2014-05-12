@@ -24,7 +24,7 @@ object Compiler {
   var frontend_path_bin:String = null // the path to DBToaster's frontend
   var in   : List[String] = Nil  // input files
   var out  : String = null       // output file (defaults to stdout)
-  var lang : String = LANG_SCALA // output language
+  var lang : String = null       // output language
   var cPath: String = null       // path for putting the compiled program
   var name : String = null       // class/structures name (defaults to Query or capitalized filename)
   var pkg  : String = "ddbt.gen" // class package
@@ -107,6 +107,9 @@ object Compiler {
       // error("  -xvm          execute in a new JVM instance")
       // error("  -xa <arg>     pass an argument to generated program")
       error("", true) //exit the application
+    }
+    if(lang == null && out != null){
+      lang = if(out.endsWith(".cpp") || out.endsWith(".hpp") || out.endsWith(".h") || out.endsWith(".c")) LANG_CPP else LANG_SCALA
     }
     if (out==null && exec) { error("Execution disabled, specify an output file"); exec=false }
     if (name==null) {
