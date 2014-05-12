@@ -5,7 +5,19 @@ require "./#{File.dirname($0)}/db_parser.rb"
 require 'getoptlong'
 require 'tempfile'
 
-$dbt_path = "/Users/dashti/Documents/MyWorkspaces/DATASRC/dbtoaster/compiler/alpha5" #"./#{File.dirname($0)}/../.."
+#Takes a file and loads the properties in that file
+def readProperties
+  @propertiesFile = "#{File.expand_path(File.dirname($0))}/../../conf/ddbt.properties"
+  @properties = {}
+  IO.foreach(@propertiesFile) do |line|
+    @properties[$1.strip] = $2 if line =~ /([^=]*)=(.*)\/\/(.*)/ || line =~ /([^=]*)=(.*)/
+  end
+end
+
+readProperties()
+$dbt_base_rep_path = @properties["ddbt.base_repo"]
+$dbt_base_rep_path.strip!
+$dbt_path = "#{$dbt_base_rep_path}/dbtoaster/compiler/alpha5"
 $dbt_backend_path = "#{File.expand_path(File.dirname($0))}/../.."
 $dbt = "./bin/dbtoaster"
 $ocamlrunparam = "b,l=20M"
