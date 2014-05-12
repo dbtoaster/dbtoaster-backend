@@ -358,7 +358,7 @@ object UnitTest {
   private val repo = if (path_repo!=null) new File(path_repo) else null
   val all =
     if (repo!=null) {
-      exec(Array("find","test/unit/queries","-follow","-type","f","-and","-not","-path","*/.*"),repo)._1.split("\n").sorted.map(x=>UnitParser(read(repo.getPath+"/"+x)))
+      exec(Array("find","test/unit/queries","-follow","-type","f"),repo)._1.split("\n").sorted.map(x=>UnitParser(read(repo.getPath+"/"+x)))
     }
     else if (!new java.io.File(path_examples).exists) {
       warning("folder '"+path_examples+"' does not exist, tests skipped !"); Array[QueryTest]() 
