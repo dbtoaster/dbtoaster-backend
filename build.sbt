@@ -179,8 +179,10 @@ commands += Command.command("release")((state:State) => {
     val targetDir=releaseDir/"lib"/"dbt_scala"; targetDir.mkdirs
     val ddbtJar = targetDir/"dbtoaster_2.10-2.1.jar"
     if (prop.getProperty("ddbt.lms","0")!="1") { //vanilla scala
+      println("using vanilla Scala version using dbtoaster_2.10-2.1-scala.jar")
       IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-scala.jar")
     } else { //lms
+      println("using Scala+LMS version using dbtoaster_2.10-2.1-lms.jar")
       IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-lms.jar")
     }
     IO.delete(ddbtJar)
