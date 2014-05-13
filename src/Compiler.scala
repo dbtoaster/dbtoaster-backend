@@ -81,7 +81,7 @@ object Compiler {
       error("Usage: Compiler [options] file1 [file2 [...]]")
       error("Global options:")
       error("  -o <file>     output file (default: stdout)")
-      // error("  -c <file>     invoke a second stage compiler on the source file")
+      error("  -c <file>     invoke a second stage compiler on the source file")
       error("  -l <lang>     defines the target language")
       error("                - "+LANG_CALC     +"     : relational calculus")
       error("                - "+LANG_M3       +"       : M3 program")
