@@ -184,6 +184,7 @@ commands += Command.command("release")((state:State) => {
     } else { //lms
       println("using Scala+LMS version using dbtoaster_2.10-2.1-lms.jar")
       IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-lms.jar")
+      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-scala.jar")
     }
     IO.delete(ddbtJar)
   } else {

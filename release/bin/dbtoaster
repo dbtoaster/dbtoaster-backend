@@ -20,12 +20,13 @@ CPP_LIBDIR="$BINDIR/../lib/dbt_c++"
 SCALA_LIBDIR="$BINDIR/../lib/dbt_scala"
 
 out_src_file="-"
+out_src_class_name="-"
 out_src_lang="-"
 out_bin_file="-"
 tmp_out_src_file=""
 
 option="-"
-filter_options="-c -d -D -I -L -r"
+filter_options="-c -d -D -I -L -r -n"
 new_args=""
 
 compile_cmd=""
@@ -45,10 +46,10 @@ cpp_opt_flag="-O3"
 boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
 cpp_libs="-ldbtoaster $boost_libs -lpthread"
 
-jvm_exec_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath $SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-scala.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
-all_scala_compile_flags="-deprecation -unchecked -feature -Yinline-warnings -classpath $SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-lms.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
-scala_compile_flags="$all_scala_compile_flags"
-lms_compile_flags="-deprecation -unchecked -feature -Yinline-warnings -classpath $SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-lms.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
+lms_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath $SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/cal10n-api-0.7.4.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-lms.jar:$SCALA_LIBDIR/lms_2.10-0.3-SNAPSHOT.jar:$SCALA_LIBDIR/log4j-api-2.0-rc1.jar:$SCALA_LIBDIR/log4j-core-2.0-rc1.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.2-RC1.jar:$SCALA_LIBDIR/scala-compiler-2.10.2-RC1.jar:$SCALA_LIBDIR/scala-library-2.10.2-RC2.jar:$SCALA_LIBDIR/scala-library-2.10.2.jar:$SCALA_LIBDIR/scala-reflect-2.10.2-RC1.jar:$SCALA_LIBDIR/scalariform_2.10-0.1.4.jar:$SCALA_LIBDIR/scalatest_2.10-2.0.jar:$SCALA_LIBDIR/slf4j-api-1.7.2.jar:$SCALA_LIBDIR/slf4j-ext-1.7.2.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
+scala_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath $SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-scala.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
+jvm_exec_flags=$scala_codegen_flags
+scala_compile_flags="-deprecation -unchecked -feature -Yinline-warnings -classpath $SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-scala.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
 scala_opt_flag="-optimise"
 
 compile_log=""
@@ -68,11 +69,14 @@ for arg in "$@"; do
 		out_src_file=$arg
 	elif [ $option = "-l" ]; then
 		out_src_lang=$arg;
-		if [ $out_src_lang = "scalalms" ]; then
-			scala_compile_flags=$lms_compile_flags
+		if [ $out_src_lang == "scalalms" ]; then
+			scala_codegen_flags="$lms_codegen_flags";
 		fi
 	elif [ $option = "-c" ]; then
 		out_bin_file=$arg
+	elif [ $option = "-n" ]; then
+		out_src_class_name=$arg
+		new_args="$new_args -n $arg";
 	elif [ $option = "-r" ]; then
 		run_after_compile=1
 	elif [ $option = "-D" ]; then
@@ -169,8 +173,12 @@ if [ $out_bin_file != "-" ]; then
 		fi
 		compile_flags="$scala_compile_flags $scala_opt_flag"
         compile_cmd="scalac $out_src_file -d $out_bin_file $compile_flags"
-        run_cmd=$(echo "$out_src_file" | sed -e 's/.*[/\\\\]//; s/\..*//' | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
-        run_cmd="java $jvm_exec_flags:$out_bin_file ddbt.gen.$run_cmd"
+        if [[ $out_src_class_name == "-" ]] ; then
+       		run_cmd=$(echo "$out_src_file" | sed -e 's/.*[/\\\\]//; s/\..*//' | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
+	        run_cmd="java $jvm_exec_flags:$out_bin_file ddbt.gen.$run_cmd"
+        else
+	        run_cmd="java $jvm_exec_flags:$out_bin_file $out_src_class_name"
+	    fi
 		[ $log_scala -eq 1 ] && { compile_log="$compile_log $compile_cmd"; run_log="$run_log $run_cmd"; }
     fi
 
@@ -181,7 +189,7 @@ fi
 #echo
 #echo $0 $@
 
-dbtoaster_cmd="java $jvm_exec_flags ddbt.Compiler --frontend $BINDIR/dbtoaster_release $new_args"
+dbtoaster_cmd="java $scala_codegen_flags ddbt.Compiler --frontend $BINDIR/dbtoaster_release $new_args"
 [ $log_dbtoaster -eq 1 ] && { echo $dbtoaster_cmd; }
 eval $dbtoaster_cmd;
 
