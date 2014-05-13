@@ -214,6 +214,11 @@ commands += Command.command("release")((state:State) => {
     copyFiles(IO.listFiles(currentBranchPath/"lib"/"dbt_c++").filter{f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile"==f.getName }, releaseCppLibDir)
     println("copy main.cpp")
     copyFile(currentBranchPath/"lib"/"dbt_c++"/"main.cpp",releaseDir/"examples"/"code")
+    println("make scala libs")
+    val scalaLibDir = currentBranchPath/"lib"/"dbt_scala"
+    ("make -C "+scalaLibDir.getAbsolutePath)!;
+    copyFile(currentBranchPath/"lib"/"dbt_scala"/"dbtlib.jar", releaseDir/"lib"/"dbt_scala")
+    copyFile(currentBranchPath/"lib"/"dbt_scala"/"tuplegen.jar", releaseDir/"lib"/"dbt_scala")
     println("copy data files to data")
     copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"simple"/"tiny").filter(_.getName.endsWith(".dat")), releaseDir/"examples"/"data"/"simple")
     copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"tpch"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"tpch")
