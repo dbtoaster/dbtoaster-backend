@@ -142,15 +142,42 @@ commands += Command.args("exec","")((state:State, args:Seq[String]) => {
 })
 
 commands += Command.command("release")((state:State) => {
+  def copyFile(file:File, targetDir:File) = { if(!targetDir.exists) targetDir.mkdirs; IO.copyFile(file,targetDir/file.getName)}
+  def copyFiles(files:Iterable[File], targetDir:File) = { if(!targetDir.exists) targetDir.mkdirs; files.foreach{ f => IO.copyFile(f,targetDir/f.getName) } }
+  def copyDir(sourceDir:File, targetDir:File) = { if(!targetDir.exists) targetDir.mkdirs; IO.copyDirectory(sourceDir,targetDir,true) }
+  def read(file:String) = { val f=new File(file); val cs=new Array[Char](f.length.toInt); val r=new java.io.FileReader(f); r.read(cs); r.close; new String(cs) }
+  def write(file:String,data:String) { val f=new File(file); val dir=f.getParentFile; if (dir!=null && !dir.exists) dir.mkdirs; val o=new java.io.PrintWriter(f); o.write(data); o.close() }
+  def fixSqlFiles(files:Iterable[File], targetDir:File) = { if(!targetDir.exists) targetDir.mkdirs; files.foreach{ f => val fixedSql=fixSQL(read(f.getAbsolutePath())); write((targetDir/f.getName).getAbsolutePath(), fixedSql) } }
+  def fixSQL(input:String) = {
+    var output_next_blank = false;
+    (new scala.collection.immutable.StringOps(input)).lines.map{ l =>
+      l.replace("../../experiments", "examples")
+       .replace("test/queries", "examples/queries")
+       .replace("standard/", "")
+       .replace("tiny/", "")
+       .replace("big/", "")
+       .replace("data/finance/finance.csv", "data/finance.csv")
+       .replace("../alpha5/", "")
+       .replaceAll("--.*", "")+IO.Newline
+    }.filter { l =>
+      if(!l.trim.isEmpty) { output_next_blank = true; true }
+      else if(output_next_blank) { output_next_blank = false; true }
+      else false
+    }.mkString
+  }
+  //load all the properties
+  val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
+  println("execute pack task")
   Project.evaluateTask(pack, state)
+  println("defining base and release paths")
   val base = baseDirectory.value
-  val sourceDir=base/"target"/"pack"/"lib";
+  val releaseDir = base/"release";
+  println("copy all the Scala dependency libraries")
+  val sourceDir = base/"target"/"pack"/"lib";
   if (sourceDir.exists) {
-    val targetDir=base/"release"/"lib"/"dbt_scala";
-    targetDir.mkdirs
-    IO.copyDirectory(sourceDir,targetDir,true)
+    copyDir(sourceDir,releaseDir/"lib"/"dbt_scala")
+    val targetDir=releaseDir/"lib"/"dbt_scala"; targetDir.mkdirs
     val ddbtJar = targetDir/"dbtoaster_2.10-2.1.jar"
-    val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
     if (prop.getProperty("ddbt.lms","0")!="1") { //vanilla scala
       IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-scala.jar")
     } else { //lms
@@ -159,6 +186,39 @@ commands += Command.command("release")((state:State) => {
     IO.delete(ddbtJar)
   } else {
     println("Libraries (in "+sourceDir+") are not created via pack command.")
+  }
+  println("copy dbtoaster_release")
+  val baseRepo = file(prop.getProperty("ddbt.base_repo",""))
+  if(baseRepo!="") {
+    val currentBranchPath = baseRepo/"/dbtoaster"/"compiler"/"alpha5"
+    println("copy README and LICENSE")
+    copyFile(currentBranchPath/"doc"/"README", releaseDir)
+    copyFile(currentBranchPath/"doc"/"LICENSE", releaseDir)
+    println("copy docs to doc dir")
+    val releaseDocDir = releaseDir/"doc"; releaseDocDir.mkdirs
+    copyFiles(List("9.jpg", "style.css", "bakeoff.png", "bluetab.gif",
+         "bluetabactive.gif", "dropdowntabs.js", "dbtoaster-logo.gif")
+         .map(f => currentBranchPath/"doc"/"site_html"/f),releaseDocDir)
+    copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html").filter(_.getName.endsWith(".html")), releaseDocDir)
+    println("copy dbt_release")
+    val dbtBinPath = currentBranchPath/prop.getProperty("ddbt.dbtoaster.frontend","bin/dbtoaster_release")
+    copyFile(dbtBinPath,releaseDir/"bin")
+    println("copy c++ libs")
+    val cppLibDir = currentBranchPath/"lib"/"dbt_c++"
+    val releaseCppLibDir = releaseDir/"lib"/"dbt_c++"; releaseCppLibDir.mkdirs
+    copyFiles(IO.listFiles(currentBranchPath/"lib"/"dbt_c++").filter{f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile"==f.getName }, releaseCppLibDir)
+    println("copy main.cpp")
+    copyFile(currentBranchPath/"lib"/"dbt_c++"/"main.cpp",releaseDir/"examples"/"code")
+    println("copy data files to data")
+    copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"simple"/"tiny").filter(_.getName.endsWith(".dat")), releaseDir/"examples"/"data"/"simple")
+    copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"tpch"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"tpch")
+    copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"mddb"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"mddb")
+    copyFile(baseRepo/"dbtoaster"/"experiments"/"data"/"finance"/"tiny"/"finance.csv", releaseDir/"examples"/"data")
+    println("copy query files to queries")
+    fixSqlFiles((currentBranchPath/"test"/"queries"/"simple") * "r*.sql" get, releaseDir/"examples"/"queries"/"simple")
+    fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"tpch").filter(f => !"""((query[0-9]+a?)|(schemas)).sql""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"tpch")
+    fixSqlFiles((currentBranchPath/"test"/"queries"/"finance") * "*.sql" get, releaseDir/"examples"/"queries"/"finance")
+    fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"mddb").filter(f => !"""((query[1-2]+.sql)|(schemas.sql)|(README))""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"mddb")
   }
   state
 })
