@@ -195,6 +195,8 @@ commands += Command.command("release")((state:State) => {
     ("make -C "+currentBranchPath.getAbsolutePath)!;
     println("copy dbt_release")
     val dbtBinPath = currentBranchPath/prop.getProperty("ddbt.dbtoaster.frontend","bin/dbtoaster_release")
+    copyFile(dbtBinPath,releaseDir/"bin")
+    ("chmod +x "+(releaseDir/"bin"/dbtBinPath.getName).getAbsolutePath)!;
     println("copy README and LICENSE")
     copyFile(currentBranchPath/"doc"/"README", releaseDir)
     copyFile(currentBranchPath/"doc"/"LICENSE", releaseDir)
@@ -204,7 +206,6 @@ commands += Command.command("release")((state:State) => {
          "bluetabactive.gif", "dropdowntabs.js", "dbtoaster-logo.gif")
          .map(f => currentBranchPath/"doc"/"site_html"/f),releaseDocDir)
     copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html").filter(_.getName.endsWith(".html")), releaseDocDir)
-    copyFile(dbtBinPath,releaseDir/"bin")
     println("make c++ libs")
     val cppLibDir = currentBranchPath/"lib"/"dbt_c++"
     ("make -C "+cppLibDir.getAbsolutePath)!;
