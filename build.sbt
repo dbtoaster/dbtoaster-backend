@@ -207,11 +207,11 @@ commands += Command.command("release")((state:State) => {
          .map(f => currentBranchPath/"doc"/"site_html"/f),releaseDocDir)
     copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html").filter(_.getName.endsWith(".html")), releaseDocDir)
     println("make c++ libs")
-    val cppLibDir = currentBranchPath/"lib"/"dbt_c++"
+    val cppLibDir = base/"srccpp"/"lib"
     ("make -C "+cppLibDir.getAbsolutePath)!;
     println("copy c++ libs")
     val releaseCppLibDir = releaseDir/"lib"/"dbt_c++"; releaseCppLibDir.mkdirs
-    copyFiles(IO.listFiles(currentBranchPath/"lib"/"dbt_c++").filter{f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile"==f.getName }, releaseCppLibDir)
+    copyFiles(IO.listFiles(cppLibDir).filter{f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile"==f.getName }, releaseCppLibDir)
     println("copy main.cpp")
     copyFile(currentBranchPath/"lib"/"dbt_c++"/"main.cpp",releaseDir/"examples"/"code")
     println("make scala libs")
