@@ -17,7 +17,7 @@ if [[ $( uname -s ) == CYGWIN* ]]; then
 fi
 BINDIR="\"$BINDIR\""
 CPP_LIBDIR="$BINDIR/../lib/dbt_c++"
-SCALA_LIBDIR="$BINDIR/../lib/dbt_scala"
+SCALA_LIBDIR="${BINDIR}/../lib/dbt_scala"
 
 out_src_file="-"
 out_src_class_name="-"
@@ -51,10 +51,10 @@ cpp_opt_flag="-O3"
 boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
 cpp_libs="-ldbtoaster $boost_libs -lpthread"
 
-lms_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath $SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/cal10n-api-0.7.4.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-lms.jar:$SCALA_LIBDIR/lms_2.10-0.3-SNAPSHOT.jar:$SCALA_LIBDIR/log4j-api-2.0-rc1.jar:$SCALA_LIBDIR/log4j-core-2.0-rc1.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.2-RC1.jar:$SCALA_LIBDIR/scala-compiler-2.10.2-RC1.jar:$SCALA_LIBDIR/scala-library-2.10.2-RC2.jar:$SCALA_LIBDIR/scala-library-2.10.2.jar:$SCALA_LIBDIR/scala-reflect-2.10.2-RC1.jar:$SCALA_LIBDIR/scalariform_2.10-0.1.4.jar:$SCALA_LIBDIR/scalatest_2.10-2.0.jar:$SCALA_LIBDIR/slf4j-api-1.7.2.jar:$SCALA_LIBDIR/slf4j-ext-1.7.2.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
-scala_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath $SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-scala.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
+lms_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath ${SCALA_LIBDIR}/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/cal10n-api-0.7.4.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-lms.jar:$SCALA_LIBDIR/lms_2.10-0.3-SNAPSHOT.jar:$SCALA_LIBDIR/log4j-api-2.0-rc1.jar:$SCALA_LIBDIR/log4j-core-2.0-rc1.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.2-RC1.jar:$SCALA_LIBDIR/scala-compiler-2.10.2-RC1.jar:$SCALA_LIBDIR/scala-library-2.10.2-RC2.jar:$SCALA_LIBDIR/scala-library-2.10.2.jar:$SCALA_LIBDIR/scala-reflect-2.10.2-RC1.jar:$SCALA_LIBDIR/scalariform_2.10-0.1.4.jar:$SCALA_LIBDIR/scalatest_2.10-2.0.jar:$SCALA_LIBDIR/slf4j-api-1.7.2.jar:$SCALA_LIBDIR/slf4j-ext-1.7.2.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
+scala_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath ${SCALA_LIBDIR}\"/*\""
 jvm_exec_flags=$scala_codegen_flags
-scala_compile_flags="-deprecation -unchecked -feature -Yinline-warnings -classpath $SCALA_LIBDIR/akka-actor_2.10-2.2.3.jar:$SCALA_LIBDIR/akka-remote_2.10-2.2.3.jar:$SCALA_LIBDIR/config-1.0.2.jar:$SCALA_LIBDIR/dbtlib.jar:$SCALA_LIBDIR/dbtoaster_2.10-2.1-scala.jar:$SCALA_LIBDIR/netty-3.6.6.Final.jar:$SCALA_LIBDIR/protobuf-java-2.4.1.jar:$SCALA_LIBDIR/scala-actors-2.10.3.jar:$SCALA_LIBDIR/scala-compiler-2.10.3.jar:$SCALA_LIBDIR/scala-library-2.10.3.jar:$SCALA_LIBDIR/scala-reflect-2.10.3.jar:$SCALA_LIBDIR/tuplegen.jar:$SCALA_LIBDIR/uncommons-maths-1.2.2a.jar"
+scala_compile_flags="-deprecation -unchecked -feature -Yinline-warnings -classpath ${SCALA_LIBDIR}\"/*\""
 scala_opt_flag="-optimise"
 
 compile_log=""
