@@ -191,6 +191,10 @@ commands += Command.command("release")((state:State) => {
   val baseRepo = file(prop.getProperty("ddbt.base_repo",""))
   if(baseRepo!="") {
     val currentBranchPath = baseRepo/"/dbtoaster"/"compiler"/"alpha5"
+    println("make dbt_release")
+    ("make -C "+currentBranchPath.getAbsolutePath)!;
+    println("copy dbt_release")
+    val dbtBinPath = currentBranchPath/prop.getProperty("ddbt.dbtoaster.frontend","bin/dbtoaster_release")
     println("copy README and LICENSE")
     copyFile(currentBranchPath/"doc"/"README", releaseDir)
     copyFile(currentBranchPath/"doc"/"LICENSE", releaseDir)
@@ -200,11 +204,11 @@ commands += Command.command("release")((state:State) => {
          "bluetabactive.gif", "dropdowntabs.js", "dbtoaster-logo.gif")
          .map(f => currentBranchPath/"doc"/"site_html"/f),releaseDocDir)
     copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html").filter(_.getName.endsWith(".html")), releaseDocDir)
-    println("copy dbt_release")
-    val dbtBinPath = currentBranchPath/prop.getProperty("ddbt.dbtoaster.frontend","bin/dbtoaster_release")
     copyFile(dbtBinPath,releaseDir/"bin")
-    println("copy c++ libs")
+    println("make c++ libs")
     val cppLibDir = currentBranchPath/"lib"/"dbt_c++"
+    ("make -C "+cppLibDir.getAbsolutePath)!;
+    println("copy c++ libs")
     val releaseCppLibDir = releaseDir/"lib"/"dbt_c++"; releaseCppLibDir.mkdirs
     copyFiles(IO.listFiles(currentBranchPath/"lib"/"dbt_c++").filter{f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile"==f.getName }, releaseCppLibDir)
     println("copy main.cpp")
