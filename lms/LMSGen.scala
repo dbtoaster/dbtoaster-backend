@@ -298,4 +298,14 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
 
 class LMSScalaGen(cls:String="Query") extends LMSGen(cls,ScalaExpGen) 
 
-class LMSCppGen(cls:String="Query") extends LMSGen(cls,CppExpGen) with ICppGen
+class LMSCppGen(cls:String="Query") extends LMSGen(cls,CppExpGen) with ICppGen {
+  import ddbt.ast.M3._
+
+  override def toMapFunction(q: Query) = super[LMSGen].toMapFunction(q)
+  override def onEndStream = super[LMSGen].onEndStream
+  override def genMap(m:MapDef):String = super[LMSGen].genMap(m)
+  override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = super[LMSGen].genInitializationFor(map, keyNames, keyNamesConcat)
+  override def genLMS(s0:System):(String,String,String,String) = super[LMSGen].genLMS(s0)
+  override def clearOut = super[LMSGen].clearOut
+  override def additionalImports():String = ""
+}

@@ -50,7 +50,7 @@ trait CodeGen extends (M3.System => String) {
 
   def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String):String
 
-  def genLMS(s0:M3.System):(String,String,String,String)
+  def genLMS(s0:M3.System):(String,String,String,String) = (null,null,null,null)
 
   def clearOut:Unit
 
