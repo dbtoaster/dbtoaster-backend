@@ -358,13 +358,13 @@ object UnitTest {
   private val repo = if (path_repo!=null) new File(path_repo) else null
   val all =
     if (repo!=null) {
-      exec(Array("find","test/unit/queries","-follow","-type","f","-and","-not","-path","*/.*"),repo)._1.split("\n").sorted.map(x=>UnitParser(read(repo.getPath+"/"+x)))
-    }
-    else if (!new java.io.File(path_examples).exists) {
+      exec(Array(Utils.find_bin,"test/unit/queries","-follow","-type","f","-and","-not","-path","*/.*"),repo)._1.split("\n").filterNot(_ contains "/.") //to exclude test/unit/queries/.DS_Store
+           .sorted.map(x=>UnitParser(read(repo.getPath+"/"+x)))
+    } else if (!new java.io.File(path_examples).exists) {
       warning("folder '"+path_examples+"' does not exist, tests skipped !"); Array[QueryTest]() 
+    } else {
+      exec(Array(Utils.find_bin,path_examples,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n").sorted.map(f=>QueryTest(f))
     }
-    else
-      exec(Array("find",path_examples,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n").sorted.map(f=>QueryTest(f))
   // Helper for other tests
   def sqlFiles(valid:Boolean=true) = { val qs=all.map(q=>q.sql); if (valid) qs.filter(s=> !skip.exists(e=>s.endsWith(e+".sql"))) else qs }
 

@@ -28,9 +28,11 @@ object Utils {
   val LMS_PROPERTY = "lms"
   def isLMSTurnedOn = prop(LMS_PROPERTY)=="1"
 
+  val find_bin=prop("find_bin","find");
+  
   // Paths related to DBToaster
   val path_repo = { val r=prop("base_repo",null); if (r==null) null else r+"/dbtoaster/compiler/alpha6" }
-  val path_bin  = (if (path_repo!=null) path_repo+"/" else "")+prop("dbtoaster","bin/dbtoaster_release")
+  val path_bin  = (if (path_repo!=null) path_repo+"/" else "")+prop("dbtoaster.frontend","bin/dbtoaster_release")
   private lazy val path_jdk = { var p=prop("jdk",null); if (p!=null) { val r=prop(p,null); if (r!=null) p=r; }; if (p==null) System.getProperty("java.home") else p }
   private lazy val (path_cp,path_jvm) = {
     val deps = System.getProperty("sbt.classpath",System.getProperty("sun.java.command").replaceAll(".*-classpath | .*","")+":"+System.getProperty("sun.boot.class.path")).split(":")

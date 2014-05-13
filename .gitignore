@@ -1,11 +1,12 @@
-project
+project/project
+project/target
 target
 examples/queries
 examples/data
 conf/ddbt.properties
 test/gen
 test/queries
-bin
+bin/*
 pkg
 benchmarks-*.csv
 .idea
@@ -22,3 +23,11 @@ benchmarks-*.csv
 *.synctex.gz
 *.toc
 tmp/*
+srccpp/lib/*.o
+srccpp/lib/*.a
+release/examples
+release/lib
+dbtoaster_release
+release/LICENSE
+release/README
+release/doc
