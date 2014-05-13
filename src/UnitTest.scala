@@ -347,7 +347,7 @@ object UnitTest {
   // Common helpers
   private val repo = if (path_repo!=null) new File(path_repo) else null
   val all = if (repo!=null) exec(Array(Utils.find_bin,"test/unit/queries","-type","f"),repo)._1.split("\n").filterNot(_ contains "/.") //to exclude test/unit/queries/.DS_Store
-                                 .sorted.map(UnitParser(read(repo.getPath+"/"+x)))
+                                 .sorted.map(x => UnitParser(read(repo.getPath+"/"+x)))
             else if (!new java.io.File(path_examples).exists) { warning("folder '"+path_examples+"' does not exist, tests skipped !"); Array[QueryTest]() }
             else exec(Array("find",path_examples,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n").sorted.map(f=>QueryTest(f))
   // Helper for other tests
