@@ -21,9 +21,10 @@ object Compiler {
 
   val M3_FILE_SUFFIX = ".m3"
 
+  var frontend_path_bin:String = null // the path to DBToaster's frontend
   var in   : List[String] = Nil  // input files
   var out  : String = null       // output file (defaults to stdout)
-  var lang : String = LANG_SCALA // output language
+  var lang : String = null       // output language
   var cPath: String = null       // path for putting the compiled program
   var name : String = null       // class/structures name (defaults to Query or capitalized filename)
   var pkg  : String = "ddbt.gen" // class package
@@ -45,7 +46,7 @@ object Compiler {
   def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
     val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f)) ::: (if (!opts.isEmpty) opts.toList else in)
     val repo = if (Utils.path_repo!=null && !opts.isEmpty) new File(Utils.path_repo) else null
-    val (t0,(m3,err)) = Utils.ns(()=>Utils.exec((Utils.path_bin :: os).toArray,repo,fatal=false))
+    val (t0,(m3,err)) = Utils.ns(()=>Utils.exec(((if(frontend_path_bin == null) Utils.path_bin else frontend_path_bin) :: os).toArray,repo,fatal=false))
     if (err.trim!="") { val e=new Exception("dbtoaster "+os.mkString(" ")+" failed because:\n"+err); e.setStackTrace(Array()); throw e }
     (t0, if (repo!=null) m3.replaceAll("../../experiments/data",repo.getParentFile.getParent+"/experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)") else m3)
   }
@@ -57,6 +58,7 @@ object Compiler {
     while(i<l) {
       args(i) match {
         case "-l" => eat(s=>s match { case LANG_CALC|LANG_M3|LANG_SCALA|LANG_CPP|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS|LANG_AKKA => lang=s; case _ => error("Unsupported language: "+s,true) },true)
+        case "--frontend" => eat(s=>frontend_path_bin=s)
         case "-o" => eat(s=>out=s)
         case "-c" => eat(s=>cPath=s)
         case "-n" => eat(s=>{ val p=s.lastIndexOf('.'); if (p!= -1) { pkg=s.substring(0,p); name=s.substring(p+1) } else name=s})
@@ -81,16 +83,16 @@ object Compiler {
       error("Usage: Compiler [options] file1 [file2 [...]]")
       error("Global options:")
       error("  -o <file>     output file (default: stdout)")
-      // error("  -c <file>     invoke a second stage compiler on the source file")
+      error("  -c <file>     invoke a second stage compiler on the source file")
       error("  -l <lang>     defines the target language")
-      error("                - "+LANG_CALC     +"  : relational calculus")
-      error("                - "+LANG_M3       +"    : M3 program")
-      error("                - "+LANG_SCALA    +" : vanilla Scala code")
-      error("                - "+LANG_CPP      +"   : vanilla C++ code")
-      error("                - "+LANG_AKKA     +"  : distributed Akka code")
-      // error("                - "+LANG_CPP_LMS  +"   : LMS-optimized C++")
-      error("                - "+LANG_SCALA_LMS+"   : LMS-optimized Scala")
-      //   ("                - dcpp  : distributed C/C++ code")
+      error("                - "+LANG_CALC     +"     : relational calculus")
+      error("                - "+LANG_M3       +"       : M3 program")
+      error("                - "+LANG_SCALA    +"    : vanilla Scala code")
+      error("                - "+LANG_CPP      +"      : vanilla C++ code")
+      // error("                - "+LANG_AKKA     +"     : distributed Akka code")
+      // error("                - "+LANG_CPP_LMS  +"      : LMS-optimized C++")
+      error("                - "+LANG_SCALA_LMS+" : LMS-optimized Scala")
+      //   ("                - dcpp     : distributed C/C++ code")
       error("Front-end options:")
       error("  -d <depth>    incrementalization depth (default: infinite)")
       error("  -O[123]       optimization level for M3 (default: -O2)")
@@ -105,7 +107,11 @@ object Compiler {
       // error("  -xd <path>    destination for generated binaries")
       // error("  -xsc          use external fsc/scalac compiler")
       // error("  -xvm          execute in a new JVM instance")
-      // error("  -xa <arg>     pass an argument to generated program",true)
+      // error("  -xa <arg>     pass an argument to generated program")
+      error("", true) //exit the application
+    }
+    if(lang == null && out != null){
+      lang = if(out.endsWith(".cpp") || out.endsWith(".hpp") || out.endsWith(".h") || out.endsWith(".c")) LANG_CPP else LANG_SCALA
     }
     if (out==null && exec) { error("Execution disabled, specify an output file"); exec=false }
     if (name==null) {
@@ -155,6 +161,7 @@ object Compiler {
     if (t_gen!=null) t_gen(System.nanoTime-t0)
     if (post_gen!=null) post_gen(m3)
     var dir:File = null
+    val boost = Utils.prop("lib_boost",null)
     if (cPath!=null || exec) {
       dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
       lang match {
@@ -164,7 +171,6 @@ object Compiler {
           // TODO XXX should generate jar file in cPath
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS => if(cPath!=null) {
           val pl = "srccpp/lib"
-          val boost = Utils.prop("lib_boost",null)
           val t2 = Utils.ns(()=>Utils.cppCompiler(out,cPath,boost,pl))._1; if (t_comp!=null) t_comp(t2)
         }
       }
@@ -189,7 +195,6 @@ object Compiler {
             Utils.write(out,src)
             val pl = "srccpp/lib"
             val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
-            val boost = Utils.prop("lib_boost",null)
             val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),boost,pl))._1; if (t_comp!=null) t_comp(t2)
             t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
               val (out,err)=Utils.exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)

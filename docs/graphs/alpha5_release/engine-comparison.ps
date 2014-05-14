@@ -1,0 +1,43 @@
+set terminal pdf color dashed enhanced size 12,2
+set output "engine-comparison.pdf"
+
+# --- start common commands ---
+set border 1+2
+set xlabel font ", 10"
+set ylabel font ", 10"
+set xtics font ", 8"
+set ytics font ", 8"
+set ytics nomirror
+set xtics nomirror
+set rmargin at screen 0.975
+set lmargin at screen 0.05
+# --- end common commands ---
+
+set datafile separator ","
+set datafile missing "0"
+
+set key Left reverse horizontal maxcols 2 at screen 0.95, 0.95 opaque
+set boxwidth 1 relative
+
+set xtics auto
+set style data histogram 
+set style histogram cluster gap 1 
+
+set ylabel "Average Refresh Rate (1/s)"
+set xtics 0.25 nomirror scale 0 rotate by -30
+set ytics nomirror
+
+set xlabel "Queries"
+set bmargin at screen 0.20
+set tmargin at screen 0.95
+
+set logscale y
+
+set style fill solid noborder
+plot 'engine-comparison.csv' using 2:xtic(1) title "REP" lc rgb "#a6cee3", \
+   '' using 3:xtic(1) title "DBX" lc rgb "#1f78b4", \
+   '' using 4:xtic(1) title "SPY" lc rgb "#b2df8a", \
+   '' using 5:xtic(1) title "DBToaster Scala" lc rgb "#33a02c", \
+   '' using 6:xtic(1) title "DBToaster Scala + LMS" lc rgb "#fdbf6f", \
+   '' using 7:xtic(1) title "DBToaster C++" lc rgb "#ff7f00", \
+   '' using 8:xtic(1) title "IVM" lc rgb "#fb9a99"

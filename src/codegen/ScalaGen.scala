@@ -495,8 +495,6 @@ trait IScalaGen extends CodeGen {
     (str,ld0,consts)
   }
 
-  override def genLMS(s0:System):(String,String,String,String) = (null,null,null,null)
-
   override def toMapFunction(q: Query) = q.name+".toMap"
   override def clearOut = {}
   override def onEndStream = ""

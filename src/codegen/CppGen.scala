@@ -301,8 +301,6 @@ trait ICppGen extends IScalaGen {
     (str,ld0,consts)
   }
 
-  override def genLMS(s0:System):(String,String,String,String) = (null,null,null,null)
-
   override def toMapFunction(q: Query) = q.name+".toMap"
   override def clearOut = {}
   override def onEndStream = ""
@@ -589,6 +587,12 @@ trait ICppGen extends IScalaGen {
     "\n"+
     "  protected:\n"+
     "    data_t data;\n"+
+    "};\n"+
+    "class "+cls+" : public Program\n"+
+    "{\n"+
+    "  public:\n"+
+    "    "+cls+"(int argc = 0, char* argv[] = 0) : Program(argc,argv) {\n"+
+    "    }\n"+
     "};\n"
   }
 
