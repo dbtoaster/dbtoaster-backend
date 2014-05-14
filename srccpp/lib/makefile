@@ -23,7 +23,6 @@ SRC_FILES := event.cpp \
 FILES := $(HDR_FILES) $(SRC_FILES)
 OBJ_FILES := $(patsubst %.cpp,%.o,$(SRC_FILES))
 
-# OSX 10.9: G++ := g++-4.9
 G++ := g++
 LIB_OBJ := libdbtoaster.a
 TARGET:=$(shell which $(G++) &>/dev/null && echo $(LIB_OBJ) || echo warn)
@@ -44,7 +43,7 @@ $(LIB_OBJ) : $(OBJ_FILES)
 	
 $(OBJ_FILES) : %.o : %.cpp $(HDR_FILES)
 	@echo Compiling $<
-	@$(G++) -Wall $(CPP_FLAGS) $(patsubst %,-I %,$(CPP_HDR_PATH)) -O3 -c $<
+	@$(G++) -mmacosx-version-min=10.8 -Wall $(CPP_FLAGS) $(patsubst %,-I %,$(CPP_HDR_PATH)) -O3 -c $<
 
 clean: 
 	rm -f *.o $(LIB_OBJ)

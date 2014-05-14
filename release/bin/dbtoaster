@@ -40,7 +40,12 @@ lib_flags=`echo "$DBT_LIB" | sed 's/:/ -L/g'`
 [[ $lib_flags != "" ]] && { lib_flags="-L$lib_flags"; }
 lib_flags="-L$CPP_LIBDIR $lib_flags"
 
-gpp="g++"
+# If there is a symlink to a custom C++ compiler, use it instead of g++
+if [ -L "./gpp" ]; then
+   gpp="./gpp"
+else
+   gpp="g++"
+fi
 cpp_compile_flags=""
 cpp_opt_flag="-O3"
 boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
