@@ -15,18 +15,20 @@ BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CPP_LIBDIR="$BINDIR/../lib/dbt_c++"
 SCALA_LIBDIR="${BINDIR}/../lib/dbt_scala"
 if [[ $( uname -s ) == CYGWIN* ]]; then
-   SCALA_LIBDIR_JAVA="$( cygpath --windows $SCALA_LIBDIR )"
-   BINDIR_JAVA="$( cygpath --windows $BINDIR )"
+   SCALA_LIBDIR_JAVA="$( cygpath --windows "$SCALA_LIBDIR" )"
+   BINDIR_JAVA="$( cygpath --windows "$BINDIR" )"
    PATH_SEP="\\"
    JAVA_SEP=";"
-   SCALA_LIBS=`echo $SCALA_LIBDIR/*.jar | xargs cygpath --windows | tr '[:space:]' $JAVA_SEP`
+   SCALA_LIBS=`find "$SCALA_LIBDIR" -name "*".jar -print0 | xargs -0 cygpath --windows | tr '[\n]' $JAVA_SEP`
 else
-   SCALA_LIBDIR_JAVA=$SCALA_LIBDIR
-   BINDIR_JAVA=$BINDIR
+   SCALA_LIBDIR_JAVA="$SCALA_LIBDIR"
+   BINDIR_JAVA="$BINDIR"
    PATH_SEP="/"
    JAVA_SEP=":"
-   SCALA_LIBS=`echo $SCALA_LIBDIR/*.jar | tr '[:space:]' $JAVA_SEP`
+   SCALA_LIBS=`find "$SCALA_LIBDIR" -name "*".jar -print0 | tr '[\0]' $JAVA_SEP`
 fi
+
+echo $SCALA_LIBS
 
 out_src_file="-"
 out_src_class_name="-"
@@ -170,7 +172,7 @@ if [ $out_bin_file != "-" ]; then
 
    if [ $src_extension == "scala" ]; then
       ! which scalac &>/dev/null && { echo "Unable to compile Scala code: scalac not found!"; exit 1; }
-      jar_file="$SCALA_LIBDIR/dbtlib.jar"
+      jar_file="\"$SCALA_LIBDIR/dbtlib.jar\""
       eval [ ! -f $jar_file ] && { echo "$0: dbtlib.jar not built, exiting..." ; exit 1; }
 
       if [[ $( uname -s ) == CYGWIN* ]]; then
