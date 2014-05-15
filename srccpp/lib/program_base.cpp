@@ -223,14 +223,14 @@ void ProgramBase::process_streams() {
 	std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
 	std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
 	for(;it != it_end; ++it) {
-		process_event(*it,false);
+		process_stream_event(*it);
 	}
 	if(!stream_multiplexer.eventQue->empty()) {
 		stream_multiplexer.eventQue->sort(compare_event_timestamp_order);
 		it = stream_multiplexer.eventQue->begin();
 		it_end = stream_multiplexer.eventQue->end();
 		for(;it != it_end; ++it) {
-			process_event(*it,false);
+			process_stream_event(*it);
 		}
 	}
 	// XXX memory leak
@@ -315,7 +315,7 @@ void ProgramBase::process_stream_event(const event_t& _evt) {
 	}
 	tuple_count += 1;
 
-	// IProgram::process_stream_event(_evt);
+	IProgram::process_stream_event(_evt);
 }
 
 void ProgramBase::trace(const path& trace_file, bool debug) {
