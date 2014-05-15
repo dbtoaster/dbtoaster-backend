@@ -28,8 +28,6 @@ else
    SCALA_LIBS=`find "$SCALA_LIBDIR" -name "*".jar -print0 | tr '[\0]' $JAVA_SEP`
 fi
 
-echo $SCALA_LIBS
-
 out_src_file="-"
 out_src_class_name="-"
 out_src_lang="-"
@@ -159,8 +157,13 @@ if [ $out_bin_file != "-" ]; then
       tmp_out_src_file="${tmp_out_src_file} ${out_src_file}"
    fi
 
+   if [[ $( uname -s ) == CYGWIN* ]]; then
+      out_src_file_java="$( cygpath --windows $out_src_file )"
+   fi
+   out_src_file="\"$out_src_file\""
+   new_args="$new_args -o \"$out_src_file_java\""
+
    if [ $src_extension == "hpp" ]; then
-      new_args="$new_args -o $out_src_file"
       ! which g++ &>/dev/null && { echo "Unable to compile C++ code: g++ not found!"; exit 1; }
       main_file="$CPP_LIBDIR/main.cpp"
 
@@ -174,12 +177,6 @@ if [ $out_bin_file != "-" ]; then
       ! which scalac &>/dev/null && { echo "Unable to compile Scala code: scalac not found!"; exit 1; }
       jar_file="\"$SCALA_LIBDIR/dbtlib.jar\""
       eval [ ! -f $jar_file ] && { echo "$0: dbtlib.jar not built, exiting..." ; exit 1; }
-
-      if [[ $( uname -s ) == CYGWIN* ]]; then
-         out_src_file="$( cygpath --windows $out_src_file )"
-         out_src_file="\"$out_src_file\""
-      fi
-      new_args="$new_args -o $out_src_file"
 
       out_bin_file_ext=${out_bin_file##*.}
       out_bin_file_ext=$(echo $out_bin_file_ext | tr '[:upper:]' '[:lower:]')
