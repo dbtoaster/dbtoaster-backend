@@ -552,13 +552,14 @@ trait ICppGen extends IScalaGen {
     "\n"+
     "  protected:\n"+
     "    data_t data;\n"+
-    "};\n"+
+    "};\n"+ (if cls != "Program") {
     "class "+cls+" : public Program\n"+
     "{\n"+
     "  public:\n"+
     "    "+cls+"(int argc = 0, char* argv[] = 0) : Program(argc,argv) {\n"+
     "    }\n"+
     "};\n"
+    } else ""
   }
 
   private def genStream(s:Source): String = {
