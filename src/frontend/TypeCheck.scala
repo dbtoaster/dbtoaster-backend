@@ -157,7 +157,10 @@ object TypeCheck extends (M3.System => M3.System) {
         case Cmp(l,r,_) => cr=c++ie(l,c)++ie(r,c); tpRes(l.tp,r.tp,ex)
         case Exists(e) => cr=ie(e,c)
         case Lift(n,e) => ie(e,c); c.get(n) match { case Some(t) => try { tpRes(t,e.tp,ex) } catch { case _:Throwable=> err("Value "+n+" lifted as "+t+" compared with "+e.tp) } case None => cr=c+((n,e.tp)) }
-        case a@AggSum(ks,e) => val in=ie(e,c); cr=c++ks.map{k=>(k,in(k))}; a.tks=ks.map(cr)
+        case a@AggSum(ks,e) =>
+          val in=ie(e,c)
+          cr=c++ks.map{k=>(k,in(k))}
+          a.tks=ks.map(cr)
         case a@Apply(n,_,as) => as.map(ie(_,c)); a.tp=Library.typeCheck(n,as.map(_.tp))
         case r@Ref(n) => r.tp=c(n)
         case m@MapRef(n,tp,ks) => val mtp=s0.mapType(n); cr=c++(ks zip mtp._1).toMap
@@ -175,7 +178,7 @@ object TypeCheck extends (M3.System => M3.System) {
     s0.triggers.foreach { t=> t.stmts foreach (x=>ist(x,t.evt.args.toMap)) }
     s0.queries.foreach {
       q => {
-        val m = ie (q.map,Map())
+        val m = ie(q.map,Map())
         q.tp = q.map.tp
         val (_,ov) = schema(q.map)
         q.keys = ov.map(o => (o, m(o)))

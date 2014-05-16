@@ -16,7 +16,7 @@ trait CodeGen extends (M3.System => String) {
   def streams(sources:List[Source]) : String
 
   // Context maintenance helpers
-  case class Ctx[T](ctx0:Map[String,T]=Map()) extends Function1[String,T] {
+  case class Ctx[T](ctx0:Map[String,T]=Map[String,T]()) extends Function1[String,T] {
     private var ctx = scala.collection.mutable.HashMap[String,T]()
     def add(c:Map[String,T]) = c.foreach(x=>ctx.put(x._1,x._2))
     def add(n:String,t:T) { ctx.put(n,t) }

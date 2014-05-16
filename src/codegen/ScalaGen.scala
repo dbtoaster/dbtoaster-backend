@@ -223,6 +223,30 @@ trait IScalaGen extends CodeGen {
     (str,ld0,consts)
   }
 
+  def genQueries(queries:List[Query]) = {
+    queries.map {
+      query => {
+        query.map match {
+          case MapRef(n,_,_) if (n == query.name) => ""
+          case _ => 
+            ctx = Ctx[(Type,String)]()
+            "def "+query.name+"() = {\n"+
+            ind(
+              if(query.keys.length == 0) cpsExpr(query.map)
+              else {
+                val mName = "m"+query.name
+                val tk = tup(query.keys.map(x=>x._2.toScala))
+                val nk = query.keys.map(x=>x._1)
+                "val "+mName+" = M3Map.make["+tk+","+query.tp.toScala+"]()\n"+
+                cpsExpr(query.map, (v:String) => mName+".add("+tup(nk map rn)+","+v+")")+"\n"+
+                mName
+              }
+            )+"\n}"
+        }
+      }
+    }.mkString("\n")
+  }
+
   override def toMapFunction(q: Query) = q.name+".toMap"
   override def clearOut = {}
   override def onEndStream = ""
@@ -232,12 +256,12 @@ trait IScalaGen extends CodeGen {
     val body = if (lms!=null) lms else {
       val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
       val ms = s0.maps.map(genMap).mkString("\n") // maps
-      ms+"\n\n"+ts
+      ms+"\n\n"+genQueries(s0.queries)+"\n\n"+ts
     }
     val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
-    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+"))"
+    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map(q => q.name).mkString(",")+"))"
     clearOut
     helper(s0)+"class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\n"+
@@ -247,7 +271,7 @@ trait IScalaGen extends CodeGen {
     "def receive = {\n"+ind(str+
       "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+
       "case EndOfStream | GetSnapshot(_) => t1=System.nanoTime; "+snap
-    )+"\n}\n"+gc+ld)+"\n"+"}\n"
+    )+"\n}\n"+gc+ld)+"\n}\n"
   }
 
   private def genStream(s:Source): (String,String,String) = {
