@@ -109,7 +109,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
   // ------------ System definition
   lazy val map = ("DECLARE" ~> "MAP" ~> ident) ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe),",") <~ "]" <~ ":=") ~ expr <~ ";" ^^
                  { case n~t~ks~e => MapDef(n,t.getOrElse(null),ks.map{case n~t=>(n,t)},e) }
-  lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ mapref <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
+  lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ expr <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
   lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> rep1sep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
                         { case op~n~f~ss=> val s=Schema(n,f.map{(_,null)}); Trigger(if (op=="+") EvtAdd(s) else EvtDel(s),ss) }
                      | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { Trigger(EvtReady,_) } | failure("Bad M3 trigger"))

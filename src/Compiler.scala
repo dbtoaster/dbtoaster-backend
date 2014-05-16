@@ -144,7 +144,8 @@ object Compiler {
     if (ni) {
       // ---- NON-INCREMENTAL START
       import ddbt.ast._; import M3._
-      val (qns,qss) = (m3.queries.map{q=>q.map.name},scala.collection.mutable.HashMap[String,Stmt]())
+      //XXX: Make this work with EXPRESSIVE-TLQS
+      val (qns,qss) = (m3.queries.map{q=>q.name},scala.collection.mutable.HashMap[String,Stmt]())
       val triggers=m3.triggers.map(t=>Trigger(t.evt,t.stmts.filter {
         case s@StmtMap(m,e,op,i) => if (qns.contains(m.name)) { qss += ((m.name,s)); false } else true
         case _ => true

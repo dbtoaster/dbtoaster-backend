@@ -18,10 +18,11 @@ object TypeCheck extends (M3.System => M3.System) {
     def re(e:Expr):Expr = e.replace { case MapRefConst(t,ks) => used+=t; MapRef(t, TypeLong, ks) }
     def rst(s:Stmt):Stmt = s match { case StmtMap(m,e,op,in) => StmtMap(m,re(e),op,in map re) }
     val triggers = s0.triggers.map(t=>Trigger(t.evt,t.stmts map rst))
+    val queries = s0.queries.map(q => Query(q.name,re(q.map)))
     val tabMaps = s0.sources.filter{s=> !s.stream && used.contains(s.schema.name) }.map{ so=>
       val s=so.schema; MapDef(s.name, TypeLong, s.fields, Const(TypeLong,"0L"))
     }
-    System(s0.sources,tabMaps:::s0.maps,s0.queries,triggers)
+    System(s0.sources,tabMaps:::s0.maps,queries,triggers)
   }
 
   // 2. Prettify variable names (not streams, not maps) using a renaming function
@@ -42,7 +43,8 @@ object TypeCheck extends (M3.System => M3.System) {
       case EvtDel(sc) => EvtDel(rs(sc))
       case e => e
     }, t.stmts map rst))
-    System(sources,s0.maps,s0.queries,triggers)
+    val queries = s0.queries.map(q => Query(q.name,re(q.map)))
+    System(sources,s0.maps,queries,triggers)
   }
 
   // 4. Type trigger arguments by binding to the corresponding input schema
@@ -89,8 +91,51 @@ object TypeCheck extends (M3.System => M3.System) {
       val locked = e.args.map(_._1).toSet
       Trigger(e,ss.map(x=>rst(x,locked)))
     }
+    val queries = s0.queries.map(q => Query(q.name, re(q.map,Set())))
     freshClear
-    System(s0.sources,s0.maps,s0.queries,triggers)
+    System(s0.sources,s0.maps,queries,triggers)
+  }
+
+  /*
+   * Computes the set of input variables and the set of output variables for a
+   * given expression.
+   *
+   * @param  ex Expr The expression for which the input and output variables 
+   * should be computed
+   * @return A pair of lists, holding input variables and output variables
+   */
+  def schema(ex: Expr):(List[String],List[String]) = {
+    def union(l1:List[String],l2:List[String]) = (l1 ++ l2).distinct
+    def diff(l1:List[String], l2:List[String]) = l1.filterNot(l => l2.contains(l))
+    def inter(l1:List[String], l2:List[String]) = l1.filter(l => l2.contains(l))
+    ex match {
+      case Ref(n) => (List(n),List())
+      case Const(tp,v) => (List(),List())
+      case Exists(e) => schema(e)
+      case Cmp(l,r,op) => (union(schema(l)._1, schema(r)._1),List())
+      case Apply(fn,tp,as) =>
+        val (ivs,ovs) = as.map(schema).unzip
+        (ivs.flatten.distinct,ovs.flatten.distinct)
+      case MapRef(n,tp,ks) => (List(),ks)
+      case Lift(n,e) =>
+        val (iv,ov) = schema(e)
+        (iv,if (ov contains n) ov else ov ::: List(n))
+      case Mul(el,er) =>
+        val (iv1,ov1) = schema(el)
+        val (iv2,ov2) = schema(er)
+        (union(diff(iv2, ov1), iv1),diff(union(ov1, ov2), iv1))
+      case Add(el,er) =>
+        val (iv1,ov1) = schema(el)
+        val (iv2,ov2) = schema(er)
+        val iv0 = iv1 union iv2
+        val ov0 = ov1 union iv2
+        val iv = diff(ov0, (inter(ov1, ov2)))
+        (union(iv0, iv),diff(ov0, iv))
+      case AggSum(ks,e) =>
+        val (iv,ov) = schema(e)
+        (iv,ks)
+      case _ => sys.error("Don't know how to compute schema of "+ex)
+    }
   }
 
   // 7. Resolve missing types (and also make sure operations are correctly typed)
@@ -128,6 +173,14 @@ object TypeCheck extends (M3.System => M3.System) {
     }
     def ist(s:Stmt,b:Map[String,Type]=Map()) = s match { case StmtMap(m,e,op,in) => ie(e,b); in.map(e=>ie(e,b)); ie(m,b) }
     s0.triggers.foreach { t=> t.stmts foreach (x=>ist(x,t.evt.args.toMap)) }
+    s0.queries.foreach {
+      q => {
+        val m = ie (q.map,Map())
+        q.tp = q.map.tp
+        val (_,ov) = schema(q.map)
+        q.keys = ov.map(o => (o, m(o)))
+      }
+    }
     s0
   }
 

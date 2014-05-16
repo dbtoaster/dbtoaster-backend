@@ -95,7 +95,8 @@ sealed abstract class M3 // see ddbt.frontend.M3Parser
 object M3 {
   import ddbt.Utils.ind
   case class System(sources:List[Source], maps:List[MapDef], queries:List[Query], triggers:List[Trigger]) extends M3 {
-    lazy val mapType = maps.map { m=> (m.name,(m.keys.map{x=>x._2},m.tp)) }.toMap // String => (List[Type],Type)
+    // String => (List[Type],Type)
+    lazy val mapType = maps.map { m=> (m.name,(m.keys.map{x=>x._2},m.tp)) }.toMap
     override def toString =
       "-------------------- SOURCES --------------------\n"+sources.mkString("\n\n")+"\n\n"+
       "--------------------- MAPS ----------------------\n"+maps.mkString("\n\n")+"\n\n"+
@@ -106,7 +107,11 @@ object M3 {
     override def toString="DECLARE MAP "+name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.map{case (n,t)=>n+":"+t}.mkString(",")+"] :=\n"+ind(expr+";")
     def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"
   }
-  case class Query(name:String, map:MapRef) extends M3 { override def toString="DECLARE QUERY "+name+" := "+map+";"; def toCppType=map.toCppType; def toCppRefType=map.toCppRefType}
+  case class Query(name:String, map:Expr) extends M3 {
+    var keys:List[(String,Type)] = null
+    var tp:Type = null
+    override def toString="DECLARE QUERY "+name+" := "+map+";"; def toCppType=map.tp.toCpp; def toCppRefType=map.tp.toCpp
+  }
   case class Trigger(evt:EvtTrigger, stmts:List[Stmt]) extends M3 { override def toString="ON "+evt+" {\n"+ind(stmts.mkString("\n"))+"\n}" }
 
   // ---------- Expressions (values)
