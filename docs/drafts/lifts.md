@@ -18,7 +18,7 @@ __SQL_SUM_AGGREGATE_1:
 AggSum([R_A], (R(R_A, R_B) * R_B))
 ```
 
-We would actually need an `EXISTS(R(R_A, R_B))` in front of the expression for it to be correct.
+*Note:* `EXISTS` cannot help us here because it is not able to return a value expressing the non-existance of a group (it will return 0 for non-existing groups which is indistinguishable from `SUM(B) = 0`.
 
 ### Not exists
 
