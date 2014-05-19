@@ -437,7 +437,8 @@ trait ICppGen extends IScalaGen {
       "\n\n"+
       "/* Trigger functions for stream relations */\n"+
       genStreamTriggers
-    val ms = s0.maps.filter(_.keys.size > 0).map(genMapStructDef).mkString("\n") // maps
+    val ms = s0.queries.filter(q=>(s0.maps.filter(_.name==q.name).size == 0) && (q.keys.size > 0)).map(q=>genMapStructDef(MapDef(q.name,q.tp,q.keys,q.map))).mkString("\n") + // queries`without a map (with -F EXPRESSIVE-TLQS)
+            s0.maps.filter(_.keys.size > 0).map(genMapStructDef).mkString("\n") // maps
 
     "\n/* Definitions of auxiliary maps for storing materialized views. */\n"+
     ms +
@@ -488,10 +489,26 @@ trait ICppGen extends IScalaGen {
       "ar & boost::serialization::make_nvp(BOOST_PP_STRINGIZE("+q.name+"), _"+q.name+");\n"
     }.mkString
 
-    def compile_tlqs = s0.queries.map{q =>
-      q.toCppRefType + " get_"+q.name+"(){\n"+
-      "  return "+q.name+";\n"+
-      "}\n"
+    def compile_tlqs = s0.queries.map{ query =>
+      query.toCppRefType + " get_"+query.name+"(){\n"+
+      (query.map match {
+        case MapRef(n,_,_) if (n == query.name) => "  return "+query.name+";\n"
+        case _ => 
+          ctx = Ctx[(Type,String)]()
+          ind(
+            if(query.keys.length == 0) cpsExpr(query.map, (v:String) => "return "+v)+"\n"
+            else {
+              val mName = "m"+query.name
+              // val tk = tup(query.keys.map(x=>x._2.toScala))
+              val nk = query.keys.map(x=>x._1)
+              // "val "+mName+" = M3Map.make["+tk+","+query.tp.toScala+"]()\n"+
+              query.name+"_map " + mName + ";\n"+
+              cpsExpr(query.map, (v:String) => ADD_TO_MAP_FUNC(query.name)+"("+mName+","+tup(nk map rn)+","+v+")")+"\n"+
+              "return " + mName + ";"
+            }
+          )
+      })+
+      "\n}\n"
     }.mkString
 
     def compile_tlqs_decls = s0.queries.map{q =>

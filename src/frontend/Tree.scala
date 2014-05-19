@@ -110,7 +110,7 @@ object M3 {
   case class Query(name:String, map:Expr) extends M3 {
     var keys:List[(String,Type)] = null
     var tp:Type = null
-    override def toString="DECLARE QUERY "+name+" := "+map+";"; def toCppType=map.tp.toCpp; def toCppRefType=map.tp.toCpp
+    override def toString="DECLARE QUERY "+name+" := "+map+";"; def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"
   }
   case class Trigger(evt:EvtTrigger, stmts:List[Stmt]) extends M3 { override def toString="ON "+evt+" {\n"+ind(stmts.mkString("\n"))+"\n}" }
 
