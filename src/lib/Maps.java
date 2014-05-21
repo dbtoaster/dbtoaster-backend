@@ -70,8 +70,16 @@ class M3MapBase<K,V> implements M3Map<K,V>, Cloneable, Serializable {
     public V value;
     private Entry<K,V> next;
     private Entry(int h, K k, V v, Entry<K,V> n) { hash=h; key=k; value=v; next=n; }
-    public boolean equals(Entry that) { return hash==that.hash && key.equals(that.key); }
-    public int compareTo(Entry that) { return (key instanceof Comparable<?>) ? ((Comparable<K>)key).compareTo((K)that.key) : 0; }
+    public boolean equals(Entry that) {
+       return hash==that.hash && key.equals(that.key);
+    }
+    public int compareTo(Entry that) {
+       if(key instanceof Comparable<?>) {
+          return ((Comparable<K>)key).compareTo((K)that.key);
+       } else {
+          return 0;
+       }
+    }
   }
 
   private static final int hash(Object k) { int h = k.hashCode(); h^=(h>>>20)^(h>>>12)^(h<<9); return h^(h>>>7)^(h>>>4); }

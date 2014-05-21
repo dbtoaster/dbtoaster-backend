@@ -206,10 +206,11 @@ object UnitTest {
         set.out.map {
           case (n,o) =>
             val (kt,vt) = qt(n)
-            val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
+            val tn = codegen.ScalaGen.tupleNameOfTps(kt)
+            val qtp = "["+tn+","+vt.toScala+"]"
             val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
             val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
-              case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
+              case QueryMap(m) => "Map"+qtp+"("+m.map{ case (ks,v) => "("+(if(ks.length > 1) "new "+tn+tup(ks) else ks.head)+","+v+")" }.mkString(",")+")"// inline in the code
               case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
               case QuerySingleton(v) => v
             })+")"
@@ -217,7 +218,7 @@ object UnitTest {
         }.mkString("\n"))+"\n})"
       }.mkString("\n")
       if (full) "import org.scalatest._\n\n"+
-      "class "+cls+"Spec extends FunSpec {\n"+ind("import Helper._\n"+body)+"\n}\n" else body
+      "class "+cls+"Spec extends FunSpec {\n"+ind("import Helper._\nimport "+cls+"._\n"+body)+"\n}\n" else body
     }
     def inject(pre:String,str:String,dir:String=null) { val src=read(tmp.getPath+"/"+cls+".scala").split("\\Q"+pre+"\\E"); write((if (dir!=null) dir else tmp)+"/"+cls+".scala",src(0)+pre+str+src(1)) }
     def post(sys:ddbt.ast.M3.System) { sp=spec(sys,true); if (verify) inject("  def main(args:Array[String]) {\n",ind(spec(sys,false),2)+"\n") }
@@ -398,7 +399,7 @@ object UnitTest {
   case class QueryTest(sql:String,sets:Map[String,QuerySet]=Map(("standard",QuerySet()))) { override def toString = sql+ind(sets.map{case (k,v)=>"\n - "+k+": "+v.out.toString}.mkString) }
   case class QuerySet(subs:List[(String,String)]=Nil,out:Map[String,QueryOut]=Map())
   abstract sealed class QueryOut
-  case class QueryMap(m:Map[String,String]) extends QueryOut
+  case class QueryMap(m:Map[List[String],String]) extends QueryOut
   case class QueryFile(path:String,sep:String=null) extends QueryOut
   case class QuerySingleton(v:String) extends QueryOut
 
@@ -434,7 +435,7 @@ object UnitTest {
     lazy val qout = "{"~>":type"~>"=>"~>((":onelevel"~>","~>":expected"~"=>"~>(qfile|qmap)) | (":singleton"~>","~>":expected"~>"=>"~>num ^^ { case n => QuerySingleton(n) })) <~ opt(",") <~"}" ^^ { case q => q }
     lazy val qfile:Parser[QueryOut] = ("results_file" ~> "(" ~> str) ~ (opt("," ~> pat) <~ ")") ^^ { case f~op => QueryFile(f,op match { case Some(p)=>p case None => null}) }
     lazy val qmap:Parser[QueryOut] = "{" ~> repsep(qrow,",") <~ opt(",") <~ "}" ^^ { case rs => QueryMap(rs.toMap) }
-    lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (tup(cs),n) }
+    lazy val qrow = ("[" ~> repsep(num|(str^^{s=>"\""+s+"\""}),",") <~ "]") ~ ("=>" ~> num) ^^ { case cs ~ n => (cs,n) }
     def apply(input: String): QueryTest = parseAll(qtest, input) match { case Success(r,_) => r case f => sys.error(f.toString) }
   }
 }

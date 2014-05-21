@@ -29,7 +29,9 @@ trait M3Map[K,V] {
  */
 object M3Map {
   def temp[K,V:ClassTag]():M3Map[K,V] = new M3MapBase[K,V](zero[V](),false,null)
-  def make[K,V:ClassTag](projs:K=>_ *):M3Map[K,V] = new M3MapBase(zero[V](),true,projs.toArray)
+  def make[K,V:ClassTag](projs:K=>_ *):M3Map[K,V] = {
+    new M3MapBase(zero[V](),true,projs.toArray)
+  }
   def makeIdx[K<:Product,V:ClassTag](projs:Int *):M3Map[K,V] = {
     new M3MapBase(zero[V](),true,projs.map(i => (k:K)=>k.productElement(i)).toArray)
   }

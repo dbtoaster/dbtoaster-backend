@@ -1,5 +1,6 @@
 package ddbt.lib
 
+import scala.concurrent.Await
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
 import akka.remote.RemoteScope
 import scala.reflect.ClassTag
@@ -27,7 +28,7 @@ object Helper {
   private type Streams = Seq[(InputStream,Adaptor,Split)]
   @inline private def askWait[T](actor:ActorRef,msg:Any,timeout:Long=0L) = {
     val to=akka.util.Timeout(if (timeout<=0) (1L << 42) /*139 years*/ else timeout+200000)
-    scala.concurrent.Await.result(akka.pattern.ask(actor,msg)(to), to.duration).asInstanceOf[T]
+    Await.result(akka.pattern.ask(actor,msg)(to), to.duration).asInstanceOf[T]
   }
   def mux(actor:ActorRef,streams:Streams,parallel:Int=0,timeout:Long=0L) = {
     val mux = SourceMux((ev:TupleEvent)=>{ actor ! ev },streams.map {case (in,ad,sp) => (in,ad,sp)},parallel)
@@ -107,10 +108,10 @@ object Helper {
     ds.foreach { d=> var i=0; var res0:List[Any]=null
       while (i < num) { i+=1;
         val (t,res)=run(d,parallel,timeout);
-        if (t.skip==0) { 
-          if (res0==null) 
-            res0=res 
-          else 
+        if (t.skip==0) {
+          if (res0==null)
+            res0=res
+          else
             assert(res0==res,"Inconsistent results: "+res0+" != "+res);
         }
         if (mode==1) println("SAMPLE="+d+","+(t.ns/1000)+","+t.count+","+t.skip)

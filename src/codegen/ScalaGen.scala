@@ -28,6 +28,14 @@ import ddbt.ast._
  */
 class ScalaGen(override val cls:String="Query") extends IScalaGen
 
+object ScalaGen {
+  def tupleNameOfTps(types: List[Type]) =
+    if(types.length == 1)
+      types.head.toScala
+    else
+      "T"+types.map(t => t.toScala.substring(0,3)).mkString("_")
+}
+
 trait IScalaGen extends CodeGen {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
@@ -54,7 +62,36 @@ trait IScalaGen extends CodeGen {
   */
 
   // Create a variable declaration
-  def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+tp.zeroScala+"\n" else "val "+n+" = M3Map.temp["+tup(ks.map(_.toScala))+","+tp.toScala+"]()\n"
+  def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+tp.zeroScala+"\n" else "val "+n+" = M3Map.temp["+genTupleDef(ks)+","+tp.toScala+"]()\n"
+
+  var tuples = Map[String, String]()
+
+  def genTupleDef(types: List[Type]) = {
+    val tupleName = ScalaGen.tupleNameOfTps(types)
+    if(!(tuples contains tupleName) && types.length > 1) {
+      def prodDef =
+        "def canEqual(that:Any) = true\n"+
+        "def productArity = "+types.length+"\n"+
+        "def productElement(i:Int):Any = List[Any]("+(1 to types.length).map(i => "_"+i).mkString(",")+")(i)\n"
+      def eqDef =
+        "override def equals(o:Any) = { o match { case x:"+tupleName+" => ("+(1 to types.length).map(i => "_"+i+" == x._"+i).mkString(" && ")+") case x:Product => if(this.productArity == x.productArity) (0 to (productArity - 1)).forall(i => x.productElement(i) == this.productElement(i)) else false case _ => false } }\n"+
+        "override def toString() = \"<\"+List[Any]("+(1 to types.length).map(i => "_"+i).mkString(",")+").mkString(\",\")+\">\"\n"+
+        "override def hashCode() = scala.runtime.ScalaRunTime._hashCode(this)\n"
+      def classDef = "class "+tupleName+"("+types.zipWithIndex.map{ case(t,i) => "val _"+(i+1)+":"+t.toScala }.mkString(",")+") extends Product {\n"+
+        ind(prodDef+eqDef)+"\n}\n"
+      tuples = tuples + (tupleName -> classDef)
+    }
+    tupleName
+  }
+
+  def genTuple(vars: List[(Type,String)]) = {
+    val (types,values) = vars.unzip
+    val tupleName = genTupleDef(types)
+    if(vars.length == 1)
+      vars.head._2
+    else
+      "new "+tupleName+"("+values.mkString(",")+")"
+  }
 
   // Generate code bottom-up using delimited CPS and a list of bound variables
   //   ex:expression to convert
@@ -82,7 +119,7 @@ trait IScalaGen extends CodeGen {
     //   }
     // }
     case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-      if (ki.size==0) co(n+(if (ks.size>0) ".get("+tup(ks.map(rn))+")" else "")) // all keys are bound
+      if (ki.size==0) co(n+(if (ks.size>0) ".get("+genTuple(ks map ctx)+")" else "")) // all keys are bound
       else { val (k0,v0)=(fresh("k"),fresh("v"))
         val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else "" // slice on bound variables
         ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
@@ -144,8 +181,8 @@ trait IScalaGen extends CodeGen {
           val ks = a.agg.map(_._1)
           val tmp = Some(a.agg)
           val cur = ctx.save
-          val s1 = cpsExpr(el,(v:String)=>a0+".add("+tup(ks map rn)+","+v+");\n",tmp); ctx.load(cur)
-          val s2 = cpsExpr(er,(v:String)=>a0+".add("+tup(ks map rn)+","+v+");\n",tmp); ctx.load(cur)
+          val s1 = cpsExpr(el,(v:String)=>a0+".add("+genTuple(ks map ctx)+","+v+");\n",tmp); ctx.load(cur)
+          val s2 = cpsExpr(er,(v:String)=>a0+".add("+genTuple(ks map ctx)+","+v+");\n",tmp); ctx.load(cur)
           genVar(a0,ex.tp,a.agg.map(_._2))+s1+s2+cpsExpr(mapRef(a0,ex.tp,a.agg),co)
       }
     case a@AggSum(ks,e) =>
@@ -157,7 +194,7 @@ trait IScalaGen extends CodeGen {
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
-          val s1 = "val "+a0+" = M3Map.temp["+tup(aks.map(x=>x._2.toScala))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+tup(aks.map(x=>rn(x._1)))+","+v+");\n",tmp);
+          val s1 = "val "+a0+" = M3Map.temp["+genTupleDef(aks.map(x=>x._2))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+genTuple(aks.map(x=>ctx(x._1)))+","+v+");\n",tmp);
           ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
@@ -169,10 +206,10 @@ trait IScalaGen extends CodeGen {
       val init = oi match {
         case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>
           if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-          else "if ("+m.name+".get("+tup(m.keys map rn)+")==0) "+m.name+".set("+tup(m.keys map rn)+","+i+");\n")
+          else "if ("+m.name+".get("+genTuple(m.keys map ctx)+")==0) "+m.name+".set("+genTuple(m.keys map ctx)+","+i+");\n")
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+tup(m.keys map rn)+","+v+")")+";\n",Some(m.keys zip m.tks))
+      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+genTuple(m.keys map ctx)+","+v+")")+";\n",Some(m.keys zip m.tks))
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -196,7 +233,7 @@ trait IScalaGen extends CodeGen {
   override def genMap(m:MapDef):String = {
     if (m.keys.size==0) genVar(m.name,m.tp).trim
     else {
-      val tk = tup(m.keys.map(x=>x._2.toScala))
+      val tk = genTupleDef(m.keys.map(x=>x._2))
       val s = sx.getOrElse(m.name,List[List[Int]]())
       "val "+m.name+" = M3Map.make["+tk+","+m.tp.toScala+"]("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+");"
     }
@@ -207,19 +244,28 @@ trait IScalaGen extends CodeGen {
   // Generate (1:stream events handling, 2:table loading, 3:global constants declaration)
   override def genInternals(s0:System,nextSkip:String="context.become(receive_skip)") : (String,String,String) = {
     // XXX: reduce as much as possible the overhead here to decode data, use Decoder's internals and inline the SourceMux here
-    def ev(s:Schema,short:Boolean=true):(String,String,List[(String,Type)]) = {
+    def ev(s:Schema,short:Boolean=true):(String,String,String,List[(String,Type)]) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
-      ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
+      ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")",genTuple(fs.map { case (v,t) => (t,v) }),"("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
     }
     val step = 128 // periodicity of timeout verification, must be a power of 2
     val skip = "if (t1>0 && (tN&"+(step-1)+")==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=1 } else tN+=1; "
     val str = s0.triggers.map(_.evt match {
-      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(ord,TupleInsert,\""+s.name+"\","+i+") => "+skip+"onAdd"+s.name+o+"\n"
-      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(ord,TupleDelete,\""+s.name+"\","+i+") => "+skip+"onDel"+s.name+o+"\n"
+      case EvtAdd(s) =>
+        val (i,_,o,pl) = ev(s)
+        "case TupleEvent(ord,TupleInsert,\""+s.name+"\","+i+") => "+skip+"onAdd"+s.name+o+"\n"
+      case EvtDel(s) =>
+        val (i,_,o,pl) = ev(s)
+        "case TupleEvent(ord,TupleDelete,\""+s.name+"\","+i+") => "+skip+"onDel"+s.name+o+"\n"
       case _ => ""
     }).mkString
-    val ld0 = s0.sources.filter{s=> !s.stream}.map { s=> val (in,ad,sp)=genStream(s); val (i,o,pl)=ev(s.schema)
-      "SourceMux({ case TupleEvent(ord,TupleInsert,rn,"+i+")=>"+genInitializationFor(s.schema.name,pl,o)+" }, Seq(("+in+","+ad+","+sp+"))).read;" }.mkString("\n");
+    val ld0 = s0.sources.filter{s => !s.stream}.map {
+      s => {
+        val (in,ad,sp) = genStream(s)
+        val (i,o,_,pl) = ev(s.schema)
+        "SourceMux({ case TupleEvent(ord,TupleInsert,rn,"+i+")=>"+genInitializationFor(s.schema.name,pl,o)+" }, Seq(("+in+","+ad+","+sp+"))).read;" 
+      }
+    }.mkString("\n");
     (str,ld0,consts)
   }
 
@@ -228,7 +274,7 @@ trait IScalaGen extends CodeGen {
       query => {
         query.map match {
           case MapRef(n,_,_) if (n == query.name) => ""
-          case _ => 
+          case _ =>
             ctx = Ctx[(Type,String)]()
             "def "+query.name+"() = {\n"+
             ind(
@@ -238,7 +284,7 @@ trait IScalaGen extends CodeGen {
                 val tk = tup(query.keys.map(x=>x._2.toScala))
                 val nk = query.keys.map(x=>x._1)
                 "val "+mName+" = M3Map.make["+tk+","+query.tp.toScala+"]()\n"+
-                cpsExpr(query.map, (v:String) => mName+".add("+tup(nk map rn)+","+v+")")+"\n"+
+                cpsExpr(query.map, (v:String) => mName+".add("+genTuple(nk map ctx)+","+v+")")+"\n"+
                 mName
               }
             )+"\n}"
@@ -264,7 +310,7 @@ trait IScalaGen extends CodeGen {
     val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map(q => (if (q.keys.size > 0) toMapFunction(q) else q.name)).mkString(",")+"))"
     clearOut
     helper(s0)+"class "+cls+" extends Actor {\n"+ind(
-    "import ddbt.lib.Messages._\n"+
+    "import ddbt.lib.Messages._\nimport "+cls+"._\n"+
     "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
     "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
     "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap+" case _ => tS+=1 }\n"+
@@ -304,7 +350,7 @@ trait IScalaGen extends CodeGen {
   // Helper that contains the main and stream generator
   private def helper(s0:System) =
     "import ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-    "object "+cls+" {\n"+ind("import Helper._\n"+
+    "object "+cls+" {\n"+ind("import Helper._\n"+tuples.values.mkString("\n")+"\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
