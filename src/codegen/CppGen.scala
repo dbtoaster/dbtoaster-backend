@@ -270,6 +270,22 @@ trait ICppGen extends IScalaGen {
   override def clearOut = {}
   override def onEndStream = ""
 
+  def genIntermediateDataStructureRefs(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>queries.filter(_.name==m.name).size == 0}.map{m=>m.toCppType+" "+m.name+";\n"}.mkString
+
+  def isExpressiveTLQSEnabled(queries:List[Query]) = queries.exists{ query => query.map match {
+      case MapRef(n,_,_) => if (n == query.name) false else true
+      case _ => true
+    }
+  }
+
+  private def getInitializationForIntermediateValues(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>(queries.filter(_.name==m.name).size == 0) && (m.keys.size == 0)}.map{m=>", "+m.name+"(" + m.tp.zeroCpp + ")"}.mkString
+
+  private def getInitializationForPublicValues(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>(queries.filter(_.name==m.name).size != 0) && (m.keys.size == 0)}.map{m=>", "+m.name+"(" + m.tp.zeroCpp + ")"}.mkString
+
+  private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) = getInitializationForPublicValues(maps,queries) + (if(isExpressiveTLQSEnabled(queries)) getInitializationForIntermediateValues(maps,queries) else "")
+
+  private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) = (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries))
+
   override def apply(s0:System):String = {
     def register_maps = s0.maps.map{m=>"pb.add_map<"+m.toCppType+">( \""+m.name+"\", "+m.name+" );\n"}.mkString
 
@@ -297,8 +313,6 @@ trait ICppGen extends IScalaGen {
       }.mkString+
       "#endif // DBT_PROFILE\n"
     }
-
-    def genTmpDataStructureRefs = s0.maps.filter{m=>s0.queries.filter(_.name==m.name).size == 0}.map{m=>m.toCppType+" "+m.name+";\n"}.mkString
 
     def genTableTriggers = s0.sources.filter(!_.stream).map{ s =>
       val name = s.schema.name
@@ -446,7 +460,7 @@ trait ICppGen extends IScalaGen {
     helperResultAccessor(s0)+
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
     "struct data_t : tlq_t{\n"+
-    "  data_t(): tlq_t()"+{ s0.maps.filter{m=>(s0.queries.filter(_.name==m.name).size == 0) && (m.keys.size == 0)}.map{m=>", "+m.name+"(" + m.tp.zeroCpp + ")"}.mkString }+" {\n"+
+    "  data_t(): tlq_t()"+getInitializationForDATA_T(s0.maps,s0.queries)+" {\n"+
          ind(constsInit,2)+"\n"+
     "  }\n"+
     "\n"+
@@ -472,12 +486,13 @@ trait ICppGen extends IScalaGen {
     "\n"+
        ind(ts)+
     "\n\n"+
+    (if(!isExpressiveTLQSEnabled(s0.queries)) {
     "private:\n"+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
-       ind(genTmpDataStructureRefs)+"\n"+
+       ind(genIntermediateDataStructureRefs(s0.maps,s0.queries))+"\n"+
        ind(consts)+
-    "\n\n"+
+    "\n\n"} else "")+
     "};\n"+
     "\n"+
     helper(s0)
@@ -496,14 +511,14 @@ trait ICppGen extends IScalaGen {
         case _ => 
           ctx = Ctx[(Type,String)]()
           ind(
-            if(query.keys.length == 0) cpsExpr(query.map, (v:String) => "return "+v)+"\n"
+            if(query.keys.length == 0) cpsExpr(query.map, (v:String) => "return "+v+";")+"\n"
             else {
-              val mName = "m"+query.name
+              val mName = query.name
               // val tk = tup(query.keys.map(x=>x._2.toScala))
               val nk = query.keys.map(x=>x._1)
               // "val "+mName+" = M3Map.make["+tk+","+query.tp.toScala+"]()\n"+
-              query.name+"_map " + mName + ";\n"+
-              cpsExpr(query.map, (v:String) => ADD_TO_MAP_FUNC(query.name)+"("+mName+","+tup(nk map rn)+","+v+")")+"\n"+
+              mName + ".clear();\n"+
+              cpsExpr(query.map, (v:String) => ADD_TO_MAP_FUNC(query.name)+"("+mName+","+tup(nk map rn)+","+v+");")+"\n"+
               "return " + mName + ";"
             }
           )
@@ -518,7 +533,7 @@ trait ICppGen extends IScalaGen {
     "/* Type definition providing a way to access the results of the sql program */\n"+
     "struct tlq_t{\n"+
     "  struct timeval t0,t; long tT,tN,tS;\n"+
-    "  tlq_t(): "+s0.maps.filter{m=>(s0.queries.filter(_.name==m.name).size != 0) && (m.keys.size == 0)}.map{m=>m.name+"(" + m.tp.zeroCpp + "), "}.mkString+"tN(0), tS(0) { gettimeofday(&t0,NULL); }\n"+
+    "  tlq_t(): tN(0), tS(0)"+getInitializationForTLQ_T(s0.maps,s0.queries)+" { gettimeofday(&t0,NULL); }\n"+
     "\n"+
     "/* Serialization Code */\n"+
     "  template<class Archive>\n"+
@@ -529,13 +544,18 @@ trait ICppGen extends IScalaGen {
     "  }\n"+
     "\n"+
     "  /* Functions returning / computing the results of top level queries */\n"+
-         ind(compile_tlqs,2)+
+         ind(compile_tlqs)+
     "\n\n"+
     "protected:\n"+
     "\n"+
     "  /* Data structures used for storing / computing top level queries */\n"+
-         ind(compile_tlqs_decls,2)+
+         ind(compile_tlqs_decls)+
     "\n\n"+
+    (if(isExpressiveTLQSEnabled(s0.queries)) {
+    "  /* Data structures used for storing materialized views */\n"+
+       ind(genIntermediateDataStructureRefs(s0.maps,s0.queries))+"\n"+
+       ind(consts)+
+    "\n\n"} else "")+
     "};\n"+
     "\n"
   }
