@@ -23,6 +23,7 @@ object Utils {
   def isLMSTurnedOn = prop(LMS_PROPERTY)=="1"
 
   val find_bin=prop("find_bin","find");
+  val cppOpts=prop("cpp_opts","").split(" ").toList
   
   // Paths related to DBToaster
   val path_repo = { val r=prop("base_repo",null); if (r==null) null else r+"/dbtoaster/compiler/alpha5" }
@@ -55,7 +56,7 @@ object Utils {
   def cppCompiler(out:String,cPath:String,boost:String,cppLibDir:String) = {
     val as = List(prop("gpp","g++"),cppLibDir+"/main.cpp","-include",out,"-o",cPath,"-O3","-lpthread","-ldbtoaster","-I"+cppLibDir,"-L"+cppLibDir) :::
              List("program_options","serialization","system","filesystem","chrono",Utils.prop("lib_boost_thread","thread")).map("-lboost_"+_) ::: // thread-mt
-             (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
+             (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib")) ::: cppOpts
     //make DBT c++ library
     Utils.exec(Array("make","-C",cppLibDir))
     Utils.exec(as.toArray)
