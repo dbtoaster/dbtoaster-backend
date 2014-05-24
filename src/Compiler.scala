@@ -39,6 +39,9 @@ object Compiler {
   var exec_dir: String  = null   // execution classpath
   var exec_sc : Boolean = false  // compile using fsc / external scalac
   var exec_vm : Boolean = false  // execute in a fresh JVM
+
+  // Print the time and the number of tuples processed every X tuples (0 = disable printing)
+  var printProgress = 0
   var exec_args = List[String]() // arguments passed for execution
 
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(0); null }
@@ -71,6 +74,7 @@ object Compiler {
         case "-xa" => eat(s=>exec_args=exec_args:::List(s))
         case "-xsc" => exec_sc=true;
         case "-xvm" => exec_vm=true;
+        case "-pp" => eat(i => printProgress = i.toInt);
         case s if s.matches("-O[123]") => optm3=s;
         case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
         case s => in = in ::: List(s)
@@ -133,7 +137,7 @@ object Compiler {
 
     // Back-end
     val cg:CodeGen = lang match {
-      case LANG_SCALA => new ScalaGen(name)
+      case LANG_SCALA => new ScalaGen(name,printProgress)
       case LANG_CPP => new CppGen(name)
       case LANG_AKKA => new AkkaGen(name)
       case LANG_LMS => new LMSCppGen(name)

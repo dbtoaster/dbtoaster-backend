@@ -26,7 +26,7 @@ import ddbt.ast._
  *
  * @author TCK
  */
-class ScalaGen(override val cls:String="Query") extends IScalaGen
+class ScalaGen(override val cls:String="Query", override val printProgress:Long=0L) extends IScalaGen
 
 object ScalaGen {
   def tupleNameOfTps(types: List[Type]) =
@@ -250,13 +250,14 @@ trait IScalaGen extends CodeGen {
     }
     val step = 128 // periodicity of timeout verification, must be a power of 2
     val skip = "if (t1>0 && (tN&"+(step-1)+")==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=1 } else tN+=1; "
+    val pp = if(printProgress > 0L) "printProgress(); " else ""
     val str = s0.triggers.map(_.evt match {
       case EvtAdd(s) =>
         val (i,_,o,pl) = ev(s)
-        "case TupleEvent(ord,TupleInsert,\""+s.name+"\","+i+") => "+skip+"onAdd"+s.name+o+"\n"
+        "case TupleEvent(ord,TupleInsert,\""+s.name+"\","+i+") => "+skip+pp+"onAdd"+s.name+o+"\n"
       case EvtDel(s) =>
         val (i,_,o,pl) = ev(s)
-        "case TupleEvent(ord,TupleDelete,\""+s.name+"\","+i+") => "+skip+"onDel"+s.name+o+"\n"
+        "case TupleEvent(ord,TupleDelete,\""+s.name+"\","+i+") => "+skip+pp+"onDel"+s.name+o+"\n"
       case _ => ""
     }).mkString
     val ld0 = s0.sources.filter{s => !s.stream}.map {
@@ -308,11 +309,13 @@ trait IScalaGen extends CodeGen {
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
     val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map(q => (if (q.keys.size > 0) toMapFunction(q) else q.name)).mkString(",")+"))"
+    val pp = if(printProgress > 0L) "def printProgress():Unit = if(tN % "+printProgress+" == 0) Console.println((System.nanoTime - t0)+\"\\t\"+tN);\n" else ""
     clearOut
     helper(s0)+"class "+cls+" extends Actor {\n"+ind(
     "import ddbt.lib.Messages._\nimport "+cls+"._\n"+
     "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
     "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
+    pp+
     "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap+" case _ => tS+=1 }\n"+
     "def receive = {\n"+ind(str+
       "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+

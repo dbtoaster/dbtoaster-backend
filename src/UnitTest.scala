@@ -1,5 +1,6 @@
 package ddbt
 import java.io._
+import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
 
 /**
  * Benchmarking and correctness verification generator. Instruments the
@@ -124,7 +125,7 @@ object UnitTest {
 
     if (csv!=null) { // CSV format: query,sql->m3,(codegen,compile,(med,min,max,)*)*
       csv.print("s"+samples+"_w"+warmup+"_t"+timeout+",,"); for (m<-modes) csv.print(mn(m)+",,"+datasets.map(d=>d+",,,,,,,,,").mkString); csv.println
-      csv.print("Query,SQLtoM3,"); for (m<-modes) csv.print("M3toCode,Compile,"+datasets.map(d=>"MedT,MedN,_,MinT,MinN,_,MaxT,MaxN,_,").mkString); csv.println
+      csv.print("Query,SQLtoM3,"); for (m<-modes) csv.print("M3toCode,Compile,"+datasets.map(d=>"MedT,MedN,_,MaxT,MaxN,_,MinT,MinN,_,").mkString); csv.println
     }
 
     if (cache) new File(path_cache).mkdirs;
@@ -364,6 +365,7 @@ object UnitTest {
     def t = { val ms=math.round(us/1000.0); "%d.%03d".format(ms/1000,ms%1000) } // time in seconds
     def f = { val tps=if (us==0) 0 else count*1000000.0/us; val t=math.round(tps*10); "%d.%01d".format(t/10,t%10) } // frequency in views/sec
   }
+
   class Printer(name:String) {
     private val (c0,s0)=(scala.Console.out,System.out)
     @inline private def pr(op:String,s:String,c:Boolean=false) = { c0.println("%-70s".format("%-20s".format(name+" "+op)+": "+s)); if (c) c0.print("\033[F"+"[info] "); c0.flush; s0.flush } // assumes terminal + SBT
@@ -372,23 +374,81 @@ object UnitTest {
     def gen(t:Long) { pr("codegen",tf(t)); tg=tg:+t; }
     def comp(t:Long) { pr("compile",tf(t)); tc=tc:+t; }
     def run(f:()=>Unit) {
-      val (r,o) = { val p=new PipedOutputStream; (new BufferedReader(new InputStreamReader(new PipedInputStream(p))),new PrintStream(p)) }
-      var w=0; var dn=""; var ts=List[Sample]();
-      val t = new Thread { override def run { var l=r.readLine; while(l!=null) { if (l.startsWith("SAMPLE=")) { val d=l.trim.substring(7).split(",")
-        if (dump!=null) { dump.println(name+","+l.trim.substring(7)); dump.flush }
-        if (d(0)!=dn) { w=0; ts=Nil; dn=d(0) }
-        if (w < warmup) { w+=1; pr(d(0),"  "+("."*w),true) }
-        else {
-          ts = (Sample(d(1).toLong,d(2).toLong,d(3).toLong) :: ts).sorted
-          val n=ts.size; val m=ts(n/2);
-          val med = if (n%2==1) m else { val b=ts(n/2-1); Sample((m.us+b.us)/2,(m.count+b.count)/2,(m.skip+b.skip+1)/2) } // if 1 skip, result must skip
-          val (min,max) = (ts(0),ts(n-1))
-          val abs_time = min.skip==0 && med.skip==0 && max.skip==0
-          pr(d(0),(if (abs_time) "%7s".format(med.t)+" ["+max.t+", "+min.t+"] (" else med.f+" ["+min.f+", "+max.f+"] (views/sec, ")+""+ts.size+(if (ts.size < samples) "/"+samples else "")+" samples)",n < samples)
-          if (ts.size==samples) { while (ds < datasets.size && d(0)!=datasets(ds)) add(); add(""+med+min+max) }
+      // Note: PipedInput/OutputStreams do not work here because multiple 
+      // thread might be printing to stdout
+      val queue = new LinkedBlockingQueue[Int]()
+
+      val os = new OutputStream() {
+        override def close() = {
+          super.close()
+          queue.put(-1)
         }
-      }; l=r.readLine }}}
-      t.start; try { scala.Console.setOut(o); System.setOut(o); f() } finally { scala.Console.setOut(c0); System.setOut(s0); o.close }; t.join
+        override def write(i:Int) = queue.put(i.toByte)
+      }
+
+      val is = new InputStream() {
+        var open = true
+        def read() = {
+          if(open) {
+            val next = queue.take
+            if(next >= 0)
+              next
+            else {
+              open = false
+              -1
+            }
+          }
+          else
+            -1
+        }
+      }
+
+      val o = new PrintStream(os)
+      var w=0; var dn=""; var ts=List[Sample]();
+      val t = new Thread {
+        override def run {
+          val r = new BufferedReader(new InputStreamReader(is))
+          var l=r.readLine
+          while(l!=null) {
+            if (l.startsWith("SAMPLE=")) {
+              val d=l.trim.substring(7).split(",")
+              if (dump!=null) {
+                dump.println(name+","+l.trim.substring(7))
+                dump.flush
+              }
+              if (d(0)!=dn) {
+                w=0
+                ts=Nil
+                dn=d(0)
+              }
+              if (w < warmup) { w+=1; pr(d(0),"  "+("."*w),true) }
+              else {
+                ts = (Sample(d(1).toLong,d(2).toLong,d(3).toLong) :: ts).sorted
+                val n=ts.size; val m=ts(n/2);
+                val med = if (n%2==1) m else { val b=ts(n/2-1); Sample((m.us+b.us)/2,(m.count+b.count)/2,(m.skip+b.skip+1)/2) } // if 1 skip, result must skip
+                val (min,max) = (ts(0),ts(n-1))
+                val abs_time = min.skip==0 && med.skip==0 && max.skip==0
+                pr(d(0),(if (abs_time) "%7s".format(med.t)+" ["+max.t+", "+min.t+"] (" else med.f+" ["+min.f+", "+max.f+"] (views/sec, ")+""+ts.size+(if (ts.size < samples) "/"+samples else "")+" samples)",n < samples)
+                if (ts.size==samples) { while (ds < datasets.size && d(0)!=datasets(ds)) add(); add(""+med+min+max) }
+              }
+            }
+            l=r.readLine
+          }
+        }
+      }
+      t.start
+      try {
+        scala.Console.setOut(o)
+        System.setOut(o)
+        f()
+      }
+      finally {
+        scala.Console.setOut(c0)
+        System.setOut(s0)
+        o.flush
+        o.close
+      }
+      t.join
     }
     def all(q:QueryTest)(f:(String,Int,Long)=>Unit) { datasets.foreach { d=> if (!q.sets.contains(d)) add() else f(d,parallel,timeout) }; close }
     def close { while (ds < datasets.size) add(); var s=time(med(tg))+","+time(med(tc))+","+tr; if (csv!=null) { csv.print(s); csv.flush } }

@@ -9,6 +9,8 @@ import ddbt.ast.{M3,Source,Type}
  */
 trait CodeGen extends (M3.System => String) {
   val cls:String="Query"
+  val printProgress:Long=0L
+
   // Generate the system (everything but stream and views I/O)
   def apply(s:M3.System) : String
 
