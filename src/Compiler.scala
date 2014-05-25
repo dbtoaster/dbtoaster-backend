@@ -116,7 +116,8 @@ object Compiler {
     if (out==null && exec) { error("Execution disabled, specify an output file"); exec=false }
     if (name==null) {
       val n = if (out!=null) out.replaceAll(".*[/\\\\]","").replaceAll("\\..*","") else "query"
-      name = n.substring(0,1).toUpperCase+n.substring(1)
+      val firstChar = n.substring(0,1);
+      name = (if(Character.isDigit(firstChar(0))) "_"+firstChar else firstChar.toUpperCase)+n.substring(1)
     }
     def lib(s:String):Boolean = if (new File(s).exists) { libs=s::Nil; true } else false
     if (libs==Nil && exec) lang match {
