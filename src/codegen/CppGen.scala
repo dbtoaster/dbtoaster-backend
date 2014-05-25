@@ -451,13 +451,14 @@ trait ICppGen extends IScalaGen {
       "\n\n"+
       "/* Trigger functions for stream relations */\n"+
       genStreamTriggers
+    val resAcc = helperResultAccessor(s0)
     val ms = s0.queries.filter(q=>(s0.maps.filter(_.name==q.name).size == 0) && (q.keys.size > 0)).map(q=>genMapStructDef(MapDef(q.name,q.tp,q.keys,q.map))).mkString("\n") + // queries`without a map (with -F EXPRESSIVE-TLQS)
             s0.maps.filter(_.keys.size > 0).map(genMapStructDef).mkString("\n") // maps
 
     "\n/* Definitions of auxiliary maps for storing materialized views. */\n"+
     ms +
     "\n\n"+
-    helperResultAccessor(s0)+
+    resAcc+
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
     "struct data_t : tlq_t{\n"+
     "  data_t(): tlq_t()"+getInitializationForDATA_T(s0.maps,s0.queries)+" {\n"+
