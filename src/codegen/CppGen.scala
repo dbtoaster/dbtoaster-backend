@@ -13,9 +13,11 @@ trait ICppGen extends IScalaGen {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,fresh,freshClear} // common functions
   val VALUE_NAME = "__av"
-  def FIND_IN_MAP_FUNC(m:String) = "find_in_"+m
-  def SET_IN_MAP_FUNC(m:String) = "set_in_"+m
-  def ADD_TO_MAP_FUNC(m:String) = "add_to_"+m
+
+  private val helperFuncUsage = HashMap[(String,String),Int]()
+  def FIND_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("FIND_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("FIND_IN_MAP_FUNC" -> m),0)+1); "find_in_"+m }
+  def SET_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("SET_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("SET_IN_MAP_FUNC" -> m),0)+1); "set_in_"+m }
+  def ADD_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("ADD_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("ADD_TO_MAP_FUNC" -> m),0)+1); "add_to_"+m }
   def ADD_TO_TEMP_MAP_FUNC(k:String,v:String) = "add_to_temp_map<"+k+","+v+">"
 
   def tup(vs:List[String]) = { val v=vs.mkString(","); if (vs.size>1) "boost::fusion::make_tuple("+v+")" else v }
@@ -423,25 +425,25 @@ trait ICppGen extends IScalaGen {
         indices.map{is => "typedef "+mapType+"::index<"+mapName+"_pat"+getIndexPattern(mapName,is)+">::type "+mapName+"_index"+getIndexId(mapName,is)+";"}.mkString("\n")
 
       def genHelperFunctions =
-        "inline "+mapValueType+" "+FIND_IN_MAP_FUNC(mapName)+"(const "+mapType+"& m, const "+mapKeyType+"& k) {\n"+
+        (if(helperFuncUsage.contains(("FIND_IN_MAP_FUNC" -> mapName))) "inline "+mapValueType+" "+FIND_IN_MAP_FUNC(mapName)+"(const "+mapType+"& m, const "+mapKeyType+"& k) {\n"+
         "  "+mapValueType+" res;\n"+ 
         "  "+mapType+"::iterator lkup = m.find(k);\n"+
         "  if (lkup!=m.end()) res = (*lkup)."+VALUE_NAME+"; else res = "+m.tp.zeroCpp+";\n"+
         "  return res;\n"+
-        "}\n"+
-        "inline void "+SET_IN_MAP_FUNC(mapName)+"("+mapType+"& m,"+(if(m.keys.size > 1) "" else " const")+" "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
+        "}\n" else "")+
+        (if(helperFuncUsage.contains(("SET_IN_MAP_FUNC" -> mapName))) "inline void "+SET_IN_MAP_FUNC(mapName)+"("+mapType+"& m,"+(if(m.keys.size > 1) "" else " const")+" "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
         "  "+mapType+"::iterator lkup = m.find(k), end = m.end();\n"+
         "  if (v == "+m.tp.zeroCpp+") { if(lkup != end) m.erase(lkup); /*else \"nothing should be done\"*/ }\n"+
         "  else if(/*v != "+m.tp.zeroCpp+" &&*/ lkup != end) m.modify(lkup,boost::lambda::bind(&"+mapEntry+"::__av, boost::lambda::_1) = v);\n"+
         "  else /*if(v != "+m.tp.zeroCpp+" && lkup == end)*/ { "+(if(m.keys.size > 1) "k.__av = v; m.insert(k);" else mapEntry+" ent(k,v); m.insert(ent);")+" }\n"+
-        "}\n"+
-        "inline void "+ADD_TO_MAP_FUNC(mapName)+"("+mapType+"& m,"+(if(m.keys.size > 1) "" else " const")+" "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
+        "}\n" else "")+
+        (if(helperFuncUsage.contains(("ADD_TO_MAP_FUNC" -> mapName))) "inline void "+ADD_TO_MAP_FUNC(mapName)+"("+mapType+"& m,"+(if(m.keys.size > 1) "" else " const")+" "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
         "  if (v != "+m.tp.zeroCpp+") {\n"+
         "    "+mapType+"::iterator lkup = m.find(k), end = m.end();\n"+
         "    if(lkup != end) { "+mapValueType+" newV = (v+(*lkup)."+VALUE_NAME+"); m.modify(lkup,boost::lambda::bind(&"+mapEntry+"::__av, boost::lambda::_1) = newV); }\n"+
         "    else { "+(if(m.keys.size > 1) "k.__av = v; m.insert(k);" else mapEntry+" ent(k,v); m.insert(ent);")+" }\n"+
         "  }\n"+
-        "}"
+        "}" else "")
       genEntryStruct+"\n"+genPatternStructs+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs+"\n"+genHelperFunctions
     }
 
