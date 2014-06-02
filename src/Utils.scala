@@ -55,7 +55,7 @@ object Utils {
   // C++ compiler wrapper
   def cppCompiler(out:String,cPath:String,boost:String,cppLibDir:String) = {
     val as = List(prop("gpp","g++"),cppLibDir+"/main.cpp","-include",out,"-o",cPath,"-O3","-lpthread","-ldbtoaster","-I"+cppLibDir,"-L"+cppLibDir) :::
-             List("program_options","serialization","system","filesystem","chrono",Utils.prop("lib_boost_thread","thread")).map("-lboost_"+_) ::: // thread-mt
+             List("program_options","serialization","system","filesystem","chrono","thread").map("-lboost_"+_+Utils.prop("lib_boost_thread","")) ::: // thread-mt
              (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib")) ::: cppOpts
     //make DBT c++ library
     Utils.exec(Array("make","-C",cppLibDir))

@@ -338,7 +338,7 @@ object UnitTest {
       val pl = path_repo+"/lib/dbt_c++"
       val po = tmp.getPath+"/"+qName
       val as = List("g++",pl+"/main.cpp","-include",po+".hpp","-o",po,"-O3","-lpthread","-ldbtoaster","-I"+pl,"-L"+pl) :::
-               List("program_options","serialization","system","filesystem","chrono",prop("lib_boost_thread","thread")).map("-lboost_"+_) ::: // thread-mt
+               List("program_options","serialization","system","filesystem","chrono","thread").map("-lboost_"+_+prop("lib_boost_thread","")) ::: // thread-mt
                (if (boost==null) Nil else List("-I"+boost+"/include","-L"+boost+"/lib"))
       val t2 = ns(()=>exec(as.toArray))._1; p.comp(t2)
       p.run(()=>{ var i=0; while (i < warmup+samples) { i+=1
