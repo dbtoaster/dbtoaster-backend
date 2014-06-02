@@ -28,7 +28,7 @@ trait ICppGen extends IScalaGen {
 
   // Create a variable declaration
   //XXXXX TODO
-  override def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) tp.toCpp+" "+n+" = "+tp.zeroCpp+";\n" else "map<"+tupType(ks.map(_.toCpp))+" ,"+tp.toCpp+"> "+n+";\n"
+  override def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) tp.toCpp+" "+n+" = "+tp.zeroCpp+";\n" else "map<"+tupType(ks.map(_.toCpp))+","+tp.toCpp+"> "+n+";\n"
 
   def getIndexId(m:String,is:List[Int]):String = getIndexPattern(m,is) //slice(m,is)
   def getIndexPattern(m:String,is:List[Int]):String = (if(is.isEmpty) (0 until mapDefs(m).keys.size).toList else is).mkString
@@ -52,7 +52,12 @@ trait ICppGen extends IScalaGen {
     case m@MapRef(n,tp,ks) =>
       val kswt = (ks zip m.tks) //ks with type
       val (ko,ki) = kswt.zipWithIndex.partition{case((k,ktp),i)=>ctx.contains(k)}
-      if (ki.size==0) co((if (ks.size>0) FIND_IN_MAP_FUNC(n)+"("+n+", "+tup(ks.map(rn))+")" else n)) // all keys are bound
+      val mapName = m.name
+      val mapType = mapName+"_map"
+      val mapEntry = mapName+"_entry"
+      val sampleEnt=fresh("se")
+      val sampleEntDef=(if (m.keys.size > 1) mapEntry+" "+sampleEnt+";\n" else "")
+      if (ki.size==0) sampleEntDef+co((if (ks.size>0) FIND_IN_MAP_FUNC(n)+"("+n+", "+(if(ks.size > 1) sampleEnt+".modify("+(ks map rn).mkString(",")+")" else tup(ks map rn))+")" else n)) // all keys are bound
       else {
         val lup0 = fresh("lkup") //lookup
         val lupItr0 = lup0+"_it"
@@ -76,7 +81,8 @@ trait ICppGen extends IScalaGen {
             val idxType = n+"_index"+getIndexId(n,is)
             val idxIterator = idxType+"::iterator"
             slice(n,is)
-            "std::pair<"+idxIterator+","+idxIterator+"> "+lup0+" = "+n+".get<"+patternName+">().equal_range("+tup(iKeys)+"); //slice\n"+
+            sampleEntDef+
+            "std::pair<"+idxIterator+","+idxIterator+"> "+lup0+" = "+n+".get<"+patternName+">().equal_range("+(if (is.size > 1) sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+")" else tup(iKeys))+"); //slice\n"+
             //expanded mode
             // idxIterator+" "+lupItr0+" = "+lup0+".first;\n"+
             // idxIterator+" "+lupEnd0+" = "+lup0+".second;\n"
@@ -102,7 +108,7 @@ trait ICppGen extends IScalaGen {
           "  ++"+lupItr0+";\n"+
           "}\n"
         } else { //only foreach for Temp map
-          val mapType = "map<"+tupType(m.tks.map(_.toCpp))+" ,"+tp.toCpp+">"
+          val mapType = "map<"+tupType(m.tks.map(_.toCpp))+","+tp.toCpp+">"
           val idxIterator = mapType+"::iterator"
 
           //expanded mode
@@ -198,15 +204,24 @@ trait ICppGen extends IScalaGen {
   }
 
   override def genStmt(s:Stmt):String = s match {
-    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => (ADD_TO_MAP_FUNC(m.name),"+=") case OpSet => (ADD_TO_MAP_FUNC(m.name),"=") }
+    case StmtMap(m,e,op,oi) =>
+      val (fop,sop)=op match { case OpAdd => (ADD_TO_MAP_FUNC(m.name),"+=") case OpSet => (ADD_TO_MAP_FUNC(m.name),"=") }
+      val mapName = m.name
+      val mapType = mapName+"_map"
+      val mapEntry = mapName+"_entry"
+      val sampleEnt=fresh("se")
+      val sampleEntDef=(if (m.keys.size > 1) mapEntry+" "+sampleEnt+";\n" else "")
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear();\n" else "" }
       val init = oi match {
-        case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>
-          if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-          else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+m.name+", "+tup(m.keys map rn)+")==0) "+SET_IN_MAP_FUNC(m.name)+"("+m.name+", "+tup(m.keys map rn)+","+i+");\n")
+        case Some(ie) =>
+          ctx.load()
+          cpsExpr(ie,(i:String)=>
+            if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
+            else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+m.name+", "+(if(m.keys.size > 1) sampleEnt+".modify("+(m.keys map rn).mkString(",")+")" else tup(m.keys map rn))+")==0) {\n  "+SET_IN_MAP_FUNC(m.name)+"("+m.name+", "+(if(m.keys.size > 1) sampleEnt else tup(m.keys map rn))+", "+i+");\n}\n"
+          )
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+m.name+", "+tup(m.keys map rn)+","+v+")"})+";\n",Some(m.keys zip m.tks))
+      ctx.load(); clear+sampleEntDef+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+m.name+", "+(if(m.keys.size > 1) sampleEnt+".modify("+(m.keys map rn).mkString(",")+")" else tup(m.keys map rn))+","+v+")"})+";\n",Some(m.keys zip m.tks))
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -343,9 +358,9 @@ trait ICppGen extends IScalaGen {
 
     def genMapStructDef(m:MapDef) = {
       val mapName = m.name
-      val mapType = m.name+"_map"
+      val mapType = mapName+"_map"
       val mapEntry = mapName+"_entry"
-      val mapKeyType = tupType(m.keys.map{_._2.toCpp})
+      val mapKeyType = if(m.keys.size > 1) mapEntry else tupType(m.keys.map{_._2.toCpp})
       val mapValueType = m.tp.toCpp
       val fields = m.keys ++ List(VALUE_NAME -> m.tp)
       val fieldsWithIdx = fields.zipWithIndex
@@ -357,10 +372,15 @@ trait ICppGen extends IScalaGen {
       def genEntryStruct = 
         "struct "+mapEntry+" {\n"+
         "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+"\n"+
-        "  "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => tp.toCpp+" c"+i}.mkString(", ")+") {"+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
-        "  "+mapEntry+"(const std::pair<const "+mapKeyType+" , "+mapValueType+">& p) { "+(if(m.keys.size == 1) m.keys(0)._1+" = p.first; " else m.keys.zipWithIndex.map{case ((fld,_),i) => fld+" = at_c<"+i+">(p.first); "}.mkString)+VALUE_NAME+" = p.second; }\n"+
-        (if(m.keys.size > 1) "  "+mapEntry+"(const "+mapKeyType+"& k ,  const "+mapValueType+"& v) { "+(if(m.keys.size == 1) m.keys(0)._1+" = k; " else m.keys.zipWithIndex.map{case ((fld,_),i) => fld+" = at_c<"+i+">(k); "}.mkString)+VALUE_NAME+" = v; }\n" else "")+
-        "  operator const std::pair<const "+mapKeyType+" , "+mapValueType+">() const { return std::make_pair("+tup(m.keys.map{case (fld,_) => fld})+", "+VALUE_NAME+"); }\n"+
+        "  explicit "+mapEntry+"() { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
+        "  explicit "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => tp.toCpp+" c"+i}.mkString(", ")+") { "+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
+        multiKeyIndices.map{ case (is,unique) =>
+        "  "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => fields(i)._2.toCpp+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
+        // "  const "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => fields(i)._2.toCpp+" c"+i}.mkString(", ")+") const { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
+        }.mkString+
+        // "  "+mapEntry+"(const std::pair<const "+mapKeyType+" , "+mapValueType+">& p) { "+(if(m.keys.size == 1) m.keys(0)._1+" = p.first; " else m.keys.zipWithIndex.map{case ((fld,_),i) => fld+" = at_c<"+i+">(p.first); "}.mkString)+VALUE_NAME+" = p.second; }\n"+
+        // (if(m.keys.size > 1) "  "+mapEntry+"(const "+mapKeyType+"& k ,  const "+mapValueType+"& v) { "+(if(m.keys.size == 1) m.keys(0)._1+" = k; " else m.keys.zipWithIndex.map{case ((fld,_),i) => fld+" = at_c<"+i+">(k); "}.mkString)+VALUE_NAME+" = v; }\n" else "")+
+        // "  operator const std::pair<const "+mapKeyType+" , "+mapValueType+">() const { return std::make_pair("+tup(m.keys.map{case (fld,_) => fld})+", "+VALUE_NAME+"); }\n"+
         "  template<class Archive>\n"+
         "  void serialize(Archive& ar, const unsigned int version)\n"+
         "  {\n"+
@@ -373,9 +393,9 @@ trait ICppGen extends IScalaGen {
 
       def genExtractorsAndHashers = multiKeyIndices.map{ case (is,unique) =>
         "struct "+mapType+"key"+getIndexId(mapName,is)+"_extractor {\n"+
-        "  typedef "+tupType(is.map{ isIndex => fields(isIndex)._2.toCpp})+"  result_type;\n"+
+        "  typedef "+mapEntry+"  result_type;\n"+
         "  result_type operator()(const "+mapEntry+"& e) const {\n"+
-        "    return "+tup(is.map{ isIndex => "e."+fields(isIndex)._1})+";\n"+
+        "    return e;\n"+
         "  }\n"+
         "};\n"+
         //TODO XXX we can implement a better hasher, e.g. using murmur hash
@@ -385,36 +405,41 @@ trait ICppGen extends IScalaGen {
         is.map{ isIndex => "    boost::hash_combine(seed, e."+fields(isIndex)._1+");\n" }.mkString +
         "    return seed;\n"+
         "  }\n"+
-        "  size_t operator()("+tupType(is.map{ isIndex => fields(isIndex)._2.toCpp})+"  k) const {\n"+
-        "    return boost::fusion::fold(k, 0, fold_hash());\n"+
+        // "  size_t operator()("+tupType(is.map{ isIndex => fields(isIndex)._2.toCpp})+"  k) const {\n"+
+        // "    return boost::fusion::fold(k, 0, fold_hash());\n"+
+        // "  }\n"+
+        "};\n"+
+        "struct "+mapType+"key"+getIndexId(mapName,is)+"_equalto {\n"+
+        "  bool operator()(const "+mapEntry+"& x, const "+mapEntry+"& y) const {\n"+
+        "    return "+is.map{ isIndex => val fld=fields(isIndex)._1;"(x."+fld+"==y."+fld+")" }.mkString(" && ") + ";\n" +
         "  }\n"+
         "};"
       }.mkString("\n")
 
       def genTypeDefs =
         "typedef multi_index_container<"+mapEntry+", indexed_by<\n"+
-        allIndices.map{case (is,unique) => "  hashed_"+(if(unique) "unique<" else "non_unique<tag<"+mapName+"_pat"+getIndexPattern(mapName,is)+">, ")+(if(is.size > 1) mapType+"key"+getIndexId(mapName,is)+"_extractor,"+mapType+"key"+getIndexId(mapName,is)+"_hasher" else "member<"+mapEntry+","+fields(is(0))._2.toCpp+",&"+mapEntry+"::"+fields(is(0))._1+"> ")+">"}.mkString(",\n")+"\n"+
+        allIndices.map{case (is,unique) => "  hashed_"+(if(unique) "unique<" else "non_unique<tag<"+mapName+"_pat"+getIndexPattern(mapName,is)+">, ")+(if(is.size > 1) mapType+"key"+getIndexId(mapName,is)+"_extractor,"+mapType+"key"+getIndexId(mapName,is)+"_hasher,"+mapType+"key"+getIndexId(mapName,is)+"_equalto" else "member<"+mapEntry+","+fields(is(0))._2.toCpp+",&"+mapEntry+"::"+fields(is(0))._1+"> ")+">"}.mkString(",\n")+"\n"+
         " > > "+mapType+";\n"+
         indices.map{is => "typedef "+mapType+"::index<"+mapName+"_pat"+getIndexPattern(mapName,is)+">::type "+mapName+"_index"+getIndexId(mapName,is)+";"}.mkString("\n")
 
       def genHelperFunctions =
-        mapValueType+" "+FIND_IN_MAP_FUNC(mapName)+"(const "+mapType+"& m, const "+mapKeyType+"& k) {\n"+
+        "inline "+mapValueType+" "+FIND_IN_MAP_FUNC(mapName)+"(const "+mapType+"& m, const "+mapKeyType+"& k) {\n"+
         "  "+mapValueType+" res;\n"+ 
         "  "+mapType+"::iterator lkup = m.find(k);\n"+
         "  if (lkup!=m.end()) res = (*lkup)."+VALUE_NAME+"; else res = "+m.tp.zeroCpp+";\n"+
         "  return res;\n"+
         "}\n"+
-        "void "+SET_IN_MAP_FUNC(mapName)+"("+mapType+"& m, const "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
+        "inline void "+SET_IN_MAP_FUNC(mapName)+"("+mapType+"& m,"+(if(m.keys.size > 1) "" else " const")+" "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
         "  "+mapType+"::iterator lkup = m.find(k), end = m.end();\n"+
         "  if (v == "+m.tp.zeroCpp+") { if(lkup != end) m.erase(lkup); /*else \"nothing should be done\"*/ }\n"+
         "  else if(/*v != "+m.tp.zeroCpp+" &&*/ lkup != end) m.modify(lkup,boost::lambda::bind(&"+mapEntry+"::__av, boost::lambda::_1) = v);\n"+
-        "  else /*if(v != "+m.tp.zeroCpp+" && lkup == end)*/ { "+mapEntry+" ent(k,v); m.insert(ent); }\n"+
+        "  else /*if(v != "+m.tp.zeroCpp+" && lkup == end)*/ { "+(if(m.keys.size > 1) "k.__av = v; m.insert(k);" else mapEntry+" ent(k,v); m.insert(ent);")+" }\n"+
         "}\n"+
-        "void "+ADD_TO_MAP_FUNC(mapName)+"("+mapType+"& m, const "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
+        "inline void "+ADD_TO_MAP_FUNC(mapName)+"("+mapType+"& m,"+(if(m.keys.size > 1) "" else " const")+" "+mapKeyType+"& k, const "+mapValueType+"& v) {\n"+
         "  if (v != "+m.tp.zeroCpp+") {\n"+
         "    "+mapType+"::iterator lkup = m.find(k), end = m.end();\n"+
         "    if(lkup != end) { "+mapValueType+" newV = (v+(*lkup)."+VALUE_NAME+"); m.modify(lkup,boost::lambda::bind(&"+mapEntry+"::__av, boost::lambda::_1) = newV); }\n"+
-        "    else { "+mapEntry+" ent(k,v); m.insert(ent); }\n"+
+        "    else { "+(if(m.keys.size > 1) "k.__av = v; m.insert(k);" else mapEntry+" ent(k,v); m.insert(ent);")+" }\n"+
         "  }\n"+
         "}"
       genEntryStruct+"\n"+genPatternStructs+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs+"\n"+genHelperFunctions
@@ -514,13 +539,18 @@ trait ICppGen extends IScalaGen {
           ind(
             if(query.keys.length == 0) cpsExpr(query.map, (v:String) => "return "+v+";")+"\n"
             else {
-              val mName = query.name
               // val tk = tup(query.keys.map(x=>x._2.toScala))
               val nk = query.keys.map(x=>x._1)
-              // "val "+mName+" = M3Map.make["+tk+","+query.tp.toScala+"]()\n"+
-              mName + ".clear();\n"+
-              cpsExpr(query.map, (v:String) => ADD_TO_MAP_FUNC(query.name)+"("+mName+","+tup(nk map rn)+","+v+");")+"\n"+
-              "return " + mName + ";"
+              val mapName = query.name
+              val mapType = mapName+"_map"
+              val mapEntry = mapName+"_entry"
+              val sampleEnt=fresh("se")
+              val sampleEntDef=(if (nk.size > 1) mapEntry+" "+sampleEnt+";\n" else "")
+              // "val "+mapName+" = M3Map.make["+tk+","+query.tp.toScala+"]()\n"+
+              mapName + ".clear();\n"+
+              sampleEntDef+
+              cpsExpr(query.map, (v:String) => ADD_TO_MAP_FUNC(query.name)+"("+mapName+","+(if(nk.size > 1) sampleEnt+".modify("+(nk map rn).mkString(",")+")" else tup(nk map rn))+","+v+");")+"\n"+
+              "return " + mapName + ";"
             }
           )
       })+
