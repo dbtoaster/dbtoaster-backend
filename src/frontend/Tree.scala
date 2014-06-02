@@ -9,18 +9,18 @@ package ddbt.ast
 sealed abstract class Tree // Generic AST node
 
 // ---------- Data types
-sealed abstract class Type extends Tree { def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase; def toCpp=toString; def zero:String; def zeroScala=zero; def zeroCpp=zero }
+sealed abstract class Type extends Tree { def toScala=toString.substring(0,1).toUpperCase+toString.substring(1).toLowerCase; def toCpp=toString; def zero:String; def zeroScala=zero; def zeroCpp=zero; def simpleName=toString.substring(0,1).toUpperCase }
 //case object TypeChar extends Type /*  8 bit */ { override def toString="char" }
 //case object TypeShort extends Type /*16 bit */ { override def toString="short" }
 //case object TypeInt  extends Type /* 32 bit */ { override def toString="int" }
 case object TypeLong   extends Type /* 64 bit */ { override def toString="long"; val zero="0L" }
 //case object TypeFloat extends Type /*32 bit */ { override def toString="float" }
 case object TypeDouble extends Type /* 64 bit */ { override def toString="double"; val zero="0.0" }
-case object TypeDate   extends Type              { override def toString="date"; val zero="0L"; override def zeroScala="new Date(0L)"; override def zeroCpp="00000000" }
+case object TypeDate   extends Type              { override def toString="date"; val zero="0L"; override def zeroScala="new Date(0L)"; override def zeroCpp="00000000"; override def simpleName="A" }
 //case object TypeTime extends Type              { override def toString="timestamp" }
 case object TypeString extends Type              { override def toString="string"; val zero="\"\"" }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
-case class TypeTuple(ts:List[Type]) extends Type { override def toString="<"+ts.mkString(",")+">"; val zero="<"+ts.map(_.zero).mkString(",")+">"; override val zeroScala="<"+ts.map(_.zeroScala).mkString(",")+">"; }
+case class TypeTuple(ts:List[Type]) extends Type { override def toString="<"+ts.mkString(",")+">"; val zero="<"+ts.map(_.zero).mkString(",")+">"; override val zeroScala="<"+ts.map(_.zeroScala).mkString(",")+">"; override def simpleName=ts.map(_.simpleName).mkString}
 
 // ---------- Comparison operators
 sealed abstract class OpCmp extends Tree { def toM3=toString; def toSQL=toString } // toString is C/Scala notation
