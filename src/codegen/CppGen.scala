@@ -385,7 +385,7 @@ trait ICppGen extends IScalaGen {
         "  explicit "+mapEntry+"() { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
         "  explicit "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => tp.toCpp+" c"+i}.mkString(", ")+") { "+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
         multiKeyIndices.map{ case (is,unique) =>
-        "  "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => fields(i)._2.toCpp+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
+        "  inline "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => fields(i)._2.toCpp+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
         // "  const "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => fields(i)._2.toCpp+" c"+i}.mkString(", ")+") const { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
         }.mkString+
         // "  "+mapEntry+"(const std::pair<const "+mapKeyType+" , "+mapValueType+">& p) { "+(if(m.keys.size == 1) m.keys(0)._1+" = p.first; " else m.keys.zipWithIndex.map{case ((fld,_),i) => fld+" = at_c<"+i+">(p.first); "}.mkString)+VALUE_NAME+" = p.second; }\n"+
