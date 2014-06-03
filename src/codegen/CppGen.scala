@@ -27,6 +27,9 @@ trait ICppGen extends IScalaGen {
   override def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "/*const static*/ "+tp.toCpp+" "+n+";\n" }.mkString+"\n" // constant member definition
   def constsInit = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); n+" = "+"U"+f+"("+vs.mkString(",")+");\n" }.mkString+"\n" // constant member initilization
 
+  //Sample entry definitions are accumulated in this variable
+  var sampleEntDef = ""
+
   private val mapDefs = HashMap[String,MapDef]() //mapName => MapDef
 
   // Create a variable declaration
@@ -58,10 +61,11 @@ trait ICppGen extends IScalaGen {
       val mapName = m.name
       val mapType = mapName+"_map"
       val mapEntry = mapName+"_entry"
-      val sampleEnt=fresh("se")
-      val sampleEntDef=(if (m.keys.size > 1) mapEntry+" "+sampleEnt+";\n" else "")
-      if (ki.size==0) sampleEntDef+co((if (ks.size>0) FIND_IN_MAP_FUNC(n)+"("+n+", "+(if(ks.size > 1) sampleEnt+".modify("+(ks map rn).mkString(",")+")" else tup(ks map rn, m.tks))+")" else n)) // all keys are bound
-      else {
+      if (ki.size==0) {
+        val sampleEnt=fresh("se")
+        sampleEntDef+=(if (m.keys.size > 1) "  "+mapEntry+" "+sampleEnt+";\n" else "")
+        co((if (ks.size>0) FIND_IN_MAP_FUNC(n)+"("+n+", "+(if(ks.size > 1) sampleEnt+".modify("+(ks map rn).mkString(",")+")" else tup(ks map rn, m.tks))+")" else n)) // all keys are bound
+      } else {
         val lup0 = fresh("lkup") //lookup
         val lupItr0 = lup0+"_it"
         val lupItrNext0 = "next_"+lupItr0
@@ -85,7 +89,8 @@ trait ICppGen extends IScalaGen {
             val idxType = n+"_index"+getIndexId(n,is)
             val idxIterator = idxType+"::iterator"
             slice(n,is)
-            sampleEntDef+
+            val sampleEnt=fresh("se")
+            sampleEntDef+=(if (m.keys.size > 1) "  "+mapEntry+" "+sampleEnt+";\n" else "")
             "std::pair<"+idxIterator+","+idxIterator+"> "+lup0+" = "+n+".get<"+patternName+">().equal_range("+(if (is.size > 1) sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+")" else tup(iKeys, iKeysTp))+"); //slice\n"+
             //expanded mode
             // idxIterator+" "+lupItr0+" = "+lup0+".first;\n"+
@@ -215,7 +220,7 @@ trait ICppGen extends IScalaGen {
       val mapType = mapName+"_map"
       val mapEntry = mapName+"_entry"
       val sampleEnt=fresh("se")
-      val sampleEntDef=(if (m.keys.size > 1) mapEntry+" "+sampleEnt+";\n" else "")
+      sampleEntDef+=(if (m.keys.size > 1) "  "+mapEntry+" "+sampleEnt+";\n" else "")
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear();\n" else "" }
       val init = oi match {
         case Some(ie) =>
@@ -226,7 +231,7 @@ trait ICppGen extends IScalaGen {
           )
         case None => ""
       }
-      ctx.load(); clear+sampleEntDef+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+m.name+", "+(if(m.keys.size > 1) sampleEnt+".modify("+(m.keys map rn).mkString(",")+")" else tup(m.keys map rn, m.tks))+","+v+")"})+";\n",Some(m.keys zip m.tks))
+      ctx.load(); clear+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+m.name+", "+(if(m.keys.size > 1) sampleEnt+".modify("+(m.keys map rn).mkString(",")+")" else tup(m.keys map rn, m.tks))+","+v+")"})+";\n",Some(m.keys zip m.tks))
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -530,6 +535,9 @@ trait ICppGen extends IScalaGen {
     (if(!isExpressiveTLQSEnabled(s0.queries)) {
     "private:\n"+
     "\n"+
+    "  /* Sample entries for avoiding recreation of temporary objects */\n"+
+    sampleEntDef+
+    "\n"+
     "  /* Data structures used for storing materialized views */\n"+
        ind(genIntermediateDataStructureRefs(s0.maps,s0.queries))+"\n"+
        ind(consts)+
@@ -560,10 +568,9 @@ trait ICppGen extends IScalaGen {
               val mapType = mapName+"_map"
               val mapEntry = mapName+"_entry"
               val sampleEnt=fresh("se")
-              val sampleEntDef=(if (nk.size > 1) mapEntry+" "+sampleEnt+";\n" else "")
+              sampleEntDef+=(if (nk.size > 1) "  "+mapEntry+" "+sampleEnt+";\n" else "")
               // "val "+mapName+" = M3Map.make["+tk+","+query.tp.toScala+"]()\n"+
               mapName + ".clear();\n"+
-              sampleEntDef+
               cpsExpr(query.map, (v:String) => ADD_TO_MAP_FUNC(query.name)+"("+mapName+","+(if(nk.size > 1) sampleEnt+".modify("+(nk map rn).mkString(",")+")" else tup(nk map rn, nkTp))+","+v+");")+"\n"+
               "return " + mapName + ";"
             }
