@@ -33,7 +33,7 @@ object ScalaGen {
     if(types.length == 1)
       types.head.toScala
     else
-      "T"+types.map(t => t.toScala.substring(0,3)).mkString("_")
+      "T"+types.map(t => t.simpleName).mkString
 }
 
 trait IScalaGen extends CodeGen {
@@ -68,7 +68,7 @@ trait IScalaGen extends CodeGen {
 
   def genTupleDef(types: List[Type]) = {
     val tupleName = ScalaGen.tupleNameOfTps(types)
-    if(!(tuples contains tupleName) && types.length > 1) {
+    if(types.length > 1 && !(tuples contains tupleName)) {
       def prodDef =
         "def canEqual(that:Any) = true\n"+
         "def productArity = "+types.length+"\n"+
@@ -350,10 +350,12 @@ trait IScalaGen extends CodeGen {
     "Seq(\n"+ind(ss.replaceAll("Adaptor.CSV\\(([^)]+)\\)","Adaptor.CSV($1,if(d.endsWith(\"_del\")) \"ins+del\" else \"insert\")").replaceAll("/standard/","/\"+d+\"/"))+"\n)"
   }
 
+  def getEntryDefinitions:String = tuples.values.mkString("\n")
+
   // Helper that contains the main and stream generator
   private def helper(s0:System) =
     "import ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-    "object "+cls+" {\n"+ind("import Helper._\n"+tuples.values.mkString("\n")+"\n"+
+    "object "+cls+" {\n"+ind("import Helper._\n"+getEntryDefinitions+"\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+

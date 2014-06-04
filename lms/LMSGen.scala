@@ -294,6 +294,8 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
   }
 
   override def additionalImports():String = "import ddbt.lib.store._\n"
+
+  override def getEntryDefinitions:String = ""
 }
 
 class LMSScalaGen(cls:String="Query") extends LMSGen(cls,ScalaExpGen) 
