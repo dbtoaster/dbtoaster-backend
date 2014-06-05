@@ -193,7 +193,7 @@ object UnitTest {
   // ---------------------------------------------------------------------------
   // Query generator
   def genQueryScala(q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
-    val cls = name(q.sql)
+    val cls = name(q.sql)+(if(mode.contains("lms")) "LMS" else "")
     var sp=""
     // Correctness
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
@@ -243,7 +243,7 @@ object UnitTest {
 
   def genQueryCpp(q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
     val CPP_SUFFIX = ".hpp"
-    val cls = name(q.sql)
+    val cls = name(q.sql)+(if(mode.contains("lms")) "LMS" else "")
     var sp=""
     // Correctness
     // def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
