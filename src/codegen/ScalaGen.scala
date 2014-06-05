@@ -45,7 +45,11 @@ trait IScalaGen extends CodeGen {
   // Methods involving only constants are hoisted as global constants
   protected val cs = HashMap[Apply,String]()
   override def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
-  override def consts:String = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+"\n" // constant function applications
+  override def consts:String = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+ // constant function applications
+                               regexpCacheMap.map{ case (regex,preg) => "val "+preg+"=java.util.regex.Pattern.compile(\""+regex+"\");\n"}.mkString+"\n"
+
+  protected val ENABLE_REGEXP_PARTIAL_EVAL=false
+  protected val regexpCacheMap = HashMap[String,String]() //Regex String => Regex object name
 
   // XXX: enlarge the definition to generalized constants
 
@@ -93,6 +97,15 @@ trait IScalaGen extends CodeGen {
       "new "+tupleName+"("+values.mkString(",")+")"
   }
 
+  def applyFunc(co:String=>String, fn1:String, tp:Type, as1:List[Expr]) = {
+    val (as, fn) = (fn1 match {
+      case "regexp_match" if (ENABLE_REGEXP_PARTIAL_EVAL && as1.head.isInstanceOf[Const] && !as1.tail.head.isInstanceOf[Const]) => val regex=as1.head.asInstanceOf[Const].v; val preg0=regexpCacheMap.getOrElse(regex, fresh("preg")); regexpCacheMap.update(regex,preg0); (as1.tail, "preg_match("+preg0+",")
+      case _ => (as1, fn1+"(")
+    })
+    if (as.forall(_.isInstanceOf[Const])) co(constApply(Apply(fn1,tp,as1))) // hoist constants resulting from function application
+    else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
+  }
+
   // Generate code bottom-up using delimited CPS and a list of bound variables
   //   ex:expression to convert
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
@@ -102,9 +115,7 @@ trait IScalaGen extends CodeGen {
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
     case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+" != 0) 1L else 0L)"))
     case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") 1L else 0L)")))
-    case app@Apply(fn,tp,as) =>
-      if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
-      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
+    case app@Apply(fn,tp,as) => applyFunc(co,fn,tp,as)
     //ki : inner key
     //ko : outer key
     //Example:

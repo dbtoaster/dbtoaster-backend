@@ -36,6 +36,7 @@ object Functions {
     case null => val p=java.util.regex.Pattern.compile(re); re_cache.put(re,p); p
     case p => p
   }).matcher(str).find) 1L else 0L
+  def Upreg_match(p:java.util.regex.Pattern, str:String): Long = if (p.matcher(str).find) 1L else 0L
 
   def Udiv(x: Double): Double = if (x==0.0) 0.0 else 1.0 / x
   def UmulDbl(x: Double, y:Double): Double = x * y
