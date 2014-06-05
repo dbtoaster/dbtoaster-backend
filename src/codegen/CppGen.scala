@@ -227,7 +227,7 @@ trait ICppGen extends IScalaGen {
           ctx.load()
           cpsExpr(ie,(i:String)=>
             if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-            else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+m.name+", "+(if(m.keys.size > 1) sampleEnt+".modify("+(m.keys map rn).mkString(",")+")" else tup(m.keys map rn, m.tks))+")==0) {\n  "+SET_IN_MAP_FUNC(m.name)+"("+m.name+", "+(if(m.keys.size > 1) sampleEnt else tup(m.keys map rn, m.tks))+", "+i+");\n}\n"
+            else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+m.name+", "+(if(m.keys.size > 1) sampleEnt+".modify("+(m.keys map rn).mkString(",")+")" else tup(m.keys map rn, m.tks))+")==0) "+SET_IN_MAP_FUNC(m.name)+"("+m.name+", "+(if(m.keys.size > 1) sampleEnt else tup(m.keys map rn, m.tks))+", "+i+");\n"
           )
         case None => ""
       }
