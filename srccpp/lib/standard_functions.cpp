@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <iostream>
 #include <sstream>
-#include <regex.h>
 #include <math.h>
 
 namespace dbtoaster {
@@ -138,6 +137,18 @@ int Uregexp_match(const char *regex, string &s){
 	}
 
 	regfree(&preg);
+}
+
+int Upreg_match(const regex_t &preg, string &s){
+  int ret = regexec(&preg, s.c_str(), 0, NULL, 0);
+
+  switch(ret){
+    case 0: return 1;
+    case REG_NOMATCH: return 0;
+    default:
+    cerr << "Error evaluating regular expression." << endl;
+    exit(-1);
+  }
 }
 
 double Udiv(double x) { return ((x==0.0) ? 0.0 : (1.0 / x)); }

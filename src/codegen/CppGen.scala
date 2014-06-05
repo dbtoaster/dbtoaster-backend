@@ -20,6 +20,7 @@ trait ICppGen extends IScalaGen {
   def ADD_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("ADD_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("ADD_TO_MAP_FUNC" -> m),0)+1); "add_to_"+m }
   def ADD_TO_TEMP_MAP_FUNC(k:String,v:String) = "add_to_temp_map<"+k+","+v+">"
 
+  private val regexpCacheMap = HashMap[String,String]() //mapName => MapDef
   val tempTupleTypes = HashMap[String,List[Type]]()
   def tup(vs:List[String], vsTp:List[Type]) = { val v=vs.mkString(","); if (vs.size>1) tupType(vsTp)+"("+v+")" else v }
   def tupType(vsTp:List[Type]):String = { if (vsTp.size>1) { val tupleTp="tuple"+vsTp.size+"_"+vsTp.map(_.simpleName).mkString; tempTupleTypes.update(tupleTp,vsTp); tupleTp } else vsTp.mkString(",") }
@@ -49,11 +50,12 @@ trait ICppGen extends IScalaGen {
     case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
     case app@Apply(fn1,tp,as1) => {
       val (as, fn) = (fn1 match {
-        case "date_part" if as1.head.isInstanceOf[Const] => (as1.tail, as1.head.asInstanceOf[Const].v.toLowerCase+"_part")
-        case _ => (as1, fn1)
+        case "date_part" if as1.head.isInstanceOf[Const] => (as1.tail, as1.head.asInstanceOf[Const].v.toLowerCase+"_part(")
+        case "regexp_match" if as1.head.isInstanceOf[Const] => val regex=as1.head.asInstanceOf[Const].v; val preg0=regexpCacheMap.getOrElse(regex, fresh("preg")); regexpCacheMap.update(regex,preg0); (as1.tail, "preg_match("+preg0+",")
+        case _ => (as1, fn1+"(")
       })
       if (as.forall(_.isInstanceOf[Const])) co(constApply(app)) // hoist constants resulting from function application
-      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "(")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
+      else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>cpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
     }
     case m@MapRef(n,tp,ks) =>
       val kswt = (ks zip m.tks) //ks with type
@@ -507,7 +509,15 @@ trait ICppGen extends IScalaGen {
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
     "struct data_t : tlq_t{\n"+
     "  data_t(): tlq_t()"+getInitializationForDATA_T(s0.maps,s0.queries)+" {\n"+
-         ind(constsInit,2)+"\n"+
+         ind(constsInit,2)+"\n"+ 
+    (if(regexpCacheMap.isEmpty) "" else
+    "    /* regex_t init */\n"+
+    regexpCacheMap.map{case (regex,preg) => 
+    "    if(regcomp(&"+preg+", \""+regex+"\", REG_EXTENDED | REG_NOSUB)){\n"+
+    "      cerr << \"Error compiling regular expression: /"+regex+"/\" << endl;\n"+
+    "      exit(-1);\n"+
+    "    }\n"
+    }.mkString)+
     "  }\n"+
     "\n"+
     "  #ifdef DBT_PROFILE\n"+
@@ -537,6 +547,9 @@ trait ICppGen extends IScalaGen {
     "\n"+
     "  /* Sample entries for avoiding recreation of temporary objects */\n"+
     sampleEntDef+
+    (if(regexpCacheMap.isEmpty) "" else
+    "  /* regex_t temporary objects */\n"+
+    regexpCacheMap.map{case (_,preg) => "  regex_t "+preg+";\n"}.mkString)+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
        ind(genIntermediateDataStructureRefs(s0.maps,s0.queries))+"\n"+

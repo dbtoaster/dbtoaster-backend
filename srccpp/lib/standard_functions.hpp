@@ -6,6 +6,7 @@
 using namespace std;
 
 #include "event.hpp"
+#include <regex.h>
 
 namespace dbtoaster {
 
@@ -19,6 +20,7 @@ namespace dbtoaster {
   // String functions
   string Usubstring(string &s, long start, long len);  
   int Uregexp_match(const char *regex, string &s);
+  int Upreg_match(const regex_t &preg, string &s);
   
   // Vector functions
   float Uvec_dot(float x1, float y1, float z1, 
