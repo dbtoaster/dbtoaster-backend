@@ -226,7 +226,6 @@ public:
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
     pool.del(elem);
   }
-public:
   inline void foreach(std::function<void (const T&)> f) {
     index[0]->foreach(f);
   }
