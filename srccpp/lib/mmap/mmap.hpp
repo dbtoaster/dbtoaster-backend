@@ -29,13 +29,10 @@ public:
 };
 
 template<typename T>
-struct GenericHashFn {
+struct GenericIndexFn {
   static long hash(const T& e) {
     return 0;
   }
-};
-template<typename T>
-struct GenericEqFn {
   static bool equals(const T& x,const T& y) {
     return false;
   }
@@ -65,7 +62,7 @@ public:
   virtual ~Index(){};
 };
 
-template<typename T, typename hash_ = GenericHashFn<T>, typename equal_ = GenericEqFn<T>, int list_size=8>
+template<typename T, typename IDX_FN = GenericIndexFn<T>, int list_size=8>
 class HashIndex : public Index<T> {
 private:
   typedef struct __Node {
@@ -77,11 +74,9 @@ private:
   Pool<Node> nodes_;
   size_t size_, count_, threshold_;
   double load_factor_;
-  // std::function<long (const T&)> hash_;
-  // std::function<bool (const T&, const T&)> equal_;
 
   void add_(T* obj) { // does not resize the bucket array, does not maintain count
-    long h = hash_::hash(*obj);
+    long h = IDX_FN::hash(*obj);
     Node* n = &buckets_[h % size_];
     while (n->next) n=n->next;
     int i=0; while(i < list_size && n->obj[i]) ++i;
@@ -110,8 +105,6 @@ private:
 
 public:
   HashIndex(size_t size=DEFAULT_CHUNK_SIZE, double load_factor=.75) : nodes_(size) {
-    // hash_ = hash;
-    // equal_ = equal;
     load_factor_ = load_factor;
     size_ = 0;
     count_ = 0;
@@ -120,8 +113,6 @@ public:
   }
 
   HashIndex(HashIndex&& other) {
-    // hash_ = std::move(other.hash_);
-    // equal_ = std::move(other.equal_);
     load_factor_ = other.load_factor_;
     size_ = other.size_;
     count_ = other.count_;
@@ -137,14 +128,14 @@ public:
     return *get(key);
   }
   inline virtual bool hashDiffers(const T& x, const T& y) {
-    return hash_::hash(x) != hash_::hash(y);
+    return IDX_FN::hash(x) != IDX_FN::hash(y);
   }
   // retrieves the first element equivalent to the key or nullptr if not found
   inline virtual T* get(const T& key) {
-    long h = hash_::hash(key);
+    long h = IDX_FN::hash(key);
     Node* n = &buckets_[h % size_];
     do for (int i=0; i<list_size && n->obj[i]; ++i) {
-      if (h == n->hash[i] && equal_::equals(key, *n->obj[i])) return n->obj[i];
+      if (h == n->hash[i] && IDX_FN::equals(key, *n->obj[i])) return n->obj[i];
     } while ((n=n->next));
     return nullptr;
   }
@@ -156,7 +147,7 @@ public:
   // deletes an existing elements (equality by pointer comparison)
   inline virtual void del(const T& obj) { const T* ptr = get(obj); if (ptr!=nullptr) del(ptr); }
   virtual void del(const T* obj) {
-    long h = hash_::hash(*obj);
+    long h = IDX_FN::hash(*obj);
     Node* n = &buckets_[h % size_];
     Node* prev = nullptr; // previous
     do {
@@ -180,10 +171,10 @@ public:
   }
 
   inline virtual void slice(const T& key, std::function<void (const T&)> f) {
-    long h = hash_::hash(key);
+    long h = IDX_FN::hash(key);
     Node* n = &(buckets_[h % size_]);
     do for (size_t i=0; i<list_size && n->obj[i]; ++i) {
-      if (h == n->hash[i] && equal_::equals(key, *n->obj[i])) f(*n->obj[i]);
+      if (h == n->hash[i] && IDX_FN::equals(key, *n->obj[i])) f(*n->obj[i]);
     } while ((n=n->next));
   }
 
@@ -210,10 +201,7 @@ public:
   inline void add(const T& obj) { add(&obj); }
   void add(const T* elem) {
     T* cur = index[0]->get(*elem);
-    // bool add[sizeof...(INDEXES)];
-    // bool del[sizeof...(INDEXES)];
     if (cur==nullptr) {
-      // add[i]=true; del[i]=false;
       cur=pool.add();
       memcpy(cur, elem, sizeof(T));
       for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
@@ -221,23 +209,19 @@ public:
       memcpy(cur, elem, sizeof(T));
       for (size_t i=0; i<sizeof...(INDEXES); ++i) {
         if (index[i]->hashDiffers(*cur,*elem)) {
-          //add[i]=true; del[i]=true;
           index[i]->del(cur);   
           index[i]->add(cur);
         }
       }
     }
-    // for (int i=0; i<sizeof...(INDEXES); ++i) if (del[i]) index[i].del(cur);
-    // memcpy(cur, elem, sizeof(T));
-    // for (int i=0; i<sizeof...(INDEXES); ++i) if (add[i]) index[i].add(cur);
   }
 
   void del(const T& key, int idx=0) {
     T* elem = get(idx, key); if (elem!=nullptr) del(elem);
   }
-  // void delete(int idx, T* key) {
-  //   slice(idx, key) { elem=> delete(elem); }
-  // }
+  void delSlice(const T& key, int idx=0) {
+    slice(idx, key,[] (const T& e) { del(e); });
+  }
   void del(T* elem) { // assume that the element is already in the map
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
     pool.del(elem);
