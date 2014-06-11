@@ -60,18 +60,25 @@ void test_index() {
 }
 
 void test_map() {
-  MultiHashMap<rec,HashIndex<rec,IndexFn1>,HashIndex<rec,IndexFn2>> hmap;
-  hmap.add(rec(1,2,11));
-  hmap.add(rec(1,6,12));
-  hmap.add(rec(2,3,13));
-  hmap.add(rec(3,4,14));
-  assert(hmap.count()==4);
-  // hmap.foreach([] (const rec& a) { printf(" - %d -> %d\n", a._1, a._2); });
-  hmap.slice(1,rec(1),[] (const rec& a) { printf(" - %d -> %d\n", a._1, a._2); });
-  hmap.del(rec(3,4));
-  assert(hmap.count()==3);
+  std::cout << "- hmap1" << std::endl;
+  MultiHashMap<rec,HashIndex<rec,IndexFn1>,HashIndex<rec,IndexFn2>> hmap1;
+  hmap1.add(rec(1,2,11));
+  hmap1.add(rec(1,6,12));
+  hmap1.add(rec(2,3,13));
+  hmap1.add(rec(3,4,14));
+  assert(hmap1.count()==4);
+  // hmap1.foreach([] (const rec& a) { printf(" - %d -> %d\n", a._1, a._2); });
+  hmap1.slice(1,rec(1),[] (const rec& a) { printf(" - %d -> %d\n", a._1, a._2); });
+  hmap1.del(rec(3,4));
+  assert(hmap1.count()==3);
+  assert(IndexFn1::equals(*hmap1.get(rec(1),1),rec(1,2)));
 
-  assert(IndexFn1::equals(*hmap.get(rec(1),1),rec(1,2)));
+  std::cout << "- hmap2" << std::endl;
+  MultiHashMap<rec,HashIndex<rec,IndexFn1>,HashIndex<rec,IndexFn2>> hmap2(hmap1);
+  assert(IndexFn1::equals(*hmap2.get(rec(1),1),rec(1,2)));
+  assert(hmap2.count()==3);
+  // hmap2.foreach([] (const rec& a) { printf(" - %d -> %d\n", a._1, a._2); });
+  hmap2.slice(1,rec(1),[] (const rec& a) { printf(" - %d -> %d\n", a._1, a._2); });
 }
 
 int main(int argc, char** argv) {

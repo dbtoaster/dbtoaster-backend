@@ -9,7 +9,7 @@
 template<typename T>
 class Pool {
 private:
-  typedef union __El { __El(){}; T obj;  union __El* next; } El;
+  typedef union __El { __El(){}; T obj;  union __El* next; ~__El() {}; } El;
   El* free_;
   El* data_;
   size_t size_;
@@ -20,11 +20,6 @@ private:
 public:
   Pool(size_t chunk_size=DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size) { add_chunk(); }
   ~Pool() { while (data_ != nullptr) { El* el = data_[size_].next; delete[] data_; data_ = el; } }
-  Pool(Pool&& other) { data_ = std::move(other.data_); free_=other.free_; size_=other.size_; other.data_=nullptr; other.free_=nullptr; other.size_=0; }
-  Pool& operator=(Pool&& other) {
-    data_ = std::move(other.data_); free_=other.free_; size_=other.size_; other.data_=nullptr; other.free_=nullptr; other.size_=0;
-    return *this;
-  }
   T* add() { if (!free_) add_chunk(); El* el = free_; free_ = free_->next; return &(el->obj); }
   void del(T* obj) { ((El*)obj)->next = free_; free_ = (El*)obj; }
 };
@@ -114,16 +109,6 @@ public:
     resize_(size);
   }
 
-  HashIndex(HashIndex&& other) {
-    load_factor_ = other.load_factor_;
-    size_ = other.size_;
-    count_ = other.count_;
-    buckets_ = other.buckets_;
-    nodes_ = std::move(other.nodes_);
-
-    other.buckets_ = nullptr;
-  }
-
   ~HashIndex() { if(buckets_ != nullptr) delete[] buckets_; }
 
   T& operator[](const T& key) {
@@ -194,6 +179,10 @@ public:
   MultiHashMap() { // by defintion index 0 is always unique
     index = new Index<T>*[sizeof...(INDEXES)]{ new INDEXES()... };
   }
+  MultiHashMap(const MultiHashMap& other) { // by defintion index 0 is always unique
+    index = new Index<T>*[sizeof...(INDEXES)]{ new INDEXES()... };
+    other.index[0]->foreach([this] (const T& e) { this->insert_nocheck(e); });
+  }
   ~MultiHashMap() {
     for (size_t i=0; i<sizeof...(INDEXES); ++i) delete index[i];
     delete[] index;
@@ -218,9 +207,9 @@ public:
       }
     }
   }
-  inline void insert_nocheck(const T* elem) {
+  inline virtual void insert_nocheck(const T& elem) {
     T* cur = pool.add();
-    memcpy(cur, elem, sizeof(T));
+    memcpy(cur, &elem, sizeof(T));
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
   }
 
