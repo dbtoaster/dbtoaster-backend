@@ -62,7 +62,7 @@ trait ICppGen extends IScalaGen {
       val mapEntry = mapName+"_entry"
       if (ki.size==0) {
         val sampleEnt=fresh("se")
-        sampleEntDef+="  "+mapEntry+" "+sampleEnt+";\n"
+        sampleEntDef+=(if(ks.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
         co((if (ks.size>0) FIND_IN_MAP_FUNC(n)+"("+n+", "+sampleEnt+".modify("+(ks map rn).mkString(",")+"))" else n)) // all keys are bound
       } else {
         val lup0 = fresh("lkup") //lookup
@@ -124,7 +124,7 @@ trait ICppGen extends IScalaGen {
           if (ko.size>0) { //slice
             val idxIndex = slice(n,is)+1 //+1 because the index 0 is the unique index
             val sampleEnt=fresh("se")
-            sampleEntDef+=(if (m.keys.size > 1) "  "+mapEntry+" "+sampleEnt+";\n" else "")
+            sampleEntDef+=(if (m.keys.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
 
             // val mapType = n+"_map"
             // val idxFn = mapType+"key"+getIndexId(n,is)+"_idxfn"
@@ -261,7 +261,7 @@ trait ICppGen extends IScalaGen {
       val mapType = mapName+"_map"
       val mapEntry = mapName+"_entry"
       val sampleEnt=fresh("se")
-      sampleEntDef+="  "+mapEntry+" "+sampleEnt+";\n"
+      sampleEntDef+=(if(m.keys.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear();\n" else "" }
       val init = oi match {
         case Some(ie) =>
@@ -599,7 +599,7 @@ trait ICppGen extends IScalaGen {
               val mapType = mapName+"_map"
               val mapEntry = mapName+"_entry"
               val sampleEnt=fresh("se")
-              sampleEntDef+="  "+mapEntry+" "+sampleEnt+";\n"
+              sampleEntDef+=(if(nk.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
               // "val "+mapName+" = M3Map.make["+tk+","+query.tp.toScala+"]()\n"+
               mapName + ".clear();\n"+
               cpsExpr(query.map, (v:String) => ADD_TO_MAP_FUNC(query.name)+"("+mapName+","+sampleEnt+".modify("+(nk map rn).mkString(",")+"),"+v+");")+"\n"+
