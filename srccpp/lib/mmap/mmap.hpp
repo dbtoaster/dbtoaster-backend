@@ -2,6 +2,8 @@
 #include <assert.h>
 #include <functional>
 #include <string.h>
+#include <boost/archive/xml_oarchive.hpp>
+#include <boost/serialization/map.hpp>
 
 #define DEFAULT_CHUNK_SIZE 1024
 #define DEFAULT_LIST_SIZE 8
@@ -232,4 +234,14 @@ public:
   }
 
   inline size_t count() { return index[0]->count(); }
+
+  inline void clear(){
+    //TODO
+  }
+
+  template<class Archive>
+  void serialize(Archive& ar, const unsigned int version)
+  {
+    //TODO
+  }
 };
