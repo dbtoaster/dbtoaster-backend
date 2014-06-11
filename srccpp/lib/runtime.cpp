@@ -106,7 +106,7 @@ void runtime_options::setup_tracing(options_description& o) {
 void runtime_options::init(int argc, char* argv[]) {
 	if (argc <= 0 ) return;
 
-	opt_desc = boost::shared_ptr<options_description>(
+	opt_desc = std::shared_ptr<options_description>(
 		new options_description("dbtoaster query options"));
 
 	init_options(*opt_desc);

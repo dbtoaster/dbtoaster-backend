@@ -518,8 +518,8 @@ trait ICppGen extends IScalaGen {
     "  }\n"+
     "\n"+
     "  #ifdef DBT_PROFILE\n"+
-    "  boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> exec_stats;\n"+
-    "  boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> ivc_stats;\n"+
+    "  std::shared_ptr<dbtoaster::statistics::trigger_exec_stats> exec_stats;\n"+
+    "  std::shared_ptr<dbtoaster::statistics::trigger_exec_stats> ivc_stats;\n"+
     "  #endif\n"+
     "\n"+
     "  /* Registering relations and trigger functions */\n"+
@@ -668,7 +668,7 @@ trait ICppGen extends IScalaGen {
     val adaptorVar = sourceId+"_adaptor"
     val paramsVar = adaptorVar+"_params"
     val sourceFileVar = sourceId+"_file"
-    val in = s.in match { case SourceFile(path) => "boost::shared_ptr<dbt_file_source> "+sourceFileVar+"(new dbt_file_source(\""+path+"\","+sourceSplitVar+","+adaptorVar+"));\n" }
+    val in = s.in match { case SourceFile(path) => "std::shared_ptr<dbt_file_source> "+sourceFileVar+"(new dbt_file_source(\""+path+"\","+sourceSplitVar+","+adaptorVar+"));\n" }
     val split = "frame_descriptor "+sourceSplitVar+(s.split match { case SplitLine => "(\"\\n\")" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => "XXXXX("+p+")" })+";\n" //XXXX for SplitPrefix
     
     val schema_param = s.schema.fields.map{case (_,tp) => tp.toCpp}.mkString(",")
@@ -683,7 +683,7 @@ trait ICppGen extends IScalaGen {
         val a_opts = s.adaptor.options.filter{case (k,_) => !orderBookTypesList.contains(k)} ++ Map("schema" -> schema_param)
         val numParams = a_opts.size+1
         val a_def = "pair<string,string> "+paramsVar+"[] = { make_pair(\"book\",\""+orderBookType+"\"), "+a_opts.map{case (k,v) => "make_pair(\""+k+"\",\""+v+"\")"}.mkString(", ")+" };\n"+
-          "boost::shared_ptr<order_books::order_book_adaptor> "+adaptorVar+"(new order_books::order_book_adaptor("+bidsAndAsks.map{ x => {if(s.adaptor.options.contains(x)) "get_relation_id(\""+s.adaptor.options(x)+"\")" else "-1"}+","}.mkString+numParams+","+paramsVar+"));\n"
+          "std::shared_ptr<order_books::order_book_adaptor> "+adaptorVar+"(new order_books::order_book_adaptor("+bidsAndAsks.map{ x => {if(s.adaptor.options.contains(x)) "get_relation_id(\""+s.adaptor.options(x)+"\")" else "-1"}+","}.mkString+numParams+","+paramsVar+"));\n"
 
         a_def
       }      
@@ -691,7 +691,7 @@ trait ICppGen extends IScalaGen {
         val a_opts = s.adaptor.options ++ Map("schema" -> schema_param)
         val numParams = a_opts.size
         val a_def = "pair<string,string> "+paramsVar+"[] = { "+a_opts.map{case (k,v) => "make_pair(\""+k+"\",\""+v+"\")"}.mkString(", ")+" };\n"+
-          "boost::shared_ptr<csv_adaptor> "+adaptorVar+"(new csv_adaptor(get_relation_id(\""+s.schema.name+"\"),"+numParams+","+paramsVar+"));\n"
+          "std::shared_ptr<csv_adaptor> "+adaptorVar+"(new csv_adaptor(get_relation_id(\""+s.schema.name+"\"),"+numParams+","+paramsVar+"));\n"
 
         a_def
       }

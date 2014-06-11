@@ -4,7 +4,6 @@
 #include <cstdlib>
 #include <map>
 
-#include <boost/shared_ptr.hpp>
 #include <boost/function.hpp>
 
 #include <boost/circular_buffer.hpp>
@@ -48,7 +47,7 @@ namespace dbtoaster {
     public:
       typedef window window_type;
 
-      statistics_map(shared_ptr<nmap> kn, typename window_type::size_type s);
+      statistics_map(std::shared_ptr<nmap> kn, typename window_type::size_type s);
 
       void append(key k, value sample);
       void clear();
@@ -56,18 +55,18 @@ namespace dbtoaster {
 
     private:
       typename window_type::size_type num_samples;
-      shared_ptr<smap> samples;
-      shared_ptr<nmap> key_names;
+      std::shared_ptr<smap> samples;
+      std::shared_ptr<nmap> key_names;
     };
 
     // File sequences.
     struct file_sequence {
       uint64_t i;
       string prefix, suffix;
-      shared_ptr<ofstream> current;
+      std::shared_ptr<ofstream> current;
       file_sequence(string p, string s = ".txt") : prefix(p), suffix(s), i(0) {}
 
-      shared_ptr<ostream> next();
+      std::shared_ptr<ostream> next();
     };
 
     // File sequences with periodic construction.
@@ -79,9 +78,9 @@ namespace dbtoaster {
         : file_sequence(p,s), n_firings(0), period(pd)
       {}
 
-      shared_ptr<ostream> next();
+      std::shared_ptr<ostream> next();
 
-      shared_ptr<ostream> next_now() { return file_sequence::next(); }
+      std::shared_ptr<ostream> next_now() { return file_sequence::next(); }
     };
 
     // Interval statistics
@@ -97,12 +96,12 @@ namespace dbtoaster {
       typedef typename boost::function<measure (metadata)> measure_f;
 
       index_id stats_id;
-      shared_ptr<names_map> probe_ids;
-      shared_ptr<meta_map> meta;
-      shared_ptr<stats_map> stats;
+      std::shared_ptr<names_map> probe_ids;
+      std::shared_ptr<meta_map> meta;
+      std::shared_ptr<stats_map> stats;
       measure_f probe_f;
 
-      shared_ptr<periodic_file_sequence> out;
+      std::shared_ptr<periodic_file_sequence> out;
 
     public:
       interval_statistics(
@@ -147,7 +146,7 @@ namespace dbtoaster {
     class multi_trigger_stats
     {
       typedef interval_statistics<index_id, probe_id, metadata, measure> stats;
-      typedef map<index_id, shared_ptr<stats> > tsmap;
+      typedef map<index_id, std::shared_ptr<stats> > tsmap;
       typedef map<index_id, pair<uint64_t, uint32_t> > idpmap;
 
     protected:

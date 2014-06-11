@@ -51,18 +51,18 @@ namespace streams {
 /******************************************************************************
 	source
 ******************************************************************************/
-source::source(frame_descriptor& f, shared_ptr<stream_adaptor> a) : frame_info(f), adaptor(a) {
+source::source(frame_descriptor& f, std::shared_ptr<stream_adaptor> a) : frame_info(f), adaptor(a) {
 }
 
 /******************************************************************************
 	dbt_file_source
 ******************************************************************************/
 dbt_file_source::dbt_file_source(
-		const std::string& path, frame_descriptor& f, shared_ptr<stream_adaptor> a): source(f,a)
+		const std::string& path, frame_descriptor& f, std::shared_ptr<stream_adaptor> a): source(f,a)
 {
 	if ( boost::filesystem::exists( path ) )
 	{
-		source_stream = boost::shared_ptr<file_stream>(new file_stream(path.c_str(), file_stream::in));
+		source_stream = std::shared_ptr<file_stream>(new file_stream(path.c_str(), file_stream::in));
 		if( runtime_options::verbose() )
 			std::cerr << "reading from " << path
 				 << " with 1 adaptors" << std::endl;
@@ -71,7 +71,7 @@ dbt_file_source::dbt_file_source(
 		std::cerr << "File not found: " << path << std::endl;
 }
 
-void dbt_file_source::read_source_events(shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue) {
+void dbt_file_source::read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) {
 	//read the whole file
 	source_stream->seekg(0, std::ios::end);
 	size_t bufferLength = source_stream->tellg();
@@ -140,35 +140,35 @@ source_multiplexer::source_multiplexer(int seed, int st)
 	: step(st), remaining(0), block(100)
 {
 	srandom(seed);
-	eventList = boost::shared_ptr<std::list<event_t> >(new std::list<event_t>());
-	eventQue = shared_ptr<std::list<event_t> >(new std::list<event_t>());
+	eventList = std::shared_ptr<std::list<event_t> >(new std::list<event_t>());
+	eventQue = std::shared_ptr<std::list<event_t> >(new std::list<event_t>());
 }
 
 source_multiplexer::source_multiplexer(int seed, int st, 
-										std::set<boost::shared_ptr<source> >& s)
+										std::set<std::shared_ptr<source> >& s)
 {
 	source_multiplexer(seed, st);
-	std::set<boost::shared_ptr<source> >::iterator it = s.begin();
-	std::set<boost::shared_ptr<source> >::iterator end = s.end();
+	std::set<std::shared_ptr<source> >::iterator it = s.begin();
+	std::set<std::shared_ptr<source> >::iterator end = s.end();
 	for(; it != end; ++it) add_source(*it);
 }
 
-void source_multiplexer::add_source(boost::shared_ptr<source> s) {
+void source_multiplexer::add_source(std::shared_ptr<source> s) {
 	inputs.push_back(s);
 }
 
-void source_multiplexer::remove_source(boost::shared_ptr<source> s) {
-	std::vector<shared_ptr<source> >::iterator end = inputs.end();
-	for (std::vector<shared_ptr<source> >::iterator it = inputs.begin(); it != end; ++it) {
+void source_multiplexer::remove_source(std::shared_ptr<source> s) {
+	std::vector<std::shared_ptr<source> >::iterator end = inputs.end();
+	for (std::vector<std::shared_ptr<source> >::iterator it = inputs.begin(); it != end; ++it) {
 		if((*it) == s) inputs.erase(it);
 	}
 }
 
 void source_multiplexer::init_source() {
-	std::vector<shared_ptr<source> >::iterator it = inputs.begin();
-	std::vector<shared_ptr<source> >::iterator end = inputs.end();
+	std::vector<std::shared_ptr<source> >::iterator it = inputs.begin();
+	std::vector<std::shared_ptr<source> >::iterator end = inputs.end();
 	for (; it != end; ++it) {
-		boost::shared_ptr<source> s = (*it);
+		std::shared_ptr<source> s = (*it);
 		if(s) {
 			s->init_source();
 			s->read_source_events(eventList, eventQue);

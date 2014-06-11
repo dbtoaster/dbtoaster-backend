@@ -57,10 +57,10 @@ namespace dbtoaster {
     public:
       typedef window window_type;
 
-      statistics_map(shared_ptr<nmap> kn, typename window_type::size_type s)
+      statistics_map(std::shared_ptr<nmap> kn, typename window_type::size_type s)
         : num_samples(s)
       {
-        samples = shared_ptr<smap>(new smap());
+        samples = std::shared_ptr<smap>(new smap());
         key_names = kn;
       }
 
@@ -92,22 +92,22 @@ namespace dbtoaster {
 
     private:
       typename window_type::size_type num_samples;
-      shared_ptr<smap> samples;
-      shared_ptr<nmap> key_names;
+      std::shared_ptr<smap> samples;
+      std::shared_ptr<nmap> key_names;
     };
 
     // File sequences.
     struct file_sequence {
       uint64_t i;
       string prefix, suffix;
-      shared_ptr<ofstream> current;
+      std::shared_ptr<ofstream> current;
       file_sequence(string p, string s = ".txt") : prefix(p), suffix(s), i(0) {}
 
-      shared_ptr<ostream> next() {
+      std::shared_ptr<ostream> next() {
         if ( current ) current->close();
         ++i;
         string fn = prefix+boost::lexical_cast<string>(i)+suffix;
-        current = shared_ptr<ofstream>(new ofstream(fn.c_str()));
+        current = std::shared_ptr<ofstream>(new ofstream(fn.c_str()));
         return dynamic_pointer_cast<ostream,ofstream>(current);
       }
     };
@@ -121,14 +121,14 @@ namespace dbtoaster {
         : file_sequence(p,s), n_firings(0), period(pd)
       {}
 
-      shared_ptr<ostream> next() {
+      std::shared_ptr<ostream> next() {
         n_firings++;
-        shared_ptr<ostream> r;
+        std::shared_ptr<ostream> r;
         if ( period > 0 && n_firings % period == 0 ) r = file_sequence::next();
         return r;
       }
 
-      shared_ptr<ostream> next_now() { return file_sequence::next(); }
+      std::shared_ptr<ostream> next_now() { return file_sequence::next(); }
     };
 
     // Interval statistics
@@ -144,12 +144,12 @@ namespace dbtoaster {
       typedef typename boost::function<measure (metadata)> measure_f;
 
       index_id stats_id;
-      shared_ptr<names_map> probe_ids;
-      shared_ptr<meta_map> meta;
-      shared_ptr<stats_map> stats;
+      std::shared_ptr<names_map> probe_ids;
+      std::shared_ptr<meta_map> meta;
+      std::shared_ptr<stats_map> stats;
       measure_f probe_f;
 
-      shared_ptr<periodic_file_sequence> out;
+      std::shared_ptr<periodic_file_sequence> out;
 
     public:
       interval_statistics(
@@ -157,12 +157,12 @@ namespace dbtoaster {
         uint64_t period, string fn_prefix)
         : stats_id(id)
       {
-        probe_ids = shared_ptr<names_map>(new names_map());
-        meta = shared_ptr<meta_map>(new meta_map());
-        stats = shared_ptr<stats_map>(new stats_map(probe_ids, sz));
+        probe_ids = std::shared_ptr<names_map>(new names_map());
+        meta = std::shared_ptr<meta_map>(new meta_map());
+        stats = std::shared_ptr<stats_map>(new stats_map(probe_ids, sz));
         probe_f = f;
 
-        out = shared_ptr<periodic_file_sequence>(
+        out = std::shared_ptr<periodic_file_sequence>(
                 new periodic_file_sequence(period, fn_prefix));
       }
 
@@ -181,7 +181,7 @@ namespace dbtoaster {
       // Periodic saving.
       void save() {
         if ( stats && out ) {
-          shared_ptr<ostream> s = out->next();
+          std::shared_ptr<ostream> s = out->next();
           if ( s ) stats->save(*s);
         }
       }
@@ -189,7 +189,7 @@ namespace dbtoaster {
       // Immediate saving.
       void save_now() {
         if ( stats && out ) {
-          shared_ptr<ostream> s = out->next_now();
+          std::shared_ptr<ostream> s = out->next_now();
           if ( s ) stats->save(*s);
         }
       }
@@ -220,7 +220,7 @@ namespace dbtoaster {
     class multi_trigger_stats
     {
       typedef interval_statistics<index_id, probe_id, metadata, measure> stats;
-      typedef map<index_id, shared_ptr<stats> > tsmap;
+      typedef map<index_id, std::shared_ptr<stats> > tsmap;
       typedef map<index_id, pair<uint64_t, uint32_t> > idpmap;
 
     protected:
@@ -235,7 +235,7 @@ namespace dbtoaster {
         typename idpmap::iterator it = id_periods.begin();
         typename idpmap::iterator end = id_periods.end();
         for (; it != end; ++it) {
-          trigger_stats[it->first] = shared_ptr<stats>(
+          trigger_stats[it->first] = std::shared_ptr<stats>(
             new stats(it->first, it->second.second, f, 
                       it->second.first, fn_prefix));
         };

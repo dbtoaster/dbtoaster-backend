@@ -38,7 +38,7 @@ struct stream_adaptor
 {
     stream_adaptor() {}
 
-    virtual void read_adaptor_events(char* data, boost::shared_ptr<std::list<event_t> > eventList, boost::shared_ptr<std::list<event_t> > eventQue) = 0;
+    virtual void read_adaptor_events(char* data, std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) = 0;
 };
 
 // Framing
@@ -61,13 +61,13 @@ struct frame_descriptor {
 struct source
 {
     frame_descriptor frame_info;
-    boost::shared_ptr<stream_adaptor> adaptor;
+    std::shared_ptr<stream_adaptor> adaptor;
 
-    source(frame_descriptor& f, boost::shared_ptr<stream_adaptor> a);
+    source(frame_descriptor& f, std::shared_ptr<stream_adaptor> a);
     
     // Process adaptors in the first stage, accumulating and returning
     // stream events
-    virtual void read_source_events(boost::shared_ptr<std::list<event_t> > eventList, boost::shared_ptr<std::list<event_t> > eventQue) = 0;
+    virtual void read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) = 0;
 
     virtual void init_source() = 0;
 };
@@ -75,28 +75,28 @@ struct source
 struct dbt_file_source : public source
 {
     typedef std::ifstream file_stream;
-    boost::shared_ptr<file_stream> source_stream;
+    std::shared_ptr<file_stream> source_stream;
 
-    dbt_file_source(const std::string& path, frame_descriptor& f, boost::shared_ptr<stream_adaptor> a);
+    dbt_file_source(const std::string& path, frame_descriptor& f, std::shared_ptr<stream_adaptor> a);
 
-    void read_source_events(boost::shared_ptr<std::list<event_t> > eventList, boost::shared_ptr<std::list<event_t> > eventQue);
+    void read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue);
 
     void init_source() {}
 };
 
 struct source_multiplexer
 {
-    std::vector<boost::shared_ptr<source> > inputs;
-    boost::shared_ptr<source> current;
+    std::vector<std::shared_ptr<source> > inputs;
+    std::shared_ptr<source> current;
     int step, remaining, block;
-    boost::shared_ptr<std::list<event_t> > eventList;
-    boost::shared_ptr<std::list<event_t> > eventQue;
+    std::shared_ptr<std::list<event_t> > eventList;
+    std::shared_ptr<std::list<event_t> > eventQue;
 
     source_multiplexer(int seed, int st);
-    source_multiplexer(int seed, int st, std::set<boost::shared_ptr<source> >& s);
+    source_multiplexer(int seed, int st, std::set<std::shared_ptr<source> >& s);
 
-    void add_source(boost::shared_ptr<source> s);
-    void remove_source(boost::shared_ptr<source> s);
+    void add_source(std::shared_ptr<source> s);
+    void remove_source(std::shared_ptr<source> s);
 
     void init_source();
 };

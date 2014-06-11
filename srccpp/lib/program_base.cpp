@@ -54,7 +54,7 @@ ProgramBase::trigger_t::trigger_t(
 			string r_name, 
 			event_type ev_type, 
 			ProgramBase::trigger_fn_t t_fn,
-			boost::shared_ptr<ProgramBase::logger_t> t_logger) :
+			std::shared_ptr<ProgramBase::logger_t> t_logger) :
 	name(string(event_name[ev_type]) + "_" + r_name)
 	,fn(t_fn)
 	,logger(t_logger)
@@ -78,24 +78,24 @@ ProgramBase::relation_t::relation_t(
 			relation_id_t r_id,
 			ProgramBase::trigger_fn_t ins_trigger_fn, 
 			ProgramBase::trigger_fn_t del_trigger_fn,
-			boost::shared_ptr<ProgramBase::logger_t> ins_logger,
-			boost::shared_ptr<ProgramBase::logger_t> del_logger) :
+			std::shared_ptr<ProgramBase::logger_t> ins_logger,
+			std::shared_ptr<ProgramBase::logger_t> del_logger) :
 	name(r_name)
 	, is_table(r_is_table)
 	, id(r_id) 
 {
 	trigger[insert_tuple] =
 			ins_trigger_fn ?
-				boost::shared_ptr<ProgramBase::trigger_t>(
+				std::shared_ptr<ProgramBase::trigger_t>(
 					new ProgramBase::trigger_t(r_name, insert_tuple,
 									ins_trigger_fn, ins_logger)) :
-				boost::shared_ptr<ProgramBase::trigger_t>();
+				std::shared_ptr<ProgramBase::trigger_t>();
 	trigger[delete_tuple] =
 			del_trigger_fn ?
-				boost::shared_ptr<ProgramBase::trigger_t>(
+				std::shared_ptr<ProgramBase::trigger_t>(
 					new ProgramBase::trigger_t(r_name, delete_tuple,
 									del_trigger_fn, del_logger)) :
-					boost::shared_ptr<ProgramBase::trigger_t>();
+					std::shared_ptr<ProgramBase::trigger_t>();
 }
 
 /******************************************************************************
@@ -103,13 +103,13 @@ ProgramBase::relation_t::relation_t(
 ******************************************************************************/
 
 relation_id_t ProgramBase::get_relation_id(string r_name) {
-	map<string, boost::shared_ptr<relation_t> >::iterator it =
+	map<string, std::shared_ptr<relation_t> >::iterator it =
 			relations_by_name.find(r_name);
 	return (it != relations_by_name.end()) ? it->second->id : -1;
 }
 
 string ProgramBase::get_relation_name(relation_id_t s_id) {
-	map<relation_id_t, boost::shared_ptr<relation_t> >::iterator it =
+	map<relation_id_t, std::shared_ptr<relation_t> >::iterator it =
 			relations_by_id.find(s_id);
 	return (it != relations_by_id.end()) ? it->second->name : "";
 }
@@ -131,7 +131,7 @@ void ProgramBase::add_relation(
 	}
 
 	ProgramBase::relation_ptr_t r = 
-			boost::shared_ptr<ProgramBase::relation_t>(
+			std::shared_ptr<ProgramBase::relation_t>(
 				new ProgramBase::relation_t(r_name, is_table, id));
 	relations_by_name[r_name] = r;
 	relations_by_id[id] = r;
@@ -149,14 +149,14 @@ void ProgramBase::add_trigger(
 	}
 	ProgramBase::relation_ptr_t r = it->second;
 
-	static boost::shared_ptr<ProgramBase::logger_t> g_log = 
-			boost::shared_ptr<ProgramBase::logger_t>();
-	boost::shared_ptr<ProgramBase::logger_t> log = 
-			boost::shared_ptr<ProgramBase::logger_t>();
+	static std::shared_ptr<ProgramBase::logger_t> g_log = 
+			std::shared_ptr<ProgramBase::logger_t>();
+	std::shared_ptr<ProgramBase::logger_t> log = 
+			std::shared_ptr<ProgramBase::logger_t>();
 	if (run_opts->global()) {
 		if (!g_log) {
 			path global_file = run_opts->get_log_file("", "Events", true);
-			g_log = boost::shared_ptr<ProgramBase::logger_t>(
+			g_log = std::shared_ptr<ProgramBase::logger_t>(
 					new ProgramBase::logger_t(global_file, true, true));
 		}
 		log = g_log;
@@ -165,18 +165,18 @@ void ProgramBase::add_trigger(
 		if (run_opts->unified()) {
 			event_type other_type =
 					ev_type == insert_tuple ? delete_tuple : insert_tuple;
-			boost::shared_ptr<ProgramBase::logger_t> other_log = 
+			std::shared_ptr<ProgramBase::logger_t> other_log = 
 					r->trigger[other_type]->logger;
 
 			if (other_log)
 				log = other_log;
 			else
-				log = boost::shared_ptr<ProgramBase::logger_t>(
+				log = std::shared_ptr<ProgramBase::logger_t>(
 						new ProgramBase::logger_t(
 								run_opts->get_log_file(r->name),	
 								false, true));
 		} else {
-			log = boost::shared_ptr<ProgramBase::logger_t>(
+			log = std::shared_ptr<ProgramBase::logger_t>(
 						new ProgramBase::logger_t(
 								run_opts->get_log_file(r->name, ev_type),
 								false, false));
@@ -184,12 +184,12 @@ void ProgramBase::add_trigger(
 	}
 
 	r->trigger[ev_type] = 
-		boost::shared_ptr<ProgramBase::trigger_t>(
+		std::shared_ptr<ProgramBase::trigger_t>(
 			new ProgramBase::trigger_t(r->name, ev_type, fn, log));
 }
 
 void ProgramBase::add_source(
-				boost::shared_ptr<streams::source> source, 
+				std::shared_ptr<streams::source> source, 
 				bool is_table_source) {
 	if( is_table_source )   table_multiplexer.add_source(source);
 	else                    stream_multiplexer.add_source(source);
@@ -271,13 +271,13 @@ void ProgramBase::set_log_count_every(
 
 void ProgramBase::process_event(const event_t& evt, bool process_table) {
 	map<relation_id_t, 
-				 boost::shared_ptr<ProgramBase::relation_t> >::iterator r_it =
+				 std::shared_ptr<ProgramBase::relation_t> >::iterator r_it =
 			relations_by_id.find(evt.id);
 	if( r_it != relations_by_id.end() &&
 		r_it->second->is_table == process_table &&
 		r_it->second->trigger[evt.type] )
 	{
-		boost::shared_ptr<ProgramBase::trigger_t> trig = 
+		std::shared_ptr<ProgramBase::trigger_t> trig = 
 			r_it->second->trigger[evt.type];
 
 		try {

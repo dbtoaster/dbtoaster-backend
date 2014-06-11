@@ -61,11 +61,11 @@ statistics_window<value,window>::size() {
 	statistics_map
 ******************************************************************************/
 template<typename key, typename value, typename window>
-statistics_map<key,value,window>::statistics_map(shared_ptr<nmap> kn, 
+statistics_map<key,value,window>::statistics_map(std::shared_ptr<nmap> kn, 
 											typename window_type::size_type s)
         : num_samples(s)
 {
-	samples = shared_ptr<smap>(new smap());
+	samples = std::shared_ptr<smap>(new smap());
 	key_names = kn;
 }
 
@@ -101,20 +101,20 @@ void statistics_map<key,value,window>::save(ostream& out) {
 /******************************************************************************
 	file_sequence
 ******************************************************************************/
-shared_ptr<ostream> file_sequence::next() {
+std::shared_ptr<ostream> file_sequence::next() {
 	if ( current ) current->close();
 	++i;
 	string fn = prefix+boost::lexical_cast<string>(i)+suffix;
-	current = shared_ptr<ofstream>(new ofstream(fn.c_str()));
+	current = std::shared_ptr<ofstream>(new ofstream(fn.c_str()));
 	return dynamic_pointer_cast<ostream,ofstream>(current);
 }
 
 /******************************************************************************
 	periodic_file_sequence
 ******************************************************************************/
-shared_ptr<ostream> periodic_file_sequence::next() {
+std::shared_ptr<ostream> periodic_file_sequence::next() {
 	n_firings++;
-	shared_ptr<ostream> r;
+	std::shared_ptr<ostream> r;
 	if ( period > 0 && n_firings % period == 0 ) r = file_sequence::next();
 	return r;
 }
@@ -128,12 +128,12 @@ interval_statistics<index_id,probe_id,metadata,measure>::interval_statistics(
 	index_id id, typename stats_map::window_type::size_type sz, measure_f f,
 	uint64_t period, string fn_prefix)	: stats_id(id)
 {
-	probe_ids = shared_ptr<names_map>(new names_map());
-	meta = shared_ptr<meta_map>(new meta_map());
-	stats = shared_ptr<stats_map>(new stats_map(probe_ids, sz));
+	probe_ids = std::shared_ptr<names_map>(new names_map());
+	meta = std::shared_ptr<meta_map>(new meta_map());
+	stats = std::shared_ptr<stats_map>(new stats_map(probe_ids, sz));
 	probe_f = f;
 
-	out = shared_ptr<periodic_file_sequence>(
+	out = std::shared_ptr<periodic_file_sequence>(
 			new periodic_file_sequence(period, fn_prefix));
 }
 
@@ -166,7 +166,7 @@ template<typename index_id, typename probe_id,
 		 typename metadata, typename measure>
 void interval_statistics<index_id,probe_id,metadata,measure>::save() {
 	if ( stats && out ) {
-	  shared_ptr<ostream> s = out->next();
+	  std::shared_ptr<ostream> s = out->next();
 	  if ( s ) stats->save(*s);
 	}
 }
@@ -176,7 +176,7 @@ template<typename index_id, typename probe_id,
 		 typename metadata, typename measure>
 void interval_statistics<index_id,probe_id,metadata,measure>::save_now() {
 	if ( stats && out ) {
-	  shared_ptr<ostream> s = out->next_now();
+	  std::shared_ptr<ostream> s = out->next_now();
 	  if ( s ) stats->save(*s);
 	}
 }
@@ -194,7 +194,7 @@ multi_trigger_stats<index_id,probe_id,metadata,measure>::multi_trigger_stats(
 	typename idpmap::iterator it = id_periods.begin();
 	typename idpmap::iterator end = id_periods.end();
 	for (; it != end; ++it) {
-	  trigger_stats[it->first] = shared_ptr<stats>(
+	  trigger_stats[it->first] = std::shared_ptr<stats>(
 		new stats(it->first, it->second.second, f, 
 				  it->second.first, fn_prefix));
 	}

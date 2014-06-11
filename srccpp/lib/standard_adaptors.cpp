@@ -182,7 +182,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 	return boost::tuples::make_tuple(valid, insert, event_order, tuple);
 }
 
-void csv_adaptor::read_adaptor_events(char* data, shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue) {
+void csv_adaptor::read_adaptor_events(char* data, std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) {
 	if ( (*schema) != '\0' ) {
 	  // Interpret the schema.
 	  tuple<bool, bool, unsigned int, event_args_t> evt = interpret_event(schema, data);
@@ -249,8 +249,8 @@ order_book_adaptor::order_book_adaptor(
 		relation_id_t bids_rel_sid, relation_id_t asks_rel_sid, int nb, order_book_type t)
           : bids_rel_id(bids_rel_sid), asks_rel_id(asks_rel_sid), num_brokers(nb), type(t)
 {
-	bids = boost::shared_ptr<order_book>(new order_book());
-	asks = boost::shared_ptr<order_book>(new order_book());
+	bids = std::shared_ptr<order_book>(new order_book());
+	asks = std::shared_ptr<order_book>(new order_book());
 	deterministic = false;
 	insert_only = false;
 }
@@ -260,8 +260,8 @@ order_book_adaptor::order_book_adaptor(relation_id_t bids_rel_sid, relation_id_t
 {
 	bids_rel_id = bids_rel_sid;
 	asks_rel_id = asks_rel_sid;
-	bids = boost::shared_ptr<order_book>(new order_book());
-	asks = boost::shared_ptr<order_book>(new order_book());
+	bids = std::shared_ptr<order_book>(new order_book());
+	asks = std::shared_ptr<order_book>(new order_book());
 	deterministic = false;
         insert_only = false;
 	num_brokers = 10;
@@ -338,7 +338,7 @@ bool order_book_adaptor::parse_message(char* data, order_book_message& r) {
 }
 
 void order_book_adaptor::process_message(const order_book_message& msg,
-					 shared_ptr<std::list<event_t> > dest)
+					 std::shared_ptr<std::list<event_t> > dest)
 {
 	bool valid = true;
 	order_book_tuple r(msg);
@@ -438,7 +438,7 @@ void order_book_adaptor::process_message(const order_book_message& msg,
 	}
 }
 
-void order_book_adaptor::read_adaptor_events(char* data, shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue) {
+void order_book_adaptor::read_adaptor_events(char* data, std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) {
 	// Grab a message from the data.
 	order_book_message r;
 	bool valid = parse_message(data, r);

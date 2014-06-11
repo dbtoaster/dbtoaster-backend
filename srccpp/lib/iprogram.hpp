@@ -26,7 +26,7 @@ struct tlq_t;
 
 class IProgram {
 public:
-    typedef boost::shared_ptr<tlq_t> snapshot_t;
+    typedef std::shared_ptr<tlq_t> snapshot_t;
 
     IProgram() :
         running(false)

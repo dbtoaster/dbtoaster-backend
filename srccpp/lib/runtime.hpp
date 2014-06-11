@@ -23,7 +23,7 @@ namespace dbtoaster {
     using namespace boost::program_options;
     
     struct runtime_options {
-      boost::shared_ptr<options_description> opt_desc;
+      std::shared_ptr<options_description> opt_desc;
       variables_map opt_map;
       positional_options_description pos_options;
 

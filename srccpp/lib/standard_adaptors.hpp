@@ -5,7 +5,6 @@
 #include <list>
 #include <map>
 
-#include <boost/shared_ptr.hpp>
 #include "boost/tuple/tuple.hpp"
 
 #include "streams.hpp"
@@ -25,7 +24,7 @@ namespace dbtoaster {
       char* schema;
       std::string delimiter;
       
-      boost::shared_ptr<event_t> saved_event;
+      std::shared_ptr<event_t> saved_event;
 
       csv_adaptor(relation_id_t _id);
       csv_adaptor(relation_id_t _id, std::string sch);
@@ -33,7 +32,7 @@ namespace dbtoaster {
                   const std::pair<std::string,std::string> params[]);
 
 
-      void read_adaptor_events(char* data, shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue);
+      void read_adaptor_events(char* data, std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue);
       void parse_params(int num_params, const std::pair<std::string, std::string> params[]);
       virtual std::string parse_schema(std::string s);
       void validate_schema();
@@ -87,8 +86,8 @@ namespace dbtoaster {
         relation_id_t asks_rel_id;
         int num_brokers;
         order_book_type type;
-        boost::shared_ptr<order_book> bids;
-        boost::shared_ptr<order_book> asks;
+        std::shared_ptr<order_book> bids;
+        std::shared_ptr<order_book> asks;
         bool deterministic;
         bool insert_only;
 
@@ -97,13 +96,13 @@ namespace dbtoaster {
         order_book_adaptor(relation_id_t bids_rel_sid, relation_id_t asks_rel_sid, int num_params,
                            std::pair<std::string, std::string> params[]);
 
-        void read_adaptor_events(char* data, shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue);						   
+        void read_adaptor_events(char* data, std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue);						   
         bool parse_error(const char* data, int field);
 
         // Expected message format: t, id, action, volume, price
         bool parse_message(char* data, order_book_message& r);
         void process_message(const order_book_message& msg,
-                             boost::shared_ptr<std::list<event_t> > dest);
+                             std::shared_ptr<std::list<event_t> > dest);
       };
     }
   }
