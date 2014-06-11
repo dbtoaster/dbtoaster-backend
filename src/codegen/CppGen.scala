@@ -122,7 +122,7 @@ trait ICppGen extends IScalaGen {
           co(v0)
 
           if (ko.size>0) { //slice
-            val idxIndex = slice(n,is)
+            val idxIndex = slice(n,is)+1 //+1 because the index 0 is the unique index
             val sampleEnt=fresh("se")
             sampleEntDef+=(if (m.keys.size > 1) "  "+mapEntry+" "+sampleEnt+";\n" else "")
 
