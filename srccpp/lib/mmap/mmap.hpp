@@ -64,13 +64,14 @@ public:
 
 template<typename T, typename IDX_FN = GenericIndexFn<T>, int list_size=8>
 class HashIndex : public Index<T> {
-private:
+public:
   typedef struct __Node {
     long hash[list_size];
     T* obj[list_size];
     struct __Node* next;
   } Node;  //  the linked list is maintained 'compactly': if a Node has a next, it is full.
   Node* buckets_;
+private:
   Pool<Node> nodes_;
   size_t size_, count_, threshold_;
   double load_factor_;
@@ -186,8 +187,9 @@ template<typename T, typename...INDEXES>
 class MultiHashMap {
 private:
   Pool<T> pool;
-  Index<T>** index;
 public:
+  Index<T>** index;
+
   MultiHashMap() { // by defintion index 0 is always unique
     index = new Index<T>*[sizeof...(INDEXES)]{ new INDEXES()... };
   }
