@@ -242,6 +242,8 @@ public:
   template<class Archive>
   void serialize(Archive& ar, const unsigned int version)
   {
-    //TODO
+    int cnt = count();
+    ar << boost::serialization::make_nvp("count", cnt);
+    foreach([&ar] (const T& e) { ar << boost::serialization::make_nvp("item", e); });
   }
 };
