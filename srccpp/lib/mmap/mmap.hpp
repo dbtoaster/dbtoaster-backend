@@ -24,6 +24,14 @@ public:
   ~Pool() { while (data_ != nullptr) { El* el = data_[size_].next; delete[] data_; data_ = el; } }
   T* add() { if (!free_) add_chunk(); El* el = free_; free_ = free_->next; return &(el->obj); }
   void del(T* obj) { ((El*)obj)->next = free_; free_ = (El*)obj; }
+  inline void clear(){
+    El* chunk = data_;
+    while (chunk != nullptr) {
+      for (size_t i=0; i<size_-1; ++i) chunk[i].next = &chunk[i+1];
+      // chunk[size_-1].next = nullptr; // did not change
+      chunk = chunk[size_].next;
+    }
+  }
 };
 
 template<typename T>
@@ -56,6 +64,8 @@ public:
   virtual void slice(const T& key, std::function<void (const T&)> f) = 0;
 
   virtual size_t count() = 0;
+
+  virtual void clear() = 0;
 
   virtual ~Index(){};
 };
@@ -166,6 +176,18 @@ public:
       if (h == n->hash[i] && IDX_FN::equals(key, *n->obj[i])) f(*n->obj[i]);
     } while ((n=n->next));
   }
+  inline virtual void clear(){
+    count_ = 0;
+    for (size_t b=0; b<size_; ++b) {
+      IdxNode* n = &buckets_[b];
+      n->next = nullptr;
+      for (int i=0; i<list_size; ++i) {
+        n->obj[i] = nullptr;
+        n->hash[i] = 0L;
+      }
+    }
+    nodes_.clear();
+  }
 
   inline virtual size_t count() { return count_; }
   template<typename TP, typename...INDEXES> friend class MultiHashMap;
@@ -236,7 +258,8 @@ public:
   inline size_t count() { return index[0]->count(); }
 
   inline void clear(){
-    //TODO
+    for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->clear();
+    pool.clear();
   }
 
   template<class Archive>
