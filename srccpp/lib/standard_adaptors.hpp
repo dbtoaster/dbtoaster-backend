@@ -13,7 +13,7 @@
 namespace dbtoaster {
   namespace adaptors {
 
-    using namespace std;
+    // using namespace std;
     using namespace boost;
     using namespace dbtoaster;
     using namespace dbtoaster::streams;
@@ -23,19 +23,19 @@ namespace dbtoaster {
       relation_id_t id;
       event_type type;
       char* schema;
-      string delimiter;
+      std::string delimiter;
       
       boost::shared_ptr<event_t> saved_event;
 
       csv_adaptor(relation_id_t _id);
-      csv_adaptor(relation_id_t _id, string sch);
+      csv_adaptor(relation_id_t _id, std::string sch);
       csv_adaptor(relation_id_t i, int num_params,
-                  const pair<string,string> params[]);
+                  const std::pair<std::string,std::string> params[]);
 
 
-      void read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue);
-      void parse_params(int num_params, const pair<string, string> params[]);
-      virtual string parse_schema(string s);
+      void read_adaptor_events(char* data, shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue);
+      void parse_params(int num_params, const std::pair<std::string, std::string> params[]);
+      virtual std::string parse_schema(std::string s);
       void validate_schema();
 
       // Interpret the schema.
@@ -60,7 +60,7 @@ namespace dbtoaster {
       struct order_book_message {
           double t;
           long id;
-          string action;
+          std::string action;
           double volume;
           double price;
       };
@@ -80,7 +80,7 @@ namespace dbtoaster {
           void operator()(event_args_t& e);
       };
 
-      typedef map<int, order_book_tuple> order_book;
+      typedef std::map<int, order_book_tuple> order_book;
 
       struct order_book_adaptor : public stream_adaptor {
         relation_id_t bids_rel_id;
@@ -95,15 +95,15 @@ namespace dbtoaster {
 
         order_book_adaptor(relation_id_t bids_rel_sid, relation_id_t asks_rel_sid, int nb, order_book_type t);
         order_book_adaptor(relation_id_t bids_rel_sid, relation_id_t asks_rel_sid, int num_params,
-                           pair<string, string> params[]);
+                           std::pair<std::string, std::string> params[]);
 
-        void read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue);						   
+        void read_adaptor_events(char* data, shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue);						   
         bool parse_error(const char* data, int field);
 
         // Expected message format: t, id, action, volume, price
         bool parse_message(char* data, order_book_message& r);
         void process_message(const order_book_message& msg,
-                             boost::shared_ptr<list<event_t> > dest);
+                             boost::shared_ptr<std::list<event_t> > dest);
       };
     }
   }

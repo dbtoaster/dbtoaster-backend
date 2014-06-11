@@ -17,7 +17,7 @@
 namespace dbtoaster {
   namespace runtime {
 
-    using namespace std;
+    // using namespace std;
     using namespace boost;
     using namespace boost::filesystem;
     using namespace boost::program_options;
@@ -27,15 +27,15 @@ namespace dbtoaster {
       variables_map opt_map;
       positional_options_description pos_options;
 
-      std::vector<string> output_maps;
-      std::vector<string> logged_streams_v;
-      std::set<string> logged_streams;
+      std::vector<std::string> output_maps;
+      std::vector<std::string> logged_streams_v;
+      std::set<std::string> logged_streams;
 
       // Tracing
-      string trace_opts;
+      std::string trace_opts;
       bool traced;
       int trace_counter, trace_step;
-      unordered_set<string> traced_maps;
+      unordered_set<std::string> traced_maps;
       unsigned int log_tuple_count_every;
 
       // Verbose
@@ -60,17 +60,17 @@ namespace dbtoaster {
       bool help();
 
       // Result output.
-      string get_output_file();
-      bool is_output_map(string map_name);
-      void add_output_map(string map_name);
+      std::string get_output_file();
+      bool is_output_map(std::string map_name);
+      void add_output_map(std::string map_name);
 
       // Trigger logging.
       bool global();
       bool unified();
 
-      path get_log_file(string stream_name, event_type t);
-      path get_log_file(string stream_name);
-      path get_log_file(string stream_name, string ftype, bool prefix);
+      path get_log_file(std::string stream_name, event_type t);
+      path get_log_file(std::string stream_name);
+      path get_log_file(std::string stream_name, std::string ftype, bool prefix);
 
       // Statistics
       // Number of samples to collect per statitics period.
@@ -78,23 +78,23 @@ namespace dbtoaster {
 
       // Period size, in terms of the number of trigger invocations.
       unsigned int get_stats_period();
-      string get_stats_file();
+      std::string get_stats_file();
 
       // Tracing.
-      void parse_tracing(const string& opts);
-      bool is_traced_map(string map_name);
+      void parse_tracing(const std::string& opts);
+      bool is_traced_map(std::string map_name);
       bool is_traced();
       path get_trace_file();
     };
 
     struct orderbook_options : public runtime_options {
-      std::vector<string> orderbook_params;
+      std::vector<std::string> orderbook_params;
       orderbook_options() {}
       orderbook_options(int argc, char* argv[]) { init(argc, argv); }
 
       void init(int argc, char* argv[]);
-      string order_book_file();
-      string order_book_params();
+      std::string order_book_file();
+      std::string order_book_params();
     };
   }
 }

@@ -28,12 +28,12 @@ void runtime_options::init_options(options_description& desc) {
 	  ("help", "list available options")
 	  ("v", "verbose")
 	  ("async", "asynchronous execution mode")
-	  ("log-dir", value<string>(), "logging directory")
+	  ("log-dir", value<std::string>(), "logging directory")
 	  ("log-triggers,l",
-		value<vector<string> >(&logged_streams_v), "log stream triggers")
-	  ("unified,u", value<string>(), "unified logging [stream | global]")
-	  ("output-file,o", value<string>(), "output file")
-	  ("maps,m", value<vector<string> >(&output_maps), "output maps")
+		value<std::vector<std::string> >(&logged_streams_v), "log stream triggers")
+	  ("unified,u", value<std::string>(), "unified logging [stream | global]")
+	  ("output-file,o", value<std::string>(), "output file")
+	  ("maps,m", value<std::vector<std::string> >(&output_maps), "output maps")
 
 	  // Statistics profiling parameters
 	  ("samplesize", value<unsigned int>(),
@@ -42,12 +42,12 @@ void runtime_options::init_options(options_description& desc) {
 	  ("sampleperiod", value<unsigned int>(),
 		   "period length, as number of trigger events")
 
-	  ("statsfile", value<string>(),
+	  ("statsfile", value<std::string>(),
 		   "output file for trigger profile statistics")
 
 	  // Tracing parameters
-	  ("trace-dir", value<string>(), "trace output dir")
-	  ("trace,t", value<string>(&trace_opts), "trace query execution")
+	  ("trace-dir", value<std::string>(), "trace output dir")
+	  ("trace,t", value<std::string>(&trace_opts), "trace query execution")
 	  ("trace-step,s", value(&trace_step), "trace step size")
 	  ("log-count", value<unsigned int>(&log_tuple_count_every), 
 	   "log tuple count every [arg] updates");
@@ -68,13 +68,13 @@ void runtime_options::process_options(
 		  options(o).positional(p).run(), m);
 		notify(m);
 	} catch (unknown_option& o) {
-	  cerr << "unknown option: \"" 
-		   << o.what() << "\"" << endl;
-	  cerr << *opt_desc << endl;
+	  std::cerr << "unknown option: \"" 
+		   << o.what() << "\"" << std::endl;
+	  std::cerr << *opt_desc << std::endl;
 	  exit(1);
 	} catch (error& e) {
-	  cerr << "error parsing command line options" << endl;
-	  cerr << *opt_desc << endl;
+	  std::cerr << "error parsing command line options" << std::endl;
+	  std::cerr << *opt_desc << std::endl;
 	  exit(1);
 	}
 }
@@ -87,18 +87,18 @@ void runtime_options::setup_tracing(options_description& o) {
 	  if ( trace_opts != "" )
 	  {
 		  if( runtime_options::verbose() )
-			  cerr << "tracing: " << trace_opts << endl;
+			  std::cerr << "tracing: " << trace_opts << std::endl;
 		  parse_tracing(trace_opts);
 	  }
 	  else traced = false;
 	} catch (unknown_option& uo) {
-		cerr << "unknown option: \"" 
-			 << uo.what() << "\"" << endl;
-		cerr << o << endl;
+		std::cerr << "unknown option: \"" 
+			 << uo.what() << "\"" << std::endl;
+		std::cerr << o << std::endl;
 		exit(1);
 	} catch (error& e) {
-		cerr << "error parsing command line options" << endl;
-		cerr << o << endl;
+		std::cerr << "error parsing command line options" << std::endl;
+		std::cerr << o << std::endl;
 		exit(1);
 	}
 }
@@ -115,56 +115,56 @@ void runtime_options::init(int argc, char* argv[]) {
 	_verbose = opt_map.count("v");
 	async = opt_map.count("async");
 	setup_tracing(*opt_desc);
-	logged_streams = set<string>(logged_streams_v.begin(),
+	logged_streams = std::set<std::string>(logged_streams_v.begin(),
 								 logged_streams_v.end());
 	logged_streams_v.clear();
 }
 
 bool runtime_options::help() {
-	if ( opt_map.count("help") ) cerr << *opt_desc << endl;
+	if ( opt_map.count("help") ) std::cerr << *opt_desc << std::endl;
 	return opt_map.count("help");
 }
 
 // Result output.
-string runtime_options::get_output_file() {
+std::string runtime_options::get_output_file() {
 	if(opt_map.count("output-file")) {
-	  return opt_map["output-file"].as<string>();
+	  return opt_map["output-file"].as<std::string>();
 	} else {
-	  return string("-");
+	  return std::string("-");
 	}
 }
 
-bool runtime_options::is_output_map(string map_name) {
+bool runtime_options::is_output_map(std::string map_name) {
 	return find(output_maps.begin(), output_maps.end(), map_name)
 			!= output_maps.end();
 }
 
-void runtime_options::add_output_map(string map_name){
+void runtime_options::add_output_map(std::string map_name){
 	output_maps.push_back(map_name);
 }
 
 // Trigger logging.
 bool runtime_options::global() {
 	return opt_map.count("unified")
-			 && opt_map["unified"].as<string>() == "global";
+			 && opt_map["unified"].as<std::string>() == "global";
 }
 
 bool runtime_options::unified() {
 	return opt_map.count("unified")
-			 && opt_map["unified"].as<string>() == "stream";
+			 && opt_map["unified"].as<std::string>() == "stream";
 }
 
-path runtime_options::get_log_file(string stream_name, event_type t) {
+path runtime_options::get_log_file(std::string stream_name, event_type t) {
 	return get_log_file(stream_name, event_name[t], true);
 }
 
-path runtime_options::get_log_file(string stream_name) {
+path runtime_options::get_log_file(std::string stream_name) {
 	return get_log_file(stream_name, "Events", false);
 }
 
-path runtime_options::get_log_file(string stream_name, string ftype, bool prefix) {
+path runtime_options::get_log_file(std::string stream_name, std::string ftype, bool prefix) {
 	path r;
-	if ( opt_map.count("log-dir") ) r = opt_map["log-dir"].as<string>();
+	if ( opt_map.count("log-dir") ) r = opt_map["log-dir"].as<std::string>();
 	else r = current_path();
 	r /= (prefix? ftype : "") + stream_name + 
 		 (prefix? "" : ftype) + ".dbtdat";
@@ -190,30 +190,30 @@ unsigned int runtime_options::get_stats_period() {
 	return r;
 }
 
-string runtime_options::get_stats_file() {
-	string r = "stats";
+std::string runtime_options::get_stats_file() {
+	std::string r = "stats";
 	if ( opt_map.count("statsfile") ) {
-	  r = opt_map["statsfile"].as<string>();
+	  r = opt_map["statsfile"].as<std::string>();
 	}
 	return r;
 }
 
 // Tracing.
-void runtime_options::parse_tracing(const string& opts) {
-	split_iterator<string::const_iterator> it =
+void runtime_options::parse_tracing(const std::string& opts) {
+	split_iterator<std::string::const_iterator> it =
 	   make_split_iterator(opts, first_finder(",", is_equal()));
 
-	split_iterator<string::const_iterator> end;
+	split_iterator<std::string::const_iterator> end;
 
 	for (; it != end; ++it) {
-	  string param = copy_range<std::string>(*it);
-	  cerr << "tracing map " << param << endl;
+	  std::string param = copy_range<std::string>(*it);
+	  std::cerr << "tracing map " << param << std::endl;
 	  traced_maps.insert(param);
 	}
 	traced = true;
 }
 
-bool runtime_options::is_traced_map(string map_name) {
+bool runtime_options::is_traced_map(std::string map_name) {
 	return traced_maps.empty()
 			|| (traced_maps.find(map_name) != traced_maps.end());
 }
@@ -226,10 +226,10 @@ bool runtime_options::is_traced() {
 path runtime_options::get_trace_file() {
 	path p = "traces";
 	if ( opt_map.count("trace-dir") ) {
-	  p = opt_map["trace-dir"].as<string>();
+	  p = opt_map["trace-dir"].as<std::string>();
 	}
 	p /= "trace"+boost::lexical_cast<std::string>(trace_counter)+".txt";
-	cerr << "trace file " << p << endl;
+	std::cerr << "trace file " << p << std::endl;
 	return p.make_preferred();
 }
 
@@ -243,8 +243,8 @@ void orderbook_options::init(int argc, char* argv[]) {
 
 	// Additional
 	opt_desc->add_options()
-	  ("input-file,i", value<string>(), "order book input data file")
-	  ("orderbook-params", value<vector<string> >(&orderbook_params),
+	  ("input-file,i", value<std::string>(), "order book input data file")
+	  ("orderbook-params", value<std::vector<std::string> >(&orderbook_params),
 		  "order book adaptor parameters");
 
 	// No positional parameters.
@@ -253,17 +253,17 @@ void orderbook_options::init(int argc, char* argv[]) {
 	runtime_options::setup_tracing(*opt_desc);
 }
 
-string orderbook_options::order_book_file() {
-	string r;
+std::string orderbook_options::order_book_file() {
+	std::string r;
 	if ( opt_map.count("input-file") ) {
-	  r = opt_map["input-file"].as<string>();
+	  r = opt_map["input-file"].as<std::string>();
 	}
 	return r;
 }
 
-string orderbook_options::order_book_params() {
-	string r;
-	vector<string>::iterator it = orderbook_params.begin();
+std::string orderbook_options::order_book_params() {
+	std::string r;
+	std::vector<std::string>::iterator it = orderbook_params.begin();
 	for (; it != orderbook_params.end(); ++it)
 	  r += (r.empty()? "" : ",") + *it;
 	return r;

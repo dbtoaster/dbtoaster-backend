@@ -27,15 +27,15 @@ std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
         else if( a.type() == typeid(std::string) )
             return strm << any_cast<std::string>(a);
         else
-            cerr << "event_arg: Unrecognized type in <<: " 
-                 << a.type().name() << endl;
+            std::cerr << "event_arg: Unrecognized type in <<: " 
+                 << a.type().name() << std::endl;
     } catch (boost::bad_any_cast& bc) {
-        cerr << "bad cast on <<: " << bc.what() << endl;
+        std::cerr << "bad cast on <<: " << bc.what() << std::endl;
     }
     return strm;
 }
 
-std::ostream& operator<<(std::ostream &strm, const vector<boost::any> &args) {
+std::ostream& operator<<(std::ostream &strm, const std::vector<boost::any> &args) {
     if( !args.empty() )
     {
         strm << args[0];
@@ -64,14 +64,14 @@ dbt_file_source::dbt_file_source(
 	{
 		source_stream = boost::shared_ptr<file_stream>(new file_stream(path.c_str(), file_stream::in));
 		if( runtime_options::verbose() )
-			cerr << "reading from " << path
-				 << " with 1 adaptors" << endl;
+			std::cerr << "reading from " << path
+				 << " with 1 adaptors" << std::endl;
 	}
 	else
-		cerr << "File not found: " << path << endl;
+		std::cerr << "File not found: " << path << std::endl;
 }
 
-void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) {
+void dbt_file_source::read_source_events(shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue) {
 	//read the whole file
 	source_stream->seekg(0, std::ios::end);
 	size_t bufferLength = source_stream->tellg();
@@ -126,10 +126,10 @@ void dbt_file_source::read_source_events(shared_ptr<list<event_t> > eventList, s
 
 	}
 	else if ( frame_info.type == variable_size ) {
-		cerr << "variable size frames not supported" << endl;
+		std::cerr << "variable size frames not supported" << std::endl;
 	}
 	else {
-		cerr << "invalid frame type" << endl;
+		std::cerr << "invalid frame type" << std::endl;
 	}
 	delete[] buffer;
 }
@@ -140,16 +140,16 @@ source_multiplexer::source_multiplexer(int seed, int st)
 	: step(st), remaining(0), block(100)
 {
 	srandom(seed);
-	eventList = boost::shared_ptr<list<event_t> >(new list<event_t>());
-	eventQue = shared_ptr<list<event_t> >(new list<event_t>());
+	eventList = boost::shared_ptr<std::list<event_t> >(new std::list<event_t>());
+	eventQue = shared_ptr<std::list<event_t> >(new std::list<event_t>());
 }
 
 source_multiplexer::source_multiplexer(int seed, int st, 
-										set<boost::shared_ptr<source> >& s)
+										std::set<boost::shared_ptr<source> >& s)
 {
 	source_multiplexer(seed, st);
-	set<boost::shared_ptr<source> >::iterator it = s.begin();
-	set<boost::shared_ptr<source> >::iterator end = s.end();
+	std::set<boost::shared_ptr<source> >::iterator it = s.begin();
+	std::set<boost::shared_ptr<source> >::iterator end = s.end();
 	for(; it != end; ++it) add_source(*it);
 }
 

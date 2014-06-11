@@ -21,7 +21,7 @@ csv_adaptor::csv_adaptor(relation_id_t _id)
 	schema[0] = '\0';
 }
 
-csv_adaptor::csv_adaptor(relation_id_t _id, string sch)
+csv_adaptor::csv_adaptor(relation_id_t _id, std::string sch)
 		: id(_id), type(insert_tuple), delimiter(",")
 {
 	schema = new char[sch.size()+1];
@@ -30,7 +30,7 @@ csv_adaptor::csv_adaptor(relation_id_t _id, string sch)
 }
 
 csv_adaptor::csv_adaptor(relation_id_t i, int num_params,
-						const pair<string,string> params[])
+						const std::pair<std::string,std::string> params[])
 		: id(i), type(insert_tuple), delimiter(",")
 {
 	parse_params(num_params,params);
@@ -38,14 +38,14 @@ csv_adaptor::csv_adaptor(relation_id_t i, int num_params,
 }
 
 void csv_adaptor::parse_params(int num_params, 
-							   const pair<string, string> params[]) {
-	string param_schema = "";
-	string param_schema_prefix = "";
+							   const std::pair<std::string, std::string> params[]) {
+	std::string param_schema = "";
+	std::string param_schema_prefix = "";
 	for (int i = 0; i< num_params; ++i) {
-	  string k = params[i].first;
-	  string v = params[i].second;
+	  std::string k = params[i].first;
+	  std::string v = params[i].second;
 	  if( runtime_options::verbose() )
-		cerr << "csv params: " << k << ": " << v << endl;
+		std::cerr << "csv params: " << k << ": " << v << std::endl;
 
 	  if ( k == "delimiter" ) {
 		delimiter = (char*)(v.c_str());
@@ -65,15 +65,15 @@ void csv_adaptor::parse_params(int num_params,
 	schema[param_schema.size()] = '\0';
 }
 
-string csv_adaptor::parse_schema(string s)
+std::string csv_adaptor::parse_schema(std::string s)
 {
-	string r = "";
-	split_iterator<string::iterator> end;
-	for (split_iterator<string::iterator> it =
+	std::string r = "";
+	split_iterator<std::string::iterator> end;
+	for (split_iterator<std::string::iterator> it =
 		 make_split_iterator(s, first_finder(",", is_equal()));
 		 it != end; ++it)
 	{
-	  string ty = copy_range<std::string>(*it);
+	  std::string ty = copy_range<std::string>(*it);
 	  if ( ty == "event" )          r += "e";
 	  else if ( ty == "order" )     r += "o";
 	  else if ( ty == "int" )       r += "l";
@@ -84,7 +84,7 @@ string csv_adaptor::parse_schema(string s)
 	  else if ( ty == "hash" )      r += "h";
 	  else if ( ty == "string" )    r += "s";          
 	  else {
-		cerr << "invalid csv schema type " << ty << endl;
+		std::cerr << "invalid csv schema type " << ty << std::endl;
 		r = "";
 		break;
 	  }
@@ -136,16 +136,16 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
     size_t delimSize = delimiter.size();
     char* field_start=data;
     char* field_end=data;
-    // cout << " with schema " << schema_it << endl;
+    // std::cout << " with schema " << schema_it << std::endl;
     while(valid && schema_it !='\0') {
     	field_end = strstr(field_start,delim);
         if(field_end) *field_end='\0';
-        // cout << "  handling schema => " << *schema_it << endl;
+        // std::cout << "  handling schema => " << *schema_it << std::endl;
         switch (*schema_it) {
 			case 'e': ins=atoi(field_start); insert = ins; break;
 			case 'l': l=atol(field_start); tuple[tupleIdx++]=l; break;
 			case 'f': f=atof(field_start); tuple[tupleIdx++]=f; break;
-			case 'h': tuple[tupleIdx++]=static_cast<int>(field_hash(string(field_start)));
+			case 'h': tuple[tupleIdx++]=static_cast<int>(field_hash(std::string(field_start)));
 					  break;
 			case 'd': 
 				date_y_field = strtok (field_start,"-");
@@ -160,7 +160,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 							if ( 0 < m && m < 13 && 0 < d && d <= 31) {
 								tuple[tupleIdx++]=date(y*10000+m*100+d);
 							}
-        					// cout << "  date is => " << date(y*10000+m*100+d) << endl;
+        					// std::cout << "  date is => " << date(y*10000+m*100+d) << std::endl;
 						} else valid = false;
 					} else valid = false;
 				} else valid = false;
@@ -168,7 +168,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 			case 'o':
 				event_order=atoi(field_start);
 				break;
-			case 's': tuple[tupleIdx++]=string(field_start);   break;
+			case 's': tuple[tupleIdx++]=std::string(field_start);   break;
 			default: valid = false; break;
 		}
 
@@ -178,11 +178,11 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
             ++schema_it;
         } else break;
 	}
-    // cout << " tuples is ==> " << tuple << endl;
-	return make_tuple(valid, insert, event_order, tuple);
+    // std::cout << " tuples is ==> " << tuple << std::endl;
+	return boost::tuples::make_tuple(valid, insert, event_order, tuple);
 }
 
-void csv_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) {
+void csv_adaptor::read_adaptor_events(char* data, shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue) {
 	if ( (*schema) != '\0' ) {
 	  // Interpret the schema.
 	  tuple<bool, bool, unsigned int, event_args_t> evt = interpret_event(schema, data);
@@ -197,12 +197,12 @@ void csv_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eve
 			eventQue->push_back(e);
 		}
 	  } else {
-		cerr << "adaptor could not process " << data << endl;
-		cerr << "schema: " << schema << endl;
+		std::cerr << "adaptor could not process " << data << std::endl;
+		std::cerr << "schema: " << schema << std::endl;
 	  }
 	} else if ( runtime_options::verbose() ) {
-		cerr << "Skipping event, no "
-			<< ((*schema) == '\0'? "schema" : "buffer") << " found." << endl;
+		std::cerr << "Skipping event, no "
+			<< ((*schema) == '\0'? "schema" : "buffer") << " found." << std::endl;
 	}
 }
 
@@ -256,7 +256,7 @@ order_book_adaptor::order_book_adaptor(
 }
 
 order_book_adaptor::order_book_adaptor(relation_id_t bids_rel_sid, relation_id_t asks_rel_sid, int num_params,
-				   pair<string, string> params[])
+				   std::pair<std::string, std::string> params[])
 {
 	bids_rel_id = bids_rel_sid;
 	asks_rel_id = asks_rel_sid;
@@ -268,11 +268,11 @@ order_book_adaptor::order_book_adaptor(relation_id_t bids_rel_sid, relation_id_t
         type = both;
 
 	for (int i = 0; i < num_params; ++i) {
-		string k = params[i].first;
-		string v = params[i].second;
+		std::string k = params[i].first;
+		std::string v = params[i].second;
 		if( runtime_options::verbose() )
-		   cerr << "order book adaptor params: "
-				<< params[i].first << ", " << params[i].second << endl;
+		   std::cerr << "order book adaptor params: "
+				<< params[i].first << ", " << params[i].second << std::endl;
 
 		if ( k == "book" ) {
 		  type = (v == "bids"? tbids : (v == "asks"? tasks : both));
@@ -287,19 +287,19 @@ order_book_adaptor::order_book_adaptor(relation_id_t bids_rel_sid, relation_id_t
 		  // simply ignore this parameter since it is hard-coded
 		  // it should be always "double,long,long,double,double"
 		} else {
-		  cerr << "Invalid order book param " << k << ", " << v << endl;
+		  std::cerr << "Invalid order book param " << k << ", " << v << std::endl;
 		}
 	}
 }
 
 bool order_book_adaptor::parse_error(const char* data, int field) {
-	cerr << "Invalid field " << field << " message " << data << endl;
+	std::cerr << "Invalid field " << field << " message " << data << std::endl;
 	return false;
 }
 
 // Expected message format: t, id, action, volume, price
 bool order_book_adaptor::parse_message(char* data, order_book_message& r) {
-	string msg = data;
+	std::string msg = data;
 	char* start = data;
 	char* end = start;
 	char action;
@@ -338,7 +338,7 @@ bool order_book_adaptor::parse_message(char* data, order_book_message& r) {
 }
 
 void order_book_adaptor::process_message(const order_book_message& msg,
-					 shared_ptr<list<event_t> > dest)
+					 shared_ptr<std::list<event_t> > dest)
 {
 	bool valid = true;
 	order_book_tuple r(msg);
@@ -382,8 +382,8 @@ void order_book_adaptor::process_message(const order_book_message& msg,
 		  if ( r.volume <= 0.0 ) { asks->erase(ask_it); valid = false; }
 		  else { (*asks)[msg.id] = r; }
 		} else {
-		  //cerr << "unknown order id " << msg.id
-		  //     << " (neither bid nor ask)" << endl;
+		  //std::cerr << "unknown order id " << msg.id
+		  //     << " (neither bid nor ask)" << std::endl;
 		  valid = false;
 		  x_valid = false;
 		}
@@ -411,8 +411,8 @@ void order_book_adaptor::process_message(const order_book_message& msg,
 		  r = ask_it->second;
 		  asks->erase(ask_it);
 		} else {
-		  //cerr << "unknown order id " << msg.id
-		  //     << " (neither bid nor ask)" << endl;
+		  //std::cerr << "unknown order id " << msg.id
+		  //     << " (neither bid nor ask)" << std::endl;
 		  valid = false;
 		}
 	  }
@@ -438,7 +438,7 @@ void order_book_adaptor::process_message(const order_book_message& msg,
 	}
 }
 
-void order_book_adaptor::read_adaptor_events(char* data, shared_ptr<list<event_t> > eventList, shared_ptr<list<event_t> > eventQue) {
+void order_book_adaptor::read_adaptor_events(char* data, shared_ptr<std::list<event_t> > eventList, shared_ptr<std::list<event_t> > eventQue) {
 	// Grab a message from the data.
 	order_book_message r;
 	bool valid = parse_message(data, r);

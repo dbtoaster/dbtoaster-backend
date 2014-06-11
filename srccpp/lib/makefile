@@ -1,6 +1,14 @@
 #include ../../makefile.inc
 #include ../../makefile.local
 
+ifndef BOOST_INC_DIR
+BOOST_INC_DIR := /usr/local/include
+endif
+
+ifndef BOOST_LIB_DIR
+BOOST_LIB_DIR := /usr/local/lib
+endif
+
 HDR_FILES := event.hpp \
 	iprogram.hpp \
 	program_base.hpp \
@@ -43,7 +51,7 @@ $(LIB_OBJ) : $(OBJ_FILES)
 	
 $(OBJ_FILES) : %.o : %.cpp $(HDR_FILES)
 	@echo Compiling $<
-	@$(G++) -Wall $(CPP_FLAGS) $(patsubst %,-I %,$(CPP_HDR_PATH)) -O3 -c $<
+	@$(G++) -I$(BOOST_INC_DIR) -L$(BOOST_LIB_DIR) -Wall -std=c++11 $(CPP_FLAGS) $(patsubst %,-I %,$(CPP_HDR_PATH)) -O3 -c $<
 
 clean: 
 	rm -f *.o $(LIB_OBJ)
