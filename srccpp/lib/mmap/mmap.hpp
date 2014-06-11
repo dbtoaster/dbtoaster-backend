@@ -185,7 +185,7 @@ public:
     index = new Index<T>*[sizeof...(INDEXES)]{ new INDEXES()... };
     other.index[0]->foreach([this] (const T& e) { this->insert_nocheck(e); });
   }
-  ~MultiHashMap() {
+  virtual ~MultiHashMap() {
     for (size_t i=0; i<sizeof...(INDEXES); ++i) delete index[i];
     delete[] index;
   }
