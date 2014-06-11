@@ -4,6 +4,7 @@
 #include <string.h>
 
 #define DEFAULT_CHUNK_SIZE 1024
+#define DEFAULT_LIST_SIZE 8
 
 template<typename T>
 class Pool {
@@ -43,7 +44,7 @@ class Index {
 public:
   virtual bool hashDiffers(const T& x, const T& y) = 0;
 
-  virtual T* get(const T& key) = 0;
+  virtual T* get(const T& key) const = 0;
 
   virtual void add(T& obj) = 0;
 
@@ -62,43 +63,43 @@ public:
   virtual ~Index(){};
 };
 
-template<typename T, typename IDX_FN = GenericIndexFn<T>, int list_size=8>
+template<typename T, typename IDX_FN = GenericIndexFn<T>, int list_size=DEFAULT_LIST_SIZE>
 class HashIndex : public Index<T> {
 public:
-  typedef struct __Node {
+  typedef struct __IdxNode {
     long hash[list_size];
     T* obj[list_size];
-    struct __Node* next;
-  } Node;  //  the linked list is maintained 'compactly': if a Node has a next, it is full.
-  Node* buckets_;
+    struct __IdxNode* next;
+  } IdxNode;  //  the linked list is maintained 'compactly': if a IdxNode has a next, it is full.
+  IdxNode* buckets_;
 private:
-  Pool<Node> nodes_;
+  Pool<IdxNode> nodes_;
   size_t size_, count_, threshold_;
   double load_factor_;
 
   void add_(T* obj) { // does not resize the bucket array, does not maintain count
     long h = IDX_FN::hash(*obj);
-    Node* n = &buckets_[h % size_];
+    IdxNode* n = &buckets_[h % size_];
     while (n->next) n=n->next;
     int i=0; while(i < list_size && n->obj[i]) ++i;
-    if (i < list_size) { n->hash[i] = h; n->obj[i] = obj; return; } // space left in last Node
-    Node* next = nodes_.add(); memset(next, 0, sizeof(Node)); // add a node
+    if (i < list_size) { n->hash[i] = h; n->obj[i] = obj; return; } // space left in last IdxNode
+    IdxNode* next = nodes_.add(); memset(next, 0, sizeof(IdxNode)); // add a node
     next->hash[0] = h; next->obj[0] = obj; n->next = next;
   }
 
   void resize_(size_t new_size) {
-    Node* old = buckets_;
+    IdxNode* old = buckets_;
     size_t sz = size_;
-    buckets_ = new Node[new_size];
-    memset(buckets_, 0, sizeof(Node) * new_size);
+    buckets_ = new IdxNode[new_size];
+    memset(buckets_, 0, sizeof(IdxNode) * new_size);
     size_ = new_size;
     threshold_ = size_ * load_factor_;
     for (size_t b=0; b<sz; ++b) {
-      Node* n = &buckets_[b];
+      IdxNode* n = &buckets_[b];
       bool pooled = false;
       do {
         for (int i=0; i<list_size && n->obj[i]; ++i) add_(n->obj[i]);
-        if (pooled) { Node* d=n; n=n->next; nodes_.del(d); } else n=n->next; pooled = true;
+        if (pooled) { IdxNode* d=n; n=n->next; nodes_.del(d); } else n=n->next; pooled = true;
       } while(n);
     }
     if(old != nullptr) delete[] old;
@@ -132,9 +133,9 @@ public:
     return IDX_FN::hash(x) != IDX_FN::hash(y);
   }
   // retrieves the first element equivalent to the key or nullptr if not found
-  inline virtual T* get(const T& key) {
+  inline virtual T* get(const T& key) const {
     long h = IDX_FN::hash(key);
-    Node* n = &buckets_[h % size_];
+    IdxNode* n = &buckets_[h % size_];
     do for (int i=0; i<list_size && n->obj[i]; ++i) {
       if (h == n->hash[i] && IDX_FN::equals(key, *n->obj[i])) return n->obj[i];
     } while ((n=n->next));
@@ -149,15 +150,15 @@ public:
   inline virtual void del(const T& obj) { const T* ptr = get(obj); if (ptr!=nullptr) del(ptr); }
   virtual void del(const T* obj) {
     long h = IDX_FN::hash(*obj);
-    Node* n = &buckets_[h % size_];
-    Node* prev = nullptr; // previous
+    IdxNode* n = &buckets_[h % size_];
+    IdxNode* prev = nullptr; // previous
     do {
       for (int i=0; i<list_size && n->obj[i]; ++i) {
         if (n->obj[i] == obj) { --count_;
-          Node* last=n; while (last->next) { prev=last; last=last->next; }
+          IdxNode* last=n; while (last->next) { prev=last; last=last->next; }
           int l=1; while (l<list_size && last->obj[l]) ++l; --l; // find the last element at last[l]
           n->hash[i] = last->hash[l]; n->obj[i] = last->obj[l]; last->obj[l] = nullptr; // swap & delete
-          if (l==0 && prev) { prev->next=nullptr; nodes_.del(last); } return; // drop Node if empty
+          if (l==0 && prev) { prev->next=nullptr; nodes_.del(last); } return; // drop IdxNode if empty
         }
       }
       prev = n;
@@ -166,14 +167,14 @@ public:
 
   inline virtual void foreach(std::function<void (const T&)> f) {
     for (size_t b=0; b<size_; ++b) {
-      Node* n = &buckets_[b];
+      IdxNode* n = &buckets_[b];
       do { for (size_t i=0; i<list_size && n->obj[i]; ++i) f(*n->obj[i]); } while((n=n->next));
     }
   }
 
   inline virtual void slice(const T& key, std::function<void (const T&)> f) {
     long h = IDX_FN::hash(key);
-    Node* n = &(buckets_[h % size_]);
+    IdxNode* n = &(buckets_[h % size_]);
     do for (size_t i=0; i<list_size && n->obj[i]; ++i) {
       if (h == n->hash[i] && IDX_FN::equals(key, *n->obj[i])) f(*n->obj[i]);
     } while ((n=n->next));
@@ -198,7 +199,7 @@ public:
     delete[] index;
   }
   
-  T* get(int idx, const T& key) { return index[idx]->get(key); }
+  T* get(const T& key,int idx=0) const { return index[idx]->get(key); }
 
   inline void add(const T& obj) { add(&obj); }
   void add(const T* elem) {
@@ -217,9 +218,14 @@ public:
       }
     }
   }
+  inline void insert_nocheck(const T* elem) {
+    T* cur = pool.add();
+    memcpy(cur, elem, sizeof(T));
+    for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
+  }
 
   void del(const T& key, int idx=0) {
-    T* elem = get(idx, key); if (elem!=nullptr) del(elem);
+    T* elem = get(key,idx); if (elem!=nullptr) del(elem);
   }
   void delSlice(const T& key, int idx=0) {
     slice(idx, key,[] (const T& e) { del(e); });

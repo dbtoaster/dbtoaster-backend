@@ -71,7 +71,7 @@ void test_map() {
   hmap.del(rec(3,4));
   assert(hmap.count()==3);
 
-  assert(IndexFn1::equals(*hmap.get(1,rec(1)),rec(1,2)));
+  assert(IndexFn1::equals(*hmap.get(rec(1),1),rec(1,2)));
 }
 
 int main(int argc, char** argv) {
