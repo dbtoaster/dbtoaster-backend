@@ -180,11 +180,13 @@ public:
     count_ = 0;
     for (size_t b=0; b<size_; ++b) {
       IdxNode* n = &buckets_[b];
-      n->next = nullptr;
-      for (int i=0; i<list_size; ++i) {
+      IdxNode* next;
+      do for (int i=0; i<list_size; ++i) {
         n->obj[i] = nullptr;
         n->hash[i] = 0L;
-      }
+        next = n->next;
+        n->next = nullptr;
+      } while ((n=next));
     }
     nodes_.clear();
   }
