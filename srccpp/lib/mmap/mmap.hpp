@@ -221,10 +221,14 @@ public:
     T* cur = index[0]->get(*elem);
     if (cur==nullptr) {
       cur=pool.add();
-      memcpy(cur, elem, sizeof(T));
+      // cur->~T();
+      // *cur=std::move(*elem);
+      new(cur) T(*elem);
       for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
     } else {
-      memcpy(cur, elem, sizeof(T));
+      // cur->~T();
+      // *cur=std::move(*elem);
+      new(cur) T(*elem);
       for (size_t i=0; i<sizeof...(INDEXES); ++i) {
         if (index[i]->hashDiffers(*cur,*elem)) {
           index[i]->del(cur);   
@@ -235,7 +239,9 @@ public:
   }
   inline virtual void insert_nocheck(const T& elem) {
     T* cur = pool.add();
-    memcpy(cur, &elem, sizeof(T));
+    // cur->~T();
+    // *cur=std::move(elem);
+    new(cur) T(elem);
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
   }
 
