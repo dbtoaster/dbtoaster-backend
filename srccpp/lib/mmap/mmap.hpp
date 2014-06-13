@@ -102,11 +102,12 @@ private:
     size_ = new_size;
     threshold_ = size_ * load_factor_;
     for (size_t b=0; b<sz; ++b) {
-      IdxNode* n = &buckets_[b];
+      IdxNode* n = &old[b];
       bool pooled = false;
       do {
         for (int i=0; i<list_size && n->obj[i]; ++i) add_(n->obj[i]);
-        if (pooled) { IdxNode* d=n; n=n->next; nodes_.del(d); } else n=n->next; pooled = true;
+        if (pooled) { IdxNode* d=n; n=n->next; nodes_.del(d); } else n=n->next;
+        pooled = true;
       } while(n);
     }
     if(old != nullptr) delete[] old;
