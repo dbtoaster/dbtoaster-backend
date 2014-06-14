@@ -79,9 +79,10 @@ public:
     struct __IdxNode* next;
   } IdxNode;  //  the linked list is maintained 'compactly': if a IdxNode has a next, it is full.
   IdxNode* buckets_;
+  size_t size_;
 private:
   Pool<IdxNode> nodes_;
-  size_t size_, count_, threshold_;
+  size_t count_, threshold_;
   double load_factor_;
 
   void add_(T* obj) { // does not resize the bucket array, does not maintain count

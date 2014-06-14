@@ -114,11 +114,15 @@ trait ICppGen extends IScalaGen {
           // "}\n"
 
 
-          // val n0= fresh("n")
-          // val i0= fresh("i")
+          val n0= fresh("n")
+          val i0= fresh("i")
           val e0= fresh("e")
-          val body = ki.map{case ((k,ktp),i)=>ktp+" "+rn(k)+" = "+e0+"."+mapDef.keys(i)._1+";\n"}.mkString+
-          tp.toCpp+" "+v0+" = "+e0+"."+VALUE_NAME+";\n"+
+          val idx0= fresh("d")
+          val mapType = n+"_map"
+          val idxName = "HashIndex_"+mapType+"_"+getIndexId(n,is)
+          val idxFn = mapType+"key"+getIndexId(n,is)+"_idxfn"
+          val body = ki.map{case ((k,ktp),i)=>ktp+" "+rn(k)+" = "+e0+"->"+mapDef.keys(i)._1+";\n"}.mkString+
+          tp.toCpp+" "+v0+" = "+e0+"->"+VALUE_NAME+";\n"+
           co(v0)
 
           if (ko.size>0) { //slice
@@ -126,36 +130,36 @@ trait ICppGen extends IScalaGen {
             val sampleEnt=fresh("se")
             sampleEntDef+=(if (m.keys.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
 
-            // val mapType = n+"_map"
-            // val idxFn = mapType+"key"+getIndexId(n,is)+"_idxfn"
-            // val h0= fresh("h")
-            // "{ //slice\n"+
-            // "  long "+h0+" = "+idxFn+"::hash("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"));\n"+
-            // "  IdxNode<"+mapEntry+">* "+n0+" = &("+n+".index["+idxIndex+"]->buckets_[h % size_]);\n"+
-            // "  "+mapEntry+"* "+e0+";\n"+
-            // "  do for (size_t "+i0+"=0; "+i0+"<DEFAULT_LIST_SIZE && ("+e0+"="+n0+"->obj["+i0+"]); ++"+i0+") {\n"+
-            // "    if (h == "+n0+"->hash["+i0+"] && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
-            //        ind(body,3)+"\n"+
-            // "    }\n"+
-            // "  } while (("+n0+"="+n0+"->next));\n"+
-            // "}\n"
-            n+".index["+idxIndex+"]->slice("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"),[&] (const "+mapEntry+"& "+e0+") {\n"+
-              ind(body)+"\n"+
-            "});\n"
+            val h0= fresh("h")
+            "{ //slice\n"+
+            "  const long "+h0+" = "+idxFn+"::hash("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"));\n"+
+            "  const "+idxName+"* "+idx0+" = static_cast<"+idxName+"*>("+n+".index["+idxIndex+"]);\n"+
+            "  "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+h0+" % "+idx0+"->size_]);\n"+
+            "  "+mapEntry+"* "+e0+";\n"+
+            "  do for (size_t "+i0+"=0; "+i0+"<DEFAULT_LIST_SIZE && ("+e0+"="+n0+"->obj["+i0+"]); ++"+i0+") {\n"+
+            "    if ("+h0+" == "+n0+"->hash["+i0+"] && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
+                   ind(body,3)+"\n"+
+            "    }\n"+
+            "  } while (("+n0+"="+n0+"->next));\n"+
+            "}\n"
+            // n+".index["+idxIndex+"]->slice("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"),[&] (const "+mapEntry+"& "+e0+") {\n"+
+            //   ind(body)+"\n"+
+            // "});\n"
           } else { //foreach
-            n+".index[0]->foreach([&] (const "+mapEntry+"& "+e0+") {\n"+
-              ind(body)+"\n"+
-            "});\n"
-            // val b0= fresh("b")
-            // "{ //foreach\n"+
-            // "  "+mapEntry+"* "+e0+";\n"+
-            // "  for (size_t "+b0+"=0; "+b0+"<"+n+".index[0]->size_; ++"+b0+") {\n"+
-            // "    IdxNode<"+mapEntry+">* "+n0+" = &("+n+".index[0]->buckets_["+b0+"]);\n"+
-            // "    do { for (size_t "+i0+"=0; "+i0+"<DEFAULT_LIST_SIZE && ("+e0+"="+n0+"->obj["+i0+"]); ++"+i0+") {\n"+
-            //        ind(body,3)+"\n"+
-            // "    } } while(("+n0+"="+n0+"->next));\n"+
-            // "  }\n"+
-            // "}\n"
+            val b0= fresh("b")
+            "{ //foreach\n"+
+            "  "+mapEntry+"* "+e0+";\n"+
+            "  const "+idxName+"* "+idx0+" = static_cast<"+idxName+"*>("+n+".index[0]);\n"+
+            "  for (size_t "+b0+"=0; "+b0+"<"+idx0+"->size_; ++"+b0+") {\n"+
+            "    "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+b0+"]);\n"+
+            "    do { for (size_t "+i0+"=0; "+i0+"<DEFAULT_LIST_SIZE && ("+e0+"="+n0+"->obj["+i0+"]); ++"+i0+") {\n"+
+                   ind(body,3)+"\n"+
+            "    } } while(("+n0+"="+n0+"->next));\n"+
+            "  }\n"+
+            "}\n"
+            // n+".index[0]->foreach([&] (const "+mapEntry+"& "+e0+") {\n"+
+            //   ind(body)+"\n"+
+            // "});\n"
           }
         } else { //only foreach for Temp map
           val mapType = "map<"+tupType(m.tks)+","+tp.toCpp+">"
@@ -453,7 +457,10 @@ trait ICppGen extends IScalaGen {
       def genTypeDefs =
         "typedef MultiHashMap<"+mapEntry+","+
         allIndices.map{case (is,unique) => "\n  HashIndex<"+mapEntry+","+mapType+"key"+getIndexId(mapName,is)+"_idxfn>"}.mkString(",")+
-        "\n> "+mapType+";\n"
+        "\n> "+mapType+";\n"+
+        allIndices.map{ case (is,_) =>
+          "typedef HashIndex<"+mapEntry+","+mapType+"key"+getIndexId(mapName,is)+"_idxfn> HashIndex_"+mapType+"_"+getIndexId(mapName,is)+";\n"
+        }.mkString
 
       def genHelperFunctions =
         (if(helperFuncUsage.contains(("FIND_IN_MAP_FUNC" -> mapName))) "inline "+mapValueType+" "+FIND_IN_MAP_FUNC(mapName)+"(const "+mapType+"& m, const "+mapEntry+"& k) {\n"+
