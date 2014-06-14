@@ -115,9 +115,8 @@ trait ICppGen extends IScalaGen {
 
 
           val n0= fresh("n")
-          val i0= fresh("i")
           val e0= fresh("e")
-          val idx0= fresh("d")
+          val idx0= fresh("i")
           val mapType = n+"_map"
           val idxName = "HashIndex_"+mapType+"_"+getIndexId(n,is)
           val idxFn = mapType+"key"+getIndexId(n,is)+"_idxfn"
@@ -136,10 +135,8 @@ trait ICppGen extends IScalaGen {
             "  const "+idxName+"* "+idx0+" = static_cast<"+idxName+"*>("+n+".index["+idxIndex+"]);\n"+
             "  "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+h0+" % "+idx0+"->size_]);\n"+
             "  "+mapEntry+"* "+e0+";\n"+
-            "  do for (size_t "+i0+"=0; "+i0+"<DEFAULT_LIST_SIZE && ("+e0+"="+n0+"->obj["+i0+"]); ++"+i0+") {\n"+
-            "    if ("+h0+" == "+n0+"->hash["+i0+"] && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
-                   ind(body,3)+"\n"+
-            "    }\n"+
+            "  do if (("+e0+"="+n0+"->obj) && "+h0+" == "+n0+"->hash && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
+                 ind(body,2)+"\n"+
             "  } while (("+n0+"="+n0+"->next));\n"+
             "}\n"
             // n+".index["+idxIndex+"]->slice("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"),[&] (const "+mapEntry+"& "+e0+") {\n"+
@@ -152,9 +149,9 @@ trait ICppGen extends IScalaGen {
             "  const "+idxName+"* "+idx0+" = static_cast<"+idxName+"*>("+n+".index[0]);\n"+
             "  for (size_t "+b0+"=0; "+b0+"<"+idx0+"->size_; ++"+b0+") {\n"+
             "    "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+b0+"]);\n"+
-            "    do { for (size_t "+i0+"=0; "+i0+"<DEFAULT_LIST_SIZE && ("+e0+"="+n0+"->obj["+i0+"]); ++"+i0+") {\n"+
+            "    do if (("+e0+"="+n0+"->obj)) {\n"+
                    ind(body,3)+"\n"+
-            "    } } while(("+n0+"="+n0+"->next));\n"+
+            "    } while(("+n0+"="+n0+"->next));\n"+
             "  }\n"+
             "}\n"
             // n+".index[0]->foreach([&] (const "+mapEntry+"& "+e0+") {\n"+

@@ -70,12 +70,12 @@ public:
   virtual ~Index(){};
 };
 
-template<typename T, typename IDX_FN = GenericIndexFn<T>, int list_size=DEFAULT_LIST_SIZE>
+template<typename T, typename IDX_FN = GenericIndexFn<T> >
 class HashIndex : public Index<T> {
 public:
   typedef struct __IdxNode {
-    long hash[list_size];
-    T* obj[list_size];
+    long hash;
+    T* obj;
     struct __IdxNode* next;
   } IdxNode;  //  the linked list is maintained 'compactly': if a IdxNode has a next, it is full.
   IdxNode* buckets_;
@@ -88,11 +88,13 @@ private:
   void add_(T* obj) { // does not resize the bucket array, does not maintain count
     long h = IDX_FN::hash(*obj);
     IdxNode* n = &buckets_[h % size_];
-    while (n->next) n=n->next;
-    int i=0; while(i < list_size && n->obj[i]) ++i;
-    if (i < list_size) { n->hash[i] = h; n->obj[i] = obj; return; } // space left in last IdxNode
-    IdxNode* next = nodes_.add(); memset(next, 0, sizeof(IdxNode)); // add a node
-    next->hash[0] = h; next->obj[0] = obj; n->next = next;
+    if (n->obj) {
+      IdxNode* nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
+      nw->hash = h; nw->obj = obj;
+      nw->next = n->next; n->next=nw;
+    } else {  // space left in last IdxNode
+      n->hash = h; n->obj = obj; //n->next=nullptr;
+    }
   }
 
   void resize_(size_t new_size) {
@@ -106,12 +108,12 @@ private:
       IdxNode* n = &old[b];
       bool pooled = false;
       do {
-        for (int i=0; i<list_size && n->obj[i]; ++i) add_(n->obj[i]);
+        if(n->obj) add_(n->obj);
         if (pooled) { IdxNode* d=n; n=n->next; nodes_.del(d); } else n=n->next;
         pooled = true;
       } while(n);
     }
-    if(old != nullptr) delete[] old;
+    if(old) delete[] old;
   }
 
 public:
@@ -135,8 +137,8 @@ public:
   inline virtual T* get(const T& key) const {
     long h = IDX_FN::hash(key);
     IdxNode* n = &buckets_[h % size_];
-    do for (int i=0; i<list_size && n->obj[i]; ++i) {
-      if (h == n->hash[i] && IDX_FN::equals(key, *n->obj[i])) return n->obj[i];
+    do {
+      if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) return n->obj;
     } while ((n=n->next));
     return nullptr;
   }
@@ -146,19 +148,23 @@ public:
   inline virtual void add(T* obj) { ++count_; if (count_>threshold_) resize_(size_<<1); add_(obj); }
 
   // deletes an existing elements (equality by pointer comparison)
-  inline virtual void del(const T& obj) { const T* ptr = get(obj); if (ptr!=nullptr) del(ptr); }
+  inline virtual void del(const T& obj) { const T* ptr = get(obj); if (ptr) del(ptr); }
   virtual void del(const T* obj) {
     long h = IDX_FN::hash(*obj);
     IdxNode* n = &buckets_[h % size_];
     IdxNode* prev = nullptr; // previous
     do {
-      for (int i=0; i<list_size && n->obj[i]; ++i) {
-        if (n->obj[i] == obj) { --count_;
-          IdxNode* last=n; while (last->next) { prev=last; last=last->next; }
-          int l=1; while (l<list_size && last->obj[l]) ++l; --l; // find the last element at last[l]
-          n->hash[i] = last->hash[l]; n->obj[i] = last->obj[l]; last->obj[l] = nullptr; // swap & delete
-          if (l==0 && prev) { prev->next=nullptr; nodes_.del(last); } return; // drop IdxNode if empty
+      if (/*n->obj &&*/ n->obj == obj) {
+        --count_;
+        if(prev) {
+          prev->next=n->next;
+          // n->next = nullptr;
+          // n->obj = nullptr;
+          nodes_.del(n);
+        } else {
+          n->obj = nullptr;
         }
+        return;
       }
       prev = n;
     } while ((n=n->next));
@@ -167,15 +173,15 @@ public:
   inline virtual void foreach(std::function<void (const T&)> f) {
     for (size_t b=0; b<size_; ++b) {
       IdxNode* n = &buckets_[b];
-      do { for (size_t i=0; i<list_size && n->obj[i]; ++i) f(*n->obj[i]); } while((n=n->next));
+      do { if(n->obj) f(*n->obj); } while((n=n->next));
     }
   }
 
   inline virtual void slice(const T& key, std::function<void (const T&)> f) {
     long h = IDX_FN::hash(key);
     IdxNode* n = &(buckets_[h % size_]);
-    do for (size_t i=0; i<list_size && n->obj[i]; ++i) {
-      if (h == n->hash[i] && IDX_FN::equals(key, *n->obj[i])) f(*n->obj[i]);
+    do {
+      if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) f(*n->obj);
     } while ((n=n->next));
   }
   inline virtual void clear(){
@@ -183,9 +189,9 @@ public:
     for (size_t b=0; b<size_; ++b) {
       IdxNode* n = &buckets_[b];
       IdxNode* next;
-      do for (int i=0; i<list_size; ++i) {
-        n->obj[i] = nullptr;
-        n->hash[i] = 0L;
+      do {
+        n->obj = nullptr;
+        // n->hash = 0L;
         next = n->next;
         n->next = nullptr;
       } while ((n=next));
