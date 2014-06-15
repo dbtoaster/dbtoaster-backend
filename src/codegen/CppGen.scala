@@ -428,7 +428,7 @@ trait ICppGen extends IScalaGen {
         // "  "+mapEntry+"& operator=(const "+mapEntry+"& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = other."+fld+";"}.mkString+" return *this; }\n"+
         // "  "+mapEntry+"& operator=(const "+mapEntry+"&& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+(if(tp.isBasicCppType) "other."+fld else "std::move(other."+fld+")")+";"}.mkString+" return *this; }\n"+
         allIndices.map{ case (is,unique) =>
-        "  inline "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => fields(i)._2.toCpp+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
+        "  FORCE_INLINE "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => fields(i)._2.toCpp+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
         }.mkString+
         "  template<class Archive>\n"+
         "  void serialize(Archive& ar, const unsigned int version)\n"+
@@ -455,7 +455,7 @@ trait ICppGen extends IScalaGen {
       def genExtractorsAndHashers = allIndices.map{ case (is,unique) =>
         //TODO XXX we can implement a better hasher, e.g. using murmur hash
         "struct "+mapType+"key"+getIndexId(mapName,is)+"_idxfn {\n"+
-        "  static size_t hash(const "+mapEntry+"& e) {\n"+
+        "  FORCE_INLINE static size_t hash(const "+mapEntry+"& e) {\n"+
         // (if(is.size == m.keys.size && !isStringFieldInTheIndex(is)) {
         // "    return MurmurHash2(&e,sizeof("+mapEntry+")-sizeof((("+mapEntry+" *)0)->__av));"
         // } else if(isIndexingSingleStringField(is)) {
@@ -477,7 +477,7 @@ trait ICppGen extends IScalaGen {
         // })+
         "\n"+
         "  }\n"+
-        "  static bool equals(const "+mapEntry+"& x, const "+mapEntry+"& y) {\n"+
+        "  FORCE_INLINE static bool equals(const "+mapEntry+"& x, const "+mapEntry+"& y) {\n"+
         "    return "+is.map{ isIndex => val fld=fields(isIndex)._1;"(x."+fld+"==y."+fld+")" }.mkString(" && ") + ";\n" +
         "  }\n"+
         "};\n"
@@ -492,19 +492,19 @@ trait ICppGen extends IScalaGen {
         }.mkString
 
       def genHelperFunctions =
-        (if(helperFuncUsage.contains(("FIND_IN_MAP_FUNC" -> mapName))) "inline "+mapValueType+" "+FIND_IN_MAP_FUNC(mapName)+"(const "+mapType+"& m, const "+mapEntry+"& k) {\n"+
+        (if(helperFuncUsage.contains(("FIND_IN_MAP_FUNC" -> mapName))) "FORCE_INLINE "+mapValueType+" "+FIND_IN_MAP_FUNC(mapName)+"(const "+mapType+"& m, const "+mapEntry+"& k) {\n"+
         "  "+mapValueType+" res = "+m.tp.zeroCpp+";\n"+ 
         "  "+mapEntry+"* lkup = m.get(k);\n"+
         "  if (lkup!=nullptr) res = lkup->"+VALUE_NAME+";\n"+
         "  return res;\n"+
         "}\n" else "")+
-        (if(helperFuncUsage.contains(("SET_IN_MAP_FUNC" -> mapName))) "inline void "+SET_IN_MAP_FUNC(mapName)+"("+mapType+"& m, "+mapEntry+"& k, const "+mapValueType+"& v) {\n"+
+        (if(helperFuncUsage.contains(("SET_IN_MAP_FUNC" -> mapName))) "FORCE_INLINE void "+SET_IN_MAP_FUNC(mapName)+"("+mapType+"& m, "+mapEntry+"& k, const "+mapValueType+"& v) {\n"+
         "  "+mapEntry+"* lkup = m.get(k);\n"+
         "  if (v == "+m.tp.zeroCpp+") { if(lkup != nullptr) m.del(lkup); /*else \"nothing should be done\"*/ }\n"+
         "  else if(/*v != "+m.tp.zeroCpp+" &&*/ lkup != nullptr) lkup->"+VALUE_NAME+"=v;\n"+
         "  else /*if(v != "+m.tp.zeroCpp+" && lkup == nullptr)*/ { k."+VALUE_NAME+" = v; m.insert_nocheck(k); }\n"+
         "}\n" else "")+
-        (if(helperFuncUsage.contains(("ADD_TO_MAP_FUNC" -> mapName))) "inline void "+ADD_TO_MAP_FUNC(mapName)+"("+mapType+"& m, "+mapEntry+"& k, const "+mapValueType+"& v) {\n"+
+        (if(helperFuncUsage.contains(("ADD_TO_MAP_FUNC" -> mapName))) "FORCE_INLINE void "+ADD_TO_MAP_FUNC(mapName)+"("+mapType+"& m, "+mapEntry+"& k, const "+mapValueType+"& v) {\n"+
         "  if (v != "+m.tp.zeroCpp+") {\n"+
         "    "+mapEntry+"* lkup = m.get(k);\n"+
         "    if(lkup != nullptr) lkup->"+VALUE_NAME+"+=v;\n"+

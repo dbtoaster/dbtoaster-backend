@@ -25,8 +25,8 @@ private:
 public:
   Pool(size_t chunk_size=DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size) { add_chunk(); }
   ~Pool() { while (data_ != nullptr) { El* el = data_[size_].next; delete[] data_; data_ = el; } }
-  T* add() { if (!free_) add_chunk(); El* el = free_; free_ = free_->next; return &(el->obj); }
-  void del(T* obj) { ((El*)obj)->next = free_; free_ = (El*)obj; }
+  FORCE_INLINE T* add() { if (!free_) add_chunk(); El* el = free_; free_ = free_->next; return &(el->obj); }
+  FORCE_INLINE void del(T* obj) { ((El*)obj)->next = free_; free_ = (El*)obj; }
   inline void clear(){
     El* chunk = data_;
     while (chunk != nullptr) {
@@ -133,7 +133,7 @@ public:
   T& operator[](const T& key) {
     return *get(key);
   }
-  inline virtual bool hashDiffers(const T& x, const T& y) {
+  FORCE_INLINE virtual bool hashDiffers(const T& x, const T& y) {
     return IDX_FN::hash(x) != IDX_FN::hash(y);
   }
   // retrieves the first element equivalent to the key or nullptr if not found
@@ -147,11 +147,11 @@ public:
   }
 
   // inserts regardless of whether element exists already
-  inline virtual void add(T& obj) { add(&obj); }
+  FORCE_INLINE virtual void add(T& obj) { add(&obj); }
   inline virtual void add(T* obj) { ++count_; if (count_>threshold_) resize_(size_<<1); add_(obj); }
 
   // deletes an existing elements (equality by pointer comparison)
-  inline virtual void del(const T& obj) { const T* ptr = get(obj); if (ptr) del(ptr); }
+  FORCE_INLINE virtual void del(const T& obj) { const T* ptr = get(obj); if (ptr) del(ptr); }
   virtual void del(const T* obj) {
     HASH_RES_t h = IDX_FN::hash(*obj);
     IdxNode* n = &buckets_[h % size_];
@@ -202,7 +202,7 @@ public:
     nodes_.clear();
   }
 
-  inline virtual size_t count() { return count_; }
+  FORCE_INLINE virtual size_t count() { return count_; }
   template<typename TP, typename...INDEXES> friend class MultiHashMap;
 };
 
@@ -225,9 +225,9 @@ public:
     delete[] index;
   }
   
-  T* get(const T& key,int idx=0) const { return index[idx]->get(key); }
+  FORCE_INLINE T* get(const T& key,int idx=0) const { return index[idx]->get(key); }
 
-  inline void add(const T& obj) { add(&obj); }
+  FORCE_INLINE void add(const T& obj) { add(&obj); }
   void add(const T* elem) {
     T* cur = index[0]->get(*elem);
     if (cur==nullptr) {
@@ -248,7 +248,7 @@ public:
       }
     }
   }
-  inline virtual void insert_nocheck(const T& elem) {
+  FORCE_INLINE virtual void insert_nocheck(const T& elem) {
     T* cur = pool.add();
     // cur->~T();
     // *cur=std::move(elem);
@@ -256,13 +256,13 @@ public:
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
   }
 
-  void del(const T& key, int idx=0) {
+  FORCE_INLINE void del(const T& key, int idx=0) {
     T* elem = get(key,idx); if (elem!=nullptr) del(elem);
   }
   void delSlice(const T& key, int idx=0) {
     slice(idx, key,[] (const T& e) { del(e); });
   }
-  void del(T* elem) { // assume that the element is already in the map
+  FORCE_INLINE void del(T* elem) { // assume that the element is already in the map
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
     pool.del(elem);
   }
@@ -274,9 +274,9 @@ public:
     index[idx]->slice(key, f);
   }
 
-  inline size_t count() { return index[0]->count(); }
+  FORCE_INLINE size_t count() { return index[0]->count(); }
 
-  inline void clear(){
+  FORCE_INLINE void clear(){
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->clear();
     pool.clear();
   }
