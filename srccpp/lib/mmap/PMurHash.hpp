@@ -263,15 +263,12 @@ FORCE_INLINE uint32_t MurmurHash2 ( const void * key, int len )
 /*-----------------------------------------------------------------------------
  * Core murmurhash algorithm macros */
 
-#define C1  (0xcc9e2d51)
-#define C2  (0x1b873593)
-
 /* This is the main processing body of the algorithm. It operates
  * on each full 32-bits of input. */
 #define DOBLOCK(h1, k1) do{ \
-        k1 *= C1; \
+        k1 *= 0xcc9e2d51; \
         k1 = ROTL32(k1,15); \
-        k1 *= C2; \
+        k1 *= 0x1b873593; \
         \
         h1 ^= k1; \
         h1 = ROTL32(h1,13); \
@@ -387,7 +384,7 @@ FORCE_INLINE uint32_t PMurHash32_Result(uint32_t h, uint32_t carry, uint32_t tot
   int n = carry & 3;
   if(n) {
     k1 = carry >> (4-n)*8;
-    k1 *= C1; k1 = ROTL32(k1,15); k1 *= C2; h ^= k1;
+    k1 *= 0xcc9e2d51; k1 = ROTL32(k1,15); k1 *= 0x1b873593; h ^= k1;
   }
   h ^= total_length;
 
