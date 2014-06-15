@@ -4,9 +4,12 @@
 #include <string.h>
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/serialization/map.hpp>
+#include <mmap/PMurHash.hpp>
 
 #define DEFAULT_CHUNK_SIZE 1024
 #define DEFAULT_LIST_SIZE 8
+
+#define HASH_RES_t size_t
 
 template<typename T>
 class Pool {
@@ -34,15 +37,15 @@ public:
   }
 };
 
-template<typename T>
+/*template<typename T>
 struct GenericIndexFn {
-  static long hash(const T& e) {
+  static HASH_RES_t hash(const T& e) {
     return 0;
   }
   static bool equals(const T& x,const T& y) {
     return false;
   }
-};
+};*/
 
 template<typename T>
 class Index {
@@ -70,11 +73,11 @@ public:
   virtual ~Index(){};
 };
 
-template<typename T, typename IDX_FN = GenericIndexFn<T> >
+template<typename T, typename IDX_FN/* = GenericIndexFn<T>*/ >
 class HashIndex : public Index<T> {
 public:
   typedef struct __IdxNode {
-    long hash;
+    HASH_RES_t hash;
     T* obj;
     struct __IdxNode* next;
   } IdxNode;  //  the linked list is maintained 'compactly': if a IdxNode has a next, it is full.
@@ -86,7 +89,7 @@ private:
   double load_factor_;
 
   void add_(T* obj) { // does not resize the bucket array, does not maintain count
-    long h = IDX_FN::hash(*obj);
+    HASH_RES_t h = IDX_FN::hash(*obj);
     IdxNode* n = &buckets_[h % size_];
     if (n->obj) {
       IdxNode* nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -135,7 +138,7 @@ public:
   }
   // retrieves the first element equivalent to the key or nullptr if not found
   inline virtual T* get(const T& key) const {
-    long h = IDX_FN::hash(key);
+    HASH_RES_t h = IDX_FN::hash(key);
     IdxNode* n = &buckets_[h % size_];
     do {
       if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) return n->obj;
@@ -150,7 +153,7 @@ public:
   // deletes an existing elements (equality by pointer comparison)
   inline virtual void del(const T& obj) { const T* ptr = get(obj); if (ptr) del(ptr); }
   virtual void del(const T* obj) {
-    long h = IDX_FN::hash(*obj);
+    HASH_RES_t h = IDX_FN::hash(*obj);
     IdxNode* n = &buckets_[h % size_];
     IdxNode* prev = nullptr; // previous
     do {
@@ -178,7 +181,7 @@ public:
   }
 
   inline virtual void slice(const T& key, std::function<void (const T&)> f) {
-    long h = IDX_FN::hash(key);
+    HASH_RES_t h = IDX_FN::hash(key);
     IdxNode* n = &(buckets_[h % size_]);
     do {
       if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) f(*n->obj);

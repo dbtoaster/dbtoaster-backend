@@ -131,7 +131,7 @@ trait ICppGen extends IScalaGen {
 
             val h0= fresh("h")
             "{ //slice\n"+
-            "  const long "+h0+" = "+idxFn+"::hash("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"));\n"+
+            "  const HASH_RES_t "+h0+" = "+idxFn+"::hash("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"));\n"+
             "  const "+idxName+"* "+idx0+" = static_cast<"+idxName+"*>("+n+".index["+idxIndex+"]);\n"+
             "  "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+h0+" % "+idx0+"->size_]);\n"+
             "  "+mapEntry+"* "+e0+";\n"+
@@ -436,14 +436,46 @@ trait ICppGen extends IScalaGen {
         fields.map{case (fld,_) => "    ar & BOOST_SERIALIZATION_NVP("+fld+");\n"}.mkString+
         "  }\n"+
         "};"
+      // def isStringFieldInTheIndex(is:List[Int]) = is.map(fields(_)._2).contains(TypeString)
+      // def isIndexingSingleStringField(is:List[Int]) = ((is.size == 1) && (fields(is(0))._2 == TypeString))
+      // def isIndexingSingleField(is:List[Int]) = is.size == 1
+      // def isIndexingSequentialFields(is:List[Int]):Boolean = {
+      //   if(is.size > 1) {
+      //     var cur = 0;
+      //     while(cur < is.size-1) {
+      //       if(is(cur)+1 != is(cur+1)){
+      //         return false
+      //       }
+      //       cur+=1
+      //     }
+      //   }
+      //   true
+      // }
 
       def genExtractorsAndHashers = allIndices.map{ case (is,unique) =>
         //TODO XXX we can implement a better hasher, e.g. using murmur hash
         "struct "+mapType+"key"+getIndexId(mapName,is)+"_idxfn {\n"+
-        "  static long hash(const "+mapEntry+"& e) {\n"+
-        "    size_t seed = 0;\n"+
-        is.map{ isIndex => "    boost::hash_combine(seed, e."+fields(isIndex)._1+");\n" }.mkString +
-        "    return (long)seed;\n"+
+        "  static size_t hash(const "+mapEntry+"& e) {\n"+
+        // (if(is.size == m.keys.size && !isStringFieldInTheIndex(is)) {
+        // "    return MurmurHash2(&e,sizeof("+mapEntry+")-sizeof((("+mapEntry+" *)0)->__av));"
+        // } else if(isIndexingSingleStringField(is)) {
+        // "    const char* fld = e."+fields(is(0))._1+".c_str();\n"+
+        // "    return MurmurHash2(fld,strlen(fld));"
+        // } else if(isIndexingSingleField(is)) {
+        // "    return MurmurHash2(&(e."+fields(is(0))._1+"),sizeof((("+mapEntry+" *)0)->"+fields(is(0))._1+"));"
+        // } else if(!isStringFieldInTheIndex(is) && isIndexingSequentialFields(is)) {
+        // "    return MurmurHash2(&(e."+fields(is(0))._1+"),"+is.map{ isIndex => "sizeof((("+mapEntry+" *)0)->"+fields(isIndex)._1+")"}.mkString("+")+");"
+        // } else {
+        "    size_t h = 0;\n"+
+        is.map{ isIndex => "    hash_combine(h, e."+fields(isIndex)._1+");\n" }.mkString +
+        "    return h;"+
+        // "    uint32_t h=0, carry=0;\n"+
+        // is.map{ isIndex => (if(fields(isIndex)._2 == TypeString) "    const char* fld"+isIndex+" = e."+fields(is(isIndex))._1+".c_str();\n" else "")+
+        // "    PMurHash32_Process(&h, &carry, &(e."+fields(isIndex)._1+"),"+(if(fields(isIndex)._2 == TypeString) "strlen(fld"+isIndex+")" else "sizeof((("+mapEntry+" *)0)->"+fields(isIndex)._1+")")+");\n"
+        // }.mkString +
+        // "    return PMurHash32_Result(h, carry, "+is.sortBy{ isIndex => if(fields(isIndex)._2 == TypeString) 1 else 0}.map{ isIndex => if(fields(isIndex)._2 == TypeString) "strlen(fld"+isIndex+")" else "sizeof((("+mapEntry+" *)0)->"+fields(isIndex)._1+")"}.mkString("+")+");\n"
+        // })+
+        "\n"+
         "  }\n"+
         "  static bool equals(const "+mapEntry+"& x, const "+mapEntry+"& y) {\n"+
         "    return "+is.map{ isIndex => val fld=fields(isIndex)._1;"(x."+fld+"==y."+fld+")" }.mkString(" && ") + ";\n" +

@@ -1,13 +1,16 @@
 #include "mmap.hpp"
 
 struct rec {
-  rec():_1(0),_2(0),_val(0){}
-  rec(int _1, int _2=0, int _val=0) { this->_1=_1; this->_2=_2; this->_val=_val; }
-  int _1, _2,_val;
+  rec():_1(0),_3(""),_2(0),_val(0){}
+  rec(int _1, int _2=0, int _val=0, std::string _3="") { this->_1=_1; this->_2=_2; this->_3=_3; this->_val=_val; }
+  int _1;
+  std::string _3;
+  int _2;
+  int _val;
 };
 struct IndexFn1 {
-  static long hash(const rec& a) {
-    return (long)(a._1*1000+a._2);
+  static HASH_RES_t hash(const rec& a) {
+    return (HASH_RES_t)(a._1*1000+a._2);
   }
   static bool equals(const rec& a,const rec& b) { 
     return a._1==b._1 && a._2==b._2;
@@ -15,8 +18,8 @@ struct IndexFn1 {
 };
 
 struct IndexFn2 {
-  static long hash(const rec& a) {
-    return (long)a._1;;
+  static HASH_RES_t hash(const rec& a) {
+    return (HASH_RES_t)a._1;
   }
   static bool equals(const rec& a,const rec& b) { 
     return a._1==b._1;
@@ -81,6 +84,35 @@ void test_map() {
   hmap2.slice(1,rec(1),[] (const rec& a) { printf(" - %d -> %d\n", a._1, a._2); });
 }
 
+void test_hash(){
+  rec r1(1,2,11);
+  uint32_t h1_1 = MurmurHash2(&r1,sizeof(rec));
+  std::cout << "h1_1 = " << h1_1 << std::endl;
+  uint32_t h2_1 = MurmurHash2(&r1,sizeof(rec)-sizeof(((rec *)0)->_val));
+  std::cout << "h2_1 = " << h2_1 << std::endl;
+  uint32_t h3_1=0, carry_1=0;
+  PMurHash32_Process(&h3_1, &carry_1, &(r1._1),sizeof(((rec *)0)->_1));
+  std::cout << "  h3_1 = " << h3_1 << std::endl;
+  PMurHash32_Process(&h3_1, &carry_1, &(r1._2),sizeof(((rec *)0)->_2));
+  std::cout << "  h3_1 = " << h3_1 << std::endl;
+  std::cout << "h3_1 = " << PMurHash32_Result(h3_1, carry_1, sizeof(((rec *)0)->_1)+sizeof(((rec *)0)->_2)) << std::endl;
+
+  std::cout << std::endl;
+
+  rec r2(1,2,28);
+  uint32_t h1_2 = MurmurHash2(&r2,sizeof(rec));
+  std::cout << "h1_2 = " << h1_2 << std::endl;
+  uint32_t h2_2 = MurmurHash2(&r2,sizeof(rec)-sizeof(((rec *)0)->_val));
+  std::cout << "h2_2 = " << h2_2 << std::endl;
+  uint32_t h3_2=0, carry_2=0;
+  PMurHash32_Process(&h3_2, &carry_2, &(r2._1),sizeof(((rec *)0)->_1));
+  std::cout << "  h3_2 = " << h3_2 << std::endl;
+  PMurHash32_Process(&h3_2, &carry_2, &(r2._2),sizeof(((rec *)0)->_2));
+  std::cout << "  h3_2 = " << h3_2 << std::endl;
+  std::cout << "h3_2 = " << PMurHash32_Result(h3_2, carry_2, sizeof(((rec *)0)->_1)+sizeof(((rec *)0)->_2)) << std::endl;
+}
+
+
 int main(int argc, char** argv) {
   std::cout << "test_pool()" << std::endl;
   test_pool();
@@ -88,6 +120,8 @@ int main(int argc, char** argv) {
   test_index();
   std::cout << "test_map()" << std::endl;
   test_map();
+  std::cout << "test_hash()" << std::endl;
+  test_hash();
   std::cout << "All tests passes successfully :)" << std::endl;
   return 0;
 }
