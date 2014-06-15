@@ -470,10 +470,10 @@ trait ICppGen extends IScalaGen {
         is.map{ isIndex => "    hash_combine(h, e."+fields(isIndex)._1+");\n" }.mkString +
         "    return h;"+
         // "    uint32_t h=0, carry=0;\n"+
-        // is.map{ isIndex => (if(fields(isIndex)._2 == TypeString) "    const char* fld"+isIndex+" = e."+fields(is(isIndex))._1+".c_str();\n" else "")+
-        // "    PMurHash32_Process(&h, &carry, &(e."+fields(isIndex)._1+"),"+(if(fields(isIndex)._2 == TypeString) "strlen(fld"+isIndex+")" else "sizeof((("+mapEntry+" *)0)->"+fields(isIndex)._1+")")+");\n"
+        // is.map{ isIndex => (if(fields(isIndex)._2 == TypeString) "    const char* fld"+isIndex+" = e."+fields(is(isIndex))._1+".c_str();\n    int fldlen"+isIndex+" = strlen(fld"+isIndex+");\n" else "")+
+        // "    PMurHash32_Process(&h, &carry, &(e."+fields(isIndex)._1+"),"+(if(fields(isIndex)._2 == TypeString) "fldlen"+isIndex else "sizeof((("+mapEntry+" *)0)->"+fields(isIndex)._1+")")+");\n"
         // }.mkString +
-        // "    return PMurHash32_Result(h, carry, "+is.sortBy{ isIndex => if(fields(isIndex)._2 == TypeString) 1 else 0}.map{ isIndex => if(fields(isIndex)._2 == TypeString) "strlen(fld"+isIndex+")" else "sizeof((("+mapEntry+" *)0)->"+fields(isIndex)._1+")"}.mkString("+")+");\n"
+        // "    return PMurHash32_Result(h, carry, "+is.sortBy{ isIndex => if(fields(isIndex)._2 == TypeString) 1 else 0}.map{ isIndex => if(fields(isIndex)._2 == TypeString) "fldlen"+isIndex else "sizeof((("+mapEntry+" *)0)->"+fields(isIndex)._1+")"}.mkString("+")+");\n"
         // })+
         "\n"+
         "  }\n"+
