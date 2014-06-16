@@ -18,21 +18,36 @@ private:
   El* free_;
   El* data_;
   size_t size_;
+  bool forceClear;
   void add_chunk() { // precondition: no available elements
+    size_ = size_ << 1;
     El* chunk = new El[size_+1]; for (size_t i=0; i<size_-1; ++i) chunk[i].next = &chunk[i+1];
     chunk[size_-1].next = nullptr; chunk[size_].next = data_; data_ = chunk; free_ = chunk;
   }
 public:
-  Pool(size_t chunk_size=DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size) { add_chunk(); }
-  ~Pool() { while (data_ != nullptr) { El* el = data_[size_].next; delete[] data_; data_ = el; } }
-  FORCE_INLINE T* add() { if (!free_) add_chunk(); El* el = free_; free_ = free_->next; return &(el->obj); }
+  Pool(size_t chunk_size=DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size >> 1), forceClear(false) { add_chunk(); }
+  ~Pool() { size_t sz=size_; while (data_ != nullptr) { El* el = data_[sz].next; delete[] data_; data_ = el; sz=sz >> 1; } }
+  FORCE_INLINE T* add() { if (!free_) { forceClear=true; add_chunk(); } El* el = free_; free_ = free_->next; return &(el->obj); }
   FORCE_INLINE void del(T* obj) { ((El*)obj)->next = free_; free_ = (El*)obj; }
   inline void clear(){
-    El* chunk = data_;
-    while (chunk != nullptr) {
-      for (size_t i=0; i<size_-1; ++i) chunk[i].next = &chunk[i+1];
-      // chunk[size_-1].next = nullptr; // did not change
-      chunk = chunk[size_].next;
+    if(forceClear) {
+      El* prevChunk = nullptr;
+      El* chunk = data_;
+      size_t sz = size_;
+      size_t doubleSz = sz << 1;
+      while (chunk) {
+        if(prevChunk) {
+          prevChunk[doubleSz-1].next=chunk;
+        }
+        for (size_t i=0; i<sz-1; ++i) chunk[i].next = &chunk[i+1];
+        chunk[sz-1].next = nullptr; // did not change
+        prevChunk = chunk;
+        chunk = chunk[sz].next;
+        doubleSz=sz;
+        sz=sz>>1;
+      }
+      free_ = data_;
+      forceClear = false;
     }
   }
 };
