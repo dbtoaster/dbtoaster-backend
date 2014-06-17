@@ -136,7 +136,10 @@ trait ICppGen extends IScalaGen {
             "  "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+h0+" % "+idx0+"->size_]);\n"+
             "  "+mapEntry+"* "+e0+";\n"+
             "  do if (("+e0+"="+n0+"->obj) && "+h0+" == "+n0+"->hash && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
-                 ind(body,2)+"\n"+
+            "    do {\n"+
+                   ind(body,3)+"\n"+
+            "    } while(("+n0+"="+n0+"->next) && ("+e0+"="+n0+"->obj) && ("+h0+" == "+n0+"->hash) && "+idxFn+"::equals("+sampleEnt+", *"+n0+"->obj));\n"+
+            "    break;\n"+
             "  } while (("+n0+"="+n0+"->next));\n"+
             "}\n"
             // n+".index["+idxIndex+"]->slice("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"),[&] (const "+mapEntry+"& "+e0+") {\n"+
@@ -145,13 +148,10 @@ trait ICppGen extends IScalaGen {
           } else { //foreach
             val b0= fresh("b")
             "{ //foreach\n"+
-            "  "+mapEntry+"* "+e0+";\n"+
-            "  const "+idxName+"* "+idx0+" = static_cast<"+idxName+"*>("+n+".index[0]);\n"+
-            "  for (size_t "+b0+"=0; "+b0+"<"+idx0+"->size_; ++"+b0+") {\n"+
-            "    "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+b0+"]);\n"+
-            "    do if (("+e0+"="+n0+"->obj)) {\n"+
-                   ind(body,3)+"\n"+
-            "    } while(("+n0+"="+n0+"->next));\n"+
+            "  "+mapEntry+"* "+e0+" = "+n+".head;\n"+
+            "  while("+e0+"){\n"+
+                 ind(body,2)+"\n"+
+            "    "+e0+" = "+e0+"->nxt;\n"+
             "  }\n"+
             "}\n"
             // n+".index[0]->foreach([&] (const "+mapEntry+"& "+e0+") {\n"+
@@ -421,10 +421,10 @@ trait ICppGen extends IScalaGen {
 
       def genEntryStruct = 
         "struct "+mapEntry+" {\n"+
-        "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+"\n"+
-        "  explicit "+mapEntry+"() { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
+        "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+" "+mapEntry+"* nxt; "+mapEntry+"* prv;\n"+
+        "  explicit "+mapEntry+"() : nxt(nullptr), prv(nullptr) { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
         "  explicit "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => tp.toCpp+" c"+i}.mkString(", ")+") { "+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
-        "  "+mapEntry+"(const "+mapEntry+"& other) : "+fieldsWithIdx.map{case ((fld,tp),i) => fld+"( other."+fld+" )"}.mkString(", ")+" {}\n"+
+        "  "+mapEntry+"(const "+mapEntry+"& other) : "+fieldsWithIdx.map{case ((fld,tp),i) => fld+"( other."+fld+" ), "}.mkString+"nxt( nullptr ), prv( nullptr ) {}\n"+
         // "  "+mapEntry+"& operator=(const "+mapEntry+"& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = other."+fld+";"}.mkString+" return *this; }\n"+
         // "  "+mapEntry+"& operator=(const "+mapEntry+"&& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+(if(tp.isBasicCppType) "other."+fld else "std::move(other."+fld+")")+";"}.mkString+" return *this; }\n"+
         allIndices.map{ case (is,unique) =>
@@ -485,10 +485,10 @@ trait ICppGen extends IScalaGen {
 
       def genTypeDefs =
         "typedef MultiHashMap<"+mapEntry+","+
-        allIndices.map{case (is,unique) => "\n  HashIndex<"+mapEntry+","+mapType+"key"+getIndexId(mapName,is)+"_idxfn>"}.mkString(",")+
+        allIndices.map{case (is,unique) => "\n  HashIndex<"+mapEntry+","+mapType+"key"+getIndexId(mapName,is)+"_idxfn,"+unique+">"}.mkString(",")+
         "\n> "+mapType+";\n"+
-        allIndices.map{ case (is,_) =>
-          "typedef HashIndex<"+mapEntry+","+mapType+"key"+getIndexId(mapName,is)+"_idxfn> HashIndex_"+mapType+"_"+getIndexId(mapName,is)+";\n"
+        allIndices.map{ case (is,unique) =>
+          "typedef HashIndex<"+mapEntry+","+mapType+"key"+getIndexId(mapName,is)+"_idxfn,"+unique+"> HashIndex_"+mapType+"_"+getIndexId(mapName,is)+";\n"
         }.mkString
 
       def genHelperFunctions =
@@ -507,7 +507,7 @@ trait ICppGen extends IScalaGen {
         (if(helperFuncUsage.contains(("ADD_TO_MAP_FUNC" -> mapName))) "FORCE_INLINE void "+ADD_TO_MAP_FUNC(mapName)+"("+mapType+"& m, "+mapEntry+"& k, const "+mapValueType+"& v) {\n"+
         "  if (v != "+m.tp.zeroCpp+") {\n"+
         "    "+mapEntry+"* lkup = m.get(k);\n"+
-        "    if(lkup != nullptr) lkup->"+VALUE_NAME+"+=v;\n"+
+        "    if(lkup != nullptr) { lkup->"+VALUE_NAME+"+=v; if(lkup->"+VALUE_NAME+" == "+m.tp.zeroCpp+") m.del(lkup); }\n"+
         "    else { k."+VALUE_NAME+" = v; m.insert_nocheck(k); }\n"+
         "  }\n"+
         "}" else "")

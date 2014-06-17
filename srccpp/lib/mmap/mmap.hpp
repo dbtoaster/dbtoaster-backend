@@ -88,7 +88,7 @@ public:
   virtual ~Index(){};
 };
 
-template<typename T, typename IDX_FN/* = GenericIndexFn<T>*/ >
+template<typename T, typename IDX_FN/* = GenericIndexFn<T>*/, bool is_unique=true >
 class HashIndex : public Index<T> {
 public:
   typedef struct __IdxNode {
@@ -103,31 +103,42 @@ private:
   size_t count_, threshold_;
   double load_factor_;
 
-  void add_(T* obj) { // does not resize the bucket array, does not maintain count
-    HASH_RES_t h = IDX_FN::hash(*obj);
-    IdxNode* n = &buckets_[h % size_];
-    if (n->obj) {
-      IdxNode* nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-      nw->hash = h; nw->obj = obj;
-      nw->next = n->next; n->next=nw;
-    } else {  // space left in last IdxNode
-      n->hash = h; n->obj = obj; //n->next=nullptr;
-    }
-  }
+  // void add_(T* obj) { // does not resize the bucket array, does not maintain count
+  //   HASH_RES_t h = IDX_FN::hash(*obj);
+  //   IdxNode* n = &buckets_[h % size_];
+  //   if (n->obj) {
+  //     IdxNode* nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
+  //     nw->hash = h; nw->obj = obj;
+  //     nw->next = n->next; n->next=nw;
+  //   } else {  // space left in last IdxNode
+  //     n->hash = h; n->obj = obj; //n->next=nullptr;
+  //   }
+  // }
 
   void resize_(size_t new_size) {
-    IdxNode* old = buckets_;
+    IdxNode *old = buckets_, *n, *na, *nw, *d;
+    HASH_RES_t h;
     size_t sz = size_;
     buckets_ = new IdxNode[new_size];
     memset(buckets_, 0, sizeof(IdxNode) * new_size);
     size_ = new_size;
     threshold_ = size_ * load_factor_;
     for (size_t b=0; b<sz; ++b) {
-      IdxNode* n = &old[b];
+      n = &old[b];
       bool pooled = false;
       do {
-        if(n->obj) add_(n->obj);
-        if (pooled) { IdxNode* d=n; n=n->next; nodes_.del(d); } else n=n->next;
+        if(n->obj) { //add_(n->obj); // does not resize the bucket array, does not maintain count
+          h = IDX_FN::hash(*n->obj);
+          na = &buckets_[h % size_];
+          if (na->obj) {
+            nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
+            nw->hash = h; nw->obj = n->obj;
+            nw->next = na->next; na->next=nw;
+          } else {  // space left in last IdxNode
+            na->hash = h; na->obj = n->obj; //na->next=nullptr;
+          }
+        }
+        if (pooled) { d=n; n=n->next; nodes_.del(d); } else n=n->next;
         pooled = true;
       } while(n);
     }
@@ -163,29 +174,74 @@ public:
 
   // inserts regardless of whether element exists already
   FORCE_INLINE virtual void add(T& obj) { add(&obj); }
-  inline virtual void add(T* obj) { ++count_; if (count_>threshold_) resize_(size_<<1); add_(obj); }
+  inline virtual void add(T* obj) {
+    if (count_>threshold_) resize_(size_<<1);
+    HASH_RES_t h = IDX_FN::hash(*obj);
+    size_t b = h % size_;
+    IdxNode* n = &buckets_[b];
+    IdxNode* nw;
+    
+    if(is_unique) {
+      ++count_;
+      if (n->obj) {
+        nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
+        nw->hash = h; nw->obj = obj;
+        nw->next = n->next; n->next=nw;
+      } else {  // space left in last IdxNode
+        n->hash = h; n->obj = obj; //n->next=nullptr;
+      }
+    } else {
+      // ++count_;
+      if (!n->obj) { // space left in last IdxNode
+        ++count_;
+        n->hash = h; n->obj = obj; //n->next=nullptr;
+        return;
+      }
+      do {
+        if(h==n->hash && IDX_FN::equals(*obj, *n->obj)) {
+          nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
+          nw->hash = h; nw->obj = obj;
+          nw->next = n->next; n->next=nw;
+          return;
+        }/*else {
+          //go ahead, and look for an element in the same slice
+          //or reach the end of linked list of IdxNodes
+        }*/
+      } while((n=n->next));
+      // if(!n) {
+      ++count_;
+      n = &buckets_[b];
+      nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
+      nw->hash = h; nw->obj = obj;
+      nw->next = n->next; n->next=nw;
+      // return;
+      // }
+    }
+  }
 
   // deletes an existing elements (equality by pointer comparison)
   FORCE_INLINE virtual void del(const T& obj) { const T* ptr = get(obj); if (ptr) del(ptr); }
   virtual void del(const T* obj) {
     HASH_RES_t h = IDX_FN::hash(*obj);
     IdxNode* n = &buckets_[h % size_];
-    IdxNode* prev = nullptr; // previous
+    IdxNode* prev = nullptr, *next; // previous and next pointers
     do {
+      next = n->next;
       if (/*n->obj &&*/ n->obj == obj) {
-        --count_;
         if(prev) {
-          prev->next=n->next;
+          prev->next=next;
           // n->next = nullptr;
           // n->obj = nullptr;
           nodes_.del(n);
         } else {
           n->obj = nullptr;
         }
+        if(is_unique || !((prev && prev->obj && (h==prev->hash) && IDX_FN::equals(*obj, *prev->obj)) || 
+           (next && (h==next->hash) && IDX_FN::equals(*obj, *next->obj)))) --count_;
         return;
       }
       prev = n;
-    } while ((n=n->next));
+    } while ((n=next));
   }
 
   inline virtual void foreach(std::function<void (const T&)> f) {
@@ -199,21 +255,27 @@ public:
     HASH_RES_t h = IDX_FN::hash(key);
     IdxNode* n = &(buckets_[h % size_]);
     do {
-      if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) f(*n->obj);
+      if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) {
+        do {
+          f(*n->obj);
+        } while ((n=n->next) && (h == n->hash) && IDX_FN::equals(key, *n->obj));
+        return;
+      }
     } while ((n=n->next));
   }
   inline virtual void clear(){
     count_ = 0;
-    for (size_t b=0; b<size_; ++b) {
-      IdxNode* n = &buckets_[b];
-      IdxNode* next;
-      do {
-        n->obj = nullptr;
-        // n->hash = 0L;
-        next = n->next;
-        n->next = nullptr;
-      } while ((n=next));
-    }
+    memset(buckets_, 0, sizeof(IdxNode) * size_);
+    // for (size_t b=0; b<size_; ++b) {
+    //   IdxNode* n = &buckets_[b];
+    //   IdxNode* next;
+    //   do {
+    //     n->obj = nullptr;
+    //     // n->hash = 0L;
+    //     next = n->next;
+    //     n->next = nullptr;
+    //   } while ((n=next));
+    // }
     nodes_.clear();
   }
 
@@ -227,11 +289,12 @@ private:
   Pool<T> pool;
 public:
   Index<T>** index;
+  T* head;
 
-  MultiHashMap() { // by defintion index 0 is always unique
+  MultiHashMap() : head(nullptr) { // by defintion index 0 is always unique
     index = new Index<T>*[sizeof...(INDEXES)]{ new INDEXES()... };
   }
-  MultiHashMap(const MultiHashMap& other) { // by defintion index 0 is always unique
+  MultiHashMap(const MultiHashMap& other) : head(nullptr) { // by defintion index 0 is always unique
     index = new Index<T>*[sizeof...(INDEXES)]{ new INDEXES()... };
     other.index[0]->foreach([this] (const T& e) { this->insert_nocheck(e); });
   }
@@ -250,6 +313,12 @@ public:
       // cur->~T();
       // *cur=std::move(*elem);
       new(cur) T(*elem);
+      if(head) {
+        cur->prv = nullptr;
+        cur->nxt  = head;
+        head->prv = cur;
+      }
+      head = cur; 
       for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
     } else {
       // cur->~T();
@@ -268,6 +337,12 @@ public:
     // cur->~T();
     // *cur=std::move(elem);
     new(cur) T(elem);
+    if(head) {
+      cur->prv = nullptr;
+      cur->nxt = head;
+      head->prv = cur;
+    }
+    head = cur; 
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
   }
 
@@ -278,11 +353,20 @@ public:
     slice(idx, key,[] (const T& e) { del(e); });
   }
   FORCE_INLINE void del(T* elem) { // assume that the element is already in the map
+    if(elem->prv) elem->prv->nxt = elem->nxt;
+    if(elem->nxt) elem->nxt->prv = elem->prv;
+    elem->nxt = nullptr; elem->prv = nullptr;
+
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
     pool.del(elem);
   }
   inline void foreach(std::function<void (const T&)> f) {
-    index[0]->foreach(f);
+    // index[0]->foreach(f);
+    T* tmp = head;
+    while(tmp) {
+      f(*tmp);
+      tmp = tmp->nxt;
+    }
   }
 
   void slice(int idx, const T& key, std::function<void (const T&)> f) {
@@ -292,6 +376,7 @@ public:
   FORCE_INLINE size_t count() { return index[0]->count(); }
 
   FORCE_INLINE void clear(){
+    head = nullptr;
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->clear();
     pool.clear();
   }
