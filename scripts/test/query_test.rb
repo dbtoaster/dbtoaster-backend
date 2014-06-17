@@ -216,7 +216,7 @@ class CppNewBackendUnitTest < GenericUnitTest
             compile_cmd =
             "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
             $timeout_compile +
-            "(cd #{$dbt_backend_path}; sbt 'toast -l cpp -o #{$dbt_path}/bin/queries/#{@qname}.hpp -c #{$dbt_path}/bin/queries/#{@qname} #{@qpath} ')"+
+            "(cd #{$dbt_backend_path}; sbt 'toast -l cpp -O3 -o #{$dbt_path}/bin/queries/#{@qname}.hpp -c #{$dbt_path}/bin/queries/#{@qname} #{@qpath} ')"+
             #(dbt_base_cmd + [
             #"-l","cpp",
             #"-o","bin/queries/#{@qname}.hpp",
