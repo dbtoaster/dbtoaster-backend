@@ -353,8 +353,10 @@ public:
     slice(idx, key,[] (const T& e) { del(e); });
   }
   FORCE_INLINE void del(T* elem) { // assume that the element is already in the map
-    if(elem->prv) elem->prv->nxt = elem->nxt;
-    if(elem->nxt) elem->nxt->prv = elem->prv;
+    T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+    if(elemPrv) elemPrv->nxt = elemNxt;
+    if(elemNxt) elemNxt->prv = elemPrv;
+    if(elem == head) head = elemNxt;
     elem->nxt = nullptr; elem->prv = nullptr;
 
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
