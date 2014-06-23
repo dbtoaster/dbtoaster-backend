@@ -282,13 +282,7 @@ class ScalaUnitTest < GenericUnitTest
     starttime = Time.now;
     @currentdir = Dir.pwd;
     IO.popen($timeout_exec +
-             "scala -J-Xmx2048M -J-XX:+HeapDumpOnOutOfMemoryError " +
-
-             "-J-agentpath:lib/dbt_scala/libyjpagent.jnilib" +
-             "=onexit=snapshot" +
-             ",logdir=#{@currentdir}/bin/queries/log/#{@qname}" +
-             ",dir=#{@currentdir}/bin/queries/snapshot/#{@qname} " +
-
+             "scala -J-Xmx100G -J-XX:+HeapDumpOnOutOfMemoryError " +
              "-classpath \"bin/queries/#{@qname}.jar#{$path_delim}" + 
                           "lib/dbt_scala/dbtlib.jar\" " + 
              "org.dbtoaster.RunQuery", "r") do |qin|
