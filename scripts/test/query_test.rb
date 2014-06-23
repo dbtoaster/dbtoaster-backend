@@ -173,6 +173,7 @@ class CppUnitTest < GenericUnitTest
         "-l","cpp",
         "-o","bin/queries/#{@qname}.hpp",
         "-c","bin/queries/#{@qname}",
+        "-O3",
       ]).join(" ") + "  2>&1";
       # print compile_cmd
       starttime = Time.now
@@ -272,6 +273,7 @@ class ScalaUnitTest < GenericUnitTest
         "-l","scala",
         "-o","bin/queries/#{@qname}.scala",
         "-c","bin/queries/#{@qname}",
+        "-O3",
       ]).join(" ") + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
