@@ -159,8 +159,7 @@ trait ICppGen extends IScalaGen {
             // "});\n"
           }
         } else { //only foreach for Temp map
-          val mapType = "map<"+tupType(m.tks)+","+tp.toCpp+">"
-          val idxIterator = mapType+"::iterator"
+          val idxIterator = "map<"+tupType(m.tks)+","+tp.toCpp+">::iterator"
 
           //expanded mode
           // idxIterator+" "+lupItr0+" = "+n+".begin(); //temp foreach\n"+
