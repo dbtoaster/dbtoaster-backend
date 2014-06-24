@@ -18,7 +18,7 @@ trait ICppGen extends IScalaGen {
   def FIND_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("FIND_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("FIND_IN_MAP_FUNC" -> m),0)+1); "find_in_"+m }
   def SET_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("SET_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("SET_IN_MAP_FUNC" -> m),0)+1); "set_in_"+m }
   def ADD_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("ADD_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("ADD_TO_MAP_FUNC" -> m),0)+1); "add_to_"+m }
-  def ADD_TO_TEMP_MAP_FUNC(k:String,v:String) = "add_to_temp_map<"+k+","+v+">"
+  def ADD_TO_TEMP_MAP_FUNC(k:List[Type],v:Type) = "add_to_temp_map<"+tupType(k)+","+v.toCpp+">"
 
   val tempTupleTypes = HashMap[String,List[Type]]()
   def tup(vs:List[String], vsTp:List[Type]) = { val v=vs.mkString(","); if (vs.size>1) tupType(vsTp)+"("+v+")" else v }
@@ -236,8 +236,8 @@ trait ICppGen extends IScalaGen {
           val ksTp = a.agg.map(_._2)
           val tmp = Some(a.agg)
           val cur = ctx.save
-          val s1 = cpsExpr(el,(v:String)=>ADD_TO_TEMP_MAP_FUNC(tupType(a.agg.map(_._2)),ex.tp.toCpp)+"("+a0+", "+tup(ks map rn, ksTp)+","+v+");\n",tmp); ctx.load(cur)
-          val s2 = cpsExpr(er,(v:String)=>ADD_TO_TEMP_MAP_FUNC(tupType(a.agg.map(_._2)),ex.tp.toCpp)+"("+a0+", "+tup(ks map rn, ksTp)+","+v+");\n",tmp); ctx.load(cur)
+          val s1 = cpsExpr(el,(v:String)=>ADD_TO_TEMP_MAP_FUNC(a.agg.map(_._2),ex.tp)+"("+a0+", "+tup(ks map rn, ksTp)+","+v+");\n",tmp); ctx.load(cur)
+          val s2 = cpsExpr(er,(v:String)=>ADD_TO_TEMP_MAP_FUNC(a.agg.map(_._2),ex.tp)+"("+a0+", "+tup(ks map rn, ksTp)+","+v+");\n",tmp); ctx.load(cur)
           genVar(a0,ex.tp,a.agg.map(_._2))+s1+s2+cpsExpr(mapRef(a0,ex.tp,a.agg),co)
       }
     case a@AggSum(ks,e) =>
@@ -249,7 +249,7 @@ trait ICppGen extends IScalaGen {
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
-          val s1 = genVar(a0,e.tp,aks.map(_._2))+"\n"+cpsExpr(e,(v:String)=>ADD_TO_TEMP_MAP_FUNC(tupType(aks.map(_._2)),e.tp.toCpp)+"("+a0+", "+tup(aks.map(x=>rn(x._1)), aks.map(x=>x._2))+","+v+");\n",tmp);
+          val s1 = genVar(a0,e.tp,aks.map(_._2))+"\n"+cpsExpr(e,(v:String)=>ADD_TO_TEMP_MAP_FUNC(aks.map(_._2),e.tp)+"("+a0+", "+tup(aks.map(x=>rn(x._1)), aks.map(x=>x._2))+","+v+");\n",tmp);
           ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
