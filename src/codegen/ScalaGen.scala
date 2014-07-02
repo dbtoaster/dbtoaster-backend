@@ -48,7 +48,7 @@ trait IScalaGen extends CodeGen {
   override def consts:String = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "val "+n+":"+tp.toScala+" = U"+f+"("+vs.mkString(",")+")\n" }.mkString+ // constant function applications
                                regexpCacheMap.map{ case (regex,preg) => "val "+preg+"=java.util.regex.Pattern.compile(\""+regex+"\");\n"}.mkString+"\n"
 
-  protected val ENABLE_REGEXP_PARTIAL_EVAL=false
+  protected val ENABLE_REGEXP_PARTIAL_EVAL=true
   protected val regexpCacheMap = HashMap[String,String]() //Regex String => Regex object name
 
   // XXX: enlarge the definition to generalized constants
