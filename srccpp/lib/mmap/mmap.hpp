@@ -1,10 +1,13 @@
+#ifndef MMAP_H
+#define MMAP_H
+
 #include <iostream>
 #include <assert.h>
 #include <functional>
 #include <string.h>
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/serialization/map.hpp>
-#include <mmap/PMurHash.hpp>
+#include "PMurHash.hpp"
 
 #define DEFAULT_CHUNK_SIZE 1024
 #define DEFAULT_LIST_SIZE 8
@@ -88,7 +91,7 @@ public:
   virtual ~Index(){};
 };
 
-template<typename T, typename IDX_FN/* = GenericIndexFn<T>*/, bool is_unique=true >
+template<typename T, typename IDX_FN=T/* = GenericIndexFn<T>*/, bool is_unique=true >
 class HashIndex : public Index<T> {
 public:
   typedef struct __IdxNode {
@@ -294,6 +297,10 @@ public:
   MultiHashMap() : head(nullptr) { // by defintion index 0 is always unique
     index = new Index<T>*[sizeof...(INDEXES)]{ new INDEXES()... };
   }
+
+  MultiHashMap(size_t init_capacity) : head(nullptr) { // by defintion index 0 is always unique
+    index = new Index<T>*[sizeof...(INDEXES)]{ new INDEXES(init_capacity)... };
+  }
   MultiHashMap(const MultiHashMap& other) : head(nullptr) { // by defintion index 0 is always unique
     index = new Index<T>*[sizeof...(INDEXES)]{ new INDEXES()... };
     other.index[0]->foreach([this] (const T& e) { this->insert_nocheck(e); });
@@ -391,3 +398,5 @@ public:
     foreach([&ar] (const T& e) { ar << boost::serialization::make_nvp("item", e); });
   }
 };
+
+#endif //MMAP_H
