@@ -282,7 +282,7 @@ FORCE_INLINE uint32_t MurmurHash2 ( const void * key, int len )
     int _i = cnt; \
     while(_i--) { \
         c = c>>8 | *ptr++<<24; \
-        n++; len--; \
+        ++n; --len; \
         if(n==4) { \
             DOBLOCK(h1, c); \
             n = 0; \

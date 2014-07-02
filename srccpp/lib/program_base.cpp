@@ -332,7 +332,7 @@ void ProgramBase::trace(std::ostream &ofs, bool debug) {
 
 	map<string, ProgramBase::map_ptr_t>::iterator it = 
 			maps_by_name.begin();
-	for (; it != maps_by_name.end(); it++)
+	for (; it != maps_by_name.end(); ++it)
 	#ifndef DBT_TRACE_ALL
 	if ((!debug && it->second->isOutput) || (debug && it->second->isTraced)) 
 	#endif

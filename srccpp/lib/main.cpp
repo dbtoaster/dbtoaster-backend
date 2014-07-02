@@ -15,7 +15,7 @@ namespace dbtoaster{
     {
     public:
         void process_streams() {
-            for( long i = 1; i <= 10; i++ ) {
+            for( long i = 1; i <= 10; ++i ) {
                 event_args_t ev_args;
                 ev_args.push_back(i);
                 ev_args.push_back(i+10);
@@ -45,7 +45,7 @@ namespace dbtoaster{
  */
 bool async_mode(int argc, char* argv[])
 {
-    for(int i = 1; i < argc; i++)
+    for(int i = 1; i < argc; ++i)
         if( !strcmp(argv[i],"--async") )
             return true;
     return false;

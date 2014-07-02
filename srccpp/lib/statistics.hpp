@@ -122,7 +122,7 @@ namespace dbtoaster {
       {}
 
       std::shared_ptr<ostream> next() {
-        n_firings++;
+        ++n_firings;
         std::shared_ptr<ostream> r;
         if ( period > 0 && n_firings % period == 0 ) r = file_sequence::next();
         return r;

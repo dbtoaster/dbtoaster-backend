@@ -39,7 +39,7 @@ std::ostream& operator<<(std::ostream &strm, const std::vector<boost::any> &args
     if( !args.empty() )
     {
         strm << args[0];
-        for( size_t i = 1; i < args.size(); i++ )
+        for( size_t i = 1; i < args.size(); ++i )
             strm << ", " << args[i];
     }
     return strm;
@@ -105,9 +105,9 @@ void dbt_file_source::read_source_events(std::shared_ptr<std::list<event_t> > ev
 		size_t delim_size = frame_info.delimiter.size();
 
 		//add delimeter at the end, is it does not exist
-		for(size_t delim_idx = 0; delim_idx < delim_size; delim_idx++) {
+		for(size_t delim_idx = 0; delim_idx < delim_size; ++delim_idx) {
 			if(*(buffer_end-1-delim_idx) != *(delim+delim_size-1)) {
-				for(delim_idx = 0; delim_idx < delim_size; delim_idx++) {
+				for(delim_idx = 0; delim_idx < delim_size; ++delim_idx) {
 					*buffer_end = *(delim+delim_idx);
 					buffer_end+=1;
 				}
