@@ -32,8 +32,10 @@
 #include "iprogram.hpp"
 #include "util.hpp"
 #include "streams.hpp"
-#include "standard_adaptors.hpp"
+#include "standard_adaptors.hpp"    
 #include "standard_functions.hpp"
+ 
+#include "mmap/mmap.hpp"
 
 //using namespace ::std;
 using namespace ::boost;
@@ -251,15 +253,12 @@ namespace boost {namespace serialization {
 }} //namespace serialization, namespace boost
 
 namespace dbtoaster {
-    template<typename K,typename V>
-    void add_to_temp_map(map<K,V>& m, const K& k, const V& v)
+    template<typename T>
+    void add_to_temp_map(MultiHashMap<T,HashIndex<T,T> >& m, const T& k)
     {
-        typename map<K,V>::iterator lkup = m.find(k);
-        if (lkup!=m.end()) {
-            m[k] = v + (*lkup).second;
-        } else {
-            m[k] = v;
-        }
+        T* lkup = m.get(k);
+        if(lkup != nullptr) lkup->__av+=k.__av;
+        else /*k.__av = v;*/ m.insert_nocheck(k);
     }
 }
 

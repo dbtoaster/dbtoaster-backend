@@ -18,11 +18,15 @@ trait ICppGen extends IScalaGen {
   def FIND_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("FIND_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("FIND_IN_MAP_FUNC" -> m),0)+1); "find_in_"+m }
   def SET_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("SET_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("SET_IN_MAP_FUNC" -> m),0)+1); "set_in_"+m }
   def ADD_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("ADD_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("ADD_TO_MAP_FUNC" -> m),0)+1); "add_to_"+m }
-  def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) = "add_to_temp_map<"+tupType(ksTp)+","+vsTp+">("+m+", "+tup(ks map rn, ksTp)+","+vs+");\n"
+  def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) = {
+    val sampleTempEnt=fresh("st")
+    sampleEntDef+="  "+tupType(ksTp, vsTp)+" "+sampleTempEnt+";\n"
+    "add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, vs)+");\n"
+  }
 
-  val tempTupleTypes = HashMap[String,List[Type]]()
-  def tup(vs:List[String], vsTp:List[Type]) = { val v=vs.mkString(","); if (vs.size>1) tupType(vsTp)+"("+v+")" else v }
-  def tupType(ksTp:List[Type]):String = { if (ksTp.size>1) { val tupleTp="tuple"+ksTp.size+"_"+ksTp.map(_.simpleName).mkString; tempTupleTypes.update(tupleTp,ksTp); tupleTp } else ksTp.mkString(",") }
+  val tempTupleTypes = HashMap[String,(List[Type],Type)]()
+  def tup(ks:List[String],vs:String) = "("+ks.mkString(",")+","+vs+")"
+  def tupType(ksTp:List[Type], vsTp:Type):String = { val tupleTp="tuple"+(ksTp.size+1)+"_"+ksTp.map(_.simpleName).mkString+"_"+vsTp.simpleName; tempTupleTypes.update(tupleTp,(ksTp, vsTp)); tupleTp }
 
   override def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "/*const static*/ "+tp.toCpp+" "+n+";\n" }.mkString+"\n" // constant member definition
   def constsInit = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); n+" = "+"U"+f+"("+vs.mkString(",")+");\n" }.mkString+"\n" // constant member initilization
@@ -31,10 +35,11 @@ trait ICppGen extends IScalaGen {
   var sampleEntDef = ""
 
   private val mapDefs = HashMap[String,MapDef]() //mapName => MapDef
+  private val tmpMapDefs = HashMap[String,String]() //tmp mapName => MapDef string
 
   // Create a variable declaration
   //XXXXX TODO
-  override def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) tp.toCpp+" "+n+" = "+tp.zeroCpp+";\n" else "map<"+tupType(ks)+","+tp.toCpp+"> "+n+";\n"
+  override def genVar(n:String,vsTp:Type,ksTp:List[Type]) = if (ksTp==Nil) vsTp.toCpp+" "+n+" = "+vsTp.zeroCpp+";\n" else { tmpMapDefs += (n -> tupType(ksTp,vsTp)); n+".clear();\n" }
 
   def getIndexId(m:String,is:List[Int]):String = getIndexPattern(m,is) //slice(m,is)
   def getIndexPattern(m:String,is:List[Int]):String = (if(is.isEmpty) (0 until mapDefs(m).keys.size).toList else is).mkString
@@ -72,7 +77,7 @@ trait ICppGen extends IScalaGen {
         val is = ko.map(_._2)
         val iKeys = ko.map(x=>rn(x._1._1))
         val iKeysTp = ko.map(x=>x._1._2)
-        val (k0,v0)=(fresh("k"),fresh("v"))
+        val (k0,v0,e0)=(fresh("k"),fresh("v"),fresh("e"))
 
         ctx.add(kswt.filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
 
@@ -115,7 +120,6 @@ trait ICppGen extends IScalaGen {
 
 
           val n0= fresh("n")
-          val e0= fresh("e")
           val idx0= fresh("i")
           val mapType = n+"_map"
           val idxName = "HashIndex_"+mapType+"_"+getIndexId(n,is)
@@ -159,23 +163,33 @@ trait ICppGen extends IScalaGen {
             // "});\n"
           }
         } else { //only foreach for Temp map
-          val idxIterator = "map<"+tupType(m.tks)+","+tp.toCpp+">::iterator"
+          // val idxIterator = "map<"+tupType(m.tks,m.tp)+","+tp.toCpp+">::iterator"
+          // //expanded mode
+          // // idxIterator+" "+lupItr0+" = "+n+".begin(); //temp foreach\n"+
+          // // idxIterator+" "+lupEnd0+" = "+n+".end();\n"+
+          // //compact mode
+          // idxIterator+" "+lupItr0+" = "+n+".begin(), "+lupEnd0+" = "+n+".end(); //temp foreach\n"+
+          // // idxIterator+" "+lupItrNext0+" = "+lupItr0+";\n"+
+          // "while("+lupItr0+"!="+lupEnd0+") {\n"+
+          // // "  ++"+lupItrNext0+";\n"+
+          // "  "+tupType(m.tks,m.tp)+" "+(if(ks.size==1) rn(ks.head) else k0)+" = "+"(*"+lupItr0+").first;\n"+
+          // "  "+tp.toCpp+" "+v0+" = "+"(*"+lupItr0+").second;\n"+
+          //    (if(ks.size > 1) ki.map{case ((k,ktp),i)=>"  "+ktp+" "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString else "")+
+          //    ind(co(v0))+
+          // "\n"+
+          // // "  "+lupItr0+" = "+lupItrNext0+";\n"+
+          // "  ++"+lupItr0+";\n"+
+          // "}\n"
 
-          //expanded mode
-          // idxIterator+" "+lupItr0+" = "+n+".begin(); //temp foreach\n"+
-          // idxIterator+" "+lupEnd0+" = "+n+".end();\n"+
-          //compact mode
-          idxIterator+" "+lupItr0+" = "+n+".begin(), "+lupEnd0+" = "+n+".end(); //temp foreach\n"+
-          // idxIterator+" "+lupItrNext0+" = "+lupItr0+";\n"+
-          "while("+lupItr0+"!="+lupEnd0+") {\n"+
-          // "  ++"+lupItrNext0+";\n"+
-          "  "+tupType(m.tks)+" "+(if(ks.size==1) rn(ks.head) else k0)+" = "+"(*"+lupItr0+").first;\n"+
-          "  "+tp.toCpp+" "+v0+" = "+"(*"+lupItr0+").second;\n"+
-             (if(ks.size > 1) ki.map{case ((k,ktp),i)=>"  "+ktp+" "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString else "")+
-             ind(co(v0))+
-          "\n"+
-          // "  "+lupItr0+" = "+lupItrNext0+";\n"+
-          "  ++"+lupItr0+";\n"+
+
+          "{ //temp foreach\n"+
+          "  "+tupType(m.tks,m.tp)+"* "+e0+" = "+n+".head;\n"+
+          "  while("+e0+"){\n"+
+          "    "+ki.map{case ((k,ktp),i)=>ktp+" "+rn(k)+" = "+e0+"->_"+(i+1)+";\n"}.mkString+
+          "    "+tp.toCpp+" "+v0+" = "+e0+"->"+VALUE_NAME+";\n"+
+               ind(co(v0),2)+"\n"+
+          "    "+e0+" = "+e0+"->nxt;\n"+
+          "  }\n"+
           "}\n"
         }
       }
@@ -235,13 +249,13 @@ trait ICppGen extends IScalaGen {
           val ksTp = a.agg.map(_._2)
           val tmp = Some(a.agg)
           val cur = ctx.save
-          val s1 = cpsExpr(el,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,ex.tp,a0,ks,v),tmp); ctx.load(cur)
-          val s2 = cpsExpr(er,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,ex.tp,a0,ks,v),tmp); ctx.load(cur)
-          genVar(a0,ex.tp,a.agg.map(_._2))+s1+s2+cpsExpr(mapRef(a0,ex.tp,a.agg),co)
+          val s1 = cpsExpr(el,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,a.tp,a0,ks,v),tmp); ctx.load(cur)
+          val s2 = cpsExpr(er,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,a.tp,a0,ks,v),tmp); ctx.load(cur)
+          genVar(a0,a.tp,a.agg.map(_._2))+s1+s2+cpsExpr(mapRef(a0,a.tp,a.agg),co)
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-      if (aks.size==0) { val a0=fresh("agg"); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
+      if (aks.size==0) { val a0=fresh("agg"); genVar(a0,a.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
       else am match {
         case Some(t) if t.toSet==aks.toSet => cpsExpr(e,co,am)
         case _ =>
@@ -303,7 +317,7 @@ trait ICppGen extends IScalaGen {
   override def genMap(m:MapDef):String = {
     // if (m.keys.size==0) genVar(m.name,m.tp).trim
     // else {
-    //   val tk = tupType(m.keys.map(_._2))
+    //   val tk = tupType(m.keys.map(_._2),m.tp)
     //   val s = sx.getOrElse(m.name,List[List[Int]]())
     //   "val "+m.name+" = M3Map.make["+tk+","+m.tp.toCpp+"]("+s.map{is=>"(k:"+tk+")=>"+tup(is.map{i=>"k._"+(i+1)}) }.mkString(", ")+");"
     // }
@@ -338,6 +352,8 @@ trait ICppGen extends IScalaGen {
 
   def genIntermediateDataStructureRefs(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>queries.filter(_.name==m.name).size == 0}.map{m=>m.toCppType+" "+m.name+";\n"}.mkString
 
+  def genTempMapDefs = tmpMapDefs.map{ case (n, tp) => "MultiHashMap<"+tp+",HashIndex<"+tp+"> > "+n+";\n" }.mkString
+
   def isExpressiveTLQSEnabled(queries:List[Query]) = queries.exists{ query => query.map match {
       case MapRef(n,_,_) => if (n == query.name) false else true
       case _ => true
@@ -346,11 +362,13 @@ trait ICppGen extends IScalaGen {
 
   private def getInitializationForIntermediateValues(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>(queries.filter(_.name==m.name).size == 0) && (m.keys.size == 0)}.map{m=>", "+m.name+"(" + m.tp.zeroCpp + ")"}.mkString
 
+  private def getInitializationForTempMaps = tmpMapDefs.map{ case (n,tp) => ", "+n+"(16U)" }.mkString
+
   private def getInitializationForPublicValues(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>(queries.filter(_.name==m.name).size != 0) && (m.keys.size == 0)}.map{m=>", "+m.name+"(" + m.tp.zeroCpp + ")"}.mkString
 
-  private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) = getInitializationForPublicValues(maps,queries) + (if(isExpressiveTLQSEnabled(queries)) getInitializationForIntermediateValues(maps,queries) else "")
+  private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) = getInitializationForPublicValues(maps,queries) + (if(isExpressiveTLQSEnabled(queries)) getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps else "")
 
-  private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) = (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries))
+  private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) = (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps)
 
   override def apply(s0:System):String = {
     def register_maps = s0.maps.map{m=>"pb.add_map<"+m.toCppType+">( \""+m.name+"\", "+m.name+" );\n"}.mkString
@@ -512,13 +530,22 @@ trait ICppGen extends IScalaGen {
         "}" else "")
       genEntryStruct+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs+"\n"+genHelperFunctions
     }
-    def genTempTupleTypes = tempTupleTypes.map{case (name,vsTp) => 
-      val vsTpWithIdx = vsTp.zipWithIndex
+    def genTempTupleTypes = tempTupleTypes.map{case (name,(ksTp,vsTp)) => 
+      val ksTpWithIdx = ksTp.zipWithIndex
+      val valVarName = VALUE_NAME
       "struct " + name +" {\n"+
-      "  "+vsTpWithIdx.map{case (v,i) => v.toCpp+" _"+(i+1)+"; "}.mkString+"\n"+
-      "  explicit "+name+"("+vsTpWithIdx.map{case (v,i) => v.toCpp+" c"+(i+1)}.mkString(", ")+") { "+vsTpWithIdx.map{case (v,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+"}\n"+
-      "  int operator<(const "+name+" &rhs) const { \n"+vsTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
-      "  int operator==(const "+name+" &rhs) const { return ("+vsTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
+      "  "+ksTpWithIdx.map{case (k,i) => k.toCpp+" _"+(i+1)+"; "}.mkString+(vsTp.toCpp+" "+valVarName+"; "+name+"* nxt; "+name+"* prv;")+"\n"+
+      "  explicit "+name+"() : nxt(nullptr), prv(nullptr) { "/*+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = "+k.zeroCpp+"; "}.mkString+(valVarName+" = "+vsTp.zeroCpp+";")*/+"}\n"+
+      "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => k.toCpp+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") : nxt(nullptr), prv(nullptr) { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
+      "  int operator<(const "+name+" &rhs) const { \n"+ksTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
+      "  int operator==(const "+name+" &rhs) const { return ("+ksTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
+      "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => k.toCpp+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
+      "  static bool equals(const "+name+" &x, const "+name+" &y) { return ("+ksTpWithIdx.map{case (v,i) => "(x._"+(i+1)+"==y._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
+      "  static long hash(const "+name+" &e) {\n"+
+      "    size_t h = 0;\n"+
+      ksTpWithIdx.map{ case (v,i) => "    hash_combine(h, e._"+(i+1)+");\n" }.mkString +
+      "    return h;\n"+
+      "  }\n"+
       "};"
     }
 
@@ -609,6 +636,7 @@ trait ICppGen extends IScalaGen {
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
        ind(genIntermediateDataStructureRefs(s0.maps,s0.queries))+"\n"+
+       ind(genTempMapDefs)+"\n"+
        ind(consts)+
     "\n\n"} else "")+
     "};\n"+
@@ -676,6 +704,7 @@ trait ICppGen extends IScalaGen {
     (if(isExpressiveTLQSEnabled(s0.queries)) {
     "  /* Data structures used for storing materialized views */\n"+
        ind(genIntermediateDataStructureRefs(s0.maps,s0.queries))+"\n"+
+       ind(genTempMapDefs)+"\n"+
        ind(consts)+
     "\n\n"} else "")+
     "};\n"+
