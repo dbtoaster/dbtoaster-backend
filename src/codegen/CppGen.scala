@@ -306,7 +306,7 @@ trait ICppGen extends IScalaGen {
                 "END_TRIGGER(ivc_stats,\""+n+"\")\n"
     ctx=null
 
-    "void on_"+n+"("+as.map(a=>a._2.toCpp+" "+a._1).mkString(", ")+") {\n"+ind(preBody+body+pstBody)+"\n}"
+    "void on_"+n+"("+as.map(a=>"const "+a._2.toCpp+" "+a._1).mkString(", ")+") {\n"+ind(preBody+body+pstBody)+"\n}"
   }
 
   override def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
@@ -401,7 +401,7 @@ trait ICppGen extends IScalaGen {
     def genTableTriggers = s0.sources.filter(!_.stream).map{ s =>
       val name = s.schema.name
       val fields = s.schema.fields
-      "void on_insert_"+name+"("+fields.map{case (fld,tp) => tp.toCpp+" "+fld }.mkString(", ")+") {\n"+
+      "void on_insert_"+name+"("+fields.map{case (fld,tp) => "const "+tp.toCpp+" "+fld }.mkString(", ")+") {\n"+
       "  "+name+"_entry e("+fields.map{case (fld,_) => fld }.mkString(", ")+", 1);\n"+
       "  "+ADD_TO_MAP_FUNC(name)+"("+name+",e,1L);\n"+
       "}\n"+
@@ -440,7 +440,7 @@ trait ICppGen extends IScalaGen {
         "struct "+mapEntry+" {\n"+
         "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+" "+mapEntry+"* nxt; "+mapEntry+"* prv;\n"+
         "  explicit "+mapEntry+"() : nxt(nullptr), prv(nullptr) { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
-        "  explicit "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => tp.toCpp+" c"+i}.mkString(", ")+") { "+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
+        "  explicit "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => "const "+tp.toCppRefType+" c"+i}.mkString(", ")+") { "+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
         "  "+mapEntry+"(const "+mapEntry+"& other) : "+fieldsWithIdx.map{case ((fld,tp),i) => fld+"( other."+fld+" ), "}.mkString+"nxt( nullptr ), prv( nullptr ) {}\n"+
         // "  "+mapEntry+"& operator=(const "+mapEntry+"& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = other."+fld+";"}.mkString+" return *this; }\n"+
         // "  "+mapEntry+"& operator=(const "+mapEntry+"&& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+(if(tp.isBasicCppType) "other."+fld else "std::move(other."+fld+")")+";"}.mkString+" return *this; }\n"+
@@ -536,7 +536,7 @@ trait ICppGen extends IScalaGen {
       "struct " + name +" {\n"+
       "  "+ksTpWithIdx.map{case (k,i) => k.toCpp+" _"+(i+1)+"; "}.mkString+(vsTp.toCpp+" "+valVarName+"; "+name+"* nxt; "+name+"* prv;")+"\n"+
       "  explicit "+name+"() : nxt(nullptr), prv(nullptr) { "/*+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = "+k.zeroCpp+"; "}.mkString+(valVarName+" = "+vsTp.zeroCpp+";")*/+"}\n"+
-      "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => k.toCpp+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") : nxt(nullptr), prv(nullptr) { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
+      "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") : nxt(nullptr), prv(nullptr) { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
       "  int operator<(const "+name+" &rhs) const { \n"+ksTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
       "  int operator==(const "+name+" &rhs) const { return ("+ksTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
       "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => k.toCpp+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
