@@ -82,7 +82,7 @@ std::string csv_adaptor::parse_schema(std::string s)
 	  else if ( ty == "double" )    r += "f";
 	  else if ( ty == "date" )      r += "d";
 	  else if ( ty == "hash" )      r += "h";
-	  else if ( ty == "string" )    r += "s";          
+	  else if ( ty == "PString" )    r += "s";          
 	  else {
 		std::cerr << "invalid csv schema type " << ty << std::endl;
 		r = "";
@@ -119,7 +119,7 @@ tuple<bool, bool, unsigned int, event_args_t>
 csv_adaptor::interpret_event(const char* schema_it, char* data)
 {
 	boost::hash<std::string> field_hash;
-	bool ins; unsigned int event_order=0; int y,m,d; double f; long l;
+	bool ins; unsigned int event_order=0; int y,m,d; double f; long l; PString pstr;
 	char* date_y_field;
 	char* date_m_field;
 	char* date_d_field;
@@ -168,7 +168,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 			case 'o':
 				event_order=atoi(field_start);
 				break;
-			case 's': tuple[tupleIdx++]=std::string(field_start);   break;
+			case 's': pstr.~PString(); new(&pstr) PString(field_start); tuple[tupleIdx++]=pstr;   break;
 			default: valid = false; break;
 		}
 

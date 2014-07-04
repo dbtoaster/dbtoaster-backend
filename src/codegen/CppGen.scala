@@ -124,7 +124,7 @@ trait ICppGen extends IScalaGen {
           val mapType = n+"_map"
           val idxName = "HashIndex_"+mapType+"_"+getIndexId(n,is)
           val idxFn = mapType+"key"+getIndexId(n,is)+"_idxfn"
-          val body = ki.map{case ((k,ktp),i)=>ktp+" "+rn(k)+" = "+e0+"->"+mapDef.keys(i)._1+";\n"}.mkString+
+          val body = ki.map{case ((k,ktp),i)=>ktp.toCpp+" "+rn(k)+" = "+e0+"->"+mapDef.keys(i)._1+";\n"}.mkString+
           tp.toCpp+" "+v0+" = "+e0+"->"+VALUE_NAME+";\n"+
           co(v0)
 
@@ -185,7 +185,7 @@ trait ICppGen extends IScalaGen {
           "{ //temp foreach\n"+
           "  "+tupType(m.tks,m.tp)+"* "+e0+" = "+n+".head;\n"+
           "  while("+e0+"){\n"+
-          "    "+ki.map{case ((k,ktp),i)=>ktp+" "+rn(k)+" = "+e0+"->_"+(i+1)+";\n"}.mkString+
+          "    "+ki.map{case ((k,ktp),i)=> "    "+ktp.toCpp+" "+rn(k)+" = "+e0+"->_"+(i+1)+";\n"}.mkString+
           "    "+tp.toCpp+" "+v0+" = "+e0+"->"+VALUE_NAME+";\n"+
                ind(co(v0),2)+"\n"+
           "    "+e0+" = "+e0+"->nxt;\n"+
@@ -306,7 +306,7 @@ trait ICppGen extends IScalaGen {
                 "END_TRIGGER(ivc_stats,\""+n+"\")\n"
     ctx=null
 
-    "void on_"+n+"("+as.map(a=>"const "+a._2.toCpp+" "+a._1).mkString(", ")+") {\n"+ind(preBody+body+pstBody)+"\n}"
+    "void on_"+n+"("+as.map(a=>"const "+a._2.toCppRefType+" "+a._1).mkString(", ")+") {\n"+ind(preBody+body+pstBody)+"\n}"
   }
 
   override def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
@@ -420,7 +420,7 @@ trait ICppGen extends IScalaGen {
         case _ => sys.error("Unsupported trigger event "+evt)
       }
       "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
-      "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "any_cast<"+tp.toCpp+">(ea["+i+"])"}.mkString(", ")+");\n"+
+      "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => /*if(tp == TypeString) "PStringany_cast<string>(ea["+i+"])" else*/ "any_cast<"+tp.toCpp+">(ea["+i+"])"}.mkString(", ")+");\n"+
       "}\n\n"
     }
 
@@ -445,7 +445,7 @@ trait ICppGen extends IScalaGen {
         // "  "+mapEntry+"& operator=(const "+mapEntry+"& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = other."+fld+";"}.mkString+" return *this; }\n"+
         // "  "+mapEntry+"& operator=(const "+mapEntry+"&& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+(if(tp.isBasicCppType) "other."+fld else "std::move(other."+fld+")")+";"}.mkString+" return *this; }\n"+
         allIndices.map{ case (is,unique) =>
-        "  FORCE_INLINE "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => fields(i)._2.toCpp+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
+        "  FORCE_INLINE "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => "const "+fields(i)._2.toCppRefType+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
         }.mkString+
         "  template<class Archive>\n"+
         "  void serialize(Archive& ar, const unsigned int version)\n"+
@@ -539,7 +539,7 @@ trait ICppGen extends IScalaGen {
       "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") : nxt(nullptr), prv(nullptr) { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
       "  int operator<(const "+name+" &rhs) const { \n"+ksTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
       "  int operator==(const "+name+" &rhs) const { return ("+ksTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
-      "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => k.toCpp+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
+      "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
       "  static bool equals(const "+name+" &x, const "+name+" &y) { return ("+ksTpWithIdx.map{case (v,i) => "(x._"+(i+1)+"==y._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
       "  static long hash(const "+name+" &e) {\n"+
       "    size_t h = 0;\n"+
@@ -804,7 +804,7 @@ trait ICppGen extends IScalaGen {
     ss
   }
 
-  override def pkgWrapper(pkg:String, body:String) = "#include \"program_base.hpp\"\n#include \"mmap/mmap.hpp\"\n"+additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
+  override def pkgWrapper(pkg:String, body:String) = "#include \"program_base.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n"+additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
 
     // "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     // "object "+cls+" {\n"+ind("import Helper._\n"+

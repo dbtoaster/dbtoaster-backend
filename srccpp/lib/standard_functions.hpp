@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <string>
 using namespace std;
+#include "hpds/pstring.hpp"
 
 #include "event.hpp"
 #include <regex.h>
@@ -19,8 +20,10 @@ namespace dbtoaster {
   
   // String functions
   string Usubstring(string &s, long start, long len);  
-  int Uregexp_match(const char *regex, string &s);
-  int Upreg_match(const regex_t &preg, string &s);
+  int Uregexp_match(const char *regex, const string &s);
+  int Upreg_match(const regex_t &preg, const string &s);
+  int Uregexp_match(const char *regex, const PString &s);
+  int Upreg_match(const regex_t &preg, const PString &s);
   
   // Vector functions
   float Uvec_dot(float x1, float y1, float z1, 

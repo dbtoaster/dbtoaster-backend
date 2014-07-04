@@ -18,7 +18,7 @@ case object TypeLong   extends Type /* 64 bit */ { override def toString="long";
 case object TypeDouble extends Type /* 64 bit */ { override def toString="double"; val zero="0.0" }
 case object TypeDate   extends Type              { override def toString="date"; val zero="0L"; override def zeroScala="new Date(0L)"; override def zeroCpp="00000000"; override def simpleName="A" }
 //case object TypeTime extends Type              { override def toString="timestamp" }
-case object TypeString extends Type              { override def toString="string"; val zero="\"\""; override def toCppRefType=toCpp+"&"; }
+case object TypeString extends Type              { override def toString="string"; val zero="\"\""; override def toCpp="PString"; override def toCppRefType=toCpp+"&"; }
 // case class TypeBinary(maxBytes:Int) extends Type { override def toString="binary("+max+")" } // prefix with number of bytes such that prefix minimize number of bytes used
 case class TypeTuple(ts:List[Type]) extends Type { override def toString="<"+ts.mkString(",")+">"; val zero="<"+ts.map(_.zero).mkString(",")+">"; override val zeroScala="<"+ts.map(_.zeroScala).mkString(",")+">"; override def simpleName=ts.map(_.simpleName).mkString}
 

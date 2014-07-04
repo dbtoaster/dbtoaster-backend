@@ -13,6 +13,7 @@
 #include <boost/program_options/positional_options.hpp>
 
 #include "event.hpp"
+#include "hpds/pstring.hpp"
 
 namespace dbtoaster {
   namespace runtime {
