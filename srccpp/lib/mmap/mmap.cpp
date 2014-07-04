@@ -1,4 +1,5 @@
 #include "mmap.hpp"
+#include "../smhasher/PMurHash.hpp"
 
 struct rec {
   rec():_1(0),_3(""),_2(0),_val(0),nxt(nullptr){}

@@ -7,7 +7,7 @@
 #include <string.h>
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/serialization/map.hpp>
-#include "PMurHash.hpp"
+#include "../smhasher/PMurHash.hpp"
 
 #define DEFAULT_CHUNK_SIZE 1024
 #define DEFAULT_LIST_SIZE 8

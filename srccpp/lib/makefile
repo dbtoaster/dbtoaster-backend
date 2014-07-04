@@ -9,7 +9,9 @@ ifndef BOOST_LIB_DIR
 BOOST_LIB_DIR := /usr/local/lib
 endif
 
-HDR_FILES := event.hpp \
+HDR_FILES := smhasher/MurmurHash2.hpp \
+	hpds/pstring.hpp \
+	event.hpp \
 	iprogram.hpp \
 	program_base.hpp \
 	runtime.hpp \
@@ -17,9 +19,12 @@ HDR_FILES := event.hpp \
 	standard_functions.hpp \
 	statistics.hpp \
 	streams.hpp \
-	util.hpp
+	util.hpp \
 	
-SRC_FILES := event.cpp \
+	
+SRC_FILES := smhasher/MurmurHash2.cpp \
+	hpds/pstring.cpp \
+	event.cpp \
 	iprogram.cpp \
 	program_base.cpp \
 	runtime.cpp \
@@ -29,7 +34,7 @@ SRC_FILES := event.cpp \
 	
 	
 FILES := $(HDR_FILES) $(SRC_FILES)
-OBJ_FILES := $(patsubst %.cpp,%.o,$(SRC_FILES))
+OBJ_FILES := $(patsubst %.cpp,bin/%.o,$(SRC_FILES))
 
 G++ := g++
 LIB_OBJ := libdbtoaster.a
@@ -47,13 +52,16 @@ warn: $(FILES)
 
 $(LIB_OBJ) : $(OBJ_FILES)
 	@echo "Linking $@"
-	@ar cr $@ $^ 
+	@ar cr $@ $^
 	
-$(OBJ_FILES) : %.o : %.cpp $(HDR_FILES)
+$(OBJ_FILES) : bin/%.o : %.cpp $(HDR_FILES)
+	@mkdir -p ./bin
+	@mkdir -p ./bin/hpds
+	@mkdir -p ./bin/smhasher
 	@echo Compiling $<
-	@$(G++) -I$(BOOST_INC_DIR) -L$(BOOST_LIB_DIR) -Wall -std=c++11 $(CPP_FLAGS) $(patsubst %,-I %,$(CPP_HDR_PATH)) -O3 -c $<
+	@$(G++) -I$(BOOST_INC_DIR) -L$(BOOST_LIB_DIR) -Wall -std=c++11 $(CPP_FLAGS) $(patsubst %,-I %,$(CPP_HDR_PATH)) -O3 -o $(patsubst %.cpp,bin/%.o,$<) -c $<
 
 clean: 
-	rm -f *.o $(LIB_OBJ)
+	rm -rf bin $(LIB_OBJ)
 
 .PHONY: all clean

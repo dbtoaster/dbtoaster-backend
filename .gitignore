@@ -31,4 +31,5 @@ dbtoaster_release
 release/LICENSE
 release/README
 release/doc
+*.o
 mmap
