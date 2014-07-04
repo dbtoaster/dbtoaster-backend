@@ -150,7 +150,7 @@ public:
     const unsigned int file_version
   ) {
     std::string tmp(this->data_);
-    ar & BOOST_SERIALIZATION_NVP(tmp);
+    boost::archive::save(ar, tmp);
   }
 };
 
