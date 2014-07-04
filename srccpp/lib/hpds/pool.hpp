@@ -22,7 +22,7 @@
 // SOFTWARE.
 
 #include <string.h>
-#include "macro.h"
+#include "macro.hpp"
 
 #define DEFAULT_CHUNK_SIZE 1024
 #define DEFAULT_FORCE_CLEAR true

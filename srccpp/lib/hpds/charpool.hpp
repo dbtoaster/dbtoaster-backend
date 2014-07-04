@@ -26,9 +26,9 @@
 
 #include <iostream>
 #include <string.h>
-#include "macro.h"
+#include "macro.hpp"
 
-#define DEFAULT_CHUNK_SIZE 128U
+#define CHARPOOL_DEFAULT_CHUNK_SIZE 128U
 #define DEFAULT_CHAR_ARR_SIZE 8U //should be a power of two
 #define DEFAULT_NUM_RESERVED_CELLS 128U
 #define DEFAULT_FORCE_CLEAR true
@@ -94,7 +94,7 @@ private:
     }
   }
 public:
-  CharPool(size_t chunk_size = DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(getPowerOfTwo(chunk_size) >> 1), forceClear_(false), num_cell_left_in_index0_(0)
+  CharPool(size_t chunk_size = CHARPOOL_DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(getPowerOfTwo(chunk_size) >> 1), forceClear_(false), num_cell_left_in_index0_(0)
   {
     memset(free_, 0, (num_reserved_cell + 1) * sizeof(El*));
     add_chunk();

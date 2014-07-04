@@ -24,8 +24,11 @@
 #ifndef POOLED_STRING_H
 #define POOLED_STRING_H
 
-#include "charpool.h"
+#include "charpool.hpp"
 #include <string>
+#include <iostream>
+
+#include <boost/archive/xml_oarchive.hpp>
 
 #define DEFAULT_CHAR_ARR_SIZE_MINUS_ONE (DEFAULT_CHAR_ARR_SIZE - 1)
 
@@ -33,6 +36,9 @@ struct PString
 {
 private:
   static CharPool<> pool_;
+  size_t size_;
+  char *data_;
+  size_t* ptr_count_;
   inline static size_t getNumCells(int sz)
   {
     size_t num_cells = sz / DEFAULT_CHAR_ARR_SIZE;
@@ -45,42 +51,43 @@ protected:
   friend bool operator==(const PString &, const PString &);
   friend bool operator==(const PString &, const char *);
   friend bool operator==(const char *, const PString &);
+  friend std::ostream& operator<< (std::ostream& o, PString const& str);
+  friend size_t hash_value(PString const& str);
 public:
-  size_t size_;
-  char *data_;
-
-  PString() : size_(0), data_(nullptr) {}
-  PString(const char *str)
+  PString() : size_(0), data_(nullptr), ptr_count_(new size_t(1)) {
+  }
+  PString(const char *str) : ptr_count_(new size_t(1))
   {
     size_ = strlen(str) + 1;
     size_t num_cells = getNumCells(size_);
     data_ = pool_.add(num_cells);
     memcpy(data_, str, size_ * sizeof(char));
   }
-  PString(const char *str, size_t strln)
+  PString(const char *str, size_t strln) : ptr_count_(new size_t(1))
   {
     size_ = strln + 1;
     size_t num_cells = getNumCells(size_);
     data_ = pool_.add(num_cells);
     memcpy(data_, str, size_ * sizeof(char));
   }
-  PString(const std::string &str)
+  PString(const std::string &str) : ptr_count_(new size_t(1))
   {
     size_ = str.length() + 1;
     size_t num_cells = getNumCells(size_);
     data_ = pool_.add(num_cells);
     memcpy(data_, str.c_str(), size_ * sizeof(char));
   }
-  PString(const PString &str)
+  PString(const PString &pstr)
   {
-    size_ = str.size_;
-    size_t num_cells = getNumCells(size_);
-    data_ = pool_.add(num_cells);
-    memcpy(data_, str.data_, size_ * sizeof(char));
+    *pstr.ptr_count_ += 1;
+    this->ptr_count_ = pstr.ptr_count_;
+    this->data_ = pstr.data_;
+    this->size_ = pstr.size_;
   }
   ~PString()
   {
-    if (data_) pool_.del(getNumCells(size_), data_);
+    *ptr_count_ -= 1;
+    if (!(*ptr_count_) && data_) { pool_.del(getNumCells(size_), data_); delete ptr_count_; ptr_count_=nullptr; }
   }
   inline operator char *()
   {
@@ -94,7 +101,7 @@ public:
   {
     return data_;
   }
-  inline const char *c_str() const
+  FORCE_INLINE const char *c_str() const
   {
     return data_;
   }
@@ -108,54 +115,21 @@ public:
   }
   PString &operator=(const char *str)
   {
-    size_t sz = strlen(str) + 1;
+    if (!(--(*ptr_count_)) && data_) { pool_.del(getNumCells(size_), data_); delete ptr_count_; }
+    ptr_count_ = new size_t(1);
+    size_ = strlen(str) + 1;
     size_t num_cells = getNumCells(size_);
-    size_t max_capacity = (num_cells * DEFAULT_CHAR_ARR_SIZE);
-    if (sz < max_capacity && sz > max_capacity - DEFAULT_CHAR_ARR_SIZE)
-    {
-      memcpy(data_, str, sz);
-    }
-    else
-    {
-      pool_.del(num_cells, data_);
-      size_ = sz;
-      num_cells = getNumCells(size_);
-      data_ = pool_.add(num_cells);
-      memcpy(data_, str, size_ * sizeof(char));
-    }
+    data_ = pool_.add(num_cells);
+    memcpy(data_, str, size_ * sizeof(char));
     return *this;
   }
   PString &operator=(const PString &pstr)
   {
-    char *str = pstr.data_;
-    size_t sz = pstr.size_;
-    size_t num_cells = getNumCells(size_);
-    size_t max_capacity = (num_cells * DEFAULT_CHAR_ARR_SIZE);
-    if (sz < max_capacity && sz > max_capacity - DEFAULT_CHAR_ARR_SIZE)
-    {
-      memcpy(data_, str, sz);
-    }
-    else
-    {
-      pool_.del(num_cells, data_);
-      size_ = sz;
-      num_cells = getNumCells(size_);
-      data_ = pool_.add(num_cells);
-      memcpy(data_, str, size_ * sizeof(char));
-    }
+    (*pstr.ptr_count_)++;
+    this->ptr_count_ = pstr.ptr_count_;
+    this->data_ = pstr.data_;
+    this->size_ = pstr.size_;
     return *this;
-  }
-  void clear()
-  {
-    if (!data_) return;
-
-    if (size_ <= DEFAULT_CHAR_ARR_SIZE) data_[0] = '\0';
-    else
-    {
-      pool_.del(getNumCells(size_), data_);
-      data_ = nullptr;
-      size_ = 0;
-    }
   }
   size_t length() const
   {
@@ -168,6 +142,15 @@ public:
   int end() const
   {
     return size_ - 1;
+  }
+
+  template<class Archive>
+  void serialize(
+    Archive & ar,
+    const unsigned int file_version
+  ) {
+    std::string tmp(this->data_);
+    ar & BOOST_SERIALIZATION_NVP(tmp);
   }
 };
 

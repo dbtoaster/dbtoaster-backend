@@ -21,7 +21,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#include "pstring.h"
+#include "pstring.hpp"
+#include "../smhasher/MurmurHash2.hpp"
 
 CharPool<> PString::pool_;
 
@@ -99,4 +100,14 @@ bool operator!=(const PString &str1, const char *str2)
 bool operator!=(const char *str1, const PString &str2)
 {
   return !(str1 == str2);
+}
+
+std::ostream& operator<< (std::ostream& o, PString const& str)
+{
+  return o << str.data_;
+}
+
+size_t hash_value(PString const& str)
+{
+    return MurmurHash2(str.data_,(str.size_-1)*sizeof(char),0);
 }
