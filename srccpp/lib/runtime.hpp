@@ -15,6 +15,15 @@
 #include "event.hpp"
 #include "hpds/pstring.hpp"
 
+#ifndef STRING_TYPE
+#define STRING_TYPE std::string
+#endif //STRING_TYPE
+
+#ifndef STRING_TYPE_STR
+#define STRING(s) #s
+#define STRING_TYPE_STR STRING(STRING_TYPE)
+#endif //STRING_TYPE_STR
+
 namespace dbtoaster {
   namespace runtime {
 

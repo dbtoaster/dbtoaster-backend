@@ -82,7 +82,7 @@ std::string csv_adaptor::parse_schema(std::string s)
 	  else if ( ty == "double" )    r += "f";
 	  else if ( ty == "date" )      r += "d";
 	  else if ( ty == "hash" )      r += "h";
-	  else if ( ty == "PString" )    r += "s";          
+	  else if ( ty == STRING_TYPE_STR )    r += "s";          
 	  else {
 		std::cerr << "invalid csv schema type " << ty << std::endl;
 		r = "";
@@ -168,7 +168,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 			case 'o':
 				event_order=atoi(field_start);
 				break;
-			case 's': pstr.~PString(); new(&pstr) PString(field_start); tuple[tupleIdx++]=pstr;   break;
+			case 's': tuple[tupleIdx++]=STRING_TYPE(field_start);   break;
 			default: valid = false; break;
 		}
 

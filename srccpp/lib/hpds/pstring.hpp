@@ -30,6 +30,10 @@
 
 #include <boost/archive/xml_oarchive.hpp>
 
+#ifndef STRING_TYPE
+#define STRING_TYPE PString
+#endif //STRING_TYPE
+
 #define DEFAULT_CHAR_ARR_SIZE_MINUS_ONE (DEFAULT_CHAR_ARR_SIZE - 1)
 
 struct PString

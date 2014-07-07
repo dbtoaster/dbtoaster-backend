@@ -114,7 +114,7 @@ float pow(int a, int b) {
   return ::pow((float)a, (float)b);
 }*/
 
-int Uregexp_match(const char *regex, const string &s){
+int Uregexp_match(const char *regex, const STRING_TYPE &s){
   //TODO: Caching regexes, or possibly inlining regex construction
   regex_t preg;
   int ret;
@@ -139,44 +139,7 @@ int Uregexp_match(const char *regex, const string &s){
   regfree(&preg);
 }
 
-int Upreg_match(const regex_t &preg, const string &s){
-  int ret = regexec(&preg, s.c_str(), 0, NULL, 0);
-
-  switch(ret){
-    case 0: return 1;
-    case REG_NOMATCH: return 0;
-    default:
-    cerr << "Error evaluating regular expression." << endl;
-    exit(-1);
-  }
-}
-
-int Uregexp_match(const char *regex, const PString &s){
-  //TODO: Caching regexes, or possibly inlining regex construction
-  regex_t preg;
-  int ret;
-
-  if(regcomp(&preg, regex, REG_EXTENDED | REG_NOSUB)){
-    cerr << "Error compiling regular expression: /" << 
-        regex << "/" << endl;
-    exit(-1);
-  }
-  ret = regexec(&preg, s.c_str(), 0, NULL, 0);
-  regfree(&preg);
-
-  switch(ret){
-    case 0: return 1;
-    case REG_NOMATCH: return 0;
-    default:
-    cerr << "Error evaluating regular expression: /" << 
-        regex << "/" << endl;
-    exit(-1);
-  }
-
-  regfree(&preg);
-}
-
-int Upreg_match(const regex_t &preg, const PString &s){
+int Upreg_match(const regex_t &preg, const STRING_TYPE &s){
   int ret = regexec(&preg, s.c_str(), 0, NULL, 0);
 
   switch(ret){

@@ -19,11 +19,9 @@ namespace dbtoaster {
   long Uday_part(date d);
   
   // String functions
-  string Usubstring(string &s, long start, long len);  
-  int Uregexp_match(const char *regex, const string &s);
-  int Upreg_match(const regex_t &preg, const string &s);
-  int Uregexp_match(const char *regex, const PString &s);
-  int Upreg_match(const regex_t &preg, const PString &s);
+  string Usubstring(string &s, long start, long len);
+  int Uregexp_match(const char *regex, const STRING_TYPE &s);
+  int Upreg_match(const regex_t &preg, const STRING_TYPE &s);
   
   // Vector functions
   float Uvec_dot(float x1, float y1, float z1, 
