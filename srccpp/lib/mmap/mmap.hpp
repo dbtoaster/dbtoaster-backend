@@ -55,6 +55,26 @@ public:
   }
 };
 
+template<typename V>
+struct ZeroVal {
+  V get() { return NULL; }
+};
+
+template<>
+struct ZeroVal<long> {
+  long get() { return 0L; }
+};
+
+template<>
+struct ZeroVal<double> {
+  double get() { return 0.0; }
+};
+
+template<>
+struct ZeroVal<PString> {
+  PString get() { return PString(); }
+};
+
 /*template<typename T>
 struct GenericIndexFn {
   static HASH_RES_t hash(const T& e) {
