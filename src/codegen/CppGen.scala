@@ -185,7 +185,7 @@ trait ICppGen extends IScalaGen {
           "{ //temp foreach\n"+
           "  "+tupType(m.tks,m.tp)+"* "+e0+" = "+n+".head;\n"+
           "  while("+e0+"){\n"+
-          "    "+ki.map{case ((k,ktp),i)=> "    "+ktp.toCpp+" "+rn(k)+" = "+e0+"->_"+(i+1)+";\n"}.mkString+
+          ki.map{case ((k,ktp),i)=> "    "+ktp.toCpp+" "+rn(k)+" = "+e0+"->_"+(i+1)+";\n"}.mkString+
           "    "+tp.toCpp+" "+v0+" = "+e0+"->"+VALUE_NAME+";\n"+
                ind(co(v0),2)+"\n"+
           "    "+e0+" = "+e0+"->nxt;\n"+
