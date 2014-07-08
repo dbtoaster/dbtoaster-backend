@@ -29,6 +29,7 @@
 #include <iostream>
 
 #include <boost/archive/xml_oarchive.hpp>
+#include "../smhasher/MurmurHash2.hpp"
 
 #ifndef STRING_TYPE
 #define STRING_TYPE PString
@@ -91,7 +92,7 @@ public:
     *ptr_count_ -= 1;
     if (!(*ptr_count_) && data_) { pool_.del(getNumCells(size_), data_); delete ptr_count_; ptr_count_=nullptr; }
   }
-  inline char *c_str()
+  FORCE_INLINE char *c_str()
   {
     return data_;
   }
