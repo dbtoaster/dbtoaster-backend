@@ -21,7 +21,7 @@ long Uday_part(date d) {
 }
 
 // String functions
-string Usubstring(string &s, long start, long len){
+STRING_TYPE Usubstring(const STRING_TYPE &s, long start, long len){
 	return s.substr(start, len);
 }
 
@@ -161,17 +161,17 @@ double Ulistmax(double v1, long v2) { return ((v1 > v2) ? v1 : v2); }
 
 // Type conversion functions
 template <class T> 
-string cast_string(const T &t) {
+STRING_TYPE cast_string(const T &t) {
 	std::stringstream ss;
 	ss << t;
-	return ss.str();
+	return STRING_TYPE(ss.str().c_str());
 }
-string cast_string_from_date(date ymd)   { 
+STRING_TYPE cast_string_from_date(date ymd)   { 
 	std::stringstream ss;
 	ss << ((ymd / 10000) % 10000)
 	   << ((ymd / 100  ) % 100)
 	   << ((ymd        ) % 100);
-	return ss.str();
+  return STRING_TYPE(ss.str().c_str());
 }
 date Udate(const char *c) { //cast_date_from_string
 	unsigned int y, m, d;
