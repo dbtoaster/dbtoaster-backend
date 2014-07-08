@@ -52,8 +52,6 @@ private:
   }
 protected:
   //friends
-  friend bool operator==(const PString &, const PString &);
-  friend bool operator==(const PString &, const char *);
   friend bool operator==(const char *, const PString &);
   friend std::ostream& operator<< (std::ostream& o, PString const& str);
   friend size_t hash_value(PString const& str);
@@ -74,13 +72,13 @@ public:
     data_ = pool_.add(num_cells);
     memcpy(data_, str, size_ * sizeof(char));
   }
-  PString(const std::string &str) : ptr_count_(new size_t(1))
-  {
-    size_ = str.length() + 1;
-    size_t num_cells = getNumCells(size_);
-    data_ = pool_.add(num_cells);
-    memcpy(data_, str.c_str(), size_ * sizeof(char));
-  }
+  // PString(const std::string &str) : ptr_count_(new size_t(1))
+  // {
+  //   size_ = str.length() + 1;
+  //   size_t num_cells = getNumCells(size_);
+  //   data_ = pool_.add(num_cells);
+  //   memcpy(data_, str.c_str(), size_ * sizeof(char));
+  // }
   PString(const PString &pstr)
   {
     *pstr.ptr_count_ += 1;
@@ -92,14 +90,6 @@ public:
   {
     *ptr_count_ -= 1;
     if (!(*ptr_count_) && data_) { pool_.del(getNumCells(size_), data_); delete ptr_count_; ptr_count_=nullptr; }
-  }
-  inline operator char *()
-  {
-    return data_;
-  }
-  inline operator const char *() const
-  {
-    return data_;
   }
   inline char *c_str()
   {
@@ -155,6 +145,104 @@ public:
   ) {
     std::string tmp(this->data_);
     boost::archive::save(ar, tmp);
+  }
+
+  inline bool operator==(const PString &other) const {
+    if (this->size_ != other.size_)
+    {
+  
+      return false;
+    }
+    char *tmp1 = this->data_;
+    char *tmp2 = other.data_;
+    while (*tmp1 != 0)
+    {
+      if (*tmp1 != *tmp2)
+      {
+        return false;
+      }
+      ++tmp1;
+      ++tmp2;
+    }
+    return true;
+  }
+
+  inline bool operator!=(const PString &other) const {
+    if (this->size_ != other.size_)
+    {
+      return true;
+    }
+    char *tmp1 = this->data_;
+    char *tmp2 = other.data_;
+    while (*tmp1 != 0)
+    {
+      if (*tmp1 != *tmp2)
+      {
+        return true;
+      }
+      ++tmp1;
+      ++tmp2;
+    }
+    return false;
+  }
+
+  inline bool operator<(const PString &other) const {
+    if (this->size_ != other.size_)
+    {
+      return (this->size_ < other.size_);
+    }
+    char *tmp1 = this->data_;
+    char *tmp2 = other.data_;
+    while (*tmp1 != 0)
+    {
+      if (*tmp1 != *tmp2)
+      {
+        return (*tmp1 < *tmp2);
+      }
+      ++tmp1;
+      ++tmp2;
+    }
+    return false;
+  }
+
+  inline bool operator==(const char *other)
+  {
+    size_t size = strlen(other) + 1;
+    if (this->size_ != size)
+    {
+      return false;
+    }
+    char *tmp = this->data_;
+    while (*tmp != 0)
+    {
+      if (*tmp != *other)
+      {
+        return false;
+      }
+      ++tmp;
+      ++other;
+    }
+    return true;
+  }
+
+  inline bool operator!=(const char *other)
+  {
+    size_t size = strlen(other) + 1;
+    if (this->size_ != size)
+    {
+      return true;
+    }
+    char *tmp = this->data_;
+    while (*tmp != 0)
+    {
+      if (*tmp != *other)
+      {
+        return true;
+      }
+      ++tmp;
+      ++other;
+    }
+    return false;
   }
 };
 

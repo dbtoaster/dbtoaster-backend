@@ -47,11 +47,19 @@ trait ICppGen extends IScalaGen {
   //   ex:expression to convert
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
+  private def reverese(op:OpCmp) = op match {
+    case OpGt => "<"
+    case OpGe => "<="
+    case x => x.toString
+  }
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
     case Ref(n) => co(rn(n))
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
     case Exists(e) => cpsExpr(e,(v:String)=>co("("+v+" != 0 ? 1L : 0L)"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
+    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=> l match {
+      case Const(_,_) => "("+rr+" "+reverese(op)+" "+ll+")"
+      case _ => "("+ll+" "+op+" "+rr+")"
+    } )))
     case app@Apply(fn1,tp,as1) => {
       val (as, fn) = (fn1 match {
         case "date_part" if as1.head.isInstanceOf[Const] => (as1.tail, as1.head.asInstanceOf[Const].v.toLowerCase+"_part")
