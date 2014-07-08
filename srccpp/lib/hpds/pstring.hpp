@@ -71,7 +71,8 @@ public:
     size_ = strln + 1;
     size_t num_cells = getNumCells(size_);
     data_ = pool_.add(num_cells);
-    memcpy(data_, str, size_ * sizeof(char));
+    memcpy(data_, str, strln * sizeof(char));
+    data_[strln] = '\0';
   }
   // PString(const std::string &str) : ptr_count_(new size_t(1))
   // {
@@ -244,6 +245,13 @@ public:
       ++other;
     }
     return false;
+  }
+
+  PString substr (size_t pos) const {
+    return PString(this->data_+pos);
+  }
+  PString substr (size_t pos, size_t len) const {
+    return PString(this->data_+pos,len);
   }
 };
 
