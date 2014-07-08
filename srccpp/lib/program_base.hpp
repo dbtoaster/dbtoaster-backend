@@ -253,8 +253,8 @@ namespace boost {namespace serialization {
 }} //namespace serialization, namespace boost
 
 namespace dbtoaster {
-    template<typename T>
-    void add_to_temp_map(MultiHashMap<T,HashIndex<T,T> >& m, const T& k)
+    template<typename T, typename V>
+    void add_to_temp_map(MultiHashMap<T,V,HashIndex<T,V,T> >& m, const T& k)
     {
         T* lkup = m.get(k);
         if(lkup != nullptr) lkup->__av+=k.__av;
