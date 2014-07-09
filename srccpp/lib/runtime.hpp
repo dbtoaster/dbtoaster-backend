@@ -34,7 +34,6 @@ namespace dbtoaster {
       variables_map opt_map;
       positional_options_description pos_options;
 
-      std::vector<std::string> output_maps;
       std::vector<std::string> logged_streams_v;
       std::set<std::string> logged_streams;
 
@@ -68,8 +67,6 @@ namespace dbtoaster {
 
       // Result output.
       std::string get_output_file();
-      bool is_output_map(std::string map_name);
-      void add_output_map(std::string map_name);
 
       // Trigger logging.
       bool global();

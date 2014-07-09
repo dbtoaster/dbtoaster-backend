@@ -31,7 +31,6 @@ void runtime_options::init_options(options_description& desc) {
 		value<std::vector<std::string> >(&logged_streams_v), "log stream triggers")
 	  ("unified,u", value<std::string>(), "unified logging [stream | global]")
 	  ("output-file,o", value<std::string>(), "output file")
-	  ("maps,m", value<std::vector<std::string> >(&output_maps), "output maps")
 
 	  // Statistics profiling parameters
 	  ("samplesize", value<unsigned int>(),
@@ -130,15 +129,6 @@ std::string runtime_options::get_output_file() {
 	} else {
 	  return std::string("-");
 	}
-}
-
-bool runtime_options::is_output_map(std::string map_name) {
-	return find(output_maps.begin(), output_maps.end(), map_name)
-			!= output_maps.end();
-}
-
-void runtime_options::add_output_map(std::string map_name){
-	output_maps.push_back(map_name);
 }
 
 // Trigger logging.
