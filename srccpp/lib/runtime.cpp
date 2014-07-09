@@ -51,7 +51,6 @@ void runtime_options::init_options(options_description& desc) {
 }
 
 void runtime_options::init_positional_options(positional_options_description& p) {
-	p.add("maps", -1);
 }
 
 void runtime_options::process_options(
