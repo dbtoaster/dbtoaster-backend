@@ -448,9 +448,9 @@ trait ICppGen extends IScalaGen {
         "  FORCE_INLINE "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => "const "+fields(i)._2.toCppRefType+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
         }.mkString+
         "  template<class Archive>\n"+
-        "  void serialize(Archive& ar, const unsigned int version)\n"+
+        "  void serialize(Archive& ar, const unsigned int version) const \n"+
         "  {\n"+
-        fields.map{case (fld,_) => "    ar & BOOST_SERIALIZATION_NVP("+fld+");\n"}.mkString+
+        fields.map{case (fld,_) => "    ar << \"\\n\\t\\t\\t\";\n    DBT_SERIALIZATION_NVP(ar, "+fld+");\n"}.mkString+
         "  }\n"+
         "};"
       // def isStringFieldInTheIndex(is:List[Int]) = is.map(fields(_)._2).contains(TypeString)
@@ -626,12 +626,13 @@ trait ICppGen extends IScalaGen {
 
   private def helperResultAccessor(s0:System) = {
     def compile_serialization = s0.queries.map{q =>
-      q.toCppRefType + " _"+q.name+" = get_"+q.name+"();\n"+
-      "ar & boost::serialization::make_nvp(BOOST_PP_STRINGIZE("+q.name+"), _"+q.name+");\n"
+      "ar << \"\\n\";\n"+
+      "const " + q.toCppRefType + " _"+q.name+" = get_"+q.name+"();\n"+
+      "dbtoaster::serialize_nvp_tabbed(ar, STRING("+q.name+"), _"+q.name+", \"\\t\");\n"
     }.mkString
 
     def compile_tlqs = s0.queries.map{ query =>
-      query.toCppRefType + " get_"+query.name+"(){\n"+
+      "const " + query.toCppRefType + " get_"+query.name+"() const {\n"+
       (query.map match {
         case MapRef(n,_,_) if (n == query.name) => "  return "+query.name+";\n"
         case _ => 
@@ -667,7 +668,7 @@ trait ICppGen extends IScalaGen {
     "\n"+
     "/* Serialization Code */\n"+
     "  template<class Archive>\n"+
-    "  void serialize(Archive& ar, const unsigned int version) {\n"+
+    "  void serialize(Archive& ar, const unsigned int version) const {\n"+
     "\n"+
          ind(compile_serialization,2)+
     "\n\n"+

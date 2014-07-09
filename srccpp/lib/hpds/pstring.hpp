@@ -28,7 +28,6 @@
 #include <string>
 #include <iostream>
 
-#include <boost/archive/xml_oarchive.hpp>
 #include "../smhasher/MurmurHash2.hpp"
 
 #ifndef STRING_TYPE
@@ -144,9 +143,8 @@ public:
   void serialize(
     Archive & ar,
     const unsigned int file_version
-  ) {
-    std::string tmp(this->data_);
-    boost::archive::save(ar, tmp);
+  ) const {
+    ar << this->data_;
   }
 
   inline bool operator==(const PString &other) const {
@@ -254,5 +252,12 @@ public:
     return PString(this->data_+pos,len);
   }
 };
+
+
+template<class Archive>
+inline Archive & serialize(Archive & ar, const unsigned int version, const PString & t){
+    t.serialize(ar, version);
+    return ar;
+}
 
 #endif //POOLED_STRING_H

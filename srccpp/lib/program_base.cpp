@@ -1,6 +1,5 @@
 #include "program_base.hpp"
-
-#include "runtime.hpp"
+#include <iomanip>
 
 namespace dbtoaster {
 
@@ -40,7 +39,7 @@ void ProgramBase::logger_t::log(string& relation_name, const event_t& evt) {
         (*log_stream) << evt.type << "|";
 //  (*log_stream) << setprecision(15) << evt.data << endl;  
     for(size_t i = 0 ; i < evt.data.size(); ++i) {
-        (*log_stream) << setprecision(15) << evt.data[i];
+        (*log_stream) << std::setprecision(15) << evt.data[i];
         if (i < evt.data.size() - 1) (*log_stream) << "|";
     }
     (*log_stream) << endl;
@@ -328,7 +327,7 @@ void ProgramBase::trace(const path& trace_file, bool debug) {
 }
 
 void ProgramBase::trace(std::ostream &ofs, bool debug) {
-	std::auto_ptr<boost::archive::xml_oarchive> oa;
+	std::auto_ptr<dbtoaster::xml_oarchive> oa;
 
 	map<string, ProgramBase::map_ptr_t>::iterator it = 
 			maps_by_name.begin();
@@ -338,43 +337,9 @@ void ProgramBase::trace(std::ostream &ofs, bool debug) {
 	#endif
 	{
 		if (!oa.get())
-			oa = std::auto_ptr<boost::archive::xml_oarchive>(
-					new boost::archive::xml_oarchive(ofs, 0));
+			oa = std::auto_ptr<dbtoaster::xml_oarchive>(&ofs);
 		it->second->serialize_fn(*oa);
 	}
 }
 
 }
-
-namespace boost {namespace serialization {
-
-/******************************************************************************
-	serialize_tuple
-******************************************************************************/
-
-template<class Archive>
-serialize_tuple<Archive>::serialize_tuple(Archive& _ar) : ar(_ar)
-{}
-
-template<class Archive>
-template<typename T>
-void serialize_tuple<Archive>::operator()(T& t) const
-{
-	ar & BOOST_SERIALIZATION_NVP(t);
-}
-
-/******************************************************************************
-	serialize
-******************************************************************************/
-
-template <class Archive, BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
-                                               typename T)>
-void serialize (Archive& ar, 
-        std::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
-                                                    T) >& p, 
-        const unsigned int/* file_version */)
-{
-    std::for_each( p, serialize_tuple<Archive>(ar) );
-}
-
-}} //namespace serialization, namespace boost

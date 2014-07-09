@@ -65,7 +65,6 @@ bool async_mode(int argc, char* argv[])
  */
 int main(int argc, char* argv[]) {
     bool async = async_mode(argc,argv);
-    boost::archive::xml_oarchive oa(cout, 0);
 
     dbtoaster::Program p(argc,argv);
     //dbtoaster::CustomProgram_1 p;
@@ -80,12 +79,12 @@ int main(int argc, char* argv[]) {
     while( !p.is_finished() )
     {
        snap = p.get_snapshot();
-       oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
+       DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
     }
 
     cout << "Printing final result:" << endl;
     snap = p.get_snapshot();
-    oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
-
+    DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
+    cout << std::endl;
     return 0;
 }

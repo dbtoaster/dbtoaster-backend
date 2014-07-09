@@ -5,8 +5,6 @@
 #include <assert.h>
 #include <functional>
 #include <string.h>
-#include <boost/archive/xml_oarchive.hpp>
-#include <boost/serialization/map.hpp>
 #include "../smhasher/PMurHash.hpp"
 
 #define DEFAULT_CHUNK_SIZE 1024
@@ -123,7 +121,7 @@ public:
 
   virtual void del(const T* obj, const HASH_RES_t h) = 0;
 
-  virtual void foreach(std::function<void (const T&)> f) = 0;
+  virtual void foreach(std::function<void (const T&)> f) const = 0;
 
   virtual void slice(const T& key, std::function<void (const T&)> f) = 0;
 
@@ -365,7 +363,7 @@ public:
     } while ((n=next));
   }
 
-  inline virtual void foreach(std::function<void (const T&)> f) {
+  inline virtual void foreach(std::function<void (const T&)> f) const {
     for (size_t b=0; b<size_; ++b) {
       IdxNode* n = &buckets_[b];
       do { if(n->obj) f(*n->obj); } while((n=n->next));
@@ -616,7 +614,7 @@ public:
     for (size_t i=1; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
     pool.del(elem);
   }
-  inline void foreach(std::function<void (const T&)> f) {
+  inline void foreach(std::function<void (const T&)> f) const {
     // index[0]->foreach(f);
     T* tmp = head;
     while(tmp) {
@@ -629,7 +627,7 @@ public:
     index[idx]->slice(key, f);
   }
 
-  FORCE_INLINE size_t count() { return index[0]->count(); }
+  FORCE_INLINE size_t count() const { return index[0]->count(); }
 
   FORCE_INLINE void clear(){
     head = nullptr;
@@ -638,11 +636,11 @@ public:
   }
 
   template<class Archive>
-  void serialize(Archive& ar, const unsigned int version)
+  void serialize(Archive& ar, const unsigned int version) const
   {
-    int cnt = count();
-    ar << boost::serialization::make_nvp("count", cnt);
-    foreach([&ar] (const T& e) { ar << boost::serialization::make_nvp("item", e); });
+    ar << "\n\t\t";
+    dbtoaster::serialize_nvp(ar, "count", count());
+    foreach([&ar] (const T& e) { ar << "\n"; dbtoaster::serialize_nvp_tabbed(ar, "item", e, "\t\t"); });
   }
 
   inline virtual V getValueOrDefault(const T& key, int mainIdx=0) const { return index[mainIdx]->getValueOrDefault(key); }

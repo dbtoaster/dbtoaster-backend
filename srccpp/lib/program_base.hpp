@@ -12,8 +12,6 @@
 
 #include <map>
 
-#include <boost/archive/xml_oarchive.hpp>
-#include <boost/serialization/map.hpp>
 #include "filepath.hpp"
 
 #include <functional>
@@ -25,10 +23,9 @@
 #include "streams.hpp"
 #include "standard_adaptors.hpp"    
 #include "standard_functions.hpp"
- 
-#include "mmap/mmap.hpp"
+#include "runtime.hpp"
 
-using namespace ::boost::serialization;
+#include "mmap/mmap.hpp"
 
 using namespace ::dbtoaster;
 using namespace ::dbtoaster::adaptors;
@@ -59,11 +56,7 @@ using namespace ::dbtoaster::statistics;
 #define DBT_TRACE
 #endif
 
-#define BOOST_SERIALIZATION_NVP_OF_PTR( name )  \
-    boost::serialization::make_nvp(BOOST_PP_STRINGIZE(name), *name)
-
 namespace dbtoaster {
-
 namespace runtime {
 	struct runtime_options;
 }
@@ -90,12 +83,12 @@ namespace runtime {
 class ProgramBase: public IProgram {
 public:
 
-    typedef std::function<void(boost::archive::xml_oarchive&)> serialize_fn_t;
+    typedef std::function<dbtoaster::xml_oarchive&(dbtoaster::xml_oarchive&)> serialize_fn_t;
     struct serializer {
         template<class T>
-        static boost::archive::xml_oarchive& fn(
-                boost::archive::xml_oarchive& oa, const nvp<T>& t) {
-            return (oa << t);
+        static dbtoaster::xml_oarchive& fn(
+                dbtoaster::xml_oarchive& oa, const char* name, T& t) {
+            return serialize_nvp(oa, name, t);
         }
     };
 
@@ -158,7 +151,7 @@ public:
 
 		serialize_fn_t fn = 
 			std::bind(&serializer::template fn<T>,
-						std::placeholders::_1, make_nvp(m_name.c_str(), t));
+						std::placeholders::_1, m_name.c_str(), t);
 		map_ptr_t m = std::shared_ptr<map_t>(new map_t(fn));
 		maps_by_name[m_name] = m;
 		return;
@@ -212,38 +205,13 @@ public:
 
 };
 
+template<typename T, typename V>
+void add_to_temp_map(MultiHashMap<T,V,HashIndex<T,V,T> >& m, const T& k)
+{
+    T* lkup = m.get(k);
+    if(lkup != nullptr) lkup->__av+=k.__av;
+    else /*k.__av = v;*/ m.insert_nocheck(k);
 }
-
-
-namespace boost {namespace serialization {
-    template<class Archive>
-    struct serialize_tuple
-    {
-        Archive& ar;
-
-        serialize_tuple(Archive& _ar);
-
-        template<typename T>
-        void operator()(T& t) const;
-    };
-
-    template <class Archive, BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
-                                                   typename T)>
-    void serialize (Archive& ar, 
-            std::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
-                                                        T) >& p, 
-            const unsigned int/* file_version */);
-
-}} //namespace serialization, namespace boost
-
-namespace dbtoaster {
-    template<typename T, typename V>
-    void add_to_temp_map(MultiHashMap<T,V,HashIndex<T,V,T> >& m, const T& k)
-    {
-        T* lkup = m.get(k);
-        if(lkup != nullptr) lkup->__av+=k.__av;
-        else /*k.__av = v;*/ m.insert_nocheck(k);
-    }
 }
 
 #endif /* DBTOASTER_DBT_PROGRAM_BASE_H */
