@@ -106,7 +106,7 @@ namespace dbtoaster {
       std::shared_ptr<ostream> next() {
         if ( current ) current->close();
         ++i;
-        string fn = prefix+boost::lexical_cast<string>(i)+suffix;
+        string fn = prefix+std::to_string(i)+suffix;
         current = std::shared_ptr<ofstream>(new ofstream(fn.c_str()));
         return dynamic_pointer_cast<ostream,ofstream>(current);
       }

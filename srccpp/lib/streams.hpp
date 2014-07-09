@@ -11,10 +11,10 @@
 #include <streambuf>
 #include <sys/time.h>
 
-#include <boost/any.hpp>
 #include <boost/function.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <boost/iostreams/device/file.hpp>
+#include "any.hpp"
 
 #include "event.hpp"
 
@@ -22,13 +22,12 @@
 // using namespace ::boost;
 using namespace boost::iostreams;
 
-
 namespace dbtoaster {
 
 // These need to be placed here as C++ doesn't search for overloaded
 // << operators in all the available namespaces
-std::ostream& operator<<(std::ostream &strm, const boost::any &a);
-std::ostream& operator<<(std::ostream &strm, const std::vector<boost::any> &args);
+std::ostream& operator<<(std::ostream &strm, const dbtoaster::any &a);
+std::ostream& operator<<(std::ostream &strm, const std::vector<dbtoaster::any> &args);
 
 namespace streams {
 

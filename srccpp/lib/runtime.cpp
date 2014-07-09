@@ -228,7 +228,7 @@ path runtime_options::get_trace_file() {
 	if ( opt_map.count("trace-dir") ) {
 	  p = opt_map["trace-dir"].as<std::string>();
 	}
-	p /= "trace"+boost::lexical_cast<std::string>(trace_counter)+".txt";
+	p /= "trace"+std::to_string(trace_counter)+".txt";
 	std::cerr << "trace file " << p << std::endl;
 	return p.make_preferred();
 }

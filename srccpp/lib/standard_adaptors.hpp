@@ -5,7 +5,7 @@
 #include <list>
 #include <map>
 
-#include "boost/tuple/tuple.hpp"
+#include <tuple>
 
 #include "streams.hpp"
 
@@ -38,7 +38,7 @@ namespace dbtoaster {
       void validate_schema();
 
       // Interpret the schema.
-      tuple<bool, bool, unsigned int, event_args_t> interpret_event(const char* schema,
+      std::tuple<bool, bool, unsigned int, event_args_t> interpret_event(const char* schema,
                                                        char* data);
     };
   }

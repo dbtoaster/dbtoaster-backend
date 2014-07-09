@@ -1,7 +1,9 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/find_iterator.hpp>
 #include <boost/functional/hash.hpp>
+#include <tuple>
 
+#include "smhasher/MurmurHash2.hpp"
 #include "standard_adaptors.hpp"
 
 #include "runtime.hpp"
@@ -115,10 +117,9 @@ void csv_adaptor::validate_schema() {
 }
 
 // Interpret the schema.
-tuple<bool, bool, unsigned int, event_args_t> 
+std::tuple<bool, bool, unsigned int, event_args_t> 
 csv_adaptor::interpret_event(const char* schema_it, char* data)
 {
-	boost::hash<std::string> field_hash;
 	bool ins; unsigned int event_order=0; int y,m,d; double f; long l; PString pstr;
 	char* date_y_field;
 	char* date_m_field;
@@ -145,7 +146,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 			case 'e': ins=atoi(field_start); insert = ins; break;
 			case 'l': l=atol(field_start); tuple[tupleIdx++]=l; break;
 			case 'f': f=atof(field_start); tuple[tupleIdx++]=f; break;
-			case 'h': tuple[tupleIdx++]=static_cast<int>(field_hash(std::string(field_start)));
+			case 'h': tuple[tupleIdx++]=static_cast<int>(MurmurHash2(field_start,strlen(field_start)*sizeof(char),0));
 					  break;
 			case 'd': 
 				date_y_field = strtok (field_start,"-");
@@ -179,13 +180,13 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
         } else break;
 	}
     // std::cout << " tuples is ==> " << tuple << std::endl;
-	return boost::tuples::make_tuple(valid, insert, event_order, tuple);
+	return std::make_tuple(valid, insert, event_order, tuple);
 }
 
 void csv_adaptor::read_adaptor_events(char* data, std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) {
 	if ( (*schema) != '\0' ) {
 	  // Interpret the schema.
-	  tuple<bool, bool, unsigned int, event_args_t> evt = interpret_event(schema, data);
+	  std::tuple<bool, bool, unsigned int, event_args_t> evt = interpret_event(schema, data);
 	  bool valid = get<0>(evt);
 	  bool insert = get<1>(evt);
 	  unsigned int event_order = get<2>(evt);

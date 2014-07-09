@@ -13,7 +13,7 @@ using namespace ::dbtoaster::runtime;
 
 namespace dbtoaster {
 
-std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
+std::ostream& operator<<(std::ostream &strm, const dbtoaster::any &a) {
     try{
         if( a.type() == typeid(int) )
             return strm << any_cast<int>(a);
@@ -29,13 +29,13 @@ std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
         else
             std::cerr << "event_arg: Unrecognized type in <<: " 
                  << a.type().name() << std::endl;
-    } catch (boost::bad_any_cast& bc) {
+    } catch (dbtoaster::bad_any_cast& bc) {
         std::cerr << "bad cast on <<: " << bc.what() << std::endl;
     }
     return strm;
 }
 
-std::ostream& operator<<(std::ostream &strm, const std::vector<boost::any> &args) {
+std::ostream& operator<<(std::ostream &strm, const std::vector<dbtoaster::any> &args) {
     if( !args.empty() )
     {
         strm << args[0];

@@ -287,7 +287,7 @@ void ProgramBase::process_event(const event_t& evt, bool process_table) {
 			trig->log(r_it->second->name, evt);
 
 			(trig->fn)(evt.data);
-		} catch (boost::bad_any_cast& bc) {
+		} catch (dbtoaster::bad_any_cast& bc) {
 			cout << "bad cast on " << trig->name << ": " << bc.what()
 					<< endl;
 		}
