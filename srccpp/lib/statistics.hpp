@@ -8,16 +8,13 @@
 #include <chrono>
 #include <boost/circular_buffer.hpp>
 #include <cstdint>
-#include <boost/phoenix/core.hpp>
-#include <boost/phoenix/operator.hpp>
-#include <boost/phoenix/bind.hpp>
 
 namespace dbtoaster {
   namespace statistics {
 
     using namespace std;
     using namespace std::chrono;
-    using boost::phoenix::arg_names::arg1;
+    using std::placeholders::_1;
     using std::chrono::high_resolution_clock;
 
     // Sample buffer.
@@ -38,7 +35,7 @@ namespace dbtoaster {
       iterator begin() { return win.begin(); }
       iterator end() { return win.end(); }
       void save(ostream& out) {
-        for_each(begin(), end(), out << arg1 << ",");
+        std::for_each(begin(), end(), [&out] (value &arg1) { out << arg1 << ","; });
         out << endl;
       }
       size_type size() { return win.size(); }
@@ -74,8 +71,8 @@ namespace dbtoaster {
 
       void clear() {
         if ( samples ) {
-          for_each(samples->begin(), samples->end(),
-            bind(&smap::value_type::second,arg1).clear());
+          std::for_each(samples->begin(), samples->end(),
+            std::bind(&smap::value_type::second,std::placeholders::_1).clear());
         }
       }
 
@@ -265,8 +262,8 @@ namespace dbtoaster {
                          uint64_t period, string fn_prefix)
         : tstats(
           stats_id, sz,
-          boost::phoenix::bind(
-            &trigger_exec_stats::probe, this, boost::phoenix::arg_names::arg1),
+          std::bind(
+            &trigger_exec_stats::probe, this, std::placeholders::_1),
           period, fn_prefix)
       {}
 
@@ -290,9 +287,9 @@ namespace dbtoaster {
       multi_trigger_exec_stats(
         map<string, pair<uint64_t, uint32_t> > id_periods, string fn_prefix)
         : mtstats(id_periods,
-            boost::phoenix::bind(
+            std::bind(
               &multi_trigger_exec_stats::probe, this,
-              boost::phoenix::arg_names::arg1),
+              std::placeholders::_1),
             fn_prefix)
       {}
 
@@ -313,8 +310,8 @@ namespace dbtoaster {
                        uint64_t period, string fn_prefix)
       : tstats(
           stats_id, sz,
-          boost::phoenix::bind(
-            &delta_size_stats::probe, this, boost::phoenix::arg_names::arg1),
+          std::bind(
+            &delta_size_stats::probe, this, std::placeholders::_1),
           period, fn_prefix)
       {}
 

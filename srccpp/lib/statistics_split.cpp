@@ -3,15 +3,12 @@
 #include <fstream>
 
 #include <cstdint>
-#include <boost/phoenix/core.hpp>
-#include <boost/phoenix/operator.hpp>
-#include <boost/phoenix/bind.hpp>
+#include <functional>
 
 namespace dbtoaster {
 namespace statistics {
 
 using namespace std;
-using boost::phoenix::arg_names::arg1;
 
 /******************************************************************************
 	statistics_window
@@ -44,7 +41,7 @@ statistics_window<value,window>::end() {
 
 template<typename value, typename window>
 void statistics_window<value,window>::save(ostream& out) {
-	for_each(begin(), end(), out << arg1 << ",");
+	std::for_each(begin(), end(), [&out] (value &arg1) { out << arg1 << ","; });
 		out << endl;
 }
 template<typename value, typename window>
@@ -79,8 +76,8 @@ void statistics_map<key,value,window>::append(key k, value sample) {
 template<typename key, typename value, typename window>
 void statistics_map<key,value,window>::clear() {
 	if ( samples ) {
-	  for_each(samples->begin(), samples->end(),
-		bind(&smap::value_type::second,arg1).clear());
+	  std::for_each(samples->begin(), samples->end(),
+		std::bind(&smap::value_type::second,std::placeholders::_1).clear());
 	}
 }
 
@@ -232,8 +229,8 @@ trigger_exec_stats::trigger_exec_stats(
         uint64_t period, string fn_prefix)
 	: tstats(
 		stats_id, sz,
-		boost::phoenix::bind(
-			&trigger_exec_stats::probe, this, boost::phoenix::arg_names::arg1),
+		std::bind(
+			&trigger_exec_stats::probe, this, std::placeholders::_1),
 		period, fn_prefix)
 {}
 
@@ -253,9 +250,9 @@ int trigger_exec_stats::probe(hrc::time_point start) {
 multi_trigger_exec_stats::multi_trigger_exec_stats(
         map<string, pair<uint64_t, uint32_t> > id_periods, string fn_prefix)
         : mtstats(id_periods,
-            boost::phoenix::bind(
+            std::bind(
               &multi_trigger_exec_stats::probe, this,
-              boost::phoenix::arg_names::arg1),
+              std::placeholders::_1),
             fn_prefix)
 {}
 
@@ -272,8 +269,8 @@ delta_size_stats::delta_size_stats(string stats_id,
                     uint64_t period, string fn_prefix)
       : tstats(
           stats_id, sz,
-          boost::phoenix::bind(
-            &delta_size_stats::probe, this, boost::phoenix::arg_names::arg1),
+          std::bind(
+            &delta_size_stats::probe, this, std::placeholders::_1),
           period, fn_prefix)
 {}
 
