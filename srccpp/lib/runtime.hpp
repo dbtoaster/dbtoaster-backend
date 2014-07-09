@@ -7,7 +7,7 @@
 #include <vector>
 
 #include <unordered_set>
-#include <boost/filesystem/path.hpp>
+#include "filepath.hpp"
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/positional_options.hpp>
@@ -27,7 +27,6 @@
 namespace dbtoaster {
   namespace runtime {
 
-    using namespace boost::filesystem;
     using namespace boost::program_options;
     
     struct runtime_options {

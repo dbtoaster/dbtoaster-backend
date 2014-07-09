@@ -2,9 +2,7 @@
 
 #include "runtime.hpp"
 
-#include <boost/filesystem.hpp>
-
-using namespace boost::filesystem;
+#include "filepath.hpp"
 
 using namespace ::dbtoaster::runtime;
 
@@ -57,7 +55,7 @@ source::source(frame_descriptor& f, std::shared_ptr<stream_adaptor> a) : frame_i
 dbt_file_source::dbt_file_source(
 		const std::string& path, frame_descriptor& f, std::shared_ptr<stream_adaptor> a): source(f,a)
 {
-	if ( boost::filesystem::exists( path ) )
+	if ( file_exists( path ) )
 	{
 		source_stream = std::shared_ptr<file_stream>(new file_stream(path.c_str(), file_stream::in));
 		if( runtime_options::verbose() )

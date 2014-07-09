@@ -14,7 +14,7 @@
 
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/serialization/map.hpp>
-#include <boost/filesystem/path.hpp>
+#include "filepath.hpp"
 
 #include <functional>
 #include <iostream>
@@ -28,7 +28,6 @@
  
 #include "mmap/mmap.hpp"
 
-using namespace ::boost::filesystem;
 using namespace ::boost::serialization;
 
 using namespace ::dbtoaster;
