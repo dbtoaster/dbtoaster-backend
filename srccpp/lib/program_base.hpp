@@ -16,18 +16,9 @@
 #include <boost/serialization/map.hpp>
 #include <boost/filesystem/path.hpp>
 
-#include <boost/preprocessor/repetition/enum_params.hpp>
-
-#include <boost/fusion/tuple.hpp>
-#include <boost/fusion/include/fold.hpp>
-#include <boost/fusion/include/for_each.hpp>
-#include <boost/lambda/lambda.hpp>
-#include <boost/lambda/bind.hpp>
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/sequenced_index.hpp>
-#include <boost/multi_index/composite_key.hpp>
-#include <boost/multi_index/member.hpp>
+#include <functional>
+#include <iostream>
+#include <fstream>
 
 #include "iprogram.hpp"
 #include "util.hpp"
@@ -37,14 +28,8 @@
  
 #include "mmap/mmap.hpp"
 
-//using namespace ::std;
-using namespace ::boost;
-
 using namespace ::boost::filesystem;
 using namespace ::boost::serialization;
-using namespace ::boost::fusion;
-using namespace ::boost::lambda;
-using namespace ::boost::multi_index;
 
 using namespace ::dbtoaster;
 using namespace ::dbtoaster::adaptors;
@@ -106,7 +91,7 @@ namespace runtime {
 class ProgramBase: public IProgram {
 public:
 
-    typedef boost::function<void(boost::archive::xml_oarchive&)> serialize_fn_t;
+    typedef std::function<void(boost::archive::xml_oarchive&)> serialize_fn_t;
     struct serializer {
         template<class T>
         static boost::archive::xml_oarchive& fn(
@@ -124,10 +109,10 @@ public:
     };
     typedef std::shared_ptr<map_t> map_ptr_t;
 
-    typedef boost::function<void(const event_args_t&)> trigger_fn_t;
+    typedef std::function<void(const event_args_t&)> trigger_fn_t;
 
     struct logger_t {
-        typedef stream<file_sink> file_stream_t;
+        typedef ofstream file_stream_t;
 
         std::shared_ptr<file_stream_t> log_stream;
         bool log_relation_name;
@@ -173,8 +158,8 @@ public:
 		}
 
 		serialize_fn_t fn = 
-			boost::bind(&serializer::template fn<T>,
-						::boost::lambda::_1, make_nvp(m_name.c_str(), t));
+			std::bind(&serializer::template fn<T>,
+						std::placeholders::_1, make_nvp(m_name.c_str(), t));
 		map_ptr_t m = std::shared_ptr<map_t>(new map_t(fn));
 		maps_by_name[m_name] = m;
 		return;
@@ -246,7 +231,7 @@ namespace boost {namespace serialization {
     template <class Archive, BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
                                                    typename T)>
     void serialize (Archive& ar, 
-            boost::fusion::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
+            std::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
                                                         T) >& p, 
             const unsigned int/* file_version */);
 

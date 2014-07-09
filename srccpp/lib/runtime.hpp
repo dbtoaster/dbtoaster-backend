@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-#include <boost/unordered_set.hpp>
+#include <unordered_set>
 #include <boost/filesystem/path.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -27,8 +27,6 @@
 namespace dbtoaster {
   namespace runtime {
 
-    // using namespace std;
-    using namespace boost;
     using namespace boost::filesystem;
     using namespace boost::program_options;
     
@@ -45,7 +43,7 @@ namespace dbtoaster {
       std::string trace_opts;
       bool traced;
       int trace_counter, trace_step;
-      unordered_set<std::string> traced_maps;
+      std::unordered_set<std::string> traced_maps;
       unsigned int log_tuple_count_every;
 
       // Verbose

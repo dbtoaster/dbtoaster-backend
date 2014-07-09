@@ -370,11 +370,11 @@ void serialize_tuple<Archive>::operator()(T& t) const
 template <class Archive, BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
                                                typename T)>
 void serialize (Archive& ar, 
-        boost::fusion::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
+        std::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
                                                     T) >& p, 
         const unsigned int/* file_version */)
 {
-    boost::fusion::for_each( p, serialize_tuple<Archive>(ar) );
+    std::for_each( p, serialize_tuple<Archive>(ar) );
 }
 
 }} //namespace serialization, namespace boost

@@ -4,19 +4,18 @@
 #include <cstdlib>
 #include <map>
 
-#include <boost/function.hpp>
+#include <functional>
 
 #include <boost/circular_buffer.hpp>
-#include <boost/chrono/system_clocks.hpp>
+#include <chrono>
 
 namespace dbtoaster {
   namespace statistics {
 
     using namespace std;
-    using namespace boost;
 
     // Sample buffer.
-    template<typename value, typename window = circular_buffer<value> >
+    template<typename value, typename window = boost::circular_buffer<value> >
     class statistics_window {
     protected:
       window win;
@@ -61,8 +60,8 @@ namespace dbtoaster {
 
     // File sequences.
     struct file_sequence {
-      uint64_t i;
       string prefix, suffix;
+      uint64_t i;
       std::shared_ptr<ofstream> current;
       file_sequence(string p, string s = ".txt") : prefix(p), suffix(s), i(0) {}
 
@@ -93,7 +92,7 @@ namespace dbtoaster {
       typedef dbtoaster::statistics::statistics_map<probe_id, measure>
               stats_map;
 
-      typedef typename boost::function<measure (metadata)> measure_f;
+      typedef typename std::function<measure (metadata)> measure_f;
 
       index_id stats_id;
       std::shared_ptr<names_map> probe_ids;
@@ -132,7 +131,7 @@ namespace dbtoaster {
     public:
       trigger_stats(index_id id,
                     typename stats::stats_map::window_type::size_type sz,
-                    boost::function<measure (metadata)> f,
+                    std::function<measure (metadata)> f,
                     uint64_t period, string fn_prefix)
         : stats(id, sz, f, period, fn_prefix)
       {}
@@ -155,7 +154,7 @@ namespace dbtoaster {
 
     public:
       multi_trigger_stats(idpmap id_periods,
-                          boost::function<measure (metadata)> f, 
+                          std::function<measure (metadata)> f, 
                           string fn_prefix);
 
       void begin_probe(probe_id pid, metadata m);
@@ -165,9 +164,9 @@ namespace dbtoaster {
 
     // Execution statistics
     class trigger_exec_stats : public trigger_stats<
-          string, int, boost::chrono::high_resolution_clock::time_point, int>
+          string, int, std::chrono::high_resolution_clock::time_point, int>
     {
-      typedef boost::chrono::high_resolution_clock hrc;
+      typedef std::chrono::high_resolution_clock hrc;
       typedef trigger_stats<string, int, hrc::time_point, int> tstats;
 
     public:
@@ -179,9 +178,9 @@ namespace dbtoaster {
     };
 
     class multi_trigger_exec_stats : multi_trigger_stats<
-        string, int, boost::chrono::high_resolution_clock::time_point, int>
+        string, int, std::chrono::high_resolution_clock::time_point, int>
     {
-      typedef boost::chrono::high_resolution_clock hrc;
+      typedef std::chrono::high_resolution_clock hrc;
       typedef multi_trigger_stats<string, int, hrc::time_point, int> mtstats;
 
     public:

@@ -376,12 +376,12 @@ trait ICppGen extends IScalaGen {
     def register_relations = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ", true") + ");\n"}.mkString
 
     def register_table_triggers = s0.sources.filter(!_.stream).map{ s => 
-      "pb.add_trigger(\""+s.schema.name+"\", insert_tuple, boost::bind(&data_t::unwrap_insert_"+s.schema.name+", this, ::boost::lambda::_1));\n"
+      "pb.add_trigger(\""+s.schema.name+"\", insert_tuple, std::bind(&data_t::unwrap_insert_"+s.schema.name+", this, std::placeholders::_1));\n"
     }.mkString
 
     def register_stream_triggers = s0.triggers.filter(_.evt != EvtReady).map{ t=>t.evt match {
-        case EvtAdd(Schema(n,_)) => "pb.add_trigger(\""+n+"\", insert_tuple, boost::bind(&data_t::unwrap_insert_"+n+", this, ::boost::lambda::_1));\n"
-        case EvtDel(Schema(n,_)) => "pb.add_trigger(\""+n+"\", delete_tuple, boost::bind(&data_t::unwrap_delete_"+n+", this, ::boost::lambda::_1));\n"
+        case EvtAdd(Schema(n,_)) => "pb.add_trigger(\""+n+"\", insert_tuple, std::bind(&data_t::unwrap_insert_"+n+", this, std::placeholders::_1));\n"
+        case EvtDel(Schema(n,_)) => "pb.add_trigger(\""+n+"\", delete_tuple, std::bind(&data_t::unwrap_delete_"+n+", this, std::placeholders::_1));\n"
         case _ => ""
       }
     }.mkString
@@ -784,7 +784,7 @@ trait ICppGen extends IScalaGen {
     ss
   }
 
-  override def pkgWrapper(pkg:String, body:String) = "#include \"any.hpp\"\n#include \"program_base.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n"+additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
+  override def pkgWrapper(pkg:String, body:String) = "#include \"any.hpp\"\n#include \"hash.hpp\"\n#include \"program_base.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n"+additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
 
     // "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     // "object "+cls+" {\n"+ind("import Helper._\n"+

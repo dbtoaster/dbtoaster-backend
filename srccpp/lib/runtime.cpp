@@ -2,9 +2,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
-
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/find_iterator.hpp>
+#include <algorithm>
 
 /******************************************************************************
 	runtime_options
@@ -200,16 +198,20 @@ std::string runtime_options::get_stats_file() {
 
 // Tracing.
 void runtime_options::parse_tracing(const std::string& opts) {
-	split_iterator<std::string::const_iterator> it =
-	   make_split_iterator(opts, first_finder(",", is_equal()));
-
-	split_iterator<std::string::const_iterator> end;
-
-	for (; it != end; ++it) {
-	  std::string param = copy_range<std::string>(*it);
-	  std::cerr << "tracing map " << param << std::endl;
-	  traced_maps.insert(param);
-	}
+	typedef std::string::const_iterator iter;
+    iter beg = opts.begin();
+    iter end = opts.end();
+    while(beg != end) {
+        iter temp = std::find(beg, end, ',');
+        if(beg != end) {
+            std::string param(beg, temp);
+            std::cerr << "tracing map " << param << std::endl;
+            traced_maps.insert(param);
+        }
+        beg = temp;
+        while ((beg != end) && (*beg == ','))
+            beg++;
+    }
 	traced = true;
 }
 

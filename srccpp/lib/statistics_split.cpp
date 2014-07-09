@@ -1,8 +1,8 @@
-#include "statistics.hpp"
+#include "statistics_split.hpp"
 
 #include <fstream>
 
-#include <boost/cstdint.hpp>
+#include <cstdint>
 #include <boost/phoenix/core.hpp>
 #include <boost/phoenix/operator.hpp>
 #include <boost/phoenix/bind.hpp>
@@ -11,10 +11,7 @@ namespace dbtoaster {
 namespace statistics {
 
 using namespace std;
-using namespace boost;
-using namespace boost::chrono;
 using boost::phoenix::arg_names::arg1;
-using boost::chrono::high_resolution_clock;
 
 /******************************************************************************
 	statistics_window
@@ -187,7 +184,7 @@ template<typename index_id, typename probe_id,
          typename metadata, typename measure>
 multi_trigger_stats<index_id,probe_id,metadata,measure>::multi_trigger_stats(
 		idpmap id_periods,
-		boost::function<measure (metadata)> f, 
+		std::function<measure (metadata)> f, 
 		string fn_prefix)
 {
 	typename idpmap::iterator it = id_periods.begin();

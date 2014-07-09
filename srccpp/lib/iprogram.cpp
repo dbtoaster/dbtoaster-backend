@@ -10,9 +10,10 @@ namespace dbtoaster {
 void IProgram::run( bool async ) {
 	if( async )
 	{
-		boost::packaged_task<void> pt(boost::bind(&IProgram::run, 
-												  this, false));
-		boost::thread task( boost::move(pt) );
+		std::packaged_task<void()> pt([this]() {
+			this->run(false);
+		});
+		std::thread task( std::move(pt) );
 	}
 	else
 	{
@@ -89,7 +90,7 @@ void IProgram::process_snapshot()
 		snapshot_request = false;
 
 		{
-			boost::lock_guard<boost::mutex> lock(snapshot_ready_mtx);
+			std::lock_guard<std::mutex> lock(snapshot_ready_mtx);
 			snapshot_ready=true;
 		}
 		snapshot_ready_cond.notify_all();
@@ -128,7 +129,7 @@ IProgram::snapshot_t IProgram::wait_for_snapshot()
 {
 	if( !snapshot_ready )
 	{
-		boost::unique_lock<boost::mutex> lock(snapshot_ready_mtx);
+		std::unique_lock<std::mutex> lock(snapshot_ready_mtx);
 		while(!snapshot_ready)
 		{
 			snapshot_ready_cond.wait(lock);

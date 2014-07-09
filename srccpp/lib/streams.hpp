@@ -1,6 +1,7 @@
 #ifndef DBTOASTER_STREAMS_H
 #define DBTOASTER_STREAMS_H
 
+#include <memory>
 #include <map>
 #include <set>
 #include <list>
@@ -11,16 +12,10 @@
 #include <streambuf>
 #include <sys/time.h>
 
-#include <boost/function.hpp>
-#include <boost/iostreams/stream.hpp>
-#include <boost/iostreams/device/file.hpp>
+#include <functional>
 #include "any.hpp"
 
 #include "event.hpp"
-
-// using namespace ::std;
-// using namespace ::boost;
-using namespace boost::iostreams;
 
 namespace dbtoaster {
 

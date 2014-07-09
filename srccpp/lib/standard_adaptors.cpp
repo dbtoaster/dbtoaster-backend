@@ -1,7 +1,5 @@
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/string/find_iterator.hpp>
-#include <boost/functional/hash.hpp>
 #include <tuple>
+#include <algorithm>
 
 #include "smhasher/MurmurHash2.hpp"
 #include "standard_adaptors.hpp"
@@ -70,27 +68,33 @@ void csv_adaptor::parse_params(int num_params,
 std::string csv_adaptor::parse_schema(std::string s)
 {
 	std::string r = "";
-	split_iterator<std::string::iterator> end;
-	for (split_iterator<std::string::iterator> it =
-		 make_split_iterator(s, first_finder(",", is_equal()));
-		 it != end; ++it)
-	{
-	  std::string ty = copy_range<std::string>(*it);
-	  if ( ty == "event" )          r += "e";
-	  else if ( ty == "order" )     r += "o";
-	  else if ( ty == "int" )       r += "l";
-	  else if ( ty == "long" )      r += "l";
-	  else if ( ty == "float" )     r += "f";
-	  else if ( ty == "double" )    r += "f";
-	  else if ( ty == "date" )      r += "d";
-	  else if ( ty == "hash" )      r += "h";
-	  else if ( ty == STRING_TYPE_STR )    r += "s";          
-	  else {
-		std::cerr << "invalid csv schema type " << ty << std::endl;
-		r = "";
-		break;
-	  }
-	}
+
+	typedef std::string::const_iterator iter;
+    iter beg = s.begin();
+    iter end = s.end();
+    while(beg != end) {
+        iter temp = std::find(beg, end, ',');
+        if(beg != end) {
+			std::string ty(beg, temp);
+			if ( ty == "event" )          r += "e";
+			else if ( ty == "order" )     r += "o";
+			else if ( ty == "int" )       r += "l";
+			else if ( ty == "long" )      r += "l";
+			else if ( ty == "float" )     r += "f";
+			else if ( ty == "double" )    r += "f";
+			else if ( ty == "date" )      r += "d";
+			else if ( ty == "hash" )      r += "h";
+			else if ( ty == STRING_TYPE_STR )    r += "s";          
+			else {
+				std::cerr << "invalid csv schema type " << ty << std::endl;
+				r = "";
+				break;
+			}
+        }
+        beg = temp;
+        while ((beg != end) && (*beg == ','))
+            beg++;
+    }
 	return (char*)(r.c_str());
 }
 
@@ -187,11 +191,11 @@ void csv_adaptor::read_adaptor_events(char* data, std::shared_ptr<std::list<even
 	if ( (*schema) != '\0' ) {
 	  // Interpret the schema.
 	  std::tuple<bool, bool, unsigned int, event_args_t> evt = interpret_event(schema, data);
-	  bool valid = get<0>(evt);
-	  bool insert = get<1>(evt);
-	  unsigned int event_order = get<2>(evt);
+	  bool valid = std::get<0>(evt);
+	  bool insert = std::get<1>(evt);
+	  unsigned int event_order = std::get<2>(evt);
 	  if ( valid )  {
-		event_t e(insert? insert_tuple : delete_tuple, id, event_order, get<3>(evt));
+		event_t e(insert? insert_tuple : delete_tuple, id, event_order, std::get<3>(evt));
 		if(e.event_order == 0) {
 			eventList->push_back(e);
 		} else {

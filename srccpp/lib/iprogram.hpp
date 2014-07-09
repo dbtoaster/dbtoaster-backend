@@ -8,7 +8,12 @@
 #ifndef DBTOASTER_IPROGRAM_H
 #define DBTOASTER_IPROGRAM_H
 
-#include <boost/thread.hpp>
+#include <thread>
+#include <condition_variable>
+#include <mutex>
+#include <future>
+#include <functional>
+#include <cassert>
 
 namespace dbtoaster {
 
@@ -131,10 +136,10 @@ protected:
 private:
     bool running;
     bool finished;
-    boost::mutex running_mtx;
+    std::mutex running_mtx;
 
-    boost::condition_variable snapshot_ready_cond;
-    boost::mutex snapshot_ready_mtx;
+    std::condition_variable snapshot_ready_cond;
+    std::mutex snapshot_ready_mtx;
     bool snapshot_ready;
 
     bool snapshot_request;

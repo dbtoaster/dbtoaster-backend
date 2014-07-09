@@ -3,11 +3,8 @@
 #include "runtime.hpp"
 
 #include <boost/filesystem.hpp>
-#include <boost/lambda/lambda.hpp>
-#include <boost/lambda/bind.hpp>
 
 using namespace boost::filesystem;
-using namespace boost::lambda;
 
 using namespace ::dbtoaster::runtime;
 

@@ -11,9 +11,6 @@
 
 namespace dbtoaster {
   namespace adaptors {
-
-    // using namespace std;
-    using namespace boost;
     using namespace dbtoaster;
     using namespace dbtoaster::streams;
 
