@@ -71,10 +71,10 @@ namespace dbtoaster {
   inline STRING_TYPE cast_string_from_double(double d) { return cast_string(d); }
   STRING_TYPE cast_string_from_date(date ymd);
   date Udate(const char *c);
-  inline date Udate(string &s) { 
+  inline date Udate(const string &s) { 
     return Udate(s.c_str()); 
   }
-  inline date Udate(PString &s) { 
+  inline date Udate(const PString &s) { 
     return Udate(s.c_str()); 
   }
   
