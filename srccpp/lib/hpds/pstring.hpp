@@ -53,6 +53,7 @@ private:
 protected:
   //friends
   friend bool operator==(const char *, const PString &);
+  friend bool operator!=(const char *, const PString &);
   friend std::ostream& operator<< (std::ostream& o, PString const& str);
   friend size_t hash_value(PString const& str);
 public:
@@ -148,42 +149,13 @@ public:
   }
 
   inline bool operator==(const PString &other) const {
-    if (this->size_ != other.size_)
-    {
-  
-      return false;
-    }
-    char *tmp1 = this->data_;
-    char *tmp2 = other.data_;
-    while (*tmp1 != 0)
-    {
-      if (*tmp1 != *tmp2)
-      {
-        return false;
-      }
-      ++tmp1;
-      ++tmp2;
-    }
-    return true;
+    if (this->size_ != other.size_) return false;
+    return (strcmp(this->data_, other.data_) == 0);
   }
 
   inline bool operator!=(const PString &other) const {
-    if (this->size_ != other.size_)
-    {
-      return true;
-    }
-    char *tmp1 = this->data_;
-    char *tmp2 = other.data_;
-    while (*tmp1 != 0)
-    {
-      if (*tmp1 != *tmp2)
-      {
-        return true;
-      }
-      ++tmp1;
-      ++tmp2;
-    }
-    return false;
+    if (this->size_ != other.size_) return true;
+    return (strcmp(this->data_, other.data_) != 0);
   }
 
   inline bool operator<(const PString &other) const {
@@ -207,42 +179,12 @@ public:
 
   inline bool operator==(const char *other)
   {
-    size_t size = strlen(other) + 1;
-    if (this->size_ != size)
-    {
-      return false;
-    }
-    char *tmp = this->data_;
-    while (*tmp != 0)
-    {
-      if (*tmp != *other)
-      {
-        return false;
-      }
-      ++tmp;
-      ++other;
-    }
-    return true;
+    return (strcmp(this->data_, other) == 0);
   }
 
   inline bool operator!=(const char *other)
   {
-    size_t size = strlen(other) + 1;
-    if (this->size_ != size)
-    {
-      return true;
-    }
-    char *tmp = this->data_;
-    while (*tmp != 0)
-    {
-      if (*tmp != *other)
-      {
-        return true;
-      }
-      ++tmp;
-      ++other;
-    }
-    return false;
+    return (strcmp(this->data_, other) != 0);
   }
 
   PString substr (size_t pos) const {
