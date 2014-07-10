@@ -29,7 +29,11 @@ trait ICppGen extends IScalaGen {
   def tupType(ksTp:List[Type], vsTp:Type):String = { val tupleTp="tuple"+(ksTp.size+1)+"_"+ksTp.map(_.simpleName).mkString+"_"+vsTp.simpleName; tempTupleTypes.update(tupleTp,(ksTp, vsTp)); tupleTp }
 
   override def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "/*const static*/ "+tp.toCpp+" "+n+";\n" }.mkString+"\n" // constant member definition
-  def constsInit = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); n+" = "+"U"+f+"("+vs.mkString(",")+");\n" }.mkString+"\n" // constant member initilization
+  def constsInit = cs.map{ case (Apply(f,tp,as),n) => f match {
+      case "STRING_TYPE" => n+" = "+f+"(\""+as(0).asInstanceOf[Const].v+"\");\n" // string initilization
+      case _ => val vs=as.map(a=>cpsExpr(a)); n+" = "+"U"+f+"(\""+as.mkString(",")+"\");\n"
+    }
+  }.mkString+"\n" // constant member initilization
 
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
@@ -49,7 +53,7 @@ trait ICppGen extends IScalaGen {
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
   override def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
     case Ref(n) => co(rn(n))
-    case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
+    case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => cpsExpr(Apply("STRING_TYPE",TypeString,List(ex)),co,am) case _ => co(v) }
     case Exists(e) => cpsExpr(e,(v:String)=>co("("+v+" != 0 ? 1L : 0L)"))
     case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
     case app@Apply(fn1,tp,as1) => {
