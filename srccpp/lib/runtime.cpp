@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "filepath.hpp"
-#include <boost/program_options.hpp>
 #include <algorithm>
 
 /******************************************************************************
