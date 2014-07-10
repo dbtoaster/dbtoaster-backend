@@ -5,12 +5,11 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 #include <unordered_set>
 #include "filepath.hpp"
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/positional_options.hpp>
+#include "optionparser.hpp"
 
 #include "event.hpp"
 #include "hpds/pstring.hpp"
@@ -26,21 +25,79 @@
 
 namespace dbtoaster {
   namespace runtime {
+    struct Arg: public option::Arg
+    {
+      static void printError(const char* msg1, const option::Option& opt, const char* msg2)
+      {
+        fprintf(stderr, "%s", msg1);
+        fwrite(opt.name, opt.namelen, 1, stderr);
+        fprintf(stderr, "%s", msg2);
+      }
 
-    using namespace boost::program_options;
+      static option::ArgStatus Unknown(const option::Option& option, bool msg)
+      {
+        if (msg) printError("Unknown option '", option, "'\n");
+        return option::ARG_ILLEGAL;
+      }
+
+      static option::ArgStatus Required(const option::Option& option, bool msg)
+      {
+        if (option.arg != 0)
+          return option::ARG_OK;
+
+        if (msg) printError("Option '", option, "' requires an argument\n");
+        return option::ARG_ILLEGAL;
+      }
+
+      static option::ArgStatus Numeric(const option::Option& option, bool msg)
+      {
+        char* endptr = 0;
+        if (option.arg != 0 && strtol(option.arg, &endptr, 10)){};
+        if (endptr != option.arg && *endptr == 0)
+          return option::ARG_OK;
+
+        if (msg) printError("Option '", option, "' requires a numeric argument\n");
+        return option::ARG_ILLEGAL;
+      }
+    };
+
+    enum  optionIndex { UNKNOWN, HELP, VERBOSE, ASYNC, LOGDIR, LOGTRIG, UNIFIED, OUTFILE, SAMPLESZ, SAMPLEPRD, STATSFILE, TRACE, TRACEDIR, TRACESTEP, LOGCOUNT };
+    const option::Descriptor usage[] = {
+    { UNKNOWN,  0,"", "",           Arg::Unknown, "dbtoaster query options:" },
+    { HELP,     0,"h","help",       Arg::None,    "  -h       , \t--help  \tlist available options." },
+    { VERBOSE,  0,"v","verbose",    Arg::None,    "  -v       , \t--verbose  \tfor verbose output." },
+    { ASYNC,    0,"a","async",      Arg::None,    "  -a       , \t--async  \tasynchronous execution mode." },
+    { LOGDIR,   0,"d","log-dir",    Arg::Required,"  -d  <arg>, \t--log-dir=<arg>  \tlogging directory." },
+    { LOGTRIG,  0,"l","log-trigger",Arg::Required,"  -l  <arg>, \t--log-trigger=<arg>  \tlog stream triggers (several of them can be added with using this option several times)." },
+    { UNIFIED,  0,"u","unified",    Arg::Required,"  -u  <arg>, \t--unified=<arg>  \tunified logging [stream | global]." },
+    { OUTFILE,  0,"o","output-file",Arg::Required,"  -o  <arg>, \t--output-file=<arg>  \toutput file." },
+    // Statistics profiling parameters
+    { SAMPLESZ, 0,"","samplesize",  Arg::Numeric, "  \t--samplesize=<arg>  \tsample window size for trigger profiles." },
+    { SAMPLEPRD,0,"","sampleperiod",Arg::Numeric, "  \t--sampleperiod=<arg>  \tperiod length, as number of trigger events." },
+    { STATSFILE,0,"","statsfile",   Arg::Required,"  \t--statsfile=<arg>  \toutput file for trigger profile statistics." },
+    // Tracing parameters
+    { TRACE,    0,"","trace",       Arg::Required,"  \t--trace=<arg>  \ttrace query execution." },
+    { TRACEDIR, 0,"","trace-dir",   Arg::Required,"  \t--trace-dir=<arg>  \ttrace output dir." },
+    { TRACESTEP,0,"","trace-step",  Arg::Numeric, "  \t--trace-step=<arg>  \ttrace step size." },
+    { LOGCOUNT, 0,"","log-count",   Arg::Numeric, "  \t--log-count=<arg>  \tlog tuple count every [arg] updates." },
+    { 0, 0, 0, 0, 0, 0 } };
     
     struct runtime_options {
-      std::shared_ptr<options_description> opt_desc;
-      variables_map opt_map;
-      positional_options_description pos_options;
-
+      std::string log_dir;
       std::vector<std::string> logged_streams_v;
       std::set<std::string> logged_streams;
+      std::string _unified;
+      std::string out_file;
+
+      unsigned int sample_size;
+      unsigned int sample_period;
+      std::string stats_file;
 
       // Tracing
-      std::string trace_opts;
       bool traced;
-      int trace_counter, trace_step;
+      std::string trace_opts;
+      std::string trace_dir;
+      unsigned int trace_counter, trace_step;
       std::unordered_set<std::string> traced_maps;
       unsigned int log_tuple_count_every;
 
@@ -53,17 +110,10 @@ namespace dbtoaster {
 
       runtime_options(int argc = 0, char* argv[] = 0);
 
-      void init_options(options_description& desc);
-      void init_positional_options(positional_options_description& p);
-	  
-      void process_options(int argc, char* argv[],
-                           options_description& o,
-                           positional_options_description& p,
-                           variables_map& m);
-      void setup_tracing(options_description& o);
+      void process_options(int argc, char* argv[]);
+      void setup_tracing();
 
       void init(int argc, char* argv[]);
-      bool help();
 
       // Result output.
       std::string get_output_file();
@@ -89,16 +139,6 @@ namespace dbtoaster {
       bool is_traced_map(std::string map_name);
       bool is_traced();
       path get_trace_file();
-    };
-
-    struct orderbook_options : public runtime_options {
-      std::vector<std::string> orderbook_params;
-      orderbook_options() {}
-      orderbook_options(int argc, char* argv[]) { init(argc, argv); }
-
-      void init(int argc, char* argv[]);
-      std::string order_book_file();
-      std::string order_book_params();
     };
   }
 }

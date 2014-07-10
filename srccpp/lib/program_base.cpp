@@ -213,9 +213,6 @@ ProgramBase::ProgramBase(int argc, char* argv[]) :
 									   stats_period, stats_file))
 #endif // DBT_PROFILE
 {
-	if (run_opts->help()) {
-		exit(1);
-	};
 }
 
 void ProgramBase::process_streams() {
