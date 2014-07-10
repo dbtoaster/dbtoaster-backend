@@ -42,7 +42,8 @@ private:
   static CharPool<> pool_;
   size_t size_;
   char *data_;
-  size_t* ptr_count_;
+  size_t *ptr_count_;
+
   inline static size_t getNumCells(int sz)
   {
     size_t num_cells = sz / DEFAULT_CHAR_ARR_SIZE;
@@ -50,15 +51,19 @@ private:
     if (sz & DEFAULT_CHAR_ARR_SIZE_MINUS_ONE) num_cells++;
     return num_cells;
   }
+
 protected:
   //friends
   friend bool operator==(const char *, const PString &);
   friend bool operator!=(const char *, const PString &);
-  friend std::ostream& operator<< (std::ostream& o, PString const& str);
-  friend size_t hash_value(PString const& str);
+  friend std::ostream &operator<< (std::ostream &o, PString const &str);
+  friend size_t hash_value(PString const &str);
+
 public:
-  PString() : size_(0), data_(nullptr), ptr_count_(new size_t(1)) {
+  PString() : size_(0), data_(nullptr), ptr_count_(new size_t(1))
+  {
   }
+
   PString(const char *str) : ptr_count_(new size_t(1))
   {
     size_ = strlen(str) + 1;
@@ -66,6 +71,7 @@ public:
     data_ = pool_.add(num_cells);
     memcpy(data_, str, size_ * sizeof(char));
   }
+
   PString(const char *str, size_t strln) : ptr_count_(new size_t(1))
   {
     size_ = strln + 1;
@@ -74,6 +80,7 @@ public:
     memcpy(data_, str, strln * sizeof(char));
     data_[strln] = '\0';
   }
+
   // PString(const std::string &str) : ptr_count_(new size_t(1))
   // {
   //   size_ = str.length() + 1;
@@ -81,6 +88,7 @@ public:
   //   data_ = pool_.add(num_cells);
   //   memcpy(data_, str.c_str(), size_ * sizeof(char));
   // }
+
   PString(const PString &pstr)
   {
     *pstr.ptr_count_ += 1;
@@ -88,30 +96,45 @@ public:
     this->data_ = pstr.data_;
     this->size_ = pstr.size_;
   }
+
   ~PString()
   {
     *ptr_count_ -= 1;
-    if (!(*ptr_count_) && data_) { pool_.del(getNumCells(size_), data_); delete ptr_count_; ptr_count_=nullptr; }
+    if (!(*ptr_count_) && data_)
+    {
+      pool_.del(getNumCells(size_), data_);
+      delete ptr_count_;
+      ptr_count_ = nullptr;
+    }
   }
+
   FORCE_INLINE char *c_str()
   {
     return data_;
   }
+
   FORCE_INLINE const char *c_str() const
   {
     return data_;
   }
+
   inline char &operator[](const int x)
   {
     return data_[x];
   }
+
   inline const char &operator[](const int x) const
   {
     return data_[x];
   }
+
   PString &operator=(const char *str)
   {
-    if (!(--(*ptr_count_)) && data_) { pool_.del(getNumCells(size_), data_); delete ptr_count_; }
+    if (!(--(*ptr_count_)) && data_)
+    {
+      pool_.del(getNumCells(size_), data_);
+      delete ptr_count_;
+    }
     ptr_count_ = new size_t(1);
     size_ = strlen(str) + 1;
     size_t num_cells = getNumCells(size_);
@@ -119,6 +142,7 @@ public:
     memcpy(data_, str, size_ * sizeof(char));
     return *this;
   }
+
   PString &operator=(const PString &pstr)
   {
     (*pstr.ptr_count_)++;
@@ -127,38 +151,42 @@ public:
     this->size_ = pstr.size_;
     return *this;
   }
+
   size_t length() const
   {
     return size_ - 1;
   }
+
   size_t maxsize() const
   {
-    return getNumCells(size_)*DEFAULT_CHAR_ARR_SIZE - 1;
+    return getNumCells(size_) * DEFAULT_CHAR_ARR_SIZE - 1;
   }
+
   int end() const
   {
     return size_ - 1;
   }
 
   template<class Archive>
-  void serialize(
-    Archive & ar,
-    const unsigned int file_version
-  ) const {
+  void serialize(Archive &ar, const unsigned int file_version) const
+  {
     ar << this->data_;
   }
 
-  inline bool operator==(const PString &other) const {
+  inline bool operator==(const PString &other) const
+  {
     if (this->size_ != other.size_) return false;
     return (strcmp(this->data_, other.data_) == 0);
   }
 
-  inline bool operator!=(const PString &other) const {
+  inline bool operator!=(const PString &other) const
+  {
     if (this->size_ != other.size_) return true;
     return (strcmp(this->data_, other.data_) != 0);
   }
 
-  inline bool operator<(const PString &other) const {
+  inline bool operator<(const PString &other) const
+  {
     if (this->size_ != other.size_)
     {
       return (this->size_ < other.size_);
@@ -187,19 +215,23 @@ public:
     return (strcmp(this->data_, other) != 0);
   }
 
-  PString substr (size_t pos) const {
-    return PString(this->data_+pos);
+  PString substr (size_t pos) const
+  {
+    return PString(this->data_ + pos);
   }
-  PString substr (size_t pos, size_t len) const {
-    return PString(this->data_+pos,len);
+
+  PString substr (size_t pos, size_t len) const
+  {
+    return PString(this->data_ + pos, len);
   }
 };
 
 
 template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const PString & t){
-    t.serialize(ar, version);
-    return ar;
+inline Archive &serialize(Archive &ar, const unsigned int version, const PString &t)
+{
+  t.serialize(ar, version);
+  return ar;
 }
 
 #endif //POOLED_STRING_H
