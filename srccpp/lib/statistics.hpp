@@ -5,8 +5,9 @@
 #include <map>
 #include <utility>
 #include <functional>
+#include <algorithm>
 #include <chrono>
-#include <boost/circular_buffer.hpp>
+#include "circular_buffer.hpp"
 #include <cstdint>
 
 namespace dbtoaster {
@@ -18,7 +19,7 @@ namespace dbtoaster {
     using std::chrono::high_resolution_clock;
 
     // Sample buffer.
-    template<typename value, typename window = boost::circular_buffer<value> >
+    template<typename value, typename window = circular_buffer<value> >
     class statistics_window {
     protected:
       window win;
