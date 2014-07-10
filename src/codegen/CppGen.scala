@@ -31,7 +31,11 @@ trait ICppGen extends IScalaGen {
   override def consts = cs.map{ case (Apply(f,tp,as),n) => val vs=as.map(a=>cpsExpr(a)); "/*const static*/ "+tp.toCpp+" "+n+";\n" }.mkString+"\n" // constant member definition
   def constsInit = cs.map{ case (Apply(f,tp,as),n) => f match {
       case "STRING_TYPE" => n+" = "+f+"(\""+as(0).asInstanceOf[Const].v+"\");\n" // string initilization
-      case _ => val vs=as.map(a=>cpsExpr(a)); n+" = "+"U"+f+"(\""+as.mkString(",")+"\");\n"
+      case _ => val vs=as.map{
+          case Const(tp,v) if (tp == TypeString) => "STRING_TYPE(\""+v+"\")"
+          case a => cpsExpr(a)
+        }
+        n+" = "+"U"+f+"("+vs.mkString(",")+");\n"
     }
   }.mkString+"\n" // constant member initilization
 
