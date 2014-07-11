@@ -389,7 +389,7 @@ trait ICppGen extends IScalaGen {
         "  template<class Archive>\n"+
         "  void serialize(Archive& ar, const unsigned int version) const \n"+
         "  {\n"+
-        fields.map{case (fld,_) => "    ar << \"\\n\\t\\t\\t\";\n    DBT_SERIALIZATION_NVP(ar, "+fld+");\n"}.mkString+
+        fields.map{case (fld,_) => "    ar << ELEM_SEPARATOR;\n    DBT_SERIALIZATION_NVP(ar, "+fld+");\n"}.mkString+
         "  }\n"+
         "};"
 
@@ -675,5 +675,5 @@ trait ICppGen extends IScalaGen {
 
   def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
 
-  override def additionalImports():String = "#include \"program_base.hpp\"\n#include \"hash.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n"
+  override def additionalImports():String = "#include \"program_base.hpp\"\n#include \"hash.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n#define ELEM_SEPARATOR \"\\n\\t\\t\\t\"\n"
 }
