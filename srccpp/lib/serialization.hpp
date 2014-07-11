@@ -54,25 +54,17 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const size_
 
 template<typename T, class Archive>
 inline Archive & serialize_nvp(Archive & ar, const char * name, const T & t){
-    ar << "<";
-    ar << name;
-    ar << ">";
+    ar << "<"  << name << ">";
     serialize(ar, 0, t);
-    ar << "</";
-    ar << name;
-    ar << ">";
+    ar << "</" << name << ">";
     return ar;
 }
 
 template<typename T, class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const T & t, const char* tab){
-    ar << tab << "<";
-    ar << name;
-    ar << ">";
+    ar << tab << "<"  << name << ">";
     serialize(ar, 0, t);
-    ar << tab << "</";
-    ar << name;
-    ar << ">";
+    ar << tab << "</" << name << ">";
     return ar;
 }
 
