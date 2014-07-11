@@ -167,12 +167,6 @@ public:
     return size_ - 1;
   }
 
-  template<class Archive>
-  void serialize(Archive &ar, const unsigned int file_version) const
-  {
-    ar << this->data_;
-  }
-
   inline bool operator==(const PString &other) const
   {
     if (this->size_ != other.size_) return false;
