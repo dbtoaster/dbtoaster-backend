@@ -13,17 +13,10 @@
 #include <sys/time.h>
 
 #include <functional>
-#include "any.hpp"
 
 #include "event.hpp"
 
 namespace dbtoaster {
-
-// These need to be placed here as C++ doesn't search for overloaded
-// << operators in all the available namespaces
-std::ostream& operator<<(std::ostream &strm, const dbtoaster::any &a);
-std::ostream& operator<<(std::ostream &strm, const std::vector<dbtoaster::any> &args);
-
 namespace streams {
 
 // Adaptor and stream interfaces.

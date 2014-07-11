@@ -276,17 +276,12 @@ void ProgramBase::process_event(const event_t& evt, bool process_table) {
 		std::shared_ptr<ProgramBase::trigger_t> trig = 
 			r_it->second->trigger[evt.type];
 
-		try {
-			#ifdef DBT_TRACE
-			cout << trig->name << ": " << evt.data << endl;
-			#endif // DBT_TRACE
-			trig->log(r_it->second->name, evt);
+		#ifdef DBT_TRACE
+		cout << trig->name << ": " << evt.data << endl;
+		#endif // DBT_TRACE
+		trig->log(r_it->second->name, evt);
 
-			(trig->fn)(evt.data);
-		} catch (dbtoaster::bad_any_cast& bc) {
-			cout << "bad cast on " << trig->name << ": " << bc.what()
-					<< endl;
-		}
+		(trig->fn)(evt.data);
 	} else {
 		cerr << "Could not find " << event_name[evt.type]
 				<< " handler for relation " << evt.id << endl;

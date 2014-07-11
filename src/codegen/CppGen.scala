@@ -428,7 +428,7 @@ trait ICppGen extends IScalaGen {
         case _ => sys.error("Unsupported trigger event "+evt)
       }
       "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
-      "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => /*if(tp == TypeString) "PStringany_cast<string>(ea["+i+"])" else*/ "any_cast<"+tp.toCpp+">(ea["+i+"])"}.mkString(", ")+");\n"+
+      "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
       "}\n\n"
     }
 
@@ -793,7 +793,7 @@ trait ICppGen extends IScalaGen {
     ss
   }
 
-  override def pkgWrapper(pkg:String, body:String) = "#include \"any.hpp\"\n#include \"hash.hpp\"\n#include \"program_base.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n"+additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
+  override def pkgWrapper(pkg:String, body:String) = "#include \"program_base.hpp\"\n#include \"hash.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n"+additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
 
     // "package "+pkg+"\nimport ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     // "object "+cls+" {\n"+ind("import Helper._\n"+

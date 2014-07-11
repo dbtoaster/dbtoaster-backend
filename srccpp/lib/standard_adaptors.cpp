@@ -124,11 +124,13 @@ void csv_adaptor::validate_schema() {
 std::tuple<bool, bool, unsigned int, event_args_t> 
 csv_adaptor::interpret_event(const char* schema_it, char* data)
 {
-	bool ins; unsigned int event_order=0; int y,m,d; double f; long l; PString pstr;
+	bool ins; unsigned int event_order=0; int y,m,d; PString pstr;
 	char* date_y_field;
 	char* date_m_field;
 	char* date_d_field;
 	
+	//TODO make sure that are heap allocated objects inside tuple
+	//will be deallocated in the end
 	event_args_t tuple(strlen(schema_it));
 	size_t tupleIdx = 0;
 	bool valid = true;
@@ -148,9 +150,9 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
         // std::cout << "  handling schema => " << *schema_it << std::endl;
         switch (*schema_it) {
 			case 'e': ins=atoi(field_start); insert = ins; break;
-			case 'l': l=atol(field_start); tuple[tupleIdx++]=l; break;
-			case 'f': f=atof(field_start); tuple[tupleIdx++]=f; break;
-			case 'h': tuple[tupleIdx++]=static_cast<int>(MurmurHash2(field_start,strlen(field_start)*sizeof(char),0));
+			case 'l': tuple[tupleIdx++]=new long(atol(field_start)); break;
+			case 'f': tuple[tupleIdx++]=new double(atof(field_start)); break;
+			case 'h': tuple[tupleIdx++]=new int(static_cast<int>(MurmurHash2(field_start,strlen(field_start)*sizeof(char),0)));
 					  break;
 			case 'd': 
 				date_y_field = strtok (field_start,"-");
@@ -163,7 +165,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 							m = atoi(date_m_field);
 							d = atoi(date_d_field);
 							if ( 0 < m && m < 13 && 0 < d && d <= 31) {
-								tuple[tupleIdx++]=date(y*10000+m*100+d);
+								tuple[tupleIdx++]=new date(y*10000+m*100+d);
 							}
         					// std::cout << "  date is => " << date(y*10000+m*100+d) << std::endl;
 						} else valid = false;
@@ -173,7 +175,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 			case 'o':
 				event_order=atoi(field_start);
 				break;
-			case 's': tuple[tupleIdx++]=STRING_TYPE(field_start);   break;
+			case 's': tuple[tupleIdx++]=new STRING_TYPE(field_start);   break;
 			default: valid = false; break;
 		}
 
@@ -240,11 +242,11 @@ order_book_tuple& order_book_tuple::operator=(order_book_tuple& other) {
 }
 
 void order_book_tuple::operator()(event_args_t& e) {
-	if (e.size() > 0) e[0] = t; else e.push_back(t);
-	if (e.size() > 1) e[1] = id; else e.push_back(id);
-	if (e.size() > 2) e[2] = broker_id; else e.push_back(broker_id);
-	if (e.size() > 3) e[3] = volume; else e.push_back(volume);
-	if (e.size() > 4) e[4] = price; else e.push_back(price);
+	if (e.size() > 0) e[0] = new double(t); else e.push_back(new double(t));
+	if (e.size() > 1) e[1] = new long(id); else e.push_back(new long(id));
+	if (e.size() > 2) e[2] = new long(broker_id); else e.push_back(new long(broker_id));
+	if (e.size() > 3) e[3] = new double(volume); else e.push_back(new double(volume));
+	if (e.size() > 4) e[4] = new double(price); else e.push_back(new double(price));
 }
 
 /******************************************************************************

@@ -11,8 +11,6 @@
 #include <string>
 #include <vector>
 
-#include "any.hpp"
-
 namespace dbtoaster {
 
 typedef long date;
@@ -23,7 +21,7 @@ typedef long date;
 
 enum event_type { delete_tuple=0, insert_tuple, system_ready_event };
 typedef int relation_id_t;
-typedef std::vector<dbtoaster::any> event_args_t;
+typedef std::vector<void*> event_args_t;
 
 extern std::string event_name[];
 

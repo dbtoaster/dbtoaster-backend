@@ -7,40 +7,6 @@
 using namespace ::dbtoaster::runtime;
 
 namespace dbtoaster {
-
-std::ostream& operator<<(std::ostream &strm, const dbtoaster::any &a) {
-    try{
-        if( a.type() == typeid(int) )
-            return strm << any_cast<int>(a);
-
-        else if( a.type() == typeid(long) )
-            return strm << any_cast<long>(a);
-
-        else if( a.type() == typeid(double) )
-            return strm << any_cast<double>(a);
-
-        else if( a.type() == typeid(STRING_TYPE) )
-            return strm << any_cast<STRING_TYPE>(a);
-        else
-            std::cerr << "event_arg: Unrecognized type in <<: " 
-                 << a.type().name() << std::endl;
-    } catch (dbtoaster::bad_any_cast& bc) {
-        std::cerr << "bad cast on <<: " << bc.what() << std::endl;
-    }
-    return strm;
-}
-
-std::ostream& operator<<(std::ostream &strm, const std::vector<dbtoaster::any> &args) {
-    if( !args.empty() )
-    {
-        strm << args[0];
-        for( size_t i = 1; i < args.size(); ++i )
-            strm << ", " << args[i];
-    }
-    return strm;
-}
-
-
 namespace streams {
 
 /******************************************************************************
