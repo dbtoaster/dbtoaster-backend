@@ -566,9 +566,9 @@ unless !queries.empty? then
         ]
     when "big" then
       queries = [
-          "tpch11a","tpch2","tpch6","tpch14","tpch3","tpch10","tpch12","tpch9","tpch1","tpch17","tpch7",
-          "tpch11","tpch22","tpch22a","tpch20","tpch4","tpch17a","tpch19","tpch21","tpch18a","tpch8",
-          "tpch11c","tpch18","tpch13","tpch16","tpch15","ssb4",
+          "tpch11a","tpch2","tpch6","tpch4","tpch14","tpch3","tpch10","tpch17a","tpch18a","tpch12",
+          "tpch17","tpch18","tpch21","tpch22a","tpch1","tpch22","tpch20","tpch8","tpch9","tpch7",
+          "tpch5","tpch16","tpch19","tpch11","tpch13","tpch15","tpch11c","ssb4",
           # "tpch1","tpch2","tpch3","tpch4","tpch5","tpch6","tpch7","tpch8",
           # "tpch9","tpch10","tpch11","tpch11a","tpch11c","tpch12","tpch13","tpch14","tpch15",
           # "tpch16","tpch17","tpch17a","tpch18","tpch18a","tpch19","tpch20","tpch21","tpch22","tpch22a","ssb4",
@@ -584,9 +584,9 @@ unless !queries.empty? then
         ]
     when "big_del" then
       queries = [
-          "tpch11a","tpch2","tpch6","tpch14","tpch3","tpch10","tpch12","tpch9","tpch1","tpch17","tpch7",
-          "tpch11","tpch22","tpch22a","tpch20","tpch4","tpch17a","tpch19","tpch21","tpch18a","tpch8",
-          "tpch11c","tpch18","tpch13","tpch16","tpch15","ssb4",
+          "tpch11a","tpch2","tpch6","tpch4","tpch14","tpch3","tpch10","tpch17a","tpch18a","tpch12",
+          "tpch17","tpch18","tpch21","tpch22a","tpch1","tpch22","tpch20","tpch8","tpch9","tpch7",
+          "tpch5","tpch16","tpch19","tpch11","tpch13","tpch15","tpch11c","ssb4",
           # "tpch1","tpch2","tpch3","tpch4","tpch5","tpch6","tpch7","tpch8",
           # "tpch9","tpch10","tpch11","tpch11a","tpch11c","tpch12","tpch13","tpch14","tpch15",
           # "tpch16","tpch17","tpch17a","tpch18","tpch18a","tpch19","tpch20","tpch21","tpch22","tpch22a","ssb4",
