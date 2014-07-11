@@ -8,7 +8,6 @@
 #ifndef DBTOASTER_SERIALIZATION_H
 #define DBTOASTER_SERIALIZATION_H
 
-#include "hpds/pstring.hpp"
 #include <iostream>
 #include <iomanip>
 
@@ -50,12 +49,6 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const int &
 template<class Archive>
 inline Archive & serialize(Archive & ar, const unsigned int version, const size_t & t){
     ar << t;
-    return ar;
-}
-
-template<class Archive>
-inline Archive & serialize(Archive & ar, const unsigned int version, const STRING_TYPE & t){
-    ar << t.c_str();
     return ar;
 }
 

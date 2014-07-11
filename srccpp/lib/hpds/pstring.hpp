@@ -31,7 +31,7 @@
 #include "../smhasher/MurmurHash2.hpp"
 
 #ifndef STRING_TYPE
-#define STRING_TYPE PString
+#define STRING_TYPE std::string
 #endif //STRING_TYPE
 
 #define DEFAULT_CHAR_ARR_SIZE_MINUS_ONE (DEFAULT_CHAR_ARR_SIZE - 1)
@@ -222,9 +222,9 @@ public:
 
 
 template<class Archive>
-inline Archive &serialize(Archive &ar, const unsigned int version, const PString &t)
+inline Archive &serialize(Archive &ar, const unsigned int version, const STRING_TYPE &t)
 {
-  t.serialize(ar, version);
+  ar << t.c_str();
   return ar;
 }
 
