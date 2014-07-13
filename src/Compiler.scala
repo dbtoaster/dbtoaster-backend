@@ -10,6 +10,11 @@ import ddbt.codegen._
 object Compiler {
   import java.io._
 
+  val DEPLOYMENT_STATUS_RELEASE=1
+  val DEPLOYMENT_STATUS_DEVELOPMENT=2
+
+  val DEPLOYMENT_STATUS=DEPLOYMENT_STATUS_DEVELOPMENT
+
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"
   val LANG_SCALA = "vscala"

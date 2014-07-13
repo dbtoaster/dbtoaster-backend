@@ -247,7 +247,7 @@ trait ICppGen extends IScalaGen {
     ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap)
     val preBody="BEGIN_TRIGGER(exec_stats,\""+n+"\")\n"+
                 "BEGIN_TRIGGER(ivc_stats,\""+n+"\")\n"+
-                "{  "+xActCounter+"\n"
+                "{  "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+xActCounter+"\n"
     val body=ind(t.stmts.map(genStmt).mkString)
     val pstBody="\n}\n"+
                 "END_TRIGGER(exec_stats,\""+n+"\")\n"+
@@ -601,7 +601,7 @@ trait ICppGen extends IScalaGen {
     "    }\n"+
     "\n"+
     "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
-    "    snapshot_t take_snapshot(){ tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d.tT,d.tN,d.tS);\n"+
+    "    snapshot_t take_snapshot(){ "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d.tT,d.tN,d.tS);\n"+
     "        return snapshot_t( new tlq_t((tlq_t&)data) );\n"+
     "    }\n"+
     "\n"+
