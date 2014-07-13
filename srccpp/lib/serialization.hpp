@@ -75,6 +75,46 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const T &
     return ar;
 }
 
+template<class Archive>
+inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const double & t, const char* tab){
+    ar << tab << "<"  << name << ">";
+    serialize(ar, 0, t);
+    ar << "</" << name << ">";
+    return ar;
+}
+
+template<class Archive>
+inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const long & t, const char* tab){
+    ar << tab << "<"  << name << ">";
+    serialize(ar, 0, t);
+    ar << "</" << name << ">";
+    return ar;
+}
+
+template<class Archive>
+inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const int & t, const char* tab){
+    ar << tab << "<"  << name << ">";
+    serialize(ar, 0, t);
+    ar << "</" << name << ">";
+    return ar;
+}
+
+template<class Archive>
+inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const size_t & t, const char* tab){
+    ar << tab << "<"  << name << ">";
+    serialize(ar, 0, t);
+    ar << "</" << name << ">";
+    return ar;
+}
+
+template<class Archive>
+inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const STRING_TYPE & t, const char* tab){
+    ar << tab << "<"  << name << ">";
+    serialize(ar, 0, t);
+    ar << "</" << name << ">";
+    return ar;
+}
+
 }
 
 #endif /* DBTOASTER_SERIALIZATION_H */
