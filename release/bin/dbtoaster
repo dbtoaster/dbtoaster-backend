@@ -56,10 +56,9 @@ else
    gpp="g++"
 fi
 
-cpp_compile_flags=""
+cpp_compile_flags="-std=c++11"
 cpp_opt_flag="-O3"
-boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
-cpp_libs="-ldbtoaster $boost_libs -lpthread"
+cpp_libs="-ldbtoaster -lpthread"
 
 lms_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath \"$SCALA_LIBS\""
 scala_codegen_flags="-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath \"$SCALA_LIBS\""
@@ -69,9 +68,9 @@ scala_opt_flag="-optimise"
 
 compile_log=""
 run_log=""
-log_gcc=1
-log_scala=1
-log_dbtoaster=1
+log_gcc=0
+log_scala=0
+log_dbtoaster=0
 
 run_after_compile=0
 
@@ -113,12 +112,6 @@ for arg in "$@"; do
          scala_opt_flag=""
       elif [ $debug_flag = "COMPILE-WITH-STATIC" ]; then
          cpp_compile_flags="$cpp_compile_flags -static"
-      elif [ $debug_flag = "MT" ]; then
-         cpp_libs="-ldbtoaster";
-         for lib in $boost_libs; do
-            cpp_libs="$cpp_libs ${lib}-mt";
-         done;
-               cpp_libs="$cpp_libs -lpthread"
       elif [ $debug_flag = "LOG-DBTOASTER" ]; then
          log_dbtoaster=1
       elif [ $debug_flag = "LOG-GCC" ]; then
