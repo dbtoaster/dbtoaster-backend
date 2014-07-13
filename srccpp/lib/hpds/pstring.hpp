@@ -34,12 +34,16 @@
 #define STRING_TYPE PString
 #endif //STRING_TYPE
 
+// #define USE_POOL
+
 #define DEFAULT_CHAR_ARR_SIZE_MINUS_ONE (DEFAULT_CHAR_ARR_SIZE - 1)
 
 struct PString
 {
 private:
+#ifdef USE_POOL
   static CharPool<> pool_;
+#endif //USE_POOL
   size_t size_;
   char *data_;
   size_t *ptr_count_;
@@ -67,27 +71,39 @@ public:
   PString(const char *str) : ptr_count_(new size_t(1))
   {
     size_ = strlen(str) + 1;
+#ifdef USE_POOL
     size_t num_cells = getNumCells(size_);
     data_ = pool_.add(num_cells);
+#else
+    data_ = new char[size_];
+#endif //USE_POOL
     memcpy(data_, str, size_ * sizeof(char));
   }
 
   PString(const char *str, size_t strln) : ptr_count_(new size_t(1))
   {
     size_ = strln + 1;
+#ifdef USE_POOL
     size_t num_cells = getNumCells(size_);
     data_ = pool_.add(num_cells);
+#else
+    data_ = new char[size_];
+#endif //USE_POOL
     memcpy(data_, str, strln * sizeof(char));
     data_[strln] = '\0';
   }
 
-  // PString(const std::string &str) : ptr_count_(new size_t(1))
-  // {
-  //   size_ = str.length() + 1;
-  //   size_t num_cells = getNumCells(size_);
-  //   data_ = pool_.add(num_cells);
-  //   memcpy(data_, str.c_str(), size_ * sizeof(char));
-  // }
+//   PString(const std::string &str) : ptr_count_(new size_t(1))
+//   {
+//     size_ = str.length() + 1;
+// #ifdef USE_POOL
+//     size_t num_cells = getNumCells(size_);
+//     data_ = pool_.add(num_cells);
+// #else
+//     data_ = new char[size_];
+// #endif //USE_POOL
+//     memcpy(data_, str.c_str(), size_ * sizeof(char));
+//   }
 
   PString(const PString &pstr)
   {
@@ -99,10 +115,14 @@ public:
 
   ~PString()
   {
-    *ptr_count_ -= 1;
-    if (!(*ptr_count_) && data_)
+    if (((--(*ptr_count_)) == 0) && data_)
     {
+#ifdef USE_POOL
       pool_.del(getNumCells(size_), data_);
+#else
+    delete[] data_;
+#endif //USE_POOL
+      data_ = nullptr;
       delete ptr_count_;
       ptr_count_ = nullptr;
     }
@@ -130,15 +150,25 @@ public:
 
   PString &operator=(const char *str)
   {
-    if (!(--(*ptr_count_)) && data_)
+#ifdef USE_POOL
+    if (((--(*ptr_count_)) == 0) && data_)
     {
       pool_.del(getNumCells(size_), data_);
-      delete ptr_count_;
     }
-    ptr_count_ = new size_t(1);
+    (*ptr_count_) = 1;
     size_ = strlen(str) + 1;
     size_t num_cells = getNumCells(size_);
     data_ = pool_.add(num_cells);
+#else
+    size_t sz = strlen(str) + 1;
+    if (((--(*ptr_count_)) == 0) && data_ && (sz > size_))
+    {
+      delete[] data_;
+    }
+    (*ptr_count_) = 1;
+    size_ = sz;
+    data_ = new char[size_];
+#endif //USE_POOL
     memcpy(data_, str, size_ * sizeof(char));
     return *this;
   }

@@ -22,3 +22,9 @@
 // SOFTWARE.
 
 #include "pstring.hpp"
+
+
+//global operators
+#ifdef USE_POOL
+CharPool<> PString::pool_;
+#endif //USE_POOL

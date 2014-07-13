@@ -1,7 +1,5 @@
 #include "pstring.hpp"
 
-//global operators
-CharPool<> PString::pool_;
 
 inline bool operator==(const char *str1, const PString &str2)
 {
