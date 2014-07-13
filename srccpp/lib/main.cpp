@@ -71,10 +71,10 @@ int main(int argc, char* argv[]) {
     //dbtoaster::CustomProgram_2 p;
     dbtoaster::Program::snapshot_t snap;
 
-    cout << "Initializing program:" << endl;
+    // cout << "Initializing program:" << endl;
     p.init();
 
-    cout << "Running program:" << endl;
+    // cout << "Running program:" << endl;
     p.run( async );
     while( !p.is_finished() )
     {
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
        DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
     }
 
-    cout << "Printing final result:" << endl;
+    // cout << "Printing final result:" << endl;
     snap = p.get_snapshot();
     DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
     cout << std::endl;
