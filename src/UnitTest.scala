@@ -1,7 +1,12 @@
 package ddbt
 import java.io._
 import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
-
+import Compiler.LANG_SCALA
+import Compiler.LANG_CPP
+import Compiler.LANG_AKKA
+import Compiler.LANG_LMS
+import Compiler.LANG_CPP_LMS
+import Compiler.LANG_SCALA_LMS
 /**
  * Benchmarking and correctness verification generator. Instruments the
  * compiler such that options can be shared. To get more information:
@@ -73,7 +78,7 @@ object UnitTest {
         e("Filtering options:")
         e("  -d <dataset>  add a dataset: tiny, standard, big, huge (_del)?")
         e("  -dd           add tiny,tiny_del,standard,standard_del datasets")
-        e("  -m <mode>     add mode: "+Compiler.LANG_SCALA+", "+Compiler.LANG_CPP+", "+Compiler.LANG_CPP_LMS+", "+Compiler.LANG_SCALA_LMS+", "+Compiler.LANG_AKKA+" (_spec|_full|_0-10)?")
+        e("  -m <mode>     add mode: "+LANG_SCALA+", "+LANG_CPP+", "+LANG_CPP_LMS+", "+LANG_SCALA_LMS+", "+LANG_AKKA+" (_spec|_full|_0-10)?")
         e("                          lscala, lcpp, llms")
         e("  -q <filter>   add an inclusion filter for queries")
         e("  -qx <filter>  add an exclusion filter for queries")
@@ -93,7 +98,7 @@ object UnitTest {
         Compiler.parseArgs(Array[String]())
       case s => as=s::as
     }; i+=1 }
-    if (datasets.size==0) datasets=List("standard"); if (modes.size==0) modes=List("scala")
+    if (datasets.size==0) datasets=List("standard"); if (modes.size==0) modes=List(LANG_SCALA)
     if ((modes.toSet&Set("lscala","lcpp","llms")).size>0 && !benchmark) warning("Legacy modes are meaningful only with benchmarks enabled")
     def re(set:MSet[String]) = java.util.regex.Pattern.compile(".*("+set.mkString("|")+")(\\.sql)?")
     if (qinc.size>0) { val pi=re(qinc); q_f=(s:String)=>pi.matcher(s).matches }
@@ -147,8 +152,8 @@ object UnitTest {
         for (m <- modes) m match {
           case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
           case "lcpp" if (repo!=null && benchmark) => legacyCPP(q,new Printer("LCPP"),t0)
-          case "scala"|"scalalms" => genQueryScala(q,new Printer(mn(m)),m3,m)
-          case "cpp" | "cpplms" | "lms" => genQueryCpp(q,new Printer(mn(m)),m3,m)
+          case LANG_SCALA|LANG_SCALA_LMS => genQueryScala(q,new Printer(mn(m)),m3,m)
+          case LANG_CPP | LANG_CPP_LMS | LANG_LMS => genQueryCpp(q,new Printer(mn(m)),m3,m)
           case _ => sys.error("Mode is not supported: "+m)
 
         }
@@ -182,8 +187,8 @@ object UnitTest {
       val m3={ write(f,sql); Compiler.in=List(f); Compiler.toast("m3")._2 }
 
       for (m <- modes) m match {
-        case "scala"|"scalalms" => genQueryScala(QueryTest(f),new Printer("Scala"),m3,m)
-        case "cpp"|"cpplms"|"lms" => genQueryCpp(QueryTest(f),new Printer("Cpp"),m3,m)
+        case LANG_SCALA|LANG_SCALA_LMS => genQueryScala(QueryTest(f),new Printer("Scala"),m3,m)
+        case LANG_CPP|LANG_CPP_LMS|LANG_LMS => genQueryCpp(QueryTest(f),new Printer("Cpp"),m3,m)
         case _ => ()
       }
       

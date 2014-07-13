@@ -12,12 +12,12 @@ object Compiler {
 
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"
-  val LANG_SCALA = "scala"
+  val LANG_SCALA = "vscala"
   val LANG_CPP = "cpp"
   val LANG_AKKA = "akka"
   val LANG_LMS = "lms"
   val LANG_CPP_LMS = "cpplms"
-  val LANG_SCALA_LMS = "scalalms"
+  val LANG_SCALA_LMS = "scala"
 
   val M3_FILE_SUFFIX = ".m3"
 
