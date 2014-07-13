@@ -5,7 +5,7 @@
 #include <assert.h>
 #include <functional>
 #include <string.h>
-#include "../smhasher/PMurHash.hpp"
+#include "../hpds/macro.hpp"
 
 #define DEFAULT_CHUNK_SIZE 1024
 #define DEFAULT_LIST_SIZE 8
