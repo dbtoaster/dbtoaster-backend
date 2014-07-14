@@ -217,7 +217,13 @@ commands += Command.command("release")((state:State) => {
     ("make -C "+cppLibDir.getAbsolutePath)!;
     println("copy c++ libs")
     val releaseCppLibDir = releaseDir/"lib"/"dbt_c++"; releaseCppLibDir.mkdirs
+    (releaseCppLibDir/"hpds").mkdirs
+    (releaseCppLibDir/"mmap").mkdirs
+    (releaseCppLibDir/"smhasher").mkdirs
     copyFiles(IO.listFiles(cppLibDir).filter{f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile"==f.getName }, releaseCppLibDir)
+    copyFiles(IO.listFiles(cppLibDir/"hpds").filter{f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile"==f.getName }, releaseCppLibDir/"hpds")
+    copyFiles(IO.listFiles(cppLibDir/"mmap").filter{f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile"==f.getName }, releaseCppLibDir/"mmap")
+    copyFiles(IO.listFiles(cppLibDir/"smhasher").filter{f => f.getName.startsWith("MurmurHash2") }, releaseCppLibDir/"smhasher")
     println("copy main.cpp")
     copyFile(currentBranchPath/"lib"/"dbt_c++"/"main.cpp",releaseDir/"examples"/"code")
     println("make scala libs")
