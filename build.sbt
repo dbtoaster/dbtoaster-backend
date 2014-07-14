@@ -170,6 +170,9 @@ commands += Command.command("release")((state:State) => {
   }
   //load all the properties
   val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
+  val compilerClassContent = read("src/Compiler.scala")
+  write("src/Compiler.scala", compilerClassContent.replace("=DEPLOYMENT_STATUS_DEVELOPMENT", "=DEPLOYMENT_STATUS_RELEASE"))
+  Project.evaluateTask(compile, state)
   println("execute pack task")
   Project.evaluateTask(pack, state)
   println("defining base and release paths")
@@ -242,6 +245,7 @@ commands += Command.command("release")((state:State) => {
     fixSqlFiles((currentBranchPath/"test"/"queries"/"finance") * "*.sql" get, releaseDir/"examples"/"queries"/"finance")
     fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"mddb").filter(f => !"""((query[1-2]+.sql)|(schemas.sql)|(README))""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"mddb")
   }
+  write("src/Compiler.scala", compilerClassContent)
   state
 })
 
