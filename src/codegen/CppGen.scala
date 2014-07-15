@@ -401,7 +401,14 @@ trait ICppGen extends IScalaGen {
         "    return h;\n"+
         "  }\n"+
         "  FORCE_INLINE static bool equals(const "+mapEntry+"& x, const "+mapEntry+"& y) {\n"+
-        "    return "+is.map{ isIndex => val fld=fields(isIndex)._1;"(x."+fld+"==y."+fld+")" }.mkString(" && ") + ";\n" +
+        "    return "+
+        is.map{ isIndex =>
+          val fld=fields(isIndex)._1
+          fields(isIndex)._2 match {
+            case TypeDouble => "(abs(x."+fld+"-y."+fld+") < diff_p)"
+            case _ => "(x."+fld+"==y."+fld+")"
+          }
+        }.mkString(" && ") + ";\n" +
         "  }\n"+
         "};\n"
       }.mkString("\n")
