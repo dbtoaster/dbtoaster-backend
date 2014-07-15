@@ -78,9 +78,24 @@ trait IScalaGen extends CodeGen {
         "def productArity = "+types.length+"\n"+
         "def productElement(i:Int):Any = List[Any]("+(1 to types.length).map(i => "_"+i).mkString(",")+")(i)\n"
       def eqDef =
-        "override def equals(o:Any) = { o match { case x:"+tupleName+" => ("+(1 to types.length).map(i => "_"+i+" == x._"+i).mkString(" && ")+") case x:Product => if(this.productArity == x.productArity) (0 to (productArity - 1)).forall(i => x.productElement(i) == this.productElement(i)) else false case _ => false } }\n"+
+        "override def equals(o:Any) = { o match { case x:"+tupleName+" => ("+
+        (1 to types.length).map{i => types(i-1) match {
+            case TypeDouble => "(Math.abs(_"+i+"-x._"+i+") < diff_p)"
+            case _ => "_"+i+" == x._"+i
+          }
+        }.mkString(" && ")+") case x:Product => if(this.productArity == x.productArity) (0 to (productArity - 1)).forall(i => x.productElement(i) == this.productElement(i)) else false case _ => false } }\n"+
         "override def toString() = \"<\"+List[Any]("+(1 to types.length).map(i => "_"+i).mkString(",")+").mkString(\",\")+\">\"\n"+
-        "override def hashCode() = scala.runtime.ScalaRunTime._hashCode(this)\n"
+        "override def hashCode() = {\n"+
+        "  var h:Int="+types.length+"\n"+
+        (1 to types.length).map { i =>
+        "  h = h * 41 + "+(types(i-1) match {
+            case TypeLong => "_"+i+".toInt"
+            case TypeDouble => "_"+i+".toInt"
+            case _ => "_"+i+".hashCode"
+          })+"\n"
+        }.mkString+
+        "  h\n"+
+        "}\n"
       def classDef = "class "+tupleName+"("+types.zipWithIndex.map{ case(t,i) => "val _"+(i+1)+":"+t.toScala }.mkString(",")+") extends Product {\n"+
         ind(prodDef+eqDef)+"\n}\n"
       tuples = tuples + (tupleName -> classDef)
@@ -366,7 +381,7 @@ trait IScalaGen extends CodeGen {
   // Helper that contains the main and stream generator
   private def helper(s0:System) =
     "import ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
-    "object "+cls+" {\n"+ind("import Helper._\n"+getEntryDefinitions+"\n"+
+    "object "+cls+" {\n"+ind("import Helper._\nval precision = 7; // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)\nval diff_p = Math.pow(0.1,precision)\n"+getEntryDefinitions+"\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
