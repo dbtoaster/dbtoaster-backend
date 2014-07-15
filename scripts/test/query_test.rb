@@ -20,6 +20,7 @@ $dbt_base_rep_path.strip!
 $dbt_path = "#{$dbt_base_rep_path}/dbtoaster/compiler/alpha5"
 $dbt_backend_path = "#{File.expand_path(File.dirname($0))}/../.."
 $dbt = "./bin/dbtoaster"
+$lib_boost_path = @properties["ddbt.lib_boost"]
 $ocamlrunparam = "b,l=20M"
 Dir.chdir $dbt_path
 
@@ -168,11 +169,14 @@ class CppUnitTest < GenericUnitTest
     unless $skip_compile then
       compile_cmd = 
         "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
+        "DBT_LIB='#{$lib_boost_path}/lib';" +
+        "DBT_HDR='#{$lib_boost_path}/include';" +
         $timeout_compile +
         (dbt_base_cmd + [
         "-l","cpp",
         "-o","bin/queries/#{@qname}.hpp",
         "-c","bin/queries/#{@qname}",
+        "-d","mt",
         "-O3",
       ]).join(" ") + "  2>&1";
       # print compile_cmd
