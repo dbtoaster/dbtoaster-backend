@@ -113,10 +113,7 @@ trait ICppGen extends IScalaGen {
             "  "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+h0+" % "+idx0+"->size_]);\n"+
             "  "+mapEntry+"* "+e0+";\n"+
             "  do if (("+e0+"="+n0+"->obj) && "+h0+" == "+n0+"->hash && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
-            "    do {\n"+
-                   ind(body,3)+"\n"+
-            "    } while(("+n0+"="+n0+"->next) && ("+e0+"="+n0+"->obj) && ("+h0+" == "+n0+"->hash) && "+idxFn+"::equals("+sampleEnt+", *"+n0+"->obj));\n"+
-            "    break;\n"+
+                 ind(body,2)+"\n"+
             "  } while (("+n0+"="+n0+"->next));\n"+
             "}\n"
           } else { //foreach
