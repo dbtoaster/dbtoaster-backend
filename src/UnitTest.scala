@@ -27,7 +27,7 @@ object UnitTest {
                   "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                   "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
              List("mddb/query3","chrissedtrades") // too long to compile, incorrect result
-             // Also TPCH11c is incorrect with -O3 (front-end) option
+             // Also TPCH-8, TPCH-17, TPCH-17a and TPCH-19 are incorrect with -O3 (front-end) option
   var csv:PrintWriter = null
   var csvFile:String = null
   var dump:PrintWriter = null
