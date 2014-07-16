@@ -22,6 +22,7 @@ $dbt_backend_path = "#{File.expand_path(File.dirname($0))}/../.."
 $dbt = "./bin/dbtoaster"
 $lib_boost_path = @properties["ddbt.lib_boost"]
 $ocamlrunparam = "b,l=20M"
+$optlevel = "-O3"
 Dir.chdir $dbt_path
 
 raise "DBToaster is not compiled" unless (File.exists? $dbt)
@@ -196,7 +197,7 @@ class CppUnitTest < GenericUnitTest
         "-o","bin/queries/#{queryName}.hpp",
         "-c","bin/queries/#{queryName}",
         "-d","mt",
-        "-O2",
+        $optlevel,
       ]).join(" ") + "  2>&1";
       # print compile_cmd
       starttime = Time.now
@@ -246,7 +247,7 @@ class CppNewBackendUnitTest < GenericUnitTest
             compile_cmd =
             "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
             $timeout_compile +
-            "(cd #{$dbt_backend_path}; sbt 'toast -l cpp -O2 -o #{$dbt_path}/bin/queries/#{queryName}.hpp -c #{$dbt_path}/bin/queries/#{queryName} #{@qpath} ')"+
+            "(cd #{$dbt_backend_path}; sbt 'toast -l cpp #{$optlevel} -o #{$dbt_path}/bin/queries/#{queryName}.hpp -c #{$dbt_path}/bin/queries/#{queryName} #{@qpath} ')"+
             #(dbt_base_cmd + [
             #"-l","cpp",
             #"-o","bin/queries/#{queryName}.hpp",
@@ -308,7 +309,7 @@ class ScalaUnitTest < GenericUnitTest
         "-l","scala",
         "-o","bin/queries/#{queryName}.scala",
         "-c","bin/queries/#{queryName}",
-        "-O2",
+        $optlevel,
       ]).join(" ") + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
@@ -492,7 +493,10 @@ GetoptLong.new(
   [ '--dump-query',      GetoptLong::NO_ARGUMENT],
   [ '--memprofiling',    GetoptLong::NO_ARGUMENT],
   [ '--ignore-errors',   GetoptLong::NO_ARGUMENT],
-  [ '--path-delim',      GetoptLong::REQUIRED_ARGUMENT]
+  [ '--path-delim',      GetoptLong::REQUIRED_ARGUMENT],
+  [ '--O1',               GetoptLong::NO_ARGUMENT],
+  [ '--O2',               GetoptLong::NO_ARGUMENT],
+  [ '--O3',               GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-f' then $opts.push(arg)
@@ -533,7 +537,10 @@ GetoptLong.new(
     when '--memprofiling' then 
       $compiler_args += ["-l", "cpp:prof", "-g", "^-ltcmalloc"]
     when '--ignore-errors' then $strict = false; $always_return_success = true;
-  when '--path-delim' then $path_delim = arg;
+    when '--path-delim' then $path_delim = arg;
+    when '--O1' then $optlevel = "-O1";
+    when '--O2' then $optlevel = "-O2";
+    when '--O3' then $optlevel = "-O3";
   end
 end
 
