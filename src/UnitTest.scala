@@ -33,7 +33,8 @@ object UnitTest {
   var dump:PrintWriter = null
   var dumpFile:String = null
   var tmp = makeTempDir() //(auto_delete=false)
-  var cache = true      // cache is enabled
+  var cache = false     // cache is disabled
+  var replaceQuery=true // replaceQuery is enabled
   var benchmark = false // enable benchmarks
   var samples = 3       // number of samples to take in the benchmark
   var warmup = 2        // number of warm-up transients to remove
@@ -68,7 +69,8 @@ object UnitTest {
       case "-t" => eat(s=>timeout=s.toLong)
       case "-csv" => eat(s=>csvFile=s)
       case "-dump" => eat(s=>dumpFile=s)
-      case "-nocache" => cache=false
+      case "-cache" => cache=true
+      case "-noreplace" => replaceQuery=false
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
         e("Zeus mode:")
@@ -92,7 +94,8 @@ object UnitTest {
         e("  -t <ms>       test duration timeout (in ms, default: 0)")
         e("  -csv <file>   store benchmark results in a file")
         e("  -dump <file>  dump raw benchmark samples in a file")
-        e("  -nocache      disable M3 cache")
+        e("  -cache        enable M3 cache")
+        e("  -noreplace    disable replacing generated trigger programs, if any exists")
         e("")
         e("Other options are forwarded to the compiler:")
         Compiler.parseArgs(Array[String]())
@@ -137,10 +140,13 @@ object UnitTest {
     for (q <- sel) {
       try {
         println("---------[[ "+name(q.sql)+" ]]---------")
+        var queryName = name(q.sql)
         val (t0,m3) = {
-          val f = "target/m3/"+name(q.sql)+".m3"
+          var f = "target/m3/"+queryName+".m3"
           if (cache && new File(f).exists) ns(()=>Utils.read(f))
           else {
+            queryName = if(replaceQuery) name(q.sql) else Utils.generateNewFileName(name(q.sql),"target/m3/%s.m3")
+            f = "target/m3/"+queryName+".m3"
             val r=Compiler.toast("m3",q.sql); Utils.write(f,r._2);
             println("SQL -> M3           : "+tf(r._1))
             r
@@ -150,10 +156,10 @@ object UnitTest {
         if (csv!=null) csv.print(name(q.sql)+","+time(t0)+",")
         ;
         for (m <- modes) m match {
-          case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
-          case "lcpp" if (repo!=null && benchmark) => legacyCPP(q,new Printer("LCPP"),t0)
-          case LANG_SCALA|LANG_SCALA_LMS => genQueryScala(q,new Printer(mn(m)),m3,m)
-          case LANG_CPP | LANG_CPP_LMS | LANG_LMS => genQueryCpp(q,new Printer(mn(m)),m3,m)
+          case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(queryName, q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
+          case "lcpp" if (repo!=null && benchmark) => legacyCPP(queryName, q,new Printer("LCPP"),t0)
+          case LANG_SCALA|LANG_SCALA_LMS => genQueryScala(queryName, q,new Printer(mn(m)),m3,m)
+          case LANG_CPP | LANG_CPP_LMS | LANG_LMS => genQueryCpp(queryName, q,new Printer(mn(m)),m3,m)
           case _ => sys.error("Mode is not supported: "+m)
 
         }
@@ -183,12 +189,14 @@ object UnitTest {
       val ma = java.util.regex.Pattern.compile("^-- seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
       val id = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
       println("---------[[ Zeus "+id+" ]]---------")
-      val f=tmp+"/zeus"+id+".sql";
+
+      val queryName = if(replaceQuery) "zeus"+id else Utils.generateNewFileName("zeus"+id,tmp+"/%s.sql")
+      val f=tmp+"/"+queryName+".sql"
       val m3={ write(f,sql); Compiler.in=List(f); Compiler.toast("m3")._2 }
 
       for (m <- modes) m match {
-        case LANG_SCALA|LANG_SCALA_LMS => genQueryScala(QueryTest(f),new Printer("Scala"),m3,m)
-        case LANG_CPP|LANG_CPP_LMS|LANG_LMS => genQueryCpp(QueryTest(f),new Printer("Cpp"),m3,m)
+        case LANG_SCALA|LANG_SCALA_LMS => genQueryScala(queryName,QueryTest(f),new Printer("Scala"),m3,m)
+        case LANG_CPP|LANG_CPP_LMS|LANG_LMS => genQueryCpp(queryName,QueryTest(f),new Printer("Cpp"),m3,m)
         case _ => ()
       }
       
@@ -197,8 +205,8 @@ object UnitTest {
 
   // ---------------------------------------------------------------------------
   // Query generator
-  def genQueryScala(q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
-    val cls = name(q.sql)+(if(mode.contains("lms")) "LMS" else "")
+  def genQueryScala(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
+    val cls = qName+(if(mode.contains("lms")) "LMS" else "")
     var sp=""
     // Correctness
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
@@ -246,9 +254,9 @@ object UnitTest {
   }
 
 
-  def genQueryCpp(q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
+  def genQueryCpp(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
     val CPP_SUFFIX = ".hpp"
-    val cls = name(q.sql)+(if(mode.contains("lms")) "LMS" else "")
+    val cls = qName+(if(mode.contains("lms")) "LMS" else "")
     var sp=""
     // Correctness
     // def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
@@ -293,7 +301,7 @@ object UnitTest {
   // ---------------------------------------------------------------------------
   // Legacy testing
   private var legacySC:List[String]=>Unit = null
-  def legacyScala(q:QueryTest,p:Printer,t0:Long,lms:Boolean=false) {
+  def legacyScala(qName:String,q:QueryTest,p:Printer,t0:Long,lms:Boolean=false) {
     val libs = (if (path_repo!=null) path_repo+"/" else "")+"lib/dbt_scala/dbtlib.jar"
     if (legacySC==null) {
       legacySC=scalaCompiler(tmp,libs,Compiler.exec_sc)
@@ -327,9 +335,9 @@ object UnitTest {
     }
   }
 
-  def legacyCPP(q:QueryTest,p:Printer,t0:Long) {
+  def legacyCPP(qNameInit:String,q:QueryTest,p:Printer,t0:Long) {
     val boost = prop("lib_boost",null)
-    val qName = name(q.sql)+"_LCPP"
+    val qName = qNameInit+"_LCPP"
     val (t1,cc) = Compiler.toast("cpp",q.sql); p.gen(math.max(0,t1-t0))
     p.all(q){case (dataset,_,_)=>
       write(tmp+"/"+qName+".hpp", {

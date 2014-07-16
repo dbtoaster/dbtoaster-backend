@@ -148,4 +148,52 @@ object Utils {
   // Time measurement
   def ns[T](f:()=>T) = { val t0=System.nanoTime; var r=f(); val t1=System.nanoTime; (t1-t0,r) }
   def time(ns:Long,p:Boolean=true) = if (p) { val us=ns/1000; ("%d.%06d").format(us/1000000,us%1000000) } else { val ms=math.round(ns/1000000.0); ("%d.%03d").format(ms/1000,ms%1000) }
+
+  def generateNewFileName(qName:String, pathTemplate:String) = {
+    var queryName = qName
+    var f = new java.io.File(pathTemplate.format(queryName))
+    var couldLock = false
+    while(!couldLock) {
+      var i = 1
+      while(f.exists) {
+        queryName = qName + "_" + i
+        i += 1
+        f = new java.io.File(pathTemplate.format(queryName))
+      }
+      var channel:java.nio.channels.FileChannel = null;
+      var lock: java.nio.channels.FileLock = null;
+      try {
+        channel = new java.io.RandomAccessFile(f, "rw").getChannel();
+
+        // Use the file channel to create a lock on the file.
+        // This method blocks until it can retrieve the lock.
+        lock = channel.lock
+
+        // Try acquiring the lock without blocking. This method returns
+        // null or throws an exception if the file is already locked.
+        try {
+          lock = channel.tryLock
+        } catch {
+          case e: java.nio.channels.OverlappingFileLockException =>
+          // File is already locked in this thread or virtual machine
+        }
+
+        if(lock != null) {
+
+          f.createNewFile
+
+          // Release the lock
+          lock.release
+
+          couldLock = true
+        }
+      } catch {
+          case e: Exception => //...
+      } finally {
+        if(lock != null && lock.isValid) lock.release();
+        if(channel != null) channel.close();
+      }
+    }
+    queryName
+  }
 }
