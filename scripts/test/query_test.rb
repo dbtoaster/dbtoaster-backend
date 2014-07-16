@@ -42,6 +42,12 @@ end
 class GenericUnitTest
   attr_reader :runtime, :opts;
 
+  def temp_name(file_name='', ext='', dir=nil)
+    id   = Thread.current.hash * Time.now.to_i % 2**32
+    name = "%s_%d%s" % [file_name, id, ext]
+    dir ? File.join(dir, name) : name
+  end
+
   def query=(q)
     @qname = q
     qdat = File.open("test/unit/queries/#{q}") do |f| 
@@ -63,9 +69,16 @@ class GenericUnitTest
       [name, info]
     end.to_h
     @toplevels
-    
-    qfile = File.new("query_test.sql", "w+");
-    at_exit { if File.exist?("query_test.sql") then qfile.close; File.delete("query_test.sql") end }
+
+    qfilename = "query_test.sql";
+    counter = 1;
+    if File.file?(qfilename) then
+      qfilename = temp_name('query_test', '.sql');
+      counter += 1;
+    end
+
+    qfile = File.new(qfilename, "w+");
+    at_exit { if File.exist?(qfilename) then qfile.close; File.delete(qfilename) end }
     if qdat[:datasets][@dataset].has_key? :subs then    
       subs = qdat[:datasets][@dataset][:subs]
       qfile.puts(
@@ -85,7 +98,7 @@ class GenericUnitTest
       );
     end
     qfile.flush;
-    @qpath = File.expand_path("query_test.sql");
+    @qpath = File.expand_path(qfilename);
 
     @compiler_flags =
       (qdat.has_key? :compiler_flags) ? qdat[:compiler_flags] : [];
@@ -166,7 +179,13 @@ end
 
 class CppUnitTest < GenericUnitTest
   def run
+    queryName = @qname;
     unless $skip_compile then
+      counter = 1;
+      if File.file?("bin/queries/#{queryName}.hpp") then
+        queryName = temp_name(@qname);
+        counter += 1;
+      end
       compile_cmd = 
         "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
         "DBT_LIB='#{$lib_boost_path}/lib';" +
@@ -174,10 +193,10 @@ class CppUnitTest < GenericUnitTest
         $timeout_compile +
         (dbt_base_cmd + [
         "-l","cpp",
-        "-o","bin/queries/#{@qname}.hpp",
-        "-c","bin/queries/#{@qname}",
+        "-o","bin/queries/#{queryName}.hpp",
+        "-c","bin/queries/#{queryName}",
         "-d","mt",
-        "-O3",
+        "-O2",
       ]).join(" ") + "  2>&1";
       # print compile_cmd
       starttime = Time.now
@@ -188,7 +207,7 @@ class CppUnitTest < GenericUnitTest
     return if $compile_only;
     starttime = Time.now;
     IO.popen($timeout_exec + 
-             "bin/queries/#{@qname} #{$executable_args.join(" ")}",
+             "bin/queries/#{queryName} #{$executable_args.join(" ")}",
              "r") do |qin|
       output = qin.readlines;
       endtime = Time.now;
@@ -217,15 +236,21 @@ end
 
 class CppNewBackendUnitTest < GenericUnitTest
     def run
+        queryName = @qname;
         unless $skip_compile then
+            counter = 1;
+            if File.file?("#{$dbt_path}/bin/queries/#{queryName}.hpp") then
+              queryName = temp_name(@qname);
+              counter += 1;
+            end
             compile_cmd =
             "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
             $timeout_compile +
-            "(cd #{$dbt_backend_path}; sbt 'toast -l cpp -O3 -o #{$dbt_path}/bin/queries/#{@qname}.hpp -c #{$dbt_path}/bin/queries/#{@qname} #{@qpath} ')"+
+            "(cd #{$dbt_backend_path}; sbt 'toast -l cpp -O2 -o #{$dbt_path}/bin/queries/#{queryName}.hpp -c #{$dbt_path}/bin/queries/#{queryName} #{@qpath} ')"+
             #(dbt_base_cmd + [
             #"-l","cpp",
-            #"-o","bin/queries/#{@qname}.hpp",
-            #"-c","bin/queries/#{@qname}",
+            #"-o","bin/queries/#{queryName}.hpp",
+            #"-c","bin/queries/#{queryName}",
             #]).join(" ") +
             "  2>&1"
              starttime = Time.now
@@ -236,7 +261,7 @@ class CppNewBackendUnitTest < GenericUnitTest
         return if $compile_only;
         starttime = Time.now;
         IO.popen($timeout_exec +
-                 "bin/queries/#{@qname} #{$executable_args.join(" ")}",
+                 "bin/queries/#{queryName} #{$executable_args.join(" ")}",
                  "r") do |qin|
             output = qin.readlines;
             endtime = Time.now;
@@ -265,19 +290,25 @@ end
 
 class ScalaUnitTest < GenericUnitTest
   def run
+    queryName = @qname;
     unless $skip_compile then
-    dir = File.dirname("bin/queries/#{@qname}")
+    counter = 1;
+    if File::exists?("bin/queries/#{queryName}") then
+      queryName = temp_name(@qname);
+      counter += 1;
+    end
+    dir = File.dirname("bin/queries/#{queryName}")
     FileUtils.mkdir_p dir unless File::exists? dir;
-    File.delete("bin/queries/#{@qname}.jar") if 
-         File::exists?("bin/queries/#{@qname}.jar");
+    File.delete("bin/queries/#{queryName}.jar") if 
+         File::exists?("bin/queries/#{queryName}.jar");
       compile_cmd = 
         "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
         $timeout_compile + 
         (dbt_base_cmd + [
         "-l","scala",
-        "-o","bin/queries/#{@qname}.scala",
-        "-c","bin/queries/#{@qname}",
-        "-O3",
+        "-o","bin/queries/#{queryName}.scala",
+        "-c","bin/queries/#{queryName}",
+        "-O2",
       ]).join(" ") + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
@@ -289,7 +320,7 @@ class ScalaUnitTest < GenericUnitTest
     @currentdir = Dir.pwd;
     IO.popen($timeout_exec +
              "scala -J-Xmx100G -J-XX:+HeapDumpOnOutOfMemoryError " +
-             "-classpath \"bin/queries/#{@qname}.jar#{$path_delim}" + 
+             "-classpath \"bin/queries/#{queryName}.jar#{$path_delim}" + 
                           "lib/dbt_scala/dbtlib.jar\" " + 
              "org.dbtoaster.RunQuery", "r") do |qin|
       output = qin.readlines;
@@ -321,19 +352,25 @@ end
 
 class ScalaOptUnitTest < GenericUnitTest
   def run
+    queryName = @qname;
     unless $skip_compile then
-    dir = File.dirname("bin/queries/#{@qname}")
+    counter = 1;
+    if File::exists?("bin/queries/#{queryName}") then
+      queryName = temp_name(@qname);
+      counter += 1;
+    end
+    dir = File.dirname("bin/queries/#{queryName}")
     FileUtils.mkdir_p dir unless File::exists? dir;
-    File.delete("bin/queries/#{@qname}.jar") if 
-         File::exists?("bin/queries/#{@qname}.jar");
+    File.delete("bin/queries/#{queryName}.jar") if 
+         File::exists?("bin/queries/#{queryName}.jar");
       compile_cmd = 
         "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
         $timeout_compile + 
         (dbt_base_cmd + [
         "-l","scala",
-        "-o","bin/queries/#{@qname}.scala",
+        "-o","bin/queries/#{queryName}.scala",
         "-O4",
-        "-c","bin/queries/#{@qname}",
+        "-c","bin/queries/#{queryName}",
       ]).join(" ") + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
@@ -348,10 +385,10 @@ class ScalaOptUnitTest < GenericUnitTest
 
              "-J-agentpath:lib/dbt_scala/libyjpagent.jnilib" +
              "=onexit=snapshot" +
-             ",logdir=#{@currentdir}/bin/queries/log/#{@qname}" +
-             ",dir=#{@currentdir}/bin/queries/snapshot/#{@qname} " +
+             ",logdir=#{@currentdir}/bin/queries/log/#{queryName}" +
+             ",dir=#{@currentdir}/bin/queries/snapshot/#{queryName} " +
 
-             "-classpath \"bin/queries/#{@qname}.jar#{$path_delim}" + 
+             "-classpath \"bin/queries/#{queryName}.jar#{$path_delim}" + 
                           "lib/dbt_scala/dbtlib.jar\" " + 
              "org.dbtoaster.RunQuery", "r") do |qin|
       output = qin.readlines;
