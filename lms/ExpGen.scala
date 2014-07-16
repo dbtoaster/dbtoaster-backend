@@ -46,6 +46,7 @@ object ManifestHelper {
     case TypeDouble => 0.0
     case TypeString => ""
     case TypeDate => new java.util.Date()
+    case _ => sys.error("Bad Type")
   }
   def zero(m: Manifest[_]) = m.toString match {
     case "Long" => 0L
