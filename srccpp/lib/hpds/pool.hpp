@@ -24,8 +24,14 @@
 #include <string.h>
 #include "macro.hpp"
 
-#define DEFAULT_CHUNK_SIZE 1024
 #define DEFAULT_FORCE_CLEAR true
+// #define EXPONENTIAL_POOL_ALLOCATION
+
+#ifdef EXPONENTIAL_POOL_ALLOCATION
+  #define DEFAULT_CHUNK_SIZE 1024
+#else
+  #define DEFAULT_CHUNK_SIZE 4096
+#endif
 
 template<typename T>
 class Pool
@@ -44,7 +50,9 @@ private:
   bool forceClear;
   void add_chunk()   // precondition: no available elements
   {
+#ifdef EXPONENTIAL_POOL_ALLOCATION
     size_ = size_ << 1;
+#endif
     El *chunk = new El[size_ + 1];
     for (size_t i = 0; i < size_ - 1; ++i)
       chunk[i].next = &chunk[i + 1];
@@ -54,7 +62,13 @@ private:
     free_ = chunk;
   }
 public:
-  Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size >> 1), forceClear(false)
+  Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE) : data_(nullptr), 
+#ifdef EXPONENTIAL_POOL_ALLOCATION
+                                                 size_(chunk_size >> 1),
+#else
+                                                 size_(chunk_size),
+#endif
+                                                 forceClear(false)
   {
     add_chunk();
   }
@@ -66,7 +80,9 @@ public:
       El *el = data_[sz].next;
       delete[] data_;
       data_ = el;
+#ifdef EXPONENTIAL_POOL_ALLOCATION
       sz = sz >> 1;
+#endif
     }
   }
   FORCE_INLINE T *add()
@@ -103,7 +119,9 @@ public:
         prevChunk = chunk;
         chunk = chunk[sz].next;
         doubleSz = sz;
+#ifdef EXPONENTIAL_POOL_ALLOCATION
         sz = sz >> 1;
+#endif
       }
       free_ = data_;
       forceClear = false;
