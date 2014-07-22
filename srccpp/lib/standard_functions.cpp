@@ -159,6 +159,12 @@ double Ulistmax(double v1, double v2) { return ((v1 > v2) ? v1 : v2); }
 double Ulistmax(long v1, double v2) { return ((v1 > v2) ? v1 : v2); }
 double Ulistmax(double v1, long v2) { return ((v1 > v2) ? v1 : v2); }
 
+KDouble Udiv(KDouble x) { return ((x==0.0) ? 0.0 : (1.0 / x)); }
+KDouble UmulDbl(KDouble x, KDouble y) { return x * y; }
+KDouble Ulistmax(KDouble v1, KDouble v2) { return ((v1 > v2) ? v1 : v2); }
+KDouble Ulistmax(long v1, KDouble v2) { return ((v2 < v1) ? v1 : v2); }
+KDouble Ulistmax(KDouble v1, long v2) { return ((v1 > v2) ? v1 : v2); }
+
 // Type conversion functions
 template <class T> 
 STRING_TYPE cast_string(const T &t) {

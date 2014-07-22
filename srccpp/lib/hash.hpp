@@ -1,10 +1,7 @@
 #include "hpds/macro.hpp"
-#include <cmath>
+#include "hpds/KDouble.hpp"
 
 namespace dbtoaster {
-  size_t precision = 7; // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)
-  double diff_p = pow(0.1,precision);
-
   template <class T>
   FORCE_INLINE void hash_combine(std::size_t& seed, const T& v)
   {
@@ -40,5 +37,10 @@ namespace dbtoaster {
   FORCE_INLINE void hash_combine(std::size_t& seed, const std::string& v)
   {
       seed ^= string_hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+  }
+  template <>
+  FORCE_INLINE void hash_combine(std::size_t& seed, const KDouble& v)
+  {
+      seed ^= float2int(v.sum) + 0x9e3779b9 + (seed<<6) + (seed>>2);
   }
 }

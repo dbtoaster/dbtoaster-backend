@@ -3,6 +3,7 @@
 
 #include "smhasher/MurmurHash2.hpp"
 #include "standard_adaptors.hpp"
+#include "hpds/KDouble.hpp"
 
 #include "runtime.hpp"
 using namespace ::dbtoaster::runtime;
@@ -76,15 +77,16 @@ std::string csv_adaptor::parse_schema(std::string s)
         iter temp = std::find(beg, end, ',');
         if(beg != end) {
 			std::string ty(beg, temp);
-			if ( ty == "event" )          r += "e";
-			else if ( ty == "order" )     r += "o";
-			else if ( ty == "int" )       r += "l";
-			else if ( ty == "long" )      r += "l";
-			else if ( ty == "float" )     r += "f";
-			else if ( ty == "double" )    r += "f";
-			else if ( ty == "date" )      r += "d";
-			else if ( ty == "hash" )      r += "h";
-			else if ( ty == STRING_TYPE_STR )    r += "s";          
+			if ( ty == "event" )              r += "e";
+			else if ( ty == "order" )         r += "o";
+			else if ( ty == "int" )           r += "l";
+			else if ( ty == "long" )          r += "l";
+			else if ( ty == "float" )         r += "f";
+			else if ( ty == "double" )        r += "f";
+			else if ( ty == DOUBLE_TYPE_STR ) r += "f";
+			else if ( ty == "date" )          r += "d";
+			else if ( ty == "hash" )          r += "h";
+			else if ( ty == STRING_TYPE_STR ) r += "s";          
 			else {
 				std::cerr << "invalid csv schema type " << ty << std::endl;
 				r = "";
@@ -151,7 +153,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
         switch (*schema_it) {
 			case 'e': ins=atoi(field_start); insert = ins; break;
 			case 'l': tuple[tupleIdx++]=new long(atol(field_start)); break;
-			case 'f': tuple[tupleIdx++]=new double(atof(field_start)); break;
+			case 'f': tuple[tupleIdx++]=new DOUBLE_TYPE(atof(field_start)); break;
 			case 'h': tuple[tupleIdx++]=new int(static_cast<int>(MurmurHash2(field_start,strlen(field_start)*sizeof(char),0)));
 					  break;
 			case 'd': 

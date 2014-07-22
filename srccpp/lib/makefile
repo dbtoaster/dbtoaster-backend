@@ -11,6 +11,7 @@ endif
 
 HDR_FILES := smhasher/MurmurHash2.hpp \
 	hpds/pstring.hpp \
+	hpds/KDouble.hpp \
 	event.hpp \
 	iprogram.hpp \
 	program_base.hpp \
@@ -24,6 +25,7 @@ HDR_FILES := smhasher/MurmurHash2.hpp \
 	
 SRC_FILES := smhasher/MurmurHash2.cpp \
 	hpds/pstring.cpp \
+	hpds/KDouble.cpp \
 	event.cpp \
 	iprogram.cpp \
 	program_base.cpp \

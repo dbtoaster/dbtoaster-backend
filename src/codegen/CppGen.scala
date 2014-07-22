@@ -53,8 +53,8 @@ trait ICppGen extends IScalaGen {
 
   private def cmpFunc(tp: Type, op:OpCmp, arg1: String, arg2: String) = tp match {
     case TypeDouble => op match {
-      case OpEq => "abs("+arg1+"-"+arg2+") < diff_p"
-      case OpNe => "abs("+arg1+"-"+arg2+") >= diff_p"
+      case OpEq => "abs("+arg1+"-"+arg2+") < KDouble::diff_p"
+      case OpNe => "abs("+arg1+"-"+arg2+") >= KDouble::diff_p"
       case _ => arg1+" "+op+" "+arg2
     }
     case _ => arg1+" "+op+" "+arg2
@@ -685,5 +685,5 @@ trait ICppGen extends IScalaGen {
 
   def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
 
-  override def additionalImports():String = "#include \"program_base.hpp\"\n#include \"hash.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n#define ELEM_SEPARATOR \"\\n\\t\\t\\t\"\n"
+  override def additionalImports():String = "#include \"program_base.hpp\"\n#include \"hpds/KDouble.hpp\"\n#include \"hash.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n#define ELEM_SEPARATOR \"\\n\\t\\t\\t\"\n"
 }

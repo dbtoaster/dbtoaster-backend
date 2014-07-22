@@ -9,6 +9,7 @@
 #define DBTOASTER_SERIALIZATION_H
 
 #include "hpds/pstring.hpp"
+#include "hpds/KDouble.hpp"
 #include <iostream>
 #include <iomanip>
 
@@ -56,6 +57,12 @@ inline Archive & serialize(Archive & ar, const unsigned int version, const size_
 template<class Archive>
 inline Archive & serialize(Archive & ar, const unsigned int version, const STRING_TYPE & t){
     ar << t.c_str();
+    return ar;
+}
+
+template<class Archive>
+inline Archive & serialize(Archive & ar, const unsigned int version, const KDouble & t){
+    ar << std::setprecision(15) << t;
     return ar;
 }
 
@@ -111,6 +118,14 @@ template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const STRING_TYPE & t, const char* tab){
     ar << tab << "<"  << name << ">";
     serialize(ar, 0, t);
+    ar << "</" << name << ">";
+    return ar;
+}
+
+template<class Archive>
+inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const KDouble & t, const char* tab){
+    ar << tab << "<"  << name << ">";
+    serialize(ar, 0, static_cast<double>(t));
     ar << "</" << name << ">";
     return ar;
 }

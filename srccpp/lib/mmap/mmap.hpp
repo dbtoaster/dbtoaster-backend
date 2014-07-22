@@ -58,7 +58,7 @@ public:
 
 template<typename V>
 struct ZeroVal {
-  V get() { return NULL; }
+  V get() { return V(); }
 };
 
 template<>

@@ -18,10 +18,20 @@
 #define STRING_TYPE std::string
 #endif //STRING_TYPE
 
-#ifndef STRING_TYPE_STR
+#ifndef DOUBLE_TYPE
+#define DOUBLE_TYPE double
+#endif //DOUBLE_TYPE
+
+
 #define STRING(s) #s
+
+#ifndef STRING_TYPE_STR
 #define STRING_TYPE_STR STRING(STRING_TYPE)
 #endif //STRING_TYPE_STR
+
+#ifndef DOUBLE_TYPE_STR
+#define DOUBLE_TYPE_STR STRING(DOUBLE_TYPE)
+#endif //DOUBLE_TYPE_STR
 
 namespace dbtoaster {
   namespace runtime {

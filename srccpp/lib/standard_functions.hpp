@@ -5,6 +5,7 @@
 #include <string>
 using namespace std;
 #include "hpds/pstring.hpp"
+#include "hpds/KDouble.hpp"
 
 #include "event.hpp"
 #include <regex.h>
@@ -51,6 +52,12 @@ namespace dbtoaster {
   double Ulistmax(double v1, double v2);
   double Ulistmax(long v1, double v2);
   double Ulistmax(double v1, long v2);
+
+  KDouble Udiv(KDouble x);
+  KDouble UmulDbl(KDouble x, KDouble y);
+  KDouble Ulistmax(KDouble v1, KDouble v2);
+  KDouble Ulistmax(long v1, KDouble v2);
+  KDouble Ulistmax(KDouble v1, long v2);
   
   // Type conversion functions
   inline long cast_int_from_float(double           d) { return (long)d; };
