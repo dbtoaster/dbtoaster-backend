@@ -65,6 +65,15 @@ trait IScalaGen extends CodeGen {
   x1+x2
   */
 
+  private def cmpFunc(tp: Type, op:OpCmp, arg1: String, arg2: String) = tp match {
+    case TypeDouble => op match {
+      case OpEq => "Math.abs("+arg1+"-"+arg2+") < diff_p"
+      case OpNe => "Math.abs("+arg1+"-"+arg2+") >= diff_p"
+      case _ => arg1+" "+op+" "+arg2
+    }
+    case _ => arg1+" "+op+" "+arg2
+  }
+
   // Create a variable declaration
   def genVar(n:String,tp:Type,ks:List[Type]=Nil) = if (ks==Nil) "var "+n+" = "+tp.zeroScala+"\n" else "val "+n+" = M3Map.temp["+genTupleDef(ks)+","+tp.toScala+"]()\n"
 
@@ -79,11 +88,7 @@ trait IScalaGen extends CodeGen {
         "def productElement(i:Int):Any = List[Any]("+(1 to types.length).map(i => "_"+i).mkString(",")+")(i)\n"
       def eqDef =
         "override def equals(o:Any) = { o match { case x:"+tupleName+" => ("+
-        (1 to types.length).map{i => types(i-1) match {
-            case TypeDouble => "(Math.abs(_"+i+"-x._"+i+") < diff_p)"
-            case _ => "_"+i+" == x._"+i
-          }
-        }.mkString(" && ")+") case x:Product => if(this.productArity == x.productArity) (0 to (productArity - 1)).forall(i => x.productElement(i) == this.productElement(i)) else false case _ => false } }\n"+
+        (1 to types.length).map{ i => cmpFunc(types(i-1),OpEq,"_"+i,"x._"+i) }.mkString(" && ")+") case x:Product => if(this.productArity == x.productArity) (0 to (productArity - 1)).forall(i => x.productElement(i) == this.productElement(i)) else false case _ => false } }\n"+
         "override def toString() = \"<\"+List[Any]("+(1 to types.length).map(i => "_"+i).mkString(",")+").mkString(\",\")+\">\"\n"+
         "override def hashCode() = {\n"+
         "  var h:Int="+types.length+"\n"+
@@ -129,7 +134,7 @@ trait IScalaGen extends CodeGen {
     case Ref(n) => co(rn(n))
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
     case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+" != 0) 1L else 0L)"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+ll+" "+op+" "+rr+") 1L else 0L)")))
+    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+cmpFunc(l.tp,op,ll,rr)+") 1L else 0L)")))
     case app@Apply(fn,tp,as) => applyFunc(co,fn,tp,as)
     //ki : inner key
     //ko : outer key

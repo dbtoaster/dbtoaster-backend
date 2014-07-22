@@ -51,6 +51,15 @@ trait ICppGen extends IScalaGen {
 
   def getIndexId(m:String,is:List[Int]):String = (if(is.isEmpty) (0 until mapDefs(m).keys.size).toList else is).mkString //slice(m,is)
 
+  private def cmpFunc(tp: Type, op:OpCmp, arg1: String, arg2: String) = tp match {
+    case TypeDouble => op match {
+      case OpEq => "abs("+arg1+"-"+arg2+") < diff_p"
+      case OpNe => "abs("+arg1+"-"+arg2+") >= diff_p"
+      case _ => arg1+" "+op+" "+arg2
+    }
+    case _ => arg1+" "+op+" "+arg2
+  }
+
   // Generate code bottom-up using delimited CPS and a list of bound variables
   //   ex:expression to convert
   //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
@@ -59,7 +68,7 @@ trait ICppGen extends IScalaGen {
     case Ref(n) => co(rn(n))
     case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => cpsExpr(Apply("STRING_TYPE",TypeString,List(ex)),co,am) case _ => co(v) }
     case Exists(e) => cpsExpr(e,(v:String)=>co("("+v+" != 0 ? 1L : 0L)"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"("+ll+" "+op+" "+rr+")")))
+    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"("+cmpFunc(l.tp,op,ll,rr)+")")))
     case app@Apply(fn1,tp,as1) => {
       val (as, fn) = (fn1 match {
         case "date_part" if as1.head.isInstanceOf[Const] => (as1.tail, as1.head.asInstanceOf[Const].v.toLowerCase+"_part")
@@ -401,10 +410,7 @@ trait ICppGen extends IScalaGen {
         "    return "+
         is.map{ isIndex =>
           val fld=fields(isIndex)._1
-          fields(isIndex)._2 match {
-            case TypeDouble => "(abs(x."+fld+"-y."+fld+") < diff_p)"
-            case _ => "(x."+fld+"==y."+fld+")"
-          }
+          cmpFunc(fields(isIndex)._2,OpEq,"x."+fld,"y."+fld)
         }.mkString(" && ") + ";\n" +
         "  }\n"+
         "};\n"
