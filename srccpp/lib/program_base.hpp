@@ -18,12 +18,12 @@
 #include <iostream>
 #include <fstream>
 
+#include "runtime.hpp"
 #include "iprogram.hpp"
 #include "util.hpp"
 #include "streams.hpp"
 #include "standard_adaptors.hpp"    
 #include "standard_functions.hpp"
-#include "runtime.hpp"
 
 #include "mmap/mmap.hpp"
 

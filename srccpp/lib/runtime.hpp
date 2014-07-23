@@ -12,7 +12,6 @@
 #include "optionparser.hpp"
 
 #include "event.hpp"
-#include "hpds/pstring.hpp"
 
 #ifndef STRING_TYPE
 #define STRING_TYPE std::string
@@ -32,6 +31,9 @@
 #ifndef DOUBLE_TYPE_STR
 #define DOUBLE_TYPE_STR STRING(DOUBLE_TYPE)
 #endif //DOUBLE_TYPE_STR
+
+#include "hpds/pstring.hpp"
+#include "hpds/KDouble.hpp"
 
 namespace dbtoaster {
   namespace runtime {

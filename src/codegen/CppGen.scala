@@ -636,7 +636,7 @@ trait ICppGen extends IScalaGen {
     val in = s.in match { case SourceFile(path) => "std::shared_ptr<dbt_file_source> "+sourceFileVar+"(new dbt_file_source(\""+path+"\","+sourceSplitVar+","+adaptorVar+"));\n" }
     val split = "frame_descriptor "+sourceSplitVar+(s.split match { case SplitLine => "(\"\\n\")" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => "XXXXX("+p+")" })+";\n" //XXXX for SplitPrefix
     
-    val schema_param = s.schema.fields.map{case (_,tp) => tp.toCpp}.mkString(",")
+    val schema_param = s.schema.fields.map{case (_,tp) => tp.toString}.mkString(",")
     val adaptor = s.adaptor.name match {
       case "ORDERBOOK" => {
         val bidsAndAsks = List("bids","asks")

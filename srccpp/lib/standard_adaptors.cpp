@@ -83,10 +83,9 @@ std::string csv_adaptor::parse_schema(std::string s)
 			else if ( ty == "long" )          r += "l";
 			else if ( ty == "float" )         r += "f";
 			else if ( ty == "double" )        r += "f";
-			else if ( ty == DOUBLE_TYPE_STR ) r += "f";
 			else if ( ty == "date" )          r += "d";
 			else if ( ty == "hash" )          r += "h";
-			else if ( ty == STRING_TYPE_STR ) r += "s";          
+			else if ( ty == "string" ) r += "s";          
 			else {
 				std::cerr << "invalid csv schema type " << ty << std::endl;
 				r = "";
