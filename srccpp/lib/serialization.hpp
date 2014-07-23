@@ -125,7 +125,7 @@ inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const STR
 template<class Archive>
 inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const KDouble & t, const char* tab){
     ar << tab << "<"  << name << ">";
-    serialize(ar, 0, static_cast<double>(t));
+    serialize(ar, 0, t);
     ar << "</" << name << ">";
     return ar;
 }

@@ -42,6 +42,10 @@ protected:
   //friends
   friend bool operator==(const double, const KDouble &);
   friend bool operator!=(const double, const KDouble &);
+  friend bool operator<(const double, const KDouble &);
+  friend bool operator<=(const double, const KDouble &);
+  friend bool operator>(const double, const KDouble &);
+  friend bool operator>=(const double, const KDouble &);
   // friend size_t hash_value(KDouble const &v);
   template <class T>
   friend void hash_combine(std::size_t& seed, const T& v);
@@ -158,6 +162,26 @@ inline bool operator==(const double sum, const KDouble & other)
 inline bool operator!=(const double sum, const KDouble & other)
 {
   return abs(sum-other.sum) >= KDouble::diff_p;
+}
+
+inline bool operator<(const double sum, const KDouble &other)
+{
+  return sum < other.sum;
+}
+
+inline bool operator<=(const double sum, const KDouble &other)
+{
+  return sum <= other.sum;
+}
+
+inline bool operator>(const double sum, const KDouble &other)
+{
+  return sum > other.sum;
+}
+
+inline bool operator>=(const double sum, const KDouble &other)
+{
+  return sum >= other.sum;
 }
 
 inline KDouble operator-(const KDouble &g1, const KDouble &g2)
