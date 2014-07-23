@@ -26,8 +26,22 @@
 #include <cmath>
 #include <iostream>
 
+#define DOUBLE_TYPE_STD_DOUBLE 1
+#define DOUBLE_TYPE_KAHAN_DOUBLE 2
+
 #ifndef DOUBLE_TYPE
-#define DOUBLE_TYPE KDouble
+
+  //you can change the value of DOUBLE_TYPE_SYM
+  //to change the double type. Choices are:
+  // - DOUBLE_TYPE_STD_DOUBLE
+  // - DOUBLE_TYPE_KAHAN_DOUBLE
+  #define DOUBLE_TYPE_SYM DOUBLE_TYPE_STD_DOUBLE
+
+  #if DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
+    #define DOUBLE_TYPE KDouble
+  #else
+    #define DOUBLE_TYPE double
+  #endif //DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
 #endif //DOUBLE_TYPE
 
 namespace dbtoaster {
@@ -159,243 +173,245 @@ public:
   }
 };
 
-inline bool operator==(const double sum, const KDouble & other)
-{
-  return abs(sum-other.sum) < KDouble::diff_p;
-}
-inline bool operator!=(const double sum, const KDouble & other)
-{
-  return abs(sum-other.sum) >= KDouble::diff_p;
-}
+#if DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
 
-inline bool operator<(const double sum, const KDouble &other)
-{
-  return sum < other.sum;
-}
+  inline bool operator==(const double sum, const KDouble & other)
+  {
+    return abs(sum-other.sum) < KDouble::diff_p;
+  }
+  inline bool operator!=(const double sum, const KDouble & other)
+  {
+    return abs(sum-other.sum) >= KDouble::diff_p;
+  }
 
-inline bool operator<=(const double sum, const KDouble &other)
-{
-  return sum <= other.sum;
-}
+  inline bool operator<(const double sum, const KDouble &other)
+  {
+    return sum < other.sum;
+  }
 
-inline bool operator>(const double sum, const KDouble &other)
-{
-  return sum > other.sum;
-}
+  inline bool operator<=(const double sum, const KDouble &other)
+  {
+    return sum <= other.sum;
+  }
 
-inline bool operator>=(const double sum, const KDouble &other)
-{
-  return sum >= other.sum;
-}
+  inline bool operator>(const double sum, const KDouble &other)
+  {
+    return sum > other.sum;
+  }
 
-inline KDouble operator-(const KDouble &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result -= g2;
-    return result;
-}
+  inline bool operator>=(const double sum, const KDouble &other)
+  {
+    return sum >= other.sum;
+  }
 
-inline KDouble operator+(const KDouble &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result += g2;
-    return result;
-}
+  inline KDouble operator-(const KDouble &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result -= g2;
+      return result;
+  }
 
-inline KDouble operator*(const KDouble &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result *= g2;
-    return result;
-}
+  inline KDouble operator+(const KDouble &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result += g2;
+      return result;
+  }
 
-inline KDouble operator/(const KDouble &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result /= g2;
-    return result;
-}
+  inline KDouble operator*(const KDouble &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result *= g2;
+      return result;
+  }
 
-inline KDouble operator-(const double &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result -= g2;
-    return result;
-}
+  inline KDouble operator/(const KDouble &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result /= g2;
+      return result;
+  }
 
-inline KDouble operator+(const double &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result += g2;
-    return result;
-}
+  inline KDouble operator-(const double &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result -= g2;
+      return result;
+  }
 
-inline KDouble operator/(const double &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result /= g2;
-    return result;
-}
+  inline KDouble operator+(const double &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result += g2;
+      return result;
+  }
 
-inline KDouble operator-(const long &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result -= g2;
-    return result;
-}
+  inline KDouble operator/(const double &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result /= g2;
+      return result;
+  }
 
-inline KDouble operator+(const long &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result += g2;
-    return result;
-}
+  inline KDouble operator-(const long &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result -= g2;
+      return result;
+  }
 
-inline KDouble operator/(const long &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result /= g2;
-    return result;
-}
+  inline KDouble operator+(const long &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result += g2;
+      return result;
+  }
 
-inline KDouble operator-(const int &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result -= g2;
-    return result;
-}
+  inline KDouble operator/(const long &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result /= g2;
+      return result;
+  }
 
-inline KDouble operator+(const int &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result += g2;
-    return result;
-}
+  inline KDouble operator-(const int &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result -= g2;
+      return result;
+  }
 
-inline KDouble operator*(const int &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result *= g2;
-    return result;
-}
+  inline KDouble operator+(const int &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result += g2;
+      return result;
+  }
 
-inline KDouble operator/(const int &g1, const KDouble &g2)
-{
-    KDouble result(g1);
-    result /= g2;
-    return result;
-}
+  inline KDouble operator*(const int &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result *= g2;
+      return result;
+  }
 
-inline KDouble operator-(const KDouble &g1, const double &g2)
-{
-    KDouble result(g1);
-    result -= g2;
-    return result;
-}
+  inline KDouble operator/(const int &g1, const KDouble &g2)
+  {
+      KDouble result(g1);
+      result /= g2;
+      return result;
+  }
 
-inline KDouble operator+(const KDouble &g1, const double &g2)
-{
-    KDouble result(g1);
-    result += g2;
-    return result;
-}
+  inline KDouble operator-(const KDouble &g1, const double &g2)
+  {
+      KDouble result(g1);
+      result -= g2;
+      return result;
+  }
 
-inline KDouble operator*(const KDouble &g1, const double &g2)
-{
-    KDouble result(g1);
-    result *= g2;
-    return result;
-}
+  inline KDouble operator+(const KDouble &g1, const double &g2)
+  {
+      KDouble result(g1);
+      result += g2;
+      return result;
+  }
 
-inline KDouble operator/(const KDouble &g1, const double &g2)
-{
-    KDouble result(g1);
-    result /= g2;
-    return result;
-}
+  inline KDouble operator*(const KDouble &g1, const double &g2)
+  {
+      KDouble result(g1);
+      result *= g2;
+      return result;
+  }
 
-inline KDouble operator-(const KDouble &g1, const long &g2)
-{
-    KDouble result(g1);
-    result -= g2;
-    return result;
-}
+  inline KDouble operator/(const KDouble &g1, const double &g2)
+  {
+      KDouble result(g1);
+      result /= g2;
+      return result;
+  }
 
-inline KDouble operator+(const KDouble &g1, const long &g2)
-{
-    KDouble result(g1);
-    result += g2;
-    return result;
-}
+  inline KDouble operator-(const KDouble &g1, const long &g2)
+  {
+      KDouble result(g1);
+      result -= g2;
+      return result;
+  }
 
-inline KDouble operator*(const KDouble &g1, const long &g2)
-{
-    KDouble result(g1);
-    result *= g2;
-    return result;
-}
+  inline KDouble operator+(const KDouble &g1, const long &g2)
+  {
+      KDouble result(g1);
+      result += g2;
+      return result;
+  }
 
-inline KDouble operator/(const KDouble &g1, const long &g2)
-{
-    KDouble result(g1);
-    result /= g2;
-    return result;
-}
+  inline KDouble operator*(const KDouble &g1, const long &g2)
+  {
+      KDouble result(g1);
+      result *= g2;
+      return result;
+  }
 
-inline KDouble operator-(const KDouble &g1, const int &g2)
-{
-    KDouble result(g1);
-    result -= g2;
-    return result;
-}
+  inline KDouble operator/(const KDouble &g1, const long &g2)
+  {
+      KDouble result(g1);
+      result /= g2;
+      return result;
+  }
 
-inline KDouble operator+(const KDouble &g1, const int &g2)
-{
-    KDouble result(g1);
-    result += g2;
-    return result;
-}
+  inline KDouble operator-(const KDouble &g1, const int &g2)
+  {
+      KDouble result(g1);
+      result -= g2;
+      return result;
+  }
 
-inline KDouble operator*(const KDouble &g1, const int &g2)
-{
-    KDouble result(g1);
-    result *= g2;
-    return result;
-}
+  inline KDouble operator+(const KDouble &g1, const int &g2)
+  {
+      KDouble result(g1);
+      result += g2;
+      return result;
+  }
 
-inline KDouble operator/(const KDouble &g1, const int &g2)
-{
-    KDouble result(g1);
-    result /= g2;
-    return result;
-}
+  inline KDouble operator*(const KDouble &g1, const int &g2)
+  {
+      KDouble result(g1);
+      result *= g2;
+      return result;
+  }
 
-inline KDouble abs(const KDouble &dbl)
-{
-    KDouble result(dbl);
-    if(result.sum < 0.0) result.sum = -result.sum;
-    return result;
-}
+  inline KDouble operator/(const KDouble &g1, const int &g2)
+  {
+      KDouble result(g1);
+      result /= g2;
+      return result;
+  }
 
-inline KDouble acos(const KDouble &dbl)
-{
-    return KDouble(acos(dbl.sum));
-}
+  inline KDouble abs(const KDouble &dbl)
+  {
+      KDouble result(dbl);
+      if(result.sum < 0.0) result.sum = -result.sum;
+      return result;
+  }
 
-inline KDouble atan2(const KDouble &g1, const KDouble &g2)
-{
-  return KDouble(atan2(g1.sum,g2.sum));
-}
+  inline KDouble acos(const KDouble &dbl)
+  {
+      return KDouble(acos(dbl.sum));
+  }
 
-inline KDouble sqrt(const KDouble &dbl)
-{
-  return KDouble(sqrt(dbl.sum));
-}
+  inline KDouble atan2(const KDouble &g1, const KDouble &g2)
+  {
+    return KDouble(atan2(g1.sum,g2.sum));
+  }
 
-inline KDouble pow(const KDouble &g1, const KDouble &g2)
-{
-  return KDouble(pow(g1.sum, g2.sum));
-}
+  inline KDouble sqrt(const KDouble &dbl)
+  {
+    return KDouble(sqrt(dbl.sum));
+  }
 
+  inline KDouble pow(const KDouble &g1, const KDouble &g2)
+  {
+    return KDouble(pow(g1.sum, g2.sum));
+  }
+#endif //DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
 }
 #endif //KDOUBLE_H
