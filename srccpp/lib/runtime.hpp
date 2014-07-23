@@ -13,14 +13,8 @@
 
 #include "event.hpp"
 
-#ifndef STRING_TYPE
-#define STRING_TYPE std::string
-#endif //STRING_TYPE
-
-#ifndef DOUBLE_TYPE
-#define DOUBLE_TYPE double
-#endif //DOUBLE_TYPE
-
+#include "hpds/pstring.hpp"
+#include "hpds/KDouble.hpp"
 
 #define STRING(s) #s
 
@@ -32,8 +26,6 @@
 #define DOUBLE_TYPE_STR STRING(DOUBLE_TYPE)
 #endif //DOUBLE_TYPE_STR
 
-#include "hpds/pstring.hpp"
-#include "hpds/KDouble.hpp"
 
 namespace dbtoaster {
   namespace runtime {

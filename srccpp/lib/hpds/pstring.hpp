@@ -31,7 +31,7 @@
 #include "../smhasher/MurmurHash2.hpp"
 
 #ifndef STRING_TYPE
-#define STRING_TYPE PString
+#define STRING_TYPE std::string
 #endif //STRING_TYPE
 
 // #define USE_POOL

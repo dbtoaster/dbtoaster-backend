@@ -27,7 +27,7 @@
 #include <iostream>
 
 #ifndef DOUBLE_TYPE
-#define DOUBLE_TYPE KDouble
+#define DOUBLE_TYPE double
 #endif //DOUBLE_TYPE
 
 namespace dbtoaster {
