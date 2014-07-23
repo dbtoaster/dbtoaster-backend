@@ -25,38 +25,38 @@ STRING_TYPE Usubstring(const STRING_TYPE &s, long start, long len){
 	return s.substr(start, len);
 }
 
-float Uvec_length(float x, float y, float z){
+DOUBLE_TYPE Uvec_length(DOUBLE_TYPE x, DOUBLE_TYPE y, DOUBLE_TYPE z){
   return sqrt(x*x+y*y+z*z);
 }
 
-float Uvec_dot(float x1, float y1, float z1, 
-              float x2, float y2, float z2){
+DOUBLE_TYPE Uvec_dot(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+              DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2){
   return x1*x2+y1*y2+z1*z2;
 }
 
-void Uvec_cross(float x1, float y1, float z1, 
-               float x2, float y2, float z2,
-               float& x, float& y, float& z){
+void Uvec_cross(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+               DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2,
+               DOUBLE_TYPE& x, DOUBLE_TYPE& y, DOUBLE_TYPE& z){
   x = (y1*z2-z1*y2);
   y = (z1*x2-x1*z2);
   z = (x1*y2-y1*x2);
 }
 
-float Uvector_angle(float x1, float y1, float z1, 
-              float x2, float y2, float z2){
+DOUBLE_TYPE Uvector_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+              DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2){
   return acos(Uvec_dot(x1,y1,z1,x2,y2,z2) /
                (Uvec_length(x1,y1,z1)*Uvec_length(x2,y2,z2)));
 }
 
-float Udihedral_angle(float x1, float y1, float z1, 
-                    float x2, float y2, float z2,
-                    float x3, float y3, float z3,
-                    float x4, float y4, float z4){
-  float v1_x, v1_y, v1_z;
-  float v2_x, v2_y, v2_z;
-  float v3_x, v3_y, v3_z;
-  float n1_x, n1_y, n1_z;
-  float n2_x, n2_y, n2_z;
+DOUBLE_TYPE Udihedral_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+                    DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2,
+                    DOUBLE_TYPE x3, DOUBLE_TYPE y3, DOUBLE_TYPE z3,
+                    DOUBLE_TYPE x4, DOUBLE_TYPE y4, DOUBLE_TYPE z4){
+  DOUBLE_TYPE v1_x, v1_y, v1_z;
+  DOUBLE_TYPE v2_x, v2_y, v2_z;
+  DOUBLE_TYPE v3_x, v3_y, v3_z;
+  DOUBLE_TYPE n1_x, n1_y, n1_z;
+  DOUBLE_TYPE n2_x, n2_y, n2_z;
   
   v1_x = x2-x1;
   v1_y = y2-y1;
@@ -91,27 +91,27 @@ long long Uhash(long long v) {
    return v;
 }
 
-const float PI = 3.141592653589793238462643383279502884;
+const DOUBLE_TYPE PI = 3.141592653589793238462643383279502884;
 
-float Uradians(float degree) {
+DOUBLE_TYPE Uradians(DOUBLE_TYPE degree) {
   return degree * PI / 180;
 }
 
-float Udegrees(float radian) {
+DOUBLE_TYPE Udegrees(DOUBLE_TYPE radian) {
   return radian * 180 / PI;
 }
 
-float Upow(float a, float b) {
-  return ::pow(a, b);
+DOUBLE_TYPE Upow(DOUBLE_TYPE a, DOUBLE_TYPE b) {
+  return pow(a, b);
 }
-/*float pow(float a, int b) {
-  return ::pow(a, (float)b);
+/*DOUBLE_TYPE pow(DOUBLE_TYPE a, int b) {
+  return ::pow(a, (DOUBLE_TYPE)b);
 }
-float pow(int a, float b) {
-  return ::pow((float)a, b);
+DOUBLE_TYPE pow(int a, DOUBLE_TYPE b) {
+  return ::pow((DOUBLE_TYPE)a, b);
 }
-float pow(int a, int b) {
-  return ::pow((float)a, (float)b);
+DOUBLE_TYPE pow(int a, int b) {
+  return ::pow((DOUBLE_TYPE)a, (DOUBLE_TYPE)b);
 }*/
 
 int Uregexp_match(const char *regex, const STRING_TYPE &s){
@@ -151,19 +151,14 @@ int Upreg_match(const regex_t &preg, const STRING_TYPE &s){
   }
 }
 
-double Udiv(double x) { return ((x==0.0) ? 0.0 : (1.0 / x)); }
-double UmulDbl(double x, double y) { return x * y; }
 long UmulLng(long x, long y) { return x * y; }
 long Ulistmax(long v1,  long v2) { return ((v1 > v2) ? v1 : v2 ); }
-double Ulistmax(double v1, double v2) { return ((v1 > v2) ? v1 : v2); }
-double Ulistmax(long v1, double v2) { return ((v1 > v2) ? v1 : v2); }
-double Ulistmax(double v1, long v2) { return ((v1 > v2) ? v1 : v2); }
 
-KDouble Udiv(KDouble x) { return ((x==0.0) ? 0.0 : (1.0 / x)); }
-KDouble UmulDbl(KDouble x, KDouble y) { return x * y; }
-KDouble Ulistmax(KDouble v1, KDouble v2) { return ((v1 > v2) ? v1 : v2); }
-KDouble Ulistmax(long v1, KDouble v2) { return ((v2 < v1) ? v1 : v2); }
-KDouble Ulistmax(KDouble v1, long v2) { return ((v1 > v2) ? v1 : v2); }
+DOUBLE_TYPE Udiv(DOUBLE_TYPE x) { return ((x==0.0) ? 0.0 : (1.0 / x)); }
+DOUBLE_TYPE UmulDbl(DOUBLE_TYPE x, DOUBLE_TYPE y) { return x * y; }
+DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, DOUBLE_TYPE v2) { return ((v1 > v2) ? v1 : v2); }
+DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2) { return ((v2 < v1) ? v1 : v2); }
+DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, long v2) { return ((v1 > v2) ? v1 : v2); }
 
 // Type conversion functions
 template <class T> 

@@ -25,39 +25,34 @@ namespace dbtoaster {
   int Upreg_match(const regex_t &preg, const STRING_TYPE &s);
   
   // Vector functions
-  float Uvec_dot(float x1, float y1, float z1, 
-              float x2, float y2, float z2);
-  float Uvec_length(float x1, float y1, float z1);
-  float Uvector_angle(float x1, float y1, float z1, 
-              float x2, float y2, float z2);
-  float Udihedral_angle(float x1, float y1, float z1, 
-                    float x2, float y2, float z2,
-                    float x3, float y3, float z3,
-                    float x4, float y4, float z4);
+  DOUBLE_TYPE Uvec_dot(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+              DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2);
+  DOUBLE_TYPE Uvec_length(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1);
+  DOUBLE_TYPE Uvector_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+              DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2);
+  DOUBLE_TYPE Udihedral_angle(DOUBLE_TYPE x1, DOUBLE_TYPE y1, DOUBLE_TYPE z1, 
+                    DOUBLE_TYPE x2, DOUBLE_TYPE y2, DOUBLE_TYPE z2,
+                    DOUBLE_TYPE x3, DOUBLE_TYPE y3, DOUBLE_TYPE z3,
+                    DOUBLE_TYPE x4, DOUBLE_TYPE y4, DOUBLE_TYPE z4);
 
   long long Uhash(long long v);
   
   // Math funtions
-  float Uradians(float degree);
-  float Udegrees(float radian);
-  float Upow(float a, float b);
-/*  float pow(float a, int b);
-  float pow(int a, float b);
-  float pow(int a, int b);
+  DOUBLE_TYPE Uradians(DOUBLE_TYPE degree);
+  DOUBLE_TYPE Udegrees(DOUBLE_TYPE radian);
+  DOUBLE_TYPE Upow(DOUBLE_TYPE a, DOUBLE_TYPE b);
+/*  DOUBLE_TYPE pow(DOUBLE_TYPE a, int b);
+  DOUBLE_TYPE pow(int a, DOUBLE_TYPE b);
+  DOUBLE_TYPE pow(int a, int b);
  */
-  double Udiv(double x);
-  double UmulDbl(double x, double y);
   long UmulLng(long x, long y);
   long Ulistmax(long v1,  long v2);
-  double Ulistmax(double v1, double v2);
-  double Ulistmax(long v1, double v2);
-  double Ulistmax(double v1, long v2);
 
-  KDouble Udiv(KDouble x);
-  KDouble UmulDbl(KDouble x, KDouble y);
-  KDouble Ulistmax(KDouble v1, KDouble v2);
-  KDouble Ulistmax(long v1, KDouble v2);
-  KDouble Ulistmax(KDouble v1, long v2);
+  DOUBLE_TYPE Udiv(DOUBLE_TYPE x);
+  DOUBLE_TYPE UmulDbl(DOUBLE_TYPE x, DOUBLE_TYPE y);
+  DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, DOUBLE_TYPE v2);
+  DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2);
+  DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, long v2);
   
   // Type conversion functions
   inline long cast_int_from_float(double           d) { return (long)d; };

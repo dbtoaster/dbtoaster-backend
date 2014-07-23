@@ -27,7 +27,7 @@
 #include <iostream>
 
 #ifndef DOUBLE_TYPE
-#define DOUBLE_TYPE double
+#define DOUBLE_TYPE KDouble
 #endif //DOUBLE_TYPE
 
 namespace dbtoaster {
@@ -46,6 +46,10 @@ protected:
   friend bool operator<=(const double, const KDouble &);
   friend bool operator>(const double, const KDouble &);
   friend bool operator>=(const double, const KDouble &);
+  friend KDouble acos(const KDouble &);
+  friend KDouble atan2(const KDouble &, const KDouble &);
+  friend KDouble sqrt(const KDouble &);
+  friend KDouble pow(const KDouble &, const KDouble &);
   // friend size_t hash_value(KDouble const &v);
   template <class T>
   friend void hash_combine(std::size_t& seed, const T& v);
@@ -371,6 +375,26 @@ inline KDouble abs(const KDouble &dbl)
     KDouble result(dbl);
     if(result.sum < 0.0) result.sum = -result.sum;
     return result;
+}
+
+inline KDouble acos(const KDouble &dbl)
+{
+    return KDouble(acos(dbl.sum));
+}
+
+inline KDouble atan2(const KDouble &g1, const KDouble &g2)
+{
+  return KDouble(atan2(g1.sum,g2.sum));
+}
+
+inline KDouble sqrt(const KDouble &dbl)
+{
+  return KDouble(sqrt(dbl.sum));
+}
+
+inline KDouble pow(const KDouble &g1, const KDouble &g2)
+{
+  return KDouble(pow(g1.sum, g2.sum));
 }
 
 }

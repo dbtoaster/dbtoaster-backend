@@ -26,6 +26,6 @@
 namespace dbtoaster {
 
 size_t precision = 7; // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)
-double KDouble::diff_p = pow(0.1,precision);
+double KDouble::diff_p = std::pow(0.1,precision);
 
 }
