@@ -25,9 +25,14 @@
 #define KDOUBLE_H
 #include <cmath>
 #include <iostream>
+// #include <boost/multiprecision/cpp_dec_float.hpp>
+
+// typedef boost::multiprecision::number<boost::multiprecision::cpp_dec_float<1000, long long> > cpp_dec_float_1000;
 
 #define DOUBLE_TYPE_STD_DOUBLE 1
 #define DOUBLE_TYPE_KAHAN_DOUBLE 2
+#define DOUBLE_TYPE_STD_LONG_DOUBLE 3
+#define DOUBLE_TYPE_BOOST 4
 
 #ifndef DOUBLE_TYPE
 
@@ -35,10 +40,16 @@
   //to change the double type. Choices are:
   // - DOUBLE_TYPE_STD_DOUBLE
   // - DOUBLE_TYPE_KAHAN_DOUBLE
+  // - DOUBLE_TYPE_STD_LONG_DOUBLE
+  // - DOUBLE_TYPE_BOOST
   #define DOUBLE_TYPE_SYM DOUBLE_TYPE_STD_DOUBLE
 
   #if DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
     #define DOUBLE_TYPE KDouble
+  #elif DOUBLE_TYPE_SYM == DOUBLE_TYPE_BOOST
+    #define DOUBLE_TYPE cpp_dec_float_1000
+  #elif DOUBLE_TYPE_SYM == DOUBLE_TYPE_STD_LONG_DOUBLE
+    #define DOUBLE_TYPE long double
   #else
     #define DOUBLE_TYPE double
   #endif //DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE

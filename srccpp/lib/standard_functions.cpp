@@ -154,7 +154,7 @@ int Upreg_match(const regex_t &preg, const STRING_TYPE &s){
 long UmulLng(long x, long y) { return x * y; }
 long Ulistmax(long v1,  long v2) { return ((v1 > v2) ? v1 : v2 ); }
 
-DOUBLE_TYPE Udiv(DOUBLE_TYPE x) { return ((x==0.0) ? 0.0 : (1.0 / x)); }
+DOUBLE_TYPE Udiv(DOUBLE_TYPE x) { if(x==0.0) return 0.0; else return (1.0 / x); }
 DOUBLE_TYPE UmulDbl(DOUBLE_TYPE x, DOUBLE_TYPE y) { return x * y; }
 DOUBLE_TYPE Ulistmax(DOUBLE_TYPE v1, DOUBLE_TYPE v2) { return ((v1 > v2) ? v1 : v2); }
 DOUBLE_TYPE Ulistmax(long v1, DOUBLE_TYPE v2) { return ((v2 < v1) ? v1 : v2); }
