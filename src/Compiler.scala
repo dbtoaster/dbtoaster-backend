@@ -203,9 +203,9 @@ object Compiler {
             Utils.write(out,src)
             val pl = "srccpp/lib"
             val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
-            val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),boost,pl))._1; if (t_comp!=null) t_comp(t2)
+            val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),null,pl))._1; if (t_comp!=null) t_comp(t2)
             t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
-              val (out,err)=Utils.exec(Array(po),null,if (boost!=null) Array("DYLD_LIBRARY_PATH="+boost+"/lib","LD_LIBRARY_PATH="+boost+"/lib") else null)
+              val (out,err)=Utils.exec(Array(po),null,null)
               if (err!="") System.err.println(err); Utils.write(po+"_"+lang+".txt",out); println(out)
             }})
           }
