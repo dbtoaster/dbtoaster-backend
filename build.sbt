@@ -215,6 +215,8 @@ commands += Command.command("release")((state:State) => {
          "bluetabactive.gif", "dropdowntabs.js", "dbtoaster-logo.gif")
          .map(f => currentBranchPath/"doc"/"site_html"/f),releaseDocDir)
     copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html").filter(_.getName.endsWith(".html")), releaseDocDir)
+    copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html"/"css").filter(_.getName.endsWith(".css")), releaseDocDir/"css")
+    copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html"/"js").filter(_.getName.endsWith(".js")), releaseDocDir/"js")
     println("make c++ libs")
     val cppLibDir = base/"srccpp"/"lib"
     ("make -C "+cppLibDir.getAbsolutePath)!;
