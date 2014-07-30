@@ -143,7 +143,7 @@ if [ $out_bin_file != "-" ]; then
    fi
 
    if [ ${out_src_file} = "-" ]; then
-      eval "mkdir ./tmp"
+      eval "mkdir -p ./tmp"
       tmp_out_src_file=`mktemp -q ./tmp/dbtoaster.XXXXXX`
       [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
 
