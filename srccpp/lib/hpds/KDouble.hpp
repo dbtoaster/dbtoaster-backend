@@ -57,6 +57,7 @@
 
 namespace dbtoaster {
 
+#if DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
 class KDouble
 {
 private:
@@ -183,8 +184,6 @@ public:
     return sum >= other.sum;
   }
 };
-
-#if DOUBLE_TYPE_SYM == DOUBLE_TYPE_KAHAN_DOUBLE
 
   inline bool operator==(const double sum, const KDouble & other)
   {
