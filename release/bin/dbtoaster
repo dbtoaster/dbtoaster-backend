@@ -213,7 +213,7 @@ eval $compile_cmd;
 [ "$run_log" ] && { echo $run_log; }
 
 if [ $run_after_compile == "1" ]; then
-   eval "$run_cmd"
+   eval "time $run_cmd"
 fi
 
 exit 0;
