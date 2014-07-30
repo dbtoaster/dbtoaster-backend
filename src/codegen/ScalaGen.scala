@@ -66,11 +66,11 @@ trait IScalaGen extends CodeGen {
   */
 
   private def cmpFunc(tp: Type, op:OpCmp, arg1: String, arg2: String) = tp match {
-    case TypeDouble => op match {
-      case OpEq => "Math.abs("+arg1+"-"+arg2+") < diff_p"
-      case OpNe => "Math.abs("+arg1+"-"+arg2+") >= diff_p"
-      case _ => arg1+" "+op+" "+arg2
-    }
+    // case TypeDouble => op match {
+    //   case OpEq => "Math.abs("+arg1+"-"+arg2+") < diff_p"
+    //   case OpNe => "Math.abs("+arg1+"-"+arg2+") >= diff_p"
+    //   case _ => arg1+" "+op+" "+arg2
+    // }
     case _ => arg1+" "+op+" "+arg2
   }
 
