@@ -100,7 +100,7 @@ void dbt_file_source::read_source_events(std::shared_ptr<std::list<event_t> > ev
 source_multiplexer::source_multiplexer(int seed, int st)
 	: step(st), remaining(0), block(100)
 {
-	srandom(seed);
+	srand(seed);
 	eventList = std::shared_ptr<std::list<event_t> >(new std::list<event_t>());
 	eventQue = std::shared_ptr<std::list<event_t> >(new std::list<event_t>());
 }

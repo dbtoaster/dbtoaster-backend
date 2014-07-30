@@ -35,6 +35,7 @@
 #include <list>
 #include <locale>
 #include <cstdlib>
+#include <cstdio>
 
 using namespace std;
 

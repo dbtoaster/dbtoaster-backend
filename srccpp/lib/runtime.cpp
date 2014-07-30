@@ -4,10 +4,21 @@
 #include <stdlib.h>
 #include "filepath.hpp"
 #include <algorithm>
+#include <string>
+#include <sstream>
 
 /******************************************************************************
 	runtime_options
 ******************************************************************************/
+
+namespace patch {
+    template < typename T > std::string to_string( const T& n ) {
+        std::ostringstream stm ;
+        stm << n ;
+        return stm.str() ;
+    }
+}
+
 namespace dbtoaster {
 namespace runtime {
 
@@ -230,7 +241,7 @@ path runtime_options::get_trace_file() {
 	if ( !trace_dir.empty() ) {
 	  p = trace_dir;
 	}
-	p /= "trace"+std::to_string(trace_counter)+".txt";
+	p /= "trace"+patch::to_string(trace_counter)+".txt";
 	std::cerr << "trace file " << p << std::endl;
 	return p.make_preferred();
 }
