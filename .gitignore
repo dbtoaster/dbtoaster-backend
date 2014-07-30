@@ -33,3 +33,4 @@ release/README
 release/doc
 *.o
 mmap
+dist/*

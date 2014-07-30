@@ -244,6 +244,11 @@ commands += Command.command("release")((state:State) => {
     fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"tpch").filter(f => !"""((query[0-9]+a?)|(schemas)).sql""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"tpch")
     fixSqlFiles((currentBranchPath/"test"/"queries"/"finance") * "*.sql" get, releaseDir/"examples"/"queries"/"finance")
     fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"mddb").filter(f => !"""((query[1-2]+.sql)|(schemas.sql)|(README))""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"mddb")
+    val distDir = base/"dist";
+    if(!distDir.exists) distDir.mkdirs;
+    ("mv ./release ./dbtoaster")!;
+    ("tar -cvzf ./dist/dbtoaster.tgz ./dbtoaster")!;
+    ("mv ./dbtoaster ./release")!;
   }
   write("src/Compiler.scala", compilerClassContent)
   state
