@@ -93,6 +93,12 @@ for arg in "$@"; do
       new_args="$new_args -n $arg";
    elif [ $option = "-r" ]; then
       run_after_compile=1
+      if [ $out_bin_file = "-" ]; then
+         out_bin_file=`mktemp -q ./dbttest.XXXXXX`
+      fi
+      if [ ${arg:0:1} != "-" ]; then
+         new_args="$new_args $arg";
+      fi
    elif [ $option = "-D" ]; then
       def_flags="$def_flags -D $arg"
    elif [ $option = "-I" ]; then
@@ -143,8 +149,7 @@ if [ $out_bin_file != "-" ]; then
    fi
 
    if [ ${out_src_file} = "-" ]; then
-      eval "mkdir -p ./tmp"
-      tmp_out_src_file=`mktemp -q ./tmp/dbtoaster.XXXXXX`
+      tmp_out_src_file=`mktemp -q ./dbtoaster.XXXXXX`
       [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
 
       out_src_file=${tmp_out_src_file}.${src_extension}
@@ -208,7 +213,7 @@ eval $compile_cmd;
 [ "$run_log" ] && { echo $run_log; }
 
 if [ $run_after_compile == "1" ]; then
-   eval "time $run_cmd"
+   eval "$run_cmd"
 fi
 
 exit 0;
