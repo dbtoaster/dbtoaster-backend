@@ -52,11 +52,11 @@ trait ICppGen extends IScalaGen {
   def getIndexId(m:String,is:List[Int]):String = (if(is.isEmpty) (0 until mapDefs(m).keys.size).toList else is).mkString //slice(m,is)
 
   private def cmpFunc(tp: Type, op:OpCmp, arg1: String, arg2: String) = tp match {
-    case TypeDouble => op match {
-      case OpEq => "abs("+arg1+"-"+arg2+") < KDouble::diff_p"
-      case OpNe => "abs("+arg1+"-"+arg2+") >= KDouble::diff_p"
-      case _ => arg1+" "+op+" "+arg2
-    }
+    // case TypeDouble => op match {
+    //   case OpEq => "abs("+arg1+"-"+arg2+") < KDouble::diff_p"
+    //   case OpNe => "abs("+arg1+"-"+arg2+") >= KDouble::diff_p"
+    //   case _ => arg1+" "+op+" "+arg2
+    // }
     case _ => arg1+" "+op+" "+arg2
   }
 
