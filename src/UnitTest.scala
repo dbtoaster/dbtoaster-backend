@@ -222,10 +222,10 @@ object UnitTest {
           case (n,o) =>
             val (kt,vt) = qt(n)
             val tn = codegen.ScalaGen.tupleNameOfTps(kt)
-            val qtp = if(lmsMode) "["+tup(kt.map(_.toScala))+","+vt.toScala+"]" else "["+tn+","+vt.toScala+"]"
+            val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
             val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
             val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
-              case QueryMap(m) => "Map"+qtp+"("+m.map{ case (ks,v) => "("+(if(lmsMode) ks.mkString("(",",",")") else (if(ks.length > 1) "new "+tn+tup(ks) else ks.head))+","+v+")" }.mkString(",")+")"// inline in the code
+              case QueryMap(m) => "Map"+qtp+"("+m.map{ case (ks,v) => "("+ks.mkString("(",",",")")+","+v+")" }.mkString(",")+")"// inline in the code
               case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
               case QuerySingleton(v) => v
             })+")"

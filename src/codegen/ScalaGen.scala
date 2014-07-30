@@ -325,11 +325,20 @@ trait IScalaGen extends CodeGen {
     }.mkString("\n")
   }
 
-  override def toMapFunction(q: Query) = q.name+".toMap"
+  override def toMapFunction(q: Query) = {
+    val map = q.name
+    val m = maps(map)
+    val mapKeys = m.keys.map(_._2)
+    val nodeName = map+"_node"
+    val res = nodeName+"_mres"
+    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{case (e,v) => "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) })+" -> v) }; "+res+".toMap }"
+  }
   override def clearOut = {}
   override def onEndStream = ""
 
+  var maps = Map[String,MapDef]() // declared global maps
   def apply(s0:System):String = {
+    maps=s0.maps.map(m=>(m.name,m)).toMap
     val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
     val body = if (lms!=null) lms else {
       val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)

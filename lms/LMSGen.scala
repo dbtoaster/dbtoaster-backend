@@ -257,10 +257,8 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
   }
 
   // Expose the maps of the system being generated
-  var maps = Map[String,MapDef]() // declared global maps
   var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
   override def genLMS(s0:System):(String,String,String,String) = {
-    maps=s0.maps.map(m=>(m.name,m)).toMap
     ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); val s = impl.named(name,false)(m); s.emitted = true; (name,(s,keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
     val (str,ld0,_) = genInternals(s0)
     //TODO: this should be replaced by a specific traversal for completing the slice information
