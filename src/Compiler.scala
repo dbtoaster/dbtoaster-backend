@@ -117,8 +117,12 @@ object Compiler {
       // error("  -xa <arg>     pass an argument to generated program")
       error("", true) //exit the application
     }
-    if(lang == null && out != null){
-      lang = if(out.endsWith(".cpp") || out.endsWith(".hpp") || out.endsWith(".h") || out.endsWith(".c")) LANG_CPP else LANG_SCALA
+    if(lang == null) {
+      if(out != null){
+        lang = if(out.endsWith(".cpp") || out.endsWith(".hpp") || out.endsWith(".h") || out.endsWith(".c")) LANG_CPP else LANG_SCALA
+      } else {
+        lang = LANG_CPP
+      }
     }
     if (out==null && exec) { error("Execution disabled, specify an output file"); exec=false }
     if (name==null) {
