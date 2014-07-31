@@ -13,7 +13,7 @@ void IProgram::run( bool async ) {
 		std::packaged_task<void()> pt([this]() {
 			this->run(false);
 		});
-		std::thread task( std::move(pt) );
+		pt();
 	}
 	else
 	{
