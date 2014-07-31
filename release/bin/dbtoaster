@@ -184,7 +184,7 @@ if [ $out_bin_file != "-" ]; then
 
       out_bin_file_ext=${out_bin_file##*.}
       out_bin_file_ext=$(echo $out_bin_file_ext | tr '[:upper:]' '[:lower:]')
-      [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; tmp_out_bin_file="${tmp_out_bin_file} ${out_bin_file}"; }
+      [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; }
 
 
       if [ -f $out_bin_file ]; then
@@ -220,6 +220,6 @@ if [ $run_after_compile == "1" ]; then
    eval "time $run_cmd"
 fi
 
-[ "$tmp_out_bin_file" ] && { rm -fr $tmp_out_bin_file; }
+[ "$tmp_out_bin_file" ] && { tmp_out_bin_file="${tmp_out_bin_file} ${tmp_out_bin_file}.jar"; rm -fr $tmp_out_bin_file; }
 
 exit 0;

@@ -34,3 +34,4 @@ release/doc
 *.o
 mmap
 dist/*
+CHANGELOG
