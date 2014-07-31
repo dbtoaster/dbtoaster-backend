@@ -33,9 +33,11 @@ out_src_class_name="-"
 out_src_lang="-"
 out_bin_file="-"
 tmp_out_src_file=""
+tmp_out_bin_file=""
 
 option="-"
 filter_options="-c -d -D -I -L -r -n"
+no_parameter_options="-r"
 new_args=""
 
 compile_cmd=""
@@ -78,6 +80,9 @@ for arg in "$@"; do
    if ! in_list $arg $filter_options && ! in_list $option $filter_options; then
       new_args="$new_args $arg";
    fi
+   if ! in_list $arg $filter_options && in_list $option $no_parameter_options; then
+      new_args="$new_args $arg";
+   fi
 
    if [ $option = "-o" ]; then
       out_src_file=$arg
@@ -94,10 +99,9 @@ for arg in "$@"; do
    elif [ $option = "-r" ]; then
       run_after_compile=1
       if [ $out_bin_file = "-" ]; then
-         out_bin_file=`mktemp -q ./dbttest.XXXXXX`
-      fi
-      if [ ${arg:0:1} != "-" ]; then
-         new_args="$new_args $arg";
+         tmp_out_bin_file=`mktemp -q ./dbttest.XXXXXX`
+         [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
+         out_bin_file=${tmp_out_bin_file}
       fi
    elif [ $option = "-D" ]; then
       def_flags="$def_flags -D $arg"
@@ -180,7 +184,7 @@ if [ $out_bin_file != "-" ]; then
 
       out_bin_file_ext=${out_bin_file##*.}
       out_bin_file_ext=$(echo $out_bin_file_ext | tr '[:upper:]' '[:lower:]')
-      [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; }
+      [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; tmp_out_bin_file="${tmp_out_bin_file} ${out_bin_file}"; }
 
 
       if [ -f $out_bin_file ]; then
@@ -215,5 +219,7 @@ eval $compile_cmd;
 if [ $run_after_compile == "1" ]; then
    eval "time $run_cmd"
 fi
+
+[ "$tmp_out_bin_file" ] && { rm -fr $tmp_out_bin_file; }
 
 exit 0;
