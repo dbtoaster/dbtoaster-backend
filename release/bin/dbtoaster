@@ -204,7 +204,7 @@ if [ $out_bin_file != "-" ]; then
    mkdir -p $(dirname "$out_bin_file")
 fi
 
-dbtoaster_cmd="java $scala_codegen_flags ddbt.Compiler --frontend \"${BINDIR_JAVA}${PATH_SEP}dbtoaster_release\" $new_args"
+dbtoaster_cmd="java $scala_codegen_flags ddbt.Compiler --frontend \"${BINDIR_JAVA}${PATH_SEP}dbtoaster_frontend\" $new_args"
 [ $log_dbtoaster -eq 1 ] && { echo $dbtoaster_cmd; }
 eval $dbtoaster_cmd;
 

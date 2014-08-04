@@ -22,7 +22,7 @@ object BrokerSpread {
     if (size=="huge") return Map[Long,Double](
     )
     val (b,f) = (new java.io.File(path_repo),"tmp.sql"); write(b+"/"+f,sql.replaceAll("/standard/","/"+size+"/"))
-    val r = exec(Array("bin/dbtoaster_release",f).toArray,b)._1.split("\n")
+    val r = exec(Array("bin/dbtoaster_frontend",f).toArray,b)._1.split("\n")
     new java.io.File(path_repo+"/"+f).delete;
     val m=new java.util.HashMap[Long,Double]()
     val p = java.util.regex.Pattern.compile(".*\\[([0-9]+)\\]->([\\-0-9\\.]+);.*")

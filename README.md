@@ -16,7 +16,7 @@ Currently the project matches original DBToaster code generation based on M3 and
 #### Setup
 1. Install [SBT](http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html) and [Git](http://git-scm.com) in your PATH.
 2. Checkout the repository `$ git clone https://github.com/tcknet/ddbtoaster.git`
-3. Get some data/queries to play with: add `bin/dbtoaster_release` and `examples/{data,queries}` from [here](http://www.dbtoaster.org/index.php?page=download) to the DDBToaster folder (keep the same paths).
+3. Get some data/queries to play with: add `bin/dbtoaster_frontend` and `examples/{data,queries}` from [here](http://www.dbtoaster.org/index.php?page=download) to the DDBToaster folder (keep the same paths).
 4. Execute the compiler using `$ sbt 'toast <options> <sql_input>'`. The list of available options is show using `$ sbt 'toast --help'`.
 5. You can also use LMS and Akka by following the extended setup, however, you will not be able to run the tests as they are stored in DBToaster (private) repository.
 

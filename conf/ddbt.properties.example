@@ -1,4 +1,4 @@
 # The paths are relative to DBToaster's base folder.
 # - ddbt.dbtoaster: dbtoaster binary (required if base_repo is not set)
 
-ddbt.dbtoaster.frontend = ./bin/dbtoaster_release
+ddbt.dbtoaster.frontend = ./bin/dbtoaster_frontend

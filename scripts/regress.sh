@@ -5,7 +5,7 @@
 #  regress.sh [-d dataset] query
 #
 
-DBT='bin/dbtoaster_release'
+DBT='bin/dbtoaster_frontend'
 #DBT='./dbtoaster_ref' # reference released version
 
 cd `dirname $0`; cd ..

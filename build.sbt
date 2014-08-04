@@ -205,7 +205,8 @@ commands += Command.command("release")((state:State) => {
     println("copy dbt_release")
     val dbtBinPath = currentBranchPath/prop.getProperty("ddbt.dbtoaster.frontend","bin/dbtoaster_release")
     copyFile(dbtBinPath,releaseDir/"bin")
-    ("chmod +x "+(releaseDir/"bin"/dbtBinPath.getName).getAbsolutePath)!;
+    ("mv "+(releaseDir/"bin"/dbtBinPath.getName).getAbsolutePath+" "+(releaseDir/"bin"/"dbtoaster_frontend").getAbsolutePath)!;
+    ("chmod +x "+(releaseDir/"bin"/"dbtoaster_frontend").getAbsolutePath)!;
     println("copy README, LICENSE and CHANGELOG")
     copyFile(currentBranchPath/"doc"/"README", releaseDir)
     copyFile(currentBranchPath/"doc"/"LICENSE", releaseDir)

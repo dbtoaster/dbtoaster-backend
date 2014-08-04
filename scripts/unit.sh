@@ -36,9 +36,9 @@ dbt_load() {
   while [ "$1" ]; do if [ ! -e "$1" ]; then tar -xzf dbt.tgz --strip-components 1 dbtoaster/$1; fi; shift; done
 }
 do_setup() {
-  if [ ! "$REPO" ]; then dbt_load bin/dbtoaster_release examples/data examples/queries lib/dbt_scala/dbtlib.jar; fi
+  if [ ! "$REPO" ]; then dbt_load bin/dbtoaster_frontend examples/data examples/queries lib/dbt_scala/dbtlib.jar; fi
   if [ ! -d conf ]; then mkdir conf; fi
-  if [ ! -f $CONF ]; then echo 'ddbt.dbtoaster = bin/dbtoaster_release' > $CONF; fi
+  if [ ! -f $CONF ]; then echo 'ddbt.dbtoaster = bin/dbtoaster_frontend' > $CONF; fi
 }
 
 ###### UPDATING REPOSITORIES
