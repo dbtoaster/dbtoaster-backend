@@ -170,19 +170,28 @@ commands += Command.command("release")((state:State) => {
   }
   //load all the properties
   val prop=new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
+  println("defining base and release paths")
+  val base = baseDirectory.value
+  val releaseDir = base/"release";
+  println("cleaning")
+  IO.delete(releaseDir/"bin"/"dbtoaster_frontend")
+  IO.delete(releaseDir/"CHANGELOG")
+  IO.delete(releaseDir/"LICENSE")
+  IO.delete(releaseDir/"README")
+  IO.delete(releaseDir/"doc")
+  IO.delete(releaseDir/"examples")
+  IO.delete(releaseDir/"lib")
+  println("compiling sources")
   val compilerClassContent = read("src/Compiler.scala")
   write("src/Compiler.scala", compilerClassContent.replace("=DEPLOYMENT_STATUS_DEVELOPMENT", "=DEPLOYMENT_STATUS_RELEASE"))
   Project.evaluateTask(compile, state)
   println("execute pack task")
   Project.evaluateTask(pack, state)
-  println("defining base and release paths")
-  val base = baseDirectory.value
-  val releaseDir = base/"release";
   println("copy all the Scala dependency libraries")
   val sourceDir = base/"target"/"pack"/"lib";
   if (sourceDir.exists) {
-    copyDir(sourceDir,releaseDir/"lib"/"dbt_scala")
     val targetDir=releaseDir/"lib"/"dbt_scala"; targetDir.mkdirs
+    copyFiles(IO.listFiles(sourceDir).filter{f => (!f.getName.startsWith("mysql") && !f.getName.startsWith("netty") && !f.getName.startsWith("protobuf")  && !f.getName.startsWith("scala-actors") && !f.getName.startsWith("scalatest") && f.getName != "dbtlib.jar" && f.getName != "tuplegen.jar")},targetDir)
     val ddbtJar = targetDir/"dbtoaster_2.10-2.1.jar"
     if (prop.getProperty("ddbt.lms","0")!="1") { //vanilla scala
       println("using vanilla Scala version using dbtoaster_2.10-2.1-scala.jar")
@@ -190,7 +199,7 @@ commands += Command.command("release")((state:State) => {
     } else { //lms
       println("using Scala+LMS version using dbtoaster_2.10-2.1-lms.jar")
       IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-lms.jar")
-      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-scala.jar")
+      // IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-scala.jar")
     }
     IO.delete(ddbtJar)
   } else {
@@ -234,10 +243,10 @@ commands += Command.command("release")((state:State) => {
     println("copy main.cpp")
     copyFile(currentBranchPath/"lib"/"dbt_c++"/"main.cpp",releaseDir/"examples"/"code")
     println("make scala libs")
-    val scalaLibDir = currentBranchPath/"lib"/"dbt_scala"
-    ("make -C "+scalaLibDir.getAbsolutePath)!;
-    copyFile(currentBranchPath/"lib"/"dbt_scala"/"dbtlib.jar", releaseDir/"lib"/"dbt_scala")
-    copyFile(currentBranchPath/"lib"/"dbt_scala"/"tuplegen.jar", releaseDir/"lib"/"dbt_scala")
+    // val scalaLibDir = currentBranchPath/"lib"/"dbt_scala"
+    // ("make -C "+scalaLibDir.getAbsolutePath)!;
+    // copyFile(currentBranchPath/"lib"/"dbt_scala"/"dbtlib.jar", releaseDir/"lib"/"dbt_scala")
+    // copyFile(currentBranchPath/"lib"/"dbt_scala"/"tuplegen.jar", releaseDir/"lib"/"dbt_scala")
     println("copy data files to data")
     copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"simple"/"tiny").filter(_.getName.endsWith(".dat")), releaseDir/"examples"/"data"/"simple")
     copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"tpch"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"tpch")

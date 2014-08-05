@@ -173,8 +173,8 @@ if [ $out_bin_file != "-" ]; then
 
    if [ $src_extension == "scala" ]; then
       ! which scalac &>/dev/null && { echo "Unable to compile Scala code: scalac not found!"; exit 1; }
-      jar_file="$SCALA_LIBDIR/dbtlib.jar"
-      eval [ ! -f $jar_file ] && { echo "$0: dbtlib.jar not built, exiting..." ; exit 1; }
+      # jar_file="$SCALA_LIBDIR/dbtlib.jar"
+      # eval [ ! -f $jar_file ] && { echo "$0: dbtlib.jar not built, exiting..." ; exit 1; }
 
       if [[ $( uname -s ) == CYGWIN* ]]; then
          out_src_file="$( cygpath --windows $out_src_file )"
