@@ -191,7 +191,7 @@ commands += Command.command("release")((state:State) => {
   val sourceDir = base/"target"/"pack"/"lib";
   if (sourceDir.exists) {
     val targetDir=releaseDir/"lib"/"dbt_scala"; targetDir.mkdirs
-    copyFiles(IO.listFiles(sourceDir).filter{f => (!f.getName.startsWith("mysql") && !f.getName.startsWith("netty") && !f.getName.startsWith("protobuf")  && !f.getName.startsWith("scala-actors") && !f.getName.startsWith("scalatest") && f.getName != "dbtlib.jar" && f.getName != "tuplegen.jar")},targetDir)
+    copyFiles(IO.listFiles(sourceDir).filter{f => (!f.getName.startsWith("akka-remote") && !f.getName.startsWith("mysql") && !f.getName.startsWith("netty") && !f.getName.startsWith("protobuf")  && !f.getName.startsWith("scala-actors") && !f.getName.startsWith("scalatest") && f.getName != "dbtlib.jar" && f.getName != "tuplegen.jar")},targetDir)
     val ddbtJar = targetDir/"dbtoaster_2.10-2.1.jar"
     if (prop.getProperty("ddbt.lms","0")!="1") { //vanilla scala
       println("using vanilla Scala version using dbtoaster_2.10-2.1-scala.jar")
