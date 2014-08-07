@@ -10,23 +10,26 @@ in_list() {
    return 1
 }
 
+# Helper function for producing JVM flags based on SCALA_LIBS
+function get_jvm_exec_flags() {
+   echo "-Xms256m -Xmx2g -XX:-DontCompileHugeMethods -XX:+CMSClassUnloadingEnabled -classpath \"$SCALA_LIBS\""
+}
+
 
 BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CPP_LIBDIR="$BINDIR/../lib/dbt_c++"
 SCALA_LIBDIR="${BINDIR}/../lib/dbt_scala"
-SCALA_LIBDIR_IN_SED=`echo $SCALA_LIBDIR | sed 's/\//\\\\\//g'`
+
 if [[ $( uname -s ) == CYGWIN* ]]; then
-   SCALA_LIBDIR_JAVA="$( cygpath --windows $SCALA_LIBDIR )"
-   BINDIR_JAVA="$( cygpath --windows $BINDIR )"
    PATH_SEP="\\"
    JAVA_SEP=";"
-   SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar'  | xargs cygpath --windows | xargs echo -n | sed "s/$SCALA_LIBDIR_IN_SED\//\//g" | tr '[:space:]' $JAVA_SEP | sed "s/\//$SCALA_LIBDIR_IN_SED\//g"`
+   BINDIR_JAVA="$( cygpath --windows $BINDIR )"
+   SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar' | xargs cygpath --windows | tr "\\n" $JAVA_SEP`
 else
-   SCALA_LIBDIR_JAVA=$SCALA_LIBDIR
-   BINDIR_JAVA=$BINDIR
    PATH_SEP="/"
    JAVA_SEP=":"
-   SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar' | xargs echo -n | sed "s/$SCALA_LIBDIR_IN_SED\//\//g" | tr '[:space:]' $JAVA_SEP | sed "s/\//$SCALA_LIBDIR_IN_SED\//g"`
+   BINDIR_JAVA=$BINDIR
+   SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar' | tr "\\n" $JAVA_SEP`
 fi
 
 out_src_file="-"
@@ -83,6 +86,9 @@ for arg in "$@"; do
    fi
    if ! in_list $arg $filter_options && in_list $option $no_parameter_options; then
       new_args="$new_args $arg";
+   fi
+   if in_list $arg $no_parameter_options; then
+      option=$arg
    fi
 
    if [ $option = "-o" ]; then
@@ -168,7 +174,7 @@ if [ $out_bin_file != "-" ]; then
 
       compile_flags="$cpp_compile_flags $cpp_opt_flag $def_flags $inc_flags $lib_flags $cpp_libs"
       compile_cmd="$gpp $main_file -include $out_src_file -o $out_bin_file $compile_flags"
-      run_cmd="$out_bin_file"
+      run_cmd="./$out_bin_file"
       [ $log_gcc -eq 1 ] && { compile_log="$compile_log $compile_cmd"; run_log="$run_log $run_cmd"; }
    fi
 
@@ -193,12 +199,22 @@ if [ $out_bin_file != "-" ]; then
       fi
       compile_flags="$scala_compile_flags $scala_opt_flag"
       compile_cmd="scalac $out_src_file -d $out_bin_file $compile_flags"
-      if [[ $out_src_class_name == "-" ]] ; then
-         run_cmd=$(echo "$out_src_file" | sed -e 's/.*[/\\\\]//; s/\..*//' | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
-         run_cmd="java $jvm_exec_flags:$out_bin_file ddbt.gen.$run_cmd"
+
+      if [[ $( uname -s ) == CYGWIN* ]]; then
+         new_out_bin_file=`cygpath --windows $out_bin_file`
       else
-         run_cmd="java $jvm_exec_flags:$out_bin_file $out_src_class_name"
+         new_out_bin_file=$out_bin_file
       fi
+      SCALA_LIBS="${SCALA_LIBS}${JAVA_SEP}.${PATH_SEP}$new_out_bin_file"
+      jvm_exec_flags=$(get_jvm_exec_flags)
+
+      if [[ $out_src_class_name == "-" ]] ; then
+         run_cmd=$(echo "$out_src_file" | sed 's/\"//g' | sed -e 's/.*[/\\\\]//; s/\..*//' | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
+         run_cmd="java $jvm_exec_flags ddbt.gen.$run_cmd"
+      else
+         run_cmd="java $jvm_exec_flags $out_src_class_name"
+      fi
+
       [ $log_scala -eq 1 ] && { compile_log="$compile_log $compile_cmd"; run_log="$run_log $run_cmd"; }
    fi
 
@@ -212,7 +228,7 @@ eval $dbtoaster_cmd;
 [ "$compile_log" ] && { echo $compile_log; }
 eval $compile_cmd;
 
-# Delete any temporary files 
+# Delete any temporary files
 [ "$tmp_out_src_file" ] && { rm -fr $tmp_out_src_file; }
 
 [ "$run_log" ] && { echo $run_log; }
@@ -224,3 +240,4 @@ fi
 [ "$tmp_out_bin_file" ] && { tmp_out_bin_file="${tmp_out_bin_file} ${tmp_out_bin_file}.jar"; rm -fr $tmp_out_bin_file; }
 
 exit 0;
+
