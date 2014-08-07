@@ -174,7 +174,7 @@ if [ $out_bin_file != "-" ]; then
 
       compile_flags="$cpp_compile_flags $cpp_opt_flag $def_flags $inc_flags $lib_flags $cpp_libs"
       compile_cmd="$gpp $main_file -include $out_src_file -o $out_bin_file $compile_flags"
-      run_cmd="./$out_bin_file"
+      run_cmd="PATH=.:\$PATH $out_bin_file"
       [ $log_gcc -eq 1 ] && { compile_log="$compile_log $compile_cmd"; run_log="$run_log $run_cmd"; }
    fi
 
