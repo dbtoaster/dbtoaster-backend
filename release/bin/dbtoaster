@@ -14,18 +14,19 @@ in_list() {
 BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 CPP_LIBDIR="$BINDIR/../lib/dbt_c++"
 SCALA_LIBDIR="${BINDIR}/../lib/dbt_scala"
+SCALA_LIBDIR_IN_SED=`echo $SCALA_LIBDIR | sed 's/\//\\\\\//g'`
 if [[ $( uname -s ) == CYGWIN* ]]; then
    SCALA_LIBDIR_JAVA="$( cygpath --windows $SCALA_LIBDIR )"
    BINDIR_JAVA="$( cygpath --windows $BINDIR )"
    PATH_SEP="\\"
    JAVA_SEP=";"
-   SCALA_LIBS=`echo $SCALA_LIBDIR/*.jar | xargs cygpath --windows | tr '[:space:]' $JAVA_SEP`
+   SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar'  | xargs cygpath --windows | xargs echo -n | sed "s/$SCALA_LIBDIR_IN_SED\//\//g" | tr '[:space:]' $JAVA_SEP | sed "s/\//$SCALA_LIBDIR_IN_SED\//g"`
 else
    SCALA_LIBDIR_JAVA=$SCALA_LIBDIR
    BINDIR_JAVA=$BINDIR
    PATH_SEP="/"
    JAVA_SEP=":"
-   SCALA_LIBS=`echo $SCALA_LIBDIR/*.jar | tr '[:space:]' $JAVA_SEP`
+   SCALA_LIBS=`find "$SCALA_LIBDIR" -type f -name '*.jar' | xargs echo -n | sed "s/$SCALA_LIBDIR_IN_SED\//\//g" | tr '[:space:]' $JAVA_SEP | sed "s/\//$SCALA_LIBDIR_IN_SED\//g"`
 fi
 
 out_src_file="-"
@@ -45,11 +46,11 @@ run_cmd=""
 
 def_flags=""
 inc_flags=`echo "$DBT_HDR" | sed 's/:/ -I/g'`
-[[ $inc_flags != "" ]] && { inc_flags="-I$inc_flags"; }
-inc_flags="-I$CPP_LIBDIR $inc_flags"
+[[ $inc_flags != "" ]] && { inc_flags="-I\"$inc_flags\""; }
+inc_flags="-I\"$CPP_LIBDIR\" $inc_flags"
 lib_flags=`echo "$DBT_LIB" | sed 's/:/ -L/g'`
-[[ $lib_flags != "" ]] && { lib_flags="-L$lib_flags"; }
-lib_flags="-L$CPP_LIBDIR $lib_flags"
+[[ $lib_flags != "" ]] && { lib_flags="-L\"$lib_flags\""; }
+lib_flags="-L\"$CPP_LIBDIR\" $lib_flags"
 
 # If there is a symlink to a custom C++ compiler, use it instead of g++
 if [ -L "./gpp" ]; then
@@ -163,7 +164,7 @@ if [ $out_bin_file != "-" ]; then
    if [ $src_extension == "hpp" ]; then
       new_args="$new_args -o $out_src_file"
       ! which g++ &>/dev/null && { echo "Unable to compile C++ code: g++ not found!"; exit 1; }
-      main_file="$CPP_LIBDIR/main.cpp"
+      main_file="\"$CPP_LIBDIR/main.cpp\""
 
       compile_flags="$cpp_compile_flags $cpp_opt_flag $def_flags $inc_flags $lib_flags $cpp_libs"
       compile_cmd="$gpp $main_file -include $out_src_file -o $out_bin_file $compile_flags"
