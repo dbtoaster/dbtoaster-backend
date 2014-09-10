@@ -132,9 +132,13 @@ trait IScalaGen extends CodeGen {
   //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
   def cpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
     case Ref(n) => co(rn(n))
-    case Const(tp,v) => tp match { case TypeLong => co(v+"L") case TypeString => co("\""+v+"\"") case _ => co(v) }
+    case Const(tp,v) => tp match {
+      case TypeLong => co(v+"L")
+      case TypeString => co("\""+v+"\"")
+      case _ => co(v)
+    }
     case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+" != 0) 1L else 0L)"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>"(if ("+cmpFunc(l.tp,op,ll,rr)+") 1L else 0L)")))
+    case Cmp(l,r,op) => cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>co("(if ("+cmpFunc(l.tp,op,ll,rr)+") 1L else 0L)")))
     case app@Apply(fn,tp,as) => applyFunc(co,fn,tp,as)
     //ki : inner key
     //ko : outer key
@@ -149,13 +153,24 @@ trait IScalaGen extends CodeGen {
     //     v * ex
     //   }
     // }
-    case m@MapRef(n,tp,ks) => val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-      if (ki.size==0) co(n+(if (ks.size>0) ".get("+genTuple(ks map ctx)+")" else "")) // all keys are bound
-      else { val (k0,v0)=(fresh("k"),fresh("v"))
-        val sl = if (ko.size>0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else "" // slice on bound variables
+    case m@MapRef(n,tp,ks) =>
+      val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
+      if(ks.size == 0) { // variable
+        co(rn(n))
+      } else if (ki.size == 0) { // all keys are bound
+        co(n+(if (ks.size>0) ".get("+genTuple(ks map ctx)+")" else ""))
+      } else { // we need to iterate over all keys not bound (ki)
+        val (k0,v0)=(fresh("k"),fresh("v"))
+        val sl = if (ko.size > 0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else "" // slice on bound variables
         ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
-        n+sl+".foreach { ("+(if (ks.size==1) rn(ks.head) else k0)+","+v0+") =>\n"+ind(
-          (if (ks.size>1) ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString else "")+co(v0))+"\n}\n" // bind free variables from retrieved key
+        n+sl+".foreach { ("+(if (ks.size==1) rn(ks.head) else k0)+","+v0+") =>\n"+
+          ind(
+            (if (ks.size>1) {
+              ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString
+            } else "")+
+            co(v0)
+          )+"\n"+
+        "}\n" // bind free variables from retrieved key
       }
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n,e) =>
@@ -181,7 +196,17 @@ trait IScalaGen extends CodeGen {
         // extract cond and then branch of "if (c) t else 0"
         // no better way for finding boolean type
         // TODO: add Boolean type
-        def cx(s:String):Option[(String,String)] = if (!s.startsWith("(if (")) None else { var d=1; var p=5; while(d>0) { if (s(p)=='(') d+=1 else if (s(p)==')') d-=1; p+=1; }; Some(s.substring(5,p-1),s.substring(p+1,s.lastIndexOf("else")-1)) }
+        def cx(s:String):Option[(String,String)] = if (!s.startsWith("(if (")) {
+          None
+        } else {
+          var d=1
+          var p=5
+          while(d>0) {
+            if (s(p)=='(') d+=1 else if (s(p)==')') d-=1
+            p+=1
+          }
+          Some(s.substring(5,p-1),s.substring(p+1,s.lastIndexOf("else")-1))
+        }
         def vx(vl:String,vr:String) = if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"
         //pulling out the conditionals from a multiplication
         (cx(vl),cx(vr)) match {
@@ -204,9 +229,22 @@ trait IScalaGen extends CodeGen {
     //   foreach vr in R, T += vr
     //   foreach t in T, co(t)
     case a@Add(el,er) =>
-      if (a.agg==Nil) { val cur=ctx.save; cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
-      else am match {
-        case Some(t) if t.toSet.subsetOf(a.agg.toSet) => val cur=ctx.save; val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
+      if (a.agg==Nil) {
+        val cur=ctx.save
+        cpsExpr(el,(vl:String)=>{
+          ctx.load(cur)
+          cpsExpr(er,(vr:String)=>{
+            ctx.load(cur)
+            co("("+vl+" + "+vr+")")
+          },am)
+        },am)
+      } else am match {
+        case Some(t) if t.toSet.subsetOf(a.agg.toSet) =>
+          val cur=ctx.save
+          val s1=cpsExpr(el,co,am)
+          ctx.load(cur)
+          val s2=cpsExpr(er,co,am)
+          ctx.load(cur); s1+s2
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
@@ -218,8 +256,10 @@ trait IScalaGen extends CodeGen {
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-      if (aks.size==0) { val a0=fresh("agg"); genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0) }
-      else am match {
+      if (aks.size==0) {
+        val a0=fresh("agg")
+        genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0)
+      } else am match {
         case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
         case _ =>
           val a0=fresh("agg")
@@ -240,7 +280,7 @@ trait IScalaGen extends CodeGen {
           else "if ("+m.name+".get("+genTuple(m.keys map ctx)+")==0) "+m.name+".set("+genTuple(m.keys map ctx)+","+i+");\n")
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+genTuple(m.keys map ctx)+","+v+")")+";\n",Some(m.keys zip m.tks))
+      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+genTuple(m.keys map ctx)+","+v+")")+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 

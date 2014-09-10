@@ -37,31 +37,8 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
       case _ => sys.error("Unsupported type "+tp)
     }
-    case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)),am),am)
-    case a@Add(l,r) =>
-      if (a.agg==Nil) { val cur=cx.save; expr(l,(vl:Rep[_])=>{ cx.load(cur); expr(r,(vr:Rep[_])=>{ cx.load(cur); co(add(vl,vr,ex.tp)) },am)},am) }
-      else am match {
-        case Some(t) if t.toSet==a.agg.toSet => val cur=cx.save; expr(l,co,am); cx.load(cur); expr(r,co,am); cx.load(cur); impl.unit(())
-        case _ =>
-          implicit val mE=me(a.agg.map(_._2),a.tp)
-          val acc = impl.m3temp()(mE)
-          val inCo = (v:Rep[_]) => impl.m3add(acc,impl.stNewEntry2(acc, (a.agg.map(x=>cx(x._1))++List(v)) : _*))(mE)
-          val cur = cx.save
-          expr(l,inCo,Some(a.agg)); cx.load(cur)
-          expr(r,inCo,Some(a.agg)); cx.load(cur)
-          foreach(acc,a.agg,a.tp,co)
-      }
-    case Cmp(l,r,op) => expr(l,(vl:Rep[_]) => expr(r,(vr:Rep[_]) => co(cmp(vl,op,vr,ex.tp)) )) // formally, we should take the derived type from left and right, but this makes no difference to LMS
     case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.notequals(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
-
-
-
-    case Lift(n,e) =>
-      if (cx.contains(n)) expr(e,(ve:Rep[_])=>co(   impl.__ifThenElse(impl.equals(ve,cx(n)),impl.unit(1L),impl.unit(0L))  ),am)
-      else e match {
-        case Ref(n2) => cx.add(n,cx(n2)); co(impl.unit(1L))
-        case _ => expr(e,(ve:Rep[_]) => if (cx.contains(n)) { co(cmp(cx(n),OpEq,ve,e.tp)) } else { cx.add(n,ve); co(impl.unit(1L)) })
-      }
+    case Cmp(l,r,op) => expr(l,(vl:Rep[_]) => expr(r,(vr:Rep[_]) => co(cmp(vl,op,vr,ex.tp)) )) // formally, we should take the derived type from left and right, but this makes no difference to LMS
     case a@Apply(fn,tp,as) =>
       def app(es:List[Expr],vs:List[Rep[_]]):Rep[Unit] = es match {
         case x :: xs => expr(x,(v:Rep[_]) => app(xs,v::vs))
@@ -80,41 +57,98 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
         val r = proxy.get(vs : _*)
         co(impl.__ifThenElse(impl.__equal(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
-        if (ko.size==0) proxy.foreach((e:Rep[Entry])=> {
-            cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
-          })
-        else {
+        if (ko.size > 0) {
           implicit val mE=me(m.tks,tp)
           val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
           impl.stSlice(mm, {
             (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
           },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
+        } else {
+          proxy.foreach((e:Rep[Entry])=> {
+            cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
+          })
         }
+      }
+    case Lift(n,e) =>
+      if (cx.contains(n)) expr(e,(ve:Rep[_])=>co(impl.__ifThenElse(impl.equals(ve,cx(n)),impl.unit(1L),impl.unit(0L))  ),am)
+      else e match {
+        case Ref(n2) => cx.add(n,cx(n2)); co(impl.unit(1L))
+        case _ => expr(e,(ve:Rep[_]) => { cx.add(n,ve); co(impl.unit(1L)) } )
+      }
+    case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)),am),am)
+    case a@Add(l,r) =>
+      if (a.agg==Nil) {
+        val cur=cx.save
+        expr(l,(vl:Rep[_])=>{
+          cx.load(cur)
+          expr(r,(vr:Rep[_])=>{
+            cx.load(cur)
+            co(add(vl,vr,ex.tp))
+          },am)
+        },am)
+      } else am match {
+        case Some(t) if t.toSet.subsetOf(a.agg.toSet) =>
+          val cur=cx.save
+          expr(l,co,am)
+          cx.load(cur)
+          expr(r,co,am)
+          cx.load(cur)
+          impl.unit(())
+        case _ =>
+          implicit val mE=me(a.agg.map(_._2),a.tp)
+          val acc = impl.m3temp()(mE)
+          val inCo = (v:Rep[_]) => impl.m3add(acc,impl.stNewEntry2(acc, (a.agg.map(x=>cx(x._1))++List(v)) : _*))(mE)
+          val cur = cx.save
+          expr(l,inCo,Some(a.agg)); cx.load(cur)
+          expr(r,inCo,Some(a.agg)); cx.load(cur)
+          foreach(acc,a.agg,a.tp,co)
       }
     case a@AggSum(ks,e) =>
       val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
       if (agg_keys.size==0) { // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
         val cur=cx.save;
-        val accRes:impl.Var[_] = ex.tp match {
-          case TypeLong => val acc:impl.Var[Long] = impl.var_new[Long](impl.unit(0L)); expr(e,(v:Rep[_]) => impl.var_assign[Long](acc.asInstanceOf[impl.Var[Long]], impl.numeric_plus[Long](impl.readVar[Long](acc.asInstanceOf[impl.Var[Long]]),v.asInstanceOf[Rep[Long]])),None); acc
-          case TypeDouble => val acc:impl.Var[Double] = impl.var_new[Double](impl.unit(0.0)); expr(e,(v:Rep[_]) => impl.var_assign[Double](acc.asInstanceOf[impl.Var[Double]], impl.numeric_plus[Double](impl.readVar[Double](acc.asInstanceOf[impl.Var[Double]]),v.asInstanceOf[Rep[Double]])),None); acc
-          case TypeString => val acc:impl.Var[String] = impl.var_new[String](impl.unit("")); expr(e,(v:Rep[_]) => impl.var_assign[String](acc.asInstanceOf[impl.Var[String]], impl.string_plus(impl.readVar[String](acc.asInstanceOf[impl.Var[String]]),v.asInstanceOf[Rep[String]]))); acc
-          //case TypeDate => val acc:impl.Var[java.util.Date] = impl.var_new[java.util.Date](impl.unit(new java.util.Date())); expr(e,(v:Rep[_]) => impl.var_assign[java.util.Date](acc.asInstanceOf[impl.Var[java.util.Date]], impl.numeric_plus[java.util.Date](impl.readVar[java.util.Date](acc.asInstanceOf[impl.Var[java.util.Date]]),v.asInstanceOf[Rep[java.util.Date]])),None); acc
+        val acc:impl.Var[_] = ex.tp match {
+          case TypeLong =>
+            val agg:impl.Var[Long] = impl.var_new[Long](impl.unit(0L))
+            expr(e,
+              (v:Rep[_]) => impl.var_assign[Long](agg.asInstanceOf[impl.Var[Long]], impl.numeric_plus[Long](impl.readVar[Long](agg.asInstanceOf[impl.Var[Long]]),v.asInstanceOf[Rep[Long]]))
+            )
+            agg
+          case TypeDouble =>
+            val agg:impl.Var[Double] = impl.var_new[Double](impl.unit(0.0))
+            expr(e,
+              (v:Rep[_]) => impl.var_assign[Double](agg.asInstanceOf[impl.Var[Double]], impl.numeric_plus[Double](impl.readVar[Double](agg.asInstanceOf[impl.Var[Double]]),v.asInstanceOf[Rep[Double]]))
+            )
+            agg
+          case TypeString =>
+            val agg:impl.Var[String] = impl.var_new[String](impl.unit(""))
+            expr(e,
+              (v:Rep[_]) => impl.var_assign[String](agg.asInstanceOf[impl.Var[String]], impl.string_plus(impl.readVar[String](agg.asInstanceOf[impl.Var[String]]),v.asInstanceOf[Rep[String]]))
+            )
+            agg
+          //case TypeDate =>
+          // val agg:impl.Var[java.util.Date] = impl.var_new[java.util.Date](impl.unit(new java.util.Date()))
+          // expr(e,
+          //  (v:Rep[_]) => impl.var_assign[java.util.Date](agg.asInstanceOf[impl.Var[java.util.Date]], impl.numeric_plus[java.util.Date](impl.readVar[java.util.Date](agg.asInstanceOf[impl.Var[java.util.Date]]),v.asInstanceOf[Rep[java.util.Date]])),
+          //  None
+          // )
+          // agg
           case _ => sys.error("Unsupported type "+ex.tp)
         }
-        cx.load(cur); co(impl.readVar(accRes))
+        cx.load(cur)
+        co(impl.readVar(acc))
       } else {
-        implicit val mE=me(agg_keys.map(_._2),ex.tp)
-        val acc = impl.m3temp()(mE)
         val cur = cx.save
 
+        implicit val mE=me(agg_keys.map(_._2),ex.tp)
+        val acc = impl.m3temp()(mE)
         val coAcc = (v:Rep[_]) => {
           val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
           impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))
         }
         expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
         am match {
-          case Some(t) if (t.toSet==agg_keys.toSet) => expr(e,co,am)
+          case Some(t) if t.toSet.subsetOf(agg_keys.toSet) => expr(e,co,am)
           case _ => foreach(acc,agg_keys,a.tp,co)
         }
       }
