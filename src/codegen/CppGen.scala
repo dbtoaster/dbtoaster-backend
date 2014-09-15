@@ -94,15 +94,16 @@ trait ICppGen extends IScalaGen {
       applyFunc(co,fn,tp,as)
     }
     case m@MapRef(n,tp,ks) =>
-      val kswt = (ks zip m.tks) //ks with type
-      val (ko,ki) = kswt.zipWithIndex.partition{case((k,ktp),i)=>ctx.contains(k)}
+      val (ko,ki) = (ks zip m.tks).zipWithIndex.partition{case((k,ktp),i)=>ctx.contains(k)}
       val mapName = m.name
       val mapType = mapName+"_map"
       val mapEntry = mapName+"_entry"
-      if (ki.size==0) {
+      if(ks.size == 0) { // variable
+        if(ctx contains n) co(rn(n)) else co(n)
+      } else if (ki.size==0) {
         val sampleEnt=fresh("se")
         sampleEntDef+=(if(ks.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
-        co((if (ks.size>0) FIND_IN_MAP_FUNC(n)+"("+sampleEnt+".modify("+(ks map rn).mkString(",")+"))" else n)) // all keys are bound
+        co(FIND_IN_MAP_FUNC(n)+"("+sampleEnt+".modify("+(ks map rn).mkString(",")+"))") // all keys are bound
       } else {
         val lup0 = fresh("lkup") //lookup
         val lupItr0 = lup0+"_it"
@@ -113,7 +114,7 @@ trait ICppGen extends IScalaGen {
         val iKeysTp = ko.map(x=>x._1._2)
         val (k0,v0,e0)=(fresh("k"),fresh("v"),fresh("e"))
 
-        ctx.add(kswt.filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
+        ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
 
         if (!m.isTemp) { // slice or foreach
           val mapDef = mapDefs(n)

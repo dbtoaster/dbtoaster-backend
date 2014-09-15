@@ -156,9 +156,9 @@ trait IScalaGen extends CodeGen {
     case m@MapRef(n,tp,ks) =>
       val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
       if(ks.size == 0) { // variable
-        co(rn(n))
+        if(ctx contains n) co(rn(n)) else co(n)
       } else if (ki.size == 0) { // all keys are bound
-        co(n+(if (ks.size>0) ".get("+genTuple(ks map ctx)+")" else ""))
+        co(n+".get("+genTuple(ks map ctx)+")")
       } else { // we need to iterate over all keys not bound (ki)
         val (k0,v0)=(fresh("k"),fresh("v"))
         val sl = if (ko.size > 0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else "" // slice on bound variables
@@ -184,7 +184,9 @@ trait IScalaGen extends CodeGen {
         //D[x] = E[x]
         //
         // will fail without a renaming.
-        case _ => ctx.add(n,(e.tp,fresh("l"))); cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L"),am)
+        case _ =>
+          ctx.add(n,(e.tp,fresh("l")))
+          cpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L"),am)
       }
     // Mul(el,er)
     // ==
@@ -200,12 +202,13 @@ trait IScalaGen extends CodeGen {
           None
         } else {
           var d=1
-          var p=5
+          val pInit="(if (".length
+          var p=pInit
           while(d>0) {
             if (s(p)=='(') d+=1 else if (s(p)==')') d-=1
             p+=1
           }
-          Some(s.substring(5,p-1),s.substring(p+1,s.lastIndexOf("else")-1))
+          Some(s.substring(pInit,p-1),s.substring(p+1,s.lastIndexOf("else")-1))
         }
         def vx(vl:String,vr:String) = if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"
         //pulling out the conditionals from a multiplication
@@ -244,7 +247,8 @@ trait IScalaGen extends CodeGen {
           val s1=cpsExpr(el,co,am)
           ctx.load(cur)
           val s2=cpsExpr(er,co,am)
-          ctx.load(cur); s1+s2
+          ctx.load(cur)
+          s1+s2
         case _ =>
           val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
@@ -252,13 +256,20 @@ trait IScalaGen extends CodeGen {
           val cur = ctx.save
           val s1 = cpsExpr(el,(v:String)=>a0+".add("+genTuple(ks map ctx)+","+v+");\n",tmp); ctx.load(cur)
           val s2 = cpsExpr(er,(v:String)=>a0+".add("+genTuple(ks map ctx)+","+v+");\n",tmp); ctx.load(cur)
-          genVar(a0,ex.tp,a.agg.map(_._2))+s1+s2+cpsExpr(mapRef(a0,ex.tp,a.agg),co)
+
+          genVar(a0,ex.tp,a.agg.map(_._2))+
+          s1+
+          s2+
+          cpsExpr(mapRef(a0,ex.tp,a.agg),co)
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (aks.size==0) {
         val a0=fresh("agg")
-        genVar(a0,ex.tp)+cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+co(a0)
+
+        genVar(a0,a.tp)+
+        cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+
+        co(a0)
       } else am match {
         case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
         case _ =>
@@ -266,18 +277,23 @@ trait IScalaGen extends CodeGen {
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
           val s1 = "val "+a0+" = M3Map.temp["+genTupleDef(aks.map(x=>x._2))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+genTuple(aks.map(x=>ctx(x._1)))+","+v+");\n",tmp);
-          ctx.load(cur); s1+cpsExpr(mapRef(a0,e.tp,aks),co)
+          ctx.load(cur)
+          s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
     case _ => sys.error("Don't know how to generate "+ex)
   }
 
   def genStmt(s:Stmt):String = s match {
-    case StmtMap(m,e,op,oi) => val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("add","=") }
+    case StmtMap(m,e,op,oi) =>
+      val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("add","=") }
       val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
       val init = oi match {
-        case Some(ie) => ctx.load(); cpsExpr(ie,(i:String)=>
-          if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-          else "if ("+m.name+".get("+genTuple(m.keys map ctx)+")==0) "+m.name+".set("+genTuple(m.keys map ctx)+","+i+");\n")
+        case Some(ie) =>
+          ctx.load()
+          cpsExpr(ie,(i:String)=>
+            if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
+            else "if ("+m.name+".get("+genTuple(m.keys map ctx)+")==0) "+m.name+".set("+genTuple(m.keys map ctx)+","+i+");\n"
+          )
         case None => ""
       }
       ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+genTuple(m.keys map ctx)+","+v+")")+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
