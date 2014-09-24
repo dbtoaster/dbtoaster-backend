@@ -297,14 +297,7 @@ trait IScalaGen extends CodeGen {
         case None => ""
       }
       ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+genTuple(m.keys map ctx)+","+v+")")+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
-    case MapDef(n,tp,ks,e) =>
-      ctx.load()
-      // ctx.add(ks.filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
-      // println(" - ctx in mapdef "+n+" is => " + ctx("orders_orderkey"))
-      // val s = 
-      cpsExpr(e,(v:String) => n+(if (ks.size==0) " = "+v else ".set("+genTuple(ks map (k => (k._2,k._1)))+","+v+")")+";\n")
-      // println(" - finish")
-      // s
+    case m@MapDef(_,_,_,_) => "" //nothing to do
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
@@ -424,7 +417,16 @@ trait IScalaGen extends CodeGen {
     val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
     val body = if (lms!=null) lms else {
       val ts = s0.triggers.map(genTrigger(_,s0)).mkString("\n\n") // triggers (need to be generated before maps)
-      val ms = s0.maps.map(genMap).mkString("\n") // maps
+      val ms = s0.maps.map(genMap).mkString("\n") + // maps
+               s0.triggers.flatMap{ t=>
+                 t.stmts.filter{
+                   case MapDef(_,_,_,_) => true
+                   case _ => false
+                 }.map{
+                  case m@MapDef(_,_,_,_) => genMap(m)
+                  case _ => ""
+                 }
+               }.mkString("\n")
       ms+"\n\n"+genQueries(s0.queries)+"\n\n"+ts
     }
     val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
