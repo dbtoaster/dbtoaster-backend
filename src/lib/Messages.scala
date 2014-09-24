@@ -18,6 +18,7 @@ object Messages {
   /** Stream event messages sent by sources to the system. */
   abstract sealed class StreamEvent
   case class TupleEvent(ord:Int,op:TupleOp,stream:String,data:List[Any]) extends StreamEvent { var streamId = 0 } // XXX: serialize stream name as Byte/Int(hashCode?)
+  case class BatchUpdateEvent(ord:Int,stream:String,data:List[List[Any]]) extends StreamEvent { var streamId = 0 } // XXX: serialize stream name as Byte/Int(hashCode?)
   case class StreamInit(timeout:Long=0L) extends StreamEvent // timeout in ms
   case object EndOfStream extends StreamEvent // get snapshot of all query maps and shut the system down
   case class GetSnapshot(view:List[Int]) extends StreamEvent // request a snapshot of some maps

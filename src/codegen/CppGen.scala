@@ -298,7 +298,7 @@ trait ICppGen extends IScalaGen {
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
-  override def genTrigger(t:Trigger):String = {
+  override def genTrigger(t:Trigger, s0:System):String = {
     val (n,as, xActCounter) = t.evt match {
       case EvtReady => ("system_ready_event",Nil,"")
       case EvtAdd(Schema(n,cs)) => ("insert_"+n,cs,"++tN;")
@@ -408,7 +408,7 @@ trait ICppGen extends IScalaGen {
     }.mkString
 
     def genStreamTriggers = s0.triggers.map(t =>
-      genTrigger(t)+"\n"+
+      genTrigger(t,s0)+"\n"+
       (if(t.evt != EvtReady) generateUnwrapFunction(t.evt) else "")
     ).mkString
 

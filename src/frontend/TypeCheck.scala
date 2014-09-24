@@ -15,12 +15,22 @@ object TypeCheck extends (M3.System => M3.System) {
   def addTables(s0:System) = {
     val tabs = s0.sources.filter{!_.stream}.map{ s=>(s.schema.name,s.schema.fields) }.toMap
     var used = Set[String]() // accessed tables
-    def re(e:Expr):Expr = e.replace { case MapRefConst(t,ks) => used+=t; MapRef(t, TypeLong, ks) }
-    def rst(s:Stmt):Stmt = s match { case StmtMap(m,e,op,in) => StmtMap(m,re(e),op,in map re) }
+    def re(e:Expr):Expr = e.replace {
+      case MapRefConst(n,ks) =>
+        used+=n
+        MapRef(n, TypeLong, ks)
+      case d@DeltaMapRefConst(_,ks) =>
+        used+=d.deltaSchema
+        MapRef(d.deltaSchema, TypeLong, ks)
+    }
+    def rst(s:Stmt):Stmt = s match {
+      case StmtMap(m,e,op,in) => StmtMap(m,re(e),op,in map re)
+      case MapDef(n,tp,ks,e) => MapDef(n,tp,ks,re(e))
+    }
     val triggers = s0.triggers.map(t=>Trigger(t.evt,t.stmts map rst))
     val queries = s0.queries.map(q => Query(q.name,re(q.map)))
     val tabMaps = s0.sources.filter{s=> !s.stream && used.contains(s.schema.name) }.map{ so=>
-      val s=so.schema; MapDef(s.name, TypeLong, s.fields, Const(TypeLong,"0L"))
+      val s=so.schema; MapDef(s.name, TypeLong, s.fields, Const(TypeLong,"0L")) 
     }
     System(s0.sources,tabMaps:::s0.maps,queries,triggers)
   }
@@ -35,8 +45,12 @@ object TypeCheck extends (M3.System => M3.System) {
       case Lift(n,e) => Lift(r(n),re(e))
       case AggSum(ks,e) => AggSum(ks map r,re(e))
       case Apply(f,tp,as) => Apply(fn(f),tp,as.map(re))
+      case d@DeltaMapRefConst(_,ks) => MapRef(d.deltaSchema, TypeLong, ks.map(r))
     }
-    def rst(s:Stmt):Stmt = s match { case StmtMap(m,e,op,in) => StmtMap(re(m).asInstanceOf[MapRef],re(e),op,in map re) }
+    def rst(s:Stmt):Stmt = s match {
+      case StmtMap(m,e,op,in) => StmtMap(re(m).asInstanceOf[MapRef],re(e),op,in map re)
+      case MapDef(n,tp,ks,e) => MapDef(n,tp,ks.map(k=>(r(k._1),k._2)),re(e))
+    }
     val sources = s0.sources.map { case Source(st,sch,in,sp,ad) => Source(st,rs(sch),in,sp,ad) }
     val triggers = s0.triggers.map(t => Trigger(t.evt match {
       case EvtAdd(sc) => EvtAdd(rs(sc))
@@ -60,7 +74,10 @@ object TypeCheck extends (M3.System => M3.System) {
       case EvtDel(s) => EvtDel(sch(s))
       case e => e
     },t.stmts))
-    val mtp = triggers.flatMap(t=>t.stmts flatMap { case StmtMap(m,_,_,_)=>List(m) }).map(m=>(m.name,m.tp)).toMap ++
+    val mtp = triggers.flatMap(t=>t.stmts map {
+      case StmtMap(m,_,_,_) => (m.name,m.tp)
+      case MapDef(n,tp,ks,e) => (n,tp)
+    }).toMap ++
               s0.sources.filter{s=> !s.stream}.map{s=>(s.schema.name,TypeLong)}.toMap // constant table are not written
     val maps = s0.maps.map{ m=> val t0=mtp.getOrElse(m.name,null); val t1=m.tp;
       val tp=if (t0==null && t1!=null) t1 else if (t1==null && t0!=null) t0 else {
@@ -86,6 +103,7 @@ object TypeCheck extends (M3.System => M3.System) {
     }
     def rst(s:Stmt,locked:Set[String]=Set()):Stmt = s match {
       case StmtMap(m,e,op,in) => val l=locked++m.keys.toSet; StmtMap(m,re(e,l),op,in map{x=>re(x,l)})
+      case MapDef(n,tp,ks,e) => val l=locked++ks.map(_._1).toSet; MapDef(n,tp,ks,re(e,l))
     }
     val triggers = s0.triggers.map { case Trigger(e,ss) =>
       val locked = e.args.map(_._1).toSet
@@ -146,39 +164,65 @@ object TypeCheck extends (M3.System => M3.System) {
       case _ => err("Bad operands ("+t1+","+t2+"): "+ex)
     }
     //c: context
-    def ie(ex:Expr,c:Map[String,Type]):Map[String,Type] = {
+    def ie(ex:Expr,c:Map[String,Type],t:Option[Trigger]):Map[String,Type] = {
       var cr=c; // new bindings
       ex match { // gives a type to all untyped nodes
-        case m@Mul(l,r) => cr=ie(r,ie(l,c)); m.tp=tpRes(l.tp,r.tp,ex)
+        case m@Mul(l,r) => cr=ie(r,ie(l,c,t),t); m.tp=tpRes(l.tp,r.tp,ex)
         case a@Add(l,r) =>
-          val (fl,fr)=(ie(l,c).filter{x=> !c.contains(x._1)},ie(r,c).filter{x=> !c.contains(x._1)}) // free(l), free(r)
+          val (fl,fr)=(ie(l,c,t).filter{x=> !c.contains(x._1)},ie(r,c,t).filter{x=> !c.contains(x._1)}) // free(l), free(r)
           a.agg=fl.filter{x=>fr.contains(x._1)}.toList // sorted(free(l) & free(r)) : a variable is bound differently in l and r => set union
           cr=c++fl++fr; a.tp=tpRes(l.tp,r.tp,ex);
-        case Cmp(l,r,_) => cr=c++ie(l,c)++ie(r,c); tpRes(l.tp,r.tp,ex)
-        case Exists(e) => cr=ie(e,c)
-        case Lift(n,e) => ie(e,c); c.get(n) match { case Some(t) => try { tpRes(t,e.tp,ex) } catch { case _:Throwable=> err("Value "+n+" lifted as "+t+" compared with "+e.tp) } case None => cr=c+((n,e.tp)) }
+        case Cmp(l,r,_) => cr=c++ie(l,c,t)++ie(r,c,t); tpRes(l.tp,r.tp,ex)
+        case Exists(e) => cr=ie(e,c,t)
+        case Lift(n,e) => ie(e,c,t); c.get(n) match { case Some(t) => try { tpRes(t,e.tp,ex) } catch { case _:Throwable=> err("Value "+n+" lifted as "+t+" compared with "+e.tp) } case None => cr=c+((n,e.tp)) }
         case a@AggSum(ks,e) =>
-          val in=ie(e,c)
+          val in=ie(e,c,t)
           cr=c++ks.map{k=>(k,in(k))}
           a.tks=ks.map(cr)
-        case a@Apply(n,_,as) => as.map(ie(_,c)); a.tp=Library.typeCheck(n,as.map(_.tp))
+        case a@Apply(n,_,as) => as.map(ie(_,c,t)); a.tp=Library.typeCheck(n,as.map(_.tp))
         case r@Ref(n) => r.tp=c(n)
-        case m@MapRef(n,tp,ks) => val mtp=s0.mapType(n); cr=c++(ks zip mtp._1).toMap
-          if (tp==null) m.tp=mtp._2 else if (tp!=mtp._2) err("Bad value type: expected "+mtp._2+", got "+tp+" for "+ex)
-          (ks zip mtp._1).foreach{ case(k,t)=> if(c.contains(k) && t!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
-          m.tks = mtp._1
+        case m@MapRef(n,tp,ks) =>
+          s0.mapType.get(n) match {
+            case Some(mtp) =>
+              cr=c++(ks zip mtp._1).toMap
+              if (tp==null) m.tp=mtp._2 else if (tp!=mtp._2) err("Bad value type: expected "+mtp._2+", got "+tp+" for "+ex)
+              (ks zip mtp._1).foreach{ case(k,t)=> if(c.contains(k) && t!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
+              m.tks = mtp._1
+            case None => if(n.startsWith("DELTA_")) { //delta relation
+              val relName = n.substring("DELTA_".length)
+              val rel = s0.sources.filter(s => s.schema.name == relName)(0)
+              cr=c++rel.schema.fields.toMap
+              if (tp==null) m.tp=TypeLong else if (tp!=TypeLong) err("Bad value type: expected "+TypeLong+", got "+tp+" for "+ex)
+              rel.schema.fields.foreach{ case(k,t)=> if(c.contains(k) && t!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
+              m.tks = rel.schema.fields.map(_._2)
+            } else { //local map def
+              s0.triggers.filter(_ == t.getOrElse(null)).foreach { trig =>
+                trig.stmts.foreach { 
+                  case MapDef(md_n,md_tp,md_ks,md_e) if(md_n == n) =>
+                    cr=c++md_ks.toMap
+                    if (tp==null) m.tp=md_tp else if (tp!=md_tp) err("Bad value type: expected "+md_tp+", got "+tp+" for "+ex)
+                    md_ks.foreach{ case(k,tp)=> if(c.contains(k) && tp!=c(k)) err("Key type ("+k+") mismatch in "+ex) }
+                    m.tks = md_ks.map(_._2)
+                  case _ => //ignore
+                }
+              }
+            } 
+          }
         // Tupling
-        case Tuple(es) => es.foreach(e=>cr=ie(e,cr))
-        case TupleLift(ns,e) => cr=ie(e,c)
+        case Tuple(es) => es.foreach(e=>cr=ie(e,cr,t))
+        case TupleLift(ns,e) => cr=ie(e,c,t)
         case _ =>
       }
       if (ex.tp==null) err("Untyped: "+ex); cr
     }
-    def ist(s:Stmt,b:Map[String,Type]=Map()) = s match { case StmtMap(m,e,op,in) => ie(e,b); in.map(e=>ie(e,b)); ie(m,b) }
-    s0.triggers.foreach { t=> t.stmts foreach (x=>ist(x,t.evt.args.toMap)) }
+    def ist(s:Stmt,b:Map[String,Type]=Map(),t:Option[Trigger]) = s match {
+      case StmtMap(m,e,op,in) => ie(e,b,t); in.map(e=>ie(e,b,t)); ie(m,b,t)
+      case MapDef(n,tp,ks,e) => ie(e,b,t); // XXX ie(MapRef(...),b,t)
+    }
+    s0.triggers.foreach { t=> t.stmts foreach (x=>ist(x,t.evt.args.toMap,Some(t))) }
     s0.queries.foreach {
       q => {
-        val m = ie(q.map,Map())
+        val m = ie(q.map,Map(),None)
         q.tp = q.map.tp
         val (_,ov) = schema(q.map)
         q.keys = ov.map(o => (o, m(o)))

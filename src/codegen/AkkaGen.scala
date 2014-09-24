@@ -244,7 +244,7 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case _ => sys.error("Unimplemented")
   }
 
-  override def genTrigger(t:Trigger):String = { // add pre and deq/ready calls in master's triggers
+  override def genTrigger(t:Trigger, s0:System):String = { // add pre and deq/ready calls in master's triggers
     val (n,as,deq) = t.evt match { case EvtReady=>("SystemReady",Nil,"ready\n") case EvtAdd(Schema(n,cs))=>("Add"+n,cs,"deq\n") case EvtDel(Schema(n,cs))=>("Del"+n,cs,"deq\n") }
     ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val res="def on"+n+"("+as.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ind(close(()=>t.stmts.map(genStmt).mkString+deq))+"\n}"; ctx=null; res
   }

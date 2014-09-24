@@ -297,17 +297,35 @@ trait IScalaGen extends CodeGen {
         case None => ""
       }
       ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+genTuple(m.keys map ctx)+","+v+")")+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
+    case MapDef(n,tp,ks,e) =>
+      ctx.load()
+      // ctx.add(ks.filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
+      // println(" - ctx in mapdef "+n+" is => " + ctx("orders_orderkey"))
+      // val s = 
+      cpsExpr(e,(v:String) => n+(if (ks.size==0) " = "+v else ".set("+genTuple(ks map (k => (k._2,k._1)))+","+v+")")+";\n")
+      // println(" - finish")
+      // s
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
-  def genTrigger(t:Trigger):String = {
+  def genTrigger(t:Trigger, s0:System):String = {
     val (n,as) = t.evt match {
       case EvtReady => ("SystemReady",Nil)
+      case EvtBatchUpdate(Schema(n,cs)) => ("BatchUpdate"+n,cs)
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
-    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val body=t.stmts.map(genStmt).mkString; ctx=null;
-    "def on"+n+"("+as.map(a=>a._1+":"+a._2.toScala).mkString(", ")+") "+(if (body=="") "{ }" else "{\n"+ind(body)+"\n}")
+    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val body=t.stmts.map(genStmt).mkString; ctx=null
+    val params = t.evt match {
+      case EvtBatchUpdate(Schema(n,_)) =>
+        val rel = s0.sources.filter(_.schema.name == n)(0).schema
+        val ks = rel.fields.map(_._2)
+        val tp = TypeLong
+        DeltaMapRefConst(rel.name,Nil).deltaSchema+":M3Map["+genTupleDef(ks)+","+tp.toScala+"]"
+      case _ =>
+        as.map(a=>a._1+":"+a._2.toScala).mkString(", ")
+    }
+    "def on"+n+"("+params+") "+(if (body=="") "{ }" else "{\n"+ind(body)+"\n}")
   }
 
   // Lazy slicing (secondary) indices computation
@@ -333,7 +351,7 @@ trait IScalaGen extends CodeGen {
     // XXX: reduce as much as possible the overhead here to decode data, use Decoder's internals and inline the SourceMux here
     def ev(s:Schema,short:Boolean=true):(String,String,String,List[(String,Type)]) = {
       val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
-      ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(",")+")",genTuple(fs.map { case (v,t) => (t,v) }),"("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
+      (fs.map{case(s,t)=>s.toLowerCase+":"+t.toScala}.mkString(","),genTuple(fs.map { case (v,t) => (t,v) }),"("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
     }
     val step = 128 // periodicity of timeout verification, must be a power of 2
     val skip = "if (t1>0 && (tN&"+(step-1)+")==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=1 } else tN+=1; "
@@ -341,10 +359,18 @@ trait IScalaGen extends CodeGen {
     val str = s0.triggers.map(_.evt match {
       case EvtAdd(s) =>
         val (i,_,o,pl) = ev(s)
-        "case TupleEvent(ord,TupleInsert,\""+s.name+"\","+i+") => "+skip+pp+"onAdd"+s.name+o+"\n"
+        "case TupleEvent(ord,TupleInsert,\""+s.name+"\",List("+i+")) => "+skip+pp+"onAdd"+s.name+o+"\n"
       case EvtDel(s) =>
         val (i,_,o,pl) = ev(s)
-        "case TupleEvent(ord,TupleDelete,\""+s.name+"\","+i+") => "+skip+pp+"onDel"+s.name+o+"\n"
+        "case TupleEvent(ord,TupleDelete,\""+s.name+"\",List("+i+")) => "+skip+pp+"onDel"+s.name+o+"\n"
+      case EvtBatchUpdate(s) =>
+        val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
+        val (i,_,o,pl) = ev(schema)
+        val skip = "if (t1>0 && (tN/"+step+")<((tN+dataList.size)/"+step+")) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=dataList.size } else tN+=dataList.size; "
+        val deltaRel = DeltaMapRefConst(schema.name,Nil).deltaSchema
+        val batch = genMap(MapDef(deltaRel,TypeLong,schema.fields,null))+"\n"+
+                    "  dataList.foreach{ case List("+i+",vv:"+TypeLong.toScala+") => \n    "+deltaRel+".set("+genTuple(schema.fields.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+", vv)\n  }; "
+        "case BatchUpdateEvent(ord,\""+s.name+"\",dataList) => \n  "+skip+"\n  "+pp+"\n  "+batch+"\n  onBatchUpdate"+s.name+"("+deltaRel+")\n"
       case _ => ""
     }).mkString
     val ld0 = s0.sources.filter{s => !s.stream}.map {
@@ -397,7 +423,7 @@ trait IScalaGen extends CodeGen {
     maps=s0.maps.map(m=>(m.name,m)).toMap
     val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
     val body = if (lms!=null) lms else {
-      val ts = s0.triggers.map(genTrigger).mkString("\n\n") // triggers (need to be generated before maps)
+      val ts = s0.triggers.map(genTrigger(_,s0)).mkString("\n\n") // triggers (need to be generated before maps)
       val ms = s0.maps.map(genMap).mkString("\n") // maps
       ms+"\n\n"+genQueries(s0.queries)+"\n\n"+ts
     }

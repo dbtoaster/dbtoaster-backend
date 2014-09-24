@@ -88,6 +88,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
   | "EXISTS" ~> "(" ~> expr <~ ")" ^^ { Exists(_) }
   | mapref
   | ident ~ ("(" ~> repsep(ident, ",") <~ ")") ^^ { case n~f => MapRefConst(n,f) } // only in map declaration
+  | ("(" ~> "DELTA" ~> ident <~ ")") ~ ("(" ~> repsep(ident, ",") <~ ")") ^^ { case n~f => DeltaMapRefConst(n,f) } // only for delta relation in batching
   | ("[" ~> "/" ~> ":" ~> tpe <~ "]") ~ ("(" ~> expr <~ ")") ^^ { case t~e => Apply("/",t,List(e)) }
   | ("[" ~> func <~ ":") ~ (tpe <~ "]") ~ ("(" ~> repsep(expr,",") <~ ")") ^^ { case n~t~as => Apply(n,t,as) }
   | "DATE" ~> "(" ~> expr <~ ")" ^^ { case e => Apply("date",TypeDate,List(e)) }
@@ -112,8 +113,13 @@ object M3Parser extends ExtParser with (String => M3.System) {
   lazy val query = ("DECLARE" ~> "QUERY" ~> ident <~ ":=") ~ expr <~ ";" ^^ { case n~m=>Query(n,m) } | failure("Bad M3 query")
   lazy val trigger = (("ON" ~> ("+"|"-")) ~ ident ~ ("(" ~> rep1sep(ident, ",") <~ ")") ~ ("{" ~> rep(stmt) <~ "}") ^^
                         { case op~n~f~ss=> val s=Schema(n,f.map{(_,null)}); Trigger(if (op=="+") EvtAdd(s) else EvtDel(s),ss) }
-                     | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { Trigger(EvtReady,_) } | failure("Bad M3 trigger"))
-  lazy val stmt = mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~oi~op~e=>StmtMap(m,e,op match { case "+="=>OpAdd case ":="=>OpSet },oi) }
+                     | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { Trigger(EvtReady,_) } | failure("Bad M3 trigger")
+                     | "ON" ~> "BATCH" ~> "UPDATE" ~> "OF" ~> ident ~ ("{" ~> rep(stmt) <~ "}") ^^
+                        { case n~ss=> val s=Schema(n,Nil); Trigger(EvtBatchUpdate(s),ss) })
+  lazy val stmt = (
+      (mapref ~ opt(":" ~> "(" ~> expr <~ ")") ~ ("+="|":=") ~ expr <~ ";" ^^ { case m~oi~op~e=>StmtMap(m,e,op match { case "+="=>OpAdd case ":="=>OpSet },oi) })
+    | map
+  )
 
   lazy val system = rep(source) ~ rep(map) ~ rep(query) ~ rep(trigger) ^^ { case ss~ms~qs~ts => System(ss,ms,qs,ts) }
 

@@ -55,6 +55,7 @@ sealed abstract class EvtTrigger extends Tree { def args=List[(String,Type)](); 
 case object EvtReady extends EvtTrigger { override def toString="SYSTEM READY"; override val evtName="system_ready" }
 case class EvtAdd(schema:Schema) extends EvtTrigger { override def toString="+ "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields; override val evtName="insert_"+schema.name }
 case class EvtDel(schema:Schema) extends EvtTrigger { override def toString="- "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields; override val evtName="delete_"+schema.name }
+case class EvtBatchUpdate(schema:Schema) extends EvtTrigger { override def toString="BATCH UPDATE OF "+schema.name; override def args=Nil; override val evtName="batchupdate_"+schema.name }
 // Cleanup/Failure/Shutdown/Checkpoint
 
 // -----------------------------------------------------------------------------
@@ -96,14 +97,15 @@ object M3 {
   import ddbt.Utils.ind
   case class System(sources:List[Source], maps:List[MapDef], queries:List[Query], triggers:List[Trigger]) extends M3 {
     // String => (List[Type],Type)
-    lazy val mapType = maps.map { m=> (m.name,(m.keys.map{x=>x._2},m.tp)) }.toMap
+    lazy val mapType = (maps.map { m => (m.name,(m.keys.map{x=>x._2},m.tp)) } ++
+                        sources.map { s =>  (DeltaMapRefConst(s.schema.name,Nil).deltaSchema,(s.schema.fields.map{x=>x._2},TypeLong)) }).toMap
     override def toString =
       "-------------------- SOURCES --------------------\n"+sources.mkString("\n\n")+"\n\n"+
       "--------------------- MAPS ----------------------\n"+maps.mkString("\n\n")+"\n\n"+
       "-------------------- QUERIES --------------------\n"+queries.mkString("\n\n")+"\n\n"+
       "------------------- TRIGGERS --------------------\n"+triggers.mkString("\n\n")
   }
-  case class MapDef(name:String, tp:Type, keys:List[(String,Type)], expr:Expr) extends M3 {
+  case class MapDef(name:String, tp:Type, keys:List[(String,Type)], expr:Expr) extends Stmt {
     override def toString="DECLARE MAP "+name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.map{case (n,t)=>n+":"+t}.mkString(",")+"] :=\n"+ind(expr+";")
     def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"
   }
@@ -155,6 +157,7 @@ object M3 {
   case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]"; var tks:List[Type]=Nil; var isTemp:Boolean=false; def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"}
   case class Lift(name:String, e:Expr) extends Expr { override def toString="("+name+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
   case class MapRefConst(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=TypeLong } // appear in Map definition and constant table lookups
+  case class DeltaMapRefConst(schema:String, proj:List[String]) extends Expr { override def toString="(DELTA "+schema+")("+proj.mkString(", ")+")"; val tp=TypeLong; val deltaSchema="DELTA_"+schema } //used for delta relations used while batching is used
   // Operations
   case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+ind(e.toString)+"\n)"; def tp=e.tp; var tks:List[Type]=Nil } // (grouping_keys)->sum relation
   case class Mul(l:Expr,r:Expr) extends Expr { override def toString="("+l+" * "+r+")"; var tp:Type=null } // cross-product semantics
