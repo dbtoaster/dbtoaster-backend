@@ -328,23 +328,6 @@ trait ICppGen extends IScalaGen {
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = map+".add("+keyNamesConcat+",1L)"
 
-  // Generate (1:stream events handling, 2:table loading, 3:global constants declaration)
-  override def genInternals(s0:System,nextSkip:String="context.become(receive_skip)") : (String,String,String) = {
-    // XXX: reduce as much as possible the overhead here to decode data, use Decoder's internals and inline the SourceMux here
-    def ev(s:Schema,short:Boolean=true):(String,String,List[(String,Type)]) = {
-      val fs = if (short) s.fields.zipWithIndex.map{ case ((s,t),i) => ("v"+i,t) } else s.fields
-      ("List("+fs.map{case(s,t)=>s.toLowerCase+":"+t.toCpp}.mkString(",")+")","("+fs.map{case(s,t)=>s.toLowerCase}.mkString(",")+")",fs)
-    }
-    val step = 128 // periodicity of timeout verification, must be a power of 2
-    val skip = "if (t1>0 && (tN&"+(step-1)+")==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=1 } else tN+=1; "
-    val str = s0.triggers.map(_.evt match {
-      case EvtAdd(s) => val (i,o,pl)=ev(s); "case TupleEvent(_,TupleInsert,\""+s.name+"\","+i+") => "+skip+"onAdd"+s.name+o+"\n"
-      case EvtDel(s) => val (i,o,pl)=ev(s); "case TupleEvent(_,TupleDelete,\""+s.name+"\","+i+") => "+skip+"onDel"+s.name+o+"\n"
-      case _ => ""
-    }).mkString
-    (str,"",consts)
-  }
-
   override def toMapFunction(q: Query) = q.name+".toMap"
   override def clearOut = {}
   override def onEndStream = ""
