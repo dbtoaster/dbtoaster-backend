@@ -208,10 +208,21 @@ object Compiler {
             val pl = "srccpp/lib"
             val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
             val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),null,pl))._1; if (t_comp!=null) t_comp(t2)
-            t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
-              val (out,err)=Utils.exec(Array(po),null,null)
-              if (err!="") System.err.println(err); Utils.write(po+"_"+lang+".txt",out); println(out)
-            }})
+            if(t_run != null) {
+              t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
+                val (out,err)=Utils.exec(Array(po),null,null)
+                if (err!="") System.err.println(err); Utils.write(po+"_"+lang+".txt",out); println(out)
+              }})
+            } else {
+              var i=0
+              while (i < samplesAndWarmupRounds) {
+                i+=1
+                val (out,err)=Utils.exec(Array(po),null,null)
+                if (err!="") System.err.println(err)
+                Utils.write(po+"_"+lang+".txt",out)
+                println(out)
+              }
+            }
           }
         case _ => error("Execution not supported for "+lang,true)
       }
