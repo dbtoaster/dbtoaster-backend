@@ -27,6 +27,7 @@ object Compiler {
   val M3_FILE_SUFFIX = ".m3"
 
   var frontend_path_bin:String = null // the path to DBToaster's frontend
+  var batching_enabled:Boolean = false// determines whether batching is enabled or not
   var in   : List[String] = Nil  // input files
   var out  : String = null       // output file (defaults to stdout)
   var lang : String = null       // output language
@@ -52,7 +53,7 @@ object Compiler {
 
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(0); null }
   def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
-    val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f)) ::: (if (!opts.isEmpty) opts.toList else in)
+    val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f)) ::: (if (!opts.isEmpty) opts.toList else in) ::: (if(batching_enabled) List("--batch") else Nil )
     val repo = if (Utils.path_repo!=null && !opts.isEmpty) new File(Utils.path_repo) else null
     val (t0,(m3,err)) = Utils.ns(()=>Utils.exec(((if(frontend_path_bin == null) Utils.path_bin else frontend_path_bin) :: os).toArray,repo,fatal=false))
     if (err.trim!="") { val e=new Exception("dbtoaster "+os.mkString(" ")+" failed because:\n"+err); e.setStackTrace(Array()); throw e }
@@ -67,6 +68,7 @@ object Compiler {
       args(i) match {
         case "-l" => eat(s=>s match { case LANG_CALC|LANG_M3|LANG_SCALA|LANG_CPP|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS|LANG_AKKA => lang=s; case _ => error("Unsupported language: "+s,true) },true)
         case "--frontend" => eat(s=>frontend_path_bin=s)
+        case "--batch" => batching_enabled = true
         case "-o" => eat(s=>out=s)
         case "-c" => eat(s=>cPath=s)
         case "-n" => eat(s=>{ val p=s.lastIndexOf('.'); if (p!= -1) { pkg=s.substring(0,p); name=s.substring(p+1) } else name=s})
