@@ -14,7 +14,7 @@ import ddbt.lib._
 
 object Axfinder3 {
   import Helper._
-  def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>runLocal[Axfinder3Master,Axfinder3Worker](args)(Seq(
+  def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long,b:Int)=>runLocal[Axfinder3Master,Axfinder3Worker](args)(Seq(
     (new java.io.FileInputStream("/Documents/EPFL/Data/cornell_db_maybms/dbtoaster/experiments/data/finance/"+d+"/finance.csv"),new Adaptor.OrderBook(brokers=10,deterministic=true,bids="BIDS",asks="ASKS"),Split())
   ),p,t),f)
   def main(args:Array[String]) {
