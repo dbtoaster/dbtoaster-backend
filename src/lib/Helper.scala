@@ -30,15 +30,15 @@ object Helper {
     val to=akka.util.Timeout(if (timeout<=0) (1L << 42) /*139 years*/ else timeout+200000)
     Await.result(akka.pattern.ask(actor,msg)(to), to.duration).asInstanceOf[T]
   }
-  def mux(actor:ActorRef,streams:Streams,parallel:Int=0,timeout:Long=0L) = {
-    val mux = SourceMux((ev:TupleEvent)=>{ actor ! ev },streams.map {case (in,ad,sp) => (in,ad,sp)},parallel)
+  def mux(actor:ActorRef,streams:Streams,parallel:Int=0,timeout:Long=0L,batchSize:Int=0) = {
+    val mux = SourceMux((ev:InputEvent)=>{ actor ! ev },streams.map {case (in,ad,sp) => (in,ad,sp)},parallel,batchSize)
     actor ! StreamInit(timeout); mux.read(); askWait[(StreamStat,List[Any])](actor,EndOfStream,timeout)
   }
 
-  def run[Q<:akka.actor.Actor](streams:Streams,parallel:Int=0,timeout:Long=0L)(implicit cq:ClassTag[Q]) = {
+  def run[Q<:akka.actor.Actor](streams:Streams,parallel:Int=0,timeout:Long=0L,batchSize:Int=0)(implicit cq:ClassTag[Q]) = {
     val system = actorSys()
     val query = system.actorOf(Props[Q],"Query")
-    try { mux(query,streams,parallel,timeout); } finally { system.shutdown }
+    try { mux(query,streams,parallel,timeout,batchSize); } finally { system.shutdown }
   }
 
   // ---------------------------------------------------------------------------
@@ -99,15 +99,16 @@ object Helper {
     val mode = ad("-m",-1,x=>x.toInt)
     val timeout = ad("-t",0L,x=>x.toLong)
     val parallel = ad("-p",2,x=>x.toInt)
+    val batchSize = ad("-b",0,x=>x.toInt)
     var ds = args.filter(x=>x.startsWith("-d")).map(x=>x.substring(2)); if (ds.size==0) ds=Array("standard")
-    (num, mode, timeout, parallel, ds)
+    (num, mode, timeout, parallel, ds, batchSize)
   }
-  def bench(args:Array[String],run:(String,Int,Long)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
-    val (num, mode, timeout, parallel, ds) = extractExecArgs(args)
+  def bench(args:Array[String],run:(String,Int,Long,Int)=>(StreamStat,List[Any]),op:List[Any]=>Unit=null) {
+    val (num, mode, timeout, parallel, ds, batchSize) = extractExecArgs(args)
     if (mode < 0) println("Java "+System.getProperty("java.version")+", Scala "+util.Properties.versionString.replaceAll(".* ",""))
     ds.foreach { d=> var i=0; var res0:List[Any]=null
       while (i < num) { i+=1;
-        val (t,res)=run(d,parallel,timeout);
+        val (t,res)=run(d,parallel,timeout,batchSize);
         if (t.skip==0) {
           if (res0==null)
             res0=res
@@ -167,7 +168,7 @@ object Helper {
 
   def loadCSV[K,V](kv:List[Any]=>(K,V),file:String,fmt:String,sep:String=","):Map[K,V] = {
     val m = new java.util.HashMap[K,V]()
-    def f(e:TupleEvent) = { val (k,v)=kv(e.data); m.put(k,v) }
+    def f(e:InputEvent) = { val (k,v)=kv(e.asInstanceOf[TupleEvent].data); m.put(k,v) }
     val s = SourceMux(f,Seq((new java.io.FileInputStream(file),new Adaptor.CSV("REF",fmt,sep),Split())))
     s.read; scala.collection.JavaConversions.mapAsScalaMap(m).toMap
   }

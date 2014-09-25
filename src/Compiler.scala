@@ -44,6 +44,7 @@ object Compiler {
   var exec_dir: String  = null   // execution classpath
   var exec_sc : Boolean = false  // compile using fsc / external scalac
   var exec_vm : Boolean = false  // execute in a fresh JVM
+  // var exec_bs : Int     = 0      // execute as batches of certain size
 
   // Print the time and the number of tuples processed every X tuples (0 = disable printing)
   var printProgress = 0
@@ -79,7 +80,8 @@ object Compiler {
         case "-xa" => eat(s=>exec_args=exec_args:::List(s))
         case "-xsc" => exec_sc=true;
         case "-xvm" => exec_vm=true;
-        case "-pp" => eat(i => printProgress = i.toInt);
+        case "-xbs" => eat{i => val exec_bs = i.toInt; exec_args=exec_args:::List("-b"+exec_bs)}
+        case "-pp" => eat(i => printProgress = i.toInt)
         case s if s.matches("-O[123]") => optm3=s;
         case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
         case s => in = in ::: List(s)
@@ -162,6 +164,7 @@ object Compiler {
       val (qns,qss) = (m3.queries.map{q=>q.name},scala.collection.mutable.HashMap[String,Stmt]())
       val triggers=m3.triggers.map(t=>Trigger(t.evt,t.stmts.filter {
         case s@StmtMap(m,e,op,i) => if (qns.contains(m.name)) { qss += ((m.name,s)); false } else true
+        // case case MapDef(n,tp,ks,e) => XXXXXX
         case _ => true
       }))
       val r = cg.pkgWrapper(pkg,cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__execute__",Nil)), qss.map(_._2).toList)::triggers)))
@@ -193,7 +196,7 @@ object Compiler {
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
           Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
-          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets) = ddbt.lib.Helper.extractExecArgs(exec_args.toArray)
+          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets,batchSize) = ddbt.lib.Helper.extractExecArgs(exec_args.toArray)
           datasets.foreach{ dataset =>
             def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
             val srcTmp=Utils.read(out).replace("standard",dataset)

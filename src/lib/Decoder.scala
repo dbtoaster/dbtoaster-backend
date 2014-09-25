@@ -1,7 +1,8 @@
 package ddbt.lib
 import Messages._
 import scala.collection.mutable.PriorityQueue
-
+import scala.collection.mutable.HashMap
+import scala.collection.mutable.ArrayBuffer
 /**
  * These class helps creating a stream of events from a record data.
  * The data format is defined in terms of records and fields in the record:
@@ -20,7 +21,7 @@ import scala.collection.mutable.PriorityQueue
  */
 
 /* Decode a tuple by splitting binary data, decoding it and calling f on each generated event */
-case class Decoder(f:TupleEvent=>Unit,adaptor:Adaptor=Adaptor("ORDERBOOK",Nil),splitter:Split=Split()) {
+case class Decoder(f:InputEvent=>Unit,adaptor:Adaptor=Adaptor("ORDERBOOK",Nil),splitter:Split=Split()) {
   private var data=Array[Byte]()
   def add(b:Array[Byte],n:Int) { if (n<=0) return;
     val l=data.length; val d=new Array[Byte](l+n);
@@ -162,7 +163,41 @@ object Adaptor {
  *   and usually small, so thread switching penalty should be low.
  */
 import java.io.InputStream
-case class SourceMux(f:TupleEvent=>Unit,streams:Seq[(InputStream,Adaptor,Split)],parallel:Int=0,bufferSize:Int=32*1024) {
+case class SourceMux(g:InputEvent=>Unit,streams:Seq[(InputStream,Adaptor,Split)],parallel:Int=0,batchSize:Int=0,bufferSize:Int=32*1024) {
+  var batches = new HashMap[String,ArrayBuffer[TupleEvent]]
+  private def f(e:InputEvent) {
+    def callG(stream:String, batch:ArrayBuffer[TupleEvent]) {
+      g(BatchUpdateEvent(batch(0).ord,stream,batch.map{e => e.data :+ (e.asInstanceOf[TupleEvent].op match {
+        case TupleInsert => 1L
+        case TupleDelete => -1L
+        case _ => sys.error("Unsupported event")
+      })}.toList))
+    }
+    if(e == null) {
+      batches.foreach { case (stream, batch) =>
+        if(!batch.isEmpty) {
+          callG(stream,batch)
+          batch.clear
+        }
+      }
+    } else if(batchSize==0 || batchSize==1) {
+      g(e)
+    } else {
+      val te = e.asInstanceOf[TupleEvent]
+      batches.get(te.stream) match {
+        case Some(batch) =>
+          batch += te
+          if(batchSize > 0 && batch.size >= batchSize) {
+            callG(te.stream,batch)
+            batch.clear
+          }
+        case None =>
+          val newBatch = if(batchSize > 0) new ArrayBuffer[TupleEvent](batchSize) else new ArrayBuffer[TupleEvent]
+          newBatch += te
+          batches += (te.stream -> newBatch)
+      }
+    }
+  }
   private def read1(in:InputStream,d:Decoder) {
     val buf = new Array[Byte](bufferSize)
     var n:Int = 0
@@ -172,34 +207,37 @@ case class SourceMux(f:TupleEvent=>Unit,streams:Seq[(InputStream,Adaptor,Split)]
 
   // Preload in deterministic alternating order
   import java.util.LinkedList
-  private val que : PriorityQueue[TupleEvent] = new PriorityQueue[TupleEvent]()(Ordering.by(-_.ord))
-  private val queuedTuplesFromStreams = new Array[Int](streams.length)
-  private def processQ(streamId:Int, e:TupleEvent) = que.synchronized {
-    e.streamId = streamId
-    que.enqueue(e)
-    queuedTuplesFromStreams(streamId) += 1
-    var i = queuedTuplesFromStreams.min
-    while((i > 0) && que.nonEmpty) {
-      i -= 1
-      val e1 = que.dequeue()
-      queuedTuplesFromStreams(e1.streamId) -= 1
-      f(e1)
-    }
+  private val que : PriorityQueue[InputEvent] = new PriorityQueue[InputEvent]()(Ordering.by(-_.ord))
+  // private val queuedTuplesFromStreams = new Array[Int](streams.length)
+  // private def processQ(streamId:Int, e:InputEvent) = que.synchronized {
+  //   e.streamId = streamId
+  //   que.enqueue(e)
+  //   queuedTuplesFromStreams(streamId) += 1
+  //   var i = queuedTuplesFromStreams.min
+  //   while((i > 0) && que.nonEmpty) {
+  //     i -= 1
+  //     val e1 = que.dequeue()
+  //     queuedTuplesFromStreams(e1.streamId) -= 1
+  //     f(e1)
+  //   }
+  // }
+
+  private def processQTail = {
+    while(que.nonEmpty) f(que.dequeue())
+    f(null)
   }
 
-  private def processQTail = while(que.nonEmpty) f(que.dequeue())
-
-  private var lst : LinkedList[TupleEvent] = null
+  private var lst : LinkedList[InputEvent] = null
   if (parallel==2) {
-    lst=new LinkedList[TupleEvent]()
-    val qq = new LinkedList[LinkedList[TupleEvent]]()
-    streams.foreach { case (in,adp,splt) => val iq=new LinkedList[TupleEvent]; read1(in,Decoder((e:TupleEvent)=>iq.offer(e),adp,splt)); qq.offer(iq) }
+    lst=new LinkedList[InputEvent]()
+    val qq = new LinkedList[LinkedList[InputEvent]]()
+    streams.foreach { case (in,adp,splt) => val iq=new LinkedList[InputEvent]; read1(in,Decoder((e:InputEvent)=>iq.offer(e),adp,splt)); qq.offer(iq) }
     var p=qq.poll; while (p!=null) { val e=p.poll; if (e!=null) { if(e.ord == 0) lst.offer(e) else que.enqueue(e); qq.offer(p) }; p=qq.poll }
   }
   def read() = {
     parallel match {
-      case 0 => streams.foreach { case (in,adp,splt) => read1(in,Decoder((e:TupleEvent)=>if(e.ord == 0) f(e) else que.enqueue(e),adp,splt)) }
-      // case 1 => val ts = streams.zipWithIndex.map { case ((in,adp,splt),i) => new Thread{ override def run() { read1(in,Decoder((e:TupleEvent)=>if(e.ord == 0) f(e) else processQ(i,e),adp,splt)); queuedTuplesFromStreams(i) = Int.MaxValue }} }
+      case 0 => streams.foreach { case (in,adp,splt) => read1(in,Decoder((e:InputEvent)=>if(e.ord == 0) f(e) else que.enqueue(e),adp,splt)) }
+      // case 1 => val ts = streams.zipWithIndex.map { case ((in,adp,splt),i) => new Thread{ override def run() { read1(in,Decoder((e:InputEvent)=>if(e.ord == 0) f(e) else processQ(i,e),adp,splt)); queuedTuplesFromStreams(i) = Int.MaxValue }} }
       //           ts.foreach(_.start); ts.foreach(_.join)
       case 2 => var e=lst.poll; while (e!=null) { f(e); e=lst.poll }
       case _ => sys.error("Unsupported parallel mode")

@@ -356,14 +356,24 @@ trait IScalaGen extends CodeGen {
       case EvtDel(s) =>
         val (i,_,o,pl) = ev(s)
         "case TupleEvent(ord,TupleDelete,\""+s.name+"\",List("+i+")) => "+skip+pp+"onDel"+s.name+o+"\n"
-      case EvtBatchUpdate(s) =>
+      case b@EvtBatchUpdate(s) =>
         val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
         val (i,_,o,pl) = ev(schema)
-        val skip = "if (t1>0 && (tN/"+step+")<((tN+dataList.size)/"+step+")) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=dataList.size } else tN+=dataList.size; "
+        val batchSkip = "if (t1>0 && (tN/"+step+")<((tN+dataList.size)/"+step+")) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=dataList.size } else tN+=dataList.size; "
         val deltaRel = DeltaMapRefConst(schema.name,Nil).deltaSchema
-        val batch = genMap(MapDef(deltaRel,TypeLong,schema.fields,null))+"\n"+
+        val batch = deltaRel+".clear\n"+
                     "  dataList.foreach{ case List("+i+",vv:"+TypeLong.toScala+") => \n    "+deltaRel+".set("+genTuple(schema.fields.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+", vv)\n  }; "
-        "case BatchUpdateEvent(ord,\""+s.name+"\",dataList) => \n  "+skip+"\n  "+pp+"\n  "+batch+"\n  onBatchUpdate"+s.name+"("+deltaRel+")\n"
+        val singleAdd = deltaRel+".clear\n"+
+                    "  "+deltaRel+".set("+genTuple(schema.fields.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+",  1L); "
+        val singleDel = deltaRel+".clear\n"+
+                    "  "+deltaRel+".set("+genTuple(schema.fields.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+", -1L); "
+        "case BatchUpdateEvent(ord,\""+s.name+"\",dataList) => \n  "+batchSkip+"\n  "+pp+"\n  "+batch+"\n  onBatchUpdate"+s.name+"("+deltaRel+")\n"+
+        (if(hasOnlyBatchProcessingForAdd(s0,b))
+           "case TupleEvent(ord,TupleInsert,\""+s.name+"\",List("+i+")) => \n  "+skip+"\n  "+pp+"\n  "+singleAdd+"\n  onBatchUpdate"+s.name+"("+deltaRel+")\n"
+         else "")+
+        (if(hasOnlyBatchProcessingForDel(s0,b))
+           "case TupleEvent(ord,TupleDelete,\""+s.name+"\",List("+i+")) => \n  "+skip+"\n  "+pp+"\n  "+singleDel+"\n  onBatchUpdate"+s.name+"("+deltaRel+")\n"
+         else "")
       case _ => ""
     }).mkString
     val ld0 = s0.sources.filter{s => !s.stream}.map {
@@ -374,6 +384,18 @@ trait IScalaGen extends CodeGen {
       }
     }.mkString("\n");
     (str,ld0,consts)
+  }
+
+  def hasOnlyBatchProcessingForAdd(s0:System, evt:EvtBatchUpdate) = s0.triggers.forall{ t => t.evt match {
+      case EvtAdd(s) if(evt.schema.name == s.name) => false
+      case _ => true
+    }
+  }
+
+  def hasOnlyBatchProcessingForDel(s0:System, evt:EvtBatchUpdate) = s0.triggers.forall{ t => t.evt match {
+      case EvtDel(s) if(evt.schema.name == s.name) => false
+      case _ => true
+    }
   }
 
   def genQueries(queries:List[Query]) = {
@@ -440,6 +462,13 @@ trait IScalaGen extends CodeGen {
     "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
     "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
     pp+
+    s0.triggers.map(_.evt match {
+      case EvtBatchUpdate(s) =>
+        val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
+        val deltaRel = DeltaMapRefConst(schema.name,Nil).deltaSchema
+        genMap(MapDef(deltaRel,TypeLong,schema.fields,null))+"\n"
+      case _ => ""
+    }).mkString+
     "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap+" case _ => tS+=1 }\n"+
     "def receive = {\n"+ind(str+
       "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+
@@ -480,7 +509,7 @@ trait IScalaGen extends CodeGen {
   private def helper(s0:System) =
     "import ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" {\n"+ind("import Helper._\nval precision = 7; // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)\nval diff_p = Math.pow(0.1,precision)\n"+getEntryDefinitions+"\n"+
-    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long)=>run["+cls+"]("+streams(s0.sources)+",p,t),f)\n\n"+
+    "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long,b:Int)=>run["+cls+"]("+streams(s0.sources)+",p,t,b),f)\n\n"+
     "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
     ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
     "\n})")+"\n}")+"\n}\n"
