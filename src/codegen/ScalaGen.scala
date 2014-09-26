@@ -439,16 +439,23 @@ trait IScalaGen extends CodeGen {
     val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
     val body = if (lms!=null) lms else {
       val ts = s0.triggers.map(genTrigger(_,s0)).mkString("\n\n") // triggers (need to be generated before maps)
-      val ms = s0.maps.map(genMap).mkString("\n") + // maps
-               s0.triggers.flatMap{ t=>
+      val ms = s0.triggers.map(_.evt match { //delta relations
+                 case EvtBatchUpdate(s) =>
+                   val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
+                   val deltaRel = DeltaMapRefConst(schema.name,Nil).deltaSchema
+                   genMap(MapDef(deltaRel,TypeLong,schema.fields,null))+"\n"
+                 case _ => ""
+               }).mkString +
+               s0.triggers.flatMap{ t=> //local maps
                  t.stmts.filter{
                    case MapDef(_,_,_,_) => true
                    case _ => false
                  }.map{
-                  case m@MapDef(_,_,_,_) => genMap(m)
+                  case m@MapDef(_,_,_,_) => genMap(m)+"\n"
                   case _ => ""
                  }
-               }.mkString("\n")
+               }.mkString +
+               s0.maps.map(genMap).mkString("\n") // maps
       ms+"\n\n"+genQueries(s0.queries)+"\n\n"+ts
     }
     val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
@@ -462,13 +469,6 @@ trait IScalaGen extends CodeGen {
     "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
     "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
     pp+
-    s0.triggers.map(_.evt match {
-      case EvtBatchUpdate(s) =>
-        val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
-        val deltaRel = DeltaMapRefConst(schema.name,Nil).deltaSchema
-        genMap(MapDef(deltaRel,TypeLong,schema.fields,null))+"\n"
-      case _ => ""
-    }).mkString+
     "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap+" case _ => tS+=1 }\n"+
     "def receive = {\n"+ind(str+
       "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+
