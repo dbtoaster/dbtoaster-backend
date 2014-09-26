@@ -30,7 +30,9 @@ object M3ParserTest {
       // java.lang.System.err.println(m3)
       // java.lang.System.err.println("===========================")
     } else {
-      System.err.println("Pass your m3 file path as the parameter.")
+      // System.err.println("Pass your m3 file path as the parameter.")
+      System.err.println("Usage:")
+      System.err.println("test:run-main ddbt.test.M3ParserTest /path/to/your/m3/file.m3")
     }
   }
 }
