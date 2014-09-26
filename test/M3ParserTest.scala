@@ -21,8 +21,8 @@ object M3ParserTest {
       Compiler.exec = true
       Compiler.exec_sc = true
       Compiler.exec_vm = true
-      Compiler.exec_bs = BATCH_SIZE
-      Compiler.exec_args = "-n1" :: "-b"+Compiler.exec_bs :: "-p2" /*:: "-m1"*/ :: "-dstandard" :: Nil
+      // Compiler.exec_bs = BATCH_SIZE
+      Compiler.exec_args = "-n1" :: "-b"+BATCH_SIZE :: "-p2" /*:: "-m1"*/ :: "-dstandard" :: Nil
       Compiler.out = "tpch3Test.Scala"
       Compiler.compile(m3_src)
       // val m3 = Compiler.postProc((M3Parser andThen TypeCheck) (m3_src))
