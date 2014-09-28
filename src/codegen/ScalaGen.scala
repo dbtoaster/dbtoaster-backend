@@ -380,7 +380,7 @@ trait IScalaGen extends CodeGen {
       s => {
         val (in,ad,sp) = genStream(s)
         val (i,o,_,pl) = ev(s.schema)
-        "SourceMux({ case TupleEvent(ord,TupleInsert,rn,"+i+")=>"+genInitializationFor(s.schema.name,pl,o)+" }, Seq(("+in+","+ad+","+sp+"))).read;" 
+        "SourceMux({ case TupleEvent(ord,TupleInsert,rn,List("+i+"))=>"+genInitializationFor(s.schema.name,pl,o)+" }, Seq(("+in+","+ad+","+sp+"))).read;" 
       }
     }.mkString("\n");
     (str,ld0,consts)
