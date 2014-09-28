@@ -46,6 +46,7 @@ object UnitTest {
   var modes = List[String]() // selected modes
   var datasets = List[String]() // selected datasets
   var q_f = (s:String)=>true // query filter (sql file name)
+  var exec_bs : Int     = 0  // execute as batches of certain size
 
   def parseArgs(args:Array[String]) {
     import scala.collection.mutable.{Set=>MSet}
@@ -71,6 +72,7 @@ object UnitTest {
       case "-dump" => eat(s=>dumpFile=s)
       case "-cache" => cache=true
       case "-noreplace" => replaceQuery=false
+      case "-b" => eat(i => exec_bs = i.toInt)
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
         e("Zeus mode:")
@@ -95,6 +97,7 @@ object UnitTest {
         e("  -csv <file>   store benchmark results in a file")
         e("  -dump <file>  dump raw benchmark samples in a file")
         e("  -cache        enable M3 cache")
+        e("  -b <n>        execute as batches of certain size")
         e("  -noreplace    disable replacing generated trigger programs, if any exists")
         e("")
         e("Other options are forwarded to the compiler:")
@@ -247,7 +250,7 @@ object UnitTest {
     Compiler.exec = benchmark
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    Compiler.exec_args = "-b"+exec_bs :: "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run))
     p.close
     // Append correctness spec and move to test/gen/
@@ -292,7 +295,7 @@ object UnitTest {
     Compiler.exec = benchmark
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = Compiler.exec_args ::: "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    Compiler.exec_args = "-b"+exec_bs :: "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run))
     p.close
     // Append correctness spec and move to test/gen/

@@ -45,7 +45,7 @@ object Compiler {
   var exec_dir: String  = null   // execution classpath
   var exec_sc : Boolean = false  // compile using fsc / external scalac
   var exec_vm : Boolean = false  // execute in a fresh JVM
-  // var exec_bs : Int     = 0      // execute as batches of certain size
+  var exec_bs : Int     = 0      // execute as batches of certain size
 
   // Print the time and the number of tuples processed every X tuples (0 = disable printing)
   var printProgress = 0
@@ -82,7 +82,7 @@ object Compiler {
         case "-xa" => eat(s=>exec_args=exec_args:::List(s))
         case "-xsc" => exec_sc=true;
         case "-xvm" => exec_vm=true;
-        case "-xbs" => eat{i => val exec_bs = i.toInt; exec_args=exec_args:::List("-b"+exec_bs)}
+        case "-xbs" => eat{i => exec_bs = i.toInt; batching_enabled = true}
         case "-pp" => eat(i => printProgress = i.toInt)
         case s if s.matches("-O[123]") => optm3=s;
         case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
@@ -118,6 +118,7 @@ object Compiler {
       // error("  -xd <path>    destination for generated binaries")
       // error("  -xsc          use external fsc/scalac compiler")
       // error("  -xvm          execute in a new JVM instance")
+      // error("  -xbs          execute as batches of certain size")
       // error("  -xa <arg>     pass an argument to generated program")
       error("", true) //exit the application
     }
@@ -196,9 +197,9 @@ object Compiler {
     if (exec) {
       lang match {
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
-          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,exec_args.toArray,exec_vm)
+          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,(List("-b"+exec_bs):::exec_args).toArray,exec_vm)
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
-          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets,batchSize) = ddbt.lib.Helper.extractExecArgs(exec_args.toArray)
+          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets,batchSize) = ddbt.lib.Helper.extractExecArgs((List("-b"+exec_bs):::exec_args).toArray)
           datasets.foreach{ dataset =>
             def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
             val srcTmp=Utils.read(out).replace("standard",dataset)
