@@ -16,12 +16,12 @@ object M3ParserTest {
       val source = scala.io.Source.fromFile(m3File)
       val m3_src = if (Utils.path_repo!=null) source.mkString.replaceAll("../../experiments/data",new File(Utils.path_repo).getParentFile.getParent+"/experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)") else source.mkString
       source.close()
-      Compiler.lang = Compiler.LANG_SCALA
+      Compiler.lang = Compiler.LANG_SCALA_LMS
       Compiler.name = "Query"
       Compiler.exec = true
       Compiler.exec_sc = true
       Compiler.exec_vm = true
-      // Compiler.exec_bs = BATCH_SIZE
+      Compiler.exec_bs = BATCH_SIZE
       Compiler.exec_args = "-n1" :: "-b"+BATCH_SIZE :: "-p2" /*:: "-m1"*/ :: "-dstandard" :: Nil
       Compiler.out = "tpch3Test.Scala"
       Compiler.compile(m3_src)

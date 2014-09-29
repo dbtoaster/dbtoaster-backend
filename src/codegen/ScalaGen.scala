@@ -308,7 +308,9 @@ trait IScalaGen extends CodeGen {
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
-    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap); val body=t.stmts.map(genStmt).mkString; ctx=null
+    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap)
+    val body=t.stmts.map(genStmt).mkString
+    ctx=null
     val params = t.evt match {
       case EvtBatchUpdate(Schema(n,_)) =>
         val rel = s0.sources.filter(_.schema.name == n)(0).schema
@@ -362,11 +364,12 @@ trait IScalaGen extends CodeGen {
         val batchSkip = "if (t1>0 && (tN/"+step+")<((tN+dataList.size)/"+step+")) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=dataList.size } else tN+=dataList.size; "
         val deltaRel = DeltaMapRefConst(schema.name,Nil).deltaSchema
         val batch = deltaRel+".clear\n"+
-                    "  dataList.foreach{ case List("+i+",vv:"+TypeLong.toScala+") => \n    "+deltaRel+".set("+genTuple(schema.fields.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+", vv)\n  }; "
+                    "  dataList.foreach{ case List("+i+",vv:"+TypeLong.toScala+") => \n    "+
+                         deltaRel+"."+genBatchTupleRec(deltaRel,schema.fields,"vv")+"\n  }; "
         val singleAdd = deltaRel+".clear\n"+
-                    "  "+deltaRel+".set("+genTuple(schema.fields.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+",  1L); "
+                    "  "+deltaRel+"."+genBatchTupleRec(deltaRel,schema.fields," 1L")+"; "
         val singleDel = deltaRel+".clear\n"+
-                    "  "+deltaRel+".set("+genTuple(schema.fields.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+", -1L); "
+                    "  "+deltaRel+"."+genBatchTupleRec(deltaRel,schema.fields,"-1L")+"; "
         "case BatchUpdateEvent(ord,\""+s.name+"\",dataList) => \n  "+batchSkip+"\n  "+pp+"\n  "+batch+"\n  onBatchUpdate"+s.name+"("+deltaRel+")\n"+
         (if(hasOnlyBatchProcessingForAdd(s0,b))
            "case TupleEvent(ord,TupleInsert,\""+s.name+"\",List("+i+")) => \n  "+skip+"\n  "+pp+"\n  "+singleAdd+"\n  onBatchUpdate"+s.name+"("+deltaRel+")\n"
@@ -385,6 +388,8 @@ trait IScalaGen extends CodeGen {
     }.mkString("\n");
     (str,ld0,consts)
   }
+
+  def genBatchTupleRec(name:String, keys:List[(String,Type)], value:String) = "set("+genTuple(keys.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+",  "+value+")"
 
   def hasOnlyBatchProcessingForAdd(s0:System, evt:EvtBatchUpdate) = s0.triggers.forall{ t => t.evt match {
       case EvtAdd(s) if(evt.schema.name == s.name) => false

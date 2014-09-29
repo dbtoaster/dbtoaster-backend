@@ -206,18 +206,46 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
   }
 
   // Trigger code generation
-  def genTriggerLMS(t:Trigger) = {
+  def genTriggerLMS(t:Trigger, s0:System) = {
     val (name,args) = t.evt match {
       case EvtReady => ("SystemReady",Nil)
+      case EvtBatchUpdate(Schema(n,cs)) => ("BatchUpdate"+n,cs)
       case EvtAdd(Schema(n,cs)) => ("Add"+n,cs)
       case EvtDel(Schema(n,cs)) => ("Del"+n,cs)
     }
 
+    var params = ""
     val block = impl.reifyEffects {
+      params = t.evt match {
+        case EvtBatchUpdate(Schema(n,_)) =>
+          val rel = s0.sources.filter(_.schema.name == n)(0).schema
+          val name = DeltaMapRefConst(rel.name,Nil).deltaSchema
+          
+          name+":Store["+impl.codegen.storeEntryType(ctx0(name)._1)+"]"
+        case _ =>
+          args.map(a=>a._1+":"+a._2.toScala).mkString(", ")
+      }
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
         ctx0.map{ case (name,(sym,keys,tp)) => (name, sym) }.toList union
-        args.map{ case (name,tp) => (name,impl.named(name,tp)) }
+        {
+          t.evt match {
+            case EvtBatchUpdate(Schema(n,_)) =>
+              // val rel = s0.sources.filter(_.schema.name == n)(0).schema
+              // val ks = rel.fields.map(_._2)
+              // val tp = TypeLong
+              // val name = DeltaMapRefConst(rel.name,Nil).deltaSchema
+
+              // val m = me(ks,tp)
+              // val sc=impl.named(name,true)(manStore(m))
+              // impl.collectStore(sc)(m)
+
+              // List(name -> sc)
+              Nil
+            case _ =>
+              args.map{ case (name,tp) => (name,impl.named(name,tp)) }
+          }
+        }
       ).toMap)
       // Execute each statement
       t.stmts.map {
@@ -247,11 +275,16 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
               op match { case OpAdd => impl.m3add(mm, ent)(mE) case OpSet => impl.m3set(mm, ent)(mE) }
             }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
           }
+        case m@MapDef(name,tp,keys,_) =>
+          // val m = me(keys.map(_._2),tp)
+          // val s=impl.named(name,true)(manStore(m))
+          // impl.collectStore(s)(m)
+          // cx = Ctx(cx.ctx0 + (name -> s))
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
       impl.unit(())
     }
-    cx = null; (name,args,block)
+    cx = null; (name,params,block)
   }
 
   override def toMapFunction(q: Query) = {
@@ -293,15 +326,52 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
   // Expose the maps of the system being generated
   var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
   override def genLMS(s0:System):(String,String,String,String) = {
-    ctx0 = maps.map{ case (name,MapDef(_,tp,keys,_)) => if (keys.size==0) { val m = man(tp); val s = impl.named(name,false)(m); s.emitted = true; (name,(s,keys,tp)) } else { val m = me(keys.map(_._2),tp); val s=impl.named(name,true)(manStore(m)); impl.collectStore(s)(m); (name,(/*impl.newSStore()(m)*/s,keys,tp)) } } // XXX missing indexes
+    val classLevelMaps = s0.triggers.filter(_.evt match {
+      case EvtBatchUpdate(s) => true
+      case _ => false
+    }).map(_.evt match { //delta relations
+      case EvtBatchUpdate(sc) =>
+        val name = sc.name
+        val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
+        val deltaRel = DeltaMapRefConst(name,Nil).deltaSchema
+        val tp = TypeLong
+        val keys = schema.fields
+        MapDef(deltaRel,tp,keys,null)
+      case _ => null
+    }) ++
+    s0.triggers.flatMap{ t=> //local maps
+      t.stmts.filter{
+        case MapDef(_,_,_,_) => true
+        case _ => false
+      }.map{
+        case m@MapDef(_,_,_,_) => m
+        case _ => null
+      }
+    } ++
+    maps.map{
+      case (_,m@MapDef(_,_,_,_)) => m
+    } // XXX missing indexes
+    ctx0 = classLevelMaps.map{
+      case MapDef(name,tp,keys,_) => if (keys.size==0) {
+        val m = man(tp)
+        val s = impl.named(name,false)(m)
+        s.emitted = true
+        (name,(s,keys,tp))
+      } else {
+        val m = me(keys.map(_._2),tp)
+        val s=impl.named(name,true)(manStore(m))
+        impl.collectStore(s)(m)
+        (name,(/*impl.newSStore()(m)*/s,keys,tp))
+      }
+    }.toMap // XXX missing indexes
     val (str,ld0,_) = genInternals(s0)
     //TODO: this should be replaced by a specific traversal for completing the slice information
     // s0.triggers.map(super.genTrigger)
-    val tsResBlks = s0.triggers.map(genTriggerLMS) // triggers (need to be generated before maps)
-    val ts = tsResBlks.map{ case (name,args,b) =>
-      impl.emitTrigger(b,name,args)
+    val tsResBlks = s0.triggers.map(genTriggerLMS(_,s0)) // triggers (need to be generated before maps)
+    val ts = tsResBlks.map{ case (name,params,b) =>
+      impl.emitTrigger(b,name,params)
     }.mkString("\n\n")
-    val ms = s0.maps.map(genMap).mkString("\n") // maps
+    val ms = classLevelMaps.map(genMap).mkString("\n") // maps
     var outStream = new java.io.StringWriter
     var outWriter = new java.io.PrintWriter(outStream)
     //impl.codegen.generateClassArgsDefs(outWriter,Nil)
@@ -318,6 +388,8 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
     val r=ds+"\n"+ms+"\n"+ts+"\n"+printInfoDef
     (r,str,ld0,consts)
   }
+
+  override def genBatchTupleRec(name:String, keys:List[(String,Type)], value:String) = "insert(new "+impl.codegen.storeEntryType(ctx0(name)._1)+"("+keys.zipWithIndex.map{ case ((_,tp),i) => "v"+i+","}.mkString+value+"))"
 
   override def clearOut = {
     maps=Map()

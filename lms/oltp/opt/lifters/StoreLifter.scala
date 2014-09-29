@@ -555,14 +555,14 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     case _ => super.emitNode(sym, rhs)
   }
 
-  def getStoreSym(s:Rep[_]) = (s match {
+  def getStoreSym(s:Exp[_]) = (s match {
     case Def(Reflect(StMutable(sym),_,_)) => sym
     case sym => sym
   }).asInstanceOf[Sym[_]]
 
-  def storeEntryType(sym:Rep[_]) = extractEntryClassName(getStoreSym(sym))._1
+  def storeEntryType(sym:Exp[_]) = extractEntryClassName(getStoreSym(sym))._1
 
-  def extractEntryClassName(n:Rep[_]) = {
+  def extractEntryClassName(n:Exp[_]) = {
     val sym = n.asInstanceOf[Sym[Store[Entry]]]
     val m = sym.tp
     val ms = m.typeArguments(0).toString
@@ -599,7 +599,11 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
       //out.println("  override def merge(e0:Entry) { val e=e0.asInstanceOf["+clsName+"]; "+l+" "+(argTypes.last match { case "java.util.Date" => "= new Date("+l+".getTime + e."+l+".getTime)" case _ => "+= e."+l })+" }")
       out.println("}")
 
-      val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
+      val indices = sym.attributes.get(ENTRY_INDICES_KEY) match {
+        case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
+        case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
+                     m += ((IList, (1 to sym.tp.typeArguments.size),false,-1))
+      }
       // ------------- EntryIdx
       indices.zipWithIndex.foreach{ case ((idxType,idxLoc,idxUniq,idxSliceIdx),i) =>
         out.println("object "+clsName+"_Idx"+i+" extends EntryIdx["+clsName+"] {\n"+ind(

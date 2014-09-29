@@ -61,13 +61,15 @@ object ManifestHelper {
 trait LMSExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressions with Effects { self =>
   trait MyGenericCodegen extends GenericCodegen with oltp.opt.lifters.GenericGenStore {
     val IR: self.type = self
+
+    def storeEntryType(sym:Exp[_]):String
   }
 
   val codegen: MyGenericCodegen
   override def reset = { storeSyms = Nil; super.reset }
   def emit[T:Manifest](sym: => Exp[T]):String
   def emit[T:Manifest](blk:Block[T]):String
-  def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]):String
+  def emitTrigger[T:Manifest](blk:Block[T],name:String,params:String):String
 }
 
 /*
@@ -95,8 +97,8 @@ object ScalaExpGen extends LMSExpGen { self =>
         case e: ScalaParserException => unformattedScala
       }
     }
-    def emitTriggerSource[T:Manifest](body: Block[T],name:String,args:List[(String,Type)]) : String = {
-      val funDef = "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(emitSource(body))+"\n}"
+    def emitTriggerSource[T:Manifest](body: Block[T],name:String,params:String) : String = {
+      val funDef = "def on"+name+"("+params+") {\n"+ddbt.Utils.ind(emitSource(body))+"\n}"
 
       var staticFieldsStr = ""
       staticFields.map { case (key, staticFldDef) =>
@@ -110,7 +112,7 @@ object ScalaExpGen extends LMSExpGen { self =>
   val codegen = new MyCodeGen
   override def emit[T:Manifest](sym: => Exp[T]):String = { assert(codegen ne null); codegen.emitSource(sym) }
   override def emit[T:Manifest](blk:Block[T]):String = { assert(codegen ne null); codegen.emitSource(blk) }
-  override def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]):String = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args) }
+  override def emitTrigger[T:Manifest](blk:Block[T],name:String,params:String):String = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,params) }
 }
 
 object CppExpGen extends LMSExpGen with COpsPkgExpOpt { self =>
@@ -134,8 +136,8 @@ object CppExpGen extends LMSExpGen with COpsPkgExpOpt { self =>
         case e: ScalaParserException => unformattedScala
       }
     }
-    def emitTriggerSource[T:Manifest](body: Block[T],name:String,args:List[(String,Type)]) : String = {
-      val funDef = "def on"+name+"("+args.map{a=>a._1+":"+a._2.toScala} .mkString(", ")+") {\n"+ddbt.Utils.ind(emitSource(body))+"\n}"
+    def emitTriggerSource[T:Manifest](body: Block[T],name:String,params:String) : String = {
+      val funDef = "def on"+name+"("+params+") {\n"+ddbt.Utils.ind(emitSource(body))+"\n}"
 
       var staticFieldsStr = ""
       staticFields.map { case (key, staticFldDef) =>
@@ -149,7 +151,7 @@ object CppExpGen extends LMSExpGen with COpsPkgExpOpt { self =>
   val codegen = new MyCodeGen
   override def emit[T:Manifest](sym: => Exp[T]):String = { assert(codegen ne null); codegen.emitSource(sym) }
   override def emit[T:Manifest](blk:Block[T]):String = { assert(codegen ne null); codegen.emitSource(blk) }
-  override def emitTrigger[T:Manifest](blk:Block[T],name:String,args:List[(String,Type)]):String = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,args) }
+  override def emitTrigger[T:Manifest](blk:Block[T],name:String,params:String):String = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,params) }
 }
 
 // XXX: implement the counterpart for C/C++
