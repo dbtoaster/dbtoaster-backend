@@ -1,5 +1,5 @@
 package ddbt.codegen
-import ddbt.ast.{M3,Source,Type}
+import ddbt.ast.{M3,Source,Type,EvtBatchUpdate,EvtAdd,EvtDel}
 
 /**
  * An abstraction of the code generator. Because we want to instrument generated
@@ -59,6 +59,18 @@ trait CodeGen extends (M3.System => String) {
   def additionalImports():String
 
   def pkgWrapper(pkg:String, body:String):String
+
+  def hasOnlyBatchProcessingForAdd(s0:M3.System, evt:EvtBatchUpdate) = s0.triggers.forall{ t => t.evt match {
+      case EvtAdd(s) if(evt.schema.name == s.name) => false
+      case _ => true
+    }
+  }
+
+  def hasOnlyBatchProcessingForDel(s0:M3.System, evt:EvtBatchUpdate) = s0.triggers.forall{ t => t.evt match {
+      case EvtDel(s) if(evt.schema.name == s.name) => false
+      case _ => true
+    }
+  }
 
   /*
   case class CtxCtr[T](f:Int=>T=(i:Int)=>i) extends Function0[T] {

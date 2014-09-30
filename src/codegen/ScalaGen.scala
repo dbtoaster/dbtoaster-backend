@@ -391,18 +391,6 @@ trait IScalaGen extends CodeGen {
 
   def genBatchTupleRec(name:String, keys:List[(String,Type)], value:String) = "set("+genTuple(keys.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+",  "+value+")"
 
-  def hasOnlyBatchProcessingForAdd(s0:System, evt:EvtBatchUpdate) = s0.triggers.forall{ t => t.evt match {
-      case EvtAdd(s) if(evt.schema.name == s.name) => false
-      case _ => true
-    }
-  }
-
-  def hasOnlyBatchProcessingForDel(s0:System, evt:EvtBatchUpdate) = s0.triggers.forall{ t => t.evt match {
-      case EvtDel(s) if(evt.schema.name == s.name) => false
-      case _ => true
-    }
-  }
-
   def genQueries(queries:List[Query]) = {
     queries.map {
       query => {
