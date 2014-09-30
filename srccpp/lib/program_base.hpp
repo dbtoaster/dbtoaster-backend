@@ -129,7 +129,7 @@ public:
         bool is_table;
         relation_id_t id;
 
-        std::shared_ptr<trigger_t> trigger[2];
+        std::shared_ptr<trigger_t> trigger[3];
 
         relation_t(string r_name, bool r_is_table, relation_id_t r_id,
                 trigger_fn_t ins_trigger_fn = 0, 

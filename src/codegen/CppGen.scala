@@ -295,12 +295,14 @@ trait ICppGen extends IScalaGen {
         case None => ""
       }
       ctx.load(); clear+init+cpsExpr(e,(v:String) => (if (m.keys.size==0) m.name+" "+sop+" "+v else { fop+"("+sampleEnt+".modify("+(m.keys map rn).mkString(",")+"),"+v+")"})+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
+    case m@MapDef(_,_,_,_) => "" //nothing to do
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
   override def genTrigger(t:Trigger, s0:System):String = {
     val (n,as, xActCounter) = t.evt match {
       case EvtReady => ("system_ready_event",Nil,"")
+      case EvtBatchUpdate(sc@Schema(n,cs)) => ("batch_update_"+n,cs,"tN+="+sc.deltaSchema+".count()-1; ++tN;") //later, we will find ++tN in the code to add some benchmarkings, so we will let it remain here
       case EvtAdd(Schema(n,cs)) => ("insert_"+n,cs,"++tN;")
       case EvtDel(Schema(n,cs)) => ("delete_"+n,cs,"++tN;")
     }
@@ -313,8 +315,16 @@ trait ICppGen extends IScalaGen {
                 "END_TRIGGER(exec_stats,\""+n+"\")\n"+
                 "END_TRIGGER(ivc_stats,\""+n+"\")\n"
     ctx=null
-
-    "void on_"+n+"("+as.map(a=>"const "+a._2.toCppRefType+" "+a._1).mkString(", ")+") {\n"+ind(preBody+body+pstBody)+"\n}"
+    val params = t.evt match {
+      case EvtBatchUpdate(Schema(n,_)) =>
+        val rel = s0.sources.filter(_.schema.name == n)(0).schema
+        val ks = rel.fields.map(_._2)
+        val tp = TypeLong
+        rel.deltaSchema + "_map " + rel.deltaSchema
+      case _ =>
+        as.map(a=>"const "+a._2.toCppRefType+" "+a._1).mkString(", ")
+    }
+    "void on_"+n+"("+params+") {\n"+ind(preBody+body+pstBody)+"\n}"
   }
 
   override def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
@@ -362,6 +372,10 @@ trait ICppGen extends IScalaGen {
     }.mkString
 
     def register_stream_triggers = s0.triggers.filter(_.evt != EvtReady).map{ t=>t.evt match {
+        case EvtBatchUpdate(Schema(n,_)) =>
+          "pb.add_trigger(\""+n+"\", batch_update, std::bind(&data_t::unwrap_batch_update_"+n+", this, std::placeholders::_1));\n" +
+          "pb.add_trigger(\""+n+"\", insert_tuple, std::bind(&data_t::unwrap_insert_"+n+", this, std::placeholders::_1));\n" +
+          "pb.add_trigger(\""+n+"\", delete_tuple, std::bind(&data_t::unwrap_delete_"+n+", this, std::placeholders::_1));\n"
         case EvtAdd(Schema(n,_)) => "pb.add_trigger(\""+n+"\", insert_tuple, std::bind(&data_t::unwrap_insert_"+n+", this, std::placeholders::_1));\n"
         case EvtDel(Schema(n,_)) => "pb.add_trigger(\""+n+"\", delete_tuple, std::bind(&data_t::unwrap_delete_"+n+", this, std::placeholders::_1));\n"
         case _ => ""
@@ -397,13 +411,46 @@ trait ICppGen extends IScalaGen {
 
     def generateUnwrapFunction(evt:EvtTrigger) = {
       val (op,name,fields) = evt match {
+        case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
         case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
         case EvtDel(Schema(n,cs)) => ("delete",n,cs)
         case _ => sys.error("Unsupported trigger event "+evt)
       }
-      "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
-      "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
-      "}\n\n"
+      evt match {
+        case b@EvtBatchUpdate(_) =>
+          val schema = s0.sources.filter(_.schema.name == name)(0).schema
+          val deltaRel = schema.deltaSchema
+          val entryClass = deltaRel + "_entry"
+          "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"+
+          "  "+deltaRel+".clear();\n"+
+          "  for(size_t i=0; i < eaList.size(); i++){\n"+
+          "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
+          "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"])));\n"+
+          "    "+deltaRel+".insert_nocheck(e);\n"+
+          "  }\n"+
+          "  on_"+op+"_"+name+"("+deltaRel+");\n"+
+          "}\n\n" +
+          (if(hasOnlyBatchProcessingForAdd(s0,b))
+            "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
+            "  "+deltaRel+".clear();\n"+
+            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+" 1L);\n"+
+            "  "+deltaRel+".insert_nocheck(e);\n"+
+            "  on_batch_update_"+name+"("+deltaRel+");\n"+
+            "}\n\n"
+           else "") +
+          (if(hasOnlyBatchProcessingForDel(s0,b))
+            "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
+            "  "+deltaRel+".clear();\n"+
+            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+"-1L);\n"+
+            "  "+deltaRel+".insert_nocheck(e);\n"+
+            "  on_batch_update_"+name+"("+deltaRel+");\n"+
+            "}\n\n"
+           else "")
+        case _ =>
+          "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
+          "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+          "}\n\n"
+      }
     }
 
     def genMapStructDef(m:MapDef) = {
@@ -486,7 +533,19 @@ trait ICppGen extends IScalaGen {
     clearOut
 
     s0.maps.foreach{m => mapDefs += (m.name -> m)}
-
+    s0.triggers.foreach(_.evt match { //delta relations
+      case EvtBatchUpdate(s) =>
+        val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
+        val deltaRel = schema.deltaSchema
+        mapDefs += (deltaRel -> MapDef(deltaRel,TypeLong,schema.fields,null))
+      case _ => //nothing to do
+    })
+    s0.triggers.foreach{ t=> //local maps
+      t.stmts.map{
+        case m@MapDef(name,_,_,_) => mapDefs += (name -> m)
+        case _ => //nothing to do
+      }
+    }
     val ts =
       "/* Trigger functions for table relations */\n"+
       genTableTriggers+
@@ -495,6 +554,22 @@ trait ICppGen extends IScalaGen {
       genStreamTriggers
     val resAcc = helperResultAccessor(s0)
     val ms = s0.queries.filter(q=>(s0.maps.filter(_.name==q.name).size == 0) && (q.keys.size > 0)).map(q=>genMapStructDef(MapDef(q.name,q.tp,q.keys,q.map))).mkString("\n") + // queries`without a map (with -F EXPRESSIVE-TLQS)
+            s0.triggers.map(_.evt match { //delta relations
+              case EvtBatchUpdate(s) =>
+                val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
+                val deltaRel = schema.deltaSchema
+                genMapStructDef(MapDef(deltaRel,TypeLong,schema.fields,null))+"\n"
+              case _ => ""
+            }).mkString +
+            s0.triggers.flatMap{ t=> //local maps
+              t.stmts.filter{
+                case MapDef(_,_,_,_) => true
+                case _ => false
+              }.map{
+               case m@MapDef(_,_,_,_) => genMapStructDef(m)+"\n"
+               case _ => ""
+              }
+            }.mkString +
             s0.maps.filter(_.keys.size > 0).map(genMapStructDef(_)+"\n").mkString + // maps
             genTempTupleTypes.mkString("\n")
 
@@ -548,7 +623,7 @@ trait ICppGen extends IScalaGen {
     regexpCacheMap.map{case (_,preg) => "  regex_t "+preg+";\n"}.mkString)+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
-       ind(genIntermediateDataStructureRefs(s0.maps,s0.queries))+"\n"+
+       ind(genIntermediateDataStructureRefs(mapDefs.map(_._2).toList,s0.queries))+"\n"+
        ind(genTempMapDefs)+"\n"+
        ind(consts)+
     "\n\n"} else "")+
@@ -617,7 +692,7 @@ trait ICppGen extends IScalaGen {
     "\n\n"+
     (if(isExpressiveTLQSEnabled(s0.queries)) {
     "  /* Data structures used for storing materialized views */\n"+
-       ind(genIntermediateDataStructureRefs(s0.maps,s0.queries))+"\n"+
+       ind(genIntermediateDataStructureRefs(mapDefs.map(_._2).toList,s0.queries))+"\n"+
        ind(genTempMapDefs)+"\n"+
        ind(consts)+
     "\n\n"} else "")+
