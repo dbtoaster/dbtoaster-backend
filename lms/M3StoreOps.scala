@@ -2,8 +2,7 @@ package ddbt.codegen.lms
 import ddbt.ast._
 import oltp.opt.lifters._
 import ddbt.lib.store._
-import ManifestHelper._
-
+import ddbt.lib.ManifestHelper._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
@@ -27,7 +26,6 @@ trait M3StoreOps extends StoreOps with Equal with IfThenElse {
 }
 
 trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp with EqualExp with IfThenElseExp {
-  import ManifestHelper.man
   val USE_STORE1 = true // whether we specialize temporary maps in Store1
 
   def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))

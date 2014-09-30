@@ -145,7 +145,7 @@ object Compiler {
   def output(s:String) = if (out==null) println(s) else Utils.write(out,s)
 
   // M3 -> execution phase, returns (gen,compile) time
-  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null,t_run:(()=>Unit)=>Unit=null) {
+  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null,t_run:(()=>Unit)=>Unit=null, t_verify:(String,ast.M3.System,String)=>Unit=null) {
     val t0=System.nanoTime
     // Front-end phases
     val m3 = postProc((M3Parser andThen TypeCheck) (m3_src))
@@ -215,15 +215,23 @@ object Compiler {
             val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
             val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),null,pl))._1; if (t_comp!=null) t_comp(t2)
             if(t_run != null) {
-              t_run(()=>{ var i=0; while (i < samplesAndWarmupRounds) { i+=1
-                val (out,err)=Utils.exec(Array(po),null,null)
-                if (err!="") System.err.println(err); Utils.write(po+"_"+lang+".txt",out); println(out)
-              }})
+              t_run(()=>{
+                var i = 0
+                while (i < samplesAndWarmupRounds) {
+                  i += 1
+                  val (out,err) = Utils.exec(Array(po),null,null)
+                  t_verify(out,m3,dataset)
+                  if (err!="") System.err.println(err)
+                  Utils.write(po+"_"+lang+".txt",out)
+                  println(out)
+                }
+              })
             } else {
               var i=0
               while (i < samplesAndWarmupRounds) {
                 i+=1
                 val (out,err)=Utils.exec(Array(po),null,null)
+                t_verify(out,m3,dataset)
                 if (err!="") System.err.println(err)
                 Utils.write(po+"_"+lang+".txt",out)
                 println(out)

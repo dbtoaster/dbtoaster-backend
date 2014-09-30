@@ -7,6 +7,7 @@ import Compiler.LANG_AKKA
 import Compiler.LANG_LMS
 import Compiler.LANG_CPP_LMS
 import Compiler.LANG_SCALA_LMS
+import ddbt.lib.ManifestHelper
 /**
  * Benchmarking and correctness verification generator. Instruments the
  * compiler such that options can be shared. To get more information:
@@ -240,6 +241,7 @@ object UnitTest {
     }
     def inject(pre:String,str:String,dir:String=null) { val src=read(tmp.getPath+"/"+cls+".scala").split("\\Q"+pre+"\\E"); write((if (dir!=null) dir else tmp)+"/"+cls+".scala",src(0)+pre+str+src(1)) }
     def post(sys:ddbt.ast.M3.System) { sp=spec(sys,true); if (verify) inject("  def main(args:Array[String]) {\n",ind(spec(sys,false),2)+"\n") }
+    def verifyResult(output:String, sys:ddbt.ast.M3.System, dataset:String) { /* result verification for scala is done in the generated main function */ }
     // Benchmark (and codegen)
     val m=mode.split("_"); // Specify the inlining as a suffix of the mode
     Compiler.inl = if (m.length==1) 0 else if (m(1)=="spec") 5 else if (m(1)=="full") 10 else try { m(1).toInt } catch { case _:Throwable => 0 }
@@ -251,7 +253,7 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_args = "-b"+exec_bs :: "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
-    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run))
+    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
     // Append correctness spec and move to test/gen/
     if (genSpec) inject("import java.util.Date\n",sp,path_sources)
@@ -262,29 +264,46 @@ object UnitTest {
     val CPP_SUFFIX = ".hpp"
     val cls = qName+(if(mode.contains(LANG_CPP_LMS)) "" else "VCpp")
     var sp=""
-    // Correctness
-    // def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
-    //   val qid = sys.queries.map{_.name}.zipWithIndex.toMap
-    //   val qt = sys.queries.map{q=>(q.name,sys.mapType(q.map.name)) }.toMap
-    //   val body = ""
-    //   q.sets.map { case (sz,set) =>
-    //     (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-m0\",\"-d"+sz+"\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
-    //     set.out.map { case (n,o) => val (kt,vt) = qt(n); val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
-    //       val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
-    //       val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
-    //         case QueryMap(m) => "Map"+qtp+"("+m.map{ case (k,v)=> "("+k+","+v+")" }.mkString(",")+")"// inline in the code
-    //         case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
-    //         case QuerySingleton(v) => v
-    //       })+")"
-    //       (if (full) "it(\""+n+" correct\") " else "")+"{\n"+ind(kv+cmp)+"\n}"
-    //     }.mkString("\n"))+"\n})"
-    //   }.mkString("\n")
-    //   if (full) "import org.scalatest._\n\n"+
-    //   "class "+cls+"Spec extends FunSpec {\n"+ind("import Helper._\n"+body)+"\n}\n" else body
-    // }
-    // def inject(pre:String,str:String,dir:String=null) { val src=read(tmp.getPath+"/"+cls+CPP_SUFFIX).split("\\Q"+pre+"\\E"); write((if (dir!=null) dir else tmp)+"/"+cls+CPP_SUFFIX,src(0)+pre+str+src(1)) }
     def post(sys:ddbt.ast.M3.System) { } //sp=spec(sys,true); /*if (verify) inject("  def main(args:Array[String]) {\n",ind(spec(sys,false),2)+"\n")*/ }
 
+    def verifyResult(output:String, sys:ddbt.ast.M3.System, dataset:String) {
+      // import scala.xml._
+      // def dateConv(d:Long) = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime
+      // def strConv(d:Long) = ""+d
+      // if(verify) {
+      //   val startIdx = output.indexOf("<snap>")
+      //   val endIdx = output.indexOf("</snap>")+"</snap>".length
+      //   val snap = XML.loadString(output.substring(startIdx, endIdx))
+
+      //   val qid = sys.queries.map{_.name}.zipWithIndex.toMap
+      //   val qt = sys.queries.map{q=>(q.name, (q.keys.map(_._2), q.tp)) }.toMap
+      //   val qn = sys.queries.map{q=>(q.name, (q.keys.map(_._1), "__av")) }.toMap
+      //   q.sets.filter(_._1 == dataset).map { case (sz,set) =>
+      //     set.out.foreach {
+      //       case (n,o) =>
+      //         val (kt,vt) = qt(n)
+      //         val kman = ManifestHelper.man(kt)
+      //         val vman = ManifestHelper.man(vt)
+      //         val qnn = qn(n)
+      //         val qtn = qt(n)
+      //         o match {
+      //           case QueryMap(m) =>
+      //             // Helper.diff((snap \ n \ "item").map{ i =>
+      //             // ...
+      //             // },m)(kman,vman)
+      //             (snap \ n \ "item").foreach{ i =>
+      //               (qn(n)._1.foreach { k =>
+      //                 //println(k.toUpperCase + " => "+(i \ k.toUpperCase).text) 
+      //               }
+      //             }
+      //           case QueryFile(path,sep) =>
+      //           case QuerySingleton(v) =>
+      //         }
+      //       java.lang.System.err.println((n,o))
+      //     }
+      //   }
+      // }
+    }
     // Benchmark (and codegen)
     val m=mode.split("_"); // Specify the inlining as a suffix of the mode
     Compiler.inl = if (m.length==1) 0 else if (m(1)=="spec") 5 else if (m(1)=="full") 10 else try { m(1).toInt } catch { case _:Throwable => 0 }
@@ -296,7 +315,7 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_args = "-b"+exec_bs :: "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
-    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run))
+    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
     // Append correctness spec and move to test/gen/
     // if (genSpec) inject("import java.util.Date\n",sp,path_sources)
