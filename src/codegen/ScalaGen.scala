@@ -316,7 +316,7 @@ trait IScalaGen extends CodeGen {
         val rel = s0.sources.filter(_.schema.name == n)(0).schema
         val ks = rel.fields.map(_._2)
         val tp = TypeLong
-        DeltaMapRefConst(rel.name,Nil).deltaSchema+":M3Map["+genTupleDef(ks)+","+tp.toScala+"]"
+        rel.deltaSchema+":M3Map["+genTupleDef(ks)+","+tp.toScala+"]"
       case _ =>
         as.map(a=>a._1+":"+a._2.toScala).mkString(", ")
     }
@@ -362,7 +362,7 @@ trait IScalaGen extends CodeGen {
         val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
         val (i,_,o,pl) = ev(schema)
         val batchSkip = "if (t1>0 && (tN/"+step+")<((tN+dataList.size)/"+step+")) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; "+nextSkip+" } else tN+=dataList.size } else tN+=dataList.size; "
-        val deltaRel = DeltaMapRefConst(schema.name,Nil).deltaSchema
+        val deltaRel = schema.deltaSchema
         val batch = deltaRel+".clear\n"+
                     "  dataList.foreach{ case List("+i+",vv:"+TypeLong.toScala+") => \n    "+
                          deltaRel+"."+genBatchTupleRec(deltaRel,schema.fields,"vv")+"\n  }; "
@@ -447,7 +447,7 @@ trait IScalaGen extends CodeGen {
       val ms = s0.triggers.map(_.evt match { //delta relations
                  case EvtBatchUpdate(s) =>
                    val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
-                   val deltaRel = DeltaMapRefConst(schema.name,Nil).deltaSchema
+                   val deltaRel = schema.deltaSchema
                    genMap(MapDef(deltaRel,TypeLong,schema.fields,null))+"\n"
                  case _ => ""
                }).mkString +

@@ -31,7 +31,7 @@ case object OpGe extends OpCmp { override def toString=">=" } // OpGe by reversi
 
 // ---------- Source definitions, see ddbt.frontend.ExtParser
 case class Source(stream:Boolean, schema:Schema, in:SourceIn, split:Split, adaptor:Adaptor) extends Tree { override def toString = "CREATE "+(if (stream) "STREAM" else "TABLE")+" "+schema+"\n  FROM "+in+" "+split+" "+adaptor+";" }
-case class Schema(name:String, fields:List[(String,Type)]) extends Tree { override def toString=name+" ("+fields.map(x=>x._1+" "+x._2).mkString(", ")+")" }
+case class Schema(name:String, fields:List[(String,Type)]) extends Tree { override def toString=name+" ("+fields.map(x=>x._1+" "+x._2).mkString(", ")+")"; val deltaSchema="DELTA_"+name }
 case class Adaptor(name:String, options:Map[String,String]) extends Tree { override def toString=name+(if (options.isEmpty) "" else " ("+options.map{case(k,v)=>k+":='"+v+"'"}.mkString(", ")+")") }
 
 sealed abstract class SourceIn extends Tree
@@ -98,7 +98,7 @@ object M3 {
   case class System(sources:List[Source], maps:List[MapDef], queries:List[Query], triggers:List[Trigger]) extends M3 {
     // String => (List[Type],Type)
     lazy val mapType = (maps.map { m => (m.name,(m.keys.map{x=>x._2},m.tp)) } ++
-                        sources.map { s =>  (DeltaMapRefConst(s.schema.name,Nil).deltaSchema,(s.schema.fields.map{x=>x._2},TypeLong)) }).toMap
+                        sources.map { s => (s.schema.deltaSchema,(s.schema.fields.map{x=>x._2},TypeLong)) }).toMap
     override def toString =
       "-------------------- SOURCES --------------------\n"+sources.mkString("\n\n")+"\n\n"+
       "--------------------- MAPS ----------------------\n"+maps.mkString("\n\n")+"\n\n"+
@@ -157,7 +157,7 @@ object M3 {
   case class MapRef(name:String, var tp:Type /*M3 bug*/, keys:List[String]) extends Expr { override def toString=name+(if (tp!=null)"("+tp+")" else "")+"[]["+keys.mkString(",")+"]"; var tks:List[Type]=Nil; var isTemp:Boolean=false; def toCppType=if(keys.size == 0) tp.toCpp else name+"_map"; def toCppRefType=if(keys.size == 0) toCppType else toCppType+"&"}
   case class Lift(name:String, e:Expr) extends Expr { override def toString="("+name+" ^= "+e+")"; val tp=TypeLong } // 'Let name=e in ...' semantics (combined with Mul)
   case class MapRefConst(schema:String, proj:List[String]) extends Expr { override def toString=schema+"("+proj.mkString(", ")+")"; val tp=TypeLong } // appear in Map definition and constant table lookups
-  case class DeltaMapRefConst(schema:String, proj:List[String]) extends Expr { override def toString="(DELTA "+schema+")("+proj.mkString(", ")+")"; val tp=TypeLong; val deltaSchema="DELTA_"+schema } //used for delta relations used while batching is used
+  case class DeltaMapRefConst(schema:String, proj:List[String]) extends Expr { override def toString="(DELTA "+schema+")("+proj.mkString(", ")+")"; val tp=TypeLong; def deltaSchema=Schema(schema,null).deltaSchema } //used for delta relations used while batching is used
   // Operations
   case class AggSum(ks:List[String], e:Expr) extends Expr { override def toString="AggSum(["+ks.mkString(",")+"],\n"+ind(e.toString)+"\n)"; def tp=e.tp; var tks:List[Type]=Nil } // (grouping_keys)->sum relation
   case class Mul(l:Expr,r:Expr) extends Expr { override def toString="("+l+" * "+r+")"; var tp:Type=null } // cross-product semantics

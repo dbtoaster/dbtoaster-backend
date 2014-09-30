@@ -219,7 +219,7 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
       params = t.evt match {
         case EvtBatchUpdate(Schema(n,_)) =>
           val rel = s0.sources.filter(_.schema.name == n)(0).schema
-          val name = DeltaMapRefConst(rel.name,Nil).deltaSchema
+          val name = rel.deltaSchema
           
           name+":Store["+impl.codegen.storeEntryType(ctx0(name)._1)+"]"
         case _ =>
@@ -234,7 +234,7 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
               // val rel = s0.sources.filter(_.schema.name == n)(0).schema
               // val ks = rel.fields.map(_._2)
               // val tp = TypeLong
-              // val name = DeltaMapRefConst(rel.name,Nil).deltaSchema
+              // val name = rel.deltaSchema
 
               // val m = me(ks,tp)
               // val sc=impl.named(name,true)(manStore(m))
@@ -333,7 +333,7 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
       case EvtBatchUpdate(sc) =>
         val name = sc.name
         val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
-        val deltaRel = DeltaMapRefConst(name,Nil).deltaSchema
+        val deltaRel = sc.deltaSchema
         val tp = TypeLong
         val keys = schema.fields
         MapDef(deltaRel,tp,keys,null)
