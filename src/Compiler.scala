@@ -220,7 +220,7 @@ object Compiler {
                 while (i < samplesAndWarmupRounds) {
                   i += 1
                   val (out,err) = Utils.exec(Array(po),null,null)
-                  t_verify(out,m3,dataset)
+                  if(t_verify != null) t_verify(out,m3,dataset)
                   if (err!="") System.err.println(err)
                   Utils.write(po+"_"+lang+".txt",out)
                   println(out)
@@ -231,7 +231,7 @@ object Compiler {
               while (i < samplesAndWarmupRounds) {
                 i+=1
                 val (out,err)=Utils.exec(Array(po),null,null)
-                t_verify(out,m3,dataset)
+                if(t_verify != null) t_verify(out,m3,dataset)
                 if (err!="") System.err.println(err)
                 Utils.write(po+"_"+lang+".txt",out)
                 println(out)
