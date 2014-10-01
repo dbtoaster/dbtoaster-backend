@@ -168,7 +168,7 @@ case class SourceMux(g:InputEvent=>Unit,streams:Seq[(InputStream,Adaptor,Split)]
   private def f(e:InputEvent) {
     def callG(stream:String, batch:ArrayBuffer[TupleEvent]) {
       g(BatchUpdateEvent(batch(0).ord,stream,batch.map{e => e.data :+ (e.asInstanceOf[TupleEvent].op match {
-        case TupleInsert => 1L
+        case TupleInsert =>  1L
         case TupleDelete => -1L
         case _ => sys.error("Unsupported event")
       })}.toList))

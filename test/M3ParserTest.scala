@@ -7,6 +7,8 @@ import ddbt.codegen._
 
 object M3ParserTest {
   val BATCH_SIZE = 4
+  val DATASET = "standard"
+  val INPUT_PROCESSING_MODE = 2
   
   // Usage:
   // test:run-main ddbt.test.M3ParserTest /path/to/your/m3/file.m3
@@ -21,9 +23,10 @@ object M3ParserTest {
       Compiler.exec = true
       Compiler.exec_sc = true
       Compiler.exec_vm = true
+      Compiler.batching_enabled = true
       Compiler.exec_bs = BATCH_SIZE
-      Compiler.exec_args = "-n1" :: "-b"+BATCH_SIZE :: "-p2" /*:: "-m1"*/ :: "-dstandard" :: Nil
-      Compiler.out = "tpch3Test.Scala"
+      Compiler.exec_args = "-n1" :: "-b"+BATCH_SIZE :: "-p"+INPUT_PROCESSING_MODE /*:: "-m1"*/ :: "-d"+DATASET :: Nil
+      Compiler.out = "./tpch3Test"+(if(Compiler.lang == Compiler.LANG_CPP) ".cpp" else ".scala")
       Compiler.compile(m3_src)
       // val m3 = Compiler.postProc((M3Parser andThen TypeCheck) (m3_src))
       // java.lang.System.err.println("---------------------------")
