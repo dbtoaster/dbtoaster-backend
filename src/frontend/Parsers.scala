@@ -85,7 +85,7 @@ object M3Parser extends ExtParser with (String => M3.System) {
   lazy val prod:Parser[Expr] = atom ~ opt("*" ~> prod) ^^ { case l~or=>or match{ case Some(r)=>Mul(l,r) case None=>l } }
   lazy val atom = (
     ("AggSum" ~> "(" ~> "[" ~> repsep(ident,",") <~  "]" <~ ",") ~ expr <~ ")"  ^^ { case ks~e => AggSum(ks,e) }
-  | "EXISTS" ~> "(" ~> expr <~ ")" ^^ { Exists(_) }
+  | ("EXISTS"|"DOMAIN") ~> "(" ~> expr <~ ")" ^^ { Exists(_) }
   | mapref
   | ident ~ ("(" ~> repsep(ident, ",") <~ ")") ^^ { case n~f => MapRefConst(n,f) } // only in map declaration
   | ("(" ~> "DELTA" ~> ident <~ ")") ~ ("(" ~> repsep(ident, ",") <~ ")") ^^ { case n~f => DeltaMapRefConst(n,f) } // only for delta relation in batching
