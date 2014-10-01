@@ -252,7 +252,8 @@ object UnitTest {
     Compiler.exec = benchmark
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = "-b"+exec_bs :: "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    Compiler.exec_bs = exec_bs
+    Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
     // Append correctness spec and move to test/gen/
@@ -314,7 +315,8 @@ object UnitTest {
     Compiler.exec = benchmark
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = "-b"+exec_bs :: "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    Compiler.exec_bs = exec_bs
+    Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
     // Append correctness spec and move to test/gen/

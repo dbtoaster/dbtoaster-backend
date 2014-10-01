@@ -199,7 +199,7 @@ object Compiler {
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
           Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,(List("-b"+exec_bs):::exec_args).toArray,exec_vm)
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
-          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets,batchSize) = ddbt.lib.Helper.extractExecArgs((List("-b"+exec_bs):::exec_args).toArray)
+          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = ddbt.lib.Helper.extractExecArgs((List("-b"+exec_bs):::exec_args).toArray)
           datasets.foreach{ dataset =>
             def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
             val srcTmp=Utils.read(out).replace("standard",dataset)
