@@ -32,6 +32,8 @@ runtime_options::runtime_options(int argc, char* argv[]) :
   , trace_step(0)
   , log_tuple_count_every(0)
   , async(false)
+  , batch_size(0)
+  , parallel(PROCESS_RELATIONS_SEQUENTIALLY)
 {
 	init(argc, argv);
 }
@@ -107,8 +109,11 @@ void runtime_options::process_options(int argc, char* argv[])
 			case TRACESTEP:
 				trace_step = std::atoi(opt.arg);
 				break;
-			case LOGCOUNT:
-				log_tuple_count_every = std::atoi(opt.arg);
+			case BATCH_SIZE:
+				batch_size = std::atoi(opt.arg);
+				break;
+			case PARALLEL_INPUT:
+				parallel = std::atoi(opt.arg);
 				break;
 			case UNKNOWN:
 				// not possible because Arg::Unknown returns ARG_ILLEGAL

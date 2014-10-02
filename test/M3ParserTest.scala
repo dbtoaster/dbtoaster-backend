@@ -6,6 +6,7 @@ import ddbt.frontend._
 import ddbt.codegen._
 
 object M3ParserTest {
+  val LANG = Compiler.LANG_SCALA_LMS
   val BATCH_SIZE = 4
   val DATASET = "standard"
   val INPUT_PROCESSING_MODE = 2
@@ -18,7 +19,7 @@ object M3ParserTest {
       val source = scala.io.Source.fromFile(m3File)
       val m3_src = if (Utils.path_repo!=null) source.mkString.replaceAll("../../experiments/data",new File(Utils.path_repo).getParentFile.getParent+"/experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)") else source.mkString
       source.close()
-      Compiler.lang = Compiler.LANG_SCALA_LMS
+      Compiler.lang = LANG
       Compiler.name = "Query"
       Compiler.exec = true
       Compiler.exec_sc = true

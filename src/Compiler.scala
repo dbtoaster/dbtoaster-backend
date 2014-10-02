@@ -197,9 +197,10 @@ object Compiler {
     if (exec) {
       lang match {
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
-          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,(List("-b"+exec_bs):::exec_args).toArray,exec_vm)
+          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,("-b"+exec_bs :: exec_args).toArray,exec_vm)
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
-          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = ddbt.lib.Helper.extractExecArgs((List("-b"+exec_bs):::exec_args).toArray)
+          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = ddbt.lib.Helper.extractExecArgs(("-b"+exec_bs :: exec_args).toArray)
+          val actual_exec_args = "-b "+exec_bs :: "-p "+pMode :: Nil
           datasets.foreach{ dataset =>
             def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
             val srcTmp=Utils.read(out).replace("standard",dataset)
@@ -219,7 +220,7 @@ object Compiler {
                 var i = 0
                 while (i < samplesAndWarmupRounds) {
                   i += 1
-                  val (out,err) = Utils.exec(Array(po),null,null)
+                  val (out,err) = Utils.exec((po :: actual_exec_args).toArray,null,null)
                   if(t_verify != null) t_verify(out,m3,dataset)
                   if (err!="") System.err.println(err)
                   Utils.write(po+"_"+lang+".txt",out)
@@ -230,7 +231,7 @@ object Compiler {
               var i=0
               while (i < samplesAndWarmupRounds) {
                 i+=1
-                val (out,err)=Utils.exec(Array(po),null,null)
+                val (out,err)=Utils.exec((po :: actual_exec_args).toArray,null,null)
                 if(t_verify != null) t_verify(out,m3,dataset)
                 if (err!="") System.err.println(err)
                 Utils.write(po+"_"+lang+".txt",out)
