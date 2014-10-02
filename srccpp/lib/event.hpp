@@ -37,6 +37,10 @@ struct event_t
     unsigned int event_order;
     event_args_t data;
 
+    event_t(const event_t& other)
+    : type(other.type), id(other.id), event_order(other.event_order), data(other.data)
+    {}
+
     event_t(event_type t, relation_id_t i, unsigned int ord, event_args_t& d)
     : type(t), id(i), event_order(ord), data(d)
     {}

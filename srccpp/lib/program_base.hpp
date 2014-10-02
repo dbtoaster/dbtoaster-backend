@@ -27,6 +27,8 @@
 
 #include "mmap/mmap.hpp"
 
+#include <limits.h>
+
 using namespace ::dbtoaster;
 using namespace ::dbtoaster::adaptors;
 using namespace ::dbtoaster::datasets;
@@ -173,7 +175,7 @@ protected:
 	
     void process_event(const event_t& evt, bool process_table);
     void process_stream_event(const event_t& evt);
-	
+	void process_remaining_events();
 	
     std::shared_ptr<runtime::runtime_options> run_opts;
     source_multiplexer stream_multiplexer;
@@ -183,6 +185,7 @@ protected:
 
     map<string, relation_ptr_t> relations_by_name;
     map<relation_id_t, relation_ptr_t> relations_by_id;
+    map<relation_id_t, event_args_t > tuples_queued_in_relations;
     int next_relation_id;
 
     unsigned int tuple_count;
