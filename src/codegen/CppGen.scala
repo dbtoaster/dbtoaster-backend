@@ -243,7 +243,7 @@ trait ICppGen extends IScalaGen {
           ctx.load(cur)
           s1+s2
         case _ =>
-          val (acc,k0,v0)=(fresh("c"),fresh("k"),fresh("v"))
+          val (acc,k0,v0)=(fresh("_c"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
           val ksTp = a.agg.map(_._2)
           val tmp = Some(a.agg)
