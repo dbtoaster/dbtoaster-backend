@@ -201,9 +201,10 @@ object Compiler {
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
           val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = ddbt.lib.Helper.extractExecArgs(("-b"+exec_bs :: exec_args).toArray)
           val actual_exec_args = "-b "+exec_bs :: "-p "+pMode :: Nil
+          val compiledSrc = Utils.read(out);
           datasets.foreach{ dataset =>
             def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
-            val srcTmp=Utils.read(out).replace("standard",dataset)
+            val srcTmp=compiledSrc.replace("standard",dataset)
                             .replace("++tN;",(if (timeout>0) "if (tS>0) { ++tS; return; } if (tN%100==0) { "+tc()+" if (tT>"+(timeout*1000L)+"L) { tS=1; return; } } " else "")+"++tN;")
                             .replace("//P"+pMode+"_PLACE_HOLDER",
                                       "struct timeval t0;\n"+
