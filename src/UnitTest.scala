@@ -281,7 +281,7 @@ object UnitTest {
       }
       def convRef(v:String, tp: Type) = tp match {
         case TypeLong => v.replace("L","").toLong
-        case TypeDouble => v.toDouble
+        case TypeDouble => v.replace("L","").replace("D","").toDouble
         case TypeString => v.substring(1,v.length-1)
         case TypeDate => dateConv(v.replace("L","").toLong)
         case _ => scala.sys.error("Bad Type")
