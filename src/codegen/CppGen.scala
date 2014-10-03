@@ -10,7 +10,6 @@ class CppGen(override val cls:String="Query") extends ICppGen
 
 trait ICppGen extends IScalaGen {
   import scala.collection.mutable.HashMap
-  import scala.collection.mutable.ListMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,fresh,freshClear} // common functions
   val VALUE_NAME = "__av"
@@ -18,7 +17,8 @@ trait ICppGen extends IScalaGen {
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
 
-  private val mapDefs = ListMap[String,MapDef]() //mapName => MapDef
+  private var mapDefs = Map[String,MapDef]() //mapName => MapDef
+  private val mapDefsList = scala.collection.mutable.MutableList[(String,MapDef)]() //List(mapName => MapDef) to preserver the order
   private val tmpMapDefs = HashMap[String,(List[Type],Type)]() //tmp mapName => (List of key types and value type)
 
   private val helperFuncUsage = HashMap[(String,String),Int]()
@@ -533,20 +533,24 @@ trait ICppGen extends IScalaGen {
     freshClear
     clearOut
 
-    s0.maps.foreach{m => mapDefs += (m.name -> m)}
+    s0.maps.foreach{m =>
+      mapDefsList += (m.name -> m)
+    }
     s0.triggers.foreach(_.evt match { //delta relations
       case EvtBatchUpdate(s) =>
         val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
         val deltaRel = schema.deltaSchema
-        mapDefs += (deltaRel -> MapDef(deltaRel,TypeLong,schema.fields,null))
+        mapDefsList += (deltaRel -> MapDef(deltaRel,TypeLong,schema.fields,null))
       case _ => //nothing to do
     })
     s0.triggers.foreach{ t=> //local maps
       t.stmts.map{
-        case m@MapDef(name,_,_,_) => mapDefs += (name -> m)
+        case m@MapDef(name,_,_,_) =>
+          mapDefsList += (name -> m)
         case _ => //nothing to do
       }
     }
+    mapDefs = mapDefsList.toMap
     val ts =
       "/* Trigger functions for table relations */\n"+
       genTableTriggers+
@@ -624,7 +628,7 @@ trait ICppGen extends IScalaGen {
     regexpCacheMap.map{case (_,preg) => "  regex_t "+preg+";\n"}.mkString)+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
-       ind(genIntermediateDataStructureRefs(mapDefs.map(_._2).toList,s0.queries))+"\n"+
+       ind(genIntermediateDataStructureRefs(mapDefsList.map(_._2).toList,s0.queries))+"\n"+
        ind(genTempMapDefs)+"\n"+
        ind(consts)+
     "\n\n"} else "")+
@@ -693,7 +697,7 @@ trait ICppGen extends IScalaGen {
     "\n\n"+
     (if(isExpressiveTLQSEnabled(s0.queries)) {
     "  /* Data structures used for storing materialized views */\n"+
-       ind(genIntermediateDataStructureRefs(mapDefs.map(_._2).toList,s0.queries))+"\n"+
+       ind(genIntermediateDataStructureRefs(mapDefsList.map(_._2).toList,s0.queries))+"\n"+
        ind(genTempMapDefs)+"\n"+
        ind(consts)+
     "\n\n"} else "")+
