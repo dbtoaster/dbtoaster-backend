@@ -8,6 +8,7 @@ import Compiler.LANG_LMS
 import Compiler.LANG_CPP_LMS
 import Compiler.LANG_SCALA_LMS
 import ddbt.lib.ManifestHelper
+import ddbt.lib.Helper
 /**
  * Benchmarking and correctness verification generator. Instruments the
  * compiler such that options can be shared. To get more information:
@@ -268,42 +269,67 @@ object UnitTest {
     def post(sys:ddbt.ast.M3.System) { } //sp=spec(sys,true); /*if (verify) inject("  def main(args:Array[String]) {\n",ind(spec(sys,false),2)+"\n")*/ }
 
     def verifyResult(output:String, sys:ddbt.ast.M3.System, dataset:String) {
-      // import scala.xml._
-      // def dateConv(d:Long) = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime
-      // def strConv(d:Long) = ""+d
-      // if(verify) {
-      //   val startIdx = output.indexOf("<snap>")
-      //   val endIdx = output.indexOf("</snap>")+"</snap>".length
-      //   val snap = XML.loadString(output.substring(startIdx, endIdx))
+      import scala.xml._
+      import ddbt.ast._
+      def dateConv(d:Long) = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime
+      def conv(v:String, tp: Type) = tp match {
+        case TypeLong => v.toLong
+        case TypeDouble => v.toDouble
+        case TypeString => v
+        case TypeDate => dateConv(v.toLong)
+        case _ => scala.sys.error("Bad Type")
+      }
+      def convRef(v:String, tp: Type) = tp match {
+        case TypeLong => v.replace("L","").toLong
+        case TypeDouble => v.toDouble
+        case TypeString => v.substring(1,v.length-1)
+        case TypeDate => dateConv(v.replace("L","").toLong)
+        case _ => scala.sys.error("Bad Type")
+      }
+      if(verify) {
+        val startIdx = output.indexOf("<snap>")
+        val endIdx = output.indexOf("</snap>")+"</snap>".length
+        val snap = XML.loadString(output.substring(startIdx, endIdx))
 
-      //   val qid = sys.queries.map{_.name}.zipWithIndex.toMap
-      //   val qt = sys.queries.map{q=>(q.name, (q.keys.map(_._2), q.tp)) }.toMap
-      //   val qn = sys.queries.map{q=>(q.name, (q.keys.map(_._1), "__av")) }.toMap
-      //   q.sets.filter(_._1 == dataset).map { case (sz,set) =>
-      //     set.out.foreach {
-      //       case (n,o) =>
-      //         val (kt,vt) = qt(n)
-      //         val kman = ManifestHelper.man(kt)
-      //         val vman = ManifestHelper.man(vt)
-      //         val qnn = qn(n)
-      //         val qtn = qt(n)
-      //         o match {
-      //           case QueryMap(m) =>
-      //             // Helper.diff((snap \ n \ "item").map{ i =>
-      //             // ...
-      //             // },m)(kman,vman)
-      //             (snap \ n \ "item").foreach{ i =>
-      //               (qn(n)._1.foreach { k =>
-      //                 //println(k.toUpperCase + " => "+(i \ k.toUpperCase).text) 
-      //               }
-      //             }
-      //           case QueryFile(path,sep) =>
-      //           case QuerySingleton(v) =>
-      //         }
-      //       java.lang.System.err.println((n,o))
-      //     }
-      //   }
-      // }
+        val qid = sys.queries.map{_.name}.zipWithIndex.toMap
+        val qt = sys.queries.map{q=>(q.name, (q.keys.map(_._2), q.tp)) }.toMap
+        val qn = sys.queries.map{q=>(q.name, (q.keys.map(_._1), "__av")) }.toMap
+        q.sets.filter(_._1 == dataset).map { case (sz,set) =>
+          set.out.foreach { case (n,o) =>
+            val (kt,vt) = qt(n)
+            val qnn = qn(n)
+            val qtn = qt(n)
+            o match {
+              case QueryMap(m) =>
+                val res = (snap \ n \ "item").map{ i =>
+                  ((qnn._1 zip qtn._1).map{ case (k, tp) =>
+                    conv((i \ k.toUpperCase).text, tp)
+                  },conv((i \ qnn._2).text,qtn._2))
+                }.toMap
+
+                val refRes = m.map { case (kList,v) =>
+                  ((kList zip qtn._1).map { case (k, tp) =>
+                    convRef(k, tp)
+                  },convRef(v,qtn._2))
+                }
+                Helper.diff(res,refRes)
+              case QueryFile(path,sep) =>
+                val res = (snap \ n \ "item").map{ i =>
+                  ((qnn._1 zip qtn._1).map{ case (k, tp) =>
+                    conv((i \ k.toUpperCase).text, tp)
+                  },conv((i \ qnn._2).text,qtn._2))
+                }.toMap
+                def kv(l:List[Any]) = (l.reverse.tail.reverse,l.reverse.head)
+                val refRes = Helper.loadCSV(kv,path_repo+"/"+path,(qtn._1:::List(qtn._2)).mkString(","),"\\Q"+sep.replaceAll("\\\\\\|","|")+"\\E")
+                Helper.diff(res,refRes)
+              case QuerySingleton(v) =>
+                val res = conv((snap \ n).text,qtn._2)
+                val refRes = convRef(v,qtn._2)
+                Helper.diff(res,refRes)
+            }
+          }
+        }
+      }
     }
     // Benchmark (and codegen)
     val m=mode.split("_"); // Specify the inlining as a suffix of the mode
