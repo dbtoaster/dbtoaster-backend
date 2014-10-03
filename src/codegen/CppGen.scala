@@ -10,6 +10,7 @@ class CppGen(override val cls:String="Query") extends ICppGen
 
 trait ICppGen extends IScalaGen {
   import scala.collection.mutable.HashMap
+  import scala.collection.mutable.ListMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,fresh,freshClear} // common functions
   val VALUE_NAME = "__av"
@@ -17,7 +18,7 @@ trait ICppGen extends IScalaGen {
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
 
-  private val mapDefs = HashMap[String,MapDef]() //mapName => MapDef
+  private val mapDefs = ListMap[String,MapDef]() //mapName => MapDef
   private val tmpMapDefs = HashMap[String,(List[Type],Type)]() //tmp mapName => (List of key types and value type)
 
   private val helperFuncUsage = HashMap[(String,String),Int]()
