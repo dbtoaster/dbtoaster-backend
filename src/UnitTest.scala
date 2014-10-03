@@ -282,7 +282,7 @@ object UnitTest {
       def convRef(v:String, tp: Type) = tp match {
         case TypeLong => v.replace("L","").toLong
         case TypeDouble => v.replace("L","").replace("D","").toDouble
-        case TypeString => v.substring(1,v.length-1)
+        case TypeString => if(v(0)=='\"' && v(v.length-1)=='\"') v.substring(1,v.length-1) else v.replace("L","") //for coverting Long to String
         case TypeDate => dateConv(v.replace("L","").toLong)
         case _ => scala.sys.error("Bad Type")
       }
