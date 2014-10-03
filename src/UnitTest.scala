@@ -320,7 +320,7 @@ object UnitTest {
                   },conv((i \ qnn._2).text,qtn._2))
                 }.toMap
                 def kv(l:List[Any]) = (l.reverse.tail.reverse,l.reverse.head)
-                val refRes = Helper.loadCSV(kv,path_repo+"/"+path,(qtn._1:::List(qtn._2)).mkString(","),"\\Q"+sep.replaceAll("\\\\\\|","|")+"\\E")
+                val refRes = Helper.loadCSV(kv,path_repo+"/"+path,(qtn._1:::List(qtn._2)).mkString(","),(if (sep!=null) "\\Q"+sep.replaceAll("\\\\\\|","|")+"\\E" else ","))
                 Helper.diff(res,refRes)
               case QuerySingleton(v) =>
                 val res = conv((snap \ n).text,qtn._2)
