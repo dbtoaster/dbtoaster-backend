@@ -215,6 +215,8 @@ void add_to_temp_map(MultiHashMap<T,V,HashIndex<T,V,T> >& m, const T& k)
     if(lkup != nullptr) lkup->__av+=k.__av;
     else /*k.__av = v;*/ m.insert_nocheck(k);
 }
+
+void voidFunc();
 }
 
 #endif /* DBTOASTER_DBT_PROGRAM_BASE_H */

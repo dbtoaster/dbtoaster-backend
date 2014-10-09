@@ -42,6 +42,13 @@ trait IScalaGen extends CodeGen {
   import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
   def mapRef(n:String,tp:Type,keys:List[(String,Type)]) = { val m=M3.MapRef(n,tp,keys.map(_._1)); m.tks=keys.map(_._2); m.isTemp=true; m }
 
+  def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) = extractBooleanExp(vs) match {
+    case Some((c,t)) =>
+      "(if ("+c+") "+m+".add("+genTuple(ks map ctx)+","+t+") else ())\n"
+    case _ =>
+      m+".add("+genTuple(ks map ctx)+","+vs+")\n"
+  }
+
   // Methods involving only constants are hoisted as global constants
   protected val cs = HashMap[Apply,String]()
   override def constApply(a:Apply):String = cs.get(a) match { case Some(n) => n case None => val n=fresh("c"); cs+=((a,n)); n }
@@ -65,13 +72,33 @@ trait IScalaGen extends CodeGen {
   x1+x2
   */
 
-  private def cmpFunc(tp: Type, op:OpCmp, arg1: String, arg2: String) = tp match {
+  def cmpFunc(tp: Type, op:OpCmp, arg1: String, arg2: String, withIfThenElse: Boolean = true) = tp match {
     // case TypeDouble => op match {
     //   case OpEq => "Math.abs("+arg1+"-"+arg2+") < diff_p"
     //   case OpNe => "Math.abs("+arg1+"-"+arg2+") >= diff_p"
     //   case _ => arg1+" "+op+" "+arg2
     // }
-    case _ => arg1+" "+op+" "+arg2
+    case _ => 
+      if(withIfThenElse)
+        "(if ("+arg1+" "+op+" "+arg2+") 1L else 0L)"
+      else
+        arg1+" "+op+" "+arg2
+  }
+
+  // extract cond and then branch of "if (c) t else 0"
+  // no better way for finding boolean type
+  // TODO: add Boolean type
+  def extractBooleanExp(s:String):Option[(String,String)] = if (!s.startsWith("(if (")) {
+    None
+  } else {
+    var d=1
+    val pInit="(if (".length
+    var p=pInit
+    while(d>0) {
+      if (s(p)=='(') d+=1 else if (s(p)==')') d-=1
+      p+=1
+    }
+    Some(s.substring(pInit,p-1),s.substring(p+1,s.lastIndexOf("else")-1))
   }
 
   // Create a variable declaration
@@ -88,7 +115,7 @@ trait IScalaGen extends CodeGen {
         "def productElement(i:Int):Any = List[Any]("+(1 to types.length).map(i => "_"+i).mkString(",")+")(i)\n"
       def eqDef =
         "override def equals(o:Any) = { o match { case x:"+tupleName+" => ("+
-        (1 to types.length).map{ i => cmpFunc(types(i-1),OpEq,"_"+i,"x._"+i) }.mkString(" && ")+") case x:Product => if(this.productArity == x.productArity) (0 to (productArity - 1)).forall(i => x.productElement(i) == this.productElement(i)) else false case _ => false } }\n"+
+        (1 to types.length).map{ i => cmpFunc(types(i-1),OpEq,"_"+i,"x._"+i,false) }.mkString(" && ")+") case x:Product => if(this.productArity == x.productArity) (0 to (productArity - 1)).forall(i => x.productElement(i) == this.productElement(i)) else false case _ => false } }\n"+
         "override def toString() = \"<\"+List[Any]("+(1 to types.length).map(i => "_"+i).mkString(",")+").mkString(\",\")+\">\"\n"+
         "override def hashCode() = {\n"+
         "  var h:Int="+types.length+"\n"+
@@ -138,7 +165,7 @@ trait IScalaGen extends CodeGen {
       case _ => co(v)
     }
     case Exists(e) => cpsExpr(e,(v:String)=>co("(if ("+v+" != 0) 1L else 0L)"))
-    case Cmp(l,r,op) => cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>co("(if ("+cmpFunc(l.tp,op,ll,rr)+") 1L else 0L)")))
+    case Cmp(l,r,op) => cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>co(cmpFunc(l.tp,op,ll,rr))))
     case app@Apply(fn,tp,as) => applyFunc(co,fn,tp,as)
     //ki : inner key
     //ko : outer key
@@ -175,7 +202,7 @@ trait IScalaGen extends CodeGen {
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
-      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co("(if ("+rn(n)+" == "+v+") 1L else 0L)"),am)
+      if (ctx.contains(n)) cpsExpr(e,(v:String)=>co(cmpFunc(TypeLong,OpEq,rn(n),v)),am)
       else e match {
         case Ref(n2) => ctx.add(n,(e.tp,rn(n2))); co("1L") // de-aliasing
         //This renaming is required. As an example:
@@ -195,24 +222,9 @@ trait IScalaGen extends CodeGen {
     //   (v=vl*vr , ctx2)
     case Mul(el,er) => //cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"),am),am)
       def mul(vl:String,vr:String) = { // simplifies (vl * vr)
-        // extract cond and then branch of "if (c) t else 0"
-        // no better way for finding boolean type
-        // TODO: add Boolean type
-        def cx(s:String):Option[(String,String)] = if (!s.startsWith("(if (")) {
-          None
-        } else {
-          var d=1
-          val pInit="(if (".length
-          var p=pInit
-          while(d>0) {
-            if (s(p)=='(') d+=1 else if (s(p)==')') d-=1
-            p+=1
-          }
-          Some(s.substring(pInit,p-1),s.substring(p+1,s.lastIndexOf("else")-1))
-        }
         def vx(vl:String,vr:String) = if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"
         //pulling out the conditionals from a multiplication
-        (cx(vl),cx(vr)) match {
+        (extractBooleanExp(vl),extractBooleanExp(vr)) match {
           case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+ex.tp.zeroScala+")"
           case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+ex.tp.zeroScala+")"
           case (_,Some((cr,tr))) => "(if ("+cr+") "+vx(vl,tr)+" else "+ex.tp.zeroScala+")"
@@ -250,17 +262,18 @@ trait IScalaGen extends CodeGen {
           ctx.load(cur)
           s1+s2
         case _ =>
-          val (a0,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
+          val (acc,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
           val ks = a.agg.map(_._1)
+          val ksTp = a.agg.map(_._2)
           val tmp = Some(a.agg)
           val cur = ctx.save
-          val s1 = cpsExpr(el,(v:String)=>a0+".add("+genTuple(ks map ctx)+","+v+");\n",tmp); ctx.load(cur)
-          val s2 = cpsExpr(er,(v:String)=>a0+".add("+genTuple(ks map ctx)+","+v+");\n",tmp); ctx.load(cur)
+          val s1 = cpsExpr(el,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,a.tp,acc,ks,v),tmp); ctx.load(cur)
+          val s2 = cpsExpr(er,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,a.tp,acc,ks,v),tmp); ctx.load(cur)
 
-          genVar(a0,ex.tp,a.agg.map(_._2))+
+          genVar(acc,ex.tp,a.agg.map(_._2))+
           s1+
           s2+
-          cpsExpr(mapRef(a0,ex.tp,a.agg),co)
+          cpsExpr(mapRef(acc,ex.tp,a.agg),co)
       }
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
@@ -268,7 +281,14 @@ trait IScalaGen extends CodeGen {
         val a0=fresh("agg")
 
         genVar(a0,a.tp)+
-        cpsExpr(e,(v:String)=>a0+" += "+v+";\n")+
+        cpsExpr(e,(v:String)=>
+          extractBooleanExp(v) match {
+            case Some((c,t)) =>
+              "(if ("+c+") "+a0+" += "+t+" else ())\n"
+            case _ =>
+              a0+" += "+v+"\n"
+          }
+        )+
         co(a0)
       } else am match {
         case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
@@ -276,7 +296,8 @@ trait IScalaGen extends CodeGen {
           val a0=fresh("agg")
           val tmp=Some(aks) // declare this as summing target
           val cur = ctx.save
-          val s1 = "val "+a0+" = M3Map.temp["+genTupleDef(aks.map(x=>x._2))+","+e.tp.toScala+"]()\n"+cpsExpr(e,(v:String)=>a0+".add("+genTuple(aks.map(x=>ctx(x._1)))+","+v+");\n",tmp);
+          val s1 = "val "+a0+" = M3Map.temp["+genTupleDef(aks.map(x=>x._2))+","+e.tp.toScala+"]()\n"+
+          cpsExpr(e,(v:String)=>ADD_TO_TEMP_MAP_FUNC(aks.map(_._2),e.tp,a0,aks.map(_._1),v),tmp);
           ctx.load(cur)
           s1+cpsExpr(mapRef(a0,e.tp,aks),co)
       }
@@ -296,7 +317,22 @@ trait IScalaGen extends CodeGen {
           )
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => m.name+(if (m.keys.size==0) " "+sop+" "+v else "."+fop+"("+genTuple(m.keys map ctx)+","+v+")")+";\n",if (op==OpAdd) Some(m.keys zip m.tks) else None)
+      ctx.load(); clear+init+cpsExpr(e,(v:String) =>
+        (if (m.keys.size==0) {
+          extractBooleanExp(v) match {
+            case Some((c,t)) =>
+              "(if ("+c+") "+m.name+" "+sop+" "+t+" else ());\n"
+            case _ =>
+              m.name+" "+sop+" "+v+"\n"
+          }
+        } else {
+          extractBooleanExp(v) match {
+            case Some((c,t)) =>
+              "(if ("+c+") "+m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+t+") else ());\n"
+            case _ =>
+              m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+v+")"
+          }
+        }),if (op==OpAdd) Some(m.keys zip m.tks) else None)
     case m@MapDef(_,_,_,_) => "" //nothing to do
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
