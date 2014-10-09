@@ -43,19 +43,25 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
     var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
 
+    val entVal = ent.get(n)
     if(tmp) {
       // we don't remove 0-elements
       if (USE_STORE1) {
         //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
         //addIndicesToEntryClass[E](map, (xx, m) => { val idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
-        reflectWrite(map)(M3Add(map,ent))
+        __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()),
+          reflectWrite(map)(M3Add(map,ent))
+        )
       } else {
-        val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
-        __ifThenElse(__equal(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),currentEnt += (n, ent.get(n)))
+        __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
+          ///////
+          val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+          __ifThenElse(__equal(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),currentEnt += (n, entVal))
+          ///////
+        })
       }
     } else {
       // we remove 0-elements
-      val entVal = ent.get(n)
       __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()), {
         ///////
         val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
