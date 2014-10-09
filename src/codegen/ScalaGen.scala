@@ -330,7 +330,7 @@ trait IScalaGen extends CodeGen {
             case Some((c,t)) =>
               "(if ("+c+") "+m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+t+") else ());\n"
             case _ =>
-              m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+v+")"
+              m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+v+")\n"
           }
         }),if (op==OpAdd) Some(m.keys zip m.tks) else None)
     case m@MapDef(_,_,_,_) => "" //nothing to do
