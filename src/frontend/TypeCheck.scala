@@ -104,6 +104,12 @@ object TypeCheck extends (M3.System => M3.System) {
   // Mul(Lift(a,3),Mul(a,Mul(Lift(a,2),a))) => 6
   def renameLifts(s0:System) = {
     def re(e:Expr,locked:Set[String]):Expr = e.replace {
+      case Mul(MapRef(n,tp,ks), r) =>
+        val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>locked.contains(k)}
+        if(ks.size > 0 && ki.size > 0)
+          Mul(MapRef(n,tp,ks), re(r,locked++ks.toSet))
+        else
+          Mul(MapRef(n,tp,ks), re(r,locked))
       case Mul(Lift(n,e),r) if !locked.contains(n) => e match {
         case Ref(m) if (locked.contains(m)) => Mul(re(Lift(n,e),locked),re(r,locked))
         case _ => val f=fresh("lift"); Mul(Lift(f,re(e.rename(n,f),locked+f)),re(r.rename(n,f),locked+f))
