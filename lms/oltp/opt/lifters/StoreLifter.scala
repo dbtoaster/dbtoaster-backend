@@ -247,9 +247,9 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
 
   // def newStore     [E<:Entry:Manifest](sndIdx: Exp[Array[Idx[E]]]):Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E], sndIdx)) }
   def newStore     [E<:Entry:Manifest]():Exp[Store[E]] = { val s:Exp[Store[E]]=reflectMutable(StNewStore[E](manifest[E])); collectStore[E](s); s } //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E])) }
-  def stNewEntry       [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]):Exp[E] = reflectMutable(SteNewSEntry[E](x, args)) //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](x, args)) }
-  def stSampleEntry    [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]):Exp[E] = SteSampleSEntry[E](x, args) //{ checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](x, args) }
-  // def stSampleFullEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Rep[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args.zipWithIndex.map{case (arg, i) => ((i+1, arg))}) }
+  def stNewEntry       [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Exp[Any]]):Exp[E] = reflectMutable(SteNewSEntry[E](x, args)) //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](x, args)) }
+  def stSampleEntry    [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Exp[Any])]):Exp[E] = SteSampleSEntry[E](x, args) //{ checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](x, args) }
+  // def stSampleFullEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Exp[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args.zipWithIndex.map{case (arg, i) => ((i+1, arg))}) }
   override def steGet         [E<:Entry:Manifest](x: Exp[E], i: Int):Exp[Any] = x match {
     case Def(SteNewSEntry(_, args)) => args(i-1)
     case Def(Reflect(SteNewSEntry(_, args),_,_)) => args(i-1)

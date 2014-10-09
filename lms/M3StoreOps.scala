@@ -25,7 +25,7 @@ trait M3StoreOps extends StoreOps with Equal with IfThenElse {
   def m3set[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:Manifest[E]):Rep[Unit]
 }
 
-trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp with EqualExp with IfThenElseExp {
+trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExpOpt with EqualExp with IfThenElseExp {
   val USE_STORE1 = true // whether we specialize temporary maps in Store1
 
   def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
