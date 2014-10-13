@@ -190,7 +190,7 @@ object UnitTest {
   def genZeus {
     val num=if(seed!=0) 1 else samples; samples=1; warmup=0; timeout=0; benchmark=true
     var i=0; while(i < num) { i+=1
-      val sql = exec("scripts/zeus.rb"+(if (seed!=0) " -s "+seed else ""))._1.replaceAll("@@DATA@@",path_repo+"/../../experiments/data/simple/tiny")
+      val sql = exec("scripts/zeus.rb"+(if (seed!=0) " -s "+seed else ""),true)._1.replaceAll("@@DATA@@",path_repo+"/../../experiments/data/simple/tiny")
       val ma = java.util.regex.Pattern.compile("^-- seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
       val id = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
       println("---------[[ Zeus "+id+" ]]---------")

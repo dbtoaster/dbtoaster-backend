@@ -67,7 +67,7 @@ object Utils {
     if (!external) runMain(cp,cls,args)
     else {
       val env = ("JAVA_HOME="+path_jdk :: scala.collection.JavaConversions.mapAsScalaMap(System.getenv).filter(x=>x._1.toUpperCase!="JAVA_HOME").map(x=>x._1+"="+x._2).toList).toArray
-      exec((path_jvm+" -cp "+cp.map(_.getAbsolutePath).mkString(":")+":"+path_cp+" "+cls+" "+args.mkString(" ")).split(" +"),env=env,prefix="")
+      exec((path_jvm+" -cp "+cp.map(_.getAbsolutePath).mkString(":")+":"+path_cp+" "+cls+" "+args.mkString(" ")).split(" +"),env=env,fatal=true,prefix="")
     }
   }
 
@@ -91,11 +91,21 @@ object Utils {
   }
 
   // Execute arbitrary command, return (out,err)
-  def exec(cmd:String):(String,String) = exec(cmd.split(" +"))
+  def exec(cmd:String,fatal:Boolean):(String,String) = exec(cmd.split(" +"),null,null,fatal)
   def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true,prefix:String=null):(String,String) = {
     val p = Runtime.getRuntime.exec(cmd,env,dir)
-    val out=gobble(p.getInputStream,scala.Console.out,prefix); val err=gobble(p.getErrorStream,scala.Console.err,prefix); p.waitFor; val o=out.toString; val e=err.toString
-    if (fatal && e.trim!="") { println("Execution error in: "+cmd.mkString(" ")); scala.Console.out.print(o); scala.Console.err.print(e); System.exit(1) }; (o,e)
+    val out=gobble(p.getInputStream,scala.Console.out,prefix); val err=gobble(p.getErrorStream,scala.Console.err,prefix); val exitVal=p.waitFor; val o=out.toString; val e=err.toString
+    if (fatal && (e.trim!="" || exitVal!=0)) {
+      if(e.trim!="") {
+        println("Execution error in: "+cmd.mkString(" "))
+        scala.Console.out.print(o)
+        scala.Console.err.print(e)
+      } else {
+        scala.Console.err.print("Error: exit value is " + exitVal)
+      }
+      System.exit(if(exitVal!=0) exitVal else 1)
+    }
+    (o,e)
   }
 
   // Capture console/default output and error streams in two strings
