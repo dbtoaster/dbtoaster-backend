@@ -89,8 +89,8 @@ public:
     struct serializer {
         template<class T>
         static dbtoaster::xml_oarchive& fn(
-                dbtoaster::xml_oarchive& oa, const char* name, T& t) {
-            return serialize_nvp(oa, name, t);
+                dbtoaster::xml_oarchive& oa, const char* name, T* t) {
+            return serialize_nvp(oa, name, *t);
         }
     };
 
@@ -153,7 +153,7 @@ public:
 
 		serialize_fn_t fn = 
 			std::bind(&serializer::template fn<T>,
-						std::placeholders::_1, m_name.c_str(), t);
+						std::placeholders::_1, m_name.c_str(), &t);
 		map_ptr_t m = std::shared_ptr<map_t>(new map_t(fn));
 		maps_by_name[m_name] = m;
 		return;
