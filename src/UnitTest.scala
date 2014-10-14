@@ -74,7 +74,7 @@ object UnitTest {
       case "-dump" => eat(s=>dumpFile=s)
       case "-cache" => cache=true
       case "-noreplace" => replaceQuery=false
-      case "-b" => eat(i => exec_bs = i.toInt)
+      case "-b" | "-xbs" => eat(i => exec_bs = i.toInt)
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
         e("Zeus mode:")
