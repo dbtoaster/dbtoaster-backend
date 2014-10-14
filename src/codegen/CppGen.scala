@@ -353,7 +353,7 @@ trait ICppGen extends IScalaGen {
         val rel = s0.sources.filter(_.schema.name == n)(0).schema
         val ks = rel.fields.map(_._2)
         val tp = TypeLong
-        rel.deltaSchema + "_map " + rel.deltaSchema
+        rel.deltaSchema + "_map& " + rel.deltaSchema
       case _ =>
         as.map(a=>"const "+a._2.toCppRefType+" "+a._1).mkString(", ")
     }
