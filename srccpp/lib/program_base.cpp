@@ -289,7 +289,7 @@ void ProgramBase::set_log_count_every(
 
 void ProgramBase::process_event(const event_t& evt, bool process_table) {
 	bool useBatch = false;
-	if(process_table == false && !(run_opts->batch_size == 0 || run_opts->batch_size == 1)) {
+	if(!process_table && !(run_opts->batch_size == 0 || run_opts->batch_size == 1)) {
 		event_args_t* evtData = new event_args_t(evt.data);
 		if(evt.type == insert_tuple) evtData->push_back(new long( 1L));
 		else evtData->push_back(new long(-1L));
