@@ -16,14 +16,14 @@ namespace adaptors {
 ******************************************************************************/
 
 csv_adaptor::csv_adaptor(relation_id_t _id) 
-		: id(_id), type(insert_tuple), delimiter(",") 
+		: id(_id), type(insert_tuple), schema_size(0), delimiter(",") 
 {
 	schema = new char[1];
 	schema[0] = '\0';
 }
 
 csv_adaptor::csv_adaptor(relation_id_t _id, std::string sch)
-		: id(_id), type(insert_tuple), delimiter(",")
+		: id(_id), type(insert_tuple), schema_size(0), delimiter(",")
 {
 	schema = new char[sch.size()+1];
 	std::copy(sch.begin(), sch.end(), schema);
@@ -32,7 +32,7 @@ csv_adaptor::csv_adaptor(relation_id_t _id, std::string sch)
 
 csv_adaptor::csv_adaptor(relation_id_t i, int num_params,
 						const std::pair<std::string,std::string> params[])
-		: id(i), type(insert_tuple), delimiter(",")
+		: id(i), type(insert_tuple), schema_size(0), delimiter(",")
 {
 	parse_params(num_params,params);
 	validate_schema();
@@ -106,17 +106,21 @@ void csv_adaptor::validate_schema() {
 	  switch(*it) {
 		case 'e':  // event type
 		case 'o':  // order field type
+				  break;
 		case 'l':
 		case 'f':
 		case 'd':
 		case 'h':
-		case 's': break;
+		case 's':
+				  schema_size++;
+				  break;
 		default: valid = false; break;
 	  }
 	}
 	if ( !valid ) {
 		delete[] schema;
 		schema = new char[1];
+		schema_size = 0;
 		schema[0] = '\0';
 	}
 }
@@ -132,7 +136,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 	
 	//TODO make sure that are heap allocated objects inside tuple
 	//will be deallocated in the end
-	event_args_t tuple(strlen(schema_it));
+	event_args_t tuple(schema_size);
 	size_t tupleIdx = 0;
 	bool valid = true;
 

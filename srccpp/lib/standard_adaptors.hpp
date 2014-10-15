@@ -19,6 +19,7 @@ namespace dbtoaster {
       relation_id_t id;
       event_type type;
       char* schema;
+      size_t schema_size;
       std::string delimiter;
       
       std::shared_ptr<event_t> saved_event;
