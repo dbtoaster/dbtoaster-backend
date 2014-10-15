@@ -7,7 +7,7 @@
 #include <string.h>
 #include "../hpds/macro.hpp"
 
-#define DEFAULT_CHUNK_SIZE 1024
+#define DEFAULT_CHUNK_SIZE 32
 #define DEFAULT_LIST_SIZE 8
 
 #define INSERT_INTO_MMAP 1
