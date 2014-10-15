@@ -760,8 +760,10 @@ trait ICppGen extends IScalaGen {
     "    }\n"+
     "\n"+
     "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
-    "    snapshot_t take_snapshot(){ "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d.tT,d.tN,d.tS);\n"+
-    "        return snapshot_t( new tlq_t((tlq_t&)data) );\n"+
+    "    snapshot_t take_snapshot(){\n"+
+    "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
+    "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
+    "        return snapshot_t( d );\n"+
     "    }\n"+
     "\n"+
     "  protected:\n"+
