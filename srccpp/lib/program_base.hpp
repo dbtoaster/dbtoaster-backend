@@ -173,7 +173,7 @@ public:
 protected:
 	void set_log_count_every(unsigned int _log_count_every);
 	
-    void process_event(const event_t& evt, bool process_table);
+    void process_event(const event_t& evt, const bool process_table);
     void process_stream_event(const event_t& evt);
 	void process_remaining_events();
 	
@@ -185,7 +185,6 @@ protected:
 
     map<string, relation_ptr_t> relations_by_name;
     map<relation_id_t, relation_ptr_t> relations_by_id;
-    map<relation_id_t, event_args_t > tuples_queued_in_relations;
     int next_relation_id;
 
     unsigned int tuple_count;

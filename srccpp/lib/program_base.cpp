@@ -216,30 +216,32 @@ ProgramBase::ProgramBase(int argc, char* argv[]) :
 }
 
 void ProgramBase::process_streams() {
-	if(run_opts->parallel == MIX_INPUT_TUPLES && stream_multiplexer.inputs.size() > 1 && stream_multiplexer.eventList->size() > 0) {
-		std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
-		std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
+	if(stream_multiplexer.eventList->empty()) {
+		if(run_opts->parallel == MIX_INPUT_TUPLES) {
+			std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
+			std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
 
-		std::list<event_t> events_by_relation[relations_by_id.size()];
-		for(;it != it_end; ++it) {
-			events_by_relation[it->id].push_back(*it);
-		}
-		bool thereAreMoreTuples = true;
-		while(thereAreMoreTuples) {
-			thereAreMoreTuples = false;
-			for(size_t i = 0; i < relations_by_id.size(); i++) {
-				if(events_by_relation[i].size() > 0) {
-					thereAreMoreTuples = true;
-					process_stream_event(events_by_relation[i].front());
-					events_by_relation[i].pop_front();
+			std::list<event_t> events_by_relation[relations_by_id.size()];
+			for(;it != it_end; ++it) {
+				events_by_relation[it->id].push_back(*it);
+			}
+			bool thereAreMoreTuples = true;
+			while(thereAreMoreTuples) {
+				thereAreMoreTuples = false;
+				for(size_t i = 0; i < relations_by_id.size(); i++) {
+					if(events_by_relation[i].size() > 0) {
+						thereAreMoreTuples = true;
+						process_stream_event(events_by_relation[i].front());
+						events_by_relation[i].pop_front();
+					}
 				}
 			}
-		}
-	} else {
-		std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
-		std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
-		for(;it != it_end; ++it) {
-			process_stream_event(*it);
+		} else {
+			std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
+			std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
+			for(;it != it_end; ++it) {
+				process_stream_event(*it);
+			}
 		}
 	}
 	if(!stream_multiplexer.eventQue->empty()) {
@@ -250,7 +252,6 @@ void ProgramBase::process_streams() {
 			process_stream_event(*it);
 		}
 	}
-	process_remaining_events();
 	// XXX memory leak
 	// but if we assume that program finishes at this point
 	// we can ignore it
@@ -287,39 +288,14 @@ void ProgramBase::set_log_count_every(
 	log_count_every = _log_count_every;
 }
 
-void ProgramBase::process_event(const event_t& evt, bool process_table) {
-	bool useBatch = false;
-	if(!process_table && !(run_opts->batch_size == 0 || run_opts->batch_size == 1)) {
-		event_args_t* evtData = new event_args_t(evt.data);
-		if(evt.type == insert_tuple) evtData->push_back(new long( 1L));
-		else evtData->push_back(new long(-1L));
-
-		tuples_queued_in_relations[evt.id].push_back(evtData);
-		if(run_opts->batch_size > 0 && tuples_queued_in_relations[evt.id].size() >= run_opts->batch_size) {
-			useBatch = true;
-		} else {
-			return;
-		}
-	}
+void ProgramBase::process_event(const event_t& evt, const bool process_table) {
 	map<relation_id_t, 
 				 std::shared_ptr<ProgramBase::relation_t> >::iterator r_it =
 			relations_by_id.find(evt.id);
 	if( r_it != relations_by_id.end() &&
 		r_it->second->is_table == process_table )
 	{
-		if(useBatch && r_it->second->trigger[batch_update]) {
-			std::shared_ptr<ProgramBase::trigger_t> trig = 
-				r_it->second->trigger[batch_update];
-
-			#ifdef DBT_TRACE
-			cout << trig->name << ": " << tuples_queued_in_relations[evt.id] << endl;
-			#endif // DBT_TRACE
-			event_t e(batch_update,evt.id,evt.event_order,tuples_queued_in_relations[evt.id]);
-			trig->log(r_it->second->name, e);
-
-			(trig->fn)(tuples_queued_in_relations[evt.id]);
-			tuples_queued_in_relations[evt.id].clear();
-		} else if(r_it->second->trigger[evt.type]) {
+		if(r_it->second->trigger[evt.type]) {
 			std::shared_ptr<ProgramBase::trigger_t> trig = 
 				r_it->second->trigger[evt.type];
 
@@ -331,43 +307,11 @@ void ProgramBase::process_event(const event_t& evt, bool process_table) {
 			(trig->fn)(evt.data);
 		} else {
 			cerr << "Could not find " << event_name[evt.type]
-					<< " handler for relation " << evt.id << endl;	
+					<< " handler for relation " << evt.id << endl;
 		}
 	} else {
 		cerr << "Could not find " << event_name[evt.type]
 				<< " handler for relation " << evt.id << endl;
-	}
-}
-
-void ProgramBase::process_remaining_events() {
-	if(!(run_opts->batch_size == 0 || run_opts->batch_size == 1)) {
-		map<relation_id_t, event_args_t >::iterator it = tuples_queued_in_relations.begin();
-		map<relation_id_t, event_args_t >::iterator it_end = tuples_queued_in_relations.end();
-		for(; it != it_end; ++it) {
-			if(it->second.size() > 0) {
-				relation_id_t evtId = it->first;
-				map<relation_id_t, 
-					 std::shared_ptr<ProgramBase::relation_t> >::iterator r_it =
-						relations_by_id.find(evtId);
-				if( r_it != relations_by_id.end() &&
-					r_it->second->is_table == false &&
-					r_it->second->trigger[batch_update]) {
-
-					std::shared_ptr<ProgramBase::trigger_t> trig = 
-						r_it->second->trigger[batch_update];
-
-					#ifdef DBT_TRACE
-					cout << trig->name << ": " << tuples_queued_in_relations[evtId] << endl;
-					#endif // DBT_TRACE
-					event_t e(batch_update,evtId,INT_MAX,it->second);
-					trig->log(r_it->second->name, e);
-
-
-					(trig->fn)(it->second);
-					it->second.clear();
-				}
-			}
-		}
 	}
 }
 

@@ -752,8 +752,8 @@ trait ICppGen extends IScalaGen {
     "    /* Imports data for static tables and performs view initialization based on it. */\n"+
     "    void init() {\n"+
     "        //P0_PLACE_HOLDER\n"+
-    "        table_multiplexer.init_source();\n"+
-    "        stream_multiplexer.init_source();\n"+
+    "        table_multiplexer.init_source(run_opts->batch_size);\n"+
+    "        stream_multiplexer.init_source(run_opts->batch_size);\n"+
     "        process_tables();\n"+
     "        data.on_system_ready_event();\n"+
     "        //P2_PLACE_HOLDER\n"+

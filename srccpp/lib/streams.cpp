@@ -32,7 +32,7 @@ dbt_file_source::dbt_file_source(
 		std::cerr << "File not found: " << path << std::endl;
 }
 
-void dbt_file_source::read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) {
+void dbt_file_source::read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue, size_t batch_size) {
 	//read the whole file
 	source_stream->seekg(0, std::ios::end);
 	size_t bufferLength = source_stream->tellg();
@@ -85,11 +85,55 @@ void dbt_file_source::read_source_events(std::shared_ptr<std::list<event_t> > ev
 			start_event_pos = end_event_pos + delim_size;
 		}
 
-	}
-	else if ( frame_info.type == variable_size ) {
+		if(batch_size > 1) {
+			std::list<event_t> batchedEventList;
+			map<relation_id_t,std::vector<event_t*> > tuples_queued_in_relations;
+
+			if(!eventList->empty()) {
+				std::list<event_t>::iterator eit = eventList->begin();
+				std::list<event_t>::iterator eit_end = eventList->end();
+				for(;eit != eit_end; ++eit) {
+					event_t* evt = &(*eit);
+					tuples_queued_in_relations[evt->id].push_back(evt);
+				}
+			}
+			if(!eventQue->empty()) {
+				std::list<event_t>::iterator eit = eventQue->begin();
+				std::list<event_t>::iterator eit_end = eventQue->end();
+					event_t* evt = &(*eit);
+				for(;eit != eit_end; ++eit) {
+					tuples_queued_in_relations[evt->id].push_back(evt);
+				}
+			}
+			map<relation_id_t, std::vector<event_t*> >::iterator it = tuples_queued_in_relations.begin();
+			map<relation_id_t, std::vector<event_t*> >::iterator it_end = tuples_queued_in_relations.end();
+			event_args_t batch;
+			for(; it != it_end; ++it) {
+				while(!it->second.empty()) {
+					event_t* evt = it->second.back();
+					event_args_t* evtData = new event_args_t(evt->data);
+					if(evt->type == insert_tuple) evtData->push_back(new long( 1L));
+					else evtData->push_back(new long(-1L));
+					batch.push_back(evtData);
+					if(batch.size() >= batch_size || it->second.empty()) {
+						event_t e(batch_update, evt->id, evt->event_order, batch);
+						batchedEventList.push_back(e);
+						batch.clear();
+					}
+				}
+			}
+			if(eventQue->empty()) {
+				eventList->clear();
+				eventList->insert(eventList->end(), batchedEventList.begin(), batchedEventList.end());
+			} else {
+				eventList->clear();
+				eventQue->clear();
+				eventQue->insert(eventQue->end(), batchedEventList.begin(), batchedEventList.end());
+			}
+		}
+	} else if ( frame_info.type == variable_size ) {
 		std::cerr << "variable size frames not supported" << std::endl;
-	}
-	else {
+	} else {
 		std::cerr << "invalid frame type" << std::endl;
 	}
 	delete[] buffer;
@@ -125,14 +169,14 @@ void source_multiplexer::remove_source(std::shared_ptr<source> s) {
 	}
 }
 
-void source_multiplexer::init_source() {
+void source_multiplexer::init_source(size_t batch_size) {
 	std::vector<std::shared_ptr<source> >::iterator it = inputs.begin();
 	std::vector<std::shared_ptr<source> >::iterator end = inputs.end();
 	for (; it != end; ++it) {
 		std::shared_ptr<source> s = (*it);
 		if(s) {
 			s->init_source();
-			s->read_source_events(eventList, eventQue);
+			s->read_source_events(eventList, eventQue, batch_size);
 		}
 	}
 }
