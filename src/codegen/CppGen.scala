@@ -167,7 +167,7 @@ trait ICppGen extends IScalaGen {
             "  "+mapEntry+"* "+e0+";\n"+
             "  do if (("+e0+"="+n0+"->obj) && "+h0+" == "+n0+"->hash && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
                  ind(body,2)+"\n"+
-            "  } while (("+n0+"="+n0+"->next));\n"+
+            "  } while (("+n0+"="+n0+"->nxt));\n"+
             "}\n"
           } else { //foreach
             "{ //foreach\n"+

@@ -16,43 +16,56 @@
 #define HASH_RES_t size_t
 
 template<typename T>
+union El { El(){}; T obj;  union El* next; ~El() {}; };
+
+template<typename T>
 class Pool {
 private:
-  typedef union __El { __El(){}; T obj;  union __El* next; ~__El() {}; } El;
-  El* free_;
-  El* data_;
+  El<T>* free_;
+  El<T>* data_;
   size_t size_;
-  bool forceClear;
   void add_chunk() { // precondition: no available elements
     size_ = size_ << 1;
-    El* chunk = new El[size_+1]; for (size_t i=0; i<size_-1; ++i) chunk[i].next = &chunk[i+1];
+    El<T>* chunk = new El<T>[size_+1]; for (size_t i=0; i<size_-1; ++i) chunk[i].next = &chunk[i+1];
     chunk[size_-1].next = nullptr; chunk[size_].next = data_; data_ = chunk; free_ = chunk;
   }
 public:
-  Pool(size_t chunk_size=DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size >> 1), forceClear(false) { add_chunk(); }
-  ~Pool() { size_t sz=size_; while (data_ != nullptr) { El* el = data_[sz].next; delete[] data_; data_ = el; sz=sz >> 1; } }
-  FORCE_INLINE T* add() { if (!free_) { forceClear=true; add_chunk(); } El* el = free_; free_ = free_->next; return &(el->obj); }
-  FORCE_INLINE void del(T* obj) { ((El*)obj)->next = free_; free_ = (El*)obj; }
-  inline void clear(){
-    if(forceClear) {
-      El* prevChunk = nullptr;
-      El* chunk = data_;
-      size_t sz = size_;
-      size_t doubleSz = sz << 1;
-      while (chunk) {
-        if(prevChunk) {
-          prevChunk[doubleSz-1].next=chunk;
+  Pool(size_t chunk_size=DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size >> 1) { add_chunk(); }
+  ~Pool() { size_t sz=size_; while (data_ != nullptr) { El<T>* el = data_[sz].next; delete[] data_; data_ = el; sz=sz >> 1; } }
+  FORCE_INLINE T* add() { if (!free_) { add_chunk(); } El<T>* el = free_; free_ = free_->next; return &(el->obj); }
+  FORCE_INLINE void del(T* obj) { ((El<T>*)obj)->next = free_; free_ = (El<T>*)obj; }
+  inline void delete_all(T* current_data){
+    if(current_data) {
+      T* tmp = current_data;
+      do {
+        T* tmpNext = tmp->nxt;
+        if(tmpNext){
+          ((El<T>*)tmp)->next = ((El<T>*)tmpNext);
+        } else {
+          ((El<T>*)tmp)->next = free_;
         }
-        for (size_t i=0; i<sz-1; ++i) chunk[i].next = &chunk[i+1];
-        chunk[sz-1].next = nullptr; // did not change
-        prevChunk = chunk;
-        chunk = chunk[sz].next;
-        doubleSz=sz;
-        sz=sz>>1;
-      }
-      free_ = data_;
-      forceClear = false;
+        tmp = tmpNext;
+      } while(tmp);
+      free_ = (El<T>*)current_data;
     }
+  }
+  inline void clear(){
+    El<T>* prevChunk = nullptr;
+    El<T>* chunk = data_;
+    size_t sz = size_;
+    size_t doubleSz = sz << 1;
+    while (chunk) {
+      if(prevChunk) {
+        prevChunk[doubleSz-1].next=chunk;
+      }
+      for (size_t i=0; i<sz-1; ++i) chunk[i].next = &chunk[i+1];
+      chunk[sz-1].next = nullptr; // did not change
+      prevChunk = chunk;
+      chunk = chunk[sz].next;
+      doubleSz=sz;
+      sz=sz>>1;
+    }
+    free_ = data_;
   }
 };
 
@@ -140,12 +153,13 @@ public:
   typedef struct __IdxNode {
     HASH_RES_t hash;
     T* obj;
-    struct __IdxNode* next;
-  } IdxNode;  //  the linked list is maintained 'compactly': if a IdxNode has a next, it is full.
+    struct __IdxNode* nxt;
+  } IdxNode;  //  the linked list is maintained 'compactly': if a IdxNode has a nxt, it is full.
   IdxNode* buckets_;
   size_t size_;
 private:
   Pool<IdxNode> nodes_;
+  bool allocated_from_pool_;
   size_t count_, threshold_;
   double load_factor_;
   const V zero;
@@ -156,9 +170,9 @@ private:
   //   if (n->obj) {
   //     IdxNode* nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
   //     nw->hash = h; nw->obj = obj;
-  //     nw->next = n->next; n->next=nw;
+  //     nw->nxt = n->nxt; n->nxt=nw;
   //   } else {  // space left in last IdxNode
-  //     n->hash = h; n->obj = obj; //n->next=nullptr;
+  //     n->hash = h; n->obj = obj; //n->nxt=nullptr;
   //   }
   // }
 
@@ -170,6 +184,7 @@ private:
     memset(buckets_, 0, sizeof(IdxNode) * new_size);
     size_ = new_size;
     threshold_ = size_ * load_factor_;
+    bool tmp_allocated_from_pool = false;
     for (size_t b=0; b<sz; ++b) {
       n = &old[b];
       bool pooled = false;
@@ -178,22 +193,24 @@ private:
           h = IDX_FN::hash(*n->obj);
           na = &buckets_[h % size_];
           if (na->obj) {
+            tmp_allocated_from_pool = true;
             nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
             nw->hash = h; nw->obj = n->obj;
-            nw->next = na->next; na->next=nw;
+            nw->nxt = na->nxt; na->nxt=nw;
           } else {  // space left in last IdxNode
-            na->hash = h; na->obj = n->obj; //na->next=nullptr;
+            na->hash = h; na->obj = n->obj; //na->nxt=nullptr;
           }
         }
-        if (pooled) { d=n; n=n->next; nodes_.del(d); } else n=n->next;
+        if (pooled) { d=n; n=n->nxt; nodes_.del(d); } else n=n->nxt;
         pooled = true;
       } while(n);
     }
+    allocated_from_pool_ = tmp_allocated_from_pool;
     if(old) delete[] old;
   }
 
 public:
-  HashIndex(size_t size=DEFAULT_CHUNK_SIZE, double load_factor=.75) : nodes_(size), zero(ZeroVal<V>().get()) {
+  HashIndex(size_t size=DEFAULT_CHUNK_SIZE, double load_factor=.75) : nodes_(size), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
     load_factor_ = load_factor;
     size_ = 0;
     count_ = 0;
@@ -215,14 +232,14 @@ public:
     IdxNode* n = &buckets_[h % size_];
     do {
       if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) return n->obj;
-    } while ((n=n->next));
+    } while ((n=n->nxt));
     return nullptr;
   }
   inline virtual T* get(const T& key, const HASH_RES_t h) const {
     IdxNode* n = &buckets_[h % size_];
     do {
       if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) return n->obj;
-    } while ((n=n->next));
+    } while ((n=n->nxt));
     return nullptr;
   }
 
@@ -238,36 +255,39 @@ public:
     if(is_unique) {
       ++count_;
       if (n->obj) {
+        allocated_from_pool_ = true;
         nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
         nw->hash = h; nw->obj = obj;
-        nw->next = n->next; n->next=nw;
+        nw->nxt = n->nxt; n->nxt=nw;
       } else {  // space left in last IdxNode
-        n->hash = h; n->obj = obj; //n->next=nullptr;
+        n->hash = h; n->obj = obj; //n->nxt=nullptr;
       }
     } else {
       // ++count_;
       if (!n->obj) { // space left in last IdxNode
         ++count_;
-        n->hash = h; n->obj = obj; //n->next=nullptr;
+        n->hash = h; n->obj = obj; //n->nxt=nullptr;
         return;
       }
       do {
         if(h==n->hash && IDX_FN::equals(*obj, *n->obj)) {
+          allocated_from_pool_ = true;
           nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
           nw->hash = h; nw->obj = obj;
-          nw->next = n->next; n->next=nw;
+          nw->nxt = n->nxt; n->nxt=nw;
           return;
         }/*else {
           //go ahead, and look for an element in the same slice
           //or reach the end of linked list of IdxNodes
         }*/
-      } while((n=n->next));
+      } while((n=n->nxt));
       // if(!n) {
       ++count_;
       n = &buckets_[b];
+      allocated_from_pool_ = true;
       nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
       nw->hash = h; nw->obj = obj;
-      nw->next = n->next; n->next=nw;
+      nw->nxt = n->nxt; n->nxt=nw;
       // return;
       // }
     }
@@ -281,36 +301,39 @@ public:
     if(is_unique) {
       ++count_;
       if (n->obj) {
+        allocated_from_pool_ = true;
         nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
         nw->hash = h; nw->obj = obj;
-        nw->next = n->next; n->next=nw;
+        nw->nxt = n->nxt; n->nxt=nw;
       } else {  // space left in last IdxNode
-        n->hash = h; n->obj = obj; //n->next=nullptr;
+        n->hash = h; n->obj = obj; //n->nxt=nullptr;
       }
     } else {
       // ++count_;
       if (!n->obj) { // space left in last IdxNode
         ++count_;
-        n->hash = h; n->obj = obj; //n->next=nullptr;
+        n->hash = h; n->obj = obj; //n->nxt=nullptr;
         return;
       }
       do {
         if(h==n->hash && IDX_FN::equals(*obj, *n->obj)) {
+          allocated_from_pool_ = true;
           nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
           nw->hash = h; nw->obj = obj;
-          nw->next = n->next; n->next=nw;
+          nw->nxt = n->nxt; n->nxt=nw;
           return;
         }/*else {
           //go ahead, and look for an element in the same slice
           //or reach the end of linked list of IdxNodes
         }*/
-      } while((n=n->next));
+      } while((n=n->nxt));
       // if(!n) {
       ++count_;
       n = &buckets_[b];
+      allocated_from_pool_ = true;
       nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
       nw->hash = h; nw->obj = obj;
-      nw->next = n->next; n->next=nw;
+      nw->nxt = n->nxt; n->nxt=nw;
       // return;
       // }
     }
@@ -324,11 +347,11 @@ public:
     IdxNode* n = &buckets_[h % size_];
     IdxNode* prev = nullptr, *next; // previous and next pointers
     do {
-      next = n->next;
+      next = n->nxt;
       if (/*n->obj &&*/ n->obj == obj) {
         if(prev) {
-          prev->next=next;
-          // n->next = nullptr;
+          prev->nxt=next;
+          // n->nxt = nullptr;
           // n->obj = nullptr;
           nodes_.del(n);
         } else {
@@ -345,11 +368,11 @@ public:
     IdxNode* n = &buckets_[h % size_];
     IdxNode* prev = nullptr, *next; // previous and next pointers
     do {
-      next = n->next;
+      next = n->nxt;
       if (/*n->obj &&*/ n->obj == obj) {
         if(prev) {
-          prev->next=next;
-          // n->next = nullptr;
+          prev->nxt=next;
+          // n->nxt = nullptr;
           // n->obj = nullptr;
           nodes_.del(n);
         } else {
@@ -366,7 +389,7 @@ public:
   inline virtual void foreach(std::function<void (const T&)> f) const {
     for (size_t b=0; b<size_; ++b) {
       IdxNode* n = &buckets_[b];
-      do { if(n->obj) f(*n->obj); } while((n=n->next));
+      do { if(n->obj) f(*n->obj); } while((n=n->nxt));
     }
   }
 
@@ -377,25 +400,30 @@ public:
       if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) {
         do {
           f(*n->obj);
-        } while ((n=n->next) && (h == n->hash) && IDX_FN::equals(key, *n->obj));
+        } while ((n=n->nxt) && (h == n->hash) && IDX_FN::equals(key, *n->obj));
         return;
       }
-    } while ((n=n->next));
+    } while ((n=n->nxt));
   }
   inline virtual void clear(){
+    if(allocated_from_pool_) {
+      IdxNode* head = nullptr;
+      for (size_t b=0; b<size_; ++b) {
+        IdxNode* n = buckets_[b].nxt;
+        if(n){
+          IdxNode* tmp = n;
+          if(head) {
+            while(n->nxt) n = n->nxt;
+            n->nxt = head;
+            head = tmp;
+          } else head = n;
+        }
+      }
+      nodes_.delete_all(head);
+    }
+    allocated_from_pool_ = false;
     count_ = 0;
     memset(buckets_, 0, sizeof(IdxNode) * size_);
-    // for (size_t b=0; b<size_; ++b) {
-    //   IdxNode* n = &buckets_[b];
-    //   IdxNode* next;
-    //   do {
-    //     n->obj = nullptr;
-    //     // n->hash = 0L;
-    //     next = n->next;
-    //     n->next = nullptr;
-    //   } while ((n=next));
-    // }
-    nodes_.clear();
   }
 
   FORCE_INLINE virtual size_t count() { return count_; }
@@ -410,7 +438,7 @@ public:
     do {
       T* lkup = n->obj;
       if (lkup && h == n->hash && IDX_FN::equals(key, *lkup)) return lkup->__av;
-    } while ((n=n->next));
+    } while ((n=n->nxt));
     return zero;
   }
 
@@ -419,7 +447,7 @@ public:
     do {
       T* lkup = n->obj;
       if (lkup && h == n->hash && IDX_FN::equals(key, *lkup)) return lkup->__av;
-    } while ((n=n->next));
+    } while ((n=n->nxt));
     return zero;
   }
 
@@ -435,7 +463,7 @@ public:
         lkup->__av = v;
         return 0;
       }
-    } while ((n=n->next));
+    } while ((n=n->nxt));
     //not found
     if(v != zero) return INSERT_INTO_MMAP; //insert it into the map
     return 0;
@@ -452,7 +480,7 @@ public:
         lkup->__av = v;
         return 0;
       }
-    } while ((n=n->next));
+    } while ((n=n->nxt));
     //not found
     if(v != zero) return INSERT_INTO_MMAP; //insert it into the map
     return 0;
@@ -471,7 +499,7 @@ public:
           }
           return 0;
         }
-      } while ((n=n->next));
+      } while ((n=n->nxt));
       //not found
       return INSERT_INTO_MMAP; //insert it into the map
     }
@@ -490,7 +518,7 @@ public:
           }
           return 0;
         }
-      } while ((n=n->next));
+      } while ((n=n->nxt));
       //not found
       return INSERT_INTO_MMAP; //insert it into the map
     }
@@ -630,9 +658,9 @@ public:
   FORCE_INLINE size_t count() const { return index[0]->count(); }
 
   FORCE_INLINE void clear(){
-    head = nullptr;
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->clear();
-    pool.clear();
+    pool.delete_all(head);
+    head = nullptr;
   }
 
   template<class Archive>
