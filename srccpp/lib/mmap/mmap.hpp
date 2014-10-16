@@ -33,20 +33,20 @@ public:
   Pool(size_t chunk_size=DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size >> 1) { add_chunk(); }
   ~Pool() { size_t sz=size_; while (data_ != nullptr) { El<T>* el = data_[sz].next; delete[] data_; data_ = el; sz=sz >> 1; } }
   FORCE_INLINE T* add() { if (!free_) { add_chunk(); } El<T>* el = free_; free_ = free_->next; return &(el->obj); }
-  FORCE_INLINE void del(T* obj) { ((El<T>*)obj)->next = free_; free_ = (El<T>*)obj; }
+  FORCE_INLINE void del(T* obj) { reinterpret_cast<El<T>*>(obj)->next = free_; free_ = reinterpret_cast<El<T>*>(obj); }
   inline void delete_all(T* current_data){
     if(current_data) {
       T* tmp = current_data;
       do {
         T* tmpNext = tmp->nxt;
         if(tmpNext){
-          ((El<T>*)tmp)->next = ((El<T>*)tmpNext);
+          reinterpret_cast<El<T>*>(tmp)->next = reinterpret_cast<El<T>*>(tmpNext);
         } else {
-          ((El<T>*)tmp)->next = free_;
+          reinterpret_cast<El<T>*>(tmp)->next = free_;
         }
         tmp = tmpNext;
       } while(tmp);
-      free_ = (El<T>*)current_data;
+      free_ = reinterpret_cast<El<T>*>(current_data);
     }
   }
   inline void clear(){
