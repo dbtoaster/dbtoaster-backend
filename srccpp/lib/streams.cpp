@@ -32,7 +32,7 @@ dbt_file_source::dbt_file_source(
 		std::cerr << "File not found: " << path << std::endl;
 }
 
-void dbt_file_source::read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue, size_t batch_size) {
+void dbt_file_source::read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) {
 	//read the whole file
 	source_stream->seekg(0, std::ios::end);
 	size_t bufferLength = source_stream->tellg();
@@ -129,7 +129,7 @@ void source_multiplexer::init_source(size_t batch_size) {
 		std::shared_ptr<source> s = (*it);
 		if(s) {
 			s->init_source();
-			s->read_source_events(eventList, eventQue, batch_size);
+			s->read_source_events(eventList, eventQue);
 		}
 	}
 	if(batch_size > 1) {

@@ -55,7 +55,7 @@ struct source
     
     // Process adaptors in the first stage, accumulating and returning
     // stream events
-    virtual void read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue, size_t batch_size) = 0;
+    virtual void read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) = 0;
 
     virtual void init_source() = 0;
 };
@@ -67,7 +67,7 @@ struct dbt_file_source : public source
 
     dbt_file_source(const std::string& path, frame_descriptor& f, std::shared_ptr<stream_adaptor> a);
 
-    void read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue, size_t batch_size);
+    void read_source_events(std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue);
 
     void init_source() {}
 };
