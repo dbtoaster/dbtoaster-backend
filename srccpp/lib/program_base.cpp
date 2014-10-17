@@ -216,8 +216,8 @@ ProgramBase::ProgramBase(int argc, char* argv[]) :
 }
 
 void ProgramBase::process_streams() {
-	if(stream_multiplexer.eventList->empty()) {
-		if(run_opts->parallel == MIX_INPUT_TUPLES) {
+	if(!stream_multiplexer.eventList->empty()) {
+		if(run_opts->parallel == MIX_INPUT_TUPLES && stream_multiplexer.inputs.size() > 1) {
 			std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
 			std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
 
