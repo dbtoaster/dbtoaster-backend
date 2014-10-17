@@ -455,27 +455,48 @@ trait ICppGen extends IScalaGen {
           val deltaRel = schema.deltaSchema
           val entryClass = deltaRel + "_entry"
           "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"+
-          "  "+deltaRel+".clear();\n"+
-          "  for(size_t i=0; i < eaList.size(); i++){\n"+
-          "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
-          "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"])));\n"+
-          "    "+deltaRel+".insert_nocheck(e);\n"+
+          "  size_t sz = eaList.size();\n"+
+          "  if(sz == "+deltaRel+".count()) {\n"+
+          "    "+entryClass+"* head = "+deltaRel+".head;\n"+
+          "    for(size_t i=0; i < sz; i++){\n"+
+          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
+          "      head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"]))"}.mkString(", ")+");\n"+
+          "      head->__av =  *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"]));\n"+
+          "      head = head->nxt;\n"+
+          "    }\n"+
+          "  } else {\n"+
+          "    "+deltaRel+".clear();\n"+
+          "    for(size_t i=0; i < sz; i++){\n"+
+          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
+          "      "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"])));\n"+
+          "      "+deltaRel+".insert_nocheck(e);\n"+
+          "    }\n"+
           "  }\n"+
           "  on_"+op+"_"+name+"("+deltaRel+");\n"+
           "}\n\n" +
           (if(hasOnlyBatchProcessingForAdd(s0,b))
             "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
-            "  "+deltaRel+".clear();\n"+
-            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+" 1L);\n"+
-            "  "+deltaRel+".insert_nocheck(e);\n"+
+            "  if("+deltaRel+".head){\n"+
+            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+            "    "+deltaRel+".head->__av =  1L;\n"+
+            "  } else {\n"+
+            "    "+deltaRel+".clear();\n"+
+            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+" 1L);\n"+
+            "    "+deltaRel+".insert_nocheck(e);\n"+
+            "  }\n"+
             "  on_batch_update_"+name+"("+deltaRel+");\n"+
             "}\n\n"
            else "") +
           (if(hasOnlyBatchProcessingForDel(s0,b))
             "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
-            "  "+deltaRel+".clear();\n"+
-            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+"-1L);\n"+
-            "  "+deltaRel+".insert_nocheck(e);\n"+
+            "  if("+deltaRel+".head){\n"+
+            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+            "    "+deltaRel+".head->__av = -1L;\n"+
+            "  } else {\n"+
+            "    "+deltaRel+".clear();\n"+
+            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+"-1L);\n"+
+            "    "+deltaRel+".insert_nocheck(e);\n"+
+            "  }\n"+
             "  on_batch_update_"+name+"("+deltaRel+");\n"+
             "}\n\n"
            else "")
