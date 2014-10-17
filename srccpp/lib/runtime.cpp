@@ -33,7 +33,7 @@ runtime_options::runtime_options(int argc, char* argv[]) :
   , log_tuple_count_every(0)
   , async(false)
   , batch_size(0)
-  , parallel(PROCESS_RELATIONS_SEQUENTIALLY)
+  , parallel(MIX_INPUT_TUPLES)
 {
 	init(argc, argv);
 }
