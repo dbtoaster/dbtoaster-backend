@@ -361,6 +361,4 @@ void ProgramBase::trace(std::ostream &ofs, bool debug) {
 	}
 }
 
-void voidFunc() {}
-
 }

@@ -26,6 +26,7 @@
 #include "standard_functions.hpp"
 
 #include "mmap/mmap.hpp"
+#include "hpds/macro.hpp"
 
 #include <limits.h>
 
@@ -208,14 +209,17 @@ public:
 };
 
 template<typename T, typename V>
-void add_to_temp_map(MultiHashMap<T,V,HashIndex<T,V,T> >& m, const T& k)
+FORCE_INLINE void add_to_temp_map(MultiHashMap<T,V,HashIndex<T,V,T> >& m, const T& k)
 {
     T* lkup = m.get(k);
     if(lkup != nullptr) lkup->__av+=k.__av;
     else /*k.__av = v;*/ m.insert_nocheck(k);
 }
 
-void voidFunc();
+FORCE_INLINE void voidFunc(){
+
+}
+
 }
 
 #endif /* DBTOASTER_DBT_PROGRAM_BASE_H */
