@@ -401,7 +401,14 @@ trait ICppGen extends IScalaGen {
     def register_relations = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ", true") + ");\n"}.mkString
 
     def register_table_triggers = s0.sources.filter(!_.stream).map{ s => 
+      (if(s0.triggers.exists{
+        t=>t.evt match {
+          case EvtBatchUpdate(_) => true
+          case _ => false
+        }
+      }) "pb.add_trigger(\""+s.schema.name+"\", batch_update, std::bind(&data_t::unwrap_batch_update_"+s.schema.name+", this, std::placeholders::_1));\n" else "") +
       "pb.add_trigger(\""+s.schema.name+"\", insert_tuple, std::bind(&data_t::unwrap_insert_"+s.schema.name+", this, std::placeholders::_1));\n"
+      
     }.mkString
 
     def register_stream_triggers = s0.triggers.filter(_.evt != EvtReady).map{ t=>t.evt match {
@@ -431,10 +438,25 @@ trait ICppGen extends IScalaGen {
       val name = s.schema.name
       val fields = s.schema.fields
       "void on_insert_"+name+"("+fields.map{case (fld,tp) => "const "+tp.toCpp+" "+fld }.mkString(", ")+") {\n"+
-      "  "+name+"_entry e("+fields.map{case (fld,_) => fld }.mkString(", ")+", 1);\n"+
+      "  "+name+"_entry e("+fields.map{case (fld,_) => fld }.mkString(", ")+", 1L);\n"+
       "  "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
-      "}\n"+
-      generateUnwrapFunction(EvtAdd(s.schema))
+      "}\n\n"+
+      generateUnwrapFunction(EvtAdd(s.schema))+
+      (if(s0.triggers.exists{
+          t=>t.evt match {
+            case EvtBatchUpdate(_) => true
+            case _ => false
+          }
+        })
+        "void unwrap_batch_update_"+name+"(const event_args_t& eaList) {\n"+
+        "  size_t sz = eaList.size();\n"+
+        "  for(size_t i=0; i < sz; i++){\n"+
+        "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
+        "    "+name+"_entry e("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"1L);\n"+
+        "    "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
+        "  }\n"+
+        "}\n\n"
+      else "")
     }.mkString
 
     def genStreamTriggers = s0.triggers.map(t =>
