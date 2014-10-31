@@ -34,7 +34,7 @@ trait LMSExpGen extends M3OpsExp with ScalaOpsPkgExpOpt with ExtendedExpressions
  * convert a Rep[T] into its String representation in the target code.
  */
 object ScalaExpGen extends LMSExpGen { self =>
-  class MyCodeGen extends ScalaCodeGenPkg with ScalaConciseCodegen with ScalaGenM3Ops with ScalaGenSEntry with ScalaGenStore with MyGenericCodegen {
+  class MyCodeGen extends ScalaCodeGenPkg with ScalaConciseCodegen with ScalaGenSEntry with ScalaGenStore with MyGenericCodegen with ScalaGenM3Ops {
     override val IR: self.type = self
     def emitSource[T:Manifest](sym: => Exp[T]) : String = emitSource(reifyBlock(sym))
     def emitSource[T:Manifest](body: Block[T]) : String = {
@@ -73,7 +73,7 @@ object ScalaExpGen extends LMSExpGen { self =>
 }
 
 object CppExpGen extends LMSExpGen with COpsPkgExpOpt { self =>
-  class MyCodeGen extends CCodeGenPkg with CCodegen with CConciseCodegen with CGenM3Ops with CGenSEntry with CGenStore with MyGenericCodegen {
+  class MyCodeGen extends CCodeGenPkg with CCodegen with CConciseCodegen with CGenSEntry with CGenStore with MyGenericCodegen with CGenM3Ops {
     override val IR: self.type = self
     def emitSource[T:Manifest](sym: => Exp[T]) : String = emitSource(reifyBlock(sym))
     def emitSource[T:Manifest](body: Block[T]) : String = {
