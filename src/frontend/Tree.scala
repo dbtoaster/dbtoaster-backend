@@ -51,8 +51,8 @@ case object OpSet extends OpMap { override def toString=":=" }
 case object OpAdd extends OpMap { override def toString="+=" }
 
 // ---------- Trigger events
-sealed abstract class EvtTrigger extends Tree { def args=List[(String,Type)](); def evtName:String }
-case object EvtReady extends EvtTrigger { override def toString="SYSTEM READY"; override val evtName="system_ready" }
+sealed abstract class EvtTrigger extends Tree { def args=List[(String,Type)](); def evtName:String; def schema:Schema }
+case object EvtReady extends EvtTrigger { override def toString="SYSTEM READY"; override val evtName="system_ready"; val schema = null }
 case class EvtAdd(schema:Schema) extends EvtTrigger { override def toString="+ "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields; override val evtName="insert_"+schema.name }
 case class EvtDel(schema:Schema) extends EvtTrigger { override def toString="- "+schema.name+" ("+schema.fields.map(x=>x._1).mkString(", ")+")"; override def args=schema.fields; override val evtName="delete_"+schema.name }
 case class EvtBatchUpdate(schema:Schema) extends EvtTrigger { override def toString="BATCH UPDATE OF "+schema.name; override def args=Nil; override val evtName="batch_"+schema.name }
