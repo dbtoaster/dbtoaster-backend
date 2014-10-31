@@ -205,6 +205,8 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
     },impl.unit(1L),impl.unit(0L))
   }
 
+  def filterStatement(s:Stmt) = true
+
   // Trigger code generation
   def genTriggerLMS(t:Trigger, s0:System) = {
     val (name,args) = t.evt match {
@@ -248,7 +250,7 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
         }
       ).toMap)
       // Execute each statement
-      t.stmts.map {
+      t.stmts.filter(filterStatement).map {
         case StmtMap(m,e,op,oi) => cx.load()
           if (m.keys.size==0) {
             val mm = m.tp match {
@@ -304,6 +306,8 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
       impl.codegen.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]])
     }
   }
+
+  def genAllMaps(maps:Seq[MapDef]) = maps.map(genMap).mkString("\n")
   def createVarDefinition(name: String, tp:Type) = "var "+name+":"+tp.toScala+" = "+tp.zero
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = {
@@ -371,7 +375,7 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
     val ts = tsResBlks.map{ case (name,params,b) =>
       impl.emitTrigger(b,name,params)
     }.mkString("\n\n")
-    val ms = classLevelMaps.map(genMap).mkString("\n") // maps
+    val ms = genAllMaps(classLevelMaps) // maps
     var outStream = new java.io.StringWriter
     var outWriter = new java.io.PrintWriter(outStream)
     //impl.codegen.generateClassArgsDefs(outWriter,Nil)
