@@ -327,7 +327,7 @@ trait ICppGen extends IScalaGen {
             case _ =>
               fop+"("+sampleEnt+".modify("+(m.keys map rn).mkString(",")+"),"+v+");\n"
           }
-        }), if (op==OpAdd) Some(m.keys zip m.tks) else None)
+        }), /*if (op==OpAdd)*/ Some(m.keys zip m.tks) /*else None*/)
     case m@MapDef(_,_,_,_) => "" //nothing to do
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }

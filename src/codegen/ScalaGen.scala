@@ -332,7 +332,7 @@ trait IScalaGen extends CodeGen {
             case _ =>
               m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+v+")\n"
           }
-        }),if (op==OpAdd) Some(m.keys zip m.tks) else None)
+        }),/*if (op==OpAdd)*/ Some(m.keys zip m.tks)/* else None*/) // XXXX commented out the if expression
     case m@MapDef(_,_,_,_) => "" //nothing to do
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }

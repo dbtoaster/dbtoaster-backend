@@ -16,10 +16,10 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
   import ManifestHelper.{man,zero,manEntry,manStore}
   import impl.Rep
   implicit val overloaded1 = impl.overloaded1
+  import ddbt.lib.store._
 
   var cx : Ctx[Rep[_]] = null
 
-  import ddbt.lib.store._
   def me(ks:List[Type],v:Type=null) = manEntry(if (v==null) ks else ks:::List(v))
   def mapProxy(m:Rep[_]) = impl.store2StoreOpsCls(m.asInstanceOf[Rep[Store[Entry]]])
 
@@ -137,7 +137,10 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
         }
         cx.load(cur)
         co(impl.readVar(acc))
-      } else {
+      } else am match {
+        case Some(t) if t.toSet.subsetOf(agg_keys.toSet) => expr(e,co,am)
+        case _ =>
+
         val cur = cx.save
 
         implicit val mE=me(agg_keys.map(_._2),ex.tp)
@@ -147,10 +150,7 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
           impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))
         }
         expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
-        am match {
-          case Some(t) if t.toSet.subsetOf(agg_keys.toSet) => expr(e,co,am)
-          case _ => foreach(acc,agg_keys,a.tp,co)
-        }
+        foreach(acc,agg_keys,a.tp,co)
       }
     case _ => sys.error("Unimplemented: "+ex)
   }
@@ -272,8 +272,8 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
             cx.load()
             expr(e,(r:Rep[_]) => {
               val ent = impl.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)) : _*)
-              op match { case OpAdd => impl.m3add(mm, ent)(mE) case OpSet => impl.m3set(mm, ent)(mE) }
-            }, if (op==OpAdd) Some(m.keys zip m.tks) else None)
+              op match { case OpAdd | OpSet => impl.m3add(mm, ent)(mE) }
+            }, /*if (op==OpAdd)*/ Some(m.keys zip m.tks) /*else None*/) // XXXX commented out the if expression
           }
         case m@MapDef(name,tp,keys,_) =>
           // val m = me(keys.map(_._2),tp)
