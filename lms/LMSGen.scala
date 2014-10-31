@@ -303,7 +303,7 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
   override def genMap(m:MapDef):String = {
     if (m.keys.size==0) createVarDefinition(m.name, m.tp)+";"
     else {
-      impl.codegen.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]])
+      impl.codegen.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]], true)
     }
   }
 

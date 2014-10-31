@@ -229,7 +229,7 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
   }).asInstanceOf[Sym[_]]
 
   def addIndicesToEntryClass[E<:Entry:Manifest](x:Exp[Store[E]], fn: ((Sym[_],collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]) => Unit)) = {
-    var xx = getStoreSym(x).asInstanceOf[Sym[Store[E]]]
+    val xx = getStoreSym(x).asInstanceOf[Sym[Store[E]]]
     // x match {
     //   case Def(Reflect(StMutable(xy),_,_)) => xx = xy.asInstanceOf[Sym[_]]
     //   case _ => ()
@@ -457,7 +457,7 @@ trait GenericGenStore extends GenericNestedCodegen {
   val IR: StoreExp with ExtendedExpressions with Effects
   import IR._
   
-  def generateNewStore(c: Sym[_]):String
+  def generateNewStore(c: Sym[_], isClassLevel:Boolean=false):String
 
   def simplifyTypeName(tp:String):String = tp match {
     case "Int" | "int" => "I"
@@ -488,7 +488,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     case StNewStore(mE) => {
       val symName = quote(sym)
       staticFields += ("StoreOps."+symName -> generateNewStore(sym))
-      stream.println(symName+".clear")
+      stream.println(symName+".clear //new store")
       //stream.println(generateNewStore(sym)) //emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
     }
     case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ storeEntryType(x) + "("+args.map(quote(_)).mkString(", ")+")")
@@ -576,11 +576,11 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
 
   // Implementation of MurmurHash3 based on scala.util.hashing.MurmurHash3 for Products
   // https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
-  def hashFun(argTypes:List[String],locs:Seq[Int],obj:String=null) = {
+  def hashFun(argTypes:List[String],locs:Seq[Int],obj:String=null,seed:String="0xcafebabe") = {
     def h(tp:String) = if (tp=="Int") "" else ".##"
     def rotl(i:String, dist:Int) = "("+i+" << "+dist+") | ("+i+" >>> "+(-dist)+")"
     locs.zipWithIndex.map { case (i,n) =>
-      (if(n==0) "{ var h:Int=0xcafebabe; var mix:Int" else "  mix") + "="+(if (obj!=null) obj+"." else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
+      (if(n==0) "{ var h:Int="+seed+"; var mix:Int" else "  mix") + "="+(if (obj!=null) obj+"." else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
       "mix=("+rotl("mix",15)+")*0x1b873593 ^ h; mix=" + rotl("mix", 13)+"; h=(mix << 1)+mix+0xe6546b64; "
     }.mkString+"h^="+locs.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h ^ (h>>>16) }"
   }
@@ -590,7 +590,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     out.println
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
-      out.println("case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
+      out.println("case class %s(%s) extends Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
         "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
       }.mkString(", "), argTypes.size))
       out.println("  def copy = "+clsName+"("+argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")+")")
@@ -633,7 +633,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     }
   }
 
-  override def generateNewStore(c: Sym[_]):String = {
+  override def generateNewStore(c: Sym[_], isClassLevel:Boolean=false):String = {
     val outStream = new java.io.StringWriter
     val out = new java.io.PrintWriter(outStream)
 
@@ -781,7 +781,7 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
     out.println
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
-      out.println("case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
+      out.println("case class %s(%s) extends Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
         "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
       }.mkString(", "), argTypes.size))
       out.println("  def copy = "+clsName+"("+argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")+")")
@@ -820,7 +820,7 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
     }
   }
 
-  override def generateNewStore(c: Sym[_]):String = {
+  override def generateNewStore(c: Sym[_], isClassLevel:Boolean=false):String = {
     val outStream = new java.io.StringWriter
     val out = new java.io.PrintWriter(outStream)
 

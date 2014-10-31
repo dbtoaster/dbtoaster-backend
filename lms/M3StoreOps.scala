@@ -27,6 +27,7 @@ trait M3StoreOps extends StoreOps with Equal with IfThenElse {
 
 trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExpOpt with EqualExp with IfThenElseExp {
   val USE_STORE1 = true // whether we specialize temporary maps in Store1
+  val USE_UNIQUE_INDEX_WHEN_POSSIBLE = true
 
   def named(name:String,tp:Type,mutable:Boolean=false) = named(name,mutable)(man(tp))
   def named[T](name:String,mutable:Boolean=false)(implicit mT:Manifest[T]) = { val n=Named(name)(mT); if (mutable) reflectMutable(n) else n }
@@ -40,14 +41,14 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     val n = m.typeArguments.size
     val lastMan = m.typeArguments.last
 
-    val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
+    val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
     var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
 
     val entVal = ent.get(n)
     if(tmp) {
       // we don't remove 0-elements
       if (USE_STORE1) {
-        //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
+        //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
         //addIndicesToEntryClass[E](map, (xx, m) => { val idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
         __ifThenElse(__equal(entVal,unit(zero(lastMan))), unit(()),
           reflectWrite(map)(M3Add(map,ent))
@@ -82,7 +83,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
     val entVal = ent.get(n)
 
-    val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
+    val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
     var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
 
     if(tmp) { // this never happens in practice
@@ -100,7 +101,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
     var idx = idx_in
     key match {
       case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
-        val tupVal = ((IHash,args.map(_._1),false,-1)) //if(isTemp) ((IHash,args.map(_._1),false,-1)) else ((IHash,args.map(_._1),true,-1))
+        val tupVal = ((IHash,args.map(_._1),USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1)) //if(isTemp) ((IHash,args.map(_._1),false,-1)) else ((IHash,args.map(_._1),true,-1))
         idx = m.indexOf(tupVal)
         if(idx < 0) {
           m += tupVal
@@ -108,7 +109,7 @@ trait M3StoreOpsExp extends BaseExp with EffectExp with M3StoreOps with StoreExp
         }
       })
       case _ =>
-        val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,false,-1))
+        val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
         addIndicesToEntryClass[E](x, (xx, m) => {
           idx = m.indexOf(tupVal)
           if(idx < 0) { m+=tupVal; idx=m.size-1 }
@@ -132,9 +133,9 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
   import ddbt.Utils.{ind,tup}
 
   // Specialization of temporary maps into Entry1 / Store1
-  override def generateNewStore(s: Sym[_]):String =
+  override def generateNewStore(s: Sym[_], isClassLevel:Boolean=false):String =
     if (USE_STORE1 && isTemp(s)) "val "+quote(s,true)+" = new Store1["+storeEntryType(s)+"]()\n"
-    else super.generateNewStore(s)
+    else super.generateNewStore(s,isClassLevel)
   override def emitDataStructures(out: java.io.PrintWriter): Unit = {
     if (USE_STORE1) {
       val (temp,global) = storeSyms.partition(s => isTemp(s))
@@ -236,7 +237,7 @@ trait CGenM3StoreOps extends CGenBase with CGenEffect with CGenStore {
   import ddbt.Utils.{ind,tup}
 
   // Specialization of temporary maps into Entry1 / Store1
-  override def generateNewStore(s: Sym[_]):String =
+  override def generateNewStore(s: Sym[_], isClassLevel:Boolean=false):String =
     if (USE_STORE1 && isTemp(s)) "val "+quote(s,true)+" = new Store1["+storeEntryType(s)+"]()\n"
     else super.generateNewStore(s)
   override def emitDataStructures(out: java.io.PrintWriter): Unit = {
