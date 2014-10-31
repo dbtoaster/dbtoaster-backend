@@ -23,6 +23,7 @@ object Compiler {
   val LANG_LMS = "lms"
   val LANG_CPP_LMS = "cpplms"
   val LANG_SCALA_LMS = "scala"
+  val LANG_SPARK_LMS = "spark"
 
   val M3_FILE_SUFFIX = ".m3"
 
@@ -66,7 +67,7 @@ object Compiler {
     def eat(f:String=>Unit,s:Boolean=false) { i+=1; if (i<l) f(if(s) args(i).toLowerCase else args(i)) }
     while(i<l) {
       args(i) match {
-        case "-l" => eat(s=>s match { case LANG_CALC|LANG_M3|LANG_SCALA|LANG_CPP|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS|LANG_AKKA => lang=s; case _ => error("Unsupported language: "+s,true) },true)
+        case "-l" => eat(s=>s match { case LANG_CALC|LANG_M3|LANG_SCALA|LANG_CPP|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS|LANG_SPARK_LMS|LANG_AKKA => lang=s; case _ => error("Unsupported language: "+s,true) },true)
         case "--frontend" => eat(s=>frontend_path_bin=s)
         case "--batch" => batching_enabled = true
         case "-o" => eat(s=>out=s)
@@ -103,6 +104,7 @@ object Compiler {
       // error("                - "+LANG_AKKA     +"     : distributed Akka code")
       // error("                - "+LANG_CPP_LMS  +"      : LMS-optimized C++")
       error("                - "+LANG_SCALA_LMS+" : LMS-optimized Scala")
+      error("                - "+LANG_SPARK_LMS+" : LMS-optimized Spark")
       //   ("                - dcpp     : distributed C/C++ code")
       error("Front-end options:")
       error("  -d <depth>    incrementalization depth (default: infinite)")
@@ -158,6 +160,7 @@ object Compiler {
       case LANG_LMS => new LMSCppGen(name)
       case LANG_CPP_LMS => new LMSCppGen(name)
       case LANG_SCALA_LMS => new LMSScalaGen(name)
+      case LANG_SPARK_LMS => new LMSSparkGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }
     if (ni) {
@@ -183,7 +186,7 @@ object Compiler {
     if (cPath!=null || exec) {
       dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
       lang match {
-        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
+        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS|LANG_SPARK_LMS =>
           val t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
           if (t_comp!=null) t_comp(t2)
           // TODO XXX should generate jar file in cPath
@@ -196,7 +199,7 @@ object Compiler {
     // Execution
     if (exec) {
       lang match {
-        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
+        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS|LANG_SPARK_LMS =>
           Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,("-b"+exec_bs :: exec_args).toArray,exec_vm)
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
           val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = ddbt.lib.Helper.extractExecArgs(("-b"+exec_bs :: exec_args).toArray)

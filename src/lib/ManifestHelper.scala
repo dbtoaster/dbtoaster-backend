@@ -29,6 +29,12 @@ object ManifestHelper {
     val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.Store")
     scala.reflect.ManifestFactory.classType(cls,entryMan).asInstanceOf[Manifest[Store[Entry]]]
   }
+  def manContainer(ts:List[Type]):Manifest[Store[Entry]] = manStore(manEntry(ts))
+
+  def manContainer(entryMan:Manifest[Entry]):Manifest[Store[Entry]] = {
+    val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.Container")
+    scala.reflect.ManifestFactory.classType(cls,entryMan).asInstanceOf[Manifest[Store[Entry]]]
+  }
   def zero(tp: Type) = tp match {
     case TypeLong => 0L
     case TypeDouble => 0.0

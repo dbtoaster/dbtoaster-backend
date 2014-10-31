@@ -109,7 +109,10 @@ trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaC
     case SteUpdate(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" = "+quote(v))
     case SteIncrease(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" += "+quote(v))
     case SteDecrease(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" -= "+quote(v))
-    case SteGet(x,i) => emitValDef(sym, quote(x)+"._"+i)
+    case SteGet(x,i) => x.asInstanceOf[Sym[_]].attributes.get(SparkGenStore.ENTRY_GET+i) match{
+      case Some(fld:String) => emitValDef(sym, fld)
+      case _ => emitValDef(sym, quote(x)+"._"+i)
+    }
     case _ => super.emitNode(sym, rhs)
   }
 }
@@ -484,6 +487,8 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
   val IR: StoreExp with ExtendedExpressions with Effects
   import IR._
 
+  def isContainer(x: Exp[Any]) = quote(x).endsWith("_DELTA")
+
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case StNewStore(mE) => {
       val symName = quote(sym)
@@ -670,6 +675,107 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
   */
 }
 
+object SparkGenStore {
+  val FIELDS = "Store.FIELDS"
+  val ENTRY_GET = "Store.Entry.GET"
+}
+trait SparkGenStore extends ScalaGenStore {
+  val IR: StoreExp with ExtendedExpressions with Effects
+  import IR._
+  import SparkGenStore._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    case StForeach(x, blockSym, block) if isContainer(x) => 
+        val qx = quote(x)
+        val len = "len_"+qx
+        val i = "i_"+qx
+        val fields = x.asInstanceOf[Sym[_]].attributes(FIELDS).asInstanceOf[Seq[String]]
+        stream.println("{")
+        stream.println(" val "+len+" = "+qx+".length")
+        stream.println(" var "+i+" = 0")
+        emitValDef(sym," while( " + i + " < " + len + ") {")
+        (fields ++ List("values")).zipWithIndex.foreach{ case (f, idx) =>
+          blockSym.attributes.put(ENTRY_GET+(idx+1),qx+"."+f+"("+i+")")
+        }
+        // stream.println("  val "+quote(blockSym) + " = (" + fields.map(qx+"."+_+"(i), ").mkString+qx+".values(i))")
+        emitBlock(block)
+        stream.println(" "+i+" += 1")
+        stream.println(" }")
+        stream.println("}")
+    case _ => super.emitNode(sym, rhs)
+  }
+
+  override def emitDataStructures(out: java.io.PrintWriter): Unit = {
+    import ddbt.Utils.ind
+    out.println
+    storeSyms.foreach{ sym =>
+      val (clsName, argTypes) = extractEntryClassName(sym)
+      out.println("case class %s(%s) extends Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
+        "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
+      }.mkString(", "), argTypes.size))
+      out.println("  def copy = "+clsName+"("+argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")+")")
+      //val l="_"+argTypes.size
+      //out.println("  override def zero = "+l+" == "+zeroValue(argTypes.last))
+      //out.println("  override def merge(e0:Entry) { val e=e0.asInstanceOf["+clsName+"]; "+l+" "+(argTypes.last match { case "java.util.Date" => "= new Date("+l+".getTime + e."+l+".getTime)" case _ => "+= e."+l })+" }")
+      out.println("}")
+
+      val indices = sym.attributes.get(ENTRY_INDICES_KEY) match {
+        case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
+        case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
+                     m += ((IList, (1 to sym.tp.typeArguments.size),false,-1))
+      }
+      // ------------- EntryIdx
+      indices.zipWithIndex.foreach{ case ((idxType,idxLoc,idxUniq,idxSliceIdx),i) =>
+        out.println("object "+clsName+"_Idx"+i+" extends EntryIdx["+clsName+"] {\n"+ind(
+          // "private final val seed = stringHash(\""+clsName+"\")"+"\n"+
+          "def hash(e:"+clsName+") = "+(idxType match {
+            case IHash|IList => hashFun(argTypes,idxLoc,"e"/*,"seed"*/)
+            case ISliceHeapMax|ISliceHeapMin => hashFun(argTypes,List(idxLoc(0)),"e"/*,"seed"*/)
+            case _ => sys.error("index_hash not supported")
+          })+"\n"+
+          "def cmp(e1:"+clsName+",e2:"+clsName+") = "+(idxType match {
+            case IHash | IList => "if(%s) 0 else 1".format(idxLoc.map(i => "e1._%d==e2._%d".format(i,i)).mkString(" && "))
+            case ISliceHeapMin => val i = idxLoc(0); "if(e1._%s < e2._%s) -1 else if(e1._%s > e2._%s) 1 else 0".format(i,i,i,i)
+            case ISliceHeapMax => val i = idxLoc(0); "if(e1._%s < e2._%s) 1 else if(e1._%s > e2._%s) -1 else 0".format(i,i,i,i)
+            case _ => sys.error("index_cmp not supported")
+          })
+        )+"\n}")
+      }
+      out.println
+    }
+  }
+
+  override def generateNewStore(c: Sym[_], isClassLevel:Boolean=false):String = {
+    val outStream = new java.io.StringWriter
+    val out = new java.io.PrintWriter(outStream)
+
+    val idxArr = c.attributes.get(ENTRY_INDICES_KEY) match {
+      case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
+      case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
+                   m += ((IList, (1 to c.tp.typeArguments.size),false,-1))
+    }
+    val cName = quote(c, true)
+    val entTp = storeEntryType(c)
+    if(isClassLevel) {
+      out.println("val "+cName+" = createMap["+entTp+"](\""+cName+"\", Vector(")
+      idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
+        case IHash => out.println("  new HashIndex[%s](%d, %s) with %s".format(entTp, i, idxUniq, entTp+"_Idx"+i))
+        case _ => sys.error("Index type "+idxType+" not supported")
+      }}
+      out.println("))")
+    } else {
+      out.println("val "+cName+" = new Store["+entTp+"]("+idxArr.size+",Array[EntryIdx["+entTp+"]]("+(0 until idxArr.size).map(i=>entTp+"_Idx"+i).mkString(",")+"))")
+      idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
+        case IList => out.println("%s.index(%d,IList,%s)".format(cName, i, idxUniq))
+        case IHash => out.println("%s.index(%d,IHash,%s)".format(cName, i, idxUniq))
+        case ISliceHeapMax => out.println("%s.index(%d,ISliceHeapMax,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
+        case ISliceHeapMin => out.println("%s.index(%d,ISliceHeapMin,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
+        case _ => sys.error("Index type "+idxType+" not supported")
+      }}
+    }
+    outStream.toString
+  }
+}
 
 trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
   val IR: StoreExp with ExtendedExpressions with Effects

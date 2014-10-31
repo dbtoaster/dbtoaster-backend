@@ -72,6 +72,46 @@ object ScalaExpGen extends LMSExpGen { self =>
   override def emitTrigger[T:Manifest](blk:Block[T],name:String,params:String):String = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,params) }
 }
 
+
+object SparkExpGen extends LMSExpGen { self =>
+  class MyCodeGen extends ScalaCodeGenPkg with ScalaConciseCodegen with ScalaGenSEntry with SparkGenStore with MyGenericCodegen with ScalaGenM3Ops {
+    override val IR: self.type = self
+    def emitSource[T:Manifest](sym: => Exp[T]) : String = emitSource(reifyBlock(sym))
+    def emitSource[T:Manifest](body: Block[T]) : String = {
+      val outStream = new java.io.StringWriter
+      val outWriter = new java.io.PrintWriter(outStream)
+      withStream(outWriter) {
+        val transformedBody = performTransformations(body)
+        emitBlock(transformedBody)
+        if (manifest[T]!=manifest[Unit]) stream.println(quote(getBlockResult(transformedBody)))
+      }
+      // reset // reset the whole LMS subsystem
+
+      val unformattedScala = outStream.toString
+      try {
+        ScalaFormatter.format(unformattedScala)
+      } catch {
+        case e: ScalaParserException => unformattedScala
+      }
+    }
+    def emitTriggerSource[T:Manifest](body: Block[T],name:String,params:String) : String = {
+      val funDef = "def on"+name+"("+params+") {\n"+ddbt.Utils.ind(emitSource(body))+"\n}"
+
+      var staticFieldsStr = ""
+      staticFields.map { case (key, staticFldDef) =>
+        staticFieldsStr += staticFldDef.trim + "\n"
+      }
+      staticFields.clear
+
+      staticFieldsStr + "\n" + funDef
+    }
+  }
+  val codegen = new MyCodeGen
+  override def emit[T:Manifest](sym: => Exp[T]):String = { assert(codegen ne null); codegen.emitSource(sym) }
+  override def emit[T:Manifest](blk:Block[T]):String = { assert(codegen ne null); codegen.emitSource(blk) }
+  override def emitTrigger[T:Manifest](blk:Block[T],name:String,params:String):String = { assert(codegen ne null); codegen.emitTriggerSource(blk,name,params) }
+}
+
 object CppExpGen extends LMSExpGen with COpsPkgExpOpt { self =>
   class MyCodeGen extends CCodeGenPkg with CCodegen with CConciseCodegen with CGenSEntry with CGenStore with MyGenericCodegen with CGenM3Ops {
     override val IR: self.type = self

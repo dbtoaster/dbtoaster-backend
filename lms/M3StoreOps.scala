@@ -231,6 +231,16 @@ trait ScalaGenM3StoreOps extends ScalaGenBase with ScalaGenEffect with ScalaGenS
 }
 
 
+trait SparkGenM3StoreOps extends ScalaGenM3StoreOps with SparkGenStore{
+  val IR: M3StoreOpsExp with ExtendedExpressions with Effects
+  import IR._
+  import ddbt.Utils.{ind,tup}
+  
+  // override def generateNewStore(s: Sym[_], isClassLevel:Boolean=false):String =
+  //   if (USE_STORE1 && isTemp(s)) "val "+quote(s,true)+" = new Store1["+storeEntryType(s)+"]()\n"
+  //   else super[SparkGenStore].generateNewStore(s,isClassLevel)
+}
+
 trait CGenM3StoreOps extends CGenBase with CGenEffect with CGenStore {
   val IR: M3StoreOpsExp with ExtendedExpressions with Effects
   import IR._

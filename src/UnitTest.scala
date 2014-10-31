@@ -1,12 +1,7 @@
 package ddbt
 import java.io._
 import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
-import Compiler.LANG_SCALA
-import Compiler.LANG_CPP
-import Compiler.LANG_AKKA
-import Compiler.LANG_LMS
-import Compiler.LANG_CPP_LMS
-import Compiler.LANG_SCALA_LMS
+import Compiler._
 import ddbt.lib.ManifestHelper
 import ddbt.lib.Helper
 /**
@@ -84,7 +79,7 @@ object UnitTest {
         e("Filtering options:")
         e("  -d <dataset>  add a dataset: tiny, standard, big, huge (_del)?")
         e("  -dd           add tiny,tiny_del,standard,standard_del datasets")
-        e("  -m <mode>     add mode: "+LANG_SCALA+", "+LANG_CPP+", "+LANG_CPP_LMS+", "+LANG_SCALA_LMS+", "+LANG_AKKA+" (_spec|_full|_0-10)?")
+        e("  -m <mode>     add mode: "+LANG_SCALA+", "+LANG_CPP+", "+LANG_CPP_LMS+", "+LANG_SCALA_LMS+", "+LANG_SPARK_LMS+", "+LANG_AKKA+" (_spec|_full|_0-10)?")
         e("                          lscala, lcpp, llms")
         e("  -q <filter>   add an inclusion filter for queries")
         e("  -qx <filter>  add an exclusion filter for queries")
@@ -164,6 +159,7 @@ object UnitTest {
           case "lscala"|"llms" if (repo!=null && benchmark) => ;legacyScala(queryName, q,new Printer(if(m=="llms") "LLMS" else "LScala"),t0,m=="llms")
           case "lcpp" if (repo!=null && benchmark) => legacyCPP(queryName, q,new Printer("LCPP"),t0)
           case LANG_SCALA|LANG_SCALA_LMS => genQueryScala(queryName, q,new Printer(mn(m)),m3,m)
+          case LANG_SPARK_LMS => genQuerySpark(queryName, q,new Printer(mn(m)),m3,m)
           case LANG_CPP | LANG_CPP_LMS | LANG_LMS => genQueryCpp(queryName, q,new Printer(mn(m)),m3,m)
           case _ => sys.error("Mode is not supported: "+m)
 
@@ -201,6 +197,7 @@ object UnitTest {
 
       for (m <- modes) m match {
         case LANG_SCALA|LANG_SCALA_LMS => genQueryScala(queryName,QueryTest(f),new Printer("Scala"),m3,m)
+        case LANG_SPARK_LMS => genQuerySpark(queryName,QueryTest(f),new Printer("Spark"),m3,m)
         case LANG_CPP|LANG_CPP_LMS|LANG_LMS => genQueryCpp(queryName,QueryTest(f),new Printer("Cpp"),m3,m)
         case _ => ()
       }
@@ -213,6 +210,57 @@ object UnitTest {
   def genQueryScala(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
     val lmsMode = mode.contains(LANG_SCALA_LMS)
     val cls = qName+(if(lmsMode) "" else "VScala")
+    var sp=""
+    // Correctness
+    def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
+      val qid = sys.queries.map{_.name}.zipWithIndex.toMap
+      val qt = sys.queries.map{q=>(q.name, (q.keys.map(_._2), q.tp)) }.toMap
+      val body = "import scala.language.implicitConversions\n"+
+      "implicit def dateConv(d:Long) = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime;\n"+
+      "implicit def strConv(d:Long) = \"\"+d\n"+ // fix for TPCH22
+      q.sets.map { case (sz,set) =>
+        (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-m0\",\"-d"+sz+"\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
+        set.out.map {
+          case (n,o) =>
+            val (kt,vt) = qt(n)
+            val tn = codegen.ScalaGen.tupleNameOfTps(kt)
+            val qtp = "["+tup(kt.map(_.toScala))+","+vt.toScala+"]"
+            val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
+            val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
+              case QueryMap(m) => "Map"+qtp+"("+m.map{ case (ks,v) => "("+ks.mkString("(",",",")")+","+v+")" }.mkString(",")+")"// inline in the code
+              case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
+              case QuerySingleton(v) => v
+            })+")"
+            (if (full) "it(\""+n+" correct\") " else "")+"{\n"+ind(kv+cmp)+"\n}"
+        }.mkString("\n"))+"\n})"
+      }.mkString("\n")
+      if (full) "import org.scalatest._\n\n"+
+      "class "+cls+"Spec extends FunSpec {\n"+ind("import Helper._\nimport "+cls+"._\n"+body)+"\n}\n" else body
+    }
+    def inject(pre:String,str:String,dir:String=null) { val src=read(tmp.getPath+"/"+cls+".scala").split("\\Q"+pre+"\\E"); write((if (dir!=null) dir else tmp)+"/"+cls+".scala",src(0)+pre+str+src(1)) }
+    def post(sys:ddbt.ast.M3.System) { sp=spec(sys,true); if (verify) inject("  def main(args:Array[String]) {\n",ind(spec(sys,false),2)+"\n") }
+    def verifyResult(output:String, sys:ddbt.ast.M3.System, dataset:String) { /* result verification for scala is done in the generated main function */ }
+    // Benchmark (and codegen)
+    val m=mode.split("_"); // Specify the inlining as a suffix of the mode
+    Compiler.inl = if (m.length==1) 0 else if (m(1)=="spec") 5 else if (m(1)=="full") 10 else try { m(1).toInt } catch { case _:Throwable => 0 }
+    Compiler.lang = m(0)
+    Compiler.name = cls
+    Compiler.pkg = "ddbt.test.gen"
+    Compiler.out = tmp.getPath+"/"+cls+".scala"
+    Compiler.exec = benchmark
+    Compiler.exec_sc |= Utils.isLMSTurnedOn
+    Compiler.exec_dir = path_classes
+    Compiler.exec_bs = exec_bs
+    Compiler.exec_args = "-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList
+    p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
+    p.close
+    // Append correctness spec and move to test/gen/
+    if (genSpec) inject("import java.util.Date\n",sp,path_sources)
+  }
+
+  def genQuerySpark(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
+    val lmsMode = mode.contains(LANG_SPARK_LMS)
+    val cls = qName+(if(lmsMode) "Spark" else "VSpark")
     var sp=""
     // Correctness
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
