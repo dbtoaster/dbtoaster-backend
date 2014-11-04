@@ -122,7 +122,7 @@ void source_multiplexer::remove_source(std::shared_ptr<source> s) {
 	}
 }
 
-void source_multiplexer::init_source(size_t batch_size, size_t parallel) {
+void source_multiplexer::init_source(size_t batch_size, size_t parallel, bool is_table) {
 	std::vector<std::shared_ptr<source> >::iterator it = inputs.begin();
 	std::vector<std::shared_ptr<source> >::iterator end = inputs.end();
 	for (; it != end; ++it) {
@@ -180,7 +180,7 @@ void source_multiplexer::init_source(size_t batch_size, size_t parallel) {
 		}
 	}
 	size_t num_relations = inputs.size();
-	if(!eventList->empty() && parallel == MIX_INPUT_TUPLES && num_relations > 1) {
+	if(!is_table && !eventList->empty() && parallel == MIX_INPUT_TUPLES && num_relations > 1) { //we do not interleave table tuples as they are part of preprocessing and we do not even time their calculations
 		std::list<event_t>::reverse_iterator it = eventList->rbegin();
 		std::list<event_t>::reverse_iterator it_end = eventList->rend();
 		std::vector<event_t> events_by_relation[num_relations];
@@ -194,7 +194,7 @@ void source_multiplexer::init_source(size_t batch_size, size_t parallel) {
 			for(size_t i = 0; i < num_relations; ++i) {
 				if(events_by_relation[i].size() > 0) {
 					thereAreMoreTuples = true;
-					eventList->push_back(events_by_relation[i].back()); // XXXX here is slow
+					eventList->push_back(events_by_relation[i].back());
 					events_by_relation[i].pop_back();
 				}
 			}
