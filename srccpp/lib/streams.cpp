@@ -122,7 +122,7 @@ void source_multiplexer::remove_source(std::shared_ptr<source> s) {
 	}
 }
 
-void source_multiplexer::init_source(size_t batch_size) {
+void source_multiplexer::init_source(size_t batch_size, size_t parallel) {
 	std::vector<std::shared_ptr<source> >::iterator it = inputs.begin();
 	std::vector<std::shared_ptr<source> >::iterator end = inputs.end();
 	for (; it != end; ++it) {
@@ -178,6 +178,30 @@ void source_multiplexer::init_source(size_t batch_size) {
 			eventQue->clear();
 			eventQue->insert(eventQue->end(), batchedEventList.begin(), batchedEventList.end());
 		}
+	}
+	size_t num_relations = inputs.size();
+	if(!eventList->empty() && parallel == MIX_INPUT_TUPLES && num_relations > 1) {
+		std::list<event_t>::reverse_iterator it = eventList->rbegin();
+		std::list<event_t>::reverse_iterator it_end = eventList->rend();
+		std::vector<event_t> events_by_relation[num_relations];
+		for(;it != it_end; ++it) {
+			events_by_relation[it->id].push_back(*it);
+		}
+		eventList->clear();
+		bool thereAreMoreTuples = true;
+		while(thereAreMoreTuples) {
+			thereAreMoreTuples = false;
+			for(size_t i = 0; i < num_relations; ++i) {
+				if(events_by_relation[i].size() > 0) {
+					thereAreMoreTuples = true;
+					eventList->push_back(events_by_relation[i].back()); // XXXX here is slow
+					events_by_relation[i].pop_back();
+				}
+			}
+		}
+	}
+	if(!eventQue->empty()) {
+		eventQue->sort(compare_event_timestamp_order);
 	}
 }
 

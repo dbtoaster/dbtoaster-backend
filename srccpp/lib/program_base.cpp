@@ -217,35 +217,13 @@ ProgramBase::ProgramBase(int argc, char* argv[]) :
 
 void ProgramBase::process_streams() {
 	if(!stream_multiplexer.eventList->empty()) {
-		if(run_opts->parallel == MIX_INPUT_TUPLES && stream_multiplexer.inputs.size() > 1) {
-			std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
-			std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
-
-			std::list<event_t> events_by_relation[relations_by_id.size()];
-			for(;it != it_end; ++it) {
-				events_by_relation[it->id].push_back(*it);
-			}
-			bool thereAreMoreTuples = true;
-			while(thereAreMoreTuples) {
-				thereAreMoreTuples = false;
-				for(size_t i = 0; i < relations_by_id.size(); i++) {
-					if(events_by_relation[i].size() > 0) {
-						thereAreMoreTuples = true;
-						process_stream_event(events_by_relation[i].front());
-						events_by_relation[i].pop_front();
-					}
-				}
-			}
-		} else {
-			std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
-			std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
-			for(;it != it_end; ++it) {
-				process_stream_event(*it);
-			}
+		std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
+		std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
+		for(;it != it_end; ++it) {
+			process_stream_event(*it);
 		}
 	}
 	if(!stream_multiplexer.eventQue->empty()) {
-		stream_multiplexer.eventQue->sort(compare_event_timestamp_order);
 		std::list<event_t>::iterator it = stream_multiplexer.eventQue->begin();
 		std::list<event_t>::iterator it_end = stream_multiplexer.eventQue->end();
 		for(;it != it_end; ++it) {
