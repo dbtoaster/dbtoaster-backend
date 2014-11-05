@@ -104,7 +104,7 @@ object Compiler {
       // error("                - "+LANG_AKKA     +"     : distributed Akka code")
       // error("                - "+LANG_CPP_LMS  +"      : LMS-optimized C++")
       error("                - "+LANG_SCALA_LMS+" : LMS-optimized Scala")
-      error("                - "+LANG_SPARK_LMS+" : LMS-optimized Spark")
+      // error("                - "+LANG_SPARK_LMS+" : LMS-optimized Spark")
       //   ("                - dcpp     : distributed C/C++ code")
       error("Front-end options:")
       error("  -d <depth>    incrementalization depth (default: infinite)")
