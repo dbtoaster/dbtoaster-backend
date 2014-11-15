@@ -65,7 +65,7 @@ void dbt_file_source::read_source_events(std::shared_ptr<std::list<event_t> > ev
 		const char* delim = frame_info.delimiter.c_str();
 		size_t delim_size = frame_info.delimiter.size();
 
-		//add delimeter at the end, is it does not exist
+		//add delimeter at the end, if it does not exist
 		for(size_t delim_idx = 0; delim_idx < delim_size; ++delim_idx) {
 			if(*(buffer_end-1-delim_idx) != *(delim+delim_size-1)) {
 				for(delim_idx = 0; delim_idx < delim_size; ++delim_idx) {

@@ -149,7 +149,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
     char* field_start=data;
     char* field_end=data;
     // std::cout << " with schema " << schema_it << std::endl;
-    while(valid && schema_it !='\0') {
+    while(valid && (*schema_it !='\0')) {
     	field_end = strstr(field_start,delim);
         if(field_end) *field_end='\0';
         // std::cout << "  handling schema => " << *schema_it << std::endl;
@@ -184,11 +184,14 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 			default: valid = false; break;
 		}
 
+        ++schema_it;
         if(field_end) {
             field_end += delimSize;
             field_start = field_end;
-            ++schema_it;
-        } else break;
+        } else if(*schema_it != '\0'){
+        	valid = false;
+        	break;
+        }
 	}
     // std::cout << " tuples is ==> " << tuple << std::endl;
 	return std::make_tuple(valid, insert, event_order, tuple);
