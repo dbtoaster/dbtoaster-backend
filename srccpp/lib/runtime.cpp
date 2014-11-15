@@ -34,6 +34,7 @@ runtime_options::runtime_options(int argc, char* argv[]) :
   , async(false)
   , batch_size(0)
   , parallel(MIX_INPUT_TUPLES)
+  , no_output(false)
 {
 	init(argc, argv);
 }
@@ -116,6 +117,9 @@ void runtime_options::process_options(int argc, char* argv[])
 				break;
 			case PARALLEL_INPUT:
 				parallel = std::atoi(opt.arg);
+				break;
+			case NO_OUTPUT:
+				no_output = true;
 				break;
 			case UNKNOWN:
 				// not possible because Arg::Unknown returns ARG_ILLEGAL

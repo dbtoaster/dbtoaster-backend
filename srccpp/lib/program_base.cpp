@@ -339,4 +339,12 @@ void ProgramBase::trace(std::ostream &ofs, bool debug) {
 	}
 }
 
+bool ProgramBase::is_async() {
+	return run_opts->async;
+}
+
+bool ProgramBase::is_no_output() {
+	return run_opts->no_output;
+}
+
 }

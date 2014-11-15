@@ -171,6 +171,9 @@ public:
     void process_streams();
     void process_tables();
 
+    bool is_async();
+    bool is_no_output();
+
 protected:
 	void set_log_count_every(unsigned int _log_count_every);
 	

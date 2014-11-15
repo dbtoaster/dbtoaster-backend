@@ -67,7 +67,7 @@ namespace dbtoaster {
       }
     };
 
-    enum  optionIndex { UNKNOWN, HELP, VERBOSE, ASYNC, LOGDIR, LOGTRIG, UNIFIED, OUTFILE, BATCH_SIZE, PARALLEL_INPUT, SAMPLESZ, SAMPLEPRD, STATSFILE, TRACE, TRACEDIR, TRACESTEP, LOGCOUNT };
+    enum  optionIndex { UNKNOWN, HELP, VERBOSE, ASYNC, LOGDIR, LOGTRIG, UNIFIED, OUTFILE, BATCH_SIZE, PARALLEL_INPUT, NO_OUTPUT, SAMPLESZ, SAMPLEPRD, STATSFILE, TRACE, TRACEDIR, TRACESTEP, LOGCOUNT };
     const option::Descriptor usage[] = {
     { UNKNOWN,       0,"", "",           Arg::Unknown, "dbtoaster query options:" },
     { HELP,          0,"h","help",       Arg::None,    "  -h       , \t--help  \tlist available options." },
@@ -79,6 +79,7 @@ namespace dbtoaster {
     { OUTFILE,       0,"o","output-file",Arg::Required,"  -o  <arg>, \t--output-file=<arg>  \toutput file." },
     { BATCH_SIZE,    0,"b","batch-size", Arg::Required,"  -b  <arg>, \t--batch-size  \texecute as batches of certain size." },
     { PARALLEL_INPUT,0,"p","par-stream", Arg::Required,"  -p  <arg>, \t--par-stream  \tparallel streams (0=off, 2=deterministic)" },
+    { NO_OUTPUT     ,0,"n","no-output",  Arg::None,    "  -n       , \t--no-output  \tdo not print the output result in the standard output" },
     // Statistics profiling parameters
     { SAMPLESZ, 0,"","samplesize",  Arg::Numeric, "  \t--samplesize=<arg>  \tsample window size for trigger profiles." },
     { SAMPLEPRD,0,"","sampleperiod",Arg::Numeric, "  \t--sampleperiod=<arg>  \tperiod length, as number of trigger events." },
@@ -118,6 +119,8 @@ namespace dbtoaster {
 
       unsigned int batch_size;
       unsigned int parallel;
+
+      bool no_output;
 
       runtime_options(int argc = 0, char* argv[] = 0);
 
