@@ -85,6 +85,7 @@ object Compiler {
         case "-xvm" => exec_vm=true;
         case "-xbs" => eat{i => exec_bs = i.toInt; batching_enabled = true}
         case "-pp" => eat(i => printProgress = i.toInt)
+        case s@"--no-output" => exec_args=exec_args:::List(s)
         case s if s.matches("-O[123]") => optm3=s;
         case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
         case s => in = in ::: List(s)
@@ -202,8 +203,8 @@ object Compiler {
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS|LANG_SPARK_LMS =>
           Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,("-b"+exec_bs :: exec_args).toArray,exec_vm)
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
-          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = ddbt.lib.Helper.extractExecArgs(("-b"+exec_bs :: exec_args).toArray)
-          val actual_exec_args = "-b "+exec_bs :: "-p "+pMode :: Nil
+          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize, no_output) = ddbt.lib.Helper.extractExecArgs(("-b"+exec_bs :: exec_args).toArray)
+          val actual_exec_args = "-b "+exec_bs :: "-p "+pMode :: (if(no_output) List("--no-output") else Nil)
           val compiledSrc = Utils.read(out);
           datasets.foreach{ dataset =>
             def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
