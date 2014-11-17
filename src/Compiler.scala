@@ -54,7 +54,7 @@ object Compiler {
 
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(0); null }
   def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
-    val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-F",f)) ::: (if (!opts.isEmpty) opts.toList else in) ::: (if(batching_enabled) List("--batch") else Nil )
+    val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-d",f)) ::: (if (!opts.isEmpty) opts.toList else in) ::: (if(batching_enabled) List("--batch") else Nil )
     val repo = if (Utils.path_repo!=null && !opts.isEmpty) new File(Utils.path_repo) else null
     val (t0,(m3,err)) = Utils.ns(()=>Utils.exec(((if(frontend_path_bin == null) Utils.path_bin else frontend_path_bin) :: os).toArray,repo,fatal=false))
     if (err.trim!="") { val e=new Exception("dbtoaster "+os.mkString(" ")+" failed because:\n"+err); e.setStackTrace(Array()); throw e }
