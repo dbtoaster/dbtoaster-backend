@@ -1,0 +1,9 @@
+C:\Users\khgl\Desktop\codebase\MyFirstNaiadProgram\MyFirstNaiadProgram\bin\Release\MyFirstNaiadProgram.exe.config
+C:\Users\khgl\Desktop\codebase\MyFirstNaiadProgram\MyFirstNaiadProgram\bin\Release\MyFirstNaiadProgram.exe
+C:\Users\khgl\Desktop\codebase\MyFirstNaiadProgram\MyFirstNaiadProgram\bin\Release\MyFirstNaiadProgram.pdb
+C:\Users\khgl\Desktop\codebase\MyFirstNaiadProgram\MyFirstNaiadProgram\bin\Release\Microsoft.Research.Naiad.dll
+C:\Users\khgl\Desktop\codebase\MyFirstNaiadProgram\MyFirstNaiadProgram\bin\Release\Microsoft.Research.Naiad.pdb
+C:\Users\khgl\Desktop\codebase\MyFirstNaiadProgram\MyFirstNaiadProgram\bin\Release\Microsoft.Research.Naiad.xml
+C:\Users\khgl\Desktop\codebase\MyFirstNaiadProgram\MyFirstNaiadProgram\obj\Release\MyFirstNaiadProgram.exe
+C:\Users\khgl\Desktop\codebase\MyFirstNaiadProgram\MyFirstNaiadProgram\obj\Release\MyFirstNaiadProgram.pdb
+C:\Users\khgl\Desktop\codebase\MyFirstNaiadProgram\MyFirstNaiadProgram\obj\Release\CodeGenTestsing.csprojResolveAssemblyReference.cache
