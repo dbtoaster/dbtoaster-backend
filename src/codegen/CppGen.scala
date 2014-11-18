@@ -110,7 +110,12 @@ trait ICppGen extends IScalaGen {
       case TypeString => cpsExpr(Apply("STRING_TYPE",TypeString,List(ex)),co,am)
       case _ => co(v)
     }
-    case Exists(e) => cpsExpr(e,(v:String)=>co("("+v+" != 0 ? 1L : 0L)"))
+    case Exists(e) => 
+      val cur=ctx.save
+      cpsExpr(e,(v:String)=> {
+        ctx.load(cur)
+        co("("+v+" != 0 ? 1L : 0L)")
+      })
     case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>cmpFunc(l.tp,op,ll,rr))))
     case app@Apply(fn1,tp,as1) => {
       val (as, fn) = (fn1 match {
