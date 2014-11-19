@@ -274,6 +274,7 @@ trait ICppGen extends IScalaGen {
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (aks.size==0) {
+        val cur=ctx.save;
         val a0=fresh("agg")
 
         genVar(a0,a.tp)+
@@ -284,8 +285,10 @@ trait ICppGen extends IScalaGen {
             case _ =>
               a0+" += "+v+";\n"
           }
-        )+
-        co(a0)
+        ) + {
+          ctx.load(cur)
+          co(a0)
+        }
       } else am match {
         case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
         case _ =>
