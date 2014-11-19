@@ -62,7 +62,6 @@ trait IScalaGen extends CodeGen {
 
   var ctx:Ctx[(Type,String)] = null // Context: variable->(type,unique_name)
   def rn(n:String):String = ctx(n)._2 // get unique name (avoids nesting Lifts)
-  def rnWithCheck(n:String):String = if(ctx.contains(n)) rn(n) else n // get unique name (avoids nesting Lifts)
 
   /*
   Here you need to rename variable to avoid putting individual statements in separated blocks
@@ -280,6 +279,7 @@ trait IScalaGen extends CodeGen {
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (aks.size==0) {
+        val cur=ctx.save;
         val a0=fresh("agg")
 
         genVar(a0,a.tp)+
@@ -290,8 +290,10 @@ trait IScalaGen extends CodeGen {
             case _ =>
               a0+" += "+v+"\n"
           }
-        )+
-        co(a0)
+        ) + {
+          ctx.load(cur)
+          co(a0)
+        }
       } else am match {
         case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
         case _ =>

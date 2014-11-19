@@ -110,12 +110,7 @@ trait ICppGen extends IScalaGen {
       case TypeString => cpsExpr(Apply("STRING_TYPE",TypeString,List(ex)),co,am)
       case _ => co(v)
     }
-    case Exists(e) => 
-      val cur=ctx.save
-      cpsExpr(e,(v:String)=> {
-        ctx.load(cur)
-        co("("+v+" != 0 ? 1L : 0L)")
-      })
+    case Exists(e) => cpsExpr(e,(v:String)=> co("("+v+" != 0 ? 1L : 0L)"))
     case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>cmpFunc(l.tp,op,ll,rr))))
     case app@Apply(fn1,tp,as1) => {
       val (as, fn) = (fn1 match {
@@ -316,7 +311,7 @@ trait ICppGen extends IScalaGen {
           ctx.load()
           cpsExpr(ie,(i:String)=>
             if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-            else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+sampleEnt+".modify("+(m.keys map rnWithCheck).mkString(",")+"))==0) "+SET_IN_MAP_FUNC(m.name)+"("+sampleEnt+", "+i+");\n"
+            else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+sampleEnt+".modify("+(m.keys map rn).mkString(",")+"))==0) "+SET_IN_MAP_FUNC(m.name)+"("+sampleEnt+", "+i+");\n"
           )
         case None => ""
       }
@@ -331,9 +326,9 @@ trait ICppGen extends IScalaGen {
         } else {
           extractBooleanExp(v) match {
             case Some((c,t)) =>
-              "(/*if */("+c+") ? "+fop+"("+sampleEnt+".modify("+(m.keys map rnWithCheck).mkString(",")+"),"+t+") : voidFunc());\n"
+              "(/*if */("+c+") ? "+fop+"("+sampleEnt+".modify("+(m.keys map rn).mkString(",")+"),"+t+") : voidFunc());\n"
             case _ =>
-              fop+"("+sampleEnt+".modify("+(m.keys map rnWithCheck).mkString(",")+"),"+v+");\n"
+              fop+"("+sampleEnt+".modify("+(m.keys map rn).mkString(",")+"),"+v+");\n"
           }
         }), /*if (op==OpAdd)*/ Some(m.keys zip m.tks) /*else None*/)
     case m@MapDef(_,_,_,_) => "" //nothing to do
