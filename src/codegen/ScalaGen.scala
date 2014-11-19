@@ -62,6 +62,8 @@ trait IScalaGen extends CodeGen {
 
   var ctx:Ctx[(Type,String)] = null // Context: variable->(type,unique_name)
   def rn(n:String):String = ctx(n)._2 // get unique name (avoids nesting Lifts)
+  def rnWithCheck(n:String):String = if(ctx.contains(n)) rn(n) else n // get unique name (avoids nesting Lifts)
+
   /*
   Here you need to rename variable to avoid putting individual statements in separated blocks
   M[x] = Add( Mul(Lift(x,2),A[x]), Mul(Lift(x,3),B[x]) )

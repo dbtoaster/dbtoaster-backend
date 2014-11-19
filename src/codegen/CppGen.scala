@@ -313,7 +313,7 @@ trait ICppGen extends IScalaGen {
           ctx.load()
           cpsExpr(ie,(i:String)=>
             if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-            else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+sampleEnt+".modify("+(m.keys map rn).mkString(",")+"))==0) "+SET_IN_MAP_FUNC(m.name)+"("+sampleEnt+", "+i+");\n"
+            else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+sampleEnt+".modify("+(m.keys map rnWithCheck).mkString(",")+"))==0) "+SET_IN_MAP_FUNC(m.name)+"("+sampleEnt+", "+i+");\n"
           )
         case None => ""
       }
@@ -328,9 +328,9 @@ trait ICppGen extends IScalaGen {
         } else {
           extractBooleanExp(v) match {
             case Some((c,t)) =>
-              "(/*if */("+c+") ? "+fop+"("+sampleEnt+".modify("+(m.keys map rn).mkString(",")+"),"+t+") : voidFunc());\n"
+              "(/*if */("+c+") ? "+fop+"("+sampleEnt+".modify("+(m.keys map rnWithCheck).mkString(",")+"),"+t+") : voidFunc());\n"
             case _ =>
-              fop+"("+sampleEnt+".modify("+(m.keys map rn).mkString(",")+"),"+v+");\n"
+              fop+"("+sampleEnt+".modify("+(m.keys map rnWithCheck).mkString(",")+"),"+v+");\n"
           }
         }), /*if (op==OpAdd)*/ Some(m.keys zip m.tks) /*else None*/)
     case m@MapDef(_,_,_,_) => "" //nothing to do
