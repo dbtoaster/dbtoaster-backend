@@ -211,8 +211,8 @@ object UnitTest {
   // ---------------------------------------------------------------------------
   // Query generator
   def genQueryScala(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
-    val lmsMode = mode.contains(LANG_SCALA_LMS)
-    val cls = qName+(if(lmsMode) "" else "VScala")
+    val nonLmsMode = mode.contains(LANG_SCALA)
+    val cls = qName+(if(nonLmsMode) "VScala" else "")
     var sp=""
     // Correctness
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
@@ -262,8 +262,9 @@ object UnitTest {
   }
 
   def genQuerySpark(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
-    val lmsMode = mode.contains(LANG_SPARK_LMS)
-    val cls = qName+(if(lmsMode) "Spark" else "VSpark")
+    // val nonLmsMode = mode.contains(LANG_SPARK)
+    val nonLmsMode = false;
+    val cls = qName+(if(nonLmsMode) "VSpark" else "Spark")
     var sp=""
     // Correctness
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
