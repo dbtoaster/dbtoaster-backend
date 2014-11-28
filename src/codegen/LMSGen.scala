@@ -20,3 +20,8 @@ class LMSCppGen(cls:String="Query") extends LMSGen(cls) with ICppGen{
     "Set 'ddbt.lms=1' in conf/ddbt.properties to enable LMS code generation"
   )
 }
+class LMSSparkGen(cls:String="Query") extends LMSGen(cls) with IScalaGen{
+  override def apply(s0:M3.System):String = sys.error(
+    "Set 'ddbt.lms=1' in conf/ddbt.properties to enable LMS code generation"
+  )
+}
