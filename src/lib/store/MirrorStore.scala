@@ -7,6 +7,7 @@ import ch.epfl.data.pardis.annotations._
 
 @needs[Array[_]]
 @deep
+@noImplementation
 // @reflect[Store[_]]
 class MStore[E<:Entry](val idxs:Array[E], val ops:Array[E]) {
   private val n = idxs.length

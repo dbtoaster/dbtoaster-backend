@@ -6,9 +6,10 @@ import ch.epfl.data.pardis
 import pardis.ir._
 import pardis.types.PardisTypeImplicits._
 import pardis.effects._
+import pardis.deep._
 import pardis.deep.scalalib._
-import ddbt.lib.store._
-
+import pardis.deep.scalalib.collection._
+import pardis.deep.scalalib.io._
 trait MStoreOps extends Base with ArrayOps {  
   // Type representation
   case class MStoreType[E <: ddbt.lib.store.Entry](typeE: TypeRep[E]) extends TypeRep[MStore[E]] {
@@ -129,36 +130,6 @@ trait MStoreOps extends Base with ArrayOps {
 trait MStoreImplicits extends MStoreOps { 
   // Add implicit conversions here!
 }
-trait MStoreImplementations extends MStoreOps { 
-    override def mStoreUnsafeInsert[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = {
-???
-    }
-    override def mStoreInsert[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = {
-???
-    }
-    override def mStoreUpdate[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = {
-???
-    }
-    override def mStoreDelete1[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = {
-???
-    }
-    override def mStoreGet[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[E] = {
-???
-    }
-    override def mStoreForeach[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = {
-???
-    }
-    override def mStoreSlice[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = {
-???
-    }
-    override def mStoreRange[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = {
-???
-    }
-    override def mStoreDelete2[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = {
-???
-    }
-}
-
 trait MStorePartialEvaluation extends MStoreComponent with BasePartialEvaluation {  
   // Immutable field inlining 
   override def mStore_Field_Ops[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]])(implicit typeE : TypeRep[E]) : Rep[Array[E]] = self match {
