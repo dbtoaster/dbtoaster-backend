@@ -110,7 +110,7 @@ trait ICppGen extends IScalaGen {
       case TypeString => cpsExpr(Apply("STRING_TYPE",TypeString,List(ex)),co,am)
       case _ => co(v)
     }
-    case Exists(e) => cpsExpr(e,(v:String)=>co("("+v+" != 0 ? 1L : 0L)"))
+    case Exists(e) => cpsExpr(e,(v:String)=> co("("+v+" != 0 ? 1L : 0L)"))
     case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>cmpFunc(l.tp,op,ll,rr))))
     case app@Apply(fn1,tp,as1) => {
       val (as, fn) = (fn1 match {
@@ -269,6 +269,7 @@ trait ICppGen extends IScalaGen {
     case a@AggSum(ks,e) =>
       val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
       if (aks.size==0) {
+        val cur=ctx.save;
         val a0=fresh("agg")
 
         genVar(a0,a.tp)+
@@ -279,8 +280,10 @@ trait ICppGen extends IScalaGen {
             case _ =>
               a0+" += "+v+";\n"
           }
-        )+
-        co(a0)
+        ) + {
+          ctx.load(cur)
+          co(a0)
+        }
       } else am match {
         case Some(t) if t.toSet.subsetOf(aks.toSet) => cpsExpr(e,co,am)
         case _ =>
