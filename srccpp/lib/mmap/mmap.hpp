@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <functional>
 #include <string.h>
+#include "../serialization.hpp"
+#include "../hpds/pstring.hpp"
 #include "../hpds/macro.hpp"
 
 #define DEFAULT_CHUNK_SIZE 32
@@ -190,12 +192,16 @@ private:
       bool pooled = false;
       do {
         if(n->obj) { //add_(n->obj); // does not resize the bucket array, does not maintain count
-          h = IDX_FN::hash(*n->obj);
+          h = n->hash;
           na = &buckets_[h % size_];
           if (na->obj) {
             tmp_allocated_from_pool = true;
             nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-            nw->hash = h; nw->obj = n->obj;
+            //in addition to adding nw, we also change the place of nw with na
+            //to preserve the order of elements, as it is required for
+            //non-unique hash maps
+            nw->hash = na->hash; nw->obj = na->obj;
+            na->hash = h; na->obj = n->obj;
             nw->nxt = na->nxt; na->nxt=nw;
           } else {  // space left in last IdxNode
             na->hash = h; na->obj = n->obj; //na->nxt=nullptr;
@@ -245,54 +251,11 @@ public:
 
   // inserts regardless of whether element exists already
   FORCE_INLINE virtual void add(T& obj) { add(&obj); }
-  inline virtual void add(T* obj) {
-    if (count_>threshold_) resize_(size_<<1);
+  FORCE_INLINE virtual void add(T* obj) {
     HASH_RES_t h = IDX_FN::hash(*obj);
-    size_t b = h % size_;
-    IdxNode* n = &buckets_[b];
-    IdxNode* nw;
-    
-    if(is_unique) {
-      ++count_;
-      if (n->obj) {
-        allocated_from_pool_ = true;
-        nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-        nw->hash = h; nw->obj = obj;
-        nw->nxt = n->nxt; n->nxt=nw;
-      } else {  // space left in last IdxNode
-        n->hash = h; n->obj = obj; //n->nxt=nullptr;
-      }
-    } else {
-      // ++count_;
-      if (!n->obj) { // space left in last IdxNode
-        ++count_;
-        n->hash = h; n->obj = obj; //n->nxt=nullptr;
-        return;
-      }
-      do {
-        if(h==n->hash && IDX_FN::equals(*obj, *n->obj)) {
-          allocated_from_pool_ = true;
-          nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-          nw->hash = h; nw->obj = obj;
-          nw->nxt = n->nxt; n->nxt=nw;
-          return;
-        }/*else {
-          //go ahead, and look for an element in the same slice
-          //or reach the end of linked list of IdxNodes
-        }*/
-      } while((n=n->nxt));
-      // if(!n) {
-      ++count_;
-      n = &buckets_[b];
-      allocated_from_pool_ = true;
-      nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-      nw->hash = h; nw->obj = obj;
-      nw->nxt = n->nxt; n->nxt=nw;
-      // return;
-      // }
-    }
+    add(obj, h);
   }
-  inline virtual void add(T* obj, const HASH_RES_t h) {
+  FORCE_INLINE virtual void add(T* obj, const HASH_RES_t h) {
     if (count_>threshold_) resize_(size_<<1);
     size_t b = h % size_;
     IdxNode* n = &buckets_[b];
@@ -332,7 +295,12 @@ public:
       n = &buckets_[b];
       allocated_from_pool_ = true;
       nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-      nw->hash = h; nw->obj = obj;
+      //in addition to adding nw, we also change the place of nw with n
+      //to preserve the order of elements, as it is required for
+      //non-unique hash maps (as the first element might be the start of)
+      //a chain of non-unique elements belonging to the same slice
+      nw->hash = n->hash; nw->obj = n->obj;
+      n->hash = h; n->obj = obj;
       nw->nxt = n->nxt; n->nxt=nw;
       // return;
       // }
@@ -342,40 +310,28 @@ public:
   // deletes an existing elements (equality by pointer comparison)
   FORCE_INLINE virtual void del(const T& obj) { const T* ptr = get(obj); if (ptr) del(ptr); }
   FORCE_INLINE virtual void del(const T& obj, const HASH_RES_t h) { const T* ptr = get(obj,h); if (ptr) del(ptr,h); }
-  virtual void del(const T* obj) {
+  FORCE_INLINE virtual void del(const T* obj) {
     HASH_RES_t h = IDX_FN::hash(*obj);
-    IdxNode* n = &buckets_[h % size_];
-    IdxNode* prev = nullptr, *next; // previous and next pointers
-    do {
-      next = n->nxt;
-      if (/*n->obj &&*/ n->obj == obj) {
-        if(prev) {
-          prev->nxt=next;
-          // n->nxt = nullptr;
-          // n->obj = nullptr;
-          nodes_.del(n);
-        } else {
-          n->obj = nullptr;
-        }
-        if(is_unique || !((prev && prev->obj && (h==prev->hash) && IDX_FN::equals(*obj, *prev->obj)) || 
-           (next && (h==next->hash) && IDX_FN::equals(*obj, *next->obj)))) --count_;
-        return;
-      }
-      prev = n;
-    } while ((n=next));
+    del(obj, h);
   }
-  virtual void del(const T* obj, const HASH_RES_t h) {
-    IdxNode* n = &buckets_[h % size_];
-    IdxNode* prev = nullptr, *next; // previous and next pointers
+  FORCE_INLINE virtual void del(const T* obj, const HASH_RES_t h) {
+    IdxNode *n = &buckets_[h % size_];
+    IdxNode *prev = nullptr, *next; // previous and next pointers
     do {
       next = n->nxt;
-      if (/*n->obj &&*/ n->obj == obj) {
-        if(prev) {
+      if (/*n->obj &&*/ n->obj == obj) { //we only need a pointer comparison, as all objects are stored in the pool
+        if(prev) { //it is an element in the linked list (and not in the bucket itself)
           prev->nxt=next;
           // n->nxt = nullptr;
           // n->obj = nullptr;
           nodes_.del(n);
-        } else {
+        } else if(next) { //it is the elements in the bucket, and there are other elements in linked list
+          n->obj = next->obj;
+          n->hash = next->hash;
+          n->nxt = next->nxt;
+          nodes_.del(next);
+          next = n;
+        } else { //it is the only element in the bucket
           n->obj = nullptr;
         }
         if(is_unique || !((prev && prev->obj && (h==prev->hash) && IDX_FN::equals(*obj, *prev->obj)) || 
