@@ -2,13 +2,13 @@
 #include "../smhasher/PMurHash.hpp"
 
 struct rec {
-  rec():_1(0),_3(""),_2(0),_val(0),nxt(nullptr){}
-  rec(int _1, int _2=0, int _val=0, std::string _3="") { this->_1=_1; this->_2=_2; this->_3=_3; this->_val=_val; this->nxt=nullptr; }
-  rec(const rec& other) : nxt(nullptr){ this->_1=other._1; this->_2=other._2; this->_3=other._3; this->_val=other._val; this->nxt=nullptr; }
+  rec():_1(0),_3(""),_2(0),__av(0),nxt(nullptr){}
+  rec(int _1, int _2=0, int __av=0, std::string _3="") { this->_1=_1; this->_2=_2; this->_3=_3; this->__av=__av; this->nxt=nullptr; }
+  rec(const rec& other) : nxt(nullptr){ this->_1=other._1; this->_2=other._2; this->_3=other._3; this->__av=other.__av; this->nxt=nullptr; }
   int _1;
   std::string _3;
   int _2;
-  int _val;
+  int __av;
   rec* nxt;
   rec* prv;
 };
@@ -53,7 +53,7 @@ void test_pool() {
 }
 
 void test_index() {
-  HashIndex<rec,IndexFn1> index;
+  HashIndex<rec,int,IndexFn1> index;
 
   rec r1(1,2,11);
   rec r2(2,3,12);
@@ -87,12 +87,12 @@ void test_map() {
   hmap1.slice(1,rec(1),[] (const rec& a) { printf(" - %d -> %d\n", a._1, a._2); });
   hmap1.del(rec(3,4));
   assert(hmap1.count()==6);
-  assert(IndexFn1::equals(*hmap1.get(rec(1),1),rec(1,2)));
+  assert(IndexFn1::equals(*hmap1.get(rec(1),IndexFn2::hash(rec(1)),1),rec(1,2)));
 
   std::cout << "- hmap2" << std::endl;
-  MultiHashMap<rec,HashIndex<rec,IndexFn1>,HashIndex<rec,IndexFn2,false>> hmap2(hmap1);
+  MultiHashMap<rec,int,HashIndex<rec,int,IndexFn1>,HashIndex<rec,int,IndexFn2,false> > hmap2(hmap1);
   std::cout << "-   get" << std::endl;
-  rec* frec = hmap2.get(rec(1),1);
+  rec* frec = hmap2.get(rec(1),IndexFn2::hash(rec(1)),1);
   std::cout << "-   equals" << std::endl;
   assert(IndexFn1::equals(*frec,rec(1,2)));
   std::cout << "-   count" << std::endl;
@@ -106,7 +106,7 @@ void test_map() {
 void test_map2(){
   const int num = 100;
 
-  MultiHashMap<rec,HashIndex<rec,IndexFn1>,HashIndex<rec,IndexFn2,false>> hmap1;
+  MultiHashMap<rec,int,HashIndex<rec,int,IndexFn1>,HashIndex<rec,int,IndexFn2,false> > hmap1;
 
   for (int i=1;i<num;++i) {
     hmap1.add(rec(i,i+1,i*2));
@@ -124,11 +124,23 @@ void test_map2(){
   // hmap1.foreach([] (const rec& a) { printf(" - %d -> %d\n", a._1, a._2); });
 }
 
+void test_map3() {
+  std::cout << "- hmap1" << std::endl;
+  MultiHashMap<rec,int,HashIndex<rec,int,IndexFn1>,HashIndex<rec,int,IndexFn2,false> > hmap1;
+  hmap1.insert_nocheck(rec(1,2,11));
+  hmap1.insert_nocheck(rec(1,6,12));
+  hmap1.insert_nocheck(rec(3,4,14));
+  // assert(hmap1.count()==7);
+  hmap1.del(rec(1,2));
+  hmap1.del(rec(1,6));
+  hmap1.del(rec(3,4));
+}
+
 void test_hash(){
   rec r1(1,2,11);
   uint32_t h1_1 = MurmurHash2(&r1,sizeof(rec));
   std::cout << "h1_1 = " << h1_1 << std::endl;
-  uint32_t h2_1 = MurmurHash2(&r1,sizeof(rec)-sizeof(((rec *)0)->_val));
+  uint32_t h2_1 = MurmurHash2(&r1,sizeof(rec)-sizeof(((rec *)0)->__av));
   std::cout << "h2_1 = " << h2_1 << std::endl;
   uint32_t h3_1=0, carry_1=0;
   PMurHash32_Process(&h3_1, &carry_1, &(r1._1),sizeof(((rec *)0)->_1));
@@ -142,7 +154,7 @@ void test_hash(){
   rec r2(1,2,28);
   uint32_t h1_2 = MurmurHash2(&r2,sizeof(rec));
   std::cout << "h1_2 = " << h1_2 << std::endl;
-  uint32_t h2_2 = MurmurHash2(&r2,sizeof(rec)-sizeof(((rec *)0)->_val));
+  uint32_t h2_2 = MurmurHash2(&r2,sizeof(rec)-sizeof(((rec *)0)->__av));
   std::cout << "h2_2 = " << h2_2 << std::endl;
   uint32_t h3_2=0, carry_2=0;
   PMurHash32_Process(&h3_2, &carry_2, &(r2._1),sizeof(((rec *)0)->_1));
@@ -163,6 +175,8 @@ int main(int argc, char** argv) {
   test_hash();
   std::cout << "test_map2()" << std::endl;
   test_map2();
+  std::cout << "test_map3()" << std::endl;
+  test_map3();
   std::cout << "All tests passes successfully :)" << std::endl;
   return 0;
 }
