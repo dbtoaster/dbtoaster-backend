@@ -612,7 +612,7 @@ public:
   }
 
   FORCE_INLINE void del(const T& key/*, int idx=0*/) { // assume that mainIdx=0
-    T* elem = get(key,0); if (elem!=nullptr) del(elem);
+    T* elem = get(key); if (elem!=nullptr) del(elem);
   }
 
   FORCE_INLINE void del(const T& key, HASH_RES_t h, int idx=0) {
