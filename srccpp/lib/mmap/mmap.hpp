@@ -335,7 +335,7 @@ public:
           n->obj = nullptr;
         }
         if(is_unique || !((prev && prev->obj && (h==prev->hash) && IDX_FN::equals(*obj, *prev->obj)) || 
-           (next && (h==next->hash) && IDX_FN::equals(*obj, *next->obj)))) --count_;
+           (next && next->obj && (h==next->hash) && IDX_FN::equals(*obj, *next->obj)))) --count_;
         return;
       }
       prev = n;
