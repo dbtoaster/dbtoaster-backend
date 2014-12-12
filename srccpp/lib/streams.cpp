@@ -160,9 +160,9 @@ void source_multiplexer::init_source(size_t batch_size, size_t parallel, bool is
 				event_t* evt = it->second.back();
 				it->second.pop_back();
 				event_args_t* evtData = new event_args_t(evt->data);
-				if(evt->type == insert_tuple) evtData->push_back(new long( 1L));
-				else evtData->push_back(new long(-1L));
-				batch.push_back(evtData);
+				if(evt->type == insert_tuple) evtData->push_back(std::shared_ptr<long>(new long( 1L)));
+				else evtData->push_back(std::shared_ptr<long>(new long(-1L)));
+				batch.push_back(std::shared_ptr<event_args_t>(evtData));
 				if(batch.size() >= batch_size || it->second.empty()) {
 					event_t e(batch_update, evt->id, evt->event_order, batch);
 					batchedEventList.push_back(e);

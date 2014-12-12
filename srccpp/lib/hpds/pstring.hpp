@@ -32,9 +32,10 @@
 
 #ifndef STRING_TYPE
 #define STRING_TYPE PString
+//#define STRING_TYPE std::string 
 #endif //STRING_TYPE
 
-// #define USE_POOL
+//#define USE_POOL
 
 #define DEFAULT_CHAR_ARR_SIZE_MINUS_ONE (DEFAULT_CHAR_ARR_SIZE - 1)
 
@@ -50,10 +51,9 @@ private:
 
   inline static size_t getNumCells(int sz)
   {
-    size_t num_cells = sz / DEFAULT_CHAR_ARR_SIZE;
-    // if(num_cells * DEFAULT_CHAR_ARR_SIZE != sz) num_cells++;
-    if (sz & DEFAULT_CHAR_ARR_SIZE_MINUS_ONE) num_cells++;
-    return num_cells;
+    return (sz & DEFAULT_CHAR_ARR_SIZE_MINUS_ONE ? 
+            (sz / DEFAULT_CHAR_ARR_SIZE) + 1 :
+            (sz / DEFAULT_CHAR_ARR_SIZE)) ;
   }
 
 protected:
@@ -115,16 +115,19 @@ public:
 
   ~PString()
   {
-    if (((--(*ptr_count_)) == 0) && data_)
+    if ((--(*ptr_count_)) == 0)
     {
-#ifdef USE_POOL
-      pool_.del(getNumCells(size_), data_);
-#else
-    delete[] data_;
-#endif //USE_POOL
-      data_ = nullptr;
       delete ptr_count_;
       ptr_count_ = nullptr;
+      if (data_) 
+	    {
+#ifdef USE_POOL
+        pool_.del(getNumCells(size_), data_);
+#else
+        delete[] data_;
+#endif //USE_POOL
+        data_ = nullptr;
+      }
     }
   }
 
@@ -151,21 +154,23 @@ public:
   PString &operator=(const char *str)
   {
 #ifdef USE_POOL
-    if (((--(*ptr_count_)) == 0) && data_)
+    if ((--(*ptr_count_)) == 0)
     {
-      pool_.del(getNumCells(size_), data_);
+      (*ptr_count_) = 1;  // re-use ptr_count
+      if (data_) pool_.del(getNumCells(size_), data_);
     }
-    (*ptr_count_) = 1;
+    else ptr_count_ = new size_t(1);
     size_ = strlen(str) + 1;
     size_t num_cells = getNumCells(size_);
     data_ = pool_.add(num_cells);
 #else
-    size_t sz = strlen(str) + 1;
-    if (((--(*ptr_count_)) == 0) && data_ && (sz > size_))
+    if ((--(*ptr_count_)) == 0)
     {
-      delete[] data_;
+      (*ptr_count_) = 1;  // re-use ptr_count
+      if (data_) delete[] data_;
     }
-    (*ptr_count_) = 1;
+    else ptr_count_ = new size_t(1);
+    size_t sz = strlen(str) + 1;
     size_ = sz;
     data_ = new char[size_];
 #endif //USE_POOL
@@ -175,6 +180,18 @@ public:
 
   PString &operator=(const PString &pstr)
   {
+    if ((--(*ptr_count_)) == 0) 
+    {
+      delete ptr_count_;
+      if (data_)
+      {
+#ifdef USE_POOL
+        pool_.del(getNumCells(size_), data_);
+#else
+        delete[] data_;
+#endif //USE_POOL
+      }
+    }
     (*pstr.ptr_count_)++;
     this->ptr_count_ = pstr.ptr_count_;
     this->data_ = pstr.data_;
@@ -199,14 +216,14 @@ public:
 
   inline bool operator==(const PString &other) const
   {
-    if (this->size_ != other.size_) return false;
-    return (strcmp(this->data_, other.data_) == 0);
+    return (this->size_ == other.size_ &&
+            strcmp(this->data_, other.data_) == 0);
   }
 
   inline bool operator!=(const PString &other) const
   {
-    if (this->size_ != other.size_) return true;
-    return (strcmp(this->data_, other.data_) != 0);
+    return (this->size_ != other.size_ || 
+            strcmp(this->data_, other.data_) != 0); 
   }
 
   inline bool operator<(const PString &other) const

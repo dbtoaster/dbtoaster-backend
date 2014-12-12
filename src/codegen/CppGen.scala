@@ -454,8 +454,8 @@ trait ICppGen extends IScalaGen {
         "void unwrap_batch_update_"+name+"(const event_args_t& eaList) {\n"+
         "  size_t sz = eaList.size();\n"+
         "  for(size_t i=0; i < sz; i++){\n"+
-        "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
-        "    "+name+"_entry e("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"1L);\n"+
+        "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
+        "    "+name+"_entry e("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"1L);\n"+
         "    "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
         "  }\n"+
         "}\n\n"
@@ -484,16 +484,16 @@ trait ICppGen extends IScalaGen {
           "  if(sz == "+deltaRel+".count()) {\n"+
           "    "+entryClass+"* head = "+deltaRel+".head;\n"+
           "    for(size_t i=0; i < sz; i++){\n"+
-          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
-          "      head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"]))"}.mkString(", ")+");\n"+
-          "      head->__av =  *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"]));\n"+
+          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
+          "      head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get()))"}.mkString(", ")+");\n"+
+          "      head->__av =  *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get()));\n"+
           "      head = head->nxt;\n"+
           "    }\n"+
           "  } else {\n"+
           "    "+deltaRel+".clear();\n"+
           "    for(size_t i=0; i < sz; i++){\n"+
-          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
-          "      "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"])));\n"+
+          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
+          "      "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"+
           "      "+deltaRel+".insert_nocheck(e);\n"+
           "    }\n"+
           "  }\n"+
@@ -502,11 +502,11 @@ trait ICppGen extends IScalaGen {
           (if(hasOnlyBatchProcessingForAdd(s0,b))
             "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
             "  if("+deltaRel+".head){\n"+
-            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
             "    "+deltaRel+".head->__av =  1L;\n"+
             "  } else {\n"+
             "    "+deltaRel+".clear();\n"+
-            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+" 1L);\n"+
+            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+" 1L);\n"+
             "    "+deltaRel+".insert_nocheck(e);\n"+
             "  }\n"+
             "  on_batch_update_"+name+"("+deltaRel+");\n"+
@@ -515,11 +515,11 @@ trait ICppGen extends IScalaGen {
           (if(hasOnlyBatchProcessingForDel(s0,b))
             "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
             "  if("+deltaRel+".head){\n"+
-            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
             "    "+deltaRel+".head->__av = -1L;\n"+
             "  } else {\n"+
             "    "+deltaRel+".clear();\n"+
-            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+"-1L);\n"+
+            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+"-1L);\n"+
             "    "+deltaRel+".insert_nocheck(e);\n"+
             "  }\n"+
             "  on_batch_update_"+name+"("+deltaRel+");\n"+
@@ -527,7 +527,7 @@ trait ICppGen extends IScalaGen {
            else "")
         case _ =>
           "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
-          "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+          "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
           "}\n\n"
       }
     }
@@ -674,6 +674,12 @@ trait ICppGen extends IScalaGen {
     }.mkString)+
     "  }\n"+
     "\n"+
+    (if(regexpCacheMap.isEmpty) "" else
+      "  ~data_t() {\n" +
+      regexpCacheMap.map { case (regex, preg) =>
+        "    regfree(&" + preg + ");\n" 
+      }.mkString + 
+      "  }\n") + 
     "  #ifdef DBT_PROFILE\n"+
     "  std::shared_ptr<dbtoaster::statistics::trigger_exec_stats> exec_stats;\n"+
     "  std::shared_ptr<dbtoaster::statistics::trigger_exec_stats> ivc_stats;\n"+

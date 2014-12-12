@@ -18,7 +18,21 @@
 #define HASH_RES_t size_t
 
 template<typename T>
-union El { El(){}; T obj;  union El* next; ~El() {}; };
+struct El {
+  union {
+    T obj;
+    struct El* next; 
+  };
+  bool used;
+  El() { used = false; next = nullptr; }
+  ~El() { 
+    if (used) { 
+      obj.~T(); 
+      used = false;
+    }
+    next = nullptr;
+  }
+};
 
 template<typename T>
 class Pool {
@@ -28,39 +42,76 @@ private:
   size_t size_;
   void add_chunk() { // precondition: no available elements
     size_ = size_ << 1;
-    El<T>* chunk = new El<T>[size_+1]; for (size_t i=0; i<size_-1; ++i) chunk[i].next = &chunk[i+1];
-    chunk[size_-1].next = nullptr; chunk[size_].next = data_; data_ = chunk; free_ = chunk;
+    El<T>* chunk = new El<T>[size_+1];
+    for (size_t i=0; i<size_-1; ++i) chunk[i].next = &chunk[i+1];
+    chunk[size_-1].next = nullptr;
+    chunk[size_].next = data_;
+    data_ = chunk;
+    free_ = chunk;
   }
 public:
-  Pool(size_t chunk_size=DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size >> 1) { add_chunk(); }
-  ~Pool() { size_t sz=size_; while (data_ != nullptr) { El<T>* el = data_[sz].next; delete[] data_; data_ = el; sz=sz >> 1; } }
-  FORCE_INLINE T* add() { if (!free_) { add_chunk(); } El<T>* el = free_; free_ = free_->next; return &(el->obj); }
-  FORCE_INLINE void del(T* obj) { reinterpret_cast<El<T>*>(obj)->next = free_; free_ = reinterpret_cast<El<T>*>(obj); }
+  Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size >> 1) {
+    add_chunk();
+  }
+  ~Pool() {
+    size_t sz=size_;
+    while (data_ != nullptr) {
+      El<T>* el = data_[sz].next;
+      delete[] data_;
+      data_ = el;
+      sz=sz >> 1;
+    } 
+  }
+
+  FORCE_INLINE T* add() {
+    if (!free_) {
+      add_chunk();
+    }
+    El<T>* el = free_;
+    free_ = free_->next;
+    el->used = true;
+    el->next = nullptr;
+    return &(el->obj);
+  }
+
+  FORCE_INLINE void del(T* obj) { 
+    El<T>* el = reinterpret_cast<El<T>*>(obj);
+    el->~El();
+    el->next = free_; 
+    free_ = el; 
+  }
+
   inline void delete_all(T* current_data){
-    if(current_data) {
+    if (current_data) {
       T* tmp = current_data;
       do {
         T* tmpNext = tmp->nxt;
+        El<T> *tmpEl = reinterpret_cast<El<T>*>(tmp);
+        tmpEl->~El();
         if(tmpNext){
-          reinterpret_cast<El<T>*>(tmp)->next = reinterpret_cast<El<T>*>(tmpNext);
+          tmpEl->next = reinterpret_cast<El<T>*>(tmpNext);
         } else {
-          reinterpret_cast<El<T>*>(tmp)->next = free_;
+          tmpEl->next = free_;
         }
         tmp = tmpNext;
-      } while(tmp);
+      } while (tmp);
       free_ = reinterpret_cast<El<T>*>(current_data);
     }
   }
+
   inline void clear(){
     El<T>* prevChunk = nullptr;
     El<T>* chunk = data_;
     size_t sz = size_;
     size_t doubleSz = sz << 1;
     while (chunk) {
-      if(prevChunk) {
+      if (prevChunk) {
         prevChunk[doubleSz-1].next=chunk;
       }
-      for (size_t i=0; i<sz-1; ++i) chunk[i].next = &chunk[i+1];
+      for (size_t i=0; i<sz-1; ++i) {
+        chunk[i].~El();
+        chunk[i].next = &chunk[i+1];
+      }
       chunk[sz-1].next = nullptr; // did not change
       prevChunk = chunk;
       chunk = chunk[sz].next;
@@ -74,21 +125,25 @@ public:
 template<typename V>
 struct ZeroVal {
   V get() { return V(); }
+  virtual bool isZero(V a) { return (a == V()); }
 };
 
 template<>
 struct ZeroVal<long> {
   long get() { return 0L; }
+  FORCE_INLINE bool isZero(long a) { return (a == 0L); }
 };
 
 template<>
 struct ZeroVal<double> {
   double get() { return 0.0; }
+  FORCE_INLINE bool isZero(double a) { return (a >= -1e-6 && a <= 1e-6); }
 };
 
 template<>
 struct ZeroVal<PString> {
   PString get() { return PString(); }
+  FORCE_INLINE bool isZero(PString a) { return (a == PString()); }
 };
 
 /*template<typename T>
@@ -165,6 +220,7 @@ private:
   size_t count_, threshold_;
   double load_factor_;
   const V zero;
+  
 
   // void add_(T* obj) { // does not resize the bucket array, does not maintain count
   //   HASH_RES_t h = IDX_FN::hash(*obj);
@@ -413,7 +469,7 @@ public:
     do {
       T* lkup = n->obj;
       if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
-        if(v == zero) {
+        if (ZeroVal<V>().isZero(v)) {
           return DELETE_FROM_MMAP;
         }
         lkup->__av = v;
@@ -421,7 +477,7 @@ public:
       }
     } while ((n=n->nxt));
     //not found
-    if(v != zero) return INSERT_INTO_MMAP; //insert it into the map
+    if(!ZeroVal<V>().isZero(v)) return INSERT_INTO_MMAP; //insert it into the map
     return 0;
   }
 
@@ -430,7 +486,7 @@ public:
     do {
       T* lkup = n->obj;
       if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
-        if(v == zero) {
+        if (ZeroVal<V>().isZero(v)) {
           return DELETE_FROM_MMAP;
         }
         lkup->__av = v;
@@ -438,19 +494,19 @@ public:
       }
     } while ((n=n->nxt));
     //not found
-    if(v != zero) return INSERT_INTO_MMAP; //insert it into the map
+    if(!ZeroVal<V>().isZero(v)) return INSERT_INTO_MMAP; //insert it into the map
     return 0;
   }
 
   inline virtual int addOrDelOnZero(const T& k, const V& v) {
-    if(v != zero) {
+    if(!ZeroVal<V>().isZero(v)) {
       HASH_RES_t h = IDX_FN::hash(k);
       IdxNode* n = &buckets_[h % size_];
       do {
         T* lkup = n->obj;
         if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
           lkup->__av += v;
-          if(lkup->__av == zero) {
+          if(ZeroVal<V>().isZero(lkup->__av)) {
             return DELETE_FROM_MMAP;
           }
           return 0;
@@ -463,13 +519,13 @@ public:
   }
 
   inline virtual int addOrDelOnZero(const T& k, const V& v, HASH_RES_t h) {
-    if(v != zero) {
+    if(!ZeroVal<V>().isZero(v)) {
       IdxNode* n = &buckets_[h % size_];
       do {
         T* lkup = n->obj;
         if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
           lkup->__av += v;
-          if(lkup->__av == zero) {
+          if(ZeroVal<V>().isZero(lkup->__av)) {
             return DELETE_FROM_MMAP;
           }
           return 0;
@@ -543,11 +599,9 @@ public:
     // cur->~T();
     // *cur=std::move(elem);
     new(cur) T(elem);
-    if(head) {
-      cur->prv = nullptr;
-      cur->nxt = head;
-      head->prv = cur;
-    }
+    cur->prv = nullptr;
+    cur->nxt = head;
+    if (head) head->prv = cur;
     head = cur;
     for (size_t i=0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
   }
@@ -556,13 +610,10 @@ public:
     // cur->~T();
     // *cur=std::move(elem);
     new(cur) T(elem);
-    if(head) {
-      cur->prv = nullptr;
-      cur->nxt = head;
-      head->prv = cur;
-    }
+    cur->prv = nullptr;
+    cur->nxt = head;
+    if (head) head->prv = cur;
     head = cur; 
-
     index[0]->add(cur,h);
     for (size_t i=1; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
   }
