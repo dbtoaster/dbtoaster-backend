@@ -135,7 +135,7 @@ object UnitTest {
     def mn(s:String) = (s(0)+"").toUpperCase+s.substring(1)
 
     if (csv!=null) { // CSV format: query,sql->m3,(codegen,compile,(med,min,max,)*)*
-      csv.print("s"+samples+"_w"+warmup+"_t"+timeout+",,"); for (m<-modes) csv.print(mn(m)+",,"+datasets.map(d=>d+",,,,,,,,,").mkString); csv.println
+      csv.print("s"+samples+"_w"+warmup+"_t"+timeout+"_b"+exec_bs+",,"); for (m<-modes) csv.print(mn(m)+",,"+datasets.map(d=>d+",,,,,,,,,").mkString); csv.println
       csv.print("Query,SQLtoM3,"); for (m<-modes) csv.print("M3toCode,Compile,"+datasets.map(d=>"MedT,MedN,_,MaxT,MaxN,_,MinT,MinN,_,").mkString); csv.println
     }
 

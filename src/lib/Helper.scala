@@ -117,7 +117,7 @@ object Helper {
           else
             assert(res0==res,"Inconsistent results: "+res0+" != "+res);
         }
-        if (mode==1) println("SAMPLE="+d+","+(t.ns/1000)+","+t.count+","+t.skip)
+        if (mode==1) println("SAMPLE="+d+","+(t.ns/1000)+","+t.count+","+t.skip+","+batchSize)
         if (mode < 0) println("Time: "+t)
       }
       if (mode!=1 && res0!=null && op!=null) op(res0)
