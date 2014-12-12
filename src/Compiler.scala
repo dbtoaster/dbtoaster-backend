@@ -215,7 +215,7 @@ object Compiler {
                             "          gettimeofday(&t0,NULL);\n"+
                             "          data.t0 = t0;\n")
             //TODO XXX dataset should be an argument to the program
-            val src = if(dataset.contains("_del")) srcTmp.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else srcTmp
+            val src = if(dataset.contains("_del") || dataset.startsWith("custom")) srcTmp.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else srcTmp
             Utils.write(out,src)
             val pl = "srccpp/lib"
             val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
