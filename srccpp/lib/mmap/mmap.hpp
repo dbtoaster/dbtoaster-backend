@@ -17,6 +17,9 @@
 
 #define HASH_RES_t size_t
 
+//#define DOUBLE_ZERO_APPROXIMATED
+#define DOUBLE_ZERO_THRESHOLD 1e-8
+
 template<typename T>
 struct El {
   union {
@@ -137,7 +140,11 @@ struct ZeroVal<long> {
 template<>
 struct ZeroVal<double> {
   double get() { return 0.0; }
-  FORCE_INLINE bool isZero(double a) { return (a >= -1e-6 && a <= 1e-6); }
+#ifdef DOUBLE_ZERO_APPROXIMATED
+  FORCE_INLINE bool isZero(double a) { return (a >= -DOUBLE_ZERO_THRESHOLD && a <= DOUBLE_ZERO_THRESHOLD); }
+#else
+  FORCE_INLINE bool isZero(double a) { return (a == 0.0); }
+#endif
 };
 
 template<>
