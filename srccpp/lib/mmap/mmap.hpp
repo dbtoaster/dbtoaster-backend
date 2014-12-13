@@ -22,16 +22,22 @@
 
 template<typename T>
 struct El {
+  
   union {
     T obj;
     struct El* next; 
   };
+  
   bool used;
+  
   El() { used = false; next = nullptr; }
-  ~El() { 
-    if (used) { 
+  
+  ~El() { deactivate(); }
+
+  void deactivate() {
+    if (used) {
       obj.~T(); 
-      used = false;
+      used = false;  
     }
     next = nullptr;
   }
@@ -53,7 +59,7 @@ private:
     free_ = chunk;
   }
 public:
-  Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE) : data_(nullptr), size_(chunk_size >> 1) {
+  Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE) : free_(nullptr), data_(nullptr), size_(chunk_size >> 1) {
     add_chunk();
   }
   ~Pool() {
@@ -78,10 +84,12 @@ public:
   }
 
   FORCE_INLINE void del(T* obj) { 
-    El<T>* el = reinterpret_cast<El<T>*>(obj);
-    el->~El();
-    el->next = free_; 
-    free_ = el; 
+    if (obj) {
+      El<T>* el = reinterpret_cast<El<T>*>(obj);
+      el->deactivate();
+      el->next = free_; 
+      free_ = el; 
+    }
   }
 
   inline void delete_all(T* current_data){
@@ -90,7 +98,7 @@ public:
       do {
         T* tmpNext = tmp->nxt;
         El<T> *tmpEl = reinterpret_cast<El<T>*>(tmp);
-        tmpEl->~El();
+        tmpEl->deactivate();
         if(tmpNext){
           tmpEl->next = reinterpret_cast<El<T>*>(tmpNext);
         } else {
@@ -112,7 +120,7 @@ public:
         prevChunk[doubleSz-1].next=chunk;
       }
       for (size_t i=0; i<sz-1; ++i) {
-        chunk[i].~El();
+        chunk[i].deactivate();
         chunk[i].next = &chunk[i+1];
       }
       chunk[sz-1].next = nullptr; // did not change
