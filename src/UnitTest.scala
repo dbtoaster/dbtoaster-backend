@@ -44,6 +44,7 @@ object UnitTest {
   var datasets = List[String]() // selected datasets
   var q_f = (s:String)=>true // query filter (sql file name)
   var exec_bs : Int     = 0  // execute as batches of certain size
+  var depth : Int = -1  // incrementalization depth (-1=infinite)
   var no_output: Boolean= false  // do not print the output result in the standard output
 
   def parseArgs(args:Array[String]) {
@@ -71,6 +72,7 @@ object UnitTest {
       case "-cache" => cache=true
       case "-noreplace" => replaceQuery=false
       case "-b" | "-xbs" => eat(i => exec_bs = i.toInt)
+      case "-depth" => eat(i => depth = i.toInt)
       case "--no-output" => no_output=true
       case "-h"|"-help"|"--help" => import Compiler.{error=>e}
         e("Usage: Unit [options] [compiler options]")
@@ -254,6 +256,7 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_bs = exec_bs
+    Compiler.depth = depth
     Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
@@ -306,6 +309,7 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_bs = exec_bs
+    Compiler.depth = depth
     Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
@@ -394,6 +398,7 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_bs = exec_bs
+    Compiler.depth = depth
     Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
@@ -429,7 +434,7 @@ object UnitTest {
       val fl=if (repo!=null) new File(repo,f) else new File(f); val s=read(fl.getPath); fl.delete;
       (t1,s.replaceAll("../../experiments/data",path_repo+"/../../experiments/data"))
     }
-    if (timeout>0) sc=sc.replaceAll("(case StreamEvent.*=>)","$1 if (!skip)").replace("def act(): Unit","var skip = false;\n    def act(): Unit")
+    if (timeout>0) sc=sc.replaceAll("(case StreamEvent.*=>)","$1 if (!skip)").replace("def act(): Unit","var skip = false;\n    def act(): -depth")
     p.gen(math.max(0,t1-t0))
     p.all(q){case (dataset,_,_)=> write(tmp+"/Query.scala",{ val res = sc.replaceAll("/standard/","/"+dataset+"/"); if(dataset.contains("_del")) res.replace(", delimiter = \"\\\\|\")", ", deletions = \"true\", delimiter = \"\\\\|\")") else res })
       val t2 = ns(()=>legacySC(List(tmp.getPath+"/Query.scala",tmp.getPath+"/RunQuery.scala")))._1; p.comp(t2)
