@@ -494,7 +494,7 @@ trait IScalaGen extends CodeGen {
     val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
-    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map(q => (if (q.keys.size > 0) toMapFunction(q) else q.name)).mkString(",")+"))"
+    def snap(t1:String)=onEndStream+" sender ! (StreamStat("+t1+"-t0,tN,tS),List("+s0.queries.map(q => (if (q.keys.size > 0) toMapFunction(q) else q.name)).mkString(",")+"))"
     val pp = if(printProgress > 0L) "def printProgress():Unit = if(tN % "+printProgress+" == 0) Console.println((System.nanoTime - t0)+\"\\t\"+tN);\n" else ""
     clearOut
     helper(s0)+"class "+cls+" extends Actor {\n"+ind(
@@ -502,10 +502,11 @@ trait IScalaGen extends CodeGen {
     "import ddbt.lib.Functions._\n\n"+body+"\n\n"+
     "var t0=0L; var t1=0L; var tN=0L; var tS=0L\n"+
     pp+
-    "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap+" case _ => tS+=1 }\n"+
+    "def receive_skip:Receive = { case EndOfStream | GetSnapshot(_) => "+snap("t1")+" case _ => tS+=1 }\n"+
     "def receive = {\n"+ind(str+
       "case StreamInit(timeout) =>"+(if (ld!="") " loadTables();" else "")+" onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L\n"+
-      "case EndOfStream | GetSnapshot(_) => t1=System.nanoTime; "+snap
+      "case GetSnapshot(_) => "+snap("System.nanoTime")+"\n"+
+      "case EndOfStream => t1=System.nanoTime; "+snap("t1")
     )+"\n}\n"+gc+ld)+"\n}\n"
   }
 
