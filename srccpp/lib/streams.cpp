@@ -136,6 +136,7 @@ void source_multiplexer::init_source(size_t batch_size, size_t parallel, bool is
 		std::list<event_t> batchedEventList;
 		map<relation_id_t,std::vector<event_t*> > tuples_queued_in_relations;
 
+
 		if(!eventList->empty()) {
 			std::list<event_t>::iterator eit = eventList->begin();
 			std::list<event_t>::iterator eit_end = eventList->end();
@@ -145,28 +146,47 @@ void source_multiplexer::init_source(size_t batch_size, size_t parallel, bool is
 			}
 		}
 		if(!eventQue->empty()) {
+			eventQue->sort(compare_event_timestamp_order);
 			std::list<event_t>::iterator eit = eventQue->begin();
 			std::list<event_t>::iterator eit_end = eventQue->end();
-			for(;eit != eit_end; ++eit) {
+			event_args_t batch;
+
+			for(;eit != eit_end;) {
 				event_t* evt = &(*eit);
-				tuples_queued_in_relations[evt->id].push_back(evt);
-			}
-		}
-		map<relation_id_t, std::vector<event_t*> >::iterator it = tuples_queued_in_relations.begin();
-		map<relation_id_t, std::vector<event_t*> >::iterator it_end = tuples_queued_in_relations.end();
-		event_args_t batch;
-		for(; it != it_end; ++it) {
-			while(!it->second.empty()) {
-				event_t* evt = it->second.back();
-				it->second.pop_back();
 				event_args_t* evtData = new event_args_t(evt->data);
 				if(evt->type == insert_tuple) evtData->push_back(std::shared_ptr<long>(new long( 1L)));
 				else evtData->push_back(std::shared_ptr<long>(new long(-1L)));
+
+				// add relation to last element
+				evtData->push_back(std::shared_ptr<int>(new int(evt->id)));
+
 				batch.push_back(std::shared_ptr<event_args_t>(evtData));
-				if(batch.size() >= batch_size || it->second.empty()) {
+				// increment iterator
+				++eit;
+				if(batch.size() >= batch_size || eit == eit_end) {
 					event_t e(batch_update, evt->id, evt->event_order, batch);
 					batchedEventList.push_back(e);
 					batch.clear();
+				}
+			}
+		}
+		if (!eventList->empty()) {
+			map<relation_id_t, std::vector<event_t*> >::iterator it = tuples_queued_in_relations.begin();
+			map<relation_id_t, std::vector<event_t*> >::iterator it_end = tuples_queued_in_relations.end();
+			event_args_t batch;
+			for(; it != it_end; ++it) {
+				while(!it->second.empty()) {
+					event_t* evt = it->second.back();
+					it->second.pop_back();
+					event_args_t* evtData = new event_args_t(evt->data);
+					if(evt->type == insert_tuple) evtData->push_back(std::shared_ptr<long>(new long( 1L)));
+					else evtData->push_back(std::shared_ptr<long>(new long(-1L)));
+					batch.push_back(std::shared_ptr<event_args_t>(evtData));
+					if(batch.size() >= batch_size || it->second.empty()) {
+						event_t e(batch_update, evt->id, evt->event_order, batch);
+						batchedEventList.push_back(e);
+						batch.clear();
+					}
 				}
 			}
 		}

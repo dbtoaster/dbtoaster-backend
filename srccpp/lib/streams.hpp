@@ -17,6 +17,7 @@
 #include "runtime.hpp"
 #include "event.hpp"
 
+
 namespace dbtoaster {
 namespace streams {
 
