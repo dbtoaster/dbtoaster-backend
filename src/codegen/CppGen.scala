@@ -479,28 +479,29 @@ trait ICppGen extends IScalaGen {
           var code =    "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"
           code = code + "  size_t sz = eaList.size();\n"
 
-          for (sources <- s0.sources) {
+          for (sources <- s0.sources.filter(_.stream)) {
             val schema = sources.schema;
             val deltaRel = schema.deltaSchema
             code = code + "    "+deltaRel+".clear();\n"
           }
+          
           code = code +   "    for(size_t i=0; i < sz; i++){\n"
           code = code +   "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
           code = code +   "      relation_id_t relation = *(reinterpret_cast<relation_id_t*>((*ea).back().get()));\n"
           
-          for (sources <- s0.sources) {
+          for (sources <- s0.sources.filter(_.stream)) {
             val schema = sources.schema;
             val deltaRel = schema.deltaSchema
             val entryClass = deltaRel + "_entry"  
-
+         
             code = code + "      if (relation == program_base->get_relation_id(\"" + schema.name + "\"" + ")) { \n"
             code = code + "        event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
             code = code + "        "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
             code = code + "        "+deltaRel+".insert_nocheck(e);\n"
             code = code + "      }\n"
           }
-          code = code +   "    }"
-          for (sources <- s0.sources) {
+          code = code +   "    }\n"
+          for (sources <- s0.sources.filter(_.stream)) {
             val schema = sources.schema;
             val deltaRel = schema.deltaSchema
             code = code + "  on_"+op+"_"+schema.name+"("+deltaRel+");\n"

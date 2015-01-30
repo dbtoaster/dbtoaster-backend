@@ -220,6 +220,8 @@ object Compiler {
             val pl = "srccpp/lib"
             val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
             val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),null,pl))._1; if (t_comp!=null) t_comp(t2)
+                            
+
             if(t_run != null) {
               t_run(()=>{
                 var i = 0
