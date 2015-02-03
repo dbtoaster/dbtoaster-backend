@@ -152,6 +152,8 @@ object UnitTest {
           else {
             queryName = if(replaceQuery) name(q.sql) else Utils.generateNewFileName(name(q.sql),"target/m3/%s.m3")
             f = "target/m3/"+queryName+".m3"
+            // set depth before generating m3
+            Compiler.depth = depth
             val r=Compiler.toast("m3",q.sql); Utils.write(f,r._2);
             println("SQL -> M3           : "+tf(r._1))
             r
@@ -256,7 +258,6 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_bs = exec_bs
-    Compiler.depth = depth
     Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
@@ -309,7 +310,6 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_bs = exec_bs
-    Compiler.depth = depth
     Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
@@ -398,7 +398,6 @@ object UnitTest {
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
     Compiler.exec_bs = exec_bs
-    Compiler.depth = depth
     Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
