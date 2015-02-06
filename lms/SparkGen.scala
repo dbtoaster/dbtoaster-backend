@@ -1,451 +1,1074 @@
 package ddbt.codegen
+
 import ddbt.codegen.lms._
 import ddbt.ast._
 import ddbt.lib._
 
 /**
- * This code generator is similar to ScalaGen but targets Spark as a parallel backend.
- *
- * @author Mohammad Dashti
- */
-class LMSSparkGen(cls:String="Query") extends LMSGen(cls,SparkExpGen) with IScalaGen {
+  * Generates code for the Spark parallel backend.
+  *
+  * @author Milos Nikolic, Mohammad Dashti
+  */
+class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen) 
+                                            with IScalaGen {
+  
   import ddbt.ast.M3._
-  import ddbt.Utils.{ind,tup,fresh,freshClear} // common functions
-  import ManifestHelper.{man,zero,manEntry,manStore,manContainer}
+  import ddbt.Utils.{ind, block, tup, fresh, freshClear} // common functions
+  import ManifestHelper.{man,zero,manEntry,manStore}
   import ddbt.lib.store._
   import impl.Rep
 
-  override def genMap(m:MapDef):String = {
-    if (m.keys.size==0) createVarDefinition(m.name, m.tp)+";"
+  
+  //----------
+  case class MapInfo(name: String, tp: Type, keys: List[(String, Type)], 
+                     expr: Expr, locality: LocalityType, storeType: StoreType,
+                     linkMap: Boolean = false)
+  
+  val mapInfo = collection.mutable.Map[String, MapInfo]()  
+  var deltaMapInfo = List[(String, MapInfo)]() 
+  
+  val linkMaps  = collection.mutable.Set[MapInfo]()
+  val localMaps = collection.mutable.Set[MapInfo]()
+  val distributedMaps = collection.mutable.Set[MapInfo]()
+  
+  //----------
+
+  abstract sealed class Transformer { 
+    var expr: Expr
+
+    def rename(mapping: Map[String, String]): Unit = expr = expr.rename(mapping)
+  }
+  case class DefaultTransformer(var expr: Expr) extends Transformer {
+    override def toString = ""
+  }
+  case class ScatterTransformer(var expr: Expr) extends Transformer {
+    assert(expr.locality match { 
+      case Some(LocalExp) => true 
+      case _ => false 
+    }, "Locality check failed")
+    assert(mapInfo(expr.asInstanceOf[MapRef].name).storeType match {
+      case PartitionStore(_) => true  
+      case _ => false
+    }, "Store type check failed")
+
+    override def toString = "SCATTER"
+  }
+  case class RepartitionTransformer(var expr: Expr) extends Transformer {
+    assert(expr.locality match { 
+      case Some(DistributedExp(_)) => true 
+      case _ => false 
+    }, "Locality check failed")
+    assert(mapInfo(expr.asInstanceOf[MapRef].name).storeType match {
+      case PartitionStore(_) => true 
+      case _ => false
+    }, "Store type check failed")      
+
+    override def toString = "REPARTITION"
+  }
+  case class GatherTransformer(var expr: Expr) extends Transformer {
+    assert(expr.locality match { 
+      case Some(DistributedExp(_)) => true 
+      case _ => false 
+    }, "Locality check failed")
+    assert(mapInfo(expr.asInstanceOf[MapRef].name).storeType match {
+      case PartitionStore(_) | LogStore => true 
+      case _ => false
+    }, "Store type check failed")
+
+    override def toString = "GATHER"
+  }
+  case class IndexStoreTransformer(var expr: Expr) extends Transformer { override def toString = "TO_INDEX" }
+  case class LogStoreTransformer(var expr: Expr) extends Transformer { override def toString = "TO_LOG" }
+  case class PartitionStoreTransformer(var expr: Expr) extends Transformer { override def toString = "TO_PARTITION" }
+
+  //----------
+
+  abstract sealed class ExecutionMode
+  case object LocalMode extends ExecutionMode { override def toString = "LOCAL" }
+  case object DistributedMode extends ExecutionMode { override def toString = "DISTRIBUTED" }
+
+  def execMode(locality: LocalityType): ExecutionMode = locality match {
+    case LocalExp => LocalMode
+    case DistributedExp(_) => DistributedMode
+  }
+  //----------
+
+  val sSparkObject = cls
+  val sLocalMapContextClass  = s"${cls}LocalMapContext"
+  val sGlobalMapContextClass = s"GlobalMapContext[${sLocalMapContextClass}]"
+  val sEscapeFn = "context.become(receive_skip)"
+
+  //----------
+
+  case class Statement(var lhsMap: MapRef, val rhsTransformer: Transformer, 
+      var initTransformer: Option[Transformer], val opMap: OpMap, val execMode: ExecutionMode) {
+    
+    def rhsMaps = rhsTransformer.expr.collect { case m: MapRef => List(m) }.toSet ++
+                  initTransformer.map(_.expr.collect { case m: MapRef => List(m) }.toSet).getOrElse(Set())
+
+    def commute(that: Statement): Boolean = 
+      (!that.rhsMaps.contains(this.lhsMap) && !this.rhsMaps.contains(that.lhsMap))
+
+    def rename(mapping: Map[String, String]): Unit = {     // renaming only map names
+      lhsMap = lhsMap.rename(mapping).asInstanceOf[MapRef]
+      rhsTransformer.rename(mapping)
+      initTransformer.map(_.rename(mapping))
+    }
+
+    override def toString = {
+      val initExpr = initTransformer.map(":(" + _.expr + ")").getOrElse("") 
+      s"${execMode} ${lhsMap} ${initExpr} ${opMap} ${rhsTransformer}(${rhsTransformer.expr});"
+    }
+
+    def toShortString = {
+      val rhsList = rhsMaps.map(_.name).mkString(", ")
+      s"${execMode} ${lhsMap.name} ${opMap} ${rhsTransformer} { ${rhsList} }"
+    }
+  }
+
+  object Statement {
+
+    def transformToLog(prefix: String, rhsMap: MapRef): Statement = {
+      val lhsName = fresh(prefix + "ToLog")
+      val rhsInfo = mapInfo(rhsMap.name)
+      val rhsStoreType = LogStore
+      val lhsInfo = MapInfo(lhsName, rhsInfo.tp, rhsMap.keys, rhsInfo.expr, rhsInfo.locality, rhsStoreType)
+      mapInfo += ((lhsInfo.name, lhsInfo))
+      val lhsRef = MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys)
+      lhsRef.locality = Some(lhsInfo.locality)
+      lhsRef.isTemp = true
+      Statement(lhsRef, LogStoreTransformer(rhsMap), None, OpSet, execMode(lhsInfo.locality))
+    }
+
+    def transformToPartition(prefix: String, rhsMap: MapRef, pkeys: List[(String, Type)]): Statement = {
+      val lhsName = fresh(prefix + "ToPartition")
+      val rhsInfo = mapInfo(rhsMap.name)
+      val rhsStoreType = PartitionStore(pkeys.map(k => rhsMap.keys.indexOf(k)))
+      val lhsInfo = MapInfo(lhsName, rhsInfo.tp, rhsMap.keys, rhsInfo.expr, rhsInfo.locality, rhsStoreType)
+      mapInfo += ((lhsInfo.name, lhsInfo))
+      val lhsRef = new MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys)
+      lhsRef.locality = Some(lhsInfo.locality)
+      lhsRef.isTemp = true
+      Statement(lhsRef, PartitionStoreTransformer(rhsMap), None, OpSet, execMode(lhsInfo.locality))
+    }
+
+    def transformToIndex(prefix: String, rhsMap: MapRef): Statement = {
+      val lhsName = fresh(prefix + "ToIndex")
+      val rhsInfo = mapInfo(rhsMap.name)
+      val rhsStoreType = IndexedStore
+      val lhsInfo = MapInfo(lhsName, rhsInfo.tp, rhsMap.keys, rhsInfo.expr, rhsInfo.locality, rhsStoreType)
+      mapInfo += ((lhsInfo.name, lhsInfo))
+      val lhsRef = new MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys)
+      lhsRef.locality = Some(lhsInfo.locality)
+      lhsRef.isTemp = true
+      Statement(lhsRef, IndexStoreTransformer(rhsMap), None, OpSet, execMode(lhsInfo.locality))
+    }
+
+    def createScatter(expr: Expr, pkeys: List[(String, Type)]): List[Statement] = {
+      val (iv, ov) = expr.schema
+      if (iv != Nil) sys.error("Distributed map (Scatter) with input vars")
+      /* DIST_SCATTER := SCATTER(EXPR, PKEYS) gets transformed into
+       *
+       * LOCAL_SCATTER    := EXPR unless EXPR == MapRef
+       * LOCAL_PARTITIONS := SPLIT_INTO_PARTITIONS(LOCAL_SCATTER)
+       * DIST_PARTITIONS  := SCATTER(LOCAL_PARTITIONS)
+       * DIST_SCATTER     := LOG_TO_INDEX(DIST_PARTITIONS)       
+       */
+      val (localRef, localStmt) = expr match {
+        case m: MapRef if mapInfo(m.name).storeType == IndexedStore => (m, Nil)
+        case m: MapRef if mapInfo(m.name).storeType != IndexedStore => sys.error("Transformation not implemented yet")
+        case _ =>
+          val localName = fresh("scatter")
+          val localLocality = expr.locality match {
+            case Some(LocalExp) => LocalExp
+            case Some(DistributedExp(_)) | None => sys.error("Scattering of a distributed expression")
+          }
+          val localInfo = MapInfo(localName, expr.tp, ov, expr, localLocality, IndexedStore)
+          mapInfo += ((localInfo.name, localInfo))
+          val localRef = new MapRef(localInfo.name, localInfo.tp, localInfo.keys)
+          localRef.locality = Some(localInfo.locality)
+          localRef.isTemp = true
+          val localStmt = Statement(localRef, DefaultTransformer(expr), None, OpSet, LocalMode)
+          (localRef, List(localStmt))
+      }
+      val toPartitionStmt = Statement.transformToPartition("scatter", localRef, pkeys)
+      val scatterStmt = {        
+        val distName = fresh("scatter")
+        val distInfo = MapInfo(distName, expr.tp, ov, expr, DistributedExp(pkeys), LogStore, true)
+        mapInfo += ((distInfo.name, distInfo))
+        val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
+        distRef.locality = Some(distInfo.locality)
+        distRef.isTemp = true
+        Statement(distRef, ScatterTransformer(toPartitionStmt.lhsMap), None, OpSet, LocalMode)
+      }
+      val toStoreStmt = Statement.transformToIndex("scatter", scatterStmt.lhsMap)
+      localStmt ++ List(toPartitionStmt, scatterStmt, toStoreStmt)
+    }
+
+    def createRepartition(expr: Expr, pkeys: List[(String, Type)]): List[Statement] = {
+      val (iv, ov) = expr.schema
+      if (iv != Nil) sys.error("Distributed map (Repartition) with input vars")
+      /* DIST_DEST := REPARTITION(EXPR, PKEYS) gets transformed into
+       *
+       * DIST_SRC := EXPR unless EXPR == MapRef
+       * DIST_PARTITIONS_SRC := INDEX_TO_PART(DIST_SRC)
+       * !!! TODO: PRE-AGGREGATION OF PARTITIONS
+       * DIST_PARTITIONS_DST := REPARTITION(DIST_PARTITIONS_SRC)
+       * DIST_DEST           := MERGE_PARTITIONS(DIST_PARTITIONS_DST)
+       */
+      val (distSrcRef, distSrcStmt) = expr match {
+        case m: MapRef if mapInfo(m.name).storeType == IndexedStore => (m, Nil)
+        case m: MapRef if mapInfo(m.name).storeType != IndexedStore => sys.error("Transformation not implemented yet")
+        case _ =>  
+          val distName = fresh("repartition")
+          val distLocality = expr.locality match {
+            case Some(DistributedExp(pk)) => DistributedExp(pk)
+            case Some(LocalExp) | None => sys.error("Repartitioning of a local expression")
+          }
+          val distInfo = MapInfo(distName, expr.tp, ov, expr, distLocality, IndexedStore)
+          mapInfo += ((distInfo.name, distInfo))
+          val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)    
+          distRef.locality = Some(distInfo.locality)
+          distRef.isTemp = true    
+          val distStmt = Statement(distRef, DefaultTransformer(expr), None, OpSet, DistributedMode)
+          (distRef, List(distStmt))
+      }
+      val srcToPartitionStmt = Statement.transformToPartition("repartition", distSrcRef, pkeys)
+      val repartitionStmt = {
+        val distName = fresh("repartition")
+        val distStoreType = PartitionStore(pkeys.map(k => ov.indexOf(k)))
+        val distInfo = MapInfo(distName, expr.tp, ov, expr, DistributedExp(pkeys), distStoreType, true)
+        mapInfo += ((distInfo.name, distInfo))
+        val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
+        distRef.locality = Some(distInfo.locality)
+        distRef.isTemp = true
+        Statement(distRef, RepartitionTransformer(srcToPartitionStmt.lhsMap), None, OpSet, LocalMode)
+      }
+      val dstToIndexStmt = Statement.transformToIndex("repartition", repartitionStmt.lhsMap)
+      (distSrcStmt ++ List(srcToPartitionStmt, repartitionStmt, dstToIndexStmt))
+    }
+
+    def createGather(expr: Expr): List[Statement] = {
+      val (iv, ov) = expr.schema
+      if (iv != Nil) sys.error("Distributed map (Gather) with input vars")
+      /* LOCAL_GATHER := GATHER(DIST_GATHER) gets transformed into
+       *
+       * DIST_GATHER      := EXPR unless EXPR == MapRef
+       * DIST_PARTITIONS  := INDEX_TO_LOG(DIST_GATHER)
+       * !!! TODO: PRE-AGGREGATION OF PARTITIONS
+       * LOCAL_PARTITIONS := GATHER(DIST_PARTITIONS)
+       * LOCAL_GATHER     := MERGE_PARTITIONS(LOCAL_PARTITIONS)  
+       */
+       val (distRef, distStmt) = expr match {
+        case m: MapRef if mapInfo(m.name).storeType == IndexedStore => (m, Nil)
+        case m: MapRef if mapInfo(m.name).storeType != IndexedStore => sys.error("Transformation not implemented yet")
+        case _ =>  
+          val distName = fresh("gather")
+          val distLocality = expr.locality match {
+            case Some(DistributedExp(pk)) => DistributedExp(pk)
+            case Some(LocalExp) | None => sys.error("Gathering of a local expression")
+          }
+          val distInfo = MapInfo(distName, expr.tp, ov, expr, distLocality, IndexedStore)
+          mapInfo += ((distInfo.name, distInfo))
+          val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
+          distRef.locality = Some(distInfo.locality)
+          distRef.isTemp = true
+          val distStmt = Statement(distRef, DefaultTransformer(expr), None, OpSet, DistributedMode)
+          (distRef, List(distStmt))
+        }
+        val toLogStmt = Statement.transformToLog("gather", distRef)
+        val gatherStmt = {        
+          val partName = fresh("gather")
+          val partInfo = MapInfo(partName, expr.tp, ov, expr, LocalExp, PartitionStore(Nil), true)
+          mapInfo += ((partInfo.name, partInfo))
+          val partRef = new MapRef(partInfo.name, partInfo.tp, partInfo.keys)
+          partRef.locality = Some(partInfo.locality)
+          partRef.isTemp = true
+          Statement(partRef, GatherTransformer(toLogStmt.lhsMap), None, OpSet, LocalMode)
+        }
+        val toIndexStmt = Statement.transformToIndex("gather", gatherStmt.lhsMap)
+        distStmt ++ List(toLogStmt, gatherStmt, toIndexStmt)
+    }
+  }
+
+  case class StatementBlock(val execMode: ExecutionMode, val stmts: List[Statement]) {
+    def lhsMaps = stmts.map(_.lhsMap).toSet
+    def rhsMaps = stmts.flatMap(_.rhsMaps).toSet
+    def maps = lhsMaps ++ rhsMaps
+
+    def commute(that: StatementBlock): Boolean = 
+      stmts.forall(lhs => that.stmts.forall(rhs => lhs.commute(rhs)))
+
+    override def toString = 
+      s"""|>> BLOCK START (${execMode})
+          |${ind(stmts.map(_.toString).mkString("\n"))}
+          |<< BLOCK END (${execMode})
+          |""".stripMargin
+
+    def toShortString = 
+      s"""|>> BLOCK START (${execMode})
+          |${ind(stmts.map(_.toShortString).mkString("\n"))}
+          |<< BLOCK END (${execMode})
+          |""".stripMargin
+  }
+
+  object Optimizer {
+    
+    def optBlockFusion = new Function1[List[StatementBlock], List[StatementBlock]] {
+      def apply(blocks: List[StatementBlock]): List[StatementBlock] = blocks match {
+        case Nil => Nil
+        case List(b) => List(b)
+        case head :: tail => 
+          val (lhs, curr, rhs) = tail.foldLeft (List[StatementBlock](), head, List[StatementBlock]()) { 
+            case ( (lhsBlocks, blockA, rhsBlocks), blockB ) => (blockA, blockB) match {
+              
+              case (a @ StatementBlock(execModeA, stmtsA), b @ StatementBlock(execModeB, stmtsB)) 
+                   if (execModeA == execModeB) =>  
+                if (rhsBlocks.forall(_.commute(b)))        // Try to push b to the left 
+                  (lhsBlocks, StatementBlock(execModeA, stmtsA ++ stmtsB), rhsBlocks)  
+                else if (rhsBlocks.forall(a.commute))      // Try to push a to the right
+                  (lhsBlocks ++ rhsBlocks, StatementBlock(execModeA, stmtsA ++ stmtsB), Nil)
+                else 
+                  (lhsBlocks, blockA, rhsBlocks ++ List(blockB))
+
+              case _ => (lhsBlocks, blockA, rhsBlocks ++ List(blockB))
+            }
+          } 
+          val newBlocks = lhs ++ (curr :: rhs)
+          if (blocks.length > newBlocks.length) apply(newBlocks)
+          else head :: apply(tail)
+      }  
+    }
+
+    def optCSE = new Function1[List[Statement], List[Statement]] {
+      var mapDefs = Map[String, Transformer]()
+      var equiMaps = Map[String, List[String]]()
+
+      def mapping = equiMaps.mapValues(_.head)
+
+      def rewrite(map: MapRef, op: OpMap, transformer: Transformer): Unit = {
+        // invalidate map's definition
+        equiMaps = (equiMaps - map.name).mapValues(_.filterNot(_ == map.name))
+        mapDefs = mapDefs - map.name
+        // rename RHS expression
+        transformer.rename(mapping)
+
+        if (op == OpSet) {
+          // Update equiMaps - try to find equivalent expression definitions          
+          val matchingNames = mapDefs.filter(_._2 == transformer).map(_._1).toList 
+          if (matchingNames.length == 0) equiMaps = equiMaps + ((map.name, List(map.name)))
+          else {
+            val equiClass = equiMaps(matchingNames.head) ++ List(map.name)
+            equiMaps = equiMaps ++ (map.name :: matchingNames).map((_, equiClass))
+          }
+          // Create new map definition, avoid aliases
+          transformer match {
+            case DefaultTransformer(m: MapRef) if mapDefs.contains(m.name) =>
+              mapDefs = mapDefs + ((map.name, mapDefs(m.name)))
+            case _ => mapDefs = mapDefs + ((map.name, transformer))
+          }
+        }
+      }
+
+      def apply(stmts: List[Statement]): List[Statement] = {
+        stmts.foreach { stmt => {
+          rewrite(stmt.lhsMap, stmt.opMap, stmt.rhsTransformer)
+          stmt.initTransformer.map(t => rewrite(stmt.lhsMap, OpSet, t))
+        }}
+        stmts
+      }
+    }
+
+    def optDCE = new Function1[List[Statement], List[Statement]] {
+      def isReferenced(map: MapRef, stmts: List[Statement]): Boolean = stmts match {
+        case Nil => false
+        case head :: tail =>
+          if (map == head.lhsMap) !(head.opMap == OpSet)    
+          else (head.rhsMaps.contains(map) || isReferenced(map, tail))
+      }
+
+      def deadStatements(stmts: List[Statement]): List[Statement] = stmts match {
+        case Nil => Nil
+        case head :: tail =>
+          if (head.lhsMap.isTemp && !isReferenced(head.lhsMap, tail)) head :: deadStatements(tail) 
+          else deadStatements(tail)
+      }
+
+      def apply(stmts: List[Statement]): List[Statement] = {
+        val deadStmts = deadStatements(stmts).toSet
+        stmts.filterNot(deadStmts.contains)
+      }
+    }
+
+    def optimize(stmts: List[Statement]): List[Statement] = {
+      val optStmts = (optCSE andThen optDCE)(stmts)
+      if (stmts == optStmts) optStmts else optimize(optStmts)
+    }
+  }
+
+  // CLASS DEFINITIONS FOR DISTRIBUTED EXECUTION (END)
+
+  val partitioningMap = List[(String, Option[List[Int]])](
+      ("QUERY3",                   None), //Some(List(0))),
+      ("QUERY3LINEITEM1",          Some(List(0))),
+      ("QUERY3LINEITEM1CUSTOMER1", Some(List(0))),
+      ("QUERY3ORDERS1_P_1",        Some(List(0))),    // CK
+      ("QUERY3ORDERS1_P_2",        Some(List(0))),
+      ("QUERY3CUSTOMER1",          Some(List(0))),    // CK 
+      ("QUERY3LINEITEM1_DELTA",    Some(List(0))),
+      ("QUERY3ORDERS1_DELTA",      Some(List(0))),
+      ("QUERY3CUSTOMER1_DELTA",    Some(List(0)))
+  ).toMap
+
+  def prepareStatement(stmt: Stmt): List[Statement] = stmt match {
+    case StmtMap(map, expr, op, ivc) => 
+      val (aStmts, aTransformer) = {
+        val (aStmts, aExpr) = prepareExpression(expr)
+        (aStmts, DefaultTransformer(aExpr))
+      }
+      val (bStmts, bTransformer) = ivc.map(e => {
+        val (bStmts, bExpr) = prepareExpression(e)
+        (bStmts, Some(DefaultTransformer(bExpr)))
+      }).getOrElse((Nil, None))
+
+      val execMode = aTransformer.expr.locality match {
+        case Some(LocalExp) | None => LocalMode
+        case Some(DistributedExp(_)) => DistributedMode
+      }      
+      ( aStmts ++ bStmts ++ List(Statement(map, aTransformer, bTransformer, op, execMode)))
+    case m: MapDef => Nil  
+  }
+
+  def prepareExpression(expr: Expr): (List[Statement], Expr) = expr match {
+    case Const(tp, v) => (Nil, expr)
+    case Ref(name) => (Nil, expr)
+    case m @ MapRef(name, tp, keys) => 
+      val map = mapInfo(name)
+      m.locality  = map.locality match {
+        case LocalExp => Some(LocalExp)
+        case DistributedExp(pk) => Some(DistributedExp(pk.map(k => keys(map.keys.indexOf(k)))))
+      }
+      (Nil, m)
+    case MapRefConst(name, keys) => (Nil, expr)
+    case DeltaMapRefConst(name, keys) => (Nil, expr)
+    case Lift(name, e) => 
+      val (stmts, subexp) = prepareExpression(e)
+      (stmts, Lift(name, subexp))
+    case AggSum(ks, e) => 
+      val (stmts, subexp) = prepareExpression(e)
+      (stmts, AggSum(ks, subexp))
+    case Mul(l, r) => 
+      val (la, le) = prepareExpression(l)
+      val (ra, re) = prepareExpression(r)
+      val newExpr = Mul(le, re)
+      newExpr.tp = expr.tp
+      (la ++ ra, newExpr)
+    case a @ Add(l, r) =>           
+      val (la, le) = prepareExpression(l)
+      val (ra, re) = prepareExpression(r)
+      val newExpr = Add(le, re)
+      newExpr.tp = a.tp
+      newExpr.agg = a.agg
+      (la ++ ra, newExpr)
+    case Exists(e) => 
+      val (stmts, subexp) = prepareExpression(e)
+      (stmts, Exists(subexp))
+    case Apply(fn, tp, as) => 
+      val (stmts, args) = as.map(prepareExpression).unzip
+      (stmts.flatten, Apply(fn, tp, args))
+    case Cmp(l, r, op) => 
+      val (la, le) = prepareExpression(l)
+      val (ra, re) = prepareExpression(r)
+      (la ++ ra, Cmp(le, re, op))
+    case Tuple(es) => 
+      val (stmts, args) = es.map(prepareExpression).unzip
+      val newExpr = Tuple(args)
+      newExpr.tp = expr.tp
+      (stmts.flatten, newExpr)
+    case TupleLift(ns, e) =>     
+      val (stmts, subexp) = prepareExpression(e)
+      (stmts, TupleLift(ns, subexp))    
+    case Repartition(ks, e) => 
+      val (stmts, subexp) = prepareExpression(e)
+      val (iv, ov) = expr.schema
+      if (iv != Nil) sys.error("Repartitioning a map with input vars")
+      subexp.locality match {
+        case Some(LocalExp) =>
+          val scatterStmts = Statement.createScatter(subexp, ks)
+          (stmts ++ scatterStmts, scatterStmts.last.lhsMap)
+        case Some(DistributedExp(pkeys)) if (pkeys != ks) =>
+          val repartStmts = Statement.createRepartition(subexp, ks)
+          (stmts ++ repartStmts, repartStmts.last.lhsMap)
+        case Some(DistributedExp(_)) | None => (stmts, subexp)
+      }
+    case Gather(e) => 
+      val (stmts, subexp) = prepareExpression(e)
+      val (iv, ov) = expr.schema
+      if (iv != Nil) sys.error("Gathering a map with input vars")
+      subexp.locality match {
+        case Some(DistributedExp(pkeys)) =>
+          val gatherStmts = Statement.createGather(subexp)
+          (stmts ++ gatherStmts, gatherStmts.last.lhsMap)
+        case Some(LocalExp) | None => (stmts, subexp) 
+      }
+  }
+
+  def createBlocks(stmts: List[Statement]): List[StatementBlock] = 
+    stmts.map(s => StatementBlock(s.execMode, List(s)))
+
+  def reorderTriggers(triggers: List[Trigger]): List[Trigger] = triggers
+
+  // SPARK CODE GENERATION - HERE WE PRODUCE SOME STRINGS
+
+  override def apply(s0: System): String = {
+    val tables = s0.sources.filterNot(_.stream).map(_.schema.name).toSet
+    // Create MapInfo definitions and load partitioning information
+    mapInfo ++= s0.maps.map { case MapDef(name, tp, keys, expr, loc) =>
+      // All tables are replicated
+      val locality = if (!tables.contains(name)) loc else LocalExp //DistributedExp(List())
+      val mapInfo = MapInfo(name, tp, keys, expr, locality, IndexedStore)
+      (mapInfo.name, mapInfo)
+    }
+    // Create delta MapInfo definitions
+    deltaMapInfo = s0.triggers.flatMap { _.evt match {
+      case EvtBatchUpdate(s @ Schema(name, _)) => 
+        val keys = s0.sources.filter(_.schema.name == name)(0).schema.fields
+        val mapInfo = MapInfo(s.deltaName, TypeLong, keys, DeltaMapRefConst(name, keys), LocalExp, IndexedStore)
+        List((mapInfo.name, mapInfo))        
+      case EvtAdd(_) | EvtDel(_) => 
+        sys.error("Distributed programs run only in batch mode.")
+      case _ => Nil
+    }}    
+    mapInfo ++= deltaMapInfo
+
+    val updateStmts = reorderTriggers(s0.triggers).flatMap { 
+      case Trigger(EvtBatchUpdate(_), stmts) => stmts.flatMap(prepareStatement)
+      case _ => Nil
+    }
+    val systemReadyStmts = s0.triggers.flatMap { 
+      case Trigger(EvtReady, stmts) => stmts.flatMap(prepareStatement)
+      case _ => Nil
+    }
+
+    // Optimize statements
+    val optUpdateStmts = Optimizer.optimize(updateStmts)
+    val optSystemReadyStmts = Optimizer.optimize(systemReadyStmts)
+
+    // Create statement blocks 
+    val updateBlocks = createBlocks(optUpdateStmts)
+    val systemReadyBlocks = createBlocks(optSystemReadyStmts)
+
+    // Optimize statement blocks
+    val optUpdateBlocks = Optimizer.optBlockFusion(updateBlocks)
+    optUpdateBlocks.map(b => java.lang.System.err.println(b.toShortString))
+    val optSystemReadyBlocks = Optimizer.optBlockFusion(systemReadyBlocks)
+    optSystemReadyBlocks.map(b => java.lang.System.err.println(b.toShortString))
+
+    // Remove unused maps
+    val referencedMaps = 
+      (optUpdateBlocks ++ optSystemReadyBlocks).map { case block => 
+        block.lhsMaps.map(_.name) ++ block.rhsMaps.map(_.name)
+      }.reduceOption(_ ++ _).getOrElse(Set[String]())
+    mapInfo.retain((n, _) => referencedMaps.contains(n))
+
+    // Extract local, distributed, and link maps
+    mapInfo.foreach { case (_, map) => 
+      if (map.linkMap) linkMaps += map
+      else map.locality match {
+        case LocalExp => localMaps += map
+        case DistributedExp(_) => distributedMaps += map      
+      }
+    }
+
+    ctx0 = mapInfo.map { case (_, MapInfo(name, tp, keys, _, _, storeType, _)) =>  
+      if (keys.size == 0) {
+        val manifest = man(tp)
+        val rep = impl.named(name, false)(manifest)
+        rep.emitted = true
+        (name, (rep, keys, tp))
+      } 
+      else {
+        val manifestEntry = me(keys.map(_._2), tp)
+        val rep = impl.named(name, true)(manStore(manifestEntry))
+        impl.collectStore(rep)(manifestEntry)
+        impl.setStoreType(rep.asInstanceOf[impl.codegen.IR.Sym[_]], storeType)
+        (name, (rep, keys, tp))
+      }
+    }.toMap   // XXX missing indexes
+
+    // GENERATE CODE
+    val sMainClass = emitMainClass(s0)
+    val sActorClass = emitActorClass(s0, optUpdateBlocks, optSystemReadyBlocks)
+    val sMapContext = emitMapContext(distributedMaps.toSeq)  // contains distributed maps
+    val sDataStructures = emitDataStructures 
+    val sProgram = sMainClass + sDataStructures + sMapContext + sActorClass
+    freshClear()
+    clearOut
+    sProgram
+  }
+
+  def emitBlocks(blocks: List[StatementBlock]): String = {
+    val linkMapNames = linkMaps.map(_.name)
+    blocks.map { 
+      case StatementBlock(LocalMode, stmts) =>
+        val (actions, others) = stmts.partition (_.rhsTransformer match {
+          case ScatterTransformer(_) | 
+               RepartitionTransformer(_) | 
+               GatherTransformer(_) => true
+          case _ => false
+        })
+        val scatterStmts = actions.filter(_.rhsTransformer match {
+          case ScatterTransformer(_) => true; case _ => false          
+        })
+        val repartStmts = actions.filter(_.rhsTransformer match {
+          case RepartitionTransformer(_) => true; case _ => false          
+        })        
+        val gatherStmts = actions.filter(_.rhsTransformer match {
+          case GatherTransformer(_) => true; case _ => false          
+        })
+        val localBlock = StatementBlock(LocalMode, others)
+        val lmsLocalBlock = liftBlockToLMS(localBlock)
+        val strLocalBlock = block(impl.emitTrigger(lmsLocalBlock, null, null))
+
+        // Push Scatter/Repartition to the end of the statement list
+        val strScatterBlock = scatterStmts.map { stmt =>
+          val lhsName = stmt.lhsMap.name
+          val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+          s"""|val ${lhsName} = ctx.sc.parallelize(
+              |  ${rhsName}.partitions.zipWithIndex.map(_.swap), 
+              |  numPartitions)""".stripMargin
+        }.mkString("\n")
+
+        val strRepartitionBlock = repartStmts.map { stmt =>
+          val lhsName = stmt.lhsMap.name
+          val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+          val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
+          s"""|val ${lhsName} = ctx.rdd.flatMap { case (id, localCtx) =>  
+              |  localCtx.${rhsName}.partitions.zipWithIndex.map(_.swap).toList
+              |}.groupByKey(ctx.partitioner).mapValues { case stores => 
+              |  new ReadPartitionStore[$entryType] {
+              |    val partitions = stores.toArray
+              |    assert(partitions.size == numPartitions)
+              |  }
+              |}""".stripMargin
+        }.mkString("\n")
+
+        // Pull Gather to the beginning of the statement list
+        val strGatherBlock = gatherStmts.map { stmt =>
+          val lhsName = stmt.lhsMap.name
+          val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+          val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
+          s"""|val ${lhsName} = new ReadPartitionStore[$entryType] {
+              |  val partitions = ctx.rdd.map(_._2.${rhsName}).collect
+              |  assert(partitions.size == numPartitions)
+              |}""".stripMargin
+        }.mkString("\n")
+        "//  --- LOCAL BLOCK ---\n" + 
+        List(
+          strGatherBlock, 
+          strLocalBlock, 
+          strScatterBlock, 
+          strRepartitionBlock
+        ).filterNot(_ == "").mkString("\n") + "\n"
+
+      case distBlock @ StatementBlock(DistributedMode, statements) =>
+        val mapNames = distBlock.maps.map(_.name).toList
+        val (inputNames, distNames) = mapNames.partition(linkMapNames.contains)
+        val zipList = inputNames.map(n => s".zip($n)").mkString
+        def caseList(input: List[String]): String = {
+          val id = fresh("id")
+          input match {
+            case Nil => s"($id, localCtx)"
+            case head :: tail => s"(${caseList(tail)}, ($id, $head))"
+          }
+        }
+        val strRenaming = distNames.map(n => s"val $n = localCtx.$n").mkString("\n")
+        val lmsDistBlock = liftBlockToLMS(distBlock)
+        val strDistBlock = impl.emitTrigger(lmsDistBlock, null, null)
+        s"""|//  --- DISTRIBUTED BLOCK ---
+            |ctx.rdd${zipList}.foreach {
+            |  case ${caseList(inputNames.reverse)} =>
+            |${ind(strRenaming, 2)} 
+            |${ind(strDistBlock, 2)} 
+            |}""".stripMargin        
+    }.mkString("\n")
+  }
+
+  protected def emitMaps(f: (MapInfo => String), maps: Seq[MapInfo]): String = 
+    maps.map(f).mkString("\n")
+
+  protected def emitLocalMap(m: MapInfo): String = {
+    if (m.keys.size == 0) createVarDefinition(m.name, m.tp) + ";"
     else {
-      impl.codegen.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]], true)
+      val sym = ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]]
+      impl.codegen.generateStore(sym)
     }
   }
 
-  override def genAllMaps(maps:Seq[MapDef]) = "class "+cls+"MapContext(val partitionId: Int) extends LocalMapContext {\n"+ind(
-    maps.filter(!_.name.endsWith("_DELTA")).map(genMap).mkString("\n")
-  )+"\n}"
-  // +"\n"+maps.filter(_.name.endsWith("_DELTA")).map(genMap).mkString("\n")
-
-
-
-  override def genLMS(s0:System):(String,String,String,String) = {
-    def relationUsingMapName(mName: String) = s0.triggers.filter(t => t.evt != EvtReady && t.stmts.exists(_ match{
-      case StmtMap(m2,_,_,_) if m2.name == mName => true
-      case _ => false
-    }))(0).evt match {
-      case EvtBatchUpdate(s) => s.name
-      case e => sys.error("Unsupported event type: " + e)
+  protected def emitDistributedMap(m: MapInfo): String = 
+    if (m.keys.size == 0) sys.error("Distributed map without output variables")
+    else {
+      val sym = ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]]
+      impl.codegen.generateStore(sym)
     }
-    def relationUsingMap(m: MapDef) = relationUsingMapName(m.name)
 
-    val classLevelMaps = s0.triggers.flatMap{ t=> //local maps
-      t.stmts.filter{
-        case MapDef(_,_,_,_) => true
-        case _ => false
-      }.map{
-        case m@MapDef(_,_,_,_) => m
-        case _ => null
-      }
-    } ++
-    maps.map{
-      case (_,m@MapDef(_,_,_,_)) => m
-    } // XXX missing indexes
-    ctx0 = (classLevelMaps ++ s0.triggers.filter(_.evt match {
-      case EvtBatchUpdate(s) => true
-      case _ => false
-    }).map(_.evt match { //delta relations
-      case EvtBatchUpdate(sc) =>
-        val name = sc.name
-        val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
-        val deltaRel = sc.deltaSchema
-        val tp = TypeLong
-        val keys = schema.fields
-        MapDef(deltaRel,tp,keys,null)
-      case _ => null
-    })).map{
-      case MapDef(name,tp,keys,_) => if (keys.size==0) {
-        val m = man(tp)
-        val s = impl.named(name,false)(m)
-        s.emitted = true
-        (name,(s,keys,tp))
-      } else {
-        val m = me(keys.map(_._2),tp)
+  override val additionalImports: String = List(
+      "import ddbt.lib.spark.LocalMapContext",
+      "import ddbt.lib.spark._",
+      "import ddbt.lib.spark.store._",
+      "import scala.util.hashing.MurmurHash3.stringHash",
+      "import org.apache.spark.SparkContext",
+      "import org.apache.spark.SparkContext._"
+    ).mkString("\n")
 
-        if(name.endsWith("_DELTA")) {
-          val s=impl.named(name,true)(manContainer(m))
-          s.asInstanceOf[impl.Sym[_]].attributes.put(oltp.opt.lifters.SparkGenStore.FIELDS, keys.map(_._1))
-          (name,(/*impl.newSStore()(m)*/s,keys,tp))
-        } else {
-          val s=impl.named(name,true)(manStore(m))
-          impl.collectStore(s)(m)
-          (name,(/*impl.newSStore()(m)*/s,keys,tp))
+  def liftBlockToLMS(block: StatementBlock): impl.Block[Unit] = {
+    // Trigger context: global maps + local maps + trigger arguments (batch)
+    cx = Ctx(ctx0.map { case (name, (sym, keys, tp)) => (name, sym) })
+    impl.reifyEffects {
+      block.stmts.map { case stmt =>
+        cx.load()
+        val lhsMap = stmt.lhsMap
+        if (lhsMap.keys.size == 0) {
+          val lhsRep = lhsMap.tp match {
+            case TypeLong   => impl.Variable(cx(lhsMap.name).asInstanceOf[Rep[impl.Variable[Long]]])
+            case TypeDouble => impl.Variable(cx(lhsMap.name).asInstanceOf[Rep[impl.Variable[Double]]])
+            case TypeString => impl.Variable(cx(lhsMap.name).asInstanceOf[Rep[impl.Variable[String]]])
+            case _ => sys.error("Unsupported type " + lhsMap.tp)
+          }
+          expr(stmt.rhsTransformer.expr, (rhsRep: Rep[_]) => stmt.opMap match { 
+            case OpAdd => impl.var_plusequals(lhsRep, rhsRep) 
+            case OpSet => impl.__assign(lhsRep, rhsRep) 
+          })
+        } 
+        else {
+          val lhsRep = cx(lhsMap.name).asInstanceOf[Rep[Store[Entry]]]         
+          implicit val manifestEntry = manEntry(lhsMap.keys.map(_._2) ++ List(lhsMap.tp)).asInstanceOf[Manifest[Entry]]            
+          if (stmt.opMap == OpSet) impl.stClear(lhsRep)
+          stmt.initTransformer.map { case initTransformer =>
+            expr(initTransformer.expr, (ivcRep: Rep[_]) => {
+              val entryRep = impl.stNewEntry(lhsRep, (lhsMap.keys.map(x => cx(x._1)) ++ List(ivcRep)))
+              impl.__ifThenElse(
+                impl.equals(
+                  mapProxy(lhsRep).get(lhsMap.keys.zipWithIndex.map { case (k, i) => (i + 1, cx(k._1)) }: _*),
+                  impl.unit(null)
+                ),
+                impl.m3set(lhsRep, entryRep),
+                impl.unit(()))
+            })
+          }
+          cx.load()
+          expr(stmt.rhsTransformer.expr, (rhsRep: Rep[_]) => {
+            val entryRep = impl.stNewEntry(lhsRep, (lhsMap.keys.map(x => cx(x._1)) ++ List(rhsRep)))
+            stmt.opMap match { case OpAdd | OpSet => impl.m3add(lhsRep, entryRep)(manifestEntry) }
+          }, Some(lhsMap.keys))
         }
       }
-    }.toMap // XXX missing indexes
-    val deltaMaps = classLevelMaps.filter(_.name.endsWith("_DELTA"))
-    val (str,ld0,_) = genInternals(s0)
-    //TODO: this should be replaced by a specific traversal for completing the slice information
-    // s0.triggers.map(super.genTrigger)
-    val tsResBlks = s0.triggers.map(t => (genTriggerLMS(t,s0), t.evt match {
-      case EvtBatchUpdate(Schema(n,_)) =>
-        val rel = s0.sources.filter(_.schema.name == n)(0).schema
-        val name = rel.name
-        deltaMaps.filter(relationUsingMap(_) == name).map{ m =>
-          m.name+":"+name+"Container"
-        }.mkString(", ")
-      case _ => ""
-    })) // triggers (need to be generated before maps)
-    val ts = tsResBlks.map{ case ((name,_,b),params) =>
-      impl.emitTrigger(b,name,params)
-    }.mkString("\n\n")
-    val ms = genAllMaps(classLevelMaps) // maps
+      impl.unit(())
+    }
+  }
+
+  protected def emitSources(sources: List[Source]): String = streams(sources)
+
+  protected def emitQueryResults(queries: List[Query]): String =
+    queries.zipWithIndex.map { case (q, i) => 
+      "println(\"%s:\\n\" + M3Map.toStr(res(%d)) + \"\\n\")".format(q.name, i)
+    }.mkString("\n")
+
+  protected def emitMainClass(s0: System): String = {
+    val sSources = ind(emitSources(s0.sources), 4)
+    val sQueryResult = ind(emitQueryResults(s0.queries), 4)
+    s"""|import ddbt.lib._ 
+        |import akka.actor.Actor
+        |$additionalImports
+        |
+        |object $sSparkObject {
+        |  import Helper._
+        |
+        |  var configFile: String = "conf/spark.config"
+        |  var batchSize: Int = 0
+        |  var noOutput: Boolean = false
+        |  var logCount: Int = 0
+        |
+        |  // Spark related variables
+        |  private var cfg: SparkConfig = null
+        |  private var sc: SparkContext = null
+        |
+        |  var numPartitions: Int = 0
+        |  var ctx: ${sGlobalMapContextClass} = null
+        |
+        |  def execute(args: Array[String], f: List[Any] => Unit) =
+        |    bench(args, (dataset: String, parallelMode: Int, timeout: Long, batchSize: Int) =>
+        |      run[$sSparkObject](
+        |$sSources, 
+        |        parallelMode, timeout, batchSize), f)
+        | 
+        |  def main(args: Array[String]) {
+        |    val argMap = parseArgs(args)
+        |    configFile = argMap.get("configFile").map(_.asInstanceOf[String]).getOrElse(configFile)
+        |    batchSize = argMap.get("batchSize").map(_.asInstanceOf[Int]).getOrElse(batchSize)
+        |    noOutput = argMap.get("noOutput").map(_.asInstanceOf[Boolean]).getOrElse(noOutput)
+        |    logCount = argMap.get("logCount").map(_.asInstanceOf[Int]).getOrElse(logCount)
+        |
+        |    if (configFile == null) { sys.error("Config file is missing.") }
+        |    if (batchSize == 0) { sys.error("Invalid batch size.") }
+        |
+        |    cfg = new SparkConfig(new java.io.FileInputStream(configFile))
+        |    sc = new SparkContext(
+        |      cfg.sparkConf.setAppName("$sSparkObject")
+        |                 //.set("spark.kryo.registrator", "XXX???")
+        |    )
+        |    numPartitions = cfg.sparkNumPartitions
+        |    ctx = new ${sGlobalMapContextClass}(sc, numPartitions, 
+        |      (id => new ${sLocalMapContextClass}(id, numPartitions, batchSize)))
+        |
+        |    // START EXECUTION
+        |    execute(args, (res: List[Any]) => {
+        |      if (!noOutput) {
+        |$sQueryResult      
+        |      }
+        |    })
+        |  }
+        |}
+        |
+        |""".stripMargin
+  }
+
+  protected def emitDataStructures: String = {
     var outStream = new java.io.StringWriter
-    var outWriter = new java.io.PrintWriter(outStream)
-    //impl.codegen.generateClassArgsDefs(outWriter,Nil)
-
-    impl.codegen.emitDataStructures(outWriter)
-    val ds = outStream.toString
-    val outputBatchCls = cls+"Batch"
-    val inputBatchCls = "TpchBatch"
-    val contextCls = cls+"MapContext"
-    val taskCls = cls+"Task"
-    val r=ds+"\n"+ms+"\n\n"+
-    "class "+outputBatchCls+"{\n"+
-    deltaMaps.map{ m =>
-    "  val "+m.name+" = new "+relationUsingMap(m)+"Container(batchSize, "+m.keys.map("use"+_._1+" = true").mkString(", ")+")\n"
-    }.mkString+
-    "  /*private*/ val containers = Array[TPCHContainer]("+deltaMaps.map(_.name).mkString(", ")+")\n\n" +
-    // "  private def signature: Int = {\n" +
-    // "    if (containers.size > 32) throw new IllegalStateException(\"Too many containers.\")\n" +
-    // "    containers.foldLeft (0) ((s, c) => (s << 1) | (if (c.capacity > 0) 1 else 0))\n" +
-    // "  }\n\n" +
-    // "  def clear() = containers foreach { _.clear() }\n\n" +
-    // "  def write(out: OutputStreamWrapper): Unit = {\n" +
-    // "    // write header (signature)\n" +
-    // "    out.writeInt(signature)\n" +
-    // "    // write containers\n" +
-    // "    containers foreach { _.write(out) }\n" +
-    // "  }\n" +
-    "}\n\n"+
-    "class "+taskCls+"(val batchSize: Int, val numPartitions: Int) extends TPCHTask["+contextCls+"] {\n" +
-      ind(
-        "val processedBatch = Array.tabulate(numPartitions)(id => new TPCHBatchPartition(id, new "+outputBatchCls+" ))\n\n"+
-        "def onBatchUpdate(ctx: GlobalMapContext["+contextCls+"], batch: "+outputBatchCls+"): Unit = {\n"+
-          ind(
-            "def preprocess(input: "+inputBatchCls+", output: "+outputBatchCls+"): Unit = {\n"+
-            ind(s0.triggers.filter(_.evt != EvtReady).map{ t => 
-              ctx=Ctx(t.evt.schema.fields.map(x=>(x._1,(x._2,x._1))).toMap)
-              val schemaName = t.evt.schema.name
-              "val in"+schemaName+" = input."+schemaName+"\n"+
-              "val len"+schemaName+" = input."+schemaName+".size\n"+
-              t.stmts.filter(!filterStatement(_)).map { s =>
-                prepGenStmt(t,s)+"\n"
-              }.mkString
-            }.mkString("//------\n\n"))+
-            "\n}\n\n"+
-            "swPreprocess.time {\n"+
-            "  processedBatch.clear()\n"+
-            "  preprocess(batch, processedBatch)\n"+
-            "}\n"+
-            deltaMaps.map{ m =>
-              "total"+m.name+"Tuples += batch."+m.name+".size\n"
-            }.mkString+"\n"+
-            "val partitionedBatch = ctx.sc.parallelize(processedBatch, numPartitions)\n\n"+
-            "ctx.rdd.zip(partitionedBatch).foreach {\n"+
-            "  case ((id, ctx), partitionedBatch) => {\n"+
-              ind(
-                ts+"\n"+
-                s0.triggers.filter(_.evt != EvtReady).map{ t => 
-                  val relName = t.evt.schema.name
-                  "Stopwatch.time(\"ON "+relName+" executing... \", onBatchUpdate"+relName+"("+
-                    deltaMaps.filter(relationUsingMap(_) == relName).map("partitionedBatch.batch."+_.name).mkString(", ")+"))"
-                }.mkString("\n")
-              ,2)+
-            "\n  }\n"+
-            "}\n"+
-            "swBroadcastUnpersist.time { partitionedBatch.unpersist(false) }"
-          )+
-        "\n}\n"
-      )+
-    "\n}"
-    (r,str,ld0,consts)
+    impl.codegen.emitDataStructures(new java.io.PrintWriter(outStream))
+    outStream.toString
   }
 
-  override def filterStatement(s:Stmt) = s match {
-    case StmtMap(m,_,_,_) if m.name.endsWith("_DELTA") => false
-    case _ => true
+  protected def emitMapContext(distributedMaps: Seq[MapInfo]): String = {
+    val sDistributedMaps = ind(emitMaps(emitDistributedMap, distributedMaps))
+    s"""|class $sLocalMapContextClass(val partitionId: Int, numPartitions: Int, batchSize: Int) extends LocalMapContext {
+        |$sDistributedMaps
+        |}
+        |""".stripMargin
   }
+  
+  def schemaToArgList(schema: Schema): String = 
+    schema.fields.zipWithIndex.map { case ((_, _), i) => "v" + i }.mkString(", ")
 
-  override def additionalImports():String = super.additionalImports+"import scala.util.hashing.MurmurHash3.stringHash\n"
+  def schemaToParamList(schema: Schema): String = 
+    schema.fields.zipWithIndex.map { case ((_, tp), i) => s"v$i: ${tp.toScala}" }.mkString(", ")
 
-
-  def prepGenStmt(trig:Trigger, s:Stmt):String = s match {
-    case StmtMap(m,e,op,oi) =>
-      val (fop,sop)=op match { case OpAdd => ("add","+=") case OpSet => ("add","=") }
-      val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear()\n" else "" }
-      val init = oi match {
-        case Some(ie) =>
-          ctx.load()
-          prepCpsExpr(ie,(i:String)=>
-            if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-            else "if ("+m.name+".get("+genTuple(m.keys map ctx)+")==0) "+m.name+".set("+genTuple(m.keys map ctx)+","+i+");\n"
-          )
-        case None => ""
-      }
-      ctx.load(); clear+init+prepCpsExpr(e,(v:String) =>
-        (if (m.keys.size==0) {
-          extractBooleanExp(v) match {
-            case Some((c,t)) =>
-              "(if ("+c+") "+m.name+" "+sop+" "+t+" else ());\n"
-            case _ =>
-              m.name+" "+sop+" "+v+"\n"
-          }
-        } else {
-          extractBooleanExp(v) match {
-            case Some((c,t)) =>
-              if(m.name.endsWith("_DELTA")){
-                val partitionId = "partitionId"+m.name
-                val outContainer = "out"+m.name
-                val inContainer = "in"+trig.evt.schema.name
-                val i = "i"+trig.evt.schema.name
-                "(if ("+c+") "+"{\n"+ind(
-                  "val "+partitionId+" = 0; // TODO\n"+
-                  "val "+outContainer+" = output("+partitionId+").batch."+m.name+"\n"+
-                  m.keys.map{k =>
-                    outContainer+"."+k+" += ("+inContainer+"."+k+","+i+")\n"
-                  }.mkString+
-                  outContainer+".values += "+t+"\n"
-                )+
-                "\n} else ());\n"
-              } else {
-                "(if ("+c+") "+m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+t+") else ());\n"
-              }
-            case _ =>
-              if(m.name.endsWith("_DELTA")){
-                val partitionId = "partitionId"+m.name
-                val outContainer = "out"+m.name
-                val inContainer = "in"+trig.evt.schema.name
-                val i = "i"+trig.evt.schema.name
-                "{\n"+ind(
-                  "val "+partitionId+" = 0; // TODO\n"+
-                  "val "+outContainer+" = output("+partitionId+").batch."+m.name+"\n"+
-                  m.keys.map{k =>
-                    outContainer+"."+k+" += ("+inContainer+"."+k+","+i+")\n"
-                  }.mkString+
-                  outContainer+".values += "+v+"\n"
-                )+
-                "\n}\n"
-              } else {
-                m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+v+")\n"
-              }
-          }
-        }),/*if (op==OpAdd)*/ Some(m.keys zip m.tks) /*else None*/) // XXXX commented out the if expression
-    case m@MapDef(_,_,_,_) => "" //nothing to do
-    case _ => sys.error("Unimplemented") // we leave room for other type of events
-  }
-
-  // Generate code bottom-up using delimited CPS and a list of bound variables
-  //   ex:expression to convert
-  //   co:delimited continuation (code with 'holes' to be filled by expression) similar to Rep[Expr]=>Rep[Unit]
-  //   am:shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
-  def prepCpsExpr(ex:Expr,co:String=>String=(v:String)=>v,am:Option[List[(String,Type)]]=None):String = ex match { // XXX: am should be a Set instead of a List
-    case Ref(n) => co(rn(n))
-    case Const(tp,v) => tp match {
-      case TypeLong => co(v+"L")
-      case TypeString => co("\""+v+"\"")
-      case _ => co(v)
+  protected def emitEventHandlers(s0: System, skipExec: Boolean): String = {
+    val step = 128 // periodicity of timeout verification, must be a power of 2
+    val (batchEvents, otherEvents) = s0.triggers.map(_.evt).partition {
+      case EvtBatchUpdate(_) => true
+      case _ => false
     }
-    case Exists(e) => prepCpsExpr(e,(v:String)=>co("(if ("+v+" != 0) 1L else 0L)"))
-    case Cmp(l,r,op) => prepCpsExpr(l,(ll:String)=>prepCpsExpr(r,(rr:String)=>co(cmpFunc(l.tp,op,ll,rr))))
-    case app@Apply(fn,tp,as) => prepApplyFunc(co,fn,tp,as)
-    //ki : inner key
-    //ko : outer key
-    //Example:
-    //  f(A) {
-    //    Mul(M[A,B],ex)
-    //  }
-    // will be translated to:
-    // f(A) {
-    //   M.slice(A).foreach{ case (k,v) => // here A is ko
-    //     val B = k._2 // here B is ki
-    //     v * ex
-    //   }
-    // }
-    case m@MapRef(n,tp,ks) =>
-      val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>ctx.contains(k)}
-      if(ks.size == 0) { // variable
-        if(ctx contains n) co(rn(n)) else co(n)
-      } else if (ki.size == 0) { // all keys are bound
-        co(n+".get("+genTuple(ks map ctx)+")")
-      } else { // we need to iterate over all keys not bound (ki)
-        val (k0,v0)=(fresh("k"),fresh("v"))
-        val sl = if (ko.size > 0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else "" // slice on bound variables
-        ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
-        if(n.startsWith("DELTA_")){
-          val col = "in"+n.replace("DELTA_","")
-          val len = "len"+n.replace("DELTA_","")
-          val i = "i"+n.replace("DELTA_","")
-          "val "+i+" = 0\n"+
-          "while("+i+" < "+len+") {\n"+
-            ind(
-              // (if (ks.size>1) {
-              //   ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString
-              // } else "")+
-              "val " + v0 + " = " + col + ".values("+i+")\n"+
-              co(v0)+"\n"+
-              i + " += 1"
-            )+"\n"+
-          "}\n" // bind free variables from retrieved key
-        } else {
-          n+sl+".foreach { ("+(if (ks.size==1) rn(ks.head) else k0)+","+v0+") =>\n"+
-            ind(
-              (if (ks.size>1) {
-                ki.map{case (k,i)=>"val "+rn(k)+" = "+k0+"._"+(i+1)+";\n"}.mkString
-              } else "")+
-              co(v0)
-            )+"\n"+
-          "}\n" // bind free variables from retrieved key
-        }
+    val sBatchEventHandler = if (batchEvents.size == 0) "" 
+      else if (skipExec) {
+        """|case BatchUpdateEvent(streamData) =>
+           |  val batchSize = streamData.map(_._2.length).sum
+           |  tuplesSkipped += batchSize
+           |""".stripMargin
       }
-    // "1L" is the neutral element for multiplication, and chaining is done with multiplication
-    case Lift(n,e) =>
-    // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
-      if (ctx.contains(n)) prepCpsExpr(e,(v:String)=>co(cmpFunc(TypeLong,OpEq,rn(n),v)),am)
-      else e match {
-        case Ref(n2) => ctx.add(n,(e.tp,rn(n2))); co("1L") // de-aliasing
-        //This renaming is required. As an example:
-        //
-        //C[x] = Add(A[x,y], B[x,y])
-        //D[x] = E[x]
-        //
-        // will fail without a renaming.
-        case _ =>
-          ctx.add(n,(e.tp,fresh("l")))
-          prepCpsExpr(e,(v:String)=> "val "+rn(n)+" = "+v+";\n"+co("1L"),am)
-      }
-    // Mul(el,er)
-    // ==
-    //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) )
-    //    ==>
-    //   (v=vl*vr , ctx2)
-    case Mul(el,er) => //prepCpsExpr(el,(vl:String)=>prepCpsExpr(er,(vr:String)=>co(if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"),am),am)
-      def mul(vl:String,vr:String) = { // simplifies (vl * vr)
-        def vx(vl:String,vr:String) = if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"
-        //pulling out the conditionals from a multiplication
-        (extractBooleanExp(vl),extractBooleanExp(vr)) match {
-          case (Some((cl,tl)),Some((cr,tr))) => "(if ("+cl+" && "+cr+") "+vx(tl,tr)+" else "+ex.tp.zeroScala+")"
-          case (Some((cl,tl)),_) => "(if ("+cl+") "+vx(tl,vr)+" else "+ex.tp.zeroScala+")"
-          case (_,Some((cr,tr))) => "(if ("+cr+") "+vx(vl,tr)+" else "+ex.tp.zeroScala+")"
-          case _ => vx(vl,vr)
-        }
-      }
-      prepCpsExpr(el,(vl:String)=>prepCpsExpr(er,(vr:String)=>co(mul(vl,vr)),am),am)
-    // Add(el,er)
-    // ==
-    //   Add( (el,ctx0) -> (vl,ctx1) , (er,ctx0) -> (vr,ctx2) )
-    //         <-------- L -------->    <-------- R -------->
-    //    (add - if there's no free variable) ==>
-    //   (v=vl+vr , ctx0)
-    //    (union - if there are some free variables) ==>
-    //   T = Map[....]
-    //   foreach vl in L, T += vl
-    //   foreach vr in R, T += vr
-    //   foreach t in T, co(t)
-    case a@Add(el,er) =>
-      if (a.agg==Nil) {
-        val cur=ctx.save
-        prepCpsExpr(el,(vl:String)=>{
-          ctx.load(cur)
-          prepCpsExpr(er,(vr:String)=>{
-            ctx.load(cur)
-            co("("+vl+" + "+vr+")")
-          },am)
-        },am)
-      } else am match {
-        case Some(t) if t.toSet.subsetOf(a.agg.toSet) =>
-          val cur=ctx.save
-          val s1=prepCpsExpr(el,co,am)
-          ctx.load(cur)
-          val s2=prepCpsExpr(er,co,am)
-          ctx.load(cur)
-          s1+s2
-        case _ =>
-          val (acc,k0,v0)=(fresh("add"),fresh("k"),fresh("v"))
-          val ks = a.agg.map(_._1)
-          val ksTp = a.agg.map(_._2)
-          val tmp = Some(a.agg)
-          val cur = ctx.save
-          val s1 = prepCpsExpr(el,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,a.tp,acc,ks,v),tmp); ctx.load(cur)
-          val s2 = prepCpsExpr(er,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,a.tp,acc,ks,v),tmp); ctx.load(cur)
-
-          genVar(acc,ex.tp,a.agg.map(_._2))+
-          s1+
-          s2+
-          prepCpsExpr(mapRef(acc,ex.tp,a.agg),co)
-      }
-    case a@AggSum(ks,e) =>
-      val aks = (ks zip a.tks).filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
-      if (aks.size==0) {
-        val a0=fresh("agg")
-
-        genVar(a0,a.tp)+
-        prepCpsExpr(e,(v:String)=>
-          extractBooleanExp(v) match {
-            case Some((c,t)) =>
-              "(if ("+c+") "+a0+" += "+t+" else ())\n"
-            case _ =>
-              a0+" += "+v+"\n"
+      else {
+        lazy val batchTupleTimeoutCheck =
+          s"""|// Timeout check
+              |if (endTime > 0 && (tuplesProcessed / $step) < ((tuplesProcessed + batchSize) / $step)) {
+              |  val t = System.nanoTime
+              |  if (t > endTime) { 
+              |    endTime = t
+              |    tuplesSkipped = batchSize
+              |    $sEscapeFn 
+              |  }
+              |}
+              |""".stripMargin      
+        val sStreamCase = batchEvents.map {
+          case EvtBatchUpdate(s) =>
+            val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
+            val deltaName = schema.deltaName
+            val params = schemaToParamList(schema)
+            val addBatchTuple = ind(genAddBatchTuple(deltaName, schema.fields, "vv"), 2)
+            s"""|case ("${schema.name}", dataList) => 
+                |  dataList.foreach { case List(${params}, vv: TupleOp) =>
+                |$addBatchTuple
+                |  }""".stripMargin
+          case _ => ""
+        }.mkString("\n")
+        val deltaNames = batchEvents.flatMap {
+          case EvtBatchUpdate(s) => List(s.deltaName)
+          case _ => Nil
+        } 
+        val deltaArgs = deltaNames.mkString(", ")
+        val clearDeltas = deltaNames.map(_ + ".clear").mkString("\n")
+        s"""|case BatchUpdateEvent(streamData) =>
+            |  val batchSize = streamData.map(_._2.length).sum
+            |${ind(batchTupleTimeoutCheck)}
+            |  tuplesProcessed += batchSize
+            |
+            |${ind(clearDeltas)}
+            |  streamData.foreach { 
+            |${ind(sStreamCase, 2)}
+            |    case (s, _) => sys.error("Unknown stream event name " + s)
+            |  }
+            |  onBatchUpdate($sSparkObject.ctx, $deltaArgs)
+            |  if (logCount > 0 && tuplesProcessed % logCount == 0) 
+            |    Console.println(tuplesProcessed + " tuples processed at " + 
+            |      ((System.nanoTime - startTime) / 1000000) + "ms")
+            |""".stripMargin
+    }
+    val sTupleEventHandler = {
+      lazy val singleTupleTimeoutCheck =
+        s"""|// Timeout check
+            |if (endTime > 0 && (tuplesProcessed & ${step - 1}) == 0) {
+            |  val t = System.nanoTime
+            |  if (t > endTime) { 
+            |    endTime = t
+            |    tuplesSkipped = 1
+            |    $sEscapeFn
+            |  }
+            |}
+            |""".stripMargin      
+      otherEvents.map {
+        case EvtAdd(schema) => if (skipExec) {
+            s"""|case TupleEvent(TupleInsert, "${schema.name}", _) =>
+                |  tuplesSkipped += 1
+                |""".stripMargin
           }
-        )+
-        co(a0)
-      } else am match {
-        case Some(t) if t.toSet.subsetOf(aks.toSet) => prepCpsExpr(e,co,am)
-        case _ =>
-          val a0=fresh("agg")
-          val tmp=Some(aks) // declare this as summing target
-          val cur = ctx.save
-          val s1 = "val "+a0+" = M3Map.temp["+genTupleDef(aks.map(x=>x._2))+","+e.tp.toScala+"]()\n"+
-          prepCpsExpr(e,(v:String)=>ADD_TO_TEMP_MAP_FUNC(aks.map(_._2),e.tp,a0,aks.map(_._1),v),tmp);
-          ctx.load(cur)
-          s1+prepCpsExpr(mapRef(a0,e.tp,aks),co)
-      }
-    case _ => sys.error("Don't know how to generate "+ex)
+          else {
+            s"""|case TupleEvent(TupleInsert, "${schema.name}", List(${schemaToParamList(schema)})) =>
+                |%s
+                |  tuplesProcessed += 1
+                |  onAdd${schema.name}(${schemaToArgList(schema)})  
+                |""".stripMargin
+          }
+        case EvtDel(schema) =>  if (skipExec) {
+            s"""|case TupleEvent(TupleDelete, "${schema.name}", _) =>
+                |  tuplesSkipped += 1
+                |""".stripMargin
+          }
+          else {
+            """|case TupleEvent(TupleDelete, "${schema.name}", List(${schemaToParamList(schema)})) =>
+               |%s
+               |  tuplesProcessed += 1
+               |  onDel${schema.name}(${schemaToArgList(schema)})  
+               |""".stripMargin
+          }
+        case _ => ""
+      }.mkString("\n") 
+    }
+    (sTupleEventHandler + sBatchEventHandler)
   }
 
-  // var ctx:Ctx[(Type,String)] = null // Context: variable->(type,unique_name)
-  // def cmpFunc(tp: Type, op:OpCmp, arg1: String, arg2: String, withIfThenElse: Boolean = true) = tp match {
-  //   case _ => 
-  //     if(withIfThenElse)
-  //       "(if ("+arg1+" "+op+" "+arg2+") 1L else 0L)"
-  //     else
-  //       arg1+" "+op+" "+arg2
-  // }
-  // def extractBooleanExp(s:String):Option[(String,String)] = if (!s.startsWith("(if (")) {
-  //   None
-  // } else {
-  //   var d=1
-  //   val pInit="(if (".length
-  //   var p=pInit
-  //   while(d>0) {
-  //     if (s(p)=='(') d+=1 else if (s(p)==')') d-=1
-  //     p+=1
-  //   }
-  //   Some(s.substring(pInit,p-1),s.substring(p+1,s.lastIndexOf("else")-1))
-  // }
-  // def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) = extractBooleanExp(vs) match {
-  //   case Some((c,t)) =>
-  //     "(if ("+c+") "+m+".add("+genTuple(ks map ctx)+","+t+") else ())\n"
-  //   case _ =>
-  //     m+".add("+genTuple(ks map ctx)+","+vs+")\n"
-  // }
+  protected def emitLoadTables(sources: List[Source]): String = 
+    sources.filterNot { _.stream }.map { table => {
+      val keys = table.schema.fields.zipWithIndex.map { case ((_, t), i) => ("v" + i, t) }
+      val tuple = genTuple(keys.map { case (v, t) => (t, v) })
+      val (inputStream, adaptor, split) = genStream(table)
+      s"""|SourceMux({ 
+          |  case TupleEvent(TupleInsert, _, List(${schemaToParamList(table.schema)})) =>
+          |${ind(genInitializationFor(table.schema.name, keys, tuple), 2)}
+          |  }, Seq((
+          |    $inputStream,
+          |    $adaptor,
+          |    $split
+          |))).read""".stripMargin
+    }}.mkString("\n")
 
-  def prepApplyFunc(co:String=>String, fn1:String, tp:Type, as1:List[Expr]) = {
-    val (as, fn) = (fn1 match {
-      case "regexp_match" if (ENABLE_REGEXP_PARTIAL_EVAL && as1.head.isInstanceOf[Const] && !as1.tail.head.isInstanceOf[Const]) => val regex=as1.head.asInstanceOf[Const].v; val preg0=regexpCacheMap.getOrElse(regex, fresh("preg")); regexpCacheMap.update(regex,preg0); (as1.tail, "preg_match("+preg0+",")
-      case _ => (as1, fn1+"(")
-    })
-    if (as.forall(_.isInstanceOf[Const])) co(constApply(Apply(fn1,tp,as1))) // hoist constants resulting from function application
-    else { var c=co; as.zipWithIndex.reverse.foreach { case (a,i) => val c0=c; c=(p:String)=>prepCpsExpr(a,(v:String)=>c0(p+(if (i>0) "," else "")+v+(if (i==as.size-1) ")" else ""))) }; c("U"+fn) }
+  override def toMapFunction(q: Query) = {
+    val mapName = q.name
+    val mapType = q.map.tp.toScala
+    val mapKeyTypes = mapInfo(mapName).keys.map(_._2)
+    val args = tup(mapKeyTypes.zipWithIndex.map { case (_, i) => "e._" + (i + 1) })
+    val params = tup(mapKeyTypes.map(_.toScala))
+    val resultMapName = mapName + "Result"
+    s"""|{
+        |  val $resultMapName = new collection.mutable.HashMap[$params, $mapType]()
+        |  $mapName.foreach { e => 
+        |    $resultMapName += ($args -> e._${mapKeyTypes.size + 1})
+        |  }
+        |  $resultMapName.toMap
+        |}""".stripMargin
+  }
+
+  protected def emitGetSnapshot(queries: List[Query]): String = {
+    val sCreateHashMap = queries.map(q => 
+      if (q.keys.size > 0) toMapFunction(q) else q.name
+    ).mkString(", ")
+    s"""|(StreamStat(endTime - startTime, tuplesProcessed, tuplesSkipped), List(
+        |${ind(sCreateHashMap)}
+        |))""".stripMargin    
+  }
+
+  protected def emitActorClass(s0: System, updateBlocks: List[StatementBlock], 
+      systemReadyBlocks: List[StatementBlock]): String = {
+    // The order of these statements is important
+    val sEventHandlersSkip = ind(emitEventHandlers(s0, true), 2)
+    val sEventHandler = ind(emitEventHandlers(s0, false), 2)
+    val sLoadTables = ind(emitLoadTables(s0.sources), 2)
+    val sEmitBody = ind(emitActorBody(updateBlocks, systemReadyBlocks))
+    val sGetSnapshot = ind(emitGetSnapshot(s0.queries), 2)
+    val sConstants = ind(consts)    
+    s"""|class $sSparkObject extends Actor {
+        |  import ddbt.lib.Messages._
+        |  import ddbt.lib.Functions._
+        |  import $sSparkObject._ 
+        |
+        |$sEmitBody
+        |
+        |  var startTime = 0L
+        |  var endTime = 0L
+        |  var tuplesProcessed = 0L
+        |  var tuplesSkipped = 0L
+        |  val logCount = $sSparkObject.logCount
+        |
+        |  def loadTables() = { ${block(sLoadTables)} }
+        |
+        |  def getSnapshot = { ${block(sGetSnapshot)} }
+        |
+        |  def receive_skip: Receive = { 
+        |    case StreamInit(_) =>
+        |    case EndOfStream => 
+        |      ${sSparkObject}.ctx.destroy()
+        |    case GetSnapshot(_) => 
+        |      sender ! getSnapshot
+        |      ${sSparkObject}.ctx.destroy()
+        |$sEventHandlersSkip
+        |  }
+        | 
+        |  def receive = {
+        |    case StreamInit(timeout) => 
+        |      loadTables()
+        |      onSystemReady()
+        |      ${sSparkObject}.ctx.init()
+        |      startTime = System.nanoTime
+        |      if (timeout > 0) endTime = startTime + timeout * 1000000L
+        |    case EndOfStream => 
+        |      endTime = System.nanoTime
+        |      sender ! getSnapshot
+        |      ${sSparkObject}.ctx.destroy()
+        |    case GetSnapshot(_) => 
+        |      sender ! getSnapshot
+        |$sEventHandler
+        |  }
+        | 
+        |$sConstants
+        |}
+        |""".stripMargin
+  }
+
+  protected def emitActorBody(updateBlocks: List[StatementBlock],
+      systemReadyBlocks: List[StatementBlock]): String = {
+    
+    val sUpdateBatchArgs = 
+      s"ctx: ${sGlobalMapContextClass}, " + 
+      deltaMapInfo.map { case (name, _) =>
+        s"${name}: ${impl.codegen.storeType(ctx0(name)._1)}"
+      }.mkString(", ")
+
+    val sSystemReadyBlocks = ind(emitBlocks(systemReadyBlocks))    
+    val sUpdateBlocks = ind(emitBlocks(updateBlocks))
+    val sLocalMaps = emitMaps(emitLocalMap, localMaps.toSeq)
+    s"""|$sLocalMaps
+        |
+        |def onBatchUpdate($sUpdateBatchArgs) = { ${block(sUpdateBlocks)} } 
+        | 
+        |def onSystemReady() = { ${block(sSystemReadyBlocks)} }
+        |""".stripMargin
   }
 }
