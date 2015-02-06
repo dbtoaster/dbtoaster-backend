@@ -479,30 +479,42 @@ trait ICppGen extends IScalaGen {
       }
       evt match {
         case b@EvtBatchUpdate(_) =>
+          var code =    "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"
+          code = code + "  size_t sz = eaList.size();\n"
+
+          for (sources <- s0.sources.filter(_.stream)) {
+            val schema = sources.schema;
+            val deltaRel = schema.deltaName
+            code = code + "    "+deltaRel+".clear();\n"
+          }
+          
+          code = code +   "    for(size_t i=0; i < sz; i++){\n"
+          code = code +   "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
+          code = code +   "      relation_id_t relation = *(reinterpret_cast<relation_id_t*>((*ea).back().get()));\n"
+          
+          for (sources <- s0.sources.filter(_.stream)) {
+            val schema = sources.schema;
+            val deltaRel = schema.deltaName
+            val entryClass = deltaRel + "_entry"  
+         
+            code = code + "      if (relation == program_base->get_relation_id(\"" + schema.name + "\"" + ")) { \n"
+            code = code + "        event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
+            code = code + "        "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
+            code = code + "        "+deltaRel+".insert_nocheck(e);\n"
+            code = code + "      }\n"
+          }
+          code = code +   "    }\n"
+          for (sources <- s0.sources.filter(_.stream)) {
+            val schema = sources.schema;
+            val deltaRel = schema.deltaName
+            code = code + "  on_"+op+"_"+schema.name+"("+deltaRel+");\n"
+          }            
+          code = code +   "}\n\n"
+
           val schema = s0.sources.filter(_.schema.name == name)(0).schema
           val deltaRel = schema.deltaName
-          val entryClass = deltaRel + "_entry"
-          "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"+
-          "  size_t sz = eaList.size();\n"+
-          // "  if(sz == "+deltaRel+".count()) {\n"+
-          // "    "+entryClass+"* head = "+deltaRel+".head;\n"+
-          // "    for(size_t i=0; i < sz; i++){\n"+
-          // "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
-          // "      head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get()))"}.mkString(", ")+");\n"+
-          // "      head->__av =  *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get()));\n"+
-          // "      head = head->nxt;\n"+
-          // "    }\n"+
-          // "  } else {\n"+
-          "  "+deltaRel+".clear();\n"+
-          "  for(size_t i=0; i < sz; i++){\n"+
-          "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
-          "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"+
-          "    "+deltaRel+".addOrDelOnZero(e," +  
-            "*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get()))" + ");\n"+
-          // "    }\n"+
-          "  }\n"+
-          "  on_"+op+"_"+name+"("+deltaRel+");\n"+
-          "}\n\n" +
+          val entryClass = deltaRel + "_entry"            
+          code +
           (if(hasOnlyBatchProcessingForAdd(s0,b))
             "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
             "  if("+deltaRel+".head){\n"+
@@ -689,7 +701,10 @@ trait ICppGen extends IScalaGen {
     "  #endif\n"+
     "\n"+
     "  /* Registering relations and trigger functions */\n"+
+    "  ProgramBase* program_base;\n"+
     "  void register_data(ProgramBase& pb) {\n"+
+    "  program_base = &pb;\n"+
+    //"  map<relation_id_t, std::shared_ptr<ProgramBase::relation_t> >::iterator r_it = pb.relations_by_id.find(12);\n"+
     "\n"+
          ind(register_maps,2)+
     "\n\n"+
