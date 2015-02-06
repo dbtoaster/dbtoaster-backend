@@ -37,18 +37,38 @@ object Utils {
   }
 
   // Scala compiler wrapper
-  def scalaCompiler(dir:File,classpath:String=null,external:Boolean=false) : List[String]=>Unit = {
-    val path_dir=dir.getAbsolutePath; val cp=(if(classpath!=null) classpath+":" else "")+path_cp
-    val opts=prop("scalac").split(" +").toList
+  def scalaCompiler(dir: File, classpath: String = null, external: Boolean = false): List[String]=>Unit = {
+    val path_dir = dir.getAbsolutePath
+    val cp = (if (classpath != null) classpath + ":" else "") + path_cp
+    val opts = prop("scalac").split(" +").toList
+    // Spark is using an old version of akka actors; here we override 
+    // the new version of akka actors shipping with the Scala library
+    val bootcp = 
+      cp.split(":").filter(s => s.contains("spark") && s.contains("akka"))
+                   .mkString(":")
+    val jbootcp = if (bootcp == "") "" else "-J-Xbootclasspath/p:" + bootcp
     if (!external) { // Embedded Scala compiler
-      val s=new scala.tools.nsc.Settings(); s.processArguments(opts,true)
-      s.classpath.value=cp; s.outputDirs.setSingleOutput(path_dir); val g=new scala.tools.nsc.Global(s)
-      (fs:List[String]) => try { (new g.Run).compile(fs) } catch { case t:Throwable => t.printStackTrace }
-    } else { // FSC external processes
-      def execOut(cmd:String) = exec(cmd.split(" +"),prefix="")
-      val args="-cp "+cp+" -d "+path_dir+" "+opts.mkString(" ")+" "
-      val fsc="fsc "+prop("jvm").split(" +").map("-J"+_).mkString(" ")+" "+args
-      (fs:List[String]) => try { execOut(fsc+fs.mkString(" ")) } catch { case _:IOException => execOut(path_jvm+" scala.tools.nsc.Main "+args+fs.mkString(" ")) }
+      val s = new scala.tools.nsc.Settings()
+      s.processArguments(opts, true)
+      s.classpath.value = cp
+      s.bootclasspath.value = bootcp
+      s.outputDirs.setSingleOutput(path_dir)
+      val g = new scala.tools.nsc.Global(s)
+      (fs: List[String]) => 
+        try { (new g.Run).compile(fs) } 
+        catch { case t: Throwable => t.printStackTrace }
+    } 
+    else { // FSC external processes
+      def execOut(cmd: String) = exec(cmd.split(" +"), prefix = "")
+      val args = jbootcp + " -cp " + cp + " -d " + path_dir + 
+                 " " + opts.mkString(" ") + " "
+      val fsc = "fsc " + prop("jvm").split(" +").map("-J"+_).mkString(" ") + 
+                " " + args
+      (fs: List[String]) => 
+        try { execOut(fsc + fs.mkString(" ")) } 
+        catch { case _: IOException => 
+          execOut(path_jvm + " scala.tools.nsc.Main " + args + fs.mkString(" ")) 
+        }
     }
   }
 
@@ -93,6 +113,7 @@ object Utils {
   // Execute arbitrary command, return (out,err)
   def exec(cmd:String,fatal:Boolean):(String,String) = exec(cmd.split(" +"),null,null,fatal)
   def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true,prefix:String=null):(String,String) = {
+    System.err.println(cmd.mkString(" "))
     val p = Runtime.getRuntime.exec(cmd,env,dir)
     val out=gobble(p.getInputStream,scala.Console.out,prefix); val err=gobble(p.getErrorStream,scala.Console.err,prefix); val exitVal=p.waitFor; val o=out.toString; val e=err.toString
     if (fatal && (e.trim!="" || exitVal!=0)) {
@@ -136,7 +157,8 @@ object Utils {
 
   // String manipulation
   def ind(s:String,n:Int=1) = { val i="  "*n; i+s.replaceAll("\n? *$","").replaceAll("\n","\n"+i) }
-  def tup(vs:List[String]) = { val v=vs.mkString(","); if (vs.size>1) "("+v+")" else v }
+  def block(s:String) = if (s == null || s.trim() == "") s.trim() else "\n"+s+"\n"
+  def tup(vs:List[String]) = { val v=vs.mkString(", "); if (vs.size>1) "("+v+")" else v }
 
   // Fresh variables name provider
   private val counter = scala.collection.mutable.HashMap[String,Int]()
