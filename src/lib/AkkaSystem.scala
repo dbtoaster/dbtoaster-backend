@@ -320,6 +320,7 @@ trait MasterActor extends WorkerActor {
         }
         ev match {
           case e:TupleEvent => if (skip) { tS+=1; deq } else dispatch(e)
+          case e: BatchUpdateEvent => sys.error("Unsupported batch updates")
           case StreamInit(timeout) => pre_map=new Array[Int](local.size); t0=0L; t1=timeout; tN=0L; tS=0L; skip=false; onSystemReady()
           case EndOfStream => barrier{()=> t1=System.nanoTime(); collect(queries.reverse)}
           case GetSnapshot(qs:List[Int]) => barrier{()=> t1=System.nanoTime; collect(qs.map(MapRef(_)).reverse)}
