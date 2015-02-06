@@ -17,6 +17,7 @@ object Compiler {
 
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"
+  val LANG_DIST_M3 = "annotm3"
   val LANG_SCALA = "vscala"
   val LANG_CPP = "cpp"
   val LANG_AKKA = "akka"
@@ -27,8 +28,8 @@ object Compiler {
 
   val M3_FILE_SUFFIX = ".m3"
 
-  var frontend_path_bin:String = null // the path to DBToaster's frontend
-  var batching_enabled:Boolean = false// determines whether batching is enabled or not
+  var frontend_path_bin: String = null // the path to DBToaster's frontend
+  var batching_enabled: Boolean = false// determines whether batching is enabled or not
   var in   : List[String] = Nil  // input files
   var out  : String = null       // output file (defaults to stdout)
   var lang : String = null       // output language
@@ -48,51 +49,91 @@ object Compiler {
   var exec_vm : Boolean = false  // execute in a fresh JVM
   var exec_bs : Int     = 0      // execute as batches of certain size
 
-  // Print the time and the number of tuples processed every X tuples (0 = disable printing)
-  var printProgress = 0
   var exec_args = List[String]() // arguments passed for execution
 
-  def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(0); null }
-  def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
-    val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-d",f)) ::: (if (!opts.isEmpty) opts.toList else in) ::: (if(batching_enabled) List("--batch") else Nil )
-    val repo = if (Utils.path_repo!=null && !opts.isEmpty) new File(Utils.path_repo) else null
-    val (t0,(m3,err)) = Utils.ns(()=>Utils.exec(((if(frontend_path_bin == null) Utils.path_bin else frontend_path_bin) :: os).toArray,repo,fatal=false))
-    if (err.trim!="") { val e=new Exception("dbtoaster "+os.mkString(" ")+" failed because:\n"+err); e.setStackTrace(Array()); throw e }
-    (t0, if (repo!=null) m3.replaceAll("../../experiments/data",repo.getParentFile.getParent+"/experiments/data").replace("throw DBTFatalError(\"Event could not be dispatched: \" + event)","supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)") else m3)
+  def error(str: String, fatal: Boolean = false) = { 
+    System.err.println(str)
+    if (fatal) System.exit(0)
+    null 
   }
 
-  def parseArgs(args:Array[String]) {
-    val l=args.length
-    var i=0
-    def eat(f:String=>Unit,s:Boolean=false) { i+=1; if (i<l) f(if(s) args(i).toLowerCase else args(i)) }
-    while(i<l) {
+  def toast(lang: String, opts: String*): (Long, String) = { 
+    // if opts is empty we do _NOT_ use repository
+    val os = optm3 :: "-l" :: lang ::
+             (if (depth >= 0) List("--depth", depth.toString) else Nil) ::: 
+             flags.flatMap(f => List("-d", f)) ::: 
+             (if (!opts.isEmpty) opts.toList else in) ::: 
+             (if (batching_enabled) List("--batch") else Nil)
+    val repo = if (Utils.path_repo != null && !opts.isEmpty) 
+                 new File(Utils.path_repo) 
+               else null
+    val (t0, (m3, err)) = Utils.ns(() => 
+      Utils.exec(
+        ((if (frontend_path_bin == null) Utils.path_bin 
+          else frontend_path_bin) :: os).toArray,
+        repo,
+        fatal = false))
+    if (err.trim != "") { 
+      val e = new Exception("dbtoaster " + os.mkString(" ") +
+                            " failed because:\n" + err)
+      e.setStackTrace(Array())
+      throw e 
+    }
+    (t0, if (repo != null) 
+           m3.replaceAll(
+               "../../experiments/data", 
+               repo.getParentFile.getParent + "/experiments/data")
+             .replace(
+               "throw DBTFatalError(\"Event could not be dispatched: \" + event)", 
+               "supervisor ! DBTDone; throw DBTFatalError(\"Event could not be dispatched: \" + event)") 
+         else m3)
+  }
+
+  def parseArgs(args: Array[String]) {
+    val l = args.length
+    var i = 0 
+    def eat(f: String => Unit, s: Boolean = false) { 
+      i += 1
+      if (i < l) f(if(s) args(i).toLowerCase else args(i)) 
+    }
+    while (i < l) {
       args(i) match {
-        case "-l" => eat(s=>s match { case LANG_CALC|LANG_M3|LANG_SCALA|LANG_CPP|LANG_LMS|LANG_CPP_LMS|LANG_SCALA_LMS|LANG_SPARK_LMS|LANG_AKKA => lang=s; case _ => error("Unsupported language: "+s,true) },true)
-        case "--frontend" => eat(s=>frontend_path_bin=s)
+        case "-l" => eat(s => s match { 
+          case LANG_CALC|LANG_M3|LANG_DIST_M3|LANG_SCALA|LANG_CPP|LANG_LMS|
+               LANG_CPP_LMS|LANG_SCALA_LMS|LANG_SPARK_LMS|LANG_AKKA => lang = s
+          case _ => error("Unsupported language: " + s, true) }, true)
+        case "--frontend" => eat(s => frontend_path_bin = s)
         case "--batch" => batching_enabled = true
-        case "-o" => eat(s=>out=s)
-        case "-c" => eat(s=>cPath=s)
-        case "-n" => eat(s=>{ val p=s.lastIndexOf('.'); if (p!= -1) { pkg=s.substring(0,p); name=s.substring(p+1) } else name=s})
-        case "-L" => eat(s=>libs=s::libs)
-        case "-d" => eat(s=>depth=s.toInt)
-        case "-F" => eat(s=>flags=s::flags)
-        case "-inl" => eat(s=>inl = if (s=="spec") 5 else if (s=="full") 10 else try { math.min(10,math.max(0,s.toInt)) } catch { case _:Throwable => 0 })
-        case "-ni" => ni=true; depth=0; flags=Nil
+        case "-o" => eat(s => out = s)
+        case "-c" => eat(s => cPath = s)
+        case "-n" => eat(s => { val p = s.lastIndexOf('.')
+                                if (p != -1) { 
+                                  pkg = s.substring(0, p)
+                                  name = s.substring(p + 1) 
+                                } else name = s})
+        case "-L" => eat(s => libs = s :: libs)
+        case "--depth" => eat(s => depth = s.toInt)
+        case "-F" => eat(s => flags = s :: flags)
+        case "-inl" => eat(s => inl = if (s == "spec") 5 
+                                      else if (s == "full") 10 
+                                      else try { 
+                                        math.min(10, math.max(0, s.toInt)) 
+                                      } catch { case _: Throwable => 0 })
+        case "-ni" => ni = true; depth = 0; flags = Nil
         case "-x" => exec = true
-        case "-xd" => eat(s=>exec_dir=s)
-        case "-xa" => eat(s=>exec_args=exec_args:::List(s))
-        case "-xsc" => exec_sc=true;
-        case "-xvm" => exec_vm=true;
-        case "-xbs" => eat{i => exec_bs = i.toInt; batching_enabled = true}
-        case "-pp" => eat(i => printProgress = i.toInt)
-        case s@"--no-output" => exec_args=exec_args:::List(s)
-        case s if s.matches("-O[123]") => optm3=s;
-        case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
+        case "-xd" => eat(s => exec_dir = s)
+        case "-xa" => eat(s => exec_args = exec_args ::: List(s))
+        case "-xsc" => exec_sc = true;
+        case "-xvm" => exec_vm = true;
+        case "-xbs" => eat { i => exec_bs = i.toInt; batching_enabled = true }
+        case s @ "--no-output" => exec_args = exec_args ::: List(s)
+        case s if s.matches("-O[123]") => optm3 = s;
+        case s if s.startsWith("--") => exec_args = exec_args ::: List(s.substring(1)) // --flag is a shorthand for -xa -flag
         case s => in = in ::: List(s)
       }
-      i+=1
+      i += 1
     }
-    if (in.size==0) {
+    if (in.size == 0) {
       error("Usage: Compiler [options] file1 [file2 [...]]")
       error("Global options:")
       error("  -o <file>     output file (default: stdout)")
@@ -100,15 +141,16 @@ object Compiler {
       error("  -l <lang>     defines the target language")
       error("                - "+LANG_CALC     +"     : relational calculus")
       error("                - "+LANG_M3       +"       : M3 program")
+      error("                - "+LANG_DIST_M3  +"    : distributed M3 program")
       error("                - "+LANG_SCALA    +"    : vanilla Scala code")
       error("                - "+LANG_CPP      +"      : vanilla C++ code")
       // error("                - "+LANG_AKKA     +"     : distributed Akka code")
       // error("                - "+LANG_CPP_LMS  +"      : LMS-optimized C++")
       error("                - "+LANG_SCALA_LMS+" : LMS-optimized Scala")
-      // error("                - "+LANG_SPARK_LMS+" : LMS-optimized Spark")
+      error("                - "+LANG_SPARK_LMS+" : LMS-optimized Spark")
       //   ("                - dcpp     : distributed C/C++ code")
       error("Front-end options:")
-      error("  -d <depth>    incrementalization depth (default: infinite)")
+      error("  --depth <depth>    incrementalization depth (default: infinite)")
       error("  -O[123]       optimization level for M3 (default: -O2)")
       error("  -F <flag>     set a front-end optimization flag")
       // error("  -ni           non-incremental (on-demand) query evaluation")
@@ -125,75 +167,103 @@ object Compiler {
       // error("  -xa <arg>     pass an argument to generated program")
       error("", true) //exit the application
     }
+    if (exec && batching_enabled && exec_bs <= 0) { 
+      error("Invalid batch size")
+      exec = false 
+    }
     if(lang == null) {
       if(out != null){
-        lang = if(out.endsWith(".cpp") || out.endsWith(".hpp") || out.endsWith(".h") || out.endsWith(".c")) LANG_CPP else LANG_SCALA
+        lang = if (out.endsWith(".cpp") || out.endsWith(".hpp") || 
+                   out.endsWith(".h") || out.endsWith(".c")) LANG_CPP 
+               else LANG_SCALA
       } else {
         lang = LANG_CPP
       }
     }
-    if (out==null && exec) { error("Execution disabled, specify an output file"); exec=false }
-    if (name==null) {
-      val n = if (out!=null) out.replaceAll(".*[/\\\\]","").replaceAll("\\..*","") else "query"
-      val firstChar = n.substring(0,1);
-      name = (if(Character.isDigit(firstChar(0))) "_"+firstChar else firstChar.toUpperCase)+n.substring(1)
+    if (out == null && exec) { 
+      error("Execution disabled, specify an output file")
+      exec = false 
     }
-    def lib(s:String):Boolean = if (new File(s).exists) { libs=s::Nil; true } else false
-    if (libs==Nil && exec) lang match {
-      case LANG_SCALA => lib("lib/ddbt.jar") || lib("target/scala-2.10/classes") || ({ error("Cannot find runtime libraries"); exec=false; false })
+    if (name == null) {
+      val n = if (out != null) out.replaceAll(".*[/\\\\]", "").replaceAll("\\..*", "") else "query"
+      val firstChar = n.substring(0, 1)
+      name = (if(Character.isDigit(firstChar(0))) "_" + firstChar 
+              else firstChar.toUpperCase) + n.substring(1)
+    }
+    def lib(s: String) = if (new File(s).exists) { libs = s :: Nil; true } else false
+    if (libs == Nil && exec) lang match {
+      case LANG_SCALA => 
+        lib("lib/ddbt.jar") || lib("target/scala-2.10/classes") || 
+        ({ error("Cannot find runtime libraries"); exec = false; false })
       case _ =>
     }
   }
 
-  def output(s:String) = if (out==null) println(s) else Utils.write(out,s)
+  def output(s: String) = if (out == null) println(s) else Utils.write(out, s)
 
   // M3 -> execution phase, returns (gen,compile) time
-  def compile(m3_src:String,post_gen:(ast.M3.System)=>Unit=null,t_gen:Long=>Unit=null,t_comp:Long=>Unit=null,t_run:(()=>Unit)=>Unit=null, t_verify:(String,ast.M3.System,String)=>Unit=null) {
-    val t0=System.nanoTime
+  def compile(m3_src: String, post_gen: (ast.M3.System) => Unit = null,
+              t_gen: Long => Unit = null, t_comp: Long => Unit = null,
+              t_run: (() => Unit) => Unit = null, 
+              t_verify: (String, ast.M3.System, String) => Unit = null) {
+    val t0 = System.nanoTime
     // Front-end phases
     val m3 = postProc((M3Parser andThen TypeCheck) (m3_src))
 
     // Back-end
-    val cg:CodeGen = lang match {
-      case LANG_SCALA => new ScalaGen(name,printProgress)
+    val cg: CodeGen = lang match {
+      case LANG_SCALA => new ScalaGen(name)
       case LANG_CPP => new CppGen(name)
       case LANG_AKKA => new AkkaGen(name)
       case LANG_LMS => new LMSCppGen(name)
       case LANG_CPP_LMS => new LMSCppGen(name)
       case LANG_SCALA_LMS => new LMSScalaGen(name)
       case LANG_SPARK_LMS => new LMSSparkGen(name)
-      case _ => error("Code generation for "+lang+" is not supported",true)
+      case _ => error("Code generation for " + lang + " is not supported", true)
     }
     if (ni) {
       // ---- NON-INCREMENTAL START
-      import ddbt.ast._; import M3._
+      import ddbt.ast._
+      import M3._
       //XXX: Make this work with EXPRESSIVE-TLQS
-      val (qns,qss) = (m3.queries.map{q=>q.name},scala.collection.mutable.HashMap[String,Stmt]())
-      val triggers=m3.triggers.map(t=>Trigger(t.evt,t.stmts.filter {
-        case s@StmtMap(m,e,op,i) => if (qns.contains(m.name)) { qss += ((m.name,s)); false } else true
+      val (qns, qss) = (m3.queries.map(_.name), collection.mutable.HashMap[String,Stmt]())
+      val triggers = m3.triggers.map(t => Trigger(t.evt, t.stmts.filter {
+        case s @ StmtMap(m,e,op,i) => 
+          if (qns.contains(m.name)) { qss += ((m.name, s)); false } else true
         // case case MapDef(n,tp,ks,e) => XXXXXX
         case _ => true
       }))
-      val r = cg.pkgWrapper(pkg,cg(System(m3.sources,m3.maps,m3.queries,Trigger(EvtAdd(Schema("__execute__",Nil)), qss.map(_._2).toList)::triggers)))
+      val r = cg.pkgWrapper(pkg, cg(System(m3.sources, m3.maps, m3.queries, 
+        Trigger(EvtAdd(Schema("__execute__", Nil)), qss.map(_._2).toList) :: triggers)))
       // XXX: improve this RegExp
-      output(r.replaceAll("GetSnapshot\\(_\\) => ","GetSnapshot(_) => onAdd__execute__(); ").replaceAll("onAdd__execute__","onExecute")) // Scala transforms
+      output(r.replaceAll("GetSnapshot\\(_\\) => ", 
+                          "GetSnapshot(_) => onAdd__execute__(); ")
+              .replaceAll("onAdd__execute__","onExecute")) // Scala transforms
       // ---- NON-INCREMENTAL ENDS
     } else {
-      output(cg.pkgWrapper(pkg,cg(m3)))
+      output(cg.pkgWrapper(pkg, cg(m3)))
     }
-    if (t_gen!=null) t_gen(System.nanoTime-t0)
-    if (post_gen!=null) post_gen(m3)
-    var dir:File = null
-    if (cPath!=null || exec) {
-      dir = if (exec_dir!=null) { val d=new File(exec_dir); if (!d.exists) d.mkdirs; d } else Utils.makeTempDir()
+    if (t_gen != null) t_gen(System.nanoTime - t0)
+    if (post_gen != null) post_gen(m3)
+    var dir: File = null
+    if (cPath != null || exec) {
+      dir = if (exec_dir != null) { 
+        val d = new File(exec_dir)
+        if (!d.exists) d.mkdirs
+        d 
+      } else Utils.makeTempDir()
       lang match {
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS|LANG_SPARK_LMS =>
-          val t2=Utils.ns(()=>Utils.scalaCompiler(dir,if (libs!=Nil) libs.mkString(":") else null,exec_sc)(List(out)))._1
-          if (t_comp!=null) t_comp(t2)
+          val t2 = Utils.ns(() =>
+            Utils.scalaCompiler(dir, 
+                                if (libs != Nil) libs.mkString(":") else null,
+                                exec_sc)(List(out)))._1
+          if (t_comp != null) t_comp(t2)
           // TODO XXX should generate jar file in cPath
-        case LANG_CPP|LANG_LMS|LANG_CPP_LMS => if(cPath!=null) {
+        case LANG_CPP|LANG_LMS|LANG_CPP_LMS => if (cPath != null) {
           val pl = "srccpp/lib"
-          val t2 = Utils.ns(()=>Utils.cppCompiler(out,cPath,null,pl))._1; if (t_comp!=null) t_comp(t2)
+          val t2 = Utils.ns(() => Utils.cppCompiler(out, cPath, null, pl))._1; 
+          if (t_comp != null) t_comp(t2)
         }
       }
     }
@@ -201,55 +271,69 @@ object Compiler {
     if (exec) {
       lang match {
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS|LANG_SPARK_LMS =>
-          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,("-b"+exec_bs :: exec_args).toArray,exec_vm)
+          Utils.scalaExec(
+            dir :: libs.map(p => new File(p)), 
+            pkg + "." + name,
+            ("-b" + exec_bs :: exec_args).toArray,
+            exec_vm)
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
-          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize, no_output) = ddbt.lib.Helper.extractExecArgs(("-b"+exec_bs :: exec_args).toArray)
-          val actual_exec_args = "-b "+exec_bs :: "-p "+pMode :: (if(no_output) List("--no-output") else Nil)
-          val compiledSrc = Utils.read(out);
+          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = 
+            ddbt.lib.Helper.extractExecArgs(("-b" + exec_bs :: exec_args).toArray)
+          val actual_exec_args = List("-b " + exec_bs, "-p " + pMode)
+          val compiledSrc = Utils.read(out)
           datasets.foreach{ dataset =>
-            def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
-            val srcTmp=compiledSrc.replace("standard",dataset)
-                            .replace("++tN;",(if (timeout>0) "if (tS>0) { ++tS; return; } if (tN%100==0) { "+tc()+" if (tT>"+(timeout*1000L)+"L) { tS=1; return; } } " else "")+"++tN;")
-                            .replace("//P"+pMode+"_PLACE_HOLDER",
-                                      "struct timeval t0;\n"+
-                            "          gettimeofday(&t0,NULL);\n"+
-                            "          data.t0 = t0;\n")
+            def tc(p: String = "") = 
+              "gettimeofday(&(" + p + "t),NULL); " + p + "tT=((" +
+              p + "t).tv_sec-(" + p + "t0).tv_sec)*1000000L+((" + 
+              p + "t).tv_usec-(" + p + "t0).tv_usec);"
+            val srcTmp = compiledSrc.replace("standard", dataset)
+              .replace("++tN;",(if (timeout > 0) "if (tS>0) { ++tS; return; } if (tN%100==0) { " + tc() + " if (tT>" + (timeout * 1000L) + "L) { tS=1; return; } } " else "") + "++tN;")
+              .replace("//P"+pMode+"_PLACE_HOLDER",
+                        "struct timeval t0;\n"+
+              "          gettimeofday(&t0,NULL);\n"+
+              "          data.t0 = t0;\n")
             //TODO XXX dataset should be an argument to the program
-            val src = if(dataset.contains("_del")) srcTmp.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else srcTmp
-            Utils.write(out,src)
+            val src = if (dataset.contains("_del")) 
+                srcTmp.replace("make_pair(\"schema\",\"", 
+                               "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"")
+                      .replace("\"),2,", "\"),3,") 
+              else srcTmp
+            Utils.write(out, src)
             val pl = "srccpp/lib"
-            val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
-            val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),null,pl))._1; if (t_comp!=null) t_comp(t2)
-            if(t_run != null) {
-              t_run(()=>{
+            val po = if (cPath != null) cPath else out.substring(0, out.lastIndexOf("."))
+            val t2 = Utils.ns(() =>
+              Utils.cppCompiler(out, out.substring(0, out.lastIndexOf(".")), null, pl))._1; 
+            if (t_comp != null) t_comp(t2)
+            if (t_run != null) {
+              t_run(() => {
                 var i = 0
                 while (i < samplesAndWarmupRounds) {
                   i += 1
-                  val (out,err) = Utils.exec((po :: actual_exec_args).toArray,null,null)
-                  if(t_verify != null) t_verify(out,m3,dataset)
-                  if (err!="") System.err.println(err)
-                  Utils.write(po+"_"+lang+".txt",out)
+                  val (out, err) = Utils.exec((po :: actual_exec_args).toArray, null, null)
+                  if(t_verify != null) t_verify(out, m3, dataset)
+                  if (err != "") System.err.println(err)
+                  Utils.write(po + "_" + lang + ".txt", out)
                   println(out)
                 }
               })
             } else {
-              var i=0
+              var i = 0
               while (i < samplesAndWarmupRounds) {
-                i+=1
-                val (out,err)=Utils.exec((po :: actual_exec_args).toArray,null,null)
-                if(t_verify != null) t_verify(out,m3,dataset)
-                if (err!="") System.err.println(err)
-                Utils.write(po+"_"+lang+".txt",out)
+                i += 1
+                val (out, err) = Utils.exec((po :: actual_exec_args).toArray, null, null)
+                if(t_verify != null) t_verify(out, m3, dataset)
+                if (err != "") System.err.println(err)
+                Utils.write(po + "_" + lang + ".txt", out)
                 println(out)
               }
             }
           }
-        case _ => error("Execution not supported for "+lang,true)
+        case _ => error("Execution not supported for " + lang, true)
       }
     }
   }
 
-  def postProc(s0:ast.M3.System) = {
+  def postProc(s0: ast.M3.System) = {
     //fixing the unique id for each statement
     //used in debugging and performance measurements
     var stmtId = 0
@@ -266,10 +350,16 @@ object Compiler {
     try {
       lang match {
         case LANG_CALC => output(toast(lang)._2)
-        case LANG_M3 => output(TypeCheck(M3Parser(toast(lang)._2)).toString)
+        case LANG_M3 | LANG_DIST_M3 => output(TypeCheck(M3Parser(toast(lang)._2)).toString)
         case _ if in.forall(_.endsWith(M3_FILE_SUFFIX)) => compile(in.map(Utils.read(_)).mkString("\n"))
+        case LANG_SPARK_LMS => compile(toast(LANG_DIST_M3)._2)
         case _ => compile(toast(LANG_M3)._2)
       }
-    } catch { case t:Throwable => val sw = new StringWriter(); val pw = new PrintWriter(sw); t.printStackTrace(pw); error(sw.toString(),true) }
+    } catch { case t: Throwable => 
+      val sw = new StringWriter()
+      val pw = new PrintWriter(sw)
+      t.printStackTrace(pw)
+      error(sw.toString(), true) 
+    }
   }
 }
