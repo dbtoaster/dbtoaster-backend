@@ -524,8 +524,8 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     val tables = s0.sources.filterNot(_.stream).map(_.schema.name).toSet
     // Create MapInfo definitions and load partitioning information
     mapInfo ++= s0.maps.map { case MapDef(name, tp, keys, expr, loc) =>
-      // All tables are replicated
-      val locality = if (!tables.contains(name)) loc else LocalExp //DistributedExp(List())
+      // All static tables are local
+      val locality = if (!tables.contains(name)) loc else LocalExp
       val mapInfo = MapInfo(name, tp, keys, expr, locality, IndexedStore)
       (mapInfo.name, mapInfo)
     }
@@ -894,7 +894,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
           case EvtBatchUpdate(s) => List(s.deltaName)
           case _ => Nil
         } 
-        val deltaArgs = deltaNames.mkString(", ")
+        val onBatchArgs = (s"$sSparkObject.ctx" :: deltaNames).mkString(", ")
         val clearDeltas = deltaNames.map(_ + ".clear").mkString("\n")
         s"""|case BatchUpdateEvent(streamData) =>
             |  val batchSize = streamData.map(_._2.length).sum
@@ -906,7 +906,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
             |${ind(sStreamCase, 2)}
             |    case (s, _) => sys.error("Unknown stream event name " + s)
             |  }
-            |  onBatchUpdate($sSparkObject.ctx, $deltaArgs)
+            |  onBatchUpdate($onBatchArgs)
             |  if (logCount > 0 && tuplesProcessed % logCount == 0) 
             |    Console.println(tuplesProcessed + " tuples processed at " + 
             |      ((System.nanoTime - startTime) / 1000000) + "ms")
@@ -1056,10 +1056,10 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       systemReadyBlocks: List[StatementBlock]): String = {
     
     val sUpdateBatchArgs = 
-      s"ctx: ${sGlobalMapContextClass}, " + 
-      deltaMapInfo.map { case (name, _) =>
-        s"${name}: ${impl.codegen.storeType(ctx0(name)._1)}"
-      }.mkString(", ")
+      (s"ctx: ${sGlobalMapContextClass}" ::
+       deltaMapInfo.map { case (name, _) =>
+         s"${name}: ${impl.codegen.storeType(ctx0(name)._1)}"
+       }).mkString(", ")
 
     val sSystemReadyBlocks = ind(emitBlocks(systemReadyBlocks))    
     val sUpdateBlocks = ind(emitBlocks(updateBlocks))
