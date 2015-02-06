@@ -1,7 +1,6 @@
 package ddbt.test.examples
 import ddbt.lib._
 import akka.actor.{Actor,ActorRef,ActorSystem,Props}
-import java.util.Date;
 
 object TPCH15 {
   import Helper._
@@ -33,10 +32,10 @@ class TPCH15 extends Actor {
 
   var t0:Long = 0
   def receive = {
-    case TupleEvent(_,TupleInsert,"LINEITEM",List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Date,v11:Date,v12:Date,v13:String,v14:String,v15:String)) => onAddLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
-    case TupleEvent(_,TupleDelete,"LINEITEM",List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Date,v11:Date,v12:Date,v13:String,v14:String,v15:String)) => onDelLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
-    case TupleEvent(_,TupleInsert,"SUPPLIER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String)) => onAddSUPPLIER(v0,v1,v2,v3,v4,v5,v6)
-    case TupleEvent(_,TupleDelete,"SUPPLIER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String)) => onDelSUPPLIER(v0,v1,v2,v3,v4,v5,v6)
+    case TupleEvent(TupleInsert,"LINEITEM",List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Long,v11:Long,v12:Long,v13:String,v14:String,v15:String)) => onAddLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
+    case TupleEvent(TupleDelete,"LINEITEM",List(v0:Long,v1:Long,v2:Long,v3:Long,v4:Double,v5:Double,v6:Double,v7:Double,v8:String,v9:String,v10:Long,v11:Long,v12:Long,v13:String,v14:String,v15:String)) => onDelLINEITEM(v0,v1,v2,v3,v4,v5,v6,v7,v8,v9,v10,v11,v12,v13,v14,v15)
+    case TupleEvent(TupleInsert,"SUPPLIER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String)) => onAddSUPPLIER(v0,v1,v2,v3,v4,v5,v6)
+    case TupleEvent(TupleDelete,"SUPPLIER",List(v0:Long,v1:String,v2:String,v3:Long,v4:String,v5:Double,v6:String)) => onDelSUPPLIER(v0,v1,v2,v3,v4,v5,v6)
     case StreamInit(_) => onSystemReady(); t0=System.nanoTime()
     case EndOfStream => val time=System.nanoTime()-t0;
       /*
@@ -56,10 +55,10 @@ class TPCH15 extends Actor {
 
   def result = COUNT.toMap
 
-  val c1:Date = Udate("1996-4-1")
-  val c2:Date = Udate("1996-1-1")
+  val c1:Long = Udate("1996-4-1")
+  val c2:Long = Udate("1996-1-1")
 
-  def onAddLINEITEM(L_ORDERKEY:Long, L_PARTKEY:Long, L_SUPPKEY:Long, L_LINENUMBER:Long, L_QUANTITY:Double, L_EXTENDEDPRICE:Double, L_DISCOUNT:Double, L_TAX:Double, L_RETURNFLAG:String, L_LINESTATUS:String, L_SHIPDATE:Date, L_COMMITDATE:Date, L_RECEIPTDATE:Date, L_SHIPINSTRUCT:String, L_SHIPMODE:String, L_COMMENT:String) {
+  def onAddLINEITEM(L_ORDERKEY:Long, L_PARTKEY:Long, L_SUPPKEY:Long, L_LINENUMBER:Long, L_QUANTITY:Double, L_EXTENDEDPRICE:Double, L_DISCOUNT:Double, L_TAX:Double, L_RETURNFLAG:String, L_LINESTATUS:String, L_SHIPDATE:Long, L_COMMITDATE:Long, L_RECEIPTDATE:Long, L_SHIPINSTRUCT:String, L_SHIPMODE:String, L_COMMENT:String) {
     COUNT_mLINEITEM1.foreach { case (k1,v1) =>
       val S_NAME = k1._1;
       val S_ADDRESS = k1._2;
@@ -278,7 +277,7 @@ class TPCH15 extends Actor {
     COUNT_mLINEITEM1_L3_1_E1_3.add(L_SUPPKEY,((L_SHIPDATE >= c2) * ((c1 > L_SHIPDATE) * L_EXTENDEDPRICE)));
   }
 
-  def onDelLINEITEM(L_ORDERKEY:Long, L_PARTKEY:Long, L_SUPPKEY:Long, L_LINENUMBER:Long, L_QUANTITY:Double, L_EXTENDEDPRICE:Double, L_DISCOUNT:Double, L_TAX:Double, L_RETURNFLAG:String, L_LINESTATUS:String, L_SHIPDATE:Date, L_COMMITDATE:Date, L_RECEIPTDATE:Date, L_SHIPINSTRUCT:String, L_SHIPMODE:String, L_COMMENT:String) {
+  def onDelLINEITEM(L_ORDERKEY:Long, L_PARTKEY:Long, L_SUPPKEY:Long, L_LINENUMBER:Long, L_QUANTITY:Double, L_EXTENDEDPRICE:Double, L_DISCOUNT:Double, L_TAX:Double, L_RETURNFLAG:String, L_LINESTATUS:String, L_SHIPDATE:Long, L_COMMITDATE:Long, L_RECEIPTDATE:Long, L_SHIPINSTRUCT:String, L_SHIPMODE:String, L_COMMENT:String) {
     COUNT_mLINEITEM1.foreach { case (k11,v11) =>
       val S_NAME = k11._1;
       val S_ADDRESS = k11._2;
