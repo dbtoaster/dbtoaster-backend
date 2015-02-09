@@ -1,27 +1,116 @@
 package ddbt.lib.spark.store
 
-import ddbt.lib.spark.store.io.{InputStreamWrapper, OutputStreamWrapper}
+import com.esotericsoftware.kryo.io.{Input, Output}
 
 abstract sealed class Buffer extends Serializable {
 
   var position: Int = 0         // public to make inlining possible
-  
-  def ensureSize(n: Int): Unit
 
+  def buffer: Array[_]
+
+  def stepSize: Int             // number of buffer items that make one element
+  
   def clear(): Unit = position = 0
-  
-  def size = position
 
-  def size_=(n: Int) = {
-    ensureSize(n)
-    position = n
+  def capacity = buffer.length / stepSize
+  
+  def size = position / stepSize
+
+  def size_=(n: Int): Unit = {
+    val nativeSize = n * stepSize
+    ensureSize(nativeSize)
+    position = nativeSize
   }
+
+  def ensureSize(n: Int): Unit   
 }
 
-final class IntBuffer(val initialSize: Int) extends Buffer {   
-  var buffer = new Array[Int](Math.max(initialSize, 1))
+object Buffer {
 
-  def write(out: OutputStreamWrapper): Unit = {
+  def apply(tp: String, size: Int, strFieldLength: Int = 0) = tp match {
+    case "int"    => new IntBuffer(size)
+    case "double" => new DoubleBuffer(size)
+    case "char"   => new CharBuffer(size)
+    case "charArray" | "wstring" => new CharArrayBuffer(size, strFieldLength)
+    case "wint"    => new WrappedIntBuffer(size)
+    case "wdouble" => new WrappedDoubleBuffer(size)
+    case "wchar"   => new WrappedCharBuffer(size)
+    case "wcharArray" | "wstring" => new WrappedCharArrayBuffer(size, strFieldLength)
+    case _ => sys.error("Unsupported buffer type")
+  } 
+
+  def write(out: Output, buffer: Buffer): Unit = {
+    // We don't use case classes here to enable inlining
+    if (buffer.isInstanceOf[IntBuffer]) {
+      out.writeInt('I')
+      out.writeInt(buffer.size)
+      buffer.write(out)  
+    } 
+    else if (buffer.isInstanceOf[DoubleBuffer]) {
+      out.writeInt('D')
+      out.writeInt(buffer.size)
+      buffer.write(out)
+    }
+    else if (buffer.isInstanceOf[CharBuffer]) {
+      out.writeInt('C')
+      out.writeInt(buffer.size)
+      buffer.write(out)
+    }
+    else if (buffer.isInstanceOf[CharArrayBuffer]) {
+      out.writeInt('S')
+      out.writeInt(buffer.size)
+      out.writeInt(buffer.asInstanceOf[CharArrayBuffer].fieldLength)
+      buffer.write(out)
+    }
+    else if (buffer.isInstanceOf[WrappedIntBuffer]) {
+      out.writeInt('i')
+      out.writeInt(buffer.size)
+      buffer.write(out)      
+    }
+    else if (buffer.isInstanceOf[WrappedDoubleBuffer]) {
+      out.writeInt('d')
+      out.writeInt(buffer.size)
+      buffer.write(out)      
+    }
+    else if (buffer.isInstanceOf[WrappedCharBuffer]) {
+      out.writeInt('c')
+      out.writeInt(buffer.size)
+      buffer.write(out)      
+    }
+    else if (buffer.isInstanceOf[WrappedCharArrayBuffer]) {
+      out.writeInt('s')
+      out.writeInt(buffer.size)
+      out.writeInt(buffer.asInstanceOf[WrappedCharArrayBuffer].fieldLength)
+      buffer.write(out)      
+    }
+    else sys.error("Unknown buffer type " + buffer.getClass.getName)
+  }
+
+  def read(in: Input): Buffer = {
+    val classId = in.readInt()
+    val size = in.readInt()
+    val buffer = classId match {
+      case 'I' => new IntBuffer(size)
+      case 'D' => new DoubleBuffer(size)
+      case 'C' => new CharBuffer(size)
+      case 'S' => new CharArrayBuffer(size, in.readInt())
+      case 'i' => new WrappedIntBuffer(size)
+      case 'd' => new WrappedDoubleBuffer(size)
+      case 'c' => new WrappedCharBuffer(size)
+      case 's' => new WrappedCharArrayBuffer(size, in.readInt())
+      case  x => sys.error("Unknown buffer type " + x)
+    }
+    buffer.size = size
+    buffer.read(in)
+    buffer
+  }  
+}
+
+final class IntBuffer(initialSize: Int) extends Buffer { 
+  var buffer = new Array[Int](Math.max(initialSize, 1))
+  val stepSize = 1
+
+  def write(out: Output): Unit = {
     val byteBuffer = new Array[Byte](4)
     var i = 0    
     while (i < position) {
@@ -31,7 +120,7 @@ final class IntBuffer(val initialSize: Int) extends Buffer {
     }
   }
 
-  def read(in: InputStreamWrapper): Unit = {
+  def read(in: Input): Unit = {
     val byteBuffer = new Array[Byte](4)
     var i = 0    
     while (i < position) {
@@ -73,14 +162,15 @@ final class IntBuffer(val initialSize: Int) extends Buffer {
   def apply(idx: Int): Int = {
     if (idx >= position) throw new IndexOutOfBoundsException(idx.toString)
     buffer(idx)
-  }   
+  }
 } 
 
-final class DoubleBuffer(val initialSize: Int) extends Buffer { 
+final class DoubleBuffer(initialSize: Int) extends Buffer { 
   var buffer = new Array[Double](Math.max(initialSize, 1))
-   
-  def write(out: OutputStreamWrapper): Unit = {
-  	val byteBuffer = new Array[Byte](8)
+  val stepSize = 1
+
+  def write(out: Output): Unit = {
+    val byteBuffer = new Array[Byte](8)
     var i = 0    
     while (i < position) {
        ByteUtils.doubleToBytes(buffer(i), byteBuffer, 0)
@@ -89,7 +179,7 @@ final class DoubleBuffer(val initialSize: Int) extends Buffer {
     }    
   }
 
-  def read(in: InputStreamWrapper): Unit = {
+  def read(in: Input): Unit = {
     val byteBuffer = new Array[Byte](8)
     var i = 0    
     while (i < position) {
@@ -127,11 +217,12 @@ final class DoubleBuffer(val initialSize: Int) extends Buffer {
   }
 }
 
-final class CharBuffer(val initialSize: Int) extends Buffer {
+final class CharBuffer(initialSize: Int) extends Buffer {
   var buffer = new Array[Char](Math.max(initialSize, 1))
-  
-  def write(out: OutputStreamWrapper): Unit = {
-  	val byteBuffer = new Array[Byte](2)
+  val stepSize = 1
+
+  def write(out: Output): Unit = {
+    val byteBuffer = new Array[Byte](2)
     var i = 0    
     while (i < position) {
        ByteUtils.charToBytes(buffer(i), byteBuffer, 0)
@@ -140,7 +231,7 @@ final class CharBuffer(val initialSize: Int) extends Buffer {
     }
   }
 
-  def read(in: InputStreamWrapper): Unit = {
+  def read(in: Input): Unit = {
     val byteBuffer = new Array[Byte](2)
     var i = 0    
     while (i < position) {
@@ -149,6 +240,7 @@ final class CharBuffer(val initialSize: Int) extends Buffer {
        i += 1
     }
   }
+
 
   @inline
   def ensureSize(n: Int): Unit = {
@@ -178,18 +270,15 @@ final class CharBuffer(val initialSize: Int) extends Buffer {
   }
 }
 
-final class CharArrayBuffer(initialSize: Int, fieldLength: Int) extends Buffer { 
-  val typeSize = 2 * fieldLength
-  var buffer = new Array[Byte](initialSize * typeSize) 
-  private val charArray = new CharArray(fieldLength)
+final class CharArrayBuffer(initialSize: Int, val fieldLength: Int) extends Buffer {   
+  val stepSize = 2 * fieldLength
+  var buffer = new Array[Byte](initialSize * stepSize) 
+  val charArray = new CharArray(fieldLength)
   
-  override def size = position / typeSize
-  
-  override def size_=(_size: Int) = super.size_=(_size * typeSize)
-  
-  def write(out: OutputStreamWrapper) = out.writeBytes(buffer, 0, position)
+  def write(out: Output) = out.writeBytes(buffer, 0, position)
 
-  def read(in: InputStreamWrapper) = in.readBytes(buffer, 0, position)
+  def read(in: Input) = in.readBytes(buffer, 0, position)
+
   
   @inline
   def ensureSize(n: Int): Unit = {
@@ -207,24 +296,31 @@ final class CharArrayBuffer(initialSize: Int, fieldLength: Int) extends Buffer {
   
   @inline
   def +=(elem: CharArray): Unit = {
-    ensureSize(position + typeSize)
+    ensureSize(position + stepSize)
     ByteUtils.charArrayToBytes(elem, buffer, position)
-    position += typeSize
+    position += stepSize
+  }
+
+  @inline
+  def +=(elem: String): Unit = {
+    ensureSize(position + stepSize)
+    charArray.putString(elem)
+    ByteUtils.charArrayToBytes(charArray, buffer, position)
+    position += stepSize
   }
   
   @inline
   def apply(idx: Int): CharArray = {
-    val offset = idx * typeSize
-    if (offset + typeSize > position) throw new IndexOutOfBoundsException(idx.toString)
+    val offset = idx * stepSize
+    if (offset + stepSize > position) throw new IndexOutOfBoundsException(idx.toString)
     ByteUtils.bytesToCharArray(buffer, offset, charArray)
     charArray    
   }
 }
 
 abstract class WrappedBuffer extends Buffer {
-  val typeSize: Int
   var buffer: Array[Byte]
-  
+
   @inline
   def ensureSize(n: Int): Unit = {
     val bufferLength: Long = buffer.length
@@ -239,88 +335,84 @@ abstract class WrappedBuffer extends Buffer {
     }
   }
 
-  final def write(out: OutputStreamWrapper) = out.writeBytes(buffer, 0, position)
+  def write(out: Output) = out.writeBytes(buffer, 0, position)
 
-  final def read(in: InputStreamWrapper) = in.readBytes(buffer, 0, position)
-    
-  override def size = position / typeSize
-  
-  override def size_=(_size: Int) = super.size_=(_size * typeSize)
+  def read(in: Input) = in.readBytes(buffer, 0, position)
 }
 
 final class WrappedIntBuffer(initialSize: Int) extends WrappedBuffer {
-  val typeSize = 4
-  var buffer = new Array[Byte](initialSize * typeSize)
+  val stepSize = 4
+  var buffer = new Array[Byte](initialSize * stepSize)
 
   @inline
   def +=(elem: Int): Unit = {
-    ensureSize(position + typeSize)
+    ensureSize(position + stepSize)
     ByteUtils.intToBytes(elem, buffer, position)
-    position += typeSize
+    position += stepSize
   }
 
   @inline
   def apply(idx: Int): Int = {
-    val offset = idx * typeSize    
-    if (offset + typeSize > position) throw new IndexOutOfBoundsException(idx.toString)
+    val offset = idx * stepSize    
+    if (offset + stepSize > position) throw new IndexOutOfBoundsException(idx.toString)
     ByteUtils.bytesToInt(buffer, offset)
   }  
 }
 
 final class WrappedDoubleBuffer(initialSize: Int) extends WrappedBuffer { 
-  val typeSize = 8
-  var buffer = new Array[Byte](initialSize * typeSize)
+  val stepSize = 8
+  var buffer = new Array[Byte](initialSize * stepSize)
 
   @inline
   def +=(elem: Double): Unit = {
-    ensureSize(position + typeSize)
+    ensureSize(position + stepSize)
     ByteUtils.doubleToBytes(elem, buffer, position)
-    position += typeSize
+    position += stepSize
   }
 
   @inline
   def apply(idx: Int): Double = {
-    val offset = idx * typeSize
-    if (offset + typeSize > position) throw new IndexOutOfBoundsException(idx.toString)
+    val offset = idx * stepSize
+    if (offset + stepSize > position) throw new IndexOutOfBoundsException(idx.toString)
     ByteUtils.bytesToDouble(buffer, offset)
   }  
 }
 
 final class WrappedCharBuffer(initialSize: Int) extends WrappedBuffer { 
-  val typeSize = 2
-  var buffer = new Array[Byte](initialSize * typeSize)
+  val stepSize = 2
+  var buffer = new Array[Byte](initialSize * stepSize)
 
   @inline
   def +=(elem: Char): Unit = {
-    ensureSize(position + typeSize)
+    ensureSize(position + stepSize)
     ByteUtils.charToBytes(elem, buffer, position)
-    position += typeSize
+    position += stepSize
   }
   
   @inline
   def apply(idx: Int): Char = {
-    val offset = idx * typeSize
-    if (offset + typeSize > position) throw new IndexOutOfBoundsException(idx.toString)
+    val offset = idx * stepSize
+    if (offset + stepSize > position) throw new IndexOutOfBoundsException(idx.toString)
     ByteUtils.bytesToChar(buffer, offset)
   }  
 }
 
-final class WrappedCharArrayBuffer(initialSize: Int, fieldLength: Int) extends WrappedBuffer {  
-  val typeSize = 2 * fieldLength
-  var buffer = new Array[Byte](initialSize * typeSize)
+final class WrappedCharArrayBuffer(initialSize: Int, val fieldLength: Int) extends WrappedBuffer {  
+  val stepSize = 2 * fieldLength
+  var buffer = new Array[Byte](initialSize * stepSize)
   private val charArray = new CharArray(fieldLength)
   
   @inline
   def +=(elem: CharArray): Unit = {
-    ensureSize(position + typeSize)
+    ensureSize(position + stepSize)
     ByteUtils.charArrayToBytes(elem, buffer, position)
-    position += typeSize
+    position += stepSize
   }
 
   @inline
   def apply(idx: Int): CharArray = {
-    val offset = idx * typeSize
-    if (offset + typeSize > position) throw new IndexOutOfBoundsException(idx.toString)
+    val offset = idx * stepSize
+    if (offset + stepSize > position) throw new IndexOutOfBoundsException(idx.toString)
     ByteUtils.bytesToCharArray(buffer, offset, charArray)
     charArray
   }

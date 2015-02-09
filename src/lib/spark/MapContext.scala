@@ -13,42 +13,42 @@ import ddbt.lib.spark.store.Store
   
 abstract class LocalMapContext {
   
-  class LocalMap[E <: MapEntry: ClassTag](
-    val name: String,
-    val indices: Vector[Index[E]],
-    val topLevel: Boolean) {
+//   class LocalMap[E <: MapEntry: ClassTag](
+//     val name: String,
+//     val indices: Vector[Index[E]],
+//     val topLevel: Boolean) {
 
-    val store = new Store[E](indices)
+//     val store = new Store[E](indices)
 
-    def print(): Unit = {
-      println("NAME: %s  TL: %s".format(name, topLevel))
-      store foreach (e => println("  %s".format(e)))
-    }
+//     def print(): Unit = {
+//       println("NAME: %s  TL: %s".format(name, topLevel))
+//       store foreach (e => println("  %s".format(e)))
+//     }
     
-    def collect(): (String, Seq[E]) = {
-      val entries = new ArrayBuffer[E](store.size)
-      store foreach (entries += _)
-      (name, entries)
-    }
-  }
+//     def collect(): (String, Seq[E]) = {
+//       val entries = new ArrayBuffer[E](store.size)
+//       store foreach (entries += _)
+//       (name, entries)
+//     }
+//   }
 
-  private val maps = new ArrayBuffer[LocalMap[_]]()
+//   private val maps = new ArrayBuffer[LocalMap[_]]()
   
-  protected def createMap[E <: MapEntry: ClassTag](
-      name: String, 
-      indices: Vector[Index[E]], 
-      topLevel: Boolean = false) = {
-    val map = new LocalMap[E](name, indices, topLevel)
-    maps += map
-    map
-  }
+//   protected def createMap[E <: MapEntry: ClassTag](
+//       name: String, 
+//       indices: Vector[Index[E]], 
+//       topLevel: Boolean = false) = {
+//     val map = new LocalMap[E](name, indices, topLevel)
+//     maps += map
+//     map
+//   }
   
-  def printMaps(): Unit = maps foreach { _.print }
+//   def printMaps(): Unit = maps foreach { _.print }
 
-  def printTopLevelMaps(): Unit = maps filter { _.topLevel } map { _.print }
+//   def printTopLevelMaps(): Unit = maps filter { _.topLevel } map { _.print }
 }
 
-class GlobalMapContext[A <: LocalMapContext](
+class GlobalMapContext[A](
   val sc: SparkContext,
   val numPartitions: Int,
   val localContext: (Int => A)) {
@@ -72,7 +72,7 @@ class GlobalMapContext[A <: LocalMapContext](
 
   def unmaterialize() = rdd.unpersist(true)
 
-  def printMaps() = rdd foreach { _._2.printMaps() }
+  // def printMaps() = rdd foreach { _._2.printMaps() }
 
-  def printTopLevelMaps() = rdd foreach { _._2.printTopLevelMaps() }
+  // def printTopLevelMaps() = rdd foreach { _._2.printTopLevelMaps() }
 }

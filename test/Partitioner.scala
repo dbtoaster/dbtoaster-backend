@@ -11,11 +11,13 @@ object Partitioner {
     if (qs.size==0) return printf("No query selected, relax your pattern")
     qs.foreach{ q =>
       println("------ "+q)
+      ddbt.Compiler.batching_enabled = true
+      ddbt.Compiler.optm3 = "-O3"
       val m3_src = ddbt.Compiler.toast("m3",q)._2
       val m3 = (M3Parser andThen TypeCheck)(m3_src)
       val (p,h)=Partitioning(m3)
       println(p)
-      //println(h)
+      // println(h)
     }
   }
 }

@@ -2,10 +2,15 @@ package ddbt.lib.spark.store
 
 import java.util.Arrays
 
+object CharArrayImplicits { 
+  import scala.language.implicitConversions
+  implicit def charArrayToStr(c: CharArray): String = c.getString
+}
+
 class CharArray(capacity: Int) {
 
-  private val charArray = new Array[Char](capacity)
-  private var _size = 0
+  val charArray = new Array[Char](capacity)   
+  var _size = 0
 
   def this(str: String) = {
     this(str.length)
@@ -15,7 +20,7 @@ class CharArray(capacity: Int) {
   def size: Int = _size
 
   def clear(): Unit = _size = 0
-  
+
   def putString(str: String): CharArray = {
     _size = math.min(capacity, str.length)
     str.getChars(0, _size, charArray, 0)

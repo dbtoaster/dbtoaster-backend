@@ -454,23 +454,23 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
           }
         case LogStore | PartitionStore(_) => 
           val argTypes = sym.tp.typeArguments(0).typeArguments
-          val logClsName = logStoreName(sym)
-          val logClsAttrs = argTypes.zipWithIndex.map { case (argTp, i) =>
-            s"val _${i + 1} = ${emitCreateBuffer(argTp)}"
+          val colStoreName = logStoreName(sym)
+          val attributes = argTypes.zipWithIndex.map { case (argTp, i) =>
+            s"val _${i + 1} = buffers($i)${emitCastBuffer(argTp)}"
           }.mkString("\n") 
-          val buffers = (1 to argTypes.length).map("_" + _).mkString(", ")
           val appendBody = (1 to argTypes.length).map(i => s"_$i += e._$i").mkString("; ")
-          val entryVar = (1 to argTypes.length).map(i => s"entry._$i = _$i(i)").mkString("; ")
+          val setEntry = (1 to argTypes.length).map(i => s"entry._$i = _$i(i)").mkString("; ")
+          val bufferList = argTypes.map(tp => s"${emitCreateBuffer(tp)}").mkString(", ") 
           out.println(
-            s"""|class $logClsName(initialSize: Int) extends LogStore[$entryClsName] {
-                |${ind(logClsAttrs)}
-                |  val buffers = Array[Buffer]($buffers)
+            s"""|class $colStoreName(buffers: Array[Buffer]) extends ColumnarStore(buffers) with WriteStore[$entryClsName] {
+                |  def this() = this(Array[Buffer]($bufferList))
+                |${ind(attributes)} 
                 |  val entry = $entryClsName()
                 |  def +=(e: $entryClsName) = { $appendBody }
                 |  def foreach(f: $entryClsName => Unit) = {
                 |    var i = 0
                 |    while (i < size) {
-                |      ${entryVar}
+                |      ${setEntry}
                 |      f(entry)
                 |      i += 1 
                 |    }
@@ -478,18 +478,19 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
                 |}""".stripMargin)
           getStoreType(sym) match { 
             case PartitionStore(pkeys) => 
-              val partClsName = partitionStoreName(sym)
+              val containerName = partitionStoreName(sym)
               if (pkeys.length == 0) 
                 out.println(
-                  s"""|class $partClsName(numPartitions: Int, initialSize: Int) extends WritePartitionStore[$entryClsName] {
-                      |  val partitions = Array.fill[$logClsName](numPartitions)(new $logClsName(initialSize))
-                      |}""".stripMargin)
+                  s"""|class $containerName(numPartitions: Int) 
+                      |  extends PartitionContainer[$entryClsName](
+                      |    Array.fill[$colStoreName](numPartitions)(new $colStoreName()))""".stripMargin)
               else if (pkeys.length == 1) {
                 if (pkeys(0) >= argTypes.length) sys.error("Invalid partition column index.")
                 else 
                   out.println(
-                    s"""|class $partClsName(numPartitions: Int, initialSize: Int) extends WritePartitionStore[$entryClsName] {
-                        |  val partitions = Array.fill[$logClsName](numPartitions)(new $logClsName(initialSize))
+                    s"""|class $containerName(numPartitions: Int) 
+                        |  extends PartitionContainer[$entryClsName](
+                        |    Array.fill[$colStoreName](numPartitions)(new $colStoreName())) {
                         |  override def +=(e: $entryClsName) = {
                         |    val partitionId = (e._${pkeys(0) + 1}.hashCode) % numPartitions
                         |    partitions(partitionId) += e
@@ -518,18 +519,25 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
           val strIndices = indicesToString(entryType, indices).mkString(",\n")
           s"val $cName = new Store[$entryType](Vector(${block(ind(strIndices))}))"
         case LogStore => 
-          s"val $cName = new ${logStoreName(sym)}(batchSize)"  
+          s"val $cName = new ${logStoreName(sym)}()"  
         case PartitionStore(_) => 
-          s"val $cName = new ${partitionStoreName(sym)}(numPartitions, batchSize)"
+          s"val $cName = new ${partitionStoreName(sym)}(numPartitions)"
         case _ => sys.error(s"Store type is not specified for $cName.")
       }
     }
   }
 
   def emitCreateBuffer(manifest: Manifest[_]): String = manifest.toString match {
-    case "Long"   | "long"   => "new IntBuffer(initialSize)"
-    case "Double" | "double" => "new DoubleBuffer(initialSize)"
-    case "java.lang.String" | "char*" => "new CharArrayBuffer(initialSize, 30)" 
+    case "Long"   | "long"   => "new IntBuffer(16)"
+    case "Double" | "double" => "new DoubleBuffer(16)"
+    case "java.lang.String" | "char*" => "new CharArrayBuffer(16, 30)" 
+    case _ => sys.error("Unsupported buffer type")
+  }
+
+  def emitCastBuffer(manifest: Manifest[_]): String = manifest.toString match {
+    case "Long"   | "long"   => ".asInstanceOf[IntBuffer]"
+    case "Double" | "double" => ".asInstanceOf[DoubleBuffer]"
+    case "java.lang.String" | "char*" => ".asInstanceOf[CharArrayBuffer]" 
     case _ => sys.error("Unsupported buffer type")
   }
 
@@ -560,14 +568,14 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
     val storeSym = sym.asInstanceOf[Sym[Store[Entry]]]
     val argTypes = storeSym.tp.typeArguments(0).typeArguments
     val argSuffix = argTypes.map(tp => simplifyTypeName(remap(tp))).mkString
-    s"LogStore_x${sym.id}_$argSuffix"
+    s"ColumnarStore_x${sym.id}_$argSuffix"
   }
 
   protected def partitionStoreName(sym: Sym[_]): String = {
     val storeSym = sym.asInstanceOf[Sym[Store[Entry]]]
     val argTypes = storeSym.tp.typeArguments(0).typeArguments
     val argSuffix = argTypes.map(tp => simplifyTypeName(remap(tp))).mkString
-    s"PartitionStore_x${sym.id}_$argSuffix"
+    s"PartitionContainer_x${sym.id}_$argSuffix"
   }
 
   override def storeType(sym: Exp[_]): String = {

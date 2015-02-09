@@ -1,10 +1,10 @@
 package ddbt.lib.spark.store
 
-import ddbt.lib.spark.store.io.{InputStreamWrapper, OutputStreamWrapper}
+import com.esotericsoftware.kryo.io.{Input, Output}
 
 trait Serializable {
   
-  def write(out: OutputStreamWrapper): Unit
-  
-  def read(in: InputStreamWrapper): Unit  
+  def write(out: Output): Unit
+
+  def read(in: Input): Unit    
 }

@@ -560,9 +560,9 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
     // Optimize statement blocks
     val optUpdateBlocks = Optimizer.optBlockFusion(updateBlocks)
-    optUpdateBlocks.map(b => java.lang.System.err.println(b.toShortString))
+    optUpdateBlocks.map(b => java.lang.System.err.println("UPDATE\n" + b.toShortString))
     val optSystemReadyBlocks = Optimizer.optBlockFusion(systemReadyBlocks)
-    optSystemReadyBlocks.map(b => java.lang.System.err.println(b.toShortString))
+    optSystemReadyBlocks.map(b => java.lang.System.err.println("SYSREADY\n" + b.toShortString))
 
     // Remove unused maps
     val referencedMaps = 
@@ -634,23 +634,31 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         val strScatterBlock = scatterStmts.map { stmt =>
           val lhsName = stmt.lhsMap.name
           val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+          val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
+          val storeType = impl.codegen.storeType(ctx0(lhsName)._1)
           s"""|val ${lhsName} = ctx.sc.parallelize(
-              |  ${rhsName}.partitions.zipWithIndex.map(_.swap), 
-              |  numPartitions)""".stripMargin
+              |  ${rhsName}.partitions.zipWithIndex.map { case (store, i) => 
+              |    new ColumnarPartition(i, store.buffers)
+              |  }, numPartitions).mapPartitions(_.map { s => 
+              |    (s.partId, new $storeType(s.buffers))
+              |  }, true)""".stripMargin
         }.mkString("\n")
 
         val strRepartitionBlock = repartStmts.map { stmt =>
           val lhsName = stmt.lhsMap.name
           val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
           val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
-          s"""|val ${lhsName} = ctx.rdd.flatMap { case (id, localCtx) =>  
-              |  localCtx.${rhsName}.partitions.zipWithIndex.map(_.swap).toList
-              |}.groupByKey(ctx.partitioner).mapValues { case stores => 
-              |  new ReadPartitionStore[$entryType] {
-              |    val partitions = stores.toArray
-              |    assert(partitions.size == numPartitions)
-              |  }
-              |}""".stripMargin
+          val storeType = "ColumnarStore" + entryType.substring(entryType.indexOf("_")) // TODO: fix this hack                              
+          s"""|val ${lhsName} = 
+              |  ctx.rdd.mapPartitions(_.toList.flatMap { case (_, localCtx) => 
+              |    localCtx.${rhsName}.partitions.zipWithIndex.map { 
+              |      case (store, i) => (i, new ColumnarPartition(i, store.buffers))
+              |    }  
+              |  }.iterator, false).groupByKey(ctx.partitioner)
+              |  .mapValues { case stores => 
+              |    new PartitionContainer[$entryType](
+              |      stores.map(s => new $storeType(s.buffers)).toArray)
+              |  }""".stripMargin
         }.mkString("\n")
 
         // Pull Gather to the beginning of the statement list
@@ -658,10 +666,12 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
           val lhsName = stmt.lhsMap.name
           val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
           val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
-          s"""|val ${lhsName} = new ReadPartitionStore[$entryType] {
-              |  val partitions = ctx.rdd.map(_._2.${rhsName}).collect
-              |  assert(partitions.size == numPartitions)
-              |}""".stripMargin
+          val storeType = "ColumnarStore" + entryType.substring(entryType.indexOf("_")) // TODO: fix this hack                              
+          s"""|val ${lhsName} = new PartitionContainer[$entryType](
+              |  ctx.rdd.map { case (id, localCtx) =>
+              |    new ColumnarPartition(id, localCtx.${rhsName}.buffers) 
+              |  }.collect.map(s => new $storeType(s.buffers))
+              |)""".stripMargin
         }.mkString("\n")
         "//  --- LOCAL BLOCK ---\n" + 
         List(
@@ -713,9 +723,9 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     }
 
   override val additionalImports: String = List(
-      "import ddbt.lib.spark.LocalMapContext",
       "import ddbt.lib.spark._",
       "import ddbt.lib.spark.store._",
+      "import ddbt.lib.spark.store.CharArrayImplicits._",
       "import scala.util.hashing.MurmurHash3.stringHash",
       "import org.apache.spark.SparkContext",
       "import org.apache.spark.SparkContext._"
@@ -788,12 +798,11 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |  var batchSize: Int = 0
         |  var noOutput: Boolean = false
         |  var logCount: Int = 0
+        |  var numPartitions: Int = 0
         |
         |  // Spark related variables
         |  private var cfg: SparkConfig = null
         |  private var sc: SparkContext = null
-        |
-        |  var numPartitions: Int = 0
         |  var ctx: ${sGlobalMapContextClass} = null
         |
         |  def execute(args: Array[String], f: List[Any] => Unit) =
@@ -802,6 +811,10 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |$sSources, 
         |        parallelMode, timeout, batchSize), f)
         | 
+        |  def initContext(sc: SparkContext, numPartitions: Int) = 
+        |    new ${sGlobalMapContextClass}(sc, numPartitions,
+        |      (id => new ${sLocalMapContextClass}(id, numPartitions)))
+        |
         |  def main(args: Array[String]) {
         |    val argMap = parseArgs(args)
         |    configFile = argMap.get("configFile").map(_.asInstanceOf[String]).getOrElse(configFile)
@@ -813,13 +826,12 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |    if (batchSize == 0) { sys.error("Invalid batch size.") }
         |
         |    cfg = new SparkConfig(new java.io.FileInputStream(configFile))
-        |    sc = new SparkContext(
-        |      cfg.sparkConf.setAppName("$sSparkObject")
-        |                 //.set("spark.kryo.registrator", "XXX???")
+        |    sc = new SparkContext(cfg.sparkConf
+        |      .setAppName("$sSparkObject")
+        |      .set("spark.kryo.registrator", "ddbt.lib.spark.store.Registrator")
         |    )
         |    numPartitions = cfg.sparkNumPartitions
-        |    ctx = new ${sGlobalMapContextClass}(sc, numPartitions, 
-        |      (id => new ${sLocalMapContextClass}(id, numPartitions, batchSize)))
+        |    ctx = initContext(sc, numPartitions)
         |
         |    // START EXECUTION
         |    execute(args, (res: List[Any]) => {
@@ -841,7 +853,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
   protected def emitMapContext(distributedMaps: Seq[MapInfo]): String = {
     val sDistributedMaps = ind(emitMaps(emitDistributedMap, distributedMaps))
-    s"""|class $sLocalMapContextClass(val partitionId: Int, numPartitions: Int, batchSize: Int) extends LocalMapContext {
+    s"""|class $sLocalMapContextClass(val partitionId: Int, numPartitions: Int) extends LocalMapContext {
         |$sDistributedMaps
         |}
         |""".stripMargin
@@ -894,7 +906,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
           case EvtBatchUpdate(s) => List(s.deltaName)
           case _ => Nil
         } 
-        val onBatchArgs = (s"$sSparkObject.ctx" :: deltaNames).mkString(", ")
+        val onBatchArgs = deltaNames.mkString(", ")
         val clearDeltas = deltaNames.map(_ + ".clear").mkString("\n")
         s"""|case BatchUpdateEvent(streamData) =>
             |  val batchSize = streamData.map(_._2.length).sum
@@ -973,17 +985,32 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   override def toMapFunction(q: Query) = {
     val mapName = q.name
     val mapType = q.map.tp.toScala
-    val mapKeyTypes = mapInfo(mapName).keys.map(_._2)
+    val mapDef = mapInfo(mapName)
+    val mapKeyTypes = mapDef.keys.map(_._2)
     val args = tup(mapKeyTypes.zipWithIndex.map { case (_, i) => "e._" + (i + 1) })
     val params = tup(mapKeyTypes.map(_.toScala))
     val resultMapName = mapName + "Result"
-    s"""|{
-        |  val $resultMapName = new collection.mutable.HashMap[$params, $mapType]()
-        |  $mapName.foreach { e => 
-        |    $resultMapName += ($args -> e._${mapKeyTypes.size + 1})
-        |  }
-        |  $resultMapName.toMap
-        |}""".stripMargin
+    mapDef.locality match {
+      case LocalExp => 
+        s"""|{
+            |  val $resultMapName = new collection.mutable.HashMap[$params, $mapType]()
+            |  $mapName.foreach { e => 
+            |    $resultMapName += ($args -> e._${mapKeyTypes.size + 1})
+            |  }
+            |  $resultMapName.toMap
+            |}""".stripMargin
+      case DistributedExp(pkeys) => 
+        val filter = if (pkeys == Nil) "first" else "reduce(_ ++ _)"
+        s"""|{
+            |  ctx.rdd.map { case (_, localCtx) =>
+            |    val $resultMapName = new collection.mutable.HashMap[$params, $mapType]()
+            |    localCtx.${mapName}.foreach { e =>
+            |      $resultMapName += ($args -> e._${mapKeyTypes.size + 1})  
+            |    }
+            |    $resultMapName.toMap
+            |  }.collect.${filter}
+            |}""".stripMargin
+    }
   }
 
   protected def emitGetSnapshot(queries: List[Query]): String = {
@@ -1015,7 +1042,6 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |  var endTime = 0L
         |  var tuplesProcessed = 0L
         |  var tuplesSkipped = 0L
-        |  val logCount = $sSparkObject.logCount
         |
         |  def loadTables() = { ${block(sLoadTables)} }
         |
@@ -1024,24 +1050,24 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |  def receive_skip: Receive = { 
         |    case StreamInit(_) =>
         |    case EndOfStream => 
-        |      ${sSparkObject}.ctx.destroy()
+        |      sender ! getSnapshot
+        |      ctx.destroy()
         |    case GetSnapshot(_) => 
         |      sender ! getSnapshot
-        |      ${sSparkObject}.ctx.destroy()
         |$sEventHandlersSkip
         |  }
         | 
         |  def receive = {
         |    case StreamInit(timeout) => 
+        |      ctx.init()
         |      loadTables()
-        |      onSystemReady()
-        |      ${sSparkObject}.ctx.init()
+        |      onSystemReady()        
         |      startTime = System.nanoTime
         |      if (timeout > 0) endTime = startTime + timeout * 1000000L
         |    case EndOfStream => 
         |      endTime = System.nanoTime
         |      sender ! getSnapshot
-        |      ${sSparkObject}.ctx.destroy()
+        |      ctx.destroy()
         |    case GetSnapshot(_) => 
         |      sender ! getSnapshot
         |$sEventHandler
@@ -1056,10 +1082,9 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       systemReadyBlocks: List[StatementBlock]): String = {
     
     val sUpdateBatchArgs = 
-      (s"ctx: ${sGlobalMapContextClass}" ::
-       deltaMapInfo.map { case (name, _) =>
-         s"${name}: ${impl.codegen.storeType(ctx0(name)._1)}"
-       }).mkString(", ")
+      deltaMapInfo.map { case (name, _) =>
+        s"${name}: ${impl.codegen.storeType(ctx0(name)._1)}"
+      }.mkString(", ")
 
     val sSystemReadyBlocks = ind(emitBlocks(systemReadyBlocks))    
     val sUpdateBlocks = ind(emitBlocks(updateBlocks))

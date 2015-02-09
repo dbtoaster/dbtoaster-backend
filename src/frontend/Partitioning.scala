@@ -28,7 +28,7 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
   import M3._
   // A co-partitioning is given by a mapping relation->partitioning keys and a frequency.
   case class CoPart(var freq:Int=0) extends scala.collection.mutable.HashMap[String,List[Int]] with Ordered[CoPart] {
-    override def toString = "CoPart["+freq+"] "+map{ case (m,k)=>m+"("+k.mkString(",")+")"}.mkString(", ")
+    override def toString = "CoPart["+freq+"] "+map{ case (m,k)=>m+"("+k.mkString(",")+":"+ k.map(mapDefs(m).apply).mkString(",") + ")"}.mkString(", ")
     def compare(o:CoPart) = o.freq - freq // descending frequency
     def add(o:CoPart) = if (this==o) { freq+=o.freq; true } else false // freq is not verified in equality
     def merge(p2:CoPart,m:Int):Boolean = m match { // merge p2 in this and return true iff
@@ -57,6 +57,10 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
   private var sys0:System = null // system reference to access map definitions
   private var ctx0 = List[String]() // trigger context
   private var cm0 = List[MapRef]() // maps joining the context (common map: maps that share sth with the context)
+  private var tableNames = Set[String]()
+  private var deltaNames = Set[String]()
+  private var mapDefs = Map[String, List[String]]()
+
   private def expr(ex:Expr,ctx:List[MapRef]):List[MapRef] = ex match {
     case Exists(e) => expr(e,ctx)
     case Mul(l,r) => expr(r,expr(l,ctx))
@@ -65,15 +69,24 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     case Apply(fn,tp,as) => (ctx /: as)((c,a)=>expr(a,ctx))
     case Lift(n,e) => expr(e,ctx)
     case AggSum(ks,e) => expr(e,ctx)
-    case m@MapRef(n,tp,ks) if (!sys0.sources.filter(!_.stream).map(_.schema.name).contains(n)) => // don't consider replicated tables
+    case m@MapRef(n,tp,ks) if (!tableNames.contains(n) && !deltaNames.contains(n)) => // don't consider replicated tables and delta relations
       (ctx:::cm0).foreach(x=>join(m,x)); if (!(ctx0.toSet & ks.map(_._1).toSet).isEmpty) cm0=m::cm0; m::ctx
     case _ => ctx
   }
 
   def apply(s0:System):(Partitioning,String) = {
     sys0=s0; parts=Nil
+    tableNames = s0.sources.filter(!_.stream).map(_.schema.name).toSet
+    deltaNames = s0.triggers.flatMap(_.evt match {
+      case EvtBatchUpdate(s) => List(s.deltaName) case _ => Nil
+    }).toSet
+    mapDefs = s0.maps.map { case m: MapDef => (m.name, m.keys.map(_._1))}.toMap
     s0.triggers.foreach { t => cm0=Nil
-      ctx0 = (t.evt match { case EvtReady=>Nil case EvtAdd(s)=>s.fields case EvtDel(s)=>s.fields case EvtBatchUpdate(_) => sys.error("Batch updates not supported") }).map(_._1)
+      ctx0 = (t.evt match { 
+        case EvtReady => Nil 
+        case EvtAdd(s) => s.fields 
+        case EvtDel(s) => s.fields 
+        case EvtBatchUpdate(s) => s.fields }).map(_._1)
       t.stmts.foreach { case StmtMap(m,e,_,oi) =>
         cm0.foreach(x=>join(m,x))
         if (!(ctx0.toSet & m.keys.map(_._1).toSet).isEmpty) cm0=m::cm0
@@ -122,7 +135,9 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
     // partitioning
     val part = Partitioning(parts,if (r0==0 || r0==r1) 1 else r1*1.0/r0,s0.sources.filter(!_.stream).map(s=>s.schema.name).toSet);
     // hashing function
-    val its = s0.maps.zipWithIndex.map{ case (m,i)=>(m.name,(i,m.keys.map(_._2))) }.toMap // name=>(index,tps)
+    val its = s0.maps.zipWithIndex.map { 
+        case (m, i) => (m.name, (i,m.keys.map(_._2))) 
+      }.toMap  // name=>(index,tps)       
     val imp = scala.collection.mutable.HashMap[String,List[Int]]() // body => maprefs
     parts.foreach(_.foreach{ case (n,is) => val (i,ts)=its(n)
       val ks=is.map(i=>(if (ts.size>1) "t._"+(i+1) else "t")+(ts(i) match { case TypeLong=>"" case TypeDate=>".getTime" case _=>".##" }))

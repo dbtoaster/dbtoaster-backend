@@ -259,6 +259,19 @@ object Compiler {
                                 if (libs != Nil) libs.mkString(":") else null,
                                 exec_sc)(List(out)))._1
           if (t_comp != null) t_comp(t2)
+          if (lang == LANG_SPARK_LMS) {
+            val pkgDir = new File("./pkg")
+            if (!pkgDir.exists) pkgDir.mkdirs
+            Utils.exec(Array[String](
+              "jar", "-cMf", (pkgDir.getAbsolutePath + "/ddbt_gen.jar"), 
+              "-C", dir.getAbsolutePath, "ddbt/test/gen"))
+            Utils.exec(Array[String](
+              "jar", "-cMf", (pkgDir.getAbsolutePath + "/ddbt_lib.jar"), 
+              "-C", dir.getAbsolutePath + "/../classes", "ddbt/lib",
+              "-C", "conf", "ddbt.properties", 
+              "-C", "conf", "log4j.properties", 
+              "-C", "conf", "spark.config"))
+          }
           // TODO XXX should generate jar file in cPath
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS => if (cPath != null) {
           val pl = "srccpp/lib"

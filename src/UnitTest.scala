@@ -360,7 +360,9 @@ object UnitTest {
                   val ll = (kt ::: vt :: Nil).zipWithIndex
                   "def kv(l: List[Any]) = l match { case List(" + 
                   ll.map { case (t, i) => "v" + i + ": " + t.toScala }.mkString(", ") + ") => (" + 
-                  tup(ll.init.map { case (t, i) => "v" + i }) + ", v" + ll.last._2 + ") }\n" 
+                  tup(ll.init.map { case (t, i) => "v" + i + 
+                    (if (t.toString == "string") ".take(30)" else "") 
+                  }) + ", v" + ll.last._2 + ") }\n" 
                 }
               val cmp = "diff(res(" + qid(n) + ").asInstanceOf[" + 
                 (if (kt.size > 0) "Map" + qtp else vt.toScala) + "], " + 
@@ -503,7 +505,7 @@ object UnitTest {
       }
     }
     // Benchmark (and codegen)
-    val m=mode.split("_"); // Specify the inlining as a suffix of the mode
+    val m = mode.split("_"); // Specify the inlining as a suffix of the mode
     Compiler.inl = if (m.length==1) 0 else if (m(1)=="spec") 5 else if (m(1)=="full") 10 else try { m(1).toInt } catch { case _:Throwable => 0 }
     Compiler.lang = m(0)
     Compiler.name = cls
@@ -512,7 +514,7 @@ object UnitTest {
     Compiler.exec = benchmark
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
+    Compiler.exec_args = ("-n" + (samples + warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
     // Append correctness spec and move to test/gen/
