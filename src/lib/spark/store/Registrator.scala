@@ -18,6 +18,10 @@ class Registrator extends KryoRegistrator {
     kryo.register(classOf[scala.collection.mutable.WrappedArray$ofRef])
     kryo.register(classOf[Array[scala.collection.immutable.Map[_,_]]])
     kryo.register(classOf[scala.collection.immutable.Map$EmptyMap$])
+    kryo.register(classOf[Array[Int]])
+    kryo.register(classOf[Array[Double]])
+    kryo.register(classOf[Array[Char]])
+    kryo.register(classOf[Array[CharArray]])
 
     kryo.register(classOf[Array[ColumnarPartition]], new Serializer[Array[ColumnarPartition]] {
       def write(kryo: Kryo, output: Output, partitions: Array[ColumnarPartition]) = {

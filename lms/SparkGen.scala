@@ -665,13 +665,19 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         val strGatherBlock = gatherStmts.map { stmt =>
           val lhsName = stmt.lhsMap.name
           val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
-          val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
-          val storeType = "ColumnarStore" + entryType.substring(entryType.indexOf("_")) // TODO: fix this hack                              
-          s"""|val ${lhsName} = new PartitionContainer[$entryType](
-              |  ctx.rdd.map { case (id, localCtx) =>
-              |    new ColumnarPartition(id, localCtx.${rhsName}.buffers) 
-              |  }.collect.map(s => new $storeType(s.buffers))
-              |)""".stripMargin
+          val lhsMap = mapInfo(lhsName)
+          if (lhsMap.keys.size == 0) {
+            s"""|val ${lhsName} = ctx.rdd.map(_._2.${rhsName}).collect.reduce(_ + _)""".stripMargin
+          }
+          else {
+            val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
+            val storeType = "ColumnarStore" + entryType.substring(entryType.indexOf("_")) // TODO: fix this hack                              
+            s"""|val ${lhsName} = new PartitionContainer[$entryType](
+                |  ctx.rdd.map { case (id, localCtx) =>
+                |    new ColumnarPartition(id, localCtx.${rhsName}.buffers) 
+                |  }.collect.map(s => new $storeType(s.buffers))
+                |)""".stripMargin
+          }
         }.mkString("\n")
         "//  --- LOCAL BLOCK ---\n" + 
         List(
@@ -692,7 +698,10 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
             case head :: tail => s"(${caseList(tail)}, ($id, $head))"
           }
         }
-        val strRenaming = distNames.map(n => s"val $n = localCtx.$n").mkString("\n")
+        val strRenaming = distNames.map(n => 
+          if (mapInfo(n).keys.size == 0) s"var $n = localCtx.$n"            
+          else s"val $n = localCtx.$n"
+        ).mkString("\n")
         val lmsDistBlock = liftBlockToLMS(distBlock)
         val strDistBlock = impl.emitTrigger(lmsDistBlock, null, null)
         s"""|//  --- DISTRIBUTED BLOCK ---
@@ -716,7 +725,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   }
 
   protected def emitDistributedMap(m: MapInfo): String = 
-    if (m.keys.size == 0) sys.error("Distributed map without output variables")
+    if (m.keys.size == 0) createVarDefinition(m.name, m.tp) + ";"
     else {
       val sym = ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]]
       impl.codegen.generateStore(sym)
