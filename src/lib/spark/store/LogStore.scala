@@ -13,22 +13,22 @@ trait WriteStore[E <: MapEntry] extends ReadStore[E] { this: ColumnarStore =>
 
 class ColumnarStore(val buffers: Array[Buffer])
 
-class ColumnarPartition(val partId: Int, val buffers: Array[Buffer])
+class ColumnarPartition(val id: Int, val buffers: Array[Buffer])
 
 object ColumnarPartition {
   import com.esotericsoftware.kryo.io.{Input, Output}
 
   def write(out: Output, store: ColumnarPartition) = {
-    out.writeInt(store.partId)
+    out.writeInt(store.id)
     out.writeInt(store.buffers.length)
     store.buffers foreach { b => Buffer.write(out, b) }
   }
 
   def read(in: Input): ColumnarPartition = {
-    val partId = in.readInt()
+    val id = in.readInt()
     val length = in.readInt()
     val buffers = Array.fill[Buffer](length)(Buffer.read(in))
-    new ColumnarPartition(partId, buffers)
+    new ColumnarPartition(id, buffers)
   }
 }
 

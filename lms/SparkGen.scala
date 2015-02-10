@@ -580,10 +580,12 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       }
     }
 
-    ctx0 = mapInfo.map { case (_, MapInfo(name, tp, keys, _, _, storeType, _)) =>  
+    ctx0 = mapInfo.map { case (_, MapInfo(name, tp, keys, _, locality, storeType, _)) =>  
       if (keys.size == 0) {
         val manifest = man(tp)
-        val rep = impl.named(name, false)(manifest)
+        // hack -- distributed variables are prefixed by "localCtx."
+        val prefix = if (locality == LocalExp) "" else "localCtx." 
+        val rep = impl.named(prefix + name, false)(manifest)
         rep.emitted = true
         (name, (rep, keys, tp))
       } 
@@ -608,7 +610,8 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   }
 
   def emitBlocks(blocks: List[StatementBlock]): String = {
-    val linkMapNames = linkMaps.map(_.name)
+    val linkMapNames = linkMaps.map(_.name)    
+    val unifiedBlocks = collection.mutable.Map[String, (String, Int)]()
     blocks.map { 
       case StatementBlock(LocalMode, stmts) =>
         val (actions, others) = stmts.partition (_.rhsTransformer match {
@@ -630,86 +633,151 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         val lmsLocalBlock = liftBlockToLMS(localBlock)
         val strLocalBlock = block(impl.emitTrigger(lmsLocalBlock, null, null))
 
-        // Push Scatter/Repartition to the end of the statement list
-        val strScatterBlock = scatterStmts.map { stmt =>
-          val lhsName = stmt.lhsMap.name
-          val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
-          val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
-          val storeType = impl.codegen.storeType(ctx0(lhsName)._1)
-          s"""|val ${lhsName} = ctx.sc.parallelize(
-              |  ${rhsName}.partitions.zipWithIndex.map { case (store, i) => 
-              |    new ColumnarPartition(i, store.buffers)
-              |  }, numPartitions).mapPartitions(_.map { s => 
-              |    (s.partId, new $storeType(s.buffers))
+        // SCATTER BLOCK
+        val strScatterBlock = if (scatterStmts.size == 0) "" else {
+          val unifiedId = fresh("unified")
+          val wrap = scatterStmts.zipWithIndex.map { case (stmt, i) => {
+            val lhsName = stmt.lhsMap.name
+            val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+            unifiedBlocks += ((lhsName, (unifiedId, i)))
+            s"new ColumnarPartition(i, ${rhsName}.partitions(i).buffers)"
+          }}.mkString(",\n")
+          val unwrap = scatterStmts.zipWithIndex.map { case (stmt, i) => {
+            val lhsName = stmt.lhsMap.name
+            val storeType = impl.codegen.storeType(ctx0(lhsName)._1)
+            s"new $storeType(stores($i).buffers)"
+          }}.mkString(",\n")
+          s"""|val ${unifiedId} = ctx.sc.parallelize(
+              |  Array.tabulate(numPartitions)(i => 
+              |    Array[ColumnarPartition]( 
+              |${ind(wrap, 3)}
+              |    )
+              |  ), numPartitions)
+              |  .mapPartitions(_.map { stores =>
+              |    (stores.head.id, 
+              |      ( 
+              |${ind(unwrap, 4)}
+              |      )
+              |    ) 
               |  }, true)""".stripMargin
-        }.mkString("\n")
+        }
 
-        val strRepartitionBlock = repartStmts.map { stmt =>
-          val lhsName = stmt.lhsMap.name
-          val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
-          val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
-          val storeType = "ColumnarStore" + entryType.substring(entryType.indexOf("_")) // TODO: fix this hack                              
-          s"""|val ${lhsName} = 
-              |  ctx.rdd.mapPartitions(_.toList.flatMap { case (_, localCtx) => 
-              |    localCtx.${rhsName}.partitions.zipWithIndex.map { 
-              |      case (store, i) => (i, new ColumnarPartition(i, store.buffers))
-              |    }  
-              |  }.iterator, false).groupByKey(ctx.partitioner)
-              |  .mapValues { case stores => 
-              |    new PartitionContainer[$entryType](
-              |      stores.map(s => new $storeType(s.buffers)).toArray)
-              |  }""".stripMargin
-        }.mkString("\n")
-
-        // Pull Gather to the beginning of the statement list
-        val strGatherBlock = gatherStmts.map { stmt =>
-          val lhsName = stmt.lhsMap.name
-          val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
-          val lhsMap = mapInfo(lhsName)
-          if (lhsMap.keys.size == 0) {
-            s"""|val ${lhsName} = ctx.rdd.map(_._2.${rhsName}).collect.reduce(_ + _)""".stripMargin
-          }
-          else {
+        // REPARTITION BLOCK
+        val strRepartitionBlock = if (repartStmts.size == 0) "" else {
+          val unifiedId = fresh("unified")
+          val wrap = repartStmts.zipWithIndex.map { case (stmt, i) => {
+            val lhsName = stmt.lhsMap.name
+            val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name          
+            unifiedBlocks += ((lhsName, (unifiedId, i)))
+            s"""|localCtx.${rhsName}.partitions.zipWithIndex.map {
+                |  case (store, i) => (i, new ColumnarPartition($i, store.buffers))
+                |}""".stripMargin
+          }}.mkString(" ++ \n")
+          val unwrap = repartStmts.zipWithIndex.map { case (stmt, i) => {
+            val lhsName = stmt.lhsMap.name
+            val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
-            val storeType = "ColumnarStore" + entryType.substring(entryType.indexOf("_")) // TODO: fix this hack                              
-            s"""|val ${lhsName} = new PartitionContainer[$entryType](
-                |  ctx.rdd.map { case (id, localCtx) =>
-                |    new ColumnarPartition(id, localCtx.${rhsName}.buffers) 
-                |  }.collect.map(s => new $storeType(s.buffers))
-                |)""".stripMargin
+            val storeType = "ColumnarStore" + entryType.substring(entryType.indexOf("_")) // TODO: fix this hack
+            s"""|new PartitionContainer[$entryType](
+                |  storeGroups($i).map(s => new $storeType(s.buffers)).toArray)""".stripMargin
+          }}.mkString(",\n")
+          s"""|val ${unifiedId} = 
+              |  ctx.rdd.mapPartitions(_.toList.flatMap { case (_, localCtx) =>
+              |${ind(wrap, 2)}
+              |  }.iterator, false)
+              |  .groupByKey(ctx.partitioner)
+              |  .mapValues(stores => {
+              |    val storeGroups = stores.groupBy(_.id)
+              |    (
+              |${ind(unwrap, 3)}
+              |    )
+              |  })""".stripMargin
+        }
+
+        // GATHER BLOCK
+        val strGatherBlock = {
+          val (singletons, nonSingletons) = gatherStmts.partition(_.lhsMap.keys.size == 0)
+          val singletonBlock = if (singletons.size == 0) "" else {
+            val unifiedId = fresh("unified")
+            val wrap = singletons.map { stmt =>
+              val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+              s"localCtx.${rhsName}"
+            }.mkString(",\n")
+            val unwrap = singletons.zipWithIndex.map { case (stmt, i) => 
+              val cast = if (stmt.lhsMap.tp == TypeLong) ".toLong" else ""
+              s"${unifiedId}.map(_($i)).reduce(_ + _)${cast}"
+            }.mkString(",\n")
+            val lhsTuple = "(" + singletons.map(_.lhsMap.name).mkString(", ") + ")"
+            s"""|val $unifiedId = ctx.rdd.map { case (id, localCtx) =>
+                |  Array(
+                |${ind(wrap, 2)}  
+                |  ) 
+                |}.collect
+                |val $lhsTuple = 
+                |  (
+                |${ind(unwrap, 2)}
+                |  )""".stripMargin
           }
-        }.mkString("\n")
+          val nonSingletonBlock = if (nonSingletons.size == 0) "" else {
+            val unifiedId = fresh("unified")
+            val wrap = nonSingletons.map { stmt =>
+              val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+              s"new ColumnarPartition(id, localCtx.${rhsName}.buffers)"
+            }.mkString(",\n")
+            val unwrap = nonSingletons.zipWithIndex.map { case (stmt, i) =>
+              val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+              val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
+              val storeType = "ColumnarStore" + entryType.substring(entryType.indexOf("_")) // TODO: fix this hack
+              s"""|new PartitionContainer[$entryType](${unifiedId}.map(stores =>
+                  |  new $storeType(stores($i).buffers)))""".stripMargin
+            }.mkString(",\n")
+            val lhsTuple = "(" + nonSingletons.map(_.lhsMap.name).mkString(", ") + ")"
+            s"""|val $unifiedId = ctx.rdd.map { case (id, localCtx) =>
+                |  Array[ColumnarPartition](
+                |${ind(wrap, 2)}  
+                |  ) 
+                |}.collect
+                |val $lhsTuple = 
+                |  (
+                |${ind(unwrap, 2)}
+                |  )""".stripMargin
+          }
+          singletonBlock + "\n" + nonSingletonBlock
+        }
+
         "//  --- LOCAL BLOCK ---\n" + 
         List(
-          strGatherBlock, 
-          strLocalBlock, 
-          strScatterBlock, 
+          strGatherBlock,           // Pull Gather to the beginning
+          strLocalBlock,            
+          strScatterBlock,          // Push Scatter/Repartition to the end
           strRepartitionBlock
         ).filterNot(_ == "").mkString("\n") + "\n"
 
       case distBlock @ StatementBlock(DistributedMode, statements) =>
         val mapNames = distBlock.maps.map(_.name).toList
         val (inputNames, distNames) = mapNames.partition(linkMapNames.contains)
-        val zipList = inputNames.map(n => s".zip($n)").mkString
-        def caseList(input: List[String]): String = {
-          val id = fresh("id")
-          input match {
-            case Nil => s"($id, localCtx)"
-            case head :: tail => s"(${caseList(tail)}, ($id, $head))"
-          }
+        val unifiedId = {
+          val ids = inputNames.map(n => unifiedBlocks(n)._1).toSet
+          if (ids.size == 0) sys.error("No unified block")
+          else if (ids.size > 1) sys.error("More than one unified blocks")
+          else ids.head
         }
-        val strRenaming = distNames.map(n => 
-          if (mapInfo(n).keys.size == 0) s"var $n = localCtx.$n"            
-          else s"val $n = localCtx.$n"
-        ).mkString("\n")
+        val strRenaming = distNames.filter(n => mapInfo(n).keys.size > 0)
+                                   .map(n => s"val $n = localCtx.$n")
+                                   .mkString("\n")
         val lmsDistBlock = liftBlockToLMS(distBlock)
         val strDistBlock = impl.emitTrigger(lmsDistBlock, null, null)
+
+        val id1 = fresh("id")
+        val id2 = fresh("id")
+        val caseMaps = inputNames.map(n => (unifiedBlocks(n)._2, n))
+                                 .sortBy(_._1).map(_._2).mkString(", ")
         s"""|//  --- DISTRIBUTED BLOCK ---
-            |ctx.rdd${zipList}.foreach {
-            |  case ${caseList(inputNames.reverse)} =>
+            |ctx.rdd.zip($unifiedId).foreach {
+            |  case (($id1, localCtx), ($id2, ($caseMaps))) =>
             |${ind(strRenaming, 2)} 
             |${ind(strDistBlock, 2)} 
-            |}""".stripMargin        
+            |}""".stripMargin
     }.mkString("\n")
   }
 
@@ -717,7 +785,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     maps.map(f).mkString("\n")
 
   protected def emitLocalMap(m: MapInfo): String = {
-    if (m.keys.size == 0) createVarDefinition(m.name, m.tp) + ";"
+    if (m.keys.size == 0) createVarDefinition(m.name, m.tp)
     else {
       val sym = ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]]
       impl.codegen.generateStore(sym)
@@ -725,7 +793,9 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   }
 
   protected def emitDistributedMap(m: MapInfo): String = 
-    if (m.keys.size == 0) createVarDefinition(m.name, m.tp) + ";"
+    if (m.keys.size == 0) 
+      // hack -- distributed variables are prefixed by "localCtx."
+      createVarDefinition(m.name.stripPrefix("localCtx."), m.tp)
     else {
       val sym = ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]]
       impl.codegen.generateStore(sym)
