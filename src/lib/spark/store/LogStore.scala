@@ -40,3 +40,11 @@ class PartitionContainer[E <: MapEntry](
 
   def clear(): Unit = partitions foreach { _.clear() } 
 }
+
+
+class WrapperIPA(val id: Int, val pArray: Array[ColumnarPartition])
+class WrapperIDA(val id: Int, val dArray: Array[Double])
+class WrapperIDAPA(val id: Int, val dArray: Array[Double], val pArray: Array[ColumnarPartition])
+// class WrapperDA(val dArray: Array[Double])
+// class WrapperPA(val pArray: Array[ColumnarPartition])
+// class WrapperDAPA(val dArray: Array[Double], val pArray: Array[ColumnarPartition])

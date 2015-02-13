@@ -17,6 +17,7 @@ sealed abstract class Type extends Tree {
   def toCpp: String = toString
   def toCppRefType: String = toCpp
   def simpleName: String = toString.substring(0, 1).toUpperCase 
+  def castScala: String = "to" + toScala
 }
 
 // case object TypeChar extends Type /*  8 bit */ { 

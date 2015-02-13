@@ -144,7 +144,7 @@ object TypeCheck extends (M3.System => M3.System) {
         val (ko, ki) = ks.zipWithIndex.partition{
           case (k, i) => locked.contains(k._1)
         }
-        if(ks.size > 0 && ki.size > 0)
+        if (ks.size > 0 && ki.size > 0)
           Mul(MapRef(n, tp, ks), re(r, locked ++ ks.map(_._1).toSet))
         else
           Mul(MapRef(n, tp, ks), re(r, locked))
@@ -157,6 +157,15 @@ object TypeCheck extends (M3.System => M3.System) {
               re(r.rename(n, f), locked + f))
       }
       case AggSum(ks, e) => AggSum(ks, re(e, locked ++ ks.map(_._1).toSet))
+      case Exists(e) => 
+        val ovars = e.schema._2 
+        Exists(re(e, locked ++ ovars.map(_._1).toSet))
+      case Repartition(ks, e) => 
+        val ovars = e.schema._2 
+        Repartition(ks, re(e, locked ++ ovars.map(_._1).toSet))
+      case Gather(e) =>   
+        val ovars = e.schema._2 
+        Gather(re(e, locked ++ ovars.map(_._1).toSet))      
     }
     def rst(s: Stmt, locked: Set[String] = Set()): Stmt = s match {
       case StmtMap(m, e, op, in) => 
