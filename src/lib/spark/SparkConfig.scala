@@ -22,7 +22,7 @@ class SparkConfig(input: InputStream) {
   def sparkConf(): SparkConf = {
     val conf = new SparkConf()
       .setMaster(sparkMasterURL)    
-      // .setSparkHome(sparkHomeDir)
+      .setSparkHome(sparkHomeDir)
       .setJars(sparkJars)      
       .set("spark.eventLog.enabled", "true")
       .set("spark.default.parallelism", "16")

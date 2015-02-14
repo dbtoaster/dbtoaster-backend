@@ -646,16 +646,23 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         val strScatterBlock = if (scatterStmts.size == 0) "" else {
           val unifiedId = fresh("unified")
           val (singletons, partitions) = 
-            scatterStmts.partition(_.lhsMap.keys.size == 0)                    
-          val wrapS = singletons.zipWithIndex.map { case (stmt, i) => {
+            scatterStmts.partition(_.lhsMap.keys.size == 0)
+          val (singletonsL, singletonsD) = 
+            singletons.partition(_.lhsMap.tp == TypeLong)
+          val wrapL = singletonsL.zipWithIndex.map { case (stmt, i) => {
               val lhsName = stmt.lhsMap.name
               val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
               unifiedBlocks += ((lhsName, (unifiedId, i)))
               s"${rhsName}"
             }}
-          val unwrapS = singletons.zipWithIndex.map { case (stmt, i) => {
-              s"w.dArray($i).${stmt.lhsMap.tp.castScala}"
-            }}
+          val wrapD = singletonsD.zipWithIndex.map { case (stmt, i) => {
+              val lhsName = stmt.lhsMap.name
+              val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+              unifiedBlocks += ((lhsName, (unifiedId, i)))
+              s"${rhsName}"
+            }}  
+          val unwrapL = (0 until singletonsL.length).map(i => s"w.lArray($i)").toList
+          val unwrapD = (0 until singletonsD.length).map(i => s"w.dArray($i)").toList
           val wrapP = partitions.zipWithIndex.map { case (stmt, i) => {
             val lhsName = stmt.lhsMap.name
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
@@ -667,35 +674,28 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
             val storeType = impl.codegen.storeType(ctx0(lhsName)._1)
             s"new $storeType(w.pArray($i).buffers)"
           }}
-          val wrap = 
-            if (!wrapS.isEmpty && !wrapP.isEmpty) 
-              s"""|new WrapperIDAPA(
-                  |  i,
-                  |  Array[Double](
-                  |${ind(wrapS.mkString(",\n"), 2)} 
-                  |  ),
-                  |  Array[ColumnarPartition](
-                  |${ind(wrapP.mkString(",\n"), 2)}   
-                  |  )
-                  |)""".stripMargin
-            else if (!wrapS.isEmpty) 
-              s"""|new WrapperIDA(
-                  |  i,
-                  |  Array[Double](
-                  |${ind(wrapS.mkString(",\n"), 2)} 
-                  |  )
-                  |)""".stripMargin
-            else 
-              s"""|new WrapperIPA(
-                  |  i, 
-                  |  Array[ColumnarPartition](
-                  |${ind(wrapP.mkString(",\n"), 2)}   
-                  |  )
-                  |)""".stripMargin
+          val wrapArgs = List(
+              "id = i",              
+              if (wrapL.isEmpty) "" else s"""|lArray = Array[Long](
+                                             |${ind(wrapL.mkString(",\n"))} 
+                                             |)""".stripMargin,
+              if (wrapD.isEmpty) "" else s"""|dArray = Array[Double](
+                                             |${ind(wrapD.mkString(",\n"))} 
+                                             |)""".stripMargin,
+              if (wrapP.isEmpty) "" else s"""|pArray = Array[ColumnarPartition](
+                                             |${ind(wrapP.mkString(",\n"))}
+                                             |)""".stripMargin
+            ).filter(_ != "").mkString(",\n")
+          val wrap = s"""|new StoreWrapper(
+                         |${ind(wrapArgs)} 
+                         |)""".stripMargin
           val unwrap = 
             List("w.id",
-              if (unwrapS.isEmpty) "" else s"""|(
-                                               |${ind(tuple(unwrapS, "\n"))}
+              if (unwrapL.isEmpty) "" else s"""|(
+                                               |${ind(tuple(unwrapL, "\n"))}
+                                               |)""".stripMargin,
+              if (unwrapD.isEmpty) "" else s"""|(
+                                               |${ind(tuple(unwrapD, "\n"))}
                                                |)""".stripMargin,
               if (unwrapP.isEmpty) "" else s"""|(
                                                |${ind(tuple(unwrapP, "\n"))}
@@ -751,13 +751,20 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
           val unifiedId = fresh("unified")
           val (singletons, partitions) = 
             gatherStmts.partition(_.lhsMap.keys.size == 0)
-          val wrapS = singletons.map { stmt =>
+          val (singletonsL, singletonsD) = 
+            singletons.partition(_.lhsMap.tp == TypeLong)
+          val wrapL = singletonsL.map { stmt =>
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             s"localCtx.${rhsName}"
           }
-          val unwrapS = singletons.zipWithIndex.map { case (stmt, i) => 
-            s"${unifiedId}S.map(_($i)).reduce(_ + _).${stmt.lhsMap.tp.castScala}"
-          }
+          val wrapD = singletonsD.map { stmt =>
+            val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
+            s"localCtx.${rhsName}"
+          }          
+          val unwrapL = (0 until singletonsL.length).map(i => 
+            s"${unifiedId}L.map(_($i)).reduce(_ + _)").toList
+          val unwrapD = (0 until singletonsD.length).map(i => 
+            s"${unifiedId}D.map(_($i)).reduce(_ + _)").toList
           val wrapP = partitions.map { stmt =>
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             s"new ColumnarPartition(id, localCtx.${rhsName}.buffers)"
@@ -769,54 +776,59 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
             s"""|new PartitionContainer[$entryType](${unifiedId}P.map(stores =>
                 |  new $storeType(stores($i).buffers)))""".stripMargin
           }
-          val wrap = 
-            if (!wrapS.isEmpty && !wrapP.isEmpty) 
-              s"""|new WrapperIDAPA(
-                  |  id, 
-                  |  Array[Double](
-                  |${ind(wrapS.mkString(",\n"), 2)}
-                  |  ),
-                  |  Array[ColumnarPartition](
-                  |${ind(wrapP.mkString(",\n"), 2)}
-                  |  )
-                  |)""".stripMargin
-            else if (!wrapS.isEmpty)
-              s"""|new WrapperIDA(
-                  |  id, 
-                  |  Array[Double](
-                  |${ind(wrapS.mkString(",\n"), 2)}
-                  |  )
-                  |)""".stripMargin
-            else 
-              s"""|new WrapperIPA(
-                  |  id, 
-                  |  Array[ColumnarPartition](
-                  |${ind(wrapP.mkString(",\n"), 2)}
-                  |  )
-                  |)""".stripMargin
+          val wrapArgs = List(
+              "id = id",              
+              if (wrapL.isEmpty) "" else s"""|lArray = Array[Long](
+                                             |${ind(wrapL.mkString(",\n"))} 
+                                             |)""".stripMargin,
+              if (wrapD.isEmpty) "" else s"""|dArray = Array[Double](
+                                             |${ind(wrapD.mkString(",\n"))} 
+                                             |)""".stripMargin,
+              if (wrapP.isEmpty) "" else s"""|pArray = Array[ColumnarPartition](
+                                             |${ind(wrapP.mkString(",\n"))}
+                                             |)""".stripMargin
+            ).filter(_ != "").mkString(",\n")
+          val wrap = s"""|new StoreWrapper(
+                         |${ind(wrapArgs)} 
+                         |)""".stripMargin
+          val extract = List(
+              if (wrapL.isEmpty) "" else s"val ${unifiedId}L = $unifiedId.map(_.lArray)",
+              if (wrapD.isEmpty) "" else s"val ${unifiedId}D = $unifiedId.map(_.dArray)",
+              if (wrapP.isEmpty) "" else s"val ${unifiedId}P = $unifiedId.map(_.pArray)"
+            ).filter(_ != "").mkString("\n")
           val unwrap = List(
-              if (unwrapS.isEmpty) "" else tuple(unwrapS, "\n"),
-              if (unwrapP.isEmpty) "" else tuple(unwrapP, "\n")
+              if (unwrapL.isEmpty) "" else {
+                (for (g <- (singletonsL.zip(unwrapL)).grouped(10)) yield {
+                  val (lhs, rhs) = g.unzip
+                  s"""|val ${tuple(lhs.map(_.lhsMap.name))} = (
+                      |${ind(tuple(rhs, "\n"))}
+                      |)""".stripMargin
+                }).mkString("\n")
+              },            
+              if (unwrapD.isEmpty) "" else {
+                (for (g <- (singletonsD.zip(unwrapD)).grouped(10)) yield {
+                  val (lhs, rhs) = g.unzip
+                  s"""|val ${tuple(lhs.map(_.lhsMap.name))} = (
+                      |${ind(tuple(rhs, "\n"))}
+                      |)""".stripMargin
+                }).mkString("\n")
+              },
+              if (unwrapP.isEmpty) "" else {
+                (for (g <- (partitions.zip(unwrapP)).grouped(10)) yield {
+                  val (lhs, rhs) = g.unzip
+                  s"""|val ${tuple(lhs.map(_.lhsMap.name))} = (
+                      |${ind(tuple(rhs, "\n"))}
+                      |)""".stripMargin
+                }).mkString("\n")
+              }
             ).filterNot(_ == "").mkString(",\n")
-          val extract = if (!wrapS.isEmpty && !wrapP.isEmpty) 
-              s"val (${unifiedId}S, ${unifiedId}P) = $unifiedId.map(w => (w.dArray, w.pArray)).unzip"
-            else if (!wrapS.isEmpty) s"val ${unifiedId}S = $unifiedId.map(_.dArray)"
-            else if (!wrapP.isEmpty) s"val ${unifiedId}P = $unifiedId.map(_.pArray)"
-            else sys.error("No gather maps")
-          val lhsTuple = "(" + List(
-              if (unwrapS.isEmpty) "" else tuple(singletons.map(_.lhsMap.name)),
-              if (unwrapP.isEmpty) "" else tuple(partitions.map(_.lhsMap.name))
-            ).filterNot(_ == "").mkString("), (") + ")"
           s"""|val $unifiedId = ctx.rdd.map { case (id, localCtx) =>
               |  (
               |${ind(wrap, 2)}  
               |  ) 
               |}.collect
               |$extract
-              |val $lhsTuple =
-              |  (
-              |${ind(unwrap, 2)}
-              |  )""".stripMargin
+              |$unwrap""".stripMargin
         }
 
         "//  --- LOCAL BLOCK ---\n" + 
@@ -840,12 +852,20 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
         val (singletonNames, partitionNames) = 
           inputNames.partition(n => mapInfo(n).keys.size == 0)
+        val (singletonLNames, singletonDNames) = 
+          singletonNames.partition(n => mapInfo(n).tp == TypeLong)  
         val zipList = unifiedIds.mkString(").zip(") 
 
         val caseMaps = (
-          (if (singletonNames.size == 0) Nil
+          (if (singletonLNames.size == 0) Nil
            else List(
-             "(" + tuple(singletonNames.map(n => (unifiedBlocks(n)._2, n))
+             "(" + tuple(singletonLNames.map(n => (unifiedBlocks(n)._2, n))
+                                        .sortBy(_._1).map(_._2)) + ")"))
+          ++
+
+          (if (singletonDNames.size == 0) Nil
+           else List(
+             "(" + tuple(singletonDNames.map(n => (unifiedBlocks(n)._2, n))
                                        .sortBy(_._1).map(_._2)) + ")"))
           ++
           (if (partitionNames.size == 0) Nil

@@ -27,7 +27,7 @@ Seq(
 
 // --------- Dependencies
 libraryDependencies ++= Seq(
-  "org.apache.spark"  %% "spark-core"     % "1.1.1",
+  "org.apache.spark"  %% "spark-core"     % "1.2.1",
   "org.scala-lang"     % "scala-actors"   % scalaVersion.value, // to compile legacy Scala
   "org.scala-lang"     % "scala-compiler" % scalaVersion.value,
   "org.scalatest"     %% "scalatest"      % "2.0" % "test"

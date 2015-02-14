@@ -140,32 +140,15 @@ object TypeCheck extends (M3.System => M3.System) {
   // Example: Mul(Lift(a,3),Mul(a,Mul(Lift(a,2),a))) => 6
   def renameLifts(s0: System) = {
     def re(e: Expr, locked: Set[String]): Expr = e.replace {
-      case Mul(MapRef(n, tp, ks), r) =>
-        val (ko, ki) = ks.zipWithIndex.partition{
-          case (k, i) => locked.contains(k._1)
-        }
-        if (ks.size > 0 && ki.size > 0)
-          Mul(MapRef(n, tp, ks), re(r, locked ++ ks.map(_._1).toSet))
-        else
-          Mul(MapRef(n, tp, ks), re(r, locked))
-      case Mul(Lift(n, e), r) if !locked.contains(n) => e match {
-        case Ref(m) if (locked.contains(m)) => 
-          Mul(re(Lift(n, e), locked), re(r, locked))
-        case _ => 
-          val f = fresh("lift")
-          Mul(Lift(f, re(e.rename(n, f), locked + f)), 
-              re(r.rename(n, f), locked + f))
-      }
-      case AggSum(ks, e) => AggSum(ks, re(e, locked ++ ks.map(_._1).toSet))
-      case Exists(e) => 
-        val ovars = e.schema._2 
-        Exists(re(e, locked ++ ovars.map(_._1).toSet))
-      case Repartition(ks, e) => 
-        val ovars = e.schema._2 
-        Repartition(ks, re(e, locked ++ ovars.map(_._1).toSet))
-      case Gather(e) =>   
-        val ovars = e.schema._2 
-        Gather(re(e, locked ++ ovars.map(_._1).toSet))      
+      case AggSum(ks, sub0) => 
+        val iv = sub0.schema._1
+        val lck = locked ++ (iv ++ ks).map(_._1).toSet
+        val sub = re(sub0, lck)
+        val ov = sub.schema._2.map(_._1).toSet
+        val lifts = sub.collect { case Lift(v, _) => List(v) }
+        val mapping = lifts.filter(l => ov.contains(l) && !lck.contains(l))
+                           .map((_, fresh("lift"))).toMap
+        AggSum(ks, sub.rename(mapping))
     }
     def rst(s: Stmt, locked: Set[String] = Set()): Stmt = s match {
       case StmtMap(m, e, op, in) => 

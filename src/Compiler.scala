@@ -260,6 +260,7 @@ object Compiler {
                                 exec_sc)(List(out)))._1
           if (t_comp != null) t_comp(t2)
           if (lang == LANG_SPARK_LMS) {
+            exec_vm = true
             val pkgDir = new File("./pkg")
             if (!pkgDir.exists) pkgDir.mkdirs
             Utils.exec(Array[String](
