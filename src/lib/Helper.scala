@@ -139,7 +139,7 @@ object Helper {
           if (res0 == null) res0 = res
           else assert(res0 == res, s"Inconsistent results: $res0 != $res")
         }
-        if (mode == 1) println("SAMPLE = " + dataset + "," + (t.ns / 1000) + "," + t.count + "," + t.skip + "," + batchSize)
+        if (mode == 1) println("SAMPLE=" + dataset + "," + (t.ns / 1000) + "," + t.count + "," + t.skip + "," + batchSize)
         else if (mode < 0) println("Time: " + t)
       }
       if (mode != 1 && res0 != null && op != null) op(res0)

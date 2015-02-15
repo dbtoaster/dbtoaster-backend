@@ -297,8 +297,8 @@ object UnitTest {
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
       val qid = sys.queries.map{_.name}.zipWithIndex.toMap
       val qt = sys.queries.map{q=>(q.name, (q.keys.map(_._2), q.tp)) }.toMap
-      val body = "import scala.language.implicitConversions\n"+
-      "//implicit def dateConv(d:Long) = new java.util.GregorianCalendar((d/10000).toInt,((d%10000)/100).toInt - 1, (d%100).toInt).getTime;\n"+
+      val body = 
+      "import scala.language.implicitConversions\n"+
       "implicit def strConv(d:Long) = \"\"+d\n"+ // fix for TPCH22
       q.sets.map { case (sz,set) =>
         (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-m0\",\"-d"+sz+"\",\"-b" + Compiler.exec_bs + "\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
