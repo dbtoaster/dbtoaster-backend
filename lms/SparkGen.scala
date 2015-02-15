@@ -352,10 +352,19 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
       def mapping = equiMaps.mapValues(_.head)
 
+      def invalidate(name: String): Unit = {
+        equiMaps = (equiMaps - name).mapValues(_.filterNot(_ == name))
+        mapDefs = mapDefs - name
+        val affected = mapDefs.flatMap { case (n, t) => 
+          val rhsMaps = t.expr.collect { case m: MapRef => List(m.name) }.toSet
+          if (rhsMaps.contains(name)) List(n) else Nil
+        }
+        affected.foreach(invalidate)
+      }
+
       def rewrite(map: MapRef, op: OpMap, transformer: Transformer): Unit = {
-        // invalidate map's definition
-        equiMaps = (equiMaps - map.name).mapValues(_.filterNot(_ == map.name))
-        mapDefs = mapDefs - map.name
+        // invalidate map definitions
+        invalidate(map.name)
         // rename RHS expression
         transformer.rename(mapping)
 
