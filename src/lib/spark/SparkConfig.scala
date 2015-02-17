@@ -27,7 +27,7 @@ class SparkConfig(input: InputStream) {
       .set("spark.eventLog.enabled", "true")
       .set("spark.default.parallelism", "16")
       .set("spark.akka.threads", "16")      
-//      .set("spark.akka.frameSize", "1024")
+      .set("spark.akka.frameSize", "1024")
       .set("spark.broadcast.compress", "false")
       .set("spark.shuffle.compress", "false")
       .set("spark.shuffle.spill", "false")
