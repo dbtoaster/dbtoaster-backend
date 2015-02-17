@@ -336,7 +336,7 @@ object UnitTest {
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
     // Append correctness spec and move to test/gen/
-    if (genSpec) inject("import java.util.Date\n",sp,path_sources)
+    if (genSpec) inject("import akka.actor.Actor\n",sp,path_sources)
   }
 
   def genQuerySpark(qName: String, q: QueryTest, p: Printer, m3: String, mode: String, genSpec: Boolean = true) {

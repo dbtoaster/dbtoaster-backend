@@ -197,6 +197,12 @@ trait IScalaGen extends CodeGen {
         val preg0 = regexpCacheMap.getOrElse(regex, fresh("preg"))
         regexpCacheMap.update(regex,preg0)
         (as1.tail, "preg_match(" + preg0 + ",")
+      case "date_part" => as1.head.asInstanceOf[Const].v.toLowerCase match {
+          case "year"  => (as1.tail, "date_year" + "(")
+          case "month" => (as1.tail, "date_month" + "(")
+          case "day"   => (as1.tail, "date_day" + "(")
+          case p       => throw new Exception("Invalid date part: " + p)
+        }
       case _ => (as1, fn1 + "(")
     })
     // hoist constants resulting from function application
@@ -767,7 +773,7 @@ trait IScalaGen extends CodeGen {
   // Helper that contains the main and stream generator
   private def helper(s0: System) =
     "import ddbt.lib._\n" + additionalImports +
-    "\nimport akka.actor.Actor\nimport java.util.Date\n\n" +
+    "\nimport akka.actor.Actor\n\n" +
     "object " + cls + " {\n" + 
     ind(
       "import Helper._\nval precision = 7; " + 

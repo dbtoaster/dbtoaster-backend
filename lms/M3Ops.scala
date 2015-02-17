@@ -105,10 +105,20 @@ trait M3OpsExp extends BaseExp with EffectExp
                 args(2).asInstanceOf[Rep[Long]])
     //case "regexp_match" => regexp_match(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[String]])
     //case "date_part" => date_part(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[java.util.Date]])
+
     case "date" => args(0) match {
       case Const(strDate) => Const(ddbt.lib.Functions.Udate(strDate.asInstanceOf[String]))
       case _ => M3Apply(fn, args, man(tp))
     }
+    case "date_part" => args(0).asInstanceOf[Rep[String]] match {
+      case Const(s: String) => s.toLowerCase match {
+        case "year"  => M3Apply("date_year", args.tail, man(tp))
+        case "month" => M3Apply("date_month", args.tail, man(tp))
+        case "day"   => M3Apply("date_day", args.tail, man(tp))
+        case p       => throw new Exception("Invalid date part: " + p)
+      }
+      case _ => throw new Exception("Unknown date_part argument")
+    }    
     case _ => M3Apply(fn, args, man(tp)) // fallback for large or unknown functions
   }
 

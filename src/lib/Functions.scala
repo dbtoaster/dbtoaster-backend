@@ -43,12 +43,11 @@ object Functions {
   def Ulistmax(v1: Long, v2: Long): Long = Math.max(v1, v2)
   def Ulistmax(v1: Double, v2: Double): Double = Math.max(v1, v2)
 
-  def Udate_part(field: String, date: Long): Long = field.toLowerCase match {
-    case "year"  => (date / 10000)
-    case "month" => (date / 100) % 100
-    case "day"   => (date % 100)
-    case p       => throw new Exception("Invalid date part: " + p)
-  }
+  def Udate_year(date: Long)  = date / 10000
+  def Udate_month(date: Long) = (date / 100) % 100
+  def Udate_day(date: Long)   = date % 100
+
+  def Udate_part(field: String, date: Long): Long = -1L   // not used
 
   def Usubstring(s: String, b: Long, e: Long = -1L) = 
     if (e == -1L) s.substring(b.toInt) else s.substring(b.toInt, e.toInt)
