@@ -504,9 +504,17 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       val (stmts, subexp) = prepareExpression(e)
       (stmts, TupleLift(ns, subexp))    
     case Repartition(ks, e) => 
-      val (stmts, subexp) = prepareExpression(e)
+      val (stmts, subexp0) = prepareExpression(e)
       val (iv, ov) = expr.schema
       if (iv != Nil) sys.error("Repartitioning a map with input vars: " + e)
+      val subexp = subexp0 match {
+        case a @ Add(l, r) =>
+          val newAdd = Add(l, r)
+          newAdd.tp = a.tp
+          newAdd.agg = a.schema._2
+          newAdd
+        case _ => subexp0
+      }
       subexp.locality match {
         case Some(LocalExp) =>
           val scatterStmts = Statement.createScatter(subexp, ks)
@@ -517,9 +525,17 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         case Some(DistributedExp(_)) | None => (stmts, subexp)
       }
     case Gather(e) => 
-      val (stmts, subexp) = prepareExpression(e)
+      val (stmts, subexp0) = prepareExpression(e)
       val (iv, ov) = expr.schema
       if (iv != Nil) sys.error("Gathering a map with input vars")
+      val subexp = subexp0 match {
+        case a @ Add(l, r) =>
+          val newAdd = Add(l, r)
+          newAdd.tp = a.tp
+          newAdd.agg = a.schema._2
+          newAdd
+        case _ => subexp0
+      }
       subexp.locality match {
         case Some(DistributedExp(pkeys)) =>
           val gatherStmts = Statement.createGather(subexp)
@@ -575,9 +591,9 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
     // Optimize statement blocks
     val optUpdateBlocks = Optimizer.optBlockFusion(updateBlocks)
-    optUpdateBlocks.map(b => java.lang.System.err.println("UPDATE\n" + b.toShortString))
+    optUpdateBlocks.map(b => java.lang.System.err.println("UPDATE\n" + b.toString))
     val optSystemReadyBlocks = Optimizer.optBlockFusion(systemReadyBlocks)
-    optSystemReadyBlocks.map(b => java.lang.System.err.println("SYSREADY\n" + b.toShortString))
+    optSystemReadyBlocks.map(b => java.lang.System.err.println("SYSREADY\n" + b.toString))
 
     // Remove unused maps
     val referencedMaps = 
