@@ -41,7 +41,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   case class DefaultTransformer(var expr: Expr) extends Transformer {
     override def toString = ""
   }
-  case class ScatterTransformer(var expr: Expr) extends Transformer {
+  case class ScatterTransformer(var expr: Expr, var pkeys: List[(String, Type)]) extends Transformer {
     assert(expr.locality match { 
       case Some(LocalExp) => true 
       case _ => false 
@@ -51,9 +51,9 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       case _ => false
     }, "Store type check failed")
 
-    override def toString = "SCATTER"
+    override def toString = "SCATTER<" + pkeys.mkString(", ") + ">"
   }
-  case class RepartitionTransformer(var expr: Expr) extends Transformer {
+  case class RepartitionTransformer(var expr: Expr, var pkeys: List[(String, Type)]) extends Transformer {
     assert(expr.locality match { 
       case Some(DistributedExp(_)) => true 
       case _ => false 
@@ -63,7 +63,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       case _ => false
     }, "Store type check failed")      
 
-    override def toString = "REPARTITION"
+    override def toString = "REPARTITION<" + pkeys.mkString(", ") + ">"
   }
   case class GatherTransformer(var expr: Expr) extends Transformer {
     assert(expr.locality match { 
@@ -205,7 +205,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
         distRef.locality = Some(distInfo.locality)
         distRef.isTemp = true
-        Statement(distRef, ScatterTransformer(toPartitionStmt.lhsMap), None, OpSet, LocalMode)
+        Statement(distRef, ScatterTransformer(toPartitionStmt.lhsMap, pkeys), None, OpSet, LocalMode)
       }
       val toStoreStmt = Statement.transformToIndex("scatter", scatterStmt.lhsMap)
       localStmt ++ List(toPartitionStmt, scatterStmt, toStoreStmt)
@@ -248,7 +248,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
         distRef.locality = Some(distInfo.locality)
         distRef.isTemp = true
-        Statement(distRef, RepartitionTransformer(srcToPartitionStmt.lhsMap), None, OpSet, LocalMode)
+        Statement(distRef, RepartitionTransformer(srcToPartitionStmt.lhsMap, pkeys), None, OpSet, LocalMode)
       }
       val dstToIndexStmt = Statement.transformToIndex("repartition", repartitionStmt.lhsMap)
       (distSrcStmt ++ List(srcToPartitionStmt, repartitionStmt, dstToIndexStmt))
@@ -649,16 +649,16 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     blocks.map { 
       case StatementBlock(LocalMode, stmts) =>
         val (actions, others) = stmts.partition (_.rhsTransformer match {
-          case ScatterTransformer(_) | 
-               RepartitionTransformer(_) | 
+          case ScatterTransformer(_, _) | 
+               RepartitionTransformer(_, _) | 
                GatherTransformer(_) => true
           case _ => false
         })
         val scatterStmts = actions.filter(_.rhsTransformer match {
-          case ScatterTransformer(_) => true; case _ => false          
+          case ScatterTransformer(_, _) => true; case _ => false          
         })
         val repartStmts = actions.filter(_.rhsTransformer match {
-          case RepartitionTransformer(_) => true; case _ => false          
+          case RepartitionTransformer(_, _) => true; case _ => false          
         })        
         val gatherStmts = actions.filter(_.rhsTransformer match {
           case GatherTransformer(_) => true; case _ => false          
