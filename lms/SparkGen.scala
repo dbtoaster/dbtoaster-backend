@@ -41,7 +41,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   case class DefaultTransformer(var expr: Expr) extends Transformer {
     override def toString = ""
   }
-  case class ScatterTransformer(var expr: Expr, var pkeys: List[(String, Type)]) extends Transformer {
+  case class ScatterTransformer(var expr: Expr, val pkeys: List[(String, Type)]) extends Transformer {
     assert(expr.locality match { 
       case Some(LocalExp) => true 
       case _ => false 
@@ -53,7 +53,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
     override def toString = "SCATTER<" + pkeys.mkString(", ") + ">"
   }
-  case class RepartitionTransformer(var expr: Expr, var pkeys: List[(String, Type)]) extends Transformer {
+  case class RepartitionTransformer(var expr: Expr, val pkeys: List[(String, Type)]) extends Transformer {
     assert(expr.locality match { 
       case Some(DistributedExp(_)) => true 
       case _ => false 
@@ -83,8 +83,8 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   case class LogStoreTransformer(var expr: Expr) extends Transformer { 
     override def toString = "TO_LOG" 
   }
-  case class PartitionStoreTransformer(var expr: Expr) extends Transformer { 
-    override def toString = "TO_PARTITION" 
+  case class PartitionStoreTransformer(var expr: Expr, val pkeys: List[(String, Type)]) extends Transformer { 
+    override def toString = "TO_PARTITION<" + pkeys.mkString(", ") + ">"
   }
 
   //----------
@@ -155,7 +155,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       val lhsRef = new MapRef(lhsInfo.name, lhsInfo.tp, lhsInfo.keys)
       lhsRef.locality = Some(lhsInfo.locality)
       lhsRef.isTemp = true
-      Statement(lhsRef, PartitionStoreTransformer(rhsMap), None, OpSet, execMode(lhsInfo.locality))
+      Statement(lhsRef, PartitionStoreTransformer(rhsMap, pkeys), None, OpSet, execMode(lhsInfo.locality))
     }
 
     def transformToIndex(prefix: String, rhsMap: MapRef): Statement = {
@@ -437,6 +437,11 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
   def prepareStatement(stmt: Stmt): List[Statement] = stmt match {
     case StmtMap(map, expr, op, ivc) => 
+      val mapInf = mapInfo(map.name)
+      map.locality = mapInf.locality match {
+        case LocalExp => Some(LocalExp)
+        case DistributedExp(pk) => Some(DistributedExp(pk.map(k => map.keys(mapInf.keys.indexOf(k))))) 
+      }
       val (aStmts, aTransformer) = {
         val (aStmts, aExpr) = prepareExpression(expr)
         (aStmts, DefaultTransformer(aExpr))
