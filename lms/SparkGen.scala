@@ -45,11 +45,11 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     assert(expr.locality match { 
       case Some(LocalExp) => true 
       case _ => false 
-    }, "Locality check failed")
+    }, "ScatterTransformer: Locality check failed")
     assert(mapInfo(expr.asInstanceOf[MapRef].name).storeType match {
       case PartitionStore(_) => true  
       case _ => false
-    }, "Store type check failed")
+    }, "ScatterTransformer: Store type check failed")
 
     override def toString = "SCATTER<" + pkeys.mkString(", ") + ">"
   }
@@ -57,23 +57,23 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     assert(expr.locality match { 
       case Some(DistributedExp(_)) => true 
       case _ => false 
-    }, "Locality check failed")
+    }, "RepartitionTransformer: Locality check failed")
     assert(mapInfo(expr.asInstanceOf[MapRef].name).storeType match {
       case PartitionStore(_) => true 
       case _ => false
-    }, "Store type check failed")      
+    }, "RepartitionTransformer: Store type check failed")      
 
     override def toString = "REPARTITION<" + pkeys.mkString(", ") + ">"
   }
   case class GatherTransformer(var expr: Expr) extends Transformer {
     assert(expr.locality match { 
-      case Some(DistributedExp(_)) => true 
+      case Some(DistributedExp(pk)) if pk.length > 0  => true 
       case _ => false 
-    }, "Locality check failed")
+    }, "GatherTransformer: Locality check failed")
     assert(mapInfo(expr.asInstanceOf[MapRef].name).storeType match {
       case PartitionStore(_) | LogStore => true 
       case _ => false
-    }, "Store type check failed")
+    }, "GatherTransformer: Store type check failed")
 
     override def toString = "GATHER"
   }
