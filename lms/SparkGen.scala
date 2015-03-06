@@ -873,42 +873,52 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         val mapNames = distBlock.maps.map(_.name).toList
         val (inputNames, distNames) = mapNames.partition(linkMapNames.contains)
         val unifiedIds = inputNames.map(n => unifiedBlocks(n)._1).toSet
-        val unifiedId = unifiedIds.head
         val strRenaming = distNames.filter(n => mapInfo(n).keys.size > 0)
                                    .map(n => s"val $n = localCtx.$n")
                                    .mkString("\n")
         val lmsDistBlock = liftBlockToLMS(distBlock)
         val strDistBlock = impl.emitTrigger(lmsDistBlock, null, null)
 
-        val (singletonNames, partitionNames) = 
-          inputNames.partition(n => mapInfo(n).keys.size == 0)
-        val (singletonLNames, singletonDNames) = 
-          singletonNames.partition(n => mapInfo(n).tp == TypeLong)  
-        val zipList = unifiedIds.mkString(").zip(") 
+        if (unifiedIds.size > 0) {
+          val unifiedId = unifiedIds.head
+          val (singletonNames, partitionNames) = 
+            inputNames.partition(n => mapInfo(n).keys.size == 0)
+          val (singletonLNames, singletonDNames) = 
+            singletonNames.partition(n => mapInfo(n).tp == TypeLong)  
+          val zipList = unifiedIds.mkString(").zip(") 
 
-        val caseMaps = (
-          (if (singletonLNames.size == 0) Nil
-           else List(
-             "(" + tuple(singletonLNames.map(n => (unifiedBlocks(n)._2, n))
-                                        .sortBy(_._1).map(_._2)) + ")"))
-          ++
+          val caseMaps = (
+            (if (singletonLNames.size == 0) Nil
+             else List(
+               "(" + tuple(singletonLNames.map(n => (unifiedBlocks(n)._2, n))
+                                          .sortBy(_._1).map(_._2)) + ")"))
+            ++
 
-          (if (singletonDNames.size == 0) Nil
-           else List(
-             "(" + tuple(singletonDNames.map(n => (unifiedBlocks(n)._2, n))
-                                       .sortBy(_._1).map(_._2)) + ")"))
-          ++
-          (if (partitionNames.size == 0) Nil
-           else List(
-             "(" + tuple(partitionNames.map(n => (unifiedBlocks(n)._2, n))
-                                       .sortBy(_._1).map(_._2)) + ")"))
-        ).mkString(", ")
-        s"""|//  --- DISTRIBUTED BLOCK ---
-            |ctx.rdd.zip($zipList).foreach {
-            |  case ((id, localCtx), (id2, ${caseMaps})) =>
-            |${ind(strRenaming, 2)} 
-            |${ind(strDistBlock, 2)} 
-            |}""".stripMargin
+            (if (singletonDNames.size == 0) Nil
+             else List(
+               "(" + tuple(singletonDNames.map(n => (unifiedBlocks(n)._2, n))
+                                         .sortBy(_._1).map(_._2)) + ")"))
+            ++
+            (if (partitionNames.size == 0) Nil
+             else List(
+               "(" + tuple(partitionNames.map(n => (unifiedBlocks(n)._2, n))
+                                         .sortBy(_._1).map(_._2)) + ")"))
+          ).mkString(", ")
+          s"""|//  --- DISTRIBUTED BLOCK ---
+              |ctx.rdd.zip($zipList).foreach {
+              |  case ((id, localCtx), (id2, ${caseMaps})) =>
+              |${ind(strRenaming, 2)} 
+              |${ind(strDistBlock, 2)} 
+              |}""".stripMargin          
+        }
+        else {
+         s"""|//  --- DISTRIBUTED BLOCK ---
+              |ctx.rdd.foreach {
+              |  case (id, localCtx) =>
+              |${ind(strRenaming, 2)} 
+              |${ind(strDistBlock, 2)} 
+              |}""".stripMargin           
+        }
     }.mkString("\n")
   }
 
