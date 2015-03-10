@@ -109,11 +109,13 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   case class Statement(var lhsMap: MapRef, val rhsTransformer: Transformer, 
       var initTransformer: Option[Transformer], val opMap: OpMap, val execMode: ExecutionMode) {
     
-    def rhsMaps = rhsTransformer.expr.collect { case m: MapRef => List(m) }.toSet ++
-                  initTransformer.map(_.expr.collect { case m: MapRef => List(m) }.toSet).getOrElse(Set())
+    def rhsMapNames = 
+      rhsTransformer.expr.collect { case m: MapRef => List(m.name) }.toSet ++
+      initTransformer.map(_.expr.collect { case m: MapRef => List(m.name) }.toSet).getOrElse(Set())
 
     def commute(that: Statement): Boolean = 
-      (!that.rhsMaps.contains(this.lhsMap) && !this.rhsMaps.contains(that.lhsMap))
+      (!that.rhsMapNames.contains(this.lhsMap.name) && 
+       !this.rhsMapNames.contains(that.lhsMap.name))
 
     def rename(mapping: Map[String, String]): Unit = {     // renaming only map names
       lhsMap = lhsMap.rename(mapping).asInstanceOf[MapRef]
@@ -127,7 +129,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     }
 
     def toShortString = {
-      val rhsList = rhsMaps.map(_.name).mkString(", ")
+      val rhsList = rhsMapNames.mkString(", ")
       s"${execMode} ${lhsMap.name} ${opMap} ${rhsTransformer} { ${rhsList} }"
     }
   }
@@ -298,9 +300,9 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   }
 
   case class StatementBlock(val execMode: ExecutionMode, val stmts: List[Statement]) {
-    def lhsMaps = stmts.map(_.lhsMap).toSet
-    def rhsMaps = stmts.flatMap(_.rhsMaps).toSet
-    def maps = lhsMaps ++ rhsMaps
+    def lhsMapNames = stmts.map(_.lhsMap.name).toSet
+    def rhsMapNames = stmts.flatMap(_.rhsMapNames).toSet
+    def mapNames = lhsMapNames ++ rhsMapNames
 
     def commute(that: StatementBlock): Boolean = 
       stmts.forall(lhs => that.stmts.forall(rhs => lhs.commute(rhs)))
@@ -319,32 +321,49 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   }
 
   object Optimizer {
-    
+
     def optBlockFusion = new Function1[List[StatementBlock], List[StatementBlock]] {
       def apply(blocks: List[StatementBlock]): List[StatementBlock] = blocks match {
         case Nil => Nil
-        case List(b) => List(b)
-        case head :: tail => 
-          val (lhs, curr, rhs) = tail.foldLeft (List[StatementBlock](), head, List[StatementBlock]()) { 
-            case ( (lhsBlocks, blockA, rhsBlocks), blockB ) => (blockA, blockB) match {
-              
-              case (a @ StatementBlock(execModeA, stmtsA), b @ StatementBlock(execModeB, stmtsB)) 
-                   if (execModeA == execModeB) =>  
-                if (rhsBlocks.forall(_.commute(b)))        // Try to push b to the left 
-                  (lhsBlocks, StatementBlock(execModeA, stmtsA ++ stmtsB), rhsBlocks)  
-                else if (rhsBlocks.forall(a.commute))      // Try to push a to the right
-                  (lhsBlocks ++ rhsBlocks, StatementBlock(execModeA, stmtsA ++ stmtsB), Nil)
-                else 
-                  (lhsBlocks, blockA, rhsBlocks ++ List(blockB))
-
-              case _ => (lhsBlocks, blockA, rhsBlocks ++ List(blockB))
-            }
-          } 
-          val newBlocks = lhs ++ (curr :: rhs)
-          if (blocks.length > newBlocks.length) apply(newBlocks)
-          else head :: apply(tail)
-      }  
+        case head :: tail =>
+          val (newHead, newTail) = tail.foldLeft (head, List[StatementBlock]()) {
+            case ((b1, rhs), b2) => 
+              if (b1.execMode == b2.execMode && rhs.forall(_.commute(b2)))
+                (StatementBlock(b1.execMode, b1.stmts ++ b2.stmts), rhs)
+              else
+                (b1, rhs ++ List(b2))  
+          }
+          if (head == newHead) newHead :: apply(tail)
+          else apply(newHead :: newTail)
+      }
     }
+    
+    //// An alternative block fusion
+    // def optBlockFusion2 = new Function1[List[StatementBlock], List[StatementBlock]] {
+    //   def apply(blocks: List[StatementBlock]): List[StatementBlock] = blocks match {
+    //     case Nil => Nil
+    //     case List(b) => List(b)
+    //     case head :: tail => 
+    //       val (lhs, curr, rhs) = tail.foldLeft (List[StatementBlock](), head, List[StatementBlock]()) { 
+    //         case ( (lhsBlocks, blockA, rhsBlocks), blockB ) => (blockA, blockB) match {
+              
+    //           case (a @ StatementBlock(execModeA, stmtsA), b @ StatementBlock(execModeB, stmtsB)) 
+    //                if (execModeA == execModeB) =>  
+    //             if (rhsBlocks.forall(_.commute(b)))        // Try to push b to the left 
+    //               (lhsBlocks, StatementBlock(execModeA, stmtsA ++ stmtsB), rhsBlocks)  
+    //             else if (rhsBlocks.forall(a.commute))      // Try to push a to the right
+    //               (lhsBlocks ++ rhsBlocks, StatementBlock(execModeA, stmtsA ++ stmtsB), Nil)
+    //             else 
+    //               (lhsBlocks, blockA, rhsBlocks ++ List(blockB))
+
+    //           case _ => (lhsBlocks, blockA, rhsBlocks ++ List(blockB))
+    //         }
+    //       } 
+    //       val newBlocks = lhs ++ (curr :: rhs)
+    //       if (blocks.length > newBlocks.length) apply(newBlocks)
+    //       else head :: apply(tail)
+    //   }  
+    // }
 
     def optCSE = new Function1[List[Statement], List[Statement]] {
       var mapDefs = Map[String, Transformer]()
@@ -399,7 +418,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         case Nil => false
         case head :: tail =>
           if (map == head.lhsMap) !(head.opMap == OpSet)    
-          else (head.rhsMaps.contains(map) || isReferenced(map, tail))
+          else (head.rhsMapNames.contains(map.name) || isReferenced(map, tail))
       }
 
       def deadStatements(stmts: List[Statement]): List[Statement] = stmts match {
@@ -450,7 +469,6 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         val (bStmts, bExpr) = prepareExpression(e)
         (bStmts, Some(DefaultTransformer(bExpr)))
       }).getOrElse((Nil, None))
-
       val execMode = aTransformer.expr.locality match {
         case Some(LocalExp) | None => LocalMode
         case Some(DistributedExp(_)) => DistributedMode
@@ -488,7 +506,6 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       val (ra, re) = prepareExpression(r)
       val newExpr = Add(le, re)
       newExpr.tp = a.tp
-      newExpr.agg = a.agg
       (la ++ ra, newExpr)
     case Exists(e) => 
       val (stmts, subexp) = prepareExpression(e)
@@ -516,7 +533,6 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         case a @ Add(l, r) =>
           val newAdd = Add(l, r)
           newAdd.tp = a.tp
-          newAdd.agg = a.schema._2
           newAdd
         case _ => subexp0
       }
@@ -537,7 +553,6 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         case a @ Add(l, r) =>
           val newAdd = Add(l, r)
           newAdd.tp = a.tp
-          newAdd.agg = a.schema._2
           newAdd
         case _ => subexp0
       }
@@ -603,7 +618,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     // Remove unused maps
     val referencedMaps = 
       (optUpdateBlocks ++ optSystemReadyBlocks).map { case block => 
-        block.lhsMaps.map(_.name) ++ block.rhsMaps.map(_.name)
+        block.lhsMapNames ++ block.rhsMapNames
       }.reduceOption(_ ++ _).getOrElse(Set[String]())
     mapInfo.retain((n, _) => referencedMaps.contains(n))
 
@@ -691,14 +706,16 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
               unifiedBlocks += ((lhsName, (unifiedId, i)))
               s"${rhsName}"
             }}  
-          val unwrapL = (0 until singletonsL.length).map(i => s"w.lArray($i)").toList
-          val unwrapD = (0 until singletonsD.length).map(i => s"w.dArray($i)").toList
           val wrapP = partitions.zipWithIndex.map { case (stmt, i) => {
             val lhsName = stmt.lhsMap.name
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             unifiedBlocks += ((lhsName, (unifiedId, i)))
             s"new ColumnarPartition(i, ${rhsName}.partitions(i).buffers)"
           }}
+          val unwrapL = Array.tabulate(singletonsL.length)(i => 
+            s"w.lArray($i)").toList
+          val unwrapD = Array.tabulate(singletonsD.length)(i => 
+            s"w.dArray($i)").toList
           val unwrapP = partitions.zipWithIndex.map { case (stmt, i) => {
             val lhsName = stmt.lhsMap.name
             val storeType = impl.codegen.storeType(ctx0(lhsName)._1)
@@ -791,14 +808,14 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             s"localCtx.${rhsName}"
           }          
-          val unwrapL = (0 until singletonsL.length).map(i => 
-            s"${unifiedId}L.map(_($i)).reduce(_ + _)").toList
-          val unwrapD = (0 until singletonsD.length).map(i => 
-            s"${unifiedId}D.map(_($i)).reduce(_ + _)").toList
           val wrapP = partitions.map { stmt =>
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             s"new ColumnarPartition(id, localCtx.${rhsName}.buffers)"
           }
+          val unwrapL = Array.tabulate(singletonsL.length)(i => 
+            s"${unifiedId}L.map(_($i)).reduce(_ + _)").toList
+          val unwrapD = Array.tabulate(singletonsD.length)(i => 
+            s"${unifiedId}D.map(_($i)).reduce(_ + _)").toList
           val unwrapP = partitions.zipWithIndex.map { case (stmt, i) =>
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             val entryType = impl.codegen.storeEntryType(ctx0(rhsName)._1)
@@ -851,7 +868,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
                       |)""".stripMargin
                 }).mkString("\n")
               }
-            ).filterNot(_ == "").mkString(",\n")
+            ).filterNot(_ == "").mkString("\n")
           s"""|val $unifiedId = ctx.rdd.map { case (id, localCtx) =>
               |  (
               |${ind(wrap, 2)}  
@@ -861,7 +878,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
               |$unwrap""".stripMargin
         }
 
-        "//  --- LOCAL BLOCK ---\n" + 
+        "//  --- LOCAL BLOCK ---\n" +
         List(
           strGatherBlock,           // Pull Gather to the beginning
           strLocalBlock,            
@@ -870,55 +887,60 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         ).filterNot(_ == "").mkString("\n") + "\n"
 
       case distBlock @ StatementBlock(DistributedMode, statements) =>
-        val mapNames = distBlock.maps.map(_.name).toList
+        val mapNames = distBlock.mapNames.toList
         val (inputNames, distNames) = mapNames.partition(linkMapNames.contains)
-        val unifiedIds = inputNames.map(n => unifiedBlocks(n)._1).toSet
+        
+        // Generate foreach body
         val strRenaming = distNames.filter(n => mapInfo(n).keys.size > 0)
                                    .map(n => s"val $n = localCtx.$n")
                                    .mkString("\n")
         val lmsDistBlock = liftBlockToLMS(distBlock)
         val strDistBlock = impl.emitTrigger(lmsDistBlock, null, null)
 
-        if (unifiedIds.size > 0) {
-          val unifiedId = unifiedIds.head
-          val (singletonNames, partitionNames) = 
-            inputNames.partition(n => mapInfo(n).keys.size == 0)
-          val (singletonLNames, singletonDNames) = 
-            singletonNames.partition(n => mapInfo(n).tp == TypeLong)  
-          val zipList = unifiedIds.mkString(").zip(") 
+        // Generate foreach header 
+        val unifiedIds = inputNames.map(n => unifiedBlocks(n)._1).distinct
+        val strZip = if (unifiedIds.size == 0) "" else 
+          ".zip(" + unifiedIds.mkString(").zip(") + ")"
+        val strCaseList = "(id, localCtx)" :: 
+          unifiedIds.zipWithIndex.map { case (unifiedId, i) =>
+            val unifiedNames = unifiedBlocks.filter(_._2._1 == unifiedId)
+                                            .map(_._1).toSet
+            val matchInputs  = inputNames.filter(unifiedNames.contains)
+            val (singletons, partitions) = 
+              matchInputs.partition(n => mapInfo(n).keys.size == 0)
+            val (singletonsL, singletonsD) = 
+              singletons.partition(n => mapInfo(n).tp == TypeLong) 
 
-          val caseMaps = (
-            (if (singletonLNames.size == 0) Nil
-             else List(
-               "(" + tuple(singletonLNames.map(n => (unifiedBlocks(n)._2, n))
-                                          .sortBy(_._1).map(_._2)) + ")"))
-            ++
+            val caseMaps = (
+              (if (singletonsL.size == 0) Nil
+               else List(
+                 "(" + tuple(singletonsL.map(n => (unifiedBlocks(n)._2, n))
+                                        .sortBy(_._1).map(_._2)) + ")"))
+              ++
 
-            (if (singletonDNames.size == 0) Nil
-             else List(
-               "(" + tuple(singletonDNames.map(n => (unifiedBlocks(n)._2, n))
-                                         .sortBy(_._1).map(_._2)) + ")"))
-            ++
-            (if (partitionNames.size == 0) Nil
-             else List(
-               "(" + tuple(partitionNames.map(n => (unifiedBlocks(n)._2, n))
-                                         .sortBy(_._1).map(_._2)) + ")"))
-          ).mkString(", ")
-          s"""|//  --- DISTRIBUTED BLOCK ---
-              |ctx.rdd.zip($zipList).foreach {
-              |  case ((id, localCtx), (id2, ${caseMaps})) =>
-              |${ind(strRenaming, 2)} 
-              |${ind(strDistBlock, 2)} 
-              |}""".stripMargin          
+              (if (singletonsD.size == 0) Nil
+               else List(
+                 "(" + tuple(singletonsD.map(n => (unifiedBlocks(n)._2, n))
+                                        .sortBy(_._1).map(_._2)) + ")"))
+              ++
+              (if (partitions.size == 0) Nil
+               else List(
+                 "(" + tuple(partitions.map(n => (unifiedBlocks(n)._2, n))
+                                       .sortBy(_._1).map(_._2)) + ")"))
+            ).mkString(", ")
+            s"(id${i + 2}, $caseMaps)"
+          }
+        def caseToString(cases: List[String]): String = cases match {
+          case Nil => sys.error("Empty case list.")
+          case hd :: Nil => hd
+          case hd1 :: (hd2 :: tail) => caseToString(s"($hd1, $hd2)" :: tail)
         }
-        else {
-         s"""|//  --- DISTRIBUTED BLOCK ---
-              |ctx.rdd.foreach {
-              |  case (id, localCtx) =>
-              |${ind(strRenaming, 2)} 
-              |${ind(strDistBlock, 2)} 
-              |}""".stripMargin           
-        }
+        s"""|//  --- DISTRIBUTED BLOCK ---
+            |ctx.rdd${strZip}.foreach {
+            |  case ${caseToString(strCaseList)} =>
+            |${ind(strRenaming, 2)}
+            |${ind(strDistBlock, 2)}
+            |}""".stripMargin
     }.mkString("\n")
   }
 
@@ -953,7 +975,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
   def liftBlockToLMS(block: StatementBlock): impl.Block[Unit] = {
     // Trigger context: global maps + local maps + trigger arguments (batch)
-    cx = Ctx(ctx0.map { case (name, (sym, keys, tp)) => (name, sym) })
+    cx = Ctx(ctx0.map { case (name, (sym, keys, tp)) => (name, sym) })    
     impl.reifyEffects {
       block.stmts.map { case stmt =>
         cx.load()

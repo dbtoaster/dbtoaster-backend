@@ -187,7 +187,6 @@ object TypeCheck extends (M3.System => M3.System) {
           val (fl, fr) = 
             (ie(l, c, t).filter { x => !c.contains(x._1) }, 
              ie(r, c, t).filter { x => !c.contains(x._1) }) // free(l), free(r)
-          a.agg = fl.filter { x => fr.contains(x._1) }.toList 
           // sorted(free(l) & free(r)) : a variable is bound 
           // differently in l and r => set union
           cr = c ++ fl ++ fr

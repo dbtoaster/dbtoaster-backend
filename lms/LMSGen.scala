@@ -106,7 +106,8 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
       expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(mul(vl, vr, ex.tp)), am), am)
 
     case a @ Add(l, r) =>
-      if (a.agg == Nil) {
+      val agg = a.schema._2.filter { case (n, t) => !cx.contains(n) }
+      if (agg == Nil) {  
         val cur = cx.save
         expr(l, (vl: Rep[_]) => {
           cx.load(cur)
@@ -117,7 +118,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
         }, am)
       } 
       else am match {
-        case Some(t) if t.toSet.subsetOf(a.agg.toSet) =>
+        case Some(t) if t.toSet.subsetOf(agg.toSet) =>
           val cur = cx.save
           expr(l, co, am)
           cx.load(cur)
@@ -125,17 +126,17 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
           cx.load(cur)
           impl.unit(())
         case _ =>
-          implicit val mE = me(a.agg.map(_._2), a.tp)          
+          implicit val mE = me(agg.map(_._2), a.tp)          
           val acc = impl.m3temp()(mE)
           val inCo = (v: Rep[_]) => 
             impl.m3add(acc, 
-              impl.stNewEntry2(acc, (a.agg.map(x => cx(x._1)) ++ List(v)) : _*))(mE)
+              impl.stNewEntry2(acc, (agg.map(x => cx(x._1)) ++ List(v)) : _*))(mE)
           val cur = cx.save
-          expr(l, inCo, Some(a.agg))
+          expr(l, inCo, Some(agg))
           cx.load(cur)
-          expr(r, inCo, Some(a.agg))
+          expr(r, inCo, Some(agg))
           cx.load(cur)
-          foreach(acc, a.agg, a.tp, co)
+          foreach(acc, agg, a.tp, co)
       }
 
     case a @ AggSum(ks, e) =>

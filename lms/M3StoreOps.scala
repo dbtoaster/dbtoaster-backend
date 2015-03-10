@@ -103,16 +103,16 @@ trait M3StoreOpsExp extends BaseExp
           } 
           else {
             __ifThenElse(
-                __equal(entVal, unit(zero(lastMan))), 
-                unit(()), 
-                { val currentEnt = stGet(map, -1, ent) 
-                  //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
-                  __ifThenElse(
-                    __equal(currentEnt, unit(null)), 
-                    stUnsafeInsert(map, ent, idx),
-                    currentEnt += (n, entVal)
-                  )
-                }
+              __equal(entVal, unit(zero(lastMan))), 
+              unit(()), 
+              { val currentEnt = stGet(map, -1, ent) 
+                //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+                __ifThenElse(
+                  __equal(currentEnt, unit(null)), 
+                  stUnsafeInsert(map, ent, idx),
+                  currentEnt += (n, entVal)
+                )
+              }
             )
           }
         } 

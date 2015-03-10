@@ -335,7 +335,8 @@ trait IScalaGen extends CodeGen {
     //   foreach vr in R, T += vr
     //   foreach t in T, co(t)
     case a @ Add(el, er) =>
-      if (a.agg == Nil) {
+      val agg = a.schema._2.filter { case (n, t) => !ctx.contains(n) } 
+      if (agg == Nil) {
         val cur = ctx.save
         cpsExpr(el, (vl: String) => {
           ctx.load(cur)
@@ -346,7 +347,7 @@ trait IScalaGen extends CodeGen {
         }, am)
       } 
       else am match {
-        case Some(t) if t.toSet.subsetOf(a.agg.toSet) =>
+        case Some(t) if t.toSet.subsetOf(agg.toSet) =>
           val cur = ctx.save
           val s1 = cpsExpr(el, co, am)
           ctx.load(cur)
@@ -355,15 +356,15 @@ trait IScalaGen extends CodeGen {
           s1 + s2
         case _ =>
           val (acc, k0, v0) = (fresh("add"), fresh("k"), fresh("v"))
-          val ks = a.agg.map(_._1)
-          val ksTp = a.agg.map(_._2)
-          val tmp = Some(a.agg)
+          val ks = agg.map(_._1)
+          val ksTp = agg.map(_._2)
+          val tmp = Some(agg)
           val cur = ctx.save
           val s1 = cpsExpr(el, (v: String) => addToTempMap(acc, ks, v), tmp)
           ctx.load(cur)
           val s2 = cpsExpr(er, (v: String) => addToTempMap(acc, ks, v), tmp)
           ctx.load(cur)
-          genVar(acc, ex.tp, a.agg.map(_._2)) + s1 + s2 + cpsExpr(mapRef(acc, ex.tp, a.agg), co)
+          genVar(acc, ex.tp, agg.map(_._2)) + s1 + s2 + cpsExpr(mapRef(acc, ex.tp, agg), co)
       }
     case a @ AggSum(ks, e) =>
       // aggregation keys as (name,type)

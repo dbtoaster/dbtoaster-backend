@@ -301,7 +301,6 @@ object M3 {
         case a @ Add(l, r) => 
           val newEx = Add(l.replace(f), r.replace(f))
           newEx.tp = tp
-          newEx.agg = a.agg
           newEx
         case Cmp(l, r, op) => Cmp(l.replace(f), r.replace(f), op)
         case Exists(e) => Exists(e.replace(f))
@@ -338,7 +337,6 @@ object M3 {
       case a @ Add(el, er) => 
         val newEx = Add(el.rename(r), er.rename(r))
         newEx.tp = a.tp
-        newEx.agg = a.agg.map { case (n, t) => (r(n), t) }
         newEx
     }
 
@@ -462,7 +460,6 @@ object M3 {
 
   case class Add(l: Expr, r: Expr) extends Expr { 
     var tp: Type = null
-    var agg: List[(String, Type)] = Nil 
     def locality = (l.locality, r.locality) match {
       case (Some(LocalExp), Some(LocalExp)) => Some(LocalExp)
       case (Some(DistributedExp(a)), Some(DistributedExp(b))) 
@@ -473,7 +470,7 @@ object M3 {
       case _ => sys.error("Merging incompatible expression types in Add: l = " + l + " r = " + r)
     }
     override def toString = "(" + l + " + " + r + ")"
-  } // set union semantics, agg!=Nil if union with free vars
+  } // set union semantics
 
   case class Exists(e: Expr) extends Expr { 
     val tp = TypeLong 

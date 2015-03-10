@@ -144,7 +144,9 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
     case Lift(n,e) => fmap(e,c2)
     case Exists(e) => fmap(e,c2)
     case Mul(l,r) => val lm=fmap(l,c2); if (lm==null) fmap(r,c2++l.collect{ case Lift(n,e) => List(n) }) else lm
-    case a@Add(l,r) => if (a.agg!=Nil) null else { val lm=fmap(l,c2); if (lm==null) fmap(r,c2) else lm }
+    case a@Add(l,r) => 
+      val agg = a.schema._2.filter { case(n,t)=> !ctx.contains(n) }
+      if (agg!=Nil) null else { val lm=fmap(l,c2); if (lm==null) fmap(r,c2) else lm }
     case _ => null
   }
 
@@ -217,15 +219,16 @@ class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
         r+(if (aks.size==0) { ctx.add(a0,(e.tp,a0)); inuse.add(Set(a0)); co(a0) } else { ctx.load(cur); cpsExpr(mapRef(a0,e.tp,aks),co) })
       }
     case a@Add(el,er) => val cur=ctx.save;
-      if (a.agg==Nil) { cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
+      val agg = a.schema._2.filter { case(n,t)=> !ctx.contains(n) }
+      if (agg==Nil) { cpsExpr(el,(vl:String)=>{ ctx.load(cur); cpsExpr(er,(vr:String)=>{ ctx.load(cur); co("("+vl+" + "+vr+")")},am)},am) }
       else am match {
-        case Some(t) if t==a.agg => val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
+        case Some(t) if t==agg => val s1=cpsExpr(el,co,am); ctx.load(cur); val s2=cpsExpr(er,co,am); ctx.load(cur); s1+s2
         case _ => val a0=fresh("add")
           def add(e:Expr):String = { val m=fmap(e)
-            val r = if (m!=null) { val l0=lacc; lacc=(a0,e.tp,a.agg); val r=remote_agg(a0,m,a.agg,e,true); lacc=l0; r }
-                    else cpsExpr(e,(v:String)=>a0+".add("+tup(a.agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
+            val r = if (m!=null) { val l0=lacc; lacc=(a0,e.tp,agg); val r=remote_agg(a0,m,agg,e,true); lacc=l0; r }
+                    else cpsExpr(e,(v:String)=>a0+".add("+tup(agg.map(x=>rn(x._1)))+","+v+");\n",am); ctx.load(cur); r
           }
-          "val "+a0+" = M3Map.temp["+tup(a.agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ cpsExpr(mapRef(a0,ex.tp,a.agg),co) }
+          "val "+a0+" = M3Map.temp["+tup(agg.map(_._2.toScala))+","+ex.tp.toScala+"]()\n"+add(el)+add(er)+{ cpsExpr(mapRef(a0,ex.tp,agg),co) }
       }
     case _ => super.cpsExpr(ex,co,am)
   }

@@ -235,7 +235,8 @@ trait ICppGen extends IScalaGen {
     //   foreach vr in R, T += vr
     //   foreach t in T, co(t) 
     case a@Add(el,er) =>
-      if (a.agg==Nil) {
+      val agg = a.schema._2.filter { case(n, t)=> !ctx.contains(n) }
+      if (agg==Nil) {
         val cur=ctx.save
         cpsExpr(el,(vl:String)=> {
           ctx.load(cur)
@@ -245,7 +246,7 @@ trait ICppGen extends IScalaGen {
           },am)
         },am)
       } else am match {
-        case Some(t) if t.toSet.subsetOf(a.agg.toSet) => 
+        case Some(t) if t.toSet.subsetOf(agg.toSet) => 
           val cur=ctx.save
           val s1=cpsExpr(el,co,am)
           ctx.load(cur)
@@ -254,17 +255,17 @@ trait ICppGen extends IScalaGen {
           s1+s2
         case _ =>
           val (acc,k0,v0)=(fresh("_c"),fresh("k"),fresh("v"))
-          val ks = a.agg.map(_._1)
-          val ksTp = a.agg.map(_._2)
-          val tmp = Some(a.agg)
+          val ks = agg.map(_._1)
+          val ksTp = agg.map(_._2)
+          val tmp = Some(agg)
           val cur = ctx.save
           val s1 = cpsExpr(el,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,a.tp,acc,ks,v),tmp); ctx.load(cur)
           val s2 = cpsExpr(er,(v:String)=>ADD_TO_TEMP_MAP_FUNC(ksTp,a.tp,acc,ks,v),tmp); ctx.load(cur)
 
-          genVar(acc,a.tp,a.agg.map(_._2))+
+          genVar(acc,a.tp,agg.map(_._2))+
           s1+
           s2+
-          cpsExpr(mapRef(acc,a.tp,a.agg),co)
+          cpsExpr(mapRef(acc,a.tp,agg),co)
       }
     case a@AggSum(ks,e) =>
       val aks = ks.filter { case(n,t)=> !ctx.contains(n) } // aggregation keys as (name,type)
