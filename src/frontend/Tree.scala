@@ -209,6 +209,7 @@ case class EvtBatchUpdate(schema: Schema) extends EvtTrigger {
   override def toString = "BATCH UPDATE OF " + schema.name
 }
 
+
 // Cleanup/Failure/Shutdown/Checkpoint
 // -----------------------------------------------------------------------------
 // M3 language
@@ -269,6 +270,20 @@ object M3 {
 
   case class Trigger(evt: EvtTrigger, stmts: List[Stmt]) extends M3 { 
     override def toString = "ON " + evt + " {\n" + ind(stmts.mkString("\n")) + "\n}" 
+  }
+
+  object FMap {
+    val empty: Option[Map[(String, Type), (String, Type)]] = Some(Map())
+    def create(a: (String, Type), b: (String, Type)): Option[Map[(String, Type), (String, Type)]] = Some(Map(a -> b))
+    def create(m: Map[(String, Type), (String, Type)]) = Some(m)
+    def merge(a: Option[Map[(String, Type), (String, Type)]], 
+              b: => Option[Map[(String, Type), (String, Type)]]) = 
+      if (a == None) None else (a, b) match {
+        case (Some(a), Some(b)) =>
+          val common = a.keySet.intersect(b.keySet)
+          if (common.exists(k => a(k) != b(k))) None else Some(a ++ b)
+        case _ => None
+      }
   }
 
   // ---------- Expressions (values)
@@ -387,6 +402,54 @@ object M3 {
         case _ => sys.error("Don't know how to compute schema of " + this)
       }
     }
+
+    def cmp(that: Expr): Option[Map[(String, Type), (String, Type)]] = 
+      if (this.tp != that.tp) None else (this, that) match {
+        case (Const(_, v1), Const(_, v2)) => 
+          if (v1 == v2) FMap.empty else None        
+        case (a @ Ref(n1), b @ Ref(n2)) => 
+          FMap.create((n1, a.tp), (n2, b.tp))        
+        case (Apply(fn1, tp1, as1), Apply(fn2, tp2, as2)) =>
+          if (fn1 != fn2 || as1.length != as2.length) None 
+          else as1.zip(as2).foldLeft (FMap.empty) { 
+            case (fmap, (a, b)) => FMap.merge(fmap, a.cmp(b)) }
+        case (MapRef(n1, tp1, ks1), MapRef(n2, tp2, ks2)) => 
+          if (n1 != n2 || ks1.length != ks2.length) None 
+          else ks1.zip(ks2).foldLeft (FMap.empty) { 
+            case (fmap, (a, b)) => FMap.merge(fmap, FMap.create(a, b)) }
+        case (MapRefConst(n1, ks1), MapRefConst(n2, ks2)) => 
+          if (n1 != n2 || ks1.length != ks2.length) None 
+          else ks1.zip(ks2).foldLeft (FMap.empty) { 
+            case (fmap, (a, b)) => FMap.merge(fmap, FMap.create(a, b)) }
+        case (DeltaMapRefConst(n1, ks1), DeltaMapRefConst(n2, ks2)) =>          
+          if (n1 != n2 || ks1.length != ks2.length) None 
+          else ks1.zip(ks2).foldLeft (FMap.empty) { 
+            case (fmap, (a, b)) => FMap.merge(fmap, FMap.create(a, b)) }
+        case (Cmp(l1, r1, op1), Cmp(l2, r2, op2)) =>
+          if (op1 != op2) None else FMap.merge(l1.cmp(l2), r1.cmp(r2))
+        case (Mul(l1, r1), Mul(l2, r2)) => 
+          FMap.merge(l1.cmp(l2), r1.cmp(r2))
+        case (Add(l1, r1), Add(l2, r2)) => 
+          FMap.merge(l1.cmp(l2), r1.cmp(r2))          
+        case (a @ Lift(v1, e1), b @ Lift(v2, e2)) =>
+          FMap.merge(e1.cmp(e2), FMap.create((v1, a.tp), (v2, a.tp)))
+        case (Exists(e1), Exists(e2)) => e1.cmp(e2)
+        case (AggSum(ks1, e1), AggSum(ks2, e2)) =>
+          if (ks1.length != ks2.length) None else e1.cmp(e2) match {
+            case Some(mapping) if ks1.map(mapping.apply).toSet == ks2.toSet =>
+              val rvars = (e1.schema._1 ++ ks1).toSet
+              val rmapping = rvars.map(v => (v, mapping.apply(v))).toMap
+              FMap.create(rmapping)              
+            case _ => None
+          }
+        case (Repartition(ks1, e1), Repartition(ks2, e2)) =>
+          if (ks1.length != ks2.length) None else e1.cmp(e2) match {
+            case f @ Some(mapping) if ks1.map(mapping.apply).toSet == ks2.toSet => f
+            case _ => None
+          }
+        case (Gather(e1), Gather(e2)) => e1.cmp(e2)
+        case _ => None
+      }
   }
 
   // Constants

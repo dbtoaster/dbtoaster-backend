@@ -366,7 +366,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     // }
 
     def optCSE = new Function1[List[Statement], List[Statement]] {
-      var mapDefs = Map[String, Transformer]()
+      var mapDefs = Map[String, (List[(String, Type)], Transformer)]()
       var equiMaps = Map[String, List[String]]()
 
       def mapping = equiMaps.mapValues(_.head)
@@ -374,7 +374,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       def invalidate(name: String): Unit = {
         equiMaps = (equiMaps - name).mapValues(_.filterNot(_ == name))
         mapDefs = mapDefs - name
-        val affected = mapDefs.flatMap { case (n, t) => 
+        val affected = mapDefs.flatMap { case (n, (_, t)) => 
           val rhsMaps = t.expr.collect { case m: MapRef => List(m.name) }.toSet
           if (rhsMaps.contains(name)) List(n) else Nil
         }
@@ -385,11 +385,53 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         // invalidate map definitions
         invalidate(map.name)
         // rename RHS expression
-        transformer.rename(mapping)
+        transformer.rename(mapping)        
 
         if (op == OpSet) {
           // Update equiMaps - try to find equivalent expression definitions          
-          val matchingNames = mapDefs.filter(_._2 == transformer).map(_._1).toList 
+          val ta = transformer
+          val ka = map.keys
+          val matchingNames = mapDefs.filter { case (_, (kb, tb)) => (ta, tb) match {
+            case (DefaultTransformer(e1), DefaultTransformer(e2)) => 
+              e1.cmp(e2) match {
+                case Some(mapping) => ka.map(mapping.apply) == kb
+                case _ => false
+              }
+            case (ScatterTransformer(e1, pk1), ScatterTransformer(e2, pk2)) =>
+              e1.cmp(e2) match {
+                case Some(mapping) => ka.map(mapping.apply) == kb &&
+                                      pk1.map(mapping.apply) == pk2
+                case _ => false
+              }
+            case (RepartitionTransformer(e1, pk1), RepartitionTransformer(e2, pk2)) =>
+              e1.cmp(e2) match {
+                case Some(mapping) => ka.map(mapping.apply) == kb && 
+                                      pk1.map(mapping.apply) == pk2
+                case _ => false
+              }              
+            case (GatherTransformer(e1), GatherTransformer(e2)) =>
+              e1.cmp(e2) match {
+                case Some(mapping) => ka.map(mapping.apply) == kb
+                case _ => false
+              }
+            case (IndexStoreTransformer(e1), IndexStoreTransformer(e2)) =>
+              e1.cmp(e2) match {
+                case Some(mapping) => ka.map(mapping.apply) == kb
+                case _ => false
+              }
+            case (LogStoreTransformer(e1), LogStoreTransformer(e2)) =>
+              e1.cmp(e2) match {
+                case Some(mapping) => ka.map(mapping.apply) == kb
+                case _ => false
+              }
+            case (PartitionStoreTransformer(e1, pk1), PartitionStoreTransformer(e2, pk2)) =>
+              e1.cmp(e2) match {
+                case Some(mapping) => ka.map(mapping.apply) == kb && 
+                                      pk1.map(mapping.apply) == pk2
+                case _ => false
+              }
+            case _ => false
+          }}.map(_._1).toList
           if (matchingNames.length == 0) equiMaps = equiMaps + ((map.name, List(map.name)))
           else {
             val equiClass = equiMaps(matchingNames.head) ++ List(map.name)
@@ -397,9 +439,10 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
           }
           // Create new map definition, avoid aliases
           transformer match {
-            case DefaultTransformer(m: MapRef) if mapDefs.contains(m.name) =>
-              mapDefs = mapDefs + ((map.name, mapDefs(m.name)))
-            case _ => mapDefs = mapDefs + ((map.name, transformer))
+            case DefaultTransformer(m: MapRef) 
+              if mapDefs.contains(m.name) && mapDefs(m.name)._1 == map.keys =>
+              mapDefs = mapDefs + ((map.name, (map.keys, mapDefs(m.name)._2)))
+            case _ => mapDefs = mapDefs + ((map.name, (map.keys, transformer)))
           }
         }
       }
@@ -476,6 +519,116 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       ( aStmts ++ bStmts ++ List(Statement(map, aTransformer, bTransformer, op, execMode)))
     case m: MapDef => Nil  
   }
+
+  // def prepareExpression(scope: Set[(String, Type)], 
+  //                       schema: Set[(String, Type)], 
+  //                       expr: Expr): (List[Statement], Expr) = {
+  //   val (ein0, eout0) = expr.schema
+  //   val (ein, eout) = (ein0.toSet, eout0.toSet)
+  //   val evars = ein.union(eout)
+  //   val escope  = evars.intersect(scope)
+  //   val eschema = eout.intersect(scope.union(schema)) 
+  //   expr match {
+  //     case Const(tp, v) => (Nil, expr)
+  //     case Ref(name) => (Nil, expr)
+  //     case m @ MapRef(name, tp, keys) => 
+  //       val map = mapInfo(name)
+  //       m.locality  = map.locality match {
+  //         case LocalExp => Some(LocalExp)
+  //         case DistributedExp(pk) => Some(DistributedExp(pk.map(k => keys(map.keys.indexOf(k)))))
+  //       }
+  //       (Nil, m)
+  //     case MapRefConst(name, keys) => (Nil, expr)
+  //     case DeltaMapRefConst(name, keys) => (Nil, expr)
+  //     case Lift(name, se) => 
+  //       val v = ((name, se.tp))
+  //       val subscope  = escope.diff(Set(v))
+  //       val subschema = eschema.diff(Set(v))
+  //       val (stmts, subexp) = prepareExpression(subscope, subschema, se)
+  //       (stmts, Lift(name, subexp))
+  //     case AggSum(ks, e) => 
+  //       val (stmts, subexp) = prepareExpression(escope, eschema, e)
+  //       (stmts, AggSum(ks, subexp))
+  //     case Mul(l, r) => 
+  //       val (lin0, lout0) = l.schema
+  //       val (lin, lout) = (lin0.toSet, lout0.toSet)
+  //       val (rin0, rout0) = l.schema
+  //       val (rin, rout) = (rin0.toSet, rout0.toSet)
+  //       val lvars = lin.union(lout)
+  //       val rvars = rin.union(rout)
+  //       val lscope  = lvars.intersect(scope)
+  //       val lschema = lout.intersect(schema.union(rvars))
+  //       val rscope  = rvars.intersect(escope.union(lout))
+  //       val rschema = rout.intersect(schema)
+  //       val (la, le) = prepareExpression(lscope, lschema, l)
+  //       val (ra, re) = prepareExpression(rscope, rschema, r)
+  //       val newExpr = Mul(le, re)
+  //       newExpr.tp = expr.tp
+  //       (la ++ ra, newExpr)
+  //     case a @ Add(l, r) =>           
+  //       val (la, le) = prepareExpression(escope, eschema, l)
+  //       val (ra, re) = prepareExpression(escope, eschema, r)
+  //       val newExpr = Add(le, re)
+  //       newExpr.tp = a.tp
+  //       (la ++ ra, newExpr)
+  //     case Exists(e) => 
+  //       val (stmts, subexp) = prepareExpression(escope, eschema, e)
+  //       (stmts, Exists(subexp))
+  //     case Apply(fn, tp, as) => 
+  //       val (stmts, args) = as.map(a => prepareExpression(escope, eschema, a)).unzip
+  //       (stmts.flatten, Apply(fn, tp, args))
+  //     case Cmp(l, r, op) => 
+  //       val (la, le) = prepareExpression(escope, eschema, l)
+  //       val (ra, re) = prepareExpression(escope, eschema, r)
+  //       (la ++ ra, Cmp(le, re, op))
+  //     case Tuple(es) => 
+  //       val (stmts, args) = es.map(e => prepareExpression(escope, eschema, e)).unzip
+  //       val newExpr = Tuple(args)
+  //       newExpr.tp = expr.tp
+  //       (stmts.flatten, newExpr)
+  //     case TupleLift(ns, e) =>     
+  //       val (stmts, subexp) = prepareExpression(escope, eschema, e)
+  //       (stmts, TupleLift(ns, subexp))    
+  //     case Repartition(ks, e) => 
+  //       val (stmts, subexp0) = prepareExpression(escope, eschema, e)
+  //       val (iv, ov) = expr.schema
+  //       if (iv != Nil) sys.error("Repartitioning a map with input vars: " + e)
+  //       val subexp = subexp0 match {
+  //         case a @ Add(l, r) =>
+  //           val newAdd = Add(l, r)
+  //           newAdd.tp = a.tp
+  //           newAdd
+  //         case _ => subexp0
+  //       }
+  //       subexp.locality match {
+  //         case Some(LocalExp) =>
+  //           val scatterStmts = Statement.createScatter(subexp, ks)
+  //           (stmts ++ scatterStmts, scatterStmts.last.lhsMap)
+  //         case Some(DistributedExp(pkeys)) if (pkeys != ks) =>
+  //           val repartStmts = Statement.createRepartition(subexp, ks)
+  //           (stmts ++ repartStmts, repartStmts.last.lhsMap)
+  //         case Some(DistributedExp(_)) | None => (stmts, subexp)
+  //       }
+  //     case Gather(e) => 
+  //       val (stmts, subexp0) = prepareExpression(escope, eschema, e)
+  //       val (iv, ov) = expr.schema
+  //       if (iv != Nil) sys.error("Gathering a map with input vars")
+  //       val subexp = subexp0 match {
+  //         case a @ Add(l, r) =>
+  //           val newAdd = Add(l, r)
+  //           newAdd.tp = a.tp
+  //           newAdd
+  //         case _ => subexp0
+  //       }
+  //       subexp.locality match {
+  //         case Some(DistributedExp(pkeys)) =>
+  //           val gatherStmts = Statement.createGather(subexp)
+  //           (stmts ++ gatherStmts, gatherStmts.last.lhsMap)
+  //         case Some(LocalExp) | None => (stmts, subexp) 
+  //       }
+
+  //   }
+  // }
 
   def prepareExpression(expr: Expr): (List[Statement], Expr) = expr match {
     case Const(tp, v) => (Nil, expr)
