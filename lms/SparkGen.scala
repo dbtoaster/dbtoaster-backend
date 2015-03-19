@@ -67,7 +67,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   }
   case class GatherTransformer(var expr: Expr) extends Transformer {
     assert(expr.locality match { 
-      case Some(DistributedExp(pk)) if pk.length > 0  => true 
+      case Some(DistributedExp(pk)) => true 
       case _ => false 
     }, "GatherTransformer: Locality check failed")
     assert(mapInfo(expr.asInstanceOf[MapRef].name).storeType match {
@@ -520,116 +520,6 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
     case m: MapDef => Nil  
   }
 
-  // def prepareExpression(scope: Set[(String, Type)], 
-  //                       schema: Set[(String, Type)], 
-  //                       expr: Expr): (List[Statement], Expr) = {
-  //   val (ein0, eout0) = expr.schema
-  //   val (ein, eout) = (ein0.toSet, eout0.toSet)
-  //   val evars = ein.union(eout)
-  //   val escope  = evars.intersect(scope)
-  //   val eschema = eout.intersect(scope.union(schema)) 
-  //   expr match {
-  //     case Const(tp, v) => (Nil, expr)
-  //     case Ref(name) => (Nil, expr)
-  //     case m @ MapRef(name, tp, keys) => 
-  //       val map = mapInfo(name)
-  //       m.locality  = map.locality match {
-  //         case LocalExp => Some(LocalExp)
-  //         case DistributedExp(pk) => Some(DistributedExp(pk.map(k => keys(map.keys.indexOf(k)))))
-  //       }
-  //       (Nil, m)
-  //     case MapRefConst(name, keys) => (Nil, expr)
-  //     case DeltaMapRefConst(name, keys) => (Nil, expr)
-  //     case Lift(name, se) => 
-  //       val v = ((name, se.tp))
-  //       val subscope  = escope.diff(Set(v))
-  //       val subschema = eschema.diff(Set(v))
-  //       val (stmts, subexp) = prepareExpression(subscope, subschema, se)
-  //       (stmts, Lift(name, subexp))
-  //     case AggSum(ks, e) => 
-  //       val (stmts, subexp) = prepareExpression(escope, eschema, e)
-  //       (stmts, AggSum(ks, subexp))
-  //     case Mul(l, r) => 
-  //       val (lin0, lout0) = l.schema
-  //       val (lin, lout) = (lin0.toSet, lout0.toSet)
-  //       val (rin0, rout0) = l.schema
-  //       val (rin, rout) = (rin0.toSet, rout0.toSet)
-  //       val lvars = lin.union(lout)
-  //       val rvars = rin.union(rout)
-  //       val lscope  = lvars.intersect(scope)
-  //       val lschema = lout.intersect(schema.union(rvars))
-  //       val rscope  = rvars.intersect(escope.union(lout))
-  //       val rschema = rout.intersect(schema)
-  //       val (la, le) = prepareExpression(lscope, lschema, l)
-  //       val (ra, re) = prepareExpression(rscope, rschema, r)
-  //       val newExpr = Mul(le, re)
-  //       newExpr.tp = expr.tp
-  //       (la ++ ra, newExpr)
-  //     case a @ Add(l, r) =>           
-  //       val (la, le) = prepareExpression(escope, eschema, l)
-  //       val (ra, re) = prepareExpression(escope, eschema, r)
-  //       val newExpr = Add(le, re)
-  //       newExpr.tp = a.tp
-  //       (la ++ ra, newExpr)
-  //     case Exists(e) => 
-  //       val (stmts, subexp) = prepareExpression(escope, eschema, e)
-  //       (stmts, Exists(subexp))
-  //     case Apply(fn, tp, as) => 
-  //       val (stmts, args) = as.map(a => prepareExpression(escope, eschema, a)).unzip
-  //       (stmts.flatten, Apply(fn, tp, args))
-  //     case Cmp(l, r, op) => 
-  //       val (la, le) = prepareExpression(escope, eschema, l)
-  //       val (ra, re) = prepareExpression(escope, eschema, r)
-  //       (la ++ ra, Cmp(le, re, op))
-  //     case Tuple(es) => 
-  //       val (stmts, args) = es.map(e => prepareExpression(escope, eschema, e)).unzip
-  //       val newExpr = Tuple(args)
-  //       newExpr.tp = expr.tp
-  //       (stmts.flatten, newExpr)
-  //     case TupleLift(ns, e) =>     
-  //       val (stmts, subexp) = prepareExpression(escope, eschema, e)
-  //       (stmts, TupleLift(ns, subexp))    
-  //     case Repartition(ks, e) => 
-  //       val (stmts, subexp0) = prepareExpression(escope, eschema, e)
-  //       val (iv, ov) = expr.schema
-  //       if (iv != Nil) sys.error("Repartitioning a map with input vars: " + e)
-  //       val subexp = subexp0 match {
-  //         case a @ Add(l, r) =>
-  //           val newAdd = Add(l, r)
-  //           newAdd.tp = a.tp
-  //           newAdd
-  //         case _ => subexp0
-  //       }
-  //       subexp.locality match {
-  //         case Some(LocalExp) =>
-  //           val scatterStmts = Statement.createScatter(subexp, ks)
-  //           (stmts ++ scatterStmts, scatterStmts.last.lhsMap)
-  //         case Some(DistributedExp(pkeys)) if (pkeys != ks) =>
-  //           val repartStmts = Statement.createRepartition(subexp, ks)
-  //           (stmts ++ repartStmts, repartStmts.last.lhsMap)
-  //         case Some(DistributedExp(_)) | None => (stmts, subexp)
-  //       }
-  //     case Gather(e) => 
-  //       val (stmts, subexp0) = prepareExpression(escope, eschema, e)
-  //       val (iv, ov) = expr.schema
-  //       if (iv != Nil) sys.error("Gathering a map with input vars")
-  //       val subexp = subexp0 match {
-  //         case a @ Add(l, r) =>
-  //           val newAdd = Add(l, r)
-  //           newAdd.tp = a.tp
-  //           newAdd
-  //         case _ => subexp0
-  //       }
-  //       subexp.locality match {
-  //         case Some(DistributedExp(pkeys)) =>
-  //           val gatherStmts = Statement.createGather(subexp)
-  //           (stmts ++ gatherStmts, gatherStmts.last.lhsMap)
-  //         case Some(LocalExp) | None => (stmts, subexp) 
-  //       }
-
-  //   }
-  // }
-
   def prepareExpression(expr: Expr): (List[Statement], Expr) = expr match {
     case Const(tp, v) => (Nil, expr)
     case Ref(name) => (Nil, expr)
@@ -955,15 +845,29 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
             singletons.partition(_.lhsMap.tp == TypeLong)
           val wrapL = singletonsL.map { stmt =>
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
-            s"localCtx.${rhsName}"
+            stmt.rhsTransformer.expr.locality match {
+              case Some(DistributedExp(Nil)) => s"if (id == 0) localCtx.${rhsName} else 0L"
+              case Some(DistributedExp(pk))  => s"localCtx.${rhsName}"
+              case _ => sys.error("Gather of a local expression")
+            }            
           }
           val wrapD = singletonsD.map { stmt =>
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
-            s"localCtx.${rhsName}"
-          }          
-          val wrapP = partitions.map { stmt =>
+            stmt.rhsTransformer.expr.locality match {
+              case Some(DistributedExp(Nil)) => s"if (id == 0) localCtx.${rhsName} else 0.0"
+              case Some(DistributedExp(pk))  => s"localCtx.${rhsName}"
+              case _ => sys.error("Gather of a local expression")
+            }
+          }
+          val wrapP = partitions.map { stmt => 
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
-            s"new ColumnarPartition(id, localCtx.${rhsName}.buffers)"
+            stmt.rhsTransformer.expr.locality match {
+              case Some(DistributedExp(Nil)) =>
+                s"new ColumnarPartition(id, { if (id > 0) localCtx.${rhsName}.size = 0; localCtx.${rhsName}.buffers })"
+              case Some(DistributedExp(pk)) =>
+                s"new ColumnarPartition(id, localCtx.${rhsName}.buffers)"
+              case _ => sys.error("Gather of a local expression")
+            }
           }
           val unwrapL = Array.tabulate(singletonsL.length)(i => 
             s"${unifiedId}L.map(_($i)).reduce(_ + _)").toList
@@ -1146,8 +1050,9 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
           })
         } 
         else {
-          val lhsRep = cx(lhsMap.name).asInstanceOf[Rep[Store[Entry]]]         
-          implicit val manifestEntry = manEntry(lhsMap.keys.map(_._2) ++ List(lhsMap.tp)).asInstanceOf[Manifest[Entry]]            
+          val lhsRep = cx(lhsMap.name).asInstanceOf[Rep[Store[Entry]]]
+          implicit val manifestEntry = manEntry(lhsMap.keys.map(_._2) ++ List(lhsMap.tp)).asInstanceOf[Manifest[Entry]]
+
           if (stmt.opMap == OpSet) impl.stClear(lhsRep)
           stmt.initTransformer.map { case initTransformer =>
             expr(initTransformer.expr, (ivcRep: Rep[_]) => {
@@ -1166,6 +1071,19 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
             val entryRep = impl.stNewEntry(lhsRep, (lhsMap.keys.map(x => cx(x._1)) ++ List(rhsRep)))
             stmt.opMap match { case OpAdd | OpSet => impl.m3add(lhsRep, entryRep)(manifestEntry) }
           }, Some(lhsMap.keys))
+
+          // val batch = cx(stmt.conditions.head).asInstanceOf[Rep[Store[Entry]]]
+          // val cond = if (batch == null) impl.unit(true)
+          //            else impl.ordering_gt(impl.stSize(batch), impl.unit(0))
+          // impl.__ifThenElse(
+          //   cond,
+          //   impl.notequals(
+          //     if (stmt.opMap == OpSet) impl.stSize(guard) else impl.unit(1),
+          //     impl.unit(0)
+          //   ),
+          //   <BLOCK>,
+          //   impl.unit()
+          // )
         }
       }
       impl.unit(())
