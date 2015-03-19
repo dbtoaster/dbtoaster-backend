@@ -431,8 +431,8 @@ object M3 {
           FMap.merge(l1.cmp(l2), r1.cmp(r2))
         case (Add(l1, r1), Add(l2, r2)) => 
           FMap.merge(l1.cmp(l2), r1.cmp(r2))          
-        case (a @ Lift(v1, e1), b @ Lift(v2, e2)) =>
-          FMap.merge(e1.cmp(e2), FMap.create((v1, a.tp), (v2, a.tp)))
+        case (Lift(v1, e1), Lift(v2, e2)) =>
+          FMap.merge(e1.cmp(e2), FMap.create((v1, e1.tp), (v2, e2.tp)))
         case (Exists(e1), Exists(e2)) => e1.cmp(e2)
         case (AggSum(ks1, e1), AggSum(ks2, e2)) =>
           if (ks1.length != ks2.length) None else e1.cmp(e2) match {
