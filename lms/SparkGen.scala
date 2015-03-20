@@ -676,10 +676,9 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
     ctx0 = mapInfo.map { case (_, MapInfo(name, tp, keys, _, locality, storeType, linkMap)) =>  
       if (keys.size == 0) {
-        val manifest = man(tp)
         // hack -- distributed variables are prefixed by "localCtx."
         val prefix = if (locality == LocalExp || linkMap) "" else "localCtx." 
-        val rep = impl.named(prefix + name, false)(manifest)
+        val rep = impl.namedVar(prefix + name, tp)
         rep.emitted = true
         (name, (rep, keys, tp))
       } 
@@ -1038,7 +1037,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         cx.load()
         val lhsMap = stmt.lhsMap
         if (lhsMap.keys.size == 0) {
-          val lhsRep = lhsMap.tp match {
+          val lhsRep = lhsMap.tp match {      
             case TypeLong   => impl.Variable(cx(lhsMap.name).asInstanceOf[Rep[impl.Variable[Long]]])
             case TypeDouble => impl.Variable(cx(lhsMap.name).asInstanceOf[Rep[impl.Variable[Double]]])
             case TypeString => impl.Variable(cx(lhsMap.name).asInstanceOf[Rep[impl.Variable[String]]])

@@ -448,8 +448,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
     } // XXX missing indexes
     ctx0 = classLevelMaps.map {
       case MapDef(name, tp, keys, _, _) => if (keys.size == 0) {
-        val m = man(tp)
-        val s = impl.named(name, false)(m)
+        val s = impl.namedVar(name, tp)
         s.emitted = true
         (name, (s, keys, tp))
       } 

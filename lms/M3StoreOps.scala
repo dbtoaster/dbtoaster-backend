@@ -22,6 +22,8 @@ trait M3StoreOps extends StoreOps with Equal with IfThenElse {
   def named(name: String, tp: Type, mutable: Boolean = false): Rep[_]  
   
   def named[T](name: String, mutable: Boolean = false)(implicit mT: Manifest[T]): Rep[T]
+  
+  def namedVar(name: String, tp: Type): Rep[_]
               
   // M3-specific operations
   def m3temp[E <: Entry]()(implicit tp: Manifest[E]): Rep[Store[E]]
@@ -44,6 +46,7 @@ trait M3StoreOpsExp extends BaseExp
   val USE_STORE1 = true // whether we specialize temporary maps in Store1
   val USE_UNIQUE_INDEX_WHEN_POSSIBLE = true
   val STORE_TYPE = "M3StoreOpsExp.STORE_TYPE"
+  val NAME_ATTRIBUTE = "_name"
 
   def named(name: String, tp: Type, mutable: Boolean = false) = 
     named(name, mutable)(man(tp))
@@ -51,6 +54,18 @@ trait M3StoreOpsExp extends BaseExp
   def named[T](name: String, mutable: Boolean = false)(implicit mT: Manifest[T]) = { 
     val n = Named(name)(mT)
     if (mutable) reflectMutable(n) else n 
+  }
+
+  override def namedVar(name: String, tp: Type): Rep[_] = {
+    val init = tp match {
+      case TypeLong   => unit(0L)
+      case TypeDouble => unit(0.0)
+      case TypeString => unit("")
+      case _ => sys.error("Unsupported type " + tp) 
+    }
+    val rep = reflectMutable(NewVar(init))
+    rep.asInstanceOf[Sym[_]].attributes.update(NAME_ATTRIBUTE, name)
+    rep
   }
 
   def m3temp[E <: Entry]()(implicit tp: Manifest[E]): Rep[Store[E]] = {
@@ -283,10 +298,8 @@ trait ScalaGenM3StoreOps extends ScalaGenBase
     res
   }
 
-  private val nameAttr = "_name"
-
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr, n)
+    case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(NAME_ATTRIBUTE, n)
     case StUnsafeInsert(x, e, i) => 
       emitValDef(sym, quote(x) + ".unsafeInsert(" + i + "," + quote(e) + ")")
     case M3Add(s, e) =>
@@ -313,11 +326,11 @@ trait ScalaGenM3StoreOps extends ScalaGenBase
               strWriter.toString
           }
           case None => 
-            if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString 
+            if (s.attributes.contains(NAME_ATTRIBUTE)) s.attributes(NAME_ATTRIBUTE).toString 
             else "x" + s.id
         }
       } else {
-        if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString 
+        if (s.attributes.contains(NAME_ATTRIBUTE)) s.attributes(NAME_ATTRIBUTE).toString 
         else "x" + s.id
       }
     }
@@ -331,7 +344,7 @@ trait ScalaGenM3StoreOps extends ScalaGenBase
       case Const(z) => z.toString
       case s @ Sym(n) => 
         if (forcePrintSymbol) {
-          if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString 
+          if (s.attributes.contains(NAME_ATTRIBUTE)) s.attributes(NAME_ATTRIBUTE).toString 
           else "x" + s.id
         } else {
           isVoidType(s.tp) match {
@@ -641,10 +654,8 @@ trait CGenM3StoreOps extends CGenBase
     res
   }
 
-  private val nameAttr = "_name"
-
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(nameAttr, n)
+    case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(NAME_ATTRIBUTE, n)
     case StUnsafeInsert(x, e, i) => 
       emitValDef(sym, quote(x) + ".unsafeInsert(" + i + "," + quote(e) + ")")
     case M3Add(s, e) =>
@@ -673,11 +684,11 @@ trait CGenM3StoreOps extends CGenBase
               strWriter.toString
           }
           case None => 
-            if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString 
+            if (s.attributes.contains(NAME_ATTRIBUTE)) s.attributes(NAME_ATTRIBUTE).toString 
             else "x" + s.id
         }
       } else {
-        if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString 
+        if (s.attributes.contains(NAME_ATTRIBUTE)) s.attributes(NAME_ATTRIBUTE).toString 
         else "x" + s.id
       }
     }
@@ -691,7 +702,7 @@ trait CGenM3StoreOps extends CGenBase
       case Const(z) => z.toString
       case s @ Sym(n) => 
         if (forcePrintSymbol) {
-          if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString 
+          if (s.attributes.contains(NAME_ATTRIBUTE)) s.attributes(NAME_ATTRIBUTE).toString 
           else "x" + s.id
         } else {
           isVoidType(s.tp) match {
