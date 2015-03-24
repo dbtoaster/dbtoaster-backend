@@ -43,8 +43,10 @@ object Helper {
     val mux = SourceMux(
       (ev: InputEvent) => { actor ! ev }, 
       streams.map { case (in, ad, sp) => (in, ad, sp) },
-      parallel,
-      batchSize)
+      timeoutMilli = timeout * 1000,
+      parallel = parallel,
+      batchSize = batchSize)
+    mux.init()
     actor ! StreamInit(timeout)
     mux.read()
     askWait[(StreamStat, List[Any])](actor, EndOfStream, timeout)

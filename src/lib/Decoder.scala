@@ -3,6 +3,9 @@ import Messages._
 import scala.collection.mutable.PriorityQueue
 import scala.collection.mutable.HashMap
 import scala.collection.mutable.ArrayBuffer
+import java.io.DataInputStream
+import java.io.BufferedInputStream
+
 /**
  * These class helps creating a stream of events from a record data.
  * The data format is defined in terms of records and fields in the record:
@@ -21,10 +24,10 @@ import scala.collection.mutable.ArrayBuffer
  */
 
 /* Decode a tuple by splitting binary data, decoding it and calling f on each generated event */
-case class Decoder(f: OrderedInputEvent => Unit, adaptor: Adaptor = Adaptor("ORDERBOOK", Nil), splitter: Split = Split()) {
+case class Decoder(f: OrderedInputEvent => Unit, adaptor: Adaptor, splitter: Split = Split()) {
   private var data = Array[Byte]()
 
-  def add(b: Array[Byte], n: Int): Unit = { if (n <= 0) return;
+  def add(b: Array[Byte], n: Int): Unit = if (n > 0) {
     val l = data.length
     val d = new Array[Byte](l + n)
     System.arraycopy(data, 0, d, 0, l)
@@ -132,35 +135,41 @@ object Split {
  *               delimiter = ","
  *               action = "insert" | "delete" | "both" => col(0):Int=order, col(1):Int=is_insert
  */
-abstract class Adaptor extends Function3[Array[Byte], Int, Int, List[OrderedInputEvent]] // buffer,start,end => events
-object Adaptor {
-  def apply(name: String, options: Map[String, String]): Adaptor = apply(name, options.toList)
+// abstract class Adaptor extends Function3[Array[Byte], Int, Int, List[OrderedInputEvent]] // buffer,start,end => events
+abstract class Adaptor {
+  def apply(data: Array[Byte], off: Int, len: Int): List[OrderedInputEvent]
+  def apply(str: String): List[OrderedInputEvent]
+  def apply(in: DataInputStream): OrderedInputEvent
+}
 
-  def apply(name: String, options: List[(String, String)]): Adaptor = {
-    val m = options.map { case (k, v) => (k.toLowerCase, v) }.toMap
-    def i(k: String, v: Int)  = m.get(k) match { 
-      case Some(x) => Integer.parseInt(x) 
-      case None => v 
-    }
-    def b(k: String, v: Boolean) = m.get(k) match { 
-      case Some(x) => x.toLowerCase == "yes" || x.toLowerCase == "true" || x == "1" 
-      case None => v 
-    }
-    def s(k: String, v: String)  = m.get(k) match { 
-      case Some(x) => x.toUpperCase 
-      case None => v 
-    }
-    name.toUpperCase match {
-      case "ORDERBOOK" => 
-        new OrderBook(i("brokers", 10), s("bids", "BIDS"), s("asks", "ASKS"), b("deterministic", true))
-      case "CSV" => 
-        new CSV(s("name", "CSV"), s("schema", "string"), s("delimiter", ","), s("action", "insert"))
-      case x => sys.error("Adaptor '" + x + "' not found")
-    }
-  }
+object Adaptor {
+  // def apply(name: String, options: Map[String, String]): Adaptor = apply(name, options.toList)
+
+  // def apply(name: String, options: List[(String, String)]): Adaptor = {
+  //   val m = options.map { case (k, v) => (k.toLowerCase, v) }.toMap
+  //   def i(k: String, v: Int)  = m.get(k) match { 
+  //     case Some(x) => Integer.parseInt(x) 
+  //     case None => v 
+  //   }
+  //   def b(k: String, v: Boolean) = m.get(k) match { 
+  //     case Some(x) => x.toLowerCase == "yes" || x.toLowerCase == "true" || x == "1" 
+  //     case None => v 
+  //   }
+  //   def s(k: String, v: String)  = m.get(k) match { 
+  //     case Some(x) => x.toUpperCase 
+  //     case None => v 
+  //   }
+  //   name.toUpperCase match {
+  //     case "ORDERBOOK" => 
+  //       new OrderBook(i("brokers", 10), s("bids", "BIDS"), s("asks", "ASKS"), b("deterministic", true))
+  //     case "CSV" => 
+  //       new CSV(s("name", "CSV"), s("schema", "string"), s("delimiter", ","), s("action", "insert"))
+  //     case x => sys.error("Adaptor '" + x + "' not found")
+  //   }
+  // }
 
   class CSV(name: String, schema: String, delimiter: String = ",", action: String = "insert") extends Adaptor {
-    val tfs: Array[String => _] = schema.split(",").map{
+    val tfs: Array[String => _] = schema.split(",").map {
       case "int"   | "long"   => (c: String) => java.lang.Long.parseLong(c)
       case "float" | "double" => (c: String) => java.lang.Double.parseDouble(c)
       case "date"   => (c: String) => Functions.Udate(c)
@@ -179,11 +188,33 @@ object Adaptor {
                                                 rec.drop(2)) // tx=java.lang.Long.parseLong(rec(0))
     }
 
-    def apply(data: Array[Byte], off: Int, len: Int): List[OrderedInputEvent] = {
-      val (ord: Int, op: TupleOp, rec: Array[String]) = 
-        ev(new String(data, off, len, "UTF-8").split(delimiter))
+    val btfs: Array[DataInputStream => _] = schema.split(",").map {
+      case "int"   | "long"   => (in: DataInputStream) => in.readLong()
+      case "float" | "double" => (in: DataInputStream) => in.readDouble()
+      case "date"   => (in: DataInputStream) => in.readLong()
+      case "string" => (in: DataInputStream) => in.readUTF()
+      case _ => sys.error("Unsupported schema type")
+    }
+
+    val bev: DataInputStream => (Int, TupleOp) = action.toLowerCase match {
+      case "insert" => (in: DataInputStream) => (0, TupleInsert)
+      case "delete" => (in: DataInputStream) => (0, TupleDelete)
+      case _        => (in: DataInputStream) => (in.readInt(), if (in.readInt() == 1) TupleInsert else TupleDelete)
+    }
+
+    def apply(in: DataInputStream): OrderedInputEvent = {
+      val (ord, op) = bev(in)
+      val eventData = btfs.map(f => f(in)).toList
+      OrderedInputEvent(ord, TupleEvent(op, name, eventData))
+    }
+
+    def apply(data: Array[Byte], off: Int, len: Int): List[OrderedInputEvent] = 
+      apply(new String(data, off, len, "UTF-8"))
+
+    def apply(str: String): List[OrderedInputEvent] = {
+      val (ord: Int, op: TupleOp, rec: Array[String]) = ev(str.split(delimiter))
       val eventData = rec.zipWithIndex.map { case (x, i) => tfs(i)(x) }.toList
-      List(OrderedInputEvent(ord, TupleEvent(op, name, eventData)))
+      List(OrderedInputEvent(ord, TupleEvent(op, name, eventData))) 
     }
   }
 
@@ -195,8 +226,13 @@ object Adaptor {
     val asksMap = new Hist()
     val bidsMap = new Hist()
 
-    def apply(data: Array[Byte], off: Int, len: Int): List[OrderedInputEvent] = {
-      val col = new String(data, off, len, "UTF-8").split(",")
+    def apply(in: DataInputStream): OrderedInputEvent = sys.error("Not implemented")
+
+    def apply(data: Array[Byte], off: Int, len: Int): List[OrderedInputEvent] = 
+      apply(new String(data, off, len, "UTF-8"))
+    
+    def apply(str: String): List[OrderedInputEvent] = {
+      val col = str.split(",")
       val t = java.lang.Integer.parseInt(col(0)) //order or timestamp
       val id = java.lang.Long.parseLong(col(1))
       val volume = java.lang.Double.parseDouble(col(3))
@@ -248,8 +284,12 @@ object Adaptor {
  *   and usually small, so thread switching penalty should be low.
  */
 import java.io.InputStream
-case class SourceMux(dispatchFn: InputEvent => Unit, streams: Seq[(InputStream, Adaptor, Split)], 
-                     parallel: Int = 0, batchSize: Int = 0, bufferSize: Int = 32 * 1024) {
+case class SourceMux(dispatchFn: InputEvent => Unit, 
+                     streams: Seq[(InputStream, Adaptor, Split)], 
+                     timeoutMilli: Long = 0L,
+                     parallel: Int = 0, 
+                     batchSize: Int = 0, 
+                     bufferSize: Int = 32 * 1024) {
 
   var batchCtx = new HashMap[String, ArrayBuffer[List[Any]]]
   var tupleCounter = 0L
@@ -281,44 +321,7 @@ case class SourceMux(dispatchFn: InputEvent => Unit, streams: Seq[(InputStream, 
     }
   }
 
-  // private def f(e: InputEvent) = {}
-
-  // var batches = new HashMap[String, ArrayBuffer[TupleEvent]]
-
-  // private def f(e: InputEvent) {
-  //   def callG(stream: String, batch: ArrayBuffer[TupleEvent]) {
-  //     g(BatchUpdateEvent(stream, batch.map { e => e.data :+ (e.asInstanceOf[TupleEvent].op match {
-  //       case TupleInsert =>  1L
-  //       case TupleDelete => -1L
-  //       case _ => sys.error("Unsupported event")
-  //     })}.toList))
-  //   }
-  //   if(e == null) {
-  //     batches.foreach { case (stream, batch) =>
-  //       if (!batch.isEmpty) {
-  //         callG(stream, batch)
-  //         batch.clear
-  //       }
-  //     }
-  //   } else if (batchSize == 0 || batchSize == 1) {
-  //     g(e)
-  //   } else {
-  //     val te = e.asInstanceOf[TupleEvent]
-  //     batches.get(te.stream) match {
-  //       case Some(batch) =>
-  //         batch += te
-  //         if (batchSize > 0 && batch.size >= batchSize) {
-  //           callG(te.stream, batch)
-  //           batch.clear
-  //         }
-  //       case None =>
-  //         val newBatch = if (batchSize > 0) new ArrayBuffer[TupleEvent](batchSize) 
-  //                        else new ArrayBuffer[TupleEvent]
-  //         newBatch += te
-  //         batches += (te.stream -> newBatch)
-  //     }
-  //   }
-  // }
+  // READ STREAMS
 
   private def read1(in: InputStream, d: Decoder) {
     val buf = new Array[Byte](bufferSize)
@@ -326,7 +329,7 @@ case class SourceMux(dispatchFn: InputEvent => Unit, streams: Seq[(InputStream, 
     do { 
       n = in.read(buf)
       d.add(buf, n)
-    } while (n > 0);
+    } while (n > 0)
     d.eof()
     in.close()
   }
@@ -356,23 +359,25 @@ case class SourceMux(dispatchFn: InputEvent => Unit, streams: Seq[(InputStream, 
 
   private var lst: LinkedList[OrderedInputEvent] = null
 
-  if (parallel == 2) {
-    lst = new LinkedList[OrderedInputEvent]()
-    val qq = new LinkedList[LinkedList[OrderedInputEvent]]()
-    streams.foreach { case (in, adp, splt) => 
-      val iq = new LinkedList[OrderedInputEvent]
-      read1(in, Decoder((e: OrderedInputEvent) => iq.offer(e), adp, splt))
-      qq.offer(iq) 
-    }
-    var p = qq.poll
-    while (p != null) { 
-      val e = p.poll
-      if (e != null) { 
-        if (e.ord == 0) lst.offer(e) 
-        else que.enqueue(e)
-        qq.offer(p) 
+  def init() = {
+    if (parallel == 2) {
+      lst = new LinkedList[OrderedInputEvent]()
+      val qq = new LinkedList[LinkedList[OrderedInputEvent]]()
+      streams.foreach { case (in, adp, splt) => 
+        val iq = new LinkedList[OrderedInputEvent]
+        read1(in, Decoder((e: OrderedInputEvent) => iq.offer(e), adp, splt))
+        qq.offer(iq) 
       }
-      p = qq.poll 
+      var p = qq.poll
+      while (p != null) { 
+        val e = p.poll
+        if (e != null) { 
+          if (e.ord == 0) lst.offer(e) 
+          else que.enqueue(e)
+          qq.offer(p) 
+        }
+        p = qq.poll 
+      }
     }
   }
 
@@ -382,7 +387,13 @@ case class SourceMux(dispatchFn: InputEvent => Unit, streams: Seq[(InputStream, 
         case (in, adp, splt) => 
           read1(in, Decoder((e: OrderedInputEvent) => 
             if (e.ord == 0) processEvent(e.event) else que.enqueue(e), adp, splt)) 
-      }
+        }
+        processQTail
+      case 1 => streams.foreach { case (in, adp, splt) => 
+          for (line <- scala.io.Source.fromInputStream(in).getLines) {
+            adp(line).headOption.foreach(e => processEvent(e.event))
+          }
+        }
       // case 1 => val ts = streams.zipWithIndex.map { case ((in,adp,splt),i) => new Thread{ override def run() { read1(in,Decoder((e:InputEvent)=>if(e.ord == 0) f(e) else processQ(i,e),adp,splt)); queuedTuplesFromStreams(i) = Int.MaxValue }} }
       //           ts.foreach(_.start); ts.foreach(_.join)
       case 2 => 
@@ -391,11 +402,76 @@ case class SourceMux(dispatchFn: InputEvent => Unit, streams: Seq[(InputStream, 
           processEvent(e.event)
           e = lst.poll 
         }
+        processQTail
+      case 3 | 4 =>
+        import collection.JavaConversions._
+        import java.util.ArrayList
+        import java.util.LinkedList
+        import java.util.concurrent.ArrayBlockingQueue
+
+        val binaryFormat = (parallel == 4)
+        val BLOCK_SIZE = 1024
+        val queues = Array.fill(streams.length)(new ArrayBlockingQueue[OrderedInputEvent](BLOCK_SIZE))
+
+        case class QBlock(
+          val queue: ArrayBlockingQueue[OrderedInputEvent], 
+          var block: LinkedList[OrderedInputEvent] = new LinkedList[OrderedInputEvent](),
+          var hasMore: Boolean = true)
+
+        val consumer = new Thread { 
+          override def run() = {
+            var qblocks = queues.map(q => QBlock(q))
+            while (qblocks.size > 0) {
+              for (qb <- qblocks if qb.block.isEmpty) {
+                qb.block.add(qb.queue.take())
+                qb.queue.drainTo(qb.block)
+                qb.hasMore = (qb.block.getFirst.ord >= 0)
+              }
+              qblocks = qblocks.filter(_.hasMore)
+
+              while (qblocks.size > 0 && qblocks.forall(!_.block.isEmpty)) {
+                val minOrd = qblocks.map(_.block.getFirst.ord).min
+                qblocks.filter(_.block.getFirst.ord == minOrd).foreach { qb =>
+                  processEvent(qb.block.poll().event)
+                  qb.hasMore = qb.block.isEmpty || qb.block.getFirst.ord >= 0
+                }  
+                qblocks = qblocks.filter(_.hasMore)  
+              }                
+            }
+          }
+        }
+        val producers = streams.zipWithIndex.map { case ((in, adp, splt), i) => new Thread {
+            override def run() = {
+              val q = queues(i)
+              if (binaryFormat) {
+                try {
+                  val input = new DataInputStream(new BufferedInputStream(in, bufferSize))
+                  while (true) q.put(adp(input))
+                } catch { case e: java.io.EOFException => }
+              }
+              else {
+                for (line <- scala.io.Source.fromInputStream(in).getLines) 
+                  adp(line).headOption.foreach(q.put)                
+              }
+              q.put(OrderedInputEvent(-1, null))
+            }            
+          } 
+        }
+        consumer.setDaemon(true)
+        consumer.start
+        producers.foreach { t => t.setDaemon(true); t.start }
+        // producers.foreach { t => t.join }
+        consumer.join(timeoutMilli)
       case _ => sys.error("Unsupported parallel mode")
     }
-    processQTail
+    
   }
 }
+
+
+
+
+
 
 /*
  * SourceMuxPull is similar to SourceMux but tuples are explicitly requested by
