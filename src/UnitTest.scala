@@ -596,10 +596,19 @@ object UnitTest {
 
   // Helper for displaying information and emitting a CSV file
   case class Sample(us:Long,count:Long,skip:Long) extends Ordered[Sample] {
-    override def toString = { (us/1000000L)+".%06d".format(us%1000000L)+","+count+","+skip+"," } // CSV format
-    def compare(s:Sample) = { val (a,b) = (count*s.us,s.count*us); if (a < b) -1 else if (a>b) 1 else 0 }
-    def t = { val ms=math.round(us/1000.0); "%d.%03d".format(ms/1000,ms%1000) } // time in seconds
-    def f = { val tps=if (us==0) 0 else count*1000000.0/us; val t=math.round(tps*10); "%d.%01d".format(t/10,t%10) } // frequency in views/sec
+    override def toString = "%d.%06d,%d,%d,".format(us / 1000000L, us % 1000000L, count, skip) // CSV format
+    def compare(s: Sample) = { 
+      val (a, b) = (count * s.us, s.count * us); if (a < b) -1 else if (a > b) 1 else 0 
+    }
+    def t = { // time in seconds
+      val ms = math.round(us / 1000.0)
+      "%d.%03d".format(ms / 1000, ms % 1000) 
+    } 
+    def f = {  // frequency in views/sec
+      val tps = if (us == 0) 0 else count * 1000000.0 / us
+      val t = math.round(tps * 10)
+      "%d.%01d".format(t / 10, t % 10) 
+    }
   }
 
   class Printer(name:String) {

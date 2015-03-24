@@ -109,7 +109,7 @@ case object OpGe extends OpCmp { override def toString = ">=" }
 
 
 // ---------- Source definitions, see ddbt.frontend.ExtParser
-case class Source(stream: Boolean, schema: Schema, in: SourceIn, split:Split, adaptor:Adaptor) extends Tree { 
+case class Source(stream: Boolean, schema: Schema, in: SourceIn, split: Split, adaptor: Adaptor) extends Tree { 
   override def toString = 
     "CREATE " + (if (stream) "STREAM" else "TABLE") + " " + schema + 
     "\n  FROM " + in + " " + split + " " + adaptor + ";" 
