@@ -340,6 +340,10 @@ commands += Command.command("release")((state:State) => {
   import ch.epfl.data.purgatory.plugin.PurgatoryPlugin._
   val prop = new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
   Seq(
+    scalaSource in Compile <<= baseDirectory / "pardis", // incorrect; copied from lms
+    libraryDependencies ++= Seq(
+      "ch.epfl.data" % "sc-pardis-compiler_2.11" % "0.1-SNAPSHOT"
+    ),
     outputFolder := prop.getProperty("ddbt.pardis.outputFolder","pardis/lifter"),
     inputPackage := prop.getProperty("ddbt.pardis.inputPackage","ddbt.lib.store"),
     outputPackage := prop.getProperty("ddbt.pardis.outputPackage","ddbt.lib.store.deep")) ++ generatorSettings
