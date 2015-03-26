@@ -54,6 +54,8 @@ trait CodeGen extends (M3.System => String) {
 
   def genLMS(s0:M3.System):(String,String,String,String) = (null,null,null,null)
 
+  def genPardis(s0:M3.System):(String, String, String, String) = (null, null, null, null)
+
   def clearOut:Unit
 
   def additionalImports():String
