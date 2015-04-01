@@ -2,6 +2,8 @@ package ddbt.lib.store;
 import scala.Function1;
 import scala.Unit;
 
+import java.io.Serializable;
+
 /**
  * Index interface.
  * By default it emits a warning when an unsupported function is called.
@@ -9,7 +11,8 @@ import scala.Unit;
  *
  * @author TCK
  */
-public abstract class Idx<E extends Entry> {
+public abstract class Idx<E extends Entry> implements Serializable {
+  private static final long serialVersionUID = 300L;
   Idx(Store<E> st, int idx, boolean unique) { this.ops=st.ops()[idx]; this.idx=idx; this.unique=unique; }
   protected final EntryIdx<E> ops;
   protected final int idx;
@@ -39,7 +42,7 @@ public abstract class Idx<E extends Entry> {
  * + insert,delete,update,get = O(1)
  * + range = O(n)
  */
-class IdxHashEntry<E extends Entry> {
+class IdxHashEntry<E extends Entry> implements Serializable {
   IdxHashEntry(int h, E d) { hash=h; data=d; }
   int hash; E data; IdxHashEntry<E> next;
 }

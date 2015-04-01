@@ -1,5 +1,7 @@
 package ddbt.lib.store;
 
+import java.io.Serializable;
+
 /**
  * Abstract entry that is specialized for each map.
  * There is no key/value distinction as it is encoded by the indices.
@@ -8,10 +10,13 @@ package ddbt.lib.store;
  *
  * @author TCK
  */
-public abstract class Entry {
+public abstract class Entry implements Serializable {
+  private static final long serialVersionUID = 400L;
+
   final Object[] data;
   public Entry(int n) { data=new Object[n]; }
   abstract public Entry copy(); // returns a copy of the entry, for B-Trees only
+  abstract public Object[] elements();
   //abstract public boolean zero(); // the tuple can safely be deleted from the map
   //abstract public void merge(Entry e); // combine e in this (some kine of aggregation)
 
