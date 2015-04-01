@@ -640,9 +640,9 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry
       out.println("  def copy = " + clsName + "(" + 
         argTypes.zipWithIndex.map { case (_, i) => "_%d".format(i + 1) }
         .mkString(", ") + ")")
-      out.println("  def elements = Array(" +
+      out.println("  def elements = Array[Any](" +
         argTypes.zipWithIndex.map { case (_, i) => "_%d".format(i + 1) }
-        .mkString(", ") + ").map(_.asInstanceOf[AnyRef])")
+        .mkString(", ") + ").asInstanceOf[Array[AnyRef]]")
       //val l="_"+argTypes.size
       //out.println("  override def zero = "+l+" == "+zeroValue(argTypes.last))
       //out.println("  override def merge(e0:Entry) { val e=e0.asInstanceOf["+clsName+"]; "+l+" "+(argTypes.last match { case "java.util.Date" => "= new Date("+l+".getTime + e."+l+".getTime)" case _ => "+= e."+l })+" }")
