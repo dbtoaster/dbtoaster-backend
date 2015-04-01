@@ -3,6 +3,7 @@ import ddbt.codegen.lms._
 import ddbt.ast._
 import ddbt.lib._
 
+
 /**
   * This code generator is similar to ScalaGen but targets LMS graph (IR) to
   * optimize further before emitting Scala code for the trigger bodies.
@@ -19,6 +20,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
   import ddbt.lib.store._
 
   var cx: Ctx[Rep[_]] = null
+  val STORE_WATCHED = "StoreOps.watched"
 
   def me(ks: List[Type], v: Type = null) = 
     manEntry(if (v == null) ks else ks ::: List(v))
@@ -393,8 +395,14 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
 
   def genAllMaps(maps: Seq[MapDef]) = maps.map(genMap).mkString("\n")
 
-  def createVarDefinition(name: String, tp: Type) = 
-    "var " + name + ": " + tp.toScala + " = " + tp.zero
+  def createVarDefinition(name: String, tp: Type) = {
+
+    val watched = ctx0(name)._1.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.get(STORE_WATCHED).asInstanceOf[Option[Boolean]].getOrElse(false)
+    if (watched)
+      "var " + name + " = new ValueWrapper(" + tp.zero + ")"
+    else
+      "var " + name + ": " + tp.toScala + " = " + tp.zero
+  }
 
   override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
     val (a, keys, tp) = ctx0(map)
@@ -445,6 +453,8 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
     maps.map{
       case (_, m: MapDef) => m
     } // XXX missing indexes
+
+    val queryNames = s0.queries.map(q => q.name)
     ctx0 = classLevelMaps.map {
       case MapDef(name, tp, keys, _, _) => if (keys.size == 0) {
         val m = man(tp)
@@ -456,6 +466,13 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
         val m = me(keys.map(_._2), tp)
         val s = impl.named(name, true)(manStore(m))
         impl.collectStore(s)(m)
+
+        if (queryNames.contains(name))
+          s.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.put(STORE_WATCHED, true)
+        else
+          s.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.put(STORE_WATCHED, false)
+
+
         (name, (/*impl.newSStore()(m)*/s, keys, tp))
       }
     }.toMap // XXX missing indexes
@@ -499,6 +516,12 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
     } 
     else "def printMapsInfo() = {}"
     val r = ds + "\n" + ms + "\n" + ts + "\n" + printInfoDef
+    //println("-------ds: \n" + ds)
+    //println("-----ms:\n " + ms)
+
+    //println("--------ts:\n " + ts)
+
+
     (r, str, ld0, consts)
   }
 

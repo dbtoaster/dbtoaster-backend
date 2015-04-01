@@ -588,11 +588,51 @@ trait IScalaGen extends CodeGen {
     (singleStr + batchStr, ld0, consts)
   }
 
+  def genSimpleEventsHandling(s0: System):String = {
+    def ev(s: Schema, short: Boolean = true): (String, String, String, List[(String, Type)]) = {
+      val fs =
+        if (short) s.fields.zipWithIndex.map {
+          case ((s, t), i) => ("v" + i, t)
+        }
+        else s.fields
+      (fs.map { case(s, t) => s.toLowerCase + ":" + t.toScala }.mkString(","),
+        genTuple(fs.map { case (v, t) => (t, v) }),
+        "(" + fs.map { case (s, t) => s.toLowerCase }.mkString(",") + ")",
+        fs)
+    }
+
+    val (systemEvent, others) = s0.triggers.partition(_.evt match {
+      case EvtReady => true
+      case _ => false
+    })
+
+    val (singleEvents, batchEvents) = others.partition(_.evt match {
+      case EvtBatchUpdate(_) => false
+      case EvtAdd(_) | EvtDel(_) => true
+      case _ => sys.error("Unexpected trigger event")
+    })
+    val singleStr = singleEvents.map(_.evt match {
+      case EvtAdd(s) =>
+        val (i, _, o, pl) = ev(s)
+        "case TupleEvent(TupleInsert, \"" + s.name +
+          "\", List(" + i + ")) => onAdd" + s.name + o + "\n"
+      case EvtDel(s) =>
+        val (i, _, o, pl) = ev(s)
+        "case TupleEvent(TupleDelete, \"" + s.name +
+          "\", List(" + i + ")) => onDel" + s.name + o + "\n"
+      case _ => ""
+    }).mkString
+
+    singleStr
+  }
+
   def genQueries(queries: List[Query]) = {
+    println("genQueries " + queries)
     queries.map { query => { query.map match {
       case MapRef(n,_,_) if (n == query.name) => ""
       case _ =>
         ctx = Ctx[(Type, String)]()
+        println("Query: " + query)
         "def " + query.name + "() = {\n" +
         ind(
           if (query.keys.length == 0) cpsExpr(query.map)
@@ -634,7 +674,9 @@ trait IScalaGen extends CodeGen {
   var maps = Map[String, MapDef]() // declared global maps
   
   def apply(s0: System): String = {
+
     maps = s0.maps.map( m => (m.name, m)).toMap
+    println(maps)
     val (lms, strLMS, ld0LMS, gcLMS) = genLMS(s0)
     val body = if (lms!=null) lms else {
       // triggers (need to be generated before maps)
@@ -654,45 +696,73 @@ trait IScalaGen extends CodeGen {
           case m: MapDef => genMap(m)+"\n"
           case _ => ""
         }
-      }.mkString + s0.maps.map(genMap).mkString("\n") // maps
+      }.mkString + s0.maps.map(m => genMap(m)).mkString("\n") // maps
       ms + "\n\n" + genQueries(s0.queries) + "\n\n" + ts
     }
+    //println(strLMS)
     val (str, ld0, gc) = 
       if (lms != null) (strLMS, ld0LMS, gcLMS) else genInternals(s0)
+    val simEventHandlerStr = genSimpleEventsHandling(s0)
     val ld = 
       // optional preloading of static tables content
       if (ld0 != "") "\n\ndef loadTables() {\n" + ind(ld0) + "\n}" else "" 
     freshClear()
-    val snap =
-      onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), List(" +
-      s0.queries.map(q => 
-        (if (q.keys.size > 0) toMapFunction(q) else q.name)).mkString(",") + 
-      "))"
+    //println("Queries: " + s0.queries)
+    val snap = "List(" +
+      s0.queries.map(q =>
+        (if (q.keys.size > 0) toMapFunction(q) else q.name)).mkString(",") +
+      ")"
+    val snapWithStat =
+      onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), " + snap + ")"
+
     val pp = ""
       // if (printProgress > 0L) 
       //   "def printProgress(): Unit = if (tN % " + printProgress + 
       //   " == 0) Console.println((System.nanoTime - t0) + \"\\t\" + tN);\n" 
       // else ""
     clearOut
-    helper(s0) + "class " + cls + " extends Actor {\n" + 
+    helper(s0) + "class " + cls + "Impl extends Serializable {\n" +
     ind(
-      "import ddbt.lib.Messages._\nimport " + cls + "._\n" +
-      "import ddbt.lib.Functions._\n\n" + body + "\n\n" +
-      "var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L\n" +
+      "import ddbt.lib.Messages._\n\n" +
+      body + "\n\n" +
       pp +
-      "def receive_skip: Receive = { case EndOfStream | GetSnapshot(_) => "+ 
-      snap + " case _ => tS += 1L }\n" +
-      "def receive = {\n" + 
+      "def handleEvent(e: StreamEvent) = e match {\n" +
+        ind(
+          simEventHandlerStr +
+          "case StreamInit(timeout) =>" +
+          (if (ld != "") " loadTables();" else "") +
+          " onSystemReady()\n" +
+          "case EndOfStream | GetSnapshot(_) => " + onEndStream + " " + snap + "\n" +
+          "case GetStream(_) => List(" +
+          s0.queries.map(q => (if (q.keys.size > 0) q.name + ".getStream" else q.name)).mkString(",") +
+          ")"
+        ) +
+        "\n}\n" +
+//        s0.queries.map(q =>
+//      "def getStream() = {\n" +
+//      ind(
+//        (if (q.keys.size > 0) q.name + ".getStream" else q.name)
+//      ) + "\n}\n").mkString("\n") +
+      gc + ld
+    ) + "\n}\n" +
+    "class " + cls + " extends " + cls + "Impl with Actor {\n\n" +
+    ind(
+    "import ddbt.lib.Messages._\nimport " + cls + "._\n" +
+    "import ddbt.lib.Functions._\n\n" +
+    "var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L\n" +
+    "def receive_skip: Receive = { case EndOfStream | GetSnapshot(_) => "+
+      snapWithStat + " case _ => tS += 1L }\n" +
+      "def receive = {\n" +
       ind(
         str +
-        "case StreamInit(timeout) =>" + 
-        (if (ld != "") " loadTables();" else "") + 
-        " onSystemReady(); t0 = System.nanoTime; " + 
-        "if (timeout > 0) t1 = t0 + timeout * 1000000L\n" +
-        "case EndOfStream | GetSnapshot(_) => t1 = System.nanoTime; " + snap
-      ) + 
-      "\n}\n" + gc + ld
-    ) + "\n}\n"
+          "case StreamInit(timeout) =>" +
+          (if (ld != "") " loadTables();" else "") +
+          " onSystemReady(); t0 = System.nanoTime; " +
+          "if (timeout > 0) t1 = t0 + timeout * 1000000L\n" +
+          "case EndOfStream | GetSnapshot(_) => t1 = System.nanoTime; " + snap
+      ) +
+      "\n}\n") +
+    "\n}\n"
   }
 
   protected def genStream(s: Source): (String, String, String) = {
