@@ -733,9 +733,11 @@ trait IScalaGen extends CodeGen {
           (if (ld != "") " loadTables();" else "") +
           " onSystemReady()\n" +
           "case EndOfStream | GetSnapshot(_) => " + onEndStream + " " + snap + "\n" +
-          "case GetStream(_) => List(" +
-          s0.queries.map(q => (if (q.keys.size > 0) q.name + ".getStream" else q.name)).mkString(",") +
-          ")"
+          "case GetStream(n) => n match {\n" +
+            ind(
+            s0.queries.zipWithIndex.map{case (q, i) => "case " + (i + 1) + " => " + (if (q.keys.size > 0) q.name + ".getStream" else q.name)}.mkString("\n") + "\n" +
+            "case _ => List(" + s0.queries.map(q => (if (q.keys.size > 0) q.name + ".getStream" else q.name)).mkString(",") +
+          ")\n}")
         ) +
         "\n}\n" +
 //        s0.queries.map(q =>
