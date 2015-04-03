@@ -721,9 +721,9 @@ trait IScalaGen extends CodeGen {
       //   " == 0) Console.println((System.nanoTime - t0) + \"\\t\" + tN);\n" 
       // else ""
     clearOut
-    helper(s0) + "class " + cls + "Impl extends Serializable {\n" +
+    helper(s0) + "class " + cls + "Impl extends IQuery with Serializable {\n" +
     ind(
-      "import ddbt.lib.Messages._\n\n" +
+      "import ddbt.lib.Messages._\n" +
       body + "\n\n" +
       pp +
       "def handleEvent(e: StreamEvent) = e match {\n" +
