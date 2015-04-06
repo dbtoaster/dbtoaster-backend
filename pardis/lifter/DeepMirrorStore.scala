@@ -3,6 +3,7 @@
 package ddbt.lib.store.deep
 
 import ch.epfl.data.pardis
+import ddbt.lib.store.{Store, Entry}
 import pardis.ir._
 import pardis.types.PardisTypeImplicits._
 import pardis.effects._
@@ -12,7 +13,7 @@ import pardis.deep.scalalib.collection._
 import pardis.deep.scalalib.io._
 
 
-trait MStoreOps extends Base with ArrayOps {  
+trait MStoreOps extends Base with ArrayOps {
   // Type representation
   case class MStoreType[E <: ddbt.lib.store.Entry](typeE: TypeRep[E]) extends TypeRep[MStore[E]] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = MStoreType(newArguments(0).asInstanceOf[TypeRep[_ <: ddbt.lib.store.Entry]])
@@ -37,6 +38,7 @@ trait MStoreOps extends Base with ArrayOps {
      def ops : Rep[Array[E]] = mStore_Field_Ops[E](self)(typeE)
      def idxs : Rep[Array[E]] = mStore_Field_Idxs[E](self)(typeE)
   }
+
   object MStore {
 
   }

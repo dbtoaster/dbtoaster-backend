@@ -81,7 +81,7 @@ trait M3OpsExp extends BaseExp with EffectExp with M3Ops with Equal with Numeric
   case class M3Apply[T](name:String,args:List[Exp[_]],mT:Manifest[T]) extends Def[T]
 }
 
-trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThenElse with ScalaGenM3StoreOps {
+trait ScalaGenM3Ops extends ScalaGenBa.se with ScalaGenEffect with ScalaGenIfThenElse with ScalaGenM3StoreOps {
   val IR: M3OpsExp with ExtendedExpressions
   import IR._
 

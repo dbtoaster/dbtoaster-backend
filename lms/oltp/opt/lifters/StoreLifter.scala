@@ -133,7 +133,7 @@ trait CGenSEntry extends CGenBase with dbtoptimizer.ToasterBoosterCCodegen {
 
 trait StoreOps extends Base with SEntryOps {
 
-  class StoreOpsCls[E<:Entry:Manifest](x: Rep[Store[E]]) {
+    class StoreOpsCls[E<:Entry:Manifest](x: Rep[Store[E]]) {
     def insert(e: Rep[E]):Rep[Unit] = stInsert[E](x, e)
     def update(e: Rep[E]):Rep[Unit] = stUpdate[E](x, e)
     def delete(e: Rep[E]):Rep[Unit] = stDelete[E](x, e)

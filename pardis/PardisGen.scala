@@ -27,7 +27,6 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
 
   def mapProxy(m:Rep[_]) = impl.store2StoreOpsCls(m.asInstanceOf[Rep[Store[Entry]]])
 
-
   // Expression CPS transformation from M3 AST to LMS graph representation
   //   ex : expression to convert
   //   co : continuation in which the result should be plugged
@@ -41,7 +40,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
       case _ => sys.error("Unsupported type "+tp)
     }
-    case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.notequals(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
+    case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.infix_!=(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
     case Cmp(l,r,op) => expr(l,(vl:Rep[_]) => expr(r,(vr:Rep[_]) => co(cmp(vl,op,vr,ex.tp)) )) // formally, we should take the derived type from left and right, but this makes no difference to LMS
     case a@Apply(fn,tp,as) =>
       def app(es:List[Expr],vs:List[Rep[_]]):Rep[Unit] = es match {
@@ -59,7 +58,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
         val z = impl.unit(zero(tp))
         val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
         val r = proxy.get(vs : _*)
-        co(impl.__ifThenElse(impl.__equal(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)))
+        co(impl.__ifThenElse(impl.infix_==(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)))
       } else { // we need to iterate over all keys not bound (ki)
         if (ko.size > 0) {
           implicit val mE=me(m.tks,tp)
@@ -194,8 +193,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
     @inline def cmp2[T:Ordering:Manifest](vl:Rep[_],vr:Rep[_]): Rep[Boolean] = {
       val (ll,rr)=(vl.asInstanceOf[Rep[T]],vr.asInstanceOf[Rep[T]])
       op match {
-        case OpEq => impl.equals[T,T](ll,rr)
-        case OpNe => impl.notequals[T,T](ll,rr)
+        case OpEq => impl.infix_==[T,T](ll,rr)
+        case OpNe => impl.infix_!=[T,T](ll,rr)
         case OpGt => impl.ordering_gt[T](ll,rr)
         case OpGe => impl.ordering_gteq[T](ll,rr)
       }
@@ -207,9 +206,9 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
       case TypeDate => cmp2[Long](impl.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]),impl.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
       case _ => sys.error("Unsupported type")
     },impl.unit(1L),impl.unit(0L))
-  }  
+  }
 
-  def filterStatement(s:Stmt) = true  
+  def filterStatement(s:Stmt) = true
 
   // Trigger code generation
   def genTriggerLMS(t:Trigger, s0:System) = {
@@ -221,12 +220,12 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
     }
 
     var params = ""
-    val block = impl.reifyEffects {
+    val block = impl.reifyBlock {
       params = t.evt match {
         case EvtBatchUpdate(Schema(n,_)) =>
           val rel = s0.sources.filter(_.schema.name == n)(0).schema
           val name = rel.deltaSchema
-          
+
           name+":Store["+impl.codegen.storeEntryType(ctx0(name)._1)+"]"
         case _ =>
           args.map(a=>a._1+":"+a._2.toScala).mkString(", ")
@@ -248,9 +247,9 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
         case StmtMap(m,e,op,oi) => cx.load()
           if (m.keys.size==0) {
             val mm = m.tp match {
-              case TypeLong => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Long]]])
-              case TypeDouble => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[Double]]])
-              case TypeString => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[String]]])
+              case TypeLong => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[Long]]])
+              case TypeDouble => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[Double]]])
+              case TypeString => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[String]]])
               //case TypeDate => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[java.util.Date]]])
               case _ => sys.error("Unsupported type "+m.tp)
             }
@@ -284,10 +283,14 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
   }
 
   override def genMap(m:MapDef):String = {
-    "Here we generate maps :)"
+    if (m.keys.size==0) createVarDefinition(m.name, m.tp)+";"
+    else {
+      impl.codegen.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]], true)
+    }
   }
 
   def genAllMaps(maps:Seq[MapDef]) = maps.map(genMap).mkString("\n")
+  def createVarDefinition(name: String, tp:Type) = "var "+name+":"+tp.toScala+" = "+tp.zero
 
 	var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
 	override def genPardis(s0:M3.System):(String, String, String, String) = {
@@ -325,7 +328,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
       } else {
         val m = me(keys.map(_._2),tp)
         val s=impl.named(name,true)(manStore(m))
-        impl.collectStore(s)(m)
+        impl.ind(s)(m)
         (name,(/*impl.newSStore()(m)*/s,keys,tp))
       }
     }.toMap // XXX missing indexes
@@ -339,14 +342,14 @@ abstract class PardisGen(override val cls:String="Query", val impl: PardisExpGen
     val ms = genAllMaps(classLevelMaps) // maps
     var outStream = new java.io.StringWriter
     var outWriter = new java.io.PrintWriter(outStream)
-    //impl.codegen.generateClassArgsDefs(outWriter,Nil)
+    // impl.codegen.generateClassArgsDefs(outWriter,Nil)
 
     impl.codegen.emitDataStructures(outWriter)
     val ds = outStream.toString
     val printInfoDef = "def printMapsInfo() = {}"
     val r=ds+"\n"+ms+"\n"+ts+"\n"+printInfoDef
-    (r,str,ld0,consts)	
+    (r,str,ld0,consts)
 	}
 }
 
-class PardisScalaGen(cls:String="Query") extends PardisGen(cls, ScalaExpGen) 
+class PardisScalaGen(cls:String="Query") extends PardisGen(cls, ScalaExpGen)
