@@ -1,6 +1,7 @@
 package ddbt.codegen
 
 import ddbt.ast.M3._
+import ddbt.ast.M3.{Apply => M3ASTApply}
 import ddbt.ast._
 import compiler._
 import ddbt.lib.ManifestHelper
@@ -12,7 +13,7 @@ import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
 
 abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) extends IScalaGen {
 
-//  import ch.epfl.data.pardis.types.PardisTypeImplicits._
+  //  import ch.epfl.data.pardis.types.PardisTypeImplicits._
   import scala.language.implicitConversions
   import ddbt.lib.store.deep._
   import impl._
@@ -21,7 +22,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     tp match {
       case TypeLong => runtimeType[Long]
       case TypeDouble => runtimeType[Double]
-      //    case TypeString => runtimeType[]
+      case TypeString => runtimeType[String]
       case TypeDate => runtimeType[Date]
     }
   }.asInstanceOf[TypeRep[Any]]
@@ -45,6 +46,21 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     }
     case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.infix_!=(ve.asInstanceOf[Rep[Long]],impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
     case Cmp(l,r,op) => expr(l,(vl:Rep[_]) => expr(r,(vr:Rep[_]) => co(cmp(vl,op,vr,ex.tp)) )) // formally, we should take the derived type from left and right, but this makes no difference to LMS
+    case a@M3ASTApply(fn,tp,as) =>
+      def app(es:List[Expr],vs:List[Rep[_]]):Rep[Unit] = es match {
+        case x :: xs => expr(x,(v:Rep[_]) => app(xs,v::vs))
+        case Nil => co(impl.m3apply(fn,vs.reverse,tp))
+      }
+      if (as.forall(_.isInstanceOf[Const])) co(impl.freshNamed(constApply(a))(typeToTypeRep(tp))) // hoist constants resulting from function application
+      else app(as,Nil)
+
+    case Lift(n,e) =>
+      if (cx.contains(n))
+        expr(e,(ve:Rep[_])=>co(impl.__ifThenElse(impl.infix_==(ve.asInstanceOf[Rep[Any]],cx(n).asInstanceOf[Rep[Any]]),impl.unit(1L),impl.unit(0L))  ),am)
+      else e match {
+        case Ref(n2) => cx.add(n,cx(n2)); co(impl.unit(1L))
+        case _ => expr(e,(ve:Rep[_]) => { cx.add(n,ve); co(impl.unit(1L)) } )
+      }
     case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)),am),am)
     case a@Add(l,r) =>
       if (a.agg==Nil) {
@@ -100,8 +116,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       op match {
         case OpEq => impl.infix_==[T,T](ll,rr)
         case OpNe => impl.infix_!=[T,T](ll,rr)
-        // case OpGt => impl.ordering_gt[T](ll,rr)
-        // case OpGe => impl.ordering_gteq[T](ll,rr)
+        case OpGt => impl.ordering_gt[T](ll,rr)
+        case OpGe => impl.ordering_gteq[T](ll,rr)
       }
     }
     impl.__ifThenElse(tp match {
@@ -185,6 +201,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       }
       impl.unit(())
     }
+    println(block)
     cx = null; (name,params,block)
   }
 
@@ -192,25 +209,25 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
   override def genPardis(s0: M3.System): (String, String, String, String) = {
     val tsResBlks = s0.triggers.map(genTriggerLMS(_,s0)) // triggers (need to be generated before maps)
     ("par1", "par2", "par3", "par4")
-//    val context = new MirrorStoreDSL {
-//      implicit def liftInt(i: Int): Rep[Int] = unit(i)
-//
-//      implicit val typeE = typeRep[Int].asInstanceOf[TypeRep[Entry]]
-//
-//      def prog = {
-//        val v1 = __newMStore[Entry](__newArray[Entry](3), __newArray[Entry](3))
-//        //          v1.insert(unit(1))
-//        v1.insert(unit(12).asInstanceOf[Rep[Entry]])
-//        v1.insert(unit(14).asInstanceOf[Rep[Entry]])
-//      }
-//    }
-//    System.out.println(context.reifyBlock(context.prog))
-//
-//    import context._
-//    new MirrorStoreCompiler(context).compile(prog, "GeneratedMirrorApp")
-//
-//    val (str, ld0, _) = genInternals(s0)
-//    ("Must be added", str, ld0, consts)
+    //    val context = new MirrorStoreDSL {
+    //      implicit def liftInt(i: Int): Rep[Int] = unit(i)
+    //
+    //      implicit val typeE = typeRep[Int].asInstanceOf[TypeRep[Entry]]
+    //
+    //      def prog = {
+    //        val v1 = __newMStore[Entry](__newArray[Entry](3), __newArray[Entry](3))
+    //        //          v1.insert(unit(1))
+    //        v1.insert(unit(12).asInstanceOf[Rep[Entry]])
+    //        v1.insert(unit(14).asInstanceOf[Rep[Entry]])
+    //      }
+    //    }
+    //    System.out.println(context.reifyBlock(context.prog))
+    //
+    //    import context._
+    //    new MirrorStoreCompiler(context).compile(prog, "GeneratedMirrorApp")
+    //
+    //    val (str, ld0, _) = genInternals(s0)
+    //    ("Must be added", str, ld0, consts)
   }
 }
 

@@ -26,7 +26,7 @@ trait TypeToTypeRep { this: StoreDSL =>
       new ReflectionType(tpe)
   }
   def manEntry(ts:List[Type]):TypeRep[Entry] = {
-    val ms:List[Manifest[_]] = ts map man
+    val ms:List[TypeRep[_]] = ts map man
     val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.SEntry"+ts.size)
     val tpe = scala.reflect.runtime.universe.runtimeMirror(cls.getClassLoader).classSymbol(cls).typeSignature
     // FIXME have to apply to arguments
