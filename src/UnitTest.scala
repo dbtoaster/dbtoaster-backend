@@ -488,7 +488,7 @@ object UnitTest {
     @inline private def add(s:String=",,,,,,,,,") { tr+=s; ds+=1 }
     var tg=Seq[Long](); var tc=Seq[Long](); var tr=""; var ds=0;
     def gen(t:Long) { pr("codegen",tf(t)); tg=tg:+t; }
-    def comp(t:Long) { pr("compile",tf(t)); tc=tc:+t; }
+    def comp(t:Long) { pr("compiler",tf(t)); tc=tc:+t; }
     def run(f:()=>Unit) {
       // Note: PipedInput/OutputStreams do not work here because multiple 
       // thread might be printing to stdout

@@ -158,10 +158,10 @@ object Compiler {
       case LANG_SCALA => new ScalaGen(name,printProgress)
       case LANG_CPP => new CppGen(name)
       case LANG_AKKA => new AkkaGen(name)
-      case LANG_LMS => new LMSCppGen(name)
-      case LANG_CPP_LMS => new LMSCppGen(name)
-      case LANG_SCALA_LMS => new LMSScalaGen(name)
-      case LANG_SPARK_LMS => new LMSSparkGen(name)
+     // case LANG_LMS => new LMSCppGen(name)
+     // case LANG_CPP_LMS => new LMSCppGen(name)
+      case LANG_SCALA_LMS => new PardisScalaGen(name)
+     // case LANG_SPARK_LMS => new LMSSparkGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }
     if (ni) {

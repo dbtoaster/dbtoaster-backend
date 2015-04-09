@@ -469,7 +469,8 @@ trait IScalaGen extends CodeGen {
   var maps = Map[String,MapDef]() // declared global maps
   def apply(s0:System):String = {
     maps=s0.maps.map(m=>(m.name,m)).toMap
-    val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
+    //val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
+    val (lms,strLMS,ld0LMS,gcLMS) = genPardis(s0)
     val body = if (lms!=null) lms else {
       val ts = s0.triggers.map(genTrigger(_,s0)).mkString("\n\n") // triggers (need to be generated before maps)
       val ms = s0.triggers.map(_.evt match { //delta relations

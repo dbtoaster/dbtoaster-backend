@@ -39,6 +39,8 @@ trait MStoreOps extends Base with ArrayOps {
      def idxs : Rep[Array[E]] = mStore_Field_Idxs[E](self)(typeE)
   }
 
+  implicit def store2StoreOpsCls[E<:Entry:Manifest](x: Rep[Store[E]]): MStoreRep[E] = null
+
   object MStore {
 
   }
@@ -134,7 +136,7 @@ trait MStoreOps extends Base with ArrayOps {
 trait MStoreImplicits extends MStoreOps { 
   // Add implicit conversions here!
 }
-trait MStorePartialEvaluation extends MStoreComponent with BasePartialEvaluation {  
+trait MStorePartialEvaluation extends MStoreComponent with BasePartialEvaluation {
   // Immutable field inlining 
   override def mStore_Field_Ops[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]])(implicit typeE : TypeRep[E]) : Rep[Array[E]] = self match {
     case Def(node: MStoreNew[_]) => node.ops
