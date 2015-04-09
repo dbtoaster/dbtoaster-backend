@@ -5,16 +5,27 @@ import ddbt.ast._
 import compiler._
 import ddbt.lib.ManifestHelper
 import ddbt.lib.ManifestHelper._
-import ddbt.lib.store.deep.MirrorStoreDSL
+import ddbt.lib.store.deep.StoreDSL
 import ddbt.lib.store.{Store, Entry}
+import ch.epfl.data.pardis.types.PardisTypeImplicits._
 
 
-abstract class PardisGen(override val cls:String="Query", val impl: MirrorStoreDSL) extends IScalaGen {
+abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) extends IScalaGen {
 
-  import ch.epfl.data.pardis.types.PardisTypeImplicits._
+//  import ch.epfl.data.pardis.types.PardisTypeImplicits._
   import scala.language.implicitConversions
   import ddbt.lib.store.deep._
   import impl._
+
+  def typeToTypeRep(tp: Type): TypeRep[Any] = {
+    tp match {
+      case TypeLong => runtimeType[Long]
+      case TypeDouble => runtimeType[Double]
+      //    case TypeString => runtimeType[]
+      case TypeDate => runtimeType[Date]
+    }
+  }.asInstanceOf[TypeRep[Any]]
+
 
   def me(ks:List[Type],v:Type=null) = manEntry(if (v==null) ks else ks:::List(v))
   def mapProxy(m:Rep[_]) = impl.store2StoreOpsCls(m.asInstanceOf[Rep[Store[Entry]]])
@@ -32,44 +43,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: MirrorStoreD
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
       case _ => sys.error("Unsupported type "+tp)
     }
-    case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.infix_!=(ve,impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
+    case Exists(e) => expr(e,(ve:Rep[_]) => co(impl.__ifThenElse(impl.infix_!=(ve.asInstanceOf[Rep[Long]],impl.unit(0L)),impl.unit(1L),impl.unit(0L))))
     case Cmp(l,r,op) => expr(l,(vl:Rep[_]) => expr(r,(vr:Rep[_]) => co(cmp(vl,op,vr,ex.tp)) )) // formally, we should take the derived type from left and right, but this makes no difference to LMS
-    case a@Apply(fn,tp,as) =>
-      def app(es:List[Expr],vs:List[Rep[_]]):Rep[Unit] = es match {
-        case x :: xs => expr(x,(v:Rep[_]) => app(xs,v::vs))
-        case Nil => co(impl.m3apply(fn,vs.reverse,tp))
-      }
-      if (as.forall(_.isInstanceOf[Const])) co(impl.named(constApply(a),tp,false)) // hoist constants resulting from function application
-      else app(as,Nil)
-    case m@MapRef(n,tp,ks) =>
-      val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
-      val proxy = mapProxy(cx(n))
-      if(ks.size == 0) { // variable
-        co(cx(n))
-      } else if(ki.size == 0) { // all keys are bound
-      val z = impl.unit(zero(tp))
-        val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
-        val r = proxy.get(vs : _*)
-        co(impl.__ifThenElse(impl.infix_==(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)))
-      } else { // we need to iterate over all keys not bound (ki)
-        if (ko.size > 0) {
-          implicit val mE=me(m.tks,tp)
-          val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
-          impl.mStoreSlice(mm, {
-            (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
-          },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
-        } else {
-          proxy.foreach((e:Rep[Entry])=> {
-            cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
-          })
-        }
-      }
-    case Lift(n,e) =>
-      if (cx.contains(n)) expr(e,(ve:Rep[_])=>co(impl.__ifThenElse(impl.equals(ve,cx(n)),impl.unit(1L),impl.unit(0L))  ),am)
-      else e match {
-        case Ref(n2) => cx.add(n,cx(n2)); co(impl.unit(1L))
-        case _ => expr(e,(ve:Rep[_]) => { cx.add(n,ve); co(impl.unit(1L)) } )
-      }
     case Mul(l,r) => expr(l,(vl:Rep[_])=> expr(r,(vr:Rep[_]) => co(mul(vl,vr,ex.tp)),am),am)
     case a@Add(l,r) =>
       if (a.agg==Nil) {
@@ -78,7 +53,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: MirrorStoreD
           cx.load(cur)
           expr(r,(vr:Rep[_])=>{
             cx.load(cur)
-            co(add(vl,vr,ex.tp))
+            co(add(vl,vr,ex.tp).asInstanceOf[Rep[_]])
           },am)
         },am)
       } else am match {
@@ -98,59 +73,10 @@ abstract class PardisGen(override val cls:String="Query", val impl: MirrorStoreD
           expr(r,inCo,Some(a.agg)); cx.load(cur)
           foreach(acc,a.agg,a.tp,co)
       }
-    case a@AggSum(ks,e) =>
-      val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
-      if (agg_keys.size==0) { // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
-      val cur=cx.save;
-        val acc:impl.Var[_] = ex.tp match {
-          case TypeLong =>
-            val agg:impl.Var[Long] = impl.__newVar[Long](impl.unit(0L))
-            expr(e,
-              (v:Rep[_]) => impl.var_assign[Long](agg.asInstanceOf[impl.Var[Long]], impl.numeric_plus[Long](impl.readVar[Long](agg.asInstanceOf[impl.Var[Long]]),v.asInstanceOf[Rep[Long]]))
-            )
-            agg
-          case TypeDouble =>
-            val agg:impl.Var[Double] = impl.__newVar[Double](impl.unit(0.0))
-            expr(e,
-              (v:Rep[_]) => impl.var_assign[Double](agg.asInstanceOf[impl.Var[Double]], impl.numeric_plus[Double](impl.readVar[Double](agg.asInstanceOf[impl.Var[Double]]),v.asInstanceOf[Rep[Double]]))
-            )
-            agg
-          case TypeString =>
-            val agg:impl.Var[String] = impl.__newVar[String](impl.unit(""))
-            expr(e,
-              (v:Rep[_]) => impl.var_assign[String](agg.asInstanceOf[impl.Var[String]], impl.string_plus(impl.readVar[String](agg.asInstanceOf[impl.Var[String]]),v.asInstanceOf[Rep[String]]))
-            )
-            agg
-          case _ => sys.error("Unsupported type "+ex.tp)
-        }
-        cx.load(cur)
-        co(impl.readVar(acc))
-      } else am match {
-        case Some(t) if t.toSet.subsetOf(agg_keys.toSet) => expr(e,co,am)
-        case _ =>
-
-          val cur = cx.save
-
-          implicit val mE=me(agg_keys.map(_._2),ex.tp)
-          val acc = impl.m3temp()(mE)
-          val coAcc = (v:Rep[_]) => {
-            val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
-            impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))
-          }
-          expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
-          foreach(acc,agg_keys,a.tp,co)
-      }
     case _ => sys.error("Unimplemented: "+ex)
   }
 
-  def foreach(map:Rep[_],keys:List[(String,Type)],value_tp:Type,co:Rep[_]=>Rep[Unit]):Rep[Unit] = {
-    implicit val mE = manEntry(keys.map(_._2) ::: List(value_tp))
-    val proxy = mapProxy(map)
-    proxy.foreach{ e:Rep[Entry] =>
-      cx.add(keys.zipWithIndex.filter(x=> !cx.contains(x._1._1)).map { case ((n,t),i) => (n,impl.steGet(e, i+1)) }.toMap)
-      co(impl.steGet(e, keys.size+1))
-    }
-  }
+  def foreach(map:Rep[_],keys:List[(String,Type)],value_tp:Type,co:Rep[_]=>Rep[Unit]) = null
 
   def mul(l:Rep[_], r:Rep[_], tp:Type) = {
     tp match {
@@ -160,7 +86,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: MirrorStoreD
   }
 
   def add(l:Rep[_], r:Rep[_], tp:Type) = {
-    @inline def plus[T:Numeric:Manifest]() = impl.numeric_plus[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
+    @inline def plus[T:TypeRep]() = impl.numeric_plus[T](l.asInstanceOf[Rep[T]],r.asInstanceOf[Rep[T]])
     tp match {
       case TypeLong => plus[Long]()
       case TypeDouble => plus[Double]()
@@ -169,7 +95,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: MirrorStoreD
   }
 
   def cmp(l:Rep[_], op:OpCmp, r:Rep[_], tp:Type): Rep[Long] = {
-    @inline def cmp2[T:Ordering:Manifest](vl:Rep[_],vr:Rep[_]): Rep[Boolean] = {
+    @inline def cmp2[T:TypeRep](vl:Rep[_],vr:Rep[_]): Rep[Boolean] = {
       val (ll,rr)=(vl.asInstanceOf[Rep[T]],vr.asInstanceOf[Rep[T]])
       op match {
         case OpEq => impl.infix_==[T,T](ll,rr)
@@ -221,7 +147,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: MirrorStoreD
               case EvtBatchUpdate(Schema(n,_)) =>
                 Nil
               case _ =>
-                args.map{ case (name,tp) => (name,impl.freshNamed(name)) }
+                args.map{ case (name,tp) => (name,impl.freshNamed(name)(typeToTypeRep(tp))) }
             }
           }
         ).toMap)
@@ -239,12 +165,12 @@ abstract class PardisGen(override val cls:String="Query", val impl: MirrorStoreD
             expr(e,(r:Rep[_]) => op match { case OpAdd => impl.var_plusequals(mm,r) case OpSet => impl.__assign(mm,r) })
           } else {
             val mm = cx(m.name).asInstanceOf[Rep[Store[Entry]]]
-            implicit val mE = manEntry(m.tks ++ List(m.tp)).asInstanceOf[Manifest[Entry]]
+            implicit val mE = manEntry(m.tks ++ List(m.tp)).asInstanceOf[TypeRep[Entry]]
             if (op==OpSet) impl.stClear(mm)
             oi match { case None => case Some(ie) =>
               expr(ie,(r:Rep[_]) => {
                 val ent = impl.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)) : _*)
-                impl.__ifThenElse(impl.infix_==(mapProxy(mm).get(m.keys.zipWithIndex.map{ case (n,i) => (i+1,cx(n))} : _*),
+                impl.__ifThenElse(impl.infix_==(stProxyGet(mm, m.keys.zipWithIndex.map{ case (n,i) => (i+1,cx(n))} : _*),
                   impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
               })
             }
@@ -288,4 +214,4 @@ abstract class PardisGen(override val cls:String="Query", val impl: MirrorStoreD
   }
 }
 
-class PardisScalaGen(cls:String="Query") extends PardisGen(cls, new MirrorStoreDSL {})
+class PardisScalaGen(cls:String="Query") extends PardisGen(cls, new StoreDSL {})

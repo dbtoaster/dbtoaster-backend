@@ -1,6 +1,6 @@
 package ddbt.codegen.prettyprinter
 
-import ddbt.lib.store.deep.MirrorStoreDSL
+import ddbt.lib.store.deep.StoreDSL
 import ch.epfl.data.pardis.prettyprinter._
 import ch.epfl.data.pardis.utils.Document
 
@@ -8,7 +8,7 @@ import ch.epfl.data.pardis.utils.Document
 /**
  * Created by khayyam on 4/8/15.
  */
-class MirrorStoreScalaGenerator(val IR: MirrorStoreDSL) extends ScalaCodeGenerator with ASTCodeGenerator[MirrorStoreDSL] {
+class StoreScalaGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with ASTCodeGenerator[StoreDSL] {
 
   override def getHeader: Document = s"""package ch.epfl.data
 package vector
