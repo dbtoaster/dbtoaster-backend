@@ -4,7 +4,7 @@ import ddbt.ast._
 import ddbt.lib.store.{Store, Entry}
 import ddbt.lib.store.deep.StoreDSL
 
-import ch.epfl.data.pardis.types._
+import ch.epfl.data.sc.pardis.types._
 
 /**
  * Created by khayyam on 4/9/15.

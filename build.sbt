@@ -296,48 +296,8 @@ commands += Command.command("release")((state:State) => {
 
 // --------- Pardis codegen -- START
 {
-  // val prop = new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
-  // val outputFolder = prop.getProperty("ddbt.pardis.outputFolder","pardis/lifter")
-  // val inputPackage = prop.getProperty("ddbt.pardis.inputPackage","ddbt.lib.store")
-  // val outputPackage = prop.getProperty("ddbt.pardis.outputPackage","ddbt.lib.store.deep")
-  // lazy val generatorMode = SettingKey[Boolean]("generator-mode", "Is the compiler used for generating the deep embedding")
-  // def embed = Command.command("embed") { state =>
-  //   val cleaned = Project.runTask(Keys.clean in Compile, state)
-  //   cleaned match {
-  //     case Some((state, _)) =>
-  //       Project.evaluateTask(Keys.compile in Compile,
-  //         (Project extract state).append(Seq(generatorMode := true), state))
-  //       Project.evaluateTask(Keys.clean in Compile, state)
-  //       state
-  //     case None =>
-  //       state
-  //   }
-  // }
-  // def generatorSettings: Seq[Setting[_]] = Seq(
-  //   libraryDependencies ++= Seq("ch.epfl.data" % "purgatory-core_2.11" % "0.1-SNAPSHOT",
-  //     "ch.epfl.data" % "purgatory_2.11" % "0.1-SNAPSHOT"
-  //   ),
-  //   generatorMode := false,
-  //   scalacOptions ++= {
-  //     if(generatorMode.value) {
-  //       val cpath = update.value.matching(configurationFilter()).classpath
-  //       val plugin = cpath.files.find(_.getName contains "purgatory_").get.absString
-  //       val purgatory_core = cpath.files.find(_.getName contains "purgatory-core").get.absString
-  //       val yy_core = cpath.files.find(_.getName contains "yinyang-core").get.absString
-  //       val yy = cpath.files.find(_.getName contains "scala-yinyang").get.absString
-  //       Seq(
-  //         s"-Xplugin:$plugin:$yy_core:$yy:$purgatory_core",
-  //         "-Ystop-after:backend-generator", 
-  //         s"-P:backend-generator:output-folder:$outputFolder",
-  //         s"-P:backend-generator:input-package:$inputPackage",
-  //         s"-P:backend-generator:output-package:$outputPackage"
-  //       )
-  //     } else Seq()
-  //   },
-  //   commands += embed
-  // )
   // generatorSettings
-  import ch.epfl.data.purgatory.plugin.PurgatoryPlugin._
+  import ch.epfl.data.sc.purgatory.plugin.PurgatoryPlugin._
   val prop = new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
   Seq(
     scalaSource in Compile <<= baseDirectory / "pardis", // incorrect; copied from lms

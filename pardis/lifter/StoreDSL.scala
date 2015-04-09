@@ -1,6 +1,6 @@
 package ddbt.lib.store.deep
 
-import ch.epfl.data.pardis.deep.scalalib.StringComponent
+import ch.epfl.data.sc.pardis.deep.scalalib.StringComponent
 import ddbt.ast.{TypeDouble, TypeLong, Type}
 import ddbt.lib.ManifestHelper._
 import ddbt.lib.store.{Store, Entry}

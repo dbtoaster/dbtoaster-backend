@@ -1,8 +1,8 @@
 package ddbt.codegen.prettyprinter
 
 import ddbt.lib.store.deep.StoreDSL
-import ch.epfl.data.pardis.prettyprinter._
-import ch.epfl.data.pardis.utils.Document
+import ch.epfl.data.sc.pardis.prettyprinter._
+import ch.epfl.data.sc.pardis.utils.Document
 
 
 /**

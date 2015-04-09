@@ -3,7 +3,7 @@ import scala.reflect._
 
 import ddbt.Utils.ind
 import scala.collection.mutable.HashMap
-import ch.epfl.data.pardis.annotations._
+import ch.epfl.data.sc.pardis.annotations._
 
 @needs[Array[_]]
 @deep

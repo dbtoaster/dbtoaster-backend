@@ -1,7 +1,7 @@
 package lifter
 
-import ch.epfl.data.pardis
-import ch.epfl.data.pardis.deep.scalalib.{IntComponent, LongComponent, DoubleComponent}
+import ch.epfl.data.sc.pardis
+import pardis.deep.scalalib.{IntComponent, LongComponent, DoubleComponent}
 import pardis.ir._
 
 /**

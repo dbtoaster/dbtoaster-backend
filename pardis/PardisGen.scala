@@ -7,7 +7,7 @@ import ddbt.lib.ManifestHelper
 import ddbt.lib.ManifestHelper._
 import ddbt.lib.store.deep.StoreDSL
 import ddbt.lib.store.{Store, Entry}
-import ch.epfl.data.pardis.types.PardisTypeImplicits._
+import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
 
 
 abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) extends IScalaGen {

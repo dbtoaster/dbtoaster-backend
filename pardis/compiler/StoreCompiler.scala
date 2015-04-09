@@ -2,7 +2,7 @@ package ddbt.codegen.compiler
 
 import ddbt.codegen.prettyprinter.StoreScalaGenerator
 import ddbt.lib.store.deep.StoreDSL
-import ch.epfl.data.pardis
+import ch.epfl.data.sc.pardis
 import pardis.optimization._
 import pardis.compiler._
 
