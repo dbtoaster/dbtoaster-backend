@@ -2,7 +2,6 @@ package ddbt.lib.store;
 import scala.Function1;
 import scala.Unit;
 
-import java.io.Serializable;
 
 /**
  * Index interface.
@@ -11,8 +10,7 @@ import java.io.Serializable;
  *
  * @author TCK
  */
-public abstract class Idx<E extends Entry> implements Serializable {
-  private static final long serialVersionUID = 300L;
+public abstract class Idx<E extends Entry> {
   Idx(Store<E> st, int idx, boolean unique) { this.ops=st.ops()[idx]; this.idx=idx; this.unique=unique; }
   protected final EntryIdx<E> ops;
   protected final int idx;
@@ -42,7 +40,7 @@ public abstract class Idx<E extends Entry> implements Serializable {
  * + insert,delete,update,get = O(1)
  * + range = O(n)
  */
-class IdxHashEntry<E extends Entry> implements Serializable {
+class IdxHashEntry<E extends Entry> {
   IdxHashEntry(int h, E d) { hash=h; data=d; }
   int hash; E data; IdxHashEntry<E> next;
 }

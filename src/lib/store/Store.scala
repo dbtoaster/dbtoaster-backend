@@ -35,8 +35,7 @@ case object ISliceHeapMin extends IndexType // Operate over a slicing index and 
 case object ISliceHeapMax extends IndexType // O(N) to delete any, O(log N) to delete min/max
 
 /** Map-specific operations on entries */
-@SerialVersionUID(150L)
-abstract class EntryIdx[E<:Entry] extends Serializable {
+abstract class EntryIdx[E<:Entry] {
   def cmp(e1:E,e2:E):Int; // key comparison between entries
   def hash(e:E):Int; // hash function for Hash, index for Array
   // Note: The hash function must take care of shuffling LSBs enough, no
@@ -178,8 +177,7 @@ object Store {
  * Index 0 should retain all data (and possibly be one of the fastest index).
  * Indices data structure can be dynamically adapted using the index() function.
  */
-@SerialVersionUID(200L)
-class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) extends Serializable {
+class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) {
   assert(idxs.size > 0)
   // def startPerfCounters = { perfMeasurement = true }
   // def stopPerfCounters = { perfMeasurement = false }
