@@ -318,7 +318,6 @@ class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(im
 
   def getStream = {
     val es = getEvents
-    println("get stream : " + es)
     es.flatMap(e => e match {
       case InsertEvent(entry) => Some(entry.elements())
       case UpdateEvent(oldEntry, newEntry) => Some(newEntry.elements())
