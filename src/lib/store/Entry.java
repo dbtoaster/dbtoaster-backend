@@ -12,6 +12,7 @@ public abstract class Entry {
   final Object[] data;
   public Entry(int n) { data=new Object[n]; }
   abstract public Entry copy(); // returns a copy of the entry, for B-Trees only
+  abstract public Object[] elements();
   //abstract public boolean zero(); // the tuple can safely be deleted from the map
   //abstract public void merge(Entry e); // combine e in this (some kine of aggregation)
 

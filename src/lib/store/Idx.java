@@ -2,6 +2,7 @@ package ddbt.lib.store;
 import scala.Function1;
 import scala.Unit;
 
+
 /**
  * Index interface.
  * By default it emits a warning when an unsupported function is called.

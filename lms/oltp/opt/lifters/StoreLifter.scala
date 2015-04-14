@@ -83,12 +83,16 @@ trait SEntryExp extends StoreOps with BaseExp with EffectExp with VariablesExp {
   case class SteIncrease    [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
   case class SteDecrease    [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
   case class SteGet         [E <: Entry: Manifest](x: Exp[E], i: Int) extends Def[Any]
+  case class SteCopy        [E <: Entry: Manifest](x: Exp[E]) extends Def[E]
+  case class SteLogUpdate   [E <: Entry: Manifest](s: Exp[Store[E]], x: Exp[E], y: Exp[E]) extends Def[Unit]
 
   def steMakeMutable [E <: Entry: Manifest](x: Exp[E]):Exp[E] = reflectMutable(SteMakeMutable[E](x))
   def steUpdate      [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]): Exp[Unit] = reflectWrite(x)(SteUpdate[E](x, i, v))
   def steIncrease    [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]): Exp[Unit] = reflectWrite(x)(SteIncrease[E](x, i, v))
   def steDecrease    [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]): Exp[Unit] = reflectWrite(x)(SteDecrease[E](x, i, v))
   def steGet         [E <: Entry: Manifest](x: Exp[E], i: Int): Exp[Any] = SteGet[E](x, i)
+  def steCopy        [E <: Entry: Manifest](x: Exp[E]): Exp[E] = reflectWrite(x)(SteCopy[E](x))
+  def steLogUpdate   [E <: Entry: Manifest](s: Exp[Store[E]], x: Exp[E], y: Exp[E]): Exp[Unit] = reflectWrite(x)(SteLogUpdate[E](s, x, y))
 
   //////////////
   // mirroring
@@ -117,6 +121,8 @@ trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaC
     //   case Some(fld: String) => emitValDef(sym, fld)
     //   case _ => emitValDef(sym, quote(x) + "._" + i)
     // }
+    case SteCopy(x) => emitValDef(sym, quote(x) + ".copy")
+    case SteLogUpdate(s, x, y) => emitValDef(sym, quote(s) + ".logUpdate(" + quote(x) + ", " + quote(y) +")")
     case _ => super.emitNode(sym, rhs)
   }
 }
@@ -511,6 +517,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry
                                          with GenericGenStore {
   val IR: StoreExp with ExtendedExpressions with Effects
   import IR._
+  val STORE_WATCHED = "StoreOps.watched"
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case StNewStore(mE) => {
@@ -633,6 +640,9 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry
       out.println("  def copy = " + clsName + "(" + 
         argTypes.zipWithIndex.map { case (_, i) => "_%d".format(i + 1) }
         .mkString(", ") + ")")
+      out.println("  def elements = Array[Any](" +
+        argTypes.zipWithIndex.map { case (_, i) => "_%d".format(i + 1) }
+        .mkString(", ") + ").asInstanceOf[Array[AnyRef]]")
       //val l="_"+argTypes.size
       //out.println("  override def zero = "+l+" == "+zeroValue(argTypes.last))
       //out.println("  override def merge(e0:Entry) { val e=e0.asInstanceOf["+clsName+"]; "+l+" "+(argTypes.last match { case "java.util.Date" => "= new Date("+l+".getTime + e."+l+".getTime)" case _ => "+= e."+l })+" }")
@@ -683,7 +693,11 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry
     }
     val cName = quote(c, true)
     val entTp = storeEntryType(c)
-    out.println("val "+cName+" = new Store["+entTp+"]("+idxArr.size+",Array[EntryIdx["+entTp+"]]("+(0 until idxArr.size).map(i=>entTp+"_Idx"+i).mkString(",")+"))")
+
+    val watched = c.attributes.get(STORE_WATCHED).asInstanceOf[Option[Boolean]].getOrElse(false)
+    val storeType = (if (watched) "StoreWrapper" else "Store")
+
+    out.println("val "+cName+" = new " + storeType + "["+entTp+"]("+idxArr.size+",Array[EntryIdx["+entTp+"]]("+(0 until idxArr.size).map(i=>entTp+"_Idx"+i).mkString(",")+"))")
     idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
       case IList => out.println("%s.index(%d,IList,%s)".format(cName, i, idxUniq))
       case IHash => out.println("%s.index(%d,IHash,%s)".format(cName, i, idxUniq))

@@ -47,6 +47,7 @@ trait M3StoreOpsExp extends BaseExp
   val USE_UNIQUE_INDEX_WHEN_POSSIBLE = true
   val STORE_TYPE = "M3StoreOpsExp.STORE_TYPE"
   val NAME_ATTRIBUTE = "_name"
+  val STORE_WATCHED = "StoreOps.watched"
 
   def named(name: String, tp: Type, mutable: Boolean = false) = 
     named(name, mutable)(man(tp))
@@ -85,7 +86,7 @@ trait M3StoreOpsExp extends BaseExp
     s.attributes.put(STORE_TYPE, storeType)
   }
 
-  def m3add[E <: Entry](map: Rep[Store[E]], ent: Rep[E])(implicit m: Manifest[E]) = {    
+  def m3add[E <: Entry](map: Rep[Store[E]], ent: Rep[E])(implicit m: Manifest[E]) = {
     val n = m.typeArguments.size
     val lastMan = m.typeArguments.last
     val entVal = ent.get(n)
@@ -141,7 +142,15 @@ trait M3StoreOpsExp extends BaseExp
               __ifThenElse(
                 __equal(currentEnt, unit(null)),
                 stUnsafeInsert(map, ent, idx), 
-                { currentEnt += (n, entVal)
+                {
+                  val watched = map.asInstanceOf[Sym[_]].attributes.get(STORE_WATCHED).asInstanceOf[Option[Boolean]].getOrElse(false)
+                  if (watched) {
+                    val oldEnt = steCopy(currentEnt)
+                    currentEnt += (n, entVal)
+                    steLogUpdate(map, oldEnt, currentEnt)
+                  } else {
+                    currentEnt += (n, entVal)
+                  }
                   val currentEntVal = currentEnt.get(n)
                   __ifThenElse(
                     __equal(currentEntVal, unit(zero(lastMan))),
@@ -300,7 +309,7 @@ trait ScalaGenM3StoreOps extends ScalaGenBase
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(NAME_ATTRIBUTE, n)
-    case StUnsafeInsert(x, e, i) => 
+    case StUnsafeInsert(x, e, i) =>
       emitValDef(sym, quote(x) + ".unsafeInsert(" + i + "," + quote(e) + ")")
     case M3Add(s, e) =>
       stream.println(quote(s) + ".add(" + quote(e) + ")")

@@ -1,6 +1,6 @@
 package ddbt.lib.store
-import scala.reflect._
 
+import scala.reflect._
 import ddbt.Utils.ind
 import scala.collection.mutable.HashMap
 
@@ -280,6 +280,89 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
     res.append("}").toString
   }
 }
+
+abstract sealed class StoreEvent
+case class DeleteEvent(e: Entry) extends StoreEvent
+case class UpdateEvent(oldE: Entry, newE: Entry) extends StoreEvent
+case class InsertEvent(e: Entry) extends StoreEvent
+
+import scala.collection.mutable.MutableList
+
+//class StreamLogger[E<:Entry] extends Serializable {
+//  //var events = MutableList[StoreEvent[E]]()
+//  //var binaryEvents = MutableList[StoreEvent[E]]()
+//  var tuples = MutableList[List[Any]]()
+//
+//  //def logInsert(e: E) = {tuples += e.data.toList}
+//  def logUpdate(e: List[Any]) = {tuples += e}
+//  //def logDelete(e: E) = {events += Delete(e)}
+//  //def logUpdate(e: E) = {events += Update(e)}
+//  def get() = {val snapshot = tuples.toList; tuples.clear(); println(snapshot); snapshot}
+//}
+
+class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) extends Store[E](idxs, ops)(cE) {
+
+  def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),null)(cE)
+  def this(n:Int,ops:Array[EntryIdx[E]])(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),ops)(cE)
+
+  var events = MutableList[StoreEvent]()
+  override def unsafeInsert(idx:Int,e:E):Unit = { events += InsertEvent(e.copy); super.unsafeInsert(idx, e) }
+  override def delete(e:E):Unit = { events += DeleteEvent(e.copy); super.delete(e) }
+  override def insert(e:E):Unit = { events += InsertEvent(e.copy); super.insert(e) }
+  def logUpdate(o:E, n:E):Unit = { events += UpdateEvent(o.copy, n.copy) }
+  //override def update(e:E):Unit = { events += Update(e); super.update(e) } - Update method won't be invoked
+
+  def getEvents = { val r = events.toList; events.clear(); r}
+
+  def getStream = {
+    val es = getEvents
+    es.flatMap(e => e match {
+      case InsertEvent(entry) => Some(entry.elements())
+      case UpdateEvent(oldEntry, newEntry) => Some(newEntry.elements())
+      case _ => None
+    }).toArray
+  }
+}
+
+abstract sealed class ValueEvent[A<:AnyVal];
+case class PlusEvent[A<:AnyVal](o: A) extends ValueEvent[A]
+case class MinusEvent[A<:AnyVal](o: A) extends ValueEvent[A]
+
+class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
+
+  var events = MutableList[ValueEvent[A]]()
+
+  def +(other: A): ValueWrapper[A] = {
+    new ValueWrapper(n.plus(v, other))
+  }
+
+  def -(other: A): ValueWrapper[A] = {
+    new ValueWrapper(n.minus(v, other))
+  }
+
+  def +=(other: A): ValueWrapper[A] = {
+    v = n.plus(v, other)
+    events += PlusEvent(other)
+    this
+  }
+
+  def -=(other: A): ValueWrapper[A] = {
+    v = n.minus(v, other)
+    events += MinusEvent(other)
+    this
+  }
+
+  def getEvents = { val r = events.toList; events.clear(); r }
+
+  def getStream = {
+    val es = getEvents
+    es.map(e => e match {
+      case PlusEvent(o) => o
+      case MinusEvent(o) => n.negate(o)
+    })
+  }
+}
+
 
 // Hash index has been moved to Store.java
 
