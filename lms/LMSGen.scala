@@ -516,12 +516,6 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
     } 
     else "def printMapsInfo() = {}"
     val r = ds + "\n" + ms + "\n" + ts + "\n" + printInfoDef
-    //println("-------ds: \n" + ds)
-    //println("-----ms:\n " + ms)
-
-    //println("--------ts:\n " + ts)
-
-
     (r, str, ld0, consts)
   }
 

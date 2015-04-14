@@ -627,12 +627,10 @@ trait IScalaGen extends CodeGen {
   }
 
   def genQueries(queries: List[Query]) = {
-    println("genQueries " + queries)
     queries.map { query => { query.map match {
       case MapRef(n,_,_) if (n == query.name) => ""
       case _ =>
         ctx = Ctx[(Type, String)]()
-        println("Query: " + query)
         "def " + query.name + "() = {\n" +
         ind(
           if (query.keys.length == 0) cpsExpr(query.map)
