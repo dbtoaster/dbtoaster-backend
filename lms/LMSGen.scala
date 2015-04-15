@@ -19,7 +19,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
   import impl.Rep
   implicit val overloaded1 = impl.overloaded1
   import ddbt.lib.store._
-
+  val watch = false
   var cx: Ctx[Rep[_]] = null
 
   def me(ks: List[Type], v: Type = null) = 
@@ -420,7 +420,6 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
 
   // Expose the maps of the system being generated
   var ctx0 = Map[String, (Rep[_], List[(String, Type)], Type)]()
-  var resultMapNames = List[String]()
 
   override def genLMS(s0: System): (String, String, String, String) = {
     val classLevelMaps = s0.triggers.filter(_.evt match {
@@ -449,7 +448,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
       case (_, m: MapDef) => m
     } // XXX missing indexes
 
-    resultMapNames = s0.queries.map(q => q.name)
+    val resultMapNames = s0.queries.map(q => q.name)
     ctx0 = classLevelMaps.map {
       case MapDef(name, tp, keys, _, _) => if (keys.size == 0) {
         val s = impl.namedVar(name, tp)
@@ -460,6 +459,8 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
         val m = me(keys.map(_._2), tp)
         val s = impl.named(name, true)(manStore(m))
         impl.collectStore(s)(m)
+        if (watch && resultMapNames.contains(name))
+          s.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.put(LMSScalaGen.STORE_WATCHED, true)
         (name, (/*impl.newSStore()(m)*/s, keys, tp))
       }
     }.toMap // XXX missing indexes
@@ -536,22 +537,10 @@ object LMSScalaGen {
   val STORE_WATCHED = "StoreOps.watched"
 }
 
-class LMSScalaGen(cls: String = "Query", val watch: Boolean = false) extends LMSGen(cls, ScalaExpGen) {
+class LMSScalaGen(cls: String = "Query", override val watch: Boolean = false) extends LMSGen(cls, ScalaExpGen) {
   import ddbt.ast.M3._
   import ddbt.Utils._
   import LMSScalaGen._
-
-
-  override def genMap(m: MapDef): String = {
-    if (m.keys.size == 0) createVarDefinition(m.name, m.tp) + ";"
-    else {
-      var mapSymbol = ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]]
-      if (watch && resultMapNames.contains(m.name)) {
-        mapSymbol.attributes.put(STORE_WATCHED, true)
-      }
-      impl.codegen.generateStore(mapSymbol)
-    }
-  }
 
   override def createVarDefinition(name: String, tp: Type) = {
     if (watch)
