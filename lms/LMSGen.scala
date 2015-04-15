@@ -1,4 +1,5 @@
 package ddbt.codegen
+
 import ddbt.codegen.lms._
 import ddbt.ast._
 import ddbt.lib._
@@ -20,7 +21,6 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
   import ddbt.lib.store._
 
   var cx: Ctx[Rep[_]] = null
-  val STORE_WATCHED = "StoreOps.watched"
 
   def me(ks: List[Type], v: Type = null) = 
     manEntry(if (v == null) ks else ks ::: List(v))
@@ -396,14 +396,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
 
   def genAllMaps(maps: Seq[MapDef]) = maps.map(genMap).mkString("\n")
 
-  def createVarDefinition(name: String, tp: Type) = {
-
-    val watched = ctx0(name)._1.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.get(STORE_WATCHED).asInstanceOf[Option[Boolean]].getOrElse(false)
-    if (watched)
-      "var " + name + " = new ValueWrapper(" + tp.zero + ")"
-    else
-      "var " + name + ": " + tp.toScala + " = " + tp.zero
-  }
+  def createVarDefinition(name: String, tp: Type) = "var " + name + ": " + tp.toScala + " = " + tp.zero
 
   override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
     val (a, keys, tp) = ctx0(map)
@@ -427,6 +420,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
 
   // Expose the maps of the system being generated
   var ctx0 = Map[String, (Rep[_], List[(String, Type)], Type)]()
+  var resultMapNames = List[String]()
 
   override def genLMS(s0: System): (String, String, String, String) = {
     val classLevelMaps = s0.triggers.filter(_.evt match {
@@ -455,7 +449,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
       case (_, m: MapDef) => m
     } // XXX missing indexes
 
-    val queryNames = s0.queries.map(q => q.name)
+    resultMapNames = s0.queries.map(q => q.name)
     ctx0 = classLevelMaps.map {
       case MapDef(name, tp, keys, _, _) => if (keys.size == 0) {
         val s = impl.namedVar(name, tp)
@@ -466,13 +460,6 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
         val m = me(keys.map(_._2), tp)
         val s = impl.named(name, true)(manStore(m))
         impl.collectStore(s)(m)
-
-        if (queryNames.contains(name))
-          s.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.put(STORE_WATCHED, true)
-        else
-          s.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.put(STORE_WATCHED, false)
-
-
         (name, (/*impl.newSStore()(m)*/s, keys, tp))
       }
     }.toMap // XXX missing indexes
@@ -545,7 +532,80 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
   override def getEntryDefinitions: String = ""
 }
 
-class LMSScalaGen(cls: String = "Query") extends LMSGen(cls, ScalaExpGen) 
+object LMSScalaGen {
+  val STORE_WATCHED = "StoreOps.watched"
+}
+
+class LMSScalaGen(cls: String = "Query", val watch: Boolean = false) extends LMSGen(cls, ScalaExpGen) {
+  import ddbt.ast.M3._
+  import ddbt.Utils._
+  import LMSScalaGen._
+
+
+  override def genMap(m: MapDef): String = {
+    if (m.keys.size == 0) createVarDefinition(m.name, m.tp) + ";"
+    else {
+      var mapSymbol = ctx0(m.name)._1.asInstanceOf[impl.codegen.IR.Sym[_]]
+      if (watch && resultMapNames.contains(m.name)) {
+        mapSymbol.attributes.put(STORE_WATCHED, true)
+      }
+      impl.codegen.generateStore(mapSymbol)
+    }
+  }
+
+  override def createVarDefinition(name: String, tp: Type) = {
+    if (watch)
+      "var " + name + " = new ValueWrapper(" + tp.zero + ")"
+    else
+      "var " + name + ": " + tp.toScala + " = " + tp.zero
+  }
+
+  override protected def genClass(s0: System, body: String, pp: String, ld: String, gc: String, snap: String, str: String) = {
+    if (watch) {
+      "class " + cls + "Impl extends IQuery {\n" +
+        ind(
+          "import ddbt.lib.Messages._\n" +
+            body + "\n\n" +
+            pp +
+            "def handleEvent(e: StreamEvent) = e match {\n" +
+            ind(
+              genSimpleEventsHandling(s0) +
+                "case StreamInit(timeout) =>" +
+                (if (ld != "") " loadTables();" else "") +
+                " onSystemReady()\n" +
+                "case EndOfStream | GetSnapshot(_) => " + onEndStream + " " + snap + "\n" +
+                "case GetStream(n) => n match {\n" +
+                ind(
+                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => " + (if (q.keys.size > 0) q.name + ".getStream" else q.name)}.mkString("\n") + "\n" +
+                    "case _ => List(" + s0.queries.map(q => (if (q.keys.size > 0) q.name + ".getStream" else q.name)).mkString(",") +
+                    ")\n}")
+            ) +
+            "\n}\n" +
+            gc + ld
+        ) + "\n}\n" +
+        "class " + cls + " extends " + cls + "Impl with Actor {\n\n" +
+        ind(
+          "import ddbt.lib.Messages._\nimport " + cls + "._\n" +
+            "import ddbt.lib.Functions._\n\n" +
+            "var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L\n" +
+            "def receive_skip: Receive = { case EndOfStream | GetSnapshot(_) => " +
+            onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), " + snap + ")" + " case _ => tS += 1L }\n" +
+            "def receive = {\n" +
+            ind(
+              str +
+                "case StreamInit(timeout) =>" +
+                (if (ld != "") " loadTables();" else "") +
+                " onSystemReady(); t0 = System.nanoTime; " +
+                "if (timeout > 0) t1 = t0 + timeout * 1000000L\n" +
+                "case EndOfStream | GetSnapshot(_) => t1 = System.nanoTime; " + onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), " + snap + ")"
+            ) +
+            "\n}\n") +
+        "\n}\n"
+    } else {
+      super.genClass(s0, body, pp, ld, gc, snap, str)
+    }
+  }
+}
 
 class LMSCppGen(cls: String = "Query") extends LMSGen(cls, CppExpGen) 
                                        with ICppGen {

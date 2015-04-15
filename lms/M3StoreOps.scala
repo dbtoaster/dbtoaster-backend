@@ -42,14 +42,13 @@ trait M3StoreOpsExp extends BaseExp
                        with StoreExpOpt
                        with EqualExp 
                        with IfThenElseExp {
-
+  import ddbt.codegen.LMSScalaGen.STORE_WATCHED
   val USE_STORE1 = true // whether we specialize temporary maps in Store1
   val USE_UNIQUE_INDEX_WHEN_POSSIBLE = true
   val STORE_TYPE = "M3StoreOpsExp.STORE_TYPE"
   val NAME_ATTRIBUTE = "_name"
-  val STORE_WATCHED = "StoreOps.watched"
 
-  def named(name: String, tp: Type, mutable: Boolean = false) = 
+  def named(name: String, tp: Type, mutable: Boolean = false) =
     named(name, mutable)(man(tp))
 
   def named[T](name: String, mutable: Boolean = false)(implicit mT: Manifest[T]) = { 

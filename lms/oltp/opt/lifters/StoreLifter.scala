@@ -517,7 +517,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry
                                          with GenericGenStore {
   val IR: StoreExp with ExtendedExpressions with Effects
   import IR._
-  val STORE_WATCHED = "StoreOps.watched"
+  import ddbt.codegen.LMSScalaGen.STORE_WATCHED
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case StNewStore(mE) => {
