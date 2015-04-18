@@ -288,18 +288,6 @@ case class InsertEvent(e: Entry) extends StoreEvent
 
 import scala.collection.mutable.MutableList
 
-//class StreamLogger[E<:Entry] extends Serializable {
-//  //var events = MutableList[StoreEvent[E]]()
-//  //var binaryEvents = MutableList[StoreEvent[E]]()
-//  var tuples = MutableList[List[Any]]()
-//
-//  //def logInsert(e: E) = {tuples += e.data.toList}
-//  def logUpdate(e: List[Any]) = {tuples += e}
-//  //def logDelete(e: E) = {events += Delete(e)}
-//  //def logUpdate(e: E) = {events += Update(e)}
-//  def get() = {val snapshot = tuples.toList; tuples.clear(); println(snapshot); snapshot}
-//}
-
 class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) extends Store[E](idxs, ops)(cE) {
 
   def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),null)(cE)
@@ -312,10 +300,16 @@ class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(im
   def logUpdate(o:E, n:E):Unit = { events += UpdateEvent(o.copy, n.copy) }
   //override def update(e:E):Unit = { events += Update(e); super.update(e) } - Update method won't be invoked
 
-  def getEvents = { val r = events.toList; events.clear(); r}
+  /**
+   * Returns list of new events affected the store since the last invocation of the method
+   */
+  def getEventsDelta: List[StoreEvent] = { val r = events.toList; events.clear(); r}
 
+  /**
+   * Returns stream of output tuples by processing events delta
+   */
   def getStream = {
-    val es = getEvents
+    val es = getEventsDelta
     es.flatMap(e => e match {
       case InsertEvent(entry) => Some(entry.elements())
       case UpdateEvent(oldEntry, newEntry) => Some(newEntry.elements())
@@ -352,10 +346,16 @@ class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
     this
   }
 
-  def getEvents = { val r = events.toList; events.clear(); r }
+  /**
+   * Retruns list of new events affected the value since the last invocation of the method
+   */
+  def getEventsDelta: List[ValueEvent[A]] = { val r = events.toList; events.clear(); r }
 
+  /**
+   * Returns delta values by processing Events delta
+   */
   def getStream = {
-    val es = getEvents
+    val es = getEventsDelta
     es.map(e => e match {
       case PlusEvent(o) => o
       case MinusEvent(o) => n.negate(o)
