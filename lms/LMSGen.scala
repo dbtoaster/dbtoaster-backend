@@ -549,6 +549,14 @@ class LMSScalaGen(cls: String = "Query", override val watch: Boolean = false) ex
       "var " + name + ": " + tp.toScala + " = " + tp.zero
   }
 
+  override protected def genSnap(s0: System): String = {
+    val snap = "List(" +
+      s0.queries.map(q =>
+        (if (q.keys.size > 0) toMapFunction(q) else (if (watch) q.name + ".value" else q.name))).mkString(",") +
+      ")"
+    snap
+  }
+
   override protected def genClass(s0: System, body: String, pp: String, ld: String, gc: String, snap: String, str: String) = {
     if (watch) {
       "class " + cls + "Impl extends IQuery {\n" +
@@ -565,9 +573,10 @@ class LMSScalaGen(cls: String = "Query", override val watch: Boolean = false) ex
                 "case EndOfStream | GetSnapshot(_) => " + onEndStream + " " + snap + "\n" +
                 "case GetStream(n) => n match {\n" +
                 ind(
-                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => " + (if (q.keys.size > 0) q.name + ".getStream" else q.name)}.mkString("\n") + "\n" +
-                    "case _ => List(" + s0.queries.map(q => (if (q.keys.size > 0) q.name + ".getStream" else q.name)).mkString(",") +
-                    ")\n}")
+                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => " + q.name + ".getStream"}.mkString("\n") + "\n" +
+                    "case _ => List(" + s0.queries.map(q => q.name + ".getStream").mkString(",") +
+                    ")\n"
+                ) + "\n}"
             ) +
             "\n}\n" +
             gc + ld
@@ -586,7 +595,13 @@ class LMSScalaGen(cls: String = "Query", override val watch: Boolean = false) ex
                 (if (ld != "") " loadTables();" else "") +
                 " onSystemReady(); t0 = System.nanoTime; " +
                 "if (timeout > 0) t1 = t0 + timeout * 1000000L\n" +
-                "case EndOfStream | GetSnapshot(_) => t1 = System.nanoTime; " + onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), " + snap + ")"
+                "case EndOfStream | GetSnapshot(_) => t1 = System.nanoTime; " + onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), " + snap + ")\n" +
+                "case GetStream(n) => n match {\n" +
+                ind(
+                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => sender ! (StreamStat(t1 - t0, tN, tS), " + q.name + ".getStream)"}.mkString("\n") + "\n" +
+                    "case _ => sender ! (StreamStat(t1 - t0, tN, tS), List(" + s0.queries.map(q => q.name + ".getStream").mkString(",") +
+                    "))\n"
+                ) + "\n}"
             ) +
             "\n}\n") +
         "\n}\n"

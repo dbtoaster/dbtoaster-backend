@@ -705,15 +705,11 @@ trait IScalaGen extends CodeGen {
     }
     val (str, ld0, gc) =
       if (lms != null) (strLMS, ld0LMS, gcLMS) else genInternals(s0)
-    //val simEventHandlerStr = genSimpleEventsHandling(s0)
     val ld =
       // optional preloading of static tables content
       if (ld0 != "") "\n\ndef loadTables() {\n" + ind(ld0) + "\n}" else "" 
     freshClear()
-    val snap = "List(" +
-      s0.queries.map(q =>
-        (if (q.keys.size > 0) toMapFunction(q) else q.name)).mkString(",") +
-      ")"
+    val snap: String = genSnap(s0)
     val pp = ""
       // if (printProgress > 0L) 
       //   "def printProgress(): Unit = if (tN % " + printProgress + 
@@ -721,6 +717,14 @@ trait IScalaGen extends CodeGen {
       // else ""
     clearOut
     helper(s0) + genClass(s0, body, pp, ld, gc, snap, str)
+  }
+
+  protected def genSnap(s0: System): String = {
+    val snap = "List(" +
+      s0.queries.map(q =>
+        (if (q.keys.size > 0) toMapFunction(q) else q.name)).mkString(",") +
+      ")"
+    snap
   }
 
   protected def genStream(s: Source): (String, String, String) = {

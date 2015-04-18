@@ -346,6 +346,8 @@ class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
     this
   }
 
+  def value = v
+
   /**
    * Retruns list of new events affected the value since the last invocation of the method
    */
