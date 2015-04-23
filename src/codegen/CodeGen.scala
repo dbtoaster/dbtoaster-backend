@@ -19,7 +19,8 @@ trait CodeGen extends (M3.System => String) {
 
   // Context maintenance helpers
   case class Ctx[T](ctx0:Map[String,T]=Map[String,T]()) extends Function1[String,T] {
-    private var ctx = scala.collection.mutable.HashMap[String,T]()
+    // TODO Khayyam make it private again
+    var ctx = scala.collection.mutable.HashMap[String,T]()
     def add(c:Map[String,T]) = c.foreach(x=>ctx.put(x._1,x._2))
     def add(n:String,t:T) { ctx.put(n,t) }
     def load(c:Map[String,T]=Map()) { ctx.clear; add(c) }

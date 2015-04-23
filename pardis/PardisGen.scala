@@ -1,5 +1,9 @@
 package ddbt.codegen
 
+import java.io.StringWriter
+
+import ch.epfl.data.sc.pardis.ir.StructTags.ClassTag
+import ch.epfl.data.sc.pardis.prettyprinter.ScalaCodeGenerator
 import ddbt.ast.M3._
 import ddbt.ast.M3.{Apply => M3ASTApply}
 import ddbt.ast._
@@ -29,6 +33,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
 
   def me(ks:List[Type],v:Type=null) = manEntry(if (v==null) ks else ks:::List(v))
+  def me2(ks:List[Type],v:Type=null) = ManifestHelper.manEntry(if (v==null) ks else ks:::List(v))
+
   def mapProxy(m:Rep[_]) = impl.store2StoreOpsCls(m.asInstanceOf[Rep[Store[Entry]]])
 
   // Expression CPS transformation from M3 AST to LMS graph representation
@@ -134,6 +140,18 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     case _ => true
   }
 
+  override def genMap(m:MapDef):String = {
+    if (m.keys.size==0) createVarDefinition(m.name, m.tp)+";"
+    else {
+      impl.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.Sym[_]], true)
+    }
+  }
+
+  def genAllMaps(maps:Seq[MapDef]) = maps.map(genMap).mkString("\n")
+
+  def createVarDefinition(name: String, tp:Type) = "var "+name+":"+tp.toScala+" = "+tp.zero
+
+
   var cx : Ctx[Rep[_]] = null
   // Trigger code generation
   def genTriggerLMS(t:Trigger, s0:System) = {
@@ -155,6 +173,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
         case _ =>
           args.map(a=>a._1+":"+a._2.toScala).mkString(", ")
       }
+      println(s"HELLO AGAIN2 ${ctx0}")
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
         ctx0.map{ case (name,(sym,keys,tp)) => (name, sym) }.toList union
@@ -167,6 +186,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
             }
           }
         ).toMap)
+      println(s"HELLO AGAIN ${cx.ctx}")
       // Execute each statement
       t.stmts.filter(filterStatement).map {
         case StmtMap(m,e,op,oi) => cx.load()
@@ -185,6 +205,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
             if (op==OpSet) impl.stClear(mm)
             oi match { case None => case Some(ie) =>
               expr(ie,(r:Rep[_]) => {
+//                println(s"HELLO KHAYYAM $mm")
                 val ent = impl.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)) : _*)
                 impl.__ifThenElse(impl.infix_==(stProxyGet(mm, m.keys.zipWithIndex.map{ case (n,i) => (i+1,cx(n))} : _*),
                   impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
@@ -192,6 +213,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
             }
             cx.load()
             expr(e,(r:Rep[_]) => {
+              println(s"HELLO KHAYYAM $mm")
               val ent = impl.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)) : _*)
               op match { case OpAdd | OpSet => impl.m3add(mm, ent)(mE) }
             }, /*if (op==OpAdd)*/ Some(m.keys zip m.tks) /*else None*/) // XXXX commented out the if expression
@@ -202,13 +224,77 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       impl.unit(())
     }
     println(block)
+    println("=======")
     cx = null; (name,params,block)
   }
 
   var ctx0 = Map[String,(Rep[_], List[(String,Type)], Type)]()
   override def genPardis(s0: M3.System): (String, String, String, String) = {
+    val classLevelMaps = s0.triggers.filter(_.evt match {
+      case EvtBatchUpdate(s) => true
+      case _ => false
+    }).map(_.evt match { //delta relations
+      case EvtBatchUpdate(sc) =>
+        val name = sc.name
+        val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
+        val deltaRel = sc.deltaSchema
+        val tp = TypeLong
+        val keys = schema.fields
+        MapDef(deltaRel,tp,keys,null)
+      case _ => null
+    }) ++
+      s0.triggers.flatMap{ t=> //local maps
+        t.stmts.filter{
+          case MapDef(_,_,_,_) => true
+          case _ => false
+        }.map{
+          case m@MapDef(_,_,_,_) => m
+          case _ => null
+        }
+      } ++
+      maps.map{
+        case (_,m@MapDef(_,_,_,_)) => m
+      } // XXX missing indexes
+    ctx0 = classLevelMaps.map{
+      case MapDef(name,tp,keys,_) => if (keys.size==0) {
+        val m = man(tp)
+        val s = impl.__newVar(impl.unit(0)).e// xxx::: Change nulls impl.named(name,false)(m)
+        //s.emitted = true
+        (name,(s,keys,tp))
+      } else {
+        val m = me2(keys.map(_._2),tp)
+        implicit val cE = ManifestHelper.manStore(m)
+        val s= impl.__newMStore()// xxx::impl.named(name,true)(manStore(m))
+        //impl.collectStore(s)(m)
+        (name,(/*impl.newSStore()(m)*/s,keys,tp))
+      }
+    }.toMap // XXX missing indexes
+
+    val (str,ld0,_) = genInternals(s0)
+
     val tsResBlks = s0.triggers.map(genTriggerLMS(_,s0)) // triggers (need to be generated before maps)
-    ("par1", "par2", "par3", "par4")
+    val codeGen = new ScalaCodeGenerator {
+
+      }
+
+    var ts = ""
+    for(x <- tsResBlks) {
+      val doc = codeGen.blockToDocument((x._3))
+      val strWriter = new StringWriter()
+      val pw = new java.io.PrintWriter(strWriter)
+      doc.format(80, pw)
+      ts += strWriter.toString
+    }
+
+    val ms = genAllMaps(classLevelMaps) // maps
+    val ds = "" // xxx - Fixeit outStream.toString
+    val printInfoDef = "def printMapsInfo() = {}"
+
+
+    println("Helloooooooo\n" + ts)
+    val r=ds+"\n"+ms+"\n"+ts+"\n"+printInfoDef
+    (r,str,ld0,consts)
+    // ("par1", "par2", "par3", "par4")
     //    val context = new MirrorStoreDSL {
     //      implicit def liftInt(i: Int): Rep[Int] = unit(i)
     //

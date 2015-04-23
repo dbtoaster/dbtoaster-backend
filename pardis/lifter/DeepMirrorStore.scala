@@ -33,10 +33,13 @@ trait MStoreOps extends Base with ArrayOps {
 
   }
   // constructors
-   def __newMStore[E <: ddbt.lib.store.Entry](idxs : Rep[Array[E]], ops : Rep[Array[E]])(implicit typeE : TypeRep[E]) : Rep[MStore[E]] = mStoreNew[E](idxs, ops)(typeE)
+   def __newMStore[E <: ddbt.lib.store.Entry](idxs : Rep[Array[E]], ops : Rep[Array[E]])(implicit overload1 : Overloaded1, typeE : TypeRep[E]) : Rep[MStore[E]] = mStoreNew1[E](idxs, ops)(typeE)
+   def __newMStore[E <: ddbt.lib.store.Entry]()(implicit cE : Manifest[E], overload2 : Overloaded2, typeE : TypeRep[E]) : Rep[MStore[E]] = mStoreNew2[E]()(typeE, cE)
   // IR defs
-  val MStoreNew = MStoreIRs.MStoreNew
-  type MStoreNew[E <: ddbt.lib.store.Entry] = MStoreIRs.MStoreNew[E]
+  val MStoreNew1 = MStoreIRs.MStoreNew1
+  type MStoreNew1[E <: ddbt.lib.store.Entry] = MStoreIRs.MStoreNew1[E]
+  val MStoreNew2 = MStoreIRs.MStoreNew2
+  type MStoreNew2[E <: ddbt.lib.store.Entry] = MStoreIRs.MStoreNew2[E]
   val MStoreUnsafeInsert = MStoreIRs.MStoreUnsafeInsert
   type MStoreUnsafeInsert[E <: ddbt.lib.store.Entry] = MStoreIRs.MStoreUnsafeInsert[E]
   val MStoreInsert = MStoreIRs.MStoreInsert
@@ -62,7 +65,8 @@ trait MStoreOps extends Base with ArrayOps {
   val MStore_Field_Idxs = MStoreIRs.MStore_Field_Idxs
   type MStore_Field_Idxs[E <: ddbt.lib.store.Entry] = MStoreIRs.MStore_Field_Idxs[E]
   // method definitions
-   def mStoreNew[E <: ddbt.lib.store.Entry](idxs : Rep[Array[E]], ops : Rep[Array[E]])(implicit typeE : TypeRep[E]) : Rep[MStore[E]] = MStoreNew[E](idxs, ops)
+   def mStoreNew1[E <: ddbt.lib.store.Entry](idxs : Rep[Array[E]], ops : Rep[Array[E]])(implicit typeE : TypeRep[E]) : Rep[MStore[E]] = MStoreNew1[E](idxs, ops)
+   def mStoreNew2[E <: ddbt.lib.store.Entry]()(implicit typeE : TypeRep[E], cE : Manifest[E]) : Rep[MStore[E]] = MStoreNew2[E]()
    def mStoreUnsafeInsert[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreUnsafeInsert[E](self, idx, e)
    def mStoreInsert[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreInsert[E](self, e)
    def mStoreUpdate[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreUpdate[E](self, e)
@@ -90,8 +94,12 @@ object MStoreIRs extends Base {
   }
       implicit def typeMStore[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[MStore[E]] = MStoreType(implicitly[TypeRep[E]])
   // case classes
-  case class MStoreNew[E <: ddbt.lib.store.Entry](idxs : Rep[Array[E]], ops : Rep[Array[E]])(implicit val typeE : TypeRep[E]) extends ConstructorDef[MStore[E]](List(typeE), "MStore", List(List(idxs,ops))){
+  case class MStoreNew1[E <: ddbt.lib.store.Entry](idxs : Rep[Array[E]], ops : Rep[Array[E]])(implicit val typeE : TypeRep[E]) extends ConstructorDef[MStore[E]](List(typeE), "MStore", List(List(idxs,ops))){
     override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class MStoreNew2[E <: ddbt.lib.store.Entry]()(implicit val typeE : TypeRep[E], val cE : Manifest[E]) extends ConstructorDef[MStore[E]](List(typeE), "MStore", List(List())){
+    override def curriedConstructor = (x: Any) => copy[E]()
   }
 
   case class MStoreUnsafeInsert[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "unsafeInsert", List(List(idx,e))){
@@ -168,11 +176,11 @@ trait MStoreImplicits extends MStoreOps {
 trait MStorePartialEvaluation extends MStoreComponent with BasePartialEvaluation {  
   // Immutable field inlining 
   override def mStore_Field_Ops[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]])(implicit typeE : TypeRep[E]) : Rep[Array[E]] = self match {
-    case Def(node: MStoreNew[_]) => node.ops
+    case Def(node: MStoreNew1[_]) => node.ops
     case _ => super.mStore_Field_Ops[E](self)(typeE)
   }
   override def mStore_Field_Idxs[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]])(implicit typeE : TypeRep[E]) : Rep[Array[E]] = self match {
-    case Def(node: MStoreNew[_]) => node.idxs
+    case Def(node: MStoreNew1[_]) => node.idxs
     case _ => super.mStore_Field_Idxs[E](self)(typeE)
   }
 

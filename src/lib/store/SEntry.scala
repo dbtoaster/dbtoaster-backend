@@ -1,6 +1,26 @@
 package ddbt.lib.store
 
+import scala.collection.mutable
+
 //abstract class SEntry[E<:Product:Manifest] extends Entry(manifest[E].runtimeClass.newInstance.asInstanceOf[Product].productArity)
+class GenericEntry(val map: mutable.HashMap[Int,Any]) extends Entry(0) {
+  def this() = this(new mutable.HashMap[Int,Any])
+
+  def update(i: Int, v:Any) = map.put(i, v)
+  def increase(i: Int, v:Any) =  ??? //if (map.contains(i)) map.put(i, map.get(i) + v) else map.put(i, v)
+  def +=(i: Int, v:Any) = increase(i ,v)
+  def decrease(i: Int, v:Any) = ??? //if (map.contains(i)) map.put(i, map.get(i) - v) else map.put(i, v)
+  def -=(i: Int, v:Any) = decrease(i ,v)
+  def get(i: Int) = map.get(i)
+  def copy:Entry = new GenericEntry(map.clone)
+}
+
+object GenericEntry extends EntryIdx[GenericEntry] {
+  def hash(e:GenericEntry) = e.map.hashCode
+
+  def cmp(e1:GenericEntry, e2:GenericEntry) = if (e1.map == e2.map) 0 else 1
+}
+
 abstract class SEntry2 [T1:Manifest,T2:Manifest] extends Entry(2)
 abstract class SEntry3 [T1:Manifest,T2:Manifest,T3:Manifest] extends Entry(3)
 abstract class SEntry4 [T1:Manifest,T2:Manifest,T3:Manifest,T4:Manifest] extends Entry(4)

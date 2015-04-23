@@ -10,7 +10,7 @@ import ch.epfl.data.sc.pardis.annotations._
 @noImplementation
 //@reflect[Store[_]]
 class MStore[E<:Entry](val idxs:Array[E], val ops:Array[E]) {
-  //def this() = this(new Array[E](0), new Array[E](0))
+  def this()(implicit cE:Manifest[E]) = this(new Array[E](0), new Array[E](0))
   private val n = idxs.length
   // def this(n:Int) = this(new Array[Idx[E]](n),null)(cE)
   // def this(n:Int,ops:Array[EntryIdx[E]]) = this(new Array[Idx[E]](n),ops)(cE)

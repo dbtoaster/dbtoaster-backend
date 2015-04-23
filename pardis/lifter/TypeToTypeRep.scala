@@ -1,5 +1,6 @@
 package lifter
 
+import ch.epfl.data.sc.pardis.utils
 import ddbt.ast._
 import ddbt.lib.store.{Store, Entry}
 import ddbt.lib.store.deep.StoreDSL
@@ -23,22 +24,26 @@ trait TypeToTypeRep { this: StoreDSL =>
       val cls:java.lang.Class[_] = Class.forName("scala.Tuple"+ts.size)
       val tpe = scala.reflect.runtime.universe.runtimeMirror(cls.getClassLoader).classSymbol(cls).typeSignature
       // FIXME have to apply to arguments
-      new ReflectionType(tpe)
+      new ExtendedReflectionType(tpe, ms)
   }
   def manEntry(ts:List[Type]):TypeRep[Entry] = {
     val ms:List[TypeRep[_]] = ts map man
     val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.SEntry"+ts.size)
     val tpe = scala.reflect.runtime.universe.runtimeMirror(cls.getClassLoader).classSymbol(cls).typeSignature
     // FIXME have to apply to arguments
-    new ReflectionType(tpe).asInstanceOf[TypeRep[Entry]]
+    new ExtendedReflectionType(tpe, ms).asInstanceOf[TypeRep[Entry]]
   }
+
+
+
+
   def manStore(ts:List[Type]):TypeRep[Store[Entry]] = manStore(manEntry(ts))
 
   def manStore(entryMan:TypeRep[Entry]):TypeRep[Store[Entry]] = {
     val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.Store")
     val tpe = scala.reflect.runtime.universe.runtimeMirror(cls.getClassLoader).classSymbol(cls).typeSignature
     // FIXME have to apply to arguments
-    new ReflectionType(tpe).asInstanceOf[TypeRep[Store[Entry]]]
+    new ExtendedReflectionType(tpe, Nil).asInstanceOf[TypeRep[Store[Entry]]]
   }
   def manContainer(ts:List[Type]):TypeRep[Store[Entry]] = manStore(manEntry(ts))
 
@@ -46,7 +51,7 @@ trait TypeToTypeRep { this: StoreDSL =>
     val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.Container")
     val tpe = scala.reflect.runtime.universe.runtimeMirror(cls.getClassLoader).classSymbol(cls).typeSignature
     // FIXME have to apply to arguments
-    new ReflectionType(tpe).asInstanceOf[TypeRep[Store[Entry]]]
+    new ExtendedReflectionType(tpe, Nil).asInstanceOf[TypeRep[Store[Entry]]]
   }
   def zero(tp: Type) = tp match {
     case TypeLong => 0L
@@ -55,6 +60,13 @@ trait TypeToTypeRep { this: StoreDSL =>
     case TypeDate => new java.util.Date()
     case _ => sys.error("Bad Type")
   }
+//  def unitZero(tp: Type) = tp match {
+//    case TypeLong => unit(0L)
+//    case TypeDouble => unit(0.0)
+//    case TypeString => unit("")
+//    case TypeDate => unit(new java.util.Date())
+//    case _ => sys.error("Bad Type")
+//  }
   def zero(m: TypeRep[_]) = m.name match {
     case "Long" => 0L
     case "Double" => 0.0
@@ -62,4 +74,19 @@ trait TypeToTypeRep { this: StoreDSL =>
     case "java.util.Date" => new java.util.Date()
     case _ => sys.error("Bad manifest")
   }
+//  def unitZero(m: TypeRep[_]) = m match {
+//    case LongType => unit(0L)
+//    case DoubleType => unit(0.0)
+//    case StringType => unit("")
+//    case DateType => unit(new java.util.Date())
+//    case _ => sys.error("Bad manifest")
+//  }
+}
+
+// TODO Amir: move it to SC
+class ExtendedReflectionType(tpe: scala.reflect.runtime.universe.Type, override val typeArguments: List[PardisType[_]] ) extends ReflectionType(tpe) {
+
+  override def rebuild(newArguments: PardisType[_]*): PardisType[_] = new ExtendedReflectionType(tpe, typeArguments)
+
+//  val typeTag: TypeTag[Any] = null //sys.error("No typetag available for a type constructed from a reflection type")
 }
