@@ -34,12 +34,18 @@ import ddbt.ast._
 class ScalaGen(override val cls: String = "Query") extends IScalaGen
 
 object ScalaGen {
+
+  val STORE_WATCHED = "StoreOps.watched"
+
   def tupleNameOfTps(types: List[Type]) =
     if (types.length == 1) types.head.toScala
     else "T" + types.map(t => t.simpleName).mkString
 }
 
 trait IScalaGen extends CodeGen {
+
+  val watch = false
+
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.Utils.{ind, tup, fresh, freshClear} // common functions

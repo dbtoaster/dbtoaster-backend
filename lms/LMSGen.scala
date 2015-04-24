@@ -11,7 +11,7 @@ import ddbt.lib._
   *
   * @author Mohammad Dashti, TCK
   */
-abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) extends IScalaGen {
+abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, override val watch: Boolean = false) extends IScalaGen {
 
   import ddbt.ast.M3._
   import ddbt.Utils.{ind, tup, fresh, freshClear} // common functions
@@ -19,7 +19,6 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
   import impl.Rep
   implicit val overloaded1 = impl.overloaded1
   import ddbt.lib.store._
-  val watch = false
   var cx: Ctx[Rep[_]] = null
 
   def me(ks: List[Type], v: Type = null) = 
@@ -460,7 +459,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
         val s = impl.named(name, true)(manStore(m))
         impl.collectStore(s)(m)
         if (watch && resultMapNames.contains(name))
-          s.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.put(LMSScalaGen.STORE_WATCHED, true)
+          s.asInstanceOf[impl.codegen.IR.Sym[_]].attributes.put(ScalaGen.STORE_WATCHED, true)
         (name, (/*impl.newSStore()(m)*/s, keys, tp))
       }
     }.toMap // XXX missing indexes
@@ -533,11 +532,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen) e
   override def getEntryDefinitions: String = ""
 }
 
-object LMSScalaGen {
-  val STORE_WATCHED = "StoreOps.watched"
-}
-
-class LMSScalaGen(cls: String = "Query", override val watch: Boolean = false) extends LMSGen(cls, ScalaExpGen) {
+class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(cls, ScalaExpGen, watch) {
   import ddbt.ast.M3._
   import ddbt.Utils._
   import LMSScalaGen._
