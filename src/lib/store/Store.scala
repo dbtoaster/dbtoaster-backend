@@ -281,14 +281,17 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
   }
 }
 
-abstract sealed class StoreEvent
-case class DeleteEvent(e: Entry) extends StoreEvent
-case class UpdateEvent(oldE: Entry, newE: Entry) extends StoreEvent
-case class InsertEvent(e: Entry) extends StoreEvent
-
-import scala.collection.mutable.MutableList
 
 class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) extends Store[E](idxs, ops)(cE) {
+  import ddbt.lib.Messages.TupleOp
+  import ddbt.lib.Messages.TupleDelete
+  import ddbt.lib.Messages.TupleInsert
+  import scala.collection.mutable.MutableList
+
+  abstract sealed class StoreEvent
+  case class DeleteEvent(e: Entry) extends StoreEvent
+  case class UpdateEvent(oldE: Entry, newE: Entry) extends StoreEvent
+  case class InsertEvent(e: Entry) extends StoreEvent
 
   def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),null)(cE)
   def this(n:Int,ops:Array[EntryIdx[E]])(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),ops)(cE)
@@ -308,21 +311,22 @@ class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(im
   /**
    * Returns stream of output tuples by processing events delta
    */
-  def getStream = {
+  def getStream: List[(TupleOp, Array[AnyRef])] = {
     val es = getEventsDelta
     es.flatMap(e => e match {
-      case InsertEvent(entry) => Some(entry.elements())
-      case UpdateEvent(oldEntry, newEntry) => Some(newEntry.elements())
-      case _ => None
-    }).toArray
+      case InsertEvent(entry) => List((TupleInsert, entry.elements()))
+      case UpdateEvent(oldEntry, newEntry) => List((TupleDelete, oldEntry.elements), (TupleInsert, newEntry.elements()))
+      case DeleteEvent(entry) => List((TupleDelete, entry.elements()))
+    })
   }
 }
 
-abstract sealed class ValueEvent[A<:AnyVal];
-case class PlusEvent[A<:AnyVal](o: A) extends ValueEvent[A]
-case class MinusEvent[A<:AnyVal](o: A) extends ValueEvent[A]
 
 class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
+  import scala.collection.mutable.MutableList
+
+  abstract sealed class ValueEvent[A<:AnyVal];
+  case class UpdateEvent[A<:AnyVal](oldV: A, newV: A) extends ValueEvent[A]
 
   var events = MutableList[ValueEvent[A]]()
 
@@ -335,14 +339,16 @@ class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
   }
 
   def +=(other: A): ValueWrapper[A] = {
+    val oldV = v
     v = n.plus(v, other)
-    events += PlusEvent(other)
+    events += UpdateEvent(oldV, v)
     this
   }
 
   def -=(other: A): ValueWrapper[A] = {
+    val oldV = v
     v = n.minus(v, other)
-    events += MinusEvent(other)
+    events += UpdateEvent(oldV, v)
     this
   }
 
@@ -356,11 +362,10 @@ class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
   /**
    * Returns delta values by processing Events delta
    */
-  def getStream = {
+  def getStream: List[A] = {
     val es = getEventsDelta
-    es.map(e => e match {
-      case PlusEvent(o) => o
-      case MinusEvent(o) => n.negate(o)
+    es.flatMap(e => e match {
+      case UpdateEvent(oldV, newV) => List(n.negate(oldV), newV)
     })
   }
 }
