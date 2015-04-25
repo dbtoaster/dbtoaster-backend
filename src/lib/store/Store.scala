@@ -311,12 +311,28 @@ class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(im
   /**
    * Returns stream of output tuples by processing events delta
    */
-  def getStream: List[(TupleOp, Array[AnyRef])] = {
+  def getStream: List[Array[AnyRef]] = {
+
+    def negate[A](v: A): Any = v match {
+      case _: Int => implicitly[Numeric[Int]].negate(v.asInstanceOf[Int])
+      case _: Long => implicitly[Numeric[Long]].negate(v.asInstanceOf[Long])
+      case _: Float => implicitly[Numeric[Float]].negate(v.asInstanceOf[Float])
+      case _: Double => implicitly[Numeric[Double]].negate(v.asInstanceOf[Double])
+      case _ => v
+    }
+
+    def negateEntry(elements: Array[AnyRef]): Array[AnyRef] = {
+      val lastIndex = elements.length - 1
+      elements(lastIndex) = negate(elements(lastIndex)).asInstanceOf[AnyRef]
+      elements
+    }
+
     val es = getEventsDelta
+
     es.flatMap(e => e match {
-      case InsertEvent(entry) => List((TupleInsert, entry.elements()))
-      case UpdateEvent(oldEntry, newEntry) => List((TupleDelete, oldEntry.elements), (TupleInsert, newEntry.elements()))
-      case DeleteEvent(entry) => List((TupleDelete, entry.elements()))
+      case InsertEvent(entry) => List(entry.elements)
+      case UpdateEvent(oldEntry, newEntry) => List(negateEntry(oldEntry.elements), newEntry.elements)
+      case DeleteEvent(entry) => List(negateEntry(entry.elements))
     })
   }
 }
