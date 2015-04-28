@@ -1,0 +1,141 @@
+<instrumentationManifest xmlns="http://schemas.microsoft.com/win/2004/08/events">
+ <instrumentation xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:win="http://manifests.microsoft.com/win/2004/08/windows/events">
+  <events xmlns="http://schemas.microsoft.com/win/2004/08/events">
+<provider name="Naiad" guid="{0ad7158e-b717-53ae-c71a-6f41ab15fe16}" resourceFileName="Naiad.dll" messageFileName="Naiad.dll" symbol="Naiad">
+ <tasks>
+  <task name="Channels" value="1"/>
+  <task name="Scheduling" value="2"/>
+  <task name="Control" value="3"/>
+  <task name="Locks" value="4"/>
+  <task name="Graph" value="5"/>
+  <task name="WriteEvent" value="65514"/>
+ </tasks>
+ <opcodes>
+ </opcodes>
+ <keywords>
+  <keyword name="Debug"  message="$(string.keyword_Debug)" mask="0x1"/>
+  <keyword name="Measurement"  message="$(string.keyword_Measurement)" mask="0x2"/>
+  <keyword name="Network"  message="$(string.keyword_Network)" mask="0x4"/>
+  <keyword name="Scheduling"  message="$(string.keyword_Scheduling)" mask="0x8"/>
+  <keyword name="Viz"  message="$(string.keyword_Viz)" mask="0x10"/>
+  <keyword name="Locks"  message="$(string.keyword_Locks)" mask="0x20"/>
+  <keyword name="GraphMetaData"  message="$(string.keyword_GraphMetaData)" mask="0x40"/>
+ </keywords>
+ <events>
+  <event value="104" version="0" level="win:Informational" keywords="Network Viz" opcode="win:Send" task="Channels" template="MsgSendArgs"/>
+  <event value="105" version="0" level="win:Informational" keywords="Network Viz" opcode="win:Send" task="Channels" template="MsgRecvArgs"/>
+  <event value="200" version="0" level="win:Informational" keywords="Scheduling Viz" opcode="win:Start" task="Scheduling" template="StartSchedArgs"/>
+  <event value="201" version="0" level="win:Informational" keywords="Scheduling Viz" opcode="win:Stop" task="Scheduling" template="StopSchedArgs"/>
+  <event value="300" version="0" level="win:Informational" keywords="Viz" task="Control"/>
+  <event value="301" version="0" level="win:Informational" keywords="Viz" task="Control" template="AdvanceFrontierArgs"/>
+  <event value="302" version="0" level="win:Informational" keywords="Debug Network Viz" task="Control" template="SocketErrorArgs"/>
+  <event value="303" version="0" level="win:Informational" keywords="Debug Viz" task="Control" template="RegionStartArgs"/>
+  <event value="304" version="0" level="win:Informational" keywords="Debug Viz" task="Control" template="RegionStopArgs"/>
+  <event value="305" version="0" level="win:Informational" keywords="Debug Viz" task="Control"/>
+  <event value="500" version="0" level="win:Informational" keywords="Viz GraphMetaData" task="Graph" template="StageInfoArgs"/>
+  <event value="501" version="0" level="win:Informational" keywords="Viz GraphMetaData" task="Graph" template="VertexPlacementArgs"/>
+  <event value="502" version="0" level="win:Informational" keywords="Viz GraphMetaData" task="Graph" template="ChannelInfoArgs"/>
+  <event value="503" version="0" level="win:Informational" keywords="Viz" task="Graph" template="ThreadNameArgs"/>
+  <event value="504" version="0" level="win:Informational" keywords="Viz GraphMetaData" task="Graph" template="ProcessInfoArgs"/>
+  <event value="400" version="0" level="win:Verbose" keywords="Locks" task="Locks" template="LockInfoArgs"/>
+  <event value="401" version="0" level="win:Verbose" keywords="Locks" task="Locks" template="LockAcquireArgs"/>
+  <event value="402" version="0" level="win:Verbose" keywords="Locks" task="Locks" template="LockHeldArgs"/>
+  <event value="403" version="0" level="win:Verbose" keywords="Locks" task="Locks" template="LockReleaseArgs"/>
+  <event value="20" version="0" level="win:Informational" task="WriteEvent" template="WriteEventArgs"/>
+ </events>
+ <templates>
+  <template tid="MsgSendArgs">
+   <data name="channel" inType="win:Int32"/>
+   <data name="seqno" inType="win:Int32"/>
+   <data name="len" inType="win:Int32"/>
+   <data name="src" inType="win:Int32"/>
+   <data name="dst" inType="win:Int32"/>
+  </template>
+  <template tid="MsgRecvArgs">
+   <data name="channel" inType="win:Int32"/>
+   <data name="seqno" inType="win:Int32"/>
+   <data name="len" inType="win:Int32"/>
+   <data name="src" inType="win:Int32"/>
+   <data name="dst" inType="win:Int32"/>
+  </template>
+  <template tid="StartSchedArgs">
+   <data name="stageid" inType="win:Int32"/>
+  </template>
+  <template tid="StopSchedArgs">
+   <data name="stageid" inType="win:Int32"/>
+  </template>
+  <template tid="AdvanceFrontierArgs">
+   <data name="newFrontier" inType="win:UnicodeString"/>
+  </template>
+  <template tid="SocketErrorArgs">
+   <data name="msg" inType="win:UnicodeString"/>
+  </template>
+  <template tid="RegionStartArgs">
+   <data name="id" inType="win:Int32"/>
+  </template>
+  <template tid="RegionStopArgs">
+   <data name="id" inType="win:Int32"/>
+  </template>
+  <template tid="StageInfoArgs">
+   <data name="id" inType="win:Int32"/>
+   <data name="name" inType="win:UnicodeString"/>
+  </template>
+  <template tid="VertexPlacementArgs">
+   <data name="stageid" inType="win:Int32"/>
+   <data name="vertexid" inType="win:Int32"/>
+   <data name="proc" inType="win:Int32"/>
+   <data name="worker" inType="win:Int32"/>
+  </template>
+  <template tid="ChannelInfoArgs">
+   <data name="channel" inType="win:Int32"/>
+   <data name="src" inType="win:Int32"/>
+   <data name="dst" inType="win:Int32"/>
+   <data name="isExchange" inType="win:Boolean"/>
+   <data name="isProgress" inType="win:Boolean"/>
+  </template>
+  <template tid="ThreadNameArgs">
+   <data name="name" inType="win:UnicodeString"/>
+  </template>
+  <template tid="ProcessInfoArgs">
+   <data name="id" inType="win:Int32"/>
+   <data name="name" inType="win:UnicodeString"/>
+  </template>
+  <template tid="LockInfoArgs">
+   <data name="id" inType="win:Int32"/>
+   <data name="name" inType="win:UnicodeString"/>
+  </template>
+  <template tid="LockAcquireArgs">
+   <data name="id" inType="win:Int32"/>
+  </template>
+  <template tid="LockHeldArgs">
+   <data name="id" inType="win:Int32"/>
+  </template>
+  <template tid="LockReleaseArgs">
+   <data name="id" inType="win:Int32"/>
+  </template>
+  <template tid="WriteEventArgs">
+   <data name="eventId" inType="win:Int32"/>
+   <data name="arg1" inType="win:Int32"/>
+   <data name="arg2" inType="win:Int32"/>
+   <data name="arg3" inType="win:Int32"/>
+   <data name="arg4" inType="win:Int32"/>
+   <data name="arg5" inType="win:Int32"/>
+  </template>
+ </templates>
+</provider>
+</events>
+</instrumentation>
+<localization>
+ <resources culture="en-US">
+  <stringTable>
+   <string id="keyword_Debug" value="Debug"/>
+   <string id="keyword_GraphMetaData" value="GraphMetaData"/>
+   <string id="keyword_Locks" value="Locks"/>
+   <string id="keyword_Measurement" value="Measurement"/>
+   <string id="keyword_Network" value="Network"/>
+   <string id="keyword_Scheduling" value="Scheduling"/>
+   <string id="keyword_Viz" value="Viz"/>
+  </stringTable>
+ </resources>
+</localization>
+</instrumentationManifest>
