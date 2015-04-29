@@ -2,8 +2,10 @@ package ddbt.codegen
 
 import java.io.StringWriter
 
+import ch.epfl.data.sc.pardis.ir.ExpressionSymbol
 import ch.epfl.data.sc.pardis.ir.StructTags.ClassTag
 import ch.epfl.data.sc.pardis.prettyprinter.ScalaCodeGenerator
+import ch.epfl.data.sc.pardis.utils.Document
 import ddbt.ast.M3._
 import ddbt.ast.M3.{Apply => M3ASTApply}
 import ddbt.ast._
@@ -143,7 +145,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
   override def genMap(m:MapDef):String = {
     if (m.keys.size==0) createVarDefinition(m.name, m.tp)+";"
     else {
-      impl.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.Sym[_]], true)
+      println("MAP NAME: " + m.name)
+      impl.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.Sym[_]], m.name, true)
     }
   }
 
@@ -186,7 +189,6 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
             }
           }
         ).toMap)
-      println(s"HELLO AGAIN ${cx.ctx}")
       // Execute each statement
       t.stmts.filter(filterStatement).map {
         case StmtMap(m,e,op,oi) => cx.load()
@@ -205,7 +207,6 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
             if (op==OpSet) impl.stClear(mm)
             oi match { case None => case Some(ie) =>
               expr(ie,(r:Rep[_]) => {
-//                println(s"HELLO KHAYYAM $mm")
                 val ent = impl.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)) : _*)
                 impl.__ifThenElse(impl.infix_==(stProxyGet(mm, m.keys.zipWithIndex.map{ case (n,i) => (i+1,cx(n))} : _*),
                   impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
@@ -213,7 +214,6 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
             }
             cx.load()
             expr(e,(r:Rep[_]) => {
-              println(s"HELLO KHAYYAM $mm")
               val ent = impl.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)) : _*)
               op match { case OpAdd | OpSet => impl.m3add(mm, ent)(mE) }
             }, /*if (op==OpAdd)*/ Some(m.keys zip m.tks) /*else None*/) // XXXX commented out the if expression
@@ -223,8 +223,6 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       }
       impl.unit(())
     }
-    println(block)
-    println("=======")
     cx = null; (name,params,block)
   }
 
@@ -273,25 +271,27 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     val (str,ld0,_) = genInternals(s0)
 
     val tsResBlks = s0.triggers.map(genTriggerLMS(_,s0)) // triggers (need to be generated before maps)
-    val codeGen = new ScalaCodeGenerator {
+    val codeGen = new SStoreCodeGeneration()
 
-      }
+
 
     var ts = ""
     for(x <- tsResBlks) {
+      println(x._3)
+      println("========")
       val doc = codeGen.blockToDocument((x._3))
       val strWriter = new StringWriter()
       val pw = new java.io.PrintWriter(strWriter)
       doc.format(80, pw)
-      ts += strWriter.toString
+      ts += "def on"+x._1+"("+x._2+") {\n"+strWriter.toString+"\n}\n"
     }
+
+
 
     val ms = genAllMaps(classLevelMaps) // maps
     val ds = "" // xxx - Fixeit outStream.toString
     val printInfoDef = "def printMapsInfo() = {}"
 
-
-    println("Helloooooooo\n" + ts)
     val r=ds+"\n"+ms+"\n"+ts+"\n"+printInfoDef
     (r,str,ld0,consts)
     // ("par1", "par2", "par3", "par4")
@@ -318,3 +318,13 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 }
 
 class PardisScalaGen(cls:String="Query") extends PardisGen(cls, new StoreDSL {})
+
+class SStoreCodeGeneration() extends ScalaCodeGenerator {
+  override def symToDocument(sym: ExpressionSymbol[_]): Document = {
+    if(sym.name != "x") {
+      Document.text(sym.name)
+    } else {
+      super.symToDocument(sym)
+    }
+  }
+}

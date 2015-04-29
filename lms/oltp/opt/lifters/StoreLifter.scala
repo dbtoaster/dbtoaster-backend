@@ -630,7 +630,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
   }
 
   override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
-    storeSyms.foreach { c => out.println(ddbt.Utils.ind(generateNewStore(c),2)) }
+    storeSyms.foreach { c => out.println(ddbt.Utils.ind(getStoreSym(c),2)) }
     functionNames.foreach { fn =>
       out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
         quote(c, true)

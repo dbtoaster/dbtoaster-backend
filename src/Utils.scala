@@ -93,6 +93,7 @@ object Utils {
   // Execute arbitrary command, return (out,err)
   def exec(cmd:String,fatal:Boolean):(String,String) = exec(cmd.split(" +"),null,null,fatal)
   def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true,prefix:String=null):(String,String) = {
+    println(cmd.mkString(" "))
     val p = Runtime.getRuntime.exec(cmd,env,dir)
     val out=gobble(p.getInputStream,scala.Console.out,prefix); val err=gobble(p.getErrorStream,scala.Console.err,prefix); val exitVal=p.waitFor; val o=out.toString; val e=err.toString
     if (fatal && (e.trim!="" || exitVal!=0)) {

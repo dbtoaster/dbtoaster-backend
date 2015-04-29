@@ -7,15 +7,32 @@ class GenericEntry(val map: mutable.HashMap[Int,Any]) extends Entry(0) {
   def this() = this(new mutable.HashMap[Int,Any])
 
   def update(i: Int, v:Any) = map.put(i, v)
-  def increase(i: Int, v:Any) =  ??? //if (map.contains(i)) map.put(i, map.get(i) + v) else map.put(i, v)
+  def increase(i: Int, v:Any) = v match {
+    case _: Int => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Int] + v.asInstanceOf[Int]) else map.put(i, v)
+    case _: Double => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Double] + v.asInstanceOf[Double]) else map.put(i, v)
+    case _: Long => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Long] + v.asInstanceOf[Long]) else map.put(i, v)
+    case _: String => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[String] + v.asInstanceOf[String]) else map.put(i, v)
+  }
+
   def +=(i: Int, v:Any) = increase(i ,v)
-  def decrease(i: Int, v:Any) = ??? //if (map.contains(i)) map.put(i, map.get(i) - v) else map.put(i, v)
+  def decrease(i: Int, v:Any) = v match {
+    case _: Int => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Int] - v.asInstanceOf[Int]) else map.put(i, v)
+    case _: Double => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Double] - v.asInstanceOf[Double]) else map.put(i, v)
+    case _: Long => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Long] - v.asInstanceOf[Long]) else map.put(i, v)
+  }
   def -=(i: Int, v:Any) = decrease(i ,v)
   def get(i: Int) = map.get(i)
   def copy:Entry = new GenericEntry(map.clone)
 }
 
 object GenericEntry extends EntryIdx[GenericEntry] {
+  def apply(ignore: Any, elems: Any*): GenericEntry = {
+    val map = new mutable.HashMap[Int, Any]
+    for((e, i) <- elems.zipWithIndex) {
+      map.put(i+1, e)
+    }
+    new GenericEntry(map)
+  }
   def hash(e:GenericEntry) = e.map.hashCode
 
   def cmp(e1:GenericEntry, e2:GenericEntry) = if (e1.map == e2.map) 0 else 1

@@ -38,7 +38,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   case class SteGet[E<:Entry:TypeRep](x: Rep[E], i: Int) extends FunctionDef[E](None, "", List(List(x), List(unit(i))))
 
-  case class SteNewSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) extends FunctionDef[E](None, "", List(x::args.toList))
+  case class SteNewSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) extends FunctionDef[E](None, "GenericEntry", List(x::args.toList))
 
   case class SteSampleSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]) extends FunctionDef[E](None, "", List(x::args.map(_._2).toList))
 
@@ -46,7 +46,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   case class StClear[E<:Entry:TypeRep](x: Rep[Store[E]]) extends FunctionDef[Unit](None, "", List(List(x)))
 
-  case class StUnsafeInsert[E<:Entry:TypeRep](s: Rep[Store[E]], e:Rep[E], idx:Int) extends FunctionDef[Unit](None, "", List(List(s), List(e), List(unit(idx))))
+  case class StUnsafeInsert[E<:Entry:TypeRep](s: Rep[Store[E]], e:Rep[E], idx:Int) extends FunctionDef[Unit](Some(s), "unsafeInsert", List(List(unit(idx), e)))
 
     // case class SteNewSEntry   [E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) extends Def[E]
   // case class SteSampleSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]) extends Def[E]
@@ -80,7 +80,6 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   def isTemp(s:Sym[_]):Boolean = false//s.attributes.get("_isTemp").asInstanceOf[Option[Boolean]].getOrElse(false)
 
   def m3add[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:TypeRep[E]) = {
-    println(m)
     val tmp = isTemp(map.asInstanceOf[Sym[_]])
     val n = unit(m.typeArguments.size)
     val lastMan = m.typeArguments.last
@@ -150,7 +149,21 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   def stNewEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) = SteNewSEntry[E](x, args)
   def stNewEntry2[E<:Entry:TypeRep](x: Rep[Store[E]], args:Rep[Any]*):Rep[E] = stNewEntry[E](x, args)
 
-  def storeEntryType(sym:Rep[_]) = ""
+  def storeEntryType(sym:Rep[_]) = "GenericEntry" //XXX FIXIT extractEntryClassName(getStoreSym(sym))._1
+//
+//  def getStoreSym(s:Rep[_]) = s.asInstanceOf[Sym[_]]
+//
+//  def extractEntryClassName(n:Rep[_]) = {
+//    val sym = n.asInstanceOf[Sym[Store[Entry]]]
+//    val m = sym.tp
+//    val ms = m.typeArguments(0).toString
+//    val targs = m.typeArguments(0).typeArguments
+//    val fullClsName = ms.take(ms.indexOf("["))
+//    val baseClsName = fullClsName.takeRight(fullClsName.size - fullClsName.lastIndexOf('.') - 1)
+//    val targsStrList = targs.map(_.toString)//XXX FIXEIT targs.map(tp => remap(tp))
+//    val clsName = baseClsName+"_x"+sym.id+"_"+targsStrList.map(tp => simplifyTypeName(tp)).mkString
+//    (clsName, targsStrList)
+//  }
 
   def dtGetTime(x: Rep[Date]): Rep[Long] = dateGetTime(x)
   def stProxyGet[E<:Entry: TypeRep](x: Rep[Store[E]], args:(Int,Rep[Any])*):Rep[E] = steGet(stSampleEntry(x, args),-1).asInstanceOf[Rep[E]]
@@ -193,8 +206,8 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] = null
 
 
-  // code generator functions
-  def generateNewStore(c: Sym[_], isClassLevel:Boolean=false):String = {
+  // code generator functions // XXX fixeit
+  def generateNewStore(c: Sym[_], mname:String = "", isClassLevel:Boolean=false):String = {
     val outStream = new java.io.StringWriter
     val out = new java.io.PrintWriter(outStream)
 
@@ -204,9 +217,12 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 //        m += ((IList, (1 to c.tp.typeArguments.size),false,-1))
 //    }
     val idxArr = List()
-    val cName = c.name + c.id //XXX - fixeit quote(c, true)
+    val cName = mname//c.name + c.id //XXX - fixeit quote(c, true)
     val entTp = storeEntryType(c)
-    out.println("val "+cName+" = new Store["+entTp+"]("+idxArr.size+",Array[EntryIdx["+entTp+"]]("+(0 until idxArr.size).map(i=>entTp+"_Idx"+i).mkString(",")+"))")
+//    out.println("val "+cName+" = new Store["+entTp+"]("+idxArr.size+",Array[EntryIdx["+entTp+"]]("+(0 until idxArr.size).map(i=>entTp+"_Idx"+i).mkString(",")+"))")
+    out.println("val "+cName+" = new Store["+entTp+"](0)")
+    out.println(s"val ${c.name+c.id} = $cName")
+
 //    idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
 //      case IList => out.println("%s.index(%d,IList,%s)".format(cName, i, idxUniq))
 //      case IHash => out.println("%s.index(%d,IHash,%s)".format(cName, i, idxUniq))
@@ -214,9 +230,25 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 //      case ISliceHeapMin => out.println("%s.index(%d,ISliceHeapMin,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
 //      case _ => sys.error("Index type "+idxType+" not supported")
 //    }}
+
+
     outStream.toString
   }
 
+
+  // FIXIT -- deleted some parts from original quote
+//  def quote(x: Rep[Any], forcePrintSymbol: Boolean) : String = {
+//    x match {
+//      case Constant(s: String) => "\""+s.replace("\"", "\\\"").replace("\n", "\\n")+"\"" // TODO: more escapes?
+//      case Constant(c: Char) => "'"+c+"'"
+//      case Constant(f: Float) => "%1.10f".format(f) + "f"
+//      case Constant(l: Long) => l.toString + "L"
+//      case Constant(null) => "null"
+//      case Constant(z) => z.toString
+//      case s@Sym(n) => "burdayiq" //if (s.attributes.contains(nameAttr)) s.attributes(nameAttr).toString else "x"+s.id
+//      case _ => throw new RuntimeException("could not quote %s".format(x))
+//    }
+//  }
 
 
   implicit val typeNull = ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeAny.asInstanceOf[TypeRep[Null]]
