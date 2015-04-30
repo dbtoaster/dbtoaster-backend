@@ -97,55 +97,76 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
           expr(r,inCo,Some(a.agg)); cx.load(cur)
           foreach(acc,a.agg,a.tp,co)
       }
-//    case a@AggSum(ks,e) =>
-//      val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
-//      if (agg_keys.size==0) { // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
-//      val cur=cx.save;
-//        val acc:impl.Var[_] = ex.tp match {
-//          case TypeLong =>
-//            val agg:impl.Var[Long] = impl.__newVar[Long](impl.unit(0L))
-//            expr(e,
-//              (v:Rep[_]) => impl.__assign[Long](agg.asInstanceOf[impl.Var[Long]], impl.numeric_plus[Long](impl.readVar[Long](agg.asInstanceOf[impl.Var[Long]]),v.asInstanceOf[Rep[Long]]))
-//            )
-//            agg
-//          case TypeDouble =>
-//            val agg:impl.Var[Double] = impl.__newVar[Double](impl.unit(0.0))
-//            expr(e,
-//              (v:Rep[_]) => impl.__assign[Double](agg.asInstanceOf[impl.Var[Double]], impl.numeric_plus[Double](impl.readVar[Double](agg.asInstanceOf[impl.Var[Double]]),v.asInstanceOf[Rep[Double]]))
-//            )
-//            agg
-//          case TypeString =>
-//            val agg:impl.Var[String] = impl.__newVar[String](impl.unit(""))
-//            expr(e,
-//              (v:Rep[_]) => impl.__assign[String](agg.asInstanceOf[impl.Var[String]], impl.string$plus(impl.readVar[String](agg.asInstanceOf[impl.Var[String]]),v.asInstanceOf[Rep[String]]))
-//            )
-//            agg
-//          //case TypeDate =>
-//          // val agg:impl.Var[java.util.Date] = impl.var_new[java.util.Date](impl.unit(new java.util.Date()))
-//          // expr(e,
-//          //  (v:Rep[_]) => impl.var_assign[java.util.Date](agg.asInstanceOf[impl.Var[java.util.Date]], impl.numeric_plus[java.util.Date](impl.readVar[java.util.Date](agg.asInstanceOf[impl.Var[java.util.Date]]),v.asInstanceOf[Rep[java.util.Date]])),
-//          //  None
-//          // )
-//          // agg
-//          case _ => sys.error("Unsupported type "+ex.tp)
+//
+//    case m@MapRef(n,tp,ks) =>
+//      val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
+//      val proxy = mapProxy(cx(n))
+//      if(ks.size == 0) { // variable
+//        co(cx(n))
+//      } else if(ki.size == 0) { // all keys are bound
+//      val z = impl.unit(zero(tp))
+//        val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
+//        val r = proxy.get(vs : _*)
+//        co(impl.__ifThenElse(impl.infix_==(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)))
+//      } else { // we need to iterate over all keys not bound (ki)
+//        if (ko.size > 0) {
+//          implicit val mE=me(m.tks,tp)
+//          val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
+//          impl.stSlice(mm, {
+//            (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
+//          },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
+//        } else {
+//          proxy.foreach((e:Rep[Entry])=> {
+//            cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
+//          })
 //        }
-//        cx.load(cur)
-//        co(impl.readVar(acc))
-//      } else am match {
-//        case Some(t) if t.toSet.subsetOf(agg_keys.toSet) => expr(e,co,am)
-//        case _ =>
-//
-//          val cur = cx.save
-//
-//          implicit val mE=me(agg_keys.map(_._2),ex.tp)
-//          val acc = impl.m3temp()(mE)
-//          val coAcc = (v:Rep[_]) => {
-//            val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
-//            impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))
-//          }
-//          expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
-//          foreach(acc,agg_keys,a.tp,co)
 //      }
+
+    case a@AggSum(ks,e) =>
+      val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
+      if (agg_keys.size==0) { // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
+      val cur=cx.save;
+        ex.tp match {
+          case TypeLong =>
+            val agg:impl.Var[Long] = impl.__newVar[Long](impl.unit(0L))
+            expr(e,
+              (v:Rep[_]) => impl.__assign[Long](agg.asInstanceOf[impl.Var[Long]], impl.numeric_plus[Long](impl.readVar[Long](agg.asInstanceOf[impl.Var[Long]]),v.asInstanceOf[Rep[Long]]))
+            )
+            cx.load(cur)
+            co(impl.readVar(agg))
+          case TypeDouble =>
+            val agg:impl.Var[Double] = impl.__newVar[Double](impl.unit(0.0))
+            expr(e,
+              (v:Rep[_]) => impl.__assign[Double](agg.asInstanceOf[impl.Var[Double]], impl.numeric_plus[Double](impl.readVar[Double](agg.asInstanceOf[impl.Var[Double]]),v.asInstanceOf[Rep[Double]]))
+            )
+
+            cx.load(cur)
+            co(impl.readVar(agg))
+          case TypeString =>
+            val agg:impl.Var[String] = impl.__newVar[String](impl.unit(""))
+            expr(e,
+              (v:Rep[_]) => impl.__assign[String](agg.asInstanceOf[impl.Var[String]], impl.string$plus(impl.readVar[String](agg.asInstanceOf[impl.Var[String]]),v.asInstanceOf[Rep[String]]))
+            )
+
+            cx.load(cur)
+            co(impl.readVar(agg))
+          case _ => sys.error("Unsupported type "+ex.tp)
+        }
+      } else am match {
+        case Some(t) if t.toSet.subsetOf(agg_keys.toSet) => expr(e,co,am)
+        case _ =>
+
+          val cur = cx.save
+
+          implicit val mE=me(agg_keys.map(_._2),ex.tp)
+          val acc = impl.m3temp()(mE)
+          val coAcc = (v:Rep[_]) => {
+            val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
+            impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))
+          }
+          expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
+          foreach(acc,agg_keys,a.tp,co)
+      }
     case _ => sys.error("Unimplemented: "+ex)
   }
 
@@ -206,7 +227,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
   var cx : Ctx[Rep[_]] = null
   // Trigger code generation
-  def genTriggerLMS(t:Trigger, s0:System) = {
+  def genTriggerPardis(t:Trigger, s0:System) = {
     val (name,args) = t.evt match {
       case EvtReady => ("SystemReady",Nil)
       case EvtBatchUpdate(Schema(n,cs)) => ("BatchUpdate"+n,cs)
@@ -318,11 +339,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     }.toMap // XXX missing indexes
 
     val (str,ld0,_) = genInternals(s0)
-
-    val tsResBlks = s0.triggers.map(genTriggerLMS(_,s0)) // triggers (need to be generated before maps)
+    val tsResBlks = s0.triggers.map(genTriggerPardis(_,s0)) // triggers (need to be generated before maps)
     val codeGen = new SStoreCodeGeneration()
-
-
 
     var ts = ""
     for(x <- tsResBlks) {
@@ -335,34 +353,12 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       ts += "def on"+x._1+"("+x._2+") {\n"+strWriter.toString+"\n}\n"
     }
 
-
-
     val ms = genAllMaps(classLevelMaps) // maps
     val ds = "" // xxx - Fixeit outStream.toString
     val printInfoDef = "def printMapsInfo() = {}"
 
     val r=ds+"\n"+ms+"\n"+ts+"\n"+printInfoDef
     (r,str,ld0,consts)
-    // ("par1", "par2", "par3", "par4")
-    //    val context = new MirrorStoreDSL {
-    //      implicit def liftInt(i: Int): Rep[Int] = unit(i)
-    //
-    //      implicit val typeE = typeRep[Int].asInstanceOf[TypeRep[Entry]]
-    //
-    //      def prog = {
-    //        val v1 = __newMStore[Entry](__newArray[Entry](3), __newArray[Entry](3))
-    //        //          v1.insert(unit(1))
-    //        v1.insert(unit(12).asInstanceOf[Rep[Entry]])
-    //        v1.insert(unit(14).asInstanceOf[Rep[Entry]])
-    //      }
-    //    }
-    //    System.out.println(context.reifyBlock(context.prog))
-    //
-    //    import context._
-    //    new MirrorStoreCompiler(context).compile(prog, "GeneratedMirrorApp")
-    //
-    //    val (str, ld0, _) = genInternals(s0)
-    //    ("Must be added", str, ld0, consts)
   }
 }
 

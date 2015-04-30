@@ -171,6 +171,29 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   def stDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]):Rep[Unit] = StDelete[E](x, e)
 
+  // TODO FIXME
+  def stSlice[E<:Entry:TypeRep](x: Rep[Store[E]], idx_in:Int,key:Rep[E],f:Rep[E]=>Rep[Unit]):Rep[Unit] = {
+    null
+//    var idx = idx_in
+//    key match {
+//      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
+//        val tupVal = ((IHash,args.map(_._1),false,-1))
+//        idx = m.indexOf(tupVal)
+//        if(idx < 0) {
+//          m += tupVal
+//          idx = m.size - 1
+//        }
+//      })
+//      case tp@_ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.slice, not a " + Def.unapply(tp))
+//    }
+//    val blkSym = fresh[E]
+//    val blk = reifyEffects(f(blkSym))
+//    reflectEffect(StSlice[E](x, idx, key, blkSym, blk), summarizeEffects(blk).star)
+  }
+  def stSlice[E<:Entry:TypeRep](x: Rep[Store[E]], f:Rep[E]=>Rep[Unit], args:(Int,Rep[Any])*):Rep[Unit] = stSlice(x,-1,stSampleEntry(x, args),f)
+
+
+
 
   // FIXME
   def store2StoreOpsCls[E <: Entry](store: Rep[Store[E]]) = new MStoreRep(store.asInstanceOf[Rep[MStore[E]]])(runtimeType[Int].asInstanceOf[TypeRep[E]])

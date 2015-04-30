@@ -3,6 +3,7 @@
 package ddbt.lib.store.deep
 
 import ch.epfl.data.sc.pardis
+import ddbt.lib.store.Entry
 import pardis.ir._
 import pardis.types.PardisTypeImplicits._
 import pardis.effects._
@@ -21,6 +22,16 @@ trait MStoreOps extends Base with ArrayOps {
      def update(e : Rep[E]) : Rep[Unit] = mStoreUpdate[E](self, e)(typeE)
      def delete(e : Rep[E])(implicit overload1 : Overloaded1) : Rep[Unit] = mStoreDelete1[E](self, e)(typeE)
      def get(idx : Rep[Int], key : Rep[E]) : Rep[E] = mStoreGet[E](self, idx, key)(typeE)
+
+     // FIXME
+     def get[E<:Entry:TypeRep](args:(Int,Rep[Any])*):Rep[E] = {
+       null
+     }//get2(stSampleEntry(x, args),-1)
+     // FIXME
+     def get2[E<:Entry:TypeRep](key:Rep[E],idx:Int=(-1)):Rep[E] = {
+      null
+    }//stGet(x, idx, key)
+
      def foreach(f : Rep[(E => Unit)]) : Rep[Unit] = mStoreForeach[E](self, f)(typeE)
      def slice(idx : Rep[Int], key : Rep[E], f : Rep[(E => Unit)]) : Rep[Unit] = mStoreSlice[E](self, idx, key, f)(typeE)
      def range(idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[(E => Unit)]) : Rep[Unit] = mStoreRange[E](self, idx, min, max, withMin, withMax, f)(typeE)

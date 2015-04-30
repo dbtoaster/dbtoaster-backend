@@ -462,8 +462,8 @@ trait IScalaGen extends CodeGen {
     val nodeName = map+"_node"
     val res = nodeName+"_mres"
     // XXX fix it
-    //"{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => SUM_QTY_node_mres += ((e.get(1).asInstanceOf[String], e.get(2).asInstanceOf[String]) -> e.get(3).asInstanceOf[Double])}; "+res+".toMap }"
-    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{case (e,v) => "+res+" += ("+(if(mapKeys.size > 1) tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) }) else "e")+" -> v) }; "+res+".toMap }"
+    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => SUM_QTY_node_mres += ((e.get(1).asInstanceOf[String], e.get(2).asInstanceOf[String]) -> e.get(3).asInstanceOf[Double])}; "+res+".toMap }"
+   // "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{case (e,v) => "+res+" += ("+(if(mapKeys.size > 1) tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) }) else "e")+" -> v) }; "+res+".toMap }"
   }
   override def clearOut = {}
   override def onEndStream = ""
