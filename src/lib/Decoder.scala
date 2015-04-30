@@ -381,90 +381,88 @@ case class SourceMux(dispatchFn: InputEvent => Unit,
     }
   }
 
-  def read() = {
-    parallel match {
-      case 0 => streams.foreach { 
-        case (in, adp, splt) => 
-          read1(in, Decoder((e: OrderedInputEvent) => 
-            if (e.ord == 0) processEvent(e.event) else que.enqueue(e), adp, splt)) 
+  def read() = parallel match {
+    case 0 => streams.foreach { 
+      case (in, adp, splt) => 
+        read1(in, Decoder((e: OrderedInputEvent) => 
+          if (e.ord == 0) processEvent(e.event) else que.enqueue(e), adp, splt)) 
+      }
+      processQTail
+    case 1 => streams.foreach { case (in, adp, splt) => 
+        for (line <- scala.io.Source.fromInputStream(in).getLines) {
+          adp(line).headOption.foreach(e => processEvent(e.event))
         }
-        processQTail
-      case 1 => streams.foreach { case (in, adp, splt) => 
-          for (line <- scala.io.Source.fromInputStream(in).getLines) {
-            adp(line).headOption.foreach(e => processEvent(e.event))
-          }
-        }
-      // case 1 => val ts = streams.zipWithIndex.map { case ((in,adp,splt),i) => new Thread{ override def run() { read1(in,Decoder((e:InputEvent)=>if(e.ord == 0) f(e) else processQ(i,e),adp,splt)); queuedTuplesFromStreams(i) = Int.MaxValue }} }
-      //           ts.foreach(_.start); ts.foreach(_.join)
-      case 2 => 
-        var e = lst.poll
-        while (e != null) { 
-          processEvent(e.event)
-          e = lst.poll 
-        }
-        processQTail
-      case 3 | 4 =>
-        import collection.JavaConversions._
-        import java.util.ArrayList
-        import java.util.LinkedList
-        import java.util.concurrent.ArrayBlockingQueue
+      }
+    // case 1 => val ts = streams.zipWithIndex.map { case ((in,adp,splt),i) => new Thread{ override def run() { read1(in,Decoder((e:InputEvent)=>if(e.ord == 0) f(e) else processQ(i,e),adp,splt)); queuedTuplesFromStreams(i) = Int.MaxValue }} }
+    //           ts.foreach(_.start); ts.foreach(_.join)
+    case 2 => 
+      var e = lst.poll
+      while (e != null) { 
+        processEvent(e.event)
+        e = lst.poll 
+      }
+      processQTail
+    case 3 | 4 =>
+      import collection.JavaConversions._
+      import java.util.ArrayList
+      import java.util.LinkedList
+      import java.util.concurrent.ArrayBlockingQueue
 
-        val binaryFormat = (parallel == 4)
-        val BLOCK_SIZE = 1024
-        val queues = Array.fill(streams.length)(new ArrayBlockingQueue[OrderedInputEvent](BLOCK_SIZE))
+      val binaryFormat = (parallel == 4)
+      val BLOCK_SIZE = 1024
+      val queues = Array.fill(streams.length)(new ArrayBlockingQueue[OrderedInputEvent](BLOCK_SIZE))
 
-        case class QBlock(
-          val queue: ArrayBlockingQueue[OrderedInputEvent], 
-          var block: LinkedList[OrderedInputEvent] = new LinkedList[OrderedInputEvent](),
-          var hasMore: Boolean = true)
+      case class QBlock(
+        val queue: ArrayBlockingQueue[OrderedInputEvent], 
+        var block: LinkedList[OrderedInputEvent] = new LinkedList[OrderedInputEvent](),
+        var hasMore: Boolean = true)
 
-        val consumer = new Thread { 
-          override def run() = {
-            var qblocks = queues.map(q => QBlock(q))
-            while (qblocks.size > 0) {
-              for (qb <- qblocks if qb.block.isEmpty) {
-                qb.block.add(qb.queue.take())
-                qb.queue.drainTo(qb.block)
-                qb.hasMore = (qb.block.getFirst.ord >= 0)
-              }
-              qblocks = qblocks.filter(_.hasMore)
-
-              while (qblocks.size > 0 && qblocks.forall(!_.block.isEmpty)) {
-                val minOrd = qblocks.map(_.block.getFirst.ord).min
-                qblocks.filter(_.block.getFirst.ord == minOrd).foreach { qb =>
-                  processEvent(qb.block.poll().event)
-                  qb.hasMore = qb.block.isEmpty || qb.block.getFirst.ord >= 0
-                }  
-                qblocks = qblocks.filter(_.hasMore)  
-              }                
+      val consumer = new Thread { 
+        override def run() = {
+          var qblocks = queues.map(q => QBlock(q))
+          while (qblocks.size > 0) {
+            for (qb <- qblocks if qb.block.isEmpty) {
+              qb.block.add(qb.queue.take())
+              qb.queue.drainTo(qb.block)
+              qb.hasMore = (qb.block.getFirst.ord >= 0)
             }
+            qblocks = qblocks.filter(_.hasMore)
+
+            while (qblocks.size > 0 && qblocks.forall(!_.block.isEmpty)) {
+              val minOrd = qblocks.map(_.block.getFirst.ord).min
+              qblocks.filter(_.block.getFirst.ord == minOrd).foreach { qb =>
+                processEvent(qb.block.poll().event)
+                qb.hasMore = qb.block.isEmpty || qb.block.getFirst.ord >= 0
+              }  
+              qblocks = qblocks.filter(_.hasMore)  
+            }                
           }
+          flushBatches()
         }
-        val producers = streams.zipWithIndex.map { case ((in, adp, splt), i) => new Thread {
-            override def run() = {
-              val q = queues(i)
-              if (binaryFormat) {
-                try {
-                  val input = new DataInputStream(new BufferedInputStream(in, bufferSize))
-                  while (true) q.put(adp(input))
-                } catch { case e: java.io.EOFException => }
-              }
-              else {
-                for (line <- scala.io.Source.fromInputStream(in).getLines) 
-                  adp(line).headOption.foreach(q.put)                
-              }
-              q.put(OrderedInputEvent(-1, null))
-            }            
-          } 
-        }
-        consumer.setDaemon(true)
-        consumer.start
-        producers.foreach { t => t.setDaemon(true); t.start }
-        // producers.foreach { t => t.join }
-        consumer.join(timeoutMilli)
-      case _ => sys.error("Unsupported parallel mode")
-    }
-    
+      }
+      val producers = streams.zipWithIndex.map { case ((in, adp, splt), i) => new Thread {
+          override def run() = {
+            val q = queues(i)
+            if (binaryFormat) {
+              try {
+                val input = new DataInputStream(new BufferedInputStream(in, bufferSize))
+                while (true) q.put(adp(input))
+              } catch { case e: java.io.EOFException => }
+            }
+            else {
+              for (line <- scala.io.Source.fromInputStream(in).getLines) 
+                adp(line).headOption.foreach(q.put)                
+            }
+            q.put(OrderedInputEvent(-1, null))
+          }            
+        } 
+      }
+      consumer.setDaemon(true)
+      consumer.start
+      producers.foreach { t => t.setDaemon(true); t.start }
+      // producers.foreach { t => t.join }
+      consumer.join(timeoutMilli)
+    case _ => sys.error("Unsupported parallel mode")
   }
 }
 
