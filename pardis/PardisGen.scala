@@ -97,6 +97,55 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
           expr(r,inCo,Some(a.agg)); cx.load(cur)
           foreach(acc,a.agg,a.tp,co)
       }
+//    case a@AggSum(ks,e) =>
+//      val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables
+//      if (agg_keys.size==0) { // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
+//      val cur=cx.save;
+//        val acc:impl.Var[_] = ex.tp match {
+//          case TypeLong =>
+//            val agg:impl.Var[Long] = impl.__newVar[Long](impl.unit(0L))
+//            expr(e,
+//              (v:Rep[_]) => impl.__assign[Long](agg.asInstanceOf[impl.Var[Long]], impl.numeric_plus[Long](impl.readVar[Long](agg.asInstanceOf[impl.Var[Long]]),v.asInstanceOf[Rep[Long]]))
+//            )
+//            agg
+//          case TypeDouble =>
+//            val agg:impl.Var[Double] = impl.__newVar[Double](impl.unit(0.0))
+//            expr(e,
+//              (v:Rep[_]) => impl.__assign[Double](agg.asInstanceOf[impl.Var[Double]], impl.numeric_plus[Double](impl.readVar[Double](agg.asInstanceOf[impl.Var[Double]]),v.asInstanceOf[Rep[Double]]))
+//            )
+//            agg
+//          case TypeString =>
+//            val agg:impl.Var[String] = impl.__newVar[String](impl.unit(""))
+//            expr(e,
+//              (v:Rep[_]) => impl.__assign[String](agg.asInstanceOf[impl.Var[String]], impl.string$plus(impl.readVar[String](agg.asInstanceOf[impl.Var[String]]),v.asInstanceOf[Rep[String]]))
+//            )
+//            agg
+//          //case TypeDate =>
+//          // val agg:impl.Var[java.util.Date] = impl.var_new[java.util.Date](impl.unit(new java.util.Date()))
+//          // expr(e,
+//          //  (v:Rep[_]) => impl.var_assign[java.util.Date](agg.asInstanceOf[impl.Var[java.util.Date]], impl.numeric_plus[java.util.Date](impl.readVar[java.util.Date](agg.asInstanceOf[impl.Var[java.util.Date]]),v.asInstanceOf[Rep[java.util.Date]])),
+//          //  None
+//          // )
+//          // agg
+//          case _ => sys.error("Unsupported type "+ex.tp)
+//        }
+//        cx.load(cur)
+//        co(impl.readVar(acc))
+//      } else am match {
+//        case Some(t) if t.toSet.subsetOf(agg_keys.toSet) => expr(e,co,am)
+//        case _ =>
+//
+//          val cur = cx.save
+//
+//          implicit val mE=me(agg_keys.map(_._2),ex.tp)
+//          val acc = impl.m3temp()(mE)
+//          val coAcc = (v:Rep[_]) => {
+//            val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
+//            impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))
+//          }
+//          expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
+//          foreach(acc,agg_keys,a.tp,co)
+//      }
     case _ => sys.error("Unimplemented: "+ex)
   }
 

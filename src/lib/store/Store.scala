@@ -178,7 +178,7 @@ object Store {
  * Indices data structure can be dynamically adapted using the index() function.
  */
 class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) {
-  assert(idxs.size > 0)
+  // assert(idxs.size > 0)
   // def startPerfCounters = { perfMeasurement = true }
   // def stopPerfCounters = { perfMeasurement = false }
   // var perfMeasurement = Store.GATHER_STATISTICS

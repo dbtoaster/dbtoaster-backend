@@ -32,19 +32,19 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   }
   def m3_apply[T: TypeRep](name1: String, args: List[Rep[_]]): Rep[T] = M3Apply[T](name1, args)
 
-  case class M3Add[E<:Entry:TypeRep](s:Rep[Store[E]], e:Rep[E]) extends FunctionDef[E](None, "", List(List(s), List(e)))
+  case class M3Add[E<:Entry:TypeRep](s:Rep[Store[E]], e:Rep[E]) extends FunctionDef[E](Some(s), "add", List(List(e)))
 
   case class StNewStore   [E<:Entry:TypeRep](tE: TypeRep[E]) extends ConstructorDef[Store[E]](List(tE), "Store", List(Nil))
 
-  case class SteGet[E<:Entry:TypeRep](x: Rep[E], i: Int) extends FunctionDef[E](None, "", List(List(x), List(unit(i))))
+  case class SteGet[E<:Entry:TypeRep](x: Rep[E], i: Int) extends FunctionDef[E](None, "get", List(List(x), List(unit(i))))
 
   case class SteNewSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) extends FunctionDef[E](None, "GenericEntry", List(x::args.toList))
 
-  case class SteSampleSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]) extends FunctionDef[E](None, "", List(x::args.map(_._2).toList))
+  case class SteSampleSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]) extends FunctionDef[E](None, "GenericEntry", List(x::args.map(_._2).toList))
 
-  case class StDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]) extends FunctionDef[Unit](None, "", List(List(x), List(e)))
+  case class StDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]) extends FunctionDef[Unit](Some(x), "delete", List(List(e)))
 
-  case class StClear[E<:Entry:TypeRep](x: Rep[Store[E]]) extends FunctionDef[Unit](None, "", List(List(x)))
+  case class StClear[E<:Entry:TypeRep](x: Rep[Store[E]]) extends FunctionDef[Unit](Some(x), "clear", List())
 
   case class StUnsafeInsert[E<:Entry:TypeRep](s: Rep[Store[E]], e:Rep[E], idx:Int) extends FunctionDef[Unit](Some(s), "unsafeInsert", List(List(unit(idx), e)))
 
