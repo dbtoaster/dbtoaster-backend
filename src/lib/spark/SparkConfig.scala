@@ -18,6 +18,7 @@ class SparkConfig(input: InputStream) {
   val sparkJars = prop.getProperty("spark.jars", "").split(":")
   val sparkTmpDir = prop.getProperty("spark.tmp.dir")
   val sparkAkkaThreads = prop.getProperty("spark.akka.threads")
+  val sparkExecutorJavaOpts = prop.getProperty("spark.executor.javaopts")
   
   def sparkConf(): SparkConf = {
     val conf = new SparkConf()
@@ -25,13 +26,13 @@ class SparkConfig(input: InputStream) {
       .setSparkHome(sparkHomeDir)
       .setJars(sparkJars)      
       .set("spark.eventLog.enabled", "true")
-      .set("spark.default.parallelism", "16")
-      .set("spark.akka.threads", "16")      
-      .set("spark.akka.frameSize", "1024")
-      .set("spark.broadcast.compress", "false")
-      .set("spark.shuffle.compress", "false")
-      .set("spark.shuffle.spill", "false")
-      .set("spark.shuffle.file.buffer.kb", "10000")
+//      .set("spark.default.parallelism", "16")
+//      .set("spark.akka.threads", "16")      
+//      .set("spark.akka.frameSize", "1024")
+//      .set("spark.broadcast.compress", "false")
+//      .set("spark.shuffle.compress", "false")
+//      .set("spark.shuffle.spill", "false")
+//      .set("spark.shuffle.file.buffer.kb", "10000")
 //      .set("spark.shuffle.spill.compress", "false")
 //      .set("spark.rdd.compress", "false")
       
@@ -42,6 +43,7 @@ class SparkConfig(input: InputStream) {
     if (sparkNumCores != null) conf.set("spark.cores.max", sparkNumCores)
     if (sparkTmpDir != null) conf.set("spark.local.dir", sparkTmpDir)
     if (sparkAkkaThreads != null) conf.set("spark.akka.threads", sparkAkkaThreads)
+    if (sparkExecutorJavaOpts != null) conf.set("spark.executor.extraJavaOptions", sparkExecutorJavaOpts)
     conf
   }
 }
