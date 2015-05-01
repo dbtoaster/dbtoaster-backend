@@ -1165,7 +1165,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
   protected def emitMapContext(distributedMaps: Seq[MapInfo]): String = {
     val sDistributedMaps = ind(emitMaps(emitDistributedMap, distributedMaps))
-    s"""|class $sLocalMapContextClass(val partitionId: Int, numPartitions: Int) extends LocalMapContext {
+    s"""|class $sLocalMapContextClass(val partitionId: Int, numPartitions: Int) {
         |$sDistributedMaps
         |}
         |""".stripMargin
