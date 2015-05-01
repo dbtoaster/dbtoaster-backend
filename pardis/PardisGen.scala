@@ -38,6 +38,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
   def me2(ks:List[Type],v:Type=null) = ManifestHelper.manEntry(if (v==null) ks else ks:::List(v))
 
   def mapProxy(m:Rep[_]) = impl.store2StoreOpsCls(m.asInstanceOf[Rep[Store[Entry]]])
+  def mapProxy2(m:Rep[_]) = new impl.MStoreRep1(m.asInstanceOf[Rep[MStore[Entry]]])
 
   // Expression CPS transformation from M3 AST to LMS graph representation
   //   ex : expression to convert
@@ -97,30 +98,31 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
           expr(r,inCo,Some(a.agg)); cx.load(cur)
           foreach(acc,a.agg,a.tp,co)
       }
-//
-//    case m@MapRef(n,tp,ks) =>
-//      val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
-//      val proxy = mapProxy(cx(n))
-//      if(ks.size == 0) { // variable
-//        co(cx(n))
-//      } else if(ki.size == 0) { // all keys are bound
-//      val z = impl.unit(zero(tp))
-//        val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
-//        val r = proxy.get(vs : _*)
-//        co(impl.__ifThenElse(impl.infix_==(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)))
-//      } else { // we need to iterate over all keys not bound (ki)
-//        if (ko.size > 0) {
-//          implicit val mE=me(m.tks,tp)
-//          val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
-//          impl.stSlice(mm, {
-//            (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
-//          },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
-//        } else {
-//          proxy.foreach((e:Rep[Entry])=> {
-//            cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)) }.toMap); co(impl.steGet(e, ks.size+1))
-//          })
-//        }
-//      }
+
+    case m@MapRef(n,tp,ks) =>
+      val (ko,ki) = ks.zipWithIndex.partition{case(k,i)=>cx.contains(k)}
+      val proxy = mapProxy(cx(n))
+      val proxy2 = mapProxy2(cx(n))
+      if(ks.size == 0) { // variable
+        co(cx(n))
+      } else if(ki.size == 0) { // all keys are bound
+      val z = impl.unit(zero(tp))
+        val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
+        val r = proxy2.get(vs : _*)
+        co(impl.__ifThenElse(impl.infix_==(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)(impl.EntryType, man(tp))))
+      } else { // we need to iterate over all keys not bound (ki)
+        if (ko.size > 0) {
+          implicit val mE=me(m.tks,tp)
+          val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
+          impl.stSlice(mm, {
+            (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, mE)) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, mE))
+          },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
+        } else {
+          proxy.foreach((e:Rep[Entry])=> {
+            cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, man(tp))) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, man(tp)))
+          })
+        }
+      }
 
     case a@AggSum(ks,e) =>
       val agg_keys = (ks zip a.tks).filter{ case (n,t)=> !cx.contains(n) } // the aggregation is only made on free variables

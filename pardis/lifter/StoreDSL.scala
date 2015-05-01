@@ -22,6 +22,17 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   implicit def entryRepToGenericEntryOps(self : Rep[Entry]) = new GenericEntryRep(self.asInstanceOf[Rep[GenericEntry]])
   implicit def storeRepToStoreOps[E <: ddbt.lib.store.Entry](self : Rep[Store[E]])(implicit typeE : TypeRep[E]) = new MStoreRep[E](self.asInstanceOf[Rep[MStore[E]]])
 
+  implicit class MStoreRep1[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]])(implicit typeE : TypeRep[E]) {
+
+    def get(args: (Int, Rep[Any])*): Rep[E] = {
+      get2(stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args),-1)
+    }
+
+    def get2(key: Rep[E], idx: Int = (-1)): Rep[E] = {
+      stGet(self.asInstanceOf[Rep[Store[E]]], idx, key)
+    }
+  }
+
   // Global variables
   val USE_UNIQUE_INDEX_WHEN_POSSIBLE = true
   val USE_STORE1 = true // whether we specialize temporary maps in Store1
@@ -36,7 +47,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   case class StNewStore   [E<:Entry:TypeRep](tE: TypeRep[E]) extends ConstructorDef[Store[E]](List(tE), "Store", List(Nil))
 
-  case class SteGet[E<:Entry:TypeRep](x: Rep[E], i: Int) extends FunctionDef[E](None, "get", List(List(x), List(unit(i))))
+  case class SteGet[E<:Entry:TypeRep, T: TypeRep](x: Rep[E], i: Int) extends FunctionDef[T](Some(x), "get", List(List(unit(i))), List(implicitly[TypeRep[T]]))
 
   case class SteNewSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) extends FunctionDef[E](None, "GenericEntry", List(x::args.toList))
 
@@ -140,7 +151,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     }
   }
 
-  def steGet[E<:Entry:TypeRep](x: Rep[E], i: Int):Rep[Any] = SteGet[E](x, i).asInstanceOf[Rep[Any]]
+  def steGet[E<:Entry:TypeRep, T:TypeRep](x: Rep[E], i: Int):Rep[T] = SteGet[E, T](x, i)
   def stGet[E<:Entry:TypeRep](x: Rep[Store[E]], idx:Int, key:Rep[E]):Rep[E] = x.get(unit(idx), key)
   def stClear[E<:Entry:TypeRep](x: Rep[Store[E]]):Rep[Unit] = StClear[E](x)
 
@@ -166,7 +177,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 //  }
 
   def dtGetTime(x: Rep[Date]): Rep[Long] = dateGetTime(x)
-  def stProxyGet[E<:Entry: TypeRep](x: Rep[Store[E]], args:(Int,Rep[Any])*):Rep[E] = steGet(stSampleEntry(x, args),-1).asInstanceOf[Rep[E]]
+  def stProxyGet[E<:Entry: TypeRep](x: Rep[Store[E]], args:(Int,Rep[Any])*):Rep[E] = steGet[E, E](stSampleEntry(x, args),-1).asInstanceOf[Rep[E]]
   def stSampleEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]):Rep[E] = SteSampleSEntry[E](x, args)
 
   def stDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]):Rep[Unit] = StDelete[E](x, e)
@@ -183,7 +194,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 //          m += tupVal
 //          idx = m.size - 1
 //        }
-//      })
+//      })x
 //      case tp@_ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.slice, not a " + Def.unapply(tp))
 //    }
 //    val blkSym = fresh[E]

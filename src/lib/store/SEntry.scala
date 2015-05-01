@@ -21,7 +21,7 @@ class GenericEntry(val map: mutable.HashMap[Int,Any]) extends Entry(0) {
     case _: Long => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Long] - v.asInstanceOf[Long]) else map.put(i, v)
   }
   def -=(i: Int, v:Any) = decrease(i ,v)
-  def get(i: Int) = map.get(i)
+  def get[E](i: Int) = map.get(i).asInstanceOf[E]
   def copy:Entry = new GenericEntry(map.clone)
 }
 
