@@ -265,9 +265,7 @@ object Compiler {
             if (!pkgDir.exists) pkgDir.mkdirs
             Utils.exec(Array[String](
               "jar", "-cMf", (pkgDir.getAbsolutePath + "/ddbt_gen.jar"), 
-              "-C", dir.getAbsolutePath, "ddbt/test/gen"))
-            Utils.exec(Array[String](
-              "jar", "-cMf", (pkgDir.getAbsolutePath + "/ddbt_lib.jar"), 
+              "-C", dir.getAbsolutePath, "ddbt/test/gen",
               "-C", dir.getAbsolutePath + "/../classes", "ddbt/lib",
               "-C", "conf", "ddbt.properties", 
               "-C", "conf", "log4j.properties", 
