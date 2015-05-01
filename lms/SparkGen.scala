@@ -1106,7 +1106,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |object $sSparkObject {
         |  import Helper._
         |
-        |  var configFile: String = "conf/spark.config"
+        |  var configFile: String = "/spark.config"
         |  var batchSize: Int = 0
         |  var noOutput: Boolean = false
         |  var logCount: Int = 0
@@ -1137,7 +1137,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |    if (configFile == null) { sys.error("Config file is missing.") }
         |    if (batchSize == 0) { sys.error("Invalid batch size.") }
         |
-        |    cfg = new SparkConfig(new java.io.FileInputStream(configFile))
+        |    cfg = new SparkConfig(getClass().getResourceAsStream(configFile))
         |    sc = new SparkContext(cfg.sparkConf
         |      .setAppName("$sSparkObject")
         |      .set("spark.kryo.registrator", "ddbt.lib.spark.store.Registrator")
