@@ -38,6 +38,7 @@ class SparkConfig(input: InputStream) {
       
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.referenceTracking", "false")
+      .set("spark.kryo.registrator", "ddbt.lib.spark.store.Registrator")
 
     if (sparkExecutorMemory != null) conf.set("spark.executor.memory", sparkExecutorMemory)
     if (sparkNumCores != null) conf.set("spark.cores.max", sparkNumCores)

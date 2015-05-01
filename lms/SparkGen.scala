@@ -1138,10 +1138,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |    if (batchSize == 0) { sys.error("Invalid batch size.") }
         |
         |    cfg = new SparkConfig(getClass().getResourceAsStream(configFile))
-        |    sc = new SparkContext(cfg.sparkConf
-        |      .setAppName("$sSparkObject")
-        |      .set("spark.kryo.registrator", "ddbt.lib.spark.store.Registrator")
-        |    )
+        |    sc = new SparkContext(cfg.sparkConf.setAppName("$sSparkObject"))
         |    numPartitions = cfg.sparkNumPartitions
         |    ctx = initContext(sc, numPartitions)
         |
