@@ -147,7 +147,7 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
         val acc = impl.m3temp()(mE)
         val coAcc = (v:Rep[_]) => {
           val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
-          impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))
+          impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))(mE)
         }
         expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
         foreach(acc,agg_keys,a.tp,co)
@@ -692,7 +692,7 @@ class LMSSparkGen(cls:String="Query") extends LMSGen(cls,SparkExpGen) with IScal
         co(n+".get("+genTuple(ks map ctx)+")")
       } else { // we need to iterate over all keys not bound (ki)
         val (k0,v0)=(fresh("k"),fresh("v"))
-        val sl = if (ko.size > 0) ".slice("+slice(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else "" // slice on bound variables
+        val sl = if (ko.size > 0) ".slice("+slicase m@MapDefce(n,ko.map(_._2))+","+tup(ko.map(x=>rn(x._1)))+")" else "" // slice on bound variables
         ctx.add((ks zip m.tks).filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
         if(n.startsWith("DELTA_")){
           val col = "in"+n.replace("DELTA_","")

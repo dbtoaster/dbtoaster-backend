@@ -3,7 +3,6 @@ package ddbt.codegen
 import java.io.StringWriter
 
 import ch.epfl.data.sc.pardis.ir.ExpressionSymbol
-import ch.epfl.data.sc.pardis.ir.StructTags.ClassTag
 import ch.epfl.data.sc.pardis.prettyprinter.ScalaCodeGenerator
 import ch.epfl.data.sc.pardis.utils.Document
 import ddbt.ast.M3._
@@ -109,17 +108,27 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       val z = impl.unit(zero(tp))
         val vs = ks.zipWithIndex.map{ case (n,i) => (i+1,cx(n))}
         val r = proxy2.get(vs : _*)
-        co(impl.__ifThenElse(impl.infix_==(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)(impl.EntryType, man(tp))))
+        val mE = man(tp)
+//        println(s"tpe here! ${mE}")
+//                    println(s"tpe here! ${mE.typeArguments}")
+
+        co(impl.__ifThenElse(impl.infix_==(r,impl.unit(null)),z,impl.steGet(r,ks.size+1)(impl.EntryType, mE)))
       } else { // we need to iterate over all keys not bound (ki)
         if (ko.size > 0) {
           implicit val mE=me(m.tks,tp)
           val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
-          impl.stSlice(mm, {
-            (e:Rep[Entry])=> cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, mE)) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, mE))
+          impl.stSlice(mm, { (e:Rep[Entry])=>
+//            println(s"tpe here! ${mE.typeArguments(i+1)}")
+            cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, mE.typeArguments(i))) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, mE.typeArguments(ks.size)))
           },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
         } else {
-          proxy.foreach((e:Rep[Entry])=> {
-            cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, man(tp))) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, man(tp)))
+          val mE = man(tp)
+                  println(s"tpe here! ${mE}")
+                              println(s"tpe here! ${mE.typeArguments}")
+          proxy.foreach(__lambda {
+            (e:Rep[Entry])=> {
+              cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, mE.typeArguments(i))) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, mE.typeArguments(ks.size)))
+            }
           })
         }
       }
@@ -164,7 +173,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
           val acc = impl.m3temp()(mE)
           val coAcc = (v:Rep[_]) => {
             val vs:List[Rep[_]] = agg_keys.map(x=>cx(x._1)).toList ::: List(v)
-            impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))
+            impl.m3add(acc, impl.stNewEntry2(acc, vs : _*))(mE)
           }
           expr(e,coAcc,Some(agg_keys)); cx.load(cur) // returns (Rep[Unit],ctx) and we ignore ctx
           foreach(acc,agg_keys,a.tp,co)
@@ -172,7 +181,19 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     case _ => sys.error("Unimplemented: "+ex)
   }
 
-  def foreach(map:Rep[_],keys:List[(String,Type)],value_tp:Type,co:Rep[_]=>Rep[Unit]) = null
+  //def foreach(map:Rep[_],keys:List[(String,Type)],value_tp:Type,co:Rep[_]=>Rep[Unit]) = null
+
+  def foreach(map:Rep[_],keys:List[(String,Type)],value_tp:Type,co:Rep[_]=>Rep[Unit]):Rep[Unit] = {
+    implicit val mE = manEntry(keys.map(_._2) ::: List(value_tp))
+    val proxy = mapProxy(map)
+    proxy.foreach {
+      __lambda {
+        e: Rep[Entry] =>
+          cx.add(keys.zipWithIndex.filter(x => !cx.contains(x._1._1)).map { case ((n, t), i) => (n, impl.steGet(e, i + 1)(impl.EntryType, mE)) }.toMap)
+          co(impl.steGet(e, keys.size + 1)(impl.EntryType, mE))
+      }
+    }
+  }
 
   def mul(l:Rep[_], r:Rep[_], tp:Type) = {
     tp match {
@@ -275,7 +296,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
             expr(e,(r:Rep[_]) => op match { case OpAdd => impl.var_plusequals(mm,r) case OpSet => impl.__assign(mm,r) })
           } else {
             val mm = cx(m.name).asInstanceOf[Rep[Store[Entry]]]
-            implicit val mE = manEntry(m.tks ++ List(m.tp)).asInstanceOf[TypeRep[Entry]]
+            implicit val mE = manEntry(m.tks ++ List(m.tp))
             if (op==OpSet) impl.stClear(mm)
             oi match { case None => case Some(ie) =>
               expr(ie,(r:Rep[_]) => {

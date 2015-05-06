@@ -14,7 +14,7 @@ import lifter.{SCLMSInterop, TypeToTypeRep}
 trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep {
   implicit case object EntryType extends TypeRep[Entry] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = EntryType
-    val name = "Entry"
+    val name = "GenericEntry"
     val typeArguments = Nil
     val typeTag = scala.reflect.runtime.universe.typeTag[Entry]
   }
@@ -24,11 +24,16 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   implicit class MStoreRep1[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]])(implicit typeE : TypeRep[E]) {
 
+    def slice(f:Rep[E]=>Rep[Unit], args:(Int,Rep[Any])*):Rep[Unit] = slice2(stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args),f,-1)
+    def slice2(key:Rep[E],f:Rep[E]=>Rep[Unit],idx:Int=(-1)):Rep[Unit] = stSlice(self.asInstanceOf[Rep[Store[E]]],idx,key,f)
+
+
     def get(args: (Int, Rep[Any])*): Rep[E] = {
       get2(stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args),-1)
     }
 
     def get2(key: Rep[E], idx: Int = (-1)): Rep[E] = {
+
       stGet(self.asInstanceOf[Rep[Store[E]]], idx, key)
     }
   }
@@ -59,8 +64,8 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   case class StUnsafeInsert[E<:Entry:TypeRep](s: Rep[Store[E]], e:Rep[E], idx:Int) extends FunctionDef[Unit](Some(s), "unsafeInsert", List(List(unit(idx), e)))
 
-    // case class SteNewSEntry   [E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) extends Def[E]
-  // case class SteSampleSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]) extends Def[E]
+  //case class StSlice[E<:Entry:TypeRep](x: Rep[Store[E]], idx:Int, key:Rep[E], blockSym: Sym[E], block: Block[Unit]) extends FunctionDef[Unit](Some(x), "slice", List(Nil))
+
 
   def m3apply(fn:String,args:List[Rep[_]],tp:Type): Rep[_] = {
     fn match {
@@ -98,7 +103,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
     //var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
     var idx = 0
-
+    println(s"tpeeee: ${m.typeArguments}")
     val entVal = ent.get(n.asInstanceOf[Rep[Int]])
     if(tmp) {
       // we don't remove 0-elements
@@ -184,8 +189,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   // TODO FIXME
   def stSlice[E<:Entry:TypeRep](x: Rep[Store[E]], idx_in:Int,key:Rep[E],f:Rep[E]=>Rep[Unit]):Rep[Unit] = {
-    null
-//    var idx = idx_in
+    var idx = idx_in
 //    key match {
 //      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
 //        val tupVal = ((IHash,args.map(_._1),false,-1))
@@ -197,14 +201,14 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 //      })x
 //      case tp@_ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.slice, not a " + Def.unapply(tp))
 //    }
+//    println(unit("helloooo"))
 //    val blkSym = fresh[E]
-//    val blk = reifyEffects(f(blkSym))
-//    reflectEffect(StSlice[E](x, idx, key, blkSym, blk), summarizeEffects(blk).star)
+//    val blk = reifyBlock(f(blkSym))
+//    StSlice[E](x, idx, key, blkSym, blk)
+//    blk
+    x.slice(unit(idx), key, __lambda(f))
   }
   def stSlice[E<:Entry:TypeRep](x: Rep[Store[E]], f:Rep[E]=>Rep[Unit], args:(Int,Rep[Any])*):Rep[Unit] = stSlice(x,-1,stSampleEntry(x, args),f)
-
-
-
 
   // FIXME
   def store2StoreOpsCls[E <: Entry](store: Rep[Store[E]]) = new MStoreRep(store.asInstanceOf[Rep[MStore[E]]])(runtimeType[Int].asInstanceOf[TypeRep[E]])
@@ -265,10 +269,8 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 //      case _ => sys.error("Index type "+idxType+" not supported")
 //    }}
 
-
     outStream.toString
   }
-
 
   // FIXIT -- deleted some parts from original quote
 //  def quote(x: Rep[Any], forcePrintSymbol: Boolean) : String = {
@@ -283,7 +285,6 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 //      case _ => throw new RuntimeException("could not quote %s".format(x))
 //    }
 //  }
-
 
   implicit val typeNull = ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeAny.asInstanceOf[TypeRep[Null]]
   implicit def typeStore[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Store[E]] = MStoreType(implicitly[TypeRep[E]]).asInstanceOf[TypeRep[Store[E]]]
