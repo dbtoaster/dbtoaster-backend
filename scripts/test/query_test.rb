@@ -23,6 +23,7 @@ $dbt = "./bin/dbtoaster"
 $lib_boost_path = @properties["ddbt.lib_boost"]
 $ocamlrunparam = "b,l=20M"
 $optlevel = "-O3"
+$parallel_input = "-p 2"
 Dir.chdir $dbt_path
 
 raise "DBToaster is not compiled" unless (File.exists? $dbt)
@@ -262,7 +263,7 @@ class CppNewBackendUnitTest < GenericUnitTest
         return if $compile_only;
         starttime = Time.now;
         IO.popen($timeout_exec +
-                 "bin/queries/#{queryName} #{$executable_args.join(" ")}",
+                 "bin/queries/#{queryName} #{$parallel_input} #{$executable_args.join(" ")}",
                  "r") do |qin|
             output = qin.readlines;
             endtime = Time.now;
@@ -496,7 +497,9 @@ GetoptLong.new(
   [ '--path-delim',      GetoptLong::REQUIRED_ARGUMENT],
   [ '--O1',               GetoptLong::NO_ARGUMENT],
   [ '--O2',               GetoptLong::NO_ARGUMENT],
-  [ '--O3',               GetoptLong::NO_ARGUMENT]
+  [ '--O3',               GetoptLong::NO_ARGUMENT],
+  [ '--p0',               GetoptLong::NO_ARGUMENT],
+  [ '--p2',               GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-f' then $opts.push(arg)
@@ -541,6 +544,8 @@ GetoptLong.new(
     when '--O1' then $optlevel = "-O1";
     when '--O2' then $optlevel = "-O2";
     when '--O3' then $optlevel = "-O3";
+    when '--p0' then $parallel_input = "-p 0";
+    when '--p2' then $parallel_input = "-p 2";
   end
 end
 

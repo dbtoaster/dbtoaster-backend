@@ -18,7 +18,8 @@ namespace dbtoaster {
     {
       relation_id_t id;
       event_type type;
-      char* schema;
+      string schema;
+      size_t schema_size;
       std::string delimiter;
       
       std::shared_ptr<event_t> saved_event;
@@ -28,15 +29,13 @@ namespace dbtoaster {
       csv_adaptor(relation_id_t i, int num_params,
                   const std::pair<std::string,std::string> params[]);
 
-
       void read_adaptor_events(char* data, std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue);
       void parse_params(int num_params, const std::pair<std::string, std::string> params[]);
       virtual std::string parse_schema(std::string s);
       void validate_schema();
 
       // Interpret the schema.
-      std::tuple<bool, bool, unsigned int, event_args_t> interpret_event(const char* schema,
-                                                       char* data);
+      std::tuple<bool, bool, unsigned int, event_args_t> interpret_event(char* data);
     };
   }
 

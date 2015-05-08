@@ -1,6 +1,7 @@
 package ddbt.codegen.lms
-import ddbt.ast._
 
+import ddbt.ast._
+import ddbt.lib.ManifestHelper
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
@@ -18,69 +19,115 @@ import scala.reflect.SourceContext
 
 trait M3Ops extends M3StoreOps {
   // Function application
-  def m3apply(fn:String,args:List[Rep[_]],tp:Type):Rep[_]
+  def m3apply(fn: String, args: List[Rep[_]], tp: Type): Rep[_]
 }
 
-trait M3OpsExp extends BaseExp with EffectExp with M3Ops with Equal with NumericOps with MathOps
- with DateOps with StringOps with PrimitiveOps with IfThenElseExp with M3StoreOpsExp with CastingOps with OrderingOps {
+trait M3OpsExp extends BaseExp with EffectExp 
+                               with M3Ops 
+                               with Equal 
+                               with NumericOps 
+                               with MathOps
+                               with DateOps 
+                               with StringOps 
+                               with PrimitiveOps 
+                               with IfThenElseExp 
+                               with M3StoreOpsExp 
+                               with CastingOps 
+                               with OrderingOps {
   import ManifestHelper.man
 
+
+
   def div(x: Rep[Double]): Rep[Double] = x match {
-    case Const(v) if x.tp.toString=="Long" => div(Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)) // unit(1.0/x.x.toDouble)
-    case _ => __ifThenElse(equals(x,unit(0.0)),unit(0.0),numeric_divide(unit(1.0),x))
+    case Const(v) if x.tp.toString == "Int" => // unit(1/x.toDouble)
+      div(Const(scala.runtime.BoxesRunTime.unboxToInt(v).toDouble))     
+    case Const(v) if x.tp.toString == "Long" => // unit(1L/x.toDouble)
+      div(Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)) 
+    case _ => 
+      __ifThenElse(equals(x, unit(0.0)), unit(0.0), numeric_divide(unit(1.0), x))
   }
+
   def mulLong(l: Rep[Long], r: Rep[Long]): Rep[Long] = {
     val ll = (l match {
-      case Const(v) if l.tp.toString=="Double" => Const(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)
+      case Const(v) if l.tp.toString == "Double" => 
+        Const(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)
       case _ => l
     }).asInstanceOf[Rep[Long]]
     val rr = (r match {
-      case Const(v) if r.tp.toString=="Double" => Const(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)
+      case Const(v) if r.tp.toString == "Double" => 
+        Const(scala.runtime.BoxesRunTime.unboxToDouble(v).toLong)
       case _ => r
     }).asInstanceOf[Rep[Long]]
-    numeric_times[Long](ll,rr)
+    numeric_times[Long](ll, rr)
   }
+
   def mulDouble(l: Rep[Double], r: Rep[Double]): Rep[Double] = {
     val ll = (l match {
-      case Const(v) if l.tp.toString=="Long" => Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
+      case Const(v) if l.tp.toString == "Long" => 
+        Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
       case _ => l
     }).asInstanceOf[Rep[Double]]
     val rr = (r match {
-      case Const(v) if r.tp.toString=="Long" => Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
+      case Const(v) if r.tp.toString == "Long" => 
+        Const(scala.runtime.BoxesRunTime.unboxToLong(v).toDouble)
       case _ => r
     }).asInstanceOf[Rep[Double]]
-    numeric_times[Double](ll,rr)
+    numeric_times[Double](ll, rr)
   }
-  def max(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = if(v1 > v2) v1 else v2
-  def min(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = if(v1 < v2) v1 else v2
+
+  def max(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = 
+    if (v1 > v2) v1 else v2
+  
+  def min(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = 
+    if (v1 < v2) v1 else v2
+  
   def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] =
-    infix_substring (str, rep_asinstanceof[Long, Int](start, manifest[Long], manifest[Int]), rep_asinstanceof[Long, Int](start + length, manifest[Long], manifest[Int]))
+    infix_substring(str, 
+      rep_asinstanceof[Long, Int](start, manifest[Long], manifest[Int]), 
+      rep_asinstanceof[Long, Int](start + length, manifest[Long], manifest[Int]))
 
-  def m3apply(fn:String,args:List[Exp[_]],tp:Type) = {
-    fn match {
-      case "div" => div(args(0).asInstanceOf[Rep[Double]])
-      case "mul" => tp match {
-        case TypeLong => mulLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
-        case TypeDouble => mulDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
-        case _ => M3Apply(fn,args,man(tp))
-      }
-      case "listmax" => max(args(0).asInstanceOf[Rep[Double]],args(1).asInstanceOf[Rep[Double]])
-      case "listmin" => min(args(0).asInstanceOf[Rep[Double]],args(1).asInstanceOf[Rep[Double]])
-      case "substring" => substring(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[Long]],args(2).asInstanceOf[Rep[Long]])
-      //case "regexp_match" => regexp_match(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[String]])
-      //case "date_part" => date_part(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[java.util.Date]])
-      case "date" => args(0) match {
-        case Const(strDate) => Const(ddbt.lib.Functions.Udate(strDate.asInstanceOf[String]))
-        case _ => M3Apply(fn,args,man(tp))
-      }
-      case _ => M3Apply(fn,args,man(tp)) // fallback for large or unknown functions
+  def m3apply(fn: String, args: List[Exp[_]], tp: Type) = fn match {
+    case "div" => div(args(0).asInstanceOf[Rep[Double]])
+    case "mul" => tp match {
+      case TypeLong => 
+        mulLong(args(0).asInstanceOf[Rep[Long]], args(1).asInstanceOf[Rep[Long]])
+      case TypeDouble => 
+        mulDouble(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
+      case _ => M3Apply(fn, args, man(tp))
     }
+    case "listmax" => 
+      max(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
+    case "listmin" => 
+      min(args(0).asInstanceOf[Rep[Double]], args(1).asInstanceOf[Rep[Double]])
+    case "substring" => 
+      substring(args(0).asInstanceOf[Rep[String]], 
+                args(1).asInstanceOf[Rep[Long]],
+                args(2).asInstanceOf[Rep[Long]])
+    //case "regexp_match" => regexp_match(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[String]])
+    //case "date_part" => date_part(args(0).asInstanceOf[Rep[String]],args(1).asInstanceOf[Rep[java.util.Date]])
+
+    case "date" => args(0) match {
+      case Const(strDate) => Const(ddbt.lib.Functions.Udate(strDate.asInstanceOf[String]))
+      case _ => M3Apply(fn, args, man(tp))
+    }
+    case "date_part" => args(0).asInstanceOf[Rep[String]] match {
+      case Const(s: String) => s.toLowerCase match {
+        case "year"  => M3Apply("date_year", args.tail, man(tp))
+        case "month" => M3Apply("date_month", args.tail, man(tp))
+        case "day"   => M3Apply("date_day", args.tail, man(tp))
+        case p       => throw new Exception("Invalid date part: " + p)
+      }
+      case _ => throw new Exception("Unknown date_part argument")
+    }    
+    case _ => M3Apply(fn, args, man(tp)) // fallback for large or unknown functions
   }
 
-  case class M3Apply[T](name:String,args:List[Exp[_]],mT:Manifest[T]) extends Def[T]
+  case class M3Apply[T](name: String, args: List[Exp[_]], mT: Manifest[T]) extends Def[T]
 }
 
-trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThenElse with ScalaGenM3StoreOps {
+trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect 
+                                         with ScalaGenIfThenElse 
+                                         with ScalaGenM3StoreOps {
   val IR: M3OpsExp with ExtendedExpressions
   import IR._
 
@@ -91,8 +138,28 @@ trait ScalaGenM3Ops extends ScalaGenBase with ScalaGenEffect with ScalaGenIfThen
         //stream.println("  "+quote(getBlockResult(a))) // useless undeclared Unit symbols
         // stream.println("}")
 
-    case M3Apply(fn,args,_) => emitValDef(sym,"U"+fn+"("+(args map quote).mkString(",")+")")
-    case _ => super.emitNode(sym,rhs)
+    case M3Apply(fn, args, _) => 
+      emitValDef(sym, "U" + fn + "(" + (args map quote).mkString(",") + ")")
+    case _ => super.emitNode(sym, rhs)
+  }
+}
+
+trait SparkGenM3Ops extends ScalaGenBase with ScalaGenEffect 
+                                         with ScalaGenIfThenElse 
+                                         with SparkGenM3StoreOps {
+  val IR: M3OpsExp with ExtendedExpressions
+  import IR._
+
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+    // case IfThenElse(c,a,b) if (quote(getBlockResult(b))=="()") =>
+        // stream.println("if (" + quote(c) + ") {") // there is only one branch (initialization)
+        // stream.println(getBlockContents(a))
+        //stream.println("  "+quote(getBlockResult(a))) // useless undeclared Unit symbols
+        // stream.println("}")
+
+    case M3Apply(fn, args, _) => 
+      emitValDef(sym, "U" + fn + "(" + (args map quote).mkString(",") + ")")
+    case _ => super.emitNode(sym, rhs)
   }
 }
 
@@ -107,7 +174,8 @@ trait CGenM3Ops extends CGenBase with CGenEffect with CGenIfThenElse with CGenM3
         //stream.println("  "+quote(getBlockResult(a))) // useless undeclared Unit symbols
         // stream.println("}")
 
-    case M3Apply(fn,args,_) => emitValDef(sym,"U"+fn+"("+(args map quote).mkString(",")+")")
+    case M3Apply(fn, args, _) => 
+      emitValDef(sym, "U" + fn + "(" + (args map quote).mkString(",") + ")")
     case _ => super.emitNode(sym,rhs)
   }
 }

@@ -26,6 +26,9 @@
 #include "standard_functions.hpp"
 
 #include "mmap/mmap.hpp"
+#include "hpds/macro.hpp"
+
+#include <limits.h>
 
 using namespace ::dbtoaster;
 using namespace ::dbtoaster::adaptors;
@@ -87,8 +90,8 @@ public:
     struct serializer {
         template<class T>
         static dbtoaster::xml_oarchive& fn(
-                dbtoaster::xml_oarchive& oa, const char* name, T& t) {
-            return serialize_nvp(oa, name, t);
+                dbtoaster::xml_oarchive& oa, const char* name, T* t) {
+            return serialize_nvp(oa, name, *t);
         }
     };
 
@@ -129,7 +132,7 @@ public:
         bool is_table;
         relation_id_t id;
 
-        std::shared_ptr<trigger_t> trigger[2];
+        std::shared_ptr<trigger_t> trigger[3];
 
         relation_t(string r_name, bool r_is_table, relation_id_t r_id,
                 trigger_fn_t ins_trigger_fn = 0, 
@@ -151,7 +154,7 @@ public:
 
 		serialize_fn_t fn = 
 			std::bind(&serializer::template fn<T>,
-						std::placeholders::_1, m_name.c_str(), t);
+						std::placeholders::_1, m_name.c_str(), &t);
 		map_ptr_t m = std::shared_ptr<map_t>(new map_t(fn));
 		maps_by_name[m_name] = m;
 		return;
@@ -168,12 +171,15 @@ public:
     void process_streams();
     void process_tables();
 
+    bool is_async();
+    bool is_no_output();
+
 protected:
 	void set_log_count_every(unsigned int _log_count_every);
 	
-    void process_event(const event_t& evt, bool process_table);
+    void process_event(const event_t& evt, const bool process_table);
     void process_stream_event(const event_t& evt);
-	
+	void process_remaining_events();
 	
     std::shared_ptr<runtime::runtime_options> run_opts;
     source_multiplexer stream_multiplexer;
@@ -206,12 +212,17 @@ public:
 };
 
 template<typename T, typename V>
-void add_to_temp_map(MultiHashMap<T,V,HashIndex<T,V,T> >& m, const T& k)
+FORCE_INLINE void add_to_temp_map(MultiHashMap<T,V,HashIndex<T,V,T> >& m, const T& k)
 {
     T* lkup = m.get(k);
     if(lkup != nullptr) lkup->__av+=k.__av;
     else /*k.__av = v;*/ m.insert_nocheck(k);
 }
+
+FORCE_INLINE void voidFunc(){
+
+}
+
 }
 
 #endif /* DBTOASTER_DBT_PROGRAM_BASE_H */

@@ -16,23 +16,21 @@ namespace adaptors {
 ******************************************************************************/
 
 csv_adaptor::csv_adaptor(relation_id_t _id) 
-		: id(_id), type(insert_tuple), delimiter(",") 
+		: id(_id), type(insert_tuple), schema_size(0), delimiter(",") 
 {
-	schema = new char[1];
-	schema[0] = '\0';
+	schema = std::string();
 }
 
 csv_adaptor::csv_adaptor(relation_id_t _id, std::string sch)
-		: id(_id), type(insert_tuple), delimiter(",")
+		: id(_id), type(insert_tuple), schema_size(0), delimiter(",")
 {
-	schema = new char[sch.size()+1];
-	std::copy(sch.begin(), sch.end(), schema);
+	schema = std::string(sch);
 	validate_schema();
 }
 
 csv_adaptor::csv_adaptor(relation_id_t i, int num_params,
 						const std::pair<std::string,std::string> params[])
-		: id(i), type(insert_tuple), delimiter(",")
+		: id(i), type(insert_tuple), schema_size(0), delimiter(",")
 {
 	parse_params(num_params,params);
 	validate_schema();
@@ -61,9 +59,7 @@ void csv_adaptor::parse_params(int num_params,
 	  // in OCaml adaptors.
 	}
 	param_schema.assign(parse_schema(param_schema_prefix + param_schema));
-	schema = new char[param_schema.size()+1];
-	std::copy(param_schema.begin(), param_schema.end(), schema);
-	schema[param_schema.size()] = '\0';
+	schema = std::string(param_schema);
 }
 
 std::string csv_adaptor::parse_schema(std::string s)
@@ -101,38 +97,40 @@ std::string csv_adaptor::parse_schema(std::string s)
 
 void csv_adaptor::validate_schema() {
 	bool valid = true;
-	char* it = schema;
-	for (; valid && ((*it) != '\0'); ++it) {
+	
+	std::string::iterator it = schema.begin();
+	std::string::iterator end = schema.end();
+	for (; valid && it != end; ++it) {	
 	  switch(*it) {
 		case 'e':  // event type
 		case 'o':  // order field type
+				  break;
 		case 'l':
 		case 'f':
 		case 'd':
 		case 'h':
-		case 's': break;
+		case 's':
+				  schema_size++;
+				  break;
 		default: valid = false; break;
 	  }
 	}
 	if ( !valid ) {
-		delete[] schema;
-		schema = new char[1];
-		schema[0] = '\0';
+		schema = std::string();
+		schema_size = 0;
 	}
 }
 
 // Interpret the schema.
 std::tuple<bool, bool, unsigned int, event_args_t> 
-csv_adaptor::interpret_event(const char* schema_it, char* data)
+csv_adaptor::interpret_event(char* data)
 {
-	bool ins; unsigned int event_order=0; int y,m,d; PString pstr;
+	bool ins; unsigned int event_order=0; int y,m,d; 
 	char* date_y_field;
 	char* date_m_field;
 	char* date_d_field;
 	
-	//TODO make sure that are heap allocated objects inside tuple
-	//will be deallocated in the end
-	event_args_t tuple(strlen(schema_it));
+	event_args_t tuple(schema_size);
 	size_t tupleIdx = 0;
 	bool valid = true;
 
@@ -144,16 +142,18 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
     size_t delimSize = delimiter.size();
     char* field_start=data;
     char* field_end=data;
-    // std::cout << " with schema " << schema_it << std::endl;
-    while(valid && schema_it !='\0') {
+
+	std::string::iterator schema_it = schema.begin();
+	std::string::iterator schema_end = schema.end();
+	while(valid && (schema_it != schema_end)) {
     	field_end = strstr(field_start,delim);
         if(field_end) *field_end='\0';
         // std::cout << "  handling schema => " << *schema_it << std::endl;
         switch (*schema_it) {
 			case 'e': ins=atoi(field_start); insert = ins; break;
-			case 'l': tuple[tupleIdx++]=new long(atol(field_start)); break;
-			case 'f': tuple[tupleIdx++]=new DOUBLE_TYPE(atof(field_start)); break;
-			case 'h': tuple[tupleIdx++]=new int(static_cast<int>(MurmurHash2(field_start,strlen(field_start)*sizeof(char),0)));
+			case 'l': tuple[tupleIdx++]=std::shared_ptr<long>(new long(atol(field_start))); break;
+			case 'f': tuple[tupleIdx++]=std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(atof(field_start))); break;
+			case 'h': tuple[tupleIdx++]=std::shared_ptr<int>(new int(static_cast<int>(MurmurHash2(field_start,strlen(field_start)*sizeof(char),0))));
 					  break;
 			case 'd': 
 				date_y_field = strtok (field_start,"-");
@@ -166,7 +166,7 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 							m = atoi(date_m_field);
 							d = atoi(date_d_field);
 							if ( 0 < m && m < 13 && 0 < d && d <= 31) {
-								tuple[tupleIdx++]=new date(y*10000+m*100+d);
+								tuple[tupleIdx++]=std::shared_ptr<date>(new date(y*10000+m*100+d));
 							}
         					// std::cout << "  date is => " << date(y*10000+m*100+d) << std::endl;
 						} else valid = false;
@@ -176,24 +176,29 @@ csv_adaptor::interpret_event(const char* schema_it, char* data)
 			case 'o':
 				event_order=atoi(field_start);
 				break;
-			case 's': tuple[tupleIdx++]=new STRING_TYPE(field_start);   break;
+			case 's': 
+			  tuple[tupleIdx++]=std::shared_ptr<STRING_TYPE>(new STRING_TYPE(field_start)); 
+			  break;
 			default: valid = false; break;
 		}
 
+        ++schema_it;
         if(field_end) {
             field_end += delimSize;
             field_start = field_end;
-            ++schema_it;
-        } else break;
+        } else if(schema_it != schema_end){
+        	valid = false;
+        	break;
+        }
 	}
     // std::cout << " tuples is ==> " << tuple << std::endl;
 	return std::make_tuple(valid, insert, event_order, tuple);
 }
 
 void csv_adaptor::read_adaptor_events(char* data, std::shared_ptr<std::list<event_t> > eventList, std::shared_ptr<std::list<event_t> > eventQue) {
-	if ( (*schema) != '\0' ) {
+	if ( schema.size() > 0 ) {
 	  // Interpret the schema.
-	  std::tuple<bool, bool, unsigned int, event_args_t> evt = interpret_event(schema, data);
+	  std::tuple<bool, bool, unsigned int, event_args_t> evt = interpret_event(data);
 	  bool valid = std::get<0>(evt);
 	  bool insert = std::get<1>(evt);
 	  unsigned int event_order = std::get<2>(evt);
@@ -209,8 +214,7 @@ void csv_adaptor::read_adaptor_events(char* data, std::shared_ptr<std::list<even
 		std::cerr << "schema: " << schema << std::endl;
 	  }
 	} else if ( runtime_options::verbose() ) {
-		std::cerr << "Skipping event, no "
-			<< ((*schema) == '\0'? "schema" : "buffer") << " found." << std::endl;
+		std::cerr << "Skipping event, no schema found." << std::endl;
 	}
 }
 
@@ -230,7 +234,7 @@ order_book_tuple::order_book_tuple(const order_book_message& msg) {
 	id = msg.id;
 	volume = msg.volume;
 	price = msg.price;
-        broker_id = 0;
+    broker_id = 0;
 }
 
 order_book_tuple& order_book_tuple::operator=(order_book_tuple& other) {
@@ -243,11 +247,16 @@ order_book_tuple& order_book_tuple::operator=(order_book_tuple& other) {
 }
 
 void order_book_tuple::operator()(event_args_t& e) {
-	if (e.size() > 0) e[0] = new double(t); else e.push_back(new double(t));
-	if (e.size() > 1) e[1] = new long(id); else e.push_back(new long(id));
-	if (e.size() > 2) e[2] = new long(broker_id); else e.push_back(new long(broker_id));
-	if (e.size() > 3) e[3] = new double(volume); else e.push_back(new double(volume));
-	if (e.size() > 4) e[4] = new double(price); else e.push_back(new double(price));
+	if (e.size() > 0) e[0] = std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(t)); 
+	else e.push_back(std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(t)));
+	if (e.size() > 1) e[1] = std::shared_ptr<long>(new long(id)); 
+	else e.push_back(std::shared_ptr<long>(new long(id)));
+	if (e.size() > 2) e[2] = std::shared_ptr<long>(new long(broker_id)); 
+	else e.push_back(std::shared_ptr<long>(new long(broker_id)));
+	if (e.size() > 3) e[3] = std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(volume)); 
+	else e.push_back(std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(volume)));
+	if (e.size() > 4) e[4] = std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(price)); 
+	else e.push_back(std::shared_ptr<DOUBLE_TYPE>(new DOUBLE_TYPE(price)));
 }
 
 /******************************************************************************

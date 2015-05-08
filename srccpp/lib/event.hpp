@@ -10,6 +10,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace dbtoaster {
 
@@ -19,9 +20,15 @@ typedef long date;
  * Type definitions of data-structures used for representing events.
  */
 
-enum event_type { delete_tuple=0, insert_tuple, system_ready_event };
+enum event_type { 
+    delete_tuple = 0, 
+    insert_tuple, 
+    batch_update, 
+    system_ready_event 
+};
+
 typedef int relation_id_t;
-typedef std::vector<void*> event_args_t;
+typedef std::vector<std::shared_ptr<void>> event_args_t;
 
 extern std::string event_name[];
 
@@ -36,6 +43,10 @@ struct event_t
     relation_id_t id;
     unsigned int event_order;
     event_args_t data;
+
+    event_t(const event_t& other)
+    : type(other.type), id(other.id), event_order(other.event_order), data(other.data)
+    {}
 
     event_t(event_type t, relation_id_t i, unsigned int ord, event_args_t& d)
     : type(t), id(i), event_order(ord), data(d)

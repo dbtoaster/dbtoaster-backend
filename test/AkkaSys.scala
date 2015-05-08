@@ -6,10 +6,10 @@ object Consts {
   import Messages._
   val m0 = /*MapRef*/(0)
   val m1 = /*MapRef*/(1)
-  val ev1 = TupleEvent(1,TupleInsert,"S",List(1))
-  val ev2 = TupleEvent(2,TupleInsert,"T",List(2))
-  val ev3 = TupleEvent(3,TupleInsert,"U",List(3))
-  val ev4 = TupleEvent(4,TupleInsert,"V",List(4))
+  val ev1 = OrderedInputEvent(1, TupleEvent(TupleInsert,"S",List(1)))
+  val ev2 = OrderedInputEvent(2, TupleEvent(TupleInsert,"T",List(2)))
+  val ev3 = OrderedInputEvent(3, TupleEvent(TupleInsert,"U",List(3)))
+  val ev4 = OrderedInputEvent(4, TupleEvent(TupleInsert,"V",List(4)))
   val f1 = /*FunRef*/(1)
   val f2 = /*FunRef*/(2)
   val f3 = /*FunRef*/(3)
@@ -89,10 +89,10 @@ class AkkaSys extends FunSpec {
     m ! Members(m,ws.toArray)
     m ! StreamInit()
     // custom external events
-    m ! ev1
-    m ! ev2
-    (0 until 20000).foreach { _ => m ! ev3 }
-    m ! ev4
+    m ! ev1.event
+    m ! ev2.event
+    (0 until 20000).foreach { _ => m ! ev3.event }
+    m ! ev4.event
     // finalize
     val wait = 10000
     val timeout = akka.util.Timeout(wait)

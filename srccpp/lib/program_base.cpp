@@ -216,15 +216,16 @@ ProgramBase::ProgramBase(int argc, char* argv[]) :
 }
 
 void ProgramBase::process_streams() {
-	std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
-	std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
-	for(;it != it_end; ++it) {
-		process_stream_event(*it);
+	if(!stream_multiplexer.eventList->empty()) {
+		std::list<event_t>::iterator it = stream_multiplexer.eventList->begin();
+		std::list<event_t>::iterator it_end = stream_multiplexer.eventList->end();
+		for(;it != it_end; ++it) {
+			process_stream_event(*it);
+		}
 	}
 	if(!stream_multiplexer.eventQue->empty()) {
-		stream_multiplexer.eventQue->sort(compare_event_timestamp_order);
-		it = stream_multiplexer.eventQue->begin();
-		it_end = stream_multiplexer.eventQue->end();
+		std::list<event_t>::iterator it = stream_multiplexer.eventQue->begin();
+		std::list<event_t>::iterator it_end = stream_multiplexer.eventQue->end();
 		for(;it != it_end; ++it) {
 			process_stream_event(*it);
 		}
@@ -265,23 +266,27 @@ void ProgramBase::set_log_count_every(
 	log_count_every = _log_count_every;
 }
 
-void ProgramBase::process_event(const event_t& evt, bool process_table) {
+void ProgramBase::process_event(const event_t& evt, const bool process_table) {
 	map<relation_id_t, 
 				 std::shared_ptr<ProgramBase::relation_t> >::iterator r_it =
 			relations_by_id.find(evt.id);
 	if( r_it != relations_by_id.end() &&
-		r_it->second->is_table == process_table &&
-		r_it->second->trigger[evt.type] )
+		r_it->second->is_table == process_table )
 	{
-		std::shared_ptr<ProgramBase::trigger_t> trig = 
-			r_it->second->trigger[evt.type];
+		if(r_it->second->trigger[evt.type]) {
+			std::shared_ptr<ProgramBase::trigger_t> trig = 
+				r_it->second->trigger[evt.type];
 
-		#ifdef DBT_TRACE
-		cout << trig->name << ": " << evt.data << endl;
-		#endif // DBT_TRACE
-		trig->log(r_it->second->name, evt);
+			#ifdef DBT_TRACE
+			cout << trig->name << ": " << evt.data << endl;
+			#endif // DBT_TRACE
+			trig->log(r_it->second->name, evt);
 
-		(trig->fn)(evt.data);
+			(trig->fn)(evt.data);
+		} else {
+			cerr << "Could not find " << event_name[evt.type]
+					<< " handler for relation " << evt.id << endl;
+		}
 	} else {
 		cerr << "Could not find " << event_name[evt.type]
 				<< " handler for relation " << evt.id << endl;
@@ -332,6 +337,14 @@ void ProgramBase::trace(std::ostream &ofs, bool debug) {
 			oa = std::auto_ptr<dbtoaster::xml_oarchive>(&ofs);
 		it->second->serialize_fn(*oa);
 	}
+}
+
+bool ProgramBase::is_async() {
+	return run_opts->async;
+}
+
+bool ProgramBase::is_no_output() {
+	return run_opts->no_output;
 }
 
 }

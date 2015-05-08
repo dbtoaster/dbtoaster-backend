@@ -27,8 +27,7 @@ Seq(
 
 // --------- Dependencies
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor"     % "2.2.3",
-  "com.typesafe.akka" %% "akka-remote"    % "2.2.3",
+  "org.apache.spark"  %% "spark-core"     % "1.2.1",
   "org.scala-lang"     % "scala-actors"   % scalaVersion.value, // to compile legacy Scala
   "org.scala-lang"     % "scala-compiler" % scalaVersion.value,
   "org.scalatest"     %% "scalatest"      % "2.0" % "test"
@@ -255,7 +254,7 @@ commands += Command.command("release")((state:State) => {
     println("copy query files to queries")
     fixSqlFiles((currentBranchPath/"test"/"queries"/"simple") * "r*.sql" get, releaseDir/"examples"/"queries"/"simple")
     fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"tpch").filter(f => !"""((query[0-9]+a?)|(schemas)).sql""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"tpch")
-    fixSqlFiles((currentBranchPath/"test"/"queries"/"finance") * "*.sql" get, releaseDir/"examples"/"queries"/"finance")
+    fixSqlFiles(((currentBranchPath/"test"/"queries"/"finance") * "*.sql" get).filter(_.getName != "chrissedtrades.sql"), releaseDir/"examples"/"queries"/"finance")
     fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"mddb").filter(f => !"""((query[1-2]+.sql)|(schemas.sql)|(README))""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"mddb")
     val distDir = base/"dist";
     if(!distDir.exists) distDir.mkdirs;
@@ -277,7 +276,7 @@ commands += Command.command("release")((state:State) => {
     //unmanagedSourceDirectories in Compile += file("lms"),
     // LMS-specific options
     scalaOrganization := "org.scala-lang.virtualized",
-    scalaVersion := "2.10.2-RC1",
+    scalaVersion := "2.10.2",
     libraryDependencies ++= Seq(
       "org.scala-lang.virtualized" % "scala-library" % scalaVersion.value,
       "org.scala-lang.virtualized" % "scala-compiler" % scalaVersion.value,
@@ -325,7 +324,7 @@ commands += Command.command("release")((state:State) => {
 //	"org.scalariform" %% "scalariform" % "0.1.4",
 //parallelExecution in Test := false
 //scalaOrganization := "org.scala-lang.virtualized"
-//scalaVersion := Option(System.getenv("SCALA_VIRTUALIZED_VERSION")).getOrElse("2.10.2-RC1")
+//scalaVersion := Option(System.getenv("SCALA_VIRTUALIZED_VERSION")).getOrElse("2.10.2")
 //resolvers ++= Seq(
 //    ScalaToolsSnapshots,
 //    "Sonatype Public" at "https://oss.sonatype.org/content/groups/public",

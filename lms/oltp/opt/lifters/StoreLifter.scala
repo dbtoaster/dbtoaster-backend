@@ -8,14 +8,14 @@ import scala.language.implicitConversions
 import ddbt.lib.store._
 import Store._
 
-trait SEntryOps extends Base{
+trait SEntryOps extends Base {
 
-  class SEntryOpsCls[E<:Entry:Manifest](x: Rep[E]) {
-    def update(i: Int, v:Rep[Any]) = steUpdate[E](x , i ,v)
-    def increase(i: Int, v:Rep[Any]) = steIncrease[E](x , i ,v)
-    def +=(i: Int, v:Rep[Any]) = increase(i ,v)
-    def decrease(i: Int, v:Rep[Any]) = steDecrease[E](x , i ,v)
-    def -=(i: Int, v:Rep[Any]) = decrease(i ,v)
+  class SEntryOpsCls[E <: Entry: Manifest](x: Rep[E]) {
+    def update(i: Int, v: Rep[Any]) = steUpdate[E](x, i, v)
+    def increase(i: Int, v: Rep[Any]) = steIncrease[E](x, i, v)
+    def +=(i: Int, v: Rep[Any]) = increase(i ,v)
+    def decrease(i: Int, v: Rep[Any]) = steDecrease[E](x, i, v)
+    def -=(i: Int, v: Rep[Any]) = decrease(i ,v)
     def get(i: Int) = steGet[E](x , i)
   }
 
@@ -62,40 +62,42 @@ trait SEntryOps extends Base{
   implicit def conv2SEntry22[T1:Manifest,T2:Manifest,T3:Manifest,T4:Manifest,T5:Manifest,T6:Manifest,T7:Manifest,T8:Manifest,T9:Manifest,T10:Manifest,T11:Manifest,T12:Manifest,T13:Manifest,T14:Manifest,T15:Manifest,T16:Manifest,T17:Manifest,T18:Manifest,T19:Manifest,T20:Manifest,T21:Manifest,T22:Manifest](x: Rep[SEntry22[T1,T2,T3,T4,T5,T6,T7,T8,T9,T10,T11,T12,T13,T14,T15,T16,T17,T18,T19,T20,T21,T22]])(implicit pos: SourceContext) =
     (x.get(1).asInstanceOf[Rep[T1]],x.get(2).asInstanceOf[Rep[T2]],x.get(3).asInstanceOf[Rep[T3]],x.get(4).asInstanceOf[Rep[T4]],x.get(5).asInstanceOf[Rep[T5]],x.get(6).asInstanceOf[Rep[T6]],x.get(7).asInstanceOf[Rep[T7]],x.get(8).asInstanceOf[Rep[T8]],x.get(9).asInstanceOf[Rep[T9]],x.get(10).asInstanceOf[Rep[T10]],x.get(11).asInstanceOf[Rep[T11]],x.get(12).asInstanceOf[Rep[T12]],x.get(13).asInstanceOf[Rep[T13]],x.get(14).asInstanceOf[Rep[T14]],x.get(15).asInstanceOf[Rep[T15]],x.get(16).asInstanceOf[Rep[T16]],x.get(17).asInstanceOf[Rep[T17]],x.get(18).asInstanceOf[Rep[T18]],x.get(19).asInstanceOf[Rep[T19]],x.get(20).asInstanceOf[Rep[T20]],x.get(21).asInstanceOf[Rep[T21]],x.get(22).asInstanceOf[Rep[T22]])
 
-  implicit def storeEntry2SEntryOpsCls[E<:Entry:Manifest](x: Rep[E]): SEntryOpsCls[E] = new SEntryOpsCls[E](x)
-  def steMakeMutable[E<:Entry:Manifest](x: Rep[E]):Rep[E]
+  implicit def storeEntry2SEntryOpsCls[E <: Entry: Manifest](x: Rep[E]): SEntryOpsCls[E] = new SEntryOpsCls[E](x)
 
-  def steUpdate[E<:Entry:Manifest](x: Rep[E], i: Int, v: Rep[Any]):Rep[Unit]
-  def steIncrease[E<:Entry:Manifest](x: Rep[E], i: Int, v: Rep[Any]):Rep[Unit]
-  def steDecrease[E<:Entry:Manifest](x: Rep[E], i: Int, v: Rep[Any]):Rep[Unit]
-  def steGet[E<:Entry:Manifest](x: Rep[E], i: Int):Rep[Any]
+  def steMakeMutable[E <: Entry: Manifest](x: Rep[E]): Rep[E]
+
+  def steUpdate[E <: Entry: Manifest](x: Rep[E], i: Int, v: Rep[Any]): Rep[Unit]
+  def steIncrease[E <: Entry: Manifest](x: Rep[E], i: Int, v: Rep[Any]): Rep[Unit]
+  def steDecrease[E <: Entry: Manifest](x: Rep[E], i: Int, v: Rep[Any]): Rep[Unit]
+  def steGet[E <: Entry: Manifest](x: Rep[E], i: Int): Rep[Any]
 }
 
 trait SEntryExp extends StoreOps with BaseExp with EffectExp with VariablesExp {
 
-  case class SteMakeMutable [E<:Entry:Manifest](x: Exp[E]) extends Def[E]
-  case class SteUpdate      [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
-  case class SteIncrease    [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
-  case class SteDecrease    [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
-  case class SteGet         [E<:Entry:Manifest](x: Exp[E], i: Int) extends Def[Any]
+  var storeSyms = List[Sym[Store[Entry]]]()
 
-  def steMakeMutable [E<:Entry:Manifest](x: Exp[E]):Exp[E] = reflectMutable(SteMakeMutable[E](x))
-  def steUpdate      [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]):Exp[Unit] = reflectWrite(x)(SteUpdate[E](x, i, v))
-  def steIncrease    [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]):Exp[Unit] = reflectWrite(x)(SteIncrease[E](x, i, v))
-  def steDecrease    [E<:Entry:Manifest](x: Exp[E], i: Int, v: Exp[Any]):Exp[Unit] = reflectWrite(x)(SteDecrease[E](x, i, v))
-  def steGet         [E<:Entry:Manifest](x: Exp[E], i: Int):Exp[Any] = SteGet[E](x, i)
+  val ENTRY_INDICES_KEY = "StoreOps.Entry.indices"
+
+  case class SteMakeMutable [E <: Entry: Manifest](x: Exp[E]) extends Def[E]
+  case class SteUpdate      [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
+  case class SteIncrease    [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
+  case class SteDecrease    [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]) extends Def[Unit]
+  case class SteGet         [E <: Entry: Manifest](x: Exp[E], i: Int) extends Def[Any]
+
+  def steMakeMutable [E <: Entry: Manifest](x: Exp[E]):Exp[E] = reflectMutable(SteMakeMutable[E](x))
+  def steUpdate      [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]): Exp[Unit] = reflectWrite(x)(SteUpdate[E](x, i, v))
+  def steIncrease    [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]): Exp[Unit] = reflectWrite(x)(SteIncrease[E](x, i, v))
+  def steDecrease    [E <: Entry: Manifest](x: Exp[E], i: Int, v: Exp[Any]): Exp[Unit] = reflectWrite(x)(SteDecrease[E](x, i, v))
+  def steGet         [E <: Entry: Manifest](x: Exp[E], i: Int): Exp[Any] = SteGet[E](x, i)
 
   //////////////
   // mirroring
-  override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit pos: SourceContext): Exp[A] = (e match {
-    case _ => super.mirror(e,f)
+  override def mirror[A: Manifest](e: Def[A], f: Transformer)(implicit pos: SourceContext): Exp[A] = (e match {
+    case _ => super.mirror(e, f)
   }).asInstanceOf[Exp[A]] // why??
 
   //this hashmap will map (entry manifest string) -> ((entry class name),(list of argument type names),(list of Store[E] symbols, containing entry of the type given as key))
   //val storeEntryClasses: collection.mutable.Map[String, (Manifest[_],collection.mutable.Set[Sym[_]])] = new collection.mutable.HashMap[String, (Manifest[_],collection.mutable.Set[Sym[_]])]()
-  var storeSyms = List[Sym[Store[Entry]]]()
-  var localStoreSyms = List[Sym[Store[Entry]]]()
-  val ENTRY_INDICES_KEY = "StoreOps.Entry.indices"
 }
 
 trait SEntryExpOpt extends SEntryExp
@@ -105,11 +107,16 @@ trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaC
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case SteMakeMutable(x) => emitValDef(sym, quote(x)+" /*made mutable*/")
-    case SteUpdate(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" = "+quote(v))
-    case SteIncrease(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" += "+quote(v))
-    case SteDecrease(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" -= "+quote(v))
-    case SteGet(x,i) => emitValDef(sym, quote(x)+"._"+i)
+    case SteMakeMutable(x) => emitValDef(sym, quote(x) + " /*made mutable*/")
+    case SteUpdate(x, i, v) => emitValDef(sym, quote(x) + "._" + i + " = " + quote(v))
+    case SteIncrease(x, i, v) => emitValDef(sym, quote(x) + "._" + i + " += " + quote(v))
+    case SteDecrease(x, i, v) => emitValDef(sym, quote(x) + "._" + i + " -= " + quote(v))
+    case SteGet(x, i) => emitValDef(sym, quote(x) + "._" + i)
+    // // TODO: Check the code below (probably should be removed)
+    // x.asInstanceOf[Sym[_]].attributes.get(SparkGenStore.ENTRY_GET + i) match {
+    //   case Some(fld: String) => emitValDef(sym, fld)
+    //   case _ => emitValDef(sym, quote(x) + "._" + i)
+    // }
     case _ => super.emitNode(sym, rhs)
   }
 }
@@ -119,125 +126,140 @@ trait CGenSEntry extends CGenBase with dbtoptimizer.ToasterBoosterCCodegen {
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case SteMakeMutable(x) => emitValDef(sym, quote(x)+" /*made mutable*/")
-    case SteUpdate(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" = "+quote(v))
-    case SteIncrease(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" += "+quote(v))
-    case SteDecrease(x,i,v) => emitValDef(sym, quote(x)+"._"+i+" -= "+quote(v))
-    case SteGet(x,i) => emitValDef(sym, quote(x)+"._"+i)
+    case SteMakeMutable(x) => emitValDef(sym, quote(x) + " /*made mutable*/")
+    case SteUpdate(x, i, v) => emitValDef(sym, quote(x) + "._" + i + " = " + quote(v))
+    case SteIncrease(x, i, v) => emitValDef(sym, quote(x) + "._" + i + " += " + quote(v))
+    case SteDecrease(x, i, v) => emitValDef(sym, quote(x) + "._" + i + " -= " + quote(v))
+    case SteGet(x, i) => emitValDef(sym, quote(x) + "._"+i)
     case _ => super.emitNode(sym, rhs)
   }
 }
 
 trait StoreOps extends Base with SEntryOps {
 
-  class StoreOpsCls[E<:Entry:Manifest](x: Rep[Store[E]]) {
-    def insert(e: Rep[E]):Rep[Unit] = stInsert[E](x, e)
-    def update(e: Rep[E]):Rep[Unit] = stUpdate[E](x, e)
-    def delete(e: Rep[E]):Rep[Unit] = stDelete[E](x, e)
-    def get(args:(Int,Rep[Any])*):Rep[E] = get2(stSampleEntry(x, args),-1)
-    def get2(key:Rep[E],idx:Int=(-1)):Rep[E] = stGet(x, idx, key)
-    //def getOrPrev(key:Rep[E],idx:Int=(-1)):Rep[E] = stGetOrPrev(x, idx, key)
-    //def getOrNext(key:Rep[E],idx:Int=(-1)):Rep[E] = stGetOrNext(x, idx, key)
-    def getSliceMin(targetField:Int, args:(Int,Rep[Any])*):Rep[E] = getSliceMin2(stSampleEntry(x, args), targetField, -1, -1)
-    def getSliceMin2(key:Rep[E],targetField:Int,sliceIdx:Int=(-1),minIdx:Int=(-1)):Rep[E] = stGetSliceMin(x, key, targetField, sliceIdx, minIdx)
-    def getSliceMax(targetField:Int, args:(Int,Rep[Any])*):Rep[E] = getSliceMax2(stSampleEntry(x, args), targetField, -1, -1)
-    def getSliceMax2(key:Rep[E],targetField:Int,sliceIdx:Int=(-1),maxIdx:Int=(-1)):Rep[E] = stGetSliceMax(x, key, targetField, sliceIdx, maxIdx)
-    //def getMin(idx:Int=(-1)):Rep[E] = stGetMin(x, idx)
-    //def getMax(idx:Int=(-1)):Rep[E] = stGetMax(x, idx)
-    //def getMedian(idx:Int=(-1)):Rep[E] = stGetMedian(x, idx)
-    def foreach(f:Rep[E]=>Rep[Unit]):Rep[Unit] = stForeach(x, f)
-    def slice(f:Rep[E]=>Rep[Unit], args:(Int,Rep[Any])*):Rep[Unit] = slice2(stSampleEntry(x, args),f,-1)
-    def slice2(key:Rep[E],f:Rep[E]=>Rep[Unit],idx:Int=(-1)):Rep[Unit] = stSlice(x,idx,key,f)
-    //def range(min:Rep[E],max:Rep[E],f:Rep[E]=>Rep[Unit],withMin:Rep[Boolean]=unit(true),withMax:Rep[Boolean]=unit(true),idx:Int=(-1)):Rep[Unit] = stRange(x,idx,min,max,withMin,withMax,f)
-    def delete(key:Rep[E],idx:Int=(-1)):Rep[Unit] = stDelete(x,idx,key)
-    def clear:Rep[Unit] = stClear(x)
-    def size:Rep[Int] = stSize(x)
-    def index(tp:Rep[IndexType],unique:Rep[Boolean],idx:Int=(-1)):Rep[Unit] = stIndex(x, idx, tp, unique)
+  class StoreOpsCls[E <: Entry: Manifest](x: Rep[Store[E]]) {
+    def insert(e: Rep[E]): Rep[Unit] = stInsert[E](x, e)
+    def update(e: Rep[E]): Rep[Unit] = stUpdate[E](x, e)
+    def delete(e: Rep[E]): Rep[Unit] = stDelete[E](x, e)
+    def get(args: (Int, Rep[Any])*): Rep[E] = get2(stSampleEntry(x, args), -1)
+    def get2(key: Rep[E], idx: Int = (-1)): Rep[E] = stGet(x, idx, key)
+    //def getOrPrev(key: Rep[E],idx:Int=(-1)): Rep[E] = stGetOrPrev(x, idx, key)
+    //def getOrNext(key: Rep[E],idx:Int=(-1)): Rep[E] = stGetOrNext(x, idx, key)
+    def getSliceMin(targetField: Int, args: (Int, Rep[Any])*): Rep[E] = 
+      getSliceMin2(stSampleEntry(x, args), targetField, -1, -1)            
+    def getSliceMin2(key: Rep[E], targetField: Int, sliceIdx: Int = (-1), minIdx: Int = (-1)): Rep[E] = 
+      stGetSliceMin(x, key, targetField, sliceIdx, minIdx)
+    def getSliceMax(targetField: Int, args: (Int, Rep[Any])*): Rep[E] = 
+      getSliceMax2(stSampleEntry(x, args), targetField, -1, -1)
+    def getSliceMax2(key: Rep[E], targetField: Int, sliceIdx: Int = (-1), maxIdx: Int = (-1)): Rep[E] = 
+      stGetSliceMax(x, key, targetField, sliceIdx, maxIdx)
+    //def getMin(idx:Int=(-1)): Rep[E] = stGetMin(x, idx)
+    //def getMax(idx:Int=(-1)): Rep[E] = stGetMax(x, idx)
+    //def getMedian(idx:Int=(-1)): Rep[E] = stGetMedian(x, idx)
+    def foreach(f: Rep[E] => Rep[Unit]): Rep[Unit] = stForeach(x, f)
+    def slice(f: Rep[E] => Rep[Unit], args: (Int, Rep[Any])*): Rep[Unit] = 
+      slice2(stSampleEntry(x, args), f, -1)
+    def slice2(key: Rep[E], f: Rep[E] => Rep[Unit], idx: Int = (-1)): Rep[Unit] = 
+      stSlice(x, idx, key, f)
+    //def range(min: Rep[E],max: Rep[E],f: Rep[E]=>Rep[Unit],withMin: Rep[Boolean]=unit(true),withMax: Rep[Boolean]=unit(true),idx:Int=(-1)): Rep[Unit] = stRange(x,idx,min,max,withMin,withMax,f)
+    def delete(key: Rep[E], idx: Int = (-1)): Rep[Unit] = stDelete(x,idx,key)
+    def clear: Rep[Unit] = stClear(x)
+    def size: Rep[Int] = stSize(x)
+    def index(tp: Rep[IndexType], unique: Rep[Boolean], idx: Int = (-1)): Rep[Unit] = 
+      stIndex(x, idx, tp, unique)
     def mutable = stMutable(x)
-    def newEntry(args:Rep[Any]*):Rep[E] = stNewEntry[E](x, args)
-    def sampleEntry(args:(Int,Rep[Any])*):Rep[E] = stSampleEntry[E](x, args)
-    def sampleFullEntry(args:Rep[Any]*):Rep[E] = stSampleEntry[E](x, args.zipWithIndex.map{case (arg, i) => ((i+1, arg))})
-    //def idxs(idx:Int):Rep[Array[Idx[E]]] = stIdxs(x, idx)
+    def newEntry(args: Rep[Any]*): Rep[E] = stNewEntry[E](x, args)
+    def sampleEntry(args: (Int, Rep[Any])*): Rep[E] = stSampleEntry[E](x, args)
+    def sampleFullEntry(args: Rep[Any]*): Rep[E] = 
+      stSampleEntry[E](x, args.zipWithIndex.map { case (arg, i) => ((i + 1, arg))})
+    //def idxs(idx:Int): Rep[Array[Idx[E]]] = stIdxs(x, idx)
   }
 
-  implicit def store2StoreOpsCls[E<:Entry:Manifest](x: Rep[Store[E]]): StoreOpsCls[E] = new StoreOpsCls[E](x)
+  implicit def store2StoreOpsCls[E <: Entry: Manifest](x: Rep[Store[E]]): StoreOpsCls[E] = new StoreOpsCls[E](x)
 
-  def newStore     [E<:Entry:Manifest]():Rep[Store[E]]
+  def newStore     [E <: Entry: Manifest](): Rep[Store[E]]
 
-  def stNewEntry[E<:Entry:Manifest](x: Rep[Store[E]], args:Seq[Rep[Any]]):Rep[E]
-  def stNewEntry2[E<:Entry:Manifest](x: Rep[Store[E]], args:Rep[Any]*):Rep[E] = stNewEntry[E](x, args)
-  def stSampleEntry[E<:Entry:Manifest](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]):Rep[E]
-  // def stSampleFullEntry[E<:Entry:Manifest](x: Rep[Store[E]], args:Rep[Any]*):Rep[E]
-  //def newStore     [E<:Entry:Manifest]():Rep[Store[E]] = newStore[E](null.asInstanceOf[Rep[Array[Idx[E]]]])
-  def stInsert     [E<:Entry:Manifest](x: Rep[Store[E]], e: Rep[E]):Rep[Unit]
-  def stUpdate     [E<:Entry:Manifest](x: Rep[Store[E]], e: Rep[E]):Rep[Unit]
-  def stDelete     [E<:Entry:Manifest](x: Rep[Store[E]], e: Rep[E]):Rep[Unit]
-  def stGet        [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,key:Rep[E]):Rep[E]
-  //def stGetOrPrev  [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,key:Rep[E]):Rep[E]
-  //def stGetOrNext  [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,key:Rep[E]):Rep[E]
-  def stGetSliceMin[E<:Entry:Manifest](x: Rep[Store[E]], key:Rep[E],targetField:Int,sliceIdx:Int,minIdx:Int):Rep[E]
-  def stGetSliceMax[E<:Entry:Manifest](x: Rep[Store[E]], key:Rep[E],targetField:Int,sliceIdx:Int,maxIdx:Int):Rep[E]
-  //def stGetMin     [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int):Rep[E]
-  //def stGetMax     [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int):Rep[E]
-  //def stGetMedian  [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int):Rep[E]
-  def stForeach    [E<:Entry:Manifest](x: Rep[Store[E]], f:Rep[E]=>Rep[Unit]):Rep[Unit]
-  def stSlice      [E<:Entry:Manifest](x: Rep[Store[E]], f:Rep[E]=>Rep[Unit], args:(Int,Rep[Any])*):Rep[Unit] = stSlice(x,-1,stSampleEntry(x, args),f)
-  def stSlice      [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,key:Rep[E],f:Rep[E]=>Rep[Unit]):Rep[Unit]
-  //def stRange      [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,min:Rep[E],max:Rep[E],withMin:Rep[Boolean],withMax:Rep[Boolean],f:Rep[E]=>Rep[Unit]):Rep[Unit]
-  def stDelete     [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,key:Rep[E]):Rep[Unit]
-  def stClear      [E<:Entry:Manifest](x: Rep[Store[E]]):Rep[Unit]
-  def stSize       [E<:Entry:Manifest](x: Rep[Store[E]]):Rep[Int]
-  def stIndex      [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int,tp:Rep[IndexType],unique:Rep[Boolean]):Rep[Unit]
-  //def stIdxs     [E<:Entry:Manifest](x: Rep[Store[E]], idx:Int):Rep[Array[Idx[E]]]
-  def stMutable    [E<:Entry:Manifest](x: Rep[Store[E]]):Rep[Store[E]]
-  def allMutable   [E:Manifest](x: Rep[E]):Rep[E]
+  def stNewEntry[E <: Entry: Manifest](x: Rep[Store[E]], args: Seq[Rep[Any]]): Rep[E]
+  def stNewEntry2[E <: Entry: Manifest](x: Rep[Store[E]], args: Rep[Any]*): Rep[E] = stNewEntry[E](x, args)
+  def stSampleEntry[E <: Entry: Manifest](x: Rep[Store[E]], args:Seq[(Int, Rep[Any])]): Rep[E]
+  // def stSampleFullEntry[E <: Entry: Manifest](x: Rep[Store[E]], args: Rep[Any]*): Rep[E]
+  //def newStore     [E <: Entry: Manifest](): Rep[Store[E]] = newStore[E](null.asInstanceOf[Rep[Array[Idx[E]]]])
+  def stInsert     [E <: Entry: Manifest](x: Rep[Store[E]], e: Rep[E]): Rep[Unit]
+  def stUpdate     [E <: Entry: Manifest](x: Rep[Store[E]], e: Rep[E]): Rep[Unit]
+  def stDelete     [E <: Entry: Manifest](x: Rep[Store[E]], e: Rep[E]): Rep[Unit]
+  def stGet        [E <: Entry: Manifest](x: Rep[Store[E]], idx: Int, key: Rep[E]): Rep[E]
+  //def stGetOrPrev  [E <: Entry: Manifest](x: Rep[Store[E]], idx:Int,key: Rep[E]): Rep[E]
+  //def stGetOrNext  [E <: Entry: Manifest](x: Rep[Store[E]], idx:Int,key: Rep[E]): Rep[E]
+  def stGetSliceMin[E <: Entry: Manifest](x: Rep[Store[E]], key: Rep[E], targetField: Int, sliceIdx: Int, minIdx: Int): Rep[E]
+  def stGetSliceMax[E <: Entry: Manifest](x: Rep[Store[E]], key: Rep[E], targetField: Int, sliceIdx: Int, maxIdx: Int): Rep[E]
+  //def stGetMin     [E <: Entry: Manifest](x: Rep[Store[E]], idx:Int): Rep[E]
+  //def stGetMax     [E <: Entry: Manifest](x: Rep[Store[E]], idx:Int): Rep[E]
+  //def stGetMedian  [E <: Entry: Manifest](x: Rep[Store[E]], idx:Int): Rep[E]
+  def stForeach    [E <: Entry: Manifest](x: Rep[Store[E]], f: Rep[E] => Rep[Unit]): Rep[Unit]
+  def stSlice      [E <: Entry: Manifest](x: Rep[Store[E]], f: Rep[E] => Rep[Unit], args: (Int, Rep[Any])*): Rep[Unit] = 
+    stSlice(x, -1, stSampleEntry(x, args), f)
+  def stSlice      [E <: Entry: Manifest](x: Rep[Store[E]], idx: Int, key: Rep[E], f: Rep[E] => Rep[Unit]): Rep[Unit]
+  //def stRange      [E <: Entry: Manifest](x: Rep[Store[E]], idx:Int,min: Rep[E],max: Rep[E],withMin: Rep[Boolean],withMax: Rep[Boolean],f: Rep[E]=>Rep[Unit]): Rep[Unit]
+  def stDelete     [E <: Entry: Manifest](x: Rep[Store[E]], idx : Int, key: Rep[E]): Rep[Unit]
+  def stClear      [E <: Entry: Manifest](x: Rep[Store[E]]): Rep[Unit]
+  def stSize       [E <: Entry: Manifest](x: Rep[Store[E]]): Rep[Int]
+  def stIndex      [E <: Entry: Manifest](x: Rep[Store[E]], idx : Int, tp: Rep[IndexType], unique: Rep[Boolean]): Rep[Unit]
+  //def stIdxs     [E <: Entry: Manifest](x: Rep[Store[E]], idx:Int): Rep[Array[Idx[E]]]
+  def stMutable    [E <: Entry: Manifest](x: Rep[Store[E]]): Rep[Store[E]]
+  def allMutable   [E:Manifest](x: Rep[E]): Rep[E]
 
-  def collectStore [E<:Entry:Manifest](x:Rep[_]):Unit
+  def collectStore [E <: Entry: Manifest](x: Rep[_]): Unit
 }
 
-trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp with SEntryExp {
-  case class StNewStore   [E<:Entry:Manifest](mE: Manifest[E]/*, sndIdx: Exp[Array[Idx[E]]]*/) extends Def[Store[E]]
+trait StoreExp extends StoreOps with BaseExp 
+                                with EffectExp 
+                                with VariablesExp 
+                                with SEntryExp {
 
-  case class SteNewSEntry   [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]) extends Def[E]
-  case class SteSampleSEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]) extends Def[E]
+  case class StNewStore   [E <: Entry: Manifest](mE: Manifest[E]/*, sndIdx: Exp[Array[Idx[E]]]*/) extends Def[Store[E]]
 
-  case class StInsert     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
-  case class StUpdate     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
-  case class StDelete     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
-  case class StGet        [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]) extends Def[E]
-  //case class StGetOrPrev  [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]) extends Def[E]
-  //case class StGetOrNext  [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]) extends Def[E]
-  case class StGetSliceMin[E<:Entry:Manifest](x: Exp[Store[E]], key:Exp[E],targetField:Int,sliceIdx:Int,minIdx:Int) extends Def[E]
-  case class StGetSliceMax[E<:Entry:Manifest](x: Exp[Store[E]], key:Exp[E],targetField:Int,sliceIdx:Int,maxIdx:Int) extends Def[E]
-  //case class StGetMin     [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int) extends Def[E]
-  //case class StGetMax     [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int) extends Def[E]
-  //case class StGetMedian  [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int) extends Def[E]
-  case class StForeach    [E<:Entry:Manifest](x: Exp[Store[E]], blockSym: Sym[E], block: Block[Unit]) extends Def[Unit]
-  case class StSlice      [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int, key:Exp[E], blockSym: Sym[E], block: Block[Unit]) extends Def[Unit]
-  //case class StRange      [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int, min:Exp[E],max:Exp[E], withMin:Exp[Boolean], withMax:Exp[Boolean], blockSym: Sym[E], block: Block[Unit]) extends Def[Unit]
-  case class StDeleteOnIdx[E<:Entry:Manifest](x: Exp[Store[E]], idx:Int, key:Exp[E]) extends Def[Unit]
-  case class StClear      [E<:Entry:Manifest](x: Exp[Store[E]]) extends Def[Unit]
-  case class StSize       [E<:Entry:Manifest](x: Exp[Store[E]]) extends Def[Int]
-  case class StIndex      [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int, tp:Exp[IndexType], unique:Exp[Boolean]) extends Def[Unit]
-  //case class StIdxs     [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int) extends Def[Array[Idx[E]]]
-  case class StMutable    [E<:Entry:Manifest](x: Exp[Store[E]]) extends Def[Store[E]]
-  case class AllMutable    [E:Manifest](x: Exp[E]) extends Def[E]
+  case class SteNewSEntry   [E <: Entry: Manifest](x: Exp[Store[E]], args: Seq[Rep[Any]]) extends Def[E]
+  case class SteSampleSEntry[E <: Entry: Manifest](x: Exp[Store[E]], args: Seq[(Int, Rep[Any])]) extends Def[E]
 
-  def getStoreSym(s:Rep[_]) = (s match {
-    case Def(Reflect(StMutable(sym),_,_)) => sym
+  case class StInsert     [E <: Entry: Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
+  case class StUpdate     [E <: Entry: Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
+  case class StDelete     [E <: Entry: Manifest](x: Exp[Store[E]], e: Exp[E]) extends Def[Unit]
+  case class StGet        [E <: Entry: Manifest](x: Exp[Store[E]], idx: Int, key: Exp[E]) extends Def[E]
+  //case class StGetOrPrev  [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]) extends Def[E]
+  //case class StGetOrNext  [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]) extends Def[E]
+  case class StGetSliceMin[E <: Entry: Manifest](x: Exp[Store[E]], key: Exp[E], targetField: Int, sliceIdx: Int, minIdx: Int) extends Def[E]
+  case class StGetSliceMax[E <: Entry: Manifest](x: Exp[Store[E]], key: Exp[E], targetField: Int, sliceIdx: Int, maxIdx: Int) extends Def[E]
+  //case class StGetMin     [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int) extends Def[E]
+  //case class StGetMax     [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int) extends Def[E]
+  //case class StGetMedian  [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int) extends Def[E]
+  case class StForeach    [E <: Entry: Manifest](x: Exp[Store[E]], blockSym: Sym[E], block: Block[Unit]) extends Def[Unit]
+  case class StSlice      [E <: Entry: Manifest](x: Exp[Store[E]], idx: Int, key: Exp[E], blockSym: Sym[E], block: Block[Unit]) extends Def[Unit]
+  //case class StRange      [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int, min:Exp[E],max:Exp[E], withMin:Exp[Boolean], withMax:Exp[Boolean], blockSym: Sym[E], block: Block[Unit]) extends Def[Unit]
+  case class StDeleteOnIdx[E <: Entry: Manifest](x: Exp[Store[E]], idx: Int, key: Exp[E]) extends Def[Unit]
+  case class StClear      [E <: Entry: Manifest](x: Exp[Store[E]]) extends Def[Unit]
+  case class StSize       [E <: Entry: Manifest](x: Exp[Store[E]]) extends Def[Int]
+  case class StIndex      [E <: Entry: Manifest](x: Exp[Store[E]], idx: Int, tp: Exp[IndexType], unique: Exp[Boolean]) extends Def[Unit]
+  //case class StIdxs     [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int) extends Def[Array[Idx[E]]]
+  case class StMutable    [E <: Entry: Manifest](x: Exp[Store[E]]) extends Def[Store[E]]
+  case class AllMutable   [E: Manifest](x: Exp[E]) extends Def[E]
+
+  def getStoreSym(s: Rep[_]): Sym[_] = (s match {
+    case Def(Reflect(StMutable(sym), _ , _)) => sym
     case sym => sym
   }).asInstanceOf[Sym[_]]
 
-  def addIndicesToEntryClass[E<:Entry:Manifest](x:Exp[Store[E]], fn: ((Sym[_],collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]) => Unit)) = {
-    var xx = getStoreSym(x).asInstanceOf[Sym[Store[E]]]
+  def addIndicesToEntryClass[E <: Entry: Manifest](x: Exp[Store[E]], 
+      fn: ((Sym[_],collection.mutable.ArrayBuffer[(IndexType, Seq[Int], Boolean, Int)]) => Unit)) = {
+    val xx = getStoreSym(x).asInstanceOf[Sym[Store[E]]]
     // x match {
     //   case Def(Reflect(StMutable(xy),_,_)) => xx = xy.asInstanceOf[Sym[_]]
     //   case _ => ()
     // }
     xx.attributes.get(ENTRY_INDICES_KEY) match {
-      case Some(m) => fn(xx, m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]])
+      case Some(m) => 
+        fn(xx, m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType, Seq[Int], Boolean, Int)]])
       case None => {
-        val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
+        val m = new collection.mutable.ArrayBuffer[(IndexType, Seq[Int], Boolean, Int)]
         fn(xx, m)
         xx.attributes.put(ENTRY_INDICES_KEY, m)
       }
@@ -245,128 +267,132 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
     // storeEntryClasses(manifest[E].toString)._2 += xx
   }
 
-  // def newStore     [E<:Entry:Manifest](sndIdx: Exp[Array[Idx[E]]]):Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E], sndIdx)) }
-  def newStore     [E<:Entry:Manifest]():Exp[Store[E]] = { val s:Exp[Store[E]]=reflectMutable(StNewStore[E](manifest[E])); collectStore[E](s); s } //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E])) }
-  def stNewEntry       [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[Rep[Any]]):Exp[E] = reflectMutable(SteNewSEntry[E](x, args)) //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](x, args)) }
-  def stSampleEntry    [E<:Entry:Manifest](x: Exp[Store[E]], args:Seq[(Int,Rep[Any])]):Exp[E] = SteSampleSEntry[E](x, args) //{ checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](x, args) }
-  // def stSampleFullEntry[E<:Entry:Manifest](x: Exp[Store[E]], args:Rep[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args.zipWithIndex.map{case (arg, i) => ((i+1, arg))}) }
-  override def steGet         [E<:Entry:Manifest](x: Exp[E], i: Int):Exp[Any] = x match {
-    case Def(SteNewSEntry(_, args)) => args(i-1)
-    case Def(Reflect(SteNewSEntry(_, args),_,_)) => args(i-1)
+  // def newStore     [E <: Entry: Manifest](sndIdx: Exp[Array[Idx[E]]]):Exp[Store[E]] = { checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E], sndIdx)) }
+  def newStore[E <: Entry: Manifest]():Exp[Store[E]] = { 
+    val s: Exp[Store[E]] = reflectMutable(StNewStore[E](manifest[E]))
+    collectStore[E](s)
+    s 
+  } //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(StNewStore[E](manifest[E])) }
+  def stNewEntry[E <: Entry: Manifest](x: Exp[Store[E]], args: Seq[Exp[Any]]): Exp[E] = reflectMutable(SteNewSEntry[E](x, args)) //{ checkOrInsertEntryClass[E](manifest[E]); reflectMutable(SteNewSEntry[E](x, args)) }
+  def stSampleEntry[E <: Entry: Manifest](x: Exp[Store[E]], args: Seq[(Int, Exp[Any])]): Exp[E] = SteSampleSEntry[E](x, args) //{ checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](x, args) }
+  // def stSampleFullEntry[E <: Entry: Manifest](x: Exp[Store[E]], args:Exp[Any]*):Exp[E] = { checkOrInsertEntryClass[E](manifest[E]); SteSampleSEntry[E](manifest[E], args.zipWithIndex.map{case (arg, i) => ((i+1, arg))}) }
+  override def steGet[E <: Entry: Manifest](x: Exp[E], i: Int): Exp[Any] = x match {
+    case Def(SteNewSEntry(_, args)) => args(i - 1)
+    case Def(Reflect(SteNewSEntry(_, args),_,_)) => args(i - 1)
     case Def(SteSampleSEntry(_, args)) => (args.filter(_._1 == i))(0)._2
     case Def(Reflect(SteSampleSEntry(_, args),_,_)) => (args.filter(_._1 == i))(0)._2
     case _ => SteGet[E](x, i)
   }
-  def stInsert     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StInsert[E](x, e))
-  def stUpdate     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StUpdate[E](x, e))
-  def stDelete     [E<:Entry:Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StDelete[E](x, e))
-  def stGet        [E<:Entry:Manifest](x: Exp[Store[E]], idx_in:Int,key:Exp[E]):Exp[E] = {
+  def stInsert[E <: Entry: Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StInsert[E](x, e))
+  def stUpdate[E <: Entry: Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StUpdate[E](x, e))
+  def stDelete[E <: Entry: Manifest](x: Exp[Store[E]], e: Exp[E]):Exp[Unit] = reflectWrite(x)(StDelete[E](x, e))
+  def stGet   [E <: Entry: Manifest](x: Exp[Store[E]], idx_in: Int, key: Exp[E]): Exp[E] = {
     var idx = idx_in
     key match {
-      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
-        val tupVal = ((IHash,args.map(_._1),true,-1))
+      case Def(Reflect(SteSampleSEntry(_, args), _, _)) => addIndicesToEntryClass[E](x, (xx, m) => {
+        val tupVal = ((IHash, args.map(_._1), true, -1))
         idx = m.indexOf(tupVal)
-        if(idx < 0) {
+        if (idx < 0) {
           m += tupVal
           idx = m.size - 1
         }
       })
       case _ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.get")
     }
-    val elem:Exp[E]=StGet[E](x,idx,key)
+    val elem: Exp[E] = StGet[E](x, idx, key)
     steMakeMutable(elem)
   }
-  //def stGetOrPrev  [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]):Exp[E] = { val elem:Exp[E]=StGetOrPrev[E](x,idx,key); steMakeMutable(elem)}
-  //def stGetOrNext  [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]):Exp[E] = { val elem:Exp[E]=StGetOrNext[E](x,idx,key); steMakeMutable(elem)}
-  def stGetSliceMin[E<:Entry:Manifest](x: Exp[Store[E]], key:Exp[E],targetField:Int,sliceIdx_in:Int,minIdx_in:Int):Exp[E] = {
+  //def stGetOrPrev  [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]):Exp[E] = { val elem:Exp[E]=StGetOrPrev[E](x,idx,key); steMakeMutable(elem)}
+  //def stGetOrNext  [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]):Exp[E] = { val elem:Exp[E]=StGetOrNext[E](x,idx,key); steMakeMutable(elem)}
+  def stGetSliceMin[E <: Entry: Manifest](x: Exp[Store[E]], key: Exp[E], targetField: Int, sliceIdx_in: Int, minIdx_in: Int): Exp[E] = {
     var sliceIdx = sliceIdx_in
     var minIdx = minIdx_in
     key match {
-      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
-        val sliceIdxTupVal = ((IHash,args.map(_._1),false,-1))
+      case Def(Reflect(SteSampleSEntry(_, args), _, _)) => addIndicesToEntryClass[E](x, (xx, m) => {
+        val sliceIdxTupVal = ((IHash, args.map(_._1), false, -1))
         sliceIdx = m.indexOf(sliceIdxTupVal)
-        if(sliceIdx < 0) {
+        if (sliceIdx < 0) {
           m += sliceIdxTupVal
           sliceIdx = m.size - 1
         }
-        val minTupVal = ((ISliceHeapMin, List(targetField),false,sliceIdx))
+        val minTupVal = ((ISliceHeapMin, List(targetField), false, sliceIdx))
         minIdx = m.indexOf(minTupVal)
-        if(minIdx < 0) {
+        if (minIdx < 0) {
           m += minTupVal
           minIdx = m.size - 1
         }
       })
       case _ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.getSliceMin")
     }
-    val elem:Exp[E]=StGetSliceMin[E](x,key,targetField,sliceIdx,minIdx)
+    val elem: Exp[E] = StGetSliceMin[E](x, key, targetField, sliceIdx, minIdx)
     steMakeMutable(elem)
   }
-  def stGetSliceMax[E<:Entry:Manifest](x: Exp[Store[E]], key:Exp[E],targetField:Int,sliceIdx_in:Int,maxIdx_in:Int):Exp[E] = {
+  def stGetSliceMax[E <: Entry: Manifest](x: Exp[Store[E]], key: Exp[E], targetField: Int, sliceIdx_in: Int, maxIdx_in: Int): Exp[E] = {
     var sliceIdx = sliceIdx_in
     var maxIdx = maxIdx_in
     key match {
-      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
-        val sliceIdxTupVal = ((IHash,args.map(_._1),false,-1))
+      case Def(Reflect(SteSampleSEntry(_, args), _, _)) => addIndicesToEntryClass[E](x, (xx, m) => {
+        val sliceIdxTupVal = ((IHash, args.map(_._1), false, -1))
         sliceIdx = m.indexOf(sliceIdxTupVal)
-        if(sliceIdx < 0) {
+        if (sliceIdx < 0) {
           m += sliceIdxTupVal
           sliceIdx = m.size - 1
         }
-        val maxTupVal = ((ISliceHeapMax, List(targetField),false,sliceIdx))
+        val maxTupVal = ((ISliceHeapMax, List(targetField), false, sliceIdx))
         maxIdx = m.indexOf(maxTupVal)
-        if(maxIdx < 0) {
+        if (maxIdx < 0) {
           m += maxTupVal
           maxIdx = m.size - 1
         }
       })
       case _ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.getSliceMax")
     }
-    val elem:Exp[E]=StGetSliceMax[E](x,key,targetField,sliceIdx,maxIdx)
+    val elem: Exp[E] = StGetSliceMax[E](x, key, targetField, sliceIdx, maxIdx)
     steMakeMutable(elem)
   }
-  //def stGetMin   [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int):Exp[E] = { val elem:Exp[E]=StGetMin[E](x,idx); steMakeMutable(elem)}
-  //def stGetMax   [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int):Exp[E] = { val elem:Exp[E]=StGetMax[E](x,idx); steMakeMutable(elem)}
-  //def stGetMedian[E<:Entry:Manifest](x: Exp[Store[E]], idx:Int):Exp[E] = { val elem:Exp[E]=StGetMedian[E](x,idx); steMakeMutable(elem)}
-  def stForeach    [E<:Entry:Manifest](x: Exp[Store[E]], f:Exp[E]=>Exp[Unit]):Exp[Unit] = {
+  //def stGetMin   [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int):Exp[E] = { val elem:Exp[E]=StGetMin[E](x,idx); steMakeMutable(elem)}
+  //def stGetMax   [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int):Exp[E] = { val elem:Exp[E]=StGetMax[E](x,idx); steMakeMutable(elem)}
+  //def stGetMedian[E <: Entry: Manifest](x: Exp[Store[E]], idx:Int):Exp[E] = { val elem:Exp[E]=StGetMedian[E](x,idx); steMakeMutable(elem)}
+  def stForeach[E <: Entry: Manifest](x: Exp[Store[E]], f: Exp[E] => Exp[Unit]): Exp[Unit] = {
     val blkSym = fresh[E]
     val blk = reifyEffects(f(blkSym))
     reflectEffect(StForeach[E](x, blkSym, blk), summarizeEffects(blk).star)
   }
-  def stSlice      [E<:Entry:Manifest](x: Exp[Store[E]], idx_in:Int,key:Exp[E],f:Exp[E]=>Exp[Unit]):Exp[Unit] = {
+  def stSlice[E <: Entry: Manifest](x: Exp[Store[E]], idx_in: Int, key: Exp[E], f: Exp[E] => Exp[Unit]): Exp[Unit] = {
     var idx = idx_in
     key match {
       case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
-        val tupVal = ((IHash,args.map(_._1),false,-1))
+        val tupVal = ((IHash, args.map(_._1), false, -1))
         idx = m.indexOf(tupVal)
-        if(idx < 0) {
+        if (idx < 0) {
           m += tupVal
           idx = m.size - 1
         }
       })
-      case tp@_ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.slice, not a " + Def.unapply(tp))
+      case tp @ _ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.slice, not a " + Def.unapply(tp))
     }
     val blkSym = fresh[E]
     val blk = reifyEffects(f(blkSym))
     reflectEffect(StSlice[E](x, idx, key, blkSym, blk), summarizeEffects(blk).star)
   }
-  //def stRange      [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int,min:Exp[E],max:Exp[E],withMin:Exp[Boolean],withMax:Exp[Boolean],f:Exp[E]=>Exp[Unit]):Exp[Unit] = {
+  //def stRange      [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int,min:Exp[E],max:Exp[E],withMin:Exp[Boolean],withMax:Exp[Boolean],f:Exp[E]=>Exp[Unit]):Exp[Unit] = {
   //  val blkSym = fresh[E]
   //  val blk = reifyEffects(f(blkSym))
   //  reflectEffect(StRange[E](x, idx, min, max, withMin, withMax, blkSym, blk), summarizeEffects(blk).star)
   //}
-  def stDelete     [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int,key:Exp[E]):Exp[Unit] = reflectWrite(x)(StDeleteOnIdx[E](x, idx, key))
-  def stClear      [E<:Entry:Manifest](x: Exp[Store[E]]):Exp[Unit] = reflectWrite(x)(StClear[E](x))
-  def stSize       [E<:Entry:Manifest](x: Exp[Store[E]]):Rep[Int] = StSize[E](x)
-  def stIndex      [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int,tp:Exp[IndexType],unique:Exp[Boolean]):Exp[Unit] = reflectWrite(x)(StIndex[E](x, idx, tp, unique))
-  //def stIdxs     [E<:Entry:Manifest](x: Exp[Store[E]], idx:Int):Exp[Array[Idx[E]]] = ...
-  def stMutable    [E<:Entry:Manifest](x: Exp[Store[E]]):Exp[Store[E]] = reflectMutable(StMutable[E](x))
-  def allMutable   [E:Manifest](x: Rep[E]):Rep[E] = reflectMutable(AllMutable[E](x))
+  def stDelete  [E <: Entry: Manifest](x: Exp[Store[E]], idx: Int, key: Exp[E]): Exp[Unit] = reflectWrite(x)(StDeleteOnIdx[E](x, idx, key))
+  def stClear   [E <: Entry: Manifest](x: Exp[Store[E]]): Exp[Unit] = reflectWrite(x)(StClear[E](x))
+  def stSize    [E <: Entry: Manifest](x: Exp[Store[E]]): Rep[Int] = StSize[E](x)
+  def stIndex   [E <: Entry: Manifest](x: Exp[Store[E]], idx: Int, tp: Exp[IndexType], unique: Exp[Boolean]): Exp[Unit] = reflectWrite(x)(StIndex[E](x, idx, tp, unique))
+  //def stIdxs  [E <: Entry: Manifest](x: Exp[Store[E]], idx:Int):Exp[Array[Idx[E]]] = ...
+  def stMutable [E <: Entry: Manifest](x: Exp[Store[E]]): Exp[Store[E]] = reflectMutable(StMutable[E](x))
+  def allMutable[E:Manifest](x: Rep[E]): Rep[E] = reflectMutable(AllMutable[E](x))
 
-  def collectStore[E<:Entry:Manifest](x:Rep[_]):Unit = {
+  def collectStore[E <: Entry: Manifest](x: Rep[_]): Unit = {
     val currentSym = getStoreSym(x).asInstanceOf[Sym[Store[E]]]
     storeSyms = storeSyms :+ currentSym
-    localStoreSyms = localStoreSyms :+ currentSym
   }
+
   //////////////
   // mirroring
   override def mirror[A:Manifest](e: Def[A], f: Transformer)(implicit pos: SourceContext): Exp[A] = (e match {
@@ -454,12 +480,13 @@ trait StoreExp extends StoreOps with BaseExp with EffectExp with VariablesExp wi
 trait StoreExpOpt extends StoreExp with SEntryExpOpt
 
 trait GenericGenStore extends GenericNestedCodegen {
+  
   val IR: StoreExp with ExtendedExpressions with Effects
   import IR._
   
-  def generateNewStore(c: Sym[_]):String
+  def generateStore(c: Sym[_]): String
 
-  def simplifyTypeName(tp:String):String = tp match {
+  def simplifyTypeName(tp: String): String = tp match {
     case "Int" | "int" => "I"
     case "Long" | "long" => "L"
     case "Float" | "float" => "F"
@@ -467,10 +494,10 @@ trait GenericGenStore extends GenericNestedCodegen {
     case "Boolean" | "boolean" => "B"
     case "java.util.Date" => "A"
     case "java.lang.String" | "char*" => "S"
-    case _ => tp.replace(".","_")
+    case _ => tp.replace(".", "_")
   }
 
-  def zeroValue(tp:String):String = tp match {
+  def zeroValue(tp: String): String = tp match {
     case "Int" | "int" => "0"
     case "Long" | "long" => "0L"
     case "Float" | "float" => "0f"
@@ -480,44 +507,46 @@ trait GenericGenStore extends GenericNestedCodegen {
   }
 }
 
-trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStore {
+trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry 
+                                         with GenericGenStore {
   val IR: StoreExp with ExtendedExpressions with Effects
   import IR._
 
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case StNewStore(mE) => {
       val symName = quote(sym)
-      staticFields += ("StoreOps."+symName -> generateNewStore(sym))
-      stream.println(symName+".clear")
-      //stream.println(generateNewStore(sym)) //emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
+      staticFields += ("StoreOps." + symName -> generateStore(sym))
+      stream.println(symName + ".clear //new store")
+      //stream.println(generateStore(sym)) //emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
     }
-    case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ storeEntryType(x) + "("+args.map(quote(_)).mkString(", ")+")")
+    case SteNewSEntry(x, args) => 
+      emitValDef(sym, /*"new " +  remap(mE) +*/ storeEntryType(x) + "(" + args.map(quote(_)).mkString(", ") + ")")
     case SteSampleSEntry(x, args) => {
       val symName = "se%d".format(sym.id)
-      staticFields += ("SEntryOps."+symName -> "val %s = new %s".format(symName, storeEntryType(x)/*remap(mE)*/))
-      emitValDef(sym, "{ "+args.map{
-        case (i, v) => symName+"._"+i+" = "+quote(v)+"; "
-      }.mkString +" "+symName+" }")
+      staticFields += ("SEntryOps." + symName -> "val %s = new %s".format(symName, storeEntryType(x)/*remap(mE)*/))
+      emitValDef(sym, "{ " + args.map { case (i, v) => 
+        symName + "._" + i + " = " + quote(v) + "; "
+      }.mkString + " " + symName + " }")
     }
-    case StInsert(x,e) => emitValDef(sym, quote(x)+".insert("+quote(e)+")")
-    case StUpdate(x,e) => emitValDef(sym, quote(x)+".update("+quote(e)+")")
-    case StDelete(x,e) => emitValDef(sym, quote(x)+".delete("+quote(e)+")")
-    case StGet(x,idx,key) => if(GATHER_STATISTICS) {
-      emitValDef(sym, quote(x)+".get("+{if(idx == (-1)) "0" else ""+idx}+","+quote(key)+")")
+    case StInsert(x, e) => emitValDef(sym, quote(x) + ".insert(" + quote(e) + ")")
+    case StUpdate(x, e) => emitValDef(sym, quote(x) + ".update(" + quote(e) + ")")
+    case StDelete(x, e) => emitValDef(sym, quote(x) + ".delete(" + quote(e) + ")")
+    case StGet(x, idx, key) => if (GATHER_STATISTICS) {
+      emitValDef(sym, quote(x) + ".get(" + { if (idx == (-1)) "0" else "" + idx } + "," + quote(key) + ")")
     } else {
-      emitValDef(sym, quote(x)+".idxs("+{if(idx == (-1)) "0" else ""+idx}+").get("+quote(key)+")")
+      emitValDef(sym, quote(x) + ".idxs(" + { if(idx == (-1)) "0" else "" + idx } + ").get(" + quote(key) + ")")
     }
     //case StGetOrPrev(x,idx,key) => emitValDef(sym, quote(x)+".getOrPrev("+{if(idx == (-1)) "1" else ""+idx}+", "+quote(key)+")")
     //case StGetOrNext(x,idx,key) => emitValDef(sym, quote(x)+".getOrNext("+{if(idx == (-1)) "1" else ""+idx}+", "+quote(key)+")")
-    case StGetSliceMin(x,key,targetField,sliceIdx,minIdx) => if(GATHER_STATISTICS) {
-        emitValDef(sym, quote(x)+".get("+{if(minIdx == (-1)) "1" else minIdx}+","+quote(key)+") /* min */")
+    case StGetSliceMin(x, key, targetField, sliceIdx, minIdx) => if (GATHER_STATISTICS) {
+        emitValDef(sym, quote(x) + ".get(" + { if (minIdx == (-1)) "1" else minIdx } + "," + quote(key) + ") /* min */")
       } else {
-        emitValDef(sym, quote(x)+".idxs("+{if(minIdx == (-1)) "1" else minIdx}+").get("+quote(key)+") /* min */")
+        emitValDef(sym, quote(x) + ".idxs(" + { if (minIdx == (-1)) "1" else minIdx } + ").get(" + quote(key) + ") /* min */")
       }
-    case StGetSliceMax(x,key,targetField,sliceIdx,maxIdx) => if(GATHER_STATISTICS) {
-        emitValDef(sym, quote(x)+".get("+{if(maxIdx == (-1)) "1" else maxIdx}+","+quote(key)+") /* max */")
+    case StGetSliceMax(x, key, targetField, sliceIdx, maxIdx) => if (GATHER_STATISTICS) {
+        emitValDef(sym, quote(x) + ".get(" + { if (maxIdx == (-1)) "1" else maxIdx } + "," + quote(key) + ") /* max */")
       } else {
-        emitValDef(sym, quote(x)+".idxs("+{if(maxIdx == (-1)) "1" else maxIdx}+").get("+quote(key)+") /* max */")
+        emitValDef(sym, quote(x) + ".idxs(" + { if (maxIdx == (-1)) "1" else maxIdx } + ").get(" + quote(key) + ") /* max */")
       }
     //case StGetMin(x,idx) => emitValDef(sym, quote(x)+".getMin("+{if(idx == (-1)) "1" else ""+idx}+")")
     //case StGetMax(x,idx) => emitValDef(sym, quote(x)+".getMax("+{if(idx == (-1)) "1" else ""+idx}+")")
@@ -526,18 +555,18 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     //   stream.println(quote(blockSym) + " => ")
     //   emitBlock(block)
     //   stream.println("}")
-    case StForeach(x, blockSym, block) => if(GATHER_STATISTICS) {
-        emitValDef(sym, quote(x)+".foreach{")
+    case StForeach(x, blockSym, block) => if (GATHER_STATISTICS) {
+        emitValDef(sym, quote(x) + ".foreach {")
       } else {
-        emitValDef(sym, quote(x)+".idxs(0).foreach{")
+        emitValDef(sym, quote(x) + ".idxs(0).foreach {")
       }
       stream.println(quote(blockSym) + " => ")
       emitBlock(block)
       stream.println("}")
-    case StSlice(x, idx, key, blockSym, block) => if(GATHER_STATISTICS) {
-        emitValDef(sym, quote(x)+".slice("+{if(idx == (-1)) "1" else ""+idx}+","+quote(key)+",{")
+    case StSlice(x, idx, key, blockSym, block) => if (GATHER_STATISTICS) {
+        emitValDef(sym, quote(x) + ".slice(" + { if (idx == (-1)) "1" else "" + idx } + "," + quote(key) + ",{")
       } else {
-        emitValDef(sym, quote(x)+".idxs("+{if(idx == (-1)) "1" else ""+idx}+").slice("+quote(key)+",{")
+        emitValDef(sym, quote(x) + ".idxs(" + { if (idx == (-1)) "1" else "" + idx } + ").slice(" + quote(key) + ",{")
       }
       stream.println(quote(blockSym) + " => ")
       emitBlock(block)
@@ -546,23 +575,27 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     //  stream.println(quote(blockSym) + " => ")
     //  emitBlock(block)
     //  stream.println("})")
-    case StDeleteOnIdx(x,idx,key) => emitValDef(sym, quote(x)+".delete("+{if(idx == (-1)) "0" else ""+idx}+", "+quote(key)+")")
-    case StClear(x) => emitValDef(sym, quote(x)+".clear")
-    case StSize(x) => emitValDef(sym, quote(x)+".size")
-    case StIndex(x, idx, tp, unique) => emitValDef(sym,  quote(x)+".get("+{if(idx == (-1)) "0" else ""+idx}+", "+quote(tp)+", "+quote(unique)+")")
+    case StDeleteOnIdx(x, idx, key) => 
+      emitValDef(sym, quote(x) + ".delete(" + { if (idx == (-1)) "0" else "" + idx } + ", " + quote(key) + ")")
+    case StClear(x) => emitValDef(sym, quote(x) + ".clear")
+    case StSize(x) => emitValDef(sym, quote(x) + ".size")
+    case StIndex(x, idx, tp, unique) => 
+      emitValDef(sym,  quote(x) + ".get(" + { if (idx == (-1)) "0" else "" + idx } + ", " + quote(tp) + ", " + quote(unique) + ")")
     case StMutable(x) => emitValDef(sym, quote(x)+" /*store made mutable*/")
     case AllMutable(x) => emitValDef(sym, quote(x)+" /*made mutable*/")
     case _ => super.emitNode(sym, rhs)
   }
 
-  def getStoreSym(s:Rep[_]) = (s match {
+  def getStoreSym(s:Exp[_]) = (s match {
     case Def(Reflect(StMutable(sym),_,_)) => sym
     case sym => sym
   }).asInstanceOf[Sym[_]]
 
-  def storeEntryType(sym:Rep[_]) = extractEntryClassName(getStoreSym(sym))._1
+  def storeEntryType(sym: Exp[_]): String = extractEntryClassName(getStoreSym(sym))._1
 
-  def extractEntryClassName(n:Rep[_]) = {
+  def storeType(sym: Exp[_]): String = s"Store[${storeEntryType(sym)}]"
+
+  def extractEntryClassName(n:Exp[_]) = {
     val sym = n.asInstanceOf[Sym[Store[Entry]]]
     val m = sym.tp
     val ms = m.typeArguments(0).toString
@@ -570,19 +603,22 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     val fullClsName = ms.take(ms.indexOf("["))
     val baseClsName = fullClsName.takeRight(fullClsName.size - fullClsName.lastIndexOf('.') - 1)
     val targsStrList = targs.map(tp => remap(tp))
-    val clsName = baseClsName+"_x"+sym.id+"_"+targsStrList.map(tp => simplifyTypeName(tp)).mkString
+    val clsName = baseClsName + "_x" + sym.id + "_" + targsStrList.map(simplifyTypeName).mkString
     (clsName, targsStrList)
   }
 
   // Implementation of MurmurHash3 based on scala.util.hashing.MurmurHash3 for Products
   // https://github.com/scala/scala/blob/v2.10.2/src/library/scala/util/hashing/MurmurHash3.scala
-  def hashFun(argTypes:List[String],locs:Seq[Int],obj:String=null) = {
-    def h(tp:String) = if (tp=="Int") "" else ".##"
-    def rotl(i:String, dist:Int) = "("+i+" << "+dist+") | ("+i+" >>> "+(-dist)+")"
-    locs.zipWithIndex.map { case (i,n) =>
-      (if(n==0) "{ var h:Int=0xcafebabe; var mix:Int" else "  mix") + "="+(if (obj!=null) obj+"." else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
-      "mix=("+rotl("mix",15)+")*0x1b873593 ^ h; mix=" + rotl("mix", 13)+"; h=(mix << 1)+mix+0xe6546b64; "
-    }.mkString+"h^="+locs.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h ^ (h>>>16) }"
+  def hashFun(argTypes: List[String], locs: Seq[Int], obj: String = null, seed: String = "0xcafebabe") = {
+    def h(tp: String) = if (tp == "Int") "" else ".##"
+    def rotl(i: String, dist: Int) = "(" + i + " << " + dist + ") | (" + i + " >>> " + (-dist) + ")"
+    locs.zipWithIndex.map { case (i, n) =>
+      (if (n == 0) "{ var h: Int = " + seed + "; var mix: Int" else "  mix") + "=" + 
+      (if (obj != null) obj + "." else "") + "_" + i + h(argTypes(i - 1)) + " * 0xcc9e2d51; " +
+      "mix = (" + rotl("mix", 15) + ") * 0x1b873593 ^ h; mix = " + 
+      rotl("mix", 13) + "; h=(mix << 1) + mix + 0xe6546b64; "
+    }.mkString + 
+    "h ^= " + locs.size + "; h ^= h>>>16; h *= 0x85ebca6b; h ^= h >>> 13; h *= 0xc2b2ae35; h ^ (h>>>16) }"
   }
 
   override def emitDataStructures(out: java.io.PrintWriter): Unit = {
@@ -590,16 +626,23 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     out.println
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
-      out.println("case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
-        "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
-      }.mkString(", "), argTypes.size))
-      out.println("  def copy = "+clsName+"("+argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")+")")
+      out.println("case class %s(%s) extends Entry(%d) {"
+        .format(clsName, argTypes.zipWithIndex.map { case (argTp, i) =>
+          "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
+        }.mkString(", "), argTypes.size))
+      out.println("  def copy = " + clsName + "(" + 
+        argTypes.zipWithIndex.map { case (_, i) => "_%d".format(i + 1) }
+        .mkString(", ") + ")")
       //val l="_"+argTypes.size
       //out.println("  override def zero = "+l+" == "+zeroValue(argTypes.last))
       //out.println("  override def merge(e0:Entry) { val e=e0.asInstanceOf["+clsName+"]; "+l+" "+(argTypes.last match { case "java.util.Date" => "= new Date("+l+".getTime + e."+l+".getTime)" case _ => "+= e."+l })+" }")
       out.println("}")
 
-      val indices = sym.attributes.get(ENTRY_INDICES_KEY).asInstanceOf[Option[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]].getOrElse(new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)])
+      val indices = sym.attributes.get(ENTRY_INDICES_KEY) match {
+        case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
+        case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
+                     m += ((IList, (1 to sym.tp.typeArguments.size),false,-1))
+      }
       // ------------- EntryIdx
       indices.zipWithIndex.foreach{ case ((idxType,idxLoc,idxUniq,idxSliceIdx),i) =>
         out.println("object "+clsName+"_Idx"+i+" extends EntryIdx["+clsName+"] {\n"+ind(
@@ -621,7 +664,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
   }
 
   override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
-    storeSyms.foreach { c => out.println(ddbt.Utils.ind(generateNewStore(c),2)) }
+    storeSyms.foreach { c => out.println(ddbt.Utils.ind(generateStore(c),2)) }
     functionNames.foreach { fn =>
       out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
         quote(c, true)
@@ -629,7 +672,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     }
   }
 
-  override def generateNewStore(c: Sym[_]):String = {
+  override def generateStore(c: Sym[_]):String = {
     val outStream = new java.io.StringWriter
     val out = new java.io.PrintWriter(outStream)
 
@@ -666,6 +709,20 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
   */
 }
 
+object SparkGenStore {
+  val FIELDS = "Store.FIELDS"
+  val ENTRY_GET = "Store.Entry.GET"
+  val CONTAINER_NUM_PARTITIONS = "SparkGenStore.CONTAINER_NUM_PARTITIONS"
+  val CONTAINER_PARTITION_KEYS = "SparkGenStore.CONTAINER_PARTITION_KEYS" 
+}
+
+trait SparkGenStore extends ScalaGenStore {
+
+  val IR: StoreExp with ExtendedExpressions with Effects
+  import IR._
+  import SparkGenStore._
+  import ddbt.Utils.{ind, block}
+}
 
 trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
   val IR: StoreExp with ExtendedExpressions with Effects
@@ -674,9 +731,9 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case StNewStore(mE) => {
       val symName = quote(sym)
-      staticFields += ("StoreOps."+symName -> generateNewStore(sym))
+      staticFields += ("StoreOps."+symName -> generateStore(sym))
       stream.println(symName+".clear")
-      //stream.println(generateNewStore(sym)) //emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
+      //stream.println(generateStore(sym)) //emitValDef(sym, "new Store[" + storeEntryType(sym) + "]("/* XXX: need to collect from attributes how many indexes are required +quote(sndIdx)+ */ +"0)")
     }
     case SteNewSEntry(x, args) => emitValDef(sym, /*"new " +  remap(mE) +*/ storeEntryType(x) + "("+args.map(quote(_)).mkString(", ")+")")
     case SteSampleSEntry(x, args) => {
@@ -742,14 +799,16 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
     case _ => super.emitNode(sym, rhs)
   }
 
-  def getStoreSym(s:Rep[_]) = (s match {
+  def getStoreSym(s: Rep[_]) = (s match {
     case Def(Reflect(StMutable(sym),_,_)) => sym
     case sym => sym
   }).asInstanceOf[Sym[_]]
 
-  def storeEntryType(sym:Rep[_]) = extractEntryClassName(getStoreSym(sym))._1
+  def storeEntryType(sym: Rep[_]) = extractEntryClassName(getStoreSym(sym))._1
+  
+  def storeType(sym: Exp[_]): String = s"Store[${storeEntryType(sym)}]"
 
-  def extractEntryClassName(n:Rep[_]) = {
+  def extractEntryClassName(n: Rep[_]) = {
     val sym = n.asInstanceOf[Sym[Store[Entry]]]
     val m = sym.tp
     val ms = m.typeArguments(0).toString
@@ -777,7 +836,7 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
     out.println
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
-      out.println("case class %s(%s) extends ddbt.lib.store.Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
+      out.println("case class %s(%s) extends Entry(%d) {".format(clsName, argTypes.zipWithIndex.map{ case (argTp, i) =>
         "var _%d:%s = %s".format(i+1, argTp, zeroValue(argTp))
       }.mkString(", "), argTypes.size))
       out.println("  def copy = "+clsName+"("+argTypes.zipWithIndex.map{ case (_, i) => "_%d".format(i+1) }.mkString(", ")+")")
@@ -808,7 +867,7 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
   }
 
   override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
-    storeSyms.foreach { c => out.println(ddbt.Utils.ind(generateNewStore(c),2)) }
+    storeSyms.foreach { c => out.println(ddbt.Utils.ind(generateStore(c),2)) }
     functionNames.foreach { fn =>
       out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
         quote(c, true)
@@ -816,7 +875,7 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
     }
   }
 
-  override def generateNewStore(c: Sym[_]):String = {
+  override def generateStore(c: Sym[_]):String = {
     val outStream = new java.io.StringWriter
     val out = new java.io.PrintWriter(outStream)
 

@@ -14,7 +14,9 @@
 
 #include <functional>
 
+#include "runtime.hpp"
 #include "event.hpp"
+
 
 namespace dbtoaster {
 namespace streams {
@@ -85,7 +87,7 @@ struct source_multiplexer
     void add_source(std::shared_ptr<source> s);
     void remove_source(std::shared_ptr<source> s);
 
-    void init_source();
+    void init_source(size_t batch_size, size_t parallel, bool is_table);
 };
 
 }

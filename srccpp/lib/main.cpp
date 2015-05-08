@@ -17,8 +17,8 @@ namespace dbtoaster{
         void process_streams() {
             for( long i = 1; i <= 10; ++i ) {
                 event_args_t ev_args;
-                ev_args.push_back(new long(i));
-                ev_args.push_back(new long(i+10));
+                ev_args.push_back(std::shared_ptr<long>(new long(i)));
+                ev_args.push_back(std::shared_ptr<long>(new long(i+10)));
                 event_t ev( insert_tuple, get_relation_id("S"), 0, ev_args);
 
                 process_stream_event(ev);
@@ -64,17 +64,17 @@ bool async_mode(int argc, char* argv[])
  * @return
  */
 int main(int argc, char* argv[]) {
-    bool async = async_mode(argc,argv);
-
     dbtoaster::Program p(argc,argv);
+    bool async = p.is_async(); //async_mode(argc,argv);
+    bool no_output = p.is_no_output();
     //dbtoaster::CustomProgram_1 p;
     //dbtoaster::CustomProgram_2 p;
     dbtoaster::Program::snapshot_t snap;
 
-    // cout << "Initializing program:" << endl;
+    // if(!no_output) cout << "Initializing program:" << endl;
     p.init();
 
-    // cout << "Running program:" << endl;
+    // if(!no_output) cout << "Running program:" << endl;
     p.run( async );
     while( !p.is_finished() )
     {
@@ -82,9 +82,11 @@ int main(int argc, char* argv[]) {
        DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
     }
 
-    // cout << "Printing final result:" << endl;
-    snap = p.get_snapshot();
-    DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
-    cout << std::endl;
+    // if(!no_output) cout << "Printing final result:" << endl;
+    if(!no_output) {
+        snap = p.get_snapshot();
+        DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
+        cout << std::endl;
+    }
     return 0;
 }
