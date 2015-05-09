@@ -42,6 +42,7 @@ object Compiler {
   var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
   var ni   : Boolean = false     // non-incremental query evaluation (implies depth=0)
   var inl  : Int = 0             // inlining level, in range [0-10]
+  var watch : Boolean = false   // stream of updates on result map
   // Execution
   var exec    : Boolean = false  // compile and execute immediately
   var exec_dir: String  = null   // execution classpath
@@ -119,6 +120,7 @@ object Compiler {
                                       else try { 
                                         math.min(10, math.max(0, s.toInt)) 
                                       } catch { case _: Throwable => 0 })
+        case "-w" => watch = true;
         case "-ni" => ni = true; depth = 0; flags = Nil
         case "-x" => exec = true
         case "-xd" => eat(s => exec_dir = s)
@@ -217,7 +219,7 @@ object Compiler {
       case LANG_AKKA => new AkkaGen(name)
       case LANG_LMS => new LMSCppGen(name)
       case LANG_CPP_LMS => new LMSCppGen(name)
-      case LANG_SCALA_LMS => new LMSScalaGen(name)
+      case LANG_SCALA_LMS => new LMSScalaGen(name, watch)
       case LANG_SPARK_LMS => new LMSSparkGen(name)
       case _ => error("Code generation for " + lang + " is not supported", true)
     }

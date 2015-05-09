@@ -1,6 +1,6 @@
 package ddbt.lib.store
-import scala.reflect._
 
+import scala.reflect._
 import ddbt.Utils.ind
 import scala.collection.mutable.HashMap
 
@@ -280,6 +280,112 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
     res.append("}").toString
   }
 }
+
+
+class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) extends Store[E](idxs, ops)(cE) {
+  import ddbt.lib.Messages.TupleOp
+  import ddbt.lib.Messages.TupleDelete
+  import ddbt.lib.Messages.TupleInsert
+  import scala.collection.mutable.MutableList
+
+  abstract sealed class StoreEvent
+  case class DeleteEvent(e: Entry) extends StoreEvent
+  case class UpdateEvent(oldE: Entry, newE: Entry) extends StoreEvent
+  case class InsertEvent(e: Entry) extends StoreEvent
+
+  def this(n:Int)(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),null)(cE)
+  def this(n:Int,ops:Array[EntryIdx[E]])(implicit cE:ClassTag[E]) = this(new Array[Idx[E]](n),ops)(cE)
+
+  var events = MutableList[StoreEvent]()
+  override def unsafeInsert(idx:Int,e:E):Unit = { events += InsertEvent(e.copy); super.unsafeInsert(idx, e) }
+  override def delete(e:E):Unit = { events += DeleteEvent(e.copy); super.delete(e) }
+  override def insert(e:E):Unit = { events += InsertEvent(e.copy); super.insert(e) }
+  def logUpdate(o:E, n:E):Unit = { events += UpdateEvent(o.copy, n.copy) }
+  //override def update(e:E):Unit = { events += Update(e); super.update(e) } - Update method won't be invoked
+
+  /**
+   * Returns list of new events affected the store since the last invocation of the method
+   */
+  def getEventsDelta: List[StoreEvent] = { val r = events.toList; events.clear(); r}
+
+  /**
+   * Returns stream of output tuples by processing events delta
+   */
+  def getStream: List[Array[AnyRef]] = {
+
+    def negate[A](v: A): Any = v match {
+      case _: Int => implicitly[Numeric[Int]].negate(v.asInstanceOf[Int])
+      case _: Long => implicitly[Numeric[Long]].negate(v.asInstanceOf[Long])
+      case _: Float => implicitly[Numeric[Float]].negate(v.asInstanceOf[Float])
+      case _: Double => implicitly[Numeric[Double]].negate(v.asInstanceOf[Double])
+      case _ => v
+    }
+
+    def negateEntry(elements: Array[AnyRef]): Array[AnyRef] = {
+      val lastIndex = elements.length - 1
+      elements(lastIndex) = negate(elements(lastIndex)).asInstanceOf[AnyRef]
+      elements
+    }
+
+    val es = getEventsDelta
+
+    es.flatMap(e => e match {
+      case InsertEvent(entry) => List(entry.elements)
+      case UpdateEvent(oldEntry, newEntry) => List(negateEntry(oldEntry.elements), newEntry.elements)
+      case DeleteEvent(entry) => List(negateEntry(entry.elements))
+    })
+  }
+}
+
+
+class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
+  import scala.collection.mutable.MutableList
+
+  abstract sealed class ValueEvent[A<:AnyVal];
+  case class UpdateEvent[A<:AnyVal](oldV: A, newV: A) extends ValueEvent[A]
+
+  var events = MutableList[ValueEvent[A]]()
+
+  def +(other: A): ValueWrapper[A] = {
+    new ValueWrapper(n.plus(v, other))
+  }
+
+  def -(other: A): ValueWrapper[A] = {
+    new ValueWrapper(n.minus(v, other))
+  }
+
+  def +=(other: A): ValueWrapper[A] = {
+    val oldV = v
+    v = n.plus(v, other)
+    events += UpdateEvent(oldV, v)
+    this
+  }
+
+  def -=(other: A): ValueWrapper[A] = {
+    val oldV = v
+    v = n.minus(v, other)
+    events += UpdateEvent(oldV, v)
+    this
+  }
+
+  def value = v
+
+  /**
+   * Retruns list of new events affected the value since the last invocation of the method
+   */
+  def getEventsDelta: List[ValueEvent[A]] = { val r = events.toList; events.clear(); r }
+
+  /**
+   * Returns delta values by processing Events delta
+   */
+  def getStream: List[A] = {
+    val es = getEventsDelta
+    es.flatMap(e => e match {
+      case UpdateEvent(oldV, newV) => List(n.negate(oldV), newV)
+    })
+  }
+}
+
 
 // Hash index has been moved to Store.java
 
