@@ -628,6 +628,7 @@ class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Stor
       if(_1 == e._1 && _2 == e._2) 0 else 1
     }
     def copy = SEntry11_IISSSSSSFDI(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11)
+    def elements = Array[Any](_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11).asInstanceOf[Array[AnyRef]]
   }
   case class SEntry8_IIIIIAFS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:Int = 0, var _5:Int = 0, var _6:java.util.Date = null, var _7:Float = 0f, var _8:java.lang.String = null) extends Entry(8) {
     def hash(i: Int):Int = {
@@ -698,6 +699,7 @@ class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Stor
       } else { 0 }
     }
     def copy = SEntry8_IIIIIAFS(_1, _2, _3, _4, _5, _6, _7, _8)
+    def elements = Array[Any](_1, _2, _3, _4, _5, _6, _7, _8).asInstanceOf[Array[AnyRef]]
   }
   case class SEntry8_IIIIAIIB(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:Int = 0, var _5:java.util.Date = null, var _6:Int = 0, var _7:Int = 0, var _8:Boolean = false) extends Entry(8) {
     def hash(i: Int):Int = {
@@ -782,6 +784,7 @@ class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Stor
       } else { 0 }
     }
     def copy = SEntry8_IIIIAIIB(_1, _2, _3, _4, _5, _6, _7, _8)
+    def elements = Array[Any](_1, _2, _3, _4, _5, _6, _7, _8).asInstanceOf[Array[AnyRef]]
   }
   case class SEntry17_IIISSSSSSSSSSIIIS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:java.lang.String = null, var _9:java.lang.String = null, var _10:java.lang.String = null, var _11:java.lang.String = null, var _12:java.lang.String = null, var _13:java.lang.String = null, var _14:Int = 0, var _15:Int = 0, var _16:Int = 0, var _17:java.lang.String = null) extends Entry(17) {
     def hash(i: Int):Int = {
@@ -793,6 +796,7 @@ class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Stor
       if(_1 == e._1 && _2 == e._2) 0 else 1
     }
     def copy = SEntry17_IIISSSSSSSSSSIIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17)
+    def elements = Array[Any](_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17).asInstanceOf[Array[AnyRef]]
   }
   case class SEntry21_IIISSSSSSSSSASFFFFIIS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:java.lang.String = null, var _9:java.lang.String = null, var _10:java.lang.String = null, var _11:java.lang.String = null, var _12:java.lang.String = null, var _13:java.util.Date = null, var _14:java.lang.String = null, var _15:Float = 0f, var _16:Float = 0f, var _17:Float = 0f, var _18:Float = 0f, var _19:Int = 0, var _20:Int = 0, var _21:java.lang.String = null) extends Entry(21) {
     def hash(i: Int):Int = {
@@ -838,6 +842,7 @@ class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Stor
       } else { 0 }
     }
     def copy = SEntry21_IIISSSSSSSSSASFFFFIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21)
+    def elements = Array[Any](_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21).asInstanceOf[Array[AnyRef]]
   }
   case class SEntry10_IIIIIIAIFS(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0, var _4:Int = 0, var _5:Int = 0, var _6:Int = 0, var _7:java.util.Date = null, var _8:Int = 0, var _9:Float = 0f, var _10:java.lang.String = null) extends Entry(10) {
     def hash(i: Int):Int = {
@@ -878,6 +883,7 @@ class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Stor
       } else { 0 }
     }
     def copy = SEntry10_IIIIIIAIFS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10)
+    def elements = Array[Any](_1, _2, _3, _4, _5, _6, _7, _8, _9, _10).asInstanceOf[Array[AnyRef]]
   }
   case class SEntry3_III(var _1:Int = 0, var _2:Int = 0, var _3:Int = 0) extends Entry(3) {
     def hash(i: Int):Int = {
@@ -928,6 +934,7 @@ class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Stor
       } else { 0 }
     }
     def copy = SEntry3_III(_1, _2, _3)
+    def elements = Array[Any](_1, _2, _3).asInstanceOf[Array[AnyRef]]
   }
   case class SEntry5_IISFS(var _1:Int = 0, var _2:Int = 0, var _3:java.lang.String = null, var _4:Float = 0f, var _5:java.lang.String = null) extends Entry(5) {
     def hash(i: Int):Int = {
@@ -939,6 +946,7 @@ class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Stor
       if(_1 == e._1) 0 else 1
     }
     def copy = SEntry5_IISFS(_1, _2, _3, _4, _5)
+    def elements = Array[Any](_1, _2, _3, _4, _5).asInstanceOf[Array[AnyRef]]
   }
   case class SEntry9_ISSSSSSFD(var _1:Int = 0, var _2:java.lang.String = null, var _3:java.lang.String = null, var _4:java.lang.String = null, var _5:java.lang.String = null, var _6:java.lang.String = null, var _7:java.lang.String = null, var _8:Float = 0f, var _9:Double = 0D) extends Entry(9) {
     def hash(i: Int):Int = {
@@ -950,6 +958,7 @@ class stockLevelTx(x0: Store[SEntry3_III], x1: Store[SEntry8_IIIIIAFS], x2: Stor
       if(_1 == e._1) 0 else 1
     }
     def copy = SEntry9_ISSSSSSFD(_1, _2, _3, _4, _5, _6, _7, _8, _9)
+    def elements = Array[Any](_1, _2, _3, _4, _5, _6, _7, _8, _9).asInstanceOf[Array[AnyRef]]
   }
   class EfficientExecutor {
     val x0 = new Store[SEntry3_III](2)
