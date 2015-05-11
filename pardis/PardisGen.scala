@@ -122,12 +122,13 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
             cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, mE.typeArguments(i))) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, mE.typeArguments(ks.size)))
           },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
         } else {
+          println(s"tpe here! ${tp}")
           val mE = man(tp)
-                  println(s"tpe here! ${mE}")
-                              println(s"tpe here! ${mE.typeArguments}")
+          println(s"tpe here! ${mE}")
+          println(s"tpe here! ${mE.typeArguments} ")
           proxy.foreach(__lambda {
             (e:Rep[Entry])=> {
-              cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, mE.typeArguments(i))) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, mE.typeArguments(ks.size)))
+              cx.add(ki.map{ case (k,i) => println(mE.typeArguments.size); (k,impl.steGet(e, i+1)(impl.EntryType, runtimeType[Long])) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, runtimeType[Long]))
             }
           })
         }
