@@ -237,7 +237,10 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
   }
 
   override def genMap(m:MapDef):String = {
-    if (m.keys.size==0) createVarDefinition(m.name, m.tp)+";"
+    if (m.keys.size==0) {
+      val c = ctx0(m.name)._1.asInstanceOf[impl.Sym[_]]
+      createVarDefinition(m.name, m.tp)+";\n" + s"var ${c.name+c.id} = " + m.name + ";\n"
+    }
     else {
       println("MAP NAME: " + m.name)
       impl.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.Sym[_]], m.name, true)
@@ -287,14 +290,19 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       t.stmts.filter(filterStatement).map {
         case StmtMap(m,e,op,oi) => cx.load()
           if (m.keys.size==0) {
-            val mm = m.tp match {
-              case TypeLong => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[Long]]])
-              case TypeDouble => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[Double]]])
-              case TypeString => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[String]]])
-              //case TypeDate => impl.Variable(cx(m.name).asInstanceOf[Rep[impl.Variable[java.util.Date]]])
+            val (mm, mmtp) = m.tp match {
+              case TypeLong => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[Long]]]) -> LongType
+              case TypeDouble => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[Double]]]) -> DoubleType
+              case TypeString => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[String]]]) -> StringType
+              case TypeDate => impl.Var(cx(m.name).asInstanceOf[Rep[impl.Var[java.util.Date]]]) -> DateType
               case _ => sys.error("Unsupported type "+m.tp)
             }
-            expr(e,(r:Rep[_]) => op match { case OpAdd => impl.var_plusequals(mm,r) case OpSet => impl.__assign(mm,r) })
+
+//            println(s"tpe here! ${mm}, ${mmtp}, ${m.tp}}");
+            expr(e,(r:Rep[_]) => op match {
+              case OpAdd => println(s"tpe here! ${mm}, ${mm.tp}}"); impl.var_plusequals(mm,r)(mmtp.asInstanceOf[TypeRep[Any]])
+              case OpSet => impl.__assign(mm,r)
+            })
           } else {
             val mm = cx(m.name).asInstanceOf[Rep[Store[Entry]]]
             implicit val mE = manEntry(m.tks ++ List(m.tp))
@@ -303,7 +311,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
               expr(ie,(r:Rep[_]) => {
                 val ent = impl.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)) : _*)
                 impl.__ifThenElse(impl.infix_==(stProxyGet(mm, m.keys.zipWithIndex.map{ case (n,i) => (i+1,cx(n))} : _*),
-                  impl.unit(null)),impl.m3set(mm,ent),impl.unit(()))
+                  impl.unit(null)),impl.m3set(mm,ent)(mE),impl.unit(()))
               })
             }
             cx.load()
@@ -371,9 +379,19 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       println(x._3)
       println("========")
       val doc = codeGen.blockToDocument((x._3))
+//      println(doc)
+//      val doc = {
+//  println(x._3.stmts.size)
+//        x._3.stmts.foldLeft[Document](Document.empty)((a, c) => a :/: codeGen.stmtToDocument(c))
+//      }
       val strWriter = new StringWriter()
       val pw = new java.io.PrintWriter(strWriter)
-      doc.format(80, pw)
+//      for(stm <- x._3.stmts) {
+//        codeGen.stmtToDocument(stm).format(80, pw)
+//        pw.println()
+//      }
+      doc.format(20, pw)
+      println(strWriter.toString)
       ts += "def on"+x._1+"("+x._2+") {\n"+strWriter.toString+"\n}\n"
     }
 

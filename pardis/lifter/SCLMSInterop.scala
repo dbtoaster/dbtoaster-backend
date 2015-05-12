@@ -1,6 +1,7 @@
 package lifter
 
 import ch.epfl.data.sc.pardis
+import ch.epfl.data.sc.pardis.types.AnyType
 import pardis.deep.scalalib.{IntComponent, LongComponent, DoubleComponent}
 import pardis.ir._
 
@@ -17,6 +18,7 @@ trait SCLMSInterop extends Base with IntComponent with LongComponent with Double
         case IntType => lhs.asInstanceOf[Rep[Int]] + rhs.asInstanceOf[Rep[Int]]
         case LongType => lhs.asInstanceOf[Rep[Long]] + rhs.asInstanceOf[Rep[Long]]
         case DoubleType => lhs.asInstanceOf[Rep[Double]] + rhs.asInstanceOf[Rep[Double]]
+        //case AnyType => lhs.asInstanceOf[Rep[Double]] + rhs.asInstanceOf[Rep[Double]]
       }
   }.asInstanceOf[Rep[T]]
 

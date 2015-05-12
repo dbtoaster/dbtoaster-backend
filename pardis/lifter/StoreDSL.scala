@@ -137,7 +137,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   def m3set[E<:Entry](map:Rep[Store[E]], ent:Rep[E])(implicit m:TypeRep[E]) = {
     val tmp = isTemp(map.asInstanceOf[Sym[_]])
-    val n = m.typeArguments.size.asInstanceOf[Rep[Int]]
+    val n = unit(m.typeArguments.size)
     val lastMan = m.typeArguments.last
     val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
     val entVal = ent.get(n)

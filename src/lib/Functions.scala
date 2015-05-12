@@ -54,6 +54,16 @@ object Functions {
     }
   }
 
+  def Udate_part(field:String, date:Long): Long = {
+    val c = java.util.Calendar.getInstance; c.setTime(new Date(date))
+    field.toLowerCase match {
+      case "year"  => c.get(java.util.Calendar.YEAR)
+      case "month" => c.get(java.util.Calendar.MONTH)
+      case "day"   => c.get(java.util.Calendar.DAY_OF_MONTH)
+      case p => throw new Exception("Invalid date part: "+p)
+    }
+  }
+
   def Usubstring(s:String,b:Long,e:Long= -1) = if (e== -1) s.substring(b.toInt) else s.substring(b.toInt,e.toInt)
 
   def Uvec_length(x:Double, y:Double, z:Double):Double = Vector(x,y,z).length
