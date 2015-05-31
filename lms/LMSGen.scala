@@ -566,10 +566,10 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
                 (if (ld != "") " loadTables();" else "") +
                 " onSystemReady()\n" +
                 "case EndOfStream | GetSnapshot(_) => " + onEndStream + " " + snap + "\n" +
-                "case GetStream(n) => n match {\n" +
+                "case GetStream(n, withTupleOp) => n match {\n" +
                 ind(
-                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => " + q.name + ".getStream"}.mkString("\n") + "\n" +
-                    "case _ => List(" + s0.queries.map(q => q.name + ".getStream").mkString(",") +
+                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => " + q.name + ".getStream(withTupleOp)"}.mkString("\n") + "\n" +
+                    "case _ => List(" + s0.queries.map(q => q.name + ".getStream(withTupleOp)").mkString(",") +
                     ")\n"
                 ) + "\n}"
             ) +
@@ -591,10 +591,10 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
                 " onSystemReady(); t0 = System.nanoTime; " +
                 "if (timeout > 0) t1 = t0 + timeout * 1000000L\n" +
                 "case EndOfStream | GetSnapshot(_) => t1 = System.nanoTime; " + onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), " + snap + ")\n" +
-                "case GetStream(n) => n match {\n" +
+                "case GetStream(n, withTupleOp) => n match {\n" +
                 ind(
-                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => sender ! (StreamStat(t1 - t0, tN, tS), " + q.name + ".getStream)"}.mkString("\n") + "\n" +
-                    "case _ => sender ! (StreamStat(t1 - t0, tN, tS), List(" + s0.queries.map(q => q.name + ".getStream").mkString(",") +
+                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => sender ! (StreamStat(t1 - t0, tN, tS), " + q.name + ".getStream(withTupleOp))"}.mkString("\n") + "\n" +
+                    "case _ => sender ! (StreamStat(t1 - t0, tN, tS), List(" + s0.queries.map(q => q.name + ".getStream(withTupleOp)").mkString(",") +
                     "))\n"
                 ) + "\n}"
             ) +

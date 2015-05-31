@@ -283,7 +283,6 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
 
 
 class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(implicit cE:ClassTag[E]) extends Store[E](idxs, ops)(cE) {
-  import ddbt.lib.Messages.TupleOp
   import ddbt.lib.Messages.TupleDelete
   import ddbt.lib.Messages.TupleInsert
   import scala.collection.mutable.MutableList
@@ -311,14 +310,20 @@ class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(im
   /**
    * Returns stream of output tuples by processing events delta
    */
-  def getStream: List[Array[AnyRef]] = {
+  def getStream(withTupleOp: Boolean): List[Array[AnyRef]] = {
 
     def negate[A](v: A): Any = v match {
       case _: Int => implicitly[Numeric[Int]].negate(v.asInstanceOf[Int])
       case _: Long => implicitly[Numeric[Long]].negate(v.asInstanceOf[Long])
       case _: Float => implicitly[Numeric[Float]].negate(v.asInstanceOf[Float])
       case _: Double => implicitly[Numeric[Double]].negate(v.asInstanceOf[Double])
-      case _ => v
+    }
+
+    def delta[A](o: A, n: A): Any = o match {
+      case _: Int => implicitly[Numeric[Int]].minus(n.asInstanceOf[Int], o.asInstanceOf[Int])
+      case _: Long => implicitly[Numeric[Long]].minus(n.asInstanceOf[Long], o.asInstanceOf[Long])
+      case _: Float => implicitly[Numeric[Float]].minus(n.asInstanceOf[Float], o.asInstanceOf[Float])
+      case _: Double => implicitly[Numeric[Double]].minus(n.asInstanceOf[Double], o.asInstanceOf[Double])
     }
 
     def negateEntry(elements: Array[AnyRef]): Array[AnyRef] = {
@@ -327,24 +332,45 @@ class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(im
       elements
     }
 
+    def deltaEntry(oldElements: Array[AnyRef], newElements: Array[AnyRef]): Array[AnyRef] = {
+      val lastIndex = newElements.length - 1
+      newElements(lastIndex) = delta(oldElements(lastIndex), newElements(lastIndex)).asInstanceOf[AnyRef]
+      newElements
+    }
+
     val es = getEventsDelta
 
-    es.flatMap(e => e match {
-      case InsertEvent(entry) => List(entry.elements)
-      case UpdateEvent(oldEntry, newEntry) => List(negateEntry(oldEntry.elements), newEntry.elements)
-      case DeleteEvent(entry) => List(negateEntry(entry.elements))
-    })
+    if (withTupleOp) {
+      es.flatMap(e => e match {
+        case InsertEvent(entry) => List((TupleInsert.asInstanceOf[AnyRef] +: entry.elements))
+        case UpdateEvent(oldEntry, newEntry) => List((TupleDelete.asInstanceOf[AnyRef] +: oldEntry.elements), (TupleInsert.asInstanceOf[AnyRef] +: newEntry.elements))
+        case DeleteEvent(entry) => List((TupleDelete.asInstanceOf[AnyRef] +: entry.elements))
+      })
+    } else {
+      es.map(e => e match {
+        case InsertEvent(entry) => entry.elements
+        case UpdateEvent(oldEntry, newEntry) => deltaEntry(oldEntry.elements, newEntry.elements)
+        case DeleteEvent(entry) => negateEntry(entry.elements)
+      })
+    }
   }
 }
 
+object ValueWrapper {
+  import scala.language.implicitConversions
+  implicit def toValueWrapper[A<:AnyVal](v: A)(implicit n:Numeric[A]) = new ValueWrapper[A](v)
+}
 
 class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
   import scala.collection.mutable.MutableList
+  import ddbt.lib.Messages.TupleDelete
+  import ddbt.lib.Messages.TupleInsert
 
   abstract sealed class ValueEvent[A<:AnyVal];
+  case class InsertEvent[A<:AnyVal](value: A) extends ValueEvent[A]
   case class UpdateEvent[A<:AnyVal](oldV: A, newV: A) extends ValueEvent[A]
 
-  var events = MutableList[ValueEvent[A]]()
+  var events = MutableList[ValueEvent[A]](InsertEvent(v)) // create insert event for the initial value
 
   def +(other: A): ValueWrapper[A] = {
     new ValueWrapper(n.plus(v, other))
@@ -357,14 +383,16 @@ class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
   def +=(other: A): ValueWrapper[A] = {
     val oldV = v
     v = n.plus(v, other)
-    events += UpdateEvent(oldV, v)
+    if (n.compare(v, oldV) != 0) // only create UpdateEvent if the value actually changes
+      events += UpdateEvent(oldV, v)
     this
   }
 
   def -=(other: A): ValueWrapper[A] = {
     val oldV = v
     v = n.minus(v, other)
-    events += UpdateEvent(oldV, v)
+    if (n.compare(v, oldV) != 0) // only create UpdateEvent if the value actually changes
+      events += UpdateEvent(oldV, v)
     this
   }
 
@@ -378,11 +406,20 @@ class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
   /**
    * Returns delta values by processing Events delta
    */
-  def getStream: List[A] = {
+  def getStream(withTupleOp: Boolean): List[Any] = {
     val es = getEventsDelta
-    es.flatMap(e => e match {
-      case UpdateEvent(oldV, newV) => List(n.negate(oldV), newV)
-    })
+
+    if (withTupleOp) {
+      es.flatMap(e => e match {
+        case InsertEvent(value) => List(Array(TupleInsert, value))
+        case UpdateEvent(oldV, newV) => List(Array(TupleDelete, oldV), Array(TupleInsert, newV))
+      })
+    } else {
+      es.map(e => e match {
+        case InsertEvent(value) => value
+        case UpdateEvent(oldV, newV) => n.minus(newV, oldV)
+      })
+    }
   }
 }
 
