@@ -358,7 +358,12 @@ class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(im
 
 object ValueWrapper {
   import scala.language.implicitConversions
+
   implicit def toValueWrapper[A<:AnyVal](v: A)(implicit n:Numeric[A]) = new ValueWrapper[A](v)
+  implicit def fromValueWrapper[A<:AnyVal](v: ValueWrapper[A]):A = v.value
+  // gen code can assign Long value to Double var
+  implicit def longToDoubleValueWrapper(v: Long)(implicit n:Numeric[Double]):ValueWrapper[Double] = new ValueWrapper[Double](v.toDouble)
+
 }
 
 class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {

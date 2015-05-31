@@ -557,7 +557,7 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
       "class " + cls + "Impl extends IQuery {\n" +
         ind(
           "import ddbt.lib.Messages._\n" +
-          "import ddbt.lib.Functions._\n\n" +
+          "import ddbt.lib.Functions._\n" +
             body + "\n\n" +
             pp +
             "def handleEvent(e: StreamEvent) = e match {\n" +
