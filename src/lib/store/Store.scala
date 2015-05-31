@@ -372,27 +372,44 @@ class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
 
   var events = MutableList[ValueEvent[A]](InsertEvent(v)) // create insert event for the initial value
 
-  def +(other: A): ValueWrapper[A] = {
-    new ValueWrapper(n.plus(v, other))
+  def +(other: A): A = {
+    n.plus(v, other)
   }
 
-  def -(other: A): ValueWrapper[A] = {
-    new ValueWrapper(n.minus(v, other))
+  def -(other: A): A = {
+    n.minus(v, other)
+  }
+
+  def *(other: A): A = {
+    n.times(v, other)
   }
 
   def +=(other: A): ValueWrapper[A] = {
     val oldV = v
-    v = n.plus(v, other)
-    if (n.compare(v, oldV) != 0) // only create UpdateEvent if the value actually changes
+    if (n.compare(other, n.zero) != 0) {
+      // only create UpdateEvent if the value actually changes
+      v = n.plus(v, other)
       events += UpdateEvent(oldV, v)
+    }
     this
   }
 
   def -=(other: A): ValueWrapper[A] = {
     val oldV = v
-    v = n.minus(v, other)
-    if (n.compare(v, oldV) != 0) // only create UpdateEvent if the value actually changes
+    if (n.compare(other, n.zero) != 0) {
+      // only create UpdateEvent if the value actually changes
+      v = n.minus(v, other)
       events += UpdateEvent(oldV, v)
+    }
+    this
+  }
+
+  def *=(other: A): ValueWrapper[A] = {
+    val oldV = v
+    if (n.compare(other, n.one) != 0) {
+      v = n.times(v, other)
+      events += UpdateEvent(oldV, v)
+    }
     this
   }
 
