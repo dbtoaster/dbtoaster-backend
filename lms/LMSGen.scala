@@ -419,6 +419,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
 
   // Expose the maps of the system being generated
   var ctx0 = Map[String, (Rep[_], List[(String, Type)], Type)]()
+  var resultMapNames = List[String]()
 
   override def genLMS(s0: System): (String, String, String, String) = {
     val classLevelMaps = s0.triggers.filter(_.evt match {
@@ -447,7 +448,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
       case (_, m: MapDef) => m
     } // XXX missing indexes
 
-    val resultMapNames = s0.queries.map(q => q.name)
+    resultMapNames = s0.queries.map(q => q.name)
     ctx0 = classLevelMaps.map {
       case MapDef(name, tp, keys, _, _) => if (keys.size == 0) {
         val s = impl.namedVar(name, tp)
@@ -535,10 +536,9 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
 class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(cls, ScalaExpGen, watch) {
   import ddbt.ast.M3._
   import ddbt.Utils._
-  import LMSScalaGen._
 
   override def createVarDefinition(name: String, tp: Type) = {
-    if (watch)
+    if (watch && resultMapNames.contains(name)) // only use ValueWrapper if watch flag is enabled and the variable is the result
       "var " + name + " = new ValueWrapper(" + tp.zero + ")"
     else
       "var " + name + ": " + tp.toScala + " = " + tp.zero
@@ -547,7 +547,7 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
   override protected def genSnap(s0: System): String = {
     val snap = "List(" +
       s0.queries.map(q =>
-        (if (q.keys.size > 0) toMapFunction(q) else (if (watch) q.name + ".value" else q.name))).mkString(",") +
+        (if (q.keys.size > 0) toMapFunction(q) else (if (watch && resultMapNames.contains(q.name)) q.name + ".value" else q.name))).mkString(",") +
       ")"
     snap
   }
@@ -557,6 +557,7 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
       "class " + cls + "Impl extends IQuery {\n" +
         ind(
           "import ddbt.lib.Messages._\n" +
+          "import ddbt.lib.Functions._\n" +
             body + "\n\n" +
             pp +
             "def handleEvent(e: StreamEvent) = e match {\n" +
@@ -566,10 +567,10 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
                 (if (ld != "") " loadTables();" else "") +
                 " onSystemReady()\n" +
                 "case EndOfStream | GetSnapshot(_) => " + onEndStream + " " + snap + "\n" +
-                "case GetStream(n) => n match {\n" +
+                "case GetStream(n, withTupleOp) => n match {\n" +
                 ind(
-                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => " + q.name + ".getStream"}.mkString("\n") + "\n" +
-                    "case _ => List(" + s0.queries.map(q => q.name + ".getStream").mkString(",") +
+                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => " + q.name + ".getStream(withTupleOp)"}.mkString("\n") + "\n" +
+                    "case _ => List(" + s0.queries.map(q => q.name + ".getStream(withTupleOp)").mkString(",") +
                     ")\n"
                 ) + "\n}"
             ) +
@@ -591,10 +592,10 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
                 " onSystemReady(); t0 = System.nanoTime; " +
                 "if (timeout > 0) t1 = t0 + timeout * 1000000L\n" +
                 "case EndOfStream | GetSnapshot(_) => t1 = System.nanoTime; " + onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), " + snap + ")\n" +
-                "case GetStream(n) => n match {\n" +
+                "case GetStream(n, withTupleOp) => n match {\n" +
                 ind(
-                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => sender ! (StreamStat(t1 - t0, tN, tS), " + q.name + ".getStream)"}.mkString("\n") + "\n" +
-                    "case _ => sender ! (StreamStat(t1 - t0, tN, tS), List(" + s0.queries.map(q => q.name + ".getStream").mkString(",") +
+                  s0.queries.zipWithIndex.map { case (q, i) => "case " + (i + 1) + " => sender ! (StreamStat(t1 - t0, tN, tS), " + q.name + ".getStream(withTupleOp))"}.mkString("\n") + "\n" +
+                    "case _ => sender ! (StreamStat(t1 - t0, tN, tS), List(" + s0.queries.map(q => q.name + ".getStream(withTupleOp)").mkString(",") +
                     "))\n"
                 ) + "\n}"
             ) +

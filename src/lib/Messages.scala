@@ -26,7 +26,7 @@ object Messages {
   // Command messages
   case class StreamInit(timeout: Long = 0L) extends StreamEvent // timeout in ms
   case class GetSnapshot(view: List[Int]) extends StreamEvent // request a snapshot of some maps
-  case class GetStream(view: Int) extends StreamEvent // get stream of update
+  case class GetStream(view: Int, withTupleOp: Boolean) extends StreamEvent // get stream of update
   /** System state (returned with snapshot) */
   case class StreamStat(ns: Long, count: Long, skip: Long) { 
     override def toString = { 

@@ -120,7 +120,7 @@ object Compiler {
                                       else try { 
                                         math.min(10, math.max(0, s.toInt)) 
                                       } catch { case _: Throwable => 0 })
-        case "-w" => watch = true;
+        case "-wa" => watch = true;
         case "-ni" => ni = true; depth = 0; flags = Nil
         case "-x" => exec = true
         case "-xd" => eat(s => exec_dir = s)
