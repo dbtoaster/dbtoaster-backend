@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module external.linked.project.id="sstore" external.linked.project.path="$MODULE_DIR$/../../sstore" external.root.project.path="$MODULE_DIR$/../.." external.system.id="SBT" type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="false">
+    <output url="file://$MODULE_DIR$/../../sstore/target/scala-2.11/classes" />
+    <output-test url="file://$MODULE_DIR$/../../sstore/target/scala-2.11/test-classes" />
+    <exclude-output />
+    <content url="file://$MODULE_DIR$/../../sstore">
+      <sourceFolder url="file://$MODULE_DIR$/../../sstore/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../sstore/target/scala-2.11/src_managed/main" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../../sstore/src/test/java" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/../../sstore/src/test/scala" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/../../sstore/target/scala-2.11/src_managed/test" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/../../sstore/src/resources" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/../../sstore/target/scala-2.11/resource_managed/main" type="java-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/../../sstore/src/test/resources" type="java-test-resource" />
+      <sourceFolder url="file://$MODULE_DIR$/../../sstore/target/scala-2.11/resource_managed/test" type="java-test-resource" />
+      <excludeFolder url="file://$MODULE_DIR$/../../sstore/target/resolution-cache" />
+      <excludeFolder url="file://$MODULE_DIR$/../../sstore/target/scala-2.10" />
+      <excludeFolder url="file://$MODULE_DIR$/../../sstore/target/streams" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+    <orderEntry type="library" name="SBT: com.google.protobuf:protobuf-java:2.5.0:jar" level="project" />
+    <orderEntry type="library" name="SBT: com.typesafe:config:1.2.1:jar" level="project" />
+    <orderEntry type="library" name="SBT: com.typesafe.akka:akka-actor_2.11:2.3.10:jar" level="project" />
+    <orderEntry type="library" name="SBT: com.typesafe.akka:akka-remote_2.11:2.3.10:jar" level="project" />
+    <orderEntry type="library" name="SBT: io.netty:netty:3.8.0.Final:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.scala-lang:scala-library:2.11.5:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.uncommons.maths:uncommons-maths:1.2.2a:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.scala-lang:scala-actors:2.11.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.scala-lang:scala-compiler:2.11.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.scala-lang:scala-reflect:2.11.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.scala-lang.modules:scala-parser-combinators_2.11:1.0.2:jar" level="project" />
+    <orderEntry type="library" name="SBT: org.scala-lang.modules:scala-xml_2.11:1.0.2:jar" level="project" />
+  </component>
+</module>
