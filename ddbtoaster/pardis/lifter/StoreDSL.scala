@@ -258,7 +258,8 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     val cName = mname//c.name + c.id //XXX - fixeit quote(c, true)
     val entTp = storeEntryType(c)
 //    out.println("val "+cName+" = new Store["+entTp+"]("+idxArr.size+",Array[EntryIdx["+entTp+"]]("+(0 until idxArr.size).map(i=>entTp+"_Idx"+i).mkString(",")+"))")
-    out.println("val "+cName+" = new Store["+entTp+"](0)")
+    out.println("val "+cName+" = new Store["+entTp+"](1,Array[EntryIdx[GenericEntry]](GenericEntry))")
+    out.println(s"$cName.index(0,IHash,true)")
     out.println(s"val ${c.name+c.id} = $cName")
 
 //    idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {

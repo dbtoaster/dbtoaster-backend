@@ -3,13 +3,13 @@ package ddbt.lib.store
 import scala.collection.mutable
 
 //abstract class SEntry[E<:Product:Manifest] extends Entry(manifest[E].runtimeClass.newInstance.asInstanceOf[Product].productArity)
-class GenericEntry(val map: mutable.HashMap[Int,Any]) extends Entry(0) {
-  def this() = this(new mutable.HashMap[Int,Any])
+class GenericEntry(val map: mutable.HashMap[Int,Any], val n: Int) extends Entry(n) {
+  def this(n: Int) = this(new mutable.HashMap[Int,Any], n)
 
   def update(i: Int, v:Any) = map.put(i, v)
   def increase(i: Int, v:Any) = v match {
     case _: Int => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Int] + v.asInstanceOf[Int]) else map.put(i, v)
-    case _: Double => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Double] + v.asInstanceOf[Double]) else map.put(i, v)
+    case _: Double => if (map.contains(i)) map.put(i, map.get(i).get.asInstanceOf[Double] + v.asInstanceOf[Double]) else map.put(i, v);
     case _: Long => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Long] + v.asInstanceOf[Long]) else map.put(i, v)
     case _: String => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[String] + v.asInstanceOf[String]) else map.put(i, v)
   }
@@ -21,8 +21,8 @@ class GenericEntry(val map: mutable.HashMap[Int,Any]) extends Entry(0) {
     case _: Long => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Long] - v.asInstanceOf[Long]) else map.put(i, v)
   }
   def -=(i: Int, v:Any) = decrease(i ,v)
-  def get[E](i: Int) = map.get(i).asInstanceOf[E]
-  def copy:Entry = new GenericEntry(map.clone)
+  def get[E](i: Int) = map.get(i).get.asInstanceOf[E]
+  def copy:GenericEntry = new GenericEntry(map.clone, map.size)
 }
 
 object GenericEntry extends EntryIdx[GenericEntry] {
@@ -31,11 +31,26 @@ object GenericEntry extends EntryIdx[GenericEntry] {
     for((e, i) <- elems.zipWithIndex) {
       map.put(i+1, e)
     }
-    new GenericEntry(map)
+    new GenericEntry(map, map.size)
   }
-  def hash(e:GenericEntry) = e.map.hashCode
+  def hash(e:GenericEntry) = {
+    var h = 16;
+    for (i <- (1 until e.map.size))
+      h = h * 41  + e.map.get(i).get.hashCode()
+//      e.map.foreach {e => h = h * 41 + e._2.hashCode()}
+    h
+  }//e.map.hashCode
 
-  def cmp(e1:GenericEntry, e2:GenericEntry) = if (e1.map == e2.map) 0 else 1
+
+
+  def cmp(e1:GenericEntry, e2:GenericEntry):Int = {
+
+    for (i <- (1 until e1.map.size)) {
+      if ( e1.map.get(i).get != e2.map.get(i).get )
+        return 1
+    }
+    0
+  }
 }
 
 abstract class SEntry2 [T1:Manifest,T2:Manifest] extends Entry(2)
