@@ -191,8 +191,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     proxy.foreach {
       __lambda {
         e: Rep[Entry] =>
-          cx.add(keys.zipWithIndex.filter(x => !cx.contains(x._1._1)).map { case ((n, t), i) => (n, impl.steGet(e, i + 1)(impl.EntryType, mE)) }.toMap)
-          co(impl.steGet(e, keys.size + 1)(impl.EntryType, mE))
+          cx.add(keys.zipWithIndex.filter(x => !cx.contains(x._1._1)).map { case ((n, t), i) => (n, impl.steGet(e, i + 1)(impl.EntryType, mE.typeArguments(i))) }.toMap)
+          co(impl.steGet(e, keys.size + 1)(impl.EntryType, mE.typeArguments(keys.size)))
       }
     }
   }

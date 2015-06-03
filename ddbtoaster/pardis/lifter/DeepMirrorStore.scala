@@ -25,7 +25,7 @@ trait MStoreOps extends Base with ArrayOps {
      def slice(idx : Rep[Int], key : Rep[E], f : Rep[(E => Unit)]) : Rep[Unit] = mStoreSlice[E](self, idx, key, f)(typeE)
      def range(idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[(E => Unit)]) : Rep[Unit] = mStoreRange[E](self, idx, min, max, withMin, withMax, f)(typeE)
      def delete(idx : Rep[Int], key : Rep[E])(implicit overload2 : Overloaded2) : Rep[Unit] = mStoreDelete2[E](self, idx, key)(typeE)
-     def clear() : Rep[Unit] = mStoreClear[E](self)(typeE)
+     def clear : Rep[Unit] = mStoreClear[E](self)(typeE)
      def n : Rep[Int] = mStore_Field_N[E](self)(typeE)
      def ops : Rep[Array[E]] = mStore_Field_Ops[E](self)(typeE)
      def idxs : Rep[Array[E]] = mStore_Field_Idxs[E](self)(typeE)
@@ -142,7 +142,7 @@ object MStoreIRs extends Base {
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  case class MStoreClear[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "clear", List(List())){
+  case class MStoreClear[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "clear", List()){
     override def curriedConstructor = (copy[E] _)
   }
 

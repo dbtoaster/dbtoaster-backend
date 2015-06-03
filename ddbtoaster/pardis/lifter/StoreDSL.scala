@@ -161,7 +161,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   def steGet[E<:Entry:TypeRep, T:TypeRep](x: Rep[E], i: Int):Rep[T] = //SteGet[E, T](x, i)
     x.get[T](unit(i))
   def stGet[E<:Entry:TypeRep](x: Rep[Store[E]], idx:Int, key:Rep[E]):Rep[E] = x.get(unit(idx), key)
-  def stClear[E<:Entry:TypeRep](x: Rep[Store[E]]):Rep[Unit] = x.clear()//StClear[E](x)
+  def stClear[E<:Entry:TypeRep](x: Rep[Store[E]]):Rep[Unit] = x.clear//StClear[E](x)
 
   def stUnsafeInsert[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E], idx:Int):Rep[Unit] = x.unsafeInsert(unit(idx), e)//StUnsafeInsert[E](x, e, idx)
 
