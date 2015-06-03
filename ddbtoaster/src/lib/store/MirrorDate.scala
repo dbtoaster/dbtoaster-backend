@@ -5,7 +5,7 @@ package ddbt.lib.store
  */
 import ch.epfl.data.sc.pardis.annotations._
 
-@needs[Long]
+@needs[Numeric[_]]
 @deep
 @noImplementation
 @reflect[java.util.Date]

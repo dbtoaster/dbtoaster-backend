@@ -4,16 +4,15 @@ import java.io.StringWriter
 
 import ch.epfl.data.sc.pardis.ir.ExpressionSymbol
 import ch.epfl.data.sc.pardis.prettyprinter.ScalaCodeGenerator
-import ch.epfl.data.sc.pardis.utils.Document
 import ddbt.ast.M3._
 import ddbt.ast.M3.{Apply => M3ASTApply}
 import ddbt.ast._
-import compiler._
 import ddbt.lib.ManifestHelper
 import ddbt.lib.ManifestHelper._
 import ddbt.lib.store.deep.StoreDSL
 import ddbt.lib.store.{Store, Entry}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
+import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 
 
 abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) extends IScalaGen {
@@ -373,7 +372,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
     val (str,ld0,_) = genInternals(s0)
     val tsResBlks = s0.triggers.map(genTriggerPardis(_,s0)) // triggers (need to be generated before maps)
-    val codeGen = new SStoreCodeGeneration()
+    val codeGen = new StoreScalaCodeGenerator()
 
     var ts = ""
     for(x <- tsResBlks) {
@@ -407,13 +406,3 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 }
 
 class PardisScalaGen(cls:String="Query") extends PardisGen(cls, new StoreDSL {})
-
-class SStoreCodeGeneration() extends ScalaCodeGenerator {
-  override def symToDocument(sym: ExpressionSymbol[_]): Document = {
-    if(sym.name != "x") {
-      Document.text(sym.name)
-    } else {
-      super.symToDocument(sym)
-    }
-  }
-}

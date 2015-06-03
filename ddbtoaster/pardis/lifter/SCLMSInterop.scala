@@ -2,13 +2,13 @@ package lifter
 
 import ch.epfl.data.sc.pardis
 import ch.epfl.data.sc.pardis.types.AnyType
-import pardis.deep.scalalib.{IntComponent, LongComponent, DoubleComponent}
+import pardis.deep.scalalib.{NumericOps}
 import pardis.ir._
 
 /**
  * Created by khayyam on 4/9/15.
  */
-trait SCLMSInterop extends Base with IntComponent with LongComponent with DoubleComponent {
+trait SCLMSInterop extends Base with NumericOps {
   def var_plusequals[T/*: Numeric*/ : TypeRep](lhs: Var[T], rhs: Rep[T]): Rep[Unit] = {
     __assign(lhs, numeric_plus(__readVar(lhs), rhs))
   }

@@ -10,7 +10,7 @@ import pardis.deep._
 import pardis.deep.scalalib._
 import pardis.deep.scalalib.collection._
 import pardis.deep.scalalib.io._
-trait DateOps extends Base with LongOps {  
+trait DateOps extends Base with NumericOps {  
   // Type representation
   val DateType = DateIRs.DateType
   implicit val typeDate: TypeRep[Date] = DateType
@@ -37,7 +37,7 @@ trait DateOps extends Base with LongOps {
   type Date = java.util.Date
 }
 object DateIRs extends Base {
-  import LongIRs._
+  import NumericIRs._
   // Type representation
   case object DateType extends TypeRep[Date] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = DateType
