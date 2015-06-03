@@ -186,6 +186,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
   def foreach(map:Rep[_],keys:List[(String,Type)],value_tp:Type,co:Rep[_]=>Rep[Unit]):Rep[Unit] = {
     implicit val mE = manEntry(keys.map(_._2) ::: List(value_tp))
+    // val mE = impl.EntryType
     val proxy = mapProxy(map)
     proxy.foreach {
       __lambda {
@@ -398,8 +399,9 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     val ms = genAllMaps(classLevelMaps) // maps
     val ds = "" // xxx - Fixeit outStream.toString
     val printInfoDef = "def printMapsInfo() = {}"
-
-    val r=ds+"\n"+ms+"\n"+ts+"\n"+printInfoDef
+    val storeTypeAlias = "type MStore[E<:Entry] = Store[E]\n"
+    // val storeTypeAlias = ""
+    val r=ds+"\n"+storeTypeAlias+ms+"\n"+ts+"\n"+printInfoDef
     (r,str,ld0,consts)
   }
 }

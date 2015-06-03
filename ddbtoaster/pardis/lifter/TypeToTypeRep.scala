@@ -27,8 +27,13 @@ trait TypeToTypeRep { this: StoreDSL =>
       new ExtendedReflectionType(tpe, ms)
   }
   def manEntry(ts:List[Type]):TypeRep[Entry] = {
+    // val ms:List[TypeRep[_]] = ts map man
+    // val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.SEntry"+ts.size)
+    // val tpe = scala.reflect.runtime.universe.runtimeMirror(cls.getClassLoader).classSymbol(cls).typeSignature
+    // // FIXME have to apply to arguments
+    // new ExtendedReflectionType(tpe, ms).asInstanceOf[TypeRep[Entry]]
     val ms:List[TypeRep[_]] = ts map man
-    val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.SEntry"+ts.size)
+    val cls:java.lang.Class[_] = Class.forName("ddbt.lib.store.GenericEntry")
     val tpe = scala.reflect.runtime.universe.runtimeMirror(cls.getClassLoader).classSymbol(cls).typeSignature
     // FIXME have to apply to arguments
     new ExtendedReflectionType(tpe, ms).asInstanceOf[TypeRep[Entry]]

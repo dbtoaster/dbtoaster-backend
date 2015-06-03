@@ -48,21 +48,21 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   }
   def m3_apply[T: TypeRep](name1: String, args: List[Rep[_]]): Rep[T] = M3Apply[T](name1, args)
 
-  case class M3Add[E<:Entry:TypeRep](s:Rep[Store[E]], e:Rep[E]) extends FunctionDef[E](Some(s), "add", List(List(e)))
+  //case class M3Add[E<:Entry:TypeRep](s:Rep[Store[E]], e:Rep[E]) extends FunctionDef[E](Some(s), "add", List(List(e)))
 
-  case class StNewStore   [E<:Entry:TypeRep](tE: TypeRep[E]) extends ConstructorDef[Store[E]](List(tE), "Store", List(Nil))
+  // case class StNewStore[E<:Entry:TypeRep](tE: TypeRep[E]) extends ConstructorDef[Store[E]](List(tE), "Store", List(Nil))
 
-  case class SteGet[E<:Entry:TypeRep, T: TypeRep](x: Rep[E], i: Int) extends FunctionDef[T](Some(x), "get", List(List(unit(i))), List(implicitly[TypeRep[T]]))
+  // case class SteGet[E<:Entry:TypeRep, T: TypeRep](x: Rep[E], i: Int) extends FunctionDef[T](Some(x), "get", List(List(unit(i))), List(implicitly[TypeRep[T]]))
 
   case class SteNewSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) extends FunctionDef[E](None, "GenericEntry", List(x::args.toList))
 
   case class SteSampleSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]) extends FunctionDef[E](None, "GenericEntry", List(x::args.map(_._2).toList))
 
-  case class StDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]) extends FunctionDef[Unit](Some(x), "delete", List(List(e)))
+  //case class StDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]) extends FunctionDef[Unit](Some(x), "delete", List(List(e)))
 
-  case class StClear[E<:Entry:TypeRep](x: Rep[Store[E]]) extends FunctionDef[Unit](Some(x), "clear", List())
+  //case class StClear[E<:Entry:TypeRep](x: Rep[Store[E]]) extends FunctionDef[Unit](Some(x), "clear", List())
 
-  case class StUnsafeInsert[E<:Entry:TypeRep](s: Rep[Store[E]], e:Rep[E], idx:Int) extends FunctionDef[Unit](Some(s), "unsafeInsert", List(List(unit(idx), e)))
+  //case class StUnsafeInsert[E<:Entry:TypeRep](s: Rep[Store[E]], e:Rep[E], idx:Int) extends FunctionDef[Unit](Some(s), "unsafeInsert", List(List(unit(idx), e)))
 
   //case class StSlice[E<:Entry:TypeRep](x: Rep[Store[E]], idx:Int, key:Rep[E], blockSym: Sym[E], block: Block[Unit]) extends FunctionDef[Unit](Some(x), "slice", List(Nil))
 
@@ -87,9 +87,11 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   }
 
   def m3temp[E<:Entry]()(implicit tp:TypeRep[E]):Rep[Store[E]] = {
-    val sym = StNewStore[E](tp)
+    // val sym = StNewStore[E](tp)
     //sym.asInstanceOf[Sym[_]].attributes.put("_isTemp",true);
-    sym
+    implicit val manE = manifest[Int].asInstanceOf[Manifest[E]]
+    val sym = __newMStore[E]()
+    sym.asInstanceOf[Rep[Store[E]]]
 //    null
   }
 
@@ -105,33 +107,33 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     var idx = 0
     println(s"tpeeee: ${m.typeArguments}")
     val entVal = ent.get(n.asInstanceOf[Rep[Int]])(lastMan)
-    if(tmp) {
-      // we don't remove 0-elements
-      if (USE_STORE1) {
-        //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
-        //addIndicesToEntryClass[E](map, (xx, m) => { val idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
-        __ifThenElse(infix_==(entVal,unit(zero(lastMan))), unit(()), M3Add(map,ent).asInstanceOf[Rep[Store[E]]])// look at there :)
-      } else {
-        __ifThenElse(infix_==(entVal,unit(zero(lastMan))), unit(()), {
-          ///////
-          val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
-          __ifThenElse(infix_==(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),currentEnt += (n, entVal))
-          ///////
-        })
-      }
-    } else {
+    // if(tmp) {
+    //   // we don't remove 0-elements
+    //   if (USE_STORE1) {
+    //     //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
+    //     //addIndicesToEntryClass[E](map, (xx, m) => { val idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
+    //     __ifThenElse(infix_==(entVal,unit(zero(lastMan))), unit(()), M3Add(map,ent).asInstanceOf[Rep[Store[E]]])// look at there :)
+    //   } else {
+    //     __ifThenElse(infix_==(entVal,unit(zero(lastMan))), unit(()), {
+    //       ///////
+    //       val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+    //       __ifThenElse(infix_==(currentEnt,unit(null)),/*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent),currentEnt += (n, entVal))
+    //       ///////
+    //     })
+    //   }
+    // } else {
       // we remove 0-elements
       __ifThenElse(infix_==(entVal,unit(zero(lastMan))), unit(()), {
         ///////
         val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
-        __ifThenElse(infix_==(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),{
+        __ifThenElse(infix_==(currentEnt,unit(null)),/*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent),{
           currentEnt += (n, entVal)
           val currentEntVal = currentEnt.get(n)(lastMan)
           __ifThenElse(infix_==(currentEntVal,unit(zero(lastMan))), map.delete(currentEnt), unit(())) // question ???? changed delete - stDelete
         })
         ///////
       })
-    }
+    // }
     unit(())
   }
 
@@ -146,21 +148,22 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     //var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
     var idx = 0
     if(tmp) { // this never happens in practice
-      __ifThenElse(infix_==(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),currentEnt.update(n, entVal)) // same
+      __ifThenElse(infix_==(currentEnt,unit(null)),/*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent),currentEnt.update(n, entVal)) // same
     } else {
       __ifThenElse(infix_==(entVal,unit(zero(lastMan))),{
         __ifThenElse(infix_==(currentEnt,unit(null)),unit(()), map.delete(currentEnt))
       },{
-        __ifThenElse(infix_==(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),currentEnt.update(n, entVal)) // same
+        __ifThenElse(infix_==(currentEnt,unit(null)),/*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent),currentEnt.update(n, entVal)) // same
       })
     }
   }
 
-  def steGet[E<:Entry:TypeRep, T:TypeRep](x: Rep[E], i: Int):Rep[T] = SteGet[E, T](x, i)
+  def steGet[E<:Entry:TypeRep, T:TypeRep](x: Rep[E], i: Int):Rep[T] = //SteGet[E, T](x, i)
+    x.get[T](unit(i))
   def stGet[E<:Entry:TypeRep](x: Rep[Store[E]], idx:Int, key:Rep[E]):Rep[E] = x.get(unit(idx), key)
-  def stClear[E<:Entry:TypeRep](x: Rep[Store[E]]):Rep[Unit] = StClear[E](x)
+  def stClear[E<:Entry:TypeRep](x: Rep[Store[E]]):Rep[Unit] = x.clear()//StClear[E](x)
 
-  def stUnsafeInsert[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E], idx:Int):Rep[Unit] = StUnsafeInsert[E](x, e, idx)
+  def stUnsafeInsert[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E], idx:Int):Rep[Unit] = x.unsafeInsert(unit(idx), e)//StUnsafeInsert[E](x, e, idx)
 
   def stNewEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) = SteNewSEntry[E](x, args)
   def stNewEntry2[E<:Entry:TypeRep](x: Rep[Store[E]], args:Rep[Any]*):Rep[E] = stNewEntry[E](x, args)
@@ -185,7 +188,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   def stProxyGet[E<:Entry: TypeRep](x: Rep[Store[E]], args:(Int,Rep[Any])*):Rep[E] = steGet[E, E](stSampleEntry(x, args),-1).asInstanceOf[Rep[E]]
   def stSampleEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]):Rep[E] = SteSampleSEntry[E](x, args)
 
-  def stDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]):Rep[Unit] = StDelete[E](x, e)
+  def stDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]):Rep[Unit] = x.delete(e)//StDelete[E](x, e)
 
   // TODO FIXME
   def stSlice[E<:Entry:TypeRep](x: Rep[Store[E]], idx_in:Int,key:Rep[E],f:Rep[E]=>Rep[Unit]):Rep[Unit] = {

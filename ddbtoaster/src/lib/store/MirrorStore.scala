@@ -23,4 +23,5 @@ class MStore[E<:Entry](val idxs:Array[E], val ops:Array[E]) {
   def slice(idx:Int,key:E,f:E=>Unit): Unit = ???
   def range(idx:Int,min:E,max:E,withMin:Boolean,withMax:Boolean,f:E=>Unit): Unit = ???
   def delete(idx:Int,key:E):Unit = ???
+  def clear():Unit = ???
 }
