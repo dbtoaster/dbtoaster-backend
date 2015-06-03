@@ -246,36 +246,6 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   def min(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = __ifThenElse(v1 < v2, v1, v2)
   def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] = null
 
-
-  // code generator functions // XXX fixeit
-  def generateNewStore(c: Sym[_], mname:String = "", isClassLevel:Boolean=false):String = {
-    val outStream = new java.io.StringWriter
-    val out = new java.io.PrintWriter(outStream)
-
-//    val idxArr = c.attributes.get(ENTRY_INDICES_KEY) match {
-//      case Some(m) => m.asInstanceOf[collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]]
-//      case None => val m = new collection.mutable.ArrayBuffer[(IndexType,Seq[Int],Boolean,Int)]
-//        m += ((IList, (1 to c.tp.typeArguments.size),false,-1))
-//    }
-    val idxArr = List()
-    val cName = mname//c.name + c.id //XXX - fixeit quote(c, true)
-    val entTp = storeEntryType(c)
-//    out.println("val "+cName+" = new Store["+entTp+"]("+idxArr.size+",Array[EntryIdx["+entTp+"]]("+(0 until idxArr.size).map(i=>entTp+"_Idx"+i).mkString(",")+"))")
-    out.println("val "+cName+" = new Store["+entTp+"](1,Array[EntryIdx[GenericEntry]](GenericEntry))")
-    out.println(s"$cName.index(0,IHash,true)")
-    out.println(s"val ${c.name+c.id} = $cName")
-
-//    idxArr.zipWithIndex.foreach { case ((idxType, idxLoc, idxUniq, idxSliceIdx), i) => idxType match {
-//      case IList => out.println("%s.index(%d,IList,%s)".format(cName, i, idxUniq))
-//      case IHash => out.println("%s.index(%d,IHash,%s)".format(cName, i, idxUniq))
-//      case ISliceHeapMax => out.println("%s.index(%d,ISliceHeapMax,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
-//      case ISliceHeapMin => out.println("%s.index(%d,ISliceHeapMin,%s,%d)".format(cName, i, idxUniq, idxSliceIdx))
-//      case _ => sys.error("Index type "+idxType+" not supported")
-//    }}
-
-    outStream.toString
-  }
-
   // FIXIT -- deleted some parts from original quote
 //  def quote(x: Rep[Any], forcePrintSymbol: Boolean) : String = {
 //    x match {

@@ -22,6 +22,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
   import ddbt.lib.store.deep._
   import impl._
 
+  val codeGen = new StoreScalaCodeGenerator()
+
   def typeToTypeRep(tp: Type): TypeRep[Any] = {
     tp match {
       case TypeLong => runtimeType[Long]
@@ -243,7 +245,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     }
     else {
       println("MAP NAME: " + m.name)
-      impl.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.Sym[_]], m.name, true)
+      codeGen.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.Sym[_]], Some(m.name))
     }
   }
 
@@ -372,7 +374,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
     val (str,ld0,_) = genInternals(s0)
     val tsResBlks = s0.triggers.map(genTriggerPardis(_,s0)) // triggers (need to be generated before maps)
-    val codeGen = new StoreScalaCodeGenerator()
+    
 
     var ts = ""
     for(x <- tsResBlks) {
