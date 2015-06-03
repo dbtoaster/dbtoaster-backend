@@ -14,6 +14,6 @@ class MirrorGenericEntry {
   def +=(i: Int, v:Any): Unit = ???
   def decrease(i: Int, v:Any): Unit = ???
   def -=(i: Int, v:Any): Unit = ???
-  def get(i: Int): Unit = ???
+  def get[E](i: Int): E = ???
 //  def copy:Entry = ???
 }

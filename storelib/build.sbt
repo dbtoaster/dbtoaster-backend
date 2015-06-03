@@ -14,8 +14,8 @@ Seq(
 libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.2.3",
   "com.typesafe.akka" %% "akka-remote"    % "2.2.3",
- // "com.typesafe.akka" %% "akka-actor"     % "2.3.10",
- // "com.typesafe.akka" %% "akka-remote"    % "2.3.10",
+//  "com.typesafe.akka" %% "akka-actor"     % "2.3.10",
+//  "com.typesafe.akka" %% "akka-remote"    % "2.3.10",
   "org.scala-lang"     % "scala-actors"   % scalaVersion.value, // to compile legacy Scala
   "org.scala-lang"     % "scala-compiler" % scalaVersion.value
 )

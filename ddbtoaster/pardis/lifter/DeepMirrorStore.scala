@@ -3,7 +3,6 @@
 package ddbt.lib.store.deep
 
 import ch.epfl.data.sc.pardis
-import ddbt.lib.store.Entry
 import pardis.ir._
 import pardis.types.PardisTypeImplicits._
 import pardis.effects._

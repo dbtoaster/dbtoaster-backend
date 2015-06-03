@@ -304,7 +304,7 @@ commands += Command.command("release")((state:State) => {
     libraryDependencies ++= Seq(
       "ch.epfl.data" % "sc-pardis-compiler_2.11" % "0.1-SNAPSHOT"
     ),
-    outputFolder := prop.getProperty("ddbt.pardis.outputFolder","pardis/lifter"),
+    outputFolder := prop.getProperty("ddbt.pardis.outputFolder","ddbtoaster/pardis/lifter"),
     inputPackage := prop.getProperty("ddbt.pardis.inputPackage","ddbt.lib.store"),
     outputPackage := prop.getProperty("ddbt.pardis.outputPackage","ddbt.lib.store.deep")) ++ generatorSettings
 }

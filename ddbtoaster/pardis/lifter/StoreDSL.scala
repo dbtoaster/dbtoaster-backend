@@ -104,7 +104,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     //var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
     var idx = 0
     println(s"tpeeee: ${m.typeArguments}")
-    val entVal = ent.get(n.asInstanceOf[Rep[Int]])
+    val entVal = ent.get(n.asInstanceOf[Rep[Int]])(lastMan)
     if(tmp) {
       // we don't remove 0-elements
       if (USE_STORE1) {
@@ -126,7 +126,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
         val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
         __ifThenElse(infix_==(currentEnt,unit(null)),stUnsafeInsert(map,ent,idx),{
           currentEnt += (n, entVal)
-          val currentEntVal = currentEnt.get(n)
+          val currentEntVal = currentEnt.get(n)(lastMan)
           __ifThenElse(infix_==(currentEntVal,unit(zero(lastMan))), map.delete(currentEnt), unit(())) // question ???? changed delete - stDelete
         })
         ///////
@@ -140,7 +140,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     val n = unit(m.typeArguments.size)
     val lastMan = m.typeArguments.last
     val currentEnt = stGet(map,-1,ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
-    val entVal = ent.get(n)
+    val entVal = ent.get(n)(lastMan)
 
     //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
     //var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })

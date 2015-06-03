@@ -20,7 +20,7 @@ trait GenericEntryOps extends Base  {
      def +=(i : Rep[Int], v : Rep[Any]) : Rep[Unit] = genericEntry$plus$eq(self, i, v)
      def decrease(i : Rep[Int], v : Rep[Any]) : Rep[Unit] = genericEntryDecrease(self, i, v)
      def -=(i : Rep[Int], v : Rep[Any]) : Rep[Unit] = genericEntry$minus$eq(self, i, v)
-     def get(i : Rep[Int]) : Rep[Unit] = genericEntryGet(self, i)
+     def get[E](i : Rep[Int])(implicit typeE : TypeRep[E]) : Rep[E] = genericEntryGet[E](self, i)(typeE)
   }
   object GenericEntry {
 
@@ -41,7 +41,7 @@ trait GenericEntryOps extends Base  {
   val GenericEntry$minus$eq = GenericEntryIRs.GenericEntry$minus$eq
   type GenericEntry$minus$eq = GenericEntryIRs.GenericEntry$minus$eq
   val GenericEntryGet = GenericEntryIRs.GenericEntryGet
-  type GenericEntryGet = GenericEntryIRs.GenericEntryGet
+  type GenericEntryGet[E] = GenericEntryIRs.GenericEntryGet[E]
   // method definitions
    def genericEntryNew() : Rep[GenericEntry] = GenericEntryNew()
    def genericEntryUpdate(self : Rep[GenericEntry], i : Rep[Int], v : Rep[Any]) : Rep[Unit] = GenericEntryUpdate(self, i, v)
@@ -49,7 +49,7 @@ trait GenericEntryOps extends Base  {
    def genericEntry$plus$eq(self : Rep[GenericEntry], i : Rep[Int], v : Rep[Any]) : Rep[Unit] = GenericEntry$plus$eq(self, i, v)
    def genericEntryDecrease(self : Rep[GenericEntry], i : Rep[Int], v : Rep[Any]) : Rep[Unit] = GenericEntryDecrease(self, i, v)
    def genericEntry$minus$eq(self : Rep[GenericEntry], i : Rep[Int], v : Rep[Any]) : Rep[Unit] = GenericEntry$minus$eq(self, i, v)
-   def genericEntryGet(self : Rep[GenericEntry], i : Rep[Int]) : Rep[Unit] = GenericEntryGet(self, i)
+   def genericEntryGet[E](self : Rep[GenericEntry], i : Rep[Int])(implicit typeE : TypeRep[E]) : Rep[E] = GenericEntryGet[E](self, i)
   type GenericEntry = ddbt.lib.store.GenericEntry
 }
 object GenericEntryIRs extends Base {
@@ -87,8 +87,8 @@ object GenericEntryIRs extends Base {
     override def curriedConstructor = (copy _).curried
   }
 
-  case class GenericEntryGet(self : Rep[GenericEntry], i : Rep[Int]) extends FunctionDef[Unit](Some(self), "get", List(List(i))){
-    override def curriedConstructor = (copy _).curried
+  case class GenericEntryGet[E](self : Rep[GenericEntry], i : Rep[Int])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "get", List(List(i)), List(typeE)){
+    override def curriedConstructor = (copy[E] _).curried
   }
 
   type GenericEntry = ddbt.lib.store.GenericEntry
