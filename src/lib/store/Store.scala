@@ -342,9 +342,9 @@ class StoreWrapper[E<:Entry](idxs:Array[Idx[E]], ops:Array[EntryIdx[E]]=null)(im
 
     if (withTupleOp) {
       es.flatMap(e => e match {
-        case InsertEvent(entry) => List((TupleInsert.asInstanceOf[AnyRef] +: entry.elements))
-        case UpdateEvent(oldEntry, newEntry) => List((TupleDelete.asInstanceOf[AnyRef] +: oldEntry.elements), (TupleInsert.asInstanceOf[AnyRef] +: newEntry.elements))
-        case DeleteEvent(entry) => List((TupleDelete.asInstanceOf[AnyRef] +: entry.elements))
+        case InsertEvent(entry) => List((entry.elements :+ TupleInsert.asInstanceOf[AnyRef]))
+        case UpdateEvent(oldEntry, newEntry) => List((oldEntry.elements :+ TupleDelete.asInstanceOf[AnyRef]), (newEntry.elements :+ TupleInsert.asInstanceOf[AnyRef]))
+        case DeleteEvent(entry) => List((entry.elements :+ TupleDelete.asInstanceOf[AnyRef]))
       })
     } else {
       es.map(e => e match {
@@ -433,8 +433,8 @@ class ValueWrapper[A<:AnyVal](var v: A)(implicit n:Numeric[A]) {
 
     if (withTupleOp) {
       es.flatMap(e => e match {
-        case InsertEvent(value) => List(Array(TupleInsert, value))
-        case UpdateEvent(oldV, newV) => List(Array(TupleDelete, oldV), Array(TupleInsert, newV))
+        case InsertEvent(value) => List(Array(value, TupleInsert))
+        case UpdateEvent(oldV, newV) => List(Array(oldV, TupleDelete), Array(newV, TupleInsert))
       })
     } else {
       es.map(e => e match {
