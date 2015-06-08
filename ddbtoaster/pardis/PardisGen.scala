@@ -253,6 +253,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
   def createVarDefinition(name: String, tp:Type) = "var "+name+":"+tp.toScala+" = "+tp.zero
 
+  override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = map+".unsafeInsert(0, GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",")+",1L))"
+
 
   var cx : Ctx[Rep[_]] = null
   // Trigger code generation
