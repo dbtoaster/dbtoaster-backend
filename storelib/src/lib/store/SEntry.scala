@@ -3,8 +3,8 @@ package ddbt.lib.store
 import scala.collection.mutable
 
 //abstract class SEntry[E<:Product:Manifest] extends Entry(manifest[E].runtimeClass.newInstance.asInstanceOf[Product].productArity)
-class GenericEntry(val map: mutable.HashMap[Int,Any], val n: Int) extends Entry(n) {
-  def this(n: Int) = this(new mutable.HashMap[Int,Any], n)
+class GenericEntry(val map: mutable.HashMap[Int,Any], val n: Int, val isSampleEntry: Boolean) extends Entry(n) {
+  def this(n: Int) = this(new mutable.HashMap[Int,Any], n, false)
 
   def update(i: Int, v:Any) = map.put(i, v)
   def increase(i: Int, v:Any) = v match {
@@ -22,34 +22,80 @@ class GenericEntry(val map: mutable.HashMap[Int,Any], val n: Int) extends Entry(
   }
   def -=(i: Int, v:Any) = decrease(i ,v)
   def get[E](i: Int) = map.get(i).get.asInstanceOf[E]
-  def copy:GenericEntry = new GenericEntry(map.clone, map.size)
+  def copy:GenericEntry = new GenericEntry(map.clone, map.size, isSampleEntry)
 }
 
 object GenericEntry extends EntryIdx[GenericEntry] {
   def apply(ignore: Any, elems: Any*): GenericEntry = {
     val map = new mutable.HashMap[Int, Any]
-    for((e, i) <- elems.zipWithIndex) {
-      map.put(i+1, e)
+    
+    if (ignore == "SteSampleSEntry") {
+      map.put(elems(0).asInstanceOf[Int], elems(1))
+    } else {
+      for((e, i) <- elems.zipWithIndex) {
+        map.put(i+1, e)
+      }
     }
-    new GenericEntry(map, map.size)
-  }
-  def hash(e:GenericEntry) = {
-    var h = 16;
-    for (i <- (1 until e.map.size))
-      h = h * 41  + e.map.get(i).get.hashCode()
-//      e.map.foreach {e => h = h * 41 + e._2.hashCode()}
-    h
-  }//e.map.hashCode
 
+    new GenericEntry(map, map.size, ignore == "SteSampleSEntry")
+  }
+  def hash(e:GenericEntry) :Int = {
+    var h = 16;
+
+    // SteSampleSEntry
+    if (e.isSampleEntry) {
+      return h * 41 + e.map.get(1).get.hashCode()
+    } else {
+      for (i <- (1 until e.map.size))
+        h = h * 41  + e.map.get(i).get.hashCode()
+    }
+//      e.map.foreach {e => h = h * 41 + e._2.hashCode()}
+    return h
+  }//e.map.hashCode
 
 
   def cmp(e1:GenericEntry, e2:GenericEntry):Int = {
 
-    for (i <- (1 until e1.map.size)) {
-      if ( e1.map.get(i).get != e2.map.get(i).get )
-        return 1
+   // System.err.println("Start")
+   //  System.err.println("********** E1 ************")
+   //  for ((k, v) <- e1.map) System.err.println("   " + k + " "+ v)
+
+   //  System.err.println("********** E2 ************")
+   //  for ((k, v) <- e2.map) System.err.println("   " + k + " "+ v)
+   //  System.err.println("End")
+
+
+    // first element is SteSampleSEntry
+    if (e1.map.size < e2.map.size) {
+      for ((k, v) <- e1.map) {
+        if (e2.map.get(k).get != e1.map.get(k).get) {
+         System.err.println("NOT Equals e1(%s) < e2(%s)".format(e1.map, e2.map))
+          return 1
+        }
+      }
+     System.err.println("Equals e1(%s) < e2(%s)".format(e1.map, e2.map))
+      0
+    } else if (e1.map.size > e2.map.size) {
+      for ((k, v) <- e2.map) {
+        if (e1.map.get(k).get != e2.map.get(k).get) {
+         System.err.println("NOT Equals e1(%s) > e2(%s)".format(e1.map, e2.map))
+          return 1
+        }
+      }
+           System.err.println("Equals e1(%s) > e2(%s)".format(e1.map, e2.map))
+
+      0
+    } else {
+      for (i <- (1 until e1.map.size)) {
+        if ( e1.map.get(i).get != e2.map.get(i).get) {
+          System.err.println("NOT Equals e1 < e2")
+          return 1
+        }
+      }
+      System.err.println("Equals e1 = e2")
+
+      0
     }
-    0
   }
 }
 
