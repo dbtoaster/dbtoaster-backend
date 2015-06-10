@@ -9,7 +9,7 @@ abstract class LMSGen(override val cls:String="Query") extends CodeGen {
 }
 
 
-class LMSScalaGen(cls:String="Query", override val watch: Boolean = false) extends LMSGen(cls) with IScalaGen{
+class LMSScalaGen(cls:String="Query") extends LMSGen(cls) with IScalaGen{
   override def apply(s0:M3.System):String = sys.error(
     "Set 'ddbt.lms=1' in conf/ddbt.properties to enable LMS code generation"
   )
