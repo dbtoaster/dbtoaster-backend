@@ -21,6 +21,7 @@ trait GenericEntryOps extends Base  {
      def decrease(i : Rep[Int], v : Rep[Any]) : Rep[Unit] = genericEntryDecrease(self, i, v)
      def -=(i : Rep[Int], v : Rep[Any]) : Rep[Unit] = genericEntry$minus$eq(self, i, v)
      def get[E](i : Rep[Int])(implicit typeE : TypeRep[E]) : Rep[E] = genericEntryGet[E](self, i)(typeE)
+     def cmp(e : Rep[GenericEntry]) : Rep[Int] = genericEntryCmp(self, e)
   }
   object GenericEntry {
 
@@ -42,6 +43,8 @@ trait GenericEntryOps extends Base  {
   type GenericEntry$minus$eq = GenericEntryIRs.GenericEntry$minus$eq
   val GenericEntryGet = GenericEntryIRs.GenericEntryGet
   type GenericEntryGet[E] = GenericEntryIRs.GenericEntryGet[E]
+  val GenericEntryCmp = GenericEntryIRs.GenericEntryCmp
+  type GenericEntryCmp = GenericEntryIRs.GenericEntryCmp
   // method definitions
    def genericEntryNew() : Rep[GenericEntry] = GenericEntryNew()
    def genericEntryUpdate(self : Rep[GenericEntry], i : Rep[Int], v : Rep[Any]) : Rep[Unit] = GenericEntryUpdate(self, i, v)
@@ -50,6 +53,7 @@ trait GenericEntryOps extends Base  {
    def genericEntryDecrease(self : Rep[GenericEntry], i : Rep[Int], v : Rep[Any]) : Rep[Unit] = GenericEntryDecrease(self, i, v)
    def genericEntry$minus$eq(self : Rep[GenericEntry], i : Rep[Int], v : Rep[Any]) : Rep[Unit] = GenericEntry$minus$eq(self, i, v)
    def genericEntryGet[E](self : Rep[GenericEntry], i : Rep[Int])(implicit typeE : TypeRep[E]) : Rep[E] = GenericEntryGet[E](self, i)
+   def genericEntryCmp(self : Rep[GenericEntry], e : Rep[GenericEntry]) : Rep[Int] = GenericEntryCmp(self, e)
   type GenericEntry = ddbt.lib.store.GenericEntry
 }
 object GenericEntryIRs extends Base {
@@ -89,6 +93,10 @@ object GenericEntryIRs extends Base {
 
   case class GenericEntryGet[E](self : Rep[GenericEntry], i : Rep[Int])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "get", List(List(i)), List(typeE)){
     override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class GenericEntryCmp(self : Rep[GenericEntry], e : Rep[GenericEntry]) extends FunctionDef[Int](Some(self), "cmp", List(List(e))){
+    override def curriedConstructor = (copy _).curried
   }
 
   type GenericEntry = ddbt.lib.store.GenericEntry

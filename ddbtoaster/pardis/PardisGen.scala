@@ -1,4 +1,5 @@
 package ddbt.codegen
+import ddbt.Utils._
 
 import java.io.StringWriter
 
@@ -255,6 +256,16 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
   override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = map+".unsafeInsert(0, GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",")+",1L))"
 
+  override def toMapFunction(q: Query) = {
+    val map = q.name
+    val m = maps(map)
+    val mapKeys = m.keys.map(_._2)
+    val nodeName = map+"_node"
+    val res = nodeName+"_mres"
+    // XXX fix it
+    //"{ val test"+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => SUM_QTY_node_mres += ((e.get(1).asInstanceOf[String], e.get(2).asInstanceOf[String]) -> e.get(3).asInstanceOf[Double])}; "+res+".toMap }"
+    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += ("+(if(mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map{ case (_,i) => "e.get("+(i+1)+")" }) else "e")+" -> e.get("+(if(mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size)+")) }; "+res+".toMap }"
+  }
 
   var cx : Ctx[Rep[_]] = null
   // Trigger code generation

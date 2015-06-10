@@ -160,7 +160,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   def steGet[E<:Entry:TypeRep, T:TypeRep](x: Rep[E], i: Int):Rep[T] = //SteGet[E, T](x, i)
     x.get[T](unit(i))
-  def stGet[E<:Entry:TypeRep](x: Rep[Store[E]], idx:Int, key:Rep[E]):Rep[E] = x.get(unit(idx), key)
+  def stGet[E<:Entry:TypeRep](x: Rep[Store[E]], idx:Int, key:Rep[E]):Rep[E] = x.get(unit(0), key)
   def stClear[E<:Entry:TypeRep](x: Rep[Store[E]]):Rep[Unit] = x.clear//StClear[E](x)
 
   def stUnsafeInsert[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E], idx:Int):Rep[Unit] = x.unsafeInsert(unit(idx), e)//StUnsafeInsert[E](x, e, idx)
@@ -209,7 +209,12 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 //    val blk = reifyBlock(f(blkSym))
 //    StSlice[E](x, idx, key, blkSym, blk)
 //    blk
-    x.slice(unit(idx), key, __lambda(f))
+
+//store.foreach{e => if(GenericEntry.cmp(sampleEntry, e) == 0) func(e)}
+//    x.slice(unit(0), key, __lambda(f))
+
+    x.foreach(__lambda{ e => __ifThenElse(infix_==(key.cmp(e.asInstanceOf[Rep[GenericEntry]]),unit(0)), f(e), unit())})
+
   }
   def stSlice[E<:Entry:TypeRep](x: Rep[Store[E]], f:Rep[E]=>Rep[Unit], args:(Int,Rep[Any])*):Rep[Unit] = stSlice(x,-1,stSampleEntry(x, args),f)
 

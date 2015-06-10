@@ -23,6 +23,7 @@ class GenericEntry(val map: mutable.HashMap[Int,Any], val n: Int, val isSampleEn
   def -=(i: Int, v:Any) = decrease(i ,v)
   def get[E](i: Int) = map.get(i).get.asInstanceOf[E]
   def copy:GenericEntry = new GenericEntry(map.clone, map.size, isSampleEntry)
+  def cmp(e: GenericEntry) = GenericEntry.cmp(this, e)
 }
 
 object GenericEntry extends EntryIdx[GenericEntry] {
@@ -69,30 +70,30 @@ object GenericEntry extends EntryIdx[GenericEntry] {
     if (e1.map.size < e2.map.size) {
       for ((k, v) <- e1.map) {
         if (e2.map.get(k).get != e1.map.get(k).get) {
-         System.err.println("NOT Equals e1(%s) < e2(%s)".format(e1.map, e2.map))
+         //System.err.println("NOT Equals e1(%s) < e2(%s)".format(e1.map, e2.map))
           return 1
         }
       }
-     System.err.println("Equals e1(%s) < e2(%s)".format(e1.map, e2.map))
+     //System.err.println("Equals e1(%s) < e2(%s)".format(e1.map, e2.map))
       0
     } else if (e1.map.size > e2.map.size) {
       for ((k, v) <- e2.map) {
         if (e1.map.get(k).get != e2.map.get(k).get) {
-         System.err.println("NOT Equals e1(%s) > e2(%s)".format(e1.map, e2.map))
+        // System.err.println("NOT Equals e1(%s) > e2(%s)".format(e1.map, e2.map))
           return 1
         }
       }
-           System.err.println("Equals e1(%s) > e2(%s)".format(e1.map, e2.map))
+         //  System.err.println("Equals e1(%s) > e2(%s)".format(e1.map, e2.map))
 
       0
     } else {
       for (i <- (1 until e1.map.size)) {
         if ( e1.map.get(i).get != e2.map.get(i).get) {
-          System.err.println("NOT Equals e1 < e2")
+          //System.err.println("NOT Equals e1 < e2")
           return 1
         }
       }
-      System.err.println("Equals e1 = e2")
+      //System.err.println("Equals e1 = e2")
 
       0
     }
