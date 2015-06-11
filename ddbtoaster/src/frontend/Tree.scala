@@ -224,7 +224,7 @@ object SQL {
   // ---------- Expressions
   abstract sealed class Expr extends SQL
   case class Alias(e:Expr,n:String) extends Expr { override def toString=e+" AS "+n }
-  case class Field(n:String,t:String) extends Expr { override def toString=if (t==null) n else t+ "" +n }
+  case class Field(n:String,t:String) extends Expr { override def toString=if (t==null) n else t+"."+n }
   case class Const(v:String, tp:Type) extends Expr { override def toString=if (tp==TypeString) "'"+v+"'" else v }
   case class Apply(fun:String,args:List[Expr]) extends Expr { override def toString=fun+"("+args.mkString(", ")+")" }
   case class Nested(q:Query) extends Expr { override def toString="("+ind("\n"+q.toString)+"\n)" }

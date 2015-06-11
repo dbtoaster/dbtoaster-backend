@@ -1,4 +1,4 @@
-package store2;
+package ddbt.lib.store2;
 
 /**
  * Abstract entry that is specialized for each map.

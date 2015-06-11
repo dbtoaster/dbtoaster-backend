@@ -470,7 +470,7 @@ trait GenericGenStore extends GenericNestedCodegen {
     case "Boolean" | "boolean" => "B"
     case "java.util.Date" => "A"
     case "java.lang.String" | "char*" => "S"
-    case _ => tp.replace("","_")
+    case _ => tp.replace(".","_")
   }
 
   def zeroValue(tp:String):String = tp match {
@@ -585,7 +585,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry with GenericGenStor
     def h(tp:String) = if (tp=="Int") "" else ".##"
     def rotl(i:String, dist:Int) = "("+i+" << "+dist+") | ("+i+" >>> "+(-dist)+")"
     locs.zipWithIndex.map { case (i,n) =>
-      (if(n==0) "{ var h:Int="+seed+"; var mix:Int" else "  mix") + "="+(if (obj!=null) obj+ "" else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
+      (if(n==0) "{ var h:Int="+seed+"; var mix:Int" else "  mix") + "="+(if (obj!=null) obj+"." else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
       "mix=("+rotl("mix",15)+")*0x1b873593 ^ h; mix=" + rotl("mix", 13)+"; h=(mix << 1)+mix+0xe6546b64; "
     }.mkString+"h^="+locs.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h ^ (h>>>16) }"
   }
@@ -695,7 +695,7 @@ trait SparkGenStore extends ScalaGenStore {
         stream.println(" var "+i+" = 0")
         emitValDef(sym," while( " + i + " < " + len + ") {")
         (fields ++ List("values")).zipWithIndex.foreach{ case (f, idx) =>
-          blockSym.attributes.put(ENTRY_GET+(idx+1),qx+ "" +f+"("+i+")")
+          blockSym.attributes.put(ENTRY_GET+(idx+1),qx+"."+f+"("+i+")")
         }
         // stream.println("  val "+quote(blockSym) + " = (" + fields.map(qx+"."+_+"(i), ").mkString+qx+".values(i))")
         emitBlock(block)
@@ -877,7 +877,7 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
     def h(tp:String) = if (tp=="Int") "" else ".##"
     def rotl(i:String, dist:Int) = "("+i+" << "+dist+") | ("+i+" >>> "+(-dist)+")"
     locs.zipWithIndex.map { case (i,n) =>
-      (if(n==0) "{ var h:Int=0xcafebabe; var mix:Int" else "  mix") + "="+(if (obj!=null) obj+ "" else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
+      (if(n==0) "{ var h:Int=0xcafebabe; var mix:Int" else "  mix") + "="+(if (obj!=null) obj+"." else "")+"_"+i+h(argTypes(i-1))+" * 0xcc9e2d51; "+
       "mix=("+rotl("mix",15)+")*0x1b873593 ^ h; mix=" + rotl("mix", 13)+"; h=(mix << 1)+mix+0xe6546b64; "
     }.mkString+"h^="+locs.size+"; h^=h>>>16; h*=0x85ebca6b; h^=h >>> 13; h*=0xc2b2ae35; h ^ (h>>>16) }"
   }

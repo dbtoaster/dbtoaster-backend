@@ -7,7 +7,7 @@ object Loader {
 
   def load(lib:String) {
     def ld(pl:List[String]):Unit = pl match {
-      case p::ps => val f = new java.io.File(p+ "/lib" +lib+".jnilib")
+      case p::ps => val f = new java.io.File(p+"/lib"+lib+".jnilib")
         if (f.exists) System.load(f.getCanonicalPath()) else ld(ps);
       case Nil => throw new Exception("JNI Library "+lib+" not found");
     }

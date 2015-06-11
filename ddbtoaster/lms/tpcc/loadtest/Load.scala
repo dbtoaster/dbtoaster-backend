@@ -62,7 +62,7 @@ object Load{
       itemRecord.add(i_data)
       itemLoader.load(itemRecord)
       if ((i_id % 100) == 0) {
-        System.out.print("")
+        System.out.print(".")
         if ((i_id % 5000) == 0) System.out.print(" %d\n".format(i_id))
       }
       i_id += 1
@@ -237,7 +237,7 @@ object Load{
       stockLoader.load(stockRecord)
       if (optionDebug) System.out.print("SID = %d, WID = %d, Quan = %d\n".format(s_i_id, s_w_id, s_quantity))
       if ((s_i_id % 100) == 0) {
-        System.out.print("")
+        System.out.print(".")
         if ((s_i_id % 5000) == 0) System.out.print(" %d\n".format(s_i_id))
       }
       s_i_id += 1
@@ -396,7 +396,7 @@ object Load{
           System.out.print("CID = %d, LST = %s, P# = %s\n".format(c_id, c_last, c_phone))
         }
         if ((c_id % 100) == 0) {
-          System.out.print("")
+          System.out.print(".")
           if ((c_id % 1000) == 0) System.out.print(" %d\n".format(c_id))
         }
         c_id += 1
@@ -523,7 +523,7 @@ object Load{
           ol += 1
         }
         if ((o_id % 100) == 0) {
-          System.out.print("")
+          System.out.print(".")
           if ((o_id % 1000) == 0) {
             System.out.print(" %d\n".format(o_id))
           }

@@ -291,7 +291,7 @@ object Library {
       if (rt!=null && !at.contains(null)) {
         val n = m.getName
         val un = if (namePrefix!=null) n.substring(namePrefix.length) else n
-        val cn = if (callPrefix!=null) callPrefix+ "" +n else n
+        val cn = if (callPrefix!=null) callPrefix+"."+n else n
         val p = un.indexOf("$default$")
         if (p == -1) {
           if (!funs.containsKey(un)) funs.put(un,(cn,List((rt,at))))

@@ -1,4 +1,4 @@
-package store; // we pretend
+package ddbt.lib.store; // we pretend
 import scala.Function1;
 import scala.Unit;
 

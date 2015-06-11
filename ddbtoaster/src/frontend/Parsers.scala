@@ -33,14 +33,14 @@ class ExtParser extends StandardTokenParsers {
 
   import lexical._
   //lexical.reserved ++= List("")
-  lexical.delimiters ++= List("(",")",",", "",";","+","-",":=","<",">")
+  lexical.delimiters ++= List("(",")",",",".",";","+","-",":=","<",">")
 
   // Verifies that the parse result matches a predicate
   // def check[T](p:Parser[T],pred:T=>Boolean,msg:String) = new Parser[T] { def apply(i:Input) = p(i) match { case Success(res,next) => if (pred(res)) Success(res,next) else new Failure(msg,i) case f=>f } }
 
   // ------------ Literals
   lazy val longLit = opt("+"|"-") ~ numericLit ^^ { case s~n => s.getOrElse("")+n }
-  lazy val doubleLit = (longLit <~ "") ~ opt(numericLit) ~ opt(("E"|"e") ~> longLit) ^^ { case i~d~e => val f=i+ "" +d.getOrElse("")+(e match { case Some(j)=>"E"+j case _=>"" }); if (f.endsWith("")) f+"0" else f }
+  lazy val doubleLit = (longLit <~ ".") ~ opt(numericLit) ~ opt(("E"|"e") ~> longLit) ^^ { case i~d~e => val f=i+"."+d.getOrElse("")+(e match { case Some(j)=>"E"+j case _=>"" }); if (f.endsWith(".")) f+"0" else f }
 
   // ------------ Types
   lazy val tpe: Parser[Type] = (("string" | ("char"|"varchar") ~> "(" ~> numericLit <~  ")") ^^^ TypeString
@@ -75,7 +75,7 @@ class ExtParser extends StandardTokenParsers {
 
 object M3Parser extends ExtParser with (String => M3.System) {
   import ddbt.ast.M3._
-  lexical.delimiters ++= List("{","}",":",":=","+","-","*", "/","=","!=","<","<=",">=",">","[","]","^=","+=")
+  lexical.delimiters ++= List("{","}",":",":=","+","-","*","/","=","!=","<","<=",">=",">","[","]","^=","+=")
 
   // ------------ Expressions
   lazy val mapref = ident ~ opt("(" ~> tpe <~ ")") ~ ("[" ~> "]" ~> "[" ~> repsep(ident,",") <~ "]") ^^
@@ -136,12 +136,12 @@ object M3Parser extends ExtParser with (String => M3.System) {
 object SQLParser extends ExtParser with (String => SQL.System) {
   import ddbt.ast.SQL._
   lexical.reserved ++= List("SELECT","FROM","WHERE","GROUP","LEFT","RIGHT","JOIN","NATURAL","ON") // reduce this list by conditional accepts
-  lexical.delimiters ++= List("+","-","*", "/","%","=","<>","!=","<","<=",">=",">")
-  lazy val field = opt(ident<~ "")~(ident|"*") ^^ { case t~n => Field(n,t.getOrElse(null)) } // if '*' compute the expansion
+  lexical.delimiters ++= List("+","-","*","/","%","=","<>","!=","<","<=",">=",">")
+  lazy val field = opt(ident<~".")~(ident|"*") ^^ { case t~n => Field(n,t.getOrElse(null)) } // if '*' compute the expansion
 
   // ------------ Expressions
   lazy val expr = prod ~ rep(("+"|"-") ~ prod) ^^ { case a~l => (a/:l) { case (l,o~r)=> o match { case "+" => Add(l,r) case "-" => Sub(l,r) }} }
-  lazy val prod = atom ~ rep(("*"| "/" |"%") ~ atom) ^^ { case a~l => (a/:l) { case (l,o~r)=> o match { case "*" => Mul(l,r) case "/" => Div(l,r) case "%" => Mod(l,r) }} }
+  lazy val prod = atom ~ rep(("*"|"/"|"%") ~ atom) ^^ { case a~l => (a/:l) { case (l,o~r)=> o match { case "*" => Mul(l,r) case "/" => Div(l,r) case "%" => Mod(l,r) }} }
   lazy val atom:Parser[Expr] = (
     "COUNT" ~> "(" ~>"DISTINCT" ~> expr <~ ")" ^^ { Agg(_,OpCountDistinct) }
   //| "INTERVAL" ~> stringLit ~ ("year"|"month"|"day"|"hours"|"minute"|"second") ^^ { case e~u => Const(e+";"+u, TypeDate) }
@@ -204,7 +204,7 @@ object SQLParser extends ExtParser with (String => SQL.System) {
     case e => sys.error(e.toString)
   }
   def load(path:String,base:String=null) = {
-    def f(p:String) = scala.io.Source.fromFile((if (base!=null) base+ "/" else "")+p).mkString
+    def f(p:String) = scala.io.Source.fromFile((if (base!=null) base+"/" else "")+p).mkString
     apply("(?i)INCLUDE [\"']?([^\"';]+)[\"']?;".r.replaceAllIn(f(path),m=>f(m.group(1))).trim)
   }
 }

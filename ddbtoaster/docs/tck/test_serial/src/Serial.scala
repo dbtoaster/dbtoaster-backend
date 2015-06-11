@@ -85,7 +85,7 @@ object Loader {
     val p=(if (path!=null) Array(path) else (l0 match {
       case ctx: URLClassLoader => ctx.getURLs.map(_.getPath)
       case _ => System.getProperty("java.class.path").split(":")
-    })).filter(p=>new File(p+ "/" +cls.replace("", "/")+".class").exists)
+    })).filter(p=>new File(p+"/"+cls.replace(".","/")+".class").exists)
     if (p.size==0) { System.err.println("Class not found "+cls); return null.asInstanceOf[T] }
     val l1=new URLClassLoader(Array(new File(p(0)).toURI.toURL),l0)
     try {
@@ -95,7 +95,7 @@ object Loader {
       }
       if (cs.size!=1) { System.err.println("No matching constructors: "+cs.toList); return null.asInstanceOf[T] }
       // JNI loading
-      val f=new File(p(0)+ "/" +cls.replace("", "/")+".jnilib")
+      val f=new File(p(0)+"/"+cls.replace(".","/")+".jnilib")
       if (f.exists) try { System.load(f.getCanonicalPath) } catch { case t:Throwable=> }
       cs(0).newInstance(args.asInstanceOf[Seq[Object]]:_*).asInstanceOf[T]
       //null.asInstanceOf[T]

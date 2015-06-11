@@ -201,7 +201,7 @@ object Compiler {
     if (exec) {
       lang match {
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS|LANG_SPARK_LMS =>
-          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+ "" +name,("-b"+exec_bs :: exec_args).toArray,exec_vm)
+          Utils.scalaExec(dir::libs.map(p=>new File(p)),pkg+"."+name,("-b"+exec_bs :: exec_args).toArray,exec_vm)
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
           val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize, no_output) = ddbt.lib.Helper.extractExecArgs(("-b"+exec_bs :: exec_args).toArray)
           val actual_exec_args = "-b "+exec_bs :: "-p "+pMode :: (if(no_output) List("--no-output") else Nil)
@@ -218,8 +218,8 @@ object Compiler {
             val src = if(dataset.contains("_del")) srcTmp.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else srcTmp
             Utils.write(out,src)
             val pl = "srccpp/lib"
-            val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf(""))
-            val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf("")),null,pl))._1; if (t_comp!=null) t_comp(t2)
+            val po = if(cPath!=null) cPath else out.substring(0,out.lastIndexOf("."))
+            val t2 = Utils.ns(()=>Utils.cppCompiler(out,out.substring(0,out.lastIndexOf(".")),null,pl))._1; if (t_comp!=null) t_comp(t2)
             if(t_run != null) {
               t_run(()=>{
                 var i = 0

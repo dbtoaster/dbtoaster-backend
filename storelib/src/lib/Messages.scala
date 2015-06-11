@@ -24,7 +24,7 @@ object Messages {
   case object EndOfStream extends StreamEvent // get snapshot of all query maps and shut the system down
   case class GetSnapshot(view:List[Int]) extends StreamEvent // request a snapshot of some maps
   /** System state (returned with snapshot) */
-  case class StreamStat(ns:Long,count:Long,skip:Long) { override def toString = { val ms=math.round(ns/1000000.0); ms/1000+".%03d".format(ms%1000)+"s ("+count+ "/" +skip+")" } }
+  case class StreamStat(ns:Long,count:Long,skip:Long) { override def toString = { val ms=math.round(ns/1000000.0); ms/1000+".%03d".format(ms%1000)+"s ("+count+"/"+skip+")" } }
 
   // --------------- Internal cluster messages
   import java.io._

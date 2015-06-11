@@ -1,4 +1,4 @@
-package store2;
+package ddbt.lib.store2;
 import scala.Function1;
 import scala.Boolean;
 import scala.Unit;

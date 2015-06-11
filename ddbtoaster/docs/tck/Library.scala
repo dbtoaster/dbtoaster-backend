@@ -35,7 +35,7 @@ object Library {
       if (rt!=null && !at.contains(null)) {
         val n = m.getName
         val un = if (namePrefix!=null) n.substring(namePrefix.length) else n
-        val cn = if (callPrefix!=null) callPrefix+ "" +n else n
+        val cn = if (callPrefix!=null) callPrefix+"."+n else n
         val p = un.indexOf("$default$")
         if (p == -1) funs.put(un,(cn,rt,at))
         else { // min #arguments required for this function = min(in-1) forall in

@@ -625,13 +625,13 @@ class LMSSparkGen(cls:String="Query") extends LMSGen(cls,SparkExpGen) with IScal
                   "val "+partitionId+" = 0; // TODO\n"+
                   "val "+outContainer+" = output("+partitionId+").batch."+m.name+"\n"+
                   m.keys.map{k =>
-                    outContainer+ "" +k+" += ("+inContainer+ "" +k+","+i+")\n"
+                    outContainer+"."+k+" += ("+inContainer+"."+k+","+i+")\n"
                   }.mkString+
                   outContainer+".values += "+t+"\n"
                 )+
                 "\n} else ());\n"
               } else {
-                "(if ("+c+") "+m.name+ "" +fop+"("+genTuple(m.keys map ctx)+","+t+") else ());\n"
+                "(if ("+c+") "+m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+t+") else ());\n"
               }
             case _ =>
               if(m.name.endsWith("_DELTA")){
@@ -643,13 +643,13 @@ class LMSSparkGen(cls:String="Query") extends LMSGen(cls,SparkExpGen) with IScal
                   "val "+partitionId+" = 0; // TODO\n"+
                   "val "+outContainer+" = output("+partitionId+").batch."+m.name+"\n"+
                   m.keys.map{k =>
-                    outContainer+ "" +k+" += ("+inContainer+ "" +k+","+i+")\n"
+                    outContainer+"."+k+" += ("+inContainer+"."+k+","+i+")\n"
                   }.mkString+
                   outContainer+".values += "+v+"\n"
                 )+
                 "\n}\n"
               } else {
-                m.name+ "" +fop+"("+genTuple(m.keys map ctx)+","+v+")\n"
+                m.name+"."+fop+"("+genTuple(m.keys map ctx)+","+v+")\n"
               }
           }
         }),/*if (op==OpAdd)*/ Some(m.keys zip m.tks) /*else None*/) // XXXX commented out the if expression
