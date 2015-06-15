@@ -46,6 +46,11 @@ object M3Map {
   // Pretty-print a map
   def toStr(o:Any):String = if (o.isInstanceOf[Map[_,_]]) toStr(o.asInstanceOf[Map[_,_]]) else o.toString
   def toStr[K,V](m:Map[K,V]):String = m.toList.map{case(k,v)=>(str(k),str(v))}.sortBy(x=>x._1).map{case(k,v)=>k+" -> "+v}.mkString("\n")
+  def toStr[K,V](o:Any, keys: List[String]):String = if (o.isInstanceOf[Map[_,_]]) toStr(o.asInstanceOf[Map[_,_]],keys) else o.toString
+  def toStr[K,V](m:Map[K,V], keys: List[String]):String = m.toList.map{case(k,v)=>(genKeys(k,keys),str(v))}.sortBy(x=>x._1).map{case(k,v)=>"\t<item>\n%s\n\t\t<__av>%s</__av>\n\t</item>".format(k,v)}.mkString("\n")
+  def genKeys[K](k:K, keys: List[String]):String = if(keys.size == 0) ""
+  else if(keys.size == 1) "\t\t<%s>%s</%s>".format(keys(0), k, keys(0))
+  else keys.zipWithIndex.map{case (name, i) => "\t\t<%s>%s</%s>".format(name.toUpperCase,str(k.asInstanceOf[Product].productElement(i)),name.toUpperCase)}.mkString("\n")
   // Convert a map into XML (for debug purposes)
   def toXML[K,V](m:Map[K,V]): List[xml.Elem] = {
     var l = List[xml.Elem]()

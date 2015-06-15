@@ -124,13 +124,13 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
             cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, mE.typeArguments(i))) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, mE.typeArguments(ks.size)))
           },ko.map{ case (k,i) => (i+1,cx(k)) } : _*)
         } else {
-          println(s"tpe here! ${tp}")
-          val mE = man(tp)
-          println(s"tpe here! ${mE}")
-          println(s"tpe here! ${mE.typeArguments} ")
-          proxy.foreach(__lambda {
-            (e:Rep[Entry])=> {
-              cx.add(ki.map{ case (k,i) => println(mE.typeArguments.size); (k,impl.steGet(e, i+1)(impl.EntryType, runtimeType[Long])) }.toMap); co(impl.steGet(e, ks.size+1)(impl.EntryType, runtimeType[Long]))
+          implicit val mE=me(m.tks,tp)
+          proxy.foreach(__lambda { e:Rep[Entry] => {
+            //println(s"********************tpe here! ${mE}")
+            // println(s"********************tpe here! ${mE.typeArguments}")
+              cx.add(ki.map{ case (k,i) => (k,impl.steGet(e, i+1)(impl.EntryType, mE.typeArguments(i))) }.toMap)
+
+              co(impl.steGet(e, ks.size+1)(impl.EntryType, runtimeType[Long]))
             }
           })
         }
@@ -245,7 +245,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       createVarDefinition(m.name, m.tp)+";\n" + s"var ${c.name+c.id} = " + m.name + ";\n"
     }
     else {
-      println("MAP NAME: " + m.name)
+      //println("MAP NAME: " + m.name)
       codeGen.generateNewStore(ctx0(m.name)._1.asInstanceOf[impl.Sym[_]], Some(m.name))
     }
   }
@@ -264,7 +264,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     val res = nodeName+"_mres"
     // XXX fix it
     //"{ val test"+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => SUM_QTY_node_mres += ((e.get(1).asInstanceOf[String], e.get(2).asInstanceOf[String]) -> e.get(3).asInstanceOf[Double])}; "+res+".toMap }"
-    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += ("+(if(mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map{ case (_,i) => "e.get("+(i+1)+")" }) else "e")+" -> e.get("+(if(mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size)+")) }; "+res+".toMap }"
+    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += (("+(if(mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map{ case (_,i) => "e.get("+(i+1)+")" }) else "e")+", e.get("+(if(mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size)+"))) }; "+res+".toMap }"
   }
 
   var cx : Ctx[Rep[_]] = null
@@ -288,7 +288,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
         case _ =>
           args.map(a=>a._1+":"+a._2.toScala).mkString(", ")
       }
-      println(s"HELLO AGAIN2 ${ctx0}")
+      //println(s"HELLO AGAIN2 ${ctx0}")
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
         ctx0.map{ case (name,(sym,keys,tp)) => (name, sym) }.toList union
@@ -391,8 +391,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
     var ts = ""
     for(x <- tsResBlks) {
-      println(x._3)
-      println("========")
+      //println(x._3)
+      //println("========")
       val doc = codeGen.blockToDocument((x._3))
 //      println(doc)
 //      val doc = {
@@ -406,7 +406,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 //        pw.println()
 //      }
       doc.format(20, pw)
-      println(strWriter.toString)
+      //println(strWriter.toString)
       ts += "def on"+x._1+"("+x._2+") {\n"+strWriter.toString+"\n}\n"
     }
 

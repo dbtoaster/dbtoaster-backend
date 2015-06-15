@@ -547,9 +547,9 @@ trait IScalaGen extends CodeGen {
     "import ddbt.lib._\n"+additionalImports()+"\nimport akka.actor.Actor\nimport java.util.Date\n\n"+
     "object "+cls+" {\n"+ind("import Helper._\nval precision = 7; // significative numbers (7 to pass r_sumdivgrp, 10 otherwise)\nval diff_p = Math.pow(0.1,precision)\n"+getEntryDefinitions+"\n"+
     "def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long,b:Int,no_output:Boolean)=>run["+cls+"]("+streams(s0.sources)+",p,t,b),f)\n\n"+
-    "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+
-    ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\""+q.name+":\\n\"+M3Map.toStr(res("+i+"))+\"\\n\")" }.mkString("\n"))+
-    "\n})")+"\n}")+"\n}\n"
+    "def main(args:Array[String]) {\n"+ind("execute(args,(res:List[Any])=>{\n"+ind("println(\"<snap>\")")+"\n"+
+    ind(s0.queries.zipWithIndex.map{ case (q,i)=> "println(\"<"+q.name+">\\n\"+M3Map.toStr(res("+i+")" + (if(q.keys.isEmpty) "" else ",List("+q.keys.map(k => "\""+k._1+"\"").mkString(",")+")") + ")+\"\\n\" + \"</"+q.name+">\\n\")" }.mkString("\n"))+
+    "\n"+ind("println(\"</snap>\")")+"\n})")+"\n}")+"\n}\n"
 
   override def pkgWrapper(pkg:String, body:String) = "package "+pkg+"\n"+body+"\n"
 

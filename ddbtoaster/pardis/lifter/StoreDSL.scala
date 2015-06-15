@@ -105,7 +105,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
     //var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
     var idx = 0
-    println(s"tpeeee: ${m.typeArguments}")
+    //println(s"tpeeee: ${m.typeArguments}")
     val entVal = ent.get(n.asInstanceOf[Rep[Int]])(lastMan)
     // if(tmp) {
     //   // we don't remove 0-elements
@@ -185,7 +185,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 //  }
 
   def dtGetTime(x: Rep[Date]): Rep[Long] = dateGetTime(x)
-  def stProxyGet[E<:Entry: TypeRep](x: Rep[Store[E]], args:(Int,Rep[Any])*):Rep[E] = steGet[E, E](stSampleEntry(x, args),-1).asInstanceOf[Rep[E]]
+  def stProxyGet[E<:Entry: TypeRep](x: Rep[Store[E]], args:(Int,Rep[Any])*):Rep[E] = stGet[E](x, -1, stSampleEntry[E](x, args))
   def stSampleEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]):Rep[E] = SteSampleSEntry[E](x, args)
 
   def stDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]):Rep[Unit] = x.delete(e)//StDelete[E](x, e)

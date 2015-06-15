@@ -290,6 +290,76 @@ class CppNewBackendUnitTest < GenericUnitTest
     end
 end
 
+
+class SCNewBackendUnitTest < GenericUnitTest
+    def run
+        queryName = @qname;
+        unless $skip_compile then
+            counter = 1;
+            if File.file?("bin/queries/#{queryName}") then
+              queryName = temp_name(@qname);
+              counter += 1;
+            end
+            print "#{$dbt_path}/bin/queries/#{queryName}.scala \n"
+            compile_cmd =
+            "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
+            $timeout_compile +
+            "(cd #{$dbt_backend_path}/.. ; sbt 'project DDBToaster' 'toast -l scala #{$optlevel} -o #{$dbt_path}/bin/queries/#{queryName}.scala  #{@qpath} '; 
+              fsc -J-Xss512m -J-Xmx4G -J-Xms4G -J-XX:-DontCompileHugeMethods -cp /Users/khayyam/Desktop/private/education/Epfl/Pardis-SStore/DDBToaster/storelib/target/scala-2.10/classes:/Users/khayyam/.ivy2/cache/com.typesafe.akka/akka-actor_2.10/jars/akka-actor_2.10-2.2.3.jar:/Users/khayyam/.ivy2/cache/com.typesafe.akka/akka-remote_2.10/jars/akka-remote_2.11-2.2.3.jar:/Users/khayyam/.ivy2/cache/org.uncommons.maths/uncommons-maths/jars/uncommons-maths-1.2.2a.jar:/Users/khayyam/.ivy2/cache/org.scala-lang/scala-actors/jars/scala-actors-2.10.2.jar -d /Users/khayyam/Desktop/private/education/Epfl/Pardis-SStore/DDBToaster/ddbtoaster/target/tmp -deprecation -unchecked -feature -optimise -Yinline-warnings #{$dbt_path}/bin/queries/#{queryName}.scala
+              )"+
+            #(dbt_base_cmd + [
+            #"-l","cpp",
+            #"-o","bin/queries/#{queryName}.hpp",
+            #"-c","bin/queries/#{queryName}",
+            #]).join(" ") +
+            "  2>&1"
+             starttime = Time.now
+             system(compile_cmd) or raise "Compilation Error";
+             print "(Compile: #{(Time.now - starttime).to_i}s) "
+             $stdout.flush;
+        end
+        return if $compile_only;
+        starttime = Time.now;
+        IO.popen($timeout_exec +
+                 "(cd #{$dbt_path}/bin/queries ; 
+                  java -Xss512m -Xmx4G -Xms4G -XX:-DontCompileHugeMethods -Xbootclasspath/a:/Users/khayyam/.ivy2/cache/org.scala-lang/scala-library/jars/scala-library-2.10.3.jar -cp /Users/khayyam/Desktop/private/education/Epfl/Pardis-SStore/DDBToaster/ddbtoaster/target/tmp:/Users/khayyam/Desktop/private/education/Epfl/Pardis-SStore/DDBToaster/storelib/target/scala-2.10/classes:/Users/khayyam/.ivy2/cache/com.typesafe.akka/akka-actor_2.10/jars/akka-actor_2.10-2.2.3.jar:/Users/khayyam/.ivy2/cache/com.typesafe.akka/akka-remote_2.10/jars/akka-remote_2.11-2.2.3.jar:/Users/khayyam/.ivy2/cache/org.uncommons.maths/uncommons-maths/jars/uncommons-maths-1.2.2a.jar:/Users/khayyam/.ivy2/cache/org.scala-lang/scala-actors/jars/scala-actors-2.10.2.jar:/Users/khayyam/.ivy2/cache/com.typesafe/config/bundles/config-1.2.1.jar ddbt.gen.#{queryName.capitalize} -b0
+                  )" + 
+                  "  2>&1"
+                 ) do |qin|
+      output = qin.readlines;
+      #print "Here is output : #{output} \n"
+      endtime = Time.now;
+      output = output.map { |l| l.chomp.strip }.join("");
+      @runtime = (endtime - starttime).to_f;
+      if /<runtime>(.*)<\/runtime>/ =~ output then
+        @runtime = ($1.to_f / 1000000.0).to_f;
+      end
+      
+      @toplevels.keys.each do |q| 
+        #print "Here is : #{q}"
+        if /<#{q}[^>]*>(.*)<\/#{q}>/ =~ output then
+        #if /#{q}(.*)/ =~ output then
+          result = $1;
+          case @toplevels[q][:type]
+            when :singleton then @toplevels[q][:result] = result.strip.to_f;
+            when :onelevel then @toplevels[q][:result] = CppDB.new(result);
+            else nil
+          end
+        else raise "Runtime Error"
+        end;
+      end
+    end
+  end
+
+  def to_s
+    "Scala Code generator"
+  end
+
+
+
+end
+
+
 class ScalaUnitTest < GenericUnitTest
   def run
     queryName = @qname;
@@ -507,6 +577,7 @@ GetoptLong.new(
     when '-p', '--precision' then $precision = 10 ** (-1 * arg.to_i);
     when '-t', '--test' then 
     case arg
+        when 'sc' then tests.push SCNewBackendUnitTest
         when 'cppnew'         then tests.push CppNewBackendUnitTest
         when 'cpp'         then tests.push CppUnitTest
         when 'interpreter' then tests.push InterpreterUnitTest
