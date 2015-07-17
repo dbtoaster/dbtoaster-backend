@@ -39,8 +39,6 @@ object Utils {
   // Scala compiler wrapper
   def scalaCompiler(dir:File,classpath:String=null,external:Boolean=false) : List[String]=>Unit = {
     val path_dir=dir.getAbsolutePath; val cp=(if(classpath!=null) classpath+":" else "")+path_cp
-    System.err.println("********** : " + classpath)
-    System.err.println("********** : " + path_cp)
 
     val opts=prop("scalac").split(" +").toList
     if (!external) { // Embedded Scala compiler
@@ -96,7 +94,7 @@ object Utils {
   // Execute arbitrary command, return (out,err)
   def exec(cmd:String,fatal:Boolean):(String,String) = exec(cmd.split(" +"),null,null,fatal)
   def exec(cmd:Array[String],dir:File=null,env:Array[String]=null,fatal:Boolean=true,prefix:String=null):(String,String) = {
-    println(cmd.mkString(" "))
+    // println(cmd.mkString(" "))
     val p = Runtime.getRuntime.exec(cmd,env,dir)
     val out=gobble(p.getInputStream,scala.Console.out,prefix); val err=gobble(p.getErrorStream,scala.Console.err,prefix); val exitVal=p.waitFor; val o=out.toString; val e=err.toString
     if (fatal && (e.trim!="" || exitVal!=0)) {
