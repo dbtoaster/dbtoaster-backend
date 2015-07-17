@@ -15,6 +15,7 @@ import ddbt.lib.store.{Store, Entry}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 
+import ch.epfl.data.sc.pardis.optimization._
 
 abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) extends IScalaGen {
 
@@ -390,6 +391,52 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     
 
     var ts = ""
+
+    case class OpInfo(var count:Int)
+
+    class AccessOperationAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {
+      import IR._
+
+       
+      /**
+       * Keeps the list of while loops that should be converted
+       */
+
+      val mapAccess = scala.collection.mutable.HashMap[Rep[_],OpInfo]()
+
+      analysis += statement {
+        case sym -> (node @ MStoreGet(map,_,_)) =>
+          mapAccess.getOrElseUpdate(map, new OpInfo(0)).count += 1
+          ()
+      }
+    }
+
+    class AccessOperationTransformer(override val IR: StoreDSL, val mapAccess: scala.collection.mutable.HashMap[Rep[_],OpInfo]) extends RuleBasedTransformer[StoreDSL](IR) {
+      import IR._
+
+      // rewrite += rule {
+      //   case MStoreGet(map,idx,key) if(mapAccess(map).count < 4) =>
+      //     map.update(unit(null))
+      // }
+    }
+
+    val analysisRound = new AccessOperationAnalysis(impl)
+
+    for(x <- tsResBlks) {
+      analysisRound.traverseBlock(x._3)
+    }
+
+    val transformationRound = new AccessOperationTransformer(impl, analysisRound.mapAccess)
+    val analysisRound2 = new AccessOperationAnalysis(impl)
+
+    for(x <- tsResBlks) {
+      val nb = transformationRound.transformBlock(x._3)
+      analysisRound2.traverseBlock(nb)
+    }
+
+    // java.lang.System.err.println(analysisRound.mapAccess)
+    // java.lang.System.err.println(analysisRound2.mapAccess)
+
     for(x <- tsResBlks) {
       //println(x._3)
       //println("========")
