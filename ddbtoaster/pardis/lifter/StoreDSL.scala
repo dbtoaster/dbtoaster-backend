@@ -54,9 +54,18 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   // case class SteGet[E<:Entry:TypeRep, T: TypeRep](x: Rep[E], i: Int) extends FunctionDef[T](Some(x), "get", List(List(unit(i))), List(implicitly[TypeRep[T]]))
 
-  case class SteNewSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) extends FunctionDef[E](None, "GenericEntry", List(unit("SteNewSEntry")::args.toList))
+  case class SteNewSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[Rep[Any]]) extends FunctionDef[E](None, "GenericEntry", List(unit("SteNewSEntry")::args.toList)) {
+    override def rebuild(children: FunctionArg*) = SteNewSEntry(children(0).asInstanceOf[Rep[Store[E]]], children.drop(1).asInstanceOf[Seq[Rep[Any]]])
+  }
 
-  case class SteSampleSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]) extends FunctionDef[E](None, "GenericEntry", List(unit("SteSampleSEntry")::(args.map(e => unit(e._1)).toList ++ args.map(e => e._2).toList)))
+  case class SteSampleSEntry[E<:Entry:TypeRep](x: Rep[Store[E]], args:Seq[(Int,Rep[Any])]) extends FunctionDef[E](None, "GenericEntry", List(unit("SteSampleSEntry")::(args.map(e => unit(e._1)).toList ++ args.map(e => e._2).toList))) {
+    override def rebuild(children: FunctionArg*) = {
+      val argsSeq = children.drop(1)
+      val (indices, values) = argsSeq.zipWithIndex.partition(x => x._2 < argsSeq.size / 2)
+      val result = indices.map(_._1 match { case Constant(v) => v}).zip(values.map(_._1))
+      SteSampleSEntry(children(0).asInstanceOf[Rep[Store[E]]], result.asInstanceOf[Seq[(Int, Rep[Any])]])
+    }
+  }
 
   //case class StDelete[E<:Entry:TypeRep](x: Rep[Store[E]], e: Rep[E]) extends FunctionDef[Unit](Some(x), "delete", List(List(e)))
 
