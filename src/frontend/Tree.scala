@@ -172,8 +172,11 @@ abstract sealed class LocalityType
 case object LocalExp extends LocalityType {
   override def toString = "<Local>"
 }
-case class DistributedExp(pkeys: List[(String, Type)]) extends LocalityType {
-  override def toString = "<Dist(" + pkeys.map(_._1).mkString(", ") + ")>"
+case object DistRandomExp extends LocalityType {
+  override def toString = "<DistRandom>"
+}
+case class DistByKeyExp(pkeys: List[(String, Type)]) extends LocalityType {
+  override def toString = "<DistByKey(" + pkeys.map(_._1).mkString(", ") + ")>"
 }
 
 // ---------- Trigger events
@@ -248,7 +251,9 @@ object M3 {
       ind(expr.toString) + 
       (locality match { 
         case LocalExp => "" 
-        case DistributedExp(pk) => 
+        case DistRandomExp => 
+          "\n  PARTITIONED RANDOMLY"
+        case DistByKeyExp(pk) => 
           "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
       }) + ";"
 
@@ -341,7 +346,8 @@ object M3 {
         val newEx = MapRef(r(n), tp, ks.map(x => (r(x._1), x._2)))
         newEx.isTemp = m.isTemp
         newEx.locality = m.locality match { 
-          case Some(DistributedExp(pkeys)) => Some(DistributedExp(pkeys.map(x => (r(x._1), x._2))))
+          case Some(DistByKeyExp(pkeys)) => Some(DistByKeyExp(pkeys.map(x => (r(x._1), x._2))))
+          case Some(DistRandomExp) => Some(DistRandomExp)
           case Some(LocalExp) => Some(LocalExp)
           case None => None
         }
@@ -509,10 +515,14 @@ object M3 {
     var tp: Type = null 
     def locality = (l.locality, r.locality) match {
       case (Some(LocalExp), Some(LocalExp)) => Some(LocalExp)
-      case (Some(DistributedExp(a)), Some(DistributedExp(b))) 
-        if (a == b || b == Nil) => Some(DistributedExp(a))
-      case (Some(DistributedExp(a)), Some(DistributedExp(b))) 
-        if (a == Nil) => Some(DistributedExp(b))
+      case (Some(DistByKeyExp(a)), Some(DistRandomExp)) 
+        if (a == Nil) => Some(DistRandomExp)
+      case (Some(DistRandomExp), Some(DistByKeyExp(b))) 
+        if (b == Nil) => Some(DistRandomExp)
+      case (Some(DistByKeyExp(a)), Some(DistByKeyExp(b))) 
+        if (a == b || b == Nil) => Some(DistByKeyExp(a))
+      case (Some(DistByKeyExp(a)), Some(DistByKeyExp(b))) 
+        if (a == Nil) => Some(DistByKeyExp(b))        
       case (Some(a), None) => Some(a)
       case (None, Some(b)) => Some(b)
       case (None, None) => None
@@ -525,8 +535,9 @@ object M3 {
     var tp: Type = null
     def locality = (l.locality, r.locality) match {
       case (Some(LocalExp), Some(LocalExp)) => Some(LocalExp)
-      case (Some(DistributedExp(a)), Some(DistributedExp(b))) 
-        if (a == b) => Some(DistributedExp(a))
+      case (Some(DistRandomExp), Some(DistRandomExp)) => Some(DistRandomExp)
+      case (Some(DistByKeyExp(a)), Some(DistByKeyExp(b))) 
+        if (a == b) => Some(DistByKeyExp(a))
       case (Some(a), None) => Some(a)
       case (None, Some(b)) => Some(b)
       case (None, None) => None
@@ -568,7 +579,7 @@ object M3 {
   // Distributed operations
   case class Repartition(var ks: List[(String, Type)], e: Expr) extends Expr { 
     def tp = e.tp    
-    def locality = Some(DistributedExp(ks))
+    def locality = Some(DistByKeyExp(ks))
     override def toString = 
       "Repartition([" + ks.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"  
   } 

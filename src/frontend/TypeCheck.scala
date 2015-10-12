@@ -72,8 +72,9 @@ object TypeCheck extends (M3.System => M3.System) {
                if (e != null) re(e, t) else e,
                l match { 
                  case LocalExp => LocalExp 
-                 case DistributedExp(pk) => 
-                  DistributedExp(pk.map(k => (r(k._1), k._2)))
+                 case DistRandomExp => DistRandomExp
+                 case DistByKeyExp(pk) => 
+                  DistByKeyExp(pk.map(k => (r(k._1), k._2)))
                })
     }
     val sources = s0.sources.map { 

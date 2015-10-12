@@ -55,7 +55,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   }
   case class RepartitionTransformer(var expr: Expr, val pkeys: List[(String, Type)]) extends Transformer {
     assert(expr.locality match { 
-      case Some(DistributedExp(_)) => true 
+      case Some(DistByKeyExp(_)) | Some(DistRandomExp) => true 
       case _ => false 
     }, "RepartitionTransformer: Locality check failed")
     assert(mapInfo(expr.asInstanceOf[MapRef].name).storeType match {
@@ -67,7 +67,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
   }
   case class GatherTransformer(var expr: Expr) extends Transformer {
     assert(expr.locality match { 
-      case Some(DistributedExp(pk)) => true 
+      case Some(DistByKeyExp(_)) | Some(DistRandomExp) => true 
       case _ => false 
     }, "GatherTransformer: Locality check failed")
     assert(mapInfo(expr.asInstanceOf[MapRef].name).storeType match {
@@ -95,7 +95,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
 
   def execMode(locality: LocalityType): ExecutionMode = locality match {
     case LocalExp => LocalMode
-    case DistributedExp(_) => DistributedMode
+    case DistByKeyExp(_) | DistRandomExp => DistributedMode
   }
   //----------
 
@@ -189,7 +189,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
           val localName = fresh("scatter")
           val localLocality = expr.locality match {
             case Some(LocalExp) => LocalExp
-            case Some(DistributedExp(_)) | None => sys.error("Scattering of a distributed expression")
+            case Some(DistByKeyExp(_)) | Some(DistRandomExp) | None => sys.error("Scattering of a distributed expression")
           }
           val localInfo = MapInfo(localName, expr.tp, ov, expr, localLocality, IndexedStore)
           mapInfo += ((localInfo.name, localInfo))
@@ -202,7 +202,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       val toPartitionStmt = Statement.transformToPartition("scatter", localRef, pkeys)
       val scatterStmt = {        
         val distName = fresh("scatter")
-        val distInfo = MapInfo(distName, expr.tp, ov, expr, DistributedExp(pkeys), LogStore, true)
+        val distInfo = MapInfo(distName, expr.tp, ov, expr, DistByKeyExp(pkeys), LogStore, true)
         mapInfo += ((distInfo.name, distInfo))
         val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
         distRef.locality = Some(distInfo.locality)
@@ -230,7 +230,8 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         case _ =>  
           val distName = fresh("repartition")
           val distLocality = expr.locality match {
-            case Some(DistributedExp(pk)) => DistributedExp(pk)
+            case Some(DistByKeyExp(pk)) => DistByKeyExp(pk)
+            case Some(DistRandomExp) => DistRandomExp
             case Some(LocalExp) | None => sys.error("Repartitioning of a local expression")
           }
           val distInfo = MapInfo(distName, expr.tp, ov, expr, distLocality, IndexedStore)
@@ -245,7 +246,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       val repartitionStmt = {
         val distName = fresh("repartition")
         val distStoreType = PartitionStore(pkeys.map(k => ov.indexOf(k)))
-        val distInfo = MapInfo(distName, expr.tp, ov, expr, DistributedExp(pkeys), distStoreType, true)
+        val distInfo = MapInfo(distName, expr.tp, ov, expr, DistByKeyExp(pkeys), distStoreType, true)
         mapInfo += ((distInfo.name, distInfo))
         val distRef = new MapRef(distInfo.name, distInfo.tp, distInfo.keys)
         distRef.locality = Some(distInfo.locality)
@@ -273,7 +274,8 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         case _ =>  
           val distName = fresh("gather")
           val distLocality = expr.locality match {
-            case Some(DistributedExp(pk)) => DistributedExp(pk)
+            case Some(DistByKeyExp(pk)) => DistByKeyExp(pk)
+            case Some(DistRandomExp) => DistRandomExp
             case Some(LocalExp) | None => sys.error("Gathering of a local expression")
           }
           val distInfo = MapInfo(distName, expr.tp, ov, expr, distLocality, IndexedStore)
@@ -502,7 +504,8 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       val mapInf = mapInfo(map.name)
       map.locality = mapInf.locality match {
         case LocalExp => Some(LocalExp)
-        case DistributedExp(pk) => Some(DistributedExp(pk.map(k => map.keys(mapInf.keys.indexOf(k))))) 
+        case DistRandomExp => Some(DistRandomExp)
+        case DistByKeyExp(pk) => Some(DistByKeyExp(pk.map(k => map.keys(mapInf.keys.indexOf(k))))) 
       }
       val (aStmts, aTransformer) = {
         val (aStmts, aExpr) = prepareExpression(expr)
@@ -514,7 +517,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       }).getOrElse((Nil, None))
       val execMode = aTransformer.expr.locality match {
         case Some(LocalExp) | None => LocalMode
-        case Some(DistributedExp(_)) => DistributedMode
+        case Some(DistByKeyExp(_)) | Some(DistRandomExp) => DistributedMode
       }      
       ( aStmts ++ bStmts ++ List(Statement(map, aTransformer, bTransformer, op, execMode)))
     case m: MapDef => Nil  
@@ -527,7 +530,8 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       val map = mapInfo(name)
       m.locality  = map.locality match {
         case LocalExp => Some(LocalExp)
-        case DistributedExp(pk) => Some(DistributedExp(pk.map(k => keys(map.keys.indexOf(k)))))
+        case DistRandomExp => Some(DistRandomExp)
+        case DistByKeyExp(pk) => Some(DistByKeyExp(pk.map(k => keys(map.keys.indexOf(k)))))
       }
       (Nil, m)
     case MapRefConst(name, keys) => (Nil, expr)
@@ -583,10 +587,13 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         case Some(LocalExp) =>
           val scatterStmts = Statement.createScatter(subexp, ks)
           (stmts ++ scatterStmts, scatterStmts.last.lhsMap)
-        case Some(DistributedExp(pkeys)) if (pkeys != ks) =>
+        case Some(DistRandomExp) =>
           val repartStmts = Statement.createRepartition(subexp, ks)
           (stmts ++ repartStmts, repartStmts.last.lhsMap)
-        case Some(DistributedExp(_)) | None => (stmts, subexp)
+        case Some(DistByKeyExp(pkeys)) if (pkeys != ks) =>
+          val repartStmts = Statement.createRepartition(subexp, ks)
+          (stmts ++ repartStmts, repartStmts.last.lhsMap)
+        case Some(DistByKeyExp(_)) | None => (stmts, subexp)
       }
     case Gather(e) => 
       val (stmts, subexp0) = prepareExpression(e)
@@ -600,7 +607,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         case _ => subexp0
       }
       subexp.locality match {
-        case Some(DistributedExp(pkeys)) =>
+        case Some(DistByKeyExp(_)) | Some(DistRandomExp) =>
           val gatherStmts = Statement.createGather(subexp)
           (stmts ++ gatherStmts, gatherStmts.last.lhsMap)
         case Some(LocalExp) | None => (stmts, subexp) 
@@ -670,7 +677,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       if (map.linkMap) linkMaps += map
       else map.locality match {
         case LocalExp => localMaps += map
-        case DistributedExp(_) => distributedMaps += map      
+        case DistByKeyExp(_) | DistRandomExp => distributedMaps += map      
       }
     }
 
@@ -845,25 +852,25 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
           val wrapL = singletonsL.map { stmt =>
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             stmt.rhsTransformer.expr.locality match {
-              case Some(DistributedExp(Nil)) => s"if (id == 0) localCtx.${rhsName} else 0L"
-              case Some(DistributedExp(pk))  => s"localCtx.${rhsName}"
+              case Some(DistByKeyExp(Nil)) => s"if (id == 0) localCtx.${rhsName} else 0L"
+              case Some(DistByKeyExp(_)) | Some(DistRandomExp)  => s"localCtx.${rhsName}"
               case _ => sys.error("Gather of a local expression")
             }            
           }
           val wrapD = singletonsD.map { stmt =>
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             stmt.rhsTransformer.expr.locality match {
-              case Some(DistributedExp(Nil)) => s"if (id == 0) localCtx.${rhsName} else 0.0"
-              case Some(DistributedExp(pk))  => s"localCtx.${rhsName}"
+              case Some(DistByKeyExp(Nil)) => s"if (id == 0) localCtx.${rhsName} else 0.0"
+              case Some(DistByKeyExp(_)) | Some(DistRandomExp)  => s"localCtx.${rhsName}"
               case _ => sys.error("Gather of a local expression")
             }
           }
           val wrapP = partitions.map { stmt => 
             val rhsName = stmt.rhsTransformer.expr.asInstanceOf[MapRef].name
             stmt.rhsTransformer.expr.locality match {
-              case Some(DistributedExp(Nil)) =>
+              case Some(DistByKeyExp(Nil)) =>
                 s"new ColumnarPartition(id, { if (id > 0) localCtx.${rhsName}.size = 0; localCtx.${rhsName}.buffers })"
-              case Some(DistributedExp(pk)) =>
+              case Some(DistByKeyExp(_)) | Some(DistRandomExp) =>
                 s"new ColumnarPartition(id, localCtx.${rhsName}.buffers)"
               case _ => sys.error("Gather of a local expression")
             }
@@ -1308,8 +1315,11 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
             |  }
             |  $resultMapName.toMap
             |}""".stripMargin
-      case DistributedExp(pkeys) => 
-        val filter = if (pkeys == Nil) "first" else "reduce(_ ++ _)"
+      case DistByKeyExp(_) | DistRandomExp => 
+        val filter = mapDef.locality match {
+          case DistByKeyExp(Nil) => "first"
+          case _ => "reduce(_ ++ _)"
+        }
         s"""|{
             |  ctx.rdd.map { case (_, localCtx) =>
             |    val $resultMapName = new collection.mutable.HashMap[$params, $mapType]()

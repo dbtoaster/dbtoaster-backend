@@ -198,19 +198,25 @@ object M3Parser extends ExtParser with (String => M3.System) {
     )
 
   // ------------ System definition
+  lazy val partitioning = 
+    ( ("PARTITIONED" ~> "BY" ~> "[" ~> 
+       repsep(ident ~ (":" ~> tpe), ",") <~ "]") ^^ { 
+        case ks => DistByKeyExp(ks.map { case n ~ t => (n, t) })
+      }
+    | ("PARTITIONED" ~> "RANDOMLY") ^^^ DistRandomExp
+    )
+
   lazy val map = 
     ("DECLARE" ~> "MAP" ~> ident) ~ opt("(" ~> tpe <~ ")") ~ 
     ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe), ",") <~ "]") ~ 
-    opt(":=" ~> expr) ~ opt("PARTITIONED" ~> "BY" ~> "[" ~> 
-      repsep(ident ~ (":" ~> tpe), ",") <~ "]") <~ ";" ^^ { 
-      case n ~ t ~ ks ~ e ~ pk => 
+    opt(":=" ~> expr) ~ opt(partitioning) <~ ";" ^^ { 
+      case n ~ t ~ ks ~ e ~ p => 
         MapDef(
           n, 
           t.getOrElse(null), 
           ks.map { case n ~ t => (n, t) }, 
           e.getOrElse(null),
-          pk.map(ks => DistributedExp(ks.map { case n ~ t => (n, t) }))
-            .getOrElse(LocalExp)
+          p.getOrElse(LocalExp)
         ) 
     }
 
