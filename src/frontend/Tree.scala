@@ -108,11 +108,29 @@ case object OpGt extends OpCmp { override def toString = ">" }
 case object OpGe extends OpCmp { override def toString = ">=" } 
 
 
+// ---------- Expression locality types
+abstract sealed class LocalityType
+case object LocalExp extends LocalityType {
+  override def toString = "<Local>"
+}
+case object DistRandomExp extends LocalityType {
+  override def toString = "<DistRandom>"
+}
+case class DistByKeyExp(pkeys: List[(String, Type)]) extends LocalityType {
+  override def toString = "<DistByKey(" + pkeys.map(_._1).mkString(", ") + ")>"
+}
+
 // ---------- Source definitions, see ddbt.frontend.ExtParser
-case class Source(stream: Boolean, schema: Schema, in: SourceIn, split: Split, adaptor: Adaptor) extends Tree { 
+case class Source(stream: Boolean, schema: Schema, in: SourceIn, split: Split, adaptor: Adaptor, locality: LocalityType) extends Tree { 
   override def toString = 
     "CREATE " + (if (stream) "STREAM" else "TABLE") + " " + schema + 
-    "\n  FROM " + in + " " + split + " " + adaptor + ";" 
+    "\n  FROM " + in + " " + split + " " + adaptor + 
+    (locality match { 
+      case LocalExp => "" 
+      case DistRandomExp => "\n  PARTITIONED RANDOMLY"
+      case DistByKeyExp(pk) => 
+        "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
+    }) + ";" 
 }
 
 case class Schema(name: String, fields: List[(String, Type)]) extends Tree { 
@@ -167,17 +185,6 @@ case object IndexedStore extends StoreType       // Default store type (Store)
 case object LogStore     extends StoreType       // Only append and foreach
 case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores 
 
-// ---------- Expression locality types
-abstract sealed class LocalityType
-case object LocalExp extends LocalityType {
-  override def toString = "<Local>"
-}
-case object DistRandomExp extends LocalityType {
-  override def toString = "<DistRandom>"
-}
-case class DistByKeyExp(pkeys: List[(String, Type)]) extends LocalityType {
-  override def toString = "<DistByKey(" + pkeys.map(_._1).mkString(", ") + ")>"
-}
 
 // ---------- Trigger events
 sealed abstract class EvtTrigger extends Tree { 
@@ -251,8 +258,7 @@ object M3 {
       ind(expr.toString) + 
       (locality match { 
         case LocalExp => "" 
-        case DistRandomExp => 
-          "\n  PARTITIONED RANDOMLY"
+        case DistRandomExp => "\n  PARTITIONED RANDOMLY"
         case DistByKeyExp(pk) => 
           "\n  PARTITIONED BY [" + pk.map(_._1).mkString(", ") + "]"
       }) + ";"

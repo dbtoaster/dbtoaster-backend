@@ -630,11 +630,14 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
       val mapInfo = MapInfo(name, tp, keys, expr, locality, IndexedStore)
       (mapInfo.name, mapInfo)
     }
+
     // Create delta MapInfo definitions
     deltaMapInfo = s0.triggers.flatMap { _.evt match {
       case EvtBatchUpdate(s @ Schema(name, _)) => 
-        val keys = s0.sources.filter(_.schema.name == name)(0).schema.fields
-        val mapInfo = MapInfo(s.deltaName, TypeLong, keys, DeltaMapRefConst(name, keys), LocalExp, IndexedStore)
+        val source = s0.sources.filter(_.schema.name == name)(0)
+        val keys = source.schema.fields
+        val locality = source.locality
+        val mapInfo = MapInfo(s.deltaName, TypeLong, keys, DeltaMapRefConst(name, keys), locality, IndexedStore)
         List((mapInfo.name, mapInfo))        
       case EvtAdd(_) | EvtDel(_) => 
         sys.error("Distributed programs run only in batch mode.")

@@ -768,19 +768,19 @@ trait IScalaGen extends CodeGen {
     def fixOrderbook(ss: List[Source]): List[Source] = { 
       val (os, xs) = ss.partition { _.adaptor.name == "ORDERBOOK" }
       val ob = new java.util.HashMap[(Boolean, SourceIn), 
-                                     (Schema, Split, Map[String, String])]()
-      os.foreach { case Source(s, sc, in, sp, ad) =>
+        (Schema, Split, Map[String, String], LocalityType)]()
+      os.foreach { case Source(s, sc, in, sp, ad, loc) =>
         val (k, v) = 
           ((s, in), 
            (ad.options - "book") + ((ad.options.getOrElse("book","bids"),
                                     sc.name)))
         val p = ob.get(k)
-        if (p == null) ob.put(k, (sc, sp, v)) 
-        else ob.put(k, (sc, sp, p._3 ++ v))
+        if (p == null) ob.put(k, (sc, sp, v, loc)) 
+        else ob.put(k, (sc, sp, p._3 ++ v, loc))
       }
       scala.collection.JavaConversions.mapAsScalaMap(ob).toList.map { 
-        case ((s, in), (sc, sp, opts)) => 
-          Source(s, sc, in, sp, Adaptor("ORDERBOOK", opts)) 
+        case ((s, in), (sc, sp, opts, loc)) => 
+          Source(s, sc, in, sp, Adaptor("ORDERBOOK", opts), loc) 
       } ::: xs
     }
     val ss = 

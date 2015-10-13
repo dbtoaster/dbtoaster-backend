@@ -891,12 +891,12 @@ trait ICppGen extends IScalaGen {
   override def streams(sources:List[Source]) = {
     def fixOrderbook(ss:List[Source]):List[Source] = { // one source generates BOTH asks and bids events
       val (os,xs) = ss.partition{_.adaptor.name=="ORDERBOOK"}
-      val ob = new java.util.HashMap[(Boolean,SourceIn),(Schema,Split,Map[String,String])]()
-      os.foreach { case Source(s,sc,in,sp,ad) =>
+      val ob = new java.util.HashMap[(Boolean,SourceIn),(Schema,Split,Map[String,String], LocalityType)]()
+      os.foreach { case Source(s,sc,in,sp,ad,loc) =>
         val (k,v) = ((s,in),(ad.options-"book") + ((ad.options.getOrElse("book","bids"),sc.name)))
-        val p=ob.get(k); if (p==null) ob.put(k,(sc,sp,v)) else ob.put(k,(sc,sp,p._3++v))
+        val p=ob.get(k); if (p==null) ob.put(k,(sc,sp,v,loc)) else ob.put(k,(sc,sp,p._3++v,loc))
       }
-      scala.collection.JavaConversions.mapAsScalaMap(ob).toList.map { case ((s,in),(sc,sp,opts)) => Source(s,sc,in,sp,Adaptor("ORDERBOOK",opts)) } ::: xs
+      scala.collection.JavaConversions.mapAsScalaMap(ob).toList.map { case ((s,in),(sc,sp,opts,loc)) => Source(s,sc,in,sp,Adaptor("ORDERBOOK",opts),loc) } ::: xs
     }
     val src = fixOrderbook(sources)
     val ss="\n/* Specifying data sources */\n\n"+src.filter{!_.stream}.map(genStreams).mkString("\n")+"\n"+src.filter{_.stream}.map(genStreams).mkString("\n")

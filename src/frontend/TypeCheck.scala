@@ -78,7 +78,7 @@ object TypeCheck extends (M3.System => M3.System) {
                })
     }
     val sources = s0.sources.map { 
-      case Source(st, sch, in, sp, ad) => Source(st, rs(sch), in, sp, ad) 
+      case Source(st, sch, in, sp, ad, loc) => Source(st, rs(sch), in, sp, ad, loc) 
     }
     val triggers = s0.triggers.map { t => 
       localMaps.clear
