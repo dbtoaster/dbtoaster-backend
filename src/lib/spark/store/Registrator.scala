@@ -22,7 +22,7 @@ class Registrator extends KryoRegistrator {
 
     kryo.register(classOf[Array[StoreWrapper]], new Serializer[Array[StoreWrapper]] {
       def write(kryo: Kryo, output: Output, container: Array[StoreWrapper]) = {
-        Stopwatch.time("Serializer -- Array[StoreWrapper]...", {
+        // Stopwatch.time("Serializer -- Array[StoreWrapper]...", {
           output.writeInt(container.length)
           container.foreach { w => 
             output.writeInt(w.id)
@@ -33,11 +33,11 @@ class Registrator extends KryoRegistrator {
             output.writeInt(w.pArray.length)
             w.pArray.foreach { s => ColumnarPartition.write(output, s) }
           }
-        })
+        // })
       }
 
       def read(kryo: Kryo, input: Input, t: Class[Array[StoreWrapper]]) = {
-        Stopwatch.time("Deserializer -- Array[StoreWrapper]...", {
+        // Stopwatch.time("Deserializer -- Array[StoreWrapper]...", {
           val length = input.readInt()
           Array.fill[StoreWrapper](length) {
             val id = input.readInt()
@@ -49,21 +49,21 @@ class Registrator extends KryoRegistrator {
             val pArray = Array.fill[ColumnarPartition](pLength)(ColumnarPartition.read(input))
             new StoreWrapper(id, lArray, dArray, pArray)
           }
-        })
+        // })
       }
     })
 
     kryo.register(classOf[ColumnarPartition], new Serializer[ColumnarPartition] {
       def write(kryo: Kryo, output: Output, partition: ColumnarPartition) = {
-        Stopwatch.time("Serializer -- ColumnarPartition...", {
+        // Stopwatch.time("Serializer -- ColumnarPartition...", {
           ColumnarPartition.write(output, partition)
-        })
+        // })
       }
 
       def read(kryo: Kryo, input: Input, t: Class[ColumnarPartition]) = {
-        Stopwatch.time("Deserializer -- ColumnarPartition...", {
+        // Stopwatch.time("Deserializer -- ColumnarPartition...", {
           ColumnarPartition.read(input)
-        })
+        // })
       }        
     })
   }

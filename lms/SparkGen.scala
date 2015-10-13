@@ -1130,9 +1130,13 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |$sSources, 
         |        parallelMode, timeout, batchSize), f)
         | 
-        |  def initContext(sc: SparkContext, numPartitions: Int) = 
-        |    new ${sGlobalMapContextClass}(sc, numPartitions,
+        |  def initContext(sc: SparkContext, numPartitions: Int) {
+        |    ctx = new ${sGlobalMapContextClass}(sc, numPartitions,
         |      (id => new ${sLocalMapContextClass}(id, numPartitions)))
+        |    ctx.init()
+        |  }
+        |
+        |  def destroyContext() = ctx.destroy()
         |
         |  def main(args: Array[String]) {
         |    val argMap = parseArgs(args)
@@ -1147,7 +1151,6 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |    cfg = new SparkConfig(getClass().getResourceAsStream(configFile))
         |    sc = new SparkContext(cfg.sparkConf.setAppName("$sSparkObject"))
         |    numPartitions = cfg.sparkNumPartitions
-        |    ctx = initContext(sc, numPartitions)
         |
         |    // START EXECUTION
         |    execute(args, (res: List[Any]) => {
@@ -1370,7 +1373,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |    case StreamInit(_) =>
         |    case EndOfStream => 
         |      sender ! getSnapshot
-        |      ctx.destroy()
+        |      destroyContext()
         |    case GetSnapshot(_) => 
         |      sender ! getSnapshot
         |$sEventHandlersSkip
@@ -1378,7 +1381,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         | 
         |  def receive = {
         |    case StreamInit(timeout) => 
-        |      ctx.init()
+        |      initContext(sc, numPartitions)
         |      loadTables()
         |      onSystemReady()        
         |      startTime = System.nanoTime
@@ -1386,7 +1389,7 @@ class LMSSparkGen(cls: String = "Query") extends LMSGen(cls, SparkExpGen)
         |    case EndOfStream => 
         |      endTime = System.nanoTime
         |      sender ! getSnapshot
-        |      ctx.destroy()
+        |      destroyContext()
         |    case GetSnapshot(_) => 
         |      sender ! getSnapshot
         |$sEventHandler

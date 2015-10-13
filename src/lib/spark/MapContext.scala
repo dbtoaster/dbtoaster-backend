@@ -26,10 +26,7 @@ class GlobalMapContext[A](
 
   def init() = materialize()
 
-  def destroy() = {
-    unmaterialize()
-    sc.stop()
-  }
+  def destroy() = unmaterialize()  
 
   def materialize() = {
     rdd.persist(org.apache.spark.storage.StorageLevel.MEMORY_ONLY)
