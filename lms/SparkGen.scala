@@ -376,7 +376,6 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
           (cs.map { case (_, n) => s"val $n = localCtx.$n" } ++
            regexpCacheMap.map { case (_, n) => s"val $n = localCtx.$n" }).mkString("\n")
 
-
         // Generate foreach header 
         val unifiedIds = inputNames.map(n => unifiedBlocks(n)._1).distinct
         val strZip = if (unifiedIds.size == 0) "" else 
