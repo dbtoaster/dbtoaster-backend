@@ -25,13 +25,6 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
                      linkMap: Boolean = false)
   
   val mapInfo = collection.mutable.Map[String, MapInfo]()  
-  var deltaMapInfo = List[(String, MapInfo)]() 
-  
-  val linkMaps  = collection.mutable.Set[MapInfo]()
-  val localMaps = collection.mutable.Set[MapInfo]()
-  val distributedMaps = collection.mutable.Set[MapInfo]()
-
-  var isInputDistributed: Boolean = false
   
   //----------
 

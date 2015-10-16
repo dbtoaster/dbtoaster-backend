@@ -1,4 +1,4 @@
-package ddbt.lib.spark
+package ddbt.lib
 
 import scala.collection.mutable.ArrayBuffer
 

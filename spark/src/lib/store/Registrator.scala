@@ -6,7 +6,7 @@ import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
 import org.apache.spark.serializer.KryoRegistrator
 import ddbt.lib.spark.store.io.{InputStreamWrapper, OutputStreamWrapper}
-import ddbt.lib.spark.Stopwatch
+import ddbt.lib.Stopwatch
 
 class Registrator extends KryoRegistrator {
 
@@ -18,6 +18,13 @@ class Registrator extends KryoRegistrator {
     kryo.register(classOf[scala.collection.mutable.WrappedArray$ofRef])
     kryo.register(classOf[Array[scala.collection.immutable.Map[_,_]]])
     kryo.register(classOf[scala.collection.immutable.Map$EmptyMap$])
+
+    kryo.register(classOf[Array[scala.Tuple3[_,_,_]]])
+    kryo.register(classOf[Array[Int]])
+    kryo.register(classOf[scala.reflect.ClassTag$$anon$1])
+    kryo.register(classOf[java.lang.Class[_]])
+    kryo.register(classOf[scala.collection.immutable.$colon$colon[_]])
+    kryo.register(classOf[scala.collection.immutable.Nil$])
 
 
     kryo.register(classOf[Array[StoreWrapper]], new Serializer[Array[StoreWrapper]] {
