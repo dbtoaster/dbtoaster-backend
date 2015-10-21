@@ -30,7 +30,7 @@ libraryDependencies ++= Seq()
 
 // --------- Compilation options
 Seq(
-  //scalaVersion := "2.10.4",
+  scalaVersion := "2.10.4",
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-optimise","-Yinline-warnings"), // ,"-target:jvm-1.7"
   javacOptions ++= Seq("-Xlint:unchecked","-Xlint:-options","-source","1.6","-target","1.6") // forces JVM 1.6 compatibility with JDK 1.7 compiler
 )
@@ -272,7 +272,6 @@ commands += Command.command("release")((state:State) => {
     // LMS-specific options
     scalaOrganization := "org.scala-lang.virtualized",
     scalaVersion := "2.10.2",
-    autoScalaLibrary := false,
     libraryDependencies ++= Seq(
       "org.scala-lang.virtualized" % "scala-library" % scalaVersion.value,
       "org.scala-lang.virtualized" % "scala-compiler" % scalaVersion.value,

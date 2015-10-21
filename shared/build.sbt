@@ -5,6 +5,8 @@ Seq(
   version := "1.0"
 )
 
+scalaVersion := "2.10.4"
+
 // --------- Paths
 Seq(
   scalaSource in Compile <<= baseDirectory / "src",
@@ -15,8 +17,6 @@ Seq(
   sourceDirectory in Test <<= baseDirectory / "test",
   resourceDirectory in Compile <<= baseDirectory / "conf"
 )
-
-scalaVersion := "2.10.4"
 
 // --------- Dependencies
 libraryDependencies ++= Seq(
