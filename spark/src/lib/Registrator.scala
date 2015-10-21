@@ -1,18 +1,18 @@
-package ddbt.lib.spark.store
+package ddbt.lib.spark
 
+import ddbt.lib.spark.store.{ ColumnarPartition, StoreWrapper }
 import org.apache.spark.serializer.KryoRegistrator
 import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
-import ddbt.lib.Stopwatch
 
 class Registrator extends KryoRegistrator {
 
   override def registerClasses(kryo: Kryo) {
 
     kryo.setRegistrationRequired(true)
-           
+       
     kryo.register(classOf[scala.collection.immutable.Range])
     kryo.register(classOf[scala.collection.mutable.WrappedArray$ofRef])
     kryo.register(classOf[Array[scala.collection.immutable.Map[_,_]]])
@@ -23,7 +23,9 @@ class Registrator extends KryoRegistrator {
     kryo.register(classOf[scala.reflect.ClassTag$$anon$1])
     kryo.register(classOf[java.lang.Class[_]])
     kryo.register(classOf[scala.collection.immutable.$colon$colon[_]])
-    // kryo.register(classOf[scala.collection.immutable.Nil$])
+    // NOTICE: Uncomment the following line after successfully compiling the spark subproject
+    kryo.register(classOf[scala.collection.immutable.Nil$])
+
 
     kryo.register(classOf[Array[StoreWrapper]], new Serializer[Array[StoreWrapper]] {
       def write(kryo: Kryo, output: Output, container: Array[StoreWrapper]) = {

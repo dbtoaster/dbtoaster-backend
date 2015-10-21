@@ -2,8 +2,6 @@ package ddbt.codegen
 
 import ddbt.codegen.lms._
 import ddbt.ast._
-import ddbt.lib._
-
 
 /**
   * This code generator is similar to ScalaGen but targets LMS graph (IR) to
@@ -14,11 +12,12 @@ import ddbt.lib._
 abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, override val watch: Boolean = false) extends IScalaGen {
 
   import ddbt.ast.M3._
-  import ddbt.Utils.{ind, tup, fresh, freshClear} // common functions
+  import ddbt.lib.Utils.{ ind, tup, fresh, freshClear } // common functions
+  import ddbt.lib.store.{ Store, Entry }
   import ManifestHelper.{man, zero, manEntry, manStore}
   import impl.Rep
   implicit val overloaded1 = impl.overloaded1
-  import ddbt.lib.store._
+  
   var cx: Ctx[Rep[_]] = null
 
   def me(ks: List[Type], v: Type = null) = 
@@ -535,7 +534,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
 
 class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(cls, ScalaExpGen, watch) {
   import ddbt.ast.M3._
-  import ddbt.Utils._
+  import ddbt.lib.Utils.ind
 
   override def createVarDefinition(name: String, tp: Type) = {
     if (watch && resultMapNames.contains(name)) // only use ValueWrapper if watch flag is enabled and the variable is the result

@@ -2,7 +2,6 @@ package ddbt.codegen
 
 import ddbt.codegen.lms._
 import ddbt.ast._
-import ddbt.lib._
 
 /**
   * Creates a distributed M3 program.
@@ -13,9 +12,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
     extends LMSGen(cls, impl) with IScalaGen {
   
   import ddbt.ast.M3._
-  import ddbt.Utils.{ind, block, tup, fresh, freshClear} // common functions
+  import ddbt.lib.Utils.{ ind, block, tup, fresh, freshClear } // common functions
   import ManifestHelper.{man,zero,manEntry,manStore}
-  import ddbt.lib.store._
   import impl.Rep
 
   

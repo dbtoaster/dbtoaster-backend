@@ -1,11 +1,9 @@
 // --------- Project informations
 Seq(
-  name := "DBToaster-spark",
+  name := "DBToaster-shared",
   organization := "ch.epfl.data",
   version := "1.0"
 )
-
-scalaVersion := "2.10.4"
 
 // --------- Paths
 Seq(
@@ -18,7 +16,12 @@ Seq(
   resourceDirectory in Compile <<= baseDirectory / "conf"
 )
 
+scalaVersion := "2.10.4"
+
+// --------- Dependencies
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "1.5.1"
+  "com.typesafe.akka" %% "akka-actor"     % "2.3.11",
+  "com.typesafe.akka" %% "akka-remote"    % "2.3.11",
+  "org.scala-lang"     % "scala-compiler" % scalaVersion.value
 )
 

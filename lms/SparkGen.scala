@@ -12,8 +12,8 @@ import ddbt.lib._
 class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpGen) {  
   
   import ddbt.ast.M3._
-  import ddbt.Utils.{ind, block, tup, fresh, freshClear} // common functions
-  import ManifestHelper.{man,zero,manEntry,manStore}
+  import ddbt.lib.Utils.{ ind, block, tup, fresh, freshClear } // common functions
+  import ManifestHelper.{ man, zero, manEntry, manStore }
   import ddbt.lib.store._
   import impl.Rep
 

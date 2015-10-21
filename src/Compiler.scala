@@ -1,4 +1,6 @@
 package ddbt
+
+import ddbt.lib._
 import ddbt.frontend._
 import ddbt.codegen._
 
@@ -65,12 +67,12 @@ object Compiler {
              flags.flatMap(f => List("-d", f)) ::: 
              (if (!opts.isEmpty) opts.toList else in) ::: 
              (if (batching_enabled) List("--batch") else Nil)
-    val repo = if (Utils.path_repo != null && !opts.isEmpty) 
-                 new File(Utils.path_repo) 
+    val repo = if (Utils.pathRepo != null && !opts.isEmpty) 
+                 new File(Utils.pathRepo) 
                else null
     val (t0, (m3, err)) = Utils.ns(() => 
       Utils.exec(
-        ((if (frontend_path_bin == null) Utils.path_bin 
+        ((if (frontend_path_bin == null) Utils.pathDBTBin
           else frontend_path_bin) :: os).toArray,
         repo,
         fatal = false))
@@ -254,26 +256,36 @@ object Compiler {
         if (!d.exists) d.mkdirs
         d 
       } else Utils.makeTempDir()
-      lang match {
-        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS|LANG_SPARK_LMS =>
+      lang match {        
+        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
           val t2 = Utils.ns(() =>
             Utils.scalaCompiler(dir, 
                                 if (libs != Nil) libs.mkString(":") else null,
                                 exec_sc)(List(out)))._1
           if (t_comp != null) t_comp(t2)
-          if (lang == LANG_SPARK_LMS) {
-            exec_vm = true
-            val pkgDir = new File("./pkg")
-            if (!pkgDir.exists) pkgDir.mkdirs
-            Utils.exec(Array[String](
-              "jar", "-cMf", (pkgDir.getAbsolutePath + "/ddbt_gen.jar"), 
-              "-C", dir.getAbsolutePath, "ddbt/test/gen",
-              "-C", dir.getAbsolutePath + "/../classes", "ddbt/lib",
-              "-C", "conf", "ddbt.properties", 
-              "-C", "conf", "log4j.properties", 
-              "-C", "conf", "spark.config"))
-          }
-          // TODO XXX should generate jar file in cPath
+
+        case LANG_SPARK_LMS =>
+          val t2 = Utils.ns(() =>
+            Utils.sparkCompiler(dir, 
+                                if (libs != Nil) libs.mkString(":") else null,
+                                exec_sc)(List(out)))._1
+          if (t_comp != null) t_comp(t2)
+          exec_vm = true
+          val baseDir = new File("./")
+          val sharedDirPath = 
+            baseDir.getAbsolutePath + "/shared/target/scala-2.10/classes"
+          val sparkDirPath = 
+            baseDir.getAbsolutePath + "/spark/target/scala-2.10/classes"
+          val pkgDir = new File("./pkg")
+          if (!pkgDir.exists) pkgDir.mkdirs
+          Utils.exec(Array[String](
+            "jar", "-cMf", (pkgDir.getAbsolutePath + "/ddbt_gen.jar"), 
+            "-C", dir.getAbsolutePath, "ddbt/test/gen",
+            "-C", sharedDirPath, "ddbt/lib",
+            "-C", sparkDirPath, "ddbt/lib/spark",
+            "-C", sparkDirPath, "log4j.properties", 
+            "-C", sparkDirPath, "spark.config"))
+
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS => if (cPath != null) {
           val pl = "srccpp/lib"
           val t2 = Utils.ns(() => Utils.cppCompiler(out, cPath, null, pl))._1; 
@@ -284,8 +296,14 @@ object Compiler {
     // Execution
     if (exec) {
       lang match {
-        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS|LANG_SPARK_LMS =>
+        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
           Utils.scalaExec(
+            dir :: libs.map(p => new File(p)), 
+            pkg + "." + name,
+            ("-b" + exec_bs :: exec_args).toArray,
+            exec_vm)
+        case LANG_SPARK_LMS =>
+          Utils.sparkExec(
             dir :: libs.map(p => new File(p)), 
             pkg + "." + name,
             ("-b" + exec_bs :: exec_args).toArray,

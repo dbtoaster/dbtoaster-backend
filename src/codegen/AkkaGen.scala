@@ -1,4 +1,5 @@
 package ddbt.codegen
+
 import ddbt.ast._
 
 /**
@@ -70,7 +71,7 @@ Issues to solve (big XXX list):
 
 class AkkaGen(cls:String="Query") extends ScalaGen(cls) {
   import M3._
-  import ddbt.Utils.{ind,tup,fresh,freshClear}
+  import ddbt.lib.Utils.{ ind, tup, fresh, freshClear }
   import scala.collection.mutable.HashMap
   import ddbt.frontend.Partitioning
 

@@ -1,4 +1,5 @@
 package ddbt.frontend
+
 import ddbt.ast._
 
 /**
@@ -8,8 +9,9 @@ import ddbt.ast._
   */
 object TypeCheck extends (M3.System => M3.System) {
 
+  import ddbt.lib.Utils.{ fresh, freshClear }
   import ddbt.ast.M3._
-  import ddbt.Utils.{fresh,freshClear}
+
   @inline def err(msg: String) = sys.error("Type checking error: " + msg)
 
   // 1. Add used (constant) tables in maps, replace access by MapRefs (M3 fix?)

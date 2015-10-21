@@ -1,4 +1,5 @@
 package ddbt.codegen
+
 import ddbt.ast._
 
 /**
@@ -48,7 +49,7 @@ trait IScalaGen extends CodeGen {
 
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
-  import ddbt.Utils.{ind, tup, fresh, freshClear} // common functions
+  import ddbt.lib.Utils.{ ind, tup, fresh, freshClear } // common functions
 
   def mapRef(n: String, tp: Type, keys: List[(String, Type)]) = { 
     val m = M3.MapRef(n, tp, keys)

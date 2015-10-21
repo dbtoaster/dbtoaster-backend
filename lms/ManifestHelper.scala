@@ -1,7 +1,7 @@
-package ddbt.lib
+package ddbt.codegen
 
 import ddbt.ast._
-import ddbt.lib.store._
+import ddbt.lib.store.{ Store, Entry }
 
 /* Helper to convert AST types into manifests */
 object ManifestHelper {

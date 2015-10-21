@@ -1,9 +1,10 @@
 package ddbt
+
 import java.io._
-import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
+import java.util.concurrent.{ BlockingQueue, LinkedBlockingQueue }
 import Compiler._
-import ddbt.lib.ManifestHelper
 import ddbt.lib.Helper
+
 /**
  * Benchmarking and correctness verification generator. Instruments the
  * compiler such that options can be shared. To get more information:
@@ -13,6 +14,10 @@ import ddbt.lib.Helper
  * @author TCK
  */
 object UnitTest {
+
+  import ddbt.lib.Utils
+  import ddbt.lib.Utils._
+
   def med(ts: Seq[Long]) = 
     if (ts.size == 0) 0L 
     else { 
@@ -21,7 +26,6 @@ object UnitTest {
       if (n % 2 == 0) (s(n / 2) + s(n / 2 - 1)) / 2 else ts(n / 2) 
     }
 
-  import Utils._
   val path_examples = "examples/queries"
   val path_sources = "test/gen"
   val path_classes = "target/scala-2.10/test-classes"
@@ -268,7 +272,7 @@ object UnitTest {
   def genZeus {
     val num=if(seed!=0) 1 else samples; samples=1; warmup=0; timeout=0; benchmark=true
     var i=0; while(i < num) { i+=1
-      val sql = exec("scripts/zeus.rb"+(if (seed!=0) " -s "+seed else ""),true)._1.replaceAll("@@DATA@@",path_repo+"/../../experiments/data/simple/tiny")
+      val sql = exec("scripts/zeus.rb"+(if (seed!=0) " -s "+seed else ""),true)._1.replaceAll("@@DATA@@",pathRepo+"/../../experiments/data/simple/tiny")
       val ma = java.util.regex.Pattern.compile("^-- seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
       val id = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
       println("---------[[ Zeus "+id+" ]]---------")
@@ -310,7 +314,7 @@ object UnitTest {
             val kv = if (kt.size==0) "" else { val ll=(kt:::vt::Nil).zipWithIndex; "def kv(l:List[Any]) = l match { case List("+ll.map{case (t,i)=>"v"+i+":"+t.toScala}.mkString(",")+") => ("+tup(ll.init.map{ case (t,i)=>"v"+i })+",v"+ll.last._2+") }\n" }
             val cmp = "diff(res("+qid(n)+").asInstanceOf["+(if(kt.size>0) "Map"+qtp else vt.toScala)+"], "+(o match {
               case QueryMap(m) => "Map"+qtp+"("+m.map{ case (ks,v) => "("+ks.mkString("(",",",")")+","+v+")" }.mkString(",")+")"// inline in the code
-              case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+path_repo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
+              case QueryFile(path,sep) => "loadCSV"+qtp+"(kv,\""+pathRepo+"/"+path+"\",\""+(kt:::List(vt)).mkString(",")+"\""+(if (sep!=null) ",\"\\\\Q"+sep.replaceAll("\\\\\\|","|")+"\\\\E\"" else "")+")"
               case QuerySingleton(v) => v
             })+")"
             (if (full) "it(\""+n+" correct\") " else "")+"{\n"+ind(kv+cmp)+"\n}"
@@ -372,7 +376,7 @@ object UnitTest {
                       "(" + ks.mkString("(", ",", ")") + "," + v + ")" 
                     }.mkString(",") + ")"// inline in the code
                   case QueryFile(path,sep) => 
-                    "loadCSV" + qtp + "(kv, \"" + path_repo + "/" + path + "\", \"" + 
+                    "loadCSV" + qtp + "(kv, \"" + pathRepo + "/" + path + "\", \"" + 
                       (kt ::: List(vt)).mkString(",") + "\"" + 
                       (if (sep != null) 
                          ", \"\\\\Q" + sep.replaceAll("\\\\\\|","|") + "\\\\E\"" 
@@ -493,7 +497,7 @@ object UnitTest {
                   },conv((i \ qnn._2).text,qtn._2))
                 }.toMap
                 def kv(l:List[Any]) = (l.reverse.tail.reverse,l.reverse.head)
-                val refRes = Helper.loadCSV(kv,path_repo+"/"+path,(qtn._1:::List(qtn._2)).mkString(","),(if (sep!=null) "\\Q"+sep.replaceAll("\\\\\\|","|")+"\\E" else ","))
+                val refRes = Helper.loadCSV(kv,pathRepo+"/"+path,(qtn._1:::List(qtn._2)).mkString(","),(if (sep!=null) "\\Q"+sep.replaceAll("\\\\\\|","|")+"\\E" else ","))
                 Helper.diff(res,refRes)
               case QuerySingleton(v) =>
                 val res = conv((snap \ n).text,qtn._2)
@@ -525,7 +529,7 @@ object UnitTest {
   // Legacy testing
   private var legacySC:List[String]=>Unit = null
   def legacyScala(qName:String,q:QueryTest,p:Printer,t0:Long,lms:Boolean=false) {
-    val libs = (if (path_repo!=null) path_repo+"/" else "")+"lib/dbt_scala/dbtlib.jar"
+    val libs = (if (pathRepo!=null) pathRepo+"/" else "")+"lib/dbt_scala/dbtlib.jar"
     if (legacySC==null) {
       legacySC=scalaCompiler(tmp,libs,Compiler.exec_sc)
       write(tmp+"/RunQuery.scala","package org.dbtoaster\n"+
@@ -547,7 +551,7 @@ object UnitTest {
     var (t1,sc) = if (!lms) Compiler.toast("scala",q.sql) else {
       val f="tmp.scala"; val (t1,_) = Compiler.toast("scala","-O4","-o",f,q.sql);
       val fl=if (repo!=null) new File(repo,f) else new File(f); val s=read(fl.getPath); fl.delete;
-      (t1,s.replaceAll("../../experiments/data",path_repo+"/../../experiments/data"))
+      (t1,s.replaceAll("../../experiments/data",pathRepo+"/../../experiments/data"))
     }
     if (timeout>0) sc=sc.replaceAll("(case StreamEvent.*=>)","$1 if (!skip)").replace("def act(): Unit","var skip = false;\n    def act(): Unit")
     p.gen(math.max(0,t1-t0))
@@ -571,7 +575,7 @@ object UnitTest {
                 .replaceAll("(snapshot_t take_snapshot\\(\\)\\{)","$1 tlq_t d=(tlq_t&)data; if (d.tS==0) { "+tc("d.")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\\\n\",d.tT,d.tN,d.tS);")
         if(dataset.contains("_del")) res.replace("make_pair(\"schema\",\"", "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"").replace("\"),2,", "\"),3,") else res
       })
-      val pl = path_repo+"/lib/dbt_c++"
+      val pl = pathRepo+"/lib/dbt_c++"
       val po = tmp.getPath+"/"+qName
       val as = List("g++",pl+"/main.cpp","-include",po+".hpp","-o",po,"-O3","-lpthread","-ldbtoaster","-I"+pl,"-L"+pl) :::
                List("program_options","serialization","system","filesystem","chrono","thread").map("-lboost_"+_+prop("lib_boost_thread","")) ::: // thread-mt
@@ -586,8 +590,8 @@ object UnitTest {
 
   // ---------------------------------------------------------------------------
   // Common helpers
-  private val repo = if (path_repo!=null) new File(path_repo) else null
-  val all = if (repo!=null) exec(Array(Utils.find_bin,"test/unit/queries","-type","f"),repo)._1.split("\n").filterNot(_ contains "/.") //to exclude test/unit/queries/.DS_Store
+  private val repo = if (pathRepo!=null) new File(pathRepo) else null
+  val all = if (repo!=null) exec(Array(Utils.pathFindBin,"test/unit/queries","-type","f"),repo)._1.split("\n").filterNot(_ contains "/.") //to exclude test/unit/queries/.DS_Store
                                  .sorted.map(x => UnitParser(read(repo.getPath+"/"+x)))
             else if (!new java.io.File(path_examples).exists) { warning("folder '"+path_examples+"' does not exist, tests skipped !"); Array[QueryTest]() }
             else exec(Array("find",path_examples,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n").sorted.map(f=>QueryTest(f))

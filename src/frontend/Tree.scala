@@ -228,7 +228,7 @@ sealed abstract class M3 // see ddbt.frontend.M3Parser
 
 object M3 {
 
-  import ddbt.Utils.ind
+  import ddbt.lib.Utils.ind
 
   case class System(sources: List[Source], maps: List[MapDef], queries: List[Query], triggers: List[Trigger]) extends M3 {
     lazy val mapType =              // String => (List[Type], Type)
@@ -613,7 +613,7 @@ sealed abstract class SQL // see ddbt.frontend.SQLParser
 
 object SQL {
 
-  import ddbt.Utils.ind
+  import ddbt.lib.Utils.ind
 
   sealed abstract class OpAgg extends SQL
   case object OpSum extends OpAgg

@@ -37,7 +37,7 @@ class SparkConfig(input: InputStream) {
       // Kryo Serializer
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.referenceTracking", "false")
-      .set("spark.kryo.registrator", "ddbt.lib.spark.store.Registrator")
+      .set("spark.kryo.registrator", "ddbt.lib.spark.Registrator")
 
 //      .set("spark.default.parallelism", "16")
 //      .set("spark.broadcast.compress", "false")

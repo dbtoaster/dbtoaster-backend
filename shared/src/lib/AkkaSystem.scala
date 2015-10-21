@@ -324,6 +324,7 @@ trait MasterActor extends WorkerActor {
           case StreamInit(timeout) => pre_map=new Array[Int](local.size); t0=0L; t1=timeout; tN=0L; tS=0L; skip=false; onSystemReady()
           case EndOfStream => barrier{()=> t1=System.nanoTime(); collect(queries.reverse)}
           case GetSnapshot(qs:List[Int]) => barrier{()=> t1=System.nanoTime; collect(qs.map(MapRef(_)).reverse)}
+          case GetStream(_, _) => sys.error("Unsupported GetStream")
         }
         if (est==2) est=1 // disable trampoline
       }
