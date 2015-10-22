@@ -681,6 +681,9 @@ object UnitTest {
                 if (ts.size==samples) { while (ds < datasets.size && d(0)!=datasets(ds)) add(); add(""+med+min+max) }
               }
             }
+            else if (l.startsWith("###")) {
+              java.lang.System.err.println(l)
+            }
             l=r.readLine
           }
         }

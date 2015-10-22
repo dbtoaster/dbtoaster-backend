@@ -184,6 +184,52 @@ object Utils {
     }
   }
 
+  def sparkSubmit(className: String, args: Array[String]) = {
+    val prop = new java.util.Properties
+    prop.load(new java.io.FileInputStream("spark/conf/spark.config"))
+
+    val homeDir = prop.getProperty("spark.home.dir")
+    val masterURL = prop.getProperty("spark.master.url")
+    val driverMemory = prop.getProperty("spark.driver.memory")
+    val numExecutors = prop.getProperty("spark.partitions.num")
+    val execMemory = prop.getProperty("spark.executor.memory")
+    val execCores = prop.getProperty("spark.executor.cores")
+
+    val submit = if (homeDir == null || homeDir == "") "spark-submit" 
+      else s"${homeDir}/bin/spark-submit"
+
+    val (sMaster, sDeploy) = 
+      if (masterURL.matches("yarn-client.*")) 
+        ("--master yarn", "--deploy-mode client")
+      else if (masterURL.matches("yarn-cluster.*"))
+        ("--master yarn", "--deploy-mode cluster")
+      else 
+        ("--master " + masterURL, "")  
+    val sDriverMemory = 
+      if (driverMemory == null || driverMemory == "") "" 
+      else "--driver-memory " + driverMemory
+    val sNumExecutors = 
+      if (numExecutors == null || numExecutors == "") ""
+      else "--num-executors " + numExecutors
+    val sExecMemory = 
+      if (execMemory == null || execMemory == "") ""
+      else "--executor-memory " + execMemory
+    val sExecCores = 
+      if (execCores == null || execCores == "") ""
+      else "--executor-cores " + execCores
+      
+    val env = ("JAVA_HOME=" + pathJDK :: 
+      scala.collection.JavaConversions.mapAsScalaMap(System.getenv)
+        .filter(_._1.toUpperCase != "JAVA_HOME")
+        .map(x => x._1 + "=" + x._2).toList).toArray      
+
+    exec(
+      ( s"$submit $sMaster $sDeploy $sDriverMemory $sNumExecutors " + 
+        s"$sExecMemory $sExecMemory --files spark/conf/log4j.properties " +
+        s"--class $className ./pkg/ddbt_gen.jar " + args.mkString(" ")
+      ).split(" +"),
+      env = env, fatal = true, prefix = "")
+  }
 
   // XXX: use scala.sys.process.Process and scala.sys.process.ProcessLogger instead
   // Gobbles an input stream (lines not matching prefix are sent to out, null matches all, "" matches none)

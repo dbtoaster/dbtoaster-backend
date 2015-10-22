@@ -303,11 +303,15 @@ object Compiler {
             ("-b" + exec_bs :: exec_args).toArray,
             exec_vm)
         case LANG_SPARK_LMS =>
-          Utils.sparkExec(
-            dir :: libs.map(p => new File(p)), 
-            pkg + "." + name,
-            ("-b" + exec_bs :: exec_args).toArray,
-            exec_vm)
+          Utils.sparkSubmit(
+            pkg + "." + name, 
+            ("-b" + exec_bs :: exec_args).toArray)
+
+          // Utils.sparkExec(
+          //   dir :: libs.map(p => new File(p)), 
+          //   pkg + "." + name,
+          //   ("-b" + exec_bs :: exec_args).toArray,
+          //   exec_vm)
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
           val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = 
             ddbt.lib.Helper.extractExecArgs(("-b" + exec_bs :: exec_args).toArray)

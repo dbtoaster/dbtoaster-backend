@@ -807,7 +807,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |val bBatchSize = sc.broadcast(batchSize)  
         |val bNumBatches = sc.broadcast(numBatches)
         |
-        |printSummary()
+        |//printSummary()
         |
         |ctx.rdd.zip(streamRDD).foreach {
         |  case ((id, localCtx), tuples) =>
@@ -906,13 +906,13 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |  def getSnapshot = { ${block(sGetSnapshotBody)} }
         |
         |  def printSummary() = {
-        |    println("${sSparkObject}")
-        |    println("DATASET:    " + dataset)
-        |    println("PARTITIONS: " + numPartitions)
-        |    println("TUPLES:     " + numTuples)
-        |    println("BATCHES:    " + numBatches)
-        |    println("BATCH SIZE: " + batchSize)
-        |    println("DISTRIBUTED INPUT: ${isInputDistributed}")
+        |    println("### ${sSparkObject}")
+        |    println("### DATASET:    " + dataset)
+        |    println("### PARTITIONS: " + numPartitions)
+        |    println("### TUPLES:     " + numTuples)
+        |    println("### BATCHES:    " + numBatches)
+        |    println("### BATCH SIZE: " + batchSize)
+        |    println("### DISTRIBUTED INPUT: ${isInputDistributed}")
         |  }
         |
         |  def receive_skip: Receive = { 
@@ -984,7 +984,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
               |}""".stripMargin
 
         s"""|def processBatches(numBatches: Int) = {
-            |  println("PROCESSING START: " + numBatches)
+            |  println("### PROCESSING START: " + numBatches)
             |  for (i <- 0 until numBatches) {
             |${ind(sDequeueBlock, 2)}
             |
