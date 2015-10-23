@@ -540,6 +540,10 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |  var numPartitions: Int = 0
         |  var dataset: String = null
         |  var distInputPath: String = null
+        |  
+        |  // Handle for reading from HDFS
+        |  val fs = org.apache.hadoop.fs.FileSystem.get(
+        |    new org.apache.hadoop.conf.Configuration())
         |
         |  // Spark related variables
         |  private var cfg: SparkConfig = null
@@ -560,7 +564,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |    ctx.init()
         |  }
         |
-        |  def destroyContext() = ctx.destroy()
+        |  def destroyContext() = { ctx.destroy(); fs.close() }
         |
         |  def disableLogging() = {
         |    import org.apache.log4j.{Logger, Level}
@@ -620,11 +624,11 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
     val sDistributedMaps = emitMaps(emitDistributedMap, distributedMaps)
     s"""|class $sLocalMapContextClass(val partitionId: Int, numPartitions: Int) {
+        |  import ddbt.lib.Functions._
         | 
         |${ind(sDistributedMaps)}
         |
         |  // Constants   
-        |  import ddbt.lib.Functions._
         |${ind(consts)}
         |  
         |${ind(sBatchQueues)}
@@ -746,7 +750,17 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
     sources.filterNot { _.stream }.map { table => {
       val keys = table.schema.fields.zipWithIndex.map { case ((_, t), i) => ("v" + i, t) }
       val tuple = genTuple(keys.map { case (v, t) => (t, v) })
-      val (inputStream, adaptor, split) = genStream(table)
+      val (_, adaptor, split) = genStream(table)
+      val inputStream = table.in match {
+        case SourceFile(path) =>
+          if (isInputDistributed) {
+            val filename = path.substring(path.lastIndexOf("/") + 1)
+            // TODO: remove hard-coded standard dataset
+            val distPath = "distInputPath + \"/standard/" + filename + "\"" 
+            s"fs.open(new org.apache.hadoop.fs.Path(${distPath}))"
+          }
+          else s"""new java.io.FileInputStream("${path}")"""
+      }
       s"""|SourceMux({ 
           |  case TupleEvent(TupleInsert, _, List(${fieldsToParamList(table.schema.fields)})) =>
           |${ind(genInitializationFor(table.schema.name, keys, tuple), 2)}
@@ -887,6 +901,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
     val sConstants = ind(consts)
     s"""|class $sSparkObject extends Actor {
         |  import ddbt.lib.Messages._        
+        |  import ddbt.lib.Functions._
         |  import $sSparkObject._ 
         |
         |$sEmitBody
@@ -944,7 +959,6 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |  }
         | 
         |  // Constants 
-        |  import ddbt.lib.Functions._
         |$sConstants
         |}
         |""".stripMargin

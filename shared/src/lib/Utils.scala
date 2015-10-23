@@ -226,6 +226,7 @@ object Utils {
     exec(
       ( s"$submit $sMaster $sDeploy $sDriverMemory $sNumExecutors " + 
         s"$sExecMemory $sExecCores --files spark/conf/log4j.properties " +
+        s"--conf spark.ui.showConsoleProgress=false " +
         s"--class $className ./pkg/ddbt_gen.jar " + args.mkString(" ")
       ).split(" +"),
       env = env, fatal = true, prefix = "")
