@@ -295,13 +295,14 @@ object Compiler {
     }
     // Execution
     if (exec) {
-      lang match {
+      lang match {        
         case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
           Utils.scalaExec(
             dir :: libs.map(p => new File(p)), 
             pkg + "." + name,
             ("-b" + exec_bs :: exec_args).toArray,
             exec_vm)
+
         case LANG_SPARK_LMS =>
           Utils.sparkSubmit(
             pkg + "." + name, 
@@ -312,6 +313,7 @@ object Compiler {
           //   pkg + "." + name,
           //   ("-b" + exec_bs :: exec_args).toArray,
           //   exec_vm)
+
         case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
           val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = 
             ddbt.lib.Helper.extractExecArgs(("-b" + exec_bs :: exec_args).toArray)

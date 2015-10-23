@@ -581,7 +581,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |    if (configFile == null) { sys.error("Config file is missing.") }
         |    if (batchSize == 0) { sys.error("Invalid batch size.") }
         |
-        |    //disableLogging()
+        |    disableLogging()
         |
         |    cfg = new SparkConfig(getClass().getResourceAsStream(configFile))
         |
@@ -807,7 +807,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |val bBatchSize = sc.broadcast(batchSize)  
         |val bNumBatches = sc.broadcast(numBatches)
         |
-        |//printSummary()
+        |printSummary()
         |
         |ctx.rdd.zip(streamRDD).foreach {
         |  case ((id, localCtx), tuples) =>
@@ -990,6 +990,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
             |
             |${ind(sUpdateBlocks, 2)}
             |  }
+            |  println("### PROCESSING END")
             |}""".stripMargin
       }
       else {

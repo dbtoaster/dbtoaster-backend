@@ -493,14 +493,42 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
         val (aStmts, aExpr) = prepareExpression(expr)
         (aStmts, DefaultTransformer(aExpr))
       }
+
+      // Sanity check
+      assert(        
+        aTransformer.expr.locality match {
+          case Some(LocalExp) => (map.locality == Some(LocalExp))
+          case Some(DistRandomExp) => (map.locality == Some(DistRandomExp))
+          case Some(DistByKeyExp(pk1)) => map.locality match {
+            case Some(DistByKeyExp(pk2)) if pk1 == pk2 => true
+            case _ => false
+          }
+          case None => true          
+        })
+
       val (bStmts, bTransformer) = ivc.map(e => {
-        val (bStmts, bExpr) = prepareExpression(e)
+        val (bStmts, bExpr) = prepareExpression(e)       
+      
+        // Sanity check
+        assert(
+          bExpr.locality match {
+            case Some(LocalExp) => (map.locality == Some(LocalExp))
+            case Some(DistRandomExp) => (map.locality == Some(DistRandomExp))
+            case Some(DistByKeyExp(pk1)) => map.locality match {
+              case Some(DistByKeyExp(pk2)) if pk1 == pk2 => true
+              case _ => false
+            }
+            case None => true          
+          })        
+
         (bStmts, Some(DefaultTransformer(bExpr)))
       }).getOrElse((Nil, None))
-      val execMode = aTransformer.expr.locality match {
-        case Some(LocalExp) | None => LocalMode
+
+      val execMode = map.locality match {
+        case Some(LocalExp) => LocalMode
         case Some(DistByKeyExp(_)) | Some(DistRandomExp) => DistributedMode
-      }      
+        case _ => sys.error ("Map without locality information") 
+      }
       ( aStmts ++ bStmts ++ List(Statement(map, aTransformer, bTransformer, op, execMode)))
     case m: MapDef => Nil  
   }
