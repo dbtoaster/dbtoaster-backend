@@ -542,7 +542,8 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |  var distInputPath: String = null
         |  
         |  // Handle for reading from HDFS
-        |  var fs: org.apache.hadoop.fs.FileSystem = null
+        |  var fs = org.apache.hadoop.fs.FileSystem.get(
+        |    new org.apache.hadoop.conf.Configuration())
         |
         |  // Spark related variables
         |  private var cfg: SparkConfig = null
@@ -561,11 +562,9 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |    ctx = new ${sGlobalMapContextClass}(sc, numPartitions,
         |      (id => new ${sLocalMapContextClass}(id, numPartitions)))
         |    ctx.init()
-        |    fs = org.apache.hadoop.fs.FileSystem.get(
-        |      new org.apache.hadoop.conf.Configuration())
         |  }
         |
-        |  def destroyContext() = { ctx.destroy(); fs.close() }
+        |  def destroyContext() = ctx.destroy()
         |
         |  def disableLogging() = {
         |    import org.apache.log4j.{Logger, Level}
@@ -967,11 +966,13 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
   protected def emitActorBody(updateBlocks: List[StatementBlock],
       systemReadyBlocks: List[StatementBlock]): String = {
-    val sUpdateBlocks = emitBlocks(updateBlocks)
-    val sSystemReadyBlocks = ind(emitBlocks(systemReadyBlocks))
-    val sLocalMaps = emitMaps(emitLocalMap, localMaps.toSeq)
-    val sProcessFn = if (isInputDistributed) {
 
+    val sSystemReadyBlocks = ind(emitBlocks(systemReadyBlocks))
+
+    val sUpdateBlocks = emitBlocks(updateBlocks)
+
+    val sProcessFn =
+      if (isInputDistributed) {
         val sRenaming = deltaMapInfo.map { case (name, _) => 
             s"val ${name} = localCtx.${name}"
           }.mkString("\n")
@@ -1012,8 +1013,12 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         val sUpdateBatchArgs = deltaMapInfo.map { case (name, _) =>
             s"${name}: ${impl.codegen.storeType(ctx0(name)._1)}"
           }.mkString(", ")
+
         s"def onBatchUpdate($sUpdateBatchArgs) = { ${block(ind(sUpdateBlocks))} }"
       }
+
+    val sLocalMaps = emitMaps(emitLocalMap, localMaps.toSeq)
+
     s"""|$sLocalMaps
         |
         |$sProcessFn
