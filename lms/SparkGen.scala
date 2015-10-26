@@ -1001,11 +1001,18 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
         s"""|def processBatches(numBatches: Int) = {
             |  println("### PROCESSING START: " + numBatches)
+            |  var batchStartTime = startTime
             |  for (i <- 0 until numBatches) {
+            |
             |${ind(sDequeueBlock, 2)}
             |
             |${ind(sUpdateBlocks, 2)}
+            |
+            |    val batchEndTime = System.nanoTime
+            |    println("###   Batch " + i + ": " + ((batchEndTime - batchStartTime) / 1000000) + " ms")
+            |    batchStartTime = batchEndTime
             |  }
+            |  println("###   Total time: " + ((System.nanoTime - startTime) / 1000000) + " ms")
             |  println("### PROCESSING END")
             |}""".stripMargin
       }
