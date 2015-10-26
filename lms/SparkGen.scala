@@ -542,8 +542,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |  var distInputPath: String = null
         |  
         |  // Handle for reading from HDFS
-        |  val fs = org.apache.hadoop.fs.FileSystem.get(
-        |    new org.apache.hadoop.conf.Configuration())
+        |  var fs: org.apache.hadoop.fs.FileSystem = null
         |
         |  // Spark related variables
         |  private var cfg: SparkConfig = null
@@ -562,6 +561,8 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |    ctx = new ${sGlobalMapContextClass}(sc, numPartitions,
         |      (id => new ${sLocalMapContextClass}(id, numPartitions)))
         |    ctx.init()
+        |    fs = org.apache.hadoop.fs.FileSystem.get(
+        |      new org.apache.hadoop.conf.Configuration())
         |  }
         |
         |  def destroyContext() = { ctx.destroy(); fs.close() }
