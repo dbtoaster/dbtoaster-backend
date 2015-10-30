@@ -54,7 +54,7 @@ class GlobalMapContext[A](
             .map(_.zipWithIndex().map { case (x, t) => (t, x._2, x._3) })
             .reduce( _ union _)            // RDD[(ord, relId, data)]
 
-    val sorted = unified.sortBy(x => x._1 * numStreams + x._2, true, numPartitions
+    val sorted = unified.sortBy(x => x._1 * numStreams + x._2, true, numPartitions)
 
     val zipped = sorted.zipWithIndex()     // RDD[((ord, relId, data), ind)]
     val partitioned =                      // RDD[(data, (ind, relId))]
