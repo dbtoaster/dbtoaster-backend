@@ -32,20 +32,32 @@ class GlobalMapContext[A](
   def unmaterialize() = rdd.unpersist(true)
 
   def load(streams: List[(String, (String, String, String, String))]): RDD[Array[(List[Any], (Long, Int))]] = {
-    val unified = streams.zipWithIndex.map {
+    val numStreams = streams.length
+    val hasDeletions = streams.headOption.map(_._2._4 != "insert").getOrElse(false)
+
+    val streamRDDs = streams.zipWithIndex.map {
       case ((path, (name, schema, sep, del)), ind) =>
         sc.textFile(path, numPartitions).mapPartitions(it => {
           val adaptor = new Adaptor.CSV(name, schema, sep, del)
-          it.flatMap(s => adaptor.apply(s).map {
+          it.toList.flatMap(s => adaptor.apply(s).map {
             case OrderedInputEvent(ord, event) =>
               val tupleEvent = event.asInstanceOf[TupleEvent]
-              (ord, ind, tupleEvent.data :+ tupleEvent.op)
-          })
+              (ord.toLong, ind, tupleEvent.data :+ tupleEvent.op)
+          }).iterator
         }, false)
-    }.reduce( _ union _)                   // (ord, relId, data)
-    val sorted = unified.sortBy(x => x._1 * 2 + x._2)
-    val zipped = sorted.zipWithIndex()     // ((ord, relId, data), ind)
-    val partitioned =                      // (data, (ind, relId))
+    }                                      // List[RDD[(ord, relId, data)]]
+
+    val unified = 
+      // Datasets with deletions have orderIDs 
+      if (hasDeletions) streamRDDs.reduce( _ union _) 
+      else streamRDDs
+            .map(_.zipWithIndex().map { case (x, t) => (t, x._2, x._3) })
+            .reduce( _ union _)            // RDD[(ord, relId, data)]
+
+    val sorted = unified.sortBy(x => x._1 * numStreams + x._2, true, numPartitions
+
+    val zipped = sorted.zipWithIndex()     // RDD[((ord, relId, data), ind)]
+    val partitioned =                      // RDD[(data, (ind, relId))]
       zipped.map { case ((ord, relId, data), ind) => (data, (ind, relId)) }
             .partitionBy(partitioner)
             .mapPartitions(it => Array(it.toArray).iterator, true)
