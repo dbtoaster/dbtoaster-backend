@@ -50,7 +50,7 @@ class GlobalMapContext[A](
     val path = streams.head._1
     val checkpointPath = 
       path.substring(0, path.lastIndexOf("/")) + "/checkpoint/" + queryName +
-      (if (randomizeDataset) "_random" else "")
+      (if (randomizeDataset) "_random" else "") + "_" + numPartitions
 
     if (isCheckpointingEnabled && fs.exists(new Path(checkpointPath))) {
       return sc.objectFile(checkpointPath)
