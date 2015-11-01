@@ -14,8 +14,12 @@ class GlobalMapContext[A](
   val numPartitions: Int,
   val localContext: (Int => A)) {
 
-  val isCheckpointEnabled = true
+  val isCheckpointingEnabled = true
 
+  val shuffleInsertDatasets = false
+
+  val fs = FileSystem.get(new Configuration())  
+  
   val partitioner = new HashPartitioner(numPartitions)
 
   val rdd =
@@ -39,27 +43,29 @@ class GlobalMapContext[A](
 
     assert(streams.length > 0)
 
-    val fs = FileSystem.get(new Configuration())  
-
+    val numStreams = streams.length
+    val hasDeletions = (streams.head._2._4 != "insert")
+    val randomizeDataset = !hasDeletions && shuffleInsertDatasets
+    
     val path = streams.head._1
     val checkpointPath = 
-      path.substring(0, path.lastIndexOf("/")) + "/checkpoint/" + queryName
+      path.substring(0, path.lastIndexOf("/")) + "/checkpoint/" + queryName +
+      (if (randomizeDataset) "_random" else "")
 
-    if (isCheckpointEnabled && fs.exists(new Path(checkpointPath))) {
+    if (isCheckpointingEnabled && fs.exists(new Path(checkpointPath))) {
       return sc.objectFile(checkpointPath)
     }
 
-    val numStreams = streams.length
-    val hasDeletions = (streams.head._2._4 != "insert")
-
     val streamRDDs = streams.zipWithIndex.map {
-      case ((path, (name, schema, sep, del)), ind) =>
-        sc.textFile(path, numPartitions).mapPartitions(it => {
+      case ((path, (name, schema, sep, del)), streamId) =>
+        sc.textFile(path, numPartitions).mapPartitionsWithIndex((pid, it) => {
           val adaptor = new Adaptor.CSV(name, schema, sep, del)
+          val rnd = new scala.util.Random(pid * numStreams + streamId)
           it.toList.flatMap(s => adaptor.apply(s).map {
             case OrderedInputEvent(ord, event) =>
+              val orderId = if (randomizeDataset) rnd.nextLong else ord.toLong
               val tupleEvent = event.asInstanceOf[TupleEvent]
-              (ord.toLong, ind, tupleEvent.data :+ tupleEvent.op)
+              (orderId, streamId, tupleEvent.data :+ tupleEvent.op)
           }).iterator
         }, false)
     }                                      // List[RDD[(ord, relId, data)]]
@@ -79,7 +85,7 @@ class GlobalMapContext[A](
             .partitionBy(partitioner)
             .mapPartitions(it => Array(it.toArray).iterator, true)
 
-    if (isCheckpointEnabled) 
+    if (isCheckpointingEnabled) 
       partitioned.saveAsObjectFile(checkpointPath)
 
     partitioned
