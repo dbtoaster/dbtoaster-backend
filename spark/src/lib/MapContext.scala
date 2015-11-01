@@ -50,43 +50,52 @@ class GlobalMapContext[A](
     val path = streams.head._1
     val checkpointPath = 
       path.substring(0, path.lastIndexOf("/")) + "/checkpoint/" + queryName +
-      (if (randomizeDataset) "_random" else "") + "_" + numPartitions
+      (if (randomizeDataset) "_random" else "")
 
-    if (isCheckpointingEnabled && fs.exists(new Path(checkpointPath))) {
-      return sc.objectFile(checkpointPath)
-    }
+    val mapped: RDD[(List[Any], (Long, Int))] = 
+      if (isCheckpointingEnabled && fs.exists(new Path(checkpointPath))) {
+        sc.objectFile(checkpointPath)
+      }
+      else {
+        // Load streams, assign order ids, and sort them 
+        val streamRDDs = streams.zipWithIndex.map {
+          case ((path, (name, schema, sep, del)), streamId) =>
+            sc.textFile(path, numPartitions)
+              .mapPartitionsWithIndex((pid, it) => {
+                val adaptor = new Adaptor.CSV(name, schema, sep, del)
+                val rnd = new scala.util.Random(pid * numStreams + streamId)
+                it.toList.flatMap(s => adaptor.apply(s).map {
+                  case OrderedInputEvent(ord, event) =>
+                    val orderId = if (randomizeDataset) rnd.nextLong else ord.toLong
+                    val tupleEvent = event.asInstanceOf[TupleEvent]
+                    (orderId, streamId, tupleEvent.data :+ tupleEvent.op)
+              }).iterator
+            }, false)
+        }                                      // List[RDD[(ord, relId, data)]]
 
-    val streamRDDs = streams.zipWithIndex.map {
-      case ((path, (name, schema, sep, del)), streamId) =>
-        sc.textFile(path, numPartitions).mapPartitionsWithIndex((pid, it) => {
-          val adaptor = new Adaptor.CSV(name, schema, sep, del)
-          val rnd = new scala.util.Random(pid * numStreams + streamId)
-          it.toList.flatMap(s => adaptor.apply(s).map {
-            case OrderedInputEvent(ord, event) =>
-              val orderId = if (randomizeDataset) rnd.nextLong else ord.toLong
-              val tupleEvent = event.asInstanceOf[TupleEvent]
-              (orderId, streamId, tupleEvent.data :+ tupleEvent.op)
-          }).iterator
-        }, false)
-    }                                      // List[RDD[(ord, relId, data)]]
+        val unified = 
+          // Datasets with deletions have orderIDs 
+          if (hasDeletions || randomizeDataset) streamRDDs.reduce( _ union _) 
+          else streamRDDs
+                .map(_.zipWithIndex().map { case (x, t) => (t, x._2, x._3) })
+                .reduce( _ union _)            // RDD[(ord, relId, data)]
 
-    val unified = 
-      // Datasets with deletions have orderIDs 
-      if (hasDeletions) streamRDDs.reduce( _ union _) 
-      else streamRDDs
-            .map(_.zipWithIndex().map { case (x, t) => (t, x._2, x._3) })
-            .reduce( _ union _)            // RDD[(ord, relId, data)]
+        val sorted = 
+          unified.sortBy(x => x._1 * numStreams + x._2, true, numPartitions)
 
-    val sorted = unified.sortBy(x => x._1 * numStreams + x._2, true, numPartitions)
+        val zipped = sorted.zipWithIndex()    // RDD[((ord, relId, data), ind)]
+                                   
+        val mapped =                          // RDD[(data, (ind, relId))]
+          zipped.map { case ((ord, relId, data), ind) => (data, (ind, relId)) }
+    
+        if (isCheckpointingEnabled) mapped.saveAsObjectFile(checkpointPath)    
 
-    val zipped = sorted.zipWithIndex()     // RDD[((ord, relId, data), ind)]
-    val partitioned =                      // RDD[(data, (ind, relId))]
-      zipped.map { case ((ord, relId, data), ind) => (data, (ind, relId)) }
-            .partitionBy(partitioner)
+        mapped
+      }
+                          
+    val partitioned = 
+      mapped.partitionBy(partitioner)
             .mapPartitions(it => Array(it.toArray).iterator, true)
-
-    if (isCheckpointingEnabled) 
-      partitioned.saveAsObjectFile(checkpointPath)
 
     partitioned
   }
