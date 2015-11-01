@@ -568,7 +568,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |  var distInputPath: String = null
         |  
         |  // Handle for reading from HDFS
-        |  var fs = org.apache.hadoop.fs.FileSystem.get(
+        |  val fs = org.apache.hadoop.fs.FileSystem.get(
         |    new org.apache.hadoop.conf.Configuration())
         |
         |  // Spark related variables
@@ -837,7 +837,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
             |""".stripMargin
       }}.mkString("\n")
 
-    s"""|val streamRDD = ctx.load(List(
+    s"""|val streamRDD = ctx.load("$sSparkObject", List(
         |${ind(sDistInputSources)}
         |))
         |

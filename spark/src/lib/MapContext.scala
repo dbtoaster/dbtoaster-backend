@@ -4,6 +4,8 @@ import org.apache.spark.HashPartitioner
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext.rddToPairRDDFunctions
 import org.apache.spark.rdd.RDD
+import org.apache.hadoop.fs.{ Path, FileSystem }
+import org.apache.hadoop.conf.Configuration
 import ddbt.lib.Adaptor
 import ddbt.lib.Messages._
   
@@ -11,6 +13,8 @@ class GlobalMapContext[A](
   val sc: SparkContext,
   val numPartitions: Int,
   val localContext: (Int => A)) {
+
+  val isCheckpointEnabled = true
 
   val partitioner = new HashPartitioner(numPartitions)
 
@@ -31,9 +35,22 @@ class GlobalMapContext[A](
 
   def unmaterialize() = rdd.unpersist(true)
 
-  def load(streams: List[(String, (String, String, String, String))]): RDD[Array[(List[Any], (Long, Int))]] = {
+  def load(queryName: String, streams: List[(String, (String, String, String, String))]): RDD[Array[(List[Any], (Long, Int))]] = {
+
+    assert(streams.length > 0)
+
+    val fs = FileSystem.get(new Configuration())  
+
+    val path = streams.head._1
+    val checkpointPath = 
+      path.substring(0, path.lastIndexOf("/")) + "/checkpoint/" + queryName
+
+    if (isCheckpointEnabled && fs.exists(new Path(checkpointPath))) {
+      return sc.objectFile(checkpointPath)
+    }
+
     val numStreams = streams.length
-    val hasDeletions = streams.headOption.map(_._2._4 != "insert").getOrElse(false)
+    val hasDeletions = (streams.head._2._4 != "insert")
 
     val streamRDDs = streams.zipWithIndex.map {
       case ((path, (name, schema, sep, del)), ind) =>
@@ -61,6 +78,10 @@ class GlobalMapContext[A](
       zipped.map { case ((ord, relId, data), ind) => (data, (ind, relId)) }
             .partitionBy(partitioner)
             .mapPartitions(it => Array(it.toArray).iterator, true)
+
+    if (isCheckpointEnabled) 
+      partitioned.saveAsObjectFile(checkpointPath)
+
     partitioned
   }
 }
