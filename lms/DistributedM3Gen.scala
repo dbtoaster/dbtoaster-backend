@@ -472,8 +472,26 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
       }
     }
 
+    def optDropTopLevelStmts = new Function1[List[Statement], List[Statement]] {
+
+      def topLevelStatements(stmts: List[Statement]): List[Statement] = stmts match {
+        case Nil => Nil
+        case head :: tail =>
+          val isReferenced = tail.exists(_.rhsMapNames.contains(head.lhsMap.name))
+          if (isReferenced) topLevelStatements(tail)
+          else head :: topLevelStatements(tail)
+      }
+
+      def apply(stmts: List[Statement]): List[Statement] = {
+        val topLevelReeval = topLevelStatements(stmts).filter(_.opMap == OpSet)
+        val uniqueReeval = topLevelReeval.groupBy(_.lhsMap.name).map(_._2.head)
+        val topLevelMaps = uniqueReeval.map(_.lhsMap.name).toSet
+        stmts.filterNot(s => topLevelMaps.contains(s.lhsMap.name)) ++ uniqueReeval
+      }
+    }
+
     def optimize(stmts: List[Statement]): List[Statement] = {
-      val optStmts = (optCSE andThen optDCE)(stmts)
+      val optStmts = (optCSE andThen optDCE andThen optDropTopLevelStmts)(stmts)
       if (stmts == optStmts) optStmts else optimize(optStmts)
     }
   }
