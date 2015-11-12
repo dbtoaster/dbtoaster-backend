@@ -116,8 +116,8 @@ object Utils {
     val jbootcp = if (bootcp == "") "" else "-J-Xbootclasspath/p:" + bootcp
     val jcp = if (cp == null || cp == "") "" else " -cp " + cp
     val args = jbootcp + jcp + " -d " + pathDir + " " + opts.mkString(" ") + " "
-    val exec = if (useFsc) "fsc " else "scalac "
-    val scalac = exec + prop("jvm").split(" +").map("-J"+_).mkString(" ") + " " + args
+    val exe = if (useFsc) "fsc " else "scalac "
+    val scalac = exe + prop("jvm").split(" +").map("-J"+_).mkString(" ") + " " + args
     (fs: List[String]) => 
       try { execOut(scalac + fs.mkString(" ")) } 
       catch { case _: IOException => 
