@@ -94,7 +94,7 @@ object Utils {
     val bootcp = jSparkBootclasspaths.mkString(":")
     val pathDir = dir.getAbsolutePath
 
-    if (external) externalScalaCompiler(scalacOpts, bootcp, cp, pathDir)  
+    if (external) externalScalaCompiler(scalacOpts, bootcp, cp, pathDir, false)  
     else embeddedScalaCompiler(scalacOpts, bootcp, cp, pathDir)  
   }
 
@@ -110,15 +110,16 @@ object Utils {
       catch { case t: Throwable => t.printStackTrace }
   }
 
-  private def externalScalaCompiler(opts: List[String], bootcp: String, cp: String, pathDir: String): List[String] => Unit = {
+  private def externalScalaCompiler(opts: List[String], bootcp: String, cp: String, pathDir: String, useFsc: Boolean = true): List[String] => Unit = {
     // FSC external processes
     def execOut(cmd: String) = exec(cmd.split(" +"), prefix = "")
     val jbootcp = if (bootcp == "") "" else "-J-Xbootclasspath/p:" + bootcp
     val jcp = if (cp == null || cp == "") "" else " -cp " + cp
     val args = jbootcp + jcp + " -d " + pathDir + " " + opts.mkString(" ") + " "
-    val fsc = "fsc " + prop("jvm").split(" +").map("-J"+_).mkString(" ") + " " + args
+    val exec = if (useFsc) "fsc " else "scalac "
+    val scalac = exec + prop("jvm").split(" +").map("-J"+_).mkString(" ") + " " + args
     (fs: List[String]) => 
-      try { execOut(fsc + fs.mkString(" ")) } 
+      try { execOut(scalac + fs.mkString(" ")) } 
       catch { case _: IOException => 
         val jbootcp = if (bootcp == "") "" else " -Xbootclasspath/p:" + bootcp
         execOut("java " + prop("jvm") + jbootcp + " scala.tools.nsc.Main " + args + fs.mkString(" ")) 
@@ -258,7 +259,7 @@ object Utils {
 
   def exec(cmd: Array[String], dir: File = null, env: Array[String] = null, 
       fatal: Boolean = true, prefix: String = null): (String, String) = {
-    System.err.println(cmd.mkString(" "))
+    //System.err.println(cmd.mkString(" "))
     val p = Runtime.getRuntime.exec(cmd, env, dir)
     val out = gobble(p.getInputStream, scala.Console.out, prefix)
     val err = gobble(p.getErrorStream, scala.Console.err, prefix)
