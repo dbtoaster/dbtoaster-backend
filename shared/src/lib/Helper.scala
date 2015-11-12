@@ -21,7 +21,13 @@ object Helper {
       val f = "conf/akka.conf"
       if (new java.io.File(f).exists) scala.io.Source.fromFile(f).mkString else "" 
     }
-    val system = ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(conf + user))
+    val mailbox = """
+      bounded-mailbox {
+        mailbox-type = "akka.dispatch.BoundedMailbox"
+        mailbox-capacity = 2
+        mailbox-push-timeout-time = -1
+      }"""
+    val system = ActorSystem(name, com.typesafe.config.ConfigFactory.parseString(conf + user /* + mailbox */))
     //Runtime.getRuntime.addShutdownHook(new Thread{ override def run() = { /*println("Stopping "+host+":"+port);*/ system.shutdown() } });
     /*println("Started "+host+":"+port);*/ system
   }
@@ -56,7 +62,7 @@ object Helper {
                                  timeout: Long = 0L, batchSize: Int = 0)
                                 (implicit cq: ClassTag[Q]) = {
     val system = actorSys()
-    val query = system.actorOf(Props[Q], "Query")
+    val query = system.actorOf(Props[Q] /* .withDispatcher("bounded-mailbox") */, "Query")
     try { mux(query, streams, parallel, timeout, batchSize) } 
     finally { system.shutdown }
   }
