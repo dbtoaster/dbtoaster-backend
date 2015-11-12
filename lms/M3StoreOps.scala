@@ -2,12 +2,12 @@ package ddbt.codegen.lms
 
 import ddbt.ast._
 import oltp.opt.lifters._
-import ddbt.lib.store._
-import ddbt.lib.ManifestHelper._
+import ddbt.codegen.ManifestHelper._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext
-import ddbt.Utils.ind
+import ddbt.lib.Utils.ind
+import ddbt.lib.store.{ Store, Entry, IHash, IList, IndexType }
 
 /**
  * The following LMS operations are implemented by these traits:
@@ -93,7 +93,7 @@ trait M3StoreOpsExp extends BaseExp
     getStoreType(map.asInstanceOf[Sym[_]]) match {
       case LogStore | PartitionStore(_) =>
         __ifThenElse(
-          __equal(entVal, unit(ddbt.lib.ManifestHelper.zero(lastMan))), 
+          __equal(entVal, unit(ddbt.codegen.ManifestHelper.zero(lastMan))), 
           unit(()),
           stInsert(map, ent)
         )    
@@ -259,7 +259,7 @@ trait ScalaGenM3StoreOps extends ScalaGenBase
 
   val IR: M3StoreOpsExp with ExtendedExpressions with Effects
   import IR._
-  import ddbt.Utils.{ind,tup}
+  import ddbt.lib.Utils.{ind,tup}
 
   // Specialization of temporary maps into Entry1 / Store1
   override def generateStore(s: Sym[_]): String =
@@ -397,7 +397,7 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
 
   val IR: M3StoreOpsExp with ExtendedExpressions with Effects
   import IR._
-  import ddbt.Utils.{ind, tup, block}
+  import ddbt.lib.Utils.{ind, tup, block}
 
   private def extractIndices(sym: Sym[_]) = 
     sym.attributes.get(ENTRY_INDICES_KEY) match {
@@ -615,7 +615,7 @@ trait CGenM3StoreOps extends CGenBase
 
   val IR: M3StoreOpsExp with ExtendedExpressions with Effects
   import IR._
-  import ddbt.Utils.{ind,tup}
+  import ddbt.lib.Utils.{ind,tup}
 
   // Specialization of temporary maps into Entry1 / Store1
   override def generateStore(s: Sym[_]): String =

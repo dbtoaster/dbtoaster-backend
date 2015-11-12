@@ -1,4 +1,5 @@
 package ddbt.frontend
+
 import ddbt.ast._
 
 /**
@@ -8,8 +9,9 @@ import ddbt.ast._
   */
 object TypeCheck extends (M3.System => M3.System) {
 
+  import ddbt.lib.Utils.{ fresh, freshClear }
   import ddbt.ast.M3._
-  import ddbt.Utils.{fresh,freshClear}
+
   @inline def err(msg: String) = sys.error("Type checking error: " + msg)
 
   // 1. Add used (constant) tables in maps, replace access by MapRefs (M3 fix?)
@@ -72,12 +74,13 @@ object TypeCheck extends (M3.System => M3.System) {
                if (e != null) re(e, t) else e,
                l match { 
                  case LocalExp => LocalExp 
-                 case DistributedExp(pk) => 
-                  DistributedExp(pk.map(k => (r(k._1), k._2)))
+                 case DistRandomExp => DistRandomExp
+                 case DistByKeyExp(pk) => 
+                  DistByKeyExp(pk.map(k => (r(k._1), k._2)))
                })
     }
     val sources = s0.sources.map { 
-      case Source(st, sch, in, sp, ad) => Source(st, rs(sch), in, sp, ad) 
+      case Source(st, sch, in, sp, ad, loc) => Source(st, rs(sch), in, sp, ad, loc) 
     }
     val triggers = s0.triggers.map { t => 
       localMaps.clear

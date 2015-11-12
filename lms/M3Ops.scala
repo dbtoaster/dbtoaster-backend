@@ -1,7 +1,7 @@
 package ddbt.codegen.lms
 
 import ddbt.ast._
-import ddbt.lib.ManifestHelper
+import ddbt.codegen.ManifestHelper
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import scala.reflect.SourceContext

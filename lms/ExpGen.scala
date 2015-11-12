@@ -3,7 +3,6 @@ package ddbt.codegen.lms
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import ddbt.ast._
-import ddbt.lib.store._
 import scalariform.formatter.preferences._
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
@@ -81,7 +80,7 @@ object ScalaExpGen extends LMSExpGen { self =>
     def emitTriggerSource[T: Manifest](body: Block[T], name: String, params: String): String = {
       val funDef = 
         "def on" + name + "(" + params + ") {\n" + 
-        ddbt.Utils.ind(emitSource(body)) + "\n}"
+        ddbt.lib.Utils.ind(emitSource(body)) + "\n}"
 
       var staticFieldsStr = ""
       staticFields.map { case (key, staticFldDef) => 
@@ -216,7 +215,7 @@ object CppExpGen extends LMSExpGen
     def emitTriggerSource[T: Manifest](body: Block[T], name: String, params: String): String = {
       val funDef = 
         "def on" + name + "(" + params + ") {\n" + 
-        ddbt.Utils.ind(emitSource(body)) + "\n}"
+        ddbt.lib.Utils.ind(emitSource(body)) + "\n}"
 
       var staticFieldsStr = ""
       staticFields.map { case (key, staticFldDef) =>

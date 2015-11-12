@@ -629,7 +629,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry
   }
 
   override def emitDataStructures(out: java.io.PrintWriter): Unit = {
-    import ddbt.Utils.ind
+    import ddbt.lib.Utils.ind
     out.println
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
@@ -674,7 +674,7 @@ trait ScalaGenStore extends ScalaGenBase with ScalaGenSEntry
   }
 
   override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
-    storeSyms.foreach { c => out.println(ddbt.Utils.ind(generateStore(c),2)) }
+    storeSyms.foreach { c => out.println(ddbt.lib.Utils.ind(generateStore(c),2)) }
     functionNames.foreach { fn =>
       out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
         quote(c, true)
@@ -735,7 +735,7 @@ trait SparkGenStore extends ScalaGenStore {
   val IR: StoreExp with ExtendedExpressions with Effects
   import IR._
   import SparkGenStore._
-  import ddbt.Utils.{ind, block}
+  import ddbt.lib.Utils.{ ind, block }
 }
 
 trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
@@ -846,7 +846,7 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
   }
 
   override def emitDataStructures(out: java.io.PrintWriter): Unit = {
-    import ddbt.Utils.ind
+    import ddbt.lib.Utils.ind
     out.println
     storeSyms.foreach{ sym =>
       val (clsName, argTypes) = extractEntryClassName(sym)
@@ -881,7 +881,7 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
   }
 
   override def generateClassArgsDefs(out: java.io.PrintWriter, functionNames:Seq[String]) {
-    storeSyms.foreach { c => out.println(ddbt.Utils.ind(generateStore(c),2)) }
+    storeSyms.foreach { c => out.println(ddbt.lib.Utils.ind(generateStore(c),2)) }
     functionNames.foreach { fn =>
       out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
         quote(c, true)

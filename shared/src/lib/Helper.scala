@@ -159,9 +159,12 @@ object Helper {
       else defValue
     }
     List(
+      parseShort("-d", None, x => Some(x)) match {
+        case Some(x) => List(("dataset", x)) case None => Nil 
+      },
       parseShort("-b", None, x => Some(x.toInt)) match {
         case Some(x) => List(("batchSize", x)) case None => Nil 
-      },     
+      },
       parseShort("--no-output", None, x => Some(true)) match {
         case Some(x) => List(("noOutput", x)) case None => Nil 
       },
@@ -170,6 +173,9 @@ object Helper {
       },
       parseLong("--log-count",  None, x => Some(x.toInt)) match {
         case Some(x) => List(("logCount", x)) case None => Nil 
+      },
+      parseLong("--num-partitions", None, x => Some(x.toInt)) match {
+        case Some(x) => List(("numPartitions", x)) case None => Nil
       }      
     ).flatten.toMap
   }

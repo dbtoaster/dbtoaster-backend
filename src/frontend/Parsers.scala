@@ -87,11 +87,21 @@ class ExtParser extends StandardTokenParsers {
     acceptIf (x => Library(x.chars.toLowerCase)) (x => 
       "No such function '" + x.chars + "'") ^^ (_.chars.toLowerCase)
     
+  // ------------ Partitioning information
+  lazy val partitioning = 
+    ( ("PARTITIONED" ~> "BY" ~> "[" ~> 
+       repsep(ident ~ (":" ~> tpe), ",") <~ "]") ^^ { 
+        case ks => DistByKeyExp(ks.map { case n ~ t => (n, t) })
+      }
+    | ("PARTITIONED" ~> "RANDOMLY") ^^^ DistRandomExp
+    )
+
   // ------------ Source declaration
   lazy val source = 
     "CREATE" ~> ("STREAM" | "TABLE") ~ schema ~ ("FROM" ~> sourceIn) ~ 
-    split ~ adaptor <~ ";" ^^ { 
-      case t ~ s ~ i ~ b ~ a => Source(t == "STREAM",s,i,b,a) 
+    split ~ adaptor ~ opt(partitioning) <~ ";" ^^ { 
+      case t ~ s ~ i ~ b ~ a ~ p => 
+        Source(t == "STREAM", s, i, b, a, p.getOrElse(LocalExp))
     }
 
   lazy val schema = 
@@ -201,16 +211,14 @@ object M3Parser extends ExtParser with (String => M3.System) {
   lazy val map = 
     ("DECLARE" ~> "MAP" ~> ident) ~ opt("(" ~> tpe <~ ")") ~ 
     ("[" ~> "]" ~> "[" ~> repsep(ident ~ (":" ~> tpe), ",") <~ "]") ~ 
-    opt(":=" ~> expr) ~ opt("PARTITIONED" ~> "BY" ~> "[" ~> 
-      repsep(ident ~ (":" ~> tpe), ",") <~ "]") <~ ";" ^^ { 
-      case n ~ t ~ ks ~ e ~ pk => 
+    opt(":=" ~> expr) ~ opt(partitioning) <~ ";" ^^ { 
+      case n ~ t ~ ks ~ e ~ p => 
         MapDef(
           n, 
           t.getOrElse(null), 
           ks.map { case n ~ t => (n, t) }, 
           e.getOrElse(null),
-          pk.map(ks => DistributedExp(ks.map { case n ~ t => (n, t) }))
-            .getOrElse(LocalExp)
+          p.getOrElse(LocalExp)
         ) 
     }
 

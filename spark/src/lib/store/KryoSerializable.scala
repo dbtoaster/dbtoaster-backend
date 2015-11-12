@@ -2,7 +2,7 @@ package ddbt.lib.spark.store
 
 import com.esotericsoftware.kryo.io.{Input, Output}
 
-trait Serializable {
+trait KryoSerializable {
   
   def write(out: Output): Unit
 

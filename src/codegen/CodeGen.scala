@@ -1,5 +1,6 @@
 package ddbt.codegen
-import ddbt.ast.{M3,Source,Type,EvtBatchUpdate,EvtAdd,EvtDel}
+
+import ddbt.ast.{ M3, Source, Type, EvtBatchUpdate, EvtAdd, EvtDel }
 
 /**
   * An abstraction of the code generator.
