@@ -31,8 +31,11 @@ class SparkConfig(input: InputStream) {
       .setSparkHome(sparkHomeDir)
       .setJars(sparkJars)      
             
-      .set("spark.akka.threads", "16")      
+      .set("spark.akka.threads", "32")
       .set("spark.akka.frameSize", "1024")
+      .set("spark.driver.cores", "2")
+      .set("spark.driver.maxResultSize", "0")
+      .set("spark.network.timeout", "1200s")
       
       // Kryo Serializer
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
