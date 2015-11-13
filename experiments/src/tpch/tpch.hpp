@@ -1,6 +1,7 @@
 #ifndef DBTOASTER_TEST_TPCH_HPP
 #define DBTOASTER_TEST_TPCH_HPP
 
+#include <vector>
 #include "types.hpp"
 #include "serialization.hpp"
 
@@ -401,9 +402,11 @@ namespace dbtoaster
             read(i, comment);
         }
     };
+
     struct TPCHLineitemBatch
     {
-        size_t length;
+        size_t size;
+        size_t capacity;
         long* orderkey;
         long* partkey;
         long* suppkey;
@@ -421,29 +424,42 @@ namespace dbtoaster
         STRING_TYPE* shipmode;
         STRING_TYPE* comment;
 
-        TPCHLineitemBatch() : length(0) { }
+        //TPCHLineitemBatch() : size(0), capacity(0) { }
+
+        TPCHLineitemBatch(size_t c) { initCapacity(c); }            
+
+        TPCHLineitemBatch(const TPCHLineitemBatch& batch) 
+        {
+            initCapacity(batch.size);
+            size = batch.size;
+
+            for (size_t i = 0; i < batch.size; i++)
+            {
+                orderkey[i] = batch.orderkey[i];
+                partkey[i] = batch.partkey[i];
+                suppkey[i] = batch.suppkey[i];
+                linenumber[i] = batch.linenumber[i];
+                quantity[i] = batch.quantity[i];
+                extendedprice[i] = batch.extendedprice[i];
+                discount[i] = batch.discount[i];
+                tax[i] = batch.tax[i];
+                returnflag[i] = batch.returnflag[i];
+                linestatus[i] = batch.linestatus[i];
+                shipdate[i] = batch.shipdate[i];
+                commitdate[i] = batch.commitdate[i];
+                receiptdate[i] = batch.receiptdate[i];
+                shipinstruct[i] = batch.shipinstruct[i];
+                shipmode[i] = batch.shipmode[i];
+                comment[i] = batch.comment[i];
+            }
+        }
 
         TPCHLineitemBatch(std::vector<TPCHLineitem>& lineitems)
         {
-            length = lineitems.size();
-            orderkey = new long[length];
-            partkey = new long[length];
-            suppkey = new long[length];
-            linenumber = new long[length];
-            quantity = new DOUBLE_TYPE[length];
-            extendedprice = new DOUBLE_TYPE[length];
-            discount = new DOUBLE_TYPE[length];
-            tax = new DOUBLE_TYPE[length];
-            returnflag = new STRING_TYPE[length]();
-            linestatus = new STRING_TYPE[length]();
-            shipdate = new DATE_TYPE[length];
-            commitdate = new DATE_TYPE[length];
-            receiptdate = new DATE_TYPE[length];
-            shipinstruct = new STRING_TYPE[length]();
-            shipmode = new STRING_TYPE[length]();
-            comment = new STRING_TYPE[length]();
+            initCapacity(lineitems.size());            
+            size = lineitems.size();
 
-            for (size_t i = 0; i < length; i++)
+            for (size_t i = 0; i < lineitems.size(); i++)
             {
                 orderkey[i] = lineitems[i].orderkey;
                 partkey[i] = lineitems[i].partkey;
@@ -462,6 +478,51 @@ namespace dbtoaster
                 shipmode[i] = lineitems[i].shipmode;
                 comment[i] = lineitems[i].comment;
             }
+        }
+
+        void initCapacity(size_t c) 
+        {           
+            assert(c > 0);
+            size = 0;
+            capacity = c;
+            orderkey = new long[capacity]();
+            partkey = new long[capacity]();
+            suppkey = new long[capacity]();
+            linenumber = new long[capacity]();
+            quantity = new DOUBLE_TYPE[capacity]();
+            extendedprice = new DOUBLE_TYPE[capacity]();
+            discount = new DOUBLE_TYPE[capacity]();
+            tax = new DOUBLE_TYPE[capacity]();
+            returnflag = new STRING_TYPE[capacity]();
+            linestatus = new STRING_TYPE[capacity]();
+            shipdate = new DATE_TYPE[capacity]();
+            commitdate = new DATE_TYPE[capacity]();
+            receiptdate = new DATE_TYPE[capacity]();
+            shipinstruct = new STRING_TYPE[capacity]();
+            shipmode = new STRING_TYPE[capacity]();
+            comment = new STRING_TYPE[capacity]();     
+        }
+
+        void add(long _orderkey, long _partkey, long _suppkey, long _linenumber, DOUBLE_TYPE _quantity, DOUBLE_TYPE _extendedprice, DOUBLE_TYPE _discount, DOUBLE_TYPE _tax, STRING_TYPE _returnflag, STRING_TYPE _linestatus, DATE_TYPE _shipdate, DATE_TYPE _commitdate, DATE_TYPE _receiptdate, STRING_TYPE _shipinstruct, STRING_TYPE _shipmode, STRING_TYPE _comment)
+        {            
+            assert(size < capacity);
+            orderkey[size] = _orderkey;
+            partkey[size] = _partkey;
+            suppkey[size] = _suppkey;
+            linenumber[size] = _linenumber;
+            quantity[size] = _quantity;
+            extendedprice[size] = _extendedprice;
+            discount[size] = _discount;
+            tax[size] = _tax;
+            returnflag[size] = _returnflag;
+            linestatus[size] = _linestatus;
+            shipdate[size] = _shipdate;
+            commitdate[size] = _commitdate;
+            receiptdate[size] = _receiptdate;
+            shipinstruct[size] = _shipinstruct;
+            shipmode[size] = _shipmode;
+            comment[size] = _comment;
+            size++;
         }
 
         ~TPCHLineitemBatch()
@@ -487,7 +548,8 @@ namespace dbtoaster
 
     struct TPCHOrdersBatch
     {
-        size_t length;
+        size_t size;
+        size_t capacity;
         long* orderkey;
         long* custkey;
         STRING_TYPE* orderstatus;
@@ -498,22 +560,35 @@ namespace dbtoaster
         long* shippriority;
         STRING_TYPE* comment;
 
-        TPCHOrdersBatch() : length(0) { }
+        TPCHOrdersBatch() : size(0), capacity(0) { }
+
+        TPCHOrdersBatch(size_t c) { initCapacity(c); }
+
+        TPCHOrdersBatch(const TPCHOrdersBatch& batch)
+        {
+            initCapacity(batch.size);
+            size = batch.size;
+            
+            for (size_t i = 0; i < batch.size; i++)
+            {
+                orderkey[i] = batch.orderkey[i];
+                custkey[i] = batch.custkey[i];
+                orderstatus[i] = batch.orderstatus[i];
+                totalprice[i] = batch.totalprice[i];
+                orderdate[i] = batch.orderdate[i];
+                orderpriority[i] = batch.orderpriority[i];
+                clerk[i] = batch.clerk[i];
+                shippriority[i] = batch.shippriority[i];
+                comment[i] = batch.comment[i];
+            }
+        }
 
         TPCHOrdersBatch(std::vector<TPCHOrders>& orders)
         {
-            length = orders.size();
-            orderkey = new long[length];
-            custkey = new long[length];
-            orderstatus = new STRING_TYPE[length];
-            totalprice = new DOUBLE_TYPE[length];
-            orderdate = new DATE_TYPE[length];
-            orderpriority = new STRING_TYPE[length];
-            clerk = new STRING_TYPE[length];
-            shippriority = new long[length];
-            comment = new STRING_TYPE[length];
-
-            for (size_t i = 0; i < length; i++)
+            initCapacity(orders.size());
+            size = orders.size();
+            
+            for (size_t i = 0; i < orders.size(); i++)
             {
                 orderkey[i] = orders[i].orderkey;
                 custkey[i] = orders[i].custkey;
@@ -526,6 +601,38 @@ namespace dbtoaster
                 comment[i] = orders[i].comment;
             }
         }
+
+        void initCapacity(size_t c) 
+        {           
+            assert(c > 0);
+            size = 0;
+            capacity = c;
+            orderkey = new long[capacity]();
+            custkey = new long[capacity]();
+            orderstatus = new STRING_TYPE[capacity]();
+            totalprice = new DOUBLE_TYPE[capacity]();
+            orderdate = new DATE_TYPE[capacity]();
+            orderpriority = new STRING_TYPE[capacity]();
+            clerk = new STRING_TYPE[capacity]();
+            shippriority = new long[capacity]();
+            comment = new STRING_TYPE[capacity]();
+        }
+
+        void add(long _orderkey, long _custkey, STRING_TYPE _orderstatus, DOUBLE_TYPE _totalprice, DATE_TYPE _orderdate, STRING_TYPE _orderpriority, STRING_TYPE _clerk, long _shippriority,         STRING_TYPE _comment) 
+        {            
+            assert(size < capacity);
+            orderkey[size] = _orderkey;
+            custkey[size] = _custkey;
+            orderstatus[size] = _orderstatus;
+            totalprice[size] = _totalprice;
+            orderdate[size] = _orderdate;
+            orderpriority[size] = _orderpriority;
+            clerk[size] = _clerk;
+            shippriority[size] = _shippriority;
+            comment[size] = _comment;
+            size++;
+        }
+
         ~TPCHOrdersBatch()
         {
             delete[] orderkey;
@@ -542,7 +649,8 @@ namespace dbtoaster
 
     struct TPCHCustomerBatch
     {
-        size_t length;
+        size_t size;
+        size_t capacity;
         long* custkey;
         STRING_TYPE* name;
         STRING_TYPE* address;
@@ -552,21 +660,34 @@ namespace dbtoaster
         STRING_TYPE* mktsegment;
         STRING_TYPE* comment;
 
-        TPCHCustomerBatch() : length(0) { }
+        //TPCHCustomerBatch() : size(0), capacity(0) { }
+
+        TPCHCustomerBatch(size_t c) { initCapacity(c); }
+        
+        TPCHCustomerBatch(const TPCHCustomerBatch& batch)
+        {
+            initCapacity(batch.size);
+            size = batch.size;
+            
+            for (size_t i = 0; i < batch.size; i++)
+            {
+                custkey[i] = batch.custkey[i];
+                name[i] = batch.name[i];
+                address[i] = batch.address[i];
+                nationkey[i] = batch.nationkey[i];
+                phone[i] = batch.phone[i];
+                acctbal[i] = batch.acctbal[i];
+                mktsegment[i] = batch.mktsegment[i];
+                comment[i] = batch.comment[i];
+            }
+        }
 
         TPCHCustomerBatch(std::vector<TPCHCustomer>& customers)
         {
-            length = customers.size();
-            custkey = new long[length];
-            name = new STRING_TYPE[length];
-            address  = new STRING_TYPE[length];
-            nationkey = new long[length];
-            phone = new STRING_TYPE[length];
-            acctbal = new DOUBLE_TYPE[length];
-            mktsegment = new STRING_TYPE[length];
-            comment = new STRING_TYPE[length];
+            initCapacity(customers.size());
+            size = customers.size();
 
-            for (size_t i = 0; i < length; i++)
+            for (size_t i = 0; i < customers.size(); i++)
             {
                 custkey[i] = customers[i].custkey;
                 name[i] = customers[i].name;
@@ -577,6 +698,35 @@ namespace dbtoaster
                 mktsegment[i] = customers[i].mktsegment;
                 comment[i] = customers[i].comment;
             }
+        }
+
+        void initCapacity(size_t c) 
+        {           
+            assert(c > 0);
+            size = 0;
+            capacity = c;
+            custkey = new long[capacity]();
+            name = new STRING_TYPE[capacity]();
+            address  = new STRING_TYPE[capacity]();
+            nationkey = new long[capacity]();
+            phone = new STRING_TYPE[capacity]();
+            acctbal = new DOUBLE_TYPE[capacity]();
+            mktsegment = new STRING_TYPE[capacity]();
+            comment = new STRING_TYPE[capacity]();
+        }
+
+        void add(long _custkey, STRING_TYPE _name, STRING_TYPE _address, long _nationkey, STRING_TYPE _phone, DOUBLE_TYPE _acctbal,         STRING_TYPE _mktsegment, STRING_TYPE _comment) 
+        {            
+            assert(size < capacity);
+            custkey[size] = _custkey;
+            name[size] = _name;
+            address[size] = _address;
+            nationkey[size] = _nationkey;
+            phone[size] = _phone;
+            acctbal[size] = _acctbal;
+            mktsegment[size] = _mktsegment;
+            comment[size] = _comment;
+            size++;
         }
 
         ~TPCHCustomerBatch()
@@ -594,25 +744,39 @@ namespace dbtoaster
 
     struct TPCHPartSuppBatch
     {
-        size_t length;
+        size_t size;
+        size_t capacity;
         long* partkey;
         long* suppkey;
         long* availqty;
         DOUBLE_TYPE* supplycost;
         STRING_TYPE* comment;
 
-        TPCHPartSuppBatch() : length(0) { }
+        // TPCHPartSuppBatch() : size(0), capacity(0) { }
+
+        TPCHPartSuppBatch(size_t c) { initCapacity(c); } 
+        
+        TPCHPartSuppBatch(const TPCHPartSuppBatch& batch)
+        {
+            initCapacity(batch.size);
+            size = batch.size;
+
+            for (size_t i = 0; i < batch.size; i++)
+            {
+                partkey[i] = batch.partkey[i];
+                suppkey[i] = batch.suppkey[i];
+                availqty[i] = batch.availqty[i];
+                supplycost[i] = batch.supplycost[i];
+                comment[i] = batch.comment[i];
+            }
+        }
 
         TPCHPartSuppBatch(std::vector<TPCHPartSupp>& partsupps)
         {
-            length = partsupps.size();
-            partkey = new long[length];
-            suppkey = new long[length];
-            availqty = new long[length];
-            supplycost = new DOUBLE_TYPE[length];
-            comment = new STRING_TYPE[length];
+            initCapacity(partsupps.size());
+            size = partsupps.size();
 
-            for (size_t i = 0; i < length; i++)
+            for (size_t i = 0; i < partsupps.size(); i++)
             {
                 partkey[i] = partsupps[i].partkey;
                 suppkey[i] = partsupps[i].suppkey;
@@ -620,6 +784,29 @@ namespace dbtoaster
                 supplycost[i] = partsupps[i].supplycost;
                 comment[i] = partsupps[i].comment;
             }
+        }
+
+        void initCapacity(size_t c)
+        {
+            assert(c > 0);
+            size = 0;
+            capacity = c;
+            partkey = new long[capacity]();
+            suppkey = new long[capacity]();
+            availqty = new long[capacity]();
+            supplycost = new DOUBLE_TYPE[capacity]();
+            comment = new STRING_TYPE[capacity]();          
+        }
+
+        void add(long _partkey, long _suppkey, long _availqty,         DOUBLE_TYPE _supplycost, STRING_TYPE _comment) 
+        {            
+            assert(size < capacity);
+            partkey[size] = _partkey;
+            suppkey[size] = _suppkey;
+            availqty[size] = _availqty;
+            supplycost[size] = _supplycost;
+            comment[size] = _comment;
+            size++;
         }
 
         ~TPCHPartSuppBatch()
@@ -634,44 +821,89 @@ namespace dbtoaster
 
     struct TPCHPartBatch
     {
-        size_t length;
+        size_t size;
+        size_t capacity;
         long* partkey;
         STRING_TYPE* name;
         STRING_TYPE* mfgr;
         STRING_TYPE* brand;
         STRING_TYPE* type;
-        long* size;
+        long* psize;
         STRING_TYPE* container;
         DOUBLE_TYPE* retailprice;
         STRING_TYPE* comment;
 
-        TPCHPartBatch() : length(0) { }
+        //TPCHPartBatch() : size(0), capacity(0) { }
+
+        TPCHPartBatch(size_t c) { initCapacity(c); } 
+
+        TPCHPartBatch(const TPCHPartBatch& batch)
+        {
+            initCapacity(batch.size);
+            size = batch.size;
+
+            for (size_t i = 0; i < batch.size; i++)
+            {
+                partkey[i] = batch.partkey[i];
+                name[i] = batch.name[i];
+                mfgr[i] = batch.mfgr[i];
+                brand[i] = batch.brand[i];
+                type[i] = batch.type[i];
+                psize[i] = batch.psize[i];
+                container[i] = batch.container[i];
+                retailprice[i] = batch.retailprice[i];
+                comment[i] = batch.comment[i];
+            }
+        }
 
         TPCHPartBatch(std::vector<TPCHPart>& parts)
         {
-            length = parts.size();
-            partkey = new long[length];
-            name = new STRING_TYPE[length];
-            mfgr = new STRING_TYPE[length];
-            brand = new STRING_TYPE[length];
-            type = new STRING_TYPE[length];
-            size = new long[length];
-            container = new STRING_TYPE[length];
-            retailprice = new DOUBLE_TYPE[length];
-            comment = new STRING_TYPE[length];
-
-            for (size_t i = 0; i < length; i++)
+            initCapacity(parts.size());
+            size = parts.size();
+            
+            for (size_t i = 0; i < parts.size(); i++)
             {
                 partkey[i] = parts[i].partkey;
                 name[i] = parts[i].name;
                 mfgr[i] = parts[i].mfgr;
                 brand[i] = parts[i].brand;
                 type[i] = parts[i].type;
-                size[i] = parts[i].size;
+                psize[i] = parts[i].size;
                 container[i] = parts[i].container;
                 retailprice[i] = parts[i].retailprice;
                 comment[i] = parts[i].comment;
             }
+        }
+
+        void initCapacity(size_t c)
+        {
+            assert(c > 0);
+            size = 0;
+            capacity = c;
+            partkey = new long[capacity]();
+            name = new STRING_TYPE[capacity]();
+            mfgr = new STRING_TYPE[capacity]();
+            brand = new STRING_TYPE[capacity]();
+            type = new STRING_TYPE[capacity]();
+            psize = new long[capacity]();
+            container = new STRING_TYPE[capacity]();
+            retailprice = new DOUBLE_TYPE[capacity]();
+            comment = new STRING_TYPE[capacity]();
+        }
+
+        void add(long _partkey, STRING_TYPE _name, STRING_TYPE _mfgr,         STRING_TYPE _brand, STRING_TYPE _type, long _size,         STRING_TYPE _container, DOUBLE_TYPE _retailprice,         STRING_TYPE _comment) 
+        {            
+            assert(size < capacity);
+            partkey[size] = _partkey;
+            name[size] = _name;
+            mfgr[size] = _mfgr;
+            brand[size] = _brand;
+            type[size] = _type;
+            psize[size] = _size;
+            container[size] = _container;
+            retailprice[size] = _retailprice;
+            comment[size] = _comment;
+            size++;
         }
 
         ~TPCHPartBatch()
@@ -681,7 +913,7 @@ namespace dbtoaster
             delete[] mfgr;
             delete[] brand;
             delete[] type;
-            delete[] size;
+            delete[] psize;
             delete[] container;
             delete[] retailprice;
             delete[] comment;
@@ -690,7 +922,8 @@ namespace dbtoaster
 
     struct TPCHSupplierBatch
     {
-        size_t length;
+        size_t size;
+        size_t capacity;
         long* suppkey;
         STRING_TYPE* name;
         STRING_TYPE* address;
@@ -699,20 +932,33 @@ namespace dbtoaster
         DOUBLE_TYPE* acctbal;
         STRING_TYPE* comment;
 
-        TPCHSupplierBatch() : length(0) { }
+        //TPCHSupplierBatch() : size(0), capacity(0) { }
+
+        TPCHSupplierBatch(size_t c) { initCapacity(c); }
+
+        TPCHSupplierBatch(const TPCHSupplierBatch& batch)
+        {
+            initCapacity(batch.size);
+            size = batch.size;
+
+            for (size_t i = 0; i < batch.size; i++)
+            {
+                suppkey[i] = batch.suppkey[i];
+                name[i] = batch.name[i];
+                address[i] = batch.address[i];
+                nationkey[i] = batch.nationkey[i];
+                phone[i] = batch.phone[i];
+                acctbal[i] = batch.acctbal[i];
+                comment[i] = batch.comment[i];
+            }
+        }
 
         TPCHSupplierBatch(std::vector<TPCHSupplier>& suppliers)
         {
-            length = suppliers.size();
-            suppkey = new long[length];
-            name = new STRING_TYPE[length];
-            address = new STRING_TYPE[length];
-            nationkey = new long[length];
-            phone = new STRING_TYPE[length];
-            acctbal = new DOUBLE_TYPE[length];
-            comment = new STRING_TYPE[length];
+            initCapacity(suppliers.size());
+            size = suppliers.size();
 
-            for (size_t i = 0; i < length; i++)
+            for (size_t i = 0; i < suppliers.size(); i++)
             {
                 suppkey[i] = suppliers[i].suppkey;
                 name[i] = suppliers[i].name;
@@ -722,6 +968,33 @@ namespace dbtoaster
                 acctbal[i] = suppliers[i].acctbal;
                 comment[i] = suppliers[i].comment;
             }
+        }
+
+        void initCapacity(size_t c)
+        {
+            assert(c > 0);
+            size = 0;
+            capacity = c;
+            suppkey = new long[capacity]();
+            name = new STRING_TYPE[capacity]();
+            address = new STRING_TYPE[capacity]();
+            nationkey = new long[capacity]();
+            phone = new STRING_TYPE[capacity]();
+            acctbal = new DOUBLE_TYPE[capacity]();
+            comment = new STRING_TYPE[capacity]();            
+        }
+
+        void add(long _suppkey, STRING_TYPE _name, STRING_TYPE _address, long _nationkey, STRING_TYPE _phone, DOUBLE_TYPE _acctbal,         STRING_TYPE _comment) 
+        {            
+            assert(size < capacity);
+            suppkey[size] = _suppkey;
+            name[size] = _name;
+            address[size] = _address;
+            nationkey[size] = _nationkey;
+            phone[size] = _phone;
+            acctbal[size] = _acctbal;
+            comment[size] = _comment;
+            size++;
         }
 
         ~TPCHSupplierBatch()
@@ -738,29 +1011,64 @@ namespace dbtoaster
 
     struct TPCHNationBatch
     {
-        size_t length;
+        size_t size;
+        size_t capacity;
         long* nationkey;
         STRING_TYPE* name;
         long* regionkey;
         STRING_TYPE* comment;
 
-        TPCHNationBatch() : length(0) { }
+        // TPCHNationBatch() : size(0), capacity(0) { }
+
+        TPCHNationBatch(size_t c) { initCapacity(c); }
+
+        TPCHNationBatch(const TPCHNationBatch& batch)
+        {
+            initCapacity(batch.size);
+            size = batch.size;
+
+            for (size_t i = 0; i < batch.size; i++)
+            {
+                nationkey[i] = batch.nationkey[i];
+                name[i] = batch.name[i];
+                regionkey[i] = batch.regionkey[i];
+                comment[i] = batch.comment[i];
+            }
+        }
 
         TPCHNationBatch(std::vector<TPCHNation>& nations)
         {
-            length = nations.size();
-            nationkey = new long[length];
-            name = new STRING_TYPE[length];
-            regionkey = new long[length];
-            comment = new STRING_TYPE[length];
+            initCapacity(nations.size());
+            size = nations.size();
 
-            for (size_t i = 0; i < length; i++)
+            for (size_t i = 0; i < nations.size(); i++)
             {
                 nationkey[i] = nations[i].nationkey;
                 name[i] = nations[i].name;
                 regionkey[i] = nations[i].regionkey;
                 comment[i] = nations[i].comment;
             }
+        }
+
+        void initCapacity(size_t c)
+        {
+            assert(c > 0);
+            size = 0;
+            capacity = c;
+            nationkey = new long[capacity]();
+            name = new STRING_TYPE[capacity]();
+            regionkey = new long[capacity]();
+            comment = new STRING_TYPE[capacity]();
+        }
+
+        void add(long _nationkey, STRING_TYPE _name, long _regionkey,         STRING_TYPE _comment) 
+        {            
+            assert(size < capacity);            
+            nationkey[size] = _nationkey;
+            name[size] = _name;
+            regionkey[size] = _regionkey;
+            comment[size] = _comment;
+            size++;
         }
 
         ~TPCHNationBatch()
@@ -774,26 +1082,59 @@ namespace dbtoaster
 
     struct TPCHRegionBatch
     {
-        size_t length;
+        size_t size;
+        size_t capacity;
         long* regionkey;
         STRING_TYPE* name;
         STRING_TYPE* comment;
 
-        TPCHRegionBatch() : length(0) { }
+        // TPCHRegionBatch() : size(0), capacity(0) { }
+
+        TPCHRegionBatch(size_t c) { initCapacity(c); }
+
+        TPCHRegionBatch(const TPCHRegionBatch& batch)
+        {
+            initCapacity(batch.size);
+            size = batch.size;
+
+            for (size_t i = 0; i < batch.size; i++)
+            {
+                regionkey[i] = batch.regionkey[i];
+                name[i] = batch.name[i];
+                comment[i] = batch.comment[i];
+            }
+        }
 
         TPCHRegionBatch(std::vector<TPCHRegion>& regions)
         {
-            length = regions.size();
-            regionkey = new long[length];
-            name = new STRING_TYPE[length];
-            comment = new STRING_TYPE[length];
+            initCapacity(regions.size());
+            size = regions.size();
 
-            for (size_t i = 0; i < length; i++)
+            for (size_t i = 0; i < regions.size(); i++)
             {
                 regionkey[i] = regions[i].regionkey;
                 name[i] = regions[i].name;
                 comment[i] = regions[i].comment;
             }
+        }
+
+        void initCapacity(size_t c)
+        {
+            assert(c > 0);
+            size = 0;
+            capacity = c;
+            regionkey = new long[capacity]();
+            name = new STRING_TYPE[capacity]();
+            comment = new STRING_TYPE[capacity]();
+        }
+
+        void add(long _regionkey, STRING_TYPE _name, STRING_TYPE _comment) 
+        {
+            assert(size < capacity);
+            regionkey[size] = _regionkey;
+            name[size] = _name;
+            comment[size] = _comment;
+            size++;
         }
 
         ~TPCHRegionBatch()

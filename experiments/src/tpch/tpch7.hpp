@@ -4,7 +4,11 @@
 #define USE_TPCH_CUSTOMER
 #define USE_TPCH_NATION
 
-#include "codegen/Tpch7VCpp.hpp"
+#ifdef BATCH_MODE
+    #include "codegen_batch/Tpch7VCpp.hpp"
+#else
+    #include "codegen/Tpch7VCpp.hpp"
+#endif
 
 namespace dbtoaster
 {

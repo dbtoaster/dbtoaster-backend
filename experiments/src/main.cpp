@@ -18,6 +18,49 @@ using namespace std;
 
 using namespace dbtoaster;
 
+
+#ifdef BATCH_MODE
+
+void RunQuery() 
+{
+    std::cout << "-------------" << std::endl;
+
+    size_t batchSize = BATCH_SIZE;
+
+    load_relations();
+    convert_tables_to_batches(batchSize);
+    convert_streams_to_batches(batchSize);
+    destroy_relations();
+
+    Stopwatch sw;
+    for (int run = 0; run < 3; run++) 
+    {
+    //    std::cout << "Press ENTER...";
+    //    char ch;
+    //    std::cin >> ch;
+
+        data_t data;
+
+        sw.restart();
+
+        process_table_batches(data);
+        data.on_system_ready_event();
+        process_stream_batches(data);
+
+        sw.stop();
+
+        print_result(data);
+
+        std::cout << "Processed: " << data.tN 
+                  << "    Skipped: " << data.tS 
+                  << "    Execution time: " << sw.elapsedTimeInMilliSeconds() << " ms" 
+                  << "    Batch size: " << batchSize
+                  << std::endl;        
+    }   
+}
+
+#else
+
 void RunQuery() 
 {
     std::cout << "-------------" << std::endl;
@@ -51,6 +94,8 @@ void RunQuery()
 
     destroy_relations();
 }
+
+#endif
 
 int main()
 {

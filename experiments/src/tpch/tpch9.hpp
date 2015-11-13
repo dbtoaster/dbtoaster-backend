@@ -5,7 +5,11 @@
 #define USE_TPCH_ORDERS
 #define USE_TPCH_NATION
 
-#include "codegen/Tpch9VCpp.hpp"
+#ifdef BATCH_MODE
+    #include "codegen_batch/Tpch9VCpp.hpp"
+#else
+    #include "codegen/Tpch9VCpp.hpp"
+#endif
 
 namespace dbtoaster
 {

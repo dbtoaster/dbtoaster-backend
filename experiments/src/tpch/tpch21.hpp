@@ -3,7 +3,11 @@
 #define USE_TPCH_ORDERS
 #define USE_TPCH_LINEITEM
 
-#include "codegen/Tpch21VCpp.hpp"
+#ifdef BATCH_MODE
+    #include "codegen_batch/Tpch21VCpp.hpp"
+#else
+    #include "codegen/Tpch21VCpp.hpp"
+#endif
 
 namespace dbtoaster
 {

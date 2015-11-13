@@ -2,7 +2,11 @@
 #define USE_TPCH_PART
 #define USE_TPCH_SUPPLIER
 
-#include "codegen/Tpch16VCpp.hpp"
+#ifdef BATCH_MODE
+    #include "codegen_batch/Tpch16VCpp.hpp"
+#else
+    #include "codegen/Tpch16VCpp.hpp"
+#endif
 
 namespace dbtoaster
 {

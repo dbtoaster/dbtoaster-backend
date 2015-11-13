@@ -1,6 +1,10 @@
 #define USE_TPCH_LINEITEM
 
-#include "codegen/Tpch1VCpp.hpp"
+#ifdef BATCH_MODE
+    #include "codegen_batch/Tpch1VCpp.hpp"
+#else
+    #include "codegen/Tpch1VCpp.hpp"
+#endif
 
 
 namespace dbtoaster

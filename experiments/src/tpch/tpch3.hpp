@@ -2,7 +2,11 @@
 #define USE_TPCH_ORDERS
 #define USE_TPCH_CUSTOMER
 
-#include "codegen/Tpch3VCpp.hpp"
+#ifdef BATCH_MODE
+    #include "codegen_batch/Tpch3VCpp.hpp"
+#else
+    #include "codegen/Tpch3VCpp.hpp"
+#endif
 
 namespace dbtoaster
 {

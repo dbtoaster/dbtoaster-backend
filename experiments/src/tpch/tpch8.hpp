@@ -6,7 +6,12 @@
 #define USE_TPCH_NATION
 #define USE_TPCH_REGION
 
-#include "codegen/Tpch8VCpp.hpp"
+#ifdef BATCH_MODE
+    #include "codegen_batch/Tpch8VCpp.hpp"
+#else
+    #include "codegen/Tpch8VCpp.hpp"
+#endif
+
 
 namespace dbtoaster
 {
