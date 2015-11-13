@@ -820,9 +820,9 @@ namespace dbtoaster {
                 long v11 = 1L;
                 (/*if */(lift1 == c5) ? HIGH_LINE_COUNTORDERS3_DELTA.addOrDelOnZero(se13.modify(o_orderkey),v11) : (void)0);
                 long v12 = 1L;
-                (/*if */(lift2 == c6) ? HIGH_LINE_COUNTORDERS1_DELTA.addOrDelOnZero(se14.modify(o_orderkey),v12) : (void)0);
+                (/*if */(lift1 == c6) ? HIGH_LINE_COUNTORDERS1_DELTA.addOrDelOnZero(se14.modify(o_orderkey),v12) : (void)0);
                 long v13 = 1L;
-                (/*if */(c6 != o_orderpriority && c5 != o_orderpriority) ? LOW_LINE_COUNTORDERS1_DELTA.addOrDelOnZero(se15.modify(o_orderkey),v13) : (void)0);
+                (/*if */(c6 != lift1 && c5 != lift1) ? LOW_LINE_COUNTORDERS1_DELTA.addOrDelOnZero(se15.modify(o_orderkey),v13) : (void)0);
 
           }
         }

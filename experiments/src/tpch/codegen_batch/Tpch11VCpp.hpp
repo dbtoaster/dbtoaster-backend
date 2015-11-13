@@ -635,13 +635,13 @@ namespace dbtoaster {
         { 
           for (size_t i = 0; i < DELTA_SUPPLIER.size; i++) 
           {
-                long ps_suppkey = DELTA_SUPPLIER.suppkey;
-                STRING_TYPE s_name = DELTA_SUPPLIER.name;
-                STRING_TYPE s_address = DELTA_SUPPLIER.address;
-                long s_nationkey = DELTA_SUPPLIER.nationkey;
-                STRING_TYPE s_phone = DELTA_SUPPLIER.phone;
-                DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal;
-                STRING_TYPE s_comment = DELTA_SUPPLIER.comment;
+                long ps_suppkey = DELTA_SUPPLIER.suppkey[i];
+                STRING_TYPE s_name = DELTA_SUPPLIER.name[i];
+                STRING_TYPE s_address = DELTA_SUPPLIER.address[i];
+                long s_nationkey = DELTA_SUPPLIER.nationkey[i];
+                STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
+                DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
+                STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
                 long v1 = 1L;
                 QUERY11PARTSUPP1_L1_1SUPPLIER1_DELTA.addOrDelOnZero(se1.modify(ps_suppkey,s_nationkey),v1);            
           }          

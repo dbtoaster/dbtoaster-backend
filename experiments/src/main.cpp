@@ -27,9 +27,13 @@ void RunQuery()
 
     size_t batchSize = BATCH_SIZE;
 
-    load_relations();
-    convert_tables_to_batches(batchSize);
-    convert_streams_to_batches(batchSize);
+    load_relations();    
+
+    std::cout << "Forming batches... ";
+    convert_tables_to_batches(batchSize);    
+    convert_streams_to_batches(batchSize);    
+    std::cout << "Done!" << std::endl;
+
     destroy_relations();
 
     Stopwatch sw;
