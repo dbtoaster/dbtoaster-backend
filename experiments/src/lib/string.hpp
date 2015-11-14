@@ -206,7 +206,7 @@ namespace dbtoaster
 
         ~RefCountedString()
         {
-            if ((--(*ptr_count_)) == 0) 
+            if (ptr_count_ && (--(*ptr_count_)) == 0) 
             {
                 delete ptr_count_;
                 if (data_ != nullptr) delete[] data_;
@@ -295,7 +295,7 @@ namespace dbtoaster
 
         ~PooledRefCountedString()
         {
-            if ((--(*ptr_count_)) == 0) 
+            if (ptr_count_ && (--(*ptr_count_)) == 0) 
             {
                 pool.del(ptr_count_);
                 if (data_ != nullptr) delete[] data_;
