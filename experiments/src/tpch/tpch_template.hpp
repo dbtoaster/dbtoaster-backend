@@ -202,9 +202,9 @@ namespace dbtoaster
         IF_PARTSUPP ({
             sw.restart();
             std::vector<TPCHPartSupp> partsupps;
-            //readFromBinaryFile(customers, dataPath + "/" + dataset + "/partsupp.bin");
+            //readFromBinaryFile(partsupps, dataPath + "/" + dataset + "/partsupp.bin");
             readFromFile(partsupps, dataPath + "/" + dataset + "/partsupp.csv", '|');
-            //writeToBinaryFile(customers, dataPath + "/" + dataset + "/partsupp.bin");
+            //writeToBinaryFile(partsupps, dataPath + "/" + dataset + "/partsupp.bin");
             partsuppBatch = new TPCHPartSuppBatch(partsupps);            
             sw.stop();
             std::cout << "Loaded partsupp (" << partsuppBatch->size << ")... " << sw.elapsedTimeInMilliSeconds() << " ms" << std::endl;
@@ -213,9 +213,9 @@ namespace dbtoaster
         IF_PART ({
             sw.restart();
             std::vector<TPCHPart> parts;
-            //readFromBinaryFile(customers, dataPath + "/" + dataset + "/part.bin");
+            //readFromBinaryFile(parts, dataPath + "/" + dataset + "/part.bin");
             readFromFile(parts, dataPath + "/" + dataset + "/part.csv", '|');
-            //writeToBinaryFile(customers, dataPath + "/" + dataset + "/part.bin");
+            //writeToBinaryFile(parts, dataPath + "/" + dataset + "/part.bin");
             partBatch = new TPCHPartBatch(parts);    
             sw.stop();
             std::cout << "Loaded part (" << partBatch->size << ")... " << sw.elapsedTimeInMilliSeconds() << " ms" << std::endl;
@@ -224,9 +224,9 @@ namespace dbtoaster
         IF_SUPPLIER ({
             sw.restart();
             std::vector<TPCHSupplier> suppliers;
-            //readFromBinaryFile(customers, dataPath + "/" + dataset + "/supplier.bin");
+            //readFromBinaryFile(suppliers, dataPath + "/" + dataset + "/supplier.bin");
             readFromFile(suppliers, dataPath + "/" + dataset + "/supplier.csv", '|');
-            //writeToBinaryFile(customers, dataPath + "/" + dataset + "/supplier.bin");
+            //writeToBinaryFile(suppliers, dataPath + "/" + dataset + "/supplier.bin");
             supplierBatch = new TPCHSupplierBatch(suppliers);
             sw.stop();
             std::cout << "Loaded supplier (" << supplierBatch->size << ")... " << sw.elapsedTimeInMilliSeconds() << " ms" << std::endl;
@@ -234,17 +234,17 @@ namespace dbtoaster
 
         IF_NATION ({
             std::vector<TPCHNation> nations;
-            //readFromBinaryFile(customers, dataPath + "/" + dataset + "/nation.bin");
+            //readFromBinaryFile(nations, dataPath + "/" + dataset + "/nation.bin");
             readFromFile(nations, dataPath + "/" + dataset + "/nation.csv", '|');
-            //writeToBinaryFile(customers, dataPath + "/" + dataset + "/nation.bin");
+            //writeToBinaryFile(nations, dataPath + "/" + dataset + "/nation.bin");
             nationBatch = new TPCHNationBatch(nations);
         })  
 
         IF_REGION ({
             std::vector<TPCHRegion> regions;
-            //readFromBinaryFile(customers, dataPath + "/" + dataset + "/region.bin");
+            //readFromBinaryFile(regions, dataPath + "/" + dataset + "/region.bin");
             readFromFile(regions, dataPath + "/" + dataset + "/region.csv", '|');
-            //writeToBinaryFile(customers, dataPath + "/" + dataset + "/region.bin");
+            //writeToBinaryFile(regions, dataPath + "/" + dataset + "/region.bin");
             regionBatch = new TPCHRegionBatch(regions);
         })    
     }
