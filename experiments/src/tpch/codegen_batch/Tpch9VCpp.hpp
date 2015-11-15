@@ -2055,15 +2055,15 @@ namespace dbtoaster {
                 DOUBLE_TYPE l_quantity = DELTA_LINEITEM.quantity[i];
                 DOUBLE_TYPE l_extendedprice = DELTA_LINEITEM.extendedprice[i];
                 DOUBLE_TYPE l_discount = DELTA_LINEITEM.discount[i];
-                DOUBLE_TYPE l_tax = DELTA_LINEITEM.tax[i];
-                STRING_TYPE l_returnflag = DELTA_LINEITEM.returnflag[i];
-                STRING_TYPE l_linestatus = DELTA_LINEITEM.linestatus[i];
-                date l_shipdate = DELTA_LINEITEM.shipdate[i];
-                date l_commitdate = DELTA_LINEITEM.commitdate[i];
-                date l_receiptdate = DELTA_LINEITEM.receiptdate[i];
-                STRING_TYPE l_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
-                STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
-                STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
+                // DOUBLE_TYPE l_tax = DELTA_LINEITEM.tax[i];
+                // STRING_TYPE l_returnflag = DELTA_LINEITEM.returnflag[i];
+                // STRING_TYPE l_linestatus = DELTA_LINEITEM.linestatus[i];
+                // date l_shipdate = DELTA_LINEITEM.shipdate[i];
+                // date l_commitdate = DELTA_LINEITEM.commitdate[i];
+                // date l_receiptdate = DELTA_LINEITEM.receiptdate[i];
+                // STRING_TYPE l_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
+                // STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
+                // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
                 SUM_PROFITLINEITEM13_DELTA.addOrDelOnZero(se1.modify(l_orderkey,p_partkey,s_suppkey),(v1 * (l_extendedprice * (1L + (-1L * l_discount)))));
                 long v2 = 1L;
@@ -2703,14 +2703,14 @@ namespace dbtoaster {
           for (size_t i = 0; i < DELTA_ORDERS.size; i++)
           {
                 long l_orderkey = DELTA_ORDERS.orderkey[i];
-                long o_custkey = DELTA_ORDERS.custkey[i];
-                STRING_TYPE o_orderstatus = DELTA_ORDERS.orderstatus[i];
-                DOUBLE_TYPE o_totalprice = DELTA_ORDERS.totalprice[i];
+                // long o_custkey = DELTA_ORDERS.custkey[i];
+                // STRING_TYPE o_orderstatus = DELTA_ORDERS.orderstatus[i];
+                // DOUBLE_TYPE o_totalprice = DELTA_ORDERS.totalprice[i];
                 date o_orderdate = DELTA_ORDERS.orderdate[i];
-                STRING_TYPE o_orderpriority = DELTA_ORDERS.orderpriority[i];
-                STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
-                long o_shippriority = DELTA_ORDERS.shippriority[i];
-                STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
+                // STRING_TYPE o_orderpriority = DELTA_ORDERS.orderpriority[i];
+                // STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
+                // long o_shippriority = DELTA_ORDERS.shippriority[i];
+                // STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
                 long v41 = 1L;
                 long l1 = Uyear_part(o_orderdate);
                 SUM_PROFITORDERS11_DELTA.addOrDelOnZero(se64.modify(l_orderkey,l1),v41);
@@ -3100,13 +3100,13 @@ namespace dbtoaster {
           {
                 long p_partkey = DELTA_PART.partkey[i];
                 STRING_TYPE p_name = DELTA_PART.name[i];
-                STRING_TYPE p_mfgr = DELTA_PART.mfgr[i];
-                STRING_TYPE p_brand = DELTA_PART.brand[i];
-                STRING_TYPE p_type = DELTA_PART.type[i];
-                long p_size = DELTA_PART.psize[i];
-                STRING_TYPE p_container = DELTA_PART.container[i];
-                DOUBLE_TYPE p_retailprice = DELTA_PART.retailprice[i];
-                STRING_TYPE p_comment = DELTA_PART.comment[i];
+                // STRING_TYPE p_mfgr = DELTA_PART.mfgr[i];
+                // STRING_TYPE p_brand = DELTA_PART.brand[i];
+                // STRING_TYPE p_type = DELTA_PART.type[i];
+                // long p_size = DELTA_PART.psize[i];
+                // STRING_TYPE p_container = DELTA_PART.container[i];
+                // DOUBLE_TYPE p_retailprice = DELTA_PART.retailprice[i];
+                // STRING_TYPE p_comment = DELTA_PART.comment[i];
                 long v67 = 1L;
                 (/*if */(0L != Upreg_match(preg1,p_name)) ? SUM_PROFITPART11_DELTA.addOrDelOnZero(se88.modify(p_partkey),v67) : (void)0);
           }
@@ -3394,12 +3394,12 @@ namespace dbtoaster {
           for (size_t i = 0; i < DELTA_SUPPLIER.size; i++) 
           {
                 long s_suppkey = DELTA_SUPPLIER.suppkey[i];
-                STRING_TYPE s_name = DELTA_SUPPLIER.name[i];
-                STRING_TYPE s_address = DELTA_SUPPLIER.address[i];
+                // STRING_TYPE s_name = DELTA_SUPPLIER.name[i];
+                // STRING_TYPE s_address = DELTA_SUPPLIER.address[i];
                 long s_nationkey = DELTA_SUPPLIER.nationkey[i];
-                STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
-                DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
-                STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
+                // STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
+                // DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
+                // STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
                 long v85 = 1L;
                 SUM_PROFITSUPPLIER11_DELTA.addOrDelOnZero(se105.modify(s_suppkey,s_nationkey),v85);
           }
@@ -3820,9 +3820,9 @@ namespace dbtoaster {
           {
                 long p_partkey = DELTA_PARTSUPP.partkey[i];
                 long s_suppkey = DELTA_PARTSUPP.suppkey[i];
-                long ps_availqty = DELTA_PARTSUPP.availqty[i];
+                // long ps_availqty = DELTA_PARTSUPP.availqty[i];
                 DOUBLE_TYPE ps_supplycost = DELTA_PARTSUPP.supplycost[i];
-                STRING_TYPE ps_comment = DELTA_PARTSUPP.comment[i];
+                // STRING_TYPE ps_comment = DELTA_PARTSUPP.comment[i];
                 long v112 = 1L;
                 SUM_PROFITPARTSUPP13_DELTA.addOrDelOnZero(se131.modify(p_partkey,s_suppkey),v112);
                 long v113 = 1L;

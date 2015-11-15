@@ -636,12 +636,12 @@ namespace dbtoaster {
           for (size_t i = 0; i < DELTA_SUPPLIER.size; i++) 
           {
                 long ps_suppkey = DELTA_SUPPLIER.suppkey[i];
-                STRING_TYPE s_name = DELTA_SUPPLIER.name[i];
-                STRING_TYPE s_address = DELTA_SUPPLIER.address[i];
+                // STRING_TYPE s_name = DELTA_SUPPLIER.name[i];
+                // STRING_TYPE s_address = DELTA_SUPPLIER.address[i];
                 long s_nationkey = DELTA_SUPPLIER.nationkey[i];
-                STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
-                DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
-                STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
+                // STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
+                // DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
+                // STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
                 long v1 = 1L;
                 QUERY11PARTSUPP1_L1_1SUPPLIER1_DELTA.addOrDelOnZero(se1.modify(ps_suppkey,s_nationkey),v1);            
           }          
@@ -792,7 +792,7 @@ namespace dbtoaster {
                 long ps_suppkey = DELTA_PARTSUPP.suppkey[i];
                 long ps_availqty = DELTA_PARTSUPP.availqty[i];
                 DOUBLE_TYPE ps_supplycost = DELTA_PARTSUPP.supplycost[i];
-                STRING_TYPE ps_comment = DELTA_PARTSUPP.comment[i];
+                // STRING_TYPE ps_comment = DELTA_PARTSUPP.comment[i];
                 long v9 = 1L;
                 QUERY11PARTSUPP1_L1_1PARTSUPP1_DELTA.addOrDelOnZero(se16.modify(ps_suppkey),(v9 * (ps_supplycost * ps_availqty)));
                 long v10 = 1L;

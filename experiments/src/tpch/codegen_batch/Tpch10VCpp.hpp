@@ -765,21 +765,21 @@ namespace dbtoaster {
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
                 long o_orderkey = DELTA_LINEITEM.orderkey[i];
-                long l_partkey = DELTA_LINEITEM.partkey[i];
-                long l_suppkey = DELTA_LINEITEM.suppkey[i];
-                long l_linenumber = DELTA_LINEITEM.linenumber[i];
-                DOUBLE_TYPE l_quantity = DELTA_LINEITEM.quantity[i];
+                // long l_partkey = DELTA_LINEITEM.partkey[i];
+                // long l_suppkey = DELTA_LINEITEM.suppkey[i];
+                // long l_linenumber = DELTA_LINEITEM.linenumber[i];
+                // DOUBLE_TYPE l_quantity = DELTA_LINEITEM.quantity[i];
                 DOUBLE_TYPE l_extendedprice = DELTA_LINEITEM.extendedprice[i];
                 DOUBLE_TYPE l_discount = DELTA_LINEITEM.discount[i];
-                DOUBLE_TYPE l_tax = DELTA_LINEITEM.tax[i];
+                // DOUBLE_TYPE l_tax = DELTA_LINEITEM.tax[i];
                 STRING_TYPE lift1 = DELTA_LINEITEM.returnflag[i];
-                STRING_TYPE l_linestatus = DELTA_LINEITEM.linestatus[i];
-                date l_shipdate = DELTA_LINEITEM.shipdate[i];
-                date l_commitdate = DELTA_LINEITEM.commitdate[i];
-                date l_receiptdate = DELTA_LINEITEM.receiptdate[i];
-                STRING_TYPE l_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
-                STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
-                STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
+                // STRING_TYPE l_linestatus = DELTA_LINEITEM.linestatus[i];
+                // date l_shipdate = DELTA_LINEITEM.shipdate[i];
+                // date l_commitdate = DELTA_LINEITEM.commitdate[i];
+                // date l_receiptdate = DELTA_LINEITEM.receiptdate[i];
+                // STRING_TYPE l_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
+                // STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
+                // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
                 (/*if */(lift1 == c1) ? REVENUELINEITEM1_DELTA.addOrDelOnZero(se1.modify(o_orderkey),(v1 * (l_extendedprice * (1L + (-1L * l_discount))))) : (void)0);
 

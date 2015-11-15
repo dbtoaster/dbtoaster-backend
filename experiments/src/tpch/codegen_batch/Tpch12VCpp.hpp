@@ -628,21 +628,21 @@ namespace dbtoaster {
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
                 long o_orderkey = DELTA_LINEITEM.orderkey[i];
-                long l_partkey = DELTA_LINEITEM.partkey[i];
-                long l_suppkey = DELTA_LINEITEM.suppkey[i];
-                long l_linenumber = DELTA_LINEITEM.linenumber[i];
-                DOUBLE_TYPE l_quantity = DELTA_LINEITEM.quantity[i];
-                DOUBLE_TYPE l_extendedprice = DELTA_LINEITEM.extendedprice[i];
-                DOUBLE_TYPE l_discount = DELTA_LINEITEM.discount[i];
-                DOUBLE_TYPE l_tax = DELTA_LINEITEM.tax[i];
-                STRING_TYPE l_returnflag = DELTA_LINEITEM.returnflag[i];
-                STRING_TYPE l_linestatus = DELTA_LINEITEM.linestatus[i];
+                // long l_partkey = DELTA_LINEITEM.partkey[i];
+                // long l_suppkey = DELTA_LINEITEM.suppkey[i];
+                // long l_linenumber = DELTA_LINEITEM.linenumber[i];
+                // DOUBLE_TYPE l_quantity = DELTA_LINEITEM.quantity[i];
+                // DOUBLE_TYPE l_extendedprice = DELTA_LINEITEM.extendedprice[i];
+                // DOUBLE_TYPE l_discount = DELTA_LINEITEM.discount[i];
+                // DOUBLE_TYPE l_tax = DELTA_LINEITEM.tax[i];
+                // STRING_TYPE l_returnflag = DELTA_LINEITEM.returnflag[i];
+                // STRING_TYPE l_linestatus = DELTA_LINEITEM.linestatus[i];
                 date l_shipdate = DELTA_LINEITEM.shipdate[i];
                 date l_commitdate = DELTA_LINEITEM.commitdate[i];
                 date l_receiptdate = DELTA_LINEITEM.receiptdate[i];
-                STRING_TYPE l_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
+                // STRING_TYPE l_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
                 STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
-                STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
+                // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
                 (/*if */(l_shipmode == c1 && l_receiptdate > l_commitdate && l_commitdate > l_shipdate && l_receiptdate >= c2 && c3 > l_receiptdate) ? HIGH_LINE_COUNTLINEITEM2_DELTA.addOrDelOnZero(se1.modify(o_orderkey,l_shipmode),v1) : (void)0);
                 long v2 = 1L;
@@ -809,14 +809,14 @@ namespace dbtoaster {
           for (size_t i = 0; i < DELTA_ORDERS.size; i++)
           {
                 long o_orderkey = DELTA_ORDERS.orderkey[i];
-                long o_custkey = DELTA_ORDERS.custkey[i];
-                STRING_TYPE o_orderstatus = DELTA_ORDERS.orderstatus[i];
-                DOUBLE_TYPE o_totalprice = DELTA_ORDERS.totalprice[i];
-                date o_orderdate = DELTA_ORDERS.orderdate[i];
+                // long o_custkey = DELTA_ORDERS.custkey[i];
+                // STRING_TYPE o_orderstatus = DELTA_ORDERS.orderstatus[i];
+                // DOUBLE_TYPE o_totalprice = DELTA_ORDERS.totalprice[i];
+                // date o_orderdate = DELTA_ORDERS.orderdate[i];
                 STRING_TYPE lift1 = DELTA_ORDERS.orderpriority[i];
-                STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
-                long o_shippriority = DELTA_ORDERS.shippriority[i];
-                STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
+                // STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
+                // long o_shippriority = DELTA_ORDERS.shippriority[i];
+                // STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
                 long v11 = 1L;
                 (/*if */(lift1 == c5) ? HIGH_LINE_COUNTORDERS3_DELTA.addOrDelOnZero(se13.modify(o_orderkey),v11) : (void)0);
                 long v12 = 1L;

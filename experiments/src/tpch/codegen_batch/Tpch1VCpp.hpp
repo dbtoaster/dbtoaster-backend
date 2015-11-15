@@ -854,10 +854,10 @@ namespace dbtoaster {
         {  
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
-                long lineitem_orderkey = DELTA_LINEITEM.orderkey[i];
-                long lineitem_partkey = DELTA_LINEITEM.partkey[i];
-                long lineitem_suppkey = DELTA_LINEITEM.suppkey[i];
-                long lineitem_linenumber = DELTA_LINEITEM.linenumber[i];
+                //long lineitem_orderkey = DELTA_LINEITEM.orderkey[i];
+                //long lineitem_partkey = DELTA_LINEITEM.partkey[i];
+                //long lineitem_suppkey = DELTA_LINEITEM.suppkey[i];
+                //long lineitem_linenumber = DELTA_LINEITEM.linenumber[i];
                 DOUBLE_TYPE lineitem_quantity = DELTA_LINEITEM.quantity[i];
                 DOUBLE_TYPE lineitem_extendedprice = DELTA_LINEITEM.extendedprice[i];
                 DOUBLE_TYPE lineitem_discount = DELTA_LINEITEM.discount[i];
@@ -865,11 +865,11 @@ namespace dbtoaster {
                 STRING_TYPE lineitem_returnflag = DELTA_LINEITEM.returnflag[i];
                 STRING_TYPE lineitem_linestatus = DELTA_LINEITEM.linestatus[i];
                 date lineitem_shipdate = DELTA_LINEITEM.shipdate[i];
-                date lineitem_commitdate = DELTA_LINEITEM.commitdate[i];
-                date lineitem_receiptdate = DELTA_LINEITEM.receiptdate[i];
-                STRING_TYPE lineitem_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
-                STRING_TYPE lineitem_shipmode = DELTA_LINEITEM.shipmode[i];
-                STRING_TYPE lineitem_comment = DELTA_LINEITEM.comment[i];
+                // date lineitem_commitdate = DELTA_LINEITEM.commitdate[i];
+                // date lineitem_receiptdate = DELTA_LINEITEM.receiptdate[i];
+                // STRING_TYPE lineitem_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
+                // STRING_TYPE lineitem_shipmode = DELTA_LINEITEM.shipmode[i];
+                // STRING_TYPE lineitem_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
                 (/*if */(c1 >= lineitem_shipdate) ? SUM_QTYLINEITEM1_DELTA.addOrDelOnZero(se1.modify(lineitem_returnflag,lineitem_linestatus),(v1 * lineitem_quantity)) : (void)0);
                 long v2 = 1L;

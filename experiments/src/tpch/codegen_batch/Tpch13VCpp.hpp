@@ -543,14 +543,14 @@ namespace dbtoaster {
         {  
           for (size_t i = 0; i < DELTA_ORDERS.size; i++)
           {
-                long o_orderkey = DELTA_ORDERS.orderkey[i];
+                // long o_orderkey = DELTA_ORDERS.orderkey[i];
                 long c_custkey = DELTA_ORDERS.custkey[i];
-                STRING_TYPE o_orderstatus = DELTA_ORDERS.orderstatus[i];
-                DOUBLE_TYPE o_totalprice = DELTA_ORDERS.totalprice[i];
-                date o_orderdate = DELTA_ORDERS.orderdate[i];
-                STRING_TYPE o_orderpriority = DELTA_ORDERS.orderpriority[i];
-                STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
-                long o_shippriority = DELTA_ORDERS.shippriority[i];
+                // STRING_TYPE o_orderstatus = DELTA_ORDERS.orderstatus[i];
+                // DOUBLE_TYPE o_totalprice = DELTA_ORDERS.totalprice[i];
+                // date o_orderdate = DELTA_ORDERS.orderdate[i];
+                // STRING_TYPE o_orderpriority = DELTA_ORDERS.orderpriority[i];
+                // STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
+                // long o_shippriority = DELTA_ORDERS.shippriority[i];
                 STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
                 long v1 = 1L;
                 long preg1_match = Upreg_match(preg1,o_comment);
@@ -715,13 +715,13 @@ namespace dbtoaster {
           for (size_t i = 0; i < DELTA_CUSTOMER.size; i++)
           {
                 long c_custkey = DELTA_CUSTOMER.custkey[i];
-                STRING_TYPE c_name = DELTA_CUSTOMER.name[i];
-                STRING_TYPE c_address = DELTA_CUSTOMER.address[i];
-                long c_nationkey = DELTA_CUSTOMER.nationkey[i];
-                STRING_TYPE c_phone = DELTA_CUSTOMER.phone[i];
-                DOUBLE_TYPE c_acctbal = DELTA_CUSTOMER.acctbal[i];
-                STRING_TYPE c_mktsegment = DELTA_CUSTOMER.mktsegment[i];
-                STRING_TYPE c_comment = DELTA_CUSTOMER.comment[i];
+                // STRING_TYPE c_name = DELTA_CUSTOMER.name[i];
+                // STRING_TYPE c_address = DELTA_CUSTOMER.address[i];
+                // long c_nationkey = DELTA_CUSTOMER.nationkey[i];
+                // STRING_TYPE c_phone = DELTA_CUSTOMER.phone[i];
+                // DOUBLE_TYPE c_acctbal = DELTA_CUSTOMER.acctbal[i];
+                // STRING_TYPE c_mktsegment = DELTA_CUSTOMER.mktsegment[i];
+                // STRING_TYPE c_comment = DELTA_CUSTOMER.comment[i];
                 long v12 = 1L;
                 CUSTDISTCUSTOMER3_L1_2_DELTA.addOrDelOnZero(se17.modify(c_custkey,c_custkey),v12);
                 long v13 = 1L;

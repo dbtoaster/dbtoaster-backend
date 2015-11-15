@@ -1926,14 +1926,14 @@ namespace dbtoaster {
           for (size_t i = 0; i < DELTA_PART.size; i++)
           {
                 long ps_partkey = DELTA_PART.partkey[i];
-                STRING_TYPE p_name = DELTA_PART.name[i];
-                STRING_TYPE p_mfgr = DELTA_PART.mfgr[i];
+                // STRING_TYPE p_name = DELTA_PART.name[i];
+                // STRING_TYPE p_mfgr = DELTA_PART.mfgr[i];
                 STRING_TYPE p_brand = DELTA_PART.brand[i];
                 STRING_TYPE p_type = DELTA_PART.type[i];
                 long p_size = DELTA_PART.psize[i];
-                STRING_TYPE p_container = DELTA_PART.container[i];
-                DOUBLE_TYPE p_retailprice = DELTA_PART.retailprice[i];
-                STRING_TYPE p_comment = DELTA_PART.comment[i];
+                // STRING_TYPE p_container = DELTA_PART.container[i];
+                // DOUBLE_TYPE p_retailprice = DELTA_PART.retailprice[i];
+                // STRING_TYPE p_comment = DELTA_PART.comment[i];
                 long v1 = 1L;
                 SUPPLIER_CNTPART1_E1_33_DELTA.addOrDelOnZero(se1.modify(ps_partkey,p_brand,p_type,p_size),v1);            
                 long v2 = 1L;
@@ -2756,11 +2756,11 @@ namespace dbtoaster {
           for (size_t i = 0; i < DELTA_SUPPLIER.size; i++) 
           {
                 long ps_suppkey = DELTA_SUPPLIER.suppkey[i];
-                STRING_TYPE s_name = DELTA_SUPPLIER.name[i];
-                STRING_TYPE s_address = DELTA_SUPPLIER.address[i];
-                long s_nationkey = DELTA_SUPPLIER.nationkey[i];
-                STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
-                DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
+                // STRING_TYPE s_name = DELTA_SUPPLIER.name[i];
+                // STRING_TYPE s_address = DELTA_SUPPLIER.address[i];
+                // long s_nationkey = DELTA_SUPPLIER.nationkey[i];
+                // STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
+                // DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
                 STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
                 long v55 = 1L;
                 long upreg_match = Upreg_match(preg2,s_comment);
@@ -3333,9 +3333,9 @@ namespace dbtoaster {
           {
                 long ps_partkey = DELTA_PARTSUPP.partkey[i];
                 long ps_suppkey = DELTA_PARTSUPP.suppkey[i];
-                long ps_availqty = DELTA_PARTSUPP.availqty[i];
-                DOUBLE_TYPE ps_supplycost = DELTA_PARTSUPP.supplycost[i];
-                STRING_TYPE ps_comment = DELTA_PARTSUPP.comment[i];
+                // long ps_availqty = DELTA_PARTSUPP.availqty[i];
+                // DOUBLE_TYPE ps_supplycost = DELTA_PARTSUPP.supplycost[i];
+                // STRING_TYPE ps_comment = DELTA_PARTSUPP.comment[i];
                 long v88 = 1L;
                 SUPPLIER_CNTPARTSUPP1_E1_18_DELTA.addOrDelOnZero(se85.modify(ps_partkey,ps_suppkey),v88);            
                 long v89 = 1L;
