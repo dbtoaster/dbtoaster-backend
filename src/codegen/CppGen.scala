@@ -519,27 +519,17 @@ trait ICppGen extends IScalaGen {
           code +
           (if(hasOnlyBatchProcessingForAdd(s0,b))
             "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
-            "  if("+deltaRel+".head){\n"+
-            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
-            "    "+deltaRel+".head->__av =  1L;\n"+
-            "  } else {\n"+
-            "    "+deltaRel+".clear();\n"+
-            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+" 1L);\n"+
-            "    "+deltaRel+".insert_nocheck(e);\n"+
-            "  }\n"+
+            "  "+deltaRel+".clear();\n"+
+            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+" 1L);\n"+
+            "  "+deltaRel+".insert_nocheck(e);\n"+
             "  on_batch_update_"+name+"("+deltaRel+");\n"+
             "}\n\n"
            else "") +
           (if(hasOnlyBatchProcessingForDel(s0,b))
             "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
-            "  if("+deltaRel+".head){\n"+
-            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
-            "    "+deltaRel+".head->__av = -1L;\n"+
-            "  } else {\n"+
-            "    "+deltaRel+".clear();\n"+
-            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+"-1L);\n"+
-            "    "+deltaRel+".insert_nocheck(e);\n"+
-            "  }\n"+
+            "  "+deltaRel+".clear();\n"+
+            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+"-1L);\n"+
+            "  "+deltaRel+".insert_nocheck(e);\n"+
             "  on_batch_update_"+name+"("+deltaRel+");\n"+
             "}\n\n"
            else "")
