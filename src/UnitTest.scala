@@ -115,7 +115,7 @@ object UnitTest {
         e("  -csv <file>   store benchmark results in a file")
         e("  -dump <file>  dump raw benchmark samples in a file")
         e("  -cache        enable M3 cache")
-        // e("  -b <n>        execute as batches of certain size")
+        e("  -xbs <n>      execute with batches of certain size")
         e("  -noreplace    disable replacing generated trigger programs, if any exists")
         e("")
         e("Other options are forwarded to the compiler:")

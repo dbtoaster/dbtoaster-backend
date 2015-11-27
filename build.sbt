@@ -5,7 +5,7 @@ val LANG_SCALA_LMS = "scala"
 Seq(
   name := "DBtoaster",
   organization := "ch.epfl.data",
-  version := "2.1"
+  version := "2.2"
 )
 
 mainClass in run in Compile := Some("ddbt.Compiler")
@@ -185,15 +185,20 @@ commands += Command.command("release")((state:State) => {
   val sourceDir = base/"target"/"pack"/"lib";
   if (sourceDir.exists) {
     val targetDir=releaseDir/"lib"/"dbt_scala"; targetDir.mkdirs
-    copyFiles(IO.listFiles(sourceDir).filter{f => (!f.getName.startsWith("akka-remote") && !f.getName.startsWith("mysql") && !f.getName.startsWith("netty") && !f.getName.startsWith("protobuf")  && !f.getName.startsWith("scala-actors") && !f.getName.startsWith("scalatest") && f.getName != "dbtlib.jar" && f.getName != "tuplegen.jar")},targetDir)
-    val ddbtJar = targetDir/"dbtoaster_2.10-2.1.jar"
+
+    copyFiles(IO.listFiles(sourceDir).filter{f => 
+      (f.getName.matches(".*(akka-actor_2.10-2.2.3|config-1.0.2|lms|scalariform).*") ||
+       f.getName.matches(".*scala-(library|compiler|reflect)-2.10.2.*")  ||
+       f.getName.matches(".*dbtoaster(_|-shared_).*"))
+    },targetDir)
+
+    val ddbtJar = targetDir/"dbtoaster_2.10-2.2.jar"
     if (prop.getProperty("ddbt.lms","0")!="1") { //vanilla scala
-      println("using vanilla Scala version using dbtoaster_2.10-2.1-scala.jar")
-      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-scala.jar")
+      println("using vanilla Scala version using dbtoaster_2.10-2.2-scala.jar")
+      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.2-scala.jar")
     } else { //lms
-      println("using Scala+LMS version using dbtoaster_2.10-2.1-lms.jar")
-      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-lms.jar")
-      // IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.1-scala.jar")
+      println("using Scala+LMS version using dbtoaster_2.10-2.2.jar")
+      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.2-lms.jar")
     }
     IO.delete(ddbtJar)
   } else {
