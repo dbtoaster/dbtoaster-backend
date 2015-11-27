@@ -46,6 +46,7 @@ new_args=""
 
 compile_cmd=""
 run_cmd=""
+out_bin_args=""
 
 def_flags=""
 inc_flags=`echo "$DBT_HDR" | sed 's/:/ -I/g'`
@@ -110,6 +111,8 @@ for arg in "$@"; do
          [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
          out_bin_file=${tmp_out_bin_file}
       fi
+   elif [ $option = "-xbs" ]; then
+      out_bin_args="${out_bin_args} -b${arg}"
    elif [ $option = "-D" ]; then
       def_flags="$def_flags -D $arg"
    elif [ $option = "-I" ]; then
@@ -174,7 +177,7 @@ if [ $out_bin_file != "-" ]; then
 
       compile_flags="$cpp_compile_flags $cpp_opt_flag $def_flags $inc_flags $lib_flags $cpp_libs"
       compile_cmd="$gpp $main_file -include $out_src_file -o $out_bin_file $compile_flags"
-      run_cmd="PATH=.:\$PATH $out_bin_file"
+      run_cmd="PATH=.:\$PATH $out_bin_file $out_bin_args"
       [ $log_gcc -eq 1 ] && { compile_log="$compile_log $compile_cmd"; run_log="$run_log $run_cmd"; }
    fi
 
@@ -210,9 +213,9 @@ if [ $out_bin_file != "-" ]; then
 
       if [[ $out_src_class_name == "-" ]] ; then
          run_cmd=$(echo "$out_src_file" | sed 's/\"//g' | sed -e 's/.*[/\\\\]//; s/\..*//' | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')
-         run_cmd="java $jvm_exec_flags ddbt.gen.$run_cmd"
+         run_cmd="java $jvm_exec_flags ddbt.gen.$run_cmd $out_bin_args"
       else
-         run_cmd="java $jvm_exec_flags $out_src_class_name"
+         run_cmd="java $jvm_exec_flags $out_src_class_name $out_bin_args"
       fi
 
       [ $log_scala -eq 1 ] && { compile_log="$compile_log $compile_cmd"; run_log="$run_log $run_cmd"; }
@@ -234,6 +237,7 @@ eval $compile_cmd;
 [ "$run_log" ] && { echo $run_log; }
 
 if [ $run_after_compile == "1" ]; then
+   echo $run_cmd
    eval "time $run_cmd"
 fi
 
