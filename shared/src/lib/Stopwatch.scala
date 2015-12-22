@@ -63,9 +63,10 @@ class Stopwatch {
 object Stopwatch {
   
   def time[R](message: String, block: => R): R = {
-    val sw = new Stopwatch
-    val res = sw.time(block, false)
-    println(message + sw.getElapsedTime + " ms")
-    res
+    val startTime = System.nanoTime
+    val result = block
+    val elapsedTime = (System.nanoTime - startTime) / 1000000L
+    println(message + elapsedTime + " ms")
+    result
   }
 }
