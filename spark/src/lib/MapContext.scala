@@ -16,7 +16,7 @@ class GlobalMapContext[A](
 
   val isCheckpointingEnabled = true
 
-  val shuffleInsertDatasets = false
+  val shuffleInsertDatasets = true
 
   val fs = FileSystem.get(new Configuration())  
   
