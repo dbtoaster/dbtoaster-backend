@@ -829,25 +829,44 @@ trait IScalaGen extends CodeGen {
     ) + "\n}\n"
 
   protected def genClass(s0: System, body: String, pp: String, ld: String, gc: String, snap: String, str: String) = {
-    "class " + cls + " extends Actor {\n" +
-      ind(
-        "import ddbt.lib.Messages._\nimport " + cls + "._\n" +
-          "import ddbt.lib.Functions._\n\n" + body + "\n\n" +
-          "var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L\n" +
-          pp +
-          "def receive_skip: Receive = { case EndOfStream | GetSnapshot(_) => "+
-          onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), " + snap + ")" + " case _ => tS += 1L }\n" +
-          "def receive = {\n" +
-          ind(
-            str +
-              "case StreamInit(timeout) =>" +
-              (if (ld != "") " loadTables();" else "") +
-              " onSystemReady(); t0 = System.nanoTime; " +
-              "if (timeout > 0) t1 = t0 + timeout * 1000000L\n" +
-              "case EndOfStream | GetSnapshot(_) => t1 = System.nanoTime; " + onEndStream + " sender ! (StreamStat(t1 - t0, tN, tS), " + snap + ")"
-          ) +
-          "\n}\n" + gc + ld
-      ) + "\n}\n"
+
+    s"""|class ${cls}Base {
+        |  import ${cls}._
+        |  import ddbt.lib.Functions._
+        |
+        |${ind(body)}
+        |
+        |${ind(gc)}
+        |}
+        |
+        |class ${cls} extends ${cls}Base with Actor {
+        |  import ddbt.lib.Messages._
+        |  import ${cls}._
+        |  
+        |  var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L
+        |
+        |  ${pp}
+        |
+        |${ind(ld)}
+        |
+        |  def receive_skip: Receive = { 
+        |    case EndOfStream | GetSnapshot(_) => 
+        |      ${onEndStream} sender ! (StreamStat(t1 - t0, tN, tS), ${snap})
+        |    case _ => tS += 1L
+        |  }
+        |
+        |  def receive = {
+        |${ind(str, 2)}
+        |    case StreamInit(timeout) => 
+        |      ${if (ld != "") " loadTables();" else ""}
+        |      onSystemReady();
+        |      t0 = System.nanoTime;
+        |      if (timeout > 0) t1 = t0 + timeout * 1000000L
+        |    case EndOfStream | GetSnapshot(_) => 
+        |      t1 = System.nanoTime; 
+        |      ${onEndStream} sender ! (StreamStat(t1 - t0, tN, tS), ${snap})
+        |  }
+        |}""".stripMargin
   }
 
   override def pkgWrapper(pkg: String, body: String) = 
