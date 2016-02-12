@@ -50,8 +50,20 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
     case Cmp(l, r, op) => 
       // formally, we should take the derived type from left and right, 
       // but this makes no difference to LMS
-      expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(cmp(vl, op, vr, ex.tp)))) 
-
+      expr(l, (vl: Rep[_]) =>
+        expr(r, (vr: Rep[_]) => co(cmp(vl, op, vr, ex.tp))))
+    case CmpOrList(l, r) =>
+      assert(r.forall(_.isInstanceOf[Const]))
+      expr(l, (vl: Rep[_]) => {
+        val vr = r.map {
+          case Const(TypeLong, v) => impl.unit(v.toLong)
+          case Const(TypeDouble, v) => impl.unit(v.toDouble)
+          case Const(TypeString, v) => impl.unit(v)
+          case Const(TypeDate, v) => sys.error("No date constant conversion")
+          case x => sys.error("Unsupported type: " + x.tp)
+        }
+        co(cmpOrList(vl, vr, l.tp))
+      })
     case a @ Apply(fn, tp, as) =>
       def app(es: List[Expr], vs: List[Rep[_]]): Rep[Unit] = es match {
         case x :: xs => expr(x, (v: Rep[_]) => app(xs, v :: vs))
@@ -266,6 +278,28 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
         case _ => sys.error("Unsupported type")
       }, 
       impl.unit(1L), 
+      impl.unit(0L)
+    )
+  }
+
+  def cmpOrList(l: Rep[_], r: List[Rep[_]], tp: Type): Rep[Long] = {
+    def cmp2[T: Ordering: Manifest](vl: Rep[_], vr: List[Rep[_]]): Rep[Boolean] = vr match {
+      case Nil => impl.unit(false)
+      case hd :: Nil =>
+        impl.equals[T, T](vl.asInstanceOf[Rep[T]], hd.asInstanceOf[Rep[T]])
+      case hd :: tl =>
+        impl.boolean_or (
+          impl.equals[T, T](vl.asInstanceOf[Rep[T]], hd.asInstanceOf[Rep[T]]),
+          cmp2(vl, tl))
+    }
+    impl.__ifThenElse(tp match {
+        case TypeLong => cmp2[Long](l, r)
+        case TypeDouble => cmp2[Double](l, r)
+        case TypeString => cmp2[String](l, r)
+        case TypeDate => cmp2[Long](l, r)
+        case _ => sys.error("Unsupported type")
+      },
+      impl.unit(1L),
       impl.unit(0L)
     )
   }

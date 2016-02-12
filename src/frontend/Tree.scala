@@ -307,6 +307,7 @@ object M3 {
         case Mul(l, r) => l.collect(f) ++ r.collect(f)
         case Add(l, r) => l.collect(f) ++ r.collect(f)
         case Cmp(l, r, op) => l.collect(f) ++ r.collect(f)
+        case CmpOrList(l, r) => l.collect(f) ++ r.flatMap(_.collect(f))
         case Exists(e) => e.collect(f)
         case Lift(n, e) => e.collect(f)
         case AggSum(ks, e) => e.collect(f)
@@ -329,6 +330,7 @@ object M3 {
           newEx.tp = tp
           newEx
         case Cmp(l, r, op) => Cmp(l.replace(f), r.replace(f), op)
+        case CmpOrList(l, r) => CmpOrList(l.replace(f), r.map(_.replace(f)))
         case Exists(e) => Exists(e.replace(f))
         case Lift(n, e) => Lift(n, e.replace(f))
         case AggSum(ks, e) => AggSum(ks, e.replace(f))
@@ -390,6 +392,7 @@ object M3 {
         case MapRefConst(n, ks) => (List(), ks)
         case DeltaMapRefConst(n, ks) => (List(), ks)        
         case Cmp(l, r, op) => (union(l.schema._1, r.schema._1), List())
+        case CmpOrList(l, r) => (l.schema._1, List())
         case Apply(fn, tp, as) =>
           val (ivs, ovs) = as.map(_.schema).unzip
           (ivs.flatten.distinct, ovs.flatten.distinct)
@@ -567,6 +570,12 @@ object M3 {
     val tp = TypeLong    
     val locality: Option[LocalityType] = None
     override def toString = "{" + l + " " + op.toM3 + " " + r + "}"
+  } // comparison, returns 0 or 1
+
+  case class CmpOrList(l: Expr, r: List[Expr]) extends Expr {
+    val tp = TypeLong
+    val locality: Option[LocalityType] = None
+    override def toString = "{" + l + " IN [" + r.mkString(", ") + "]}"
   } // comparison, returns 0 or 1
 
   // Tupling
