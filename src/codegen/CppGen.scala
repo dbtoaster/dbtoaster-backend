@@ -113,7 +113,16 @@ trait ICppGen extends IScalaGen {
       case _ => co(v)
     }
     case Exists(e) => cpsExpr(e,(v:String)=> co("("+v+" != 0 ? 1L : 0L)"))
-    case Cmp(l,r,op) => co(cpsExpr(l,(ll:String)=>cpsExpr(r,(rr:String)=>cmpFunc(l.tp,op,ll,rr))))
+    case Cmp(l,r,op) =>
+      co(cpsExpr(l, (ll: String) =>
+        cpsExpr(r, (rr: String) => cmpFunc(l.tp, op, ll, rr))))
+    case CmpOrList(l,r) =>
+      co(cpsExpr(l, (ll: String) =>
+        "(/*if */((" +
+        r.map(x => cpsExpr(x, (rr: String) => "(" + ll + " == " + rr + ")"))
+         .mkString(" || ") +
+        ")) ? 1L : 0L)"
+      ))
     case app@Apply(fn1,tp,as1) => {
       val (as, fn) = (fn1 match {
         case "date_part" if as1.head.isInstanceOf[Const] => (as1.tail, as1.head.asInstanceOf[Const].v.toLowerCase+"_part")
