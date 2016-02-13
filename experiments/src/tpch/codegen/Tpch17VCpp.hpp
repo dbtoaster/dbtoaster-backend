@@ -195,12 +195,12 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_insert_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         DOUBLE_TYPE agg1 = 0.0;
         DOUBLE_TYPE agg2 = 0.0;
-        long l2 = (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se3.modify(lineitem_partkey)) + 1L);
+        long l2 = (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se4.modify(lineitem_partkey)) + 1L);
         (/*if */(0L != l2) ? agg2 += Udiv(Ulistmax(1L, l2)) : 0.0);
-        DOUBLE_TYPE l1 = (agg2 * ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se4.modify(lineitem_partkey)) + lineitem_quantity) * 0.2));
+        DOUBLE_TYPE l1 = ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se3.modify(lineitem_partkey)) + lineitem_quantity) * (agg2 * 0.2));
         { //slice 
           const HashIndex_AVG_YEARLY_mLINEITEM5_map_0* i1 = static_cast<HashIndex_AVG_YEARLY_mLINEITEM5_map_0*>(AVG_YEARLY_mLINEITEM5.index[1]);
           const HASH_RES_t h1 = AVG_YEARLY_mLINEITEM5_mapkey0_idxfn::hash(se5.modify0(lineitem_partkey));
@@ -217,9 +217,9 @@ namespace dbtoaster {
           }
         }DOUBLE_TYPE agg3 = 0.0;
         DOUBLE_TYPE agg4 = 0.0;
-        long l4 = AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se6.modify(lineitem_partkey));
+        long l4 = AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se7.modify(lineitem_partkey));
         (/*if */(0L != l4) ? agg4 += Udiv(Ulistmax(1L, l4)) : 0.0);
-        DOUBLE_TYPE l3 = (agg4 * (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se7.modify(lineitem_partkey)) * 0.2));
+        DOUBLE_TYPE l3 = (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se6.modify(lineitem_partkey)) * (agg4 * 0.2));
         { //slice 
           const HashIndex_AVG_YEARLY_mLINEITEM5_map_0* i2 = static_cast<HashIndex_AVG_YEARLY_mLINEITEM5_map_0*>(AVG_YEARLY_mLINEITEM5.index[1]);
           const HASH_RES_t h2 = AVG_YEARLY_mLINEITEM5_mapkey0_idxfn::hash(se8.modify0(lineitem_partkey));
@@ -236,9 +236,9 @@ namespace dbtoaster {
           }
         }long agg5 = 0L;
         DOUBLE_TYPE agg6 = 0.0;
-        long l6 = (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se9.modify(lineitem_partkey)) + 1L);
+        long l6 = (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se10.modify(lineitem_partkey)) + 1L);
         (/*if */(0L != l6) ? agg6 += Udiv(Ulistmax(1L, l6)) : 0.0);
-        DOUBLE_TYPE l5 = (agg6 * ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se10.modify(lineitem_partkey)) + lineitem_quantity) * 0.2));
+        DOUBLE_TYPE l5 = ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se9.modify(lineitem_partkey)) + lineitem_quantity) * (agg6 * 0.2));
         (/*if */(l5 > lineitem_quantity) ? agg5 += AVG_YEARLY_mLINEITEM2.getValueOrDefault(se11.modify(lineitem_partkey)) : 0L);
         AVG_YEARLY += (((AVG_YEARLY_mLINEITEM2.getValueOrDefault(se2.modify(lineitem_partkey)) * (agg1 + (agg3 * -1L))) + (agg5 * lineitem_extendedprice)) * 0.142857142857);
         AVG_YEARLY_mLINEITEM1_L1_1_L1_1.addOrDelOnZero(se12.modify(lineitem_partkey),1L);
@@ -247,12 +247,12 @@ namespace dbtoaster {
       }
     }
     void on_delete_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         DOUBLE_TYPE agg7 = 0.0;
         DOUBLE_TYPE agg8 = 0.0;
-        long l8 = (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se17.modify(lineitem_partkey)) + -1L);
+        long l8 = (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se18.modify(lineitem_partkey)) + -1L);
         (/*if */(0L != l8) ? agg8 += Udiv(Ulistmax(1L, l8)) : 0.0);
-        DOUBLE_TYPE l7 = (agg8 * ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se18.modify(lineitem_partkey)) + (-1L * lineitem_quantity)) * 0.2));
+        DOUBLE_TYPE l7 = ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se17.modify(lineitem_partkey)) + (-1L * lineitem_quantity)) * (agg8 * 0.2));
         { //slice 
           const HashIndex_AVG_YEARLY_mLINEITEM5_map_0* i3 = static_cast<HashIndex_AVG_YEARLY_mLINEITEM5_map_0*>(AVG_YEARLY_mLINEITEM5.index[1]);
           const HASH_RES_t h3 = AVG_YEARLY_mLINEITEM5_mapkey0_idxfn::hash(se19.modify0(lineitem_partkey));
@@ -269,9 +269,9 @@ namespace dbtoaster {
           }
         }DOUBLE_TYPE agg9 = 0.0;
         DOUBLE_TYPE agg10 = 0.0;
-        long l10 = AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se20.modify(lineitem_partkey));
+        long l10 = AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se21.modify(lineitem_partkey));
         (/*if */(0L != l10) ? agg10 += Udiv(Ulistmax(1L, l10)) : 0.0);
-        DOUBLE_TYPE l9 = (agg10 * (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se21.modify(lineitem_partkey)) * 0.2));
+        DOUBLE_TYPE l9 = (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se20.modify(lineitem_partkey)) * (agg10 * 0.2));
         { //slice 
           const HashIndex_AVG_YEARLY_mLINEITEM5_map_0* i4 = static_cast<HashIndex_AVG_YEARLY_mLINEITEM5_map_0*>(AVG_YEARLY_mLINEITEM5.index[1]);
           const HASH_RES_t h4 = AVG_YEARLY_mLINEITEM5_mapkey0_idxfn::hash(se22.modify0(lineitem_partkey));
@@ -288,9 +288,9 @@ namespace dbtoaster {
           }
         }long agg11 = 0L;
         DOUBLE_TYPE agg12 = 0.0;
-        long l12 = (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se23.modify(lineitem_partkey)) + -1L);
+        long l12 = (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se24.modify(lineitem_partkey)) + -1L);
         (/*if */(0L != l12) ? agg12 += Udiv(Ulistmax(1L, l12)) : 0.0);
-        DOUBLE_TYPE l11 = (agg12 * ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se24.modify(lineitem_partkey)) + (-1L * lineitem_quantity)) * 0.2));
+        DOUBLE_TYPE l11 = ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se23.modify(lineitem_partkey)) + (-1L * lineitem_quantity)) * (agg12 * 0.2));
         (/*if */(l11 > lineitem_quantity) ? agg11 += AVG_YEARLY_mLINEITEM2.getValueOrDefault(se25.modify(lineitem_partkey)) : 0L);
         AVG_YEARLY += (((AVG_YEARLY_mLINEITEM2.getValueOrDefault(se16.modify(lineitem_partkey)) * (agg7 + (agg9 * -1L))) + (agg11 * (-1L * lineitem_extendedprice))) * 0.142857142857);
         AVG_YEARLY_mLINEITEM1_L1_1_L1_1.addOrDelOnZero(se26.modify(lineitem_partkey),-1L);
@@ -299,12 +299,12 @@ namespace dbtoaster {
       }
     }
     void on_insert_PART(const long part_partkey, const STRING_TYPE& part_name, const STRING_TYPE& part_mfgr, const STRING_TYPE& part_brand, const STRING_TYPE& part_type, const long part_size, const STRING_TYPE& part_container, const DOUBLE_TYPE part_retailprice, const STRING_TYPE& part_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         DOUBLE_TYPE agg13 = 0.0;
         DOUBLE_TYPE agg14 = 0.0;
-        long l14 = AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se30.modify(part_partkey));
+        long l14 = AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se31.modify(part_partkey));
         (/*if */(0L != l14) ? agg14 += Udiv(Ulistmax(1L, l14)) : 0.0);
-        DOUBLE_TYPE l13 = (agg14 * (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se31.modify(part_partkey)) * 0.2));
+        DOUBLE_TYPE l13 = (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se30.modify(part_partkey)) * (agg14 * 0.2));
         { //slice 
           const HashIndex_AVG_YEARLY_mLINEITEM5_map_0* i5 = static_cast<HashIndex_AVG_YEARLY_mLINEITEM5_map_0*>(AVG_YEARLY_mLINEITEM5.index[1]);
           const HASH_RES_t h5 = AVG_YEARLY_mLINEITEM5_mapkey0_idxfn::hash(se32.modify0(part_partkey));
@@ -320,16 +320,16 @@ namespace dbtoaster {
             } while (n5 && (e5 = n5->obj) && h5 == n5->hash &&  AVG_YEARLY_mLINEITEM5_mapkey0_idxfn::equals(se32, *e5)); 
           }
         }(/*if */(part_brand == c1 && part_container == c2) ? AVG_YEARLY += (agg13 * 0.142857142857) : 0L);
-        (/*if */(part_container == c2 && part_brand == c1) ? AVG_YEARLY_mLINEITEM2.addOrDelOnZero(se33.modify(part_partkey),1L) : (void)0);
+        (/*if */(part_brand == c1 && part_container == c2) ? AVG_YEARLY_mLINEITEM2.addOrDelOnZero(se33.modify(part_partkey),1L) : (void)0);
       }
     }
     void on_delete_PART(const long part_partkey, const STRING_TYPE& part_name, const STRING_TYPE& part_mfgr, const STRING_TYPE& part_brand, const STRING_TYPE& part_type, const long part_size, const STRING_TYPE& part_container, const DOUBLE_TYPE part_retailprice, const STRING_TYPE& part_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         DOUBLE_TYPE agg15 = 0.0;
         DOUBLE_TYPE agg16 = 0.0;
-        long l16 = AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se35.modify(part_partkey));
+        long l16 = AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se36.modify(part_partkey));
         (/*if */(0L != l16) ? agg16 += Udiv(Ulistmax(1L, l16)) : 0.0);
-        DOUBLE_TYPE l15 = (agg16 * (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se36.modify(part_partkey)) * 0.2));
+        DOUBLE_TYPE l15 = (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se35.modify(part_partkey)) * (agg16 * 0.2));
         { //slice 
           const HashIndex_AVG_YEARLY_mLINEITEM5_map_0* i6 = static_cast<HashIndex_AVG_YEARLY_mLINEITEM5_map_0*>(AVG_YEARLY_mLINEITEM5.index[1]);
           const HASH_RES_t h6 = AVG_YEARLY_mLINEITEM5_mapkey0_idxfn::hash(se37.modify0(part_partkey));
@@ -345,11 +345,11 @@ namespace dbtoaster {
             } while (n6 && (e6 = n6->obj) && h6 == n6->hash &&  AVG_YEARLY_mLINEITEM5_mapkey0_idxfn::equals(se37, *e6)); 
           }
         }(/*if */(part_brand == c1 && part_container == c2) ? AVG_YEARLY += (agg15 * -0.142857142857) : 0L);
-        (/*if */(part_container == c2 && part_brand == c1) ? AVG_YEARLY_mLINEITEM2.addOrDelOnZero(se38.modify(part_partkey),-1L) : (void)0);
+        (/*if */(part_brand == c1 && part_container == c2) ? AVG_YEARLY_mLINEITEM2.addOrDelOnZero(se38.modify(part_partkey),-1L) : (void)0);
       }
     }
     void on_system_ready_event() {
-      {  
+      {  //
         AVG_YEARLY = 0.0;
       }
     }
@@ -358,37 +358,37 @@ namespace dbtoaster {
   
     /* Sample entries for avoiding recreation of temporary objects */
     AVG_YEARLY_mLINEITEM2_entry se2;
-    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se3;
-    AVG_YEARLY_mLINEITEM1_L1_2_entry se4;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se3;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se4;
     AVG_YEARLY_mLINEITEM5_entry se5;
-    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se6;
-    AVG_YEARLY_mLINEITEM1_L1_2_entry se7;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se6;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se7;
     AVG_YEARLY_mLINEITEM5_entry se8;
-    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se9;
-    AVG_YEARLY_mLINEITEM1_L1_2_entry se10;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se9;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se10;
     AVG_YEARLY_mLINEITEM2_entry se11;
     AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se12;
     AVG_YEARLY_mLINEITEM1_L1_2_entry se13;
     AVG_YEARLY_mLINEITEM5_entry se14;
     AVG_YEARLY_mLINEITEM2_entry se16;
-    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se17;
-    AVG_YEARLY_mLINEITEM1_L1_2_entry se18;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se17;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se18;
     AVG_YEARLY_mLINEITEM5_entry se19;
-    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se20;
-    AVG_YEARLY_mLINEITEM1_L1_2_entry se21;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se20;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se21;
     AVG_YEARLY_mLINEITEM5_entry se22;
-    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se23;
-    AVG_YEARLY_mLINEITEM1_L1_2_entry se24;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se23;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se24;
     AVG_YEARLY_mLINEITEM2_entry se25;
     AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se26;
     AVG_YEARLY_mLINEITEM1_L1_2_entry se27;
     AVG_YEARLY_mLINEITEM5_entry se28;
-    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se30;
-    AVG_YEARLY_mLINEITEM1_L1_2_entry se31;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se30;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se31;
     AVG_YEARLY_mLINEITEM5_entry se32;
     AVG_YEARLY_mLINEITEM2_entry se33;
-    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se35;
-    AVG_YEARLY_mLINEITEM1_L1_2_entry se36;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se35;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se36;
     AVG_YEARLY_mLINEITEM5_entry se37;
     AVG_YEARLY_mLINEITEM2_entry se38;
   

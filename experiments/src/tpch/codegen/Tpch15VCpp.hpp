@@ -261,7 +261,7 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_insert_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? COUNT_mLINEITEM1_E2_1.addOrDelOnZero(se1.modify(lineitem_suppkey),1L) : (void)0);
         (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? COUNT_mLINEITEM1_L3_1.addOrDelOnZero(se2.modify(lineitem_suppkey),(lineitem_extendedprice * (1L + (-1L * lineitem_discount)))) : (void)0);
         (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? COUNT_mLINEITEM1_L4_1_E1_1.addOrDelOnZero(se3.modify(lineitem_suppkey),1L) : (void)0);
@@ -312,7 +312,7 @@ namespace dbtoaster {
       }
     }
     void on_delete_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? COUNT_mLINEITEM1_E2_1.addOrDelOnZero(se9.modify(lineitem_suppkey),-1L) : (void)0);
         (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? COUNT_mLINEITEM1_L3_1.addOrDelOnZero(se10.modify(lineitem_suppkey),(-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : (void)0);
         (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? COUNT_mLINEITEM1_L4_1_E1_1.addOrDelOnZero(se11.modify(lineitem_suppkey),-1L) : (void)0);
@@ -363,7 +363,7 @@ namespace dbtoaster {
       }
     }
     void on_insert_SUPPLIER(const long supplier_suppkey, const STRING_TYPE& supplier_name, const STRING_TYPE& supplier_address, const long supplier_nationkey, const STRING_TYPE& supplier_phone, const DOUBLE_TYPE supplier_acctbal, const STRING_TYPE& supplier_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         DOUBLE_TYPE l7 = COUNT_mLINEITEM1_L3_1.getValueOrDefault(se18.modify(supplier_suppkey));
         long agg5 = 0L;
         long agg6 = 0L;
@@ -379,19 +379,19 @@ namespace dbtoaster {
             {
                 long r2_suppkey = e5->R2_SUPPKEY;
                 long v5 = e5->__av;
-                DOUBLE_TYPE l9 = COUNT_mLINEITEM1_L4_1_L2_1.getValueOrDefault(se19.modify(r2_suppkey));
+                DOUBLE_TYPE l9 = COUNT_mLINEITEM1_L4_1_L2_1.getValueOrDefault(se20.modify(r2_suppkey));
                 (/*if */(l9 > l7) ? agg6 += (v5 != 0 ? 1L : 0L) : 0L);
               n5 = n5->nxt;
             }
           }
         }long l8 = agg6;
         (/*if */(l8 == 0L) ? agg5 += 1L : 0L);
-        COUNT.addOrDelOnZero(se17.modify(supplier_suppkey,supplier_name,supplier_address,supplier_phone,l7),(agg5 * (COUNT_mLINEITEM1_E2_1.getValueOrDefault(se20.modify(supplier_suppkey)) != 0 ? 1L : 0L)));
+        COUNT.addOrDelOnZero(se17.modify(supplier_suppkey,supplier_name,supplier_address,supplier_phone,l7),((COUNT_mLINEITEM1_E2_1.getValueOrDefault(se19.modify(supplier_suppkey)) != 0 ? 1L : 0L) * agg5));
         COUNT_mLINEITEM1.addOrDelOnZero(se21.modify(supplier_suppkey,supplier_name,supplier_address,supplier_phone),1L);
       }
     }
     void on_delete_SUPPLIER(const long supplier_suppkey, const STRING_TYPE& supplier_name, const STRING_TYPE& supplier_address, const long supplier_nationkey, const STRING_TYPE& supplier_phone, const DOUBLE_TYPE supplier_acctbal, const STRING_TYPE& supplier_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         DOUBLE_TYPE l10 = COUNT_mLINEITEM1_L3_1.getValueOrDefault(se23.modify(supplier_suppkey));
         long agg7 = 0L;
         long agg8 = 0L;
@@ -407,19 +407,19 @@ namespace dbtoaster {
             {
                 long r2_suppkey = e6->R2_SUPPKEY;
                 long v6 = e6->__av;
-                DOUBLE_TYPE l12 = COUNT_mLINEITEM1_L4_1_L2_1.getValueOrDefault(se24.modify(r2_suppkey));
+                DOUBLE_TYPE l12 = COUNT_mLINEITEM1_L4_1_L2_1.getValueOrDefault(se25.modify(r2_suppkey));
                 (/*if */(l12 > l10) ? agg8 += (v6 != 0 ? 1L : 0L) : 0L);
               n6 = n6->nxt;
             }
           }
         }long l11 = agg8;
         (/*if */(l11 == 0L) ? agg7 += 1L : 0L);
-        COUNT.addOrDelOnZero(se22.modify(supplier_suppkey,supplier_name,supplier_address,supplier_phone,l10),(agg7 * ((COUNT_mLINEITEM1_E2_1.getValueOrDefault(se25.modify(supplier_suppkey)) != 0 ? 1L : 0L) * -1L)));
+        COUNT.addOrDelOnZero(se22.modify(supplier_suppkey,supplier_name,supplier_address,supplier_phone,l10),((COUNT_mLINEITEM1_E2_1.getValueOrDefault(se24.modify(supplier_suppkey)) != 0 ? 1L : 0L) * (agg7 * -1L)));
         COUNT_mLINEITEM1.addOrDelOnZero(se26.modify(supplier_suppkey,supplier_name,supplier_address,supplier_phone),-1L);
       }
     }
     void on_system_ready_event() {
-      {  
+      {  //
         
       }
     }
@@ -445,13 +445,13 @@ namespace dbtoaster {
     COUNT_mLINEITEM1_L4_1_L2_1_entry se16;
     COUNT_entry se17;
     COUNT_mLINEITEM1_L3_1_entry se18;
-    COUNT_mLINEITEM1_L4_1_L2_1_entry se19;
-    COUNT_mLINEITEM1_E2_1_entry se20;
+    COUNT_mLINEITEM1_E2_1_entry se19;
+    COUNT_mLINEITEM1_L4_1_L2_1_entry se20;
     COUNT_mLINEITEM1_entry se21;
     COUNT_entry se22;
     COUNT_mLINEITEM1_L3_1_entry se23;
-    COUNT_mLINEITEM1_L4_1_L2_1_entry se24;
-    COUNT_mLINEITEM1_E2_1_entry se25;
+    COUNT_mLINEITEM1_E2_1_entry se24;
+    COUNT_mLINEITEM1_L4_1_L2_1_entry se25;
     COUNT_mLINEITEM1_entry se26;
   
     /* Data structures used for storing materialized views */

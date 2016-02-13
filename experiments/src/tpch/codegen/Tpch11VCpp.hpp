@@ -394,7 +394,7 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_insert_SUPPLIER(const long supplier_suppkey, const STRING_TYPE& supplier_name, const STRING_TYPE& supplier_address, const long supplier_nationkey, const STRING_TYPE& supplier_phone, const DOUBLE_TYPE supplier_acctbal, const STRING_TYPE& supplier_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         QUERY11_mPARTSUPP1_L1_1 += (QUERY11_mPARTSUPP1_L1_1_mSUPPLIER1.getValueOrDefault(se2.modify(supplier_nationkey)) * QUERY11_mPARTSUPP1_L1_1_mSUPPLIER2.getValueOrDefault(se3.modify(supplier_suppkey)));
         QUERY11_mPARTSUPP1_L1_1_mPARTSUPP1.addOrDelOnZero(se4.modify(supplier_suppkey),QUERY11_mPARTSUPP1_L1_1_mSUPPLIER1.getValueOrDefault(se5.modify(supplier_nationkey)));
         { //slice 
@@ -450,7 +450,7 @@ namespace dbtoaster {
       }
     }
     void on_delete_SUPPLIER(const long supplier_suppkey, const STRING_TYPE& supplier_name, const STRING_TYPE& supplier_address, const long supplier_nationkey, const STRING_TYPE& supplier_phone, const DOUBLE_TYPE supplier_acctbal, const STRING_TYPE& supplier_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         QUERY11_mPARTSUPP1_L1_1 += (QUERY11_mPARTSUPP1_L1_1_mSUPPLIER1.getValueOrDefault(se16.modify(supplier_nationkey)) * (QUERY11_mPARTSUPP1_L1_1_mSUPPLIER2.getValueOrDefault(se17.modify(supplier_suppkey)) * -1L));
         QUERY11_mPARTSUPP1_L1_1_mPARTSUPP1.addOrDelOnZero(se18.modify(supplier_suppkey),(QUERY11_mPARTSUPP1_L1_1_mSUPPLIER1.getValueOrDefault(se19.modify(supplier_nationkey)) * -1L));
         { //slice 
@@ -506,7 +506,7 @@ namespace dbtoaster {
       }
     }
     void on_insert_PARTSUPP(const long partsupp_partkey, const long partsupp_suppkey, const long partsupp_availqty, const DOUBLE_TYPE partsupp_supplycost, const STRING_TYPE& partsupp_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         QUERY11_mPARTSUPP1_L1_1 += (QUERY11_mPARTSUPP1_L1_1_mPARTSUPP1.getValueOrDefault(se30.modify(partsupp_suppkey)) * (partsupp_supplycost * partsupp_availqty));
         QUERY11_mPARTSUPP1_L1_1_mSUPPLIER2.addOrDelOnZero(se31.modify(partsupp_suppkey),(partsupp_supplycost * partsupp_availqty));
         QUERY11_mPARTSUPP1_E2_1.addOrDelOnZero(se32.modify(partsupp_partkey),QUERY11_mPARTSUPP1_L1_1_mPARTSUPP1.getValueOrDefault(se33.modify(partsupp_suppkey)));
@@ -538,7 +538,7 @@ namespace dbtoaster {
       }
     }
     void on_delete_PARTSUPP(const long partsupp_partkey, const long partsupp_suppkey, const long partsupp_availqty, const DOUBLE_TYPE partsupp_supplycost, const STRING_TYPE& partsupp_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         QUERY11_mPARTSUPP1_L1_1 += (QUERY11_mPARTSUPP1_L1_1_mPARTSUPP1.getValueOrDefault(se42.modify(partsupp_suppkey)) * (-1L * (partsupp_supplycost * partsupp_availqty)));
         QUERY11_mPARTSUPP1_L1_1_mSUPPLIER2.addOrDelOnZero(se43.modify(partsupp_suppkey),(-1L * (partsupp_supplycost * partsupp_availqty)));
         QUERY11_mPARTSUPP1_E2_1.addOrDelOnZero(se44.modify(partsupp_partkey),(QUERY11_mPARTSUPP1_L1_1_mPARTSUPP1.getValueOrDefault(se45.modify(partsupp_suppkey)) * -1L));
@@ -570,7 +570,7 @@ namespace dbtoaster {
       }
     }
     void on_system_ready_event() {
-      {  
+      {  //
         QUERY11_mPARTSUPP1_L1_1 = 0.0;
         QUERY11_mPARTSUPP1_L1_1_mSUPPLIER1.clear();
         STRING_TYPE l9 = c1;

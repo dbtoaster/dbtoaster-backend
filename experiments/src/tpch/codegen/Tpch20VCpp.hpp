@@ -369,179 +369,179 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_insert_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
+        long agg1 = 0L;
+        DOUBLE_TYPE l1 = ((COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se2.modify(lineitem_partkey,lineitem_suppkey)) + (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? lineitem_quantity : 0.0)) * 0.5);
         { //slice 
-          const HashIndex_COUNT_mPARTSUPP1_map_0* i1 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0*>(COUNT_mPARTSUPP1.index[1]);
-          const HASH_RES_t h5 = COUNT_mPARTSUPP1_mapkey0_idxfn::hash(se13.modify0(lineitem_suppkey));
-          HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode* n1 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode*>(i1->slice(se13, h5));
-          COUNT_mPARTSUPP1_entry* e1;
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_01* i1 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01*>(COUNT_mSUPPLIER2_E1_1.index[1]);
+          const HASH_RES_t h1 = COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::hash(se3.modify01(lineitem_partkey, lineitem_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode* n1 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode*>(i1->slice(se3, h1));
+          COUNT_mSUPPLIER2_E1_1_entry* e1;
          
           if (n1 && (e1 = n1->obj)) {
             do {                
-              STRING_TYPE s_name = e1->S_NAME;
-              STRING_TYPE s_address = e1->S_ADDRESS;
+              long ps_availqty = e1->PS_AVAILQTY;
               long v1 = e1->__av;
-              long agg1 = 0L;
-              DOUBLE_TYPE l1 = ((COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se3.modify(lineitem_partkey,lineitem_suppkey)) + (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? lineitem_quantity : 0.0)) * 0.5);
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_01* i2 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01*>(COUNT_mSUPPLIER2_E1_1.index[1]);
-                const HASH_RES_t h1 = COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::hash(se4.modify01(lineitem_partkey, lineitem_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode* n2 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode*>(i2->slice(se4, h1));
-                COUNT_mSUPPLIER2_E1_1_entry* e2;
-               
-                if (n2 && (e2 = n2->obj)) {
-                  do {                
-                    long ps_availqty = e2->PS_AVAILQTY;
-                    long v2 = e2->__av;
-                    (/*if */(ps_availqty > l1) ? agg1 += v2 : 0L);
-                    n2 = n2->nxt;
-                  } while (n2 && (e2 = n2->obj) && h1 == n2->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::equals(se4, *e2)); 
-                }
-              }long agg2 = 0L;
-              DOUBLE_TYPE l2 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se5.modify(lineitem_partkey,lineitem_suppkey)) * 0.5);
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_01* i3 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01*>(COUNT_mSUPPLIER2_E1_1.index[1]);
-                const HASH_RES_t h2 = COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::hash(se6.modify01(lineitem_partkey, lineitem_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode* n3 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode*>(i3->slice(se6, h2));
-                COUNT_mSUPPLIER2_E1_1_entry* e3;
-               
-                if (n3 && (e3 = n3->obj)) {
-                  do {                
-                    long ps_availqty = e3->PS_AVAILQTY;
-                    long v3 = e3->__av;
-                    (/*if */(ps_availqty > l2) ? agg2 += v3 : 0L);
-                    n3 = n3->nxt;
-                  } while (n3 && (e3 = n3->obj) && h2 == n3->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::equals(se6, *e3)); 
-                }
-              }long agg3 = 0L;
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i4 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
-                const HASH_RES_t h3 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se9.modify1(lineitem_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n4 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i4->slice(se9, h3));
-                COUNT_mSUPPLIER2_E1_1_entry* e4;
-               
-                if (n4 && (e4 = n4->obj)) {
-                  do {                
-                    long ps_partkey = e4->PS_PARTKEY;
-                    long ps_availqty = e4->PS_AVAILQTY;
-                    long v4 = e4->__av;
-                    DOUBLE_TYPE l3 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se7.modify(ps_partkey,lineitem_suppkey)) * 0.5);
-                    (/*if */(ps_availqty > l3) ? agg3 += (v4 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se8.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                    n4 = n4->nxt;
-                  } while (n4 && (e4 = n4->obj) && h3 == n4->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se9, *e4)); 
-                }
-              }long agg4 = 0L;
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i5 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
-                const HASH_RES_t h4 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se12.modify1(lineitem_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n5 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i5->slice(se12, h4));
-                COUNT_mSUPPLIER2_E1_1_entry* e5;
-               
-                if (n5 && (e5 = n5->obj)) {
-                  do {                
-                    long ps_partkey = e5->PS_PARTKEY;
-                    long ps_availqty = e5->PS_AVAILQTY;
-                    long v5 = e5->__av;
-                    DOUBLE_TYPE l4 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se10.modify(ps_partkey,lineitem_suppkey)) * 0.5);
-                    (/*if */(ps_availqty > l4) ? agg4 += (v5 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se11.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                    n5 = n5->nxt;
-                  } while (n5 && (e5 = n5->obj) && h4 == n5->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se12, *e5)); 
-                }
-              }COUNT.addOrDelOnZero(se1.modify(s_name,s_address),(v1 * (((((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se2.modify(lineitem_partkey)) != 0 ? 1L : 0L) * (agg1 + (agg2 * -1L))) + agg3) != 0 ? 1L : 0L) + ((agg4 != 0 ? 1L : 0L) * -1L))));
+              (/*if */(ps_availqty > l1) ? agg1 += v1 : 0L);
               n1 = n1->nxt;
-            } while (n1 && (e1 = n1->obj) && h5 == n1->hash &&  COUNT_mPARTSUPP1_mapkey0_idxfn::equals(se13, *e1)); 
+            } while (n1 && (e1 = n1->obj) && h1 == n1->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::equals(se3, *e1)); 
           }
-        }(/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? COUNT_mSUPPLIER2_E1_1_L1_1.addOrDelOnZero(se14.modify(lineitem_partkey,lineitem_suppkey),lineitem_quantity) : (void)0);
+        }long agg2 = 0L;
+        DOUBLE_TYPE l2 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se4.modify(lineitem_partkey,lineitem_suppkey)) * 0.5);
+        { //slice 
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_01* i2 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01*>(COUNT_mSUPPLIER2_E1_1.index[1]);
+          const HASH_RES_t h2 = COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::hash(se5.modify01(lineitem_partkey, lineitem_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode* n2 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode*>(i2->slice(se5, h2));
+          COUNT_mSUPPLIER2_E1_1_entry* e2;
+         
+          if (n2 && (e2 = n2->obj)) {
+            do {                
+              long ps_availqty = e2->PS_AVAILQTY;
+              long v2 = e2->__av;
+              (/*if */(ps_availqty > l2) ? agg2 += v2 : 0L);
+              n2 = n2->nxt;
+            } while (n2 && (e2 = n2->obj) && h2 == n2->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::equals(se5, *e2)); 
+          }
+        }long agg3 = 0L;
+        { //slice 
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i3 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
+          const HASH_RES_t h3 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se9.modify1(lineitem_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n3 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i3->slice(se9, h3));
+          COUNT_mSUPPLIER2_E1_1_entry* e3;
+         
+          if (n3 && (e3 = n3->obj)) {
+            do {                
+              long ps_partkey = e3->PS_PARTKEY;
+              long ps_availqty = e3->PS_AVAILQTY;
+              long v3 = e3->__av;
+              DOUBLE_TYPE l3 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se7.modify(ps_partkey,lineitem_suppkey)) * 0.5);
+              (/*if */(ps_availqty > l3) ? agg3 += (v3 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se8.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+              n3 = n3->nxt;
+            } while (n3 && (e3 = n3->obj) && h3 == n3->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se9, *e3)); 
+          }
+        }long agg4 = 0L;
+        { //slice 
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i4 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
+          const HASH_RES_t h4 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se12.modify1(lineitem_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n4 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i4->slice(se12, h4));
+          COUNT_mSUPPLIER2_E1_1_entry* e4;
+         
+          if (n4 && (e4 = n4->obj)) {
+            do {                
+              long ps_partkey = e4->PS_PARTKEY;
+              long ps_availqty = e4->PS_AVAILQTY;
+              long v4 = e4->__av;
+              DOUBLE_TYPE l4 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se10.modify(ps_partkey,lineitem_suppkey)) * 0.5);
+              (/*if */(ps_availqty > l4) ? agg4 += (v4 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se11.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+              n4 = n4->nxt;
+            } while (n4 && (e4 = n4->obj) && h4 == n4->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se12, *e4)); 
+          }
+        }{ //slice 
+          const HashIndex_COUNT_mPARTSUPP1_map_0* i5 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0*>(COUNT_mPARTSUPP1.index[1]);
+          const HASH_RES_t h5 = COUNT_mPARTSUPP1_mapkey0_idxfn::hash(se13.modify0(lineitem_suppkey));
+          HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode* n5 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode*>(i5->slice(se13, h5));
+          COUNT_mPARTSUPP1_entry* e5;
+         
+          if (n5 && (e5 = n5->obj)) {
+            do {                
+              STRING_TYPE s_name = e5->S_NAME;
+              STRING_TYPE s_address = e5->S_ADDRESS;
+              long v5 = e5->__av;
+              COUNT.addOrDelOnZero(se1.modify(s_name,s_address),((((((agg1 + (agg2 * -1L)) * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se6.modify(lineitem_partkey)) != 0 ? 1L : 0L)) + agg3) != 0 ? 1L : 0L) + ((agg4 != 0 ? 1L : 0L) * -1L)) * v5));
+              n5 = n5->nxt;
+            } while (n5 && (e5 = n5->obj) && h5 == n5->hash &&  COUNT_mPARTSUPP1_mapkey0_idxfn::equals(se13, *e5)); 
+          }
+        }(/*if */(c2 > lineitem_shipdate && lineitem_shipdate >= c1) ? COUNT_mSUPPLIER2_E1_1_L1_1.addOrDelOnZero(se14.modify(lineitem_partkey,lineitem_suppkey),lineitem_quantity) : (void)0);
       }
     }
     void on_delete_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
+        long agg5 = 0L;
+        DOUBLE_TYPE l5 = ((COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se16.modify(lineitem_partkey,lineitem_suppkey)) + (/*if */(c2 > lineitem_shipdate && lineitem_shipdate >= c1) ? (-1L * lineitem_quantity) : 0.0)) * 0.5);
         { //slice 
-          const HashIndex_COUNT_mPARTSUPP1_map_0* i6 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0*>(COUNT_mPARTSUPP1.index[1]);
-          const HASH_RES_t h10 = COUNT_mPARTSUPP1_mapkey0_idxfn::hash(se27.modify0(lineitem_suppkey));
-          HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode* n6 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode*>(i6->slice(se27, h10));
-          COUNT_mPARTSUPP1_entry* e6;
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_01* i6 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01*>(COUNT_mSUPPLIER2_E1_1.index[1]);
+          const HASH_RES_t h6 = COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::hash(se17.modify01(lineitem_partkey, lineitem_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode* n6 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode*>(i6->slice(se17, h6));
+          COUNT_mSUPPLIER2_E1_1_entry* e6;
          
           if (n6 && (e6 = n6->obj)) {
             do {                
-              STRING_TYPE s_name = e6->S_NAME;
-              STRING_TYPE s_address = e6->S_ADDRESS;
+              long ps_availqty = e6->PS_AVAILQTY;
               long v6 = e6->__av;
-              long agg5 = 0L;
-              DOUBLE_TYPE l5 = ((COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se17.modify(lineitem_partkey,lineitem_suppkey)) + (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? (-1L * lineitem_quantity) : 0.0)) * 0.5);
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_01* i7 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01*>(COUNT_mSUPPLIER2_E1_1.index[1]);
-                const HASH_RES_t h6 = COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::hash(se18.modify01(lineitem_partkey, lineitem_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode* n7 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode*>(i7->slice(se18, h6));
-                COUNT_mSUPPLIER2_E1_1_entry* e7;
-               
-                if (n7 && (e7 = n7->obj)) {
-                  do {                
-                    long ps_availqty = e7->PS_AVAILQTY;
-                    long v7 = e7->__av;
-                    (/*if */(ps_availqty > l5) ? agg5 += v7 : 0L);
-                    n7 = n7->nxt;
-                  } while (n7 && (e7 = n7->obj) && h6 == n7->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::equals(se18, *e7)); 
-                }
-              }long agg6 = 0L;
-              DOUBLE_TYPE l6 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se19.modify(lineitem_partkey,lineitem_suppkey)) * 0.5);
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_01* i8 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01*>(COUNT_mSUPPLIER2_E1_1.index[1]);
-                const HASH_RES_t h7 = COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::hash(se20.modify01(lineitem_partkey, lineitem_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode* n8 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode*>(i8->slice(se20, h7));
-                COUNT_mSUPPLIER2_E1_1_entry* e8;
-               
-                if (n8 && (e8 = n8->obj)) {
-                  do {                
-                    long ps_availqty = e8->PS_AVAILQTY;
-                    long v8 = e8->__av;
-                    (/*if */(ps_availqty > l6) ? agg6 += v8 : 0L);
-                    n8 = n8->nxt;
-                  } while (n8 && (e8 = n8->obj) && h7 == n8->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::equals(se20, *e8)); 
-                }
-              }long agg7 = 0L;
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i9 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
-                const HASH_RES_t h8 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se23.modify1(lineitem_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n9 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i9->slice(se23, h8));
-                COUNT_mSUPPLIER2_E1_1_entry* e9;
-               
-                if (n9 && (e9 = n9->obj)) {
-                  do {                
-                    long ps_partkey = e9->PS_PARTKEY;
-                    long ps_availqty = e9->PS_AVAILQTY;
-                    long v9 = e9->__av;
-                    DOUBLE_TYPE l7 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se21.modify(ps_partkey,lineitem_suppkey)) * 0.5);
-                    (/*if */(ps_availqty > l7) ? agg7 += (v9 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se22.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                    n9 = n9->nxt;
-                  } while (n9 && (e9 = n9->obj) && h8 == n9->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se23, *e9)); 
-                }
-              }long agg8 = 0L;
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i10 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
-                const HASH_RES_t h9 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se26.modify1(lineitem_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n10 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i10->slice(se26, h9));
-                COUNT_mSUPPLIER2_E1_1_entry* e10;
-               
-                if (n10 && (e10 = n10->obj)) {
-                  do {                
-                    long ps_partkey = e10->PS_PARTKEY;
-                    long ps_availqty = e10->PS_AVAILQTY;
-                    long v10 = e10->__av;
-                    DOUBLE_TYPE l8 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se24.modify(ps_partkey,lineitem_suppkey)) * 0.5);
-                    (/*if */(ps_availqty > l8) ? agg8 += (v10 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se25.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                    n10 = n10->nxt;
-                  } while (n10 && (e10 = n10->obj) && h9 == n10->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se26, *e10)); 
-                }
-              }COUNT.addOrDelOnZero(se15.modify(s_name,s_address),(v6 * (((((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se16.modify(lineitem_partkey)) != 0 ? 1L : 0L) * (agg5 + (agg6 * -1L))) + agg7) != 0 ? 1L : 0L) + ((agg8 != 0 ? 1L : 0L) * -1L))));
+              (/*if */(ps_availqty > l5) ? agg5 += v6 : 0L);
               n6 = n6->nxt;
-            } while (n6 && (e6 = n6->obj) && h10 == n6->hash &&  COUNT_mPARTSUPP1_mapkey0_idxfn::equals(se27, *e6)); 
+            } while (n6 && (e6 = n6->obj) && h6 == n6->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::equals(se17, *e6)); 
           }
-        }(/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? COUNT_mSUPPLIER2_E1_1_L1_1.addOrDelOnZero(se28.modify(lineitem_partkey,lineitem_suppkey),(-1L * lineitem_quantity)) : (void)0);
+        }long agg6 = 0L;
+        DOUBLE_TYPE l6 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se18.modify(lineitem_partkey,lineitem_suppkey)) * 0.5);
+        { //slice 
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_01* i7 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01*>(COUNT_mSUPPLIER2_E1_1.index[1]);
+          const HASH_RES_t h7 = COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::hash(se19.modify01(lineitem_partkey, lineitem_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode* n7 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_01::IdxNode*>(i7->slice(se19, h7));
+          COUNT_mSUPPLIER2_E1_1_entry* e7;
+         
+          if (n7 && (e7 = n7->obj)) {
+            do {                
+              long ps_availqty = e7->PS_AVAILQTY;
+              long v7 = e7->__av;
+              (/*if */(ps_availqty > l6) ? agg6 += v7 : 0L);
+              n7 = n7->nxt;
+            } while (n7 && (e7 = n7->obj) && h7 == n7->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn::equals(se19, *e7)); 
+          }
+        }long agg7 = 0L;
+        { //slice 
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i8 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
+          const HASH_RES_t h8 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se23.modify1(lineitem_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n8 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i8->slice(se23, h8));
+          COUNT_mSUPPLIER2_E1_1_entry* e8;
+         
+          if (n8 && (e8 = n8->obj)) {
+            do {                
+              long ps_partkey = e8->PS_PARTKEY;
+              long ps_availqty = e8->PS_AVAILQTY;
+              long v8 = e8->__av;
+              DOUBLE_TYPE l7 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se21.modify(ps_partkey,lineitem_suppkey)) * 0.5);
+              (/*if */(ps_availqty > l7) ? agg7 += (v8 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se22.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+              n8 = n8->nxt;
+            } while (n8 && (e8 = n8->obj) && h8 == n8->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se23, *e8)); 
+          }
+        }long agg8 = 0L;
+        { //slice 
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i9 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
+          const HASH_RES_t h9 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se26.modify1(lineitem_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n9 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i9->slice(se26, h9));
+          COUNT_mSUPPLIER2_E1_1_entry* e9;
+         
+          if (n9 && (e9 = n9->obj)) {
+            do {                
+              long ps_partkey = e9->PS_PARTKEY;
+              long ps_availqty = e9->PS_AVAILQTY;
+              long v9 = e9->__av;
+              DOUBLE_TYPE l8 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se24.modify(ps_partkey,lineitem_suppkey)) * 0.5);
+              (/*if */(ps_availqty > l8) ? agg8 += (v9 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se25.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+              n9 = n9->nxt;
+            } while (n9 && (e9 = n9->obj) && h9 == n9->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se26, *e9)); 
+          }
+        }{ //slice 
+          const HashIndex_COUNT_mPARTSUPP1_map_0* i10 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0*>(COUNT_mPARTSUPP1.index[1]);
+          const HASH_RES_t h10 = COUNT_mPARTSUPP1_mapkey0_idxfn::hash(se27.modify0(lineitem_suppkey));
+          HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode* n10 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode*>(i10->slice(se27, h10));
+          COUNT_mPARTSUPP1_entry* e10;
+         
+          if (n10 && (e10 = n10->obj)) {
+            do {                
+              STRING_TYPE s_name = e10->S_NAME;
+              STRING_TYPE s_address = e10->S_ADDRESS;
+              long v10 = e10->__av;
+              COUNT.addOrDelOnZero(se15.modify(s_name,s_address),((((((agg5 + (agg6 * -1L)) * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se20.modify(lineitem_partkey)) != 0 ? 1L : 0L)) + agg7) != 0 ? 1L : 0L) + ((agg8 != 0 ? 1L : 0L) * -1L)) * v10));
+              n10 = n10->nxt;
+            } while (n10 && (e10 = n10->obj) && h10 == n10->hash &&  COUNT_mPARTSUPP1_mapkey0_idxfn::equals(se27, *e10)); 
+          }
+        }(/*if */(c2 > lineitem_shipdate && lineitem_shipdate >= c1) ? COUNT_mSUPPLIER2_E1_1_L1_1.addOrDelOnZero(se28.modify(lineitem_partkey,lineitem_suppkey),(-1L * lineitem_quantity)) : (void)0);
       }
     }
     void on_insert_PART(const long part_partkey, const STRING_TYPE& part_name, const STRING_TYPE& part_mfgr, const STRING_TYPE& part_brand, const STRING_TYPE& part_type, const long part_size, const STRING_TYPE& part_container, const DOUBLE_TYPE part_retailprice, const STRING_TYPE& part_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(0L != Upreg_match(preg1,part_name)) ? COUNT_mSUPPLIER2_E1_1_E2_1.addOrDelOnZero(se29.modify(part_partkey),1L) : (void)0);
         COUNT.clear();
         {  // foreach
@@ -583,7 +583,7 @@ namespace dbtoaster {
       }
     }
     void on_delete_PART(const long part_partkey, const STRING_TYPE& part_name, const STRING_TYPE& part_mfgr, const STRING_TYPE& part_brand, const STRING_TYPE& part_type, const long part_size, const STRING_TYPE& part_container, const DOUBLE_TYPE part_retailprice, const STRING_TYPE& part_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(0L != Upreg_match(preg1,part_name)) ? COUNT_mSUPPLIER2_E1_1_E2_1.addOrDelOnZero(se34.modify(part_partkey),-1L) : (void)0);
         COUNT.clear();
         {  // foreach
@@ -625,7 +625,7 @@ namespace dbtoaster {
       }
     }
     void on_insert_SUPPLIER(const long supplier_suppkey, const STRING_TYPE& supplier_name, const STRING_TYPE& supplier_address, const long supplier_nationkey, const STRING_TYPE& supplier_phone, const DOUBLE_TYPE supplier_acctbal, const STRING_TYPE& supplier_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         long agg11 = 0L;
         { //slice 
           const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i15 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
@@ -648,7 +648,7 @@ namespace dbtoaster {
       }
     }
     void on_delete_SUPPLIER(const long supplier_suppkey, const STRING_TYPE& supplier_name, const STRING_TYPE& supplier_address, const long supplier_nationkey, const STRING_TYPE& supplier_phone, const DOUBLE_TYPE supplier_acctbal, const STRING_TYPE& supplier_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         long agg12 = 0L;
         { //slice 
           const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i16 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
@@ -671,121 +671,121 @@ namespace dbtoaster {
       }
     }
     void on_insert_PARTSUPP(const long partsupp_partkey, const long partsupp_suppkey, const long partsupp_availqty, const DOUBLE_TYPE partsupp_supplycost, const STRING_TYPE& partsupp_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
+        long agg13 = 0L;
         { //slice 
-          const HashIndex_COUNT_mPARTSUPP1_map_0* i17 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0*>(COUNT_mPARTSUPP1.index[1]);
-          const HASH_RES_t h17 = COUNT_mPARTSUPP1_mapkey0_idxfn::hash(se62.modify0(partsupp_suppkey));
-          HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode* n17 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode*>(i17->slice(se62, h17));
-          COUNT_mPARTSUPP1_entry* e17;
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i17 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
+          const HASH_RES_t h15 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se56.modify1(partsupp_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n17 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i17->slice(se56, h15));
+          COUNT_mSUPPLIER2_E1_1_entry* e17;
          
           if (n17 && (e17 = n17->obj)) {
             do {                
-              STRING_TYPE s_name = e17->S_NAME;
-              STRING_TYPE s_address = e17->S_ADDRESS;
+              long ps_partkey = e17->PS_PARTKEY;
+              long ps_availqty = e17->PS_AVAILQTY;
               long v17 = e17->__av;
-              long agg13 = 0L;
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i18 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
-                const HASH_RES_t h15 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se56.modify1(partsupp_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n18 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i18->slice(se56, h15));
-                COUNT_mSUPPLIER2_E1_1_entry* e18;
-               
-                if (n18 && (e18 = n18->obj)) {
-                  do {                
-                    long ps_partkey = e18->PS_PARTKEY;
-                    long ps_availqty = e18->PS_AVAILQTY;
-                    long v18 = e18->__av;
-                    DOUBLE_TYPE l13 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se54.modify(ps_partkey,partsupp_suppkey)) * 0.5);
-                    (/*if */(ps_availqty > l13) ? agg13 += (v18 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se55.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                    n18 = n18->nxt;
-                  } while (n18 && (e18 = n18->obj) && h15 == n18->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se56, *e18)); 
-                }
-              }long agg14 = 0L;
-              DOUBLE_TYPE l14 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se57.modify(partsupp_partkey,partsupp_suppkey)) * 0.5);
-              (/*if */(partsupp_availqty > l14) ? agg14 += 1L : 0L);
-              long agg15 = 0L;
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i19 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
-                const HASH_RES_t h16 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se61.modify1(partsupp_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n19 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i19->slice(se61, h16));
-                COUNT_mSUPPLIER2_E1_1_entry* e19;
-               
-                if (n19 && (e19 = n19->obj)) {
-                  do {                
-                    long ps_partkey = e19->PS_PARTKEY;
-                    long ps_availqty = e19->PS_AVAILQTY;
-                    long v19 = e19->__av;
-                    DOUBLE_TYPE l15 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se59.modify(ps_partkey,partsupp_suppkey)) * 0.5);
-                    (/*if */(ps_availqty > l15) ? agg15 += (v19 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se60.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                    n19 = n19->nxt;
-                  } while (n19 && (e19 = n19->obj) && h16 == n19->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se61, *e19)); 
-                }
-              }COUNT.addOrDelOnZero(se53.modify(s_name,s_address),(v17 * (((agg13 + (agg14 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se58.modify(partsupp_partkey)) != 0 ? 1L : 0L))) != 0 ? 1L : 0L) + ((agg15 != 0 ? 1L : 0L) * -1L))));
+              DOUBLE_TYPE l13 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se54.modify(ps_partkey,partsupp_suppkey)) * 0.5);
+              (/*if */(ps_availqty > l13) ? agg13 += (v17 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se55.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
               n17 = n17->nxt;
-            } while (n17 && (e17 = n17->obj) && h17 == n17->hash &&  COUNT_mPARTSUPP1_mapkey0_idxfn::equals(se62, *e17)); 
+            } while (n17 && (e17 = n17->obj) && h15 == n17->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se56, *e17)); 
+          }
+        }long agg14 = 0L;
+        DOUBLE_TYPE l14 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se57.modify(partsupp_partkey,partsupp_suppkey)) * 0.5);
+        (/*if */(partsupp_availqty > l14) ? agg14 += 1L : 0L);
+        long agg15 = 0L;
+        { //slice 
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i18 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
+          const HASH_RES_t h16 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se61.modify1(partsupp_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n18 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i18->slice(se61, h16));
+          COUNT_mSUPPLIER2_E1_1_entry* e18;
+         
+          if (n18 && (e18 = n18->obj)) {
+            do {                
+              long ps_partkey = e18->PS_PARTKEY;
+              long ps_availqty = e18->PS_AVAILQTY;
+              long v18 = e18->__av;
+              DOUBLE_TYPE l15 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se59.modify(ps_partkey,partsupp_suppkey)) * 0.5);
+              (/*if */(ps_availqty > l15) ? agg15 += (v18 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se60.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+              n18 = n18->nxt;
+            } while (n18 && (e18 = n18->obj) && h16 == n18->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se61, *e18)); 
+          }
+        }{ //slice 
+          const HashIndex_COUNT_mPARTSUPP1_map_0* i19 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0*>(COUNT_mPARTSUPP1.index[1]);
+          const HASH_RES_t h17 = COUNT_mPARTSUPP1_mapkey0_idxfn::hash(se62.modify0(partsupp_suppkey));
+          HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode* n19 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode*>(i19->slice(se62, h17));
+          COUNT_mPARTSUPP1_entry* e19;
+         
+          if (n19 && (e19 = n19->obj)) {
+            do {                
+              STRING_TYPE s_name = e19->S_NAME;
+              STRING_TYPE s_address = e19->S_ADDRESS;
+              long v19 = e19->__av;
+              COUNT.addOrDelOnZero(se53.modify(s_name,s_address),((((agg13 + (agg14 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se58.modify(partsupp_partkey)) != 0 ? 1L : 0L))) != 0 ? 1L : 0L) + ((agg15 != 0 ? 1L : 0L) * -1L)) * v19));
+              n19 = n19->nxt;
+            } while (n19 && (e19 = n19->obj) && h17 == n19->hash &&  COUNT_mPARTSUPP1_mapkey0_idxfn::equals(se62, *e19)); 
           }
         }COUNT_mSUPPLIER2_E1_1.addOrDelOnZero(se63.modify(partsupp_partkey,partsupp_suppkey,partsupp_availqty),1L);
       }
     }
     void on_delete_PARTSUPP(const long partsupp_partkey, const long partsupp_suppkey, const long partsupp_availqty, const DOUBLE_TYPE partsupp_supplycost, const STRING_TYPE& partsupp_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
+        long agg16 = 0L;
         { //slice 
-          const HashIndex_COUNT_mPARTSUPP1_map_0* i20 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0*>(COUNT_mPARTSUPP1.index[1]);
-          const HASH_RES_t h20 = COUNT_mPARTSUPP1_mapkey0_idxfn::hash(se73.modify0(partsupp_suppkey));
-          HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode* n20 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode*>(i20->slice(se73, h20));
-          COUNT_mPARTSUPP1_entry* e20;
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i20 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
+          const HASH_RES_t h18 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se67.modify1(partsupp_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n20 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i20->slice(se67, h18));
+          COUNT_mSUPPLIER2_E1_1_entry* e20;
          
           if (n20 && (e20 = n20->obj)) {
             do {                
-              STRING_TYPE s_name = e20->S_NAME;
-              STRING_TYPE s_address = e20->S_ADDRESS;
+              long ps_partkey = e20->PS_PARTKEY;
+              long ps_availqty = e20->PS_AVAILQTY;
               long v20 = e20->__av;
-              long agg16 = 0L;
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i21 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
-                const HASH_RES_t h18 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se67.modify1(partsupp_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n21 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i21->slice(se67, h18));
-                COUNT_mSUPPLIER2_E1_1_entry* e21;
-               
-                if (n21 && (e21 = n21->obj)) {
-                  do {                
-                    long ps_partkey = e21->PS_PARTKEY;
-                    long ps_availqty = e21->PS_AVAILQTY;
-                    long v21 = e21->__av;
-                    DOUBLE_TYPE l16 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se65.modify(ps_partkey,partsupp_suppkey)) * 0.5);
-                    (/*if */(ps_availqty > l16) ? agg16 += (v21 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se66.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                    n21 = n21->nxt;
-                  } while (n21 && (e21 = n21->obj) && h18 == n21->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se67, *e21)); 
-                }
-              }long agg17 = 0L;
-              DOUBLE_TYPE l17 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se68.modify(partsupp_partkey,partsupp_suppkey)) * 0.5);
-              (/*if */(partsupp_availqty > l17) ? agg17 += 1L : 0L);
-              long agg18 = 0L;
-              { //slice 
-                const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i22 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
-                const HASH_RES_t h19 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se72.modify1(partsupp_suppkey));
-                HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n22 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i22->slice(se72, h19));
-                COUNT_mSUPPLIER2_E1_1_entry* e22;
-               
-                if (n22 && (e22 = n22->obj)) {
-                  do {                
-                    long ps_partkey = e22->PS_PARTKEY;
-                    long ps_availqty = e22->PS_AVAILQTY;
-                    long v22 = e22->__av;
-                    DOUBLE_TYPE l18 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se70.modify(ps_partkey,partsupp_suppkey)) * 0.5);
-                    (/*if */(ps_availqty > l18) ? agg18 += (v22 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se71.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                    n22 = n22->nxt;
-                  } while (n22 && (e22 = n22->obj) && h19 == n22->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se72, *e22)); 
-                }
-              }COUNT.addOrDelOnZero(se64.modify(s_name,s_address),(v20 * (((agg16 + (agg17 * ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se69.modify(partsupp_partkey)) != 0 ? 1L : 0L) * -1L))) != 0 ? 1L : 0L) + ((agg18 != 0 ? 1L : 0L) * -1L))));
+              DOUBLE_TYPE l16 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se65.modify(ps_partkey,partsupp_suppkey)) * 0.5);
+              (/*if */(ps_availqty > l16) ? agg16 += (v20 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se66.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
               n20 = n20->nxt;
-            } while (n20 && (e20 = n20->obj) && h20 == n20->hash &&  COUNT_mPARTSUPP1_mapkey0_idxfn::equals(se73, *e20)); 
+            } while (n20 && (e20 = n20->obj) && h18 == n20->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se67, *e20)); 
+          }
+        }long agg17 = 0L;
+        DOUBLE_TYPE l17 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se68.modify(partsupp_partkey,partsupp_suppkey)) * 0.5);
+        (/*if */(partsupp_availqty > l17) ? agg17 += 1L : 0L);
+        long agg18 = 0L;
+        { //slice 
+          const HashIndex_COUNT_mSUPPLIER2_E1_1_map_1* i21 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1*>(COUNT_mSUPPLIER2_E1_1.index[2]);
+          const HASH_RES_t h19 = COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::hash(se72.modify1(partsupp_suppkey));
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode* n21 = static_cast<HashIndex_COUNT_mSUPPLIER2_E1_1_map_1::IdxNode*>(i21->slice(se72, h19));
+          COUNT_mSUPPLIER2_E1_1_entry* e21;
+         
+          if (n21 && (e21 = n21->obj)) {
+            do {                
+              long ps_partkey = e21->PS_PARTKEY;
+              long ps_availqty = e21->PS_AVAILQTY;
+              long v21 = e21->__av;
+              DOUBLE_TYPE l18 = (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se70.modify(ps_partkey,partsupp_suppkey)) * 0.5);
+              (/*if */(ps_availqty > l18) ? agg18 += (v21 * (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se71.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+              n21 = n21->nxt;
+            } while (n21 && (e21 = n21->obj) && h19 == n21->hash &&  COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn::equals(se72, *e21)); 
+          }
+        }{ //slice 
+          const HashIndex_COUNT_mPARTSUPP1_map_0* i22 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0*>(COUNT_mPARTSUPP1.index[1]);
+          const HASH_RES_t h20 = COUNT_mPARTSUPP1_mapkey0_idxfn::hash(se73.modify0(partsupp_suppkey));
+          HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode* n22 = static_cast<HashIndex_COUNT_mPARTSUPP1_map_0::IdxNode*>(i22->slice(se73, h20));
+          COUNT_mPARTSUPP1_entry* e22;
+         
+          if (n22 && (e22 = n22->obj)) {
+            do {                
+              STRING_TYPE s_name = e22->S_NAME;
+              STRING_TYPE s_address = e22->S_ADDRESS;
+              long v22 = e22->__av;
+              COUNT.addOrDelOnZero(se64.modify(s_name,s_address),((((agg16 + (agg17 * ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se69.modify(partsupp_partkey)) != 0 ? 1L : 0L) * -1L))) != 0 ? 1L : 0L) + ((agg18 != 0 ? 1L : 0L) * -1L)) * v22));
+              n22 = n22->nxt;
+            } while (n22 && (e22 = n22->obj) && h20 == n22->hash &&  COUNT_mPARTSUPP1_mapkey0_idxfn::equals(se73, *e22)); 
           }
         }COUNT_mSUPPLIER2_E1_1.addOrDelOnZero(se74.modify(partsupp_partkey,partsupp_suppkey,partsupp_availqty),-1L);
       }
     }
     void on_system_ready_event() {
-      {  
+      {  //
         COUNT_mSUPPLIER1.clear();
         STRING_TYPE l19 = c3;
         { //slice 
@@ -812,11 +812,11 @@ namespace dbtoaster {
   
     /* Sample entries for avoiding recreation of temporary objects */
     COUNT_entry se1;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se2;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se3;
-    COUNT_mSUPPLIER2_E1_1_entry se4;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se5;
-    COUNT_mSUPPLIER2_E1_1_entry se6;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se2;
+    COUNT_mSUPPLIER2_E1_1_entry se3;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se4;
+    COUNT_mSUPPLIER2_E1_1_entry se5;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se6;
     COUNT_mSUPPLIER2_E1_1_L1_1_entry se7;
     COUNT_mSUPPLIER2_E1_1_E2_1_entry se8;
     COUNT_mSUPPLIER2_E1_1_entry se9;
@@ -826,11 +826,11 @@ namespace dbtoaster {
     COUNT_mPARTSUPP1_entry se13;
     COUNT_mSUPPLIER2_E1_1_L1_1_entry se14;
     COUNT_entry se15;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se16;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se17;
-    COUNT_mSUPPLIER2_E1_1_entry se18;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se19;
-    COUNT_mSUPPLIER2_E1_1_entry se20;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se16;
+    COUNT_mSUPPLIER2_E1_1_entry se17;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se18;
+    COUNT_mSUPPLIER2_E1_1_entry se19;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se20;
     COUNT_mSUPPLIER2_E1_1_L1_1_entry se21;
     COUNT_mSUPPLIER2_E1_1_E2_1_entry se22;
     COUNT_mSUPPLIER2_E1_1_entry se23;

@@ -54,17 +54,17 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_insert_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate && lineitem_discount >= 0.05 && 0.07 >= lineitem_discount && 24L > lineitem_quantity) ? REVENUE += (lineitem_extendedprice * lineitem_discount) : 0L);
       }
     }
     void on_delete_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate && lineitem_discount >= 0.05 && 0.07 >= lineitem_discount && 24L > lineitem_quantity) ? REVENUE += (-1L * (lineitem_extendedprice * lineitem_discount)) : 0L);
       }
     }
     void on_system_ready_event() {
-      {  
+      {  //
         REVENUE = 0.0;
       }
     }

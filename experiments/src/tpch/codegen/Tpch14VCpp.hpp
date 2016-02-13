@@ -137,8 +137,8 @@ namespace dbtoaster {
   /* Type definition providing a way to incrementally maintain the results of the sql program */
   struct data_t : tlq_t{
     data_t(): tlq_t(), PROMO_REVENUE_mLINEITEM1_L1_1_L1_1(0.0), PROMO_REVENUE_mLINEITEM2(0.0) {
-      c1 = Udate(STRING_TYPE("1995-9-1"));
-      c2 = Udate(STRING_TYPE("1995-10-1"));
+      c2 = Udate(STRING_TYPE("1995-9-1"));
+      c1 = Udate(STRING_TYPE("1995-10-1"));
       /* regex_t init */
       if(regcomp(&preg1, "^PROMO.*$", REG_EXTENDED | REG_NOSUB)){
         cerr << "Error compiling regular expression: /^PROMO.*$/" << endl;
@@ -155,35 +155,35 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_insert_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
-        (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 += (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se2.modify(lineitem_partkey)) * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))) : 0L);
-        (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se3.modify(lineitem_partkey),(lineitem_extendedprice * (1L + (-1L * lineitem_discount)))) : (void)0);
-        (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM2 += (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se5.modify(lineitem_partkey)) * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))) : 0L);
+      {  //++tN;
+        (/*if */(c1 > lineitem_shipdate && lineitem_shipdate >= c2) ? PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 += (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se2.modify(lineitem_partkey)) * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))) : 0L);
+        (/*if */(lineitem_shipdate >= c2 && c1 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se3.modify(lineitem_partkey),(lineitem_extendedprice * (1L + (-1L * lineitem_discount)))) : (void)0);
+        (/*if */(c1 > lineitem_shipdate && lineitem_shipdate >= c2) ? PROMO_REVENUE_mLINEITEM2 += (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se5.modify(lineitem_partkey)) * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))) : 0L);
         DOUBLE_TYPE agg1 = 0.0;
         DOUBLE_TYPE agg2 = 0.0;
         DOUBLE_TYPE l2 = PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
         agg2 += Ulistmax(1L, l2);
         DOUBLE_TYPE l1 = agg2;
         agg1 += Udiv(l1);
-        PROMO_REVENUE = (agg1 * (PROMO_REVENUE_mLINEITEM2 * 100.0));
+        PROMO_REVENUE = (PROMO_REVENUE_mLINEITEM2 * (agg1 * 100.0));
       }
     }
     void on_delete_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
-        (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 += (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se8.modify(lineitem_partkey)) * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : 0L);
-        (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se9.modify(lineitem_partkey),(-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : (void)0);
-        (/*if */(lineitem_shipdate >= c1 && c2 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM2 += (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se11.modify(lineitem_partkey)) * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : 0L);
+      {  //++tN;
+        (/*if */(lineitem_shipdate >= c2 && c1 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 += (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se8.modify(lineitem_partkey)) * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : 0L);
+        (/*if */(lineitem_shipdate >= c2 && c1 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se9.modify(lineitem_partkey),(-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : (void)0);
+        (/*if */(lineitem_shipdate >= c2 && c1 > lineitem_shipdate) ? PROMO_REVENUE_mLINEITEM2 += (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se11.modify(lineitem_partkey)) * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : 0L);
         DOUBLE_TYPE agg3 = 0.0;
         DOUBLE_TYPE agg4 = 0.0;
         DOUBLE_TYPE l4 = PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
         agg4 += Ulistmax(1L, l4);
         DOUBLE_TYPE l3 = agg4;
         agg3 += Udiv(l3);
-        PROMO_REVENUE = (agg3 * (PROMO_REVENUE_mLINEITEM2 * 100.0));
+        PROMO_REVENUE = (PROMO_REVENUE_mLINEITEM2 * (agg3 * 100.0));
       }
     }
     void on_insert_PART(const long part_partkey, const STRING_TYPE& part_name, const STRING_TYPE& part_mfgr, const STRING_TYPE& part_brand, const STRING_TYPE& part_type, const long part_size, const STRING_TYPE& part_container, const DOUBLE_TYPE part_retailprice, const STRING_TYPE& part_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 += PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se14.modify(part_partkey));
         PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.addOrDelOnZero(se15.modify(part_partkey),1L);
         (/*if */(0L != Upreg_match(preg1,part_type)) ? PROMO_REVENUE_mLINEITEM2 += PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se17.modify(part_partkey)) : 0L);
@@ -194,11 +194,11 @@ namespace dbtoaster {
         agg6 += Ulistmax(1L, l6);
         DOUBLE_TYPE l5 = agg6;
         agg5 += Udiv(l5);
-        PROMO_REVENUE = (agg5 * (PROMO_REVENUE_mLINEITEM2 * 100.0));
+        PROMO_REVENUE = (PROMO_REVENUE_mLINEITEM2 * (agg5 * 100.0));
       }
     }
     void on_delete_PART(const long part_partkey, const STRING_TYPE& part_name, const STRING_TYPE& part_mfgr, const STRING_TYPE& part_brand, const STRING_TYPE& part_type, const long part_size, const STRING_TYPE& part_container, const DOUBLE_TYPE part_retailprice, const STRING_TYPE& part_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 += (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se21.modify(part_partkey)) * -1L);
         PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.addOrDelOnZero(se22.modify(part_partkey),-1L);
         (/*if */(0L != Upreg_match(preg1,part_type)) ? PROMO_REVENUE_mLINEITEM2 += (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se24.modify(part_partkey)) * -1L) : 0L);
@@ -209,11 +209,11 @@ namespace dbtoaster {
         agg8 += Ulistmax(1L, l8);
         DOUBLE_TYPE l7 = agg8;
         agg7 += Udiv(l7);
-        PROMO_REVENUE = (agg7 * (PROMO_REVENUE_mLINEITEM2 * 100.0));
+        PROMO_REVENUE = (PROMO_REVENUE_mLINEITEM2 * (agg7 * 100.0));
       }
     }
     void on_system_ready_event() {
-      {  
+      {  //
         PROMO_REVENUE = 0.0;
         PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 = 0.0;
         PROMO_REVENUE_mLINEITEM2 = 0.0;
@@ -247,8 +247,8 @@ namespace dbtoaster {
     DOUBLE_TYPE PROMO_REVENUE_mLINEITEM2;
     PROMO_REVENUE_mLINEITEM2_mLINEITEM3_map PROMO_REVENUE_mLINEITEM2_mLINEITEM3;
     
-    /*const static*/ long c1;
     /*const static*/ long c2;
+    /*const static*/ long c1;
   
   };
 

@@ -517,7 +517,7 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_insert_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(c1 >= lineitem_shipdate) ? SUM_QTY.addOrDelOnZero(se1.modify(lineitem_returnflag,lineitem_linestatus),lineitem_quantity) : (void)0);
         (/*if */(c1 >= lineitem_shipdate) ? SUM_BASE_PRICE.addOrDelOnZero(se2.modify(lineitem_returnflag,lineitem_linestatus),lineitem_extendedprice) : (void)0);
         (/*if */(c1 >= lineitem_shipdate) ? SUM_DISC_PRICE.addOrDelOnZero(se3.modify(lineitem_returnflag,lineitem_linestatus),(lineitem_extendedprice * (1L + (-1L * lineitem_discount)))) : (void)0);
@@ -560,7 +560,7 @@ namespace dbtoaster {
       }
     }
     void on_delete_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(c1 >= lineitem_shipdate) ? SUM_QTY.addOrDelOnZero(se25.modify(lineitem_returnflag,lineitem_linestatus),(-1L * lineitem_quantity)) : (void)0);
         (/*if */(c1 >= lineitem_shipdate) ? SUM_BASE_PRICE.addOrDelOnZero(se26.modify(lineitem_returnflag,lineitem_linestatus),(-1L * lineitem_extendedprice)) : (void)0);
         (/*if */(c1 >= lineitem_shipdate) ? SUM_DISC_PRICE.addOrDelOnZero(se27.modify(lineitem_returnflag,lineitem_linestatus),(-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : (void)0);
@@ -603,7 +603,7 @@ namespace dbtoaster {
       }
     }
     void on_system_ready_event() {
-      {  
+      {  //
         
       }
     }

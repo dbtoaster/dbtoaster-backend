@@ -164,7 +164,7 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_insert_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         { //slice 
           const HashIndex_ORDER_COUNT_mLINEITEM1_map_0* i1 = static_cast<HashIndex_ORDER_COUNT_mLINEITEM1_map_0*>(ORDER_COUNT_mLINEITEM1.index[1]);
           const HASH_RES_t h1 = ORDER_COUNT_mLINEITEM1_mapkey0_idxfn::hash(se4.modify0(lineitem_orderkey));
@@ -175,7 +175,7 @@ namespace dbtoaster {
             do {                
               STRING_TYPE o_orderpriority = e1->O_ORDERPRIORITY;
               long v1 = e1->__av;
-              ORDER_COUNT.addOrDelOnZero(se1.modify(o_orderpriority),(v1 * (((ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se2.modify(lineitem_orderkey)) + (/*if */(lineitem_receiptdate > lineitem_commitdate) ? 1L : 0L)) != 0 ? 1L : 0L) + ((ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se3.modify(lineitem_orderkey)) != 0 ? 1L : 0L) * -1L))));
+              ORDER_COUNT.addOrDelOnZero(se1.modify(o_orderpriority),((((ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se2.modify(lineitem_orderkey)) + (/*if */(lineitem_receiptdate > lineitem_commitdate) ? 1L : 0L)) != 0 ? 1L : 0L) + ((ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se3.modify(lineitem_orderkey)) != 0 ? 1L : 0L) * -1L)) * v1));
               n1 = n1->nxt;
             } while (n1 && (e1 = n1->obj) && h1 == n1->hash &&  ORDER_COUNT_mLINEITEM1_mapkey0_idxfn::equals(se4, *e1)); 
           }
@@ -183,7 +183,7 @@ namespace dbtoaster {
       }
     }
     void on_delete_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         { //slice 
           const HashIndex_ORDER_COUNT_mLINEITEM1_map_0* i2 = static_cast<HashIndex_ORDER_COUNT_mLINEITEM1_map_0*>(ORDER_COUNT_mLINEITEM1.index[1]);
           const HASH_RES_t h2 = ORDER_COUNT_mLINEITEM1_mapkey0_idxfn::hash(se9.modify0(lineitem_orderkey));
@@ -194,7 +194,7 @@ namespace dbtoaster {
             do {                
               STRING_TYPE o_orderpriority = e2->O_ORDERPRIORITY;
               long v2 = e2->__av;
-              ORDER_COUNT.addOrDelOnZero(se6.modify(o_orderpriority),(v2 * (((ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se7.modify(lineitem_orderkey)) + (/*if */(lineitem_receiptdate > lineitem_commitdate) ? -1L : 0L)) != 0 ? 1L : 0L) + ((ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se8.modify(lineitem_orderkey)) != 0 ? 1L : 0L) * -1L))));
+              ORDER_COUNT.addOrDelOnZero(se6.modify(o_orderpriority),((((ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se7.modify(lineitem_orderkey)) + (/*if */(lineitem_receiptdate > lineitem_commitdate) ? -1L : 0L)) != 0 ? 1L : 0L) + ((ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se8.modify(lineitem_orderkey)) != 0 ? 1L : 0L) * -1L)) * v2));
               n2 = n2->nxt;
             } while (n2 && (e2 = n2->obj) && h2 == n2->hash &&  ORDER_COUNT_mLINEITEM1_mapkey0_idxfn::equals(se9, *e2)); 
           }
@@ -202,19 +202,19 @@ namespace dbtoaster {
       }
     }
     void on_insert_ORDERS(const long orders_orderkey, const long orders_custkey, const STRING_TYPE& orders_orderstatus, const DOUBLE_TYPE orders_totalprice, const date orders_orderdate, const STRING_TYPE& orders_orderpriority, const STRING_TYPE& orders_clerk, const long orders_shippriority, const STRING_TYPE& orders_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(orders_orderdate >= c1 && c2 > orders_orderdate) ? ORDER_COUNT.addOrDelOnZero(se11.modify(orders_orderpriority),(ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se12.modify(orders_orderkey)) != 0 ? 1L : 0L)) : (void)0);
-        (/*if */(orders_orderdate >= c1 && c2 > orders_orderdate) ? ORDER_COUNT_mLINEITEM1.addOrDelOnZero(se13.modify(orders_orderkey,orders_orderpriority),1L) : (void)0);
+        (/*if */(c2 > orders_orderdate && orders_orderdate >= c1) ? ORDER_COUNT_mLINEITEM1.addOrDelOnZero(se13.modify(orders_orderkey,orders_orderpriority),1L) : (void)0);
       }
     }
     void on_delete_ORDERS(const long orders_orderkey, const long orders_custkey, const STRING_TYPE& orders_orderstatus, const DOUBLE_TYPE orders_totalprice, const date orders_orderdate, const STRING_TYPE& orders_orderpriority, const STRING_TYPE& orders_clerk, const long orders_shippriority, const STRING_TYPE& orders_comment) {
-      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+      {  //++tN;
         (/*if */(orders_orderdate >= c1 && c2 > orders_orderdate) ? ORDER_COUNT.addOrDelOnZero(se14.modify(orders_orderpriority),((ORDER_COUNT_mORDERS3_E1_1.getValueOrDefault(se15.modify(orders_orderkey)) != 0 ? 1L : 0L) * -1L)) : (void)0);
-        (/*if */(orders_orderdate >= c1 && c2 > orders_orderdate) ? ORDER_COUNT_mLINEITEM1.addOrDelOnZero(se16.modify(orders_orderkey,orders_orderpriority),-1L) : (void)0);
+        (/*if */(c2 > orders_orderdate && orders_orderdate >= c1) ? ORDER_COUNT_mLINEITEM1.addOrDelOnZero(se16.modify(orders_orderkey,orders_orderpriority),-1L) : (void)0);
       }
     }
     void on_system_ready_event() {
-      {  
+      {  //
         
       }
     }
