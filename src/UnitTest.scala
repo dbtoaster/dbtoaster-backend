@@ -115,7 +115,7 @@ object UnitTest {
         e("  -csv <file>   store benchmark results in a file")
         e("  -dump <file>  dump raw benchmark samples in a file")
         e("  -cache        enable M3 cache")
-        // e("  -b <n>        execute as batches of certain size")
+        e("  -xbs <n>      execute with batches of certain size")
         e("  -noreplace    disable replacing generated trigger programs, if any exists")
         e("")
         e("Other options are forwarded to the compiler:")
@@ -337,7 +337,7 @@ object UnitTest {
     Compiler.exec = benchmark
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets /*.filter(d=>q.sets.contains(d)) */.map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
+    Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
     // Append correctness spec and move to test/gen/
@@ -431,7 +431,7 @@ object UnitTest {
       "-t" + timeout :: 
       "-p" + parallel :: 
       "-m1" :: 
-      datasets /*.filter(q.sets.contains) */.map("-d" + _).toList) ++ 
+      datasets.filter(q.sets.contains).map("-d" + _).toList) ++ 
       (if (no_output) List("--no-output") else Nil)
     p.run(() => Compiler.compile(m3, post, p.gen, p.comp, p.run, verifyResult))
     p.close
@@ -519,7 +519,7 @@ object UnitTest {
     Compiler.exec = benchmark
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = ("-n" + (samples + warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets /*.filter(d=>q.sets.contains(d)) */.map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
+    Compiler.exec_args = ("-n" + (samples + warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
     // Append correctness spec and move to test/gen/

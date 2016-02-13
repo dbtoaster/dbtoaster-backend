@@ -593,6 +593,10 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
       val (la, le) = prepareExpression(l)
       val (ra, re) = prepareExpression(r)
       (la ++ ra, Cmp(le, re, op))
+    case CmpOrList(l, r) =>
+      val (la, le) = prepareExpression(l)
+      val (ra, re) = r.map(prepareExpression).unzip
+      (la ++ ra.flatten, CmpOrList(le, re))
     case Tuple(es) => 
       val (stmts, args) = es.map(prepareExpression).unzip
       val newExpr = Tuple(args)

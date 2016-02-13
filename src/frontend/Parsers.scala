@@ -195,6 +195,9 @@ object M3Parser extends ExtParser with (String => M3.System) {
         }
         case l ~ None => l
       }
+    | "{" ~> expr ~ ("IN" ~> "[" ~> repsep(expr, ",") <~ "]") <~ "}" ^^ {
+        case v ~ consts => CmpOrList(v, consts)
+      }
     | ident ^^ { Ref(_) }
     // | floatLit ^^ { Const(TypeFloat, _) }
     | doubleLit ^^ { Const(TypeDouble, _) }

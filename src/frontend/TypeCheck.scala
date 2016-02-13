@@ -197,6 +197,8 @@ object TypeCheck extends (M3.System => M3.System) {
         case Cmp(l, r, _) => 
           cr = c ++ ie(l, c, t) ++ ie(r, c, t)
           tpRes(l.tp, r.tp, ex)
+        case CmpOrList(l, r) =>
+          cr = c ++ ie(l, c, t) ++ r.flatMap(x => ie(x, c, t))
         case Exists(e) => cr = ie(e, c, t)
         case Lift(n,e) => 
           ie(e, c, t)

@@ -244,7 +244,16 @@ trait IScalaGen extends CodeGen {
     case Exists(e) => 
       cpsExpr(e, (v: String) => co("(if (" + v + " != 0) 1L else 0L)"))
     case Cmp(l, r, op) => 
-      cpsExpr(l, (ll: String) => cpsExpr(r, (rr: String) => co(cmpFunc(l.tp, op, ll, rr))))
+      cpsExpr(l, (ll: String) =>
+        cpsExpr(r, (rr: String) => co(cmpFunc(l.tp, op, ll, rr))))
+    case CmpOrList(l, r) =>
+      assert(r.forall(_.isInstanceOf[Const]))
+      cpsExpr(l, (ll: String) =>
+        co("(if ((" +
+          r.map(x => cpsExpr(x, (rr: String) => "(" + ll + " == " + rr + ")"))
+          .mkString(" || ") +
+          ")) 1L else 0L)"))
+
     case Apply(fn, tp, as) => applyFunc(co, fn, tp, as)
     //ki : inner key
     //ko : outer key

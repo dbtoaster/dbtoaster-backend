@@ -20,8 +20,10 @@ Seq(
 
 // --------- Dependencies
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor"     % "2.3.11",
-  "com.typesafe.akka" %% "akka-remote"    % "2.3.11",
+//  "com.typesafe.akka" %% "akka-actor"     % "2.3.11",
+//  "com.typesafe.akka" %% "akka-remote"    % "2.3.11",
+  "com.typesafe.akka" %% "akka-actor"     % "2.2.3",   // release only
+  "com.typesafe.akka" %% "akka-remote"    % "2.2.3",   // release only
   "org.scala-lang"     % "scala-compiler" % scalaVersion.value
 )
 

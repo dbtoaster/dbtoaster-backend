@@ -15,7 +15,7 @@ object Compiler {
   val DEPLOYMENT_STATUS_RELEASE=1
   val DEPLOYMENT_STATUS_DEVELOPMENT=2
 
-  val DEPLOYMENT_STATUS=DEPLOYMENT_STATUS_DEVELOPMENT
+  val DEPLOYMENT_STATUS=DEPLOYMENT_STATUS_RELEASE
 
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"
@@ -145,16 +145,17 @@ object Compiler {
       error("  -l <lang>     defines the target language")
       error("                - "+LANG_CALC     +"     : relational calculus")
       error("                - "+LANG_M3       +"       : M3 program")
-      error("                - "+LANG_DIST_M3  +"    : distributed M3 program")
-      error("                - "+LANG_SCALA    +"    : vanilla Scala code")
-      error("                - "+LANG_CPP      +"      : vanilla C++ code")
+      // error("                - "+LANG_DIST_M3  +"    : distributed M3 program")
+      error("                - "+LANG_SCALA    +"   : vanilla Scala code")
+      error("                - "+LANG_CPP      +"      : C++ code")
       // error("                - "+LANG_AKKA     +"     : distributed Akka code")
       // error("                - "+LANG_CPP_LMS  +"      : LMS-optimized C++")
-      error("                - "+LANG_SCALA_LMS+" : LMS-optimized Scala")
-      error("                - "+LANG_SPARK_LMS+" : LMS-optimized Spark")
+      error("                - "+LANG_SCALA_LMS+"    : LMS-optimized Scala")
+      // error("                - "+LANG_SPARK_LMS+" : LMS-optimized Spark")
       //   ("                - dcpp     : distributed C/C++ code")
       error("Front-end options:")
       error("  --depth <depth>    incrementalization depth (default: infinite)")
+      error("  --batch       Enable batch processing")
       error("  -O[123]       optimization level for M3 (default: -O2)")
       error("  -F <flag>     set a front-end optimization flag")
       // error("  -ni           non-incremental (on-demand) query evaluation")
@@ -162,12 +163,12 @@ object Compiler {
       error("  -n <name>     name of internal structures (default: Query)")
       // error("  -L            libraries for target language")
       // error("  -inl <level>  inlining level (0-10,none,spec,full,default:none)")
-      // error("Execution options:")
+      error("Execution options:")
       // error("  -x            compile and execute immediately")
       // error("  -xd <path>    destination for generated binaries")
       // error("  -xsc          use external fsc/scalac compiler")
       // error("  -xvm          execute in a new JVM instance")
-      // error("  -xbs          execute as batches of certain size")
+      error("  -xbs <n>        execute with batches of certain size")
       // error("  -xa <arg>     pass an argument to generated program")
       error("", true) //exit the application
     }
