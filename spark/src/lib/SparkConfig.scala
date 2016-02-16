@@ -24,6 +24,7 @@ class SparkConfig(input: InputStream) {
   val sparkExecutorMemory = prop.getProperty("spark.executor.memory")
   val sparkNumPartitions = prop.getProperty("spark.partitions.num", "0").toInt
   val distInputPath = prop.getProperty("dist.input.path")
+  val logOutputPath = prop.getProperty("log.output.path")
 
   def sparkConf(): SparkConf = {
     val conf = new SparkConf()

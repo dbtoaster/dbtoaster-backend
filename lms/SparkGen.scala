@@ -74,9 +74,9 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
     // Optimize statement blocks
     val optUpdateBlocks = Optimizer.optBlockFusion(updateBlocks)
-    optUpdateBlocks.map(b => java.lang.System.err.println("UPDATE\n" + b.toString))
+    //optUpdateBlocks.map(b => java.lang.System.err.println("UPDATE\n" + b.toString))
     val optSystemReadyBlocks = Optimizer.optBlockFusion(systemReadyBlocks)
-    optSystemReadyBlocks.map(b => java.lang.System.err.println("SYSREADY\n" + b.toString))
+    //optSystemReadyBlocks.map(b => java.lang.System.err.println("SYSREADY\n" + b.toString))
 
     // Remove unused maps
     val referencedMaps = 
@@ -354,7 +354,9 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
           }}
           s"""|val ${unifiedId} = 
               |  ${lastRDD}.mapPartitions(_.toList.flatMap { case (_, localCtx) =>
-              |${ind(wrap, 2)}
+              |//    Stopwatch.time("Repartition processing time: ", {
+              |${ind(wrap, 3)}
+              |//    })
               |  }.iterator, false)
               |  .groupByKey(ctx.partitioner)
               |  .mapValues(stores => {
@@ -436,10 +438,12 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         s"""|//  --- DISTRIBUTED BLOCK ---
             |val ${destRDD} = ${sourceRDD}${strZip}.mapPartitions(_.toList.map {
             |  case ${caseToString(strCaseList)} =>
-            |${ind(strRenaming, 2)}
-            |${ind(strConstRenaming, 2)}
+            |//    Stopwatch.time("Distributed block processing time: ", {
+            |${ind(strRenaming, 3)}
+            |${ind(strConstRenaming, 3)}
             |
-            |${ind(strDistBlock, 2)}
+            |${ind(strDistBlock, 3)}
+            |//    })
             |
             |  (id, localCtx)
             |}.iterator, true)""".stripMargin
@@ -545,7 +549,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
   protected def emitQueryResults(queries: List[Query]): String =
     queries.zipWithIndex.map { case (q, i) => 
-      "println(\"%s:\\n\" + M3Map.toStr(res(%d)) + \"\\n\")".format(q.name, i)
+      "logWriter.println(\"%s:\\n\" + M3Map.toStr(res(%d)) + \"\\n\")".format(q.name, i)
     }.mkString("\n")
 
   protected def emitMainClass(s0: System): String = {
@@ -558,6 +562,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |
         |object $sSparkObject {
         |  import Helper._
+        |  import org.apache.hadoop.fs.{ Path, FileSystem, FSDataOutputStream }
         |
         |  var configFile: String = "/spark.config"
         |  var batchSize: Int = 0
@@ -568,8 +573,9 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |  var distInputPath: String = null
         |  
         |  // Handle for reading from HDFS
-        |  val fs = org.apache.hadoop.fs.FileSystem.get(
-        |    new org.apache.hadoop.conf.Configuration())
+        |  val fs = FileSystem.get(new org.apache.hadoop.conf.Configuration())
+        |
+        |  var logWriter: LogWriter = null 
         |
         |  // Spark related variables
         |  private var cfg: SparkConfig = null
@@ -592,7 +598,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |
         |  def destroyContext() = ctx.destroy()
         |
-        |  def disableLogging() = {
+        |  def disableLog4j() = {
         |    import org.apache.log4j.{Logger, Level}
         |    Logger.getLogger("org").setLevel(Level.WARN)
         |    Logger.getLogger("akka").setLevel(Level.WARN)
@@ -611,14 +617,18 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |    if (configFile == null) { sys.error("Config file is missing.") }
         |    if (batchSize == 0) { sys.error("Invalid batch size.") }
         |
-        |    disableLogging()
+        |    disableLog4j()
         |
         |    cfg = new SparkConfig(getClass().getResourceAsStream(configFile))
         |
         |    if (numPartitions == 0) { numPartitions = cfg.sparkNumPartitions }
         |    if (numPartitions == 0) { sys.error("Invalid number of partitions.") }
         |    distInputPath = cfg.distInputPath
+        | 
+        |    // Init logger
+        |    logWriter = new LogWriter("$sSparkObject", cfg.logOutputPath)
         |
+        |    // Init Spark context
         |    sc = new SparkContext(cfg.sparkConf.setAppName("$sSparkObject"))
         |
         |    // START EXECUTION
@@ -725,7 +735,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
             |  }
             |  onBatchUpdate($onBatchArgs)
             |  if (logCount > 0 && tuplesProcessed % logCount == 0) 
-            |    Console.println(tuplesProcessed + " tuples processed at " + 
+            |    logWriter.println(tuplesProcessed + " tuples processed at " + 
             |      ((System.nanoTime - startTime) / 1000000) + "ms")
             |""".stripMargin
     }
@@ -910,7 +920,9 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
       if (q.keys.size > 0) toMapFunction(q) else q.name
     ).mkString(", ")
     s"""|(StreamStat(endTime - startTime, tuplesProcessed, tuplesSkipped), List(
+        |
         |${ind(sCreateHashMap)}
+        |
         |))""".stripMargin    
   }
 
@@ -947,13 +959,13 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |  def getSnapshot = { ${block(sGetSnapshotBody)} }
         |
         |  def printSummary() = {
-        |    println("### ${sSparkObject}")
-        |    println("### DATASET:    " + dataset)
-        |    println("### PARTITIONS: " + numPartitions)
-        |    println("### TUPLES:     " + numTuples)
-        |    println("### BATCHES:    " + numBatches)
-        |    println("### BATCH SIZE: " + batchSize)
-        |    println("### DISTRIBUTED INPUT: ${isInputDistributed}")
+        |    logWriter.println("### ${sSparkObject}")
+        |    logWriter.println("### DATASET:    " + dataset)
+        |    logWriter.println("### PARTITIONS: " + numPartitions)
+        |    logWriter.println("### TUPLES:     " + numTuples)
+        |    logWriter.println("### BATCHES:    " + numBatches)
+        |    logWriter.println("### BATCH SIZE: " + batchSize)
+        |    logWriter.println("### DISTRIBUTED INPUT: ${isInputDistributed}")
         |  }
         |
         |  def receive_skip: Receive = { 
@@ -1030,20 +1042,24 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
               |}.iterator, true)""".stripMargin
 
         s"""|def processBatches(numBatches: Int) = {
-            |  println("### PROCESSING START: " + numBatches)
-            |  var batchStartTime = startTime
+            |  logWriter.println("### PROCESSING START: " + numBatches, true)
+            |  var runningTime = 0L
             |  for (i <- 0 until numBatches) {
+            |    val batchStartTime = System.nanoTime
             |
             |${ind(sDequeueBlock, 2)}
             |
             |${ind(sUpdateBlocks, 2)}
             |
-            |    val batchEndTime = System.nanoTime
-            |    println("###   Batch " + i + ": " + ((batchEndTime - batchStartTime) / 1000000) + " ms")
-            |    batchStartTime = batchEndTime
+            |    val batchElapsedTime = System.nanoTime - batchStartTime
+            |    runningTime += batchElapsedTime
+            |    logWriter.println(s"###   Batch $${i}: $${(batchElapsedTime / 1000000L)} ms", true)
             |  }
-            |  println("###   Total time: " + ((System.nanoTime - startTime) / 1000000) + " ms")
-            |  println("### PROCESSING END")
+            |  val endTime = System.nanoTime
+            |
+            |  logWriter.println(s"###   Running time: $${(runningTime / 1000000L)} ms") 
+            |  logWriter.println(s"###   Total time (running + hsync): $${((endTime - startTime) / 1000000)} ms")
+            |  logWriter.println("### PROCESSING END", true)
             |}""".stripMargin
       }
       else {
