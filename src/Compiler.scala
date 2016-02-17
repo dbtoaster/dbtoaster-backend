@@ -295,16 +295,18 @@ object Compiler {
       }
     }
     // Execution
-    if (exec) {
-      lang match {        
-        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
+    lang match {        
+      case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
+        if (exec) { 
           Utils.scalaExec(
             dir :: libs.map(p => new File(p)), 
             pkg + "." + name,
             ("-b" + exec_bs :: exec_args).toArray,
             exec_vm)
+        }
 
-        case LANG_SPARK_LMS =>
+      case LANG_SPARK_LMS =>
+        if (exec) {
           Utils.sparkSubmit(
             pkg + "." + name, 
             ("-b" + exec_bs :: exec_args).toArray)
@@ -314,30 +316,32 @@ object Compiler {
           //   pkg + "." + name,
           //   ("-b" + exec_bs :: exec_args).toArray,
           //   exec_vm)
+        }
 
-        case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
-          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = 
-            ddbt.lib.Helper.extractExecArgs(("-b" + exec_bs :: exec_args).toArray)
-          val actual_exec_args = List("-b " + exec_bs, "-p " + pMode)
-          val compiledSrc = Utils.read(out)
-          datasets.foreach{ dataset =>
-            def tc(p: String = "") = 
-              "gettimeofday(&(" + p + "t),NULL); " + p + "tT=((" +
-              p + "t).tv_sec-(" + p + "t0).tv_sec)*1000000L+((" + 
-              p + "t).tv_usec-(" + p + "t0).tv_usec);"
-            val srcTmp = compiledSrc.replace("standard", dataset)
-              .replace("++tN;",(if (timeout > 0) "if (tS>0) { ++tS; return; } if ((tN&127)==0) { " + tc() + " if (tT>" + (timeout * 1000L) + "L) { tS=1; return; } } " else "") + "++tN;")
-              .replace("//P"+pMode+"_PLACE_HOLDER",
-                        "struct timeval t0;\n"+
-              "          gettimeofday(&t0,NULL);\n"+
-              "          data.t0 = t0;\n")
-            //TODO XXX dataset should be an argument to the program
-            val src = if (dataset.contains("_del")) 
-                srcTmp.replace("make_pair(\"schema\",\"", 
-                               "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"")
-                      .replace("\"),2,", "\"),3,") 
-              else srcTmp
-            Utils.write(out, src)
+      case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
+        val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = 
+          ddbt.lib.Helper.extractExecArgs(("-b" + exec_bs :: exec_args).toArray)
+        val actual_exec_args = List("-b " + exec_bs, "-p " + pMode)
+        val compiledSrc = Utils.read(out)
+        datasets.foreach{ dataset =>
+          def tc(p: String = "") = 
+            "gettimeofday(&(" + p + "t),NULL); " + p + "tT=((" +
+            p + "t).tv_sec-(" + p + "t0).tv_sec)*1000000L+((" + 
+            p + "t).tv_usec-(" + p + "t0).tv_usec);"
+          val srcTmp = compiledSrc.replace("standard", dataset)
+            .replace("++tN;",(if (timeout > 0) "if (tS>0) { ++tS; return; } if ((tN&127)==0) { " + tc() + " if (tT>" + (timeout * 1000L) + "L) { tS=1; return; } } " else "") + "++tN;")
+            .replace("//P"+pMode+"_PLACE_HOLDER",
+                      "struct timeval t0;\n"+
+            "          gettimeofday(&t0,NULL);\n"+
+            "          data.t0 = t0;\n")
+          //TODO XXX dataset should be an argument to the program
+          val src = if (dataset.contains("_del")) 
+              srcTmp.replace("make_pair(\"schema\",\"", 
+                             "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"")
+                    .replace("\"),2,", "\"),3,") 
+            else srcTmp
+          Utils.write(out, src)
+          if (exec) {
             val pl = "srccpp/lib"
             val po = if (cPath != null) cPath else out.substring(0, out.lastIndexOf("."))
             val t2 = Utils.ns(() =>
@@ -367,9 +371,10 @@ object Compiler {
               }
             }
           }
+        }
+
         case _ => error("Execution not supported for " + lang, true)
       }
-    }
   }
 
   def postProc(s0: ast.M3.System) = {
