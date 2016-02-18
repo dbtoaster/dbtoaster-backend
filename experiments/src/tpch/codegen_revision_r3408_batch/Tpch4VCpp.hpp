@@ -382,8 +382,8 @@ namespace dbtoaster {
   /* Type definition providing a way to incrementally maintain the results of the sql program */
   struct data_t : tlq_t{
     data_t(): tlq_t() {
-      c2 = Udate(STRING_TYPE("1993-10-1"));
-      c1 = Udate(STRING_TYPE("1993-7-1"));
+      c1 = Udate(STRING_TYPE("1993-10-1"));
+      c2 = Udate(STRING_TYPE("1993-7-1"));
     }
   
   
@@ -392,7 +392,7 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_batch_update_LINEITEM(TPCHLineitemBatch& DELTA_LINEITEM) {
-      {
+      {  
         if (tS > 0) { tS += DELTA_LINEITEM.size; return; }         
         tLastN += DELTA_LINEITEM.size;        
         if (tLastN > 127) { 
@@ -405,8 +405,7 @@ namespace dbtoaster {
 
         ORDER_COUNTLINEITEM1_E1_2_DELTA.clear();
         ORDER_COUNTLINEITEM1_DOMAIN1.clear();        
-        { 
-
+        {  
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
                 long o_orderkey = DELTA_LINEITEM.orderkey[i];
@@ -428,9 +427,10 @@ namespace dbtoaster {
                 long v1 = 1L;
                 (/*if */(l_receiptdate > l_commitdate) ? ORDER_COUNTLINEITEM1_E1_2_DELTA.addOrDelOnZero(se1.modify(o_orderkey),v1) : (void)0);
                 long v2 = 1L;
-                (/*if */(l_receiptdate > l_commitdate) ? ORDER_COUNTLINEITEM1_DOMAIN1.addOrDelOnZero(se2.modify(o_orderkey),(v2 != 0 ? 1L : 0L)) : (void)0);                
+                (/*if */(l_receiptdate > l_commitdate) ? ORDER_COUNTLINEITEM1_DOMAIN1.addOrDelOnZero(se2.modify(o_orderkey),(v2 != 0 ? 1L : 0L)) : (void)0);
           }
         }
+
         {  // foreach
           const HashIndex_ORDER_COUNTLINEITEM1_DOMAIN1_map_0* i3 = static_cast<HashIndex_ORDER_COUNTLINEITEM1_DOMAIN1_map_0*>(ORDER_COUNTLINEITEM1_DOMAIN1.index[0]);
           HashIndex_ORDER_COUNTLINEITEM1_DOMAIN1_map_0::IdxNode* n3; 
@@ -522,10 +522,9 @@ namespace dbtoaster {
         }
         tN += DELTA_ORDERS.size;
 
-
         ORDER_COUNTORDERS1_DELTA.clear();
-        {  
-          for (size_t i = 0; i < DELTA_ORDERS.size; i++)
+        {
+          for (size_t i = 0; i < DELTA_ORDERS.size; i++) 
           {
                 long o_orderkey = DELTA_ORDERS.orderkey[i];
                 // long o_custkey = DELTA_ORDERS.custkey[i];
@@ -537,9 +536,10 @@ namespace dbtoaster {
                 // long o_shippriority = DELTA_ORDERS.shippriority[i];
                 // STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
                 long v8 = 1L;
-                (/*if */(o_orderdate >= c1 && c2 > o_orderdate) ? ORDER_COUNTORDERS1_DELTA.addOrDelOnZero(se10.modify(o_orderkey,o_orderpriority),v8) : (void)0);
+                (/*if */(c1 > o_orderdate && o_orderdate >= c2) ? ORDER_COUNTORDERS1_DELTA.addOrDelOnZero(se10.modify(o_orderkey,o_orderpriority),v8) : (void)0);
           }
         }
+
         {  // foreach
           const HashIndex_ORDER_COUNTORDERS1_DELTA_map_01* i9 = static_cast<HashIndex_ORDER_COUNTORDERS1_DELTA_map_01*>(ORDER_COUNTORDERS1_DELTA.index[0]);
           HashIndex_ORDER_COUNTORDERS1_DELTA_map_01::IdxNode* n9; 
@@ -609,9 +609,9 @@ namespace dbtoaster {
     DELTA_LINEITEM_map DELTA_LINEITEM;
     DELTA_ORDERS_map DELTA_ORDERS;
     
-    /*const static*/ long c2;
-    /*const static*/ STRING_TYPE c3;
     /*const static*/ long c1;
+    /*const static*/ STRING_TYPE c3;
+    /*const static*/ long c2;
   
   };
 

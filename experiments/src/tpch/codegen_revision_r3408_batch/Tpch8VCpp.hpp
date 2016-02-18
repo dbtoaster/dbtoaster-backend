@@ -710,147 +710,6 @@ namespace dbtoaster {
   typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey1_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_1;
   typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey0_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0;
   
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry {
-    long L_ORDERKEY; long S_SUPPKEY; DOUBLE_TYPE __av; 
-    explicit MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry() { /*L_ORDERKEY = 0L; S_SUPPKEY = 0L; __av = 0.0; */ }
-    explicit MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry(const long c0, const long c1, const DOUBLE_TYPE c2) { L_ORDERKEY = c0; S_SUPPKEY = c1; __av = c2; }
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& other) : L_ORDERKEY( other.L_ORDERKEY ), S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& modify(const long c0, const long c1) { L_ORDERKEY = c0; S_SUPPKEY = c1;  return *this; }
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& modify0(const long c0) { L_ORDERKEY = c0;  return *this; }
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& modify1(const long c1) { S_SUPPKEY = c1;  return *this; }
-    template<class Archive>
-    void serialize(Archive& ar, const unsigned int version) const 
-    {
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, L_ORDERKEY);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.L_ORDERKEY);
-      hash_combine(h, e.S_SUPPKEY);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& y) {
-      return x.L_ORDERKEY == y.L_ORDERKEY && x.S_SUPPKEY == y.S_SUPPKEY;
-    }
-  };
-  
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn {
-    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.L_ORDERKEY);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& y) {
-      return x.L_ORDERKEY == y.L_ORDERKEY;
-    }
-  };
-  
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn {
-    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.S_SUPPKEY);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& y) {
-      return x.S_SUPPKEY == y.S_SUPPKEY;
-    }
-  };
-  
-  typedef MultiHashMap<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,
-    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey01_idxfn,true>,
-    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn,false>,
-    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn,false>
-  > MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map;
-  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey01_idxfn,true> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_01;
-  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0;
-  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1;
-  
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry {
-    long L_ORDERKEY; long P_PARTKEY; long S_SUPPKEY; DOUBLE_TYPE __av; 
-    explicit MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry() { /*L_ORDERKEY = 0L; P_PARTKEY = 0L; S_SUPPKEY = 0L; __av = 0.0; */ }
-    explicit MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { L_ORDERKEY = c0; P_PARTKEY = c1; S_SUPPKEY = c2; __av = c3; }
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& other) : L_ORDERKEY( other.L_ORDERKEY ), P_PARTKEY( other.P_PARTKEY ), S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& modify(const long c0, const long c1, const long c2) { L_ORDERKEY = c0; P_PARTKEY = c1; S_SUPPKEY = c2;  return *this; }
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& modify0(const long c0) { L_ORDERKEY = c0;  return *this; }
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& modify1(const long c1) { P_PARTKEY = c1;  return *this; }
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& modify2(const long c2) { S_SUPPKEY = c2;  return *this; }
-    template<class Archive>
-    void serialize(Archive& ar, const unsigned int version) const 
-    {
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, L_ORDERKEY);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, P_PARTKEY);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey012_idxfn {
-    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.L_ORDERKEY);
-      hash_combine(h, e.P_PARTKEY);
-      hash_combine(h, e.S_SUPPKEY);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& y) {
-      return x.L_ORDERKEY == y.L_ORDERKEY && x.P_PARTKEY == y.P_PARTKEY && x.S_SUPPKEY == y.S_SUPPKEY;
-    }
-  };
-  
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn {
-    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.L_ORDERKEY);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& y) {
-      return x.L_ORDERKEY == y.L_ORDERKEY;
-    }
-  };
-  
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey1_idxfn {
-    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.P_PARTKEY);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& y) {
-      return x.P_PARTKEY == y.P_PARTKEY;
-    }
-  };
-  
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey2_idxfn {
-    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.S_SUPPKEY);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry& y) {
-      return x.S_SUPPKEY == y.S_SUPPKEY;
-    }
-  };
-  
-  typedef MultiHashMap<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry,DOUBLE_TYPE,
-    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey012_idxfn,true>,
-    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn,false>,
-    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey1_idxfn,false>,
-    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey2_idxfn,false>
-  > MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map;
-  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey012_idxfn,true> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_012;
-  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0;
-  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey1_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_1;
-  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey2_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_2;
-  
   struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry {
     long P_PARTKEY; long S_SUPPKEY; long O_CUSTKEY; long TOTAL_O_YEAR; DOUBLE_TYPE __av; 
     explicit MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry() { /*P_PARTKEY = 0L; S_SUPPKEY = 0L; O_CUSTKEY = 0L; TOTAL_O_YEAR = 0L; __av = 0.0; */ }
@@ -933,21 +792,162 @@ namespace dbtoaster {
   typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey2_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_2;
   typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey1_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1;
   
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry {
-    long P_PARTKEY; long O_CUSTKEY; long TOTAL_O_YEAR; DOUBLE_TYPE __av; 
-    explicit MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry() { /*P_PARTKEY = 0L; O_CUSTKEY = 0L; TOTAL_O_YEAR = 0L; __av = 0.0; */ }
-    explicit MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { P_PARTKEY = c0; O_CUSTKEY = c1; TOTAL_O_YEAR = c2; __av = c3; }
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry(const MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& other) : P_PARTKEY( other.P_PARTKEY ), O_CUSTKEY( other.O_CUSTKEY ), TOTAL_O_YEAR( other.TOTAL_O_YEAR ), __av( other.__av ) {}
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& modify(const long c0, const long c1, const long c2) { P_PARTKEY = c0; O_CUSTKEY = c1; TOTAL_O_YEAR = c2;  return *this; }
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& modify0(const long c0) { P_PARTKEY = c0;  return *this; }
-    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& modify1(const long c1) { O_CUSTKEY = c1;  return *this; }
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry {
+    long L_ORDERKEY; long P_PARTKEY; long S_SUPPKEY; DOUBLE_TYPE __av; 
+    explicit MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry() { /*L_ORDERKEY = 0L; P_PARTKEY = 0L; S_SUPPKEY = 0L; __av = 0.0; */ }
+    explicit MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { L_ORDERKEY = c0; P_PARTKEY = c1; S_SUPPKEY = c2; __av = c3; }
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& other) : L_ORDERKEY( other.L_ORDERKEY ), P_PARTKEY( other.P_PARTKEY ), S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& modify(const long c0, const long c1, const long c2) { L_ORDERKEY = c0; P_PARTKEY = c1; S_SUPPKEY = c2;  return *this; }
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& modify0(const long c0) { L_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& modify1(const long c1) { P_PARTKEY = c1;  return *this; }
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& modify2(const long c2) { S_SUPPKEY = c2;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
       ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, L_ORDERKEY);
+      ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, P_PARTKEY);
       ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.L_ORDERKEY);
+      hash_combine(h, e.P_PARTKEY);
+      hash_combine(h, e.S_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& y) {
+      return x.L_ORDERKEY == y.L_ORDERKEY && x.P_PARTKEY == y.P_PARTKEY && x.S_SUPPKEY == y.S_SUPPKEY;
+    }
+  };
+  
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.L_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& y) {
+      return x.L_ORDERKEY == y.L_ORDERKEY;
+    }
+  };
+  
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.P_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& y) {
+      return x.P_PARTKEY == y.P_PARTKEY;
+    }
+  };
+  
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey2_idxfn {
+    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.S_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry& y) {
+      return x.S_SUPPKEY == y.S_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry,DOUBLE_TYPE,
+    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey012_idxfn,true>,
+    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn,false>,
+    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey1_idxfn,false>,
+    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey2_idxfn,false>
+  > MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map;
+  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey012_idxfn,true> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_012;
+  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0;
+  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey1_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_1;
+  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey2_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_2;
+  
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry {
+    long L_ORDERKEY; long S_SUPPKEY; DOUBLE_TYPE __av; 
+    explicit MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry() { /*L_ORDERKEY = 0L; S_SUPPKEY = 0L; __av = 0.0; */ }
+    explicit MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry(const long c0, const long c1, const DOUBLE_TYPE c2) { L_ORDERKEY = c0; S_SUPPKEY = c1; __av = c2; }
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& other) : L_ORDERKEY( other.L_ORDERKEY ), S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& modify(const long c0, const long c1) { L_ORDERKEY = c0; S_SUPPKEY = c1;  return *this; }
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& modify0(const long c0) { L_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& modify1(const long c1) { S_SUPPKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, L_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.L_ORDERKEY);
+      hash_combine(h, e.S_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& y) {
+      return x.L_ORDERKEY == y.L_ORDERKEY && x.S_SUPPKEY == y.S_SUPPKEY;
+    }
+  };
+  
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.L_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& y) {
+      return x.L_ORDERKEY == y.L_ORDERKEY;
+    }
+  };
+  
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.S_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry& y) {
+      return x.S_SUPPKEY == y.S_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,
+    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey01_idxfn,true>,
+    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn,false>,
+    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn,false>
+  > MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map;
+  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey01_idxfn,true> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_01;
+  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0;
+  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1;
+  
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry {
+    long O_CUSTKEY; long P_PARTKEY; long TOTAL_O_YEAR; DOUBLE_TYPE __av; 
+    explicit MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry() { /*O_CUSTKEY = 0L; P_PARTKEY = 0L; TOTAL_O_YEAR = 0L; __av = 0.0; */ }
+    explicit MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { O_CUSTKEY = c0; P_PARTKEY = c1; TOTAL_O_YEAR = c2; __av = c3; }
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry(const MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& other) : O_CUSTKEY( other.O_CUSTKEY ), P_PARTKEY( other.P_PARTKEY ), TOTAL_O_YEAR( other.TOTAL_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& modify(const long c0, const long c1, const long c2) { O_CUSTKEY = c0; P_PARTKEY = c1; TOTAL_O_YEAR = c2;  return *this; }
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& modify1(const long c1) { P_PARTKEY = c1;  return *this; }
+    FORCE_INLINE MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& modify0(const long c0) { O_CUSTKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, O_CUSTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_PARTKEY);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, TOTAL_O_YEAR);
       ar << ELEM_SEPARATOR;
@@ -957,17 +957,17 @@ namespace dbtoaster {
   struct MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey012_idxfn {
     FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.P_PARTKEY);
       hash_combine(h, e.O_CUSTKEY);
+      hash_combine(h, e.P_PARTKEY);
       hash_combine(h, e.TOTAL_O_YEAR);
       return h;
     }
     FORCE_INLINE static bool equals(const MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& x, const MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& y) {
-      return x.P_PARTKEY == y.P_PARTKEY && x.O_CUSTKEY == y.O_CUSTKEY && x.TOTAL_O_YEAR == y.TOTAL_O_YEAR;
+      return x.O_CUSTKEY == y.O_CUSTKEY && x.P_PARTKEY == y.P_PARTKEY && x.TOTAL_O_YEAR == y.TOTAL_O_YEAR;
     }
   };
   
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn {
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey1_idxfn {
     FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& e) {
       size_t h = 0;
       hash_combine(h, e.P_PARTKEY);
@@ -978,7 +978,7 @@ namespace dbtoaster {
     }
   };
   
-  struct MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey1_idxfn {
+  struct MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn {
     FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry& e) {
       size_t h = 0;
       hash_combine(h, e.O_CUSTKEY);
@@ -991,12 +991,12 @@ namespace dbtoaster {
   
   typedef MultiHashMap<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,
     HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey012_idxfn,true>,
-    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn,false>,
-    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey1_idxfn,false>
+    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey1_idxfn,false>,
+    HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn,false>
   > MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map;
   typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey012_idxfn,true> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_012;
-  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0;
   typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey1_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_1;
+  typedef HashIndex<MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn,false> HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0;
   
   struct MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry {
     long L_ORDERKEY; long P_PARTKEY; DOUBLE_TYPE __av; 
@@ -1608,37 +1608,6 @@ namespace dbtoaster {
   > MKT_SHAREORDERS1_L1_1_L1_2_P_2_map;
   typedef HashIndex<MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry,DOUBLE_TYPE,MKT_SHAREORDERS1_L1_1_L1_2_P_2_mapkey0_idxfn,true> HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2_map_0;
   
-  struct MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry {
-    long S_SUPPKEY; long __av; 
-    explicit MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry() { /*S_SUPPKEY = 0L; __av = 0L; */ }
-    explicit MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry(const long c0, const long c1) { S_SUPPKEY = c0; __av = c1; }
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry(const MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& other) : S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
-    FORCE_INLINE MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& modify(const long c0) { S_SUPPKEY = c0;  return *this; }
-    template<class Archive>
-    void serialize(Archive& ar, const unsigned int version) const 
-    {
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  struct MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_mapkey0_idxfn {
-    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.S_SUPPKEY);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& x, const MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& y) {
-      return x.S_SUPPKEY == y.S_SUPPKEY;
-    }
-  };
-  
-  typedef MultiHashMap<MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry,long,
-    HashIndex<MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry,long,MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_mapkey0_idxfn,true>
-  > MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_map;
-  typedef HashIndex<MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry,long,MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_mapkey0_idxfn,true> HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_map_0;
-  
   struct MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry {
     long S_NATIONKEY; long __av; 
     explicit MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry() { /*S_NATIONKEY = 0L; __av = 0L; */ }
@@ -1732,42 +1701,36 @@ namespace dbtoaster {
   typedef HashIndex<MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey0_idxfn,false> HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0;
   typedef HashIndex<MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey1_idxfn,false> HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_1;
   
-  struct MKT_SHAREORDERS4_DELTA_entry {
-    long L_ORDERKEY; long O_CUSTKEY; date O_ORDERDATE; long __av; 
-    explicit MKT_SHAREORDERS4_DELTA_entry() { /*L_ORDERKEY = 0L; O_CUSTKEY = 0L; O_ORDERDATE = 00000000; __av = 0L; */ }
-    explicit MKT_SHAREORDERS4_DELTA_entry(const long c0, const long c1, const date c2, const long c3) { L_ORDERKEY = c0; O_CUSTKEY = c1; O_ORDERDATE = c2; __av = c3; }
-    MKT_SHAREORDERS4_DELTA_entry(const MKT_SHAREORDERS4_DELTA_entry& other) : L_ORDERKEY( other.L_ORDERKEY ), O_CUSTKEY( other.O_CUSTKEY ), O_ORDERDATE( other.O_ORDERDATE ), __av( other.__av ) {}
-    FORCE_INLINE MKT_SHAREORDERS4_DELTA_entry& modify(const long c0, const long c1, const date c2) { L_ORDERKEY = c0; O_CUSTKEY = c1; O_ORDERDATE = c2;  return *this; }
+  struct MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry {
+    long S_SUPPKEY; long __av; 
+    explicit MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry() { /*S_SUPPKEY = 0L; __av = 0L; */ }
+    explicit MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry(const long c0, const long c1) { S_SUPPKEY = c0; __av = c1; }
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry(const MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& other) : S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& modify(const long c0) { S_SUPPKEY = c0;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
       ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, L_ORDERKEY);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, O_CUSTKEY);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, O_ORDERDATE);
+      DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct MKT_SHAREORDERS4_DELTA_mapkey012_idxfn {
-    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS4_DELTA_entry& e) {
+  struct MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.L_ORDERKEY);
-      hash_combine(h, e.O_CUSTKEY);
-      hash_combine(h, e.O_ORDERDATE);
+      hash_combine(h, e.S_SUPPKEY);
       return h;
     }
-    FORCE_INLINE static bool equals(const MKT_SHAREORDERS4_DELTA_entry& x, const MKT_SHAREORDERS4_DELTA_entry& y) {
-      return x.L_ORDERKEY == y.L_ORDERKEY && x.O_CUSTKEY == y.O_CUSTKEY && x.O_ORDERDATE == y.O_ORDERDATE;
+    FORCE_INLINE static bool equals(const MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& x, const MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry& y) {
+      return x.S_SUPPKEY == y.S_SUPPKEY;
     }
   };
   
-  typedef MultiHashMap<MKT_SHAREORDERS4_DELTA_entry,long,
-    HashIndex<MKT_SHAREORDERS4_DELTA_entry,long,MKT_SHAREORDERS4_DELTA_mapkey012_idxfn,true>
-  > MKT_SHAREORDERS4_DELTA_map;
-  typedef HashIndex<MKT_SHAREORDERS4_DELTA_entry,long,MKT_SHAREORDERS4_DELTA_mapkey012_idxfn,true> HashIndex_MKT_SHAREORDERS4_DELTA_map_012;
+  typedef MultiHashMap<MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry,long,
+    HashIndex<MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry,long,MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_mapkey0_idxfn,true>
+  > MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_map;
+  typedef HashIndex<MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry,long,MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_mapkey0_idxfn,true> HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_map_0;
   
   struct MKT_SHAREORDERS4_P_1_entry {
     long L_ORDERKEY; DOUBLE_TYPE __av; 
@@ -2092,22 +2055,22 @@ namespace dbtoaster {
   typedef HashIndex<MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey1_idxfn,false> HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_1;
   
   struct MKT_SHAREPART1CUSTOMER1_P_2PART1_entry {
-    long P_PARTKEY; long O_CUSTKEY; date O_ORDERDATE; DOUBLE_TYPE __av; 
-    explicit MKT_SHAREPART1CUSTOMER1_P_2PART1_entry() { /*P_PARTKEY = 0L; O_CUSTKEY = 0L; O_ORDERDATE = 00000000; __av = 0.0; */ }
-    explicit MKT_SHAREPART1CUSTOMER1_P_2PART1_entry(const long c0, const long c1, const date c2, const DOUBLE_TYPE c3) { P_PARTKEY = c0; O_CUSTKEY = c1; O_ORDERDATE = c2; __av = c3; }
-    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry(const MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& other) : P_PARTKEY( other.P_PARTKEY ), O_CUSTKEY( other.O_CUSTKEY ), O_ORDERDATE( other.O_ORDERDATE ), __av( other.__av ) {}
-    FORCE_INLINE MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& modify(const long c0, const long c1, const date c2) { P_PARTKEY = c0; O_CUSTKEY = c1; O_ORDERDATE = c2;  return *this; }
-    FORCE_INLINE MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& modify0(const long c0) { P_PARTKEY = c0;  return *this; }
-    FORCE_INLINE MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& modify1(const long c1) { O_CUSTKEY = c1;  return *this; }
+    long O_CUSTKEY; date O_ORDERDATE; long P_PARTKEY; DOUBLE_TYPE __av; 
+    explicit MKT_SHAREPART1CUSTOMER1_P_2PART1_entry() { /*O_CUSTKEY = 0L; O_ORDERDATE = 00000000; P_PARTKEY = 0L; __av = 0.0; */ }
+    explicit MKT_SHAREPART1CUSTOMER1_P_2PART1_entry(const long c0, const date c1, const long c2, const DOUBLE_TYPE c3) { O_CUSTKEY = c0; O_ORDERDATE = c1; P_PARTKEY = c2; __av = c3; }
+    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry(const MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& other) : O_CUSTKEY( other.O_CUSTKEY ), O_ORDERDATE( other.O_ORDERDATE ), P_PARTKEY( other.P_PARTKEY ), __av( other.__av ) {}
+    FORCE_INLINE MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& modify(const long c0, const date c1, const long c2) { O_CUSTKEY = c0; O_ORDERDATE = c1; P_PARTKEY = c2;  return *this; }
+    FORCE_INLINE MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& modify2(const long c2) { P_PARTKEY = c2;  return *this; }
+    FORCE_INLINE MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& modify0(const long c0) { O_CUSTKEY = c0;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
       ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, P_PARTKEY);
-      ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, O_CUSTKEY);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, O_ORDERDATE);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_PARTKEY);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
@@ -2115,17 +2078,17 @@ namespace dbtoaster {
   struct MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey012_idxfn {
     FORCE_INLINE static size_t hash(const MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.P_PARTKEY);
       hash_combine(h, e.O_CUSTKEY);
       hash_combine(h, e.O_ORDERDATE);
+      hash_combine(h, e.P_PARTKEY);
       return h;
     }
     FORCE_INLINE static bool equals(const MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& x, const MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& y) {
-      return x.P_PARTKEY == y.P_PARTKEY && x.O_CUSTKEY == y.O_CUSTKEY && x.O_ORDERDATE == y.O_ORDERDATE;
+      return x.O_CUSTKEY == y.O_CUSTKEY && x.O_ORDERDATE == y.O_ORDERDATE && x.P_PARTKEY == y.P_PARTKEY;
     }
   };
   
-  struct MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey0_idxfn {
+  struct MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey2_idxfn {
     FORCE_INLINE static size_t hash(const MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& e) {
       size_t h = 0;
       hash_combine(h, e.P_PARTKEY);
@@ -2136,7 +2099,7 @@ namespace dbtoaster {
     }
   };
   
-  struct MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey1_idxfn {
+  struct MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey0_idxfn {
     FORCE_INLINE static size_t hash(const MKT_SHAREPART1CUSTOMER1_P_2PART1_entry& e) {
       size_t h = 0;
       hash_combine(h, e.O_CUSTKEY);
@@ -2149,12 +2112,49 @@ namespace dbtoaster {
   
   typedef MultiHashMap<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,
     HashIndex<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey012_idxfn,true>,
-    HashIndex<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey0_idxfn,false>,
-    HashIndex<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey1_idxfn,false>
+    HashIndex<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey2_idxfn,false>,
+    HashIndex<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey0_idxfn,false>
   > MKT_SHAREPART1CUSTOMER1_P_2PART1_map;
   typedef HashIndex<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey012_idxfn,true> HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_012;
+  typedef HashIndex<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey2_idxfn,false> HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_2;
   typedef HashIndex<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey0_idxfn,false> HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_0;
-  typedef HashIndex<MKT_SHAREPART1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey1_idxfn,false> HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_1;
+  
+  struct MKT_SHAREPART1ORDERS1_DELTA_entry {
+    long L_ORDERKEY; long O_CUSTKEY; date O_ORDERDATE; long __av; 
+    explicit MKT_SHAREPART1ORDERS1_DELTA_entry() { /*L_ORDERKEY = 0L; O_CUSTKEY = 0L; O_ORDERDATE = 00000000; __av = 0L; */ }
+    explicit MKT_SHAREPART1ORDERS1_DELTA_entry(const long c0, const long c1, const date c2, const long c3) { L_ORDERKEY = c0; O_CUSTKEY = c1; O_ORDERDATE = c2; __av = c3; }
+    MKT_SHAREPART1ORDERS1_DELTA_entry(const MKT_SHAREPART1ORDERS1_DELTA_entry& other) : L_ORDERKEY( other.L_ORDERKEY ), O_CUSTKEY( other.O_CUSTKEY ), O_ORDERDATE( other.O_ORDERDATE ), __av( other.__av ) {}
+    FORCE_INLINE MKT_SHAREPART1ORDERS1_DELTA_entry& modify(const long c0, const long c1, const date c2) { L_ORDERKEY = c0; O_CUSTKEY = c1; O_ORDERDATE = c2;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, L_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, O_CUSTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, O_ORDERDATE);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct MKT_SHAREPART1ORDERS1_DELTA_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const MKT_SHAREPART1ORDERS1_DELTA_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.L_ORDERKEY);
+      hash_combine(h, e.O_CUSTKEY);
+      hash_combine(h, e.O_ORDERDATE);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const MKT_SHAREPART1ORDERS1_DELTA_entry& x, const MKT_SHAREPART1ORDERS1_DELTA_entry& y) {
+      return x.L_ORDERKEY == y.L_ORDERKEY && x.O_CUSTKEY == y.O_CUSTKEY && x.O_ORDERDATE == y.O_ORDERDATE;
+    }
+  };
+  
+  typedef MultiHashMap<MKT_SHAREPART1ORDERS1_DELTA_entry,long,
+    HashIndex<MKT_SHAREPART1ORDERS1_DELTA_entry,long,MKT_SHAREPART1ORDERS1_DELTA_mapkey012_idxfn,true>
+  > MKT_SHAREPART1ORDERS1_DELTA_map;
+  typedef HashIndex<MKT_SHAREPART1ORDERS1_DELTA_entry,long,MKT_SHAREPART1ORDERS1_DELTA_mapkey012_idxfn,true> HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012;
   
   struct MKT_SHAREPART1LINEITEM1_P_1_entry {
     long L_ORDERKEY; date O_ORDERDATE; long __av; 
@@ -2445,20 +2445,20 @@ namespace dbtoaster {
   typedef HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_mapkey0_idxfn,false> HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_map_0;
   
   struct MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry {
-    long P_PARTKEY; long O_CUSTKEY; long TOTAL_O_YEAR; DOUBLE_TYPE __av; 
-    explicit MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry() { /*P_PARTKEY = 0L; O_CUSTKEY = 0L; TOTAL_O_YEAR = 0L; __av = 0.0; */ }
-    explicit MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { P_PARTKEY = c0; O_CUSTKEY = c1; TOTAL_O_YEAR = c2; __av = c3; }
-    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry(const MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& other) : P_PARTKEY( other.P_PARTKEY ), O_CUSTKEY( other.O_CUSTKEY ), TOTAL_O_YEAR( other.TOTAL_O_YEAR ), __av( other.__av ) {}
-    FORCE_INLINE MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& modify(const long c0, const long c1, const long c2) { P_PARTKEY = c0; O_CUSTKEY = c1; TOTAL_O_YEAR = c2;  return *this; }
-    FORCE_INLINE MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& modify0(const long c0) { P_PARTKEY = c0;  return *this; }
-    FORCE_INLINE MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& modify1(const long c1) { O_CUSTKEY = c1;  return *this; }
+    long O_CUSTKEY; long P_PARTKEY; long TOTAL_O_YEAR; DOUBLE_TYPE __av; 
+    explicit MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry() { /*O_CUSTKEY = 0L; P_PARTKEY = 0L; TOTAL_O_YEAR = 0L; __av = 0.0; */ }
+    explicit MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { O_CUSTKEY = c0; P_PARTKEY = c1; TOTAL_O_YEAR = c2; __av = c3; }
+    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry(const MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& other) : O_CUSTKEY( other.O_CUSTKEY ), P_PARTKEY( other.P_PARTKEY ), TOTAL_O_YEAR( other.TOTAL_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& modify(const long c0, const long c1, const long c2) { O_CUSTKEY = c0; P_PARTKEY = c1; TOTAL_O_YEAR = c2;  return *this; }
+    FORCE_INLINE MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& modify1(const long c1) { P_PARTKEY = c1;  return *this; }
+    FORCE_INLINE MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& modify0(const long c0) { O_CUSTKEY = c0;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
       ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, P_PARTKEY);
-      ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, O_CUSTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_PARTKEY);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, TOTAL_O_YEAR);
       ar << ELEM_SEPARATOR;
@@ -2468,17 +2468,17 @@ namespace dbtoaster {
   struct MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey012_idxfn {
     FORCE_INLINE static size_t hash(const MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.P_PARTKEY);
       hash_combine(h, e.O_CUSTKEY);
+      hash_combine(h, e.P_PARTKEY);
       hash_combine(h, e.TOTAL_O_YEAR);
       return h;
     }
     FORCE_INLINE static bool equals(const MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& x, const MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& y) {
-      return x.P_PARTKEY == y.P_PARTKEY && x.O_CUSTKEY == y.O_CUSTKEY && x.TOTAL_O_YEAR == y.TOTAL_O_YEAR;
+      return x.O_CUSTKEY == y.O_CUSTKEY && x.P_PARTKEY == y.P_PARTKEY && x.TOTAL_O_YEAR == y.TOTAL_O_YEAR;
     }
   };
   
-  struct MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn {
+  struct MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey1_idxfn {
     FORCE_INLINE static size_t hash(const MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& e) {
       size_t h = 0;
       hash_combine(h, e.P_PARTKEY);
@@ -2489,7 +2489,7 @@ namespace dbtoaster {
     }
   };
   
-  struct MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey1_idxfn {
+  struct MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn {
     FORCE_INLINE static size_t hash(const MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry& e) {
       size_t h = 0;
       hash_combine(h, e.O_CUSTKEY);
@@ -2502,12 +2502,12 @@ namespace dbtoaster {
   
   typedef MultiHashMap<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,
     HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey012_idxfn,true>,
-    HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn,false>,
-    HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey1_idxfn,false>
+    HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey1_idxfn,false>,
+    HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn,false>
   > MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map;
   typedef HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey012_idxfn,true> HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_012;
-  typedef HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn,false> HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0;
   typedef HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey1_idxfn,false> HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_1;
+  typedef HashIndex<MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry,DOUBLE_TYPE,MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn,false> HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0;
   
   struct MKT_SHAREPART1_L2_1_L1_1PART1_entry {
     long P_PARTKEY; long TOTAL_O_YEAR; DOUBLE_TYPE __av; 
@@ -2625,8 +2625,7 @@ namespace dbtoaster {
         tN += DELTA_LINEITEM.size;
 
         MKT_SHAREORDERS1LINEITEM1_DELTA.clear();
-        {  
-
+        { 
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
                 long l_orderkey = DELTA_LINEITEM.orderkey[i];
@@ -2646,10 +2645,10 @@ namespace dbtoaster {
                 // STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
                 // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
-                MKT_SHAREORDERS1LINEITEM1_DELTA.addOrDelOnZero(se1.modify(l_orderkey,p_partkey,s_suppkey),(v1 * (l_extendedprice * (1L + (-1L * l_discount)))));
-
+                MKT_SHAREORDERS1LINEITEM1_DELTA.addOrDelOnZero(se1.modify(l_orderkey,p_partkey,s_suppkey),(v1 * (l_extendedprice * (1L + (-1L * l_discount)))));            
           }
         }
+
         {  // foreach
           const HashIndex_MKT_SHAREORDERS1LINEITEM1_DELTA_map_012* i2 = static_cast<HashIndex_MKT_SHAREORDERS1LINEITEM1_DELTA_map_012*>(MKT_SHAREORDERS1LINEITEM1_DELTA.index[0]);
           HashIndex_MKT_SHAREORDERS1LINEITEM1_DELTA_map_012::IdxNode* n2; 
@@ -2674,7 +2673,7 @@ namespace dbtoaster {
                     do {                
                       long total_o_year = e3->TOTAL_O_YEAR;
                       long v3 = e3->__av;
-                      MKT_SHAREORDERS1.addOrDelOnZero(se2.modify(total_o_year),(v2 * (MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se3.modify(p_partkey)) * (v3 * MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se4.modify(s_suppkey))))));
+                      MKT_SHAREORDERS1.addOrDelOnZero(se2.modify(total_o_year),(v2 * (MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se3.modify(p_partkey)) * (MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se4.modify(s_suppkey)) * v3))));
                       n3 = n3->nxt;
                     } while (n3 && (e3 = n3->obj) && h1 == n3->hash &&  MKT_SHAREORDERS1LINEITEM1_P_2_mapkey0_idxfn::equals(se5, *e3)); 
                   }
@@ -2762,26 +2761,23 @@ namespace dbtoaster {
                 long p_partkey = e8->P_PARTKEY;
                 long s_suppkey = e8->S_SUPPKEY;
                 DOUBLE_TYPE v8 = e8->__av;
-                MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.addOrDelOnZero(se13.modify(l_orderkey,s_suppkey),(v8 * MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se14.modify(p_partkey))));
+                { //slice 
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_0* i9 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3.index[1]);
+                  const HASH_RES_t h4 = MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey0_idxfn::hash(se14.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_0::IdxNode* n9 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_0::IdxNode*>(i9->slice(se14, h4));
+                  MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry* e9;
+                 
+                  if (n9 && (e9 = n9->obj)) {
+                    do {                
+                      long o_custkey = e9->O_CUSTKEY;
+                      long total_o_year = e9->TOTAL_O_YEAR;
+                      long v9 = e9->__av;
+                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1.addOrDelOnZero(se13.modify(p_partkey,s_suppkey,o_custkey,total_o_year),(v8 * v9));
+                      n9 = n9->nxt;
+                    } while (n9 && (e9 = n9->obj) && h4 == n9->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey0_idxfn::equals(se14, *e9)); 
+                  }
+                }
               n8 = n8->nxt;
-            }
-          }
-        }{  // foreach
-          const HashIndex_MKT_SHAREORDERS1LINEITEM1_DELTA_map_012* i9 = static_cast<HashIndex_MKT_SHAREORDERS1LINEITEM1_DELTA_map_012*>(MKT_SHAREORDERS1LINEITEM1_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS1LINEITEM1_DELTA_map_012::IdxNode* n9; 
-          MKT_SHAREORDERS1LINEITEM1_DELTA_entry* e9;
-        
-          for (size_t i = 0; i < i9->size_; i++)
-          {
-            n9 = i9->buckets_ + i;
-            while (n9 && (e9 = n9->obj))
-            {
-                long l_orderkey = e9->L_ORDERKEY;
-                long p_partkey = e9->P_PARTKEY;
-                long s_suppkey = e9->S_SUPPKEY;
-                DOUBLE_TYPE v9 = e9->__av;
-                MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1.addOrDelOnZero(se15.modify(l_orderkey,p_partkey,s_suppkey),v9);
-              n9 = n9->nxt;
             }
           }
         }{  // foreach
@@ -2798,23 +2794,26 @@ namespace dbtoaster {
                 long p_partkey = e10->P_PARTKEY;
                 long s_suppkey = e10->S_SUPPKEY;
                 DOUBLE_TYPE v10 = e10->__av;
-                { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_0* i11 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3.index[1]);
-                  const HASH_RES_t h4 = MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey0_idxfn::hash(se17.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_0::IdxNode* n11 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_0::IdxNode*>(i11->slice(se17, h4));
-                  MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry* e11;
-                 
-                  if (n11 && (e11 = n11->obj)) {
-                    do {                
-                      long o_custkey = e11->O_CUSTKEY;
-                      long total_o_year = e11->TOTAL_O_YEAR;
-                      long v11 = e11->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1.addOrDelOnZero(se16.modify(p_partkey,s_suppkey,o_custkey,total_o_year),(v10 * v11));
-                      n11 = n11->nxt;
-                    } while (n11 && (e11 = n11->obj) && h4 == n11->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey0_idxfn::equals(se17, *e11)); 
-                  }
-                }
+                MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1.addOrDelOnZero(se15.modify(l_orderkey,p_partkey,s_suppkey),v10);
               n10 = n10->nxt;
+            }
+          }
+        }{  // foreach
+          const HashIndex_MKT_SHAREORDERS1LINEITEM1_DELTA_map_012* i11 = static_cast<HashIndex_MKT_SHAREORDERS1LINEITEM1_DELTA_map_012*>(MKT_SHAREORDERS1LINEITEM1_DELTA.index[0]);
+          HashIndex_MKT_SHAREORDERS1LINEITEM1_DELTA_map_012::IdxNode* n11; 
+          MKT_SHAREORDERS1LINEITEM1_DELTA_entry* e11;
+        
+          for (size_t i = 0; i < i11->size_; i++)
+          {
+            n11 = i11->buckets_ + i;
+            while (n11 && (e11 = n11->obj))
+            {
+                long l_orderkey = e11->L_ORDERKEY;
+                long p_partkey = e11->P_PARTKEY;
+                long s_suppkey = e11->S_SUPPKEY;
+                DOUBLE_TYPE v11 = e11->__av;
+                MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.addOrDelOnZero(se16.modify(l_orderkey,s_suppkey),(v11 * MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se17.modify(p_partkey))));
+              n11 = n11->nxt;
             }
           }
         }{  // foreach
@@ -2842,7 +2841,7 @@ namespace dbtoaster {
                       long o_custkey = e13->O_CUSTKEY;
                       long total_o_year = e13->TOTAL_O_YEAR;
                       long v13 = e13->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1PART1.addOrDelOnZero(se18.modify(p_partkey,o_custkey,total_o_year),(v12 * (MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se19.modify(s_suppkey)) * v13)));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1PART1.addOrDelOnZero(se18.modify(o_custkey,p_partkey,total_o_year),(v12 * (MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se19.modify(s_suppkey)) * v13)));
                       n13 = n13->nxt;
                     } while (n13 && (e13 = n13->obj) && h5 == n13->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey0_idxfn::equals(se20, *e13)); 
                   }
@@ -2892,7 +2891,7 @@ namespace dbtoaster {
                     do {                
                       long total_o_year = e16->TOTAL_O_YEAR;
                       long v16 = e16->__av;
-                      MKT_SHAREORDERS1SUPPLIER1_P_1.addOrDelOnZero(se23.modify(s_suppkey,total_o_year),(v15 * (v16 * MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se24.modify(p_partkey)))));
+                      MKT_SHAREORDERS1SUPPLIER1_P_1.addOrDelOnZero(se23.modify(s_suppkey,total_o_year),(v15 * (MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se24.modify(p_partkey)) * v16)));
                       n16 = n16->nxt;
                     } while (n16 && (e16 = n16->obj) && h6 == n16->hash &&  MKT_SHAREORDERS1LINEITEM1_P_2_mapkey0_idxfn::equals(se25, *e16)); 
                   }
@@ -3014,7 +3013,7 @@ namespace dbtoaster {
                 long p_partkey = e23->P_PARTKEY;
                 long s_suppkey = e23->S_SUPPKEY;
                 DOUBLE_TYPE v23 = e23->__av;
-                MKT_SHAREORDERS4_P_1.addOrDelOnZero(se36.modify(l_orderkey),(v23 * (MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se37.modify(s_suppkey)) * MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se38.modify(p_partkey)))));
+                MKT_SHAREORDERS4_P_1.addOrDelOnZero(se36.modify(l_orderkey),(v23 * (MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se37.modify(p_partkey)) * MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se38.modify(s_suppkey)))));
               n23 = n23->nxt;
             }
           }
@@ -3042,7 +3041,7 @@ namespace dbtoaster {
                     do {                
                       date o_orderdate = e25->O_ORDERDATE;
                       long v25 = e25->__av;
-                      MKT_SHAREPART1.addOrDelOnZero(se39.modify(o_orderdate),(v24 * (v25 * (MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se40.modify(p_partkey)) * MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se41.modify(s_suppkey))))));
+                      MKT_SHAREPART1.addOrDelOnZero(se39.modify(o_orderdate),(v24 * (MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se40.modify(p_partkey)) * (MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se41.modify(s_suppkey)) * v25))));
                       n25 = n25->nxt;
                     } while (n25 && (e25 = n25->obj) && h9 == n25->hash &&  MKT_SHAREPART1LINEITEM1_P_1_mapkey0_idxfn::equals(se42, *e25)); 
                   }
@@ -3174,7 +3173,7 @@ namespace dbtoaster {
                       long o_custkey = e33->O_CUSTKEY;
                       date o_orderdate = e33->O_ORDERDATE;
                       long v33 = e33->__av;
-                      MKT_SHAREPART1CUSTOMER1_P_2PART1.addOrDelOnZero(se52.modify(p_partkey,o_custkey,o_orderdate),(v32 * (MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se53.modify(s_suppkey)) * v33)));
+                      MKT_SHAREPART1CUSTOMER1_P_2PART1.addOrDelOnZero(se52.modify(o_custkey,o_orderdate,p_partkey),(v32 * (MKT_SHAREORDERS1LINEITEM1_P_3.getValueOrDefault(se53.modify(s_suppkey)) * v33)));
                       n33 = n33->nxt;
                     } while (n33 && (e33 = n33->obj) && h13 == n33->hash &&  MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_mapkey0_idxfn::equals(se54, *e33)); 
                   }
@@ -3302,7 +3301,7 @@ namespace dbtoaster {
                     do {                
                       long total_o_year = e41->TOTAL_O_YEAR;
                       long v41 = e41->__av;
-                      MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se63.modify(total_o_year),(v40 * (v41 * (MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se64.modify(p_partkey)) * MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2.getValueOrDefault(se65.modify(s_suppkey))))));
+                      MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se63.modify(total_o_year),(v40 * (MKT_SHAREORDERS1LINEITEM1_P_1.getValueOrDefault(se64.modify(p_partkey)) * (MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2.getValueOrDefault(se65.modify(s_suppkey)) * v41))));
                       n41 = n41->nxt;
                     } while (n41 && (e41 = n41->obj) && h17 == n41->hash &&  MKT_SHAREORDERS1LINEITEM1_P_2_mapkey0_idxfn::equals(se66, *e41)); 
                   }
@@ -3368,7 +3367,7 @@ namespace dbtoaster {
                       long o_custkey = e45->O_CUSTKEY;
                       long total_o_year = e45->TOTAL_O_YEAR;
                       long v45 = e45->__av;
-                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.addOrDelOnZero(se71.modify(p_partkey,o_custkey,total_o_year),(v44 * (MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2.getValueOrDefault(se72.modify(s_suppkey)) * v45)));
+                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.addOrDelOnZero(se71.modify(o_custkey,p_partkey,total_o_year),(v44 * (MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2.getValueOrDefault(se72.modify(s_suppkey)) * v45)));
                       n45 = n45->nxt;
                     } while (n45 && (e45 = n45->obj) && h19 == n45->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey0_idxfn::equals(se73, *e45)); 
                   }
@@ -3400,7 +3399,7 @@ namespace dbtoaster {
                     do {                
                       long total_o_year = e47->TOTAL_O_YEAR;
                       long v47 = e47->__av;
-                      MKT_SHAREPART1_L2_1_L1_1PART1.addOrDelOnZero(se74.modify(p_partkey,total_o_year),(v46 * (v47 * MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2.getValueOrDefault(se75.modify(s_suppkey)))));
+                      MKT_SHAREPART1_L2_1_L1_1PART1.addOrDelOnZero(se74.modify(p_partkey,total_o_year),(v46 * (MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2.getValueOrDefault(se75.modify(s_suppkey)) * v47)));
                       n47 = n47->nxt;
                     } while (n47 && (e47 = n47->obj) && h20 == n47->hash &&  MKT_SHAREORDERS1LINEITEM1_P_2_mapkey0_idxfn::equals(se76, *e47)); 
                   }
@@ -3445,11 +3444,11 @@ namespace dbtoaster {
         }
         tN += DELTA_ORDERS.size;
 
-        MKT_SHAREORDERS4_DELTA.clear();
         MKT_SHAREORDERS1_L1_1_L1_2_DELTA.clear();
         MKT_SHAREORDERS1_DOMAIN1.clear();
-        {  
-          for (size_t i = 0; i < DELTA_ORDERS.size; i++)
+        MKT_SHAREPART1ORDERS1_DELTA.clear();
+        { 
+          for (size_t i = 0; i < DELTA_ORDERS.size; i++) 
           {
                 long l_orderkey = DELTA_ORDERS.orderkey[i];
                 long o_custkey = DELTA_ORDERS.custkey[i];
@@ -3461,15 +3460,15 @@ namespace dbtoaster {
                 // long o_shippriority = DELTA_ORDERS.shippriority[i];
                 // STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
                 long v49 = 1L;
-                (/*if */(o_orderdate >= c1 && c2 >= o_orderdate) ? MKT_SHAREORDERS4_DELTA.addOrDelOnZero(se79.modify(l_orderkey,o_custkey,o_orderdate),v49) : (void)0);
-                long v50 = 1L;
                 long l4 = Uyear_part(o_orderdate);
-                (/*if */(o_orderdate >= c1 && c2 >= o_orderdate) ? MKT_SHAREORDERS1_L1_1_L1_2_DELTA.addOrDelOnZero(se80.modify(l_orderkey,o_custkey,l4),v50) : (void)0);
+                (/*if */(o_orderdate >= c1 && c2 >= o_orderdate) ? MKT_SHAREORDERS1_L1_1_L1_2_DELTA.addOrDelOnZero(se79.modify(l_orderkey,o_custkey,l4),v49) : (void)0);            
+                long v50 = 1L;
+                (/*if */(o_orderdate >= c1 && c2 >= o_orderdate) ? MKT_SHAREORDERS1_DOMAIN1.addOrDelOnZero(se80.modify(l4),(v50 != 0 ? 1L : 0L)) : (void)0);
                 long v51 = 1L;
-                long l5 = l4;
-                (/*if */(o_orderdate >= c1 && c2 >= o_orderdate) ? MKT_SHAREORDERS1_DOMAIN1.addOrDelOnZero(se81.modify(l5),(v51 != 0 ? 1L : 0L)) : (void)0);
-          }
-        } 
+                (/*if */(o_orderdate >= c1 && c2 >= o_orderdate) ? MKT_SHAREPART1ORDERS1_DELTA.addOrDelOnZero(se81.modify(l_orderkey,o_custkey,o_orderdate),v51) : (void)0);
+          }        
+        }
+
         {  // foreach
           const HashIndex_MKT_SHAREORDERS1_DOMAIN1_map_0* i52 = static_cast<HashIndex_MKT_SHAREORDERS1_DOMAIN1_map_0*>(MKT_SHAREORDERS1_DOMAIN1.index[0]);
           HashIndex_MKT_SHAREORDERS1_DOMAIN1_map_0::IdxNode* n52; 
@@ -3511,30 +3510,26 @@ namespace dbtoaster {
                 DOUBLE_TYPE l8 = agg6;
                 agg5 += Udiv(l8);
                 DOUBLE_TYPE agg7 = 0.0;
-                {  // foreach
-                  const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i54 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-                  HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n54; 
-                  MKT_SHAREORDERS4_DELTA_entry* e54;
-                
-                  for (size_t i = 0; i < i54->size_; i++)
-                  {
-                    n54 = i54->buckets_ + i;
-                    while (n54 && (e54 = n54->obj))
-                    {
-                        long l_orderkey = e54->L_ORDERKEY;
-                        long o_custkey = e54->O_CUSTKEY;
-                        date o_orderdate = e54->O_ORDERDATE;
-                        long v54 = e54->__av;
-                        long l10 = Uyear_part(o_orderdate);
-                        DOUBLE_TYPE agg8 = 0.0;
-                        DOUBLE_TYPE agg9 = 0.0;
-                        agg9 += (MKT_SHAREORDERS1_L1_1_L1_2_DELTA.getValueOrDefault(se90.modify(l_orderkey,o_custkey,l10)) * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se91.modify(o_custkey)) * MKT_SHAREORDERS1_L1_1_L1_2_P_2.getValueOrDefault(se92.modify(l_orderkey))));
-                        DOUBLE_TYPE l12 = (MKT_SHAREPART1_L2_1_L1_1.getValueOrDefault(se89.modify(l10)) + agg9);
-                        agg8 += Ulistmax(1L, l12);
-                        DOUBLE_TYPE l11 = agg8;
-                        agg7 += (v54 * (MKT_SHAREORDERS4_P_1.getValueOrDefault(se93.modify(l_orderkey)) * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se94.modify(o_custkey)) * Udiv(l11))));
+                { //slice 
+                  const HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_DELTA_map_2* i54 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_DELTA_map_2*>(MKT_SHAREORDERS1_L1_1_L1_2_DELTA.index[1]);
+                  const HASH_RES_t h22 = MKT_SHAREORDERS1_L1_1_L1_2_DELTA_mapkey2_idxfn::hash(se95.modify2(total_o_year));
+                  HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_DELTA_map_2::IdxNode* n54 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_DELTA_map_2::IdxNode*>(i54->slice(se95, h22));
+                  MKT_SHAREORDERS1_L1_1_L1_2_DELTA_entry* e54;
+                 
+                  if (n54 && (e54 = n54->obj)) {
+                    do {                
+                      long l_orderkey = e54->L_ORDERKEY;
+                      long o_custkey = e54->O_CUSTKEY;
+                      long v54 = e54->__av;
+                      DOUBLE_TYPE agg8 = 0.0;
+                      DOUBLE_TYPE agg9 = 0.0;
+                      agg9 += (MKT_SHAREORDERS1_L1_1_L1_2_DELTA.getValueOrDefault(se90.modify(l_orderkey,o_custkey,total_o_year)) * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se91.modify(o_custkey)) * MKT_SHAREORDERS1_L1_1_L1_2_P_2.getValueOrDefault(se92.modify(l_orderkey))));
+                      DOUBLE_TYPE l11 = (MKT_SHAREPART1_L2_1_L1_1.getValueOrDefault(se89.modify(total_o_year)) + agg9);
+                      agg8 += Ulistmax(1L, l11);
+                      DOUBLE_TYPE l10 = agg8;
+                      agg7 += (v54 * (MKT_SHAREORDERS4_P_1.getValueOrDefault(se93.modify(l_orderkey)) * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se94.modify(o_custkey)) * Udiv(l10))));
                       n54 = n54->nxt;
-                    }
+                    } while (n54 && (e54 = n54->obj) && h22 == n54->hash &&  MKT_SHAREORDERS1_L1_1_L1_2_DELTA_mapkey2_idxfn::equals(se95, *e54)); 
                   }
                 }MKT_SHARE.addOrDelOnZero(se82.modify(total_o_year),((v52 != 0 ? 1L : 0L) * ((MKT_SHAREORDERS1.getValueOrDefault(se83.modify(total_o_year)) * (agg2 + (agg5 * -1L))) + agg7)));
               n52 = n52->nxt;
@@ -3554,7 +3549,7 @@ namespace dbtoaster {
                 long o_custkey = e55->O_CUSTKEY;
                 long total_o_year = e55->TOTAL_O_YEAR;
                 long v55 = e55->__av;
-                MKT_SHAREORDERS1.addOrDelOnZero(se95.modify(total_o_year),(v55 * (MKT_SHAREORDERS4_P_1.getValueOrDefault(se96.modify(l_orderkey)) * MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se97.modify(o_custkey)))));
+                MKT_SHAREORDERS1.addOrDelOnZero(se96.modify(total_o_year),(v55 * (MKT_SHAREORDERS4_P_1.getValueOrDefault(se97.modify(l_orderkey)) * MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se98.modify(o_custkey)))));
               n55 = n55->nxt;
             }
           }
@@ -3572,7 +3567,7 @@ namespace dbtoaster {
                 long o_custkey = e56->O_CUSTKEY;
                 long total_o_year = e56->TOTAL_O_YEAR;
                 long v56 = e56->__av;
-                MKT_SHAREORDERS1CUSTOMER1_P_1.addOrDelOnZero(se98.modify(o_custkey,total_o_year),(v56 * MKT_SHAREORDERS4_P_1.getValueOrDefault(se99.modify(l_orderkey))));
+                MKT_SHAREORDERS1CUSTOMER1_P_1.addOrDelOnZero(se99.modify(o_custkey,total_o_year),(v56 * MKT_SHAREORDERS4_P_1.getValueOrDefault(se100.modify(l_orderkey))));
               n56 = n56->nxt;
             }
           }
@@ -3590,7 +3585,7 @@ namespace dbtoaster {
                 long o_custkey = e57->O_CUSTKEY;
                 long total_o_year = e57->TOTAL_O_YEAR;
                 long v57 = e57->__av;
-                MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3.addOrDelOnZero(se100.modify(l_orderkey,o_custkey,total_o_year),v57);
+                MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3.addOrDelOnZero(se101.modify(l_orderkey,o_custkey,total_o_year),v57);
               n57 = n57->nxt;
             }
           }
@@ -3610,17 +3605,17 @@ namespace dbtoaster {
                 long v58 = e58->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0* i59 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.index[1]);
-                  const HASH_RES_t h22 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::hash(se102.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode* n59 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode*>(i59->slice(se102, h22));
+                  const HASH_RES_t h23 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::hash(se103.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode* n59 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode*>(i59->slice(se103, h23));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry* e59;
                  
                   if (n59 && (e59 = n59->obj)) {
                     do {                
                       long s_suppkey = e59->S_SUPPKEY;
                       DOUBLE_TYPE v59 = e59->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2.addOrDelOnZero(se101.modify(s_suppkey,o_custkey,total_o_year),(v58 * v59));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2.addOrDelOnZero(se102.modify(s_suppkey,o_custkey,total_o_year),(v58 * v59));
                       n59 = n59->nxt;
-                    } while (n59 && (e59 = n59->obj) && h22 == n59->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::equals(se102, *e59)); 
+                    } while (n59 && (e59 = n59->obj) && h23 == n59->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::equals(se103, *e59)); 
                   }
                 }
               n58 = n58->nxt;
@@ -3641,19 +3636,19 @@ namespace dbtoaster {
                 long total_o_year = e60->TOTAL_O_YEAR;
                 long v60 = e60->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0* i61 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1.index[1]);
-                  const HASH_RES_t h23 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn::hash(se104.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0::IdxNode* n61 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0::IdxNode*>(i61->slice(se104, h23));
-                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry* e61;
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0* i61 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1.index[1]);
+                  const HASH_RES_t h24 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn::hash(se105.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0::IdxNode* n61 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0::IdxNode*>(i61->slice(se105, h24));
+                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry* e61;
                  
                   if (n61 && (e61 = n61->obj)) {
                     do {                
                       long p_partkey = e61->P_PARTKEY;
                       long s_suppkey = e61->S_SUPPKEY;
                       DOUBLE_TYPE v61 = e61->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1.addOrDelOnZero(se103.modify(p_partkey,s_suppkey,o_custkey,total_o_year),(v60 * v61));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1.addOrDelOnZero(se104.modify(p_partkey,s_suppkey,o_custkey,total_o_year),(v60 * v61));
                       n61 = n61->nxt;
-                    } while (n61 && (e61 = n61->obj) && h23 == n61->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn::equals(se104, *e61)); 
+                    } while (n61 && (e61 = n61->obj) && h24 == n61->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn::equals(se105, *e61)); 
                   }
                 }
               n60 = n60->nxt;
@@ -3675,17 +3670,17 @@ namespace dbtoaster {
                 long v62 = e62->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0* i63 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1.index[1]);
-                  const HASH_RES_t h24 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::hash(se106.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode* n63 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode*>(i63->slice(se106, h24));
+                  const HASH_RES_t h25 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::hash(se107.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode* n63 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode*>(i63->slice(se107, h25));
                   MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry* e63;
                  
                   if (n63 && (e63 = n63->obj)) {
                     do {                
                       long p_partkey = e63->P_PARTKEY;
                       DOUBLE_TYPE v63 = e63->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1PART1.addOrDelOnZero(se105.modify(p_partkey,o_custkey,total_o_year),(v62 * v63));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1PART1.addOrDelOnZero(se106.modify(o_custkey,p_partkey,total_o_year),(v62 * v63));
                       n63 = n63->nxt;
-                    } while (n63 && (e63 = n63->obj) && h24 == n63->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::equals(se106, *e63)); 
+                    } while (n63 && (e63 = n63->obj) && h25 == n63->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::equals(se107, *e63)); 
                   }
                 }
               n62 = n62->nxt;
@@ -3705,7 +3700,7 @@ namespace dbtoaster {
                 long o_custkey = e64->O_CUSTKEY;
                 long total_o_year = e64->TOTAL_O_YEAR;
                 long v64 = e64->__av;
-                MKT_SHAREORDERS1LINEITEM1_P_2.addOrDelOnZero(se107.modify(l_orderkey,total_o_year),(v64 * MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se108.modify(o_custkey))));
+                MKT_SHAREORDERS1LINEITEM1_P_2.addOrDelOnZero(se108.modify(l_orderkey,total_o_year),(v64 * MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se109.modify(o_custkey))));
               n64 = n64->nxt;
             }
           }
@@ -3725,17 +3720,17 @@ namespace dbtoaster {
                 long v65 = e65->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0* i66 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.index[1]);
-                  const HASH_RES_t h25 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::hash(se111.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode* n66 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode*>(i66->slice(se111, h25));
+                  const HASH_RES_t h26 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::hash(se112.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode* n66 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode*>(i66->slice(se112, h26));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry* e66;
                  
                   if (n66 && (e66 = n66->obj)) {
                     do {                
                       long s_suppkey = e66->S_SUPPKEY;
                       DOUBLE_TYPE v66 = e66->__av;
-                      MKT_SHAREORDERS1SUPPLIER1_P_1.addOrDelOnZero(se109.modify(s_suppkey,total_o_year),(v65 * (v66 * MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se110.modify(o_custkey)))));
+                      MKT_SHAREORDERS1SUPPLIER1_P_1.addOrDelOnZero(se110.modify(s_suppkey,total_o_year),(v65 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se111.modify(o_custkey)) * v66)));
                       n66 = n66->nxt;
-                    } while (n66 && (e66 = n66->obj) && h25 == n66->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::equals(se111, *e66)); 
+                    } while (n66 && (e66 = n66->obj) && h26 == n66->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::equals(se112, *e66)); 
                   }
                 }
               n65 = n65->nxt;
@@ -3756,19 +3751,19 @@ namespace dbtoaster {
                 long total_o_year = e67->TOTAL_O_YEAR;
                 long v67 = e67->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0* i68 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1.index[1]);
-                  const HASH_RES_t h26 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn::hash(se114.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0::IdxNode* n68 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0::IdxNode*>(i68->slice(se114, h26));
-                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry* e68;
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0* i68 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1.index[1]);
+                  const HASH_RES_t h27 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn::hash(se115.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0::IdxNode* n68 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0::IdxNode*>(i68->slice(se115, h27));
+                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry* e68;
                  
                   if (n68 && (e68 = n68->obj)) {
                     do {                
                       long p_partkey = e68->P_PARTKEY;
                       long s_suppkey = e68->S_SUPPKEY;
                       DOUBLE_TYPE v68 = e68->__av;
-                      MKT_SHAREORDERS1SUPPLIER1_P_1PART1.addOrDelOnZero(se112.modify(p_partkey,s_suppkey,total_o_year),(v67 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se113.modify(o_custkey)) * v68)));
+                      MKT_SHAREORDERS1SUPPLIER1_P_1PART1.addOrDelOnZero(se113.modify(p_partkey,s_suppkey,total_o_year),(v67 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se114.modify(o_custkey)) * v68)));
                       n68 = n68->nxt;
-                    } while (n68 && (e68 = n68->obj) && h26 == n68->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn::equals(se114, *e68)); 
+                    } while (n68 && (e68 = n68->obj) && h27 == n68->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn::equals(se115, *e68)); 
                   }
                 }
               n67 = n67->nxt;
@@ -3790,26 +3785,26 @@ namespace dbtoaster {
                 long v69 = e69->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0* i70 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1.index[1]);
-                  const HASH_RES_t h27 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::hash(se117.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode* n70 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode*>(i70->slice(se117, h27));
+                  const HASH_RES_t h28 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::hash(se118.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode* n70 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode*>(i70->slice(se118, h28));
                   MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry* e70;
                  
                   if (n70 && (e70 = n70->obj)) {
                     do {                
                       long p_partkey = e70->P_PARTKEY;
                       DOUBLE_TYPE v70 = e70->__av;
-                      MKT_SHAREORDERS1PART1.addOrDelOnZero(se115.modify(p_partkey,total_o_year),(v69 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se116.modify(o_custkey)) * v70)));
+                      MKT_SHAREORDERS1PART1.addOrDelOnZero(se116.modify(p_partkey,total_o_year),(v69 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se117.modify(o_custkey)) * v70)));
                       n70 = n70->nxt;
-                    } while (n70 && (e70 = n70->obj) && h27 == n70->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::equals(se117, *e70)); 
+                    } while (n70 && (e70 = n70->obj) && h28 == n70->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::equals(se118, *e70)); 
                   }
                 }
               n69 = n69->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i71 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n71; 
-          MKT_SHAREORDERS4_DELTA_entry* e71;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i71 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n71; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e71;
         
           for (size_t i = 0; i < i71->size_; i++)
           {
@@ -3820,14 +3815,14 @@ namespace dbtoaster {
                 long o_custkey = e71->O_CUSTKEY;
                 date o_orderdate = e71->O_ORDERDATE;
                 long v71 = e71->__av;
-                MKT_SHAREPART1.addOrDelOnZero(se118.modify(o_orderdate),(v71 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se119.modify(o_custkey)) * MKT_SHAREORDERS4_P_1.getValueOrDefault(se120.modify(l_orderkey)))));
+                MKT_SHAREPART1.addOrDelOnZero(se119.modify(o_orderdate),(v71 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se120.modify(o_custkey)) * MKT_SHAREORDERS4_P_1.getValueOrDefault(se121.modify(l_orderkey)))));
               n71 = n71->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i72 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n72; 
-          MKT_SHAREORDERS4_DELTA_entry* e72;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i72 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n72; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e72;
         
           for (size_t i = 0; i < i72->size_; i++)
           {
@@ -3838,14 +3833,14 @@ namespace dbtoaster {
                 long o_custkey = e72->O_CUSTKEY;
                 date o_orderdate = e72->O_ORDERDATE;
                 long v72 = e72->__av;
-                MKT_SHAREPART1CUSTOMER1_P_2.addOrDelOnZero(se121.modify(o_custkey,o_orderdate),(v72 * MKT_SHAREORDERS4_P_1.getValueOrDefault(se122.modify(l_orderkey))));
+                MKT_SHAREPART1CUSTOMER1_P_2.addOrDelOnZero(se122.modify(o_custkey,o_orderdate),(v72 * MKT_SHAREORDERS4_P_1.getValueOrDefault(se123.modify(l_orderkey))));
               n72 = n72->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i73 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n73; 
-          MKT_SHAREORDERS4_DELTA_entry* e73;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i73 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n73; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e73;
         
           for (size_t i = 0; i < i73->size_; i++)
           {
@@ -3856,14 +3851,14 @@ namespace dbtoaster {
                 long o_custkey = e73->O_CUSTKEY;
                 date o_orderdate = e73->O_ORDERDATE;
                 long v73 = e73->__av;
-                MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3.addOrDelOnZero(se123.modify(l_orderkey,o_custkey,o_orderdate),v73);
+                MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3.addOrDelOnZero(se124.modify(l_orderkey,o_custkey,o_orderdate),v73);
               n73 = n73->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i74 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n74; 
-          MKT_SHAREORDERS4_DELTA_entry* e74;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i74 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n74; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e74;
         
           for (size_t i = 0; i < i74->size_; i++)
           {
@@ -3876,26 +3871,26 @@ namespace dbtoaster {
                 long v74 = e74->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0* i75 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.index[1]);
-                  const HASH_RES_t h28 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::hash(se125.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode* n75 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode*>(i75->slice(se125, h28));
+                  const HASH_RES_t h29 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::hash(se126.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode* n75 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode*>(i75->slice(se126, h29));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry* e75;
                  
                   if (n75 && (e75 = n75->obj)) {
                     do {                
                       long s_suppkey = e75->S_SUPPKEY;
                       DOUBLE_TYPE v75 = e75->__av;
-                      MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2.addOrDelOnZero(se124.modify(s_suppkey,o_custkey,o_orderdate),(v74 * v75));
+                      MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2.addOrDelOnZero(se125.modify(s_suppkey,o_custkey,o_orderdate),(v74 * v75));
                       n75 = n75->nxt;
-                    } while (n75 && (e75 = n75->obj) && h28 == n75->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::equals(se125, *e75)); 
+                    } while (n75 && (e75 = n75->obj) && h29 == n75->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::equals(se126, *e75)); 
                   }
                 }
               n74 = n74->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i76 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n76; 
-          MKT_SHAREORDERS4_DELTA_entry* e76;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i76 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n76; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e76;
         
           for (size_t i = 0; i < i76->size_; i++)
           {
@@ -3907,28 +3902,28 @@ namespace dbtoaster {
                 date o_orderdate = e76->O_ORDERDATE;
                 long v76 = e76->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0* i77 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1.index[1]);
-                  const HASH_RES_t h29 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn::hash(se127.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0::IdxNode* n77 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0::IdxNode*>(i77->slice(se127, h29));
-                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry* e77;
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0* i77 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1.index[1]);
+                  const HASH_RES_t h30 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn::hash(se128.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0::IdxNode* n77 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0::IdxNode*>(i77->slice(se128, h30));
+                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry* e77;
                  
                   if (n77 && (e77 = n77->obj)) {
                     do {                
                       long p_partkey = e77->P_PARTKEY;
                       long s_suppkey = e77->S_SUPPKEY;
                       DOUBLE_TYPE v77 = e77->__av;
-                      MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1.addOrDelOnZero(se126.modify(p_partkey,s_suppkey,o_custkey,o_orderdate),(v76 * v77));
+                      MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1.addOrDelOnZero(se127.modify(p_partkey,s_suppkey,o_custkey,o_orderdate),(v76 * v77));
                       n77 = n77->nxt;
-                    } while (n77 && (e77 = n77->obj) && h29 == n77->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn::equals(se127, *e77)); 
+                    } while (n77 && (e77 = n77->obj) && h30 == n77->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn::equals(se128, *e77)); 
                   }
                 }
               n76 = n76->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i78 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n78; 
-          MKT_SHAREORDERS4_DELTA_entry* e78;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i78 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n78; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e78;
         
           for (size_t i = 0; i < i78->size_; i++)
           {
@@ -3941,26 +3936,26 @@ namespace dbtoaster {
                 long v78 = e78->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0* i79 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1.index[1]);
-                  const HASH_RES_t h30 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::hash(se129.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode* n79 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode*>(i79->slice(se129, h30));
+                  const HASH_RES_t h31 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::hash(se130.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode* n79 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode*>(i79->slice(se130, h31));
                   MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry* e79;
                  
                   if (n79 && (e79 = n79->obj)) {
                     do {                
                       long p_partkey = e79->P_PARTKEY;
                       DOUBLE_TYPE v79 = e79->__av;
-                      MKT_SHAREPART1CUSTOMER1_P_2PART1.addOrDelOnZero(se128.modify(p_partkey,o_custkey,o_orderdate),(v78 * v79));
+                      MKT_SHAREPART1CUSTOMER1_P_2PART1.addOrDelOnZero(se129.modify(o_custkey,o_orderdate,p_partkey),(v78 * v79));
                       n79 = n79->nxt;
-                    } while (n79 && (e79 = n79->obj) && h30 == n79->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::equals(se129, *e79)); 
+                    } while (n79 && (e79 = n79->obj) && h31 == n79->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::equals(se130, *e79)); 
                   }
                 }
               n78 = n78->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i80 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n80; 
-          MKT_SHAREORDERS4_DELTA_entry* e80;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i80 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n80; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e80;
         
           for (size_t i = 0; i < i80->size_; i++)
           {
@@ -3971,14 +3966,14 @@ namespace dbtoaster {
                 long o_custkey = e80->O_CUSTKEY;
                 date o_orderdate = e80->O_ORDERDATE;
                 long v80 = e80->__av;
-                MKT_SHAREPART1LINEITEM1_P_1.addOrDelOnZero(se130.modify(l_orderkey,o_orderdate),(v80 * MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se131.modify(o_custkey))));
+                MKT_SHAREPART1LINEITEM1_P_1.addOrDelOnZero(se131.modify(l_orderkey,o_orderdate),(v80 * MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se132.modify(o_custkey))));
               n80 = n80->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i81 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n81; 
-          MKT_SHAREORDERS4_DELTA_entry* e81;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i81 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n81; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e81;
         
           for (size_t i = 0; i < i81->size_; i++)
           {
@@ -3991,26 +3986,26 @@ namespace dbtoaster {
                 long v81 = e81->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0* i82 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.index[1]);
-                  const HASH_RES_t h31 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::hash(se134.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode* n82 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode*>(i82->slice(se134, h31));
+                  const HASH_RES_t h32 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::hash(se135.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode* n82 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_0::IdxNode*>(i82->slice(se135, h32));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry* e82;
                  
                   if (n82 && (e82 = n82->obj)) {
                     do {                
                       long s_suppkey = e82->S_SUPPKEY;
                       DOUBLE_TYPE v82 = e82->__av;
-                      MKT_SHAREPART1SUPPLIER1_P_1.addOrDelOnZero(se132.modify(s_suppkey,o_orderdate),(v81 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se133.modify(o_custkey)) * v82)));
+                      MKT_SHAREPART1SUPPLIER1_P_1.addOrDelOnZero(se133.modify(s_suppkey,o_orderdate),(v81 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se134.modify(o_custkey)) * v82)));
                       n82 = n82->nxt;
-                    } while (n82 && (e82 = n82->obj) && h31 == n82->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::equals(se134, *e82)); 
+                    } while (n82 && (e82 = n82->obj) && h32 == n82->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey0_idxfn::equals(se135, *e82)); 
                   }
                 }
               n81 = n81->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i83 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n83; 
-          MKT_SHAREORDERS4_DELTA_entry* e83;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i83 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n83; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e83;
         
           for (size_t i = 0; i < i83->size_; i++)
           {
@@ -4022,28 +4017,28 @@ namespace dbtoaster {
                 date o_orderdate = e83->O_ORDERDATE;
                 long v83 = e83->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0* i84 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1.index[1]);
-                  const HASH_RES_t h32 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn::hash(se137.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0::IdxNode* n84 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_0::IdxNode*>(i84->slice(se137, h32));
-                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry* e84;
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0* i84 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1.index[1]);
+                  const HASH_RES_t h33 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn::hash(se138.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0::IdxNode* n84 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_0::IdxNode*>(i84->slice(se138, h33));
+                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry* e84;
                  
                   if (n84 && (e84 = n84->obj)) {
                     do {                
                       long p_partkey = e84->P_PARTKEY;
                       long s_suppkey = e84->S_SUPPKEY;
                       DOUBLE_TYPE v84 = e84->__av;
-                      MKT_SHAREPART1SUPPLIER1_P_1PART1.addOrDelOnZero(se135.modify(p_partkey,s_suppkey,o_orderdate),(v83 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se136.modify(o_custkey)) * v84)));
+                      MKT_SHAREPART1SUPPLIER1_P_1PART1.addOrDelOnZero(se136.modify(p_partkey,s_suppkey,o_orderdate),(v83 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se137.modify(o_custkey)) * v84)));
                       n84 = n84->nxt;
-                    } while (n84 && (e84 = n84->obj) && h32 == n84->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey0_idxfn::equals(se137, *e84)); 
+                    } while (n84 && (e84 = n84->obj) && h33 == n84->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey0_idxfn::equals(se138, *e84)); 
                   }
                 }
               n83 = n83->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS4_DELTA_map_012* i85 = static_cast<HashIndex_MKT_SHAREORDERS4_DELTA_map_012*>(MKT_SHAREORDERS4_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS4_DELTA_map_012::IdxNode* n85; 
-          MKT_SHAREORDERS4_DELTA_entry* e85;
+          const HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012* i85 = static_cast<HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012*>(MKT_SHAREPART1ORDERS1_DELTA.index[0]);
+          HashIndex_MKT_SHAREPART1ORDERS1_DELTA_map_012::IdxNode* n85; 
+          MKT_SHAREPART1ORDERS1_DELTA_entry* e85;
         
           for (size_t i = 0; i < i85->size_; i++)
           {
@@ -4056,17 +4051,17 @@ namespace dbtoaster {
                 long v85 = e85->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0* i86 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1.index[1]);
-                  const HASH_RES_t h33 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::hash(se140.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode* n86 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode*>(i86->slice(se140, h33));
+                  const HASH_RES_t h34 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::hash(se141.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode* n86 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_0::IdxNode*>(i86->slice(se141, h34));
                   MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry* e86;
                  
                   if (n86 && (e86 = n86->obj)) {
                     do {                
                       long p_partkey = e86->P_PARTKEY;
                       DOUBLE_TYPE v86 = e86->__av;
-                      MKT_SHAREPART1PART1.addOrDelOnZero(se138.modify(p_partkey,o_orderdate),(v85 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se139.modify(o_custkey)) * v86)));
+                      MKT_SHAREPART1PART1.addOrDelOnZero(se139.modify(p_partkey,o_orderdate),(v85 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se140.modify(o_custkey)) * v86)));
                       n86 = n86->nxt;
-                    } while (n86 && (e86 = n86->obj) && h33 == n86->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::equals(se140, *e86)); 
+                    } while (n86 && (e86 = n86->obj) && h34 == n86->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey0_idxfn::equals(se141, *e86)); 
                   }
                 }
               n85 = n85->nxt;
@@ -4086,7 +4081,7 @@ namespace dbtoaster {
                 long o_custkey = e87->O_CUSTKEY;
                 long total_o_year = e87->TOTAL_O_YEAR;
                 long v87 = e87->__av;
-                MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se141.modify(total_o_year),(v87 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se142.modify(o_custkey)) * MKT_SHAREORDERS1_L1_1_L1_2_P_2.getValueOrDefault(se143.modify(l_orderkey)))));
+                MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se142.modify(total_o_year),(v87 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se143.modify(o_custkey)) * MKT_SHAREORDERS1_L1_1_L1_2_P_2.getValueOrDefault(se144.modify(l_orderkey)))));
               n87 = n87->nxt;
             }
           }
@@ -4104,7 +4099,7 @@ namespace dbtoaster {
                 long o_custkey = e88->O_CUSTKEY;
                 long total_o_year = e88->TOTAL_O_YEAR;
                 long v88 = e88->__av;
-                MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2.addOrDelOnZero(se144.modify(o_custkey,total_o_year),(v88 * MKT_SHAREORDERS1_L1_1_L1_2_P_2.getValueOrDefault(se145.modify(l_orderkey))));
+                MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2.addOrDelOnZero(se145.modify(o_custkey,total_o_year),(v88 * MKT_SHAREORDERS1_L1_1_L1_2_P_2.getValueOrDefault(se146.modify(l_orderkey))));
               n88 = n88->nxt;
             }
           }
@@ -4124,17 +4119,17 @@ namespace dbtoaster {
                 long v89 = e89->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0* i90 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0*>(MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1.index[1]);
-                  const HASH_RES_t h34 = MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey0_idxfn::hash(se147.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0::IdxNode* n90 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0::IdxNode*>(i90->slice(se147, h34));
+                  const HASH_RES_t h35 = MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey0_idxfn::hash(se148.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0::IdxNode* n90 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0::IdxNode*>(i90->slice(se148, h35));
                   MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry* e90;
                  
                   if (n90 && (e90 = n90->obj)) {
                     do {                
                       long p_partkey = e90->P_PARTKEY;
                       DOUBLE_TYPE v90 = e90->__av;
-                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.addOrDelOnZero(se146.modify(p_partkey,o_custkey,total_o_year),(v89 * v90));
+                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.addOrDelOnZero(se147.modify(o_custkey,p_partkey,total_o_year),(v89 * v90));
                       n90 = n90->nxt;
-                    } while (n90 && (e90 = n90->obj) && h34 == n90->hash &&  MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey0_idxfn::equals(se147, *e90)); 
+                    } while (n90 && (e90 = n90->obj) && h35 == n90->hash &&  MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey0_idxfn::equals(se148, *e90)); 
                   }
                 }
               n89 = n89->nxt;
@@ -4156,17 +4151,17 @@ namespace dbtoaster {
                 long v91 = e91->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0* i92 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0*>(MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1.index[1]);
-                  const HASH_RES_t h35 = MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey0_idxfn::hash(se150.modify0(l_orderkey));
-                  HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0::IdxNode* n92 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0::IdxNode*>(i92->slice(se150, h35));
+                  const HASH_RES_t h36 = MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey0_idxfn::hash(se151.modify0(l_orderkey));
+                  HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0::IdxNode* n92 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_0::IdxNode*>(i92->slice(se151, h36));
                   MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry* e92;
                  
                   if (n92 && (e92 = n92->obj)) {
                     do {                
                       long p_partkey = e92->P_PARTKEY;
                       DOUBLE_TYPE v92 = e92->__av;
-                      MKT_SHAREPART1_L2_1_L1_1PART1.addOrDelOnZero(se148.modify(p_partkey,total_o_year),(v91 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se149.modify(o_custkey)) * v92)));
+                      MKT_SHAREPART1_L2_1_L1_1PART1.addOrDelOnZero(se149.modify(p_partkey,total_o_year),(v91 * (MKT_SHAREORDERS1_L1_1_L1_2_P_1.getValueOrDefault(se150.modify(o_custkey)) * v92)));
                       n92 = n92->nxt;
-                    } while (n92 && (e92 = n92->obj) && h35 == n92->hash &&  MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey0_idxfn::equals(se150, *e92)); 
+                    } while (n92 && (e92 = n92->obj) && h36 == n92->hash &&  MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey0_idxfn::equals(se151, *e92)); 
                   }
                 }
               n91 = n91->nxt;
@@ -4189,7 +4184,7 @@ namespace dbtoaster {
 
         MKT_SHAREORDERS1PART1_DELTA.clear();
         {  
-          for (size_t i = 0; i < DELTA_PART.size; i++)
+          for (size_t i = 0; i < DELTA_PART.size; i++) 
           {
                 long p_partkey = DELTA_PART.partkey[i];
                 // STRING_TYPE p_name = DELTA_PART.name[i];
@@ -4201,9 +4196,10 @@ namespace dbtoaster {
                 // DOUBLE_TYPE p_retailprice = DELTA_PART.retailprice[i];
                 // STRING_TYPE p_comment = DELTA_PART.comment[i];
                 long v93 = 1L;
-                (/*if */(lift7 == c3) ? MKT_SHAREORDERS1PART1_DELTA.addOrDelOnZero(se151.modify(p_partkey),v93) : (void)0);
+                (/*if */(lift7 == c3) ? MKT_SHAREORDERS1PART1_DELTA.addOrDelOnZero(se152.modify(p_partkey),v93) : (void)0);            
           }
         }
+
         {  // foreach
           const HashIndex_MKT_SHAREORDERS1PART1_DELTA_map_0* i94 = static_cast<HashIndex_MKT_SHAREORDERS1PART1_DELTA_map_0*>(MKT_SHAREORDERS1PART1_DELTA.index[0]);
           HashIndex_MKT_SHAREORDERS1PART1_DELTA_map_0::IdxNode* n94; 
@@ -4218,17 +4214,17 @@ namespace dbtoaster {
                 long v94 = e94->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1PART1_map_0* i95 = static_cast<HashIndex_MKT_SHAREORDERS1PART1_map_0*>(MKT_SHAREORDERS1PART1.index[1]);
-                  const HASH_RES_t h36 = MKT_SHAREORDERS1PART1_mapkey0_idxfn::hash(se153.modify0(p_partkey));
-                  HashIndex_MKT_SHAREORDERS1PART1_map_0::IdxNode* n95 = static_cast<HashIndex_MKT_SHAREORDERS1PART1_map_0::IdxNode*>(i95->slice(se153, h36));
+                  const HASH_RES_t h37 = MKT_SHAREORDERS1PART1_mapkey0_idxfn::hash(se154.modify0(p_partkey));
+                  HashIndex_MKT_SHAREORDERS1PART1_map_0::IdxNode* n95 = static_cast<HashIndex_MKT_SHAREORDERS1PART1_map_0::IdxNode*>(i95->slice(se154, h37));
                   MKT_SHAREORDERS1PART1_entry* e95;
                  
                   if (n95 && (e95 = n95->obj)) {
                     do {                
                       long total_o_year = e95->TOTAL_O_YEAR;
                       DOUBLE_TYPE v95 = e95->__av;
-                      MKT_SHAREORDERS1.addOrDelOnZero(se152.modify(total_o_year),(v94 * v95));
+                      MKT_SHAREORDERS1.addOrDelOnZero(se153.modify(total_o_year),(v94 * v95));
                       n95 = n95->nxt;
-                    } while (n95 && (e95 = n95->obj) && h36 == n95->hash &&  MKT_SHAREORDERS1PART1_mapkey0_idxfn::equals(se153, *e95)); 
+                    } while (n95 && (e95 = n95->obj) && h37 == n95->hash &&  MKT_SHAREORDERS1PART1_mapkey0_idxfn::equals(se154, *e95)); 
                   }
                 }
               n94 = n94->nxt;
@@ -4247,9 +4243,9 @@ namespace dbtoaster {
                 long p_partkey = e96->P_PARTKEY;
                 long v96 = e96->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0* i97 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1PART1.index[1]);
-                  const HASH_RES_t h37 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn::hash(se155.modify0(p_partkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0::IdxNode* n97 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0::IdxNode*>(i97->slice(se155, h37));
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_1* i97 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1PART1.index[1]);
+                  const HASH_RES_t h38 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey1_idxfn::hash(se156.modify1(p_partkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_1::IdxNode* n97 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_1::IdxNode*>(i97->slice(se156, h38));
                   MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry* e97;
                  
                   if (n97 && (e97 = n97->obj)) {
@@ -4257,9 +4253,9 @@ namespace dbtoaster {
                       long o_custkey = e97->O_CUSTKEY;
                       long total_o_year = e97->TOTAL_O_YEAR;
                       DOUBLE_TYPE v97 = e97->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1.addOrDelOnZero(se154.modify(o_custkey,total_o_year),(v96 * v97));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1.addOrDelOnZero(se155.modify(o_custkey,total_o_year),(v96 * v97));
                       n97 = n97->nxt;
-                    } while (n97 && (e97 = n97->obj) && h37 == n97->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn::equals(se155, *e97)); 
+                    } while (n97 && (e97 = n97->obj) && h38 == n97->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey1_idxfn::equals(se156, *e97)); 
                   }
                 }
               n96 = n96->nxt;
@@ -4279,8 +4275,8 @@ namespace dbtoaster {
                 long v98 = e98->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_0* i99 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1.index[1]);
-                  const HASH_RES_t h38 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey0_idxfn::hash(se157.modify0(p_partkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_0::IdxNode* n99 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_0::IdxNode*>(i99->slice(se157, h38));
+                  const HASH_RES_t h39 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey0_idxfn::hash(se158.modify0(p_partkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_0::IdxNode* n99 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_0::IdxNode*>(i99->slice(se158, h39));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry* e99;
                  
                   if (n99 && (e99 = n99->obj)) {
@@ -4289,9 +4285,9 @@ namespace dbtoaster {
                       long o_custkey = e99->O_CUSTKEY;
                       long total_o_year = e99->TOTAL_O_YEAR;
                       DOUBLE_TYPE v99 = e99->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2.addOrDelOnZero(se156.modify(s_suppkey,o_custkey,total_o_year),(v98 * v99));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2.addOrDelOnZero(se157.modify(s_suppkey,o_custkey,total_o_year),(v98 * v99));
                       n99 = n99->nxt;
-                    } while (n99 && (e99 = n99->obj) && h38 == n99->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey0_idxfn::equals(se157, *e99)); 
+                    } while (n99 && (e99 = n99->obj) && h39 == n99->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey0_idxfn::equals(se158, *e99)); 
                   }
                 }
               n98 = n98->nxt;
@@ -4310,19 +4306,19 @@ namespace dbtoaster {
                 long p_partkey = e100->P_PARTKEY;
                 long v100 = e100->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_1* i101 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1.index[2]);
-                  const HASH_RES_t h39 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey1_idxfn::hash(se159.modify1(p_partkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_1::IdxNode* n101 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_1::IdxNode*>(i101->slice(se159, h39));
-                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry* e101;
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_1* i101 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1.index[2]);
+                  const HASH_RES_t h40 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey1_idxfn::hash(se160.modify1(p_partkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_1::IdxNode* n101 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_1::IdxNode*>(i101->slice(se160, h40));
+                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry* e101;
                  
                   if (n101 && (e101 = n101->obj)) {
                     do {                
                       long l_orderkey = e101->L_ORDERKEY;
                       long s_suppkey = e101->S_SUPPKEY;
                       DOUBLE_TYPE v101 = e101->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.addOrDelOnZero(se158.modify(l_orderkey,s_suppkey),(v100 * v101));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.addOrDelOnZero(se159.modify(l_orderkey,s_suppkey),(v100 * v101));
                       n101 = n101->nxt;
-                    } while (n101 && (e101 = n101->obj) && h39 == n101->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey1_idxfn::equals(se159, *e101)); 
+                    } while (n101 && (e101 = n101->obj) && h40 == n101->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey1_idxfn::equals(se160, *e101)); 
                   }
                 }
               n100 = n100->nxt;
@@ -4340,7 +4336,7 @@ namespace dbtoaster {
             {
                 long p_partkey = e102->P_PARTKEY;
                 long v102 = e102->__av;
-                MKT_SHAREORDERS1LINEITEM1_P_1.addOrDelOnZero(se160.modify(p_partkey),v102);
+                MKT_SHAREORDERS1LINEITEM1_P_1.addOrDelOnZero(se161.modify(p_partkey),v102);
               n102 = n102->nxt;
             }
           }
@@ -4358,8 +4354,8 @@ namespace dbtoaster {
                 long v103 = e103->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_0* i104 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_0*>(MKT_SHAREORDERS1SUPPLIER1_P_1PART1.index[1]);
-                  const HASH_RES_t h40 = MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey0_idxfn::hash(se162.modify0(p_partkey));
-                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_0::IdxNode* n104 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_0::IdxNode*>(i104->slice(se162, h40));
+                  const HASH_RES_t h41 = MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey0_idxfn::hash(se163.modify0(p_partkey));
+                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_0::IdxNode* n104 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_0::IdxNode*>(i104->slice(se163, h41));
                   MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry* e104;
                  
                   if (n104 && (e104 = n104->obj)) {
@@ -4367,9 +4363,9 @@ namespace dbtoaster {
                       long s_suppkey = e104->S_SUPPKEY;
                       long total_o_year = e104->TOTAL_O_YEAR;
                       DOUBLE_TYPE v104 = e104->__av;
-                      MKT_SHAREORDERS1SUPPLIER1_P_1.addOrDelOnZero(se161.modify(s_suppkey,total_o_year),(v103 * v104));
+                      MKT_SHAREORDERS1SUPPLIER1_P_1.addOrDelOnZero(se162.modify(s_suppkey,total_o_year),(v103 * v104));
                       n104 = n104->nxt;
-                    } while (n104 && (e104 = n104->obj) && h40 == n104->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey0_idxfn::equals(se162, *e104)); 
+                    } while (n104 && (e104 = n104->obj) && h41 == n104->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey0_idxfn::equals(se163, *e104)); 
                   }
                 }
               n103 = n103->nxt;
@@ -4389,17 +4385,17 @@ namespace dbtoaster {
                 long v105 = e105->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_1* i106 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_1*>(MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1.index[2]);
-                  const HASH_RES_t h41 = MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey1_idxfn::hash(se164.modify1(p_partkey));
-                  HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_1::IdxNode* n106 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_1::IdxNode*>(i106->slice(se164, h41));
+                  const HASH_RES_t h42 = MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey1_idxfn::hash(se165.modify1(p_partkey));
+                  HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_1::IdxNode* n106 = static_cast<HashIndex_MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map_1::IdxNode*>(i106->slice(se165, h42));
                   MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry* e106;
                  
                   if (n106 && (e106 = n106->obj)) {
                     do {                
                       long l_orderkey = e106->L_ORDERKEY;
                       DOUBLE_TYPE v106 = e106->__av;
-                      MKT_SHAREORDERS1_L1_1_L1_2_P_2.addOrDelOnZero(se163.modify(l_orderkey),(v105 * v106));
+                      MKT_SHAREORDERS1_L1_1_L1_2_P_2.addOrDelOnZero(se164.modify(l_orderkey),(v105 * v106));
                       n106 = n106->nxt;
-                    } while (n106 && (e106 = n106->obj) && h41 == n106->hash &&  MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey1_idxfn::equals(se164, *e106)); 
+                    } while (n106 && (e106 = n106->obj) && h42 == n106->hash &&  MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_mapkey1_idxfn::equals(se165, *e106)); 
                   }
                 }
               n105 = n105->nxt;
@@ -4419,17 +4415,17 @@ namespace dbtoaster {
                 long v107 = e107->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_1* i108 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1.index[2]);
-                  const HASH_RES_t h42 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey1_idxfn::hash(se166.modify1(p_partkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_1::IdxNode* n108 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_1::IdxNode*>(i108->slice(se166, h42));
+                  const HASH_RES_t h43 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey1_idxfn::hash(se167.modify1(p_partkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_1::IdxNode* n108 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map_1::IdxNode*>(i108->slice(se167, h43));
                   MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry* e108;
                  
                   if (n108 && (e108 = n108->obj)) {
                     do {                
                       long l_orderkey = e108->L_ORDERKEY;
                       DOUBLE_TYPE v108 = e108->__av;
-                      MKT_SHAREORDERS4_P_1.addOrDelOnZero(se165.modify(l_orderkey),(v107 * v108));
+                      MKT_SHAREORDERS4_P_1.addOrDelOnZero(se166.modify(l_orderkey),(v107 * v108));
                       n108 = n108->nxt;
-                    } while (n108 && (e108 = n108->obj) && h42 == n108->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey1_idxfn::equals(se166, *e108)); 
+                    } while (n108 && (e108 = n108->obj) && h43 == n108->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_mapkey1_idxfn::equals(se167, *e108)); 
                   }
                 }
               n107 = n107->nxt;
@@ -4449,17 +4445,17 @@ namespace dbtoaster {
                 long v109 = e109->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1PART1_map_0* i110 = static_cast<HashIndex_MKT_SHAREPART1PART1_map_0*>(MKT_SHAREPART1PART1.index[1]);
-                  const HASH_RES_t h43 = MKT_SHAREPART1PART1_mapkey0_idxfn::hash(se168.modify0(p_partkey));
-                  HashIndex_MKT_SHAREPART1PART1_map_0::IdxNode* n110 = static_cast<HashIndex_MKT_SHAREPART1PART1_map_0::IdxNode*>(i110->slice(se168, h43));
+                  const HASH_RES_t h44 = MKT_SHAREPART1PART1_mapkey0_idxfn::hash(se169.modify0(p_partkey));
+                  HashIndex_MKT_SHAREPART1PART1_map_0::IdxNode* n110 = static_cast<HashIndex_MKT_SHAREPART1PART1_map_0::IdxNode*>(i110->slice(se169, h44));
                   MKT_SHAREPART1PART1_entry* e110;
                  
                   if (n110 && (e110 = n110->obj)) {
                     do {                
                       date o_orderdate = e110->O_ORDERDATE;
                       DOUBLE_TYPE v110 = e110->__av;
-                      MKT_SHAREPART1.addOrDelOnZero(se167.modify(o_orderdate),(v109 * v110));
+                      MKT_SHAREPART1.addOrDelOnZero(se168.modify(o_orderdate),(v109 * v110));
                       n110 = n110->nxt;
-                    } while (n110 && (e110 = n110->obj) && h43 == n110->hash &&  MKT_SHAREPART1PART1_mapkey0_idxfn::equals(se168, *e110)); 
+                    } while (n110 && (e110 = n110->obj) && h44 == n110->hash &&  MKT_SHAREPART1PART1_mapkey0_idxfn::equals(se169, *e110)); 
                   }
                 }
               n109 = n109->nxt;
@@ -4478,9 +4474,9 @@ namespace dbtoaster {
                 long p_partkey = e111->P_PARTKEY;
                 long v111 = e111->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_0* i112 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_0*>(MKT_SHAREPART1CUSTOMER1_P_2PART1.index[1]);
-                  const HASH_RES_t h44 = MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey0_idxfn::hash(se170.modify0(p_partkey));
-                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_0::IdxNode* n112 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_0::IdxNode*>(i112->slice(se170, h44));
+                  const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_2* i112 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_2*>(MKT_SHAREPART1CUSTOMER1_P_2PART1.index[1]);
+                  const HASH_RES_t h45 = MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey2_idxfn::hash(se171.modify2(p_partkey));
+                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_2::IdxNode* n112 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_2::IdxNode*>(i112->slice(se171, h45));
                   MKT_SHAREPART1CUSTOMER1_P_2PART1_entry* e112;
                  
                   if (n112 && (e112 = n112->obj)) {
@@ -4488,9 +4484,9 @@ namespace dbtoaster {
                       long o_custkey = e112->O_CUSTKEY;
                       date o_orderdate = e112->O_ORDERDATE;
                       DOUBLE_TYPE v112 = e112->__av;
-                      MKT_SHAREPART1CUSTOMER1_P_2.addOrDelOnZero(se169.modify(o_custkey,o_orderdate),(v111 * v112));
+                      MKT_SHAREPART1CUSTOMER1_P_2.addOrDelOnZero(se170.modify(o_custkey,o_orderdate),(v111 * v112));
                       n112 = n112->nxt;
-                    } while (n112 && (e112 = n112->obj) && h44 == n112->hash &&  MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey0_idxfn::equals(se170, *e112)); 
+                    } while (n112 && (e112 = n112->obj) && h45 == n112->hash &&  MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey2_idxfn::equals(se171, *e112)); 
                   }
                 }
               n111 = n111->nxt;
@@ -4510,8 +4506,8 @@ namespace dbtoaster {
                 long v113 = e113->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_0* i114 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_0*>(MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1.index[1]);
-                  const HASH_RES_t h45 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey0_idxfn::hash(se172.modify0(p_partkey));
-                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_0::IdxNode* n114 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_0::IdxNode*>(i114->slice(se172, h45));
+                  const HASH_RES_t h46 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey0_idxfn::hash(se173.modify0(p_partkey));
+                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_0::IdxNode* n114 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_0::IdxNode*>(i114->slice(se173, h46));
                   MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry* e114;
                  
                   if (n114 && (e114 = n114->obj)) {
@@ -4520,9 +4516,9 @@ namespace dbtoaster {
                       long o_custkey = e114->O_CUSTKEY;
                       date o_orderdate = e114->O_ORDERDATE;
                       DOUBLE_TYPE v114 = e114->__av;
-                      MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2.addOrDelOnZero(se171.modify(s_suppkey,o_custkey,o_orderdate),(v113 * v114));
+                      MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2.addOrDelOnZero(se172.modify(s_suppkey,o_custkey,o_orderdate),(v113 * v114));
                       n114 = n114->nxt;
-                    } while (n114 && (e114 = n114->obj) && h45 == n114->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey0_idxfn::equals(se172, *e114)); 
+                    } while (n114 && (e114 = n114->obj) && h46 == n114->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey0_idxfn::equals(se173, *e114)); 
                   }
                 }
               n113 = n113->nxt;
@@ -4542,8 +4538,8 @@ namespace dbtoaster {
                 long v115 = e115->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_0* i116 = static_cast<HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_0*>(MKT_SHAREPART1SUPPLIER1_P_1PART1.index[1]);
-                  const HASH_RES_t h46 = MKT_SHAREPART1SUPPLIER1_P_1PART1_mapkey0_idxfn::hash(se174.modify0(p_partkey));
-                  HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_0::IdxNode* n116 = static_cast<HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_0::IdxNode*>(i116->slice(se174, h46));
+                  const HASH_RES_t h47 = MKT_SHAREPART1SUPPLIER1_P_1PART1_mapkey0_idxfn::hash(se175.modify0(p_partkey));
+                  HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_0::IdxNode* n116 = static_cast<HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_0::IdxNode*>(i116->slice(se175, h47));
                   MKT_SHAREPART1SUPPLIER1_P_1PART1_entry* e116;
                  
                   if (n116 && (e116 = n116->obj)) {
@@ -4551,9 +4547,9 @@ namespace dbtoaster {
                       long s_suppkey = e116->S_SUPPKEY;
                       date o_orderdate = e116->O_ORDERDATE;
                       DOUBLE_TYPE v116 = e116->__av;
-                      MKT_SHAREPART1SUPPLIER1_P_1.addOrDelOnZero(se173.modify(s_suppkey,o_orderdate),(v115 * v116));
+                      MKT_SHAREPART1SUPPLIER1_P_1.addOrDelOnZero(se174.modify(s_suppkey,o_orderdate),(v115 * v116));
                       n116 = n116->nxt;
-                    } while (n116 && (e116 = n116->obj) && h46 == n116->hash &&  MKT_SHAREPART1SUPPLIER1_P_1PART1_mapkey0_idxfn::equals(se174, *e116)); 
+                    } while (n116 && (e116 = n116->obj) && h47 == n116->hash &&  MKT_SHAREPART1SUPPLIER1_P_1PART1_mapkey0_idxfn::equals(se175, *e116)); 
                   }
                 }
               n115 = n115->nxt;
@@ -4573,17 +4569,17 @@ namespace dbtoaster {
                 long v117 = e117->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1_L2_1_L1_1PART1_map_0* i118 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1PART1_map_0*>(MKT_SHAREPART1_L2_1_L1_1PART1.index[1]);
-                  const HASH_RES_t h47 = MKT_SHAREPART1_L2_1_L1_1PART1_mapkey0_idxfn::hash(se176.modify0(p_partkey));
-                  HashIndex_MKT_SHAREPART1_L2_1_L1_1PART1_map_0::IdxNode* n118 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1PART1_map_0::IdxNode*>(i118->slice(se176, h47));
+                  const HASH_RES_t h48 = MKT_SHAREPART1_L2_1_L1_1PART1_mapkey0_idxfn::hash(se177.modify0(p_partkey));
+                  HashIndex_MKT_SHAREPART1_L2_1_L1_1PART1_map_0::IdxNode* n118 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1PART1_map_0::IdxNode*>(i118->slice(se177, h48));
                   MKT_SHAREPART1_L2_1_L1_1PART1_entry* e118;
                  
                   if (n118 && (e118 = n118->obj)) {
                     do {                
                       long total_o_year = e118->TOTAL_O_YEAR;
                       DOUBLE_TYPE v118 = e118->__av;
-                      MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se175.modify(total_o_year),(v117 * v118));
+                      MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se176.modify(total_o_year),(v117 * v118));
                       n118 = n118->nxt;
-                    } while (n118 && (e118 = n118->obj) && h47 == n118->hash &&  MKT_SHAREPART1_L2_1_L1_1PART1_mapkey0_idxfn::equals(se176, *e118)); 
+                    } while (n118 && (e118 = n118->obj) && h48 == n118->hash &&  MKT_SHAREPART1_L2_1_L1_1PART1_mapkey0_idxfn::equals(se177, *e118)); 
                   }
                 }
               n117 = n117->nxt;
@@ -4602,9 +4598,9 @@ namespace dbtoaster {
                 long p_partkey = e119->P_PARTKEY;
                 long v119 = e119->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0* i120 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0*>(MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.index[1]);
-                  const HASH_RES_t h48 = MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn::hash(se178.modify0(p_partkey));
-                  HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0::IdxNode* n120 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0::IdxNode*>(i120->slice(se178, h48));
+                  const HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_1* i120 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_1*>(MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.index[1]);
+                  const HASH_RES_t h49 = MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey1_idxfn::hash(se179.modify1(p_partkey));
+                  HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_1::IdxNode* n120 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_1::IdxNode*>(i120->slice(se179, h49));
                   MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry* e120;
                  
                   if (n120 && (e120 = n120->obj)) {
@@ -4612,9 +4608,9 @@ namespace dbtoaster {
                       long o_custkey = e120->O_CUSTKEY;
                       long total_o_year = e120->TOTAL_O_YEAR;
                       DOUBLE_TYPE v120 = e120->__av;
-                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2.addOrDelOnZero(se177.modify(o_custkey,total_o_year),(v119 * v120));
+                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2.addOrDelOnZero(se178.modify(o_custkey,total_o_year),(v119 * v120));
                       n120 = n120->nxt;
-                    } while (n120 && (e120 = n120->obj) && h48 == n120->hash &&  MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn::equals(se178, *e120)); 
+                    } while (n120 && (e120 = n120->obj) && h49 == n120->hash &&  MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey1_idxfn::equals(se179, *e120)); 
                   }
                 }
               n119 = n119->nxt;
@@ -4633,12 +4629,12 @@ namespace dbtoaster {
             {
                 date o_orderdate = e121->O_ORDERDATE;
                 DOUBLE_TYPE v121 = e121->__av;
-                long l13 = Uyear_part(o_orderdate);
+                long l12 = Uyear_part(o_orderdate);
                 DOUBLE_TYPE agg10 = 0.0;
-                DOUBLE_TYPE l15 = MKT_SHAREPART1_L2_1_L1_1.getValueOrDefault(se180.modify(l13));
-                agg10 += Ulistmax(1L, l15);
-                DOUBLE_TYPE l14 = agg10;
-                MKT_SHARE.addOrDelOnZero(se179.modify(l13),(v121 * Udiv(l14)));
+                DOUBLE_TYPE l14 = MKT_SHAREPART1_L2_1_L1_1.getValueOrDefault(se181.modify(l12));
+                agg10 += Ulistmax(1L, l14);
+                DOUBLE_TYPE l13 = agg10;
+                MKT_SHARE.addOrDelOnZero(se180.modify(l12),(v121 * Udiv(l13)));
               n121 = n121->nxt;
             }
           }
@@ -4658,8 +4654,8 @@ namespace dbtoaster {
         tN += DELTA_CUSTOMER.size;
 
         MKT_SHAREORDERS1CUSTOMER1_DELTA.clear();
-        {  
-          for (size_t i = 0; i < DELTA_CUSTOMER.size; i++)
+        { 
+          for (size_t i = 0; i < DELTA_CUSTOMER.size; i++) 
           {
                 long o_custkey = DELTA_CUSTOMER.custkey[i];
                 // STRING_TYPE c_name = DELTA_CUSTOMER.name[i];
@@ -4670,9 +4666,10 @@ namespace dbtoaster {
                 // STRING_TYPE c_mktsegment = DELTA_CUSTOMER.mktsegment[i];
                 // STRING_TYPE c_comment = DELTA_CUSTOMER.comment[i];
                 long v122 = 1L;
-                MKT_SHAREORDERS1CUSTOMER1_DELTA.addOrDelOnZero(se181.modify(o_custkey,c_nationkey),v122);
-          }        
+                MKT_SHAREORDERS1CUSTOMER1_DELTA.addOrDelOnZero(se182.modify(o_custkey,c_nationkey),v122);            
+          }
         }
+
         {  // foreach
           const HashIndex_MKT_SHAREORDERS1CUSTOMER1_DELTA_map_01* i123 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_DELTA_map_01*>(MKT_SHAREORDERS1CUSTOMER1_DELTA.index[0]);
           HashIndex_MKT_SHAREORDERS1CUSTOMER1_DELTA_map_01::IdxNode* n123; 
@@ -4688,23 +4685,24 @@ namespace dbtoaster {
                 long v123 = e123->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1_map_0* i124 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1.index[1]);
-                  const HASH_RES_t h49 = MKT_SHAREORDERS1CUSTOMER1_P_1_mapkey0_idxfn::hash(se184.modify0(o_custkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1_map_0::IdxNode* n124 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1_map_0::IdxNode*>(i124->slice(se184, h49));
+                  const HASH_RES_t h50 = MKT_SHAREORDERS1CUSTOMER1_P_1_mapkey0_idxfn::hash(se185.modify0(o_custkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1_map_0::IdxNode* n124 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1_map_0::IdxNode*>(i124->slice(se185, h50));
                   MKT_SHAREORDERS1CUSTOMER1_P_1_entry* e124;
                  
                   if (n124 && (e124 = n124->obj)) {
                     do {                
                       long total_o_year = e124->TOTAL_O_YEAR;
                       DOUBLE_TYPE v124 = e124->__av;
-                      MKT_SHAREORDERS1.addOrDelOnZero(se182.modify(total_o_year),(v123 * (v124 * MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se183.modify(c_nationkey)))));
+                      MKT_SHAREORDERS1.addOrDelOnZero(se183.modify(total_o_year),(v123 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se184.modify(c_nationkey)) * v124)));
                       n124 = n124->nxt;
-                    } while (n124 && (e124 = n124->obj) && h49 == n124->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1_mapkey0_idxfn::equals(se184, *e124)); 
+                    } while (n124 && (e124 = n124->obj) && h50 == n124->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1_mapkey0_idxfn::equals(se185, *e124)); 
                   }
                 }
               n123 = n123->nxt;
             }
           }
-        }{  // foreach
+        }
+        {  // foreach
           const HashIndex_MKT_SHAREORDERS1CUSTOMER1_DELTA_map_01* i125 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_DELTA_map_01*>(MKT_SHAREORDERS1CUSTOMER1_DELTA.index[0]);
           HashIndex_MKT_SHAREORDERS1CUSTOMER1_DELTA_map_01::IdxNode* n125; 
           MKT_SHAREORDERS1CUSTOMER1_DELTA_entry* e125;
@@ -4719,8 +4717,8 @@ namespace dbtoaster {
                 long v125 = e125->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_1* i126 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3.index[2]);
-                  const HASH_RES_t h50 = MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey1_idxfn::hash(se187.modify1(o_custkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_1::IdxNode* n126 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_1::IdxNode*>(i126->slice(se187, h50));
+                  const HASH_RES_t h51 = MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey1_idxfn::hash(se188.modify1(o_custkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_1::IdxNode* n126 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map_1::IdxNode*>(i126->slice(se188, h51));
                   MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry* e126;
                  
                   if (n126 && (e126 = n126->obj)) {
@@ -4728,9 +4726,9 @@ namespace dbtoaster {
                       long l_orderkey = e126->L_ORDERKEY;
                       long total_o_year = e126->TOTAL_O_YEAR;
                       long v126 = e126->__av;
-                      MKT_SHAREORDERS1LINEITEM1_P_2.addOrDelOnZero(se185.modify(l_orderkey,total_o_year),(v125 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se186.modify(c_nationkey)) * v126)));
+                      MKT_SHAREORDERS1LINEITEM1_P_2.addOrDelOnZero(se186.modify(l_orderkey,total_o_year),(v125 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se187.modify(c_nationkey)) * v126)));
                       n126 = n126->nxt;
-                    } while (n126 && (e126 = n126->obj) && h50 == n126->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey1_idxfn::equals(se187, *e126)); 
+                    } while (n126 && (e126 = n126->obj) && h51 == n126->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_mapkey1_idxfn::equals(se188, *e126)); 
                   }
                 }
               n125 = n125->nxt;
@@ -4751,8 +4749,8 @@ namespace dbtoaster {
                 long v127 = e127->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_1* i128 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2.index[1]);
-                  const HASH_RES_t h51 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey1_idxfn::hash(se190.modify1(o_custkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_1::IdxNode* n128 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_1::IdxNode*>(i128->slice(se190, h51));
+                  const HASH_RES_t h52 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey1_idxfn::hash(se191.modify1(o_custkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_1::IdxNode* n128 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_1::IdxNode*>(i128->slice(se191, h52));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry* e128;
                  
                   if (n128 && (e128 = n128->obj)) {
@@ -4760,9 +4758,9 @@ namespace dbtoaster {
                       long s_suppkey = e128->S_SUPPKEY;
                       long total_o_year = e128->TOTAL_O_YEAR;
                       DOUBLE_TYPE v128 = e128->__av;
-                      MKT_SHAREORDERS1SUPPLIER1_P_1.addOrDelOnZero(se188.modify(s_suppkey,total_o_year),(v127 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se189.modify(c_nationkey)) * v128)));
+                      MKT_SHAREORDERS1SUPPLIER1_P_1.addOrDelOnZero(se189.modify(s_suppkey,total_o_year),(v127 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se190.modify(c_nationkey)) * v128)));
                       n128 = n128->nxt;
-                    } while (n128 && (e128 = n128->obj) && h51 == n128->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey1_idxfn::equals(se190, *e128)); 
+                    } while (n128 && (e128 = n128->obj) && h52 == n128->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey1_idxfn::equals(se191, *e128)); 
                   }
                 }
               n127 = n127->nxt;
@@ -4783,8 +4781,8 @@ namespace dbtoaster {
                 long v129 = e129->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_2* i130 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_2*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1.index[2]);
-                  const HASH_RES_t h52 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey2_idxfn::hash(se193.modify2(o_custkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_2::IdxNode* n130 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_2::IdxNode*>(i130->slice(se193, h52));
+                  const HASH_RES_t h53 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey2_idxfn::hash(se194.modify2(o_custkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_2::IdxNode* n130 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_2::IdxNode*>(i130->slice(se194, h53));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry* e130;
                  
                   if (n130 && (e130 = n130->obj)) {
@@ -4793,9 +4791,9 @@ namespace dbtoaster {
                       long s_suppkey = e130->S_SUPPKEY;
                       long total_o_year = e130->TOTAL_O_YEAR;
                       DOUBLE_TYPE v130 = e130->__av;
-                      MKT_SHAREORDERS1SUPPLIER1_P_1PART1.addOrDelOnZero(se191.modify(p_partkey,s_suppkey,total_o_year),(v129 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se192.modify(c_nationkey)) * v130)));
+                      MKT_SHAREORDERS1SUPPLIER1_P_1PART1.addOrDelOnZero(se192.modify(p_partkey,s_suppkey,total_o_year),(v129 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se193.modify(c_nationkey)) * v130)));
                       n130 = n130->nxt;
-                    } while (n130 && (e130 = n130->obj) && h52 == n130->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey2_idxfn::equals(se193, *e130)); 
+                    } while (n130 && (e130 = n130->obj) && h53 == n130->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey2_idxfn::equals(se194, *e130)); 
                   }
                 }
               n129 = n129->nxt;
@@ -4815,9 +4813,9 @@ namespace dbtoaster {
                 long c_nationkey = e131->C_NATIONKEY;
                 long v131 = e131->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_1* i132 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1PART1.index[2]);
-                  const HASH_RES_t h53 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey1_idxfn::hash(se196.modify1(o_custkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_1::IdxNode* n132 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_1::IdxNode*>(i132->slice(se196, h53));
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0* i132 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1PART1.index[2]);
+                  const HASH_RES_t h54 = MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn::hash(se197.modify0(o_custkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0::IdxNode* n132 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map_0::IdxNode*>(i132->slice(se197, h54));
                   MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry* e132;
                  
                   if (n132 && (e132 = n132->obj)) {
@@ -4825,9 +4823,9 @@ namespace dbtoaster {
                       long p_partkey = e132->P_PARTKEY;
                       long total_o_year = e132->TOTAL_O_YEAR;
                       DOUBLE_TYPE v132 = e132->__av;
-                      MKT_SHAREORDERS1PART1.addOrDelOnZero(se194.modify(p_partkey,total_o_year),(v131 * (v132 * MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se195.modify(c_nationkey)))));
+                      MKT_SHAREORDERS1PART1.addOrDelOnZero(se195.modify(p_partkey,total_o_year),(v131 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se196.modify(c_nationkey)) * v132)));
                       n132 = n132->nxt;
-                    } while (n132 && (e132 = n132->obj) && h53 == n132->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey1_idxfn::equals(se196, *e132)); 
+                    } while (n132 && (e132 = n132->obj) && h54 == n132->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1PART1_mapkey0_idxfn::equals(se197, *e132)); 
                   }
                 }
               n131 = n131->nxt;
@@ -4846,7 +4844,7 @@ namespace dbtoaster {
                 long o_custkey = e133->O_CUSTKEY;
                 long c_nationkey = e133->C_NATIONKEY;
                 long v133 = e133->__av;
-                MKT_SHAREORDERS1_L1_1_L1_2_P_1.addOrDelOnZero(se197.modify(o_custkey),(v133 * MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se198.modify(c_nationkey))));
+                MKT_SHAREORDERS1_L1_1_L1_2_P_1.addOrDelOnZero(se198.modify(o_custkey),(v133 * MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se199.modify(c_nationkey))));
               n133 = n133->nxt;
             }
           }
@@ -4865,17 +4863,17 @@ namespace dbtoaster {
                 long v134 = e134->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2_map_0* i135 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2_map_0*>(MKT_SHAREPART1CUSTOMER1_P_2.index[1]);
-                  const HASH_RES_t h54 = MKT_SHAREPART1CUSTOMER1_P_2_mapkey0_idxfn::hash(se201.modify0(o_custkey));
-                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2_map_0::IdxNode* n135 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2_map_0::IdxNode*>(i135->slice(se201, h54));
+                  const HASH_RES_t h55 = MKT_SHAREPART1CUSTOMER1_P_2_mapkey0_idxfn::hash(se202.modify0(o_custkey));
+                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2_map_0::IdxNode* n135 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2_map_0::IdxNode*>(i135->slice(se202, h55));
                   MKT_SHAREPART1CUSTOMER1_P_2_entry* e135;
                  
                   if (n135 && (e135 = n135->obj)) {
                     do {                
                       date o_orderdate = e135->O_ORDERDATE;
                       DOUBLE_TYPE v135 = e135->__av;
-                      MKT_SHAREPART1.addOrDelOnZero(se199.modify(o_orderdate),(v134 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se200.modify(c_nationkey)) * v135)));
+                      MKT_SHAREPART1.addOrDelOnZero(se200.modify(o_orderdate),(v134 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se201.modify(c_nationkey)) * v135)));
                       n135 = n135->nxt;
-                    } while (n135 && (e135 = n135->obj) && h54 == n135->hash &&  MKT_SHAREPART1CUSTOMER1_P_2_mapkey0_idxfn::equals(se201, *e135)); 
+                    } while (n135 && (e135 = n135->obj) && h55 == n135->hash &&  MKT_SHAREPART1CUSTOMER1_P_2_mapkey0_idxfn::equals(se202, *e135)); 
                   }
                 }
               n134 = n134->nxt;
@@ -4896,8 +4894,8 @@ namespace dbtoaster {
                 long v136 = e136->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_map_1* i137 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_map_1*>(MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3.index[2]);
-                  const HASH_RES_t h55 = MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_mapkey1_idxfn::hash(se204.modify1(o_custkey));
-                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_map_1::IdxNode* n137 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_map_1::IdxNode*>(i137->slice(se204, h55));
+                  const HASH_RES_t h56 = MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_mapkey1_idxfn::hash(se205.modify1(o_custkey));
+                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_map_1::IdxNode* n137 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_map_1::IdxNode*>(i137->slice(se205, h56));
                   MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_entry* e137;
                  
                   if (n137 && (e137 = n137->obj)) {
@@ -4905,9 +4903,9 @@ namespace dbtoaster {
                       long l_orderkey = e137->L_ORDERKEY;
                       date o_orderdate = e137->O_ORDERDATE;
                       long v137 = e137->__av;
-                      MKT_SHAREPART1LINEITEM1_P_1.addOrDelOnZero(se202.modify(l_orderkey,o_orderdate),(v136 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se203.modify(c_nationkey)) * v137)));
+                      MKT_SHAREPART1LINEITEM1_P_1.addOrDelOnZero(se203.modify(l_orderkey,o_orderdate),(v136 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se204.modify(c_nationkey)) * v137)));
                       n137 = n137->nxt;
-                    } while (n137 && (e137 = n137->obj) && h55 == n137->hash &&  MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_mapkey1_idxfn::equals(se204, *e137)); 
+                    } while (n137 && (e137 = n137->obj) && h56 == n137->hash &&  MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_mapkey1_idxfn::equals(se205, *e137)); 
                   }
                 }
               n136 = n136->nxt;
@@ -4928,8 +4926,8 @@ namespace dbtoaster {
                 long v138 = e138->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_1* i139 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_1*>(MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2.index[1]);
-                  const HASH_RES_t h56 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_mapkey1_idxfn::hash(se207.modify1(o_custkey));
-                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_1::IdxNode* n139 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_1::IdxNode*>(i139->slice(se207, h56));
+                  const HASH_RES_t h57 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_mapkey1_idxfn::hash(se208.modify1(o_custkey));
+                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_1::IdxNode* n139 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_1::IdxNode*>(i139->slice(se208, h57));
                   MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry* e139;
                  
                   if (n139 && (e139 = n139->obj)) {
@@ -4937,9 +4935,9 @@ namespace dbtoaster {
                       long s_suppkey = e139->S_SUPPKEY;
                       date o_orderdate = e139->O_ORDERDATE;
                       DOUBLE_TYPE v139 = e139->__av;
-                      MKT_SHAREPART1SUPPLIER1_P_1.addOrDelOnZero(se205.modify(s_suppkey,o_orderdate),(v138 * (v139 * MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se206.modify(c_nationkey)))));
+                      MKT_SHAREPART1SUPPLIER1_P_1.addOrDelOnZero(se206.modify(s_suppkey,o_orderdate),(v138 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se207.modify(c_nationkey)) * v139)));
                       n139 = n139->nxt;
-                    } while (n139 && (e139 = n139->obj) && h56 == n139->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_mapkey1_idxfn::equals(se207, *e139)); 
+                    } while (n139 && (e139 = n139->obj) && h57 == n139->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_mapkey1_idxfn::equals(se208, *e139)); 
                   }
                 }
               n138 = n138->nxt;
@@ -4960,8 +4958,8 @@ namespace dbtoaster {
                 long v140 = e140->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_2* i141 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_2*>(MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1.index[2]);
-                  const HASH_RES_t h57 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey2_idxfn::hash(se210.modify2(o_custkey));
-                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_2::IdxNode* n141 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_2::IdxNode*>(i141->slice(se210, h57));
+                  const HASH_RES_t h58 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey2_idxfn::hash(se211.modify2(o_custkey));
+                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_2::IdxNode* n141 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_2::IdxNode*>(i141->slice(se211, h58));
                   MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry* e141;
                  
                   if (n141 && (e141 = n141->obj)) {
@@ -4970,9 +4968,9 @@ namespace dbtoaster {
                       long s_suppkey = e141->S_SUPPKEY;
                       date o_orderdate = e141->O_ORDERDATE;
                       DOUBLE_TYPE v141 = e141->__av;
-                      MKT_SHAREPART1SUPPLIER1_P_1PART1.addOrDelOnZero(se208.modify(p_partkey,s_suppkey,o_orderdate),(v140 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se209.modify(c_nationkey)) * v141)));
+                      MKT_SHAREPART1SUPPLIER1_P_1PART1.addOrDelOnZero(se209.modify(p_partkey,s_suppkey,o_orderdate),(v140 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se210.modify(c_nationkey)) * v141)));
                       n141 = n141->nxt;
-                    } while (n141 && (e141 = n141->obj) && h57 == n141->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey2_idxfn::equals(se210, *e141)); 
+                    } while (n141 && (e141 = n141->obj) && h58 == n141->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey2_idxfn::equals(se211, *e141)); 
                   }
                 }
               n140 = n140->nxt;
@@ -4992,19 +4990,19 @@ namespace dbtoaster {
                 long c_nationkey = e142->C_NATIONKEY;
                 long v142 = e142->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_1* i143 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_1*>(MKT_SHAREPART1CUSTOMER1_P_2PART1.index[2]);
-                  const HASH_RES_t h58 = MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey1_idxfn::hash(se213.modify1(o_custkey));
-                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_1::IdxNode* n143 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_1::IdxNode*>(i143->slice(se213, h58));
+                  const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_0* i143 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_0*>(MKT_SHAREPART1CUSTOMER1_P_2PART1.index[2]);
+                  const HASH_RES_t h59 = MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey0_idxfn::hash(se214.modify0(o_custkey));
+                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_0::IdxNode* n143 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2PART1_map_0::IdxNode*>(i143->slice(se214, h59));
                   MKT_SHAREPART1CUSTOMER1_P_2PART1_entry* e143;
                  
                   if (n143 && (e143 = n143->obj)) {
                     do {                
-                      long p_partkey = e143->P_PARTKEY;
                       date o_orderdate = e143->O_ORDERDATE;
+                      long p_partkey = e143->P_PARTKEY;
                       DOUBLE_TYPE v143 = e143->__av;
-                      MKT_SHAREPART1PART1.addOrDelOnZero(se211.modify(p_partkey,o_orderdate),(v142 * (v143 * MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se212.modify(c_nationkey)))));
+                      MKT_SHAREPART1PART1.addOrDelOnZero(se212.modify(p_partkey,o_orderdate),(v142 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se213.modify(c_nationkey)) * v143)));
                       n143 = n143->nxt;
-                    } while (n143 && (e143 = n143->obj) && h58 == n143->hash &&  MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey1_idxfn::equals(se213, *e143)); 
+                    } while (n143 && (e143 = n143->obj) && h59 == n143->hash &&  MKT_SHAREPART1CUSTOMER1_P_2PART1_mapkey0_idxfn::equals(se214, *e143)); 
                   }
                 }
               n142 = n142->nxt;
@@ -5025,17 +5023,17 @@ namespace dbtoaster {
                 long v144 = e144->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_map_0* i145 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_map_0*>(MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2.index[1]);
-                  const HASH_RES_t h59 = MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_mapkey0_idxfn::hash(se216.modify0(o_custkey));
-                  HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_map_0::IdxNode* n145 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_map_0::IdxNode*>(i145->slice(se216, h59));
+                  const HASH_RES_t h60 = MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_mapkey0_idxfn::hash(se217.modify0(o_custkey));
+                  HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_map_0::IdxNode* n145 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_map_0::IdxNode*>(i145->slice(se217, h60));
                   MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry* e145;
                  
                   if (n145 && (e145 = n145->obj)) {
                     do {                
                       long total_o_year = e145->TOTAL_O_YEAR;
                       DOUBLE_TYPE v145 = e145->__av;
-                      MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se214.modify(total_o_year),(v144 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se215.modify(c_nationkey)) * v145)));
+                      MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se215.modify(total_o_year),(v144 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se216.modify(c_nationkey)) * v145)));
                       n145 = n145->nxt;
-                    } while (n145 && (e145 = n145->obj) && h59 == n145->hash &&  MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_mapkey0_idxfn::equals(se216, *e145)); 
+                    } while (n145 && (e145 = n145->obj) && h60 == n145->hash &&  MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_mapkey0_idxfn::equals(se217, *e145)); 
                   }
                 }
               n144 = n144->nxt;
@@ -5055,9 +5053,9 @@ namespace dbtoaster {
                 long c_nationkey = e146->C_NATIONKEY;
                 long v146 = e146->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_1* i147 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_1*>(MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.index[2]);
-                  const HASH_RES_t h60 = MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey1_idxfn::hash(se219.modify1(o_custkey));
-                  HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_1::IdxNode* n147 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_1::IdxNode*>(i147->slice(se219, h60));
+                  const HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0* i147 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0*>(MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.index[2]);
+                  const HASH_RES_t h61 = MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn::hash(se220.modify0(o_custkey));
+                  HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0::IdxNode* n147 = static_cast<HashIndex_MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_map_0::IdxNode*>(i147->slice(se220, h61));
                   MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry* e147;
                  
                   if (n147 && (e147 = n147->obj)) {
@@ -5065,9 +5063,9 @@ namespace dbtoaster {
                       long p_partkey = e147->P_PARTKEY;
                       long total_o_year = e147->TOTAL_O_YEAR;
                       DOUBLE_TYPE v147 = e147->__av;
-                      MKT_SHAREPART1_L2_1_L1_1PART1.addOrDelOnZero(se217.modify(p_partkey,total_o_year),(v146 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se218.modify(c_nationkey)) * v147)));
+                      MKT_SHAREPART1_L2_1_L1_1PART1.addOrDelOnZero(se218.modify(p_partkey,total_o_year),(v146 * (MKT_SHAREORDERS1CUSTOMER1_P_2.getValueOrDefault(se219.modify(c_nationkey)) * v147)));
                       n147 = n147->nxt;
-                    } while (n147 && (e147 = n147->obj) && h60 == n147->hash &&  MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey1_idxfn::equals(se219, *e147)); 
+                    } while (n147 && (e147 = n147->obj) && h61 == n147->hash &&  MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_mapkey0_idxfn::equals(se220, *e147)); 
                   }
                 }
               n146 = n146->nxt;
@@ -5086,12 +5084,12 @@ namespace dbtoaster {
             {
                 date o_orderdate = e148->O_ORDERDATE;
                 DOUBLE_TYPE v148 = e148->__av;
-                long l16 = Uyear_part(o_orderdate);
+                long l15 = Uyear_part(o_orderdate);
                 DOUBLE_TYPE agg11 = 0.0;
-                DOUBLE_TYPE l18 = MKT_SHAREPART1_L2_1_L1_1.getValueOrDefault(se221.modify(l16));
-                agg11 += Ulistmax(1L, l18);
-                DOUBLE_TYPE l17 = agg11;
-                MKT_SHARE.addOrDelOnZero(se220.modify(l16),(v148 * Udiv(l17)));
+                DOUBLE_TYPE l17 = MKT_SHAREPART1_L2_1_L1_1.getValueOrDefault(se222.modify(l15));
+                agg11 += Ulistmax(1L, l17);
+                DOUBLE_TYPE l16 = agg11;
+                MKT_SHARE.addOrDelOnZero(se221.modify(l15),(v148 * Udiv(l16)));
               n148 = n148->nxt;
             }
           }
@@ -5110,9 +5108,8 @@ namespace dbtoaster {
         }
         tN += DELTA_SUPPLIER.size;
 
-
         MKT_SHAREORDERS1SUPPLIER1_DELTA.clear();
-        {  
+        { 
           for (size_t i = 0; i < DELTA_SUPPLIER.size; i++) 
           {
                 long s_suppkey = DELTA_SUPPLIER.suppkey[i];
@@ -5123,9 +5120,10 @@ namespace dbtoaster {
                 // DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
                 // STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
                 long v149 = 1L;
-                MKT_SHAREORDERS1SUPPLIER1_DELTA.addOrDelOnZero(se222.modify(s_suppkey,s_nationkey),v149);
+                MKT_SHAREORDERS1SUPPLIER1_DELTA.addOrDelOnZero(se223.modify(s_suppkey,s_nationkey),v149);
           }
-        }{  // foreach
+        }
+        {  // foreach
           const HashIndex_MKT_SHAREORDERS1SUPPLIER1_DELTA_map_01* i150 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_DELTA_map_01*>(MKT_SHAREORDERS1SUPPLIER1_DELTA.index[0]);
           HashIndex_MKT_SHAREORDERS1SUPPLIER1_DELTA_map_01::IdxNode* n150; 
           MKT_SHAREORDERS1SUPPLIER1_DELTA_entry* e150;
@@ -5140,17 +5138,17 @@ namespace dbtoaster {
                 long v150 = e150->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0* i151 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0*>(MKT_SHAREORDERS1SUPPLIER1_P_1.index[1]);
-                  const HASH_RES_t h61 = MKT_SHAREORDERS1SUPPLIER1_P_1_mapkey0_idxfn::hash(se225.modify0(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0::IdxNode* n151 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0::IdxNode*>(i151->slice(se225, h61));
+                  const HASH_RES_t h62 = MKT_SHAREORDERS1SUPPLIER1_P_1_mapkey0_idxfn::hash(se226.modify0(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0::IdxNode* n151 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0::IdxNode*>(i151->slice(se226, h62));
                   MKT_SHAREORDERS1SUPPLIER1_P_1_entry* e151;
                  
                   if (n151 && (e151 = n151->obj)) {
                     do {                
                       long total_o_year = e151->TOTAL_O_YEAR;
                       DOUBLE_TYPE v151 = e151->__av;
-                      MKT_SHAREORDERS1.addOrDelOnZero(se223.modify(total_o_year),(v150 * (v151 * MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se224.modify(s_nationkey)))));
+                      MKT_SHAREORDERS1.addOrDelOnZero(se224.modify(total_o_year),(v150 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se225.modify(s_nationkey)) * v151)));
                       n151 = n151->nxt;
-                    } while (n151 && (e151 = n151->obj) && h61 == n151->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1_mapkey0_idxfn::equals(se225, *e151)); 
+                    } while (n151 && (e151 = n151->obj) && h62 == n151->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1_mapkey0_idxfn::equals(se226, *e151)); 
                   }
                 }
               n150 = n150->nxt;
@@ -5171,8 +5169,8 @@ namespace dbtoaster {
                 long v152 = e152->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0* i153 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2.index[2]);
-                  const HASH_RES_t h62 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey0_idxfn::hash(se228.modify0(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0::IdxNode* n153 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0::IdxNode*>(i153->slice(se228, h62));
+                  const HASH_RES_t h63 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey0_idxfn::hash(se229.modify0(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0::IdxNode* n153 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0::IdxNode*>(i153->slice(se229, h63));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry* e153;
                  
                   if (n153 && (e153 = n153->obj)) {
@@ -5180,9 +5178,9 @@ namespace dbtoaster {
                       long o_custkey = e153->O_CUSTKEY;
                       long total_o_year = e153->TOTAL_O_YEAR;
                       DOUBLE_TYPE v153 = e153->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1.addOrDelOnZero(se226.modify(o_custkey,total_o_year),(v152 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se227.modify(s_nationkey)) * v153)));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1.addOrDelOnZero(se227.modify(o_custkey,total_o_year),(v152 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se228.modify(s_nationkey)) * v153)));
                       n153 = n153->nxt;
-                    } while (n153 && (e153 = n153->obj) && h62 == n153->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey0_idxfn::equals(se228, *e153)); 
+                    } while (n153 && (e153 = n153->obj) && h63 == n153->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey0_idxfn::equals(se229, *e153)); 
                   }
                 }
               n152 = n152->nxt;
@@ -5203,8 +5201,8 @@ namespace dbtoaster {
                 long v154 = e154->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1* i155 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1.index[3]);
-                  const HASH_RES_t h63 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey1_idxfn::hash(se231.modify1(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1::IdxNode* n155 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1::IdxNode*>(i155->slice(se231, h63));
+                  const HASH_RES_t h64 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey1_idxfn::hash(se232.modify1(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1::IdxNode* n155 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1::IdxNode*>(i155->slice(se232, h64));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry* e155;
                  
                   if (n155 && (e155 = n155->obj)) {
@@ -5213,9 +5211,9 @@ namespace dbtoaster {
                       long o_custkey = e155->O_CUSTKEY;
                       long total_o_year = e155->TOTAL_O_YEAR;
                       DOUBLE_TYPE v155 = e155->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1PART1.addOrDelOnZero(se229.modify(p_partkey,o_custkey,total_o_year),(v154 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se230.modify(s_nationkey)) * v155)));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1PART1.addOrDelOnZero(se230.modify(o_custkey,p_partkey,total_o_year),(v154 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se231.modify(s_nationkey)) * v155)));
                       n155 = n155->nxt;
-                    } while (n155 && (e155 = n155->obj) && h63 == n155->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey1_idxfn::equals(se231, *e155)); 
+                    } while (n155 && (e155 = n155->obj) && h64 == n155->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey1_idxfn::equals(se232, *e155)); 
                   }
                 }
               n154 = n154->nxt;
@@ -5235,19 +5233,19 @@ namespace dbtoaster {
                 long s_nationkey = e156->S_NATIONKEY;
                 long v156 = e156->__av;
                 { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_2* i157 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_2*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1.index[3]);
-                  const HASH_RES_t h64 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey2_idxfn::hash(se234.modify2(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_2::IdxNode* n157 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_2::IdxNode*>(i157->slice(se234, h64));
-                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry* e157;
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_2* i157 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_2*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1.index[3]);
+                  const HASH_RES_t h65 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey2_idxfn::hash(se235.modify2(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_2::IdxNode* n157 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_2::IdxNode*>(i157->slice(se235, h65));
+                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry* e157;
                  
                   if (n157 && (e157 = n157->obj)) {
                     do {                
                       long l_orderkey = e157->L_ORDERKEY;
                       long p_partkey = e157->P_PARTKEY;
                       DOUBLE_TYPE v157 = e157->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1.addOrDelOnZero(se232.modify(l_orderkey,p_partkey),(v156 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se233.modify(s_nationkey)) * v157)));
+                      MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1.addOrDelOnZero(se233.modify(l_orderkey,p_partkey),(v156 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se234.modify(s_nationkey)) * v157)));
                       n157 = n157->nxt;
-                    } while (n157 && (e157 = n157->obj) && h64 == n157->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey2_idxfn::equals(se234, *e157)); 
+                    } while (n157 && (e157 = n157->obj) && h65 == n157->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey2_idxfn::equals(se235, *e157)); 
                   }
                 }
               n156 = n156->nxt;
@@ -5266,7 +5264,7 @@ namespace dbtoaster {
                 long s_suppkey = e158->S_SUPPKEY;
                 long s_nationkey = e158->S_NATIONKEY;
                 long v158 = e158->__av;
-                MKT_SHAREORDERS1LINEITEM1_P_3.addOrDelOnZero(se235.modify(s_suppkey),(v158 * MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se236.modify(s_nationkey))));
+                MKT_SHAREORDERS1LINEITEM1_P_3.addOrDelOnZero(se236.modify(s_suppkey),(v158 * MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se237.modify(s_nationkey))));
               n158 = n158->nxt;
             }
           }
@@ -5285,8 +5283,8 @@ namespace dbtoaster {
                 long v159 = e159->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1* i160 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1*>(MKT_SHAREORDERS1SUPPLIER1_P_1PART1.index[2]);
-                  const HASH_RES_t h65 = MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey1_idxfn::hash(se239.modify1(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1::IdxNode* n160 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1::IdxNode*>(i160->slice(se239, h65));
+                  const HASH_RES_t h66 = MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey1_idxfn::hash(se240.modify1(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1::IdxNode* n160 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1::IdxNode*>(i160->slice(se240, h66));
                   MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry* e160;
                  
                   if (n160 && (e160 = n160->obj)) {
@@ -5294,9 +5292,9 @@ namespace dbtoaster {
                       long p_partkey = e160->P_PARTKEY;
                       long total_o_year = e160->TOTAL_O_YEAR;
                       DOUBLE_TYPE v160 = e160->__av;
-                      MKT_SHAREORDERS1PART1.addOrDelOnZero(se237.modify(p_partkey,total_o_year),(v159 * (v160 * MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se238.modify(s_nationkey)))));
+                      MKT_SHAREORDERS1PART1.addOrDelOnZero(se238.modify(p_partkey,total_o_year),(v159 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se239.modify(s_nationkey)) * v160)));
                       n160 = n160->nxt;
-                    } while (n160 && (e160 = n160->obj) && h65 == n160->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey1_idxfn::equals(se239, *e160)); 
+                    } while (n160 && (e160 = n160->obj) && h66 == n160->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey1_idxfn::equals(se240, *e160)); 
                   }
                 }
               n159 = n159->nxt;
@@ -5317,17 +5315,17 @@ namespace dbtoaster {
                 long v161 = e161->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1* i162 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.index[2]);
-                  const HASH_RES_t h66 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn::hash(se242.modify1(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1::IdxNode* n162 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1::IdxNode*>(i162->slice(se242, h66));
+                  const HASH_RES_t h67 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn::hash(se243.modify1(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1::IdxNode* n162 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1::IdxNode*>(i162->slice(se243, h67));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry* e162;
                  
                   if (n162 && (e162 = n162->obj)) {
                     do {                
                       long l_orderkey = e162->L_ORDERKEY;
                       DOUBLE_TYPE v162 = e162->__av;
-                      MKT_SHAREORDERS1_L1_1_L1_2_P_2.addOrDelOnZero(se240.modify(l_orderkey),(v161 * (v162 * MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se241.modify(s_nationkey)))));
+                      MKT_SHAREORDERS1_L1_1_L1_2_P_2.addOrDelOnZero(se241.modify(l_orderkey),(v161 * (MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se242.modify(s_nationkey)) * v162)));
                       n162 = n162->nxt;
-                    } while (n162 && (e162 = n162->obj) && h66 == n162->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn::equals(se242, *e162)); 
+                    } while (n162 && (e162 = n162->obj) && h67 == n162->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn::equals(se243, *e162)); 
                   }
                 }
               n161 = n161->nxt;
@@ -5346,40 +5344,40 @@ namespace dbtoaster {
                 long s_suppkey = e163->S_SUPPKEY;
                 long s_nationkey = e163->S_NATIONKEY;
                 long v163 = e163->__av;
-                MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2.addOrDelOnZero(se243.modify(s_suppkey),(v163 * MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se244.modify(s_nationkey))));
+                { //slice 
+                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_2* i164 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_2*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1.index[3]);
+                  const HASH_RES_t h68 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey2_idxfn::hash(se246.modify2(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_2::IdxNode* n164 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map_2::IdxNode*>(i164->slice(se246, h68));
+                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry* e164;
+                 
+                  if (n164 && (e164 = n164->obj)) {
+                    do {                
+                      long l_orderkey = e164->L_ORDERKEY;
+                      long p_partkey = e164->P_PARTKEY;
+                      DOUBLE_TYPE v164 = e164->__av;
+                      MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1.addOrDelOnZero(se244.modify(l_orderkey,p_partkey),(v163 * (MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se245.modify(s_nationkey)) * v164)));
+                      n164 = n164->nxt;
+                    } while (n164 && (e164 = n164->obj) && h68 == n164->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_mapkey2_idxfn::equals(se246, *e164)); 
+                  }
+                }
               n163 = n163->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_MKT_SHAREORDERS1SUPPLIER1_DELTA_map_01* i164 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_DELTA_map_01*>(MKT_SHAREORDERS1SUPPLIER1_DELTA.index[0]);
-          HashIndex_MKT_SHAREORDERS1SUPPLIER1_DELTA_map_01::IdxNode* n164; 
-          MKT_SHAREORDERS1SUPPLIER1_DELTA_entry* e164;
+          const HashIndex_MKT_SHAREORDERS1SUPPLIER1_DELTA_map_01* i165 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_DELTA_map_01*>(MKT_SHAREORDERS1SUPPLIER1_DELTA.index[0]);
+          HashIndex_MKT_SHAREORDERS1SUPPLIER1_DELTA_map_01::IdxNode* n165; 
+          MKT_SHAREORDERS1SUPPLIER1_DELTA_entry* e165;
         
-          for (size_t i = 0; i < i164->size_; i++)
+          for (size_t i = 0; i < i165->size_; i++)
           {
-            n164 = i164->buckets_ + i;
-            while (n164 && (e164 = n164->obj))
+            n165 = i165->buckets_ + i;
+            while (n165 && (e165 = n165->obj))
             {
-                long s_suppkey = e164->S_SUPPKEY;
-                long s_nationkey = e164->S_NATIONKEY;
-                long v164 = e164->__av;
-                { //slice 
-                  const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_2* i165 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_2*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1.index[3]);
-                  const HASH_RES_t h67 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey2_idxfn::hash(se247.modify2(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_2::IdxNode* n165 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map_2::IdxNode*>(i165->slice(se247, h67));
-                  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry* e165;
-                 
-                  if (n165 && (e165 = n165->obj)) {
-                    do {                
-                      long l_orderkey = e165->L_ORDERKEY;
-                      long p_partkey = e165->P_PARTKEY;
-                      DOUBLE_TYPE v165 = e165->__av;
-                      MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1.addOrDelOnZero(se245.modify(l_orderkey,p_partkey),(v164 * (v165 * MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se246.modify(s_nationkey)))));
-                      n165 = n165->nxt;
-                    } while (n165 && (e165 = n165->obj) && h67 == n165->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_mapkey2_idxfn::equals(se247, *e165)); 
-                  }
-                }
-              n164 = n164->nxt;
+                long s_suppkey = e165->S_SUPPKEY;
+                long s_nationkey = e165->S_NATIONKEY;
+                long v165 = e165->__av;
+                MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2.addOrDelOnZero(se247.modify(s_suppkey),(v165 * MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se248.modify(s_nationkey))));
+              n165 = n165->nxt;
             }
           }
         }{  // foreach
@@ -5397,17 +5395,17 @@ namespace dbtoaster {
                 long v166 = e166->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1* i167 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1.index[2]);
-                  const HASH_RES_t h68 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn::hash(se250.modify1(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1::IdxNode* n167 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1::IdxNode*>(i167->slice(se250, h68));
+                  const HASH_RES_t h69 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn::hash(se251.modify1(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1::IdxNode* n167 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map_1::IdxNode*>(i167->slice(se251, h69));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry* e167;
                  
                   if (n167 && (e167 = n167->obj)) {
                     do {                
                       long l_orderkey = e167->L_ORDERKEY;
                       DOUBLE_TYPE v167 = e167->__av;
-                      MKT_SHAREORDERS4_P_1.addOrDelOnZero(se248.modify(l_orderkey),(v166 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se249.modify(s_nationkey)) * v167)));
+                      MKT_SHAREORDERS4_P_1.addOrDelOnZero(se249.modify(l_orderkey),(v166 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se250.modify(s_nationkey)) * v167)));
                       n167 = n167->nxt;
-                    } while (n167 && (e167 = n167->obj) && h68 == n167->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn::equals(se250, *e167)); 
+                    } while (n167 && (e167 = n167->obj) && h69 == n167->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_mapkey1_idxfn::equals(se251, *e167)); 
                   }
                 }
               n166 = n166->nxt;
@@ -5428,17 +5426,17 @@ namespace dbtoaster {
                 long v168 = e168->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1SUPPLIER1_P_1_map_0* i169 = static_cast<HashIndex_MKT_SHAREPART1SUPPLIER1_P_1_map_0*>(MKT_SHAREPART1SUPPLIER1_P_1.index[1]);
-                  const HASH_RES_t h69 = MKT_SHAREPART1SUPPLIER1_P_1_mapkey0_idxfn::hash(se253.modify0(s_suppkey));
-                  HashIndex_MKT_SHAREPART1SUPPLIER1_P_1_map_0::IdxNode* n169 = static_cast<HashIndex_MKT_SHAREPART1SUPPLIER1_P_1_map_0::IdxNode*>(i169->slice(se253, h69));
+                  const HASH_RES_t h70 = MKT_SHAREPART1SUPPLIER1_P_1_mapkey0_idxfn::hash(se254.modify0(s_suppkey));
+                  HashIndex_MKT_SHAREPART1SUPPLIER1_P_1_map_0::IdxNode* n169 = static_cast<HashIndex_MKT_SHAREPART1SUPPLIER1_P_1_map_0::IdxNode*>(i169->slice(se254, h70));
                   MKT_SHAREPART1SUPPLIER1_P_1_entry* e169;
                  
                   if (n169 && (e169 = n169->obj)) {
                     do {                
                       date o_orderdate = e169->O_ORDERDATE;
                       DOUBLE_TYPE v169 = e169->__av;
-                      MKT_SHAREPART1.addOrDelOnZero(se251.modify(o_orderdate),(v168 * (v169 * MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se252.modify(s_nationkey)))));
+                      MKT_SHAREPART1.addOrDelOnZero(se252.modify(o_orderdate),(v168 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se253.modify(s_nationkey)) * v169)));
                       n169 = n169->nxt;
-                    } while (n169 && (e169 = n169->obj) && h69 == n169->hash &&  MKT_SHAREPART1SUPPLIER1_P_1_mapkey0_idxfn::equals(se253, *e169)); 
+                    } while (n169 && (e169 = n169->obj) && h70 == n169->hash &&  MKT_SHAREPART1SUPPLIER1_P_1_mapkey0_idxfn::equals(se254, *e169)); 
                   }
                 }
               n168 = n168->nxt;
@@ -5459,8 +5457,8 @@ namespace dbtoaster {
                 long v170 = e170->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_0* i171 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_0*>(MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2.index[2]);
-                  const HASH_RES_t h70 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_mapkey0_idxfn::hash(se256.modify0(s_suppkey));
-                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_0::IdxNode* n171 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_0::IdxNode*>(i171->slice(se256, h70));
+                  const HASH_RES_t h71 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_mapkey0_idxfn::hash(se257.modify0(s_suppkey));
+                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_0::IdxNode* n171 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map_0::IdxNode*>(i171->slice(se257, h71));
                   MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry* e171;
                  
                   if (n171 && (e171 = n171->obj)) {
@@ -5468,9 +5466,9 @@ namespace dbtoaster {
                       long o_custkey = e171->O_CUSTKEY;
                       date o_orderdate = e171->O_ORDERDATE;
                       DOUBLE_TYPE v171 = e171->__av;
-                      MKT_SHAREPART1CUSTOMER1_P_2.addOrDelOnZero(se254.modify(o_custkey,o_orderdate),(v170 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se255.modify(s_nationkey)) * v171)));
+                      MKT_SHAREPART1CUSTOMER1_P_2.addOrDelOnZero(se255.modify(o_custkey,o_orderdate),(v170 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se256.modify(s_nationkey)) * v171)));
                       n171 = n171->nxt;
-                    } while (n171 && (e171 = n171->obj) && h70 == n171->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_mapkey0_idxfn::equals(se256, *e171)); 
+                    } while (n171 && (e171 = n171->obj) && h71 == n171->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_mapkey0_idxfn::equals(se257, *e171)); 
                   }
                 }
               n170 = n170->nxt;
@@ -5491,8 +5489,8 @@ namespace dbtoaster {
                 long v172 = e172->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_1* i173 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_1*>(MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1.index[3]);
-                  const HASH_RES_t h71 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey1_idxfn::hash(se259.modify1(s_suppkey));
-                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_1::IdxNode* n173 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_1::IdxNode*>(i173->slice(se259, h71));
+                  const HASH_RES_t h72 = MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey1_idxfn::hash(se260.modify1(s_suppkey));
+                  HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_1::IdxNode* n173 = static_cast<HashIndex_MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map_1::IdxNode*>(i173->slice(se260, h72));
                   MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry* e173;
                  
                   if (n173 && (e173 = n173->obj)) {
@@ -5501,9 +5499,9 @@ namespace dbtoaster {
                       long o_custkey = e173->O_CUSTKEY;
                       date o_orderdate = e173->O_ORDERDATE;
                       DOUBLE_TYPE v173 = e173->__av;
-                      MKT_SHAREPART1CUSTOMER1_P_2PART1.addOrDelOnZero(se257.modify(p_partkey,o_custkey,o_orderdate),(v172 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se258.modify(s_nationkey)) * v173)));
+                      MKT_SHAREPART1CUSTOMER1_P_2PART1.addOrDelOnZero(se258.modify(o_custkey,o_orderdate,p_partkey),(v172 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se259.modify(s_nationkey)) * v173)));
                       n173 = n173->nxt;
-                    } while (n173 && (e173 = n173->obj) && h71 == n173->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey1_idxfn::equals(se259, *e173)); 
+                    } while (n173 && (e173 = n173->obj) && h72 == n173->hash &&  MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_mapkey1_idxfn::equals(se260, *e173)); 
                   }
                 }
               n172 = n172->nxt;
@@ -5524,8 +5522,8 @@ namespace dbtoaster {
                 long v174 = e174->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_1* i175 = static_cast<HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_1*>(MKT_SHAREPART1SUPPLIER1_P_1PART1.index[2]);
-                  const HASH_RES_t h72 = MKT_SHAREPART1SUPPLIER1_P_1PART1_mapkey1_idxfn::hash(se262.modify1(s_suppkey));
-                  HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_1::IdxNode* n175 = static_cast<HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_1::IdxNode*>(i175->slice(se262, h72));
+                  const HASH_RES_t h73 = MKT_SHAREPART1SUPPLIER1_P_1PART1_mapkey1_idxfn::hash(se263.modify1(s_suppkey));
+                  HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_1::IdxNode* n175 = static_cast<HashIndex_MKT_SHAREPART1SUPPLIER1_P_1PART1_map_1::IdxNode*>(i175->slice(se263, h73));
                   MKT_SHAREPART1SUPPLIER1_P_1PART1_entry* e175;
                  
                   if (n175 && (e175 = n175->obj)) {
@@ -5533,9 +5531,9 @@ namespace dbtoaster {
                       long p_partkey = e175->P_PARTKEY;
                       date o_orderdate = e175->O_ORDERDATE;
                       DOUBLE_TYPE v175 = e175->__av;
-                      MKT_SHAREPART1PART1.addOrDelOnZero(se260.modify(p_partkey,o_orderdate),(v174 * (v175 * MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se261.modify(s_nationkey)))));
+                      MKT_SHAREPART1PART1.addOrDelOnZero(se261.modify(p_partkey,o_orderdate),(v174 * (MKT_SHAREORDERS1SUPPLIER1_P_2.getValueOrDefault(se262.modify(s_nationkey)) * v175)));
                       n175 = n175->nxt;
-                    } while (n175 && (e175 = n175->obj) && h72 == n175->hash &&  MKT_SHAREPART1SUPPLIER1_P_1PART1_mapkey1_idxfn::equals(se262, *e175)); 
+                    } while (n175 && (e175 = n175->obj) && h73 == n175->hash &&  MKT_SHAREPART1SUPPLIER1_P_1PART1_mapkey1_idxfn::equals(se263, *e175)); 
                   }
                 }
               n174 = n174->nxt;
@@ -5556,17 +5554,17 @@ namespace dbtoaster {
                 long v176 = e176->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0* i177 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0*>(MKT_SHAREORDERS1SUPPLIER1_P_1.index[1]);
-                  const HASH_RES_t h73 = MKT_SHAREORDERS1SUPPLIER1_P_1_mapkey0_idxfn::hash(se265.modify0(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0::IdxNode* n177 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0::IdxNode*>(i177->slice(se265, h73));
+                  const HASH_RES_t h74 = MKT_SHAREORDERS1SUPPLIER1_P_1_mapkey0_idxfn::hash(se266.modify0(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0::IdxNode* n177 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1_map_0::IdxNode*>(i177->slice(se266, h74));
                   MKT_SHAREORDERS1SUPPLIER1_P_1_entry* e177;
                  
                   if (n177 && (e177 = n177->obj)) {
                     do {                
                       long total_o_year = e177->TOTAL_O_YEAR;
                       DOUBLE_TYPE v177 = e177->__av;
-                      MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se263.modify(total_o_year),(v176 * (v177 * MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se264.modify(s_nationkey)))));
+                      MKT_SHAREPART1_L2_1_L1_1.addOrDelOnZero(se264.modify(total_o_year),(v176 * (MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se265.modify(s_nationkey)) * v177)));
                       n177 = n177->nxt;
-                    } while (n177 && (e177 = n177->obj) && h73 == n177->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1_mapkey0_idxfn::equals(se265, *e177)); 
+                    } while (n177 && (e177 = n177->obj) && h74 == n177->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1_mapkey0_idxfn::equals(se266, *e177)); 
                   }
                 }
               n176 = n176->nxt;
@@ -5587,8 +5585,8 @@ namespace dbtoaster {
                 long v178 = e178->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0* i179 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2.index[2]);
-                  const HASH_RES_t h74 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey0_idxfn::hash(se268.modify0(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0::IdxNode* n179 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0::IdxNode*>(i179->slice(se268, h74));
+                  const HASH_RES_t h75 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey0_idxfn::hash(se269.modify0(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0::IdxNode* n179 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map_0::IdxNode*>(i179->slice(se269, h75));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry* e179;
                  
                   if (n179 && (e179 = n179->obj)) {
@@ -5596,9 +5594,9 @@ namespace dbtoaster {
                       long o_custkey = e179->O_CUSTKEY;
                       long total_o_year = e179->TOTAL_O_YEAR;
                       DOUBLE_TYPE v179 = e179->__av;
-                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2.addOrDelOnZero(se266.modify(o_custkey,total_o_year),(v178 * (v179 * MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se267.modify(s_nationkey)))));
+                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2.addOrDelOnZero(se267.modify(o_custkey,total_o_year),(v178 * (MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se268.modify(s_nationkey)) * v179)));
                       n179 = n179->nxt;
-                    } while (n179 && (e179 = n179->obj) && h74 == n179->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey0_idxfn::equals(se268, *e179)); 
+                    } while (n179 && (e179 = n179->obj) && h75 == n179->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_mapkey0_idxfn::equals(se269, *e179)); 
                   }
                 }
               n178 = n178->nxt;
@@ -5619,8 +5617,8 @@ namespace dbtoaster {
                 long v180 = e180->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1* i181 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1*>(MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1.index[3]);
-                  const HASH_RES_t h75 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey1_idxfn::hash(se271.modify1(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1::IdxNode* n181 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1::IdxNode*>(i181->slice(se271, h75));
+                  const HASH_RES_t h76 = MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey1_idxfn::hash(se272.modify1(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1::IdxNode* n181 = static_cast<HashIndex_MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map_1::IdxNode*>(i181->slice(se272, h76));
                   MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry* e181;
                  
                   if (n181 && (e181 = n181->obj)) {
@@ -5629,9 +5627,9 @@ namespace dbtoaster {
                       long o_custkey = e181->O_CUSTKEY;
                       long total_o_year = e181->TOTAL_O_YEAR;
                       DOUBLE_TYPE v181 = e181->__av;
-                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.addOrDelOnZero(se269.modify(p_partkey,o_custkey,total_o_year),(v180 * (v181 * MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se270.modify(s_nationkey)))));
+                      MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1.addOrDelOnZero(se270.modify(o_custkey,p_partkey,total_o_year),(v180 * (MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se271.modify(s_nationkey)) * v181)));
                       n181 = n181->nxt;
-                    } while (n181 && (e181 = n181->obj) && h75 == n181->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey1_idxfn::equals(se271, *e181)); 
+                    } while (n181 && (e181 = n181->obj) && h76 == n181->hash &&  MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_mapkey1_idxfn::equals(se272, *e181)); 
                   }
                 }
               n180 = n180->nxt;
@@ -5652,8 +5650,8 @@ namespace dbtoaster {
                 long v182 = e182->__av;
                 { //slice 
                   const HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1* i183 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1*>(MKT_SHAREORDERS1SUPPLIER1_P_1PART1.index[2]);
-                  const HASH_RES_t h76 = MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey1_idxfn::hash(se274.modify1(s_suppkey));
-                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1::IdxNode* n183 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1::IdxNode*>(i183->slice(se274, h76));
+                  const HASH_RES_t h77 = MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey1_idxfn::hash(se275.modify1(s_suppkey));
+                  HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1::IdxNode* n183 = static_cast<HashIndex_MKT_SHAREORDERS1SUPPLIER1_P_1PART1_map_1::IdxNode*>(i183->slice(se275, h77));
                   MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry* e183;
                  
                   if (n183 && (e183 = n183->obj)) {
@@ -5661,9 +5659,9 @@ namespace dbtoaster {
                       long p_partkey = e183->P_PARTKEY;
                       long total_o_year = e183->TOTAL_O_YEAR;
                       DOUBLE_TYPE v183 = e183->__av;
-                      MKT_SHAREPART1_L2_1_L1_1PART1.addOrDelOnZero(se272.modify(p_partkey,total_o_year),(v182 * (v183 * MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se273.modify(s_nationkey)))));
+                      MKT_SHAREPART1_L2_1_L1_1PART1.addOrDelOnZero(se273.modify(p_partkey,total_o_year),(v182 * (MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.getValueOrDefault(se274.modify(s_nationkey)) * v183)));
                       n183 = n183->nxt;
-                    } while (n183 && (e183 = n183->obj) && h76 == n183->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey1_idxfn::equals(se274, *e183)); 
+                    } while (n183 && (e183 = n183->obj) && h77 == n183->hash &&  MKT_SHAREORDERS1SUPPLIER1_P_1PART1_mapkey1_idxfn::equals(se275, *e183)); 
                   }
                 }
               n182 = n182->nxt;
@@ -5682,12 +5680,12 @@ namespace dbtoaster {
             {
                 date o_orderdate = e184->O_ORDERDATE;
                 DOUBLE_TYPE v184 = e184->__av;
-                long l19 = Uyear_part(o_orderdate);
+                long l18 = Uyear_part(o_orderdate);
                 DOUBLE_TYPE agg12 = 0.0;
-                DOUBLE_TYPE l21 = MKT_SHAREPART1_L2_1_L1_1.getValueOrDefault(se276.modify(l19));
-                agg12 += Ulistmax(1L, l21);
-                DOUBLE_TYPE l20 = agg12;
-                MKT_SHARE.addOrDelOnZero(se275.modify(l19),(v184 * Udiv(l20)));
+                DOUBLE_TYPE l20 = MKT_SHAREPART1_L2_1_L1_1.getValueOrDefault(se277.modify(l18));
+                agg12 += Ulistmax(1L, l20);
+                DOUBLE_TYPE l19 = agg12;
+                MKT_SHARE.addOrDelOnZero(se276.modify(l18),(v184 * Udiv(l19)));
               n184 = n184->nxt;
             }
           }
@@ -5697,7 +5695,7 @@ namespace dbtoaster {
     void on_system_ready_event() {
       {  
         MKT_SHAREORDERS1CUSTOMER1_P_2.clear();
-        STRING_TYPE l22 = c4;
+        STRING_TYPE l21 = c4;
         {  // foreach
           const HashIndex_NATION_map_0123* i185 = static_cast<HashIndex_NATION_map_0123*>(NATION.index[0]);
           HashIndex_NATION_map_0123::IdxNode* n185; 
@@ -5715,28 +5713,28 @@ namespace dbtoaster {
                 long v185 = e185->__av;
                 { //slice 
                   const HashIndex_REGION_map_01* i186 = static_cast<HashIndex_REGION_map_01*>(REGION.index[1]);
-                  const HASH_RES_t h77 = REGION_mapkey01_idxfn::hash(se278.modify01(n1_regionkey, l22));
-                  HashIndex_REGION_map_01::IdxNode* n186 = static_cast<HashIndex_REGION_map_01::IdxNode*>(i186->slice(se278, h77));
+                  const HASH_RES_t h78 = REGION_mapkey01_idxfn::hash(se279.modify01(n1_regionkey, l21));
+                  HashIndex_REGION_map_01::IdxNode* n186 = static_cast<HashIndex_REGION_map_01::IdxNode*>(i186->slice(se279, h78));
                   REGION_entry* e186;
                  
                   if (n186 && (e186 = n186->obj)) {
                     do {                
                       STRING_TYPE r_comment = e186->REGION_COMMENT;
                       long v186 = e186->__av;
-                      MKT_SHAREORDERS1CUSTOMER1_P_2.addOrDelOnZero(se277.modify(c_nationkey),(v185 * v186));
+                      MKT_SHAREORDERS1CUSTOMER1_P_2.addOrDelOnZero(se278.modify(c_nationkey),(v185 * v186));
                       n186 = n186->nxt;
-                    } while (n186 && (e186 = n186->obj) && h77 == n186->hash &&  REGION_mapkey01_idxfn::equals(se278, *e186)); 
+                    } while (n186 && (e186 = n186->obj) && h78 == n186->hash &&  REGION_mapkey01_idxfn::equals(se279, *e186)); 
                   }
                 }
               n185 = n185->nxt;
             }
           }
         }MKT_SHAREORDERS1SUPPLIER1_P_2.clear();
-        STRING_TYPE l23 = c5;
+        STRING_TYPE l22 = c5;
         { //slice 
           const HashIndex_NATION_map_1* i187 = static_cast<HashIndex_NATION_map_1*>(NATION.index[1]);
-          const HASH_RES_t h78 = NATION_mapkey1_idxfn::hash(se280.modify1(l23));
-          HashIndex_NATION_map_1::IdxNode* n187 = static_cast<HashIndex_NATION_map_1::IdxNode*>(i187->slice(se280, h78));
+          const HASH_RES_t h79 = NATION_mapkey1_idxfn::hash(se281.modify1(l22));
+          HashIndex_NATION_map_1::IdxNode* n187 = static_cast<HashIndex_NATION_map_1::IdxNode*>(i187->slice(se281, h79));
           NATION_entry* e187;
          
           if (n187 && (e187 = n187->obj)) {
@@ -5745,9 +5743,9 @@ namespace dbtoaster {
               long n2_regionkey = e187->NATION_REGIONKEY;
               STRING_TYPE n2_comment = e187->NATION_COMMENT;
               long v187 = e187->__av;
-              MKT_SHAREORDERS1SUPPLIER1_P_2.addOrDelOnZero(se279.modify(s_nationkey),v187);
+              MKT_SHAREORDERS1SUPPLIER1_P_2.addOrDelOnZero(se280.modify(s_nationkey),v187);
               n187 = n187->nxt;
-            } while (n187 && (e187 = n187->obj) && h78 == n187->hash &&  NATION_mapkey1_idxfn::equals(se280, *e187)); 
+            } while (n187 && (e187 = n187->obj) && h79 == n187->hash &&  NATION_mapkey1_idxfn::equals(se281, *e187)); 
           }
         }MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.clear();
         {  // foreach
@@ -5765,7 +5763,7 @@ namespace dbtoaster {
                 long n2_regionkey = e188->NATION_REGIONKEY;
                 STRING_TYPE n2_comment = e188->NATION_COMMENT;
                 long v188 = e188->__av;
-                MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.addOrDelOnZero(se281.modify(s_nationkey),v188);
+                MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2.addOrDelOnZero(se282.modify(s_nationkey),v188);
               n188 = n188->nxt;
             }
           }
@@ -5788,11 +5786,11 @@ namespace dbtoaster {
     MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se10;
     MKT_SHAREORDERS1LINEITEM1_P_1_entry se11;
     MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry se12;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se13;
-    MKT_SHAREORDERS1LINEITEM1_P_1_entry se14;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry se15;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se16;
-    MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry se17;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se13;
+    MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry se14;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry se15;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se16;
+    MKT_SHAREORDERS1LINEITEM1_P_1_entry se17;
     MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry se18;
     MKT_SHAREORDERS1LINEITEM1_P_3_entry se19;
     MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry se20;
@@ -5812,8 +5810,8 @@ namespace dbtoaster {
     MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry se34;
     MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry se35;
     MKT_SHAREORDERS4_P_1_entry se36;
-    MKT_SHAREORDERS1LINEITEM1_P_3_entry se37;
-    MKT_SHAREORDERS1LINEITEM1_P_1_entry se38;
+    MKT_SHAREORDERS1LINEITEM1_P_1_entry se37;
+    MKT_SHAREORDERS1LINEITEM1_P_3_entry se38;
     MKT_SHAREPART1_entry se39;
     MKT_SHAREORDERS1LINEITEM1_P_1_entry se40;
     MKT_SHAREORDERS1LINEITEM1_P_3_entry se41;
@@ -5854,9 +5852,9 @@ namespace dbtoaster {
     MKT_SHAREORDERS1LINEITEM1_P_2_entry se76;
     MKT_SHARE_entry se77;
     MKT_SHAREPART1_L2_1_L1_1_entry se78;
-    MKT_SHAREORDERS4_DELTA_entry se79;
-    MKT_SHAREORDERS1_L1_1_L1_2_DELTA_entry se80;
-    MKT_SHAREORDERS1_DOMAIN1_entry se81;
+    MKT_SHAREORDERS1_L1_1_L1_2_DELTA_entry se79;
+    MKT_SHAREORDERS1_DOMAIN1_entry se80;
+    MKT_SHAREPART1ORDERS1_DELTA_entry se81;
     MKT_SHARE_entry se82;
     MKT_SHAREORDERS1_entry se83;
     MKT_SHAREPART1_L2_1_L1_1_entry se84;
@@ -5870,193 +5868,194 @@ namespace dbtoaster {
     MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry se92;
     MKT_SHAREORDERS4_P_1_entry se93;
     MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se94;
-    MKT_SHAREORDERS1_entry se95;
-    MKT_SHAREORDERS4_P_1_entry se96;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se97;
-    MKT_SHAREORDERS1CUSTOMER1_P_1_entry se98;
-    MKT_SHAREORDERS4_P_1_entry se99;
-    MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry se100;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se101;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se102;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se103;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry se104;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry se105;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se106;
-    MKT_SHAREORDERS1LINEITEM1_P_2_entry se107;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se108;
-    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se109;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se110;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se111;
-    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se112;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se113;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry se114;
-    MKT_SHAREORDERS1PART1_entry se115;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se116;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se117;
-    MKT_SHAREPART1_entry se118;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se119;
-    MKT_SHAREORDERS4_P_1_entry se120;
-    MKT_SHAREPART1CUSTOMER1_P_2_entry se121;
-    MKT_SHAREORDERS4_P_1_entry se122;
-    MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_entry se123;
-    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry se124;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se125;
-    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry se126;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry se127;
-    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry se128;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se129;
-    MKT_SHAREPART1LINEITEM1_P_1_entry se130;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se131;
-    MKT_SHAREPART1SUPPLIER1_P_1_entry se132;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se133;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se134;
-    MKT_SHAREPART1SUPPLIER1_P_1PART1_entry se135;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se136;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry se137;
-    MKT_SHAREPART1PART1_entry se138;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se139;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se140;
-    MKT_SHAREPART1_L2_1_L1_1_entry se141;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se142;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry se143;
-    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry se144;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry se145;
-    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry se146;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry se147;
-    MKT_SHAREPART1_L2_1_L1_1PART1_entry se148;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se149;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry se150;
-    MKT_SHAREORDERS1PART1_DELTA_entry se151;
-    MKT_SHAREORDERS1_entry se152;
-    MKT_SHAREORDERS1PART1_entry se153;
-    MKT_SHAREORDERS1CUSTOMER1_P_1_entry se154;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry se155;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se156;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se157;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se158;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry se159;
-    MKT_SHAREORDERS1LINEITEM1_P_1_entry se160;
-    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se161;
-    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se162;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry se163;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry se164;
-    MKT_SHAREORDERS4_P_1_entry se165;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se166;
-    MKT_SHAREPART1_entry se167;
-    MKT_SHAREPART1PART1_entry se168;
-    MKT_SHAREPART1CUSTOMER1_P_2_entry se169;
-    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry se170;
-    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry se171;
-    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry se172;
-    MKT_SHAREPART1SUPPLIER1_P_1_entry se173;
-    MKT_SHAREPART1SUPPLIER1_P_1PART1_entry se174;
-    MKT_SHAREPART1_L2_1_L1_1_entry se175;
-    MKT_SHAREPART1_L2_1_L1_1PART1_entry se176;
-    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry se177;
-    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry se178;
-    MKT_SHARE_entry se179;
-    MKT_SHAREPART1_L2_1_L1_1_entry se180;
-    MKT_SHAREORDERS1CUSTOMER1_DELTA_entry se181;
-    MKT_SHAREORDERS1_entry se182;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se183;
-    MKT_SHAREORDERS1CUSTOMER1_P_1_entry se184;
-    MKT_SHAREORDERS1LINEITEM1_P_2_entry se185;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se186;
-    MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry se187;
-    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se188;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se189;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se190;
-    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se191;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se192;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se193;
-    MKT_SHAREORDERS1PART1_entry se194;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se195;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry se196;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se197;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se198;
-    MKT_SHAREPART1_entry se199;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se200;
-    MKT_SHAREPART1CUSTOMER1_P_2_entry se201;
-    MKT_SHAREPART1LINEITEM1_P_1_entry se202;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se203;
-    MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_entry se204;
-    MKT_SHAREPART1SUPPLIER1_P_1_entry se205;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se206;
-    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry se207;
-    MKT_SHAREPART1SUPPLIER1_P_1PART1_entry se208;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se209;
-    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry se210;
-    MKT_SHAREPART1PART1_entry se211;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se212;
-    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry se213;
-    MKT_SHAREPART1_L2_1_L1_1_entry se214;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se215;
-    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry se216;
-    MKT_SHAREPART1_L2_1_L1_1PART1_entry se217;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se218;
-    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry se219;
-    MKT_SHARE_entry se220;
-    MKT_SHAREPART1_L2_1_L1_1_entry se221;
-    MKT_SHAREORDERS1SUPPLIER1_DELTA_entry se222;
-    MKT_SHAREORDERS1_entry se223;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se224;
-    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se225;
-    MKT_SHAREORDERS1CUSTOMER1_P_1_entry se226;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se227;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se228;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry se229;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se230;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se231;
-    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se232;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se233;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry se234;
-    MKT_SHAREORDERS1LINEITEM1_P_3_entry se235;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se236;
-    MKT_SHAREORDERS1PART1_entry se237;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se238;
-    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se239;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry se240;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se241;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se242;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry se243;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se244;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry se245;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se246;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_entry se247;
-    MKT_SHAREORDERS4_P_1_entry se248;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se249;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se250;
-    MKT_SHAREPART1_entry se251;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se252;
-    MKT_SHAREPART1SUPPLIER1_P_1_entry se253;
-    MKT_SHAREPART1CUSTOMER1_P_2_entry se254;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se255;
-    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry se256;
-    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry se257;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se258;
-    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry se259;
-    MKT_SHAREPART1PART1_entry se260;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se261;
-    MKT_SHAREPART1SUPPLIER1_P_1PART1_entry se262;
-    MKT_SHAREPART1_L2_1_L1_1_entry se263;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se264;
-    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se265;
-    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry se266;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se267;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se268;
-    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry se269;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se270;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se271;
-    MKT_SHAREPART1_L2_1_L1_1PART1_entry se272;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se273;
-    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se274;
-    MKT_SHARE_entry se275;
-    MKT_SHAREPART1_L2_1_L1_1_entry se276;
-    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se277;
-    REGION_entry se278;
-    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se279;
-    NATION_entry se280;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se281;
+    MKT_SHAREORDERS1_L1_1_L1_2_DELTA_entry se95;
+    MKT_SHAREORDERS1_entry se96;
+    MKT_SHAREORDERS4_P_1_entry se97;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se98;
+    MKT_SHAREORDERS1CUSTOMER1_P_1_entry se99;
+    MKT_SHAREORDERS4_P_1_entry se100;
+    MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry se101;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se102;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se103;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se104;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry se105;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry se106;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se107;
+    MKT_SHAREORDERS1LINEITEM1_P_2_entry se108;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se109;
+    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se110;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se111;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se112;
+    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se113;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se114;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry se115;
+    MKT_SHAREORDERS1PART1_entry se116;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se117;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se118;
+    MKT_SHAREPART1_entry se119;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se120;
+    MKT_SHAREORDERS4_P_1_entry se121;
+    MKT_SHAREPART1CUSTOMER1_P_2_entry se122;
+    MKT_SHAREORDERS4_P_1_entry se123;
+    MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_entry se124;
+    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry se125;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se126;
+    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry se127;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry se128;
+    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry se129;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se130;
+    MKT_SHAREPART1LINEITEM1_P_1_entry se131;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se132;
+    MKT_SHAREPART1SUPPLIER1_P_1_entry se133;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se134;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se135;
+    MKT_SHAREPART1SUPPLIER1_P_1PART1_entry se136;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se137;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry se138;
+    MKT_SHAREPART1PART1_entry se139;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se140;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se141;
+    MKT_SHAREPART1_L2_1_L1_1_entry se142;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se143;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry se144;
+    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry se145;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry se146;
+    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry se147;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry se148;
+    MKT_SHAREPART1_L2_1_L1_1PART1_entry se149;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se150;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry se151;
+    MKT_SHAREORDERS1PART1_DELTA_entry se152;
+    MKT_SHAREORDERS1_entry se153;
+    MKT_SHAREORDERS1PART1_entry se154;
+    MKT_SHAREORDERS1CUSTOMER1_P_1_entry se155;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry se156;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se157;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se158;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se159;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry se160;
+    MKT_SHAREORDERS1LINEITEM1_P_1_entry se161;
+    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se162;
+    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se163;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry se164;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry se165;
+    MKT_SHAREORDERS4_P_1_entry se166;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se167;
+    MKT_SHAREPART1_entry se168;
+    MKT_SHAREPART1PART1_entry se169;
+    MKT_SHAREPART1CUSTOMER1_P_2_entry se170;
+    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry se171;
+    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry se172;
+    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry se173;
+    MKT_SHAREPART1SUPPLIER1_P_1_entry se174;
+    MKT_SHAREPART1SUPPLIER1_P_1PART1_entry se175;
+    MKT_SHAREPART1_L2_1_L1_1_entry se176;
+    MKT_SHAREPART1_L2_1_L1_1PART1_entry se177;
+    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry se178;
+    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry se179;
+    MKT_SHARE_entry se180;
+    MKT_SHAREPART1_L2_1_L1_1_entry se181;
+    MKT_SHAREORDERS1CUSTOMER1_DELTA_entry se182;
+    MKT_SHAREORDERS1_entry se183;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se184;
+    MKT_SHAREORDERS1CUSTOMER1_P_1_entry se185;
+    MKT_SHAREORDERS1LINEITEM1_P_2_entry se186;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se187;
+    MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_entry se188;
+    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se189;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se190;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se191;
+    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se192;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se193;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se194;
+    MKT_SHAREORDERS1PART1_entry se195;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se196;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry se197;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_1_entry se198;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se199;
+    MKT_SHAREPART1_entry se200;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se201;
+    MKT_SHAREPART1CUSTOMER1_P_2_entry se202;
+    MKT_SHAREPART1LINEITEM1_P_1_entry se203;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se204;
+    MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3_entry se205;
+    MKT_SHAREPART1SUPPLIER1_P_1_entry se206;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se207;
+    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry se208;
+    MKT_SHAREPART1SUPPLIER1_P_1PART1_entry se209;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se210;
+    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry se211;
+    MKT_SHAREPART1PART1_entry se212;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se213;
+    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry se214;
+    MKT_SHAREPART1_L2_1_L1_1_entry se215;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se216;
+    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry se217;
+    MKT_SHAREPART1_L2_1_L1_1PART1_entry se218;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se219;
+    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry se220;
+    MKT_SHARE_entry se221;
+    MKT_SHAREPART1_L2_1_L1_1_entry se222;
+    MKT_SHAREORDERS1SUPPLIER1_DELTA_entry se223;
+    MKT_SHAREORDERS1_entry se224;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se225;
+    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se226;
+    MKT_SHAREORDERS1CUSTOMER1_P_1_entry se227;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se228;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se229;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1_entry se230;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se231;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se232;
+    MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_entry se233;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se234;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry se235;
+    MKT_SHAREORDERS1LINEITEM1_P_3_entry se236;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se237;
+    MKT_SHAREORDERS1PART1_entry se238;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se239;
+    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se240;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2_entry se241;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se242;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se243;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_entry se244;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se245;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_entry se246;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_entry se247;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se248;
+    MKT_SHAREORDERS4_P_1_entry se249;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se250;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_entry se251;
+    MKT_SHAREPART1_entry se252;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se253;
+    MKT_SHAREPART1SUPPLIER1_P_1_entry se254;
+    MKT_SHAREPART1CUSTOMER1_P_2_entry se255;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se256;
+    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_entry se257;
+    MKT_SHAREPART1CUSTOMER1_P_2PART1_entry se258;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se259;
+    MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_entry se260;
+    MKT_SHAREPART1PART1_entry se261;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se262;
+    MKT_SHAREPART1SUPPLIER1_P_1PART1_entry se263;
+    MKT_SHAREPART1_L2_1_L1_1_entry se264;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se265;
+    MKT_SHAREORDERS1SUPPLIER1_P_1_entry se266;
+    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2_entry se267;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se268;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_entry se269;
+    MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1_entry se270;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se271;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_entry se272;
+    MKT_SHAREPART1_L2_1_L1_1PART1_entry se273;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se274;
+    MKT_SHAREORDERS1SUPPLIER1_P_1PART1_entry se275;
+    MKT_SHARE_entry se276;
+    MKT_SHAREPART1_L2_1_L1_1_entry se277;
+    MKT_SHAREORDERS1CUSTOMER1_P_2_entry se278;
+    REGION_entry se279;
+    MKT_SHAREORDERS1SUPPLIER1_P_2_entry se280;
+    NATION_entry se281;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_entry se282;
   
     /* Data structures used for storing materialized views */
     NATION_map NATION;
@@ -6067,9 +6066,9 @@ namespace dbtoaster {
     MKT_SHAREORDERS1CUSTOMER1_P_1_map MKT_SHAREORDERS1CUSTOMER1_P_1;
     MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3_map MKT_SHAREORDERS1CUSTOMER1_P_1LINEITEM1_P_3;
     MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2_map MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1;
-    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1_map MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1PART1;
     MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1_map MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1_map MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2PART1ORDERS1;
+    MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1_map MKT_SHAREORDERS1CUSTOMER1_P_1SUPPLIER1_P_2ORDERS1;
     MKT_SHAREORDERS1CUSTOMER1_P_1PART1_map MKT_SHAREORDERS1CUSTOMER1_P_1PART1;
     MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1_map MKT_SHAREORDERS1CUSTOMER1_P_1PART1ORDERS1;
     MKT_SHAREORDERS1CUSTOMER1_P_2_map MKT_SHAREORDERS1CUSTOMER1_P_2;
@@ -6086,10 +6085,9 @@ namespace dbtoaster {
     MKT_SHAREORDERS1_L1_1_L1_2_DELTA_map MKT_SHAREORDERS1_L1_1_L1_2_DELTA;
     MKT_SHAREORDERS1_L1_1_L1_2_P_1_map MKT_SHAREORDERS1_L1_1_L1_2_P_1;
     MKT_SHAREORDERS1_L1_1_L1_2_P_2_map MKT_SHAREORDERS1_L1_1_L1_2_P_2;
-    MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_map MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2;
     MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2_map MKT_SHAREORDERS1_L1_1_L1_2_P_2SUPPLIER1_P_2;
     MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1_map MKT_SHAREORDERS1_L1_1_L1_2_P_2PART1;
-    MKT_SHAREORDERS4_DELTA_map MKT_SHAREORDERS4_DELTA;
+    MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2_map MKT_SHAREORDERS1_L1_1_L1_2_P_2LINEITEM1_P_2;
     MKT_SHAREORDERS4_P_1_map MKT_SHAREORDERS4_P_1;
     MKT_SHAREPART1_map MKT_SHAREPART1;
     MKT_SHAREPART1CUSTOMER1_P_2_map MKT_SHAREPART1CUSTOMER1_P_2;
@@ -6097,6 +6095,7 @@ namespace dbtoaster {
     MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2_map MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2;
     MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1_map MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1;
     MKT_SHAREPART1CUSTOMER1_P_2PART1_map MKT_SHAREPART1CUSTOMER1_P_2PART1;
+    MKT_SHAREPART1ORDERS1_DELTA_map MKT_SHAREPART1ORDERS1_DELTA;
     MKT_SHAREPART1LINEITEM1_P_1_map MKT_SHAREPART1LINEITEM1_P_1;
     MKT_SHAREPART1SUPPLIER1_P_1_map MKT_SHAREPART1SUPPLIER1_P_1;
     MKT_SHAREPART1SUPPLIER1_P_1PART1_map MKT_SHAREPART1SUPPLIER1_P_1PART1;

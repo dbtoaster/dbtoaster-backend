@@ -7,6 +7,7 @@
 #include "serialization.hpp"
 #include "tpch.hpp"
 
+
 #define ELEM_SEPARATOR "\n\t\t\t"
 
 namespace dbtoaster {
@@ -612,7 +613,7 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_batch_update_LINEITEM(TPCHLineitemBatch& DELTA_LINEITEM) {
-      {  
+      { 
         if (tS > 0) { tS += DELTA_LINEITEM.size; return; }         
         tLastN += DELTA_LINEITEM.size;        
         if (tLastN > 127) { 
@@ -623,31 +624,34 @@ namespace dbtoaster {
         }
         tN += DELTA_LINEITEM.size;
 
+
         QUERY3LINEITEM1_DELTA.clear();
         {  
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
-            long orders_orderkey = DELTA_LINEITEM.orderkey[i];
-            // long lineitem_partkey = DELTA_LINEITEM.partkey[i];
-            // long lineitem_suppkey = DELTA_LINEITEM.suppkey[i];
-            // long lineitem_linenumber = DELTA_LINEITEM.linenumber[i];
-            // DOUBLE_TYPE lineitem_quantity = DELTA_LINEITEM.quantity[i];
-            DOUBLE_TYPE lineitem_extendedprice = DELTA_LINEITEM.extendedprice[i];
-            DOUBLE_TYPE lineitem_discount = DELTA_LINEITEM.discount[i];
-            // DOUBLE_TYPE lineitem_tax = DELTA_LINEITEM.tax[i];
-            // STRING_TYPE lineitem_returnflag = DELTA_LINEITEM.returnflag[i];
-            // STRING_TYPE lineitem_linestatus = DELTA_LINEITEM.linestatus[i];
-            date lineitem_shipdate = DELTA_LINEITEM.shipdate[i];
-            // date lineitem_commitdate = DELTA_LINEITEM.commitdate[i];
-            // date lineitem_receiptdate = DELTA_LINEITEM.receiptdate[i];
-            // STRING_TYPE lineitem_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
-            // STRING_TYPE lineitem_shipmode = DELTA_LINEITEM.shipmode[i];
-            // STRING_TYPE lineitem_comment = DELTA_LINEITEM.comment[i];
-            long v1 = 1L;
-            (/*if */(lineitem_shipdate > c1) ? QUERY3LINEITEM1_DELTA.addOrDelOnZero(se1.modify(orders_orderkey),(v1 * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : (void)0);
+                long orders_orderkey = DELTA_LINEITEM.orderkey[i];
+                // long lineitem_partkey = DELTA_LINEITEM.partkey[i];
+                // long lineitem_suppkey = DELTA_LINEITEM.suppkey[i];
+                // long lineitem_linenumber = DELTA_LINEITEM.linenumber[i];
+                // DOUBLE_TYPE lineitem_quantity = DELTA_LINEITEM.quantity[i];
+                DOUBLE_TYPE lineitem_extendedprice = DELTA_LINEITEM.extendedprice[i];
+                DOUBLE_TYPE lineitem_discount = DELTA_LINEITEM.discount[i];
+                // DOUBLE_TYPE lineitem_tax = DELTA_LINEITEM.tax[i];
+                // STRING_TYPE lineitem_returnflag = DELTA_LINEITEM.returnflag[i];
+                // STRING_TYPE lineitem_linestatus = DELTA_LINEITEM.linestatus[i];
+                date lineitem_shipdate = DELTA_LINEITEM.shipdate[i];
+                // date lineitem_commitdate = DELTA_LINEITEM.commitdate[i];
+                // date lineitem_receiptdate = DELTA_LINEITEM.receiptdate[i];
+                // STRING_TYPE lineitem_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
+                // STRING_TYPE lineitem_shipmode = DELTA_LINEITEM.shipmode[i];
+                // STRING_TYPE lineitem_comment = DELTA_LINEITEM.comment[i];
+                long v1 = 1L;
+                (/*if */(lineitem_shipdate > c1) ? QUERY3LINEITEM1_DELTA.addOrDelOnZero(se1.modify(orders_orderkey),(v1 * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : (void)0);
 
           }
-        }{  // foreach
+        }
+
+        {  // foreach
           const HashIndex_QUERY3LINEITEM1_DELTA_map_0* i2 = static_cast<HashIndex_QUERY3LINEITEM1_DELTA_map_0*>(QUERY3LINEITEM1_DELTA.index[0]);
           HashIndex_QUERY3LINEITEM1_DELTA_map_0::IdxNode* n2; 
           QUERY3LINEITEM1_DELTA_entry* e2;
@@ -730,7 +734,7 @@ namespace dbtoaster {
       }
     }
     void on_batch_update_ORDERS(TPCHOrdersBatch& DELTA_ORDERS) {
-      {  
+      { 
         if (tS > 0) { tS += DELTA_ORDERS.size; return; }         
         tLastN += DELTA_ORDERS.size;        
         if (tLastN > 127) { 
@@ -742,8 +746,8 @@ namespace dbtoaster {
         tN += DELTA_ORDERS.size;
 
         QUERY3ORDERS1_DELTA.clear();
-        {  
-          for (size_t i = 0; i < DELTA_ORDERS.size; i++)
+        {
+          for (size_t i = 0; i < DELTA_ORDERS.size; i++) 
           {
             long orders_orderkey = DELTA_ORDERS.orderkey[i];
             long customer_custkey = DELTA_ORDERS.custkey[i];
@@ -757,7 +761,9 @@ namespace dbtoaster {
             long v7 = 1L;
             (/*if */(c1 > orders_orderdate) ? QUERY3ORDERS1_DELTA.addOrDelOnZero(se7.modify(orders_orderkey,customer_custkey,orders_orderdate,orders_shippriority),v7) : (void)0);
           }
-        }{  // foreach
+        }
+
+        {  // foreach
           const HashIndex_QUERY3ORDERS1_DELTA_map_0123* i8 = static_cast<HashIndex_QUERY3ORDERS1_DELTA_map_0123*>(QUERY3ORDERS1_DELTA.index[0]);
           HashIndex_QUERY3ORDERS1_DELTA_map_0123::IdxNode* n8; 
           QUERY3ORDERS1_DELTA_entry* e8;
@@ -837,7 +843,7 @@ namespace dbtoaster {
       }
     }
     void on_batch_update_CUSTOMER(TPCHCustomerBatch& DELTA_CUSTOMER) {
-      {  
+      { 
         if (tS > 0) { tS += DELTA_CUSTOMER.size; return; }         
         tLastN += DELTA_CUSTOMER.size;        
         if (tLastN > 127) { 
@@ -850,21 +856,22 @@ namespace dbtoaster {
 
         QUERY3CUSTOMER1_DELTA.clear();
         {  
-
-          for (size_t i = 0; i < DELTA_CUSTOMER.size; i++)
+          for (size_t i = 0; i < DELTA_CUSTOMER.size; i++) 
           {
-            long customer_custkey = DELTA_CUSTOMER.custkey[i];
-            // STRING_TYPE customer_name = DELTA_CUSTOMER.name[i];
-            // STRING_TYPE customer_address = DELTA_CUSTOMER.address[i];
-            // long customer_nationkey = DELTA_CUSTOMER.nationkey[i];
-            // STRING_TYPE customer_phone = DELTA_CUSTOMER.phone[i];
-            // DOUBLE_TYPE customer_acctbal = DELTA_CUSTOMER.acctbal[i];
-            STRING_TYPE lift1 = DELTA_CUSTOMER.mktsegment[i];
-            // STRING_TYPE customer_comment = DELTA_CUSTOMER.comment[i];
-            long v12 = 1L;
-            (/*if */(lift1 == c2) ? QUERY3CUSTOMER1_DELTA.addOrDelOnZero(se16.modify(customer_custkey),v12) : (void)0);
+                long customer_custkey = DELTA_CUSTOMER.custkey[i];
+                // STRING_TYPE customer_name = DELTA_CUSTOMER.name[i];
+                // STRING_TYPE customer_address = DELTA_CUSTOMER.address[i];
+                // long customer_nationkey = DELTA_CUSTOMER.nationkey[i];
+                // STRING_TYPE customer_phone = DELTA_CUSTOMER.phone[i];
+                // DOUBLE_TYPE customer_acctbal = DELTA_CUSTOMER.acctbal[i];
+                STRING_TYPE lift1 = DELTA_CUSTOMER.mktsegment[i];
+                // STRING_TYPE customer_comment = DELTA_CUSTOMER.comment[i];
+                long v12 = 1L;
+                (/*if */(lift1 == c2) ? QUERY3CUSTOMER1_DELTA.addOrDelOnZero(se16.modify(customer_custkey),v12) : (void)0);            
           }
-        }{  // foreach
+        }
+
+        {  // foreach
           const HashIndex_QUERY3CUSTOMER1_DELTA_map_0* i13 = static_cast<HashIndex_QUERY3CUSTOMER1_DELTA_map_0*>(QUERY3CUSTOMER1_DELTA.index[0]);
           HashIndex_QUERY3CUSTOMER1_DELTA_map_0::IdxNode* n13; 
           QUERY3CUSTOMER1_DELTA_entry* e13;

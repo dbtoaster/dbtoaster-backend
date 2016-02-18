@@ -360,53 +360,36 @@ namespace dbtoaster {
   > COUNTPART1_map;
   typedef HashIndex<COUNTPART1_entry,long,COUNTPART1_mapkey012_idxfn,true> HashIndex_COUNTPART1_map_012;
   
-  struct COUNTLINEITEM1_DOMAIN1_entry {
-    STRING_TYPE N_NAME; long S_SUPPKEY; long __av; 
-    explicit COUNTLINEITEM1_DOMAIN1_entry() { /*N_NAME = ""; S_SUPPKEY = 0L; __av = 0L; */ }
-    explicit COUNTLINEITEM1_DOMAIN1_entry(const STRING_TYPE& c0, const long c1, const long c2) { N_NAME = c0; S_SUPPKEY = c1; __av = c2; }
-    COUNTLINEITEM1_DOMAIN1_entry(const COUNTLINEITEM1_DOMAIN1_entry& other) : N_NAME( other.N_NAME ), S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
-    FORCE_INLINE COUNTLINEITEM1_DOMAIN1_entry& modify(const STRING_TYPE& c0, const long c1) { N_NAME = c0; S_SUPPKEY = c1;  return *this; }
-    FORCE_INLINE COUNTLINEITEM1_DOMAIN1_entry& modify0(const STRING_TYPE& c0) { N_NAME = c0;  return *this; }
+  struct COUNTLINEITEM1_DOMAIN1_P_2_entry {
+    long S_SUPPKEY; long __av; 
+    explicit COUNTLINEITEM1_DOMAIN1_P_2_entry() { /*S_SUPPKEY = 0L; __av = 0L; */ }
+    explicit COUNTLINEITEM1_DOMAIN1_P_2_entry(const long c0, const long c1) { S_SUPPKEY = c0; __av = c1; }
+    COUNTLINEITEM1_DOMAIN1_P_2_entry(const COUNTLINEITEM1_DOMAIN1_P_2_entry& other) : S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE COUNTLINEITEM1_DOMAIN1_P_2_entry& modify(const long c0) { S_SUPPKEY = c0;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, N_NAME);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct COUNTLINEITEM1_DOMAIN1_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const COUNTLINEITEM1_DOMAIN1_entry& e) {
+  struct COUNTLINEITEM1_DOMAIN1_P_2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const COUNTLINEITEM1_DOMAIN1_P_2_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.N_NAME);
       hash_combine(h, e.S_SUPPKEY);
       return h;
     }
-    FORCE_INLINE static bool equals(const COUNTLINEITEM1_DOMAIN1_entry& x, const COUNTLINEITEM1_DOMAIN1_entry& y) {
-      return x.N_NAME == y.N_NAME && x.S_SUPPKEY == y.S_SUPPKEY;
+    FORCE_INLINE static bool equals(const COUNTLINEITEM1_DOMAIN1_P_2_entry& x, const COUNTLINEITEM1_DOMAIN1_P_2_entry& y) {
+      return x.S_SUPPKEY == y.S_SUPPKEY;
     }
   };
   
-  struct COUNTLINEITEM1_DOMAIN1_mapkey0_idxfn {
-    FORCE_INLINE static size_t hash(const COUNTLINEITEM1_DOMAIN1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.N_NAME);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const COUNTLINEITEM1_DOMAIN1_entry& x, const COUNTLINEITEM1_DOMAIN1_entry& y) {
-      return x.N_NAME == y.N_NAME;
-    }
-  };
-  
-  typedef MultiHashMap<COUNTLINEITEM1_DOMAIN1_entry,long,
-    HashIndex<COUNTLINEITEM1_DOMAIN1_entry,long,COUNTLINEITEM1_DOMAIN1_mapkey01_idxfn,true>,
-    HashIndex<COUNTLINEITEM1_DOMAIN1_entry,long,COUNTLINEITEM1_DOMAIN1_mapkey0_idxfn,false>
-  > COUNTLINEITEM1_DOMAIN1_map;
-  typedef HashIndex<COUNTLINEITEM1_DOMAIN1_entry,long,COUNTLINEITEM1_DOMAIN1_mapkey01_idxfn,true> HashIndex_COUNTLINEITEM1_DOMAIN1_map_01;
-  typedef HashIndex<COUNTLINEITEM1_DOMAIN1_entry,long,COUNTLINEITEM1_DOMAIN1_mapkey0_idxfn,false> HashIndex_COUNTLINEITEM1_DOMAIN1_map_0;
+  typedef MultiHashMap<COUNTLINEITEM1_DOMAIN1_P_2_entry,long,
+    HashIndex<COUNTLINEITEM1_DOMAIN1_P_2_entry,long,COUNTLINEITEM1_DOMAIN1_P_2_mapkey0_idxfn,true>
+  > COUNTLINEITEM1_DOMAIN1_P_2_map;
+  typedef HashIndex<COUNTLINEITEM1_DOMAIN1_P_2_entry,long,COUNTLINEITEM1_DOMAIN1_P_2_mapkey0_idxfn,true> HashIndex_COUNTLINEITEM1_DOMAIN1_P_2_map_0;
   
   struct COUNTLINEITEM1_E1_1_L1_3_DELTA_entry {
     long PS_PARTKEY; long S_SUPPKEY; DOUBLE_TYPE __av; 
@@ -442,64 +425,49 @@ namespace dbtoaster {
   > COUNTLINEITEM1_E1_1_L1_3_DELTA_map;
   typedef HashIndex<COUNTLINEITEM1_E1_1_L1_3_DELTA_entry,DOUBLE_TYPE,COUNTLINEITEM1_E1_1_L1_3_DELTA_mapkey01_idxfn,true> HashIndex_COUNTLINEITEM1_E1_1_L1_3_DELTA_map_01;
   
-  struct COUNTPARTSUPP1_DOMAIN1_entry {
-    STRING_TYPE N_NAME; long S_SUPPKEY; long __av; 
-    explicit COUNTPARTSUPP1_DOMAIN1_entry() { /*N_NAME = ""; S_SUPPKEY = 0L; __av = 0L; */ }
-    explicit COUNTPARTSUPP1_DOMAIN1_entry(const STRING_TYPE& c0, const long c1, const long c2) { N_NAME = c0; S_SUPPKEY = c1; __av = c2; }
-    COUNTPARTSUPP1_DOMAIN1_entry(const COUNTPARTSUPP1_DOMAIN1_entry& other) : N_NAME( other.N_NAME ), S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
-    FORCE_INLINE COUNTPARTSUPP1_DOMAIN1_entry& modify(const STRING_TYPE& c0, const long c1) { N_NAME = c0; S_SUPPKEY = c1;  return *this; }
-    FORCE_INLINE COUNTPARTSUPP1_DOMAIN1_entry& modify0(const STRING_TYPE& c0) { N_NAME = c0;  return *this; }
+  struct COUNTPARTSUPP1_DOMAIN1_P_2_entry {
+    long S_SUPPKEY; long __av; 
+    explicit COUNTPARTSUPP1_DOMAIN1_P_2_entry() { /*S_SUPPKEY = 0L; __av = 0L; */ }
+    explicit COUNTPARTSUPP1_DOMAIN1_P_2_entry(const long c0, const long c1) { S_SUPPKEY = c0; __av = c1; }
+    COUNTPARTSUPP1_DOMAIN1_P_2_entry(const COUNTPARTSUPP1_DOMAIN1_P_2_entry& other) : S_SUPPKEY( other.S_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE COUNTPARTSUPP1_DOMAIN1_P_2_entry& modify(const long c0) { S_SUPPKEY = c0;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, N_NAME);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct COUNTPARTSUPP1_DOMAIN1_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const COUNTPARTSUPP1_DOMAIN1_entry& e) {
+  struct COUNTPARTSUPP1_DOMAIN1_P_2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const COUNTPARTSUPP1_DOMAIN1_P_2_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.N_NAME);
       hash_combine(h, e.S_SUPPKEY);
       return h;
     }
-    FORCE_INLINE static bool equals(const COUNTPARTSUPP1_DOMAIN1_entry& x, const COUNTPARTSUPP1_DOMAIN1_entry& y) {
-      return x.N_NAME == y.N_NAME && x.S_SUPPKEY == y.S_SUPPKEY;
+    FORCE_INLINE static bool equals(const COUNTPARTSUPP1_DOMAIN1_P_2_entry& x, const COUNTPARTSUPP1_DOMAIN1_P_2_entry& y) {
+      return x.S_SUPPKEY == y.S_SUPPKEY;
     }
   };
   
-  struct COUNTPARTSUPP1_DOMAIN1_mapkey0_idxfn {
-    FORCE_INLINE static size_t hash(const COUNTPARTSUPP1_DOMAIN1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.N_NAME);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const COUNTPARTSUPP1_DOMAIN1_entry& x, const COUNTPARTSUPP1_DOMAIN1_entry& y) {
-      return x.N_NAME == y.N_NAME;
-    }
-  };
-  
-  typedef MultiHashMap<COUNTPARTSUPP1_DOMAIN1_entry,long,
-    HashIndex<COUNTPARTSUPP1_DOMAIN1_entry,long,COUNTPARTSUPP1_DOMAIN1_mapkey01_idxfn,true>,
-    HashIndex<COUNTPARTSUPP1_DOMAIN1_entry,long,COUNTPARTSUPP1_DOMAIN1_mapkey0_idxfn,false>
-  > COUNTPARTSUPP1_DOMAIN1_map;
-  typedef HashIndex<COUNTPARTSUPP1_DOMAIN1_entry,long,COUNTPARTSUPP1_DOMAIN1_mapkey01_idxfn,true> HashIndex_COUNTPARTSUPP1_DOMAIN1_map_01;
-  typedef HashIndex<COUNTPARTSUPP1_DOMAIN1_entry,long,COUNTPARTSUPP1_DOMAIN1_mapkey0_idxfn,false> HashIndex_COUNTPARTSUPP1_DOMAIN1_map_0;
+  typedef MultiHashMap<COUNTPARTSUPP1_DOMAIN1_P_2_entry,long,
+    HashIndex<COUNTPARTSUPP1_DOMAIN1_P_2_entry,long,COUNTPARTSUPP1_DOMAIN1_P_2_mapkey0_idxfn,true>
+  > COUNTPARTSUPP1_DOMAIN1_P_2_map;
+  typedef HashIndex<COUNTPARTSUPP1_DOMAIN1_P_2_entry,long,COUNTPARTSUPP1_DOMAIN1_P_2_mapkey0_idxfn,true> HashIndex_COUNTPARTSUPP1_DOMAIN1_P_2_map_0;
   
   struct COUNTPARTSUPP1_P_2_entry {
-    long S_SUPPKEY; STRING_TYPE S_NAME; STRING_TYPE S_ADDRESS; STRING_TYPE N_NAME; long __av; 
-    explicit COUNTPARTSUPP1_P_2_entry() { /*S_SUPPKEY = 0L; S_NAME = ""; S_ADDRESS = ""; N_NAME = ""; __av = 0L; */ }
-    explicit COUNTPARTSUPP1_P_2_entry(const long c0, const STRING_TYPE& c1, const STRING_TYPE& c2, const STRING_TYPE& c3, const long c4) { S_SUPPKEY = c0; S_NAME = c1; S_ADDRESS = c2; N_NAME = c3; __av = c4; }
-    COUNTPARTSUPP1_P_2_entry(const COUNTPARTSUPP1_P_2_entry& other) : S_SUPPKEY( other.S_SUPPKEY ), S_NAME( other.S_NAME ), S_ADDRESS( other.S_ADDRESS ), N_NAME( other.N_NAME ), __av( other.__av ) {}
-    FORCE_INLINE COUNTPARTSUPP1_P_2_entry& modify(const long c0, const STRING_TYPE& c1, const STRING_TYPE& c2, const STRING_TYPE& c3) { S_SUPPKEY = c0; S_NAME = c1; S_ADDRESS = c2; N_NAME = c3;  return *this; }
-    FORCE_INLINE COUNTPARTSUPP1_P_2_entry& modify03(const long c0, const STRING_TYPE& c3) { S_SUPPKEY = c0; N_NAME = c3;  return *this; }
+    STRING_TYPE N_NAME; long S_SUPPKEY; STRING_TYPE S_NAME; STRING_TYPE S_ADDRESS; long __av; 
+    explicit COUNTPARTSUPP1_P_2_entry() { /*N_NAME = ""; S_SUPPKEY = 0L; S_NAME = ""; S_ADDRESS = ""; __av = 0L; */ }
+    explicit COUNTPARTSUPP1_P_2_entry(const STRING_TYPE& c0, const long c1, const STRING_TYPE& c2, const STRING_TYPE& c3, const long c4) { N_NAME = c0; S_SUPPKEY = c1; S_NAME = c2; S_ADDRESS = c3; __av = c4; }
+    COUNTPARTSUPP1_P_2_entry(const COUNTPARTSUPP1_P_2_entry& other) : N_NAME( other.N_NAME ), S_SUPPKEY( other.S_SUPPKEY ), S_NAME( other.S_NAME ), S_ADDRESS( other.S_ADDRESS ), __av( other.__av ) {}
+    FORCE_INLINE COUNTPARTSUPP1_P_2_entry& modify(const STRING_TYPE& c0, const long c1, const STRING_TYPE& c2, const STRING_TYPE& c3) { N_NAME = c0; S_SUPPKEY = c1; S_NAME = c2; S_ADDRESS = c3;  return *this; }
+    FORCE_INLINE COUNTPARTSUPP1_P_2_entry& modify01(const STRING_TYPE& c0, const long c1) { N_NAME = c0; S_SUPPKEY = c1;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, N_NAME);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
       ar << ELEM_SEPARATOR;
@@ -507,43 +475,41 @@ namespace dbtoaster {
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, S_ADDRESS);
       ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, N_NAME);
-      ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
   struct COUNTPARTSUPP1_P_2_mapkey0123_idxfn {
     FORCE_INLINE static size_t hash(const COUNTPARTSUPP1_P_2_entry& e) {
       size_t h = 0;
+      hash_combine(h, e.N_NAME);
       hash_combine(h, e.S_SUPPKEY);
       hash_combine(h, e.S_NAME);
       hash_combine(h, e.S_ADDRESS);
-      hash_combine(h, e.N_NAME);
       return h;
     }
     FORCE_INLINE static bool equals(const COUNTPARTSUPP1_P_2_entry& x, const COUNTPARTSUPP1_P_2_entry& y) {
-      return x.S_SUPPKEY == y.S_SUPPKEY && x.S_NAME == y.S_NAME && x.S_ADDRESS == y.S_ADDRESS && x.N_NAME == y.N_NAME;
+      return x.N_NAME == y.N_NAME && x.S_SUPPKEY == y.S_SUPPKEY && x.S_NAME == y.S_NAME && x.S_ADDRESS == y.S_ADDRESS;
     }
   };
   
-  struct COUNTPARTSUPP1_P_2_mapkey03_idxfn {
+  struct COUNTPARTSUPP1_P_2_mapkey01_idxfn {
     FORCE_INLINE static size_t hash(const COUNTPARTSUPP1_P_2_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.S_SUPPKEY);
       hash_combine(h, e.N_NAME);
+      hash_combine(h, e.S_SUPPKEY);
       return h;
     }
     FORCE_INLINE static bool equals(const COUNTPARTSUPP1_P_2_entry& x, const COUNTPARTSUPP1_P_2_entry& y) {
-      return x.S_SUPPKEY == y.S_SUPPKEY && x.N_NAME == y.N_NAME;
+      return x.N_NAME == y.N_NAME && x.S_SUPPKEY == y.S_SUPPKEY;
     }
   };
   
   typedef MultiHashMap<COUNTPARTSUPP1_P_2_entry,long,
     HashIndex<COUNTPARTSUPP1_P_2_entry,long,COUNTPARTSUPP1_P_2_mapkey0123_idxfn,true>,
-    HashIndex<COUNTPARTSUPP1_P_2_entry,long,COUNTPARTSUPP1_P_2_mapkey03_idxfn,false>
+    HashIndex<COUNTPARTSUPP1_P_2_entry,long,COUNTPARTSUPP1_P_2_mapkey01_idxfn,false>
   > COUNTPARTSUPP1_P_2_map;
   typedef HashIndex<COUNTPARTSUPP1_P_2_entry,long,COUNTPARTSUPP1_P_2_mapkey0123_idxfn,true> HashIndex_COUNTPARTSUPP1_P_2_map_0123;
-  typedef HashIndex<COUNTPARTSUPP1_P_2_entry,long,COUNTPARTSUPP1_P_2_mapkey03_idxfn,false> HashIndex_COUNTPARTSUPP1_P_2_map_03;
+  typedef HashIndex<COUNTPARTSUPP1_P_2_entry,long,COUNTPARTSUPP1_P_2_mapkey01_idxfn,false> HashIndex_COUNTPARTSUPP1_P_2_map_01;
   
   struct COUNTPARTSUPP1_P_2SUPPLIER1_entry {
     long S_NATIONKEY; STRING_TYPE N_NAME; long __av; 
@@ -862,19 +828,7 @@ namespace dbtoaster {
   > COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_map;
   typedef HashIndex<COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_entry,long,COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_mapkey0_idxfn,true> HashIndex_COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_map_0;
   
-  struct tuple2_L_L {
-    long _1; long __av;
-    explicit tuple2_L_L() { }
-    explicit tuple2_L_L(const long c1, long c__av=0L) { _1 = c1; __av = c__av;}
-    int operator==(const tuple2_L_L &rhs) const { return ((this->_1==rhs._1)); }
-    FORCE_INLINE tuple2_L_L& modify(const long c0, long c__av) { _1 = c0; __av = c__av; return *this; }
-    static bool equals(const tuple2_L_L &x, const tuple2_L_L &y) { return ((x._1==y._1)); }
-    static long hash(const tuple2_L_L &e) {
-      size_t h = 0;
-      hash_combine(h, e._1);
-      return h;
-    }
-  };
+  
   
   /* Type definition providing a way to access the results of the sql program */
   struct tlq_t{
@@ -906,9 +860,9 @@ namespace dbtoaster {
   
   /* Type definition providing a way to incrementally maintain the results of the sql program */
   struct data_t : tlq_t{
-    data_t(): tlq_t(), agg6(16U), agg1(16U) {
-      c2 = Udate(STRING_TYPE("1995-1-1"));
-      c1 = Udate(STRING_TYPE("1994-1-1"));
+    data_t(): tlq_t() {
+      c2 = Udate(STRING_TYPE("1994-1-1"));
+      c1 = Udate(STRING_TYPE("1995-1-1"));
       c3 = STRING_TYPE("CANADA");
       /* regex_t init */
       if(regcomp(&preg1, "^forest.*$", REG_EXTENDED | REG_NOSUB)){
@@ -942,12 +896,9 @@ namespace dbtoaster {
         }
         tN += DELTA_LINEITEM.size;
 
-
         COUNTLINEITEM1_E1_1_L1_3_DELTA.clear();
-        COUNTLINEITEM1_DOMAIN1.clear();
-        STRING_TYPE l1 = c3;
-        agg1.clear();        
-        {
+        COUNTLINEITEM1_DOMAIN1_P_2.clear();        
+        { 
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
                 // long l_orderkey = DELTA_LINEITEM.orderkey[i];
@@ -967,144 +918,132 @@ namespace dbtoaster {
                 // STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
                 // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
-                (/*if */(l_shipdate >= c1 && c2 > l_shipdate) ? COUNTLINEITEM1_E1_1_L1_3_DELTA.addOrDelOnZero(se1.modify(ps_partkey,s_suppkey),(v1 * l_quantity)) : (void)0);
+                (/*if */(c1 > l_shipdate && l_shipdate >= c2) ? COUNTLINEITEM1_E1_1_L1_3_DELTA.addOrDelOnZero(se1.modify(ps_partkey,s_suppkey),(v1 * l_quantity)) : (void)0);            
                 long v2 = 1L;
-                (/*if */(l_shipdate >= c1 && c2 > l_shipdate) ? agg1.addOrDelOnZero(st1.modify(s_suppkey,(v2 != 0 ? 1L : 0L)), (v2 != 0 ? 1L : 0L)) : (void)0);                
+                (/*if */(l_shipdate >= c2 && c1 > l_shipdate) ? COUNTLINEITEM1_DOMAIN1_P_2.addOrDelOnZero(se2.modify(s_suppkey),(v2 != 0 ? 1L : 0L)) : (void)0);
           }
         }
-        
-        {  // temp foreach
-          const HashIndex<tuple2_L_L, long>* i3 = static_cast<HashIndex<tuple2_L_L, long>*>(agg1.index[0]);
-          HashIndex<tuple2_L_L, long>::IdxNode* n3; 
-          tuple2_L_L* e3;
+
+        STRING_TYPE l1 = c3;
+        {  // foreach
+          const HashIndex_COUNTLINEITEM1_DOMAIN1_P_2_map_0* i3 = static_cast<HashIndex_COUNTLINEITEM1_DOMAIN1_P_2_map_0*>(COUNTLINEITEM1_DOMAIN1_P_2.index[0]);
+          HashIndex_COUNTLINEITEM1_DOMAIN1_P_2_map_0::IdxNode* n3; 
+          COUNTLINEITEM1_DOMAIN1_P_2_entry* e3;
         
           for (size_t i = 0; i < i3->size_; i++)
           {
             n3 = i3->buckets_ + i;
             while (n3 && (e3 = n3->obj))
             {
-              long s_suppkey = e3->_1;  
-              long v3 = e3->__av; 
-            COUNTLINEITEM1_DOMAIN1.addOrDelOnZero(se2.modify(l1,s_suppkey),v3);      
+                long s_suppkey = e3->S_SUPPKEY;
+                long v3 = e3->__av;
+                { //slice 
+                  const HashIndex_COUNTPARTSUPP1_P_2_map_01* i4 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_01*>(COUNTPARTSUPP1_P_2.index[1]);
+                  const HASH_RES_t h2 = COUNTPARTSUPP1_P_2_mapkey01_idxfn::hash(se8.modify01(l1, s_suppkey));
+                  HashIndex_COUNTPARTSUPP1_P_2_map_01::IdxNode* n4 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_01::IdxNode*>(i4->slice(se8, h2));
+                  COUNTPARTSUPP1_P_2_entry* e4;
+                 
+                  if (n4 && (e4 = n4->obj)) {
+                    do {                
+                      STRING_TYPE s_name = e4->S_NAME;
+                      STRING_TYPE s_address = e4->S_ADDRESS;
+                      long v4 = e4->__av;
+                      long agg1 = 0L;
+                      { //slice 
+                        const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i5 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
+                        const HASH_RES_t h1 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se7.modify1(s_suppkey));
+                        HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n5 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i5->slice(se7, h1));
+                        COUNTSUPPLIER1_E1_1_entry* e5;
+                       
+                        if (n5 && (e5 = n5->obj)) {
+                          do {                
+                            long ps_partkey = e5->PS_PARTKEY;
+                            long ps_availqty = e5->PS_AVAILQTY;
+                            long v5 = e5->__av;
+                            DOUBLE_TYPE l2 = ((COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se4.modify(ps_partkey,s_suppkey)) + COUNTLINEITEM1_E1_1_L1_3_DELTA.getValueOrDefault(se5.modify(ps_partkey,s_suppkey))) * 0.5);
+                            (/*if */(ps_availqty > l2) ? agg1 += (v5 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se6.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+                            n5 = n5->nxt;
+                          } while (n5 && (e5 = n5->obj) && h1 == n5->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se7, *e5)); 
+                        }
+                      }COUNT.addOrDelOnZero(se3.modify(s_name,s_address),((v3 != 0 ? 1L : 0L) * (v4 * (agg1 != 0 ? 1L : 0L))));
+                      n4 = n4->nxt;
+                    } while (n4 && (e4 = n4->obj) && h2 == n4->hash &&  COUNTPARTSUPP1_P_2_mapkey01_idxfn::equals(se8, *e4)); 
+                  }
+                }
               n3 = n3->nxt;
             }
           }
-        }STRING_TYPE l2 = c3;
-        { //slice 
-          const HashIndex_COUNTLINEITEM1_DOMAIN1_map_0* i4 = static_cast<HashIndex_COUNTLINEITEM1_DOMAIN1_map_0*>(COUNTLINEITEM1_DOMAIN1.index[1]);
-          const HASH_RES_t h3 = COUNTLINEITEM1_DOMAIN1_mapkey0_idxfn::hash(se9.modify0(l2));
-          HashIndex_COUNTLINEITEM1_DOMAIN1_map_0::IdxNode* n4 = static_cast<HashIndex_COUNTLINEITEM1_DOMAIN1_map_0::IdxNode*>(i4->slice(se9, h3));
-          COUNTLINEITEM1_DOMAIN1_entry* e4;
-         
-          if (n4 && (e4 = n4->obj)) {
-            do {                
-              long s_suppkey = e4->S_SUPPKEY;
-              long v4 = e4->__av;
-              { //slice 
-                const HashIndex_COUNTPARTSUPP1_P_2_map_03* i5 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_03*>(COUNTPARTSUPP1_P_2.index[1]);
-                const HASH_RES_t h2 = COUNTPARTSUPP1_P_2_mapkey03_idxfn::hash(se8.modify03(s_suppkey, l2));
-                HashIndex_COUNTPARTSUPP1_P_2_map_03::IdxNode* n5 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_03::IdxNode*>(i5->slice(se8, h2));
-                COUNTPARTSUPP1_P_2_entry* e5;
-               
-                if (n5 && (e5 = n5->obj)) {
-                  do {                
-                    STRING_TYPE s_name = e5->S_NAME;
-                    STRING_TYPE s_address = e5->S_ADDRESS;
-                    long v5 = e5->__av;
-                    long agg2 = 0L;
-                    { //slice 
-                      const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i6 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
-                      const HASH_RES_t h1 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se7.modify1(s_suppkey));
-                      HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n6 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i6->slice(se7, h1));
-                      COUNTSUPPLIER1_E1_1_entry* e6;
-                     
-                      if (n6 && (e6 = n6->obj)) {
-                        do {                
-                          long ps_partkey = e6->PS_PARTKEY;
-                          long ps_availqty = e6->PS_AVAILQTY;
-                          long v6 = e6->__av;
-                          DOUBLE_TYPE l3 = ((COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se4.modify(ps_partkey,s_suppkey)) + COUNTLINEITEM1_E1_1_L1_3_DELTA.getValueOrDefault(se5.modify(ps_partkey,s_suppkey))) * 0.5);
-                          (/*if */(ps_availqty > l3) ? agg2 += (v6 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se6.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                          n6 = n6->nxt;
-                        } while (n6 && (e6 = n6->obj) && h1 == n6->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se7, *e6)); 
-                      }
-                    }COUNT.addOrDelOnZero(se3.modify(s_name,s_address),((v4 != 0 ? 1L : 0L) * (v5 * (agg2 != 0 ? 1L : 0L))));
-                    n5 = n5->nxt;
-                  } while (n5 && (e5 = n5->obj) && h2 == n5->hash &&  COUNTPARTSUPP1_P_2_mapkey03_idxfn::equals(se8, *e5)); 
+        }STRING_TYPE l3 = c3;
+        {  // foreach
+          const HashIndex_COUNTLINEITEM1_DOMAIN1_P_2_map_0* i6 = static_cast<HashIndex_COUNTLINEITEM1_DOMAIN1_P_2_map_0*>(COUNTLINEITEM1_DOMAIN1_P_2.index[0]);
+          HashIndex_COUNTLINEITEM1_DOMAIN1_P_2_map_0::IdxNode* n6; 
+          COUNTLINEITEM1_DOMAIN1_P_2_entry* e6;
+        
+          for (size_t i = 0; i < i6->size_; i++)
+          {
+            n6 = i6->buckets_ + i;
+            while (n6 && (e6 = n6->obj))
+            {
+                long s_suppkey = e6->S_SUPPKEY;
+                long v6 = e6->__av;
+                { //slice 
+                  const HashIndex_COUNTPARTSUPP1_P_2_map_01* i7 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_01*>(COUNTPARTSUPP1_P_2.index[1]);
+                  const HASH_RES_t h4 = COUNTPARTSUPP1_P_2_mapkey01_idxfn::hash(se12.modify01(l3, s_suppkey));
+                  HashIndex_COUNTPARTSUPP1_P_2_map_01::IdxNode* n7 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_01::IdxNode*>(i7->slice(se12, h4));
+                  COUNTPARTSUPP1_P_2_entry* e7;
+                 
+                  if (n7 && (e7 = n7->obj)) {
+                    do {                
+                      STRING_TYPE s_name = e7->S_NAME;
+                      STRING_TYPE s_address = e7->S_ADDRESS;
+                      long v7 = e7->__av;
+                      long agg2 = 0L;
+                      { //slice 
+                        const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i8 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
+                        const HASH_RES_t h3 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se11.modify1(s_suppkey));
+                        HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n8 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i8->slice(se11, h3));
+                        COUNTSUPPLIER1_E1_1_entry* e8;
+                       
+                        if (n8 && (e8 = n8->obj)) {
+                          do {                
+                            long ps_partkey = e8->PS_PARTKEY;
+                            long ps_availqty = e8->PS_AVAILQTY;
+                            long v8 = e8->__av;
+                            DOUBLE_TYPE l4 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se9.modify(ps_partkey,s_suppkey)) * 0.5);
+                            (/*if */(ps_availqty > l4) ? agg2 += (v8 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se10.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+                            n8 = n8->nxt;
+                          } while (n8 && (e8 = n8->obj) && h3 == n8->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se11, *e8)); 
+                        }
+                      }COUNT.addOrDelOnZero(se3.modify(s_name,s_address),(((v6 != 0 ? 1L : 0L) * (v7 * (agg2 != 0 ? 1L : 0L))) * -1L));
+                      n7 = n7->nxt;
+                    } while (n7 && (e7 = n7->obj) && h4 == n7->hash &&  COUNTPARTSUPP1_P_2_mapkey01_idxfn::equals(se12, *e7)); 
+                  }
                 }
-              }
-              n4 = n4->nxt;
-            } while (n4 && (e4 = n4->obj) && h3 == n4->hash &&  COUNTLINEITEM1_DOMAIN1_mapkey0_idxfn::equals(se9, *e4)); 
-          }
-        }STRING_TYPE l4 = c3;
-        { //slice 
-          const HashIndex_COUNTLINEITEM1_DOMAIN1_map_0* i7 = static_cast<HashIndex_COUNTLINEITEM1_DOMAIN1_map_0*>(COUNTLINEITEM1_DOMAIN1.index[1]);
-          const HASH_RES_t h6 = COUNTLINEITEM1_DOMAIN1_mapkey0_idxfn::hash(se14.modify0(l4));
-          HashIndex_COUNTLINEITEM1_DOMAIN1_map_0::IdxNode* n7 = static_cast<HashIndex_COUNTLINEITEM1_DOMAIN1_map_0::IdxNode*>(i7->slice(se14, h6));
-          COUNTLINEITEM1_DOMAIN1_entry* e7;
-         
-          if (n7 && (e7 = n7->obj)) {
-            do {                
-              long s_suppkey = e7->S_SUPPKEY;
-              long v7 = e7->__av;
-              { //slice 
-                const HashIndex_COUNTPARTSUPP1_P_2_map_03* i8 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_03*>(COUNTPARTSUPP1_P_2.index[1]);
-                const HASH_RES_t h5 = COUNTPARTSUPP1_P_2_mapkey03_idxfn::hash(se13.modify03(s_suppkey, l4));
-                HashIndex_COUNTPARTSUPP1_P_2_map_03::IdxNode* n8 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_03::IdxNode*>(i8->slice(se13, h5));
-                COUNTPARTSUPP1_P_2_entry* e8;
-               
-                if (n8 && (e8 = n8->obj)) {
-                  do {                
-                    STRING_TYPE s_name = e8->S_NAME;
-                    STRING_TYPE s_address = e8->S_ADDRESS;
-                    long v8 = e8->__av;
-                    long agg3 = 0L;
-                    { //slice 
-                      const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i9 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
-                      const HASH_RES_t h4 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se12.modify1(s_suppkey));
-                      HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n9 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i9->slice(se12, h4));
-                      COUNTSUPPLIER1_E1_1_entry* e9;
-                     
-                      if (n9 && (e9 = n9->obj)) {
-                        do {                
-                          long ps_partkey = e9->PS_PARTKEY;
-                          long ps_availqty = e9->PS_AVAILQTY;
-                          long v9 = e9->__av;
-                          DOUBLE_TYPE l5 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se10.modify(ps_partkey,s_suppkey)) * 0.5);
-                          (/*if */(ps_availqty > l5) ? agg3 += (v9 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se11.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                          n9 = n9->nxt;
-                        } while (n9 && (e9 = n9->obj) && h4 == n9->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se12, *e9)); 
-                      }
-                    }COUNT.addOrDelOnZero(se3.modify(s_name,s_address),(((v7 != 0 ? 1L : 0L) * (v8 * (agg3 != 0 ? 1L : 0L))) * -1L));
-                    n8 = n8->nxt;
-                  } while (n8 && (e8 = n8->obj) && h5 == n8->hash &&  COUNTPARTSUPP1_P_2_mapkey03_idxfn::equals(se13, *e8)); 
-                }
-              }
-              n7 = n7->nxt;
-            } while (n7 && (e7 = n7->obj) && h6 == n7->hash &&  COUNTLINEITEM1_DOMAIN1_mapkey0_idxfn::equals(se14, *e7)); 
+              n6 = n6->nxt;
+            }
           }
         }{  // foreach
-          const HashIndex_COUNTLINEITEM1_E1_1_L1_3_DELTA_map_01* i10 = static_cast<HashIndex_COUNTLINEITEM1_E1_1_L1_3_DELTA_map_01*>(COUNTLINEITEM1_E1_1_L1_3_DELTA.index[0]);
-          HashIndex_COUNTLINEITEM1_E1_1_L1_3_DELTA_map_01::IdxNode* n10; 
-          COUNTLINEITEM1_E1_1_L1_3_DELTA_entry* e10;
+          const HashIndex_COUNTLINEITEM1_E1_1_L1_3_DELTA_map_01* i9 = static_cast<HashIndex_COUNTLINEITEM1_E1_1_L1_3_DELTA_map_01*>(COUNTLINEITEM1_E1_1_L1_3_DELTA.index[0]);
+          HashIndex_COUNTLINEITEM1_E1_1_L1_3_DELTA_map_01::IdxNode* n9; 
+          COUNTLINEITEM1_E1_1_L1_3_DELTA_entry* e9;
         
-          for (size_t i = 0; i < i10->size_; i++)
+          for (size_t i = 0; i < i9->size_; i++)
           {
-            n10 = i10->buckets_ + i;
-            while (n10 && (e10 = n10->obj))
+            n9 = i9->buckets_ + i;
+            while (n9 && (e9 = n9->obj))
             {
-                long ps_partkey = e10->PS_PARTKEY;
-                long s_suppkey = e10->S_SUPPKEY;
-                DOUBLE_TYPE v10 = e10->__av;
-                COUNTSUPPLIER1_E1_1_L1_1.addOrDelOnZero(se15.modify(ps_partkey,s_suppkey),v10);
-              n10 = n10->nxt;
+                long ps_partkey = e9->PS_PARTKEY;
+                long s_suppkey = e9->S_SUPPKEY;
+                DOUBLE_TYPE v9 = e9->__av;
+                COUNTSUPPLIER1_E1_1_L1_1.addOrDelOnZero(se13.modify(ps_partkey,s_suppkey),v9);
+              n9 = n9->nxt;
             }
           }
         }
       }
     }
     void on_batch_update_PART(TPCHPartBatch& DELTA_PART) {
-      {  
+      { 
         if (tS > 0) { tS += DELTA_PART.size; return; }         
         tLastN += DELTA_PART.size;        
         if (tLastN > 127) { 
@@ -1115,10 +1054,9 @@ namespace dbtoaster {
         }
         tN += DELTA_PART.size;
 
-
         COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA.clear();
         {  
-          for (size_t i = 0; i < DELTA_PART.size; i++)
+          for (size_t i = 0; i < DELTA_PART.size; i++) 
           {
                 long ps_partkey = DELTA_PART.partkey[i];
                 STRING_TYPE p_name = DELTA_PART.name[i];
@@ -1129,67 +1067,68 @@ namespace dbtoaster {
                 // STRING_TYPE p_container = DELTA_PART.container[i];
                 // DOUBLE_TYPE p_retailprice = DELTA_PART.retailprice[i];
                 // STRING_TYPE p_comment = DELTA_PART.comment[i];
-                long v11 = 1L;
-                (/*if */(0L != Upreg_match(preg1,p_name)) ? COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA.addOrDelOnZero(se16.modify(ps_partkey),v11) : (void)0);            
+                long v10 = 1L;
+                (/*if */(0L != Upreg_match(preg1,p_name)) ? COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA.addOrDelOnZero(se14.modify(ps_partkey),v10) : (void)0);            
           }
         }
+
         {  // foreach
-          const HashIndex_COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_map_0* i12 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_map_0*>(COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA.index[0]);
-          HashIndex_COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_map_0::IdxNode* n12; 
-          COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_entry* e12;
+          const HashIndex_COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_map_0* i11 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_map_0*>(COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA.index[0]);
+          HashIndex_COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_map_0::IdxNode* n11; 
+          COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_entry* e11;
+        
+          for (size_t i = 0; i < i11->size_; i++)
+          {
+            n11 = i11->buckets_ + i;
+            while (n11 && (e11 = n11->obj))
+            {
+                long ps_partkey = e11->PS_PARTKEY;
+                long v11 = e11->__av;
+                COUNTSUPPLIER1_E1_1_E2_1.addOrDelOnZero(se15.modify(ps_partkey),v11);
+              n11 = n11->nxt;
+            }
+          }
+        }COUNT.clear();
+        {  // foreach
+          const HashIndex_COUNTPART1_map_012* i12 = static_cast<HashIndex_COUNTPART1_map_012*>(COUNTPART1.index[0]);
+          HashIndex_COUNTPART1_map_012::IdxNode* n12; 
+          COUNTPART1_entry* e12;
         
           for (size_t i = 0; i < i12->size_; i++)
           {
             n12 = i12->buckets_ + i;
             while (n12 && (e12 = n12->obj))
             {
-                long ps_partkey = e12->PS_PARTKEY;
+                long s_suppkey = e12->S_SUPPKEY;
+                STRING_TYPE s_name = e12->S_NAME;
+                STRING_TYPE s_address = e12->S_ADDRESS;
                 long v12 = e12->__av;
-                COUNTSUPPLIER1_E1_1_E2_1.addOrDelOnZero(se17.modify(ps_partkey),v12);
-              n12 = n12->nxt;
-            }
-          }
-        }COUNT.clear();
-        {  // foreach
-          const HashIndex_COUNTPART1_map_012* i13 = static_cast<HashIndex_COUNTPART1_map_012*>(COUNTPART1.index[0]);
-          HashIndex_COUNTPART1_map_012::IdxNode* n13; 
-          COUNTPART1_entry* e13;
-        
-          for (size_t i = 0; i < i13->size_; i++)
-          {
-            n13 = i13->buckets_ + i;
-            while (n13 && (e13 = n13->obj))
-            {
-                long s_suppkey = e13->S_SUPPKEY;
-                STRING_TYPE s_name = e13->S_NAME;
-                STRING_TYPE s_address = e13->S_ADDRESS;
-                long v13 = e13->__av;
-                long agg4 = 0L;
+                long agg3 = 0L;
                 { //slice 
-                  const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i14 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
-                  const HASH_RES_t h7 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se21.modify1(s_suppkey));
-                  HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n14 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i14->slice(se21, h7));
-                  COUNTSUPPLIER1_E1_1_entry* e14;
+                  const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i13 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
+                  const HASH_RES_t h5 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se19.modify1(s_suppkey));
+                  HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n13 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i13->slice(se19, h5));
+                  COUNTSUPPLIER1_E1_1_entry* e13;
                  
-                  if (n14 && (e14 = n14->obj)) {
+                  if (n13 && (e13 = n13->obj)) {
                     do {                
-                      long ps_partkey = e14->PS_PARTKEY;
-                      long ps_availqty = e14->PS_AVAILQTY;
-                      long v14 = e14->__av;
-                      DOUBLE_TYPE l6 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se19.modify(ps_partkey,s_suppkey)) * 0.5);
-                      (/*if */(ps_availqty > l6) ? agg4 += (v14 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se20.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                      n14 = n14->nxt;
-                    } while (n14 && (e14 = n14->obj) && h7 == n14->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se21, *e14)); 
+                      long ps_partkey = e13->PS_PARTKEY;
+                      long ps_availqty = e13->PS_AVAILQTY;
+                      long v13 = e13->__av;
+                      DOUBLE_TYPE l5 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se17.modify(ps_partkey,s_suppkey)) * 0.5);
+                      (/*if */(ps_availqty > l5) ? agg3 += (v13 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se18.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+                      n13 = n13->nxt;
+                    } while (n13 && (e13 = n13->obj) && h5 == n13->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se19, *e13)); 
                   }
-                }COUNT.addOrDelOnZero(se18.modify(s_name,s_address),(v13 * (agg4 != 0 ? 1L : 0L)));
-              n13 = n13->nxt;
+                }COUNT.addOrDelOnZero(se16.modify(s_name,s_address),(v12 * (agg3 != 0 ? 1L : 0L)));
+              n12 = n12->nxt;
             }
           }
         }
       }
     }
     void on_batch_update_SUPPLIER(TPCHSupplierBatch& DELTA_SUPPLIER) {
-      {  
+      { 
         if (tS > 0) { tS += DELTA_SUPPLIER.size; return; }         
         tLastN += DELTA_SUPPLIER.size;        
         if (tLastN > 127) { 
@@ -1199,7 +1138,6 @@ namespace dbtoaster {
           tLastN = 0;
         }
         tN += DELTA_SUPPLIER.size;
-
 
         COUNTSUPPLIER1_DELTA.clear();
         { 
@@ -1212,44 +1150,64 @@ namespace dbtoaster {
                 // STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
                 // DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
                 // STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
-                long v15 = 1L;
-                COUNTSUPPLIER1_DELTA.addOrDelOnZero(se22.modify(s_suppkey,s_name,s_address,s_nationkey),v15);            
+                long v14 = 1L;
+                COUNTSUPPLIER1_DELTA.addOrDelOnZero(se20.modify(s_suppkey,s_name,s_address,s_nationkey),v14);            
           }
         }
+
         {  // foreach
-          const HashIndex_COUNTSUPPLIER1_DELTA_map_0123* i16 = static_cast<HashIndex_COUNTSUPPLIER1_DELTA_map_0123*>(COUNTSUPPLIER1_DELTA.index[0]);
-          HashIndex_COUNTSUPPLIER1_DELTA_map_0123::IdxNode* n16; 
-          COUNTSUPPLIER1_DELTA_entry* e16;
+          const HashIndex_COUNTSUPPLIER1_DELTA_map_0123* i15 = static_cast<HashIndex_COUNTSUPPLIER1_DELTA_map_0123*>(COUNTSUPPLIER1_DELTA.index[0]);
+          HashIndex_COUNTSUPPLIER1_DELTA_map_0123::IdxNode* n15; 
+          COUNTSUPPLIER1_DELTA_entry* e15;
         
-          for (size_t i = 0; i < i16->size_; i++)
+          for (size_t i = 0; i < i15->size_; i++)
           {
-            n16 = i16->buckets_ + i;
-            while (n16 && (e16 = n16->obj))
+            n15 = i15->buckets_ + i;
+            while (n15 && (e15 = n15->obj))
             {
-                long s_suppkey = e16->S_SUPPKEY;
-                STRING_TYPE s_name = e16->S_NAME;
-                STRING_TYPE s_address = e16->S_ADDRESS;
-                long s_nationkey = e16->S_NATIONKEY;
-                long v16 = e16->__av;
-                long agg5 = 0L;
+                long s_suppkey = e15->S_SUPPKEY;
+                STRING_TYPE s_name = e15->S_NAME;
+                STRING_TYPE s_address = e15->S_ADDRESS;
+                long s_nationkey = e15->S_NATIONKEY;
+                long v15 = e15->__av;
+                long agg4 = 0L;
                 { //slice 
-                  const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i17 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
-                  const HASH_RES_t h8 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se27.modify1(s_suppkey));
-                  HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n17 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i17->slice(se27, h8));
-                  COUNTSUPPLIER1_E1_1_entry* e17;
+                  const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i16 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
+                  const HASH_RES_t h6 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se25.modify1(s_suppkey));
+                  HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n16 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i16->slice(se25, h6));
+                  COUNTSUPPLIER1_E1_1_entry* e16;
                  
-                  if (n17 && (e17 = n17->obj)) {
+                  if (n16 && (e16 = n16->obj)) {
                     do {                
-                      long ps_partkey = e17->PS_PARTKEY;
-                      long ps_availqty = e17->PS_AVAILQTY;
-                      long v17 = e17->__av;
-                      DOUBLE_TYPE l7 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se25.modify(ps_partkey,s_suppkey)) * 0.5);
-                      (/*if */(ps_availqty > l7) ? agg5 += (v17 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se26.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                      n17 = n17->nxt;
-                    } while (n17 && (e17 = n17->obj) && h8 == n17->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se27, *e17)); 
+                      long ps_partkey = e16->PS_PARTKEY;
+                      long ps_availqty = e16->PS_AVAILQTY;
+                      long v16 = e16->__av;
+                      DOUBLE_TYPE l6 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se23.modify(ps_partkey,s_suppkey)) * 0.5);
+                      (/*if */(ps_availqty > l6) ? agg4 += (v16 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se24.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+                      n16 = n16->nxt;
+                    } while (n16 && (e16 = n16->obj) && h6 == n16->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se25, *e16)); 
                   }
-                }COUNT.addOrDelOnZero(se23.modify(s_name,s_address),(v16 * (COUNTSUPPLIER1.getValueOrDefault(se24.modify(s_nationkey)) * (agg5 != 0 ? 1L : 0L))));
-              n16 = n16->nxt;
+                }COUNT.addOrDelOnZero(se21.modify(s_name,s_address),(v15 * (COUNTSUPPLIER1.getValueOrDefault(se22.modify(s_nationkey)) * (agg4 != 0 ? 1L : 0L))));
+              n15 = n15->nxt;
+            }
+          }
+        }{  // foreach
+          const HashIndex_COUNTSUPPLIER1_DELTA_map_0123* i17 = static_cast<HashIndex_COUNTSUPPLIER1_DELTA_map_0123*>(COUNTSUPPLIER1_DELTA.index[0]);
+          HashIndex_COUNTSUPPLIER1_DELTA_map_0123::IdxNode* n17; 
+          COUNTSUPPLIER1_DELTA_entry* e17;
+        
+          for (size_t i = 0; i < i17->size_; i++)
+          {
+            n17 = i17->buckets_ + i;
+            while (n17 && (e17 = n17->obj))
+            {
+                long s_suppkey = e17->S_SUPPKEY;
+                STRING_TYPE s_name = e17->S_NAME;
+                STRING_TYPE s_address = e17->S_ADDRESS;
+                long s_nationkey = e17->S_NATIONKEY;
+                long v17 = e17->__av;
+                COUNTPART1.addOrDelOnZero(se26.modify(s_suppkey,s_name,s_address),(v17 * COUNTSUPPLIER1.getValueOrDefault(se27.modify(s_nationkey))));
+              n17 = n17->nxt;
             }
           }
         }{  // foreach
@@ -1267,41 +1225,22 @@ namespace dbtoaster {
                 STRING_TYPE s_address = e18->S_ADDRESS;
                 long s_nationkey = e18->S_NATIONKEY;
                 long v18 = e18->__av;
-                COUNTPART1.addOrDelOnZero(se28.modify(s_suppkey,s_name,s_address),(v18 * COUNTSUPPLIER1.getValueOrDefault(se29.modify(s_nationkey))));
-              n18 = n18->nxt;
-            }
-          }
-        }{  // foreach
-          const HashIndex_COUNTSUPPLIER1_DELTA_map_0123* i19 = static_cast<HashIndex_COUNTSUPPLIER1_DELTA_map_0123*>(COUNTSUPPLIER1_DELTA.index[0]);
-          HashIndex_COUNTSUPPLIER1_DELTA_map_0123::IdxNode* n19; 
-          COUNTSUPPLIER1_DELTA_entry* e19;
-        
-          for (size_t i = 0; i < i19->size_; i++)
-          {
-            n19 = i19->buckets_ + i;
-            while (n19 && (e19 = n19->obj))
-            {
-                long s_suppkey = e19->S_SUPPKEY;
-                STRING_TYPE s_name = e19->S_NAME;
-                STRING_TYPE s_address = e19->S_ADDRESS;
-                long s_nationkey = e19->S_NATIONKEY;
-                long v19 = e19->__av;
                 { //slice 
-                  const HashIndex_COUNTPARTSUPP1_P_2SUPPLIER1_map_0* i20 = static_cast<HashIndex_COUNTPARTSUPP1_P_2SUPPLIER1_map_0*>(COUNTPARTSUPP1_P_2SUPPLIER1.index[1]);
-                  const HASH_RES_t h9 = COUNTPARTSUPP1_P_2SUPPLIER1_mapkey0_idxfn::hash(se31.modify0(s_nationkey));
-                  HashIndex_COUNTPARTSUPP1_P_2SUPPLIER1_map_0::IdxNode* n20 = static_cast<HashIndex_COUNTPARTSUPP1_P_2SUPPLIER1_map_0::IdxNode*>(i20->slice(se31, h9));
-                  COUNTPARTSUPP1_P_2SUPPLIER1_entry* e20;
+                  const HashIndex_COUNTPARTSUPP1_P_2SUPPLIER1_map_0* i19 = static_cast<HashIndex_COUNTPARTSUPP1_P_2SUPPLIER1_map_0*>(COUNTPARTSUPP1_P_2SUPPLIER1.index[1]);
+                  const HASH_RES_t h7 = COUNTPARTSUPP1_P_2SUPPLIER1_mapkey0_idxfn::hash(se29.modify0(s_nationkey));
+                  HashIndex_COUNTPARTSUPP1_P_2SUPPLIER1_map_0::IdxNode* n19 = static_cast<HashIndex_COUNTPARTSUPP1_P_2SUPPLIER1_map_0::IdxNode*>(i19->slice(se29, h7));
+                  COUNTPARTSUPP1_P_2SUPPLIER1_entry* e19;
                  
-                  if (n20 && (e20 = n20->obj)) {
+                  if (n19 && (e19 = n19->obj)) {
                     do {                
-                      STRING_TYPE n_name = e20->N_NAME;
-                      long v20 = e20->__av;
-                      COUNTPARTSUPP1_P_2.addOrDelOnZero(se30.modify(s_suppkey,s_name,s_address,n_name),(v19 * v20));
-                      n20 = n20->nxt;
-                    } while (n20 && (e20 = n20->obj) && h9 == n20->hash &&  COUNTPARTSUPP1_P_2SUPPLIER1_mapkey0_idxfn::equals(se31, *e20)); 
+                      STRING_TYPE n_name = e19->N_NAME;
+                      long v19 = e19->__av;
+                      COUNTPARTSUPP1_P_2.addOrDelOnZero(se28.modify(n_name,s_suppkey,s_name,s_address),(v18 * v19));
+                      n19 = n19->nxt;
+                    } while (n19 && (e19 = n19->obj) && h7 == n19->hash &&  COUNTPARTSUPP1_P_2SUPPLIER1_mapkey0_idxfn::equals(se29, *e19)); 
                   }
                 }
-              n19 = n19->nxt;
+              n18 = n18->nxt;
             }
           }
         }
@@ -1319,169 +1258,154 @@ namespace dbtoaster {
         }
         tN += DELTA_PARTSUPP.size;
 
-
         COUNTPARTSUPP1_E1_2_DELTA.clear();
-        COUNTPARTSUPP1_DOMAIN1.clear();
-        STRING_TYPE l8 = c3;
-        agg6.clear();        
-        { 
-          for (size_t i = 0; i < DELTA_PARTSUPP.size; i++)
+        COUNTPARTSUPP1_DOMAIN1_P_2.clear();
+        {  
+          for (size_t i = 0; i < DELTA_PARTSUPP.size; i++) 
           {
                 long ps_partkey = DELTA_PARTSUPP.partkey[i];
                 long s_suppkey = DELTA_PARTSUPP.suppkey[i];
                 long ps_availqty = DELTA_PARTSUPP.availqty[i];
                 // DOUBLE_TYPE ps_supplycost = DELTA_PARTSUPP.supplycost[i];
                 // STRING_TYPE ps_comment = DELTA_PARTSUPP.comment[i];
+                long v20 = 1L;
+                COUNTPARTSUPP1_E1_2_DELTA.addOrDelOnZero(se30.modify(ps_partkey,s_suppkey,ps_availqty),v20);
                 long v21 = 1L;
-                COUNTPARTSUPP1_E1_2_DELTA.addOrDelOnZero(se32.modify(ps_partkey,s_suppkey,ps_availqty),v21);            
-                long v22 = 1L;
-                agg6.addOrDelOnZero(st2.modify(s_suppkey,(v22 != 0 ? 1L : 0L)), (v22 != 0 ? 1L : 0L));                
+                COUNTPARTSUPP1_DOMAIN1_P_2.addOrDelOnZero(se31.modify(s_suppkey),(v21 != 0 ? 1L : 0L));
           }
         }
 
-        {  // temp foreach
-          const HashIndex<tuple2_L_L, long>* i23 = static_cast<HashIndex<tuple2_L_L, long>*>(agg6.index[0]);
-          HashIndex<tuple2_L_L, long>::IdxNode* n23; 
-          tuple2_L_L* e23;
+        STRING_TYPE l7 = c3;
+        {  // foreach
+          const HashIndex_COUNTPARTSUPP1_DOMAIN1_P_2_map_0* i22 = static_cast<HashIndex_COUNTPARTSUPP1_DOMAIN1_P_2_map_0*>(COUNTPARTSUPP1_DOMAIN1_P_2.index[0]);
+          HashIndex_COUNTPARTSUPP1_DOMAIN1_P_2_map_0::IdxNode* n22; 
+          COUNTPARTSUPP1_DOMAIN1_P_2_entry* e22;
         
-          for (size_t i = 0; i < i23->size_; i++)
+          for (size_t i = 0; i < i22->size_; i++)
           {
-            n23 = i23->buckets_ + i;
-            while (n23 && (e23 = n23->obj))
+            n22 = i22->buckets_ + i;
+            while (n22 && (e22 = n22->obj))
             {
-              long s_suppkey = e23->_1;  
-              long v23 = e23->__av; 
-            COUNTPARTSUPP1_DOMAIN1.addOrDelOnZero(se33.modify(l8,s_suppkey),v23);      
-              n23 = n23->nxt;
+                long s_suppkey = e22->S_SUPPKEY;
+                long v22 = e22->__av;
+                { //slice 
+                  const HashIndex_COUNTPARTSUPP1_P_2_map_01* i23 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_01*>(COUNTPARTSUPP1_P_2.index[1]);
+                  const HASH_RES_t h10 = COUNTPARTSUPP1_P_2_mapkey01_idxfn::hash(se39.modify01(l7, s_suppkey));
+                  HashIndex_COUNTPARTSUPP1_P_2_map_01::IdxNode* n23 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_01::IdxNode*>(i23->slice(se39, h10));
+                  COUNTPARTSUPP1_P_2_entry* e23;
+                 
+                  if (n23 && (e23 = n23->obj)) {
+                    do {                
+                      STRING_TYPE s_name = e23->S_NAME;
+                      STRING_TYPE s_address = e23->S_ADDRESS;
+                      long v23 = e23->__av;
+                      long agg5 = 0L;
+                      { //slice 
+                        const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i24 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
+                        const HASH_RES_t h8 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se35.modify1(s_suppkey));
+                        HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n24 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i24->slice(se35, h8));
+                        COUNTSUPPLIER1_E1_1_entry* e24;
+                       
+                        if (n24 && (e24 = n24->obj)) {
+                          do {                
+                            long ps_partkey = e24->PS_PARTKEY;
+                            long ps_availqty = e24->PS_AVAILQTY;
+                            long v24 = e24->__av;
+                            DOUBLE_TYPE l8 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se33.modify(ps_partkey,s_suppkey)) * 0.5);
+                            (/*if */(ps_availqty > l8) ? agg5 += (v24 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se34.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+                            n24 = n24->nxt;
+                          } while (n24 && (e24 = n24->obj) && h8 == n24->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se35, *e24)); 
+                        }
+                      }long agg6 = 0L;
+                      { //slice 
+                        const HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_1* i25 = static_cast<HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_1*>(COUNTPARTSUPP1_E1_2_DELTA.index[1]);
+                        const HASH_RES_t h9 = COUNTPARTSUPP1_E1_2_DELTA_mapkey1_idxfn::hash(se38.modify1(s_suppkey));
+                        HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_1::IdxNode* n25 = static_cast<HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_1::IdxNode*>(i25->slice(se38, h9));
+                        COUNTPARTSUPP1_E1_2_DELTA_entry* e25;
+                       
+                        if (n25 && (e25 = n25->obj)) {
+                          do {                
+                            long ps_partkey = e25->PS_PARTKEY;
+                            long ps_availqty = e25->PS_AVAILQTY;
+                            long v25 = e25->__av;
+                            DOUBLE_TYPE l9 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se36.modify(ps_partkey,s_suppkey)) * 0.5);
+                            (/*if */(ps_availqty > l9) ? agg6 += (v25 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se37.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+                            n25 = n25->nxt;
+                          } while (n25 && (e25 = n25->obj) && h9 == n25->hash &&  COUNTPARTSUPP1_E1_2_DELTA_mapkey1_idxfn::equals(se38, *e25)); 
+                        }
+                      }COUNT.addOrDelOnZero(se32.modify(s_name,s_address),((v22 != 0 ? 1L : 0L) * (v23 * ((agg5 + agg6) != 0 ? 1L : 0L))));
+                      n23 = n23->nxt;
+                    } while (n23 && (e23 = n23->obj) && h10 == n23->hash &&  COUNTPARTSUPP1_P_2_mapkey01_idxfn::equals(se39, *e23)); 
+                  }
+                }
+              n22 = n22->nxt;
             }
           }
-        }STRING_TYPE l9 = c3;
-        { //slice 
-          const HashIndex_COUNTPARTSUPP1_DOMAIN1_map_0* i24 = static_cast<HashIndex_COUNTPARTSUPP1_DOMAIN1_map_0*>(COUNTPARTSUPP1_DOMAIN1.index[1]);
-          const HASH_RES_t h13 = COUNTPARTSUPP1_DOMAIN1_mapkey0_idxfn::hash(se42.modify0(l9));
-          HashIndex_COUNTPARTSUPP1_DOMAIN1_map_0::IdxNode* n24 = static_cast<HashIndex_COUNTPARTSUPP1_DOMAIN1_map_0::IdxNode*>(i24->slice(se42, h13));
-          COUNTPARTSUPP1_DOMAIN1_entry* e24;
-         
-          if (n24 && (e24 = n24->obj)) {
-            do {                
-              long s_suppkey = e24->S_SUPPKEY;
-              long v24 = e24->__av;
-              { //slice 
-                const HashIndex_COUNTPARTSUPP1_P_2_map_03* i25 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_03*>(COUNTPARTSUPP1_P_2.index[1]);
-                const HASH_RES_t h12 = COUNTPARTSUPP1_P_2_mapkey03_idxfn::hash(se41.modify03(s_suppkey, l9));
-                HashIndex_COUNTPARTSUPP1_P_2_map_03::IdxNode* n25 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_03::IdxNode*>(i25->slice(se41, h12));
-                COUNTPARTSUPP1_P_2_entry* e25;
-               
-                if (n25 && (e25 = n25->obj)) {
-                  do {                
-                    STRING_TYPE s_name = e25->S_NAME;
-                    STRING_TYPE s_address = e25->S_ADDRESS;
-                    long v25 = e25->__av;
-                    long agg7 = 0L;
-                    { //slice 
-                      const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i26 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
-                      const HASH_RES_t h10 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se37.modify1(s_suppkey));
-                      HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n26 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i26->slice(se37, h10));
-                      COUNTSUPPLIER1_E1_1_entry* e26;
-                     
-                      if (n26 && (e26 = n26->obj)) {
-                        do {                
-                          long ps_partkey = e26->PS_PARTKEY;
-                          long ps_availqty = e26->PS_AVAILQTY;
-                          long v26 = e26->__av;
-                          DOUBLE_TYPE l10 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se35.modify(ps_partkey,s_suppkey)) * 0.5);
-                          (/*if */(ps_availqty > l10) ? agg7 += (v26 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se36.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                          n26 = n26->nxt;
-                        } while (n26 && (e26 = n26->obj) && h10 == n26->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se37, *e26)); 
-                      }
-                    }long agg8 = 0L;
-                    { //slice 
-                      const HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_1* i27 = static_cast<HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_1*>(COUNTPARTSUPP1_E1_2_DELTA.index[1]);
-                      const HASH_RES_t h11 = COUNTPARTSUPP1_E1_2_DELTA_mapkey1_idxfn::hash(se40.modify1(s_suppkey));
-                      HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_1::IdxNode* n27 = static_cast<HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_1::IdxNode*>(i27->slice(se40, h11));
-                      COUNTPARTSUPP1_E1_2_DELTA_entry* e27;
-                     
-                      if (n27 && (e27 = n27->obj)) {
-                        do {                
-                          long ps_partkey = e27->PS_PARTKEY;
-                          long ps_availqty = e27->PS_AVAILQTY;
-                          long v27 = e27->__av;
-                          DOUBLE_TYPE l11 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se38.modify(ps_partkey,s_suppkey)) * 0.5);
-                          (/*if */(ps_availqty > l11) ? agg8 += (v27 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se39.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                          n27 = n27->nxt;
-                        } while (n27 && (e27 = n27->obj) && h11 == n27->hash &&  COUNTPARTSUPP1_E1_2_DELTA_mapkey1_idxfn::equals(se40, *e27)); 
-                      }
-                    }COUNT.addOrDelOnZero(se34.modify(s_name,s_address),((v24 != 0 ? 1L : 0L) * (v25 * ((agg7 + agg8) != 0 ? 1L : 0L))));
-                    n25 = n25->nxt;
-                  } while (n25 && (e25 = n25->obj) && h12 == n25->hash &&  COUNTPARTSUPP1_P_2_mapkey03_idxfn::equals(se41, *e25)); 
+        }STRING_TYPE l10 = c3;
+        {  // foreach
+          const HashIndex_COUNTPARTSUPP1_DOMAIN1_P_2_map_0* i26 = static_cast<HashIndex_COUNTPARTSUPP1_DOMAIN1_P_2_map_0*>(COUNTPARTSUPP1_DOMAIN1_P_2.index[0]);
+          HashIndex_COUNTPARTSUPP1_DOMAIN1_P_2_map_0::IdxNode* n26; 
+          COUNTPARTSUPP1_DOMAIN1_P_2_entry* e26;
+        
+          for (size_t i = 0; i < i26->size_; i++)
+          {
+            n26 = i26->buckets_ + i;
+            while (n26 && (e26 = n26->obj))
+            {
+                long s_suppkey = e26->S_SUPPKEY;
+                long v26 = e26->__av;
+                { //slice 
+                  const HashIndex_COUNTPARTSUPP1_P_2_map_01* i27 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_01*>(COUNTPARTSUPP1_P_2.index[1]);
+                  const HASH_RES_t h12 = COUNTPARTSUPP1_P_2_mapkey01_idxfn::hash(se43.modify01(l10, s_suppkey));
+                  HashIndex_COUNTPARTSUPP1_P_2_map_01::IdxNode* n27 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_01::IdxNode*>(i27->slice(se43, h12));
+                  COUNTPARTSUPP1_P_2_entry* e27;
+                 
+                  if (n27 && (e27 = n27->obj)) {
+                    do {                
+                      STRING_TYPE s_name = e27->S_NAME;
+                      STRING_TYPE s_address = e27->S_ADDRESS;
+                      long v27 = e27->__av;
+                      long agg7 = 0L;
+                      { //slice 
+                        const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i28 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
+                        const HASH_RES_t h11 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se42.modify1(s_suppkey));
+                        HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n28 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i28->slice(se42, h11));
+                        COUNTSUPPLIER1_E1_1_entry* e28;
+                       
+                        if (n28 && (e28 = n28->obj)) {
+                          do {                
+                            long ps_partkey = e28->PS_PARTKEY;
+                            long ps_availqty = e28->PS_AVAILQTY;
+                            long v28 = e28->__av;
+                            DOUBLE_TYPE l11 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se40.modify(ps_partkey,s_suppkey)) * 0.5);
+                            (/*if */(ps_availqty > l11) ? agg7 += (v28 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se41.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
+                            n28 = n28->nxt;
+                          } while (n28 && (e28 = n28->obj) && h11 == n28->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se42, *e28)); 
+                        }
+                      }COUNT.addOrDelOnZero(se32.modify(s_name,s_address),(((v26 != 0 ? 1L : 0L) * (v27 * (agg7 != 0 ? 1L : 0L))) * -1L));
+                      n27 = n27->nxt;
+                    } while (n27 && (e27 = n27->obj) && h12 == n27->hash &&  COUNTPARTSUPP1_P_2_mapkey01_idxfn::equals(se43, *e27)); 
+                  }
                 }
-              }
-              n24 = n24->nxt;
-            } while (n24 && (e24 = n24->obj) && h13 == n24->hash &&  COUNTPARTSUPP1_DOMAIN1_mapkey0_idxfn::equals(se42, *e24)); 
-          }
-        }STRING_TYPE l12 = c3;
-        { //slice 
-          const HashIndex_COUNTPARTSUPP1_DOMAIN1_map_0* i28 = static_cast<HashIndex_COUNTPARTSUPP1_DOMAIN1_map_0*>(COUNTPARTSUPP1_DOMAIN1.index[1]);
-          const HASH_RES_t h16 = COUNTPARTSUPP1_DOMAIN1_mapkey0_idxfn::hash(se47.modify0(l12));
-          HashIndex_COUNTPARTSUPP1_DOMAIN1_map_0::IdxNode* n28 = static_cast<HashIndex_COUNTPARTSUPP1_DOMAIN1_map_0::IdxNode*>(i28->slice(se47, h16));
-          COUNTPARTSUPP1_DOMAIN1_entry* e28;
-         
-          if (n28 && (e28 = n28->obj)) {
-            do {                
-              long s_suppkey = e28->S_SUPPKEY;
-              long v28 = e28->__av;
-              { //slice 
-                const HashIndex_COUNTPARTSUPP1_P_2_map_03* i29 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_03*>(COUNTPARTSUPP1_P_2.index[1]);
-                const HASH_RES_t h15 = COUNTPARTSUPP1_P_2_mapkey03_idxfn::hash(se46.modify03(s_suppkey, l12));
-                HashIndex_COUNTPARTSUPP1_P_2_map_03::IdxNode* n29 = static_cast<HashIndex_COUNTPARTSUPP1_P_2_map_03::IdxNode*>(i29->slice(se46, h15));
-                COUNTPARTSUPP1_P_2_entry* e29;
-               
-                if (n29 && (e29 = n29->obj)) {
-                  do {                
-                    STRING_TYPE s_name = e29->S_NAME;
-                    STRING_TYPE s_address = e29->S_ADDRESS;
-                    long v29 = e29->__av;
-                    long agg9 = 0L;
-                    { //slice 
-                      const HashIndex_COUNTSUPPLIER1_E1_1_map_1* i30 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1*>(COUNTSUPPLIER1_E1_1.index[1]);
-                      const HASH_RES_t h14 = COUNTSUPPLIER1_E1_1_mapkey1_idxfn::hash(se45.modify1(s_suppkey));
-                      HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode* n30 = static_cast<HashIndex_COUNTSUPPLIER1_E1_1_map_1::IdxNode*>(i30->slice(se45, h14));
-                      COUNTSUPPLIER1_E1_1_entry* e30;
-                     
-                      if (n30 && (e30 = n30->obj)) {
-                        do {                
-                          long ps_partkey = e30->PS_PARTKEY;
-                          long ps_availqty = e30->PS_AVAILQTY;
-                          long v30 = e30->__av;
-                          DOUBLE_TYPE l13 = (COUNTSUPPLIER1_E1_1_L1_1.getValueOrDefault(se43.modify(ps_partkey,s_suppkey)) * 0.5);
-                          (/*if */(ps_availqty > l13) ? agg9 += (v30 * (COUNTSUPPLIER1_E1_1_E2_1.getValueOrDefault(se44.modify(ps_partkey)) != 0 ? 1L : 0L)) : 0L);
-                          n30 = n30->nxt;
-                        } while (n30 && (e30 = n30->obj) && h14 == n30->hash &&  COUNTSUPPLIER1_E1_1_mapkey1_idxfn::equals(se45, *e30)); 
-                      }
-                    }COUNT.addOrDelOnZero(se34.modify(s_name,s_address),(((v28 != 0 ? 1L : 0L) * (v29 * (agg9 != 0 ? 1L : 0L))) * -1L));
-                    n29 = n29->nxt;
-                  } while (n29 && (e29 = n29->obj) && h15 == n29->hash &&  COUNTPARTSUPP1_P_2_mapkey03_idxfn::equals(se46, *e29)); 
-                }
-              }
-              n28 = n28->nxt;
-            } while (n28 && (e28 = n28->obj) && h16 == n28->hash &&  COUNTPARTSUPP1_DOMAIN1_mapkey0_idxfn::equals(se47, *e28)); 
+              n26 = n26->nxt;
+            }
           }
         }{  // foreach
-          const HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_012* i31 = static_cast<HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_012*>(COUNTPARTSUPP1_E1_2_DELTA.index[0]);
-          HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_012::IdxNode* n31; 
-          COUNTPARTSUPP1_E1_2_DELTA_entry* e31;
+          const HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_012* i29 = static_cast<HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_012*>(COUNTPARTSUPP1_E1_2_DELTA.index[0]);
+          HashIndex_COUNTPARTSUPP1_E1_2_DELTA_map_012::IdxNode* n29; 
+          COUNTPARTSUPP1_E1_2_DELTA_entry* e29;
         
-          for (size_t i = 0; i < i31->size_; i++)
+          for (size_t i = 0; i < i29->size_; i++)
           {
-            n31 = i31->buckets_ + i;
-            while (n31 && (e31 = n31->obj))
+            n29 = i29->buckets_ + i;
+            while (n29 && (e29 = n29->obj))
             {
-                long ps_partkey = e31->PS_PARTKEY;
-                long s_suppkey = e31->S_SUPPKEY;
-                long ps_availqty = e31->PS_AVAILQTY;
-                long v31 = e31->__av;
-                COUNTSUPPLIER1_E1_1.addOrDelOnZero(se48.modify(ps_partkey,s_suppkey,ps_availqty),v31);
-              n31 = n31->nxt;
+                long ps_partkey = e29->PS_PARTKEY;
+                long s_suppkey = e29->S_SUPPKEY;
+                long ps_availqty = e29->PS_AVAILQTY;
+                long v29 = e29->__av;
+                COUNTSUPPLIER1_E1_1.addOrDelOnZero(se44.modify(ps_partkey,s_suppkey,ps_availqty),v29);
+              n29 = n29->nxt;
             }
           }
         }
@@ -1491,41 +1415,41 @@ namespace dbtoaster {
       {  
         COUNTPARTSUPP1_P_2SUPPLIER1.clear();
         {  // foreach
-          const HashIndex_NATION_map_0123* i32 = static_cast<HashIndex_NATION_map_0123*>(NATION.index[0]);
-          HashIndex_NATION_map_0123::IdxNode* n32; 
-          NATION_entry* e32;
+          const HashIndex_NATION_map_0123* i30 = static_cast<HashIndex_NATION_map_0123*>(NATION.index[0]);
+          HashIndex_NATION_map_0123::IdxNode* n30; 
+          NATION_entry* e30;
         
-          for (size_t i = 0; i < i32->size_; i++)
+          for (size_t i = 0; i < i30->size_; i++)
           {
-            n32 = i32->buckets_ + i;
-            while (n32 && (e32 = n32->obj))
+            n30 = i30->buckets_ + i;
+            while (n30 && (e30 = n30->obj))
             {
-                long s_nationkey = e32->NATION_NATIONKEY;
-                STRING_TYPE n_name = e32->NATION_NAME;
-                long n_regionkey = e32->NATION_REGIONKEY;
-                STRING_TYPE n_comment = e32->NATION_COMMENT;
-                long v32 = e32->__av;
-                COUNTPARTSUPP1_P_2SUPPLIER1.addOrDelOnZero(se49.modify(s_nationkey,n_name),v32);
-              n32 = n32->nxt;
+                long s_nationkey = e30->NATION_NATIONKEY;
+                STRING_TYPE n_name = e30->NATION_NAME;
+                long n_regionkey = e30->NATION_REGIONKEY;
+                STRING_TYPE n_comment = e30->NATION_COMMENT;
+                long v30 = e30->__av;
+                COUNTPARTSUPP1_P_2SUPPLIER1.addOrDelOnZero(se45.modify(s_nationkey,n_name),v30);
+              n30 = n30->nxt;
             }
           }
         }COUNTSUPPLIER1.clear();
-        STRING_TYPE l14 = c3;
+        STRING_TYPE l12 = c3;
         { //slice 
-          const HashIndex_NATION_map_1* i33 = static_cast<HashIndex_NATION_map_1*>(NATION.index[1]);
-          const HASH_RES_t h17 = NATION_mapkey1_idxfn::hash(se51.modify1(l14));
-          HashIndex_NATION_map_1::IdxNode* n33 = static_cast<HashIndex_NATION_map_1::IdxNode*>(i33->slice(se51, h17));
-          NATION_entry* e33;
+          const HashIndex_NATION_map_1* i31 = static_cast<HashIndex_NATION_map_1*>(NATION.index[1]);
+          const HASH_RES_t h13 = NATION_mapkey1_idxfn::hash(se47.modify1(l12));
+          HashIndex_NATION_map_1::IdxNode* n31 = static_cast<HashIndex_NATION_map_1::IdxNode*>(i31->slice(se47, h13));
+          NATION_entry* e31;
          
-          if (n33 && (e33 = n33->obj)) {
+          if (n31 && (e31 = n31->obj)) {
             do {                
-              long s_nationkey = e33->NATION_NATIONKEY;
-              long n_regionkey = e33->NATION_REGIONKEY;
-              STRING_TYPE n_comment = e33->NATION_COMMENT;
-              long v33 = e33->__av;
-              COUNTSUPPLIER1.addOrDelOnZero(se50.modify(s_nationkey),v33);
-              n33 = n33->nxt;
-            } while (n33 && (e33 = n33->obj) && h17 == n33->hash &&  NATION_mapkey1_idxfn::equals(se51, *e33)); 
+              long s_nationkey = e31->NATION_NATIONKEY;
+              long n_regionkey = e31->NATION_REGIONKEY;
+              STRING_TYPE n_comment = e31->NATION_COMMENT;
+              long v31 = e31->__av;
+              COUNTSUPPLIER1.addOrDelOnZero(se46.modify(s_nationkey),v31);
+              n31 = n31->nxt;
+            } while (n31 && (e31 = n31->obj) && h13 == n31->hash &&  NATION_mapkey1_idxfn::equals(se47, *e31)); 
           }
         }
       }
@@ -1535,67 +1459,61 @@ namespace dbtoaster {
   
     /* Sample entries for avoiding recreation of temporary objects */
     COUNTLINEITEM1_E1_1_L1_3_DELTA_entry se1;
-    COUNTLINEITEM1_DOMAIN1_entry se2;
-    tuple2_L_L st1;
+    COUNTLINEITEM1_DOMAIN1_P_2_entry se2;
     COUNT_entry se3;
     COUNTSUPPLIER1_E1_1_L1_1_entry se4;
     COUNTLINEITEM1_E1_1_L1_3_DELTA_entry se5;
     COUNTSUPPLIER1_E1_1_E2_1_entry se6;
     COUNTSUPPLIER1_E1_1_entry se7;
     COUNTPARTSUPP1_P_2_entry se8;
-    COUNTLINEITEM1_DOMAIN1_entry se9;
-    COUNTSUPPLIER1_E1_1_L1_1_entry se10;
-    COUNTSUPPLIER1_E1_1_E2_1_entry se11;
-    COUNTSUPPLIER1_E1_1_entry se12;
-    COUNTPARTSUPP1_P_2_entry se13;
-    COUNTLINEITEM1_DOMAIN1_entry se14;
-    COUNTSUPPLIER1_E1_1_L1_1_entry se15;
-    COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_entry se16;
-    COUNTSUPPLIER1_E1_1_E2_1_entry se17;
-    COUNT_entry se18;
-    COUNTSUPPLIER1_E1_1_L1_1_entry se19;
-    COUNTSUPPLIER1_E1_1_E2_1_entry se20;
-    COUNTSUPPLIER1_E1_1_entry se21;
-    COUNTSUPPLIER1_DELTA_entry se22;
-    COUNT_entry se23;
-    COUNTSUPPLIER1_entry se24;
-    COUNTSUPPLIER1_E1_1_L1_1_entry se25;
-    COUNTSUPPLIER1_E1_1_E2_1_entry se26;
-    COUNTSUPPLIER1_E1_1_entry se27;
-    COUNTPART1_entry se28;
-    COUNTSUPPLIER1_entry se29;
-    COUNTPARTSUPP1_P_2_entry se30;
-    COUNTPARTSUPP1_P_2SUPPLIER1_entry se31;
-    COUNTPARTSUPP1_E1_2_DELTA_entry se32;
-    COUNTPARTSUPP1_DOMAIN1_entry se33;
-    tuple2_L_L st2;
-    COUNT_entry se34;
-    COUNTSUPPLIER1_E1_1_L1_1_entry se35;
-    COUNTSUPPLIER1_E1_1_E2_1_entry se36;
-    COUNTSUPPLIER1_E1_1_entry se37;
-    COUNTSUPPLIER1_E1_1_L1_1_entry se38;
-    COUNTSUPPLIER1_E1_1_E2_1_entry se39;
-    COUNTPARTSUPP1_E1_2_DELTA_entry se40;
-    COUNTPARTSUPP1_P_2_entry se41;
-    COUNTPARTSUPP1_DOMAIN1_entry se42;
-    COUNTSUPPLIER1_E1_1_L1_1_entry se43;
-    COUNTSUPPLIER1_E1_1_E2_1_entry se44;
-    COUNTSUPPLIER1_E1_1_entry se45;
-    COUNTPARTSUPP1_P_2_entry se46;
-    COUNTPARTSUPP1_DOMAIN1_entry se47;
-    COUNTSUPPLIER1_E1_1_entry se48;
-    COUNTPARTSUPP1_P_2SUPPLIER1_entry se49;
-    COUNTSUPPLIER1_entry se50;
-    NATION_entry se51;
+    COUNTSUPPLIER1_E1_1_L1_1_entry se9;
+    COUNTSUPPLIER1_E1_1_E2_1_entry se10;
+    COUNTSUPPLIER1_E1_1_entry se11;
+    COUNTPARTSUPP1_P_2_entry se12;
+    COUNTSUPPLIER1_E1_1_L1_1_entry se13;
+    COUNTSUPPLIER1_E1_1_E2_1PART1_DELTA_entry se14;
+    COUNTSUPPLIER1_E1_1_E2_1_entry se15;
+    COUNT_entry se16;
+    COUNTSUPPLIER1_E1_1_L1_1_entry se17;
+    COUNTSUPPLIER1_E1_1_E2_1_entry se18;
+    COUNTSUPPLIER1_E1_1_entry se19;
+    COUNTSUPPLIER1_DELTA_entry se20;
+    COUNT_entry se21;
+    COUNTSUPPLIER1_entry se22;
+    COUNTSUPPLIER1_E1_1_L1_1_entry se23;
+    COUNTSUPPLIER1_E1_1_E2_1_entry se24;
+    COUNTSUPPLIER1_E1_1_entry se25;
+    COUNTPART1_entry se26;
+    COUNTSUPPLIER1_entry se27;
+    COUNTPARTSUPP1_P_2_entry se28;
+    COUNTPARTSUPP1_P_2SUPPLIER1_entry se29;
+    COUNTPARTSUPP1_E1_2_DELTA_entry se30;
+    COUNTPARTSUPP1_DOMAIN1_P_2_entry se31;
+    COUNT_entry se32;
+    COUNTSUPPLIER1_E1_1_L1_1_entry se33;
+    COUNTSUPPLIER1_E1_1_E2_1_entry se34;
+    COUNTSUPPLIER1_E1_1_entry se35;
+    COUNTSUPPLIER1_E1_1_L1_1_entry se36;
+    COUNTSUPPLIER1_E1_1_E2_1_entry se37;
+    COUNTPARTSUPP1_E1_2_DELTA_entry se38;
+    COUNTPARTSUPP1_P_2_entry se39;
+    COUNTSUPPLIER1_E1_1_L1_1_entry se40;
+    COUNTSUPPLIER1_E1_1_E2_1_entry se41;
+    COUNTSUPPLIER1_E1_1_entry se42;
+    COUNTPARTSUPP1_P_2_entry se43;
+    COUNTSUPPLIER1_E1_1_entry se44;
+    COUNTPARTSUPP1_P_2SUPPLIER1_entry se45;
+    COUNTSUPPLIER1_entry se46;
+    NATION_entry se47;
     /* regex_t temporary objects */
     regex_t preg1;
   
     /* Data structures used for storing materialized views */
     NATION_map NATION;
     COUNTPART1_map COUNTPART1;
-    COUNTLINEITEM1_DOMAIN1_map COUNTLINEITEM1_DOMAIN1;
+    COUNTLINEITEM1_DOMAIN1_P_2_map COUNTLINEITEM1_DOMAIN1_P_2;
     COUNTLINEITEM1_E1_1_L1_3_DELTA_map COUNTLINEITEM1_E1_1_L1_3_DELTA;
-    COUNTPARTSUPP1_DOMAIN1_map COUNTPARTSUPP1_DOMAIN1;
+    COUNTPARTSUPP1_DOMAIN1_P_2_map COUNTPARTSUPP1_DOMAIN1_P_2;
     COUNTPARTSUPP1_P_2_map COUNTPARTSUPP1_P_2;
     COUNTPARTSUPP1_P_2SUPPLIER1_map COUNTPARTSUPP1_P_2SUPPLIER1;
     COUNTPARTSUPP1_E1_2_DELTA_map COUNTPARTSUPP1_E1_2_DELTA;
@@ -1609,8 +1527,7 @@ namespace dbtoaster {
     DELTA_PART_map DELTA_PART;
     DELTA_SUPPLIER_map DELTA_SUPPLIER;
     DELTA_PARTSUPP_map DELTA_PARTSUPP;
-    MultiHashMap<tuple2_L_L,long,HashIndex<tuple2_L_L,long> > agg6;
-    MultiHashMap<tuple2_L_L,long,HashIndex<tuple2_L_L,long> > agg1;
+    
     /*const static*/ long c2;
     /*const static*/ long c1;
     /*const static*/ STRING_TYPE c3;

@@ -362,8 +362,8 @@ namespace dbtoaster {
   /* Type definition providing a way to incrementally maintain the results of the sql program */
   struct data_t : tlq_t{
     data_t(): tlq_t(), PROMO_REVENUELINEITEM1_L1_1_L1_1(0.0), PROMO_REVENUELINEITEM2(0.0) {
-      c1 = Udate(STRING_TYPE("1995-9-1"));
-      c2 = Udate(STRING_TYPE("1995-10-1"));
+      c2 = Udate(STRING_TYPE("1995-9-1"));
+      c1 = Udate(STRING_TYPE("1995-10-1"));
       /* regex_t init */
       if(regcomp(&preg1, "^PROMO.*$", REG_EXTENDED | REG_NOSUB)){
         cerr << "Error compiling regular expression: /^PROMO.*$/" << endl;
@@ -391,9 +391,8 @@ namespace dbtoaster {
         }
         tN += DELTA_LINEITEM.size;
 
-
         PROMO_REVENUELINEITEM1_L1_1_L1_1LINEITEM1_DELTA.clear();
-        {  
+        { 
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
                 // long l_orderkey = DELTA_LINEITEM.orderkey[i];
@@ -413,10 +412,10 @@ namespace dbtoaster {
                 // STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
                 // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
-                (/*if */(l_shipdate >= c1 && c2 > l_shipdate) ? PROMO_REVENUELINEITEM1_L1_1_L1_1LINEITEM1_DELTA.addOrDelOnZero(se1.modify(l_partkey),(v1 * (l_extendedprice * (1L + (-1L * l_discount))))) : (void)0);
+                (/*if */(c1 > l_shipdate && l_shipdate >= c2) ? PROMO_REVENUELINEITEM1_L1_1_L1_1LINEITEM1_DELTA.addOrDelOnZero(se1.modify(l_partkey),(v1 * (l_extendedprice * (1L + (-1L * l_discount))))) : (void)0);
+          
           }
         }
-
         DOUBLE_TYPE agg1 = 0.0;
         {  // foreach
           const HashIndex_PROMO_REVENUELINEITEM1_L1_1_L1_1LINEITEM1_DELTA_map_0* i2 = static_cast<HashIndex_PROMO_REVENUELINEITEM1_L1_1_L1_1LINEITEM1_DELTA_map_0*>(PROMO_REVENUELINEITEM1_L1_1_L1_1LINEITEM1_DELTA.index[0]);
@@ -475,11 +474,11 @@ namespace dbtoaster {
         agg4 += Ulistmax(1L, l2);
         DOUBLE_TYPE l1 = agg4;
         agg3 += Udiv(l1);
-        PROMO_REVENUE = (agg3 * (PROMO_REVENUELINEITEM2 * 100.0));
+        PROMO_REVENUE = (PROMO_REVENUELINEITEM2 * (agg3 * 100.0));
       }
     }
     void on_batch_update_PART(TPCHPartBatch& DELTA_PART) {
-      {  
+      { 
         if (tS > 0) { tS += DELTA_PART.size; return; }         
         tLastN += DELTA_PART.size;        
         if (tLastN > 127) { 
@@ -490,11 +489,10 @@ namespace dbtoaster {
         }
         tN += DELTA_PART.size;
 
-
         PROMO_REVENUELINEITEM1_L1_1_L1_1PART1_DELTA.clear();
         PROMO_REVENUELINEITEM2PART1_DELTA.clear();
         {  
-          for (size_t i = 0; i < DELTA_PART.size; i++)
+          for (size_t i = 0; i < DELTA_PART.size; i++) 
           {
                 long l_partkey = DELTA_PART.partkey[i];
                 // STRING_TYPE p_name = DELTA_PART.name[i];
@@ -506,12 +504,12 @@ namespace dbtoaster {
                 // DOUBLE_TYPE p_retailprice = DELTA_PART.retailprice[i];
                 // STRING_TYPE p_comment = DELTA_PART.comment[i];
                 long v5 = 1L;
-                PROMO_REVENUELINEITEM1_L1_1_L1_1PART1_DELTA.addOrDelOnZero(se8.modify(l_partkey),v5);
+                PROMO_REVENUELINEITEM1_L1_1_L1_1PART1_DELTA.addOrDelOnZero(se8.modify(l_partkey),v5);            
                 long v6 = 1L;
-                (/*if */(0L != Upreg_match(preg1,p_type)) ? PROMO_REVENUELINEITEM2PART1_DELTA.addOrDelOnZero(se9.modify(l_partkey),v6) : (void)0);
+                (/*if */(0L != Upreg_match(preg1,p_type)) ? PROMO_REVENUELINEITEM2PART1_DELTA.addOrDelOnZero(se9.modify(l_partkey),v6) : (void)0);                
           }
         }
-        
+
         DOUBLE_TYPE agg5 = 0.0;
         {  // foreach
           const HashIndex_PROMO_REVENUELINEITEM1_L1_1_L1_1PART1_DELTA_map_0* i7 = static_cast<HashIndex_PROMO_REVENUELINEITEM1_L1_1_L1_1PART1_DELTA_map_0*>(PROMO_REVENUELINEITEM1_L1_1_L1_1PART1_DELTA.index[0]);
@@ -586,7 +584,7 @@ namespace dbtoaster {
         agg8 += Ulistmax(1L, l4);
         DOUBLE_TYPE l3 = agg8;
         agg7 += Udiv(l3);
-        PROMO_REVENUE = (agg7 * (PROMO_REVENUELINEITEM2 * 100.0));
+        PROMO_REVENUE = (PROMO_REVENUELINEITEM2 * (agg7 * 100.0));
       }
     }
     void on_system_ready_event() {
@@ -625,8 +623,8 @@ namespace dbtoaster {
     DELTA_LINEITEM_map DELTA_LINEITEM;
     DELTA_PART_map DELTA_PART;
     
-    /*const static*/ long c1;
     /*const static*/ long c2;
+    /*const static*/ long c1;
   
   };
 

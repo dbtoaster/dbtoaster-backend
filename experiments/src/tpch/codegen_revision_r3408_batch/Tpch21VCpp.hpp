@@ -407,76 +407,55 @@ namespace dbtoaster {
   typedef HashIndex<NUMWAITORDERS1LINEITEM1_entry,long,NUMWAITORDERS1LINEITEM1_mapkey01_idxfn,true> HashIndex_NUMWAITORDERS1LINEITEM1_map_01;
   typedef HashIndex<NUMWAITORDERS1LINEITEM1_entry,long,NUMWAITORDERS1LINEITEM1_mapkey0_idxfn,false> HashIndex_NUMWAITORDERS1LINEITEM1_map_0;
   
-  struct NUMWAITLINEITEM1_DOMAIN1_entry {
-    STRING_TYPE N_NAME; STRING_TYPE O_ORDERSTATUS; long L1_ORDERKEY; long __av; 
-    explicit NUMWAITLINEITEM1_DOMAIN1_entry() { /*N_NAME = ""; O_ORDERSTATUS = ""; L1_ORDERKEY = 0L; __av = 0L; */ }
-    explicit NUMWAITLINEITEM1_DOMAIN1_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const long c2, const long c3) { N_NAME = c0; O_ORDERSTATUS = c1; L1_ORDERKEY = c2; __av = c3; }
-    NUMWAITLINEITEM1_DOMAIN1_entry(const NUMWAITLINEITEM1_DOMAIN1_entry& other) : N_NAME( other.N_NAME ), O_ORDERSTATUS( other.O_ORDERSTATUS ), L1_ORDERKEY( other.L1_ORDERKEY ), __av( other.__av ) {}
-    FORCE_INLINE NUMWAITLINEITEM1_DOMAIN1_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1, const long c2) { N_NAME = c0; O_ORDERSTATUS = c1; L1_ORDERKEY = c2;  return *this; }
-    FORCE_INLINE NUMWAITLINEITEM1_DOMAIN1_entry& modify01(const STRING_TYPE& c0, const STRING_TYPE& c1) { N_NAME = c0; O_ORDERSTATUS = c1;  return *this; }
+  struct NUMWAITLINEITEM1_DOMAIN1_P_3_entry {
+    long L1_ORDERKEY; long __av; 
+    explicit NUMWAITLINEITEM1_DOMAIN1_P_3_entry() { /*L1_ORDERKEY = 0L; __av = 0L; */ }
+    explicit NUMWAITLINEITEM1_DOMAIN1_P_3_entry(const long c0, const long c1) { L1_ORDERKEY = c0; __av = c1; }
+    NUMWAITLINEITEM1_DOMAIN1_P_3_entry(const NUMWAITLINEITEM1_DOMAIN1_P_3_entry& other) : L1_ORDERKEY( other.L1_ORDERKEY ), __av( other.__av ) {}
+    FORCE_INLINE NUMWAITLINEITEM1_DOMAIN1_P_3_entry& modify(const long c0) { L1_ORDERKEY = c0;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, N_NAME);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, O_ORDERSTATUS);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, L1_ORDERKEY);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct NUMWAITLINEITEM1_DOMAIN1_mapkey012_idxfn {
-    FORCE_INLINE static size_t hash(const NUMWAITLINEITEM1_DOMAIN1_entry& e) {
+  struct NUMWAITLINEITEM1_DOMAIN1_P_3_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const NUMWAITLINEITEM1_DOMAIN1_P_3_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.N_NAME);
-      hash_combine(h, e.O_ORDERSTATUS);
       hash_combine(h, e.L1_ORDERKEY);
       return h;
     }
-    FORCE_INLINE static bool equals(const NUMWAITLINEITEM1_DOMAIN1_entry& x, const NUMWAITLINEITEM1_DOMAIN1_entry& y) {
-      return x.N_NAME == y.N_NAME && x.O_ORDERSTATUS == y.O_ORDERSTATUS && x.L1_ORDERKEY == y.L1_ORDERKEY;
+    FORCE_INLINE static bool equals(const NUMWAITLINEITEM1_DOMAIN1_P_3_entry& x, const NUMWAITLINEITEM1_DOMAIN1_P_3_entry& y) {
+      return x.L1_ORDERKEY == y.L1_ORDERKEY;
     }
   };
   
-  struct NUMWAITLINEITEM1_DOMAIN1_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const NUMWAITLINEITEM1_DOMAIN1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.N_NAME);
-      hash_combine(h, e.O_ORDERSTATUS);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const NUMWAITLINEITEM1_DOMAIN1_entry& x, const NUMWAITLINEITEM1_DOMAIN1_entry& y) {
-      return x.N_NAME == y.N_NAME && x.O_ORDERSTATUS == y.O_ORDERSTATUS;
-    }
-  };
-  
-  typedef MultiHashMap<NUMWAITLINEITEM1_DOMAIN1_entry,long,
-    HashIndex<NUMWAITLINEITEM1_DOMAIN1_entry,long,NUMWAITLINEITEM1_DOMAIN1_mapkey012_idxfn,true>,
-    HashIndex<NUMWAITLINEITEM1_DOMAIN1_entry,long,NUMWAITLINEITEM1_DOMAIN1_mapkey01_idxfn,false>
-  > NUMWAITLINEITEM1_DOMAIN1_map;
-  typedef HashIndex<NUMWAITLINEITEM1_DOMAIN1_entry,long,NUMWAITLINEITEM1_DOMAIN1_mapkey012_idxfn,true> HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_012;
-  typedef HashIndex<NUMWAITLINEITEM1_DOMAIN1_entry,long,NUMWAITLINEITEM1_DOMAIN1_mapkey01_idxfn,false> HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01;
+  typedef MultiHashMap<NUMWAITLINEITEM1_DOMAIN1_P_3_entry,long,
+    HashIndex<NUMWAITLINEITEM1_DOMAIN1_P_3_entry,long,NUMWAITLINEITEM1_DOMAIN1_P_3_mapkey0_idxfn,true>
+  > NUMWAITLINEITEM1_DOMAIN1_P_3_map;
+  typedef HashIndex<NUMWAITLINEITEM1_DOMAIN1_P_3_entry,long,NUMWAITLINEITEM1_DOMAIN1_P_3_mapkey0_idxfn,true> HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0;
   
   struct NUMWAITLINEITEM1_P_3_entry {
-    long S_SUPPKEY; STRING_TYPE S_NAME; long L1_ORDERKEY; STRING_TYPE N_NAME; long __av; 
-    explicit NUMWAITLINEITEM1_P_3_entry() { /*S_SUPPKEY = 0L; S_NAME = ""; L1_ORDERKEY = 0L; N_NAME = ""; __av = 0L; */ }
-    explicit NUMWAITLINEITEM1_P_3_entry(const long c0, const STRING_TYPE& c1, const long c2, const STRING_TYPE& c3, const long c4) { S_SUPPKEY = c0; S_NAME = c1; L1_ORDERKEY = c2; N_NAME = c3; __av = c4; }
-    NUMWAITLINEITEM1_P_3_entry(const NUMWAITLINEITEM1_P_3_entry& other) : S_SUPPKEY( other.S_SUPPKEY ), S_NAME( other.S_NAME ), L1_ORDERKEY( other.L1_ORDERKEY ), N_NAME( other.N_NAME ), __av( other.__av ) {}
-    FORCE_INLINE NUMWAITLINEITEM1_P_3_entry& modify(const long c0, const STRING_TYPE& c1, const long c2, const STRING_TYPE& c3) { S_SUPPKEY = c0; S_NAME = c1; L1_ORDERKEY = c2; N_NAME = c3;  return *this; }
-    FORCE_INLINE NUMWAITLINEITEM1_P_3_entry& modify23(const long c2, const STRING_TYPE& c3) { L1_ORDERKEY = c2; N_NAME = c3;  return *this; }
+    STRING_TYPE N_NAME; long L1_ORDERKEY; long S_SUPPKEY; STRING_TYPE S_NAME; long __av; 
+    explicit NUMWAITLINEITEM1_P_3_entry() { /*N_NAME = ""; L1_ORDERKEY = 0L; S_SUPPKEY = 0L; S_NAME = ""; __av = 0L; */ }
+    explicit NUMWAITLINEITEM1_P_3_entry(const STRING_TYPE& c0, const long c1, const long c2, const STRING_TYPE& c3, const long c4) { N_NAME = c0; L1_ORDERKEY = c1; S_SUPPKEY = c2; S_NAME = c3; __av = c4; }
+    NUMWAITLINEITEM1_P_3_entry(const NUMWAITLINEITEM1_P_3_entry& other) : N_NAME( other.N_NAME ), L1_ORDERKEY( other.L1_ORDERKEY ), S_SUPPKEY( other.S_SUPPKEY ), S_NAME( other.S_NAME ), __av( other.__av ) {}
+    FORCE_INLINE NUMWAITLINEITEM1_P_3_entry& modify(const STRING_TYPE& c0, const long c1, const long c2, const STRING_TYPE& c3) { N_NAME = c0; L1_ORDERKEY = c1; S_SUPPKEY = c2; S_NAME = c3;  return *this; }
+    FORCE_INLINE NUMWAITLINEITEM1_P_3_entry& modify01(const STRING_TYPE& c0, const long c1) { N_NAME = c0; L1_ORDERKEY = c1;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
       ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, S_NAME);
+      DBT_SERIALIZATION_NVP(ar, N_NAME);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, L1_ORDERKEY);
       ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, N_NAME);
+      DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, S_NAME);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
@@ -484,43 +463,43 @@ namespace dbtoaster {
   struct NUMWAITLINEITEM1_P_3_mapkey0123_idxfn {
     FORCE_INLINE static size_t hash(const NUMWAITLINEITEM1_P_3_entry& e) {
       size_t h = 0;
+      hash_combine(h, e.N_NAME);
+      hash_combine(h, e.L1_ORDERKEY);
       hash_combine(h, e.S_SUPPKEY);
       hash_combine(h, e.S_NAME);
-      hash_combine(h, e.L1_ORDERKEY);
-      hash_combine(h, e.N_NAME);
       return h;
     }
     FORCE_INLINE static bool equals(const NUMWAITLINEITEM1_P_3_entry& x, const NUMWAITLINEITEM1_P_3_entry& y) {
-      return x.S_SUPPKEY == y.S_SUPPKEY && x.S_NAME == y.S_NAME && x.L1_ORDERKEY == y.L1_ORDERKEY && x.N_NAME == y.N_NAME;
+      return x.N_NAME == y.N_NAME && x.L1_ORDERKEY == y.L1_ORDERKEY && x.S_SUPPKEY == y.S_SUPPKEY && x.S_NAME == y.S_NAME;
     }
   };
   
-  struct NUMWAITLINEITEM1_P_3_mapkey23_idxfn {
+  struct NUMWAITLINEITEM1_P_3_mapkey01_idxfn {
     FORCE_INLINE static size_t hash(const NUMWAITLINEITEM1_P_3_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.L1_ORDERKEY);
       hash_combine(h, e.N_NAME);
+      hash_combine(h, e.L1_ORDERKEY);
       return h;
     }
     FORCE_INLINE static bool equals(const NUMWAITLINEITEM1_P_3_entry& x, const NUMWAITLINEITEM1_P_3_entry& y) {
-      return x.L1_ORDERKEY == y.L1_ORDERKEY && x.N_NAME == y.N_NAME;
+      return x.N_NAME == y.N_NAME && x.L1_ORDERKEY == y.L1_ORDERKEY;
     }
   };
   
   typedef MultiHashMap<NUMWAITLINEITEM1_P_3_entry,long,
     HashIndex<NUMWAITLINEITEM1_P_3_entry,long,NUMWAITLINEITEM1_P_3_mapkey0123_idxfn,true>,
-    HashIndex<NUMWAITLINEITEM1_P_3_entry,long,NUMWAITLINEITEM1_P_3_mapkey23_idxfn,false>
+    HashIndex<NUMWAITLINEITEM1_P_3_entry,long,NUMWAITLINEITEM1_P_3_mapkey01_idxfn,false>
   > NUMWAITLINEITEM1_P_3_map;
   typedef HashIndex<NUMWAITLINEITEM1_P_3_entry,long,NUMWAITLINEITEM1_P_3_mapkey0123_idxfn,true> HashIndex_NUMWAITLINEITEM1_P_3_map_0123;
-  typedef HashIndex<NUMWAITLINEITEM1_P_3_entry,long,NUMWAITLINEITEM1_P_3_mapkey23_idxfn,false> HashIndex_NUMWAITLINEITEM1_P_3_map_23;
+  typedef HashIndex<NUMWAITLINEITEM1_P_3_entry,long,NUMWAITLINEITEM1_P_3_mapkey01_idxfn,false> HashIndex_NUMWAITLINEITEM1_P_3_map_01;
   
-  struct NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry {
+  struct NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry {
     long S_NATIONKEY; STRING_TYPE N_NAME; long __av; 
-    explicit NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry() { /*S_NATIONKEY = 0L; N_NAME = ""; __av = 0L; */ }
-    explicit NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry(const long c0, const STRING_TYPE& c1, const long c2) { S_NATIONKEY = c0; N_NAME = c1; __av = c2; }
-    NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry& other) : S_NATIONKEY( other.S_NATIONKEY ), N_NAME( other.N_NAME ), __av( other.__av ) {}
-    FORCE_INLINE NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry& modify(const long c0, const STRING_TYPE& c1) { S_NATIONKEY = c0; N_NAME = c1;  return *this; }
-    FORCE_INLINE NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry& modify0(const long c0) { S_NATIONKEY = c0;  return *this; }
+    explicit NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry() { /*S_NATIONKEY = 0L; N_NAME = ""; __av = 0L; */ }
+    explicit NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry(const long c0, const STRING_TYPE& c1, const long c2) { S_NATIONKEY = c0; N_NAME = c1; __av = c2; }
+    NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry& other) : S_NATIONKEY( other.S_NATIONKEY ), N_NAME( other.N_NAME ), __av( other.__av ) {}
+    FORCE_INLINE NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry& modify(const long c0, const STRING_TYPE& c1) { S_NATIONKEY = c0; N_NAME = c1;  return *this; }
+    FORCE_INLINE NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry& modify0(const long c0) { S_NATIONKEY = c0;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
@@ -532,35 +511,35 @@ namespace dbtoaster {
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry& e) {
+  struct NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry& e) {
       size_t h = 0;
       hash_combine(h, e.S_NATIONKEY);
       hash_combine(h, e.N_NAME);
       return h;
     }
-    FORCE_INLINE static bool equals(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry& x, const NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry& y) {
+    FORCE_INLINE static bool equals(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry& x, const NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry& y) {
       return x.S_NATIONKEY == y.S_NATIONKEY && x.N_NAME == y.N_NAME;
     }
   };
   
-  struct NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey0_idxfn {
-    FORCE_INLINE static size_t hash(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry& e) {
+  struct NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry& e) {
       size_t h = 0;
       hash_combine(h, e.S_NATIONKEY);
       return h;
     }
-    FORCE_INLINE static bool equals(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry& x, const NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry& y) {
+    FORCE_INLINE static bool equals(const NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry& x, const NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry& y) {
       return x.S_NATIONKEY == y.S_NATIONKEY;
     }
   };
   
-  typedef MultiHashMap<NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry,long,
-    HashIndex<NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry,long,NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey01_idxfn,true>,
-    HashIndex<NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry,long,NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey0_idxfn,false>
-  > NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map;
-  typedef HashIndex<NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry,long,NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey01_idxfn,true> HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_01;
-  typedef HashIndex<NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry,long,NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey0_idxfn,false> HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_0;
+  typedef MultiHashMap<NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry,long,
+    HashIndex<NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry,long,NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey01_idxfn,true>,
+    HashIndex<NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry,long,NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey0_idxfn,false>
+  > NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map;
+  typedef HashIndex<NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry,long,NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey01_idxfn,true> HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_01;
+  typedef HashIndex<NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry,long,NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey0_idxfn,false> HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_0;
   
   struct NUMWAITLINEITEM1_P_4_entry {
     long L1_ORDERKEY; STRING_TYPE O_ORDERSTATUS; long __av; 
@@ -727,22 +706,22 @@ namespace dbtoaster {
   typedef HashIndex<NUMWAITLINEITEM3_E3_2_DELTA_entry,long,NUMWAITLINEITEM3_E3_2_DELTA_mapkey0_idxfn,false> HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0;
   
   struct NUMWAITLINEITEM4_P_3_entry {
-    long S_SUPPKEY; STRING_TYPE S_NAME; STRING_TYPE N_NAME; long __av; 
-    explicit NUMWAITLINEITEM4_P_3_entry() { /*S_SUPPKEY = 0L; S_NAME = ""; N_NAME = ""; __av = 0L; */ }
-    explicit NUMWAITLINEITEM4_P_3_entry(const long c0, const STRING_TYPE& c1, const STRING_TYPE& c2, const long c3) { S_SUPPKEY = c0; S_NAME = c1; N_NAME = c2; __av = c3; }
-    NUMWAITLINEITEM4_P_3_entry(const NUMWAITLINEITEM4_P_3_entry& other) : S_SUPPKEY( other.S_SUPPKEY ), S_NAME( other.S_NAME ), N_NAME( other.N_NAME ), __av( other.__av ) {}
-    FORCE_INLINE NUMWAITLINEITEM4_P_3_entry& modify(const long c0, const STRING_TYPE& c1, const STRING_TYPE& c2) { S_SUPPKEY = c0; S_NAME = c1; N_NAME = c2;  return *this; }
-    FORCE_INLINE NUMWAITLINEITEM4_P_3_entry& modify02(const long c0, const STRING_TYPE& c2) { S_SUPPKEY = c0; N_NAME = c2;  return *this; }
-    FORCE_INLINE NUMWAITLINEITEM4_P_3_entry& modify0(const long c0) { S_SUPPKEY = c0;  return *this; }
+    STRING_TYPE N_NAME; long S_SUPPKEY; STRING_TYPE S_NAME; long __av; 
+    explicit NUMWAITLINEITEM4_P_3_entry() { /*N_NAME = ""; S_SUPPKEY = 0L; S_NAME = ""; __av = 0L; */ }
+    explicit NUMWAITLINEITEM4_P_3_entry(const STRING_TYPE& c0, const long c1, const STRING_TYPE& c2, const long c3) { N_NAME = c0; S_SUPPKEY = c1; S_NAME = c2; __av = c3; }
+    NUMWAITLINEITEM4_P_3_entry(const NUMWAITLINEITEM4_P_3_entry& other) : N_NAME( other.N_NAME ), S_SUPPKEY( other.S_SUPPKEY ), S_NAME( other.S_NAME ), __av( other.__av ) {}
+    FORCE_INLINE NUMWAITLINEITEM4_P_3_entry& modify(const STRING_TYPE& c0, const long c1, const STRING_TYPE& c2) { N_NAME = c0; S_SUPPKEY = c1; S_NAME = c2;  return *this; }
+    FORCE_INLINE NUMWAITLINEITEM4_P_3_entry& modify01(const STRING_TYPE& c0, const long c1) { N_NAME = c0; S_SUPPKEY = c1;  return *this; }
+    FORCE_INLINE NUMWAITLINEITEM4_P_3_entry& modify1(const long c1) { S_SUPPKEY = c1;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
       ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, N_NAME);
+      ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, S_NAME);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, N_NAME);
       ar << ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
@@ -750,29 +729,29 @@ namespace dbtoaster {
   struct NUMWAITLINEITEM4_P_3_mapkey012_idxfn {
     FORCE_INLINE static size_t hash(const NUMWAITLINEITEM4_P_3_entry& e) {
       size_t h = 0;
+      hash_combine(h, e.N_NAME);
       hash_combine(h, e.S_SUPPKEY);
       hash_combine(h, e.S_NAME);
-      hash_combine(h, e.N_NAME);
       return h;
     }
     FORCE_INLINE static bool equals(const NUMWAITLINEITEM4_P_3_entry& x, const NUMWAITLINEITEM4_P_3_entry& y) {
-      return x.S_SUPPKEY == y.S_SUPPKEY && x.S_NAME == y.S_NAME && x.N_NAME == y.N_NAME;
+      return x.N_NAME == y.N_NAME && x.S_SUPPKEY == y.S_SUPPKEY && x.S_NAME == y.S_NAME;
     }
   };
   
-  struct NUMWAITLINEITEM4_P_3_mapkey02_idxfn {
+  struct NUMWAITLINEITEM4_P_3_mapkey01_idxfn {
     FORCE_INLINE static size_t hash(const NUMWAITLINEITEM4_P_3_entry& e) {
       size_t h = 0;
-      hash_combine(h, e.S_SUPPKEY);
       hash_combine(h, e.N_NAME);
+      hash_combine(h, e.S_SUPPKEY);
       return h;
     }
     FORCE_INLINE static bool equals(const NUMWAITLINEITEM4_P_3_entry& x, const NUMWAITLINEITEM4_P_3_entry& y) {
-      return x.S_SUPPKEY == y.S_SUPPKEY && x.N_NAME == y.N_NAME;
+      return x.N_NAME == y.N_NAME && x.S_SUPPKEY == y.S_SUPPKEY;
     }
   };
   
-  struct NUMWAITLINEITEM4_P_3_mapkey0_idxfn {
+  struct NUMWAITLINEITEM4_P_3_mapkey1_idxfn {
     FORCE_INLINE static size_t hash(const NUMWAITLINEITEM4_P_3_entry& e) {
       size_t h = 0;
       hash_combine(h, e.S_SUPPKEY);
@@ -785,12 +764,12 @@ namespace dbtoaster {
   
   typedef MultiHashMap<NUMWAITLINEITEM4_P_3_entry,long,
     HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey012_idxfn,true>,
-    HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey02_idxfn,false>,
-    HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey0_idxfn,false>
+    HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey01_idxfn,false>,
+    HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey1_idxfn,false>
   > NUMWAITLINEITEM4_P_3_map;
   typedef HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey012_idxfn,true> HashIndex_NUMWAITLINEITEM4_P_3_map_012;
-  typedef HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey02_idxfn,false> HashIndex_NUMWAITLINEITEM4_P_3_map_02;
-  typedef HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey0_idxfn,false> HashIndex_NUMWAITLINEITEM4_P_3_map_0;
+  typedef HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey01_idxfn,false> HashIndex_NUMWAITLINEITEM4_P_3_map_01;
+  typedef HashIndex<NUMWAITLINEITEM4_P_3_entry,long,NUMWAITLINEITEM4_P_3_mapkey1_idxfn,false> HashIndex_NUMWAITLINEITEM4_P_3_map_1;
   
   struct NUMWAITSUPPLIER1_DELTA_entry {
     long S_SUPPKEY; STRING_TYPE S_NAME; long S_NATIONKEY; long __av; 
@@ -1049,24 +1028,12 @@ namespace dbtoaster {
   typedef HashIndex<NUMWAITSUPPLIER1_E3_1_entry,long,NUMWAITSUPPLIER1_E3_1_mapkey01_idxfn,true> HashIndex_NUMWAITSUPPLIER1_E3_1_map_01;
   typedef HashIndex<NUMWAITSUPPLIER1_E3_1_entry,long,NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn,false> HashIndex_NUMWAITSUPPLIER1_E3_1_map_0;
   
-  struct tuple2_L_L {
-    long _1; long __av;
-    explicit tuple2_L_L() { }
-    explicit tuple2_L_L(const long c1, long c__av=0L) { _1 = c1; __av = c__av;}
-    int operator==(const tuple2_L_L &rhs) const { return ((this->_1==rhs._1)); }
-    FORCE_INLINE tuple2_L_L& modify(const long c0, long c__av) { _1 = c0; __av = c__av; return *this; }
-    static bool equals(const tuple2_L_L &x, const tuple2_L_L &y) { return ((x._1==y._1)); }
-    static long hash(const tuple2_L_L &e) {
-      size_t h = 0;
-      hash_combine(h, e._1);
-      return h;
-    }
-  };
+  
   
   /* Type definition providing a way to access the results of the sql program */
   struct tlq_t{
     struct timeval t0,t; long tT,tN,tS,tLastN;
-    tlq_t(): tN(0), tS(0),tLastN(0) { gettimeofday(&t0,NULL); }
+    tlq_t(): tN(0), tS(0), tLastN(0) { gettimeofday(&t0,NULL); }
   
   /* Serialization Code */
     template<class Archive>
@@ -1093,9 +1060,9 @@ namespace dbtoaster {
   
   /* Type definition providing a way to incrementally maintain the results of the sql program */
   struct data_t : tlq_t{
-    data_t(): tlq_t(), agg1(16U) {
-      c2 = STRING_TYPE("F");
-      c1 = STRING_TYPE("SAUDI ARABIA");
+    data_t(): tlq_t() {
+      c1 = STRING_TYPE("F");
+      c2 = STRING_TYPE("SAUDI ARABIA");
     }
   
   
@@ -1120,14 +1087,10 @@ namespace dbtoaster {
         }
         tN += DELTA_LINEITEM.size;
 
-
         NUMWAITLINEITEM3_E3_2_DELTA.clear();
         NUMWAITLINEITEM3_L2_2_DELTA.clear();
-        NUMWAITLINEITEM1_DOMAIN1.clear();
-        STRING_TYPE l1 = c1;
-        STRING_TYPE l2 = c2;
-        agg1.clear();        
-        {
+        NUMWAITLINEITEM1_DOMAIN1_P_3.clear();
+        { 
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
                 long l1_orderkey = DELTA_LINEITEM.orderkey[i];
@@ -1141,374 +1104,363 @@ namespace dbtoaster {
                 // STRING_TYPE l2_returnflag = DELTA_LINEITEM.returnflag[i];
                 // STRING_TYPE l2_linestatus = DELTA_LINEITEM.linestatus[i];
                 // date l2_shipdate = DELTA_LINEITEM.shipdate[i];
-                // date l2_commitdate = DELTA_LINEITEM.commitdate[i];
-                // date l2_receiptdate = DELTA_LINEITEM.receiptdate[i];
+                date l2_commitdate = DELTA_LINEITEM.commitdate[i];
+                date l2_receiptdate = DELTA_LINEITEM.receiptdate[i];
                 // STRING_TYPE l2_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
                 // STRING_TYPE l2_shipmode = DELTA_LINEITEM.shipmode[i];
                 // STRING_TYPE l2_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
-                NUMWAITLINEITEM3_E3_2_DELTA.addOrDelOnZero(se1.modify(l1_orderkey,l2_suppkey),v1);            
-
-                // long l1_orderkey = e2->lineitem_orderkey;
-                // long l3_partkey = DELTA_LINEITEM.partkey[i];
-                long l3_suppkey = DELTA_LINEITEM.suppkey[i];
-                // long l3_linenumber = DELTA_LINEITEM.linenumber[i];
-                // DOUBLE_TYPE l3_quantity = DELTA_LINEITEM.quantity[i];
-                // DOUBLE_TYPE l3_extendedprice = DELTA_LINEITEM.extendedprice[i];
-                // DOUBLE_TYPE l3_discount = DELTA_LINEITEM.discount[i];
-                // DOUBLE_TYPE l3_tax = DELTA_LINEITEM.tax[i];
-                // STRING_TYPE l3_returnflag = DELTA_LINEITEM.returnflag[i];
-                // STRING_TYPE l3_linestatus = DELTA_LINEITEM.linestatus[i];
-                // date l3_shipdate = DELTA_LINEITEM.shipdate[i];
-                date l3_commitdate = DELTA_LINEITEM.commitdate[i];
-                date l3_receiptdate = DELTA_LINEITEM.receiptdate[i];
-                // STRING_TYPE l3_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
-                // STRING_TYPE l3_shipmode = DELTA_LINEITEM.shipmode[i];
-                // STRING_TYPE l3_comment = DELTA_LINEITEM.comment[i];
+                NUMWAITLINEITEM3_E3_2_DELTA.addOrDelOnZero(se1.modify(l1_orderkey,l2_suppkey),v1);
                 long v2 = 1L;
-                (/*if */(l3_receiptdate > l3_commitdate) ? NUMWAITLINEITEM3_L2_2_DELTA.addOrDelOnZero(se2.modify(l1_orderkey,l3_suppkey),v2) : (void)0);
-
+                (/*if */(l2_receiptdate > l2_commitdate) ? NUMWAITLINEITEM3_L2_2_DELTA.addOrDelOnZero(se2.modify(l1_orderkey,l2_suppkey),v2) : (void)0);
                 long v3 = 1L;
-                agg1.addOrDelOnZero(st1.modify(l1_orderkey,(v3 != 0 ? 1L : 0L)), (v3 != 0 ? 1L : 0L));                
+                NUMWAITLINEITEM1_DOMAIN1_P_3.addOrDelOnZero(se3.modify(l1_orderkey),(v3 != 0 ? 1L : 0L));
           }
         }
-
-        {  // temp foreach
-          const HashIndex<tuple2_L_L, long>* i4 = static_cast<HashIndex<tuple2_L_L, long>*>(agg1.index[0]);
-          HashIndex<tuple2_L_L, long>::IdxNode* n4; 
-          tuple2_L_L* e4;
+        
+        STRING_TYPE l1 = c1;
+        STRING_TYPE l2 = c2;
+        long l3 = 0L;
+        {  // foreach
+          const HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0* i4 = static_cast<HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0*>(NUMWAITLINEITEM1_DOMAIN1_P_3.index[0]);
+          HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0::IdxNode* n4; 
+          NUMWAITLINEITEM1_DOMAIN1_P_3_entry* e4;
         
           for (size_t i = 0; i < i4->size_; i++)
           {
             n4 = i4->buckets_ + i;
             while (n4 && (e4 = n4->obj))
             {
-              long l1_orderkey = e4->_1;  
-              long v4 = e4->__av; 
-            NUMWAITLINEITEM1_DOMAIN1.addOrDelOnZero(se3.modify(l1,l2,l1_orderkey),v4);      
+                long l1_orderkey = e4->L1_ORDERKEY;
+                long v4 = e4->__av;
+                { //slice 
+                  const HashIndex_NUMWAITLINEITEM1_P_3_map_01* i5 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3_map_01*>(NUMWAITLINEITEM1_P_3.index[1]);
+                  const HASH_RES_t h3 = NUMWAITLINEITEM1_P_3_mapkey01_idxfn::hash(se8.modify01(l2, l1_orderkey));
+                  HashIndex_NUMWAITLINEITEM1_P_3_map_01::IdxNode* n5 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3_map_01::IdxNode*>(i5->slice(se8, h3));
+                  NUMWAITLINEITEM1_P_3_entry* e5;
+                 
+                  if (n5 && (e5 = n5->obj)) {
+                    do {                
+                      long s_suppkey = e5->S_SUPPKEY;
+                      STRING_TYPE s_name = e5->S_NAME;
+                      long v5 = e5->__av;
+                      long agg1 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i6 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
+                        const HASH_RES_t h1 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se6.modify0(l1_orderkey));
+                        HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n6 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i6->slice(se6, h1));
+                        NUMWAITSUPPLIER1_L2_1_entry* e6;
+                       
+                        if (n6 && (e6 = n6->obj)) {
+                          do {                
+                            long l3_suppkey = e6->L3_SUPPKEY;
+                            long v6 = e6->__av;
+                            (/*if */(l3_suppkey != s_suppkey) ? agg1 += v6 : 0L);
+                            n6 = n6->nxt;
+                          } while (n6 && (e6 = n6->obj) && h1 == n6->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se6, *e6)); 
+                        }
+                      }long agg2 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i7 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
+                        const HASH_RES_t h2 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se7.modify0(l1_orderkey));
+                        HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n7 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i7->slice(se7, h2));
+                        NUMWAITSUPPLIER1_E3_1_entry* e7;
+                       
+                        if (n7 && (e7 = n7->obj)) {
+                          do {                
+                            long l2_suppkey = e7->L2_SUPPKEY;
+                            long v7 = e7->__av;
+                            (/*if */(l2_suppkey != s_suppkey) ? agg2 += v7 : 0L);
+                            n7 = n7->nxt;
+                          } while (n7 && (e7 = n7->obj) && h2 == n7->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se7, *e7)); 
+                        }
+                      }(/*if */(l3 == agg1) ? NUMWAIT.addOrDelOnZero(se4.modify(s_name),(((v4 != 0 ? 1L : 0L) * (NUMWAITLINEITEM1_P_4.getValueOrDefault(se5.modify(l1_orderkey,l1)) * (v5 * (agg2 != 0 ? 1L : 0L)))) * -1L)) : (void)0);
+                      n5 = n5->nxt;
+                    } while (n5 && (e5 = n5->obj) && h3 == n5->hash &&  NUMWAITLINEITEM1_P_3_mapkey01_idxfn::equals(se8, *e5)); 
+                  }
+                }
               n4 = n4->nxt;
             }
           }
-        }long l3 = 0L;
-        STRING_TYPE l4 = c1;
+        }STRING_TYPE l4 = c1;
         STRING_TYPE l5 = c2;
-        { //slice 
-          const HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01* i5 = static_cast<HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01*>(NUMWAITLINEITEM1_DOMAIN1.index[1]);
-          const HASH_RES_t h4 = NUMWAITLINEITEM1_DOMAIN1_mapkey01_idxfn::hash(se9.modify01(l4, l5));
-          HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01::IdxNode* n5 = static_cast<HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01::IdxNode*>(i5->slice(se9, h4));
-          NUMWAITLINEITEM1_DOMAIN1_entry* e5;
-         
-          if (n5 && (e5 = n5->obj)) {
-            do {                
-              long l1_orderkey = e5->L1_ORDERKEY;
-              long v5 = e5->__av;
-              { //slice 
-                const HashIndex_NUMWAITLINEITEM1_P_3_map_23* i6 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3_map_23*>(NUMWAITLINEITEM1_P_3.index[1]);
-                const HASH_RES_t h3 = NUMWAITLINEITEM1_P_3_mapkey23_idxfn::hash(se8.modify23(l1_orderkey, l4));
-                HashIndex_NUMWAITLINEITEM1_P_3_map_23::IdxNode* n6 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3_map_23::IdxNode*>(i6->slice(se8, h3));
-                NUMWAITLINEITEM1_P_3_entry* e6;
-               
-                if (n6 && (e6 = n6->obj)) {
-                  do {                
-                    long s_suppkey = e6->S_SUPPKEY;
-                    STRING_TYPE s_name = e6->S_NAME;
-                    long v6 = e6->__av;
-                    long agg2 = 0L;
-                    { //slice 
-                      const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i7 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
-                      const HASH_RES_t h1 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se5.modify0(l1_orderkey));
-                      HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n7 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i7->slice(se5, h1));
-                      NUMWAITSUPPLIER1_L2_1_entry* e7;
-                     
-                      if (n7 && (e7 = n7->obj)) {
-                        do {                
-                          long l3_suppkey = e7->L3_SUPPKEY;
-                          long v7 = e7->__av;
-                          (/*if */(l3_suppkey != s_suppkey) ? agg2 += v7 : 0L);
-                          n7 = n7->nxt;
-                        } while (n7 && (e7 = n7->obj) && h1 == n7->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se5, *e7)); 
-                      }
-                    }long agg3 = 0L;
-                    { //slice 
-                      const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i8 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
-                      const HASH_RES_t h2 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se7.modify0(l1_orderkey));
-                      HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n8 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i8->slice(se7, h2));
-                      NUMWAITSUPPLIER1_E3_1_entry* e8;
-                     
-                      if (n8 && (e8 = n8->obj)) {
-                        do {                
-                          long l2_suppkey = e8->L2_SUPPKEY;
-                          long v8 = e8->__av;
-                          (/*if */(l2_suppkey != s_suppkey) ? agg3 += v8 : 0L);
-                          n8 = n8->nxt;
-                        } while (n8 && (e8 = n8->obj) && h2 == n8->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se7, *e8)); 
-                      }
-                    }(/*if */(l3 == agg2) ? NUMWAIT.addOrDelOnZero(se4.modify(s_name),(((v5 != 0 ? 1L : 0L) * (v6 * (NUMWAITLINEITEM1_P_4.getValueOrDefault(se6.modify(l1_orderkey,l5)) * (agg3 != 0 ? 1L : 0L)))) * -1L)) : (void)0);
-                    n6 = n6->nxt;
-                  } while (n6 && (e6 = n6->obj) && h3 == n6->hash &&  NUMWAITLINEITEM1_P_3_mapkey23_idxfn::equals(se8, *e6)); 
-                }
-              }
-              n5 = n5->nxt;
-            } while (n5 && (e5 = n5->obj) && h4 == n5->hash &&  NUMWAITLINEITEM1_DOMAIN1_mapkey01_idxfn::equals(se9, *e5)); 
-          }
-        }long l6 = 0L;
-        STRING_TYPE l7 = c1;
-        STRING_TYPE l8 = c2;
-        { //slice 
-          const HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01* i9 = static_cast<HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01*>(NUMWAITLINEITEM1_DOMAIN1.index[1]);
-          const HASH_RES_t h10 = NUMWAITLINEITEM1_DOMAIN1_mapkey01_idxfn::hash(se16.modify01(l7, l8));
-          HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01::IdxNode* n9 = static_cast<HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01::IdxNode*>(i9->slice(se16, h10));
-          NUMWAITLINEITEM1_DOMAIN1_entry* e9;
-         
-          if (n9 && (e9 = n9->obj)) {
-            do {                
-              long l1_orderkey = e9->L1_ORDERKEY;
-              long v9 = e9->__av;
-              { //slice 
-                const HashIndex_NUMWAITLINEITEM1_P_3_map_23* i10 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3_map_23*>(NUMWAITLINEITEM1_P_3.index[1]);
-                const HASH_RES_t h9 = NUMWAITLINEITEM1_P_3_mapkey23_idxfn::hash(se15.modify23(l1_orderkey, l7));
-                HashIndex_NUMWAITLINEITEM1_P_3_map_23::IdxNode* n10 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3_map_23::IdxNode*>(i10->slice(se15, h9));
-                NUMWAITLINEITEM1_P_3_entry* e10;
-               
-                if (n10 && (e10 = n10->obj)) {
-                  do {                
-                    long s_suppkey = e10->S_SUPPKEY;
-                    STRING_TYPE s_name = e10->S_NAME;
-                    long v10 = e10->__av;
-                    long agg4 = 0L;
-                    { //slice 
-                      const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i11 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
-                      const HASH_RES_t h5 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se10.modify0(l1_orderkey));
-                      HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n11 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i11->slice(se10, h5));
-                      NUMWAITSUPPLIER1_L2_1_entry* e11;
-                     
-                      if (n11 && (e11 = n11->obj)) {
-                        do {                
-                          long l3_suppkey = e11->L3_SUPPKEY;
-                          long v11 = e11->__av;
-                          (/*if */(l3_suppkey != s_suppkey) ? agg4 += v11 : 0L);
-                          n11 = n11->nxt;
-                        } while (n11 && (e11 = n11->obj) && h5 == n11->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se10, *e11)); 
-                      }
-                    }long agg5 = 0L;
-                    { //slice 
-                      const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0* i12 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0*>(NUMWAITLINEITEM3_L2_2_DELTA.index[1]);
-                      const HASH_RES_t h6 = NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::hash(se11.modify0(l1_orderkey));
-                      HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode* n12 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode*>(i12->slice(se11, h6));
-                      NUMWAITLINEITEM3_L2_2_DELTA_entry* e12;
-                     
-                      if (n12 && (e12 = n12->obj)) {
-                        do {                
-                          long l3_suppkey = e12->L3_SUPPKEY;
-                          long v12 = e12->__av;
-                          (/*if */(l3_suppkey != s_suppkey) ? agg5 += v12 : 0L);
-                          n12 = n12->nxt;
-                        } while (n12 && (e12 = n12->obj) && h6 == n12->hash &&  NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::equals(se11, *e12)); 
-                      }
-                    }long agg6 = 0L;
-                    { //slice 
-                      const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i13 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
-                      const HASH_RES_t h7 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se13.modify0(l1_orderkey));
-                      HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n13 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i13->slice(se13, h7));
-                      NUMWAITSUPPLIER1_E3_1_entry* e13;
-                     
-                      if (n13 && (e13 = n13->obj)) {
-                        do {                
-                          long l2_suppkey = e13->L2_SUPPKEY;
-                          long v13 = e13->__av;
-                          (/*if */(l2_suppkey != s_suppkey) ? agg6 += v13 : 0L);
-                          n13 = n13->nxt;
-                        } while (n13 && (e13 = n13->obj) && h7 == n13->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se13, *e13)); 
-                      }
-                    }long agg7 = 0L;
-                    { //slice 
-                      const HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0* i14 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0*>(NUMWAITLINEITEM3_E3_2_DELTA.index[1]);
-                      const HASH_RES_t h8 = NUMWAITLINEITEM3_E3_2_DELTA_mapkey0_idxfn::hash(se14.modify0(l1_orderkey));
-                      HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0::IdxNode* n14 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0::IdxNode*>(i14->slice(se14, h8));
-                      NUMWAITLINEITEM3_E3_2_DELTA_entry* e14;
-                     
-                      if (n14 && (e14 = n14->obj)) {
-                        do {                
-                          long l2_suppkey = e14->L2_SUPPKEY;
-                          long v14 = e14->__av;
-                          (/*if */(l2_suppkey != s_suppkey) ? agg7 += v14 : 0L);
-                          n14 = n14->nxt;
-                        } while (n14 && (e14 = n14->obj) && h8 == n14->hash &&  NUMWAITLINEITEM3_E3_2_DELTA_mapkey0_idxfn::equals(se14, *e14)); 
-                      }
-                    }(/*if */(l6 == (agg4 + agg5)) ? NUMWAIT.addOrDelOnZero(se4.modify(s_name),((v9 != 0 ? 1L : 0L) * (v10 * (NUMWAITLINEITEM1_P_4.getValueOrDefault(se12.modify(l1_orderkey,l8)) * ((agg6 + agg7) != 0 ? 1L : 0L))))) : (void)0);
-                    n10 = n10->nxt;
-                  } while (n10 && (e10 = n10->obj) && h9 == n10->hash &&  NUMWAITLINEITEM1_P_3_mapkey23_idxfn::equals(se15, *e10)); 
-                }
-              }
-              n9 = n9->nxt;
-            } while (n9 && (e9 = n9->obj) && h10 == n9->hash &&  NUMWAITLINEITEM1_DOMAIN1_mapkey01_idxfn::equals(se16, *e9)); 
-          }
-        }long l9 = 0L;
-        STRING_TYPE l10 = c1;
-        STRING_TYPE l11 = c2;
-        { //slice 
-          const HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01* i15 = static_cast<HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01*>(NUMWAITLINEITEM1_DOMAIN1.index[1]);
-          const HASH_RES_t h17 = NUMWAITLINEITEM1_DOMAIN1_mapkey01_idxfn::hash(se24.modify01(l10, l11));
-          HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01::IdxNode* n15 = static_cast<HashIndex_NUMWAITLINEITEM1_DOMAIN1_map_01::IdxNode*>(i15->slice(se24, h17));
-          NUMWAITLINEITEM1_DOMAIN1_entry* e15;
-         
-          if (n15 && (e15 = n15->obj)) {
-            do {                
-              long l1_orderkey = e15->L1_ORDERKEY;
-              long v15 = e15->__av;
-              { //slice 
-                const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0* i16 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0*>(NUMWAITLINEITEM3_L2_2_DELTA.index[1]);
-                const HASH_RES_t h16 = NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::hash(se23.modify0(l1_orderkey));
-                HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode* n16 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode*>(i16->slice(se23, h16));
-                NUMWAITLINEITEM3_L2_2_DELTA_entry* e16;
-               
-                if (n16 && (e16 = n16->obj)) {
-                  do {                
-                    long s_suppkey = e16->L3_SUPPKEY;
-                    long v16 = e16->__av;
-                    long agg8 = 0L;
-                    { //slice 
-                      const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i17 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
-                      const HASH_RES_t h11 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se17.modify0(l1_orderkey));
-                      HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n17 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i17->slice(se17, h11));
-                      NUMWAITSUPPLIER1_L2_1_entry* e17;
-                     
-                      if (n17 && (e17 = n17->obj)) {
-                        do {                
-                          long l3_suppkey = e17->L3_SUPPKEY;
-                          long v17 = e17->__av;
-                          (/*if */(l3_suppkey != s_suppkey) ? agg8 += v17 : 0L);
-                          n17 = n17->nxt;
-                        } while (n17 && (e17 = n17->obj) && h11 == n17->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se17, *e17)); 
-                      }
-                    }long agg9 = 0L;
-                    { //slice 
-                      const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0* i18 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0*>(NUMWAITLINEITEM3_L2_2_DELTA.index[1]);
-                      const HASH_RES_t h12 = NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::hash(se18.modify0(l1_orderkey));
-                      HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode* n18 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode*>(i18->slice(se18, h12));
-                      NUMWAITLINEITEM3_L2_2_DELTA_entry* e18;
-                     
-                      if (n18 && (e18 = n18->obj)) {
-                        do {                
-                          long l3_suppkey = e18->L3_SUPPKEY;
-                          long v18 = e18->__av;
-                          (/*if */(l3_suppkey != s_suppkey) ? agg9 += v18 : 0L);
-                          n18 = n18->nxt;
-                        } while (n18 && (e18 = n18->obj) && h12 == n18->hash &&  NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::equals(se18, *e18)); 
-                      }
-                    }{ //slice 
-                      const HashIndex_NUMWAITLINEITEM4_P_3_map_02* i19 = static_cast<HashIndex_NUMWAITLINEITEM4_P_3_map_02*>(NUMWAITLINEITEM4_P_3.index[1]);
-                      const HASH_RES_t h15 = NUMWAITLINEITEM4_P_3_mapkey02_idxfn::hash(se22.modify02(s_suppkey, l10));
-                      HashIndex_NUMWAITLINEITEM4_P_3_map_02::IdxNode* n19 = static_cast<HashIndex_NUMWAITLINEITEM4_P_3_map_02::IdxNode*>(i19->slice(se22, h15));
-                      NUMWAITLINEITEM4_P_3_entry* e19;
-                     
-                      if (n19 && (e19 = n19->obj)) {
-                        do {                
-                          STRING_TYPE s_name = e19->S_NAME;
-                          long v19 = e19->__av;
-                          long agg10 = 0L;
-                          { //slice 
-                            const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i20 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
-                            const HASH_RES_t h13 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se20.modify0(l1_orderkey));
-                            HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n20 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i20->slice(se20, h13));
-                            NUMWAITSUPPLIER1_E3_1_entry* e20;
-                           
-                            if (n20 && (e20 = n20->obj)) {
-                              do {                
-                                long l2_suppkey = e20->L2_SUPPKEY;
-                                long v20 = e20->__av;
-                                (/*if */(l2_suppkey != s_suppkey) ? agg10 += v20 : 0L);
-                                n20 = n20->nxt;
-                              } while (n20 && (e20 = n20->obj) && h13 == n20->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se20, *e20)); 
-                            }
-                          }long agg11 = 0L;
-                          { //slice 
-                            const HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0* i21 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0*>(NUMWAITLINEITEM3_E3_2_DELTA.index[1]);
-                            const HASH_RES_t h14 = NUMWAITLINEITEM3_E3_2_DELTA_mapkey0_idxfn::hash(se21.modify0(l1_orderkey));
-                            HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0::IdxNode* n21 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0::IdxNode*>(i21->slice(se21, h14));
-                            NUMWAITLINEITEM3_E3_2_DELTA_entry* e21;
-                           
-                            if (n21 && (e21 = n21->obj)) {
-                              do {                
-                                long l2_suppkey = e21->L2_SUPPKEY;
-                                long v21 = e21->__av;
-                                (/*if */(l2_suppkey != s_suppkey) ? agg11 += v21 : 0L);
-                                n21 = n21->nxt;
-                              } while (n21 && (e21 = n21->obj) && h14 == n21->hash &&  NUMWAITLINEITEM3_E3_2_DELTA_mapkey0_idxfn::equals(se21, *e21)); 
-                            }
-                          }(/*if */(l9 == (agg8 + agg9)) ? NUMWAIT.addOrDelOnZero(se4.modify(s_name),((v15 != 0 ? 1L : 0L) * (v16 * (v19 * (NUMWAITLINEITEM1_P_4.getValueOrDefault(se19.modify(l1_orderkey,l11)) * ((agg10 + agg11) != 0 ? 1L : 0L)))))) : (void)0);
-                          n19 = n19->nxt;
-                        } while (n19 && (e19 = n19->obj) && h15 == n19->hash &&  NUMWAITLINEITEM4_P_3_mapkey02_idxfn::equals(se22, *e19)); 
-                      }
-                    }
-                    n16 = n16->nxt;
-                  } while (n16 && (e16 = n16->obj) && h16 == n16->hash &&  NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::equals(se23, *e16)); 
-                }
-              }
-              n15 = n15->nxt;
-            } while (n15 && (e15 = n15->obj) && h17 == n15->hash &&  NUMWAITLINEITEM1_DOMAIN1_mapkey01_idxfn::equals(se24, *e15)); 
-          }
-        }{  // foreach
-          const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01* i22 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01*>(NUMWAITLINEITEM3_L2_2_DELTA.index[0]);
-          HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01::IdxNode* n22; 
-          NUMWAITLINEITEM3_L2_2_DELTA_entry* e22;
+        long l6 = 0L;
+        {  // foreach
+          const HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0* i8 = static_cast<HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0*>(NUMWAITLINEITEM1_DOMAIN1_P_3.index[0]);
+          HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0::IdxNode* n8; 
+          NUMWAITLINEITEM1_DOMAIN1_P_3_entry* e8;
         
-          for (size_t i = 0; i < i22->size_; i++)
+          for (size_t i = 0; i < i8->size_; i++)
           {
-            n22 = i22->buckets_ + i;
-            while (n22 && (e22 = n22->obj))
+            n8 = i8->buckets_ + i;
+            while (n8 && (e8 = n8->obj))
             {
-                long l1_orderkey = e22->L1_ORDERKEY;
-                long s_suppkey = e22->L3_SUPPKEY;
-                long v22 = e22->__av;
+                long l1_orderkey = e8->L1_ORDERKEY;
+                long v8 = e8->__av;
                 { //slice 
-                  const HashIndex_NUMWAITORDERS1LINEITEM1_map_0* i23 = static_cast<HashIndex_NUMWAITORDERS1LINEITEM1_map_0*>(NUMWAITORDERS1LINEITEM1.index[1]);
-                  const HASH_RES_t h18 = NUMWAITORDERS1LINEITEM1_mapkey0_idxfn::hash(se26.modify0(s_suppkey));
-                  HashIndex_NUMWAITORDERS1LINEITEM1_map_0::IdxNode* n23 = static_cast<HashIndex_NUMWAITORDERS1LINEITEM1_map_0::IdxNode*>(i23->slice(se26, h18));
-                  NUMWAITORDERS1LINEITEM1_entry* e23;
+                  const HashIndex_NUMWAITLINEITEM1_P_3_map_01* i9 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3_map_01*>(NUMWAITLINEITEM1_P_3.index[1]);
+                  const HASH_RES_t h8 = NUMWAITLINEITEM1_P_3_mapkey01_idxfn::hash(se14.modify01(l5, l1_orderkey));
+                  HashIndex_NUMWAITLINEITEM1_P_3_map_01::IdxNode* n9 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3_map_01::IdxNode*>(i9->slice(se14, h8));
+                  NUMWAITLINEITEM1_P_3_entry* e9;
                  
-                  if (n23 && (e23 = n23->obj)) {
+                  if (n9 && (e9 = n9->obj)) {
                     do {                
-                      STRING_TYPE s_name = e23->S_NAME;
-                      long v23 = e23->__av;
-                      NUMWAITORDERS1.addOrDelOnZero(se25.modify(s_suppkey,s_name,l1_orderkey),(v22 * v23));
-                      n23 = n23->nxt;
-                    } while (n23 && (e23 = n23->obj) && h18 == n23->hash &&  NUMWAITORDERS1LINEITEM1_mapkey0_idxfn::equals(se26, *e23)); 
+                      long s_suppkey = e9->S_SUPPKEY;
+                      STRING_TYPE s_name = e9->S_NAME;
+                      long v9 = e9->__av;
+                      long agg3 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i10 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
+                        const HASH_RES_t h4 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se10.modify0(l1_orderkey));
+                        HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n10 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i10->slice(se10, h4));
+                        NUMWAITSUPPLIER1_L2_1_entry* e10;
+                       
+                        if (n10 && (e10 = n10->obj)) {
+                          do {                
+                            long l3_suppkey = e10->L3_SUPPKEY;
+                            long v10 = e10->__av;
+                            (/*if */(l3_suppkey != s_suppkey) ? agg3 += v10 : 0L);
+                            n10 = n10->nxt;
+                          } while (n10 && (e10 = n10->obj) && h4 == n10->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se10, *e10)); 
+                        }
+                      }long agg4 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0* i11 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0*>(NUMWAITLINEITEM3_L2_2_DELTA.index[1]);
+                        const HASH_RES_t h5 = NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::hash(se11.modify0(l1_orderkey));
+                        HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode* n11 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode*>(i11->slice(se11, h5));
+                        NUMWAITLINEITEM3_L2_2_DELTA_entry* e11;
+                       
+                        if (n11 && (e11 = n11->obj)) {
+                          do {                
+                            long l3_suppkey = e11->L3_SUPPKEY;
+                            long v11 = e11->__av;
+                            (/*if */(l3_suppkey != s_suppkey) ? agg4 += v11 : 0L);
+                            n11 = n11->nxt;
+                          } while (n11 && (e11 = n11->obj) && h5 == n11->hash &&  NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::equals(se11, *e11)); 
+                        }
+                      }long agg5 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i12 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
+                        const HASH_RES_t h6 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se12.modify0(l1_orderkey));
+                        HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n12 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i12->slice(se12, h6));
+                        NUMWAITSUPPLIER1_E3_1_entry* e12;
+                       
+                        if (n12 && (e12 = n12->obj)) {
+                          do {                
+                            long l2_suppkey = e12->L2_SUPPKEY;
+                            long v12 = e12->__av;
+                            (/*if */(l2_suppkey != s_suppkey) ? agg5 += v12 : 0L);
+                            n12 = n12->nxt;
+                          } while (n12 && (e12 = n12->obj) && h6 == n12->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se12, *e12)); 
+                        }
+                      }long agg6 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0* i13 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0*>(NUMWAITLINEITEM3_E3_2_DELTA.index[1]);
+                        const HASH_RES_t h7 = NUMWAITLINEITEM3_E3_2_DELTA_mapkey0_idxfn::hash(se13.modify0(l1_orderkey));
+                        HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0::IdxNode* n13 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0::IdxNode*>(i13->slice(se13, h7));
+                        NUMWAITLINEITEM3_E3_2_DELTA_entry* e13;
+                       
+                        if (n13 && (e13 = n13->obj)) {
+                          do {                
+                            long l2_suppkey = e13->L2_SUPPKEY;
+                            long v13 = e13->__av;
+                            (/*if */(l2_suppkey != s_suppkey) ? agg6 += v13 : 0L);
+                            n13 = n13->nxt;
+                          } while (n13 && (e13 = n13->obj) && h7 == n13->hash &&  NUMWAITLINEITEM3_E3_2_DELTA_mapkey0_idxfn::equals(se13, *e13)); 
+                        }
+                      }(/*if */(l6 == (agg3 + agg4)) ? NUMWAIT.addOrDelOnZero(se4.modify(s_name),((v8 != 0 ? 1L : 0L) * (NUMWAITLINEITEM1_P_4.getValueOrDefault(se9.modify(l1_orderkey,l4)) * (v9 * ((agg5 + agg6) != 0 ? 1L : 0L))))) : (void)0);
+                      n9 = n9->nxt;
+                    } while (n9 && (e9 = n9->obj) && h8 == n9->hash &&  NUMWAITLINEITEM1_P_3_mapkey01_idxfn::equals(se14, *e9)); 
                   }
                 }
-              n22 = n22->nxt;
+              n8 = n8->nxt;
+            }
+          }
+        }STRING_TYPE l7 = c1;
+        STRING_TYPE l8 = c2;
+        long l9 = 0L;
+        {  // foreach
+          const HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0* i14 = static_cast<HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0*>(NUMWAITLINEITEM1_DOMAIN1_P_3.index[0]);
+          HashIndex_NUMWAITLINEITEM1_DOMAIN1_P_3_map_0::IdxNode* n14; 
+          NUMWAITLINEITEM1_DOMAIN1_P_3_entry* e14;
+        
+          for (size_t i = 0; i < i14->size_; i++)
+          {
+            n14 = i14->buckets_ + i;
+            while (n14 && (e14 = n14->obj))
+            {
+                long l1_orderkey = e14->L1_ORDERKEY;
+                long v14 = e14->__av;
+                { //slice 
+                  const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0* i15 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0*>(NUMWAITLINEITEM3_L2_2_DELTA.index[1]);
+                  const HASH_RES_t h14 = NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::hash(se21.modify0(l1_orderkey));
+                  HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode* n15 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode*>(i15->slice(se21, h14));
+                  NUMWAITLINEITEM3_L2_2_DELTA_entry* e15;
+                 
+                  if (n15 && (e15 = n15->obj)) {
+                    do {                
+                      long s_suppkey = e15->L3_SUPPKEY;
+                      long v15 = e15->__av;
+                      long agg7 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i16 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
+                        const HASH_RES_t h9 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se15.modify0(l1_orderkey));
+                        HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n16 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i16->slice(se15, h9));
+                        NUMWAITSUPPLIER1_L2_1_entry* e16;
+                       
+                        if (n16 && (e16 = n16->obj)) {
+                          do {                
+                            long l3_suppkey = e16->L3_SUPPKEY;
+                            long v16 = e16->__av;
+                            (/*if */(l3_suppkey != s_suppkey) ? agg7 += v16 : 0L);
+                            n16 = n16->nxt;
+                          } while (n16 && (e16 = n16->obj) && h9 == n16->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se15, *e16)); 
+                        }
+                      }long agg8 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0* i17 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0*>(NUMWAITLINEITEM3_L2_2_DELTA.index[1]);
+                        const HASH_RES_t h10 = NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::hash(se16.modify0(l1_orderkey));
+                        HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode* n17 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_0::IdxNode*>(i17->slice(se16, h10));
+                        NUMWAITLINEITEM3_L2_2_DELTA_entry* e17;
+                       
+                        if (n17 && (e17 = n17->obj)) {
+                          do {                
+                            long l3_suppkey = e17->L3_SUPPKEY;
+                            long v17 = e17->__av;
+                            (/*if */(l3_suppkey != s_suppkey) ? agg8 += v17 : 0L);
+                            n17 = n17->nxt;
+                          } while (n17 && (e17 = n17->obj) && h10 == n17->hash &&  NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::equals(se16, *e17)); 
+                        }
+                      }{ //slice 
+                        const HashIndex_NUMWAITLINEITEM4_P_3_map_01* i18 = static_cast<HashIndex_NUMWAITLINEITEM4_P_3_map_01*>(NUMWAITLINEITEM4_P_3.index[1]);
+                        const HASH_RES_t h13 = NUMWAITLINEITEM4_P_3_mapkey01_idxfn::hash(se20.modify01(l8, s_suppkey));
+                        HashIndex_NUMWAITLINEITEM4_P_3_map_01::IdxNode* n18 = static_cast<HashIndex_NUMWAITLINEITEM4_P_3_map_01::IdxNode*>(i18->slice(se20, h13));
+                        NUMWAITLINEITEM4_P_3_entry* e18;
+                       
+                        if (n18 && (e18 = n18->obj)) {
+                          do {                
+                            STRING_TYPE s_name = e18->S_NAME;
+                            long v18 = e18->__av;
+                            long agg9 = 0L;
+                            { //slice 
+                              const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i19 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
+                              const HASH_RES_t h11 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se18.modify0(l1_orderkey));
+                              HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n19 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i19->slice(se18, h11));
+                              NUMWAITSUPPLIER1_E3_1_entry* e19;
+                             
+                              if (n19 && (e19 = n19->obj)) {
+                                do {                
+                                  long l2_suppkey = e19->L2_SUPPKEY;
+                                  long v19 = e19->__av;
+                                  (/*if */(l2_suppkey != s_suppkey) ? agg9 += v19 : 0L);
+                                  n19 = n19->nxt;
+                                } while (n19 && (e19 = n19->obj) && h11 == n19->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se18, *e19)); 
+                              }
+                            }long agg10 = 0L;
+                            { //slice 
+                              const HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0* i20 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0*>(NUMWAITLINEITEM3_E3_2_DELTA.index[1]);
+                              const HASH_RES_t h12 = NUMWAITLINEITEM3_E3_2_DELTA_mapkey0_idxfn::hash(se19.modify0(l1_orderkey));
+                              HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0::IdxNode* n20 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_0::IdxNode*>(i20->slice(se19, h12));
+                              NUMWAITLINEITEM3_E3_2_DELTA_entry* e20;
+                             
+                              if (n20 && (e20 = n20->obj)) {
+                                do {                
+                                  long l2_suppkey = e20->L2_SUPPKEY;
+                                  long v20 = e20->__av;
+                                  (/*if */(l2_suppkey != s_suppkey) ? agg10 += v20 : 0L);
+                                  n20 = n20->nxt;
+                                } while (n20 && (e20 = n20->obj) && h12 == n20->hash &&  NUMWAITLINEITEM3_E3_2_DELTA_mapkey0_idxfn::equals(se19, *e20)); 
+                              }
+                            }(/*if */(l9 == (agg7 + agg8)) ? NUMWAIT.addOrDelOnZero(se4.modify(s_name),((v14 != 0 ? 1L : 0L) * (v15 * (NUMWAITLINEITEM1_P_4.getValueOrDefault(se17.modify(l1_orderkey,l7)) * (v18 * ((agg9 + agg10) != 0 ? 1L : 0L)))))) : (void)0);
+                            n18 = n18->nxt;
+                          } while (n18 && (e18 = n18->obj) && h13 == n18->hash &&  NUMWAITLINEITEM4_P_3_mapkey01_idxfn::equals(se20, *e18)); 
+                        }
+                      }
+                      n15 = n15->nxt;
+                    } while (n15 && (e15 = n15->obj) && h14 == n15->hash &&  NUMWAITLINEITEM3_L2_2_DELTA_mapkey0_idxfn::equals(se21, *e15)); 
+                  }
+                }
+              n14 = n14->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01* i24 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01*>(NUMWAITLINEITEM3_L2_2_DELTA.index[0]);
-          HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01::IdxNode* n24; 
-          NUMWAITLINEITEM3_L2_2_DELTA_entry* e24;
+          const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01* i21 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01*>(NUMWAITLINEITEM3_L2_2_DELTA.index[0]);
+          HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01::IdxNode* n21; 
+          NUMWAITLINEITEM3_L2_2_DELTA_entry* e21;
         
-          for (size_t i = 0; i < i24->size_; i++)
+          for (size_t i = 0; i < i21->size_; i++)
           {
-            n24 = i24->buckets_ + i;
-            while (n24 && (e24 = n24->obj))
+            n21 = i21->buckets_ + i;
+            while (n21 && (e21 = n21->obj))
             {
-                long l1_orderkey = e24->L1_ORDERKEY;
-                long s_suppkey = e24->L3_SUPPKEY;
-                long v24 = e24->__av;
+                long l1_orderkey = e21->L1_ORDERKEY;
+                long s_suppkey = e21->L3_SUPPKEY;
+                long v21 = e21->__av;
                 { //slice 
-                  const HashIndex_NUMWAITLINEITEM4_P_3_map_0* i25 = static_cast<HashIndex_NUMWAITLINEITEM4_P_3_map_0*>(NUMWAITLINEITEM4_P_3.index[2]);
-                  const HASH_RES_t h19 = NUMWAITLINEITEM4_P_3_mapkey0_idxfn::hash(se28.modify0(s_suppkey));
-                  HashIndex_NUMWAITLINEITEM4_P_3_map_0::IdxNode* n25 = static_cast<HashIndex_NUMWAITLINEITEM4_P_3_map_0::IdxNode*>(i25->slice(se28, h19));
-                  NUMWAITLINEITEM4_P_3_entry* e25;
+                  const HashIndex_NUMWAITORDERS1LINEITEM1_map_0* i22 = static_cast<HashIndex_NUMWAITORDERS1LINEITEM1_map_0*>(NUMWAITORDERS1LINEITEM1.index[1]);
+                  const HASH_RES_t h15 = NUMWAITORDERS1LINEITEM1_mapkey0_idxfn::hash(se23.modify0(s_suppkey));
+                  HashIndex_NUMWAITORDERS1LINEITEM1_map_0::IdxNode* n22 = static_cast<HashIndex_NUMWAITORDERS1LINEITEM1_map_0::IdxNode*>(i22->slice(se23, h15));
+                  NUMWAITORDERS1LINEITEM1_entry* e22;
                  
-                  if (n25 && (e25 = n25->obj)) {
+                  if (n22 && (e22 = n22->obj)) {
                     do {                
-                      STRING_TYPE s_name = e25->S_NAME;
-                      STRING_TYPE n_name = e25->N_NAME;
-                      long v25 = e25->__av;
-                      NUMWAITLINEITEM1_P_3.addOrDelOnZero(se27.modify(s_suppkey,s_name,l1_orderkey,n_name),(v24 * v25));
-                      n25 = n25->nxt;
-                    } while (n25 && (e25 = n25->obj) && h19 == n25->hash &&  NUMWAITLINEITEM4_P_3_mapkey0_idxfn::equals(se28, *e25)); 
+                      STRING_TYPE s_name = e22->S_NAME;
+                      long v22 = e22->__av;
+                      NUMWAITORDERS1.addOrDelOnZero(se22.modify(s_suppkey,s_name,l1_orderkey),(v21 * v22));
+                      n22 = n22->nxt;
+                    } while (n22 && (e22 = n22->obj) && h15 == n22->hash &&  NUMWAITORDERS1LINEITEM1_mapkey0_idxfn::equals(se23, *e22)); 
                   }
                 }
-              n24 = n24->nxt;
+              n21 = n21->nxt;
+            }
+          }
+        }{  // foreach
+          const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01* i23 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01*>(NUMWAITLINEITEM3_L2_2_DELTA.index[0]);
+          HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01::IdxNode* n23; 
+          NUMWAITLINEITEM3_L2_2_DELTA_entry* e23;
+        
+          for (size_t i = 0; i < i23->size_; i++)
+          {
+            n23 = i23->buckets_ + i;
+            while (n23 && (e23 = n23->obj))
+            {
+                long l1_orderkey = e23->L1_ORDERKEY;
+                long s_suppkey = e23->L3_SUPPKEY;
+                long v23 = e23->__av;
+                { //slice 
+                  const HashIndex_NUMWAITLINEITEM4_P_3_map_1* i24 = static_cast<HashIndex_NUMWAITLINEITEM4_P_3_map_1*>(NUMWAITLINEITEM4_P_3.index[2]);
+                  const HASH_RES_t h16 = NUMWAITLINEITEM4_P_3_mapkey1_idxfn::hash(se25.modify1(s_suppkey));
+                  HashIndex_NUMWAITLINEITEM4_P_3_map_1::IdxNode* n24 = static_cast<HashIndex_NUMWAITLINEITEM4_P_3_map_1::IdxNode*>(i24->slice(se25, h16));
+                  NUMWAITLINEITEM4_P_3_entry* e24;
+                 
+                  if (n24 && (e24 = n24->obj)) {
+                    do {                
+                      STRING_TYPE n_name = e24->N_NAME;
+                      STRING_TYPE s_name = e24->S_NAME;
+                      long v24 = e24->__av;
+                      NUMWAITLINEITEM1_P_3.addOrDelOnZero(se24.modify(n_name,l1_orderkey,s_suppkey,s_name),(v23 * v24));
+                      n24 = n24->nxt;
+                    } while (n24 && (e24 = n24->obj) && h16 == n24->hash &&  NUMWAITLINEITEM4_P_3_mapkey1_idxfn::equals(se25, *e24)); 
+                  }
+                }
+              n23 = n23->nxt;
+            }
+          }
+        }{  // foreach
+          const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01* i25 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01*>(NUMWAITLINEITEM3_L2_2_DELTA.index[0]);
+          HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01::IdxNode* n25; 
+          NUMWAITLINEITEM3_L2_2_DELTA_entry* e25;
+        
+          for (size_t i = 0; i < i25->size_; i++)
+          {
+            n25 = i25->buckets_ + i;
+            while (n25 && (e25 = n25->obj))
+            {
+                long l1_orderkey = e25->L1_ORDERKEY;
+                long s_suppkey = e25->L3_SUPPKEY;
+                long v25 = e25->__av;
+                NUMWAITSUPPLIER1_P_2.addOrDelOnZero(se26.modify(l1_orderkey,s_suppkey),(v25 * NUMWAITSUPPLIER1_P_2LINEITEM1.getValueOrDefault(se27.modify(l1_orderkey))));
+              n25 = n25->nxt;
             }
           }
         }{  // foreach
@@ -1522,16 +1474,16 @@ namespace dbtoaster {
             while (n26 && (e26 = n26->obj))
             {
                 long l1_orderkey = e26->L1_ORDERKEY;
-                long s_suppkey = e26->L3_SUPPKEY;
+                long l3_suppkey = e26->L3_SUPPKEY;
                 long v26 = e26->__av;
-                NUMWAITSUPPLIER1_P_2.addOrDelOnZero(se29.modify(l1_orderkey,s_suppkey),(v26 * NUMWAITSUPPLIER1_P_2LINEITEM1.getValueOrDefault(se30.modify(l1_orderkey))));
+                NUMWAITSUPPLIER1_L2_1.addOrDelOnZero(se28.modify(l1_orderkey,l3_suppkey),v26);
               n26 = n26->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01* i27 = static_cast<HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01*>(NUMWAITLINEITEM3_L2_2_DELTA.index[0]);
-          HashIndex_NUMWAITLINEITEM3_L2_2_DELTA_map_01::IdxNode* n27; 
-          NUMWAITLINEITEM3_L2_2_DELTA_entry* e27;
+          const HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_01* i27 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_01*>(NUMWAITLINEITEM3_E3_2_DELTA.index[0]);
+          HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_01::IdxNode* n27; 
+          NUMWAITLINEITEM3_E3_2_DELTA_entry* e27;
         
           for (size_t i = 0; i < i27->size_; i++)
           {
@@ -1539,34 +1491,17 @@ namespace dbtoaster {
             while (n27 && (e27 = n27->obj))
             {
                 long l1_orderkey = e27->L1_ORDERKEY;
-                long l3_suppkey = e27->L3_SUPPKEY;
+                long l2_suppkey = e27->L2_SUPPKEY;
                 long v27 = e27->__av;
-                NUMWAITSUPPLIER1_L2_1.addOrDelOnZero(se31.modify(l1_orderkey,l3_suppkey),v27);
+                NUMWAITSUPPLIER1_E3_1.addOrDelOnZero(se29.modify(l1_orderkey,l2_suppkey),v27);
               n27 = n27->nxt;
-            }
-          }
-        }{  // foreach
-          const HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_01* i28 = static_cast<HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_01*>(NUMWAITLINEITEM3_E3_2_DELTA.index[0]);
-          HashIndex_NUMWAITLINEITEM3_E3_2_DELTA_map_01::IdxNode* n28; 
-          NUMWAITLINEITEM3_E3_2_DELTA_entry* e28;
-        
-          for (size_t i = 0; i < i28->size_; i++)
-          {
-            n28 = i28->buckets_ + i;
-            while (n28 && (e28 = n28->obj))
-            {
-                long l1_orderkey = e28->L1_ORDERKEY;
-                long l2_suppkey = e28->L2_SUPPKEY;
-                long v28 = e28->__av;
-                NUMWAITSUPPLIER1_E3_1.addOrDelOnZero(se32.modify(l1_orderkey,l2_suppkey),v28);
-              n28 = n28->nxt;
             }
           }
         }
       }
     }
     void on_batch_update_ORDERS(TPCHOrdersBatch& DELTA_ORDERS) {
-      {  
+      { 
         if (tS > 0) { tS += DELTA_ORDERS.size; return; }         
         tLastN += DELTA_ORDERS.size;        
         if (tLastN > 127) { 
@@ -1577,94 +1512,110 @@ namespace dbtoaster {
         }
         tN += DELTA_ORDERS.size;
 
-
         NUMWAITORDERS1_DELTA.clear();
         NUMWAITLINEITEM1_P_4ORDERS1_DELTA.clear();
-        {  
-          for (size_t i = 0; i < DELTA_ORDERS.size; i++)
+        { 
+          for (size_t i = 0; i < DELTA_ORDERS.size; i++) 
           {
                 long l1_orderkey = DELTA_ORDERS.orderkey[i];
                 // long o_custkey = DELTA_ORDERS.custkey[i];
-                STRING_TYPE lift13 = DELTA_ORDERS.orderstatus[i];
+                STRING_TYPE o_orderstatus = DELTA_ORDERS.orderstatus[i];
                 // DOUBLE_TYPE o_totalprice = DELTA_ORDERS.totalprice[i];
                 // date o_orderdate = DELTA_ORDERS.orderdate[i];
                 // STRING_TYPE o_orderpriority = DELTA_ORDERS.orderpriority[i];
                 // STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
                 // long o_shippriority = DELTA_ORDERS.shippriority[i];
                 // STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
+                long v28 = 1L;
+                (/*if */(o_orderstatus == c1) ? NUMWAITORDERS1_DELTA.addOrDelOnZero(se30.modify(l1_orderkey),v28) : (void)0);
                 long v29 = 1L;
-                (/*if */(lift13 == c2) ? NUMWAITORDERS1_DELTA.addOrDelOnZero(se33.modify(l1_orderkey),v29) : (void)0);   
-                long v30 = 1L;
-                NUMWAITLINEITEM1_P_4ORDERS1_DELTA.addOrDelOnZero(se34.modify(l1_orderkey,lift13),v30);                         
+                NUMWAITLINEITEM1_P_4ORDERS1_DELTA.addOrDelOnZero(se31.modify(l1_orderkey,o_orderstatus),v29);
           }
         }
-        
-        long l12 = 0L;
+
+        long l10 = 0L;
         {  // foreach
-          const HashIndex_NUMWAITORDERS1_DELTA_map_0* i31 = static_cast<HashIndex_NUMWAITORDERS1_DELTA_map_0*>(NUMWAITORDERS1_DELTA.index[0]);
-          HashIndex_NUMWAITORDERS1_DELTA_map_0::IdxNode* n31; 
-          NUMWAITORDERS1_DELTA_entry* e31;
+          const HashIndex_NUMWAITORDERS1_DELTA_map_0* i30 = static_cast<HashIndex_NUMWAITORDERS1_DELTA_map_0*>(NUMWAITORDERS1_DELTA.index[0]);
+          HashIndex_NUMWAITORDERS1_DELTA_map_0::IdxNode* n30; 
+          NUMWAITORDERS1_DELTA_entry* e30;
         
-          for (size_t i = 0; i < i31->size_; i++)
+          for (size_t i = 0; i < i30->size_; i++)
           {
-            n31 = i31->buckets_ + i;
-            while (n31 && (e31 = n31->obj))
+            n30 = i30->buckets_ + i;
+            while (n30 && (e30 = n30->obj))
             {
-                long l1_orderkey = e31->L1_ORDERKEY;
-                long v31 = e31->__av;
+                long l1_orderkey = e30->L1_ORDERKEY;
+                long v30 = e30->__av;
                 { //slice 
-                  const HashIndex_NUMWAITORDERS1_map_2* i32 = static_cast<HashIndex_NUMWAITORDERS1_map_2*>(NUMWAITORDERS1.index[1]);
-                  const HASH_RES_t h22 = NUMWAITORDERS1_mapkey2_idxfn::hash(se38.modify2(l1_orderkey));
-                  HashIndex_NUMWAITORDERS1_map_2::IdxNode* n32 = static_cast<HashIndex_NUMWAITORDERS1_map_2::IdxNode*>(i32->slice(se38, h22));
-                  NUMWAITORDERS1_entry* e32;
+                  const HashIndex_NUMWAITORDERS1_map_2* i31 = static_cast<HashIndex_NUMWAITORDERS1_map_2*>(NUMWAITORDERS1.index[1]);
+                  const HASH_RES_t h19 = NUMWAITORDERS1_mapkey2_idxfn::hash(se35.modify2(l1_orderkey));
+                  HashIndex_NUMWAITORDERS1_map_2::IdxNode* n31 = static_cast<HashIndex_NUMWAITORDERS1_map_2::IdxNode*>(i31->slice(se35, h19));
+                  NUMWAITORDERS1_entry* e31;
                  
-                  if (n32 && (e32 = n32->obj)) {
+                  if (n31 && (e31 = n31->obj)) {
                     do {                
-                      long s_suppkey = e32->S_SUPPKEY;
-                      STRING_TYPE s_name = e32->S_NAME;
-                      long v32 = e32->__av;
-                      long agg12 = 0L;
+                      long s_suppkey = e31->S_SUPPKEY;
+                      STRING_TYPE s_name = e31->S_NAME;
+                      long v31 = e31->__av;
+                      long agg11 = 0L;
                       { //slice 
-                        const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i33 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
-                        const HASH_RES_t h20 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se36.modify0(l1_orderkey));
-                        HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n33 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i33->slice(se36, h20));
-                        NUMWAITSUPPLIER1_L2_1_entry* e33;
+                        const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i32 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
+                        const HASH_RES_t h17 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se33.modify0(l1_orderkey));
+                        HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n32 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i32->slice(se33, h17));
+                        NUMWAITSUPPLIER1_L2_1_entry* e32;
+                       
+                        if (n32 && (e32 = n32->obj)) {
+                          do {                
+                            long l3_suppkey = e32->L3_SUPPKEY;
+                            long v32 = e32->__av;
+                            (/*if */(l3_suppkey != s_suppkey) ? agg11 += v32 : 0L);
+                            n32 = n32->nxt;
+                          } while (n32 && (e32 = n32->obj) && h17 == n32->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se33, *e32)); 
+                        }
+                      }long agg12 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i33 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
+                        const HASH_RES_t h18 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se34.modify0(l1_orderkey));
+                        HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n33 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i33->slice(se34, h18));
+                        NUMWAITSUPPLIER1_E3_1_entry* e33;
                        
                         if (n33 && (e33 = n33->obj)) {
                           do {                
-                            long l3_suppkey = e33->L3_SUPPKEY;
+                            long l2_suppkey = e33->L2_SUPPKEY;
                             long v33 = e33->__av;
-                            (/*if */(l3_suppkey != s_suppkey) ? agg12 += v33 : 0L);
+                            (/*if */(l2_suppkey != s_suppkey) ? agg12 += v33 : 0L);
                             n33 = n33->nxt;
-                          } while (n33 && (e33 = n33->obj) && h20 == n33->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se36, *e33)); 
+                          } while (n33 && (e33 = n33->obj) && h18 == n33->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se34, *e33)); 
                         }
-                      }long agg13 = 0L;
-                      { //slice 
-                        const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i34 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
-                        const HASH_RES_t h21 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se37.modify0(l1_orderkey));
-                        HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n34 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i34->slice(se37, h21));
-                        NUMWAITSUPPLIER1_E3_1_entry* e34;
-                       
-                        if (n34 && (e34 = n34->obj)) {
-                          do {                
-                            long l2_suppkey = e34->L2_SUPPKEY;
-                            long v34 = e34->__av;
-                            (/*if */(l2_suppkey != s_suppkey) ? agg13 += v34 : 0L);
-                            n34 = n34->nxt;
-                          } while (n34 && (e34 = n34->obj) && h21 == n34->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se37, *e34)); 
-                        }
-                      }(/*if */(l12 == agg12) ? NUMWAIT.addOrDelOnZero(se35.modify(s_name),(v31 * (v32 * (agg13 != 0 ? 1L : 0L)))) : (void)0);
-                      n32 = n32->nxt;
-                    } while (n32 && (e32 = n32->obj) && h22 == n32->hash &&  NUMWAITORDERS1_mapkey2_idxfn::equals(se38, *e32)); 
+                      }(/*if */(l10 == agg11) ? NUMWAIT.addOrDelOnZero(se32.modify(s_name),(v30 * (v31 * (agg12 != 0 ? 1L : 0L)))) : (void)0);
+                      n31 = n31->nxt;
+                    } while (n31 && (e31 = n31->obj) && h19 == n31->hash &&  NUMWAITORDERS1_mapkey2_idxfn::equals(se35, *e31)); 
                   }
                 }
-              n31 = n31->nxt;
+              n30 = n30->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_NUMWAITLINEITEM1_P_4ORDERS1_DELTA_map_01* i35 = static_cast<HashIndex_NUMWAITLINEITEM1_P_4ORDERS1_DELTA_map_01*>(NUMWAITLINEITEM1_P_4ORDERS1_DELTA.index[0]);
-          HashIndex_NUMWAITLINEITEM1_P_4ORDERS1_DELTA_map_01::IdxNode* n35; 
-          NUMWAITLINEITEM1_P_4ORDERS1_DELTA_entry* e35;
+          const HashIndex_NUMWAITLINEITEM1_P_4ORDERS1_DELTA_map_01* i34 = static_cast<HashIndex_NUMWAITLINEITEM1_P_4ORDERS1_DELTA_map_01*>(NUMWAITLINEITEM1_P_4ORDERS1_DELTA.index[0]);
+          HashIndex_NUMWAITLINEITEM1_P_4ORDERS1_DELTA_map_01::IdxNode* n34; 
+          NUMWAITLINEITEM1_P_4ORDERS1_DELTA_entry* e34;
+        
+          for (size_t i = 0; i < i34->size_; i++)
+          {
+            n34 = i34->buckets_ + i;
+            while (n34 && (e34 = n34->obj))
+            {
+                long l1_orderkey = e34->L1_ORDERKEY;
+                STRING_TYPE o_orderstatus = e34->O_ORDERSTATUS;
+                long v34 = e34->__av;
+                NUMWAITLINEITEM1_P_4.addOrDelOnZero(se36.modify(l1_orderkey,o_orderstatus),v34);
+              n34 = n34->nxt;
+            }
+          }
+        }{  // foreach
+          const HashIndex_NUMWAITORDERS1_DELTA_map_0* i35 = static_cast<HashIndex_NUMWAITORDERS1_DELTA_map_0*>(NUMWAITORDERS1_DELTA.index[0]);
+          HashIndex_NUMWAITORDERS1_DELTA_map_0::IdxNode* n35; 
+          NUMWAITORDERS1_DELTA_entry* e35;
         
           for (size_t i = 0; i < i35->size_; i++)
           {
@@ -1672,63 +1623,46 @@ namespace dbtoaster {
             while (n35 && (e35 = n35->obj))
             {
                 long l1_orderkey = e35->L1_ORDERKEY;
-                STRING_TYPE o_orderstatus = e35->O_ORDERSTATUS;
                 long v35 = e35->__av;
-                NUMWAITLINEITEM1_P_4.addOrDelOnZero(se39.modify(l1_orderkey,o_orderstatus),v35);
+                { //slice 
+                  const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i36 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
+                  const HASH_RES_t h20 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se38.modify0(l1_orderkey));
+                  HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n36 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i36->slice(se38, h20));
+                  NUMWAITSUPPLIER1_L2_1_entry* e36;
+                 
+                  if (n36 && (e36 = n36->obj)) {
+                    do {                
+                      long s_suppkey = e36->L3_SUPPKEY;
+                      long v36 = e36->__av;
+                      NUMWAITSUPPLIER1_P_2.addOrDelOnZero(se37.modify(l1_orderkey,s_suppkey),(v35 * v36));
+                      n36 = n36->nxt;
+                    } while (n36 && (e36 = n36->obj) && h20 == n36->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se38, *e36)); 
+                  }
+                }
               n35 = n35->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_NUMWAITORDERS1_DELTA_map_0* i36 = static_cast<HashIndex_NUMWAITORDERS1_DELTA_map_0*>(NUMWAITORDERS1_DELTA.index[0]);
-          HashIndex_NUMWAITORDERS1_DELTA_map_0::IdxNode* n36; 
-          NUMWAITORDERS1_DELTA_entry* e36;
+          const HashIndex_NUMWAITORDERS1_DELTA_map_0* i37 = static_cast<HashIndex_NUMWAITORDERS1_DELTA_map_0*>(NUMWAITORDERS1_DELTA.index[0]);
+          HashIndex_NUMWAITORDERS1_DELTA_map_0::IdxNode* n37; 
+          NUMWAITORDERS1_DELTA_entry* e37;
         
-          for (size_t i = 0; i < i36->size_; i++)
+          for (size_t i = 0; i < i37->size_; i++)
           {
-            n36 = i36->buckets_ + i;
-            while (n36 && (e36 = n36->obj))
+            n37 = i37->buckets_ + i;
+            while (n37 && (e37 = n37->obj))
             {
-                long l1_orderkey = e36->L1_ORDERKEY;
-                long v36 = e36->__av;
-                { //slice 
-                  const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i37 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
-                  const HASH_RES_t h23 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se41.modify0(l1_orderkey));
-                  HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n37 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i37->slice(se41, h23));
-                  NUMWAITSUPPLIER1_L2_1_entry* e37;
-                 
-                  if (n37 && (e37 = n37->obj)) {
-                    do {                
-                      long s_suppkey = e37->L3_SUPPKEY;
-                      long v37 = e37->__av;
-                      NUMWAITSUPPLIER1_P_2.addOrDelOnZero(se40.modify(l1_orderkey,s_suppkey),(v36 * v37));
-                      n37 = n37->nxt;
-                    } while (n37 && (e37 = n37->obj) && h23 == n37->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se41, *e37)); 
-                  }
-                }
-              n36 = n36->nxt;
-            }
-          }
-        }{  // foreach
-          const HashIndex_NUMWAITORDERS1_DELTA_map_0* i38 = static_cast<HashIndex_NUMWAITORDERS1_DELTA_map_0*>(NUMWAITORDERS1_DELTA.index[0]);
-          HashIndex_NUMWAITORDERS1_DELTA_map_0::IdxNode* n38; 
-          NUMWAITORDERS1_DELTA_entry* e38;
-        
-          for (size_t i = 0; i < i38->size_; i++)
-          {
-            n38 = i38->buckets_ + i;
-            while (n38 && (e38 = n38->obj))
-            {
-                long l1_orderkey = e38->L1_ORDERKEY;
-                long v38 = e38->__av;
-                NUMWAITSUPPLIER1_P_2LINEITEM1.addOrDelOnZero(se42.modify(l1_orderkey),v38);
-              n38 = n38->nxt;
+                long l1_orderkey = e37->L1_ORDERKEY;
+                long v37 = e37->__av;
+                NUMWAITSUPPLIER1_P_2LINEITEM1.addOrDelOnZero(se39.modify(l1_orderkey),v37);
+              n37 = n37->nxt;
             }
           }
         }
       }
     }
     void on_batch_update_SUPPLIER(TPCHSupplierBatch& DELTA_SUPPLIER) {
-      {
+      { 
         if (tS > 0) { tS += DELTA_SUPPLIER.size; return; }         
         tLastN += DELTA_SUPPLIER.size;        
         if (tLastN > 127) { 
@@ -1738,7 +1672,6 @@ namespace dbtoaster {
           tLastN = 0;
         }
         tN += DELTA_SUPPLIER.size;
-
 
         NUMWAITSUPPLIER1_DELTA.clear();
         {  
@@ -1751,104 +1684,122 @@ namespace dbtoaster {
                 // STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
                 // DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
                 // STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
-                long v39 = 1L;
-                NUMWAITSUPPLIER1_DELTA.addOrDelOnZero(se43.modify(s_suppkey,s_name,s_nationkey),v39);            
+                long v38 = 1L;
+                NUMWAITSUPPLIER1_DELTA.addOrDelOnZero(se40.modify(s_suppkey,s_name,s_nationkey),v38);            
           }
         }
 
-        long l13 = 0L;
+        long l11 = 0L;
         {  // foreach
-          const HashIndex_NUMWAITSUPPLIER1_DELTA_map_012* i40 = static_cast<HashIndex_NUMWAITSUPPLIER1_DELTA_map_012*>(NUMWAITSUPPLIER1_DELTA.index[0]);
-          HashIndex_NUMWAITSUPPLIER1_DELTA_map_012::IdxNode* n40; 
-          NUMWAITSUPPLIER1_DELTA_entry* e40;
+          const HashIndex_NUMWAITSUPPLIER1_DELTA_map_012* i39 = static_cast<HashIndex_NUMWAITSUPPLIER1_DELTA_map_012*>(NUMWAITSUPPLIER1_DELTA.index[0]);
+          HashIndex_NUMWAITSUPPLIER1_DELTA_map_012::IdxNode* n39; 
+          NUMWAITSUPPLIER1_DELTA_entry* e39;
         
-          for (size_t i = 0; i < i40->size_; i++)
+          for (size_t i = 0; i < i39->size_; i++)
           {
-            n40 = i40->buckets_ + i;
-            while (n40 && (e40 = n40->obj))
+            n39 = i39->buckets_ + i;
+            while (n39 && (e39 = n39->obj))
             {
-                long s_suppkey = e40->S_SUPPKEY;
-                STRING_TYPE s_name = e40->S_NAME;
-                long s_nationkey = e40->S_NATIONKEY;
-                long v40 = e40->__av;
+                long s_suppkey = e39->S_SUPPKEY;
+                STRING_TYPE s_name = e39->S_NAME;
+                long s_nationkey = e39->S_NATIONKEY;
+                long v39 = e39->__av;
                 { //slice 
-                  const HashIndex_NUMWAITSUPPLIER1_P_2_map_1* i41 = static_cast<HashIndex_NUMWAITSUPPLIER1_P_2_map_1*>(NUMWAITSUPPLIER1_P_2.index[1]);
-                  const HASH_RES_t h26 = NUMWAITSUPPLIER1_P_2_mapkey1_idxfn::hash(se48.modify1(s_suppkey));
-                  HashIndex_NUMWAITSUPPLIER1_P_2_map_1::IdxNode* n41 = static_cast<HashIndex_NUMWAITSUPPLIER1_P_2_map_1::IdxNode*>(i41->slice(se48, h26));
-                  NUMWAITSUPPLIER1_P_2_entry* e41;
+                  const HashIndex_NUMWAITSUPPLIER1_P_2_map_1* i40 = static_cast<HashIndex_NUMWAITSUPPLIER1_P_2_map_1*>(NUMWAITSUPPLIER1_P_2.index[1]);
+                  const HASH_RES_t h23 = NUMWAITSUPPLIER1_P_2_mapkey1_idxfn::hash(se45.modify1(s_suppkey));
+                  HashIndex_NUMWAITSUPPLIER1_P_2_map_1::IdxNode* n40 = static_cast<HashIndex_NUMWAITSUPPLIER1_P_2_map_1::IdxNode*>(i40->slice(se45, h23));
+                  NUMWAITSUPPLIER1_P_2_entry* e40;
                  
-                  if (n41 && (e41 = n41->obj)) {
+                  if (n40 && (e40 = n40->obj)) {
                     do {                
-                      long l1_orderkey = e41->L1_ORDERKEY;
-                      long v41 = e41->__av;
-                      long agg14 = 0L;
+                      long l1_orderkey = e40->L1_ORDERKEY;
+                      long v40 = e40->__av;
+                      long agg13 = 0L;
                       { //slice 
-                        const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i42 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
-                        const HASH_RES_t h24 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se46.modify0(l1_orderkey));
-                        HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n42 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i42->slice(se46, h24));
-                        NUMWAITSUPPLIER1_L2_1_entry* e42;
+                        const HashIndex_NUMWAITSUPPLIER1_L2_1_map_0* i41 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0*>(NUMWAITSUPPLIER1_L2_1.index[1]);
+                        const HASH_RES_t h21 = NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::hash(se43.modify0(l1_orderkey));
+                        HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode* n41 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_0::IdxNode*>(i41->slice(se43, h21));
+                        NUMWAITSUPPLIER1_L2_1_entry* e41;
+                       
+                        if (n41 && (e41 = n41->obj)) {
+                          do {                
+                            long l3_suppkey = e41->L3_SUPPKEY;
+                            long v41 = e41->__av;
+                            (/*if */(l3_suppkey != s_suppkey) ? agg13 += v41 : 0L);
+                            n41 = n41->nxt;
+                          } while (n41 && (e41 = n41->obj) && h21 == n41->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se43, *e41)); 
+                        }
+                      }long agg14 = 0L;
+                      { //slice 
+                        const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i42 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
+                        const HASH_RES_t h22 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se44.modify0(l1_orderkey));
+                        HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n42 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i42->slice(se44, h22));
+                        NUMWAITSUPPLIER1_E3_1_entry* e42;
                        
                         if (n42 && (e42 = n42->obj)) {
                           do {                
-                            long l3_suppkey = e42->L3_SUPPKEY;
+                            long l2_suppkey = e42->L2_SUPPKEY;
                             long v42 = e42->__av;
-                            (/*if */(l3_suppkey != s_suppkey) ? agg14 += v42 : 0L);
+                            (/*if */(l2_suppkey != s_suppkey) ? agg14 += v42 : 0L);
                             n42 = n42->nxt;
-                          } while (n42 && (e42 = n42->obj) && h24 == n42->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey0_idxfn::equals(se46, *e42)); 
+                          } while (n42 && (e42 = n42->obj) && h22 == n42->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se44, *e42)); 
                         }
-                      }long agg15 = 0L;
-                      { //slice 
-                        const HashIndex_NUMWAITSUPPLIER1_E3_1_map_0* i43 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0*>(NUMWAITSUPPLIER1_E3_1.index[1]);
-                        const HASH_RES_t h25 = NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::hash(se47.modify0(l1_orderkey));
-                        HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode* n43 = static_cast<HashIndex_NUMWAITSUPPLIER1_E3_1_map_0::IdxNode*>(i43->slice(se47, h25));
-                        NUMWAITSUPPLIER1_E3_1_entry* e43;
-                       
-                        if (n43 && (e43 = n43->obj)) {
-                          do {                
-                            long l2_suppkey = e43->L2_SUPPKEY;
-                            long v43 = e43->__av;
-                            (/*if */(l2_suppkey != s_suppkey) ? agg15 += v43 : 0L);
-                            n43 = n43->nxt;
-                          } while (n43 && (e43 = n43->obj) && h25 == n43->hash &&  NUMWAITSUPPLIER1_E3_1_mapkey0_idxfn::equals(se47, *e43)); 
-                        }
-                      }(/*if */(l13 == agg14) ? NUMWAIT.addOrDelOnZero(se44.modify(s_name),(v40 * (NUMWAITSUPPLIER1_P_1.getValueOrDefault(se45.modify(s_nationkey)) * (v41 * (agg15 != 0 ? 1L : 0L))))) : (void)0);
-                      n41 = n41->nxt;
-                    } while (n41 && (e41 = n41->obj) && h26 == n41->hash &&  NUMWAITSUPPLIER1_P_2_mapkey1_idxfn::equals(se48, *e41)); 
+                      }(/*if */(l11 == agg13) ? NUMWAIT.addOrDelOnZero(se41.modify(s_name),(v39 * (NUMWAITSUPPLIER1_P_1.getValueOrDefault(se42.modify(s_nationkey)) * (v40 * (agg14 != 0 ? 1L : 0L))))) : (void)0);
+                      n40 = n40->nxt;
+                    } while (n40 && (e40 = n40->obj) && h23 == n40->hash &&  NUMWAITSUPPLIER1_P_2_mapkey1_idxfn::equals(se45, *e40)); 
                   }
                 }
-              n40 = n40->nxt;
+              n39 = n39->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_NUMWAITSUPPLIER1_DELTA_map_012* i44 = static_cast<HashIndex_NUMWAITSUPPLIER1_DELTA_map_012*>(NUMWAITSUPPLIER1_DELTA.index[0]);
-          HashIndex_NUMWAITSUPPLIER1_DELTA_map_012::IdxNode* n44; 
-          NUMWAITSUPPLIER1_DELTA_entry* e44;
+          const HashIndex_NUMWAITSUPPLIER1_DELTA_map_012* i43 = static_cast<HashIndex_NUMWAITSUPPLIER1_DELTA_map_012*>(NUMWAITSUPPLIER1_DELTA.index[0]);
+          HashIndex_NUMWAITSUPPLIER1_DELTA_map_012::IdxNode* n43; 
+          NUMWAITSUPPLIER1_DELTA_entry* e43;
         
-          for (size_t i = 0; i < i44->size_; i++)
+          for (size_t i = 0; i < i43->size_; i++)
           {
-            n44 = i44->buckets_ + i;
-            while (n44 && (e44 = n44->obj))
+            n43 = i43->buckets_ + i;
+            while (n43 && (e43 = n43->obj))
             {
-                long s_suppkey = e44->S_SUPPKEY;
-                STRING_TYPE s_name = e44->S_NAME;
-                long s_nationkey = e44->S_NATIONKEY;
-                long v44 = e44->__av;
+                long s_suppkey = e43->S_SUPPKEY;
+                STRING_TYPE s_name = e43->S_NAME;
+                long s_nationkey = e43->S_NATIONKEY;
+                long v43 = e43->__av;
                 { //slice 
-                  const HashIndex_NUMWAITSUPPLIER1_L2_1_map_1* i45 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_1*>(NUMWAITSUPPLIER1_L2_1.index[2]);
-                  const HASH_RES_t h27 = NUMWAITSUPPLIER1_L2_1_mapkey1_idxfn::hash(se51.modify1(s_suppkey));
-                  HashIndex_NUMWAITSUPPLIER1_L2_1_map_1::IdxNode* n45 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_1::IdxNode*>(i45->slice(se51, h27));
-                  NUMWAITSUPPLIER1_L2_1_entry* e45;
+                  const HashIndex_NUMWAITSUPPLIER1_L2_1_map_1* i44 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_1*>(NUMWAITSUPPLIER1_L2_1.index[2]);
+                  const HASH_RES_t h24 = NUMWAITSUPPLIER1_L2_1_mapkey1_idxfn::hash(se48.modify1(s_suppkey));
+                  HashIndex_NUMWAITSUPPLIER1_L2_1_map_1::IdxNode* n44 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_1::IdxNode*>(i44->slice(se48, h24));
+                  NUMWAITSUPPLIER1_L2_1_entry* e44;
                  
-                  if (n45 && (e45 = n45->obj)) {
+                  if (n44 && (e44 = n44->obj)) {
                     do {                
-                      long l1_orderkey = e45->L1_ORDERKEY;
-                      long v45 = e45->__av;
-                      NUMWAITORDERS1.addOrDelOnZero(se49.modify(s_suppkey,s_name,l1_orderkey),(v44 * (NUMWAITSUPPLIER1_P_1.getValueOrDefault(se50.modify(s_nationkey)) * v45)));
-                      n45 = n45->nxt;
-                    } while (n45 && (e45 = n45->obj) && h27 == n45->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey1_idxfn::equals(se51, *e45)); 
+                      long l1_orderkey = e44->L1_ORDERKEY;
+                      long v44 = e44->__av;
+                      NUMWAITORDERS1.addOrDelOnZero(se46.modify(s_suppkey,s_name,l1_orderkey),(v43 * (NUMWAITSUPPLIER1_P_1.getValueOrDefault(se47.modify(s_nationkey)) * v44)));
+                      n44 = n44->nxt;
+                    } while (n44 && (e44 = n44->obj) && h24 == n44->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey1_idxfn::equals(se48, *e44)); 
                   }
                 }
-              n44 = n44->nxt;
+              n43 = n43->nxt;
+            }
+          }
+        }{  // foreach
+          const HashIndex_NUMWAITSUPPLIER1_DELTA_map_012* i45 = static_cast<HashIndex_NUMWAITSUPPLIER1_DELTA_map_012*>(NUMWAITSUPPLIER1_DELTA.index[0]);
+          HashIndex_NUMWAITSUPPLIER1_DELTA_map_012::IdxNode* n45; 
+          NUMWAITSUPPLIER1_DELTA_entry* e45;
+        
+          for (size_t i = 0; i < i45->size_; i++)
+          {
+            n45 = i45->buckets_ + i;
+            while (n45 && (e45 = n45->obj))
+            {
+                long s_suppkey = e45->S_SUPPKEY;
+                STRING_TYPE s_name = e45->S_NAME;
+                long s_nationkey = e45->S_NATIONKEY;
+                long v45 = e45->__av;
+                NUMWAITORDERS1LINEITEM1.addOrDelOnZero(se49.modify(s_suppkey,s_name),(v45 * NUMWAITSUPPLIER1_P_1.getValueOrDefault(se50.modify(s_nationkey))));
+              n45 = n45->nxt;
             }
           }
         }{  // foreach
@@ -1865,86 +1816,68 @@ namespace dbtoaster {
                 STRING_TYPE s_name = e46->S_NAME;
                 long s_nationkey = e46->S_NATIONKEY;
                 long v46 = e46->__av;
-                NUMWAITORDERS1LINEITEM1.addOrDelOnZero(se52.modify(s_suppkey,s_name),(v46 * NUMWAITSUPPLIER1_P_1.getValueOrDefault(se53.modify(s_nationkey))));
+                { //slice 
+                  const HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_0* i47 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_0*>(NUMWAITLINEITEM1_P_3SUPPLIER1_P_1.index[1]);
+                  const HASH_RES_t h26 = NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey0_idxfn::hash(se53.modify0(s_nationkey));
+                  HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_0::IdxNode* n47 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_0::IdxNode*>(i47->slice(se53, h26));
+                  NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry* e47;
+                 
+                  if (n47 && (e47 = n47->obj)) {
+                    do {                
+                      STRING_TYPE n_name = e47->N_NAME;
+                      long v47 = e47->__av;
+                      { //slice 
+                        const HashIndex_NUMWAITSUPPLIER1_L2_1_map_1* i48 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_1*>(NUMWAITSUPPLIER1_L2_1.index[2]);
+                        const HASH_RES_t h25 = NUMWAITSUPPLIER1_L2_1_mapkey1_idxfn::hash(se52.modify1(s_suppkey));
+                        HashIndex_NUMWAITSUPPLIER1_L2_1_map_1::IdxNode* n48 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_1::IdxNode*>(i48->slice(se52, h25));
+                        NUMWAITSUPPLIER1_L2_1_entry* e48;
+                       
+                        if (n48 && (e48 = n48->obj)) {
+                          do {                
+                            long l1_orderkey = e48->L1_ORDERKEY;
+                            long v48 = e48->__av;
+                            NUMWAITLINEITEM1_P_3.addOrDelOnZero(se51.modify(n_name,l1_orderkey,s_suppkey,s_name),(v46 * (v47 * v48)));
+                            n48 = n48->nxt;
+                          } while (n48 && (e48 = n48->obj) && h25 == n48->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey1_idxfn::equals(se52, *e48)); 
+                        }
+                      }
+                      n47 = n47->nxt;
+                    } while (n47 && (e47 = n47->obj) && h26 == n47->hash &&  NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey0_idxfn::equals(se53, *e47)); 
+                  }
+                }
               n46 = n46->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_NUMWAITSUPPLIER1_DELTA_map_012* i47 = static_cast<HashIndex_NUMWAITSUPPLIER1_DELTA_map_012*>(NUMWAITSUPPLIER1_DELTA.index[0]);
-          HashIndex_NUMWAITSUPPLIER1_DELTA_map_012::IdxNode* n47; 
-          NUMWAITSUPPLIER1_DELTA_entry* e47;
+          const HashIndex_NUMWAITSUPPLIER1_DELTA_map_012* i49 = static_cast<HashIndex_NUMWAITSUPPLIER1_DELTA_map_012*>(NUMWAITSUPPLIER1_DELTA.index[0]);
+          HashIndex_NUMWAITSUPPLIER1_DELTA_map_012::IdxNode* n49; 
+          NUMWAITSUPPLIER1_DELTA_entry* e49;
         
-          for (size_t i = 0; i < i47->size_; i++)
+          for (size_t i = 0; i < i49->size_; i++)
           {
-            n47 = i47->buckets_ + i;
-            while (n47 && (e47 = n47->obj))
+            n49 = i49->buckets_ + i;
+            while (n49 && (e49 = n49->obj))
             {
-                long s_suppkey = e47->S_SUPPKEY;
-                STRING_TYPE s_name = e47->S_NAME;
-                long s_nationkey = e47->S_NATIONKEY;
-                long v47 = e47->__av;
+                long s_suppkey = e49->S_SUPPKEY;
+                STRING_TYPE s_name = e49->S_NAME;
+                long s_nationkey = e49->S_NATIONKEY;
+                long v49 = e49->__av;
                 { //slice 
-                  const HashIndex_NUMWAITSUPPLIER1_L2_1_map_1* i48 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_1*>(NUMWAITSUPPLIER1_L2_1.index[2]);
-                  const HASH_RES_t h29 = NUMWAITSUPPLIER1_L2_1_mapkey1_idxfn::hash(se56.modify1(s_suppkey));
-                  HashIndex_NUMWAITSUPPLIER1_L2_1_map_1::IdxNode* n48 = static_cast<HashIndex_NUMWAITSUPPLIER1_L2_1_map_1::IdxNode*>(i48->slice(se56, h29));
-                  NUMWAITSUPPLIER1_L2_1_entry* e48;
+                  const HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_0* i50 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_0*>(NUMWAITLINEITEM1_P_3SUPPLIER1_P_1.index[1]);
+                  const HASH_RES_t h27 = NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey0_idxfn::hash(se55.modify0(s_nationkey));
+                  HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_0::IdxNode* n50 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map_0::IdxNode*>(i50->slice(se55, h27));
+                  NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry* e50;
                  
-                  if (n48 && (e48 = n48->obj)) {
+                  if (n50 && (e50 = n50->obj)) {
                     do {                
-                      long l1_orderkey = e48->L1_ORDERKEY;
-                      long v48 = e48->__av;
-                      { //slice 
-                        const HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_0* i49 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_0*>(NUMWAITLINEITEM1_P_3SUPPLIER1_P_2.index[1]);
-                        const HASH_RES_t h28 = NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey0_idxfn::hash(se55.modify0(s_nationkey));
-                        HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_0::IdxNode* n49 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_0::IdxNode*>(i49->slice(se55, h28));
-                        NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry* e49;
-                       
-                        if (n49 && (e49 = n49->obj)) {
-                          do {                
-                            STRING_TYPE n_name = e49->N_NAME;
-                            long v49 = e49->__av;
-                            NUMWAITLINEITEM1_P_3.addOrDelOnZero(se54.modify(s_suppkey,s_name,l1_orderkey,n_name),(v47 * (v48 * v49)));
-                            n49 = n49->nxt;
-                          } while (n49 && (e49 = n49->obj) && h28 == n49->hash &&  NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey0_idxfn::equals(se55, *e49)); 
-                        }
-                      }
-                      n48 = n48->nxt;
-                    } while (n48 && (e48 = n48->obj) && h29 == n48->hash &&  NUMWAITSUPPLIER1_L2_1_mapkey1_idxfn::equals(se56, *e48)); 
+                      STRING_TYPE n_name = e50->N_NAME;
+                      long v50 = e50->__av;
+                      NUMWAITLINEITEM4_P_3.addOrDelOnZero(se54.modify(n_name,s_suppkey,s_name),(v49 * v50));
+                      n50 = n50->nxt;
+                    } while (n50 && (e50 = n50->obj) && h27 == n50->hash &&  NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_mapkey0_idxfn::equals(se55, *e50)); 
                   }
                 }
-              n47 = n47->nxt;
-            }
-          }
-        }{  // foreach
-          const HashIndex_NUMWAITSUPPLIER1_DELTA_map_012* i50 = static_cast<HashIndex_NUMWAITSUPPLIER1_DELTA_map_012*>(NUMWAITSUPPLIER1_DELTA.index[0]);
-          HashIndex_NUMWAITSUPPLIER1_DELTA_map_012::IdxNode* n50; 
-          NUMWAITSUPPLIER1_DELTA_entry* e50;
-        
-          for (size_t i = 0; i < i50->size_; i++)
-          {
-            n50 = i50->buckets_ + i;
-            while (n50 && (e50 = n50->obj))
-            {
-                long s_suppkey = e50->S_SUPPKEY;
-                STRING_TYPE s_name = e50->S_NAME;
-                long s_nationkey = e50->S_NATIONKEY;
-                long v50 = e50->__av;
-                { //slice 
-                  const HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_0* i51 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_0*>(NUMWAITLINEITEM1_P_3SUPPLIER1_P_2.index[1]);
-                  const HASH_RES_t h30 = NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey0_idxfn::hash(se58.modify0(s_nationkey));
-                  HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_0::IdxNode* n51 = static_cast<HashIndex_NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map_0::IdxNode*>(i51->slice(se58, h30));
-                  NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry* e51;
-                 
-                  if (n51 && (e51 = n51->obj)) {
-                    do {                
-                      STRING_TYPE n_name = e51->N_NAME;
-                      long v51 = e51->__av;
-                      NUMWAITLINEITEM4_P_3.addOrDelOnZero(se57.modify(s_suppkey,s_name,n_name),(v50 * v51));
-                      n51 = n51->nxt;
-                    } while (n51 && (e51 = n51->obj) && h30 == n51->hash &&  NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_mapkey0_idxfn::equals(se58, *e51)); 
-                  }
-                }
-              n50 = n50->nxt;
+              n49 = n49->nxt;
             }
           }
         }
@@ -1952,43 +1885,43 @@ namespace dbtoaster {
     }
     void on_system_ready_event() {
       {  
-        NUMWAITLINEITEM1_P_3SUPPLIER1_P_2.clear();
+        NUMWAITLINEITEM1_P_3SUPPLIER1_P_1.clear();
         {  // foreach
-          const HashIndex_NATION_map_0123* i52 = static_cast<HashIndex_NATION_map_0123*>(NATION.index[0]);
-          HashIndex_NATION_map_0123::IdxNode* n52; 
-          NATION_entry* e52;
+          const HashIndex_NATION_map_0123* i51 = static_cast<HashIndex_NATION_map_0123*>(NATION.index[0]);
+          HashIndex_NATION_map_0123::IdxNode* n51; 
+          NATION_entry* e51;
         
-          for (size_t i = 0; i < i52->size_; i++)
+          for (size_t i = 0; i < i51->size_; i++)
           {
-            n52 = i52->buckets_ + i;
-            while (n52 && (e52 = n52->obj))
+            n51 = i51->buckets_ + i;
+            while (n51 && (e51 = n51->obj))
             {
-                long s_nationkey = e52->NATION_NATIONKEY;
-                STRING_TYPE n_name = e52->NATION_NAME;
-                long n_regionkey = e52->NATION_REGIONKEY;
-                STRING_TYPE n_comment = e52->NATION_COMMENT;
-                long v52 = e52->__av;
-                NUMWAITLINEITEM1_P_3SUPPLIER1_P_2.addOrDelOnZero(se59.modify(s_nationkey,n_name),v52);
-              n52 = n52->nxt;
+                long s_nationkey = e51->NATION_NATIONKEY;
+                STRING_TYPE n_name = e51->NATION_NAME;
+                long n_regionkey = e51->NATION_REGIONKEY;
+                STRING_TYPE n_comment = e51->NATION_COMMENT;
+                long v51 = e51->__av;
+                NUMWAITLINEITEM1_P_3SUPPLIER1_P_1.addOrDelOnZero(se56.modify(s_nationkey,n_name),v51);
+              n51 = n51->nxt;
             }
           }
         }NUMWAITSUPPLIER1_P_1.clear();
-        STRING_TYPE l14 = c1;
+        STRING_TYPE l12 = c2;
         { //slice 
-          const HashIndex_NATION_map_1* i53 = static_cast<HashIndex_NATION_map_1*>(NATION.index[1]);
-          const HASH_RES_t h31 = NATION_mapkey1_idxfn::hash(se61.modify1(l14));
-          HashIndex_NATION_map_1::IdxNode* n53 = static_cast<HashIndex_NATION_map_1::IdxNode*>(i53->slice(se61, h31));
-          NATION_entry* e53;
+          const HashIndex_NATION_map_1* i52 = static_cast<HashIndex_NATION_map_1*>(NATION.index[1]);
+          const HASH_RES_t h28 = NATION_mapkey1_idxfn::hash(se58.modify1(l12));
+          HashIndex_NATION_map_1::IdxNode* n52 = static_cast<HashIndex_NATION_map_1::IdxNode*>(i52->slice(se58, h28));
+          NATION_entry* e52;
          
-          if (n53 && (e53 = n53->obj)) {
+          if (n52 && (e52 = n52->obj)) {
             do {                
-              long s_nationkey = e53->NATION_NATIONKEY;
-              long n_regionkey = e53->NATION_REGIONKEY;
-              STRING_TYPE n_comment = e53->NATION_COMMENT;
-              long v53 = e53->__av;
-              NUMWAITSUPPLIER1_P_1.addOrDelOnZero(se60.modify(s_nationkey),v53);
-              n53 = n53->nxt;
-            } while (n53 && (e53 = n53->obj) && h31 == n53->hash &&  NATION_mapkey1_idxfn::equals(se61, *e53)); 
+              long s_nationkey = e52->NATION_NATIONKEY;
+              long n_regionkey = e52->NATION_REGIONKEY;
+              STRING_TYPE n_comment = e52->NATION_COMMENT;
+              long v52 = e52->__av;
+              NUMWAITSUPPLIER1_P_1.addOrDelOnZero(se57.modify(s_nationkey),v52);
+              n52 = n52->nxt;
+            } while (n52 && (e52 = n52->obj) && h28 == n52->hash &&  NATION_mapkey1_idxfn::equals(se58, *e52)); 
           }
         }
       }
@@ -1999,75 +1932,71 @@ namespace dbtoaster {
     /* Sample entries for avoiding recreation of temporary objects */
     NUMWAITLINEITEM3_E3_2_DELTA_entry se1;
     NUMWAITLINEITEM3_L2_2_DELTA_entry se2;
-    NUMWAITLINEITEM1_DOMAIN1_entry se3;
-    tuple2_L_L st1;
+    NUMWAITLINEITEM1_DOMAIN1_P_3_entry se3;
     NUMWAIT_entry se4;
-    NUMWAITSUPPLIER1_L2_1_entry se5;
-    NUMWAITLINEITEM1_P_4_entry se6;
+    NUMWAITLINEITEM1_P_4_entry se5;
+    NUMWAITSUPPLIER1_L2_1_entry se6;
     NUMWAITSUPPLIER1_E3_1_entry se7;
     NUMWAITLINEITEM1_P_3_entry se8;
-    NUMWAITLINEITEM1_DOMAIN1_entry se9;
+    NUMWAITLINEITEM1_P_4_entry se9;
     NUMWAITSUPPLIER1_L2_1_entry se10;
     NUMWAITLINEITEM3_L2_2_DELTA_entry se11;
-    NUMWAITLINEITEM1_P_4_entry se12;
-    NUMWAITSUPPLIER1_E3_1_entry se13;
-    NUMWAITLINEITEM3_E3_2_DELTA_entry se14;
-    NUMWAITLINEITEM1_P_3_entry se15;
-    NUMWAITLINEITEM1_DOMAIN1_entry se16;
-    NUMWAITSUPPLIER1_L2_1_entry se17;
-    NUMWAITLINEITEM3_L2_2_DELTA_entry se18;
-    NUMWAITLINEITEM1_P_4_entry se19;
-    NUMWAITSUPPLIER1_E3_1_entry se20;
-    NUMWAITLINEITEM3_E3_2_DELTA_entry se21;
-    NUMWAITLINEITEM4_P_3_entry se22;
-    NUMWAITLINEITEM3_L2_2_DELTA_entry se23;
-    NUMWAITLINEITEM1_DOMAIN1_entry se24;
-    NUMWAITORDERS1_entry se25;
-    NUMWAITORDERS1LINEITEM1_entry se26;
-    NUMWAITLINEITEM1_P_3_entry se27;
-    NUMWAITLINEITEM4_P_3_entry se28;
-    NUMWAITSUPPLIER1_P_2_entry se29;
-    NUMWAITSUPPLIER1_P_2LINEITEM1_entry se30;
-    NUMWAITSUPPLIER1_L2_1_entry se31;
-    NUMWAITSUPPLIER1_E3_1_entry se32;
-    NUMWAITORDERS1_DELTA_entry se33;
-    NUMWAITLINEITEM1_P_4ORDERS1_DELTA_entry se34;
-    NUMWAIT_entry se35;
-    NUMWAITSUPPLIER1_L2_1_entry se36;
-    NUMWAITSUPPLIER1_E3_1_entry se37;
-    NUMWAITORDERS1_entry se38;
-    NUMWAITLINEITEM1_P_4_entry se39;
-    NUMWAITSUPPLIER1_P_2_entry se40;
-    NUMWAITSUPPLIER1_L2_1_entry se41;
-    NUMWAITSUPPLIER1_P_2LINEITEM1_entry se42;
-    NUMWAITSUPPLIER1_DELTA_entry se43;
-    NUMWAIT_entry se44;
-    NUMWAITSUPPLIER1_P_1_entry se45;
-    NUMWAITSUPPLIER1_L2_1_entry se46;
-    NUMWAITSUPPLIER1_E3_1_entry se47;
-    NUMWAITSUPPLIER1_P_2_entry se48;
-    NUMWAITORDERS1_entry se49;
+    NUMWAITSUPPLIER1_E3_1_entry se12;
+    NUMWAITLINEITEM3_E3_2_DELTA_entry se13;
+    NUMWAITLINEITEM1_P_3_entry se14;
+    NUMWAITSUPPLIER1_L2_1_entry se15;
+    NUMWAITLINEITEM3_L2_2_DELTA_entry se16;
+    NUMWAITLINEITEM1_P_4_entry se17;
+    NUMWAITSUPPLIER1_E3_1_entry se18;
+    NUMWAITLINEITEM3_E3_2_DELTA_entry se19;
+    NUMWAITLINEITEM4_P_3_entry se20;
+    NUMWAITLINEITEM3_L2_2_DELTA_entry se21;
+    NUMWAITORDERS1_entry se22;
+    NUMWAITORDERS1LINEITEM1_entry se23;
+    NUMWAITLINEITEM1_P_3_entry se24;
+    NUMWAITLINEITEM4_P_3_entry se25;
+    NUMWAITSUPPLIER1_P_2_entry se26;
+    NUMWAITSUPPLIER1_P_2LINEITEM1_entry se27;
+    NUMWAITSUPPLIER1_L2_1_entry se28;
+    NUMWAITSUPPLIER1_E3_1_entry se29;
+    NUMWAITORDERS1_DELTA_entry se30;
+    NUMWAITLINEITEM1_P_4ORDERS1_DELTA_entry se31;
+    NUMWAIT_entry se32;
+    NUMWAITSUPPLIER1_L2_1_entry se33;
+    NUMWAITSUPPLIER1_E3_1_entry se34;
+    NUMWAITORDERS1_entry se35;
+    NUMWAITLINEITEM1_P_4_entry se36;
+    NUMWAITSUPPLIER1_P_2_entry se37;
+    NUMWAITSUPPLIER1_L2_1_entry se38;
+    NUMWAITSUPPLIER1_P_2LINEITEM1_entry se39;
+    NUMWAITSUPPLIER1_DELTA_entry se40;
+    NUMWAIT_entry se41;
+    NUMWAITSUPPLIER1_P_1_entry se42;
+    NUMWAITSUPPLIER1_L2_1_entry se43;
+    NUMWAITSUPPLIER1_E3_1_entry se44;
+    NUMWAITSUPPLIER1_P_2_entry se45;
+    NUMWAITORDERS1_entry se46;
+    NUMWAITSUPPLIER1_P_1_entry se47;
+    NUMWAITSUPPLIER1_L2_1_entry se48;
+    NUMWAITORDERS1LINEITEM1_entry se49;
     NUMWAITSUPPLIER1_P_1_entry se50;
-    NUMWAITSUPPLIER1_L2_1_entry se51;
-    NUMWAITORDERS1LINEITEM1_entry se52;
-    NUMWAITSUPPLIER1_P_1_entry se53;
-    NUMWAITLINEITEM1_P_3_entry se54;
-    NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry se55;
-    NUMWAITSUPPLIER1_L2_1_entry se56;
-    NUMWAITLINEITEM4_P_3_entry se57;
-    NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry se58;
-    NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_entry se59;
-    NUMWAITSUPPLIER1_P_1_entry se60;
-    NATION_entry se61;
+    NUMWAITLINEITEM1_P_3_entry se51;
+    NUMWAITSUPPLIER1_L2_1_entry se52;
+    NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry se53;
+    NUMWAITLINEITEM4_P_3_entry se54;
+    NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry se55;
+    NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_entry se56;
+    NUMWAITSUPPLIER1_P_1_entry se57;
+    NATION_entry se58;
   
     /* Data structures used for storing materialized views */
     NATION_map NATION;
     NUMWAITORDERS1_DELTA_map NUMWAITORDERS1_DELTA;
     NUMWAITORDERS1_map NUMWAITORDERS1;
     NUMWAITORDERS1LINEITEM1_map NUMWAITORDERS1LINEITEM1;
-    NUMWAITLINEITEM1_DOMAIN1_map NUMWAITLINEITEM1_DOMAIN1;
+    NUMWAITLINEITEM1_DOMAIN1_P_3_map NUMWAITLINEITEM1_DOMAIN1_P_3;
     NUMWAITLINEITEM1_P_3_map NUMWAITLINEITEM1_P_3;
-    NUMWAITLINEITEM1_P_3SUPPLIER1_P_2_map NUMWAITLINEITEM1_P_3SUPPLIER1_P_2;
+    NUMWAITLINEITEM1_P_3SUPPLIER1_P_1_map NUMWAITLINEITEM1_P_3SUPPLIER1_P_1;
     NUMWAITLINEITEM1_P_4_map NUMWAITLINEITEM1_P_4;
     NUMWAITLINEITEM1_P_4ORDERS1_DELTA_map NUMWAITLINEITEM1_P_4ORDERS1_DELTA;
     NUMWAITLINEITEM3_L2_2_DELTA_map NUMWAITLINEITEM3_L2_2_DELTA;
@@ -2082,9 +2011,9 @@ namespace dbtoaster {
     DELTA_LINEITEM_map DELTA_LINEITEM;
     DELTA_ORDERS_map DELTA_ORDERS;
     DELTA_SUPPLIER_map DELTA_SUPPLIER;
-    MultiHashMap<tuple2_L_L,long,HashIndex<tuple2_L_L,long> > agg1;
-    /*const static*/ STRING_TYPE c2;
+    
     /*const static*/ STRING_TYPE c1;
+    /*const static*/ STRING_TYPE c2;
   
   };
 

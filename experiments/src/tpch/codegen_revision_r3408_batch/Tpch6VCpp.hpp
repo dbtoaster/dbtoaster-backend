@@ -121,8 +121,8 @@ namespace dbtoaster {
   /* Type definition providing a way to incrementally maintain the results of the sql program */
   struct data_t : tlq_t{
     data_t(): tlq_t(), REVENUELINEITEM1_DELTA(0.0) {
-      c2 = Udate(STRING_TYPE("1995-1-1"));
-      c1 = Udate(STRING_TYPE("1994-1-1"));
+      c2 = Udate(STRING_TYPE("1994-1-1"));
+      c1 = Udate(STRING_TYPE("1995-1-1"));
     }
   
   
@@ -144,27 +144,27 @@ namespace dbtoaster {
 
         DOUBLE_TYPE agg1 = 0.0;
         {  
-          for (size_t i = 0; i < DELTA_LINEITEM.size; i++)
+          for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
-              // long l_orderkey = DELTA_LINEITEM.orderkey[i];
-              // long l_partkey = DELTA_LINEITEM.partkey[i];
-              // long l_suppkey = DELTA_LINEITEM.suppkey[i];
-              // long l_linenumber = DELTA_LINEITEM.linenumber[i];
-              DOUBLE_TYPE l_quantity = DELTA_LINEITEM.quantity[i];
-              DOUBLE_TYPE l_extendedprice = DELTA_LINEITEM.extendedprice[i];
-              DOUBLE_TYPE l_discount = DELTA_LINEITEM.discount[i];
-              // DOUBLE_TYPE l_tax = DELTA_LINEITEM.tax[i];
-              // STRING_TYPE l_returnflag = DELTA_LINEITEM.returnflag[i];
-              // STRING_TYPE l_linestatus = DELTA_LINEITEM.linestatus[i];
-              date l_shipdate = DELTA_LINEITEM.shipdate[i];
-              // date l_commitdate = DELTA_LINEITEM.commitdate[i];
-              // date l_receiptdate = DELTA_LINEITEM.receiptdate[i];
-              // STRING_TYPE l_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
-              // STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
-              // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
-              long v1 = 1L;
-              (/*if */(l_shipdate >= c1 && c2 > l_shipdate && l_discount >= 0.05 && 0.07 >= l_discount && 24L > l_quantity) ? agg1 += (v1 * (l_extendedprice * l_discount)) : 0.0);            
-          }        
+                // long l_orderkey = DELTA_LINEITEM.orderkey[i];
+                // long l_partkey = DELTA_LINEITEM.partkey[i];
+                // long l_suppkey = DELTA_LINEITEM.suppkey[i];
+                // long l_linenumber = DELTA_LINEITEM.linenumber[i];
+                DOUBLE_TYPE l_quantity = DELTA_LINEITEM.quantity[i];
+                DOUBLE_TYPE l_extendedprice = DELTA_LINEITEM.extendedprice[i];
+                DOUBLE_TYPE l_discount = DELTA_LINEITEM.discount[i];
+                // DOUBLE_TYPE l_tax = DELTA_LINEITEM.tax[i];
+                // STRING_TYPE l_returnflag = DELTA_LINEITEM.returnflag[i];
+                // STRING_TYPE l_linestatus = DELTA_LINEITEM.linestatus[i];
+                date l_shipdate = DELTA_LINEITEM.shipdate[i];
+                // date l_commitdate = DELTA_LINEITEM.commitdate[i];
+                // date l_receiptdate = DELTA_LINEITEM.receiptdate[i];
+                // STRING_TYPE l_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
+                // STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
+                // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
+                long v1 = 1L;
+                (/*if */(24L > l_quantity && 0.07 >= l_discount && l_discount >= 0.05 && c1 > l_shipdate && l_shipdate >= c2) ? agg1 += (v1 * (l_extendedprice * l_discount)) : 0.0);
+          }
         }
         REVENUELINEITEM1_DELTA = agg1;
         REVENUE += REVENUELINEITEM1_DELTA;

@@ -381,14 +381,14 @@ namespace dbtoaster {
   typedef HashIndex<REVENUELINEITEM1_entry,long,REVENUELINEITEM1_mapkey01234567_idxfn,true> HashIndex_REVENUELINEITEM1_map_01234567;
   typedef HashIndex<REVENUELINEITEM1_entry,long,REVENUELINEITEM1_mapkey6_idxfn,false> HashIndex_REVENUELINEITEM1_map_6;
   
-  struct REVENUELINEITEM1CUSTOMER1_P_1_entry {
+  struct REVENUELINEITEM1CUSTOMER1_P_2_entry {
     long O_ORDERKEY; long C_CUSTKEY; long __av; 
-    explicit REVENUELINEITEM1CUSTOMER1_P_1_entry() { /*O_ORDERKEY = 0L; C_CUSTKEY = 0L; __av = 0L; */ }
-    explicit REVENUELINEITEM1CUSTOMER1_P_1_entry(const long c0, const long c1, const long c2) { O_ORDERKEY = c0; C_CUSTKEY = c1; __av = c2; }
-    REVENUELINEITEM1CUSTOMER1_P_1_entry(const REVENUELINEITEM1CUSTOMER1_P_1_entry& other) : O_ORDERKEY( other.O_ORDERKEY ), C_CUSTKEY( other.C_CUSTKEY ), __av( other.__av ) {}
-    FORCE_INLINE REVENUELINEITEM1CUSTOMER1_P_1_entry& modify(const long c0, const long c1) { O_ORDERKEY = c0; C_CUSTKEY = c1;  return *this; }
-    FORCE_INLINE REVENUELINEITEM1CUSTOMER1_P_1_entry& modify0(const long c0) { O_ORDERKEY = c0;  return *this; }
-    FORCE_INLINE REVENUELINEITEM1CUSTOMER1_P_1_entry& modify1(const long c1) { C_CUSTKEY = c1;  return *this; }
+    explicit REVENUELINEITEM1CUSTOMER1_P_2_entry() { /*O_ORDERKEY = 0L; C_CUSTKEY = 0L; __av = 0L; */ }
+    explicit REVENUELINEITEM1CUSTOMER1_P_2_entry(const long c0, const long c1, const long c2) { O_ORDERKEY = c0; C_CUSTKEY = c1; __av = c2; }
+    REVENUELINEITEM1CUSTOMER1_P_2_entry(const REVENUELINEITEM1CUSTOMER1_P_2_entry& other) : O_ORDERKEY( other.O_ORDERKEY ), C_CUSTKEY( other.C_CUSTKEY ), __av( other.__av ) {}
+    FORCE_INLINE REVENUELINEITEM1CUSTOMER1_P_2_entry& modify(const long c0, const long c1) { O_ORDERKEY = c0; C_CUSTKEY = c1;  return *this; }
+    FORCE_INLINE REVENUELINEITEM1CUSTOMER1_P_2_entry& modify0(const long c0) { O_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE REVENUELINEITEM1CUSTOMER1_P_2_entry& modify1(const long c1) { C_CUSTKEY = c1;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
@@ -400,48 +400,48 @@ namespace dbtoaster {
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct REVENUELINEITEM1CUSTOMER1_P_1_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const REVENUELINEITEM1CUSTOMER1_P_1_entry& e) {
+  struct REVENUELINEITEM1CUSTOMER1_P_2_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const REVENUELINEITEM1CUSTOMER1_P_2_entry& e) {
       size_t h = 0;
       hash_combine(h, e.O_ORDERKEY);
       hash_combine(h, e.C_CUSTKEY);
       return h;
     }
-    FORCE_INLINE static bool equals(const REVENUELINEITEM1CUSTOMER1_P_1_entry& x, const REVENUELINEITEM1CUSTOMER1_P_1_entry& y) {
+    FORCE_INLINE static bool equals(const REVENUELINEITEM1CUSTOMER1_P_2_entry& x, const REVENUELINEITEM1CUSTOMER1_P_2_entry& y) {
       return x.O_ORDERKEY == y.O_ORDERKEY && x.C_CUSTKEY == y.C_CUSTKEY;
     }
   };
   
-  struct REVENUELINEITEM1CUSTOMER1_P_1_mapkey0_idxfn {
-    FORCE_INLINE static size_t hash(const REVENUELINEITEM1CUSTOMER1_P_1_entry& e) {
+  struct REVENUELINEITEM1CUSTOMER1_P_2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const REVENUELINEITEM1CUSTOMER1_P_2_entry& e) {
       size_t h = 0;
       hash_combine(h, e.O_ORDERKEY);
       return h;
     }
-    FORCE_INLINE static bool equals(const REVENUELINEITEM1CUSTOMER1_P_1_entry& x, const REVENUELINEITEM1CUSTOMER1_P_1_entry& y) {
+    FORCE_INLINE static bool equals(const REVENUELINEITEM1CUSTOMER1_P_2_entry& x, const REVENUELINEITEM1CUSTOMER1_P_2_entry& y) {
       return x.O_ORDERKEY == y.O_ORDERKEY;
     }
   };
   
-  struct REVENUELINEITEM1CUSTOMER1_P_1_mapkey1_idxfn {
-    FORCE_INLINE static size_t hash(const REVENUELINEITEM1CUSTOMER1_P_1_entry& e) {
+  struct REVENUELINEITEM1CUSTOMER1_P_2_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const REVENUELINEITEM1CUSTOMER1_P_2_entry& e) {
       size_t h = 0;
       hash_combine(h, e.C_CUSTKEY);
       return h;
     }
-    FORCE_INLINE static bool equals(const REVENUELINEITEM1CUSTOMER1_P_1_entry& x, const REVENUELINEITEM1CUSTOMER1_P_1_entry& y) {
+    FORCE_INLINE static bool equals(const REVENUELINEITEM1CUSTOMER1_P_2_entry& x, const REVENUELINEITEM1CUSTOMER1_P_2_entry& y) {
       return x.C_CUSTKEY == y.C_CUSTKEY;
     }
   };
   
-  typedef MultiHashMap<REVENUELINEITEM1CUSTOMER1_P_1_entry,long,
-    HashIndex<REVENUELINEITEM1CUSTOMER1_P_1_entry,long,REVENUELINEITEM1CUSTOMER1_P_1_mapkey01_idxfn,true>,
-    HashIndex<REVENUELINEITEM1CUSTOMER1_P_1_entry,long,REVENUELINEITEM1CUSTOMER1_P_1_mapkey0_idxfn,false>,
-    HashIndex<REVENUELINEITEM1CUSTOMER1_P_1_entry,long,REVENUELINEITEM1CUSTOMER1_P_1_mapkey1_idxfn,false>
-  > REVENUELINEITEM1CUSTOMER1_P_1_map;
-  typedef HashIndex<REVENUELINEITEM1CUSTOMER1_P_1_entry,long,REVENUELINEITEM1CUSTOMER1_P_1_mapkey01_idxfn,true> HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_01;
-  typedef HashIndex<REVENUELINEITEM1CUSTOMER1_P_1_entry,long,REVENUELINEITEM1CUSTOMER1_P_1_mapkey0_idxfn,false> HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_0;
-  typedef HashIndex<REVENUELINEITEM1CUSTOMER1_P_1_entry,long,REVENUELINEITEM1CUSTOMER1_P_1_mapkey1_idxfn,false> HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_1;
+  typedef MultiHashMap<REVENUELINEITEM1CUSTOMER1_P_2_entry,long,
+    HashIndex<REVENUELINEITEM1CUSTOMER1_P_2_entry,long,REVENUELINEITEM1CUSTOMER1_P_2_mapkey01_idxfn,true>,
+    HashIndex<REVENUELINEITEM1CUSTOMER1_P_2_entry,long,REVENUELINEITEM1CUSTOMER1_P_2_mapkey0_idxfn,false>,
+    HashIndex<REVENUELINEITEM1CUSTOMER1_P_2_entry,long,REVENUELINEITEM1CUSTOMER1_P_2_mapkey1_idxfn,false>
+  > REVENUELINEITEM1CUSTOMER1_P_2_map;
+  typedef HashIndex<REVENUELINEITEM1CUSTOMER1_P_2_entry,long,REVENUELINEITEM1CUSTOMER1_P_2_mapkey01_idxfn,true> HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_01;
+  typedef HashIndex<REVENUELINEITEM1CUSTOMER1_P_2_entry,long,REVENUELINEITEM1CUSTOMER1_P_2_mapkey0_idxfn,false> HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_0;
+  typedef HashIndex<REVENUELINEITEM1CUSTOMER1_P_2_entry,long,REVENUELINEITEM1CUSTOMER1_P_2_mapkey1_idxfn,false> HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_1;
   
   struct REVENUEORDERS1_DELTA_entry {
     long O_ORDERKEY; long C_CUSTKEY; long __av; 
@@ -748,7 +748,7 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_batch_update_LINEITEM(TPCHLineitemBatch& DELTA_LINEITEM) {
-      { 
+      {  
         if (tS > 0) { tS += DELTA_LINEITEM.size; return; }         
         tLastN += DELTA_LINEITEM.size;        
         if (tLastN > 127) { 
@@ -759,9 +759,8 @@ namespace dbtoaster {
         }
         tN += DELTA_LINEITEM.size;
 
-
         REVENUELINEITEM1_DELTA.clear();
-        {  
+        { 
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
                 long o_orderkey = DELTA_LINEITEM.orderkey[i];
@@ -781,10 +780,11 @@ namespace dbtoaster {
                 // STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
                 // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
-                (/*if */(lift1 == c1) ? REVENUELINEITEM1_DELTA.addOrDelOnZero(se1.modify(o_orderkey),(v1 * (l_extendedprice * (1L + (-1L * l_discount))))) : (void)0);
-
+                (/*if */(lift1 == c1) ? REVENUELINEITEM1_DELTA.addOrDelOnZero(se1.modify(o_orderkey),(v1 * (l_extendedprice * (1L + (-1L * l_discount))))) : (void)0);            
           }
-        }{  // foreach
+        }
+
+        {  // foreach
           const HashIndex_REVENUELINEITEM1_DELTA_map_0* i2 = static_cast<HashIndex_REVENUELINEITEM1_DELTA_map_0*>(REVENUELINEITEM1_DELTA.index[0]);
           HashIndex_REVENUELINEITEM1_DELTA_map_0::IdxNode* n2; 
           REVENUELINEITEM1_DELTA_entry* e2;
@@ -849,10 +849,10 @@ namespace dbtoaster {
                 long o_orderkey = e5->O_ORDERKEY;
                 DOUBLE_TYPE v5 = e5->__av;
                 { //slice 
-                  const HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_0* i6 = static_cast<HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_0*>(REVENUELINEITEM1CUSTOMER1_P_1.index[1]);
-                  const HASH_RES_t h2 = REVENUELINEITEM1CUSTOMER1_P_1_mapkey0_idxfn::hash(se6.modify0(o_orderkey));
-                  HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_0::IdxNode* n6 = static_cast<HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_0::IdxNode*>(i6->slice(se6, h2));
-                  REVENUELINEITEM1CUSTOMER1_P_1_entry* e6;
+                  const HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_0* i6 = static_cast<HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_0*>(REVENUELINEITEM1CUSTOMER1_P_2.index[1]);
+                  const HASH_RES_t h2 = REVENUELINEITEM1CUSTOMER1_P_2_mapkey0_idxfn::hash(se6.modify0(o_orderkey));
+                  HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_0::IdxNode* n6 = static_cast<HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_0::IdxNode*>(i6->slice(se6, h2));
+                  REVENUELINEITEM1CUSTOMER1_P_2_entry* e6;
                  
                   if (n6 && (e6 = n6->obj)) {
                     do {                
@@ -860,7 +860,7 @@ namespace dbtoaster {
                       long v6 = e6->__av;
                       REVENUECUSTOMER1_P_1.addOrDelOnZero(se5.modify(c_custkey),(v5 * v6));
                       n6 = n6->nxt;
-                    } while (n6 && (e6 = n6->obj) && h2 == n6->hash &&  REVENUELINEITEM1CUSTOMER1_P_1_mapkey0_idxfn::equals(se6, *e6)); 
+                    } while (n6 && (e6 = n6->obj) && h2 == n6->hash &&  REVENUELINEITEM1CUSTOMER1_P_2_mapkey0_idxfn::equals(se6, *e6)); 
                   }
                 }
               n5 = n5->nxt;
@@ -882,22 +882,23 @@ namespace dbtoaster {
         tN += DELTA_ORDERS.size;
 
         REVENUEORDERS1_DELTA.clear();
-        { 
-          for (size_t i = 0; i < DELTA_ORDERS.size; i++)
+        {  
+          for (size_t i = 0; i < DELTA_ORDERS.size; i++) 
           {
                 long o_orderkey = DELTA_ORDERS.orderkey[i];
                 long c_custkey = DELTA_ORDERS.custkey[i];
-                STRING_TYPE o_orderstatus = DELTA_ORDERS.orderstatus[i];
-                DOUBLE_TYPE o_totalprice = DELTA_ORDERS.totalprice[i];
+                // STRING_TYPE o_orderstatus = DELTA_ORDERS.orderstatus[i];
+                // DOUBLE_TYPE o_totalprice = DELTA_ORDERS.totalprice[i];
                 date o_orderdate = DELTA_ORDERS.orderdate[i];
-                STRING_TYPE o_orderpriority = DELTA_ORDERS.orderpriority[i];
-                STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
-                long o_shippriority = DELTA_ORDERS.shippriority[i];
-                STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
+                // STRING_TYPE o_orderpriority = DELTA_ORDERS.orderpriority[i];
+                // STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
+                // long o_shippriority = DELTA_ORDERS.shippriority[i];
+                // STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
                 long v7 = 1L;
                 (/*if */(o_orderdate >= c2 && c3 > o_orderdate) ? REVENUEORDERS1_DELTA.addOrDelOnZero(se7.modify(o_orderkey,c_custkey),v7) : (void)0);
           }
         }
+
         {  // foreach
           const HashIndex_REVENUEORDERS1_DELTA_map_01* i8 = static_cast<HashIndex_REVENUEORDERS1_DELTA_map_01*>(REVENUEORDERS1_DELTA.index[0]);
           HashIndex_REVENUEORDERS1_DELTA_map_01::IdxNode* n8; 
@@ -983,7 +984,7 @@ namespace dbtoaster {
                 long o_orderkey = e12->O_ORDERKEY;
                 long c_custkey = e12->C_CUSTKEY;
                 long v12 = e12->__av;
-                REVENUELINEITEM1CUSTOMER1_P_1.addOrDelOnZero(se13.modify(o_orderkey,c_custkey),v12);
+                REVENUELINEITEM1CUSTOMER1_P_2.addOrDelOnZero(se13.modify(o_orderkey,c_custkey),v12);
               n12 = n12->nxt;
             }
           }
@@ -1020,8 +1021,8 @@ namespace dbtoaster {
         tN += DELTA_CUSTOMER.size;
 
         REVENUECUSTOMER1_DELTA.clear();
-        { 
-          for (size_t i = 0; i < DELTA_CUSTOMER.size; i++)
+        {  
+          for (size_t i = 0; i < DELTA_CUSTOMER.size; i++) 
           {
                 long c_custkey = DELTA_CUSTOMER.custkey[i];
                 STRING_TYPE c_name = DELTA_CUSTOMER.name[i];
@@ -1029,12 +1030,14 @@ namespace dbtoaster {
                 long c_nationkey = DELTA_CUSTOMER.nationkey[i];
                 STRING_TYPE c_phone = DELTA_CUSTOMER.phone[i];
                 DOUBLE_TYPE c_acctbal = DELTA_CUSTOMER.acctbal[i];
-                STRING_TYPE c_mktsegment = DELTA_CUSTOMER.mktsegment[i];
+                // STRING_TYPE c_mktsegment = DELTA_CUSTOMER.mktsegment[i];
                 STRING_TYPE c_comment = DELTA_CUSTOMER.comment[i];
                 long v14 = 1L;
-                REVENUECUSTOMER1_DELTA.addOrDelOnZero(se16.modify(c_custkey,c_name,c_address,c_nationkey,c_phone,c_acctbal,c_comment),v14);
+                REVENUECUSTOMER1_DELTA.addOrDelOnZero(se16.modify(c_custkey,c_name,c_address,c_nationkey,c_phone,c_acctbal,c_comment),v14);            
           }
-        }{  // foreach
+        }
+
+        {  // foreach
           const HashIndex_REVENUECUSTOMER1_DELTA_map_0123456* i15 = static_cast<HashIndex_REVENUECUSTOMER1_DELTA_map_0123456*>(REVENUECUSTOMER1_DELTA.index[0]);
           HashIndex_REVENUECUSTOMER1_DELTA_map_0123456::IdxNode* n15; 
           REVENUECUSTOMER1_DELTA_entry* e15;
@@ -1089,32 +1092,32 @@ namespace dbtoaster {
                 STRING_TYPE c_comment = e17->C_COMMENT;
                 long v17 = e17->__av;
                 { //slice 
-                  const HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_1* i18 = static_cast<HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_1*>(REVENUELINEITEM1CUSTOMER1_P_1.index[2]);
-                  const HASH_RES_t h7 = REVENUELINEITEM1CUSTOMER1_P_1_mapkey1_idxfn::hash(se22.modify1(c_custkey));
-                  HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_1::IdxNode* n18 = static_cast<HashIndex_REVENUELINEITEM1CUSTOMER1_P_1_map_1::IdxNode*>(i18->slice(se22, h7));
-                  REVENUELINEITEM1CUSTOMER1_P_1_entry* e18;
+                  const HashIndex_REVENUECUSTOMER1_P_2_map_0* i18 = static_cast<HashIndex_REVENUECUSTOMER1_P_2_map_0*>(REVENUECUSTOMER1_P_2.index[1]);
+                  const HASH_RES_t h7 = REVENUECUSTOMER1_P_2_mapkey0_idxfn::hash(se22.modify0(c_nationkey));
+                  HashIndex_REVENUECUSTOMER1_P_2_map_0::IdxNode* n18 = static_cast<HashIndex_REVENUECUSTOMER1_P_2_map_0::IdxNode*>(i18->slice(se22, h7));
+                  REVENUECUSTOMER1_P_2_entry* e18;
                  
                   if (n18 && (e18 = n18->obj)) {
                     do {                
-                      long o_orderkey = e18->O_ORDERKEY;
+                      STRING_TYPE n_name = e18->N_NAME;
                       long v18 = e18->__av;
                       { //slice 
-                        const HashIndex_REVENUECUSTOMER1_P_2_map_0* i19 = static_cast<HashIndex_REVENUECUSTOMER1_P_2_map_0*>(REVENUECUSTOMER1_P_2.index[1]);
-                        const HASH_RES_t h6 = REVENUECUSTOMER1_P_2_mapkey0_idxfn::hash(se21.modify0(c_nationkey));
-                        HashIndex_REVENUECUSTOMER1_P_2_map_0::IdxNode* n19 = static_cast<HashIndex_REVENUECUSTOMER1_P_2_map_0::IdxNode*>(i19->slice(se21, h6));
-                        REVENUECUSTOMER1_P_2_entry* e19;
+                        const HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_1* i19 = static_cast<HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_1*>(REVENUELINEITEM1CUSTOMER1_P_2.index[2]);
+                        const HASH_RES_t h6 = REVENUELINEITEM1CUSTOMER1_P_2_mapkey1_idxfn::hash(se21.modify1(c_custkey));
+                        HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_1::IdxNode* n19 = static_cast<HashIndex_REVENUELINEITEM1CUSTOMER1_P_2_map_1::IdxNode*>(i19->slice(se21, h6));
+                        REVENUELINEITEM1CUSTOMER1_P_2_entry* e19;
                        
                         if (n19 && (e19 = n19->obj)) {
                           do {                
-                            STRING_TYPE n_name = e19->N_NAME;
+                            long o_orderkey = e19->O_ORDERKEY;
                             long v19 = e19->__av;
                             REVENUELINEITEM1.addOrDelOnZero(se20.modify(c_custkey,c_name,c_address,c_phone,c_acctbal,c_comment,o_orderkey,n_name),(v17 * (v18 * v19)));
                             n19 = n19->nxt;
-                          } while (n19 && (e19 = n19->obj) && h6 == n19->hash &&  REVENUECUSTOMER1_P_2_mapkey0_idxfn::equals(se21, *e19)); 
+                          } while (n19 && (e19 = n19->obj) && h6 == n19->hash &&  REVENUELINEITEM1CUSTOMER1_P_2_mapkey1_idxfn::equals(se21, *e19)); 
                         }
                       }
                       n18 = n18->nxt;
-                    } while (n18 && (e18 = n18->obj) && h7 == n18->hash &&  REVENUELINEITEM1CUSTOMER1_P_1_mapkey1_idxfn::equals(se22, *e18)); 
+                    } while (n18 && (e18 = n18->obj) && h7 == n18->hash &&  REVENUECUSTOMER1_P_2_mapkey0_idxfn::equals(se22, *e18)); 
                   }
                 }
               n17 = n17->nxt;
@@ -1193,14 +1196,14 @@ namespace dbtoaster {
     REVENUELINEITEM1_entry se3;
     REVENUEORDERS1_P_1_entry se4;
     REVENUECUSTOMER1_P_1_entry se5;
-    REVENUELINEITEM1CUSTOMER1_P_1_entry se6;
+    REVENUELINEITEM1CUSTOMER1_P_2_entry se6;
     REVENUEORDERS1_DELTA_entry se7;
     REVENUE_entry se8;
     REVENUEORDERS1_P_1_entry se9;
     REVENUEORDERS1_P_2_entry se10;
     REVENUELINEITEM1_entry se11;
     REVENUEORDERS1_P_2_entry se12;
-    REVENUELINEITEM1CUSTOMER1_P_1_entry se13;
+    REVENUELINEITEM1CUSTOMER1_P_2_entry se13;
     REVENUECUSTOMER1_P_1_entry se14;
     REVENUEORDERS1_P_1_entry se15;
     REVENUECUSTOMER1_DELTA_entry se16;
@@ -1208,8 +1211,8 @@ namespace dbtoaster {
     REVENUECUSTOMER1_P_1_entry se18;
     REVENUECUSTOMER1_P_2_entry se19;
     REVENUELINEITEM1_entry se20;
-    REVENUECUSTOMER1_P_2_entry se21;
-    REVENUELINEITEM1CUSTOMER1_P_1_entry se22;
+    REVENUELINEITEM1CUSTOMER1_P_2_entry se21;
+    REVENUECUSTOMER1_P_2_entry se22;
     REVENUEORDERS1_P_2_entry se23;
     REVENUECUSTOMER1_P_2_entry se24;
     REVENUECUSTOMER1_P_2_entry se25;
@@ -1218,7 +1221,7 @@ namespace dbtoaster {
     NATION_map NATION;
     REVENUELINEITEM1_DELTA_map REVENUELINEITEM1_DELTA;
     REVENUELINEITEM1_map REVENUELINEITEM1;
-    REVENUELINEITEM1CUSTOMER1_P_1_map REVENUELINEITEM1CUSTOMER1_P_1;
+    REVENUELINEITEM1CUSTOMER1_P_2_map REVENUELINEITEM1CUSTOMER1_P_2;
     REVENUEORDERS1_DELTA_map REVENUEORDERS1_DELTA;
     REVENUEORDERS1_P_1_map REVENUEORDERS1_P_1;
     REVENUEORDERS1_P_2_map REVENUEORDERS1_P_2;

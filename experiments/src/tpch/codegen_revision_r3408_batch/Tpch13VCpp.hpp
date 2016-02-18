@@ -463,24 +463,12 @@ namespace dbtoaster {
   > CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_map;
   typedef HashIndex<CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_entry,long,CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_mapkey0_idxfn,true> HashIndex_CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_map_0;
   
-  struct tuple2_L_L {
-    long _1; long __av;
-    explicit tuple2_L_L() { }
-    explicit tuple2_L_L(const long c1, long c__av=0L) { _1 = c1; __av = c__av;}
-    int operator==(const tuple2_L_L &rhs) const { return ((this->_1==rhs._1)); }
-    FORCE_INLINE tuple2_L_L& modify(const long c0, long c__av) { _1 = c0; __av = c__av; return *this; }
-    static bool equals(const tuple2_L_L &x, const tuple2_L_L &y) { return ((x._1==y._1)); }
-    static long hash(const tuple2_L_L &e) {
-      size_t h = 0;
-      hash_combine(h, e._1);
-      return h;
-    }
-  };
+  
   
   /* Type definition providing a way to access the results of the sql program */
   struct tlq_t{
     struct timeval t0,t; long tT,tN,tS,tLastN;
-    tlq_t(): tN(0), tS(0),tLastN(0) { gettimeofday(&t0,NULL); }
+    tlq_t(): tN(0), tS(0), tLastN(0) { gettimeofday(&t0,NULL); }
   
   /* Serialization Code */
     template<class Archive>
@@ -507,7 +495,7 @@ namespace dbtoaster {
   
   /* Type definition providing a way to incrementally maintain the results of the sql program */
   struct data_t : tlq_t{
-    data_t(): tlq_t(), agg4(16U), agg1(16U) {
+    data_t(): tlq_t() {
       
       /* regex_t init */
       if(regcomp(&preg1, "^.*special.*requests.*$", REG_EXTENDED | REG_NOSUB)){
@@ -525,7 +513,7 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_batch_update_ORDERS(TPCHOrdersBatch& DELTA_ORDERS) {
-      {        
+      {  
         if (tS > 0) { tS += DELTA_ORDERS.size; return; }         
         tLastN += DELTA_ORDERS.size;        
         if (tLastN > 127) { 
@@ -536,12 +524,11 @@ namespace dbtoaster {
         }
         tN += DELTA_ORDERS.size;
 
-
         CUSTDISTORDERS3_L1_2_DELTA.clear();
         CUSTDISTORDERS1_DOMAIN1.clear();
         CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA.clear();
         {  
-          for (size_t i = 0; i < DELTA_ORDERS.size; i++)
+          for (size_t i = 0; i < DELTA_ORDERS.size; i++) 
           {
                 // long o_orderkey = DELTA_ORDERS.orderkey[i];
                 long c_custkey = DELTA_ORDERS.custkey[i];
@@ -552,21 +539,20 @@ namespace dbtoaster {
                 // STRING_TYPE o_clerk = DELTA_ORDERS.clerk[i];
                 // long o_shippriority = DELTA_ORDERS.shippriority[i];
                 STRING_TYPE o_comment = DELTA_ORDERS.comment[i];
+                long reg_match = Upreg_match(preg1,o_comment);
                 long v1 = 1L;
-                long preg1_match = Upreg_match(preg1,o_comment);
-                (/*if */(0L == preg1_match) ? CUSTDISTORDERS3_L1_2_DELTA.addOrDelOnZero(se1.modify(c_custkey,c_custkey),v1) : (void)0);
+                (/*if */(0L == reg_match) ? CUSTDISTORDERS3_L1_2_DELTA.addOrDelOnZero(se1.modify(c_custkey,c_custkey),v1) : (void)0);            
                 long v2 = 1L;
-                (/*if */(0L == preg1_match) ? CUSTDISTORDERS1_DOMAIN1.addOrDelOnZero(se2.modify(c_custkey),(v2 != 0 ? 1L : 0L)) : (void)0);
+                (/*if */(0L == reg_match) ? CUSTDISTORDERS1_DOMAIN1.addOrDelOnZero(se2.modify(c_custkey),(v2 != 0 ? 1L : 0L)) : (void)0);
                 long v3 = 1L;
-                (/*if */(0L == preg1_match) ? CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA.addOrDelOnZero(se3.modify(c_custkey),v3) : (void)0);
+                (/*if */(0L == reg_match) ? CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA.addOrDelOnZero(se3.modify(c_custkey),v3) : (void)0);
           }
         }
         
-        agg1.clear();        
         {  // foreach
-          const HashIndex_CUSTDISTCUSTOMER1_L1_1_map_0* i4 = static_cast<HashIndex_CUSTDISTCUSTOMER1_L1_1_map_0*>(CUSTDISTCUSTOMER1_L1_1.index[0]);
-          HashIndex_CUSTDISTCUSTOMER1_L1_1_map_0::IdxNode* n4; 
-          CUSTDISTCUSTOMER1_L1_1_entry* e4;
+          const HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0* i4 = static_cast<HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0*>(CUSTDISTORDERS1_DOMAIN1.index[0]);
+          HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0::IdxNode* n4; 
+          CUSTDISTORDERS1_DOMAIN1_entry* e4;
         
           for (size_t i = 0; i < i4->size_; i++)
           {
@@ -576,94 +562,92 @@ namespace dbtoaster {
                 long c_orders_c_custkey = e4->C_ORDERS_C_CUSTKEY;
                 long v4 = e4->__av;
                 long l1 = CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se5.modify(c_orders_c_custkey));
-                agg1.addOrDelOnZero(st1.modify(l1,(v4 != 0 ? 1L : 0L)), (v4 != 0 ? 1L : 0L));
+                CUSTDIST.addOrDelOnZero(se4.modify(l1),(((v4 != 0 ? 1L : 0L) * (CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se6.modify(c_orders_c_custkey)) != 0 ? 1L : 0L)) * -1L));
               n4 = n4->nxt;
             }
           }
-        }{  // temp foreach
-          const HashIndex<tuple2_L_L, long>* i5 = static_cast<HashIndex<tuple2_L_L, long>*>(agg1.index[0]);
-          HashIndex<tuple2_L_L, long>::IdxNode* n5; 
-          tuple2_L_L* e5;
+        }{  // foreach
+          const HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0* i5 = static_cast<HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0*>(CUSTDISTORDERS1_DOMAIN1.index[0]);
+          HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0::IdxNode* n5; 
+          CUSTDISTORDERS1_DOMAIN1_entry* e5;
         
           for (size_t i = 0; i < i5->size_; i++)
           {
             n5 = i5->buckets_ + i;
             while (n5 && (e5 = n5->obj))
             {
-              long c_orders_c_count = e5->_1;  
-              long v5 = e5->__av; 
-            if (CUSTDIST.getValueOrDefault(se4.modify(c_orders_c_count))==0) CUSTDIST.setOrDelOnZero(se4, v5);      
+                long c_orders_c_custkey = e5->C_ORDERS_C_CUSTKEY;
+                long v5 = e5->__av;
+                long agg1 = 0L;
+                { //slice 
+                  const HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1* i6 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1*>(CUSTDISTORDERS3_L1_2_DELTA.index[1]);
+                  const HASH_RES_t h1 = CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::hash(se9.modify1(c_orders_c_custkey));
+                  HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode* n6 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode*>(i6->slice(se9, h1));
+                  CUSTDISTORDERS3_L1_2_DELTA_entry* e6;
+                 
+                  if (n6 && (e6 = n6->obj)) {
+                    do {                
+                      long c_custkey = e6->C_CUSTKEY;
+                      long v6 = e6->__av;
+                      agg1 += (v6 * CUSTDISTORDERS3_L1_2.getValueOrDefault(se8.modify(c_custkey)));
+                      n6 = n6->nxt;
+                    } while (n6 && (e6 = n6->obj) && h1 == n6->hash &&  CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::equals(se9, *e6)); 
+                  }
+                }long l2 = (CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se7.modify(c_orders_c_custkey)) + agg1);
+                long agg2 = 0L;
+                { //slice 
+                  const HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1* i7 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1*>(CUSTDISTORDERS3_L1_2_DELTA.index[1]);
+                  const HASH_RES_t h2 = CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::hash(se12.modify1(c_orders_c_custkey));
+                  HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode* n7 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode*>(i7->slice(se12, h2));
+                  CUSTDISTORDERS3_L1_2_DELTA_entry* e7;
+                 
+                  if (n7 && (e7 = n7->obj)) {
+                    do {                
+                      long c_custkey = e7->C_CUSTKEY;
+                      long v7 = e7->__av;
+                      agg2 += (v7 * CUSTDISTORDERS3_L1_2.getValueOrDefault(se11.modify(c_custkey)));
+                      n7 = n7->nxt;
+                    } while (n7 && (e7 = n7->obj) && h2 == n7->hash &&  CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::equals(se12, *e7)); 
+                  }
+                }CUSTDIST.addOrDelOnZero(se4.modify(l2),((v5 != 0 ? 1L : 0L) * ((CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se10.modify(c_orders_c_custkey)) + agg2) != 0 ? 1L : 0L)));
               n5 = n5->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0* i6 = static_cast<HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0*>(CUSTDISTORDERS1_DOMAIN1.index[0]);
-          HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0::IdxNode* n6; 
-          CUSTDISTORDERS1_DOMAIN1_entry* e6;
+          const HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0* i8 = static_cast<HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0*>(CUSTDISTORDERS1_DOMAIN1.index[0]);
+          HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0::IdxNode* n8; 
+          CUSTDISTORDERS1_DOMAIN1_entry* e8;
         
-          for (size_t i = 0; i < i6->size_; i++)
+          for (size_t i = 0; i < i8->size_; i++)
           {
-            n6 = i6->buckets_ + i;
-            while (n6 && (e6 = n6->obj))
+            n8 = i8->buckets_ + i;
+            while (n8 && (e8 = n8->obj))
             {
-                long c_orders_c_custkey = e6->C_ORDERS_C_CUSTKEY;
-                long v6 = e6->__av;
-                long l2 = CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se6.modify(c_orders_c_custkey));
-                CUSTDIST.addOrDelOnZero(se4.modify(l2),(((v6 != 0 ? 1L : 0L) * (CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se7.modify(c_orders_c_custkey)) != 0 ? 1L : 0L)) * -1L));
-              n6 = n6->nxt;
-            }
-          }
-        }{  // foreach
-          const HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0* i7 = static_cast<HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0*>(CUSTDISTORDERS1_DOMAIN1.index[0]);
-          HashIndex_CUSTDISTORDERS1_DOMAIN1_map_0::IdxNode* n7; 
-          CUSTDISTORDERS1_DOMAIN1_entry* e7;
-        
-          for (size_t i = 0; i < i7->size_; i++)
-          {
-            n7 = i7->buckets_ + i;
-            while (n7 && (e7 = n7->obj))
-            {
-                long c_orders_c_custkey = e7->C_ORDERS_C_CUSTKEY;
-                long v7 = e7->__av;
-                long agg2 = 0L;
-                { //slice 
-                  const HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1* i8 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1*>(CUSTDISTORDERS3_L1_2_DELTA.index[1]);
-                  const HASH_RES_t h1 = CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::hash(se10.modify1(c_orders_c_custkey));
-                  HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode* n8 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode*>(i8->slice(se10, h1));
-                  CUSTDISTORDERS3_L1_2_DELTA_entry* e8;
-                 
-                  if (n8 && (e8 = n8->obj)) {
-                    do {                
-                      long c_custkey = e8->C_CUSTKEY;
-                      long v8 = e8->__av;
-                      agg2 += (v8 * CUSTDISTORDERS3_L1_2.getValueOrDefault(se9.modify(c_custkey)));
-                      n8 = n8->nxt;
-                    } while (n8 && (e8 = n8->obj) && h1 == n8->hash &&  CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::equals(se10, *e8)); 
-                  }
-                }long l3 = (CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se8.modify(c_orders_c_custkey)) + agg2);
+                long c_orders_c_custkey = e8->C_ORDERS_C_CUSTKEY;
+                long v8 = e8->__av;
                 long agg3 = 0L;
                 { //slice 
                   const HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1* i9 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1*>(CUSTDISTORDERS3_L1_2_DELTA.index[1]);
-                  const HASH_RES_t h2 = CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::hash(se13.modify1(c_orders_c_custkey));
-                  HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode* n9 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode*>(i9->slice(se13, h2));
+                  const HASH_RES_t h3 = CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::hash(se15.modify1(c_orders_c_custkey));
+                  HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode* n9 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_1::IdxNode*>(i9->slice(se15, h3));
                   CUSTDISTORDERS3_L1_2_DELTA_entry* e9;
                  
                   if (n9 && (e9 = n9->obj)) {
                     do {                
                       long c_custkey = e9->C_CUSTKEY;
                       long v9 = e9->__av;
-                      agg3 += (v9 * CUSTDISTORDERS3_L1_2.getValueOrDefault(se12.modify(c_custkey)));
+                      agg3 += (v9 * CUSTDISTORDERS3_L1_2.getValueOrDefault(se14.modify(c_custkey)));
                       n9 = n9->nxt;
-                    } while (n9 && (e9 = n9->obj) && h2 == n9->hash &&  CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::equals(se13, *e9)); 
+                    } while (n9 && (e9 = n9->obj) && h3 == n9->hash &&  CUSTDISTORDERS3_L1_2_DELTA_mapkey1_idxfn::equals(se15, *e9)); 
                   }
-                }CUSTDIST.addOrDelOnZero(se4.modify(l3),((v7 != 0 ? 1L : 0L) * ((CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se11.modify(c_orders_c_custkey)) + agg3) != 0 ? 1L : 0L)));
-              n7 = n7->nxt;
+                }CUSTDISTCUSTOMER1_L1_1.addOrDelOnZero(se13.modify(c_orders_c_custkey),((v8 != 0 ? 1L : 0L) * agg3));
+              n8 = n8->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_01* i10 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_01*>(CUSTDISTORDERS3_L1_2_DELTA.index[0]);
-          HashIndex_CUSTDISTORDERS3_L1_2_DELTA_map_01::IdxNode* n10; 
-          CUSTDISTORDERS3_L1_2_DELTA_entry* e10;
+          const HashIndex_CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_map_0* i10 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_map_0*>(CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA.index[0]);
+          HashIndex_CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_map_0::IdxNode* n10; 
+          CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_entry* e10;
         
           for (size_t i = 0; i < i10->size_; i++)
           {
@@ -671,33 +655,16 @@ namespace dbtoaster {
             while (n10 && (e10 = n10->obj))
             {
                 long c_custkey = e10->C_CUSTKEY;
-                long c_orders_c_custkey = e10->C_ORDERS_C_CUSTKEY;
                 long v10 = e10->__av;
-                CUSTDISTCUSTOMER1_L1_1.addOrDelOnZero(se14.modify(c_orders_c_custkey),(v10 * CUSTDISTORDERS3_L1_2.getValueOrDefault(se15.modify(c_custkey))));
+                CUSTDISTCUSTOMER3_L1_2.addOrDelOnZero(se16.modify(c_custkey),v10);
               n10 = n10->nxt;
-            }
-          }
-        }{  // foreach
-          const HashIndex_CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_map_0* i11 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_map_0*>(CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA.index[0]);
-          HashIndex_CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_map_0::IdxNode* n11; 
-          CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_entry* e11;
-        
-          for (size_t i = 0; i < i11->size_; i++)
-          {
-            n11 = i11->buckets_ + i;
-            while (n11 && (e11 = n11->obj))
-            {
-                long c_custkey = e11->C_CUSTKEY;
-                long v11 = e11->__av;
-                CUSTDISTCUSTOMER3_L1_2.addOrDelOnZero(se16.modify(c_custkey),v11);
-              n11 = n11->nxt;
             }
           }
         }
       }
     }
     void on_batch_update_CUSTOMER(TPCHCustomerBatch& DELTA_CUSTOMER) {
-      {
+      { 
         if (tS > 0) { tS += DELTA_CUSTOMER.size; return; }         
         tLastN += DELTA_CUSTOMER.size;        
         if (tLastN > 127) { 
@@ -712,7 +679,7 @@ namespace dbtoaster {
         CUSTDISTCUSTOMER1_DOMAIN1.clear();
         CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA.clear();
         {  
-          for (size_t i = 0; i < DELTA_CUSTOMER.size; i++)
+          for (size_t i = 0; i < DELTA_CUSTOMER.size; i++) 
           {
                 long c_custkey = DELTA_CUSTOMER.custkey[i];
                 // STRING_TYPE c_name = DELTA_CUSTOMER.name[i];
@@ -722,21 +689,36 @@ namespace dbtoaster {
                 // DOUBLE_TYPE c_acctbal = DELTA_CUSTOMER.acctbal[i];
                 // STRING_TYPE c_mktsegment = DELTA_CUSTOMER.mktsegment[i];
                 // STRING_TYPE c_comment = DELTA_CUSTOMER.comment[i];
+                long v11 = 1L;
+                CUSTDISTCUSTOMER3_L1_2_DELTA.addOrDelOnZero(se17.modify(c_custkey,c_custkey),v11);
                 long v12 = 1L;
-                CUSTDISTCUSTOMER3_L1_2_DELTA.addOrDelOnZero(se17.modify(c_custkey,c_custkey),v12);
+                CUSTDISTCUSTOMER1_DOMAIN1.addOrDelOnZero(se18.modify(c_custkey),(v12 != 0 ? 1L : 0L));
                 long v13 = 1L;
-                CUSTDISTCUSTOMER1_DOMAIN1.addOrDelOnZero(se18.modify(c_custkey),(v13 != 0 ? 1L : 0L));
-                long v14 = 1L;
-                CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA.addOrDelOnZero(se19.modify(c_custkey),v14);
+                CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA.addOrDelOnZero(se19.modify(c_custkey),v13);
           }
         }
-        
-        agg4.clear();
-        
+
         {  // foreach
-          const HashIndex_CUSTDISTCUSTOMER1_L1_1_map_0* i15 = static_cast<HashIndex_CUSTDISTCUSTOMER1_L1_1_map_0*>(CUSTDISTCUSTOMER1_L1_1.index[0]);
-          HashIndex_CUSTDISTCUSTOMER1_L1_1_map_0::IdxNode* n15; 
-          CUSTDISTCUSTOMER1_L1_1_entry* e15;
+          const HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0* i14 = static_cast<HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0*>(CUSTDISTCUSTOMER1_DOMAIN1.index[0]);
+          HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0::IdxNode* n14; 
+          CUSTDISTCUSTOMER1_DOMAIN1_entry* e14;
+        
+          for (size_t i = 0; i < i14->size_; i++)
+          {
+            n14 = i14->buckets_ + i;
+            while (n14 && (e14 = n14->obj))
+            {
+                long c_orders_c_custkey = e14->C_ORDERS_C_CUSTKEY;
+                long v14 = e14->__av;
+                long l3 = CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se21.modify(c_orders_c_custkey));
+                CUSTDIST.addOrDelOnZero(se20.modify(l3),(((v14 != 0 ? 1L : 0L) * (CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se22.modify(c_orders_c_custkey)) != 0 ? 1L : 0L)) * -1L));
+              n14 = n14->nxt;
+            }
+          }
+        }{  // foreach
+          const HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0* i15 = static_cast<HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0*>(CUSTDISTCUSTOMER1_DOMAIN1.index[0]);
+          HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0::IdxNode* n15; 
+          CUSTDISTCUSTOMER1_DOMAIN1_entry* e15;
         
           for (size_t i = 0; i < i15->size_; i++)
           {
@@ -745,122 +727,72 @@ namespace dbtoaster {
             {
                 long c_orders_c_custkey = e15->C_ORDERS_C_CUSTKEY;
                 long v15 = e15->__av;
-                long l4 = CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se21.modify(c_orders_c_custkey));
-                agg4.addOrDelOnZero(st2.modify(l4,(v15 != 0 ? 1L : 0L)), (v15 != 0 ? 1L : 0L));
+                long agg4 = 0L;
+                { //slice 
+                  const HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1* i16 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1*>(CUSTDISTCUSTOMER3_L1_2_DELTA.index[1]);
+                  const HASH_RES_t h4 = CUSTDISTCUSTOMER3_L1_2_DELTA_mapkey1_idxfn::hash(se25.modify1(c_orders_c_custkey));
+                  HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1::IdxNode* n16 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1::IdxNode*>(i16->slice(se25, h4));
+                  CUSTDISTCUSTOMER3_L1_2_DELTA_entry* e16;
+                 
+                  if (n16 && (e16 = n16->obj)) {
+                    do {                
+                      long c_custkey = e16->C_CUSTKEY;
+                      long v16 = e16->__av;
+                      agg4 += (v16 * CUSTDISTCUSTOMER3_L1_2.getValueOrDefault(se24.modify(c_custkey)));
+                      n16 = n16->nxt;
+                    } while (n16 && (e16 = n16->obj) && h4 == n16->hash &&  CUSTDISTCUSTOMER3_L1_2_DELTA_mapkey1_idxfn::equals(se25, *e16)); 
+                  }
+                }long l4 = (CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se23.modify(c_orders_c_custkey)) + agg4);
+                long agg5 = 0L;
+                { //slice 
+                  const HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1* i17 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1*>(CUSTDISTCUSTOMER3_L1_2_DELTA.index[1]);
+                  const HASH_RES_t h5 = CUSTDISTCUSTOMER3_L1_2_DELTA_mapkey1_idxfn::hash(se28.modify1(c_orders_c_custkey));
+                  HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1::IdxNode* n17 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1::IdxNode*>(i17->slice(se28, h5));
+                  CUSTDISTCUSTOMER3_L1_2_DELTA_entry* e17;
+                 
+                  if (n17 && (e17 = n17->obj)) {
+                    do {                
+                      long c_custkey = e17->C_CUSTKEY;
+                      long v17 = e17->__av;
+                      agg5 += (v17 * CUSTDISTCUSTOMER3_L1_2.getValueOrDefault(se27.modify(c_custkey)));
+                      n17 = n17->nxt;
+                    } while (n17 && (e17 = n17->obj) && h5 == n17->hash &&  CUSTDISTCUSTOMER3_L1_2_DELTA_mapkey1_idxfn::equals(se28, *e17)); 
+                  }
+                }CUSTDIST.addOrDelOnZero(se20.modify(l4),((v15 != 0 ? 1L : 0L) * ((CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se26.modify(c_orders_c_custkey)) + agg5) != 0 ? 1L : 0L)));
               n15 = n15->nxt;
             }
           }
-        }{  // temp foreach
-          const HashIndex<tuple2_L_L, long>* i16 = static_cast<HashIndex<tuple2_L_L, long>*>(agg4.index[0]);
-          HashIndex<tuple2_L_L, long>::IdxNode* n16; 
-          tuple2_L_L* e16;
-        
-          for (size_t i = 0; i < i16->size_; i++)
-          {
-            n16 = i16->buckets_ + i;
-            while (n16 && (e16 = n16->obj))
-            {
-              long c_orders_c_count = e16->_1;  
-              long v16 = e16->__av; 
-            if (CUSTDIST.getValueOrDefault(se20.modify(c_orders_c_count))==0) CUSTDIST.setOrDelOnZero(se20, v16);      
-              n16 = n16->nxt;
-            }
-          }
         }{  // foreach
-          const HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0* i17 = static_cast<HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0*>(CUSTDISTCUSTOMER1_DOMAIN1.index[0]);
-          HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0::IdxNode* n17; 
-          CUSTDISTCUSTOMER1_DOMAIN1_entry* e17;
-        
-          for (size_t i = 0; i < i17->size_; i++)
-          {
-            n17 = i17->buckets_ + i;
-            while (n17 && (e17 = n17->obj))
-            {
-                long c_orders_c_custkey = e17->C_ORDERS_C_CUSTKEY;
-                long v17 = e17->__av;
-                long l5 = CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se22.modify(c_orders_c_custkey));
-                CUSTDIST.addOrDelOnZero(se20.modify(l5),(((v17 != 0 ? 1L : 0L) * (CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se23.modify(c_orders_c_custkey)) != 0 ? 1L : 0L)) * -1L));
-              n17 = n17->nxt;
-            }
-          }
-        }{  // foreach
-          const HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0* i18 = static_cast<HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0*>(CUSTDISTCUSTOMER1_DOMAIN1.index[0]);
-          HashIndex_CUSTDISTCUSTOMER1_DOMAIN1_map_0::IdxNode* n18; 
-          CUSTDISTCUSTOMER1_DOMAIN1_entry* e18;
+          const HashIndex_CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA_map_0* i18 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA_map_0*>(CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA.index[0]);
+          HashIndex_CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA_map_0::IdxNode* n18; 
+          CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA_entry* e18;
         
           for (size_t i = 0; i < i18->size_; i++)
           {
             n18 = i18->buckets_ + i;
             while (n18 && (e18 = n18->obj))
             {
-                long c_orders_c_custkey = e18->C_ORDERS_C_CUSTKEY;
+                long c_custkey = e18->C_CUSTKEY;
                 long v18 = e18->__av;
-                long agg5 = 0L;
-                { //slice 
-                  const HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1* i19 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1*>(CUSTDISTCUSTOMER3_L1_2_DELTA.index[1]);
-                  const HASH_RES_t h3 = CUSTDISTCUSTOMER3_L1_2_DELTA_mapkey1_idxfn::hash(se26.modify1(c_orders_c_custkey));
-                  HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1::IdxNode* n19 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1::IdxNode*>(i19->slice(se26, h3));
-                  CUSTDISTCUSTOMER3_L1_2_DELTA_entry* e19;
-                 
-                  if (n19 && (e19 = n19->obj)) {
-                    do {                
-                      long c_custkey = e19->C_CUSTKEY;
-                      long v19 = e19->__av;
-                      agg5 += (v19 * CUSTDISTCUSTOMER3_L1_2.getValueOrDefault(se25.modify(c_custkey)));
-                      n19 = n19->nxt;
-                    } while (n19 && (e19 = n19->obj) && h3 == n19->hash &&  CUSTDISTCUSTOMER3_L1_2_DELTA_mapkey1_idxfn::equals(se26, *e19)); 
-                  }
-                }long l6 = (CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se24.modify(c_orders_c_custkey)) + agg5);
-                long agg6 = 0L;
-                { //slice 
-                  const HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1* i20 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1*>(CUSTDISTCUSTOMER3_L1_2_DELTA.index[1]);
-                  const HASH_RES_t h4 = CUSTDISTCUSTOMER3_L1_2_DELTA_mapkey1_idxfn::hash(se29.modify1(c_orders_c_custkey));
-                  HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1::IdxNode* n20 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_1::IdxNode*>(i20->slice(se29, h4));
-                  CUSTDISTCUSTOMER3_L1_2_DELTA_entry* e20;
-                 
-                  if (n20 && (e20 = n20->obj)) {
-                    do {                
-                      long c_custkey = e20->C_CUSTKEY;
-                      long v20 = e20->__av;
-                      agg6 += (v20 * CUSTDISTCUSTOMER3_L1_2.getValueOrDefault(se28.modify(c_custkey)));
-                      n20 = n20->nxt;
-                    } while (n20 && (e20 = n20->obj) && h4 == n20->hash &&  CUSTDISTCUSTOMER3_L1_2_DELTA_mapkey1_idxfn::equals(se29, *e20)); 
-                  }
-                }CUSTDIST.addOrDelOnZero(se20.modify(l6),((v18 != 0 ? 1L : 0L) * ((CUSTDISTCUSTOMER1_L1_1.getValueOrDefault(se27.modify(c_orders_c_custkey)) + agg6) != 0 ? 1L : 0L)));
+                CUSTDISTORDERS3_L1_2.addOrDelOnZero(se29.modify(c_custkey),v18);
               n18 = n18->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA_map_0* i21 = static_cast<HashIndex_CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA_map_0*>(CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA.index[0]);
-          HashIndex_CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA_map_0::IdxNode* n21; 
-          CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA_entry* e21;
+          const HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_01* i19 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_01*>(CUSTDISTCUSTOMER3_L1_2_DELTA.index[0]);
+          HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_01::IdxNode* n19; 
+          CUSTDISTCUSTOMER3_L1_2_DELTA_entry* e19;
         
-          for (size_t i = 0; i < i21->size_; i++)
+          for (size_t i = 0; i < i19->size_; i++)
           {
-            n21 = i21->buckets_ + i;
-            while (n21 && (e21 = n21->obj))
+            n19 = i19->buckets_ + i;
+            while (n19 && (e19 = n19->obj))
             {
-                long c_custkey = e21->C_CUSTKEY;
-                long v21 = e21->__av;
-                CUSTDISTORDERS3_L1_2.addOrDelOnZero(se30.modify(c_custkey),v21);
-              n21 = n21->nxt;
-            }
-          }
-        }{  // foreach
-          const HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_01* i22 = static_cast<HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_01*>(CUSTDISTCUSTOMER3_L1_2_DELTA.index[0]);
-          HashIndex_CUSTDISTCUSTOMER3_L1_2_DELTA_map_01::IdxNode* n22; 
-          CUSTDISTCUSTOMER3_L1_2_DELTA_entry* e22;
-        
-          for (size_t i = 0; i < i22->size_; i++)
-          {
-            n22 = i22->buckets_ + i;
-            while (n22 && (e22 = n22->obj))
-            {
-                long c_custkey = e22->C_CUSTKEY;
-                long c_orders_c_custkey = e22->C_ORDERS_C_CUSTKEY;
-                long v22 = e22->__av;
-                CUSTDISTCUSTOMER1_L1_1.addOrDelOnZero(se31.modify(c_orders_c_custkey),(v22 * CUSTDISTCUSTOMER3_L1_2.getValueOrDefault(se32.modify(c_custkey))));
-              n22 = n22->nxt;
+                long c_custkey = e19->C_CUSTKEY;
+                long c_orders_c_custkey = e19->C_ORDERS_C_CUSTKEY;
+                long v19 = e19->__av;
+                CUSTDISTCUSTOMER1_L1_1.addOrDelOnZero(se30.modify(c_orders_c_custkey),(v19 * CUSTDISTCUSTOMER3_L1_2.getValueOrDefault(se31.modify(c_custkey))));
+              n19 = n19->nxt;
             }
           }
         }
@@ -880,35 +812,32 @@ namespace dbtoaster {
     CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_entry se3;
     CUSTDIST_entry se4;
     CUSTDISTCUSTOMER1_L1_1_entry se5;
-    tuple2_L_L st1;
     CUSTDISTCUSTOMER1_L1_1_entry se6;
     CUSTDISTCUSTOMER1_L1_1_entry se7;
-    CUSTDISTCUSTOMER1_L1_1_entry se8;
-    CUSTDISTORDERS3_L1_2_entry se9;
-    CUSTDISTORDERS3_L1_2_DELTA_entry se10;
-    CUSTDISTCUSTOMER1_L1_1_entry se11;
-    CUSTDISTORDERS3_L1_2_entry se12;
-    CUSTDISTORDERS3_L1_2_DELTA_entry se13;
-    CUSTDISTCUSTOMER1_L1_1_entry se14;
-    CUSTDISTORDERS3_L1_2_entry se15;
+    CUSTDISTORDERS3_L1_2_entry se8;
+    CUSTDISTORDERS3_L1_2_DELTA_entry se9;
+    CUSTDISTCUSTOMER1_L1_1_entry se10;
+    CUSTDISTORDERS3_L1_2_entry se11;
+    CUSTDISTORDERS3_L1_2_DELTA_entry se12;
+    CUSTDISTCUSTOMER1_L1_1_entry se13;
+    CUSTDISTORDERS3_L1_2_entry se14;
+    CUSTDISTORDERS3_L1_2_DELTA_entry se15;
     CUSTDISTCUSTOMER3_L1_2_entry se16;
     CUSTDISTCUSTOMER3_L1_2_DELTA_entry se17;
     CUSTDISTCUSTOMER1_DOMAIN1_entry se18;
     CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA_entry se19;
     CUSTDIST_entry se20;
     CUSTDISTCUSTOMER1_L1_1_entry se21;
-    tuple2_L_L st2;
     CUSTDISTCUSTOMER1_L1_1_entry se22;
     CUSTDISTCUSTOMER1_L1_1_entry se23;
-    CUSTDISTCUSTOMER1_L1_1_entry se24;
-    CUSTDISTCUSTOMER3_L1_2_entry se25;
-    CUSTDISTCUSTOMER3_L1_2_DELTA_entry se26;
-    CUSTDISTCUSTOMER1_L1_1_entry se27;
-    CUSTDISTCUSTOMER3_L1_2_entry se28;
-    CUSTDISTCUSTOMER3_L1_2_DELTA_entry se29;
-    CUSTDISTORDERS3_L1_2_entry se30;
-    CUSTDISTCUSTOMER1_L1_1_entry se31;
-    CUSTDISTCUSTOMER3_L1_2_entry se32;
+    CUSTDISTCUSTOMER3_L1_2_entry se24;
+    CUSTDISTCUSTOMER3_L1_2_DELTA_entry se25;
+    CUSTDISTCUSTOMER1_L1_1_entry se26;
+    CUSTDISTCUSTOMER3_L1_2_entry se27;
+    CUSTDISTCUSTOMER3_L1_2_DELTA_entry se28;
+    CUSTDISTORDERS3_L1_2_entry se29;
+    CUSTDISTCUSTOMER1_L1_1_entry se30;
+    CUSTDISTCUSTOMER3_L1_2_entry se31;
     /* regex_t temporary objects */
     regex_t preg1;
   
@@ -924,8 +853,7 @@ namespace dbtoaster {
     CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA_map CUSTDISTCUSTOMER3_L1_2ORDERS1_DELTA;
     DELTA_ORDERS_map DELTA_ORDERS;
     DELTA_CUSTOMER_map DELTA_CUSTOMER;
-    MultiHashMap<tuple2_L_L,long,HashIndex<tuple2_L_L,long> > agg4;
-    MultiHashMap<tuple2_L_L,long,HashIndex<tuple2_L_L,long> > agg1;
+    
     
   
   };

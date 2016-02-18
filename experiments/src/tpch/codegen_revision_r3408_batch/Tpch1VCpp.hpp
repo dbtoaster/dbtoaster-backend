@@ -428,40 +428,6 @@ namespace dbtoaster {
   > AVG_QTYLINEITEM1_DOMAIN1_map;
   typedef HashIndex<AVG_QTYLINEITEM1_DOMAIN1_entry,long,AVG_QTYLINEITEM1_DOMAIN1_mapkey01_idxfn,true> HashIndex_AVG_QTYLINEITEM1_DOMAIN1_map_01;
   
-  struct AVG_QTYLINEITEM1_entry {
-    STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; DOUBLE_TYPE __av; 
-    explicit AVG_QTYLINEITEM1_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0.0; */ }
-    explicit AVG_QTYLINEITEM1_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
-    AVG_QTYLINEITEM1_entry(const AVG_QTYLINEITEM1_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
-    FORCE_INLINE AVG_QTYLINEITEM1_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
-    template<class Archive>
-    void serialize(Archive& ar, const unsigned int version) const 
-    {
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, LINEITEM_RETURNFLAG);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, LINEITEM_LINESTATUS);
-      ar << ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  struct AVG_QTYLINEITEM1_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const AVG_QTYLINEITEM1_entry& e) {
-      size_t h = 0;
-      hash_combine(h, e.LINEITEM_RETURNFLAG);
-      hash_combine(h, e.LINEITEM_LINESTATUS);
-      return h;
-    }
-    FORCE_INLINE static bool equals(const AVG_QTYLINEITEM1_entry& x, const AVG_QTYLINEITEM1_entry& y) {
-      return x.LINEITEM_RETURNFLAG == y.LINEITEM_RETURNFLAG && x.LINEITEM_LINESTATUS == y.LINEITEM_LINESTATUS;
-    }
-  };
-  
-  typedef MultiHashMap<AVG_QTYLINEITEM1_entry,DOUBLE_TYPE,
-    HashIndex<AVG_QTYLINEITEM1_entry,DOUBLE_TYPE,AVG_QTYLINEITEM1_mapkey01_idxfn,true>
-  > AVG_QTYLINEITEM1_map;
-  typedef HashIndex<AVG_QTYLINEITEM1_entry,DOUBLE_TYPE,AVG_QTYLINEITEM1_mapkey01_idxfn,true> HashIndex_AVG_QTYLINEITEM1_map_01;
-  
   struct AVG_QTYLINEITEM1_L1_1_entry {
     STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; long __av; 
     explicit AVG_QTYLINEITEM1_L1_1_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0L; */ }
@@ -496,12 +462,12 @@ namespace dbtoaster {
   > AVG_QTYLINEITEM1_L1_1_map;
   typedef HashIndex<AVG_QTYLINEITEM1_L1_1_entry,long,AVG_QTYLINEITEM1_L1_1_mapkey01_idxfn,true> HashIndex_AVG_QTYLINEITEM1_L1_1_map_01;
   
-  struct AVG_QTYLINEITEM1_L1_2_DELTA_entry {
-    STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; long __av; 
-    explicit AVG_QTYLINEITEM1_L1_2_DELTA_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0L; */ }
-    explicit AVG_QTYLINEITEM1_L1_2_DELTA_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const long c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
-    AVG_QTYLINEITEM1_L1_2_DELTA_entry(const AVG_QTYLINEITEM1_L1_2_DELTA_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
-    FORCE_INLINE AVG_QTYLINEITEM1_L1_2_DELTA_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
+  struct AVG_QTYLINEITEM2_entry {
+    STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; DOUBLE_TYPE __av; 
+    explicit AVG_QTYLINEITEM2_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0.0; */ }
+    explicit AVG_QTYLINEITEM2_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
+    AVG_QTYLINEITEM2_entry(const AVG_QTYLINEITEM2_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
+    FORCE_INLINE AVG_QTYLINEITEM2_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
@@ -513,22 +479,56 @@ namespace dbtoaster {
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct AVG_QTYLINEITEM1_L1_2_DELTA_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const AVG_QTYLINEITEM1_L1_2_DELTA_entry& e) {
+  struct AVG_QTYLINEITEM2_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const AVG_QTYLINEITEM2_entry& e) {
       size_t h = 0;
       hash_combine(h, e.LINEITEM_RETURNFLAG);
       hash_combine(h, e.LINEITEM_LINESTATUS);
       return h;
     }
-    FORCE_INLINE static bool equals(const AVG_QTYLINEITEM1_L1_2_DELTA_entry& x, const AVG_QTYLINEITEM1_L1_2_DELTA_entry& y) {
+    FORCE_INLINE static bool equals(const AVG_QTYLINEITEM2_entry& x, const AVG_QTYLINEITEM2_entry& y) {
       return x.LINEITEM_RETURNFLAG == y.LINEITEM_RETURNFLAG && x.LINEITEM_LINESTATUS == y.LINEITEM_LINESTATUS;
     }
   };
   
-  typedef MultiHashMap<AVG_QTYLINEITEM1_L1_2_DELTA_entry,long,
-    HashIndex<AVG_QTYLINEITEM1_L1_2_DELTA_entry,long,AVG_QTYLINEITEM1_L1_2_DELTA_mapkey01_idxfn,true>
-  > AVG_QTYLINEITEM1_L1_2_DELTA_map;
-  typedef HashIndex<AVG_QTYLINEITEM1_L1_2_DELTA_entry,long,AVG_QTYLINEITEM1_L1_2_DELTA_mapkey01_idxfn,true> HashIndex_AVG_QTYLINEITEM1_L1_2_DELTA_map_01;
+  typedef MultiHashMap<AVG_QTYLINEITEM2_entry,DOUBLE_TYPE,
+    HashIndex<AVG_QTYLINEITEM2_entry,DOUBLE_TYPE,AVG_QTYLINEITEM2_mapkey01_idxfn,true>
+  > AVG_QTYLINEITEM2_map;
+  typedef HashIndex<AVG_QTYLINEITEM2_entry,DOUBLE_TYPE,AVG_QTYLINEITEM2_mapkey01_idxfn,true> HashIndex_AVG_QTYLINEITEM2_map_01;
+  
+  struct AVG_QTYLINEITEM2_L1_2_DELTA_entry {
+    STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; long __av; 
+    explicit AVG_QTYLINEITEM2_L1_2_DELTA_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0L; */ }
+    explicit AVG_QTYLINEITEM2_L1_2_DELTA_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const long c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
+    AVG_QTYLINEITEM2_L1_2_DELTA_entry(const AVG_QTYLINEITEM2_L1_2_DELTA_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
+    FORCE_INLINE AVG_QTYLINEITEM2_L1_2_DELTA_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, LINEITEM_RETURNFLAG);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, LINEITEM_LINESTATUS);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct AVG_QTYLINEITEM2_L1_2_DELTA_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const AVG_QTYLINEITEM2_L1_2_DELTA_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.LINEITEM_RETURNFLAG);
+      hash_combine(h, e.LINEITEM_LINESTATUS);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const AVG_QTYLINEITEM2_L1_2_DELTA_entry& x, const AVG_QTYLINEITEM2_L1_2_DELTA_entry& y) {
+      return x.LINEITEM_RETURNFLAG == y.LINEITEM_RETURNFLAG && x.LINEITEM_LINESTATUS == y.LINEITEM_LINESTATUS;
+    }
+  };
+  
+  typedef MultiHashMap<AVG_QTYLINEITEM2_L1_2_DELTA_entry,long,
+    HashIndex<AVG_QTYLINEITEM2_L1_2_DELTA_entry,long,AVG_QTYLINEITEM2_L1_2_DELTA_mapkey01_idxfn,true>
+  > AVG_QTYLINEITEM2_L1_2_DELTA_map;
+  typedef HashIndex<AVG_QTYLINEITEM2_L1_2_DELTA_entry,long,AVG_QTYLINEITEM2_L1_2_DELTA_mapkey01_idxfn,true> HashIndex_AVG_QTYLINEITEM2_L1_2_DELTA_map_01;
   
   struct AVG_PRICE_entry {
     STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; DOUBLE_TYPE __av; 
@@ -564,12 +564,12 @@ namespace dbtoaster {
   > AVG_PRICE_map;
   typedef HashIndex<AVG_PRICE_entry,DOUBLE_TYPE,AVG_PRICE_mapkey01_idxfn,true> HashIndex_AVG_PRICE_map_01;
   
-  struct AVG_PRICELINEITEM1_entry {
+  struct AVG_PRICELINEITEM2_entry {
     STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; DOUBLE_TYPE __av; 
-    explicit AVG_PRICELINEITEM1_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0.0; */ }
-    explicit AVG_PRICELINEITEM1_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
-    AVG_PRICELINEITEM1_entry(const AVG_PRICELINEITEM1_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
-    FORCE_INLINE AVG_PRICELINEITEM1_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
+    explicit AVG_PRICELINEITEM2_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0.0; */ }
+    explicit AVG_PRICELINEITEM2_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
+    AVG_PRICELINEITEM2_entry(const AVG_PRICELINEITEM2_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
+    FORCE_INLINE AVG_PRICELINEITEM2_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
@@ -581,22 +581,22 @@ namespace dbtoaster {
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct AVG_PRICELINEITEM1_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const AVG_PRICELINEITEM1_entry& e) {
+  struct AVG_PRICELINEITEM2_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const AVG_PRICELINEITEM2_entry& e) {
       size_t h = 0;
       hash_combine(h, e.LINEITEM_RETURNFLAG);
       hash_combine(h, e.LINEITEM_LINESTATUS);
       return h;
     }
-    FORCE_INLINE static bool equals(const AVG_PRICELINEITEM1_entry& x, const AVG_PRICELINEITEM1_entry& y) {
+    FORCE_INLINE static bool equals(const AVG_PRICELINEITEM2_entry& x, const AVG_PRICELINEITEM2_entry& y) {
       return x.LINEITEM_RETURNFLAG == y.LINEITEM_RETURNFLAG && x.LINEITEM_LINESTATUS == y.LINEITEM_LINESTATUS;
     }
   };
   
-  typedef MultiHashMap<AVG_PRICELINEITEM1_entry,DOUBLE_TYPE,
-    HashIndex<AVG_PRICELINEITEM1_entry,DOUBLE_TYPE,AVG_PRICELINEITEM1_mapkey01_idxfn,true>
-  > AVG_PRICELINEITEM1_map;
-  typedef HashIndex<AVG_PRICELINEITEM1_entry,DOUBLE_TYPE,AVG_PRICELINEITEM1_mapkey01_idxfn,true> HashIndex_AVG_PRICELINEITEM1_map_01;
+  typedef MultiHashMap<AVG_PRICELINEITEM2_entry,DOUBLE_TYPE,
+    HashIndex<AVG_PRICELINEITEM2_entry,DOUBLE_TYPE,AVG_PRICELINEITEM2_mapkey01_idxfn,true>
+  > AVG_PRICELINEITEM2_map;
+  typedef HashIndex<AVG_PRICELINEITEM2_entry,DOUBLE_TYPE,AVG_PRICELINEITEM2_mapkey01_idxfn,true> HashIndex_AVG_PRICELINEITEM2_map_01;
   
   struct AVG_DISC_entry {
     STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; DOUBLE_TYPE __av; 
@@ -632,12 +632,12 @@ namespace dbtoaster {
   > AVG_DISC_map;
   typedef HashIndex<AVG_DISC_entry,DOUBLE_TYPE,AVG_DISC_mapkey01_idxfn,true> HashIndex_AVG_DISC_map_01;
   
-  struct AVG_DISCLINEITEM1_entry {
+  struct AVG_DISCLINEITEM1_DELTA_entry {
     STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; DOUBLE_TYPE __av; 
-    explicit AVG_DISCLINEITEM1_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0.0; */ }
-    explicit AVG_DISCLINEITEM1_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
-    AVG_DISCLINEITEM1_entry(const AVG_DISCLINEITEM1_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
-    FORCE_INLINE AVG_DISCLINEITEM1_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
+    explicit AVG_DISCLINEITEM1_DELTA_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0.0; */ }
+    explicit AVG_DISCLINEITEM1_DELTA_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
+    AVG_DISCLINEITEM1_DELTA_entry(const AVG_DISCLINEITEM1_DELTA_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
+    FORCE_INLINE AVG_DISCLINEITEM1_DELTA_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
@@ -649,29 +649,29 @@ namespace dbtoaster {
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct AVG_DISCLINEITEM1_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const AVG_DISCLINEITEM1_entry& e) {
+  struct AVG_DISCLINEITEM1_DELTA_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const AVG_DISCLINEITEM1_DELTA_entry& e) {
       size_t h = 0;
       hash_combine(h, e.LINEITEM_RETURNFLAG);
       hash_combine(h, e.LINEITEM_LINESTATUS);
       return h;
     }
-    FORCE_INLINE static bool equals(const AVG_DISCLINEITEM1_entry& x, const AVG_DISCLINEITEM1_entry& y) {
+    FORCE_INLINE static bool equals(const AVG_DISCLINEITEM1_DELTA_entry& x, const AVG_DISCLINEITEM1_DELTA_entry& y) {
       return x.LINEITEM_RETURNFLAG == y.LINEITEM_RETURNFLAG && x.LINEITEM_LINESTATUS == y.LINEITEM_LINESTATUS;
     }
   };
   
-  typedef MultiHashMap<AVG_DISCLINEITEM1_entry,DOUBLE_TYPE,
-    HashIndex<AVG_DISCLINEITEM1_entry,DOUBLE_TYPE,AVG_DISCLINEITEM1_mapkey01_idxfn,true>
-  > AVG_DISCLINEITEM1_map;
-  typedef HashIndex<AVG_DISCLINEITEM1_entry,DOUBLE_TYPE,AVG_DISCLINEITEM1_mapkey01_idxfn,true> HashIndex_AVG_DISCLINEITEM1_map_01;
+  typedef MultiHashMap<AVG_DISCLINEITEM1_DELTA_entry,DOUBLE_TYPE,
+    HashIndex<AVG_DISCLINEITEM1_DELTA_entry,DOUBLE_TYPE,AVG_DISCLINEITEM1_DELTA_mapkey01_idxfn,true>
+  > AVG_DISCLINEITEM1_DELTA_map;
+  typedef HashIndex<AVG_DISCLINEITEM1_DELTA_entry,DOUBLE_TYPE,AVG_DISCLINEITEM1_DELTA_mapkey01_idxfn,true> HashIndex_AVG_DISCLINEITEM1_DELTA_map_01;
   
-  struct AVG_DISCLINEITEM4_DELTA_entry {
+  struct AVG_DISCLINEITEM2_entry {
     STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; DOUBLE_TYPE __av; 
-    explicit AVG_DISCLINEITEM4_DELTA_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0.0; */ }
-    explicit AVG_DISCLINEITEM4_DELTA_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
-    AVG_DISCLINEITEM4_DELTA_entry(const AVG_DISCLINEITEM4_DELTA_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
-    FORCE_INLINE AVG_DISCLINEITEM4_DELTA_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
+    explicit AVG_DISCLINEITEM2_entry() { /*LINEITEM_RETURNFLAG = ""; LINEITEM_LINESTATUS = ""; __av = 0.0; */ }
+    explicit AVG_DISCLINEITEM2_entry(const STRING_TYPE& c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1; __av = c2; }
+    AVG_DISCLINEITEM2_entry(const AVG_DISCLINEITEM2_entry& other) : LINEITEM_RETURNFLAG( other.LINEITEM_RETURNFLAG ), LINEITEM_LINESTATUS( other.LINEITEM_LINESTATUS ), __av( other.__av ) {}
+    FORCE_INLINE AVG_DISCLINEITEM2_entry& modify(const STRING_TYPE& c0, const STRING_TYPE& c1) { LINEITEM_RETURNFLAG = c0; LINEITEM_LINESTATUS = c1;  return *this; }
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const 
     {
@@ -683,22 +683,22 @@ namespace dbtoaster {
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  struct AVG_DISCLINEITEM4_DELTA_mapkey01_idxfn {
-    FORCE_INLINE static size_t hash(const AVG_DISCLINEITEM4_DELTA_entry& e) {
+  struct AVG_DISCLINEITEM2_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const AVG_DISCLINEITEM2_entry& e) {
       size_t h = 0;
       hash_combine(h, e.LINEITEM_RETURNFLAG);
       hash_combine(h, e.LINEITEM_LINESTATUS);
       return h;
     }
-    FORCE_INLINE static bool equals(const AVG_DISCLINEITEM4_DELTA_entry& x, const AVG_DISCLINEITEM4_DELTA_entry& y) {
+    FORCE_INLINE static bool equals(const AVG_DISCLINEITEM2_entry& x, const AVG_DISCLINEITEM2_entry& y) {
       return x.LINEITEM_RETURNFLAG == y.LINEITEM_RETURNFLAG && x.LINEITEM_LINESTATUS == y.LINEITEM_LINESTATUS;
     }
   };
   
-  typedef MultiHashMap<AVG_DISCLINEITEM4_DELTA_entry,DOUBLE_TYPE,
-    HashIndex<AVG_DISCLINEITEM4_DELTA_entry,DOUBLE_TYPE,AVG_DISCLINEITEM4_DELTA_mapkey01_idxfn,true>
-  > AVG_DISCLINEITEM4_DELTA_map;
-  typedef HashIndex<AVG_DISCLINEITEM4_DELTA_entry,DOUBLE_TYPE,AVG_DISCLINEITEM4_DELTA_mapkey01_idxfn,true> HashIndex_AVG_DISCLINEITEM4_DELTA_map_01;
+  typedef MultiHashMap<AVG_DISCLINEITEM2_entry,DOUBLE_TYPE,
+    HashIndex<AVG_DISCLINEITEM2_entry,DOUBLE_TYPE,AVG_DISCLINEITEM2_mapkey01_idxfn,true>
+  > AVG_DISCLINEITEM2_map;
+  typedef HashIndex<AVG_DISCLINEITEM2_entry,DOUBLE_TYPE,AVG_DISCLINEITEM2_mapkey01_idxfn,true> HashIndex_AVG_DISCLINEITEM2_map_01;
   
   struct COUNT_ORDER_entry {
     STRING_TYPE LINEITEM_RETURNFLAG; STRING_TYPE LINEITEM_LINESTATUS; long __av; 
@@ -847,47 +847,45 @@ namespace dbtoaster {
         SUM_BASE_PRICELINEITEM1_DELTA.clear();
         SUM_DISC_PRICELINEITEM1_DELTA.clear();
         SUM_CHARGELINEITEM1_DELTA.clear();
-        AVG_QTYLINEITEM1_L1_2_DELTA.clear();
+        AVG_QTYLINEITEM2_L1_2_DELTA.clear();
         AVG_QTYLINEITEM1_DOMAIN1.clear();
-        AVG_DISCLINEITEM4_DELTA.clear();
-
-        {  
+        AVG_DISCLINEITEM1_DELTA.clear();
+        {
           for (size_t i = 0; i < DELTA_LINEITEM.size; i++) 
           {
-                //long lineitem_orderkey = DELTA_LINEITEM.orderkey[i];
-                //long lineitem_partkey = DELTA_LINEITEM.partkey[i];
-                //long lineitem_suppkey = DELTA_LINEITEM.suppkey[i];
-                //long lineitem_linenumber = DELTA_LINEITEM.linenumber[i];
-                DOUBLE_TYPE lineitem_quantity = DELTA_LINEITEM.quantity[i];
-                DOUBLE_TYPE lineitem_extendedprice = DELTA_LINEITEM.extendedprice[i];
-                DOUBLE_TYPE lineitem_discount = DELTA_LINEITEM.discount[i];
-                DOUBLE_TYPE lineitem_tax = DELTA_LINEITEM.tax[i];
-                STRING_TYPE lineitem_returnflag = DELTA_LINEITEM.returnflag[i];
-                STRING_TYPE lineitem_linestatus = DELTA_LINEITEM.linestatus[i];
-                date lineitem_shipdate = DELTA_LINEITEM.shipdate[i];
-                // date lineitem_commitdate = DELTA_LINEITEM.commitdate[i];
-                // date lineitem_receiptdate = DELTA_LINEITEM.receiptdate[i];
-                // STRING_TYPE lineitem_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
-                // STRING_TYPE lineitem_shipmode = DELTA_LINEITEM.shipmode[i];
-                // STRING_TYPE lineitem_comment = DELTA_LINEITEM.comment[i];
-                long v1 = 1L;
-                (/*if */(c1 >= lineitem_shipdate) ? SUM_QTYLINEITEM1_DELTA.addOrDelOnZero(se1.modify(lineitem_returnflag,lineitem_linestatus),(v1 * lineitem_quantity)) : (void)0);
-                long v2 = 1L;
-                (/*if */(c1 >= lineitem_shipdate) ? SUM_BASE_PRICELINEITEM1_DELTA.addOrDelOnZero(se2.modify(lineitem_returnflag,lineitem_linestatus),(v2 * lineitem_extendedprice)) : (void)0);
-                long v3 = 1L;
-                (/*if */(c1 >= lineitem_shipdate) ? SUM_DISC_PRICELINEITEM1_DELTA.addOrDelOnZero(se3.modify(lineitem_returnflag,lineitem_linestatus),(v3 * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : (void)0);              
-                long v4 = 1L;
-                (/*if */(c1 >= lineitem_shipdate) ? SUM_CHARGELINEITEM1_DELTA.addOrDelOnZero(se4.modify(lineitem_returnflag,lineitem_linestatus),(v4 * (lineitem_extendedprice * ((1L + (-1L * lineitem_discount)) * (1L + lineitem_tax))))) : (void)0);
-                long v5 = 1L;
-                (/*if */(c1 >= lineitem_shipdate) ? AVG_QTYLINEITEM1_L1_2_DELTA.addOrDelOnZero(se5.modify(lineitem_returnflag,lineitem_linestatus),v5) : (void)0);
-                long v6 = 1L;
-                (/*if */(c1 >= lineitem_shipdate) ? AVG_QTYLINEITEM1_DOMAIN1.addOrDelOnZero(se6.modify(lineitem_returnflag,lineitem_linestatus),(v6 != 0 ? 1L : 0L)) : (void)0);
-                long v7 = 1L;
-                (/*if */(c1 >= lineitem_shipdate) ? AVG_DISCLINEITEM4_DELTA.addOrDelOnZero(se7.modify(lineitem_returnflag,lineitem_linestatus),(v7 * lineitem_discount)) : (void)0);
+            // long lineitem_orderkey = DELTA_LINEITEM.orderkey[i];
+            // long lineitem_partkey = DELTA_LINEITEM.partkey[i];
+            // long lineitem_suppkey = DELTA_LINEITEM.suppkey[i];
+            // long lineitem_linenumber = DELTA_LINEITEM.linenumber[i];
+            DOUBLE_TYPE lineitem_quantity = DELTA_LINEITEM.quantity[i];
+            DOUBLE_TYPE lineitem_extendedprice = DELTA_LINEITEM.extendedprice[i];
+            DOUBLE_TYPE lineitem_discount = DELTA_LINEITEM.discount[i];
+            DOUBLE_TYPE lineitem_tax = DELTA_LINEITEM.tax[i];
+            STRING_TYPE lineitem_returnflag = DELTA_LINEITEM.returnflag[i];
+            STRING_TYPE lineitem_linestatus = DELTA_LINEITEM.linestatus[i];
+            date lineitem_shipdate = DELTA_LINEITEM.shipdate[i];
+            // date lineitem_commitdate = DELTA_LINEITEM.commitdate[i];
+            // date lineitem_receiptdate = DELTA_LINEITEM.receiptdate[i];
+            // STRING_TYPE lineitem_shipinstruct = DELTA_LINEITEM.shipinstruct[i];
+            // STRING_TYPE lineitem_shipmode = DELTA_LINEITEM.shipmode[i];
+            // STRING_TYPE lineitem_comment = DELTA_LINEITEM.comment[i];
+            long v1 = 1L;
+            (/*if */(c1 >= lineitem_shipdate) ? SUM_QTYLINEITEM1_DELTA.addOrDelOnZero(se1.modify(lineitem_returnflag,lineitem_linestatus),(v1 * lineitem_quantity)) : (void)0);
+            long v2 = 1L;
+            (/*if */(c1 >= lineitem_shipdate) ? SUM_BASE_PRICELINEITEM1_DELTA.addOrDelOnZero(se2.modify(lineitem_returnflag,lineitem_linestatus),(v2 * lineitem_extendedprice)) : (void)0);
+            long v3 = 1L;
+            (/*if */(c1 >= lineitem_shipdate) ? SUM_DISC_PRICELINEITEM1_DELTA.addOrDelOnZero(se3.modify(lineitem_returnflag,lineitem_linestatus),(v3 * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) : (void)0);
+            long v4 = 1L;
+            (/*if */(c1 >= lineitem_shipdate) ? SUM_CHARGELINEITEM1_DELTA.addOrDelOnZero(se4.modify(lineitem_returnflag,lineitem_linestatus),(v4 * (lineitem_extendedprice * ((1L + (-1L * lineitem_discount)) * (1L + lineitem_tax))))) : (void)0);
+            long v5 = 1L;
+            (/*if */(c1 >= lineitem_shipdate) ? AVG_QTYLINEITEM2_L1_2_DELTA.addOrDelOnZero(se5.modify(lineitem_returnflag,lineitem_linestatus),v5) : (void)0);
+            long v6 = 1L;
+            (/*if */(c1 >= lineitem_shipdate) ? AVG_QTYLINEITEM1_DOMAIN1.addOrDelOnZero(se6.modify(lineitem_returnflag,lineitem_linestatus),(v6 != 0 ? 1L : 0L)) : (void)0);
+            long v7 = 1L;
+            (/*if */(c1 >= lineitem_shipdate) ? AVG_DISCLINEITEM1_DELTA.addOrDelOnZero(se7.modify(lineitem_returnflag,lineitem_linestatus),(v7 * lineitem_discount)) : (void)0);
           }
         }
-        
-        
+
         {  // foreach
           const HashIndex_SUM_QTYLINEITEM1_DELTA_map_01* i8 = static_cast<HashIndex_SUM_QTYLINEITEM1_DELTA_map_01*>(SUM_QTYLINEITEM1_DELTA.index[0]);
           HashIndex_SUM_QTYLINEITEM1_DELTA_map_01::IdxNode* n8; 
@@ -970,15 +968,15 @@ namespace dbtoaster {
                 STRING_TYPE lineitem_linestatus = e12->LINEITEM_LINESTATUS;
                 long v12 = e12->__av;
                 DOUBLE_TYPE agg1 = 0.0;
-                long l1 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se14.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM1_L1_2_DELTA.getValueOrDefault(se15.modify(lineitem_returnflag,lineitem_linestatus)));
+                long l1 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se14.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM2_L1_2_DELTA.getValueOrDefault(se15.modify(lineitem_returnflag,lineitem_linestatus)));
                 (/*if */(0L != l1) ? agg1 += Udiv(Ulistmax(1L, l1)) : 0.0);
                 DOUBLE_TYPE agg2 = 0.0;
                 long l2 = AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se16.modify(lineitem_returnflag,lineitem_linestatus));
                 (/*if */(0L != l2) ? agg2 += Udiv(Ulistmax(1L, l2)) : 0.0);
                 DOUBLE_TYPE agg3 = 0.0;
-                long l3 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se18.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM1_L1_2_DELTA.getValueOrDefault(se19.modify(lineitem_returnflag,lineitem_linestatus)));
+                long l3 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se18.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM2_L1_2_DELTA.getValueOrDefault(se19.modify(lineitem_returnflag,lineitem_linestatus)));
                 (/*if */(0L != l3) ? agg3 += Udiv(Ulistmax(1L, l3)) : 0.0);
-                AVG_QTY.addOrDelOnZero(se12.modify(lineitem_returnflag,lineitem_linestatus),((v12 != 0 ? 1L : 0L) * ((AVG_QTYLINEITEM1.getValueOrDefault(se13.modify(lineitem_returnflag,lineitem_linestatus)) * (agg1 + (agg2 * -1L))) + (SUM_QTYLINEITEM1_DELTA.getValueOrDefault(se17.modify(lineitem_returnflag,lineitem_linestatus)) * agg3))));
+                AVG_QTY.addOrDelOnZero(se12.modify(lineitem_returnflag,lineitem_linestatus),((v12 != 0 ? 1L : 0L) * ((AVG_QTYLINEITEM2.getValueOrDefault(se13.modify(lineitem_returnflag,lineitem_linestatus)) * (agg1 + (agg2 * -1L))) + (SUM_QTYLINEITEM1_DELTA.getValueOrDefault(se17.modify(lineitem_returnflag,lineitem_linestatus)) * agg3))));
               n12 = n12->nxt;
             }
           }
@@ -995,7 +993,7 @@ namespace dbtoaster {
                 STRING_TYPE lineitem_returnflag = e13->LINEITEM_RETURNFLAG;
                 STRING_TYPE lineitem_linestatus = e13->LINEITEM_LINESTATUS;
                 DOUBLE_TYPE v13 = e13->__av;
-                AVG_QTYLINEITEM1.addOrDelOnZero(se20.modify(lineitem_returnflag,lineitem_linestatus),v13);
+                AVG_QTYLINEITEM2.addOrDelOnZero(se20.modify(lineitem_returnflag,lineitem_linestatus),v13);
               n13 = n13->nxt;
             }
           }
@@ -1013,15 +1011,15 @@ namespace dbtoaster {
                 STRING_TYPE lineitem_linestatus = e14->LINEITEM_LINESTATUS;
                 long v14 = e14->__av;
                 DOUBLE_TYPE agg4 = 0.0;
-                long l4 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se23.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM1_L1_2_DELTA.getValueOrDefault(se24.modify(lineitem_returnflag,lineitem_linestatus)));
+                long l4 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se23.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM2_L1_2_DELTA.getValueOrDefault(se24.modify(lineitem_returnflag,lineitem_linestatus)));
                 (/*if */(0L != l4) ? agg4 += Udiv(Ulistmax(1L, l4)) : 0.0);
                 DOUBLE_TYPE agg5 = 0.0;
                 long l5 = AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se25.modify(lineitem_returnflag,lineitem_linestatus));
                 (/*if */(0L != l5) ? agg5 += Udiv(Ulistmax(1L, l5)) : 0.0);
                 DOUBLE_TYPE agg6 = 0.0;
-                long l6 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se27.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM1_L1_2_DELTA.getValueOrDefault(se28.modify(lineitem_returnflag,lineitem_linestatus)));
+                long l6 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se27.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM2_L1_2_DELTA.getValueOrDefault(se28.modify(lineitem_returnflag,lineitem_linestatus)));
                 (/*if */(0L != l6) ? agg6 += Udiv(Ulistmax(1L, l6)) : 0.0);
-                AVG_PRICE.addOrDelOnZero(se21.modify(lineitem_returnflag,lineitem_linestatus),((v14 != 0 ? 1L : 0L) * ((AVG_PRICELINEITEM1.getValueOrDefault(se22.modify(lineitem_returnflag,lineitem_linestatus)) * (agg4 + (agg5 * -1L))) + (SUM_BASE_PRICELINEITEM1_DELTA.getValueOrDefault(se26.modify(lineitem_returnflag,lineitem_linestatus)) * agg6))));
+                AVG_PRICE.addOrDelOnZero(se21.modify(lineitem_returnflag,lineitem_linestatus),((v14 != 0 ? 1L : 0L) * ((AVG_PRICELINEITEM2.getValueOrDefault(se22.modify(lineitem_returnflag,lineitem_linestatus)) * (agg4 + (agg5 * -1L))) + (SUM_BASE_PRICELINEITEM1_DELTA.getValueOrDefault(se26.modify(lineitem_returnflag,lineitem_linestatus)) * agg6))));
               n14 = n14->nxt;
             }
           }
@@ -1038,7 +1036,7 @@ namespace dbtoaster {
                 STRING_TYPE lineitem_returnflag = e15->LINEITEM_RETURNFLAG;
                 STRING_TYPE lineitem_linestatus = e15->LINEITEM_LINESTATUS;
                 DOUBLE_TYPE v15 = e15->__av;
-                AVG_PRICELINEITEM1.addOrDelOnZero(se29.modify(lineitem_returnflag,lineitem_linestatus),v15);
+                AVG_PRICELINEITEM2.addOrDelOnZero(se29.modify(lineitem_returnflag,lineitem_linestatus),v15);
               n15 = n15->nxt;
             }
           }
@@ -1056,22 +1054,22 @@ namespace dbtoaster {
                 STRING_TYPE lineitem_linestatus = e16->LINEITEM_LINESTATUS;
                 long v16 = e16->__av;
                 DOUBLE_TYPE agg7 = 0.0;
-                long l7 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se32.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM1_L1_2_DELTA.getValueOrDefault(se33.modify(lineitem_returnflag,lineitem_linestatus)));
+                long l7 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se32.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM2_L1_2_DELTA.getValueOrDefault(se33.modify(lineitem_returnflag,lineitem_linestatus)));
                 (/*if */(0L != l7) ? agg7 += Udiv(Ulistmax(1L, l7)) : 0.0);
                 DOUBLE_TYPE agg8 = 0.0;
                 long l8 = AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se34.modify(lineitem_returnflag,lineitem_linestatus));
                 (/*if */(0L != l8) ? agg8 += Udiv(Ulistmax(1L, l8)) : 0.0);
                 DOUBLE_TYPE agg9 = 0.0;
-                long l9 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se36.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM1_L1_2_DELTA.getValueOrDefault(se37.modify(lineitem_returnflag,lineitem_linestatus)));
+                long l9 = (AVG_QTYLINEITEM1_L1_1.getValueOrDefault(se36.modify(lineitem_returnflag,lineitem_linestatus)) + AVG_QTYLINEITEM2_L1_2_DELTA.getValueOrDefault(se37.modify(lineitem_returnflag,lineitem_linestatus)));
                 (/*if */(0L != l9) ? agg9 += Udiv(Ulistmax(1L, l9)) : 0.0);
-                AVG_DISC.addOrDelOnZero(se30.modify(lineitem_returnflag,lineitem_linestatus),((v16 != 0 ? 1L : 0L) * ((AVG_DISCLINEITEM1.getValueOrDefault(se31.modify(lineitem_returnflag,lineitem_linestatus)) * (agg7 + (agg8 * -1L))) + (AVG_DISCLINEITEM4_DELTA.getValueOrDefault(se35.modify(lineitem_returnflag,lineitem_linestatus)) * agg9))));
+                AVG_DISC.addOrDelOnZero(se30.modify(lineitem_returnflag,lineitem_linestatus),((v16 != 0 ? 1L : 0L) * ((AVG_DISCLINEITEM2.getValueOrDefault(se31.modify(lineitem_returnflag,lineitem_linestatus)) * (agg7 + (agg8 * -1L))) + (AVG_DISCLINEITEM1_DELTA.getValueOrDefault(se35.modify(lineitem_returnflag,lineitem_linestatus)) * agg9))));
               n16 = n16->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_AVG_QTYLINEITEM1_L1_2_DELTA_map_01* i17 = static_cast<HashIndex_AVG_QTYLINEITEM1_L1_2_DELTA_map_01*>(AVG_QTYLINEITEM1_L1_2_DELTA.index[0]);
-          HashIndex_AVG_QTYLINEITEM1_L1_2_DELTA_map_01::IdxNode* n17; 
-          AVG_QTYLINEITEM1_L1_2_DELTA_entry* e17;
+          const HashIndex_AVG_QTYLINEITEM2_L1_2_DELTA_map_01* i17 = static_cast<HashIndex_AVG_QTYLINEITEM2_L1_2_DELTA_map_01*>(AVG_QTYLINEITEM2_L1_2_DELTA.index[0]);
+          HashIndex_AVG_QTYLINEITEM2_L1_2_DELTA_map_01::IdxNode* n17; 
+          AVG_QTYLINEITEM2_L1_2_DELTA_entry* e17;
         
           for (size_t i = 0; i < i17->size_; i++)
           {
@@ -1086,9 +1084,9 @@ namespace dbtoaster {
             }
           }
         }{  // foreach
-          const HashIndex_AVG_DISCLINEITEM4_DELTA_map_01* i18 = static_cast<HashIndex_AVG_DISCLINEITEM4_DELTA_map_01*>(AVG_DISCLINEITEM4_DELTA.index[0]);
-          HashIndex_AVG_DISCLINEITEM4_DELTA_map_01::IdxNode* n18; 
-          AVG_DISCLINEITEM4_DELTA_entry* e18;
+          const HashIndex_AVG_DISCLINEITEM1_DELTA_map_01* i18 = static_cast<HashIndex_AVG_DISCLINEITEM1_DELTA_map_01*>(AVG_DISCLINEITEM1_DELTA.index[0]);
+          HashIndex_AVG_DISCLINEITEM1_DELTA_map_01::IdxNode* n18; 
+          AVG_DISCLINEITEM1_DELTA_entry* e18;
         
           for (size_t i = 0; i < i18->size_; i++)
           {
@@ -1098,14 +1096,14 @@ namespace dbtoaster {
                 STRING_TYPE lineitem_returnflag = e18->LINEITEM_RETURNFLAG;
                 STRING_TYPE lineitem_linestatus = e18->LINEITEM_LINESTATUS;
                 DOUBLE_TYPE v18 = e18->__av;
-                AVG_DISCLINEITEM1.addOrDelOnZero(se39.modify(lineitem_returnflag,lineitem_linestatus),v18);
+                AVG_DISCLINEITEM2.addOrDelOnZero(se39.modify(lineitem_returnflag,lineitem_linestatus),v18);
               n18 = n18->nxt;
             }
           }
         }{  // foreach
-          const HashIndex_AVG_QTYLINEITEM1_L1_2_DELTA_map_01* i19 = static_cast<HashIndex_AVG_QTYLINEITEM1_L1_2_DELTA_map_01*>(AVG_QTYLINEITEM1_L1_2_DELTA.index[0]);
-          HashIndex_AVG_QTYLINEITEM1_L1_2_DELTA_map_01::IdxNode* n19; 
-          AVG_QTYLINEITEM1_L1_2_DELTA_entry* e19;
+          const HashIndex_AVG_QTYLINEITEM2_L1_2_DELTA_map_01* i19 = static_cast<HashIndex_AVG_QTYLINEITEM2_L1_2_DELTA_map_01*>(AVG_QTYLINEITEM2_L1_2_DELTA.index[0]);
+          HashIndex_AVG_QTYLINEITEM2_L1_2_DELTA_map_01::IdxNode* n19; 
+          AVG_QTYLINEITEM2_L1_2_DELTA_entry* e19;
         
           for (size_t i = 0; i < i19->size_; i++)
           {
@@ -1135,41 +1133,41 @@ namespace dbtoaster {
     SUM_BASE_PRICELINEITEM1_DELTA_entry se2;
     SUM_DISC_PRICELINEITEM1_DELTA_entry se3;
     SUM_CHARGELINEITEM1_DELTA_entry se4;
-    AVG_QTYLINEITEM1_L1_2_DELTA_entry se5;
+    AVG_QTYLINEITEM2_L1_2_DELTA_entry se5;
     AVG_QTYLINEITEM1_DOMAIN1_entry se6;
-    AVG_DISCLINEITEM4_DELTA_entry se7;
+    AVG_DISCLINEITEM1_DELTA_entry se7;
     SUM_QTY_entry se8;
     SUM_BASE_PRICE_entry se9;
     SUM_DISC_PRICE_entry se10;
     SUM_CHARGE_entry se11;
     AVG_QTY_entry se12;
-    AVG_QTYLINEITEM1_entry se13;
+    AVG_QTYLINEITEM2_entry se13;
     AVG_QTYLINEITEM1_L1_1_entry se14;
-    AVG_QTYLINEITEM1_L1_2_DELTA_entry se15;
+    AVG_QTYLINEITEM2_L1_2_DELTA_entry se15;
     AVG_QTYLINEITEM1_L1_1_entry se16;
     SUM_QTYLINEITEM1_DELTA_entry se17;
     AVG_QTYLINEITEM1_L1_1_entry se18;
-    AVG_QTYLINEITEM1_L1_2_DELTA_entry se19;
-    AVG_QTYLINEITEM1_entry se20;
+    AVG_QTYLINEITEM2_L1_2_DELTA_entry se19;
+    AVG_QTYLINEITEM2_entry se20;
     AVG_PRICE_entry se21;
-    AVG_PRICELINEITEM1_entry se22;
+    AVG_PRICELINEITEM2_entry se22;
     AVG_QTYLINEITEM1_L1_1_entry se23;
-    AVG_QTYLINEITEM1_L1_2_DELTA_entry se24;
+    AVG_QTYLINEITEM2_L1_2_DELTA_entry se24;
     AVG_QTYLINEITEM1_L1_1_entry se25;
     SUM_BASE_PRICELINEITEM1_DELTA_entry se26;
     AVG_QTYLINEITEM1_L1_1_entry se27;
-    AVG_QTYLINEITEM1_L1_2_DELTA_entry se28;
-    AVG_PRICELINEITEM1_entry se29;
+    AVG_QTYLINEITEM2_L1_2_DELTA_entry se28;
+    AVG_PRICELINEITEM2_entry se29;
     AVG_DISC_entry se30;
-    AVG_DISCLINEITEM1_entry se31;
+    AVG_DISCLINEITEM2_entry se31;
     AVG_QTYLINEITEM1_L1_1_entry se32;
-    AVG_QTYLINEITEM1_L1_2_DELTA_entry se33;
+    AVG_QTYLINEITEM2_L1_2_DELTA_entry se33;
     AVG_QTYLINEITEM1_L1_1_entry se34;
-    AVG_DISCLINEITEM4_DELTA_entry se35;
+    AVG_DISCLINEITEM1_DELTA_entry se35;
     AVG_QTYLINEITEM1_L1_1_entry se36;
-    AVG_QTYLINEITEM1_L1_2_DELTA_entry se37;
+    AVG_QTYLINEITEM2_L1_2_DELTA_entry se37;
     AVG_QTYLINEITEM1_L1_1_entry se38;
-    AVG_DISCLINEITEM1_entry se39;
+    AVG_DISCLINEITEM2_entry se39;
     COUNT_ORDER_entry se40;
   
     /* Data structures used for storing materialized views */
@@ -1178,12 +1176,12 @@ namespace dbtoaster {
     SUM_DISC_PRICELINEITEM1_DELTA_map SUM_DISC_PRICELINEITEM1_DELTA;
     SUM_CHARGELINEITEM1_DELTA_map SUM_CHARGELINEITEM1_DELTA;
     AVG_QTYLINEITEM1_DOMAIN1_map AVG_QTYLINEITEM1_DOMAIN1;
-    AVG_QTYLINEITEM1_map AVG_QTYLINEITEM1;
     AVG_QTYLINEITEM1_L1_1_map AVG_QTYLINEITEM1_L1_1;
-    AVG_QTYLINEITEM1_L1_2_DELTA_map AVG_QTYLINEITEM1_L1_2_DELTA;
-    AVG_PRICELINEITEM1_map AVG_PRICELINEITEM1;
-    AVG_DISCLINEITEM1_map AVG_DISCLINEITEM1;
-    AVG_DISCLINEITEM4_DELTA_map AVG_DISCLINEITEM4_DELTA;
+    AVG_QTYLINEITEM2_map AVG_QTYLINEITEM2;
+    AVG_QTYLINEITEM2_L1_2_DELTA_map AVG_QTYLINEITEM2_L1_2_DELTA;
+    AVG_PRICELINEITEM2_map AVG_PRICELINEITEM2;
+    AVG_DISCLINEITEM1_DELTA_map AVG_DISCLINEITEM1_DELTA;
+    AVG_DISCLINEITEM2_map AVG_DISCLINEITEM2;
     DELTA_LINEITEM_map DELTA_LINEITEM;
     
     /*const static*/ long c1;

@@ -620,7 +620,7 @@ namespace dbtoaster {
     
     /* Trigger functions for stream relations */
     void on_batch_update_SUPPLIER(TPCHSupplierBatch& DELTA_SUPPLIER) {
-      {
+      {  
         if (tS > 0) { tS += DELTA_SUPPLIER.size; return; }         
         tLastN += DELTA_SUPPLIER.size;        
         if (tLastN > 127) { 
@@ -632,7 +632,7 @@ namespace dbtoaster {
         tN += DELTA_SUPPLIER.size;
 
         QUERY11PARTSUPP1_L1_1SUPPLIER1_DELTA.clear();
-        { 
+        {  
           for (size_t i = 0; i < DELTA_SUPPLIER.size; i++) 
           {
                 long ps_suppkey = DELTA_SUPPLIER.suppkey[i];
@@ -643,8 +643,8 @@ namespace dbtoaster {
                 // DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
                 // STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
                 long v1 = 1L;
-                QUERY11PARTSUPP1_L1_1SUPPLIER1_DELTA.addOrDelOnZero(se1.modify(ps_suppkey,s_nationkey),v1);            
-          }          
+                QUERY11PARTSUPP1_L1_1SUPPLIER1_DELTA.addOrDelOnZero(se1.modify(ps_suppkey,s_nationkey),v1);
+          }
         }
 
         DOUBLE_TYPE agg1 = 0.0;
@@ -770,7 +770,7 @@ namespace dbtoaster {
       }
     }
     void on_batch_update_PARTSUPP(TPCHPartSuppBatch& DELTA_PARTSUPP) {
-      { 
+      {  
         if (tS > 0) { tS += DELTA_PARTSUPP.size; return; }         
         tLastN += DELTA_PARTSUPP.size;        
         if (tLastN > 127) { 
@@ -781,12 +781,11 @@ namespace dbtoaster {
         }
         tN += DELTA_PARTSUPP.size;
 
-
         QUERY11PARTSUPP1_L1_1PARTSUPP1_DELTA.clear();
         QUERY11PARTSUPP1_E2_1PARTSUPP1_DELTA.clear();
         QUERY11PARTSUPP1_L3_1PARTSUPP1_DELTA.clear();
         {  
-          for (size_t i = 0; i < DELTA_PARTSUPP.size; i++)
+          for (size_t i = 0; i < DELTA_PARTSUPP.size; i++) 
           {
                 long ps_partkey = DELTA_PARTSUPP.partkey[i];
                 long ps_suppkey = DELTA_PARTSUPP.suppkey[i];
@@ -794,14 +793,13 @@ namespace dbtoaster {
                 DOUBLE_TYPE ps_supplycost = DELTA_PARTSUPP.supplycost[i];
                 // STRING_TYPE ps_comment = DELTA_PARTSUPP.comment[i];
                 long v9 = 1L;
-                QUERY11PARTSUPP1_L1_1PARTSUPP1_DELTA.addOrDelOnZero(se16.modify(ps_suppkey),(v9 * (ps_supplycost * ps_availqty)));
+                QUERY11PARTSUPP1_L1_1PARTSUPP1_DELTA.addOrDelOnZero(se16.modify(ps_suppkey),(v9 * (ps_supplycost * ps_availqty)));            
                 long v10 = 1L;
                 QUERY11PARTSUPP1_E2_1PARTSUPP1_DELTA.addOrDelOnZero(se17.modify(ps_suppkey,ps_partkey),v10);
                 long v11 = 1L;
                 QUERY11PARTSUPP1_L3_1PARTSUPP1_DELTA.addOrDelOnZero(se18.modify(ps_suppkey,ps_partkey),(v11 * (ps_supplycost * ps_availqty)));
           }
         }
-
 
         DOUBLE_TYPE agg3 = 0.0;
         {  // foreach

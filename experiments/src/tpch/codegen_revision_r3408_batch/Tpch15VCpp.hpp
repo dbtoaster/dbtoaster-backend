@@ -541,8 +541,8 @@ namespace dbtoaster {
   /* Type definition providing a way to incrementally maintain the results of the sql program */
   struct data_t : tlq_t{
     data_t(): tlq_t() {
-      c2 = Udate(STRING_TYPE("1996-4-1"));
-      c1 = Udate(STRING_TYPE("1996-1-1"));
+      c1 = Udate(STRING_TYPE("1996-4-1"));
+      c2 = Udate(STRING_TYPE("1996-1-1"));
     }
   
   
@@ -586,14 +586,14 @@ namespace dbtoaster {
                 // STRING_TYPE l_shipmode = DELTA_LINEITEM.shipmode[i];
                 // STRING_TYPE l_comment = DELTA_LINEITEM.comment[i];
                 long v1 = 1L;
-                (/*if */(l_shipdate >= c1 && c2 > l_shipdate) ? COUNTLINEITEM1_E2_1LINEITEM1_DELTA.addOrDelOnZero(se1.modify(s_suppkey),v1) : (void)0);     
+                (/*if */(c1 > l_shipdate && l_shipdate >= c2) ? COUNTLINEITEM1_E2_1LINEITEM1_DELTA.addOrDelOnZero(se1.modify(s_suppkey),v1) : (void)0);
                 long v2 = 1L;
-                (/*if */(l_shipdate >= c1 && c2 > l_shipdate) ? COUNTLINEITEM1_L3_1LINEITEM1_DELTA.addOrDelOnZero(se2.modify(s_suppkey),(v2 * (l_extendedprice * (1L + (-1L * l_discount))))) : (void)0);     
+                (/*if */(c1 > l_shipdate && l_shipdate >= c2) ? COUNTLINEITEM1_L3_1LINEITEM1_DELTA.addOrDelOnZero(se2.modify(s_suppkey),(v2 * (l_extendedprice * (1L + (-1L * l_discount))))) : (void)0);
                 long v3 = 1L;
-                (/*if */(l_shipdate >= c1 && c2 > l_shipdate) ? COUNTLINEITEM1_L4_1_E1_1LINEITEM1_DELTA.addOrDelOnZero(se3.modify(s_suppkey),v3) : (void)0); 
+                (/*if */(l_shipdate >= c2 && c1 > l_shipdate) ? COUNTLINEITEM1_L4_1_E1_1LINEITEM1_DELTA.addOrDelOnZero(se3.modify(s_suppkey),v3) : (void)0);
                 long v4 = 1L;
-                (/*if */(l_shipdate >= c1 && c2 > l_shipdate) ? COUNTLINEITEM1_L4_1_L2_1LINEITEM1_DELTA.addOrDelOnZero(se4.modify(s_suppkey),(v4 * (l_extendedprice * (1L + (-1L * l_discount))))) : (void)0);
-          }          
+                (/*if */(l_shipdate >= c2 && c1 > l_shipdate) ? COUNTLINEITEM1_L4_1_L2_1LINEITEM1_DELTA.addOrDelOnZero(se4.modify(s_suppkey),(v4 * (l_extendedprice * (1L + (-1L * l_discount))))) : (void)0);
+          }
         }
 
         {  // foreach
@@ -706,7 +706,7 @@ namespace dbtoaster {
       }
     }
     void on_batch_update_SUPPLIER(TPCHSupplierBatch& DELTA_SUPPLIER) {
-      {  
+      { 
         if (tS > 0) { tS += DELTA_SUPPLIER.size; return; }         
         tLastN += DELTA_SUPPLIER.size;        
         if (tLastN > 127) { 
@@ -724,14 +724,16 @@ namespace dbtoaster {
                 long s_suppkey = DELTA_SUPPLIER.suppkey[i];
                 STRING_TYPE s_name = DELTA_SUPPLIER.name[i];
                 STRING_TYPE s_address = DELTA_SUPPLIER.address[i];
-                // long s_nationkey = DELTA_SUPPLIER.nationkey[i];
+                long s_nationkey = DELTA_SUPPLIER.nationkey[i];
                 STRING_TYPE s_phone = DELTA_SUPPLIER.phone[i];
-                // DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
-                // STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
+                DOUBLE_TYPE s_acctbal = DELTA_SUPPLIER.acctbal[i];
+                STRING_TYPE s_comment = DELTA_SUPPLIER.comment[i];
                 long v11 = 1L;
                 COUNTSUPPLIER1_DELTA.addOrDelOnZero(se13.modify(s_suppkey,s_name,s_address,s_phone),v11);            
           }
-        }{  // foreach
+        }
+
+        {  // foreach
           const HashIndex_COUNTSUPPLIER1_DELTA_map_0123* i12 = static_cast<HashIndex_COUNTSUPPLIER1_DELTA_map_0123*>(COUNTSUPPLIER1_DELTA.index[0]);
           HashIndex_COUNTSUPPLIER1_DELTA_map_0123::IdxNode* n12; 
           COUNTSUPPLIER1_DELTA_entry* e12;
@@ -836,8 +838,8 @@ namespace dbtoaster {
     DELTA_LINEITEM_map DELTA_LINEITEM;
     DELTA_SUPPLIER_map DELTA_SUPPLIER;
     
-    /*const static*/ long c2;
     /*const static*/ long c1;
+    /*const static*/ long c2;
     /*const static*/ STRING_TYPE c4;
     /*const static*/ STRING_TYPE c3;
   
