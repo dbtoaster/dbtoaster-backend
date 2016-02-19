@@ -322,7 +322,7 @@ namespace dbtoaster {
         (/*if */(((l9 == c1) || (l9 == c2) || (l9 == c3) || (l9 == c4) || (l9 == c5) || (l9 == c6) || (l9 == c7))) ? NUMCUSTCUSTOMER1.addOrDelOnZero(se10.modify(customer_custkey,customer_acctbal,l9),1L) : (void)0);
         (/*if */(customer_acctbal > 0.0 && ((l9 == c1) || (l9 == c2) || (l9 == c3) || (l9 == c4) || (l9 == c5) || (l9 == c6) || (l9 == c7))) ? NUMCUSTCUSTOMER1_L2_1_L1_1 += 1L : 0L);
         (/*if */(customer_acctbal > 0.0 && ((l9 == c1) || (l9 == c2) || (l9 == c3) || (l9 == c4) || (l9 == c5) || (l9 == c6) || (l9 == c7))) ? NUMCUSTCUSTOMER1_L2_2 += customer_acctbal : 0L);
-        (/*if */(((l9 == c1) || (l9 == c2) || (l9 == c3) || (l9 == c4) || (l9 == c5) || (l9 == c6) || (l9 == c7))) ? TOTALACCTBALCUSTOMER1.addOrDelOnZero(se13.modify(customer_custkey,customer_acctbal,l10),customer_acctbal) : (void)0);
+        (/*if */(((l9 == c1) || (l9 == c2) || (l9 == c3) || (l9 == c4) || (l9 == c5) || (l9 == c6) || (l9 == c7))) ? TOTALACCTBALCUSTOMER1.addOrDelOnZero(se13.modify(customer_custkey,customer_acctbal,l9),customer_acctbal) : (void)0);
         NUMCUST.clear();
         DOUBLE_TYPE agg7 = 0.0;
         long l12 = NUMCUSTCUSTOMER1_L2_1_L1_1;

@@ -13,8 +13,11 @@
 
 using namespace std;
 
-#include "tpch/tpch.hpp"
-#include "tpch/tpch_template.hpp"
+// #include "tpch/tpch.hpp"
+// #include "tpch/tpch_template.hpp"
+
+#include "tpcds/tpcds.hpp"
+#include "tpcds/tpcds_template.hpp"
 
 using namespace dbtoaster;
 
