@@ -7,6 +7,10 @@
 
 namespace dbtoaster 
 {
+    #define STR2LONG(s)   (s == "" ? 0   : std::stol(s))
+    #define STR2DOUBLE(s) (s == "" ? 0.0 : std::stod(s))
+    #define STR2DATE(s)   (s == "" ? 0   : str2date(s))
+
 
     struct TPCDSDateDim
     {
@@ -46,27 +50,27 @@ namespace dbtoaster
             if (fields.size() < 28) return;
             d_date_sk = std::stol(fields[0]);
             d_date_id = fields[1];
-            d_date = str2date(fields[2]);
-            d_month_seq = std::stol(fields[3]);
-            d_week_seq  = std::stol(fields[4]);
-            d_quarter_seq = std::stol(fields[5]);
-            d_year = std::stol(fields[6]); 
-            d_dow = std::stol(fields[7]);
-            d_moy = std::stol(fields[8]);
-            d_dom = std::stol(fields[9]);
-            d_qoy = std::stol(fields[10]);
-            d_fy_year = std::stol(fields[11]);
-            d_fy_quarter_seq = std::stol(fields[12]);
-            d_fy_week_seq = std::stol(fields[13]);
+            d_date = STR2DATE(fields[2]);
+            d_month_seq = STR2LONG(fields[3]);
+            d_week_seq  = STR2LONG(fields[4]);
+            d_quarter_seq = STR2LONG(fields[5]);
+            d_year = STR2LONG(fields[6]); 
+            d_dow = STR2LONG(fields[7]);
+            d_moy = STR2LONG(fields[8]);
+            d_dom = STR2LONG(fields[9]);
+            d_qoy = STR2LONG(fields[10]);
+            d_fy_year = STR2LONG(fields[11]);
+            d_fy_quarter_seq = STR2LONG(fields[12]);
+            d_fy_week_seq = STR2LONG(fields[13]);
             d_day_name = fields[14];
             d_quarter_name = fields[15];
             d_holiday = fields[16];
             d_weekend = fields[17];
             d_following_holiday = fields[18];
-            d_first_dom = std::stol(fields[19]);
-            d_last_dom = std::stol(fields[20]);
-            d_same_day_ly = std::stol(fields[21]);
-            d_same_day_lq = std::stol(fields[22]);
+            d_first_dom = STR2LONG(fields[19]);
+            d_last_dom = STR2LONG(fields[20]);
+            d_same_day_ly = STR2LONG(fields[21]);
+            d_same_day_lq = STR2LONG(fields[22]);
             d_current_day = fields[23];
             d_current_week = fields[24];
             d_current_month = fields[25];
@@ -106,29 +110,29 @@ namespace dbtoaster
         TPCDSStoreSales(std::vector<std::string>& fields)
         {
             if (fields.size() < 23) return;
-            ss_sold_date_sk = std::stol(fields[0]);    
-            ss_sold_time_sk = std::stol(fields[1]);
+            ss_sold_date_sk = STR2LONG(fields[0]);    
+            ss_sold_time_sk = STR2LONG(fields[1]);
             ss_item_sk = std::stol(fields[2]);
-            ss_customer_sk = std::stol(fields[3]);
-            ss_cdemo_sk = std::stol(fields[4]);
-            ss_hdemo_sk = std::stol(fields[5]);
-            ss_addr_sk = std::stol(fields[6]);
-            ss_store_sk = std::stol(fields[7]);
-            ss_promo_sk = std::stol(fields[8]);
+            ss_customer_sk = STR2LONG(fields[3]);
+            ss_cdemo_sk = STR2LONG(fields[4]);
+            ss_hdemo_sk = STR2LONG(fields[5]);
+            ss_addr_sk = STR2LONG(fields[6]);
+            ss_store_sk = STR2LONG(fields[7]);
+            ss_promo_sk = STR2LONG(fields[8]);
             ss_ticket_number = std::stol(fields[9]);
-            ss_quantity = std::stol(fields[10]);
-            ss_wholesale_cost = std::stol(fields[11]);
-            ss_list_price = std::stod(fields[12]);      
-            ss_sales_price = std::stod(fields[13]);
-            ss_ext_discount_amt = std::stod(fields[14]);
-            ss_ext_sales_price = std::stod(fields[15]);
-            ss_ext_wholesale_cost = std::stod(fields[16]);
-            ss_ext_list_price = std::stod(fields[17]);
-            ss_ext_tax = std::stod(fields[18]);
-            ss_coupon_amt = std::stod(fields[19]);
-            ss_net_paid = std::stod(fields[20]);
-            ss_net_paid_inc_tax = std::stod(fields[21]);
-            ss_net_profit = std::stod(fields[22]);
+            ss_quantity = STR2LONG(fields[10]);
+            ss_wholesale_cost = STR2LONG(fields[11]);
+            ss_list_price = STR2DOUBLE(fields[12]);      
+            ss_sales_price = STR2DOUBLE(fields[13]);
+            ss_ext_discount_amt = STR2DOUBLE(fields[14]);
+            ss_ext_sales_price = STR2DOUBLE(fields[15]);
+            ss_ext_wholesale_cost = STR2DOUBLE(fields[16]);
+            ss_ext_list_price = STR2DOUBLE(fields[17]);
+            ss_ext_tax = STR2DOUBLE(fields[18]);
+            ss_coupon_amt = STR2DOUBLE(fields[19]);
+            ss_net_paid = STR2DOUBLE(fields[20]);
+            ss_net_paid_inc_tax = STR2DOUBLE(fields[21]);
+            ss_net_profit = STR2DOUBLE(fields[22]);
         }
     };
 
@@ -165,25 +169,25 @@ namespace dbtoaster
             if (fields.size() < 22) return;
             i_item_sk = std::stol(fields[0]); 
             i_item_id = fields[1];
-            i_rec_start_date = str2date(fields[2]);
-            i_rec_end_date = str2date(fields[3]);
+            i_rec_start_date = STR2DATE(fields[2]);
+            i_rec_end_date = STR2DATE(fields[3]);
             i_item_desc = fields[4];
-            i_current_price = std::stod(fields[5]);  
-            i_wholesale_cost = std::stod(fields[6]);
-            i_brand_id = std::stol(fields[7]);
+            i_current_price = STR2DOUBLE(fields[5]);  
+            i_wholesale_cost = STR2DOUBLE(fields[6]);
+            i_brand_id = STR2LONG(fields[7]);
             i_brand = fields[8];
-            i_class_id = std::stol(fields[9]);
+            i_class_id = STR2LONG(fields[9]);
             i_class = fields[10];
-            i_category_id = std::stol(fields[11]);
+            i_category_id = STR2LONG(fields[11]);
             i_category = fields[12];
-            i_manufact_id = std::stol(fields[13]);
+            i_manufact_id = STR2LONG(fields[13]);
             i_manufact = fields[14];
             i_size = fields[15];
             i_formulation = fields[16];
             i_color = fields[17];
             i_units = fields[18];
             i_container = fields[19];
-            i_manager_id = std::stol(fields[20]);
+            i_manager_id = STR2LONG(fields[20]);
             i_product_name = fields[21];
         }        
     };
@@ -216,18 +220,18 @@ namespace dbtoaster
             if (fields.size() < 18) return;
             c_customer_sk = std::stol(fields[0]); 
             c_customer_id = fields[1];
-            c_current_cdemo_sk = std::stol(fields[2]); 
-            c_current_hdemo_sk = std::stol(fields[3]); 
-            c_current_addr_sk = std::stol(fields[4]); 
-            c_first_shipto_date_sk = std::stol(fields[5]); 
-            c_first_sales_date_sk = std::stol(fields[6]); 
+            c_current_cdemo_sk = STR2LONG(fields[2]); 
+            c_current_hdemo_sk = STR2LONG(fields[3]); 
+            c_current_addr_sk = STR2LONG(fields[4]); 
+            c_first_shipto_date_sk = STR2LONG(fields[5]); 
+            c_first_sales_date_sk = STR2LONG(fields[6]); 
             c_salutation = fields[7];
             c_first_name = fields[8];
             c_last_name = fields[9];
             c_preferred_cust_flag = fields[10];
-            c_birth_day = std::stol(fields[11]); 
-            c_birth_month = std::stol(fields[12]); 
-            c_birth_year = std::stol(fields[13]); 
+            c_birth_day = STR2LONG(fields[11]); 
+            c_birth_month = STR2LONG(fields[12]); 
+            c_birth_year = STR2LONG(fields[13]); 
             c_birth_country = fields[14]; 
             c_login = fields[15];
             c_email_address = fields[16];
@@ -267,7 +271,7 @@ namespace dbtoaster
             ca_state = fields[8];
             ca_zip = fields[9];
             ca_country = fields[10];
-            ca_gmt_offset = std::stod(fields[11]); 
+            ca_gmt_offset = STR2DOUBLE(fields[11]); 
             ca_location_type = fields[12];
         }
     };
@@ -311,21 +315,21 @@ namespace dbtoaster
             if (fields.size() < 29) return;        
             s_store_sk = std::stol(fields[0]); 
             s_store_id = fields[1];
-            s_rec_start_date = str2date(fields[2]);
-            s_rec_end_date = str2date(fields[3]);
-            s_closed_date_sk = std::stol(fields[4]); 
+            s_rec_start_date = STR2DATE(fields[2]);
+            s_rec_end_date = STR2DATE(fields[3]);
+            s_closed_date_sk = STR2LONG(fields[4]); 
             s_store_name = fields[5];
-            s_number_employees = std::stol(fields[6]);
-            s_floor_space = std::stol(fields[7]);
+            s_number_employees = STR2LONG(fields[6]);
+            s_floor_space = STR2LONG(fields[7]);
             s_hours = fields[8];
             s_manager = fields[9];
-            s_market_id = std::stol(fields[10]); 
+            s_market_id = STR2LONG(fields[10]); 
             s_geography_class = fields[11];
             s_market_desc = fields[12];
             s_market_manager = fields[13];
-            s_division_id = std::stol(fields[14]); 
+            s_division_id = STR2LONG(fields[14]); 
             s_division_name = fields[15];
-            s_company_id = std::stol(fields[16]); 
+            s_company_id = STR2LONG(fields[16]); 
             s_company_name = fields[17];
             s_street_number = fields[18];
             s_street_name = fields[19];
@@ -336,8 +340,8 @@ namespace dbtoaster
             s_state = fields[24];
             s_zip = fields[25];
             s_country = fields[26];
-            s_gmt_offset = std::stod(fields[27]); 
-            s_tax_precentage = std::stod(fields[28]); 
+            s_gmt_offset = STR2DOUBLE(fields[27]); 
+            s_tax_precentage = STR2DOUBLE(fields[28]); 
         }
     };
 
@@ -355,10 +359,10 @@ namespace dbtoaster
         {
             if (fields.size() < 5) return;  
              hd_demo_sk = std::stol(fields[0]); 
-             hd_income_band_sk = std::stol(fields[1]);
+             hd_income_band_sk = STR2LONG(fields[1]);
              hd_buy_potential = fields[2];
-             hd_dep_count = std::stol(fields[3]); 
-             hd_vehicle_count = std::stol(fields[4]); 
+             hd_dep_count = STR2LONG(fields[3]); 
+             hd_vehicle_count = STR2LONG(fields[4]); 
         }
     };
 
@@ -383,11 +387,11 @@ namespace dbtoaster
             cd_gender = fields[1];
             cd_marital_status = fields[2];
             cd_education_status = fields[3];
-            cd_purchase_estimate = std::stol(fields[4]); 
+            cd_purchase_estimate = STR2LONG(fields[4]); 
             cd_credit_rating = fields[5];
-            cd_dep_count = std::stol(fields[6]); 
-            cd_dep_employed_count = std::stol(fields[7]); 
-            cd_dep_college_count = std::stol(fields[8]); 
+            cd_dep_count = STR2LONG(fields[6]); 
+            cd_dep_employed_count = STR2LONG(fields[7]); 
+            cd_dep_college_count = STR2LONG(fields[8]); 
         }
     };
 
@@ -420,11 +424,11 @@ namespace dbtoaster
             if (fields.size() < 19) return;  
             p_promo_sk = std::stol(fields[0]); 
             p_promo_id = fields[1];
-            p_start_date_sk = std::stol(fields[2]); 
-            p_end_date_sk = std::stol(fields[3]); 
-            p_item_sk = std::stol(fields[4]); 
-            p_cost = std::stod(fields[5]); 
-            p_response_target = std::stol(fields[6]); 
+            p_start_date_sk = STR2LONG(fields[2]); 
+            p_end_date_sk = STR2LONG(fields[3]); 
+            p_item_sk = STR2LONG(fields[4]); 
+            p_cost = STR2DOUBLE(fields[5]); 
+            p_response_target = STR2LONG(fields[6]); 
             p_promo_name = fields[7];
             p_channel_dmail = fields[8];
             p_channel_email = fields[9];

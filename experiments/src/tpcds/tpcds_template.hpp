@@ -3,8 +3,8 @@
 
 #include "stopwatch.hpp"
 
-const string dataPath = "datasets";
-const string dataset = "standard";
+const string dataPath = "datasets/tpcds";
+const string dataset = "1GB";
 
 namespace dbtoaster 
 {
@@ -177,7 +177,7 @@ namespace dbtoaster
             sw.restart();
             std::vector<TPCDSDateDim> vDateDim;
             //readFromBinaryFile(vDateDim, dataPath + "/" + dataset + "/date_dim.bin");
-            readFromFile(vDateDim, dataPath + "/" + dataset + "/date_dim.csv", '|');
+            readFromFile(vDateDim, dataPath + "/" + dataset + "/date_dim.dat", '|');
             //writeToBinaryFile(vDateDim, dataPath + "/" + dataset + "/date_dim.bin");
             dateDimBatch = new TPCDSDateDimBatch(vDateDim);
             sw.stop();
@@ -188,7 +188,7 @@ namespace dbtoaster
             sw.restart();
             std::vector<TPCDSStoreSales> vStoreSales;
             //readFromBinaryFile(vStoreSales, dataPath + "/" + dataset + "/store_sales.bin");
-            readFromFile(vStoreSales, dataPath + "/" + dataset + "/store_sales.csv", '|');
+            readFromFile(vStoreSales, dataPath + "/" + dataset + "/store_sales.dat", '|');
             //writeToBinaryFile(vStoreSales, dataPath + "/" + dataset + "/store_sales.bin");
             storeSalesBatch = new TPCDSStoreSalesBatch(vStoreSales);
             sw.stop();
@@ -199,7 +199,7 @@ namespace dbtoaster
             sw.restart();
             std::vector<TPCDSItem> vItem;
             //readFromBinaryFile(vItem, dataPath + "/" + dataset + "/item.bin");
-            readFromFile(vItem, dataPath + "/" + dataset + "/item.csv", '|');
+            readFromFile(vItem, dataPath + "/" + dataset + "/item.dat", '|');
             //writeToBinaryFile(vItem, dataPath + "/" + dataset + "/item.bin");
             itemBatch = new TPCDSItemBatch(vItem);
             sw.stop();
@@ -210,7 +210,7 @@ namespace dbtoaster
             sw.restart();
             std::vector<TPCDSCustomer> vCustomer;
             //readFromBinaryFile(vCustomer, dataPath + "/" + dataset + "/customer.bin");
-            readFromFile(vCustomer, dataPath + "/" + dataset + "/customer.csv", '|');
+            readFromFile(vCustomer, dataPath + "/" + dataset + "/customer.dat", '|');
             //writeToBinaryFile(vCustomer, dataPath + "/" + dataset + "/customer.bin");
             customerBatch = new TPCDSCustomerBatch(vCustomer);
             sw.stop();
@@ -221,7 +221,7 @@ namespace dbtoaster
             sw.restart();
             std::vector<TPCDSCustomerAddress> vCustomerAddress;
             //readFromBinaryFile(vCustomerAddress, dataPath + "/" + dataset + "/customer_address.bin");
-            readFromFile(vCustomerAddress, dataPath + "/" + dataset + "/customer_address.csv", '|');
+            readFromFile(vCustomerAddress, dataPath + "/" + dataset + "/customer_address.dat", '|');
             //writeToBinaryFile(vCustomerAddress, dataPath + "/" + dataset + "/customer_address.bin");
             customerAddressBatch = new TPCDSCustomerAddressBatch(vCustomerAddress);
             sw.stop();
@@ -232,7 +232,7 @@ namespace dbtoaster
             sw.restart();
             std::vector<TPCDSStore> vStore;
             //readFromBinaryFile(vStore, dataPath + "/" + dataset + "/store.bin");
-            readFromFile(vStore, dataPath + "/" + dataset + "/store.csv", '|');
+            readFromFile(vStore, dataPath + "/" + dataset + "/store.dat", '|');
             //writeToBinaryFile(vStore, dataPath + "/" + dataset + "/store.bin");
             storeBatch = new TPCDSStoreBatch(vStore);
             sw.stop();
@@ -243,7 +243,7 @@ namespace dbtoaster
             sw.restart();
             std::vector<TPCDSHouseholdDemographics> vHouseholdDemographics;
             //readFromBinaryFile(vHouseholdDemographics, dataPath + "/" + dataset + "/household_demographics.bin");
-            readFromFile(vHouseholdDemographics, dataPath + "/" + dataset + "/household_demographics.csv", '|');
+            readFromFile(vHouseholdDemographics, dataPath + "/" + dataset + "/household_demographics.dat", '|');
             //writeToBinaryFile(vHouseholdDemographics, dataPath + "/" + dataset + "/household_demographics.bin");
             householdDemographicsBatch = new TPCDSHouseholdDemographicsBatch(vHouseholdDemographics);
             sw.stop();
@@ -254,7 +254,7 @@ namespace dbtoaster
             sw.restart();
             std::vector<TPCDSCustomerDemographics> vCustomerDemographics;
             //readFromBinaryFile(vCustomerDemographics, dataPath + "/" + dataset + "/customer_demographics.bin");
-            readFromFile(vCustomerDemographics, dataPath + "/" + dataset + "/customer_demographics.csv", '|');
+            readFromFile(vCustomerDemographics, dataPath + "/" + dataset + "/customer_demographics.dat", '|');
             //writeToBinaryFile(vCustomerDemographics, dataPath + "/" + dataset + "/customer_demographics.bin");
             customerDemographicsBatch = new TPCDSCustomerDemographicsBatch(vCustomerDemographics);
             sw.stop();
@@ -265,7 +265,7 @@ namespace dbtoaster
             sw.restart();
             std::vector<TPCDSPromotion> vPromotion;
             //readFromBinaryFile(vPromotion, dataPath + "/" + dataset + "/promotion.bin");
-            readFromFile(vPromotion, dataPath + "/" + dataset + "/promotion.csv", '|');
+            readFromFile(vPromotion, dataPath + "/" + dataset + "/promotion.dat", '|');
             //writeToBinaryFile(vPromotion, dataPath + "/" + dataset + "/promotion.bin");
             promotionBatch = new TPCDSPromotionBatch(vPromotion);
             sw.stop();
