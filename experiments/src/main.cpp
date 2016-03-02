@@ -32,7 +32,7 @@ void RunQuery()
 
     load_relations();    
 
-    std::cout << "Forming batches... ";
+    std::cout << "Forming batches... " << std::flush;
     convert_tables_to_batches(batchSize);    
     convert_streams_to_batches(batchSize);    
     std::cout << "Done!" << std::endl;
@@ -48,11 +48,19 @@ void RunQuery()
 
         data_t data;
 
+        std::cout << "Processing tables ... " << std::flush;
+        process_table_batches(data);
+        std::cout << "Done! " << std::endl;
+
         sw.restart();
 
-        process_table_batches(data);
+        std::cout << "OnSystemReady... " << std::flush;
         data.on_system_ready_event();
+        std::cout << "Done! " << std::endl;
+
+        std::cout << "Processing streams... " << std::flush;
         process_stream_batches(data);
+        std::cout << "Done! " << std::endl;
 
         sw.stop();
 
@@ -83,11 +91,19 @@ void RunQuery()
 
         data_t data;
 
+        std::cout << "Processing tables... " << std::flush;
+        process_tables(data);
+        std::cout << "Done! " << std::endl;
+
         sw.restart();
 
-        process_tables(data);
-        data.on_system_ready_event();
+        std::cout << "OnSystemReady... " << std::flush;
+        data.on_system_ready_event();        
+        std::cout << "Done! " << std::endl;
+
+        std::cout << "Processing streams... " << std::flush;;
         process_streams(data);
+        std::cout << "Done! " << std::endl;
 
         sw.stop();
 

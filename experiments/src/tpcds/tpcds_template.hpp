@@ -850,26 +850,12 @@ namespace dbtoaster
     {
         size_t i = 0, count = 0;
 
-        IF_PROMOTION ({
-            count = promotionBatchList.size();
+        IF_CUSTOMERDEMOGRAPHICS ({
+            count = customerDemographicsBatchList.size();
 
             for (; i < count; i++) 
             {
-                IF_CUSTOMERDEMOGRAPHICS ( INSERT_CUSTOMERDEMOGRAPHICS_BATCH )
-                IF_DATEDIM ( INSERT_DATEDIM_BATCH )
-                IF_HOUSEHOLDDEMOGRAPHICS ( INSERT_HOUSEHOLDDEMOGRAPHICS_BATCH )
-                IF_PROMOTION ( INSERT_PROMOTION_BATCH )
-            }            
-        })
-
-        IF_HOUSEHOLDDEMOGRAPHICS ({
-            count = householdDemographicsBatchList.size();
-
-            for (; i < count; i++) 
-            {
-                IF_CUSTOMERDEMOGRAPHICS ( INSERT_CUSTOMERDEMOGRAPHICS_BATCH )
-                IF_DATEDIM ( INSERT_DATEDIM_BATCH )
-                IF_HOUSEHOLDDEMOGRAPHICS ( INSERT_HOUSEHOLDDEMOGRAPHICS_BATCH )
+                INSERT_CUSTOMERDEMOGRAPHICS_BATCH
             }                        
         })
 
@@ -878,20 +864,27 @@ namespace dbtoaster
 
             for (; i < count; i++) 
             {
-                IF_CUSTOMERDEMOGRAPHICS ( INSERT_CUSTOMERDEMOGRAPHICS_BATCH )
-                IF_DATEDIM ( INSERT_DATEDIM_BATCH )
+                INSERT_DATEDIM_BATCH
             }                        
         })
 
-        IF_CUSTOMERDEMOGRAPHICS ({
-            count = customerDemographicsBatchList.size();
+        IF_HOUSEHOLDDEMOGRAPHICS ({
+            count = householdDemographicsBatchList.size();
 
             for (; i < count; i++) 
             {
-                IF_CUSTOMERDEMOGRAPHICS ( INSERT_CUSTOMERDEMOGRAPHICS_BATCH )
+                INSERT_HOUSEHOLDDEMOGRAPHICS_BATCH
             }                        
         })
 
+        IF_PROMOTION ({
+            count = promotionBatchList.size();
+
+            for (; i < count; i++) 
+            {
+                INSERT_PROMOTION_BATCH
+            }            
+        })
     }
 
     void process_stream_batches(dbtoaster::data_t& data) 
@@ -1153,47 +1146,41 @@ namespace dbtoaster
     {        
         size_t i = 0, count = 0;
 
-        IF_PROMOTION ({
-            count = promotionBatch->size;
+        IF_CUSTOMERDEMOGRAPHICS ({
+            count = customerDemographicsBatch->size;
 
-            for (; i < count; i++) 
+            for (i = 0; i < count; i++) 
             {
-                IF_CUSTOMERDEMOGRAPHICS ( INSERT_CUSTOMERDEMOGRAPHICS )
-                IF_DATEDIM ( INSERT_DATEDIM )
-                IF_HOUSEHOLDDEMOGRAPHICS ( INSERT_HOUSEHOLDDEMOGRAPHICS )
-                IF_PROMOTION ( INSERT_PROMOTION )
-            }            
+                INSERT_CUSTOMERDEMOGRAPHICS
+            }                        
+        })        
+
+        IF_DATEDIM ({
+            count = dateDimBatch->size;
+
+            for (i = 0; i < count; i++) 
+            {
+                INSERT_DATEDIM
+            }                        
         })
 
         IF_HOUSEHOLDDEMOGRAPHICS ({
             count = householdDemographicsBatch->size;
 
-            for (; i < count; i++) 
+            for (i = 0; i < count; i++) 
             {
-                IF_CUSTOMERDEMOGRAPHICS ( INSERT_CUSTOMERDEMOGRAPHICS )
-                IF_DATEDIM ( INSERT_DATEDIM )
-                IF_HOUSEHOLDDEMOGRAPHICS ( INSERT_HOUSEHOLDDEMOGRAPHICS )
+                INSERT_HOUSEHOLDDEMOGRAPHICS
             }                        
         })
 
-        IF_DATEDIM ({
-            count = dateDimBatch->size;
+        IF_PROMOTION ({
+            count = promotionBatch->size;
 
             for (; i < count; i++) 
             {
-                IF_CUSTOMERDEMOGRAPHICS ( INSERT_CUSTOMERDEMOGRAPHICS )
-                IF_DATEDIM ( INSERT_DATEDIM )
-            }                        
+                INSERT_PROMOTION
+            }
         })
-
-        IF_CUSTOMERDEMOGRAPHICS ({
-            count = customerDemographicsBatch->size;
-
-            for (; i < count; i++) 
-            {
-                IF_CUSTOMERDEMOGRAPHICS ( INSERT_CUSTOMERDEMOGRAPHICS )
-            }                        
-        })        
     }
 
     void process_streams(dbtoaster::data_t& data)

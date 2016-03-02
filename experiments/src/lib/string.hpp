@@ -85,7 +85,12 @@ namespace dbtoaster
 
         FORCE_INLINE FixedLengthString substr(uint64_t pos, uint64_t len) const
         {
-            return FixedLengthString(this->data_ + pos, len);
+            return
+                (pos < size_ ? 
+                    (len <= (size_ - pos) ? 
+                        FixedLengthString(this->data_ + pos, len) : 
+                        FixedLengthString(this->data_ + pos, size_ - pos)) :
+                    FixedLengthString());
         }
 
         template <uint64_t SZ>
@@ -178,7 +183,12 @@ namespace dbtoaster
 
         FORCE_INLINE VariableLengthString substr(uint64_t pos, uint64_t len) const
         {
-            return VariableLengthString(this->data_ + pos, len);
+            return
+                (pos < size_ ? 
+                    (len <= (size_ - pos) ? 
+                        VariableLengthString(this->data_ + pos, len) : 
+                        VariableLengthString(this->data_ + pos, size_ - pos)) :
+                    VariableLengthString());
         }        
 
         friend std::ostream& operator<<(std::ostream& o, VariableLengthString const& str);
@@ -249,7 +259,12 @@ namespace dbtoaster
 
         FORCE_INLINE RefCountedString substr(uint64_t pos, uint64_t len) const
         {
-            return RefCountedString(this->data_ + pos, len);
+            return 
+                (pos < size_ ? 
+                    (len <= (size_ - pos) ? 
+                        RefCountedString(this->data_ + pos, len) : 
+                        RefCountedString(this->data_ + pos, size_ - pos)) :
+                    RefCountedString());
         }        
     };
 
@@ -369,8 +384,13 @@ namespace dbtoaster
         }
 
         FORCE_INLINE PooledRefCountedString substr(uint64_t pos, uint64_t len) const
-        {
-            return PooledRefCountedString(this->data_ + pos, len);
+        {   
+            return 
+                (pos < size_ ? 
+                    (len <= (size_ - pos) ? 
+                        PooledRefCountedString(this->data_ + pos, len) : 
+                        PooledRefCountedString(this->data_ + pos, size_ - pos)) :
+                    PooledRefCountedString());
         }        
     };
 }

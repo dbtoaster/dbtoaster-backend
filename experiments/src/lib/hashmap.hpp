@@ -447,6 +447,11 @@ namespace dbtoaster
                 delete[] index;
             }
       
+            FORCE_INLINE void insert_nocheck(const T& k) 
+            { 
+                insert_nocheck(k, primary_index->computeHash(k));
+            }
+
             FORCE_INLINE void insert_nocheck(const T& elem, HASH_RES_t h) 
             { 
                 T* cur = pool.add();
@@ -541,6 +546,11 @@ namespace dbtoaster
                 delete[] index;
             }
       
+            FORCE_INLINE void insert_nocheck(const T& k) 
+            { 
+                insert_nocheck(k, primary_index->computeHash(k));
+            }
+
             FORCE_INLINE void insert_nocheck(const T& elem, HASH_RES_t h) 
             { 
                 T* cur = pool.add();
@@ -646,6 +656,11 @@ namespace dbtoaster
                 for (size_t i = 0;  i < sizeof...(SECONDARY_INDEXES_REST); i++) 
                     delete index[i + 2];
                 delete[] index;
+            }
+
+            FORCE_INLINE void insert_nocheck(const T& k) 
+            { 
+                insert_nocheck(k, primary_index->computeHash(k));
             }
       
             FORCE_INLINE void insert_nocheck(const T& elem, HASH_RES_t h) 
