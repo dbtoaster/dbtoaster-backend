@@ -52,6 +52,8 @@ void RunQuery()
         process_table_batches(data);
         std::cout << "Done! " << std::endl;
 
+        gettimeofday(&data.t0,NULL);
+
         sw.restart();
 
         std::cout << "OnSystemReady... " << std::flush;
@@ -94,6 +96,8 @@ void RunQuery()
         std::cout << "Processing tables... " << std::flush;
         process_tables(data);
         std::cout << "Done! " << std::endl;
+
+        gettimeofday(&data.t0,NULL);
 
         sw.restart();
 
