@@ -516,7 +516,9 @@ object M3 {
   case class AggSum(var ks: List[(String, Type)], e: Expr) extends Expr { 
     def tp = e.tp
     def locality = e.locality match {
-      case Some(DistByKeyExp(pk)) if !pk.forall(ks.contains) => Some(DistRandomExp)
+      case l @ Some(DistByKeyExp(pk)) =>
+        val expVars = (e.schema._1 ++ ks).toSet
+        if (pk.forall(expVars.contains)) l else Some(DistRandomExp)
       case l => l
     }
     override def toString =
