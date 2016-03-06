@@ -515,7 +515,10 @@ object M3 {
   // Operations
   case class AggSum(var ks: List[(String, Type)], e: Expr) extends Expr { 
     def tp = e.tp
-    def locality = e.locality
+    def locality = e.locality match {
+      case Some(DistByKeyExp(pk)) if !pk.forall(ks.contains) => Some(DistRandomExp)
+      case l => l
+    }
     override def toString =
       "AggSum([" + ks.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"
   } // (grouping_keys)->sum relation
