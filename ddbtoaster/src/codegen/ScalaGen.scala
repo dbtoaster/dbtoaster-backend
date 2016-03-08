@@ -461,9 +461,10 @@ trait IScalaGen extends CodeGen {
     val mapKeys = m.keys.map(_._2)
     val nodeName = map+"_node"
     val res = nodeName+"_mres"
-    // XXX fix it
-    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => SUM_QTY_node_mres += ((e.get(1).asInstanceOf[String], e.get(2).asInstanceOf[String]) -> e.get(3).asInstanceOf[Double])}; "+res+".toMap }"
-   // "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{case (e,v) => "+res+" += ("+(if(mapKeys.size > 1) tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) }) else "e")+" -> v) }; "+res+".toMap }"
+    if (q.keys.size > 0) 
+      "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{case (e,v) => "+res+" += ("+(if(mapKeys.size > 1) tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) }) else "e")+" -> v) }; "+res+".toMap }"
+    else
+      q.name
   }
   override def clearOut = {}
   override def onEndStream = ""
@@ -497,7 +498,7 @@ trait IScalaGen extends CodeGen {
     val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
-    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map(q => (if (q.keys.size > 0) toMapFunction(q) else q.name)).mkString(",")+"))"
+    val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map(toMapFunction).mkString(",")+"))"
     val pp = if(printProgress > 0L) "def printProgress():Unit = if(tN % "+printProgress+" == 0) Console.println((System.nanoTime - t0)+\"\\t\"+tN);\n" else ""
     clearOut
     helper(s0)+"class "+cls+" extends Actor {\n"+ind(

@@ -263,9 +263,9 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     val mapKeys = m.keys.map(_._2)
     val nodeName = map+"_node"
     val res = nodeName+"_mres"
-    // XXX fix it
-    //"{ val test"+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => SUM_QTY_node_mres += ((e.get(1).asInstanceOf[String], e.get(2).asInstanceOf[String]) -> e.get(3).asInstanceOf[Double])}; "+res+".toMap }"
+    if (q.keys.size > 0)
     "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += (("+(if(mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map{ case (_,i) => "e.get("+(i+1)+")" }) else "e")+", e.get("+(if(mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size)+"))) }; "+res+".toMap }"
+    else { val c = ctx0(q.name)._1.asInstanceOf[impl.Sym[_]]; s"${c.name+c.id}" }
   }
 
   var cx : Ctx[Rep[_]] = null
