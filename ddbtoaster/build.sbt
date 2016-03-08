@@ -13,7 +13,9 @@ mainClass in run in Compile := Some("ddbt.Compiler")
 packSettings
 
 packMain := Map("compiler" -> "ddbt.Compiler")
-
+autoCompilerPlugins := true
+addCompilerPlugin(
+  "org.scala-lang.plugins" % "scala-continuations-plugin_2.11.6" % "1.0.2")
 // --------- Paths
 Seq(
   scalaSource in Compile <<= baseDirectory / "src",
@@ -31,13 +33,14 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" % "akka-remote_2.11"    % "2.3.10",
   "org.scala-lang"     % "scala-actors"   % scalaVersion.value, // to compile legacy Scala
   "org.scala-lang"     % "scala-compiler" % scalaVersion.value,
-  "org.scalatest"     %% "scalatest"      % "2.2.0" % "test"
+  "org.scalatest"     %% "scalatest"      % "2.2.0" % "test",
+  "org.scala-lang.plugins" %% "scala-continuations-library" % "1.0.2"
 )
 
 // --------- Compilation options
 Seq(
   scalaVersion := "2.11.2",
-  scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-optimise","-Yinline-warnings"), // ,"-target:jvm-1.7"
+  scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-optimise","-Yinline-warnings","-P:continuations:enable"), // ,"-target:jvm-1.7"
   javacOptions ++= Seq("-Xlint:unchecked","-Xlint:-options","-source","1.6","-target","1.6") // forces JVM 1.6 compatibility with JDK 1.7 compiler
 )
 

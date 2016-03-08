@@ -388,7 +388,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
     val (str,ld0,_) = genInternals(s0)
     val tsResBlks = s0.triggers.map(genTriggerPardis(_,s0)) // triggers (need to be generated before maps)
-    
+
 
     var ts = ""
 
@@ -397,7 +397,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     class AccessOperationAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {
       import IR._
 
-       
+
       /**
        * Keeps the list of while loops that should be converted
        */
