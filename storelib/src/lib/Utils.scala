@@ -105,7 +105,7 @@ object Utils {
       } else {
         scala.Console.err.print("Error: exit value is " + exitVal)
       }
-      System.exit(if(exitVal!=0) exitVal else 1)
+      // System.exit(if(exitVal!=0) exitVal else 1)
     }
     (o,e)
   }

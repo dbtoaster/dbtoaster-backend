@@ -295,7 +295,9 @@ abstract class LMSGen(override val cls:String="Query", val impl: LMSExpGen) exte
     val mapKeys = m.keys.map(_._2)
     val nodeName = map+"_node"
     val res = nodeName+"_mres"
-    "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) })+" -> e._"+(mapKeys.size+1)+") }; "+res+".toMap }"
+    if (q.keys.size > 0) 
+      "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{e => "+res+" += ("+tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) })+" -> e._"+(mapKeys.size+1)+") }; "+res+".toMap }"
+    else q.name
   }
 
   override def onEndStream = "printMapsInfo();"
