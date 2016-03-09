@@ -44,7 +44,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   // cases classes
   case class M3Apply[T: TypeRep](name1:String,args1:List[Rep[_]]) extends FunctionDef[T](None, "U" + name1, List(args1)) {
-
+    override def rebuild(children: FunctionArg*) = M3Apply[T](name1, children.asInstanceOf[List[Rep[Any]]])
   }
   def m3_apply[T: TypeRep](name1: String, args: List[Rep[_]]): Rep[T] = M3Apply[T](name1, args)
 
@@ -258,7 +258,10 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   }
   def max(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = __ifThenElse(v1 > v2, v1, v2)
   def min(v1: Rep[Double], v2: Rep[Double]): Rep[Double] = __ifThenElse(v1 < v2, v1, v2)
-  def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] = null
+  def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] = (str,start,length) match {
+    case (Constant(s),Constant(t), Constant(l)) => Constant(s.substring(t.toInt,l.toInt))
+    case _ => str.substring(start.toInt, length.toInt)
+  }
 
   // FIXIT -- deleted some parts from original quote
 //  def quote(x: Rep[Any], forcePrintSymbol: Boolean) : String = {
