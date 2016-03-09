@@ -232,7 +232,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   // def dtGetYear(x: Rep[Date]): Rep[Long] = dateGetYear(x)
 
   // helper functions
-  def div(x: Rep[Double]): Rep[Double] = unit(1.0) / x
+  def div(x: Rep[Double]): Rep[Double] = __ifThenElse(unit(0) __== x, unit(0.0), unit(1.0) / x)
 
   def mulLong(l: Rep[Long], r: Rep[Long]): Rep[Long] = {
     val ll = (l match {
