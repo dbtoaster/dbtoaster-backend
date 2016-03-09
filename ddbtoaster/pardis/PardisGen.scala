@@ -24,7 +24,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
   import ddbt.lib.store.deep._
   import impl._
 
-  val codeGen = new StoreScalaCodeGenerator()
+  val codeGen = new StoreScalaCodeGenerator(impl)
 
   def typeToTypeRep(tp: Type): TypeRep[Any] = {
     tp match {
@@ -440,6 +440,8 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
     for(x <- tsResBlks) {
       //println(x._3)
       //println("========")
+      //This analysis is needed for compact code generation
+      new CountingAnalysis(impl).traverseBlock(x._3)
       val doc = codeGen.blockToDocument((x._3))
 //      println(doc)
 //      val doc = {

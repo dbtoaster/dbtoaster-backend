@@ -7,7 +7,7 @@ import ddbt.lib.store.deep.MStoreIRs._
 import ddbt.lib.store.deep.StoreDSL
 
 
-class StoreScalaCodeGenerator extends ScalaCodeGenerator {
+class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with ASTCodeGenerator[StoreDSL]{
   override def symToDocument(sym: ExpressionSymbol[_]): Document = {
     if(sym.name != "x") {
       Document.text(sym.name)
