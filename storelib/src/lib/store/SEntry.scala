@@ -48,14 +48,14 @@ object GenericEntry extends EntryIdx[GenericEntry] {
     var h = 16;
 
     // SteSampleSEntry
-    if (e.isSampleEntry) {
-      return h * 41 + e.map.get(1).get.hashCode()
-    } else {
-      for (i <- (1 until e.map.size))
-        h = h * 41  + e.map.get(i).get.hashCode()
-    }
+//    if (e.isSampleEntry) {
+       h * 41 + e.map.get(1).get.hashCode()
+//    } else {
+//      for (i <- (1 until e.map.size))
+//        h = h * 41  + e.map.get(i).get.hashCode()
+//    }
 //      e.map.foreach {e => h = h * 41 + e._2.hashCode()}
-    return h
+//    return h
   }//e.map.hashCode
 
 
