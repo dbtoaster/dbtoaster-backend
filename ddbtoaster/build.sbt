@@ -304,8 +304,9 @@ commands += Command.command("release")((state:State) => {
   val prop = new java.util.Properties(); try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } catch { case _:Throwable => }
   Seq(
     scalaSource in Compile <<= baseDirectory / "pardis", // incorrect; copied from lms
+    resolvers += Resolver.sonatypeRepo("snapshots"),
     libraryDependencies ++= Seq(
-      "ch.epfl.data" % "sc-pardis-compiler_2.11" % "0.1-SNAPSHOT"
+      "ch.epfl.data" % "sc-pardis-compiler_2.11" % "0.1.1-SNAPSHOT"
     ),
     outputFolder := prop.getProperty("ddbt.pardis.outputFolder","ddbtoaster/pardis/lifter"),
     inputPackage := prop.getProperty("ddbt.pardis.inputPackage","ddbt.lib.store"),

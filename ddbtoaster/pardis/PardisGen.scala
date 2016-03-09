@@ -371,21 +371,23 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       maps.map{
         case (_,m@MapDef(_,_,_,_)) => m
       } // XXX missing indexes
-    ctx0 = classLevelMaps.map{
-      case MapDef(name,tp,keys,_) => if (keys.size==0) {
-        val m = man(tp)
-        val s = impl.__newVar(impl.unit(0)).e// xxx::: Change nulls impl.named(name,false)(m)
-        //s.emitted = true
-        (name,(s,keys,tp))
-      } else {
-        val m = me2(keys.map(_._2),tp)
-        implicit val cE = ManifestHelper.manStore(m)
-        val s= impl.__newMStore()// xxx::impl.named(name,true)(manStore(m))
-        //impl.collectStore(s)(m)
-        (name,(/*impl.newSStore()(m)*/s,keys,tp))
-      }
-    }.toMap // XXX missing indexes
-
+    val globalMembersBlock = impl.reifyBlock {
+      ctx0 = classLevelMaps.map {
+        case MapDef(name, tp, keys, _) => if (keys.size == 0) {
+          val m = man(tp)
+          val s = impl.__newVar(impl.unit(0)).e // xxx::: Change nulls impl.named(name,false)(m)
+          //s.emitted = true
+          (name, (s, keys, tp))
+        } else {
+          val m = me2(keys.map(_._2), tp)
+          implicit val cE = ManifestHelper.manStore(m)
+          val s = impl.__newMStore() // xxx::impl.named(name,true)(manStore(m))
+          //impl.collectStore(s)(m)
+          (name, ( /*impl.newSStore()(m)*/ s, keys, tp))
+        }
+      }.toMap // XXX missing indexes
+      unit(())
+    }
     val (str,ld0,_) = genInternals(s0)
     val tsResBlks = s0.triggers.map(genTriggerPardis(_,s0)) // triggers (need to be generated before maps)
 
@@ -441,7 +443,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
       //println(x._3)
       //println("========")
       //This analysis is needed for compact code generation
-      new CountingAnalysis(impl).traverseBlock(x._3)
+//      new CountingAnalysis(impl).traverseBlock(x._3)
       val doc = codeGen.blockToDocument((x._3))
 //      println(doc)
 //      val doc = {

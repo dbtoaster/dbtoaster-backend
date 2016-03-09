@@ -1,12 +1,11 @@
 package ddbt.lib.store
-import ch.epfl.data.sc.pardis.annotations.{reflect, noImplementation, deep}
+import ch.epfl.data.sc.pardis.annotations.{reflect, deep}
 
 /**
  * Created by khayyam on 4/13/15.
  */
 
 @deep
-@noImplementation
 @reflect[GenericEntry]
 class MirrorGenericEntry {
   def update(i: Int, v:Any): Unit = ???
