@@ -10,6 +10,7 @@ import pardis.deep._
 import pardis.deep.scalalib._
 import pardis.deep.scalalib.collection._
 import pardis.deep.scalalib.io._
+
 trait MStoreOps extends Base with ArrayOps {  
   // Type representation
   val MStoreType = MStoreIRs.MStoreType

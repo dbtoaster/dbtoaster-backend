@@ -1,7 +1,9 @@
 package ddbt.lib.store.deep
 
-import ch.epfl.data.sc.pardis.deep.scalalib.StringComponent
+import ch.epfl.data.sc.pardis.deep.scalalib.collection.SetComponent
+import ch.epfl.data.sc.pardis.deep.scalalib.{BooleanComponent, StringComponent}
 import ch.epfl.data.sc.pardis.ir.Constant
+import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeUnit, typeAny}
 import ddbt.ast.{TypeDouble, TypeLong, Type}
 import ddbt.lib.store._
@@ -11,7 +13,7 @@ import lifter.{SCLMSInterop, TypeToTypeRep}
  * Created by khayyam on 4/8/15.
  */
 
-trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep {
+trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BooleanComponent with BaseQuasiExp with SetComponent {
   implicit case object EntryType extends TypeRep[Entry] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = EntryType
     val name = "GenericEntry"

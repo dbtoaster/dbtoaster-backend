@@ -17,3 +17,7 @@ class MirrorGenericEntry {
   def cmp(e: GenericEntry): Int = ???
 //  def copy:Entry = ???
 }
+
+object MirrorGenericEntry {
+  def apply(ignore: Any, elems: Any*): MirrorGenericEntry = ???
+}

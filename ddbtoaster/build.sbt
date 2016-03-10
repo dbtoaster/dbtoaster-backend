@@ -306,7 +306,8 @@ commands += Command.command("release")((state:State) => {
     scalaSource in Compile <<= baseDirectory / "pardis", // incorrect; copied from lms
     resolvers += Resolver.sonatypeRepo("snapshots"),
     libraryDependencies ++= Seq(
-      "ch.epfl.data" % "sc-pardis-compiler_2.11" % "0.1.1-SNAPSHOT"
+      "ch.epfl.data" % "sc-pardis-compiler_2.11" % "0.1.1-SNAPSHOT",
+      "ch.epfl.data" % "sc-pardis-quasi_2.11" % "0.1.1-SNAPSHOT"
     ),
     outputFolder := prop.getProperty("ddbt.pardis.outputFolder","ddbtoaster/pardis/lifter"),
     inputPackage := prop.getProperty("ddbt.pardis.inputPackage","ddbt.lib.store"),

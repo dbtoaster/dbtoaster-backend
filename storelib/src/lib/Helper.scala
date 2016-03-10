@@ -27,7 +27,7 @@ object Helper {
   // The result is usually like List(Map[K1,V1],Map[K2,V2],Value3,Map...)
   private type Streams = Seq[(InputStream,Adaptor,Split)]
   @inline private def askWait[T](actor:ActorRef,msg:Any,timeout:Long=0L) = {
-    val to=akka.util.Timeout(if (timeout<=0) (1L << 31) /*139 years*/ else timeout+200000)
+    val to=akka.util.Timeout(if (timeout<=0) (1L << 30) /*12 days*/ else timeout+200000, java.util.concurrent.TimeUnit.MILLISECONDS)
     Await.result(akka.pattern.ask(actor,msg)(to), to.duration).asInstanceOf[T]
   }
   def mux(actor:ActorRef,streams:Streams,parallel:Int=0,timeout:Long=0L,batchSize:Int=0) = {
@@ -73,8 +73,8 @@ object Helper {
         private var workers = new Array[ActorRef](0)      // Collects all workers advertisements and forward them to the master.
         private var watcher = null.asInstanceOf[ActorRef] // Responds to "ready" when all workers are available.
         def receive = {
-          case "ready" => watcher=sender; if (workers.size==waiting) watcher ! ()
-          case as:Array[ActorRef] => workers++=as; if (workers.size==waiting) { master ! Members(master,workers.toArray); if (watcher!=null) watcher ! () }
+          case "ready" => watcher=sender; if (workers.size==waiting) watcher ! (():Unit)
+          case as:Array[ActorRef] => workers++=as; if (workers.size==waiting) { master ! Members(master,workers.toArray); if (watcher!=null) watcher ! (():Unit) }
         }
       }
       //try mux(master,streams,parallel,timeout) finally { master ! ClusterShutdown; Thread.sleep(100); System.gc; Thread.sleep(100) }
