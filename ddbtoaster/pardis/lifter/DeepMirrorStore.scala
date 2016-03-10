@@ -24,6 +24,8 @@ trait MStoreOps extends Base with ArrayOps {
      def get(idx : Rep[Int], key : Rep[E]) : Rep[E] = mStoreGet[E](self, idx, key)(typeE)
      def foreach(f : Rep[(E => Unit)]) : Rep[Unit] = mStoreForeach[E](self, f)(typeE)
      def slice(idx : Rep[Int], key : Rep[E], f : Rep[(E => Unit)]) : Rep[Unit] = mStoreSlice[E](self, idx, key, f)(typeE)
+     def getSliceMin(idx : Rep[Int], key : Rep[E], col : Rep[Int]) : Rep[E] = mStoreGetSliceMin[E](self, idx, key, col)(typeE)
+     def getSliceMax(idx : Rep[Int], key : Rep[E], col : Rep[Int]) : Rep[E] = mStoreGetSliceMax[E](self, idx, key, col)(typeE)
      def range(idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[(E => Unit)]) : Rep[Unit] = mStoreRange[E](self, idx, min, max, withMin, withMax, f)(typeE)
      def delete(idx : Rep[Int], key : Rep[E])(implicit overload2 : Overloaded2) : Rep[Unit] = mStoreDelete2[E](self, idx, key)(typeE)
      def clear : Rep[Unit] = mStoreClear[E](self)(typeE)
@@ -56,6 +58,10 @@ trait MStoreOps extends Base with ArrayOps {
   type MStoreForeach[E <: ddbt.lib.store.Entry] = MStoreIRs.MStoreForeach[E]
   val MStoreSlice = MStoreIRs.MStoreSlice
   type MStoreSlice[E <: ddbt.lib.store.Entry] = MStoreIRs.MStoreSlice[E]
+  val MStoreGetSliceMin = MStoreIRs.MStoreGetSliceMin
+  type MStoreGetSliceMin[E <: ddbt.lib.store.Entry] = MStoreIRs.MStoreGetSliceMin[E]
+  val MStoreGetSliceMax = MStoreIRs.MStoreGetSliceMax
+  type MStoreGetSliceMax[E <: ddbt.lib.store.Entry] = MStoreIRs.MStoreGetSliceMax[E]
   val MStoreRange = MStoreIRs.MStoreRange
   type MStoreRange[E <: ddbt.lib.store.Entry] = MStoreIRs.MStoreRange[E]
   val MStoreDelete2 = MStoreIRs.MStoreDelete2
@@ -78,6 +84,8 @@ trait MStoreOps extends Base with ArrayOps {
    def mStoreGet[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[E] = MStoreGet[E](self, idx, key)
    def mStoreForeach[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreForeach[E](self, f)
    def mStoreSlice[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreSlice[E](self, idx, key, f)
+   def mStoreGetSliceMin[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E], col : Rep[Int])(implicit typeE : TypeRep[E]) : Rep[E] = MStoreGetSliceMin[E](self, idx, key, col)
+   def mStoreGetSliceMax[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E], col : Rep[Int])(implicit typeE : TypeRep[E]) : Rep[E] = MStoreGetSliceMax[E](self, idx, key, col)
    def mStoreRange[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreRange[E](self, idx, min, max, withMin, withMax, f)
    def mStoreDelete2[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreDelete2[E](self, idx, key)
    def mStoreClear[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreClear[E](self)
@@ -129,6 +137,14 @@ object MStoreIRs extends Base {
   }
 
   case class MStoreSlice[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E], f : Rep[((E) => Unit)])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "slice", List(List(idx,key,f))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class MStoreGetSliceMin[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E], col : Rep[Int])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "getSliceMin", List(List(idx,key,col))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class MStoreGetSliceMax[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E], col : Rep[Int])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "getSliceMax", List(List(idx,key,col))){
     override def curriedConstructor = (copy[E] _).curried
   }
 

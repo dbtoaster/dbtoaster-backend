@@ -227,6 +227,8 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
   def get(idx:Int,key:E):E = time("get",idx) { if (key==null) return key; idxs(idx).get(key) }
   def foreach(f:E=>Unit):Unit = time("foreach") { idxs(0).foreach(f) } // assumes idxs(0) is the most efficient index
   def slice(idx:Int,key:E,f:E=>Unit) = time("slice",idx) { if (key!=null) {System.err.println("Inside slice"); idxs(idx).slice(key,f)} }
+  def getSliceMin(idx:Int,key:E,col:Int):E = time("getSliceMin",idx) { if (key!=null) {System.err.println("Inside getSliceMin"); idxs(idx).getSliceMin(key,col)} else  key }
+  def getSliceMax(idx:Int,key:E,col:Int):E = time("getSliceMax",idx) { if (key!=null) {System.err.println("Inside getSliceMax"); idxs(idx).getSliceMax(key,col)} else key }
   def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = time("range", idx) { idxs(idx).range(min,max,withMin,withMax,f) }
   def delete(idx:Int,key:E):Unit = time("delete", idx) { slice(idx,key,e=>delete(e)) }
   def clear = time("clear") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }
@@ -345,6 +347,9 @@ class IdxDirect[E<:Entry](st:Store[E],idx:Int,unique:Boolean,var data:Array[E])(
       do { val d=data(s); if (ops.hash(d)>=h1) return; f(d); s+=1 } while (s < data.size)
     }
   }
+
+  override def getSliceMin(key: E, col: Int): E = ???
+  override def getSliceMax(key: E, col: Int): E = ???
 }
 
 /**
@@ -373,6 +378,9 @@ class IdxArray[E<:Entry](st:Store[E],idx:Int,unique:Boolean,var data:Array[E])(i
     val r=if (withMax) 0 else 1
     while (s < size) { val d=data(s); if (ops.cmp(max,d) < r) return; f(d); s+=1 }
   }
+  override def getSliceMin(key: E, col: Int): E = ???
+  override def getSliceMax(key: E, col: Int): E = ???
+
 }
 
 /**
@@ -531,6 +539,9 @@ class IdxBTree[E<:Entry](st:Store[E],idx:Int,unique:Boolean)(implicit cE:ClassTa
   }
   override def range(min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = _range(min,max,if (withMin) 1 else 0,if (withMax) -1 else 0,f,root)
   override def clear() { root=new LeafNode(); size=0 }
+  override def getSliceMin(key: E, col: Int): E = ???
+  override def getSliceMax(key: E, col: Int): E = ???
+
 }
 
 /**
@@ -616,6 +627,9 @@ class IdxSlicedHeap[E<:Entry](st:Store[E],idx:Int,sliceIdx:Int,max:Boolean)(impl
     }
     // def get = array(1)
   }
+  override def getSliceMin(key: E, col: Int): E = ???
+  override def getSliceMax(key: E, col: Int): E = ???
+
 }
 
 // ------------------------------------------
