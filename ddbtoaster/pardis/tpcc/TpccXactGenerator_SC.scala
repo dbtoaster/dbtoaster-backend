@@ -6,8 +6,6 @@ import ch.epfl.data.sc.pardis
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 import sc.tpcc.compiler.TpccCompiler
 
-import scala.collection.mutable.ArrayBuffer
-
 import ddbt.lib.store.deep._
 
 import ch.epfl.data.sc.pardis.prettyprinter.{ASTCodeGenerator, ScalaCodeGenerator, CodeGenerator}
@@ -21,10 +19,10 @@ object TpccXactGenerator_SC {
 
   class Prog(val Context: StoreDSL) {
 
-//    import Context.Predef._
-//    import Context.{__newMStore, Date, overloaded2, typeGenericEntry}
-//    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{entryRepToGenericEntryOps => _, MStoreRep1 => _ , _}
+    //    import Context.Predef._
+    //    import Context.{__newMStore, Date, overloaded2, typeGenericEntry}
+    //    import Context.{entryRepToGenericEntryOps => _ , _}
+    import Context.{EntryType => _, entryRepToGenericEntryOps=>_, MStoreRep1 => _, typeStore=>_, typeNull=>_, _}
 
     implicit val DSL = Context
 
@@ -47,6 +45,7 @@ object TpccXactGenerator_SC {
     val orderLineTbl = __newMStore[GenericEntry]
     val customerTbl = __newMStore[GenericEntry]
     val stockTbl = __newMStore[GenericEntry]
+
     /*
         //TODO: SBJ: check index numbers
         def newOrderTx(showOutput: Boolean, datetime: Date, t_num: Int, w_id: Int, d_id: Int, c_id: Int, o_ol_count: Int, o_all_local: Int, itemid: Array[Int], supware: Array[Int], quantity: Array[Int], price: Array[Float], iname: Array[String], stock: Array[Int], bg: Array[Char], amt: Array[Float]): Int = {
@@ -267,176 +266,181 @@ object TpccXactGenerator_SC {
           }
           1
         }
+*/
+    def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
 
-        //    def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
-        def orderStatusTx(showOutput: Boolean, datetime: Date, t_num: Int, w_id: Int, d_id: Int, c_by_name: Int, c_id: Int, c_last: String): Int = {
+      val customerEntry= __newVar[GenericEntry](null)
+      __ifThenElse( c_by_name > unit(0), {
+        val customersWithLastName = ArrayBuffer[GenericEntry]()
+        customerTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2),unit( 3), unit(6), d_id, w_id, c_last), __lambda {
+          custEntry => customersWithLastName.append(custEntry)
+        })
+        val index = __newVar(customersWithLastName.size / unit(2))
+        __ifThenElse(customersWithLastName.size % unit(2) __== unit(0), {
+          __assign(index , readVar(index)- unit(1))
+        }, unit())
+        __assign(customerEntry , customersWithLastName(readVar(index)))
+      } , {
+        __assign(customerEntry ,customerTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), c_id, d_id, w_id)))
+      })
 
-          var customerEntry: GenericEntry /*(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = null
-          if ($c_by_name > 0) {
-            val customersWithLastName = ArrayBuffer[GenericEntry]()
-            customerTbl.slice(1, GenericEntry("SteSampleSEntry", 2, 3, 6, $d_id, $w_id, $c_last), {
-              case custEntry => customersWithLastName += custEntry
-            })
-            var index = customersWithLastName.size / 2
-            if (customersWithLastName.size % 2 == 0) {
-              index -= 1
-            }
-            customerEntry = customersWithLastName(index)
-          } else {
-            customerEntry = customerTbl.get(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $c_id, $d_id, $w_id))
-          }
-
-
-
-          val found_c_id: Int = customerEntry.get(3)
-
-          val newestOrderEntry: GenericEntry /*(o_id,o_d_id_arg,o_w_id_arg,o_c_id,o_entry_d,o_carrier_id,_,_)*/ = orderTbl.getSliceMax(1 /*o_id*/ , (2, $d_id), (3, $w_id), (4, found_c_id))
-
-          var dceBlocker = 0
-          if (!$showOutput) {
-            if (newestOrderEntry != null) {
-              //o_id != -1
-              orderLineTbl.slice(1, GenericEntry("SteSampleSEntry", 1, 2, 3, newestOrderEntry.get(1), $d_id, $w_id), { case orderLineEntry /*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
-                dceBlocker = 1 // fooling the effect system, in order not to remove this part, because that's not fare in benchmarking results!
-              })
-            }
-          } else {
-            val orderLines = ArrayBuffer[String]()
-            if (newestOrderEntry != null) {
-              //o_id != -1
-              orderLineTbl.slice(1, GenericEntry("SteSampleSEntry", 1, 2, 3, newestOrderEntry.get(1), $d_id, $w_id), { case orderLineEntry /*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
-                orderLines += "[%d - %d - %d - %f - %s]".format(orderLineEntry.get(6) /*ol_supply_w_id*/ , orderLineEntry.get(5) /*ol_i_id*/ , orderLineEntry.get(8) /*ol_quantity*/ , orderLineEntry.get(9) /*ol_amount*/ , if (orderLineEntry.get(7) == null) "99-99-9999" else (orderLineEntry.get(7)))
-              })
-            }
-            val output = "\n+-------------------------- ORDER-STATUS -------------------------+\n" +
-              " Date: " + $datetime +
-              "\n\n Warehouse: " + $w_id +
-              "\n District:  " + $d_id +
-              "\n\n Customer:  " + found_c_id +
-              "\n   Name:    " + customerEntry.get(4) +
-              " " + customerEntry.get(5) +
-              " " + customerEntry.get(6) +
-              "\n   Balance: " + customerEntry.get(17) + "\n\n" +
-              (if ( /*o_id*/ newestOrderEntry.get(1) == -1) {
-                " Customer has no orders placed.\n"
-              } else {
-                " Order-Number: " + /*o_id*/ newestOrderEntry.get(1) +
-                  "\n    Entry-Date: " + /*o_entry_d*/ newestOrderEntry.get(5) +
-                  "\n    Carrier-Number: " + /*o_carrier_id*/ newestOrderEntry.get(6) + "\n\n" +
-                  (if (orderLines.size != 0) {
-                    var out = " [Supply_W - Item_ID - Qty - Amount - Delivery-Date]\n"
-                    var i = 0
-                    while (i < orderLines.size) {
-                      out = out + " " + orderLines(i) + "\n"
-                      i += 1
-                    }
-                    out.toString
-                  }
-                  else {
-                    " This Order has no Order-Lines.\n"
-                  })
-              }) +
-              "+-----------------------------------------------------------------+\n\n"
-            println(output)
-          }
-          1
+      val found_c_id = readVar(customerEntry).get[Int](unit(3))
+      val newestOrderEntry = orderTbl.getSliceMax(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3) , unit(4), d_id, w_id, found_c_id), unit(1))
+      val dceBlocker = __newVar(unit(0))
+dsl"""
+      if (!$showOutput) {
+        if ($newestOrderEntry != ${unit[GenericEntry](null)}) {
+          //o_id != -1
+//          $orderLineTbl.slice(1, GenericEntry("SteSampleSEntry".asInstanceOf[Any], 1, 2, 3, $newestOrderEntry.get[Int](1), $d_id, $w_id), { orderLineEntry /*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
+//            $dceBlocker = 1 // fooling the effect system, in order not to remove this part, because that's not fare in benchmarking results!
+//          })
+        }
+      } else {
+        val orderLines = ${ArrayBuffer[String]()}
+        if ($newestOrderEntry != ${unit[GenericEntry](null)}) {
+          //o_id != -1
+          //          $orderLineTbl.slice(1, GenericEntry("SteSampleSEntry".asInstanceOf[Any], 1, 2, 3, $newestOrderEntry.get[Int](1), $d_id, $w_id), { orderLineEntry /*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
+          //            orderLines += "[%d - %d - %d - %f - %s]".format(orderLineEntry.get[Int](6) /*ol_supply_w_id*/ , orderLineEntry.get[Int](5) /*ol_i_id*/ , orderLineEntry.get[Int](8) /*ol_quantity*/ , orderLineEntry.get[Double](9) /*ol_amount*/ , if (orderLineEntry.get[Date](7) == null) "99-99-9999" else (orderLineEntry.get[Date](7)))
+          //          })
         }
 
-    //        def deliveryTx(showOutput: Rep[Boolean], datetime: Rep[Date], w_id: Rep[Int], o_carrier_id: Rep[Int]): Rep[Int] = {
-        def deliveryTx(showOutput: Boolean, datetime: Date, w_id: Int, o_carrier_id: Int): Int = {
-    //          dsl """
-          val DIST_PER_WAREHOUSE = 10
-          val orderIDs = new Array[Int](10)
-          var d_id = 1
-          while (d_id <= DIST_PER_WAREHOUSE) {
-            val firstOrderEntry: GenericEntry /*(no_o_id,no_d_id,no_w_id)*/ = $newOrderTbl.getSliceMin(1 /*no_o_id*/ , (2, d_id), (3, $w_id))
-            if ((firstOrderEntry != null)) {
-              // found
-              val no_o_id = firstOrderEntry.get[Int](1)
-              orderIDs(d_id - 1) = no_o_id
-              $newOrderTbl.delete(firstOrderEntry)
-              val orderEntry = $orderTbl.get(0, GenericEntry("SteSampleSEntry", 1, 2, 3, no_o_id, $d_id, $w_id))
-              val c_id = orderEntry.get[Int](4)
-              orderEntry.update(6 /*o_carrier_id*/ , $o_carrier_id)
-              $orderTbl.update(orderEntry)
+        val output = "\n+-------------------------- ORDER-STATUS -------------------------+\n" +
+          " Date: " + $datetime +
+          "\n\n Warehouse: " + $w_id +
+          "\n District:  " + $d_id +
+          "\n\n Customer:  " + $found_c_id +
+          "\n   Name:    " + ${readVar(customerEntry).get[String](unit(4))} +
+          " " + ${readVar(customerEntry).get[String](unit(5))} +
+          " " + ${readVar(customerEntry).get[String](unit(6))} +
+          "\n   Balance: " + $customerEntry.get[Double](17) + "\n\n" +
+          (if ( /*o_id*/ ${newestOrderEntry.get[Int](unit(1))} == -1) {
+            " Customer has no orders placed.\n"
+          } else {
+//            " Order-Number: " + /*o_id*/ $newestOrderEntry.get[Int](1) +
+//              "\n    Entry-Date: " + /*o_entry_d*/ $newestOrderEntry.get[Date](5) +
+//              "\n    Carrier-Number: " + /*o_carrier_id*/ $newestOrderEntry.get[Int](6) + "\n\n" +
+              (if (orderLines.size != 0) {
+                var out = " [Supply_W - Item_ID - Qty - Amount - Delivery-Date]\n"
+                var i:Int = 0
 
-              var ol_total = 0f
-              $orderLineTbl.slice(1, GenericEntry("SteSampleSEntry", 1, 2, 3, no_o_id, $d_id, $w_id), { case orderLineEntry /*(o_id,d_id,w_id,ol_number, ol_i_id, ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, ol_dist_info)*/ =>
-                orderLineEntry.update(7, $datetime) //ol_delivery_d
-                ol_total += orderLineEntry.get[Float](9) //ol_amount
-                orderLineTbl.update(orderLineEntry)
-              })
-
-              val customerEntry /*(c_id, c_d_id, c_w_id, c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = $customerTbl.get(0, GenericEntry("SteSampleSEntry", 1, 2, 3, c_id, d_id, $w_id))
-              customerEntry +=(17 /*c_balance*/ , ol_total)
-              customerEntry +=(20 /*c_delivery_cnt*/ , 1)
-              customerTbl.update(customerEntry)
-            } else {
-              // not found
-              orderIDs(d_id - 1) = 0
-            }
-            d_id += 1
-          }
-          if ($showOutput) {
-            var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
-              " Date: " + $datetime +
-              "\n\n Warehouse: " + $w_id +
-              "\n Carrier:   " + $o_carrier_id +
-              "\n\n Delivered Orders\n"
-            var skippedDeliveries = 0
-            var i = 1
-            while (i <= 10) {
-              if (orderIDs(i - 1) >= 0) {
-                output = output + ("  District ") +
-                  (if (i < 10) " " else "") +
-                  (i) +
-                  (": Order number ") +
-                  (orderIDs(i - 1)) +
-                  (" was delivered.\n")
+                while (i < orderLines.size) {
+                  out = out + " " + orderLines(i) + "\n"
+                  i += 1
+                }
+                out.toString
               }
               else {
-                output = output + ("  District ") +
-                  (if (i < 10) " " else "") +
-                  (i) +
-                  (": No orders to be delivered.\n")
-                skippedDeliveries += 1
-              }
-              i += 1
-            }
-            output = output + ("+-----------------------------------------------------------------+\n\n")
-            println(output)
+                " This Order has no Order-Lines.\n"
+              })
+          }) +
+          "+-----------------------------------------------------------------+\n\n"
+        println(output)
+        ()
+      }"""
+      unit(1)
+    }
+
+    def deliveryTx(showOutput: Rep[Boolean], datetime: Rep[Date], w_id: Rep[Int], o_carrier_id: Rep[Int]): Rep[Int] = {
+      //        def deliveryTx(showOutput: Boolean, datetime: Date, w_id: Int, o_carrier_id: Int): Int = {
+
+      val DIST_PER_WAREHOUSE = unit(10)
+      val orderIDs = __newArray[Int](unit(10))
+      val d_id = __newVar(unit(1))
+      __whileDo(readVar(d_id) <= DIST_PER_WAREHOUSE, {
+        val firstOrderEntry /*(no_o_id,no_d_id,no_w_id)*/ = newOrderTbl.getSliceMin(unit(0) /*no_o_id*/ , GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), readVar(d_id), w_id), unit(1))
+        __ifThenElse(firstOrderEntry __== unit[GenericEntry](null), {
+          // found
+          val no_o_id = firstOrderEntry.get[Int](unit(1))
+          orderIDs.update(readVar(d_id) - unit(1), no_o_id)
+          newOrderTbl.delete(firstOrderEntry)
+          val orderEntry = orderTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), no_o_id, readVar(d_id), w_id))
+          val c_id = orderEntry.get[Int](unit(4))
+          orderEntry.update(unit(6) /*o_carrier_id*/ , o_carrier_id)
+          orderTbl.update(orderEntry)
+
+          val ol_total = __newVar(unit(0.0))
+          orderLineTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), no_o_id, readVar(d_id), w_id), __lambda { orderLineEntry =>
+            orderLineEntry.update(unit(7), datetime) //ol_delivery_d
+            __assign(ol_total, readVar(ol_total) + orderLineEntry.get[Double](unit(9))) //ol_amount
+            orderLineTbl.update(orderLineEntry)
+          })
+
+          val customerEntry = customerTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), c_id, readVar(d_id), w_id))
+          customerEntry.+=(unit(17) /*c_balance*/ , readVar(ol_total))
+          customerEntry.+=(unit(20) /*c_delivery_cnt*/ , unit(1))
+          customerTbl.update(customerEntry)
+
+        }, {
+          // not found
+          orderIDs.update(readVar(d_id) - unit(1), unit(0))
+        })
+        __assign(d_id, readVar(d_id) + unit(1))
+      })
+
+      dsl"""
+      if ($showOutput) {
+        var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
+          " Date: " + $datetime +
+          "\n\n Warehouse: " + $w_id +
+          "\n Carrier:   " + $o_carrier_id +
+          "\n\n Delivered Orders\n"
+        var skippedDeliveries = 0
+        var i:Int = 1
+
+        while (i <= 10) {
+          if ($orderIDs(i -1) >= 0) {
+            output = output + ("  District ") +
+              (if (i < 10) " " else "") +
+              (i) +
+              (": Order number ") +
+              ($orderIDs(i - 1)) +
+              (" was delivered.\n")
           }
-          1
-    //          """
+          else {
+            output = output + ("  District ") +
+              (if (i < 10) " " else "") +
+              (i) +
+              (": No orders to be delivered.\n")
+            skippedDeliveries += 1
+          }
+          i += 1
         }
-    */
+        output = output + ("+-----------------------------------------------------------------+\n\n")
+        println(output)
+        ()
+      }
+      """
+      unit(1)
+
+    }
+
 
     def stockLevelTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], threshold: Rep[Int]): Rep[Int] = {
-//          def stockLevelTx(showOutput: Boolean, datetime: Date, t_num: Int, w_id: Int, d_id: Int, threshold: Int): Int = {
+      //          def stockLevelTx(showOutput: Boolean, datetime: Date, t_num: Int, w_id: Int, d_id: Int, threshold: Int): Int = {
 
-            val districtEntry = districtTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"),unit(1),unit(2), d_id, w_id))
-            val o_id = districtEntry.get[Int](unit(11))
-            val i = __newVar(o_id - unit(20))
-            val unique_ol_i_id = Set[Int]()
-            __whileDo( readVar(i) < o_id, {
-              orderLineTbl.slice(unit(1), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), readVar(i), d_id, w_id), __lambda { orderLineEntry =>
-                val ol_i_id = orderLineEntry.get[Int](unit(5))
-                val stockEntry = stockTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"),unit(1),unit(2), ol_i_id, w_id))
-                val s_quantity = stockEntry.get[Int](unit(3))
-//                val s_quantity = unit(3)
-                __ifThenElse(s_quantity < threshold, {
-                  unique_ol_i_id += ol_i_id
-                  unit()
-                }, {
-                  unit()
-                }
-                )
-              }
-              )
-              __assign(i, readVar(i) + unit(1))
-            })
-            val stock_count = unique_ol_i_id.size
-            dsl"""
+      val districtEntry = districtTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), d_id, w_id))
+      val o_id = districtEntry.get[Int](unit(11))
+      val i = __newVar(o_id - unit(20))
+      val unique_ol_i_id = Set[Int]()
+      __whileDo(readVar(i) < o_id, {
+        orderLineTbl.slice(unit(1), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), readVar(i), d_id, w_id), __lambda { orderLineEntry =>
+          val ol_i_id = orderLineEntry.get[Int](unit(5))
+          val stockEntry = stockTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), ol_i_id, w_id))
+          val s_quantity = stockEntry.get[Int](unit(3))
+          //                val s_quantity = unit(3)
+          __ifThenElse(s_quantity < threshold, {
+            unique_ol_i_id += ol_i_id
+            unit()
+          }, {
+            unit()
+          }
+          )
+        }
+        )
+        __assign(i, readVar(i) + unit(1))
+      })
+      val stock_count = unique_ol_i_id.size
+      dsl"""
               if ($showOutput) {
                 val output = "\n+-------------------------- STOCK-LEVEL --------------------------+" +
                   "\n Warehouse: " + $w_id +
@@ -448,7 +452,7 @@ object TpccXactGenerator_SC {
                 ()
               }
             """
-            unit(1)
+      unit(1)
     }
   }
 
@@ -460,16 +464,17 @@ object TpccXactGenerator_SC {
 
     import Context._
     //    (new Impl("./lms/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()
-    val initBlock = reifyBlock{
+    val initBlock = reifyBlock {
       prog = new Prog(Context)
       unit(())
     }
     val codeBlock = reifyBlock {
-      prog.stockLevelTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int], fresh[Int], fresh[Int])
+      prog.deliveryTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int])
+      //      prog.stockLevelTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int], fresh[Int], fresh[Int])
     }
     val codeGen = new StoreScalaCodeGenerator(Context)
     val cgDoc = codeGen.blockToDocument(codeBlock)
     System.out.println(cgDoc.toString)
-//    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
+    //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
   }
 }
