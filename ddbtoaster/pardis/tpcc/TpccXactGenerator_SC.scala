@@ -2,6 +2,8 @@ package sc.tpcc
 
 
 //import ddbt.lib.store.{MStore, GenericEntry}
+import java.io.PrintWriter
+
 import ch.epfl.data.sc.pardis
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 import sc.tpcc.compiler.TpccCompiler
@@ -22,7 +24,7 @@ object TpccXactGenerator_SC {
     //    import Context.Predef._
     //    import Context.{__newMStore, Date, overloaded2, typeGenericEntry}
     //    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{EntryType => _, entryRepToGenericEntryOps=>_, MStoreRep1 => _, typeStore=>_, typeNull=>_, _}
+    import Context.{EntryType => _, entryRepToGenericEntryOps => _, MStoreRep1 => _, typeStore => _, typeNull => _, _}
 
     implicit val DSL = Context
 
@@ -46,247 +48,258 @@ object TpccXactGenerator_SC {
     val customerTbl = __newMStore[GenericEntry]
     val stockTbl = __newMStore[GenericEntry]
 
-    /*
-        //TODO: SBJ: check index numbers
-        def newOrderTx(showOutput: Boolean, datetime: Date, t_num: Int, w_id: Int, d_id: Int, c_id: Int, o_ol_count: Int, o_all_local: Int, itemid: Array[Int], supware: Array[Int], quantity: Array[Int], price: Array[Float], iname: Array[String], stock: Array[Int], bg: Array[Char], amt: Array[Float]): Int = {
 
-          if (showOutput) println("- Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id, d_id, c_id))
-
-          var ol_number = 0
-          var failed = false
-          val idata = new Array[String](o_ol_count)
-
-          var all_items_exist = true
-          while ((ol_number < o_ol_count) && all_items_exist) {
-
-            val itemEntry /*(i_id, _, i_name, i_price, i_data)*/ = itemTbl.get(0, GenericEntry("SteSampleSEntry", 1, itemid(ol_number)))
-            if (itemEntry == null) {
-              all_items_exist = false
-            } else {
-              iname(ol_number) = itemEntry.get(3) //i_name
-              price(ol_number) = itemEntry.get(4) //i_price
-              idata(ol_number) = itemEntry.get(5) //i_data
-            }
-            ol_number += 1
-          }
-          if (!all_items_exist) {
-            1
-          } else {
-            /*(c_id,d_id,w_id, c_discount, c_last, c_credit, w_tax)*/
-            val customerEntry /*(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = customerTbl.get(0, GenericEntry("SteSampleSEntry", 1, 2, 3, c_id, d_id, w_id))
-            val warehouseEntry /*(w_id,w_name,w_street_1,w_street_2,w_city,w_state,w_zip,w_tax,w_ytd)*/ = warehouseTbl.get(0, GenericEntry("SteSampleSEntry", 1, w_id))
-            val districtEntry /*(d_d_id,d_w_id,_,_,_,_,_,_,d_tax,_,d_next_o_id)*/ = districtTbl.get(0, GenericEntry("SteSampleSEntry", 1, 2, d_id, w_id))
-            val o_id: Int = districtEntry.get(11)
-            districtEntry +=(11, 1) //d_next_o_id+1
-            districtTbl.update(districtEntry)
-
-
-            orderTbl.insert(GenericEntry("SteNewSEntry", o_id, d_id, w_id, c_id, datetime, -1, o_ol_count, o_all_local > 0))
-
-            newOrderTbl.insert(GenericEntry("SteNewSEntry", o_id, d_id, w_id))
-
-            var total = 0f
-
-            ol_number = 0
-            while (ol_number < o_ol_count) {
-              val ol_supply_w_id = supware(ol_number)
-              val ol_i_id = itemid(ol_number)
-              val ol_quantity = quantity(ol_number)
-
-              val stockEntry /*(s_i_id,s_w_id,s_quantity,s_dist_01,s_dist_02,s_dist_03,s_dist_04,s_dist_05,s_dist_06,s_dist_07,s_dist_08,s_dist_09,s_dist_10,s_ytd,s_order_cnt,s_remote_cnt,s_data)*/ = stockTbl.get(0, GenericEntry("SteSampleSEntry", 1, 2, ol_i_id, ol_supply_w_id))
-
-              val ol_dist_info = if (d_id == 1) {
-                stockEntry.get(4) //s_dist_01
-              } else if (d_id == 2) {
-                stockEntry.get(5) //s_dist_02
-              } else if (d_id == 3) {
-                stockEntry.get(6) //s_dist_03
-              } else if (d_id == 4) {
-                stockEntry.get(7) //s_dist_04
-              } else if (d_id == 5) {
-                stockEntry.get(8) //s_dist_05
-              } else if (d_id == 6) {
-                stockEntry.get(9) //s_dist_06
-              } else if (d_id == 7) {
-                stockEntry.get(10) //s_dist_07
-              } else if (d_id == 8) {
-                stockEntry.get(11) //s_dist_08
-              } else if (d_id == 9) {
-                stockEntry.get(12) //s_dist_09
-              } else /*if(d_id == 10)*/ {
-                stockEntry.get(13) //s_dist_10
+    //TODO: SBJ: check index numbers
+    def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
+      dsl"""
+              if ($showOutput) {
+                val output = "Started NewOrder transaction for warehouse=%d, district=%d, customer=%d.format($w_id, $d_id, $c_id)"
+                println(output)
+                ()
               }
+            """
+      unit(1)
+      val ol_number = __newVar(unit(0))
+      val failed = __newVar(unit(false))
+      val idata = __newArray[String](o_ol_count)
 
-              val s_quantity: Byte = stockEntry.get(3) //s_quantity
-              stock(ol_number) = s_quantity
+      val all_items_exist = __newVar(unit(true))
+      __whileDo((readVar(ol_number) < o_ol_count) && all_items_exist, {
 
-              if ( /*c_credit*/ customerEntry.get(14).asInstanceOf[String].contains("original") && /*s_data*/ stockEntry.get(17).asInstanceOf[String].contains("original")) {
-                bg(ol_number) = 'B'
-              } else {
-                bg(ol_number) = 'G'
-              }
+        val itemEntry /*(i_id, _, i_name, i_price, i_data)*/ = itemTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), itemid(readVar(ol_number))))
+        __ifThenElse(itemEntry __== unit[GenericEntry](null), {
+          __assign(all_items_exist, unit(false))
+          unit()
+        }, {
+          iname.update(readVar(ol_number), itemEntry.get[String](unit(3))) //i_name
+          price.update(readVar(ol_number), itemEntry.get[Double](unit(4))) //i_price
+          idata.update(ol_number, itemEntry.get[String](unit(5))) //i_data
+        })
+        __assign(ol_number, readVar(ol_number) + unit(1))
+        unit()
+      })
+      __ifThenElse(!readVar(all_items_exist), {
 
-              stockEntry.update(3, s_quantity - ol_quantity)
-              if (s_quantity <= ol_quantity) stockEntry +=(3, 91)
-
-              var s_remote_cnt_increment = 0
-              if (ol_supply_w_id != w_id) s_remote_cnt_increment = 1
-
-              //TODO this is the correct version but is not implemented in the correctness test
-              //stockEntry._14 += ol_quantity //s_ytd
-              //stockEntry._15 += 1 //s_order_cnt
-              //stockEntry._16 += s_remote_cnt_increment //s_remote_cnt
-              stockTbl.update(stockEntry)
-
-              val c_discount: Float = customerEntry.get(16)
-              val w_tax: Float = warehouseEntry.get(8)
-              val d_tax: Float = districtEntry.get(9)
-              val ol_amount = (ol_quantity * price(ol_number) * (1f + w_tax + d_tax) * (1f - c_discount)) /*.asInstanceOf[Float]*/
-              amt(ol_number) = ol_amount
-              total += ol_amount
-
-              orderLineTbl.insert(GenericEntry("SteNewSEntry", o_id, d_id, w_id, ol_number + 1 /*to start from 1*/ , ol_i_id, ol_supply_w_id, null, ol_quantity, ol_amount, ol_dist_info))
-
-              ol_number += 1
-            }
-            if (showOutput) println("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id, d_id, c_id))
-            1
-          }
-        }
-
-        //    def paymentTx(showOutput:Rep[Boolean], datetime:Rep[Date], t_num:Rep[Int], w_id:Rep[Int], d_id:Rep[Int], c_by_name:Rep[Int], c_w_id:Rep[Int], c_d_id:Rep[Int], c_id:Rep[Int], c_last_input:Rep[String], h_amount:Rep[Float]):Rep[Int] = {
-        def paymentTx(showOutput: Boolean, datetime: Date, t_num: Int, w_id: Int, d_id: Int, c_by_name: Int, c_w_id: Int, c_d_id: Int, c_id: Int, c_last_input: String, h_amount: Float): Int = {
+        /*(c_id,d_id,w_id, c_discount, c_last, c_credit, w_tax)*/
+        val customerEntry = customerTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), c_id, d_id, w_id))
+        val warehouseEntry = warehouseTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), w_id))
+        val districtEntry = districtTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), d_id, w_id))
+        val o_id = districtEntry.get[Int](unit(11))
+        districtEntry +=(unit(11), unit(1)) //d_next_o_id+1
+        districtTbl.update(districtEntry)
 
 
-          val warehouseEntry /*(w_id,w_name,w_street_1,w_street_2,w_city,w_state,w_zip,_,w_ytd)*/ = warehouseTbl.get(0, GenericEntry("SteSampleSEntry", 1, w_id))
-          warehouseEntry +=(9, h_amount) //w_ytd
-          warehouseTbl.update(warehouseEntry)
+        orderTbl.insert(GenericEntry(unit("SteNewSEntry"), o_id, d_id, w_id, c_id, datetime, unit(-1), o_ol_count, o_all_local > unit(0)))
+        newOrderTbl.insert(GenericEntry(unit("SteNewSEntry"), o_id, d_id, w_id))
 
-          val districtEntry /*(d_id,d_w_id,d_name,d_street_1,d_street_2,d_city,d_state,d_zip,d_tax,d_ytd,d_next_o_id)*/ = districtTbl.get(0, GenericEntry("SteSampleSEntry", 1, 2, d_id, w_id))
-          districtEntry +=(10, h_amount)
-          districtTbl.update(districtEntry)
+        val total = __newVar(unit(0.0))
 
-          var customerEntry: GenericEntry /*(c_id,c_d_id,c_w_id,c_first,c_middle,c_last,c_street_1,c_street_2,c_city,c_state,c_zip,c_phone,c_since,c_credit,c_credit_lim,c_discount,c_balance,c_ytd_payment,c_payment_cnt,c_delivery_cnt,c_data)*/ = null
-          if ($c_by_name > 0) {
-            val customersWithLastName = ArrayBuffer[GenericEntry]()
-            customerTbl.slice(1, GenericEntry("SteSampleSEntry", 2, 3, 6, $c_d_id, $c_w_id, $c_last_input), {
-              case custEntry => customersWithLastName += custEntry
-            })
-            var index = customersWithLastName.size / 2
-            if (customersWithLastName.size % 2 == 0) {
-              index -= 1
-            }
-            customerEntry = customersWithLastName(index)
-          } else {
-            customerEntry = customerTbl.get(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $c_id, $c_d_id, $c_w_id))
-          }
+        __assign(ol_number, unit(0))
+        __whileDo(readVar(ol_number) < o_ol_count, {
+          val ol_supply_w_id = supware(readVar(ol_number))
+          val ol_i_id = itemid(readVar(ol_number))
+          val ol_quantity = quantity(readVar(ol_number))
 
-          var c_data: String = customerEntry.get(21)
+          val stockEntry = stockTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), ol_i_id, ol_supply_w_id))
 
-          if (customerEntry.get(14).asInstanceOf[String].contains("BC")) {
-            //c_credit
-            //TODO this is the correct version but is not implemented in the correctness test
-            //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-            c_data = "%d %d %d %d %d $%f %s | %s".format(customerEntry.get(1), $c_d_id, $c_w_id, $d_id, $w_id,
-              h_amount, $datetime, c_data)
-            if (c_data.length > 500) c_data = c_data.substring(0, 500)
-            customerEntry +=(17 /*c_balance*/ , h_amount)
-            //TODO this is the correct version but is not implemented in the correctness test
-            //customerEntry += (18 /*c_ytd_payment*/, h_amount)
-            //customerEntry += (19 /*c_payment_cnt*/, 1)
-            customerEntry.update(21 /*c_data*/ , c_data)
-          } else {
-            customerEntry +=(17 /*c_balance*/ , h_amount)
-            //TODO this is the correct version but is not implemented in the correctness test
-            //customerEntry += (18 /*c_ytd_payment*/, h_amount)
-            //customerEntry += (19 /*c_payment_cnt*/, 1)
-          }
-          customerTbl.update(customerEntry)
-          val w_name: String = warehouseEntry.get(2)
-          val d_name: String = districtEntry.get(3)
+          val ol_dist_info =
+            dsl""" if ($d_id == 1) {
+                 ${stockEntry.get[String](unit(4))} //s_dist_01
+               } else if ($d_id == 2) {
+                 ${stockEntry.get[String](unit(5))} //s_dist_02
+               } else if ($d_id == 3) {
+                 ${stockEntry.get[String](unit(6))} //s_dist_03
+               } else if (d_id == 4) {
+                 ${stockEntry.get[String](unit(7))} //s_dist_04
+               } else if (d_id == 5) {
+                 ${stockEntry.get[String](unit(8))} //s_dist_05
+               } else if (d_id == 6) {
+                 ${stockEntry.get[String](unit(9))} //s_dist_06
+               } else if (d_id == 7) {
+                ${stockEntry.get[String](unit(10))} //s_dist_07
+               } else if (d_id == 8) {
+                 ${stockEntry.get[String](unit(11))} //s_dist_08
+               } else if (d_id == 9) {
+                 ${stockEntry.get[String](unit(12))} //s_dist_09
+               } else /*if(d_id == 10)*/ {
+                 ${stockEntry.get[String](unit(13))} //s_dist_10
+               }"""
+
+          val s_quantity = stockEntry.get[Int](unit(3)) //s_quantity
+          stock.update(readVar(ol_number), s_quantity)
+
+          __ifThenElse(customerEntry.get[String](unit(14)).contains(unit("original")) && /*s_data*/ stockEntry.get[String](unit(17)).contains(unit("original")), {
+            bg.update(readVar(ol_number), unit("B"))
+            unit()
+          }, {
+            bg.update(readVar(ol_number), unit("G"))
+            unit()
+          })
+
+          stockEntry.update(unit(3), s_quantity - ol_quantity)
+          __ifThenElse(s_quantity <= ol_quantity, stockEntry +=(unit(3), unit(91)), unit())
+
+          val s_remote_cnt_increment = __newVar(unit(0))
+          dsl"""if ($ol_supply_w_id != $w_id) $s_remote_cnt_increment = 1"""
+
           //TODO this is the correct version but is not implemented in the correctness test
-          val h_data = {
-            if (w_name.length > 10) w_name.substring(0, 10) else w_name
-          } + "    " + {
-            if (d_name.length > 10) d_name.substring(0, 10) else d_name
-          }
-          historyTbl.insert(GenericEntry("SteNewSEntry", customerEntry.get(1), $c_d_id, $c_w_id, $d_id, $w_id, $datetime, h_amount, h_data))
-          if ($showOutput) {
-            var output = "\n+---------------------------- PAYMENT ----------------------------+" +
-              "\n Date: %s" + $datetime +
-              "\n\n Warehouse: " + $w_id +
-              "\n   Street:  " + /*w_street_1*/ warehouseEntry.get(3) +
-              "\n   Street:  " + /*w_street_2*/ warehouseEntry.get(4) +
-              "\n   City:    " + /*w_city*/ warehouseEntry.get(5) +
-              "   State: " + /*w_state*/ warehouseEntry.get(6) +
-              "  Zip: " + /*w_zip*/ warehouseEntry.get(7) +
-              "\n\n District:  " + $d_id +
-              "\n   Street:  " + /*d_street_1*/ districtEntry.get(4) +
-              "\n   Street:  " + /*d_street_2*/ districtEntry.get(5) +
-              "\n   City:    " + /*d_city*/ districtEntry.get(6) +
-              "   State: " + /*d_state*/ districtEntry.get(7) +
-              "  Zip: " + /*d_zip*/ districtEntry.get(8) +
-              "\n\n Customer:  " + customerEntry.get(1) +
-              "\n   Name:    " + /*c_first*/ customerEntry.get(4) +
-              " " + /*c_middle*/ customerEntry.get(5) +
-              " " + /*c_last*/ customerEntry.get(6) +
-              "\n   Street:  " + /*c_street_1*/ customerEntry.get(7) +
-              "\n   Street:  " + /*c_street_2*/ customerEntry.get(8) +
-              "\n   City:    " + /*c_city*/ customerEntry.get(9) +
-              "   State: " + /*c_state*/ customerEntry.get(10) +
-              "  Zip: " + /*c_zip*/ customerEntry.get(11) +
-              "\n   Since:   " +
-              (if ( /*c_since*/ customerEntry.get(13) != null) {
-                /*c_since*/ customerEntry.get(13)
-              }
-              else {
-                ""
-              }) + "\n   Credit:  " + /*c_credit*/ customerEntry.get(14) +
-              "\n   Disc:    " + /*c_discount*/ (customerEntry.get(16).asInstanceOf[Float] * 100) + "%" +
-              "\n   Phone:   " + /*c_phone*/ customerEntry.get(12) +
-              "\n\n Amount Paid:      " + h_amount +
-              "\n Credit Limit:     " + /*c_credit_lim*/ customerEntry.get(15) +
-              "\n New Cust-Balance: " + /*c_balance*/ customerEntry.get(17)
-            if (customerEntry.get(14) == "BC") {
-              val cdata = c_data
-              if (cdata.length > 50) {
-                output = output + "\n\n Cust-Data: " + cdata.substring(0, 50)
-                val data_chunks = (if (cdata.length > 200) 4 else cdata.length / 50)
-                var n = 1
-                while (n < data_chunks) {
-                  output = output + "\n            " + cdata.substring(n * 50, (n + 1) * 50)
-                  n += 1
-                }
-              } else {
-                output = output + "\n\n Cust-Data: " + cdata
-              }
-            }
-            output = output + "\n+-----------------------------------------------------------------+\n\n"
-            println(output)
-          }
-          1
-        }
-*/
+          //stockEntry._14 += ol_quantity //s_ytd
+          //stockEntry._15 += 1 //s_order_cnt
+          //stockEntry._16 += s_remote_cnt_increment //s_remote_cnt
+          stockTbl.update(stockEntry)
+
+          val c_discount = customerEntry.get[Double](unit(16))
+          val w_tax = warehouseEntry.get[Double](unit(8))
+          val d_tax = districtEntry.get[Double](unit(9))
+          val ol_amount = (ol_quantity * price(readVar(ol_number)) * (unit(1.0) + w_tax + d_tax) * (unit(1.0) - c_discount)) /*.asInstanceOf[Double]*/
+          amt.update(readVar(ol_number), ol_amount)
+          __assign(total, readVar(total) + ol_amount)
+
+          orderLineTbl.insert(GenericEntry(unit("SteNewSEntry"), o_id, d_id, w_id, readVar(ol_number) + unit(1) /*to start from 1*/ , ol_i_id, ol_supply_w_id, unit[Date](null), ol_quantity, ol_amount, ol_dist_info))
+
+          __assign(ol_number, readVar(ol_number) + unit(1))
+          unit()
+        })
+        //             if (showOutput) println("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id, d_id, c_id))
+        unit()
+      }, unit())
+
+      unit(1)
+    }
+
+    def paymentTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_w_id: Rep[Int], c_d_id: Rep[Int], c_id: Rep[Int], c_last_input: Rep[String], h_amount: Rep[Double]): Rep[Int] = {
+      val warehouseEntry = warehouseTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), w_id))
+      warehouseEntry +=(unit(9), h_amount) //w_ytd
+      warehouseTbl.update(warehouseEntry)
+
+      val districtEntry = districtTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), d_id, w_id))
+      districtEntry +=(unit(10), h_amount)
+      districtTbl.update(districtEntry)
+
+      val customerEntry = __newVar(unit[GenericEntry](null))
+      __ifThenElse(c_by_name > unit(0), {
+        val customersWithLastName = ArrayBuffer[GenericEntry]()
+        customerTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), c_d_id, c_w_id, c_last_input), __lambda { custEntry => customersWithLastName.append(custEntry)
+        })
+        val index = __newVar(customersWithLastName.size / unit(2))
+        __ifThenElse(customersWithLastName.size % unit(2) __== unit(0), {
+          __assign(index, readVar(index) - unit(1))
+        }, unit())
+        __assign(customerEntry, customersWithLastName(readVar(index)))
+
+      }, {
+        __assign(customerEntry, customerTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), c_id, c_d_id, c_w_id)))
+
+      })
+
+      val c_data = __newVar(readVar(customerEntry).get[String](unit(21)))
+      //TODO: SBJ: Fix string.format
+      __ifThenElse(readVar(customerEntry).get[String](unit(14)).contains(unit("BC")), {
+        //c_credit
+        //TODO this is the correct version but is not implemented in the correctness test
+        //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
+        __assign(c_data, unit("%d %d %d %d %d  $%f %s | %s").format(unit("FIX ME"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, datetime, readVar(c_data)))
+        __ifThenElse(readVar(c_data).length > unit(500), __assign(c_data, readVar(c_data).substring(unit(0), unit(500))), unit())
+        readVar(customerEntry) +=(unit(17) /*c_balance*/ , h_amount)
+        //TODO this is the correct version but is not implemented in the correctness test
+        //customerEntry += (18 /*c_ytd_payment*/, h_amount)
+        //customerEntry += (19 /*c_payment_cnt*/, 1)
+        readVar(customerEntry).update(unit(21) /*c_data*/ , readVar(c_data))
+        unit()
+      }, {
+        readVar(customerEntry) +=(unit(17) /*c_balance*/ , h_amount)
+        //TODO this is the correct version but is not implemented in the correctness test
+        //customerEntry += (18 /*c_ytd_payment*/, h_amount)
+        //customerEntry += (19 /*c_payment_cnt*/, 1)
+      })
+      customerTbl.update(readVar(customerEntry))
+      val w_name = warehouseEntry.get[String](unit(2))
+      val d_name = districtEntry.get[String](unit(3))
+      //TODO this is the correct version but is not implemented in the correctness test
+      val h_data =
+        dsl"""{
+        if (${w_name.length} > 10) $w_name.substring(0, 10) else $w_name
+      } + "    " + {
+        if (${d_name.length} > 10) $d_name.substring(0, 10) else $d_name
+      }"""
+      historyTbl.insert(GenericEntry(unit("SteNewSEntry"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, datetime, h_amount, h_data))
+      //      if ($showOutput) {
+      //        var output = "\n+---------------------------- PAYMENT ----------------------------+" +
+      //          "\n Date: %s" + $datetime +
+      //          "\n\n Warehouse: " + $w_id +
+      //          "\n   Street:  " + /*w_street_1*/ warehouseEntry.get(3) +
+      //          "\n   Street:  " + /*w_street_2*/ warehouseEntry.get(4) +
+      //          "\n   City:    " + /*w_city*/ warehouseEntry.get(5) +
+      //          "   State: " + /*w_state*/ warehouseEntry.get(6) +
+      //          "  Zip: " + /*w_zip*/ warehouseEntry.get(7) +
+      //          "\n\n District:  " + $d_id +
+      //          "\n   Street:  " + /*d_street_1*/ districtEntry.get(4) +
+      //          "\n   Street:  " + /*d_street_2*/ districtEntry.get(5) +
+      //          "\n   City:    " + /*d_city*/ districtEntry.get(6) +
+      //          "   State: " + /*d_state*/ districtEntry.get(7) +
+      //          "  Zip: " + /*d_zip*/ districtEntry.get(8) +
+      //          "\n\n Customer:  " + customerEntry.get(1) +
+      //          "\n   Name:    " + /*c_first*/ customerEntry.get(4) +
+      //          " " + /*c_middle*/ customerEntry.get(5) +
+      //          " " + /*c_last*/ customerEntry.get(6) +
+      //          "\n   Street:  " + /*c_street_1*/ customerEntry.get(7) +
+      //          "\n   Street:  " + /*c_street_2*/ customerEntry.get(8) +
+      //          "\n   City:    " + /*c_city*/ customerEntry.get(9) +
+      //          "   State: " + /*c_state*/ customerEntry.get(10) +
+      //          "  Zip: " + /*c_zip*/ customerEntry.get(11) +
+      //          "\n   Since:   " +
+      //          (if ( /*c_since*/ customerEntry.get(13) != null) {
+      //            /*c_since*/ customerEntry.get(13)
+      //          }
+      //          else {
+      //            ""
+      //          }) + "\n   Credit:  " + /*c_credit*/ customerEntry.get(14) +
+      //          "\n   Disc:    " + /*c_discount*/ (customerEntry.get(16).asInstanceOf[Double] * 100) + "%" +
+      //          "\n   Phone:   " + /*c_phone*/ customerEntry.get(12) +
+      //          "\n\n Amount Paid:      " + h_amount +
+      //          "\n Credit Limit:     " + /*c_credit_lim*/ customerEntry.get(15) +
+      //          "\n New Cust-Balance: " + /*c_balance*/ customerEntry.get(17)
+      //        if (customerEntry.get(14) == "BC") {
+      //          val cdata = c_data
+      //          if (cdata.length > 50) {
+      //            output = output + "\n\n Cust-Data: " + cdata.substring(0, 50)
+      //            val data_chunks = (if (cdata.length > 200) 4 else cdata.length / 50)
+      //            var n = 1
+      //            while (n < data_chunks) {
+      //              output = output + "\n            " + cdata.substring(n * 50, (n + 1) * 50)
+      //              n += 1
+      //            }
+      //          } else {
+      //            output = output + "\n\n Cust-Data: " + cdata
+      //          }
+      //        }
+      //        output = output + "\n+-----------------------------------------------------------------+\n\n"
+      //        println(output)
+      //      }
+      unit(1)
+    }
+
     def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
 
-      val customerEntry= __newVar[GenericEntry](null)
-      __ifThenElse( c_by_name > unit(0), {
+      val customerEntry = __newVar[GenericEntry](null)
+      __ifThenElse(c_by_name > unit(0), {
         val customersWithLastName = ArrayBuffer[GenericEntry]()
-        customerTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2),unit( 3), unit(6), d_id, w_id, c_last), __lambda {
+        customerTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), d_id, w_id, c_last), __lambda {
           custEntry => customersWithLastName.append(custEntry)
         })
         val index = __newVar(customersWithLastName.size / unit(2))
         __ifThenElse(customersWithLastName.size % unit(2) __== unit(0), {
-          __assign(index , readVar(index)- unit(1))
+          __assign(index, readVar(index) - unit(1))
         }, unit())
-        __assign(customerEntry , customersWithLastName(readVar(index)))
-      } , {
-        __assign(customerEntry ,customerTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), c_id, d_id, w_id)))
+        __assign(customerEntry, customersWithLastName(readVar(index)))
+      }, {
+        __assign(customerEntry, customerTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), c_id, d_id, w_id)))
       })
 
       val found_c_id = readVar(customerEntry).get[Int](unit(3))
-      val newestOrderEntry = orderTbl.getSliceMax(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3) , unit(4), d_id, w_id, found_c_id), unit(1))
+      val newestOrderEntry = orderTbl.getSliceMax(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id), unit(1))
       val dceBlocker = __newVar(unit(0))
+      /*
 dsl"""
       if (!$showOutput) {
         if ($newestOrderEntry != ${unit[GenericEntry](null)}) {
@@ -337,6 +350,7 @@ dsl"""
         println(output)
         ()
       }"""
+      */
       unit(1)
     }
 
@@ -455,26 +469,39 @@ dsl"""
       unit(1)
     }
   }
-
-
-  def main(args: Array[String]): Unit = {
+  {
     implicit object Context extends StoreDSL
-
-    var prog: Prog = null
-
     import Context._
-    //    (new Impl("./lms/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()
-    val initBlock = reifyBlock {
-      prog = new Prog(Context)
-      unit(())
+    def main(args: Array[String]): Unit = {
+
+
+      var prog: Prog = null
+
+
+      //    (new Impl("./lms/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()
+      val initBlock = reifyBlock {
+        prog = new Prog(Context)
+        unit(())
+      }
+      val codeBlock = reifyBlock {
+        prog.paymentTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int], fresh[Int], fresh[Int], fresh[Int], fresh[Int], fresh[Int], fresh[String], fresh[Double])
+        //      prog.deliveryTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int])
+        //      prog.stockLevelTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int], fresh[Int], fresh[Int])
+      }
+      val codeGen = new StoreScalaCodeGenerator(Context)
+      val cgDoc = codeGen.blockToDocument(codeBlock)
+      System.out.println(cgDoc.toString)
+      //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
     }
-    val codeBlock = reifyBlock {
-      prog.deliveryTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int])
-      //      prog.stockLevelTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int], fresh[Int], fresh[Int])
-    }
-    val codeGen = new StoreScalaCodeGenerator(Context)
-    val cgDoc = codeGen.blockToDocument(codeBlock)
-    System.out.println(cgDoc.toString)
-    //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
-  }
+
+//    def emitSource4[T1, T2, T3, T4, R](f: (Rep[T1], Rep[T2], Rep[T3], Rep[T4]) => Rep[R], className: String, stream: PrintWriter): List[(Rep[Any], Any)] = {
+  //      val s1 = fresh[T1]
+  //      val s2 = fresh[T2]
+  //      val s3 = fresh[T3]
+  //      val s4 = fresh[T4]
+  //      val body = reifyBlock(f(s1, s2, s3, s4))
+  //      emitSource[R](List(s1, s2, s3, s4), body, className, stream)
+  //    }
+  //    def emitSource[R](args: List[Sym[Any]], global:Rep[Unit], body: Block[R], className: String, stream: PrintWriter, dynamicReturnType: String = null, serializable: Boolean = false): List[(Sym[Any], Any)] = ???
+}
 }
