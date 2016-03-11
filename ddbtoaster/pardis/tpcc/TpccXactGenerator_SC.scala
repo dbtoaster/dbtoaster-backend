@@ -281,7 +281,7 @@ object TpccXactGenerator_SC {
 
     def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
 
-      val customerEntry = __newVar[GenericEntry](null)
+      val customerEntry = __newVar[GenericEntry](unit(null))
       __ifThenElse(c_by_name > unit(0), {
         val customersWithLastName = ArrayBuffer[GenericEntry]()
         customerTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), d_id, w_id, c_last), __lambda {
@@ -437,7 +437,7 @@ dsl"""
       val i = __newVar(o_id - unit(20))
       val unique_ol_i_id = Set[Int]()
       __whileDo(readVar(i) < o_id, {
-        orderLineTbl.slice(unit(1), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), readVar(i), d_id, w_id), __lambda { orderLineEntry =>
+        orderLineTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), readVar(i), d_id, w_id), __lambda { orderLineEntry =>
           val ol_i_id = orderLineEntry.get[Int](unit(5))
           val stockEntry = stockTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), ol_i_id, w_id))
           val s_quantity = stockEntry.get[Int](unit(3))
@@ -447,10 +447,8 @@ dsl"""
             unit()
           }, {
             unit()
-          }
-          )
-        }
-        )
+          })
+        })
         __assign(i, readVar(i) + unit(1))
       })
       val stock_count = unique_ol_i_id.size
@@ -460,7 +458,7 @@ dsl"""
                   "\n Warehouse: " + $w_id +
                   "\n District:  " + $d_id +
                   "\n\n Stock Level Threshold: " + $threshold +
-                  "\n Low Stock Count:       " + stock_count +
+                  "\n Low Stock Count:       " + $stock_count +
                   "\n+-----------------------------------------------------------------+\n\n"
                 println(output)
                 ()
@@ -469,39 +467,30 @@ dsl"""
       unit(1)
     }
   }
-  {
-    implicit object Context extends StoreDSL
-    import Context._
-    def main(args: Array[String]): Unit = {
+
+  implicit object Context extends StoreDSL
+
+  import Context.{EntryType => _, entryRepToGenericEntryOps => _, MStoreRep1 => _, typeStore => _, typeNull => _, _}
+
+  def main(args: Array[String]): Unit = {
 
 
-      var prog: Prog = null
+    var prog: Prog = null
 
-
-      //    (new Impl("./lms/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()
-      val initBlock = reifyBlock {
-        prog = new Prog(Context)
-        unit(())
-      }
-      val codeBlock = reifyBlock {
-        prog.paymentTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int], fresh[Int], fresh[Int], fresh[Int], fresh[Int], fresh[Int], fresh[String], fresh[Double])
-        //      prog.deliveryTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int])
-        //      prog.stockLevelTx(fresh[Boolean], fresh[Date], fresh[Int], fresh[Int], fresh[Int], fresh[Int])
-      }
-      val codeGen = new StoreScalaCodeGenerator(Context)
-      val cgDoc = codeGen.blockToDocument(codeBlock)
-      System.out.println(cgDoc.toString)
-      //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
+    //    (new Impl("./lms/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()
+    val initBlock = reifyBlock {
+      prog = new Prog(Context)
+      unit(())
     }
+    val codeGen = new StoreScalaCodeGenerator(Context)
+    val global = List(prog.newOrderTbl, prog.orderTbl, prog.orderLineTbl, prog.customerTbl, prog.districtTbl, prog.warehouseTbl, prog.stockTbl, prog.itemTbl, prog.historyTbl)
+    codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, global, "DeliveryTx")
+    codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, global, "StockLevelTx")
+    codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, global, "OrderStatusTx")
+    codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, global, "PaymentTx")
+    codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, global, "NewOrderTx")
 
-//    def emitSource4[T1, T2, T3, T4, R](f: (Rep[T1], Rep[T2], Rep[T3], Rep[T4]) => Rep[R], className: String, stream: PrintWriter): List[(Rep[Any], Any)] = {
-  //      val s1 = fresh[T1]
-  //      val s2 = fresh[T2]
-  //      val s3 = fresh[T3]
-  //      val s4 = fresh[T4]
-  //      val body = reifyBlock(f(s1, s2, s3, s4))
-  //      emitSource[R](List(s1, s2, s3, s4), body, className, stream)
-  //    }
-  //    def emitSource[R](args: List[Sym[Any]], global:Rep[Unit], body: Block[R], className: String, stream: PrintWriter, dynamicReturnType: String = null, serializable: Boolean = false): List[(Sym[Any], Any)] = ???
+    //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
+  }
 }
-}
+
