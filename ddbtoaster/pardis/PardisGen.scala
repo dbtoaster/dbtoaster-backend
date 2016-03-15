@@ -25,7 +25,9 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
   import impl._
 
   val codeGen = new StoreScalaCodeGenerator(impl)
-
+  def debug(s: String): Unit ={
+    java.lang.System.out.println(s)
+  }
   def typeToTypeRep(tp: Type): TypeRep[Any] = {
     tp match {
       case TypeLong => runtimeType[Long]
@@ -316,7 +318,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 
 //            println(s"tpe here! ${mm}, ${mmtp}, ${m.tp}}");
             expr(e,(r:Rep[_]) => op match {
-              case OpAdd => println(s"tpe here! ${mm}, ${mm.tp}}"); impl.var_plusequals(mm,r)(mmtp.asInstanceOf[TypeRep[Any]])
+              case OpAdd => debug(s"tpe here! ${mm}, ${mm.tp}}"); impl.var_plusequals(mm,r)(mmtp.asInstanceOf[TypeRep[Any]])
               case OpSet => impl.__assign(mm,r)
             })
           } else {

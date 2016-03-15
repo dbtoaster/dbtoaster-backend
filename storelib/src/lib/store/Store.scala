@@ -226,9 +226,9 @@ class Store[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]=null)(i
   def delete(e:E):Unit = time("delete") { if (e==null) return; var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).delete(e); i+=1; } } // e already in the Store
   def get(idx:Int,key:E):E = time("get",idx) { if (key==null) return key; idxs(idx).get(key) }
   def foreach(f:E=>Unit):Unit = time("foreach") { idxs(0).foreach(f) } // assumes idxs(0) is the most efficient index
-  def slice(idx:Int,key:E,f:E=>Unit) = time("slice",idx) { if (key!=null) {System.err.println("Inside slice"); idxs(idx).slice(key,f)} }
-  def getSliceMin(idx:Int,key:E,col:Int):E = time("getSliceMin",idx) { if (key!=null) {System.err.println("Inside getSliceMin"); idxs(idx).getSliceMin(key,col)} else  key }
-  def getSliceMax(idx:Int,key:E,col:Int):E = time("getSliceMax",idx) { if (key!=null) {System.err.println("Inside getSliceMax"); idxs(idx).getSliceMax(key,col)} else key }
+  def slice(idx:Int,key:E,f:E=>Unit) = time("slice",idx) { if (key!=null) { idxs(idx).slice(key,f)} }
+  def getSliceMin(idx:Int,key:E,col:Int):E = time("getSliceMin",idx) { if (key!=null) {idxs(idx).getSliceMin(key,col)} else  key }
+  def getSliceMax(idx:Int,key:E,col:Int):E = time("getSliceMax",idx) { if (key!=null) {idxs(idx).getSliceMax(key,col)} else key }
   def range(idx:Int,min:E,max:E,withMin:Boolean=true,withMax:Boolean=true,f:E=>Unit) = time("range", idx) { idxs(idx).range(min,max,withMin,withMax,f) }
   def delete(idx:Int,key:E):Unit = time("delete", idx) { slice(idx,key,e=>delete(e)) }
   def clear = time("clear") { var i=0; while(i < n) { if (idxs(i)!=null) idxs(i).clear; i+=1; } }

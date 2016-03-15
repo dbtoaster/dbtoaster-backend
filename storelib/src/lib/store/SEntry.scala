@@ -46,15 +46,16 @@ object GenericEntry extends EntryIdx[GenericEntry] {
   }
   def hash(e:GenericEntry) :Int = {
     var h = 16;
-
+//TODO: SBJ: Fix it to work with all generic maps, while also ensuring that the partial and the complete entry gives the same hash
     // SteSampleSEntry
 //    if (e.isSampleEntry) {
-       h * 41 + e.map.get(1).get.hashCode()
+//       h * 41 + e.map.get(1).get.hashCode()
 //    } else {
 //      for (i <- (1 until e.map.size))
 //        h = h * 41  + e.map.get(i).get.hashCode()
 //    }
-//      e.map.foreach {e => h = h * 41 + e._2.hashCode()}
+//    e.map.foreach {e => if(e._2 != null) h = h * 41 + e._2.hashCode()}
+    h
 //    return h
   }//e.map.hashCode
 

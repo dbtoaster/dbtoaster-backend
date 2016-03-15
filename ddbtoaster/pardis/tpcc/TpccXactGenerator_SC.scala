@@ -2,7 +2,8 @@ package sc.tpcc
 
 
 //import ddbt.lib.store.{MStore, GenericEntry}
-import java.io.PrintWriter
+import java.io.{FileWriter, PrintStream, PrintWriter}
+import java.util.concurrent.Executor
 
 import ch.epfl.data.sc.pardis
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
@@ -14,17 +15,16 @@ import ch.epfl.data.sc.pardis.prettyprinter.{ASTCodeGenerator, ScalaCodeGenerato
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeUnit
 import pardis.optimization._
 import pardis.compiler._
-
 import scala.language.implicitConversions
 
 object TpccXactGenerator_SC {
 
-  class Prog(val Context: StoreDSL) {
+  class Prog(val Context: StoreDSL)  {
 
     //    import Context.Predef._
     //    import Context.{__newMStore, Date, overloaded2, typeGenericEntry}
     //    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{EntryType => _, entryRepToGenericEntryOps => _, MStoreRep1 => _, typeStore => _, typeNull => _, _}
+    import Context.{EntryType => _, entryRepToGenericEntryOps => _, MStoreRep1 => _, typeStore => _, typeNull => _, println =>_, _}
 
     implicit val DSL = Context
 
@@ -101,7 +101,6 @@ object TpccXactGenerator_SC {
           val ol_quantity = quantity(readVar(ol_number))
 
           val stockEntry = stockTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), ol_i_id, ol_supply_w_id))
-
           val ol_dist_info =
             dsl""" if ($d_id == 1) {
                  ${stockEntry.get[String](unit(4))} //s_dist_01
@@ -178,7 +177,7 @@ object TpccXactGenerator_SC {
 
       val customerEntry = __newVar(unit[GenericEntry](null))
       __ifThenElse(c_by_name > unit(0), {
-        val customersWithLastName = ArrayBuffer[GenericEntry]()
+        val customersWithLastName = __newArrayBuffer[GenericEntry]()
         customerTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), c_d_id, c_w_id, c_last_input), __lambda { custEntry => customersWithLastName.append(custEntry)
         })
         val index = __newVar(customersWithLastName.size / unit(2))
@@ -283,7 +282,7 @@ object TpccXactGenerator_SC {
 
       val customerEntry = __newVar[GenericEntry](unit(null))
       __ifThenElse(c_by_name > unit(0), {
-        val customersWithLastName = ArrayBuffer[GenericEntry]()
+        val customersWithLastName = __newArrayBuffer[GenericEntry]()
         customerTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), d_id, w_id, c_last), __lambda {
           custEntry => customersWithLastName.append(custEntry)
         })
@@ -483,14 +482,36 @@ dsl"""
       unit(())
     }
     val codeGen = new StoreScalaCodeGenerator(Context)
-    val global = List(prog.newOrderTbl, prog.orderTbl, prog.orderLineTbl, prog.customerTbl, prog.districtTbl, prog.warehouseTbl, prog.stockTbl, prog.itemTbl, prog.historyTbl)
-    codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, global, "DeliveryTx")
-    codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, global, "StockLevelTx")
-    codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, global, "OrderStatusTx")
-    codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, global, "PaymentTx")
-    codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, global, "NewOrderTx")
+    val header ="""
+                  |package ddbt.tpcc.sc
+                  |import ddbt.lib.store.{Store => MStore, _}
+                  |import scala.collection.mutable.{ArrayBuffer,Set}
+                  |import java.util.Date
+                  |""".stripMargin
+    val file = new PrintWriter("runtime/tpcc/pardisgen/TpccGenSC.scala")
+    var codestr = codeGen.blockToDocument(initBlock).toString
+    var i = codestr.lastIndexOf("()")
+
+
+    val executor ="class SCExecutor \n"+codestr.substring(0,i)+
+                  """
+                    |    val newOrderTxInst = new NewOrderTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+                    |    val paymentTxInst = new PaymentTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+                    |    val orderStatusTxInst = new OrderStatusTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+                    |    val deliveryTxInst = new DeliveryTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+                    |    val stockLevelTxInst = new StockLevelTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+                    |}
+                  """.stripMargin
+    file.println(header+executor)
+    val global = List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl)
+    codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, global, "DeliveryTx", file)
+    codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, global, "StockLevelTx", file)
+    codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, global, "OrderStatusTx", file)
+    codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, global, "PaymentTx", file)
+    codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, global, "NewOrderTx", file)
 
     //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
+    file.close()
   }
 }
 
