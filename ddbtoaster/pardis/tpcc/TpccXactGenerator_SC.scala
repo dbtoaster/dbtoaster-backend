@@ -19,12 +19,12 @@ import scala.language.implicitConversions
 
 object TpccXactGenerator_SC {
 
-  class Prog(val Context: StoreDSL)  {
+  class Prog(val Context: StoreDSL) {
 
     //    import Context.Predef._
     //    import Context.{__newMStore, Date, overloaded2, typeGenericEntry}
     //    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{EntryType => _, entryRepToGenericEntryOps => _, MStoreRep1 => _, typeStore => _, typeNull => _, println =>_, _}
+    import Context.{EntryType => _, entryRepToGenericEntryOps => _, MStoreRep1 => _, typeStore => _, typeNull => _, println => _, _}
 
     implicit val DSL = Context
 
@@ -51,14 +51,12 @@ object TpccXactGenerator_SC {
 
     //TODO: SBJ: check index numbers
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
-      dsl"""
-              if ($showOutput) {
-                val output = "Started NewOrder transaction for warehouse=%d, district=%d, customer=%d.format($w_id, $d_id, $c_id)"
-                println(output)
-                ()
-              }
-            """
-      unit(1)
+
+      __ifThenElse(showOutput, {
+        val output = unit("Started NewOrder transaction for warehouse=%d, district=%d, customer=%d").format(unit("FIX ME"), w_id, d_id, c_id)
+        Context.println(output)
+      }, unit())
+
       val ol_number = __newVar(unit(0))
       val failed = __newVar(unit(false))
       val idata = __newArray[String](o_ol_count)
@@ -78,7 +76,7 @@ object TpccXactGenerator_SC {
         __assign(ol_number, readVar(ol_number) + unit(1))
         unit()
       })
-      __ifThenElse(!readVar(all_items_exist), {
+      __ifThenElse(readVar(all_items_exist), {
 
         /*(c_id,d_id,w_id, c_discount, c_last, c_credit, w_tax)*/
         val customerEntry = customerTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), c_id, d_id, w_id))
@@ -184,7 +182,7 @@ object TpccXactGenerator_SC {
         __ifThenElse(customersWithLastName.size % unit(2) __== unit(0), {
           __assign(index, readVar(index) - unit(1))
         }, unit())
-        __assign(customerEntry, customersWithLastName(readVar(index)))
+        __assign(customerEntry, customersWithLastName.sortWith(__lambda { (c1, c2) => c1.get[String](unit(4)).diff(c2.get[String](unit(4))) < unit(0) })(readVar(index)))
 
       }, {
         __assign(customerEntry, customerTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), c_id, c_d_id, c_w_id)))
@@ -192,12 +190,12 @@ object TpccXactGenerator_SC {
       })
 
       val c_data = __newVar(readVar(customerEntry).get[String](unit(21)))
-      //TODO: SBJ: Fix string.format
+
       __ifThenElse(readVar(customerEntry).get[String](unit(14)).contains(unit("BC")), {
         //c_credit
         //TODO this is the correct version but is not implemented in the correctness test
         //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-        __assign(c_data, unit("%d %d %d %d %d  $%f %s | %s").format(unit("FIX ME"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, datetime, readVar(c_data)))
+        __assign(c_data, unit("%d %d %d %d %d $%f %s | %s").format(unit("FIX ME"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, datetime, readVar(c_data)))
         __ifThenElse(readVar(c_data).length > unit(500), __assign(c_data, readVar(c_data).substring(unit(0), unit(500))), unit())
         readVar(customerEntry) +=(unit(17) /*c_balance*/ , h_amount)
         //TODO this is the correct version but is not implemented in the correctness test
@@ -290,7 +288,8 @@ object TpccXactGenerator_SC {
         __ifThenElse(customersWithLastName.size % unit(2) __== unit(0), {
           __assign(index, readVar(index) - unit(1))
         }, unit())
-        __assign(customerEntry, customersWithLastName(readVar(index)))
+
+        __assign(customerEntry, customersWithLastName.sortWith(__lambda { (c1, c2) => c1.get[String](unit(4)).diff(c2.get[String](unit(4))) < unit(0) })(readVar(index)))
       }, {
         __assign(customerEntry, customerTbl.get(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), c_id, d_id, w_id)))
       })
@@ -361,7 +360,7 @@ dsl"""
       val d_id = __newVar(unit(1))
       __whileDo(readVar(d_id) <= DIST_PER_WAREHOUSE, {
         val firstOrderEntry /*(no_o_id,no_d_id,no_w_id)*/ = newOrderTbl.getSliceMin(unit(0) /*no_o_id*/ , GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), readVar(d_id), w_id), unit(1))
-        __ifThenElse(firstOrderEntry __== unit[GenericEntry](null), {
+        __ifThenElse(firstOrderEntry __!= unit[GenericEntry](null), {
           // found
           val no_o_id = firstOrderEntry.get[Int](unit(1))
           orderIDs.update(readVar(d_id) - unit(1), no_o_id)
@@ -482,27 +481,28 @@ dsl"""
       unit(())
     }
     val codeGen = new StoreScalaCodeGenerator(Context)
-    val header ="""
-                  |package ddbt.tpcc.sc
-                  |import ddbt.lib.store.{Store => MStore, _}
-                  |import scala.collection.mutable.{ArrayBuffer,Set}
-                  |import java.util.Date
-                  |""".stripMargin
-    val file = new PrintWriter("runtime/tpcc/pardisgen/TpccGenSC.scala")
+    val header =
+      """
+        |package tpcc.sc
+        |import ddbt.lib.store.{Store => MStore, _}
+        |import scala.collection.mutable.{ArrayBuffer,Set}
+        |import java.util.Date
+        | """.stripMargin
+    val file = new PrintWriter("../runtime/tpcc/pardisgen/TpccGenSC.scala")
     var codestr = codeGen.blockToDocument(initBlock).toString
     var i = codestr.lastIndexOf("()")
 
 
-    val executor ="class SCExecutor \n"+codestr.substring(0,i)+
-                  """
-                    |    val newOrderTxInst = new NewOrderTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-                    |    val paymentTxInst = new PaymentTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-                    |    val orderStatusTxInst = new OrderStatusTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-                    |    val deliveryTxInst = new DeliveryTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-                    |    val stockLevelTxInst = new StockLevelTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-                    |}
-                  """.stripMargin
-    file.println(header+executor)
+    val executor = "class SCExecutor \n" + codestr.substring(0, i) +
+      """
+        |    val newOrderTxInst = new NewOrderTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+        |    val paymentTxInst = new PaymentTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+        |    val orderStatusTxInst = new OrderStatusTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+        |    val deliveryTxInst = new DeliveryTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+        |    val stockLevelTxInst = new StockLevelTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
+        |}
+      """.stripMargin
+    file.println(header + executor)
     val global = List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl)
     codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, global, "DeliveryTx", file)
     codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, global, "StockLevelTx", file)

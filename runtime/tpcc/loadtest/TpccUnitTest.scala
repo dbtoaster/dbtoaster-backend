@@ -9,7 +9,7 @@ import java.util.Properties
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import ddbt.tpcc.sc.SCExecutor
+
 import org.slf4j.LoggerFactory
 import org.slf4j.Logger
 import ddbt.tpcc.tx.TpccTable

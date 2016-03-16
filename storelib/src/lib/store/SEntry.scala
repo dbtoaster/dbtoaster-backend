@@ -103,6 +103,14 @@ object GenericEntry extends EntryIdx[GenericEntry] {
       0
     }
   }
+
+  //compares the values of a particular column of two entries
+  override def colValCmp(col: Int, e1: GenericEntry, e2: GenericEntry): Int = {
+    //TODO: SBJ: Fix: Only implemented for Integers
+    val v1 = e1.get[Int](col)
+    val v2 = e2.get[Int](col)
+    v1.compare(v2)
+  }
 }
 
 abstract class SEntry2 [T1:Manifest,T2:Manifest] extends Entry(2)

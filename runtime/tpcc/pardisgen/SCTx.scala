@@ -8,7 +8,7 @@ import ddbt.lib.store.GenericEntry
 import java.sql.Connection
 import java.sql.Statement
 import java.sql.ResultSet
-import ddbt.tpcc.sc.SCExecutor
+
 import ddbt.tpcc.tx._
 
 
@@ -61,7 +61,8 @@ object SCDataLoader {
 
       rs = stmt.executeQuery(TpccSelectQueries.ALL_WAREHOUSES);
       while (rs.next()) {
-        exec.x3.insert(GenericEntry("SteNewSEntry",
+        //TODO: SBJ: Check OK
+        exec.x3.unsafeInsert(0, GenericEntry("SteNewSEntry",
           rs.getInt("w_id"),
           rs.getString("w_name"),
           rs.getString("w_street_1"),
@@ -74,10 +75,10 @@ object SCDataLoader {
         ))
       }
       rs.close
-      java.lang.System.err.println("Warehouse data loaded")
+      java.lang.System.out.println("Warehouse data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_CUSTOMERS);
       while (rs.next()) {
-        exec.x8.insert(GenericEntry("SteNewSEntry",
+        exec.x8.unsafeInsert(0,GenericEntry("SteNewSEntry",
           rs.getInt("c_id"),
           rs.getInt("c_d_id"),
           rs.getInt("c_w_id"),
@@ -102,11 +103,11 @@ object SCDataLoader {
         ))
       }
       rs.close
-      java.lang.System.err.println("Customer data loaded")
+      java.lang.System.out.println("Customer data loaded")
 
       rs = stmt.executeQuery(TpccSelectQueries.ALL_DISTRICTS);
       while (rs.next()) {
-        exec.x6.insert(GenericEntry("SteNewSEntry",
+        exec.x6.unsafeInsert(0,GenericEntry("SteNewSEntry",
           rs.getInt("d_id"),
           rs.getInt("d_w_id"),
           rs.getString("d_name"),
@@ -121,10 +122,10 @@ object SCDataLoader {
         ))
       }
       rs.close
-      java.lang.System.err.println("District data loaded")
+      java.lang.System.out.println("District data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_HISTORIES);
       while (rs.next()) {
-        exec.x2.insert(GenericEntry("SteNewSEntry",
+        exec.x2.unsafeInsert(0,GenericEntry("SteNewSEntry",
           rs.getInt("h_c_id"),
           rs.getInt("h_c_d_id"),
           rs.getInt("h_c_w_id"),
@@ -136,10 +137,10 @@ object SCDataLoader {
         ))
       }
       rs.close
-      java.lang.System.err.println("History data loaded")
+      java.lang.System.out.println("History data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_ITEMS);
       while (rs.next()) {
-        exec.x4.insert(GenericEntry("SteNewSEntry",
+        exec.x4.unsafeInsert(0,GenericEntry("SteNewSEntry",
           rs.getInt("i_id"),
           rs.getInt("i_im_id"),
           rs.getString("i_name"),
@@ -148,20 +149,20 @@ object SCDataLoader {
         ))
       }
       rs.close
-      java.lang.System.err.println("Item data loaded")
+      java.lang.System.out.println("Item data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_NEW_ORDERS);
       while (rs.next()) {
-        exec.x1.insert(GenericEntry("SteNewSEntry",
+        exec.x1.unsafeInsert(0,GenericEntry("SteNewSEntry",
           rs.getInt("no_o_id"),
           rs.getInt("no_d_id"),
           rs.getInt("no_w_id")
         ))
       }
       rs.close
-      java.lang.System.err.println("NewOrder data loaded")
+      java.lang.System.out.println("NewOrder data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_ORDER_LINES);
       while (rs.next()) {
-        exec.x7.insert(GenericEntry("SteNewSEntry",
+        exec.x7.unsafeInsert(0,GenericEntry("SteNewSEntry",
           rs.getInt("ol_o_id"),
           rs.getInt("ol_d_id"),
           rs.getInt("ol_w_id"),
@@ -175,13 +176,13 @@ object SCDataLoader {
         ))
       }
       rs.close
-      java.lang.System.err.println("OrderLine data loaded")
+      java.lang.System.out.println("OrderLine data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_ORDERS);
       while (rs.next()) {
         val o_carrier_id = rs.getInt("o_carrier_id")
         val o_carrier_id_wasNull = rs.wasNull
         val o_all_local = (rs.getInt("o_all_local") > 0)
-        exec.x5.insert(GenericEntry("SteNewSEntry",
+        exec.x5.unsafeInsert(0,GenericEntry("SteNewSEntry",
           rs.getInt("o_id"),
           rs.getInt("o_d_id"),
           rs.getInt("o_w_id"),
@@ -193,10 +194,10 @@ object SCDataLoader {
         ))
       }
       rs.close
-      java.lang.System.err.println("Order data loaded")
+      java.lang.System.out.println("Order data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_STOCKS);
       while (rs.next()) {
-        exec.x9.insert(GenericEntry("SteNewSEntry",
+        exec.x9.unsafeInsert(0,GenericEntry("SteNewSEntry",
           rs.getInt("s_i_id"),
           rs.getInt("s_w_id"),
           rs.getInt("s_quantity"),
@@ -217,7 +218,7 @@ object SCDataLoader {
         ))
       }
       rs.close
-      java.lang.System.err.println("Stock data loaded")
+      java.lang.System.out.println("Stock data loaded")
       // println("All Tables loaded...")
       // println("Warehouse => " + warehouseTbl)
     } finally {

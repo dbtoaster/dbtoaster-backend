@@ -41,6 +41,9 @@ abstract class EntryIdx[E<:Entry] {
   // Note: The hash function must take care of shuffling LSBs enough, no
   // re-shuffling is done in the Store. Some indices (IdxDirect) require
   // order(entries)=order(hash(entries)) to work correctly.
+
+  //compares the values of a particular column of two entries
+  def colValCmp(col:Int, e1:E, e2:E):Int = ???
 }
 
 object Store {

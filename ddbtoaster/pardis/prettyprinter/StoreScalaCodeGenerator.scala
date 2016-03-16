@@ -6,7 +6,7 @@ import ch.epfl.data.sc.pardis
 import ch.epfl.data.sc.pardis.prettyprinter._
 import ch.epfl.data.sc.pardis.types.PardisType
 import ch.epfl.data.sc.pardis.utils.TypeUtils._
-import ch.epfl.data.sc.pardis.utils.document.Document
+import ch.epfl.data.sc.pardis.utils.document._
 import ch.epfl.data.sc.pardis.ir._
 import ddbt.lib.store.deep.MStoreIRs._
 import ddbt.lib.store.deep.StoreDSL
@@ -113,6 +113,8 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
     case Statement(sym, MStoreNew2()) => generateNewStore(sym, None)
+    case Statement(sym, StringDiff(str1, str2)) =>  doc"val $sym = $str1.compareToIgnoreCase($str2)"
+    case Statement(sym, StringFormat(self,_,Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
     case _ => super.stmtToDocument(stmt)
   }
 

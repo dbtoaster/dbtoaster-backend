@@ -113,42 +113,38 @@ class IdxHash<E extends Entry> extends Idx<E> {
 
     @Override
     public E getSliceMin(E key, int col) {
-
-        Integer min = new Integer(Integer.MAX_VALUE);
         E retE = null;
         int h = ops.hash(key);
         IdxHashEntry<E> e = data[h & (data.length - 1)];
-        if (!(e.data.data[col] instanceof Integer)) {
-            throw new UnsupportedOperationException("SliceMin is implemented only for columns containing Integer values");
-        }
-        if (e != null) do {
-            if (e.hash == h && ops.cmp(key, e.data) == 0 && min.compareTo((Integer)e.data.data[col]) >= 0) {
+        if (e != null){
+            retE = e.data;
+            do {
+            if (e.hash == h && ops.cmp(key, e.data) == 0 && ops.colValCmp(col, retE, e.data) > 0) {
                 retE = e.data;
-                min = (Integer)retE.data[col];
             }
             e = e.next;
         } while (e != null);
+        }
         return retE;
     }
 
     @Override
     public E getSliceMax(E key, int col) {
-        Integer max = new Integer(Integer.MIN_VALUE);
         E retE = null;
         int h = ops.hash(key);
         IdxHashEntry<E> e = data[h & (data.length - 1)];
-        if (!(e.data.data[col] instanceof Integer)) {
-            throw new UnsupportedOperationException("SliceMax is implemented only for columns containing Integer values");
+        if (e != null){
+            retE = e.data;
+            do {
+                if (e.hash == h && ops.cmp(key, e.data) == 0 && ops.colValCmp(col, retE, e.data) < 0) {
+                    retE = e.data;
+                }
+                e = e.next;
+            } while (e != null);
         }
-        if (e != null) do {
-            if (e.hash == h && ops.cmp(key, e.data) == 0 && max.compareTo((Integer)e.data.data[col]) <= 0) {
-                retE = e.data;
-                max = (Integer)retE.data[col];
-            } ;
-            e = e.next;
-        } while (e != null);
         return retE;
     }
+
     @Override public void range(E min, E max, boolean withMin, boolean withMax, Function1<E,Unit> f) {
         int cMin=withMin?-1:0; int cMax=withMax?1:0;
         for (int i=0,n=data.length;i<n;++i) { IdxHashEntry<E> e=data[i],em,en;
