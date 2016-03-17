@@ -6,7 +6,7 @@ import scala.collection.mutable
 class GenericEntry(val map: mutable.HashMap[Int,Any], val n: Int, val isSampleEntry: Boolean) extends Entry(n) {
   def this(n: Int) = this(new mutable.HashMap[Int,Any], n, false)
 
-  def update(i: Int, v:Any) = map.put(i, v)
+  def update(i: Int, v:Any):Unit = map.put(i, v)
   def increase(i: Int, v:Any) = v match {
     case _: Int => if (map.contains(i)) map.put(i, map.get(i).get.asInstanceOf[Int] + v.asInstanceOf[Int]) else map.put(i, v)
     case _: Double => if (map.contains(i)) map.put(i, map.get(i).get.asInstanceOf[Double] + v.asInstanceOf[Double]) else map.put(i, v);

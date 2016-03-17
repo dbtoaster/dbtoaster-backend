@@ -427,7 +427,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 //    val analysisRound = new AccessOperationAnalysis(impl)
 //
 //    for(x <- tsResBlks) {
-//      analysisRound.traverseBlock(x._3)
+//      analysisRound.optimize(x._3)
 //    }
 //
 //    val transformationRound = new AccessOperationTransformer(impl, analysisRound.mapAccess)
@@ -438,7 +438,7 @@ abstract class PardisGen(override val cls:String="Query", val impl: StoreDSL) ex
 //      analysisRound2.traverseBlock(nb)
 //    }
 
-    // java.lang.System.err.println(analysisRound.mapAccess)
+//     java.lang.System.err.println(analysisRound.mapAccess)
     // java.lang.System.err.println(analysisRound2.mapAccess)
 
     for(x <- tsResBlks) {
