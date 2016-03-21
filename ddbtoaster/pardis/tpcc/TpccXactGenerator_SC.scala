@@ -295,7 +295,9 @@ object TpccXactGenerator_SC {
       })
 
       val found_c_id = readVar(customerEntry).get[Int](unit(3))
-      val newestOrderEntry = orderTbl.getSliceMax(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id), unit(1))
+      val agg =  __newMirrorAggregator[GenericEntry]()
+      orderTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id),agg.gather)
+      val newestOrderEntry = agg.max(unit(1))
       val dceBlocker = __newVar(unit(0))
       /*
 dsl"""
@@ -359,7 +361,9 @@ dsl"""
       val orderIDs = __newArray[Int](unit(10))
       val d_id = __newVar(unit(1))
       __whileDo(readVar(d_id) <= DIST_PER_WAREHOUSE, {
-        val firstOrderEntry /*(no_o_id,no_d_id,no_w_id)*/ = newOrderTbl.getSliceMin(unit(0) /*no_o_id*/ , GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), readVar(d_id), w_id), unit(1))
+        val agg = __newMirrorAggregator[GenericEntry]()
+        newOrderTbl.slice(unit(0) /*no_o_id*/ , GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), readVar(d_id), w_id),agg.gather)
+        val firstOrderEntry = agg.min(unit(1))
         __ifThenElse(firstOrderEntry __!= unit[GenericEntry](null), {
           // found
           val no_o_id = firstOrderEntry.get[Int](unit(1))
@@ -489,9 +493,16 @@ dsl"""
         |import java.util.Date
         | """.stripMargin
     val file = new PrintWriter("../runtime/tpcc/pardisgen/TpccGenSC.scala")
+
+    val global = List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl)
+    codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
+    codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")
+    codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, "OrderStatusTx")
+    codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
+    codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
+    codeGen.analyzeIndices
     var codestr = codeGen.blockToDocument(initBlock).toString
     var i = codestr.lastIndexOf("()")
-
 
     val executor = "class SCExecutor \n" + codestr.substring(0, i) +
       """
@@ -503,13 +514,7 @@ dsl"""
         |}
       """.stripMargin
     file.println(header + executor)
-    val global = List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl)
-    codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, global, "DeliveryTx", file)
-    codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, global, "StockLevelTx", file)
-    codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, global, "OrderStatusTx", file)
-    codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, global, "PaymentTx", file)
-    codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, global, "NewOrderTx", file)
-
+    codeGen.emitSource(global, file)
     //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
     file.close()
   }

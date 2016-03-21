@@ -26,10 +26,10 @@ class GenericEntry(val map: mutable.HashMap[Int,Any], val n: Int, val isSampleEn
   def cmp(e: GenericEntry) = GenericEntry.cmp(this, e)
 }
 
-object GenericEntry extends EntryIdx[GenericEntry] {
+object GenericEntry {
   def apply(ignore: Any, elems: Any*): GenericEntry = {
     val map = new mutable.HashMap[Int, Any]
-    
+
     if (ignore == "SteSampleSEntry") {
       //map.put(elems(0).asInstanceOf[Int], elems(1))
         val numberOfColumns = elems.size / 2;
@@ -44,71 +44,30 @@ object GenericEntry extends EntryIdx[GenericEntry] {
 
     new GenericEntry(map, map.size, ignore == "SteSampleSEntry")
   }
-  def hash(e:GenericEntry) :Int = {
+}
+
+class GenericOps(val cols: List[Int] = List(), val orderByCol: Int = 0) extends EntryIdx[GenericEntry] {
+  def hash(e: GenericEntry): Int = {
     var h = 16;
-//TODO: SBJ: Fix it to work with all generic maps, while also ensuring that the partial and the complete entry gives the same hash
-    // SteSampleSEntry
-//    if (e.isSampleEntry) {
-//       h * 41 + e.map.get(1).get.hashCode()
-//    } else {
-//      for (i <- (1 until e.map.size))
-//        h = h * 41  + e.map.get(i).get.hashCode()
-//    }
-//    e.map.foreach {e => if(e._2 != null) h = h * 41 + e._2.hashCode()}
+    cols.foreach(i => h = h * 41 + e.map(i).hashCode())
     h
-//    return h
-  }//e.map.hashCode
-
-
-  def cmp(e1:GenericEntry, e2:GenericEntry):Int = {
-
-   // System.err.println("Start")
-   //  System.err.println("********** E1 ************")
-   //  for ((k, v) <- e1.map) System.err.println("   " + k + " "+ v)
-
-   //  System.err.println("********** E2 ************")
-   //  for ((k, v) <- e2.map) System.err.println("   " + k + " "+ v)
-   //  System.err.println("End")
-
-
-    // first element is SteSampleSEntry
-    if (e1.map.size < e2.map.size) {
-      for ((k, v) <- e1.map) {
-        if (e2.map.get(k).get != e1.map.get(k).get) {
-         //System.err.println("NOT Equals e1(%s) < e2(%s)".format(e1.map, e2.map))
-          return 1
-        }
-      }
-     //System.err.println("Equals e1(%s) < e2(%s)".format(e1.map, e2.map))
-      0
-    } else if (e1.map.size > e2.map.size) {
-      for ((k, v) <- e2.map) {
-        if (e1.map.get(k).get != e2.map.get(k).get) {
-        // System.err.println("NOT Equals e1(%s) > e2(%s)".format(e1.map, e2.map))
-          return 1
-        }
-      }
-         //  System.err.println("Equals e1(%s) > e2(%s)".format(e1.map, e2.map))
-
-      0
-    } else {
-      for (i <- (1 until e1.map.size)) {
-        if ( e1.map.get(i).get != e2.map.get(i).get) {
-          //System.err.println("NOT Equals e1 < e2")
-          return 1
-        }
-      }
-      //System.err.println("Equals e1 = e2")
-
-      0
-    }
   }
 
-  //compares the values of a particular column of two entries
-  override def colValCmp(col: Int, e1: GenericEntry, e2: GenericEntry): Int = {
+  def key_equal(e1: GenericEntry, e2: GenericEntry): Int = {
+    val colsToCompare = if (cols != Nil) cols.iterator else if (e1.map.size > e2.map.size) e2.map.keysIterator else e1.map.keysIterator
+    for (i <- colsToCompare) {
+      if (e1.map.get(i).get != e2.map.get(i).get) {
+        return 1
+      }
+    }
+    0
+  }
+
+  // compare entries for ordering
+  override def compare(e1: GenericEntry, e2: GenericEntry): Int = {
     //TODO: SBJ: Fix: Only implemented for Integers
-    val v1 = e1.get[Int](col)
-    val v2 = e2.get[Int](col)
+    val v1 = e1.get[Int](orderByCol)
+    val v2 = e2.get[Int](orderByCol)
     v1.compare(v2)
   }
 }
