@@ -569,7 +569,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |  var configFile: String = "/spark.config"
         |  var batchSize: Int = 0
         |  var noOutput: Boolean = false
-        |  var logCount: Int = 0
+        |  var logCount: Long = 0L
         |  var numPartitions: Int = 0
         |  var dataset: String = null
         |  var distInputPath: String = null
@@ -612,7 +612,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |    configFile = argMap.get("configFile").map(_.asInstanceOf[String]).getOrElse(configFile)
         |    batchSize = argMap.get("batchSize").map(_.asInstanceOf[Int]).getOrElse(batchSize)
         |    noOutput = argMap.get("noOutput").map(_.asInstanceOf[Boolean]).getOrElse(noOutput)
-        |    logCount = argMap.get("logCount").map(_.asInstanceOf[Int]).getOrElse(logCount)
+        |    logCount = argMap.get("logCount").map(_.asInstanceOf[Long]).getOrElse(logCount)
         |    numPartitions = argMap.get("numPartitions").map(_.asInstanceOf[Int]).getOrElse(numPartitions)
         |
         |    if (dataset == null) { sys.error("Dataset is missing.") }
@@ -859,7 +859,10 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |
         |val streamCounts = streams.map(_.count).toArray
         |val batchWeights = GlobalMapContext.computeBatchSizes(streamCounts, batchSize)
-        |numTuples = streamCounts.reduce(_ + _)
+        |
+        |assert(batchWeights.map(_.size).toSet.size == 1)
+        |
+        |numTuples = streamCounts.sum
         |numBatches = batchWeights.map(_.size).max
         |
         |printSummary()
@@ -920,7 +923,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |${ind(sDistInputSources)}
         |))
         |
-        |numTuples = streamRDD.map(_.size).reduce(_ + _)
+        |numTuples = streamRDD.map(_.size.toLong).reduce(_ + _)
         |numBatches = math.ceil(numTuples.toDouble / batchSize).toInt 
         |
         |val bBatchSize = sc.broadcast(batchSize)  
@@ -1095,10 +1098,12 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
             val params = fieldsToParamList(keys)
             val addBatchTuple = genAddBatchTuple(name, keys, "vv")
             s"""|${name}.clear
-                |val ${name}_TMP = localCtx.${name}_QUEUE.dequeue
-                |${name}_TMP.foreach { 
-                |  case ${storeEntryType}(${params}, vv: ${tp.toScala}) =>
-                |${ind(addBatchTuple, 2)}
+                |if (!localCtx.${name}_QUEUE.isEmpty) {
+                |  val ${name}_TMP = localCtx.${name}_QUEUE.dequeue
+                |  ${name}_TMP.foreach { 
+                |    case ${storeEntryType}(${params}, vv: ${tp.toScala}) =>
+                |${ind(addBatchTuple, 3)}
+                |  }
                 |}
                 |""".stripMargin
           }.mkString("\n")          

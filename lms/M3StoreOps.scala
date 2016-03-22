@@ -513,7 +513,7 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
                         |  extends PartitionContainer[$entryClsName](
                         |    Array.fill[$colStoreName](numPartitions)(new $colStoreName())) {
                         |  override def +=(e: $entryClsName) = {
-                        |    val partitionId = (e._${pkeys(0) + 1}.hashCode) % numPartitions
+                        |    val partitionId = Math.abs(e._${pkeys(0) + 1}.hashCode) % numPartitions
                         |    partitions(partitionId) += e
                         |  }
                         |}""".stripMargin)
