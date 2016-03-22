@@ -165,7 +165,7 @@ class GlobalMapContext[A](
 
     streams.zipWithIndex.map {
       case ((path, (name, schema, sep, del)), streamId) =>
-        sc.textFile(path, numPartitions).mapPartitions(it => {
+        sc.textFile(path, numPartitions).repartition(numPartitions).mapPartitions(it => {
             val adaptor = new Adaptor.CSV(name, schema, sep, del)
             it.flatMap(s => adaptor.apply(s).map {
               case OrderedInputEvent(ord, TupleEvent(op, stream, data)) => data })
