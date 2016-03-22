@@ -858,7 +858,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |))
         |
         |val streamCounts = streams.map(_.count).toArray
-        |val batchWeights = GlobalMapContext.computeBatchSizes(streamCounts, batchSize)
+        |val batchWeights = GlobalMapContext.uniformBatchSizes(streamCounts, batchSize)
         |
         |assert(batchWeights.map(_.size).toSet.size == 1)
         |

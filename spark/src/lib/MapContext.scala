@@ -13,14 +13,25 @@ object GlobalMapContext
 {
   val QUICK_LOAD_OF_INSERT_STREAMS = true
 
-  def computeBatchSizes(relationSizes: Array[Long], batchSize: Long): Array[Array[Long]] =
+  def uniformBatchSizes(relationSizes: Array[Long], batchSize: Long): Array[Array[Long]] =
+  {
+    val numBatches = Math.ceil(relationSizes.sum / batchSize.toDouble).toInt
+    Array.tabulate(relationSizes.size)(i => {
+      val overflow = relationSizes(i) % numBatches
+      val a = Array.fill[Long](numBatches) { relationSizes(i) / numBatches }
+      a(numBatches - 1) += overflow
+      a
+    })
+  }
+
+  def linearBatchSizes(relationSizes: Array[Long], batchSize: Long): Array[Array[Long]] =
   {
     assert(relationSizes.size <= batchSize)
 
     // Sorted input sizes
     var input = relationSizes.sorted
     // Allocate output batch sizes
-    var output = Array.fill(input.size){ new collection.mutable.ArrayBuffer[Long](16) }
+    val output = Array.fill(input.size){ new collection.mutable.ArrayBuffer[Long](16) }
 
     var lastBeat = 0L
     var currBeat = 0L
