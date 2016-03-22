@@ -8,6 +8,66 @@ import org.apache.hadoop.fs.{ Path, FileSystem }
 import org.apache.hadoop.conf.Configuration
 import ddbt.lib.Adaptor
 import ddbt.lib.Messages._
+
+object GlobalMapContext 
+{
+  val QUICK_LOAD_OF_INSERT_STREAMS = true
+
+  def computeBatchSizes(relationSizes: Array[Long], batchSize: Long): Array[Array[Long]] =
+  {
+    assert(relationSizes.size <= batchSize)
+
+    // Sorted input sizes
+    var input = relationSizes.sorted
+    // Allocate output batch sizes
+    var output = Array.fill(input.size){ new collection.mutable.ArrayBuffer[Long](16) }
+
+    var lastBeat = 0L
+    var currBeat = 0L
+
+    while (input.size > 0) 
+    {
+      var remaining = batchSize
+
+      while (remaining > 0 && input.size > 0)
+      {
+        val available = (input.head - currBeat) * input.size
+        if (available >= remaining)
+        {
+          currBeat = currBeat + (remaining - 1) / input.size + 1
+          remaining = 0
+        }
+        else 
+        {
+          currBeat = input.head
+          remaining = remaining - available
+          input = input.tail
+        }
+      }
+
+      for (j <- 0 until relationSizes.size)
+      {
+        output(j) += (if (lastBeat >= relationSizes(j)) 0
+          else if (currBeat <= relationSizes(j)) currBeat - lastBeat
+          else relationSizes(j) - lastBeat)
+      }
+      lastBeat = currBeat
+    }
+
+    output.map(_.toArray)
+  }
+
+  def split[T](xs: Array[T], ns: List[Int]): List[Array[T]] = ns match {
+    case Nil => Nil
+    case hd :: tl => (xs take hd) :: split(xs drop hd, tl)
+  }
+
+  def chop[T](xs: Array[T], weights: Array[Long]): List[Array[T]] = {
+    val sum = weights.sum
+    val chunkSz = weights.map(w => Math.ceil(w.toDouble / sum * xs.size).toInt)
+    split(xs, chunkSz.toList)
+  }
+}
   
 class GlobalMapContext[A](
   val sc: SparkContext,
@@ -39,7 +99,7 @@ class GlobalMapContext[A](
 
   def unmaterialize() = rdd.unpersist(true)
 
-  def load(queryName: String, streams: List[(String, (String, String, String, String))]): RDD[Array[(List[Any], (Long, Int))]] = {
+  def loadStreams(queryName: String, streams: List[(String, (String, String, String, String))]): RDD[Array[(List[Any], (Long, Int))]] = {
 
     assert(streams.length > 0)
 
@@ -98,5 +158,18 @@ class GlobalMapContext[A](
             .mapPartitions(it => Array(it.toArray).iterator, true)
 
     partitioned
+  }
+
+  def loadInsertStreams(streams: Array[(String, (String, String, String, String))]): Array[RDD[List[Any]]] = {
+    assert(streams.head._2._4 == "insert")
+
+    streams.zipWithIndex.map {
+      case ((path, (name, schema, sep, del)), streamId) =>
+        sc.textFile(path, numPartitions).mapPartitions(it => {
+            val adaptor = new Adaptor.CSV(name, schema, sep, del)
+            it.flatMap(s => adaptor.apply(s).map {
+              case OrderedInputEvent(ord, TupleEvent(op, stream, data)) => data })
+        }, true)
+    }                         
   }
 }

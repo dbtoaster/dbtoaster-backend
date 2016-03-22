@@ -3,6 +3,7 @@ package ddbt.codegen
 import ddbt.codegen.lms._
 import ddbt.ast._
 import ddbt.lib._
+import ddbt.lib.spark.GlobalMapContext
 
 /**
   * Generates code for the Spark parallel backend.
@@ -23,6 +24,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
   val distributedMaps = collection.mutable.Set[MapInfo]()
 
   var isInputDistributed: Boolean = false
+
 
   val contextRDD = "ctx.rdd"
 
@@ -654,7 +656,10 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
       ( "// Queues for storing preloaded distributed batches" :: 
         deltaMapInfo.map { case (name, _) =>
           val storeEntryType = impl.codegen.storeEntryType(ctx0(name)._1)
-          s"val ${name}_QUEUE = new collection.mutable.Queue[ArrayBuffer[$storeEntryType]]()"
+          if (GlobalMapContext.QUICK_LOAD_OF_INSERT_STREAMS)
+            s"val ${name}_QUEUE = new collection.mutable.Queue[Array[$storeEntryType]]()"
+          else
+            s"val ${name}_QUEUE = new collection.mutable.Queue[ArrayBuffer[$storeEntryType]]()"
         }
       ).mkString("\n")          
 
@@ -807,6 +812,70 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
           |))).read""".stripMargin
     }}.mkString("\n")
 
+  protected def emitLoadInsertStreamsBody(sources: List[Source]): String = {
+    if (!isInputDistributed) return ""
+
+    val streams = sources.filter {
+      case Source(true, _, _, _, _, DistRandomExp) => true
+      case Source(true, _, _, _, _, _) => sys.error("Stream is not randomly distributed")
+      case _ => false
+    }
+    
+    val sDistInputSources = streams.map (s => {
+      val origPath = s.in match { case SourceFile(path) => path }
+      val path = "distInputPath + \"/\" + dataset + \"/" +
+        origPath.substring(origPath.lastIndexOf("/") + 1) + "\""
+      val name = s.schema.name.toUpperCase 
+      val schema = s.schema.fields.map(_._2).mkString(",")
+      val sep = java.util.regex.Pattern.quote(
+          s.adaptor.options.getOrElse("delimiter", ",")
+        ).replaceAll("\\\\", "\\\\\\\\")
+      s"""|(${path},
+          | (\"${name}\", \"${schema}\", \"${sep}\", "insert"))""".stripMargin
+    }).mkString(",\n")
+
+    val sEnqueueBatches = streams.zipWithIndex.map { case (s, ind) => {
+        val name = s.schema.deltaName
+        val params = fieldsToParamList(s.schema.fields)
+        val args = fieldsToArgList(s.schema.fields)
+        s"""|ctx.rdd.zip(batchedStreams(${ind})).foreach {
+            |  case ((id, localCtx), batches) =>
+            |    for (batch <- batches)
+            |    {
+            |      localCtx.${s.schema.deltaName}_QUEUE.enqueue(
+            |        batch.map { case List(${params}) => 
+            |          ${impl.codegen.storeEntryType(ctx0(name)._1)}(${args}, Messages.TupleInsert)
+            |      })
+            |    }  
+            |}
+            |""".stripMargin
+      }}.mkString("\n")
+
+    s"""|assert(!dataset.endsWith("_del"))
+        |
+        |val streams = ctx.loadInsertStreams(Array(
+        |${ind(sDistInputSources)}
+        |))
+        |
+        |val streamCounts = streams.map(_.count).toArray
+        |val batchWeights = GlobalMapContext.computeBatchSizes(streamCounts, batchSize)
+        |numTuples = streamCounts.reduce(_ + _)
+        |numBatches = batchWeights.map(_.size).max
+        |
+        |printSummary()
+        |
+        |val batchedStreams = streams.zipWithIndex.map { case (s, i) => 
+        |  s.mapPartitions(it => List(GlobalMapContext.chop(it.toArray, batchWeights(i))).iterator, true) }
+        |
+        |${sEnqueueBatches}
+        |
+        |// Run GC on workers and master
+        |ctx.rdd.foreach(x => System.gc())
+        |System.gc()
+        |""".stripMargin
+
+  }
+
   protected def emitLoadStreamsBody(sources: List[Source]): String = {
     if (!isInputDistributed) return ""
 
@@ -847,7 +916,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
             |""".stripMargin
       }}.mkString("\n")
 
-    s"""|val streamRDD = ctx.load("$sSparkObject", List(
+    s"""|val streamRDD = ctx.loadStreams("$sSparkObject", List(
         |${ind(sDistInputSources)}
         |))
         |
@@ -932,7 +1001,10 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
     val sEventHandlersSkip = ind(emitEventHandlers(s0, true), 2)
     val sEventHandler = ind(emitEventHandlers(s0, false), 2)
     val sLoadTablesBody = ind(emitLoadTablesBody(s0.sources), 2)
-    val sLoadStreamsBody = ind(emitLoadStreamsBody(s0.sources), 2)
+    val sLoadStreamsBody = 
+      if (GlobalMapContext.QUICK_LOAD_OF_INSERT_STREAMS) 
+        ind(emitLoadInsertStreamsBody(s0.sources), 2)
+      else ind(emitLoadStreamsBody(s0.sources), 2)
     val sEmitBody = ind(emitActorBody(updateBlocks, systemReadyBlocks))
     val sGetSnapshotBody = ind(emitGetSnapshotBody(s0.queries), 2)
     val sProcessBatches = if (isInputDistributed) "processBatches(numBatches)" else ""
