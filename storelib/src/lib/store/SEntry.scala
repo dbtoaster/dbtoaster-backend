@@ -23,7 +23,7 @@ class GenericEntry(val map: mutable.HashMap[Int,Any], val n: Int, val isSampleEn
   def -=(i: Int, v:Any) = decrease(i ,v)
   def get[E](i: Int) = map.get(i).get.asInstanceOf[E]
   def copy:GenericEntry = new GenericEntry(map.clone, map.size, isSampleEntry)
-  def cmp(e: GenericEntry) = GenericEntry.cmp(this, e)
+
 }
 
 object GenericEntry {
@@ -46,14 +46,14 @@ object GenericEntry {
   }
 }
 
-class GenericOps(val cols: List[Int] = List(), val orderByCol: Int = 0) extends EntryIdx[GenericEntry] {
+case class GenericOps(val cols: List[Int] = List()) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
     var h = 16;
     cols.foreach(i => h = h * 41 + e.map(i).hashCode())
     h
   }
 
-  def key_equal(e1: GenericEntry, e2: GenericEntry): Int = {
+  def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
     val colsToCompare = if (cols != Nil) cols.iterator else if (e1.map.size > e2.map.size) e2.map.keysIterator else e1.map.keysIterator
     for (i <- colsToCompare) {
       if (e1.map.get(i).get != e2.map.get(i).get) {
@@ -61,14 +61,6 @@ class GenericOps(val cols: List[Int] = List(), val orderByCol: Int = 0) extends 
       }
     }
     0
-  }
-
-  // compare entries for ordering
-  override def compare(e1: GenericEntry, e2: GenericEntry): Int = {
-    //TODO: SBJ: Fix: Only implemented for Integers
-    val v1 = e1.get[Int](orderByCol)
-    val v2 = e2.get[Int](orderByCol)
-    v1.compare(v2)
   }
 }
 

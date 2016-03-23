@@ -28,15 +28,15 @@ object TpccXactGenerator_SC {
 
     implicit val DSL = Context
 
-    //  type NewOrderEntry          = SEntry3 [Int,Int,Int]
-    //  type HistoryEntry           = SEntry8 [Int,Int,Int,Int,Int,Date,Float,String]
-    //  type WarehouseEntry         = SEntry9 [Int,             String,String,String,String,String,String,Float,Double]
-    //  type ItemEntry              = SEntry5 [Int,             Int,String,Float,String]
-    //  type OrderEntry             = SEntry8 [Int,Int,Int,     Int,Date,/*Option[Int]*/Int,Int,Boolean]
-    //  type DistrictEntry          = SEntry11[Int,Int,         String,String,String,String,String,String,Float,Double,Int]
-    //  type OrderLineEntry         = SEntry10[Int,Int,Int,Int, Int,Int,/*Option[Date]*/Date,Int,Float,String]
-    //  type CustomerEntry          = SEntry21[Int,Int,Int,     String,String,String,String,String,String,String,String,String,Date,String,Float,Float,Float,Float,Int,Int,String]
-    //  type StockEntry             = SEntry17[Int,Int,         Int,String,String,String,String,String,String,String,String,String,String,Int,Int,Int,String]
+    val NewOrderEntry = List("Int", "Int", "Int")
+    val HistoryEntry = List("Int", "Int", "Int", "Int", "Int", "Date", "Double", "String")
+    val WarehouseEntry = List("Int", "String", "String", "String", "String", "String", "String", "Double", "Double")
+    val ItemEntry = List("Int", "Int", "String", "Double", "String")
+    val OrderEntry = List("Int", "Int", "Int", "Int", "Date", /*Option[Int]*/ "Int", "Int", "Boolean")
+    val DistrictEntry = List("Int", "Int", "String", "String", "String", "String", "String", "String", "Double", "Double", "Int")
+    val OrderLineEntry = List("Int", "Int", "Int", "Int", "Int", "Int", /*Option[Date]*/ "Date", "Int", "Double", "String")
+    val CustomerEntry = List("Int", "Int", "Int", "String", "String", "String", "String", "String", "String", "String", "String", "String", "Date", "String", "Double", "Double", "Double", "Double", "Int", "Int", "String")
+    val StockEntry = List("Int", "Int", "Int", "String", "String", "String", "String", "String", "String", "String", "String", "String", "String", "Int", "Int", "Int", "String")
 
     val newOrderTbl = __newMStore[GenericEntry]
     val historyTbl = __newMStore[GenericEntry]
@@ -47,7 +47,7 @@ object TpccXactGenerator_SC {
     val orderLineTbl = __newMStore[GenericEntry]
     val customerTbl = __newMStore[GenericEntry]
     val stockTbl = __newMStore[GenericEntry]
-
+    val schema = List(newOrderTbl->NewOrderEntry, historyTbl->HistoryEntry, warehouseTbl->WarehouseEntry, itemTbl->ItemEntry, orderTbl->OrderEntry, districtTbl->DistrictEntry, orderLineTbl->OrderLineEntry, customerTbl->CustomerEntry, stockTbl->StockEntry)
 
     //TODO: SBJ: check index numbers
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
@@ -295,9 +295,9 @@ object TpccXactGenerator_SC {
       })
 
       val found_c_id = readVar(customerEntry).get[Int](unit(3))
-      val agg =  __newMirrorAggregator[GenericEntry]()
-      orderTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id),agg.gather)
-      val newestOrderEntry = agg.max(unit(1))
+      val agg = MirrorAggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
+      orderTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id), agg)
+      val newestOrderEntry = agg.result
       val dceBlocker = __newVar(unit(0))
       /*
 dsl"""
@@ -361,9 +361,9 @@ dsl"""
       val orderIDs = __newArray[Int](unit(10))
       val d_id = __newVar(unit(1))
       __whileDo(readVar(d_id) <= DIST_PER_WAREHOUSE, {
-        val agg = __newMirrorAggregator[GenericEntry]()
-        newOrderTbl.slice(unit(0) /*no_o_id*/ , GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), readVar(d_id), w_id),agg.gather)
-        val firstOrderEntry = agg.min(unit(1))
+        val agg = MirrorAggregator.min[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
+        newOrderTbl.slice(unit(0) /*no_o_id*/ , GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), readVar(d_id), w_id), agg)
+        val firstOrderEntry = agg.result
         __ifThenElse(firstOrderEntry __!= unit[GenericEntry](null), {
           // found
           val no_o_id = firstOrderEntry.get[Int](unit(1))
@@ -488,7 +488,7 @@ dsl"""
     val header =
       """
         |package tpcc.sc
-        |import ddbt.lib.store.{Store => MStore, _}
+        |import ddbt.lib.store.{Store => MStore, Aggregator => MirrorAggregator, _}
         |import scala.collection.mutable.{ArrayBuffer,Set}
         |import java.util.Date
         | """.stripMargin
@@ -501,6 +501,7 @@ dsl"""
     codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
     codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
     codeGen.analyzeIndices
+    codeGen.analyzeEntries(prog.schema.map(t =>(t._1.asInstanceOf[Sym[_]],t._2)))
     var codestr = codeGen.blockToDocument(initBlock).toString
     var i = codestr.lastIndexOf("()")
 

@@ -111,40 +111,6 @@ class IdxHash<E extends Entry> extends Idx<E> {
         if (e!=null) do { if (e.hash==h && ops.cmp(key,e.data)==0) f.apply(e.data); e=e.next; } while(e!=null);
     }
 
-    @Override
-    public E getSliceMin(E key, int col) {
-        E retE = null;
-        int h = ops.hash(key);
-        IdxHashEntry<E> e = data[h & (data.length - 1)];
-        if (e != null){
-            retE = e.data;
-            do {
-            if (e.hash == h && ops.cmp(key, e.data) == 0 && ops.colValCmp(col, retE, e.data) > 0) {
-                retE = e.data;
-            }
-            e = e.next;
-        } while (e != null);
-        }
-        return retE;
-    }
-
-    @Override
-    public E getSliceMax(E key, int col) {
-        E retE = null;
-        int h = ops.hash(key);
-        IdxHashEntry<E> e = data[h & (data.length - 1)];
-        if (e != null){
-            retE = e.data;
-            do {
-                if (e.hash == h && ops.cmp(key, e.data) == 0 && ops.colValCmp(col, retE, e.data) < 0) {
-                    retE = e.data;
-                }
-                e = e.next;
-            } while (e != null);
-        }
-        return retE;
-    }
-
     @Override public void range(E min, E max, boolean withMin, boolean withMax, Function1<E,Unit> f) {
         int cMin=withMin?-1:0; int cMax=withMax?1:0;
         for (int i=0,n=data.length;i<n;++i) { IdxHashEntry<E> e=data[i],em,en;

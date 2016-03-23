@@ -14,6 +14,6 @@ trait MirrorAggregator[E <: Entry] extends (E => Unit) {
   def result: E
 }
 object MirrorAggregator {
-  def minBy[E <: Entry](col: Int) : Aggregator[E] = ???
-  def maxBy[E <: Entry](col: Int) : Aggregator[E] = ???
+  def min[E <: Entry, R](f: E => R)(implicit order: Ordering[R]) : MirrorAggregator[E] = ???
+  def max[E <: Entry, R](f: E => R)(implicit order: Ordering[R]) : MirrorAggregator[E] = ???
 }

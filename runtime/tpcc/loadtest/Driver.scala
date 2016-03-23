@@ -80,7 +80,7 @@ class Driver(var conn: java.sql.Connection,
     while (loopConditionChecker(count)) {
       try {
         if (DEBUG) logger.debug("BEFORE runTransaction: sequence: " + sequence)
-
+        System.err.println("Transaction "+count)
         if (DETECT_LOCK_WAIT_TIMEOUTS) {
           val _sequence = sequence
           val t = new FutureTask[Any](new Callable[Any]() {

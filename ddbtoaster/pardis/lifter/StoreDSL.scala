@@ -13,7 +13,7 @@ import lifter.{SCLMSInterop, TypeToTypeRep}
   * Created by khayyam on 4/8/15.
   */
 
-trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BooleanComponent with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with MirrorAggregatorComponent{
+trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BooleanComponent with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with MirrorAggregatorComponent {
 
   implicit case object EntryType extends TypeRep[Entry] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = EntryType
