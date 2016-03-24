@@ -6,34 +6,36 @@ import java.util.Date
  class SCExecutor 
 {
   
-  val x1 = new MStore[SEntry3_III](1, Array[EntryIdx[SEntry3_III]](SEntry3_III_Idx0)) 
-  x1.index(0,IHash, false, 0)
+  val x1 = new MStore[SEntry3_III](2, Array[EntryIdx[SEntry3_III]](SEntry3_III_Idx0, SEntry3_III_Idx1)) 
+  x1.index(0, IHash, false, -1)
+  x1.index(1, ISliceHeapMin, false, 0)
   
   val x2 = new MStore[SEntry8_IIIIITDS](1, Array[EntryIdx[SEntry8_IIIIITDS]](SEntry8_IIIIITDS_Idx0)) 
-  x2.index(0,IHash, false, 0)
+  x2.index(0, IHash, false, -1)
   
   val x3 = new MStore[SEntry9_ISSSSSSDD](1, Array[EntryIdx[SEntry9_ISSSSSSDD]](SEntry9_ISSSSSSDD_Idx0)) 
-  x3.index(0,IHash, true, 0)
+  x3.index(0, IHash, true, -1)
   
   val x4 = new MStore[SEntry5_IISDS](1, Array[EntryIdx[SEntry5_IISDS]](SEntry5_IISDS_Idx0)) 
-  x4.index(0,IHash, true, 0)
+  x4.index(0, IHash, true, -1)
   
-  val x5 = new MStore[SEntry8_IIIITIIB](2, Array[EntryIdx[SEntry8_IIIITIIB]](SEntry8_IIIITIIB_Idx0, SEntry8_IIIITIIB_Idx1)) 
-  x5.index(0,IHash, true, 0)
-  x5.index(1,IHash, false, 1)
+  val x5 = new MStore[SEntry8_IIIITIIB](3, Array[EntryIdx[SEntry8_IIIITIIB]](SEntry8_IIIITIIB_Idx0, SEntry8_IIIITIIB_Idx1, SEntry8_IIIITIIB_Idx2)) 
+  x5.index(0, IHash, true, -1)
+  x5.index(1, IHash, false, -1)
+  x5.index(2, ISliceHeapMax, false, 1)
   
   val x6 = new MStore[SEntry11_IISSSSSSDDI](1, Array[EntryIdx[SEntry11_IISSSSSSDDI]](SEntry11_IISSSSSSDDI_Idx0)) 
-  x6.index(0,IHash, true, 0)
+  x6.index(0, IHash, true, -1)
   
   val x7 = new MStore[SEntry10_IIIIIITIDS](1, Array[EntryIdx[SEntry10_IIIIIITIDS]](SEntry10_IIIIIITIDS_Idx0)) 
-  x7.index(0,IHash, false, 0)
+  x7.index(0, IHash, false, -1)
   
   val x8 = new MStore[SEntry21_IIISSSSSSSSSTSDDDDIIS](2, Array[EntryIdx[SEntry21_IIISSSSSSSSSTSDDDDIIS]](SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx0, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx1)) 
-  x8.index(0,IHash, true, 0)
-  x8.index(1,IHash, false, 1)
+  x8.index(0, IHash, true, -1)
+  x8.index(1, IHash, false, -1)
   
   val x9 = new MStore[SEntry17_IIISSSSSSSSSSIIIS](1, Array[EntryIdx[SEntry17_IIISSSSSSSSSSIIIS]](SEntry17_IIISSSSSSSSSSIIIS_Idx0)) 
-  x9.index(0,IHash, true, 0)
+  x9.index(0, IHash, true, -1)
   
     val newOrderTxInst = new NewOrderTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
     val paymentTxInst = new PaymentTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
@@ -327,6 +329,61 @@ object SEntry3_III_Idx0 extends EntryIdx[SEntry3_III] {
 
                 
 
+object SEntry3_III_Idx1 extends EntryIdx[SEntry3_III] {
+   override def cmp(x1339:SEntry3_III, x1340: SEntry3_III) = {
+  val x1341 = x1339._1
+  val x1342 = x1340._1
+  val x1343 = x1341.==(x1342)
+  val x1346 = if(x1343) 
+  {
+    0
+  }
+  else
+  {
+    val x1344 = x1341.>(x1342)
+    val x1345 = if(x1344) 
+    {
+      1
+    }
+    else
+    {
+      -1
+    }
+    
+    x1345
+  }
+  
+  x1346
+}
+   override def hash(e: SEntry3_III) = {
+      var hash:Int = 0xcafebabe
+      var mix:Int = 0
+      mix = e._2.hashCode * 0xcc9e2d51
+      mix = (mix << 15) | (mix >>> -15)
+      mix *= 0x1b873593
+      mix ^= hash
+      mix = (mix << 13) | (mix >>> -13)
+      hash = mix * 5 + 0xe6546b64
+                     
+      mix = e._3.hashCode * 0xcc9e2d51
+      mix = (mix << 15) | (mix >>> -15)
+      mix *= 0x1b873593
+      mix ^= hash
+      mix = (mix << 13) | (mix >>> -13)
+      hash = mix * 5 + 0xe6546b64
+                     
+      hash ^= 2
+      hash ^= hash >>> 16
+      hash *= 0x85ebca6b
+      hash ^= hash >>> 13
+      hash *= 0xc2b2ae35
+      hash ^= hash >>> 16
+      hash
+      }
+}
+
+                
+
 case class SEntry17_IIISSSSSSSSSSIIIS(var _1: Int, var _2: Int, var _3: Int, var _4: String, var _5: String, var _6: String, var _7: String, var _8: String, var _9: String, var _10: String, var _11: String, var _12: String, var _13: String, var _14: Int, var _15: Int, var _16: Int, var _17: String)  extends Entry(17){
    def copy = SEntry17_IIISSSSSSSSSSIIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17)
  }
@@ -410,6 +467,68 @@ object SEntry8_IIIITIIB_Idx0 extends EntryIdx[SEntry8_IIIITIIB] {
 
 object SEntry8_IIIITIIB_Idx1 extends EntryIdx[SEntry8_IIIITIIB] {
    override def cmp(e1: SEntry8_IIIITIIB, e2: SEntry8_IIIITIIB) = if(e1._2 == e2._2 && e1._3 == e2._3 && e1._4 == e2._4) 0 else 1
+   override def hash(e: SEntry8_IIIITIIB) = {
+      var hash:Int = 0xcafebabe
+      var mix:Int = 0
+      mix = e._2.hashCode * 0xcc9e2d51
+      mix = (mix << 15) | (mix >>> -15)
+      mix *= 0x1b873593
+      mix ^= hash
+      mix = (mix << 13) | (mix >>> -13)
+      hash = mix * 5 + 0xe6546b64
+                     
+      mix = e._3.hashCode * 0xcc9e2d51
+      mix = (mix << 15) | (mix >>> -15)
+      mix *= 0x1b873593
+      mix ^= hash
+      mix = (mix << 13) | (mix >>> -13)
+      hash = mix * 5 + 0xe6546b64
+                     
+      mix = e._4.hashCode * 0xcc9e2d51
+      mix = (mix << 15) | (mix >>> -15)
+      mix *= 0x1b873593
+      mix ^= hash
+      mix = (mix << 13) | (mix >>> -13)
+      hash = mix * 5 + 0xe6546b64
+                     
+      hash ^= 2
+      hash ^= hash >>> 16
+      hash *= 0x85ebca6b
+      hash ^= hash >>> 13
+      hash *= 0xc2b2ae35
+      hash ^= hash >>> 16
+      hash
+      }
+}
+
+                
+
+object SEntry8_IIIITIIB_Idx2 extends EntryIdx[SEntry8_IIIITIIB] {
+   override def cmp(x1347:SEntry8_IIIITIIB, x1348: SEntry8_IIIITIIB) = {
+  val x1349 = x1347._1
+  val x1350 = x1348._1
+  val x1351 = x1349.==(x1350)
+  val x1354 = if(x1351) 
+  {
+    0
+  }
+  else
+  {
+    val x1352 = x1349.>(x1350)
+    val x1353 = if(x1352) 
+    {
+      1
+    }
+    else
+    {
+      -1
+    }
+    
+    x1353
+  }
+  
+  x1354
+}
    override def hash(e: SEntry8_IIIITIIB) = {
       var hash:Int = 0xcafebabe
       var mix:Int = 0

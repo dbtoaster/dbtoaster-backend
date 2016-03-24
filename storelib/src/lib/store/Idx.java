@@ -24,8 +24,6 @@ public abstract class Idx<E extends Entry> {
     public E get(E key) { w("get"); return null; } // returns the first element only
     public void foreach(Function1<E,Unit> f) { w("foreach"); } // on all elements; warning: what about reordering updates?
     public void slice(E key,Function1<E,Unit> f) { w("slice"); } // foreach on a slice
-    public E getSliceMin(E key, int col) { w("getSliceMin"); return null;} // get min in a slice ordered by a particular column
-    public E getSliceMax(E key, int col) { w("getSliceMax"); return null;} // get max in a slice ordered by a particular column
     public void range(E min, E max, boolean withMin, boolean withMax, Function1<E,Unit> f) { w("range"); }
     public void clear() { w("clear"); }
     public void compact() { w("compact"); }
@@ -110,7 +108,6 @@ class IdxHash<E extends Entry> extends Idx<E> {
     @Override public void slice(E key,Function1<E,Unit> f) { int h=ops.hash(key); IdxHashEntry<E> e=data[h&(data.length-1)];
         if (e!=null) do { if (e.hash==h && ops.cmp(key,e.data)==0) f.apply(e.data); e=e.next; } while(e!=null);
     }
-
     @Override public void range(E min, E max, boolean withMin, boolean withMax, Function1<E,Unit> f) {
         int cMin=withMin?-1:0; int cMax=withMax?1:0;
         for (int i=0,n=data.length;i<n;++i) { IdxHashEntry<E> e=data[i],em,en;
@@ -200,14 +197,4 @@ class IdxList<E extends Entry> extends Idx<E> {
     @Override public void slice(E key,Function1<E,Unit> f) { E p=head; if (p!=null) do { E n=(E)p.data[idx]; if (ops.cmp(key,p)==0) f.apply(p); p=n; } while(p!=null); }
     @Override public void clear() { head=null; tail=null; }
     @Override public void compact() {} // nothing to do
-
-    @Override
-    public E getSliceMax(E key, int col) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
-    public E getSliceMin(E key, int col) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
 }
