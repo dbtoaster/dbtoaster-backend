@@ -264,33 +264,38 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
     Document.text(EntryAnalysis.typeName)
   else super.tpeToDocument(tp)
 
+  val aggResultMap = collection.mutable.HashMap[Sym[_], Document]()
+
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
     case Statement(sym, MStoreNew2()) => generateNewStore(sym, None)
     case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
     case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
 
     //TODO: SBJ: Fix: need to replace the agg.result with store.get
-//    case st@Statement(sym, MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(MirrorAggregatorMaxObject(_)))) if IndexAnalysis.enabled => {
-//      val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
-//      val idx = indexes(store.asInstanceOf[Sym[_]]).find(i => i.cols == cols && i.f != null && (i.tp == ISliceMax || i.tp == ISliceHeapMax)) match {
-//        case Some(Index(id, _, _, _, _, _, _)) => id
-//      }
-//      doc"val $sym = $store.get($idx, $key)"
-//    }
-//
-//
-//    case st@Statement(sym, MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(MirrorAggregatorMinObject(_)))) if IndexAnalysis.enabled => {
-//      val cols = args.zipWithIndex.collect {
-//        case (Constant(v: Int), i) if i < args.size / 2 => v
-//      }
-//      val idx = indexes(store.asInstanceOf[Sym[_]]).find(i => i.cols == cols && i.f != null && (i.tp == ISliceMin || i.tp == ISliceHeapMin)) match {
-//        case Some(Index(id, _, _, _, _, sf, _)) => id
-//      }
-//      doc"val $sym = $store.get($idx, $key)"
-//    }
+    case Statement(sym, MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(MirrorAggregatorMaxObject(_)))) if IndexAnalysis.enabled => {
+      val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
+      val idx = indexes(store.asInstanceOf[Sym[_]]).find(i => i.cols == cols && i.f != null && (i.tp == ISliceMax || i.tp == ISliceHeapMax)) match {
+        case Some(Index(id, _, _, _, _, _, _)) => id
+      }
+      aggResultMap += agg.asInstanceOf[Sym[_]] -> doc"$store.get($idx, $key)"
+      Document.empty
+    }
 
 
-    case st@Statement(sym, MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), f@_)) if IndexAnalysis.enabled => {
+    case Statement(sym, MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(MirrorAggregatorMinObject(_)))) if IndexAnalysis.enabled => {
+      val cols = args.zipWithIndex.collect {
+        case (Constant(v: Int), i) if i < args.size / 2 => v
+      }
+      val idx = indexes(store.asInstanceOf[Sym[_]]).find(i => i.cols == cols && i.f != null && (i.tp == ISliceMin || i.tp == ISliceHeapMin)) match {
+        case Some(Index(id, _, _, _, _, sf, _)) => id
+      }
+      aggResultMap += agg.asInstanceOf[Sym[_]] -> doc"$store.get($idx, $key)"
+      Document.empty
+    }
+
+    case Statement(sym, MirrorAggregatorResult(agg@Sym(_, _))) => doc"val $sym = ${aggResultMap(agg)}"
+
+    case Statement(sym, MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), f@_)) if IndexAnalysis.enabled => {
       val cols = args.zipWithIndex.collect {
         case (Constant(v: Int), i) if i < args.size / 2 => v
       }
@@ -386,7 +391,7 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
           count = count + 1
         case _ =>
       }
-      //TODO: SBJ: Fix INone cannot be index 0, using IHash temporarily
+//TODO: SBJ: Fix: INone cannot be index0 nor can ISliceHeap
       IndexAnalysis.maxSliceIndex.get(c) match {
         case Some(ll) => ll.foreach { case (l, f) => indexes getOrElseUpdate(c, collection.mutable.ArrayBuffer[Index[_]]()) +=(Index(count, l.toList, IHash, false), Index(count + 1, l.toList, ISliceHeapMax, false, count, f.f, f.typeS.asInstanceOf[TypeRep[Any]])); count = count + 2 }
         case _ =>
@@ -400,13 +405,7 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
         indexes += c -> collection.mutable.ArrayBuffer(Index(0, List(), IHash, false))
     }
     val entryidxes = indexes(c).zipWithIndex.map(t => EntryIndex(entry, t._1, t._2))
-    def generateNew: String = s"new MStore[${
-      entry.name
-    }](" + indexes(c).size + s", Array[EntryIdx[${
-      entry.name
-    }]](${
-      entryidxes.map(_.instance).mkString(", ")
-    }))"
+    def generateNew: String = s"new MStore[${entry.name}]" +      s"(" + indexes(c).size + s", Array[EntryIdx[${entry.name}]](${entryidxes.map(_.instance).mkString(", ")}))"
     entries += c -> entry
     val symbolName = c.name + c.id
     val mapAlias = mname match {

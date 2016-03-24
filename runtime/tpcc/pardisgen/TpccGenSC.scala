@@ -919,8 +919,7 @@ def apply(x10: Boolean, x11: Date, x12: Int, x13: Int) = {
     val x21 = MirrorAggregator.min(x20)
     val x22 = x15
     val x24 = SEntry3_III(null.asInstanceOf[Int], x22, x12)
-    val x25 = x1.slice(0, x24, x21)
-    val x26 = x21.result
+    val x26 = x1.get(1, x24)
     val x27 = x26.!=(null)
     val x64 = if(x27) 
     {
@@ -1269,8 +1268,7 @@ def apply(x167: Boolean, x168: Date, x169: Int, x170: Int, x171: Int, x172: Int,
   }
   val x215 = MirrorAggregator.max(x214)
   val x217 = SEntry8_IIIITIIB(null.asInstanceOf[Int], x171, x170, x211, null.asInstanceOf[Date], null.asInstanceOf[Int], null.asInstanceOf[Int], null.asInstanceOf[Boolean])
-  val x218 = x5.slice(1, x217, x215)
-  val x219 = x215.result
+  val x219 = x5.get(2, x217)
   var x220: Int = 0
   1
 }
