@@ -237,11 +237,12 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     //store.foreach{e => if(GenericEntry.cmp(sampleEntry, e) == 0) func(e)}
     //    x.slice(unit(0), key, __lambda(f))
 
-    x.foreach(__lambda { e => __ifThenElse(infix_==(key.cmp(e.asInstanceOf[Rep[GenericEntry]]), unit(0)), f(e), unit()) })
+    //x.foreach(__lambda { e => __ifThenElse(infix_==(key.cmp(e.asInstanceOf[Rep[GenericEntry]]), unit(0)), f(e), unit()) })
+    x.slice(unit(idx), key, f)
 
   }
 
-  def stSlice[E <: Entry : TypeRep](x: Rep[Store[E]], f: Rep[E] => Rep[Unit], args: (Int, Rep[Any])*): Rep[Unit] = stSlice(x, -1, stSampleEntry(x, args), f)
+  def stSlice[E <: Entry : TypeRep](x: Rep[Store[E]], f: Rep[E] => Rep[Unit], args: (Int, Rep[Any])*): Rep[Unit] = stSlice(x, 0, stSampleEntry(x, args), f)
 
   // FIXME
   def store2StoreOpsCls[E <: Entry](store: Rep[Store[E]]) = new MStoreRep(store.asInstanceOf[Rep[MStore[E]]])(runtimeType[Int].asInstanceOf[TypeRep[E]])

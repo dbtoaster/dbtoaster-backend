@@ -21,7 +21,6 @@ class MirrorGenericEntry {
 
   def get[E](i: Int): E = ???
 
-  def cmp(e: GenericEntry): Int = ???
 
   //  def copy:Entry = ???
 }

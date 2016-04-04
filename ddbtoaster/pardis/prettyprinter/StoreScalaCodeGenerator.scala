@@ -416,6 +416,6 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
     }
     s"\nval $symbolName = $generateNew \n" +
       indexes(c).map(i => symbolName + s".index($i)").mkString("\n") +
-      s"$mapAlias"
+      s"\n$mapAlias"
   }
 }
