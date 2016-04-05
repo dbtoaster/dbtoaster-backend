@@ -16,6 +16,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
   import ManifestHelper.{man,zero,manEntry,manStore}
   import impl.Rep
 
+  // When this optimization is on, generated code might fail to compile in some cases 
+  val UNSAFE_OPTIMIZATION_SKIP_INDEX_TRANSFORMERS = true
   
   //----------
   case class MapInfo(name: String, tp: Type, keys: List[(String, Type)], 
@@ -202,8 +204,12 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
         distRef.isTemp = true
         Statement(distRef, ScatterTransformer(toPartitionStmt.lhsMap, pkeys), None, OpSet, LocalMode)
       }
-      val toStoreStmt = Statement.transformToIndex("scatter", scatterStmt.lhsMap)
-      localStmt ++ List(toPartitionStmt, scatterStmt, toStoreStmt)
+      if (UNSAFE_OPTIMIZATION_SKIP_INDEX_TRANSFORMERS) 
+        localStmt ++ List(toPartitionStmt, scatterStmt)
+      else {
+        val toStoreStmt = Statement.transformToIndex("scatter", scatterStmt.lhsMap)
+        localStmt ++ List(toPartitionStmt, scatterStmt, toStoreStmt)
+      }
     }
 
     def createRepartition(expr: Expr, pkeys: List[(String, Type)]): List[Statement] = {
@@ -246,8 +252,12 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
         distRef.isTemp = true
         Statement(distRef, RepartitionTransformer(srcToPartitionStmt.lhsMap, pkeys), None, OpSet, LocalMode)
       }
-      val dstToIndexStmt = Statement.transformToIndex("repartition", repartitionStmt.lhsMap)
-      (distSrcStmt ++ List(srcToPartitionStmt, repartitionStmt, dstToIndexStmt))
+      if (UNSAFE_OPTIMIZATION_SKIP_INDEX_TRANSFORMERS) 
+        (distSrcStmt ++ List(srcToPartitionStmt, repartitionStmt))
+      else {
+        val dstToIndexStmt = Statement.transformToIndex("repartition", repartitionStmt.lhsMap)
+        (distSrcStmt ++ List(srcToPartitionStmt, repartitionStmt, dstToIndexStmt))
+      }
     }
 
     def createGather(expr: Expr): List[Statement] = {
@@ -289,8 +299,12 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
           partRef.isTemp = true
           Statement(partRef, GatherTransformer(toLogStmt.lhsMap), None, OpSet, LocalMode)
         }
-        val toIndexStmt = Statement.transformToIndex("gather", gatherStmt.lhsMap)
-        distStmt ++ List(toLogStmt, gatherStmt, toIndexStmt)
+        if (UNSAFE_OPTIMIZATION_SKIP_INDEX_TRANSFORMERS)
+          distStmt ++ List(toLogStmt, gatherStmt) 
+        else {
+          val toIndexStmt = Statement.transformToIndex("gather", gatherStmt.lhsMap)
+          distStmt ++ List(toLogStmt, gatherStmt, toIndexStmt)
+        }
     }
   }
 
