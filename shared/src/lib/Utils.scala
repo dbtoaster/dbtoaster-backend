@@ -192,7 +192,7 @@ object Utils {
     val homeDir = prop.getProperty("spark.home.dir")
     val masterURL = prop.getProperty("spark.master.url")
     val driverMemory = prop.getProperty("spark.driver.memory")
-    val numExecutors = prop.getProperty("spark.partitions.num")
+    val numExecutors = prop.getProperty("spark.executors.num")
     val execMemory = prop.getProperty("spark.executor.memory")
     val execCores = prop.getProperty("spark.executor.cores")
 
@@ -455,5 +455,10 @@ object Utils {
       }
     }
     queryName
+  }
+
+  def nonNegativeMod(x: Int, mod: Int): Int = {
+    val rawMod = x % mod
+    rawMod + (if (rawMod < 0) mod else 0)
   }
 }

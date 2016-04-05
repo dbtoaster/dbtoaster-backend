@@ -94,7 +94,7 @@ class GlobalMapContext[A](
   val partitioner = new HashPartitioner(numPartitions)
 
   val rdd =
-    sc.parallelize(0 until numPartitions)
+    sc.parallelize(0 until numPartitions, numPartitions)
       .map(x => (x, x))
       .partitionBy(partitioner)
       .mapValues(localContext)
@@ -105,7 +105,7 @@ class GlobalMapContext[A](
 
   def materialize() = {
     rdd.persist(org.apache.spark.storage.StorageLevel.MEMORY_ONLY)
-    sc.runJob(rdd, (iter: Iterator[_]) => {})
+    rdd.count
   }
 
   def unmaterialize() = rdd.unpersist(true)
@@ -176,11 +176,13 @@ class GlobalMapContext[A](
 
     streams.zipWithIndex.map {
       case ((path, (name, schema, sep, del)), streamId) =>
-        sc.textFile(path, numPartitions).repartition(numPartitions).mapPartitions(it => {
+        sc.textFile(path, numPartitions)
+          .repartition(numPartitions)
+          .mapPartitions(it => {
             val adaptor = new Adaptor.CSV(name, schema, sep, del)
             it.flatMap(s => adaptor.apply(s).map {
               case OrderedInputEvent(ord, TupleEvent(op, stream, data)) => data })
-        }, true)
+          }, true)
     }                         
   }
 }
