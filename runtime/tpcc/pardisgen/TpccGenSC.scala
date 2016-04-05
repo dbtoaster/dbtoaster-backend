@@ -7,35 +7,44 @@ import java.util.Date
 {
   
   val x1 = new MStore[SEntry3_III](2, Array[EntryIdx[SEntry3_III]](SEntry3_III_Idx0, SEntry3_III_Idx1)) 
-  x1.index(0, IHash, false, -1)
-  x1.index(1, ISliceHeapMin, false, 0)
+  x1.index(0, ISliceHeapMin, false, 1)
+  x1.index(1, INone, false, -1)
+  
   
   val x2 = new MStore[SEntry8_IIIIITDS](1, Array[EntryIdx[SEntry8_IIIIITDS]](SEntry8_IIIIITDS_Idx0)) 
-  x2.index(0, IHash, false, -1)
+  x2.index(0, IList, false, -1)
+  
   
   val x3 = new MStore[SEntry9_ISSSSSSDD](1, Array[EntryIdx[SEntry9_ISSSSSSDD]](SEntry9_ISSSSSSDD_Idx0)) 
   x3.index(0, IHash, true, -1)
   
+  
   val x4 = new MStore[SEntry5_IISDS](1, Array[EntryIdx[SEntry5_IISDS]](SEntry5_IISDS_Idx0)) 
   x4.index(0, IHash, true, -1)
   
+  
   val x5 = new MStore[SEntry8_IIIITIIB](3, Array[EntryIdx[SEntry8_IIIITIIB]](SEntry8_IIIITIIB_Idx0, SEntry8_IIIITIIB_Idx1, SEntry8_IIIITIIB_Idx2)) 
   x5.index(0, IHash, true, -1)
-  x5.index(1, IHash, false, -1)
-  x5.index(2, ISliceHeapMax, false, 1)
+  x5.index(1, ISliceHeapMax, false, 2)
+  x5.index(2, INone, false, -1)
+  
   
   val x6 = new MStore[SEntry11_IISSSSSSDDI](1, Array[EntryIdx[SEntry11_IISSSSSSDDI]](SEntry11_IISSSSSSDDI_Idx0)) 
   x6.index(0, IHash, true, -1)
   
+  
   val x7 = new MStore[SEntry10_IIIIIITIDS](1, Array[EntryIdx[SEntry10_IIIIIITIDS]](SEntry10_IIIIIITIDS_Idx0)) 
   x7.index(0, IHash, false, -1)
+  
   
   val x8 = new MStore[SEntry21_IIISSSSSSSSSTSDDDDIIS](2, Array[EntryIdx[SEntry21_IIISSSSSSSSSTSDDDDIIS]](SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx0, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx1)) 
   x8.index(0, IHash, true, -1)
   x8.index(1, IHash, false, -1)
   
+  
   val x9 = new MStore[SEntry17_IIISSSSSSSSSSIIIS](1, Array[EntryIdx[SEntry17_IIISSSSSSSSSSIIIS]](SEntry17_IIISSSSSSSSSSIIIS_Idx0)) 
   x9.index(0, IHash, true, -1)
+  
   
     val newOrderTxInst = new NewOrderTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
     val paymentTxInst = new PaymentTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
@@ -299,7 +308,31 @@ case class SEntry3_III(var _1: Int, var _2: Int, var _3: Int)  extends Entry(3){
       
 
 object SEntry3_III_Idx0 extends EntryIdx[SEntry3_III] {
-   override def cmp(e1: SEntry3_III, e2: SEntry3_III) = if(e1._2 == e2._2 && e1._3 == e2._3) 0 else 1
+   override def cmp(x1339:SEntry3_III, x1340: SEntry3_III) = {
+  val x1341 = x1339._1
+  val x1342 = x1340._1
+  val x1343 = x1341.==(x1342)
+  val x1346 = if(x1343) 
+  {
+    0
+  }
+  else
+  {
+    val x1344 = x1341.>(x1342)
+    val x1345 = if(x1344) 
+    {
+      1
+    }
+    else
+    {
+      -1
+    }
+    
+    x1345
+  }
+  
+  x1346
+}
    override def hash(e: SEntry3_III) = {
       var hash:Int = 0xcafebabe
       var mix:Int = 0
@@ -330,31 +363,7 @@ object SEntry3_III_Idx0 extends EntryIdx[SEntry3_III] {
                 
 
 object SEntry3_III_Idx1 extends EntryIdx[SEntry3_III] {
-   override def cmp(x1339:SEntry3_III, x1340: SEntry3_III) = {
-  val x1341 = x1339._1
-  val x1342 = x1340._1
-  val x1343 = x1341.==(x1342)
-  val x1346 = if(x1343) 
-  {
-    0
-  }
-  else
-  {
-    val x1344 = x1341.>(x1342)
-    val x1345 = if(x1344) 
-    {
-      1
-    }
-    else
-    {
-      -1
-    }
-    
-    x1345
-  }
-  
-  x1346
-}
+   override def cmp(e1: SEntry3_III, e2: SEntry3_III) = if(e1._2 == e2._2 && e1._3 == e2._3) 0 else 1
    override def hash(e: SEntry3_III) = {
       var hash:Int = 0xcafebabe
       var mix:Int = 0
@@ -466,7 +475,31 @@ object SEntry8_IIIITIIB_Idx0 extends EntryIdx[SEntry8_IIIITIIB] {
                 
 
 object SEntry8_IIIITIIB_Idx1 extends EntryIdx[SEntry8_IIIITIIB] {
-   override def cmp(e1: SEntry8_IIIITIIB, e2: SEntry8_IIIITIIB) = if(e1._2 == e2._2 && e1._3 == e2._3 && e1._4 == e2._4) 0 else 1
+   override def cmp(x1347:SEntry8_IIIITIIB, x1348: SEntry8_IIIITIIB) = {
+  val x1349 = x1347._1
+  val x1350 = x1348._1
+  val x1351 = x1349.==(x1350)
+  val x1354 = if(x1351) 
+  {
+    0
+  }
+  else
+  {
+    val x1352 = x1349.>(x1350)
+    val x1353 = if(x1352) 
+    {
+      1
+    }
+    else
+    {
+      -1
+    }
+    
+    x1353
+  }
+  
+  x1354
+}
    override def hash(e: SEntry8_IIIITIIB) = {
       var hash:Int = 0xcafebabe
       var mix:Int = 0
@@ -504,31 +537,7 @@ object SEntry8_IIIITIIB_Idx1 extends EntryIdx[SEntry8_IIIITIIB] {
                 
 
 object SEntry8_IIIITIIB_Idx2 extends EntryIdx[SEntry8_IIIITIIB] {
-   override def cmp(x1347:SEntry8_IIIITIIB, x1348: SEntry8_IIIITIIB) = {
-  val x1349 = x1347._1
-  val x1350 = x1348._1
-  val x1351 = x1349.==(x1350)
-  val x1354 = if(x1351) 
-  {
-    0
-  }
-  else
-  {
-    val x1352 = x1349.>(x1350)
-    val x1353 = if(x1352) 
-    {
-      1
-    }
-    else
-    {
-      -1
-    }
-    
-    x1353
-  }
-  
-  x1354
-}
+   override def cmp(e1: SEntry8_IIIITIIB, e2: SEntry8_IIIITIIB) = if(e1._2 == e2._2 && e1._3 == e2._3 && e1._4 == e2._4) 0 else 1
    override def hash(e: SEntry8_IIIITIIB) = {
       var hash:Int = 0xcafebabe
       var mix:Int = 0
@@ -919,7 +928,7 @@ def apply(x10: Boolean, x11: Date, x12: Int, x13: Int) = {
     val x21 = MirrorAggregator.min(x20)
     val x22 = x15
     val x24 = SEntry3_III(null.asInstanceOf[Int], x22, x12)
-    val x26 = x1.get(1, x24)
+    val x26 = x1.get(0, x24)
     val x27 = x26.!=(null)
     val x64 = if(x27) 
     {
@@ -1268,7 +1277,7 @@ def apply(x167: Boolean, x168: Date, x169: Int, x170: Int, x171: Int, x172: Int,
   }
   val x215 = MirrorAggregator.max(x214)
   val x217 = SEntry8_IIIITIIB(null.asInstanceOf[Int], x171, x170, x211, null.asInstanceOf[Date], null.asInstanceOf[Int], null.asInstanceOf[Int], null.asInstanceOf[Boolean])
-  val x219 = x5.get(2, x217)
+  val x219 = x5.get(1, x217)
   var x220: Int = 0
   1
 }

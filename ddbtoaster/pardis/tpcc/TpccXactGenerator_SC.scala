@@ -49,7 +49,6 @@ object TpccXactGenerator_SC {
     val stockTbl = __newMStore[GenericEntry]
     val schema = List(newOrderTbl->NewOrderEntry, historyTbl->HistoryEntry, warehouseTbl->WarehouseEntry, itemTbl->ItemEntry, orderTbl->OrderEntry, districtTbl->DistrictEntry, orderLineTbl->OrderLineEntry, customerTbl->CustomerEntry, stockTbl->StockEntry)
 
-    //TODO: SBJ: check index numbers
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
 
       __ifThenElse(showOutput, {
@@ -476,9 +475,12 @@ dsl"""
 
   def main(args: Array[String]): Unit = {
 
-
+    var analyzeEntry = true
+    var analyzeIndex = true
     var prog: Prog = null
-
+    import java.nio.file.Files.copy
+    import java.nio.file.Paths.get
+    import java.nio.file.StandardCopyOption.REPLACE_EXISTING
     //    (new Impl("./lms/tpcc/lmsgen/TpccBench.scala", "tpcc.lmsgen") with Prog).emitAll()
     val initBlock = reifyBlock {
       prog = new Prog(Context)
@@ -492,7 +494,8 @@ dsl"""
         |import scala.collection.mutable.{ArrayBuffer,Set}
         |import java.util.Date
         | """.stripMargin
-    val file = new PrintWriter("../runtime/tpcc/pardisgen/TpccGenSC.scala")
+    val genDir = "../runtime/tpcc/pardisgen"
+    val file = new PrintWriter(s"$genDir/TpccGenSC.scala")
 
     val global = List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl)
     codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
@@ -500,8 +503,14 @@ dsl"""
     codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, "OrderStatusTx")
     codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
     codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
-    codeGen.analyzeIndices
-    codeGen.analyzeEntries(prog.schema.map(t =>(t._1.asInstanceOf[Sym[_]],t._2)))
+    implicit  def toPath (filename: String) = get(filename)
+    if(analyzeIndex)  codeGen.analyzeIndices
+    if(analyzeEntry) {
+      codeGen.analyzeEntries(prog.schema.map(t =>(t._1.asInstanceOf[Sym[_]],t._2)))
+      copy(s"$genDir/SCTxSplEntry.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)
+    }else{
+      copy(s"$genDir/SCTxGenEntry.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)
+    }
     var codestr = codeGen.blockToDocument(initBlock).toString
     var i = codestr.lastIndexOf("()")
 

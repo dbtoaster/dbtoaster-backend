@@ -142,6 +142,12 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
     private Idx<E>[] idxs;
     private EntryIdx<E> ops2;
     IdxSliced(Store<E> st, int cmpIdx, int sliceIdx, boolean max) { super(st,sliceIdx,true); ops2=st.ops()[cmpIdx]; this.idxs=st.idxs(); cmpIdx=cmpIdx; cmpRes=max?1:-1; }
+
+    @Override
+    public void unsafeInsert(E e) {
+        insert(e);
+    }
+
     @Override public void insert(E e) {
         if (size==threshold) _resize();
         int h=ops.hash(e), b=h&(data.length-1);
@@ -180,6 +186,10 @@ class IdxList<E extends Entry> extends Idx<E> {
     IdxList(Store<E> st, int idx, boolean unique) { super(st,idx,unique); }
     private E head=null;
     private E tail=null;
+    @Override
+    public void unsafeInsert(E e) {
+        insert(e);
+    }
     @Override public void insert(E e) {
         if (unique && head!=null) { if (e==head) { head=(E)head.data[idx]; if (e==tail) tail=null; }
         else { E p=head; do { E n=(E)p.data[idx]; if (e==n) { p.data[idx]=n.data[idx]; if (n==tail) tail=p; return; } p=n; } while(p!=null); }

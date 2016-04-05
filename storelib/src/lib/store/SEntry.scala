@@ -75,6 +75,15 @@ case class GenericOps(val cols: List[Int] = List()) extends EntryIdx[GenericEntr
     0
   }
 }
+case class GenericCmp[R](val f: GenericEntry => R)(implicit order: Ordering[R]) extends EntryIdx[GenericEntry] {
+  def hash(e: GenericEntry): Int = {
+    16
+  }
+
+  def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
+        order.compare(f(e1), f(e2))
+  }
+}
 
 abstract class SEntry2[T1: Manifest, T2: Manifest] extends Entry(2)
 

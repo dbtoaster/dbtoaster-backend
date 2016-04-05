@@ -214,30 +214,8 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   def stDelete[E <: Entry : TypeRep](x: Rep[Store[E]], e: Rep[E]): Rep[Unit] = x.delete(e) //StDelete[E](x, e)
 
-  // TODO FIXME
-  def stSlice[E <: Entry : TypeRep](x: Rep[Store[E]], idx_in: Int, key: Rep[E], f: Rep[E] => Rep[Unit]): Rep[Unit] = {
-    var idx = idx_in
-    //    key match {
-    //      case Def(Reflect(SteSampleSEntry(_, args),_,_)) => addIndicesToEntryClass[E](x, (xx, m) => {
-    //        val tupVal = ((IHash,args.map(_._1),false,-1))
-    //        idx = m.indexOf(tupVal)
-    //        if(idx < 0) {
-    //          m += tupVal
-    //          idx = m.size - 1
-    //        }
-    //      })x
-    //      case tp@_ => throw new GenerationFailedException("You should provide a sample entry to this method: Store.slice, not a " + Def.unapply(tp))
-    //    }
-    //    println(unit("helloooo"))
-    //    val blkSym = fresh[E]
-    //    val blk = reifyBlock(f(blkSym))
-    //    StSlice[E](x, idx, key, blkSym, blk)
-    //    blk
 
-    //store.foreach{e => if(GenericEntry.cmp(sampleEntry, e) == 0) func(e)}
-    //    x.slice(unit(0), key, __lambda(f))
-
-    //x.foreach(__lambda { e => __ifThenElse(infix_==(key.cmp(e.asInstanceOf[Rep[GenericEntry]]), unit(0)), f(e), unit()) })
+  def stSlice[E <: Entry : TypeRep](x: Rep[Store[E]], idx: Int, key: Rep[E], f: Rep[E] => Rep[Unit]): Rep[Unit] = {
     x.slice(unit(idx), key, f)
 
   }
