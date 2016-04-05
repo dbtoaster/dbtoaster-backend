@@ -76,10 +76,10 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
     val systemReadyBlocks = createBlocks(optSystemReadyStmts)
 
     // Optimize statement blocks
-    val optUpdateBlocks = Optimizer.optBlockFusion(updateBlocks)
-    //optUpdateBlocks.map(b => java.lang.System.err.println("UPDATE\n" + b.toString))
-    val optSystemReadyBlocks = Optimizer.optBlockFusion(systemReadyBlocks)
-    //optSystemReadyBlocks.map(b => java.lang.System.err.println("SYSREADY\n" + b.toString))
+    val optUpdateBlocks = Optimizer.optimizeBlocks(updateBlocks)
+    // optUpdateBlocks.map(b => java.lang.System.err.println("UPDATE\n" + b.toString))
+    val optSystemReadyBlocks = Optimizer.optimizeBlocks(systemReadyBlocks)
+    // optSystemReadyBlocks.map(b => java.lang.System.err.println("SYSREADY\n" + b.toString))
 
     // Remove unused maps
     val referencedMaps = 
