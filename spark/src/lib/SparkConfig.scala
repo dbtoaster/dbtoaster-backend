@@ -50,6 +50,9 @@ class SparkConfig(input: InputStream) {
 //      .set("spark.shuffle.file.buffer.kb", "10000")
 //      .set("spark.shuffle.spill.compress", "false")
 //      .set("spark.rdd.compress", "false")     
+//      .set("spark.scheduler.mode", "FAIR")
+
+      .set("spark.locality.wait", "30s")
 
     if (sparkEventLogEnabled != null) {
       conf.set("spark.eventLog.enabled", sparkEventLogEnabled)
