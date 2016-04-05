@@ -18,6 +18,8 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
 
   // When this optimization is on, generated code might fail to compile in some cases 
   val UNSAFE_OPTIMIZATION_SKIP_INDEX_TRANSFORMERS = true
+  // Use static arrays for input batches; only foreach supported
+  val UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH = true
   
   //----------
   case class MapInfo(name: String, tp: Type, keys: List[(String, Type)], 

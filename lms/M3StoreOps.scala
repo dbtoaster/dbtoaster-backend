@@ -91,12 +91,13 @@ trait M3StoreOpsExp extends BaseExp
     val entVal = ent.get(n)
     
     getStoreType(map.asInstanceOf[Sym[_]]) match {
+      case ArrayStore => sys.error("ArrayStore does not support m3add operation")
       case LogStore | PartitionStore(_) =>
         __ifThenElse(
           __equal(entVal, unit(ddbt.codegen.ManifestHelper.zero(lastMan))), 
           unit(()),
           stInsert(map, ent)
-        )    
+        )
       case _ =>
         val tupVal = (IHash, (1 until manifest[E].typeArguments.size).toList, USE_UNIQUE_INDEX_WHEN_POSSIBLE, -1)
         var idx = -1
@@ -451,8 +452,8 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
       val entryClsParams = entryArgTypes.zipWithIndex.map { case (argTp, i) => 
         s"var _${i + 1}: ${argTp} = ${zeroValue(argTp)}"
       }.mkString(", ")           
-      out.println(
-        s"case class $entryClsName($entryClsParams) extends MapEntry(${entryArgTypes.size})")
+      out.println(s"case class $entryClsName($entryClsParams) extends MapEntry(${entryArgTypes.size})")
+
       getStoreType(sym) match {
         case IndexedStore => 
           extractIndices(sym).zipWithIndex.foreach { 
@@ -473,6 +474,7 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
                   |  def cmp(e1: $entryClsName, e2: $entryClsName) = $cmpBody
                   |}""".stripMargin)
           }
+        case ArrayStore =>
         case LogStore | PartitionStore(_) => 
           val argTypes = sym.tp.typeArguments(0).typeArguments
           val colStoreName = logStoreName(sym)
@@ -539,6 +541,9 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
           val indices = extractIndices(s)
           val strIndices = indicesToString(entryType, indices).mkString(",\n")
           s"val $cName = new Store[$entryType](Vector(${block(ind(strIndices))}))"
+        case ArrayStore =>
+          val entryType = storeEntryType(s)
+          s"var $cName: Array[$entryType] = Array()"
         case LogStore => 
           s"val $cName = new ${logStoreName(sym)}()"  
         case PartitionStore(_) => 
@@ -566,10 +571,11 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
     case StInsert(x, e) => getStoreType(x.asInstanceOf[Sym[_]]) match {
       case LogStore | PartitionStore(_) => 
         emitValDef(sym, quote(x) + " += (" + quote(e) + ")")
+      case ArrayStore => sys.error("ArrayStore does not support StInsert operation")
       case _ => super.emitNode(sym, rhs)
     }
     case StForeach(x, blockSym, block) => getStoreType(x.asInstanceOf[Sym[_]]) match {
-      case LogStore | PartitionStore(_) => 
+      case ArrayStore | LogStore | PartitionStore(_) =>
         emitValDef(sym, quote(x) + ".foreach {")
         stream.println(quote(blockSym) + " => ")
         emitBlock(block)
@@ -583,6 +589,12 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
     val storeSym = sym.asInstanceOf[Sym[Store[Entry]]]
     val entryClsName = extractEntryClassName(storeSym)._1
     s"Store[$entryClsName]"
+  }
+
+  protected def arrayStoreName(sym: Sym[_]): String = {
+    val storeSym = sym.asInstanceOf[Sym[Store[Entry]]]
+    val entryClsName = extractEntryClassName(storeSym)._1
+    s"Array[$entryClsName]"
   }
 
   protected def logStoreName(sym: Sym[_]): String = {
@@ -603,6 +615,7 @@ trait SparkGenM3StoreOps extends ScalaGenM3StoreOps
     val storeSym = getStoreSym(sym)
     getStoreType(storeSym) match {
       case IndexedStore => indexedStoreName(storeSym)
+      case ArrayStore => arrayStoreName(storeSym)
       case LogStore => logStoreName(storeSym)
       case PartitionStore(_) => partitionStoreName(storeSym)
     }

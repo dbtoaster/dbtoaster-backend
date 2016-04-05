@@ -42,7 +42,8 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
       case EvtBatchUpdate(s @ Schema(name, _)) => 
         val source = s0.sources.filter(_.schema.name == name).head
         val keys = source.schema.fields
-        List((s.deltaName, MapInfo(s.deltaName, TypeLong, keys, DeltaMapRefConst(name, keys), source.locality, IndexedStore)))
+        val storeType = if (UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH) ArrayStore else IndexedStore
+        List((s.deltaName, MapInfo(s.deltaName, TypeLong, keys, DeltaMapRefConst(name, keys), source.locality, storeType)))
       case EvtAdd(_) | EvtDel(_) => 
         sys.error("Distributed programs run only in batch mode.")
       case _ => Nil
@@ -1088,35 +1089,48 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         val rddPipeId = fresh("rddPipe")
         val sUpdateBlocks = emitBlocks(updateBlocks, rddPipeId)
 
-        val sRenaming = deltaMapInfo.map { case (name, _) => 
-            s"val ${name} = localCtx.${name}"
-          }.mkString("\n")
-
-        val sDequeueList = deltaMapInfo.map { case (name, mapInfo) => 
-            val (rep, keys, tp) = ctx0(name)
-            val storeEntryType = impl.codegen.storeEntryType(rep)
-            val params = fieldsToParamList(keys)
-            val addBatchTuple = genAddBatchTuple(name, keys, "vv")
-            s"""|${name}.clear
-                |if (!localCtx.${name}_QUEUE.isEmpty) {
-                |  val ${name}_TMP = localCtx.${name}_QUEUE.dequeue
-                |  ${name}_TMP.foreach { 
-                |    case ${storeEntryType}(${params}, vv: ${tp.toScala}) =>
-                |${ind(addBatchTuple, 3)}
-                |  }
-                |}
-                |""".stripMargin
-          }.mkString("\n")          
-
         val sDequeueBlock = 
-          s"""|// Dequeue next batch
-              |val ${rddPipeId} = ctx.rdd.mapPartitions(_.toList.map { case (id, localCtx) => 
-              |${ind(sRenaming, 2)}
-              |
-              |${ind(sDequeueList, 2)}  
-              |
-              |  (id, localCtx)
-              |}.iterator, true)""".stripMargin
+          if (UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH) {
+            val sDequeueList = deltaMapInfo.map { case (name, mapInfo) =>
+                s"localCtx.${name} = localCtx.${name}_QUEUE.dequeue"
+              }.mkString("\n")
+            s"""|// Dequeue next batch
+                |val ${rddPipeId} = ctx.rdd.mapPartitions(_.toList.map { case (id, localCtx) =>
+                |${ind(sDequeueList, 2)}
+                |
+                |  (id, localCtx)
+                |}.iterator, true)""".stripMargin
+          }
+          else {
+            val sRenaming = deltaMapInfo.map { case (name, _) =>
+                s"val ${name} = localCtx.${name}"
+              }.mkString("\n")
+
+            val sDequeueList = deltaMapInfo.map { case (name, mapInfo) =>
+                val (rep, keys, tp) = ctx0(name)
+                val storeEntryType = impl.codegen.storeEntryType(rep)
+                val params = fieldsToParamList(keys)
+                val addBatchTuple = genAddBatchTuple(name, keys, "vv")
+                s"""|${name}.clear
+                    |if (!localCtx.${name}_QUEUE.isEmpty) {
+                    |  val ${name}_TMP = localCtx.${name}_QUEUE.dequeue
+                    |  ${name}_TMP.foreach {
+                    |    case ${storeEntryType}(${params}, vv: ${tp.toScala}) =>
+                    |${ind(addBatchTuple, 3)}
+                    |  }
+                    |}
+                    |""".stripMargin
+              }.mkString("\n")
+
+            s"""|// Dequeue next batch
+                |val ${rddPipeId} = ctx.rdd.mapPartitions(_.toList.map { case (id, localCtx) =>
+                |${ind(sRenaming, 2)}
+                |
+                |${ind(sDequeueList, 2)}
+                |
+                |  (id, localCtx)
+                |}.iterator, true)""".stripMargin
+          }
 
         s"""|def processBatches(numBatches: Int) = {
             |  logWriter.println("### PROCESSING START: " + numBatches, true)

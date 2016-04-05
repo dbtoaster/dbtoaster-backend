@@ -181,8 +181,9 @@ case object OpAdd extends OpMap { override def toString = " += " }
 
 //---------- Map types
 sealed abstract class StoreType 
-case object IndexedStore extends StoreType       // Default store type (Store)
-case object LogStore     extends StoreType       // Only append and foreach
+case object IndexedStore extends StoreType       // Default store type (row-oriented Store)
+case object ArrayStore   extends StoreType       // Array store (row-oriented, only foreach)
+case object LogStore     extends StoreType       // Columnar store (only append and foreach)
 case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores 
 
 
