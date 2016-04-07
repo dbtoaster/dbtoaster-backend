@@ -21,7 +21,7 @@ trait MStoreOps extends Base with ArrayOps {
      def insert(e : Rep[E]) : Rep[Unit] = mStoreInsert[E](self, e)(typeE)
      def update(e : Rep[E]) : Rep[Unit] = mStoreUpdate[E](self, e)(typeE)
      def delete(e : Rep[E])(implicit overload1 : Overloaded1) : Rep[Unit] = mStoreDelete1[E](self, e)(typeE)
-     def get(idx : Rep[Int], key : Rep[E]) : Rep[E] = mStoreGet[E](self, idx, key)(typeE)
+     def get(key : Rep[E], keyCols : Rep[Int]*) : Rep[E] = mStoreGet[E](self, key, keyCols:_*)(typeE)
      def foreach(f : Rep[(E => Unit)]) : Rep[Unit] = mStoreForeach[E](self, f)(typeE)
      def slice(idx : Rep[Int], key : Rep[E], f : Rep[(E => Unit)]) : Rep[Unit] = mStoreSlice[E](self, idx, key, f)(typeE)
      def range(idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[(E => Unit)]) : Rep[Unit] = mStoreRange[E](self, idx, min, max, withMin, withMax, f)(typeE)
@@ -75,7 +75,10 @@ trait MStoreOps extends Base with ArrayOps {
    def mStoreInsert[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreInsert[E](self, e)
    def mStoreUpdate[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreUpdate[E](self, e)
    def mStoreDelete1[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreDelete1[E](self, e)
-   def mStoreGet[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[E] = MStoreGet[E](self, idx, key)
+   def mStoreGet[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], key : Rep[E], keyCols : Rep[Int]*)(implicit typeE : TypeRep[E]) : Rep[E] = {
+    val keyColsOutput = __liftSeq(keyCols.toSeq)
+    MStoreGet[E](self, key, keyColsOutput)
+  }
    def mStoreForeach[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreForeach[E](self, f)
    def mStoreSlice[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreSlice[E](self, idx, key, f)
    def mStoreRange[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = MStoreRange[E](self, idx, min, max, withMin, withMax, f)
@@ -120,7 +123,7 @@ object MStoreIRs extends Base {
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  case class MStoreGet[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], idx : Rep[Int], key : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "get", List(List(idx,key))){
+  case class MStoreGet[E <: ddbt.lib.store.Entry](self : Rep[MStore[E]], key : Rep[E], keyColsOutput : Rep[Seq[Int]])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "get", List(List(key,__varArg(keyColsOutput)))){
     override def curriedConstructor = (copy[E] _).curried
   }
 

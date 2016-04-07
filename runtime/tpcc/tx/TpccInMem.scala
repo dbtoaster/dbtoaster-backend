@@ -19,6 +19,7 @@ import ddbt.tpcc.itx._
 import java.sql.Connection
 import tpcc.lmsgen._
 import tpcc.lms._
+import tpcc.sc._
 
 object TpccInMem {
 
@@ -291,7 +292,13 @@ class TpccInMem() {
       orderStat = new OrderStatusLMSImpl
       delivery = new DeliveryLMSImpl
       slev = new StockLevelLMSImpl
-    } else {
+    } else if(implVersionUnderTest == 100){
+      newOrder = new NewOrderSCImpl
+      payment = new PaymentSCImpl
+      orderStat = new OrderStatusSCImpl
+      delivery = new DeliverySCImpl
+      slev = new StockLevelSCImpl
+    }else{
       throw new RuntimeException("No in-memory implementation selected.")
     }
 
@@ -366,15 +373,27 @@ class TpccInMem() {
 
       var SharedDataScala: TpccTable = null
       var SharedDataLMS: EfficientExecutor = null
+      var SharedDataSC: SCExecutor = null
       if(implVersionUnderTest > 0) {
-        SharedDataScala = new TpccTable
-        SharedDataScala.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
-        logger.info(SharedDataScala.getAllMapsInfoStr)
-        newOrder.setSharedData(SharedDataScala)
-        payment.setSharedData(SharedDataScala)
-        orderStat.setSharedData(SharedDataScala)
-        slev.setSharedData(SharedDataScala)
-        delivery.setSharedData(SharedDataScala)
+        if(implVersionUnderTest <100){
+          SharedDataScala = new TpccTable
+          SharedDataScala.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
+          logger.info(SharedDataScala.getAllMapsInfoStr)
+          newOrder.setSharedData(SharedDataScala)
+          payment.setSharedData(SharedDataScala)
+          orderStat.setSharedData(SharedDataScala)
+          slev.setSharedData(SharedDataScala)
+          delivery.setSharedData(SharedDataScala)}
+        else{
+          SharedDataSC = new SCExecutor
+          SCDataLoader.loadDataIntoMaps(SharedDataSC,javaDriver,jdbcUrl,dbUser,dbPassword)
+          logger.info(SCDataLoader.getAllMapsInfoStr(SharedDataSC))
+          newOrder.setSharedData(SharedDataSC)
+          payment.setSharedData(SharedDataSC)
+          orderStat.setSharedData(SharedDataSC)
+          slev.setSharedData(SharedDataSC)
+          delivery.setSharedData(SharedDataSC)
+        }
       } else {
         SharedDataLMS = new EfficientExecutor
         LMSDataLoader.loadDataIntoMaps(SharedDataLMS,javaDriver,jdbcUrl,dbUser,dbPassword)

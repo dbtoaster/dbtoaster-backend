@@ -13,7 +13,7 @@ import lifter.{SCLMSInterop, TypeToTypeRep}
   * Created by khayyam on 4/8/15.
   */
 
-trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BooleanComponent with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with MirrorAggregatorComponent {
+trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent  with ScalaPredefOps with MirrorAggregatorComponent {
 
   implicit case object EntryType extends TypeRep[Entry] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = EntryType
@@ -29,19 +29,17 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   implicit class MStoreRep1[E <: ddbt.lib.store.Entry](self: Rep[MStore[E]])(implicit typeE: TypeRep[E]) {
 
-    def slice(f: Rep[E] => Rep[Unit], args: (Int, Rep[Any])*): Rep[Unit] = slice2(stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args), f, -1)
+    def slice1(f: Rep[E] => Rep[Unit], args: (Int, Rep[Any])*): Rep[Unit] = slice2(stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args), f, -1)
 
     def slice2(key: Rep[E], f: Rep[E] => Rep[Unit], idx: Int = (-1)): Rep[Unit] = stSlice(self.asInstanceOf[Rep[Store[E]]], idx, key, f)
 
-
-    def get(args: (Int, Rep[Any])*): Rep[E] = {
-      get2(stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args), -1)
+    //For TPCC
+    def get1(args: (Int, Rep[Any])*): Rep[E] = {
+      stGet(self.asInstanceOf[Rep[Store[E]]], args.map(_._1), stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args))
     }
 
-    def get2(key: Rep[E], idx: Int = (-1)): Rep[E] = {
 
-      stGet(self.asInstanceOf[Rep[Store[E]]], idx, key)
-    }
+
   }
 
   // Global variables
@@ -143,7 +141,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     // we remove 0-elements
     __ifThenElse(infix_==(entVal, unit(zero(lastMan))), unit(()), {
       ///////
-      val currentEnt = stGet(map, -1, ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+      val currentEnt = stGet(map, ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
       __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {
         currentEnt +=(n, entVal)
         val currentEntVal = currentEnt.get(n)(lastMan)
@@ -159,7 +157,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
     val tmp = isTemp(map.asInstanceOf[Sym[_]])
     val n = unit(m.typeArguments.size)
     val lastMan = m.typeArguments.last
-    val currentEnt = stGet(map, -1, ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+    val currentEnt = stGet(map,  ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
     val entVal = ent.get(n)(lastMan)
 
     //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
@@ -180,7 +178,13 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
   def steGet[E <: Entry : TypeRep, T: TypeRep](x: Rep[E], i: Int): Rep[T] = //SteGet[E, T](x, i)
     x.get[T](unit(i))
 
-  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], idx: Int, key: Rep[E]): Rep[E] = x.get(unit(0), key)
+  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], keyCols: Seq[Int], key: Rep[E]): Rep[E] = x.get(key, keyCols.map(unit(_)):_*)
+
+  //Assuming full entry of TPCH
+  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], key: Rep[E]): Rep[E] = {
+    val keyCols = key match {case Def(SteNewSEntry(_,args)) => args}
+    stGet(x,(1 until keyCols.size).toList , key)
+  }
 
   def stClear[E <: Entry : TypeRep](x: Rep[Store[E]]): Rep[Unit] = x.clear //StClear[E](x)
 
@@ -208,7 +212,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with DateComponent with
 
   def dtGetTime(x: Rep[Date]): Rep[Long] = dateGetTime(x)
 
-  def stProxyGet[E <: Entry : TypeRep](x: Rep[Store[E]], args: (Int, Rep[Any])*): Rep[E] = stGet[E](x, -1, stSampleEntry[E](x, args))
+  def stProxyGet[E <: Entry : TypeRep](x: Rep[Store[E]], args: (Int, Rep[Any])*): Rep[E] = stGet[E](x, (1 to args.size).toList, stSampleEntry[E](x, args))
 
   def stSampleEntry[E <: Entry : TypeRep](x: Rep[Store[E]], args: Seq[(Int, Rep[Any])]): Rep[E] = SteSampleSEntry[E](x, args)
 

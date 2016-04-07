@@ -21,39 +21,69 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
 
   import IR._
 
+  def nullValue(tp: TypeRep[_]) = tp match {
+    case IntType => "-1"
+    case LongType => "-1L"
+    case DoubleType => "-1.0"
+    case BooleanType => "false"
+    case _ => "null"
+  }
+
   case class Index(val idxNum: Int, val cols: List[Int], tp: IndexType, unique: Boolean = false, sliceIdx: Int = -1, val f: PardisLambda[GenericEntry, _] = null) {
     override def toString = idxNum + ", " + tp + ", " + unique + ", " + sliceIdx
   }
 
-
   case class TypeVar(val ref: Sym[_]) {}
 
-  case class Entry(val sch: List[String] = List()) {
-    val name = if (sch == Nil) "GenericEntry" else s"SEntry" + sch.size + "_" + sch.map(c => if (c == "Date") 'T' else c.charAt(0)).mkString("")
+  case class Entry(val sch: List[TypeRep[_]] = List()) {
+    val name = if (sch == Nil) "GenericEntry" else s"SEntry" + sch.size + "_" + sch.map(c => if (c == DateType) 'T' else pardisTypeToString(c).charAt(0)).mkString("")
 
     override def toString = if (sch == Nil) ""
     else
       s"""
-         |case class $name(${sch.zipWithIndex.map(t => "var _" + (t._2 + 1) + ": " + t._1).mkString(", ")})  extends Entry(${sch.size}){
+         |case class $name(${sch.zipWithIndex.map(t => "var _" + (t._2 + 1) + ": " + pardisTypeToString(t._1)).mkString(", ")})  extends Entry(${sch.size}){
          |   def copy = $name(${sch.zipWithIndex.map(t => "_" + (t._2 + 1)).mkString(", ")})
          | }
          |
       """.stripMargin
   }
 
-  case class EntryIndex(val entry: Entry, val idx: Index, val id: Int) {
-    val name = if (entry.name == "GenericEntry")
-      if (idx.f == null) "GenericOps" else "GenericCmp"
-    else s"${entry.name}_Idx$id"
-    val instance = name + (if (name == "GenericOps") s"(List(${idx.cols.mkString(", ")}))" else if (name == "GenericCmp") doc"(${nodeToDocument(idx.f)})" else "")
+
+  class EntryIndex(val entry: Entry, val idx: Index, val i: Int) {
+
+    override def equals(obj: scala.Any): Boolean = obj match {
+      case EntryIndex(e, i) => contains(e, i)
+      case _ => false
+    }
+
+    def contains(e: Entry, i: Index) = entry.name == e.name && idx.cols == i.cols && idx.f == null && i.f == null
+
+    val name = if (entry.name == "GenericEntry") {
+      if (idx.f == null)
+        "GenericOps"
+      else
+        "GenericCmp"
+    }
+    else
+      s"${entry.name}_Idx$i"
+
+
+    val instance = if (entry.name == "GenericEntry") {
+      if (idx.f == null)
+        doc"GenericOps(List(${idx.cols.mkString(", ")}))"
+      else
+        doc"GenericCmp(${nodeToDocument(idx.f)})"
+    }
+    else {
+      doc"${entry.name}_Idx$i"
+    }
 
     override def toString = if (entry.name == "GenericEntry") ""
     else {
-
       val cmpfn = if (idx.f == null) {
         if (idx.cols == Nil) {
-          val cols = (1 until (entry.sch.size + 1))
-          s"override def cmp(e1: ${entry.name}, e2: ${entry.name}) = if(${cols.map(c => s"(e1._$c == null.asInstanceOf[${entry.sch(c - 1)}] || e2._$c == null.asInstanceOf[${entry.sch(c - 1)}] || e1._$c == e2._$c)").mkString(" && ")}) 0 else 1"
+          val cols = (1 until entry.sch.size)
+          s"override def cmp(e1: ${entry.name}, e2: ${entry.name}) = if(${cols.map(c => s"(e1._$c == ${nullValue(entry.sch(c - 1))} || e2._$c == ${nullValue(entry.sch(c - 1))} || e1._$c == e2._$c)").mkString(" && ")}) 0 else 1"
         }
         else
           s"override def cmp(e1: ${entry.name}, e2: ${entry.name}) = if(${idx.cols.map(c => s"e1._$c == e2._$c").mkString(" && ")}) 0 else 1"
@@ -101,10 +131,27 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
                 """.stripMargin
     }
 
+    override def hashCode(): Int = {
+      val state = Seq(entry.name, idx.cols)
+      state.map(_.hashCode()).foldLeft(0)((a, b) => 31 * a + b)
+    }
+  }
+
+  object EntryIndex {
+    val entryindexes = collection.mutable.HashSet[EntryIndex]()
+
+    def apply(entry: Entry, idx: Index) = {
+      val EI = new EntryIndex(entry, idx, entryindexes.size)
+      if (entryindexes.add(EI)) EI else entryindexes.find(ei => EI.equals(ei)).asInstanceOf[Some[EntryIndex]].get
+    }
+
+    def find(entry: Entry, idx: Index) = entryindexes.find(_.contains(entry, idx))
+
+    def unapply(ei: EntryIndex): Option[(Entry, Index)] = Some(ei.entry, ei.idx)
   }
 
   val indexes = collection.mutable.HashMap[Sym[_], collection.mutable.ArrayBuffer[Index]]()
-  val schema = collection.mutable.HashMap[Sym[_], List[String]]()
+  val schema = collection.mutable.HashMap[Sym[_], List[TypeRep[_]]]()
   val entries = collection.mutable.HashMap[Sym[_], Entry]()
 
   object EntryAnalysis extends RuleBasedTransformer[StoreDSL](IR) {
@@ -117,25 +164,50 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
 
     }
 
+    def add(key: Any, store: Rep[MStore[_]]) = {
+      //      System.err.println(s"Adding $key from store $store")
+      EntryTypes += key.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]]))
+    }
+
+    def addVar(key: Any, other: Any) = {
+      //      System.err.println(s"Adding $key from var $other")
+      EntryTypes += key.asInstanceOf[Sym[_]] -> TypeVar(other.asInstanceOf[Sym[_]])
+    }
+
     val EntryTypes = collection.mutable.HashMap[Sym[_], Any]()
     analysis += statement {
       //      case sym -> (GenericEntryApplyObject(_, _)) => EntryTypes += sym -> EntryTypeRef; ()
-      case sym -> (MStoreGet(store, _, key@Def(GenericEntryApplyObject(_, _)))) => EntryTypes += key.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += sym -> Entry(schema(store.asInstanceOf[Sym[_]])); ()
-      case sym -> (MStoreInsert(store, key@Def(GenericEntryApplyObject(_, _)))) => EntryTypes += key.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); ()
-      case sym -> (MStoreUpdate(store, key@Def(GenericEntryApplyObject(_, _)))) => EntryTypes += key.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); ()
-      case sym -> (MStoreDelete1(store, key@Def(GenericEntryApplyObject(_, _)))) => EntryTypes += key.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); ()
-      case sym -> (MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(MirrorAggregatorMaxObject(f@Def(PardisLambda(_, i, _)))))) => EntryTypes += key.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += agg.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += i.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += f.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); ()
-      case sym -> (MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(MirrorAggregatorMinObject(f@Def(PardisLambda(_, i, _)))))) => EntryTypes += key.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += agg.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += i.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += f.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); ()
-      case sym -> (MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), f@Def(PardisLambda(_, i, _)))) => EntryTypes += key.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += i.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += f.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); ()
-      case sym -> (MStoreRange(store, _, key1@Def(GenericEntryApplyObject(_, _)), key2@Def(GenericEntryApplyObject(_, _)), _, _, _)) => EntryTypes += key1.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); EntryTypes += key2.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); ()
-      case sym -> (MStoreDelete2(store, _, key@Def(GenericEntryApplyObject(_, _)))) => EntryTypes += key.asInstanceOf[Sym[_]] -> Entry(schema(store.asInstanceOf[Sym[_]])); ()
+
+      case sym -> (MStoreGet(store, key@Def(SteNewSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
+      case sym -> (MStoreGet(store, key@Def(SteSampleSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
+
+      case sym -> (MStoreInsert(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+      case sym -> (MStoreInsert(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
+
+      case sym -> (MStoreUpdate(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+      case sym -> (MStoreUpdate(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
 
 
-      case sym -> (MirrorAggregatorResult(agg)) => EntryTypes += (sym -> EntryTypes(agg.asInstanceOf[Sym[_]])); ()
-      case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if EntryTypes.contains(rhs) => EntryTypes += lhs.asInstanceOf[Sym[_]] -> EntryAnalysis(rhs); ()
-      case sym -> (PardisReadVar(PardisVar(v@Sym(_, _)))) if EntryTypes.contains(v) => EntryTypes += sym -> EntryAnalysis(v); ()
-      case sym -> (ArrayBufferAppend(ab, el)) => EntryTypes += ab.asInstanceOf[Sym[_]] -> TypeVar(el.asInstanceOf[Sym[_]]); ()
-      case sym -> (ArrayBufferSortWith(ab@Sym(_, _), f@Def(PardisLambda2(_, i1, i2, _)))) => EntryTypes += f.asInstanceOf[Sym[_]] -> TypeVar(ab); EntryTypes += i1.asInstanceOf[Sym[_]] -> TypeVar(ab); EntryTypes += i2.asInstanceOf[Sym[_]] -> TypeVar(ab); ()
+      case sym -> (MStoreDelete1(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+
+
+      case sym -> (MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(MirrorAggregatorMaxObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
+      case sym -> (MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(MirrorAggregatorMinObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
+      case sym -> (MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
+      case sym -> (MStoreSlice(store, _, key@Def(SteSampleSEntry(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
+
+      case sym -> (MStoreForeach(store, f@Def(PardisLambda(_, i, _)))) => add(i, store); add(f, store); ()
+
+      case sym -> (MStoreRange(store, _, key1@Def(GenericEntryApplyObject(_, _)), key2@Def(GenericEntryApplyObject(_, _)), _, _, _)) => add(key1, store); add(key2, store); ()
+
+      case sym -> (MStoreDelete2(store, _, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+
+
+      case sym -> (MirrorAggregatorResult(agg)) => addVar(sym, agg); ()
+      case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if EntryTypes.contains(rhs) => addVar(lhs, rhs); ()
+      case sym -> (PardisReadVar(PardisVar(v@Sym(_, _)))) if EntryTypes.contains(v) => addVar(sym, v); ()
+      case sym -> (ArrayBufferAppend(ab, el)) => addVar(ab, el); ()
+      case sym -> (ArrayBufferSortWith(ab@Sym(_, _), f@Def(PardisLambda2(_, i1, i2, _)))) => addVar(f, ab); addVar(i1, ab); addVar(i2, ab); ()
 
     }
   }
@@ -148,10 +220,12 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
     val maxSliceIndex = collection.mutable.HashMap[Rep[_], collection.mutable.Set[(Seq[Int], PardisLambda[GenericEntry, _])]]()
 
     analysis += statement {
-      case sym -> (node@MStoreGet(store, _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))))) => primaryIndex += (store.asInstanceOf[Rep[_]] -> args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }); ()
+      case sym -> (node@MStoreGet(store, _, Def(LiftedSeq(cols)))) => primaryIndex += (store.asInstanceOf[Rep[_]] -> cols.map({ case Constant(v) => v })); ()
+
       case sym -> (node@MStoreSlice(store, _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(MirrorAggregatorMaxObject(Def(f@PardisLambda(_, _, _)))))) => maxSliceIndex.getOrElseUpdate(store.asInstanceOf[Rep[_]], collection.mutable.HashSet[(Seq[Int], PardisLambda[GenericEntry, _])]()) += ((args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }) -> f.asInstanceOf[Lambda[GenericEntry, _]]); ()
       case sym -> (node@MStoreSlice(store, _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(MirrorAggregatorMinObject(Def(f@PardisLambda(_, _, _)))))) => minSliceIndex.getOrElseUpdate(store.asInstanceOf[Rep[_]], collection.mutable.HashSet[(Seq[Int], PardisLambda[GenericEntry, _])]()) += ((args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }) -> f.asInstanceOf[Lambda[GenericEntry, _]]); ()
       case sym -> (node@MStoreSlice(store, _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), z@_)) => secondaryIndex.getOrElseUpdate(store.asInstanceOf[Rep[_]], collection.mutable.HashSet[Seq[Int]]()) += (args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }); ()
+      case sym -> (node@MStoreSlice(store, _, Def(SteSampleSEntry(_, args)), z@_)) => secondaryIndex.getOrElseUpdate(store.asInstanceOf[Rep[_]], collection.mutable.HashSet[Seq[Int]]()) += (args.map(_._1)); ()
     }
 
 
@@ -232,14 +306,15 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
     allBlocks += (className -> BlockWithSymbols(body.asInstanceOf[Block[Any]], List(s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16)))
   }
 
-  def emitSource(global: List[Rep[Any]], stream: PrintWriter) = {
-    entries.foreach {
-      case (sym, entry) => {
-        stream.println(entry)
-        indexes(sym).zipWithIndex.map(t => EntryIndex(entry, t._1, t._2)).foreach(stream.println)
-      }
-    }
+  def emitEntries(stream: PrintWriter) = {
+    entries.values.toSet[Entry].foreach(e => stream.println(e.toString))
 
+    //Assumes the EntryIndexes are already populated during code generation for maps
+    EntryIndex.entryindexes.foreach(stream.println)
+  }
+
+  def emitSource(global: List[Rep[Any]], stream: PrintWriter) = {
+    emitEntries(stream)
     allBlocks.foreach {
       case (className, BlockWithSymbols(body, args)) =>
         val genCode = "class " + className + "(" + global.collect {
@@ -269,7 +344,7 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
   }
 
   //TODO: SBJ: FixMe: This is a hack. Would fail in cases with different EntryTypes (such as Join)
-  override def tpeToDocument[T](tp: TypeRep[T]): Document = if (tp == GenericEntryType)
+  override def tpeToDocument[T](tp: TypeRep[T]): Document = if (tp == GenericEntryType || tp == EntryType)
     Document.text(EntryAnalysis.typeName)
   else super.tpeToDocument(tp)
 
@@ -279,6 +354,8 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
     case Statement(sym, MStoreNew2()) => generateNewStore(sym, None)
     case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
     case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
+    case Statement(sym, MStoreGet(self, key, _)) => doc"val $sym = $self.get(0, $key)"
+
 
     case Statement(sym, MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(MirrorAggregatorMaxObject(_)))) if IndexAnalysis.enabled => {
       val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
@@ -312,6 +389,13 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
       }
       doc"val $sym = $store.slice($idx, $key, $f)"
     }
+    case Statement(sym, MStoreSlice(store, _, key@Def(SteSampleSEntry(_, args)), f@_)) if IndexAnalysis.enabled => {
+      val cols = args.map(_._1)
+      val idx = indexes(store.asInstanceOf[Sym[_]]).find(_.cols == cols) match {
+        case Some(Index(id, _, _, _, _, _)) => id
+      }
+      doc"val $sym = $store.slice($idx, $key, $f)"
+    }
 
 
     case Statement(sym, GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) if EntryAnalysis.EntryTypes.contains(sym) => {
@@ -321,16 +405,30 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
         args.map(expToDocument).mkDocument(",")
       })"
     }
-
+    case Statement(sym, SteNewSEntry(_, args)) if EntryAnalysis.EntryTypes.contains(sym) => {
+      doc"val $sym = ${
+        EntryAnalysis(sym).name
+      }(${
+        args.map(expToDocument).mkDocument(",")
+      })"
+    }
 
     case Statement(sym, GenericEntryApplyObject(Constant("SteSampleSEntry"), Def(LiftedSeq(args)))) if EntryAnalysis.EntryTypes.contains(sym) => {
       val entry = EntryAnalysis(sym)
       val cols = args.zipWithIndex.collect {
         case (Constant(v: Int), i) if i < args.size / 2 => v -> expToDocument(args(i + args.size / 2))
       }.toMap
-      val allargs = (1 until (entry.sch.size + 1)).map(c => cols getOrElse(c, s"null.asInstanceOf[${entry.sch(c - 1)}]"))
+      val allargs = (1 until (entry.sch.size + 1)).map(c => cols getOrElse(c, nullValue(entry.sch(c - 1))))
       doc"val $sym = ${entry.name}(${allargs.mkString(", ")})"
     }
+    case Statement(sym, SteSampleSEntry(_, args)) if EntryAnalysis.EntryTypes.contains(sym) => {
+      val entry = EntryAnalysis(sym)
+      val cols = args.map({ case (i, v) => (i, expToDocument(v)) }).toMap
+      val allargs = (1 until (entry.sch.size + 1)).map(c => cols getOrElse(c, nullValue(entry.sch(c - 1))))
+      doc"val $sym = ${entry.name}(${allargs.mkString(", ")})"
+    }
+
+
     case Statement(sym, GenericEntryGet(ent: Sym[_], Constant(i: Int))) if EntryAnalysis.EntryTypes.contains(ent) => {
       //      if (i > EntryAnalysis.EntryTypes(ent).sch.size || i<=0)
       //        throw new IllegalArgumentException("Accessing a column which is not in schema")
@@ -365,54 +463,53 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
   def analyzeIndices = {
     IndexAnalysis.enabled = true
     allBlocks.foreach(b => IndexAnalysis.optimize[Any](b._2.body)(AnyType))
-    java.lang.System.out.println("Primary Index")
-    IndexAnalysis.primaryIndex.foreach {
-      case (s: Sym[_], l: Seq[_]) => java.lang.System.out.println(s.name + s.id + " -> " + l.mkString("{", ", ", "}"))
-    }
-    java.lang.System.out.println("\nSecondary Index")
-    IndexAnalysis.secondaryIndex.foreach {
-      case (s: Sym[_], l: collection.mutable.Set[Seq[Int]]) => java.lang.System.out.println(s.name + s.id + " -> " + l.map(_.mkString("{", ",", "}")).mkString("{", ", ", "}"))
-    }
+    //    java.lang.System.err.println("Primary Index")
+    //    IndexAnalysis.primaryIndex.foreach {
+    //      case (s: Sym[_], l: Seq[_]) => java.lang.System.err.println(s.name + s.id + " -> " + l.mkString("{", ", ", "}"))
+    //    }
+    //    java.lang.System.err.println("\nSecondary Index")
+    //    IndexAnalysis.secondaryIndex.foreach {
+    //      case (s: Sym[_], l: collection.mutable.Set[Seq[Int]]) => java.lang.System.err.println(s.name + s.id + " -> " + l.map(_.mkString("{", ",", "}")).mkString("{", ", ", "}"))
+    //    }
 
+    val count = collection.mutable.HashMap[Sym[_], Int]()
+    IndexAnalysis.primaryIndex.foreach({ case (c: Sym[_], l) =>
+      indexes getOrElseUpdate(c, collection.mutable.ArrayBuffer[Index]()) += Index(count getOrElseUpdate(c, 0), l.toList, IHash, true);
+      count.update(c, count(c) + 1)
+    })
+
+    IndexAnalysis.secondaryIndex.foreach({ case (c: Sym[_], ll) =>
+      ll.foreach(l => {
+        indexes getOrElseUpdate(c, collection.mutable.ArrayBuffer[Index]()) += Index(count getOrElseUpdate(c, 0), l.toList, IHash, false)
+        count.update(c, count(c) + 1)
+      })
+    })
+
+    IndexAnalysis.maxSliceIndex.foreach({ case (c: Sym[_], ll) =>
+      ll.foreach { case (l, f) => indexes getOrElseUpdate(c, collection.mutable.ArrayBuffer[Index]()) +=(Index(count getOrElseUpdate(c, 0), l.toList, ISliceHeapMax, false, count(c) + 1, f), Index(count(c) + 1, l.toList, INone, false)); count.update(c, count(c) + 2) }
+    })
+
+    IndexAnalysis.minSliceIndex.foreach({ case (c: Sym[_], ll) =>
+      ll.foreach { case (l, f) => indexes getOrElseUpdate(c, collection.mutable.ArrayBuffer[Index]()) +=(Index(count getOrElseUpdate(c, 0), l.toList, ISliceHeapMin, false, count(c) + 1, f), Index(count(c) + 1, l.toList, INone, false)); count.update(c, count(c) + 2) }
+    })
 
   }
 
-  def analyzeEntries(sch: List[(Sym[_], List[String])]) = {
+  def analyzeEntries(sch: List[(Sym[_], List[TypeRep[_]])]) = {
     schema ++= sch
     allBlocks.foreach(b => EntryAnalysis.optimize[Any](b._2.body)(AnyType))
   }
 
   def generateNewStore(c: Sym[_], mname: Option[String]): String = {
-    val sch = schema getOrElse(c, List[String]())
+    val sch = schema getOrElse(c, List[TypeRep[_]]())
     val entry = Entry(sch)
     if (!IndexAnalysis.enabled)
       indexes += c -> collection.mutable.ArrayBuffer(Index(0, List(), IHash, true))
-    else {
-      var count = 0
-      IndexAnalysis.primaryIndex.get(c) match {
-        case Some(l) => indexes getOrElseUpdate(c, collection.mutable.ArrayBuffer[Index]()) += Index(count, l.toList, IHash, true);
-          count = count + 1
-        case _ =>
-      }
-      IndexAnalysis.secondaryIndex.get(c) match {
-        case Some(ll) => ll.foreach(l => indexes getOrElseUpdate(c, collection.mutable.ArrayBuffer[Index]()) += Index(count, l.toList, IHash, false));
-          count = count + 1
-        case _ =>
-      }
+    else if (!indexes.contains(c))
+      indexes += c -> collection.mutable.ArrayBuffer(Index(0, List(), IList, false))
 
-      IndexAnalysis.maxSliceIndex.get(c) match {
-        case Some(ll) => ll.foreach { case (l, f) => indexes getOrElseUpdate(c, collection.mutable.ArrayBuffer[Index]()) +=(Index(count, l.toList, ISliceHeapMax, false, count + 1, f), Index(count + 1, l.toList, INone, false)); count = count + 2 }
-        case _ =>
-      }
-      IndexAnalysis.minSliceIndex.get(c) match {
-        case Some(ll) => ll.foreach { case (l, f) => indexes getOrElseUpdate(c, collection.mutable.ArrayBuffer[Index]()) +=(Index(count, l.toList, ISliceHeapMin, false, count + 1, f), Index(count + 1, l.toList, INone, false)); count = count + 2 }
-        case _ =>
-      }
 
-      if (!indexes.contains(c))
-        indexes += c -> collection.mutable.ArrayBuffer(Index(0, List(), IList, false))
-    }
-    val entryidxes = indexes(c).zipWithIndex.map(t => EntryIndex(entry, t._1, t._2))
+    val entryidxes = indexes(c).map(idx => EntryIndex(entry, idx))
     def generateNew: String = s"new MStore[${entry.name}]" + s"(" + indexes(c).size + s", Array[EntryIdx[${entry.name}]](${entryidxes.map(_.instance).mkString(", ")}))"
     entries += c -> entry
     val symbolName = c.name + c.id
