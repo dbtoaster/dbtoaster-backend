@@ -18,7 +18,10 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
 
   // Use static arrays for input batches; only foreach supported
   val UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH = true
-  
+  val OPTIMIZATION_SIMPLIFICATION = true
+  val OPTIMIZATION_STATEMENT_LEVEL = true
+  val OPTIMIZATION_BLOCK_LEVEL = true
+
   //----------
   case class MapInfo(name: String, tp: Type, keys: List[(String, Type)], 
                      expr: Expr, locality: LocalityType, storeType: StoreType,
@@ -674,7 +677,7 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
         case Some(DistRandomExp) =>
           val repartStmts = Statement.createRepartition(subexp, ks)
           (stmts ++ repartStmts, repartStmts.last.lhsMap)
-        case Some(DistByKeyExp(pkeys)) if (pkeys != ks) =>
+        case Some(DistByKeyExp(pkeys)) if (pkeys != ks || !OPTIMIZATION_SIMPLIFICATION) =>
           val repartStmts = Statement.createRepartition(subexp, ks)
           (stmts ++ repartStmts, repartStmts.last.lhsMap)
         case Some(DistByKeyExp(_)) | None => (stmts, subexp)
