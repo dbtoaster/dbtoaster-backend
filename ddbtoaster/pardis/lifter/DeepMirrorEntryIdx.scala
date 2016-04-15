@@ -11,62 +11,79 @@ import pardis.deep.scalalib._
 import pardis.deep.scalalib.collection._
 import pardis.deep.scalalib.io._
 
-trait MirrorEntryIdxOps extends Base  {  
+trait EntryIdxOps extends Base with GenericEntryOps {  
   // Type representation
-  val MirrorEntryIdxType = MirrorEntryIdxIRs.MirrorEntryIdxType
-  type MirrorEntryIdxType[E] = MirrorEntryIdxIRs.MirrorEntryIdxType[E]
-  implicit def typeMirrorEntryIdx[E: TypeRep]: TypeRep[MirrorEntryIdx[E]] = MirrorEntryIdxType(implicitly[TypeRep[E]])
-  implicit class MirrorEntryIdxRep[E](self : Rep[MirrorEntryIdx[E]])(implicit typeE : TypeRep[E]) {
-     def cmp(e1 : Rep[E], e2 : Rep[E]) : Rep[Int] = mirrorEntryIdxCmp[E](self, e1, e2)(typeE)
-     def hash(e : Rep[E]) : Rep[Int] = mirrorEntryIdxHash[E](self, e)(typeE)
+  val EntryIdxType = EntryIdxIRs.EntryIdxType
+  type EntryIdxType[E <: ddbt.lib.store.Entry] = EntryIdxIRs.EntryIdxType[E]
+  implicit def typeEntryIdx[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[EntryIdx[E]] = EntryIdxType(implicitly[TypeRep[E]])
+  implicit class EntryIdxRep[E <: ddbt.lib.store.Entry](self : Rep[EntryIdx[E]])(implicit typeE : TypeRep[E]) {
+     def cmp(e1 : Rep[E], e2 : Rep[E]) : Rep[Int] = entryIdxCmp[E](self, e1, e2)(typeE)
+     def hash(e : Rep[E]) : Rep[Int] = entryIdxHash[E](self, e)(typeE)
   }
-  object MirrorEntryIdx {
-     def apply[E](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E]) : Rep[MirrorEntryIdx[E]] = mirrorEntryIdxApplyObject[E](h, c)(typeE)
+  object EntryIdx {
+     def apply[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E], overload1 : Overloaded1) : Rep[EntryIdx[E]] = entryIdxApplyObject1[E](h, c)(typeE)
+     def apply(cols : Rep[List[Int]])(implicit overload2 : Overloaded2) : Rep[EntryIdx[GenericEntry]] = entryIdxApplyObject2(cols)
+     def apply[R](f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R], overload3 : Overloaded3) : Rep[EntryIdx[GenericEntry]] = entryIdxApplyObject3[R](f)(typeR)
   }
   // constructors
 
   // IR defs
-  val MirrorEntryIdxCmp = MirrorEntryIdxIRs.MirrorEntryIdxCmp
-  type MirrorEntryIdxCmp[E] = MirrorEntryIdxIRs.MirrorEntryIdxCmp[E]
-  val MirrorEntryIdxHash = MirrorEntryIdxIRs.MirrorEntryIdxHash
-  type MirrorEntryIdxHash[E] = MirrorEntryIdxIRs.MirrorEntryIdxHash[E]
-  val MirrorEntryIdxApplyObject = MirrorEntryIdxIRs.MirrorEntryIdxApplyObject
-  type MirrorEntryIdxApplyObject[E] = MirrorEntryIdxIRs.MirrorEntryIdxApplyObject[E]
+  val EntryIdxCmp = EntryIdxIRs.EntryIdxCmp
+  type EntryIdxCmp[E <: ddbt.lib.store.Entry] = EntryIdxIRs.EntryIdxCmp[E]
+  val EntryIdxHash = EntryIdxIRs.EntryIdxHash
+  type EntryIdxHash[E <: ddbt.lib.store.Entry] = EntryIdxIRs.EntryIdxHash[E]
+  val EntryIdxApplyObject1 = EntryIdxIRs.EntryIdxApplyObject1
+  type EntryIdxApplyObject1[E <: ddbt.lib.store.Entry] = EntryIdxIRs.EntryIdxApplyObject1[E]
+  val EntryIdxApplyObject2 = EntryIdxIRs.EntryIdxApplyObject2
+  type EntryIdxApplyObject2 = EntryIdxIRs.EntryIdxApplyObject2
+  val EntryIdxApplyObject3 = EntryIdxIRs.EntryIdxApplyObject3
+  type EntryIdxApplyObject3[R] = EntryIdxIRs.EntryIdxApplyObject3[R]
   // method definitions
-   def mirrorEntryIdxCmp[E](self : Rep[MirrorEntryIdx[E]], e1 : Rep[E], e2 : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Int] = MirrorEntryIdxCmp[E](self, e1, e2)
-   def mirrorEntryIdxHash[E](self : Rep[MirrorEntryIdx[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Int] = MirrorEntryIdxHash[E](self, e)
-   def mirrorEntryIdxApplyObject[E](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E]) : Rep[MirrorEntryIdx[E]] = MirrorEntryIdxApplyObject[E](h, c)
-  type MirrorEntryIdx[E] = ddbt.lib.store.MirrorEntryIdx[E]
+   def entryIdxCmp[E <: ddbt.lib.store.Entry](self : Rep[EntryIdx[E]], e1 : Rep[E], e2 : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Int] = EntryIdxCmp[E](self, e1, e2)
+   def entryIdxHash[E <: ddbt.lib.store.Entry](self : Rep[EntryIdx[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Int] = EntryIdxHash[E](self, e)
+   def entryIdxApplyObject1[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = EntryIdxApplyObject1[E](h, c)
+   def entryIdxApplyObject2(cols : Rep[List[Int]]) : Rep[EntryIdx[GenericEntry]] = EntryIdxApplyObject2(cols)
+   def entryIdxApplyObject3[R](f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R]) : Rep[EntryIdx[GenericEntry]] = EntryIdxApplyObject3[R](f)
+  type EntryIdx[E <: ddbt.lib.store.Entry] = ddbt.lib.store.EntryIdx[E]
 }
-object MirrorEntryIdxIRs extends Base {
+object EntryIdxIRs extends Base {
+  import GenericEntryIRs._
   // Type representation
-  case class MirrorEntryIdxType[E](typeE: TypeRep[E]) extends TypeRep[MirrorEntryIdx[E]] {
-    def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = MirrorEntryIdxType(newArguments(0).asInstanceOf[TypeRep[_]])
-    val name = s"MirrorEntryIdx[${typeE.name}]"
+  case class EntryIdxType[E <: ddbt.lib.store.Entry](typeE: TypeRep[E]) extends TypeRep[EntryIdx[E]] {
+    def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = EntryIdxType(newArguments(0).asInstanceOf[TypeRep[_ <: ddbt.lib.store.Entry]])
+    val name = s"EntryIdx[${typeE.name}]"
     val typeArguments = List(typeE)
   }
-      implicit def typeMirrorEntryIdx[E: TypeRep]: TypeRep[MirrorEntryIdx[E]] = MirrorEntryIdxType(implicitly[TypeRep[E]])
+      implicit def typeEntryIdx[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[EntryIdx[E]] = EntryIdxType(implicitly[TypeRep[E]])
   // case classes
-  case class MirrorEntryIdxCmp[E](self : Rep[MirrorEntryIdx[E]], e1 : Rep[E], e2 : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Int](Some(self), "cmp", List(List(e1,e2))){
+  case class EntryIdxCmp[E <: ddbt.lib.store.Entry](self : Rep[EntryIdx[E]], e1 : Rep[E], e2 : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Int](Some(self), "cmp", List(List(e1,e2))){
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  case class MirrorEntryIdxHash[E](self : Rep[MirrorEntryIdx[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Int](Some(self), "hash", List(List(e))){
+  case class EntryIdxHash[E <: ddbt.lib.store.Entry](self : Rep[EntryIdx[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Int](Some(self), "hash", List(List(e))){
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  case class MirrorEntryIdxApplyObject[E](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit val typeE : TypeRep[E]) extends FunctionDef[MirrorEntryIdx[E]](None, "MirrorEntryIdx.apply", List(List(h,c))){
+  case class EntryIdxApplyObject1[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit val typeE : TypeRep[E]) extends FunctionDef[EntryIdx[E]](None, "EntryIdx.apply", List(List(h,c))){
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  type MirrorEntryIdx[E] = ddbt.lib.store.MirrorEntryIdx[E]
+  case class EntryIdxApplyObject2(cols : Rep[List[Int]]) extends FunctionDef[EntryIdx[GenericEntry]](None, "EntryIdx.apply", List(List(cols))){
+    override def curriedConstructor = (copy _)
+  }
+
+  case class EntryIdxApplyObject3[R](f : Rep[(GenericEntry => R)])(implicit val typeR : TypeRep[R]) extends FunctionDef[EntryIdx[GenericEntry]](None, "EntryIdx.apply", List(List(f))){
+    override def curriedConstructor = (copy[R] _)
+  }
+
+  type EntryIdx[E <: ddbt.lib.store.Entry] = ddbt.lib.store.EntryIdx[E]
 }
-trait MirrorEntryIdxImplicits extends MirrorEntryIdxOps { 
+trait EntryIdxImplicits extends EntryIdxOps { 
   // Add implicit conversions here!
 }
-trait MirrorEntryIdxComponent extends MirrorEntryIdxOps with MirrorEntryIdxImplicits {  }
+trait EntryIdxComponent extends EntryIdxOps with EntryIdxImplicits {  }
 
-trait MirrorEntryIdxPartialEvaluation extends MirrorEntryIdxComponent with BasePartialEvaluation {  
+trait EntryIdxPartialEvaluation extends EntryIdxComponent with BasePartialEvaluation {  
   // Immutable field inlining 
 
   // Mutable field inlining 

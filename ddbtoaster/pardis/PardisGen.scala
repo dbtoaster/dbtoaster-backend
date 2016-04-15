@@ -14,7 +14,6 @@ import ddbt.ast._
 import ddbt.lib.ManifestHelper
 import ddbt.lib.ManifestHelper._
 import ddbt.lib.store.deep.StoreDSL
-import ddbt.lib.store.{Store, Entry}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 
@@ -51,7 +50,7 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
 
   def mapProxy(m: Rep[_]) = impl.store2StoreOpsCls(m.asInstanceOf[Rep[Store[Entry]]])
 
-  def mapProxy2(m: Rep[_]) = new impl.MStoreRep1(m.asInstanceOf[Rep[MStore[Entry]]])
+  def mapProxy2(m: Rep[_]) = new impl.StoreRep1(m.asInstanceOf[Rep[Store[Entry]]])
 
   // Expression CPS transformation from M3 AST to LMS graph representation
   //   ex : expression to convert
@@ -424,7 +423,7 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
           } else {
             val m = me2(keys.map(_._2), tp)
             implicit val cE = ManifestHelper.manStore(m)
-            val s = impl.__newMStore() // xxx::impl.named(name,true)(manStore(m))
+            val s = impl.__newStore() // xxx::impl.named(name,true)(manStore(m))
             //impl.collectStore(s)(m)
             (name, ( /*impl.newSStore()(m)*/ s, keys, tp))
           }
@@ -451,7 +450,7 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
       val mapAccess = scala.collection.mutable.HashMap[Rep[_], OpInfo]()
 //
       analysis += statement {
-        case sym -> (node@MStoreGet(map, _, _, _)) =>
+        case sym -> (node@StoreGet(map, _, _, _)) =>
           mapAccess.getOrElseUpdate(map, new OpInfo(0)).count += 1
           ()
       }
@@ -462,7 +461,7 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
       import IR._
 
       // rewrite += rule {
-      //   case MStoreGet(map,idx,key) if(mapAccess(map).count < 4) =>
+      //   case StoreGet(map,idx,key) if(mapAccess(map).count < 4) =>
       //     map.update(unit(null))
       // }
     }
@@ -537,7 +536,7 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
 
     val ds = "" // xxx - Fixeit outStream.toString
     val printInfoDef = "def printMapsInfo() = {}"
-    val storeTypeAlias = "type MStore[E<:Entry] = Store[E]\n"
+    val storeTypeAlias = "type Store[E<:Entry] = Store[E]\n"
     // val storeTypeAlias = ""
     val r = ds + "\n" + storeTypeAlias + ms + "\n" + entries.toString + "\n" + ts + "\n" + printInfoDef
     (r, str, ld0, consts)

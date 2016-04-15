@@ -2,10 +2,11 @@ package ddbt.lib.store.deep
 
 import ch.epfl.data.sc.pardis.deep.scalalib.collection.{ArrayBufferComponent, SetComponent}
 import ch.epfl.data.sc.pardis.deep.scalalib.{ScalaPredefOps, ArrayComponent, BooleanComponent, StringComponent}
-import ch.epfl.data.sc.pardis.ir.{PardisLambdaDef, PardisStructMethod, PardisStructArg, Constant}
+import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeUnit, typeAny}
-import ch.epfl.data.sc.pardis.types.RecordType
+import ch.epfl.data.sc.pardis.types.{PardisType, RecordType}
+import ch.epfl.data.sc.purgatory.types.TypeRep
 import ddbt.ast.{TypeDouble, TypeLong, Type}
 import ddbt.lib.store._
 import lifter.{SCLMSInterop, TypeToTypeRep}
@@ -15,15 +16,52 @@ import transformer.{SEntryFlag, SEntry}
   * Created by khayyam on 4/8/15.
   */
 
-trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent  with ScalaPredefOps with MirrorAggregatorComponent {
+trait EntryOps extends Base {
+  implicit val EntryType = EntryIRs.EntryType
+  type Entry = ddbt.lib.store.Entry
+}
 
-  implicit case object EntryType extends TypeRep[Entry] {
+trait EntryComponent extends EntryOps
+
+object EntryIRs extends Base {
+
+  case object EntryType extends TypeRep[Entry] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = EntryType
 
     val name = "GenericEntry"
     val typeArguments = Nil
     val typeTag = scala.reflect.runtime.universe.typeTag[Entry]
   }
+
+  implicit val typeEntry: TypeRep[Entry] = EntryType
+}
+
+trait IdxOps extends Base {
+  val IdxType = IdxIRs.IdxType
+  type IdxType[E <: ddbt.lib.store.Entry] = IdxIRs.IdxType[E]
+  implicit def typeIdx[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Idx[E]] = IdxType(implicitly[TypeRep[E]])
+  //implicit def typeAggregator[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Aggregator[E]] = AggregatorType(implicitly[TypeRep[E]])
+  type Idx[E<:Entry] = ddbt.lib.store.Idx[E]
+}
+
+trait IdxComponent extends IdxOps
+
+object IdxIRs extends Base {
+import EntryIRs._
+  case class IdxType[E <: Entry](typeE: TypeRep[E]) extends TypeRep[Idx[E]] {
+    def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = IdxType(newArguments(0).asInstanceOf[TypeRep[_ <: ddbt.lib.store.Entry]])
+
+    val name = s"Idx[${typeE.name}]"
+    val typeArguments = List(typeE)
+
+  }
+  implicit def typeIdx[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Idx[E]] = IdxType(implicitly[TypeRep[E]])
+  type Idx[E <: Entry] = ddbt.lib.store.Idx[E]
+}
+
+trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with AggregatorComponent with EntryComponent with EntryIdxComponent with IdxComponent {
+
+
   def nullValue(tp: TypeRep[_]) = tp match {
     case IntType => unit(-1)
     case LongType => unit(-1L)
@@ -33,12 +71,14 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
     case DateType => unit[Date](null)
     case _ => unit(null)
   }
+
   def storeType(s: Sym[_]) = s.attributes.get[SEntry](SEntryFlag).getOrElse(SEntry())
+
   implicit def entryRepToGenericEntryOps(self: Rep[Entry]) = new GenericEntryRep(self.asInstanceOf[Rep[GenericEntry]])
 
-  implicit def storeRepToStoreOps[E <: ddbt.lib.store.Entry](self: Rep[Store[E]])(implicit typeE: TypeRep[E]) = new MStoreRep[E](self.asInstanceOf[Rep[MStore[E]]])
+  implicit def storeRepToStoreOps[E <: ddbt.lib.store.Entry](self: Rep[Store[E]])(implicit typeE: TypeRep[E]) = new StoreRep[E](self.asInstanceOf[Rep[Store[E]]])
 
-  implicit class MStoreRep1[E <: ddbt.lib.store.Entry](self: Rep[MStore[E]])(implicit typeE: TypeRep[E]) {
+  implicit class StoreRep1[E <: ddbt.lib.store.Entry](self: Rep[Store[E]])(implicit typeE: TypeRep[E]) {
 
     def slice1(f: Rep[E] => Rep[Unit], args: (Int, Rep[Any])*): Rep[Unit] = slice2(stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args), f, -1)
 
@@ -50,21 +90,21 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
     }
 
 
-
   }
-//override   def record_newDef[T: TypeRep](fields: Seq[(String, Boolean, Rep[Any])]): Def[T] = {
-//  val fieldSyms = createFieldsSyms(fields)
-//  val tp = getRecordType[T]
-//  val tag = tp match {
-//    case tpe: RecordType[T] => tpe.tag
-//  }
-//  lazy val copyfn = doLambda0Def(() => record_new[T](fields)).asInstanceOf[PardisLambdaDef]
-//  Struct[T](tag, fieldSyms, List(PardisStructMethod("copy", copyfn, true)))(tp)
-//}
- override  def createFieldsSyms(fields: Seq[(String, Boolean, Rep[Any])]): Seq[PardisStructArg] = {
+
+  //override   def record_newDef[T: TypeRep](fields: Seq[(String, Boolean, Rep[Any])]): Def[T] = {
+  //  val fieldSyms = createFieldsSyms(fields)
+  //  val tp = getRecordType[T]
+  //  val tag = tp match {
+  //    case tpe: RecordType[T] => tpe.tag
+  //  }
+  //  lazy val copyfn = doLambda0Def(() => record_new[T](fields)).asInstanceOf[PardisLambdaDef]
+  //  Struct[T](tag, fieldSyms, List(PardisStructMethod("copy", copyfn, true)))(tp)
+  //}
+  override def createFieldsSyms(fields: Seq[(String, Boolean, Rep[Any])]): Seq[PardisStructArg] = {
     fields map {
       case (index, false, rhs) => PardisStructArg(index, false, rhs)
-      case (index, true, rhs)  => PardisStructArg(index, true, rhs)
+      case (index, true, rhs) => PardisStructArg(index, true, rhs)
     }
   }
 
@@ -132,7 +172,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
     // val sym = StNewStore[E](tp)
     //sym.asInstanceOf[Sym[_]].attributes.put("_isTemp",true);
     implicit val manE = manifest[Int].asInstanceOf[Manifest[E]]
-    val sym = __newMStore[E]()
+    val sym = __newStore[E]()
     sym.asInstanceOf[Rep[Store[E]]]
     //    null
   }
@@ -183,7 +223,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
     val tmp = isTemp(map.asInstanceOf[Sym[_]])
     val n = unit(m.typeArguments.size)
     val lastMan = m.typeArguments.last
-    val currentEnt = stGet(map,  ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
+    val currentEnt = stGet(map, ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
     val entVal = ent.get(n)(lastMan)
 
     //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
@@ -204,12 +244,14 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
   def steGet[E <: Entry : TypeRep, T: TypeRep](x: Rep[E], i: Int): Rep[T] = //SteGet[E, T](x, i)
     x.get[T](unit(i))
 
-  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], keyCols: Seq[Int], key: Rep[E]): Rep[E] = x.get(unit(0), key, keyCols.map(unit(_)):_*)
+  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], keyCols: Seq[Int], key: Rep[E]): Rep[E] = x.get(unit(0), key, keyCols.map(unit(_)): _*)
 
   //Assuming full entry of TPCH
   def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], key: Rep[E]): Rep[E] = {
-    val keyCols = key match {case Def(SteNewSEntry(_,args)) => args}
-    stGet(x,(1 until keyCols.size).toList , key)
+    val keyCols = key match {
+      case Def(SteNewSEntry(_, args)) => args
+    }
+    stGet(x, (1 until keyCols.size).toList, key)
   }
 
   def stClear[E <: Entry : TypeRep](x: Rep[Store[E]]): Rep[Unit] = x.clear //StClear[E](x)
@@ -253,7 +295,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
   def stSlice[E <: Entry : TypeRep](x: Rep[Store[E]], f: Rep[E] => Rep[Unit], args: (Int, Rep[Any])*): Rep[Unit] = stSlice(x, 0, stSampleEntry(x, args), f)
 
   // FIXME
-  def store2StoreOpsCls[E <: Entry](store: Rep[Store[E]]) = new MStoreRep(store.asInstanceOf[Rep[MStore[E]]])(runtimeType[Int].asInstanceOf[TypeRep[E]])
+  def store2StoreOpsCls[E <: Entry](store: Rep[Store[E]]) = new StoreRep(store.asInstanceOf[Rep[Store[E]]])(runtimeType[Int].asInstanceOf[TypeRep[E]])
 
   // def dtGetYear(x: Rep[Date]): Rep[Long] = dateGetYear(x)
 
@@ -309,5 +351,5 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
 
   implicit val typeNull = ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeAny.asInstanceOf[TypeRep[Null]]
 
-  implicit def typeStore[E <: ddbt.lib.store.Entry : TypeRep]: TypeRep[Store[E]] = MStoreType(implicitly[TypeRep[E]]).asInstanceOf[TypeRep[Store[E]]]
+  //implicit def typeStore[E <: ddbt.lib.store.Entry : TypeRep]: TypeRep[Store[E]] = MStoreType(implicitly[TypeRep[E]]).asInstanceOf[TypeRep[Store[E]]]
 }

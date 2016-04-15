@@ -3,12 +3,12 @@ import scala.reflect._
 
 import ch.epfl.data.sc.pardis.annotations._
 
-@needs[Array[_] :: MirrorEntryIdx[_]]
+@needs[Array[_] :: EntryIdx[_] :: Idx[_]]
 @deep
-//@reflect[Store[_]]
-class MStore[E<:Entry](val idxs:Array[E], val ops:Array[E]) {
-  def this()(implicit cE:Manifest[E]) = this(new Array[E](0), new Array[E](0))
-//  def this(n: Int, ops: Array[MirrorEntryIdx[E]])(implicit cE: Manifest[E]) = this(new Array[E](0), ops)
+@reflect[Store[_]]
+class MStore[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]) {
+  def this()(implicit cE:Manifest[E]) = this(new Array[Idx[E]](0), new Array[EntryIdx[E]](0))
+  def this(n: Int, ops: Array[EntryIdx[E]])(implicit cE: Manifest[E]) = this(new Array[Idx[E]](0), ops)
   private val n = idxs.length
   // def this(n:Int) = this(new Array[Idx[E]](n),null)(cE)
   // def this(n:Int,ops:Array[EntryIdx[E]]) = this(new Array[Idx[E]](n),ops)(cE)

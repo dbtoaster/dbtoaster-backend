@@ -1,7 +1,7 @@
 package sc.tpcc
 
 
-//import ddbt.lib.store.{MStore, GenericEntry}
+//import ddbt.lib.store.{Store, GenericEntry}
 import java.io.{FileWriter, PrintStream, PrintWriter}
 import java.util.concurrent.Executor
 
@@ -24,7 +24,7 @@ object TpccXactGenerator_SC {
   class Prog(val Context: StoreDSL) {
 
     //    import Context.Predef._
-    //    import Context.{__newMStore, Date, overloaded2, typeGenericEntry}
+    //    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
     //    import Context.{entryRepToGenericEntryOps => _ , _}
     import Context.{EntryType => _, entryRepToGenericEntryOps => _, typeStore => _, typeNull => _, println => _, _}
 
@@ -40,15 +40,15 @@ object TpccXactGenerator_SC {
     val CustomerEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, DateType, StringType, DoubleType, DoubleType, DoubleType, DoubleType, IntType, IntType, StringType)
     val StockEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, IntType, IntType, IntType, StringType)
 
-    val newOrderTbl = __newMStore[GenericEntry]
-    val historyTbl = __newMStore[GenericEntry]
-    val warehouseTbl = __newMStore[GenericEntry]
-    val itemTbl = __newMStore[GenericEntry]
-    val orderTbl = __newMStore[GenericEntry]
-    val districtTbl = __newMStore[GenericEntry]
-    val orderLineTbl = __newMStore[GenericEntry]
-    val customerTbl = __newMStore[GenericEntry]
-    val stockTbl = __newMStore[GenericEntry]
+    val newOrderTbl = __newStore[GenericEntry]
+    val historyTbl = __newStore[GenericEntry]
+    val warehouseTbl = __newStore[GenericEntry]
+    val itemTbl = __newStore[GenericEntry]
+    val orderTbl = __newStore[GenericEntry]
+    val districtTbl = __newStore[GenericEntry]
+    val orderLineTbl = __newStore[GenericEntry]
+    val customerTbl = __newStore[GenericEntry]
+    val stockTbl = __newStore[GenericEntry]
     val schema = List[(Rep[_], List[TypeRep[_]])](newOrderTbl -> NewOrderEntry, historyTbl -> HistoryEntry, warehouseTbl -> WarehouseEntry, itemTbl -> ItemEntry, orderTbl -> OrderEntry, districtTbl -> DistrictEntry, orderLineTbl -> OrderLineEntry, customerTbl -> CustomerEntry, stockTbl -> StockEntry)
 
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
@@ -296,7 +296,7 @@ object TpccXactGenerator_SC {
       })
 
       val found_c_id = readVar(customerEntry).get[Int](unit(3))
-      val agg = MirrorAggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
+      val agg = Aggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
       orderTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id), agg)
       val newestOrderEntry = agg.result
       val dceBlocker = __newVar(unit(0))
@@ -362,7 +362,7 @@ dsl"""
       val orderIDs = __newArray[Int](unit(10))
       val d_id = __newVar(unit(1))
       __whileDo(readVar(d_id) <= DIST_PER_WAREHOUSE, {
-        val agg = MirrorAggregator.min[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
+        val agg = Aggregator.min[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
         newOrderTbl.slice(unit(0) /*no_o_id*/ , GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), readVar(d_id), w_id), agg)
         val firstOrderEntry = agg.result
         __ifThenElse(firstOrderEntry __!= unit[GenericEntry](null), {
@@ -492,7 +492,7 @@ dsl"""
     val header =
       """
         |package tpcc.sc
-        |import ddbt.lib.store.{Store => MStore, Aggregator => MirrorAggregator, _}
+        |import ddbt.lib.store._}
         |import scala.collection.mutable.{ArrayBuffer,Set}
         |import java.util.Date
         | """.stripMargin
@@ -549,7 +549,7 @@ dsl"""
     System.err.println(s"Structs are $structs")
     file.println(structs.map(codeGen.getStruct).mkDocument("\n"))
     optCodeBlocks.foreach { case (className, args, body) => {
-      val genCode = "class " + className + "(" + global.map(m => m.name + m.id + s": MStore[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
+      val genCode = "class " + className + "(" + global.map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
         "def apply(" + args.map(s => s + ": " + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") = "
       val cgDoc = codeGen.blockToDocument(body)
       file.println(genCode + cgDoc + "\n}")

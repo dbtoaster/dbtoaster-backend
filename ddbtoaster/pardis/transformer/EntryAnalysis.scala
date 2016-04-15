@@ -43,7 +43,7 @@ class EntryAnalysis(override val IR: StoreDSL, val schema: Map[ExpressionSymbol[
 
   import IR._
 
-  def add(key: Any, store: Rep[MStore[_]]) = {
+  def add(key: Any, store: Rep[Store[_]]) = {
     System.err.println(s"Adding $key from store $store")
     EntryTypes += key.asInstanceOf[Sym[_]] -> schema(store.asInstanceOf[Sym[_]])
   }
@@ -58,38 +58,38 @@ class EntryAnalysis(override val IR: StoreDSL, val schema: Map[ExpressionSymbol[
   analysis += statement {
     //      case sym -> (GenericEntryApplyObject(_, _)) => EntryTypes += sym -> EntryTypeRef; ()
 
-    case sym -> (MStoreGet(store, _, key@Def(SteNewSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
-    case sym -> (MStoreGet(store, _, key@Def(SteSampleSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
-    case sym -> (MStoreGet(store, _, key@Def(GenericEntryApplyObject(_, _)), _)) => add(key, store); add(sym, store); ()
+    case sym -> (StoreGet(store, _, key@Def(SteNewSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
+    case sym -> (StoreGet(store, _, key@Def(SteSampleSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
+    case sym -> (StoreGet(store, _, key@Def(GenericEntryApplyObject(_, _)), _)) => add(key, store); add(sym, store); ()
 
-    case sym -> (MStoreInsert(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
-    case sym -> (MStoreInsert(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
+    case sym -> (StoreInsert(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+    case sym -> (StoreInsert(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
 
-    case sym -> (MStoreUpdate(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
-    case sym -> (MStoreUpdate(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
-
-
-    case sym -> (MStoreDelete1(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+    case sym -> (StoreUpdate(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+    case sym -> (StoreUpdate(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
 
 
-    case sym -> (MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(MirrorAggregatorMaxObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
-    case sym -> (MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(MirrorAggregatorMinObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
-    case sym -> (MStoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
-    case sym -> (MStoreSlice(store, _, key@Def(SteSampleSEntry(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
-
-    case sym -> (MStoreForeach(store, f@Def(PardisLambda(_, i, _)))) => add(i, store); add(f, store); ()
-
-    case sym -> (MStoreRange(store, _, key1@Def(GenericEntryApplyObject(_, _)), key2@Def(GenericEntryApplyObject(_, _)), _, _, _)) => add(key1, store); add(key2, store); ()
-
-    case sym -> (MStoreDelete2(store, _, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+    case sym -> (StoreDelete1(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
 
 
-    case sym -> (MirrorAggregatorResult(agg)) => addVar(sym, agg); ()
+    case sym -> (StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMaxObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
+    case sym -> (StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMinObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
+    case sym -> (StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
+    case sym -> (StoreSlice(store, _, key@Def(SteSampleSEntry(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
+
+    case sym -> (StoreForeach(store, f@Def(PardisLambda(_, i, _)))) => add(i, store); add(f, store); ()
+
+    case sym -> (StoreRange(store, _, key1@Def(GenericEntryApplyObject(_, _)), key2@Def(GenericEntryApplyObject(_, _)), _, _, _)) => add(key1, store); add(key2, store); ()
+
+    case sym -> (StoreDelete2(store, _, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+
+
+    case sym -> (AggregatorResult(agg)) => addVar(sym, agg); ()
     case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if EntryTypes.contains(rhs) => addVar(lhs, rhs); ()
     case sym -> (PardisReadVar(PardisVar(v@Sym(_, _)))) if EntryTypes.contains(v) => addVar(sym, v); ()
     case sym -> (ArrayBufferAppend(ab, el)) => addVar(ab, el); ()
     case sym -> (ArrayBufferSortWith(ab@Sym(_, _), f@Def(PardisLambda2(_, i1, i2, _)))) => addVar(f, ab); addVar(i1, ab); addVar(i2, ab); ()
-    case s -> (MStoreNew2()) => {
+    case s -> (StoreNew2()) => {
       val sch = schema(s)
       s.attributes += SEntry(sch)
       ()
@@ -152,7 +152,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       __newArrayBuffer[SEntry]()
     }
 
-    //    case sym -> (MStoreNew1(idx,ops)) =>{
+    //    case sym -> (StoreNew1(idx,ops)) =>{
     //      val sch = schema(sym)
     //      implicit val entTp: TypeRep[SEntry] = new RecordType[SEntry](getClassTag(sch), None)
     //    }

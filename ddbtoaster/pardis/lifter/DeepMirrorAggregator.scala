@@ -11,75 +11,75 @@ import pardis.deep.scalalib._
 import pardis.deep.scalalib.collection._
 import pardis.deep.scalalib.io._
 
-trait MirrorAggregatorOps extends Base  {  
+trait AggregatorOps extends Base  {  
   // Type representation
-  val MirrorAggregatorType = MirrorAggregatorIRs.MirrorAggregatorType
-  type MirrorAggregatorType[E <: ddbt.lib.store.Entry] = MirrorAggregatorIRs.MirrorAggregatorType[E]
-  implicit def typeMirrorAggregator[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[MirrorAggregator[E]] = MirrorAggregatorType(implicitly[TypeRep[E]])
-  implicit class MirrorAggregatorRep[E <: ddbt.lib.store.Entry](self : Rep[MirrorAggregator[E]])(implicit typeE : TypeRep[E]) {
-     def apply(e : Rep[E]) : Rep[Unit] = mirrorAggregatorApply[E](self, e)(typeE)
-     def result : Rep[E] = mirrorAggregatorResult[E](self)(typeE)
-     def compose[A](g : Rep[(A => E)])(implicit typeA : TypeRep[A]) : Rep[(A => Unit)] = mirrorAggregatorCompose[E, A](self, g)(typeE, typeA)
-     def andThen[A](g : Rep[(Unit => A)])(implicit typeA : TypeRep[A]) : Rep[(E => A)] = mirrorAggregatorAndThen[E, A](self, g)(typeE, typeA)
+  val AggregatorType = AggregatorIRs.AggregatorType
+  type AggregatorType[E <: ddbt.lib.store.Entry] = AggregatorIRs.AggregatorType[E]
+  implicit def typeAggregator[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Aggregator[E]] = AggregatorType(implicitly[TypeRep[E]])
+  implicit class AggregatorRep[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit typeE : TypeRep[E]) {
+     def apply(e : Rep[E]) : Rep[Unit] = aggregatorApply[E](self, e)(typeE)
+     def result : Rep[E] = aggregatorResult[E](self)(typeE)
+     def compose[A](g : Rep[(A => E)])(implicit typeA : TypeRep[A]) : Rep[(A => Unit)] = aggregatorCompose[E, A](self, g)(typeE, typeA)
+     def andThen[A](g : Rep[(Unit => A)])(implicit typeA : TypeRep[A]) : Rep[(E => A)] = aggregatorAndThen[E, A](self, g)(typeE, typeA)
   }
-  object MirrorAggregator {
-     def min[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[MirrorAggregator[E]] = mirrorAggregatorMinObject[E, R](f)(typeE, typeR, order)
-     def max[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[MirrorAggregator[E]] = mirrorAggregatorMaxObject[E, R](f)(typeE, typeR, order)
+  object Aggregator {
+     def min[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = aggregatorMinObject[E, R](f)(typeE, typeR, order)
+     def max[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = aggregatorMaxObject[E, R](f)(typeE, typeR, order)
   }
   // constructors
 
   // IR defs
-  val MirrorAggregatorApply = MirrorAggregatorIRs.MirrorAggregatorApply
-  type MirrorAggregatorApply[E <: ddbt.lib.store.Entry] = MirrorAggregatorIRs.MirrorAggregatorApply[E]
-  val MirrorAggregatorResult = MirrorAggregatorIRs.MirrorAggregatorResult
-  type MirrorAggregatorResult[E <: ddbt.lib.store.Entry] = MirrorAggregatorIRs.MirrorAggregatorResult[E]
-  val MirrorAggregatorCompose = MirrorAggregatorIRs.MirrorAggregatorCompose
-  type MirrorAggregatorCompose[E <: ddbt.lib.store.Entry, A] = MirrorAggregatorIRs.MirrorAggregatorCompose[E, A]
-  val MirrorAggregatorAndThen = MirrorAggregatorIRs.MirrorAggregatorAndThen
-  type MirrorAggregatorAndThen[E <: ddbt.lib.store.Entry, A] = MirrorAggregatorIRs.MirrorAggregatorAndThen[E, A]
-  val MirrorAggregatorMinObject = MirrorAggregatorIRs.MirrorAggregatorMinObject
-  type MirrorAggregatorMinObject[E <: ddbt.lib.store.Entry, R] = MirrorAggregatorIRs.MirrorAggregatorMinObject[E, R]
-  val MirrorAggregatorMaxObject = MirrorAggregatorIRs.MirrorAggregatorMaxObject
-  type MirrorAggregatorMaxObject[E <: ddbt.lib.store.Entry, R] = MirrorAggregatorIRs.MirrorAggregatorMaxObject[E, R]
+  val AggregatorApply = AggregatorIRs.AggregatorApply
+  type AggregatorApply[E <: ddbt.lib.store.Entry] = AggregatorIRs.AggregatorApply[E]
+  val AggregatorResult = AggregatorIRs.AggregatorResult
+  type AggregatorResult[E <: ddbt.lib.store.Entry] = AggregatorIRs.AggregatorResult[E]
+  val AggregatorCompose = AggregatorIRs.AggregatorCompose
+  type AggregatorCompose[E <: ddbt.lib.store.Entry, A] = AggregatorIRs.AggregatorCompose[E, A]
+  val AggregatorAndThen = AggregatorIRs.AggregatorAndThen
+  type AggregatorAndThen[E <: ddbt.lib.store.Entry, A] = AggregatorIRs.AggregatorAndThen[E, A]
+  val AggregatorMinObject = AggregatorIRs.AggregatorMinObject
+  type AggregatorMinObject[E <: ddbt.lib.store.Entry, R] = AggregatorIRs.AggregatorMinObject[E, R]
+  val AggregatorMaxObject = AggregatorIRs.AggregatorMaxObject
+  type AggregatorMaxObject[E <: ddbt.lib.store.Entry, R] = AggregatorIRs.AggregatorMaxObject[E, R]
   // method definitions
-   def mirrorAggregatorApply[E <: ddbt.lib.store.Entry](self : Rep[MirrorAggregator[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = MirrorAggregatorApply[E](self, e)
-   def mirrorAggregatorResult[E <: ddbt.lib.store.Entry](self : Rep[MirrorAggregator[E]])(implicit typeE : TypeRep[E]) : Rep[E] = MirrorAggregatorResult[E](self)
-   def mirrorAggregatorCompose[E <: ddbt.lib.store.Entry, A](self : Rep[MirrorAggregator[E]], g : Rep[((A) => E)])(implicit typeE : TypeRep[E], typeA : TypeRep[A]) : Rep[(A => Unit)] = MirrorAggregatorCompose[E, A](self, g)
-   def mirrorAggregatorAndThen[E <: ddbt.lib.store.Entry, A](self : Rep[MirrorAggregator[E]], g : Rep[((Unit) => A)])(implicit typeE : TypeRep[E], typeA : TypeRep[A]) : Rep[(E => A)] = MirrorAggregatorAndThen[E, A](self, g)
-   def mirrorAggregatorMinObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[MirrorAggregator[E]] = MirrorAggregatorMinObject[E, R](f)
-   def mirrorAggregatorMaxObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[MirrorAggregator[E]] = MirrorAggregatorMaxObject[E, R](f)
-  type MirrorAggregator[E <: ddbt.lib.store.Entry] = ddbt.lib.store.MirrorAggregator[E]
+   def aggregatorApply[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = AggregatorApply[E](self, e)
+   def aggregatorResult[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit typeE : TypeRep[E]) : Rep[E] = AggregatorResult[E](self)
+   def aggregatorCompose[E <: ddbt.lib.store.Entry, A](self : Rep[Aggregator[E]], g : Rep[((A) => E)])(implicit typeE : TypeRep[E], typeA : TypeRep[A]) : Rep[(A => Unit)] = AggregatorCompose[E, A](self, g)
+   def aggregatorAndThen[E <: ddbt.lib.store.Entry, A](self : Rep[Aggregator[E]], g : Rep[((Unit) => A)])(implicit typeE : TypeRep[E], typeA : TypeRep[A]) : Rep[(E => A)] = AggregatorAndThen[E, A](self, g)
+   def aggregatorMinObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = AggregatorMinObject[E, R](f)
+   def aggregatorMaxObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = AggregatorMaxObject[E, R](f)
+  type Aggregator[E <: ddbt.lib.store.Entry] = ddbt.lib.store.Aggregator[E]
 }
-object MirrorAggregatorIRs extends Base {
+object AggregatorIRs extends Base {
   // Type representation
-  case class MirrorAggregatorType[E <: ddbt.lib.store.Entry](typeE: TypeRep[E]) extends TypeRep[MirrorAggregator[E]] {
-    def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = MirrorAggregatorType(newArguments(0).asInstanceOf[TypeRep[_ <: ddbt.lib.store.Entry]])
-    val name = s"MirrorAggregator[${typeE.name}]"
+  case class AggregatorType[E <: ddbt.lib.store.Entry](typeE: TypeRep[E]) extends TypeRep[Aggregator[E]] {
+    def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = AggregatorType(newArguments(0).asInstanceOf[TypeRep[_ <: ddbt.lib.store.Entry]])
+    val name = s"Aggregator[${typeE.name}]"
     val typeArguments = List(typeE)
   }
-      implicit def typeMirrorAggregator[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[MirrorAggregator[E]] = MirrorAggregatorType(implicitly[TypeRep[E]])
+      implicit def typeAggregator[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Aggregator[E]] = AggregatorType(implicitly[TypeRep[E]])
   // case classes
-  case class MirrorAggregatorApply[E <: ddbt.lib.store.Entry](self : Rep[MirrorAggregator[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "apply", List(List(e))){
+  case class AggregatorApply[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "apply", List(List(e))){
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  case class MirrorAggregatorResult[E <: ddbt.lib.store.Entry](self : Rep[MirrorAggregator[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "result", List()){
+  case class AggregatorResult[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "result", List()){
     override def curriedConstructor = (copy[E] _)
   }
 
-  case class MirrorAggregatorCompose[E <: ddbt.lib.store.Entry, A](self : Rep[MirrorAggregator[E]], g : Rep[((A) => E)])(implicit val typeE : TypeRep[E], val typeA : TypeRep[A]) extends FunctionDef[(A => Unit)](Some(self), "compose", List(List(g))){
+  case class AggregatorCompose[E <: ddbt.lib.store.Entry, A](self : Rep[Aggregator[E]], g : Rep[((A) => E)])(implicit val typeE : TypeRep[E], val typeA : TypeRep[A]) extends FunctionDef[(A => Unit)](Some(self), "compose", List(List(g))){
     override def curriedConstructor = (copy[E, A] _).curried
   }
 
-  case class MirrorAggregatorAndThen[E <: ddbt.lib.store.Entry, A](self : Rep[MirrorAggregator[E]], g : Rep[((Unit) => A)])(implicit val typeE : TypeRep[E], val typeA : TypeRep[A]) extends FunctionDef[(E => A)](Some(self), "andThen", List(List(g))){
+  case class AggregatorAndThen[E <: ddbt.lib.store.Entry, A](self : Rep[Aggregator[E]], g : Rep[((Unit) => A)])(implicit val typeE : TypeRep[E], val typeA : TypeRep[A]) extends FunctionDef[(E => A)](Some(self), "andThen", List(List(g))){
     override def curriedConstructor = (copy[E, A] _).curried
   }
 
-  case class MirrorAggregatorMinObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit val typeE : TypeRep[E], val typeR : TypeRep[R], val order : Ordering[R]) extends FunctionDef[MirrorAggregator[E]](None, "MirrorAggregator.min", List(List(f))){
+  case class AggregatorMinObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit val typeE : TypeRep[E], val typeR : TypeRep[R], val order : Ordering[R]) extends FunctionDef[Aggregator[E]](None, "Aggregator.min", List(List(f))){
     override def curriedConstructor = (copy[E, R] _)
     override def isPure = true
 
-    override def partiallyEvaluate(children: Any*): MirrorAggregator[E] = {
+    override def partiallyEvaluate(children: Any*): Aggregator[E] = {
       val f = children(0).asInstanceOf[(E => R)]
       ddbt.lib.store.MirrorAggregator.min[E, R](f)
     }
@@ -87,11 +87,11 @@ object MirrorAggregatorIRs extends Base {
 
   }
 
-  case class MirrorAggregatorMaxObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit val typeE : TypeRep[E], val typeR : TypeRep[R], val order : Ordering[R]) extends FunctionDef[MirrorAggregator[E]](None, "MirrorAggregator.max", List(List(f))){
+  case class AggregatorMaxObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit val typeE : TypeRep[E], val typeR : TypeRep[R], val order : Ordering[R]) extends FunctionDef[Aggregator[E]](None, "Aggregator.max", List(List(f))){
     override def curriedConstructor = (copy[E, R] _)
     override def isPure = true
 
-    override def partiallyEvaluate(children: Any*): MirrorAggregator[E] = {
+    override def partiallyEvaluate(children: Any*): Aggregator[E] = {
       val f = children(0).asInstanceOf[(E => R)]
       ddbt.lib.store.MirrorAggregator.max[E, R](f)
     }
@@ -99,14 +99,14 @@ object MirrorAggregatorIRs extends Base {
 
   }
 
-  type MirrorAggregator[E <: ddbt.lib.store.Entry] = ddbt.lib.store.MirrorAggregator[E]
+  type Aggregator[E <: ddbt.lib.store.Entry] = ddbt.lib.store.Aggregator[E]
 }
-trait MirrorAggregatorImplicits extends MirrorAggregatorOps { 
+trait AggregatorImplicits extends AggregatorOps { 
   // Add implicit conversions here!
 }
-trait MirrorAggregatorComponent extends MirrorAggregatorOps with MirrorAggregatorImplicits {  }
+trait AggregatorComponent extends AggregatorOps with AggregatorImplicits {  }
 
-trait MirrorAggregatorPartialEvaluation extends MirrorAggregatorComponent with BasePartialEvaluation {  
+trait AggregatorPartialEvaluation extends AggregatorComponent with BasePartialEvaluation {  
   // Immutable field inlining 
 
   // Mutable field inlining 

@@ -10,7 +10,7 @@ import ch.epfl.data.sc.pardis.utils.TypeUtils._
 import ch.epfl.data.sc.pardis.utils.document._
 import ch.epfl.data.sc.pardis.ir._
 import ddbt.lib.store._
-import ddbt.lib.store.deep.MStoreIRs._
+import ddbt.lib.store.deep.StoreIRs._
 import ddbt.lib.store.deep.StoreDSL
 import pardis.deep.scalalib.ScalaPredefOps
 import transformer._
@@ -265,10 +265,10 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
   override def getStruct(structDef: PardisStructDef[_]): Document = SEntryDefToDocument(structDef)
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
-    case Statement(sym, MStoreNew2()) => generateNewStore(sym, None)
+    case Statement(sym, StoreNew2()) => generateNewStore(sym, None)
     case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
     case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
-    case Statement(sym, MStoreGet(self, idx, key, _)) => doc"val $sym = $self.get($idx, $key)"
+    case Statement(sym, StoreGet(self, idx, key, _)) => doc"val $sym = $self.get($idx, $key)"
     case _ => super.stmtToDocument(stmt)
   }
 
@@ -280,7 +280,7 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
     val entry = storeType(c)
     System.err.println(s"Store type for $c is $entry")
     val entryidxes = indexes.map(i => EntryIndex(entry, i))
-    def generateNew: String = s"new MStore[${entry.name}](" + indexes.size + s", Array[EntryIdx[${entry.name}]](${entryidxes.map(_.instance).mkString(", ")}))"
+    def generateNew: String = s"new Store[${entry.name}](" + indexes.size + s", Array[EntryIdx[${entry.name}]](${entryidxes.map(_.instance).mkString(", ")}))"
     val symbolName = c.name + c.id
     val mapAlias = mname match {
       case Some(mapName) =>
