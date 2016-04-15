@@ -28,7 +28,8 @@ class GenericEntry(val map: mutable.HashMap[Int, Any], val n: Int, val isSampleE
   def get[E](i: Int) = map.get(i).get.asInstanceOf[E]
 
   def copy: GenericEntry = new GenericEntry(map.clone, map.size, isSampleEntry)
-  override def toString = map.mkString("[",", ","]")
+
+  override def toString = map.mkString("[", ", ", "]")
 }
 
 object GenericEntry {
@@ -66,7 +67,7 @@ case class GenericOps(val cols: List[Int] = List()) extends EntryIdx[GenericEntr
     else if (e1.map.size < e2.map.size)
       e1.map.keysIterator
     else
-     1 until e1.map.size    //TODO: SBJ: Fix: Assumes that all columns except the last form key
+      1 until e1.map.size //TODO: SBJ: Fix: Assumes that all columns except the last form key
     for (i <- colsToCompare) {
       if (e1.map.get(i).get != e2.map.get(i).get) {
         return 1
@@ -81,7 +82,7 @@ case class GenericCmp[R](val f: GenericEntry => R)(implicit order: Ordering[R]) 
   }
 
   def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
-        order.compare(f(e1), f(e2))
+    order.compare(f(e1), f(e2))
   }
 }
 

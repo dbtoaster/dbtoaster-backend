@@ -77,10 +77,26 @@ object MirrorAggregatorIRs extends Base {
 
   case class MirrorAggregatorMinObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit val typeE : TypeRep[E], val typeR : TypeRep[R], val order : Ordering[R]) extends FunctionDef[MirrorAggregator[E]](None, "MirrorAggregator.min", List(List(f))){
     override def curriedConstructor = (copy[E, R] _)
+    override def isPure = true
+
+    override def partiallyEvaluate(children: Any*): MirrorAggregator[E] = {
+      val f = children(0).asInstanceOf[(E => R)]
+      ddbt.lib.store.MirrorAggregator.min[E, R](f)
+    }
+    override def partiallyEvaluable: Boolean = true
+
   }
 
   case class MirrorAggregatorMaxObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit val typeE : TypeRep[E], val typeR : TypeRep[R], val order : Ordering[R]) extends FunctionDef[MirrorAggregator[E]](None, "MirrorAggregator.max", List(List(f))){
     override def curriedConstructor = (copy[E, R] _)
+    override def isPure = true
+
+    override def partiallyEvaluate(children: Any*): MirrorAggregator[E] = {
+      val f = children(0).asInstanceOf[(E => R)]
+      ddbt.lib.store.MirrorAggregator.max[E, R](f)
+    }
+    override def partiallyEvaluable: Boolean = true
+
   }
 
   type MirrorAggregator[E <: ddbt.lib.store.Entry] = ddbt.lib.store.MirrorAggregator[E]

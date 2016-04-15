@@ -19,6 +19,7 @@ import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 
 import ch.epfl.data.sc.pardis.optimization._
+import transformer._
 
 abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL, val analyzeEntry: Boolean, val analyzeIndex: Boolean) extends IScalaGen {
 
@@ -81,7 +82,8 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
       else e match {
         case Ref(n2) => cx.add(n, cx(n2)); co(impl.unit(1L))
         case _ => expr(e, (ve: Rep[_]) => {
-          cx.add(n, ve); co(impl.unit(1L))
+          cx.add(n, ve);
+          co(impl.unit(1L))
         })
       }
     case Mul(l, r) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(mul(vl, vr, ex.tp)), am), am)
@@ -280,8 +282,8 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
   override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
     if (analyzeEntry) {
       val ctx = ctx0(map)
-      val name = codeGen.Entry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
-      map + s".unsafeInsert(0, $name("+ keyNames.map(e => e._1).mkString(",") + ",1L))"
+      val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
+      map + s".unsafeInsert(0, $name(" + keyNames.map(e => e._1).mkString(",") + ",1L))"
     }
     else
       map + ".unsafeInsert(0, GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ",1L))"
@@ -297,7 +299,8 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
     if (q.keys.size > 0)
       "{ val " + res + " = new scala.collection.mutable.HashMap[" + tup(mapKeys.map(_.toScala)) + "," + q.map.tp.toScala + "](); " + map + ".foreach{e => " + res + " += ((" + (if (mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map { case (_, i) => get(i + 1) }) else "e") + "," + get(if (mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size) + ")) }; " + res + ".toMap }"
     else {
-      val c = ctx0(q.name)._1.asInstanceOf[impl.Sym[_]]; s"${c.name + c.id}"
+      val c = ctx0(q.name)._1.asInstanceOf[impl.Sym[_]];
+      s"${c.name + c.id}"
     }
   }
 
@@ -446,9 +449,9 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
         */
 
       val mapAccess = scala.collection.mutable.HashMap[Rep[_], OpInfo]()
-
+//
       analysis += statement {
-        case sym -> (node@MStoreGet(map, _, _)) =>
+        case sym -> (node@MStoreGet(map, _, _, _)) =>
           mapAccess.getOrElseUpdate(map, new OpInfo(0)).count += 1
           ()
       }
@@ -481,14 +484,32 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
     //     java.lang.System.err.println(analysisRound.mapAccess)
     // java.lang.System.err.println(analysisRound2.mapAccess)
     //TODO: SBJ: Fix: Passing empty symbol list as they are not used.
-    tsResBlks.foreach({ case (name, param, block) => codeGen.allBlocks += name -> codeGen.BlockWithSymbols(block.asInstanceOf[Block[Any]], List[Sym[Any]]()) })
-
-
-
+    //    tsResBlks.foreach({ case (name, param, block) => codeGen.allBlocks += name -> codeGen.BlockWithSymbols(block.asInstanceOf[Block[Any]], List[Sym[Any]]()) })
+    //
+    //
+    //
     val allSchema = classLevelMaps.map({ case MapDef(name, tp, kt, _) => ctx0(name)._1.asInstanceOf[impl.Sym[_]] -> (kt.map(_._2) :+ tp).map(man) }) ++ tempMapSchema
     tempMapSchema.clear()
-    if (analyzeIndex) codeGen.analyzeIndices
-    if (analyzeEntry) codeGen.analyzeEntries(allSchema)
+    val pipeline = scala.collection.mutable.ArrayBuffer[TransformerHandler]()
+//    if (analyzeIndex) {
+//      pipeline += new IndexAnalysis(IR)
+//      pipeline += new IndexDecider(IR)
+//      pipeline += new IndexTransformer(IR)
+//    } else
+//      pipeline += new IndexDecider(IR)
+//    if (analyzeEntry) {
+//      val ea = new EntryAnalysis(IR, allSchema)
+//      val et = new EntryTransformer(IR, ea.EntryTypes)
+//      pipeline += ea
+//      pipeline += et
+//    }
+    ////    if (analyzeIndex) codeGen.analyzeIndices
+    //    if (analyzeEntry) {
+    //      val ea = new EntryAnalysis(impl, allSchema.toMap)
+    //      tsResBlks.foreach(b => ea.optimize(b._3))
+    //      val et = new EntryTransformer(impl, ea.EntryTypes.toMap)
+    //      tsResBlks.foreach(b => et.optimize(b._3))
+    //    }
 
     for (x <- tsResBlks) {
       //println(x._3)
@@ -513,7 +534,7 @@ abstract class PardisGen(override val cls: String = "Query", val impl: StoreDSL,
     }
     val entries = new StringWriter()
     val ms = genAllMaps(classLevelMaps) // maps
-    codeGen.emitEntries(new PrintWriter(entries))
+
     val ds = "" // xxx - Fixeit outStream.toString
     val printInfoDef = "def printMapsInfo() = {}"
     val storeTypeAlias = "type MStore[E<:Entry] = Store[E]\n"

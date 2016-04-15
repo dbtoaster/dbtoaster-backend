@@ -2,12 +2,14 @@ package ddbt.lib.store.deep
 
 import ch.epfl.data.sc.pardis.deep.scalalib.collection.{ArrayBufferComponent, SetComponent}
 import ch.epfl.data.sc.pardis.deep.scalalib.{ScalaPredefOps, ArrayComponent, BooleanComponent, StringComponent}
-import ch.epfl.data.sc.pardis.ir.Constant
+import ch.epfl.data.sc.pardis.ir.{PardisLambdaDef, PardisStructMethod, PardisStructArg, Constant}
 import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeUnit, typeAny}
+import ch.epfl.data.sc.pardis.types.RecordType
 import ddbt.ast.{TypeDouble, TypeLong, Type}
 import ddbt.lib.store._
 import lifter.{SCLMSInterop, TypeToTypeRep}
+import transformer.{SEntryFlag, SEntry}
 
 /**
   * Created by khayyam on 4/8/15.
@@ -22,7 +24,16 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
     val typeArguments = Nil
     val typeTag = scala.reflect.runtime.universe.typeTag[Entry]
   }
-
+  def nullValue(tp: TypeRep[_]) = tp match {
+    case IntType => unit(-1)
+    case LongType => unit(-1L)
+    case DoubleType => unit(-1.0)
+    case BooleanType => unit(false)
+    case StringType => unit("")
+    case DateType => unit[Date](null)
+    case _ => unit(null)
+  }
+  def storeType(s: Sym[_]) = s.attributes.get[SEntry](SEntryFlag).getOrElse(SEntry())
   implicit def entryRepToGenericEntryOps(self: Rep[Entry]) = new GenericEntryRep(self.asInstanceOf[Rep[GenericEntry]])
 
   implicit def storeRepToStoreOps[E <: ddbt.lib.store.Entry](self: Rep[Store[E]])(implicit typeE: TypeRep[E]) = new MStoreRep[E](self.asInstanceOf[Rep[MStore[E]]])
@@ -40,6 +51,21 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
 
 
 
+  }
+//override   def record_newDef[T: TypeRep](fields: Seq[(String, Boolean, Rep[Any])]): Def[T] = {
+//  val fieldSyms = createFieldsSyms(fields)
+//  val tp = getRecordType[T]
+//  val tag = tp match {
+//    case tpe: RecordType[T] => tpe.tag
+//  }
+//  lazy val copyfn = doLambda0Def(() => record_new[T](fields)).asInstanceOf[PardisLambdaDef]
+//  Struct[T](tag, fieldSyms, List(PardisStructMethod("copy", copyfn, true)))(tp)
+//}
+ override  def createFieldsSyms(fields: Seq[(String, Boolean, Rep[Any])]): Seq[PardisStructArg] = {
+    fields map {
+      case (index, false, rhs) => PardisStructArg(index, false, rhs)
+      case (index, true, rhs)  => PardisStructArg(index, true, rhs)
+    }
   }
 
   // Global variables
@@ -178,7 +204,7 @@ trait StoreDSL extends MStoreComponent with SCLMSInterop with BooleanComponent w
   def steGet[E <: Entry : TypeRep, T: TypeRep](x: Rep[E], i: Int): Rep[T] = //SteGet[E, T](x, i)
     x.get[T](unit(i))
 
-  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], keyCols: Seq[Int], key: Rep[E]): Rep[E] = x.get(key, keyCols.map(unit(_)):_*)
+  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], keyCols: Seq[Int], key: Rep[E]): Rep[E] = x.get(unit(0), key, keyCols.map(unit(_)):_*)
 
   //Assuming full entry of TPCH
   def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], key: Rep[E]): Rep[E] = {

@@ -21,6 +21,14 @@ trait SCLMSInterop extends Base with NumericOps {
         //case AnyType => lhs.asInstanceOf[Rep[Double]] + rhs.asInstanceOf[Rep[Double]]
       }
   }.asInstanceOf[Rep[T]]
+  def numeric_minus[T/*: Numeric*/ : TypeRep](lhs: Rep[T], rhs: Rep[T]): Rep[T] = {
+      runtimeType[T] match {
+        case IntType => lhs.asInstanceOf[Rep[Int]] - rhs.asInstanceOf[Rep[Int]]
+        case LongType => lhs.asInstanceOf[Rep[Long]] - rhs.asInstanceOf[Rep[Long]]
+        case DoubleType => lhs.asInstanceOf[Rep[Double]] - rhs.asInstanceOf[Rep[Double]]
+        //case AnyType => lhs.asInstanceOf[Rep[Double]] - rhs.asInstanceOf[Rep[Double]]
+      }
+  }.asInstanceOf[Rep[T]]
 
   def numeric_times[T: TypeRep](lhs: Rep[T], rhs: Rep[T]): Rep[T] = {
     runtimeType[T] match {
