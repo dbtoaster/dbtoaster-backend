@@ -39,9 +39,12 @@ class SparkConfig(input: InputStream) {
       .set("spark.network.timeout", "1200s")
       
       // Kryo Serializer
+
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.referenceTracking", "false")
       .set("spark.kryo.registrator", "ddbt.lib.spark.Registrator")
+      .set("spark.kryoserializer.buffer.max", "256m")
+
 
 //      .set("spark.default.parallelism", "16")
 //      .set("spark.broadcast.compress", "false")

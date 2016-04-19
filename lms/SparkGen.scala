@@ -25,7 +25,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
   var isInputDistributed: Boolean = false
 
-  val OPTIMIZATION_PIPELINE_COMPUTATION = false
+  val OPTIMIZATION_PIPELINE_COMPUTATION = true
 
   val contextRDD = "ctx.rdd"
 
@@ -1178,6 +1178,10 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
         |
         |numTuples = streamCounts.sum
         |numBatches = batchWeights.map(_.size).max
+        |
+        |// Run GC on workers and master
+        |ctx.rdd.foreach(x => System.gc())
+        |System.gc()
         |
         |printSummary()
         |

@@ -2,7 +2,7 @@ package ddbt.lib.spark.store
 
 import com.esotericsoftware.kryo.io.{Input, Output}
 
-abstract sealed class Buffer extends KryoSerializable {
+abstract sealed class Buffer extends KryoSerializable with Serializable {
 
   var position: Int = 0         // public to make inlining possible
 

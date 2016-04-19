@@ -11,9 +11,9 @@ trait WriteStore[E <: MapEntry] extends ReadStore[E] { this: ColumnarStore =>
   def size_=(_size: Int) = buffers foreach { _.size = _size } 
 }
 
-class ColumnarStore(val buffers: Array[Buffer])
+class ColumnarStore(val buffers: Array[Buffer]) extends Serializable
 
-class ColumnarPartition(val id: Int, val buffers: Array[Buffer])
+class ColumnarPartition(val id: Int, val buffers: Array[Buffer]) extends Serializable
 
 object ColumnarPartition {
   import com.esotericsoftware.kryo.io.{Input, Output}
@@ -33,7 +33,7 @@ object ColumnarPartition {
 }
 
 class PartitionContainer[E <: MapEntry](
-    val partitions: Array[_ <: ColumnarStore with WriteStore[E]]) {
+    val partitions: Array[_ <: ColumnarStore with WriteStore[E]]) extends Serializable {
   def +=(e: E): Unit = partitions.foreach(_ += e)
 
   def foreach(f: E => Unit): Unit = partitions.foreach(_.foreach(f))
@@ -46,4 +46,4 @@ class StoreWrapper(
   val id: Int, 
   val lArray: Array[Long] = Array[Long](),
   val dArray: Array[Double] = Array[Double](),
-  val pArray: Array[ColumnarPartition] = Array[ColumnarPartition]())
+  val pArray: Array[ColumnarPartition] = Array[ColumnarPartition]()) extends Serializable 

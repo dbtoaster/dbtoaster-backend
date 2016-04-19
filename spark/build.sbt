@@ -19,6 +19,6 @@ Seq(
 )
 
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % "1.5.1"
+  "org.apache.spark" %% "spark-core" % "1.6.1"
 )
 

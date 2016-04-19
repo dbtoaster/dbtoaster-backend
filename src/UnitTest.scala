@@ -305,7 +305,7 @@ object UnitTest {
       val body = 
       "import scala.language.implicitConversions\n"+
       "implicit def strConv(d:Long) = \"\"+d\n"+ // fix for TPCH22
-      q.sets.filterKeys(datasets.contains(_)).map { case (sz,set) =>
+      q.sets /*.filterKeys(datasets.contains(_))*/ .map { case (sz,set) =>
         (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-m0\",\"-d"+sz+"\",\"-b" + Compiler.exec_bs + "\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
         set.out.map {
           case (n,o) =>
@@ -337,7 +337,7 @@ object UnitTest {
     Compiler.exec = benchmark
     Compiler.exec_sc |= Utils.isLMSTurnedOn
     Compiler.exec_dir = path_classes
-    Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets.filter(d=>q.sets.contains(d)).map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
+    Compiler.exec_args = ("-n"+(samples+warmup) :: "-t"+timeout :: "-p"+parallel :: "-m1" :: datasets /*.filter(d=>q.sets.contains(d))*/ .map(d=>"-d"+d).toList) ++ (if(no_output) List("--no-output") else Nil)
     p.run(()=>Compiler.compile(m3,post,p.gen,p.comp,p.run,verifyResult))
     p.close
     // Append correctness spec and move to test/gen/
@@ -354,7 +354,7 @@ object UnitTest {
       val body = 
         "import scala.language.implicitConversions\n" +
         "implicit def strConv(d: Long) = d.toString\n" + // fix for TPCH22
-        q.sets.filterKeys(datasets.contains(_)).map { case (sz, set) =>
+        q.sets /*.filterKeys(datasets.contains(_))*/ .map { case (sz, set) =>
           val execBody = set.out.map {
             case (n,o) => if (!qt.contains(n)) "" else {
               val (kt, vt) = qt(n)
@@ -431,7 +431,7 @@ object UnitTest {
       "-t" + timeout :: 
       "-p" + parallel :: 
       "-m1" :: 
-      datasets.filter(q.sets.contains).map("-d" + _).toList) ++ 
+      datasets /* .filter(q.sets.contains) */ .map("-d" + _).toList) ++ 
       (if (no_output) List("--no-output") else Nil)
     p.run(() => Compiler.compile(m3, post, p.gen, p.comp, p.run, verifyResult))
     p.close
