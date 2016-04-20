@@ -124,26 +124,7 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     res
   }
 
-  //  def hashfn(cols: List[Int]): Rep[GenericEntry => Int] = __lambda((e: Rep[GenericEntry]) => {
-  //    val hash = __newVar(unit(0xcafebabe))
-  //    val mix = __newVar(unit(0))
-  //    cols.foreach(c => {
-  //      implicit val tp = AnyType
-  //      __assign(mix, unit(0xcc9e2d51) * infix_hashCode(e.get[Any](unit(c))))
-  //      __assign(mix, __readVar(mix) << unit(15) | __readVar(mix) >>> unit(-15))
-  //      __assign(mix, __readVar(mix) * unit(0x1b873593))
-  //      __assign(mix, __readVar(mix) ^ __readVar(hash))
-  //      __assign(mix, __readVar(mix) << unit(13) | __readVar(mix) >>> unit(-13))
-  //      __assign(hash, __readVar(mix) * unit(5) + unit(0xe6546b64))
-  //    })
-  //    __assign(hash, __readVar(hash) ^ unit(2))
-  //    __assign(hash, __readVar(hash) ^ (__readVar(hash) >>> unit(16)))
-  //    __assign(hash, __readVar(hash) * unit(0x85ebca6b))
-  //    __assign(hash, __readVar(hash) ^ (__readVar(hash) >>> unit(13)))
-  //    __assign(hash, __readVar(hash) * unit(0xc2b2ae35))
-  //    __assign(hash, __readVar(hash) ^ (__readVar(hash) >>> unit(16)))
-  //    __readVar(hash)
-  //  })
+
   //  def cmpfn[R](f: PardisLambda[GenericEntry,R]) = __lambda((e1: Rep[GenericEntry], e2: Rep[GenericEntry]) =>{
   //    implicit  val rTp = f.typeS
   //    val r1 = f.f(e1)
@@ -159,18 +140,34 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
       val cols = s.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       val idxes = new Indexes()
       idxes.add(cols)
-      System.err.println(s"Deciding Index for $s")
-//      idxes.indexes.map(_ match {
-//        case Index(_, cols, IHash, _, _, _) => EntryIdx(__liftSeq(cols))
-//        case Index(_, cols, INone, _, _, _) => EntryIdx(__liftSeq(cols))
-//        case Index(_, _, ISliceHeapMax, _, _, f) => EntryIdx(f)
-//        case Index(_, _, ISliceHeapMin, _, _, f) => EntryIdx(f)
-//
-//      })
-      s.attributes += idxes
-      ()
+      //System.err.println(s"Deciding Index for $s")
+      val entidxes = idxes.indexes.map(_ match {
+        case Index(_, cols, IHash, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](cols))
+        case Index(_, cols, INone, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](cols))
+        case Index(_, cols, ISliceHeapMax, _, _, f) => {
+          implicit val tp = f.tp.asInstanceOf[TypeRep[(GenericEntry => Any)]]
+          implicit val typeR = f.typeS.asInstanceOf[TypeRep[Any]]
+          EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
+        }
+        case Index(_, cols, ISliceHeapMin, _, _, f) => {
+          implicit val tp = f.tp.asInstanceOf[TypeRep[(GenericEntry => Any)]]
+          implicit val typeR = f.typeS.asInstanceOf[TypeRep[Any]]
+          EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
+        }
+        case Index(_, _, IList, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](Nil))
+      })
+      val newS = __newStore(unit(entidxes.size), Array(entidxes: _*))
+      idxes.indexes.foreach(i => newS.index(unit(i.idxNum), unit(i.tp.toString), unit(i.unique), unit(i.sliceIdx)))
+      val ssym = newS.asInstanceOf[Sym[_]]
+      ssym.attributes += idxes
+      ssym.attributes += s.asInstanceOf[Sym[_]].attributes.get(SchemaFlag).getOrElse(StoreSchema())
+      //System.err.println(s" $s -> $newS")
+      newS
     }
+
   }
+
+  def changeGlobal(global: List[Sym[_]]) = global.map(x => apply(x.asInstanceOf[Sym[Any]])(AnyType).asInstanceOf[Sym[_]])
 }
 
 
@@ -189,15 +186,16 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
       val idxes = store.asInstanceOf[Sym[_]].attributes.get[Indexes](IndexesFlag).get
       val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
       val idx = idxes.getIdxForMax(cols)
-      System.err.println(s"Added $agg to AggResult")
+      //System.err.println(s"Added $agg to AggResult")
       aggResultMap += (agg ->(store, unit(idx), key))
       ()
     }
     case StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMinObject(_))) => {
+      //System.err.println(s"Looking for index of $store")
       val idxes = store.asInstanceOf[Sym[_]].attributes.get[Indexes](IndexesFlag).get
       val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
       val idx = idxes.getIdxForMin(cols)
-      System.err.println(s"Added $agg to AggResult")
+      //System.err.println(s"Added $agg to AggResult")
       aggResultMap += (agg ->(store, unit(idx), key))
       ()
     }

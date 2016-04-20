@@ -14,9 +14,9 @@ abstract class MirrorEntryIdx[E <: Entry] {
 }
 
 object MirrorEntryIdx {
-  def apply[E<:Entry](h: (E => Int), c: ((E, E) => Int)): MirrorEntryIdx[E] = ???
-  def apply(cols: List[Int]): MirrorEntryIdx[GenericEntry] = ???
-  def apply[R](f: GenericEntry => R): MirrorEntryIdx[GenericEntry] = ???
+  def apply[E<:Entry](h: (E => Int), c: ((E, E) => Int)): EntryIdx[E] = ???
+  def genericOps(cols: Seq[Int]): EntryIdx[GenericEntry] = ???
+  def genericCmp[R](cols: Seq[Int], f: GenericEntry => R): EntryIdx[GenericEntry] = ???
 }
 
 

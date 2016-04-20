@@ -242,6 +242,10 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
       mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)) :/: "}"
   }
 
+  def blockToDocumentNoBraces(block: Block[_]): Document = {
+      mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)
+  }
+
 
   override def symToDocument(sym: ExpressionSymbol[_]): Document = {
     if (sym.name != "x") {
@@ -265,14 +269,15 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
   override def getStruct(structDef: PardisStructDef[_]): Document = SEntryDefToDocument(structDef)
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
-    case Statement(sym, StoreNew2()) => generateNewStore(sym, None)
+//    case Statement(sym, StoreNew2()) => generateNewStore(sym, None)
     case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
     case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
     case Statement(sym, StoreGet(self, idx, key, _)) => doc"val $sym = $self.get($idx, $key)"
+    case Statement(sym, StoreIndex(self, idx, tp, uniq, other)) => doc"val $sym = $self.index($idx, ${tp.asInstanceOf[Constant[String]].underlying}, $uniq, $other)"
     case _ => super.stmtToDocument(stmt)
   }
 
-
+//
   def generateNewStore(c: Sym[_], mname: Option[String]): String = {
     //    val sch = schema getOrElse(c, List[TypeRep[_]]())
     //    val entry = Entry(sch)

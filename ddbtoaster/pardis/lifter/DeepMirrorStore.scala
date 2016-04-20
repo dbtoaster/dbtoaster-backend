@@ -27,6 +27,7 @@ trait StoreOps extends Base with ArrayOps with EntryIdxOps with IdxOps {
      def range(idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[(E => Unit)]) : Rep[Unit] = storeRange[E](self, idx, min, max, withMin, withMax, f)(typeE)
      def delete(idx : Rep[Int], key : Rep[E])(implicit overload2 : Overloaded2) : Rep[Unit] = storeDelete2[E](self, idx, key)(typeE)
      def clear : Rep[Unit] = storeClear[E](self)(typeE)
+     def index(idx : Rep[Int], idxType : Rep[String], uniq : Rep[Boolean], otherIdx : Rep[Int]) : Rep[Unit] = storeIndex[E](self, idx, idxType, uniq, otherIdx)(typeE)
      def n : Rep[Int] = store_Field_N[E](self)(typeE)
      def ops : Rep[Array[EntryIdx[E]]] = store_Field_Ops[E](self)(typeE)
      def idxs : Rep[Array[Idx[E]]] = store_Field_Idxs[E](self)(typeE)
@@ -65,6 +66,8 @@ trait StoreOps extends Base with ArrayOps with EntryIdxOps with IdxOps {
   type StoreDelete2[E <: ddbt.lib.store.Entry] = StoreIRs.StoreDelete2[E]
   val StoreClear = StoreIRs.StoreClear
   type StoreClear[E <: ddbt.lib.store.Entry] = StoreIRs.StoreClear[E]
+  val StoreIndex = StoreIRs.StoreIndex
+  type StoreIndex[E <: ddbt.lib.store.Entry] = StoreIRs.StoreIndex[E]
   val Store_Field_N = StoreIRs.Store_Field_N
   type Store_Field_N[E <: ddbt.lib.store.Entry] = StoreIRs.Store_Field_N[E]
   val Store_Field_Ops = StoreIRs.Store_Field_Ops
@@ -88,6 +91,7 @@ trait StoreOps extends Base with ArrayOps with EntryIdxOps with IdxOps {
    def storeRange[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreRange[E](self, idx, min, max, withMin, withMax, f)
    def storeDelete2[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreDelete2[E](self, idx, key)
    def storeClear[E <: ddbt.lib.store.Entry](self : Rep[Store[E]])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreClear[E](self)
+   def storeIndex[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], idxType : Rep[String], uniq : Rep[Boolean], otherIdx : Rep[Int])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreIndex[E](self, idx, idxType, uniq, otherIdx)
    def store_Field_N[E <: ddbt.lib.store.Entry](self : Rep[Store[E]])(implicit typeE : TypeRep[E]) : Rep[Int] = Store_Field_N[E](self)
    def store_Field_Ops[E <: ddbt.lib.store.Entry](self : Rep[Store[E]])(implicit typeE : TypeRep[E]) : Rep[Array[EntryIdx[E]]] = Store_Field_Ops[E](self)
    def store_Field_Idxs[E <: ddbt.lib.store.Entry](self : Rep[Store[E]])(implicit typeE : TypeRep[E]) : Rep[Array[Idx[E]]] = Store_Field_Idxs[E](self)
@@ -155,6 +159,10 @@ object StoreIRs extends Base {
 
   case class StoreClear[E <: ddbt.lib.store.Entry](self : Rep[Store[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "clear", List()){
     override def curriedConstructor = (copy[E] _)
+  }
+
+  case class StoreIndex[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], idxType : Rep[String], uniq : Rep[Boolean], otherIdx : Rep[Int])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "index", List(List(idx,idxType,uniq,otherIdx))){
+    override def curriedConstructor = (copy[E] _).curried
   }
 
   case class Store_Field_N[E <: ddbt.lib.store.Entry](self : Rep[Store[E]])(implicit val typeE : TypeRep[E]) extends FieldDef[Int](self, "n"){

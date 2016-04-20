@@ -52,39 +52,7 @@ object GenericEntry {
   }
 }
 
-case class GenericOps(val cols: List[Int] = List()) extends EntryIdx[GenericEntry] {
-  def hash(e: GenericEntry): Int = {
-    var h = 16;
-    cols.foreach(i => h = h * 41 + e.map(i).hashCode())
-    h
-  }
 
-  def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
-    val colsToCompare = if (cols != Nil)
-      cols.iterator
-    else if (e1.map.size > e2.map.size)
-      e2.map.keysIterator
-    else if (e1.map.size < e2.map.size)
-      e1.map.keysIterator
-    else
-      1 until e1.map.size //TODO: SBJ: Fix: Assumes that all columns except the last form key
-    for (i <- colsToCompare) {
-      if (e1.map.get(i).get != e2.map.get(i).get) {
-        return 1
-      }
-    }
-    0
-  }
-}
-case class GenericCmp[R](val f: GenericEntry => R)(implicit order: Ordering[R]) extends EntryIdx[GenericEntry] {
-  def hash(e: GenericEntry): Int = {
-    16
-  }
-
-  def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
-    order.compare(f(e1), f(e2))
-  }
-}
 
 abstract class SEntry2[T1: Manifest, T2: Manifest] extends Entry(2)
 

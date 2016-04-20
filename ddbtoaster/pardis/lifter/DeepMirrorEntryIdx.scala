@@ -21,9 +21,9 @@ trait EntryIdxOps extends Base with GenericEntryOps {
      def hash(e : Rep[E]) : Rep[Int] = entryIdxHash[E](self, e)(typeE)
   }
   object EntryIdx {
-     def apply[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E], overload1 : Overloaded1) : Rep[EntryIdx[E]] = entryIdxApplyObject1[E](h, c)(typeE)
-     def apply(cols : Rep[List[Int]])(implicit overload2 : Overloaded2) : Rep[EntryIdx[GenericEntry]] = entryIdxApplyObject2(cols)
-     def apply[R](f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R], overload3 : Overloaded3) : Rep[EntryIdx[GenericEntry]] = entryIdxApplyObject3[R](f)(typeR)
+     def apply[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = entryIdxApplyObject[E](h, c)(typeE)
+     def genericOps(cols : Rep[Seq[Int]]) : Rep[EntryIdx[GenericEntry]] = entryIdxGenericOpsObject(cols)
+     def genericCmp[R](cols : Rep[Seq[Int]], f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R]) : Rep[EntryIdx[GenericEntry]] = entryIdxGenericCmpObject[R](cols, f)(typeR)
   }
   // constructors
 
@@ -32,18 +32,18 @@ trait EntryIdxOps extends Base with GenericEntryOps {
   type EntryIdxCmp[E <: ddbt.lib.store.Entry] = EntryIdxIRs.EntryIdxCmp[E]
   val EntryIdxHash = EntryIdxIRs.EntryIdxHash
   type EntryIdxHash[E <: ddbt.lib.store.Entry] = EntryIdxIRs.EntryIdxHash[E]
-  val EntryIdxApplyObject1 = EntryIdxIRs.EntryIdxApplyObject1
-  type EntryIdxApplyObject1[E <: ddbt.lib.store.Entry] = EntryIdxIRs.EntryIdxApplyObject1[E]
-  val EntryIdxApplyObject2 = EntryIdxIRs.EntryIdxApplyObject2
-  type EntryIdxApplyObject2 = EntryIdxIRs.EntryIdxApplyObject2
-  val EntryIdxApplyObject3 = EntryIdxIRs.EntryIdxApplyObject3
-  type EntryIdxApplyObject3[R] = EntryIdxIRs.EntryIdxApplyObject3[R]
+  val EntryIdxApplyObject = EntryIdxIRs.EntryIdxApplyObject
+  type EntryIdxApplyObject[E <: ddbt.lib.store.Entry] = EntryIdxIRs.EntryIdxApplyObject[E]
+  val EntryIdxGenericOpsObject = EntryIdxIRs.EntryIdxGenericOpsObject
+  type EntryIdxGenericOpsObject = EntryIdxIRs.EntryIdxGenericOpsObject
+  val EntryIdxGenericCmpObject = EntryIdxIRs.EntryIdxGenericCmpObject
+  type EntryIdxGenericCmpObject[R] = EntryIdxIRs.EntryIdxGenericCmpObject[R]
   // method definitions
    def entryIdxCmp[E <: ddbt.lib.store.Entry](self : Rep[EntryIdx[E]], e1 : Rep[E], e2 : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Int] = EntryIdxCmp[E](self, e1, e2)
    def entryIdxHash[E <: ddbt.lib.store.Entry](self : Rep[EntryIdx[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Int] = EntryIdxHash[E](self, e)
-   def entryIdxApplyObject1[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = EntryIdxApplyObject1[E](h, c)
-   def entryIdxApplyObject2(cols : Rep[List[Int]]) : Rep[EntryIdx[GenericEntry]] = EntryIdxApplyObject2(cols)
-   def entryIdxApplyObject3[R](f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R]) : Rep[EntryIdx[GenericEntry]] = EntryIdxApplyObject3[R](f)
+   def entryIdxApplyObject[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = EntryIdxApplyObject[E](h, c)
+   def entryIdxGenericOpsObject(cols : Rep[Seq[Int]]) : Rep[EntryIdx[GenericEntry]] = EntryIdxGenericOpsObject(cols)
+   def entryIdxGenericCmpObject[R](cols : Rep[Seq[Int]], f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R]) : Rep[EntryIdx[GenericEntry]] = EntryIdxGenericCmpObject[R](cols, f)
   type EntryIdx[E <: ddbt.lib.store.Entry] = ddbt.lib.store.EntryIdx[E]
 }
 object EntryIdxIRs extends Base {
@@ -64,16 +64,16 @@ object EntryIdxIRs extends Base {
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  case class EntryIdxApplyObject1[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit val typeE : TypeRep[E]) extends FunctionDef[EntryIdx[E]](None, "EntryIdx.apply", List(List(h,c))){
+  case class EntryIdxApplyObject[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit val typeE : TypeRep[E]) extends FunctionDef[EntryIdx[E]](None, "EntryIdx.apply", List(List(h,c))){
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  case class EntryIdxApplyObject2(cols : Rep[List[Int]]) extends FunctionDef[EntryIdx[GenericEntry]](None, "EntryIdx.apply", List(List(cols))){
+  case class EntryIdxGenericOpsObject(cols : Rep[Seq[Int]]) extends FunctionDef[EntryIdx[GenericEntry]](None, "EntryIdx.genericOps", List(List(cols))){
     override def curriedConstructor = (copy _)
   }
 
-  case class EntryIdxApplyObject3[R](f : Rep[(GenericEntry => R)])(implicit val typeR : TypeRep[R]) extends FunctionDef[EntryIdx[GenericEntry]](None, "EntryIdx.apply", List(List(f))){
-    override def curriedConstructor = (copy[R] _)
+  case class EntryIdxGenericCmpObject[R](cols : Rep[Seq[Int]], f : Rep[(GenericEntry => R)])(implicit val typeR : TypeRep[R]) extends FunctionDef[EntryIdx[GenericEntry]](None, "EntryIdx.genericCmp", List(List(cols,f))){
+    override def curriedConstructor = (copy[R] _).curried
   }
 
   type EntryIdx[E <: ddbt.lib.store.Entry] = ddbt.lib.store.EntryIdx[E]

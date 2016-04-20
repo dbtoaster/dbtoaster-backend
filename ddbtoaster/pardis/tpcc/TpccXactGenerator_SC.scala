@@ -6,7 +6,8 @@ import java.io.{FileWriter, PrintStream, PrintWriter}
 import java.util.concurrent.Executor
 
 import ch.epfl.data.sc.pardis
-import ch.epfl.data.sc.pardis.types.AnyType
+import ch.epfl.data.sc.pardis.ir.{StructElemInformation, PardisStructDef, StructTags}
+import ch.epfl.data.sc.pardis.types.{RecordType, AnyType}
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 import sc.tpcc.compiler.TpccCompiler
 
@@ -478,13 +479,13 @@ dsl"""
   def main(args: Array[String]): Unit = {
 
     val analyzeEntry = true
-    val analyzeIndex = true
+    val analyzeIndex = false
     var prog: Prog = null
     import java.nio.file.Files.copy
     import java.nio.file.Paths.get
     import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
-    val initBlock = reifyBlock {
+    val initB = reifyBlock {
       prog = new Prog(Context)
       unit((1))
     }
@@ -492,64 +493,88 @@ dsl"""
     val header =
       """
         |package tpcc.sc
-        |import ddbt.lib.store._}
+        |import ddbt.lib.store._
         |import scala.collection.mutable.{ArrayBuffer,Set}
         |import java.util.Date
         | """.stripMargin
     val genDir = "../runtime/tpcc/pardisgen"
     val file = new PrintWriter(s"$genDir/TpccGenSC.scala")
 
-    val global = List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]])
-    val codeBlocks = collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])]()
+    case class TransactionProgram(val initBlock: Block[Int], val global: List[Sym[_]], val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()) {
+      def optimize(opt: TransformerHandler) = {
+        implicit val tp = IntType
+        System.err.println("Global contains " + global.mkString(", "))
+        val init_ = opt(Context)(initBlock)
+        val codeB_ = codeBlocks.map(t => (t._1, t._2, opt(Context)(t._3)))
+        val global_ = opt match {
+          case writer: IndexDecider => writer.changeGlobal(global)
+          case writer: EntryTransformer => writer.changeGlobal(global)
+          case _ => global
+        }
+        System.err.println("New Global contains " + global_.mkString(", "))
+        TransactionProgram(init_, global_, codeB_)
+      }
+    }
+    prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
 
-    codeBlocks += codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
-    codeBlocks += codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")
-    codeBlocks += codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, "OrderStatusTx")
-    codeBlocks += codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
-    codeBlocks += codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
-    codeBlocks += (("init", null, initBlock))
+    val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]))
+
+    initialTP.codeBlocks += codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
+    initialTP.codeBlocks += codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")
+    initialTP.codeBlocks += codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, "OrderStatusTx")
+    initialTP.codeBlocks += codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
+    initialTP.codeBlocks += codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
+
     implicit def toPath(filename: String) = get(filename)
+
     val pipeline = scala.collection.mutable.ArrayBuffer[TransformerHandler]()
+    val structsDefMap = collection.mutable.HashMap.empty[StructTags.StructTag[SEntry], PardisStructDef[SEntry]]
     if (analyzeIndex) {
       pipeline += new IndexAnalysis(Context)
       pipeline += new IndexDecider(Context)
       pipeline += new IndexTransformer(Context)
     } else
       pipeline += new IndexDecider(Context)
+
     if (analyzeEntry) {
-      val ea = new EntryAnalysis(Context, prog.schema.map(t => (t._1.asInstanceOf[Sym[_]], t._2)).toMap)
+      val ea = new EntryAnalysis(Context)
       val et = new EntryTransformer(Context, ea.EntryTypes)
       pipeline += ea
       pipeline += et
+      prog.schema.foreach(x => {
+        val entry = SEntry(x._2)
+        implicit val tp = entry.tp
+        val tag = tp.asInstanceOf[RecordType[SEntry]].tag
+        structsDefMap += tag -> PardisStructDef(tag, x._2.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true)), Nil)
+      })
       copy(s"$genDir/SCTxSplEntry.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)
     } else {
       copy(s"$genDir/SCTxGenEntry.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)
     }
-    pipeline += DCE
-    val optimizedBlocks = pipeline.foldLeft(codeBlocks)((blocks, opt) => blocks.map(t => (t._1, t._2, opt(Context)(t._3))))
-    var codestr = codeGen.blockToDocument(initBlock).toString
-    var i = codestr.lastIndexOf("1")
 
-    val executor = "class SCExecutor \n" + codestr.substring(0, i) +
-      """
-        |    val newOrderTxInst = new NewOrderTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-        |    val paymentTxInst = new PaymentTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-        |    val orderStatusTxInst = new OrderStatusTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-        |    val deliveryTxInst = new DeliveryTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-        |    val stockLevelTxInst = new StockLevelTx(x1, x2, x3, x4, x5, x6, x7, x8, x9)
-        |}
+    pipeline += DCE
+
+    val optimizedProgram = pipeline.foldLeft(initialTP)((prg, opt) => prg.optimize(opt))
+    var codestr = codeGen.blockToDocument(optimizedProgram.initBlock).toString
+    var i = codestr.lastIndexOf("1")
+    val storesnames = List("newOrderTbl", "historyTbl", "warehouseTbl", "itemTbl", "orderTbl", "districtTbl", "orderLineTbl", "customerTbl", "stockTbl")
+    val allstores = storesnames.mkString(",")
+    val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n" + storesnames.zip(optimizedProgram.global).map(t => {
+      s"""  val ${t._1} = ${codeGen.expToDocument(t._2)}""".stripMargin
+    }).mkString("\n") +
+      s"""
+         |  val newOrderTxInst = new NewOrderTx($allstores)
+         |  val paymentTxInst = new PaymentTx($allstores)
+         |  val orderStatusTxInst = new OrderStatusTx($allstores)
+         |  val deliveryTxInst = new DeliveryTx($allstores)
+         |  val stockLevelTxInst = new StockLevelTx($allstores)
+         |}
       """.stripMargin
     file.println(header + executor)
-    val structColl = new StructCollector[StoreDSL] {
-      override val IR: StoreDSL = Context
-    }
-    val optCodeBlocks = optimizedBlocks.filter(_._2 != null)
-    optCodeBlocks.foreach(t => structColl.traverseDef(t._3))
-    val structs = structColl.structsDefMap.toList.map(x => x._2)
-    System.err.println(s"Structs are $structs")
+    val structs = structsDefMap.toList.map(x => x._2)
     file.println(structs.map(codeGen.getStruct).mkDocument("\n"))
-    optCodeBlocks.foreach { case (className, args, body) => {
-      val genCode = "class " + className + "(" + global.map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
+    optimizedProgram.codeBlocks.foreach { case (className, args, body) => {
+      val genCode = "class " + className + "(" + optimizedProgram.global.map(_.asInstanceOf[Sym[_]]).map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
         "def apply(" + args.map(s => s + ": " + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") = "
       val cgDoc = codeGen.blockToDocument(body)
       file.println(genCode + cgDoc + "\n}")
@@ -558,5 +583,6 @@ dsl"""
     //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
     file.close()
   }
+
 }
 

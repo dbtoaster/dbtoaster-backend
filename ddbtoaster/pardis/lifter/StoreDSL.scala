@@ -1,12 +1,13 @@
 package ddbt.lib.store.deep
 
-import ch.epfl.data.sc.pardis.deep.scalalib.collection.{ArrayBufferComponent, SetComponent}
+import ch.epfl.data.sc.pardis.deep.scalalib.collection.{SeqComponent, ArrayBufferComponent, SetComponent}
 import ch.epfl.data.sc.pardis.deep.scalalib.{ScalaPredefOps, ArrayComponent, BooleanComponent, StringComponent}
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeUnit, typeAny}
-import ch.epfl.data.sc.pardis.types.{PardisType, RecordType}
+import ch.epfl.data.sc.pardis.types.{AnyType, PardisType, RecordType}
 import ch.epfl.data.sc.purgatory.types.TypeRep
+import com.sun.javafx.binding.ContentBinding.ListContentBinding
 import ddbt.ast.{TypeDouble, TypeLong, Type}
 import ddbt.lib.store._
 import lifter.{SCLMSInterop, TypeToTypeRep}
@@ -39,15 +40,19 @@ object EntryIRs extends Base {
 trait IdxOps extends Base {
   val IdxType = IdxIRs.IdxType
   type IdxType[E <: ddbt.lib.store.Entry] = IdxIRs.IdxType[E]
-  implicit def typeIdx[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Idx[E]] = IdxType(implicitly[TypeRep[E]])
+
+  implicit def typeIdx[E <: ddbt.lib.store.Entry : TypeRep]: TypeRep[Idx[E]] = IdxType(implicitly[TypeRep[E]])
+
   //implicit def typeAggregator[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Aggregator[E]] = AggregatorType(implicitly[TypeRep[E]])
-  type Idx[E<:Entry] = ddbt.lib.store.Idx[E]
+  type Idx[E <: Entry] = ddbt.lib.store.Idx[E]
 }
 
 trait IdxComponent extends IdxOps
 
 object IdxIRs extends Base {
-import EntryIRs._
+
+  import EntryIRs._
+
   case class IdxType[E <: Entry](typeE: TypeRep[E]) extends TypeRep[Idx[E]] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = IdxType(newArguments(0).asInstanceOf[TypeRep[_ <: ddbt.lib.store.Entry]])
 
@@ -55,12 +60,21 @@ import EntryIRs._
     val typeArguments = List(typeE)
 
   }
-  implicit def typeIdx[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Idx[E]] = IdxType(implicitly[TypeRep[E]])
+
+  implicit def typeIdx[E <: ddbt.lib.store.Entry : TypeRep]: TypeRep[Idx[E]] = IdxType(implicitly[TypeRep[E]])
+
   type Idx[E <: Entry] = ddbt.lib.store.Idx[E]
 }
 
-trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with AggregatorComponent with EntryComponent with EntryIdxComponent with IdxComponent {
-
+trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with AggregatorComponent with EntryComponent with EntryIdxComponent with IdxComponent with SeqComponent {
+  override val _IRReifier: IRReifier = new AnfIRReifier(this) {
+    override def findOrCreateSymbol[T: TypeRep](definition: Def[T]): Sym[T] = {
+      definition match {
+        case Struct(tag, elems, _) => createAndReflectStatement[T](definition)
+        case _ => super.findOrCreateSymbol(definition)
+      }
+    }
+  }
 
   def nullValue(tp: TypeRep[_]) = tp match {
     case IntType => unit(-1)
@@ -101,6 +115,13 @@ trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent wi
   //  lazy val copyfn = doLambda0Def(() => record_new[T](fields)).asInstanceOf[PardisLambdaDef]
   //  Struct[T](tag, fieldSyms, List(PardisStructMethod("copy", copyfn, true)))(tp)
   //}
+//  case Def(v: PardisNewVar[_]) => {
+    //          implicit val tp =v.tp.asInstanceOf[TypeRep[PardisVar[Any]]]
+    //          implicit val tp2 =v.init.tp.asInstanceOf[TypeRep[Any]]
+    //          val var_ = Var(rhs.asInstanceOf[Rep[PardisVar[Any]]])
+    //          val val_ = readVar(var_)(tp2)
+    //          PardisStructArg(index, true, val_)
+    //        }
   override def createFieldsSyms(fields: Seq[(String, Boolean, Rep[Any])]): Seq[PardisStructArg] = {
     fields map {
       case (index, false, rhs) => PardisStructArg(index, false, rhs)

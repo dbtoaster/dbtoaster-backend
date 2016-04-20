@@ -66,7 +66,48 @@ abstract class EntryIdx[E <: Entry] {
   // re-shuffling is done in the Store. Some indices (IdxDirect) require
   // order(entries)=order(hash(entries)) to work correctly.
 }
+case class GenericOps(val cols: Seq[Int] ) extends EntryIdx[GenericEntry] {
+  def hash(e: GenericEntry): Int = {
+    var h = 16;
+    cols.foreach(i => h = h * 41 + e.map(i).hashCode())
+    h
+  }
+  def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
+    val colsToCompare = if (cols != Nil)
+      cols.iterator
+    else if (e1.map.size > e2.map.size)
+      e2.map.keysIterator
+    else if (e1.map.size < e2.map.size)
+      e1.map.keysIterator
+    else
+      1 until e1.map.size //TODO: SBJ: Fix: Assumes that all columns except the last form key
+    for (i <- colsToCompare) {
+      if (e1.map.get(i).get != e2.map.get(i).get) {
+        return 1
+      }
+    }
+    0
+  }
+}
+case class GenericCmp[R](val cols: Seq[Int] , val f: GenericEntry => R)(implicit order: Ordering[R]) extends EntryIdx[GenericEntry] {
+  def hash(e: GenericEntry): Int = {
+    var h = 16;
+    cols.foreach(i => h = h * 41 + e.map(i).hashCode())
+    h
+  }
 
+  def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
+    order.compare(f(e1), f(e2))
+  }
+}
+object EntryIdx{
+  def apply[E<:Entry](h: (E => Int), c: ((E, E) => Int)): EntryIdx[E] = new EntryIdx[E]{
+    override def cmp(e1: E, e2: E): Int = c(e1,e2)
+    override def hash(e: E): Int = h(e)
+  }
+  def genericOps(cols: Seq[Int]): EntryIdx[GenericEntry] = GenericOps(cols)
+  def genericCmp[R: Ordering](cols: Seq[Int], f: GenericEntry => R): EntryIdx[GenericEntry] = GenericCmp(cols, f)
+}
 object Store {
   val GATHER_STATISTICS = false
   // DBToaster: create n+1 hash indexes (n=# projections)
