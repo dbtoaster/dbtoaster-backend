@@ -86,11 +86,12 @@ object Compiler {
         case "-xvm" => exec_vm=true;
         case "-xbs" => eat{i => exec_bs = i.toInt; batching_enabled = true}
         case "-pp" => eat(i => printProgress = i.toInt)
+        case "-opt" => eat(s => optimizations = s::optimizations, true)
         case s@"--no-output" => exec_args=exec_args:::List(s)
         case s if s.matches("-O[123]") => optm3=s;
         case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
         case s => in = in ::: List(s)
-        case "-opt" => eat(s => optimizations = s::optimizations)
+
       }
       i+=1
     }
