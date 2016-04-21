@@ -11,16 +11,18 @@
 #include "stopwatch.hpp"
 #include "serialization.hpp"
 
+#ifdef MEMORY_MODE
+    #include "tpch/tpch_template_memory.hpp"
+#elif TPCH
+    #include "tpch/tpch.hpp"
+    #include "tpch/tpch_template.hpp"
+#elif TPCDS
+    #include "tpcds/tpcds.hpp"
+    #include "tpcds/tpcds_template.hpp"
+#endif
+
 using namespace std;
-
-// #include "tpch/tpch.hpp"
-// #include "tpch/tpch_template.hpp"
-
-#include "tpcds/tpcds.hpp"
-#include "tpcds/tpcds_template.hpp"
-
 using namespace dbtoaster;
-
 
 #ifdef BATCH_MODE
 
@@ -40,7 +42,7 @@ void RunQuery()
     destroy_relations();
 
     Stopwatch sw;
-    for (int run = 0; run < 3; run++) 
+    for (int run = 0; run < NUMBER_OF_RUNS; run++) 
     {
     //    std::cout << "Press ENTER...";
     //    char ch;
@@ -85,7 +87,7 @@ void RunQuery()
     load_relations();
 
     Stopwatch sw;
-    for (int run = 0; run < 3; run++) 
+    for (int run = 0; run < NUMBER_OF_RUNS; run++) 
     {
     //    std::cout << "Press ENTER...";
     //    char ch;

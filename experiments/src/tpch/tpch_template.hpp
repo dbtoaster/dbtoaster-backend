@@ -3,7 +3,7 @@
 
 #include "stopwatch.hpp"
 
-const string dataPath = "datasets";
+const string dataPath = "datasets/tpch";
 const string dataset = "standard";
 
 namespace dbtoaster 
