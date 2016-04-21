@@ -41,6 +41,7 @@ object Compiler {
   var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
   var ni   : Boolean = false     // non-incremental query evaluation (implies depth=0)
   var inl  : Int = 0             // inlining level, in range [0-10]
+  var optimizations  : List[String] = Nil             // inlining level, in range [0-10]
   // Execution
   var exec    : Boolean = false  // compile and execute immediately
   var exec_dir: String  = null   // execution classpath
@@ -89,6 +90,7 @@ object Compiler {
         case s if s.matches("-O[123]") => optm3=s;
         case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
         case s => in = in ::: List(s)
+        case "-opt" => eat(s => optimizations = s::optimizations)
       }
       i+=1
     }
@@ -160,7 +162,7 @@ object Compiler {
       case LANG_AKKA => new AkkaGen(name)
      // case LANG_LMS => new LMSCppGen(name)
      // case LANG_CPP_LMS => new LMSCppGen(name)
-      case LANG_SCALA_LMS => new PardisScalaGen(name, true, true) //DSL
+      case LANG_SCALA_LMS => new PardisScalaGen(name, !optimizations.contains("entry"), !optimizations.contains("index")) //DSL
      // case LANG_SPARK_LMS => new LMSSparkGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }

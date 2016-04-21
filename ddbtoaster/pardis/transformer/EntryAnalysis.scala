@@ -100,8 +100,29 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
 
   import IR._
 
+  def super_optimize[T: TypeRep](node: Block[T]): Block[T] = {
+    val analyseProgram=classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
+    analyseProgram.setAccessible(true)
+    val isDone= classOf[RecursiveRuleBasedTransformer[StoreDSL]].getDeclaredField("isDone")
+    isDone.setAccessible(true)
+    var currentBlock = node
+    var counter = 0
+    while (isDone.get(this) == false && counter < THRESHOLD) {
+
+      analyseProgram.invoke(this,currentBlock, implicitly[TypeRep[T]])
+      postAnalyseProgram(currentBlock)
+      isDone.set(this, true)
+      currentBlock = transformProgram(currentBlock)
+      counter += 1
+    }
+    if (counter >= THRESHOLD) {
+      System.err.println(s"Recursive transformer ${getName} is not converted yet after [${scala.Console.RED}$counter${scala.Console.RESET}] rounds")
+    }
+    currentBlock
+  }
+
   override def optimize[T: TypeRep](node: Block[T]): Block[T] = {
-    val res = super.optimize(node)
+    val res = super_optimize(node)
     ruleApplied()
     res
   }

@@ -24,7 +24,7 @@ import transformer._
 
 abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, val analyzeEntry: Boolean, val analyzeIndex: Boolean) extends IScalaGen {
 
-  //  import ch.epfl.data.pardis.types.PardisTypeImplicits._
+
   import scala.language.implicitConversions
   import ddbt.lib.store.deep._
   import IR._
