@@ -1,6 +1,6 @@
 package ddbt.lib.store
 
-import ch.epfl.data.sc.pardis.annotations.{reflect, deep}
+import ch.epfl.data.sc.pardis.annotations.{read, write, reflect, deep}
 
 /**
   * Created by khayyam on 4/13/15.
@@ -9,6 +9,7 @@ import ch.epfl.data.sc.pardis.annotations.{reflect, deep}
 @deep
 @reflect[GenericEntry]
 class MirrorGenericEntry {
+  @write
   def update(i: Int, v: Any): Unit = ???
 
   def increase(i: Int, v: Any): Unit = ???
@@ -19,6 +20,7 @@ class MirrorGenericEntry {
 
   def -=(i: Int, v: Any): Unit = ???
 
+  @read
   def get[E](i: Int): E = ???
 
 

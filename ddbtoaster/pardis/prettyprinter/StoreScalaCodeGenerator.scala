@@ -13,7 +13,7 @@ import ddbt.lib.store._
 import ddbt.lib.store.deep.StoreIRs._
 import ddbt.lib.store.deep.StoreDSL
 import pardis.deep.scalalib.ScalaPredefOps
-import transformer._
+import ddbt.transformer._
 
 import scala.reflect.io.File
 

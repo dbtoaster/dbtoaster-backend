@@ -16,6 +16,7 @@ class MStore[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]) {
   def insert(e:E):Unit = ???
   def update(e:E):Unit = ???
   def delete(e:E):Unit = ???
+  @read
   def get(idx: Int, key:E, keyCols:Int*):E = ???
   def foreach(f:E=>Unit):Unit = ???
   def slice(idx:Int,key:E,f:E=>Unit): Unit = ???

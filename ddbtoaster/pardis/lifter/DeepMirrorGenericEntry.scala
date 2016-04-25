@@ -94,6 +94,7 @@ object GenericEntryIRs extends Base {
 
   case class GenericEntryGet[E](self : Rep[GenericEntry], i : Rep[Int])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "get", List(List(i)), List(typeE)){
     override def curriedConstructor = (copy[E] _).curried
+    override def effect = Read(self)
   }
 
   case class GenericEntryApplyObject(ignore : Rep[Any], elemsOutput : Rep[Seq[Any]]) extends FunctionDef[GenericEntry](None, "GenericEntry.apply", List(List(ignore,__varArg(elemsOutput)))){

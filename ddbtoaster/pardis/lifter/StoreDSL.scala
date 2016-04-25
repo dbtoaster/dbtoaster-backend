@@ -10,8 +10,8 @@ import ch.epfl.data.sc.purgatory.types.TypeRep
 import com.sun.javafx.binding.ContentBinding.ListContentBinding
 import ddbt.ast.{TypeDouble, TypeLong, Type}
 import ddbt.lib.store._
-import lifter.{SCLMSInterop, TypeToTypeRep}
-import transformer.{SEntryFlag, SEntry}
+import lifter.{OnlineOptimizations, SCLMSInterop, TypeToTypeRep}
+import ddbt.transformer.{SEntryFlag, SEntry}
 
 /**
   * Created by khayyam on 4/8/15.
@@ -65,8 +65,8 @@ object IdxIRs extends Base {
 
   type Idx[E <: Entry] = ddbt.lib.store.Idx[E]
 }
-
-trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with AggregatorComponent with EntryComponent with EntryIdxComponent with IdxComponent with SeqComponent {
+trait StoreDSLOptimized extends StoreDSL with OnlineOptimizations
+trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with AggregatorComponent with EntryComponent with EntryIdxComponent with IdxComponent with SeqComponent with BooleanExtraComponent{
   override val _IRReifier: IRReifier = new AnfIRReifier(this) {
     override def findOrCreateSymbol[T: TypeRep](definition: Def[T]): Sym[T] = {
       definition match {

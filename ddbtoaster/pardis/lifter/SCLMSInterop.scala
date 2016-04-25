@@ -2,13 +2,15 @@ package lifter
 
 import ch.epfl.data.sc.pardis
 import ch.epfl.data.sc.pardis.types.AnyType
+
+import ddbt.lib.store.deep.StoreDSL
 import pardis.deep.scalalib.{NumericOps}
 import pardis.ir._
 
 /**
  * Created by khayyam on 4/9/15.
  */
-trait SCLMSInterop extends Base with NumericOps {
+trait SCLMSInterop extends Base with NumericOps { //this: StoreDSL =>
   def var_plusequals[T/*: Numeric*/ : TypeRep](lhs: Var[T], rhs: Rep[T]): Rep[Unit] = {
     __assign(lhs, numeric_plus(__readVar(lhs), rhs))
   }

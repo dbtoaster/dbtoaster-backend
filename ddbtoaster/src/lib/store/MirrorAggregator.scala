@@ -9,6 +9,7 @@ import ch.epfl.data.sc.pardis.annotations._
 @reflect[Aggregator[_]]
 trait MirrorAggregator[E <: Entry] extends (E => Unit) {
   def apply(e: E): Unit
+  @read
   def result: E
 }
 object MirrorAggregator {

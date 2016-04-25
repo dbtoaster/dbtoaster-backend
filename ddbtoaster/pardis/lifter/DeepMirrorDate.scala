@@ -53,6 +53,14 @@ object DateIRs extends Base {
 
   case class DateGetTime(self : Rep[Date]) extends FunctionDef[Long](Some(self), "getTime", List(List())){
     override def curriedConstructor = (copy _)
+    override def isPure = true
+
+    override def partiallyEvaluate(children: Any*): Long = {
+      val self = children(0).asInstanceOf[Date]
+      self.getTime()
+    }
+    override def partiallyEvaluable: Boolean = true
+
   }
 
   case class Date_Field_LongValue(self : Rep[Date]) extends FieldDef[Long](self, "longValue"){

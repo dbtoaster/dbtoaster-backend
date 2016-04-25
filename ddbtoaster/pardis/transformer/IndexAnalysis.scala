@@ -1,4 +1,4 @@
-package transformer
+package ddbt.transformer
 
 import ch.epfl.data.sc.pardis.ir.{Constant, PardisLambda}
 import ch.epfl.data.sc.pardis.optimization.{RecursiveRuleBasedTransformer, RuleBasedTransformer}

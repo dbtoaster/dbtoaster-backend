@@ -9,5 +9,6 @@ import ch.epfl.data.sc.pardis.annotations._
 @deep
 @reflect[java.util.Date]
 class MirrorDate(longValue: Long) {
+  @pure
   def getTime(): Long = ???
 }

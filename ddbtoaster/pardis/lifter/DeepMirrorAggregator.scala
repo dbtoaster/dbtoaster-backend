@@ -65,6 +65,7 @@ object AggregatorIRs extends Base {
 
   case class AggregatorResult[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "result", List()){
     override def curriedConstructor = (copy[E] _)
+    override def effect = Read(self)
   }
 
   case class AggregatorCompose[E <: ddbt.lib.store.Entry, A](self : Rep[Aggregator[E]], g : Rep[((A) => E)])(implicit val typeE : TypeRep[E], val typeA : TypeRep[A]) extends FunctionDef[(A => Unit)](Some(self), "compose", List(List(g))){

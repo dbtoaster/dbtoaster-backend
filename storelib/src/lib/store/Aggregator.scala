@@ -6,7 +6,7 @@ import ddbt.lib.store.Entry
   * Created by sachin on 21.03.16.
   */
 trait Aggregator[E <: Entry] extends (E => Unit) {
-  def apply(e: E): Unit
+  def apply(e: E): Unit //TODO: Have a pure functional version
 
   def result: E
 }

@@ -15,12 +15,12 @@ import ddbt.ast._
 
 import ddbt.lib.ManifestHelper
 import ddbt.lib.ManifestHelper._
-import ddbt.lib.store.deep.StoreDSL
+import ddbt.lib.store.deep.{StoreDSLOptimized, StoreDSL}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 
 import ch.epfl.data.sc.pardis.optimization._
-import transformer._
+import ddbt.transformer._
 
 abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, val analyzeEntry: Boolean, val analyzeIndex: Boolean) extends IScalaGen {
 
@@ -67,7 +67,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
       case TypeDate => sys.error("No date constant conversion") //co(impl.unit(new java.util.Date()))
       case _ => sys.error("Unsupported type " + tp)
     }
-    case Exists(e) => expr(e, (ve: Rep[_]) => co(IR.__ifThenElse(IR.infix_!=(ve.asInstanceOf[Rep[Long]], IR.unit(0L)), IR.unit(1L), IR.unit(0L))))
+    case Exists(e) => expr(e, (ve: Rep[_]) => co(IR.BooleanExtra.conditional(IR.infix_!=(ve.asInstanceOf[Rep[Long]], IR.unit(0L)), IR.unit(1L), IR.unit(0L))))
     case Cmp(l, r, op) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(cmp(vl, op, vr, ex.tp)))) // formally, we should take the derived type from left and right, but this makes no difference to LMS
     case a@M3ASTApply(fn, tp, as) =>
       def app(es: List[Expr], vs: List[Rep[_]]): Rep[Unit] = es match {
@@ -79,7 +79,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
 
     case Lift(n, e) =>
       if (cx.contains(n))
-        expr(e, (ve: Rep[_]) => co(IR.__ifThenElse(IR.infix_==(ve.asInstanceOf[Rep[Any]], cx(n).asInstanceOf[Rep[Any]]), IR.unit(1L), IR.unit(0L))), am)
+        expr(e, (ve: Rep[_]) => co(IR.BooleanExtra.conditional(IR.infix_==(ve.asInstanceOf[Rep[Any]], cx(n).asInstanceOf[Rep[Any]]), IR.unit(1L), IR.unit(0L))), am)
       else e match {
         case Ref(n2) => cx.add(n, cx(n2)); co(IR.unit(1L))
         case _ => expr(e, (ve: Rep[_]) => {
@@ -87,6 +87,15 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
           co(IR.unit(1L))
         })
       }
+    case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
+    case Mul(Cmp(l, r, op), rr) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
+      var tmpVrr: Rep[_] = null;
+      expr(rr, (vrr: Rep[_]) => {
+        tmpVrr = vrr;
+        IR.unit(())
+      });
+      tmpVrr
+    }, IR.unit(0L))), am), am)
     case Mul(l, r) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(mul(vl, vr, ex.tp)), am), am)
     case a@Add(l, r) =>
       if (a.agg == Nil) {
@@ -241,7 +250,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
     }
   }
 
-  def cmp(l: Rep[_], op: OpCmp, r: Rep[_], tp: Type): Rep[Long] = {
+  def condition(l: Rep[_], op: OpCmp, r: Rep[_], tp: Type): Rep[Boolean] = {
     @inline def cmp2[T: TypeRep](vl: Rep[_], vr: Rep[_]): Rep[Boolean] = {
       val (ll, rr) = (vl.asInstanceOf[Rep[T]], vr.asInstanceOf[Rep[T]])
       op match {
@@ -251,13 +260,17 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
         case OpGe => IR.ordering_gteq[T](ll, rr)
       }
     }
-    IR.__ifThenElse(tp match {
+    tp match {
       case TypeLong => cmp2[Long](l, r)
       case TypeDouble => cmp2[Double](l, r)
       case TypeString => cmp2[String](l, r)
       case TypeDate => cmp2[Long](IR.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]), IR.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
       case _ => sys.error("Unsupported type")
-    }, IR.unit(1L), IR.unit(0L))
+    }
+  }
+
+  def cmp(l: Rep[_], op: OpCmp, r: Rep[_], tp: Type): Rep[Long] = {
+    IR.BooleanExtra.conditional(condition(l, op, r, tp), IR.unit(1L), IR.unit(0L))
   }
 
   def filterStatement(s: Stmt) = s match {
@@ -422,7 +435,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
           val m = man(tp).asInstanceOf[TypeRep[Any]]
 
           val s = IR.__newVar(unit(zero(tp))(m))(m).e // xxx::: Change nulls impl.named(name,false)(m)
-         //s.emitted = true
+          //s.emitted = true
           (name, (s, keys, tp))
         } else {
           val m = me2(keys.map(_._2), tp)
@@ -533,6 +546,11 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
         structsDefMap += (tag -> PardisStructDef(tag, x._2.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true)), Nil))
       })
     }
+    //    pipeline += TreeDumper(true)
+    //    pipeline += PartiallyEvaluate
+    pipeline += DCE
+    pipeline += ParameterPromotion
+
     val optTP = pipeline.foldLeft(initTP)((prg, opt) => prg.optimize(opt))
     for (x <- optTP.codeBlocks) {
 
@@ -559,4 +577,4 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
   }
 }
 
-class PardisScalaGen(cls: String = "Query", ent: Boolean, idx: Boolean) extends PardisGen(cls, new StoreDSL {}, ent, idx)
+class PardisScalaGen(cls: String = "Query", ent: Boolean, idx: Boolean) extends PardisGen(cls, new StoreDSLOptimized {}, ent, idx)

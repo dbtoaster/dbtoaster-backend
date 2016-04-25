@@ -1,4 +1,4 @@
-package transformer
+package ddbt.transformer
 
 import ch.epfl.data.sc.pardis.property.{TypedPropertyFlag, Property}
 import ch.epfl.data.sc.pardis.utils.TypeUtils._

@@ -17,7 +17,7 @@ import ch.epfl.data.sc.pardis.prettyprinter.{ASTCodeGenerator, ScalaCodeGenerato
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeUnit
 import pardis.optimization._
 import pardis.compiler._
-import transformer._
+import ddbt.transformer._
 import scala.language.implicitConversions
 
 object TpccXactGenerator_SC {

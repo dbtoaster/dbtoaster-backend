@@ -139,6 +139,7 @@ object StoreIRs extends Base {
 
   case class StoreGet[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E], keyColsOutput : Rep[Seq[Int]])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "get", List(List(idx,key,__varArg(keyColsOutput)))){
     override def curriedConstructor = (copy[E] _).curried
+    override def effect = Read(self)
   }
 
   case class StoreForeach[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], f : Rep[((E) => Unit)])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "foreach", List(List(f))){
