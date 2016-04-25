@@ -243,9 +243,17 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
   }
 
   def blockToDocumentNoBraces(block: Block[_]): Document = {
-      mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)
+    mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)
   }
 
+
+  override def functionNodeToDocument(fun: FunctionDef[_]): Document = fun match {
+    case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _])) =>
+      doc"new EntryIdx[${tpeToDocument(h.i.tp)}] {" :/: Document.nest(NEST_COUNT,
+        doc"override def hash(${expToDocument(h.i)} : ${tpeToDocument(h.i.tp)}) = ${blockToDocument(h.o)}" :/:
+          doc"override def cmp(${expToDocument(c.i1)} : ${tpeToDocument(c.i1.tp)} , ${expToDocument(c.i2)} : ${tpeToDocument(c.i2.tp)}) = ${blockToDocument(c.o)}") :/: doc"}"
+    case _ => super.functionNodeToDocument(fun)
+  }
 
   override def symToDocument(sym: ExpressionSymbol[_]): Document = {
     if (sym.name != "x") {
@@ -263,13 +271,13 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
       signatureMod(structDef) :: " class " :: name :: "(" :: fieldsDef(structDef) :: ")" :: " extends " :: s"Entry($count)"
     }
 
-    override def body(structDef: PardisStructDef[_]): Document = doc" {def copy = ${structDef.tag.typeName}(${(1 to structDef.fields.size).map("_"+_).mkString(", ")}) }"
+    override def body(structDef: PardisStructDef[_]): Document = doc" {def copy = ${structDef.tag.typeName}(${(1 to structDef.fields.size).map("_" + _).mkString(", ")}) }"
   }
 
   override def getStruct(structDef: PardisStructDef[_]): Document = SEntryDefToDocument(structDef)
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
-//    case Statement(sym, StoreNew2()) => generateNewStore(sym, None)
+    //    case Statement(sym, StoreNew2()) => generateNewStore(sym, None)
     case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
     case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
     case Statement(sym, StoreGet(self, idx, key, _)) => doc"val $sym = $self.get($idx, $key)"
@@ -277,7 +285,7 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
     case _ => super.stmtToDocument(stmt)
   }
 
-//
+  //
   def generateNewStore(c: Sym[_], mname: Option[String]): String = {
     //    val sch = schema getOrElse(c, List[TypeRep[_]]())
     //    val entry = Entry(sch)

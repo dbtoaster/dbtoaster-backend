@@ -87,15 +87,21 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
           co(IR.unit(1L))
         })
       }
-    case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
-    case Mul(Cmp(l, r, op), rr) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
-      var tmpVrr: Rep[_] = null;
-      expr(rr, (vrr: Rep[_]) => {
-        tmpVrr = vrr;
-        IR.unit(())
-      });
-      tmpVrr
-    }, IR.unit(0L))), am), am)
+//    case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
+//    case Mul(Cmp(l, r, op), rr) if !(rr.isInstanceOf[MapRef] && {
+//      val ks = rr.asInstanceOf[MapRef].keys
+//      ks.size > 0 &&{
+//        val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k) }
+//        ki.size > 0
+//      }
+//    }) => java.lang.System.err.println(rr.getClass); expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
+//      var tmpVrr: Rep[_] = null;
+//      expr(rr, (vrr: Rep[_]) => {
+//        tmpVrr = vrr;
+//        IR.unit(())
+//      });
+//      tmpVrr
+//    }, IR.unit(0L))), am), am)
     case Mul(l, r) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(mul(vl, vr, ex.tp)), am), am)
     case a@Add(l, r) =>
       if (a.agg == Nil) {

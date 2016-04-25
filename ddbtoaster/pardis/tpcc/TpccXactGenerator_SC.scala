@@ -472,7 +472,7 @@ dsl"""
     }
   }
 
-  implicit object Context extends StoreDSL
+  implicit object Context extends StoreDSLOptimized
 
   import Context.{EntryType => _, entryRepToGenericEntryOps => _, typeStore => _, typeNull => _, _}
 
@@ -553,7 +553,7 @@ dsl"""
     }
 
     pipeline += DCE
-
+    pipeline += ParameterPromotion
     val optimizedProgram = pipeline.foldLeft(initialTP)((prg, opt) => prg.optimize(opt))
     var codestr = codeGen.blockToDocument(optimizedProgram.initBlock).toString
     var i = codestr.lastIndexOf("1")
