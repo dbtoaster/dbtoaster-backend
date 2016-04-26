@@ -1,6 +1,6 @@
 package lifter
 
-import ch.epfl.data.sc.pardis.deep.scalalib.BooleanComponent
+import ch.epfl.data.sc.pardis.deep.scalalib.{BooleanPartialEvaluation, BooleanComponent}
 import ddbt.lib.store.deep.BooleanExtraComponent
 import ddbt.lib.store.deep.BooleanExtraIRs.{BooleanExtraConditionalObject => Conditional}
 import ch.epfl.data.sc.pardis.ir.{Constant, IfThenElseOptimization, ObjectOpsOptimization}
@@ -8,7 +8,7 @@ import ch.epfl.data.sc.pardis.ir.{Constant, IfThenElseOptimization, ObjectOpsOpt
 /**
   * Created by sachin on 22.04.16.
   */
-trait OnlineOptimizations extends ObjectOpsOptimization with IfThenElseOptimization with SCLMSInterop with BooleanComponent with BooleanExtraComponent{
+trait OnlineOptimizations extends ObjectOpsOptimization with IfThenElseOptimization with SCLMSInterop with BooleanPartialEvaluation with BooleanExtraComponent{
   override def booleanExtraConditionalObject[T](cond : Rep[Boolean], ift : Rep[T], iff : Rep[T])(implicit typeT : TypeRep[T]) : Rep[T] = {
     cond match{
       case Constant(flag) => if(flag) ift else iff

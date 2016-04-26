@@ -41,7 +41,7 @@ object Compiler {
   var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
   var ni   : Boolean = false     // non-incremental query evaluation (implies depth=0)
   var inl  : Int = 0             // inlining level, in range [0-10]
-  var optimizations  : List[String] = Nil             // inlining level, in range [0-10]
+
   // Execution
   var exec    : Boolean = false  // compile and execute immediately
   var exec_dir: String  = null   // execution classpath
@@ -52,7 +52,12 @@ object Compiler {
   // Print the time and the number of tuples processed every X tuples (0 = disable printing)
   var printProgress = 0
   var exec_args = List[String]() // arguments passed for execution
-
+  def opts(o: String) = o match{
+      case "entry" => OptFlags.analyzeEntry=false
+      case "index" => OptFlags.analyzeIndex=false
+      case "online" => OptFlags.onlineOpts=false
+      case "m3cmpmult" => OptFlags.m3CompareMultiply=false
+    }
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(0); null }
   def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository
     val os = optm3 :: "-l" :: lang :: (if (depth>=0) List("--depth",""+depth) else Nil) ::: flags.flatMap(f=>List("-d",f)) ::: (if (!opts.isEmpty) opts.toList else in) ::: (if(batching_enabled) List("--batch") else Nil )
@@ -86,7 +91,7 @@ object Compiler {
         case "-xvm" => exec_vm=true;
         case "-xbs" => eat{i => exec_bs = i.toInt; batching_enabled = true}
         case "-pp" => eat(i => printProgress = i.toInt)
-        case "-opt" => eat(s => optimizations = s::optimizations, true)
+        case "-opt" => eat(s => opts(s), true)
         case s@"--no-output" => exec_args=exec_args:::List(s)
         case s if s.matches("-O[123]") => optm3=s;
         case s if s.startsWith("--") => exec_args=exec_args:::List(s.substring(1)) // --flag is a shorthand for -xa -flag
@@ -163,7 +168,7 @@ object Compiler {
       case LANG_AKKA => new AkkaGen(name)
      // case LANG_LMS => new LMSCppGen(name)
      // case LANG_CPP_LMS => new LMSCppGen(name)
-      case LANG_SCALA_LMS => new PardisScalaGen(name, !optimizations.contains("entry"), !optimizations.contains("index")) //DSL
+      case LANG_SCALA_LMS => new PardisScalaGen(name) //DSL
      // case LANG_SPARK_LMS => new LMSSparkGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)
     }

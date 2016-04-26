@@ -101,15 +101,15 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   import IR._
 
   def super_optimize[T: TypeRep](node: Block[T]): Block[T] = {
-    val analyseProgram=classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
+    val analyseProgram = classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
     analyseProgram.setAccessible(true)
-    val isDone= classOf[RecursiveRuleBasedTransformer[StoreDSL]].getDeclaredField("isDone")
+    val isDone = classOf[RecursiveRuleBasedTransformer[StoreDSL]].getDeclaredField("isDone")
     isDone.setAccessible(true)
     var currentBlock = node
     var counter = 0
     while (isDone.get(this) == false && counter < THRESHOLD) {
 
-      analyseProgram.invoke(this,currentBlock, implicitly[TypeRep[T]])
+      analyseProgram.invoke(this, currentBlock, implicitly[TypeRep[T]])
       postAnalyseProgram(currentBlock)
       isDone.set(this, true)
       currentBlock = transformProgram(currentBlock)
@@ -134,24 +134,23 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     implicit val entryTp = s.tp
     __lambda((e: Rep[SEntry]) => {
       val hash = __newVar(unit(0xcafebabe))
-      val mix = __newVar(unit(0))
       cols.foreach(c => {
         implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]
         //System.err.println(s"Getting field $c of $e in hash")
-        __assign(mix, unit(0xcc9e2d51) * infix_hashCode(fieldGetter(e, "_" + c)(tp)))
-        __assign(mix, __readVar(mix) << unit(15) | __readVar(mix) >>> unit(-15))
-        __assign(mix, __readVar(mix) * unit(0x1b873593))
-        __assign(mix, __readVar(mix) ^ __readVar(hash))
-        __assign(mix, __readVar(mix) << unit(13) | __readVar(mix) >>> unit(-13))
-        __assign(hash, __readVar(mix) * unit(5) + unit(0xe6546b64))
+        val mix_1 = unit(0xcc9e2d51) * infix_hashCode(fieldGetter(e, "_" + c)(tp))
+        val mix_2 = (mix_1 << unit(15)) | (mix_1 >>> unit(-15))
+        val mix_3 = mix_2 * unit(0x1b873593)
+        val mix_4 = mix_3 ^ __readVar(hash)
+        val mix_5 = (mix_4 << unit(13)) | (mix_4 >>> unit(-13))
+        __assign(hash, mix_5 * unit(5) + unit(0xe6546b64))
       })
-      __assign(hash, __readVar(hash) ^ unit(2))
-      __assign(hash, __readVar(hash) ^ (__readVar(hash) >>> unit(16)))
-      __assign(hash, __readVar(hash) * unit(0x85ebca6b))
-      __assign(hash, __readVar(hash) ^ (__readVar(hash) >>> unit(13)))
-      __assign(hash, __readVar(hash) * unit(0xc2b2ae35))
-      __assign(hash, __readVar(hash) ^ (__readVar(hash) >>> unit(16)))
-      __readVar(hash)
+      val hash_0 = __readVar(hash) ^ unit(2)
+      val hash_1 = hash_0 ^ (hash_0 >>> unit(16))
+      val hash_2 = hash_1 * unit(0x85ebca6b)
+      val hash_3 = hash_2 ^ (hash_2 >>> unit(13))
+      val hash_4 = hash_3 * unit(0xc2b2ae35)
+      val hash_5 = hash_4 ^ (hash_4 >>> unit(16))
+      hash_5
     })
   }
 
@@ -161,25 +160,28 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       implicit val entryTp = s.tp
       __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => {
         val allCols = (1 until s.sch.size).toList
-        val allConds = allCols.map(i => {
+        val allConds = allCols.foldLeft(unit(true))((res, i) => {
           implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-          val v1 = fieldGetter(e1, "_" + i)(tp)
-          val v2 = fieldGetter(e2, "_" + i)(tp)
-          val vNull = nullValue(s.sch(i - 1))
-          (v1 __== vNull) || (v2 __== vNull) || (v1 __== v2)
-        }).reduce(_ && _)
+          res && {
+            val v1 = fieldGetter(e1, "_" + i)(tp)
+            val v2 = fieldGetter(e2, "_" + i)(tp)
+            val vNull = nullValue(s.sch(i - 1))
+            ((v1 __== vNull) || (v2 __== vNull) || (v1 __== v2))
+          }
+        })
         __ifThenElse(allConds, unit(0), unit(1))
       })
     } else {
       implicit val entryTp = s.tp
       __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => {
-        val allConds: Rep[Boolean] = cols.map(i => {
+        val allConds: Rep[Boolean] = cols.foldLeft(unit(true))((res, i) => {
           implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-          val v1 = fieldGetter(e1, "_" + i)(tp)
-          val v2 = fieldGetter(e2, "_" + i)(tp)
-          val vNull = nullValue(s.sch(i - 1))
-          v1 __== v2
-        }).reduce(_ && _)
+          res && {
+            val v1 = fieldGetter(e1, "_" + i)(tp)
+            val v2 = fieldGetter(e2, "_" + i)(tp)
+            (v1 __== v2)
+          }
+        })
         __ifThenElse(allConds, unit(0), unit(1))
       })
     }

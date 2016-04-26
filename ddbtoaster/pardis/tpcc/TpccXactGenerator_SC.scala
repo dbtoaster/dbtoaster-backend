@@ -479,7 +479,7 @@ dsl"""
   def main(args: Array[String]): Unit = {
 
     val analyzeEntry = true
-    val analyzeIndex = false
+    val analyzeIndex = true
     var prog: Prog = null
     import java.nio.file.Files.copy
     import java.nio.file.Paths.get

@@ -22,7 +22,7 @@ import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 import ch.epfl.data.sc.pardis.optimization._
 import ddbt.transformer._
 
-abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, val analyzeEntry: Boolean, val analyzeIndex: Boolean) extends IScalaGen {
+abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) extends IScalaGen {
 
 
   import scala.language.implicitConversions
@@ -58,6 +58,17 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
   //   ex : expression to convert
   //   co : continuation in which the result should be plugged
   //   am : shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
+  def containsMapRef(ex: Expr): Boolean = ex match {
+    case MapRef(_, _, ks) => {
+      ks.size > 0 && {
+        val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k) }
+
+        ki.size > 0
+      }
+    }
+    case s: Product => s.productIterator.collect { case e: Expr => containsMapRef(e) }.foldLeft(false)(_ || _)
+  }
+
   def expr(ex: Expr, co: Rep[_] => Rep[Unit], am: Option[List[(String, Type)]] = None): Rep[Unit] = ex match {
     case Ref(n) => co(cx(n))
     case Const(tp, v) => ex.tp match {
@@ -87,21 +98,16 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
           co(IR.unit(1L))
         })
       }
-//    case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
-//    case Mul(Cmp(l, r, op), rr) if !(rr.isInstanceOf[MapRef] && {
-//      val ks = rr.asInstanceOf[MapRef].keys
-//      ks.size > 0 &&{
-//        val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k) }
-//        ki.size > 0
-//      }
-//    }) => java.lang.System.err.println(rr.getClass); expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
-//      var tmpVrr: Rep[_] = null;
-//      expr(rr, (vrr: Rep[_]) => {
-//        tmpVrr = vrr;
-//        IR.unit(())
-//      });
-//      tmpVrr
-//    }, IR.unit(0L))), am), am)
+    //        case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
+    case Mul(Cmp(l, r, op), rr) if OptFlags.m3CompareMultiply && !containsMapRef(rr) =>
+      expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
+        var tmpVrr: Rep[_] = null;
+        expr(rr, (vrr: Rep[_]) => {
+          tmpVrr = vrr;
+          IR.unit(())
+        });
+        tmpVrr
+      }, IR.unit(0L))), am), am)
     case Mul(l, r) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(mul(vl, vr, ex.tp)), am), am)
     case a@Add(l, r) =>
       if (a.agg == Nil) {
@@ -300,7 +306,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
   def createVarDefinition(name: String, tp: Type) = "var " + name + ":" + tp.toScala + " = " + tp.zero
 
   override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
-    if (analyzeEntry) {
+    if (OptFlags.analyzeEntry) {
       val ctx = ctx0(map)
       val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
       map + s".unsafeInsert(0, $name(" + keyNames.map(e => e._1).mkString(",") + ",1L))"
@@ -315,7 +321,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
     val mapKeys = m.keys.map(_._2)
     val nodeName = map + "_node"
     val res = nodeName + "_mres"
-    def get(i: Int) = if (analyzeEntry) s"e._$i" else s"e.get($i)"
+    def get(i: Int) = if (OptFlags.analyzeEntry) s"e._$i" else s"e.get($i)"
     if (q.keys.size > 0)
       "{ val " + res + " = new scala.collection.mutable.HashMap[" + tup(mapKeys.map(_.toScala)) + "," + q.map.tp.toScala + "](); " + map + ".foreach{e => " + res + " += ((" + (if (mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map { case (_, i) => get(i + 1) }) else "e") + "," + get(if (mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size) + ")) }; " + res + ".toMap }"
     else {
@@ -533,14 +539,14 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
     }
     val initTP = TransactionProgram(globalMembersBlock, iGlobal, tsResBlks)
 
-    if (analyzeIndex) {
+    if (OptFlags.analyzeIndex) {
       pipeline += new IndexAnalysis(IR)
       pipeline += new IndexDecider(IR)
       pipeline += new IndexTransformer(IR)
     } else
       pipeline += new IndexDecider(IR)
 
-    if (analyzeEntry) {
+    if (OptFlags.analyzeEntry) {
       val ea = new EntryAnalysis(IR)
       val et = new EntryTransformer(IR, ea.EntryTypes)
       pipeline += ea
@@ -556,7 +562,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
     //    pipeline += PartiallyEvaluate
     pipeline += DCE
     pipeline += ParameterPromotion
-
+    pipeline += new StoreDCE(IR)  //has to be last
     val optTP = pipeline.foldLeft(initTP)((prg, opt) => prg.optimize(opt))
     for (x <- optTP.codeBlocks) {
 
@@ -583,4 +589,10 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL, v
   }
 }
 
-class PardisScalaGen(cls: String = "Query", ent: Boolean, idx: Boolean) extends PardisGen(cls, new StoreDSLOptimized {}, ent, idx)
+class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if(OptFlags.onlineOpts) new StoreDSLOptimized {} else new StoreDSL{})
+object OptFlags{
+  var analyzeEntry: Boolean = true
+  var analyzeIndex: Boolean = true
+  var onlineOpts = true
+  var m3CompareMultiply = false
+}
