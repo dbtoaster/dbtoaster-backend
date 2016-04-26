@@ -290,6 +290,7 @@ class StoreScalaCodeGenerator(val IR: StoreDSL) extends ScalaCodeGenerator with 
         doc"override def hash(${expToDocument(h.i)} : ${tpeToDocument(h.i.tp)}) = ${blockToDocument(h.o)}" :/:
           doc"override def cmp(${expToDocument(c.i1)} : ${tpeToDocument(c.i1.tp)} , ${expToDocument(c.i2)} : ${tpeToDocument(c.i2.tp)}) = ${blockToDocument(c.o)}") :/: doc"}"
     case Statement(sym,ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"val $sym = Array[${EntryIdxHoister.getArrayType(ops(0))}]("::ops.map(s=>Document.text(EntryIdxHoister.map(s))).mkDocument(", ") ::doc")"
+    case Statement(sym,BooleanExtraConditionalObject(cond, ift, iff)) => doc"val $sym = if(${expToDocument(cond)}) ${expToDocument(ift)} else ${expToDocument(iff)}"
     case _ => super.stmtToDocument(stmt)
   }
 

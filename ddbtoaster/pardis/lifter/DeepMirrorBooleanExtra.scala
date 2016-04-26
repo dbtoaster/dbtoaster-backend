@@ -47,7 +47,7 @@ object BooleanExtraIRs extends Base {
       val cond = children(0).asInstanceOf[Boolean]
       val ift = children(1).asInstanceOf[T]
       val iff = children(2).asInstanceOf[T]
-      ddbt.lib.store.MirrorBooleanExtra.conditional[T](cond, ift, iff)
+      ddbt.lib.store.BooleanExtra.conditional[T](cond, ift, iff)
     }
     override def partiallyEvaluable: Boolean = true
 
