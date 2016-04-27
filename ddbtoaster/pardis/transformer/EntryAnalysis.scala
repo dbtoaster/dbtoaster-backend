@@ -99,6 +99,7 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
 class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mutable.HashMap[ExpressionSymbol[_], Any]) extends RecursiveRuleBasedTransformer[StoreDSL](IR) {
 
   import IR._
+  val structsDefMap = collection.mutable.HashMap.empty[StructTags.StructTag[SEntry], PardisStructDef[SEntry]]
 
   def super_optimize[T: TypeRep](node: Block[T]): Block[T] = {
     val analyseProgram = classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
@@ -247,6 +248,8 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val sch = schema(sym)
       val entry = SEntry(sch)
       implicit val entryTp = entry.tp
+      val tag = entryTp.asInstanceOf[RecordType[SEntry]].tag
+      structsDefMap += (tag -> PardisStructDef(tag, sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true)), Nil))
       val ops_ = ops.collect {
         case Def(node: EntryIdxGenericCmpObject[_]) => {
           implicit val typeR = node.typeR

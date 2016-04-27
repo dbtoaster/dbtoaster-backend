@@ -17,7 +17,7 @@ import ddbt.lib.ManifestHelper
 import ddbt.lib.ManifestHelper._
 import ddbt.lib.store.deep.{StoreDSLOptimized, StoreDSL}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
-import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
+import ddbt.codegen.prettyprinter.{StoreCodeGenerator, StoreScalaCodeGenerator}
 
 import ch.epfl.data.sc.pardis.optimization._
 import ddbt.transformer._
@@ -29,7 +29,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
   import ddbt.lib.store.deep._
   import IR._
 
-  val codeGen = new StoreScalaCodeGenerator(IR)
+  val codeGen : StoreCodeGenerator
   val tempMapSchema = collection.mutable.ArrayBuffer[(Sym[_], List[TypeRep[_]])]()
 
   def debug(s: String): Unit = {
@@ -99,7 +99,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
         })
       }
     //        case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
-    case Mul(Cmp(l, r, op), rr) if OptFlags.m3CompareMultiply && !containsMapRef(rr) =>
+    case Mul(Cmp(l, r, op), rr) if Optimizer.m3CompareMultiply && !containsMapRef(rr) =>
       expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
         var tmpVrr: Rep[_] = null;
         expr(rr, (vrr: Rep[_]) => {
@@ -290,23 +290,11 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     case _ => true
   }
 
-  override def genMap(m: MapDef): String = {
-    if (m.keys.size == 0) {
-      val c = ctx0(m.name)._1.asInstanceOf[IR.Sym[_]]
-      createVarDefinition(m.name, m.tp) + ";\n" + s"var ${c.name + c.id} = " + m.name + ";\n"
-    }
-    else {
-      //println("MAP NAME: " + m.name)
-      codeGen.generateNewStore(ctx0(m.name)._1.asInstanceOf[IR.Sym[_]], Some(m.name))
-    }
-  }
-
-  def genAllMaps(maps: Seq[MapDef]) = maps.map(genMap).mkString("\n")
 
   def createVarDefinition(name: String, tp: Type) = "var " + name + ":" + tp.toScala + " = " + tp.zero
 
   override def genInitializationFor(map: String, keyNames: List[(String, Type)], keyNamesConcat: String) = {
-    if (OptFlags.analyzeEntry) {
+    if (Optimizer.analyzeEntry) {
       val ctx = ctx0(map)
       val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
       map + s".unsafeInsert(0, $name(" + keyNames.map(e => e._1).mkString(",") + ",1L))"
@@ -321,7 +309,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     val mapKeys = m.keys.map(_._2)
     val nodeName = map + "_node"
     val res = nodeName + "_mres"
-    def get(i: Int) = if (OptFlags.analyzeEntry) s"e._$i" else s"e.get($i)"
+    def get(i: Int) = if (Optimizer.analyzeEntry) s"e._$i" else s"e.get($i)"
     if (q.keys.size > 0)
       "{ val " + res + " = new scala.collection.mutable.HashMap[" + tup(mapKeys.map(_.toScala)) + "," + q.map.tp.toScala + "](); " + map + ".foreach{e => " + res + " += ((" + (if (mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map { case (_, i) => get(i + 1) }) else "e") + "," + get(if (mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size) + ")) }; " + res + ".toMap }"
     else {
@@ -511,88 +499,34 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
 
     //     java.lang.System.err.println(analysisRound.mapAccess)
     // java.lang.System.err.println(analysisRound2.mapAccess)
-    //TODO: SBJ: Fix: Passing empty symbol list as they are not used.
-    //    tsResBlks.foreach({ case (name, param, block) => codeGen.allBlocks += name -> codeGen.BlockWithSymbols(block.asInstanceOf[Block[Any]], List[Sym[Any]]()) })
-    //
-    //
-    //
+
     val allSchema = classLevelMaps.map({ case MapDef(name, tp, kt, _) => ctx0(name)._1.asInstanceOf[IR.Sym[_]] -> (kt.map(_._2) :+ tp).map(man) }) ++ tempMapSchema
     allSchema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
     tempMapSchema.clear()
-    val structsDefMap = collection.mutable.HashMap.empty[StructTags.StructTag[SEntry], PardisStructDef[SEntry]]
-    val pipeline = scala.collection.mutable.ArrayBuffer[TransformerHandler]()
     val allnames = classLevelMaps.collect { case MapDef(name, _, _, _) => name }
     val iGlobal = allnames.map(ctx0(_)._1.asInstanceOf[Sym[_]])
-
-    case class TransactionProgram(val initBlock: Block[Unit], val global: List[Sym[_]], val codeBlocks: Seq[(String, String, Block[Unit])]) {
-      def optimize(opt: TransformerHandler) = {
-        val init_ = opt(IR)(initBlock)
-        val codeB_ = codeBlocks.map(t => (t._1, t._2, opt(IR)(t._3)))
-        val global_ = opt match {
-          case writer: IndexDecider => writer.changeGlobal(global)
-          case writer: EntryTransformer => writer.changeGlobal(global)
-          case _ => global
-        }
-
-        TransactionProgram(init_, global_, codeB_)
-      }
-    }
-    val initTP = TransactionProgram(globalMembersBlock, iGlobal, tsResBlks)
-
-    if (OptFlags.analyzeIndex) {
-      pipeline += new IndexAnalysis(IR)
-      pipeline += new IndexDecider(IR)
-      pipeline += new IndexTransformer(IR)
-    } else
-      pipeline += new IndexDecider(IR)
-
-    if (OptFlags.analyzeEntry) {
-      val ea = new EntryAnalysis(IR)
-      val et = new EntryTransformer(IR, ea.EntryTypes)
-      pipeline += ea
-      pipeline += et
-      allSchema.foreach(x => {
-        val entry = SEntry(x._2)
-        implicit val tp = entry.tp
-        val tag = tp.asInstanceOf[RecordType[SEntry]].tag
-        structsDefMap += (tag -> PardisStructDef(tag, x._2.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true)), Nil))
-      })
-    }
-    //    pipeline += TreeDumper(true)
-    //    pipeline += PartiallyEvaluate
-    pipeline += DCE
-    pipeline += ParameterPromotion
-    pipeline += new StoreDCE(IR)  //has to be last
-    val optTP = pipeline.foldLeft(initTP)((prg, opt) => prg.optimize(opt))
+    val initTP = TransactionProgram(globalMembersBlock, iGlobal, tsResBlks, Map.empty)
+    val optTP =new Optimizer(IR).optimize(initTP)
     for (x <- optTP.codeBlocks) {
-
       val doc = codeGen.blockToDocument((x._3))
       val strWriter = new StringWriter()
       val pw = new java.io.PrintWriter(strWriter)
       doc.format(20, pw)
       ts += "def on" + x._1 + "(" + x._2 + ") {\n" + strWriter.toString + "\n}\n"
     }
-
     val ms = codeGen.blockToDocumentNoBraces(optTP.initBlock) + "\n" + optTP.global.zip(allnames).map(t => {
       s"  val ${t._2} = ${codeGen.expToDocument(t._1)}"
     }).mkString("\n")
-
     val ds = "" // xxx - Fixeit outStream.toString
     val printInfoDef = "def printMapsInfo() = {}"
-
-
-    val structs = structsDefMap.toList.map(x => x._2)
+    val structs = optTP.structsDefMap.toList.map(x => x._2)
     val entries = structs.map(codeGen.getStruct).mkDocument("\n")
-
     val r = ds + "\n" + ms + "\n" + entries + "\n" + ts + "\n" + printInfoDef
+    ExpressionSymbol.globalId = 0
     (r, str, ld0, consts)
   }
 }
 
-class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if(OptFlags.onlineOpts) new StoreDSLOptimized {} else new StoreDSL{})
-object OptFlags{
-  var analyzeEntry: Boolean = true
-  var analyzeIndex: Boolean = true
-  var onlineOpts = true
-  var m3CompareMultiply = false
+class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if(Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL{}){
+  override val codeGen: StoreCodeGenerator = new StoreScalaCodeGenerator(IR)
 }
