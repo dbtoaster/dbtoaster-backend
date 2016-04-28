@@ -101,7 +101,7 @@ case class GenericCmp[R](val cols: Seq[Int] , val f: GenericEntry => R)(implicit
   }
 }
 object EntryIdx{
-  def apply[E<:Entry](h: (E => Int), c: ((E, E) => Int)): EntryIdx[E] = new EntryIdx[E]{
+  def apply[E<:Entry](h: (E => Int), c: ((E, E) => Int), name: String=""): EntryIdx[E] = new EntryIdx[E]{
     override def cmp(e1: E, e2: E): Int = c(e1,e2)
     override def hash(e: E): Int = h(e)
   }

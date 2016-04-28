@@ -55,18 +55,13 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
 
   override def getStruct(structDef: PardisStructDef[_]): Document = SEntryDefToDocument(structDef)
 
-  object EntryIdxHoister {
-    val map = collection.mutable.HashMap[Rep[_], String]()
-    var cnt = 0
 
-    def getArrayType(sym: Rep[_]) = "EntryIdx[" + map(sym).split("_Idx")(0) + "]"
-
-    def add(sym: Rep[_], s: String): String = {
-      val name = (s + "_Idx" + cnt)
-      map += sym -> name
-      cnt = cnt + 1
-      name
-    }
+  override def nodeToDocument(node: PardisNode[_]): Document = node match{
+    case BooleanExtraConditionalObject(cond, ift, iff) => doc"if(${expToDocument(cond)}) ${expToDocument(ift)} else ${expToDocument(iff)}"
+    case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name) ) => doc" object $name extends EntryIdx[${tpeToDocument(h.i.tp)}] {" :/: Document.nest(NEST_COUNT,
+      doc"override def hash(${expToDocument(h.i)} : ${tpeToDocument(h.i.tp)}) = ${blockToDocument(h.o)}" :/:
+        doc"override def cmp(${expToDocument(c.i1)} : ${tpeToDocument(c.i1.tp)} , ${expToDocument(c.i2)} : ${tpeToDocument(c.i2.tp)}) = ${blockToDocument(c.o)}") :/: doc"}"
+    case _ => super.nodeToDocument(node)
   }
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
@@ -75,13 +70,7 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
     case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
     case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
     case Statement(sym, StoreGet(self, idx, key, _)) => doc"val $sym = $self.get($idx, $key)"
-    case Statement(sym, EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]))) =>
-      val name = EntryIdxHoister.add(sym, tpeToDocument(h.i.tp).toString)
-      doc" object $name extends EntryIdx[${tpeToDocument(h.i.tp)}] {" :/: Document.nest(NEST_COUNT,
-        doc"override def hash(${expToDocument(h.i)} : ${tpeToDocument(h.i.tp)}) = ${blockToDocument(h.o)}" :/:
-          doc"override def cmp(${expToDocument(c.i1)} : ${tpeToDocument(c.i1.tp)} , ${expToDocument(c.i2)} : ${tpeToDocument(c.i2.tp)}) = ${blockToDocument(c.o)}") :/: doc"}"
-    case Statement(sym, ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"val $sym = Array[${EntryIdxHoister.getArrayType(ops(0))}](" :: ops.map(s => Document.text(EntryIdxHoister.map(s))).mkDocument(", ") :: doc")"
-    case Statement(sym, BooleanExtraConditionalObject(cond, ift, iff)) => doc"val $sym = if(${expToDocument(cond)}) ${expToDocument(ift)} else ${expToDocument(iff)}"
+    case Statement(sym, arr@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"val $sym = Array[${arr.typeT}](" :: ops.collect{ case Def(EntryIdxApplyObject(_,_,Constant(name)))  => Document.text(name)}.mkDocument(", ") :: doc")"
     case _ => super.stmtToDocument(stmt)
   }
 

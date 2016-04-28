@@ -502,7 +502,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     tempMapSchema.clear()
     val allnames = classLevelMaps.collect { case MapDef(name, _, _, _) => name }
     val iGlobal = allnames.map(ctx0(_)._1.asInstanceOf[Sym[_]])
-    val initTP = TransactionProgram(globalMembersBlock, iGlobal, tsResBlks, Map.empty)
+    val initTP = TransactionProgram(globalMembersBlock, iGlobal, tsResBlks, Nil, Nil)
     val optTP =new Optimizer(IR).optimize(initTP)
     for (x <- optTP.codeBlocks) {
       val doc = codeGen.blockToDocument((x._3))
@@ -516,9 +516,10 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     }).mkString("\n")
     val ds = "" // xxx - Fixeit outStream.toString
     val printInfoDef = "def printMapsInfo() = {}"
-    val structs = optTP.structsDefMap.toList.map(x => x._2)
-    val entries = structs.map(codeGen.getStruct).mkDocument("\n")
-    val r = ds + "\n" + ms + "\n" + entries + "\n" + ts + "\n" + printInfoDef
+
+    val entries = optTP.structsDefs.map(codeGen.getStruct).mkDocument("\n")
+    val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
+    val r = ds + "\n" + ms + "\n" + entries + "\n"+ entryIdxes+"\n"+ ts + "\n" + printInfoDef
     ExpressionSymbol.globalId = 0
     (r, str, ld0, consts)
   }

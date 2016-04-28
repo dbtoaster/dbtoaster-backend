@@ -13,9 +13,10 @@ class StoreDCE(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL]
 
   val toRemove = collection.mutable.ArrayBuffer[Rep[_]]()
   analysis += rule {
-    case EntryIdxApplyObject(h, c) => toRemove +=(h, c);()
+    case EntryIdxApplyObject(h, c, _) => toRemove +=(h, c);()
   }
   rewrite += statement{
     case sym->st if (toRemove.contains(sym)) => ()
+    case sym -> (st:EntryIdxApplyObject[_]) => ()
   }
 }

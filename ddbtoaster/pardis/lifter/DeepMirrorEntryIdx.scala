@@ -21,7 +21,7 @@ trait EntryIdxOps extends Base with GenericEntryOps {
      def hash(e : Rep[E]) : Rep[Int] = entryIdxHash[E](self, e)(typeE)
   }
   object EntryIdx {
-     def apply[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = entryIdxApplyObject[E](h, c)(typeE)
+     def apply[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)], entryidxname : Rep[String])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = entryIdxApplyObject[E](h, c, entryidxname)(typeE)
      def genericOps(cols : Rep[Seq[Int]]) : Rep[EntryIdx[GenericEntry]] = entryIdxGenericOpsObject(cols)
      def genericCmp[R](cols : Rep[Seq[Int]], f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R]) : Rep[EntryIdx[GenericEntry]] = entryIdxGenericCmpObject[R](cols, f)(typeR)
   }
@@ -41,7 +41,7 @@ trait EntryIdxOps extends Base with GenericEntryOps {
   // method definitions
    def entryIdxCmp[E <: ddbt.lib.store.Entry](self : Rep[EntryIdx[E]], e1 : Rep[E], e2 : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Int] = EntryIdxCmp[E](self, e1, e2)
    def entryIdxHash[E <: ddbt.lib.store.Entry](self : Rep[EntryIdx[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Int] = EntryIdxHash[E](self, e)
-   def entryIdxApplyObject[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = EntryIdxApplyObject[E](h, c)
+   def entryIdxApplyObject[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)], entryidxname : Rep[String])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = EntryIdxApplyObject[E](h, c, entryidxname)
    def entryIdxGenericOpsObject(cols : Rep[Seq[Int]]) : Rep[EntryIdx[GenericEntry]] = EntryIdxGenericOpsObject(cols)
    def entryIdxGenericCmpObject[R](cols : Rep[Seq[Int]], f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R]) : Rep[EntryIdx[GenericEntry]] = EntryIdxGenericCmpObject[R](cols, f)
   type EntryIdx[E <: ddbt.lib.store.Entry] = ddbt.lib.store.EntryIdx[E]
@@ -83,14 +83,15 @@ object EntryIdxIRs extends Base {
 
   }
 
-  case class EntryIdxApplyObject[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)])(implicit val typeE : TypeRep[E]) extends FunctionDef[EntryIdx[E]](None, "EntryIdx.apply", List(List(h,c))){
+  case class EntryIdxApplyObject[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)], entryidxname : Rep[String])(implicit val typeE : TypeRep[E]) extends FunctionDef[EntryIdx[E]](None, "EntryIdx.apply", List(List(h,c,entryidxname))){
     override def curriedConstructor = (copy[E] _).curried
     override def isPure = true
 
     override def partiallyEvaluate(children: Any*): EntryIdx[E] = {
       val h = children(0).asInstanceOf[(E => Int)]
       val c = children(1).asInstanceOf[((E,E) => Int)]
-      ddbt.lib.store.MirrorEntryIdx.apply[E](h, c)
+      val entryidxname = children(2).asInstanceOf[String]
+      ddbt.lib.store.MirrorEntryIdx.apply[E](h, c, entryidxname)
     }
     override def partiallyEvaluable: Boolean = true
 

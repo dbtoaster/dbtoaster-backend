@@ -508,7 +508,7 @@ dsl"""
     codeBlocks += codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
 
 
-    val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]),codeBlocks , Map.empty)
+    val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]),codeBlocks , Nil, Nil)
 
     implicit def toPath(filename: String) = get(filename)
 
@@ -535,8 +535,8 @@ dsl"""
          |}
       """.stripMargin
     file.println(header + executor)
-    val structs = optimizedProgram.structsDefMap.toList.map(x => x._2)
-    file.println(structs.map(codeGen.getStruct).mkDocument("\n"))
+    file.println(optimizedProgram.structsDefs.map(codeGen.getStruct).mkDocument("\n"))
+    file.println(optimizedProgram.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n"))
     optimizedProgram.codeBlocks.foreach { case (className, args : List[Sym[_]], body) => {
       val genCode = "class " + className + "(" + optimizedProgram.global.map(_.asInstanceOf[Sym[_]]).map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
         "def apply(" + args.map(s => s + ": " + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") = "

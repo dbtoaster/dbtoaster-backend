@@ -99,8 +99,11 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
 class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mutable.HashMap[ExpressionSymbol[_], Any]) extends RecursiveRuleBasedTransformer[StoreDSL](IR) {
 
   import IR._
+
   val structsDefMap = collection.mutable.HashMap.empty[StructTags.StructTag[SEntry], PardisStructDef[SEntry]]
-  val genOpsMap = collection.mutable.HashMap.empty[(Seq[Int],SEntry), Rep[EntryIdx[SEntry]]]
+  val genOps = collection.mutable.HashMap.empty[(Seq[Int], SEntry), Rep[EntryIdx[SEntry]]]
+  val genCmp = collection.mutable.ArrayBuffer[Rep[EntryIdx[SEntry]]]()
+
   def super_optimize[T: TypeRep](node: Block[T]): Block[T] = {
     val analyseProgram = classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
     analyseProgram.setAccessible(true)
@@ -257,12 +260,15 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
           val cols = node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]]
           val hl = hashfn(cols, entry)
           val cl = order_cmp(node.f, entry)
-          EntryIdx.apply(hl, cl)
+          val rep = EntryIdx.apply(hl, cl, unit(entry.name + "_Idx" + cols.mkString("") + "_Ordering"))
+          genCmp += rep
+          rep
         }
         case Def(node: EntryIdxGenericOpsObject) => {
 
           val cols = node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]]
-         genOpsMap getOrElseUpdate((cols, entry),EntryIdx.apply(hashfn(cols, entry),equal_cmp(cols, entry)))
+          lazy val news = EntryIdx.apply(hashfn(cols, entry), equal_cmp(cols, entry), unit(entry.name + "_Idx" + cols.mkString("")))
+          genOps getOrElseUpdate((cols, entry), news)
         }
       }
       val newS = __newStore(n, Array.apply(ops_ : _*))

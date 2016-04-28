@@ -1,8 +1,9 @@
 package ddbt.codegen
 
 import ch.epfl.data.sc.pardis.ir._
-import ch.epfl.data.sc.pardis.optimization.{ParameterPromotion, DCE, TransformerHandler}
+import ch.epfl.data.sc.pardis.optimization.{CountingAnalysis, ParameterPromotion, DCE, TransformerHandler}
 import ch.epfl.data.sc.pardis.types.{PardisType, UnitType, RecordType}
+import ddbt.lib.store.deep.EntryIdxIRs.EntryIdxApplyObject
 import ddbt.lib.store.deep.StoreDSL
 import ddbt.transformer._
 
@@ -11,7 +12,7 @@ import scala.collection.mutable
 /**
   * Created by sachin on 27.04.16.
   */
-case class TransactionProgram[T](val initBlock: PardisBlock[T], val global: List[ExpressionSymbol[_]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structsDefMap: Map[StructTags.StructTag[SEntry], PardisStructDef[SEntry]]) {}
+case class TransactionProgram[T](val initBlock: PardisBlock[T], val global: List[ExpressionSymbol[_]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structsDefs: Seq[PardisStructDef[SEntry]], val entryIdxDefs: Seq[EntryIdxApplyObject[SEntry]]) {}
 
 object Optimizer {
   var analyzeEntry: Boolean = true
@@ -39,6 +40,12 @@ class Optimizer(val IR: StoreDSL) {
   //    pipeline += PartiallyEvaluate
   pipeline += DCE
   pipeline += ParameterPromotion
+  //  pipeline += new CountingAnalysis[StoreDSL](IR) with TransformerHandler {
+  //    override def apply[Lang <: Base, T](context: Lang)(block: context.Block[T])(implicit evidence$1: PardisType[T]): context.Block[T] = {
+  //      traverseBlock(block.asInstanceOf[IR.Block[T]])
+  //      block
+  //    }
+  //  }
   pipeline += new StoreDCE(IR)
 
   //has to be last
@@ -47,11 +54,11 @@ class Optimizer(val IR: StoreDSL) {
   def applyOptimization[T: PardisType](prg: TransactionProgram[T], opt: TransformerHandler) = {
     val init_ = opt(IR)(prg.initBlock)
     val codeB_ = prg.codeBlocks.map(t => (t._1, t._2, opt(IR)(t._3)))
-    val (global_, structs_) = opt match {
-      case writer: IndexDecider => (writer.changeGlobal(prg.global), prg.structsDefMap)
-      case writer: EntryTransformer => (writer.changeGlobal(prg.global), prg.structsDefMap ++ writer.structsDefMap)
-      case _ => (prg.global, prg.structsDefMap)
+    val (global_, structs_, entryidx_) = opt match {
+      case writer: IndexDecider => (writer.changeGlobal(prg.global), prg.structsDefs, prg.entryIdxDefs)
+      case writer: EntryTransformer => (writer.changeGlobal(prg.global), prg.structsDefs ++ writer.structsDefMap.map(_._2), prg.entryIdxDefs ++ (writer.genOps.map(_._2) ++ writer.genCmp).collect{case IR.Def(e: EntryIdxApplyObject[_]) => e})
+      case _ => (prg.global, prg.structsDefs, prg.entryIdxDefs)
     }
-    TransactionProgram(init_, global_, codeB_, structs_)
+    TransactionProgram(init_, global_, codeB_, structs_, entryidx_)
   }
 }

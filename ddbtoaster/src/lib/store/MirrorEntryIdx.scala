@@ -17,7 +17,7 @@ abstract class MirrorEntryIdx[E <: Entry] {
 
 object MirrorEntryIdx {
   @pure
-  def apply[E<:Entry](h: (E => Int), c: ((E, E) => Int)): EntryIdx[E] = ???
+  def apply[E<:Entry](h: (E => Int), c: ((E, E) => Int), entryidxname: String): EntryIdx[E] = ???
   @pure
   def genericOps(cols: Seq[Int]): EntryIdx[GenericEntry] = ???
   @pure
