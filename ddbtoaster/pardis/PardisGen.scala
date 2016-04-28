@@ -68,6 +68,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     }
     case s: Product => s.productIterator.collect { case e: Expr => containsMapRef(e) }.foldLeft(false)(_ || _)
   }
+  val csSym = collection.mutable.HashMap[String,Rep[_]]()
 
   def expr(ex: Expr, co: Rep[_] => Rep[Unit], am: Option[List[(String, Type)]] = None): Rep[Unit] = ex match {
     case Ref(n) => co(cx(n))
@@ -85,7 +86,10 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
         case x :: xs => expr(x, (v: Rep[_]) => app(xs, v :: vs))
         case Nil => co(IR.m3apply(fn, vs.reverse, tp))
       }
-      if (as.forall(_.isInstanceOf[Const])) co(IR.freshNamed(constApply(a))(typeToTypeRep(tp))) // hoist constants resulting from function application
+      if (as.forall(_.isInstanceOf[Const])) {
+        val cName = constApply(a)
+        co(csSym.get(cName) match { case Some(n) => n case None => val cSym = IR.freshNamed(cName)(typeToTypeRep(tp)); csSym+=((cName,cSym)); cSym }) // hoist constants resulting from function application
+      }
       else app(as, Nil)
 
     case Lift(n, e) =>
