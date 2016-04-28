@@ -29,8 +29,8 @@ object TreeDumper {
         pw.write("\n-----------------------[END OF BLOCK]------------------------\n")
         pw.flush()
       } else {
-        val pw = new java.io.PrintWriter(new java.io.File("tree_debug_dump.txt"))
-        pw.println(block.toString)
+        val pw = new FileWriter("tree_debug_dump.txt", true)
+        pw.write(block.toString)
         pw.flush()
       }
 
