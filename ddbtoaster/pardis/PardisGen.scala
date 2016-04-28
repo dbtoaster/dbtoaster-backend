@@ -17,7 +17,7 @@ import ddbt.lib.ManifestHelper
 import ddbt.lib.ManifestHelper._
 import ddbt.lib.store.deep.{StoreDSLOptimized, StoreDSL}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
-import ddbt.codegen.prettyprinter.{StoreCodeGenerator, StoreScalaCodeGenerator}
+import ddbt.codegen.prettyprinter.{StoreCppCodeGenerator, StoreCodeGenerator, StoreScalaCodeGenerator}
 
 import ch.epfl.data.sc.pardis.optimization._
 import ddbt.transformer._
@@ -329,17 +329,9 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       case EvtDel(Schema(n, cs)) => ("Del" + n, cs)
     }
 
-    var params = ""
-    val block = IR.reifyBlock {
-      params = t.evt match {
-        case EvtBatchUpdate(Schema(n, _)) =>
-          val rel = s0.sources.filter(_.schema.name == n)(0).schema
-          val name = rel.deltaSchema
 
-          name + ":Store[" + IR.storeEntryType(ctx0(name)._1) + "]"
-        case _ =>
-          args.map(a => a._1 + ":" + a._2.toScala).mkString(", ")
-      }
+    val block = IR.reifyBlock {
+
       //println(s"HELLO AGAIN2 ${ctx0}")
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
@@ -395,6 +387,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       }
       IR.unit(())
     }
+    val params: List[Sym[_]] = args.map(t => cx(t._1).asInstanceOf[Sym[_]])
     cx = null;
     (name, params, block)
   }
@@ -512,7 +505,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       val strWriter = new StringWriter()
       val pw = new java.io.PrintWriter(strWriter)
       doc.format(20, pw)
-      ts += "def on" + x._1 + "(" + x._2 + ") {\n" + strWriter.toString + "\n}\n"
+      ts += "def on" + x._1 + "(" + x._2.map(s => codeGen.expToDocument(s) +":"+ codeGen.tpeToDocument(s.tp)).mkString(", ") + ") {\n" + strWriter.toString + "\n}\n"
     }
     val ms = codeGen.blockToDocumentNoBraces(optTP.initBlock) + "\n" + optTP.global.zip(allnames).map(t => {
       s"  val ${t._2} = ${codeGen.expToDocument(t._1)}"
@@ -525,8 +518,12 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     ExpressionSymbol.globalId = 0
     (r, str, ld0, consts)
   }
+  override def getEntryDefinitions = "" //TODO:SBJ : Need to be fixed for batch processing(input record type)
 }
 
 class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if(Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL{}){
   override val codeGen: StoreCodeGenerator = new StoreScalaCodeGenerator(IR)
+}
+class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if(Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL{}) with ICppGen{
+  override val codeGen: StoreCodeGenerator = new StoreCppCodeGenerator(IR)
 }

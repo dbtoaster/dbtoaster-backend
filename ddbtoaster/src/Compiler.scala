@@ -164,7 +164,7 @@ object Compiler {
     // Back-end
     val cg:CodeGen = lang match {
       case LANG_SCALA => new ScalaGen(name,printProgress)
-      case LANG_CPP => new CppGen(name)
+      case LANG_CPP => new PardisCppGen(name)
       case LANG_AKKA => new AkkaGen(name)
      // case LANG_LMS => new LMSCppGen(name)
      // case LANG_CPP_LMS => new LMSCppGen(name)

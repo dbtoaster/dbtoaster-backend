@@ -65,8 +65,30 @@ object IdxIRs extends Base {
 
   type Idx[E <: Entry] = ddbt.lib.store.Idx[E]
 }
-trait StoreDSLOptimized extends StoreDSL with OnlineOptimizations
-trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with AggregatorComponent with EntryComponent with EntryIdxComponent with IdxComponent with SeqComponent with BooleanExtraComponent{
+
+
+trait StoreDSLOptimized extends StoreDSL with OnlineOptimizations {
+
+
+  case class StructFieldDecr[T: PardisType](struct: Expression[Any], index: String, rhs: Expression[T]) extends FunctionNode[Unit](Some(struct), s"${index} -=", List(List(rhs))) {
+    override def curriedConstructor = (x: Expression[Any]) => { (r: Expression[T]) => copy[T](x, index, r) }
+
+    override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
+  }
+
+  case class StructFieldIncr[T: PardisType](struct: Expression[Any], index: String, rhs: Expression[T]) extends FunctionNode[Unit](Some(struct), s"${index} +=", List(List(rhs))) {
+    override def curriedConstructor = (x: Expression[Any]) => { (r: Expression[T]) => copy[T](x, index, r) }
+
+    override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
+  }
+
+  override def fieldIncr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]) = StructFieldIncr(struct, index, rhs)
+
+  override def fieldDecr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]) = StructFieldDecr(struct, index, rhs)
+
+}
+
+trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with AggregatorComponent with EntryComponent with EntryIdxComponent with IdxComponent with SeqComponent with BooleanExtraComponent {
   override val _IRReifier: IRReifier = new AnfIRReifier(this) {
     override def findOrCreateSymbol[T: TypeRep](definition: Def[T]): Sym[T] = {
       definition match {
@@ -75,6 +97,10 @@ trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent wi
       }
     }
   }
+
+  def fieldIncr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]): Expression[Unit] = fieldSetter(struct, index, numeric_plus(fieldGetter(struct, index)(tp), rhs))(tp)
+
+  def fieldDecr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]): Expression[Unit] = fieldSetter(struct, index, numeric_minus(fieldGetter(struct, index)(tp), rhs))(tp)
 
   def nullValue(tp: TypeRep[_]) = tp match {
     case IntType => unit(-1)
@@ -115,13 +141,13 @@ trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent wi
   //  lazy val copyfn = doLambda0Def(() => record_new[T](fields)).asInstanceOf[PardisLambdaDef]
   //  Struct[T](tag, fieldSyms, List(PardisStructMethod("copy", copyfn, true)))(tp)
   //}
-//  case Def(v: PardisNewVar[_]) => {
-    //          implicit val tp =v.tp.asInstanceOf[TypeRep[PardisVar[Any]]]
-    //          implicit val tp2 =v.init.tp.asInstanceOf[TypeRep[Any]]
-    //          val var_ = Var(rhs.asInstanceOf[Rep[PardisVar[Any]]])
-    //          val val_ = readVar(var_)(tp2)
-    //          PardisStructArg(index, true, val_)
-    //        }
+  //  case Def(v: PardisNewVar[_]) => {
+  //          implicit val tp =v.tp.asInstanceOf[TypeRep[PardisVar[Any]]]
+  //          implicit val tp2 =v.init.tp.asInstanceOf[TypeRep[Any]]
+  //          val var_ = Var(rhs.asInstanceOf[Rep[PardisVar[Any]]])
+  //          val val_ = readVar(var_)(tp2)
+  //          PardisStructArg(index, true, val_)
+  //        }
   override def createFieldsSyms(fields: Seq[(String, Boolean, Rep[Any])]): Seq[PardisStructArg] = {
     fields map {
       case (index, false, rhs) => PardisStructArg(index, false, rhs)

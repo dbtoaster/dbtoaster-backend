@@ -11,7 +11,7 @@ import scala.collection.mutable
 /**
   * Created by sachin on 27.04.16.
   */
-case class TransactionProgram[T](val initBlock: PardisBlock[T], val global: List[ExpressionSymbol[_]], val codeBlocks: Seq[(String, Any, PardisBlock[T])], val structsDefMap: Map[StructTags.StructTag[SEntry], PardisStructDef[SEntry]]) {}
+case class TransactionProgram[T](val initBlock: PardisBlock[T], val global: List[ExpressionSymbol[_]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structsDefMap: Map[StructTags.StructTag[SEntry], PardisStructDef[SEntry]]) {}
 
 object Optimizer {
   var analyzeEntry: Boolean = true

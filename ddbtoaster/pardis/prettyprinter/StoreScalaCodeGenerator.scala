@@ -28,9 +28,7 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
       mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)) :/: "}"
   }
 
-  def blockToDocumentNoBraces(block: Block[_]): Document = {
-    mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)
-  }
+
 
   override def symToDocument(sym: ExpressionSymbol[_]): Document = {
     if (sym.tp == UnitType)
