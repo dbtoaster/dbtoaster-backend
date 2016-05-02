@@ -13,6 +13,7 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
 
   val effectAnalysis = new SideEffectsAnalysis(IR)
   val hotRegionAnalysis = new HotRegionAnalysis(IR)
+  type HotRegion = hotRegionAnalysis.HotRegion
 
   /**
    * First, in the analysis phase, it collects the statements constructing a HashMap
@@ -31,23 +32,26 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
     // } while (newStatementHoisted)
     // scheduleHoistedStatements()
     // transformProgram(node)
+    traverseBlock(node)
     node
   }
 
-  var startCollecting = false
-  var newStatementHoisted = false
+  var currentRegion: HotRegion = _
+  // var newStatementHoisted = false
   /**
    * Specifies the nesting level of the statements that we are traversing over.
    */
-  var depthLevel = 0
+  // var depthLevel = 0
   val hoistedStatements = collection.mutable.ArrayBuffer[Stm[Any]]()
   // TODO check if we can remove this one?
-  val currentHoistedStatements = collection.mutable.ArrayBuffer[Stm[Any]]()
+  var currentHoistedStatements = collection.Set[Stm[Any]]()
   /**
    * Contains the list of symbols that we should find their dependency in the next
    * analysis iteration.
    */
   val workList = collection.mutable.Set[Sym[Any]]()
+
+  var currentBoundSymbols = collection.Set[Rep[_]]()
 
   /**
    * Schedules the statments that should be hoisted.
@@ -77,21 +81,55 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   //   case _ => super.traverseDef(node)
   // }
 
-  override def traverseBlock(block: Block[_]): Unit = {
-    depthLevel += 1
-    super.traverseBlock(block)
-    depthLevel -= 1
+  def isFloating(stm: Stm[_]): Boolean = {
+    effectAnalysis.isPure(stm.sym) && getDependencies(stm.rhs).forall(x => !currentBoundSymbols.contains(x))
   }
 
-  def isDependentOnMutation(exp: Rep[_]): Boolean = exp match {
-    case Def(node) => node match {
-      case ReadVar(_) => true
-      case _ => node.funArgs.collect({
-        case e: Rep[_] => isDependentOnMutation(e)
-      }).exists(identity)
+  def isInMotionableContext(): Boolean = currentRegion != null
+
+  override def traverseStm(stm: Stm[_]): Unit = stm match {
+    case Stm(sym, rhs) if hotRegionAnalysis.isHotSymbol(sym) => {
+      val previousRegion = currentRegion
+      currentRegion = hotRegionAnalysis.getHotRegion(sym)
+      val previousBoundSymbols = currentBoundSymbols
+      currentBoundSymbols = currentBoundSymbols ++ currentRegion.boundSymbols
+      val previousStatements = currentHoistedStatements
+      currentHoistedStatements = collection.Set()
+      traverseBlock(currentRegion.block)
+      hoistedStatements.prependAll(currentHoistedStatements)
+      currentRegion = previousRegion
+      currentBoundSymbols = previousBoundSymbols
+      currentHoistedStatements = previousStatements
     }
-    case _ => false
+    case Stm(sym, rhs) if isInMotionableContext() => {
+      if(isFloating(stm)) {
+        currentHoistedStatements += stm.asInstanceOf[Stm[Any]]
+        // System.err.println(s"floating $stm")
+      } else {
+        currentBoundSymbols = currentBoundSymbols + sym
+      }
+      super.traverseStm(stm)
+    }
+    case _ => super.traverseStm(stm)
   }
+
+  override def traverseBlock(block: Block[_]): Unit = {
+    val previousBoundSymbols = currentBoundSymbols
+    // depthLevel += 1
+    super.traverseBlock(block)
+    // depthLevel -= 1
+    currentBoundSymbols = previousBoundSymbols
+  }
+
+  // def isDependentOnMutation(exp: Rep[_]): Boolean = exp match {
+  //   case Def(node) => node match {
+  //     case ReadVar(_) => true
+  //     case _ => node.funArgs.collect({
+  //       case e: Rep[_] => isDependentOnMutation(e)
+  //     }).exists(identity)
+  //   }
+  //   case _ => false
+  // }
 
   /**
    * Gathers the statements that should be hoisted.
@@ -159,6 +197,8 @@ class SideEffectsAnalysis(override val IR: StoreDSL) extends RuleBasedTransforme
     symEffectsInfo.getOrElseUpdate(stm.sym, if(stm.rhs.isPure) Pure else IO)
   }
 
+  def isPure(sym: Rep[_]): Boolean = symEffectsInfo(sym) == Pure
+
   def getEffectOfBlock(block: Block[_]): Effect = {
     blockEffectsInfo.getOrElseUpdate(block, if(block.stmts.map(getEffectOfStm).forall(_ == Pure)) Pure else IO)
   }
@@ -198,18 +238,20 @@ class HotRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[
 
   case class HotRegion(symbol: Rep[_], block: Block[_], boundSymbols: List[Rep[_]])
 
-  val hotRegions = scala.collection.mutable.Set[HotRegion]()
+  val hotRegions = scala.collection.mutable.Map[Rep[_], HotRegion]()
 
   override def postAnalyseProgram[T: TypeRep](node: Block[T]): Unit = {
     // System.err.println(s"Done with HotRegionAnalysis: $hotSymbols")
   }
 
-  def isHotSymbol(s: Rep[_]): Boolean = hotRegions.exists(_.symbol == s)
-  def isHotBlock(b: Block[_]): Boolean = hotRegions.exists(_.block == b)
+  def isHotSymbol(s: Rep[_]): Boolean = hotRegions.exists(_._1 == s)
+  def isHotBlock(b: Block[_]): Boolean = hotRegions.exists(_._2.block == b)
+
+  def getHotRegion(s: Rep[_]): HotRegion = hotRegions(s)
 
   analysis += statement {
     case sym -> StoreSlice(self, idx, key, Def(PardisLambda(f, i, o))) => 
-      hotRegions += HotRegion(sym, o, List(i))
+      hotRegions += sym -> HotRegion(sym, o, List(i))
       ()
   }
 }

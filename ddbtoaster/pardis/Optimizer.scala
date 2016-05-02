@@ -22,7 +22,7 @@ object Optimizer {
   var indexInline = true
   var codeMotion = true
   var tmpVarHoist = false
-  var refCounter = true
+  var refCounter = false
 }
 
 class Optimizer(val IR: StoreDSL) {
@@ -35,6 +35,7 @@ class Optimizer(val IR: StoreDSL) {
     pipeline += new IndexDecider(IR)
 
   if (Optimizer.codeMotion) {
+    pipeline += DCE
     pipeline += new CodeMotion(IR)
   }
   if (Optimizer.analyzeEntry) {
