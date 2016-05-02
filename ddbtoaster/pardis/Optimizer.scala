@@ -39,7 +39,7 @@ class Optimizer(val IR: StoreDSL) {
     pipeline += ea
     pipeline += et
     if(Optimizer.tmpVarHoist)
-      pipeline += new TempVarHoister(IR)
+      pipeline += new SampleEntryHoister(IR)
   }
   //    pipeline += TreeDumper(true)
   //    pipeline += PartiallyEvaluate
@@ -68,7 +68,7 @@ class Optimizer(val IR: StoreDSL) {
       case _ => (prg.global, prg.structsDefs, prg.entryIdxDefs)
     }
     val vars_ = opt match{
-      case writer: TempVarHoister => writer.tmpVars.toSeq
+      case writer: SampleEntryHoister => writer.tmpVars.toSeq
       case _ => prg.tempVars
     }
     TransactionProgram(init_, global_, codeB_, structs_, entryidx_, vars_)

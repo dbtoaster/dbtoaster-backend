@@ -6,8 +6,6 @@ import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeUnit, typeAny}
 import ch.epfl.data.sc.pardis.types.{AnyType, PardisType, RecordType}
-import ch.epfl.data.sc.purgatory.types.TypeRep
-import com.sun.javafx.binding.ContentBinding.ListContentBinding
 import ddbt.ast.{TypeDouble, TypeLong, Type}
 import ddbt.lib.store._
 import lifter.{OnlineOptimizations, SCLMSInterop, TypeToTypeRep}
