@@ -23,5 +23,5 @@ class MStore[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]) {
   def range(idx:Int,min:E,max:E,withMin:Boolean,withMax:Boolean,f:E=>Unit): Unit = ???
   def delete(idx:Int,key:E):Unit = ???
   def clear:Unit = ???
-  def index(idx: Int, idxType: String, uniq: Boolean, otherIdx: Int): Unit = ???
+  def index(idx: Int, idxType: String, uniq: Boolean, otherIdx: Int): Idx[E] = ???
 }

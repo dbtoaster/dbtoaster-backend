@@ -65,7 +65,7 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
   }
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
-    case Statement(sym, StoreIndex(self, idx, tp, uniq, other)) => doc"$self.index($idx, ${tp.asInstanceOf[Constant[String]].underlying}, $uniq, $other)"
+    case Statement(sym, StoreIndex(self, idx, Constant(tp: String), uniq, other)) => doc"val $sym = $self.index($idx, $tp, $uniq, $other)"
     case Statement(sym, node) if sym.tp == UnitType => nodeToDocument(node)
     case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
     case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"

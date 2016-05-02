@@ -2,12 +2,13 @@ package ddbt.codegen
 
 import ch.epfl.data.sc.pardis.types.{RecordType, UnitType}
 import ch.epfl.data.sc.pardis.utils.TypeUtils
+import ch.epfl.data.sc.pardis.utils.document.Document
 import com.sun.org.apache.xalan.internal.xsltc.compiler.Constants
 import ddbt.Utils._
 
 import java.io.{PrintWriter, StringWriter}
 
-import ch.epfl.data.sc.pardis.ir.{StructElemInformation, PardisStructDef, StructTags, ExpressionSymbol}
+import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.ScalaCodeGenerator
 import ddbt.ast.M3._
 import ddbt.ast.M3.{Apply => M3ASTApply}
@@ -511,17 +512,19 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       doc.format(20, pw)
       ts += "def on" + x._1 + "(" + x._2.map(s => codeGen.expToDocument(s) +":"+ codeGen.tpeToDocument(s.tp)).mkString(", ") + ") {\n" + strWriter.toString + "\n}\n"
     }
-    val ms = codeGen.blockToDocumentNoBraces(optTP.initBlock) + "\n" + optTP.global.zip(allnames).map(t => {
-      s"  val ${t._2} = ${codeGen.expToDocument(t._1)}"
-    }).mkString("\n")
-    val ds = "" // xxx - Fixeit outStream.toString
-    val printInfoDef = "def printMapsInfo() = {}"
+    val ms = codeGen.blockToDocumentNoBraces(optTP.initBlock) :/: optTP.global.zip(allnames).map(t => {
+      Document.text(s"val ${t._2} = ") :: codeGen.expToDocument(t._1)}).mkDocument("\n")
+//    val ds = "" // xxx - Fixeit outStream.toString
+    val printInfoDef = Document.text("def printMapsInfo() = {}")
 
     val entries = optTP.structsDefs.map(codeGen.getStruct).mkDocument("\n")
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
-    val r = ds + "\n" + ms + "\n" + entries + "\n"+ entryIdxes+"\n"+ ts + "\n" + printInfoDef
+    val tempVars = optTP.tempVars.map(t => codeGen.stmtToDocument(Statement(t._1, t._2))).mkDocument("\n")
+    val r = entries :/: entryIdxes :/: tempVars :/:  ms :/: ts :/: printInfoDef
     ExpressionSymbol.globalId = 0
-    (r, str, ld0, consts)
+     val docWriter = new StringWriter
+    r.format(20, new java.io.PrintWriter(docWriter))
+    (docWriter.toString, str, ld0, consts)
   }
   override def getEntryDefinitions = "" //TODO:SBJ : Need to be fixed for batch processing(input record type)
 }
@@ -531,4 +534,16 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if(Optimizer.
 }
 class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if(Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL{}) with ICppGen{
   override val codeGen: StoreCodeGenerator = new StoreCppCodeGenerator(IR)
+
+  override def genTrigger(t: Trigger, s0: System): String = {
+    val (name, params, block) = genTriggerPardis(t, s0)
+    val Cname = t.evt match{
+      case EvtReady => "system_ready_event"
+      case EvtBatchUpdate(sc@Schema(n,cs)) => "batch_update_"+n
+      case EvtAdd(Schema(n,cs)) => "insert_"+n
+      case EvtDel(Schema(n,cs)) => "delete_"+n
+    }
+    val code = codeGen.blockToDocument(block)
+    s"void on_$Cname("+params.map(i =>"const")
+  }
 }

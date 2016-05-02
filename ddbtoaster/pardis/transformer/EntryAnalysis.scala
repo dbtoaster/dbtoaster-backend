@@ -135,13 +135,18 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
 
   def hashfn(cols: Seq[Int], s: SEntry): Rep[SEntry => Int] = {
     //System.err.println(s"Generating hash function for ${s.tp} with cols $cols")
+    def elemhash(value: Rep[Any])(implicit tp: TypeRep[Any]): Rep[Int] = value match{
+//      case v: Rep[Long] => v.toInt
+//      case v: Rep[Int] => v
+      case v => infix_hashCode(value)
+    }
     implicit val entryTp = s.tp
     __lambda((e: Rep[SEntry]) => {
       val hash = __newVar(unit(0xcafebabe))
       cols.foreach(c => {
         implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]
         //System.err.println(s"Getting field $c of $e in hash")
-        val mix_1 = unit(0xcc9e2d51) * infix_hashCode(fieldGetter(e, "_" + c)(tp))
+        val mix_1 = unit(0xcc9e2d51) * elemhash(fieldGetter(e, "_" + c)(tp))
         val mix_2 = (mix_1 << unit(15)) | (mix_1 >>> unit(-15))
         val mix_3 = mix_2 * unit(0x1b873593)
         val mix_4 = mix_3 ^ __readVar(hash)
@@ -173,7 +178,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
             ((v1 __== vNull) || (v2 __== vNull) || (v1 __== v2))
           }
         })
-        __ifThenElse(allConds, unit(0), unit(1))
+        BooleanExtra.conditional(allConds, unit(0), unit(1))
       })
     } else {
       implicit val entryTp = s.tp
@@ -186,7 +191,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
             (v1 __== v2)
           }
         })
-        __ifThenElse(allConds, unit(0), unit(1))
+        BooleanExtra.conditional(allConds, unit(0), unit(1))
       })
     }
   }
@@ -199,7 +204,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val f_ = f.asInstanceOf[Rep[SEntry => R]]
       val r1 = __app(f_).apply(e1)
       val r2 = __app(f_).apply(e2)
-      __ifThenElse(Equal(r1, r2), unit(0), __ifThenElse(ordering_gt(r1, r2), unit(1), unit(-1)))
+      BooleanExtra.conditional(Equal(r1, r2), unit(0), __ifThenElse(ordering_gt(r1, r2), unit(1), unit(-1)))
     })
   }
 

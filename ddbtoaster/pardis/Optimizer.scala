@@ -12,13 +12,16 @@ import scala.collection.mutable
 /**
   * Created by sachin on 27.04.16.
   */
-case class TransactionProgram[T](val initBlock: PardisBlock[T], val global: List[ExpressionSymbol[_]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structsDefs: Seq[PardisStructDef[SEntry]], val entryIdxDefs: Seq[EntryIdxApplyObject[SEntry]]) {}
+case class TransactionProgram[T](val initBlock: PardisBlock[T], val global: List[ExpressionSymbol[_]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structsDefs: Seq[PardisStructDef[SEntry]], val entryIdxDefs: Seq[EntryIdxApplyObject[SEntry]], val tempVars : Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil) {}
 
 object Optimizer {
   var analyzeEntry: Boolean = true
   var analyzeIndex: Boolean = true
   var onlineOpts = true
   var m3CompareMultiply = true
+  var indexInline = true
+  var tmpVarHoist = true
+  var refCounter = true
 }
 
 class Optimizer(val IR: StoreDSL) {
@@ -35,17 +38,22 @@ class Optimizer(val IR: StoreDSL) {
     val et = new EntryTransformer(IR, ea.EntryTypes)
     pipeline += ea
     pipeline += et
+    if(Optimizer.tmpVarHoist)
+      pipeline += new TempVarHoister(IR)
   }
   //    pipeline += TreeDumper(true)
   //    pipeline += PartiallyEvaluate
+  if(Optimizer.indexInline)
+    pipeline += new IndexInliner(IR)
   pipeline += DCE
   pipeline += ParameterPromotion
-  //  pipeline += new CountingAnalysis[StoreDSL](IR) with TransformerHandler {
-  //    override def apply[Lang <: Base, T](context: Lang)(block: context.Block[T])(implicit evidence$1: PardisType[T]): context.Block[T] = {
-  //      traverseBlock(block.asInstanceOf[IR.Block[T]])
-  //      block
-  //    }
-  //  }
+  if(Optimizer.refCounter)
+    pipeline += new CountingAnalysis[StoreDSL](IR) with TransformerHandler {
+      override def apply[Lang <: Base, T](context: Lang)(block: context.Block[T])(implicit evidence$1: PardisType[T]): context.Block[T] = {
+        traverseBlock(block.asInstanceOf[IR.Block[T]])
+        block
+      }
+    }
   pipeline += new StoreDCE(IR)
 
   //has to be last
@@ -59,6 +67,10 @@ class Optimizer(val IR: StoreDSL) {
       case writer: EntryTransformer => (writer.changeGlobal(prg.global), prg.structsDefs ++ writer.structsDefMap.map(_._2), prg.entryIdxDefs ++ (writer.genOps.map(_._2) ++ writer.genCmp).collect{case IR.Def(e: EntryIdxApplyObject[_]) => e})
       case _ => (prg.global, prg.structsDefs, prg.entryIdxDefs)
     }
-    TransactionProgram(init_, global_, codeB_, structs_, entryidx_)
+    val vars_ = opt match{
+      case writer: TempVarHoister => writer.tmpVars.toSeq
+      case _ => prg.tempVars
+    }
+    TransactionProgram(init_, global_, codeB_, structs_, entryidx_, vars_)
   }
 }

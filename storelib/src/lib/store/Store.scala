@@ -381,7 +381,7 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     idxs(idx) = i
   }
 
-  def index(idx: Int, tp: IndexType, unique: Boolean = false, sliceIdx: Int = -1) {
+  def index(idx: Int, tp: IndexType, unique: Boolean = false, sliceIdx: Int = -10) = {
     // sliceIdx is the underlying slice index for IBound
     val i: Idx[E] = tp match {
       case INone => null.asInstanceOf[Idx[E]]
@@ -406,6 +406,7 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
       case _ => idxs(0).foreach(i.insert(_))
     }
     idxs(idx) = i
+    i
   }
 
   def getInfoStr: String = {

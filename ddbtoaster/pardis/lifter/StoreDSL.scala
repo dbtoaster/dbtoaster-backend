@@ -37,35 +37,6 @@ object EntryIRs extends Base {
   implicit val typeEntry: TypeRep[Entry] = EntryType
 }
 
-trait IdxOps extends Base {
-  val IdxType = IdxIRs.IdxType
-  type IdxType[E <: ddbt.lib.store.Entry] = IdxIRs.IdxType[E]
-
-  implicit def typeIdx[E <: ddbt.lib.store.Entry : TypeRep]: TypeRep[Idx[E]] = IdxType(implicitly[TypeRep[E]])
-
-  //implicit def typeAggregator[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Aggregator[E]] = AggregatorType(implicitly[TypeRep[E]])
-  type Idx[E <: Entry] = ddbt.lib.store.Idx[E]
-}
-
-trait IdxComponent extends IdxOps
-
-object IdxIRs extends Base {
-
-  import EntryIRs._
-
-  case class IdxType[E <: Entry](typeE: TypeRep[E]) extends TypeRep[Idx[E]] {
-    def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = IdxType(newArguments(0).asInstanceOf[TypeRep[_ <: ddbt.lib.store.Entry]])
-
-    val name = s"Idx[${typeE.name}]"
-    val typeArguments = List(typeE)
-
-  }
-
-  implicit def typeIdx[E <: ddbt.lib.store.Entry : TypeRep]: TypeRep[Idx[E]] = IdxType(implicitly[TypeRep[E]])
-
-  type Idx[E <: Entry] = ddbt.lib.store.Idx[E]
-}
-
 
 trait StoreDSLOptimized extends StoreDSL with OnlineOptimizations {
 
@@ -107,7 +78,7 @@ trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent wi
     case LongType => unit(-1L)
     case DoubleType => unit(-1.0)
     case BooleanType => unit(false)
-    case StringType => unit("")
+    case StringType => unit[String](null)
     case DateType => unit[Date](null)
     case _ => unit(null)
   }
