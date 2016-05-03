@@ -34,9 +34,10 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
     // transformProgram(node)
     traverseBlock(node)
     for((region, stmts) <- hoistedRegionStatements) {
-      System.err.println(s"${region.boundSymbols}: ${stmts.mkString("****")}")
+      System.err.println(s"${region.boundSymbols}: ${stmts.size/*.mkString("****")*/}")
     }
-    node
+    // node
+    transformProgram(node)
   }
 
   var currentRegion: HotRegion = _
@@ -105,22 +106,6 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
     currentHoistedStatements.exists(cstm => getStatements(cstm.rhs).contains(stm))
   }
 
-  var first = false
-
-  def filterReptitiveStatements(stmts: List[Stm[_]]): List[Stm[_]] = {
-    val sorted = Graph.schedule(stmts, (stm1: Stm[_], stm2: Stm[_]) =>
-      getStatements(stm1.rhs).contains(stm2))
-    if(first) {
-      System.err.println(stmts)
-      System.err.println(sorted)
-      // first = false
-    }
-    val result = collection.mutable.ArrayBuffer[Stm[_]]()
-    result ++= sorted
-    // TODO should iterate and check if it does not already exist then add it.
-    result.toList
-  }
-
   override def traverseStm(stm: Stm[_]): Unit = stm match {
     case Stm(sym, rhs) if hotRegionAnalysis.isHotSymbol(sym) => {
       val previousRegion = currentRegion
@@ -131,7 +116,7 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
       currentHoistedStatements = List()
       traverseBlock(currentRegion.block)
       // hoistedStatements.prependAll(currentHoistedStatements)
-      hoistedRegionStatements(currentRegion) = filterReptitiveStatements(currentHoistedStatements)
+      hoistedRegionStatements(currentRegion) = currentHoistedStatements
       currentRegion = previousRegion
       currentBoundSymbols = previousBoundSymbols
       currentHoistedStatements = previousStatements
@@ -201,10 +186,31 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
    * Removes the hoisted statements from the query processing time.
    */
   override def transformStmToMultiple(stm: Stm[_]): List[to.Stm[_]] =
-    if (hoistedStatements.contains(stm.asInstanceOf[Stm[Any]]))
+    if (hoistedRegionStatements.exists(_._2.contains(stm.asInstanceOf[Stm[Any]])))
       Nil
-    else
-      super.transformStmToMultiple(stm)
+    else stm match {
+      case Stm(sym, rhs) if {
+        hotRegionAnalysis.hotRegions.find(_._2.lambda.exists(_._1 == sym)).exists(x => hoistedRegionStatements(x._2).size > 0)
+      } => {
+        System.err.println(s"removing lambda $sym")
+        Nil
+      }
+      case Stm(sym, rhs) if hotRegionAnalysis.hotRegions.contains(sym) =>
+        val hotRegion = hotRegionAnalysis.hotRegions(sym)
+        val stmts = hoistedRegionStatements(hotRegion)
+        for(st <- stmts.reverse) {
+          reflectStm(st)
+        }
+        System.err.println(s"$sym -> ${stmts.map(_.sym)}")
+        for((lambdaSym: Sym[Any], lambdaNode: Def[Any] with PardisLambdaDef) <- hotRegion.lambda) {
+          reflectStm(Stm(lambdaSym, transformDef(lambdaNode)(lambdaNode.tp))(lambdaNode.tp))
+          System.err.println(s"lambda node :) $lambdaSym}")
+        }
+        // List(stm)
+        super.transformStmToMultiple(stm)
+      case _ =>
+        super.transformStmToMultiple(stm)
+    }
 
   /**
    * Reifies the hoisted statements in the loading time.
@@ -271,7 +277,7 @@ class SideEffectsAnalysis(override val IR: StoreDSL) extends RuleBasedTransforme
 class HotRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {
   import IR._
 
-  case class HotRegion(symbol: Rep[_], block: Block[_], boundSymbols: List[Rep[_]])
+  case class HotRegion(symbol: Rep[_], block: Block[_], boundSymbols: List[Rep[_]], lambda: Option[(Rep[_], Def[_] with PardisLambdaDef)])
 
   val hotRegions = scala.collection.mutable.Map[Rep[_], HotRegion]()
 
@@ -285,8 +291,8 @@ class HotRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[
   def getHotRegion(s: Rep[_]): HotRegion = hotRegions(s)
 
   analysis += statement {
-    case sym -> StoreSlice(self, idx, key, Def(PardisLambda(f, i, o))) => 
-      hotRegions += sym -> HotRegion(sym, o, List(i))
+    case sym -> StoreSlice(self, idx, key, lambda @ Def(lambdaDef @ PardisLambda(f, i, o))) => 
+      hotRegions += sym -> HotRegion(sym, o, List(i), Some(lambda -> lambdaDef))
       ()
   }
 }
