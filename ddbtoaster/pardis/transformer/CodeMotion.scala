@@ -1,7 +1,7 @@
 package ddbt.transformer
 
 
-import ch.epfl.data.sc.pardis.ir.{PardisStructArg, PardisStruct, PardisLambda}
+import ch.epfl.data.sc.pardis.ir.{PardisStructArg, PardisStruct, PardisLambda, PardisLambdaDef}
 import ch.epfl.data.sc.pardis.optimization.Rule.Statement
 import ch.epfl.data.sc.pardis.optimization.{Optimizer, RuleBasedTransformer}
 import ch.epfl.data.sc.pardis.effects._
@@ -33,6 +33,9 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
     // scheduleHoistedStatements()
     // transformProgram(node)
     traverseBlock(node)
+    for((region, stmts) <- hoistedRegionStatements) {
+      System.err.println(s"${region.boundSymbols}: ${stmts.mkString("****")}")
+    }
     node
   }
 
@@ -44,7 +47,7 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   // var depthLevel = 0
   val hoistedStatements = collection.mutable.ArrayBuffer[Stm[Any]]()
   // TODO check if we can remove this one?
-  var currentHoistedStatements = collection.Set[Stm[Any]]()
+  var currentHoistedStatements = List[Stm[_]]()
   /**
    * Contains the list of symbols that we should find their dependency in the next
    * analysis iteration.
@@ -52,6 +55,8 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   val workList = collection.mutable.Set[Sym[Any]]()
 
   var currentBoundSymbols = collection.Set[Rep[_]]()
+
+  val hoistedRegionStatements = collection.mutable.Map[HotRegion, List[Stm[_]]]()
 
   /**
    * Schedules the statments that should be hoisted.
@@ -82,10 +87,39 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   // }
 
   def isFloating(stm: Stm[_]): Boolean = {
-    effectAnalysis.isPure(stm.sym) && getDependencies(stm.rhs).forall(x => !currentBoundSymbols.contains(x))
+    effectAnalysis.isPure(stm.sym) && !stm.rhs.isInstanceOf[PardisLambdaDef] && 
+    getDependencies(stm.rhs).forall(x => !currentBoundSymbols.contains(x))
   }
 
   def isInMotionableContext(): Boolean = currentRegion != null
+
+  def getStatements(n: Def[_]): List[Stm[_]] = n match {
+    case Block(stmts, res) => stmts ++ stmts.flatMap(x => getStatements(x.rhs))
+    case n if n.funArgs.exists(_.isInstanceOf[Block[_]]) => n.funArgs.collect({ case b: Block[_] =>
+      getStatements(b)
+    }).flatten
+    case _ => Nil
+  }
+
+  def isContextAlreadyHoisted(stm: Stm[_]): Boolean = {
+    currentHoistedStatements.exists(cstm => getStatements(cstm.rhs).contains(stm))
+  }
+
+  var first = false
+
+  def filterReptitiveStatements(stmts: List[Stm[_]]): List[Stm[_]] = {
+    val sorted = Graph.schedule(stmts, (stm1: Stm[_], stm2: Stm[_]) =>
+      getStatements(stm1.rhs).contains(stm2))
+    if(first) {
+      System.err.println(stmts)
+      System.err.println(sorted)
+      // first = false
+    }
+    val result = collection.mutable.ArrayBuffer[Stm[_]]()
+    result ++= sorted
+    // TODO should iterate and check if it does not already exist then add it.
+    result.toList
+  }
 
   override def traverseStm(stm: Stm[_]): Unit = stm match {
     case Stm(sym, rhs) if hotRegionAnalysis.isHotSymbol(sym) => {
@@ -94,17 +128,18 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
       val previousBoundSymbols = currentBoundSymbols
       currentBoundSymbols = currentBoundSymbols ++ currentRegion.boundSymbols
       val previousStatements = currentHoistedStatements
-      currentHoistedStatements = collection.Set()
+      currentHoistedStatements = List()
       traverseBlock(currentRegion.block)
-      hoistedStatements.prependAll(currentHoistedStatements)
+      // hoistedStatements.prependAll(currentHoistedStatements)
+      hoistedRegionStatements(currentRegion) = filterReptitiveStatements(currentHoistedStatements)
       currentRegion = previousRegion
       currentBoundSymbols = previousBoundSymbols
       currentHoistedStatements = previousStatements
     }
     case Stm(sym, rhs) if isInMotionableContext() => {
       if(isFloating(stm)) {
-        currentHoistedStatements += stm.asInstanceOf[Stm[Any]]
-        // System.err.println(s"floating $stm")
+        if(!isContextAlreadyHoisted(stm))
+          currentHoistedStatements +:= stm
       } else {
         currentBoundSymbols = currentBoundSymbols + sym
       }
