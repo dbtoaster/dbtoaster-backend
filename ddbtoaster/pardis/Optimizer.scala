@@ -22,7 +22,7 @@ object Optimizer {
   var indexInline = true
   var codeMotion = true
   var tmpVarHoist = false
-  var refCounter = false
+  var refCounter = true
 }
 
 class Optimizer(val IR: StoreDSL) {

@@ -11,6 +11,13 @@ import ddbt.lib.store.deep.StoreDSL
 class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   import IR._
 
+  val debugger = false
+
+  def debug(msg: => Any): Unit = {
+    if(debugger)
+      System.err.println(msg)
+  }
+
   val effectAnalysis = new SideEffectsAnalysis(IR)
   val hotRegionAnalysis = new HotRegionAnalysis(IR)
   type HotRegion = hotRegionAnalysis.HotRegion
@@ -51,7 +58,13 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
    * Returns the symbols that the given definition is dependent on them.
    */
   def getDependencies(node: Def[_]): List[Sym[Any]] =
-    node.funArgs.filter(_.isInstanceOf[Sym[Any]]).map(_.asInstanceOf[Sym[Any]])
+    node.funArgs.collect({
+      case s: Sym[Any] => List(s)
+      case b: Block[Any] => (b.res match {
+        case s: Sym[Any] => List(s)
+        case _ => Nil
+      }) ++ getStatements(b).flatMap(s => s.sym :: getDependencies(s.rhs)).distinct
+    }).flatten
 
   /**
    * Specifies if the given statement can be hoisted from the current context.
@@ -151,7 +164,7 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
         for(st <- stmts.reverse) {
           reflectStm(st)
         }
-        System.err.println(s"${hotRegion.boundSymbols} -> ${stmts.size}")
+        debug(s"${hotRegion.boundSymbols} -> ${stmts.size}")
         // If the hot region contains a lambda, it transforms the lambda expression.
         for((lambdaSym: Sym[Any], lambdaNode: Def[Any] with PardisLambdaDef) <- hotRegion.lambda) {
           reflectStm(Stm(lambdaSym, transformDef(lambdaNode)(lambdaNode.tp))(lambdaNode.tp))
