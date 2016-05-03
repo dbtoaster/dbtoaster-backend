@@ -16,58 +16,36 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   type HotRegion = hotRegionAnalysis.HotRegion
 
   /**
-   * First, in the analysis phase, it collects the statements constructing a HashMap
-   * or MultiMap. Furthermore, it looks for the dependent statements, since hoisting
-   * statements without hoisting the dependent statements makes the program incorrect.
-   * Second, all hoisted statements are scheduled in the right order.
-   * Finally, the scheduled statements are moved to the loading part and are removed
-   * from the query processing time.
+   * First, it performs side effect analysis to have more precise effect information.
+   * Second, it identifes the hot regions from which statements should be hoisted 
+   * outside. Then, for each hot region specifies the list of statements that should
+   * be hoisted. Finally, it performs the transformation to rewrite the hot region
+   * to not include the hoisted statements, instead reifying them before the hot region.
    */
   def optimize[T: TypeRep](node: Block[T]): to.Block[T] = {
     effectAnalysis.optimize(node)
     hotRegionAnalysis.optimize(node)
-    // do {
-    //   newStatementHoisted = false
-    //   traverseBlock(node)
-    // } while (newStatementHoisted)
-    // scheduleHoistedStatements()
-    // transformProgram(node)
     traverseBlock(node)
-    for((region, stmts) <- hoistedRegionStatements) {
-      System.err.println(s"${region.boundSymbols}: ${stmts.size/*.mkString("****")*/}")
-    }
-    // node
     transformProgram(node)
   }
-
+  /**
+   * Specifies the hot region surrounding the current context.
+   */
   var currentRegion: HotRegion = _
-  // var newStatementHoisted = false
   /**
-   * Specifies the nesting level of the statements that we are traversing over.
+   * The list of statements should be hoisted in the current context.
    */
-  // var depthLevel = 0
-  val hoistedStatements = collection.mutable.ArrayBuffer[Stm[Any]]()
-  // TODO check if we can remove this one?
   var currentHoistedStatements = List[Stm[_]]()
-  /**
-   * Contains the list of symbols that we should find their dependency in the next
-   * analysis iteration.
-   */
-  val workList = collection.mutable.Set[Sym[Any]]()
 
+  /**
+   * The list of variables bound in the current context.
+   */
   var currentBoundSymbols = collection.Set[Rep[_]]()
 
-  val hoistedRegionStatements = collection.mutable.Map[HotRegion, List[Stm[_]]]()
-
   /**
-   * Schedules the statments that should be hoisted.
+   * Mapping between hot regions and the statements should be hoisted outside that region. 
    */
-  def scheduleHoistedStatements() {
-    val result = Graph.schedule(hoistedStatements.toList, (stm1: Stm[Any], stm2: Stm[Any]) =>
-      getDependencies(stm2.rhs).contains(stm1.sym))
-    hoistedStatements.clear()
-    hoistedStatements ++= result
-  }
+  val hoistedRegionStatements = collection.mutable.Map[HotRegion, List[Stm[_]]]()
 
   /**
    * Returns the symbols that the given definition is dependent on them.
@@ -75,25 +53,22 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   def getDependencies(node: Def[_]): List[Sym[Any]] =
     node.funArgs.filter(_.isInstanceOf[Sym[Any]]).map(_.asInstanceOf[Sym[Any]])
 
-  // override def traverseDef(node: Def[_]): Unit = node match {
-  //   case GenericEngineRunQueryObject(b) => {
-  //     startCollecting = true
-  //     depthLevel = 0
-  //     currentHoistedStatements.clear()
-  //     traverseBlock(b)
-  //     hoistedStatements.prependAll(currentHoistedStatements)
-  //     startCollecting = false
-  //   }
-  //   case _ => super.traverseDef(node)
-  // }
-
+  /**
+   * Specifies if the given statement can be hoisted from the current context.
+   */
   def isFloating(stm: Stm[_]): Boolean = {
     effectAnalysis.isPure(stm.sym) && !stm.rhs.isInstanceOf[PardisLambdaDef] && 
     getDependencies(stm.rhs).forall(x => !currentBoundSymbols.contains(x))
   }
 
+  /**
+   * Specifies if we are currently in a context in which we should perform hoisting.
+   */
   def isInMotionableContext(): Boolean = currentRegion != null
 
+  /**
+   * Extracts the statements defined in the given definition.
+   */
   def getStatements(n: Def[_]): List[Stm[_]] = n match {
     case Block(stmts, res) => stmts ++ stmts.flatMap(x => getStatements(x.rhs))
     case n if n.funArgs.exists(_.isInstanceOf[Block[_]]) => n.funArgs.collect({ case b: Block[_] =>
@@ -102,12 +77,24 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
     case _ => Nil
   }
 
+  /**
+   * Specifies if we have already hoisted a statement which contains the given statement.
+   * 
+   * For example, if the given statement is a statement inside an if-then-else expression
+   * which is already hoisted, there is no more need for hoisting the given statement.
+   * Hence, this method returns true in such cases.
+   * 
+   */
   def isContextAlreadyHoisted(stm: Stm[_]): Boolean = {
     currentHoistedStatements.exists(cstm => getStatements(cstm.rhs).contains(stm))
   }
 
+  /**
+   * Collects the statements that should be hoisted from hot regions.
+   */
   override def traverseStm(stm: Stm[_]): Unit = stm match {
     case Stm(sym, rhs) if hotRegionAnalysis.isHotSymbol(sym) => {
+      // Collecting the statements that should be hoisted for a hot region.
       val previousRegion = currentRegion
       currentRegion = hotRegionAnalysis.getHotRegion(sym)
       val previousBoundSymbols = currentBoundSymbols
@@ -115,17 +102,20 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
       val previousStatements = currentHoistedStatements
       currentHoistedStatements = List()
       traverseBlock(currentRegion.block)
-      // hoistedStatements.prependAll(currentHoistedStatements)
-      hoistedRegionStatements(currentRegion) = currentHoistedStatements
+      if(currentHoistedStatements.nonEmpty)
+        hoistedRegionStatements(currentRegion) = currentHoistedStatements
       currentRegion = previousRegion
       currentBoundSymbols = previousBoundSymbols
       currentHoistedStatements = previousStatements
     }
     case Stm(sym, rhs) if isInMotionableContext() => {
       if(isFloating(stm)) {
+        // Gathers the statements that should be hoisted.
         if(!isContextAlreadyHoisted(stm))
           currentHoistedStatements +:= stm
       } else {
+        // As it is not hoisted, everything depent on it also should not be hoisted.
+        // So we add its symbol to the list of bound symbols.
         currentBoundSymbols = currentBoundSymbols + sym
       }
       super.traverseStm(stm)
@@ -133,97 +123,43 @@ class CodeMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
     case _ => super.traverseStm(stm)
   }
 
+  /**
+   * Updating the list of bound symbols.
+   */
   override def traverseBlock(block: Block[_]): Unit = {
     val previousBoundSymbols = currentBoundSymbols
-    // depthLevel += 1
     super.traverseBlock(block)
-    // depthLevel -= 1
     currentBoundSymbols = previousBoundSymbols
   }
 
-  // def isDependentOnMutation(exp: Rep[_]): Boolean = exp match {
-  //   case Def(node) => node match {
-  //     case ReadVar(_) => true
-  //     case _ => node.funArgs.collect({
-  //       case e: Rep[_] => isDependentOnMutation(e)
-  //     }).exists(identity)
-  //   }
-  //   case _ => false
-  // }
-
   /**
-   * Gathers the statements that should be hoisted.
-   */
-  // override def traverseStm(stm: Stm[_]): Unit = stm match {
-  //   case Stm(sym, rhs) => {
-  //     def hoistStatement() {
-  //       currentHoistedStatements += stm.asInstanceOf[Stm[Any]]
-  //       workList ++= getDependencies(rhs)
-  //       newStatementHoisted = true
-  //     }
-  //     rhs match {
-  //       case HashMapNew() if startCollecting && !hoistedStatements.contains(stm) => {
-  //         hoistStatement()
-  //       }
-  //       case MultiMapNew() if startCollecting && !hoistedStatements.contains(stm) => {
-  //         hoistStatement()
-  //       }
-  //       case ArrayNew(size) if isDependentOnMutation(size) =>
-  //         super.traverseStm(stm)
-  //       case ArrayNew(_) if startCollecting && depthLevel == 1 && !hoistedStatements.contains(stm) => {
-  //         hoistStatement()
-  //       }
-  //       case _ if startCollecting && workList.contains(sym) && !hoistedStatements.contains(stm) => {
-  //         hoistStatement()
-  //         workList -= sym
-  //       }
-  //       case _ => super.traverseStm(stm)
-  //     }
-  //   }
-  // }
-
-  /**
-   * Removes the hoisted statements from the query processing time.
+   * Removes the hoisted statements from the hot region and reifies them outside
+   * the hot region.
    */
   override def transformStmToMultiple(stm: Stm[_]): List[to.Stm[_]] =
     if (hoistedRegionStatements.exists(_._2.contains(stm.asInstanceOf[Stm[Any]])))
       Nil
     else stm match {
-      case Stm(sym, rhs) if {
-        hotRegionAnalysis.hotRegions.find(_._2.lambda.exists(_._1 == sym)).exists(x => hoistedRegionStatements(x._2).size > 0)
-      } => {
-        System.err.println(s"removing lambda $sym")
+      // Removing the lambda expression of the hot region, as it should be reified
+      // after the expressions
+      case Stm(sym, rhs) if hoistedRegionStatements.exists(_._1.lambda.exists(_._1 == sym)) => 
         Nil
-      }
-      case Stm(sym, rhs) if hotRegionAnalysis.hotRegions.contains(sym) =>
+      case Stm(sym, rhs) if hoistedRegionStatements.exists(_._1.symbol == sym) =>
         val hotRegion = hotRegionAnalysis.hotRegions(sym)
         val stmts = hoistedRegionStatements(hotRegion)
+        // Reifies the hoisted statements outside the hot region.
         for(st <- stmts.reverse) {
           reflectStm(st)
         }
-        System.err.println(s"$sym -> ${stmts.map(_.sym)}")
+        System.err.println(s"${hotRegion.boundSymbols} -> ${stmts.size}")
+        // If the hot region contains a lambda, it transforms the lambda expression.
         for((lambdaSym: Sym[Any], lambdaNode: Def[Any] with PardisLambdaDef) <- hotRegion.lambda) {
           reflectStm(Stm(lambdaSym, transformDef(lambdaNode)(lambdaNode.tp))(lambdaNode.tp))
-          System.err.println(s"lambda node :) $lambdaSym}")
         }
-        // List(stm)
         super.transformStmToMultiple(stm)
       case _ =>
         super.transformStmToMultiple(stm)
     }
-
-  /**
-   * Reifies the hoisted statements in the loading time.
-   */
-  // override def transformDef[T: PardisType](node: Def[T]): to.Def[T] = (node match {
-  //   case GenericEngineRunQueryObject(b) =>
-  //     for (stm <- hoistedStatements) {
-  //       reflectStm(stm)
-  //     }
-  //     val newBlock = transformBlock(b)
-  //     GenericEngineRunQueryObject(newBlock)(newBlock.tp)
-  //   case _ => super.transformDef(node)
-  // }).asInstanceOf[to.Def[T]]
 }
 
 class SideEffectsAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {
@@ -243,12 +179,6 @@ class SideEffectsAnalysis(override val IR: StoreDSL) extends RuleBasedTransforme
   def getEffectOfBlock(block: Block[_]): Effect = {
     blockEffectsInfo.getOrElseUpdate(block, if(block.stmts.map(getEffectOfStm).forall(_ == Pure)) Pure else IO)
   }
-
-  override def postAnalyseProgram[T: TypeRep](node: Block[T]): Unit = {
-    // System.err.println(s"Done with effect analysis!")
-    // blockEffectsInfo.foreach(x => System.err.println(s"block ${x._1.res}: ${x._2}"))
-  }
-
 
   analysis += statement {
     case sym -> IfThenElse(cond, thenp, elsep) => {
@@ -276,14 +206,12 @@ class SideEffectsAnalysis(override val IR: StoreDSL) extends RuleBasedTransforme
 
 class HotRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {
   import IR._
+  import scala.language.existentials
 
-  case class HotRegion(symbol: Rep[_], block: Block[_], boundSymbols: List[Rep[_]], lambda: Option[(Rep[_], Def[_] with PardisLambdaDef)])
+  case class HotRegion(symbol: Rep[_], block: Block[_], boundSymbols: List[Rep[_]], 
+    lambda: Option[(Rep[_], Def[_] with PardisLambdaDef)])
 
   val hotRegions = scala.collection.mutable.Map[Rep[_], HotRegion]()
-
-  override def postAnalyseProgram[T: TypeRep](node: Block[T]): Unit = {
-    // System.err.println(s"Done with HotRegionAnalysis: $hotSymbols")
-  }
 
   def isHotSymbol(s: Rep[_]): Boolean = hotRegions.exists(_._1 == s)
   def isHotBlock(b: Block[_]): Boolean = hotRegions.exists(_._2.block == b)
@@ -292,6 +220,11 @@ class HotRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[
 
   analysis += statement {
     case sym -> StoreSlice(self, idx, key, lambda @ Def(lambdaDef @ PardisLambda(f, i, o))) => 
+      hotRegions += sym -> HotRegion(sym, o, List(i), Some(lambda -> lambdaDef))
+      ()
+  }
+  analysis += statement {
+    case sym -> StoreForeach(self, lambda @ Def(lambdaDef @ PardisLambda(f, i, o))) => 
       hotRegions += sym -> HotRegion(sym, o, List(i), Some(lambda -> lambdaDef))
       ()
   }
