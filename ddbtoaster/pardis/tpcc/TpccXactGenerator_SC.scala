@@ -6,8 +6,9 @@ import java.io.{FileWriter, PrintStream, PrintWriter}
 import java.util.concurrent.Executor
 
 import ch.epfl.data.sc.pardis
-import ch.epfl.data.sc.pardis.ir.{StructElemInformation, PardisStructDef, StructTags}
+import ch.epfl.data.sc.pardis.ir.{Statement, StructElemInformation, PardisStructDef, StructTags}
 import ch.epfl.data.sc.pardis.types.{RecordType, AnyType}
+import ch.epfl.data.sc.pardis.utils.document.Document
 import ddbt.codegen.{Optimizer, TransactionProgram}
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 import sc.tpcc.compiler.TpccCompiler
@@ -494,7 +495,7 @@ dsl"""
         |import ddbt.lib.store._
         |import scala.collection.mutable.{ArrayBuffer,Set}
         |import java.util.Date
-        | """.stripMargin
+        |""".stripMargin
     val genDir = "../runtime/tpcc/pardisgen"
     val file = new PrintWriter(s"$genDir/TpccGenSC.scala")
     val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
@@ -518,12 +519,12 @@ dsl"""
       copy(s"$genDir/SCTxGenEntry.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)
     }
 
-    val optimizedProgram = new Optimizer(Context).optimize(initialTP)
-    var codestr = codeGen.blockToDocument(optimizedProgram.initBlock).toString
+    val optTP = new Optimizer(Context).optimize(initialTP)
+    var codestr = codeGen.blockToDocument(optTP.initBlock).toString
     var i = codestr.lastIndexOf("1")
     val storesnames = List("newOrderTbl", "historyTbl", "warehouseTbl", "itemTbl", "orderTbl", "districtTbl", "orderLineTbl", "customerTbl", "stockTbl")
     val allstores = storesnames.mkString(",")
-    val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n" + storesnames.zip(optimizedProgram.global).map(t => {
+    val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n" + storesnames.zip(optTP.global).map(t => {
       s"""  val ${t._1} = ${codeGen.expToDocument(t._2)}""".stripMargin
     }).mkString("\n") +
       s"""
@@ -532,18 +533,26 @@ dsl"""
          |  val orderStatusTxInst = new OrderStatusTx($allstores)
          |  val deliveryTxInst = new DeliveryTx($allstores)
          |  val stockLevelTxInst = new StockLevelTx($allstores)
-         |}
+
       """.stripMargin
-    file.println(header + executor)
-    file.println(optimizedProgram.structsDefs.map(codeGen.getStruct).mkDocument("\n"))
-    file.println(optimizedProgram.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n"))
-    optimizedProgram.codeBlocks.foreach { case (className, args : List[Sym[_]], body) => {
-      val genCode = "class " + className + "(" + optimizedProgram.global.map(_.asInstanceOf[Sym[_]]).map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
-        "def apply(" + args.map(s => s + ": " + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") = "
-      val cgDoc = codeGen.blockToDocument(body)
-      file.println(genCode + cgDoc + "\n}")
+    file.println(header)
+    val entries = optTP.structsDefs.map(codeGen.getStruct).mkDocument("\n")
+    file.println(entries)
+    file.println(executor)
+    val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
+    implicit val tp = IntType.asInstanceOf[TypeRep[Any]]
+    val tempVars = optTP.tempVars.map(t => codeGen.stmtToDocument(Statement(t._1, t._2))).mkDocument("\n")
+    val r =  Document.nest(2, entryIdxes :/: tempVars)
+    file.println(r)
+    optTP.codeBlocks.foreach { case (className, args : List[Sym[_]], body) => {
+      val genCode = "  class " + className + "(" + optTP.global.map(_.asInstanceOf[Sym[_]]).map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
+        "    def apply(" + args.map(s => s + ": " + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") = "
+      val cgDoc = Document.nest(4, codeGen.blockToDocument(body))
+      file.println(genCode + cgDoc + "\n  }")
     }
     }
+    file.println("\n}")
+
     //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
     file.close()
   }

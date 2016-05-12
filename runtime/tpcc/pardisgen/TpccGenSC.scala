@@ -3,1743 +3,1190 @@ package tpcc.sc
 import ddbt.lib.store._
 import scala.collection.mutable.{ArrayBuffer,Set}
 import java.util.Date
- class SCExecutor 
+
+case class SEntry5_IISDS(var _1: Int, var _2: Int, var _3: String, var _4: Double, var _5: String) extends Entry(5) {def copy = SEntry5_IISDS(_1, _2, _3, _4, _5) }
+case class SEntry11_IISSSSSSDDI(var _1: Int, var _2: Int, var _3: String, var _4: String, var _5: String, var _6: String, var _7: String, var _8: String, var _9: Double, var _10: Double, var _11: Int) extends Entry(11) {def copy = SEntry11_IISSSSSSDDI(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11) }
+case class SEntry21_IIISSSSSSSSSTSDDDDIIS(var _1: Int, var _2: Int, var _3: Int, var _4: String, var _5: String, var _6: String, var _7: String, var _8: String, var _9: String, var _10: String, var _11: String, var _12: String, var _13: Date, var _14: String, var _15: Double, var _16: Double, var _17: Double, var _18: Double, var _19: Int, var _20: Int, var _21: String) extends Entry(21) {def copy = SEntry21_IIISSSSSSSSSTSDDDDIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21) }
+case class SEntry8_IIIITIIB(var _1: Int, var _2: Int, var _3: Int, var _4: Int, var _5: Date, var _6: Int, var _7: Int, var _8: Boolean) extends Entry(8) {def copy = SEntry8_IIIITIIB(_1, _2, _3, _4, _5, _6, _7, _8) }
+case class SEntry3_III(var _1: Int, var _2: Int, var _3: Int) extends Entry(3) {def copy = SEntry3_III(_1, _2, _3) }
+case class SEntry8_IIIIITDS(var _1: Int, var _2: Int, var _3: Int, var _4: Int, var _5: Int, var _6: Date, var _7: Double, var _8: String) extends Entry(8) {def copy = SEntry8_IIIIITDS(_1, _2, _3, _4, _5, _6, _7, _8) }
+case class SEntry17_IIISSSSSSSSSSIIIS(var _1: Int, var _2: Int, var _3: Int, var _4: String, var _5: String, var _6: String, var _7: String, var _8: String, var _9: String, var _10: String, var _11: String, var _12: String, var _13: String, var _14: Int, var _15: Int, var _16: Int, var _17: String) extends Entry(17) {def copy = SEntry17_IIISSSSSSSSSSIIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17) }
+case class SEntry10_IIIIIITIDS(var _1: Int, var _2: Int, var _3: Int, var _4: Int, var _5: Int, var _6: Int, var _7: Date, var _8: Int, var _9: Double, var _10: String) extends Entry(10) {def copy = SEntry10_IIIIIITIDS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10) }
+case class SEntry9_ISSSSSSDD(var _1: Int, var _2: String, var _3: String, var _4: String, var _5: String, var _6: String, var _7: String, var _8: Double, var _9: Double) extends Entry(9) {def copy = SEntry9_ISSSSSSDD(_1, _2, _3, _4, _5, _6, _7, _8, _9) }
+class SCExecutor 
 {
   val x914 = { x18: SEntry3_III => {
-      val x4103 = x18._1
-      x4103
+      val x5965 = x18._1
+      x5965
     }
   }
-   object SEntry3_III_Idx0 extends EntryIdx[SEntry3_III] {
-    override def hash(x2401 : SEntry3_III) = {
-      var x2402: Int = -889275714
-      val x2403 = x2401._2
-      val x2404 = x2403.hashCode()
-      val x2405 = -862048943.*(x2404)
-      val x2406 = x2405.<<(15)
-      val x2407 = x2405.>>>(-15)
-      val x2408 = x2406.|(x2407)
-      val x2409 = x2408.*(461845907)
-      val x2410 = x2402
-      val x2411 = x2409.^(x2410)
-      val x2412 = x2411.<<(13)
-      val x2413 = x2411.>>>(-13)
-      val x2414 = x2412.|(x2413)
-      val x2415 = x2414.*(5)
-      val x2416 = x2415.+(-430675100)
-      x2402 = x2416
-      val x2418 = x2401._3
-      val x2419 = x2418.hashCode()
-      val x2420 = -862048943.*(x2419)
-      val x2421 = x2420.<<(15)
-      val x2422 = x2420.>>>(-15)
-      val x2423 = x2421.|(x2422)
-      val x2424 = x2423.*(461845907)
-      val x2425 = x2402
-      val x2426 = x2424.^(x2425)
-      val x2427 = x2426.<<(13)
-      val x2428 = x2426.>>>(-13)
-      val x2429 = x2427.|(x2428)
-      val x2430 = x2429.*(5)
-      val x2431 = x2430.+(-430675100)
-      x2402 = x2431
-      val x2433 = x2402
-      val x2434 = x2433.^(2)
-      val x2435 = x2434.>>>(16)
-      val x2436 = x2434.^(x2435)
-      val x2437 = x2436.*(-2048144789)
-      val x2438 = x2437.>>>(13)
-      val x2439 = x2437.^(x2438)
-      val x2440 = x2439.*(-1028477387)
-      val x2441 = x2440.>>>(16)
-      val x2442 = x2440.^(x2441)
-      x2442
-    }
-    override def cmp(x2444 : SEntry3_III , x2445 : SEntry3_III) = {
-      val x2446 = x914.apply(x2444)
-      val x2447 = x914.apply(x2445)
-      val x2448 = x2446.==(x2447)
-      val x2451 = if(x2448) 
-      {
-        0
-      }
-      else
-      {
-        val x2449 = x2446.>(x2447)
-        val x2450 = if(x2449) 
-        {
-          1
-        }
-        else
-        {
-          -1
-        }
-        
-        x2450
-      }
-      
-      x2451
-    }
-  }
-   object SEntry3_III_Idx1 extends EntryIdx[SEntry3_III] {
-    override def hash(x2454 : SEntry3_III) = {
-      var x2455: Int = -889275714
-      val x2456 = x2454._2
-      val x2457 = x2456.hashCode()
-      val x2458 = -862048943.*(x2457)
-      val x2459 = x2458.<<(15)
-      val x2460 = x2458.>>>(-15)
-      val x2461 = x2459.|(x2460)
-      val x2462 = x2461.*(461845907)
-      val x2463 = x2455
-      val x2464 = x2462.^(x2463)
-      val x2465 = x2464.<<(13)
-      val x2466 = x2464.>>>(-13)
-      val x2467 = x2465.|(x2466)
-      val x2468 = x2467.*(5)
-      val x2469 = x2468.+(-430675100)
-      x2455 = x2469
-      val x2471 = x2454._3
-      val x2472 = x2471.hashCode()
-      val x2473 = -862048943.*(x2472)
-      val x2474 = x2473.<<(15)
-      val x2475 = x2473.>>>(-15)
-      val x2476 = x2474.|(x2475)
-      val x2477 = x2476.*(461845907)
-      val x2478 = x2455
-      val x2479 = x2477.^(x2478)
-      val x2480 = x2479.<<(13)
-      val x2481 = x2479.>>>(-13)
-      val x2482 = x2480.|(x2481)
-      val x2483 = x2482.*(5)
-      val x2484 = x2483.+(-430675100)
-      x2455 = x2484
-      val x2486 = x2455
-      val x2487 = x2486.^(2)
-      val x2488 = x2487.>>>(16)
-      val x2489 = x2487.^(x2488)
-      val x2490 = x2489.*(-2048144789)
-      val x2491 = x2490.>>>(13)
-      val x2492 = x2490.^(x2491)
-      val x2493 = x2492.*(-1028477387)
-      val x2494 = x2493.>>>(16)
-      val x2495 = x2493.^(x2494)
-      x2495
-    }
-    override def cmp(x2497 : SEntry3_III , x2498 : SEntry3_III) = {
-      val x2499 = x2497._2
-      val x2500 = x2498._2
-      val x2501 = x2499.==(x2500)
-      val x2505 = x2501.&&({
-        val x2502 = x2497._3
-        val x2503 = x2498._3
-        val x2504 = x2502.==(x2503)
-        x2504
-      })
-      val x2506 = if(x2505) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x2506
-    }
-  }
-  val x2510 = Array[EntryIdx[SEntry3_III]](SEntry3_III_Idx0, SEntry3_III_Idx1)
-  val x2511 = new Store[SEntry3_III](2, x2510)
-  x2511.index(0, ISliceHeapMin, false, 1)
-  x2511.index(1, INone, false, -1)
-   object SEntry8_IIIIITDS_Idx2 extends EntryIdx[SEntry8_IIIIITDS] {
-    override def hash(x2515 : SEntry8_IIIIITDS) = {
-      var x2516: Int = -889275714
-      val x2517 = x2516
-      val x2518 = x2517.^(2)
-      val x2519 = x2518.>>>(16)
-      val x2520 = x2518.^(x2519)
-      val x2521 = x2520.*(-2048144789)
-      val x2522 = x2521.>>>(13)
-      val x2523 = x2521.^(x2522)
-      val x2524 = x2523.*(-1028477387)
-      val x2525 = x2524.>>>(16)
-      val x2526 = x2524.^(x2525)
-      x2526
-    }
-    override def cmp(x2528 : SEntry8_IIIIITDS , x2529 : SEntry8_IIIIITDS) = {
-      val x2530 = x2528._1
-      val x2531 = x2529._1
-      val x2532 = x2530.==(-1)
-      val x2534 = x2532.||({
-        val x2533 = x2531.==(-1)
-        x2533
-      })
-      val x2536 = x2534.||({
-        val x2535 = x2530.==(x2531)
-        x2535
-      })
-      val x2544 = x2536.&&({
-        val x2537 = x2528._2
-        val x2538 = x2529._2
-        val x2539 = x2537.==(-1)
-        val x2541 = x2539.||({
-          val x2540 = x2538.==(-1)
-          x2540
-        })
-        val x2543 = x2541.||({
-          val x2542 = x2537.==(x2538)
-          x2542
-        })
-        x2543
-      })
-      val x2552 = x2544.&&({
-        val x2545 = x2528._3
-        val x2546 = x2529._3
-        val x2547 = x2545.==(-1)
-        val x2549 = x2547.||({
-          val x2548 = x2546.==(-1)
-          x2548
-        })
-        val x2551 = x2549.||({
-          val x2550 = x2545.==(x2546)
-          x2550
-        })
-        x2551
-      })
-      val x2560 = x2552.&&({
-        val x2553 = x2528._4
-        val x2554 = x2529._4
-        val x2555 = x2553.==(-1)
-        val x2557 = x2555.||({
-          val x2556 = x2554.==(-1)
-          x2556
-        })
-        val x2559 = x2557.||({
-          val x2558 = x2553.==(x2554)
-          x2558
-        })
-        x2559
-      })
-      val x2568 = x2560.&&({
-        val x2561 = x2528._5
-        val x2562 = x2529._5
-        val x2563 = x2561.==(-1)
-        val x2565 = x2563.||({
-          val x2564 = x2562.==(-1)
-          x2564
-        })
-        val x2567 = x2565.||({
-          val x2566 = x2561.==(x2562)
-          x2566
-        })
-        x2567
-      })
-      val x2576 = x2568.&&({
-        val x2569 = x2528._6
-        val x2570 = x2529._6
-        val x2571 = x2569.==(null)
-        val x2573 = x2571.||({
-          val x2572 = x2570.==(null)
-          x2572
-        })
-        val x2575 = x2573.||({
-          val x2574 = x2569.==(x2570)
-          x2574
-        })
-        x2575
-      })
-      val x2584 = x2576.&&({
-        val x2577 = x2528._7
-        val x2578 = x2529._7
-        val x2579 = x2577.==(-1.0)
-        val x2581 = x2579.||({
-          val x2580 = x2578.==(-1.0)
-          x2580
-        })
-        val x2583 = x2581.||({
-          val x2582 = x2577.==(x2578)
-          x2582
-        })
-        x2583
-      })
-      val x2585 = if(x2584) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x2585
-    }
-  }
-  val x2589 = Array[EntryIdx[SEntry8_IIIIITDS]](SEntry8_IIIIITDS_Idx2)
-  val x2590 = new Store[SEntry8_IIIIITDS](1, x2589)
-  x2590.index(0, IList, false, -1)
-   object SEntry9_ISSSSSSDD_Idx3 extends EntryIdx[SEntry9_ISSSSSSDD] {
-    override def hash(x2593 : SEntry9_ISSSSSSDD) = {
-      var x2594: Int = -889275714
-      val x2595 = x2593._1
-      val x2596 = x2595.hashCode()
-      val x2597 = -862048943.*(x2596)
-      val x2598 = x2597.<<(15)
-      val x2599 = x2597.>>>(-15)
-      val x2600 = x2598.|(x2599)
-      val x2601 = x2600.*(461845907)
-      val x2602 = x2594
-      val x2603 = x2601.^(x2602)
-      val x2604 = x2603.<<(13)
-      val x2605 = x2603.>>>(-13)
-      val x2606 = x2604.|(x2605)
-      val x2607 = x2606.*(5)
-      val x2608 = x2607.+(-430675100)
-      x2594 = x2608
-      val x2610 = x2594
-      val x2611 = x2610.^(2)
-      val x2612 = x2611.>>>(16)
-      val x2613 = x2611.^(x2612)
-      val x2614 = x2613.*(-2048144789)
-      val x2615 = x2614.>>>(13)
-      val x2616 = x2614.^(x2615)
-      val x2617 = x2616.*(-1028477387)
-      val x2618 = x2617.>>>(16)
-      val x2619 = x2617.^(x2618)
-      x2619
-    }
-    override def cmp(x2621 : SEntry9_ISSSSSSDD , x2622 : SEntry9_ISSSSSSDD) = {
-      val x2623 = x2621._1
-      val x2624 = x2622._1
-      val x2625 = x2623.==(x2624)
-      val x2626 = if(x2625) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x2626
-    }
-  }
-  val x2630 = Array[EntryIdx[SEntry9_ISSSSSSDD]](SEntry9_ISSSSSSDD_Idx3)
-  val x2631 = new Store[SEntry9_ISSSSSSDD](1, x2630)
-  x2631.index(0, IHash, true, -1)
-   object SEntry5_IISDS_Idx4 extends EntryIdx[SEntry5_IISDS] {
-    override def hash(x2633 : SEntry5_IISDS) = {
-      var x2634: Int = -889275714
-      val x2635 = x2633._1
-      val x2636 = x2635.hashCode()
-      val x2637 = -862048943.*(x2636)
-      val x2638 = x2637.<<(15)
-      val x2639 = x2637.>>>(-15)
-      val x2640 = x2638.|(x2639)
-      val x2641 = x2640.*(461845907)
-      val x2642 = x2634
-      val x2643 = x2641.^(x2642)
-      val x2644 = x2643.<<(13)
-      val x2645 = x2643.>>>(-13)
-      val x2646 = x2644.|(x2645)
-      val x2647 = x2646.*(5)
-      val x2648 = x2647.+(-430675100)
-      x2634 = x2648
-      val x2650 = x2634
-      val x2651 = x2650.^(2)
-      val x2652 = x2651.>>>(16)
-      val x2653 = x2651.^(x2652)
-      val x2654 = x2653.*(-2048144789)
-      val x2655 = x2654.>>>(13)
-      val x2656 = x2654.^(x2655)
-      val x2657 = x2656.*(-1028477387)
-      val x2658 = x2657.>>>(16)
-      val x2659 = x2657.^(x2658)
-      x2659
-    }
-    override def cmp(x2661 : SEntry5_IISDS , x2662 : SEntry5_IISDS) = {
-      val x2663 = x2661._1
-      val x2664 = x2662._1
-      val x2665 = x2663.==(x2664)
-      val x2666 = if(x2665) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x2666
-    }
-  }
-  val x2670 = Array[EntryIdx[SEntry5_IISDS]](SEntry5_IISDS_Idx4)
-  val x2671 = new Store[SEntry5_IISDS](1, x2670)
-  x2671.index(0, IHash, true, -1)
+  val x4372 = Array[EntryIdx[SEntry3_III]](SEntry3_III_Idx23_Ordering, SEntry3_III_Idx23)
+  val x4373 = new Store[SEntry3_III](2, x4372)
+  val x920 = x4373.index(0, ISliceHeapMin, false, 1)
+  val x921 = x4373.index(1, INone, false, -1)
+  val x4451 = Array[EntryIdx[SEntry8_IIIIITDS]](SEntry8_IIIIITDS_Idx)
+  val x4452 = new Store[SEntry8_IIIIITDS](1, x4451)
+  val x926 = x4452.index(0, IList, false, -1)
+  val x4492 = Array[EntryIdx[SEntry9_ISSSSSSDD]](SEntry9_ISSSSSSDD_Idx1)
+  val x4493 = new Store[SEntry9_ISSSSSSDD](1, x4492)
+  val x931 = x4493.index(0, IHash, true, -1)
+  val x4532 = Array[EntryIdx[SEntry5_IISDS]](SEntry5_IISDS_Idx1)
+  val x4533 = new Store[SEntry5_IISDS](1, x4532)
+  val x934 = x4533.index(0, IHash, true, -1)
   val x936 = { x210: SEntry8_IIIITIIB => {
-      val x4379 = x210._1
-      x4379
+      val x6241 = x210._1
+      x6241
     }
   }
-   object SEntry8_IIIITIIB_Idx5 extends EntryIdx[SEntry8_IIIITIIB] {
-    override def hash(x2677 : SEntry8_IIIITIIB) = {
-      var x2678: Int = -889275714
-      val x2679 = x2677._1
-      val x2680 = x2679.hashCode()
-      val x2681 = -862048943.*(x2680)
-      val x2682 = x2681.<<(15)
-      val x2683 = x2681.>>>(-15)
-      val x2684 = x2682.|(x2683)
-      val x2685 = x2684.*(461845907)
-      val x2686 = x2678
-      val x2687 = x2685.^(x2686)
-      val x2688 = x2687.<<(13)
-      val x2689 = x2687.>>>(-13)
-      val x2690 = x2688.|(x2689)
-      val x2691 = x2690.*(5)
-      val x2692 = x2691.+(-430675100)
-      x2678 = x2692
-      val x2694 = x2677._2
-      val x2695 = x2694.hashCode()
-      val x2696 = -862048943.*(x2695)
-      val x2697 = x2696.<<(15)
-      val x2698 = x2696.>>>(-15)
-      val x2699 = x2697.|(x2698)
-      val x2700 = x2699.*(461845907)
-      val x2701 = x2678
-      val x2702 = x2700.^(x2701)
-      val x2703 = x2702.<<(13)
-      val x2704 = x2702.>>>(-13)
-      val x2705 = x2703.|(x2704)
-      val x2706 = x2705.*(5)
-      val x2707 = x2706.+(-430675100)
-      x2678 = x2707
-      val x2709 = x2677._3
-      val x2710 = x2709.hashCode()
-      val x2711 = -862048943.*(x2710)
-      val x2712 = x2711.<<(15)
-      val x2713 = x2711.>>>(-15)
-      val x2714 = x2712.|(x2713)
-      val x2715 = x2714.*(461845907)
-      val x2716 = x2678
-      val x2717 = x2715.^(x2716)
-      val x2718 = x2717.<<(13)
-      val x2719 = x2717.>>>(-13)
-      val x2720 = x2718.|(x2719)
-      val x2721 = x2720.*(5)
-      val x2722 = x2721.+(-430675100)
-      x2678 = x2722
-      val x2724 = x2678
-      val x2725 = x2724.^(2)
-      val x2726 = x2725.>>>(16)
-      val x2727 = x2725.^(x2726)
-      val x2728 = x2727.*(-2048144789)
-      val x2729 = x2728.>>>(13)
-      val x2730 = x2728.^(x2729)
-      val x2731 = x2730.*(-1028477387)
-      val x2732 = x2731.>>>(16)
-      val x2733 = x2731.^(x2732)
-      x2733
-    }
-    override def cmp(x2735 : SEntry8_IIIITIIB , x2736 : SEntry8_IIIITIIB) = {
-      val x2737 = x2735._1
-      val x2738 = x2736._1
-      val x2739 = x2737.==(x2738)
-      val x2743 = x2739.&&({
-        val x2740 = x2735._2
-        val x2741 = x2736._2
-        val x2742 = x2740.==(x2741)
-        x2742
-      })
-      val x2747 = x2743.&&({
-        val x2744 = x2735._3
-        val x2745 = x2736._3
-        val x2746 = x2744.==(x2745)
-        x2746
-      })
-      val x2748 = if(x2747) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x2748
-    }
-  }
-   object SEntry8_IIIITIIB_Idx6 extends EntryIdx[SEntry8_IIIITIIB] {
-    override def hash(x2751 : SEntry8_IIIITIIB) = {
-      var x2752: Int = -889275714
-      val x2753 = x2751._2
-      val x2754 = x2753.hashCode()
-      val x2755 = -862048943.*(x2754)
-      val x2756 = x2755.<<(15)
-      val x2757 = x2755.>>>(-15)
-      val x2758 = x2756.|(x2757)
-      val x2759 = x2758.*(461845907)
-      val x2760 = x2752
-      val x2761 = x2759.^(x2760)
-      val x2762 = x2761.<<(13)
-      val x2763 = x2761.>>>(-13)
-      val x2764 = x2762.|(x2763)
-      val x2765 = x2764.*(5)
-      val x2766 = x2765.+(-430675100)
-      x2752 = x2766
-      val x2768 = x2751._3
-      val x2769 = x2768.hashCode()
-      val x2770 = -862048943.*(x2769)
-      val x2771 = x2770.<<(15)
-      val x2772 = x2770.>>>(-15)
-      val x2773 = x2771.|(x2772)
-      val x2774 = x2773.*(461845907)
-      val x2775 = x2752
-      val x2776 = x2774.^(x2775)
-      val x2777 = x2776.<<(13)
-      val x2778 = x2776.>>>(-13)
-      val x2779 = x2777.|(x2778)
-      val x2780 = x2779.*(5)
-      val x2781 = x2780.+(-430675100)
-      x2752 = x2781
-      val x2783 = x2751._4
-      val x2784 = x2783.hashCode()
-      val x2785 = -862048943.*(x2784)
-      val x2786 = x2785.<<(15)
-      val x2787 = x2785.>>>(-15)
-      val x2788 = x2786.|(x2787)
-      val x2789 = x2788.*(461845907)
-      val x2790 = x2752
-      val x2791 = x2789.^(x2790)
-      val x2792 = x2791.<<(13)
-      val x2793 = x2791.>>>(-13)
-      val x2794 = x2792.|(x2793)
-      val x2795 = x2794.*(5)
-      val x2796 = x2795.+(-430675100)
-      x2752 = x2796
-      val x2798 = x2752
-      val x2799 = x2798.^(2)
-      val x2800 = x2799.>>>(16)
-      val x2801 = x2799.^(x2800)
-      val x2802 = x2801.*(-2048144789)
-      val x2803 = x2802.>>>(13)
-      val x2804 = x2802.^(x2803)
-      val x2805 = x2804.*(-1028477387)
-      val x2806 = x2805.>>>(16)
-      val x2807 = x2805.^(x2806)
-      x2807
-    }
-    override def cmp(x2809 : SEntry8_IIIITIIB , x2810 : SEntry8_IIIITIIB) = {
-      val x2811 = x936.apply(x2809)
-      val x2812 = x936.apply(x2810)
-      val x2813 = x2811.==(x2812)
-      val x2816 = if(x2813) 
-      {
-        0
-      }
-      else
-      {
-        val x2814 = x2811.>(x2812)
-        val x2815 = if(x2814) 
-        {
-          1
-        }
-        else
-        {
-          -1
-        }
-        
-        x2815
-      }
-      
-      x2816
-    }
-  }
-   object SEntry8_IIIITIIB_Idx7 extends EntryIdx[SEntry8_IIIITIIB] {
-    override def hash(x2819 : SEntry8_IIIITIIB) = {
-      var x2820: Int = -889275714
-      val x2821 = x2819._2
-      val x2822 = x2821.hashCode()
-      val x2823 = -862048943.*(x2822)
-      val x2824 = x2823.<<(15)
-      val x2825 = x2823.>>>(-15)
-      val x2826 = x2824.|(x2825)
-      val x2827 = x2826.*(461845907)
-      val x2828 = x2820
-      val x2829 = x2827.^(x2828)
-      val x2830 = x2829.<<(13)
-      val x2831 = x2829.>>>(-13)
-      val x2832 = x2830.|(x2831)
-      val x2833 = x2832.*(5)
-      val x2834 = x2833.+(-430675100)
-      x2820 = x2834
-      val x2836 = x2819._3
-      val x2837 = x2836.hashCode()
-      val x2838 = -862048943.*(x2837)
-      val x2839 = x2838.<<(15)
-      val x2840 = x2838.>>>(-15)
-      val x2841 = x2839.|(x2840)
-      val x2842 = x2841.*(461845907)
-      val x2843 = x2820
-      val x2844 = x2842.^(x2843)
-      val x2845 = x2844.<<(13)
-      val x2846 = x2844.>>>(-13)
-      val x2847 = x2845.|(x2846)
-      val x2848 = x2847.*(5)
-      val x2849 = x2848.+(-430675100)
-      x2820 = x2849
-      val x2851 = x2819._4
-      val x2852 = x2851.hashCode()
-      val x2853 = -862048943.*(x2852)
-      val x2854 = x2853.<<(15)
-      val x2855 = x2853.>>>(-15)
-      val x2856 = x2854.|(x2855)
-      val x2857 = x2856.*(461845907)
-      val x2858 = x2820
-      val x2859 = x2857.^(x2858)
-      val x2860 = x2859.<<(13)
-      val x2861 = x2859.>>>(-13)
-      val x2862 = x2860.|(x2861)
-      val x2863 = x2862.*(5)
-      val x2864 = x2863.+(-430675100)
-      x2820 = x2864
-      val x2866 = x2820
-      val x2867 = x2866.^(2)
-      val x2868 = x2867.>>>(16)
-      val x2869 = x2867.^(x2868)
-      val x2870 = x2869.*(-2048144789)
-      val x2871 = x2870.>>>(13)
-      val x2872 = x2870.^(x2871)
-      val x2873 = x2872.*(-1028477387)
-      val x2874 = x2873.>>>(16)
-      val x2875 = x2873.^(x2874)
-      x2875
-    }
-    override def cmp(x2877 : SEntry8_IIIITIIB , x2878 : SEntry8_IIIITIIB) = {
-      val x2879 = x2877._2
-      val x2880 = x2878._2
-      val x2881 = x2879.==(x2880)
-      val x2885 = x2881.&&({
-        val x2882 = x2877._3
-        val x2883 = x2878._3
-        val x2884 = x2882.==(x2883)
-        x2884
-      })
-      val x2889 = x2885.&&({
-        val x2886 = x2877._4
-        val x2887 = x2878._4
-        val x2888 = x2886.==(x2887)
-        x2888
-      })
-      val x2890 = if(x2889) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x2890
-    }
-  }
-  val x2894 = Array[EntryIdx[SEntry8_IIIITIIB]](SEntry8_IIIITIIB_Idx5, SEntry8_IIIITIIB_Idx6, SEntry8_IIIITIIB_Idx7)
-  val x2895 = new Store[SEntry8_IIIITIIB](3, x2894)
-  x2895.index(0, IHash, true, -1)
-  x2895.index(1, ISliceHeapMax, false, 2)
-  x2895.index(2, INone, false, -1)
-   object SEntry11_IISSSSSSDDI_Idx8 extends EntryIdx[SEntry11_IISSSSSSDDI] {
-    override def hash(x2900 : SEntry11_IISSSSSSDDI) = {
-      var x2901: Int = -889275714
-      val x2902 = x2900._1
-      val x2903 = x2902.hashCode()
-      val x2904 = -862048943.*(x2903)
-      val x2905 = x2904.<<(15)
-      val x2906 = x2904.>>>(-15)
-      val x2907 = x2905.|(x2906)
-      val x2908 = x2907.*(461845907)
-      val x2909 = x2901
-      val x2910 = x2908.^(x2909)
-      val x2911 = x2910.<<(13)
-      val x2912 = x2910.>>>(-13)
-      val x2913 = x2911.|(x2912)
-      val x2914 = x2913.*(5)
-      val x2915 = x2914.+(-430675100)
-      x2901 = x2915
-      val x2917 = x2900._2
-      val x2918 = x2917.hashCode()
-      val x2919 = -862048943.*(x2918)
-      val x2920 = x2919.<<(15)
-      val x2921 = x2919.>>>(-15)
-      val x2922 = x2920.|(x2921)
-      val x2923 = x2922.*(461845907)
-      val x2924 = x2901
-      val x2925 = x2923.^(x2924)
-      val x2926 = x2925.<<(13)
-      val x2927 = x2925.>>>(-13)
-      val x2928 = x2926.|(x2927)
-      val x2929 = x2928.*(5)
-      val x2930 = x2929.+(-430675100)
-      x2901 = x2930
-      val x2932 = x2901
-      val x2933 = x2932.^(2)
-      val x2934 = x2933.>>>(16)
-      val x2935 = x2933.^(x2934)
-      val x2936 = x2935.*(-2048144789)
-      val x2937 = x2936.>>>(13)
-      val x2938 = x2936.^(x2937)
-      val x2939 = x2938.*(-1028477387)
-      val x2940 = x2939.>>>(16)
-      val x2941 = x2939.^(x2940)
-      x2941
-    }
-    override def cmp(x2943 : SEntry11_IISSSSSSDDI , x2944 : SEntry11_IISSSSSSDDI) = {
-      val x2945 = x2943._1
-      val x2946 = x2944._1
-      val x2947 = x2945.==(x2946)
-      val x2951 = x2947.&&({
-        val x2948 = x2943._2
-        val x2949 = x2944._2
-        val x2950 = x2948.==(x2949)
-        x2950
-      })
-      val x2952 = if(x2951) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x2952
-    }
-  }
-  val x2956 = Array[EntryIdx[SEntry11_IISSSSSSDDI]](SEntry11_IISSSSSSDDI_Idx8)
-  val x2957 = new Store[SEntry11_IISSSSSSDDI](1, x2956)
-  x2957.index(0, IHash, true, -1)
-   object SEntry10_IIIIIITIDS_Idx9 extends EntryIdx[SEntry10_IIIIIITIDS] {
-    override def hash(x2960 : SEntry10_IIIIIITIDS) = {
-      var x2961: Int = -889275714
-      val x2962 = x2960._1
-      val x2963 = x2962.hashCode()
-      val x2964 = -862048943.*(x2963)
-      val x2965 = x2964.<<(15)
-      val x2966 = x2964.>>>(-15)
-      val x2967 = x2965.|(x2966)
-      val x2968 = x2967.*(461845907)
-      val x2969 = x2961
-      val x2970 = x2968.^(x2969)
-      val x2971 = x2970.<<(13)
-      val x2972 = x2970.>>>(-13)
-      val x2973 = x2971.|(x2972)
-      val x2974 = x2973.*(5)
-      val x2975 = x2974.+(-430675100)
-      x2961 = x2975
-      val x2977 = x2960._2
-      val x2978 = x2977.hashCode()
-      val x2979 = -862048943.*(x2978)
-      val x2980 = x2979.<<(15)
-      val x2981 = x2979.>>>(-15)
-      val x2982 = x2980.|(x2981)
-      val x2983 = x2982.*(461845907)
-      val x2984 = x2961
-      val x2985 = x2983.^(x2984)
-      val x2986 = x2985.<<(13)
-      val x2987 = x2985.>>>(-13)
-      val x2988 = x2986.|(x2987)
-      val x2989 = x2988.*(5)
-      val x2990 = x2989.+(-430675100)
-      x2961 = x2990
-      val x2992 = x2960._3
-      val x2993 = x2992.hashCode()
-      val x2994 = -862048943.*(x2993)
-      val x2995 = x2994.<<(15)
-      val x2996 = x2994.>>>(-15)
-      val x2997 = x2995.|(x2996)
-      val x2998 = x2997.*(461845907)
-      val x2999 = x2961
-      val x3000 = x2998.^(x2999)
-      val x3001 = x3000.<<(13)
-      val x3002 = x3000.>>>(-13)
-      val x3003 = x3001.|(x3002)
-      val x3004 = x3003.*(5)
-      val x3005 = x3004.+(-430675100)
-      x2961 = x3005
-      val x3007 = x2961
-      val x3008 = x3007.^(2)
-      val x3009 = x3008.>>>(16)
-      val x3010 = x3008.^(x3009)
-      val x3011 = x3010.*(-2048144789)
-      val x3012 = x3011.>>>(13)
-      val x3013 = x3011.^(x3012)
-      val x3014 = x3013.*(-1028477387)
-      val x3015 = x3014.>>>(16)
-      val x3016 = x3014.^(x3015)
-      x3016
-    }
-    override def cmp(x3018 : SEntry10_IIIIIITIDS , x3019 : SEntry10_IIIIIITIDS) = {
-      val x3020 = x3018._1
-      val x3021 = x3019._1
-      val x3022 = x3020.==(x3021)
-      val x3026 = x3022.&&({
-        val x3023 = x3018._2
-        val x3024 = x3019._2
-        val x3025 = x3023.==(x3024)
-        x3025
-      })
-      val x3030 = x3026.&&({
-        val x3027 = x3018._3
-        val x3028 = x3019._3
-        val x3029 = x3027.==(x3028)
-        x3029
-      })
-      val x3031 = if(x3030) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x3031
-    }
-  }
-  val x3035 = Array[EntryIdx[SEntry10_IIIIIITIDS]](SEntry10_IIIIIITIDS_Idx9)
-  val x3036 = new Store[SEntry10_IIIIIITIDS](1, x3035)
-  x3036.index(0, IHash, false, -1)
-   object SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx10 extends EntryIdx[SEntry21_IIISSSSSSSSSTSDDDDIIS] {
-    override def hash(x3039 : SEntry21_IIISSSSSSSSSTSDDDDIIS) = {
-      var x3040: Int = -889275714
-      val x3041 = x3039._1
-      val x3042 = x3041.hashCode()
-      val x3043 = -862048943.*(x3042)
-      val x3044 = x3043.<<(15)
-      val x3045 = x3043.>>>(-15)
-      val x3046 = x3044.|(x3045)
-      val x3047 = x3046.*(461845907)
-      val x3048 = x3040
-      val x3049 = x3047.^(x3048)
-      val x3050 = x3049.<<(13)
-      val x3051 = x3049.>>>(-13)
-      val x3052 = x3050.|(x3051)
-      val x3053 = x3052.*(5)
-      val x3054 = x3053.+(-430675100)
-      x3040 = x3054
-      val x3056 = x3039._2
-      val x3057 = x3056.hashCode()
-      val x3058 = -862048943.*(x3057)
-      val x3059 = x3058.<<(15)
-      val x3060 = x3058.>>>(-15)
-      val x3061 = x3059.|(x3060)
-      val x3062 = x3061.*(461845907)
-      val x3063 = x3040
-      val x3064 = x3062.^(x3063)
-      val x3065 = x3064.<<(13)
-      val x3066 = x3064.>>>(-13)
-      val x3067 = x3065.|(x3066)
-      val x3068 = x3067.*(5)
-      val x3069 = x3068.+(-430675100)
-      x3040 = x3069
-      val x3071 = x3039._3
-      val x3072 = x3071.hashCode()
-      val x3073 = -862048943.*(x3072)
-      val x3074 = x3073.<<(15)
-      val x3075 = x3073.>>>(-15)
-      val x3076 = x3074.|(x3075)
-      val x3077 = x3076.*(461845907)
-      val x3078 = x3040
-      val x3079 = x3077.^(x3078)
-      val x3080 = x3079.<<(13)
-      val x3081 = x3079.>>>(-13)
-      val x3082 = x3080.|(x3081)
-      val x3083 = x3082.*(5)
-      val x3084 = x3083.+(-430675100)
-      x3040 = x3084
-      val x3086 = x3040
-      val x3087 = x3086.^(2)
-      val x3088 = x3087.>>>(16)
-      val x3089 = x3087.^(x3088)
-      val x3090 = x3089.*(-2048144789)
-      val x3091 = x3090.>>>(13)
-      val x3092 = x3090.^(x3091)
-      val x3093 = x3092.*(-1028477387)
-      val x3094 = x3093.>>>(16)
-      val x3095 = x3093.^(x3094)
-      x3095
-    }
-    override def cmp(x3097 : SEntry21_IIISSSSSSSSSTSDDDDIIS , x3098 : SEntry21_IIISSSSSSSSSTSDDDDIIS) = {
-      val x3099 = x3097._1
-      val x3100 = x3098._1
-      val x3101 = x3099.==(x3100)
-      val x3105 = x3101.&&({
-        val x3102 = x3097._2
-        val x3103 = x3098._2
-        val x3104 = x3102.==(x3103)
-        x3104
-      })
-      val x3109 = x3105.&&({
-        val x3106 = x3097._3
-        val x3107 = x3098._3
-        val x3108 = x3106.==(x3107)
-        x3108
-      })
-      val x3110 = if(x3109) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x3110
-    }
-  }
-   object SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx11 extends EntryIdx[SEntry21_IIISSSSSSSSSTSDDDDIIS] {
-    override def hash(x3113 : SEntry21_IIISSSSSSSSSTSDDDDIIS) = {
-      var x3114: Int = -889275714
-      val x3115 = x3113._2
-      val x3116 = x3115.hashCode()
-      val x3117 = -862048943.*(x3116)
-      val x3118 = x3117.<<(15)
-      val x3119 = x3117.>>>(-15)
-      val x3120 = x3118.|(x3119)
-      val x3121 = x3120.*(461845907)
-      val x3122 = x3114
-      val x3123 = x3121.^(x3122)
-      val x3124 = x3123.<<(13)
-      val x3125 = x3123.>>>(-13)
-      val x3126 = x3124.|(x3125)
-      val x3127 = x3126.*(5)
-      val x3128 = x3127.+(-430675100)
-      x3114 = x3128
-      val x3130 = x3113._3
-      val x3131 = x3130.hashCode()
-      val x3132 = -862048943.*(x3131)
-      val x3133 = x3132.<<(15)
-      val x3134 = x3132.>>>(-15)
-      val x3135 = x3133.|(x3134)
-      val x3136 = x3135.*(461845907)
-      val x3137 = x3114
-      val x3138 = x3136.^(x3137)
-      val x3139 = x3138.<<(13)
-      val x3140 = x3138.>>>(-13)
-      val x3141 = x3139.|(x3140)
-      val x3142 = x3141.*(5)
-      val x3143 = x3142.+(-430675100)
-      x3114 = x3143
-      val x3145 = x3113._6
-      val x3146 = x3145.hashCode()
-      val x3147 = -862048943.*(x3146)
-      val x3148 = x3147.<<(15)
-      val x3149 = x3147.>>>(-15)
-      val x3150 = x3148.|(x3149)
-      val x3151 = x3150.*(461845907)
-      val x3152 = x3114
-      val x3153 = x3151.^(x3152)
-      val x3154 = x3153.<<(13)
-      val x3155 = x3153.>>>(-13)
-      val x3156 = x3154.|(x3155)
-      val x3157 = x3156.*(5)
-      val x3158 = x3157.+(-430675100)
-      x3114 = x3158
-      val x3160 = x3114
-      val x3161 = x3160.^(2)
-      val x3162 = x3161.>>>(16)
-      val x3163 = x3161.^(x3162)
-      val x3164 = x3163.*(-2048144789)
-      val x3165 = x3164.>>>(13)
-      val x3166 = x3164.^(x3165)
-      val x3167 = x3166.*(-1028477387)
-      val x3168 = x3167.>>>(16)
-      val x3169 = x3167.^(x3168)
-      x3169
-    }
-    override def cmp(x3171 : SEntry21_IIISSSSSSSSSTSDDDDIIS , x3172 : SEntry21_IIISSSSSSSSSTSDDDDIIS) = {
-      val x3173 = x3171._2
-      val x3174 = x3172._2
-      val x3175 = x3173.==(x3174)
-      val x3179 = x3175.&&({
-        val x3176 = x3171._3
-        val x3177 = x3172._3
-        val x3178 = x3176.==(x3177)
-        x3178
-      })
-      val x3183 = x3179.&&({
-        val x3180 = x3171._6
-        val x3181 = x3172._6
-        val x3182 = x3180.==(x3181)
-        x3182
-      })
-      val x3184 = if(x3183) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x3184
-    }
-  }
-  val x3188 = Array[EntryIdx[SEntry21_IIISSSSSSSSSTSDDDDIIS]](SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx10, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx11)
-  val x3189 = new Store[SEntry21_IIISSSSSSSSSTSDDDDIIS](2, x3188)
-  x3189.index(0, IHash, true, -1)
-  x3189.index(1, IHash, false, -1)
-   object SEntry17_IIISSSSSSSSSSIIIS_Idx12 extends EntryIdx[SEntry17_IIISSSSSSSSSSIIIS] {
-    override def hash(x3192 : SEntry17_IIISSSSSSSSSSIIIS) = {
-      var x3193: Int = -889275714
-      val x3194 = x3192._1
-      val x3195 = x3194.hashCode()
-      val x3196 = -862048943.*(x3195)
-      val x3197 = x3196.<<(15)
-      val x3198 = x3196.>>>(-15)
-      val x3199 = x3197.|(x3198)
-      val x3200 = x3199.*(461845907)
-      val x3201 = x3193
-      val x3202 = x3200.^(x3201)
-      val x3203 = x3202.<<(13)
-      val x3204 = x3202.>>>(-13)
-      val x3205 = x3203.|(x3204)
-      val x3206 = x3205.*(5)
-      val x3207 = x3206.+(-430675100)
-      x3193 = x3207
-      val x3209 = x3192._2
-      val x3210 = x3209.hashCode()
-      val x3211 = -862048943.*(x3210)
-      val x3212 = x3211.<<(15)
-      val x3213 = x3211.>>>(-15)
-      val x3214 = x3212.|(x3213)
-      val x3215 = x3214.*(461845907)
-      val x3216 = x3193
-      val x3217 = x3215.^(x3216)
-      val x3218 = x3217.<<(13)
-      val x3219 = x3217.>>>(-13)
-      val x3220 = x3218.|(x3219)
-      val x3221 = x3220.*(5)
-      val x3222 = x3221.+(-430675100)
-      x3193 = x3222
-      val x3224 = x3193
-      val x3225 = x3224.^(2)
-      val x3226 = x3225.>>>(16)
-      val x3227 = x3225.^(x3226)
-      val x3228 = x3227.*(-2048144789)
-      val x3229 = x3228.>>>(13)
-      val x3230 = x3228.^(x3229)
-      val x3231 = x3230.*(-1028477387)
-      val x3232 = x3231.>>>(16)
-      val x3233 = x3231.^(x3232)
-      x3233
-    }
-    override def cmp(x3235 : SEntry17_IIISSSSSSSSSSIIIS , x3236 : SEntry17_IIISSSSSSSSSSIIIS) = {
-      val x3237 = x3235._1
-      val x3238 = x3236._1
-      val x3239 = x3237.==(x3238)
-      val x3243 = x3239.&&({
-        val x3240 = x3235._2
-        val x3241 = x3236._2
-        val x3242 = x3240.==(x3241)
-        x3242
-      })
-      val x3244 = if(x3243) 
-      {
-        0
-      }
-      else
-      {
-        1
-      }
-      
-      x3244
-    }
-  }
-  val x3248 = Array[EntryIdx[SEntry17_IIISSSSSSSSSSIIIS]](SEntry17_IIISSSSSSSSSSIIIS_Idx12)
-  val x3249 = new Store[SEntry17_IIISSSSSSSSSSIIIS](1, x3248)
-  x3249.index(0, IHash, true, -1)
+  val x4756 = Array[EntryIdx[SEntry8_IIIITIIB]](SEntry8_IIIITIIB_Idx123, SEntry8_IIIITIIB_Idx234_Ordering, SEntry8_IIIITIIB_Idx234)
+  val x4757 = new Store[SEntry8_IIIITIIB](3, x4756)
+  val x942 = x4757.index(0, IHash, true, -1)
+  val x943 = x4757.index(1, ISliceHeapMax, false, 2)
+  val x944 = x4757.index(2, INone, false, -1)
+  val x4818 = Array[EntryIdx[SEntry11_IISSSSSSDDI]](SEntry11_IISSSSSSDDI_Idx12)
+  val x4819 = new Store[SEntry11_IISSSSSSDDI](1, x4818)
+  val x949 = x4819.index(0, IHash, true, -1)
+  val x4897 = Array[EntryIdx[SEntry10_IIIIIITIDS]](SEntry10_IIIIIITIDS_Idx123)
+  val x4898 = new Store[SEntry10_IIIIIITIDS](1, x4897)
+  val x953 = x4898.index(0, IHash, false, -1)
+  val x5050 = Array[EntryIdx[SEntry21_IIISSSSSSSSSTSDDDDIIS]](SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx123, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236)
+  val x5051 = new Store[SEntry21_IIISSSSSSSSSTSDDDDIIS](2, x5050)
+  val x958 = x5051.index(0, IHash, true, -1)
+  val x959 = x5051.index(1, IHash, false, -1)
+  val x5110 = Array[EntryIdx[SEntry17_IIISSSSSSSSSSIIIS]](SEntry17_IIISSSSSSSSSSIIIS_Idx12)
+  val x5111 = new Store[SEntry17_IIISSSSSSSSSSIIIS](1, x5110)
+  val x962 = x5111.index(0, IHash, true, -1)
   
-  val newOrderTbl = x2511
-  val historyTbl = x2590
-  val warehouseTbl = x2631
-  val itemTbl = x2671
-  val orderTbl = x2895
-  val districtTbl = x2957
-  val orderLineTbl = x3036
-  val customerTbl = x3189
-  val stockTbl = x3249
+  val newOrderTbl = x4373
+  val historyTbl = x4452
+  val warehouseTbl = x4493
+  val itemTbl = x4533
+  val orderTbl = x4757
+  val districtTbl = x4819
+  val orderLineTbl = x4898
+  val customerTbl = x5051
+  val stockTbl = x5111
   val newOrderTxInst = new NewOrderTx(newOrderTbl,historyTbl,warehouseTbl,itemTbl,orderTbl,districtTbl,orderLineTbl,customerTbl,stockTbl)
   val paymentTxInst = new PaymentTx(newOrderTbl,historyTbl,warehouseTbl,itemTbl,orderTbl,districtTbl,orderLineTbl,customerTbl,stockTbl)
   val orderStatusTxInst = new OrderStatusTx(newOrderTbl,historyTbl,warehouseTbl,itemTbl,orderTbl,districtTbl,orderLineTbl,customerTbl,stockTbl)
   val deliveryTxInst = new DeliveryTx(newOrderTbl,historyTbl,warehouseTbl,itemTbl,orderTbl,districtTbl,orderLineTbl,customerTbl,stockTbl)
   val stockLevelTxInst = new StockLevelTx(newOrderTbl,historyTbl,warehouseTbl,itemTbl,orderTbl,districtTbl,orderLineTbl,customerTbl,stockTbl)
-}
+
       
-case class SEntry5_IISDS(var _1: Int, var _2: Int, var _3: String, var _4: Double, var _5: String) extends Entry(5) {def copy = SEntry5_IISDS(_1, _2, _3, _4, _5) }
-case class SEntry8_IIIIITDS(var _1: Int, var _2: Int, var _3: Int, var _4: Int, var _5: Int, var _6: Date, var _7: Double, var _8: String) extends Entry(8) {def copy = SEntry8_IIIIITDS(_1, _2, _3, _4, _5, _6, _7, _8) }
-case class SEntry21_IIISSSSSSSSSTSDDDDIIS(var _1: Int, var _2: Int, var _3: Int, var _4: String, var _5: String, var _6: String, var _7: String, var _8: String, var _9: String, var _10: String, var _11: String, var _12: String, var _13: Date, var _14: String, var _15: Double, var _16: Double, var _17: Double, var _18: Double, var _19: Int, var _20: Int, var _21: String) extends Entry(21) {def copy = SEntry21_IIISSSSSSSSSTSDDDDIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21) }
-case class SEntry9_ISSSSSSDD(var _1: Int, var _2: String, var _3: String, var _4: String, var _5: String, var _6: String, var _7: String, var _8: Double, var _9: Double) extends Entry(9) {def copy = SEntry9_ISSSSSSDD(_1, _2, _3, _4, _5, _6, _7, _8, _9) }
-case class SEntry8_IIIITIIB(var _1: Int, var _2: Int, var _3: Int, var _4: Int, var _5: Date, var _6: Int, var _7: Int, var _8: Boolean) extends Entry(8) {def copy = SEntry8_IIIITIIB(_1, _2, _3, _4, _5, _6, _7, _8) }
-case class SEntry17_IIISSSSSSSSSSIIIS(var _1: Int, var _2: Int, var _3: Int, var _4: String, var _5: String, var _6: String, var _7: String, var _8: String, var _9: String, var _10: String, var _11: String, var _12: String, var _13: String, var _14: Int, var _15: Int, var _16: Int, var _17: String) extends Entry(17) {def copy = SEntry17_IIISSSSSSSSSSIIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17) }
-case class SEntry11_IISSSSSSDDI(var _1: Int, var _2: Int, var _3: String, var _4: String, var _5: String, var _6: String, var _7: String, var _8: String, var _9: Double, var _10: Double, var _11: Int) extends Entry(11) {def copy = SEntry11_IISSSSSSDDI(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11) }
-case class SEntry3_III(var _1: Int, var _2: Int, var _3: Int) extends Entry(3) {def copy = SEntry3_III(_1, _2, _3) }
-case class SEntry10_IIIIIITIDS(var _1: Int, var _2: Int, var _3: Int, var _4: Int, var _5: Int, var _6: Int, var _7: Date, var _8: Int, var _9: Double, var _10: String) extends Entry(10) {def copy = SEntry10_IIIIIITIDS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10) }
-class DeliveryTx(x2511: Store[SEntry3_III], x2590: Store[SEntry8_IIIIITDS], x2631: Store[SEntry9_ISSSSSSDD], x2671: Store[SEntry5_IISDS], x2895: Store[SEntry8_IIIITIIB], x2957: Store[SEntry11_IISSSSSSDDI], x3036: Store[SEntry10_IIIIIITIDS], x3189: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x3249: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int) => Int) {
-def apply(x10: Boolean, x11: Date, x12: Int, x13: Int) = {
-  val x14 = new Array[Int](10)
-  var x15: Int = 1
-  while({
-    val x16 = x15
-    val x17 = x16.<=(10)
-    x17
-  })
-  {
-    val x22 = x15
-    val x5818 = SEntry3_III(-1, x22, x12)
-    val x26 = x2511.get(0, x5818)
-    val x27 = x26.!=(null)
-    if(x27) 
-    {
-      val x5823 = x26._1
-      val x29 = x15
-      val x30 = x29.-(1)
-      x14.update(x30, x5823)
-      x2511.delete(x26)
-      val x33 = x15
-      val x5829 = SEntry8_IIIITIIB(x5823, x33, x12, -1, null, -1, -1, false)
-      val x36 = x2895.get(0, x5829)
-      val x5832 = x36._4
-      x36._6_=(x13)
-      x2895.update(x36)
-      var x40: Double = 0.0
-      val x41 = x15
-      val x5838 = SEntry10_IIIIIITIDS(x5823, x41, x12, -1, -1, -1, null, -1, -1.0, "")
-      val x51 = { x44: SEntry10_IIIIIITIDS => {
-          x44._7_=(x11)
-          val x46 = x40
-          val x5948 = x44._9
-          val x48 = x46.+(x5948)
-          x40 = x48
-          x3036.update(x44)
-          ()
-        }
-      }
-      x3036.slice(0, x5838, x51)
-      val x53 = x15
-      val x5842 = SEntry21_IIISSSSSSSSSTSDDDDIIS(x5832, x53, x12, "", "", "", "", "", "", "", "", "", null, "", -1.0, -1.0, -1.0, -1.0, -1, -1, "")
-      val x55 = x3189.get(0, x5842)
-      val x56 = x40
-      val x5845 = x55._17
-      val x5846 = x5845.+(x56)
-      x55._17_=(x5846)
-      val x5848 = x55._20
-      val x5849 = x5848.+(1)
-      x55._20_=(x5849)
-      x3189.update(x55)
-      ()
+   object SEntry8_IIIITIIB_Idx234 extends EntryIdx[SEntry8_IIIITIIB] {
+    override def hash(x4681 : SEntry8_IIIITIIB) = {
+      var x4682: Int = -889275714
+      val x4683 = x4681._2
+      val x4685 = -862048943.*((x4683.hashCode()))
+      val x4690 = x4682
+      val x4691 = (((x4685.<<(15)).|((x4685.>>>(-15)))).*(461845907)).^(x4690)
+      x4682 = ((((x4691.<<(13)).|((x4691.>>>(-13)))).*(5)).+(-430675100))
+      val x4698 = x4681._3
+      val x4700 = -862048943.*((x4698.hashCode()))
+      val x4705 = x4682
+      val x4706 = (((x4700.<<(15)).|((x4700.>>>(-15)))).*(461845907)).^(x4705)
+      x4682 = ((((x4706.<<(13)).|((x4706.>>>(-13)))).*(5)).+(-430675100))
+      val x4713 = x4681._4
+      val x4715 = -862048943.*((x4713.hashCode()))
+      val x4720 = x4682
+      val x4721 = (((x4715.<<(15)).|((x4715.>>>(-15)))).*(461845907)).^(x4720)
+      x4682 = ((((x4721.<<(13)).|((x4721.>>>(-13)))).*(5)).+(-430675100))
+      val x4728 = x4682
+      val x4729 = x4728.^(2)
+      val x4732 = (x4729.^((x4729.>>>(16)))).*(-2048144789)
+      val x4735 = (x4732.^((x4732.>>>(13)))).*(-1028477387)
+      (x4735.^((x4735.>>>(16))))
     }
-    else
-    {
-      val x60 = x15
-      val x61 = x60.-(1)
-      x14.update(x61, 0)
-      ()
+    override def cmp(x4739 : SEntry8_IIIITIIB , x4740 : SEntry8_IIIITIIB) = {
+      val x4741 = x4739._2
+      val x4742 = x4740._2
+      (if((((x4741.==(x4742)).&&({
+        val x4744 = x4739._3
+        val x4745 = x4740._3
+        (x4744.==(x4745))
+      })).&&({
+        val x4748 = x4739._4
+        val x4749 = x4740._4
+        (x4748.==(x4749))
+      }))) 0 else 1)
     }
-    
-    val x64 = x15
-    val x65 = x64.+(1)
-    x15 = x65
-    ()
   }
-  if(x10) 
-  {
-    val x68 = "\n+---------------------------- DELIVERY ---------------------------+\n Date: ".+(x11)
-    val x69 = x68.+("\n\n Warehouse: ")
-    val x70 = x69.+(x12)
-    val x71 = x70.+("\n Carrier:   ")
-    val x72 = x71.+(x13)
-    val x73 = x72.+("\n\n Delivered Orders\n")
-    var x74: String = x73
-    var x75: Int = 0
-    var x76: Int = 1
-    while({
-      val x77 = x76
-      val x78 = x77.<=(10)
-      x78
-    })
-    {
-      val x79 = x76
-      val x80 = x79.-(1)
-      val x81 = x14.apply(x80)
-      val x82 = x81.>=(0)
-      if(x82) 
+   object SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx123 extends EntryIdx[SEntry21_IIISSSSSSSSSTSDDDDIIS] {
+    override def hash(x4901 : SEntry21_IIISSSSSSSSSTSDDDDIIS) = {
+      var x4902: Int = -889275714
+      val x4903 = x4901._1
+      val x4905 = -862048943.*((x4903.hashCode()))
+      val x4910 = x4902
+      val x4911 = (((x4905.<<(15)).|((x4905.>>>(-15)))).*(461845907)).^(x4910)
+      x4902 = ((((x4911.<<(13)).|((x4911.>>>(-13)))).*(5)).+(-430675100))
+      val x4918 = x4901._2
+      val x4920 = -862048943.*((x4918.hashCode()))
+      val x4925 = x4902
+      val x4926 = (((x4920.<<(15)).|((x4920.>>>(-15)))).*(461845907)).^(x4925)
+      x4902 = ((((x4926.<<(13)).|((x4926.>>>(-13)))).*(5)).+(-430675100))
+      val x4933 = x4901._3
+      val x4935 = -862048943.*((x4933.hashCode()))
+      val x4940 = x4902
+      val x4941 = (((x4935.<<(15)).|((x4935.>>>(-15)))).*(461845907)).^(x4940)
+      x4902 = ((((x4941.<<(13)).|((x4941.>>>(-13)))).*(5)).+(-430675100))
+      val x4948 = x4902
+      val x4949 = x4948.^(2)
+      val x4952 = (x4949.^((x4949.>>>(16)))).*(-2048144789)
+      val x4955 = (x4952.^((x4952.>>>(13)))).*(-1028477387)
+      (x4955.^((x4955.>>>(16))))
+    }
+    override def cmp(x4959 : SEntry21_IIISSSSSSSSSTSDDDDIIS , x4960 : SEntry21_IIISSSSSSSSSTSDDDDIIS) = {
+      val x4961 = x4959._1
+      val x4962 = x4960._1
+      (if((((x4961.==(x4962)).&&({
+        val x4964 = x4959._2
+        val x4965 = x4960._2
+        (x4964.==(x4965))
+      })).&&({
+        val x4968 = x4959._3
+        val x4969 = x4960._3
+        (x4968.==(x4969))
+      }))) 0 else 1)
+    }
+  }
+   object SEntry10_IIIIIITIDS_Idx123 extends EntryIdx[SEntry10_IIIIIITIDS] {
+    override def hash(x4822 : SEntry10_IIIIIITIDS) = {
+      var x4823: Int = -889275714
+      val x4824 = x4822._1
+      val x4826 = -862048943.*((x4824.hashCode()))
+      val x4831 = x4823
+      val x4832 = (((x4826.<<(15)).|((x4826.>>>(-15)))).*(461845907)).^(x4831)
+      x4823 = ((((x4832.<<(13)).|((x4832.>>>(-13)))).*(5)).+(-430675100))
+      val x4839 = x4822._2
+      val x4841 = -862048943.*((x4839.hashCode()))
+      val x4846 = x4823
+      val x4847 = (((x4841.<<(15)).|((x4841.>>>(-15)))).*(461845907)).^(x4846)
+      x4823 = ((((x4847.<<(13)).|((x4847.>>>(-13)))).*(5)).+(-430675100))
+      val x4854 = x4822._3
+      val x4856 = -862048943.*((x4854.hashCode()))
+      val x4861 = x4823
+      val x4862 = (((x4856.<<(15)).|((x4856.>>>(-15)))).*(461845907)).^(x4861)
+      x4823 = ((((x4862.<<(13)).|((x4862.>>>(-13)))).*(5)).+(-430675100))
+      val x4869 = x4823
+      val x4870 = x4869.^(2)
+      val x4873 = (x4870.^((x4870.>>>(16)))).*(-2048144789)
+      val x4876 = (x4873.^((x4873.>>>(13)))).*(-1028477387)
+      (x4876.^((x4876.>>>(16))))
+    }
+    override def cmp(x4880 : SEntry10_IIIIIITIDS , x4881 : SEntry10_IIIIIITIDS) = {
+      val x4882 = x4880._1
+      val x4883 = x4881._1
+      (if((((x4882.==(x4883)).&&({
+        val x4885 = x4880._2
+        val x4886 = x4881._2
+        (x4885.==(x4886))
+      })).&&({
+        val x4889 = x4880._3
+        val x4890 = x4881._3
+        (x4889.==(x4890))
+      }))) 0 else 1)
+    }
+  }
+   object SEntry3_III_Idx23 extends EntryIdx[SEntry3_III] {
+    override def hash(x4316 : SEntry3_III) = {
+      var x4317: Int = -889275714
+      val x4318 = x4316._2
+      val x4320 = -862048943.*((x4318.hashCode()))
+      val x4325 = x4317
+      val x4326 = (((x4320.<<(15)).|((x4320.>>>(-15)))).*(461845907)).^(x4325)
+      x4317 = ((((x4326.<<(13)).|((x4326.>>>(-13)))).*(5)).+(-430675100))
+      val x4333 = x4316._3
+      val x4335 = -862048943.*((x4333.hashCode()))
+      val x4340 = x4317
+      val x4341 = (((x4335.<<(15)).|((x4335.>>>(-15)))).*(461845907)).^(x4340)
+      x4317 = ((((x4341.<<(13)).|((x4341.>>>(-13)))).*(5)).+(-430675100))
+      val x4348 = x4317
+      val x4349 = x4348.^(2)
+      val x4352 = (x4349.^((x4349.>>>(16)))).*(-2048144789)
+      val x4355 = (x4352.^((x4352.>>>(13)))).*(-1028477387)
+      (x4355.^((x4355.>>>(16))))
+    }
+    override def cmp(x4359 : SEntry3_III , x4360 : SEntry3_III) = {
+      val x4361 = x4359._2
+      val x4362 = x4360._2
+      (if(((x4361.==(x4362)).&&({
+        val x4364 = x4359._3
+        val x4365 = x4360._3
+        (x4364.==(x4365))
+      }))) 0 else 1)
+    }
+  }
+   object SEntry17_IIISSSSSSSSSSIIIS_Idx12 extends EntryIdx[SEntry17_IIISSSSSSSSSSIIIS] {
+    override def hash(x5054 : SEntry17_IIISSSSSSSSSSIIIS) = {
+      var x5055: Int = -889275714
+      val x5056 = x5054._1
+      val x5058 = -862048943.*((x5056.hashCode()))
+      val x5063 = x5055
+      val x5064 = (((x5058.<<(15)).|((x5058.>>>(-15)))).*(461845907)).^(x5063)
+      x5055 = ((((x5064.<<(13)).|((x5064.>>>(-13)))).*(5)).+(-430675100))
+      val x5071 = x5054._2
+      val x5073 = -862048943.*((x5071.hashCode()))
+      val x5078 = x5055
+      val x5079 = (((x5073.<<(15)).|((x5073.>>>(-15)))).*(461845907)).^(x5078)
+      x5055 = ((((x5079.<<(13)).|((x5079.>>>(-13)))).*(5)).+(-430675100))
+      val x5086 = x5055
+      val x5087 = x5086.^(2)
+      val x5090 = (x5087.^((x5087.>>>(16)))).*(-2048144789)
+      val x5093 = (x5090.^((x5090.>>>(13)))).*(-1028477387)
+      (x5093.^((x5093.>>>(16))))
+    }
+    override def cmp(x5097 : SEntry17_IIISSSSSSSSSSIIIS , x5098 : SEntry17_IIISSSSSSSSSSIIIS) = {
+      val x5099 = x5097._1
+      val x5100 = x5098._1
+      (if(((x5099.==(x5100)).&&({
+        val x5102 = x5097._2
+        val x5103 = x5098._2
+        (x5102.==(x5103))
+      }))) 0 else 1)
+    }
+  }
+   object SEntry5_IISDS_Idx1 extends EntryIdx[SEntry5_IISDS] {
+    override def hash(x4495 : SEntry5_IISDS) = {
+      var x4496: Int = -889275714
+      val x4497 = x4495._1
+      val x4499 = -862048943.*((x4497.hashCode()))
+      val x4504 = x4496
+      val x4505 = (((x4499.<<(15)).|((x4499.>>>(-15)))).*(461845907)).^(x4504)
+      x4496 = ((((x4505.<<(13)).|((x4505.>>>(-13)))).*(5)).+(-430675100))
+      val x4512 = x4496
+      val x4513 = x4512.^(2)
+      val x4516 = (x4513.^((x4513.>>>(16)))).*(-2048144789)
+      val x4519 = (x4516.^((x4516.>>>(13)))).*(-1028477387)
+      (x4519.^((x4519.>>>(16))))
+    }
+    override def cmp(x4523 : SEntry5_IISDS , x4524 : SEntry5_IISDS) = {
+      val x4525 = x4523._1
+      val x4526 = x4524._1
+      (if((x4525.==(x4526))) 0 else 1)
+    }
+  }
+   object SEntry8_IIIIITDS_Idx extends EntryIdx[SEntry8_IIIIITDS] {
+    override def hash(x4377 : SEntry8_IIIIITDS) = {
+      var x4378: Int = -889275714
+      val x4379 = x4378
+      val x4380 = x4379.^(2)
+      val x4383 = (x4380.^((x4380.>>>(16)))).*(-2048144789)
+      val x4386 = (x4383.^((x4383.>>>(13)))).*(-1028477387)
+      (x4386.^((x4386.>>>(16))))
+    }
+    override def cmp(x4390 : SEntry8_IIIIITDS , x4391 : SEntry8_IIIIITDS) = {
+      val x4392 = x4390._1
+      val x4393 = x4391._1
+      (if((((((((((x4392.==(-1)).||({
+        (x4393.==(-1))
+      })).||({
+        (x4392.==(x4393))
+      })).&&({
+        val x4399 = x4390._2
+        val x4400 = x4391._2
+        (((x4399.==(-1)).||({
+          (x4400.==(-1))
+        })).||({
+          (x4399.==(x4400))
+        }))
+      })).&&({
+        val x4407 = x4390._3
+        val x4408 = x4391._3
+        (((x4407.==(-1)).||({
+          (x4408.==(-1))
+        })).||({
+          (x4407.==(x4408))
+        }))
+      })).&&({
+        val x4415 = x4390._4
+        val x4416 = x4391._4
+        (((x4415.==(-1)).||({
+          (x4416.==(-1))
+        })).||({
+          (x4415.==(x4416))
+        }))
+      })).&&({
+        val x4423 = x4390._5
+        val x4424 = x4391._5
+        (((x4423.==(-1)).||({
+          (x4424.==(-1))
+        })).||({
+          (x4423.==(x4424))
+        }))
+      })).&&({
+        val x4431 = x4390._6
+        val x4432 = x4391._6
+        (((x4431.==(null)).||({
+          (x4432.==(null))
+        })).||({
+          (x4431.==(x4432))
+        }))
+      })).&&({
+        val x4439 = x4390._7
+        val x4440 = x4391._7
+        (((x4439.==(-1.0)).||({
+          (x4440.==(-1.0))
+        })).||({
+          (x4439.==(x4440))
+        }))
+      }))) 0 else 1)
+    }
+  }
+   object SEntry11_IISSSSSSDDI_Idx12 extends EntryIdx[SEntry11_IISSSSSSDDI] {
+    override def hash(x4762 : SEntry11_IISSSSSSDDI) = {
+      var x4763: Int = -889275714
+      val x4764 = x4762._1
+      val x4766 = -862048943.*((x4764.hashCode()))
+      val x4771 = x4763
+      val x4772 = (((x4766.<<(15)).|((x4766.>>>(-15)))).*(461845907)).^(x4771)
+      x4763 = ((((x4772.<<(13)).|((x4772.>>>(-13)))).*(5)).+(-430675100))
+      val x4779 = x4762._2
+      val x4781 = -862048943.*((x4779.hashCode()))
+      val x4786 = x4763
+      val x4787 = (((x4781.<<(15)).|((x4781.>>>(-15)))).*(461845907)).^(x4786)
+      x4763 = ((((x4787.<<(13)).|((x4787.>>>(-13)))).*(5)).+(-430675100))
+      val x4794 = x4763
+      val x4795 = x4794.^(2)
+      val x4798 = (x4795.^((x4795.>>>(16)))).*(-2048144789)
+      val x4801 = (x4798.^((x4798.>>>(13)))).*(-1028477387)
+      (x4801.^((x4801.>>>(16))))
+    }
+    override def cmp(x4805 : SEntry11_IISSSSSSDDI , x4806 : SEntry11_IISSSSSSDDI) = {
+      val x4807 = x4805._1
+      val x4808 = x4806._1
+      (if(((x4807.==(x4808)).&&({
+        val x4810 = x4805._2
+        val x4811 = x4806._2
+        (x4810.==(x4811))
+      }))) 0 else 1)
+    }
+  }
+   object SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236 extends EntryIdx[SEntry21_IIISSSSSSSSSTSDDDDIIS] {
+    override def hash(x4975 : SEntry21_IIISSSSSSSSSTSDDDDIIS) = {
+      var x4976: Int = -889275714
+      val x4977 = x4975._2
+      val x4979 = -862048943.*((x4977.hashCode()))
+      val x4984 = x4976
+      val x4985 = (((x4979.<<(15)).|((x4979.>>>(-15)))).*(461845907)).^(x4984)
+      x4976 = ((((x4985.<<(13)).|((x4985.>>>(-13)))).*(5)).+(-430675100))
+      val x4992 = x4975._3
+      val x4994 = -862048943.*((x4992.hashCode()))
+      val x4999 = x4976
+      val x5000 = (((x4994.<<(15)).|((x4994.>>>(-15)))).*(461845907)).^(x4999)
+      x4976 = ((((x5000.<<(13)).|((x5000.>>>(-13)))).*(5)).+(-430675100))
+      val x5007 = x4975._6
+      val x5009 = -862048943.*((x5007.hashCode()))
+      val x5014 = x4976
+      val x5015 = (((x5009.<<(15)).|((x5009.>>>(-15)))).*(461845907)).^(x5014)
+      x4976 = ((((x5015.<<(13)).|((x5015.>>>(-13)))).*(5)).+(-430675100))
+      val x5022 = x4976
+      val x5023 = x5022.^(2)
+      val x5026 = (x5023.^((x5023.>>>(16)))).*(-2048144789)
+      val x5029 = (x5026.^((x5026.>>>(13)))).*(-1028477387)
+      (x5029.^((x5029.>>>(16))))
+    }
+    override def cmp(x5033 : SEntry21_IIISSSSSSSSSTSDDDDIIS , x5034 : SEntry21_IIISSSSSSSSSTSDDDDIIS) = {
+      val x5035 = x5033._2
+      val x5036 = x5034._2
+      (if((((x5035.==(x5036)).&&({
+        val x5038 = x5033._3
+        val x5039 = x5034._3
+        (x5038.==(x5039))
+      })).&&({
+        val x5042 = x5033._6
+        val x5043 = x5034._6
+        (x5042.==(x5043))
+      }))) 0 else 1)
+    }
+  }
+   object SEntry9_ISSSSSSDD_Idx1 extends EntryIdx[SEntry9_ISSSSSSDD] {
+    override def hash(x4455 : SEntry9_ISSSSSSDD) = {
+      var x4456: Int = -889275714
+      val x4457 = x4455._1
+      val x4459 = -862048943.*((x4457.hashCode()))
+      val x4464 = x4456
+      val x4465 = (((x4459.<<(15)).|((x4459.>>>(-15)))).*(461845907)).^(x4464)
+      x4456 = ((((x4465.<<(13)).|((x4465.>>>(-13)))).*(5)).+(-430675100))
+      val x4472 = x4456
+      val x4473 = x4472.^(2)
+      val x4476 = (x4473.^((x4473.>>>(16)))).*(-2048144789)
+      val x4479 = (x4476.^((x4476.>>>(13)))).*(-1028477387)
+      (x4479.^((x4479.>>>(16))))
+    }
+    override def cmp(x4483 : SEntry9_ISSSSSSDD , x4484 : SEntry9_ISSSSSSDD) = {
+      val x4485 = x4483._1
+      val x4486 = x4484._1
+      (if((x4485.==(x4486))) 0 else 1)
+    }
+  }
+   object SEntry8_IIIITIIB_Idx123 extends EntryIdx[SEntry8_IIIITIIB] {
+    override def hash(x4539 : SEntry8_IIIITIIB) = {
+      var x4540: Int = -889275714
+      val x4541 = x4539._1
+      val x4543 = -862048943.*((x4541.hashCode()))
+      val x4548 = x4540
+      val x4549 = (((x4543.<<(15)).|((x4543.>>>(-15)))).*(461845907)).^(x4548)
+      x4540 = ((((x4549.<<(13)).|((x4549.>>>(-13)))).*(5)).+(-430675100))
+      val x4556 = x4539._2
+      val x4558 = -862048943.*((x4556.hashCode()))
+      val x4563 = x4540
+      val x4564 = (((x4558.<<(15)).|((x4558.>>>(-15)))).*(461845907)).^(x4563)
+      x4540 = ((((x4564.<<(13)).|((x4564.>>>(-13)))).*(5)).+(-430675100))
+      val x4571 = x4539._3
+      val x4573 = -862048943.*((x4571.hashCode()))
+      val x4578 = x4540
+      val x4579 = (((x4573.<<(15)).|((x4573.>>>(-15)))).*(461845907)).^(x4578)
+      x4540 = ((((x4579.<<(13)).|((x4579.>>>(-13)))).*(5)).+(-430675100))
+      val x4586 = x4540
+      val x4587 = x4586.^(2)
+      val x4590 = (x4587.^((x4587.>>>(16)))).*(-2048144789)
+      val x4593 = (x4590.^((x4590.>>>(13)))).*(-1028477387)
+      (x4593.^((x4593.>>>(16))))
+    }
+    override def cmp(x4597 : SEntry8_IIIITIIB , x4598 : SEntry8_IIIITIIB) = {
+      val x4599 = x4597._1
+      val x4600 = x4598._1
+      (if((((x4599.==(x4600)).&&({
+        val x4602 = x4597._2
+        val x4603 = x4598._2
+        (x4602.==(x4603))
+      })).&&({
+        val x4606 = x4597._3
+        val x4607 = x4598._3
+        (x4606.==(x4607))
+      }))) 0 else 1)
+    }
+  }
+   object SEntry3_III_Idx23_Ordering extends EntryIdx[SEntry3_III] {
+    override def hash(x4263 : SEntry3_III) = {
+      var x4264: Int = -889275714
+      val x4265 = x4263._2
+      val x4267 = -862048943.*((x4265.hashCode()))
+      val x4272 = x4264
+      val x4273 = (((x4267.<<(15)).|((x4267.>>>(-15)))).*(461845907)).^(x4272)
+      x4264 = ((((x4273.<<(13)).|((x4273.>>>(-13)))).*(5)).+(-430675100))
+      val x4280 = x4263._3
+      val x4282 = -862048943.*((x4280.hashCode()))
+      val x4287 = x4264
+      val x4288 = (((x4282.<<(15)).|((x4282.>>>(-15)))).*(461845907)).^(x4287)
+      x4264 = ((((x4288.<<(13)).|((x4288.>>>(-13)))).*(5)).+(-430675100))
+      val x4295 = x4264
+      val x4296 = x4295.^(2)
+      val x4299 = (x4296.^((x4296.>>>(16)))).*(-2048144789)
+      val x4302 = (x4299.^((x4299.>>>(13)))).*(-1028477387)
+      (x4302.^((x4302.>>>(16))))
+    }
+    override def cmp(x4306 : SEntry3_III , x4307 : SEntry3_III) = {
+      val x4308 = x914.apply(x4306)
+      val x4309 = x914.apply(x4307)
+      val x4312 = if((x4308.>(x4309))) 
       {
-        val x83 = x74
-        val x84 = x83.+("  District ")
-        val x85 = x76
-        val x86 = x85.<(10)
-        val x87 = if(x86) 
-        {
-          " "
-        }
-        else
-        {
-          ""
-        }
-        
-        val x88 = x84.+(x87)
-        val x89 = x76
-        val x90 = x88.+(x89)
-        val x91 = x90.+(": Order number ")
-        val x92 = x76
-        val x93 = x92.-(1)
-        val x94 = x14.apply(x93)
-        val x95 = x91.+(x94)
-        val x96 = x95.+(" was delivered.\n")
-        x74 = x96
-        ()
+        1
       }
       else
       {
-        val x98 = x74
-        val x99 = x98.+("  District ")
-        val x100 = x76
-        val x101 = x100.<(10)
-        val x102 = if(x101) 
-        {
-          " "
-        }
-        else
-        {
-          ""
-        }
-        
-        val x103 = x99.+(x102)
-        val x104 = x76
-        val x105 = x103.+(x104)
-        val x106 = x105.+(": No orders to be delivered.\n")
-        x74 = x106
-        val x108 = x75
-        val x109 = x108.+(1)
-        x75 = x109
-        ()
+        -1
       }
       
-      val x112 = x76
-      val x113 = x112.+(1)
-      x76 = x113
-      ()
+      (if((x4308.==(x4309))) 0 else x4312)
     }
-    val x116 = x74
-    val x117 = x116.+("+-----------------------------------------------------------------+\n\n")
-    x74 = x117
-    val x119 = x74
-    println(x119)
-    ()
   }
-  else
-  {
-    ()
-  }
-  
-  1
-}
-}
-class StockLevelTx(x2511: Store[SEntry3_III], x2590: Store[SEntry8_IIIIITDS], x2631: Store[SEntry9_ISSSSSSDD], x2671: Store[SEntry5_IISDS], x2895: Store[SEntry8_IIIITIIB], x2957: Store[SEntry11_IISSSSSSDDI], x3036: Store[SEntry10_IIIIIITIDS], x3189: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x3249: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int) => Int) {
-def apply(x122: Boolean, x123: Date, x124: Int, x125: Int, x126: Int, x127: Int) = {
-  val x6136 = SEntry11_IISSSSSSDDI(x126, x125, "", "", "", "", "", "", -1.0, -1.0, -1)
-  val x130 = x2957.get(0, x6136)
-  val x6139 = x130._11
-  val x132 = x6139.-(20)
-  var x133: Int = x132
-  val x134 = Set.apply[Int]()
-  while({
-    val x135 = x133
-    val x136 = x135.<(x6139)
-    x136
-  })
-  {
-    val x137 = x133
-    val x6148 = SEntry10_IIIIIITIDS(x137, x126, x125, -1, -1, -1, null, -1, -1.0, "")
-    val x148 = { x140: SEntry10_IIIIIITIDS => {
-        val x6180 = x140._5
-        val x6181 = SEntry17_IIISSSSSSSSSSIIIS(x6180, x125, -1, "", "", "", "", "", "", "", "", "", "", -1, -1, -1, "")
-        val x143 = x3249.get(0, x6181)
-        val x6183 = x143._3
-        val x145 = x6183.<(x127)
-        if(x145) 
-        {
-          val x146 = x134.+=(x6180)
-          ()
-        }
-        else
-        {
-          ()
-        }
-        
-        ()
-      }
+   object SEntry8_IIIITIIB_Idx234_Ordering extends EntryIdx[SEntry8_IIIITIIB] {
+    override def hash(x4613 : SEntry8_IIIITIIB) = {
+      var x4614: Int = -889275714
+      val x4615 = x4613._2
+      val x4617 = -862048943.*((x4615.hashCode()))
+      val x4622 = x4614
+      val x4623 = (((x4617.<<(15)).|((x4617.>>>(-15)))).*(461845907)).^(x4622)
+      x4614 = ((((x4623.<<(13)).|((x4623.>>>(-13)))).*(5)).+(-430675100))
+      val x4630 = x4613._3
+      val x4632 = -862048943.*((x4630.hashCode()))
+      val x4637 = x4614
+      val x4638 = (((x4632.<<(15)).|((x4632.>>>(-15)))).*(461845907)).^(x4637)
+      x4614 = ((((x4638.<<(13)).|((x4638.>>>(-13)))).*(5)).+(-430675100))
+      val x4645 = x4613._4
+      val x4647 = -862048943.*((x4645.hashCode()))
+      val x4652 = x4614
+      val x4653 = (((x4647.<<(15)).|((x4647.>>>(-15)))).*(461845907)).^(x4652)
+      x4614 = ((((x4653.<<(13)).|((x4653.>>>(-13)))).*(5)).+(-430675100))
+      val x4660 = x4614
+      val x4661 = x4660.^(2)
+      val x4664 = (x4661.^((x4661.>>>(16)))).*(-2048144789)
+      val x4667 = (x4664.^((x4664.>>>(13)))).*(-1028477387)
+      (x4667.^((x4667.>>>(16))))
     }
-    x3036.slice(0, x6148, x148)
-    val x150 = x133
-    val x151 = x150.+(1)
-    x133 = x151
-    ()
-  }
-  val x154 = x134.size
-  if(x122) 
-  {
-    val x155 = "\n+-------------------------- STOCK-LEVEL --------------------------+\n Warehouse: ".+(x125)
-    val x156 = x155.+("\n District:  ")
-    val x157 = x156.+(x126)
-    val x158 = x157.+("\n\n Stock Level Threshold: ")
-    val x159 = x158.+(x127)
-    val x160 = x159.+("\n Low Stock Count:       ")
-    val x161 = x160.+(x154)
-    val x162 = x161.+("\n+-----------------------------------------------------------------+\n\n")
-    println(x162)
-    ()
-  }
-  else
-  {
-    ()
-  }
-  
-  1
-}
-}
-class OrderStatusTx(x2511: Store[SEntry3_III], x2590: Store[SEntry8_IIIIITDS], x2631: Store[SEntry9_ISSSSSSDD], x2671: Store[SEntry5_IISDS], x2895: Store[SEntry8_IIIITIIB], x2957: Store[SEntry11_IISSSSSSDDI], x3036: Store[SEntry10_IIIIIITIDS], x3189: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x3249: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, String) => Int) {
-def apply(x165: Boolean, x166: Date, x167: Int, x168: Int, x169: Int, x170: Int, x171: Int, x172: String) = {
-  var x6239: SEntry21_IIISSSSSSSSSTSDDDDIIS = null
-  val x174 = x170.>(0)
-  if(x174) 
-  {
-    val x6242 = new ArrayBuffer[SEntry21_IIISSSSSSSSSTSDDDDIIS]()
-    val x6244 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, x169, x168, "", "", x172, "", "", "", "", "", "", null, "", -1.0, -1.0, -1.0, -1.0, -1, -1, "")
-    val x180 = { x178: SEntry21_IIISSSSSSSSSTSDDDDIIS => {
-        x6242.append(x178)
-        ()
-      }
-    }
-    x3189.slice(1, x6244, x180)
-    val x182 = x6242.size
-    val x183 = x182./(2)
-    var x184: Int = x183
-    val x185 = x6242.size
-    val x186 = x185.%(2)
-    val x187 = x186.==(0)
-    if(x187) 
-    {
-      val x188 = x184
-      val x189 = x188.-(1)
-      x184 = x189
-      ()
-    }
-    else
-    {
-      ()
-    }
-    
-    val x198 = { (x192: SEntry21_IIISSSSSSSSSTSDDDDIIS, x193: SEntry21_IIISSSSSSSSSTSDDDDIIS) => {
-        val x6298 = x192._4
-        val x6299 = x193._4
-        val x196 = x6298.compareToIgnoreCase(x6299)
-        val x197 = x196.<(0)
-        x197
-      }
-    }
-    val x199 = x6242.sortWith(x198)
-    val x200 = x184
-    val x201 = x199.apply(x200)
-    x6239 = x201
-    ()
-  }
-  else
-  {
-    val x6262 = SEntry21_IIISSSSSSSSSTSDDDDIIS(x171, x169, x168, "", "", "", "", "", "", "", "", "", null, "", -1.0, -1.0, -1.0, -1.0, -1, -1, "")
-    val x205 = x3189.get(0, x6262)
-    x6239 = x205
-    ()
-  }
-  
-  val x208 = x6239
-  val x6267 = x208._3
-  var x218: Int = 0
-  1
-}
-}
-class PaymentTx(x2511: Store[SEntry3_III], x2590: Store[SEntry8_IIIIITDS], x2631: Store[SEntry9_ISSSSSSDD], x2671: Store[SEntry5_IISDS], x2895: Store[SEntry8_IIIITIIB], x2957: Store[SEntry11_IISSSSSSDDI], x3036: Store[SEntry10_IIIIIITIDS], x3189: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x3249: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double) => Int) {
-def apply(x219: Boolean, x220: Date, x221: Int, x222: Int, x223: Int, x224: Int, x225: Int, x226: Int, x227: Int, x228: String, x229: Double) = {
-  val x6367 = SEntry9_ISSSSSSDD(x222, "", "", "", "", "", "", -1.0, -1.0)
-  val x232 = x2631.get(0, x6367)
-  val x6370 = x232._9
-  val x6371 = x6370.+(x229)
-  x232._9_=(x6371)
-  x2631.update(x232)
-  val x6374 = SEntry11_IISSSSSSDDI(x223, x222, "", "", "", "", "", "", -1.0, -1.0, -1)
-  val x237 = x2957.get(0, x6374)
-  val x6377 = x237._10
-  val x6378 = x6377.+(x229)
-  x237._10_=(x6378)
-  x2957.update(x237)
-  var x6381: SEntry21_IIISSSSSSSSSTSDDDDIIS = null
-  val x241 = x224.>(0)
-  if(x241) 
-  {
-    val x6384 = new ArrayBuffer[SEntry21_IIISSSSSSSSSTSDDDDIIS]()
-    val x6386 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, x226, x225, "", "", x228, "", "", "", "", "", "", null, "", -1.0, -1.0, -1.0, -1.0, -1, -1, "")
-    val x247 = { x245: SEntry21_IIISSSSSSSSSTSDDDDIIS => {
-        x6384.append(x245)
-        ()
-      }
-    }
-    x3189.slice(1, x6386, x247)
-    val x249 = x6384.size
-    val x250 = x249./(2)
-    var x251: Int = x250
-    val x252 = x6384.size
-    val x253 = x252.%(2)
-    val x254 = x253.==(0)
-    if(x254) 
-    {
-      val x255 = x251
-      val x256 = x255.-(1)
-      x251 = x256
-      ()
-    }
-    else
-    {
-      ()
-    }
-    
-    val x265 = { (x259: SEntry21_IIISSSSSSSSSTSDDDDIIS, x260: SEntry21_IIISSSSSSSSSTSDDDDIIS) => {
-        val x6495 = x259._4
-        val x6496 = x260._4
-        val x263 = x6495.compareToIgnoreCase(x6496)
-        val x264 = x263.<(0)
-        x264
-      }
-    }
-    val x266 = x6384.sortWith(x265)
-    val x267 = x251
-    val x268 = x266.apply(x267)
-    x6381 = x268
-    ()
-  }
-  else
-  {
-    val x6404 = SEntry21_IIISSSSSSSSSTSDDDDIIS(x227, x226, x225, "", "", "", "", "", "", "", "", "", null, "", -1.0, -1.0, -1.0, -1.0, -1, -1, "")
-    val x272 = x3189.get(0, x6404)
-    x6381 = x272
-    ()
-  }
-  
-  val x275 = x6381
-  val x6409 = x275._21
-  var x277: String = x6409
-  val x278 = x6381
-  val x6412 = x278._14
-  val x280 = x6412.contains("BC")
-  if(x280) 
-  {
-    val x281 = x6381
-    val x6416 = x281._1
-    val x283 = x277
-    val x285 = "%d %d %d %d %d $%f %s | %s".format(x6416,x226,x225,x223,x222,x229,x220,x283)
-    x277 = x285
-    val x287 = x277
-    val x288 = x287.length
-    val x289 = x288.>(500)
-    if(x289) 
-    {
-      val x290 = x277
-      val x291 = x290.substring(0, 500)
-      x277 = x291
-      ()
-    }
-    else
-    {
-      ()
-    }
-    
-    val x294 = x6381
-    val x6429 = x294._17
-    val x6430 = x6429.+(x229)
-    x294._17_=(x6430)
-    val x296 = x6381
-    val x297 = x277
-    x296._21_=(x297)
-    ()
-  }
-  else
-  {
-    val x299 = x6381
-    val x6436 = x299._17
-    val x6437 = x6436.+(x229)
-    x299._17_=(x6437)
-    ()
-  }
-  
-  val x302 = x6381
-  x3189.update(x302)
-  val x6441 = x232._2
-  val x6442 = x237._3
-  val x306 = x6441.length
-  val x307 = x306.>(10)
-  val x309 = if(x307) 
-  {
-    val x308 = x6441.substring(0, 10)
-    x308
-  }
-  else
-  {
-    x6441
-  }
-  
-  val x310 = x309.+("    ")
-  val x311 = x6442.length
-  val x312 = x311.>(10)
-  val x314 = if(x312) 
-  {
-    val x313 = x6442.substring(0, 10)
-    x313
-  }
-  else
-  {
-    x6442
-  }
-  
-  val x315 = x310.+(x314)
-  val x316 = x6381
-  val x6454 = x316._1
-  val x6456 = SEntry8_IIIIITDS(x6454, x226, x225, x223, x222, x220, x229, x315)
-  x2590.insert(x6456)
-  1
-}
-}
-class NewOrderTx(x2511: Store[SEntry3_III], x2590: Store[SEntry8_IIIIITDS], x2631: Store[SEntry9_ISSSSSSDD], x2671: Store[SEntry5_IISDS], x2895: Store[SEntry8_IIIITIIB], x2957: Store[SEntry11_IISSSSSSDDI], x3036: Store[SEntry10_IIIIIITIDS], x3189: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x3249: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double]) => Int) {
-def apply(x321: Boolean, x322: Date, x323: Int, x324: Int, x325: Int, x326: Int, x327: Int, x328: Int, x329: Array[Int], x330: Array[Int], x331: Array[Int], x332: Array[Double], x333: Array[String], x334: Array[Int], x335: Array[String], x336: Array[Double]) = {
-  if(x321) 
-  {
-    val x338 = "Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(x324,x325,x326)
-    println(x338)
-    ()
-  }
-  else
-  {
-    ()
-  }
-  
-  var x341: Int = 0
-  var x342: Boolean = false
-  val x343 = new Array[String](x327)
-  var x344: Boolean = true
-  while({
-    val x345 = x341
-    val x346 = x345.<(x327)
-    val x348 = x346.&&({
-      val x347 = x344
-      x347
-    })
-    x348
-  })
-  {
-    val x349 = x341
-    val x350 = x329.apply(x349)
-    val x6671 = SEntry5_IISDS(x350, -1, "", -1.0, "")
-    val x353 = x2671.get(0, x6671)
-    val x354 = x353.==(null)
-    if(x354) 
-    {
-      x344 = false
-      ()
-    }
-    else
-    {
-      val x356 = x341
-      val x6678 = x353._3
-      x333.update(x356, x6678)
-      val x359 = x341
-      val x6681 = x353._4
-      x332.update(x359, x6681)
-      val x362 = x341
-      val x6684 = x353._5
-      x343.update(x362, x6684)
-      ()
-    }
-    
-    val x366 = x341
-    val x367 = x366.+(1)
-    x341 = x367
-    ()
-  }
-  val x370 = x344
-  if(x370) 
-  {
-    val x6691 = SEntry21_IIISSSSSSSSSTSDDDDIIS(x326, x325, x324, "", "", "", "", "", "", "", "", "", null, "", -1.0, -1.0, -1.0, -1.0, -1, -1, "")
-    val x373 = x3189.get(0, x6691)
-    val x6694 = SEntry9_ISSSSSSDD(x324, "", "", "", "", "", "", -1.0, -1.0)
-    val x376 = x2631.get(0, x6694)
-    val x6697 = SEntry11_IISSSSSSDDI(x325, x324, "", "", "", "", "", "", -1.0, -1.0, -1)
-    val x379 = x2957.get(0, x6697)
-    val x6700 = x379._11
-    val x6701 = x379._11
-    val x6702 = x6701.+(1)
-    x379._11_=(x6702)
-    x2957.update(x379)
-    val x383 = x328.>(0)
-    val x6707 = SEntry8_IIIITIIB(x6700, x325, x324, x326, x322, -1, x327, x383)
-    x2895.insert(x6707)
-    val x6710 = SEntry3_III(x6700, x325, x324)
-    x2511.insert(x6710)
-    var x390: Double = 0.0
-    x341 = 0
-    while({
-      val x392 = x341
-      val x393 = x392.<(x327)
-      x393
-    })
-    {
-      val x394 = x341
-      val x395 = x330.apply(x394)
-      val x396 = x341
-      val x397 = x329.apply(x396)
-      val x398 = x341
-      val x399 = x331.apply(x398)
-      val x6723 = SEntry17_IIISSSSSSSSSSIIIS(x397, x395, -1, "", "", "", "", "", "", "", "", "", "", -1, -1, -1, "")
-      val x401 = x3249.get(0, x6723)
-      val x402 = x325.==(1)
-      val x429 = if(x402) 
+    override def cmp(x4671 : SEntry8_IIIITIIB , x4672 : SEntry8_IIIITIIB) = {
+      val x4673 = x936.apply(x4671)
+      val x4674 = x936.apply(x4672)
+      val x4677 = if((x4673.>(x4674))) 
       {
-        val x6727 = x401._4
-        x6727
+        1
       }
       else
       {
-        val x404 = x325.==(2)
-        val x428 = if(x404) 
+        -1
+      }
+      
+      (if((x4673.==(x4674))) 0 else x4677)
+    }
+  }
+  val x7988 = SEntry10_IIIIIITIDS(-1, -1, -1, -1, -1, -1, null, -1, -1.0, null)
+  val x8191 = SEntry9_ISSSSSSDD(-1, null, null, null, null, null, null, -1.0, -1.0)
+  val x8102 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null)
+  val x7702 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null)
+  val x8521 = SEntry17_IIISSSSSSSSSSIIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, -1, -1, -1, null)
+  val x8494 = SEntry9_ISSSSSSDD(-1, null, null, null, null, null, null, -1.0, -1.0)
+  val x8021 = SEntry17_IIISSSSSSSSSSIIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, -1, -1, -1, null)
+  val x8196 = SEntry11_IISSSSSSDDI(-1, -1, null, null, null, null, null, null, -1.0, -1.0, -1)
+  val x8206 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null)
+  val x8471 = SEntry5_IISDS(-1, -1, null, -1.0, null)
+  val x7678 = SEntry3_III(-1, -1, -1)
+  val x7976 = SEntry11_IISSSSSSDDI(-1, -1, null, null, null, null, null, null, -1.0, -1.0, -1)
+  val x8491 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null)
+  val x7698 = SEntry10_IIIIIITIDS(-1, -1, -1, -1, -1, -1, null, -1, -1.0, null)
+  val x8084 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null)
+  val x8497 = SEntry11_IISSSSSSDDI(-1, -1, null, null, null, null, null, null, -1.0, -1.0, -1)
+  val x7689 = SEntry8_IIIITIIB(-1, -1, -1, -1, null, -1, -1, false)
+  val x8224 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null)
+  class DeliveryTx(x4373: Store[SEntry3_III], x4452: Store[SEntry8_IIIIITDS], x4493: Store[SEntry9_ISSSSSSDD], x4533: Store[SEntry5_IISDS], x4757: Store[SEntry8_IIIITIIB], x4819: Store[SEntry11_IISSSSSSDDI], x4898: Store[SEntry10_IIIIIITIDS], x5051: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x5111: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int) => Int) {
+    def apply(x10: Boolean, x11: Date, x12: Int, x13: Int) =     {
+      val x14 = new Array[Int](10)
+      var x15: Int = 1
+      while({
+        val x16 = x15
+        (x16.<=(10))
+      })
+      {
+        val x22 = x15
+        x7678._2_=(x22)
+        x7678._3_=(x12)
+        val x10899 = x920.get(x7678)
+        if((x10899.!=(null))) 
         {
-          val x6730 = x401._5
-          x6730
+          val x7683 = x10899._1
+          val x29 = x15
+          x14.update((x29.-(1)), x7683)
+          x4373.delete(x10899)
+          val x33 = x15
+          x7689._1_=(x7683)
+          x7689._2_=(x33)
+          x7689._3_=(x12)
+          val x10912 = x942.get(x7689)
+          val x7692 = x10912._4
+          x10912._6_=(x13)
+          x4757.update(x10912)
+          var x40: Double = 0.0
+          val x41 = x15
+          x7698._1_=(x7683)
+          x7698._2_=(x41)
+          x7698._3_=(x12)
+          x953.slice(x7698, ({ x44: SEntry10_IIIIIITIDS => {
+              x44._7_=(x11)
+              val x46 = x40
+              val x7800 = x44._9
+              x40 = (x46.+(x7800))
+              x4898.update(x44)
+              ()
+            }
+          }))
+          val x53 = x15
+          x7702._1_=(x7692)
+          x7702._2_=(x53)
+          x7702._3_=(x12)
+          val x10935 = x958.get(x7702)
+          val x56 = x40
+          x10935._17 +=(x56)
+          x10935._20 +=(1)
+          x5051.update(x10935)
+          ()
         }
         else
         {
-          val x406 = x325.==(3)
-          val x427 = if(x406) 
+          val x60 = x15
+          x14.update((x60.-(1)), 0)
+          ()
+        }
+        
+        val x64 = x15
+        x15 = (x64.+(1))
+        ()
+      }
+      if(x10) 
+      {
+        val x68 = "\n+---------------------------- DELIVERY ---------------------------+\n Date: ".+(x11)
+        val x69 = x68.+("\n\n Warehouse: ")
+        val x70 = x69.+(x12)
+        val x71 = x70.+("\n Carrier:   ")
+        val x72 = x71.+(x13)
+        val x73 = x72.+("\n\n Delivered Orders\n")
+        var x74: String = x73
+        var x75: Int = 0
+        var x76: Int = 1
+        while({
+          val x77 = x76
+          (x77.<=(10))
+        })
+        {
+          val x79 = x76
+          val x81 = x14.apply((x79.-(1)))
+          if((x81.>=(0))) 
           {
-            val x6733 = x401._6
-            x6733
-          }
-          else
-          {
-            val x408 = x325.==(4)
-            val x426 = if(x408) 
+            val x83 = x74
+            val x84 = x83.+("  District ")
+            val x85 = x76
+            val x87 = if((x85.<(10))) 
             {
-              val x6736 = x401._7
-              x6736
+              " "
             }
             else
             {
-              val x410 = x325.==(5)
-              val x425 = if(x410) 
+              ""
+            }
+            
+            val x88 = x84.+(x87)
+            val x89 = x76
+            val x90 = x88.+(x89)
+            val x91 = x90.+(": Order number ")
+            val x92 = x76
+            val x94 = x14.apply((x92.-(1)))
+            val x95 = x91.+(x94)
+            val x96 = x95.+(" was delivered.\n")
+            x74 = x96
+            ()
+          }
+          else
+          {
+            val x98 = x74
+            val x99 = x98.+("  District ")
+            val x100 = x76
+            val x102 = if((x100.<(10))) 
+            {
+              " "
+            }
+            else
+            {
+              ""
+            }
+            
+            val x103 = x99.+(x102)
+            val x104 = x76
+            val x105 = x103.+(x104)
+            val x106 = x105.+(": No orders to be delivered.\n")
+            x74 = x106
+            val x108 = x75
+            x75 = (x108.+(1))
+            ()
+          }
+          
+          val x112 = x76
+          x76 = (x112.+(1))
+          ()
+        }
+        val x116 = x74
+        val x117 = x116.+("+-----------------------------------------------------------------+\n\n")
+        x74 = x117
+        val x119 = x74
+        println(x119)
+        ()
+      }
+      else
+      {
+        ()
+      }
+      
+      1
+    }
+  }
+  class StockLevelTx(x4373: Store[SEntry3_III], x4452: Store[SEntry8_IIIIITDS], x4493: Store[SEntry9_ISSSSSSDD], x4533: Store[SEntry5_IISDS], x4757: Store[SEntry8_IIIITIIB], x4819: Store[SEntry11_IISSSSSSDDI], x4898: Store[SEntry10_IIIIIITIDS], x5051: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x5111: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int) => Int) {
+    def apply(x122: Boolean, x123: Date, x124: Int, x125: Int, x126: Int, x127: Int) =     {
+      x7976._1_=(x126)
+      x7976._2_=(x125)
+      val x11114 = x949.get(x7976)
+      val x7979 = x11114._11
+      var x133: Int = (x7979.-(20))
+      val x134 = Set.apply[Int]()
+      while({
+        val x135 = x133
+        (x135.<(x7979))
+      })
+      {
+        val x137 = x133
+        x7988._1_=(x137)
+        x7988._2_=(x126)
+        x7988._3_=(x125)
+        x953.slice(x7988, ({ x140: SEntry10_IIIIIITIDS => {
+            val x8020 = x140._5
+            x8021._1_=(x8020)
+            x8021._2_=(x125)
+            val x11132 = x962.get(x8021)
+            val x8023 = x11132._3
+            if((x8023.<(x127))) 
+            {
+              val x146 = x134.+=(x8020)
+              ()
+            }
+            else
+            {
+              ()
+            }
+            
+            ()
+          }
+        }))
+        val x150 = x133
+        x133 = (x150.+(1))
+        ()
+      }
+      val x154 = x134.size
+      if(x122) 
+      {
+        val x155 = "\n+-------------------------- STOCK-LEVEL --------------------------+\n Warehouse: ".+(x125)
+        val x156 = x155.+("\n District:  ")
+        val x157 = x156.+(x126)
+        val x158 = x157.+("\n\n Stock Level Threshold: ")
+        val x159 = x158.+(x127)
+        val x160 = x159.+("\n Low Stock Count:       ")
+        val x161 = x160.+(x154)
+        val x162 = x161.+("\n+-----------------------------------------------------------------+\n\n")
+        println(x162)
+        ()
+      }
+      else
+      {
+        ()
+      }
+      
+      1
+    }
+  }
+  class OrderStatusTx(x4373: Store[SEntry3_III], x4452: Store[SEntry8_IIIIITDS], x4493: Store[SEntry9_ISSSSSSDD], x4533: Store[SEntry5_IISDS], x4757: Store[SEntry8_IIIITIIB], x4819: Store[SEntry11_IISSSSSSDDI], x4898: Store[SEntry10_IIIIIITIDS], x5051: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x5111: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, String) => Int) {
+    def apply(x165: Boolean, x166: Date, x167: Int, x168: Int, x169: Int, x170: Int, x171: Int, x172: String) =     {
+      var x8079: SEntry21_IIISSSSSSSSSTSDDDDIIS = null
+      if((x170.>(0))) 
+      {
+        val x8082 = new ArrayBuffer[SEntry21_IIISSSSSSSSSTSDDDDIIS]()
+        x8084._2_=(x169)
+        x8084._3_=(x168)
+        x8084._6_=(x172)
+        x959.slice(x8084, ({ x178: SEntry21_IIISSSSSSSSSTSDDDDIIS => {
+            x8082.append(x178)
+            ()
+          }
+        }))
+        val x182 = x8082.size
+        var x184: Int = (x182./(2))
+        val x185 = x8082.size
+        if(((x185.%(2)).==(0))) 
+        {
+          val x188 = x184
+          x184 = (x188.-(1))
+          ()
+        }
+        else
+        {
+          ()
+        }
+        
+        val x199 = x8082.sortWith(({ (x192: SEntry21_IIISSSSSSSSSTSDDDDIIS, x193: SEntry21_IIISSSSSSSSSTSDDDDIIS) => {
+            val x8134 = x192._4
+            val x8135 = x193._4
+            val x196 = x8134.compareToIgnoreCase(x8135)
+            (x196.<(0))
+          }
+        }))
+        val x200 = x184
+        val x201 = x199.apply(x200)
+        x8079 = x201
+        ()
+      }
+      else
+      {
+        x8102._1_=(x171)
+        x8102._2_=(x169)
+        x8102._3_=(x168)
+        val x11230 = x958.get(x8102)
+        x8079 = x11230
+        ()
+      }
+      
+      val x208 = x8079
+      val x8107 = x208._3
+      val x215 = GenericEntry.apply("SteSampleSEntry", 2, 3, 4, x169, x168, x8107)
+      var x218: Int = 0
+      1
+    }
+  }
+  class PaymentTx(x4373: Store[SEntry3_III], x4452: Store[SEntry8_IIIIITDS], x4493: Store[SEntry9_ISSSSSSDD], x4533: Store[SEntry5_IISDS], x4757: Store[SEntry8_IIIITIIB], x4819: Store[SEntry11_IISSSSSSDDI], x4898: Store[SEntry10_IIIIIITIDS], x5051: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x5111: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double) => Int) {
+    def apply(x219: Boolean, x220: Date, x221: Int, x222: Int, x223: Int, x224: Int, x225: Int, x226: Int, x227: Int, x228: String, x229: Double) =     {
+      x8191._1_=(x222)
+      val x11283 = x931.get(x8191)
+      x11283._9 +=(x229)
+      x4493.update(x11283)
+      x8196._1_=(x223)
+      x8196._2_=(x222)
+      val x11289 = x949.get(x8196)
+      x11289._10 +=(x229)
+      x4819.update(x11289)
+      var x8201: SEntry21_IIISSSSSSSSSTSDDDDIIS = null
+      if((x224.>(0))) 
+      {
+        val x8204 = new ArrayBuffer[SEntry21_IIISSSSSSSSSTSDDDDIIS]()
+        x8206._2_=(x226)
+        x8206._3_=(x225)
+        x8206._6_=(x228)
+        x959.slice(x8206, ({ x245: SEntry21_IIISSSSSSSSSTSDDDDIIS => {
+            x8204.append(x245)
+            ()
+          }
+        }))
+        val x249 = x8204.size
+        var x251: Int = (x249./(2))
+        val x252 = x8204.size
+        if(((x252.%(2)).==(0))) 
+        {
+          val x255 = x251
+          x251 = (x255.-(1))
+          ()
+        }
+        else
+        {
+          ()
+        }
+        
+        val x266 = x8204.sortWith(({ (x259: SEntry21_IIISSSSSSSSSTSDDDDIIS, x260: SEntry21_IIISSSSSSSSSTSDDDDIIS) => {
+            val x8307 = x259._4
+            val x8308 = x260._4
+            val x263 = x8307.compareToIgnoreCase(x8308)
+            (x263.<(0))
+          }
+        }))
+        val x267 = x251
+        val x268 = x266.apply(x267)
+        x8201 = x268
+        ()
+      }
+      else
+      {
+        x8224._1_=(x227)
+        x8224._2_=(x226)
+        x8224._3_=(x225)
+        val x11329 = x958.get(x8224)
+        x8201 = x11329
+        ()
+      }
+      
+      val x275 = x8201
+      val x8229 = x275._21
+      var x277: String = x8229
+      val x278 = x8201
+      val x8232 = x278._14
+      val x280 = x8232.contains("BC")
+      if(x280) 
+      {
+        val x281 = x8201
+        val x8236 = x281._1
+        val x283 = x277
+        val x285 = "%d %d %d %d %d $%f %s | %s".format(x8236,x226,x225,x223,x222,x229,x220,x283)
+        x277 = x285
+        val x287 = x277
+        val x288 = x287.length
+        if((x288.>(500))) 
+        {
+          val x290 = x277
+          val x291 = x290.substring(0, 500)
+          x277 = x291
+          ()
+        }
+        else
+        {
+          ()
+        }
+        
+        val x294 = x8201
+        x294._17 +=(x229)
+        val x296 = x8201
+        val x297 = x277
+        x296._21_=(x297)
+        ()
+      }
+      else
+      {
+        val x299 = x8201
+        x299._17 +=(x229)
+        ()
+      }
+      
+      val x302 = x8201
+      x5051.update(x302)
+      val x8257 = x11283._2
+      val x8258 = x11289._3
+      val x306 = x8257.length
+      val x309 = if((x306.>(10))) 
+      {
+        val x308 = x8257.substring(0, 10)
+        x308
+      }
+      else
+      {
+        x8257
+      }
+      
+      val x310 = x309.+("    ")
+      val x311 = x8258.length
+      val x314 = if((x311.>(10))) 
+      {
+        val x313 = x8258.substring(0, 10)
+        x313
+      }
+      else
+      {
+        x8258
+      }
+      
+      val x315 = x310.+(x314)
+      val x316 = x8201
+      val x8270 = x316._1
+      x4452.insert((SEntry8_IIIIITDS(x8270, x226, x225, x223, x222, x220, x229, x315)))
+      1
+    }
+  }
+  class NewOrderTx(x4373: Store[SEntry3_III], x4452: Store[SEntry8_IIIIITDS], x4493: Store[SEntry9_ISSSSSSDD], x4533: Store[SEntry5_IISDS], x4757: Store[SEntry8_IIIITIIB], x4819: Store[SEntry11_IISSSSSSDDI], x4898: Store[SEntry10_IIIIIITIDS], x5051: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x5111: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double]) => Int) {
+    def apply(x321: Boolean, x322: Date, x323: Int, x324: Int, x325: Int, x326: Int, x327: Int, x328: Int, x329: Array[Int], x330: Array[Int], x331: Array[Int], x332: Array[Double], x333: Array[String], x334: Array[Int], x335: Array[String], x336: Array[Double]) =     {
+      if(x321) 
+      {
+        val x338 = "Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(x324,x325,x326)
+        println(x338)
+        ()
+      }
+      else
+      {
+        ()
+      }
+      
+      var x341: Int = 0
+      var x342: Boolean = false
+      val x343 = new Array[String](x327)
+      var x344: Boolean = true
+      while({
+        val x345 = x341
+        ((x345.<(x327)).&&({
+          val x347 = x344
+          x347
+        }))
+      })
+      {
+        val x349 = x341
+        val x350 = x329.apply(x349)
+        x8471._1_=(x350)
+        val x11490 = x934.get(x8471)
+        if((x11490.==(null))) 
+        {
+          x344 = false
+          ()
+        }
+        else
+        {
+          val x356 = x341
+          val x8478 = x11490._3
+          x333.update(x356, x8478)
+          val x359 = x341
+          val x8481 = x11490._4
+          x332.update(x359, x8481)
+          val x362 = x341
+          val x8484 = x11490._5
+          x343.update(x362, x8484)
+          ()
+        }
+        
+        val x366 = x341
+        x341 = (x366.+(1))
+        ()
+      }
+      val x370 = x344
+      if(x370) 
+      {
+        x8491._1_=(x326)
+        x8491._2_=(x325)
+        x8491._3_=(x324)
+        val x11512 = x958.get(x8491)
+        x8494._1_=(x324)
+        val x11515 = x931.get(x8494)
+        x8497._1_=(x325)
+        x8497._2_=(x324)
+        val x11519 = x949.get(x8497)
+        val x8500 = x11519._11
+        x11519._11 +=(1)
+        x4819.update(x11519)
+        x4757.insert((SEntry8_IIIITIIB(x8500, x325, x324, x326, x322, -1, x327, (x328.>(0)))))
+        x4373.insert((SEntry3_III(x8500, x325, x324)))
+        var x390: Double = 0.0
+        x341 = 0
+        while({
+          val x392 = x341
+          (x392.<(x327))
+        })
+        {
+          val x394 = x341
+          val x395 = x330.apply(x394)
+          val x396 = x341
+          val x397 = x329.apply(x396)
+          val x398 = x341
+          val x399 = x331.apply(x398)
+          x8521._1_=(x397)
+          x8521._2_=(x395)
+          val x11543 = x962.get(x8521)
+          val x429 = if((x325.==(1))) 
+          {
+            val x8525 = x11543._4
+            x8525
+          }
+          else
+          {
+            val x428 = if((x325.==(2))) 
+            {
+              val x8528 = x11543._5
+              x8528
+            }
+            else
+            {
+              val x427 = if((x325.==(3))) 
               {
-                val x6739 = x401._8
-                x6739
+                val x8531 = x11543._6
+                x8531
               }
               else
               {
-                val x412 = x325.==(6)
-                val x424 = if(x412) 
+                val x426 = if((x325.==(4))) 
                 {
-                  val x6742 = x401._9
-                  x6742
+                  val x8534 = x11543._7
+                  x8534
                 }
                 else
                 {
-                  val x414 = x325.==(7)
-                  val x423 = if(x414) 
+                  val x425 = if((x325.==(5))) 
                   {
-                    val x6745 = x401._10
-                    x6745
+                    val x8537 = x11543._8
+                    x8537
                   }
                   else
                   {
-                    val x416 = x325.==(8)
-                    val x422 = if(x416) 
+                    val x424 = if((x325.==(6))) 
                     {
-                      val x6748 = x401._11
-                      x6748
+                      val x8540 = x11543._9
+                      x8540
                     }
                     else
                     {
-                      val x418 = x325.==(9)
-                      val x421 = if(x418) 
+                      val x423 = if((x325.==(7))) 
                       {
-                        val x6751 = x401._12
-                        x6751
+                        val x8543 = x11543._10
+                        x8543
                       }
                       else
                       {
-                        val x6752 = x401._13
-                        x6752
+                        val x422 = if((x325.==(8))) 
+                        {
+                          val x8546 = x11543._11
+                          x8546
+                        }
+                        else
+                        {
+                          val x421 = if((x325.==(9))) 
+                          {
+                            val x8549 = x11543._12
+                            x8549
+                          }
+                          else
+                          {
+                            val x8550 = x11543._13
+                            x8550
+                          }
+                          
+                          x421
+                        }
+                        
+                        x422
                       }
                       
-                      x421
+                      x423
                     }
                     
-                    x422
+                    x424
                   }
                   
-                  x423
+                  x425
                 }
                 
-                x424
+                x426
               }
               
-              x425
+              x427
             }
             
-            x426
+            x428
           }
           
-          x427
+          val x8551 = x11543._3
+          val x431 = x341
+          x334.update(x431, x8551)
+          val x8554 = x11512._14
+          val x434 = x8554.contains("original")
+          if((x434.&&({
+            val x8557 = x11543._17
+            val x436 = x8557.contains("original")
+            x436
+          }))) 
+          {
+            val x438 = x341
+            x335.update(x438, "B")
+            ()
+          }
+          else
+          {
+            val x440 = x341
+            x335.update(x440, "G")
+            ()
+          }
+          
+          x11543._3_=((x8551.-(x399)))
+          if((x8551.<=(x399))) 
+          {
+            x11543._3 +=(91)
+            ()
+          }
+          else
+          {
+            ()
+          }
+          
+          var x448: Int = 0
+          if((x395.!=(x324))) 
+          {
+            x448 = 1
+            ()
+          }
+          else
+          {
+            ()
+          }
+          
+          x5111.update(x11543)
+          val x8574 = x11512._16
+          val x8575 = x11515._8
+          val x8576 = x11519._9
+          val x456 = x341
+          val x457 = x332.apply(x456)
+          val x464 = (((x399.toDouble).*(x457)).*(((1.0.+(x8575)).+(x8576)))).*((1.0.-(x8574)))
+          val x465 = x341
+          x336.update(x465, x464)
+          val x467 = x390
+          x390 = (x467.+(x464))
+          val x470 = x341
+          x4898.insert((SEntry10_IIIIIITIDS(x8500, x325, x324, (x470.+(1)), x397, x395, null, x399, x464, x429)))
+          val x475 = x341
+          x341 = (x475.+(1))
+          ()
         }
-        
-        x428
-      }
-      
-      val x6753 = x401._3
-      val x431 = x341
-      x334.update(x431, x6753)
-      val x6756 = x373._14
-      val x434 = x6756.contains("original")
-      val x437 = x434.&&({
-        val x6759 = x401._17
-        val x436 = x6759.contains("original")
-        x436
-      })
-      if(x437) 
-      {
-        val x438 = x341
-        x335.update(x438, "B")
-        ()
-      }
-      else
-      {
-        val x440 = x341
-        x335.update(x440, "G")
-        ()
-      }
-      
-      val x443 = x6753.-(x399)
-      x401._3_=(x443)
-      val x445 = x6753.<=(x399)
-      if(x445) 
-      {
-        val x6770 = x401._3
-        val x6771 = x6770.+(91)
-        x401._3_=(x6771)
         ()
       }
       else
@@ -1747,52 +1194,8 @@ def apply(x321: Boolean, x322: Date, x323: Int, x324: Int, x325: Int, x326: Int,
         ()
       }
       
-      var x448: Int = 0
-      val x449 = x395.!=(x324)
-      if(x449) 
-      {
-        x448 = 1
-        ()
-      }
-      else
-      {
-        ()
-      }
-      
-      x3249.update(x401)
-      val x6778 = x373._16
-      val x6779 = x376._8
-      val x6780 = x379._9
-      val x456 = x341
-      val x457 = x332.apply(x456)
-      val x458 = x399.toDouble
-      val x459 = x458.*(x457)
-      val x460 = 1.0.+(x6779)
-      val x461 = x460.+(x6780)
-      val x462 = x459.*(x461)
-      val x463 = 1.0.-(x6778)
-      val x464 = x462.*(x463)
-      val x465 = x341
-      x336.update(x465, x464)
-      val x467 = x390
-      val x468 = x467.+(x464)
-      x390 = x468
-      val x470 = x341
-      val x471 = x470.+(1)
-      val x6798 = SEntry10_IIIIIITIDS(x6700, x325, x324, x471, x397, x395, null, x399, x464, x429)
-      x3036.insert(x6798)
-      val x475 = x341
-      val x476 = x475.+(1)
-      x341 = x476
-      ()
+      1
     }
-    ()
   }
-  else
-  {
-    ()
-  }
-  
-  1
-}
+
 }

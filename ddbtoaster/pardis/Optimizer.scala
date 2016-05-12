@@ -21,7 +21,7 @@ object Optimizer {
   var m3CompareMultiply = true
   var indexInline = true
   var codeMotion = true
-  var tmpVarHoist = false
+  var tmpVarHoist = true
   var refCounter = true
 }
 

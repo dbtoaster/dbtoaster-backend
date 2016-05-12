@@ -74,8 +74,8 @@ object TpccInMem {
     var ret = 0
     tpcc.init()
 
-      println("Using the properties file for configuration.")
-      ret = tpcc.runBenchmark(true, argv)
+    println("Using the properties file for configuration.")
+    ret = tpcc.runBenchmark(true, argv)
 
     /*  if ((argv.length % 2) == 0) {
         println("Using the command line arguments for configuration.")
@@ -182,7 +182,7 @@ class TpccInMem() {
 
   private var inputStream: InputStream = _
 
-  def activeTransactionChecker(counter:Int) = (Tpcc.activate_transaction == 1)
+  def activeTransactionChecker(counter: Int) = (Tpcc.activate_transaction == 1)
 
   def init() {
     logger.info("Loading properties from: " + PROPERTIESFILE)
@@ -195,7 +195,7 @@ class TpccInMem() {
     println("***************************************")
     println("****** Java TPC-C Load Generator ******")
     println("***************************************")
-    
+
     dbUser = properties.getProperty(USER)
     dbPassword = properties.getProperty(PASSWORD)
     numWare = Integer.parseInt(properties.getProperty(WAREHOUSECOUNT))
@@ -204,7 +204,7 @@ class TpccInMem() {
     measureTime = Integer.parseInt(properties.getProperty(DURATION))
     javaDriver = properties.getProperty(DRIVER)
     jdbcUrl = properties.getProperty(JDBCURL)
-    implVersionUnderTest = IN_MEMORY_IMPL_VERSION_UNDER_TEST
+    implVersionUnderTest = 100 // IN_MEMORY_IMPL_VERSION_UNDER_TEST
     val jdbcFetchSize = properties.getProperty("JDBCFETCHSIZE")
     if (jdbcFetchSize != null) {
       fetchSize = Integer.parseInt(jdbcFetchSize)
@@ -256,49 +256,49 @@ class TpccInMem() {
         i = i + 2
       }
     }
-    if(implVersionUnderTest == 1) {
+    if (implVersionUnderTest == 1) {
       newOrder = new ddbt.tpcc.tx1.NewOrder
       payment = new ddbt.tpcc.tx1.Payment
       orderStat = new ddbt.tpcc.tx1.OrderStatus
       delivery = new ddbt.tpcc.tx1.Delivery
       slev = new ddbt.tpcc.tx1.StockLevel
-    } else if(implVersionUnderTest == 2) {
+    } else if (implVersionUnderTest == 2) {
       newOrder = new ddbt.tpcc.tx2.NewOrder
       payment = new ddbt.tpcc.tx2.Payment
       orderStat = new ddbt.tpcc.tx2.OrderStatus
       delivery = new ddbt.tpcc.tx2.Delivery
       slev = new ddbt.tpcc.tx2.StockLevel
-    } else if(implVersionUnderTest == 3) {
+    } else if (implVersionUnderTest == 3) {
       newOrder = new ddbt.tpcc.tx3.NewOrder
       payment = new ddbt.tpcc.tx3.Payment
       orderStat = new ddbt.tpcc.tx3.OrderStatus
       delivery = new ddbt.tpcc.tx3.Delivery
       slev = new ddbt.tpcc.tx3.StockLevel
-    } else if(implVersionUnderTest == 4) {
+    } else if (implVersionUnderTest == 4) {
       newOrder = new ddbt.tpcc.tx4.NewOrder
       payment = new ddbt.tpcc.tx4.Payment
       orderStat = new ddbt.tpcc.tx4.OrderStatus
       delivery = new ddbt.tpcc.tx4.Delivery
       slev = new ddbt.tpcc.tx4.StockLevel
-    } else if(implVersionUnderTest == 5) {
+    } else if (implVersionUnderTest == 5) {
       newOrder = new ddbt.tpcc.tx5.NewOrder
       payment = new ddbt.tpcc.tx5.Payment
       orderStat = new ddbt.tpcc.tx5.OrderStatus
       delivery = new ddbt.tpcc.tx5.Delivery
       slev = new ddbt.tpcc.tx5.StockLevel
-    } else if(implVersionUnderTest == -1) {
+    } else if (implVersionUnderTest == -1) {
       newOrder = new NewOrderLMSImpl
       payment = new PaymentLMSImpl
       orderStat = new OrderStatusLMSImpl
       delivery = new DeliveryLMSImpl
       slev = new StockLevelLMSImpl
-    } else if(implVersionUnderTest == 100){
+    } else if (implVersionUnderTest == 100) {
       newOrder = new NewOrderSCImpl
       payment = new PaymentSCImpl
       orderStat = new OrderStatusSCImpl
       delivery = new DeliverySCImpl
       slev = new StockLevelSCImpl
-    }else{
+    } else {
       throw new RuntimeException("No in-memory implementation selected.")
     }
 
@@ -338,8 +338,8 @@ class TpccInMem() {
     }
     val tpmcArr = new Array[Float](TpccInMem.NUM_ITERATIONS)
     var iter = 0
-    while(iter < TpccInMem.NUM_ITERATIONS) {
-      
+    while (iter < TpccInMem.NUM_ITERATIONS) {
+
       RtHist.histInit()
       activate_transaction = 1
       for (i <- 0 until TRANSACTION_COUNT) {
@@ -374,19 +374,20 @@ class TpccInMem() {
       var SharedDataScala: TpccTable = null
       var SharedDataLMS: EfficientExecutor = null
       var SharedDataSC: SCExecutor = null
-      if(implVersionUnderTest > 0) {
-        if(implVersionUnderTest <100){
+      if (implVersionUnderTest > 0) {
+        if (implVersionUnderTest < 100) {
           SharedDataScala = new TpccTable
-          SharedDataScala.loadDataIntoMaps(javaDriver,jdbcUrl,dbUser,dbPassword)
+          SharedDataScala.loadDataIntoMaps(javaDriver, jdbcUrl, dbUser, dbPassword)
           logger.info(SharedDataScala.getAllMapsInfoStr)
           newOrder.setSharedData(SharedDataScala)
           payment.setSharedData(SharedDataScala)
           orderStat.setSharedData(SharedDataScala)
           slev.setSharedData(SharedDataScala)
-          delivery.setSharedData(SharedDataScala)}
-        else{
+          delivery.setSharedData(SharedDataScala)
+        }
+        else {
           SharedDataSC = new SCExecutor
-          SCDataLoader.loadDataIntoMaps(SharedDataSC,javaDriver,jdbcUrl,dbUser,dbPassword)
+          SCDataLoader.loadDataIntoMaps(SharedDataSC, javaDriver, jdbcUrl, dbUser, dbPassword)
           logger.info(SCDataLoader.getAllMapsInfoStr(SharedDataSC))
           newOrder.setSharedData(SharedDataSC)
           payment.setSharedData(SharedDataSC)
@@ -396,7 +397,7 @@ class TpccInMem() {
         }
       } else {
         SharedDataLMS = new EfficientExecutor
-        LMSDataLoader.loadDataIntoMaps(SharedDataLMS,javaDriver,jdbcUrl,dbUser,dbPassword)
+        LMSDataLoader.loadDataIntoMaps(SharedDataLMS, javaDriver, jdbcUrl, dbUser, dbPassword)
         logger.info(LMSDataLoader.getAllMapsInfoStr(SharedDataLMS))
         newOrder.setSharedData(SharedDataLMS)
         payment.setSharedData(SharedDataLMS)
@@ -424,7 +425,7 @@ class TpccInMem() {
         // val slev: IStockLevel = new ddbt.tpcc.tx.StockLevel(SharedDataScala)
         // val delivery: IDelivery = new ddbt.tpcc.tx.Delivery(SharedDataScala)
 
-        val worker = new TpccThread(i, port, 1, dbUser, dbPassword, numWare, numConn, javaDriver, jdbcUrl, 
+        val worker = new TpccThread(i, port, 1, dbUser, dbPassword, numWare, numConn, javaDriver, jdbcUrl,
           fetchSize, success, late, retry, failure, success2, late2, retry2, failure2, conn, newOrder, payment, orderStat, slev, delivery, activeTransactionChecker)
         executor.execute(worker)
 
@@ -449,7 +450,9 @@ class TpccInMem() {
       Thread.sleep(1000)
       counting_on = true
       val startTime = System.currentTimeMillis()
-      while ({(runTime = System.currentTimeMillis() - startTime); runTime} < measureTime * 1000) {
+      while ( {
+        (runTime = System.currentTimeMillis() - startTime); runTime
+      } < measureTime * 1000) {
         //println("Current execution time lapse: " + df.format(runTime / 1000f) + " seconds")
         try {
           Thread.sleep(1000)
@@ -461,7 +464,7 @@ class TpccInMem() {
       println("---------------------------------------------------")
       println("<Raw Results>")
       for (i <- 0 until TRANSACTION_COUNT) {
-        System.out.print("  |%s| sc:%d  lt:%d  rt:%d  fl:%d \n".format(TRANSACTION_NAME(i), success(i), late(i), 
+        System.out.print("  |%s| sc:%d  lt:%d  rt:%d  fl:%d \n".format(TRANSACTION_NAME(i), success(i), late(i),
           retry(i), failure(i)))
       }
       System.out.print(" in %f sec.\n".format(actualTestTime / 1000f))
@@ -479,7 +482,7 @@ class TpccInMem() {
         }
       }
       for (i <- 0 until TRANSACTION_COUNT) {
-        System.out.print("  |%s| sc:%d  lt:%d  rt:%d  fl:%d \n".format(TRANSACTION_NAME(i), success2_sum(i), 
+        System.out.print("  |%s| sc:%d  lt:%d  rt:%d  fl:%d \n".format(TRANSACTION_NAME(i), success2_sum(i),
           late2_sum(i), retry2_sum(i), failure2_sum(i)))
       }
       println("<Constraint Check> (all must be [OK])\n [transaction percentage]")
@@ -521,9 +524,9 @@ class TpccInMem() {
       System.out.print(" [response time (at least 90%% passed)]\n")
       for (n <- 0 until TRANSACTION_NAME.length) {
         f = 100f * success(n).toFloat / (success(n) + late(n)).toFloat
-        if (DEBUG) logger.debug("f: " + f + " success[" + n + "]: " + success(n) + " late[" + 
-          n + 
-          "]: " + 
+        if (DEBUG) logger.debug("f: " + f + " success[" + n + "]: " + success(n) + " late[" +
+          n +
+          "]: " +
           late(n))
         System.out.print("      %s: %f%% ".format(TRANSACTION_NAME(n), f))
         if (f >= 90f) {
@@ -546,8 +549,12 @@ class TpccInMem() {
       println(tpcm + " TpmC")
       System.out.print("\nSTOPPING THREADS\n")
       activate_transaction = 0
-      if(implVersionUnderTest > 0) {
-        logger.info(SharedDataScala.getAllMapsInfoStr)
+      if (implVersionUnderTest > 0) {
+        if (implVersionUnderTest < 100) {
+          logger.info(SharedDataScala.getAllMapsInfoStr)
+        }
+        else
+          logger.info(SCDataLoader.getAllMapsInfoStr(SharedDataSC))
       } else {
         logger.info(LMSDataLoader.getAllMapsInfoStr(SharedDataLMS))
         //logger.info("SharedDataLMS.x2.idxs = " + SharedDataLMS.x2.idxs)
@@ -563,7 +570,7 @@ class TpccInMem() {
     }
     val tpmcArrSorted = tpmcArr.sorted
     result = tpmcArrSorted.map(_.toLong)
-    println("TpmC<min,max,median> = (%.2f,%.2f,%.2f)".format(tpmcArrSorted(0),tpmcArrSorted(TpccInMem.NUM_ITERATIONS-1),tpmcArrSorted(TpccInMem.NUM_ITERATIONS/2)))
+    println("TpmC<min,max,median> = (%.2f,%.2f,%.2f)".format(tpmcArrSorted(0), tpmcArrSorted(TpccInMem.NUM_ITERATIONS - 1), tpmcArrSorted(TpccInMem.NUM_ITERATIONS / 2)))
     0
   }
 }

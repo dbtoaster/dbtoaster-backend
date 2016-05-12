@@ -23,6 +23,7 @@ trait OnlineOptimizations extends ObjectOpsOptimization with IfThenElseOptimizat
 
         (l,r) match{
           case (Constant(x), Constant(y)) => Constant(x*y)
+          case (Constant(-1L),y) => longUnary_-(y)
           case (Constant(1L), y) => y
           case (Constant(0L), y) => unit(0L)
           case (x, Constant(1L)) => x
@@ -35,6 +36,58 @@ trait OnlineOptimizations extends ObjectOpsOptimization with IfThenElseOptimizat
           case (Def(Conditional(c,Constant(1L),f)), y) => __ifThenElse(c,y,numeric_times(f,y))
           case (x, Def(Conditional(c,t,Constant(1L)))) => __ifThenElse(c,numeric_times(x,t),x)
           case (x, Def(Conditional(c,Constant(1L),f)))  => __ifThenElse(c,x,numeric_times(x,f))
+          case _ => super.numeric_times(lhs,rhs)
+        }
+      }
+      case DoubleType if lhs.tp == LongType =>{
+        val l = lhs.asInstanceOf[Rep[Long]]
+        val r = rhs.asInstanceOf[Rep[Double]]
+        implicit val tp = DoubleType.asInstanceOf[TypeRep[AnyVal]]
+        (l,r) match{
+          case (Constant(x), Constant(y)) => Constant(x*y)
+          case (Constant(-1L),y) => doubleUnary_-(y)
+          case (Constant(1L), y) => y
+          case (Constant(0L), y) => unit(0.0)
+//          case (x, Constant(1L)) => x
+//          case (x, Constant(0L)) => unit(0L)
+//          case (x, Def(Conditional(c,t,Constant(0L)))) => __ifThenElse(c,numeric_times(x,t),unit(0L))
+//          case (x, Def(Conditional(c,Constant(0L),f))) => __ifThenElse(c,unit(0L),numeric_times(x,f))
+          case (Def(Conditional(c,t,Constant(0L))), y) => __ifThenElse(c,numeric_times(t,y),unit(0.0))
+          case (Def(Conditional(c,Constant(0L),f)), y) => __ifThenElse(c,unit(0.0),numeric_times(f,y))
+          case (Def(Conditional(c,t,Constant(1L))), y) => __ifThenElse(c,numeric_times(t,y),y)
+          case (Def(Conditional(c,Constant(1L),f)), y) => __ifThenElse(c,y,numeric_times(f,y))
+          case (x, Def(Conditional(c,t,Constant(1L)))) => __ifThenElse(c,numeric_times(x,t),x)
+          case (x, Def(Conditional(c,Constant(1L),f)))  => __ifThenElse(c,x,numeric_times(x,f))
+          case _ => super.numeric_times(lhs,rhs)
+        }
+      }
+      case DoubleType if lhs.tp == DoubleType && rhs.tp == DoubleType =>{
+        val l = lhs.asInstanceOf[Rep[Double]]
+        val r = rhs.asInstanceOf[Rep[Double]]
+        implicit val tp = DoubleType.asInstanceOf[TypeRep[AnyVal]]
+        (l,r) match{
+          case (Constant(x), Constant(y)) => Constant(x*y)
+          case (Constant(-1.0),y) => doubleUnary_-(y)
+          case (Constant(1.0), y) => y
+          case (Constant(0.0), y) => unit(0.0)
+          case (x, Constant(1.0)) => x
+          case (x, Constant(0.0)) => unit(0.0)
+          case (x, Def(Conditional(c,t,Constant(0L)))) => __ifThenElse(c,numeric_times(x,t),unit(0.0))
+          case (x, Def(Conditional(c,t,Constant(0.0)))) => __ifThenElse(c,numeric_times(x,t),unit(0.0))
+          case (x, Def(Conditional(c,Constant(0L),f))) => __ifThenElse(c,unit(0.0),numeric_times(x,f))
+          case (x, Def(Conditional(c,Constant(0.0),f))) => __ifThenElse(c,unit(0.0),numeric_times(x,f))
+          case (Def(Conditional(c,t,Constant(0L))), y) => __ifThenElse(c,numeric_times(t,y),unit(0.0))
+          case (Def(Conditional(c,t,Constant(0.0))), y) => __ifThenElse(c,numeric_times(t,y),unit(0.0))
+          case (Def(Conditional(c,Constant(0L),f)), y) => __ifThenElse(c,unit(0.0),numeric_times(f,y))
+          case (Def(Conditional(c,Constant(0.0),f)), y) => __ifThenElse(c,unit(0.0),numeric_times(f,y))
+          case (Def(Conditional(c,t,Constant(1L))), y) => __ifThenElse(c,numeric_times(t,y),y)
+          case (Def(Conditional(c,t,Constant(1.0))), y) => __ifThenElse(c,numeric_times(t,y),y)
+          case (Def(Conditional(c,Constant(1L),f)), y) => __ifThenElse(c,y,numeric_times(f,y))
+          case (Def(Conditional(c,Constant(1.0),f)), y) => __ifThenElse(c,y,numeric_times(f,y))
+          case (x, Def(Conditional(c,t,Constant(1.0)))) => __ifThenElse(c,numeric_times(x,t),x)
+          case (x, Def(Conditional(c,t,Constant(1L)))) => __ifThenElse(c,numeric_times(x,t),x)
+          case (x, Def(Conditional(c,Constant(1L),f)))  => __ifThenElse(c,x,numeric_times(x,f))
+          case (x, Def(Conditional(c,Constant(1.0),f)))  => __ifThenElse(c,x,numeric_times(x,f))
           case _ => super.numeric_times(lhs,rhs)
         }
       }

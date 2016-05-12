@@ -16,13 +16,20 @@ class SampleEntryHoister(override val IR: StoreDSL) extends RuleBasedTransformer
   val tmpVars = collection.mutable.HashMap[Sym[_], PardisStruct[_]]()
 
   def isSampleRecord(elems: Seq[PardisStructArg]) = elems.foldLeft(false)((res, arg) => {
-      val tp = arg.init.tp
-      res || (arg.init == nullValue(tp))
-    })
-  rewrite += statement {
+    val tp = arg.init.tp
+    res || (arg.init == nullValue(tp))
+  })
+
+  analysis += statement {
     case sym -> (ent@PardisStruct(tag, elems, methods)) if isSampleRecord(elems) => {
       val elems_ = elems.map(arg => PardisStructArg(arg.name, arg.mutable, nullValue(arg.init.tp)))
       tmpVars += sym -> PardisStruct(tag, elems_, methods)(ent.tp)
+      ()
+    }
+    case sym -> (StoreInsert(_, entry:Sym[_])) => tmpVars.remove(entry);()
+  }
+  rewrite += statement {
+    case sym -> (ent@PardisStruct(tag, elems, methods)) if tmpVars.contains(sym) => {
       val entry = sym.asInstanceOf[Rep[SEntry]]
       elems.foreach(arg => {
         implicit val tp = arg.init.tp
