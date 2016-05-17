@@ -55,7 +55,7 @@ class Optimizer(val IR: StoreDSL) {
 
   if(Optimizer.indexLookupFusion || Optimizer.indexLookupPartialFusion)
     pipeline += new IndexLookupFusion(IR)
-      pipeline += TreeDumper(false)
+//      pipeline += TreeDumper(false)
   if (Optimizer.indexInline)
     pipeline += new IndexInliner(IR)
   pipeline += DCE
