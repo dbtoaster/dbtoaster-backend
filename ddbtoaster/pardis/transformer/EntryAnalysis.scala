@@ -55,18 +55,18 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
   analysis += statement {
     //      case sym -> (GenericEntryApplyObject(_, _)) => EntryTypes += sym -> EntryTypeRef; ()
 
-    case sym -> (StoreGet(store, _, key@Def(SteNewSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
-    case sym -> (StoreGet(store, _, key@Def(SteSampleSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
-    case sym -> (StoreGet(store, _, key@Def(GenericEntryApplyObject(_, _)), _)) => add(key, store); add(sym, store); ()
+    case sym -> (StoreGetCopy(store, _, key@Def(SteNewSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
+    case sym -> (StoreGetCopy(store, _, key@Def(SteSampleSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
+    case sym -> (StoreGetCopy(store, _, key@Def(GenericEntryApplyObject(_, _)), _)) => add(key, store); add(sym, store); ()
 
     case sym -> (StoreInsert(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
     case sym -> (StoreInsert(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
 
-    case sym -> (StoreUpdate(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
-    case sym -> (StoreUpdate(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
+    case sym -> (StoreUpdateCopy(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+    case sym -> (StoreUpdateCopy(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
 
 
-    case sym -> (StoreDelete1(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+    case sym -> (StoreDeleteCopy(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
 
 
     case sym -> (StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMaxObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
@@ -280,6 +280,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val ssym = newS.asInstanceOf[Sym[_]]
       //System.err.println(s"Changed ops for $sym to $ssym  with new OPS as $ops_")
       entryTypes += ssym -> TypeVar(sym)
+      ssym.attributes += sym.attributes.get(IndexesFlag).get
       ssym.attributes += entry
       newS
     }

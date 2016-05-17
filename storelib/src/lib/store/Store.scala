@@ -323,8 +323,26 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
       i += 1;
     }
   }
+  def updateCopyDependent(e: E): Unit = time("update") {
+    if (e == null) return;
+    var i = 0;
+    val ref = idxs(0).get(e)
+    while (i < n) {
+      if (idxs(i) != null) idxs(i).updateCopyDependent(e, ref);
+      i += 1;
+    }
+  }
+  def updateCopy (e: E): Unit = time("update") {
+    if (e == null) return;
+    var i = 0;
+    while (i < n) {
+      if (idxs(i) != null) idxs(i).updateCopy(e, idxs(0));
+      i += 1;
+    }
+  }
 
   // e already in the Store, update in foreach is _NOT_ supported
+
   def delete(e: E): Unit = time("delete") {
     if (e == null) return;
     var i = 0;
@@ -333,11 +351,36 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
       i += 1;
     }
   }
-
+  def deleteCopy(e: E): Unit = time("delete") {
+    if (e == null) return;
+    var i = 0;
+    while (i < n) {
+      if (idxs(i) != null) idxs(i).deleteCopy(e, idxs(0));
+      i += 1;
+    }
+  }
+  def deleteCopyDependent(e: E): Unit = time("delete") {
+    if (e == null) return;
+    var i = 0;
+    val ref= idxs(0).get(e)
+    while (i < n) {
+      if (idxs(i) != null) idxs(i).deleteCopyDependent(ref);
+      i += 1;
+    }
+  }
   // e already in the Store
   def get(idx: Int, key: E): E = time("get", idx) {
     if (key == null) return key;
     idxs(idx).get(key)
+  }
+
+  def getCopy(idx: Int, key: E): E = time("getCopy", idx) {
+    if (key == null) return key;
+    idxs(idx).getCopy(key)
+  }
+  def getCopyDependent(idx: Int, key: E): E = {
+    if (key == null) return key;
+    idxs(idx).getCopyDependent(key)
   }
 
   def foreach(f: E => Unit): Unit = time("foreach") {

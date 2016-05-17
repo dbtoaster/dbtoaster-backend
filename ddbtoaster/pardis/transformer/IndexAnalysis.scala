@@ -75,7 +75,7 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
   import IR._
 
   analysis += rule {
-    case StoreGet(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
+    case StoreGetCopy(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       idxes.primary = cols.map({ case Constant(v) => v })
       sym.attributes += idxes
@@ -232,7 +232,7 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
   rewrite += rule {
     case AggregatorResult(agg) => {
       val t = aggResultMap(agg)
-      StoreGet(t._1.asInstanceOf[Rep[Store[Entry]]], t._2, t._3.asInstanceOf[Rep[Entry]], __liftSeq(List(unit(-1))))
+      StoreGetCopy(t._1.asInstanceOf[Rep[Store[Entry]]], t._2, t._3.asInstanceOf[Rep[Entry]], __liftSeq(List(unit(-1))))
     }
   }
   rewrite += rule {

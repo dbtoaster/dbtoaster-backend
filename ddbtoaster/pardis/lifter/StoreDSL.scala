@@ -35,21 +35,17 @@ object EntryIRs extends Base {
   implicit val typeEntry: TypeRep[Entry] = EntryType
 }
 
+case class StructFieldDecr[T: PardisType](struct: Expression[Any], index: String, rhs: Expression[T]) extends FunctionNode[Unit](Some(struct), s"${index} -=", List(List(rhs))) {
+  override def curriedConstructor = (x: Expression[Any]) => { (r: Expression[T]) => copy[T](x, index, r) }
+  override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
+}
+
+case class StructFieldIncr[T: PardisType](struct: Expression[Any], index: String, rhs: Expression[T]) extends FunctionNode[Unit](Some(struct), s"${index} +=", List(List(rhs))) {
+  override def curriedConstructor = (x: Expression[Any]) => { (r: Expression[T]) => copy[T](x, index, r) }
+  override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
+}
 
 trait StoreDSLOptimized extends StoreDSL with OnlineOptimizations {
-
-
-  case class StructFieldDecr[T: PardisType](struct: Expression[Any], index: String, rhs: Expression[T]) extends FunctionNode[Unit](Some(struct), s"${index} -=", List(List(rhs))) {
-    override def curriedConstructor = (x: Expression[Any]) => { (r: Expression[T]) => copy[T](x, index, r) }
-
-    override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
-  }
-
-  case class StructFieldIncr[T: PardisType](struct: Expression[Any], index: String, rhs: Expression[T]) extends FunctionNode[Unit](Some(struct), s"${index} +=", List(List(rhs))) {
-    override def curriedConstructor = (x: Expression[Any]) => { (r: Expression[T]) => copy[T](x, index, r) }
-
-    override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
-  }
 
   override def fieldIncr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]) = StructFieldIncr(struct, index, rhs)
 
@@ -227,7 +223,7 @@ trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent wi
       __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {
         currentEnt +=(n, entVal)
         val currentEntVal = currentEnt.get(n)(lastMan)
-        __ifThenElse(infix_==(currentEntVal, unit(zero(lastMan))), map.delete(currentEnt), unit(())) // question ???? changed delete - stDelete
+        __ifThenElse(infix_==(currentEntVal, unit(zero(lastMan))), map.deleteCopy(currentEnt), map.updateCopy(currentEnt)) // question ???? changed delete - stDelete
       })
       ///////
     })
@@ -247,12 +243,12 @@ trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent wi
     var idx = 0
     if (tmp) {
       // this never happens in practice
-      __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), currentEnt.update(n, entVal)) // same
+      __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {currentEnt.update(n, entVal); map.updateCopy(currentEnt)}) // same
     } else {
       __ifThenElse(infix_==(entVal, unit(zero(lastMan))), {
-        __ifThenElse(infix_==(currentEnt, unit(null)), unit(()), map.delete(currentEnt))
+        __ifThenElse(infix_==(currentEnt, unit(null)), unit(()), map.deleteCopy(currentEnt))
       }, {
-        __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), currentEnt.update(n, entVal)) // same
+        __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {currentEnt.update(n, entVal); map.updateCopy(currentEnt)}) // same
       })
     }
   }
@@ -260,7 +256,7 @@ trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent wi
   def steGet[E <: Entry : TypeRep, T: TypeRep](x: Rep[E], i: Int): Rep[T] = //SteGet[E, T](x, i)
     x.get[T](unit(i))
 
-  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], keyCols: Seq[Int], key: Rep[E]): Rep[E] = x.get(unit(0), key, keyCols.map(unit(_)): _*)
+  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], keyCols: Seq[Int], key: Rep[E]): Rep[E] = x.getCopy(unit(0), key, keyCols.map(unit(_)): _*)
 
   //Assuming full entry of TPCH
   def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], key: Rep[E]): Rep[E] = {
@@ -300,7 +296,7 @@ trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent wi
 
   def stSampleEntry[E <: Entry : TypeRep](x: Rep[Store[E]], args: Seq[(Int, Rep[Any])]): Rep[E] = SteSampleSEntry[E](x, args)
 
-  def stDelete[E <: Entry : TypeRep](x: Rep[Store[E]], e: Rep[E]): Rep[Unit] = x.delete(e) //StDelete[E](x, e)
+  def stDelete[E <: Entry : TypeRep](x: Rep[Store[E]], e: Rep[E]): Rep[Unit] = x.deleteCopy(e) //StDelete[E](x, e)
 
 
   def stSlice[E <: Entry : TypeRep](x: Rep[Store[E]], idx: Int, key: Rep[E], f: Rep[E] => Rep[Unit]): Rep[Unit] = {

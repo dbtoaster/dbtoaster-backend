@@ -88,7 +88,7 @@ object TpccXactGenerator_SC {
         val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
         val o_id = districtEntry.get[Int](unit(11))
         districtEntry +=(unit(11), unit(1)) //d_next_o_id+1
-        districtTbl.update(districtEntry)
+        districtTbl.updateCopy(districtEntry)
 
 
         orderTbl.insert(GenericEntry(unit("SteNewSEntry"), o_id, d_id, w_id, c_id, datetime, unit(-1), o_ol_count, o_all_local > unit(0)))
@@ -147,7 +147,7 @@ object TpccXactGenerator_SC {
           //stockEntry._14 += ol_quantity //s_ytd
           //stockEntry._15 += 1 //s_order_cnt
           //stockEntry._16 += s_remote_cnt_increment //s_remote_cnt
-          stockTbl.update(stockEntry)
+          stockTbl.updateCopy(stockEntry)
 
           val c_discount = customerEntry.get[Double](unit(16))
           val w_tax = warehouseEntry.get[Double](unit(8))
@@ -171,11 +171,11 @@ object TpccXactGenerator_SC {
     def paymentTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_w_id: Rep[Int], c_d_id: Rep[Int], c_id: Rep[Int], c_last_input: Rep[String], h_amount: Rep[Double]): Rep[Int] = {
       val warehouseEntry = warehouseTbl.get1((1, w_id))
       warehouseEntry +=(unit(9), h_amount) //w_ytd
-      warehouseTbl.update(warehouseEntry)
+      warehouseTbl.updateCopy(warehouseEntry)
 
       val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
       districtEntry +=(unit(10), h_amount)
-      districtTbl.update(districtEntry)
+      districtTbl.updateCopy(districtEntry)
 
       val customerEntry = __newVar(unit[GenericEntry](null))
       __ifThenElse(c_by_name > unit(0), {
@@ -213,7 +213,7 @@ object TpccXactGenerator_SC {
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
         //customerEntry += (19 /*c_payment_cnt*/, 1)
       })
-      customerTbl.update(readVar(customerEntry))
+      customerTbl.updateCopy(readVar(customerEntry))
       val w_name = warehouseEntry.get[String](unit(2))
       val d_name = districtEntry.get[String](unit(3))
       //TODO this is the correct version but is not implemented in the correctness test
@@ -372,23 +372,23 @@ dsl"""
           // found
           val no_o_id = firstOrderEntry.get[Int](unit(1))
           orderIDs.update(readVar(d_id) - unit(1), no_o_id)
-          newOrderTbl.delete(firstOrderEntry)
+          newOrderTbl.deleteCopy(firstOrderEntry)
           val orderEntry = orderTbl.get1((1, no_o_id), (2, readVar(d_id)), (3, w_id))
           val c_id = orderEntry.get[Int](unit(4))
           orderEntry.update(unit(6) /*o_carrier_id*/ , o_carrier_id)
-          orderTbl.update(orderEntry)
+          orderTbl.updateCopy(orderEntry)
 
           val ol_total = __newVar(unit(0.0))
           orderLineTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), no_o_id, readVar(d_id), w_id), __lambda { orderLineEntry =>
             orderLineEntry.update(unit(7), datetime) //ol_delivery_d
             __assign(ol_total, readVar(ol_total) + orderLineEntry.get[Double](unit(9))) //ol_amount
-            orderLineTbl.update(orderLineEntry)
+            orderLineTbl.updateCopy(orderLineEntry)
           })
 
           val customerEntry = customerTbl.get1((1, c_id), (2, readVar(d_id)), (3, w_id))
           customerEntry.+=(unit(17) /*c_balance*/ , readVar(ol_total))
           customerEntry.+=(unit(20) /*c_delivery_cnt*/ , unit(1))
-          customerTbl.update(customerEntry)
+          customerTbl.updateCopy(customerEntry)
 
         }, {
           // not found

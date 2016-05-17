@@ -55,22 +55,24 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
 
   def mapProxy2(m: Rep[_]) = new IR.StoreRep1(m.asInstanceOf[Rep[Store[Entry]]])
 
+
+  def containsForeachOrSlice(ex: Expr): Boolean = ex match {
+    case MapRef(_, _, ks) => {
+      ks.size > 0 && {
+        val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k) }
+        ki.size > 0
+      }
+    }
+    case a@Add(l, r) if (a.agg != Nil)  =>  true
+    case a@AggSum(ks, e) if ((ks zip a.tks).filter { case (n, t) => !cx.contains(n)}).size != 0 => true
+    case s: Product => s.productIterator.collect { case e: Expr => containsForeachOrSlice(e) }.foldLeft(false)(_ || _)
+  }
+  val csSym = collection.mutable.HashMap[String,Rep[_]]()
+
   // Expression CPS transformation from M3 AST to LMS graph representation
   //   ex : expression to convert
   //   co : continuation in which the result should be plugged
   //   am : shared aggregation map for Add and AggSum, avoiding useless intermediate map where possible
-  def containsMapRef(ex: Expr): Boolean = ex match {
-    case MapRef(_, _, ks) => {
-      ks.size > 0 && {
-        val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k) }
-
-        ki.size > 0
-      }
-    }
-    case s: Product => s.productIterator.collect { case e: Expr => containsMapRef(e) }.foldLeft(false)(_ || _)
-  }
-  val csSym = collection.mutable.HashMap[String,Rep[_]]()
-
   def expr(ex: Expr, co: Rep[_] => Rep[Unit], am: Option[List[(String, Type)]] = None): Rep[Unit] = ex match {
     case Ref(n) => co(cx(n))
     case Const(tp, v) => ex.tp match {
@@ -104,7 +106,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
         })
       }
     //        case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
-    case Mul(Cmp(l, r, op), rr) if Optimizer.m3CompareMultiply && !containsMapRef(rr) =>
+    case Mul(Cmp(l, r, op), rr) if Optimizer.m3CompareMultiply && !containsForeachOrSlice(rr) =>
       expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
         var tmpVrr: Rep[_] = null;
         expr(rr, (vrr: Rep[_]) => {
@@ -465,7 +467,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       val mapAccess = scala.collection.mutable.HashMap[Rep[_], OpInfo]()
       //
       analysis += statement {
-        case sym -> (node@StoreGet(map, _, _, _)) =>
+        case sym -> (node@StoreGetCopy(map, _, _, _)) =>
           mapAccess.getOrElseUpdate(map, new OpInfo(0)).count += 1
           ()
       }
@@ -476,7 +478,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       import IR._
 
       // rewrite += rule {
-      //   case StoreGet(map,idx,key) if(mapAccess(map).count < 4) =>
+      //   case StoreGetCopy(map,idx,key) if(mapAccess(map).count < 4) =>
       //     map.update(unit(null))
       // }
     }

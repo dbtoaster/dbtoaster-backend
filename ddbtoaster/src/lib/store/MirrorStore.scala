@@ -15,9 +15,17 @@ class MStore[E<:Entry](val idxs:Array[Idx[E]], val ops:Array[EntryIdx[E]]) {
   def unsafeInsert(idx:Int,e:E):Unit = ???
   def insert(e:E):Unit = ???
   def update(e:E):Unit = ???
+  def updateCopy(e:E):Unit = ???
+  def updateCopyDependent(e:E):Unit = ???
   def delete(e:E):Unit = ???
+  def deleteCopy(e:E):Unit = ???
+  def deleteCopyDependent(e:E):Unit = ???
   @read
-  def get(idx: Int, key:E, keyCols:Int*):E = ???
+  def get(idx: Int, key:E):E = ???
+  @read
+  def getCopy(idx: Int, key:E,  keyCols:Int*):E = ???
+  @read
+  def getCopyDependent(idx: Int, key:E):E = ???
   def foreach(f:E=>Unit):Unit = ???
   def slice(idx:Int,key:E,f:E=>Unit): Unit = ???
   def range(idx:Int,min:E,max:E,withMin:Boolean,withMax:Boolean,f:E=>Unit): Unit = ???

@@ -20,8 +20,24 @@ public abstract class Idx<E extends Entry> {
     public void unsafeInsert(E e) { w("unsafeInsert"); }
     public void insert(E e) { w("insert"); }
     public void delete(E e) { w("delete"); }
+    public void deleteCopyDependent(E e) {delete(e);}
+    public void deleteCopy(E e,Idx<E> primary) {E ref= primary.get(e); delete(ref);}
     public void update(E e) { w("update"); } // reposition the entry if key/hash modified
+    public void updateCopyDependent(E e, E ref) { delete(ref);insert(e); }
+    public void updateCopy(E e, Idx<E> primary) { E ref = primary.get(e); delete(ref);insert(e); }
     public E get(E key) { w("get"); return null; } // returns the first element only
+    public E getCopy(E key){
+      E e = get(key);
+        if(e != null)
+            return (E) e.copy();
+        return null;
+    }
+    public E getCopyDependent(E key){
+      E e = get(key);
+        if(e != null)
+            return (E) e.copy();
+        return null;
+    }
     public void foreach(Function1<E,Unit> f) { w("foreach"); } // on all elements; warning: what about reordering updates?
     public void slice(E key,Function1<E,Unit> f) { w("slice"); } // foreach on a slice
     public void range(E min, E max, boolean withMin, boolean withMax, Function1<E,Unit> f) { w("range"); }

@@ -20,8 +20,14 @@ trait StoreOps extends Base with ArrayOps with EntryIdxOps with IdxOps {
      def unsafeInsert(idx : Rep[Int], e : Rep[E]) : Rep[Unit] = storeUnsafeInsert[E](self, idx, e)(typeE)
      def insert(e : Rep[E]) : Rep[Unit] = storeInsert[E](self, e)(typeE)
      def update(e : Rep[E]) : Rep[Unit] = storeUpdate[E](self, e)(typeE)
+     def updateCopy(e : Rep[E]) : Rep[Unit] = storeUpdateCopy[E](self, e)(typeE)
+     def updateCopyDependent(e : Rep[E]) : Rep[Unit] = storeUpdateCopyDependent[E](self, e)(typeE)
      def delete(e : Rep[E])(implicit overload1 : Overloaded1) : Rep[Unit] = storeDelete1[E](self, e)(typeE)
-     def get(idx : Rep[Int], key : Rep[E], keyCols : Rep[Int]*) : Rep[E] = storeGet[E](self, idx, key, keyCols:_*)(typeE)
+     def deleteCopy(e : Rep[E]) : Rep[Unit] = storeDeleteCopy[E](self, e)(typeE)
+     def deleteCopyDependent(e : Rep[E]) : Rep[Unit] = storeDeleteCopyDependent[E](self, e)(typeE)
+     def get(idx : Rep[Int], key : Rep[E]) : Rep[E] = storeGet[E](self, idx, key)(typeE)
+     def getCopy(idx : Rep[Int], key : Rep[E], keyCols : Rep[Int]*) : Rep[E] = storeGetCopy[E](self, idx, key, keyCols:_*)(typeE)
+     def getCopyDependent(idx : Rep[Int], key : Rep[E]) : Rep[E] = storeGetCopyDependent[E](self, idx, key)(typeE)
      def foreach(f : Rep[(E => Unit)]) : Rep[Unit] = storeForeach[E](self, f)(typeE)
      def slice(idx : Rep[Int], key : Rep[E], f : Rep[(E => Unit)]) : Rep[Unit] = storeSlice[E](self, idx, key, f)(typeE)
      def range(idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[(E => Unit)]) : Rep[Unit] = storeRange[E](self, idx, min, max, withMin, withMax, f)(typeE)
@@ -52,10 +58,22 @@ trait StoreOps extends Base with ArrayOps with EntryIdxOps with IdxOps {
   type StoreInsert[E <: ddbt.lib.store.Entry] = StoreIRs.StoreInsert[E]
   val StoreUpdate = StoreIRs.StoreUpdate
   type StoreUpdate[E <: ddbt.lib.store.Entry] = StoreIRs.StoreUpdate[E]
+  val StoreUpdateCopy = StoreIRs.StoreUpdateCopy
+  type StoreUpdateCopy[E <: ddbt.lib.store.Entry] = StoreIRs.StoreUpdateCopy[E]
+  val StoreUpdateCopyDependent = StoreIRs.StoreUpdateCopyDependent
+  type StoreUpdateCopyDependent[E <: ddbt.lib.store.Entry] = StoreIRs.StoreUpdateCopyDependent[E]
   val StoreDelete1 = StoreIRs.StoreDelete1
   type StoreDelete1[E <: ddbt.lib.store.Entry] = StoreIRs.StoreDelete1[E]
+  val StoreDeleteCopy = StoreIRs.StoreDeleteCopy
+  type StoreDeleteCopy[E <: ddbt.lib.store.Entry] = StoreIRs.StoreDeleteCopy[E]
+  val StoreDeleteCopyDependent = StoreIRs.StoreDeleteCopyDependent
+  type StoreDeleteCopyDependent[E <: ddbt.lib.store.Entry] = StoreIRs.StoreDeleteCopyDependent[E]
   val StoreGet = StoreIRs.StoreGet
   type StoreGet[E <: ddbt.lib.store.Entry] = StoreIRs.StoreGet[E]
+  val StoreGetCopy = StoreIRs.StoreGetCopy
+  type StoreGetCopy[E <: ddbt.lib.store.Entry] = StoreIRs.StoreGetCopy[E]
+  val StoreGetCopyDependent = StoreIRs.StoreGetCopyDependent
+  type StoreGetCopyDependent[E <: ddbt.lib.store.Entry] = StoreIRs.StoreGetCopyDependent[E]
   val StoreForeach = StoreIRs.StoreForeach
   type StoreForeach[E <: ddbt.lib.store.Entry] = StoreIRs.StoreForeach[E]
   val StoreSlice = StoreIRs.StoreSlice
@@ -81,11 +99,17 @@ trait StoreOps extends Base with ArrayOps with EntryIdxOps with IdxOps {
    def storeUnsafeInsert[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreUnsafeInsert[E](self, idx, e)
    def storeInsert[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreInsert[E](self, e)
    def storeUpdate[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreUpdate[E](self, e)
+   def storeUpdateCopy[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreUpdateCopy[E](self, e)
+   def storeUpdateCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreUpdateCopyDependent[E](self, e)
    def storeDelete1[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreDelete1[E](self, e)
-   def storeGet[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E], keyCols : Rep[Int]*)(implicit typeE : TypeRep[E]) : Rep[E] = {
+   def storeDeleteCopy[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreDeleteCopy[E](self, e)
+   def storeDeleteCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreDeleteCopyDependent[E](self, e)
+   def storeGet[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[E] = StoreGet[E](self, idx, key)
+   def storeGetCopy[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E], keyCols : Rep[Int]*)(implicit typeE : TypeRep[E]) : Rep[E] = {
     val keyColsOutput = __liftSeq(keyCols.toSeq)
-    StoreGet[E](self, idx, key, keyColsOutput)
+    StoreGetCopy[E](self, idx, key, keyColsOutput)
   }
+   def storeGetCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[E] = StoreGetCopyDependent[E](self, idx, key)
    def storeForeach[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreForeach[E](self, f)
    def storeSlice[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreSlice[E](self, idx, key, f)
    def storeRange[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], min : Rep[E], max : Rep[E], withMin : Rep[Boolean], withMax : Rep[Boolean], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreRange[E](self, idx, min, max, withMin, withMax, f)
@@ -133,11 +157,37 @@ object StoreIRs extends Base {
     override def curriedConstructor = (copy[E] _).curried
   }
 
+  case class StoreUpdateCopy[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "updateCopy", List(List(e))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class StoreUpdateCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "updateCopyDependent", List(List(e))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
   case class StoreDelete1[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "delete", List(List(e))){
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  case class StoreGet[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E], keyColsOutput : Rep[Seq[Int]])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "get", List(List(idx,key,__varArg(keyColsOutput)))){
+  case class StoreDeleteCopy[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "deleteCopy", List(List(e))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class StoreDeleteCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "deleteCopyDependent", List(List(e))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class StoreGet[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "get", List(List(idx,key))){
+    override def curriedConstructor = (copy[E] _).curried
+    override def effect = Read(self)
+  }
+
+  case class StoreGetCopy[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E], keyColsOutput : Rep[Seq[Int]])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "getCopy", List(List(idx,key,__varArg(keyColsOutput)))){
+    override def curriedConstructor = (copy[E] _).curried
+    override def effect = Read(self)
+  }
+
+  case class StoreGetCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], key : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "getCopyDependent", List(List(idx,key))){
     override def curriedConstructor = (copy[E] _).curried
     override def effect = Read(self)
   }

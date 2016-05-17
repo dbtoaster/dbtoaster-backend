@@ -566,15 +566,18 @@ class SCExecutor
           val x7683 = x10899._1
           val x29 = x15
           x14.update((x29.-(1)), x7683)
-          x4373.delete(x10899)
+          x920.delete(x10899)
+          x921.delete(x10899)
           val x33 = x15
           x7689._1_=(x7683)
           x7689._2_=(x33)
           x7689._3_=(x12)
-          val x10912 = x942.get(x7689)
-          val x7692 = x10912._4
-          x10912._6_=(x13)
-          x4757.update(x10912)
+          val x10913 = x942.get(x7689)
+          val x7692 = x10913._4
+          x10913._6_=(x13)
+          x942.update(x10913)
+          x943.update(x10913)
+          x944.update(x10913)
           var x40: Double = 0.0
           val x41 = x15
           x7698._1_=(x7683)
@@ -585,7 +588,7 @@ class SCExecutor
               val x46 = x40
               val x7800 = x44._9
               x40 = (x46.+(x7800))
-              x4898.update(x44)
+              x953.update(x44)
               ()
             }
           }))
@@ -593,11 +596,12 @@ class SCExecutor
           x7702._1_=(x7692)
           x7702._2_=(x53)
           x7702._3_=(x12)
-          val x10935 = x958.get(x7702)
+          val x10938 = x958.get(x7702)
           val x56 = x40
-          x10935._17 +=(x56)
-          x10935._20 +=(1)
-          x5051.update(x10935)
+          x10938._17 +=(x56)
+          x10938._20 +=(1)
+          x959.update(x10938)
+          x958.update(x10938)
           ()
         }
         else
@@ -701,8 +705,8 @@ class SCExecutor
     def apply(x122: Boolean, x123: Date, x124: Int, x125: Int, x126: Int, x127: Int) =     {
       x7976._1_=(x126)
       x7976._2_=(x125)
-      val x11114 = x949.get(x7976)
-      val x7979 = x11114._11
+      val x11122 = x949.get(x7976)
+      val x7979 = x11122._11
       var x133: Int = (x7979.-(20))
       val x134 = Set.apply[Int]()
       while({
@@ -718,8 +722,8 @@ class SCExecutor
             val x8020 = x140._5
             x8021._1_=(x8020)
             x8021._2_=(x125)
-            val x11132 = x962.get(x8021)
-            val x8023 = x11132._3
+            val x11140 = x962.get(x8021)
+            val x8023 = x11140._3
             if((x8023.<(x127))) 
             {
               val x146 = x134.+=(x8020)
@@ -804,8 +808,8 @@ class SCExecutor
         x8102._1_=(x171)
         x8102._2_=(x169)
         x8102._3_=(x168)
-        val x11230 = x958.get(x8102)
-        x8079 = x11230
+        val x11238 = x958.get(x8102)
+        x8079 = x11238
         ()
       }
       
@@ -819,14 +823,14 @@ class SCExecutor
   class PaymentTx(x4373: Store[SEntry3_III], x4452: Store[SEntry8_IIIIITDS], x4493: Store[SEntry9_ISSSSSSDD], x4533: Store[SEntry5_IISDS], x4757: Store[SEntry8_IIIITIIB], x4819: Store[SEntry11_IISSSSSSDDI], x4898: Store[SEntry10_IIIIIITIDS], x5051: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x5111: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double) => Int) {
     def apply(x219: Boolean, x220: Date, x221: Int, x222: Int, x223: Int, x224: Int, x225: Int, x226: Int, x227: Int, x228: String, x229: Double) =     {
       x8191._1_=(x222)
-      val x11283 = x931.get(x8191)
-      x11283._9 +=(x229)
-      x4493.update(x11283)
+      val x11291 = x931.get(x8191)
+      x11291._9 +=(x229)
+      x931.update(x11291)
       x8196._1_=(x223)
       x8196._2_=(x222)
-      val x11289 = x949.get(x8196)
-      x11289._10 +=(x229)
-      x4819.update(x11289)
+      val x11297 = x949.get(x8196)
+      x11297._10 +=(x229)
+      x949.update(x11297)
       var x8201: SEntry21_IIISSSSSSSSSTSDDDDIIS = null
       if((x224.>(0))) 
       {
@@ -870,8 +874,8 @@ class SCExecutor
         x8224._1_=(x227)
         x8224._2_=(x226)
         x8224._3_=(x225)
-        val x11329 = x958.get(x8224)
-        x8201 = x11329
+        val x11337 = x958.get(x8224)
+        x8201 = x11337
         ()
       }
       
@@ -917,9 +921,10 @@ class SCExecutor
       }
       
       val x302 = x8201
-      x5051.update(x302)
-      val x8257 = x11283._2
-      val x8258 = x11289._3
+      x959.update(x302)
+      x958.update(x302)
+      val x8257 = x11291._2
+      val x8258 = x11297._3
       val x306 = x8257.length
       val x309 = if((x306.>(10))) 
       {
@@ -978,8 +983,8 @@ class SCExecutor
         val x349 = x341
         val x350 = x329.apply(x349)
         x8471._1_=(x350)
-        val x11490 = x934.get(x8471)
-        if((x11490.==(null))) 
+        val x11500 = x934.get(x8471)
+        if((x11500.==(null))) 
         {
           x344 = false
           ()
@@ -987,13 +992,13 @@ class SCExecutor
         else
         {
           val x356 = x341
-          val x8478 = x11490._3
+          val x8478 = x11500._3
           x333.update(x356, x8478)
           val x359 = x341
-          val x8481 = x11490._4
+          val x8481 = x11500._4
           x332.update(x359, x8481)
           val x362 = x341
-          val x8484 = x11490._5
+          val x8484 = x11500._5
           x343.update(x362, x8484)
           ()
         }
@@ -1008,15 +1013,15 @@ class SCExecutor
         x8491._1_=(x326)
         x8491._2_=(x325)
         x8491._3_=(x324)
-        val x11512 = x958.get(x8491)
+        val x11522 = x958.get(x8491)
         x8494._1_=(x324)
-        val x11515 = x931.get(x8494)
+        val x11525 = x931.get(x8494)
         x8497._1_=(x325)
         x8497._2_=(x324)
-        val x11519 = x949.get(x8497)
-        val x8500 = x11519._11
-        x11519._11 +=(1)
-        x4819.update(x11519)
+        val x11529 = x949.get(x8497)
+        val x8500 = x11529._11
+        x11529._11 +=(1)
+        x949.update(x11529)
         x4757.insert((SEntry8_IIIITIIB(x8500, x325, x324, x326, x322, -1, x327, (x328.>(0)))))
         x4373.insert((SEntry3_III(x8500, x325, x324)))
         var x390: Double = 0.0
@@ -1034,71 +1039,71 @@ class SCExecutor
           val x399 = x331.apply(x398)
           x8521._1_=(x397)
           x8521._2_=(x395)
-          val x11543 = x962.get(x8521)
+          val x11553 = x962.get(x8521)
           val x429 = if((x325.==(1))) 
           {
-            val x8525 = x11543._4
+            val x8525 = x11553._4
             x8525
           }
           else
           {
             val x428 = if((x325.==(2))) 
             {
-              val x8528 = x11543._5
+              val x8528 = x11553._5
               x8528
             }
             else
             {
               val x427 = if((x325.==(3))) 
               {
-                val x8531 = x11543._6
+                val x8531 = x11553._6
                 x8531
               }
               else
               {
                 val x426 = if((x325.==(4))) 
                 {
-                  val x8534 = x11543._7
+                  val x8534 = x11553._7
                   x8534
                 }
                 else
                 {
                   val x425 = if((x325.==(5))) 
                   {
-                    val x8537 = x11543._8
+                    val x8537 = x11553._8
                     x8537
                   }
                   else
                   {
                     val x424 = if((x325.==(6))) 
                     {
-                      val x8540 = x11543._9
+                      val x8540 = x11553._9
                       x8540
                     }
                     else
                     {
                       val x423 = if((x325.==(7))) 
                       {
-                        val x8543 = x11543._10
+                        val x8543 = x11553._10
                         x8543
                       }
                       else
                       {
                         val x422 = if((x325.==(8))) 
                         {
-                          val x8546 = x11543._11
+                          val x8546 = x11553._11
                           x8546
                         }
                         else
                         {
                           val x421 = if((x325.==(9))) 
                           {
-                            val x8549 = x11543._12
+                            val x8549 = x11553._12
                             x8549
                           }
                           else
                           {
-                            val x8550 = x11543._13
+                            val x8550 = x11553._13
                             x8550
                           }
                           
@@ -1126,13 +1131,13 @@ class SCExecutor
             x428
           }
           
-          val x8551 = x11543._3
+          val x8551 = x11553._3
           val x431 = x341
           x334.update(x431, x8551)
-          val x8554 = x11512._14
+          val x8554 = x11522._14
           val x434 = x8554.contains("original")
           if((x434.&&({
-            val x8557 = x11543._17
+            val x8557 = x11553._17
             val x436 = x8557.contains("original")
             x436
           }))) 
@@ -1148,10 +1153,10 @@ class SCExecutor
             ()
           }
           
-          x11543._3_=((x8551.-(x399)))
+          x11553._3_=((x8551.-(x399)))
           if((x8551.<=(x399))) 
           {
-            x11543._3 +=(91)
+            x11553._3 +=(91)
             ()
           }
           else
@@ -1170,10 +1175,10 @@ class SCExecutor
             ()
           }
           
-          x5111.update(x11543)
-          val x8574 = x11512._16
-          val x8575 = x11515._8
-          val x8576 = x11519._9
+          x962.update(x11553)
+          val x8574 = x11522._16
+          val x8575 = x11525._8
+          val x8576 = x11529._9
           val x456 = x341
           val x457 = x332.apply(x456)
           val x464 = (((x399.toDouble).*(x457)).*(((1.0.+(x8575)).+(x8576)))).*((1.0.-(x8574)))

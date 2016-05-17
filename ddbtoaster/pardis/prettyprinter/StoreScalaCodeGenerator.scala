@@ -29,7 +29,6 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
   }
 
 
-
   override def symToDocument(sym: ExpressionSymbol[_]): Document = {
     if (sym.tp == UnitType)
       doc"()"
@@ -56,9 +55,9 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
   override def getStruct(structDef: PardisStructDef[_]): Document = SEntryDefToDocument(structDef)
 
 
-  override def nodeToDocument(node: PardisNode[_]): Document = node match{
+  override def nodeToDocument(node: PardisNode[_]): Document = node match {
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"if(${expToDocument(cond)}) ${expToDocument(ift)} else ${expToDocument(iff)}"
-    case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name) ) => doc" object $name extends EntryIdx[${tpeToDocument(h.i.tp)}] {" :/: Document.nest(NEST_COUNT,
+    case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name)) => doc" object $name extends EntryIdx[${tpeToDocument(h.i.tp)}] {" :/: Document.nest(NEST_COUNT,
       doc"override def hash(${expToDocument(h.i)} : ${tpeToDocument(h.i.tp)}) = ${blockToDocument(h.o)}" :/:
         doc"override def cmp(${expToDocument(c.i1)} : ${tpeToDocument(c.i1.tp)} , ${expToDocument(c.i2)} : ${tpeToDocument(c.i2.tp)}) = ${blockToDocument(c.o)}") :/: doc"}"
     case _ => super.nodeToDocument(node)
@@ -69,8 +68,11 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
     case Statement(sym, node) if sym.tp == UnitType => nodeToDocument(node)
     case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
     case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
-    case Statement(sym, StoreGet(self, idx, key, _)) => doc"val $sym = $self.get($idx, $key)"
-    case Statement(sym, arr@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"val $sym = Array[${arr.typeT}](" :: ops.collect{ case Def(EntryIdxApplyObject(_,_,Constant(name)))  => Document.text(name)}.mkDocument(", ") :: doc")"
+    case Statement(sym, StoreGetCopy(self, idx, key, _)) => doc"val $sym = $self.getCopy($idx, $key)"
+    case Statement(sym, arr@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"val $sym = Array[${arr.typeT}](" :: ops.collect {
+      case Def(EntryIdxApplyObject(_, _, Constant(name))) => Document.text(name)
+      case Def(node) => nodeToDocument(node)
+    }.mkDocument(", ") :: doc")"
     case _ => super.stmtToDocument(stmt)
   }
 
