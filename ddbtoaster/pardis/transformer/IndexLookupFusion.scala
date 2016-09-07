@@ -1,6 +1,7 @@
 package ddbt.transformer
 
-import ch.epfl.data.sc.pardis.optimization.{RuleBasedTransformer, RecursiveRuleBasedTransformer}
+import ch.epfl.data.sc.pardis.ir.{PardisAssign, PardisLambda, PardisReadVar, PardisVar}
+import ch.epfl.data.sc.pardis.optimization.{RecursiveRuleBasedTransformer, RuleBasedTransformer}
 import ddbt.codegen.Optimizer
 import ddbt.lib.store.deep.StoreDSL
 
@@ -10,6 +11,14 @@ import ddbt.lib.store.deep.StoreDSL
 class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTransformer[StoreDSL](IR) {
 
   import IR._
+
+  val storeGets = collection.mutable.ArrayBuffer[Rep[_]]()
+
+  override def optimize[T: TypeRep](node: Block[T]): Block[T] = {
+    val res = super_optimize(node)
+    ruleApplied()
+    res
+  }
 
   def super_optimize[T: TypeRep](node: Block[T]): Block[T] = {
     val analyseProgram = classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
@@ -31,29 +40,22 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
     currentBlock
   }
 
-  override def optimize[T: TypeRep](node: Block[T]): Block[T] = {
-    val res = super_optimize(node)
-    ruleApplied()
-    res
-  }
-
-  val storeGets = collection.mutable.ArrayBuffer[Rep[_]]()
-
   if (Optimizer.indexLookupFusion) {
     // full optimization
     analysis += statement {
       case sym -> (s: StoreGetCopy[_]) => storeGets += sym; ()
-        //SBJ: TODO: Add lambdas from slice/for each
-        //SBJ: TODO: Handle assignment of ref obtained from get/slice/foreach to another ref
+      case sym -> StoreSlice(_, _, _, Def(PardisLambda(_, i, _))) => storeGets += i; ()
+      case sym -> StoreForeach(_, Def(PardisLambda(_, i, _))) => storeGets += i; ()
+      case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if storeGets.contains(rhs) => storeGets += lhs; ()
+      case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) => storeGets -= lhs; ()
+      case sym -> (PardisReadVar(PardisVar(v@Sym(_, _)))) if storeGets contains v => storeGets += sym; ()
     }
     rewrite += rule {
       case StoreGetCopy(store, idx, key, _) => store.get(idx, key)
-      case StoreUpdateCopy(store, e)  => store.update(e) //SBJ: hack for now
       case StoreUpdateCopy(store, e) if storeGets contains e => store.update(e)
-	  case StoreUpdateCopy(store, e) => store.updateCopyDependent(e)
-      case StoreDeleteCopy(store, e)  => store.delete(e) //SBJ: hack for now
+      case StoreUpdateCopy(store, e) => System.err.println(s"StoreGets does not contain $e."); store.updateCopyDependent(e)
       case StoreDeleteCopy(store, e) if storeGets contains e => store.delete(e)
-	  case StoreDeleteCopy(store, e) => store.deleteCopyDependent(e)
+      case StoreDeleteCopy(store, e) => System.err.println(s"StoreGets does not contain $e."); store.deleteCopyDependent(e)
     }
   } else {
     //partial optimization

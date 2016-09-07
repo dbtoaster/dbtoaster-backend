@@ -15,17 +15,17 @@ import scala.collection.mutable
 case class TransactionProgram[T](val initBlock: PardisBlock[T], val global: List[ExpressionSymbol[_]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structsDefs: Seq[PardisStructDef[SEntry]], val entryIdxDefs: Seq[EntryIdxApplyObject[SEntry]], val tempVars: Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil) {}
 
 object Optimizer {
-  var analyzeEntry: Boolean = false
-  var analyzeIndex: Boolean = false
-  var onlineOpts = false
-  var tmpVarHoist = false
-  var indexInline = false
-  var indexLookupFusion = false
-  var indexLookupPartialFusion = false
-  var deadIndexUpdate = false
-  var codeMotion = false
-  var refCounter = false
-  var m3CompareMultiply = false //Lazy evaluation
+  var analyzeEntry: Boolean = true
+  var analyzeIndex: Boolean = true
+  var onlineOpts = true
+  var tmpVarHoist = true
+  var indexInline = true
+  var indexLookupFusion = true
+  var indexLookupPartialFusion = true
+  var deadIndexUpdate = true
+  var codeMotion = true
+  var refCounter = true
+  var m3CompareMultiply = true //Lazy evaluation
 }
 
 class Optimizer(val IR: StoreDSL) {
