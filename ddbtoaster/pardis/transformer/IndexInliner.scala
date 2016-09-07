@@ -42,9 +42,10 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
   val indexMap = collection.mutable.HashMap[(Rep[_], Int), Rep[Idx[Entry]]]()
   val updatedCols = collection.mutable.HashMap[Rep[_], collection.mutable.HashSet[Int]]()
   analysis += statement {
-    case sym -> (StoreIndex(st, Constant(idx), _, _, _)) => indexMap += (st, idx) -> sym.asInstanceOf[Rep[Idx[Entry]]]; ()
+    case sym -> (StoreIndex(st, Constant(idx), Constant(idxType), _, _)) if idxType != "INone" => indexMap += (st, idx) -> sym.asInstanceOf[Rep[Idx[Entry]]]; ()
   }
   if (Optimizer.deadIndexUpdate)
+  //SBJ: TODO:  Add check to ensure entry comes from a get or slice
     analysis += rule {
       case GenericEntryUpdate(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
       case GenericEntryIncrease(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
@@ -62,11 +63,11 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     case StoreForeach(store, f) => indexMap((store, 0)).foreach(f)
     case StoreSlice(store, Constant(idx), e, f) => indexMap((store, idx)).slice(e, f)
     case StoreUpdateCopyDependent(store, e) => val ref = indexMap((store, 0)).get(e); indexMap.collect { case ((`store`, idx), sym) => sym.updateCopyDependent(e, ref) }; unit()
-    case StoreUpdateCopy(store, e) => indexMap.collect { case ((`store`, idx), sym) => sym.updateCopy(e, indexMap((store, 0))) }; unit()
+    case StoreUpdateCopy(store, e) => indexMap.toSeq.sortWith(_._1._2 > _._1._2).collect { case ((`store`, idx), sym) => sym.updateCopy(e, indexMap((store, 0))) }; unit()
     case StoreUpdate(store, e) if updatedCols contains e =>
        val idxes = store.asInstanceOf[Sym[_]].attributes.get(IndexesFlag).get.indexes
       indexMap.collect { case ((`store`, idx), sym) => {
-        if (idx != 0 && !updatedCols(e).intersect(idxes(idx).cols.toSet).isEmpty) //SBJ: TODO: add checks for columns of min/max index too
+        if (idx != 0 && !updatedCols(e).intersect(idxes(idx).cols.toSet).isEmpty) //SBJ: TODO: add checks for columns of min/max index too. What if idx0 is not primary
           sym.update(e)
       }
       }
@@ -74,7 +75,7 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
 
     case StoreUpdate(store, e) => indexMap.collect { case ((`store`, idx), sym) => sym.update(e) }; unit()
     case StoreDeleteCopyDependent(store, e) => val ref = indexMap((store, 0)).get(e); indexMap.collect { case ((`store`, idx), sym) => sym.deleteCopyDependent(ref) }; unit()
-    case StoreDeleteCopyDependent(store, e) => indexMap.collect { case ((`store`, idx), sym) => sym.deleteCopy(e, indexMap((store, 0))) }; unit()
+    case StoreDeleteCopy(store, e) => indexMap.toSeq.sortWith(_._1._2 > _._1._2).collect { case ((`store`, idx), sym) => sym.deleteCopy(e, indexMap((store, 0))) }; unit()
     case StoreDelete1(store, e) => indexMap.collect { case ((`store`, idx), sym) => sym.delete(e) }; unit()
   }
 

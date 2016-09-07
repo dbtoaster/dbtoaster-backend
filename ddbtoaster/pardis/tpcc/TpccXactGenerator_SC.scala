@@ -479,6 +479,41 @@ dsl"""
   import Context.{EntryType => _, entryRepToGenericEntryOps => _, typeStore => _, typeNull => _, _}
 
   def main(args: Array[String]): Unit = {
+    def opts(o: String) = o match{
+      case "entry" => Optimizer.analyzeEntry=true
+      case "index" => Optimizer.analyzeIndex=true
+      case "online" => Optimizer.onlineOpts=true
+      case "m3cmpmult" => Optimizer.m3CompareMultiply=true
+      case "tmpvar" => Optimizer.tmpVarHoist = true
+      case "idxinline" => Optimizer.indexInline = true
+      case "lookupfusion" => Optimizer.indexLookupFusion = true
+      case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true
+      case "deadidx" => Optimizer.deadIndexUpdate = true
+      case "codemotion" =>Optimizer.codeMotion = true
+      case "refcounter" => Optimizer.refCounter = true
+
+    }
+    def parseArgs(args:Array[String]) {
+      val l = args.length
+      var i = 0
+      def eat(f: String => Unit, s: Boolean = false) {
+        i += 1; if (i < l) f(if (s) args(i).toLowerCase else args(i))
+      }
+      while (i < l) {
+        args(i) match {
+          case "-opt" => eat(s => opts(s), true)
+          case _ =>
+        }
+        i += 1
+      }
+    }
+    parseArgs(args)
+
+      import Optimizer._
+      val all_opts = Map("Entry"->analyzeEntry,"Index"->analyzeIndex, "Online"->onlineOpts, "TmpVar"->tmpVarHoist, "Inline"->indexInline, "Fusion full"->indexLookupFusion, "Fusion"->indexLookupPartialFusion, "DeadIdx"->deadIndexUpdate,"CodeMotion"->codeMotion, "RefCnt"->refCounter, "CmpMult"->m3CompareMultiply)
+      java.lang.System.err.println("Optimizations :: "+all_opts.filter(_._2).map(_._1).mkString(", "))
+
+
     var prog: Prog = null
     import java.nio.file.Files.copy
     import java.nio.file.Paths.get

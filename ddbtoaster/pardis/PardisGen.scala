@@ -532,6 +532,9 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
 }
 
 class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if(Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL{}){
+  import Optimizer._;
+  val opts = Map("Entry"->analyzeEntry,"Index"->analyzeIndex, "Online"->onlineOpts, "TmpVar"->tmpVarHoist, "Inline"->indexInline, "Fusion full"->indexLookupFusion, "Fusion"->indexLookupPartialFusion, "DeadIdx"->deadIndexUpdate,"CodeMotion"->codeMotion, "RefCnt"->refCounter, "CmpMult"->m3CompareMultiply)
+  java.lang.System.err.println("Optimizations :: "+opts.filter(_._2).map(_._1).mkString(", "))
   override val codeGen: StoreCodeGenerator = new StoreScalaCodeGenerator(IR)
 }
 class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if(Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL{}) with ICppGen{

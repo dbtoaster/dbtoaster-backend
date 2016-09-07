@@ -43,11 +43,17 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
     // full optimization
     analysis += statement {
       case sym -> (s: StoreGetCopy[_]) => storeGets += sym; ()
+        //SBJ: TODO: Add lambdas from slice/for each
+        //SBJ: TODO: Handle assignment of ref obtained from get/slice/foreach to another ref
     }
     rewrite += rule {
       case StoreGetCopy(store, idx, key, _) => store.get(idx, key)
+      case StoreUpdateCopy(store, e)  => store.update(e) //SBJ: hack for now
       case StoreUpdateCopy(store, e) if storeGets contains e => store.update(e)
+	  case StoreUpdateCopy(store, e) => store.updateCopyDependent(e)
+      case StoreDeleteCopy(store, e)  => store.delete(e) //SBJ: hack for now
       case StoreDeleteCopy(store, e) if storeGets contains e => store.delete(e)
+	  case StoreDeleteCopy(store, e) => store.deleteCopyDependent(e)
     }
   } else {
     //partial optimization

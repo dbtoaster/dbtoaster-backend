@@ -334,10 +334,10 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
   }
   def updateCopy (e: E): Unit = time("update") {
     if (e == null) return;
-    var i = 0;
-    while (i < n) {
+    var i = n-1;
+    while (i >= 0) {
       if (idxs(i) != null) idxs(i).updateCopy(e, idxs(0));
-      i += 1;
+      i -= 1;
     }
   }
 
@@ -353,10 +353,10 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
   }
   def deleteCopy(e: E): Unit = time("delete") {
     if (e == null) return;
-    var i = 0;
-    while (i < n) {
+    var i = n-1;
+    while (i >= 0) {
       if (idxs(i) != null) idxs(i).deleteCopy(e, idxs(0));
-      i += 1;
+      i -= 1;
     }
   }
   def deleteCopyDependent(e: E): Unit = time("delete") {

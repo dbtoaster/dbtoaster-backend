@@ -24,7 +24,11 @@ public abstract class Idx<E extends Entry> {
     public void deleteCopy(E e,Idx<E> primary) {E ref= primary.get(e); delete(ref);}
     public void update(E e) { w("update"); } // reposition the entry if key/hash modified
     public void updateCopyDependent(E e, E ref) { delete(ref);insert(e); }
-    public void updateCopy(E e, Idx<E> primary) { E ref = primary.get(e); delete(ref);insert(e); }
+    public void updateCopy(E e, Idx<E> primary) {
+        E ref = primary.get(e);
+        delete(ref);
+        insert(e);
+    }
     public E get(E key) { w("get"); return null; } // returns the first element only
     public E getCopy(E key){
       E e = get(key);

@@ -28,10 +28,17 @@ libraryDependencies ++= Seq(
 // --------- Compilation options
 Seq(
   scalaVersion := "2.11.2",
-//  scalaVersion := "2.10.3",
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-optimise","-Yinline-warnings"), // ,"-target:jvm-1.7"
-  javacOptions ++= Seq("-Xlint:unchecked","-Xlint:-options","-source","1.6","-target","1.6"), // forces JVM 1.6 compatibility with JDK 1.7 compiler
-javaOptions <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
+  javacOptions ++= Seq("-Xlint:unchecked","-Xlint:-options","-source","1.6","-target","1.6") // forces JVM 1.6 compatibility with JDK 1.7 compiler
+)
+
+// --------- Execution options
+Seq(
+  fork := true, // required to enable javaOptions
+  //javaOptions ++= Seq("-agentpath:"+"/Applications/Tools/YourKit Profiler.app/bin/mac/libyjpagent.jnilib"+"=sampling,onexit=snapshot,builtinprobes=all"),
+  javaOptions ++= Seq("-Xss128m","-XX:-DontCompileHugeMethods","-XX:+CMSClassUnloadingEnabled"), // ,"-Xss512m","-XX:MaxPermSize=2G"
+  javaOptions ++= Seq("-Xmx4G","-Xms1G"/*,"-verbose:gc"*/), parallelExecution in Test := false, // for large benchmarks
+  javaOptions <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath="+cp.files.absString) // propagate paths
 )
 
 // --------- Pardis codegen -- START

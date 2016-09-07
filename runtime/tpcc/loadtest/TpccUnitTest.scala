@@ -62,6 +62,15 @@ object TpccUnitTest {
   @volatile var activate_transaction: Int = 0
 
   def main(argv: Array[String]) {
+    // Get current size of heap in bytes
+    val heapSize = Runtime.getRuntime().totalMemory();
+
+    // Get maximum size of heap in bytes. The heap cannot grow beyond this size.// Any attempt will result in an OutOfMemoryException.
+    val heapMaxSize = Runtime.getRuntime().maxMemory();
+
+    // Get amount of free memory within the heap in bytes. This size will increase // after garbage collection and decrease as new objects are created.
+    val heapFreeSize = Runtime.getRuntime().freeMemory();
+    println(s"heap: $heapSize     maxHeap: $heapMaxSize   freeHeap: $heapFreeSize")
     println("TPCC version " + VERSION + " Number of Arguments: " + 
       argv.length)
     val sysProp = Array("os.name", "os.arch", "os.version", "java.runtime.name", "java.vm.version", "java.library.path")

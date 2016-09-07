@@ -53,10 +53,18 @@ object Compiler {
   var printProgress = 0
   var exec_args = List[String]() // arguments passed for execution
   def opts(o: String) = o match{
-      case "entry" => Optimizer.analyzeEntry=false
-      case "index" => Optimizer.analyzeIndex=false
-      case "online" => Optimizer.onlineOpts=false
-      case "m3cmpmult" => Optimizer.m3CompareMultiply=false
+      case "entry" => Optimizer.analyzeEntry=true
+      case "index" => Optimizer.analyzeIndex=true
+      case "online" => Optimizer.onlineOpts=true
+      case "m3cmpmult" => Optimizer.m3CompareMultiply=true
+      case "tmpvar" => Optimizer.tmpVarHoist = true
+      case "idxinline" => Optimizer.indexInline = true
+      case "lookupfusion" => Optimizer.indexLookupFusion = true
+      case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true
+      case "deadidx" => Optimizer.deadIndexUpdate = true
+      case "codemotion" =>Optimizer.codeMotion = true
+      case "refcounter" => Optimizer.refCounter = true
+
     }
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(0); null }
   def toast(lang:String, opts:String*):(Long,String) = { // if opts is empty we do _NOT_ use repository

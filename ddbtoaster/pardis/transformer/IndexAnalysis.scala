@@ -42,6 +42,7 @@ class Indexes extends Property {
       indexes += Index(count, cols.primary.toList, IHash, true);
       count = count + 1
     }
+	//SBJ: FIXME: In the absence of gets, no primary assigned and the first secondary treated as primary. WIll cause problems if it is KV index. May cause problem otherwise too. Key is subset/superset of actual key, semantics might change
     cols.secondary.foreach(l => {
       indexes += Index(count, l.toList, IHash, false)
       count = count + 1
