@@ -180,7 +180,7 @@ object TpccXactGenerator_SC {
       val customerEntry = __newVar(unit[GenericEntry](null))
       __ifThenElse(c_by_name > unit(0), {
         val customersWithLastName = __newArrayBuffer[GenericEntry]()
-        customerTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), c_d_id, c_w_id, c_last_input), __lambda { custEntry => customersWithLastName.append(custEntry)
+        customerTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), c_d_id, c_w_id, c_last_input), __lambda { custEntry => customersWithLastName.append(custEntry)
         })
         val index = __newVar(customersWithLastName.size / unit(2))
         __ifThenElse(customersWithLastName.size % unit(2) __== unit(0), {
@@ -285,7 +285,7 @@ object TpccXactGenerator_SC {
       val customerEntry = __newVar[GenericEntry](unit(null))
       __ifThenElse(c_by_name > unit(0), {
         val customersWithLastName = __newArrayBuffer[GenericEntry]()
-        customerTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), d_id, w_id, c_last), __lambda {
+        customerTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), d_id, w_id, c_last), __lambda {
           custEntry => customersWithLastName.append(custEntry)
         })
         val index = __newVar(customersWithLastName.size / unit(2))
@@ -300,7 +300,7 @@ object TpccXactGenerator_SC {
 
       val found_c_id = readVar(customerEntry).get[Int](unit(3))
       val agg = Aggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
-      orderTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id), agg)
+      orderTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id), agg)
       val newestOrderEntry = agg.result
       val dceBlocker = __newVar(unit(0))
       /*
@@ -366,7 +366,7 @@ dsl"""
       val d_id = __newVar(unit(1))
       __whileDo(readVar(d_id) <= DIST_PER_WAREHOUSE, {
         val agg = Aggregator.min[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
-        newOrderTbl.slice(unit(0) /*no_o_id*/ , GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), readVar(d_id), w_id), agg)
+        newOrderTbl.sliceCopy(unit(0) /*no_o_id*/ , GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), readVar(d_id), w_id), agg)
         val firstOrderEntry = agg.result
         __ifThenElse(firstOrderEntry __!= unit[GenericEntry](null), {
           // found
@@ -379,7 +379,7 @@ dsl"""
           orderTbl.updateCopy(orderEntry)
 
           val ol_total = __newVar(unit(0.0))
-          orderLineTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), no_o_id, readVar(d_id), w_id), __lambda { orderLineEntry =>
+          orderLineTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), no_o_id, readVar(d_id), w_id), __lambda { orderLineEntry =>
             orderLineEntry.update(unit(7), datetime) //ol_delivery_d
             __assign(ol_total, readVar(ol_total) + orderLineEntry.get[Double](unit(9))) //ol_amount
             orderLineTbl.updateCopy(orderLineEntry)
@@ -443,7 +443,7 @@ dsl"""
       val i = __newVar(o_id - unit(20))
       val unique_ol_i_id = Set[Int]()
       __whileDo(readVar(i) < o_id, {
-        orderLineTbl.slice(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), readVar(i), d_id, w_id), __lambda { orderLineEntry =>
+        orderLineTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(1), unit(2), unit(3), readVar(i), d_id, w_id), __lambda { orderLineEntry =>
           val ol_i_id = orderLineEntry.get[Int](unit(5))
           val stockEntry = stockTbl.get1((1, ol_i_id), (2, w_id))
           val s_quantity = stockEntry.get[Int](unit(3))
@@ -536,6 +536,9 @@ dsl"""
     val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
     prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
 
+    val orderLineIdx = new IndexedCols()
+    orderLineIdx.primary = List(1, 2, 3, 4)
+    prog.orderLineTbl.asInstanceOf[Sym[_]].attributes += orderLineIdx
 
     codeBlocks += codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
     codeBlocks += codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")

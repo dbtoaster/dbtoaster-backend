@@ -43,6 +43,7 @@ class Indexes extends Property {
       count = count + 1
     }
 	//SBJ: FIXME: In the absence of gets, no primary assigned and the first secondary treated as primary. WIll cause problems if it is KV index. May cause problem otherwise too. Key is subset/superset of actual key, semantics might change
+    // SBJ: FIXME: Also causes problems when IndexLookupFusion is disabled and no primary key is inferred.
     cols.secondary.foreach(l => {
       indexes += Index(count, l.toList, IHash, false)
       count = count + 1
@@ -84,28 +85,28 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
       ()
     }
 
-    case StoreSlice(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMaxObject(Def(f@PardisLambda(_, _, _))))) => {
+    case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMaxObject(Def(f@PardisLambda(_, _, _))))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       idxes.max += ((args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }) -> f.asInstanceOf[Lambda[_, _]])
       sym.attributes += idxes
 
       ()
     }
-    case StoreSlice(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMinObject(Def(f@PardisLambda(_, _, _))))) => {
+    case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMinObject(Def(f@PardisLambda(_, _, _))))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       idxes.min += ((args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }) -> f.asInstanceOf[Lambda[_, _]])
       sym.attributes += idxes
 
       ()
     }
-    case StoreSlice(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), z@_) => {
+    case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), z@_) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       idxes.secondary += (args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v })
       sym.attributes += idxes
 
       ()
     }
-    case StoreSlice(sym: Sym[_], _, Def(SteSampleSEntry(_, args)), z@_) => {
+    case StoreSliceCopy(sym: Sym[_], _, Def(SteSampleSEntry(_, args)), z@_) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       idxes.secondary += (args.map(_._1))
       sym.attributes += idxes
@@ -204,7 +205,7 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
   //  }
   val aggResultMap = collection.mutable.HashMap[Rep[_], (Rep[Store[_]], Rep[Int], Rep[_])]()
   analysis += rule {
-    case StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMaxObject(_))) => {
+    case StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMaxObject(_))) => {
       val idxes = store.asInstanceOf[Sym[_]].attributes.get[Indexes](IndexesFlag).get
       val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
       val idx = idxes.getIdxForMax(cols)
@@ -212,7 +213,7 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
       aggResultMap += (agg ->(store, unit(idx), key))
       ()
     }
-    case StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMinObject(_))) => {
+    case StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMinObject(_))) => {
       //System.err.println(s"Looking for index of $store")
       val idxes = store.asInstanceOf[Sym[_]].attributes.get[Indexes](IndexesFlag).get
       val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
@@ -223,10 +224,10 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
     }
   }
   rewrite += remove {
-    case StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMaxObject(_))) => {
+    case StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMaxObject(_))) => {
       ()
     }
-    case StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMinObject(_))) => {
+    case StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMinObject(_))) => {
       ()
     }
   }
@@ -237,17 +238,17 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
     }
   }
   rewrite += rule {
-    case StoreSlice(store, i, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), f@_) => {
+    case StoreSliceCopy(store, i, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), f@_) => {
       val idxes = store.asInstanceOf[Sym[_]].attributes.get[Indexes](IndexesFlag).get
       val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
       val idx = idxes.getIdxForSlice(cols)
-      StoreSlice(store, unit(idx), key, f)
+      StoreSliceCopy(store, unit(idx), key, f)
     }
-    case StoreSlice(store, i, key@Def(SteSampleSEntry(_, args)), f@_) => {
+    case StoreSliceCopy(store, i, key@Def(SteSampleSEntry(_, args)), f@_) => {
       val cols = args.map(_._1)
       val idxes = store.asInstanceOf[Sym[_]].attributes.get[Indexes](IndexesFlag).get
       val idx = idxes.getIdxForSlice(cols)
-      StoreSlice(store, unit(idx), key, f)
+      StoreSliceCopy(store, unit(idx), key, f)
     }
   }
 }

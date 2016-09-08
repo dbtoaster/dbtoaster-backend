@@ -300,7 +300,7 @@ trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent wi
 
 
   def stSlice[E <: Entry : TypeRep](x: Rep[Store[E]], idx: Int, key: Rep[E], f: Rep[E] => Rep[Unit]): Rep[Unit] = {
-    x.slice(unit(idx), key, f)
+    x.sliceCopy(unit(idx), key, f)
 
   }
 

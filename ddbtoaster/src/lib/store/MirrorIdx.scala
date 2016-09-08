@@ -24,4 +24,6 @@ trait MirrorIdx[E <: Entry] {
   def getCopyDependent(key: E): E = ???
   def foreach(f: (E) => Unit): Unit = ???
   def slice(key: E, f: (E) => Unit): Unit = ???
+  def sliceCopy(key: E, f: (E) => Unit): Unit = ???
+  def sliceCopyDependent(key: E, f: (E) => Unit): Unit = ???
 }

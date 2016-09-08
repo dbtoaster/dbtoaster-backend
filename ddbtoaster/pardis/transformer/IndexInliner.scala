@@ -1,9 +1,11 @@
 package ddbt.transformer
 
 import ch.epfl.data.sc.pardis.ir.Constant
-import ch.epfl.data.sc.pardis.optimization.{RuleBasedTransformer, RecursiveRuleBasedTransformer}
+import ch.epfl.data.sc.pardis.optimization.{RecursiveRuleBasedTransformer, RuleBasedTransformer}
 import ddbt.codegen.Optimizer
-import ddbt.lib.store.deep.{StructFieldDecr, StructFieldIncr, StoreDSL}
+
+import ddbt.lib.store.deep.{StoreDSL, StructFieldDecr, StructFieldIncr}
+
 import scala.collection.mutable
 
 /**
@@ -61,6 +63,8 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     case StoreGet(store, Constant(idx), e) => indexMap((store, idx)).get(e)
     case StoreGetCopyDependent(store, Constant(idx), e) => indexMap((store, idx)).getCopyDependent(e)
     case StoreForeach(store, f) => indexMap((store, 0)).foreach(f)
+    case StoreSliceCopy(store, Constant(idx), e, f) => indexMap((store, idx)).sliceCopy(e, f)
+    case StoreSliceCopyDependent(store, Constant(idx), e, f) => indexMap((store, idx)).sliceCopyDependent(e, f)
     case StoreSlice(store, Constant(idx), e, f) => indexMap((store, idx)).slice(e, f)
     case StoreUpdateCopyDependent(store, e) => val ref = indexMap((store, 0)).get(e); indexMap.collect { case ((`store`, idx), sym) => sym.updateCopyDependent(e, ref) }; unit()
     case StoreUpdateCopy(store, e) => indexMap.toSeq.sortWith(_._1._2 > _._1._2).collect { case ((`store`, idx), sym) => sym.updateCopy(e, indexMap((store, 0))) }; unit()

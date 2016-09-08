@@ -1,9 +1,11 @@
 package ddbt.lib.store
 
-import scala.reflect._
+import java.util
 
+import scala.reflect._
 import ddbt.Utils.ind
-import scala.collection.mutable.HashMap
+
+import scala.collection.mutable.{ArrayBuffer, HashMap}
 
 /**
   * A store contrains entries and allow access through multiple indices.
@@ -66,12 +68,14 @@ abstract class EntryIdx[E <: Entry] {
   // re-shuffling is done in the Store. Some indices (IdxDirect) require
   // order(entries)=order(hash(entries)) to work correctly.
 }
-case class GenericOps(val cols: Seq[Int] ) extends EntryIdx[GenericEntry] {
+
+case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
     var h = 16;
     cols.foreach(i => h = h * 41 + e.map(i).hashCode())
     h
   }
+
   def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
     val colsToCompare = if (cols != Nil)
       cols.iterator
@@ -89,7 +93,8 @@ case class GenericOps(val cols: Seq[Int] ) extends EntryIdx[GenericEntry] {
     0
   }
 }
-case class GenericCmp[R](val cols: Seq[Int] , val f: GenericEntry => R)(implicit order: Ordering[R]) extends EntryIdx[GenericEntry] {
+
+case class GenericCmp[R](val cols: Seq[Int], val f: GenericEntry => R)(implicit order: Ordering[R]) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
     var h = 16;
     cols.foreach(i => h = h * 41 + e.map(i).hashCode())
@@ -100,14 +105,19 @@ case class GenericCmp[R](val cols: Seq[Int] , val f: GenericEntry => R)(implicit
     order.compare(f(e1), f(e2))
   }
 }
-object EntryIdx{
-  def apply[E<:Entry](h: (E => Int), c: ((E, E) => Int), name: String=""): EntryIdx[E] = new EntryIdx[E]{
-    override def cmp(e1: E, e2: E): Int = c(e1,e2)
+
+object EntryIdx {
+  def apply[E <: Entry](h: (E => Int), c: ((E, E) => Int), name: String = ""): EntryIdx[E] = new EntryIdx[E] {
+    override def cmp(e1: E, e2: E): Int = c(e1, e2)
+
     override def hash(e: E): Int = h(e)
   }
+
   def genericOps(cols: Seq[Int]): EntryIdx[GenericEntry] = GenericOps(cols)
+
   def genericCmp[R: Ordering](cols: Seq[Int], f: GenericEntry => R): EntryIdx[GenericEntry] = GenericCmp(cols, f)
 }
+
 object Store {
   val GATHER_STATISTICS = false
   // DBToaster: create n+1 hash indexes (n=# projections)
@@ -323,6 +333,7 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
       i += 1;
     }
   }
+
   def updateCopyDependent(e: E): Unit = time("update") {
     if (e == null) return;
     var i = 0;
@@ -332,9 +343,10 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
       i += 1;
     }
   }
-  def updateCopy (e: E): Unit = time("update") {
+
+  def updateCopy(e: E): Unit = time("update") {
     if (e == null) return;
-    var i = n-1;
+    var i = n - 1;
     while (i >= 0) {
       if (idxs(i) != null) idxs(i).updateCopy(e, idxs(0));
       i -= 1;
@@ -351,23 +363,26 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
       i += 1;
     }
   }
+
   def deleteCopy(e: E): Unit = time("delete") {
     if (e == null) return;
-    var i = n-1;
+    var i = n - 1;
     while (i >= 0) {
       if (idxs(i) != null) idxs(i).deleteCopy(e, idxs(0));
       i -= 1;
     }
   }
+
   def deleteCopyDependent(e: E): Unit = time("delete") {
     if (e == null) return;
     var i = 0;
-    val ref= idxs(0).get(e)
+    val ref = idxs(0).get(e)
     while (i < n) {
       if (idxs(i) != null) idxs(i).deleteCopyDependent(ref);
       i += 1;
     }
   }
+
   // e already in the Store
   def get(idx: Int, key: E): E = time("get", idx) {
     if (key == null) return key;
@@ -378,19 +393,33 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     if (key == null) return key;
     idxs(idx).getCopy(key)
   }
+
   def getCopyDependent(idx: Int, key: E): E = {
     if (key == null) return key;
     idxs(idx).getCopyDependent(key)
   }
 
+  // assumes idxs(0) is the most efficient index
   def foreach(f: E => Unit): Unit = time("foreach") {
     idxs(0).foreach(f)
   }
 
-  // assumes idxs(0) is the most efficient index
+
   def slice(idx: Int, key: E, f: E => Unit) = time("slice", idx) {
     if (key != null) {
       idxs(idx).slice(key, f)
+    }
+  }
+
+  def sliceCopy(idx: Int, key: E, f: E => Unit) = time("slice", idx) {
+    if (key != null) {
+      idxs(idx).sliceCopy(key, f)
+    }
+  }
+
+  def sliceCopyDependent(idx: Int, key: E, f: E => Unit) = time("slice", idx) {
+    if (key != null) {
+      idxs(idx).sliceCopyDependent(key, f)
     }
   }
 
@@ -608,6 +637,34 @@ class IdxDirect[E <: Entry](st: Store[E], idx: Int, unique: Boolean, var data: A
     }
   }
 
+  override def sliceCopy(key: E, f: E => Unit) {
+    val h = ops.hash(key)
+    if (imm) {
+      val d = data(h - off);
+      if (d != null) f(d.copy().asInstanceOf[E])
+    }
+    else {
+      val n = data.length;
+      val entries = new ArrayBuffer[E]()
+      var s = 0;
+      var e = n;
+      var m = 0
+      while (s < e) {
+        m = (s + e) / 2;
+        val d = data(m);
+        val h2 = ops.hash(d);
+        if (h2 < h) s = m + 1; else e = m
+      }
+      do {
+        val d = data(s);
+        if (ops.cmp(key, d) != 0) return;
+        entries += (d.copy().asInstanceOf[E]);
+        s += 1
+      } while (s < size)
+      entries.foreach(f)
+    }
+  }
+
   override def range(min: E, max: E, withMin: Boolean = true, withMax: Boolean = true, f: E => Unit) {
     val h0 = ops.hash(min) + (if (withMin) 0 else 1);
     val h1 = ops.hash(max) + (if (withMax) 1 else 0)
@@ -696,6 +753,25 @@ class IdxArray[E <: Entry](st: Store[E], idx: Int, unique: Boolean, var data: Ar
       f(d);
       s += 1
     } while (s < size)
+  }
+
+  override def sliceCopy(key: E, f: E => Unit): Unit = {
+    var s = 0;
+    var e = size;
+    var m = 0
+    while (s < e) {
+      m = (s + e) / 2;
+      val c = ops.cmp(key, data(m));
+      if (c > 0) s = m + 1; else e = m
+    }
+    val entries = new ArrayBuffer[E]()
+    do {
+      val d = data(s);
+      if (ops.cmp(key, d) != 0) return;
+      entries += (d.copy().asInstanceOf[E]);
+      s += 1
+    } while (s < size)
+    entries.foreach(f)
   }
 
   override def range(min: E, max: E, withMin: Boolean = true, withMax: Boolean = true, f: E => Unit) {
@@ -999,7 +1075,37 @@ class IdxBTree[E <: Entry](st: Store[E], idx: Int, unique: Boolean)(implicit cE:
     }
   }
 
+  private def _sliceCopy(key: E, f: E => Unit, n: Node): Unit = if (n.isInstanceOf[InnerNode]) {
+    val vs = n.data;
+    val num = n.num;
+    val cs = n.asInstanceOf[InnerNode].children
+    var pc = -1;
+    var nc = ops.cmp(key, vs(0));
+    if (nc <= 0) _slice(key, f, cs(0))
+    var i = 0;
+    while (i < num) {
+      pc = nc;
+      nc = ops.cmp(key, vs(i));
+      if (pc >= 0 && nc <= 0) _slice(key, f, cs(i));
+      i += 1
+    }
+    if (nc >= 0) _slice(key, f, cs(i))
+  } else {
+    val vs = n.data;
+    val num = n.num;
+    var i = 0;
+    while (i < num && ops.cmp(key, vs(i)) > 0) i += 1
+    val entries = new ArrayBuffer[E]()
+    while (i < num && ops.cmp(key, vs(i)) == 0) {
+      entries += vs(i).copy().asInstanceOf[E];
+      i += 1;
+    }
+    entries.foreach(f);
+  }
+
   override def slice(key: E, f: E => Unit) = _slice(key, f, root)
+
+  override def sliceCopy(key: E, f: E => Unit): Unit = _sliceCopy(key, f, root)
 
   private def _range(min: E, max: E, cMin: Int, cMax: Int, f: E => Unit, n: Node): Unit = if (n.isInstanceOf[InnerNode]) {
     val vs = n.data;

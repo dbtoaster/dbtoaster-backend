@@ -232,7 +232,7 @@ class HotRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[
   def getHotRegion(s: Rep[_]): HotRegion = hotRegions(s)
 
   analysis += statement {
-    case sym -> StoreSlice(self, idx, key, lambda @ Def(lambdaDef @ PardisLambda(f, i, o))) => 
+    case sym -> StoreSliceCopy(self, idx, key, lambda @ Def(lambdaDef @ PardisLambda(f, i, o))) =>
       hotRegions += sym -> HotRegion(sym, o, List(i), Some(lambda -> lambdaDef))
       ()
   }

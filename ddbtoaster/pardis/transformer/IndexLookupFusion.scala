@@ -44,7 +44,7 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
     // full optimization
     analysis += statement {
       case sym -> (s: StoreGetCopy[_]) => storeGets += sym; ()
-      case sym -> StoreSlice(_, _, _, Def(PardisLambda(_, i, _))) => storeGets += i; ()
+      case sym -> StoreSliceCopy(_, _, _, Def(PardisLambda(_, i, _))) => storeGets += i; ()
       case sym -> StoreForeach(_, Def(PardisLambda(_, i, _))) => storeGets += i; ()
       case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if storeGets.contains(rhs) => storeGets += lhs; ()
       case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) => storeGets -= lhs; ()
@@ -52,6 +52,7 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
     }
     rewrite += rule {
       case StoreGetCopy(store, idx, key, _) => store.get(idx, key)
+      case StoreSliceCopy(store, idx, key, f) => store.slice(idx, key, f)
       case StoreUpdateCopy(store, e) if storeGets contains e => store.update(e)
       case StoreUpdateCopy(store, e) => System.err.println(s"StoreGets does not contain $e."); store.updateCopyDependent(e)
       case StoreDeleteCopy(store, e) if storeGets contains e => store.delete(e)
@@ -61,6 +62,7 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
     //partial optimization
     rewrite += rule {
       case StoreGetCopy(store, idx, key, _) => store.getCopyDependent(idx, key)
+      case StoreSliceCopy(store, idx, key, f) => store.sliceCopyDependent(idx, key, f)
       case StoreUpdateCopy(store, e) => store.updateCopyDependent(e)
       case StoreDeleteCopy(store, e) => store.deleteCopyDependent(e)
     }

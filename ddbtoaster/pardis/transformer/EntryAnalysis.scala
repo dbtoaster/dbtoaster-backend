@@ -69,10 +69,10 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
     case sym -> (StoreDeleteCopy(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
 
 
-    case sym -> (StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMaxObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
-    case sym -> (StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMinObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
-    case sym -> (StoreSlice(store, _, key@Def(GenericEntryApplyObject(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
-    case sym -> (StoreSlice(store, _, key@Def(SteSampleSEntry(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
+    case sym -> (StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMaxObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
+    case sym -> (StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMinObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
+    case sym -> (StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
+    case sym -> (StoreSliceCopy(store, _, key@Def(SteSampleSEntry(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
 
     case sym -> (StoreForeach(store, f@Def(PardisLambda(_, i, _)))) => add(i, store); add(f, store); ()
 
