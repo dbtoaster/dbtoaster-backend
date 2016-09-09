@@ -77,12 +77,12 @@ case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
   }
 
   def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
-    val colsToCompare = if (cols != Nil)
-      cols.iterator
-    else if (e1.map.size > e2.map.size)
+    val colsToCompare = if (e1.map.size > e2.map.size)
       e2.map.keysIterator
     else if (e1.map.size < e2.map.size)
       e1.map.keysIterator
+    else if (cols != Nil)
+      cols.iterator
     else
       1 until e1.map.size //TODO: SBJ: Fix: Assumes that all columns except the last form key
     for (i <- colsToCompare) {

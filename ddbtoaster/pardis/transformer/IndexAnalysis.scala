@@ -4,6 +4,7 @@ import ch.epfl.data.sc.pardis.ir.{Constant, PardisLambda}
 import ch.epfl.data.sc.pardis.optimization.{RecursiveRuleBasedTransformer, RuleBasedTransformer}
 import ch.epfl.data.sc.pardis.property.{Property, TypedPropertyFlag}
 import ch.epfl.data.sc.pardis.types.AnyType
+import ddbt.codegen.Optimizer
 import ddbt.lib.store._
 import ddbt.lib.store.deep.StoreDSL
 
@@ -38,12 +39,14 @@ class Indexes extends Property {
 
   def add(cols: IndexedCols) = {
     var count = 0
+    val primaryIdxType = if(Optimizer.analyzeIndex) IHash else IList
     if (cols.primary != Nil) {
-      indexes += Index(count, cols.primary.toList, IHash, true);
+      indexes += Index(count, cols.primary.toList, primaryIdxType, Optimizer.analyzeIndex);  //IdxList with unique = false  OR IdxHash with unique = true
       count = count + 1
     }
 	//SBJ: FIXME: In the absence of gets, no primary assigned and the first secondary treated as primary. WIll cause problems if it is KV index. May cause problem otherwise too. Key is subset/superset of actual key, semantics might change
     // SBJ: FIXME: Also causes problems when IndexLookupFusion is disabled and no primary key is inferred.
+
     cols.secondary.foreach(l => {
       indexes += Index(count, l.toList, IHash, false)
       count = count + 1
@@ -177,7 +180,7 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
           implicit val typeR = f.typeS.asInstanceOf[TypeRep[Any]]
           EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
         }
-        case Index(_, _, IList, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](Nil))
+        case Index(_, cols, IList, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](cols))
       })
       val newS = __newStore(unit(entidxes.size), Array(entidxes: _*))
       idxes.indexes.foreach(i => newS.index(unit(i.idxNum), unit(i.tp.toString), unit(i.unique), unit(i.sliceIdx)))

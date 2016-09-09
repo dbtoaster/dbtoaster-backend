@@ -43,6 +43,17 @@ object TpccXactGenerator_SC {
     val CustomerEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, DateType, StringType, DoubleType, DoubleType, DoubleType, DoubleType, IntType, IntType, StringType)
     val StockEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, IntType, IntType, IntType, StringType)
 
+    val newOrderKey = List(1, 2, 3)
+    val wareHouseKey = List(1)
+    val itemKey = List(1)
+    val orderKey = List(1, 2, 3)
+    val districtKey = List(1, 2)
+    val orderLineKey = List(1, 2, 3, 4)
+    val customerKey = List(1, 2, 3)
+    val stockKey = List(1, 2)
+
+
+
     val newOrderTbl = __newStore[GenericEntry]
     val historyTbl = __newStore[GenericEntry]
     val warehouseTbl = __newStore[GenericEntry]
@@ -52,6 +63,8 @@ object TpccXactGenerator_SC {
     val orderLineTbl = __newStore[GenericEntry]
     val customerTbl = __newStore[GenericEntry]
     val stockTbl = __newStore[GenericEntry]
+
+    val allKeys = List(newOrderTbl -> newOrderKey, warehouseTbl-> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
     val schema = List[(Rep[_], List[TypeRep[_]])](newOrderTbl -> NewOrderEntry, historyTbl -> HistoryEntry, warehouseTbl -> WarehouseEntry, itemTbl -> ItemEntry, orderTbl -> OrderEntry, districtTbl -> DistrictEntry, orderLineTbl -> OrderLineEntry, customerTbl -> CustomerEntry, stockTbl -> StockEntry)
 
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
@@ -87,7 +100,7 @@ object TpccXactGenerator_SC {
         val warehouseEntry = warehouseTbl.get1((1, w_id))
         val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
         val o_id = districtEntry.get[Int](unit(11))
-        districtEntry +=(unit(11), unit(1)) //d_next_o_id+1
+        districtEntry += (unit(11), unit(1)) //d_next_o_id+1
         districtTbl.updateCopy(districtEntry)
 
 
@@ -138,7 +151,7 @@ object TpccXactGenerator_SC {
           })
 
           stockEntry.update(unit(3), s_quantity - ol_quantity)
-          __ifThenElse(s_quantity <= ol_quantity, stockEntry +=(unit(3), unit(91)), unit())
+          __ifThenElse(s_quantity <= ol_quantity, stockEntry += (unit(3), unit(91)), unit())
 
           val s_remote_cnt_increment = __newVar(unit(0))
           dsl"""if ($ol_supply_w_id != $w_id) $s_remote_cnt_increment = 1"""
@@ -170,11 +183,11 @@ object TpccXactGenerator_SC {
 
     def paymentTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_w_id: Rep[Int], c_d_id: Rep[Int], c_id: Rep[Int], c_last_input: Rep[String], h_amount: Rep[Double]): Rep[Int] = {
       val warehouseEntry = warehouseTbl.get1((1, w_id))
-      warehouseEntry +=(unit(9), h_amount) //w_ytd
+      warehouseEntry += (unit(9), h_amount) //w_ytd
       warehouseTbl.updateCopy(warehouseEntry)
 
       val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
-      districtEntry +=(unit(10), h_amount)
+      districtEntry += (unit(10), h_amount)
       districtTbl.updateCopy(districtEntry)
 
       val customerEntry = __newVar(unit[GenericEntry](null))
@@ -201,14 +214,14 @@ object TpccXactGenerator_SC {
         //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
         __assign(c_data, unit("%d %d %d %d %d $%f %s | %s").format(unit("FIX ME"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, datetime, readVar(c_data)))
         __ifThenElse(readVar(c_data).length > unit(500), __assign(c_data, readVar(c_data).substring(unit(0), unit(500))), unit())
-        readVar(customerEntry) +=(unit(17) /*c_balance*/ , h_amount)
+        readVar(customerEntry) += (unit(17) /*c_balance*/ , h_amount)
         //TODO this is the correct version but is not implemented in the correctness test
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
         //customerEntry += (19 /*c_payment_cnt*/, 1)
         readVar(customerEntry).update(unit(21) /*c_data*/ , readVar(c_data))
         unit()
       }, {
-        readVar(customerEntry) +=(unit(17) /*c_balance*/ , h_amount)
+        readVar(customerEntry) += (unit(17) /*c_balance*/ , h_amount)
         //TODO this is the correct version but is not implemented in the correctness test
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
         //customerEntry += (19 /*c_payment_cnt*/, 1)
@@ -218,7 +231,7 @@ object TpccXactGenerator_SC {
       val d_name = districtEntry.get[String](unit(3))
       //TODO this is the correct version but is not implemented in the correctness test
       val h_data =
-        dsl"""{
+      dsl"""{
         if (${w_name.length} > 10) $w_name.substring(0, 10) else $w_name
       } + "    " + {
         if (${d_name.length} > 10) $d_name.substring(0, 10) else $d_name
@@ -479,25 +492,26 @@ dsl"""
   import Context.{EntryType => _, entryRepToGenericEntryOps => _, typeStore => _, typeNull => _, _}
 
   def main(args: Array[String]): Unit = {
-    def opts(o: String) = o match{
-      case "entry" => Optimizer.analyzeEntry=true
-      case "index" => Optimizer.analyzeIndex=true
-      case "online" => Optimizer.onlineOpts=true
-      case "m3cmpmult" => Optimizer.m3CompareMultiply=true
+    def opts(o: String) = o match {
+      case "entry" => Optimizer.analyzeEntry = true
+      case "index" => Optimizer.analyzeIndex = true
+      case "online" => Optimizer.onlineOpts = true
+      case "m3cmpmult" => Optimizer.m3CompareMultiply = true
       case "tmpvar" => Optimizer.tmpVarHoist = true
       case "idxinline" => Optimizer.indexInline = true
       case "lookupfusion" => Optimizer.indexLookupFusion = true
       case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true
       case "deadidx" => Optimizer.deadIndexUpdate = true
-      case "codemotion" =>Optimizer.codeMotion = true
+      case "codemotion" => Optimizer.codeMotion = true
       case "refcounter" => Optimizer.refCounter = true
 
     }
-    def parseArgs(args:Array[String]) {
+    def parseArgs(args: Array[String]) {
       val l = args.length
       var i = 0
       def eat(f: String => Unit, s: Boolean = false) {
-        i += 1; if (i < l) f(if (s) args(i).toLowerCase else args(i))
+        i += 1;
+        if (i < l) f(if (s) args(i).toLowerCase else args(i))
       }
       while (i < l) {
         args(i) match {
@@ -509,9 +523,9 @@ dsl"""
     }
     parseArgs(args)
 
-      import Optimizer._
-      val all_opts = Map("Entry"->analyzeEntry,"Index"->analyzeIndex, "Online"->onlineOpts, "TmpVar"->tmpVarHoist, "Inline"->indexInline, "Fusion full"->indexLookupFusion, "Fusion"->indexLookupPartialFusion, "DeadIdx"->deadIndexUpdate,"CodeMotion"->codeMotion, "RefCnt"->refCounter, "CmpMult"->m3CompareMultiply)
-      java.lang.System.err.println("Optimizations :: "+all_opts.filter(_._2).map(_._1).mkString(", "))
+    import Optimizer._
+    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
+    java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
 
 
     var prog: Prog = null
@@ -530,15 +544,12 @@ dsl"""
         |import ddbt.lib.store._
         |import scala.collection.mutable.{ArrayBuffer,Set}
         |import java.util.Date
-        |""".stripMargin
+        | """.stripMargin
     val genDir = "../runtime/tpcc/pardisgen"
     val file = new PrintWriter(s"$genDir/TpccGenSC.scala")
     val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
     prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
-
-    val orderLineIdx = new IndexedCols()
-    orderLineIdx.primary = List(1, 2, 3, 4)
-    prog.orderLineTbl.asInstanceOf[Sym[_]].attributes += orderLineIdx
+    prog.allKeys.foreach{ case (tbl, key) => val i = new IndexedCols; i.primary = key ; tbl.asInstanceOf[Sym[_]].attributes += i}
 
     codeBlocks += codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
     codeBlocks += codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")
@@ -547,7 +558,7 @@ dsl"""
     codeBlocks += codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
 
 
-    val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]),codeBlocks , Nil, Nil)
+    val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]), codeBlocks, Nil, Nil)
 
     implicit def toPath(filename: String) = get(filename)
 
@@ -580,9 +591,9 @@ dsl"""
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
     implicit val tp = IntType.asInstanceOf[TypeRep[Any]]
     val tempVars = optTP.tempVars.map(t => codeGen.stmtToDocument(Statement(t._1, t._2))).mkDocument("\n")
-    val r =  Document.nest(2, entryIdxes :/: tempVars)
+    val r = Document.nest(2, entryIdxes :/: tempVars)
     file.println(r)
-    optTP.codeBlocks.foreach { case (className, args : List[Sym[_]], body) => {
+    optTP.codeBlocks.foreach { case (className, args: List[Sym[_]], body) => {
       val genCode = "  class " + className + "(" + optTP.global.map(_.asInstanceOf[Sym[_]]).map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
         "    def apply(" + args.map(s => s + ": " + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") = "
       val cgDoc = Document.nest(4, codeGen.blockToDocument(body))

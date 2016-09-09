@@ -49,6 +49,7 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
       case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if storeGets.contains(rhs) => storeGets += lhs; ()
       case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) => storeGets -= lhs; ()
       case sym -> (PardisReadVar(PardisVar(v@Sym(_, _)))) if storeGets contains v => storeGets += sym; ()
+      case sym -> AggregatorResult(_) => storeGets += sym; ()
     }
     rewrite += rule {
       case StoreGetCopy(store, idx, key, _) => store.get(idx, key)
