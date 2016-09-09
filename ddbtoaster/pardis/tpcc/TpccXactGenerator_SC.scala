@@ -52,7 +52,7 @@ object TpccXactGenerator_SC {
     val customerKey = List(1, 2, 3)
     val stockKey = List(1, 2)
 
-
+    val districtRange = List((1, 1, 11), (2, 1, 2))
 
     val newOrderTbl = __newStore[GenericEntry]
     val historyTbl = __newStore[GenericEntry]
@@ -64,7 +64,8 @@ object TpccXactGenerator_SC {
     val customerTbl = __newStore[GenericEntry]
     val stockTbl = __newStore[GenericEntry]
 
-    val allKeys = List(newOrderTbl -> newOrderKey, warehouseTbl-> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
+    val allKeys = List(newOrderTbl -> newOrderKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
+    val allRanges = List(districtTbl -> districtRange).toMap
     val schema = List[(Rep[_], List[TypeRep[_]])](newOrderTbl -> NewOrderEntry, historyTbl -> HistoryEntry, warehouseTbl -> WarehouseEntry, itemTbl -> ItemEntry, orderTbl -> OrderEntry, districtTbl -> DistrictEntry, orderLineTbl -> OrderLineEntry, customerTbl -> CustomerEntry, stockTbl -> StockEntry)
 
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
@@ -524,7 +525,7 @@ dsl"""
     parseArgs(args)
 
     import Optimizer._
-    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
+    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
     java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
 
 
@@ -549,7 +550,13 @@ dsl"""
     val file = new PrintWriter(s"$genDir/TpccGenSC.scala")
     val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
     prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
-    prog.allKeys.foreach{ case (tbl, key) => val i = new IndexedCols; i.primary = key ; tbl.asInstanceOf[Sym[_]].attributes += i}
+    prog.allKeys.foreach { case (tbl, key) => {
+      val i = new IndexedCols
+      i.primary = key
+      i.fixedrange = prog.allRanges getOrElse(tbl, Nil)
+      tbl.asInstanceOf[Sym[_]].attributes += i
+    }
+    }
 
     codeBlocks += codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
     codeBlocks += codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")

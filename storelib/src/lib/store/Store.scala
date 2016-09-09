@@ -94,6 +94,18 @@ case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
   }
 }
 
+case class GenericFixedRangeOps(val colsRange: Seq[Array[Int]]) extends EntryIdx[GenericEntry] {
+  def hash(e: GenericEntry): Int = {
+    colsRange.foldLeft((0))((acc, cur) => (acc * (cur(2) - cur(1)) + e.get[Int](cur(0)) - cur(1)))
+    //Acc = (hash, weight)
+    //Cur = (column_no, lower_bound, upper_bound)
+    //hash' = hash * weight + (e[column_no] - lower_bound)
+    //weight' = upper_bound - lower_bound
+  }
+
+  def cmp(e1: GenericEntry, e2: GenericEntry) = 0
+}
+
 case class GenericCmp[R](val cols: Seq[Int], val f: GenericEntry => R)(implicit order: Ordering[R]) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
     var h = 16;
@@ -114,6 +126,8 @@ object EntryIdx {
   }
 
   def genericOps(cols: Seq[Int]): EntryIdx[GenericEntry] = GenericOps(cols)
+
+  def genericFixedRangedOps(colsRange: Seq[Array[Int]]): EntryIdx[GenericEntry] = GenericFixedRangeOps(colsRange)
 
   def genericCmp[R: Ordering](cols: Seq[Int], f: GenericEntry => R): EntryIdx[GenericEntry] = GenericCmp(cols, f)
 }
@@ -458,13 +472,14 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     val i: Idx[E] = tp match {
       case INone => null.asInstanceOf[Idx[E]]
       case IHash => new IdxHash[E](this, idx, unique)
-      case IDirect | IArray => val data = if (idxs(0) == null) new Array[E](0)
-      else {
-        val d = new Array[E](idxs(0).size);
-        var x = 0;
-        idxs(0).foreach { e => d(x) = e; x += 1 };
-        d
-      }
+      case IDirect | IArray =>
+        //        if (idxs(0) == null) new Array[E](0)
+        //      else {
+        val data = new Array[E](sliceIdx); //SBJ: FIXME Using sliceIdx as size for now
+        //        var x = 0;
+        //        idxs(0).foreach { e => d(x) = e; x += 1 };
+
+
         if (tp == IDirect) new IdxDirect[E](this, idx, unique, data) else new IdxArray[E](this, idx, unique, data)
       case IBTree => new IdxBTree(this, idx, unique)
       case IList => new IdxList(this, idx, unique)
@@ -525,7 +540,8 @@ class IdxDirect[E <: Entry](st: Store[E], idx: Int, unique: Boolean, var data: A
   private final val nil = null.asInstanceOf[E]
   private final val min_density = 0.2
   // minimal array density to consider it for immediate election
-  private var imm = false
+  private var imm = true
+  //SBJ: Changed from false to true
   // immediate: hash=array_key
   private var off = 0
 
@@ -551,7 +567,8 @@ class IdxDirect[E <: Entry](st: Store[E], idx: Int, unique: Boolean, var data: A
     else w("data is note dense, immediate mode")
   }
 
-  prepare
+//  prepare
+  size = data.length
 
   override def unsafeInsert(e: E) {
     insert(e)
@@ -559,7 +576,9 @@ class IdxDirect[E <: Entry](st: Store[E], idx: Int, unique: Boolean, var data: A
 
   override def insert(e: E) {
     val h = ops.hash(e);
-    if (imm && h >= off && h <= off + size - 1) data(h - off) = e else w("insert")
+    if (imm && h >= off && h <= off + size - 1)
+      data(h - off) = e
+    else w("insert")
   }
 
   override def delete(e: E) {

@@ -72,6 +72,7 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
     case Statement(sym, arr@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"val $sym = Array[${arr.typeT}](" :: ops.collect {
       case Def(EntryIdxApplyObject(_, _, Constant(name))) => Document.text(name)
       case Def(node) => nodeToDocument(node)
+      case e => expToDocument(e)
     }.mkDocument(", ") :: doc")"
     case _ => super.stmtToDocument(stmt)
   }

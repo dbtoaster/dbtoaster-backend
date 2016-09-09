@@ -16,13 +16,14 @@ case class TransactionProgram[T](val initBlock: PardisBlock[T], val global: List
 
 object Optimizer {
   var analyzeEntry: Boolean = false
-  var analyzeIndex: Boolean = false
+  var analyzeIndex: Boolean = true
+  var fixedRange: Boolean = true
   var onlineOpts = true
   var tmpVarHoist = true
   var indexInline = true
-  var indexLookupFusion = false
+  var indexLookupFusion = true
   var indexLookupPartialFusion = false
-  var deadIndexUpdate = false
+  var deadIndexUpdate = true
   var codeMotion = true
   var refCounter = true
   var m3CompareMultiply = true //Lazy evaluation
@@ -76,7 +77,7 @@ class Optimizer(val IR: StoreDSL) {
     val codeB_ = prg.codeBlocks.map(t => (t._1, t._2, opt(IR)(t._3)))
     val (global_, structs_, entryidx_) = opt match {
       case writer: IndexDecider => (writer.changeGlobal(prg.global), prg.structsDefs, prg.entryIdxDefs)
-      case writer: EntryTransformer => (writer.changeGlobal(prg.global), prg.structsDefs ++ writer.structsDefMap.map(_._2), prg.entryIdxDefs ++ (writer.genOps.map(_._2) ++ writer.genCmp).collect { case IR.Def(e: EntryIdxApplyObject[_]) => e })
+      case writer: EntryTransformer => (writer.changeGlobal(prg.global), prg.structsDefs ++ writer.structsDefMap.map(_._2), prg.entryIdxDefs ++ (writer.genOps.map(_._2) ++ writer.genCmp ++ writer.genFixRngOps).collect { case IR.Def(e: EntryIdxApplyObject[_]) => e })
       case _ => (prg.global, prg.structsDefs, prg.entryIdxDefs)
     }
     val vars_ = opt match {

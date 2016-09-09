@@ -103,6 +103,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   val structsDefMap = collection.mutable.HashMap.empty[StructTags.StructTag[SEntry], PardisStructDef[SEntry]]
   val genOps = collection.mutable.HashMap.empty[(Seq[Int], SEntry), Rep[EntryIdx[SEntry]]]
   val genCmp = collection.mutable.ArrayBuffer[Rep[EntryIdx[SEntry]]]()
+  val genFixRngOps = collection.mutable.ArrayBuffer[Rep[EntryIdx[SEntry]]]()
 
   def super_optimize[T: TypeRep](node: Block[T]): Block[T] = {
     val analyseProgram = classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
@@ -133,11 +134,24 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
 
   def changeGlobal(global: List[Sym[_]]) = global.map(x => apply(x.asInstanceOf[Sym[Any]])(AnyType).asInstanceOf[Sym[_]])
 
+  def hashFixedRangeFn(colsRange: Seq[Array[Int]], s: SEntry): Rep[SEntry => Int] = {
+    implicit val entryTp = s.tp
+    __lambda((e: Rep[SEntry]) => {
+      val hash = __newVar(unit(0))
+      colsRange.foreach(c => {
+        val colval = fieldGetter(e, "_" + c(0))(IntType) - unit(c(1))
+        val weight = unit(c(2) - c(1))
+        __assign(hash, __readVar(hash) * weight + colval)
+      })
+      __readVar(hash)
+    })
+  }
+
   def hashfn(cols: Seq[Int], s: SEntry): Rep[SEntry => Int] = {
     //System.err.println(s"Generating hash function for ${s.tp} with cols $cols")
-    def elemhash(value: Rep[Any])(implicit tp: TypeRep[Any]): Rep[Int] = value match{
-//      case v: Rep[Long] => v.toInt
-//      case v: Rep[Int] => v
+    def elemhash(value: Rep[Any])(implicit tp: TypeRep[Any]): Rep[Int] = value match {
+      //      case v: Rep[Long] => v.toInt
+      //      case v: Rep[Int] => v
       case v => infix_hashCode(value)
     }
     implicit val entryTp = s.tp
@@ -261,7 +275,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val ops_ = ops.collect {
         case Def(node: EntryIdxGenericCmpObject[_]) => {
           implicit val typeR = node.typeR
-
+          //SBJ: TODO: Handle duplicity
           val cols = node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]]
           val hl = hashfn(cols, entry)
           val cl = order_cmp(node.f, entry)
@@ -274,6 +288,14 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
           val cols = node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]]
           lazy val news = EntryIdx.apply(hashfn(cols, entry), equal_cmp(cols, entry), unit(entry.name + "_Idx" + cols.mkString("")))
           genOps getOrElseUpdate((cols, entry), news)
+        }
+        case Def(node: EntryIdxGenericFixedRangeOpsObject) => {
+          val cmpFunc = __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => unit(0))
+          val colsRange = node.colsRange.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Array[Int]]]
+          //SBJ: TODO: Handle duplicity
+          val rep = EntryIdx.apply(hashFixedRangeFn(colsRange, entry), cmpFunc, unit(entry.name + "_Idx" + colsRange.map(t => s"${t(0)}f${t(1)}t${t(2)}").mkString("_")))
+          genFixRngOps += rep
+          rep
         }
       }
       val newS = __newStore(n, Array.apply(ops_ : _*))
@@ -350,9 +372,10 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   rewrite += remove {
     case n: EntryIdxGenericCmpObject[_] => ()
     case n: EntryIdxGenericOpsObject => ()
+    case n: EntryIdxGenericFixedRangeOpsObject => ()
     case ArrayApplyObject(Def(LiftedSeq(args))) if (args.foldLeft(false)((res, arg) => {
       val argdef = Def.unapply(arg).get
-      res || argdef.isInstanceOf[EntryIdxGenericCmpObject[_]] || argdef.isInstanceOf[EntryIdxGenericOpsObject]
+      res || argdef.isInstanceOf[EntryIdxGenericCmpObject[_]] || argdef.isInstanceOf[EntryIdxGenericOpsObject] || argdef.isInstanceOf[EntryIdxGenericFixedRangeOpsObject]
     })) => ()
   }
 
