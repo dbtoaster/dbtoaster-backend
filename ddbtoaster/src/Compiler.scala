@@ -55,6 +55,7 @@ object Compiler {
   def opts(o: String) = o match{
       case "entry" => Optimizer.analyzeEntry=true
       case "index" => Optimizer.analyzeIndex=true
+      case "fixedrange" => Optimizer.fixedRange=true
       case "online" => Optimizer.onlineOpts=true
       case "m3cmpmult" => Optimizer.m3CompareMultiply=true
       case "tmpvar" => Optimizer.tmpVarHoist = true
@@ -64,6 +65,7 @@ object Compiler {
       case "deadidx" => Optimizer.deadIndexUpdate = true
       case "codemotion" =>Optimizer.codeMotion = true
       case "refcounter" => Optimizer.refCounter = true
+      case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }
   def error(str:String,fatal:Boolean=false) = { System.err.println(str); if (fatal) System.exit(0); null }
