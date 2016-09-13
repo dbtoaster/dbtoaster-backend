@@ -94,9 +94,9 @@ case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
   }
 }
 
-case class GenericFixedRangeOps(val colsRange: Seq[Array[Int]]) extends EntryIdx[GenericEntry] {
+case class GenericFixedRangeOps(val colsRange: Seq[(Int, Int, Int)]) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
-    colsRange.foldLeft((0))((acc, cur) => (acc * (cur(2) - cur(1)) + e.get[Int](cur(0)) - cur(1)))
+    colsRange.foldLeft((0))((acc, cur) => (acc * (cur._3 - cur._2) + e.get[Int](cur._1) - cur._2))
     //Acc = (hash, weight)
     //Cur = (column_no, lower_bound, upper_bound)
     //hash' = hash * weight + (e[column_no] - lower_bound)
@@ -127,7 +127,7 @@ object EntryIdx {
 
   def genericOps(cols: Seq[Int]): EntryIdx[GenericEntry] = GenericOps(cols)
 
-  def genericFixedRangedOps(colsRange: Seq[Array[Int]]): EntryIdx[GenericEntry] = GenericFixedRangeOps(colsRange)
+  def genericFixedRangeOps(colsRange: Seq[(Int, Int, Int)]): EntryIdx[GenericEntry] = GenericFixedRangeOps(colsRange)
 
   def genericCmp[R: Ordering](cols: Seq[Int], f: GenericEntry => R): EntryIdx[GenericEntry] = GenericCmp(cols, f)
 }

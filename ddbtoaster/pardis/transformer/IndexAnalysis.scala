@@ -175,7 +175,7 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
       //System.err.println(s"Deciding Index for $s")
       val entidxes = idxes.indexes.map(_ match {
         case Index(_, cols, IHash, _, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](cols))
-        case Index(_, _, IDirect, _, _, _, colsRange) => EntryIdx.genericFixedRangeOps(__liftSeq(colsRange.map(x => Array[Int](unit(x._1), unit(x._2), unit(x._3)))))
+        case Index(_, _, IDirect, _, _, _, colsRange) => EntryIdx.genericFixedRangeOps(unit[Seq[(Int, Int, Int)]](colsRange))
         case Index(_, cols, INone, _, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](cols))
         case Index(_, cols, ISliceHeapMax, _, _, f, _) => {
           implicit val tp = f.tp.asInstanceOf[TypeRep[(GenericEntry => Any)]]

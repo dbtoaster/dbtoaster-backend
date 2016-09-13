@@ -1,15 +1,13 @@
 package ddbt.transformer
 
-import ch.epfl.data.sc.pardis.property.{TypedPropertyFlag, Property}
+import ch.epfl.data.sc.pardis.property.{Property, TypedPropertyFlag}
 import ch.epfl.data.sc.pardis.utils.TypeUtils._
-import ch.epfl.data.sc.pardis.types.{AnyType, RecordType, PardisType}
+import ch.epfl.data.sc.pardis.types.{AnyType, PardisType, RecordType}
 import ddbt.lib.store.deep.DateIRs.DateType
-
-
 import ddbt.lib.store.deep._
-
 import ch.epfl.data.sc.pardis.optimization.{RecursiveRuleBasedTransformer, RuleBasedTransformer}
 import ch.epfl.data.sc.pardis.ir._
+import ddbt.codegen.Optimizer
 
 /**
   * Created by sachin on 08.04.16.
@@ -134,13 +132,13 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
 
   def changeGlobal(global: List[Sym[_]]) = global.map(x => apply(x.asInstanceOf[Sym[Any]])(AnyType).asInstanceOf[Sym[_]])
 
-  def hashFixedRangeFn(colsRange: Seq[Array[Int]], s: SEntry): Rep[SEntry => Int] = {
+  def hashFixedRangeFn(colsRange: Seq[(Int, Int, Int)], s: SEntry): Rep[SEntry => Int] = {
     implicit val entryTp = s.tp
     __lambda((e: Rep[SEntry]) => {
       val hash = __newVar(unit(0))
       colsRange.foreach(c => {
-        val colval = fieldGetter(e, "_" + c(0))(IntType) - unit(c(1))
-        val weight = unit(c(2) - c(1))
+        val colval = fieldGetter(e, "_" + c._1)(IntType) - unit(c._2)
+        val weight = unit(c._3 - c._2)
         __assign(hash, __readVar(hash) * weight + colval)
       })
       __readVar(hash)
@@ -276,7 +274,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         case Def(node: EntryIdxGenericCmpObject[_]) => {
           implicit val typeR = node.typeR
           //SBJ: TODO: Handle duplicity
-          val cols = node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]]
+          val cols = if(Optimizer.analyzeIndex) node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]] else Nil
           val hl = hashfn(cols, entry)
           val cl = order_cmp(node.f, entry)
           val rep = EntryIdx.apply(hl, cl, unit(entry.name + "_Idx" + cols.mkString("") + "_Ordering"))
@@ -285,15 +283,17 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         }
         case Def(node: EntryIdxGenericOpsObject) => {
 
-          val cols = node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]]
+          val cols =  if(Optimizer.analyzeIndex) node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]] else Nil
           lazy val news = EntryIdx.apply(hashfn(cols, entry), equal_cmp(cols, entry), unit(entry.name + "_Idx" + cols.mkString("")))
           genOps getOrElseUpdate((cols, entry), news)
         }
         case Def(node: EntryIdxGenericFixedRangeOpsObject) => {
+          if(!Optimizer.fixedRange)
+            throw new IllegalStateException("Fixed range ops object without fixed range optimization")
           val cmpFunc = __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => unit(0))
-          val colsRange = node.colsRange.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Array[Int]]]
+          val colsRange = node.colsRange.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[(Int, Int, Int)]]
           //SBJ: TODO: Handle duplicity
-          val rep = EntryIdx.apply(hashFixedRangeFn(colsRange, entry), cmpFunc, unit(entry.name + "_Idx" + colsRange.map(t => s"${t(0)}f${t(1)}t${t(2)}").mkString("_")))
+          val rep = EntryIdx.apply(hashFixedRangeFn(colsRange, entry), cmpFunc, unit(entry.name + "_Idx" + colsRange.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")))
           genFixRngOps += rep
           rep
         }
@@ -373,10 +373,14 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     case n: EntryIdxGenericCmpObject[_] => ()
     case n: EntryIdxGenericOpsObject => ()
     case n: EntryIdxGenericFixedRangeOpsObject => ()
-    case ArrayApplyObject(Def(LiftedSeq(args))) if (args.foldLeft(false)((res, arg) => {
-      val argdef = Def.unapply(arg).get
-      res || argdef.isInstanceOf[EntryIdxGenericCmpObject[_]] || argdef.isInstanceOf[EntryIdxGenericOpsObject] || argdef.isInstanceOf[EntryIdxGenericFixedRangeOpsObject]
-    })) => ()
+    case ArrayApplyObject(Def(LiftedSeq(args))) if {
+      args match {
+        case Def(EntryIdxGenericOpsObject(_)) :: xs => true
+        case Def(EntryIdxGenericCmpObject(_, _)) :: xs => true
+        case Def(EntryIdxGenericFixedRangeOpsObject(_)) :: xs => true
+        case _ => false
+      }
+    } => ()
   }
 
 }

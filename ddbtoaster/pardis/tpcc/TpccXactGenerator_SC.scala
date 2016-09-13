@@ -24,7 +24,7 @@ import scala.language.implicitConversions
 
 object TpccXactGenerator_SC {
 
-  class Prog(val Context: StoreDSL) {
+  class Prog(val Context: StoreDSL, val numWare: Int) {
 
     //    import Context.Predef._
     //    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
@@ -52,7 +52,11 @@ object TpccXactGenerator_SC {
     val customerKey = List(1, 2, 3)
     val stockKey = List(1, 2)
 
-    val districtRange = List((1, 1, 11), (2, 1, 2))
+    lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
+    lazy val warehouseRange = List((1, 1, numWare + 1))
+    lazy val customerRange = List((1, 1, 3001), (2, 1, 11), (3, 1, numWare + 1))
+    lazy val itemRange = List((1, 1, 100001))
+    lazy val stockRange = List((1, 1, 100001), (2, 1, numWare + 1))
 
     val newOrderTbl = __newStore[GenericEntry]
     val historyTbl = __newStore[GenericEntry]
@@ -65,7 +69,7 @@ object TpccXactGenerator_SC {
     val stockTbl = __newStore[GenericEntry]
 
     val allKeys = List(newOrderTbl -> newOrderKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
-    val allRanges = List(districtTbl -> districtRange).toMap
+    lazy val allRanges = List(warehouseTbl -> warehouseRange, districtTbl -> districtRange, customerTbl -> customerRange, itemTbl -> itemRange, stockTbl -> stockRange).toMap
     val schema = List[(Rep[_], List[TypeRep[_]])](newOrderTbl -> NewOrderEntry, historyTbl -> HistoryEntry, warehouseTbl -> WarehouseEntry, itemTbl -> ItemEntry, orderTbl -> OrderEntry, districtTbl -> DistrictEntry, orderLineTbl -> OrderLineEntry, customerTbl -> CustomerEntry, stockTbl -> StockEntry)
 
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
@@ -493,6 +497,7 @@ dsl"""
   import Context.{EntryType => _, entryRepToGenericEntryOps => _, typeStore => _, typeNull => _, _}
 
   def main(args: Array[String]): Unit = {
+    var numWare = 1
     def opts(o: String) = o match {
       case "entry" => Optimizer.analyzeEntry = true
       case "index" => Optimizer.analyzeIndex = true
@@ -505,6 +510,8 @@ dsl"""
       case "deadidx" => Optimizer.deadIndexUpdate = true
       case "codemotion" => Optimizer.codeMotion = true
       case "refcounter" => Optimizer.refCounter = true
+      case "fixedrange" => Optimizer.fixedRange = true
+      case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }
     def parseArgs(args: Array[String]) {
@@ -517,6 +524,7 @@ dsl"""
       while (i < l) {
         args(i) match {
           case "-opt" => eat(s => opts(s), true)
+          case "-ware" => eat(s => numWare = s.toInt)
           case _ =>
         }
         i += 1
@@ -535,7 +543,7 @@ dsl"""
     import java.nio.file.StandardCopyOption.REPLACE_EXISTING
 
     val initB = reifyBlock {
-      prog = new Prog(Context)
+      prog = new Prog(Context, numWare)
       unit((1))
     }
     val codeGen = new StoreScalaCodeGenerator(Context)

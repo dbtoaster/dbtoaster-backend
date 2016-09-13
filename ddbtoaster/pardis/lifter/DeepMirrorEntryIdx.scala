@@ -24,7 +24,7 @@ trait EntryIdxOps extends Base with GenericEntryOps {
      def apply[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)], entryidxname : Rep[String])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = entryIdxApplyObject[E](h, c, entryidxname)(typeE)
      def genericOps(cols : Rep[Seq[Int]]) : Rep[EntryIdx[GenericEntry]] = entryIdxGenericOpsObject(cols)
      def genericCmp[R](cols : Rep[Seq[Int]], f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R]) : Rep[EntryIdx[GenericEntry]] = entryIdxGenericCmpObject[R](cols, f)(typeR)
-     def genericFixedRangeOps(colsRange : Rep[Seq[Array[Int]]]) : Rep[EntryIdx[GenericEntry]] = entryIdxGenericFixedRangeOpsObject(colsRange)
+     def genericFixedRangeOps(colsRange : Rep[Seq[Tuple3[Int, Int, Int]]]) : Rep[EntryIdx[GenericEntry]] = entryIdxGenericFixedRangeOpsObject(colsRange)
   }
   // constructors
 
@@ -47,7 +47,7 @@ trait EntryIdxOps extends Base with GenericEntryOps {
    def entryIdxApplyObject[E <: ddbt.lib.store.Entry](h : Rep[(E => Int)], c : Rep[((E,E) => Int)], entryidxname : Rep[String])(implicit typeE : TypeRep[E]) : Rep[EntryIdx[E]] = EntryIdxApplyObject[E](h, c, entryidxname)
    def entryIdxGenericOpsObject(cols : Rep[Seq[Int]]) : Rep[EntryIdx[GenericEntry]] = EntryIdxGenericOpsObject(cols)
    def entryIdxGenericCmpObject[R](cols : Rep[Seq[Int]], f : Rep[(GenericEntry => R)])(implicit typeR : TypeRep[R]) : Rep[EntryIdx[GenericEntry]] = EntryIdxGenericCmpObject[R](cols, f)
-   def entryIdxGenericFixedRangeOpsObject(colsRange : Rep[Seq[Array[Int]]]) : Rep[EntryIdx[GenericEntry]] = EntryIdxGenericFixedRangeOpsObject(colsRange)
+   def entryIdxGenericFixedRangeOpsObject(colsRange : Rep[Seq[Tuple3[Int, Int, Int]]]) : Rep[EntryIdx[GenericEntry]] = EntryIdxGenericFixedRangeOpsObject(colsRange)
   type EntryIdx[E <: ddbt.lib.store.Entry] = ddbt.lib.store.EntryIdx[E]
 }
 object EntryIdxIRs extends Base {
@@ -126,12 +126,12 @@ object EntryIdxIRs extends Base {
 
   }
 
-  case class EntryIdxGenericFixedRangeOpsObject(colsRange : Rep[Seq[Array[Int]]]) extends FunctionDef[EntryIdx[GenericEntry]](None, "EntryIdx.genericFixedRangeOps", List(List(colsRange))){
+  case class EntryIdxGenericFixedRangeOpsObject(colsRange : Rep[Seq[Tuple3[Int, Int, Int]]]) extends FunctionDef[EntryIdx[GenericEntry]](None, "EntryIdx.genericFixedRangeOps", List(List(colsRange))){
     override def curriedConstructor = (copy _)
     override def isPure = true
 
     override def partiallyEvaluate(children: Any*): EntryIdx[GenericEntry] = {
-      val colsRange = children(0).asInstanceOf[Seq[Array[Int]]]
+      val colsRange = children(0).asInstanceOf[Seq[Tuple3[Int, Int, Int]]]
       ddbt.lib.store.MirrorEntryIdx.genericFixedRangeOps(colsRange)
     }
     override def partiallyEvaluable: Boolean = true

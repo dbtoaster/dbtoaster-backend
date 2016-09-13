@@ -23,7 +23,7 @@ object MirrorEntryIdx {
   @pure
   def genericCmp[R](cols: Seq[Int], f: GenericEntry => R): EntryIdx[GenericEntry] = ???
   @pure
-  def genericFixedRangeOps(colsRange: Seq[Array[Int]]) : EntryIdx[GenericEntry] = ???
+  def genericFixedRangeOps(colsRange: Seq[(Int, Int, Int)]) : EntryIdx[GenericEntry] = ???
 }
 
 

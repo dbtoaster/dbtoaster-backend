@@ -16,17 +16,17 @@ case class TransactionProgram[T](val initBlock: PardisBlock[T], val global: List
 
 object Optimizer {
   var analyzeEntry: Boolean = false
-  var analyzeIndex: Boolean = true
-  var fixedRange: Boolean = true
-  var onlineOpts = true
-  var tmpVarHoist = true
-  var indexInline = true
-  var indexLookupFusion = true
+  var analyzeIndex: Boolean = false
+  var fixedRange: Boolean = false
+  var onlineOpts = false
+  var tmpVarHoist = false
+  var indexInline = false
+  var indexLookupFusion = false
   var indexLookupPartialFusion = false
-  var deadIndexUpdate = true
-  var codeMotion = true
-  var refCounter = true
-  var m3CompareMultiply = true //Lazy evaluation
+  var deadIndexUpdate = false
+  var codeMotion = false
+  var refCounter = false
+  var m3CompareMultiply = false //Lazy evaluation
 }
 
 class Optimizer(val IR: StoreDSL) {
@@ -35,8 +35,11 @@ class Optimizer(val IR: StoreDSL) {
     pipeline += new IndexAnalysis(IR)
     pipeline += new IndexDecider(IR)
     pipeline += new IndexTransformer(IR)
-  } else
+  } else {
     pipeline += new IndexDecider(IR)
+    if (Optimizer.fixedRange)
+      throw new Error("Fixed range optimization cannot be enabled without Index analysis")
+  }
 
   if (Optimizer.codeMotion) {
     pipeline += DCE
@@ -49,15 +52,21 @@ class Optimizer(val IR: StoreDSL) {
     pipeline += et
     if (Optimizer.tmpVarHoist)
       pipeline += new SampleEntryHoister(IR)
+  } else if (Optimizer.tmpVarHoist) {
+    throw new Error("Tmp Var Hoisting cannot be enabled without Entry analysis")
   }
 
-  //    pipeline += PartiallyEvaluate
 
-  if(Optimizer.indexLookupFusion || Optimizer.indexLookupPartialFusion)
+  //    pipeline += PartiallyEvaluate
+  if(!Optimizer.indexLookupFusion && !Optimizer.analyzeIndex && Optimizer.analyzeEntry)
+    throw new Error("Entry analysis requires either indexlookup or index analysis")
+  if (Optimizer.indexLookupFusion || Optimizer.indexLookupPartialFusion)
     pipeline += new IndexLookupFusion(IR)
-//      pipeline += TreeDumper(false)
+  //      pipeline += TreeDumper(false)
   if (Optimizer.indexInline)
     pipeline += new IndexInliner(IR)
+  if (Optimizer.deadIndexUpdate && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
+    throw new Error("DeadIndexUpdate opt requires both index inline as well as indexlookup fusion")
   pipeline += DCE
   pipeline += ParameterPromotion
   if (Optimizer.refCounter)
