@@ -588,7 +588,7 @@ dsl"""
     var i = codestr.lastIndexOf("1")
     val storesnames = List("newOrderTbl", "historyTbl", "warehouseTbl", "itemTbl", "orderTbl", "districtTbl", "orderLineTbl", "customerTbl", "stockTbl")
     val allstores = storesnames.mkString(",")
-    val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n" + storesnames.zip(optTP.global).map(t => {
+    val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n" + storesnames.zip(optTP.globalVars).map(t => {
       s"""  val ${t._1} = ${codeGen.expToDocument(t._2)}""".stripMargin
     }).mkString("\n") +
       s"""
@@ -600,7 +600,7 @@ dsl"""
 
       """.stripMargin
     file.println(header)
-    val entries = optTP.structsDefs.map(codeGen.getStruct).mkDocument("\n")
+    val entries = optTP.structs.map(codeGen.getStruct).mkDocument("\n")
     file.println(entries)
     file.println(executor)
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
@@ -609,7 +609,7 @@ dsl"""
     val r = Document.nest(2, entryIdxes :/: tempVars)
     file.println(r)
     optTP.codeBlocks.foreach { case (className, args: List[Sym[_]], body) => {
-      val genCode = "  class " + className + "(" + optTP.global.map(_.asInstanceOf[Sym[_]]).map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
+      val genCode = "  class " + className + "(" + optTP.globalVars.map(_.asInstanceOf[Sym[_]]).map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
         "    def apply(" + args.map(s => s + ": " + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") = "
       val cgDoc = Document.nest(4, codeGen.blockToDocument(body))
       file.println(genCode + cgDoc + "\n  }")

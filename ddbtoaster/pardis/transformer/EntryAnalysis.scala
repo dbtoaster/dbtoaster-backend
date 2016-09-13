@@ -98,7 +98,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
 
   import IR._
 
-  val structsDefMap = collection.mutable.HashMap.empty[StructTags.StructTag[SEntry], PardisStructDef[SEntry]]
+  val structsDefMap = collection.mutable.HashMap.empty[StructTags.StructTag[SEntry], PardisStructDef[Any]]
   val genOps = collection.mutable.HashMap.empty[(Seq[Int], SEntry), Rep[EntryIdx[SEntry]]]
   val genCmp = collection.mutable.ArrayBuffer[Rep[EntryIdx[SEntry]]]()
   val genFixRngOps = collection.mutable.ArrayBuffer[Rep[EntryIdx[SEntry]]]()
@@ -269,7 +269,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val entry = SEntry(sch)
       implicit val entryTp = entry.tp
       val tag = entryTp.asInstanceOf[RecordType[SEntry]].tag
-      structsDefMap += (tag -> PardisStructDef(tag, sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true)), Nil))
+      structsDefMap += (tag -> PardisStructDef(tag, sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true)), Nil).asInstanceOf[PardisStructDef[Any]])
       val ops_ = ops.collect {
         case Def(node: EntryIdxGenericCmpObject[_]) => {
           implicit val typeR = node.typeR
