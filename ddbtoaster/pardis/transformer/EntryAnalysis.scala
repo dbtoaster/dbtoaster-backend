@@ -226,6 +226,16 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   }
 
   rewrite += statement {
+    case sym -> (StoreGetCopy(self, idx, key, _)) if sym.tp == GenericEntryType => {
+      val sch = schema(sym)
+      implicit  val entTp = SEntry(sch).tp
+      self.asInstanceOf[Rep[Store[SEntry]]].getCopy(idx, key.asInstanceOf[Rep[SEntry]])
+    }
+    case sym -> (StoreGetCopy(self, idx, key, _)) if sym.tp == GenericEntryType => {
+      val sch = schema(sym)
+      implicit  val entTp = SEntry(sch).tp
+      self.asInstanceOf[Rep[Store[SEntry]]].getCopy(idx, key.asInstanceOf[Rep[SEntry]])
+    }
     case sym -> (GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp

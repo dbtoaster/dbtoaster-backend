@@ -521,7 +521,7 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
   import Optimizer._;
   val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
   java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
-  override val codeGen: StoreCodeGenerator = new StoreScalaCodeGenerator(IR)
+  override val codeGen  = new StoreScalaCodeGenerator(IR)
 
   override def genCodeForProgram[T](optTP: TransactionProgram[T], allnames: List[String]): String = {
     var ts = ""

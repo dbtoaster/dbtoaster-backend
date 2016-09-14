@@ -59,9 +59,9 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
       case StructFieldDecr(e, idx, _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += idx.drop(1).toInt; ()
     }
   rewrite += rule {
-    case StoreGetCopy(store, Constant(idx), e, _) => indexMap((store, idx)).getCopy(e)
-    case StoreGet(store, Constant(idx), e) => indexMap((store, idx)).get(e)
-    case StoreGetCopyDependent(store, Constant(idx), e) => indexMap((store, idx)).getCopyDependent(e)
+    case StoreGetCopy(store, Constant(idx), e, _) => idxGetCopy(indexMap((store, idx)), e)(e.tp)
+    case StoreGet(store, Constant(idx), e) => idxGet(indexMap((store, idx)), e)(e.tp)
+    case StoreGetCopyDependent(store, Constant(idx), e) => idxGetCopyDependent(indexMap((store, idx)), e)(e.tp)
     case StoreForeach(store, f) => indexMap((store, 0)).foreach(f)
     case StoreSliceCopy(store, Constant(idx), e, f) => indexMap((store, idx)).sliceCopy(e, f)
     case StoreSliceCopyDependent(store, Constant(idx), e, f) => indexMap((store, idx)).sliceCopyDependent(e, f)
@@ -69,7 +69,7 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     case StoreUpdateCopyDependent(store, e) => val ref = indexMap((store, 0)).get(e); indexMap.collect { case ((`store`, idx), sym) => sym.updateCopyDependent(e, ref) }; unit()
     case StoreUpdateCopy(store, e) => indexMap.toSeq.sortWith(_._1._2 > _._1._2).collect { case ((`store`, idx), sym) => sym.updateCopy(e, indexMap((store, 0))) }; unit()
     case StoreUpdate(store, e) if updatedCols contains e =>
-       val idxes = store.asInstanceOf[Sym[_]].attributes.get(IndexesFlag).get.indexes
+      val idxes = store.asInstanceOf[Sym[_]].attributes.get(IndexesFlag).get.indexes
       indexMap.collect { case ((`store`, idx), sym) => {
         if (idx != 0 && !updatedCols(e).intersect(idxes(idx).cols.toSet).isEmpty) //SBJ: TODO: add checks for columns of min/max index too. What if idx0 is not primary
           sym.update(e)

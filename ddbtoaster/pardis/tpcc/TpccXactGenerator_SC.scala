@@ -321,6 +321,7 @@ object TpccXactGenerator_SC {
       orderTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id), agg)
       val newestOrderEntry = agg.result
       val dceBlocker = __newVar(unit(0))
+      __assign(dceBlocker, newestOrderEntry.get[Int](unit(1))) //SBJ : TO avoid removal by DCE
       /*
 dsl"""
       if (!$showOutput) {
@@ -492,9 +493,6 @@ dsl"""
     }
   }
 
-  implicit object Context extends StoreDSLOptimized
-
-  import Context.{EntryType => _, entryRepToGenericEntryOps => _, typeStore => _, typeNull => _, _}
 
   def main(args: Array[String]): Unit = {
     var numWare = 1
@@ -538,24 +536,18 @@ dsl"""
 
 
     var prog: Prog = null
-    import java.nio.file.Files.copy
-    import java.nio.file.Paths.get
-    import java.nio.file.StandardCopyOption.REPLACE_EXISTING
-
+    val Context = if(Optimizer.onlineOpts) new StoreDSLOptimized{} else new StoreDSL{}
+    import Context._
     val initB = reifyBlock {
       prog = new Prog(Context, numWare)
       unit((1))
     }
-    val codeGen = new StoreScalaCodeGenerator(Context)
-    val header =
-      """
-        |package tpcc.sc
-        |import ddbt.lib.store._
-        |import scala.collection.mutable.{ArrayBuffer,Set}
-        |import java.util.Date
-        | """.stripMargin
-    val genDir = "../runtime/tpcc/pardisgen"
-    val file = new PrintWriter(s"$genDir/TpccGenSC.scala")
+    var lang = "cpp"
+//    lang = "scala"
+    val codeGen = lang match {
+      case "scala" => new TpccPardisScalaGen(Context)
+      case "cpp" => new TpccPardisCppGen(Context)
+    }
     val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
     prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
     prog.allKeys.foreach { case (tbl, key) => {
@@ -566,59 +558,16 @@ dsl"""
     }
     }
 
-    codeBlocks += codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
-    codeBlocks += codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")
-    codeBlocks += codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, "OrderStatusTx")
-    codeBlocks += codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
-    codeBlocks += codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
+    codeBlocks += codeGen.codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
+    codeBlocks += codeGen.codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")
+    codeBlocks += codeGen.codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, "OrderStatusTx")
+    codeBlocks += codeGen.codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
+    codeBlocks += codeGen.codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
 
 
     val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]), codeBlocks, Nil, Nil)
-
-    implicit def toPath(filename: String) = get(filename)
-
-    if (Optimizer.analyzeEntry) {
-      copy(s"$genDir/SCTxSplEntry.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)
-    } else {
-      copy(s"$genDir/SCTxGenEntry.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)
-    }
-
     val optTP = new Optimizer(Context).optimize(initialTP)
-    var codestr = codeGen.blockToDocument(optTP.initBlock).toString
-    var i = codestr.lastIndexOf("1")
-    val storesnames = List("newOrderTbl", "historyTbl", "warehouseTbl", "itemTbl", "orderTbl", "districtTbl", "orderLineTbl", "customerTbl", "stockTbl")
-    val allstores = storesnames.mkString(",")
-    val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n" + storesnames.zip(optTP.globalVars).map(t => {
-      s"""  val ${t._1} = ${codeGen.expToDocument(t._2)}""".stripMargin
-    }).mkString("\n") +
-      s"""
-         |  val newOrderTxInst = new NewOrderTx($allstores)
-         |  val paymentTxInst = new PaymentTx($allstores)
-         |  val orderStatusTxInst = new OrderStatusTx($allstores)
-         |  val deliveryTxInst = new DeliveryTx($allstores)
-         |  val stockLevelTxInst = new StockLevelTx($allstores)
-
-      """.stripMargin
-    file.println(header)
-    val entries = optTP.structs.map(codeGen.getStruct).mkDocument("\n")
-    file.println(entries)
-    file.println(executor)
-    val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
-    implicit val tp = IntType.asInstanceOf[TypeRep[Any]]
-    val tempVars = optTP.tempVars.map(t => codeGen.stmtToDocument(Statement(t._1, t._2))).mkDocument("\n")
-    val r = Document.nest(2, entryIdxes :/: tempVars)
-    file.println(r)
-    optTP.codeBlocks.foreach { case (className, args: List[Sym[_]], body) => {
-      val genCode = "  class " + className + "(" + optTP.globalVars.map(_.asInstanceOf[Sym[_]]).map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
-        "    def apply(" + args.map(s => s + ": " + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") = "
-      val cgDoc = Document.nest(4, codeGen.blockToDocument(body))
-      file.println(genCode + cgDoc + "\n  }")
-    }
-    }
-    file.println("\n}")
-
-    //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
-    file.close()
+    codeGen.generate(optTP)
   }
 
 }

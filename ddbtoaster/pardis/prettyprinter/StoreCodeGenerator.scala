@@ -10,11 +10,6 @@ import ddbt.lib.store.deep.StoreDSL
 trait StoreCodeGenerator extends ASTCodeGenerator[StoreDSL] {
 
   import IR._
-
-  def blockToDocumentNoBraces(block: Block[_]): Document = {
-    mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)
-  }
-
   def emitSource4[T1, T2, T3, T4, R](f: (Rep[T1], Rep[T2], Rep[T3], Rep[T4]) => Rep[R], className: String)(implicit e1: TypeRep[T1], e2: TypeRep[T2], e3: TypeRep[T3], e4: TypeRep[T4], er: TypeRep[R]) = {
     val s1 = fresh[T1]
     val s2 = fresh[T2]

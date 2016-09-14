@@ -13,7 +13,7 @@ import scala.collection.mutable
   * Created by sachin on 27.04.16.
   */
 case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: List[ExpressionSymbol[Any]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structs: List[PardisStructDef[Any]], val entryIdxDefs: Seq[EntryIdxApplyObject[SEntry]], val tempVars: Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil) extends PardisProgram {
-  override val main: PardisBlock[Any] = null
+  override val main: PardisBlock[Any] = initBlock.asInstanceOf[PardisBlock[Any]]
 }
 
 object Optimizer {
@@ -24,8 +24,8 @@ object Optimizer {
   var tmpVarHoist = true
   var indexInline = true
   var indexLookupFusion = true
-  var indexLookupPartialFusion = true
-  var deadIndexUpdate = true
+  var indexLookupPartialFusion = false
+  var deadIndexUpdate = false
   var codeMotion = true
   var refCounter = true
   var m3CompareMultiply = true //Lazy evaluation
@@ -60,11 +60,11 @@ class Optimizer(val IR: StoreDSL) {
 
 
   //    pipeline += PartiallyEvaluate
-  if(!Optimizer.indexLookupFusion && !Optimizer.analyzeIndex && Optimizer.analyzeEntry)
+  if (!Optimizer.indexLookupFusion && !Optimizer.analyzeIndex && Optimizer.analyzeEntry)
     throw new Error("Entry analysis requires either indexlookup or index analysis")
   if (Optimizer.indexLookupFusion || Optimizer.indexLookupPartialFusion)
     pipeline += new IndexLookupFusion(IR)
-  //      pipeline += TreeDumper(false)
+
   if (Optimizer.indexInline)
     pipeline += new IndexInliner(IR)
   if (Optimizer.deadIndexUpdate && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
@@ -79,6 +79,7 @@ class Optimizer(val IR: StoreDSL) {
       }
     }
   pipeline += new StoreDCE(IR)
+  pipeline += TreeDumper(false)
 
   //has to be last
   def optimize[T: PardisType](transactionProgram: TransactionProgram[T]) = pipeline.foldLeft(transactionProgram)(applyOptimization)

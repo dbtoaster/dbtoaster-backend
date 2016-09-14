@@ -52,7 +52,7 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
       case sym -> AggregatorResult(_) => storeGets += sym; ()
     }
     rewrite += rule {
-      case StoreGetCopy(store, idx, key, _) => store.get(idx, key)
+      case StoreGetCopy(store, idx, key, _) => storeGet(store, idx, key)(key.tp)
       case StoreSliceCopy(store, idx, key, f) => store.slice(idx, key, f)
       case StoreUpdateCopy(store, e) if storeGets contains e => store.update(e)
       case StoreUpdateCopy(store, e) => System.err.println(s"StoreGets does not contain $e."); store.updateCopyDependent(e)
