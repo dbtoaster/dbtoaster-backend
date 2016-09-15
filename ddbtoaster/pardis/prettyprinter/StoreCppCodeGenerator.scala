@@ -3,7 +3,7 @@ package ddbt.codegen.prettyprinter
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.CCodeGenerator
 import ch.epfl.data.sc.pardis.utils.document._
-import ddbt.lib.store.deep.StoreDSL
+import ddbt.lib.store.deep.{StoreDSL, StructFieldDecr, StructFieldIncr}
 
 
 /**
@@ -21,6 +21,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, ArrayNew(size)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: doc"[${expToDocument(size)}];"
     case Statement(sym, ArrayUpdate(self, i, x)) => doc"${expToDocument(self)}[${expToDocument(i)}] = ${expToDocument(x)};"
 
+    case Statement(sym, ab@ArrayBufferNew2()) => "vector<" :: tpeToDocument(ab.typeA) :: "> " :: symToDocument(sym) :: ";"
+    case Statement(sym, ArrayBufferSortWith(self, f)) => "sort(" :: expToDocument(self) :: ".begin(), " :: expToDocument(self) :: ".end(), " :: expToDocument(f) :: ");"
+    case Statement(sym, s@SetApplyObject2()) => "unordered_set<" :: tpeToDocument(s.typeT) :: "> " :: symToDocument(sym) :: ";"
+    case Statement(sym, `Set+=`(self, elem)) => expToDocument(self) :: ".insert(" :: expToDocument(elem) :: ");"
 
     //    case Statement(sym, StoreGetCopy(self, idx, key, _)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: " = " :: expToDocument(self) :: doc".getCopy(${expToDocument(idx)}, ${expToDocument(key)});"
     //    case Statement(sym, StoreGet(self, idx, key)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: " = " :: expToDocument(self) :: doc".get(${expToDocument(idx)}, ${expToDocument(key)});"
@@ -49,7 +53,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   }
 
   override def nodeToDocument(node: PardisNode[_]): Document = node match {
-
+    case StoreInsert(self, e) =>
+      expToDocument(self) :: ".insert(" :: expToDocument(e) :: ")"
     case StoreGetCopy(self, idx, key, _) => expToDocument(self) :: doc".getCopy(${expToDocument(idx)}, ${expToDocument(key)})"
     case StoreGet(self, idx, key) => expToDocument(self) :: doc".get(${expToDocument(idx)}, ${expToDocument(key)})"
     case StoreGetCopyDependent(self, idx, key) => expToDocument(self) :: doc".getCopyDependent(${expToDocument(idx)}, ${expToDocument(key)})"
@@ -71,10 +76,23 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case IdxDeleteCopy(self, key, _) => expToDocument(self) :: doc".deleteCopy(${expToDocument(key)})"
     case IdxDelete(self, key) => expToDocument(self) :: doc".del(${expToDocument(key)});"
     case IdxSlice(self, key, f) => expToDocument(self) :: ".slice(" :: expToDocument(key) :: ", " :: expToDocument(f) :: ");"
+
+    case ArrayBufferAppend(self, elem) => expToDocument(self) :: ".push_back(" :: expToDocument(elem) :: ")"
+    case ArrayBufferApply(Def(ArrayBufferSortWith(self, _)), i) => expToDocument(self) :: "[" :: expToDocument(i) :: "]"
+    case ArrayBufferApply(self, i) => expToDocument(self) :: "[" :: expToDocument(i) :: "]"
+    case ArrayBufferSize(self) => expToDocument(self) :: ".size()"
+
+    case SetSize(self) => expToDocument(self) :: ".size()"
+
+    case ArrayApply(self, i) => expToDocument(self) :: "[" :: expToDocument(i) :: "]"
+
+    case StructFieldIncr(self, idx, rhs) => expToDocument(self) :: "->" :: idx :: " += " :: expToDocument(rhs)
+    case StructFieldDecr(self, idx, rhs) => expToDocument(self) :: "->" :: idx :: " -= " :: expToDocument(rhs)
+
     case PardisLambda(_, i, o) =>
-      "[&](" :: tpeToDocument(i.tp) :: " " :: expToDocument(i) :: ") {" :: Document.nest(NEST_COUNT, blockToDocument(o)) :/: "}"
+      "[&](" :: tpeToDocument(i.tp) :: " & " :: expToDocument(i) :: ") {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
     case PardisLambda2(_, i1, i2, o) =>
-      "[&](" :: tpeToDocument(i1.tp) :: " " :: expToDocument(i1) :: "," :: tpeToDocument(i2.tp) :: " " :: expToDocument(i2) :: ") {" :: Document.nest(NEST_COUNT, blockToDocument(o)) :/: "}"
+      "[&](" :: tpeToDocument(i1.tp) :: " & " :: expToDocument(i1) :: ", " :: tpeToDocument(i2.tp) :: " & " :: expToDocument(i2) :: ") {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
     case _ => super.nodeToDocument(node)
   }
 }

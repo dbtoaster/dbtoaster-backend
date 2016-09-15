@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
+#include <unordered_set>
+using namespace std;
+     
 struct SEntry5_IISDS;
 struct SEntry11_IISSSSSSDDI;
 struct SEntry21_IIISSSSSSSSSTSDDDDIIS;
@@ -175,13 +179,14 @@ void DeliveryTx() {
       x7827->_1 = x7812;
       x7827->_2 = x41;
       x7827->_3 = x12;
-      x962.slice(x7827, ([&](struct SEntry10_IIIIIITIDS x44) {
+      x962.slice(x7827, ([&](struct SEntry10_IIIIIITIDS & x44) {
         x44->_7 = x11;
         double x46 = x40;
         double x7930 = x44->_9;
         x40 = (x46+(x7930));
         x962.update(x44);
         x961.update(x44);
+      
       }));;
       int x53 = x15;
       x7831->_1 = x7821;
@@ -189,8 +194,8 @@ void DeliveryTx() {
       x7831->_3 = x12;
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS x12896 = x968.get(x7831);
       double x56 = x40;
-      x12896_17 +=(x56);
-      x12896_20 +=(1);
+      x12896->_17 += x56;
+      x12896->_20 += 1;
       x969.update(x12896);
       x968.update(x12896);
     } else {
@@ -217,7 +222,7 @@ void DeliveryTx() {
       if (!((x77<=(10)))) break; 
       
       int x79 = x76;
-      int x81 = x14apply((x79-(1)));
+      int x81 = x14[(x79-(1))];
       if((x81>=(0))) {
         char* x83 = x74;
         char* x84 = x83+("  District ");
@@ -229,7 +234,7 @@ void DeliveryTx() {
         char* x90 = x88+(x89);
         char* x91 = x90+(": Order number ");
         int x92 = x76;
-        int x94 = x14apply((x92-(1)));
+        int x94 = x14[(x92-(1))];
         char* x95 = x91+(x94);
         char* x96 = x95+(" was delivered.\n");
         x74 = x96;
@@ -264,7 +269,7 @@ void StockLevelTx() {
   struct SEntry11_IISSSSSSDDI x13082 = x956.get(x8107);
   int x8111 = x13082->_11;
   int x133 = (x8111-(20));
-  Set_Int x134 = Set.apply();
+  unordered_set<int> x134;
   while(1) {
     
     int x135 = x133;
@@ -274,20 +279,21 @@ void StockLevelTx() {
     x8120->_1 = x137;
     x8120->_2 = x126;
     x8120->_3 = x125;
-    x962.slice(x8120, ([&](struct SEntry10_IIIIIITIDS x140) {
+    x962.slice(x8120, ([&](struct SEntry10_IIIIIITIDS & x140) {
       int x8153 = x140->_5;
       x8154->_1 = x8153;
       x8154->_2 = x125;
       struct SEntry17_IIISSSSSSSSSSIIIS x13100 = x974.get(x8154);
       int x8156 = x13100->_3;
       if((x8156<(x127))) {
-        Set_Int x146 = x134+=(x8153);
+        x134.insert(x8153);
       };
+    
     }));;
     int x150 = x133;
     x133 = (x150+(1));
   };
-  int x154 = x134size;
+  int x154 = x134.size();
   if(x122) {
     char* x155 = "\n+-------------------------- STOCK-LEVEL --------------------------+\n Warehouse: "+(x125);
     char* x156 = x155+("\n District:  ");
@@ -303,28 +309,30 @@ void StockLevelTx() {
 void OrderStatusTx() {
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8213 = NULL;
   if((x170>(0))) {
-    ArrayBuffer_SEntry21_IIISSSSSSSSSTSDDDDIIS x8216 = new ArrayBuffer();
+    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS> x8216;
     x8218->_2 = x169;
     x8218->_3 = x168;
     x8218->_6 = x172;
-    x969.slice(x8218, ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS x178) {
-      x8216append(x178);
+    x969.slice(x8218, ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x178) {
+      x8216.push_back(x178);
+    
     }));;
-    int x182 = x8216size;
+    int x182 = x8216.size();
     int x184 = (x182/(2));
-    int x185 = x8216size;
+    int x185 = x8216.size();
     if(((x185%(2))==(0))) {
       int x188 = x184;
       x184 = (x188-(1));
     };
-    ArrayBuffer_GenericEntry x199 = x8216sortWith(([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS x192,struct SEntry21_IIISSSSSSSSSTSDDDDIIS x193) {
+    sort(x8216.begin(), x8216.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x192, struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x193) {
       char* x8274 = x192->_4;
       char* x8275 = x193->_4;
       int x196 = strcmpi(x8274, x8275);
+      return (x196<(0)); 
     }));
     int x200 = x184;
-    GenericEntry x201 = x199apply(x200);
-    x8213 = x201;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8234 = x8216[x200];
+    x8213 = x8234;
   } else {
     
     x8236->_1 = x171;
@@ -333,8 +341,8 @@ void OrderStatusTx() {
     struct SEntry21_IIISSSSSSSSSTSDDDDIIS x13200 = x968.get(x8236);
     x8213 = x13200;
   };
-  GenericEntry x208 = x8213;
-  int x8242 = x208->_3;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8241 = x8213;
+  int x8242 = x8241->_3;
   x8244->_2 = x169;
   x8244->_3 = x168;
   x8244->_4 = x8242;
@@ -346,37 +354,39 @@ void OrderStatusTx() {
 void PaymentTx() {
   x8343->_1 = x224;
   struct SEntry9_ISSSSSSDD x13269 = x937.get(x8343);
-  x13269_9 +=(x231);
+  x13269->_9 += x231;
   x937.update(x13269);
   x8349->_1 = x225;
   x8349->_2 = x224;
   struct SEntry11_IISSSSSSDDI x13275 = x956.get(x8349);
-  x13275_10 +=(x231);
+  x13275->_10 += x231;
   x956.update(x13275);
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8354 = NULL;
   if((x226>(0))) {
-    ArrayBuffer_SEntry21_IIISSSSSSSSSTSDDDDIIS x8357 = new ArrayBuffer();
+    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS> x8357;
     x8359->_2 = x228;
     x8359->_3 = x227;
     x8359->_6 = x230;
-    x969.slice(x8359, ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS x247) {
-      x8357append(x247);
+    x969.slice(x8359, ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x247) {
+      x8357.push_back(x247);
+    
     }));;
-    int x251 = x8357size;
+    int x251 = x8357.size();
     int x253 = (x251/(2));
-    int x254 = x8357size;
+    int x254 = x8357.size();
     if(((x254%(2))==(0))) {
       int x257 = x253;
       x253 = (x257-(1));
     };
-    ArrayBuffer_GenericEntry x268 = x8357sortWith(([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS x261,struct SEntry21_IIISSSSSSSSSTSDDDDIIS x262) {
+    sort(x8357.begin(), x8357.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x261, struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x262) {
       char* x8461 = x261->_4;
       char* x8462 = x262->_4;
       int x265 = strcmpi(x8461, x8462);
+      return (x265<(0)); 
     }));
     int x269 = x253;
-    GenericEntry x270 = x268apply(x269);
-    x8354 = x270;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8375 = x8357[x269];
+    x8354 = x8375;
   } else {
     
     x8377->_1 = x229;
@@ -385,15 +395,15 @@ void PaymentTx() {
     struct SEntry21_IIISSSSSSSSSTSDDDDIIS x13315 = x968.get(x8377);
     x8354 = x13315;
   };
-  GenericEntry x277 = x8354;
-  char* x8382 = x277->_21;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8381 = x8354;
+  char* x8382 = x8381->_21;
   char* x279 = x8382;
-  GenericEntry x280 = x8354;
-  char* x8385 = x280->_14;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8384 = x8354;
+  char* x8385 = x8384->_14;
   int x282 = x8385contains("BC");
   if(x282) {
-    GenericEntry x283 = x8354;
-    int x8389 = x283->_1;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8388 = x8354;
+    int x8389 = x8388->_1;
     char* x285 = x279;
     /* val x287 = "%d %d %d %d %d $%f %s | %s".format(x8389,x228,x227,x225,x224,x231,x222,x285) */
     x279 = x287;
@@ -404,19 +414,19 @@ void PaymentTx() {
       char* x293 = x292substring(0, 500);
       x279 = x293;
     };
-    GenericEntry x296 = x8354;
-    x296_17 +=(x231);
-    GenericEntry x298 = x8354;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8401 = x8354;
+    x8401->_17 += x231;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8403 = x8354;
     char* x299 = x279;
-    x298->_21 = x299;
+    x8403->_21 = x299;
   } else {
     
-    GenericEntry x301 = x8354;
-    x301_17 +=(x231);
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8406 = x8354;
+    x8406->_17 += x231;
   };
-  GenericEntry x304 = x8354;
-  x969.update(x304);
-  x968.update(x304);
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8408 = x8354;
+  x969.update(x8408);
+  x968.update(x8408);
   char* x8410 = x13269->_2;
   char* x8411 = x13275->_3;
   int x308 = x8410length;
@@ -429,9 +439,9 @@ void PaymentTx() {
     char* x315 = x8411substring(0, 10);
   };
   char* x317 = x312+(x316);
-  GenericEntry x318 = x8354;
-  int x8423 = x318->_1;
-  x4619insert(());
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x8422 = x8354;
+  int x8423 = x8422->_1;
+  x4619.insert(());
 }
 void NewOrderTx() {
   if(x323) {
@@ -448,7 +458,7 @@ void NewOrderTx() {
     if (!(((x347<(x329))&&(x349)))) break; 
     
     int x351 = x343;
-    int x352 = x331apply(x351);
+    int x352 = x331[x351];
     x8626->_1 = x352;
     struct SEntry5_IISDS x13480 = x942.get(x8626);
     if((x13480==(NULL))) {
@@ -480,10 +490,10 @@ void NewOrderTx() {
     x8654->_2 = x326;
     struct SEntry11_IISSSSSSDDI x13510 = x956.get(x8654);
     int x8657 = x13510->_11;
-    x13510_11 +=(1);
+    x13510->_11 += 1;
     x956.update(x13510);
-    x4881insert(());
-    x4539insert(());
+    x4881.insert(());
+    x4539.insert(());
     double x392 = 0.0;
     x343 = 0;
     while(1) {
@@ -492,11 +502,11 @@ void NewOrderTx() {
       if (!((x394<(x329)))) break; 
       
       int x396 = x343;
-      int x397 = x332apply(x396);
+      int x397 = x332[x396];
       int x398 = x343;
-      int x399 = x331apply(x398);
+      int x399 = x331[x398];
       int x400 = x343;
-      int x401 = x333apply(x400);
+      int x401 = x333[x400];
       x8678->_1 = x399;
       x8678->_2 = x397;
       struct SEntry17_IIISSSSSSSSSSIIIS x13534 = x974.get(x8678);
@@ -561,7 +571,7 @@ void NewOrderTx() {
       };
       x13534->_3 = (x8708-(x401));
       if((x8708<=(x401))) {
-        x13534_3 +=(91);
+        x13534->_3 += 91;
       };
       int x450 = 0;
       if((x397!=(x326))) {
@@ -572,14 +582,14 @@ void NewOrderTx() {
       double x8732 = x13506->_8;
       double x8733 = x13510->_9;
       int x458 = x343;
-      double x459 = x334apply(x458);
+      double x459 = x334[x458];
       double x466 = (((x401toDouble)*(x459))*(((1.0+(x8732))+(x8733))))*((1.0-(x8731)));
       int x467 = x343;
       x338[x467] = x466;
       double x469 = x392;
       x392 = (x469+(x466));
       int x472 = x343;
-      x5080insert(());
+      x5080.insert(());
       int x477 = x343;
       x343 = (x477+(1));
     };

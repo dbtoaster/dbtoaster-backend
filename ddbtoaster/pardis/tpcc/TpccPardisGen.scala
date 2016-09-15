@@ -92,7 +92,12 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
   import IR._
 
-  override def header: String = ""
+  override def header: String = codeGen.header +
+    s"""
+       |#include <vector>
+       |#include <unordered_set>
+       |using namespace std;
+     """.stripMargin
 
   override val codeGen: StoreCodeGenerator = new StoreCppCodeGenerator(IR)
 
@@ -106,7 +111,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     val structs = codeGen.getStructs(optTP.structs)
     val traits = doc"/* TRAITS STARTING */" :/: codeGen.getTraitSignature :/: doc" /* TRAITS ENDING   */"
     val blocks = optTP.codeBlocks.map(x => doc"void ${x._1}() {" :: Document.nest(2, codeGen.blockToDocument(x._3)) :/: "}").mkDocument("\n")
-    file.println(codeGen.header :/: structs :/: traits :/: blocks :/: codeGen.footer)
+    file.println(header :/: structs :/: traits :/: blocks :/: codeGen.footer)
     file.close()
   }
 }

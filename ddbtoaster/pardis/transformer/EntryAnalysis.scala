@@ -83,7 +83,7 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
     case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if EntryTypes.contains(rhs) => addVar(lhs, rhs); ()
     case sym -> (PardisReadVar(PardisVar(v@Sym(_, _)))) if EntryTypes.contains(v) => addVar(sym, v); ()
     case sym -> (ArrayBufferAppend(ab, el)) => addVar(ab, el); ()
-    case sym -> (ArrayBufferSortWith(ab@Sym(_, _), f@Def(PardisLambda2(_, i1, i2, _)))) => addVar(f, ab); addVar(i1, ab); addVar(i2, ab); ()
+    case sym -> (ArrayBufferSortWith(ab@Sym(_, _), f@Def(PardisLambda2(_, i1, i2, _)))) => addVar(f, ab); addVar(i1, ab); addVar(i2, ab); addVar(sym, ab); ()
     case s -> (StoreNew3(_, _)) => {
       val stype = s.attributes.get(SchemaFlag).getOrElse(StoreSchema())
       //System.err.println(s"Adding schema ${stype} for $s")
@@ -228,12 +228,12 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   rewrite += statement {
     case sym -> (StoreGetCopy(self, idx, key, _)) if sym.tp == GenericEntryType => {
       val sch = schema(sym)
-      implicit  val entTp = SEntry(sch).tp
+      implicit val entTp = SEntry(sch).tp
       self.asInstanceOf[Rep[Store[SEntry]]].getCopy(idx, key.asInstanceOf[Rep[SEntry]])
     }
     case sym -> (StoreGetCopy(self, idx, key, _)) if sym.tp == GenericEntryType => {
       val sch = schema(sym)
-      implicit  val entTp = SEntry(sch).tp
+      implicit val entTp = SEntry(sch).tp
       self.asInstanceOf[Rep[Store[SEntry]]].getCopy(idx, key.asInstanceOf[Rep[SEntry]])
     }
     case sym -> (GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) if entryTypes.contains(sym) => {
@@ -269,10 +269,20 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       implicit val entTp = SEntry(sch).tp
       __newVarNamed[SEntry](v.asInstanceOf[Rep[SEntry]], sym.name).e.asInstanceOf[Rep[Any]]
     }
+    case sym -> (PardisReadVar(v)) if entryTypes.contains(sym) => {
+      val sch = schema(sym)
+      implicit val entTp = SEntry(sch).tp
+      __readVar(v.asInstanceOf[Var[SEntry]])
+    }
     case sym -> (ab: ArrayBufferNew2[_]) if ab.typeA == GenericEntryType => {
       val sch = schema(sym)
       implicit val entTp: TypeRep[SEntry] = SEntry(sch).tp
       __newArrayBuffer[SEntry]()
+    }
+    case sym -> (ab@ArrayBufferApply(self, i)) if ab.typeA == GenericEntryType => {
+      val sch = schema(self.asInstanceOf[Sym[_]])
+      implicit val entTp: TypeRep[SEntry] = SEntry(sch).tp
+      self.asInstanceOf[Rep[ArrayBuffer[SEntry]]].apply(i)
     }
     case sym -> (StoreNew3(n, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) if ops.size > 0 && !Def.unapply(ops(0)).get.isInstanceOf[EntryIdxApplyObject[_]] => {
       val sch = schema(sym)
@@ -284,7 +294,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         case Def(node: EntryIdxGenericCmpObject[_]) => {
           implicit val typeR = node.typeR
           //SBJ: TODO: Handle duplicity
-          val cols = if(Optimizer.analyzeIndex) node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]] else Nil
+          val cols = if (Optimizer.analyzeIndex) node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]] else Nil
           val hl = hashfn(cols, entry)
           val cl = order_cmp(node.f, entry)
           val rep = EntryIdx.apply(hl, cl, unit(entry.name + "_Idx" + cols.mkString("") + "_Ordering"))
@@ -293,12 +303,12 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         }
         case Def(node: EntryIdxGenericOpsObject) => {
 
-          val cols =  if(Optimizer.analyzeIndex) node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]] else Nil
+          val cols = if (Optimizer.analyzeIndex) node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]] else Nil
           lazy val news = EntryIdx.apply(hashfn(cols, entry), equal_cmp(cols, entry), unit(entry.name + "_Idx" + cols.mkString("")))
           genOps getOrElseUpdate((cols, entry), news)
         }
         case Def(node: EntryIdxGenericFixedRangeOpsObject) => {
-          if(!Optimizer.fixedRange)
+          if (!Optimizer.fixedRange)
             throw new IllegalStateException("Fixed range ops object without fixed range optimization")
           val cmpFunc = __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => unit(0))
           val colsRange = node.colsRange.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[(Int, Int, Int)]]
