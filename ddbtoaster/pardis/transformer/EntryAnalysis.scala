@@ -212,11 +212,19 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     implicit val entryTp = s.tp
     val fdef = Def.unapply(f).get.asInstanceOf[PardisLambda[_, _]]
     entryTypes += fdef.i.asInstanceOf[Sym[_]] -> s.sch
+
+    def inlineFunction(func: PardisLambda[_,_], arg: Rep[SEntry]) = {
+      val symMap = collection.mutable.HashMap[Sym[_], Sym[_]]()
+      implicit  val entTp = arg.tp
+      func.o.stmts.foreach{
+        case Statement(sym, GenericEntryGet(self, Constant(i))) => val rep = fieldGetter(arg.asInstanceOf[Sym[_]], "_"+i)(entTp) ; symMap += sym -> rep.asInstanceOf[Sym[_]]
+      }
+      symMap(func.o.res.asInstanceOf[Sym[_]]).asInstanceOf[Sym[R]]
+    }
     __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => {
-      val f_ = f.asInstanceOf[Rep[SEntry => R]]
-      val r1 = __app(f_).apply(e1)
-      val r2 = __app(f_).apply(e2)
-      BooleanExtra.conditional(Equal(r1, r2), unit(0), __ifThenElse(ordering_gt(r1, r2), unit(1), unit(-1)))
+      val r1 = inlineFunction(fdef, e1)
+      val r2 = inlineFunction(fdef, e2)
+      BooleanExtra.conditional(Equal(r1, r2), unit(0), BooleanExtra.conditional(ordering_gt(r1, r2), unit(1), unit(-1)))
     })
   }
 

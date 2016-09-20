@@ -15,11 +15,6 @@ case class SEntry10_IIIIIITIDS(var _1: Int, var _2: Int, var _3: Int, var _4: In
 case class SEntry9_ISSSSSSDD(var _1: Int, var _2: String, var _3: String, var _4: String, var _5: String, var _6: String, var _7: String, var _8: Double, var _9: Double) extends Entry(9) {def copy = SEntry9_ISSSSSSDD(_1, _2, _3, _4, _5, _6, _7, _8, _9) }
 class SCExecutor 
 {
-  val x783 = { x18: SEntry3_III => {
-      val x5458 = x18._1
-      x5458
-    }
-  }
   val x3921 = Array[EntryIdx[SEntry3_III]](SEntry3_III_Idx123, SEntry3_III_Idx23_Ordering, SEntry3_III_Idx23)
   val x3922 = new Store[SEntry3_III](3, x3921)
   val x789 = x3922.index(0, IHash, true, -1)
@@ -34,11 +29,6 @@ class SCExecutor
   val x4039 = Array[EntryIdx[SEntry5_IISDS]](SEntry5_IISDS_Idx1f1t100001)
   val x4040 = new Store[SEntry5_IISDS](1, x4039)
   val x806 = x4040.index(0, IDirect, true, 100000)
-  val x807 = { x146: SEntry8_IIIITIIB => {
-      val x5766 = x146._1
-      x5766
-    }
-  }
   val x4263 = Array[EntryIdx[SEntry8_IIIITIIB]](SEntry8_IIIITIIB_Idx123, SEntry8_IIIITIIB_Idx234_Ordering, SEntry8_IIIITIIB_Idx234)
   val x4264 = new Store[SEntry8_IIIITIIB](3, x4263)
   val x813 = x4264.index(0, IHash, true, -1)
@@ -428,18 +418,9 @@ class SCExecutor
       (x3851.^((x3851.>>>(16))))
     }
     override def cmp(x3855 : SEntry3_III , x3856 : SEntry3_III) = {
-      val x3857 = x783.apply(x3855)
-      val x3858 = x783.apply(x3856)
-      val x3861 = if((x3857.>(x3858))) 
-      {
-        1
-      }
-      else
-      {
-        -1
-      }
-      
-      (if((x3857.==(x3858))) 0 else x3861)
+      val x3857 = x3855._1
+      val x3858 = x3856._1
+      (if((x3857.==(x3858))) 0 else (if((x3857.>(x3858))) 1 else -1))
     }
   }
    object SEntry8_IIIITIIB_Idx234_Ordering extends EntryIdx[SEntry8_IIIITIIB] {
@@ -467,18 +448,9 @@ class SCExecutor
       (x4174.^((x4174.>>>(16))))
     }
     override def cmp(x4178 : SEntry8_IIIITIIB , x4179 : SEntry8_IIIITIIB) = {
-      val x4180 = x807.apply(x4178)
-      val x4181 = x807.apply(x4179)
-      val x4184 = if((x4180.>(x4181))) 
-      {
-        1
-      }
-      else
-      {
-        -1
-      }
-      
-      (if((x4180.==(x4181))) 0 else x4184)
+      val x4180 = x4178._1
+      val x4181 = x4179._1
+      (if((x4180.==(x4181))) 0 else (if((x4180.>(x4181))) 1 else -1))
     }
   }
    object SEntry9_ISSSSSSDD_Idx1f1t2 extends EntryIdx[SEntry9_ISSSSSSDD] {

@@ -380,11 +380,9 @@ struct SEntry9_ISSSSSSDD {
     return (x3851^((x3851>>>(16)))); 
   }
   FORCE_INLINE static bool equals(const struct SEntry3_III& x3855, const struct SEntry3_III& x3856) { 
-    int x3857 = x783(x3855);
-    int x3858 = x783(x3856);
-    int x3861 = if((x3857>(x3858))) {
-    };
-    return ((x3857==(x3858)) ? 0 : x3861); 
+    struct SEntry3_III x3857 = x3855._1;
+    struct SEntry3_III x3858 = x3856._1;
+    return ((x3857==(x3858)) ? 0 : ((x3857>(x3858)) ? 1 : -1)); 
   }
 }
  struct SEntry8_IIIITIIB_Idx234_Ordering {
@@ -412,11 +410,9 @@ struct SEntry9_ISSSSSSDD {
     return (x4174^((x4174>>>(16)))); 
   }
   FORCE_INLINE static bool equals(const struct SEntry8_IIIITIIB& x4178, const struct SEntry8_IIIITIIB& x4179) { 
-    int x4180 = x807(x4178);
-    int x4181 = x807(x4179);
-    int x4184 = if((x4180>(x4181))) {
-    };
-    return ((x4180==(x4181)) ? 0 : x4184); 
+    struct SEntry8_IIIITIIB x4180 = x4178._1;
+    struct SEntry8_IIIITIIB x4181 = x4179._1;
+    return ((x4180==(x4181)) ? 0 : ((x4180>(x4181)) ? 1 : -1)); 
   }
 }
  struct SEntry9_ISSSSSSDD_Idx1f1t2 {
@@ -563,8 +559,6 @@ void DeliveryTx(int x10, Date x11, int x12, int x13) {
       struct SEntry8_IIIITIIB* x11844 = x813.get(x7201);
       int x7204 = x11844->_4;
       x11844->_6 = x13;
-      x814.update(x11844);
-      x813.update(x11844);
       double x40 = 0.0;
       int x41 = x15;
       x7210._1 = x7195;
@@ -576,20 +570,16 @@ void DeliveryTx(int x10, Date x11, int x12, int x13) {
         double x46 = x40;
         double x7259 = x44->_9;
         x40 = (x46+(x7259));
-        x825.update(x44);
-        x826.update(x44);
       
       }));;
       int x53 = x15;
       x7214._1 = x7204;
       x7214._2 = x53;
       x7214._3 = x12;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11869 = x832.get(x7214);
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11865 = x832.get(x7214);
       double x56 = x40;
-      x11869->_17 += x56;
-      x11869->_20 += 1;
-      x833.update(x11869);
-      x832.update(x11869);
+      x11865->_17 += x56;
+      x11865->_20 += 1;
     } else {
       
       int x60 = x15;
@@ -602,8 +592,8 @@ void DeliveryTx(int x10, Date x11, int x12, int x13) {
 void StockLevelTx(int x68, Date x69, int x70, int x71, int x72, int x73) {
   x7328._1 = x72;
   x7328._2 = x71;
-  struct SEntry11_IISSSSSSDDI* x11947 = x820.get(x7328);
-  int x7332 = x11947->_11;
+  struct SEntry11_IISSSSSSDDI* x11935 = x820.get(x7328);
+  int x7332 = x11935->_11;
   int x79 = (x7332-(20));
   unordered_set<int> x80;
   while(1) {
@@ -620,8 +610,8 @@ void StockLevelTx(int x68, Date x69, int x70, int x71, int x72, int x73) {
       int x7363 = x86->_5;
       x7364._1 = x7363;
       x7364._2 = x71;
-      struct SEntry17_IIISSSSSSSSSSIIIS* x11965 = x838.get(x7364);
-      int x7366 = x11965->_3;
+      struct SEntry17_IIISSSSSSSSSSIIIS* x11953 = x838.get(x7364);
+      int x7366 = x11953->_3;
       if((x7366<(x73))) {
         x80.insert(x7363);
       };
@@ -665,29 +655,27 @@ void OrderStatusTx(int x101, Date x102, int x103, int x104, int x105, int x106, 
     x7424._1 = x107;
     x7424._2 = x105;
     x7424._3 = x104;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12043 = x832.get(x7424);
-    x7401 = x12043;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12031 = x832.get(x7424);
+    x7401 = x12031;
   };
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7429 = x7401;
   int x7430 = x7429->_3;
   x7432._2 = x105;
   x7432._3 = x104;
   x7432._4 = x7430;
-  struct SEntry8_IIIITIIB* x12053 = x814.get(x7432);
+  struct SEntry8_IIIITIIB* x12041 = x814.get(x7432);
   int x154 = 0;
-  int x7437 = x12053->_1;
+  int x7437 = x12041->_1;
   x154 = x7437;
 }
 void PaymentTx(int x157, Date x158, int x159, int x160, int x161, int x162, int x163, int x164, int x165, char* x166, double x167) {
   x7531._1 = x160;
-  struct SEntry9_ISSSSSSDD* x12112 = x801.get(x7531);
-  x12112->_9 += x167;
-  x801.update(x12112);
+  struct SEntry9_ISSSSSSDD* x12100 = x801.get(x7531);
+  x12100->_9 += x167;
   x7537._1 = x161;
   x7537._2 = x160;
-  struct SEntry11_IISSSSSSDDI* x12118 = x820.get(x7537);
-  x12118->_10 += x167;
-  x820.update(x12118);
+  struct SEntry11_IISSSSSSDDI* x12105 = x820.get(x7537);
+  x12105->_10 += x167;
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7542 = NULL;
   if((x162>(0))) {
     vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x7545;
@@ -721,25 +709,25 @@ void PaymentTx(int x157, Date x158, int x159, int x160, int x161, int x162, int 
     x7565._1 = x165;
     x7565._2 = x164;
     x7565._3 = x163;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12158 = x832.get(x7565);
-    x7542 = x12158;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12144 = x832.get(x7565);
+    x7542 = x12144;
   };
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7569 = x7542;
   char* x7570 = x7569->_21;
   char* x215 = x7570;
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7572 = x7542;
   char* x7573 = x7572->_14;
-  char* x16073 = strstr(x7573, "BC");
-  int x16074 = x16073!=(NULL);
-  if(x16074) {
+  char* x15975 = strstr(x7573, "BC");
+  int x15976 = x15975!=(NULL);
+  if(x15976) {
     struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7576 = x7542;
     int x7577 = x7576->_1;
     char* x221 = x215;
     /* val x223 = "%d %d %d %d %d $%f %s | %s".format(x7577,x164,x163,x161,x160,x167,x158,x221) */
     x215 = x223;
     char* x225 = x215;
-    int x16083 = strlen(x225);
-    if((x16083>(500))) {
+    int x15985 = strlen(x225);
+    if((x15985>(500))) {
       char* x228 = x215;
       char* x229 = x228substring(0, 500);
       x215 = x229;
@@ -757,24 +745,24 @@ void PaymentTx(int x157, Date x158, int x159, int x160, int x161, int x162, int 
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7596 = x7542;
   x833.update(x7596);
   x832.update(x7596);
-  char* x7598 = x12112->_2;
-  char* x7599 = x12118->_3;
-  int x16101 = strlen(x7598);
-  char* x247 = if((x16101>(10))) {
+  char* x7598 = x12100->_2;
+  char* x7599 = x12105->_3;
+  int x16003 = strlen(x7598);
+  char* x247 = if((x16003>(10))) {
     char* x246 = x7598substring(0, 10);
   };
   char* x248 = x247+("    ");
-  int x16106 = strlen(x7599);
-  char* x252 = if((x16106>(10))) {
+  int x16008 = strlen(x7599);
+  char* x252 = if((x16008>(10))) {
     char* x251 = x7599substring(0, 10);
   };
   char* x253 = x248+(x252);
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7610 = x7542;
   int x7611 = x7610->_1;
-  struct SEntry8_IIIIITDS* x15697 = (struct SEntry8_IIIIITDS*)malloc(1 * sizeof(struct SEntry8_IIIIITDS));
-  memset(x15697, 0, 1 * sizeof(struct SEntry8_IIIIITDS));
-  x15697->_1 = x7611; x15697->_2 = x164; x15697->_3 = x163; x15697->_4 = x161; x15697->_5 = x160; x15697->_6 = x158; x15697->_7 = x167; x15697->_8 = x253;
-  x4002.add(x15697);
+  struct SEntry8_IIIIITDS* x15615 = (struct SEntry8_IIIIITDS*)malloc(1 * sizeof(struct SEntry8_IIIIITDS));
+  memset(x15615, 0, 1 * sizeof(struct SEntry8_IIIIITDS));
+  x15615->_1 = x7611; x15615->_2 = x164; x15615->_3 = x163; x15615->_4 = x161; x15615->_5 = x160; x15615->_6 = x158; x15615->_7 = x167; x15615->_8 = x253;
+  x4002.add(x15615);
 }
 void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int x265, int x266, int x267, int x268, int x269, double x270, char* x271, int x272, char* x273, double x274) {
   int x275 = 0;
@@ -789,19 +777,19 @@ void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int
     int x283 = x275;
     int x284 = x267[x283];
     x7810._1 = x284;
-    struct SEntry5_IISDS* x12319 = x806.get(x7810);
-    if((x12319==(NULL))) {
+    struct SEntry5_IISDS* x12303 = x806.get(x7810);
+    if((x12303==(NULL))) {
       x278 = 0;
     } else {
       
       int x290 = x275;
-      char* x7818 = x12319->_3;
+      char* x7818 = x12303->_3;
       x271[x290] = x7818;
       int x293 = x275;
-      double x7821 = x12319->_4;
+      double x7821 = x12303->_4;
       x270[x293] = x7821;
       int x296 = x275;
-      char* x7824 = x12319->_5;
+      char* x7824 = x12303->_5;
       x277[x296] = x7824;
     };
     int x300 = x275;
@@ -812,23 +800,22 @@ void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int
     x7831._1 = x264;
     x7831._2 = x263;
     x7831._3 = x262;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12342 = x832.get(x7831);
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12326 = x832.get(x7831);
     x7835._1 = x262;
-    struct SEntry9_ISSSSSSDD* x12345 = x801.get(x7835);
+    struct SEntry9_ISSSSSSDD* x12329 = x801.get(x7835);
     x7838._1 = x263;
     x7838._2 = x262;
-    struct SEntry11_IISSSSSSDDI* x12349 = x820.get(x7838);
-    int x7841 = x12349->_11;
-    x12349->_11 += 1;
-    x820.update(x12349);
-    struct SEntry8_IIIITIIB* x15744 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
-    memset(x15744, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
-    x15744->_1 = x7841; x15744->_2 = x263; x15744->_3 = x262; x15744->_4 = x264; x15744->_5 = x260; x15744->_6 = -1; x15744->_7 = x265; x15744->_8 = (x266>(0));
-    x4264.add(x15744);
-    struct SEntry3_III* x15748 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
-    memset(x15748, 0, 1 * sizeof(struct SEntry3_III));
-    x15748->_1 = x7841; x15748->_2 = x263; x15748->_3 = x262;
-    x3922.add(x15748);
+    struct SEntry11_IISSSSSSDDI* x12333 = x820.get(x7838);
+    int x7841 = x12333->_11;
+    x12333->_11 += 1;
+    struct SEntry8_IIIITIIB* x15661 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
+    memset(x15661, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
+    x15661->_1 = x7841; x15661->_2 = x263; x15661->_3 = x262; x15661->_4 = x264; x15661->_5 = x260; x15661->_6 = -1; x15661->_7 = x265; x15661->_8 = (x266>(0));
+    x4264.add(x15661);
+    struct SEntry3_III* x15665 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
+    memset(x15665, 0, 1 * sizeof(struct SEntry3_III));
+    x15665->_1 = x7841; x15665->_2 = x263; x15665->_3 = x262;
+    x3922.add(x15665);
     double x324 = 0.0;
     x275 = 0;
     while(1) {
@@ -844,44 +831,44 @@ void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int
       int x333 = x269[x332];
       x7862._1 = x331;
       x7862._2 = x329;
-      struct SEntry17_IIISSSSSSSSSSIIIS* x12373 = x838.get(x7862);
+      struct SEntry17_IIISSSSSSSSSSIIIS* x12356 = x838.get(x7862);
       char* x363 = if((x263==(1))) {
-        char* x7866 = x12373->_4;
+        char* x7866 = x12356->_4;
       } else {
         
         char* x362 = if((x263==(2))) {
-          char* x7869 = x12373->_5;
+          char* x7869 = x12356->_5;
         } else {
           
           char* x361 = if((x263==(3))) {
-            char* x7872 = x12373->_6;
+            char* x7872 = x12356->_6;
           } else {
             
             char* x360 = if((x263==(4))) {
-              char* x7875 = x12373->_7;
+              char* x7875 = x12356->_7;
             } else {
               
               char* x359 = if((x263==(5))) {
-                char* x7878 = x12373->_8;
+                char* x7878 = x12356->_8;
               } else {
                 
                 char* x358 = if((x263==(6))) {
-                  char* x7881 = x12373->_9;
+                  char* x7881 = x12356->_9;
                 } else {
                   
                   char* x357 = if((x263==(7))) {
-                    char* x7884 = x12373->_10;
+                    char* x7884 = x12356->_10;
                   } else {
                     
                     char* x356 = if((x263==(8))) {
-                      char* x7887 = x12373->_11;
+                      char* x7887 = x12356->_11;
                     } else {
                       
                       char* x355 = if((x263==(9))) {
-                        char* x7890 = x12373->_12;
+                        char* x7890 = x12356->_12;
                       } else {
                         
-                        char* x7891 = x12373->_13;
+                        char* x7891 = x12356->_13;
                       };
                     };
                   };
@@ -891,13 +878,13 @@ void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int
           };
         };
       };
-      int x7892 = x12373->_3;
+      int x7892 = x12356->_3;
       int x365 = x275;
       x272[x365] = x7892;
-      char* x7895 = x12342->_14;
-      char* x16309 = strstr(x7895, "original");
-      int x16310 = x16309!=(NULL);
-      if((x16310&&(x16314))) {
+      char* x7895 = x12326->_14;
+      char* x16208 = strstr(x7895, "original");
+      int x16209 = x16208!=(NULL);
+      if((x16209&&(x16213))) {
         int x372 = x275;
         x273[x372] = "B";
       } else {
@@ -905,18 +892,17 @@ void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int
         int x374 = x275;
         x273[x374] = "G";
       };
-      x12373->_3 = (x7892-(x333));
+      x12356->_3 = (x7892-(x333));
       if((x7892<=(x333))) {
-        x12373->_3 += 91;
+        x12356->_3 += 91;
       };
       int x382 = 0;
       if((x329!=(x262))) {
         x382 = 1;
       };
-      x838.update(x12373);
-      double x7915 = x12342->_16;
-      double x7916 = x12345->_8;
-      double x7917 = x12349->_9;
+      double x7915 = x12326->_16;
+      double x7916 = x12329->_8;
+      double x7917 = x12333->_9;
       int x390 = x275;
       double x391 = x270[x390];
       double x398 = (((x333toDouble)*(x391))*(((1.0+(x7916))+(x7917))))*((1.0-(x7915)));
@@ -925,10 +911,10 @@ void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int
       double x401 = x324;
       x324 = (x401+(x398));
       int x404 = x275;
-      struct SEntry10_IIIIIITIDS* x15836 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
-      memset(x15836, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
-      x15836->_1 = x7841; x15836->_2 = x263; x15836->_3 = x262; x15836->_4 = (x404+(1)); x15836->_5 = x331; x15836->_6 = x329; x15836->_7 = NULL; x15836->_8 = x333; x15836->_9 = x398; x15836->_10 = x363;
-      x4463.add(x15836);
+      struct SEntry10_IIIIIITIDS* x15752 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
+      memset(x15752, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
+      x15752->_1 = x7841; x15752->_2 = x263; x15752->_3 = x262; x15752->_4 = (x404+(1)); x15752->_5 = x331; x15752->_6 = x329; x15752->_7 = NULL; x15752->_8 = x333; x15752->_9 = x398; x15752->_10 = x363;
+      x4463.add(x15752);
       int x409 = x275;
       x275 = (x409+(1));
     };
