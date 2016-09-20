@@ -68,16 +68,18 @@ object TpccXactGenerator_SC {
     val customerTbl = __newStore[GenericEntry]
     val stockTbl = __newStore[GenericEntry]
 
+    val codeForOutput = false
     val allKeys = List(newOrderTbl -> newOrderKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
     lazy val allRanges = List(warehouseTbl -> warehouseRange, districtTbl -> districtRange, customerTbl -> customerRange, itemTbl -> itemRange, stockTbl -> stockRange).toMap
     val schema = List[(Rep[_], List[TypeRep[_]])](newOrderTbl -> NewOrderEntry, historyTbl -> HistoryEntry, warehouseTbl -> WarehouseEntry, itemTbl -> ItemEntry, orderTbl -> OrderEntry, districtTbl -> DistrictEntry, orderLineTbl -> OrderLineEntry, customerTbl -> CustomerEntry, stockTbl -> StockEntry)
 
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
-
-      __ifThenElse(showOutput, {
-        val output = unit("Started NewOrder transaction for warehouse=%d, district=%d, customer=%d").format(unit("FIX ME"), w_id, d_id, c_id)
-        Context.println(output)
-      }, unit())
+      if (codeForOutput) {
+        __ifThenElse(showOutput, {
+          val output = unit("Started NewOrder transaction for warehouse=%d, district=%d, customer=%d").format(unit("FIX ME"), w_id, d_id, c_id)
+          Context.println(output)
+        }, unit())
+      }
 
       val ol_number = __newVar(unit(0))
       val failed = __newVar(unit(false))
@@ -323,13 +325,13 @@ object TpccXactGenerator_SC {
       val dceBlocker = __newVar(unit(0))
       __assign(dceBlocker, newestOrderEntry.get[Int](unit(1))) //SBJ : TO avoid removal by DCE
       /*
-dsl"""
+  dsl"""
       if (!$showOutput) {
         if ($newestOrderEntry != ${unit[GenericEntry](null)}) {
           //o_id != -1
-//          $orderLineTbl.slice(1, GenericEntry("SteSampleSEntry".asInstanceOf[Any], 1, 2, 3, $newestOrderEntry.get[Int](1), $d_id, $w_id), { orderLineEntry /*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
-//            $dceBlocker = 1 // fooling the effect system, in order not to remove this part, because that's not fare in benchmarking results!
-//          })
+  //          $orderLineTbl.slice(1, GenericEntry("SteSampleSEntry".asInstanceOf[Any], 1, 2, 3, $newestOrderEntry.get[Int](1), $d_id, $w_id), { orderLineEntry /*(o_id,d_id,w_id,ol_i_id,ol_supply_w_id,ol_delivery_d, ol_quantity, ol_amount, _)*/ =>
+  //            $dceBlocker = 1 // fooling the effect system, in order not to remove this part, because that's not fare in benchmarking results!
+  //          })
         }
       } else {
         val orderLines = ${ArrayBuffer[String]()}
@@ -352,9 +354,9 @@ dsl"""
           (if ( /*o_id*/ ${newestOrderEntry.get[Int](unit(1))} == -1) {
             " Customer has no orders placed.\n"
           } else {
-//            " Order-Number: " + /*o_id*/ $newestOrderEntry.get[Int](1) +
-//              "\n    Entry-Date: " + /*o_entry_d*/ $newestOrderEntry.get[Date](5) +
-//              "\n    Carrier-Number: " + /*o_carrier_id*/ $newestOrderEntry.get[Int](6) + "\n\n" +
+  //            " Order-Number: " + /*o_id*/ $newestOrderEntry.get[Int](1) +
+  //              "\n    Entry-Date: " + /*o_entry_d*/ $newestOrderEntry.get[Date](5) +
+  //              "\n    Carrier-Number: " + /*o_carrier_id*/ $newestOrderEntry.get[Int](6) + "\n\n" +
               (if (orderLines.size != 0) {
                 var out = " [Supply_W - Item_ID - Qty - Amount - Delivery-Date]\n"
                 var i:Int = 0
@@ -415,8 +417,8 @@ dsl"""
         })
         __assign(d_id, readVar(d_id) + unit(1))
       })
-
-      dsl"""
+      if (codeForOutput) {
+        dsl"""
       if ($showOutput) {
         var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
           " Date: " + $datetime +
@@ -449,6 +451,7 @@ dsl"""
         ()
       }
       """
+      }
       unit(1)
 
     }
@@ -477,7 +480,8 @@ dsl"""
         __assign(i, readVar(i) + unit(1))
       })
       val stock_count = unique_ol_i_id.size
-      dsl"""
+      if (codeForOutput) {
+        dsl"""
               if ($showOutput) {
                 val output = "\n+-------------------------- STOCK-LEVEL --------------------------+" +
                   "\n Warehouse: " + $w_id +
@@ -489,6 +493,7 @@ dsl"""
                 ()
               }
             """
+      }
       unit(1)
     }
   }
@@ -531,31 +536,37 @@ dsl"""
     parseArgs(args)
 
     import Optimizer._
+
     val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
     java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
 
 
     var prog: Prog = null
-    val Context = if(Optimizer.onlineOpts) new StoreDSLOptimized{} else new StoreDSL{}
+    val Context = if (Optimizer.onlineOpts) new StoreDSLOptimized {
+    } else new StoreDSL {
+    }
+
     import Context._
+
     val initB = reifyBlock {
       prog = new Prog(Context, numWare)
       unit((1))
     }
     var lang = "cpp"
-//    lang = "scala"
+        lang = "scala"
     val codeGen = lang match {
       case "scala" => new TpccPardisScalaGen(Context)
-      case "cpp" => new TpccPardisCppGen(Context)
+      case "cpp" => Optimizer.cTransformer = true ; new TpccPardisCppGen(Context)
     }
     val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
     prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
-    prog.allKeys.foreach { case (tbl, key) => {
-      val i = new IndexedCols
-      i.primary = key
-      i.fixedrange = prog.allRanges getOrElse(tbl, Nil)
-      tbl.asInstanceOf[Sym[_]].attributes += i
-    }
+    prog.allKeys.foreach {
+      case (tbl, key) => {
+        val i = new IndexedCols
+        i.primary = key
+        i.fixedrange = prog.allRanges getOrElse(tbl, Nil)
+        tbl.asInstanceOf[Sym[_]].attributes += i
+      }
     }
 
     codeBlocks += codeGen.codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")

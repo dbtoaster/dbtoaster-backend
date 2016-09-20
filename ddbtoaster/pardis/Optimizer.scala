@@ -25,10 +25,11 @@ object Optimizer {
   var indexInline = true
   var indexLookupFusion = true
   var indexLookupPartialFusion = false
-  var deadIndexUpdate = false
+  var deadIndexUpdate = true
   var codeMotion = true
   var refCounter = true
   var m3CompareMultiply = true //Lazy evaluation
+  var cTransformer = false
 }
 
 class Optimizer(val IR: StoreDSL) {
@@ -79,8 +80,12 @@ class Optimizer(val IR: StoreDSL) {
       }
     }
   pipeline += new StoreDCE(IR)
-  pipeline += TreeDumper(false)
+  if(Optimizer.cTransformer){
+    pipeline += new ScalaStructToMallocTransformer(IR)
+    pipeline += new StringToCTransformer(IR)
+  }
 
+  pipeline += TreeDumper(false)
   //has to be last
   def optimize[T: PardisType](transactionProgram: TransactionProgram[T]) = pipeline.foldLeft(transactionProgram)(applyOptimization)
 
