@@ -136,403 +136,403 @@ struct SEntry9_ISSSSSSDD {
   double _9;
 };
  struct SEntry10_IIIIIITIDS_Idx1234 {
-  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x4294) = { 
-    int x4295 = -889275714;
-    int x4296 = x4294._1;
-    int x4298 = -862048943*((HASH(x4296)));
-    int x4303 = x4295;
-    int x4304 = (((x4298<<(15))|((x4298>>>(-15))))*(461845907))^(x4303);
-    x4295 = ((((x4304<<(13))|((x4304>>>(-13))))*(5))+(-430675100));
-    int x4311 = x4294._2;
-    int x4313 = -862048943*((HASH(x4311)));
-    int x4318 = x4295;
-    int x4319 = (((x4313<<(15))|((x4313>>>(-15))))*(461845907))^(x4318);
-    x4295 = ((((x4319<<(13))|((x4319>>>(-13))))*(5))+(-430675100));
-    int x4326 = x4294._3;
-    int x4328 = -862048943*((HASH(x4326)));
-    int x4333 = x4295;
-    int x4334 = (((x4328<<(15))|((x4328>>>(-15))))*(461845907))^(x4333);
-    x4295 = ((((x4334<<(13))|((x4334>>>(-13))))*(5))+(-430675100));
-    int x4341 = x4294._4;
-    int x4343 = -862048943*((HASH(x4341)));
-    int x4348 = x4295;
-    int x4349 = (((x4343<<(15))|((x4343>>>(-15))))*(461845907))^(x4348);
-    x4295 = ((((x4349<<(13))|((x4349>>>(-13))))*(5))+(-430675100));
-    int x4356 = x4295;
-    int x4357 = x4356^(2);
-    int x4360 = (x4357^((x4357>>>(16))))*(-2048144789);
-    int x4363 = (x4360^((x4360>>>(13))))*(-1028477387);
-    return (x4363^((x4363>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x4123) = { 
+    int x4124 = -889275714;
+    int x4125 = x4123._1;
+    int x4127 = -862048943*((HASH(x4125)));
+    int x4132 = x4124;
+    int x4133 = (((x4127<<(15))|((x4127>>>(-15))))*(461845907))^(x4132);
+    x4124 = ((((x4133<<(13))|((x4133>>>(-13))))*(5))+(-430675100));
+    int x4140 = x4123._2;
+    int x4142 = -862048943*((HASH(x4140)));
+    int x4147 = x4124;
+    int x4148 = (((x4142<<(15))|((x4142>>>(-15))))*(461845907))^(x4147);
+    x4124 = ((((x4148<<(13))|((x4148>>>(-13))))*(5))+(-430675100));
+    int x4155 = x4123._3;
+    int x4157 = -862048943*((HASH(x4155)));
+    int x4162 = x4124;
+    int x4163 = (((x4157<<(15))|((x4157>>>(-15))))*(461845907))^(x4162);
+    x4124 = ((((x4163<<(13))|((x4163>>>(-13))))*(5))+(-430675100));
+    int x4170 = x4123._4;
+    int x4172 = -862048943*((HASH(x4170)));
+    int x4177 = x4124;
+    int x4178 = (((x4172<<(15))|((x4172>>>(-15))))*(461845907))^(x4177);
+    x4124 = ((((x4178<<(13))|((x4178>>>(-13))))*(5))+(-430675100));
+    int x4185 = x4124;
+    int x4186 = x4185^(2);
+    int x4189 = (x4186^((x4186>>>(16))))*(-2048144789);
+    int x4192 = (x4189^((x4189>>>(13))))*(-1028477387);
+    return (x4192^((x4192>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry10_IIIIIITIDS& x4367, const struct SEntry10_IIIIIITIDS& x4368) { 
-    int x4369 = x4367._1;
-    int x4370 = x4368._1;
-    return (((((x4369==(x4370))&&((x4372==(x4373))))&&((x4376==(x4377))))&&((x4380==(x4381)))) ? 0 : 1); 
+  FORCE_INLINE static bool equals(const struct SEntry10_IIIIIITIDS& x4196, const struct SEntry10_IIIIIITIDS& x4197) { 
+    int x4198 = x4196._1;
+    int x4199 = x4197._1;
+    return (((((x4198==(x4199))&&((x4201==(x4202))))&&((x4205==(x4206))))&&((x4209==(x4210)))) ? 0 : 1); 
   }
 }
  struct SEntry8_IIIITIIB_Idx234 {
-  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x4188) = { 
-    int x4189 = -889275714;
-    int x4190 = x4188._2;
-    int x4192 = -862048943*((HASH(x4190)));
-    int x4197 = x4189;
-    int x4198 = (((x4192<<(15))|((x4192>>>(-15))))*(461845907))^(x4197);
-    x4189 = ((((x4198<<(13))|((x4198>>>(-13))))*(5))+(-430675100));
-    int x4205 = x4188._3;
-    int x4207 = -862048943*((HASH(x4205)));
-    int x4212 = x4189;
-    int x4213 = (((x4207<<(15))|((x4207>>>(-15))))*(461845907))^(x4212);
-    x4189 = ((((x4213<<(13))|((x4213>>>(-13))))*(5))+(-430675100));
-    int x4220 = x4188._4;
-    int x4222 = -862048943*((HASH(x4220)));
-    int x4227 = x4189;
-    int x4228 = (((x4222<<(15))|((x4222>>>(-15))))*(461845907))^(x4227);
-    x4189 = ((((x4228<<(13))|((x4228>>>(-13))))*(5))+(-430675100));
-    int x4235 = x4189;
-    int x4236 = x4235^(2);
-    int x4239 = (x4236^((x4236>>>(16))))*(-2048144789);
-    int x4242 = (x4239^((x4239>>>(13))))*(-1028477387);
-    return (x4242^((x4242>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x4017) = { 
+    int x4018 = -889275714;
+    int x4019 = x4017._2;
+    int x4021 = -862048943*((HASH(x4019)));
+    int x4026 = x4018;
+    int x4027 = (((x4021<<(15))|((x4021>>>(-15))))*(461845907))^(x4026);
+    x4018 = ((((x4027<<(13))|((x4027>>>(-13))))*(5))+(-430675100));
+    int x4034 = x4017._3;
+    int x4036 = -862048943*((HASH(x4034)));
+    int x4041 = x4018;
+    int x4042 = (((x4036<<(15))|((x4036>>>(-15))))*(461845907))^(x4041);
+    x4018 = ((((x4042<<(13))|((x4042>>>(-13))))*(5))+(-430675100));
+    int x4049 = x4017._4;
+    int x4051 = -862048943*((HASH(x4049)));
+    int x4056 = x4018;
+    int x4057 = (((x4051<<(15))|((x4051>>>(-15))))*(461845907))^(x4056);
+    x4018 = ((((x4057<<(13))|((x4057>>>(-13))))*(5))+(-430675100));
+    int x4064 = x4018;
+    int x4065 = x4064^(2);
+    int x4068 = (x4065^((x4065>>>(16))))*(-2048144789);
+    int x4071 = (x4068^((x4068>>>(13))))*(-1028477387);
+    return (x4071^((x4071>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry8_IIIITIIB& x4246, const struct SEntry8_IIIITIIB& x4247) { 
-    int x4248 = x4246._2;
-    int x4249 = x4247._2;
-    return ((((x4248==(x4249))&&((x4251==(x4252))))&&((x4255==(x4256)))) ? 0 : 1); 
+  FORCE_INLINE static bool equals(const struct SEntry8_IIIITIIB& x4075, const struct SEntry8_IIIITIIB& x4076) { 
+    int x4077 = x4075._2;
+    int x4078 = x4076._2;
+    return ((((x4077==(x4078))&&((x4080==(x4081))))&&((x4084==(x4085)))) ? 0 : 1); 
   }
 }
  struct SEntry3_III_Idx123 {
-  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3738) = { 
-    int x3739 = -889275714;
-    int x3740 = x3738._1;
-    int x3742 = -862048943*((HASH(x3740)));
-    int x3747 = x3739;
-    int x3748 = (((x3742<<(15))|((x3742>>>(-15))))*(461845907))^(x3747);
-    x3739 = ((((x3748<<(13))|((x3748>>>(-13))))*(5))+(-430675100));
-    int x3755 = x3738._2;
-    int x3757 = -862048943*((HASH(x3755)));
-    int x3762 = x3739;
-    int x3763 = (((x3757<<(15))|((x3757>>>(-15))))*(461845907))^(x3762);
-    x3739 = ((((x3763<<(13))|((x3763>>>(-13))))*(5))+(-430675100));
-    int x3770 = x3738._3;
-    int x3772 = -862048943*((HASH(x3770)));
-    int x3777 = x3739;
-    int x3778 = (((x3772<<(15))|((x3772>>>(-15))))*(461845907))^(x3777);
-    x3739 = ((((x3778<<(13))|((x3778>>>(-13))))*(5))+(-430675100));
-    int x3785 = x3739;
-    int x3786 = x3785^(2);
-    int x3789 = (x3786^((x3786>>>(16))))*(-2048144789);
-    int x3792 = (x3789^((x3789>>>(13))))*(-1028477387);
-    return (x3792^((x3792>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3567) = { 
+    int x3568 = -889275714;
+    int x3569 = x3567._1;
+    int x3571 = -862048943*((HASH(x3569)));
+    int x3576 = x3568;
+    int x3577 = (((x3571<<(15))|((x3571>>>(-15))))*(461845907))^(x3576);
+    x3568 = ((((x3577<<(13))|((x3577>>>(-13))))*(5))+(-430675100));
+    int x3584 = x3567._2;
+    int x3586 = -862048943*((HASH(x3584)));
+    int x3591 = x3568;
+    int x3592 = (((x3586<<(15))|((x3586>>>(-15))))*(461845907))^(x3591);
+    x3568 = ((((x3592<<(13))|((x3592>>>(-13))))*(5))+(-430675100));
+    int x3599 = x3567._3;
+    int x3601 = -862048943*((HASH(x3599)));
+    int x3606 = x3568;
+    int x3607 = (((x3601<<(15))|((x3601>>>(-15))))*(461845907))^(x3606);
+    x3568 = ((((x3607<<(13))|((x3607>>>(-13))))*(5))+(-430675100));
+    int x3614 = x3568;
+    int x3615 = x3614^(2);
+    int x3618 = (x3615^((x3615>>>(16))))*(-2048144789);
+    int x3621 = (x3618^((x3618>>>(13))))*(-1028477387);
+    return (x3621^((x3621>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry3_III& x3796, const struct SEntry3_III& x3797) { 
-    int x3798 = x3796._1;
-    int x3799 = x3797._1;
-    return ((((x3798==(x3799))&&((x3801==(x3802))))&&((x3805==(x3806)))) ? 0 : 1); 
+  FORCE_INLINE static bool equals(const struct SEntry3_III& x3625, const struct SEntry3_III& x3626) { 
+    int x3627 = x3625._1;
+    int x3628 = x3626._1;
+    return ((((x3627==(x3628))&&((x3630==(x3631))))&&((x3634==(x3635)))) ? 0 : 1); 
   }
 }
  struct SEntry10_IIIIIITIDS_Idx123 {
-  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x4387) = { 
-    int x4388 = -889275714;
-    int x4389 = x4387._1;
-    int x4391 = -862048943*((HASH(x4389)));
-    int x4396 = x4388;
-    int x4397 = (((x4391<<(15))|((x4391>>>(-15))))*(461845907))^(x4396);
-    x4388 = ((((x4397<<(13))|((x4397>>>(-13))))*(5))+(-430675100));
-    int x4404 = x4387._2;
-    int x4406 = -862048943*((HASH(x4404)));
-    int x4411 = x4388;
-    int x4412 = (((x4406<<(15))|((x4406>>>(-15))))*(461845907))^(x4411);
-    x4388 = ((((x4412<<(13))|((x4412>>>(-13))))*(5))+(-430675100));
-    int x4419 = x4387._3;
-    int x4421 = -862048943*((HASH(x4419)));
-    int x4426 = x4388;
-    int x4427 = (((x4421<<(15))|((x4421>>>(-15))))*(461845907))^(x4426);
-    x4388 = ((((x4427<<(13))|((x4427>>>(-13))))*(5))+(-430675100));
-    int x4434 = x4388;
-    int x4435 = x4434^(2);
-    int x4438 = (x4435^((x4435>>>(16))))*(-2048144789);
-    int x4441 = (x4438^((x4438>>>(13))))*(-1028477387);
-    return (x4441^((x4441>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x4216) = { 
+    int x4217 = -889275714;
+    int x4218 = x4216._1;
+    int x4220 = -862048943*((HASH(x4218)));
+    int x4225 = x4217;
+    int x4226 = (((x4220<<(15))|((x4220>>>(-15))))*(461845907))^(x4225);
+    x4217 = ((((x4226<<(13))|((x4226>>>(-13))))*(5))+(-430675100));
+    int x4233 = x4216._2;
+    int x4235 = -862048943*((HASH(x4233)));
+    int x4240 = x4217;
+    int x4241 = (((x4235<<(15))|((x4235>>>(-15))))*(461845907))^(x4240);
+    x4217 = ((((x4241<<(13))|((x4241>>>(-13))))*(5))+(-430675100));
+    int x4248 = x4216._3;
+    int x4250 = -862048943*((HASH(x4248)));
+    int x4255 = x4217;
+    int x4256 = (((x4250<<(15))|((x4250>>>(-15))))*(461845907))^(x4255);
+    x4217 = ((((x4256<<(13))|((x4256>>>(-13))))*(5))+(-430675100));
+    int x4263 = x4217;
+    int x4264 = x4263^(2);
+    int x4267 = (x4264^((x4264>>>(16))))*(-2048144789);
+    int x4270 = (x4267^((x4267>>>(13))))*(-1028477387);
+    return (x4270^((x4270>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry10_IIIIIITIDS& x4445, const struct SEntry10_IIIIIITIDS& x4446) { 
-    int x4447 = x4445._1;
-    int x4448 = x4446._1;
-    return ((((x4447==(x4448))&&((x4450==(x4451))))&&((x4454==(x4455)))) ? 0 : 1); 
+  FORCE_INLINE static bool equals(const struct SEntry10_IIIIIITIDS& x4274, const struct SEntry10_IIIIIITIDS& x4275) { 
+    int x4276 = x4274._1;
+    int x4277 = x4275._1;
+    return ((((x4276==(x4277))&&((x4279==(x4280))))&&((x4283==(x4284)))) ? 0 : 1); 
   }
 }
  struct SEntry3_III_Idx23 {
-  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3865) = { 
-    int x3866 = -889275714;
-    int x3867 = x3865._2;
-    int x3869 = -862048943*((HASH(x3867)));
-    int x3874 = x3866;
-    int x3875 = (((x3869<<(15))|((x3869>>>(-15))))*(461845907))^(x3874);
-    x3866 = ((((x3875<<(13))|((x3875>>>(-13))))*(5))+(-430675100));
-    int x3882 = x3865._3;
-    int x3884 = -862048943*((HASH(x3882)));
-    int x3889 = x3866;
-    int x3890 = (((x3884<<(15))|((x3884>>>(-15))))*(461845907))^(x3889);
-    x3866 = ((((x3890<<(13))|((x3890>>>(-13))))*(5))+(-430675100));
-    int x3897 = x3866;
-    int x3898 = x3897^(2);
-    int x3901 = (x3898^((x3898>>>(16))))*(-2048144789);
-    int x3904 = (x3901^((x3901>>>(13))))*(-1028477387);
-    return (x3904^((x3904>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3694) = { 
+    int x3695 = -889275714;
+    int x3696 = x3694._2;
+    int x3698 = -862048943*((HASH(x3696)));
+    int x3703 = x3695;
+    int x3704 = (((x3698<<(15))|((x3698>>>(-15))))*(461845907))^(x3703);
+    x3695 = ((((x3704<<(13))|((x3704>>>(-13))))*(5))+(-430675100));
+    int x3711 = x3694._3;
+    int x3713 = -862048943*((HASH(x3711)));
+    int x3718 = x3695;
+    int x3719 = (((x3713<<(15))|((x3713>>>(-15))))*(461845907))^(x3718);
+    x3695 = ((((x3719<<(13))|((x3719>>>(-13))))*(5))+(-430675100));
+    int x3726 = x3695;
+    int x3727 = x3726^(2);
+    int x3730 = (x3727^((x3727>>>(16))))*(-2048144789);
+    int x3733 = (x3730^((x3730>>>(13))))*(-1028477387);
+    return (x3733^((x3733>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry3_III& x3908, const struct SEntry3_III& x3909) { 
-    int x3910 = x3908._2;
-    int x3911 = x3909._2;
-    return (((x3910==(x3911))&&((x3913==(x3914)))) ? 0 : 1); 
+  FORCE_INLINE static bool equals(const struct SEntry3_III& x3737, const struct SEntry3_III& x3738) { 
+    int x3739 = x3737._2;
+    int x3740 = x3738._2;
+    return (((x3739==(x3740))&&((x3742==(x3743)))) ? 0 : 1); 
   }
 }
  struct SEntry8_IIIIITDS_Idx {
-  FORCE_INLINE static size_t hash(const struct SEntry8_IIIIITDS& x3927) = { 
-    int x3928 = -889275714;
-    int x3929 = x3928;
-    int x3930 = x3929^(2);
-    int x3933 = (x3930^((x3930>>>(16))))*(-2048144789);
-    int x3936 = (x3933^((x3933>>>(13))))*(-1028477387);
-    return (x3936^((x3936>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry8_IIIIITDS& x3756) = { 
+    int x3757 = -889275714;
+    int x3758 = x3757;
+    int x3759 = x3758^(2);
+    int x3762 = (x3759^((x3759>>>(16))))*(-2048144789);
+    int x3765 = (x3762^((x3762>>>(13))))*(-1028477387);
+    return (x3765^((x3765>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry8_IIIIITDS& x3940, const struct SEntry8_IIIIITDS& x3941) { 
-    int x3942 = x3940._1;
-    int x3943 = x3941._1;
-    return ((((((((((x3942==(-1))||((x3943==(-1))))||((x3942==(x3943))))&&((((x3949==(-1))||((x3950==(-1))))||((x3949==(x3950))))))&&((((x3957==(-1))||((x3958==(-1))))||((x3957==(x3958))))))&&((((x3965==(-1))||((x3966==(-1))))||((x3965==(x3966))))))&&((((x3973==(-1))||((x3974==(-1))))||((x3973==(x3974))))))&&((((x3981==(NULL))||((x3982==(NULL))))||((x3981==(x3982))))))&&((((x3989==(-1.0))||((x3990==(-1.0))))||((x3989==(x3990)))))) ? 0 : 1); 
+  FORCE_INLINE static bool equals(const struct SEntry8_IIIIITDS& x3769, const struct SEntry8_IIIIITDS& x3770) { 
+    int x3771 = x3769._1;
+    int x3772 = x3770._1;
+    return ((((((((((x3771==(-1))||((x3772==(-1))))||((x3771==(x3772))))&&((((x3778==(-1))||((x3779==(-1))))||((x3778==(x3779))))))&&((((x3786==(-1))||((x3787==(-1))))||((x3786==(x3787))))))&&((((x3794==(-1))||((x3795==(-1))))||((x3794==(x3795))))))&&((((x3802==(-1))||((x3803==(-1))))||((x3802==(x3803))))))&&((((x3810==(NULL))||((x3811==(NULL))))||((x3810==(x3811))))))&&((((x3818==(-1.0))||((x3819==(-1.0))))||((x3818==(x3819)))))) ? 0 : 1); 
   }
 }
  struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236 {
-  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4493) = { 
-    int x4494 = -889275714;
-    int x4495 = x4493._2;
-    int x4497 = -862048943*((HASH(x4495)));
-    int x4502 = x4494;
-    int x4503 = (((x4497<<(15))|((x4497>>>(-15))))*(461845907))^(x4502);
-    x4494 = ((((x4503<<(13))|((x4503>>>(-13))))*(5))+(-430675100));
-    int x4510 = x4493._3;
-    int x4512 = -862048943*((HASH(x4510)));
-    int x4517 = x4494;
-    int x4518 = (((x4512<<(15))|((x4512>>>(-15))))*(461845907))^(x4517);
-    x4494 = ((((x4518<<(13))|((x4518>>>(-13))))*(5))+(-430675100));
-    char* x4525 = x4493._6;
-    int x4527 = -862048943*((HASH(x4525)));
-    int x4532 = x4494;
-    int x4533 = (((x4527<<(15))|((x4527>>>(-15))))*(461845907))^(x4532);
-    x4494 = ((((x4533<<(13))|((x4533>>>(-13))))*(5))+(-430675100));
-    int x4540 = x4494;
-    int x4541 = x4540^(2);
-    int x4544 = (x4541^((x4541>>>(16))))*(-2048144789);
-    int x4547 = (x4544^((x4544>>>(13))))*(-1028477387);
-    return (x4547^((x4547>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4322) = { 
+    int x4323 = -889275714;
+    int x4324 = x4322._2;
+    int x4326 = -862048943*((HASH(x4324)));
+    int x4331 = x4323;
+    int x4332 = (((x4326<<(15))|((x4326>>>(-15))))*(461845907))^(x4331);
+    x4323 = ((((x4332<<(13))|((x4332>>>(-13))))*(5))+(-430675100));
+    int x4339 = x4322._3;
+    int x4341 = -862048943*((HASH(x4339)));
+    int x4346 = x4323;
+    int x4347 = (((x4341<<(15))|((x4341>>>(-15))))*(461845907))^(x4346);
+    x4323 = ((((x4347<<(13))|((x4347>>>(-13))))*(5))+(-430675100));
+    char* x4354 = x4322._6;
+    int x4356 = -862048943*((HASH(x4354)));
+    int x4361 = x4323;
+    int x4362 = (((x4356<<(15))|((x4356>>>(-15))))*(461845907))^(x4361);
+    x4323 = ((((x4362<<(13))|((x4362>>>(-13))))*(5))+(-430675100));
+    int x4369 = x4323;
+    int x4370 = x4369^(2);
+    int x4373 = (x4370^((x4370>>>(16))))*(-2048144789);
+    int x4376 = (x4373^((x4373>>>(13))))*(-1028477387);
+    return (x4376^((x4376>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4551, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4552) { 
-    int x4553 = x4551._2;
-    int x4554 = x4552._2;
-    return ((((x4553==(x4554))&&((x4556==(x4557))))&&((x4560==(x4561)))) ? 0 : 1); 
+  FORCE_INLINE static bool equals(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4380, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4381) { 
+    int x4382 = x4380._2;
+    int x4383 = x4381._2;
+    return ((((x4382==(x4383))&&((x4385==(x4386))))&&((x4389==(x4390)))) ? 0 : 1); 
   }
 }
  struct SEntry8_IIIITIIB_Idx123 {
-  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x4046) = { 
-    int x4047 = -889275714;
-    int x4048 = x4046._1;
-    int x4050 = -862048943*((HASH(x4048)));
-    int x4055 = x4047;
-    int x4056 = (((x4050<<(15))|((x4050>>>(-15))))*(461845907))^(x4055);
-    x4047 = ((((x4056<<(13))|((x4056>>>(-13))))*(5))+(-430675100));
-    int x4063 = x4046._2;
-    int x4065 = -862048943*((HASH(x4063)));
-    int x4070 = x4047;
-    int x4071 = (((x4065<<(15))|((x4065>>>(-15))))*(461845907))^(x4070);
-    x4047 = ((((x4071<<(13))|((x4071>>>(-13))))*(5))+(-430675100));
-    int x4078 = x4046._3;
-    int x4080 = -862048943*((HASH(x4078)));
-    int x4085 = x4047;
-    int x4086 = (((x4080<<(15))|((x4080>>>(-15))))*(461845907))^(x4085);
-    x4047 = ((((x4086<<(13))|((x4086>>>(-13))))*(5))+(-430675100));
-    int x4093 = x4047;
-    int x4094 = x4093^(2);
-    int x4097 = (x4094^((x4094>>>(16))))*(-2048144789);
-    int x4100 = (x4097^((x4097>>>(13))))*(-1028477387);
-    return (x4100^((x4100>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3875) = { 
+    int x3876 = -889275714;
+    int x3877 = x3875._1;
+    int x3879 = -862048943*((HASH(x3877)));
+    int x3884 = x3876;
+    int x3885 = (((x3879<<(15))|((x3879>>>(-15))))*(461845907))^(x3884);
+    x3876 = ((((x3885<<(13))|((x3885>>>(-13))))*(5))+(-430675100));
+    int x3892 = x3875._2;
+    int x3894 = -862048943*((HASH(x3892)));
+    int x3899 = x3876;
+    int x3900 = (((x3894<<(15))|((x3894>>>(-15))))*(461845907))^(x3899);
+    x3876 = ((((x3900<<(13))|((x3900>>>(-13))))*(5))+(-430675100));
+    int x3907 = x3875._3;
+    int x3909 = -862048943*((HASH(x3907)));
+    int x3914 = x3876;
+    int x3915 = (((x3909<<(15))|((x3909>>>(-15))))*(461845907))^(x3914);
+    x3876 = ((((x3915<<(13))|((x3915>>>(-13))))*(5))+(-430675100));
+    int x3922 = x3876;
+    int x3923 = x3922^(2);
+    int x3926 = (x3923^((x3923>>>(16))))*(-2048144789);
+    int x3929 = (x3926^((x3926>>>(13))))*(-1028477387);
+    return (x3929^((x3929>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry8_IIIITIIB& x4104, const struct SEntry8_IIIITIIB& x4105) { 
-    int x4106 = x4104._1;
-    int x4107 = x4105._1;
-    return ((((x4106==(x4107))&&((x4109==(x4110))))&&((x4113==(x4114)))) ? 0 : 1); 
+  FORCE_INLINE static bool equals(const struct SEntry8_IIIITIIB& x3933, const struct SEntry8_IIIITIIB& x3934) { 
+    int x3935 = x3933._1;
+    int x3936 = x3934._1;
+    return ((((x3935==(x3936))&&((x3938==(x3939))))&&((x3942==(x3943)))) ? 0 : 1); 
   }
 }
  struct SEntry3_III_Idx23_Ordering {
-  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3812) = { 
-    int x3813 = -889275714;
-    int x3814 = x3812._2;
-    int x3816 = -862048943*((HASH(x3814)));
-    int x3821 = x3813;
-    int x3822 = (((x3816<<(15))|((x3816>>>(-15))))*(461845907))^(x3821);
-    x3813 = ((((x3822<<(13))|((x3822>>>(-13))))*(5))+(-430675100));
-    int x3829 = x3812._3;
-    int x3831 = -862048943*((HASH(x3829)));
-    int x3836 = x3813;
-    int x3837 = (((x3831<<(15))|((x3831>>>(-15))))*(461845907))^(x3836);
-    x3813 = ((((x3837<<(13))|((x3837>>>(-13))))*(5))+(-430675100));
-    int x3844 = x3813;
-    int x3845 = x3844^(2);
-    int x3848 = (x3845^((x3845>>>(16))))*(-2048144789);
-    int x3851 = (x3848^((x3848>>>(13))))*(-1028477387);
-    return (x3851^((x3851>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3641) = { 
+    int x3642 = -889275714;
+    int x3643 = x3641._2;
+    int x3645 = -862048943*((HASH(x3643)));
+    int x3650 = x3642;
+    int x3651 = (((x3645<<(15))|((x3645>>>(-15))))*(461845907))^(x3650);
+    x3642 = ((((x3651<<(13))|((x3651>>>(-13))))*(5))+(-430675100));
+    int x3658 = x3641._3;
+    int x3660 = -862048943*((HASH(x3658)));
+    int x3665 = x3642;
+    int x3666 = (((x3660<<(15))|((x3660>>>(-15))))*(461845907))^(x3665);
+    x3642 = ((((x3666<<(13))|((x3666>>>(-13))))*(5))+(-430675100));
+    int x3673 = x3642;
+    int x3674 = x3673^(2);
+    int x3677 = (x3674^((x3674>>>(16))))*(-2048144789);
+    int x3680 = (x3677^((x3677>>>(13))))*(-1028477387);
+    return (x3680^((x3680>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry3_III& x3855, const struct SEntry3_III& x3856) { 
-    struct SEntry3_III x3857 = x3855._1;
-    struct SEntry3_III x3858 = x3856._1;
-    return ((x3857==(x3858)) ? 0 : ((x3857>(x3858)) ? 1 : -1)); 
+  FORCE_INLINE static bool equals(const struct SEntry3_III& x3684, const struct SEntry3_III& x3685) { 
+    struct SEntry3_III x3686 = x3684._1;
+    struct SEntry3_III x3687 = x3685._1;
+    return ((x3686==(x3687)) ? 0 : ((x3686>(x3687)) ? 1 : -1)); 
   }
 }
  struct SEntry8_IIIITIIB_Idx234_Ordering {
-  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x4120) = { 
-    int x4121 = -889275714;
-    int x4122 = x4120._2;
-    int x4124 = -862048943*((HASH(x4122)));
-    int x4129 = x4121;
-    int x4130 = (((x4124<<(15))|((x4124>>>(-15))))*(461845907))^(x4129);
-    x4121 = ((((x4130<<(13))|((x4130>>>(-13))))*(5))+(-430675100));
-    int x4137 = x4120._3;
-    int x4139 = -862048943*((HASH(x4137)));
-    int x4144 = x4121;
-    int x4145 = (((x4139<<(15))|((x4139>>>(-15))))*(461845907))^(x4144);
-    x4121 = ((((x4145<<(13))|((x4145>>>(-13))))*(5))+(-430675100));
-    int x4152 = x4120._4;
-    int x4154 = -862048943*((HASH(x4152)));
-    int x4159 = x4121;
-    int x4160 = (((x4154<<(15))|((x4154>>>(-15))))*(461845907))^(x4159);
-    x4121 = ((((x4160<<(13))|((x4160>>>(-13))))*(5))+(-430675100));
-    int x4167 = x4121;
-    int x4168 = x4167^(2);
-    int x4171 = (x4168^((x4168>>>(16))))*(-2048144789);
-    int x4174 = (x4171^((x4171>>>(13))))*(-1028477387);
-    return (x4174^((x4174>>>(16)))); 
+  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3949) = { 
+    int x3950 = -889275714;
+    int x3951 = x3949._2;
+    int x3953 = -862048943*((HASH(x3951)));
+    int x3958 = x3950;
+    int x3959 = (((x3953<<(15))|((x3953>>>(-15))))*(461845907))^(x3958);
+    x3950 = ((((x3959<<(13))|((x3959>>>(-13))))*(5))+(-430675100));
+    int x3966 = x3949._3;
+    int x3968 = -862048943*((HASH(x3966)));
+    int x3973 = x3950;
+    int x3974 = (((x3968<<(15))|((x3968>>>(-15))))*(461845907))^(x3973);
+    x3950 = ((((x3974<<(13))|((x3974>>>(-13))))*(5))+(-430675100));
+    int x3981 = x3949._4;
+    int x3983 = -862048943*((HASH(x3981)));
+    int x3988 = x3950;
+    int x3989 = (((x3983<<(15))|((x3983>>>(-15))))*(461845907))^(x3988);
+    x3950 = ((((x3989<<(13))|((x3989>>>(-13))))*(5))+(-430675100));
+    int x3996 = x3950;
+    int x3997 = x3996^(2);
+    int x4000 = (x3997^((x3997>>>(16))))*(-2048144789);
+    int x4003 = (x4000^((x4000>>>(13))))*(-1028477387);
+    return (x4003^((x4003>>>(16)))); 
   }
-  FORCE_INLINE static bool equals(const struct SEntry8_IIIITIIB& x4178, const struct SEntry8_IIIITIIB& x4179) { 
-    struct SEntry8_IIIITIIB x4180 = x4178._1;
-    struct SEntry8_IIIITIIB x4181 = x4179._1;
-    return ((x4180==(x4181)) ? 0 : ((x4180>(x4181)) ? 1 : -1)); 
+  FORCE_INLINE static bool equals(const struct SEntry8_IIIITIIB& x4007, const struct SEntry8_IIIITIIB& x4008) { 
+    struct SEntry8_IIIITIIB x4009 = x4007._1;
+    struct SEntry8_IIIITIIB x4010 = x4008._1;
+    return ((x4009==(x4010)) ? 0 : ((x4009>(x4010)) ? 1 : -1)); 
   }
 }
  struct SEntry9_ISSSSSSDD_Idx1f1t2 {
-  FORCE_INLINE static size_t hash(const struct SEntry9_ISSSSSSDD& x4008) = { 
-    int x4009 = 0;
-    int x4010 = x4008._1;
-    int x4012 = x4009;
-    x4009 = ((x4012*(1))+((x4010-(1))));
-    int x4016 = x4009;
-    return x4016; 
+  FORCE_INLINE static size_t hash(const struct SEntry9_ISSSSSSDD& x3837) = { 
+    int x3838 = 0;
+    int x3839 = x3837._1;
+    int x3841 = x3838;
+    x3838 = ((x3841*(1))+((x3839-(1))));
+    int x3845 = x3838;
+    return x3845; 
   }
-  FORCE_INLINE static bool equals(const struct SEntry9_ISSSSSSDD& x4005, const struct SEntry9_ISSSSSSDD& x4006) { 
+  FORCE_INLINE static bool equals(const struct SEntry9_ISSSSSSDD& x3834, const struct SEntry9_ISSSSSSDD& x3835) { 
     return 0; 
   }
 }
  struct SEntry5_IISDS_Idx1f1t100001 {
-  FORCE_INLINE static size_t hash(const struct SEntry5_IISDS& x4027) = { 
-    int x4028 = 0;
-    int x4029 = x4027._1;
-    int x4031 = x4028;
-    x4028 = ((x4031*(100000))+((x4029-(1))));
-    int x4035 = x4028;
-    return x4035; 
+  FORCE_INLINE static size_t hash(const struct SEntry5_IISDS& x3856) = { 
+    int x3857 = 0;
+    int x3858 = x3856._1;
+    int x3860 = x3857;
+    x3857 = ((x3860*(100000))+((x3858-(1))));
+    int x3864 = x3857;
+    return x3864; 
   }
-  FORCE_INLINE static bool equals(const struct SEntry5_IISDS& x4024, const struct SEntry5_IISDS& x4025) { 
+  FORCE_INLINE static bool equals(const struct SEntry5_IISDS& x3853, const struct SEntry5_IISDS& x3854) { 
     return 0; 
   }
 }
  struct SEntry11_IISSSSSSDDI_Idx1f1t11_2f1t2 {
-  FORCE_INLINE static size_t hash(const struct SEntry11_IISSSSSSDDI& x4272) = { 
-    int x4273 = 0;
-    int x4274 = x4272._1;
-    int x4276 = x4273;
-    x4273 = ((x4276*(10))+((x4274-(1))));
-    int x4280 = x4272._2;
-    int x4282 = x4273;
-    x4273 = ((x4282*(1))+((x4280-(1))));
-    int x4286 = x4273;
-    return x4286; 
+  FORCE_INLINE static size_t hash(const struct SEntry11_IISSSSSSDDI& x4101) = { 
+    int x4102 = 0;
+    int x4103 = x4101._1;
+    int x4105 = x4102;
+    x4102 = ((x4105*(10))+((x4103-(1))));
+    int x4109 = x4101._2;
+    int x4111 = x4102;
+    x4102 = ((x4111*(1))+((x4109-(1))));
+    int x4115 = x4102;
+    return x4115; 
   }
-  FORCE_INLINE static bool equals(const struct SEntry11_IISSSSSSDDI& x4269, const struct SEntry11_IISSSSSSDDI& x4270) { 
+  FORCE_INLINE static bool equals(const struct SEntry11_IISSSSSSDDI& x4098, const struct SEntry11_IISSSSSSDDI& x4099) { 
     return 0; 
   }
 }
  struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx1f1t3001_2f1t11_3f1t2 {
-  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4470) = { 
-    int x4471 = 0;
-    int x4472 = x4470._1;
-    int x4474 = x4471;
-    x4471 = ((x4474*(3000))+((x4472-(1))));
-    int x4478 = x4470._2;
-    int x4480 = x4471;
-    x4471 = ((x4480*(10))+((x4478-(1))));
-    int x4484 = x4470._3;
-    int x4486 = x4471;
-    x4471 = ((x4486*(1))+((x4484-(1))));
-    int x4490 = x4471;
-    return x4490; 
+  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4299) = { 
+    int x4300 = 0;
+    int x4301 = x4299._1;
+    int x4303 = x4300;
+    x4300 = ((x4303*(3000))+((x4301-(1))));
+    int x4307 = x4299._2;
+    int x4309 = x4300;
+    x4300 = ((x4309*(10))+((x4307-(1))));
+    int x4313 = x4299._3;
+    int x4315 = x4300;
+    x4300 = ((x4315*(1))+((x4313-(1))));
+    int x4319 = x4300;
+    return x4319; 
   }
-  FORCE_INLINE static bool equals(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4467, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4468) { 
+  FORCE_INLINE static bool equals(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4296, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4297) { 
     return 0; 
   }
 }
  struct SEntry17_IIISSSSSSSSSSIIIS_Idx1f1t100001_2f1t2 {
-  FORCE_INLINE static size_t hash(const struct SEntry17_IIISSSSSSSSSSIIIS& x4576) = { 
-    int x4577 = 0;
-    int x4578 = x4576._1;
-    int x4580 = x4577;
-    x4577 = ((x4580*(100000))+((x4578-(1))));
-    int x4584 = x4576._2;
-    int x4586 = x4577;
-    x4577 = ((x4586*(1))+((x4584-(1))));
-    int x4590 = x4577;
-    return x4590; 
+  FORCE_INLINE static size_t hash(const struct SEntry17_IIISSSSSSSSSSIIIS& x4405) = { 
+    int x4406 = 0;
+    int x4407 = x4405._1;
+    int x4409 = x4406;
+    x4406 = ((x4409*(100000))+((x4407-(1))));
+    int x4413 = x4405._2;
+    int x4415 = x4406;
+    x4406 = ((x4415*(1))+((x4413-(1))));
+    int x4419 = x4406;
+    return x4419; 
   }
-  FORCE_INLINE static bool equals(const struct SEntry17_IIISSSSSSSSSSIIIS& x4573, const struct SEntry17_IIISSSSSSSSSSIIIS& x4574) { 
+  FORCE_INLINE static bool equals(const struct SEntry17_IIISSSSSSSSSSIIIS& x4402, const struct SEntry17_IIISSSSSSSSSSIIIS& x4403) { 
     return 0; 
   }
 }
 MultiHashMap<struct SEntry3_III,void,
    HashIndex<struct SEntry3_III, void, SEntry3_III_Idx123, 1>,
    TreeIndex<struct SEntry3_III, void, SEntry3_III_Idx23_Ordering, 0>,
-   NoIndex<struct SEntry3_III, void, SEntry3_III_Idx23, 0> > x3922;
-auto newOrderTbl& = x3922;
+   NoIndex<struct SEntry3_III, void, SEntry3_III_Idx23, 0> > x3751;
+auto newOrderTbl& = x3751;
 
 MultiHashMap<struct SEntry8_IIIIITDS,void,
-   ListIndex<struct SEntry8_IIIIITDS, void, SEntry8_IIIIITDS_Idx, 0> > x4002;
-auto historyTbl& = x4002;
+   ListIndex<struct SEntry8_IIIIITDS, void, SEntry8_IIIIITDS_Idx, 0> > x3831;
+auto historyTbl& = x3831;
 
 MultiHashMap<struct SEntry9_ISSSSSSDD,void,
-   ArrayIndex<struct SEntry9_ISSSSSSDD, void, SEntry9_ISSSSSSDD_Idx1f1t2, 1> > x4021;
-auto warehouseTbl& = x4021;
+   ArrayIndex<struct SEntry9_ISSSSSSDD, void, SEntry9_ISSSSSSDD_Idx1f1t2, 1> > x3850;
+auto warehouseTbl& = x3850;
 
 MultiHashMap<struct SEntry5_IISDS,void,
-   ArrayIndex<struct SEntry5_IISDS, void, SEntry5_IISDS_Idx1f1t100001, 1> > x4040;
-auto itemTbl& = x4040;
+   ArrayIndex<struct SEntry5_IISDS, void, SEntry5_IISDS_Idx1f1t100001, 1> > x3869;
+auto itemTbl& = x3869;
 
 MultiHashMap<struct SEntry8_IIIITIIB,void,
    HashIndex<struct SEntry8_IIIITIIB, void, SEntry8_IIIITIIB_Idx123, 1>,
    TreeIndex<struct SEntry8_IIIITIIB, void, SEntry8_IIIITIIB_Idx234_Ordering, 0>,
-   NoIndex<struct SEntry8_IIIITIIB, void, SEntry8_IIIITIIB_Idx234, 0> > x4264;
-auto orderTbl& = x4264;
+   NoIndex<struct SEntry8_IIIITIIB, void, SEntry8_IIIITIIB_Idx234, 0> > x4093;
+auto orderTbl& = x4093;
 
 MultiHashMap<struct SEntry11_IISSSSSSDDI,void,
-   ArrayIndex<struct SEntry11_IISSSSSSDDI, void, SEntry11_IISSSSSSDDI_Idx1f1t11_2f1t2, 1> > x4291;
-auto districtTbl& = x4291;
+   ArrayIndex<struct SEntry11_IISSSSSSDDI, void, SEntry11_IISSSSSSDDI_Idx1f1t11_2f1t2, 1> > x4120;
+auto districtTbl& = x4120;
 
 MultiHashMap<struct SEntry10_IIIIIITIDS,void,
    HashIndex<struct SEntry10_IIIIIITIDS, void, SEntry10_IIIIIITIDS_Idx1234, 1>,
-   HashIndex<struct SEntry10_IIIIIITIDS, void, SEntry10_IIIIIITIDS_Idx123, 0> > x4463;
-auto orderLineTbl& = x4463;
+   HashIndex<struct SEntry10_IIIIIITIDS, void, SEntry10_IIIIIITIDS_Idx123, 0> > x4292;
+auto orderLineTbl& = x4292;
 
 MultiHashMap<struct SEntry21_IIISSSSSSSSSTSDDDDIIS,void,
    ArrayIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, void, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx1f1t3001_2f1t11_3f1t2, 1>,
-   HashIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, void, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236, 0> > x4569;
-auto customerTbl& = x4569;
+   HashIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, void, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236, 0> > x4398;
+auto customerTbl& = x4398;
 
 MultiHashMap<struct SEntry17_IIISSSSSSSSSSIIIS,void,
-   ArrayIndex<struct SEntry17_IIISSSSSSSSSSIIIS, void, SEntry17_IIISSSSSSSSSSIIIS_Idx1f1t100001_2f1t2, 1> > x4595;
-auto stockTbl& = x4595;
+   ArrayIndex<struct SEntry17_IIISSSSSSSSSSIIIS, void, SEntry17_IIISSSSSSSSSSIIIS_Idx1f1t100001_2f1t2, 1> > x4424;
+auto stockTbl& = x4424;
 
 void DeliveryTx(int x10, Date x11, int x12, int x13) {
   int x14[10];
@@ -543,43 +543,43 @@ void DeliveryTx(int x10, Date x11, int x12, int x13) {
     if (!((x16<=(10)))) break; 
     
     int x22 = x15;
-    x7189._2 = x22;
-    x7189._3 = x12;
-    struct SEntry3_III* x11830 = x790.get(x7189);
-    if((x11830!=(NULL))) {
-      int x7195 = x11830->_1;
+    x7018._2 = x22;
+    x7018._3 = x12;
+    struct SEntry3_III* x11545 = x752.get(x7018);
+    if((x11545!=(NULL))) {
+      int x7024 = x11545->_1;
       int x29 = x15;
-      x14[(x29-(1))] = x7195;
-      x790.del(x11830);;
-      x789.del(x11830);;
+      x14[(x29-(1))] = x7024;
+      x752.del(x11545);;
+      x751.del(x11545);;
       int x33 = x15;
-      x7201._1 = x7195;
-      x7201._2 = x33;
-      x7201._3 = x12;
-      struct SEntry8_IIIITIIB* x11844 = x813.get(x7201);
-      int x7204 = x11844->_4;
-      x11844->_6 = x13;
+      x7030._1 = x7024;
+      x7030._2 = x33;
+      x7030._3 = x12;
+      struct SEntry8_IIIITIIB* x11559 = x775.get(x7030);
+      int x7033 = x11559->_4;
+      x11559->_6 = x13;
       double x40 = 0.0;
       int x41 = x15;
-      x7210._1 = x7195;
-      x7210._2 = x41;
-      x7210._3 = x12;
-      x826.slice(x7210, ([&](const struct SEntry10_IIIIIITIDS &  sliceVar) {
+      x7039._1 = x7024;
+      x7039._2 = x41;
+      x7039._3 = x12;
+      x788.slice(x7039, ([&](const struct SEntry10_IIIIIITIDS &  sliceVar) {
         struct SEntry10_IIIIIITIDS* x44 = &sliceVar;
         x44->_7 = x11;
         double x46 = x40;
-        double x7259 = x44->_9;
-        x40 = (x46+(x7259));
+        double x7088 = x44->_9;
+        x40 = (x46+(x7088));
       
       }));;
       int x53 = x15;
-      x7214._1 = x7204;
-      x7214._2 = x53;
-      x7214._3 = x12;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11865 = x832.get(x7214);
+      x7043._1 = x7033;
+      x7043._2 = x53;
+      x7043._3 = x12;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11580 = x794.get(x7043);
       double x56 = x40;
-      x11865->_17 += x56;
-      x11865->_20 += 1;
+      x11580->_17 += x56;
+      x11580->_20 += 1;
     } else {
       
       int x60 = x15;
@@ -590,30 +590,30 @@ void DeliveryTx(int x10, Date x11, int x12, int x13) {
   };
 }
 void StockLevelTx(int x68, Date x69, int x70, int x71, int x72, int x73) {
-  x7328._1 = x72;
-  x7328._2 = x71;
-  struct SEntry11_IISSSSSSDDI* x11935 = x820.get(x7328);
-  int x7332 = x11935->_11;
-  int x79 = (x7332-(20));
+  x7157._1 = x72;
+  x7157._2 = x71;
+  struct SEntry11_IISSSSSSDDI* x11650 = x782.get(x7157);
+  int x7161 = x11650->_11;
+  int x79 = (x7161-(20));
   unordered_set<int> x80;
   while(1) {
     
     int x81 = x79;
-    if (!((x81<(x7332)))) break; 
+    if (!((x81<(x7161)))) break; 
     
     int x83 = x79;
-    x7341._1 = x83;
-    x7341._2 = x72;
-    x7341._3 = x71;
-    x826.slice(x7341, ([&](const struct SEntry10_IIIIIITIDS &  sliceVar) {
+    x7170._1 = x83;
+    x7170._2 = x72;
+    x7170._3 = x71;
+    x788.slice(x7170, ([&](const struct SEntry10_IIIIIITIDS &  sliceVar) {
       struct SEntry10_IIIIIITIDS* x86 = &sliceVar;
-      int x7363 = x86->_5;
-      x7364._1 = x7363;
-      x7364._2 = x71;
-      struct SEntry17_IIISSSSSSSSSSIIIS* x11953 = x838.get(x7364);
-      int x7366 = x11953->_3;
-      if((x7366<(x73))) {
-        x80.insert(x7363);
+      int x7192 = x86->_5;
+      x7193._1 = x7192;
+      x7193._2 = x71;
+      struct SEntry17_IIISSSSSSSSSSIIIS* x11668 = x800.get(x7193);
+      int x7195 = x11668->_3;
+      if((x7195<(x73))) {
+        x80.insert(x7192);
       };
     
     }));;
@@ -622,253 +622,235 @@ void StockLevelTx(int x68, Date x69, int x70, int x71, int x72, int x73) {
   };
 }
 void OrderStatusTx(int x101, Date x102, int x103, int x104, int x105, int x106, int x107, char* x108) {
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7401 = NULL;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7230 = NULL;
   if((x106>(0))) {
-    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x7404;
-    x7406._2 = x105;
-    x7406._3 = x104;
-    x7406._6 = x108;
-    x833.slice(x7406, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS &  sliceVar) {
+    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x7233;
+    x7235._2 = x105;
+    x7235._3 = x104;
+    x7235._6 = x108;
+    x795.slice(x7235, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS &  sliceVar) {
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x114 = &sliceVar;
-      x7404.push_back(x114);
+      x7233.push_back(x114);
     
     }));;
-    int x118 = x7404.size();
+    int x118 = x7233.size();
     int x120 = (x118/(2));
-    int x121 = x7404.size();
+    int x121 = x7233.size();
     if(((x121%(2))==(0))) {
       int x124 = x120;
       x120 = (x124-(1));
     };
-    sort(x7404.begin(), x7404.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x128, struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x129) {
+    sort(x7233.begin(), x7233.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x128, struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x129) {
       
-      char* x7462 = x128._4;
-      char* x7463 = x129._4;
-      int x132 = strcmpi(x7462, x7463);
+      char* x7291 = x128._4;
+      char* x7292 = x129._4;
+      int x132 = strcmpi(x7291, x7292);
       return (x132<(0)); 
     }));
     int x136 = x120;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7422 = x7404[x136];
-    x7401 = x7422;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7251 = x7233[x136];
+    x7230 = x7251;
   } else {
     
-    x7424._1 = x107;
-    x7424._2 = x105;
-    x7424._3 = x104;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12031 = x832.get(x7424);
-    x7401 = x12031;
+    x7253._1 = x107;
+    x7253._2 = x105;
+    x7253._3 = x104;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11746 = x794.get(x7253);
+    x7230 = x11746;
   };
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7429 = x7401;
-  int x7430 = x7429->_3;
-  x7432._2 = x105;
-  x7432._3 = x104;
-  x7432._4 = x7430;
-  struct SEntry8_IIIITIIB* x12041 = x814.get(x7432);
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7258 = x7230;
+  int x7259 = x7258->_3;
+  x7261._2 = x105;
+  x7261._3 = x104;
+  x7261._4 = x7259;
+  struct SEntry8_IIIITIIB* x11756 = x776.get(x7261);
   int x154 = 0;
-  int x7437 = x12041->_1;
-  x154 = x7437;
+  int x7266 = x11756->_1;
+  x154 = x7266;
 }
 void PaymentTx(int x157, Date x158, int x159, int x160, int x161, int x162, int x163, int x164, int x165, char* x166, double x167) {
-  x7531._1 = x160;
-  struct SEntry9_ISSSSSSDD* x12100 = x801.get(x7531);
-  x12100->_9 += x167;
-  x7537._1 = x161;
-  x7537._2 = x160;
-  struct SEntry11_IISSSSSSDDI* x12105 = x820.get(x7537);
-  x12105->_10 += x167;
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7542 = NULL;
+  x7360._1 = x160;
+  struct SEntry9_ISSSSSSDD* x11815 = x763.get(x7360);
+  x11815->_9 += x167;
+  x7366._1 = x161;
+  x7366._2 = x160;
+  struct SEntry11_IISSSSSSDDI* x11820 = x782.get(x7366);
+  x11820->_10 += x167;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7371 = NULL;
   if((x162>(0))) {
-    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x7545;
-    x7547._2 = x164;
-    x7547._3 = x163;
-    x7547._6 = x166;
-    x833.slice(x7547, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS &  sliceVar) {
+    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x7374;
+    x7376._2 = x164;
+    x7376._3 = x163;
+    x7376._6 = x166;
+    x795.slice(x7376, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS &  sliceVar) {
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x183 = &sliceVar;
-      x7545.push_back(x183);
+      x7374.push_back(x183);
     
     }));;
-    int x187 = x7545.size();
+    int x187 = x7374.size();
     int x189 = (x187/(2));
-    int x190 = x7545.size();
+    int x190 = x7374.size();
     if(((x190%(2))==(0))) {
       int x193 = x189;
       x189 = (x193-(1));
     };
-    sort(x7545.begin(), x7545.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x197, struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x198) {
+    sort(x7374.begin(), x7374.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x197, struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x198) {
       
-      char* x7649 = x197._4;
-      char* x7650 = x198._4;
-      int x201 = strcmpi(x7649, x7650);
+      char* x7459 = x197._4;
+      char* x7460 = x198._4;
+      int x201 = strcmpi(x7459, x7460);
       return (x201<(0)); 
     }));
     int x205 = x189;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7563 = x7545[x205];
-    x7542 = x7563;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7392 = x7374[x205];
+    x7371 = x7392;
   } else {
     
-    x7565._1 = x165;
-    x7565._2 = x164;
-    x7565._3 = x163;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12144 = x832.get(x7565);
-    x7542 = x12144;
+    x7394._1 = x165;
+    x7394._2 = x164;
+    x7394._3 = x163;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11859 = x794.get(x7394);
+    x7371 = x11859;
   };
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7569 = x7542;
-  char* x7570 = x7569->_21;
-  char* x215 = x7570;
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7572 = x7542;
-  char* x7573 = x7572->_14;
-  char* x15975 = strstr(x7573, "BC");
-  int x15976 = x15975!=(NULL);
-  if(x15976) {
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7576 = x7542;
-    int x7577 = x7576->_1;
-    char* x221 = x215;
-    /* val x223 = "%d %d %d %d %d $%f %s | %s".format(x7577,x164,x163,x161,x160,x167,x158,x221) */
-    x215 = x223;
-    char* x225 = x215;
-    int x15985 = strlen(x225);
-    if((x15985>(500))) {
-      char* x228 = x215;
-      char* x229 = x228substring(0, 500);
-      x215 = x229;
-    };
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7589 = x7542;
-    x7589->_17 += x167;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7591 = x7542;
-    char* x235 = x215;
-    x7591->_21 = x235;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7398 = x7371;
+  char* x7399 = x7398->_21;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7400 = x7371;
+  char* x7401 = x7400->_14;
+  char* x15575 = strstr(x7401, "BC");
+  int x15576 = x15575!=(NULL);
+  if(x15576) {
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7404 = x7371;
+    int x7405 = x7404->_1;
+    char* x221 = new char[501];
+    snprintf(x221, 500, "%d %d %d %d %d $%f %s | %s", x7405,x164,x163,x161,x160,x167,x158,x7399);
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7408 = x7371;
+    x7408->_17 += x167;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7410 = x7371;
+    x7410->_21 = x221;
   } else {
     
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7594 = x7542;
-    x7594->_17 += x167;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7412 = x7371;
+    x7412->_17 += x167;
   };
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7596 = x7542;
-  x833.update(x7596);
-  x832.update(x7596);
-  char* x7598 = x12100->_2;
-  char* x7599 = x12105->_3;
-  int x16003 = strlen(x7598);
-  char* x247 = if((x16003>(10))) {
-    char* x246 = x7598substring(0, 10);
-  };
-  char* x248 = x247+("    ");
-  int x16008 = strlen(x7599);
-  char* x252 = if((x16008>(10))) {
-    char* x251 = x7599substring(0, 10);
-  };
-  char* x253 = x248+(x252);
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7610 = x7542;
-  int x7611 = x7610->_1;
-  struct SEntry8_IIIIITDS* x15615 = (struct SEntry8_IIIIITDS*)malloc(1 * sizeof(struct SEntry8_IIIIITDS));
-  memset(x15615, 0, 1 * sizeof(struct SEntry8_IIIIITDS));
-  x15615->_1 = x7611; x15615->_2 = x164; x15615->_3 = x163; x15615->_4 = x161; x15615->_5 = x160; x15615->_6 = x158; x15615->_7 = x167; x15615->_8 = x253;
-  x4002.add(x15615);
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7414 = x7371;
+  x794.update(x7414);
+  x795.update(x7414);
+  char* x7416 = x11815->_2;
+  char* x7417 = x11820->_3;
+  char* x234 = new char[25];
+  snprintf(x234, 24, "%.10s    %.10s", x7416,x7417);
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7420 = x7371;
+  int x7421 = x7420->_1;
+  struct SEntry8_IIIIITDS* x15216 = (struct SEntry8_IIIIITDS*)malloc(1 * sizeof(struct SEntry8_IIIIITDS));
+  memset(x15216, 0, 1 * sizeof(struct SEntry8_IIIIITDS));
+  x15216->_1 = x7421; x15216->_2 = x164; x15216->_3 = x163; x15216->_4 = x161; x15216->_5 = x160; x15216->_6 = x158; x15216->_7 = x167; x15216->_8 = x234;
+  x3831.add(x15216);
 }
-void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int x265, int x266, int x267, int x268, int x269, double x270, char* x271, int x272, char* x273, double x274) {
-  int x275 = 0;
-  int x276 = 0;
-  char* x277[x265];
-  int x278 = 1;
+void NewOrderTx(int x240, Date x241, int x242, int x243, int x244, int x245, int x246, int x247, int x248, int x249, int x250, double x251, char* x252, int x253, char* x254, double x255) {
+  int x256 = 0;
+  int x257 = 0;
+  char* x258[x246];
+  int x259 = 1;
   while(1) {
     
-    int x279 = x275;
-    if (!(((x279<(x265))&&(x281)))) break; 
+    int x260 = x256;
+    if (!(((x260<(x246))&&(x262)))) break; 
     
-    int x283 = x275;
-    int x284 = x267[x283];
-    x7810._1 = x284;
-    struct SEntry5_IISDS* x12303 = x806.get(x7810);
-    if((x12303==(NULL))) {
-      x278 = 0;
+    int x264 = x256;
+    int x265 = x248[x264];
+    x7582._1 = x265;
+    struct SEntry5_IISDS* x11980 = x768.get(x7582);
+    if((x11980==(NULL))) {
+      x259 = 0;
     } else {
       
-      int x290 = x275;
-      char* x7818 = x12303->_3;
-      x271[x290] = x7818;
-      int x293 = x275;
-      double x7821 = x12303->_4;
-      x270[x293] = x7821;
-      int x296 = x275;
-      char* x7824 = x12303->_5;
-      x277[x296] = x7824;
+      int x271 = x256;
+      char* x7590 = x11980->_3;
+      x252[x271] = x7590;
+      int x274 = x256;
+      double x7593 = x11980->_4;
+      x251[x274] = x7593;
+      int x277 = x256;
+      char* x7596 = x11980->_5;
+      x258[x277] = x7596;
     };
-    int x300 = x275;
-    x275 = (x300+(1));
+    int x281 = x256;
+    x256 = (x281+(1));
   };
-  int x304 = x278;
-  if(x304) {
-    x7831._1 = x264;
-    x7831._2 = x263;
-    x7831._3 = x262;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12326 = x832.get(x7831);
-    x7835._1 = x262;
-    struct SEntry9_ISSSSSSDD* x12329 = x801.get(x7835);
-    x7838._1 = x263;
-    x7838._2 = x262;
-    struct SEntry11_IISSSSSSDDI* x12333 = x820.get(x7838);
-    int x7841 = x12333->_11;
-    x12333->_11 += 1;
-    struct SEntry8_IIIITIIB* x15661 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
-    memset(x15661, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
-    x15661->_1 = x7841; x15661->_2 = x263; x15661->_3 = x262; x15661->_4 = x264; x15661->_5 = x260; x15661->_6 = -1; x15661->_7 = x265; x15661->_8 = (x266>(0));
-    x4264.add(x15661);
-    struct SEntry3_III* x15665 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
-    memset(x15665, 0, 1 * sizeof(struct SEntry3_III));
-    x15665->_1 = x7841; x15665->_2 = x263; x15665->_3 = x262;
-    x3922.add(x15665);
-    double x324 = 0.0;
-    x275 = 0;
+  int x285 = x259;
+  if(x285) {
+    x7603._1 = x245;
+    x7603._2 = x244;
+    x7603._3 = x243;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12003 = x794.get(x7603);
+    x7607._1 = x243;
+    struct SEntry9_ISSSSSSDD* x12006 = x763.get(x7607);
+    x7610._1 = x244;
+    x7610._2 = x243;
+    struct SEntry11_IISSSSSSDDI* x12010 = x782.get(x7610);
+    int x7613 = x12010->_11;
+    x12010->_11 += 1;
+    struct SEntry8_IIIITIIB* x15262 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
+    memset(x15262, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
+    x15262->_1 = x7613; x15262->_2 = x244; x15262->_3 = x243; x15262->_4 = x245; x15262->_5 = x241; x15262->_6 = -1; x15262->_7 = x246; x15262->_8 = (x247>(0));
+    x4093.add(x15262);
+    struct SEntry3_III* x15266 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
+    memset(x15266, 0, 1 * sizeof(struct SEntry3_III));
+    x15266->_1 = x7613; x15266->_2 = x244; x15266->_3 = x243;
+    x3751.add(x15266);
+    double x305 = 0.0;
+    x256 = 0;
     while(1) {
       
-      int x326 = x275;
-      if (!((x326<(x265)))) break; 
+      int x307 = x256;
+      if (!((x307<(x246)))) break; 
       
-      int x328 = x275;
-      int x329 = x268[x328];
-      int x330 = x275;
-      int x331 = x267[x330];
-      int x332 = x275;
-      int x333 = x269[x332];
-      x7862._1 = x331;
-      x7862._2 = x329;
-      struct SEntry17_IIISSSSSSSSSSIIIS* x12356 = x838.get(x7862);
-      char* x363 = if((x263==(1))) {
-        char* x7866 = x12356->_4;
+      int x309 = x256;
+      int x310 = x249[x309];
+      int x311 = x256;
+      int x312 = x248[x311];
+      int x313 = x256;
+      int x314 = x250[x313];
+      x7634._1 = x312;
+      x7634._2 = x310;
+      struct SEntry17_IIISSSSSSSSSSIIIS* x12033 = x800.get(x7634);
+      char* x344 = if((x244==(1))) {
+        char* x7638 = x12033->_4;
       } else {
         
-        char* x362 = if((x263==(2))) {
-          char* x7869 = x12356->_5;
+        char* x343 = if((x244==(2))) {
+          char* x7641 = x12033->_5;
         } else {
           
-          char* x361 = if((x263==(3))) {
-            char* x7872 = x12356->_6;
+          char* x342 = if((x244==(3))) {
+            char* x7644 = x12033->_6;
           } else {
             
-            char* x360 = if((x263==(4))) {
-              char* x7875 = x12356->_7;
+            char* x341 = if((x244==(4))) {
+              char* x7647 = x12033->_7;
             } else {
               
-              char* x359 = if((x263==(5))) {
-                char* x7878 = x12356->_8;
+              char* x340 = if((x244==(5))) {
+                char* x7650 = x12033->_8;
               } else {
                 
-                char* x358 = if((x263==(6))) {
-                  char* x7881 = x12356->_9;
+                char* x339 = if((x244==(6))) {
+                  char* x7653 = x12033->_9;
                 } else {
                   
-                  char* x357 = if((x263==(7))) {
-                    char* x7884 = x12356->_10;
+                  char* x338 = if((x244==(7))) {
+                    char* x7656 = x12033->_10;
                   } else {
                     
-                    char* x356 = if((x263==(8))) {
-                      char* x7887 = x12356->_11;
+                    char* x337 = if((x244==(8))) {
+                      char* x7659 = x12033->_11;
                     } else {
                       
-                      char* x355 = if((x263==(9))) {
-                        char* x7890 = x12356->_12;
+                      char* x336 = if((x244==(9))) {
+                        char* x7662 = x12033->_12;
                       } else {
                         
-                        char* x7891 = x12356->_13;
+                        char* x7663 = x12033->_13;
                       };
                     };
                   };
@@ -878,45 +860,45 @@ void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int
           };
         };
       };
-      int x7892 = x12356->_3;
-      int x365 = x275;
-      x272[x365] = x7892;
-      char* x7895 = x12326->_14;
-      char* x16208 = strstr(x7895, "original");
-      int x16209 = x16208!=(NULL);
-      if((x16209&&(x16213))) {
-        int x372 = x275;
-        x273[x372] = "B";
+      int x7664 = x12033->_3;
+      int x346 = x256;
+      x253[x346] = x7664;
+      char* x7667 = x12003->_14;
+      char* x15771 = strstr(x7667, "original");
+      int x15772 = x15771!=(NULL);
+      if((x15772&&(x15776))) {
+        int x353 = x256;
+        x254[x353] = "B";
       } else {
         
-        int x374 = x275;
-        x273[x374] = "G";
+        int x355 = x256;
+        x254[x355] = "G";
       };
-      x12356->_3 = (x7892-(x333));
-      if((x7892<=(x333))) {
-        x12356->_3 += 91;
+      x12033->_3 = (x7664-(x314));
+      if((x7664<=(x314))) {
+        x12033->_3 += 91;
       };
-      int x382 = 0;
-      if((x329!=(x262))) {
-        x382 = 1;
+      int x363 = 0;
+      if((x310!=(x243))) {
+        x363 = 1;
       };
-      double x7915 = x12326->_16;
-      double x7916 = x12329->_8;
-      double x7917 = x12333->_9;
-      int x390 = x275;
-      double x391 = x270[x390];
-      double x398 = (((x333toDouble)*(x391))*(((1.0+(x7916))+(x7917))))*((1.0-(x7915)));
-      int x399 = x275;
-      x274[x399] = x398;
-      double x401 = x324;
-      x324 = (x401+(x398));
-      int x404 = x275;
-      struct SEntry10_IIIIIITIDS* x15752 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
-      memset(x15752, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
-      x15752->_1 = x7841; x15752->_2 = x263; x15752->_3 = x262; x15752->_4 = (x404+(1)); x15752->_5 = x331; x15752->_6 = x329; x15752->_7 = NULL; x15752->_8 = x333; x15752->_9 = x398; x15752->_10 = x363;
-      x4463.add(x15752);
-      int x409 = x275;
-      x275 = (x409+(1));
+      double x7687 = x12003->_16;
+      double x7688 = x12006->_8;
+      double x7689 = x12010->_9;
+      int x371 = x256;
+      double x372 = x251[x371];
+      double x379 = (((x314toDouble)*(x372))*(((1.0+(x7688))+(x7689))))*((1.0-(x7687)));
+      int x380 = x256;
+      x255[x380] = x379;
+      double x382 = x305;
+      x305 = (x382+(x379));
+      int x385 = x256;
+      struct SEntry10_IIIIIITIDS* x15353 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
+      memset(x15353, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
+      x15353->_1 = x7613; x15353->_2 = x244; x15353->_3 = x243; x15353->_4 = (x385+(1)); x15353->_5 = x312; x15353->_6 = x310; x15353->_7 = NULL; x15353->_8 = x314; x15353->_9 = x379; x15353->_10 = x344;
+      x4292.add(x15353);
+      int x390 = x256;
+      x256 = (x390+(1));
     };
   };
 }
@@ -924,25 +906,25 @@ void NewOrderTx(int x259, Date x260, int x261, int x262, int x263, int x264, int
 
 /* GLOBAL VARS */
 
-struct SEntry17_IIISSSSSSSSSSIIIS x7364;
-struct SEntry11_IISSSSSSDDI x7838;
-struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7214;
-struct SEntry9_ISSSSSSDD x7835;
-struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7565;
-struct SEntry10_IIIIIITIDS x7210;
-struct SEntry9_ISSSSSSDD x7531;
-struct SEntry8_IIIITIIB x7201;
-struct SEntry11_IISSSSSSDDI x7328;
-struct SEntry17_IIISSSSSSSSSSIIIS x7862;
-struct SEntry10_IIIIIITIDS x7341;
-struct SEntry3_III x7189;
-struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7406;
-struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7831;
-struct SEntry11_IISSSSSSDDI x7537;
-struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7424;
-struct SEntry5_IISDS x7810;
-struct SEntry8_IIIITIIB x7432;
-struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7547;
+struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7603;
+struct SEntry8_IIIITIIB x7030;
+struct SEntry10_IIIIIITIDS x7039;
+struct SEntry17_IIISSSSSSSSSSIIIS x7193;
+struct SEntry8_IIIITIIB x7261;
+struct SEntry10_IIIIIITIDS x7170;
+struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7394;
+struct SEntry3_III x7018;
+struct SEntry11_IISSSSSSDDI x7157;
+struct SEntry5_IISDS x7582;
+struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7235;
+struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7376;
+struct SEntry11_IISSSSSSDDI x7610;
+struct SEntry11_IISSSSSSDDI x7366;
+struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7043;
+struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7253;
+struct SEntry9_ISSSSSSDD x7607;
+struct SEntry9_ISSSSSSDD x7360;
+struct SEntry17_IIISSSSSSSSSSIIIS x7634;
 int main(int argc, char** argv) {
  /* TRAITS ENDING   */
 }

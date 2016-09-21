@@ -11,7 +11,7 @@ import ch.epfl.data.sc.pardis.utils.document._
 import ch.epfl.data.sc.pardis.ir._
 import ddbt.lib.store._
 import ddbt.lib.store.deep.StoreIRs._
-import ddbt.lib.store.deep.StoreDSL
+import ddbt.lib.store.deep.{StoreDSL, StringPrintf}
 import pardis.deep.scalalib.ScalaPredefOps
 import ddbt.transformer._
 
@@ -70,7 +70,9 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
     case Statement(sym, StoreIndex(self, idx, Constant(tp: String), uniq, other)) => doc"val $sym = $self.index($idx, $tp, $uniq, $other)"
     case Statement(sym, node) if sym.tp == UnitType => nodeToDocument(node)
     case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
-    case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
+//    case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
+    case Statement(sym, StringPrintf(size, f, Def(LiftedSeq(args)))) => doc"var $sym = $f.format(${args.map(expToDocument).mkDocument(",")})" :\\:
+      doc"if($sym.size > $size) " :\\: Document.nest(NEST_COUNT, doc"$sym = $sym.substring(0, $size)")
     case Statement(sym, StoreGetCopy(self, idx, key, _)) => doc"val $sym = $self.getCopy($idx, $key)"
     case Statement(sym, arr@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"val $sym = Array[${arr.typeT}](" :: ops.collect {
       case Def(EntryIdxApplyObject(_, _, Constant(name))) => Document.text(name)

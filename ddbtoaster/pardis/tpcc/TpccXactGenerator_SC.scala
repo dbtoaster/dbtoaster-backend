@@ -212,20 +212,19 @@ object TpccXactGenerator_SC {
         __assign(customerEntry, customerTbl.get1((1, c_id), (2, c_d_id), (3, c_w_id)))
 
       })
-
-      val c_data = __newVar(readVar(customerEntry).get[String](unit(21)))
+      val cEntry = readVar(customerEntry)
+      val c_data = cEntry.get[String](unit(21))
 
       __ifThenElse(readVar(customerEntry).get[String](unit(14)).contains(unit("BC")), {
         //c_credit
         //TODO this is the correct version but is not implemented in the correctness test
         //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-        __assign(c_data, unit("%d %d %d %d %d $%f %s | %s").format(unit("FIX ME"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, datetime, readVar(c_data)))
-        __ifThenElse(readVar(c_data).length > unit(500), __assign(c_data, readVar(c_data).substring(unit(0), unit(500))), unit())
+        val c_new_data = stringPrintf(unit(500), unit("%d %d %d %d %d $%f %s | %s"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, datetime, c_data)
         readVar(customerEntry) += (unit(17) /*c_balance*/ , h_amount)
         //TODO this is the correct version but is not implemented in the correctness test
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
         //customerEntry += (19 /*c_payment_cnt*/, 1)
-        readVar(customerEntry).update(unit(21) /*c_data*/ , readVar(c_data))
+        readVar(customerEntry).update(unit(21) /*c_data*/ , c_new_data)
         unit()
       }, {
         readVar(customerEntry) += (unit(17) /*c_balance*/ , h_amount)
@@ -237,12 +236,8 @@ object TpccXactGenerator_SC {
       val w_name = warehouseEntry.get[String](unit(2))
       val d_name = districtEntry.get[String](unit(3))
       //TODO this is the correct version but is not implemented in the correctness test
-      val h_data =
-      dsl"""{
-        if (${w_name.length} > 10) $w_name.substring(0, 10) else $w_name
-      } + "    " + {
-        if (${d_name.length} > 10) $d_name.substring(0, 10) else $d_name
-      }"""
+      val h_data = stringPrintf(unit(24), unit("%.10s    %.10s"), w_name, d_name)
+
       historyTbl.insert(GenericEntry(unit("SteNewSEntry"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, datetime, h_amount, h_data))
       //      if ($showOutput) {
       //        var output = "\n+---------------------------- PAYMENT ----------------------------+" +
@@ -553,7 +548,7 @@ object TpccXactGenerator_SC {
       unit((1))
     }
     var lang = "cpp"
-        lang = "scala"
+//        lang = "scala"
     val codeGen = lang match {
       case "scala" => new TpccPardisScalaGen(Context)
       case "cpp" => Optimizer.cTransformer = true ; new TpccPardisCppGen(Context)
