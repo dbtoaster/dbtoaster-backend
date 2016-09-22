@@ -690,7 +690,7 @@ private:
                 if (pooled) {
                     d = n;
                     n = n->nxt;
-                    nodes_.remove(d);
+                    nodes_.del(d);
                 } else n = n->nxt;
                 pooled = true;
             } while (n);
@@ -870,7 +870,7 @@ private:
                 }
                 if (tmp) tmp->parent = par;
                 curr->left = curr->right = curr->parent = nullptr;
-                equiv_nodes_.remove(curr);
+                equiv_nodes_.del(curr);
 
 
                 if (par) {
@@ -1052,12 +1052,12 @@ public:
                         prev->nxt = next;
                         // n->nxt = nullptr;
                         // n->obj = nullptr;
-                        nodes_.remove(n);
+                        nodes_.del(n);
                     } else if (next) { //it is the elements in the bucket, and there are other elements in linked list
                         n->equivNodes = next->equivNodes;
                         n->hash = next->hash;
                         n->nxt = next->nxt;
-                        nodes_.remove(next);
+                        nodes_.del(next);
                         next = n;
                     } else { //it is the only element in the bucket
                         n->equivNodes = nullptr;

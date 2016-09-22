@@ -77,14 +77,14 @@ class ScalaConstructsToCTranformer(override val IR: StoreDSL, val ifAgg: Boolean
   rewrite += rule {
 
     case IfThenElse(cond, thenp, elsep) if thenp.tp != UnitType =>
-      val res = __newVarNamed[Int](unit(0), "ite")(thenp.tp.asInstanceOf[TypeRep[Int]])
+      implicit val tpe = thenp.tp
+      val res = __newVarNamed(nullValue(tpe), "ite")
       __ifThenElse(cond, {
         __assign(res, inlineBlock(thenp)(thenp.tp))(thenp.tp)
       }, {
         __assign(res, inlineBlock(elsep)(elsep.tp))(elsep.tp)
       })(UnitType)
-      val t= res.tp
-      ReadVar(res)(res.tp)
+      ReadVar(res)(tpe)
   }
 
   rewrite += rule {

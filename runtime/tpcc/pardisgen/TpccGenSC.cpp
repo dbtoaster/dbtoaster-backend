@@ -192,49 +192,43 @@ struct SEntry9_ISSSSSSDD {
   FORCE_INLINE static bool equals(const struct SEntry10_IIIIIITIDS& x4196, const struct SEntry10_IIIIIITIDS& x4197) { 
     int x4198 = x4196._1;
     int x4199 = x4197._1;
-    int ite17071 = 0;
+    int ite16943 = 0;
     if((x4198==(x4199))) {
       
       int x4201 = x4196._2;
       int x4202 = x4197._2;
-      int x17072 = (x4201==(x4202));
-      ite17071 = x17072;
+      int x16944 = (x4201==(x4202));
+      ite16943 = x16944;
     } else {
       
-      ite17071 = 0;
+      ite16943 = 0;
     };
-    int x17079 = ite17071;
-    int x17080 = ite17071;
-    int x17061 = ite17071;
-    int ite17082 = 0;
-    if(x17061) {
+    int x16933 = ite16943;
+    int ite16952 = 0;
+    if(x16933) {
       
       int x4205 = x4196._3;
       int x4206 = x4197._3;
-      int x17083 = (x4205==(x4206));
-      ite17082 = x17083;
+      int x16953 = (x4205==(x4206));
+      ite16952 = x16953;
     } else {
       
-      ite17082 = 0;
+      ite16952 = 0;
     };
-    int x17090 = ite17082;
-    int x17091 = ite17082;
-    int x17063 = ite17082;
-    int ite17093 = 0;
-    if(x17063) {
+    int x16935 = ite16952;
+    int ite16961 = 0;
+    if(x16935) {
       
       int x4209 = x4196._4;
       int x4210 = x4197._4;
-      int x17094 = (x4209==(x4210));
-      ite17093 = x17094;
+      int x16962 = (x4209==(x4210));
+      ite16961 = x16962;
     } else {
       
-      ite17093 = 0;
+      ite16961 = 0;
     };
-    int x17101 = ite17093;
-    int x17102 = ite17093;
-    int x17065 = ite17093;
-    return (x17065 ? 0 : 1); 
+    int x16937 = ite16961;
+    return (x16937 ? 0 : 1); 
   }
 };
  struct SEntry8_IIIITIIB_Idx234 {
@@ -264,35 +258,31 @@ struct SEntry9_ISSSSSSDD {
   FORCE_INLINE static bool equals(const struct SEntry8_IIIITIIB& x4075, const struct SEntry8_IIIITIIB& x4076) { 
     int x4077 = x4075._2;
     int x4078 = x4076._2;
-    int ite17209 = 0;
+    int ite17069 = 0;
     if((x4077==(x4078))) {
       
       int x4080 = x4075._3;
       int x4081 = x4076._3;
-      int x17210 = (x4080==(x4081));
-      ite17209 = x17210;
+      int x17070 = (x4080==(x4081));
+      ite17069 = x17070;
     } else {
       
-      ite17209 = 0;
+      ite17069 = 0;
     };
-    int x17217 = ite17209;
-    int x17218 = ite17209;
-    int x17201 = ite17209;
-    int ite17220 = 0;
-    if(x17201) {
+    int x17061 = ite17069;
+    int ite17078 = 0;
+    if(x17061) {
       
       int x4084 = x4075._4;
       int x4085 = x4076._4;
-      int x17221 = (x4084==(x4085));
-      ite17220 = x17221;
+      int x17079 = (x4084==(x4085));
+      ite17078 = x17079;
     } else {
       
-      ite17220 = 0;
+      ite17078 = 0;
     };
-    int x17228 = ite17220;
-    int x17229 = ite17220;
-    int x17203 = ite17220;
-    return (x17203 ? 0 : 1); 
+    int x17063 = ite17078;
+    return (x17063 ? 0 : 1); 
   }
 };
  struct SEntry3_III_Idx123 {
@@ -322,35 +312,31 @@ struct SEntry9_ISSSSSSDD {
   FORCE_INLINE static bool equals(const struct SEntry3_III& x3625, const struct SEntry3_III& x3626) { 
     int x3627 = x3625._1;
     int x3628 = x3626._1;
-    int ite17325 = 0;
+    int ite17177 = 0;
     if((x3627==(x3628))) {
       
       int x3630 = x3625._2;
       int x3631 = x3626._2;
-      int x17326 = (x3630==(x3631));
-      ite17325 = x17326;
+      int x17178 = (x3630==(x3631));
+      ite17177 = x17178;
     } else {
       
-      ite17325 = 0;
+      ite17177 = 0;
     };
-    int x17333 = ite17325;
-    int x17334 = ite17325;
-    int x17317 = ite17325;
-    int ite17336 = 0;
-    if(x17317) {
+    int x17169 = ite17177;
+    int ite17186 = 0;
+    if(x17169) {
       
       int x3634 = x3625._3;
       int x3635 = x3626._3;
-      int x17337 = (x3634==(x3635));
-      ite17336 = x17337;
+      int x17187 = (x3634==(x3635));
+      ite17186 = x17187;
     } else {
       
-      ite17336 = 0;
+      ite17186 = 0;
     };
-    int x17344 = ite17336;
-    int x17345 = ite17336;
-    int x17319 = ite17336;
-    return (x17319 ? 0 : 1); 
+    int x17171 = ite17186;
+    return (x17171 ? 0 : 1); 
   }
 };
  struct SEntry10_IIIIIITIDS_Idx123 {
@@ -380,35 +366,31 @@ struct SEntry9_ISSSSSSDD {
   FORCE_INLINE static bool equals(const struct SEntry10_IIIIIITIDS& x4274, const struct SEntry10_IIIIIITIDS& x4275) { 
     int x4276 = x4274._1;
     int x4277 = x4275._1;
-    int ite17441 = 0;
+    int ite17285 = 0;
     if((x4276==(x4277))) {
       
       int x4279 = x4274._2;
       int x4280 = x4275._2;
-      int x17442 = (x4279==(x4280));
-      ite17441 = x17442;
+      int x17286 = (x4279==(x4280));
+      ite17285 = x17286;
     } else {
       
-      ite17441 = 0;
+      ite17285 = 0;
     };
-    int x17449 = ite17441;
-    int x17450 = ite17441;
-    int x17433 = ite17441;
-    int ite17452 = 0;
-    if(x17433) {
+    int x17277 = ite17285;
+    int ite17294 = 0;
+    if(x17277) {
       
       int x4283 = x4274._3;
       int x4284 = x4275._3;
-      int x17453 = (x4283==(x4284));
-      ite17452 = x17453;
+      int x17295 = (x4283==(x4284));
+      ite17294 = x17295;
     } else {
       
-      ite17452 = 0;
+      ite17294 = 0;
     };
-    int x17460 = ite17452;
-    int x17461 = ite17452;
-    int x17435 = ite17452;
-    return (x17435 ? 0 : 1); 
+    int x17279 = ite17294;
+    return (x17279 ? 0 : 1); 
   }
 };
  struct SEntry3_III_Idx23 {
@@ -433,21 +415,19 @@ struct SEntry9_ISSSSSSDD {
   FORCE_INLINE static bool equals(const struct SEntry3_III& x3737, const struct SEntry3_III& x3738) { 
     int x3739 = x3737._2;
     int x3740 = x3738._2;
-    int ite17540 = 0;
+    int ite17376 = 0;
     if((x3739==(x3740))) {
       
       int x3742 = x3737._3;
       int x3743 = x3738._3;
-      int x17541 = (x3742==(x3743));
-      ite17540 = x17541;
+      int x17377 = (x3742==(x3743));
+      ite17376 = x17377;
     } else {
       
-      ite17540 = 0;
+      ite17376 = 0;
     };
-    int x17548 = ite17540;
-    int x17549 = ite17540;
-    int x17534 = ite17540;
-    return (x17534 ? 0 : 1); 
+    int x17370 = ite17376;
+    return (x17370 ? 0 : 1); 
   }
 };
  struct SEntry8_IIIIITDS_Idx {
@@ -462,259 +442,219 @@ struct SEntry9_ISSSSSSDD {
   FORCE_INLINE static bool equals(const struct SEntry8_IIIIITDS& x3769, const struct SEntry8_IIIIITDS& x3770) { 
     int x3771 = x3769._1;
     int x3772 = x3770._1;
-    int ite17601 = 0;
+    int ite17433 = 0;
     if((x3771==(-1))) {
-      ite17601 = 1;
+      ite17433 = 1;
     } else {
       
       
-      int x17603 = (x3772==(-1));
-      ite17601 = x17603;
+      int x17435 = (x3772==(-1));
+      ite17433 = x17435;
     };
-    int x17607 = ite17601;
-    int x17608 = ite17601;
-    int x17581 = ite17601;
-    int ite17610 = 0;
-    if(x17581) {
-      ite17610 = 1;
+    int x17413 = ite17433;
+    int ite17440 = 0;
+    if(x17413) {
+      ite17440 = 1;
     } else {
       
       
-      int x17612 = (x3771==(x3772));
-      ite17610 = x17612;
+      int x17442 = (x3771==(x3772));
+      ite17440 = x17442;
     };
-    int x17616 = ite17610;
-    int x17617 = ite17610;
-    int x17583 = ite17610;
-    int ite17619 = 0;
-    if(x17583) {
+    int x17415 = ite17440;
+    int ite17447 = 0;
+    if(x17415) {
       
       int x3778 = x3769._2;
       int x3779 = x3770._2;
-      int ite17737 = 0;
+      int ite17549 = 0;
       if((x3778==(-1))) {
-        ite17737 = 1;
+        ite17549 = 1;
       } else {
         
         
-        int x17739 = (x3779==(-1));
-        ite17737 = x17739;
+        int x17551 = (x3779==(-1));
+        ite17549 = x17551;
       };
-      int x17743 = ite17737;
-      int x17744 = ite17737;
-      int x17625 = ite17737;
-      int ite17746 = 0;
-      if(x17625) {
-        ite17746 = 1;
+      int x17453 = ite17549;
+      int ite17556 = 0;
+      if(x17453) {
+        ite17556 = 1;
       } else {
         
         
-        int x17748 = (x3778==(x3779));
-        ite17746 = x17748;
+        int x17558 = (x3778==(x3779));
+        ite17556 = x17558;
       };
-      int x17752 = ite17746;
-      int x17753 = ite17746;
-      int x17627 = ite17746;
-      int x17620 = x17627;
-      ite17619 = x17620;
+      int x17455 = ite17556;
+      int x17448 = x17455;
+      ite17447 = x17448;
     } else {
       
-      ite17619 = 0;
+      ite17447 = 0;
     };
-    int x17631 = ite17619;
-    int x17632 = ite17619;
-    int x17585 = ite17619;
-    int ite17634 = 0;
-    if(x17585) {
+    int x17417 = ite17447;
+    int ite17460 = 0;
+    if(x17417) {
       
       int x3786 = x3769._3;
       int x3787 = x3770._3;
-      int ite17766 = 0;
+      int ite17572 = 0;
       if((x3786==(-1))) {
-        ite17766 = 1;
+        ite17572 = 1;
       } else {
         
         
-        int x17768 = (x3787==(-1));
-        ite17766 = x17768;
+        int x17574 = (x3787==(-1));
+        ite17572 = x17574;
       };
-      int x17772 = ite17766;
-      int x17773 = ite17766;
-      int x17640 = ite17766;
-      int ite17775 = 0;
-      if(x17640) {
-        ite17775 = 1;
+      int x17466 = ite17572;
+      int ite17579 = 0;
+      if(x17466) {
+        ite17579 = 1;
       } else {
         
         
-        int x17777 = (x3786==(x3787));
-        ite17775 = x17777;
+        int x17581 = (x3786==(x3787));
+        ite17579 = x17581;
       };
-      int x17781 = ite17775;
-      int x17782 = ite17775;
-      int x17642 = ite17775;
-      int x17635 = x17642;
-      ite17634 = x17635;
+      int x17468 = ite17579;
+      int x17461 = x17468;
+      ite17460 = x17461;
     } else {
       
-      ite17634 = 0;
+      ite17460 = 0;
     };
-    int x17646 = ite17634;
-    int x17647 = ite17634;
-    int x17587 = ite17634;
-    int ite17649 = 0;
-    if(x17587) {
+    int x17419 = ite17460;
+    int ite17473 = 0;
+    if(x17419) {
       
       int x3794 = x3769._4;
       int x3795 = x3770._4;
-      int ite17795 = 0;
+      int ite17595 = 0;
       if((x3794==(-1))) {
-        ite17795 = 1;
+        ite17595 = 1;
       } else {
         
         
-        int x17797 = (x3795==(-1));
-        ite17795 = x17797;
+        int x17597 = (x3795==(-1));
+        ite17595 = x17597;
       };
-      int x17801 = ite17795;
-      int x17802 = ite17795;
-      int x17655 = ite17795;
-      int ite17804 = 0;
-      if(x17655) {
-        ite17804 = 1;
+      int x17479 = ite17595;
+      int ite17602 = 0;
+      if(x17479) {
+        ite17602 = 1;
       } else {
         
         
-        int x17806 = (x3794==(x3795));
-        ite17804 = x17806;
+        int x17604 = (x3794==(x3795));
+        ite17602 = x17604;
       };
-      int x17810 = ite17804;
-      int x17811 = ite17804;
-      int x17657 = ite17804;
-      int x17650 = x17657;
-      ite17649 = x17650;
+      int x17481 = ite17602;
+      int x17474 = x17481;
+      ite17473 = x17474;
     } else {
       
-      ite17649 = 0;
+      ite17473 = 0;
     };
-    int x17661 = ite17649;
-    int x17662 = ite17649;
-    int x17589 = ite17649;
-    int ite17664 = 0;
-    if(x17589) {
+    int x17421 = ite17473;
+    int ite17486 = 0;
+    if(x17421) {
       
       int x3802 = x3769._5;
       int x3803 = x3770._5;
-      int ite17824 = 0;
+      int ite17618 = 0;
       if((x3802==(-1))) {
-        ite17824 = 1;
+        ite17618 = 1;
       } else {
         
         
-        int x17826 = (x3803==(-1));
-        ite17824 = x17826;
+        int x17620 = (x3803==(-1));
+        ite17618 = x17620;
       };
-      int x17830 = ite17824;
-      int x17831 = ite17824;
-      int x17670 = ite17824;
-      int ite17833 = 0;
-      if(x17670) {
-        ite17833 = 1;
+      int x17492 = ite17618;
+      int ite17625 = 0;
+      if(x17492) {
+        ite17625 = 1;
       } else {
         
         
-        int x17835 = (x3802==(x3803));
-        ite17833 = x17835;
+        int x17627 = (x3802==(x3803));
+        ite17625 = x17627;
       };
-      int x17839 = ite17833;
-      int x17840 = ite17833;
-      int x17672 = ite17833;
-      int x17665 = x17672;
-      ite17664 = x17665;
+      int x17494 = ite17625;
+      int x17487 = x17494;
+      ite17486 = x17487;
     } else {
       
-      ite17664 = 0;
+      ite17486 = 0;
     };
-    int x17676 = ite17664;
-    int x17677 = ite17664;
-    int x17591 = ite17664;
-    int ite17679 = 0;
-    if(x17591) {
+    int x17423 = ite17486;
+    int ite17499 = 0;
+    if(x17423) {
       
       Date x3810 = x3769._6;
       Date x3811 = x3770._6;
-      int ite17853 = 0;
+      int ite17641 = 0;
       if((x3810==(NULL))) {
-        ite17853 = 1;
+        ite17641 = 1;
       } else {
         
         
-        int x17855 = (x3811==(NULL));
-        ite17853 = x17855;
+        int x17643 = (x3811==(NULL));
+        ite17641 = x17643;
       };
-      int x17859 = ite17853;
-      int x17860 = ite17853;
-      int x17685 = ite17853;
-      int ite17862 = 0;
-      if(x17685) {
-        ite17862 = 1;
+      int x17505 = ite17641;
+      int ite17648 = 0;
+      if(x17505) {
+        ite17648 = 1;
       } else {
         
         
-        int x17864 = (x3810==(x3811));
-        ite17862 = x17864;
+        int x17650 = (x3810==(x3811));
+        ite17648 = x17650;
       };
-      int x17868 = ite17862;
-      int x17869 = ite17862;
-      int x17687 = ite17862;
-      int x17680 = x17687;
-      ite17679 = x17680;
+      int x17507 = ite17648;
+      int x17500 = x17507;
+      ite17499 = x17500;
     } else {
       
-      ite17679 = 0;
+      ite17499 = 0;
     };
-    int x17691 = ite17679;
-    int x17692 = ite17679;
-    int x17593 = ite17679;
-    int ite17694 = 0;
-    if(x17593) {
+    int x17425 = ite17499;
+    int ite17512 = 0;
+    if(x17425) {
       
       double x3818 = x3769._7;
       double x3819 = x3770._7;
-      int ite17882 = 0;
+      int ite17664 = 0;
       if((x3818==(-1.0))) {
-        ite17882 = 1;
+        ite17664 = 1;
       } else {
         
         
-        int x17884 = (x3819==(-1.0));
-        ite17882 = x17884;
+        int x17666 = (x3819==(-1.0));
+        ite17664 = x17666;
       };
-      int x17888 = ite17882;
-      int x17889 = ite17882;
-      int x17700 = ite17882;
-      int ite17891 = 0;
-      if(x17700) {
-        ite17891 = 1;
+      int x17518 = ite17664;
+      int ite17671 = 0;
+      if(x17518) {
+        ite17671 = 1;
       } else {
         
         
-        int x17893 = (x3818==(x3819));
-        ite17891 = x17893;
+        int x17673 = (x3818==(x3819));
+        ite17671 = x17673;
       };
-      int x17897 = ite17891;
-      int x17898 = ite17891;
-      int x17702 = ite17891;
-      int x17695 = x17702;
-      ite17694 = x17695;
+      int x17520 = ite17671;
+      int x17513 = x17520;
+      ite17512 = x17513;
     } else {
       
-      ite17694 = 0;
+      ite17512 = 0;
     };
-    int x17706 = ite17694;
-    int x17707 = ite17694;
-    int x17595 = ite17694;
-    return (x17595 ? 0 : 1); 
+    int x17427 = ite17512;
+    return (x17427 ? 0 : 1); 
   }
 };
  struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236 {
@@ -744,35 +684,31 @@ struct SEntry9_ISSSSSSDD {
   FORCE_INLINE static bool equals(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4380, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x4381) { 
     int x4382 = x4380._2;
     int x4383 = x4381._2;
-    int ite18169 = 0;
+    int ite17905 = 0;
     if((x4382==(x4383))) {
       
       int x4385 = x4380._3;
       int x4386 = x4381._3;
-      int x18170 = (x4385==(x4386));
-      ite18169 = x18170;
+      int x17906 = (x4385==(x4386));
+      ite17905 = x17906;
     } else {
       
-      ite18169 = 0;
+      ite17905 = 0;
     };
-    int x18177 = ite18169;
-    int x18178 = ite18169;
-    int x18161 = ite18169;
-    int ite18180 = 0;
-    if(x18161) {
+    int x17897 = ite17905;
+    int ite17914 = 0;
+    if(x17897) {
       
       char* x4389 = x4380._6;
       char* x4390 = x4381._6;
-      int x18181 = (x4389==(x4390));
-      ite18180 = x18181;
+      int x17915 = (x4389==(x4390));
+      ite17914 = x17915;
     } else {
       
-      ite18180 = 0;
+      ite17914 = 0;
     };
-    int x18188 = ite18180;
-    int x18189 = ite18180;
-    int x18163 = ite18180;
-    return (x18163 ? 0 : 1); 
+    int x17899 = ite17914;
+    return (x17899 ? 0 : 1); 
   }
 };
  struct SEntry8_IIIITIIB_Idx123 {
@@ -802,35 +738,31 @@ struct SEntry9_ISSSSSSDD {
   FORCE_INLINE static bool equals(const struct SEntry8_IIIITIIB& x3933, const struct SEntry8_IIIITIIB& x3934) { 
     int x3935 = x3933._1;
     int x3936 = x3934._1;
-    int ite18285 = 0;
+    int ite18013 = 0;
     if((x3935==(x3936))) {
       
       int x3938 = x3933._2;
       int x3939 = x3934._2;
-      int x18286 = (x3938==(x3939));
-      ite18285 = x18286;
+      int x18014 = (x3938==(x3939));
+      ite18013 = x18014;
     } else {
       
-      ite18285 = 0;
+      ite18013 = 0;
     };
-    int x18293 = ite18285;
-    int x18294 = ite18285;
-    int x18277 = ite18285;
-    int ite18296 = 0;
-    if(x18277) {
+    int x18005 = ite18013;
+    int ite18022 = 0;
+    if(x18005) {
       
       int x3942 = x3933._3;
       int x3943 = x3934._3;
-      int x18297 = (x3942==(x3943));
-      ite18296 = x18297;
+      int x18023 = (x3942==(x3943));
+      ite18022 = x18023;
     } else {
       
-      ite18296 = 0;
+      ite18022 = 0;
     };
-    int x18304 = ite18296;
-    int x18305 = ite18296;
-    int x18279 = ite18296;
-    return (x18279 ? 0 : 1); 
+    int x18007 = ite18022;
+    return (x18007 ? 0 : 1); 
   }
 };
  struct SEntry3_III_Idx23_Ordering {
@@ -1230,9 +1162,9 @@ void PaymentTx(int x157, Date x158, int x159, int x160, int x161, int x162, int 
   char* x7399 = x7398->_21;
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7400 = x7371;
   char* x7401 = x7400->_14;
-  char* x16468 = strstr(x7401, "BC");
-  int x16469 = x16468!=(NULL);
-  if(x16469) {
+  char* x16384 = strstr(x7401, "BC");
+  int x16385 = x16384!=(NULL);
+  if(x16385) {
     struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7404 = x7371;
     int x7405 = x7404->_1;
     char* x221 = new char[501];
@@ -1255,10 +1187,10 @@ void PaymentTx(int x157, Date x158, int x159, int x160, int x161, int x162, int 
   snprintf(x234, 24, "%.10s    %.10s", x7416,x7417);
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7420 = x7371;
   int x7421 = x7420->_1;
-  struct SEntry8_IIIIITDS* x16042 = (struct SEntry8_IIIIITDS*)malloc(1 * sizeof(struct SEntry8_IIIIITDS));
-  memset(x16042, 0, 1 * sizeof(struct SEntry8_IIIIITDS));
-  x16042->_1 = x7421; x16042->_2 = x164; x16042->_3 = x163; x16042->_4 = x161; x16042->_5 = x160; x16042->_6 = x158; x16042->_7 = x167; x16042->_8 = x234;
-  x3831.add(x16042);
+  struct SEntry8_IIIIITDS* x15980 = (struct SEntry8_IIIIITDS*)malloc(1 * sizeof(struct SEntry8_IIIIITDS));
+  memset(x15980, 0, 1 * sizeof(struct SEntry8_IIIIITDS));
+  x15980->_1 = x7421; x15980->_2 = x164; x15980->_3 = x163; x15980->_4 = x161; x15980->_5 = x160; x15980->_6 = x158; x15980->_7 = x167; x15980->_8 = x234;
+  x3831.add(x15980);
 }
 void NewOrderTx(int x240, Date x241, int x242, int x243, int x244, int x245, int x246, int x247, int* x248, int* x249, int* x250, double* x251, char** x252, int* x253, char** x254, double* x255) {
   int x256 = 0;
@@ -1268,19 +1200,17 @@ void NewOrderTx(int x240, Date x241, int x242, int x243, int x244, int x245, int
   while(1) {
     
     int x260 = x256;
-    int ite15412 = 0;
+    int ite15394 = 0;
     if((x260<(x246))) {
       
       int x262 = x259;
-      int x15413 = x262;
-      ite15412 = x15413;
+      int x15395 = x262;
+      ite15394 = x15395;
     } else {
       
-      ite15412 = 0;
+      ite15394 = 0;
     };
-    int x15418 = ite15412;
-    int x15419 = ite15412;
-    int x15226 = ite15412;
+    int x15226 = ite15394;
     if (!(x15226)) break; 
     
     int x264 = x256;
@@ -1317,14 +1247,14 @@ void NewOrderTx(int x240, Date x241, int x242, int x243, int x244, int x245, int
     struct SEntry11_IISSSSSSDDI* x12010 = x782->get(x7610);
     int x7613 = x12010->_11;
     x12010->_11 += 1;
-    struct SEntry8_IIIITIIB* x16095 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
-    memset(x16095, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
-    x16095->_1 = x7613; x16095->_2 = x244; x16095->_3 = x243; x16095->_4 = x245; x16095->_5 = x241; x16095->_6 = -1; x16095->_7 = x246; x16095->_8 = (x247>(0));
-    x4093.add(x16095);
-    struct SEntry3_III* x16099 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
-    memset(x16099, 0, 1 * sizeof(struct SEntry3_III));
-    x16099->_1 = x7613; x16099->_2 = x244; x16099->_3 = x243;
-    x3751.add(x16099);
+    struct SEntry8_IIIITIIB* x16031 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
+    memset(x16031, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
+    x16031->_1 = x7613; x16031->_2 = x244; x16031->_3 = x243; x16031->_4 = x245; x16031->_5 = x241; x16031->_6 = -1; x16031->_7 = x246; x16031->_8 = (x247>(0));
+    x4093.add(x16031);
+    struct SEntry3_III* x16035 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
+    memset(x16035, 0, 1 * sizeof(struct SEntry3_III));
+    x16035->_1 = x7613; x16035->_2 = x244; x16035->_3 = x243;
+    x3751.add(x16035);
     double x305 = 0.0;
     x256 = 0;
     while(1) {
@@ -1341,63 +1271,63 @@ void NewOrderTx(int x240, Date x241, int x242, int x243, int x244, int x245, int
       x7634._1 = x312;
       x7634._2 = x310;
       struct SEntry17_IIISSSSSSSSSSIIIS* x12033 = x800->get(x7634);
-      char* ite15280 = 0;
+      char* ite15280 = NULL;
       if((x244==(1))) {
         char* x15281 = x12033->_4;
         ite15280 = x15281;
       } else {
         
         int x15283 = x244==(2);
-        char* ite15285 = 0;
+        char* ite15285 = NULL;
         if(x15283) {
           char* x15286 = x12033->_5;
           ite15285 = x15286;
         } else {
           
           int x15288 = x244==(3);
-          char* ite15290 = 0;
+          char* ite15290 = NULL;
           if(x15288) {
             char* x15291 = x12033->_6;
             ite15290 = x15291;
           } else {
             
             int x15293 = x244==(4);
-            char* ite15295 = 0;
+            char* ite15295 = NULL;
             if(x15293) {
               char* x15296 = x12033->_7;
               ite15295 = x15296;
             } else {
               
               int x15298 = x244==(5);
-              char* ite15300 = 0;
+              char* ite15300 = NULL;
               if(x15298) {
                 char* x15301 = x12033->_8;
                 ite15300 = x15301;
               } else {
                 
                 int x15303 = x244==(6);
-                char* ite15305 = 0;
+                char* ite15305 = NULL;
                 if(x15303) {
                   char* x15306 = x12033->_9;
                   ite15305 = x15306;
                 } else {
                   
                   int x15308 = x244==(7);
-                  char* ite15310 = 0;
+                  char* ite15310 = NULL;
                   if(x15308) {
                     char* x15311 = x12033->_10;
                     ite15310 = x15311;
                   } else {
                     
                     int x15313 = x244==(8);
-                    char* ite15315 = 0;
+                    char* ite15315 = NULL;
                     if(x15313) {
                       char* x15316 = x12033->_11;
                       ite15315 = x15316;
                     } else {
                       
                       int x15318 = x244==(9);
-                      char* ite15320 = 0;
+                      char* ite15320 = NULL;
                       if(x15318) {
                         char* x15321 = x12033->_12;
                         ite15320 = x15321;
@@ -1406,71 +1336,51 @@ void NewOrderTx(int x240, Date x241, int x242, int x243, int x244, int x245, int
                         char* x15323 = x12033->_13;
                         ite15320 = x15323;
                       };
-                      int x15326 = ite15320;
-                      int x15327 = ite15320;
                       char* x15319 = ite15320;
                       ite15315 = x15319;
                     };
-                    int x15330 = ite15315;
-                    int x15331 = ite15315;
                     char* x15314 = ite15315;
                     ite15310 = x15314;
                   };
-                  int x15334 = ite15310;
-                  int x15335 = ite15310;
                   char* x15309 = ite15310;
                   ite15305 = x15309;
                 };
-                int x15338 = ite15305;
-                int x15339 = ite15305;
                 char* x15304 = ite15305;
                 ite15300 = x15304;
               };
-              int x15342 = ite15300;
-              int x15343 = ite15300;
               char* x15299 = ite15300;
               ite15295 = x15299;
             };
-            int x15346 = ite15295;
-            int x15347 = ite15295;
             char* x15294 = ite15295;
             ite15290 = x15294;
           };
-          int x15350 = ite15290;
-          int x15351 = ite15290;
           char* x15289 = ite15290;
           ite15285 = x15289;
         };
-        int x15354 = ite15285;
-        int x15355 = ite15285;
         char* x15284 = ite15285;
         ite15280 = x15284;
       };
-      int x15358 = ite15280;
-      int x15359 = ite15280;
       char* x344 = ite15280;
       int x7664 = x12033->_3;
       int x346 = x256;
       x253[x346] = x7664;
       char* x7667 = x12003->_14;
-      char* x16725 = strstr(x7667, "original");
-      int x16726 = x16725!=(NULL);
-      int ite15559 = 0;
-      if(x16726) {
+      char* x16621 = strstr(x7667, "original");
+      int x16622 = x16621!=(NULL);
+      int ite15521 = 0;
+      if(x16622) {
         
         char* x7670 = x12033->_17;
-        char* x16731 = strstr(x7670, "original");
-        int x16732 = x16731!=(NULL);
-        int x15560 = x16732;
-        ite15559 = x15560;
+        char* x16627 = strstr(x7670, "original");
+        int x16628 = x16627!=(NULL);
+        int x15522 = x16628;
+        ite15521 = x15522;
       } else {
         
-        ite15559 = 0;
+        ite15521 = 0;
       };
-      int x15566 = ite15559;
-      int x15567 = ite15559;
-      int x15366 = ite15559;
-      if(x15366) {
+      int x15348 = ite15521;
+      if(x15348) {
         int x353 = x256;
         x254[x353] = "B";
       } else {
@@ -1497,10 +1407,10 @@ void NewOrderTx(int x240, Date x241, int x242, int x243, int x244, int x245, int
       double x382 = x305;
       x305 = (x382+(x379));
       int x385 = x256;
-      struct SEntry10_IIIIIITIDS* x16246 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
-      memset(x16246, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
-      x16246->_1 = x7613; x16246->_2 = x244; x16246->_3 = x243; x16246->_4 = (x385+(1)); x16246->_5 = x312; x16246->_6 = x310; x16246->_7 = NULL; x16246->_8 = x314; x16246->_9 = x379; x16246->_10 = x344;
-      x4292.add(x16246);
+      struct SEntry10_IIIIIITIDS* x16162 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
+      memset(x16162, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
+      x16162->_1 = x7613; x16162->_2 = x244; x16162->_3 = x243; x16162->_4 = (x385+(1)); x16162->_5 = x312; x16162->_6 = x310; x16162->_7 = NULL; x16162->_8 = x314; x16162->_9 = x379; x16162->_10 = x344;
+      x4292.add(x16162);
       int x390 = x256;
       x256 = (x390+(1));
     };
