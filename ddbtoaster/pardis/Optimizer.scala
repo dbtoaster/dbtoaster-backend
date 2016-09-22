@@ -80,7 +80,9 @@ class Optimizer(val IR: StoreDSL) {
       }
     }
   pipeline += new StoreDCE(IR)
-  if(Optimizer.cTransformer){
+
+  if (Optimizer.cTransformer) {
+    pipeline += new ScalaConstructsToCTranformer(IR, false)
     pipeline += new ScalaStructToMallocTransformer(IR)
     pipeline += new StringToCTransformer(IR)
   }

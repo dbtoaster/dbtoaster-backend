@@ -5,6 +5,7 @@ import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.CCodeGenerator
 import ch.epfl.data.sc.pardis.utils.document._
 import ddbt.lib.store.deep.{StoreDSL, StringPrintf, StructFieldDecr, StructFieldIncr}
+import ddbt.transformer.ScalaConstructsToCTranformer
 
 
 /**
@@ -60,23 +61,23 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StoreGet(self, idx, key) => expToDocument(self) :: doc".get(${expToDocument(key)})" //SBJ: Assumes idx 0
     //    case StoreGetCopyDependent(self, idx, key) => expToDocument(self) :: doc".getCopyDependent(${expToDocument(idx)}, ${expToDocument(key)})"
     //    case StoreUpdateCopyDependent(self, key) => expToDocument(self) :: doc".updateCopyDependent(${expToDocument(key)})"
-    case StoreUpdate(self, key) => expToDocument(self) :: doc".update(${expToDocument(key)})"
+    case StoreUpdate(self, key) => " " //expToDocument(self) :: doc".update(${expToDocument(key)})"   //SBJ: No update in c++
     //    case StoreUpdateCopy(self, key) => expToDocument(self) :: doc".updateCopy(${expToDocument(key)})"
     //    case StoreDeleteCopyDependent(self, key) => expToDocument(self) :: doc".deleteCopyDependent(${expToDocument(key)})"
     //    case StoreDeleteCopy(self, key) => expToDocument(self) :: doc".deleteCopy(${expToDocument(key)})"
     case StoreDelete1(self, key) => expToDocument(self) :: doc".del(${expToDocument(key)})"
     case StoreSlice(self, idx, key, f) => expToDocument(self) :: ".slice(" :: expToDocument(idx) :: ", " :: expToDocument(key) :: ", " :: expToDocument(f) :: ")"
 
-    case IdxGet(self, key) => expToDocument(self) :: doc".get(${expToDocument(key)})"
+    case IdxGet(self, key) => expToDocument(self) :: doc"->get(${expToDocument(key)})"
     //    case IdxGetCopy(self, key) => expToDocument(self) :: doc".getCopy(${expToDocument(key)})"
     //    case IdxGetCopyDependent(self, key) => expToDocument(self) :: doc".getCopyDependent(${expToDocument(key)})"
     //    case IdxUpdateCopyDependent(self, key, _) => expToDocument(self) :: doc".updateCopyDependent(${expToDocument(key)})"
-    case IdxUpdate(self, key) => expToDocument(self) :: doc".update(${expToDocument(key)})"
+    case IdxUpdate(self, key) => "  " // xpToDocument(self) :: doc"->update(${expToDocument(key)})"  //SBJ: No update in C++
     //    case IdxUpdateCopy(self, key, _) => expToDocument(self) :: doc".updateCopy(${expToDocument(key)})"
     //    case IdxDeleteCopyDependent(self, key) => expToDocument(self) :: doc".deleteCopyDependent(${expToDocument(key)})"
     //    case IdxDeleteCopy(self, key, _) => expToDocument(self) :: doc".deleteCopy(${expToDocument(key)})"
-    case IdxDelete(self, key) => expToDocument(self) :: doc".del(${expToDocument(key)});"
-    case IdxSlice(self, key, f) => expToDocument(self) :: ".slice(" :: expToDocument(key) :: ", " :: expToDocument(f) :: ");"
+    case IdxDelete(self, key) => expToDocument(self) :: doc"->del(${expToDocument(key)});"
+    case IdxSlice(self, key, f) => expToDocument(self) :: "->slice(" :: expToDocument(key) :: ", " :: expToDocument(f) :: ");"
 
     case ArrayBufferAppend(self, elem) => expToDocument(self) :: ".push_back(" :: expToDocument(elem) :: ")"
     case ArrayBufferApply(Def(ArrayBufferSortWith(self, _)), i) => expToDocument(self) :: "[" :: expToDocument(i) :: "]"
@@ -100,7 +101,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         case Nil => i.tp
       }
       val refToPtr = tpeToDocument(i.tp) :: " " :: expToDocument(i) :: " = &sliceVar;"
-      "[&](const " :: tpeToDocument(tp) :: " &  sliceVar) {" :/: Document.nest(NEST_COUNT, refToPtr :: blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
+      "[&](" :: tpeToDocument(tp) :: "&  sliceVar) {" :/: Document.nest(NEST_COUNT, refToPtr :: blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
     case PardisLambda2(_, i1, i2, o) =>
       refSymbols ++= List(i1, i2).map(_.asInstanceOf[Sym[_]])
       val t1 = i1.tp.typeArguments match {
@@ -113,12 +114,16 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       }
       "[&](" :: tpeToDocument(t1) :: " & " :: expToDocument(i1) :: ", " :: tpeToDocument(t2) :: " & " :: expToDocument(i2) :: ") {" :/: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"${expToDocument(cond)} ? ${expToDocument(ift)} : ${expToDocument(iff)}"
-
+    case `Int>>>1`(self, x) => doc"$self >> ($x & (sizeof($self)-1))"
     case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name)) =>
       refSymbols ++= List(h.i, c.i1, c.i2).map(_.asInstanceOf[Sym[_]])
+      val t = new ScalaConstructsToCTranformer(IR, false)
+      val ho = t(IR)(h.o)(h.o.typeT)
+      val co = t(IR)(c.o)(c.o.typeT)
+
       doc" struct $name {" :/: Document.nest(NEST_COUNT,
-      doc"FORCE_INLINE static size_t hash(const " :: tpeToDocument(h.i.tp) :: "& " :: expToDocument(h.i) :: ") = { " :: Document.nest(NEST_COUNT, blockToDocument(h.o) :/: getBlockResult(h.o, true)) :/: "}" :\\:
-        doc"FORCE_INLINE static bool equals(const " :: tpeToDocument(c.i1.tp) :: "& " :: expToDocument(c.i1) :: ", const " :: tpeToDocument(c.i2.tp) :: "& " :: expToDocument(c.i2) :: ") { " :: Document.nest(NEST_COUNT, blockToDocument(c.o) :/: getBlockResult(c.o, true)) :/: "}") :/: "}"
+      doc"FORCE_INLINE static size_t hash(const " :: tpeToDocument(h.i.tp) :: "& " :: expToDocument(h.i) :: ")  { " :: Document.nest(NEST_COUNT, blockToDocument(ho) :/: getBlockResult(ho, true)) :/: "}" :\\:
+        doc"FORCE_INLINE static bool equals(const " :: tpeToDocument(c.i1.tp) :: "& " :: expToDocument(c.i1) :: ", const " :: tpeToDocument(c.i2.tp) :: "& " :: expToDocument(c.i2) :: ") { " :: Document.nest(NEST_COUNT, blockToDocument(co) :/: getBlockResult(co, true)) :/: "}") :/: "};"
     case HashCode(a) => doc"HASH(${expToDocument(a)})"
     case _ => super.nodeToDocument(node)
   }
