@@ -77,12 +77,13 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
     case sym -> (StoreRange(store, _, key1@Def(GenericEntryApplyObject(_, _)), key2@Def(GenericEntryApplyObject(_, _)), _, _, _)) => add(key1, store); add(key2, store); ()
 
     case sym -> (StoreDelete2(store, _, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
-
+    case sym -> (IfThenElse(_, t, e)) if t.typeT == GenericEntryType =>  addVar(sym, t.res);()
 
     case sym -> (AggregatorResult(agg)) => addVar(sym, agg); ()
     case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if EntryTypes.contains(rhs) => addVar(lhs, rhs); ()
     case sym -> (PardisReadVar(PardisVar(v@Sym(_, _)))) if EntryTypes.contains(v) => addVar(sym, v); ()
-    case sym -> (ArrayBufferAppend(ab, el)) => addVar(ab, el); ()
+    case sym -> (ArrayBufferAppend(ab, el:Sym[_])) if el.tp == GenericEntryType => addVar(ab, el); ()
+    case sym -> (ArrayBufferApply(ab:Sym[_], _)) if EntryTypes.contains(ab) => addVar(sym, ab); ()
     case sym -> (ArrayBufferSortWith(ab@Sym(_, _), f@Def(PardisLambda2(_, i1, i2, _)))) => addVar(f, ab); addVar(i1, ab); addVar(i2, ab); addVar(sym, ab); ()
     case s -> (StoreNew3(_, _)) => {
       val stype = s.attributes.get(SchemaFlag).getOrElse(StoreSchema())

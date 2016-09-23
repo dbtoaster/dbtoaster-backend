@@ -197,8 +197,7 @@ object TpccXactGenerator_SC {
       districtEntry += (unit(10), h_amount)
       districtTbl.updateCopy(districtEntry)
 
-      val customerEntry = __newVar(unit[GenericEntry](null))
-      __ifThenElse(c_by_name > unit(0), {
+      val customerEntry = __ifThenElse(c_by_name > unit(0), {
         val customersWithLastName = __newArrayBuffer[GenericEntry]()
         customerTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), c_d_id, c_w_id, c_last_input), __lambda { custEntry => customersWithLastName.append(custEntry)
         })
@@ -206,39 +205,39 @@ object TpccXactGenerator_SC {
         __ifThenElse(customersWithLastName.size % unit(2) __== unit(0), {
           __assign(index, readVar(index) - unit(1))
         }, unit())
-        __assign(customerEntry, customersWithLastName.sortWith(__lambda { (c1, c2) => c1.get[String](unit(4)).diff(c2.get[String](unit(4))) < unit(0) })(readVar(index)))
+         customersWithLastName.sortWith(__lambda { (c1, c2) => c1.get[String](unit(4)).diff(c2.get[String](unit(4))) < unit(0) })(readVar(index))
 
       }, {
-        __assign(customerEntry, customerTbl.get1((1, c_id), (2, c_d_id), (3, c_w_id)))
+        customerTbl.get1((1, c_id), (2, c_d_id), (3, c_w_id))
 
       })
-      val cEntry = readVar(customerEntry)
-      val c_data = cEntry.get[String](unit(21))
 
-      __ifThenElse(readVar(customerEntry).get[String](unit(14)).contains(unit("BC")), {
+      val c_data = customerEntry.get[String](unit(21))
+
+      __ifThenElse(customerEntry.get[String](unit(14)).contains(unit("BC")), {
         //c_credit
         //TODO this is the correct version but is not implemented in the correctness test
         //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-        val c_new_data = stringPrintf(unit(500), unit("%d %d %d %d %d $%f %s | %s"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, datetime, c_data)
-        readVar(customerEntry) += (unit(17) /*c_balance*/ , h_amount)
+        val c_new_data = stringPrintf(unit(500), unit("%d %d %d %d %d $%f %s | %s"), customerEntry.get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, datetime, c_data)
+        customerEntry += (unit(17) /*c_balance*/ , h_amount)
         //TODO this is the correct version but is not implemented in the correctness test
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
         //customerEntry += (19 /*c_payment_cnt*/, 1)
-        readVar(customerEntry).update(unit(21) /*c_data*/ , c_new_data)
+        customerEntry.update(unit(21) /*c_data*/ , c_new_data)
         unit()
       }, {
-        readVar(customerEntry) += (unit(17) /*c_balance*/ , h_amount)
+        customerEntry += (unit(17) /*c_balance*/ , h_amount)
         //TODO this is the correct version but is not implemented in the correctness test
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
         //customerEntry += (19 /*c_payment_cnt*/, 1)
       })
-      customerTbl.updateCopy(readVar(customerEntry))
+      customerTbl.updateCopy(customerEntry)
       val w_name = warehouseEntry.get[String](unit(2))
       val d_name = districtEntry.get[String](unit(3))
       //TODO this is the correct version but is not implemented in the correctness test
       val h_data = stringPrintf(unit(24), unit("%.10s    %.10s"), w_name, d_name)
 
-      historyTbl.insert(GenericEntry(unit("SteNewSEntry"), readVar(customerEntry).get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, datetime, h_amount, h_data))
+      historyTbl.insert(GenericEntry(unit("SteNewSEntry"), customerEntry.get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, datetime, h_amount, h_data))
       //      if ($showOutput) {
       //        var output = "\n+---------------------------- PAYMENT ----------------------------+" +
       //          "\n Date: %s" + $datetime +
@@ -297,8 +296,7 @@ object TpccXactGenerator_SC {
 
     def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
 
-      val customerEntry = __newVar[GenericEntry](unit(null))
-      __ifThenElse(c_by_name > unit(0), {
+      val customerEntry =__ifThenElse(c_by_name > unit(0), {
         val customersWithLastName = __newArrayBuffer[GenericEntry]()
         customerTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), d_id, w_id, c_last), __lambda {
           custEntry => customersWithLastName.append(custEntry)
@@ -308,12 +306,12 @@ object TpccXactGenerator_SC {
           __assign(index, readVar(index) - unit(1))
         }, unit())
 
-        __assign(customerEntry, customersWithLastName.sortWith(__lambda { (c1, c2) => c1.get[String](unit(4)).diff(c2.get[String](unit(4))) < unit(0) })(readVar(index)))
+        customersWithLastName.sortWith(__lambda { (c1, c2) => c1.get[String](unit(4)).diff(c2.get[String](unit(4))) < unit(0) })(readVar(index))
       }, {
-        __assign(customerEntry, customerTbl.get1((1, c_id), (2, d_id), (3, w_id)))
+       customerTbl.get1((1, c_id), (2, d_id), (3, w_id))
       })
 
-      val found_c_id = readVar(customerEntry).get[Int](unit(3))
+      val found_c_id = customerEntry.get[Int](unit(3))
       val agg = Aggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
       orderTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(4), d_id, w_id, found_c_id), agg)
       val newestOrderEntry = agg.result
@@ -548,7 +546,7 @@ object TpccXactGenerator_SC {
       unit((1))
     }
     var lang = "cpp"
-//        lang = "scala"
+        lang = "scala"
     val codeGen = lang match {
       case "scala" => new TpccPardisScalaGen(Context)
       case "cpp" => Optimizer.cTransformer = true ; new TpccPardisCppGen(Context)

@@ -180,7 +180,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     //    optTP.codeBlocks.foreach(x => codeGen.functionsList += (blockTofunction(x)))
 
     val blocks = optTP.codeBlocks.map(x => doc"void ${x._1}(${argsDoc(x._2)}) {" :: Document.nest(2, codeGen.blockToDocument(x._3)) :/: "}").mkDocument("\n")
-    file.println(header :/: structs :\\: entryIdxes :\\: stores :\\: structVars  :: "\n\n" :\\: blocks :\\:  traits :/: codeGen.footer)
+    file.println(header :/: structs :\\: entryIdxes :\\: stores :\\: structVars  :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: codeGen.footer)
     file.close()
   }
 }

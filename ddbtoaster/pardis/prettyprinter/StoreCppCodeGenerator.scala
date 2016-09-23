@@ -61,7 +61,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StoreGet(self, idx, key) => expToDocument(self) :: doc".get(${expToDocument(key)})" //SBJ: Assumes idx 0
     //    case StoreGetCopyDependent(self, idx, key) => expToDocument(self) :: doc".getCopyDependent(${expToDocument(idx)}, ${expToDocument(key)})"
     //    case StoreUpdateCopyDependent(self, key) => expToDocument(self) :: doc".updateCopyDependent(${expToDocument(key)})"
-    case StoreUpdate(self, key) => " " //expToDocument(self) :: doc".update(${expToDocument(key)})"   //SBJ: No update in c++
+    case StoreUpdate(self, key) => expToDocument(self) :: doc".update(${expToDocument(key)})"   //SBJ: No update in c++
     //    case StoreUpdateCopy(self, key) => expToDocument(self) :: doc".updateCopy(${expToDocument(key)})"
     //    case StoreDeleteCopyDependent(self, key) => expToDocument(self) :: doc".deleteCopyDependent(${expToDocument(key)})"
     //    case StoreDeleteCopy(self, key) => expToDocument(self) :: doc".deleteCopy(${expToDocument(key)})"
@@ -72,7 +72,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     //    case IdxGetCopy(self, key) => expToDocument(self) :: doc".getCopy(${expToDocument(key)})"
     //    case IdxGetCopyDependent(self, key) => expToDocument(self) :: doc".getCopyDependent(${expToDocument(key)})"
     //    case IdxUpdateCopyDependent(self, key, _) => expToDocument(self) :: doc".updateCopyDependent(${expToDocument(key)})"
-    case IdxUpdate(self, key) => "  " // xpToDocument(self) :: doc"->update(${expToDocument(key)})"  //SBJ: No update in C++
+    case IdxUpdate(self, key) => expToDocument(self) :: doc"->update(${expToDocument(key)})"  //SBJ: No update in C++
     //    case IdxUpdateCopy(self, key, _) => expToDocument(self) :: doc".updateCopy(${expToDocument(key)})"
     //    case IdxDeleteCopyDependent(self, key) => expToDocument(self) :: doc".deleteCopyDependent(${expToDocument(key)})"
     //    case IdxDeleteCopy(self, key, _) => expToDocument(self) :: doc".deleteCopy(${expToDocument(key)})"
