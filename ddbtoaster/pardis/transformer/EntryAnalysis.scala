@@ -293,6 +293,12 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       implicit val entTp: TypeRep[SEntry] = SEntry(sch).tp
       self.asInstanceOf[Rep[ArrayBuffer[SEntry]]].apply(i)
     }
+    case sym -> (ite@IfThenElse(c, t, e)) if entryTypes.contains(sym) => {
+      val sch = schema(sym)
+      implicit val entTp = SEntry(sch).tp.asInstanceOf[TypeRep[Any]]
+      toAtom(PardisIfThenElse(c, t, e)(entTp))(entTp)
+    }
+
     case sym -> (StoreNew3(n, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) if ops.size > 0 && !Def.unapply(ops(0)).get.isInstanceOf[EntryIdxApplyObject[_]] => {
       val sch = schema(sym)
       val entry = SEntry(sch)

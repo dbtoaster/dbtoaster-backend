@@ -72,13 +72,7 @@ class Optimizer(val IR: StoreDSL) {
     throw new Error("DeadIndexUpdate opt requires both index inline as well as indexlookup fusion")
   pipeline += DCE
   pipeline += ParameterPromotion
-  if (Optimizer.refCounter)
-    pipeline += new CountingAnalysis[StoreDSL](IR) with TransformerHandler {
-      override def apply[Lang <: Base, T](context: Lang)(block: context.Block[T])(implicit evidence$1: PardisType[T]): context.Block[T] = {
-        traverseBlock(block.asInstanceOf[IR.Block[T]])
-        block
-      }
-    }
+
   pipeline += new StoreDCE(IR)
 
   if (Optimizer.cTransformer) {
@@ -86,7 +80,13 @@ class Optimizer(val IR: StoreDSL) {
     pipeline += new ScalaStructToMallocTransformer(IR)
     pipeline += new StringToCTransformer(IR)
   }
-
+  if (Optimizer.refCounter)
+    pipeline += new CountingAnalysis[StoreDSL](IR) with TransformerHandler {
+      override def apply[Lang <: Base, T](context: Lang)(block: context.Block[T])(implicit evidence$1: PardisType[T]): context.Block[T] = {
+        traverseBlock(block.asInstanceOf[IR.Block[T]])
+        block
+      }
+    }
   pipeline += TreeDumper(false)
   //has to be last
   def optimize[T: PardisType](transactionProgram: TransactionProgram[T]) = pipeline.foldLeft(transactionProgram)(applyOptimization)

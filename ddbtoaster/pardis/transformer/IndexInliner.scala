@@ -78,9 +78,11 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
       unit()
 
     case StoreUpdate(store, e) => indexMap.collect { case ((`store`, idx), sym) => sym.update(e) }; unit()
-    case StoreDeleteCopyDependent(store, e) => val ref = indexMap((store, 0)).get(e); indexMap.collect { case ((`store`, idx), sym) => sym.deleteCopyDependent(ref) }; unit()
-    case StoreDeleteCopy(store, e) => indexMap.toSeq.sortWith(_._1._2 > _._1._2).collect { case ((`store`, idx), sym) => sym.deleteCopy(e, indexMap((store, 0))) }; unit()
-    case StoreDelete1(store, e) => indexMap.collect { case ((`store`, idx), sym) => sym.delete(e) }; unit()
+
+      //SBJ : Cannot inline delete for CPP.
+//    case StoreDeleteCopyDependent(store, e) => val ref = indexMap((store, 0)).get(e); indexMap.collect { case ((`store`, idx), sym) => sym.deleteCopyDependent(ref) }; unit()
+//    case StoreDeleteCopy(store, e) => indexMap.toSeq.sortWith(_._1._2 > _._1._2).collect { case ((`store`, idx), sym) => sym.deleteCopy(e, indexMap((store, 0))) }; unit()
+//    case StoreDelete1(store, e) => indexMap.collect { case ((`store`, idx), sym) => sym.delete(e) }; unit()
   }
 
 }
