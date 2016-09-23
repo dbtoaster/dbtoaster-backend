@@ -3,7 +3,7 @@
 #include <string.h>
 #include <vector>
 #include <unordered_set>
-#include <mmap.hpp>
+#include <mmap2.hpp>
 using namespace std;
 
 FORCE_INLINE size_t HASH(int x) { return x; }
@@ -1490,10 +1490,10 @@ void OrderStatusTx(int x101, Date x102, int x103, int x104, int x105, int x106, 
       int x123 = x14908;
       x14908 = (x123-(1));
     };
-    sort(x14898.begin(), x14898.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x127, struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x128) {
+    sort(x14898.begin(), x14898.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS*  x127, struct SEntry21_IIISSSSSSSSSTSDDDDIIS*  x128) {
       
-      char* x7162 = x127._4;
-      char* x7163 = x128._4;
+      char* x7162 = x127->_4;
+      char* x7163 = x128->_4;
       int x131 = strcmpi(x7162, x7163);
       return (x131<(0)); 
     }));
@@ -1544,10 +1544,10 @@ void PaymentTx(int x153, Date x154, int x155, int x156, int x157, int x158, int 
       int x188 = x15007;
       x15007 = (x188-(1));
     };
-    sort(x14997.begin(), x14997.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x192, struct SEntry21_IIISSSSSSSSSTSDDDDIIS & x193) {
+    sort(x14997.begin(), x14997.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS*  x192, struct SEntry21_IIISSSSSSSSSTSDDDDIIS*  x193) {
       
-      char* x7343 = x192._4;
-      char* x7344 = x193._4;
+      char* x7343 = x192->_4;
+      char* x7344 = x193->_4;
       int x196 = strcmpi(x7343, x7344);
       return (x196<(0)); 
     }));

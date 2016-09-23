@@ -72,7 +72,7 @@ void test_index() {
 
 void test_map() {
   std::cout << "- hmap1" << std::endl;
-  MultiHashMap<rec,int, HashIndex<rec,int, IndexFn1>,HashIndex<rec,int,IndexFn2,false>> hmap1;
+  MultiHashMap<rec,HashIndex<rec,IndexFn1>,HashIndex<rec,IndexFn2,false>> hmap1;
   hmap1.add(rec(1,2,11));
   hmap1.add(rec(2,3,13));
   hmap1.add(rec(5,6,14));

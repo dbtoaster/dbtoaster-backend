@@ -98,7 +98,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     s"""
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap.hpp>
+       |#include <mmap2.hpp>
        |using namespace std;
        |
        |FORCE_INLINE size_t HASH(int x) { return x; }
