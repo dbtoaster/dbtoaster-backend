@@ -12,34 +12,14 @@
 #include <unordered_map>
 #include <cstdio>
 #include <cassert>
+#include <string>
+
+
 
 #define EXPAND(x) #x
 #define STRINGIFY(x) EXPAND(x)
 
 
-#ifdef NUMWARE
-const int numWare = NUMWARE;
-#else
-const int numWare = 2;
-#endif
-#ifdef NUMPROG
-const size_t numPrograms = NUMPROG;
-#else
-const size_t numPrograms = 100;
-#endif
-const size_t WareSize = 8 * (numWare / 8 + 1);
-const size_t ItemSize = 100000;
-const size_t DistSize = 8 * ((numWare * 10) / 8 + 1);
-const size_t CustSize = DistSize * 3000;
-const size_t OrderSize = CustSize * 1.5 + 0.5 * numPrograms;
-const size_t NewOrderSize = OrderSize * 0.3 + 0.5 * numPrograms;
-const size_t OrdLineSize = OrderSize * 12;
-const size_t StockSize = numWare * ItemSize;
-const size_t HistSize = OrderSize;
-
-#ifndef PROJECT_ROOT
-#define PROJECT_ROOT "/Users/sachin/TStore/"
-#endif
 const std::string TStore = PROJECT_ROOT;
 const std::string commandfile = TStore + "commands.txt";
 //const std::string inputTableDir = "/home/sachin/sem3/Project/test/input/";
@@ -58,6 +38,42 @@ typedef struct SEntry8_IIIIITDS HistoryEntry;
 typedef struct SEntry17_IIISSSSSSSSSSIIIS StockEntry;
 typedef struct SEntry10_IIIIIITIDS OrderLineEntry;
 typedef struct SEntry9_ISSSSSSDD WarehouseEntry;
+
+std::ostream &operator<<(std::ostream &os, const ItemEntry &m) {
+    return os << m._1 << " " << m._2 << "  " << m._3 << "  " << m._4 << "  " << m._5;
+}
+
+std::ostream &operator<<(std::ostream &os, const DistrictEntry &m) {
+    return os << m._1 << " " << m._2 << "  " << m._3 << "  " << m._4 << "  " << m._5 << "  " << m._6 << "  " << m._7 << "  " << m._8 << "  " << m._9 << "  " << m._10 << "  " << m._11;
+}
+
+std::ostream &operator<<(std::ostream &os, const OrderLineEntry &m) {
+    return os << m._1 << " " << m._2 << "  " << m._3 << "  " << m._4 << "  " << m._5 << "  " << m._6 << "  " << m._7 << "  " << m._8 << "  " << m._9 << "  " << m._10;
+}
+
+std::ostream &operator<<(std::ostream &os, const WarehouseEntry &m) {
+    return os << m._1 << " " << m._2 << "  " << m._3 << "  " << m._4 << "  " << m._5 << "  " << m._6 << "  " << m._7 << "  " << m._8 << "  " << m._9;
+}
+
+std::ostream &operator<<(std::ostream &os, const CustomerEntry &m) {
+    return os << m._1 << " " << m._2 << "  " << m._3 << "  " << m._4 << "  " << m._5 << "  " << m._6 << "  " << m._7 << "  " << m._8 << "  " << m._9 << "  " << m._10 << "  " << m._11 << "  " << m._12 << "  " << m._13 << "  " << m._14 << "  " << m._15 << "  " << m._16 << "  " << m._17 << "  " << m._18 << "  " << m._19 << "  " << m._20 << "  " << m._21;
+}
+
+std::ostream &operator<<(std::ostream &os, const StockEntry &m) {
+    return os << m._1 << " " << m._2 << "  " << m._3 << "  " << m._4 << "  " << m._5 << "  " << m._6 << "  " << m._7 << "  " << m._8 << "  " << m._9 << "  " << m._10 << "  " << m._11 << "  " << m._12 << "  " << m._13 << "  " << m._14 << "  " << m._15 << "  " << m._16 << "  " << m._17;
+}
+
+std::ostream &operator<<(std::ostream &os, const OrderEntry &m) {
+    return os << m._1 << " " << m._2 << "  " << m._3 << "  " << m._4 << "  " << m._5 << "  " << m._6 << "  " << m._7 << "  " << m._8;
+}
+
+std::ostream &operator<<(std::ostream &os, const HistoryEntry &m) {
+    return os << m._1 << " " << m._2 << "  " << m._3 << "  " << m._4 << "  " << m._5 << "  " << m._6 << "  " << m._7 << "  " << m._8;
+}
+
+std::ostream &operator<<(std::ostream &os, const NewOrderEntry &m) {
+    return os << m._1 << " " << m._2 << "  " << m._3;
+}
 //------------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------------------
@@ -85,12 +101,12 @@ typedef struct SEntry9_ISSSSSSDD WarehouseEntry;
 //        return t1._1 == t2._1 && t1._2 == t2._2 && t1._3 == t2._3 && t1._4 == t2._4 && t1._5 == t2._5 && t1._6 == t2._6 && t1._7 == t2._7 && t1._8 == t2._8 && t1._9 == t2._9 && t1._10 == t2._10 && t1._11 == t2._11 && t1._12 == t2._12 && t1._13 == t2._13 && fabs(t1._14 - t2._14) <= 0.01 && t1._15 == t2._15 && t1._16 == t2._16 && t1._17 == t2._17 && t1._18 == t2._18;
 //    }
 
-typedef size_t datetime_t;
 
 //-----------------------------------------
 
 struct Program {
     const short id;
+    virtual std::ostream& print(std::ostream& s) = 0;
 
     Program(short i) : id(i) {
     }
@@ -101,23 +117,25 @@ enum TPCC_Programs {
 };
 
 struct NewOrder : public Program {
-    uint32_t c_id;
-    uint8_t d_id, w_id, o_ol_cnt;
-    datetime_t datetime;
+    int c_id;
+    int d_id, w_id, o_ol_cnt;
+    Date datetime;
 
-    uint32_t itemid[15];
-    uint8_t quantity[15], supware[15];
+    int itemid[15];
+    int quantity[15], supware[15];
 
     //NOT INPUT PARAMATERS   
     bool o_all_local;
-    uint8_t stock[15];
-    float price[15];
+    int stock[15];
+    double price[15];
     char* iname[15];
-    char bg[15];
+    char* bg[15];
+    double amt[15];
 
     NewOrder() : Program(NEWORDER) {
-        for(int i=0; i<15; i++)
-            iname[i] = new char[25];
+        for (int i = 0; i < 15; ++i) {
+            bg[i] = new char[2];
+        }
         o_all_local = true;
     }
 
@@ -137,10 +155,10 @@ struct NewOrder : public Program {
 };
 
 struct PaymentById : public Program {
-    datetime_t datetime;
-    uint32_t c_id;
-    uint8_t w_id, c_w_id, d_id, c_d_id;
-    float h_amount;
+    Date datetime;
+    int c_id;
+    int w_id, c_w_id, d_id, c_d_id;
+    double h_amount;
 
     PaymentById() : Program(PAYMENTBYID) {
     }
@@ -154,11 +172,11 @@ struct PaymentById : public Program {
 };
 
 struct PaymentByName : public Program {
-    datetime_t datetime;
-    uint8_t w_id, c_w_id;
-    uint8_t d_id, c_d_id;
-    char* c_last_input;
-    float h_amount;
+    Date datetime;
+    int w_id, c_w_id;
+    int d_id, c_d_id;
+    char c_last_input[17];
+    double h_amount;
 
     PaymentByName() : Program(PAYMENTBYNAME) {
     }
@@ -172,8 +190,8 @@ struct PaymentByName : public Program {
 };
 
 struct OrderStatusById : public Program {
-    uint32_t c_id;
-    uint8_t w_id, d_id;
+    int c_id;
+    int w_id, d_id;
 
     OrderStatusById() : Program(ORDERSTATUSBYID) {
     }
@@ -186,9 +204,9 @@ struct OrderStatusById : public Program {
 };
 
 struct OrderStatusByName : public Program {
-    uint8_t w_id;
-    uint8_t d_id;
-    char * c_last;
+    int w_id;
+    int d_id;
+    char c_last[17];
 
 #ifdef PROFILE
     static size_t count, begintime, exectime, committime;
@@ -206,8 +224,8 @@ struct OrderStatusByName : public Program {
 };
 
 struct StockLevel : public Program {
-    uint8_t w_id;
-    uint8_t d_id, threshold;
+    int w_id;
+    int d_id, threshold;
 
     StockLevel() : Program(STOCKLEVEL) {
     }
@@ -221,9 +239,9 @@ struct StockLevel : public Program {
 };
 
 struct Delivery : public Program {
-    uint8_t w_id;
-    uint8_t o_carrier_id;
-    datetime_t datetime;
+    int w_id;
+    int o_carrier_id;
+    Date datetime;
 
     Delivery() : Program(DELIVERY) {
     }
@@ -236,8 +254,8 @@ struct Delivery : public Program {
 
 };
 
-datetime_t StrToIntDate(const char* s) {
-    datetime_t d = s[2] - '0';
+Date StrToIntDate(const char* s) {
+    Date d = s[2] - '0';
     //        d = d * 10 + s[1] - '0';
     //        d = d * 10 + s[2] - '0';
     d = d * 10 + s[3] - '0';
@@ -254,7 +272,8 @@ datetime_t StrToIntDate(const char* s) {
     return d;
 }
 
-void IntToStrDate(char* s, datetime_t d) {
+char* IntToStrDate(Date d) {
+    static char s[22];
     s[0] = '2';
     s[1] = '0';
     s[21] = 0;
@@ -369,7 +388,7 @@ struct TPCCDataGen {
         fin.close();
     }
 
-    void loadCust() {
+    void loadCust(customerTblStoreType& cust) {
         std::ifstream fin(inputTableDir + "customer.txt");
         std::string line;
         CustomerEntry c;
@@ -389,7 +408,7 @@ struct TPCCDataGen {
             c._21 = new char[501];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c._1, &c._2, &c._3, c._4, c._5, c._6, c._7, c._8, c._9, c._10, c._11, c._12, date, c._14, &c._15, &c._16, &c._17, &c._18, &c._19, &c._20, c._21);
             c._13 = StrToIntDate(date);
-            //            iCustomer.insert({ck, cv});
+            cust.insert_nocheck(c);
         }
         fin.close();
 #ifdef VERIFY_TPCC
@@ -414,7 +433,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadDist() {
+    void loadDist(districtTblStoreType& dist) {
         std::string line;
         std::ifstream fin(inputTableDir + "district.txt");
 
@@ -428,7 +447,7 @@ struct TPCCDataGen {
             d._7 = new char[3];
             d._8 = new char[10];
             sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d._1, &d._2, d._3, d._4, d._5, d._6, d._7, d._8, &d._9, &d._10, &d._11);
-            //            iDistrict.insert({k, v});
+            dist.insert_nocheck(d);
         }
         fin.close();
 #ifdef VERIFY_TPCC
@@ -447,7 +466,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadHist() {
+    void loadHist(historyTblStoreType& hist) {
 
         std::string line;
         std::ifstream fin;
@@ -459,7 +478,7 @@ struct TPCCDataGen {
             h._8 = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h._1, &h._2, &h._3, &h._4, &h._5, date, &h._7, h._8);
             h._6 = StrToIntDate(date);
-            //            iHistory.insert({k, v});
+            hist.insert_nocheck(h);
         }
         fin.close();
 #ifdef VERIFY_TPCC
@@ -474,7 +493,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadItem() {
+    void loadItem(itemTblStoreType& item) {
 
         std::string line;
         std::ifstream fin;
@@ -485,7 +504,7 @@ struct TPCCDataGen {
             i._3 = new char[25];
             i._5 = new char[51];
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i._1, &i._2, i._3, &i._4, i._5);
-            //            iItem.insert({k, v});
+            item.insert_nocheck(i);
         }
         fin.close();
 #ifdef VERIFY_TPCC
@@ -500,7 +519,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadNewOrd() {
+    void loadNewOrd(newOrderTblStoreType& no) {
         std::string line;
         std::ifstream fin;
 
@@ -509,7 +528,7 @@ struct TPCCDataGen {
         fin.open(inputTableDir + "new_orders.txt");
         while (std::getline(fin, line)) {
             sscanf(line.c_str(), u32 "," u8 "," u8, &n._1, &n._2, &n._3);
-            //            iNewOrder.insert({k, v});
+            no.insert_nocheck(n);
         }
         fin.close();
 #ifdef VERIFY_TPCC
@@ -522,7 +541,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadOrdLine() {
+    void loadOrdLine(orderLineTblStoreType& olt) {
 
         std::string line;
         std::ifstream fin;
@@ -534,7 +553,7 @@ struct TPCCDataGen {
             e._10 = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e._1, &e._2, &e._3, &e._4, &e._5, &e._6, date, &e._8, &e._9, e._10);
             e._7 = strcmp(date, "\\N") == 0 ? 0 : StrToIntDate(date + 1);
-            //            iOrderLine.insert({k, v});
+            olt.insert_nocheck(e);
         }
         fin.close();
 #ifdef VERIFY_TPCC
@@ -549,7 +568,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadOrders() {
+    void loadOrders(orderTblStoreType& ot) {
 
         std::string line;
         std::ifstream fin;
@@ -565,7 +584,7 @@ struct TPCCDataGen {
             o._5 = StrToIntDate(date);
             o._6 = strcmp(carrier, "\\N") == 0 ? 0 : atoi(carrier);
             o._8 = local;
-            //            iOrder.insert({k, v});
+            ot.insert_nocheck(o);
         }
         fin.close();
 #ifdef VERIFY_TPCC
@@ -581,7 +600,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadStocks() {
+    void loadStocks(stockTblStoreType& st) {
 
         std::string line;
         std::ifstream fin;
@@ -601,7 +620,7 @@ struct TPCCDataGen {
             s._13 = new char[25];
             s._17 = new char[51];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &s._1, &s._2, &s._3, s._4, s._5, s._6, s._7, s._8, s._9, s._10, s._11, s._12, s._13, &s._14, &s._15, &s._16, s._17);
-            //            iStock.insert({k, v});
+            st.insert_nocheck(s);
         }
         fin.close();
 #ifdef VERIFY_TPCC
@@ -625,12 +644,11 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadWare() {
+    void loadWare(warehouseTblStoreType& ware) {
 
         std::string line;
         std::ifstream fin;
         WarehouseEntry w;
-
         fin.open(inputTableDir + "warehouse.txt");
         while (std::getline(fin, line)) {
             w._2 = new char[11];
@@ -640,7 +658,7 @@ struct TPCCDataGen {
             w._6 = new char[3];
             w._7 = new char[10];
             sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w._1, w._2, w._3, w._4, w._5, w._6, w._7, &w._8, &w._9);
-            //            iWarehouse.insert({k, v});
+            ware.insert_nocheck(w);
         }
         fin.close();
 #ifdef VERIFY_TPCC
@@ -660,321 +678,321 @@ struct TPCCDataGen {
 #endif
     }
 
-//    void checkCustomerResults() {
-//
-//        bool isOkay = true;
-//        for (const auto& it : oCustomer) {
-//            try {
-//                const CustomerVal& v = fCustomer.at(it.first);
-//                if (!Custequals(v, it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Customer " << it.first << "contains " << v << " which should be " << it.second << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Customer " << it.first << " not present in table" << std::endl;
-//                isOkay = false;
-//
-//                return;
-//            }
-//        }
-//        for (const auto& it : fCustomer) {
-//            try {
-//                const CustomerVal& v = oCustomer.at(it.first);
-//                if (!Custequals(v, it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Customer " << it.first << "contains " << it.second << " which should be " << v << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Customer " << it.first << " is extra in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        if (isOkay)
-//            std::cout << "Customer table results are correct" << std::endl;
-//    }
-//
-//    void checkDistrictResults() {
-//
-//        bool isOkay = true;
-//        for (const auto& it : oDistrict) {
-//            try {
-//                const DistrictVal& v = fDistrict.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "District " << it.first << "contains " << v << " which should be " << it.second << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "District " << it.first << " not present in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        for (const auto& it : fDistrict) {
-//            try {
-//                const DistrictVal& v = oDistrict.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "District " << it.first << "contains " << it.second << " which should be " << v << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "District " << it.first << " is extra in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        if (isOkay)
-//            std::cout << "District table results are correct" << std::endl;
-//    }
-//
-//    void checkHistoryResults() {
-//
-//        bool isOkay = true;
-//        for (const auto& it : oHistory) {
-//            try {
-//                const HistoryVal& v = fHistory.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "History " << it.first << "contains " << v << " which should be " << it.second << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "History " << it.first << " not present in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        for (const auto& it : fHistory) {
-//            try {
-//                const HistoryVal& v = oHistory.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "History " << it.first << "contains " << it.second << " which should be " << v << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "History " << it.first << " is extra in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        if (isOkay)
-//            std::cout << "History table results are correct" << std::endl;
-//    }
-//
-//    void checkItemResults() {
-//
-//        bool isOkay = true;
-//        for (const auto& it : oItem) {
-//            try {
-//                const ItemVal& v = fItem.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Item " << it.first << "contains " << v << " which should be " << it.second << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Item " << it.first << " not present in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        for (const auto& it : fItem) {
-//            try {
-//                const ItemVal& v = oItem.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Item " << it.first << "contains " << it.second << " which should be " << v << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Item " << it.first << " is extra in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        if (isOkay)
-//            std::cout << "Item table results are correct" << std::endl;
-//    }
-//
-//    void checkNewOrderResults() {
-//
-//        bool isOkay = true;
-//        for (const auto& it : oNewOrder) {
-//            try {
-//                const NewOrderVal& v = fNewOrder.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "NewOrder " << it.first << "contains " << v << " which should be " << it.second << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "NewOrder " << it.first << " not present in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        for (const auto& it : fNewOrder) {
-//            try {
-//                const NewOrderVal& v = oNewOrder.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "NewOrder " << it.first << "contains " << it.second << " which should be " << v << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "NewOrder " << it.first << " is extra in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        if (isOkay)
-//            std::cout << "NewOrder table results are correct" << std::endl;
-//    }
-//
-//    void checkOrderLineResults() {
-//
-//        bool isOkay = true;
-//        for (const auto& it : oOrderLine) {
-//            try {
-//                const OrderLineVal& v = fOrderLine.at(it.first);
-//                if (!OLVequals(v, it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "OrderLine " << it.first << "contains " << v << " which should be " << it.second << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "OrderLine " << it.first << " not present in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        for (const auto& it : fOrderLine) {
-//            try {
-//                const OrderLineVal& v = oOrderLine.at(it.first);
-//                if (!OLVequals(v, it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "OrderLine " << it.first << "contains " << it.second << " which should be " << v << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "OrderLine " << it.first << " is extra in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        if (isOkay)
-//            std::cout << "OrderLine table results are correct" << std::endl;
-//    }
-//
-//    void checkOrderResults() {
-//
-//        bool isOkay = true;
-//        for (const auto& it : oOrder) {
-//            try {
-//                const OrderVal& v = fOrder.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Order " << it.first << "contains " << v << " which should be " << it.second << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Order " << it.first << " not present in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        for (const auto& it : fOrder) {
-//            try {
-//                const OrderVal& v = oOrder.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Order " << it.first << "contains " << it.second << " which should be " << v << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Order " << it.first << " is extra in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        if (isOkay)
-//            std::cout << "Order table results are correct" << std::endl;
-//    }
-//
-//    void checkStockResults() {
-//
-//        bool isOkay = true;
-//        for (const auto& it : oStock) {
-//            try {
-//                const StockVal& v = fStock.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Stock " << it.first << "contains " << v << " which should be " << it.second << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Stock " << it.first << " not present in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        for (const auto& it : fStock) {
-//            try {
-//                const StockVal& v = oStock.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Stock " << it.first << "contains " << it.second << " which should be " << v << std::endl;
-//                    return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Stock " << it.first << " is extra in table" << std::endl;
-//                isOkay = false;
-//                return;
-//            }
-//        }
-//        if (isOkay)
-//            std::cout << "Stock table results are correct" << std::endl;
-//    }
-//
-//    void checkWarehouseResults() {
-//
-//        bool isOkay = true;
-//        for (const auto& it : oWarehouse) {
-//            try {
-//                const WarehouseVal& v = fWarehouse.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Warehouse " << it.first << "contains " << v << " which should be " << it.second << std::endl;
-//                    //                        return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Warehouse " << it.first << " not present in table" << std::endl;
-//                isOkay = false;
-//                //                    return;
-//            }
-//        }
-//        for (const auto& it : fWarehouse) {
-//            try {
-//                const WarehouseVal& v = oWarehouse.at(it.first);
-//                if (!(v == it.second)) {
-//                    isOkay = false;
-//                    std::cerr << "Warehouse " << it.first << "contains " << it.second << " which should be " << v << std::endl;
-//                    //                        return;
-//                }
-//            } catch (const std::exception &ex) {
-//                std::cerr << "Warehouse " << it.first << " is extra in table" << std::endl;
-//                isOkay = false;
-//                //                    return;
-//            }
-//        }
-//        if (isOkay)
-//            std::cout << "Warehouse table results are correct" << std::endl;
-//    }
+    //    void checkCustomerResults() {
+    //
+    //        bool isOkay = true;
+    //        for (const auto& it : oCustomer) {
+    //            try {
+    //                const CustomerVal& v = fCustomer.at(it.first);
+    //                if (!Custequals(v, it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Customer " << it.first << "contains " << v << " which should be " << it.second << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Customer " << it.first << " not present in table" << std::endl;
+    //                isOkay = false;
+    //
+    //                return;
+    //            }
+    //        }
+    //        for (const auto& it : fCustomer) {
+    //            try {
+    //                const CustomerVal& v = oCustomer.at(it.first);
+    //                if (!Custequals(v, it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Customer " << it.first << "contains " << it.second << " which should be " << v << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Customer " << it.first << " is extra in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        if (isOkay)
+    //            std::cout << "Customer table results are correct" << std::endl;
+    //    }
+    //
+    //    void checkDistrictResults() {
+    //
+    //        bool isOkay = true;
+    //        for (const auto& it : oDistrict) {
+    //            try {
+    //                const DistrictVal& v = fDistrict.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "District " << it.first << "contains " << v << " which should be " << it.second << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "District " << it.first << " not present in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        for (const auto& it : fDistrict) {
+    //            try {
+    //                const DistrictVal& v = oDistrict.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "District " << it.first << "contains " << it.second << " which should be " << v << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "District " << it.first << " is extra in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        if (isOkay)
+    //            std::cout << "District table results are correct" << std::endl;
+    //    }
+    //
+    //    void checkHistoryResults() {
+    //
+    //        bool isOkay = true;
+    //        for (const auto& it : oHistory) {
+    //            try {
+    //                const HistoryVal& v = fHistory.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "History " << it.first << "contains " << v << " which should be " << it.second << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "History " << it.first << " not present in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        for (const auto& it : fHistory) {
+    //            try {
+    //                const HistoryVal& v = oHistory.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "History " << it.first << "contains " << it.second << " which should be " << v << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "History " << it.first << " is extra in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        if (isOkay)
+    //            std::cout << "History table results are correct" << std::endl;
+    //    }
+    //
+    //    void checkItemResults() {
+    //
+    //        bool isOkay = true;
+    //        for (const auto& it : oItem) {
+    //            try {
+    //                const ItemVal& v = fItem.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Item " << it.first << "contains " << v << " which should be " << it.second << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Item " << it.first << " not present in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        for (const auto& it : fItem) {
+    //            try {
+    //                const ItemVal& v = oItem.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Item " << it.first << "contains " << it.second << " which should be " << v << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Item " << it.first << " is extra in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        if (isOkay)
+    //            std::cout << "Item table results are correct" << std::endl;
+    //    }
+    //
+    //    void checkNewOrderResults() {
+    //
+    //        bool isOkay = true;
+    //        for (const auto& it : oNewOrder) {
+    //            try {
+    //                const NewOrderVal& v = fNewOrder.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "NewOrder " << it.first << "contains " << v << " which should be " << it.second << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "NewOrder " << it.first << " not present in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        for (const auto& it : fNewOrder) {
+    //            try {
+    //                const NewOrderVal& v = oNewOrder.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "NewOrder " << it.first << "contains " << it.second << " which should be " << v << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "NewOrder " << it.first << " is extra in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        if (isOkay)
+    //            std::cout << "NewOrder table results are correct" << std::endl;
+    //    }
+    //
+    //    void checkOrderLineResults() {
+    //
+    //        bool isOkay = true;
+    //        for (const auto& it : oOrderLine) {
+    //            try {
+    //                const OrderLineVal& v = fOrderLine.at(it.first);
+    //                if (!OLVequals(v, it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "OrderLine " << it.first << "contains " << v << " which should be " << it.second << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "OrderLine " << it.first << " not present in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        for (const auto& it : fOrderLine) {
+    //            try {
+    //                const OrderLineVal& v = oOrderLine.at(it.first);
+    //                if (!OLVequals(v, it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "OrderLine " << it.first << "contains " << it.second << " which should be " << v << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "OrderLine " << it.first << " is extra in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        if (isOkay)
+    //            std::cout << "OrderLine table results are correct" << std::endl;
+    //    }
+    //
+    //    void checkOrderResults() {
+    //
+    //        bool isOkay = true;
+    //        for (const auto& it : oOrder) {
+    //            try {
+    //                const OrderVal& v = fOrder.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Order " << it.first << "contains " << v << " which should be " << it.second << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Order " << it.first << " not present in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        for (const auto& it : fOrder) {
+    //            try {
+    //                const OrderVal& v = oOrder.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Order " << it.first << "contains " << it.second << " which should be " << v << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Order " << it.first << " is extra in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        if (isOkay)
+    //            std::cout << "Order table results are correct" << std::endl;
+    //    }
+    //
+    //    void checkStockResults() {
+    //
+    //        bool isOkay = true;
+    //        for (const auto& it : oStock) {
+    //            try {
+    //                const StockVal& v = fStock.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Stock " << it.first << "contains " << v << " which should be " << it.second << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Stock " << it.first << " not present in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        for (const auto& it : fStock) {
+    //            try {
+    //                const StockVal& v = oStock.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Stock " << it.first << "contains " << it.second << " which should be " << v << std::endl;
+    //                    return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Stock " << it.first << " is extra in table" << std::endl;
+    //                isOkay = false;
+    //                return;
+    //            }
+    //        }
+    //        if (isOkay)
+    //            std::cout << "Stock table results are correct" << std::endl;
+    //    }
+    //
+    //    void checkWarehouseResults() {
+    //
+    //        bool isOkay = true;
+    //        for (const auto& it : oWarehouse) {
+    //            try {
+    //                const WarehouseVal& v = fWarehouse.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Warehouse " << it.first << "contains " << v << " which should be " << it.second << std::endl;
+    //                    //                        return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Warehouse " << it.first << " not present in table" << std::endl;
+    //                isOkay = false;
+    //                //                    return;
+    //            }
+    //        }
+    //        for (const auto& it : fWarehouse) {
+    //            try {
+    //                const WarehouseVal& v = oWarehouse.at(it.first);
+    //                if (!(v == it.second)) {
+    //                    isOkay = false;
+    //                    std::cerr << "Warehouse " << it.first << "contains " << it.second << " which should be " << v << std::endl;
+    //                    //                        return;
+    //                }
+    //            } catch (const std::exception &ex) {
+    //                std::cerr << "Warehouse " << it.first << " is extra in table" << std::endl;
+    //                isOkay = false;
+    //                //                    return;
+    //            }
+    //        }
+    //        if (isOkay)
+    //            std::cout << "Warehouse table results are correct" << std::endl;
+    //    }
 };
 
 
