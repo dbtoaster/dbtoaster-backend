@@ -156,7 +156,8 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     implicit val entryTp = s.tp
     __lambda((e: Rep[SEntry]) => {
       val hash = __newVar(unit(0xcafebabe))
-      cols.foreach(c => {
+      val cols2 = if(cols == Nil) (1 to s.sch.size).toList else cols
+      cols2.foreach(c => {
         implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]
         //System.err.println(s"Getting field $c of $e in hash")
         val mix_1 = unit(0xcc9e2d51) * elemhash(fieldGetter(e, "_" + c)(tp))

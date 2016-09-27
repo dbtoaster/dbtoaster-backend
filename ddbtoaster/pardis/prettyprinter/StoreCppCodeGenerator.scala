@@ -18,7 +18,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   val refSymbols = collection.mutable.ArrayBuffer[Sym[_]]()
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
-    case Statement(sym, StringPrintf(Constant(size), f, Def(LiftedSeq(args)))) => doc"char* $sym = new char[${size + 1}];" :\\: doc"snprintf($sym, $size, $f, ${args.map(expToDocument).mkDocument(",")});"
+    case Statement(sym, StringPrintf(Constant(size), f, Def(LiftedSeq(args)))) => doc"char* $sym = new char[${size + 1}];" :\\: doc"snprintf($sym, ${size+1}, $f, ${args.map(expToDocument).mkDocument(",")});"
 
     case Statement(sym, ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"/* SBJ */" :: tpeToDocument(sym.tp) :: expToDocument(sym) :: ops.map(expToDocument).mkDocument("= {", ",", "};")
     case Statement(sym, ArrayNew(size)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: doc"[${expToDocument(size)}];"
@@ -57,11 +57,12 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   }
 
   override def expToDocument(exp: Expression[_]): Document = exp match {
-    case c@Constant(null) if c.tp == DateType => "-1"
+    case c@Constant(null) if c.tp == DateType => "0"
     case _ => super.expToDocument(exp)
   }
 
   override def nodeToDocument(node: PardisNode[_]): Document = node match {
+    case ToString(a) if a.tp == DateType => doc"IntToStrDate($a)"
     case StoreInsert(self, e) =>
       expToDocument(self) :: ".add(" :: expToDocument(e) :: ")"
     //    case StoreGetCopy(self, idx, key, _) => expToDocument(self) :: doc".getCopy(${expToDocument(idx)}, ${expToDocument(key)})"
@@ -126,8 +127,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"${expToDocument(cond)} ? ${expToDocument(ift)} : ${expToDocument(iff)}"
 
-    case `Int>>>1`(self, x) => doc"$self >> ($x & (sizeof($self)-1))"
-    case Equal(a, b) if a.tp == StringType => doc"strcmpi($a, $b)"
+    case `Int>>>1`(self, x) => doc"$self >> ($x & (8*sizeof($self)-1))"
+    case Equal(a, b) if a.tp == StringType => doc"!strcmpi($a, $b)"
     case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name)) =>
       refSymbols ++= List(h.i, c.i1, c.i2).map(_.asInstanceOf[Sym[_]])
       val t = new ScalaConstructsToCTranformer(IR, false)
