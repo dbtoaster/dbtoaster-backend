@@ -195,7 +195,7 @@ class Driver(var conn: java.sql.Connection,
           supware(i) = w_id
         } else {
           supware(i) = otherWare(w_id)
-          all_local = 0
+          if(supware(i) != w_id) all_local = 0
         }
       } else {
         supware(i) = w_id
