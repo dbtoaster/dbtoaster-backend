@@ -18,9 +18,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   val refSymbols = collection.mutable.ArrayBuffer[Sym[_]]()
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
-    case Statement(sym, StringPrintf(Constant(size), f, Def(LiftedSeq(args)))) => doc"char* $sym = new char[${size + 1}];" :\\: doc"snprintf($sym, ${size+1}, $f, ${args.map(expToDocument).mkDocument(",")});"
+    case Statement(sym, StringPrintf(Constant(size), f, Def(LiftedSeq(args)))) => doc"char* $sym = new char[${size + 1}];" :\\: doc"snprintf($sym, ${size+1}, $f, ${args.mkDocument(",")});"
 
-    case Statement(sym, ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"${sym.tp} $sym = { ${ops.map(expToDocument).mkDocument(",")};"
+    case Statement(sym, ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"${sym.tp} $sym = { ${ops.mkDocument(",")};"
     case Statement(sym, ArrayNew(size)) => doc"${sym.tp} $sym[$size];"
     case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) => doc"strcpy($self[$i], $r);"
     case Statement(sym, ArrayUpdate(self, i, x)) => doc"$self[$i] = $x;"

@@ -52,12 +52,13 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
 
   override def generate[T](optTP: TransactionProgram[T]): Unit = {
     import IR._
+    import codeGen.expLiftable,codeGen.tpeLiftable,codeGen.ListDocumentOps2
     var codestr = codeGen.blockToDocument(optTP.initBlock).toString
     var i = codestr.lastIndexOf("1")
     val storesnames = List("newOrderTbl", "historyTbl", "warehouseTbl", "itemTbl", "orderTbl", "districtTbl", "orderLineTbl", "customerTbl", "stockTbl")
     val allstores = storesnames.mkString(",")
     val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n" + storesnames.zip(optTP.globalVars).map(t => {
-      s"""  val ${t._1} = ${codeGen.expToDocument(t._2)}""".stripMargin
+      doc"  val ${t._1} = ${t._2}".toString
     }).mkString("\n") +
       s"""
          |  val newOrderTxInst = new NewOrderTx($allstores)
@@ -77,10 +78,11 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
     val r = Document.nest(2, entryIdxes :/: tempVars)
     file.println(r)
     optTP.codeBlocks.foreach { case (className, args: List[Sym[_]], body) => {
-      val genCode = "  class " + className + "(" + optTP.globalVars.map(_.asInstanceOf[Sym[_]]).map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkString(", ") + ") extends ((" + args.map(s => codeGen.tpeToDocument(s.tp)).mkString(", ") + ") => " + codeGen.tpeToDocument(body.typeT) + ") {\n" +
-        "    def apply(" + args.map(s => s + ": " + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") = "
+      val argsWithTypes = optTP.globalVars.map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkDocument(", ")
+      val genCode = doc"  class $className($argsWithTypes) extends ((${args.map(_.tp).mkDocument(", ")}) => ${body.typeT} ) {" :/:
+        doc"    def apply(${args.map(s => doc"$s : ${s.tp}").mkDocument(", ")}) = "
       val cgDoc = Document.nest(4, codeGen.blockToDocument(body))
-      file.println(genCode + cgDoc + "\n  }")
+      file.println(genCode + cgDoc.toString + "\n  }")
     }
     }
     file.println("\n}")
@@ -167,7 +169,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
     codeGen.currentProgram = PardisProgram(optTP.structs, optTP.main, Nil)
     codeGen.refSymbols ++= optTP.tempVars.map(_._1)
-
+  import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
     val idxes = optTP.globalVars.map(s => s -> (collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap
     optTP.initBlock.stmts.collect {
       case Statement(s, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) => {
@@ -179,13 +181,13 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       case Statement(sym, StoreIndex(s, _, Constant(typ), Constant(uniq), Constant(other))) => idxes(s.asInstanceOf[Sym[Store[_]]])._1.+=((sym, typ, uniq, other))
     }
     val idx2 = idxes.map(t => t._1 -> (t._2._1 zip t._2._2 map (x => (x._1._1, x._1._2, x._1._3, x._1._4, x._2))).toList) // Store -> List[Sym, Type, unique, otherInfo, IdxName ]
-    def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]) = {
+    def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]):Document = {
       idx._2 match {
-        case "IHash" => "HashIndex<" :: codeGen.tpeToDocument(entryTp) :: ", char, " :: idx._5 :: ", " :: codeGen.expToDocument(unit(idx._3)) :: ">"
-        case "IDirect" => "ArrayIndex<" :: codeGen.tpeToDocument(entryTp) :: ", char, " :: idx._5 :: ", " :: codeGen.expToDocument(unit(idx._4)) :: ">"
-        case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); "TreeIndex<" :: codeGen.tpeToDocument(entryTp) :: ", char, " :: idx2._5 :: ", " :: idx._5 :: ", " :: codeGen.expToDocument(unit(true)) :: ">"
-        case "ISliceHeapMin" => val idx2 = allIdxs(idx._4); "TreeIndex<" :: codeGen.tpeToDocument(entryTp) :: ", char, " :: idx2._5 :: ", " :: idx._5 :: ", " :: codeGen.expToDocument(unit(false)) :: ">"
-        case "IList" => "HashIndex< " :: codeGen.tpeToDocument(entryTp) :: ", char, " :: idx._5 :: ", " :: codeGen.expToDocument(unit(idx._3)) :: ">"
+        case "IHash" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
+        case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
+        case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(true)}>"
+        case "ISliceHeapMin" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(false)}>"
+        case "IList" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
       }
 
     }
@@ -195,22 +197,22 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
       val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
       val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
-      val idxTypeDefs = idxTypes.map(t => "typedef " :: t._1 :: "  " :: idxTypeName(t._2) :: ";").mkDocument("\n")
+      val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = "typedef MultiHashMap<" :: codeGen.tpeToDocument(entryTp) :: ",char ,\n   " :: idxTypes.map(_._1).mkDocument(",\n   ") :: " >  " :: storesnames(s) :: "StoreType;"
+      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ",",\n   ",">") :: doc" ${storesnames(s)}StoreType;"
       val storeDecl = storesnames(s) :: "StoreType  " :: storesnames(s) :: "(" :: storesnames(s) :: "Size);"
-      val storeRef = storesnames(s) :: "StoreType& " :: codeGen.expToDocument(s) :: " = " :: storesnames(s) :: ";"
+      val storeRef = doc"${storesnames(s)}StoreType& $s = ${storesnames(s)};"
 
-      val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => idxTypeName(t._2) :: "& " :: codeGen.expToDocument(t._1._1) :: " = * (" :: idxTypeName(t._2) :: "*) " :: storesnames(s) :: doc".index[${t._2}];").mkDocument("\n")
+      val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${storesnames(s)}.index[${t._2}];").mkDocument("\n")
       val primaryIdx = idx2(s)(0)
-      val primaryRef = idxTypeName(0) :: "& " :: storesnames(s) :: "PrimaryIdx = * (" :: idxTypeName(0) :: "*) " :: storesnames(s) :: doc".index[0];"
+      val primaryRef = doc"${idxTypeName(0)}& ${storesnames(s)}PrimaryIdx = * (${idxTypeName(0)} *) ${storesnames(s)}.index[0];"
       idxTypeDefs :\\: storeTypeDef :\\: storeDecl :\\: storeRef :\\: idxDecl :\\: primaryRef
     }).mkDocument("\n", "\n\n\n", "\n")
 
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
 
     val structs = codeGen.getStructs(optTP.structs)
-    val structVars = optTP.tempVars.map(st => codeGen.tpeToDocument(st._2.tp) :: " " :: codeGen.expToDocument(st._1) :: ";").mkDocument("\n")
+    val structVars = optTP.tempVars.map(st => doc"${st._2.tp} ${st._1};").mkDocument("\n")
     val structEquals = optTP.structs.map(s => {
       val sname = s.tag.typeName
       def eqFn(x: StructElemInformation) = {
@@ -229,7 +231,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     def argsDoc(args: List[Sym[_]]) = args.collect {
       case a if a.tp.isArray => (a, PointerType(a.tp.typeArguments(0)))
       case a => (a, a.tp)
-    }.map(t => codeGen.tpeToDocument(t._2) :: " " :: codeGen.expToDocument(t._1)).mkDocument(", ")
+    }.map(t => doc"${t._2} ${t._1}").mkDocument(", ")
     //    def blockTofunction(x :(String, List[ExpressionSymbol[_]], PardisBlock[T])) = {
     //      (Sym.freshNamed(x._1)(x._3.typeT, IR), x._2, x._3)
     //    }

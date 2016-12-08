@@ -1563,97 +1563,97 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
 };
 #undef int
 
-typedef HashIndex<struct SEntry3_III, char, SEntry3_III_Idx123, 1>  newOrderTblIdx0Type;
-typedef TreeIndex<struct SEntry3_III, char, SEntry3_III_Idx23, SEntry3_III_Idx23_Ordering, 0>  newOrderTblIdx1Type;
-typedef MultiHashMap<struct SEntry3_III,char ,
+typedef HashIndex<struct SEntry3_III, char, SEntry3_III_Idx123, 1> newOrderTblIdx0Type;
+typedef TreeIndex<struct SEntry3_III, char, SEntry3_III_Idx23, SEntry3_III_Idx23_Ordering, 0> newOrderTblIdx1Type;
+typedef MultiHashMap<struct SEntry3_III, char,
    HashIndex<struct SEntry3_III, char, SEntry3_III_Idx123, 1>,
-   TreeIndex<struct SEntry3_III, char, SEntry3_III_Idx23, SEntry3_III_Idx23_Ordering, 0> >  newOrderTblStoreType;
+   TreeIndex<struct SEntry3_III, char, SEntry3_III_Idx23, SEntry3_III_Idx23_Ordering, 0>> newOrderTblStoreType;
 newOrderTblStoreType  newOrderTbl(newOrderTblSize);
 newOrderTblStoreType& x3625 = newOrderTbl;
-newOrderTblIdx0Type& x723 = * (newOrderTblIdx0Type*) newOrderTbl.index[0];
-newOrderTblIdx1Type& x724 = * (newOrderTblIdx1Type*) newOrderTbl.index[1];
-newOrderTblIdx0Type& newOrderTblPrimaryIdx = * (newOrderTblIdx0Type*) newOrderTbl.index[0];
+newOrderTblIdx0Type& x723 = * (newOrderTblIdx0Type *)newOrderTbl.index[0];
+newOrderTblIdx1Type& x724 = * (newOrderTblIdx1Type *)newOrderTbl.index[1];
+newOrderTblIdx0Type& newOrderTblPrimaryIdx = * (newOrderTblIdx0Type *) newOrderTbl.index[0];
 
 
-typedef HashIndex< struct SEntry8_IIIIITDS, char, SEntry8_IIIIITDS_Idx, 0>  historyTblIdx0Type;
-typedef MultiHashMap<struct SEntry8_IIIIITDS,char ,
-   HashIndex< struct SEntry8_IIIIITDS, char, SEntry8_IIIIITDS_Idx, 0> >  historyTblStoreType;
+typedef HashIndex<struct SEntry8_IIIIITDS, char, SEntry8_IIIIITDS_Idx, 0> historyTblIdx0Type;
+typedef MultiHashMap<struct SEntry8_IIIIITDS, char,
+   HashIndex<struct SEntry8_IIIIITDS, char, SEntry8_IIIIITDS_Idx, 0>> historyTblStoreType;
 historyTblStoreType  historyTbl(historyTblSize);
 historyTblStoreType& x3825 = historyTbl;
-historyTblIdx0Type& x730 = * (historyTblIdx0Type*) historyTbl.index[0];
-historyTblIdx0Type& historyTblPrimaryIdx = * (historyTblIdx0Type*) historyTbl.index[0];
+historyTblIdx0Type& x730 = * (historyTblIdx0Type *)historyTbl.index[0];
+historyTblIdx0Type& historyTblPrimaryIdx = * (historyTblIdx0Type *) historyTbl.index[0];
 
 
-typedef ArrayIndex<struct SEntry9_ISSSSSSDD, char, SEntry9_ISSSSSSDD_Idx1f1t2, 1>  warehouseTblIdx0Type;
-typedef MultiHashMap<struct SEntry9_ISSSSSSDD,char ,
-   ArrayIndex<struct SEntry9_ISSSSSSDD, char, SEntry9_ISSSSSSDD_Idx1f1t2, 1> >  warehouseTblStoreType;
+typedef ArrayIndex<struct SEntry9_ISSSSSSDD, char, SEntry9_ISSSSSSDD_Idx1f1t2, 1> warehouseTblIdx0Type;
+typedef MultiHashMap<struct SEntry9_ISSSSSSDD, char,
+   ArrayIndex<struct SEntry9_ISSSSSSDD, char, SEntry9_ISSSSSSDD_Idx1f1t2, 1>> warehouseTblStoreType;
 warehouseTblStoreType  warehouseTbl(warehouseTblSize);
 warehouseTblStoreType& x3844 = warehouseTbl;
-warehouseTblIdx0Type& x735 = * (warehouseTblIdx0Type*) warehouseTbl.index[0];
-warehouseTblIdx0Type& warehouseTblPrimaryIdx = * (warehouseTblIdx0Type*) warehouseTbl.index[0];
+warehouseTblIdx0Type& x735 = * (warehouseTblIdx0Type *)warehouseTbl.index[0];
+warehouseTblIdx0Type& warehouseTblPrimaryIdx = * (warehouseTblIdx0Type *) warehouseTbl.index[0];
 
 
-typedef ArrayIndex<struct SEntry5_IISDS, char, SEntry5_IISDS_Idx1f1t100001, 100000>  itemTblIdx0Type;
-typedef MultiHashMap<struct SEntry5_IISDS,char ,
-   ArrayIndex<struct SEntry5_IISDS, char, SEntry5_IISDS_Idx1f1t100001, 100000> >  itemTblStoreType;
+typedef ArrayIndex<struct SEntry5_IISDS, char, SEntry5_IISDS_Idx1f1t100001, 100000> itemTblIdx0Type;
+typedef MultiHashMap<struct SEntry5_IISDS, char,
+   ArrayIndex<struct SEntry5_IISDS, char, SEntry5_IISDS_Idx1f1t100001, 100000>> itemTblStoreType;
 itemTblStoreType  itemTbl(itemTblSize);
 itemTblStoreType& x3863 = itemTbl;
-itemTblIdx0Type& x740 = * (itemTblIdx0Type*) itemTbl.index[0];
-itemTblIdx0Type& itemTblPrimaryIdx = * (itemTblIdx0Type*) itemTbl.index[0];
+itemTblIdx0Type& x740 = * (itemTblIdx0Type *)itemTbl.index[0];
+itemTblIdx0Type& itemTblPrimaryIdx = * (itemTblIdx0Type *) itemTbl.index[0];
 
 
-typedef HashIndex<struct SEntry8_IIIITIIB, char, SEntry8_IIIITIIB_Idx123, 1>  orderTblIdx0Type;
-typedef TreeIndex<struct SEntry8_IIIITIIB, char, SEntry8_IIIITIIB_Idx234, SEntry8_IIIITIIB_Idx234_Ordering, 1>  orderTblIdx1Type;
-typedef MultiHashMap<struct SEntry8_IIIITIIB,char ,
+typedef HashIndex<struct SEntry8_IIIITIIB, char, SEntry8_IIIITIIB_Idx123, 1> orderTblIdx0Type;
+typedef TreeIndex<struct SEntry8_IIIITIIB, char, SEntry8_IIIITIIB_Idx234, SEntry8_IIIITIIB_Idx234_Ordering, 1> orderTblIdx1Type;
+typedef MultiHashMap<struct SEntry8_IIIITIIB, char,
    HashIndex<struct SEntry8_IIIITIIB, char, SEntry8_IIIITIIB_Idx123, 1>,
-   TreeIndex<struct SEntry8_IIIITIIB, char, SEntry8_IIIITIIB_Idx234, SEntry8_IIIITIIB_Idx234_Ordering, 1> >  orderTblStoreType;
+   TreeIndex<struct SEntry8_IIIITIIB, char, SEntry8_IIIITIIB_Idx234, SEntry8_IIIITIIB_Idx234_Ordering, 1>> orderTblStoreType;
 orderTblStoreType  orderTbl(orderTblSize);
 orderTblStoreType& x4087 = orderTbl;
-orderTblIdx0Type& x747 = * (orderTblIdx0Type*) orderTbl.index[0];
-orderTblIdx1Type& x748 = * (orderTblIdx1Type*) orderTbl.index[1];
-orderTblIdx0Type& orderTblPrimaryIdx = * (orderTblIdx0Type*) orderTbl.index[0];
+orderTblIdx0Type& x747 = * (orderTblIdx0Type *)orderTbl.index[0];
+orderTblIdx1Type& x748 = * (orderTblIdx1Type *)orderTbl.index[1];
+orderTblIdx0Type& orderTblPrimaryIdx = * (orderTblIdx0Type *) orderTbl.index[0];
 
 
-typedef ArrayIndex<struct SEntry11_IISSSSSSDDI, char, SEntry11_IISSSSSSDDI_Idx1f1t11_2f1t2, 10>  districtTblIdx0Type;
-typedef MultiHashMap<struct SEntry11_IISSSSSSDDI,char ,
-   ArrayIndex<struct SEntry11_IISSSSSSDDI, char, SEntry11_IISSSSSSDDI_Idx1f1t11_2f1t2, 10> >  districtTblStoreType;
+typedef ArrayIndex<struct SEntry11_IISSSSSSDDI, char, SEntry11_IISSSSSSDDI_Idx1f1t11_2f1t2, 10> districtTblIdx0Type;
+typedef MultiHashMap<struct SEntry11_IISSSSSSDDI, char,
+   ArrayIndex<struct SEntry11_IISSSSSSDDI, char, SEntry11_IISSSSSSDDI_Idx1f1t11_2f1t2, 10>> districtTblStoreType;
 districtTblStoreType  districtTbl(districtTblSize);
 districtTblStoreType& x4114 = districtTbl;
-districtTblIdx0Type& x754 = * (districtTblIdx0Type*) districtTbl.index[0];
-districtTblIdx0Type& districtTblPrimaryIdx = * (districtTblIdx0Type*) districtTbl.index[0];
+districtTblIdx0Type& x754 = * (districtTblIdx0Type *)districtTbl.index[0];
+districtTblIdx0Type& districtTblPrimaryIdx = * (districtTblIdx0Type *) districtTbl.index[0];
 
 
-typedef HashIndex<struct SEntry10_IIIIIITIDS, char, SEntry10_IIIIIITIDS_Idx1234, 1>  orderLineTblIdx0Type;
-typedef HashIndex<struct SEntry10_IIIIIITIDS, char, SEntry10_IIIIIITIDS_Idx123, 0>  orderLineTblIdx1Type;
-typedef MultiHashMap<struct SEntry10_IIIIIITIDS,char ,
+typedef HashIndex<struct SEntry10_IIIIIITIDS, char, SEntry10_IIIIIITIDS_Idx1234, 1> orderLineTblIdx0Type;
+typedef HashIndex<struct SEntry10_IIIIIITIDS, char, SEntry10_IIIIIITIDS_Idx123, 0> orderLineTblIdx1Type;
+typedef MultiHashMap<struct SEntry10_IIIIIITIDS, char,
    HashIndex<struct SEntry10_IIIIIITIDS, char, SEntry10_IIIIIITIDS_Idx1234, 1>,
-   HashIndex<struct SEntry10_IIIIIITIDS, char, SEntry10_IIIIIITIDS_Idx123, 0> >  orderLineTblStoreType;
+   HashIndex<struct SEntry10_IIIIIITIDS, char, SEntry10_IIIIIITIDS_Idx123, 0>> orderLineTblStoreType;
 orderLineTblStoreType  orderLineTbl(orderLineTblSize);
 orderLineTblStoreType& x4286 = orderLineTbl;
-orderLineTblIdx0Type& x759 = * (orderLineTblIdx0Type*) orderLineTbl.index[0];
-orderLineTblIdx1Type& x760 = * (orderLineTblIdx1Type*) orderLineTbl.index[1];
-orderLineTblIdx0Type& orderLineTblPrimaryIdx = * (orderLineTblIdx0Type*) orderLineTbl.index[0];
+orderLineTblIdx0Type& x759 = * (orderLineTblIdx0Type *)orderLineTbl.index[0];
+orderLineTblIdx1Type& x760 = * (orderLineTblIdx1Type *)orderLineTbl.index[1];
+orderLineTblIdx0Type& orderLineTblPrimaryIdx = * (orderLineTblIdx0Type *) orderLineTbl.index[0];
 
 
-typedef ArrayIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, char, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx1f1t3001_2f1t11_3f1t2, 30000>  customerTblIdx0Type;
-typedef HashIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, char, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236, 0>  customerTblIdx1Type;
-typedef MultiHashMap<struct SEntry21_IIISSSSSSSSSTSDDDDIIS,char ,
+typedef ArrayIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, char, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx1f1t3001_2f1t11_3f1t2, 30000> customerTblIdx0Type;
+typedef HashIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, char, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236, 0> customerTblIdx1Type;
+typedef MultiHashMap<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, char,
    ArrayIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, char, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx1f1t3001_2f1t11_3f1t2, 30000>,
-   HashIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, char, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236, 0> >  customerTblStoreType;
+   HashIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, char, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236, 0>> customerTblStoreType;
 customerTblStoreType  customerTbl(customerTblSize);
 customerTblStoreType& x4392 = customerTbl;
-customerTblIdx0Type& x766 = * (customerTblIdx0Type*) customerTbl.index[0];
-customerTblIdx1Type& x767 = * (customerTblIdx1Type*) customerTbl.index[1];
-customerTblIdx0Type& customerTblPrimaryIdx = * (customerTblIdx0Type*) customerTbl.index[0];
+customerTblIdx0Type& x766 = * (customerTblIdx0Type *)customerTbl.index[0];
+customerTblIdx1Type& x767 = * (customerTblIdx1Type *)customerTbl.index[1];
+customerTblIdx0Type& customerTblPrimaryIdx = * (customerTblIdx0Type *) customerTbl.index[0];
 
 
-typedef ArrayIndex<struct SEntry17_IIISSSSSSSSSSIIIS, char, SEntry17_IIISSSSSSSSSSIIIS_Idx1f1t100001_2f1t2, 100000>  stockTblIdx0Type;
-typedef MultiHashMap<struct SEntry17_IIISSSSSSSSSSIIIS,char ,
-   ArrayIndex<struct SEntry17_IIISSSSSSSSSSIIIS, char, SEntry17_IIISSSSSSSSSSIIIS_Idx1f1t100001_2f1t2, 100000> >  stockTblStoreType;
+typedef ArrayIndex<struct SEntry17_IIISSSSSSSSSSIIIS, char, SEntry17_IIISSSSSSSSSSIIIS_Idx1f1t100001_2f1t2, 100000> stockTblIdx0Type;
+typedef MultiHashMap<struct SEntry17_IIISSSSSSSSSSIIIS, char,
+   ArrayIndex<struct SEntry17_IIISSSSSSSSSSIIIS, char, SEntry17_IIISSSSSSSSSSIIIS_Idx1f1t100001_2f1t2, 100000>> stockTblStoreType;
 stockTblStoreType  stockTbl(stockTblSize);
 stockTblStoreType& x4418 = stockTbl;
-stockTblIdx0Type& x772 = * (stockTblIdx0Type*) stockTbl.index[0];
-stockTblIdx0Type& stockTblPrimaryIdx = * (stockTblIdx0Type*) stockTbl.index[0];
+stockTblIdx0Type& x772 = * (stockTblIdx0Type *)stockTbl.index[0];
+stockTblIdx0Type& stockTblPrimaryIdx = * (stockTblIdx0Type *) stockTbl.index[0];
 
 struct SEntry17_IIISSSSSSSSSSIIIS x7990;
 struct SEntry8_IIIITIIB x7384;
@@ -1706,13 +1706,13 @@ void DeliveryTx(int x10, Date x11, int x12, int x13) {
       x7393._2 = x41;
       x7393._3 = x12;
       x760.slice(x7393, ([&](const struct SEntry10_IIIIIITIDS&  sliceVar) {
-        struct SEntry10_IIIIIITIDS* x44 = const_cast < struct SEntry10_IIIIIITIDS*>(&sliceVar);
+        struct SEntry10_IIIIIITIDS* x44 = const_cast<struct SEntry10_IIIIIITIDS*>(&sliceVar);
         x44->_7 = x11;
         double x46 = x40;
         double x7442 = x44->_9;
         x40 = (x46+(x7442));
       
-      }));;
+      }));
       int x53 = x15;
       x7397._1 = x7387;
       x7397._2 = x53;
@@ -1747,7 +1747,7 @@ void StockLevelTx(int x68, Date x69, int x70, int x71, int x72, int x73) {
     x7524._2 = x72;
     x7524._3 = x71;
     x760.slice(x7524, ([&](const struct SEntry10_IIIIIITIDS&  sliceVar) {
-      struct SEntry10_IIIIIITIDS* x86 = const_cast < struct SEntry10_IIIIIITIDS*>(&sliceVar);
+      struct SEntry10_IIIIIITIDS* x86 = const_cast<struct SEntry10_IIIIIITIDS*>(&sliceVar);
       int x7546 = x86->_5;
       x7547._1 = x7546;
       x7547._2 = x71;
@@ -1757,7 +1757,7 @@ void StockLevelTx(int x68, Date x69, int x70, int x71, int x72, int x73) {
         x80.insert(x7546);
       };
     
-    }));;
+    }));
     int x96 = x79;
     x79 = (x96+(1));
   };
@@ -1770,10 +1770,10 @@ void OrderStatusTx(int x101, Date x102, int x103, int x104, int x105, int x106, 
     x7599._3 = x104;
     x7599._6 = x108;
     x767.slice(x7599, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS&  sliceVar) {
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x113 = const_cast < struct SEntry21_IIISSSSSSSSSTSDDDDIIS*>(&sliceVar);
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x113 = const_cast<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*>(&sliceVar);
       x16000.push_back(x113);
     
-    }));;
+    }));
     int x16008 = x16000.size();
     int x16010 = (x16008/(2));
     int x16011 = x16000.size();
@@ -1781,7 +1781,7 @@ void OrderStatusTx(int x101, Date x102, int x103, int x104, int x105, int x106, 
       int x123 = x16010;
       x16010 = (x123-(1));
     };
-    sort(x16000.begin(), x16000.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS*  x127, struct SEntry21_IIISSSSSSSSSTSDDDDIIS*  x128) {
+    sort(x16000.begin(), x16000.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x127, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x128) {
       
       char* x7651 = x127->_4;
       char* x7652 = x128->_4;
@@ -1824,10 +1824,10 @@ void PaymentTx(int x153, Date x154, int x155, int x156, int x157, int x158, int 
     x7761._3 = x159;
     x7761._6 = x162;
     x767.slice(x7761, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS&  sliceVar) {
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x178 = const_cast < struct SEntry21_IIISSSSSSSSSTSDDDDIIS*>(&sliceVar);
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x178 = const_cast<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*>(&sliceVar);
       x16099.push_back(x178);
     
-    }));;
+    }));
     int x16107 = x16099.size();
     int x16109 = (x16107/(2));
     int x16110 = x16099.size();
@@ -1835,7 +1835,7 @@ void PaymentTx(int x153, Date x154, int x155, int x156, int x157, int x158, int 
       int x188 = x16109;
       x16109 = (x188-(1));
     };
-    sort(x16099.begin(), x16099.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS*  x192, struct SEntry21_IIISSSSSSSSSTSDDDDIIS*  x193) {
+    sort(x16099.begin(), x16099.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x192, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x193) {
       
       char* x7834 = x192->_4;
       char* x7835 = x193->_4;
@@ -2057,13 +2057,11 @@ void NewOrderTx(int x226, Date x227, int x228, int x229, int x230, int x231, int
       int x16345 = ite16518;
       if(x16345) {
         int x339 = x242;
-        x240[x339][0] = 'B';
-        x240[x339][1] = 0;
+        strcpy(x240[x339], "B");
       } else {
         
         int x341 = x242;
-        x240[x341][0] = 'G';
-        x240[x341][1] = 0;
+        strcpy(x240[x341], "G");
       };
       x12741->_3 = (x8020-(x300));
       if((x8020<=(x300))) {
