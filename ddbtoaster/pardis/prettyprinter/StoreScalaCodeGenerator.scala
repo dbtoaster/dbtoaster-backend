@@ -59,10 +59,10 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
 
 
   override def nodeToDocument(node: PardisNode[_]): Document = node match {
-    case BooleanExtraConditionalObject(cond, ift, iff) => doc"if(${expToDocument(cond)}) ${expToDocument(ift)} else ${expToDocument(iff)}"
-    case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name)) => doc" object $name extends EntryIdx[${tpeToDocument(h.i.tp)}] {" :/: Document.nest(NEST_COUNT,
-      doc"override def hash(${expToDocument(h.i)} : ${tpeToDocument(h.i.tp)}) = ${blockToDocument(h.o)}" :/:
-        doc"override def cmp(${expToDocument(c.i1)} : ${tpeToDocument(c.i1.tp)} , ${expToDocument(c.i2)} : ${tpeToDocument(c.i2.tp)}) = ${blockToDocument(c.o)}") :/: doc"}"
+    case BooleanExtraConditionalObject(cond, ift, iff) => doc"if($cond) $ift else $iff"
+    case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name)) => doc" object $name extends EntryIdx[${h.i.tp}] {" :/: Document.nest(NEST_COUNT,
+      doc"override def hash(${h.i} : ${h.i.tp}) = ${blockToDocument(h.o)}" :/:
+        doc"override def cmp(${c.i1} : ${c.i1.tp} , ${c.i2} : ${c.i2.tp}) = ${blockToDocument(c.o)}") :/: doc"}"
     case _ => super.nodeToDocument(node)
   }
 

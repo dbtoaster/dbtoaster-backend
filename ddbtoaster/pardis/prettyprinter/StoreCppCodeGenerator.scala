@@ -20,39 +20,17 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
     case Statement(sym, StringPrintf(Constant(size), f, Def(LiftedSeq(args)))) => doc"char* $sym = new char[${size + 1}];" :\\: doc"snprintf($sym, ${size+1}, $f, ${args.map(expToDocument).mkDocument(",")});"
 
-    case Statement(sym, ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"/* SBJ */" :: tpeToDocument(sym.tp) :: expToDocument(sym) :: ops.map(expToDocument).mkDocument("= {", ",", "};")
-    case Statement(sym, ArrayNew(size)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: doc"[${expToDocument(size)}];"
-    case Statement(sym, ArrayUpdate(self, i, Constant(rhs: String))) => (rhs.zipWithIndex.map(t => expToDocument(self) :: doc"[$i][${t._2}] = '" :: t._1.toString :: "\';") :+ (expToDocument(self) :: doc"[$i][${rhs.length}] = 0;")).mkDocument("\n")
-    case Statement(sym, ArrayUpdate(self, i, x)) => doc"${expToDocument(self)}[${expToDocument(i)}] = ${expToDocument(x)};"
+    case Statement(sym, ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"${sym.tp} $sym = { ${ops.map(expToDocument).mkDocument(",")};"
+    case Statement(sym, ArrayNew(size)) => doc"${sym.tp} $sym[$size];"
+    case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) => doc"strcpy($self[$i], $r);"
+    case Statement(sym, ArrayUpdate(self, i, x)) => doc"$self[$i] = $x;"
 
-    case Statement(sym, ab@ArrayBufferNew2()) => "vector<" :: tpeToDocument(ab.typeA) :: "*> " :: symToDocument(sym) :: ";"
-    case Statement(sym, ArrayBufferSortWith(self, f)) => "sort(" :: expToDocument(self) :: ".begin(), " :: expToDocument(self) :: ".end(), " :: expToDocument(f) :: ");"
-    case Statement(sym, s@SetApplyObject2()) => "unordered_set<" :: tpeToDocument(s.typeT) :: "> " :: symToDocument(sym) :: ";"
-    case Statement(sym, `Set+=`(self, elem)) => expToDocument(self) :: ".insert(" :: expToDocument(elem) :: ");"
+    case Statement(sym, ab@ArrayBufferNew2()) => doc"vector<${ab.typeA}*> $sym;"
+    case Statement(sym, ArrayBufferSortWith(self, f)) => doc"sort($self.begin(), $self.end(), $f);"
+    case Statement(sym, s@SetApplyObject2()) => doc"unordered_set<${s.typeT}> $sym;"
+    case Statement(sym, `Set+=`(self, elem)) => doc"$self.insert($elem);"
 
-    //    case Statement(sym, StoreGetCopy(self, idx, key, _)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: " = " :: expToDocument(self) :: doc".getCopy(${expToDocument(idx)}, ${expToDocument(key)});"
-    //    case Statement(sym, StoreGet(self, idx, key)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: " = " :: expToDocument(self) :: doc".get(${expToDocument(idx)}, ${expToDocument(key)});"
-    //    case Statement(sym, StoreGetCopyDependent(self, idx, key)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: " = " :: expToDocument(self) :: doc".getCopyDependent(${expToDocument(idx)}, ${expToDocument(key)});"
-    //    case Statement(sym, StoreUpdateCopyDependent(self, key)) => expToDocument(self) :: doc".updateCopyDependent(${expToDocument(key)});"
-    //    case Statement(sym, StoreUpdate(self, key)) => expToDocument(self) :: doc".update(${expToDocument(key)});"
-    //    case Statement(sym, StoreUpdateCopy(self, key)) => expToDocument(self) :: doc".updateCopy(${expToDocument(key)});"
-    //    case Statement(sym, StoreDeleteCopyDependent(self, key)) => expToDocument(self) :: doc".deleteCopyDependent(${expToDocument(key)});"
-    //    case Statement(sym, StoreDeleteCopy(self, key)) => expToDocument(self) :: doc".deleteCopy(${expToDocument(key)});"
-    //    case Statement(sym, StoreDelete1(self, key)) => expToDocument(self) :: doc".del(${expToDocument(key)});"
-    //    case Statement(_, StoreSlice(self, idx, key, f)) => expToDocument(self) :: ".slice(" :: expToDocument(idx) :: ", " :: expToDocument(key) :: ", " :: expToDocument(f) :: ");"
-    //
-    //    case Statement(sym, IdxGet(self, key)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: " = " :: expToDocument(self) :: doc".get(${expToDocument(key)});"
-    //    case Statement(sym, IdxGetCopy(self, key)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: " = " :: expToDocument(self) :: doc".getCopy(${expToDocument(key)});"
-    //    case Statement(sym, IdxGetCopyDependent(self, key)) => tpeToDocument(sym.tp) :: " " :: expToDocument(sym) :: " = " :: expToDocument(self) :: doc".getCopyDependent(${expToDocument(key)});"
-    //    case Statement(sym, IdxUpdateCopyDependent(self, key, _)) => expToDocument(self) :: doc".updateCopyDependent(${expToDocument(key)});"
-    //    case Statement(sym, IdxUpdate(self, key)) => expToDocument(self) :: doc".update(${expToDocument(key)});"
-    //    case Statement(sym, IdxUpdateCopy(self, key, _)) => expToDocument(self) :: doc".updateCopy(${expToDocument(key)});"
-    //    case Statement(sym, IdxDeleteCopyDependent(self, key)) => expToDocument(self) :: doc".deleteCopyDependent(${expToDocument(key)});"
-    //    case Statement(sym, IdxDeleteCopy(self, key, _)) => expToDocument(self) :: doc".deleteCopy(${expToDocument(key)});"
-    //    case Statement(sym, IdxDelete(self, key)) => expToDocument(self) :: doc".del(${expToDocument(key)});"
-    //    case Statement(_, IdxSlice(self, key, f)) => expToDocument(self) :: ".slice(" :: expToDocument(key) :: ", " :: expToDocument(f) :: ");"
-
-    case Statement(sym, StringDiff(str1, str2)) => "int " :: expToDocument(sym) :: doc" = strcmpi(${expToDocument(str1)}, ${expToDocument(str2)});"
+    case Statement(sym, StringDiff(str1, str2)) => doc"int $sym = strcmpi($str1, $str2);"
     case _ => super.stmtToDocument(stmt)
   }
 
@@ -63,53 +41,41 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
   override def nodeToDocument(node: PardisNode[_]): Document = node match {
     case ToString(a) if a.tp == DateType => doc"IntToStrDate($a)"
-    case StoreInsert(self, e) =>
-      expToDocument(self) :: ".add(" :: expToDocument(e) :: ")"
-    //    case StoreGetCopy(self, idx, key, _) => expToDocument(self) :: doc".getCopy(${expToDocument(idx)}, ${expToDocument(key)})"
-    case StoreGet(self, idx, key) => expToDocument(self) :: doc".get(${expToDocument(key)})" //SBJ: Assumes idx 0
-    //    case StoreGetCopyDependent(self, idx, key) => expToDocument(self) :: doc".getCopyDependent(${expToDocument(idx)}, ${expToDocument(key)})"
-    //    case StoreUpdateCopyDependent(self, key) => expToDocument(self) :: doc".updateCopyDependent(${expToDocument(key)})"
-    case StoreUpdate(self, key) => expToDocument(self) :: doc".update(${expToDocument(key)})" //SBJ: No update in c++
-    //    case StoreUpdateCopy(self, key) => expToDocument(self) :: doc".updateCopy(${expToDocument(key)})"
-    //    case StoreDeleteCopyDependent(self, key) => expToDocument(self) :: doc".deleteCopyDependent(${expToDocument(key)})"
-    //    case StoreDeleteCopy(self, key) => expToDocument(self) :: doc".deleteCopy(${expToDocument(key)})"
-    case StoreDelete1(self, key) => expToDocument(self) :: doc".del(${expToDocument(key)})"
-    case StoreSlice(self, idx, key, f) => expToDocument(self) :: ".slice(" :: expToDocument(idx) :: ", " :: expToDocument(key) :: ", " :: expToDocument(f) :: ")"
 
-    case IdxGet(self, key) => expToDocument(self) :: doc".get(${expToDocument(key)})"
-    //    case IdxGetCopy(self, key) => expToDocument(self) :: doc".getCopy(${expToDocument(key)})"
-    //    case IdxGetCopyDependent(self, key) => expToDocument(self) :: doc".getCopyDependent(${expToDocument(key)})"
-    //    case IdxUpdateCopyDependent(self, key, _) => expToDocument(self) :: doc".updateCopyDependent(${expToDocument(key)})"
-    case IdxUpdate(self, key) => expToDocument(self) :: doc".update(${expToDocument(key)})" //SBJ: No update in C++
-    //    case IdxUpdateCopy(self, key, _) => expToDocument(self) :: doc".updateCopy(${expToDocument(key)})"
-    //    case IdxDeleteCopyDependent(self, key) => expToDocument(self) :: doc".deleteCopyDependent(${expToDocument(key)})"
-    //    case IdxDeleteCopy(self, key, _) => expToDocument(self) :: doc".deleteCopy(${expToDocument(key)})"
-    case IdxDelete(self, key) => expToDocument(self) :: doc".del(${expToDocument(key)});"
-    case IdxSlice(self, key, f) => expToDocument(self) :: ".slice(" :: expToDocument(key) :: ", " :: expToDocument(f) :: ");"
+    case StoreInsert(self, e) => doc"$self.add($e)"
+    case StoreGet(self, idx, key) => doc"$self.get($key)" //SBJ: Assumes idx 0
+    case StoreUpdate(self, key) => doc"$self.update($key)" //SBJ: No update in c++. All cases of updates in current benchmark should be removed by DeadIdxUpdate
+    case StoreDelete1(self, key) => doc"$self.del($key)"
+    case StoreSlice(self, idx, key, f) => doc"$self.slice($idx, $key, $f)"
 
-    case ArrayBufferAppend(self, elem) => expToDocument(self) :: ".push_back(" :: expToDocument(elem) :: ")"
-    case ArrayBufferApply(Def(ArrayBufferSortWith(self, _)), i) => expToDocument(self) :: "[" :: expToDocument(i) :: "]"
-    case ArrayBufferApply(self, i) => expToDocument(self) :: "[" :: expToDocument(i) :: "]"
-    case ArrayBufferSize(self) => expToDocument(self) :: ".size()"
+    case IdxGet(self, key) => doc"$self.get($key)"
+    case IdxUpdate(self, key) => doc"$self.update($key)" //SBJ: No update in C++
+    case IdxDelete(self, key) => doc"$self.del($key);"
+    case IdxSlice(self, key, f) => doc"$self.slice($key, $f)"
 
-    case SetSize(self) => expToDocument(self) :: ".size()"
+    case ArrayBufferAppend(self, elem) => doc"$self.push_back($elem)"
+    case ArrayBufferApply(Def(ArrayBufferSortWith(self, _)), i) => doc"$self[$i]"
+    case ArrayBufferApply(self, i) => doc"$self[$i]"
+    case ArrayBufferSize(self) =>  doc"$self.size()"
 
-    case ArrayApply(self, i) => expToDocument(self) :: "[" :: expToDocument(i) :: "]"
+    case SetSize(self) => doc"$self.size()"
 
-    case StructFieldSetter(self: Sym[_], idx, rhs) if refSymbols.contains(self) => expToDocument(self) :: "." :: idx :: " = " :: expToDocument(rhs)
-    case StructFieldGetter(self: Sym[_], idx) if refSymbols.contains(self) => expToDocument(self) :: "." :: idx
-    case StructFieldIncr(self, idx, rhs) if refSymbols.contains(self) => expToDocument(self) :: "." :: idx :: " += " :: expToDocument(rhs)
-    case StructFieldDecr(self, idx, rhs) if refSymbols.contains(self) => expToDocument(self) :: "." :: idx :: " -= " :: expToDocument(rhs)
-    case StructFieldIncr(self, idx, rhs) => expToDocument(self) :: "->" :: idx :: " += " :: expToDocument(rhs)
-    case StructFieldDecr(self, idx, rhs) => expToDocument(self) :: "->" :: idx :: " -= " :: expToDocument(rhs)
+    case ArrayApply(self, i) => doc"$self[$i]"
+
+    case StructFieldSetter(self: Sym[_], idx, rhs) if refSymbols.contains(self) => doc"$self.$idx = $rhs"
+    case StructFieldGetter(self: Sym[_], idx) if refSymbols.contains(self) => doc"$self.$idx"
+    case StructFieldIncr(self, idx, rhs) if refSymbols.contains(self) => doc"$self.$idx += $rhs"
+    case StructFieldDecr(self, idx, rhs) if refSymbols.contains(self) => doc"$self.$idx -= $rhs"
+    case StructFieldIncr(self, idx, rhs) => doc"$self->$idx += $rhs"
+    case StructFieldDecr(self, idx, rhs) => doc"$self->$idx -= $rhs"
 
     case PardisLambda(_, i, o) =>
       val tp = i.tp.typeArguments match {
         case content :: tail => content
         case Nil => i.tp
       }
-      val refToPtr = tpeToDocument(i.tp) :: " " :: expToDocument(i) :: " = const_cast < " :: tpeToDocument(i.tp) :: ">(&sliceVar);"
-      "[&](const " :: tpeToDocument(tp) :: "&  sliceVar) {" :/: Document.nest(NEST_COUNT, refToPtr :: blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
+      val refToPtr = doc"${i.tp} $i = const_cast<${i.tp}>(&sliceVar);"
+      doc"[&](const $tp&  sliceVar) {" :/: Document.nest(NEST_COUNT, refToPtr :: blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
 //    case PardisLambda2(_, i1, i2, o) if refSymbols.contains(i1) =>
 //      val t1 = i1.tp.typeArguments match {
@@ -123,9 +89,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 //      "[&](" :: tpeToDocument(t1) :: " & " :: expToDocument(i1) :: ", " :: tpeToDocument(t2) :: " & " :: expToDocument(i2) :: ") {" :/: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 //
     case PardisLambda2(_, i1, i2, o) =>
-      "[&](" :: tpeToDocument(i1.tp) :: "  " :: expToDocument(i1) :: ", " :: tpeToDocument(i2.tp) :: "  " :: expToDocument(i2) :: ") {" :/: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
+      doc"[&](${i1.tp} $i1, ${i2.tp} $i2) {" :/: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
-    case BooleanExtraConditionalObject(cond, ift, iff) => doc"${expToDocument(cond)} ? ${expToDocument(ift)} : ${expToDocument(iff)}"
+    case BooleanExtraConditionalObject(cond, ift, iff) => doc"$cond ? $ift : $iff"
 
     case `Int>>>1`(self, x) => doc"$self >> ($x & (8*sizeof($self)-1))"
     case Equal(a, b) if a.tp == StringType => doc"!strcmpi($a, $b)"
@@ -136,10 +102,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val co = t(IR)(c.o)(c.o.typeT)
 
       doc" struct $name {" :/: Document.nest(NEST_COUNT,
-        doc"FORCE_INLINE static size_t hash(const " :: tpeToDocument(h.i.tp) :: "& " :: expToDocument(h.i) :: ")  { " :: Document.nest(NEST_COUNT, blockToDocument(ho) :/: getBlockResult(ho, true)) :/: "}" :\\:
-          doc"FORCE_INLINE static bool cmp(const " :: tpeToDocument(c.i1.tp) :: "& " :: expToDocument(c.i1) :: ", const " :: tpeToDocument(c.i2.tp) :: "& " :: expToDocument(c.i2) :: ") { " :: Document.nest(NEST_COUNT, blockToDocument(co) :/: getBlockResult(co, true)) :/: "}") :/: "};"
+        doc"FORCE_INLINE static size_t hash(const ${h.i.tp}& ${h.i})  { " :: Document.nest(NEST_COUNT, blockToDocument(ho) :/: getBlockResult(ho, true)) :/: "}" :\\:
+          doc"FORCE_INLINE static bool cmp(const ${c.i1.tp}& ${c.i1}, const ${c.i2.tp}& ${c.i2}) { " :: Document.nest(NEST_COUNT, blockToDocument(co) :/: getBlockResult(co, true)) :/: "}") :/: "};"
 
-    case HashCode(a) => doc"HASH(${expToDocument(a)})"
+    case HashCode(a) => doc"HASH($a)"
 
     case _ => super.nodeToDocument(node)
   }
