@@ -31,6 +31,11 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
   def blockToDocumentNoBraces(block: Block[_]): Document = {
     mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)
   }
+  
+  override def expToDocument(exp: Expression[_]): Document = exp match {
+    case Constant(b: Boolean) => s"$b"
+    case _ => super.expToDocument(exp)
+  }
 
   override def symToDocument(sym: ExpressionSymbol[_]): Document = {
     if (sym.tp == UnitType)
