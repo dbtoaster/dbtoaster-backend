@@ -1,7 +1,7 @@
 package ddbt.codegen.prettyprinter
 
 import ch.epfl.data.sc.pardis.prettyprinter.ASTCodeGenerator
-import ch.epfl.data.sc.pardis.utils.document.Document
+import ch.epfl.data.sc.pardis.utils.document.{Document, Liftable, ListDocumentOps}
 import ddbt.lib.store.deep.StoreDSL
 
 /**
@@ -9,6 +9,9 @@ import ddbt.lib.store.deep.StoreDSL
   */
 trait StoreCodeGenerator extends ASTCodeGenerator[StoreDSL] {
 
+  implicit def ListDocumentOps2[T: Liftable](docs: Seq[T]) = {
+    new ListDocumentOps(docs.map(implicitly[Liftable[T]].apply))
+  }
   import IR._
   def emitSource4[T1, T2, T3, T4, R](f: (Rep[T1], Rep[T2], Rep[T3], Rep[T4]) => Rep[R], className: String)(implicit e1: TypeRep[T1], e2: TypeRep[T2], e3: TypeRep[T3], e4: TypeRep[T4], er: TypeRep[R]) = {
     val s1 = fresh[T1]

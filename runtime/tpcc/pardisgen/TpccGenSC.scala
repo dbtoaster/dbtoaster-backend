@@ -1108,8 +1108,8 @@ class SCExecutor
   val x7397 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null);
   val x7963 = SEntry9_ISSSSSSDD(-1, null, null, null, null, null, null, -1.0, -1.0);
   val x7547 = SEntry17_IIISSSSSSSSSSIIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, -1, -1, -1, null);
-  class DeliveryTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int) => Int) {
-    def apply(x10: Boolean, x11: Date, x12: Int, x13: Int) =     {
+  class DeliveryTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int) => Int ) {
+    def apply(x10 : Boolean, x11 : Date, x12 : Int, x13 : Int) =     {
       val x14 = new Array[Int](10);
       var x15: Int = 1;
       while({
@@ -1171,8 +1171,8 @@ class SCExecutor
       1
     }
   }
-  class StockLevelTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int) => Int) {
-    def apply(x68: Boolean, x69: Date, x70: Int, x71: Int, x72: Int, x73: Int) =     {
+  class StockLevelTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int) => Int ) {
+    def apply(x68 : Boolean, x69 : Date, x70 : Int, x71 : Int, x72 : Int, x73 : Int) =     {
       x7511._1_=(x72)
       x7511._2_=(x71)
       val x12390 = x754.get(x7511);
@@ -1214,8 +1214,8 @@ class SCExecutor
       1
     }
   }
-  class OrderStatusTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, String) => Int) {
-    def apply(x101: Boolean, x102: Date, x103: Int, x104: Int, x105: Int, x106: Int, x107: Int, x108: String) =     {
+  class OrderStatusTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, String) => Int ) {
+    def apply(x101 : Boolean, x102 : Date, x103 : Int, x104 : Int, x105 : Int, x106 : Int, x107 : Int, x108 : String) =     {
       val x7585 = if((x106.>(0))) 
       {
         val x7597 = new ArrayBuffer[SEntry21_IIISSSSSSSSSTSDDDDIIS]();
@@ -1272,8 +1272,8 @@ class SCExecutor
       1
     }
   }
-  class PaymentTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double) => Int) {
-    def apply(x153: Boolean, x154: Date, x155: Int, x156: Int, x157: Int, x158: Int, x159: Int, x160: Int, x161: Int, x162: String, x163: Double) =     {
+  class PaymentTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double) => Int ) {
+    def apply(x153 : Boolean, x154 : Date, x155 : Int, x156 : Int, x157 : Int, x158 : Int, x159 : Int, x160 : Int, x161 : Int, x162 : String, x163 : Double) =     {
       x7713._1_=(x156)
       val x12547 = x735.get(x7713);
       x12547._9 +=(x163)
@@ -1355,8 +1355,8 @@ class SCExecutor
       1
     }
   }
-  class NewOrderTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double]) => Int) {
-    def apply(x226: Boolean, x227: Date, x228: Int, x229: Int, x230: Int, x231: Int, x232: Int, x233: Int, x234: Array[Int], x235: Array[Int], x236: Array[Int], x237: Array[Double], x238: Array[String], x239: Array[Int], x240: Array[String], x241: Array[Double]) =     {
+  class NewOrderTx(x3625: Store[SEntry3_III], x3825: Store[SEntry8_IIIIITDS], x3844: Store[SEntry9_ISSSSSSDD], x3863: Store[SEntry5_IISDS], x4087: Store[SEntry8_IIIITIIB], x4114: Store[SEntry11_IISSSSSSDDI], x4286: Store[SEntry10_IIIIIITIDS], x4392: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x4418: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double]) => Int ) {
+    def apply(x226 : Boolean, x227 : Date, x228 : Int, x229 : Int, x230 : Int, x231 : Int, x232 : Int, x233 : Int, x234 : Array[Int], x235 : Array[Int], x236 : Array[Int], x237 : Array[Double], x238 : Array[String], x239 : Array[Int], x240 : Array[String], x241 : Array[Double]) =     {
       var x242: Int = 0;
       var x243: Boolean = false;
       val x244 = new Array[String](x232);

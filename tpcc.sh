@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 rm -f opt_list.txt
 allopts=(" " 
 	"-opt index" 

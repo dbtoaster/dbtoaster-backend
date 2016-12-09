@@ -2,7 +2,7 @@ package ddbt.codegen
 
 import ch.epfl.data.sc.pardis.types.{RecordType, UnitType}
 import ch.epfl.data.sc.pardis.utils.TypeUtils
-import ch.epfl.data.sc.pardis.utils.document.Document
+import ch.epfl.data.sc.pardis.utils.document._
 import com.sun.org.apache.xalan.internal.xsltc.compiler.Constants
 import ddbt.Utils._
 
@@ -526,17 +526,16 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
   override def genCodeForProgram[T](optTP: TransactionProgram[T], allnames: List[String]): String = {
     var ts = ""
     for (x <- optTP.codeBlocks) {
-      val doc = codeGen.blockToDocument((x._3))
-      val strWriter = new StringWriter()
-      val pw = new java.io.PrintWriter(strWriter)
-      doc.format(20, pw)
-      ts += "def on" + x._1 + "(" + x._2.map(s => codeGen.expToDocument(s) + ":" + codeGen.tpeToDocument(s.tp)).mkString(", ") + ") {\n" + strWriter.toString + "\n}\n"
+      import codeGen.{doc => _, _}
+      val doc2 = codeGen.blockToDocument((x._3))
+      ts += doc"def on${x._1}(${x._2.map(s => doc"$s:${s.tp}").mkDocument(", ")}) {" :/: Document.nest(2, doc2) :/: doc"\n}\n"
     }
     val ms = codeGen.blockToDocumentNoBraces(optTP.initBlock) :/: optTP.globalVars.zip(allnames).map(t => {
-      Document.text(s"val ${t._2} = ") :: codeGen.expToDocument(t._1)
+      import codeGen.{doc => _, _}
+      doc"val ${t._2} = ${t._1}"
     }).mkDocument("\n")
     //    val ds = "" // xxx - Fixeit outStream.toString
-    val printInfoDef = Document.text("def printMapsInfo() = {}")
+    val printInfoDef = doc"def printMapsInfo() = {}"
 
     val entries = optTP.structs.map(codeGen.getStruct).mkDocument("\n")
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
