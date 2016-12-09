@@ -34,7 +34,8 @@ libraryDependencies ++= Seq(
   "org.scala-lang"     % "scala-actors"   % scalaVersion.value, // to compile legacy Scala
   "org.scala-lang"     % "scala-compiler" % scalaVersion.value,
   "org.scalatest"     %% "scalatest"      % "2.2.0" % "test",
-  "org.scala-lang.plugins" %% "scala-continuations-library" % "1.0.2"
+  "org.scala-lang.plugins" %% "scala-continuations-library" % "1.0.2",
+  "ch.epfl.data" % "squid-sc-backend_2.11" % "0.1-SNAPSHOT"
 )
 
 // --------- Compilation options

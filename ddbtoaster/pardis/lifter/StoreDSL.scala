@@ -1,16 +1,15 @@
 package ddbt.lib.store.deep
 
-import ch.epfl.data.sc.pardis.deep.scalalib.collection.{ArrayBufferComponent, SeqComponent, SetComponent}
+import ch.epfl.data.sc.pardis.deep.scalalib.collection.{SetComponent, SeqComponent, ArrayBufferComponent}
 import ch.epfl.data.sc.pardis.deep.scalalib._
-
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
-import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeAny, typeUnit}
-import ch.epfl.data.sc.pardis.types.{AnyType, PardisType, RecordType}
+import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeUnit, typeAny}
+import ch.epfl.data.sc.pardis.types.{AnyType, RecordType, PardisType}
 import ddbt.ast.{Type, TypeDouble, TypeLong}
 import ddbt.lib.store._
-import lifter.{OnlineOptimizations, SCLMSInterop, TypeToTypeRep}
-import ddbt.transformer.{SEntry, SEntryFlag}
+import lifter.{TypeToTypeRep, OnlineOptimizations, SCLMSInterop}
+import ddbt.transformer.{SEntryFlag, SEntry}
 
 /**
   * Created by khayyam on 4/8/15.
@@ -57,7 +56,30 @@ trait StoreDSLOptimized extends StoreDSL with OnlineOptimizations {
 
 }
 
-trait StoreDSL extends StoreComponent with SCLMSInterop with BooleanComponent with DateComponent with StringComponent with GenericEntryComponent with TypeToTypeRep with BaseQuasiExp with SetComponent with ArrayComponent with ArrayBufferComponent with ScalaPredefOps with AggregatorComponent with EntryComponent with EntryIdxComponent with IdxComponent with SeqComponent with BooleanExtraComponent with Tuple3Component with CFunctions {
+trait StoreDSL extends
+  StoreComponent with
+  SCLMSInterop with
+  BooleanComponent with
+  DateComponent with
+  StringComponent with
+  GenericEntryComponent with
+  TypeToTypeRep with
+  BaseQuasiExp with
+  SetComponent with
+  ArrayComponent with
+  ArrayBufferComponent with
+  ScalaPredefOps with
+  AggregatorComponent with
+  EntryComponent with
+  EntryIdxComponent with
+  IdxComponent with
+  SeqComponent with
+  BooleanExtraComponent with
+  Tuple3Component with
+  CFunctions with
+  squid.scback.PardisBinding.DefaultPardisMixin
+{
+  
   override val _IRReifier: IRReifier = new AnfIRReifier(this) {
     override def findOrCreateSymbol[T: TypeRep](definition: Def[T]): Sym[T] = {
       definition match {

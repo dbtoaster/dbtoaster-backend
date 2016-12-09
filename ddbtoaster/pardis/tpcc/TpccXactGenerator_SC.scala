@@ -5,6 +5,7 @@ package sc.tpcc
 import java.io.{FileWriter, PrintStream, PrintWriter}
 import java.util.concurrent.Executor
 
+import ddbt.newqq.DBToasterSquidBinding
 import ch.epfl.data.sc.pardis
 import ch.epfl.data.sc.pardis.ir.{Statement, StructElemInformation, PardisStructDef, StructTags}
 import ch.epfl.data.sc.pardis.types.{RecordType, AnyType}
@@ -24,7 +25,9 @@ import scala.language.implicitConversions
 
 object TpccXactGenerator_SC {
 
-  class Prog(val Context: StoreDSL, val numWare: Int) {
+  class Prog(val Context: StoreDSL, val numWare: Int) extends DBToasterSquidBinding(Context) {
+    import Sqd.Predef._
+    import Sqd.Quasicodes._
 
     //    import Context.Predef._
     //    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
@@ -148,20 +151,31 @@ object TpccXactGenerator_SC {
 
           val s_quantity = stockEntry.get[Int](unit(3)) //s_quantity
           stock.update(readVar(ol_number), s_quantity)
-
-          __ifThenElse(customerEntry.get[String](unit(14)).contains(unit("original")) && /*s_data*/ stockEntry.get[String](unit(17)).contains(unit("original")), {
-            bg.update(readVar(ol_number), unit("B"))
-            unit()
-          }, {
-            bg.update(readVar(ol_number), unit("G"))
-            unit()
-          })
-
-          stockEntry.update(unit(3), s_quantity - ol_quantity)
-          __ifThenElse(s_quantity <= ol_quantity, stockEntry += (unit(3), unit(91)), unit())
+          
+          type String = java.lang.String  // So it does not resolve to `ch.epfl.data.sc.pardis.deep.scalalib.StringOps.String`
+          ir"""
+            if ($customerEntry.get[String](14).contains("original") && /*s_data*/ $stockEntry.get[String](17).contains("original"))
+              $bg($ol_number!) = "B"
+            else
+              $bg($ol_number!) = "G"
+          """
+          
+          // Either use the QuasiCode syntax:
+          /*
+          ir{
+            $(stockEntry)(3) = $(s_quantity) - $(ol_quantity)
+            if ($(s_quantity) <= $(ol_quantity)) $(stockEntry) += (3, 91)
+          }
+          */
+          
+          // Or use the QuasiQuote syntax:
+          ir"""
+            $stockEntry(3) = $s_quantity - $ol_quantity
+            if ($s_quantity <= $ol_quantity) $stockEntry += (3, 91)
+          """
 
           val s_remote_cnt_increment = __newVar(unit(0))
-          dsl"""if ($ol_supply_w_id != $w_id) $s_remote_cnt_increment = 1"""
+          ir{ if ($(ol_supply_w_id) != $(w_id)) $(s_remote_cnt_increment) := 1 }
 
           //TODO this is the correct version but is not implemented in the correctness test
           //stockEntry._14 += ol_quantity //s_ytd
