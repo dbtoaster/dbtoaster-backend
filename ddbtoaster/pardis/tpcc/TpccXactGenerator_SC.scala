@@ -14,6 +14,7 @@ import ddbt.codegen.{Optimizer, TransactionProgram}
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 import sc.tpcc.compiler.TpccCompiler
 
+import ddbt.lib.store
 import ddbt.lib.store.deep._
 
 import ch.epfl.data.sc.pardis.prettyprinter.{ASTCodeGenerator, ScalaCodeGenerator, CodeGenerator}
@@ -213,7 +214,8 @@ object TpccXactGenerator_SC {
 
       val customerEntry = __ifThenElse(c_by_name > unit(0), {
         val customersWithLastName = __newArrayBuffer[GenericEntry]()
-        customerTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), c_d_id, c_w_id, c_last_input), __lambda { custEntry => customersWithLastName.append(custEntry)
+//        customerTbl.sliceCopy(unit(0), GenericEntry(unit("SteSampleSEntry"), unit(2), unit(3), unit(6), c_d_id, c_w_id, c_last_input), __lambda { custEntry => customersWithLastName.append(custEntry)
+        customerTbl.sliceCopy(unit(0), ir"""store.GenericEntry("SteSampleSEntry", 2, 3, 6, $c_d_id, $c_w_id, $c_last_input)""".toRep, __lambda { custEntry => customersWithLastName.append(custEntry)
         })
         val index = __newVar(customersWithLastName.size / unit(2))
         __ifThenElse(customersWithLastName.size % unit(2) __== unit(0), {
