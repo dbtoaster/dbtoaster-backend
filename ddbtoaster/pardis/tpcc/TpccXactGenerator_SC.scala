@@ -28,8 +28,7 @@ object TpccXactGenerator_SC {
 
   class Prog(val Context: StoreDSL, val numWare: Int) extends DBToasterSquidBinding(Context) {
 
-    import Sqd.Predef._
-    import Sqd.PardisIROps
+    import Sqd.Predef.{anyContextIsEmptyContext => _, _}
     import Sqd.Quasicodes._
 
     //    import Context.Predef._
@@ -220,7 +219,7 @@ object TpccXactGenerator_SC {
       districtEntry += (unit(10), h_amount)
       districtTbl.updateCopy(districtEntry)
 
-      val customerEntry = PardisIROps(ir{
+      val customerEntry = ir{
         if ($(c_by_name) > 0) {
           val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
           $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), {
@@ -239,7 +238,7 @@ object TpccXactGenerator_SC {
             customerTbl.get1((1, c_id), (2, c_d_id), (3, c_w_id))
           }
         }
-      }).toRep
+      }.toRep
 
 
       val c_data = customerEntry.get[String](unit(21))
@@ -328,7 +327,7 @@ object TpccXactGenerator_SC {
 
     def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
 
-      val customerEntry = Sqd.PardisIROps(ir{
+      val customerEntry = ir{
               if ($(c_by_name) > 0) {
                 val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
                 $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), {
@@ -345,7 +344,7 @@ object TpccXactGenerator_SC {
                   customerTbl.get1((1, c_id), (2, d_id), (3, w_id))
                 }
               }
-            }).toRep
+            }.toRep
 
       val found_c_id = customerEntry.get[Int](unit(3))
       val agg = Aggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
@@ -495,9 +494,9 @@ object TpccXactGenerator_SC {
       val i = __newVar[Int](o_id - unit(20))
       val unique_ol_i_id = Set[Int]()
       __whileDo(readVar(i) < o_id, {
-        val pKey = PardisIROps(ir{
+        val pKey = ir{
           store.GenericEntry("SteSampleSEntry", 1, 2, 3, $(i).!, $(d_id), $(w_id))
-        }).toRep
+        }.toRep
         orderLineTbl.sliceCopy(unit(0), pKey, __lambda { orderLineEntry =>
           val ol_i_id = orderLineEntry.get[Int](unit(5))
           val stockEntry = stockTbl.get1((1, ol_i_id), (2, w_id))
