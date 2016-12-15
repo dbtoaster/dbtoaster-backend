@@ -29,8 +29,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, ArrayBufferSortWith(self, f)) => doc"sort($self.begin(), $self.end(), $f);"
     case Statement(sym, s@SetApplyObject2()) => doc"unordered_set<${s.typeT}> $sym;"
     case Statement(sym, `Set+=`(self, elem)) => doc"$self.insert($elem);"
-
-    case Statement(sym, StringDiff(str1, str2)) => doc"int $sym = strcmpi($str1, $str2);"
+    case Statement(sym, StringExtraStringCompareObject(str1, str2)) => doc"int $sym = strcmpi($str1, $str2);"
     case _ => super.stmtToDocument(stmt)
   }
 

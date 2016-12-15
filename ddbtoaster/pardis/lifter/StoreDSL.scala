@@ -62,6 +62,7 @@ trait StoreDSL extends
   BooleanComponent with
   DateComponent with
   StringComponent with
+  StringExtraComponent with
   GenericEntryComponent with
   TypeToTypeRep with
   BaseQuasiExp with

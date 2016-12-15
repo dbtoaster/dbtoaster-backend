@@ -34,6 +34,9 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
   
   override def expToDocument(exp: Expression[_]): Document = exp match {
     case Constant(b: Boolean) => s"$b"
+    case Constant(l : List[Any]) =>
+      val tp = exp.tp.typeArguments(0).asInstanceOf[TypeRep[Any]]
+      l.map(x => Constant(x)(tp)).mkDocument(doc"List(", doc", ", doc")")
     case _ => super.expToDocument(exp)
   }
 
@@ -42,7 +45,7 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
       doc"()"
     else {
       if (sym.name != "x") {
-        Document.text(sym.name)
+        Document.text(sym.name.stripSuffix("_$"))
       } else {
         super.symToDocument(sym)
       }
@@ -74,7 +77,6 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
     case Statement(sym, StoreIndex(self, idx, Constant(tp: String), uniq, other)) => doc"val $sym = $self.index($idx, $tp, $uniq, $other)"
     case Statement(sym, node) if sym.tp == UnitType => nodeToDocument(node)
-    case Statement(sym, StringDiff(str1, str2)) => doc"val $sym = $str1.compareToIgnoreCase($str2)"
 //    case Statement(sym, StringFormat(self, _, Def(LiftedSeq(args)))) => doc"val $sym = $self.format(${args.map(expToDocument).mkDocument(",")})"
     case Statement(sym, StringPrintf(size, f, Def(LiftedSeq(args)))) => doc"var $sym = $f.format(${args.mkDocument(",")})" :\\:
       doc"if($sym.size > $size) " :\\: Document.nest(NEST_COUNT, doc"$sym = $sym.substring(0, $size)")

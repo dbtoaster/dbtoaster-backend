@@ -88,7 +88,7 @@ class Optimizer(val IR: StoreDSL) {
       }
     }
   pipeline += TreeDumper(false)
-  //has to be last
+
   def optimize[T: PardisType](transactionProgram: TransactionProgram[T]) = pipeline.foldLeft(transactionProgram)(applyOptimization)
 
   def applyOptimization[T: PardisType](prg: TransactionProgram[T], opt: TransformerHandler) = {

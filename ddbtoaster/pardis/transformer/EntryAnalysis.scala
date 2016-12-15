@@ -389,7 +389,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     case l@PardisLambda(f, i: Sym[GenericEntry], o) if entryTypes.contains(i) && (i.tp == GenericEntryType || i.tp == EntryType) => {
       val sch = schema(i)
       implicit val entTp: TypeRep[SEntry] = SEntry(sch).tp
-      val i_ = Sym[SEntry](i.id)
+      val i_ = Sym[SEntry](i.id, i.name)
 
       val f_ = (e: Rep[SEntry]) => f(e.asInstanceOf[Rep[Nothing]])
       PardisLambda(f_, i_, o)(entTp, l.typeS)
@@ -398,8 +398,9 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     case l@PardisLambda2(f, i1: Sym[GenericEntry], i2: Sym[GenericEntry], o) if entryTypes.contains(i1) && i1.tp == GenericEntryType => {
       val sch = schema(i1)
       implicit val entTp: TypeRep[SEntry] = SEntry(sch).tp
-      val i1_ = Sym[SEntry](i1.id)
-      val i2_ = Sym[SEntry](i2.id)
+      val i1_ = Sym[SEntry](i1.id, i1.name)
+      val i2_ = Sym[SEntry](i2.id, i2.name)
+
       val f_ = (e1: Rep[SEntry], e2: Rep[SEntry]) => f(e1.asInstanceOf[Rep[Nothing]], e2.asInstanceOf[Rep[Nothing]])
       PardisLambda2(f_, i1_, i2_, o)(entTp, entTp, l.typeS)
 

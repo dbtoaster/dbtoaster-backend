@@ -316,6 +316,10 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
 
   def this(n: Int)(implicit cE: ClassTag[E]) = this(new Array[Idx[E]](n), null)(cE)
 
+  def this()(implicit cE: ClassTag[E]) = {
+    this(0)(cE)
+  }
+
   def this(n: Int, ops: Array[EntryIdx[E]])(implicit cE: ClassTag[E]) = this(new Array[Idx[E]](n), ops)(cE)
 
   private val n = idxs.length

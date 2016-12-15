@@ -9,14 +9,21 @@ class DBToasterSquidBinding[SC <: StoreDSL](val SC: SC) {
   object Sqd extends AutoboundPardisIR[SC.type](SC) with PardisBinding.DefaultRedirections[SC.type] {
     
     protected val GEApplySymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.GenericEntry$"), "apply", None)
-    
-    /** Manual deep bindings for when the AutoBinder did not generate one. */
+    protected val WhileSymbol = loadMtdSymbol(loadTypSymbol("squid.lib.package$"), "While", None)
+    protected val StrCmpSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.StringExtra$"), "StringCompare", None)
+    /** Manual deep bindings for when the AutoBinder did not generate one.
+      * */
     override def methodApp(self: Rep, mtd: MtdSymbol, targs: List[TypeRep], argss: List[ArgList], tp: TypeRep): Rep = mtd match {
         
       case GEApplySymbol =>
         val ArgsVarargs(Args(ign),Args(cols @ _*)) :: Nil = argss
         blockWithType(tp)( SC.GenericEntry(ign |> toExpr, cols map toExpr : _*) )
-        
+      case WhileSymbol =>
+        val Args(cond, body: sc.Block[Any @unchecked])::Nil = argss
+        blockWithType(tp)(SC.While(toBlock(cond).asInstanceOf[sc.Block[Boolean]] , toBlock(body).asInstanceOf[sc.Block[Unit]]))
+      case StrCmpSymbol =>
+        val Args(s1, s2)::Nil = argss
+        blockWithType(tp)(SC.StringExtra.StringCompare(toExpr(s1).asInstanceOf[sc.Rep[String]], toExpr(s2).asInstanceOf[sc.Rep[String]]))
       case _ => super.methodApp(self, mtd, targs, argss, tp)
     }
   }
