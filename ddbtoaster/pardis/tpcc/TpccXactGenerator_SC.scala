@@ -112,7 +112,7 @@ object TpccXactGenerator_SC {
     //    import Context.Predef._
     //    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
     //    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{Array => _, ArrayBuffer => _, Boolean => _, Date => _, Double => _, EntryType => _, GenericEntry => _, Int => _, Store => _, String => _, entryRepToGenericEntryOps => _, println => _, typeNull => _, typeStore => _, StringExtra => _,  _}
+    import Context.{Array => _, ArrayBuffer => _, Boolean => _, Date => _, Double => _, EntryType => _, GenericEntry => _, Int => _, Store => _, String => _, entryRepToGenericEntryOps => _, println => _, typeNull => _, typeStore => _, StringExtra => _, Aggregator => _, _}
 
     lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
     lazy val warehouseRange = List((1, 1, numWare + 1))
@@ -200,7 +200,7 @@ object TpccXactGenerator_SC {
         type String = java.lang.String // So it does not resolve to `ch.epfl.data.sc.pardis.deep.scalalib.StringOps.String`
 
 
-        dbg_ir {
+        ir {
           $(ol_number) := 0
           while ($(ol_number).! < $(o_ol_count)) {
             val ol_supply_w_id = $(supware)($(ol_number) !)
@@ -310,7 +310,7 @@ object TpccXactGenerator_SC {
       districtTbl.updateCopy(districtEntry)
       ir {
 
-      val customerEntry =  if ($(c_by_name) > 0) {
+        val customerEntry = if ($(c_by_name) > 0) {
           val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
           $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), {
             custEntry => customersWithLastName.append(custEntry)
@@ -331,30 +331,30 @@ object TpccXactGenerator_SC {
 
 
 
-      val c_data = customerEntry.get[String](21)
+        val c_data = customerEntry.get[String](21)
 
-      if(customerEntry.get[String](14).contains("BC")){
-        //c_credit
-        //TODO this is the correct version but is not implemented in the correctness test
-        //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-        val c_new_data = StringExtra.StringPrintf(500, "%d %d %d %d %d $%f %s | %s", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(h_amount), $(datetime).toString, c_data)
-        customerEntry +=(17 /*c_balance*/ , $(h_amount))
-        //TODO this is the correct version but is not implemented in the correctness test
-        //customerEntry += (18 /*c_ytd_payment*/, h_amount)
-        //customerEntry += (19 /*c_payment_cnt*/, 1)
-        customerEntry.update(21 /*c_data*/ , c_new_data)
+        if (customerEntry.get[String](14).contains("BC")) {
+          //c_credit
+          //TODO this is the correct version but is not implemented in the correctness test
+          //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
+          val c_new_data = StringExtra.StringPrintf(500, "%d %d %d %d %d $%f %s | %s", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(h_amount), $(datetime).toString, c_data)
+          customerEntry +=(17 /*c_balance*/ , $(h_amount))
+          //TODO this is the correct version but is not implemented in the correctness test
+          //customerEntry += (18 /*c_ytd_payment*/, h_amount)
+          //customerEntry += (19 /*c_payment_cnt*/, 1)
+          customerEntry.update(21 /*c_data*/ , c_new_data)
 
-      } else {
-        customerEntry +=(17 /*c_balance*/ , $(h_amount))
+        } else {
+          customerEntry +=(17 /*c_balance*/ , $(h_amount))
+          //TODO this is the correct version but is not implemented in the correctness test
+          //customerEntry += (18 /*c_ytd_payment*/, h_amount)
+          //customerEntry += (19 /*c_payment_cnt*/, 1)
+        }
+        $(customerTbl).updateCopy(customerEntry)
+        val w_name = $(warehouseEntry).get[String](2)
+        val d_name = $(districtEntry).get[String](3)
         //TODO this is the correct version but is not implemented in the correctness test
-        //customerEntry += (18 /*c_ytd_payment*/, h_amount)
-        //customerEntry += (19 /*c_payment_cnt*/, 1)
-      }
-      $(customerTbl).updateCopy(customerEntry)
-      val w_name = $(warehouseEntry).get[String](2)
-      val d_name = $(districtEntry).get[String](3)
-      //TODO this is the correct version but is not implemented in the correctness test
-      val h_data = StringExtra.StringPrintf(24, "%.10s    %.10s", w_name, d_name)
+        val h_data = StringExtra.StringPrintf(24, "%.10s    %.10s", w_name, d_name)
 
 
         $(historyTbl).insert(GenericEntry("SteNewSEntry", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(datetime), $(h_amount), h_data))
@@ -416,9 +416,9 @@ object TpccXactGenerator_SC {
     }
 
     def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
-
-      val customerEntry = ir {
-        if ($(c_by_name) > 0) {
+      val agg = Context.Aggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
+      ir {
+        val customerEntry = if ($(c_by_name) > 0) {
           val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
           $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), {
             custEntry => customersWithLastName.append(custEntry)
@@ -434,14 +434,14 @@ object TpccXactGenerator_SC {
             customerTbl.get1((1, c_id), (2, d_id), (3, w_id))
           }
         }
-      }.toRep
 
-      val found_c_id = customerEntry.get[Int](unit(3))
-      val agg = Aggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
-      ir"""$orderTbl.sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 4, $d_id, $w_id, $found_c_id), $agg)"""
-      val newestOrderEntry = agg.result
-      val dceBlocker = __newVar(unit(0))
-      __assign(dceBlocker, newestOrderEntry.get[Int](unit(1))) //SBJ : TO avoid removal by DCE
+        val found_c_id = customerEntry.get[Int](3)
+
+        $(orderTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 4, $(d_id), $(w_id), found_c_id), $(agg))
+        val newestOrderEntry = $(agg).result
+        var dceBlocker = 0
+        dceBlocker = newestOrderEntry.get[Int](1) //SBJ : TO avoid removal by DCE
+      }.toRep
       /*
   dsl"""
       if (!$showOutput) {
@@ -499,61 +499,60 @@ object TpccXactGenerator_SC {
 
     def deliveryTx(showOutput: Rep[Boolean], datetime: Rep[Date], w_id: Rep[Int], o_carrier_id: Rep[Int]): Rep[Int] = {
       //        def deliveryTx(showOutput: Boolean, datetime: Date, w_id: Int, o_carrier_id: Int): Int = {
+      val agg  = Context.Aggregator.min[GenericEntry, Int](__lambda({ e => e.get[Int](unit(1))}))
+      ir {
+        val DIST_PER_WAREHOUSE = 10
+        val orderIDs = new Array[Int](123)
+        var d_id = 1
+        while (d_id <= DIST_PER_WAREHOUSE) {
 
-      val DIST_PER_WAREHOUSE = unit(10)
-      val orderIDs = __newArray[Int](unit(10))
-      val d_id = __newVar(unit(1))
-      __whileDo(readVar(d_id) <= DIST_PER_WAREHOUSE, {
-        val agg = Aggregator.min[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
-        ir"""$newOrderTbl.sliceCopy(0 /*no_o_id*/ , GenericEntry("SteSampleSEntry", 2, 3, $d_id!, $w_id), $agg)"""
-        val firstOrderEntry = agg.result
-        __ifThenElse(firstOrderEntry __!= unit[GenericEntry](null), {
-          // found
-          val no_o_id = firstOrderEntry.get[Int](unit(1))
-          orderIDs.update(readVar(d_id) - unit(1), no_o_id)
-          newOrderTbl.deleteCopy(firstOrderEntry)
-          val orderEntry = orderTbl.get1((1, no_o_id), (2, readVar(d_id)), (3, w_id))
-          val c_id = orderEntry.get[Int](unit(4))
-          orderEntry.update(unit(6) /*o_carrier_id*/ , o_carrier_id)
-          orderTbl.updateCopy(orderEntry)
+          $(newOrderTbl).sliceCopy(0 /*no_o_id*/ , GenericEntry("SteSampleSEntry", 2, 3, d_id, $(w_id)), $(agg))
+          val firstOrderEntry = $(agg).result
+          if (firstOrderEntry != null) {
+            // found
+            val no_o_id = firstOrderEntry.get[Int](1)
+            orderIDs.update(d_id - 1, no_o_id)
+            $(newOrderTbl).deleteCopy(firstOrderEntry)
+            val orderEntry = $(orderTbl).get(0, GenericEntry("SteSampleSEntry", 1, 2, 3, no_o_id, d_id, $(w_id)))
+            val c_id = orderEntry.get[Int](4)
+            orderEntry.update(6 /*o_carrier_id*/ , $(o_carrier_id))
+            $(orderTbl).updateCopy(orderEntry)
 
-          val ol_total = __newVar(unit(0.0))
-          ir"""
-            $orderLineTbl.sliceCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $no_o_id, $d_id!, $w_id), { orderLineEntry =>
-            orderLineEntry.update(7, $datetime) //ol_delivery_d
-            $ol_total := $ol_total.! + orderLineEntry.get[Double](9) //ol_amount
-            $orderLineTbl.updateCopy(orderLineEntry)
-          })
-            """
-          val customerEntry = customerTbl.get1((1, c_id), (2, readVar(d_id)), (3, w_id))
-          customerEntry.+=(unit(17) /*c_balance*/ , readVar(ol_total))
-          customerEntry.+=(unit(20) /*c_delivery_cnt*/ , unit(1))
-          customerTbl.updateCopy(customerEntry)
+            var ol_total = 0.0
 
-        }, {
-          // not found
-          orderIDs.update(readVar(d_id) - unit(1), unit(0))
-        })
-        __assign(d_id, readVar(d_id) + unit(1))
-      })
-      if (codeForOutput) {
-        ir"""
-      if ($showOutput) {
+            $(orderLineTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, no_o_id, d_id, $(w_id)), { orderLineEntry =>
+              orderLineEntry.update(7, $(datetime)) //ol_delivery_d
+              ol_total = ol_total + orderLineEntry.get[Double](9) //ol_amount
+              $(orderLineTbl).updateCopy(orderLineEntry) //UPDATE Inside Slice
+            })
+
+            val customerEntry = $(customerTbl).get(0, GenericEntry("SteSampleSEntry", 1, 2, 3, c_id, d_id, $(w_id)))
+            customerEntry.+=(17 /*c_balance*/ , ol_total)
+            customerEntry.+=(20 /*c_delivery_cnt*/ , 1)
+            $(customerTbl).updateCopy(customerEntry)
+
+          } else {
+            // not found
+            orderIDs.update(d_id - 1, 0)
+          }
+          d_id = d_id + 1
+        }
+      if ($(showOutput)) {
         var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
-          " Date: " + $datetime +
-          "\n\n Warehouse: " + $w_id +
-          "\n Carrier:   " + $o_carrier_id +
+          " Date: " + $(datetime) +
+          "\n\n Warehouse: " + $(w_id) +
+          "\n Carrier:   " + $(o_carrier_id) +
           "\n\n Delivered Orders\n"
         var skippedDeliveries = 0
         var i:Int = 1
 
         while (i <= 10) {
-          if ($orderIDs(i -1) >= 0) {
+          if (orderIDs(i -1) >= 0) {
             output = output + ("  District ") +
               (if (i < 10) " " else "") +
               (i) +
               (": Order number ") +
-              ($orderIDs(i - 1)) +
+              (orderIDs(i - 1)) +
               (" was delivered.\n")
           }
           else {
@@ -569,7 +568,7 @@ object TpccXactGenerator_SC {
         println(output)
         ()
       }
-      """
+
       }
       unit(1)
 
