@@ -37,6 +37,7 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
     case Constant(l : List[Any]) =>
       val tp = exp.tp.typeArguments(0).asInstanceOf[TypeRep[Any]]
       l.map(x => Constant(x)(tp)).mkDocument(doc"List(", doc", ", doc")")
+    case Constant(t@(a,b,c)) => t.toString
     case _ => super.expToDocument(exp)
   }
 

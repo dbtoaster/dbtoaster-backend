@@ -1,30 +1,120 @@
 package sc.tpcc
 
 
-import ddbt.lib.store.{GenericEntry}
+import ddbt.lib.store.{GenericEntry, Store}
 import ddbt.lib.store
 import java.io.{FileWriter, PrintStream, PrintWriter}
 import java.util.concurrent.Executor
 
 import ddbt.newqq.DBToasterSquidBinding
 import ch.epfl.data.sc.pardis
-import ch.epfl.data.sc.pardis.ir.{Statement, StructElemInformation, PardisStructDef, StructTags}
-import ch.epfl.data.sc.pardis.types.{RecordType, AnyType}
+import ch.epfl.data.sc.pardis.ir._
+import ch.epfl.data.sc.pardis.types.{AnyType, RecordType}
 import ch.epfl.data.sc.pardis.utils.document.Document
 import ddbt.codegen.{Optimizer, TransactionProgram}
 import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
 import sc.tpcc.compiler.TpccCompiler
-
 import ddbt.lib.store.deep._
+
 import collection.mutable.ArrayBuffer
-import ch.epfl.data.sc.pardis.prettyprinter.{ASTCodeGenerator, ScalaCodeGenerator, CodeGenerator}
+import ch.epfl.data.sc.pardis.prettyprinter.{ASTCodeGenerator, CodeGenerator, ScalaCodeGenerator}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeUnit
 import pardis.optimization._
 import pardis.compiler._
 import ddbt.transformer._
+
 import scala.language.implicitConversions
 import java.util.Date
+
 object TpccXactGenerator_SC {
+
+  def main(args: Array[String]): Unit = {
+    var numWare = 1
+
+    def opts(o: String) = o match {
+      case "entry" => Optimizer.analyzeEntry = true
+      case "index" => Optimizer.analyzeIndex = true
+      case "online" => Optimizer.onlineOpts = true
+      case "m3cmpmult" => Optimizer.m3CompareMultiply = true
+      case "tmpvar" => Optimizer.tmpVarHoist = true
+      case "idxinline" => Optimizer.indexInline = true
+      case "lookupfusion" => Optimizer.indexLookupFusion = true
+      case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true
+      case "deadidx" => Optimizer.deadIndexUpdate = true
+      case "codemotion" => Optimizer.codeMotion = true
+      case "refcounter" => Optimizer.refCounter = true
+      case "fixedrange" => Optimizer.fixedRange = true
+      case _ => throw new IllegalArgumentException(s"Unknown option $o")
+
+    }
+
+    def parseArgs(args: Array[String]) {
+      val l = args.length
+      var i = 0
+
+      def eat(f: String => Unit, s: Boolean = false) {
+        i += 1;
+        if (i < l) f(if (s) args(i).toLowerCase else args(i))
+      }
+
+      while (i < l) {
+        args(i) match {
+          case "-opt" => eat(s => opts(s), true)
+          case "-ware" => eat(s => numWare = s.toInt)
+          case _ =>
+        }
+        i += 1
+      }
+    }
+
+    parseArgs(args)
+
+    import Optimizer._
+
+    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
+    java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
+
+
+    var prog: Prog = null
+    val Context = if (Optimizer.onlineOpts) new StoreDSLOptimized {
+    } else new StoreDSL {
+    }
+
+    import Context._
+
+    val initB = reifyBlock {
+      prog = new Prog(Context, numWare)
+      unit((1))
+    }
+    //var lang = "cpp"
+    var lang = "scala"
+    val codeGen = lang match {
+      case "scala" => new TpccPardisScalaGen(Context)
+      case "cpp" => Optimizer.cTransformer = true;
+        new TpccPardisCppGen(Context)
+    }
+    val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
+    prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
+    prog.allKeys.foreach {
+      case (tbl, key) => {
+        val i = new IndexedCols
+        i.primary = key
+        i.fixedrange = prog.allRanges getOrElse(tbl, Nil)
+        tbl.asInstanceOf[Sym[_]].attributes += i
+      }
+    }
+
+    codeBlocks += codeGen.codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
+    codeBlocks += codeGen.codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")
+    codeBlocks += codeGen.codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, "OrderStatusTx")
+    codeBlocks += codeGen.codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
+    codeBlocks += codeGen.codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
+
+
+    val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]), codeBlocks, Nil, Nil)
+    val optTP = new Optimizer(Context).optimize(initialTP)
+    codeGen.generate(optTP)
+  }
 
   class Prog(val Context: StoreDSL, val numWare: Int) extends DBToasterSquidBinding(Context) {
 
@@ -34,10 +124,15 @@ object TpccXactGenerator_SC {
     //    import Context.Predef._
     //    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
     //    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{EntryType => _, entryRepToGenericEntryOps => _, typeStore => _, typeNull => _, println => _, GenericEntry => _, ArrayBuffer => _, String =>_, Boolean => _, Date => _, Int => _, Double => _,  _}
+    import Context.{EntryType => _, entryRepToGenericEntryOps => _, typeStore => _, typeNull => _, println => _, GenericEntry => _, ArrayBuffer => _, Array => _, String => _, Boolean => _, Date => _, Int => _, Double => _, Store => _, _}
 
+    lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
+    lazy val warehouseRange = List((1, 1, numWare + 1))
+    lazy val customerRange = List((1, 1, 3001), (2, 1, 11), (3, 1, numWare + 1))
+    lazy val itemRange = List((1, 1, 100001))
+    lazy val stockRange = List((1, 1, 100001), (2, 1, numWare + 1))
+    lazy val allRanges = List(warehouseTbl -> warehouseRange, districtTbl -> districtRange, customerTbl -> customerRange, itemTbl -> itemRange, stockTbl -> stockRange).toMap
     implicit val DSL = Context
-
     val NewOrderEntry = List(IntType, IntType, IntType)
     val HistoryEntry = List(IntType, IntType, IntType, IntType, IntType, DateType, DoubleType, StringType)
     val WarehouseEntry = List(IntType, StringType, StringType, StringType, StringType, StringType, StringType, DoubleType, DoubleType)
@@ -47,7 +142,6 @@ object TpccXactGenerator_SC {
     val OrderLineEntry = List(IntType, IntType, IntType, IntType, IntType, IntType, /*Option[Date]*/ DateType, IntType, DoubleType, StringType)
     val CustomerEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, DateType, StringType, DoubleType, DoubleType, DoubleType, DoubleType, IntType, IntType, StringType)
     val StockEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, IntType, IntType, IntType, StringType)
-
     val newOrderKey = List(1, 2, 3)
     val wareHouseKey = List(1)
     val itemKey = List(1)
@@ -56,13 +150,6 @@ object TpccXactGenerator_SC {
     val orderLineKey = List(1, 2, 3, 4)
     val customerKey = List(1, 2, 3)
     val stockKey = List(1, 2)
-
-    lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
-    lazy val warehouseRange = List((1, 1, numWare + 1))
-    lazy val customerRange = List((1, 1, 3001), (2, 1, 11), (3, 1, numWare + 1))
-    lazy val itemRange = List((1, 1, 100001))
-    lazy val stockRange = List((1, 1, 100001), (2, 1, numWare + 1))
-
     val newOrderTbl = __newStore[GenericEntry]
     val historyTbl = __newStore[GenericEntry]
     val warehouseTbl = __newStore[GenericEntry]
@@ -71,16 +158,15 @@ object TpccXactGenerator_SC {
     val districtTbl = __newStore[GenericEntry]
     val orderLineTbl = __newStore[GenericEntry]
     val customerTbl = __newStore[GenericEntry]
-    val stockTbl = __newStore[GenericEntry]
+    val stockTbl = __newStore[GenericEntry].asInstanceOf[Rep[Store[GenericEntry]]] //to change from StoreOps.Store to store.Store
 
     val codeForOutput = false
     val allKeys = List(newOrderTbl -> newOrderKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
-    lazy val allRanges = List(warehouseTbl -> warehouseRange, districtTbl -> districtRange, customerTbl -> customerRange, itemTbl -> itemRange, stockTbl -> stockRange).toMap
     val schema = List[(Rep[_], List[TypeRep[_]])](newOrderTbl -> NewOrderEntry, historyTbl -> HistoryEntry, warehouseTbl -> WarehouseEntry, itemTbl -> ItemEntry, orderTbl -> OrderEntry, districtTbl -> DistrictEntry, orderLineTbl -> OrderLineEntry, customerTbl -> CustomerEntry, stockTbl -> StockEntry)
 
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
       if (codeForOutput) {
-                ir"""
+        ir"""
                     if($showOutput) println("Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format($w_id, $d_id, $c_id))
                   """
       }
@@ -94,132 +180,148 @@ object TpccXactGenerator_SC {
         while (($(ol_number).! < $(o_ol_count)) && $(all_items_exist).!) {
 
           val itemEntry /*(i_id, _, i_name, i_price, i_data)*/ = $(itemTbl.get1((1, itemid(readVar(ol_number)))))
-          if(itemEntry == null){
+          if (itemEntry == null) {
             $(all_items_exist) := false
             ()
-          }else {
+          } else {
             $(iname).update($(ol_number).!, itemEntry.get[String](3)) //i_name
             $(price).update($(ol_number).!, itemEntry.get[Double](4)) //i_price
-            $(idata).update($(ol_number).!, itemEntry.get[String](5) )//i_data
+            $(idata).update($(ol_number).!, itemEntry.get[String](5)) //i_data
           }
-          $(ol_number) :=  $(ol_number).! + 1
+          $(ol_number) := $(ol_number).! + 1
         }
       }
       __ifThenElse(readVar(all_items_exist), {
-
         /*(c_id,d_id,w_id, c_discount, c_last, c_credit, w_tax)*/
         val customerEntry = customerTbl.get1((1, c_id), (2, d_id), (3, w_id))
         val warehouseEntry = warehouseTbl.get1((1, w_id))
         val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
         val o_id = districtEntry.get[Int](unit(11))
-        districtEntry += (unit(11), unit(1)) //d_next_o_id+1
+        districtEntry +=(unit(11), unit(1)) //d_next_o_id+1
         districtTbl.updateCopy(districtEntry)
 
-        ir{
+        ir {
           $(orderTbl).insert(GenericEntry("SteNewSEntry", $(o_id), $(d_id), $(w_id), $(c_id), $(datetime), -1, $(o_ol_count), $(o_all_local) > 0))
           $(newOrderTbl).insert(GenericEntry("SteNewSEntry", $(o_id), $(d_id), $(w_id)))
         }
 
 
         val total = __newVar(unit(0.0))
+        ////        def storeget2[E <: ddbt.lib.store.Entry, C](implicit typeE : TypeRep[E]) = ir"$$s: Store[E]".get2((1, ir"$$x:Int"), (2, ir"$$y : Int"))
+        //        def storeget2[E <: ddbt.lib.store.Entry : IRType, C] =
+        type String = java.lang.String // So it does not resolve to `ch.epfl.data.sc.pardis.deep.scalalib.StringOps.String`
 
-        __assign(ol_number, unit(0))
-        __whileDo(readVar(ol_number) < o_ol_count, {
-          val ol_supply_w_id = supware(readVar(ol_number))
-          val ol_i_id = itemid(readVar(ol_number))
-          val ol_quantity = quantity(readVar(ol_number))
 
-          val stockEntry = stockTbl.get1((1, ol_i_id), (2, ol_supply_w_id))
-          val ol_dist_info =
-            ir""" if ($d_id == 1) {
-                 ${stockEntry.get[String](unit(4))} //s_dist_01
-               } else if ($d_id == 2) {
-                 ${stockEntry.get[String](unit(5))} //s_dist_02
-               } else if ($d_id == 3) {
-                 ${stockEntry.get[String](unit(6))} //s_dist_03
-               } else if ($d_id == 4) {
-                 ${stockEntry.get[String](unit(7))} //s_dist_04
-               } else if ($d_id == 5) {
-                 ${stockEntry.get[String](unit(8))} //s_dist_05
-               } else if ($d_id == 6) {
-                 ${stockEntry.get[String](unit(9))} //s_dist_06
-               } else if ($d_id == 7) {
-                ${stockEntry.get[String](unit(10))} //s_dist_07
-               } else if ($d_id == 8) {
-                 ${stockEntry.get[String](unit(11))} //s_dist_08
-               } else if ($d_id == 9) {
-                 ${stockEntry.get[String](unit(12))} //s_dist_09
-               } else /*if(d_id == 10)*/ {
-                 ${stockEntry.get[String](unit(13))} //s_dist_10
-               }"""
+        dbg_ir {
+          $(ol_number) := 0
+          while ($(ol_number).! < $(o_ol_count)) {
+            val ol_supply_w_id = $(supware)($(ol_number) !)
+            val ol_i_id = $(itemid)($(ol_number) !)
+            val ol_quantity = $(quantity)($(ol_number) !)
 
-          val s_quantity = stockEntry.get[Int](unit(3)) //s_quantity
-          stock.update(readVar(ol_number), s_quantity)
+            //            val stockEntry = null.asInstanceOf[GenericEntry]
+            //            val x = ol_i_id
+            //            val y = ol_supply_w_id
+            //            val stockEntry = $(ir"$stockTbl".get2[Any {val x: Int; val y: Int}]((1, ir"$$x:Int"), (2, ir"$$y : Int")))
+            val stockEntry = $(stockTbl).get(0, GenericEntry("SteSampleSEntry", 1, 2, ol_i_id, ol_supply_w_id))
+            //            println("""SBJ: FIXME""", ol_i_id, ol_supply_w_id)
 
-          type String = java.lang.String // So it does not resolve to `ch.epfl.data.sc.pardis.deep.scalalib.StringOps.String`
-          ir"""
-            if ($customerEntry.get[String](14).contains("original") && /*s_data*/ $stockEntry.get[String](17).contains("original"))
-              $bg($ol_number!) = "B"
+            //            val t2 = t1.subs('x -> ol_i_id)
+            //            val stockEntry = t2.subs('y -> ol_supply_w_id)
+            //              $ {
+            //              stockTbl.get1((1, ol_i_id), (2, ol_supply_w_id))
+            //            }
+            val ol_dist_info = if ($(d_id) == 1) {
+              stockEntry.get[String](4) //s_dist_01
+            } else if ($(d_id) == 2) {
+              stockEntry.get[String](5) //s_dist_02
+            } else if ($(d_id) == 3) {
+              stockEntry.get[String](6) //s_dist_03
+            } else if ($(d_id) == 4) {
+              stockEntry.get[String](7) //s_dist_04
+            } else if ($(d_id) == 5) {
+              stockEntry.get[String](8) //s_dist_05
+            } else if ($(d_id) == 6) {
+              stockEntry.get[String](9) //s_dist_06
+            } else if ($(d_id) == 7) {
+              stockEntry.get[String](10) //s_dist_07
+            } else if ($(d_id) == 8) {
+              stockEntry.get[String](11) //s_dist_08
+            } else if ($(d_id) == 9) {
+              stockEntry.get[String](12) //s_dist_09
+            } else /*if(d_id == 10)*/ {
+              stockEntry.get[String](13) //s_dist_10
+            }
+            val s_quantity = stockEntry.get[Int](3) //s_quantity
+            $(stock).update($(ol_number) !, s_quantity)
+
+            if ($(customerEntry).get[String](14).contains("original") && /*s_data*/ stockEntry.get[String](17).contains("original"))
+              $(bg)($(ol_number) !) = "B"
             else
-              $bg($ol_number!) = "G"
-          """
+              $(bg)($(ol_number) !) = "G"
 
-          // Either use the QuasiCode syntax:
-          /*
-          ir{
-            $(stockEntry)(3) = $(s_quantity) - $(ol_quantity)
-            if ($(s_quantity) <= $(ol_quantity)) $(stockEntry) += (3, 91)
+
+            stockEntry(3) = s_quantity - ol_quantity
+            if (s_quantity <= ol_quantity) stockEntry +=(3, 91)
+
+            var s_remote_cnt_increment = 0
+
+            if (ol_supply_w_id != $(w_id)) s_remote_cnt_increment = 1
+
+
+            //TODO this is the correct version but is not implemented in the correctness test
+            //stockEntry._14 += ol_quantity //s_ytd
+            //stockEntry._15 += 1 //s_order_cnt
+            //stockEntry._16 += s_remote_cnt_increment //s_remote_cnt
+            $(stockTbl).updateCopy(stockEntry)
+
+            val c_discount = $(customerEntry).get[Double](16)
+            val w_tax = $(warehouseEntry).get[Double](8)
+            val d_tax = $(districtEntry).get[Double](9)
+            val ol_amount = (ol_quantity * $(price)($(ol_number) !) * (1.0 + w_tax + d_tax) * (1.0 - c_discount)) /*.asInstanceOf[Double]*/
+            $(amt).update($(ol_number) !, ol_amount)
+            $(total) := $(total).! + ol_amount
+
+            $(orderLineTbl).insert(GenericEntry("SteNewSEntry", $(o_id), $(d_id), $(w_id), $(ol_number).! + 1 /*to start from 1*/ , ol_i_id, ol_supply_w_id, null, ol_quantity, ol_amount, ol_dist_info))
+
+            $(ol_number) := $(ol_number).! + 1
+
+            //             if (showOutput) println("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id, d_id, c_id))
+
+
           }
-          */
-
-          // Or use the QuasiQuote syntax:
-          ir"""
-            $stockEntry(3) = $s_quantity - $ol_quantity
-            if ($s_quantity <= $ol_quantity) $stockEntry += (3, 91)
-          """
-
-          val s_remote_cnt_increment = __newVar(unit(0))
-          ir {
-            if ($(ol_supply_w_id) != $(w_id)) $(s_remote_cnt_increment) := 1
-          }
-
-          //TODO this is the correct version but is not implemented in the correctness test
-          //stockEntry._14 += ol_quantity //s_ytd
-          //stockEntry._15 += 1 //s_order_cnt
-          //stockEntry._16 += s_remote_cnt_increment //s_remote_cnt
-          stockTbl.updateCopy(stockEntry)
-
-          val c_discount = customerEntry.get[Double](unit(16))
-          val w_tax = warehouseEntry.get[Double](unit(8))
-          val d_tax = districtEntry.get[Double](unit(9))
-          val ol_amount = (ol_quantity * price(readVar(ol_number)) * (unit(1.0) + w_tax + d_tax) * (unit(1.0) - c_discount)) /*.asInstanceOf[Double]*/
-          amt.update(readVar(ol_number), ol_amount)
-          __assign(total, readVar(total) + ol_amount)
-
-          ir{
-            $(orderLineTbl).insert(GenericEntry("SteNewSEntry", $(o_id), $(d_id), $(w_id), $(ol_number).! + 1 /*to start from 1*/ , $(ol_i_id), $(ol_supply_w_id), null, $(ol_quantity), $(ol_amount), $(ol_dist_info)))
-          }
-
-          __assign(ol_number, readVar(ol_number) + unit(1))
-          unit()
-        })
-        //             if (showOutput) println("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id, d_id, c_id))
-        unit()
-      }, unit())
+        }.toRep
+        //        dbg_ir"""
+        //          $ol_number := 0
+        //            val ol_supply_w_id = $supware($ol_number!)
+        //            val ol_i_id = $itemid($ol_number!)
+        //
+        //            val x = ol_i_id
+        //            val y = ol_supply_w_id
+        //            val stockEntry = ${
+        //          val stbl: IR[Store[GenericEntry], {}] = stockTbl
+        ////          val ir1 : IR[Int, Any{val x: Int}] =
+        //          stbl.get2[Any{val x: Int}]((1, ir"$$x:Int"))
+        //        }
+        //        ()
+        //        """.toRep
+      }
+        , unit()
+      )
 
       unit(1)
     }
 
     def paymentTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_w_id: Rep[Int], c_d_id: Rep[Int], c_id: Rep[Int], c_last_input: Rep[String], h_amount: Rep[Double]): Rep[Int] = {
       val warehouseEntry = warehouseTbl.get1((1, w_id))
-      warehouseEntry += (unit(9), h_amount) //w_ytd
+      warehouseEntry +=(unit(9), h_amount) //w_ytd
       warehouseTbl.updateCopy(warehouseEntry)
 
       val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
-      districtEntry += (unit(10), h_amount)
+      districtEntry +=(unit(10), h_amount)
       districtTbl.updateCopy(districtEntry)
 
-      val customerEntry = ir{
+      val customerEntry = ir {
         if ($(c_by_name) > 0) {
           val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
           $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), {
@@ -233,7 +335,7 @@ object TpccXactGenerator_SC {
           customersWithLastName.sortWith({ (c1, c2) => store.StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
 
         }
-        else  {
+        else {
           $ {
             customerTbl.get1((1, c_id), (2, c_d_id), (3, c_w_id))
           }
@@ -248,14 +350,14 @@ object TpccXactGenerator_SC {
         //TODO this is the correct version but is not implemented in the correctness test
         //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
         val c_new_data = stringPrintf(unit(500), unit("%d %d %d %d %d $%f %s | %s"), customerEntry.get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, infix_toString(datetime), c_data)
-        customerEntry += (unit(17) /*c_balance*/ , h_amount)
+        customerEntry +=(unit(17) /*c_balance*/ , h_amount)
         //TODO this is the correct version but is not implemented in the correctness test
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
         //customerEntry += (19 /*c_payment_cnt*/, 1)
         customerEntry.update(unit(21) /*c_data*/ , c_new_data)
         unit()
       }, {
-        customerEntry += (unit(17) /*c_balance*/ , h_amount)
+        customerEntry +=(unit(17) /*c_balance*/ , h_amount)
         //TODO this is the correct version but is not implemented in the correctness test
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
         //customerEntry += (19 /*c_payment_cnt*/, 1)
@@ -266,7 +368,7 @@ object TpccXactGenerator_SC {
       //TODO this is the correct version but is not implemented in the correctness test
       val h_data = stringPrintf(unit(24), unit("%.10s    %.10s"), w_name, d_name)
 
-      ir{
+      ir {
         $(historyTbl).insert(GenericEntry("SteNewSEntry", $(customerEntry).get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(datetime), $(h_amount), $(h_data)))
       }
       //      if ($showOutput) {
@@ -327,24 +429,24 @@ object TpccXactGenerator_SC {
 
     def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
 
-      val customerEntry = ir{
-              if ($(c_by_name) > 0) {
-                val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
-                $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), {
-                  custEntry => customersWithLastName.append(custEntry)
-                })
-                var index = (customersWithLastName.size / 2)
-                if (customersWithLastName.size % 2 == 0) {
-                  index = index - 1
-                }
-                customersWithLastName.sortWith({ (c1, c2) => store.StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0})(index)
-              }
-              else  {
-                $ {
-                  customerTbl.get1((1, c_id), (2, d_id), (3, w_id))
-                }
-              }
-            }.toRep
+      val customerEntry = ir {
+        if ($(c_by_name) > 0) {
+          val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
+          $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), {
+            custEntry => customersWithLastName.append(custEntry)
+          })
+          var index = (customersWithLastName.size / 2)
+          if (customersWithLastName.size % 2 == 0) {
+            index = index - 1
+          }
+          customersWithLastName.sortWith({ (c1, c2) => store.StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
+        }
+        else {
+          $ {
+            customerTbl.get1((1, c_id), (2, d_id), (3, w_id))
+          }
+        }
+      }.toRep
 
       val found_c_id = customerEntry.get[Int](unit(3))
       val agg = Aggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
@@ -485,7 +587,6 @@ object TpccXactGenerator_SC {
 
     }
 
-
     def stockLevelTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], threshold: Rep[Int]): Rep[Int] = {
       //          def stockLevelTx(showOutput: Boolean, datetime: Date, t_num: Int, w_id: Int, d_id: Int, threshold: Int): Int = {
 
@@ -494,7 +595,7 @@ object TpccXactGenerator_SC {
       val i = __newVar[Int](o_id - unit(20))
       val unique_ol_i_id = Set[Int]()
       __whileDo(readVar(i) < o_id, {
-        val pKey = ir{
+        val pKey = ir {
           store.GenericEntry("SteSampleSEntry", 1, 2, 3, $(i).!, $(d_id), $(w_id))
         }.toRep
         orderLineTbl.sliceCopy(unit(0), pKey, __lambda { orderLineEntry =>
@@ -527,91 +628,17 @@ object TpccXactGenerator_SC {
             """
       }
       unit(1)
-    }
-  }
-
-
-  def main(args: Array[String]): Unit = {
-    var numWare = 1
-    def opts(o: String) = o match {
-      case "entry" => Optimizer.analyzeEntry = true
-      case "index" => Optimizer.analyzeIndex = true
-      case "online" => Optimizer.onlineOpts = true
-      case "m3cmpmult" => Optimizer.m3CompareMultiply = true
-      case "tmpvar" => Optimizer.tmpVarHoist = true
-      case "idxinline" => Optimizer.indexInline = true
-      case "lookupfusion" => Optimizer.indexLookupFusion = true
-      case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true
-      case "deadidx" => Optimizer.deadIndexUpdate = true
-      case "codemotion" => Optimizer.codeMotion = true
-      case "refcounter" => Optimizer.refCounter = true
-      case "fixedrange" => Optimizer.fixedRange = true
-      case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }
-    def parseArgs(args: Array[String]) {
-      val l = args.length
-      var i = 0
-      def eat(f: String => Unit, s: Boolean = false) {
-        i += 1;
-        if (i < l) f(if (s) args(i).toLowerCase else args(i))
-      }
-      while (i < l) {
-        args(i) match {
-          case "-opt" => eat(s => opts(s), true)
-          case "-ware" => eat(s => numWare = s.toInt)
-          case _ =>
-        }
-        i += 1
-      }
-    }
-    parseArgs(args)
 
-    import Optimizer._
-
-    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
-    java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
-
-
-    var prog: Prog = null
-    val Context = if (Optimizer.onlineOpts) new StoreDSLOptimized {
-    } else new StoreDSL {
-    }
-
-    import Context._
-
-    val initB = reifyBlock {
-      prog = new Prog(Context, numWare)
-      unit((1))
-    }
-    //var lang = "cpp"
-    var lang = "scala"
-    val codeGen = lang match {
-      case "scala" => new TpccPardisScalaGen(Context)
-      case "cpp" => Optimizer.cTransformer = true; new TpccPardisCppGen(Context)
-    }
-    val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
-    prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
-    prog.allKeys.foreach {
-      case (tbl, key) => {
-        val i = new IndexedCols
-        i.primary = key
-        i.fixedrange = prog.allRanges getOrElse(tbl, Nil)
-        tbl.asInstanceOf[Sym[_]].attributes += i
+    implicit class StoreRep2[E <: ddbt.lib.store.Entry, C](self: IR[Store[E], C])(implicit typeE: IRType[E]) {
+      def get2[D](args: (Int, IR[Int, D])*): IR[E, D] = {
+        val arg2 = args.map(x => (x._1, x._2.toRep))
+        implicit val typerep = typeE.rep.asInstanceOf[TypeRep[E]]
+        Sqd.`internal IR`[E, D](stGet(self.toRep, args.map(_._1), stSampleEntry(self.toRep, arg2)))
       }
     }
 
-    codeBlocks += codeGen.codeGen.emitSource4[Boolean, Date, Int, Int, Int](prog.deliveryTx, "DeliveryTx")
-    codeBlocks += codeGen.codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")
-    codeBlocks += codeGen.codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, "OrderStatusTx")
-    codeBlocks += codeGen.codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
-    codeBlocks += codeGen.codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
-
-
-    val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]), codeBlocks, Nil, Nil)
-    val optTP = new Optimizer(Context).optimize(initialTP)
-    codeGen.generate(optTP)
   }
 
 }
-

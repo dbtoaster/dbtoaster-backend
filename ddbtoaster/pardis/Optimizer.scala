@@ -17,11 +17,11 @@ case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: 
 }
 
 object Optimizer {
-  var analyzeEntry: Boolean = true
+  var analyzeEntry: Boolean = false
   var analyzeIndex: Boolean = true
   var fixedRange: Boolean = true
   var onlineOpts = true
-  var tmpVarHoist = true
+  var tmpVarHoist = false
   var indexInline = true
   var indexLookupFusion = true
   var indexLookupPartialFusion = false
@@ -34,6 +34,7 @@ object Optimizer {
 
 class Optimizer(val IR: StoreDSL) {
   val pipeline = scala.collection.mutable.ArrayBuffer[TransformerHandler]()
+    pipeline += TreeDumper(false)
   if (Optimizer.analyzeIndex) {
     pipeline += new IndexAnalysis(IR)
     pipeline += new IndexDecider(IR)
@@ -87,7 +88,7 @@ class Optimizer(val IR: StoreDSL) {
         block
       }
     }
-  pipeline += TreeDumper(false)
+
 
   def optimize[T: PardisType](transactionProgram: TransactionProgram[T]) = pipeline.foldLeft(transactionProgram)(applyOptimization)
 
