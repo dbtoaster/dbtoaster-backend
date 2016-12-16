@@ -7,7 +7,7 @@ import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeUnit
 import ddbt.codegen.{Optimizer, TransactionProgram}
 import ddbt.lib.store
 import ddbt.lib.store.deep._
-import ddbt.lib.store.{GenericEntry, Store}
+import ddbt.lib.store.{GenericEntry, Store, StringExtra}
 import ddbt.newqq.DBToasterSquidBinding
 import ddbt.transformer._
 
@@ -112,7 +112,7 @@ object TpccXactGenerator_SC {
     //    import Context.Predef._
     //    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
     //    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{Array => _, ArrayBuffer => _, Boolean => _, Date => _, Double => _, EntryType => _, GenericEntry => _, Int => _, Store => _, String => _, entryRepToGenericEntryOps => _, println => _, typeNull => _, typeStore => _, _}
+    import Context.{Array => _, ArrayBuffer => _, Boolean => _, Date => _, Double => _, EntryType => _, GenericEntry => _, Int => _, Store => _, String => _, entryRepToGenericEntryOps => _, println => _, typeNull => _, typeStore => _, StringExtra => _,  _}
 
     lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
     lazy val warehouseRange = List((1, 1, numWare + 1))
@@ -308,9 +308,9 @@ object TpccXactGenerator_SC {
       val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
       districtEntry +=(unit(10), h_amount)
       districtTbl.updateCopy(districtEntry)
+      ir {
 
-      val customerEntry = ir {
-        if ($(c_by_name) > 0) {
+      val customerEntry =  if ($(c_by_name) > 0) {
           val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
           $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), {
             custEntry => customersWithLastName.append(custEntry)
@@ -320,7 +320,7 @@ object TpccXactGenerator_SC {
           if (customersWithLastName.size % 2 == 0) {
             index = index - 1
           }
-          customersWithLastName.sortWith({ (c1, c2) => store.StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
+          customersWithLastName.sortWith({ (c1, c2) => StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
 
         }
         else {
@@ -328,36 +328,36 @@ object TpccXactGenerator_SC {
             customerTbl.get1((1, c_id), (2, c_d_id), (3, c_w_id))
           }
         }
-      }.toRep
 
 
-      val c_data = customerEntry.get[String](unit(21))
 
-      __ifThenElse(customerEntry.get[String](unit(14)).contains(unit("BC")), {
+      val c_data = customerEntry.get[String](21)
+
+      if(customerEntry.get[String](14).contains("BC")){
         //c_credit
         //TODO this is the correct version but is not implemented in the correctness test
         //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-        val c_new_data = StringExtra.StringPrintf(unit(500), unit("%d %d %d %d %d $%f %s | %s"), customerEntry.get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, infix_toString(datetime), c_data)
-        customerEntry +=(unit(17) /*c_balance*/ , h_amount)
+        val c_new_data = StringExtra.StringPrintf(500, "%d %d %d %d %d $%f %s | %s", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(h_amount), $(datetime).toString, c_data)
+        customerEntry +=(17 /*c_balance*/ , $(h_amount))
         //TODO this is the correct version but is not implemented in the correctness test
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
         //customerEntry += (19 /*c_payment_cnt*/, 1)
-        customerEntry.update(unit(21) /*c_data*/ , c_new_data)
-        unit()
-      }, {
-        customerEntry +=(unit(17) /*c_balance*/ , h_amount)
-        //TODO this is the correct version but is not implemented in the correctness test
-        //customerEntry += (18 /*c_ytd_payment*/, h_amount)
-        //customerEntry += (19 /*c_payment_cnt*/, 1)
-      })
-      customerTbl.updateCopy(customerEntry)
-      val w_name = warehouseEntry.get[String](unit(2))
-      val d_name = districtEntry.get[String](unit(3))
-      //TODO this is the correct version but is not implemented in the correctness test
-      val h_data = StringExtra.StringPrintf(unit(24), unit("%.10s    %.10s"), w_name, d_name)
+        customerEntry.update(21 /*c_data*/ , c_new_data)
 
-      ir {
-        $(historyTbl).insert(GenericEntry("SteNewSEntry", $(customerEntry).get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(datetime), $(h_amount), $(h_data)))
+      } else {
+        customerEntry +=(17 /*c_balance*/ , $(h_amount))
+        //TODO this is the correct version but is not implemented in the correctness test
+        //customerEntry += (18 /*c_ytd_payment*/, h_amount)
+        //customerEntry += (19 /*c_payment_cnt*/, 1)
+      }
+      $(customerTbl).updateCopy(customerEntry)
+      val w_name = $(warehouseEntry).get[String](2)
+      val d_name = $(districtEntry).get[String](3)
+      //TODO this is the correct version but is not implemented in the correctness test
+      val h_data = StringExtra.StringPrintf(24, "%.10s    %.10s", w_name, d_name)
+
+
+        $(historyTbl).insert(GenericEntry("SteNewSEntry", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(datetime), $(h_amount), h_data))
       }
       //      if ($showOutput) {
       //        var output = "\n+---------------------------- PAYMENT ----------------------------+" +
@@ -427,7 +427,7 @@ object TpccXactGenerator_SC {
           if (customersWithLastName.size % 2 == 0) {
             index = index - 1
           }
-          customersWithLastName.sortWith({ (c1, c2) => store.StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
+          customersWithLastName.sortWith({ (c1, c2) => StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
         }
         else {
           $ {

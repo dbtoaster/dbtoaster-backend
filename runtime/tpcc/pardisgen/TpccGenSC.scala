@@ -7,58 +7,58 @@ import java.util.Date
 
 class SCExecutor 
 {
-  val x737 = EntryIdx.genericOps(List(1, 2, 3));
-  val x742 = Array[EntryIdx[GenericEntry]](EntryIdx.genericOps(List(1, 2, 3)), EntryIdx.genericCmp(List(2, 3), ({ x18: GenericEntry => {
+  val x743 = EntryIdx.genericOps(List(1, 2, 3));
+  val x748 = Array[EntryIdx[GenericEntry]](EntryIdx.genericOps(List(1, 2, 3)), EntryIdx.genericCmp(List(2, 3), ({ x18: GenericEntry => {
       val x19 = x18.get[Int](1);
       x19
     }
   })), EntryIdx.genericOps(List(2, 3)))
-  val x743 = new Store[GenericEntry](3, x742);
-  val x744 = x743.index(0, IHash, true, -1)
-  val x745 = x743.index(1, ISliceHeapMin, false, 2)
-  val x746 = x743.index(2, INone, false, -1)
-  val x749 = Array[EntryIdx[GenericEntry]](EntryIdx.genericOps(List()))
-  val x750 = new Store[GenericEntry](1, x749);
-  val x751 = x750.index(0, IList, false, -1)
-  val x754 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,2))))
-  val x755 = new Store[GenericEntry](1, x754);
-  val x756 = x755.index(0, IDirect, true, 1)
-  val x759 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,100001))))
-  val x760 = new Store[GenericEntry](1, x759);
-  val x761 = x760.index(0, IDirect, true, 100000)
-  val x766 = Array[EntryIdx[GenericEntry]](EntryIdx.genericOps(List(1, 2, 3)), EntryIdx.genericCmp(List(2, 3, 4), ({ x145: GenericEntry => {
+  val x749 = new Store[GenericEntry](3, x748);
+  val x750 = x749.index(0, IHash, true, -1)
+  val x751 = x749.index(1, ISliceHeapMin, false, 2)
+  val x752 = x749.index(2, INone, false, -1)
+  val x755 = Array[EntryIdx[GenericEntry]](EntryIdx.genericOps(List()))
+  val x756 = new Store[GenericEntry](1, x755);
+  val x757 = x756.index(0, IList, false, -1)
+  val x760 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,2))))
+  val x761 = new Store[GenericEntry](1, x760);
+  val x762 = x761.index(0, IDirect, true, 1)
+  val x765 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,100001))))
+  val x766 = new Store[GenericEntry](1, x765);
+  val x767 = x766.index(0, IDirect, true, 100000)
+  val x772 = Array[EntryIdx[GenericEntry]](EntryIdx.genericOps(List(1, 2, 3)), EntryIdx.genericCmp(List(2, 3, 4), ({ x145: GenericEntry => {
       val x146 = x145.get[Int](1);
       x146
     }
   })), EntryIdx.genericOps(List(2, 3, 4)))
-  val x767 = new Store[GenericEntry](3, x766);
-  val x768 = x767.index(0, IHash, true, -1)
-  val x769 = x767.index(1, ISliceHeapMax, false, 2)
-  val x770 = x767.index(2, INone, false, -1)
-  val x773 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,11), (2,1,2))))
-  val x774 = new Store[GenericEntry](1, x773);
-  val x775 = x774.index(0, IDirect, true, 10)
-  val x778 = Array[EntryIdx[GenericEntry]](EntryIdx.genericOps(List(1, 2, 3, 4)), EntryIdx.genericOps(List(1, 2, 3)))
-  val x779 = new Store[GenericEntry](2, x778);
-  val x780 = x779.index(0, IHash, true, -1)
-  val x781 = x779.index(1, IHash, false, -1)
-  val x785 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,3001), (2,1,11), (3,1,2))), EntryIdx.genericOps(List(2, 3, 6)))
-  val x786 = new Store[GenericEntry](2, x785);
-  val x787 = x786.index(0, IDirect, true, 30000)
-  val x788 = x786.index(1, IHash, false, -1)
-  val x791 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,100001), (2,1,2))))
-  val x792 = new Store[GenericEntry](1, x791);
-  val x793 = x792.index(0, IDirect, true, 100000)
+  val x773 = new Store[GenericEntry](3, x772);
+  val x774 = x773.index(0, IHash, true, -1)
+  val x775 = x773.index(1, ISliceHeapMax, false, 2)
+  val x776 = x773.index(2, INone, false, -1)
+  val x779 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,11), (2,1,2))))
+  val x780 = new Store[GenericEntry](1, x779);
+  val x781 = x780.index(0, IDirect, true, 10)
+  val x784 = Array[EntryIdx[GenericEntry]](EntryIdx.genericOps(List(1, 2, 3, 4)), EntryIdx.genericOps(List(1, 2, 3)))
+  val x785 = new Store[GenericEntry](2, x784);
+  val x786 = x785.index(0, IHash, true, -1)
+  val x787 = x785.index(1, IHash, false, -1)
+  val x791 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,3001), (2,1,11), (3,1,2))), EntryIdx.genericOps(List(2, 3, 6)))
+  val x792 = new Store[GenericEntry](2, x791);
+  val x793 = x792.index(0, IDirect, true, 30000)
+  val x794 = x792.index(1, IHash, false, -1)
+  val x797 = Array[EntryIdx[GenericEntry]](EntryIdx.genericFixedRangeOps(List((1,1,100001), (2,1,2))))
+  val x798 = new Store[GenericEntry](1, x797);
+  val x799 = x798.index(0, IDirect, true, 100000)
   
-  val newOrderTbl = x743
-  val historyTbl = x750
-  val warehouseTbl = x755
-  val itemTbl = x760
-  val orderTbl = x767
-  val districtTbl = x774
-  val orderLineTbl = x779
-  val customerTbl = x786
-  val stockTbl = x792
+  val newOrderTbl = x749
+  val historyTbl = x756
+  val warehouseTbl = x761
+  val itemTbl = x766
+  val orderTbl = x773
+  val districtTbl = x780
+  val orderLineTbl = x785
+  val customerTbl = x792
+  val stockTbl = x798
   val newOrderTxInst = new NewOrderTx(newOrderTbl,historyTbl,warehouseTbl,itemTbl,orderTbl,districtTbl,orderLineTbl,customerTbl,stockTbl)
   val paymentTxInst = new PaymentTx(newOrderTbl,historyTbl,warehouseTbl,itemTbl,orderTbl,districtTbl,orderLineTbl,customerTbl,stockTbl)
   val orderStatusTxInst = new OrderStatusTx(newOrderTbl,historyTbl,warehouseTbl,itemTbl,orderTbl,districtTbl,orderLineTbl,customerTbl,stockTbl)
@@ -67,7 +67,7 @@ class SCExecutor
 
       
    
-  class DeliveryTx(x743: Store[GenericEntry], x750: Store[GenericEntry], x755: Store[GenericEntry], x760: Store[GenericEntry], x767: Store[GenericEntry], x774: Store[GenericEntry], x779: Store[GenericEntry], x786: Store[GenericEntry], x792: Store[GenericEntry]) extends ((Boolean, Date, Int, Int) => Int ) {
+  class DeliveryTx(x749: Store[GenericEntry], x756: Store[GenericEntry], x761: Store[GenericEntry], x766: Store[GenericEntry], x773: Store[GenericEntry], x780: Store[GenericEntry], x785: Store[GenericEntry], x792: Store[GenericEntry], x798: Store[GenericEntry]) extends ((Boolean, Date, Int, Int) => Int ) {
     def apply(x10 : Boolean, x11 : Date, x12 : Int, x13 : Int) =     {
       val x14 = new Array[Int](10);
       var x15: Int = 1;
@@ -78,41 +78,41 @@ class SCExecutor
       {
         val x22 = x15;
         val x24 = GenericEntry.apply("SteSampleSEntry", 2, 3, x22, x12);
-        val x3915 = x745.get(x24);
-        if((x3915.!=(null))) 
+        val x3921 = x751.get(x24);
+        if((x3921.!=(null))) 
         {
-          val x28 = x3915.get[Int](1);
+          val x28 = x3921.get[Int](1);
           val x29 = x15;
           x14.update((x29.-(1)), x28)
-          x743.delete(x3915)
+          x749.delete(x3921)
           val x33 = x15;
           val x34 = GenericEntry("SteSampleSEntry", 1, 2, 3, x28, x33, x12);
-          val x3926 = x768.get(x34);
-          val x37 = x3926.get[Int](4);
-          x3926.update(6, x13)
-          x769.update(x3926)
-          x768.update(x3926)
+          val x3932 = x774.get(x34);
+          val x37 = x3932.get[Int](4);
+          x3932.update(6, x13)
+          x774.update(x3932)
+          x775.update(x3932)
           var x40: Double = 0.0;
           val x41 = x15;
           val x43 = GenericEntry.apply("SteSampleSEntry", 1, 2, 3, x28, x41, x12);
-          x781.slice(x43, ({ orderLineEntry: GenericEntry => {
+          x787.slice(x43, ({ orderLineEntry: GenericEntry => {
               orderLineEntry.update(7, x11)
               val x46 = x40;
               val x47 = orderLineEntry.get[Double](9);
               x40 = (x46.+(x47))
-              x780.update(orderLineEntry)
-              x781.update(orderLineEntry)
+              x786.update(orderLineEntry)
+              x787.update(orderLineEntry)
               ()
             }
           }))
           val x53 = x15;
           val x54 = GenericEntry("SteSampleSEntry", 1, 2, 3, x37, x53, x12);
-          val x3947 = x787.get(x54);
+          val x3953 = x793.get(x54);
           val x56 = x40;
-          x3947.+=(17, x56)
-          x3947.+=(20, 1)
-          x788.update(x3947)
-          x787.update(x3947)
+          x3953.+=(17, x56)
+          x3953.+=(20, 1)
+          x794.update(x3953)
+          x793.update(x3953)
           ()
         }
         else
@@ -129,11 +129,11 @@ class SCExecutor
       1
     }
   }
-  class StockLevelTx(x743: Store[GenericEntry], x750: Store[GenericEntry], x755: Store[GenericEntry], x760: Store[GenericEntry], x767: Store[GenericEntry], x774: Store[GenericEntry], x779: Store[GenericEntry], x786: Store[GenericEntry], x792: Store[GenericEntry]) extends ((Boolean, Date, Int, Int, Int, Int) => Int ) {
+  class StockLevelTx(x749: Store[GenericEntry], x756: Store[GenericEntry], x761: Store[GenericEntry], x766: Store[GenericEntry], x773: Store[GenericEntry], x780: Store[GenericEntry], x785: Store[GenericEntry], x792: Store[GenericEntry], x798: Store[GenericEntry]) extends ((Boolean, Date, Int, Int, Int, Int) => Int ) {
     def apply(x68 : Boolean, x69 : Date, x70 : Int, x71 : Int, x72 : Int, x73 : Int) =     {
       val x74 = GenericEntry("SteSampleSEntry", 1, 2, x72, x71);
-      val x4014 = x775.get(x74);
-      val x77 = x4014.get[Int](11);
+      val x4020 = x781.get(x74);
+      val x77 = x4020.get[Int](11);
       var x79: Int = (x77.-(20));
       val x80 = Set.apply[Int]();
       while({
@@ -143,11 +143,11 @@ class SCExecutor
       {
         val x83 = x79;
         val x85 = GenericEntry.apply("SteSampleSEntry", 1, 2, 3, x83, x72, x71);
-        x781.slice(x85, ({ x86: GenericEntry => {
+        x787.slice(x85, ({ x86: GenericEntry => {
             val x87 = x86.get[Int](5);
             val x88 = GenericEntry("SteSampleSEntry", 1, 2, x87, x71);
-            val x4029 = x793.get(x88);
-            val x90 = x4029.get[Int](3);
+            val x4035 = x799.get(x88);
+            val x90 = x4035.get[Int](3);
             if((x90.<(x73))) 
             {
               val x92 = x80.+=(x87);
@@ -168,13 +168,13 @@ class SCExecutor
       1
     }
   }
-  class OrderStatusTx(x743: Store[GenericEntry], x750: Store[GenericEntry], x755: Store[GenericEntry], x760: Store[GenericEntry], x767: Store[GenericEntry], x774: Store[GenericEntry], x779: Store[GenericEntry], x786: Store[GenericEntry], x792: Store[GenericEntry]) extends ((Boolean, Date, Int, Int, Int, Int, Int, String) => Int ) {
+  class OrderStatusTx(x749: Store[GenericEntry], x756: Store[GenericEntry], x761: Store[GenericEntry], x766: Store[GenericEntry], x773: Store[GenericEntry], x780: Store[GenericEntry], x785: Store[GenericEntry], x792: Store[GenericEntry], x798: Store[GenericEntry]) extends ((Boolean, Date, Int, Int, Int, Int, Int, String) => Int ) {
     def apply(x101 : Boolean, x102 : Date, x103 : Int, x104 : Int, x105 : Int, x106 : Int, x107 : Int, x108 : String) =     {
       val x143 = if((x106.>(0))) 
       {
         val customersWithLastName = new ArrayBuffer[GenericEntry]();
         val x113 = GenericEntry.apply("SteSampleSEntry", 2, 3, 6, x105, x104, x108);
-        x788.slice(x113, ({ custEntry: GenericEntry => {
+        x794.slice(x113, ({ custEntry: GenericEntry => {
             customersWithLastName.append(custEntry)
             ()
           }
@@ -206,45 +206,45 @@ class SCExecutor
       else
       {
         val x140 = GenericEntry("SteSampleSEntry", 1, 2, 3, x107, x105, x104);
-        val x4095 = x787.get(x140);
-        x4095
+        val x4101 = x793.get(x140);
+        x4101
       }
       ;
       val x144 = x143.get[Int](3);
       val x150 = GenericEntry.apply("SteSampleSEntry", 2, 3, 4, x105, x104, x144);
-      val x4100 = x769.get(x150);
+      val x4106 = x775.get(x150);
       var x153: Int = 0;
-      val x154 = x4100.get[Int](1);
+      val x154 = x4106.get[Int](1);
       x153 = x154
       1
     }
   }
-  class PaymentTx(x743: Store[GenericEntry], x750: Store[GenericEntry], x755: Store[GenericEntry], x760: Store[GenericEntry], x767: Store[GenericEntry], x774: Store[GenericEntry], x779: Store[GenericEntry], x786: Store[GenericEntry], x792: Store[GenericEntry]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double) => Int ) {
+  class PaymentTx(x749: Store[GenericEntry], x756: Store[GenericEntry], x761: Store[GenericEntry], x766: Store[GenericEntry], x773: Store[GenericEntry], x780: Store[GenericEntry], x785: Store[GenericEntry], x792: Store[GenericEntry], x798: Store[GenericEntry]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double) => Int ) {
     def apply(x156 : Boolean, x157 : Date, x158 : Int, x159 : Int, x160 : Int, x161 : Int, x162 : Int, x163 : Int, x164 : Int, x165 : String, x166 : Double) =     {
       val x167 = GenericEntry("SteSampleSEntry", 1, x159);
-      val x4146 = x756.get(x167);
-      x4146.+=(9, x166)
-      x756.update(x4146)
+      val x4152 = x762.get(x167);
+      x4152.+=(9, x166)
+      x762.update(x4152)
       val x172 = GenericEntry("SteSampleSEntry", 1, 2, x160, x159);
-      val x4151 = x775.get(x172);
-      x4151.+=(10, x166)
-      x775.update(x4151)
-      val x211 = if((x161.>(0))) 
+      val x4157 = x781.get(x172);
+      x4157.+=(10, x166)
+      x781.update(x4157)
+      val customerEntry = if((x161.>(0))) 
       {
         val customersWithLastName = new ArrayBuffer[GenericEntry]();
-        val x181 = GenericEntry.apply("SteSampleSEntry", 2, 3, 6, x163, x162, x165);
-        x788.slice(x181, ({ custEntry: GenericEntry => {
+        val x182 = GenericEntry.apply("SteSampleSEntry", 2, 3, 6, x163, x162, x165);
+        x794.slice(x182, ({ custEntry: GenericEntry => {
             customersWithLastName.append(custEntry)
             ()
           }
         }))
-        val x187 = customersWithLastName.size;
-        var x189: Int = (x187./(2));
-        val x191 = customersWithLastName.size;
-        if(((x191.%(2)).==(0))) 
+        val x188 = customersWithLastName.size;
+        var x190: Int = (x188./(2));
+        val x192 = customersWithLastName.size;
+        if(((x192.%(2)).==(0))) 
         {
-          val x194 = x189;
-          x189 = (x194.-(1))
+          val x195 = x190;
+          x190 = (x195.-(1))
           ()
         }
         else
@@ -252,244 +252,244 @@ class SCExecutor
           ()
         }
         
-        val x205 = customersWithLastName.sortWith(({ (c1: GenericEntry, c2: GenericEntry) => {
-            val x200 = c1.get[String](4);
-            val x201 = c2.get[String](4);
-            ((StringExtra.StringCompare(x200, x201)).<(0))
+        val x206 = customersWithLastName.sortWith(({ (c1: GenericEntry, c2: GenericEntry) => {
+            val x201 = c1.get[String](4);
+            val x202 = c2.get[String](4);
+            ((StringExtra.StringCompare(x201, x202)).<(0))
           }
         }));
-        val x206 = x189;
-        val x207 = x205.apply(x206);
-        x207
+        val x207 = x190;
+        val x208 = x206.apply(x207);
+        x208
       }
       else
       {
-        val x208 = GenericEntry("SteSampleSEntry", 1, 2, 3, x164, x163, x162);
-        val x4185 = x787.get(x208);
-        x4185
+        val x209 = GenericEntry("SteSampleSEntry", 1, 2, 3, x164, x163, x162);
+        val x4191 = x793.get(x209);
+        x4191
       }
       ;
-      val x212 = x211.get[String](21);
-      val x213 = x211.get[String](14);
-      val x214 = x213.contains("BC");
-      if(x214) 
+      val c_data = customerEntry.get[String](21);
+      val x215 = customerEntry.get[String](14);
+      val x216 = x215.contains("BC");
+      val x225 = if(x216) 
       {
-        val x215 = x211.get[Int](1);
-        var x218 = "%d %d %d %d %d $%f %s | %s".format(x215,x163,x162,x160,x159,x166,(x157.toString()),x212)
-        if(x218.size > 500) 
-          x218 = x218.substring(0, 500)
-        x211.+=(17, x166)
-        x211.update(21, x218)
+        val x218 = customerEntry.get[Int](1);
+        var c_new_data = "%d %d %d %d %d $%f %s | %s".format(x218,x163,x162,x160,x159,x166,(x157.toString()),c_data)
+        if(c_new_data.size > 500) 
+          c_new_data = c_new_data.substring(0, 500)
+        customerEntry.+=(17, x166)
+        customerEntry.update(21, c_new_data)
         ()
       }
       else
       {
-        x211.+=(17, x166)
+        customerEntry.+=(17, x166)
         ()
       }
-      
-      x788.update(x211)
-      x787.update(x211)
-      val x224 = x4146.get[String](2);
-      val x225 = x4151.get[String](3);
-      var x227 = "%.10s    %.10s".format(x224,x225)
-      if(x227.size > 24) 
-        x227 = x227.substring(0, 24)
-      val x228 = x211.get[Int](1);
-      val x230 = GenericEntry.apply("SteNewSEntry", x228, x163, x162, x160, x159, x157, x166, x227);
-      x750.insert(x230)
+      ;
+      x794.update(customerEntry)
+      x793.update(customerEntry)
+      val w_name = x4152.get[String](2);
+      val d_name = x4157.get[String](3);
+      var h_data = "%.10s    %.10s".format(w_name,d_name)
+      if(h_data.size > 24) 
+        h_data = h_data.substring(0, 24)
+      val x234 = customerEntry.get[Int](1);
+      val x236 = GenericEntry.apply("SteNewSEntry", x234, x163, x162, x160, x159, x157, x166, h_data);
+      x756.insert(x236)
       1
     }
   }
-  class NewOrderTx(x743: Store[GenericEntry], x750: Store[GenericEntry], x755: Store[GenericEntry], x760: Store[GenericEntry], x767: Store[GenericEntry], x774: Store[GenericEntry], x779: Store[GenericEntry], x786: Store[GenericEntry], x792: Store[GenericEntry]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double]) => Int ) {
-    def apply(x232 : Boolean, x233 : Date, x234 : Int, x235 : Int, x236 : Int, x237 : Int, x238 : Int, x239 : Int, x240 : Array[Int], x241 : Array[Int], x242 : Array[Int], x243 : Array[Double], x244 : Array[String], x245 : Array[Int], x246 : Array[String], x247 : Array[Double]) =     {
-      var x248: Int = 0;
-      var x249: Boolean = false;
-      val x250 = new Array[String](x238);
-      var x251: Boolean = true;
+  class NewOrderTx(x749: Store[GenericEntry], x756: Store[GenericEntry], x761: Store[GenericEntry], x766: Store[GenericEntry], x773: Store[GenericEntry], x780: Store[GenericEntry], x785: Store[GenericEntry], x792: Store[GenericEntry], x798: Store[GenericEntry]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double]) => Int ) {
+    def apply(x238 : Boolean, x239 : Date, x240 : Int, x241 : Int, x242 : Int, x243 : Int, x244 : Int, x245 : Int, x246 : Array[Int], x247 : Array[Int], x248 : Array[Int], x249 : Array[Double], x250 : Array[String], x251 : Array[Int], x252 : Array[String], x253 : Array[Double]) =     {
+      var x254: Int = 0;
+      var x255: Boolean = false;
+      val x256 = new Array[String](x244);
+      var x257: Boolean = true;
       while({
-        val x252 = x248;
-        ((x252.<(x238)).&&({
-          val x254 = x251;
-          x254
+        val x258 = x254;
+        ((x258.<(x244)).&&({
+          val x260 = x257;
+          x260
         }))
       })
       {
-        val x257 = x248;
-        val x258 = x240.apply(x257);
-        val x259 = GenericEntry("SteSampleSEntry", 1, x258);
-        val x4283 = x761.get(x259);
-        if((x4283.==(null))) 
+        val x263 = x254;
+        val x264 = x246.apply(x263);
+        val x265 = GenericEntry("SteSampleSEntry", 1, x264);
+        val x4289 = x767.get(x265);
+        if((x4289.==(null))) 
         {
-          x251 = false
+          x257 = false
           ()
         }
         else
         {
-          val x264 = x248;
-          val x265 = x4283.get[String](3);
-          x244.update(x264, x265)
-          val x267 = x248;
-          val x268 = x4283.get[Double](4);
-          x243.update(x267, x268)
-          val x270 = x248;
-          val x271 = x4283.get[String](5);
+          val x270 = x254;
+          val x271 = x4289.get[String](3);
           x250.update(x270, x271)
+          val x273 = x254;
+          val x274 = x4289.get[Double](4);
+          x249.update(x273, x274)
+          val x276 = x254;
+          val x277 = x4289.get[String](5);
+          x256.update(x276, x277)
           ()
         }
         
-        val x274 = x248;
-        x248 = (x274.+(1))
+        val x280 = x254;
+        x254 = (x280.+(1))
         ()
       }
-      val x278 = x251;
-      if(x278) 
+      val x284 = x257;
+      if(x284) 
       {
-        val x279 = GenericEntry("SteSampleSEntry", 1, 2, 3, x237, x236, x235);
-        val x4303 = x787.get(x279);
-        val x282 = GenericEntry("SteSampleSEntry", 1, x235);
-        val x4306 = x756.get(x282);
-        val x285 = GenericEntry("SteSampleSEntry", 1, 2, x236, x235);
-        val x4309 = x775.get(x285);
-        val x288 = x4309.get[Int](11);
-        x4309.+=(11, 1)
-        x775.update(x4309)
-        val x293 = GenericEntry.apply("SteNewSEntry", x288, x236, x235, x237, x233, -1, x238, (x239.>(0)));
-        x767.insert(x293)
-        val x296 = GenericEntry.apply("SteNewSEntry", x288, x236, x235);
-        x743.insert(x296)
-        var x298: Double = 0.0;
-        x248 = 0
+        val x285 = GenericEntry("SteSampleSEntry", 1, 2, 3, x243, x242, x241);
+        val x4309 = x793.get(x285);
+        val x288 = GenericEntry("SteSampleSEntry", 1, x241);
+        val x4312 = x762.get(x288);
+        val x291 = GenericEntry("SteSampleSEntry", 1, 2, x242, x241);
+        val x4315 = x781.get(x291);
+        val x294 = x4315.get[Int](11);
+        x4315.+=(11, 1)
+        x781.update(x4315)
+        val x299 = GenericEntry.apply("SteNewSEntry", x294, x242, x241, x243, x239, -1, x244, (x245.>(0)));
+        x773.insert(x299)
+        val x302 = GenericEntry.apply("SteNewSEntry", x294, x242, x241);
+        x749.insert(x302)
+        var x304: Double = 0.0;
+        x254 = 0
         while({
-          val x300 = x248;
-          (x300.<(x238))
+          val x306 = x254;
+          (x306.<(x244))
         })
         {
-          val x303 = x248;
-          val ol_supply_w_id = x241.apply(x303);
-          val x306 = x248;
-          val ol_i_id = x240.apply(x306);
-          val x309 = x248;
-          val ol_quantity = x242.apply(x309);
-          val x313 = GenericEntry.apply("SteSampleSEntry", 1, 2, ol_i_id, ol_supply_w_id);
-          val x4333 = x793.get(x313);
-          val ol_dist_info = if((x236.==(1))) 
+          val x309 = x254;
+          val ol_supply_w_id = x247.apply(x309);
+          val x312 = x254;
+          val ol_i_id = x246.apply(x312);
+          val x315 = x254;
+          val ol_quantity = x248.apply(x315);
+          val x319 = GenericEntry.apply("SteSampleSEntry", 1, 2, ol_i_id, ol_supply_w_id);
+          val x4339 = x799.get(x319);
+          val ol_dist_info = if((x242.==(1))) 
           {
-            val x317 = x4333.get[String](4);
-            x317
+            val x323 = x4339.get[String](4);
+            x323
           }
           else
           {
-            val x342 = if((x236.==(2))) 
+            val x348 = if((x242.==(2))) 
             {
-              val x319 = x4333.get[String](5);
-              x319
+              val x325 = x4339.get[String](5);
+              x325
             }
             else
             {
-              val x341 = if((x236.==(3))) 
+              val x347 = if((x242.==(3))) 
               {
-                val x321 = x4333.get[String](6);
-                x321
+                val x327 = x4339.get[String](6);
+                x327
               }
               else
               {
-                val x340 = if((x236.==(4))) 
+                val x346 = if((x242.==(4))) 
                 {
-                  val x323 = x4333.get[String](7);
-                  x323
+                  val x329 = x4339.get[String](7);
+                  x329
                 }
                 else
                 {
-                  val x339 = if((x236.==(5))) 
+                  val x345 = if((x242.==(5))) 
                   {
-                    val x325 = x4333.get[String](8);
-                    x325
+                    val x331 = x4339.get[String](8);
+                    x331
                   }
                   else
                   {
-                    val x338 = if((x236.==(6))) 
+                    val x344 = if((x242.==(6))) 
                     {
-                      val x327 = x4333.get[String](9);
-                      x327
+                      val x333 = x4339.get[String](9);
+                      x333
                     }
                     else
                     {
-                      val x337 = if((x236.==(7))) 
+                      val x343 = if((x242.==(7))) 
                       {
-                        val x329 = x4333.get[String](10);
-                        x329
+                        val x335 = x4339.get[String](10);
+                        x335
                       }
                       else
                       {
-                        val x336 = if((x236.==(8))) 
+                        val x342 = if((x242.==(8))) 
                         {
-                          val x331 = x4333.get[String](11);
-                          x331
+                          val x337 = x4339.get[String](11);
+                          x337
                         }
                         else
                         {
-                          val x335 = if((x236.==(9))) 
+                          val x341 = if((x242.==(9))) 
                           {
-                            val x333 = x4333.get[String](12);
-                            x333
+                            val x339 = x4339.get[String](12);
+                            x339
                           }
                           else
                           {
-                            val x334 = x4333.get[String](13);
-                            x334
+                            val x340 = x4339.get[String](13);
+                            x340
                           }
                           ;
-                          x335
+                          x341
                         }
                         ;
-                        x336
+                        x342
                       }
                       ;
-                      x337
+                      x343
                     }
                     ;
-                    x338
+                    x344
                   }
                   ;
-                  x339
+                  x345
                 }
                 ;
-                x340
+                x346
               }
               ;
-              x341
+              x347
             }
             ;
-            x342
+            x348
           }
           ;
-          val s_quantity = x4333.get[Int](3);
-          val x346 = x248;
-          x245.update(x346, s_quantity)
-          val x348 = x4303.get[String](14);
-          val x349 = x348.contains("original");
-          if((x349.&&({
-            val x350 = x4333.get[String](17);
-            val x351 = x350.contains("original");
-            x351
+          val s_quantity = x4339.get[Int](3);
+          val x352 = x254;
+          x251.update(x352, s_quantity)
+          val x354 = x4309.get[String](14);
+          val x355 = x354.contains("original");
+          if((x355.&&({
+            val x356 = x4339.get[String](17);
+            val x357 = x356.contains("original");
+            x357
           }))) 
           {
-            val x353 = x248;
-            x246.update(x353, "B")
+            val x359 = x254;
+            x252.update(x359, "B")
             ()
           }
           else
           {
-            val x355 = x248;
-            x246.update(x355, "G")
+            val x361 = x254;
+            x252.update(x361, "G")
             ()
           }
           
-          x4333.update(3, (s_quantity.-(ol_quantity)))
-          val x362 = if((s_quantity.<=(ol_quantity))) 
+          x4339.update(3, (s_quantity.-(ol_quantity)))
+          val x368 = if((s_quantity.<=(ol_quantity))) 
           {
-            x4333.+=(3, 91)
+            x4339.+=(3, 91)
             ()
           }
           else
@@ -497,10 +497,10 @@ class SCExecutor
             ()
           }
           ;
-          var x364: Int = 0;
-          if((ol_supply_w_id.!=(x235))) 
+          var x370: Int = 0;
+          if((ol_supply_w_id.!=(x241))) 
           {
-            x364 = 1
+            x370 = 1
             ()
           }
           else
@@ -508,23 +508,23 @@ class SCExecutor
             ()
           }
           
-          val x4384 = x793.get(x4333);
-          x793.updateCopyDependent(x4333, x4384)
-          val c_discount = x4303.get[Double](16);
-          val w_tax = x4306.get[Double](8);
-          val d_tax = x4309.get[Double](9);
-          val x377 = x248;
-          val x378 = x243.apply(x377);
-          val ol_amount = (((ol_quantity.toDouble).*(x378)).*(((1.0.+(w_tax)).+(d_tax)))).*((1.0.-(c_discount)));
-          val x386 = x248;
-          x247.update(x386, ol_amount)
-          val x388 = x298;
-          x298 = (x388.+(ol_amount))
-          val x391 = x248;
-          val x394 = GenericEntry.apply("SteNewSEntry", x288, x236, x235, (x391.+(1)), ol_i_id, ol_supply_w_id, null, ol_quantity, ol_amount, ol_dist_info);
-          x779.insert(x394)
-          val x396 = x248;
-          x248 = (x396.+(1))
+          val x4390 = x799.get(x4339);
+          x799.updateCopyDependent(x4339, x4390)
+          val c_discount = x4309.get[Double](16);
+          val w_tax = x4312.get[Double](8);
+          val d_tax = x4315.get[Double](9);
+          val x383 = x254;
+          val x384 = x249.apply(x383);
+          val ol_amount = (((ol_quantity.toDouble).*(x384)).*(((1.0.+(w_tax)).+(d_tax)))).*((1.0.-(c_discount)));
+          val x392 = x254;
+          x253.update(x392, ol_amount)
+          val x394 = x304;
+          x304 = (x394.+(ol_amount))
+          val x397 = x254;
+          val x400 = GenericEntry.apply("SteNewSEntry", x294, x242, x241, (x397.+(1)), ol_i_id, ol_supply_w_id, null, ol_quantity, ol_amount, ol_dist_info);
+          x785.insert(x400)
+          val x402 = x254;
+          x254 = (x402.+(1))
           ()
         }
         ()
