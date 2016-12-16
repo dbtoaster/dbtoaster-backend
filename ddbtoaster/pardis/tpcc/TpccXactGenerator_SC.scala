@@ -1,30 +1,18 @@
 package sc.tpcc
 
 
-import ddbt.lib.store.{GenericEntry, Store}
-import ddbt.lib.store
-import java.io.{FileWriter, PrintStream, PrintWriter}
-import java.util.concurrent.Executor
+import java.util.Date
 
-import ddbt.newqq.DBToasterSquidBinding
-import ch.epfl.data.sc.pardis
-import ch.epfl.data.sc.pardis.ir._
-import ch.epfl.data.sc.pardis.types.{AnyType, RecordType}
-import ch.epfl.data.sc.pardis.utils.document.Document
-import ddbt.codegen.{Optimizer, TransactionProgram}
-import ddbt.codegen.prettyprinter.StoreScalaCodeGenerator
-import sc.tpcc.compiler.TpccCompiler
-import ddbt.lib.store.deep._
-
-import collection.mutable.ArrayBuffer
-import ch.epfl.data.sc.pardis.prettyprinter.{ASTCodeGenerator, CodeGenerator, ScalaCodeGenerator}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeUnit
-import pardis.optimization._
-import pardis.compiler._
+import ddbt.codegen.{Optimizer, TransactionProgram}
+import ddbt.lib.store
+import ddbt.lib.store.deep._
+import ddbt.lib.store.{GenericEntry, Store}
+import ddbt.newqq.DBToasterSquidBinding
 import ddbt.transformer._
 
+import scala.collection.mutable.ArrayBuffer
 import scala.language.implicitConversions
-import java.util.Date
 
 object TpccXactGenerator_SC {
 
@@ -124,7 +112,7 @@ object TpccXactGenerator_SC {
     //    import Context.Predef._
     //    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
     //    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{EntryType => _, entryRepToGenericEntryOps => _, typeStore => _, typeNull => _, println => _, GenericEntry => _, ArrayBuffer => _, Array => _, String => _, Boolean => _, Date => _, Int => _, Double => _, Store => _, _}
+    import Context.{Array => _, ArrayBuffer => _, Boolean => _, Date => _, Double => _, EntryType => _, GenericEntry => _, Int => _, Store => _, String => _, entryRepToGenericEntryOps => _, println => _, typeNull => _, typeStore => _, _}
 
     lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
     lazy val warehouseRange = List((1, 1, numWare + 1))
@@ -349,7 +337,7 @@ object TpccXactGenerator_SC {
         //c_credit
         //TODO this is the correct version but is not implemented in the correctness test
         //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-        val c_new_data = stringPrintf(unit(500), unit("%d %d %d %d %d $%f %s | %s"), customerEntry.get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, infix_toString(datetime), c_data)
+        val c_new_data = StringExtra.StringPrintf(unit(500), unit("%d %d %d %d %d $%f %s | %s"), customerEntry.get[Int](unit(1)), c_d_id, c_w_id, d_id, w_id, h_amount, infix_toString(datetime), c_data)
         customerEntry +=(unit(17) /*c_balance*/ , h_amount)
         //TODO this is the correct version but is not implemented in the correctness test
         //customerEntry += (18 /*c_ytd_payment*/, h_amount)
@@ -366,7 +354,7 @@ object TpccXactGenerator_SC {
       val w_name = warehouseEntry.get[String](unit(2))
       val d_name = districtEntry.get[String](unit(3))
       //TODO this is the correct version but is not implemented in the correctness test
-      val h_data = stringPrintf(unit(24), unit("%.10s    %.10s"), w_name, d_name)
+      val h_data = StringExtra.StringPrintf(unit(24), unit("%.10s    %.10s"), w_name, d_name)
 
       ir {
         $(historyTbl).insert(GenericEntry("SteNewSEntry", $(customerEntry).get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(datetime), $(h_amount), $(h_data)))

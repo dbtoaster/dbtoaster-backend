@@ -3,13 +3,8 @@
 package ddbt.lib.store.deep
 
 import ch.epfl.data.sc.pardis
-import pardis.ir._
-import pardis.types.PardisTypeImplicits._
-import pardis.effects._
-import pardis.deep._
-import pardis.deep.scalalib._
-import pardis.deep.scalalib.collection._
-import pardis.deep.scalalib.io._
+import ch.epfl.data.sc.pardis.ir._
+import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
 
 trait StringExtraOps extends Base  {  
   // Type representation
@@ -20,14 +15,21 @@ trait StringExtraOps extends Base  {
   }
   object StringExtra {
      def StringCompare(str1 : Rep[String], str2 : Rep[String]) : Rep[Int] = stringExtraStringCompareObject(str1, str2)
+     def StringPrintf(maxSize : Rep[Int], f : Rep[String], args : Rep[Any]*) : Rep[String] = stringExtraStringPrintfObject(maxSize, f, args:_*)
   }
   // constructors
 
   // IR defs
   val StringExtraStringCompareObject = StringExtraIRs.StringExtraStringCompareObject
   type StringExtraStringCompareObject = StringExtraIRs.StringExtraStringCompareObject
+  val StringExtraStringPrintfObject = StringExtraIRs.StringExtraStringPrintfObject
+  type StringExtraStringPrintfObject = StringExtraIRs.StringExtraStringPrintfObject
   // method definitions
    def stringExtraStringCompareObject(str1 : Rep[String], str2 : Rep[String]) : Rep[Int] = StringExtraStringCompareObject(str1, str2)
+   def stringExtraStringPrintfObject(maxSize : Rep[Int], f : Rep[String], args : Rep[Any]*) : Rep[String] = {
+    val argsOutput = __liftSeq(args.toSeq)
+    StringExtraStringPrintfObject(maxSize, f, argsOutput)
+  }
   type StringExtra = ddbt.lib.store.StringExtra
 }
 object StringExtraIRs extends Base {
@@ -50,6 +52,10 @@ object StringExtraIRs extends Base {
     }
     override def partiallyEvaluable: Boolean = true
 
+  }
+
+  case class StringExtraStringPrintfObject(maxSize : Rep[Int], f : Rep[String], argsOutput : Rep[Seq[Any]]) extends FunctionDef[String](None, "StringExtra.StringPrintf", List(List(maxSize,f,__varArg(argsOutput)))){
+    override def curriedConstructor = (copy _).curried
   }
 
   type StringExtra = ddbt.lib.store.StringExtra

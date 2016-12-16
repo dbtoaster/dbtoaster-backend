@@ -1,15 +1,15 @@
 package ddbt.lib.store.deep
 
-import ch.epfl.data.sc.pardis.deep.scalalib.collection.{SetComponent, SeqComponent, ArrayBufferComponent}
 import ch.epfl.data.sc.pardis.deep.scalalib._
+import ch.epfl.data.sc.pardis.deep.scalalib.collection.{ArrayBufferComponent, SeqComponent, SetComponent}
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
-import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeUnit, typeAny}
-import ch.epfl.data.sc.pardis.types.{AnyType, RecordType, PardisType}
+import ch.epfl.data.sc.pardis.types.PardisType
+import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeAny, typeUnit}
 import ddbt.ast.{Type, TypeDouble, TypeLong}
 import ddbt.lib.store._
-import lifter.{TypeToTypeRep, OnlineOptimizations, SCLMSInterop}
-import ddbt.transformer.{SEntryFlag, SEntry}
+import ddbt.transformer.{SEntry, SEntryFlag}
+import lifter.{OnlineOptimizations, SCLMSInterop, TypeToTypeRep}
 
 /**
   * Created by khayyam on 4/8/15.
@@ -33,9 +33,6 @@ object EntryIRs extends Base {
   }
 
   implicit val typeEntry: TypeRep[Entry] = EntryType
-}
-case class StringPrintf(val maxSize : Expression[Int], val f: StringIRs.Rep[String], val argsOutput : StringIRs.Rep[scala.Seq[scala.Any]]) extends  FunctionNode[StringIRs.String](None,"N/A", List(List(maxSize, f, argsOutput)))(StringIRs.StringType) {
-  override def curriedConstructor = (copy _).curried
 }
 
 case class StructFieldDecr[T: PardisType](struct: Expression[Any], index: String, rhs: Expression[T]) extends FunctionNode[Unit](Some(struct), s"${index} -=", List(List(rhs))) {
@@ -88,10 +85,6 @@ trait StoreDSL extends
         case _ => super.findOrCreateSymbol(definition)
       }
     }
-  }
-  def stringPrintf(maxSize: Expression[Int], f: Expression[String],   args : Rep[Any]*) : Expression[String] = {
-    val argsOutput = __liftSeq(args.toSeq)
-    StringPrintf(maxSize, f, argsOutput)
   }
 
   def fieldIncr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]): Expression[Unit] = fieldSetter(struct, index, numeric_plus(fieldGetter(struct, index)(tp), rhs))(tp)
