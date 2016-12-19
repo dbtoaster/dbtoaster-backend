@@ -18,10 +18,10 @@ object Compiler {
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"
   val LANG_SCALA = "vscala"
-  val LANG_CPP = "cpp"
+  val LANG_CPP = "vcpp"
   val LANG_AKKA = "akka"
   val LANG_LMS = "lms"
-  val LANG_CPP_LMS = "cpplms"
+  val LANG_CPP_LMS = "cpp"
   val LANG_SCALA_LMS = "scala"
   val LANG_SPARK_LMS = "spark"
 
@@ -174,10 +174,10 @@ object Compiler {
     // Back-end
     val cg:CodeGen = lang match {
       case LANG_SCALA => new ScalaGen(name,printProgress)
-      case LANG_CPP => new PardisCppGen(name)
+      case LANG_CPP => new CppGen(name)
       case LANG_AKKA => new AkkaGen(name)
      // case LANG_LMS => new LMSCppGen(name)
-     // case LANG_CPP_LMS => new LMSCppGen(name)
+      case LANG_CPP_LMS => new PardisCppGen(name)
       case LANG_SCALA_LMS => new PardisScalaGen(name) //DSL
      // case LANG_SPARK_LMS => new LMSSparkGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)

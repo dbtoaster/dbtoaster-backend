@@ -629,14 +629,21 @@ trait ICppGen extends IScalaGen {
       }
     }
     mapDefs = mapDefsList.toMap
+    maps = mapDefs
+    val (tsSC, msSC, tmpEntrySC) = genPardis(s0)
     val ts =
       "/* Trigger functions for table relations */\n"+
+      //table initializations (a.k.a ld0)
       genTableTriggers+
       "\n\n"+
       "/* Trigger functions for stream relations */\n"+
-      genStreamTriggers
+    //trigger implementations in the body (part 1)
+        (if(tsSC != null) tsSC else genStreamTriggers)
+    //serializer of the output query results
     val resAcc = helperResultAccessor(s0)
-    val ms = s0.queries.filter(q=>(s0.maps.filter(_.name==q.name).size == 0) && (q.keys.size > 0)).map(q=>genMapStructDef(MapDef(q.name,q.tp,q.keys,q.map))).mkString("\n") + // queries`without a map (with -F EXPRESSIVE-TLQS)
+
+    //map definitions in the body (part 2)
+    val ms = if(msSC != null) msSC else s0.queries.filter(q=>(s0.maps.filter(_.name==q.name).size == 0) && (q.keys.size > 0)).map(q=>genMapStructDef(MapDef(q.name,q.tp,q.keys,q.map))).mkString("\n") + // queries`without a map (with -F EXPRESSIVE-TLQS)
             s0.triggers.map(_.evt match { //delta relations
               case EvtBatchUpdate(s) =>
                 val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
@@ -660,6 +667,7 @@ trait ICppGen extends IScalaGen {
     ms +
     "\n\n"+
     resAcc+
+    //start of the common part between all CPP code generators (part 1)
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
     "struct data_t : tlq_t{\n"+
     "  data_t(): tlq_t()"+getInitializationForDATA_T(s0.maps,s0.queries)+" {\n"+
@@ -696,11 +704,13 @@ trait ICppGen extends IScalaGen {
     "\n"+
        ind(ts)+
     "\n\n"+
+      //end of the common part between all CPP code generators (part 1)
+      //start of constants
     (if(!isExpressiveTLQSEnabled(s0.queries)) {
     "private:\n"+
     "\n"+
     "  /* Sample entries for avoiding recreation of temporary objects */\n"+
-    sampleEntDef+
+      (if(tmpEntrySC != null) tmpEntrySC else sampleEntDef)+
     (if(regexpCacheMap.isEmpty) "" else
     "  /* regex_t temporary objects */\n"+
     regexpCacheMap.map{case (_,preg) => "  regex_t "+preg+";\n"}.mkString)+
@@ -710,9 +720,12 @@ trait ICppGen extends IScalaGen {
        ind(genTempMapDefs)+"\n"+
        ind(consts)+
     "\n\n"} else "")+
+      //end of constants
+      //start of the common part between all CPP code generators (part 2)
     "};\n"+
     "\n"+
     helper(s0)
+    //end of the common part between all CPP code generators (part 2)
   }
 
   private def helperResultAccessor(s0:System) = {

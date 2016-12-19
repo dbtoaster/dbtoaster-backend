@@ -79,7 +79,7 @@ trait IScalaGen extends CodeGen {
     //   case OpNe => "Math.abs("+arg1+"-"+arg2+") >= diff_p"
     //   case _ => arg1+" "+op+" "+arg2
     // }
-    case _ => 
+    case _ =>
       if(withIfThenElse)
         "(if ("+arg1+" "+op+" "+arg2+") 1L else 0L)"
       else
@@ -419,14 +419,14 @@ trait IScalaGen extends CodeGen {
          else "")
       case _ => ""
     }).mkString
-    val ld0 = s0.sources.filter{s => !s.stream}.map {
+    val tableInitialization = s0.sources.filter{s => !s.stream}.map {
       s => {
         val (in,ad,sp) = genStream(s)
         val (i,o,_,pl) = ev(s.schema)
-        "SourceMux({ case TupleEvent(ord,TupleInsert,rn,List("+i+"))=>"+genInitializationFor(s.schema.name,pl,o)+" }, Seq(("+in+","+ad+","+sp+"))).read;" 
+        "SourceMux({ case TupleEvent(ord,TupleInsert,rn,List("+i+"))=>"+genInitializationFor(s.schema.name,pl,o)+" }, Seq(("+in+","+ad+","+sp+"))).read;"
       }
     }.mkString("\n");
-    (str,ld0,consts)
+    (str,tableInitialization,consts)
   }
 
   def genBatchTupleRec(name:String, keys:List[(String,Type)], value:String) = "set("+genTuple(keys.zipWithIndex.map{ case ((_,tp),i) => (tp,"v"+i)})+",  "+value+")"
@@ -461,7 +461,7 @@ trait IScalaGen extends CodeGen {
     val mapKeys = m.keys.map(_._2)
     val nodeName = map+"_node"
     val res = nodeName+"_mres"
-    if (q.keys.size > 0) 
+    if (q.keys.size > 0)
       "{ val "+res+" = new scala.collection.mutable.HashMap["+tup(mapKeys.map(_.toScala))+","+q.map.tp.toScala+"](); "+map+".foreach{case (e,v) => "+res+" += ("+(if(mapKeys.size > 1) tup(mapKeys.zipWithIndex.map{ case (_,i) => "e._"+(i+1) }) else "e")+" -> v) }; "+res+".toMap }"
     else
       q.name
@@ -471,10 +471,13 @@ trait IScalaGen extends CodeGen {
 
   var maps = Map[String,MapDef]() // declared global maps
   def apply(s0:System):String = {
-    maps=s0.maps.map(m=>(m.name,m)).toMap
+    maps = s0.maps.map(m => (m.name, m)).toMap
     //val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
-    val (lms,strLMS,ld0LMS,gcLMS) = genPardis(s0)
-    val body = if (lms!=null) lms else {
+    val (tsSC, msSC, tempEntrySC) = genPardis(s0)
+    //    val (lms,strLMS,ld0LMS,gcLMS) = genPardis(s0)
+    val body = if (tsSC != null) {
+      msSC + "\n\n" + tempEntrySC + "\n" + tsSC
+    } else {
       val ts = s0.triggers.map(genTrigger(_,s0)).mkString("\n\n") // triggers (need to be generated before maps)
       val ms = s0.triggers.map(_.evt match { //delta relations
                  case EvtBatchUpdate(s) =>
@@ -495,7 +498,8 @@ trait IScalaGen extends CodeGen {
                s0.maps.map(genMap).mkString("\n") // maps
       ms+"\n\n"+genQueries(s0.queries)+"\n\n"+ts
     }
-    val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
+//    val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
+    val (str,ld0,gc) =  genInternals(s0)
     val ld = if (ld0!="") "\n\ndef loadTables() {\n"+ind(ld0)+"\n}" else "" // optional preloading of static tables content
     freshClear()
     val snap=onEndStream+" sender ! (StreamStat(t1-t0,tN,tS),List("+s0.queries.map(toMapFunction).mkString(",")+"))"
