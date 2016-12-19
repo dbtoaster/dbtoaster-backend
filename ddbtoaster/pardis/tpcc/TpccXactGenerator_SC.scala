@@ -3,9 +3,7 @@ package sc.tpcc
 
 import java.util.Date
 
-import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeUnit
 import ddbt.codegen.{Optimizer, TransactionProgram}
-import ddbt.lib.store
 import ddbt.lib.store.deep._
 import ddbt.lib.store.{GenericEntry, Store, StringExtra, Aggregator}
 import ddbt.newqq.DBToasterSquidBinding
@@ -109,10 +107,9 @@ object TpccXactGenerator_SC {
     import Sqd.Predef.{anyContextIsEmptyContext => _, _}
     import Sqd.Quasicodes._
 
-    //    import Context.Predef._
-    //    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
-    //    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{Array => _, ArrayBuffer => _, Set => _, Boolean => _, Date => _, Double => _, EntryType => _, GenericEntry => _, Int => _, Store => _, String => _, entryRepToGenericEntryOps => _, println => _, typeNull => _, typeStore => _, StringExtra => _, Aggregator => _, _}
+    import Context.Predef._
+    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
+    import Context.{IntType, StringType, DoubleType, DateType, BooleanType}
 
     lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
     lazy val warehouseRange = List((1, 1, numWare + 1))
@@ -425,7 +422,7 @@ object TpccXactGenerator_SC {
           customersWithLastName.sortWith({ (c1, c2) => StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
         }
         else {
-          $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3 , $(c_id), $(d_id), $(w_id)))
+          $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(d_id), $(w_id)))
         }
 
         val found_c_id = customerEntry.get[Int](3)
