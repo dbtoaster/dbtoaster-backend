@@ -11,8 +11,8 @@ trait Aggregator[E <: Entry] extends (E => Unit) {
   def result: E
 }
 object Aggregator{
-  def min[E <: Entry, R](f: E => R)(implicit order: Ordering[R]) = new  MinAggregator[E,R](f)
-  def max[E <: Entry, R](f: E => R)(implicit order: Ordering[R]) = new  MaxAggregator[E,R](f)
+  def min[E <: Entry, R](f: E => R)(implicit order: Ordering[R]) : Aggregator[E] = new  MinAggregator[E,R](f)
+  def max[E <: Entry, R](f: E => R)(implicit order: Ordering[R]) : Aggregator[E] = new  MaxAggregator[E,R](f)
 }
 class MinAggregator[E <: Entry, R](val f: E => R)(implicit order: Ordering[R]) extends Aggregator[E] {
   var minRes: R = 0.asInstanceOf[R]

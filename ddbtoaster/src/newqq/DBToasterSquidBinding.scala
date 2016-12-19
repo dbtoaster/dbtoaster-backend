@@ -12,6 +12,8 @@ class DBToasterSquidBinding[SC <: StoreDSL](val SC: SC) {
     protected val WhileSymbol = loadMtdSymbol(loadTypSymbol("squid.lib.package$"), "While", None)
     protected val StrCmpSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.StringExtra$"), "StringCompare", None)
     protected val StrPrintfSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.StringExtra$"), "StringPrintf", None)
+    protected val MinAggSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.Aggregator$"), "min", None)
+    protected val MaxAggSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.Aggregator$"), "max", None)
     /** Manual deep bindings for when the AutoBinder did not generate one.
       * */
     override def methodApp(self: Rep, mtd: MtdSymbol, targs: List[TypeRep], argss: List[ArgList], tp: TypeRep): Rep = mtd match {
@@ -28,6 +30,17 @@ class DBToasterSquidBinding[SC <: StoreDSL](val SC: SC) {
       case StrPrintfSymbol =>
         val ArgsVarargs(Args(s, f), Args(varargs @ _*)) :: Nil = argss
         blockWithType(tp)(SC.StringExtra.StringPrintf(toExpr(s).asInstanceOf[sc.Rep[Int]], toExpr(f).asInstanceOf[sc.Rep[String]], varargs map toExpr : _*))
+      case MinAggSymbol =>
+        val Args(f) :: Args(o) :: Nil = argss
+        val typeE = targs(0).asInstanceOf[sc.TypeRep[ddbt.lib.store.Entry]]
+        val typeR = targs(1)
+        blockWithType(tp)(SC.Aggregator.min(f.asInstanceOf[sc.Rep[ddbt.lib.store.Entry => Any]])(typeE, typeR, o.asInstanceOf[Ordering[Any]]))
+      case MaxAggSymbol =>
+        val Args(f) :: Args(o) :: Nil = argss
+        val typeE = targs(0).asInstanceOf[sc.TypeRep[ddbt.lib.store.Entry]]
+        val typeR = targs(1)
+        blockWithType(tp)(SC.Aggregator.max(f.asInstanceOf[sc.Rep[ddbt.lib.store.Entry => Any]])(typeE, typeR, o.asInstanceOf[Ordering[Any]]))
+
       case _ => super.methodApp(self, mtd, targs, argss, tp)
     }
   }

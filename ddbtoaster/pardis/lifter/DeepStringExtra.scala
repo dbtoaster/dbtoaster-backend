@@ -3,8 +3,13 @@
 package ddbt.lib.store.deep
 
 import ch.epfl.data.sc.pardis
-import ch.epfl.data.sc.pardis.ir._
-import ch.epfl.data.sc.pardis.types.PardisTypeImplicits._
+import pardis.ir._
+import pardis.types.PardisTypeImplicits._
+import pardis.effects._
+import pardis.deep._
+import pardis.deep.scalalib._
+import pardis.deep.scalalib.collection._
+import pardis.deep.scalalib.io._
 
 trait StringExtraOps extends Base  {  
   // Type representation

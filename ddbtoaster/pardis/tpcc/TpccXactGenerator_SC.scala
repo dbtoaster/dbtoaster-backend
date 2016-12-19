@@ -7,7 +7,7 @@ import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.typeUnit
 import ddbt.codegen.{Optimizer, TransactionProgram}
 import ddbt.lib.store
 import ddbt.lib.store.deep._
-import ddbt.lib.store.{GenericEntry, Store, StringExtra}
+import ddbt.lib.store.{GenericEntry, Store, StringExtra, Aggregator}
 import ddbt.newqq.DBToasterSquidBinding
 import ddbt.transformer._
 
@@ -416,7 +416,6 @@ object TpccXactGenerator_SC {
     }
 
     def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
-      val agg = Context.Aggregator.max[GenericEntry, Int](__lambda { e => e.get[Int](unit(1)) })
       ir {
         val customerEntry = if ($(c_by_name) > 0) {
           val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
@@ -436,9 +435,9 @@ object TpccXactGenerator_SC {
         }
 
         val found_c_id = customerEntry.get[Int](3)
-
-        $(orderTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 4, $(d_id), $(w_id), found_c_id), $(agg))
-        val newestOrderEntry = $(agg).result
+        val agg = Aggregator.max[GenericEntry, Int](e => e.get[Int](1))
+        $(orderTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 4, $(d_id), $(w_id), found_c_id), agg)
+        val newestOrderEntry = agg.result
         var dceBlocker = 0
         dceBlocker = newestOrderEntry.get[Int](1) //SBJ : TO avoid removal by DCE
       }.toRep
@@ -499,15 +498,14 @@ object TpccXactGenerator_SC {
 
     def deliveryTx(showOutput: Rep[Boolean], datetime: Rep[Date], w_id: Rep[Int], o_carrier_id: Rep[Int]): Rep[Int] = {
       //        def deliveryTx(showOutput: Boolean, datetime: Date, w_id: Int, o_carrier_id: Int): Int = {
-      val agg  = Context.Aggregator.min[GenericEntry, Int](__lambda({ e => e.get[Int](unit(1))}))
       ir {
         val DIST_PER_WAREHOUSE = 10
         val orderIDs = new Array[Int](123)
         var d_id = 1
         while (d_id <= DIST_PER_WAREHOUSE) {
-
-          $(newOrderTbl).sliceCopy(0 /*no_o_id*/ , GenericEntry("SteSampleSEntry", 2, 3, d_id, $(w_id)), $(agg))
-          val firstOrderEntry = $(agg).result
+          val agg  = Aggregator.min[GenericEntry, Int](e => e.get[Int](1))
+          $(newOrderTbl).sliceCopy(0 /*no_o_id*/ , GenericEntry("SteSampleSEntry", 2, 3, d_id, $(w_id)), agg)
+          val firstOrderEntry = agg.result
           if (firstOrderEntry != null) {
             // found
             val no_o_id = firstOrderEntry.get[Int](1)
