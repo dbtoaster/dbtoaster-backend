@@ -11,7 +11,7 @@ import ddbt.lib.store.{GenericEntry, Store, StringExtra, Aggregator}
 import ddbt.newqq.DBToasterSquidBinding
 import ddbt.transformer._
 
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, Set}
 import scala.language.implicitConversions
 
 object TpccXactGenerator_SC {
@@ -112,7 +112,7 @@ object TpccXactGenerator_SC {
     //    import Context.Predef._
     //    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
     //    import Context.{entryRepToGenericEntryOps => _ , _}
-    import Context.{Array => _, ArrayBuffer => _, Boolean => _, Date => _, Double => _, EntryType => _, GenericEntry => _, Int => _, Store => _, String => _, entryRepToGenericEntryOps => _, println => _, typeNull => _, typeStore => _, StringExtra => _, Aggregator => _, _}
+    import Context.{Array => _, ArrayBuffer => _, Set => _, Boolean => _, Date => _, Double => _, EntryType => _, GenericEntry => _, Int => _, Store => _, String => _, entryRepToGenericEntryOps => _, println => _, typeNull => _, typeStore => _, StringExtra => _, Aggregator => _, _}
 
     lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
     lazy val warehouseRange = List((1, 1, numWare + 1))
@@ -120,7 +120,9 @@ object TpccXactGenerator_SC {
     lazy val itemRange = List((1, 1, 100001))
     lazy val stockRange = List((1, 1, 100001), (2, 1, numWare + 1))
     lazy val allRanges = List(warehouseTbl -> warehouseRange, districtTbl -> districtRange, customerTbl -> customerRange, itemTbl -> itemRange, stockTbl -> stockRange).toMap
+
     implicit val DSL = Context
+
     val NewOrderEntry = List(IntType, IntType, IntType)
     val HistoryEntry = List(IntType, IntType, IntType, IntType, IntType, DateType, DoubleType, StringType)
     val WarehouseEntry = List(IntType, StringType, StringType, StringType, StringType, StringType, StringType, DoubleType, DoubleType)
@@ -130,6 +132,7 @@ object TpccXactGenerator_SC {
     val OrderLineEntry = List(IntType, IntType, IntType, IntType, IntType, IntType, /*Option[Date]*/ DateType, IntType, DoubleType, StringType)
     val CustomerEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, DateType, StringType, DoubleType, DoubleType, DoubleType, DoubleType, IntType, IntType, StringType)
     val StockEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, IntType, IntType, IntType, StringType)
+
     val newOrderKey = List(1, 2, 3)
     val wareHouseKey = List(1)
     val itemKey = List(1)
@@ -138,6 +141,7 @@ object TpccXactGenerator_SC {
     val orderLineKey = List(1, 2, 3, 4)
     val customerKey = List(1, 2, 3)
     val stockKey = List(1, 2)
+
     val newOrderTbl = __newStore[GenericEntry]
     val historyTbl = __newStore[GenericEntry]
     val warehouseTbl = __newStore[GenericEntry]
@@ -146,7 +150,7 @@ object TpccXactGenerator_SC {
     val districtTbl = __newStore[GenericEntry]
     val orderLineTbl = __newStore[GenericEntry]
     val customerTbl = __newStore[GenericEntry]
-    val stockTbl = __newStore[GenericEntry].asInstanceOf[Rep[Store[GenericEntry]]] //to change from StoreOps.Store to store.Store
+    val stockTbl = __newStore[GenericEntry]
 
     val codeForOutput = false
     val allKeys = List(newOrderTbl -> newOrderKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
@@ -158,60 +162,55 @@ object TpccXactGenerator_SC {
                     if($showOutput) println("Started NewOrder transaction for warehouse=%d, district=%d, customer=%d".format($w_id, $d_id, $c_id))
                   """
       }
-
-      val ol_number = __newVar(unit(0))
-      val failed = __newVar(unit(false))
-      val idata = __newArray[String](o_ol_count)
-
-      val all_items_exist = __newVar(unit(true))
       ir {
-        while (($(ol_number).! < $(o_ol_count)) && $(all_items_exist).!) {
+        var ol_number = 0
+        var failed = 0
+        val idata = new Array[String]($(o_ol_count))
 
-          val itemEntry /*(i_id, _, i_name, i_price, i_data)*/ = $(itemTbl.get1((1, itemid(readVar(ol_number)))))
+        var all_items_exist = true
+
+        while ((ol_number < $(o_ol_count)) && all_items_exist) {
+
+          val itemEntry /*(i_id, _, i_name, i_price, i_data)*/ = $(itemTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, $(itemid)(ol_number)))
           if (itemEntry == null) {
-            $(all_items_exist) := false
-            ()
+            all_items_exist = false
           } else {
-            $(iname).update($(ol_number).!, itemEntry.get[String](3)) //i_name
-            $(price).update($(ol_number).!, itemEntry.get[Double](4)) //i_price
-            $(idata).update($(ol_number).!, itemEntry.get[String](5)) //i_data
+            $(iname).update(ol_number, itemEntry.get[String](3)) //i_name
+            $(price).update(ol_number, itemEntry.get[Double](4)) //i_price
+            idata.update(ol_number, itemEntry.get[String](5)) //i_data
           }
-          $(ol_number) := $(ol_number).! + 1
-        }
-      }
-      __ifThenElse(readVar(all_items_exist), {
-        /*(c_id,d_id,w_id, c_discount, c_last, c_credit, w_tax)*/
-        val customerEntry = customerTbl.get1((1, c_id), (2, d_id), (3, w_id))
-        val warehouseEntry = warehouseTbl.get1((1, w_id))
-        val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
-        val o_id = districtEntry.get[Int](unit(11))
-        districtEntry +=(unit(11), unit(1)) //d_next_o_id+1
-        districtTbl.updateCopy(districtEntry)
-
-        ir {
-          $(orderTbl).insert(GenericEntry("SteNewSEntry", $(o_id), $(d_id), $(w_id), $(c_id), $(datetime), -1, $(o_ol_count), $(o_all_local) > 0))
-          $(newOrderTbl).insert(GenericEntry("SteNewSEntry", $(o_id), $(d_id), $(w_id)))
+          ol_number += 1
         }
 
+        if (all_items_exist) {
+          /*(c_id,d_id,w_id, c_discount, c_last, c_credit, w_tax)*/
+          val customerEntry = $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(d_id), $(w_id)))
+          val warehouseEntry = $(warehouseTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, $(w_id)))
+          val districtEntry = $(districtTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, $(d_id), $(w_id)))
+          val o_id = districtEntry.get[Int](11)
+          districtEntry +=(11, 1) //d_next_o_id+1
+          $(districtTbl).updateCopy(districtEntry)
 
-        val total = __newVar(unit(0.0))
-        ////        def storeget2[E <: ddbt.lib.store.Entry, C](implicit typeE : TypeRep[E]) = ir"$$s: Store[E]".get2((1, ir"$$x:Int"), (2, ir"$$y : Int"))
-        //        def storeget2[E <: ddbt.lib.store.Entry : IRType, C] =
-        type String = java.lang.String // So it does not resolve to `ch.epfl.data.sc.pardis.deep.scalalib.StringOps.String`
+
+          $(orderTbl).insert(GenericEntry("SteNewSEntry", o_id, $(d_id), $(w_id), $(c_id), $(datetime), -1, $(o_ol_count), $(o_all_local) > 0))
+          $(newOrderTbl).insert(GenericEntry("SteNewSEntry", o_id, $(d_id), $(w_id)))
 
 
-        ir {
-          $(ol_number) := 0
-          while ($(ol_number).! < $(o_ol_count)) {
-            val ol_supply_w_id = $(supware)($(ol_number) !)
-            val ol_i_id = $(itemid)($(ol_number) !)
-            val ol_quantity = $(quantity)($(ol_number) !)
+
+          var total = 0.0
+          ol_number = 0
+
+
+          while (ol_number < $(o_ol_count)) {
+            val ol_supply_w_id = $(supware)(ol_number)
+            val ol_i_id = $(itemid)(ol_number)
+            val ol_quantity = $(quantity)(ol_number)
 
             //            val stockEntry = null.asInstanceOf[GenericEntry]
             //            val x = ol_i_id
             //            val y = ol_supply_w_id
             //            val stockEntry = $(ir"$stockTbl".get2[Any {val x: Int; val y: Int}]((1, ir"$$x:Int"), (2, ir"$$y : Int")))
-            val stockEntry = $(stockTbl).get(0, GenericEntry("SteSampleSEntry", 1, 2, ol_i_id, ol_supply_w_id))
+            val stockEntry = $(stockTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, ol_i_id, ol_supply_w_id))
             //            println("""SBJ: FIXME""", ol_i_id, ol_supply_w_id)
 
             //            val t2 = t1.subs('x -> ol_i_id)
@@ -241,12 +240,12 @@ object TpccXactGenerator_SC {
               stockEntry.get[String](13) //s_dist_10
             }
             val s_quantity = stockEntry.get[Int](3) //s_quantity
-            $(stock).update($(ol_number) !, s_quantity)
+            $(stock).update(ol_number, s_quantity)
 
-            if ($(customerEntry).get[String](14).contains("original") && /*s_data*/ stockEntry.get[String](17).contains("original"))
-              $(bg)($(ol_number) !) = "B"
+            if (customerEntry.get[String](14).contains("original") && /*s_data*/ stockEntry.get[String](17).contains("original"))
+              $(bg)(ol_number) = "B"
             else
-              $(bg)($(ol_number) !) = "G"
+              $(bg)(ol_number) = "G"
 
 
             stockEntry(3) = s_quantity - ol_quantity
@@ -263,56 +262,55 @@ object TpccXactGenerator_SC {
             //stockEntry._16 += s_remote_cnt_increment //s_remote_cnt
             $(stockTbl).updateCopy(stockEntry)
 
-            val c_discount = $(customerEntry).get[Double](16)
-            val w_tax = $(warehouseEntry).get[Double](8)
-            val d_tax = $(districtEntry).get[Double](9)
-            val ol_amount = (ol_quantity * $(price)($(ol_number) !) * (1.0 + w_tax + d_tax) * (1.0 - c_discount)) /*.asInstanceOf[Double]*/
-            $(amt).update($(ol_number) !, ol_amount)
-            $(total) := $(total).! + ol_amount
+            val c_discount = customerEntry.get[Double](16)
+            val w_tax = warehouseEntry.get[Double](8)
+            val d_tax = districtEntry.get[Double](9)
+            val ol_amount = (ol_quantity * $(price)(ol_number) * (1.0 + w_tax + d_tax) * (1.0 - c_discount)) /*.asInstanceOf[Double]*/
+            $(amt).update(ol_number, ol_amount)
+            total += ol_amount
 
-            $(orderLineTbl).insert(GenericEntry("SteNewSEntry", $(o_id), $(d_id), $(w_id), $(ol_number).! + 1 /*to start from 1*/ , ol_i_id, ol_supply_w_id, null, ol_quantity, ol_amount, ol_dist_info))
+            $(orderLineTbl).insert(GenericEntry("SteNewSEntry", o_id, $(d_id), $(w_id), ol_number + 1 /*to start from 1*/ , ol_i_id, ol_supply_w_id, null, ol_quantity, ol_amount, ol_dist_info))
 
-            $(ol_number) := $(ol_number).! + 1
+            ol_number += 1
 
             //             if (showOutput) println("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id, d_id, c_id))
 
 
           }
-        }.toRep
-        //        dbg_ir"""
-        //          $ol_number := 0
-        //            val ol_supply_w_id = $supware($ol_number!)
-        //            val ol_i_id = $itemid($ol_number!)
-        //
-        //            val x = ol_i_id
-        //            val y = ol_supply_w_id
-        //            val stockEntry = ${
-        //          val stbl: IR[Store[GenericEntry], {}] = stockTbl
-        ////          val ir1 : IR[Int, Any{val x: Int}] =
-        //          stbl.get2[Any{val x: Int}]((1, ir"$$x:Int"))
-        //        }
-        //        ()
-        //        """.toRep
-      }
-        , unit()
-      )
 
-      unit(1)
+          //        dbg_ir"""
+          //          $ol_number := 0
+          //            val ol_supply_w_id = $supware($ol_number!)
+          //            val ol_i_id = $itemid($ol_number!)
+          //
+          //            val x = ol_i_id
+          //            val y = ol_supply_w_id
+          //            val stockEntry = ${
+          //          val stbl: IR[Store[GenericEntry], {}] = stockTbl
+          ////          val ir1 : IR[Int, Any{val x: Int}] =
+          //          stbl.get2[Any{val x: Int}]((1, ir"$$x:Int"))
+          //        }
+          //        ()
+          //        """.toRep
+        }
+
+        1
+      }.toRep
     }
 
     def paymentTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_w_id: Rep[Int], c_d_id: Rep[Int], c_id: Rep[Int], c_last_input: Rep[String], h_amount: Rep[Double]): Rep[Int] = {
-      val warehouseEntry = warehouseTbl.get1((1, w_id))
-      warehouseEntry +=(unit(9), h_amount) //w_ytd
-      warehouseTbl.updateCopy(warehouseEntry)
-
-      val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
-      districtEntry +=(unit(10), h_amount)
-      districtTbl.updateCopy(districtEntry)
       ir {
+        val warehouseEntry = $(warehouseTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, $(w_id)))
+        warehouseEntry +=(9, $(h_amount)) //w_ytd
+        $(warehouseTbl).updateCopy(warehouseEntry)
+
+        val districtEntry = $(districtTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, $(d_id), $(w_id)))
+        districtEntry +=(10, $(h_amount))
+        $(districtTbl).updateCopy(districtEntry)
 
         val customerEntry = if ($(c_by_name) > 0) {
-          val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
-          $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), {
+          val customersWithLastName = new ArrayBuffer[GenericEntry]()
+          $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), {
             custEntry => customersWithLastName.append(custEntry)
           })
 
@@ -324,9 +322,7 @@ object TpccXactGenerator_SC {
 
         }
         else {
-          $ {
-            customerTbl.get1((1, c_id), (2, c_d_id), (3, c_w_id))
-          }
+          $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(c_d_id), $(c_w_id)))
         }
 
 
@@ -351,14 +347,15 @@ object TpccXactGenerator_SC {
           //customerEntry += (19 /*c_payment_cnt*/, 1)
         }
         $(customerTbl).updateCopy(customerEntry)
-        val w_name = $(warehouseEntry).get[String](2)
-        val d_name = $(districtEntry).get[String](3)
+        val w_name = warehouseEntry.get[String](2)
+        val d_name = districtEntry.get[String](3)
         //TODO this is the correct version but is not implemented in the correctness test
         val h_data = StringExtra.StringPrintf(24, "%.10s    %.10s", w_name, d_name)
 
 
         $(historyTbl).insert(GenericEntry("SteNewSEntry", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(datetime), $(h_amount), h_data))
-      }
+        1
+      }.toRep
       //      if ($showOutput) {
       //        var output = "\n+---------------------------- PAYMENT ----------------------------+" +
       //          "\n Date: %s" + $datetime +
@@ -412,14 +409,13 @@ object TpccXactGenerator_SC {
       //        output = output + "\n+-----------------------------------------------------------------+\n\n"
       //        println(output)
       //      }
-      unit(1)
     }
 
     def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
       ir {
         val customerEntry = if ($(c_by_name) > 0) {
-          val customersWithLastName = new ArrayBuffer[store.GenericEntry]()
-          $(customerTbl).sliceCopy(0, store.GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), {
+          val customersWithLastName = new ArrayBuffer[GenericEntry]()
+          $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), {
             custEntry => customersWithLastName.append(custEntry)
           })
           var index = (customersWithLastName.size / 2)
@@ -429,9 +425,7 @@ object TpccXactGenerator_SC {
           customersWithLastName.sortWith({ (c1, c2) => StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
         }
         else {
-          $ {
-            customerTbl.get1((1, c_id), (2, d_id), (3, w_id))
-          }
+          $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3 , $(c_id), $(d_id), $(w_id)))
         }
 
         val found_c_id = customerEntry.get[Int](3)
@@ -440,6 +434,7 @@ object TpccXactGenerator_SC {
         val newestOrderEntry = agg.result
         var dceBlocker = 0
         dceBlocker = newestOrderEntry.get[Int](1) //SBJ : TO avoid removal by DCE
+        1
       }.toRep
       /*
   dsl"""
@@ -493,7 +488,6 @@ object TpccXactGenerator_SC {
         ()
       }"""
       */
-      unit(1)
     }
 
     def deliveryTx(showOutput: Rep[Boolean], datetime: Rep[Date], w_id: Rep[Int], o_carrier_id: Rep[Int]): Rep[Int] = {
@@ -503,7 +497,7 @@ object TpccXactGenerator_SC {
         val orderIDs = new Array[Int](123)
         var d_id = 1
         while (d_id <= DIST_PER_WAREHOUSE) {
-          val agg  = Aggregator.min[GenericEntry, Int](e => e.get[Int](1))
+          val agg = Aggregator.min[GenericEntry, Int](e => e.get[Int](1))
           $(newOrderTbl).sliceCopy(0 /*no_o_id*/ , GenericEntry("SteSampleSEntry", 2, 3, d_id, $(w_id)), agg)
           val firstOrderEntry = agg.result
           if (firstOrderEntry != null) {
@@ -511,7 +505,7 @@ object TpccXactGenerator_SC {
             val no_o_id = firstOrderEntry.get[Int](1)
             orderIDs.update(d_id - 1, no_o_id)
             $(newOrderTbl).deleteCopy(firstOrderEntry)
-            val orderEntry = $(orderTbl).get(0, GenericEntry("SteSampleSEntry", 1, 2, 3, no_o_id, d_id, $(w_id)))
+            val orderEntry = $(orderTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, no_o_id, d_id, $(w_id)))
             val c_id = orderEntry.get[Int](4)
             orderEntry.update(6 /*o_carrier_id*/ , $(o_carrier_id))
             $(orderTbl).updateCopy(orderEntry)
@@ -524,7 +518,7 @@ object TpccXactGenerator_SC {
               $(orderLineTbl).updateCopy(orderLineEntry) //UPDATE Inside Slice
             })
 
-            val customerEntry = $(customerTbl).get(0, GenericEntry("SteSampleSEntry", 1, 2, 3, c_id, d_id, $(w_id)))
+            val customerEntry = $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, c_id, d_id, $(w_id)))
             customerEntry.+=(17 /*c_balance*/ , ol_total)
             customerEntry.+=(20 /*c_delivery_cnt*/ , 1)
             $(customerTbl).updateCopy(customerEntry)
@@ -535,94 +529,81 @@ object TpccXactGenerator_SC {
           }
           d_id = d_id + 1
         }
-      if ($(showOutput)) {
-        var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
-          " Date: " + $(datetime) +
-          "\n\n Warehouse: " + $(w_id) +
-          "\n Carrier:   " + $(o_carrier_id) +
-          "\n\n Delivered Orders\n"
-        var skippedDeliveries = 0
-        var i:Int = 1
+        if ($(showOutput)) {
+          var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
+            " Date: " + $(datetime) +
+            "\n\n Warehouse: " + $(w_id) +
+            "\n Carrier:   " + $(o_carrier_id) +
+            "\n\n Delivered Orders\n"
+          var skippedDeliveries = 0
+          var i: Int = 1
 
-        while (i <= 10) {
-          if (orderIDs(i -1) >= 0) {
-            output = output + ("  District ") +
-              (if (i < 10) " " else "") +
-              (i) +
-              (": Order number ") +
-              (orderIDs(i - 1)) +
-              (" was delivered.\n")
+          while (i <= 10) {
+            if (orderIDs(i - 1) >= 0) {
+              output = output + ("  District ") +
+                (if (i < 10) " " else "") +
+                (i) +
+                (": Order number ") +
+                (orderIDs(i - 1)) +
+                (" was delivered.\n")
+            }
+            else {
+              output = output + ("  District ") +
+                (if (i < 10) " " else "") +
+                (i) +
+                (": No orders to be delivered.\n")
+              skippedDeliveries += 1
+            }
+            i += 1
           }
-          else {
-            output = output + ("  District ") +
-              (if (i < 10) " " else "") +
-              (i) +
-              (": No orders to be delivered.\n")
-            skippedDeliveries += 1
-          }
-          i += 1
+          output = output + ("+-----------------------------------------------------------------+\n\n")
+          println(output)
+          ()
         }
-        output = output + ("+-----------------------------------------------------------------+\n\n")
-        println(output)
-        ()
-      }
-
-      }
-      unit(1)
-
+        1
+      }.toRep
     }
 
     def stockLevelTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], threshold: Rep[Int]): Rep[Int] = {
       //          def stockLevelTx(showOutput: Boolean, datetime: Date, t_num: Int, w_id: Int, d_id: Int, threshold: Int): Int = {
-
-      val districtEntry = districtTbl.get1((1, d_id), (2, w_id))
-      val o_id = districtEntry.get[Int](unit(11))
-      val i = __newVar[Int](o_id - unit(20))
-      val unique_ol_i_id = Set[Int]()
-      __whileDo(readVar(i) < o_id, {
-        val pKey = ir {
-          store.GenericEntry("SteSampleSEntry", 1, 2, 3, $(i).!, $(d_id), $(w_id))
-        }.toRep
-        orderLineTbl.sliceCopy(unit(0), pKey, __lambda { orderLineEntry =>
-          val ol_i_id = orderLineEntry.get[Int](unit(5))
-          val stockEntry = stockTbl.get1((1, ol_i_id), (2, w_id))
-          val s_quantity = stockEntry.get[Int](unit(3))
-          //                val s_quantity = unit(3)
-          __ifThenElse(s_quantity < threshold, {
-            unique_ol_i_id += ol_i_id
-            unit()
-          }, {
-            unit()
+      ir {
+        val districtEntry = $(districtTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, $(d_id), $(w_id)))
+        val o_id = districtEntry.get[Int](11)
+        var i = o_id - 20
+        val unique_ol_i_id = Set[Int]()
+        while (i < o_id) {
+          $(orderLineTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, i, $(d_id), $(w_id)), { orderLineEntry =>
+            val ol_i_id = orderLineEntry.get[Int](5)
+            val stockEntry = $(stockTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, ol_i_id, $(w_id)))
+            val s_quantity = stockEntry.get[Int](3)
+            //                val s_quantity = unit(3)
+            if (s_quantity < $(threshold)) {
+              unique_ol_i_id += ol_i_id
+            }
           })
-        })
-        __assign(i, readVar(i) + unit(1))
-      })
-      val stock_count = unique_ol_i_id.size
-      if (codeForOutput) {
-        ir"""
-              if ($showOutput) {
-                val output = "\n+-------------------------- STOCK-LEVEL --------------------------+" +
-                  "\n Warehouse: " + $w_id +
-                  "\n District:  " + $d_id +
-                  "\n\n Stock Level Threshold: " + $threshold +
-                  "\n Low Stock Count:       " + $stock_count +
-                  "\n+-----------------------------------------------------------------+\n\n"
-                println(output)
-                ()
-              }
-            """
-      }
-      unit(1)
-
+          i += 1
+        }
+        val stock_count = unique_ol_i_id.size
+        if ($(showOutput)) {
+          val output = "\n+-------------------------- STOCK-LEVEL --------------------------+" +
+            "\n Warehouse: " + $(w_id) +
+            "\n District:  " + $(d_id) +
+            "\n\n Stock Level Threshold: " + $(threshold) +
+            "\n Low Stock Count:       " + stock_count +
+            "\n+-----------------------------------------------------------------+\n\n"
+          println(output)
+        }
+        1
+      }.toRep
     }
 
-    implicit class StoreRep2[E <: ddbt.lib.store.Entry, C](self: IR[Store[E], C])(implicit typeE: IRType[E]) {
-      def get2[D](args: (Int, IR[Int, D])*): IR[E, D] = {
-        val arg2 = args.map(x => (x._1, x._2.toRep))
-        implicit val typerep = typeE.rep.asInstanceOf[TypeRep[E]]
-        Sqd.`internal IR`[E, D](stGet(self.toRep, args.map(_._1), stSampleEntry(self.toRep, arg2)))
-      }
-    }
+    //    implicit class StoreRep2[E <: ddbt.lib.store.Entry, C](self: IR[Store[E], C])(implicit typeE: IRType[E]) {
+    //      def get2[D](args: (Int, IR[Int, D])*): IR[E, D] = {
+    //        val arg2 = args.map(x => (x._1, x._2.toRep))
+    //        implicit val typerep = typeE.rep.asInstanceOf[TypeRep[E]]
+    //        Sqd.`internal IR`[E, D](stGet(self.toRep, args.map(_._1), stSampleEntry(self.toRep, arg2)))
+    //      }
+    //    }
 
   }
 

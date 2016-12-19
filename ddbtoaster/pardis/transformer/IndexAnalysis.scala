@@ -86,13 +86,16 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
   import IR._
 
   analysis += rule {
-    case StoreGetCopy(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
-      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
-      idxes.primary = cols.map({ case Constant(v) => v })
-      sym.attributes += idxes
+    //The extra parameter in  deep verison can possibly be removed. In TPCC, the primary keys are given. No need to specify key columns.
+    //Check TPCH
 
-      ()
-    }
+    //Causes Issues when get is used without they key colums. So temporarily disabled.
+//    case StoreGetCopy(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
+//      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
+//      idxes.primary = cols.map({ case Constant(v) => v })
+//      sym.attributes += idxes
+//      ()
+//    }
 
     case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMaxObject(Def(f@PardisLambda(_, _, _))))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())

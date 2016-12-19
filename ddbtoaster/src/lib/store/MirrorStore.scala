@@ -35,6 +35,8 @@ class MStore[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]]) {
   @read
   def get(idx: Int, key: E): E = ???
 
+  //The extra parameter keyColsn can possibly be removed. In TPCC, the primary keys are given. No need to specify key columns.
+  //Check TPCH
   @read
   def getCopy(idx: Int, key: E, keyCols: Int*): E = ???
 
