@@ -14,7 +14,7 @@
 #include <cassert>
 #include <string>
 
-#include "mmap/mmap2.hpp"
+#include "mmap/mmap.hpp"
 
 
 

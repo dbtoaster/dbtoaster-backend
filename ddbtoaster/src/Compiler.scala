@@ -177,7 +177,7 @@ object Compiler {
       case LANG_CPP => new CppGen(name)
       case LANG_AKKA => new AkkaGen(name)
      // case LANG_LMS => new LMSCppGen(name)
-      case LANG_CPP_LMS => new PardisCppGen(name)
+      case LANG_CPP_LMS => Optimizer.cTransformer = true ; new PardisCppGen(name)
       case LANG_SCALA_LMS => new PardisScalaGen(name) //DSL
      // case LANG_SPARK_LMS => new LMSSparkGen(name)
       case _ => error("Code generation for "+lang+" is not supported",true)

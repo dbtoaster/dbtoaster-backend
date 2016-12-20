@@ -7,6 +7,7 @@ import com.sun.org.apache.xalan.internal.xsltc.compiler.Constants
 import ddbt.Utils._
 import java.io.{PrintWriter, StringWriter}
 
+import ch.epfl.data.sc.pardis.ir.CTypes.PointerType
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.ScalaCodeGenerator
 import ddbt.ast.M3._
@@ -158,11 +159,11 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
         val vs = ks.zipWithIndex.map { case (n, i) => (i + 1, cx(n)) }
         //TODO: SBJ: Check ok?
         val r = proxy2.get1(vs: _*)
-        val mE = man(tp)
+        val mE = man(tp).asInstanceOf[TypeRep[Any]]
         //        println(s"tpe here! ${mE}")
         //                    println(s"tpe here! ${mE.typeArguments}")
 
-        co(IR.__ifThenElse(IR.infix_==(r, IR.unit(null)), z, IR.steGet(r, ks.size + 1)(IR.EntryType, mE)))
+        co(IR.__ifThenElse(IR.infix_==(r, IR.unit(null)), z, IR.steGet(r, ks.size + 1)(IR.EntryType, mE))(mE))
       } else {
         // we need to iterate over all keys not bound (ki)
         if (ko.size > 0) {
@@ -324,7 +325,9 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
   }
 
   var cx: Ctx[Rep[_]] = null
-  def getTriggerNameArgs(t: Trigger) : (String, List[(String, Type)])
+
+  def getTriggerNameArgs(t: Trigger): (String, List[(String, Type)])
+
   // Trigger code generation
   def genTriggerPardis(t: Trigger, s0: System) = {
     val (name, args) = getTriggerNameArgs(t)
@@ -394,8 +397,10 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
 
   var ctx0 = Map[String, (Rep[_], List[(String, Type)], Type)]()
   var globalMembersBlock: Block[Unit] = null
+  var m3System: M3.System = null
 
   override def genPardis(s0: M3.System): (String, String, String) = {
+    m3System = s0
     val classLevelMaps = s0.triggers.filter(_.evt match {
       case EvtBatchUpdate(s) => true
       case _ => false
@@ -500,14 +505,9 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     val optTP = new Optimizer(IR).optimize(initTP)
     ExpressionSymbol.globalId = 0
     val printInfoDef = doc"def printMapsInfo() = {}"
-    if(consts != "\n")  //SBJ : Just to make sure we are not missing anything here
+    if (consts != "\n") //SBJ : Just to make sure we are not missing anything here
       java.lang.System.err.println(s"Consts = $consts")
     genCodeForProgram(optTP, allnames)
-
-//    val (ts, ms, tmpEntries) = genCodeForProgram(optTP, allnames)
-//    val SC_body = ms+ "\n" + tmpEntries + "\n" + ts  + printInfoDef
-//    (SC_body, str, ld0, consts)
-
   }
 
   def genCodeForProgram[T](prg: TransactionProgram[T], allnames: List[String]): (String, String, String)
@@ -520,13 +520,15 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
   import Optimizer._;
   val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
   java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
-  override val codeGen  = new StoreScalaCodeGenerator(IR)
+  override val codeGen = new StoreScalaCodeGenerator(IR)
+
   override def getTriggerNameArgs(t: Trigger) = t.evt match {
     case EvtReady => ("SystemReady", Nil)
     case EvtBatchUpdate(Schema(n, cs)) => ("BatchUpdate" + n, cs)
     case EvtAdd(Schema(n, cs)) => ("Add" + n, cs)
     case EvtDel(Schema(n, cs)) => ("Del" + n, cs)
   }
+
   override def genCodeForProgram[T](optTP: TransactionProgram[T], allnames: List[String]) = {
     var ts = ""
     for (x <- optTP.codeBlocks) {
@@ -546,26 +548,30 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
     }).mkDocument("\n")).toString
 
     val tempEntries = optTP.tempVars.map(t => codeGen.stmtToDocument(Statement(t._1, t._2))).mkDocument("\n").toString
+
     (ts, ms, tempEntries)
   }
 }
 
 class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL {}) with ICppGen {
-  override val codeGen: StoreCodeGenerator = new StoreCppCodeGenerator(IR)
+  override val codeGen: StoreCppCodeGenerator = new StoreCppCodeGenerator(IR)
+
   import IR._
 
   override def genCodeForProgram[T](optTP: TransactionProgram[T], allnames: List[String]) = {
     import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
     var ts = ""
     codeGen.currentProgram = PardisProgram(optTP.structs, optTP.main, Nil)
+    codeGen.refSymbols ++= optTP.tempVars.map(_._1)
     for (x <- optTP.codeBlocks) {
       import codeGen.{doc => _, _}
       val doc2 = codeGen.blockToDocument((x._3))
-      ts += doc"void on${x._1}(${x._2.map(s => doc"${s.tp} $s").mkDocument(", ")}) {" :/: Document.nest(2, doc2) :/: doc"\n}\n"
+      ts += doc"void on${x._1}(${x._2.map(s => doc"${s.tp}& $s").mkDocument(", ")}) {" :/: Document.nest(2, doc2) :/: doc"\n}\n"
     }
+    m3System.triggers.filter(_.evt != EvtReady).foreach(t => ts += (generateUnwrapFunction(t.evt)(m3System) + "\n"))
     val entries = optTP.structs.map(codeGen.getStruct).mkDocument("\n")
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
-    val idxes = optTP.globalVars.map(s => s -> (collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap
+    val idxes = optTP.globalVars.map(s => s ->(collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap
     optTP.initBlock.stmts.collect {
       case Statement(s, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) => {
         val names = ops.collect {
@@ -576,7 +582,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
       case Statement(sym, StoreIndex(s, _, Constant(typ), Constant(uniq), Constant(other))) => idxes(s.asInstanceOf[Sym[Store[_]]])._1.+=((sym, typ, uniq, other))
     }
     val idx2 = idxes.map(t => t._1 -> (t._2._1 zip t._2._2 map (x => (x._1._1, x._1._2, x._1._3, x._1._4, x._2))).toList) // Store -> List[Sym, Type, unique, otherInfo, IdxName ]
-    def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]):Document = {
+    def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]): Document = {
       idx._2 match {
         case "IHash" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
         case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
@@ -594,9 +600,9 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
       val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ",",\n   ",">") :: doc" ${storesnames(s)}StoreType;"
-      val storeDecl = storesnames(s) :: "StoreType  " :: storesnames(s) :: "(" :: storesnames(s) :: "Size);"
-      val storeRef = doc"${storesnames(s)}StoreType& $s = ${storesnames(s)};"
+      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${storesnames(s)}_map;"
+      val storeDecl = storesnames(s) :: "_map  " :: storesnames(s) :: "(0);"
+      val storeRef = doc"${storesnames(s)}_map& $s = ${storesnames(s)};"
 
       val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${storesnames(s)}.index[${t._2}];").mkDocument("\n")
       val primaryIdx = idx2(s)(0)
@@ -607,15 +613,18 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
     val ms = (entries :/: entryIdxes :/: stores).toString
 
-    val tempEntries = optTP.tempVars.map(t => codeGen.stmtToDocument(Statement(t._1, t._2))).mkDocument("\n").toString
+    val tempEntries = optTP.tempVars.map(t => doc"${t._2.tp} ${t._1};").mkDocument("\n").toString
+
     (ts, ms, tempEntries)
   }
+
   override def getTriggerNameArgs(t: Trigger) = t.evt match {
-    case EvtReady => ("system_ready_event", Nil)
-    case EvtBatchUpdate(Schema(n, cs)) => ("batch_update_" + n, cs)
-    case EvtAdd(Schema(n, cs)) => ("insert_" + n, cs)
-    case EvtDel(Schema(n, cs)) => ("delete_" + n, cs)
+    case EvtReady => ("_system_ready_event", Nil)
+    case EvtBatchUpdate(Schema(n, cs)) => ("_batch_update_" + n, cs)
+    case EvtAdd(Schema(n, cs)) => ("_insert_" + n, cs)
+    case EvtDel(Schema(n, cs)) => ("_delete_" + n, cs)
   }
+
   override def genTrigger(t: Trigger, s0: System): String = {
     val (name, params, block) = genTriggerPardis(t, s0)
     val Cname = t.evt match {

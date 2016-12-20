@@ -398,7 +398,72 @@ trait ICppGen extends IScalaGen {
 
   private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) = (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps)
 
+  def generateUnwrapFunction(evt:EvtTrigger)(implicit s0:System) = {
+    val (op,name,fields) = evt match {
+      case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
+      case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
+      case EvtDel(Schema(n,cs)) => ("delete",n,cs)
+      case _ => sys.error("Unsupported trigger event "+evt)
+    }
+    evt match {
+      case b@EvtBatchUpdate(_) =>
+        val schema = s0.sources.filter(_.schema.name == name)(0).schema
+        val deltaRel = schema.deltaSchema
+        val entryClass = deltaRel + "_entry"
+        "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"+
+          "  size_t sz = eaList.size();\n"+
+          "  if(sz == "+deltaRel+".count()) {\n"+
+          "    "+entryClass+"* head = "+deltaRel+".head;\n"+
+          "    for(size_t i=0; i < sz; i++){\n"+
+          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
+          "      head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"]))"}.mkString(", ")+");\n"+
+          "      head->__av =  *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"]));\n"+
+          "      head = head->nxt;\n"+
+          "    }\n"+
+          "  } else {\n"+
+          "    "+deltaRel+".clear();\n"+
+          "    for(size_t i=0; i < sz; i++){\n"+
+          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
+          "      "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"])));\n"+
+          "      "+deltaRel+".insert_nocheck(e);\n"+
+          "    }\n"+
+          "  }\n"+
+          "  on_"+op+"_"+name+"("+deltaRel+");\n"+
+          "}\n\n" +
+          (if(hasOnlyBatchProcessingForAdd(s0,b))
+            "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
+              "  if("+deltaRel+".head){\n"+
+              "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+              "    "+deltaRel+".head->__av =  1L;\n"+
+              "  } else {\n"+
+              "    "+deltaRel+".clear();\n"+
+              "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+" 1L);\n"+
+              "    "+deltaRel+".insert_nocheck(e);\n"+
+              "  }\n"+
+              "  on_batch_update_"+name+"("+deltaRel+");\n"+
+              "}\n\n"
+          else "") +
+          (if(hasOnlyBatchProcessingForDel(s0,b))
+            "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
+              "  if("+deltaRel+".head){\n"+
+              "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+              "    "+deltaRel+".head->__av = -1L;\n"+
+              "  } else {\n"+
+              "    "+deltaRel+".clear();\n"+
+              "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+"-1L);\n"+
+              "    "+deltaRel+".insert_nocheck(e);\n"+
+              "  }\n"+
+              "  on_batch_update_"+name+"("+deltaRel+");\n"+
+              "}\n\n"
+          else "")
+      case _ =>
+        "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
+          "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+          "}\n\n"
+    }
+  }
   override def apply(s0:System):String = {
+    implicit val s0_ = s0
     def register_maps = s0.maps.map{m=>"pb.add_map<"+m.toCppType+">( \""+m.name+"\", "+m.name+" );\n"}.mkString
 
     def register_relations = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ", true") + ");\n"}.mkString
@@ -467,70 +532,7 @@ trait ICppGen extends IScalaGen {
       (if(t.evt != EvtReady) generateUnwrapFunction(t.evt) else "")
     ).mkString
 
-    def generateUnwrapFunction(evt:EvtTrigger) = {
-      val (op,name,fields) = evt match {
-        case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
-        case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
-        case EvtDel(Schema(n,cs)) => ("delete",n,cs)
-        case _ => sys.error("Unsupported trigger event "+evt)
-      }
-      evt match {
-        case b@EvtBatchUpdate(_) =>
-          val schema = s0.sources.filter(_.schema.name == name)(0).schema
-          val deltaRel = schema.deltaSchema
-          val entryClass = deltaRel + "_entry"
-          "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"+
-          "  size_t sz = eaList.size();\n"+
-          "  if(sz == "+deltaRel+".count()) {\n"+
-          "    "+entryClass+"* head = "+deltaRel+".head;\n"+
-          "    for(size_t i=0; i < sz; i++){\n"+
-          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
-          "      head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"]))"}.mkString(", ")+");\n"+
-          "      head->__av =  *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"]));\n"+
-          "      head = head->nxt;\n"+
-          "    }\n"+
-          "  } else {\n"+
-          "    "+deltaRel+".clear();\n"+
-          "    for(size_t i=0; i < sz; i++){\n"+
-          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
-          "      "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"])));\n"+
-          "      "+deltaRel+".insert_nocheck(e);\n"+
-          "    }\n"+
-          "  }\n"+
-          "  on_"+op+"_"+name+"("+deltaRel+");\n"+
-          "}\n\n" +
-          (if(hasOnlyBatchProcessingForAdd(s0,b))
-            "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
-            "  if("+deltaRel+".head){\n"+
-            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
-            "    "+deltaRel+".head->__av =  1L;\n"+
-            "  } else {\n"+
-            "    "+deltaRel+".clear();\n"+
-            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+" 1L);\n"+
-            "    "+deltaRel+".insert_nocheck(e);\n"+
-            "  }\n"+
-            "  on_batch_update_"+name+"("+deltaRel+");\n"+
-            "}\n\n"
-           else "") +
-          (if(hasOnlyBatchProcessingForDel(s0,b))
-            "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
-            "  if("+deltaRel+".head){\n"+
-            "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
-            "    "+deltaRel+".head->__av = -1L;\n"+
-            "  } else {\n"+
-            "    "+deltaRel+".clear();\n"+
-            "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+"-1L);\n"+
-            "    "+deltaRel+".insert_nocheck(e);\n"+
-            "  }\n"+
-            "  on_batch_update_"+name+"("+deltaRel+");\n"+
-            "}\n\n"
-           else "")
-        case _ =>
-          "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
-          "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
-          "}\n\n"
-      }
-    }
+
 
     def genMapStructDef(m:MapDef) = {
       val mapName = m.name

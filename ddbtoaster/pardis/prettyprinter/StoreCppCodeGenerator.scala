@@ -41,12 +41,15 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case ToString(a) if a.tp == DateType => doc"IntToStrDate($a)"
 
     case StoreInsert(self, e) => doc"$self.add($e)"
-    case StoreGet(self, idx, key) => doc"$self.get($key)" //SBJ: Assumes idx 0
+    case StoreUnsafeInsert(self, idx, e) => doc"$self.add($e)"  //ignoring idx for now
+    case StoreGet(self, idx, key) if refSymbols.contains(key) => doc"$self.get($key)" //SBJ: Assumes idx 0
+    case StoreGet(self, idx, key) => doc"$self.get(*$key)" //SBJ: Assumes idx 0
     case StoreUpdate(self, key) => doc"$self.update($key)" //SBJ: No update in c++. All cases of updates in current benchmark should be removed by DeadIdxUpdate
     case StoreDelete1(self, key) => doc"$self.del($key)"
     case StoreSlice(self, idx, key, f) => doc"$self.slice($idx, $key, $f)"
 
-    case IdxGet(self, key) => doc"$self.get($key)"
+    case IdxGet(self, key) if refSymbols.contains(key) => doc"$self.get($key)"
+    case IdxGet(self, key)  => doc"$self.get(*$key)"
     case IdxUpdate(self, key) => doc"$self.update($key)" //SBJ: No update in C++
     case IdxDelete(self, key) => doc"$self.del($key);"
     case IdxSlice(self, key, f) => doc"$self.slice($key, $f)"

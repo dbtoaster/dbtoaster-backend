@@ -46,7 +46,7 @@ class Indexes extends Property {
         indexes += Index(count, cols.primary.toList, primaryIdxType, Optimizer.analyzeIndex); //IdxList with unique = false  OR IdxHash with unique = true
       else {
         val size = cols.fixedrange.foldLeft(1)((acc, cur) => acc * (cur._3 - cur._2))
-        indexes += Index(count, null, IDirect, true, size, null, cols.fixedrange.toList)  //SBJ: Fixme:   Passing size as sliceIdx
+        indexes += Index(count, null, IDirect, true, size, null, cols.fixedrange.toList) //SBJ: Fixme:   Passing size as sliceIdx
       }
       count = count + 1
     }
@@ -90,12 +90,14 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
     //Check TPCH
 
     //Causes Issues when get is used without they key colums. So temporarily disabled.
-//    case StoreGetCopy(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
-//      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
-//      idxes.primary = cols.map({ case Constant(v) => v })
-//      sym.attributes += idxes
-//      ()
-//    }
+    case StoreGetCopy(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
+      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
+      if (idxes.primary == Nil) {
+        idxes.primary = cols.map({ case Constant(v) => v })
+        sym.attributes += idxes
+      }
+      ()
+    }
 
     case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMaxObject(Def(f@PardisLambda(_, _, _))))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
@@ -132,6 +134,14 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
 
   import IR.{entryRepToGenericEntryOps => _, _}
 
+  val stores = collection.mutable.ArrayBuffer[Sym[_]]()
+
+  override def optimize[T: TypeRep](node: Block[T]): Block[T] = {
+    val res = super_optimize(node)
+    ruleApplied()
+    res
+  }
+
   def super_optimize[T: TypeRep](node: Block[T]): Block[T] = {
     val analyseProgram = classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
     analyseProgram.setAccessible(true)
@@ -152,24 +162,6 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     }
     currentBlock
   }
-
-  override def optimize[T: TypeRep](node: Block[T]): Block[T] = {
-    val res = super_optimize(node)
-    ruleApplied()
-    res
-  }
-
-
-  //  def cmpfn[R](f: PardisLambda[GenericEntry,R]) = __lambda((e1: Rep[GenericEntry], e2: Rep[GenericEntry]) =>{
-  //    implicit  val rTp = f.typeS
-  //    val r1 = f.f(e1)
-  //    val r2 = f.f(e2)
-  //    __ifThenElse(Equal(r1, r2), unit(0), __ifThenElse(ordering_gt(r1, r2), unit(1), unit(-1)))
-  //  })
-  //  def cmpfn(cols: List[Int]) = __lambda((e1: Rep[GenericEntry], e2: Rep[GenericEntry]) =>{
-  //
-  //  })
-  val stores = collection.mutable.ArrayBuffer[Sym[_]]()
   rewrite += statement {
     case s -> (StoreNew2()) => {
       val cols = s.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
@@ -223,7 +215,7 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
       val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
       val idx = idxes.getIdxForMax(cols)
       //System.err.println(s"Added $agg to AggResult")
-      aggResultMap += (agg -> (store, unit(idx), key))
+      aggResultMap += (agg ->(store, unit(idx), key))
       ()
     }
     case StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMinObject(_))) => {
@@ -232,7 +224,7 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
       val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
       val idx = idxes.getIdxForMin(cols)
       //System.err.println(s"Added $agg to AggResult")
-      aggResultMap += (agg -> (store, unit(idx), key))
+      aggResultMap += (agg ->(store, unit(idx), key))
       ()
     }
   }
