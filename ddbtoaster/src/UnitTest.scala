@@ -204,7 +204,7 @@ object UnitTest {
         case LANG_CPP|LANG_CPP_LMS|LANG_LMS => genQueryCpp(queryName,QueryTest(f),new Printer("Cpp"),m3,m)
         case _ => ()
       }
-      
+
     }
   }
 
@@ -345,7 +345,10 @@ object UnitTest {
 
         val qid = sys.queries.map{_.name}.zipWithIndex.toMap
         val qt = sys.queries.map{q=>(q.name, (q.keys.map(_._2), q.tp)) }.toMap
-        val qn = sys.queries.map{q=>(q.name, (q.keys.map(_._1), "__av")) }.toMap
+        val qn = if (lang == "cpp")
+          sys.queries.map { q => (q.name, ((1 to q.keys.size).map("_"+_).toList, "_"+(q.keys.size+1))) }.toMap
+        else
+          sys.queries.map { q => (q.name, (q.keys.map(_._1), "__av")) }.toMap
         q.sets.filter(_._1 == dataset).map { case (sz,set) =>
           set.out.foreach { case (n,o) =>
             val (kt,vt) = qt(n)

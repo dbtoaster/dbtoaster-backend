@@ -569,7 +569,16 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
       ts += doc"void on${x._1}(${x._2.map(s => doc"${s.tp}& $s").mkDocument(", ")}) {" :/: Document.nest(2, doc2) :/: doc"\n}\n"
     }
     m3System.triggers.filter(_.evt != EvtReady).foreach(t => ts += (generateUnwrapFunction(t.evt)(m3System) + "\n"))
-    val entries = optTP.structs.map(codeGen.getStruct).mkDocument("\n")
+
+    def structToDoc(s: PardisStructDef[_]) = s match {
+      case PardisStructDef(tag, fields, methods) =>
+        val fieldsDoc = fields.map(x => { doc"${x.tpe} ${x.name};"}).mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt;"
+        val serializer = doc"template<class Archive> \nvoid serialize(Archive& ar, const unsigned int version) const {" :/:
+        Document.nest(4, fields.map(x => doc"DBT_SERIALIZATION_NVP(ar,${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n","\nar << ELEM_SEPARATOR;\n","\n")) :/: "}"
+
+        "struct " :: tag.typeName :: " {" :/: Document.nest(2,fieldsDoc :/: serializer) :/: "};"
+    }
+    val entries = optTP.structs.map(structToDoc).mkDocument("\n")
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
     val idxes = optTP.globalVars.map(s => s ->(collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap
     optTP.initBlock.stmts.collect {
@@ -601,7 +610,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
       val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${storesnames(s)}_map;"
-      val storeDecl = storesnames(s) :: "_map  " :: storesnames(s) :: "(0);"
+      val storeDecl = storesnames(s) :: "_map  " :: storesnames(s) :: "(10000);"
       val storeRef = doc"${storesnames(s)}_map& $s = ${storesnames(s)};"
 
       val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${storesnames(s)}.index[${t._2}];").mkDocument("\n")

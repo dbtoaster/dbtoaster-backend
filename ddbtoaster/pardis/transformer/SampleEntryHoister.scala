@@ -27,6 +27,7 @@ class SampleEntryHoister(override val IR: StoreDSL) extends RuleBasedTransformer
       ()
     }
     case sym -> (StoreInsert(_, entry:Sym[_])) => tmpVars.remove(entry);()
+    case sym -> (StoreUnsafeInsert(_, _, entry:Sym[_])) => tmpVars.remove(entry);()
   }
   rewrite += statement {
     case sym -> (ent@PardisStruct(tag, elems, methods)) if tmpVars.contains(sym) => {

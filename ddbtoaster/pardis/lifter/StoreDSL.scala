@@ -92,9 +92,9 @@ trait StoreDSL extends
   def fieldDecr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]): Expression[Unit] = fieldSetter(struct, index, numeric_minus(fieldGetter(struct, index)(tp), rhs))(tp)
 
   def nullValue(tp: TypeRep[_]) = tp match {
-    case IntType => unit(-1)
-    case LongType => unit(-1L)
-    case DoubleType => unit(-1.0)
+    case IntType => unit(scala.Int.MinValue)
+    case LongType => unit(scala.Long.MinValue)
+    case DoubleType => unit(scala.Double.MinValue)
     case BooleanType => unit(false)
     case StringType => unit[String](null)
     case DateType => unit[Date](null)

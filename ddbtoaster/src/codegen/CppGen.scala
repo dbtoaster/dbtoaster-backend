@@ -718,9 +718,9 @@ trait ICppGen extends IScalaGen {
     regexpCacheMap.map{case (_,preg) => "  regex_t "+preg+";\n"}.mkString)+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
-       ind(genIntermediateDataStructureRefs(mapDefsList.map(_._2).toList,s0.queries))+"\n"+
-       ind(genTempMapDefs)+"\n"+
-       ind(consts)+
+//       ind(genIntermediateDataStructureRefs(mapDefsList.map(_._2).toList,s0.queries))+"\n"+
+//       ind(genTempMapDefs)+"\n"+
+//       ind(consts)+
     "\n\n"} else "")+
       //end of constants
       //start of the common part between all CPP code generators (part 2)
@@ -786,7 +786,7 @@ trait ICppGen extends IScalaGen {
     "protected:\n"+
     "\n"+
     "  /* Data structures used for storing / computing top level queries */\n"+
-         ind(compile_tlqs_decls)+
+//         ind(compile_tlqs_decls)+
     "\n\n"+
     (if(isExpressiveTLQSEnabled(s0.queries)) {
     "  /* Data structures used for storing materialized views */\n"+

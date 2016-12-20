@@ -1,7 +1,8 @@
-//#include "Tpch18-V.hpp"
-#include "ScExtra.h"
-#include "Tpch.hpp"
 
+#ifdef NB
+#include "Tpch.hpp"
+//#include "Tpch18-V.hpp"
+#endif
 namespace dbtoaster{
     class CustomProgram_1 : public Program
     {

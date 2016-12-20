@@ -82,7 +82,7 @@ public:
 
     FORCE_INLINE T* add() {
         if (!free_) {
-            throw std::logic_error("Pool add chunks disabled for this experiment");
+//            throw std::logic_error("Pool add chunks disabled for this experiment");
             add_chunk();
         }
         El<T>* el = free_;
@@ -1474,11 +1474,11 @@ public:
             // cur->~T();
             // *cur=std::move(*elem);
             new(cur) T(*elem);
-            //            if (head) {
-            //                cur->prv = nullptr;
-            //                cur->nxt = head;
-            //                head->prv = cur;
-            //            }
+                        if (head) {
+                            cur->prv = nullptr;
+                            cur->nxt = head;
+                            head->prv = cur;
+                        }
             head = cur;
             for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
         } else {
@@ -1499,9 +1499,9 @@ public:
         // cur->~T();
         // *cur=std::move(elem);
         new(cur) T(elem);
-        //        cur->prv = nullptr;
-        //        cur->nxt = head;
-        //        if (head) head->prv = cur;
+                cur->prv = nullptr;
+                cur->nxt = head;
+                if (head) head->prv = cur;
         head = cur;
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
     }
@@ -1511,9 +1511,9 @@ public:
         // cur->~T();
         // *cur=std::move(elem);
         new(cur) T(elem);
-        //        cur->prv = nullptr;
-        //        cur->nxt = head;
-        //        if (head) head->prv = cur;
+                cur->prv = nullptr;
+                cur->nxt = head;
+                if (head) head->prv = cur;
         head = cur;
         index[0]->add(cur, h);
         for (size_t i = 1; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
@@ -1535,24 +1535,24 @@ public:
     }
 
     FORCE_INLINE void del(T* elem) { // assume that the element is already in the map
-        //        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-        //        if (elemPrv) elemPrv->nxt = elemNxt;
-        //        if (elemNxt) elemNxt->prv = elemPrv;
-        //        if (elem == head) head = elemNxt;
-        //        elem->nxt = nullptr;
-        //        elem->prv = nullptr;
+                T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+                if (elemPrv) elemPrv->nxt = elemNxt;
+                if (elemNxt) elemNxt->prv = elemPrv;
+                if (elem == head) head = elemNxt;
+                elem->nxt = nullptr;
+                elem->prv = nullptr;
 
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
         pool.del(elem);
     }
 
     FORCE_INLINE void del(T* elem, HASH_RES_t h) { // assume that the element is already in the map and mainIdx=0
-        //        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-        //        if (elemPrv) elemPrv->nxt = elemNxt;
-        //        if (elemNxt) elemNxt->prv = elemPrv;
-        //        if (elem == head) head = elemNxt;
-        //        elem->nxt = nullptr;
-        //        elem->prv = nullptr;
+                T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+                if (elemPrv) elemPrv->nxt = elemNxt;
+                if (elemNxt) elemNxt->prv = elemPrv;
+                if (elem == head) head = elemNxt;
+                elem->nxt = nullptr;
+                elem->prv = nullptr;
 
         index[0]->del(elem, h);
         for (size_t i = 1; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
