@@ -454,7 +454,7 @@ public:
 
     FORCE_INLINE virtual void add(T* obj, const HASH_RES_t h) {
         if (count_ > threshold_) {
-            throw std::logic_error("HashIndex resize disabled for this experiment");
+//            throw std::logic_error("HashIndex resize disabled for this experiment");
             resize_(size_ << 1);
         }
         size_t b = h % size_;
@@ -1283,7 +1283,7 @@ public:
     }
 
     void clear() override {
-
+        throw std::logic_error("Not implemented");
     }
 
     size_t computeHash(const T& key) override {

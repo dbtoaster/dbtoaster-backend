@@ -106,6 +106,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       }
     //        case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
     case Mul(Cmp(l, r, op), rr) if Optimizer.m3CompareMultiply && !containsForeachOrSlice(rr) =>
+      val tp = man(rr.tp).asInstanceOf[TypeRep[Any]]
       expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
         var tmpVrr: Rep[_] = null;
         expr(rr, (vrr: Rep[_]) => {
@@ -113,7 +114,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
           IR.unit(())
         });
         tmpVrr
-      }, IR.unit(0L))), am), am)
+      }, IR.unit(zero(rr.tp))(tp))(tp)), am), am)
     case Mul(l, r) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(mul(vl, vr, ex.tp)), am), am)
     case a@Add(l, r) =>
       if (a.agg == Nil) {
@@ -445,7 +446,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       }.toMap // XXX missing indexes
       unit(())
     }
-    val (str, ld0, _) = genInternals(s0)
+    //    val (str, ld0, globalConstants) = genInternals(s0)
     val tsResBlks = s0.triggers.map(genTriggerPardis(_, s0)) // triggers (need to be generated before maps)
 
 
@@ -505,8 +506,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     val optTP = new Optimizer(IR).optimize(initTP)
     ExpressionSymbol.globalId = 0
     val printInfoDef = doc"def printMapsInfo() = {}"
-    if (consts != "\n") //SBJ : Just to make sure we are not missing anything here
-      java.lang.System.err.println(s"Consts = $consts")
+
     genCodeForProgram(optTP, allnames)
   }
 
@@ -572,15 +572,17 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
-        val fieldsDoc = fields.map(x => { doc"${x.tpe} ${x.name};"}).mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt;"
+        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt;"
+        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: "{}"
+        val constructor = doc"${tag.typeName}() = default;"
         val serializer = doc"template<class Archive> \nvoid serialize(Archive& ar, const unsigned int version) const {" :/:
-        Document.nest(4, fields.map(x => doc"DBT_SERIALIZATION_NVP(ar,${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n","\nar << ELEM_SEPARATOR;\n","\n")) :/: "}"
+          Document.nest(4, fields.map(x => doc"DBT_SERIALIZATION_NVP(ar,${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n", "\nar << ELEM_SEPARATOR;\n", "\n")) :/: "}"
 
-        "struct " :: tag.typeName :: " {" :/: Document.nest(2,fieldsDoc :/: serializer) :/: "};"
+        "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: serializer) :/: "};"
     }
     val entries = optTP.structs.map(structToDoc).mkDocument("\n")
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
-    val idxes = optTP.globalVars.map(s => s ->(collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap
+    val idxes = optTP.globalVars.map(s => s ->(collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap // store -> (AB(idxSym, IdxType, uniq, other), AB(IdxName))
     optTP.initBlock.stmts.collect {
       case Statement(s, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) => {
         val names = ops.collect {
@@ -603,20 +605,26 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     }
     val storesnames = optTP.globalVars.zip(allnames).toMap
     val stores = optTP.globalVars.map(s => {
-      def idxTypeName(i: Int) = storesnames(s) :: "Idx" :: i :: "Type"
 
-      val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
-      val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
-      val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
+      if (s.tp.isInstanceOf[StoreType[_]]) {
+        def idxTypeName(i: Int) = storesnames(s) :: "Idx" :: i :: "Type"
+        val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
+        val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
+        val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${storesnames(s)}_map;"
-      val storeDecl = storesnames(s) :: "_map  " :: storesnames(s) :: "(10000);"
-      val storeRef = doc"${storesnames(s)}_map& $s = ${storesnames(s)};"
+        val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${storesnames(s)}_map;"
+        val entryTypeDef = doc"typedef $entryTp ${storesnames(s)}_entry;"
+        val storeDecl = storesnames(s) :: "_map  " :: storesnames(s) :: "(10000);"
+        val storeRef = doc"${storesnames(s)}_map& $s = ${storesnames(s)};"
 
-      val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${storesnames(s)}.index[${t._2}];").mkDocument("\n")
-      val primaryIdx = idx2(s)(0)
-      val primaryRef = doc"${idxTypeName(0)}& ${storesnames(s)}PrimaryIdx = * (${idxTypeName(0)} *) ${storesnames(s)}.index[0];"
-      idxTypeDefs :\\: storeTypeDef :\\: storeDecl :\\: storeRef :\\: idxDecl :\\: primaryRef
+        val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${storesnames(s)}.index[${t._2}];").mkDocument("\n")
+        val primaryIdx = idx2(s)(0)
+        val primaryRef = doc"${idxTypeName(0)}& ${storesnames(s)}PrimaryIdx = * (${idxTypeName(0)} *) ${storesnames(s)}.index[0];"
+        idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: storeRef :\\: idxDecl :\\: primaryRef
+      } else {
+        doc"${s.tp} ${storesnames(s)};" :/:
+          doc"${s.tp}& $s = ${storesnames(s)};"
+      }
     }).mkDocument("\n", "\n\n\n", "\n")
 
 

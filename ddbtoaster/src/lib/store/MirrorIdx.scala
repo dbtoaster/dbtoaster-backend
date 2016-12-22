@@ -26,4 +26,5 @@ trait MirrorIdx[E <: Entry] {
   def slice(key: E, f: (E) => Unit): Unit = ???
   def sliceCopy(key: E, f: (E) => Unit): Unit = ???
   def sliceCopyDependent(key: E, f: (E) => Unit): Unit = ???
+  def clear(): Unit = ???
 }

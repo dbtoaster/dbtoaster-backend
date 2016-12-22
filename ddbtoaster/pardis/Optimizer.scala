@@ -22,10 +22,10 @@ object Optimizer {
   var fixedRange: Boolean = true
   var onlineOpts = true
   var tmpVarHoist = true
-  var indexInline = false
+  var indexInline = true
   var indexLookupFusion = true
   var indexLookupPartialFusion = false
-  var deadIndexUpdate = false
+  var deadIndexUpdate = true
   var codeMotion = true
   var refCounter = true
   var m3CompareMultiply = true //Lazy evaluation
@@ -34,7 +34,7 @@ object Optimizer {
 
 class Optimizer(val IR: StoreDSL) {
   val pipeline = scala.collection.mutable.ArrayBuffer[TransformerHandler]()
-    pipeline += TreeDumper(false)
+
   if (Optimizer.analyzeIndex) {
     pipeline += new IndexAnalysis(IR)
     pipeline += new IndexDecider(IR)
@@ -59,7 +59,7 @@ class Optimizer(val IR: StoreDSL) {
   } else if (Optimizer.tmpVarHoist) {
     throw new Error("Tmp Var Hoisting cannot be enabled without Entry analysis")
   }
-
+//  pipeline += TreeDumper(false)
 
   //    pipeline += PartiallyEvaluate
   if (!Optimizer.indexLookupFusion && !Optimizer.analyzeIndex && Optimizer.analyzeEntry)

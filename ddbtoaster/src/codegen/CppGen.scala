@@ -25,6 +25,7 @@ trait ICppGen extends IScalaGen {
   def FIND_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("FIND_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("FIND_IN_MAP_FUNC" -> m),0)+1); m+".getValueOrDefault" }
   def SET_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("SET_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("SET_IN_MAP_FUNC" -> m),0)+1); m+".setOrDelOnZero" }
   def ADD_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("ADD_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("ADD_TO_MAP_FUNC" -> m),0)+1); m+".addOrDelOnZero" }
+  def INSERT_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("INSERT_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("INSERT_TO_MAP_FUNC" -> m),0)+1); m+".insert_nocheck" }
   override def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) = {
     val sampleTempEnt=fresh("st")
     sampleEntDef+="  "+tupType(ksTp, vsTp)+" "+sampleTempEnt+";\n"
@@ -44,7 +45,7 @@ trait ICppGen extends IScalaGen {
     tupleTp
   }
 
-  override def consts = cs.map{ case (Apply(f,tp,as),n) => 
+  override def consts = cs.map{ case (Apply(f,tp,as),n) =>
     val vs=as.map(a=>cpsExpr(a))
     "/*const static*/ "+tp.toCpp+" "+n+";\n"
   }.mkString+"\n" // constant member definition
@@ -382,6 +383,14 @@ trait ICppGen extends IScalaGen {
 
   def genTempMapDefs = tmpMapDefs.map{ case (n, (ksTp, vsTp)) => "MultiHashMap<"+tupType(ksTp, vsTp)+","+vsTp.toCpp+",HashIndex<"+tupType(ksTp, vsTp)+","+vsTp.toCpp+"> > "+n+";\n" }.mkString
 
+  /**
+    * By default, each user-provided (top-level) query is materialized as a single map.
+    * If this flag is turned on, the compiler will materialize top-level queries as multiple maps (if it is more efficient to do so),
+    * and only combine them on request. For more complex queries (in particular nested aggregate, and AVG aggregate queries),
+    * this results in faster processing rates, and if fresh results are required less than once per update, a lower overall computational cost as well.
+    * However, because the final evaluation of the top-level query is not performed until a result is requested, access latencies are higher.
+    * This optimization is not activated by default at any optimization level.
+    */
   def isExpressiveTLQSEnabled(queries:List[Query]) = queries.exists{ query => query.map match {
       case MapRef(n,_,_) => if (n == query.name) false else true
       case _ => true
@@ -394,9 +403,9 @@ trait ICppGen extends IScalaGen {
 
   private def getInitializationForPublicValues(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>(queries.filter(_.name==m.name).size != 0) && (m.keys.size == 0)}.map{m=>", "+m.name+"(" + m.tp.zeroCpp + ")"}.mkString
 
-  private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) = getInitializationForPublicValues(maps,queries) + (if(isExpressiveTLQSEnabled(queries)) getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps else "")
+  private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) = ""//getInitializationForPublicValues(maps,queries) + (if(isExpressiveTLQSEnabled(queries)) getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps else "")
 
-  private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) = (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps)
+  private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) =""// (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps)
 
   def generateUnwrapFunction(evt:EvtTrigger)(implicit s0:System) = {
     val (op,name,fields) = evt match {
@@ -507,7 +516,7 @@ trait ICppGen extends IScalaGen {
       val fields = s.schema.fields
       "void on_insert_"+name+"("+fields.map{case (fld,tp) => "const "+tp.toCpp+" "+fld }.mkString(", ")+") {\n"+
       "  "+name+"_entry e("+fields.map{case (fld,_) => fld }.mkString(", ")+", 1L);\n"+
-      "  "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
+      "  "+INSERT_TO_MAP_FUNC(name)+"(e);\n"+
       "}\n\n"+
       generateUnwrapFunction(EvtAdd(s.schema))+
       (if(s0.triggers.exists{
@@ -521,7 +530,7 @@ trait ICppGen extends IScalaGen {
         "  for(size_t i=0; i < sz; i++){\n"+
         "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
         "    "+name+"_entry e("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"1L);\n"+
-        "    "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
+        "    "+INSERT_TO_MAP_FUNC(name)+"(e);\n"+
         "  }\n"+
         "}\n\n"
       else "")
@@ -720,7 +729,7 @@ trait ICppGen extends IScalaGen {
     "  /* Data structures used for storing materialized views */\n"+
 //       ind(genIntermediateDataStructureRefs(mapDefsList.map(_._2).toList,s0.queries))+"\n"+
 //       ind(genTempMapDefs)+"\n"+
-//       ind(consts)+
+       ind(consts)+
     "\n\n"} else "")+
       //end of constants
       //start of the common part between all CPP code generators (part 2)

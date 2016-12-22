@@ -93,7 +93,7 @@ trait StoreDSL extends
 
   def nullValue(tp: TypeRep[_]) = tp match {
     case IntType => unit(scala.Int.MinValue)
-    case LongType => unit(scala.Long.MinValue)
+    case LongType => unit(scala.Int.MinValue.asInstanceOf[scala.Long])
     case DoubleType => unit(scala.Double.MinValue)
     case BooleanType => unit(false)
     case StringType => unit[String](null)
@@ -198,6 +198,10 @@ trait StoreDSL extends
       case "substring" => substring(args(0).asInstanceOf[Rep[String]], args(1).asInstanceOf[Rep[Long]], args(2).asInstanceOf[Rep[Long]])
       case "date" => args(0) match {
         case Constant(strDate) => Constant(ddbt.lib.Functions.Udate(strDate.asInstanceOf[String]))
+        case _ => m3_apply(fn, args)(man(tp))
+      }
+      case "date_part" => args(0) match {
+        case Constant(t : String) if t.toLowerCase == "year"  => m3_apply("year_part", args.drop(1))(man(tp))
         case _ => m3_apply(fn, args)(man(tp))
       }
       case _ => m3_apply(fn, args)(man(tp)) // fallback for large or unknown functions
@@ -368,6 +372,7 @@ trait StoreDSL extends
 
   def substring(str: Rep[String], start: Rep[Long], length: Rep[Long]): Rep[String] = (str, start, length) match {
     case (Constant(s), Constant(t), Constant(l)) => Constant(s.substring(t.toInt, l.toInt))
+    case (s, Constant(t), Constant(l)) => str.substring(unit(t.toInt), unit(l.toInt))
     case _ => str.substring(start.toInt, length.toInt)
   }
 

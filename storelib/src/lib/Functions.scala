@@ -53,6 +53,10 @@ object Functions {
       case p => throw new Exception("Invalid date part: "+p)
     }
   }
+  def Uyear_part(date: java.util.Date) : Long = {
+    val c = java.util.Calendar.getInstance; c.setTime(date)
+    c.get(java.util.Calendar.YEAR)
+  }
 
   def Udate_part(field:String, date:Long): Long = {
     val c = java.util.Calendar.getInstance; c.setTime(new Date(date))
