@@ -72,8 +72,8 @@ object TpccXactGenerator_SC {
       prog = new Prog(Context, numWare)
       unit((1))
     }
-    //var lang = "cpp"
-    var lang = "scala"
+    var lang = "cpp"
+//    var lang = "scala"
     val codeGen = lang match {
       case "scala" => new TpccPardisScalaGen(Context)
       case "cpp" => Optimizer.cTransformer = true;
@@ -246,7 +246,10 @@ object TpccXactGenerator_SC {
 
 
             stockEntry(3) = s_quantity - ol_quantity
-            if (s_quantity <= ol_quantity) stockEntry +=(3, 91)
+            if (s_quantity <= ol_quantity) {
+              stockEntry +=(3, 91)
+              ()
+            }
 
             var s_remote_cnt_increment = 0
 
@@ -330,19 +333,23 @@ object TpccXactGenerator_SC {
           //c_credit
           //TODO this is the correct version but is not implemented in the correctness test
           //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-          val c_new_data = StringExtra.StringPrintf(500, "%d %d %d %d %d $%f %s | %s", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(h_amount), $(datetime).toString, c_data)
+          val c_new_data = StringExtra.StringPrintf(500, "%d %d %d %d %d $%f %s | %s", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(h_amount), $(datetime), c_data)
           customerEntry +=(17 /*c_balance*/ , $(h_amount))
           //TODO this is the correct version but is not implemented in the correctness test
           //customerEntry += (18 /*c_ytd_payment*/, h_amount)
           //customerEntry += (19 /*c_payment_cnt*/, 1)
           customerEntry.update(21 /*c_data*/ , c_new_data)
+          ()
 
         } else {
           customerEntry +=(17 /*c_balance*/ , $(h_amount))
           //TODO this is the correct version but is not implemented in the correctness test
           //customerEntry += (18 /*c_ytd_payment*/, h_amount)
           //customerEntry += (19 /*c_payment_cnt*/, 1)
+          ()
         }
+
+
         $(customerTbl).updateCopy(customerEntry)
         val w_name = warehouseEntry.get[String](2)
         val d_name = districtEntry.get[String](3)
@@ -526,37 +533,37 @@ object TpccXactGenerator_SC {
           }
           d_id = d_id + 1
         }
-        if ($(showOutput)) {
-          var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
-            " Date: " + $(datetime) +
-            "\n\n Warehouse: " + $(w_id) +
-            "\n Carrier:   " + $(o_carrier_id) +
-            "\n\n Delivered Orders\n"
-          var skippedDeliveries = 0
-          var i: Int = 1
-
-          while (i <= 10) {
-            if (orderIDs(i - 1) >= 0) {
-              output = output + ("  District ") +
-                (if (i < 10) " " else "") +
-                (i) +
-                (": Order number ") +
-                (orderIDs(i - 1)) +
-                (" was delivered.\n")
-            }
-            else {
-              output = output + ("  District ") +
-                (if (i < 10) " " else "") +
-                (i) +
-                (": No orders to be delivered.\n")
-              skippedDeliveries += 1
-            }
-            i += 1
-          }
-          output = output + ("+-----------------------------------------------------------------+\n\n")
-          println(output)
-          ()
-        }
+//        if ($(showOutput)) {
+//          var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
+//            " Date: " + $(datetime) +
+//            "\n\n Warehouse: " + $(w_id) +
+//            "\n Carrier:   " + $(o_carrier_id) +
+//            "\n\n Delivered Orders\n"
+//          var skippedDeliveries = 0
+//          var i: Int = 1
+//
+//          while (i <= 10) {
+//            if (orderIDs(i - 1) >= 0) {
+//              output = output + ("  District ") +
+//                (if (i < 10) " " else "") +
+//                (i) +
+//                (": Order number ") +
+//                (orderIDs(i - 1)) +
+//                (" was delivered.\n")
+//            }
+//            else {
+//              output = output + ("  District ") +
+//                (if (i < 10) " " else "") +
+//                (i) +
+//                (": No orders to be delivered.\n")
+//              skippedDeliveries += 1
+//            }
+//            i += 1
+//          }
+//          output = output + ("+-----------------------------------------------------------------+\n\n")
+//          println(output)
+//          ()
+//        }
         1
       }.toRep
     }
@@ -581,15 +588,15 @@ object TpccXactGenerator_SC {
           i += 1
         }
         val stock_count = unique_ol_i_id.size
-        if ($(showOutput)) {
-          val output = "\n+-------------------------- STOCK-LEVEL --------------------------+" +
-            "\n Warehouse: " + $(w_id) +
-            "\n District:  " + $(d_id) +
-            "\n\n Stock Level Threshold: " + $(threshold) +
-            "\n Low Stock Count:       " + stock_count +
-            "\n+-----------------------------------------------------------------+\n\n"
-          println(output)
-        }
+//        if ($(showOutput)) {
+//          val output = "\n+-------------------------- STOCK-LEVEL --------------------------+" +
+//            "\n Warehouse: " + $(w_id) +
+//            "\n District:  " + $(d_id) +
+//            "\n\n Stock Level Threshold: " + $(threshold) +
+//            "\n Low Stock Count:       " + stock_count +
+//            "\n+-----------------------------------------------------------------+\n\n"
+//          println(output)
+//        }
         1
       }.toRep
     }

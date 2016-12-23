@@ -1,9 +1,10 @@
 package ddbt.codegen.prettyprinter
 
+import ch.epfl.data.sc.pardis.ir.CNodes.StrStr
 import ch.epfl.data.sc.pardis.ir.CTypes.PointerType
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.CCodeGenerator
-import ch.epfl.data.sc.pardis.types.{SeqType, UnitType}
+import ch.epfl.data.sc.pardis.types.{ArrayType, PardisVariableType, SeqType, UnitType}
 import ch.epfl.data.sc.pardis.utils.document._
 import ddbt.lib.store.IHash
 import ddbt.lib.store.deep.{StoreDSL, StructFieldDecr, StructFieldIncr}
@@ -20,19 +21,26 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   val refSymbols = collection.mutable.ArrayBuffer[Sym[_]]()
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
-    case Statement(sym, StringExtraStringPrintfObject(Constant(size), f, Def(LiftedSeq(args)))) => doc"char* $sym = new char[${size + 1}];" :\\: doc"snprintf($sym, ${size + 1}, $f, ${args.mkDocument(",")});"
+    case Statement(sym, StringExtraStringPrintfObject(Constant(size), f, Def(LiftedSeq(args)))) =>
+      def ArgToDoc(arg: Rep[_]) = arg.tp match {
+        case StringType => doc"$arg.data_"
+        case DateType => doc"IntToStrdate($arg)"
+        case _ => doc"$arg"
+      }
+      doc"PString $sym($size);" :\\: doc"snprintf($sym.data_, ${size + 1}, $f, ${args.map(ArgToDoc).mkDocument(", ")});"
+    case Statement(sym, StrStr(x, y)) => doc"char* ${sym} = strstr($x.data_, $y);"
 
     case Statement(sym, ab@ArrayApplyObject(_)) if ab.typeT.isInstanceOf[EntryIdxType[_]] => Document.empty
     case Statement(sym, ab@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"${sym.tp} $sym = { ${ops.mkDocument(",")} };"
-    case Statement(sym, ArrayNew(size)) => doc"${sym.tp} $sym[$size];"
-    case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) => doc"strcpy($self[$i], $r);"
+    case Statement(sym, ArrayNew(size)) => doc"${sym.tp.asInstanceOf[ArrayType[_]].elementType} $sym[$size];"
+//    case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) => doc"strcpy($self[$i], $r);"
     case Statement(sym, ArrayUpdate(self, i, x)) => doc"$self[$i] = $x;"
 
     case Statement(sym, ab@ArrayBufferNew2()) => doc"vector<${ab.typeA}*> $sym;"
     case Statement(sym, ArrayBufferSortWith(self, f)) => doc"sort($self.begin(), $self.end(), $f);"
     case Statement(sym, s@SetApplyObject2()) => doc"unordered_set<${s.typeT}> $sym;"
     case Statement(sym, `Set+=`(self, elem)) => doc"$self.insert($elem);"
-    case Statement(sym, StringExtraStringCompareObject(str1, str2)) => doc"int $sym = strcmpi($str1, $str2);"
+
     case Statement(sym, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) =>
       val entryTp = sym.tp.asInstanceOf[StoreType[_]].typeE.asInstanceOf[PointerType[_]].contentsType
       val names = ops.collect {
@@ -61,21 +69,26 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   }
 
   override def expToDocument(exp: Expression[_]): Document = exp match {
-    case c@Constant(null) if c.tp == DateType => "0"
+    case Constant(null) if exp.tp == DateType => "0"
+    case Constant(null) if exp.tp == StringType => "PString()"
     case _ => super.expToDocument(exp)
   }
 
   override def tpeToDocument[T](tp: TypeRep[T]): Document = tp match {
     case StringType => "PString"
     case DateType => "date"
+    case IR.ArrayType(atp) => doc"$atp*"
+    case PardisVariableType(vtp) => tpeToDocument(vtp)
     case _ => super.tpeToDocument(tp)
   }
 
   override def nodeToDocument(node: PardisNode[_]): Document = node match {
-    case ToString(a) if a.tp == DateType => doc"IntToStrDate($a)"
+//    case ToString(a) if a.tp == DateType => doc"IntToStrDate($a)"
     case StringSubstring2(self, pos, len) => doc"$self.substr($pos, $len)" //Different from scala substring
+    case StringExtraStringCompareObject(str1, str2) => doc"strcmpi($str1.data_, $str2.data_)"
 
-    //    case StoreInsert(self, e) => doc"$self.add($e)"
+
+    case StoreInsert(self, e) => doc"$self.add($e)"
     case StoreUnsafeInsert(self, idx, e) => doc"$self.insert_nocheck(*$e)" //ignoring idx for now
     case StoreGet(self, idx, key) if refSymbols.contains(key) => doc"$self.get($key)" //SBJ: Assumes idx 0
     case StoreGet(self, idx, key) => doc"$self.get(*$key)" //SBJ: Assumes idx 0

@@ -59,7 +59,7 @@ class Optimizer(val IR: StoreDSL) {
   } else if (Optimizer.tmpVarHoist) {
     throw new Error("Tmp Var Hoisting cannot be enabled without Entry analysis")
   }
-//  pipeline += TreeDumper(false)
+
 
   //    pipeline += PartiallyEvaluate
   if (!Optimizer.indexLookupFusion && !Optimizer.analyzeIndex && Optimizer.analyzeEntry)
@@ -81,6 +81,7 @@ class Optimizer(val IR: StoreDSL) {
     pipeline += new ScalaStructToMallocTransformer(IR)
     pipeline += new StringToCTransformer(IR)
   }
+//  pipeline += TreeDumper(false)
   if (Optimizer.refCounter)
     pipeline += new CountingAnalysis[StoreDSL](IR) with TransformerHandler {
       override def apply[Lang <: Base, T](context: Lang)(block: context.Block[T])(implicit evidence$1: PardisType[T]): context.Block[T] = {

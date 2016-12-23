@@ -40,7 +40,7 @@
 
 struct PString
 {
-private:
+public:
 #ifdef USE_POOL
   static CharPool<> pool_;
 #endif //USE_POOL
@@ -64,21 +64,35 @@ protected:
   friend size_t hash_value(PString const &str);
 
 public:
+
   PString() : size_(0), data_(nullptr), ptr_count_(new size_t(1))
   {
   }
-
-  PString(const char *str) : ptr_count_(new size_t(1))
-  {
-    size_ = strlen(str) + 1;
-#ifdef USE_POOL
+  PString(size_t len) : size_(len +1),  ptr_count_(new size_t(1)){
+  #ifdef USE_POOL
     size_t num_cells = getNumCells(size_);
     data_ = pool_.add(num_cells);
-#else
+  #else
     data_ = new char[size_];
+  #endif //USE_POOL      
+  //SBJ: Initialized externally
+    }
+
+    PString(const char *str) : ptr_count_(new size_t(1)) {
+        if (str != nullptr) {
+            size_ = strlen(str) + 1;
+#ifdef USE_POOL
+            size_t num_cells = getNumCells(size_);
+            data_ = pool_.add(num_cells);
+#else
+            data_ = new char[size_];
 #endif //USE_POOL
-    memcpy(data_, str, size_ * sizeof(char));
-  }
+            memcpy(data_, str, size_ * sizeof (char));
+        }else{
+            size_ = 0;
+            data_ = nullptr;
+        }
+    }
 
   PString(const char *str, size_t strln) : ptr_count_(new size_t(1))
   {
@@ -199,7 +213,7 @@ public:
 
   inline bool operator==(const PString &other) const
   {
-    if (this->size_ != other.size_) return false;
+//    if (this->size_ != other.size_) return false;
     return (strcmp(this->data_, other.data_) == 0);
   }
 

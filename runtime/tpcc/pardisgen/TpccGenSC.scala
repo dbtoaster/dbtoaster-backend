@@ -603,9 +603,9 @@ class SCExecutor
     override def cmp(x4499 : SEntry8_IIIIITDS , x4500 : SEntry8_IIIIITDS) = {
       val x4501 = x4499._1;
       val x4502 = x4500._1;
-      val x4503 = x4501.==(-1);
+      val x4503 = x4501.==(-2147483648);
       val x4505 = x4503.||({
-        val x4504 = x4502.==(-1);
+        val x4504 = x4502.==(-2147483648);
         x4504
       });
       val x4507 = x4505.||({
@@ -615,9 +615,9 @@ class SCExecutor
       val x4515 = x4507.&&({
         val x4508 = x4499._2;
         val x4509 = x4500._2;
-        val x4510 = x4508.==(-1);
+        val x4510 = x4508.==(-2147483648);
         val x4512 = x4510.||({
-          val x4511 = x4509.==(-1);
+          val x4511 = x4509.==(-2147483648);
           x4511
         });
         val x4514 = x4512.||({
@@ -629,9 +629,9 @@ class SCExecutor
       val x4523 = x4515.&&({
         val x4516 = x4499._3;
         val x4517 = x4500._3;
-        val x4518 = x4516.==(-1);
+        val x4518 = x4516.==(-2147483648);
         val x4520 = x4518.||({
-          val x4519 = x4517.==(-1);
+          val x4519 = x4517.==(-2147483648);
           x4519
         });
         val x4522 = x4520.||({
@@ -643,9 +643,9 @@ class SCExecutor
       val x4531 = x4523.&&({
         val x4524 = x4499._4;
         val x4525 = x4500._4;
-        val x4526 = x4524.==(-1);
+        val x4526 = x4524.==(-2147483648);
         val x4528 = x4526.||({
-          val x4527 = x4525.==(-1);
+          val x4527 = x4525.==(-2147483648);
           x4527
         });
         val x4530 = x4528.||({
@@ -657,9 +657,9 @@ class SCExecutor
       val x4539 = x4531.&&({
         val x4532 = x4499._5;
         val x4533 = x4500._5;
-        val x4534 = x4532.==(-1);
+        val x4534 = x4532.==(-2147483648);
         val x4536 = x4534.||({
-          val x4535 = x4533.==(-1);
+          val x4535 = x4533.==(-2147483648);
           x4535
         });
         val x4538 = x4536.||({
@@ -685,9 +685,9 @@ class SCExecutor
       val x4555 = x4547.&&({
         val x4548 = x4499._7;
         val x4549 = x4500._7;
-        val x4550 = x4548.==(-1.0);
+        val x4550 = x4548.==(-1.7976931348623157E308);
         val x4552 = x4550.||({
-          val x4551 = x4549.==(-1.0);
+          val x4551 = x4549.==(-1.7976931348623157E308);
           x4551
         });
         val x4554 = x4552.||({
@@ -1089,25 +1089,25 @@ class SCExecutor
       0
     }
   }
-  val x8131 = SEntry10_IIIIIITIDS(-1, -1, -1, -1, -1, -1, null, -1, -1.0, null);
-  val x8556 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null);
-  val x8429 = SEntry10_IIIIIITIDS(-1, -1, -1, -1, -1, -1, null, -1, -1.0, null);
-  val x8416 = SEntry11_IISSSSSSDDI(-1, -1, null, null, null, null, null, null, -1.0, -1.0, -1);
-  val x8906 = SEntry11_IISSSSSSDDI(-1, -1, null, null, null, null, null, null, -1.0, -1.0, -1);
-  val x8878 = SEntry5_IISDS(-1, -1, null, -1.0, null);
-  val x8930 = SEntry17_IIISSSSSSSSSSIIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, -1, -1, -1, null);
-  val x8653 = SEntry9_ISSSSSSDD(-1, null, null, null, null, null, null, -1.0, -1.0);
-  val x8121 = SEntry8_IIIITIIB(-1, -1, -1, -1, null, -1, -1, false);
-  val x8460 = SEntry17_IIISSSSSSSSSSIIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, -1, -1, -1, null);
-  val x8903 = SEntry9_ISSSSSSDD(-1, null, null, null, null, null, null, -1.0, -1.0);
-  val x8701 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null);
-  val x8899 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null);
-  val x8539 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null);
-  val x8108 = SEntry3_III(-1, -1, -1);
-  val x8718 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null);
-  val x8135 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-1, -1, -1, null, null, null, null, null, null, null, null, null, null, null, -1.0, -1.0, -1.0, -1.0, -1, -1, null);
-  val x8659 = SEntry11_IISSSSSSDDI(-1, -1, null, null, null, null, null, null, -1.0, -1.0, -1);
-  val x8527 = SEntry8_IIIITIIB(-1, -1, -1, -1, null, -1, -1, false);
+  val x8131 = SEntry10_IIIIIITIDS(-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -1.7976931348623157E308, null);
+  val x8556 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x8429 = SEntry10_IIIIIITIDS(-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -1.7976931348623157E308, null);
+  val x8416 = SEntry11_IISSSSSSDDI(-2147483648, -2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648);
+  val x8906 = SEntry11_IISSSSSSDDI(-2147483648, -2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648);
+  val x8878 = SEntry5_IISDS(-2147483648, -2147483648, null, -1.7976931348623157E308, null);
+  val x8930 = SEntry17_IIISSSSSSSSSSIIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, -2147483648, -2147483648, -2147483648, null);
+  val x8653 = SEntry9_ISSSSSSDD(-2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308);
+  val x8121 = SEntry8_IIIITIIB(-2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -2147483648, false);
+  val x8460 = SEntry17_IIISSSSSSSSSSIIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, -2147483648, -2147483648, -2147483648, null);
+  val x8903 = SEntry9_ISSSSSSDD(-2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308);
+  val x8701 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x8899 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x8539 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x8108 = SEntry3_III(-2147483648, -2147483648, -2147483648);
+  val x8718 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x8135 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x8659 = SEntry11_IISSSSSSDDI(-2147483648, -2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648);
+  val x8527 = SEntry8_IIIITIIB(-2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -2147483648, false);
   class DeliveryTx(x4361: Store[SEntry3_III], x4561: Store[SEntry8_IIIIITDS], x4580: Store[SEntry9_ISSSSSSDD], x4599: Store[SEntry5_IISDS], x4823: Store[SEntry8_IIIITIIB], x4850: Store[SEntry11_IISSSSSSDDI], x5022: Store[SEntry10_IIIIIITIDS], x5128: Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], x5154: Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int) => Int ) {
     def apply(x10 : Boolean, x11 : Date, x12 : Int, x13 : Int) =     {
       val orderIDs = new Array[Int](123);

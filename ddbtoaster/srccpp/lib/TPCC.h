@@ -124,7 +124,7 @@ enum TPCC_Programs {
 struct NewOrder : public Program {
     int c_id;
     int d_id, w_id, o_ol_cnt;
-    Date datetime;
+    date datetime;
 
     int itemid[15];
     int quantity[15], supware[15];
@@ -133,14 +133,11 @@ struct NewOrder : public Program {
     bool o_all_local;
     int stock[15];
     double price[15];
-    char* iname[15];
-    char* bg[15];
+    PString iname[15];
+    PString bg[15];
     double amt[15];
 
     virtual ~NewOrder() {
-        for (int i = 0; i < 15; ++i) {
-            delete[] bg[i];
-        }
     }
 
     NewOrder() : Program(NEWORDER) {
@@ -166,7 +163,7 @@ struct NewOrder : public Program {
 };
 
 struct PaymentById : public Program {
-    Date datetime;
+    date datetime;
     int c_id;
     int w_id, c_w_id, d_id, c_d_id;
     double h_amount;
@@ -183,7 +180,7 @@ struct PaymentById : public Program {
 };
 
 struct PaymentByName : public Program {
-    Date datetime;
+    date datetime;
     int w_id, c_w_id;
     int d_id, c_d_id;
     char c_last_input[17];
@@ -252,7 +249,7 @@ struct StockLevel : public Program {
 struct Delivery : public Program {
     int w_id;
     int o_carrier_id;
-    Date datetime;
+    date datetime;
 
     Delivery() : Program(DELIVERY) {
     }
@@ -265,8 +262,8 @@ struct Delivery : public Program {
 
 };
 
-Date StrToIntDate(const char* s) {
-    Date d = s[2] - '0';
+date StrToIntdate(const char* s) {
+    date d = s[2] - '0';
     //        d = d * 10 + s[1] - '0';
     //        d = d * 10 + s[2] - '0';
     d = d * 10 + s[3] - '0';
@@ -283,7 +280,7 @@ Date StrToIntDate(const char* s) {
     return d;
 }
 
-char* IntToStrDate(Date d) {
+char* IntToStrdate(date d) {
     static char s[22];
     s[0] = '2';
     s[1] = '0';
@@ -412,19 +409,19 @@ struct TPCCDataGen {
         char date[20];
 
         while (std::getline(fin, line)) {
-            c._4 = new char[17];
-            c._5 = new char[3];
-            c._6 = new char[17];
-            c._7 = new char[21];
-            c._8 = new char[21];
-            c._9 = new char[21];
-            c._10 = new char[3];
-            c._11 = new char[10];
-            c._12 = new char[17];
-            c._14 = new char[3];
-            c._21 = new char[501];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c._1, &c._2, &c._3, c._4, c._5, c._6, c._7, c._8, c._9, c._10, c._11, c._12, date, c._14, &c._15, &c._16, &c._17, &c._18, &c._19, &c._20, c._21);
-            c._13 = StrToIntDate(date);
+            c._4.data_ = new char[17];
+            c._5.data_ = new char[3];
+            c._6.data_ = new char[17];
+            c._7.data_ = new char[21];
+            c._8.data_ = new char[21];
+            c._9.data_ = new char[21];
+            c._10.data_ = new char[3];
+            c._11.data_ = new char[10];
+            c._12.data_ = new char[17];
+            c._14.data_ = new char[3];
+            c._21.data_ = new char[501];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c._1, &c._2, &c._3, c._4.data_, c._5.data_, c._6.data_, c._7.data_, c._8.data_, c._9.data_, c._10.data_, c._11.data_, c._12.data_, date, c._14.data_, &c._15, &c._16, &c._17, &c._18, &c._19, &c._20, c._21.data_);
+            c._13 = StrToIntdate(date);
             customerTbl.insert_nocheck(c);
         }
         fin.close();
@@ -433,19 +430,19 @@ struct TPCCDataGen {
         fin.open(outputTableDir + "customer.txt");
         while (std::getline(fin, line)) {
             CustomerEntry *cR = new CustomerEntry();
-            cR->_4 = new char[17];
-            cR->_5 = new char[3];
-            cR->_6 = new char[17];
-            cR->_7 = new char[21];
-            cR->_8 = new char[21];
-            cR->_9 = new char[21];
-            cR->_10 = new char[3];
-            cR->_11 = new char[10];
-            cR->_12 = new char[17];
-            cR->_14 = new char[3];
-            cR->_21 = new char[501];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &cR->_1, &cR->_2, &cR->_3, cR->_4, cR->_5, cR->_6, cR->_7, cR->_8, cR->_9, cR->_10, cR->_11, cR->_12, date, cR->_14, &cR->_15, &cR->_16, &cR->_17, &cR->_18, &cR->_19, &cR->_20, cR->_21);
-            cR->_13 = StrToIntDate(date);
+            cR->_4.data_ = new char[17];
+            cR->_5.data_ = new char[3];
+            cR->_6.data_= new char[17];
+            cR->_7.data_ = new char[21];
+            cR->_8.data_ = new char[21];
+            cR->_9.data_ = new char[21];
+            cR->_10.data_ = new char[3];
+            cR->_11.data_ = new char[10];
+            cR->_12.data_ = new char[17];
+            cR->_14.data_ = new char[3];
+            cR->_21.data_ = new char[501];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &cR->_1, &cR->_2, &cR->_3, cR->_4.data_, cR->_5.data_, cR->_6.data_, cR->_7.data_, cR->_8.data_, cR->_9.data_, cR->_10.data_, cR->_11.data_, cR->_12.data_, date, cR->_14.data_, &cR->_15, &cR->_16, &cR->_17, &cR->_18, &cR->_19, &cR->_20, cR->_21.data_);
+            cR->_13 = StrToIntdate(date);
             custRes.add(cR);
         }
         fin.close();
@@ -460,13 +457,13 @@ struct TPCCDataGen {
         DistrictEntry d;
 
         while (std::getline(fin, line)) {
-            d._3 = new char[11];
-            d._4 = new char[21];
-            d._5 = new char[21];
-            d._6 = new char[21];
-            d._7 = new char[3];
-            d._8 = new char[10];
-            sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d._1, &d._2, d._3, d._4, d._5, d._6, d._7, d._8, &d._9, &d._10, &d._11);
+            d._3.data_ = new char[11];
+            d._4.data_ = new char[21];
+            d._5.data_ = new char[21];
+            d._6.data_ = new char[21];
+            d._7.data_ = new char[3];
+            d._8.data_ = new char[10];
+            sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d._1, &d._2, d._3.data_, d._4.data_, d._5.data_, d._6.data_, d._7.data_, d._8.data_, &d._9, &d._10, &d._11);
             districtTbl.insert_nocheck(d);
         }
         fin.close();
@@ -475,13 +472,13 @@ struct TPCCDataGen {
         fin.open(outputTableDir + "district.txt");
         while (std::getline(fin, line)) {
             DistrictEntry *dR = new DistrictEntry();
-            dR->_3 = new char[11];
-            dR->_4 = new char[21];
-            dR->_5 = new char[21];
-            dR->_6 = new char[21];
-            dR->_7 = new char[3];
-            dR->_8 = new char[10];
-            sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &dR->_1, &dR->_2, dR->_3, dR->_4, dR->_5, dR->_6, dR->_7, dR->_8, &dR->_9, &dR->_10, &dR->_11);
+            dR->_3.data_ = new char[11];
+            dR->_4.data_ = new char[21];
+            dR->_5.data_ = new char[21];
+            dR->_6.data_ = new char[21];
+            dR->_7.data_ = new char[3];
+            dR->_8.data_ = new char[10];
+            sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &dR->_1, &dR->_2, dR->_3.data_, dR->_4.data_, dR->_5.data_, dR->_6.data_, dR->_7.data_, dR->_8.data_, &dR->_9, &dR->_10, &dR->_11);
             distRes.add(dR);
         }
         fin.close();
@@ -498,9 +495,9 @@ struct TPCCDataGen {
 
         fin.open(inputTableDir + "history.txt");
         while (std::getline(fin, line)) {
-            h._8 = new char[25];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h._1, &h._2, &h._3, &h._4, &h._5, date, &h._7, h._8);
-            h._6 = StrToIntDate(date);
+            h._8.data_ = new char[25];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h._1, &h._2, &h._3, &h._4, &h._5, date, &h._7, h._8.data_);
+            h._6 = StrToIntdate(date);
             historyTbl.insert_nocheck(h);
         }
         fin.close();
@@ -509,9 +506,9 @@ struct TPCCDataGen {
         fin.open(outputTableDir + "history.txt");
         while (std::getline(fin, line)) {
             HistoryEntry *hR = new HistoryEntry();
-            hR->_8 = new char[25];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &hR->_1, &hR->_2, &hR->_3, &hR->_4, &hR->_5, date, &hR->_7, hR->_8);
-            hR->_6 = StrToIntDate(date);
+            hR->_8.data_ = new char[25];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &hR->_1, &hR->_2, &hR->_3, &hR->_4, &hR->_5, date, &hR->_7, hR->_8.data_);
+            hR->_6 = StrToIntdate(date);
             histRes.add(hR);
         }
         fin.close();
@@ -527,9 +524,9 @@ struct TPCCDataGen {
 
         fin.open(inputTableDir + "item.txt");
         while (std::getline(fin, line)) {
-            i._3 = new char[25];
-            i._5 = new char[51];
-            sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i._1, &i._2, i._3, &i._4, i._5);
+            i._3.data_ = new char[25];
+            i._5.data_ = new char[51];
+            sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i._1, &i._2, i._3.data_, &i._4, i._5.data_);
             itemTbl.insert_nocheck(i);
         }
         fin.close();
@@ -538,9 +535,9 @@ struct TPCCDataGen {
         fin.open(outputTableDir + "item.txt");
         while (std::getline(fin, line)) {
             ItemEntry *iR = new ItemEntry();
-            iR->_3 = new char[25];
-            iR->_5 = new char[51];
-            sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &iR->_1, &iR->_2, iR->_3, &iR->_4, iR->_5);
+            iR->_3.data_ = new char[25];
+            iR->_5.data_ = new char[51];
+            sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &iR->_1, &iR->_2, iR->_3.data_, &iR->_4, iR->_5.data_);
             itemRes.add(iR);
         }
         fin.close();
@@ -582,9 +579,9 @@ struct TPCCDataGen {
 
         fin.open(inputTableDir + "order_line.txt");
         while (std::getline(fin, line)) {
-            e._10 = new char[25];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e._1, &e._2, &e._3, &e._4, &e._5, &e._6, date, &e._8, &e._9, e._10);
-            e._7 = strcmp(date, "\\N") == 0 ? 0 : StrToIntDate(date + 1);
+            e._10.data_ = new char[25];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e._1, &e._2, &e._3, &e._4, &e._5, &e._6, date, &e._8, &e._9, e._10.data_);
+            e._7 = strcmp(date, "\\N") == 0 ? 0 : StrToIntdate(date + 1);
             orderLineTbl.insert_nocheck(e);
         }
         fin.close();
@@ -593,9 +590,9 @@ struct TPCCDataGen {
         fin.open(outputTableDir + "order_line.txt");
         while (std::getline(fin, line)) {
             OrderLineEntry * eR = new OrderLineEntry();
-            eR->_10 = new char[25];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &eR->_1, &eR->_2, &eR->_3, &eR->_4, &eR->_5, &eR->_6, date, &eR->_8, &eR->_9, eR->_10);
-            eR->_7 = strcmp(date, "\\N") == 0 ? 0 : StrToIntDate(date + 1);
+            eR->_10.data_ = new char[25];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &eR->_1, &eR->_2, &eR->_3, &eR->_4, &eR->_5, &eR->_6, date, &eR->_8, &eR->_9, eR->_10.data_);
+            eR->_7 = strcmp(date, "\\N") == 0 ? 0 : StrToIntdate(date + 1);
             ordLRes.add(eR);
         }
         fin.close();
@@ -616,7 +613,7 @@ struct TPCCDataGen {
         fin.open(inputTableDir + "orders.txt");
         while (std::getline(fin, line)) {
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &o._1, &o._2, &o._3, &o._4, date, carrier, &o._7, &local);
-            o._5 = StrToIntDate(date);
+            o._5 = StrToIntdate(date);
             o._6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             o._8 = local;
             orderTbl.insert_nocheck(o);
@@ -628,7 +625,7 @@ struct TPCCDataGen {
         while (std::getline(fin, line)) {
             OrderEntry *oR = new OrderEntry();
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &oR->_1, &oR->_2, &oR->_3, &oR->_4, date, carrier, &oR->_7, &local);
-            oR->_5 = StrToIntDate(date);
+            oR->_5 = StrToIntdate(date);
             oR->_6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             oR->_8 = local;
             ordRes.add(oR);
@@ -646,18 +643,18 @@ struct TPCCDataGen {
 
         fin.open(inputTableDir + "stock.txt");
         while (std::getline(fin, line)) {
-            s._4 = new char[25];
-            s._5 = new char[25];
-            s._6 = new char[25];
-            s._7 = new char[25];
-            s._8 = new char[25];
-            s._9 = new char[25];
-            s._10 = new char[25];
-            s._11 = new char[25];
-            s._12 = new char[25];
-            s._13 = new char[25];
-            s._17 = new char[51];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &s._1, &s._2, &s._3, s._4, s._5, s._6, s._7, s._8, s._9, s._10, s._11, s._12, s._13, &s._14, &s._15, &s._16, s._17);
+            s._4.data_ = new char[25];
+            s._5.data_ = new char[25];
+            s._6.data_ = new char[25];
+            s._7.data_ = new char[25];
+            s._8.data_ = new char[25];
+            s._9.data_ = new char[25];
+            s._10.data_ = new char[25];
+            s._11.data_ = new char[25];
+            s._12.data_ = new char[25];
+            s._13.data_ = new char[25];
+            s._17.data_ = new char[51];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &s._1, &s._2, &s._3, s._4.data_, s._5.data_, s._6.data_, s._7.data_, s._8.data_, s._9.data_, s._10.data_, s._11.data_, s._12.data_, s._13.data_, &s._14, &s._15, &s._16, s._17.data_);
             stockTbl.insert_nocheck(s);
         }
         fin.close();
@@ -666,18 +663,18 @@ struct TPCCDataGen {
         fin.open(outputTableDir + "stock.txt");
         while (std::getline(fin, line)) {
             StockEntry *sR = new StockEntry();
-            sR->_4 = new char[25];
-            sR->_5 = new char[25];
-            sR->_6 = new char[25];
-            sR->_7 = new char[25];
-            sR->_8 = new char[25];
-            sR->_9 = new char[25];
-            sR->_10 = new char[25];
-            sR->_11 = new char[25];
-            sR->_12 = new char[25];
-            sR->_13 = new char[25];
-            sR->_17 = new char[51];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &sR->_1, &sR->_2, &sR->_3, sR->_4, sR->_5, sR->_6, sR->_7, sR->_8, sR->_9, sR->_10, sR->_11, sR->_12, sR->_13, &sR->_14, &sR->_15, &sR->_16, sR->_17);
+            sR->_4.data_ = new char[25];
+            sR->_5.data_ = new char[25];
+            sR->_6.data_ = new char[25];
+            sR->_7.data_ = new char[25];
+            sR->_8.data_ = new char[25];
+            sR->_9.data_ = new char[25];
+            sR->_10.data_ = new char[25];
+            sR->_11.data_ = new char[25];
+            sR->_12.data_ = new char[25];
+            sR->_13.data_ = new char[25];
+            sR->_17.data_ = new char[51];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &sR->_1, &sR->_2, &sR->_3, sR->_4.data_, sR->_5.data_, sR->_6.data_, sR->_7.data_, sR->_8.data_, sR->_9.data_, sR->_10.data_, sR->_11.data_, sR->_12.data_, sR->_13.data_, &sR->_14, &sR->_15, &sR->_16, sR->_17.data_);
             stockRes.add(sR);
         }
         fin.close();
@@ -692,13 +689,13 @@ struct TPCCDataGen {
         WarehouseEntry w;
         fin.open(inputTableDir + "warehouse.txt");
         while (std::getline(fin, line)) {
-            w._2 = new char[11];
-            w._3 = new char[21];
-            w._4 = new char[21];
-            w._5 = new char[21];
-            w._6 = new char[3];
-            w._7 = new char[10];
-            sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w._1, w._2, w._3, w._4, w._5, w._6, w._7, &w._8, &w._9);
+            w._2.data_ = new char[11];
+            w._3.data_ = new char[21];
+            w._4.data_ = new char[21];
+            w._5.data_ = new char[21];
+            w._6.data_ = new char[3];
+            w._7.data_ = new char[10];
+            sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w._1, w._2.data_, w._3.data_, w._4.data_, w._5.data_, w._6.data_, w._7.data_, &w._8, &w._9);
             warehouseTbl.insert_nocheck(w);
         }
         fin.close();
@@ -707,13 +704,13 @@ struct TPCCDataGen {
         fin.open(outputTableDir + "warehouse.txt");
         while (std::getline(fin, line)) {
             WarehouseEntry *wR = new WarehouseEntry();
-            wR->_2 = new char[11];
-            wR->_3 = new char[21];
-            wR->_4 = new char[21];
-            wR->_5 = new char[21];
-            wR->_6 = new char[3];
-            wR->_7 = new char[10];
-            sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &wR->_1, wR->_2, wR->_3, wR->_4, wR->_5, wR->_6, wR->_7, &wR->_8, &wR->_9);
+            wR->_2.data_ = new char[11];
+            wR->_3.data_ = new char[21];
+            wR->_4.data_ = new char[21];
+            wR->_5.data_ = new char[21];
+            wR->_6.data_ = new char[3];
+            wR->_7.data_ = new char[10];
+            sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &wR->_1, wR->_2.data_, wR->_3.data_, wR->_4.data_, wR->_5.data_, wR->_6.data_, wR->_7.data_, &wR->_8, &wR->_9);
             wareRes.add(wR);
         }
         fin.close();

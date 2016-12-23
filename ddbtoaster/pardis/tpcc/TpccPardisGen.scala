@@ -101,40 +101,11 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
-       |#include <mmap2.hpp>
+       |#include <mmap.hpp>
        |using namespace std;
-       |
-       |FORCE_INLINE size_t HASH(int x) { return x; }
-       |FORCE_INLINE size_t HASH(char *x) {
-       |   size_t hash = 7;
-       |   int N = strlen(x);
-       |   for (int i = 0; i < (N < 100 ? N : 100); i++) {
-       |      hash = hash * 31 + x[i];
-       |   }
-       |   return hash;
-       |}
-       |
-       |int strcmpi(const char* This, const char *That) {
-       |   int i = 0;
-       |   while(true) {
-       |      char c1 = tolower(This[i]);
-       |      char c2 = tolower(That[i]);
-       |      if(!c1)
-       |        return c2 ? -1 : 0;
-       |      else if(!c2)
-       |        return 1;
-       |      else if (c1 == c2) {
-       |          i++;
-       |          continue;
-       |      }
-       |      else if (c1 < c2)
-       |          return -1;
-       |      else return 1;
-       |   }
-       |}
-       |
-       |typedef size_t Date;
-       |char* IntToStrDate(Date);
+       |#include "hpds/pstring.hpp"
+       |#include "hpds/pstringops.hpp"
+       |#include "program_base.hpp"
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
@@ -210,15 +181,20 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     }).mkDocument("\n", "\n\n\n", "\n")
 
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
+    def structToDoc(s: PardisStructDef[_]) = s match {
+      case PardisStructDef(tag, fields, methods) =>
+        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt;"
+        "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc) :/: "};"
+    }
 
-    val structs = codeGen.getStructs(optTP.structs)
+    val structs = optTP.structs.map(structToDoc).mkDocument("\n")
     val structVars = optTP.tempVars.map(st => doc"${st._2.tp} ${st._1};").mkDocument("\n")
     val structEquals = optTP.structs.map(s => {
       val sname = s.tag.typeName
       def eqFn(x: StructElemInformation) = {
         val n = x.name
         x.tpe.asInstanceOf[TypeRep[_]] match {
-          case StringType => doc"!strcmpi(o1.$n, o2.$n)"
+          case StringType => doc"o1.$n == o2.$n"
           case DoubleType => doc"(fabs(o1.$n - o2.$n) < 0.01)"
           case _ => doc"o1.$n == o2.$n"
         }
@@ -228,10 +204,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     }).mkDocument("\n")
 
     val traits = doc"/* TRAITS STARTING */" :/: codeGen.getTraitSignature :/: doc" /* TRAITS ENDING   */"
-    def argsDoc(args: List[Sym[_]]) = args.collect {
-      case a if a.tp.isArray => (a, PointerType(a.tp.typeArguments(0)))
-      case a => (a, a.tp)
-    }.map(t => doc"${t._2} ${t._1}").mkDocument(", ")
+    def argsDoc(args: List[Sym[_]]) = args.map(t => doc"${t.tp} ${t}").mkDocument(", ")
     //    def blockTofunction(x :(String, List[ExpressionSymbol[_]], PardisBlock[T])) = {
     //      (Sym.freshNamed(x._1)(x._3.typeT, IR), x._2, x._3)
     //    }
