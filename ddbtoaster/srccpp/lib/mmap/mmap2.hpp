@@ -82,7 +82,7 @@ public:
 
     FORCE_INLINE T* add() {
         if (!free_) {
-//            throw std::logic_error("Pool add chunks disabled for this experiment");
+            //            throw std::logic_error("Pool add chunks disabled for this experiment");
             add_chunk();
         }
         El<T>* el = free_;
@@ -246,6 +246,8 @@ public:
 
     virtual void slice(const T& key, std::function<void (const T&) > f) = 0;
 
+    virtual void update(T* obj) = 0;
+
     virtual size_t count() = 0;
 
     virtual void clear() = 0;
@@ -400,7 +402,7 @@ public:
                 } while ((n2_iter = n2_iter->nxt));
                 if (!n2_iter) {
                     std::cerr << *n1->obj << " is extra in table" << std::endl;
-//                    return false;
+                    //                    return false;
                 }
             } while ((n1 = n1->nxt));
 
@@ -412,7 +414,7 @@ public:
                 } while ((n1_iter = n1_iter->nxt));
                 if (!n1_iter) {
                     std::cerr << *n2->obj << " not found in table" << std::endl;
-//                    return false;
+                    //                    return false;
                 }
             } while ((n2 = n2->nxt));
         }
@@ -424,6 +426,10 @@ public:
     }
     // retrieves the first element equivalent to the key or nullptr if not found
 
+    inline T* get(const T* key) const {
+        return get(*key);
+    }
+
     inline virtual T* get(const T& key) const {
         HASH_RES_t h = IDX_FN::hash(key);
         IdxNode* n = &buckets_[h % size_];
@@ -431,6 +437,10 @@ public:
             if (n->obj && h == n->hash && !IDX_FN::cmp(key, *n->obj)) return n->obj;
         } while ((n = n->nxt));
         return nullptr;
+    }
+
+    inline T* get(const T* key, const HASH_RES_t h) const {
+        return get(*key, h);
     }
 
     inline virtual T* get(const T& key, const HASH_RES_t h) const {
@@ -454,7 +464,7 @@ public:
 
     FORCE_INLINE virtual void add(T* obj, const HASH_RES_t h) {
         if (count_ > threshold_) {
-//            throw std::logic_error("HashIndex resize disabled for this experiment");
+            //            throw std::logic_error("HashIndex resize disabled for this experiment");
             resize_(size_ << 1);
         }
         size_t b = h % size_;
@@ -570,6 +580,14 @@ public:
         }
     }
 
+    inline void update(T* elem) override {
+        //DO Nothing for now
+    }
+
+    inline void slice(const T* key, std::function<void (const T&) > f) {
+        return slice(*key, f);
+    }
+
     inline virtual void slice(const T& key, std::function<void (const T&) > f) {
         HASH_RES_t h = IDX_FN::hash(key);
         IdxNode* n = &(buckets_[h % size_]);
@@ -613,95 +631,32 @@ public:
     }
 
     inline virtual V getValueOrDefault(const T& key) const {
-        //        HASH_RES_t h = IDX_FN::hash(key);
-        //        IdxNode* n = &buckets_[h % size_];
-        //        do {
-        //            T* lkup = n->obj;
-        //            if (lkup && h == n->hash && !IDX_FN::cmp(key, *lkup)) return lkup->__av;
-        //        } while ((n = n->nxt));
+        throw std::logic_error("Not implemented");
         return zero;
     }
 
     inline virtual V getValueOrDefault(const T& key, HASH_RES_t h) const {
-        //        IdxNode* n = &buckets_[h % size_];
-        //        do {
-        //            T* lkup = n->obj;
-        //            if (lkup && h == n->hash && !IDX_FN::cmp(key, *lkup)) return lkup->__av;
-        //        } while ((n = n->nxt));
+        throw std::logic_error("Not implemented");
         return zero;
     }
 
     inline virtual int setOrDelOnZero(const T& k, const V& v) {
-        HASH_RES_t h = IDX_FN::hash(k);
-        IdxNode* n = &buckets_[h % size_];
-        do {
-            T* lkup = n->obj;
-            if (lkup && h == n->hash && !IDX_FN::cmp(k, *lkup)) {
-                if (ZeroVal<V>().isZero(v)) {
-                    return DELETE_FROM_MMAP;
-                }
-                //                lkup->__av = v;
-                return 0;
-            }
-        } while ((n = n->nxt));
-        //not found
-        if (!ZeroVal<V>().isZero(v)) return INSERT_INTO_MMAP; //insert it into the map
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
     inline virtual int setOrDelOnZero(const T& k, const V& v, HASH_RES_t h) {
-        IdxNode* n = &buckets_[h % size_];
-        do {
-            T* lkup = n->obj;
-            if (lkup && h == n->hash && !IDX_FN::cmp(k, *lkup)) {
-                if (ZeroVal<V>().isZero(v)) {
-                    return DELETE_FROM_MMAP;
-                }
-                //                lkup->__av = v;
-                return 0;
-            }
-        } while ((n = n->nxt));
-        //not found
-        if (!ZeroVal<V>().isZero(v)) return INSERT_INTO_MMAP; //insert it into the map
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
     inline virtual int addOrDelOnZero(const T& k, const V& v) {
-        if (!ZeroVal<V>().isZero(v)) {
-            HASH_RES_t h = IDX_FN::hash(k);
-            IdxNode* n = &buckets_[h % size_];
-            do {
-                T* lkup = n->obj;
-                if (lkup && h == n->hash && !IDX_FN::cmp(k, *lkup)) {
-                    //                    lkup->__av += v;
-                    //                    if (ZeroVal<V>().isZero(lkup->__av)) {
-                    //                        return DELETE_FROM_MMAP;
-                    //                    }
-                    return 0;
-                }
-            } while ((n = n->nxt));
-            //not found
-            return INSERT_INTO_MMAP; //insert it into the map
-        }
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
     inline virtual int addOrDelOnZero(const T& k, const V& v, HASH_RES_t h) {
-        if (!ZeroVal<V>().isZero(v)) {
-            IdxNode* n = &buckets_[h % size_];
-            do {
-                T* lkup = n->obj;
-                if (lkup && h == n->hash && !IDX_FN::cmp(k, *lkup)) {
-                    //                    lkup->__av += v;
-                    //                    if (ZeroVal<V>().isZero(lkup->__av)) {
-                    //                        return DELETE_FROM_MMAP;
-                    //                    }
-                    return 0;
-                }
-            } while ((n = n->nxt));
-            //not found
-            return INSERT_INTO_MMAP; //insert it into the map
-        }
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
@@ -1212,6 +1167,10 @@ public:
         return IDX_FN1::hash(x) != IDX_FN1::hash(y);
     }
 
+    FORCE_INLINE T* get(const T* key) const {
+        return get(*key);
+    }
+
     FORCE_INLINE virtual T* get(const T& key) const override {
         HASH_RES_t h = IDX_FN1::hash(key);
         IdxNode* n = &(buckets_[h % size_]);
@@ -1224,6 +1183,10 @@ public:
             }
         } while ((n = n->nxt));
         return nullptr;
+    }
+
+    FORCE_INLINE T* get(const T* key, const HASH_RES_t h) const {
+        return get(*key, h);
     }
 
     FORCE_INLINE virtual T* get(const T& key, const HASH_RES_t h) const override {
@@ -1241,26 +1204,32 @@ public:
     }
 
     inline virtual V getValueOrDefault(const T& key) const override {
+        throw std::logic_error("Not implemented");
         return zero;
     }
 
     V getValueOrDefault(const T& key, const size_t hash_val) const override {
+        throw std::logic_error("Not implemented");
         return zero;
     }
 
     int setOrDelOnZero(const T& k, const V& v) override {
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
     int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) override {
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
     int addOrDelOnZero(const T& k, const V& v) override {
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
     int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) override {
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
@@ -1278,7 +1247,16 @@ public:
         //TODO: implement
     }
 
+    FORCE_INLINE void update(T* elem) {
+        //Do nothing for now
+    }
+
+    FORCE_INLINE void slice(const T* key, std::function<void (const T&) > f) {
+        throw std::logic_error("Not implemented");
+    }
+
     FORCE_INLINE void slice(const T& key, std::function<void (const T&) > f) override {
+        throw std::logic_error("Not implemented");
         //TODO: implement.  traversal type?
     }
 
@@ -1326,6 +1304,10 @@ public:
         return true;
     }
 
+    FORCE_INLINE T* get(const T* key) const override {
+        return get(*key);
+    }
+
     FORCE_INLINE virtual T* get(const T& key) const override {
         HASH_RES_t idx = IDX_FN::hash(key);
         if (idx >= 0 && idx < size && isUsed[idx]) //TODO: remove check
@@ -1360,26 +1342,32 @@ public:
     }
 
     V getValueOrDefault(const T& key) const override {
+        throw std::logic_error("Not implemented");
         return zero;
     }
 
     V getValueOrDefault(const T& key, const size_t hash_val) const override {
+        throw std::logic_error("Not implemented");
         return zero;
     }
 
     int setOrDelOnZero(const T& k, const V& v) override {
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
     int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) override {
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
     int addOrDelOnZero(const T& k, const V& v) override {
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
     int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) override {
+        throw std::logic_error("Not implemented");
         return 0;
     }
 
@@ -1390,6 +1378,10 @@ public:
 
     void add(T& obj) override {
         add(&obj);
+    }
+
+    void update(T* obj) override {
+        //Do nothing
     }
 
     void del(const T* obj, const size_t h) override {
@@ -1455,11 +1447,16 @@ public:
         delete[] index;
     }
 
-    FORCE_INLINE T* get(const T& key/*, const size_t idx=0*/) const {
-        return index[0]->get(key);
+    FORCE_INLINE T* get(const T* key, const size_t idx = 0) const {
+        return get(*key, idx);
+    }
+    
+    FORCE_INLINE T* get(const T& key, const size_t idx = 0) const {
+        return index[idx]->get(key);
     } // assume that mainIdx=0
 
-    FORCE_INLINE T* get(const T& key, const HASH_RES_t h, const size_t idx = 0) const {
+   
+    FORCE_INLINE T* get(const T& key, const HASH_RES_t h, const size_t idx) const {
         return index[idx]->get(key, h);
     }
 
@@ -1474,11 +1471,11 @@ public:
             // cur->~T();
             // *cur=std::move(*elem);
             new(cur) T(*elem);
-                        if (head) {
-                            cur->prv = nullptr;
-                            cur->nxt = head;
-                            head->prv = cur;
-                        }
+            if (head) {
+                cur->prv = nullptr;
+                cur->nxt = head;
+                head->prv = cur;
+            }
             head = cur;
             for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
         } else {
@@ -1499,9 +1496,9 @@ public:
         // cur->~T();
         // *cur=std::move(elem);
         new(cur) T(elem);
-                cur->prv = nullptr;
-                cur->nxt = head;
-                if (head) head->prv = cur;
+        cur->prv = nullptr;
+        cur->nxt = head;
+        if (head) head->prv = cur;
         head = cur;
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
     }
@@ -1511,9 +1508,9 @@ public:
         // cur->~T();
         // *cur=std::move(elem);
         new(cur) T(elem);
-                cur->prv = nullptr;
-                cur->nxt = head;
-                if (head) head->prv = cur;
+        cur->prv = nullptr;
+        cur->nxt = head;
+        if (head) head->prv = cur;
         head = cur;
         index[0]->add(cur, h);
         for (size_t i = 1; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
@@ -1535,24 +1532,24 @@ public:
     }
 
     FORCE_INLINE void del(T* elem) { // assume that the element is already in the map
-                T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-                if (elemPrv) elemPrv->nxt = elemNxt;
-                if (elemNxt) elemNxt->prv = elemPrv;
-                if (elem == head) head = elemNxt;
-                elem->nxt = nullptr;
-                elem->prv = nullptr;
+        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+        if (elemPrv) elemPrv->nxt = elemNxt;
+        if (elemNxt) elemNxt->prv = elemPrv;
+        if (elem == head) head = elemNxt;
+        elem->nxt = nullptr;
+        elem->prv = nullptr;
 
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
         pool.del(elem);
     }
 
     FORCE_INLINE void del(T* elem, HASH_RES_t h) { // assume that the element is already in the map and mainIdx=0
-                T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-                if (elemPrv) elemPrv->nxt = elemNxt;
-                if (elemNxt) elemNxt->prv = elemPrv;
-                if (elem == head) head = elemNxt;
-                elem->nxt = nullptr;
-                elem->prv = nullptr;
+        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+        if (elemPrv) elemPrv->nxt = elemNxt;
+        if (elemNxt) elemNxt->prv = elemPrv;
+        if (elem == head) head = elemNxt;
+        elem->nxt = nullptr;
+        elem->prv = nullptr;
 
         index[0]->del(elem, h);
         for (size_t i = 1; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
@@ -1568,8 +1565,16 @@ public:
         }
     }
 
+    void slice(int idx, const T* key, std::function<void (const T&) > f) {
+        index[idx]->slice(*key, f);
+    }
+
     void slice(int idx, const T& key, std::function<void (const T&) > f) {
         index[idx]->slice(key, f);
+    }
+
+    FORCE_INLINE void update(T* elem) {
+        //DO NOTHING, as of now
     }
 
     FORCE_INLINE size_t count() const {

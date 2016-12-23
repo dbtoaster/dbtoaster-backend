@@ -175,11 +175,14 @@ public:
     data_ = pool_.add(num_cells);
 #else
     size_t sz = strlen(str) + 1;
-    if (((--(*ptr_count_)) == 0) && data_ && (sz > size_))
-    {
-      delete[] data_;
+    if (ptr_count_ != nullptr) {
+        if (((--(*ptr_count_)) == 0) && data_ && (sz > size_)) {
+            delete[] data_;
+        }
+        (*ptr_count_) = 1;
+    }else{
+        ptr_count_ = new size_t(1);
     }
-    (*ptr_count_) = 1;
     size_ = sz;
     data_ = new char[size_];
 #endif //USE_POOL

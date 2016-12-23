@@ -184,7 +184,12 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
         val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt;"
-        "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc) :/: "};"
+        val constructor = doc"${tag.typeName}() :" :: fields.map(x => {
+          if (x.tpe == StringType)
+            doc"${x.name}()"
+          else doc"${x.name}(${nullValue(x.tpe)})"
+        }).mkDocument(", ") :: "{}"
+        "struct " :: tag.typeName :: " {" :/: Document.nest(2, constructor :/: fieldsDoc) :/: "};"
     }
 
     val structs = optTP.structs.map(structToDoc).mkDocument("\n")
