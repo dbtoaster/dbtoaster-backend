@@ -23,8 +23,8 @@ object Optimizer {
   var onlineOpts = false
   var tmpVarHoist = false
   var indexInline = false
-  var indexLookupFusion = true
-  var indexLookupPartialFusion = false
+  var indexLookupFusion = false
+  var indexLookupPartialFusion = true
   var deadIndexUpdate = false
   var codeMotion = false
   var refCounter = true

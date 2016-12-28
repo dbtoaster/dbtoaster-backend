@@ -33,40 +33,58 @@ const size_t historyTblSize = orderTblSize;
 
      
 struct SEntry5_IISDS {
-  SEntry5_IISDS() :_1(-2147483648), _2(-2147483648), _3(), _4(-1.7976931348623157E308), _5(){}
   int _1;  int _2;  PString _3;  double _4;  PString _5;  SEntry5_IISDS *prv;  SEntry5_IISDS *nxt;
+  SEntry5_IISDS() :_1(-2147483648), _2(-2147483648), _3(), _4(-1.7976931348623157E308), _5(), prv(nullptr), nxt(nullptr) {}
+  SEntry5_IISDS(const int& _1, const int& _2, const PString& _3, const double& _4, const PString& _5) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), prv(nullptr), nxt(nullptr) {}
+  SEntry5_IISDS* copy() { return new SEntry5_IISDS(_1, _2, *_3.copy(), _4, *_5.copy()); }
 };
 struct SEntry11_IISSSSSSDDI {
-  SEntry11_IISSSSSSDDI() :_1(-2147483648), _2(-2147483648), _3(), _4(), _5(), _6(), _7(), _8(), _9(-1.7976931348623157E308), _10(-1.7976931348623157E308), _11(-2147483648){}
   int _1;  int _2;  PString _3;  PString _4;  PString _5;  PString _6;  PString _7;  PString _8;  double _9;  double _10;  int _11;  SEntry11_IISSSSSSDDI *prv;  SEntry11_IISSSSSSDDI *nxt;
+  SEntry11_IISSSSSSDDI() :_1(-2147483648), _2(-2147483648), _3(), _4(), _5(), _6(), _7(), _8(), _9(-1.7976931348623157E308), _10(-1.7976931348623157E308), _11(-2147483648), prv(nullptr), nxt(nullptr) {}
+  SEntry11_IISSSSSSDDI(const int& _1, const int& _2, const PString& _3, const PString& _4, const PString& _5, const PString& _6, const PString& _7, const PString& _8, const double& _9, const double& _10, const int& _11) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), _10(_10), _11(_11), prv(nullptr), nxt(nullptr) {}
+  SEntry11_IISSSSSSDDI* copy() { return new SEntry11_IISSSSSSDDI(_1, _2, *_3.copy(), *_4.copy(), *_5.copy(), *_6.copy(), *_7.copy(), *_8.copy(), _9, _10, _11); }
 };
 struct SEntry21_IIISSSSSSSSSTSDDDDIIS {
-  SEntry21_IIISSSSSSSSSTSDDDDIIS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(), _5(), _6(), _7(), _8(), _9(), _10(), _11(), _12(), _13(0), _14(), _15(-1.7976931348623157E308), _16(-1.7976931348623157E308), _17(-1.7976931348623157E308), _18(-1.7976931348623157E308), _19(-2147483648), _20(-2147483648), _21(){}
   int _1;  int _2;  int _3;  PString _4;  PString _5;  PString _6;  PString _7;  PString _8;  PString _9;  PString _10;  PString _11;  PString _12;  date _13;  PString _14;  double _15;  double _16;  double _17;  double _18;  int _19;  int _20;  PString _21;  SEntry21_IIISSSSSSSSSTSDDDDIIS *prv;  SEntry21_IIISSSSSSSSSTSDDDDIIS *nxt;
+  SEntry21_IIISSSSSSSSSTSDDDDIIS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(), _5(), _6(), _7(), _8(), _9(), _10(), _11(), _12(), _13(0), _14(), _15(-1.7976931348623157E308), _16(-1.7976931348623157E308), _17(-1.7976931348623157E308), _18(-1.7976931348623157E308), _19(-2147483648), _20(-2147483648), _21(), prv(nullptr), nxt(nullptr) {}
+  SEntry21_IIISSSSSSSSSTSDDDDIIS(const int& _1, const int& _2, const int& _3, const PString& _4, const PString& _5, const PString& _6, const PString& _7, const PString& _8, const PString& _9, const PString& _10, const PString& _11, const PString& _12, const date& _13, const PString& _14, const double& _15, const double& _16, const double& _17, const double& _18, const int& _19, const int& _20, const PString& _21) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), _10(_10), _11(_11), _12(_12), _13(_13), _14(_14), _15(_15), _16(_16), _17(_17), _18(_18), _19(_19), _20(_20), _21(_21), prv(nullptr), nxt(nullptr) {}
+  SEntry21_IIISSSSSSSSSTSDDDDIIS* copy() { return new SEntry21_IIISSSSSSSSSTSDDDDIIS(_1, _2, _3, *_4.copy(), *_5.copy(), *_6.copy(), *_7.copy(), *_8.copy(), *_9.copy(), *_10.copy(), *_11.copy(), *_12.copy(), _13, *_14.copy(), _15, _16, _17, _18, _19, _20, *_21.copy()); }
 };
 struct SEntry8_IIIITIIB {
-  SEntry8_IIIITIIB() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(-2147483648), _5(0), _6(-2147483648), _7(-2147483648), _8(0){}
   int _1;  int _2;  int _3;  int _4;  date _5;  int _6;  int _7;  int _8;  SEntry8_IIIITIIB *prv;  SEntry8_IIIITIIB *nxt;
+  SEntry8_IIIITIIB() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(-2147483648), _5(0), _6(-2147483648), _7(-2147483648), _8(0), prv(nullptr), nxt(nullptr) {}
+  SEntry8_IIIITIIB(const int& _1, const int& _2, const int& _3, const int& _4, const date& _5, const int& _6, const int& _7, const int& _8) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), prv(nullptr), nxt(nullptr) {}
+  SEntry8_IIIITIIB* copy() { return new SEntry8_IIIITIIB(_1, _2, _3, _4, _5, _6, _7, _8); }
 };
 struct SEntry3_III {
-  SEntry3_III() :_1(-2147483648), _2(-2147483648), _3(-2147483648){}
   int _1;  int _2;  int _3;  SEntry3_III *prv;  SEntry3_III *nxt;
+  SEntry3_III() :_1(-2147483648), _2(-2147483648), _3(-2147483648), prv(nullptr), nxt(nullptr) {}
+  SEntry3_III(const int& _1, const int& _2, const int& _3) : _1(_1), _2(_2), _3(_3), prv(nullptr), nxt(nullptr) {}
+  SEntry3_III* copy() { return new SEntry3_III(_1, _2, _3); }
 };
 struct SEntry8_IIIIITDS {
-  SEntry8_IIIIITDS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(-2147483648), _5(-2147483648), _6(0), _7(-1.7976931348623157E308), _8(){}
   int _1;  int _2;  int _3;  int _4;  int _5;  date _6;  double _7;  PString _8;  SEntry8_IIIIITDS *prv;  SEntry8_IIIIITDS *nxt;
+  SEntry8_IIIIITDS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(-2147483648), _5(-2147483648), _6(0), _7(-1.7976931348623157E308), _8(), prv(nullptr), nxt(nullptr) {}
+  SEntry8_IIIIITDS(const int& _1, const int& _2, const int& _3, const int& _4, const int& _5, const date& _6, const double& _7, const PString& _8) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), prv(nullptr), nxt(nullptr) {}
+  SEntry8_IIIIITDS* copy() { return new SEntry8_IIIIITDS(_1, _2, _3, _4, _5, _6, _7, *_8.copy()); }
 };
 struct SEntry17_IIISSSSSSSSSSIIIS {
-  SEntry17_IIISSSSSSSSSSIIIS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(), _5(), _6(), _7(), _8(), _9(), _10(), _11(), _12(), _13(), _14(-2147483648), _15(-2147483648), _16(-2147483648), _17(){}
   int _1;  int _2;  int _3;  PString _4;  PString _5;  PString _6;  PString _7;  PString _8;  PString _9;  PString _10;  PString _11;  PString _12;  PString _13;  int _14;  int _15;  int _16;  PString _17;  SEntry17_IIISSSSSSSSSSIIIS *prv;  SEntry17_IIISSSSSSSSSSIIIS *nxt;
+  SEntry17_IIISSSSSSSSSSIIIS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(), _5(), _6(), _7(), _8(), _9(), _10(), _11(), _12(), _13(), _14(-2147483648), _15(-2147483648), _16(-2147483648), _17(), prv(nullptr), nxt(nullptr) {}
+  SEntry17_IIISSSSSSSSSSIIIS(const int& _1, const int& _2, const int& _3, const PString& _4, const PString& _5, const PString& _6, const PString& _7, const PString& _8, const PString& _9, const PString& _10, const PString& _11, const PString& _12, const PString& _13, const int& _14, const int& _15, const int& _16, const PString& _17) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), _10(_10), _11(_11), _12(_12), _13(_13), _14(_14), _15(_15), _16(_16), _17(_17), prv(nullptr), nxt(nullptr) {}
+  SEntry17_IIISSSSSSSSSSIIIS* copy() { return new SEntry17_IIISSSSSSSSSSIIIS(_1, _2, _3, *_4.copy(), *_5.copy(), *_6.copy(), *_7.copy(), *_8.copy(), *_9.copy(), *_10.copy(), *_11.copy(), *_12.copy(), *_13.copy(), _14, _15, _16, *_17.copy()); }
 };
 struct SEntry10_IIIIIITIDS {
-  SEntry10_IIIIIITIDS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(-2147483648), _5(-2147483648), _6(-2147483648), _7(0), _8(-2147483648), _9(-1.7976931348623157E308), _10(){}
   int _1;  int _2;  int _3;  int _4;  int _5;  int _6;  date _7;  int _8;  double _9;  PString _10;  SEntry10_IIIIIITIDS *prv;  SEntry10_IIIIIITIDS *nxt;
+  SEntry10_IIIIIITIDS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(-2147483648), _5(-2147483648), _6(-2147483648), _7(0), _8(-2147483648), _9(-1.7976931348623157E308), _10(), prv(nullptr), nxt(nullptr) {}
+  SEntry10_IIIIIITIDS(const int& _1, const int& _2, const int& _3, const int& _4, const int& _5, const int& _6, const date& _7, const int& _8, const double& _9, const PString& _10) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), _10(_10), prv(nullptr), nxt(nullptr) {}
+  SEntry10_IIIIIITIDS* copy() { return new SEntry10_IIIIIITIDS(_1, _2, _3, _4, _5, _6, _7, _8, _9, *_10.copy()); }
 };
 struct SEntry9_ISSSSSSDD {
-  SEntry9_ISSSSSSDD() :_1(-2147483648), _2(), _3(), _4(), _5(), _6(), _7(), _8(-1.7976931348623157E308), _9(-1.7976931348623157E308){}
   int _1;  PString _2;  PString _3;  PString _4;  PString _5;  PString _6;  PString _7;  double _8;  double _9;  SEntry9_ISSSSSSDD *prv;  SEntry9_ISSSSSSDD *nxt;
+  SEntry9_ISSSSSSDD() :_1(-2147483648), _2(), _3(), _4(), _5(), _6(), _7(), _8(-1.7976931348623157E308), _9(-1.7976931348623157E308), prv(nullptr), nxt(nullptr) {}
+  SEntry9_ISSSSSSDD(const int& _1, const PString& _2, const PString& _3, const PString& _4, const PString& _5, const PString& _6, const PString& _7, const double& _8, const double& _9) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), prv(nullptr), nxt(nullptr) {}
+  SEntry9_ISSSSSSDD* copy() { return new SEntry9_ISSSSSSDD(_1, *_2.copy(), *_3.copy(), *_4.copy(), *_5.copy(), *_6.copy(), *_7.copy(), _8, _9); }
 };
 bool operator== (const SEntry5_IISDS& o1, const SEntry5_IISDS& o2) {
   return o1._1 == o2._1 && 
@@ -240,46 +258,46 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2700; 
   }
   FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x2702, const struct SEntry8_IIIITIIB& x2703) { 
-    int ite14869 = 0;
+    int ite12991 = 0;
     if(1) {
       
       int x2704 = x2702._2;
       int x2705 = x2703._2;
       int x2706 = x2704==(x2705);
-      int x14870 = x2706;
-      ite14869 = x14870;
+      int x12992 = x2706;
+      ite12991 = x12992;
     } else {
       
-      ite14869 = 0;
+      ite12991 = 0;
     };
-    int x14862 = ite14869;
-    int ite14878 = 0;
-    if(x14862) {
+    int x12984 = ite12991;
+    int ite13000 = 0;
+    if(x12984) {
       
       int x2708 = x2702._3;
       int x2709 = x2703._3;
       int x2710 = x2708==(x2709);
-      int x14879 = x2710;
-      ite14878 = x14879;
+      int x13001 = x2710;
+      ite13000 = x13001;
     } else {
       
-      ite14878 = 0;
+      ite13000 = 0;
     };
-    int x14864 = ite14878;
-    int ite14887 = 0;
-    if(x14864) {
+    int x12986 = ite13000;
+    int ite13009 = 0;
+    if(x12986) {
       
       int x2712 = x2702._4;
       int x2713 = x2703._4;
       int x2714 = x2712==(x2713);
-      int x14888 = x2714;
-      ite14887 = x14888;
+      int x13010 = x2714;
+      ite13009 = x13010;
     } else {
       
-      ite14887 = 0;
+      ite13009 = 0;
     };
-    int x14866 = ite14887;
-    int x2716 = x14866 ? 0 : 1;
+    int x12988 = ite13009;
+    int x2716 = x12988 ? 0 : 1;
     return x2716; 
   }
 };
@@ -344,46 +362,46 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2081; 
   }
   FORCE_INLINE static char cmp(const struct SEntry3_III& x2083, const struct SEntry3_III& x2084) { 
-    int ite14988 = 0;
+    int ite13110 = 0;
     if(1) {
       
       int x2085 = x2083._1;
       int x2086 = x2084._1;
       int x2087 = x2085==(x2086);
-      int x14989 = x2087;
-      ite14988 = x14989;
+      int x13111 = x2087;
+      ite13110 = x13111;
     } else {
       
-      ite14988 = 0;
+      ite13110 = 0;
     };
-    int x14981 = ite14988;
-    int ite14997 = 0;
-    if(x14981) {
+    int x13103 = ite13110;
+    int ite13119 = 0;
+    if(x13103) {
       
       int x2089 = x2083._2;
       int x2090 = x2084._2;
       int x2091 = x2089==(x2090);
-      int x14998 = x2091;
-      ite14997 = x14998;
+      int x13120 = x2091;
+      ite13119 = x13120;
     } else {
       
-      ite14997 = 0;
+      ite13119 = 0;
     };
-    int x14983 = ite14997;
-    int ite15006 = 0;
-    if(x14983) {
+    int x13105 = ite13119;
+    int ite13128 = 0;
+    if(x13105) {
       
       int x2093 = x2083._3;
       int x2094 = x2084._3;
       int x2095 = x2093==(x2094);
-      int x15007 = x2095;
-      ite15006 = x15007;
+      int x13129 = x2095;
+      ite13128 = x13129;
     } else {
       
-      ite15006 = 0;
+      ite13128 = 0;
     };
-    int x14985 = ite15006;
-    int x2097 = x14985 ? 0 : 1;
+    int x13107 = ite13128;
+    int x2097 = x13107 ? 0 : 1;
     return x2097; 
   }
 };
@@ -463,59 +481,59 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2858; 
   }
   FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x2860, const struct SEntry10_IIIIIITIDS& x2861) { 
-    int ite15124 = 0;
+    int ite13246 = 0;
     if(1) {
       
       int x2862 = x2860._1;
       int x2863 = x2861._1;
       int x2864 = x2862==(x2863);
-      int x15125 = x2864;
-      ite15124 = x15125;
+      int x13247 = x2864;
+      ite13246 = x13247;
     } else {
       
-      ite15124 = 0;
+      ite13246 = 0;
     };
-    int x15115 = ite15124;
-    int ite15133 = 0;
-    if(x15115) {
+    int x13237 = ite13246;
+    int ite13255 = 0;
+    if(x13237) {
       
       int x2866 = x2860._2;
       int x2867 = x2861._2;
       int x2868 = x2866==(x2867);
-      int x15134 = x2868;
-      ite15133 = x15134;
+      int x13256 = x2868;
+      ite13255 = x13256;
     } else {
       
-      ite15133 = 0;
+      ite13255 = 0;
     };
-    int x15117 = ite15133;
-    int ite15142 = 0;
-    if(x15117) {
+    int x13239 = ite13255;
+    int ite13264 = 0;
+    if(x13239) {
       
       int x2870 = x2860._3;
       int x2871 = x2861._3;
       int x2872 = x2870==(x2871);
-      int x15143 = x2872;
-      ite15142 = x15143;
+      int x13265 = x2872;
+      ite13264 = x13265;
     } else {
       
-      ite15142 = 0;
+      ite13264 = 0;
     };
-    int x15119 = ite15142;
-    int ite15151 = 0;
-    if(x15119) {
+    int x13241 = ite13264;
+    int ite13273 = 0;
+    if(x13241) {
       
       int x2874 = x2860._4;
       int x2875 = x2861._4;
       int x2876 = x2874==(x2875);
-      int x15152 = x2876;
-      ite15151 = x15152;
+      int x13274 = x2876;
+      ite13273 = x13274;
     } else {
       
-      ite15151 = 0;
+      ite13273 = 0;
     };
-    int x15121 = ite15151;
-    int x2878 = x15121 ? 0 : 1;
+    int x13243 = ite13273;
+    int x2878 = x13243 ? 0 : 1;
     return x2878; 
   }
 };
@@ -580,46 +598,46 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3018; 
   }
   FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3020, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3021) { 
-    int ite15261 = 0;
+    int ite13383 = 0;
     if(1) {
       
       int x3022 = x3020._1;
       int x3023 = x3021._1;
       int x3024 = x3022==(x3023);
-      int x15262 = x3024;
-      ite15261 = x15262;
+      int x13384 = x3024;
+      ite13383 = x13384;
     } else {
       
-      ite15261 = 0;
+      ite13383 = 0;
     };
-    int x15254 = ite15261;
-    int ite15270 = 0;
-    if(x15254) {
+    int x13376 = ite13383;
+    int ite13392 = 0;
+    if(x13376) {
       
       int x3026 = x3020._2;
       int x3027 = x3021._2;
       int x3028 = x3026==(x3027);
-      int x15271 = x3028;
-      ite15270 = x15271;
+      int x13393 = x3028;
+      ite13392 = x13393;
     } else {
       
-      ite15270 = 0;
+      ite13392 = 0;
     };
-    int x15256 = ite15270;
-    int ite15279 = 0;
-    if(x15256) {
+    int x13378 = ite13392;
+    int ite13401 = 0;
+    if(x13378) {
       
       int x3030 = x3020._3;
       int x3031 = x3021._3;
       int x3032 = x3030==(x3031);
-      int x15280 = x3032;
-      ite15279 = x15280;
+      int x13402 = x3032;
+      ite13401 = x13402;
     } else {
       
-      ite15279 = 0;
+      ite13401 = 0;
     };
-    int x15258 = ite15279;
-    int x3034 = x15258 ? 0 : 1;
+    int x13380 = ite13401;
+    int x3034 = x13380 ? 0 : 1;
     return x3034; 
   }
 };
@@ -669,33 +687,33 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2194; 
   }
   FORCE_INLINE static char cmp(const struct SEntry3_III& x2196, const struct SEntry3_III& x2197) { 
-    int ite15363 = 0;
+    int ite13485 = 0;
     if(1) {
       
       int x2198 = x2196._2;
       int x2199 = x2197._2;
       int x2200 = x2198==(x2199);
-      int x15364 = x2200;
-      ite15363 = x15364;
+      int x13486 = x2200;
+      ite13485 = x13486;
     } else {
       
-      ite15363 = 0;
+      ite13485 = 0;
     };
-    int x15358 = ite15363;
-    int ite15372 = 0;
-    if(x15358) {
+    int x13480 = ite13485;
+    int ite13494 = 0;
+    if(x13480) {
       
       int x2202 = x2196._3;
       int x2203 = x2197._3;
       int x2204 = x2202==(x2203);
-      int x15373 = x2204;
-      ite15372 = x15373;
+      int x13495 = x2204;
+      ite13494 = x13495;
     } else {
       
-      ite15372 = 0;
+      ite13494 = 0;
     };
-    int x15360 = ite15372;
-    int x2206 = x15360 ? 0 : 1;
+    int x13482 = ite13494;
+    int x2206 = x13482 ? 0 : 1;
     return x2206; 
   }
 };
@@ -760,46 +778,46 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2937; 
   }
   FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x2939, const struct SEntry10_IIIIIITIDS& x2940) { 
-    int ite15464 = 0;
+    int ite13586 = 0;
     if(1) {
       
       int x2941 = x2939._1;
       int x2942 = x2940._1;
       int x2943 = x2941==(x2942);
-      int x15465 = x2943;
-      ite15464 = x15465;
+      int x13587 = x2943;
+      ite13586 = x13587;
     } else {
       
-      ite15464 = 0;
+      ite13586 = 0;
     };
-    int x15457 = ite15464;
-    int ite15473 = 0;
-    if(x15457) {
+    int x13579 = ite13586;
+    int ite13595 = 0;
+    if(x13579) {
       
       int x2945 = x2939._2;
       int x2946 = x2940._2;
       int x2947 = x2945==(x2946);
-      int x15474 = x2947;
-      ite15473 = x15474;
+      int x13596 = x2947;
+      ite13595 = x13596;
     } else {
       
-      ite15473 = 0;
+      ite13595 = 0;
     };
-    int x15459 = ite15473;
-    int ite15482 = 0;
-    if(x15459) {
+    int x13581 = ite13595;
+    int ite13604 = 0;
+    if(x13581) {
       
       int x2949 = x2939._3;
       int x2950 = x2940._3;
       int x2951 = x2949==(x2950);
-      int x15483 = x2951;
-      ite15482 = x15483;
+      int x13605 = x2951;
+      ite13604 = x13605;
     } else {
       
-      ite15482 = 0;
+      ite13604 = 0;
     };
-    int x15461 = ite15482;
-    int x2953 = x15461 ? 0 : 1;
+    int x13583 = ite13604;
+    int x2953 = x13583 ? 0 : 1;
     return x2953; 
   }
 };
@@ -849,33 +867,33 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3158; 
   }
   FORCE_INLINE static char cmp(const struct SEntry17_IIISSSSSSSSSSIIIS& x3160, const struct SEntry17_IIISSSSSSSSSSIIIS& x3161) { 
-    int ite15566 = 0;
+    int ite13688 = 0;
     if(1) {
       
       int x3162 = x3160._1;
       int x3163 = x3161._1;
       int x3164 = x3162==(x3163);
-      int x15567 = x3164;
-      ite15566 = x15567;
+      int x13689 = x3164;
+      ite13688 = x13689;
     } else {
       
-      ite15566 = 0;
+      ite13688 = 0;
     };
-    int x15561 = ite15566;
-    int ite15575 = 0;
-    if(x15561) {
+    int x13683 = ite13688;
+    int ite13697 = 0;
+    if(x13683) {
       
       int x3166 = x3160._2;
       int x3167 = x3161._2;
       int x3168 = x3166==(x3167);
-      int x15576 = x3168;
-      ite15575 = x15576;
+      int x13698 = x3168;
+      ite13697 = x13698;
     } else {
       
-      ite15575 = 0;
+      ite13697 = 0;
     };
-    int x15563 = ite15575;
-    int x3170 = x15563 ? 0 : 1;
+    int x13685 = ite13697;
+    int x3170 = x13685 ? 0 : 1;
     return x3170; 
   }
 };
@@ -1015,252 +1033,252 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2347; 
   }
   FORCE_INLINE static char cmp(const struct SEntry8_IIIIITDS& x2349, const struct SEntry8_IIIIITDS& x2350) { 
-    int ite15750 = 0;
+    int ite13872 = 0;
     if(1) {
       
       int x2351 = x2349._1;
       int x2352 = x2350._1;
       int x2353 = x2351==(-2147483648);
-      int ite15848 = 0;
+      int ite13970 = 0;
       if(x2353) {
-        ite15848 = 1;
+        ite13970 = 1;
       } else {
         
         
         int x2354 = x2352==(-2147483648);
-        int x15850 = x2354;
-        ite15848 = x15850;
+        int x13972 = x2354;
+        ite13970 = x13972;
       };
-      int x15756 = ite15848;
-      int ite15855 = 0;
-      if(x15756) {
-        ite15855 = 1;
+      int x13878 = ite13970;
+      int ite13977 = 0;
+      if(x13878) {
+        ite13977 = 1;
       } else {
         
         
         int x2356 = x2351==(x2352);
-        int x15857 = x2356;
-        ite15855 = x15857;
+        int x13979 = x2356;
+        ite13977 = x13979;
       };
-      int x15758 = ite15855;
-      int x15751 = x15758;
-      ite15750 = x15751;
+      int x13880 = ite13977;
+      int x13873 = x13880;
+      ite13872 = x13873;
     } else {
       
-      ite15750 = 0;
+      ite13872 = 0;
     };
-    int x15735 = ite15750;
-    int ite15763 = 0;
-    if(x15735) {
+    int x13857 = ite13872;
+    int ite13885 = 0;
+    if(x13857) {
       
       int x2359 = x2349._2;
       int x2360 = x2350._2;
       int x2361 = x2359==(-2147483648);
-      int ite15871 = 0;
+      int ite13993 = 0;
       if(x2361) {
-        ite15871 = 1;
+        ite13993 = 1;
       } else {
         
         
         int x2362 = x2360==(-2147483648);
-        int x15873 = x2362;
-        ite15871 = x15873;
+        int x13995 = x2362;
+        ite13993 = x13995;
       };
-      int x15769 = ite15871;
-      int ite15878 = 0;
-      if(x15769) {
-        ite15878 = 1;
+      int x13891 = ite13993;
+      int ite14000 = 0;
+      if(x13891) {
+        ite14000 = 1;
       } else {
         
         
         int x2364 = x2359==(x2360);
-        int x15880 = x2364;
-        ite15878 = x15880;
+        int x14002 = x2364;
+        ite14000 = x14002;
       };
-      int x15771 = ite15878;
-      int x15764 = x15771;
-      ite15763 = x15764;
+      int x13893 = ite14000;
+      int x13886 = x13893;
+      ite13885 = x13886;
     } else {
       
-      ite15763 = 0;
+      ite13885 = 0;
     };
-    int x15737 = ite15763;
-    int ite15776 = 0;
-    if(x15737) {
+    int x13859 = ite13885;
+    int ite13898 = 0;
+    if(x13859) {
       
       int x2367 = x2349._3;
       int x2368 = x2350._3;
       int x2369 = x2367==(-2147483648);
-      int ite15894 = 0;
+      int ite14016 = 0;
       if(x2369) {
-        ite15894 = 1;
+        ite14016 = 1;
       } else {
         
         
         int x2370 = x2368==(-2147483648);
-        int x15896 = x2370;
-        ite15894 = x15896;
+        int x14018 = x2370;
+        ite14016 = x14018;
       };
-      int x15782 = ite15894;
-      int ite15901 = 0;
-      if(x15782) {
-        ite15901 = 1;
+      int x13904 = ite14016;
+      int ite14023 = 0;
+      if(x13904) {
+        ite14023 = 1;
       } else {
         
         
         int x2372 = x2367==(x2368);
-        int x15903 = x2372;
-        ite15901 = x15903;
+        int x14025 = x2372;
+        ite14023 = x14025;
       };
-      int x15784 = ite15901;
-      int x15777 = x15784;
-      ite15776 = x15777;
+      int x13906 = ite14023;
+      int x13899 = x13906;
+      ite13898 = x13899;
     } else {
       
-      ite15776 = 0;
+      ite13898 = 0;
     };
-    int x15739 = ite15776;
-    int ite15789 = 0;
-    if(x15739) {
+    int x13861 = ite13898;
+    int ite13911 = 0;
+    if(x13861) {
       
       int x2375 = x2349._4;
       int x2376 = x2350._4;
       int x2377 = x2375==(-2147483648);
-      int ite15917 = 0;
+      int ite14039 = 0;
       if(x2377) {
-        ite15917 = 1;
+        ite14039 = 1;
       } else {
         
         
         int x2378 = x2376==(-2147483648);
-        int x15919 = x2378;
-        ite15917 = x15919;
+        int x14041 = x2378;
+        ite14039 = x14041;
       };
-      int x15795 = ite15917;
-      int ite15924 = 0;
-      if(x15795) {
-        ite15924 = 1;
+      int x13917 = ite14039;
+      int ite14046 = 0;
+      if(x13917) {
+        ite14046 = 1;
       } else {
         
         
         int x2380 = x2375==(x2376);
-        int x15926 = x2380;
-        ite15924 = x15926;
+        int x14048 = x2380;
+        ite14046 = x14048;
       };
-      int x15797 = ite15924;
-      int x15790 = x15797;
-      ite15789 = x15790;
+      int x13919 = ite14046;
+      int x13912 = x13919;
+      ite13911 = x13912;
     } else {
       
-      ite15789 = 0;
+      ite13911 = 0;
     };
-    int x15741 = ite15789;
-    int ite15802 = 0;
-    if(x15741) {
+    int x13863 = ite13911;
+    int ite13924 = 0;
+    if(x13863) {
       
       int x2383 = x2349._5;
       int x2384 = x2350._5;
       int x2385 = x2383==(-2147483648);
-      int ite15940 = 0;
+      int ite14062 = 0;
       if(x2385) {
-        ite15940 = 1;
+        ite14062 = 1;
       } else {
         
         
         int x2386 = x2384==(-2147483648);
-        int x15942 = x2386;
-        ite15940 = x15942;
+        int x14064 = x2386;
+        ite14062 = x14064;
       };
-      int x15808 = ite15940;
-      int ite15947 = 0;
-      if(x15808) {
-        ite15947 = 1;
+      int x13930 = ite14062;
+      int ite14069 = 0;
+      if(x13930) {
+        ite14069 = 1;
       } else {
         
         
         int x2388 = x2383==(x2384);
-        int x15949 = x2388;
-        ite15947 = x15949;
+        int x14071 = x2388;
+        ite14069 = x14071;
       };
-      int x15810 = ite15947;
-      int x15803 = x15810;
-      ite15802 = x15803;
+      int x13932 = ite14069;
+      int x13925 = x13932;
+      ite13924 = x13925;
     } else {
       
-      ite15802 = 0;
+      ite13924 = 0;
     };
-    int x15743 = ite15802;
-    int ite15815 = 0;
-    if(x15743) {
+    int x13865 = ite13924;
+    int ite13937 = 0;
+    if(x13865) {
       
       date x2391 = x2349._6;
       date x2392 = x2350._6;
       int x2393 = x2391==(0);
-      int ite15963 = 0;
+      int ite14085 = 0;
       if(x2393) {
-        ite15963 = 1;
+        ite14085 = 1;
       } else {
         
         
         int x2394 = x2392==(0);
-        int x15965 = x2394;
-        ite15963 = x15965;
+        int x14087 = x2394;
+        ite14085 = x14087;
       };
-      int x15821 = ite15963;
-      int ite15970 = 0;
-      if(x15821) {
-        ite15970 = 1;
+      int x13943 = ite14085;
+      int ite14092 = 0;
+      if(x13943) {
+        ite14092 = 1;
       } else {
         
         
         int x2396 = x2391==(x2392);
-        int x15972 = x2396;
-        ite15970 = x15972;
+        int x14094 = x2396;
+        ite14092 = x14094;
       };
-      int x15823 = ite15970;
-      int x15816 = x15823;
-      ite15815 = x15816;
+      int x13945 = ite14092;
+      int x13938 = x13945;
+      ite13937 = x13938;
     } else {
       
-      ite15815 = 0;
+      ite13937 = 0;
     };
-    int x15745 = ite15815;
-    int ite15828 = 0;
-    if(x15745) {
+    int x13867 = ite13937;
+    int ite13950 = 0;
+    if(x13867) {
       
       double x2399 = x2349._7;
       double x2400 = x2350._7;
       int x2401 = x2399==(-1.7976931348623157E308);
-      int ite15986 = 0;
+      int ite14108 = 0;
       if(x2401) {
-        ite15986 = 1;
+        ite14108 = 1;
       } else {
         
         
         int x2402 = x2400==(-1.7976931348623157E308);
-        int x15988 = x2402;
-        ite15986 = x15988;
+        int x14110 = x2402;
+        ite14108 = x14110;
       };
-      int x15834 = ite15986;
-      int ite15993 = 0;
-      if(x15834) {
-        ite15993 = 1;
+      int x13956 = ite14108;
+      int ite14115 = 0;
+      if(x13956) {
+        ite14115 = 1;
       } else {
         
         
         int x2404 = x2399==(x2400);
-        int x15995 = x2404;
-        ite15993 = x15995;
+        int x14117 = x2404;
+        ite14115 = x14117;
       };
-      int x15836 = ite15993;
-      int x15829 = x15836;
-      ite15828 = x15829;
+      int x13958 = ite14115;
+      int x13951 = x13958;
+      ite13950 = x13951;
     } else {
       
-      ite15828 = 0;
+      ite13950 = 0;
     };
-    int x15747 = ite15828;
-    int x2407 = x15747 ? 0 : 1;
+    int x13869 = ite13950;
+    int x2407 = x13869 ? 0 : 1;
     return x2407; 
   }
 };
@@ -1295,20 +1313,20 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2482; 
   }
   FORCE_INLINE static char cmp(const struct SEntry5_IISDS& x2484, const struct SEntry5_IISDS& x2485) { 
-    int ite16195 = 0;
+    int ite14317 = 0;
     if(1) {
       
       int x2486 = x2484._1;
       int x2487 = x2485._1;
       int x2488 = x2486==(x2487);
-      int x16196 = x2488;
-      ite16195 = x16196;
+      int x14318 = x2488;
+      ite14317 = x14318;
     } else {
       
-      ite16195 = 0;
+      ite14317 = 0;
     };
-    int x16192 = ite16195;
-    int x2490 = x16192 ? 0 : 1;
+    int x14314 = ite14317;
+    int x2490 = x14314 ? 0 : 1;
     return x2490; 
   }
 };
@@ -1358,33 +1376,33 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2767; 
   }
   FORCE_INLINE static char cmp(const struct SEntry11_IISSSSSSDDI& x2769, const struct SEntry11_IISSSSSSDDI& x2770) { 
-    int ite16261 = 0;
+    int ite14383 = 0;
     if(1) {
       
       int x2771 = x2769._1;
       int x2772 = x2770._1;
       int x2773 = x2771==(x2772);
-      int x16262 = x2773;
-      ite16261 = x16262;
+      int x14384 = x2773;
+      ite14383 = x14384;
     } else {
       
-      ite16261 = 0;
+      ite14383 = 0;
     };
-    int x16256 = ite16261;
-    int ite16270 = 0;
-    if(x16256) {
+    int x14378 = ite14383;
+    int ite14392 = 0;
+    if(x14378) {
       
       int x2775 = x2769._2;
       int x2776 = x2770._2;
       int x2777 = x2775==(x2776);
-      int x16271 = x2777;
-      ite16270 = x16271;
+      int x14393 = x2777;
+      ite14392 = x14393;
     } else {
       
-      ite16270 = 0;
+      ite14392 = 0;
     };
-    int x16258 = ite16270;
-    int x2779 = x16258 ? 0 : 1;
+    int x14380 = ite14392;
+    int x2779 = x14380 ? 0 : 1;
     return x2779; 
   }
 };
@@ -1449,46 +1467,46 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3093; 
   }
   FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3095, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3096) { 
-    int ite16362 = 0;
+    int ite14484 = 0;
     if(1) {
       
       int x3097 = x3095._2;
       int x3098 = x3096._2;
       int x3099 = x3097==(x3098);
-      int x16363 = x3099;
-      ite16362 = x16363;
+      int x14485 = x3099;
+      ite14484 = x14485;
     } else {
       
-      ite16362 = 0;
+      ite14484 = 0;
     };
-    int x16355 = ite16362;
-    int ite16371 = 0;
-    if(x16355) {
+    int x14477 = ite14484;
+    int ite14493 = 0;
+    if(x14477) {
       
       int x3101 = x3095._3;
       int x3102 = x3096._3;
       int x3103 = x3101==(x3102);
-      int x16372 = x3103;
-      ite16371 = x16372;
+      int x14494 = x3103;
+      ite14493 = x14494;
     } else {
       
-      ite16371 = 0;
+      ite14493 = 0;
     };
-    int x16357 = ite16371;
-    int ite16380 = 0;
-    if(x16357) {
+    int x14479 = ite14493;
+    int ite14502 = 0;
+    if(x14479) {
       
       PString x3105 = x3095._6;
       PString x3106 = x3096._6;
       int x3107 = x3105==(x3106);
-      int x16381 = x3107;
-      ite16380 = x16381;
+      int x14503 = x3107;
+      ite14502 = x14503;
     } else {
       
-      ite16380 = 0;
+      ite14502 = 0;
     };
-    int x16359 = ite16380;
-    int x3109 = x16359 ? 0 : 1;
+    int x14481 = ite14502;
+    int x3109 = x14481 ? 0 : 1;
     return x3109; 
   }
 };
@@ -1523,20 +1541,20 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2441; 
   }
   FORCE_INLINE static char cmp(const struct SEntry9_ISSSSSSDD& x2443, const struct SEntry9_ISSSSSSDD& x2444) { 
-    int ite16447 = 0;
+    int ite14569 = 0;
     if(1) {
       
       int x2445 = x2443._1;
       int x2446 = x2444._1;
       int x2447 = x2445==(x2446);
-      int x16448 = x2447;
-      ite16447 = x16448;
+      int x14570 = x2447;
+      ite14569 = x14570;
     } else {
       
-      ite16447 = 0;
+      ite14569 = 0;
     };
-    int x16444 = ite16447;
-    int x2449 = x16444 ? 0 : 1;
+    int x14566 = ite14569;
+    int x2449 = x14566 ? 0 : 1;
     return x2449; 
   }
 };
@@ -1601,46 +1619,46 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x2557; 
   }
   FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x2559, const struct SEntry8_IIIITIIB& x2560) { 
-    int ite16530 = 0;
+    int ite14652 = 0;
     if(1) {
       
       int x2561 = x2559._1;
       int x2562 = x2560._1;
       int x2563 = x2561==(x2562);
-      int x16531 = x2563;
-      ite16530 = x16531;
+      int x14653 = x2563;
+      ite14652 = x14653;
     } else {
       
-      ite16530 = 0;
+      ite14652 = 0;
     };
-    int x16523 = ite16530;
-    int ite16539 = 0;
-    if(x16523) {
+    int x14645 = ite14652;
+    int ite14661 = 0;
+    if(x14645) {
       
       int x2565 = x2559._2;
       int x2566 = x2560._2;
       int x2567 = x2565==(x2566);
-      int x16540 = x2567;
-      ite16539 = x16540;
+      int x14662 = x2567;
+      ite14661 = x14662;
     } else {
       
-      ite16539 = 0;
+      ite14661 = 0;
     };
-    int x16525 = ite16539;
-    int ite16548 = 0;
-    if(x16525) {
+    int x14647 = ite14661;
+    int ite14670 = 0;
+    if(x14647) {
       
       int x2569 = x2559._3;
       int x2570 = x2560._3;
       int x2571 = x2569==(x2570);
-      int x16549 = x2571;
-      ite16548 = x16549;
+      int x14671 = x2571;
+      ite14670 = x14671;
     } else {
       
-      ite16548 = 0;
+      ite14670 = 0;
     };
-    int x16527 = ite16548;
-    int x2573 = x16527 ? 0 : 1;
+    int x14649 = ite14670;
+    int x2573 = x14649 ? 0 : 1;
     return x2573; 
   }
 };
@@ -1875,48 +1893,48 @@ void DeliveryTx(int x10, date x11, int x12, int x13) {
     if (!((x20<=(10)))) break; 
     
     int x27 = x18;
-    struct SEntry3_III* x13670 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
-    memset(x13670, 0, 1 * sizeof(struct SEntry3_III));
-    x13670->_1 = -2147483648; x13670->_2 = x27; x13670->_3 = x12;
-    struct SEntry3_III* x8740 = x2211.get(x13670, 1);
-    if((x8740!=(NULL))) {
-      int x6656 = x8740->_1;
+    struct SEntry3_III* x11775 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
+    memset(x11775, 0, 1 * sizeof(struct SEntry3_III));
+    x11775->_1 = -2147483648; x11775->_2 = x27; x11775->_3 = x12;
+    struct SEntry3_III* x6653 = x2211.getCopy(x11775, 1);
+    if((x6653!=(NULL))) {
+      int x6656 = x6653->_1;
       int x36 = x18;
       orderIDs[(x36-(1))] = x6656;
-      x2211.del(x8740);
+      x2211.delCopy(x6653);
       int x41 = x18;
-      struct SEntry8_IIIITIIB* x13682 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
-      memset(x13682, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
-      x13682->_1 = x6656; x13682->_2 = x41; x13682->_3 = x12; x13682->_4 = -2147483648; x13682->_5 = 0; x13682->_6 = -2147483648; x13682->_7 = -2147483648; x13682->_8 = 0;
-      struct SEntry8_IIIITIIB* x8752 = x2721.get(x13682, 0);
-      int x6666 = x8752->_4;
-      x8752->_6 = x13;
-      x2721.update(x8752);
+      struct SEntry8_IIIITIIB* x11788 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
+      memset(x11788, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
+      x11788->_1 = x6656; x11788->_2 = x41; x11788->_3 = x12; x11788->_4 = -2147483648; x11788->_5 = 0; x11788->_6 = -2147483648; x11788->_7 = -2147483648; x11788->_8 = 0;
+      struct SEntry8_IIIITIIB* x6665 = x2721.getCopy(x11788, 0);
+      int x6666 = x6665->_4;
+      x6665->_6 = x13;
+      x2721.updateCopy(x6665);
       double x51 = 0.0;
       int x53 = x18;
-      struct SEntry10_IIIIIITIDS* x13699 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
-      memset(x13699, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
-      x13699->_1 = x6656; x13699->_2 = x53; x13699->_3 = x12; x13699->_4 = -2147483648; x13699->_5 = -2147483648; x13699->_6 = -2147483648; x13699->_7 = 0; x13699->_8 = -2147483648; x13699->_9 = -1.7976931348623157E308; x13699->_10 = PString();
-      x2958.slice(1, x13699, ([&](const struct SEntry10_IIIIIITIDS&  sliceVar) {
+      struct SEntry10_IIIIIITIDS* x11805 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
+      memset(x11805, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
+      x11805->_1 = x6656; x11805->_2 = x53; x11805->_3 = x12; x11805->_4 = -2147483648; x11805->_5 = -2147483648; x11805->_6 = -2147483648; x11805->_7 = 0; x11805->_8 = -2147483648; x11805->_9 = -1.7976931348623157E308; x11805->_10 = PString();
+      x2958.sliceCopy(1, x11805, ([&](const struct SEntry10_IIIIIITIDS&  sliceVar) {
         struct SEntry10_IIIIIITIDS* orderLineEntry = const_cast<struct SEntry10_IIIIIITIDS*>(&sliceVar);
         orderLineEntry->_7 = x11;
         double x58 = x51;
         double x6728 = orderLineEntry->_9;
         x51 = (x58+(x6728));
-        x2958.update(orderLineEntry);
+        x2958.updateCopy(orderLineEntry);
       
       }));
       int x66 = x18;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13704 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-      memset(x13704, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-      x13704->_1 = x6666; x13704->_2 = x66; x13704->_3 = x12; x13704->_4 = PString(); x13704->_5 = PString(); x13704->_6 = PString(); x13704->_7 = PString(); x13704->_8 = PString(); x13704->_9 = PString(); x13704->_10 = PString(); x13704->_11 = PString(); x13704->_12 = PString(); x13704->_13 = 0; x13704->_14 = PString(); x13704->_15 = -1.7976931348623157E308; x13704->_16 = -1.7976931348623157E308; x13704->_17 = -1.7976931348623157E308; x13704->_18 = -1.7976931348623157E308; x13704->_19 = -2147483648; x13704->_20 = -2147483648; x13704->_21 = PString();
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x8772 = x3114.get(x13704, 0);
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11810 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+      memset(x11810, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+      x11810->_1 = x6666; x11810->_2 = x66; x11810->_3 = x12; x11810->_4 = PString(); x11810->_5 = PString(); x11810->_6 = PString(); x11810->_7 = PString(); x11810->_8 = PString(); x11810->_9 = PString(); x11810->_10 = PString(); x11810->_11 = PString(); x11810->_12 = PString(); x11810->_13 = 0; x11810->_14 = PString(); x11810->_15 = -1.7976931348623157E308; x11810->_16 = -1.7976931348623157E308; x11810->_17 = -1.7976931348623157E308; x11810->_18 = -1.7976931348623157E308; x11810->_19 = -2147483648; x11810->_20 = -2147483648; x11810->_21 = PString();
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6678 = x3114.getCopy(x11810, 0);
       double x70 = x51;
-      double x6680 = x8772->_17;
-      x8772->_17 = (x6680+(x70));
-      int x6683 = x8772->_20;
-      x8772->_20 = (x6683+(1));
-      x3114.update(x8772);
+      double x6680 = x6678->_17;
+      x6678->_17 = (x6680+(x70));
+      int x6683 = x6678->_20;
+      x6678->_20 = (x6683+(1));
+      x3114.updateCopy(x6678);
     } else {
       
       int x74 = x18;
@@ -1927,11 +1945,11 @@ void DeliveryTx(int x10, date x11, int x12, int x13) {
   };
 }
 void StockLevelTx(int x82, date x83, int x84, int x85, int x86, int x87) {
-  struct SEntry11_IISSSSSSDDI* x13722 = (struct SEntry11_IISSSSSSDDI*)malloc(1 * sizeof(struct SEntry11_IISSSSSSDDI));
-  memset(x13722, 0, 1 * sizeof(struct SEntry11_IISSSSSSDDI));
-  x13722->_1 = x86; x13722->_2 = x85; x13722->_3 = PString(); x13722->_4 = PString(); x13722->_5 = PString(); x13722->_6 = PString(); x13722->_7 = PString(); x13722->_8 = PString(); x13722->_9 = -1.7976931348623157E308; x13722->_10 = -1.7976931348623157E308; x13722->_11 = -2147483648;
-  struct SEntry11_IISSSSSSDDI* x8851 = x2784.get(x13722, 0);
-  int x6819 = x8851->_11;
+  struct SEntry11_IISSSSSSDDI* x11828 = (struct SEntry11_IISSSSSSDDI*)malloc(1 * sizeof(struct SEntry11_IISSSSSSDDI));
+  memset(x11828, 0, 1 * sizeof(struct SEntry11_IISSSSSSDDI));
+  x11828->_1 = x86; x11828->_2 = x85; x11828->_3 = PString(); x11828->_4 = PString(); x11828->_5 = PString(); x11828->_6 = PString(); x11828->_7 = PString(); x11828->_8 = PString(); x11828->_9 = -1.7976931348623157E308; x11828->_10 = -1.7976931348623157E308; x11828->_11 = -2147483648;
+  struct SEntry11_IISSSSSSDDI* x6818 = x2784.getCopy(x11828, 0);
+  int x6819 = x6818->_11;
   int x97 = (x6819-(20));
   unordered_set<int> unique_ol_i_id;
   while(1) {
@@ -1940,17 +1958,17 @@ void StockLevelTx(int x82, date x83, int x84, int x85, int x86, int x87) {
     if (!((x101<(x6819)))) break; 
     
     int x103 = x97;
-    struct SEntry10_IIIIIITIDS* x13745 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
-    memset(x13745, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
-    x13745->_1 = x103; x13745->_2 = x86; x13745->_3 = x85; x13745->_4 = -2147483648; x13745->_5 = -2147483648; x13745->_6 = -2147483648; x13745->_7 = 0; x13745->_8 = -2147483648; x13745->_9 = -1.7976931348623157E308; x13745->_10 = PString();
-    x2958.slice(1, x13745, ([&](const struct SEntry10_IIIIIITIDS&  sliceVar) {
+    struct SEntry10_IIIIIITIDS* x11852 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
+    memset(x11852, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
+    x11852->_1 = x103; x11852->_2 = x86; x11852->_3 = x85; x11852->_4 = -2147483648; x11852->_5 = -2147483648; x11852->_6 = -2147483648; x11852->_7 = 0; x11852->_8 = -2147483648; x11852->_9 = -1.7976931348623157E308; x11852->_10 = PString();
+    x2958.sliceCopy(1, x11852, ([&](const struct SEntry10_IIIIIITIDS&  sliceVar) {
       struct SEntry10_IIIIIITIDS* orderLineEntry = const_cast<struct SEntry10_IIIIIITIDS*>(&sliceVar);
       int x6848 = orderLineEntry->_5;
-      struct SEntry17_IIISSSSSSSSSSIIIS* x13736 = (struct SEntry17_IIISSSSSSSSSSIIIS*)malloc(1 * sizeof(struct SEntry17_IIISSSSSSSSSSIIIS));
-      memset(x13736, 0, 1 * sizeof(struct SEntry17_IIISSSSSSSSSSIIIS));
-      x13736->_1 = x6848; x13736->_2 = x85; x13736->_3 = -2147483648; x13736->_4 = PString(); x13736->_5 = PString(); x13736->_6 = PString(); x13736->_7 = PString(); x13736->_8 = PString(); x13736->_9 = PString(); x13736->_10 = PString(); x13736->_11 = PString(); x13736->_12 = PString(); x13736->_13 = PString(); x13736->_14 = -2147483648; x13736->_15 = -2147483648; x13736->_16 = -2147483648; x13736->_17 = PString();
-      struct SEntry17_IIISSSSSSSSSSIIIS* x8864 = x3175.get(x13736, 0);
-      int x6852 = x8864->_3;
+      struct SEntry17_IIISSSSSSSSSSIIIS* x11843 = (struct SEntry17_IIISSSSSSSSSSIIIS*)malloc(1 * sizeof(struct SEntry17_IIISSSSSSSSSSIIIS));
+      memset(x11843, 0, 1 * sizeof(struct SEntry17_IIISSSSSSSSSSIIIS));
+      x11843->_1 = x6848; x11843->_2 = x85; x11843->_3 = -2147483648; x11843->_4 = PString(); x11843->_5 = PString(); x11843->_6 = PString(); x11843->_7 = PString(); x11843->_8 = PString(); x11843->_9 = PString(); x11843->_10 = PString(); x11843->_11 = PString(); x11843->_12 = PString(); x11843->_13 = PString(); x11843->_14 = -2147483648; x11843->_15 = -2147483648; x11843->_16 = -2147483648; x11843->_17 = PString();
+      struct SEntry17_IIISSSSSSSSSSIIIS* x6851 = x3175.getCopy(x11843, 0);
+      int x6852 = x6851->_3;
       if((x6852<(x87))) {
         unique_ol_i_id.insert(x6848);
       };
@@ -1961,106 +1979,106 @@ void StockLevelTx(int x82, date x83, int x84, int x85, int x86, int x87) {
   };
 }
 void OrderStatusTx(int x126, date x127, int x128, int x129, int x130, int x131, int x132, PString x133) {
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite12876 = NULL;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite10969 = NULL;
   if((x131>(0))) {
-    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x12877;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13759 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    memset(x13759, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    x13759->_1 = -2147483648; x13759->_2 = x130; x13759->_3 = x129; x13759->_4 = PString(); x13759->_5 = PString(); x13759->_6 = x133; x13759->_7 = PString(); x13759->_8 = PString(); x13759->_9 = PString(); x13759->_10 = PString(); x13759->_11 = PString(); x13759->_12 = PString(); x13759->_13 = 0; x13759->_14 = PString(); x13759->_15 = -1.7976931348623157E308; x13759->_16 = -1.7976931348623157E308; x13759->_17 = -1.7976931348623157E308; x13759->_18 = -1.7976931348623157E308; x13759->_19 = -2147483648; x13759->_20 = -2147483648; x13759->_21 = PString();
-    x3114.slice(1, x13759, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS&  sliceVar) {
+    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x10970;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11866 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    memset(x11866, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    x11866->_1 = -2147483648; x11866->_2 = x130; x11866->_3 = x129; x11866->_4 = PString(); x11866->_5 = PString(); x11866->_6 = x133; x11866->_7 = PString(); x11866->_8 = PString(); x11866->_9 = PString(); x11866->_10 = PString(); x11866->_11 = PString(); x11866->_12 = PString(); x11866->_13 = 0; x11866->_14 = PString(); x11866->_15 = -1.7976931348623157E308; x11866->_16 = -1.7976931348623157E308; x11866->_17 = -1.7976931348623157E308; x11866->_18 = -1.7976931348623157E308; x11866->_19 = -2147483648; x11866->_20 = -2147483648; x11866->_21 = PString();
+    x3114.sliceCopy(1, x11866, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS&  sliceVar) {
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* custEntry = const_cast<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*>(&sliceVar);
-      x12877.push_back(custEntry);
+      x10970.push_back(custEntry);
     
     }));
-    int x12883 = x12877.size();
-    int x12885 = (x12883/(2));
-    int x12893 = x12877.size();
-    if(((x12893%(2))==(0))) {
-      int x152 = x12885;
-      x12885 = (x152-(1));
+    int x10976 = x10970.size();
+    int x10978 = (x10976/(2));
+    int x10986 = x10970.size();
+    if(((x10986%(2))==(0))) {
+      int x152 = x10978;
+      x10978 = (x152-(1));
     };
-    sort(x12877.begin(), x12877.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c1, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c2) {
+    sort(x10970.begin(), x10970.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c1, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c2) {
       
       PString x6959 = c1->_4;
       PString x6960 = c2->_4;
       return ((strcmpi(x6959.data_, x6960.data_))<(0)); 
     }));
-    int x12901 = x12885;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12902 = x12877[x12901];
-    ite12876 = x12902;
+    int x10994 = x10978;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x10995 = x10970[x10994];
+    ite10969 = x10995;
   } else {
     
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13784 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    memset(x13784, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    x13784->_1 = x132; x13784->_2 = x130; x13784->_3 = x129; x13784->_4 = PString(); x13784->_5 = PString(); x13784->_6 = PString(); x13784->_7 = PString(); x13784->_8 = PString(); x13784->_9 = PString(); x13784->_10 = PString(); x13784->_11 = PString(); x13784->_12 = PString(); x13784->_13 = 0; x13784->_14 = PString(); x13784->_15 = -1.7976931348623157E308; x13784->_16 = -1.7976931348623157E308; x13784->_17 = -1.7976931348623157E308; x13784->_18 = -1.7976931348623157E308; x13784->_19 = -2147483648; x13784->_20 = -2147483648; x13784->_21 = PString();
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12905 = x3114.get(x13784, 0);
-    ite12876 = x12905;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11891 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    memset(x11891, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    x11891->_1 = x132; x11891->_2 = x130; x11891->_3 = x129; x11891->_4 = PString(); x11891->_5 = PString(); x11891->_6 = PString(); x11891->_7 = PString(); x11891->_8 = PString(); x11891->_9 = PString(); x11891->_10 = PString(); x11891->_11 = PString(); x11891->_12 = PString(); x11891->_13 = 0; x11891->_14 = PString(); x11891->_15 = -1.7976931348623157E308; x11891->_16 = -1.7976931348623157E308; x11891->_17 = -1.7976931348623157E308; x11891->_18 = -1.7976931348623157E308; x11891->_19 = -2147483648; x11891->_20 = -2147483648; x11891->_21 = PString();
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x10999 = x3114.getCopy(x11891, 0);
+    ite10969 = x10999;
   };
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6894 = ite12876;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6894 = ite10969;
   int x6895 = x6894->_3;
-  struct SEntry8_IIIITIIB* x13791 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
-  memset(x13791, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
-  x13791->_1 = -2147483648; x13791->_2 = x130; x13791->_3 = x129; x13791->_4 = x6895; x13791->_5 = 0; x13791->_6 = -2147483648; x13791->_7 = -2147483648; x13791->_8 = 0;
-  struct SEntry8_IIIITIIB* x8948 = x2721.get(x13791, 1);
+  struct SEntry8_IIIITIIB* x11899 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
+  memset(x11899, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
+  x11899->_1 = -2147483648; x11899->_2 = x130; x11899->_3 = x129; x11899->_4 = x6895; x11899->_5 = 0; x11899->_6 = -2147483648; x11899->_7 = -2147483648; x11899->_8 = 0;
+  struct SEntry8_IIIITIIB* x6902 = x2721.getCopy(x11899, 1);
   int x184 = 0;
-  int x6904 = x8948->_1;
+  int x6904 = x6902->_1;
   x184 = x6904;
 }
 void PaymentTx(int x188, date x189, int x190, int x191, int x192, int x193, int x194, int x195, int x196, PString x197, double x198) {
-  struct SEntry9_ISSSSSSDD* x13798 = (struct SEntry9_ISSSSSSDD*)malloc(1 * sizeof(struct SEntry9_ISSSSSSDD));
-  memset(x13798, 0, 1 * sizeof(struct SEntry9_ISSSSSSDD));
-  x13798->_1 = x191; x13798->_2 = PString(); x13798->_3 = PString(); x13798->_4 = PString(); x13798->_5 = PString(); x13798->_6 = PString(); x13798->_7 = PString(); x13798->_8 = -1.7976931348623157E308; x13798->_9 = -1.7976931348623157E308;
-  struct SEntry9_ISSSSSSDD* x9001 = x2454.get(x13798, 0);
-  double x7040 = x9001->_9;
-  x9001->_9 = (x7040+(x198));
-  x2454.update(x9001);
-  struct SEntry11_IISSSSSSDDI* x13806 = (struct SEntry11_IISSSSSSDDI*)malloc(1 * sizeof(struct SEntry11_IISSSSSSDDI));
-  memset(x13806, 0, 1 * sizeof(struct SEntry11_IISSSSSSDDI));
-  x13806->_1 = x192; x13806->_2 = x191; x13806->_3 = PString(); x13806->_4 = PString(); x13806->_5 = PString(); x13806->_6 = PString(); x13806->_7 = PString(); x13806->_8 = PString(); x13806->_9 = -1.7976931348623157E308; x13806->_10 = -1.7976931348623157E308; x13806->_11 = -2147483648;
-  struct SEntry11_IISSSSSSDDI* x9008 = x2784.get(x13806, 0);
-  double x7047 = x9008->_10;
-  x9008->_10 = (x7047+(x198));
-  x2784.update(x9008);
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite12968 = NULL;
+  struct SEntry9_ISSSSSSDD* x11907 = (struct SEntry9_ISSSSSSDD*)malloc(1 * sizeof(struct SEntry9_ISSSSSSDD));
+  memset(x11907, 0, 1 * sizeof(struct SEntry9_ISSSSSSDD));
+  x11907->_1 = x191; x11907->_2 = PString(); x11907->_3 = PString(); x11907->_4 = PString(); x11907->_5 = PString(); x11907->_6 = PString(); x11907->_7 = PString(); x11907->_8 = -1.7976931348623157E308; x11907->_9 = -1.7976931348623157E308;
+  struct SEntry9_ISSSSSSDD* x7039 = x2454.getCopy(x11907, 0);
+  double x7040 = x7039->_9;
+  x7039->_9 = (x7040+(x198));
+  x2454.updateCopy(x7039);
+  struct SEntry11_IISSSSSSDDI* x11916 = (struct SEntry11_IISSSSSSDDI*)malloc(1 * sizeof(struct SEntry11_IISSSSSSDDI));
+  memset(x11916, 0, 1 * sizeof(struct SEntry11_IISSSSSSDDI));
+  x11916->_1 = x192; x11916->_2 = x191; x11916->_3 = PString(); x11916->_4 = PString(); x11916->_5 = PString(); x11916->_6 = PString(); x11916->_7 = PString(); x11916->_8 = PString(); x11916->_9 = -1.7976931348623157E308; x11916->_10 = -1.7976931348623157E308; x11916->_11 = -2147483648;
+  struct SEntry11_IISSSSSSDDI* x7046 = x2784.getCopy(x11916, 0);
+  double x7047 = x7046->_10;
+  x7046->_10 = (x7047+(x198));
+  x2784.updateCopy(x7046);
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite11066 = NULL;
   if((x193>(0))) {
-    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x12969;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13821 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    memset(x13821, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    x13821->_1 = -2147483648; x13821->_2 = x195; x13821->_3 = x194; x13821->_4 = PString(); x13821->_5 = PString(); x13821->_6 = x197; x13821->_7 = PString(); x13821->_8 = PString(); x13821->_9 = PString(); x13821->_10 = PString(); x13821->_11 = PString(); x13821->_12 = PString(); x13821->_13 = 0; x13821->_14 = PString(); x13821->_15 = -1.7976931348623157E308; x13821->_16 = -1.7976931348623157E308; x13821->_17 = -1.7976931348623157E308; x13821->_18 = -1.7976931348623157E308; x13821->_19 = -2147483648; x13821->_20 = -2147483648; x13821->_21 = PString();
-    x3114.slice(1, x13821, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS&  sliceVar) {
+    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x11067;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11931 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    memset(x11931, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    x11931->_1 = -2147483648; x11931->_2 = x195; x11931->_3 = x194; x11931->_4 = PString(); x11931->_5 = PString(); x11931->_6 = x197; x11931->_7 = PString(); x11931->_8 = PString(); x11931->_9 = PString(); x11931->_10 = PString(); x11931->_11 = PString(); x11931->_12 = PString(); x11931->_13 = 0; x11931->_14 = PString(); x11931->_15 = -1.7976931348623157E308; x11931->_16 = -1.7976931348623157E308; x11931->_17 = -1.7976931348623157E308; x11931->_18 = -1.7976931348623157E308; x11931->_19 = -2147483648; x11931->_20 = -2147483648; x11931->_21 = PString();
+    x3114.sliceCopy(1, x11931, ([&](const struct SEntry21_IIISSSSSSSSSTSDDDDIIS&  sliceVar) {
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* custEntry = const_cast<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*>(&sliceVar);
-      x12969.push_back(custEntry);
+      x11067.push_back(custEntry);
     
     }));
-    int x12975 = x12969.size();
-    int x12977 = (x12975/(2));
-    int x12985 = x12969.size();
-    if(((x12985%(2))==(0))) {
-      int x230 = x12977;
-      x12977 = (x230-(1));
+    int x11073 = x11067.size();
+    int x11075 = (x11073/(2));
+    int x11083 = x11067.size();
+    if(((x11083%(2))==(0))) {
+      int x230 = x11075;
+      x11075 = (x230-(1));
     };
-    sort(x12969.begin(), x12969.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c1, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c2) {
+    sort(x11067.begin(), x11067.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c1, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c2) {
       
       PString x7168 = c1->_4;
       PString x7169 = c2->_4;
       return ((strcmpi(x7168.data_, x7169.data_))<(0)); 
     }));
-    int x12993 = x12977;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12994 = x12969[x12993];
-    ite12968 = x12994;
+    int x11091 = x11075;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11092 = x11067[x11091];
+    ite11066 = x11092;
   } else {
     
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13846 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    memset(x13846, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    x13846->_1 = x196; x13846->_2 = x195; x13846->_3 = x194; x13846->_4 = PString(); x13846->_5 = PString(); x13846->_6 = PString(); x13846->_7 = PString(); x13846->_8 = PString(); x13846->_9 = PString(); x13846->_10 = PString(); x13846->_11 = PString(); x13846->_12 = PString(); x13846->_13 = 0; x13846->_14 = PString(); x13846->_15 = -1.7976931348623157E308; x13846->_16 = -1.7976931348623157E308; x13846->_17 = -1.7976931348623157E308; x13846->_18 = -1.7976931348623157E308; x13846->_19 = -2147483648; x13846->_20 = -2147483648; x13846->_21 = PString();
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12997 = x3114.get(x13846, 0);
-    ite12968 = x12997;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11956 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    memset(x11956, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    x11956->_1 = x196; x11956->_2 = x195; x11956->_3 = x194; x11956->_4 = PString(); x11956->_5 = PString(); x11956->_6 = PString(); x11956->_7 = PString(); x11956->_8 = PString(); x11956->_9 = PString(); x11956->_10 = PString(); x11956->_11 = PString(); x11956->_12 = PString(); x11956->_13 = 0; x11956->_14 = PString(); x11956->_15 = -1.7976931348623157E308; x11956->_16 = -1.7976931348623157E308; x11956->_17 = -1.7976931348623157E308; x11956->_18 = -1.7976931348623157E308; x11956->_19 = -2147483648; x11956->_20 = -2147483648; x11956->_21 = PString();
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11095 = x3114.getCopy(x11956, 0);
+    ite11066 = x11095;
   };
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7052 = ite12968;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7052 = ite11066;
   PString x7053 = x7052->_21;
   PString x7054 = x7052->_14;
-  char* x14305 = strstr(x7054.data_, "BC");
-  if((x14305!=(NULL))) {
+  char* x12422 = strstr(x7054.data_, "BC");
+  if((x12422!=(NULL))) {
     int x7057 = x7052->_1;
     PString c_new_data(500);
     snprintf(c_new_data.data_, 501, "%d %d %d %d %d $%f %s | %s", x7057, x195, x194, x192, x191, x198, IntToStrdate(x189), x7053.data_);
@@ -2072,16 +2090,16 @@ void PaymentTx(int x188, date x189, int x190, int x191, int x192, int x193, int 
     double x7064 = x7052->_17;
     x7052->_17 = (x7064+(x198));
   };
-  x3114.update(x7052);
-  PString x7068 = x9001->_2;
-  PString x7069 = x9008->_3;
+  x3114.updateCopy(x7052);
+  PString x7068 = x7039->_2;
+  PString x7069 = x7046->_3;
   PString h_data(24);
   snprintf(h_data.data_, 25, "%.10s    %.10s", x7068.data_, x7069.data_);
   int x7072 = x7052->_1;
-  struct SEntry8_IIIIITDS* x13872 = (struct SEntry8_IIIIITDS*)malloc(1 * sizeof(struct SEntry8_IIIIITDS));
-  memset(x13872, 0, 1 * sizeof(struct SEntry8_IIIIITDS));
-  x13872->_1 = x7072; x13872->_2 = x195; x13872->_3 = x194; x13872->_4 = x192; x13872->_5 = x191; x13872->_6 = x189; x13872->_7 = x198; x13872->_8 = h_data;
-  x2412.add(x13872);
+  struct SEntry8_IIIIITDS* x11982 = (struct SEntry8_IIIIITDS*)malloc(1 * sizeof(struct SEntry8_IIIIITDS));
+  memset(x11982, 0, 1 * sizeof(struct SEntry8_IIIIITDS));
+  x11982->_1 = x7072; x11982->_2 = x195; x11982->_3 = x194; x11982->_4 = x192; x11982->_5 = x191; x11982->_6 = x189; x11982->_7 = x198; x11982->_8 = h_data;
+  x2412.add(x11982);
 }
 void NewOrderTx(int x272, date x273, int x274, int x275, int x276, int x277, int x278, int x279, int* x280, int* x281, int* x282, double* x283, PString* x284, int* x285, PString* x286, double* x287) {
   int x289 = 0;
@@ -2091,37 +2109,37 @@ void NewOrderTx(int x272, date x273, int x274, int x275, int x276, int x277, int
   while(1) {
     
     int x299 = x289;
-    int ite13268 = 0;
+    int ite11369 = 0;
     if((x299<(x278))) {
       
       int x301 = x297;
-      int x13269 = x301;
-      ite13268 = x13269;
+      int x11370 = x301;
+      ite11369 = x11370;
     } else {
       
-      ite13268 = 0;
+      ite11369 = 0;
     };
-    int x13098 = ite13268;
-    if (!(x13098)) break; 
+    int x11197 = ite11369;
+    if (!(x11197)) break; 
     
     int x304 = x289;
     int x305 = x280[x304];
-    struct SEntry5_IISDS* x13892 = (struct SEntry5_IISDS*)malloc(1 * sizeof(struct SEntry5_IISDS));
-    memset(x13892, 0, 1 * sizeof(struct SEntry5_IISDS));
-    x13892->_1 = x305; x13892->_2 = -2147483648; x13892->_3 = PString(); x13892->_4 = -1.7976931348623157E308; x13892->_5 = PString();
-    struct SEntry5_IISDS* x9222 = x2495.get(x13892, 0);
-    if((x9222==(NULL))) {
+    struct SEntry5_IISDS* x12002 = (struct SEntry5_IISDS*)malloc(1 * sizeof(struct SEntry5_IISDS));
+    memset(x12002, 0, 1 * sizeof(struct SEntry5_IISDS));
+    x12002->_1 = x305; x12002->_2 = -2147483648; x12002->_3 = PString(); x12002->_4 = -1.7976931348623157E308; x12002->_5 = PString();
+    struct SEntry5_IISDS* x7292 = x2495.getCopy(x12002, 0);
+    if((x7292==(NULL))) {
       x297 = 0;
     } else {
       
       int x312 = x289;
-      PString x7297 = x9222->_3;
+      PString x7297 = x7292->_3;
       x284[x312] = x7297;
       int x315 = x289;
-      double x7300 = x9222->_4;
+      double x7300 = x7292->_4;
       x283[x315] = x7300;
       int x318 = x289;
-      PString x7303 = x9222->_5;
+      PString x7303 = x7292->_5;
       idata[x318] = x7303;
     };
     int x322 = x289;
@@ -2129,30 +2147,30 @@ void NewOrderTx(int x272, date x273, int x274, int x275, int x276, int x277, int
   };
   int x326 = x297;
   if(x326) {
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13913 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    memset(x13913, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
-    x13913->_1 = x277; x13913->_2 = x276; x13913->_3 = x275; x13913->_4 = PString(); x13913->_5 = PString(); x13913->_6 = PString(); x13913->_7 = PString(); x13913->_8 = PString(); x13913->_9 = PString(); x13913->_10 = PString(); x13913->_11 = PString(); x13913->_12 = PString(); x13913->_13 = 0; x13913->_14 = PString(); x13913->_15 = -1.7976931348623157E308; x13913->_16 = -1.7976931348623157E308; x13913->_17 = -1.7976931348623157E308; x13913->_18 = -1.7976931348623157E308; x13913->_19 = -2147483648; x13913->_20 = -2147483648; x13913->_21 = PString();
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9243 = x3114.get(x13913, 0);
-    struct SEntry9_ISSSSSSDD* x13917 = (struct SEntry9_ISSSSSSDD*)malloc(1 * sizeof(struct SEntry9_ISSSSSSDD));
-    memset(x13917, 0, 1 * sizeof(struct SEntry9_ISSSSSSDD));
-    x13917->_1 = x275; x13917->_2 = PString(); x13917->_3 = PString(); x13917->_4 = PString(); x13917->_5 = PString(); x13917->_6 = PString(); x13917->_7 = PString(); x13917->_8 = -1.7976931348623157E308; x13917->_9 = -1.7976931348623157E308;
-    struct SEntry9_ISSSSSSDD* x9246 = x2454.get(x13917, 0);
-    struct SEntry11_IISSSSSSDDI* x13921 = (struct SEntry11_IISSSSSSDDI*)malloc(1 * sizeof(struct SEntry11_IISSSSSSDDI));
-    memset(x13921, 0, 1 * sizeof(struct SEntry11_IISSSSSSDDI));
-    x13921->_1 = x276; x13921->_2 = x275; x13921->_3 = PString(); x13921->_4 = PString(); x13921->_5 = PString(); x13921->_6 = PString(); x13921->_7 = PString(); x13921->_8 = PString(); x13921->_9 = -1.7976931348623157E308; x13921->_10 = -1.7976931348623157E308; x13921->_11 = -2147483648;
-    struct SEntry11_IISSSSSSDDI* x9249 = x2784.get(x13921, 0);
-    int x7320 = x9249->_11;
-    int x7321 = x9249->_11;
-    x9249->_11 = (x7321+(1));
-    x2784.update(x9249);
-    struct SEntry8_IIIITIIB* x13931 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
-    memset(x13931, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
-    x13931->_1 = x7320; x13931->_2 = x276; x13931->_3 = x275; x13931->_4 = x277; x13931->_5 = x273; x13931->_6 = -1; x13931->_7 = x278; x13931->_8 = (x279>(0));
-    x2721.add(x13931);
-    struct SEntry3_III* x13935 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
-    memset(x13935, 0, 1 * sizeof(struct SEntry3_III));
-    x13935->_1 = x7320; x13935->_2 = x276; x13935->_3 = x275;
-    x2211.add(x13935);
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12024 = (struct SEntry21_IIISSSSSSSSSTSDDDDIIS*)malloc(1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    memset(x12024, 0, 1 * sizeof(struct SEntry21_IIISSSSSSSSSTSDDDDIIS));
+    x12024->_1 = x277; x12024->_2 = x276; x12024->_3 = x275; x12024->_4 = PString(); x12024->_5 = PString(); x12024->_6 = PString(); x12024->_7 = PString(); x12024->_8 = PString(); x12024->_9 = PString(); x12024->_10 = PString(); x12024->_11 = PString(); x12024->_12 = PString(); x12024->_13 = 0; x12024->_14 = PString(); x12024->_15 = -1.7976931348623157E308; x12024->_16 = -1.7976931348623157E308; x12024->_17 = -1.7976931348623157E308; x12024->_18 = -1.7976931348623157E308; x12024->_19 = -2147483648; x12024->_20 = -2147483648; x12024->_21 = PString();
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7313 = x3114.getCopy(x12024, 0);
+    struct SEntry9_ISSSSSSDD* x12029 = (struct SEntry9_ISSSSSSDD*)malloc(1 * sizeof(struct SEntry9_ISSSSSSDD));
+    memset(x12029, 0, 1 * sizeof(struct SEntry9_ISSSSSSDD));
+    x12029->_1 = x275; x12029->_2 = PString(); x12029->_3 = PString(); x12029->_4 = PString(); x12029->_5 = PString(); x12029->_6 = PString(); x12029->_7 = PString(); x12029->_8 = -1.7976931348623157E308; x12029->_9 = -1.7976931348623157E308;
+    struct SEntry9_ISSSSSSDD* x7316 = x2454.getCopy(x12029, 0);
+    struct SEntry11_IISSSSSSDDI* x12033 = (struct SEntry11_IISSSSSSDDI*)malloc(1 * sizeof(struct SEntry11_IISSSSSSDDI));
+    memset(x12033, 0, 1 * sizeof(struct SEntry11_IISSSSSSDDI));
+    x12033->_1 = x276; x12033->_2 = x275; x12033->_3 = PString(); x12033->_4 = PString(); x12033->_5 = PString(); x12033->_6 = PString(); x12033->_7 = PString(); x12033->_8 = PString(); x12033->_9 = -1.7976931348623157E308; x12033->_10 = -1.7976931348623157E308; x12033->_11 = -2147483648;
+    struct SEntry11_IISSSSSSDDI* x7319 = x2784.getCopy(x12033, 0);
+    int x7320 = x7319->_11;
+    int x7321 = x7319->_11;
+    x7319->_11 = (x7321+(1));
+    x2784.updateCopy(x7319);
+    struct SEntry8_IIIITIIB* x12043 = (struct SEntry8_IIIITIIB*)malloc(1 * sizeof(struct SEntry8_IIIITIIB));
+    memset(x12043, 0, 1 * sizeof(struct SEntry8_IIIITIIB));
+    x12043->_1 = x7320; x12043->_2 = x276; x12043->_3 = x275; x12043->_4 = x277; x12043->_5 = x273; x12043->_6 = -1; x12043->_7 = x278; x12043->_8 = (x279>(0));
+    x2721.add(x12043);
+    struct SEntry3_III* x12047 = (struct SEntry3_III*)malloc(1 * sizeof(struct SEntry3_III));
+    memset(x12047, 0, 1 * sizeof(struct SEntry3_III));
+    x12047->_1 = x7320; x12047->_2 = x276; x12047->_3 = x275;
+    x2211.add(x12047);
     double x352 = 0.0;
     x289 = 0;
     while(1) {
@@ -2166,110 +2184,110 @@ void NewOrderTx(int x272, date x273, int x274, int x275, int x276, int x277, int
       int ol_i_id = x280[x361];
       int x364 = x289;
       int ol_quantity = x282[x364];
-      struct SEntry17_IIISSSSSSSSSSIIIS* x13950 = (struct SEntry17_IIISSSSSSSSSSIIIS*)malloc(1 * sizeof(struct SEntry17_IIISSSSSSSSSSIIIS));
-      memset(x13950, 0, 1 * sizeof(struct SEntry17_IIISSSSSSSSSSIIIS));
-      x13950->_1 = ol_i_id; x13950->_2 = ol_supply_w_id; x13950->_3 = -2147483648; x13950->_4 = PString(); x13950->_5 = PString(); x13950->_6 = PString(); x13950->_7 = PString(); x13950->_8 = PString(); x13950->_9 = PString(); x13950->_10 = PString(); x13950->_11 = PString(); x13950->_12 = PString(); x13950->_13 = PString(); x13950->_14 = -2147483648; x13950->_15 = -2147483648; x13950->_16 = -2147483648; x13950->_17 = PString();
-      struct SEntry17_IIISSSSSSSSSSIIIS* x9275 = x3175.get(x13950, 0);
-      PString ite13151 = PString();
+      struct SEntry17_IIISSSSSSSSSSIIIS* x12062 = (struct SEntry17_IIISSSSSSSSSSIIIS*)malloc(1 * sizeof(struct SEntry17_IIISSSSSSSSSSIIIS));
+      memset(x12062, 0, 1 * sizeof(struct SEntry17_IIISSSSSSSSSSIIIS));
+      x12062->_1 = ol_i_id; x12062->_2 = ol_supply_w_id; x12062->_3 = -2147483648; x12062->_4 = PString(); x12062->_5 = PString(); x12062->_6 = PString(); x12062->_7 = PString(); x12062->_8 = PString(); x12062->_9 = PString(); x12062->_10 = PString(); x12062->_11 = PString(); x12062->_12 = PString(); x12062->_13 = PString(); x12062->_14 = -2147483648; x12062->_15 = -2147483648; x12062->_16 = -2147483648; x12062->_17 = PString();
+      struct SEntry17_IIISSSSSSSSSSIIIS* x7345 = x3175.getCopy(x12062, 0);
+      PString ite11252 = PString();
       if((x276==(1))) {
-        PString x13152 = x9275->_4;
-        ite13151 = x13152;
+        PString x11253 = x7345->_4;
+        ite11252 = x11253;
       } else {
         
-        PString ite13156 = PString();
+        PString ite11257 = PString();
         if((x276==(2))) {
-          PString x13157 = x9275->_5;
-          ite13156 = x13157;
+          PString x11258 = x7345->_5;
+          ite11257 = x11258;
         } else {
           
-          PString ite13161 = PString();
+          PString ite11262 = PString();
           if((x276==(3))) {
-            PString x13162 = x9275->_6;
-            ite13161 = x13162;
+            PString x11263 = x7345->_6;
+            ite11262 = x11263;
           } else {
             
-            PString ite13166 = PString();
+            PString ite11267 = PString();
             if((x276==(4))) {
-              PString x13167 = x9275->_7;
-              ite13166 = x13167;
+              PString x11268 = x7345->_7;
+              ite11267 = x11268;
             } else {
               
-              PString ite13171 = PString();
+              PString ite11272 = PString();
               if((x276==(5))) {
-                PString x13172 = x9275->_8;
-                ite13171 = x13172;
+                PString x11273 = x7345->_8;
+                ite11272 = x11273;
               } else {
                 
-                PString ite13176 = PString();
+                PString ite11277 = PString();
                 if((x276==(6))) {
-                  PString x13177 = x9275->_9;
-                  ite13176 = x13177;
+                  PString x11278 = x7345->_9;
+                  ite11277 = x11278;
                 } else {
                   
-                  PString ite13181 = PString();
+                  PString ite11282 = PString();
                   if((x276==(7))) {
-                    PString x13182 = x9275->_10;
-                    ite13181 = x13182;
+                    PString x11283 = x7345->_10;
+                    ite11282 = x11283;
                   } else {
                     
-                    PString ite13186 = PString();
+                    PString ite11287 = PString();
                     if((x276==(8))) {
-                      PString x13187 = x9275->_11;
-                      ite13186 = x13187;
+                      PString x11288 = x7345->_11;
+                      ite11287 = x11288;
                     } else {
                       
-                      PString ite13191 = PString();
+                      PString ite11292 = PString();
                       if((x276==(9))) {
-                        PString x13192 = x9275->_12;
-                        ite13191 = x13192;
+                        PString x11293 = x7345->_12;
+                        ite11292 = x11293;
                       } else {
                         
-                        PString x13194 = x9275->_13;
-                        ite13191 = x13194;
+                        PString x11295 = x7345->_13;
+                        ite11292 = x11295;
                       };
-                      PString x13190 = ite13191;
-                      ite13186 = x13190;
+                      PString x11291 = ite11292;
+                      ite11287 = x11291;
                     };
-                    PString x13185 = ite13186;
-                    ite13181 = x13185;
+                    PString x11286 = ite11287;
+                    ite11282 = x11286;
                   };
-                  PString x13180 = ite13181;
-                  ite13176 = x13180;
+                  PString x11281 = ite11282;
+                  ite11277 = x11281;
                 };
-                PString x13175 = ite13176;
-                ite13171 = x13175;
+                PString x11276 = ite11277;
+                ite11272 = x11276;
               };
-              PString x13170 = ite13171;
-              ite13166 = x13170;
+              PString x11271 = ite11272;
+              ite11267 = x11271;
             };
-            PString x13165 = ite13166;
-            ite13161 = x13165;
+            PString x11266 = ite11267;
+            ite11262 = x11266;
           };
-          PString x13160 = ite13161;
-          ite13156 = x13160;
+          PString x11261 = ite11262;
+          ite11257 = x11261;
         };
-        PString x13155 = ite13156;
-        ite13151 = x13155;
+        PString x11256 = ite11257;
+        ite11252 = x11256;
       };
-      PString ol_dist_info = ite13151;
-      int x7374 = x9275->_3;
+      PString ol_dist_info = ite11252;
+      int x7374 = x7345->_3;
       int x401 = x289;
       x285[x401] = x7374;
-      PString x7377 = x9243->_14;
-      char* x14553 = strstr(x7377.data_, "original");
-      int ite13394 = 0;
-      if((x14553!=(NULL))) {
+      PString x7377 = x7313->_14;
+      char* x12673 = strstr(x7377.data_, "original");
+      int ite11497 = 0;
+      if((x12673!=(NULL))) {
         
-        PString x7380 = x9275->_17;
-        char* x14559 = strstr(x7380.data_, "original");
-        int x13395 = (x14559!=(NULL));
-        ite13394 = x13395;
+        PString x7380 = x7345->_17;
+        char* x12679 = strstr(x7380.data_, "original");
+        int x11498 = (x12679!=(NULL));
+        ite11497 = x11498;
       } else {
         
-        ite13394 = 0;
+        ite11497 = 0;
       };
-      int x13219 = ite13394;
-      if(x13219) {
+      int x11320 = ite11497;
+      if(x11320) {
         int x408 = x289;
         x286[x408] = "B";
       } else {
@@ -2277,19 +2295,19 @@ void NewOrderTx(int x272, date x273, int x274, int x275, int x276, int x277, int
         int x410 = x289;
         x286[x410] = "G";
       };
-      x9275->_3 = (x7374-(ol_quantity));
+      x7345->_3 = (x7374-(ol_quantity));
       if((x7374<=(ol_quantity))) {
-        int x7391 = x9275->_3;
-        x9275->_3 = (x7391+(91));
+        int x7391 = x7345->_3;
+        x7345->_3 = (x7391+(91));
       };
       int x419 = 0;
       if((ol_supply_w_id!=(x275))) {
         x419 = 1;
       };
-      x3175.update(x9275);
-      double x7399 = x9243->_16;
-      double x7400 = x9246->_8;
-      double x7401 = x9249->_9;
+      x3175.updateCopy(x7345);
+      double x7399 = x7313->_16;
+      double x7400 = x7316->_8;
+      double x7401 = x7319->_9;
       int x432 = x289;
       double x433 = x283[x432];
       double ol_amount = ((ol_quantity*(x433))*(((1.0+(x7400))+(x7401))))*((1.0-(x7399)));
@@ -2298,10 +2316,10 @@ void NewOrderTx(int x272, date x273, int x274, int x275, int x276, int x277, int
       double x443 = x352;
       x352 = (x443+(ol_amount));
       int x446 = x289;
-      struct SEntry10_IIIIIITIDS* x14066 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
-      memset(x14066, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
-      x14066->_1 = x7320; x14066->_2 = x276; x14066->_3 = x275; x14066->_4 = (x446+(1)); x14066->_5 = ol_i_id; x14066->_6 = ol_supply_w_id; x14066->_7 = NULL; x14066->_8 = ol_quantity; x14066->_9 = ol_amount; x14066->_10 = ol_dist_info;
-      x2958.add(x14066);
+      struct SEntry10_IIIIIITIDS* x12178 = (struct SEntry10_IIIIIITIDS*)malloc(1 * sizeof(struct SEntry10_IIIIIITIDS));
+      memset(x12178, 0, 1 * sizeof(struct SEntry10_IIIIIITIDS));
+      x12178->_1 = x7320; x12178->_2 = x276; x12178->_3 = x275; x12178->_4 = (x446+(1)); x12178->_5 = ol_i_id; x12178->_6 = ol_supply_w_id; x12178->_7 = NULL; x12178->_8 = ol_quantity; x12178->_9 = ol_amount; x12178->_10 = ol_dist_info;
+      x2958.add(x12178);
       int x451 = x289;
       x289 = (x451+(1));
     };

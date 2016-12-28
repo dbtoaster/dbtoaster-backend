@@ -573,16 +573,22 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
         val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt;"
-        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: "{}"
+        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
         val constructor = doc"${tag.typeName}() :" :: fields.map(x => {
           if (x.tpe == StringType)
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
-        }).mkDocument(", ") :: "{}"
+        }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
+        val copyFn = doc"${tag.typeName}* copy() { return new ${tag.typeName}(" :: fields.map(x => {
+          if(x.tpe == StringType)
+            doc"*${x.name}.copy()"
+          else
+            doc"${x.name}"
+        }).mkDocument(", ") :: "); }"
         val serializer = doc"template<class Archive> \nvoid serialize(Archive& ar, const unsigned int version) const {" :/:
           Document.nest(4, fields.map(x => doc"DBT_SERIALIZATION_NVP(ar,${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n", "\nar << ELEM_SEPARATOR;\n", "\n")) :/: "}"
 
-        "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: serializer) :/: "};"
+        "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: serializer :/: copyFn) :/: "};"
     }
     val entries = optTP.structs.map(structToDoc).mkDocument("\n")
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")

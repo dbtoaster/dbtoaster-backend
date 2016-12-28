@@ -73,7 +73,7 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
   } else {
     //partial optimization
     rewrite += rule {
-      case StoreGetCopy(store, idx, key, _) => store.getCopyDependent(idx, key)
+      case StoreGetCopy(store, idx, key, _) => storeGetCopyDependent(store, idx, key)(key.tp)
       case StoreSliceCopy(store, idx, key, f) => store.sliceCopyDependent(idx, key, f)
       case StoreUpdateCopy(store, e) => store.updateCopyDependent(e)
       case StoreDeleteCopy(store, e) => store.deleteCopyDependent(e)

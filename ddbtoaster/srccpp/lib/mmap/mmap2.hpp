@@ -1,5 +1,5 @@
-#ifndef MMAP_H
-#define MMAP_H
+#ifndef MMAP2_H
+#define MMAP2_H
 
 #include <iostream>
 #include <assert.h>
@@ -214,6 +214,20 @@ public:
 
     virtual T* get(const T& key) const = 0;
 
+    FORCE_INLINE T* get(const T* key) {
+        return get(*key);
+    }
+
+    FORCE_INLINE T* getCopy(const T& key) {
+        T* ref = get(key);
+        return ref ? ref->copy() : nullptr;
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T& key) {
+        T* ref = get(key);
+        return ref ? ref->copy() : nullptr;
+    }
+
     virtual T* get(const T& key, const HASH_RES_t h) const = 0;
 
     virtual V getValueOrDefault(const T& key) const = 0;
@@ -234,11 +248,26 @@ public:
 
     virtual void add(T* obj, const HASH_RES_t h) = 0;
 
+    //del is actully delCopy. Need to add backpointers later to avoid lookup
     virtual void del(const T& obj) = 0;
 
-    virtual void del(const T& obj, const HASH_RES_t h) = 0;
-
     virtual void del(const T* obj) = 0;
+
+    FORCE_INLINE void delCopy(const T& obj, Index<T, V>* primary) {
+        T* orig = primary->get(obj);
+        del(orig);
+    }
+
+    FORCE_INLINE void delCopy(const T* obj, Index<T, V>* primary) {
+        T* orig = primary->get(obj);
+        del(orig);
+    }
+
+    FORCE_INLINE void delCopyDependent(const T* obj) {
+        del(obj);
+    }
+
+    virtual void del(const T& obj, const HASH_RES_t h) = 0;
 
     virtual void del(const T* obj, const HASH_RES_t h) = 0;
 
@@ -246,7 +275,27 @@ public:
 
     virtual void slice(const T& key, std::function<void (const T&) > f) = 0;
 
+    virtual void sliceCopy(const T& key, std::function<void (const T&) > f) = 0;
+
+    FORCE_INLINE void sliceCopyDependent(const T& key, std::function<void (const T&) > f) {
+        sliceCopy(key, f);
+    }
+
     virtual void update(T* obj) = 0;
+
+    /*Ideally, we should check if the hash changes and then delete and insert.
+     *  However, in the cases where we use it, hash does not change, so to have 
+     *   an impact, deleted and insert in all cases  */
+    FORCE_INLINE void updateCopyDependent(T* obj, T* orig) {
+        del(orig);
+        add(obj);
+    }
+
+    FORCE_INLINE void updateCopy(T* obj, Index<T, V>* primaryIdx) {
+        T* orig = primaryIdx->get(*obj);
+        del(orig);
+        add(obj);
+    }
 
     virtual size_t count() = 0;
 
@@ -451,6 +500,26 @@ public:
         return nullptr;
     }
 
+    inline virtual T* getCopyDependent(const T& key) {
+        T* ref = get(key);
+        return ref ? ref->copy() : nullptr;
+    }
+
+    inline virtual T* getCopyDependent(const T* key) {
+        T* ref = get(key);
+        return ref ? ref->copy() : nullptr;
+    }
+
+    inline virtual T* getCopy(const T& key) {
+        T* ref = get(key);
+        return ref ? ref->copy() : nullptr;
+    }
+
+    inline virtual T* getCopy(const T* key) {
+        T* ref = get(key);
+        return ref ? ref->copy() : nullptr;
+    }
+
     // inserts regardless of whether element exists already
 
     FORCE_INLINE virtual void add(T& obj) {
@@ -581,7 +650,13 @@ public:
     }
 
     inline void update(T* elem) override {
-        //DO Nothing for now
+        //        HASH_RES_t h = IDX_FN::hash(*elem);
+        //        IdxNode* n = &(buckets_[h % size_]);
+        if (is_unique) {
+            // ???
+        } else {
+            // ???
+        }
     }
 
     inline void slice(const T* key, std::function<void (const T&) > f) {
@@ -599,6 +674,28 @@ public:
                 return;
             }
         } while ((n = n->nxt));
+    }
+
+    inline virtual void sliceCopy(const T* key, std::function<void (const T&) > f) {
+        sliceCopy(*key, f);
+    }
+
+    inline virtual void sliceCopy(const T& key, std::function<void (const T&) > f) {
+        HASH_RES_t h = IDX_FN::hash(key);
+        std::vector<T*> entries;
+        IdxNode* n = &(buckets_[h % size_]);
+        do {
+            if (n->obj && h == n->hash && !IDX_FN::cmp(key, *n->obj)) {
+                do {
+                    T* temp = n->obj->copy();
+                    entries.push_back(temp);
+                } while ((n = n->nxt) && (h == n->hash) && !IDX_FN::cmp(key, *n->obj));
+                break;
+            }
+        } while ((n = n->nxt));
+        for (auto it : entries) {
+            f(*it);
+        }
     }
 
     inline virtual void clear() {
@@ -1260,6 +1357,11 @@ public:
         //TODO: implement.  traversal type?
     }
 
+    FORCE_INLINE void sliceCopy(const T& key, std::function<void (const T&) > f) override {
+        throw std::logic_error("Not implemented");
+        //TODO: implement.  traversal type?
+    }
+
     void clear() override {
         throw std::logic_error("Not implemented");
     }
@@ -1398,7 +1500,11 @@ public:
     }
 
     void slice(const T& key, std::function<void (const T&) > f) override {
-        // ???
+        throw std::logic_error("Not implemented");
+    }
+
+    void sliceCopy(const T& key, std::function<void (const T&) > f) override {
+        throw std::logic_error("Not implemented");
     }
 
     size_t count() override {
@@ -1450,12 +1556,27 @@ public:
     FORCE_INLINE T* get(const T* key, const size_t idx = 0) const {
         return get(*key, idx);
     }
-    
+
     FORCE_INLINE T* get(const T& key, const size_t idx = 0) const {
         return index[idx]->get(key);
-    } // assume that mainIdx=0
+    }
 
-   
+    FORCE_INLINE T* getCopy(const T* key, const size_t idx = 0) const {
+        return getCopy(*key, idx);
+    }
+
+    FORCE_INLINE T* getCopy(const T& key, const size_t idx = 0) const {
+        return index[idx]->getCopy(key);
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T* key, const size_t idx = 0) const {
+        return getCopyDependent(*key, idx);
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T& key, const size_t idx = 0) const {
+        return index[idx]->getCopyDependent(key);
+    }
+
     FORCE_INLINE T* get(const T& key, const HASH_RES_t h, const size_t idx) const {
         return index[idx]->get(key, h);
     }
@@ -1516,10 +1637,10 @@ public:
         for (size_t i = 1; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
     }
 
-    FORCE_INLINE void del(const T& key/*, int idx=0*/) { // assume that mainIdx=0
-        T* elem = get(key);
-        if (elem != nullptr) del(elem);
-    }
+    //    FORCE_INLINE void del(const T& key/*, int idx=0*/) { // assume that mainIdx=0
+    //        T* elem = get(key);
+    //        if (elem != nullptr) del(elem);
+    //    }
 
     FORCE_INLINE void del(const T& key, HASH_RES_t h, int idx = 0) {
         T* elem = get(key, h, idx);
@@ -1540,6 +1661,34 @@ public:
         elem->prv = nullptr;
 
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
+        pool.del(elem);
+    }
+
+    FORCE_INLINE void delCopyDependent(T* obj) {
+        T* elem = index[0]->get(obj);
+        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+        if (elemPrv) elemPrv->nxt = elemNxt;
+        if (elemNxt) elemNxt->prv = elemPrv;
+        if (elem == head) head = elemNxt;
+        elem->nxt = nullptr;
+        elem->prv = nullptr;
+
+        for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->delCopyDependent(elem);
+        pool.del(elem);
+    }
+
+    FORCE_INLINE void delCopy(T* obj) {
+        T* elem = index[0]->get(obj);
+        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+        if (elemPrv) elemPrv->nxt = elemNxt;
+        if (elemNxt) elemNxt->prv = elemPrv;
+        if (elem == head) head = elemNxt;
+        elem->nxt = nullptr;
+        elem->prv = nullptr;
+
+        for (size_t i = sizeof...(INDEXES) - 1; i != 0; --i)
+            index[i]->delCopy(obj, index[0]);
+        index[0]->delCopy(obj, index[0]);
         pool.del(elem);
     }
 
@@ -1573,8 +1722,67 @@ public:
         index[idx]->slice(key, f);
     }
 
+    void sliceCopy(int idx, const T* key, std::function<void (const T&) > f) {
+        index[idx]->sliceCopy(*key, f);
+    }
+
+    void sliceCopy(int idx, const T& key, std::function<void (const T&) > f) {
+        index[idx]->sliceCopy(key, f);
+    }
+
+    void sliceCopyDependent(int idx, const T* key, std::function<void (const T&) > f) {
+        index[idx]->sliceCopy(*key, f);
+    }
+
+    void sliceCopyDependent(int idx, const T& key, std::function<void (const T&) > f) {
+        index[idx]->sliceCopy(key, f);
+    }
+
     FORCE_INLINE void update(T* elem) {
-        //DO NOTHING, as of now
+        if (elem == nullptr)
+            return;
+        for (size_t i = 0; i < sizeof...(INDEXES); ++i) {
+            index[i]->update(elem);
+        }
+    }
+
+    FORCE_INLINE void updateCopyDependent(T* obj) {
+        if (obj == nullptr)
+            return;
+        T * elem = index[0]->get(*obj);
+        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+        if (elemPrv) elemPrv->nxt = obj;
+        if (elemNxt) elemNxt->prv = obj;
+        if (elem == head) head = obj;
+        elem->nxt = nullptr;
+        elem->prv = nullptr;
+        obj->nxt = elemNxt;
+        obj->prv = elemPrv;
+
+        for (size_t i = 0; i < sizeof...(INDEXES); ++i) {
+            index[i]->updateCopyDependent(obj, elem);
+        }
+    }
+
+    FORCE_INLINE void updateCopy(T* obj) {
+        if (obj == nullptr)
+            return;
+
+        T * elem = index[0]->get(*obj);
+        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+        if (elemPrv) elemPrv->nxt = obj;
+        if (elemNxt) elemNxt->prv = obj;
+        if (elem == head) head = obj;
+        elem->nxt = nullptr;
+        elem->prv = nullptr;
+        obj->nxt = elemNxt;
+        obj->prv = elemPrv;
+
+        //i >= 0 cant be used with unsigned type
+        for (size_t i = sizeof...(INDEXES) - 1; i != 0; --i) {
+            index[i]->updateCopy(obj, index[0]);
+        }
+        index[0]->updateCopy(obj, index[0]);
     }
 
     FORCE_INLINE size_t count() const {

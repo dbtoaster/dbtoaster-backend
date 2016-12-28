@@ -188,8 +188,15 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
           if (x.tpe == StringType)
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
-        }).mkDocument(", ") :: "{}"
-        "struct " :: tag.typeName :: " {" :/: Document.nest(2, constructor :/: fieldsDoc) :/: "};"
+        }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
+        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
+        val copyFn = doc"${tag.typeName}* copy() { return new ${tag.typeName}(" :: fields.map(x => {
+          if(x.tpe == StringType)
+            doc"*${x.name}.copy()"
+          else
+            doc"${x.name}"
+        }).mkDocument(", ") :: "); }"
+        "struct " :: tag.typeName :: " {" :/: Document.nest(2,  fieldsDoc :/: constructor :/: constructorWithArgs :/: copyFn) :/: "};"
     }
 
     val structs = optTP.structs.map(structToDoc).mkDocument("\n")

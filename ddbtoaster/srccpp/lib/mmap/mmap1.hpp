@@ -1,5 +1,5 @@
-#ifndef MMAP_H
-#define MMAP_H
+#ifndef MMAP1_H
+#define MMAP1_H
 
 #include <iostream>
 #include <assert.h>

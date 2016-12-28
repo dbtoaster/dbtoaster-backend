@@ -422,6 +422,17 @@ struct TPCCDataGen {
             c._21.data_ = new char[501];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c._1, &c._2, &c._3, c._4.data_, c._5.data_, c._6.data_, c._7.data_, c._8.data_, c._9.data_, c._10.data_, c._11.data_, c._12.data_, date, c._14.data_, &c._15, &c._16, &c._17, &c._18, &c._19, &c._20, c._21.data_);
             c._13 = StrToIntdate(date);
+            c._4.recomputeSize();
+            c._5.recomputeSize();
+            c._6.recomputeSize();
+            c._7.recomputeSize();
+            c._8.recomputeSize();
+            c._9.recomputeSize();
+            c._10.recomputeSize();
+            c._11.recomputeSize();
+            c._12.recomputeSize();
+            c._14.recomputeSize();
+            c._21.recomputeSize();
             customerTbl.insert_nocheck(c);
         }
         fin.close();
@@ -432,7 +443,7 @@ struct TPCCDataGen {
             CustomerEntry *cR = new CustomerEntry();
             cR->_4.data_ = new char[17];
             cR->_5.data_ = new char[3];
-            cR->_6.data_= new char[17];
+            cR->_6.data_ = new char[17];
             cR->_7.data_ = new char[21];
             cR->_8.data_ = new char[21];
             cR->_9.data_ = new char[21];
@@ -443,6 +454,17 @@ struct TPCCDataGen {
             cR->_21.data_ = new char[501];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &cR->_1, &cR->_2, &cR->_3, cR->_4.data_, cR->_5.data_, cR->_6.data_, cR->_7.data_, cR->_8.data_, cR->_9.data_, cR->_10.data_, cR->_11.data_, cR->_12.data_, date, cR->_14.data_, &cR->_15, &cR->_16, &cR->_17, &cR->_18, &cR->_19, &cR->_20, cR->_21.data_);
             cR->_13 = StrToIntdate(date);
+            cR->_4.recomputeSize();
+            cR->_5.recomputeSize();
+            cR->_6.recomputeSize();
+            cR->_7.recomputeSize();
+            cR->_8.recomputeSize();
+            cR->_9.recomputeSize();
+            cR->_10.recomputeSize();
+            cR->_11.recomputeSize();
+            cR->_12.recomputeSize();
+            cR->_14.recomputeSize();
+            cR->_21.recomputeSize();
             custRes.add(cR);
         }
         fin.close();
@@ -464,6 +486,12 @@ struct TPCCDataGen {
             d._7.data_ = new char[3];
             d._8.data_ = new char[10];
             sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d._1, &d._2, d._3.data_, d._4.data_, d._5.data_, d._6.data_, d._7.data_, d._8.data_, &d._9, &d._10, &d._11);
+            d._3.recomputeSize();
+            d._4.recomputeSize();
+            d._5.recomputeSize();
+            d._6.recomputeSize();
+            d._7.recomputeSize();
+            d._8.recomputeSize();
             districtTbl.insert_nocheck(d);
         }
         fin.close();
@@ -479,6 +507,12 @@ struct TPCCDataGen {
             dR->_7.data_ = new char[3];
             dR->_8.data_ = new char[10];
             sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &dR->_1, &dR->_2, dR->_3.data_, dR->_4.data_, dR->_5.data_, dR->_6.data_, dR->_7.data_, dR->_8.data_, &dR->_9, &dR->_10, &dR->_11);
+            dR->_3.recomputeSize();
+            dR->_4.recomputeSize();
+            dR->_5.recomputeSize();
+            dR->_6.recomputeSize();
+            dR->_7.recomputeSize();
+            dR->_8.recomputeSize();
             distRes.add(dR);
         }
         fin.close();
@@ -498,6 +532,7 @@ struct TPCCDataGen {
             h._8.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h._1, &h._2, &h._3, &h._4, &h._5, date, &h._7, h._8.data_);
             h._6 = StrToIntdate(date);
+            h._8.recomputeSize();
             historyTbl.insert_nocheck(h);
         }
         fin.close();
@@ -509,6 +544,7 @@ struct TPCCDataGen {
             hR->_8.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &hR->_1, &hR->_2, &hR->_3, &hR->_4, &hR->_5, date, &hR->_7, hR->_8.data_);
             hR->_6 = StrToIntdate(date);
+            hR->_8.recomputeSize();
             histRes.add(hR);
         }
         fin.close();
@@ -527,6 +563,8 @@ struct TPCCDataGen {
             i._3.data_ = new char[25];
             i._5.data_ = new char[51];
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i._1, &i._2, i._3.data_, &i._4, i._5.data_);
+            i._3.recomputeSize();
+            i._5.recomputeSize();
             itemTbl.insert_nocheck(i);
         }
         fin.close();
@@ -538,6 +576,8 @@ struct TPCCDataGen {
             iR->_3.data_ = new char[25];
             iR->_5.data_ = new char[51];
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &iR->_1, &iR->_2, iR->_3.data_, &iR->_4, iR->_5.data_);
+            iR->_3.recomputeSize();
+            iR->_5.recomputeSize();
             itemRes.add(iR);
         }
         fin.close();
@@ -582,6 +622,7 @@ struct TPCCDataGen {
             e._10.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e._1, &e._2, &e._3, &e._4, &e._5, &e._6, date, &e._8, &e._9, e._10.data_);
             e._7 = strcmp(date, "\\N") == 0 ? 0 : StrToIntdate(date + 1);
+            e._10.recomputeSize();
             orderLineTbl.insert_nocheck(e);
         }
         fin.close();
@@ -593,6 +634,7 @@ struct TPCCDataGen {
             eR->_10.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &eR->_1, &eR->_2, &eR->_3, &eR->_4, &eR->_5, &eR->_6, date, &eR->_8, &eR->_9, eR->_10.data_);
             eR->_7 = strcmp(date, "\\N") == 0 ? 0 : StrToIntdate(date + 1);
+            eR->_10.recomputeSize();
             ordLRes.add(eR);
         }
         fin.close();
@@ -655,6 +697,17 @@ struct TPCCDataGen {
             s._13.data_ = new char[25];
             s._17.data_ = new char[51];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &s._1, &s._2, &s._3, s._4.data_, s._5.data_, s._6.data_, s._7.data_, s._8.data_, s._9.data_, s._10.data_, s._11.data_, s._12.data_, s._13.data_, &s._14, &s._15, &s._16, s._17.data_);
+            s._4.recomputeSize();
+            s._5.recomputeSize();
+            s._6.recomputeSize();
+            s._7.recomputeSize();
+            s._8.recomputeSize();
+            s._9.recomputeSize();
+            s._10.recomputeSize();
+            s._11.recomputeSize();
+            s._12.recomputeSize();
+            s._13.recomputeSize();
+            s._17.recomputeSize();
             stockTbl.insert_nocheck(s);
         }
         fin.close();
@@ -675,6 +728,17 @@ struct TPCCDataGen {
             sR->_13.data_ = new char[25];
             sR->_17.data_ = new char[51];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &sR->_1, &sR->_2, &sR->_3, sR->_4.data_, sR->_5.data_, sR->_6.data_, sR->_7.data_, sR->_8.data_, sR->_9.data_, sR->_10.data_, sR->_11.data_, sR->_12.data_, sR->_13.data_, &sR->_14, &sR->_15, &sR->_16, sR->_17.data_);
+            sR->_4.recomputeSize();
+            sR->_5.recomputeSize();
+            sR->_6.recomputeSize();
+            sR->_7.recomputeSize();
+            sR->_8.recomputeSize();
+            sR->_9.recomputeSize();
+            sR->_10.recomputeSize();
+            sR->_11.recomputeSize();
+            sR->_12.recomputeSize();
+            sR->_13.recomputeSize();
+            sR->_17.recomputeSize();
             stockRes.add(sR);
         }
         fin.close();
@@ -696,6 +760,12 @@ struct TPCCDataGen {
             w._6.data_ = new char[3];
             w._7.data_ = new char[10];
             sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w._1, w._2.data_, w._3.data_, w._4.data_, w._5.data_, w._6.data_, w._7.data_, &w._8, &w._9);
+            w._2.recomputeSize();
+            w._3.recomputeSize();
+            w._4.recomputeSize();
+            w._5.recomputeSize();
+            w._6.recomputeSize();
+            w._7.recomputeSize();
             warehouseTbl.insert_nocheck(w);
         }
         fin.close();
@@ -711,6 +781,12 @@ struct TPCCDataGen {
             wR->_6.data_ = new char[3];
             wR->_7.data_ = new char[10];
             sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &wR->_1, wR->_2.data_, wR->_3.data_, wR->_4.data_, wR->_5.data_, wR->_6.data_, wR->_7.data_, &wR->_8, &wR->_9);
+            wR->_2.recomputeSize();
+            wR->_3.recomputeSize();
+            wR->_4.recomputeSize();
+            wR->_5.recomputeSize();
+            wR->_6.recomputeSize();
+            wR->_7.recomputeSize();
             wareRes.add(wR);
         }
         fin.close();
