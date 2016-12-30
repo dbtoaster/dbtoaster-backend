@@ -12,19 +12,20 @@ import scala.collection.mutable
 /**
   * Created by sachin on 27.04.16.
   */
-case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: List[ExpressionSymbol[Any]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structs: List[PardisStructDef[Any]], val entryIdxDefs: Seq[EntryIdxApplyObject[SEntry]], val tempVars: Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil) extends PardisProgram {
+case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: List[ExpressionSymbol[Any]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structs: List[PardisStructDef[Any]], val entryIdxDefs: Seq[EntryIdxApplyObject[SEntry]], val tempVars: Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil, val tmpMaps : Seq[(ExpressionSymbol[_], collection.mutable.ArrayBuffer[ExpressionSymbol[_]])] = Nil) extends PardisProgram {
   override val main: PardisBlock[Any] = initBlock.asInstanceOf[PardisBlock[Any]]
 }
 
 object Optimizer {
-  var analyzeEntry: Boolean = false
+  var analyzeEntry: Boolean = true
   var analyzeIndex: Boolean = true
   var fixedRange: Boolean = false
   var onlineOpts = false
   var tmpVarHoist = false
-  var indexInline = false
+  var tmpMapHoist = true
+  var indexInline = true
   var indexLookupFusion = false
-  var indexLookupPartialFusion = true
+  var indexLookupPartialFusion = false
   var deadIndexUpdate = false
   var codeMotion = false
   var refCounter = true
@@ -69,6 +70,10 @@ class Optimizer(val IR: StoreDSL) {
 
   if (Optimizer.indexInline)
     pipeline += new IndexInliner(IR)
+
+  if(Optimizer.tmpMapHoist)
+    pipeline += new TmpMapHoister(IR)
+
   if (Optimizer.deadIndexUpdate && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("DeadIndexUpdate opt requires both index inline as well as indexlookup fusion")
   pipeline += DCE
@@ -94,6 +99,10 @@ class Optimizer(val IR: StoreDSL) {
   def optimize[T: PardisType](transactionProgram: TransactionProgram[T]) = pipeline.foldLeft(transactionProgram)(applyOptimization)
 
   def applyOptimization[T: PardisType](prg: TransactionProgram[T], opt: TransformerHandler) = {
+    opt match {
+      case tmh : TmpMapHoister => tmh.globalMaps = prg.globalVars
+      case _ => ()
+    }
     val init_ = opt(IR)(prg.initBlock)
     val codeB_ = prg.codeBlocks.map(t => (t._1, t._2, opt(IR)(t._3)))
     val (global_, structs_, entryidx_) = opt match {
@@ -105,6 +114,10 @@ class Optimizer(val IR: StoreDSL) {
       case writer: SampleEntryHoister => writer.tmpVars.toSeq
       case _ => prg.tempVars
     }
-    TransactionProgram(init_, global_, codeB_, structs_, entryidx_, vars_)
+    val tmpMaps_ = opt match {
+      case tmh : TmpMapHoister => tmh.tmpMaps.toSeq
+      case _ => prg.tmpMaps
+    }
+    TransactionProgram(init_, global_, codeB_, structs_, entryidx_, vars_, tmpMaps_)
   }
 }

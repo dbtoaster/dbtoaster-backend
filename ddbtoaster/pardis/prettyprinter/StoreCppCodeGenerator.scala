@@ -9,6 +9,7 @@ import ch.epfl.data.sc.pardis.utils.document._
 import ddbt.lib.store.IHash
 import ddbt.lib.store.deep.{StoreDSL, StructFieldDecr, StructFieldIncr}
 import ddbt.transformer.{Index, IndexesFlag, ScalaConstructsToCTranformer}
+import sun.security.x509.CRLDistributionPointsExtension
 
 
 /**
@@ -42,9 +43,15 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, `Set+=`(self, elem)) => doc"$self.insert($elem);"
 
     case Statement(sym, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) =>
-      val entryTp = sym.tp.asInstanceOf[StoreType[_]].typeE.asInstanceOf[PointerType[_]].contentsType
-      val names = ops.collect {
+      val entryTp = sym.tp.asInstanceOf[StoreType[_]].typeE match {
+        case PointerType(tp) => tp
+        case tp => tp
+      }
+
+      val names = ops.collect {  //COMMON part. Move.
         case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
+        case Def(n : EntryIdxGenericOpsObject) => s"GenericOps"
+        case Def(n : EntryIdxGenericCmpObject[_]) => "GenericCmp"
       }
       val idxes = sym.attributes.get(IndexesFlag).get.indexes
       def idxToDoc(t: (Index, String)) = t._1.tp match {
@@ -110,7 +117,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case IdxGetCopyDependent(self, key) => doc"$self.getCopyDependent($key)"
     case IdxUpdate(self, key) => doc"$self.update($key)"
     case IdxUpdateCopy(self, key, primary) => doc"$self.updateCopy($key, &$primary)"
-    case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopy($key, $ref)"
+    case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopyDependent($key, $ref)"
     case IdxDelete(self, key) => doc"$self.del($key)"
     case IdxDeleteCopy(self, key, primary) => doc"$self.delCopy($key, &$primary)"
     case IdxDeleteCopyDependent(self, key) => doc"$self.delCopyDependent($key)"

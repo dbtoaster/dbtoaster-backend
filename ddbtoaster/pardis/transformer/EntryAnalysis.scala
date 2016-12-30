@@ -77,13 +77,13 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
     case sym -> (StoreRange(store, _, key1@Def(GenericEntryApplyObject(_, _)), key2@Def(GenericEntryApplyObject(_, _)), _, _, _)) => add(key1, store); add(key2, store); ()
 
     case sym -> (StoreDelete2(store, _, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
-    case sym -> (IfThenElse(_, t, e)) if t.typeT == GenericEntryType =>  addVar(sym, t.res);()
+    case sym -> (IfThenElse(_, t, e)) if t.typeT == GenericEntryType => addVar(sym, t.res); ()
 
     case sym -> (AggregatorResult(agg)) => addVar(sym, agg); ()
     case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if EntryTypes.contains(rhs) => addVar(lhs, rhs); ()
     case sym -> (PardisReadVar(PardisVar(v@Sym(_, _)))) if EntryTypes.contains(v) => addVar(sym, v); ()
-    case sym -> (ArrayBufferAppend(ab, el:Sym[_])) if el.tp == GenericEntryType => addVar(ab, el); ()
-    case sym -> (ArrayBufferApply(ab:Sym[_], _)) if EntryTypes.contains(ab) => addVar(sym, ab); ()
+    case sym -> (ArrayBufferAppend(ab, el: Sym[_])) if el.tp == GenericEntryType => addVar(ab, el); ()
+    case sym -> (ArrayBufferApply(ab: Sym[_], _)) if EntryTypes.contains(ab) => addVar(sym, ab); ()
     case sym -> (ArrayBufferSortWith(ab@Sym(_, _), f@Def(PardisLambda2(_, i1, i2, _)))) => addVar(f, ab); addVar(i1, ab); addVar(i2, ab); addVar(sym, ab); ()
     case s -> (StoreNew3(_, _)) => {
       val stype = s.attributes.get(SchemaFlag).getOrElse(StoreSchema())
@@ -156,7 +156,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     implicit val entryTp = s.tp
     __lambda((e: Rep[SEntry]) => {
       val hash = __newVar(unit(0xcafebabe))
-      val cols2 = if(cols == Nil) (1 to s.sch.size).toList else cols
+      val cols2 = if (cols == Nil) (1 to s.sch.size).toList else cols
       cols2.foreach(c => {
         implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]
         //System.err.println(s"Getting field $c of $e in hash")
@@ -215,11 +215,11 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     val fdef = Def.unapply(f).get.asInstanceOf[PardisLambda[_, _]]
     entryTypes += fdef.i.asInstanceOf[Sym[_]] -> s.sch
 
-    def inlineFunction(func: PardisLambda[_,_], arg: Rep[SEntry]) = {
+    def inlineFunction(func: PardisLambda[_, _], arg: Rep[SEntry]) = {
       val symMap = collection.mutable.HashMap[Sym[_], Sym[_]]()
 
-      func.o.stmts.foreach{
-        case Statement(sym, GenericEntryGet(self, Constant(i))) => val rep = fieldGetter(arg.asInstanceOf[Sym[_]], "_"+i)(s.sch(i-1).asInstanceOf[TypeRep[Any]]) ; symMap += sym -> rep.asInstanceOf[Sym[_]]
+      func.o.stmts.foreach {
+        case Statement(sym, GenericEntryGet(self, Constant(i))) => val rep = fieldGetter(arg.asInstanceOf[Sym[_]], "_" + i)(s.sch(i - 1).asInstanceOf[TypeRep[Any]]); symMap += sym -> rep.asInstanceOf[Sym[_]]
       }
       symMap(func.o.res.asInstanceOf[Sym[_]]).asInstanceOf[Sym[R]]
     }
@@ -295,7 +295,11 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       implicit val entTp = SEntry(sch).tp.asInstanceOf[TypeRep[Any]]
       toAtom(PardisIfThenElse(c, t, e)(entTp))(entTp)
     }
-
+    case sym -> (StoreIndex(self : Sym[_], idx, idxType, uniq, otherIdx)) if !sym.tp.asInstanceOf[IdxType[_]].typeE.isInstanceOf[RecordType[_]] => {
+      val sch = schema(self)
+      implicit val entTp = SEntry(sch).tp
+      self.asInstanceOf[Rep[Store[SEntry]]].index(idx, idxType, uniq, otherIdx)
+    }
     case sym -> (StoreNew3(n, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) if ops.size > 0 && !Def.unapply(ops(0)).get.isInstanceOf[EntryIdxApplyObject[_]] => {
       val sch = schema(sym)
       val entry = SEntry(sch)
@@ -330,7 +334,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
           rep
         }
       }
-      val newS = __newStore(n, Array.apply(ops_ :_*))
+      val newS = __newStore(n, Array.apply(ops_ : _*))
       val ssym = newS.asInstanceOf[Sym[_]]
       //System.err.println(s"Changed ops for $sym to $ssym  with new OPS as $ops_")
       entryTypes += ssym -> TypeVar(sym)

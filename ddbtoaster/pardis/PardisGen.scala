@@ -7,7 +7,7 @@ import com.sun.org.apache.xalan.internal.xsltc.compiler.Constants
 import ddbt.Utils._
 import java.io.{PrintWriter, StringWriter}
 
-import ch.epfl.data.sc.pardis.ir.CTypes.PointerType
+import ch.epfl.data.sc.pardis.ir.CTypes.{Pointer, PointerType}
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.ScalaCodeGenerator
 import ddbt.ast.M3._
@@ -449,7 +449,6 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     //    val (str, ld0, globalConstants) = genInternals(s0)
     val tsResBlks = s0.triggers.map(genTriggerPardis(_, s0)) // triggers (need to be generated before maps)
 
-
     case class OpInfo(var count: Int)
 
     class AccessOperationAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {
@@ -518,7 +517,9 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
 class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL {}) {
 
   import Optimizer._;
-  val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
+  import IR._
+
+  val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpMapHoist" -> tmpMapHoist, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
   java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
   override val codeGen = new StoreScalaCodeGenerator(IR)
 
@@ -542,10 +543,20 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
 
     val entries = optTP.structs.map(codeGen.getStruct).mkDocument("\n")
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
-    val ms = (entries :/: entryIdxes :/: codeGen.blockToDocumentNoBraces(optTP.initBlock) :/: optTP.globalVars.zip(allnames).map(t => {
+    val globalMaps = codeGen.blockToDocumentNoBraces(optTP.initBlock) :/: optTP.globalVars.zip(allnames).map(t => {
       import codeGen.{doc => _, _}
       doc"val ${t._2} = ${t._1}"
-    }).mkDocument("\n")).toString
+    }).mkDocument("\n")
+    val tempMaps = optTP.tmpMaps.map(s => {
+      val sDef = Def.unapply(s._1).get
+      val eIdx = sDef match {
+        case StoreNew3(_, ops: Sym[_]) => ops
+      }
+      codeGen.stmtToDocument(Statement(eIdx, Def.unapply(eIdx).get)) :/:
+        codeGen.stmtToDocument(Statement(s._1, sDef)) :/:
+        s._2.map(i => codeGen.stmtToDocument(Statement(i, Def.unapply(i).get))).mkDocument("\n")  //index defs
+    }).mkDocument("\n")
+    val ms = (entries :/: entryIdxes :/: globalMaps :/: tempMaps).toString
 
     val tempEntries = optTP.tempVars.map(t => codeGen.stmtToDocument(Statement(t._1, t._2))).mkDocument("\n").toString
 
@@ -570,6 +581,11 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     }
     m3System.triggers.filter(_.evt != EvtReady).foreach(t => ts += (generateUnwrapFunction(t.evt)(m3System) + "\n"))
 
+    def getEntryIdxNames(ops: Seq[Expression[EntryIdx[Entry]]]) = ops.collect {
+      case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
+      case Def(n: EntryIdxGenericOpsObject) => s"GenericOps"
+      case Def(n: EntryIdxGenericCmpObject[_]) => "GenericCmp"
+    }
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
         val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt;"
@@ -580,7 +596,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
           else doc"${x.name}(${nullValue(x.tpe)})"
         }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
         val copyFn = doc"${tag.typeName}* copy() { return new ${tag.typeName}(" :: fields.map(x => {
-          if(x.tpe == StringType)
+          if (x.tpe == StringType)
             doc"*${x.name}.copy()"
           else
             doc"${x.name}"
@@ -595,24 +611,13 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     val idxes = optTP.globalVars.map(s => s ->(collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap // store -> (AB(idxSym, IdxType, uniq, other), AB(IdxName))
     optTP.initBlock.stmts.collect {
       case Statement(s, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) => {
-        val names = ops.collect {
-          case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
-        }
+        val names = getEntryIdxNames(ops)
         idxes(s)._2.++=(names)
       }
       case Statement(sym, StoreIndex(s, _, Constant(typ), Constant(uniq), Constant(other))) => idxes(s.asInstanceOf[Sym[Store[_]]])._1.+=((sym, typ, uniq, other))
     }
     val idx2 = idxes.map(t => t._1 -> (t._2._1 zip t._2._2 map (x => (x._1._1, x._1._2, x._1._3, x._1._4, x._2))).toList) // Store -> List[Sym, Type, unique, otherInfo, IdxName ]
-    def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]): Document = {
-      idx._2 match {
-        case "IHash" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
-        case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
-        case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(true)}>"
-        case "ISliceHeapMin" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(false)}>"
-        case "IList" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
-      }
 
-    }
     val storesnames = optTP.globalVars.zip(allnames).toMap
     val stores = optTP.globalVars.map(s => {
 
@@ -637,12 +642,34 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
       }
     }).mkDocument("\n", "\n\n\n", "\n")
 
+    val tempMaps = optTP.tmpMaps.map(s => {
+      val entryTp = s._1.tp.asInstanceOf[StoreType[_]].typeE
+      codeGen.stmtToDocument(Statement(s._1, Def.unapply(s._1).get)) :/:
+        s._2.map(i => codeGen.stmtToDocument(Statement(i, Def.unapply(i).get))).mkDocument("\n")  //index refs
 
-    val ms = (entries :/: entryIdxes :/: stores).toString
+    }).mkDocument("\n")
+    val ms = (entries :/: entryIdxes :/: stores :/: tempMaps).toString
 
     val tempEntries = optTP.tempVars.map(t => doc"${t._2.tp} ${t._1};").mkDocument("\n").toString
 
     (ts, ms, tempEntries)
+  }
+
+  //  def storeToDoc(s: ConstructorDef[Store[_]]) = s match {
+  //  import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
+  //    case StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops))))) =>
+  //  }
+
+  def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]): Document = {
+    import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
+    idx._2 match {
+      case "IHash" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
+      case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
+      case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(true)}>"
+      case "ISliceHeapMin" => val idx2 = allIdxs(idx._4); doc"TreeIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(false)}>"
+      case "IList" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
+    }
+
   }
 
   override def getTriggerNameArgs(t: Trigger) = t.evt match {
