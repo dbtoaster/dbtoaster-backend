@@ -107,6 +107,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include "hpds/pstringops.hpp"
        |#include "program_base.hpp"
        |
+       |#define USING_GENERIC_ENTRY ${!Optimizer.analyzeEntry}
+       |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;
        |#else
@@ -146,6 +148,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       case Statement(s, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) => {
         val names = ops.collect {
           case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
+          case Def(n : EntryIdxGenericOpsObject) => s"GenericOps"
+          case Def(n : EntryIdxGenericCmpObject[_]) => "GenericCmp"
         }
         idxes(s)._2.++=(names)
       }

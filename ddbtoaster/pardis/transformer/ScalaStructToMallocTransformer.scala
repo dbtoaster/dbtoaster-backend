@@ -34,6 +34,8 @@ class ScalaStructToMallocTransformer(override val IR: StoreDSL) extends RuleBase
          case Nil     => typePointer(tp)
          case List(t) => typePointer(transformType(t))
        }
+      case GenericEntryType | EntryType => typePointer(tp)
+
 //      case TreeSetType(args)     => typePointer(typeGTree)
       case OptionType(args)      => typePointer(transformType(args))
       case _                     => super.transformType[T]

@@ -30,7 +30,17 @@ const std::string inputTableDir = TStore + "bench/systems/tpcc/mysql/db" STRINGI
 const std::string outputTableDir = TStore + "bench/systems/tpcc/mysql/results_db" STRINGIFY(NUMWARE) "innodb/";
 
 
-
+#if USING_GENERIC_ENTRY
+typedef GenericEntry ItemEntry;
+typedef GenericEntry DistrictEntry;
+typedef GenericEntry CustomerEntry;
+typedef GenericEntry OrderEntry;
+typedef GenericEntry NewOrderEntry;
+typedef GenericEntry HistoryEntry;
+typedef GenericEntry StockEntry;
+typedef GenericEntry OrderLineEntry;
+typedef GenericEntry WarehouseEntry;
+#else
 typedef struct SEntry5_IISDS ItemEntry;
 typedef struct SEntry11_IISSSSSSDDI DistrictEntry;
 typedef struct SEntry21_IIISSSSSSSSSTSDDDDIIS CustomerEntry;
@@ -76,6 +86,7 @@ std::ostream &operator<<(std::ostream &os, const HistoryEntry &m) {
 std::ostream &operator<<(std::ostream &os, const NewOrderEntry &m) {
     return os << m._1 << " " << m._2 << "  " << m._3;
 }
+#endif
 //------------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------------------
@@ -406,9 +417,35 @@ struct TPCCDataGen {
         std::ifstream fin(inputTableDir + "customer.txt");
         std::string line;
         CustomerEntry c;
-        char date[20];
+        char datestr[20];
 
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int c_1;
+            int c_2;
+            int c_3;
+            char c_4[17];
+            char c_5[3];
+            char c_6[17];
+            char c_7[21];
+            char c_8[21];
+            char c_9[21];
+            char c_10[3];
+            char c_11[10];
+            char c_12[17];
+            date c_13;
+            char c_14[3];
+            double c_15;
+            double c_16;
+            double c_17;
+            double c_18;
+            int c_19;
+            int c_20;
+            char c_21[501];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c_1, &c_2, &c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12, datestr, c_14, &c_15, &c_16, &c_17, &c_18, &c_19, &c_20, c_21);
+            c_13 = StrToIntdate(datestr);
+            customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), PString(c_13), PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
+#else
             c._4.data_ = new char[17];
             c._5.data_ = new char[3];
             c._6.data_ = new char[17];
@@ -420,8 +457,8 @@ struct TPCCDataGen {
             c._12.data_ = new char[17];
             c._14.data_ = new char[3];
             c._21.data_ = new char[501];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c._1, &c._2, &c._3, c._4.data_, c._5.data_, c._6.data_, c._7.data_, c._8.data_, c._9.data_, c._10.data_, c._11.data_, c._12.data_, date, c._14.data_, &c._15, &c._16, &c._17, &c._18, &c._19, &c._20, c._21.data_);
-            c._13 = StrToIntdate(date);
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c._1, &c._2, &c._3, c._4.data_, c._5.data_, c._6.data_, c._7.data_, c._8.data_, c._9.data_, c._10.data_, c._11.data_, c._12.data_, datestr, c._14.data_, &c._15, &c._16, &c._17, &c._18, &c._19, &c._20, c._21.data_);
+            c._13 = StrToIntdate(datestr);
             c._4.recomputeSize();
             c._5.recomputeSize();
             c._6.recomputeSize();
@@ -434,12 +471,40 @@ struct TPCCDataGen {
             c._14.recomputeSize();
             c._21.recomputeSize();
             customerTbl.insert_nocheck(c);
+#endif
         }
         fin.close();
         std::cout << "Customer Table loaded" << std::endl;
 #ifdef VERIFY_TPCC
         fin.open(outputTableDir + "customer.txt");
         while (std::getline(fin, line)) {
+
+#if USING_GENERIC_ENTRY
+            int c_1;
+            int c_2;
+            int c_3;
+            char c_4[17];
+            char c_5[3];
+            char c_6[17];
+            char c_7[21];
+            char c_8[21];
+            char c_9[21];
+            char c_10[3];
+            char c_11[10];
+            char c_12[17];
+            date c_13;
+            char c_14[3];
+            double c_15;
+            double c_16;
+            double c_17;
+            double c_18;
+            int c_19;
+            int c_20;
+            char c_21[501];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c_1, &c_2, &c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12, datestr, c_14, &c_15, &c_16, &c_17, &c_18, &c_19, &c_20, c_21);
+            c_13 = StrToIntdate(datestr);
+            custRes.add(new CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), PString(c_13), PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
+#else
             CustomerEntry *cR = new CustomerEntry();
             cR->_4.data_ = new char[17];
             cR->_5.data_ = new char[3];
@@ -452,8 +517,8 @@ struct TPCCDataGen {
             cR->_12.data_ = new char[17];
             cR->_14.data_ = new char[3];
             cR->_21.data_ = new char[501];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &cR->_1, &cR->_2, &cR->_3, cR->_4.data_, cR->_5.data_, cR->_6.data_, cR->_7.data_, cR->_8.data_, cR->_9.data_, cR->_10.data_, cR->_11.data_, cR->_12.data_, date, cR->_14.data_, &cR->_15, &cR->_16, &cR->_17, &cR->_18, &cR->_19, &cR->_20, cR->_21.data_);
-            cR->_13 = StrToIntdate(date);
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &cR->_1, &cR->_2, &cR->_3, cR->_4.data_, cR->_5.data_, cR->_6.data_, cR->_7.data_, cR->_8.data_, cR->_9.data_, cR->_10.data_, cR->_11.data_, cR->_12.data_, datestr, cR->_14.data_, &cR->_15, &cR->_16, &cR->_17, &cR->_18, &cR->_19, &cR->_20, cR->_21.data_);
+            cR->_13 = StrToIntdate(datestr);
             cR->_4.recomputeSize();
             cR->_5.recomputeSize();
             cR->_6.recomputeSize();
@@ -466,6 +531,7 @@ struct TPCCDataGen {
             cR->_14.recomputeSize();
             cR->_21.recomputeSize();
             custRes.add(cR);
+#endif
         }
         fin.close();
         std::cout << "Customer Table Results loaded" << std::endl;
@@ -479,6 +545,21 @@ struct TPCCDataGen {
         DistrictEntry d;
 
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int d_1;
+            int d_2;
+            char d_3[11];
+            char d_4[21];
+            char d_5[21];
+            char d_6[21];
+            char d_7[3];
+            char d_8[10];
+            double d_9;
+            double d_10;
+            int d_11;
+            sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d_1, &d_2, d_3, d_4, d_5, d_6, d_7, d_8, &d_9, &d_10, &d_11);
+            districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
+#else
             d._3.data_ = new char[11];
             d._4.data_ = new char[21];
             d._5.data_ = new char[21];
@@ -493,12 +574,29 @@ struct TPCCDataGen {
             d._7.recomputeSize();
             d._8.recomputeSize();
             districtTbl.insert_nocheck(d);
+#endif
         }
         fin.close();
         std::cout << "District Table loaded" << std::endl;
 #ifdef VERIFY_TPCC
         fin.open(outputTableDir + "district.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int d_1;
+            int d_2;
+            char d_3[11];
+            char d_4[21];
+            char d_5[21];
+            char d_6[21];
+            char d_7[3];
+            char d_8[10];
+            double d_9;
+            double d_10;
+            int d_11;
+            sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d_1, &d_2, d_3, d_4, d_5, d_6, d_7, d_8, &d_9, &d_10, &d_11);
+            distRes.add(new DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
+
+#else
             DistrictEntry *dR = new DistrictEntry();
             dR->_3.data_ = new char[11];
             dR->_4.data_ = new char[21];
@@ -514,6 +612,7 @@ struct TPCCDataGen {
             dR->_7.recomputeSize();
             dR->_8.recomputeSize();
             distRes.add(dR);
+#endif
         }
         fin.close();
         std::cout << "District Table Results loaded" << std::endl;
@@ -524,28 +623,57 @@ struct TPCCDataGen {
 
         std::string line;
         std::ifstream fin;
-        char date[20];
+        char datestr[20];
         HistoryEntry h;
 
         fin.open(inputTableDir + "history.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int h_1;
+            int h_2;
+            int h_3;
+            int h_4;
+            int h_5;
+            date h_6;
+            double h_7;
+            char h_8[25];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h_1, &h_2, &h_3, &h_4, &h_5, datestr, &h_7, h_8);
+            h_6 = StrToIntdate(datestr);
+            historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
+
+#else
             h._8.data_ = new char[25];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h._1, &h._2, &h._3, &h._4, &h._5, date, &h._7, h._8.data_);
-            h._6 = StrToIntdate(date);
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h._1, &h._2, &h._3, &h._4, &h._5, datestr, &h._7, h._8.data_);
+            h._6 = StrToIntdate(datestr);
             h._8.recomputeSize();
             historyTbl.insert_nocheck(h);
+#endif
         }
         fin.close();
         std::cout << "History Table loaded" << std::endl;
 #ifdef VERIFY_TPCC
         fin.open(outputTableDir + "history.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int h_1;
+            int h_2;
+            int h_3;
+            int h_4;
+            int h_5;
+            date h_6;
+            double h_7;
+            char h_8[25];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h_1, &h_2, &h_3, &h_4, &h_5, datestr, &h_7, h_8);
+            h_6 = StrToIntdate(datestr);
+            histRes.add(new HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
+#else
             HistoryEntry *hR = new HistoryEntry();
             hR->_8.data_ = new char[25];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &hR->_1, &hR->_2, &hR->_3, &hR->_4, &hR->_5, date, &hR->_7, hR->_8.data_);
-            hR->_6 = StrToIntdate(date);
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &hR->_1, &hR->_2, &hR->_3, &hR->_4, &hR->_5, datestr, &hR->_7, hR->_8.data_);
+            hR->_6 = StrToIntdate(datestr);
             hR->_8.recomputeSize();
             histRes.add(hR);
+#endif
         }
         fin.close();
         std::cout << "History Table Results loaded" << std::endl;
@@ -560,18 +688,37 @@ struct TPCCDataGen {
 
         fin.open(inputTableDir + "item.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int i_1;
+            int i_2;
+            char i_3[25];
+            double i_4;
+            char i_5[51];
+            sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i_1, &i_2, i_3, &i_4, i_5);
+            itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
+#else
             i._3.data_ = new char[25];
             i._5.data_ = new char[51];
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i._1, &i._2, i._3.data_, &i._4, i._5.data_);
             i._3.recomputeSize();
             i._5.recomputeSize();
             itemTbl.insert_nocheck(i);
+#endif
         }
         fin.close();
         std::cout << "Item Table loaded" << std::endl;
 #ifdef VERIFY_TPCC
         fin.open(outputTableDir + "item.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int i_1;
+            int i_2;
+            char i_3[25];
+            double i_4;
+            char i_5[51];
+            sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i_1, &i_2, i_3, &i_4, i_5);
+            itemRes.add(new ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
+#else
             ItemEntry *iR = new ItemEntry();
             iR->_3.data_ = new char[25];
             iR->_5.data_ = new char[51];
@@ -579,6 +726,7 @@ struct TPCCDataGen {
             iR->_3.recomputeSize();
             iR->_5.recomputeSize();
             itemRes.add(iR);
+#endif
         }
         fin.close();
         std::cout << "Item Table results loaded" << std::endl;
@@ -593,17 +741,33 @@ struct TPCCDataGen {
 
         fin.open(inputTableDir + "new_orders.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int n_1;
+            int n_2;
+            int n_3;
+            sscanf(line.c_str(), u32 "," u8 "," u8, &n_1, &n_2, &n_3);
+            newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3));
+#else
             sscanf(line.c_str(), u32 "," u8 "," u8, &n._1, &n._2, &n._3);
             newOrderTbl.insert_nocheck(n);
+#endif
         }
         fin.close();
         std::cout << "NewOrder Table loaded" << std::endl;
 #ifdef VERIFY_TPCC
         fin.open(outputTableDir + "new_orders.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int n_1;
+            int n_2;
+            int n_3;
+            sscanf(line.c_str(), u32 "," u8 "," u8, &n_1, &n_2, &n_3);
+            newOrdRes.add(new NewOrderEntry(false_type(), n_1, n_2, n_3));
+#else
             NewOrderEntry *nR = new NewOrderEntry();
             sscanf(line.c_str(), u32 "," u8 "," u8, &nR->_1, &nR->_2, &nR->_3);
             newOrdRes.add(nR);
+#endif
         }
         fin.close();
         std::cout << "NewOrder Table Results loaded" << std::endl;
@@ -614,28 +778,60 @@ struct TPCCDataGen {
 
         std::string line;
         std::ifstream fin;
-        char date[20];
+        char datestr[20];
         OrderLineEntry e;
 
         fin.open(inputTableDir + "order_line.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int e_1;
+            int e_2;
+            int e_3;
+            int e_4;
+            int e_5;
+            int e_6;
+            date e_7;
+            int e_8;
+            double e_9;
+            char e_10[25];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e_1, &e_2, &e_3, &e_4, &e_5, &e_6, datestr, &e_8, &e_9, e_10);
+            e_7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
+            orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
+#else
             e._10.data_ = new char[25];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e._1, &e._2, &e._3, &e._4, &e._5, &e._6, date, &e._8, &e._9, e._10.data_);
-            e._7 = strcmp(date, "\\N") == 0 ? 0 : StrToIntdate(date + 1);
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e._1, &e._2, &e._3, &e._4, &e._5, &e._6, datestr, &e._8, &e._9, e._10.data_);
+            e._7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
             e._10.recomputeSize();
             orderLineTbl.insert_nocheck(e);
+#endif
         }
         fin.close();
         std::cout << "OrderLine Table loaded" << std::endl;
 #ifdef VERIFY_TPCC
         fin.open(outputTableDir + "order_line.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int e_1;
+            int e_2;
+            int e_3;
+            int e_4;
+            int e_5;
+            int e_6;
+            date e_7;
+            int e_8;
+            double e_9;
+            char e_10[25];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e_1, &e_2, &e_3, &e_4, &e_5, &e_6, datestr, &e_8, &e_9, e_10);
+            e_7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
+            ordLRes.add(new OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
+#else
             OrderLineEntry * eR = new OrderLineEntry();
             eR->_10.data_ = new char[25];
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &eR->_1, &eR->_2, &eR->_3, &eR->_4, &eR->_5, &eR->_6, date, &eR->_8, &eR->_9, eR->_10.data_);
-            eR->_7 = strcmp(date, "\\N") == 0 ? 0 : StrToIntdate(date + 1);
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &eR->_1, &eR->_2, &eR->_3, &eR->_4, &eR->_5, &eR->_6, datestr, &eR->_8, &eR->_9, eR->_10.data_);
+            eR->_7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
             eR->_10.recomputeSize();
             ordLRes.add(eR);
+#endif
         }
         fin.close();
         std::cout << "OrderLine Table Results loaded" << std::endl;
@@ -646,7 +842,7 @@ struct TPCCDataGen {
 
         std::string line;
         std::ifstream fin;
-        char date[20];
+        char datestr[20];
 
         OrderEntry o;
 
@@ -654,23 +850,55 @@ struct TPCCDataGen {
         int local; //uint8_t 
         fin.open(inputTableDir + "orders.txt");
         while (std::getline(fin, line)) {
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &o._1, &o._2, &o._3, &o._4, date, carrier, &o._7, &local);
-            o._5 = StrToIntdate(date);
+#if USING_GENERIC_ENTRY
+            int o_1;
+            int o_2;
+            int o_3;
+            int o_4;
+            date o_5;
+            int o_6;
+            int o_7;
+            int o_8;
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &o_1, &o_2, &o_3, &o_4, datestr, carrier, &o_7, &local);
+            o_5 = StrToIntdate(datestr);
+            o_6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
+            o_8 = local;
+            orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
+#else
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &o._1, &o._2, &o._3, &o._4, datestr, carrier, &o._7, &local);
+            o._5 = StrToIntdate(datestr);
             o._6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             o._8 = local;
             orderTbl.insert_nocheck(o);
+#endif
         }
         fin.close();
         std::cout << "Order Table loaded" << std::endl;
 #ifdef VERIFY_TPCC
         fin.open(outputTableDir + "orders.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int o_1;
+            int o_2;
+            int o_3;
+            int o_4;
+            date o_5;
+            int o_6;
+            int o_7;
+            int o_8;
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &o_1, &o_2, &o_3, &o_4, datestr, carrier, &o_7, &local);
+            o_5 = StrToIntdate(datestr);
+            o_6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
+            o_8 = local;
+            ordRes.add(new OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
+#else
             OrderEntry *oR = new OrderEntry();
-            sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &oR->_1, &oR->_2, &oR->_3, &oR->_4, date, carrier, &oR->_7, &local);
-            oR->_5 = StrToIntdate(date);
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &oR->_1, &oR->_2, &oR->_3, &oR->_4, datestr, carrier, &oR->_7, &local);
+            oR->_5 = StrToIntdate(datestr);
             oR->_6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             oR->_8 = local;
             ordRes.add(oR);
+#endif
         }
         fin.close();
         std::cout << "Order Table results loaded" << std::endl;
@@ -685,6 +913,28 @@ struct TPCCDataGen {
 
         fin.open(inputTableDir + "stock.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+
+            int s_1;
+            int s_2;
+            int s_3;
+            char s_4[25];
+            char s_5[25];
+            char s_6[25];
+            char s_7[25];
+            char s_8[25];
+            char s_9[25];
+            char s_10[25];
+            char s_11[25];
+            char s_12[25];
+            char s_13[25];
+            int s_14;
+            int s_15;
+            int s_16;
+            char s_17[51];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &s_1, &s_2, &s_3, s_4, s_5, s_6, s_7, s_8, s_9, s_10, s_11, s_12, s_13, &s_14, &s_15, &s_16, s_17);
+            stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
+#else
             s._4.data_ = new char[25];
             s._5.data_ = new char[25];
             s._6.data_ = new char[25];
@@ -709,12 +959,34 @@ struct TPCCDataGen {
             s._13.recomputeSize();
             s._17.recomputeSize();
             stockTbl.insert_nocheck(s);
+#endif
         }
         fin.close();
         std::cout << "Stock Table loaded" << std::endl;
 #ifdef VERIFY_TPCC
         fin.open(outputTableDir + "stock.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int s_1;
+            int s_2;
+            int s_3;
+            char s_4[25];
+            char s_5[25];
+            char s_6[25];
+            char s_7[25];
+            char s_8[25];
+            char s_9[25];
+            char s_10[25];
+            char s_11[25];
+            char s_12[25];
+            char s_13[25];
+            int s_14;
+            int s_15;
+            int s_16;
+            char s_17[51];
+            sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &s_1, &s_2, &s_3, s_4, s_5, s_6, s_7, s_8, s_9, s_10, s_11, s_12, s_13, &s_14, &s_15, &s_16, s_17);
+            stockRes.add(new StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
+#else
             StockEntry *sR = new StockEntry();
             sR->_4.data_ = new char[25];
             sR->_5.data_ = new char[25];
@@ -740,6 +1012,7 @@ struct TPCCDataGen {
             sR->_13.recomputeSize();
             sR->_17.recomputeSize();
             stockRes.add(sR);
+#endif
         }
         fin.close();
         std::cout << "Stock Table results loaded" << std::endl;
@@ -753,6 +1026,19 @@ struct TPCCDataGen {
         WarehouseEntry w;
         fin.open(inputTableDir + "warehouse.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int w_1;
+            char w_2[11];
+            char w_3[21];
+            char w_4[21];
+            char w_5[21];
+            char w_6[3];
+            char w_7[10];
+            double w_8;
+            double w_9;
+            sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w_1, w_2, w_3, w_4, w_5, w_6, w_7, &w_8, &w_9);
+            warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
+#else
             w._2.data_ = new char[11];
             w._3.data_ = new char[21];
             w._4.data_ = new char[21];
@@ -767,12 +1053,26 @@ struct TPCCDataGen {
             w._6.recomputeSize();
             w._7.recomputeSize();
             warehouseTbl.insert_nocheck(w);
+#endif
         }
         fin.close();
         std::cout << "Warehouse Table loaded" << std::endl;
 #ifdef VERIFY_TPCC
         fin.open(outputTableDir + "warehouse.txt");
         while (std::getline(fin, line)) {
+#if USING_GENERIC_ENTRY
+            int w_1;
+            char w_2[11];
+            char w_3[21];
+            char w_4[21];
+            char w_5[21];
+            char w_6[3];
+            char w_7[10];
+            double w_8;
+            double w_9;
+            sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w_1, w_2, w_3, w_4, w_5, w_6, w_7, &w_8, &w_9);
+            wareRes.add(new WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
+#else
             WarehouseEntry *wR = new WarehouseEntry();
             wR->_2.data_ = new char[11];
             wR->_3.data_ = new char[21];
@@ -788,6 +1088,7 @@ struct TPCCDataGen {
             wR->_6.recomputeSize();
             wR->_7.recomputeSize();
             wareRes.add(wR);
+#endif
         }
         fin.close();
         std::cout << "Warehouse Table results loaded" << std::endl;

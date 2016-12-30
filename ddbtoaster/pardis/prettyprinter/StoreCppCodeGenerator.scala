@@ -33,7 +33,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, ab@ArrayApplyObject(_)) if ab.typeT.isInstanceOf[EntryIdxType[_]] => Document.empty
     case Statement(sym, ab@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"${sym.tp} $sym = { ${ops.mkDocument(",")} };"
     case Statement(sym, ArrayNew(size)) => doc"${sym.tp.asInstanceOf[ArrayType[_]].elementType} $sym[$size];"
-//    case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) => doc"strcpy($self[$i], $r);"
+    //    case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) => doc"strcpy($self[$i], $r);"
     case Statement(sym, ArrayUpdate(self, i, x)) => doc"$self[$i] = $x;"
 
     case Statement(sym, ab@ArrayBufferNew2()) => doc"vector<${ab.typeA}*> $sym;"
@@ -83,16 +83,16 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   }
 
   override def nodeToDocument(node: PardisNode[_]): Document = node match {
-//    case ToString(a) if a.tp == DateType => doc"IntToStrDate($a)"
+    //    case ToString(a) if a.tp == DateType => doc"IntToStrDate($a)"
     case StringSubstring2(self, pos, len) => doc"$self.substr($pos, $len)" //Different from scala substring
     case StringExtraStringCompareObject(str1, str2) => doc"strcmpi($str1.data_, $str2.data_)"
 
 
     case StoreInsert(self, e) => doc"$self.add($e)"
     case StoreUnsafeInsert(self, idx, e) => doc"$self.insert_nocheck(*$e)" //ignoring idx for now
-    case StoreGet(self, idx, key)  => doc"$self.get($key, $idx)"
-    case StoreGetCopy(self, idx, key, _)  => doc"$self.getCopy($key, $idx)"
-    case StoreGetCopyDependent(self, idx, key)  => doc"$self.getCopyDependent($key, $idx)"
+    case StoreGet(self, idx, key) => doc"$self.get($key, $idx)"
+    case StoreGetCopy(self, idx, key, _) => doc"$self.getCopy($key, $idx)"
+    case StoreGetCopyDependent(self, idx, key) => doc"$self.getCopyDependent($key, $idx)"
     case StoreUpdate(self, key) => doc"$self.update($key)"
     case StoreUpdateCopy(self, key) => doc"$self.updateCopy($key)"
     case StoreUpdateCopyDependent(self, key) => doc"$self.updateCopyDependent($key)"
@@ -105,9 +105,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StoreForeach(self, f) => doc"$self.foreach($f)"
     case StoreClear(self) => doc"$self.clear()"
 
-    case IdxGet(self, key)  => doc"$self.get($key)"
-    case IdxGetCopy(self, key)  => doc"$self.getCopy($key)"
-    case IdxGetCopyDependent(self, key)  => doc"$self.getCopyDependent($key)"
+    case IdxGet(self, key) => doc"$self.get($key)"
+    case IdxGetCopy(self, key) => doc"$self.getCopy($key)"
+    case IdxGetCopyDependent(self, key) => doc"$self.getCopyDependent($key)"
     case IdxUpdate(self, key) => doc"$self.update($key)"
     case IdxUpdateCopy(self, key, primary) => doc"$self.updateCopy($key, &$primary)"
     case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopy($key, $ref)"
@@ -135,6 +135,26 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StructFieldDecr(self, idx, rhs) if refSymbols.contains(self) => doc"$self.$idx -= $rhs"
     case StructFieldIncr(self, idx, rhs) => doc"$self->$idx += $rhs"
     case StructFieldDecr(self, idx, rhs) => doc"$self->$idx -= $rhs"
+
+    case SteNewSEntry(_, args) => doc"new GenericEntry(false_type(), ${args.mkDocument(", ")})"
+    case SteSampleSEntry(_, args) =>
+      val newargs = args.map(t => List(Constant(t._1), t._2)).flatten
+      val argsDoc = newargs.mkDocument(", ")
+      doc"new GenericEntry(true_type(), $argsDoc)"
+    case GenericEntryApplyObject(Constant("SteSampleSEntry"), Def(LiftedSeq(args))) =>
+      val newargs = args.zipWithIndex.collect({
+        case (a, i) if i < args.size / 2 => List(a, args(i + args.size / 2))
+      }).flatten
+      val argsDoc = newargs.mkDocument(", ")
+      doc"new GenericEntry(true_type(), $argsDoc)"
+    case GenericEntryApplyObject(_, Def(LiftedSeq(args))) => doc"new GenericEntry(false_type(), ${args.mkDocument(", ")})"
+    case g@GenericEntryGet(self, i) => doc"$self->get${g.typeE.name}($i)"
+    case GenericEntryIncrease(self, i, v) => doc"$self->increase($i, $v)"
+    case GenericEntry$plus$eq(self, i, v) => doc"$self->increase($i, $v)"
+    case GenericEntryDecrease(self, i, v) => doc"$self->decrease($i, $v)"
+    case GenericEntry$minus$eq(self, i, v) => doc"$self->decrease($i, $v)"
+    case GenericEntryUpdate(self, i, v) => doc"$self->update($i, $v)"
+
 
     case LiftedSeq(ops) if node.tp.isInstanceOf[SeqType[EntryIdx[_]]] => Document.empty
     case PardisLambda(_, i, o) =>
