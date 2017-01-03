@@ -18,9 +18,9 @@ class GenericEntry(val map: mutable.HashMap[Int, Any], val n: Int, val isSampleE
   def +=(i: Int, v: Any) = increase(i, v)
 
   def decrease(i: Int, v: Any) = v match {
-    case _: Int => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Int] - v.asInstanceOf[Int]) else map.put(i, v)
-    case _: Double => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Double] - v.asInstanceOf[Double]) else map.put(i, v)
-    case _: Long => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Long] - v.asInstanceOf[Long]) else map.put(i, v)
+    case _: Int => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Int] - v.asInstanceOf[Int]) else map.put(i, -v.asInstanceOf[Int])
+    case _: Double => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Double] - v.asInstanceOf[Double]) else map.put(i, -v.asInstanceOf[Double])
+    case _: Long => if (map.contains(i)) map.put(i, map.get(i).asInstanceOf[Long] - v.asInstanceOf[Long]) else map.put(i, -v.asInstanceOf[Long])
   }
 
   def -=(i: Int, v: Any) = decrease(i, v)
