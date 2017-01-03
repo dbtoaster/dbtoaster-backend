@@ -4,6 +4,7 @@
 #include "hpds/pstring.hpp"
 #include "program_base.hpp"
 using dbtoaster::date;
+
 template <class GE, typename T>
 void processSampleEntry(GE* e, const int& col, const T& arg) {
     e->update(col, arg);
@@ -26,27 +27,108 @@ void processFullEntry(GE* e, int col, const T& arg, const Args&... args) {
     processFullEntry(e, col + 1, args...);
 }
 
-union Any {
+enum AnyType {
+    UNDEFINED, INT, DOUBLE, DATE, STRING
+};
+
+union AnyUnion {
     int i;
     double d;
     date t;
     PString s;
 
-    Any() {
-        memset(this, 0, sizeof (Any));
+    AnyUnion() {
+        memset(this, 0, sizeof (AnyUnion));
     }
 
-    Any(const Any& a) {
-        memcpy(this, &a, sizeof (Any));
+    AnyUnion(const AnyUnion& a) {
+        memcpy(this, &a, sizeof (AnyUnion));
     }
 
-    ~Any() {
+    ~AnyUnion() {
 
     }
-    bool operator==(const Any& right) const {
-        return memcmp(this, &right, sizeof(Any)) == 0;
+
+    bool operator==(const AnyUnion& right) const {
+        return memcmp(this, &right, sizeof (AnyUnion)) == 0;
     }
 
+};
+
+struct Any {
+    AnyUnion data;
+    AnyType type;
+
+    friend std::ostream& operator<<(std::ostream& os, const Any& obj) {
+        switch (obj.type) {
+            case INT: os << obj.data.i;
+                break;
+            case DOUBLE: os << obj.data.d;
+                break;
+            case DATE: os << obj.data.t;
+                break;
+            case STRING: os << obj.data.s;
+                break;
+            default: os << "????";
+
+        }
+        return os;
+    }
+
+    Any() : type(UNDEFINED), data() {
+
+    }
+
+    Any(const Any& that) : type(that.type), data(that.data) {
+    }
+
+    bool operator==(const Any& that) const {
+        if (type == UNDEFINED || that.type == UNDEFINED) throw std::logic_error("UNDEFINED Type in Any ");
+        if (type != that.type) return false;
+        switch (type) {
+            case INT: return data.i == that.data.i;
+                break;
+            case DOUBLE: return data.d == that.data.d;
+                break;
+            case DATE: return data.t == that.data.t;
+                break;
+            case STRING: return data.s == that.data.s;
+                break;
+            default: throw std::logic_error("Unknown type");
+        }
+    }
+
+    bool operator!=(const Any& that) const {
+        if (type == UNDEFINED || that.type == UNDEFINED) throw std::logic_error("UNDEFINED Type in Any ");
+        if (type != that.type) return true;
+        switch (type) {
+            case INT: return data.i != that.data.i;
+                break;
+            case DOUBLE: return data.d != that.data.d;
+                break;
+            case DATE: return data.t != that.data.t;
+                break;
+            case STRING: return data.s != that.data.s;
+                break;
+            default: throw std::logic_error("Unknown type");
+        }
+    }
+
+    bool operator<(const Any& that) const {
+        if (type == UNDEFINED || that.type == UNDEFINED) throw std::logic_error("UNDEFINED Type in Any ");
+        if (type != that.type) throw std::logic_error("Cannot compare different types in Any");
+        switch (type) {
+            case INT: return data.i < that.data.i;
+                break;
+            case DOUBLE: return data.d < that.data.d;
+                break;
+            case DATE: return data.t < that.data.t;
+                break;
+            case STRING: return data.s < that.data.s;
+                break;
+            default: throw std::logic_error("Unknown type");
+        }
+    }
 };
 
 class GenericEntry {
@@ -54,18 +136,21 @@ class GenericEntry {
 
     GenericEntry(const std::unordered_map<int, Any> & m) : map(m), nxt(nullptr), prv(nullptr) {
     }
-
+    friend class GenericOps;
 public:
+    bool isSampleEntry;
     GenericEntry *nxt;
     GenericEntry *prv;
 
     template <typename... Args>
     GenericEntry(true_type isSampleEntry, const Args&... args) {
+        this->isSampleEntry = true;
         processSampleEntry(this, args...);
     }
 
     template <typename... Args>
     GenericEntry(false_type isSampleEntry, const Args&... args) {
+        this->isSampleEntry = false;
         processFullEntry(this, 0, args...);
 
     }
@@ -74,59 +159,63 @@ public:
     }
 
     FORCE_INLINE void update(int i, int v) {
-        map[i].i = v;
+        map[i].type = INT;
+        map[i].data.i = v;
     }
 
     FORCE_INLINE void update(int i, double v) {
-        map[i].d = v;
+        map[i].type = DOUBLE;
+        map[i].data.d = v;
     }
 
     FORCE_INLINE void update(int i, date v) {
-        map[i].t = v;
+        map[i].type = DATE;
+        map[i].data.t = v;
     }
 
     FORCE_INLINE void update(int i, const PString& v) {
-        map[i].s = v;
+        map[i].type = STRING;
+        map[i].data.s = v;
     }
 
     FORCE_INLINE void increase(int i, int v) {
-        map[i].i += v;
+        map[i].data.i += v;
     }
 
     FORCE_INLINE void increase(int i, double v) {
-        map[i].d += v;
+        map[i].data.d += v;
     }
 
     FORCE_INLINE void increase(int i, date v) {
-        map[i].t += v;
+        map[i].data.t += v;
     }
 
     FORCE_INLINE void decrease(int i, int v) {
-        map[i].i -= v;
+        map[i].data.i -= v;
     }
 
     FORCE_INLINE void decrease(int i, double v) {
-        map[i].d -= v;
+        map[i].data.d -= v;
     }
 
     FORCE_INLINE void decrease(int i, date v) {
-        map[i].t -= v;
+        map[i].data.t -= v;
     }
 
     int getInt(int i) {
-        return map[i].i;
+        return map[i].data.i;
     }
 
     date getDate(int i) {
-        return map[i].t;
+        return map[i].data.t;
     }
 
     double getDouble(int i) {
-        return map[i].d;
+        return map[i].data.d;
     }
 
     PString& getString(int i) {
-        return map[i].s;
+        return map[i].data.s;
     }
 
     GenericEntry* copy() {
@@ -139,12 +228,8 @@ public:
     }
 
     friend std::ostream& operator<<(std::ostream& os, const GenericEntry& obj) {
-        for(auto it : obj.map){
-            char *ptr = (char *)&it.second;
-            for(uint i = 0 ; i < sizeof(Any); ++i, ++ptr){
-                os << (int)(*ptr) << " ";
-            }
-            os << ",    ";
+        for (auto it : obj.map) {
+            os << it.first << "->" << it.second << ", ";
         }
         return os;
     }

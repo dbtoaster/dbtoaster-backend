@@ -478,7 +478,7 @@ class IdxList<E extends Entry> extends Idx<E> {
                     if (e == n) {
                         p.data[idx] = n.data[idx];
                         if (n == tail) tail = p;
-                        return;
+                        break;
                     }
                     p = n;
                 } while (p != null);
@@ -506,7 +506,7 @@ class IdxList<E extends Entry> extends Idx<E> {
                 if (e == n) {
                     p.data[idx] = n.data[idx];
                     if (n == tail) tail = p;
-                    p = null;
+                    if(unique) break;
                 } else p = n;
             } while (p != null);
         }

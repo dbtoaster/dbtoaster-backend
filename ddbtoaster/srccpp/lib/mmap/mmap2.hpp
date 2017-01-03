@@ -1838,4 +1838,213 @@ public:
     }
 };
 
+template <typename T, typename V, typename IDX_FN, bool is_unique>
+class ListIndex : public Index<T, V> {
+
+    struct Container {
+        T* obj;
+        Container* next;
+
+    };
+    Container *head, *tail;
+    Pool<Container> nodes_;
+public:
+
+    ListIndex(size_t size = DEFAULT_CHUNK_SIZE) : head(nullptr), tail(nullptr), nodes_(size) {
+
+    }
+
+    FORCE_INLINE void add(T& obj) override {
+        add(&obj);
+    }
+
+    FORCE_INLINE void add(T* obj, const size_t h) override {
+        Container *reusable = nullptr;
+        if (is_unique && head != nullptr) {
+            if (head->obj == obj || IDX_FN::cmp(*obj, *head->obj) == 0) {
+                reusable = head;
+                if (head == tail) {
+                    head = tail = nullptr;
+                } else {
+                    head = head->next;
+                }
+            } else {
+                Container *prv = head;
+                Container *cur = head->next;
+                while (cur != nullptr) {
+                    if (obj == cur->obj || IDX_FN::cmp(*obj, *cur->obj) == 0) {
+                        prv->next = cur->next;
+                        if (tail == cur)
+                            tail = prv;
+                        reusable = cur;
+                        break;
+                    }
+                    prv = cur;
+                    cur = cur->next;
+                }
+            }
+        }
+        Container *newc = reusable ? reusable : nodes_->add();
+        new (newc) Container(obj);
+        if (tail != nullptr) {
+            tail->next = newc;
+            tail = newc;
+        } else {
+            head = newc;
+            tail = newc;
+        }
+    }
+
+    FORCE_INLINE void add(T* obj) override {
+        add(obj, 0);
+    }
+
+    FORCE_INLINE int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE int addOrDelOnZero(const T& k, const V& v) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE void clear() override {
+        Container *cur = head, *next;
+        while (cur != nullptr) {
+            next = cur->next;
+            nodes_.del(cur);
+            cur = next;
+        }
+        head = tail = nullptr;
+    }
+
+    FORCE_INLINE size_t computeHash(const T& key) override {
+        return IDX_FN::hash(key);
+    }
+
+    FORCE_INLINE size_t count() override {
+        Container *cur = head;
+        size_t cnt = 0;
+        while (cur != nullptr) {
+            cnt++;
+            cur = cur->next;
+        }
+        return cnt;
+    }
+
+    FORCE_INLINE void del(const T* obj, const size_t h) {
+        if (head == nullptr) return;
+        Container* node = nullptr;
+        if (head->obj == obj || IDX_FN::cmp(*obj, *head->obj) == 0) {
+            node = head;
+            if (head == tail) {
+                head = tail = nullptr;
+            } else {
+                head = head->next;
+            }
+        } else {
+            Container *prv = head;
+            Container *cur = head->next;
+            while (cur != nullptr) {
+                if (obj == cur->obj || IDX_FN::cmp(*obj, *cur->obj) == 0) {
+                    node = cur;
+                    prv->next = cur->next;
+                    if (cur == tail)
+                        tail = prv;
+                    if(is_unique)
+                        break;
+
+                } else {
+                    prv = cur;
+                }
+                cur = cur->next;
+            }
+            nodes_.del(node);
+        }
+    }
+
+    FORCE_INLINE void del(const T& obj, const size_t h) override {
+        del(&obj, h);
+    }
+
+    FORCE_INLINE void del(const T* obj) override {
+        del(obj, 0);
+    }
+
+    FORCE_INLINE void del(const T& obj) override {
+        del(&obj, 0);
+    }
+
+    FORCE_INLINE void foreach(std::function<void (const T&) > f) const override {
+        Container *cur = head;
+        while (cur != nullptr) {
+            f(*cur->obj);
+            cur = cur->next;
+        }
+    }
+
+    FORCE_INLINE T* get(const T& key) const override {
+        Container *cur = head;
+        while (cur != nullptr) {
+            if (IDX_FN::cmp(key, *cur->obj) == 0)
+                return cur->obj;
+            cur = cur->next;
+        }
+        return nullptr;
+    }
+
+    FORCE_INLINE T* get(const T& key, const size_t h) {
+        return get(key);
+    }
+
+    FORCE_INLINE V getValueOrDefault(const T& key, const size_t hash_val) const override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE V getValueOrDefault(const T& key) const override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE bool hashDiffers(const T& x, const T& y) override {
+        return IDX_FN::hash(x) != IDX_FN::hash(y);
+    }
+
+    FORCE_INLINE int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE int setOrDelOnZero(const T& k, const V& v) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    inline virtual void slice(const T& key, std::function<void (const T&) > f) {
+        Container *cur = head;
+        while (cur != nullptr) {
+            if (IDX_FN::cmp(key, *cur->obj) == 0)
+                f(*cur->obj);
+            cur = cur->next;
+        }
+    }
+
+    inline virtual void sliceCopy(const T& key, std::function<void (const T&) > f) {
+        std::vector<T*> entries;
+        Container *cur = head;
+        while (cur != nullptr) {
+            if (IDX_FN::cmp(key, *cur->obj) == 0)
+                entries.push_back(cur->obj->copy());
+            cur = cur->next;
+        }
+        for (auto it : entries) {
+            f(*it);
+        }
+    }
+
+    FORCE_INLINE void update(T* obj) override {
+        //TODO: SBJ: Check
+        if (is_unique) {
+            del(obj);
+            add(obj);
+        }
+    }
+
+};
 #endif //MMAP_H
