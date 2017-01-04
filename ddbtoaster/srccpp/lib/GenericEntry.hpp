@@ -27,7 +27,7 @@ void processFullEntry(GE* e, int col, const T& arg, const Args&... args) {
     processFullEntry(e, col + 1, args...);
 }
 
-enum AnyType {
+enum AnyType : char {
     UNDEFINED, INT, DOUBLE, DATE, STRING
 };
 
@@ -75,11 +75,11 @@ struct Any {
         return os;
     }
 
-    Any() : type(UNDEFINED), data() {
+    Any() : data(), type(UNDEFINED) {
 
     }
 
-    Any(const Any& that) : type(that.type), data(that.data) {
+    Any(const Any& that) : data(that.data), type(that.type) {
     }
 
     bool operator==(const Any& that) const {

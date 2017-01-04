@@ -6,7 +6,7 @@ import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.CCodeGenerator
 import ch.epfl.data.sc.pardis.types.{ArrayType, PardisVariableType, SeqType, UnitType}
 import ch.epfl.data.sc.pardis.utils.document._
-import ddbt.lib.store.IHash
+import ddbt.lib.store.{IHash, IList}
 import ddbt.lib.store.deep.{StoreDSL, StructFieldDecr, StructFieldIncr}
 import ddbt.transformer.{Index, IndexesFlag, ScalaConstructsToCTranformer}
 import sun.security.x509.CRLDistributionPointsExtension
@@ -56,6 +56,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val idxes = sym.attributes.get(IndexesFlag).get.indexes
       def idxToDoc(t: (Index, String)) = t._1.tp match {
         case IHash => doc"HashIndex<$entryTp, char, ${t._2}, ${if (t._1.unique) "1" else "0"}>"
+        case IList => doc"ListIndex<$entryTp, char, ${t._2},  ${if (t._1.unique) "1" else "0"}>"
       }
       val idxTypeDefs = idxes.zip(names).map(t => doc"typedef ${idxToDoc(t)} ${sym}_Idx_${t._1.idxNum}_Type;").mkDocument("\n")
       idxTypeDefs :/:
@@ -117,7 +118,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case IdxGetCopyDependent(self, key) => doc"$self.getCopyDependent($key)"
     case IdxUpdate(self, key) => doc"$self.update($key)"
     case IdxUpdateCopy(self, key, primary) => doc"$self.updateCopy($key, &$primary)"
-    case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopyDependent($key, $ref)"
+    case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopyDependentf($key, $ref)"
     case IdxDelete(self, key) => doc"$self.del($key)"
     case IdxDeleteCopy(self, key, primary) => doc"$self.delCopy($key, &$primary)"
     case IdxDeleteCopyDependent(self, key) => doc"$self.delCopyDependent($key)"

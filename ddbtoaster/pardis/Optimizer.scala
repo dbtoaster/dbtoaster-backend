@@ -23,10 +23,10 @@ object Optimizer {
   var onlineOpts = true
   var tmpVarHoist = true
   var tmpMapHoist = true
-  var indexInline = true
+  var indexInline = false
   var indexLookupFusion = true
   var indexLookupPartialFusion = false
-  var deadIndexUpdate = true
+  var deadIndexUpdate = false
   var codeMotion = true
   var refCounter = true
   var m3CompareMultiply = true //Lazy evaluation

@@ -26,10 +26,11 @@ class IndexedCols extends Property {
   val secondary = collection.mutable.Set[Seq[Int]]()
   val min = collection.mutable.Set[(Seq[Int], PardisLambda[_, _])]()
   val max = collection.mutable.Set[(Seq[Int], PardisLambda[_, _])]()
+  var list = false
 }
 
 object IndexedCols {
-  def unapply(i: IndexedCols) = Some(i.primary, i.secondary, i.min, i.max)
+  def unapply(i: IndexedCols) = Some(i.primary, i.secondary, i.min, i.max, i.list)
 }
 
 class Indexes extends Property {
@@ -40,6 +41,10 @@ class Indexes extends Property {
 
   def add(cols: IndexedCols) = {
     var count = 0
+    if(cols.list) {
+      indexes += Index(count, cols.primary.toList, IList, true)
+      count += 1
+    }
     val primaryIdxType = if (Optimizer.analyzeIndex) IHash else IList
     if (cols.primary != Nil) {
       if (cols.fixedrange == Nil || !Optimizer.fixedRange)
@@ -125,6 +130,12 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
       idxes.secondary += (args.map(_._1))
       sym.attributes += idxes
 
+      ()
+    }
+    case StoreForeach(sym: Sym[_], _) => {
+      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
+      idxes.list = true
+      sym.attributes += idxes
       ()
     }
   }

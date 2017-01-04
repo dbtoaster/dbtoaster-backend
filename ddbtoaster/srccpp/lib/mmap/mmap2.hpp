@@ -1706,12 +1706,14 @@ public:
     }
 
     inline void foreach(std::function<void (const T&) > f) const {
-        // index[0]->foreach(f);
-        T* tmp = head;
+         index[0]->foreach(f);
+/*
+         T* tmp = head;
         while (tmp) {
             f(*tmp);
             tmp = tmp->nxt;
         }
+  */
     }
 
     void slice(int idx, const T* key, std::function<void (const T&) > f) {
@@ -1845,6 +1847,9 @@ class ListIndex : public Index<T, V> {
         T* obj;
         Container* next;
 
+        Container(T* o) : obj(o), next(nullptr) {
+        }
+
     };
     Container *head, *tail;
     Pool<Container> nodes_;
@@ -1884,7 +1889,7 @@ public:
                 }
             }
         }
-        Container *newc = reusable ? reusable : nodes_->add();
+        Container *newc = reusable ? reusable : nodes_.add();
         new (newc) Container(obj);
         if (tail != nullptr) {
             tail->next = newc;
@@ -1950,7 +1955,7 @@ public:
                     prv->next = cur->next;
                     if (cur == tail)
                         tail = prv;
-                    if(is_unique)
+                    if (is_unique)
                         break;
 
                 } else {
@@ -1992,7 +1997,7 @@ public:
         return nullptr;
     }
 
-    FORCE_INLINE T* get(const T& key, const size_t h) {
+    FORCE_INLINE T* get(const T& key, const size_t h) const override {
         return get(key);
     }
 
@@ -2044,6 +2049,9 @@ public:
             del(obj);
             add(obj);
         }
+    }
+
+    virtual ~ListIndex() {
     }
 
 };
