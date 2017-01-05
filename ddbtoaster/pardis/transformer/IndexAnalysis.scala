@@ -41,10 +41,7 @@ class Indexes extends Property {
 
   def add(cols: IndexedCols) = {
     var count = 0
-    if(cols.list) {
-      indexes += Index(count, cols.primary.toList, IList, true)
-      count += 1
-    }
+
     val primaryIdxType = if (Optimizer.analyzeIndex) IHash else IList
     if (cols.primary != Nil) {
       if (cols.fixedrange == Nil || !Optimizer.fixedRange)
@@ -74,6 +71,12 @@ class Indexes extends Property {
       count = count + 2
     }
     })
+
+    if(cols.list) {
+      indexes += Index(count, cols.primary.toList, IList, false)
+      count += 1
+    }
+    
     if (count == 0) {
       indexes += Index(0, List(), IList, false)
     }

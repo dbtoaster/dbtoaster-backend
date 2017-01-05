@@ -1706,7 +1706,8 @@ public:
     }
 
     inline void foreach(std::function<void (const T&) > f) const {
-         index[0]->foreach(f);
+        size_t lastIdx = sizeof...(INDEXES) - 1; 
+        index[lastIdx]->foreach(f);
 /*
          T* tmp = head;
         while (tmp) {
@@ -1913,12 +1914,14 @@ public:
     }
 
     FORCE_INLINE void clear() override {
+        /*
         Container *cur = head, *next;
         while (cur != nullptr) {
             next = cur->next;
             nodes_.del(cur);
             cur = next;
         }
+        */
         head = tail = nullptr;
     }
 
@@ -1988,6 +1991,7 @@ public:
     }
 
     FORCE_INLINE T* get(const T& key) const override {
+        throw std::logic_error("get disabled for list index for now");
         Container *cur = head;
         while (cur != nullptr) {
             if (IDX_FN::cmp(key, *cur->obj) == 0)
@@ -2022,6 +2026,7 @@ public:
     }
 
     inline virtual void slice(const T& key, std::function<void (const T&) > f) {
+        throw std::logic_error("slice disabled for list index for now");
         Container *cur = head;
         while (cur != nullptr) {
             if (IDX_FN::cmp(key, *cur->obj) == 0)
@@ -2031,6 +2036,7 @@ public:
     }
 
     inline virtual void sliceCopy(const T& key, std::function<void (const T&) > f) {
+        throw std::logic_error("slicecopy disabled for list index for now");
         std::vector<T*> entries;
         Container *cur = head;
         while (cur != nullptr) {
@@ -2046,6 +2052,7 @@ public:
     FORCE_INLINE void update(T* obj) override {
         //TODO: SBJ: Check
         if (is_unique) {
+            throw std::logic_error("update disabled for list index for now");
             del(obj);
             add(obj);
         }

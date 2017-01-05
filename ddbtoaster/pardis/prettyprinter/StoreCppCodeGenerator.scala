@@ -118,7 +118,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case IdxGetCopyDependent(self, key) => doc"$self.getCopyDependent($key)"
     case IdxUpdate(self, key) => doc"$self.update($key)"
     case IdxUpdateCopy(self, key, primary) => doc"$self.updateCopy($key, &$primary)"
-    case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopyDependentf($key, $ref)"
+    case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopyDependent($key, $ref)"
     case IdxDelete(self, key) => doc"$self.del($key)"
     case IdxDeleteCopy(self, key, primary) => doc"$self.delCopy($key, &$primary)"
     case IdxDeleteCopyDependent(self, key) => doc"$self.delCopyDependent($key)"
