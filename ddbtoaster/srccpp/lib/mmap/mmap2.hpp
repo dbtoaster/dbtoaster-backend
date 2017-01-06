@@ -249,7 +249,7 @@ public:
 
     virtual void add(T* obj, const HASH_RES_t h) = 0;
 
-    
+
     virtual void del(const T& obj) = 0;
 
     virtual void del(const T* obj) = 0;
@@ -533,7 +533,7 @@ public:
     }
 
     FORCE_INLINE virtual void add(T* obj, const HASH_RES_t h) {
-        auto idxId = Index<T,V>::idxId;
+        auto idxId = Index<T, V>::idxId;
         if (count_ > threshold_) {
             //            throw std::logic_error("HashIndex resize disabled for this experiment");
             resize_(size_ << 1);
@@ -1438,7 +1438,7 @@ public:
     }
 
     FORCE_INLINE virtual void add(T* obj) override {
-         auto idxId = Index<T,V>::idxId;
+        auto idxId = Index<T, V>::idxId;
         HASH_RES_t idx = IDX_FN::hash(*obj);
         isUsed[idx] = true;
         obj->backPtrs[idxId] = (void *) &(array[idx]);
@@ -1534,6 +1534,7 @@ template<typename T, typename V, typename...INDEXES>
 class MultiHashMap {
 private:
     Pool<T> pool;
+    bool *modified;
 public:
     Index<T, V>** index;
 #ifdef USE_STORE_FE
@@ -1544,8 +1545,11 @@ public:
         index = new Index<T, V>*[sizeof...(INDEXES)] {
             new INDEXES()...
         };
-        for (size_t i = 0; i<sizeof...(INDEXES); ++i)
+        modified = new bool[sizeof...(INDEXES)];
+        for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
             index[i]->idxId = i;
+            modified[i] = false;
+        }
 #ifdef USE_STORE_FE
         head = nullptr;
 #endif
@@ -1555,8 +1559,11 @@ public:
         index = new Index<T, V>*[sizeof...(INDEXES)] {
             new INDEXES(init_capacity)...
         };
-        for (size_t i = 0; i<sizeof...(INDEXES); ++i)
+        modified = new bool[sizeof...(INDEXES)];
+        for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
             index[i]->idxId = i;
+            modified[i] = false;
+        }
 #ifdef USE_STORE_FE
         head = nullptr;
 #endif
@@ -1566,8 +1573,11 @@ public:
         index = new Index<T, V>*[sizeof...(INDEXES)] {
             new INDEXES()...
         };
-        for (size_t i = 0; i<sizeof...(INDEXES); ++i)
+        modified = new bool[sizeof...(INDEXES)];
+        for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
             index[i]->idxId = i;
+            modified[i] = false;
+        }
         other.index[0]->foreach([this] (const T & e) {
             this->insert_nocheck(e); });
 #ifdef USE_STORE_FE
@@ -1631,11 +1641,18 @@ public:
         } else {
             // cur->~T();
             // *cur=std::move(*elem);
-            new(cur) T(*elem);
+            
             for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
                 if (index[i]->hashDiffers(*cur, *elem)) {
                     index[i]->del(cur);
+                    modified[i] = true;
+                }
+            }
+            new(cur) T(*elem);
+            for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
+                if (modified[i]) {
                     index[i]->add(cur);
+                    modified[i] = false;
                 }
             }
         }
@@ -1909,7 +1926,7 @@ public:
     }
 
     FORCE_INLINE void add(T* obj, const size_t h) override {
-         auto idxId = Index<T,V>::idxId;
+        auto idxId = Index<T, V>::idxId;
         Container *reusable = nullptr;
         if (is_unique && head != nullptr) {
             if (head->obj == obj || IDX_FN::cmp(*obj, *head->obj) == 0) {
@@ -1926,7 +1943,7 @@ public:
                 while (cur != nullptr) {
                     if (obj == cur->obj || IDX_FN::cmp(*obj, *cur->obj) == 0) {
                         prv->next = cur->next;
-                        if(cur->next)
+                        if (cur->next)
                             cur->next->obj->backPtrs[idxId] = (void *) prv;
                         if (tail == cur)
                             tail = prv;
@@ -1964,14 +1981,14 @@ public:
     }
 
     FORCE_INLINE void clear() override {
-        
+
         Container *cur = head, *next;
         while (cur != nullptr) {
             next = cur->next;
             nodes_.del(cur);
             cur = next;
         }
-         
+
         head = tail = nullptr;
     }
 
@@ -1990,30 +2007,30 @@ public:
     }
 
     FORCE_INLINE void del(const T* obj, const size_t h) {
-         auto idxId = Index<T,V>::idxId;
+        auto idxId = Index<T, V>::idxId;
         //Assumes isUnique behaviour even though it is false
         if (head == nullptr) return;
-        Container* prev = (Container *)obj->backPtrs[idxId];
+        Container* prev = (Container *) obj->backPtrs[idxId];
         Container* cur;
-        if(prev == nullptr){
+        if (prev == nullptr) {
             cur = head;
-            if(head == tail)
+            if (head == tail)
                 head = tail = nullptr;
             else {
-            head = head->next;
-            head->obj->backPtrs[idxId] = nullptr;
+                head = head->next;
+                head->obj->backPtrs[idxId] = nullptr;
             }
-        }
-        else{ 
+        } else {
             cur = prev->next;
             prev->next = cur->next;
-            if(cur->next)
-                cur->next->obj->backPtrs[idxId] = (void *)prev;
-            if(cur == tail)
+            if (cur->next)
+                cur->next->obj->backPtrs[idxId] = (void *) prev;
+            if (cur == tail)
                 tail = prev;
         }
         nodes_.del(cur);
     }
+
     FORCE_INLINE void delC(const T* obj, const size_t h) {
         if (head == nullptr) return;
         Container* node = nullptr;
