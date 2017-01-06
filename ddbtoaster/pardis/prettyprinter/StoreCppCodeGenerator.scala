@@ -97,7 +97,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
 
     case StoreInsert(self, e) => doc"$self.add($e)"
-    case StoreUnsafeInsert(self, idx, e) => doc"$self.insert_nocheck(*$e)" //ignoring idx for now
+    case StoreUnsafeInsert(self, idx, e) => doc"$self.insert_nocheck($e)" //ignoring idx for now
     case StoreGet(self, idx, key) => doc"$self.get($key, $idx)"
     case StoreGetCopy(self, idx, key, _) => doc"$self.getCopy($key, $idx)"
     case StoreGetCopyDependent(self, idx, key) => doc"$self.getCopyDependent($key, $idx)"

@@ -1,4 +1,4 @@
-
+//#define USE_STORE_FE 1
 #ifdef NB
 #include "Tpch.hpp"
 //#include "Tpch18-V.hpp"

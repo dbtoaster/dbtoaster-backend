@@ -249,7 +249,7 @@ public:
 
     virtual void add(T* obj, const HASH_RES_t h) = 0;
 
-    //del is actully delCopy. Need to add backpointers later to avoid lookup
+    
     virtual void del(const T& obj) = 0;
 
     virtual void del(const T* obj) = 0;
@@ -1547,7 +1547,7 @@ public:
         for (size_t i = 0; i<sizeof...(INDEXES); ++i)
             index[i]->idxId = i;
 #ifdef USE_STORE_FE
-        head = nullptr
+        head = nullptr;
 #endif
     }
 
@@ -1558,7 +1558,7 @@ public:
         for (size_t i = 0; i<sizeof...(INDEXES); ++i)
             index[i]->idxId = i;
 #ifdef USE_STORE_FE
-        head = nullptr
+        head = nullptr;
 #endif
     }
 
@@ -1838,7 +1838,7 @@ public:
         pool.delete_all(head);
         head = nullptr;
 #else
-        //SBJ: TODO: something equivalent to delete_all
+        pool.clear();
 #endif
     }
 
@@ -1964,14 +1964,14 @@ public:
     }
 
     FORCE_INLINE void clear() override {
-        /*
+        
         Container *cur = head, *next;
         while (cur != nullptr) {
             next = cur->next;
             nodes_.del(cur);
             cur = next;
         }
-         */
+         
         head = tail = nullptr;
     }
 
