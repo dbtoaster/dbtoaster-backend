@@ -62,7 +62,10 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     case StoreGetCopy(store, Constant(idx), e, _) => idxGetCopy(indexMap((store, idx)), e)(e.tp)
     case StoreGet(store, Constant(idx), e) => idxGet(indexMap((store, idx)), e)(e.tp)
     case StoreGetCopyDependent(store, Constant(idx), e) => idxGetCopyDependent(indexMap((store, idx)), e)(e.tp)
-    case StoreForeach(store, f) => indexMap((store, 0)).foreach(f)
+    case StoreForeach(store, f) => {
+      val lastIdx = indexMap.collect { case ((`store`, idx), sym) => (idx, sym) }.toSeq.sortWith(_._1 > _._1)(0)
+      lastIdx._2.foreach(f)
+    }
     case StoreSliceCopy(store, Constant(idx), e, f) => indexMap((store, idx)).sliceCopy(e, f)
     case StoreSliceCopyDependent(store, Constant(idx), e, f) => indexMap((store, idx)).sliceCopyDependent(e, f)
     case StoreSlice(store, Constant(idx), e, f) => indexMap((store, idx)).slice(e, f)

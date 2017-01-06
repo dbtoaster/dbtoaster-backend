@@ -210,6 +210,7 @@ struct GenericIndexFn {
 template<typename T, typename V>
 class Index {
 public:
+    int idxId;
     virtual bool hashDiffers(const T& x, const T& y) = 0;
 
     virtual T* get(const T& key) const = 0;
@@ -532,6 +533,7 @@ public:
     }
 
     FORCE_INLINE virtual void add(T* obj, const HASH_RES_t h) {
+        auto idxId = Index<T,V>::idxId;
         if (count_ > threshold_) {
             //            throw std::logic_error("HashIndex resize disabled for this experiment");
             resize_(size_ << 1);
@@ -547,11 +549,13 @@ public:
                 nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
                 nw->hash = h;
                 nw->obj = obj;
+                obj->backPtrs[idxId] = (void *) nw;
                 nw->nxt = n->nxt;
                 n->nxt = nw;
             } else { // space left in last IdxNode
                 n->hash = h;
                 n->obj = obj; //n->nxt=nullptr;
+                obj->backPtrs[idxId] = (void *) n;
             }
         } else {
             // ++count_;
@@ -559,6 +563,7 @@ public:
                 ++count_;
                 n->hash = h;
                 n->obj = obj; //n->nxt=nullptr;
+                obj->backPtrs[idxId] = (void *) n;
                 return;
             }
             do {
@@ -569,6 +574,7 @@ public:
                     nw->obj = obj;
                     nw->nxt = n->nxt;
                     n->nxt = nw;
+                    obj->backPtrs[idxId] = (void *) nw;
                     return;
                 }/*else {
           //go ahead, and look for an element in the same slice
@@ -585,9 +591,11 @@ public:
             //non-unique hash maps (as the first element might be the start of)
             //a chain of non-unique elements belonging to the same slice
             nw->hash = n->hash;
+            n->obj->backPtrs[idxId] = (void *) nw;
             nw->obj = n->obj;
             n->hash = h;
             n->obj = obj;
+            obj->backPtrs[idxId] = (void *) n;
             nw->nxt = n->nxt;
             n->nxt = nw;
             // return;
@@ -1406,7 +1414,7 @@ public:
         return true;
     }
 
-    FORCE_INLINE T* get(const T* key) const override {
+    FORCE_INLINE T* get(const T* key) const {
         return get(*key);
     }
 
@@ -1430,8 +1438,10 @@ public:
     }
 
     FORCE_INLINE virtual void add(T* obj) override {
+         auto idxId = Index<T,V>::idxId;
         HASH_RES_t idx = IDX_FN::hash(*obj);
         isUsed[idx] = true;
+        obj->backPtrs[idxId] = (void *) &(array[idx]);
         array[idx] = obj;
     }
 
@@ -1526,26 +1536,43 @@ private:
     Pool<T> pool;
 public:
     Index<T, V>** index;
+#ifdef USE_STORE_FE
     T* head;
+#endif
 
-    MultiHashMap() : head(nullptr) { // by defintion index 0 is always unique
+    MultiHashMap() { // by defintion index 0 is always unique
         index = new Index<T, V>*[sizeof...(INDEXES)] {
             new INDEXES()...
         };
+        for (size_t i = 0; i<sizeof...(INDEXES); ++i)
+            index[i]->idxId = i;
+#ifdef USE_STORE_FE
+        head = nullptr
+#endif
     }
 
-    MultiHashMap(size_t init_capacity) : pool(init_capacity), head(nullptr) { // by defintion index 0 is always unique
+    MultiHashMap(size_t init_capacity) : pool(init_capacity) { // by defintion index 0 is always unique
         index = new Index<T, V>*[sizeof...(INDEXES)] {
             new INDEXES(init_capacity)...
         };
+        for (size_t i = 0; i<sizeof...(INDEXES); ++i)
+            index[i]->idxId = i;
+#ifdef USE_STORE_FE
+        head = nullptr
+#endif
     }
 
-    MultiHashMap(const MultiHashMap& other) : head(nullptr) { // by defintion index 0 is always unique
+    MultiHashMap(const MultiHashMap& other) { // by defintion index 0 is always unique
         index = new Index<T, V>*[sizeof...(INDEXES)] {
             new INDEXES()...
         };
+        for (size_t i = 0; i<sizeof...(INDEXES); ++i)
+            index[i]->idxId = i;
         other.index[0]->foreach([this] (const T & e) {
             this->insert_nocheck(e); });
+#ifdef USE_STORE_FE
+        head = nullptr;
+#endif
     }
 
     virtual ~MultiHashMap() {
@@ -1592,12 +1619,14 @@ public:
             // cur->~T();
             // *cur=std::move(*elem);
             new(cur) T(*elem);
+#ifdef USE_STORE_FE
             if (head) {
                 cur->prv = nullptr;
                 cur->nxt = head;
                 head->prv = cur;
             }
             head = cur;
+#endif
             for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
         } else {
             // cur->~T();
@@ -1617,10 +1646,12 @@ public:
         // cur->~T();
         // *cur=std::move(elem);
         new(cur) T(elem);
+#ifdef USE_STORE_FE
         cur->prv = nullptr;
         cur->nxt = head;
         if (head) head->prv = cur;
         head = cur;
+#endif
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
     }
 
@@ -1629,10 +1660,12 @@ public:
         // cur->~T();
         // *cur=std::move(elem);
         new(cur) T(elem);
+#ifdef USE_STORE_FE
         cur->prv = nullptr;
         cur->nxt = head;
         if (head) head->prv = cur;
         head = cur;
+#endif
         index[0]->add(cur, h);
         for (size_t i = 1; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
     }
@@ -1653,39 +1686,42 @@ public:
     }
 
     FORCE_INLINE void del(T* elem) { // assume that the element is already in the map
+#ifdef USE_STORE_FE
         T *elemPrv = elem->prv, *elemNxt = elem->nxt;
         if (elemPrv) elemPrv->nxt = elemNxt;
         if (elemNxt) elemNxt->prv = elemPrv;
         if (elem == head) head = elemNxt;
         elem->nxt = nullptr;
         elem->prv = nullptr;
-
+#endif
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
         pool.del(elem);
     }
 
     FORCE_INLINE void delCopyDependent(T* obj) {
         T* elem = index[0]->get(obj);
+#ifdef USE_STORE_FE
         T *elemPrv = elem->prv, *elemNxt = elem->nxt;
         if (elemPrv) elemPrv->nxt = elemNxt;
         if (elemNxt) elemNxt->prv = elemPrv;
         if (elem == head) head = elemNxt;
         elem->nxt = nullptr;
         elem->prv = nullptr;
-
+#endif
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->delCopyDependent(elem);
         pool.del(elem);
     }
 
     FORCE_INLINE void delCopy(T* obj) {
         T* elem = index[0]->get(obj);
+#ifdef USE_STORE_FE
         T *elemPrv = elem->prv, *elemNxt = elem->nxt;
         if (elemPrv) elemPrv->nxt = elemNxt;
         if (elemNxt) elemNxt->prv = elemPrv;
         if (elem == head) head = elemNxt;
         elem->nxt = nullptr;
         elem->prv = nullptr;
-
+#endif
         for (size_t i = sizeof...(INDEXES) - 1; i != 0; --i)
             index[i]->delCopy(obj, index[0]);
         index[0]->delCopy(obj, index[0]);
@@ -1693,28 +1729,30 @@ public:
     }
 
     FORCE_INLINE void del(T* elem, HASH_RES_t h) { // assume that the element is already in the map and mainIdx=0
+#ifdef USE_STORE_FE
         T *elemPrv = elem->prv, *elemNxt = elem->nxt;
         if (elemPrv) elemPrv->nxt = elemNxt;
         if (elemNxt) elemNxt->prv = elemPrv;
         if (elem == head) head = elemNxt;
         elem->nxt = nullptr;
         elem->prv = nullptr;
-
+#endif
         index[0]->del(elem, h);
         for (size_t i = 1; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
         pool.del(elem);
     }
 
     inline void foreach(std::function<void (const T&) > f) const {
-        size_t lastIdx = sizeof...(INDEXES) - 1; 
+#ifndef USE_STORE_FE
+        size_t lastIdx = sizeof...(INDEXES) - 1;
         index[lastIdx]->foreach(f);
-/*
-         T* tmp = head;
+#else
+        T* tmp = head;
         while (tmp) {
             f(*tmp);
             tmp = tmp->nxt;
         }
-  */
+#endif
     }
 
     void slice(int idx, const T* key, std::function<void (const T&) > f) {
@@ -1753,6 +1791,7 @@ public:
         if (obj == nullptr)
             return;
         T * elem = index[0]->get(*obj);
+#ifdef USE_STORE_FE
         T *elemPrv = elem->prv, *elemNxt = elem->nxt;
         if (elemPrv) elemPrv->nxt = obj;
         if (elemNxt) elemNxt->prv = obj;
@@ -1761,7 +1800,7 @@ public:
         elem->prv = nullptr;
         obj->nxt = elemNxt;
         obj->prv = elemPrv;
-
+#endif
         for (size_t i = 0; i < sizeof...(INDEXES); ++i) {
             index[i]->updateCopyDependent(obj, elem);
         }
@@ -1772,6 +1811,7 @@ public:
             return;
 
         T * elem = index[0]->get(*obj);
+#ifdef USE_STORE_FE
         T *elemPrv = elem->prv, *elemNxt = elem->nxt;
         if (elemPrv) elemPrv->nxt = obj;
         if (elemNxt) elemNxt->prv = obj;
@@ -1780,7 +1820,7 @@ public:
         elem->prv = nullptr;
         obj->nxt = elemNxt;
         obj->prv = elemPrv;
-
+#endif
         //i >= 0 cant be used with unsigned type
         for (size_t i = sizeof...(INDEXES) - 1; i != 0; --i) {
             index[i]->updateCopy(obj, index[0]);
@@ -1794,8 +1834,12 @@ public:
 
     FORCE_INLINE void clear() {
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->clear();
+#ifdef USE_STORE_FE
         pool.delete_all(head);
         head = nullptr;
+#else
+        //SBJ: TODO: something equivalent to delete_all
+#endif
     }
 
     template<class Archive>
@@ -1865,6 +1909,7 @@ public:
     }
 
     FORCE_INLINE void add(T* obj, const size_t h) override {
+         auto idxId = Index<T,V>::idxId;
         Container *reusable = nullptr;
         if (is_unique && head != nullptr) {
             if (head->obj == obj || IDX_FN::cmp(*obj, *head->obj) == 0) {
@@ -1873,6 +1918,7 @@ public:
                     head = tail = nullptr;
                 } else {
                     head = head->next;
+                    head->obj->backPtrs[idxId] = nullptr;
                 }
             } else {
                 Container *prv = head;
@@ -1880,6 +1926,8 @@ public:
                 while (cur != nullptr) {
                     if (obj == cur->obj || IDX_FN::cmp(*obj, *cur->obj) == 0) {
                         prv->next = cur->next;
+                        if(cur->next)
+                            cur->next->obj->backPtrs[idxId] = (void *) prv;
                         if (tail == cur)
                             tail = prv;
                         reusable = cur;
@@ -1891,6 +1939,8 @@ public:
             }
         }
         Container *newc = reusable ? reusable : nodes_.add();
+        //Adding previous container as backPointer , NOT it's own container!!
+        obj->backPtrs[idxId] = (void *) tail;
         new (newc) Container(obj);
         if (tail != nullptr) {
             tail->next = newc;
@@ -1921,7 +1971,7 @@ public:
             nodes_.del(cur);
             cur = next;
         }
-        */
+         */
         head = tail = nullptr;
     }
 
@@ -1940,6 +1990,31 @@ public:
     }
 
     FORCE_INLINE void del(const T* obj, const size_t h) {
+         auto idxId = Index<T,V>::idxId;
+        //Assumes isUnique behaviour even though it is false
+        if (head == nullptr) return;
+        Container* prev = (Container *)obj->backPtrs[idxId];
+        Container* cur;
+        if(prev == nullptr){
+            cur = head;
+            if(head == tail)
+                head = tail = nullptr;
+            else {
+            head = head->next;
+            head->obj->backPtrs[idxId] = nullptr;
+            }
+        }
+        else{ 
+            cur = prev->next;
+            prev->next = cur->next;
+            if(cur->next)
+                cur->next->obj->backPtrs[idxId] = (void *)prev;
+            if(cur == tail)
+                tail = prev;
+        }
+        nodes_.del(cur);
+    }
+    FORCE_INLINE void delC(const T* obj, const size_t h) {
         if (head == nullptr) return;
         Container* node = nullptr;
         if (head->obj == obj || IDX_FN::cmp(*obj, *head->obj) == 0) {
