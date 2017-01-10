@@ -52,7 +52,7 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
 
   override def generate[T](optTP: TransactionProgram[T]): Unit = {
     import IR._
-    import codeGen.expLiftable,codeGen.tpeLiftable,codeGen.ListDocumentOps2
+    import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
     var codestr = codeGen.blockToDocument(optTP.initBlock).toString
     var i = codestr.lastIndexOf("1")
     val storesnames = List("newOrderTbl", "historyTbl", "warehouseTbl", "itemTbl", "orderTbl", "districtTbl", "orderLineTbl", "customerTbl", "stockTbl")
@@ -142,21 +142,36 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
     codeGen.currentProgram = PardisProgram(optTP.structs, optTP.main, Nil)
     codeGen.refSymbols ++= optTP.tempVars.map(_._1)
-  import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
-    val idxes = optTP.globalVars.map(s => s -> (collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap
+    import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
+    val idxes = optTP.globalVars.map(s => s ->(collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap
     optTP.initBlock.stmts.collect {
       case Statement(s, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) => {
         val names = ops.collect {
           case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
-          case Def(n : EntryIdxGenericOpsObject) => s"GenericOps"
-          case Def(n : EntryIdxGenericCmpObject[_]) => "GenericCmp"
+          case Def(n: EntryIdxGenericOpsObject) =>
+            val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
+            if (cols.isEmpty)
+              s"GenericOps"
+            else {
+              s"GenericOps_$cols"
+            }
+          case Def(n: EntryIdxGenericCmpObject[_]) =>
+            val ord = Def.unapply(n.f).get.asInstanceOf[PardisLambda[_, _]].o.stmts(0).rhs match {
+              case GenericEntryGet(_, Constant(i)) => i
+            }
+            val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
+            s"GenericCmp_${cols.mkString("")}_$ord"
+
+          case Def(n: EntryIdxGenericFixedRangeOpsObject) =>
+            val cols = n.colsRange.asInstanceOf[Constant[List[(Int, Int, Int)]]].underlying.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")
+            s"GenericFixedRange_$cols"
         }
         idxes(s)._2.++=(names)
       }
       case Statement(sym, StoreIndex(s, _, Constant(typ), Constant(uniq), Constant(other))) => idxes(s.asInstanceOf[Sym[Store[_]]])._1.+=((sym, typ, uniq, other))
     }
     val idx2 = idxes.map(t => t._1 -> (t._2._1 zip t._2._2 map (x => (x._1._1, x._1._2, x._1._3, x._1._4, x._2))).toList) // Store -> List[Sym, Type, unique, otherInfo, IdxName ]
-    def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]):Document = {
+    def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]): Document = {
       idx._2 match {
         case "IHash" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
         case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
@@ -174,7 +189,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ",",\n   ",">") :: doc" ${storesnames(s)}StoreType;"
+      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${storesnames(s)}StoreType;"
       val storeDecl = storesnames(s) :: "StoreType  " :: storesnames(s) :: "(" :: storesnames(s) :: "Size);"
       val storeRef = doc"${storesnames(s)}StoreType& $s = ${storesnames(s)};"
 
@@ -187,7 +202,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
-        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt;"
+        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
         val constructor = doc"${tag.typeName}() :" :: fields.map(x => {
           if (x.tpe == StringType)
             doc"${x.name}()"
@@ -195,12 +210,12 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
         val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
         val copyFn = doc"${tag.typeName}* copy() { return new ${tag.typeName}(" :: fields.map(x => {
-          if(x.tpe == StringType)
+          if (x.tpe == StringType)
             doc"*${x.name}.copy()"
           else
             doc"${x.name}"
         }).mkDocument(", ") :: "); }"
-        "struct " :: tag.typeName :: " {" :/: Document.nest(2,  fieldsDoc :/: constructor :/: constructorWithArgs :/: copyFn) :/: "};"
+        "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: copyFn) :/: "};"
     }
 
     val structs = optTP.structs.map(structToDoc).mkDocument("\n")
@@ -323,7 +338,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |#endif
          |
       """.stripMargin
-    file.println(header :/: structs :\\: structEquals :\\: "#define int unsigned int" :\\: entryIdxes  :\\: "#undef int" :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: codeGen.footer)
+    file.println(header :/: structs :\\: structEquals :\\: "#define int unsigned int" :\\: entryIdxes :\\: "#undef int" :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: codeGen.footer)
     file.close()
   }
 }

@@ -71,8 +71,9 @@ abstract class EntryIdx[E <: Entry] {
 
 case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
+    val cols2 = if(cols == Nil) 1 to e.map.size else cols
     var h = 16;
-    cols.foreach(i => h = h * 41 + e.map(i).hashCode())
+    cols2.foreach(i => h = h * 41 + e.map(i).hashCode())
     h
   }
 
@@ -418,7 +419,7 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     if (key == null) return key;
     idxs(idx).getCopyDependent(key)
   }
-
+//TODO: Change to last index. Causes problems for result-checking -> use another kind of foreach for result checking
   // assumes idxs(0) is the most efficient index
   def foreach(f: E => Unit): Unit = time("foreach") {
     idxs(0).foreach(f)

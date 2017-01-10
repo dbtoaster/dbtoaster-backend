@@ -3,11 +3,15 @@
 #include<unordered_map>
 #include "hpds/pstring.hpp"
 #include "program_base.hpp"
+#define ELEM_SEPARATOR "\n\t\t\t"
 using dbtoaster::date;
 
 template <class GE, typename T>
 void processSampleEntry(GE* e, const int& col, const T& arg) {
     e->update(col, arg);
+    e->backPtrs = new void*[col + 1];
+    for (int i = 0; i < col + 1; i++)
+        e->backPtrs[i] = nullptr;
 }
 
 template <class GE, typename T, typename... Args>
@@ -19,6 +23,9 @@ void processSampleEntry(GE* e, const int& col, const T& arg, const Args&... args
 template <class GE, typename T>
 void processFullEntry(GE* e, int col, const T& arg) {
     e->update(col, arg);
+    e->backPtrs = new void*[col + 1];
+    for (int i = 0; i < col + 1; i++)
+        e->backPtrs[i] = nullptr;
 }
 
 template <class GE, typename T, typename... Args>
@@ -88,7 +95,7 @@ struct Any {
         switch (type) {
             case INT: return data.i == that.data.i;
                 break;
-            case DOUBLE: return data.d == that.data.d;
+            case DOUBLE: return fabs(data.d - that.data.d) < 0.01;
                 break;
             case DATE: return data.t == that.data.t;
                 break;
@@ -132,30 +139,60 @@ struct Any {
 };
 
 class GenericEntry {
-    std::unordered_map<int, Any> map;
 
-    GenericEntry(const std::unordered_map<int, Any> & m) : map(m), nxt(nullptr), prv(nullptr) {
+    GenericEntry(const std::unordered_map<int, Any> & m) : map(m), nxt(nullptr), prv(nullptr) {        
+        int s = m.size() + 1;
+        backPtrs = new void*[s];
+        for (int i = 0; i < s; i++)
+            backPtrs[i] = nullptr;
+        isSampleEntry = false;
     }
     friend class GenericOps;
 public:
+    std::unordered_map<int, Any> map;
+    void** backPtrs;
     bool isSampleEntry;
     GenericEntry *nxt;
     GenericEntry *prv;
 
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const {
+        for (uint i = 1; i <= map.size(); ++i) {
+            ar << ELEM_SEPARATOR;
+            std::string name = "_" + std::to_string(i);
+            const Any& a = map.at(i);
+            switch (a.type) {
+                case INT: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.i);
+                    break;
+                case DATE: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.t);
+                    break;
+                case STRING: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.s);
+                    break;
+                case DOUBLE: dbtoaster::serialize_nvp(ar, name.c_str(), a.data.d);
+                    break;
+                default: throw std::logic_error("Cannot serialize AnyType");
+            }
+        }
+    }
+
     template <typename... Args>
-    GenericEntry(true_type isSampleEntry, const Args&... args) {
+    GenericEntry(true_type isSampleEntry, const Args&... args) : map() {
         this->isSampleEntry = true;
         processSampleEntry(this, args...);
     }
 
     template <typename... Args>
-    GenericEntry(false_type isSampleEntry, const Args&... args) {
+    GenericEntry(false_type isSampleEntry, const Args&... args) : map() {
         this->isSampleEntry = false;
-        processFullEntry(this, 0, args...);
+        processFullEntry(this, 1, args...);
 
     }
 
-    GenericEntry() : nxt(nullptr), prv(nullptr) {
+    GenericEntry(int maxIdx = 10) : nxt(nullptr), prv(nullptr) {
+        backPtrs = new void*[maxIdx];
+        for (int i = 0; i < maxIdx; i++)
+            backPtrs[i] = nullptr;
+        isSampleEntry = false;
     }
 
     FORCE_INLINE void update(int i, int v) {
@@ -202,24 +239,30 @@ public:
         map[i].data.t -= v;
     }
 
-    int getInt(int i) {
-        return map[i].data.i;
+    int getInt(int i) const {
+        return map.at(i).data.i;
     }
 
-    date getDate(int i) {
-        return map[i].data.t;
+    date getDate(int i) const {
+        return map.at(i).data.t;
     }
 
-    double getDouble(int i) {
-        return map[i].data.d;
+    //Assuming long is same as date type
+
+    long getLong(int i) const {
+        return map.at(i).data.t;
     }
 
-    PString& getString(int i) {
-        return map[i].data.s;
+    double getDouble(int i) const {
+        return map.at(i).data.d;
+    }
+
+    const PString& getString(int i) const {
+        return map.at(i).data.s;
     }
 
     GenericEntry* copy() {
-        //ONLY SHALLOW COPY for PString.            
+        //ONLY SHALLOW COPY for PString.
         return new GenericEntry(map);
     }
 

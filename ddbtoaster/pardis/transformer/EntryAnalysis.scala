@@ -100,9 +100,9 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   import IR._
 
   val structsDefMap = collection.mutable.HashMap.empty[StructTags.StructTag[SEntry], PardisStructDef[Any]]
-  val genOps = collection.mutable.HashMap.empty[(Seq[Int], SEntry), Rep[EntryIdx[SEntry]]]
-  val genCmp = collection.mutable.ArrayBuffer[Rep[EntryIdx[SEntry]]]()
-  val genFixRngOps = collection.mutable.ArrayBuffer[Rep[EntryIdx[SEntry]]]()
+  val genOps = collection.mutable.HashMap[(Seq[Int], SEntry), Rep[EntryIdx[SEntry]]]()
+  val genCmp = collection.mutable.HashMap[(Seq[Int], Int, SEntry), Rep[EntryIdx[SEntry]]]()
+  val genFixRngOps = collection.mutable.HashMap[(Seq[(Int, Int, Int)], SEntry), Rep[EntryIdx[SEntry]]]()
 
   def super_optimize[T: TypeRep](node: Block[T]): Block[T] = {
     val analyseProgram = classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
@@ -295,7 +295,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       implicit val entTp = SEntry(sch).tp.asInstanceOf[TypeRep[Any]]
       toAtom(PardisIfThenElse(c, t, e)(entTp))(entTp)
     }
-    case sym -> (StoreIndex(self : Sym[_], idx, idxType, uniq, otherIdx)) if !sym.tp.asInstanceOf[IdxType[_]].typeE.isInstanceOf[RecordType[_]] => {
+    case sym -> (StoreIndex(self: Sym[_], idx, idxType, uniq, otherIdx)) if !sym.tp.asInstanceOf[IdxType[_]].typeE.isInstanceOf[RecordType[_]] => {
       val sch = schema(self)
       implicit val entTp = SEntry(sch).tp
       self.asInstanceOf[Rep[Store[SEntry]]].index(idx, idxType, uniq, otherIdx)
@@ -313,9 +313,11 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
           val cols = if (Optimizer.analyzeIndex) node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]] else Nil
           val hl = hashfn(cols, entry)
           val cl = order_cmp(node.f, entry)
-          val rep = EntryIdx.apply(hl, cl, unit(entry.name + "_Idx" + cols.mkString("") + "_Ordering"))
-          genCmp += rep
-          rep
+          val ordCol = Def.unapply(node.f).get.asInstanceOf[PardisLambda[_, _]].o.stmts(0).rhs match {
+            case GenericEntryGet(_, Constant(i)) => i
+          }
+          lazy val rep = EntryIdx.apply(hl, cl, unit(entry.name + "_Idx" + cols.mkString("") + "_Ordering"))
+          genCmp getOrElseUpdate((cols, ordCol, entry), rep)
         }
         case Def(node: EntryIdxGenericOpsObject) => {
 
@@ -328,10 +330,8 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
             throw new IllegalStateException("Fixed range ops object without fixed range optimization")
           val cmpFunc = __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => unit(0))
           val colsRange = node.colsRange.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[(Int, Int, Int)]]
-          //SBJ: TODO: Handle duplicity
-          val rep = EntryIdx.apply(hashFixedRangeFn(colsRange, entry), cmpFunc, unit(entry.name + "_Idx" + colsRange.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")))
-          genFixRngOps += rep
-          rep
+          lazy val rep = EntryIdx.apply(hashFixedRangeFn(colsRange, entry), cmpFunc, unit(entry.name + "_Idx" + colsRange.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")))
+          genFixRngOps getOrElseUpdate((colsRange, entry), rep)
         }
       }
       val newS = __newStore(n, Array.apply(ops_ : _*))

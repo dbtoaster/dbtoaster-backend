@@ -554,7 +554,7 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
       }
       codeGen.stmtToDocument(Statement(eIdx, Def.unapply(eIdx).get)) :/:
         codeGen.stmtToDocument(Statement(s._1, sDef)) :/:
-        s._2.map(i => codeGen.stmtToDocument(Statement(i, Def.unapply(i).get))).mkDocument("\n")  //index defs
+        s._2.map(i => codeGen.stmtToDocument(Statement(i, Def.unapply(i).get))).mkDocument("\n") //index defs
     }).mkDocument("\n")
     val ms = (entries :/: entryIdxes :/: globalMaps :/: tempMaps).toString
 
@@ -583,8 +583,24 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
     def getEntryIdxNames(ops: Seq[Expression[EntryIdx[Entry]]]) = ops.collect {
       case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
-      case Def(n: EntryIdxGenericOpsObject) => s"GenericOps"
-      case Def(n: EntryIdxGenericCmpObject[_]) => "GenericCmp"
+      case Def(n: EntryIdxGenericOpsObject) =>
+        val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
+        if (cols.isEmpty)
+          s"GenericOps"
+        else {
+           s"GenericOps_$cols"
+
+        }
+      case Def(n: EntryIdxGenericCmpObject[_]) =>
+        val ord = Def.unapply(n.f).get.asInstanceOf[PardisLambda[_, _]].o.stmts(0).rhs match {
+          case GenericEntryGet(_, Constant(i)) => i
+        }
+        val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
+         s"GenericCmp_${cols.mkString("")}_$ord"
+
+      case Def(n: EntryIdxGenericFixedRangeOpsObject) =>
+        val cols = n.colsRange.asInstanceOf[Constant[List[(Int, Int, Int)]]].underlying.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")
+        s"GenericFixedRange_$cols"
     }
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
@@ -645,7 +661,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     val tempMaps = optTP.tmpMaps.map(s => {
       val entryTp = s._1.tp.asInstanceOf[StoreType[_]].typeE
       codeGen.stmtToDocument(Statement(s._1, Def.unapply(s._1).get)) :/:
-        s._2.map(i => codeGen.stmtToDocument(Statement(i, Def.unapply(i).get))).mkDocument("\n")  //index refs
+        s._2.map(i => codeGen.stmtToDocument(Statement(i, Def.unapply(i).get))).mkDocument("\n") //index refs
 
     }).mkDocument("\n")
     val ms = (entries :/: entryIdxes :/: stores :/: tempMaps).toString

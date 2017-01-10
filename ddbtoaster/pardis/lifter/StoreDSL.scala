@@ -37,11 +37,13 @@ object EntryIRs extends Base {
 
 case class StructFieldDecr[T: PardisType](struct: Expression[Any], index: String, rhs: Expression[T]) extends FunctionNode[Unit](Some(struct), s"${index} -=", List(List(rhs))) {
   override def curriedConstructor = (x: Expression[Any]) => { (r: Expression[T]) => copy[T](x, index, r) }
+
   override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
 }
 
 case class StructFieldIncr[T: PardisType](struct: Expression[Any], index: String, rhs: Expression[T]) extends FunctionNode[Unit](Some(struct), s"${index} +=", List(List(rhs))) {
   override def curriedConstructor = (x: Expression[Any]) => { (r: Expression[T]) => copy[T](x, index, r) }
+
   override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
 }
 
@@ -75,9 +77,8 @@ trait StoreDSL extends
   BooleanExtraComponent with
   Tuple3Component with
   CFunctions with
-  squid.scback.PardisBinding.DefaultPardisMixin
-{
-  
+  squid.scback.PardisBinding.DefaultPardisMixin {
+
   override val _IRReifier: IRReifier = new AnfIRReifier(this) {
     override def findOrCreateSymbol[T: TypeRep](definition: Def[T]): Sym[T] = {
       definition match {
@@ -201,7 +202,7 @@ trait StoreDSL extends
         case _ => m3_apply(fn, args)(man(tp))
       }
       case "date_part" => args(0) match {
-        case Constant(t : String) if t.toLowerCase == "year"  => m3_apply("year_part", args.drop(1))(man(tp))
+        case Constant(t: String) if t.toLowerCase == "year" => m3_apply("year_part", args.drop(1))(man(tp))
         case _ => m3_apply(fn, args)(man(tp))
       }
       case _ => m3_apply(fn, args)(man(tp)) // fallback for large or unknown functions
@@ -291,7 +292,7 @@ trait StoreDSL extends
     val keyCols = key match {
       case Def(SteNewSEntry(_, args)) => args
     }
-    stGet(x, (1 until keyCols.size).toList, key)
+    stGet(x, (1 until keyCols.size).toList, key)(EntryType.asInstanceOf[TypeRep[E]])
   }
 
   def stClear[E <: Entry : TypeRep](x: Rep[Store[E]]): Rep[Unit] = x.clear //StClear[E](x)

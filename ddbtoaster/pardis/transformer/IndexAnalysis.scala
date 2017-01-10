@@ -72,11 +72,11 @@ class Indexes extends Property {
     }
     })
 
-    if(cols.list) {
+    if (cols.list) {
       indexes += Index(count, cols.primary.toList, IList, false)
       count += 1
     }
-    
+
     if (count == 0) {
       indexes += Index(0, List(), IList, false)
     }
@@ -150,6 +150,10 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
 
   val stores = collection.mutable.ArrayBuffer[Sym[_]]()
 
+  val genOps = collection.mutable.HashMap[Seq[Int], Rep[EntryIdx[GenericEntry]]]()
+  val genCmp = collection.mutable.HashMap[(Seq[Int], Int), Rep[EntryIdx[GenericEntry]]]()
+  val genFixed = collection.mutable.HashMap[Seq[(Int, Int, Int)], Rep[EntryIdx[GenericEntry]]]()
+
   override def optimize[T: TypeRep](node: Block[T]): Block[T] = {
     val res = super_optimize(node)
     ruleApplied()
@@ -176,27 +180,57 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     }
     currentBlock
   }
+
   rewrite += statement {
     case s -> (StoreNew2()) => {
       val cols = s.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       val idxes = new Indexes()
       idxes.add(cols)
       //System.err.println(s"Deciding Index for $s")
+
       val entidxes = idxes.indexes.map(_ match {
-        case Index(_, cols, IHash, _, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](cols))
-        case Index(_, _, IDirect, _, _, _, colsRange) => EntryIdx.genericFixedRangeOps(unit[Seq[(Int, Int, Int)]](colsRange))
-        case Index(_, cols, INone, _, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](cols))
+        case Index(_, cols, IHash, _, _, _, _) =>
+          val rep = EntryIdx.genericOps(unit[Seq[Int]](cols))
+          if (!genOps.contains(cols))
+            genOps += (cols -> rep)
+          rep
+        case Index(_, _, IDirect, _, _, _, colsRange) =>
+          val rep = EntryIdx.genericFixedRangeOps(unit[Seq[(Int, Int, Int)]](colsRange))
+          if (!genFixed.contains(colsRange))
+            genFixed += (colsRange -> rep)
+          rep
+        case Index(_, cols, INone, _, _, _, _) =>
+          val rep = EntryIdx.genericOps(unit[Seq[Int]](cols))
+          if (!genOps.contains(cols))
+            genOps += (cols -> rep)
+          rep
         case Index(_, cols, ISliceHeapMax, _, _, f, _) => {
           implicit val tp = f.tp.asInstanceOf[TypeRep[(GenericEntry => Any)]]
           implicit val typeR = f.typeS.asInstanceOf[TypeRep[Any]]
-          EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
+          val ordCol = f.o.stmts(0).rhs match {
+            case GenericEntryGet(_, Constant(i)) => i
+          }
+          val rep = EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
+          if (!genCmp.contains((cols, ordCol)))
+            genCmp += ((cols, ordCol) -> rep)
+          rep
         }
         case Index(_, cols, ISliceHeapMin, _, _, f, _) => {
           implicit val tp = f.tp.asInstanceOf[TypeRep[(GenericEntry => Any)]]
           implicit val typeR = f.typeS.asInstanceOf[TypeRep[Any]]
-          EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
+          val rep = EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
+          val ordCol = f.o.stmts(0).rhs match {
+            case GenericEntryGet(_, Constant(i)) => i
+          }
+          if (!genCmp.contains((cols, ordCol)))
+            genCmp += ((cols, ordCol) -> rep)
+          rep
         }
-        case Index(_, cols, IList, _, _, _, _) => EntryIdx.genericOps(unit[Seq[Int]](cols))
+        case Index(_, cols, IList, _, _, _, _) =>
+          val rep = EntryIdx.genericOps(unit[Seq[Int]](cols))
+          if (!genOps.contains(cols))
+            genOps += (cols -> rep)
+          rep
       })
       val newS = __newStore(unit(entidxes.size), Array(entidxes: _*))
       idxes.indexes.foreach(i => newS.index(unit(i.idxNum), unit(i.tp.toString), unit(i.unique), unit(i.sliceIdx)))

@@ -31,7 +31,11 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"PString $sym($size);" :\\: doc"snprintf($sym.data_, ${size + 1}, $f, ${args.map(ArgToDoc).mkDocument(", ")});"
     case Statement(sym, StrStr(x, y)) => doc"char* ${sym} = strstr($x.data_, $y);"
 
+    case Statement(sym, EntryIdxGenericCmpObject(_, _)) => Document.empty
+    case Statement(sym, EntryIdxGenericOpsObject(_)) => Document.empty
+    case Statement(sym, EntryIdxGenericFixedRangeOpsObject(_)) => Document.empty
     case Statement(sym, ab@ArrayApplyObject(_)) if ab.typeT.isInstanceOf[EntryIdxType[_]] => Document.empty
+
     case Statement(sym, ab@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"${sym.tp} $sym = { ${ops.mkDocument(",")} };"
     case Statement(sym, ArrayNew(size)) => doc"${sym.tp.asInstanceOf[ArrayType[_]].elementType} $sym[$size];"
     //    case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) => doc"strcpy($self[$i], $r);"
@@ -48,10 +52,27 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         case tp => tp
       }
 
-      val names = ops.collect {  //COMMON part. Move.
+      val names = ops.collect {
+        //TODO: COMMON part. Move.
         case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
-        case Def(n : EntryIdxGenericOpsObject) => s"GenericOps"
-        case Def(n : EntryIdxGenericCmpObject[_]) => "GenericCmp"
+        case Def(n: EntryIdxGenericOpsObject) =>
+          val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
+          if (cols.isEmpty)
+            s"GenericOps"
+          else {
+            s"GenericOps_$cols"
+          }
+        case Def(n: EntryIdxGenericCmpObject[_]) =>
+          val ord = Def.unapply(n.f).get.asInstanceOf[PardisLambda[_, _]].o.stmts(0).rhs match {
+            case GenericEntryGet(_, Constant(i)) => i
+          }
+          val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
+          s"GenericCmp_${cols.mkString("")}_$ord"
+
+        case Def(n: EntryIdxGenericFixedRangeOpsObject) =>
+          val cols = n.colsRange.asInstanceOf[Constant[List[(Int, Int, Int)]]].underlying.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")
+          s"GenericFixedRange_$cols"
+
       }
       val idxes = sym.attributes.get(IndexesFlag).get.indexes
       def idxToDoc(t: (Index, String)) = t._1.tp match {
@@ -200,6 +221,95 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc" struct $name {" :/: Document.nest(NEST_COUNT,
         doc"FORCE_INLINE static size_t hash(const ${h.i.tp}& ${h.i})  { " :: Document.nest(NEST_COUNT, blockToDocument(ho) :/: getBlockResult(ho, true)) :/: "}" :\\:
           doc"FORCE_INLINE static char cmp(const ${c.i1.tp}& ${c.i1}, const ${c.i2.tp}& ${c.i2}) { " :: Document.nest(NEST_COUNT, blockToDocument(co) :/: getBlockResult(co, true)) :/: "}") :/: "};"
+
+    case EntryIdxGenericOpsObject(Constant(cols)) =>
+      if (cols != Nil) {
+        val name = "GenericOps_" + cols.mkString("")
+        val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
+          "size_t h = 16;" :/:
+            s"for(int c : {${
+              cols.mkString(", ")
+            }})" :/:
+            "  h = h * 41 + HASH(e.map.at(c));" :/:
+            "return h;"
+        ) :/: "}"
+        val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :/: Document.nest(2,
+          s"""if (e1.isSampleEntry) {
+              |  for (auto it : e1.map) {
+              |    if (e2.map.at(it.first) != it.second)
+              |        return 1;
+              |  }
+              |} else if (e2.isSampleEntry) {
+              | for (auto it : e2.map) {
+              |     if (e1.map.at(it.first) != it.second)
+              |         return 1;
+              |  }
+              |}else {
+              |  for(int c : {${
+            cols.mkString(", ")
+          }})
+              |    if(e1.map.at(c) != e2.map.at(c))
+              |      return 1;
+              |}
+              |return 0;""".stripMargin
+        ) :/: "}"
+        doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"
+      } else Document.empty
+
+    case EntryIdxGenericCmpObject(Constant(cols), Def(PardisLambda(_, _, o))) =>
+      val ordCol = o.stmts(0).rhs match {
+        case GenericEntryGet(_, Constant(i)) => i
+      }
+      val name = "GenericCmp_" + cols.mkString("") + "_" + ordCol
+      val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
+        "size_t h = 16;" :/:
+          s"for(int c : {${
+            cols.mkString("")
+          }})" :/:
+          "  h = h * 41 + HASH(e.map.at(c));" :/:
+          "return h;"
+      ) :/: "}"
+      val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :: Document.nest(2,
+        s"""
+           |const Any &r1 = e1.map.at($ordCol);
+           |const Any &r2 = e2.map.at($ordCol);
+           |if (r1 == r2)
+           |  return 0;
+           |else if( r1 < r2)
+           |  return -1;
+           |else
+           |  return 1;
+      """.stripMargin) :/: "}"
+      doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"
+
+    case EntryIdxGenericFixedRangeOpsObject(Constant(cols)) =>
+      val name = "GenericFixedRange_" + cols.map(t => s"${
+        t._1
+      }f${
+        t._2
+      }t${
+        t._3
+      }").mkString("_")
+      val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
+        s"""size_t h = 0;
+            |int cols[] = {${
+          cols.map(_._1).mkString(", ")
+        }};
+            |int lower[] = {${
+          cols.map(_._2).mkString(", ")
+        }};
+            |int upper[] = {${
+          cols.map(_._3).mkString(", ")
+        }};
+            |for(int i = 0; i < ${
+          cols.size
+        }; ++i)
+            |  h = h * (upper[i] - lower[i]) + e.getInt(cols[i]) - lower[i];  //Defined only for int
+            |return h;
+        """.stripMargin
+      ) :/: "}"
+      val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :: Document.nest(2, "return 0;") :: "}"
+      doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"
 
     case HashCode(a) => doc"HASH($a)"
     case _ => super.nodeToDocument(node)

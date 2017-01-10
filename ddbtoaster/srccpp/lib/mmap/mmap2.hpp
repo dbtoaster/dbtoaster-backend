@@ -243,6 +243,8 @@ public:
 
     virtual int addOrDelOnZero(const T& k, const V& v, const HASH_RES_t hash_val) = 0;
 
+    virtual void insert_nocheck(T *obj) = 0;
+
     virtual void add(T& obj) = 0;
 
     virtual void add(T* obj) = 0;
@@ -355,6 +357,7 @@ private:
                 if (n->obj) { //add_(n->obj); // does not resize the bucket array, does not maintain count
                     h = n->hash;
                     na = &buckets_[h % size_];
+                    n->obj->backPtrs[Index<T,V>::idxId] = na;
                     if (na->obj) {
                         tmp_allocated_from_pool = true;
                         nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -440,9 +443,13 @@ public:
             IdxNode* n2 = &that.buckets_[b];
             if ((n1->obj && !n2->obj) || (n2->obj && !n1->obj)) {
                 std::cerr << "Buckets don't match" << std::endl;
-                return false;
+                if (n1->obj)
+                    std::cerr << *n1->obj << " is extra" << std::endl;
+                if (n2 -> obj)
+                    std::cerr << *n2->obj << " is missing" << std::endl;
+                //                return false;
             }
-            if (!n1->obj)
+            if (!n1->obj || !n2->obj)
                 continue;
             do {
                 IdxNode *n2_iter = n2;
@@ -540,6 +547,7 @@ public:
         }
         size_t b = h % size_;
         IdxNode* n = &buckets_[b];
+        obj->backPtrs[idxId] = (void *) n; //store head of bucket in backPtr
         IdxNode* nw;
 
         if (is_unique) {
@@ -549,13 +557,11 @@ public:
                 nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
                 nw->hash = h;
                 nw->obj = obj;
-                obj->backPtrs[idxId] = (void *) nw;
                 nw->nxt = n->nxt;
                 n->nxt = nw;
             } else { // space left in last IdxNode
                 n->hash = h;
                 n->obj = obj; //n->nxt=nullptr;
-                obj->backPtrs[idxId] = (void *) n;
             }
         } else {
             // ++count_;
@@ -563,7 +569,6 @@ public:
                 ++count_;
                 n->hash = h;
                 n->obj = obj; //n->nxt=nullptr;
-                obj->backPtrs[idxId] = (void *) n;
                 return;
             }
             do {
@@ -574,7 +579,6 @@ public:
                     nw->obj = obj;
                     nw->nxt = n->nxt;
                     n->nxt = nw;
-                    obj->backPtrs[idxId] = (void *) nw;
                     return;
                 }/*else {
           //go ahead, and look for an element in the same slice
@@ -591,17 +595,20 @@ public:
             //non-unique hash maps (as the first element might be the start of)
             //a chain of non-unique elements belonging to the same slice
             nw->hash = n->hash;
-            n->obj->backPtrs[idxId] = (void *) nw;
             nw->obj = n->obj;
             n->hash = h;
             n->obj = obj;
-            obj->backPtrs[idxId] = (void *) n;
             nw->nxt = n->nxt;
             n->nxt = nw;
             // return;
             // }
         }
     }
+
+    FORCE_INLINE void insert_nocheck(T* obj) override {
+        add(obj); //FIX LATER
+    }
+
 
     // deletes an existing elements (equality by pointer comparison)
 
@@ -616,12 +623,12 @@ public:
     }
 
     FORCE_INLINE virtual void del(const T* obj) {
-        HASH_RES_t h = IDX_FN::hash(*obj);
-        del(obj, h);
+        IdxNode *n = (IdxNode *) obj->backPtrs[Index<T, V>::idxId];
+        del_(obj, n);
     }
 
-    FORCE_INLINE virtual void del(const T* obj, const HASH_RES_t h) {
-        IdxNode *n = &buckets_[h % size_];
+    FORCE_INLINE void del_(const T* obj, IdxNode *n) {
+        HASH_RES_t h = n->hash;
         IdxNode *prev = nullptr, *next; // previous and next pointers
         do {
             next = n->nxt;
@@ -646,6 +653,10 @@ public:
             }
             prev = n;
         } while ((n = next));
+    }
+
+    FORCE_INLINE virtual void del(const T* obj, const HASH_RES_t h) {
+        del_(obj, &buckets_[h % size_]);
     }
 
     inline virtual void foreach(std::function<void (const T&) > f) const {
@@ -1102,6 +1113,10 @@ public:
         add(& obj);
     }
 
+    FORCE_INLINE void insert_nocheck(T* obj) override {
+        add(obj); //TODO: Fix later
+    }
+
     FORCE_INLINE virtual void add(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
         add(obj, h);
@@ -1445,6 +1460,10 @@ public:
         array[idx] = obj;
     }
 
+    FORCE_INLINE void insert_nocheck(T* obj) override {
+        add(obj); //TODO: Fix later
+    }
+
     bool hashDiffers(const T& x, const T& y) override {
         return IDX_FN::hash(x) != IDX_FN::hash(y);
     }
@@ -1588,6 +1607,7 @@ public:
     virtual ~MultiHashMap() {
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) delete index[i];
         delete[] index;
+        delete[] modified;
     }
 
     FORCE_INLINE T* get(const T* key, const size_t idx = 0) const {
@@ -1641,7 +1661,7 @@ public:
         } else {
             // cur->~T();
             // *cur=std::move(*elem);
-            
+
             for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
                 if (index[i]->hashDiffers(*cur, *elem)) {
                     index[i]->del(cur);
@@ -1658,7 +1678,10 @@ public:
         }
     }
 
-    FORCE_INLINE virtual void insert_nocheck(const T& elem) {
+    FORCE_INLINE  void insert_nocheck(const T* elem) {
+        insert_nocheck(*elem);
+    }
+    FORCE_INLINE  void insert_nocheck(const T& elem) {
         T* cur = pool.add();
         // cur->~T();
         // *cur=std::move(elem);
@@ -1669,10 +1692,10 @@ public:
         if (head) head->prv = cur;
         head = cur;
 #endif
-        for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
+        for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->insert_nocheck(cur);
     }
 
-    FORCE_INLINE virtual void insert_nocheck(const T& elem, HASH_RES_t h) { // assume that mainIdx=0
+    FORCE_INLINE  void insert_nocheck(const T& elem, HASH_RES_t h) { // assume that mainIdx=0
         T* cur = pool.add();
         // cur->~T();
         // *cur=std::move(elem);
@@ -1827,8 +1850,10 @@ public:
         if (obj == nullptr)
             return;
 
-        T * elem = index[0]->get(*obj);
+
 #ifdef USE_STORE_FE
+
+        T * elem = index[0]->get(*obj);
         T *elemPrv = elem->prv, *elemNxt = elem->nxt;
         if (elemPrv) elemPrv->nxt = obj;
         if (elemNxt) elemNxt->prv = obj;
@@ -1923,6 +1948,10 @@ public:
 
     FORCE_INLINE void add(T& obj) override {
         add(&obj);
+    }
+
+    FORCE_INLINE void insert_nocheck(T* obj) override {
+        add(obj); //TODO: Fix later
     }
 
     FORCE_INLINE void add(T* obj, const size_t h) override {
@@ -2029,37 +2058,6 @@ public:
                 tail = prev;
         }
         nodes_.del(cur);
-    }
-
-    FORCE_INLINE void delC(const T* obj, const size_t h) {
-        if (head == nullptr) return;
-        Container* node = nullptr;
-        if (head->obj == obj || IDX_FN::cmp(*obj, *head->obj) == 0) {
-            node = head;
-            if (head == tail) {
-                head = tail = nullptr;
-            } else {
-                head = head->next;
-            }
-        } else {
-            Container *prv = head;
-            Container *cur = head->next;
-            while (cur != nullptr) {
-                if (obj == cur->obj || IDX_FN::cmp(*obj, *cur->obj) == 0) {
-                    node = cur;
-                    prv->next = cur->next;
-                    if (cur == tail)
-                        tail = prv;
-                    if (is_unique)
-                        break;
-
-                } else {
-                    prv = cur;
-                }
-                cur = cur->next;
-            }
-            nodes_.del(node);
-        }
     }
 
     FORCE_INLINE void del(const T& obj, const size_t h) override {

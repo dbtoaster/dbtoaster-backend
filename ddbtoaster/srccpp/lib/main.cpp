@@ -4,14 +4,15 @@
 //#include "Tpch18-V.hpp"
 #endif
 #ifdef EXEC_PROFILE
- std::unordered_map<std::string, Timepoint> startTimes;
- std::unordered_map<std::string, size_t> durations;
- std::unordered_map<std::string, size_t> counters;
+std::unordered_map<std::string, Timepoint> startTimes;
+std::unordered_map<std::string, size_t> durations;
+std::unordered_map<std::string, size_t> counters;
 #endif
-namespace dbtoaster{
-    class CustomProgram_1 : public Program
-    {
+namespace dbtoaster {
+
+    class CustomProgram_1 : public Program {
     public:
+
         void process_stream_event(const event_t& ev) {
             cout << "on_" << dbtoaster::event_name[ev.type] << "_";
             // cout << get_relation_name(ev.id) << "(" << ev.data << ")" << endl;
@@ -20,15 +21,15 @@ namespace dbtoaster{
         }
     };
 
-    class CustomProgram_2 : public Program
-    {
+    class CustomProgram_2 : public Program {
     public:
+
         void process_streams() {
-            for( long i = 1; i <= 10; ++i ) {
+            for (long i = 1; i <= 10; ++i) {
                 event_args_t ev_args;
                 ev_args.push_back(new long(i));
-                ev_args.push_back(new long(i+10));
-                event_t ev( insert_tuple, get_relation_id("S"), 0, ev_args);
+                ev_args.push_back(new long(i + 10));
+                event_t ev(insert_tuple, get_relation_id("S"), 0, ev_args);
 
                 process_stream_event(ev);
             }
@@ -52,10 +53,9 @@ namespace dbtoaster{
  * @param argv
  * @return true if "--async" is one of the command line arguments
  */
-bool async_mode(int argc, char* argv[])
-{
-    for(int i = 1; i < argc; ++i)
-        if( !strcmp(argv[i],"--async") )
+bool async_mode(int argc, char* argv[]) {
+    for (int i = 1; i < argc; ++i)
+        if (!strcmp(argv[i], "--async"))
             return true;
     return false;
 }
@@ -84,15 +84,14 @@ int main(int argc, char* argv[]) {
     p.init();
 
     // if(!no_output) cout << "Running program:" << endl;
-    p.run( async );
-    while( !p.is_finished() )
-    {
-       snap = p.get_snapshot();
-       DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
+    p.run(async);
+    while (!p.is_finished()) {
+        snap = p.get_snapshot();
+        DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
     }
 
     // if(!no_output) cout << "Printing final result:" << endl;
-    if(!no_output) {
+    if (!no_output) {
         snap = p.get_snapshot();
         DBT_SERIALIZATION_NVP_OF_PTR(cout, snap);
         cout << std::endl;

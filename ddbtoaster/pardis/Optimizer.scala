@@ -12,24 +12,24 @@ import scala.collection.mutable
 /**
   * Created by sachin on 27.04.16.
   */
-case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: List[ExpressionSymbol[Any]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structs: List[PardisStructDef[Any]], val entryIdxDefs: Seq[EntryIdxApplyObject[SEntry]], val tempVars: Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil, val tmpMaps : Seq[(ExpressionSymbol[_], collection.mutable.ArrayBuffer[ExpressionSymbol[_]])] = Nil) extends PardisProgram {
+case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: List[ExpressionSymbol[Any]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structs: List[PardisStructDef[Any]], val entryIdxDefs: Seq[PardisNode[_]], val tempVars: Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil, val tmpMaps : Seq[(ExpressionSymbol[_], collection.mutable.ArrayBuffer[ExpressionSymbol[_]])] = Nil) extends PardisProgram {
   override val main: PardisBlock[Any] = initBlock.asInstanceOf[PardisBlock[Any]]
 }
 
 object Optimizer {
-  var analyzeEntry: Boolean = true
+  var analyzeEntry: Boolean = false
   var analyzeIndex: Boolean = true
-  var fixedRange: Boolean = true
-  var onlineOpts = true
-  var tmpVarHoist = true
-  var tmpMapHoist = true
+  var fixedRange: Boolean = false
+  var onlineOpts = false
+  var tmpVarHoist = false
+  var tmpMapHoist = false
   var indexInline = false
   var indexLookupFusion = true
   var indexLookupPartialFusion = false
   var deadIndexUpdate = false
-  var codeMotion = true
+  var codeMotion = false
   var refCounter = true
-  var m3CompareMultiply = true //Lazy evaluation
+  var m3CompareMultiply = false //Lazy evaluation
   var cTransformer = false
 }
 
@@ -106,8 +106,8 @@ class Optimizer(val IR: StoreDSL) {
     val init_ = opt(IR)(prg.initBlock)
     val codeB_ = prg.codeBlocks.map(t => (t._1, t._2, opt(IR)(t._3)))
     val (global_, structs_, entryidx_) = opt match {
-      case writer: IndexDecider => (writer.changeGlobal(prg.globalVars), prg.structs, prg.entryIdxDefs)
-      case writer: EntryTransformer => (writer.changeGlobal(prg.globalVars), prg.structs ++ writer.structsDefMap.map(_._2), prg.entryIdxDefs ++ (writer.genOps.map(_._2) ++ writer.genCmp ++ writer.genFixRngOps).collect { case IR.Def(e: EntryIdxApplyObject[_]) => e })
+      case writer: IndexDecider => (writer.changeGlobal(prg.globalVars), prg.structs, if(Optimizer.cTransformer) (writer.genOps.values ++ writer.genCmp.values ++ writer.genFixed.values).toSeq.map(IR.Def.unapply(_).get) else prg.entryIdxDefs)
+      case writer: EntryTransformer => (writer.changeGlobal(prg.globalVars), prg.structs ++ writer.structsDefMap.map(_._2), (writer.genOps.map(_._2) ++ writer.genCmp.map(_._2) ++ writer.genFixRngOps.map(_._2)).toSeq.collect { case IR.Def(e: EntryIdxApplyObject[_]) => e })
       case _ => (prg.globalVars, prg.structs, prg.entryIdxDefs)
     }
     val vars_ = opt match {
