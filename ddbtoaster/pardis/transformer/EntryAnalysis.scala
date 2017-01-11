@@ -334,7 +334,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
           genFixRngOps getOrElseUpdate((colsRange, entry), rep)
         }
       }
-      val newS = __newStore(n, Array.apply(ops_ : _*))
+      val newS = __newStoreNamed2(sym.name, n, Array.apply(ops_ : _*))
       val ssym = newS.asInstanceOf[Sym[_]]
       //System.err.println(s"Changed ops for $sym to $ssym  with new OPS as $ops_")
       entryTypes += ssym -> TypeVar(sym)

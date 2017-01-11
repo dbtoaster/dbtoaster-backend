@@ -122,6 +122,9 @@ trait StoreDSL extends
 
   }
 
+  def __newStoreNamed[E <: ddbt.lib.store.Entry](name: String)(implicit cE : Manifest[E], typeE : TypeRep[E]) : Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name), StoreNew2[E]()(typeE, cE)))
+  def __newStoreNamed2[E <: ddbt.lib.store.Entry](name: String, n : Rep[Int], ops : Rep[Array[EntryIdx[E]]])(implicit cE : Manifest[E], typeE : TypeRep[E]) : Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name), StoreNew3[E](n, ops)(typeE, cE)))
+
   //override   def record_newDef[T: TypeRep](fields: Seq[(String, Boolean, Rep[Any])]): Def[T] = {
   //  val fieldSyms = createFieldsSyms(fields)
   //  val tp = getRecordType[T]
@@ -157,6 +160,8 @@ trait StoreDSL extends
   }
 
   def m3_apply[T: TypeRep](name1: String, args: List[Rep[_]]): Rep[T] = M3Apply[T](name1, args)
+
+
 
   //case class M3Add[E<:Entry:TypeRep](s:Rep[Store[E]], e:Rep[E]) extends FunctionDef[E](Some(s), "add", List(List(e)))
 

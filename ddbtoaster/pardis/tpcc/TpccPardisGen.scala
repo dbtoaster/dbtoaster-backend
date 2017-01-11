@@ -48,18 +48,15 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
   } else {
     copy(s"$genDir/SCTxGenEntry.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)
   }
-  override val codeGen: StoreCodeGenerator = new StoreScalaCodeGenerator(IR)
+  override val codeGen: StoreScalaCodeGenerator = new StoreScalaCodeGenerator(IR)
 
   override def generate[T](optTP: TransactionProgram[T]): Unit = {
     import IR._
     import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
     var codestr = codeGen.blockToDocument(optTP.initBlock).toString
     var i = codestr.lastIndexOf("1")
-    val storesnames = List("newOrderTbl", "historyTbl", "warehouseTbl", "itemTbl", "orderTbl", "districtTbl", "orderLineTbl", "customerTbl", "stockTbl")
-    val allstores = storesnames.mkString(",")
-    val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n" + storesnames.zip(optTP.globalVars).map(t => {
-      doc"  val ${t._1} = ${t._2}".toString
-    }).mkString("\n") +
+    val allstores = optTP.globalVars.map(_.name).mkDocument(", ")
+    val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n"  +
       s"""
          |  val newOrderTxInst = new NewOrderTx($allstores)
          |  val paymentTxInst = new PaymentTx($allstores)
@@ -78,7 +75,7 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
     val r = Document.nest(2, entryIdxes :/: tempVars)
     file.println(r)
     optTP.codeBlocks.foreach { case (className, args: List[Sym[_]], body) => {
-      val argsWithTypes = optTP.globalVars.map(m => m.name + m.id + s": Store[${storeType(m).name}]").mkDocument(", ")
+      val argsWithTypes = optTP.globalVars.map(m => doc"$m : Store[${storeType(m).tp}]").mkDocument(", ")
       val genCode = doc"  class $className($argsWithTypes) extends ((${args.map(_.tp).mkDocument(", ")}) => ${body.typeT} ) {" :/:
         doc"    def apply(${args.map(s => doc"$s : ${s.tp}").mkDocument(", ")}) = "
       val cgDoc = Document.nest(4, codeGen.blockToDocument(body))
@@ -181,22 +178,21 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       }
 
     }
-    val storesnames = optTP.globalVars.zip(List("newOrderTbl", "historyTbl", "warehouseTbl", "itemTbl", "orderTbl", "districtTbl", "orderLineTbl", "customerTbl", "stockTbl")).toMap
+
     val stores = optTP.globalVars.map(s => {
-      def idxTypeName(i: Int) = storesnames(s) :: "Idx" :: i :: "Type"
+      def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
 
       val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
       val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${storesnames(s)}StoreType;"
-      val storeDecl = storesnames(s) :: "StoreType  " :: storesnames(s) :: "(" :: storesnames(s) :: "Size);"
-      val storeRef = doc"${storesnames(s)}StoreType& $s = ${storesnames(s)};"
+      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}StoreType;"
+      val storeDecl = s.name :: "StoreType  " :: s.name :: "(" :: s.name :: "Size);"
 
-      val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${storesnames(s)}.index[${t._2}];").mkDocument("\n")
+      val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
       val primaryIdx = idx2(s)(0)
-      val primaryRef = doc"${idxTypeName(0)}& ${storesnames(s)}PrimaryIdx = * (${idxTypeName(0)} *) ${storesnames(s)}.index[0];"
-      idxTypeDefs :\\: storeTypeDef :\\: storeDecl :\\: storeRef :\\: idxDecl :\\: primaryRef
+      val primaryRef = doc"${idxTypeName(0)}& ${s.name}PrimaryIdx = * (${idxTypeName(0)} *) ${s.name}.index[0];"
+      idxTypeDefs :\\: storeTypeDef :\\: storeDecl :\\: idxDecl :\\: primaryRef
     }).mkDocument("\n", "\n\n\n", "\n")
 
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")

@@ -232,7 +232,7 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
             genOps += (cols -> rep)
           rep
       })
-      val newS = __newStore(unit(entidxes.size), Array(entidxes: _*))
+      val newS = __newStoreNamed2(s.name, unit(entidxes.size), Array(entidxes: _*))
       idxes.indexes.foreach(i => newS.index(unit(i.idxNum), unit(i.tp.toString), unit(i.unique), unit(i.sliceIdx)))
       val ssym = newS.asInstanceOf[Sym[_]]
       ssym.attributes += idxes

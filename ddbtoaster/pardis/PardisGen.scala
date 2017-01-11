@@ -433,13 +433,13 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
         case MapDef(name, tp, keys, _) => if (keys.size == 0) {
           val m = man(tp).asInstanceOf[TypeRep[Any]]
 
-          val s = IR.__newVar(unit(zero(tp))(m))(m).e // xxx::: Change nulls impl.named(name,false)(m)
+          val s = IR.__newVarNamed(unit(zero(tp))(m), name)(m).e // xxx::: Change nulls impl.named(name,false)(m)
           //s.emitted = true
           (name, (s, keys, tp))
         } else {
           val m = me2(keys.map(_._2), tp)
           implicit val cE = ManifestHelper.manStore(m)
-          val s = IR.__newStore() // xxx::impl.named(name,true)(manStore(m))
+          val s = IR.__newStoreNamed(name) // xxx::impl.named(name,true)(manStore(m))
           //impl.collectStore(s)(m)
           (name, ( /*impl.newSStore()(m)*/ s, keys, tp))
         }
@@ -506,10 +506,10 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     ExpressionSymbol.globalId = 0
     val printInfoDef = doc"def printMapsInfo() = {}"
 
-    genCodeForProgram(optTP, allnames)
+    genCodeForProgram(optTP)
   }
 
-  def genCodeForProgram[T](prg: TransactionProgram[T], allnames: List[String]): (String, String, String)
+  def genCodeForProgram[T](prg: TransactionProgram[T]): (String, String, String)
 
   override def getEntryDefinitions = "" //TODO:SBJ : Need to be fixed for batch processing(input record type)
 }
@@ -530,7 +530,7 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
     case EvtDel(Schema(n, cs)) => ("Del" + n, cs)
   }
 
-  override def genCodeForProgram[T](optTP: TransactionProgram[T], allnames: List[String]) = {
+  override def genCodeForProgram[T](optTP: TransactionProgram[T]) = {
     var ts = ""
     for (x <- optTP.codeBlocks) {
       import codeGen.{doc => _, _}
@@ -543,10 +543,7 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
 
     val entries = optTP.structs.map(codeGen.getStruct).mkDocument("\n")
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
-    val globalMaps = codeGen.blockToDocumentNoBraces(optTP.initBlock) :/: optTP.globalVars.zip(allnames).map(t => {
-      import codeGen.{doc => _, _}
-      doc"val ${t._2} = ${t._1}"
-    }).mkDocument("\n")
+    val globalMaps = codeGen.blockToDocumentNoBraces(optTP.initBlock)
     val tempMaps = optTP.tmpMaps.map(s => {
       val sDef = Def.unapply(s._1).get
       val eIdx = sDef match {
@@ -569,7 +566,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
   import IR._
 
-  override def genCodeForProgram[T](optTP: TransactionProgram[T], allnames: List[String]) = {
+  override def genCodeForProgram[T](optTP: TransactionProgram[T]) = {
     import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
     var ts = ""
     codeGen.currentProgram = PardisProgram(optTP.structs, optTP.main, Nil)
@@ -588,7 +585,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
         if (cols.isEmpty)
           s"GenericOps"
         else {
-           s"GenericOps_$cols"
+          s"GenericOps_$cols"
 
         }
       case Def(n: EntryIdxGenericCmpObject[_]) =>
@@ -596,7 +593,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
           case GenericEntryGet(_, Constant(i)) => i
         }
         val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
-         s"GenericCmp_${cols.mkString("")}_$ord"
+        s"GenericCmp_${cols.mkString("")}_$ord"
 
       case Def(n: EntryIdxGenericFixedRangeOpsObject) =>
         val cols = n.colsRange.asInstanceOf[Constant[List[(Int, Int, Int)]]].underlying.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")
@@ -623,7 +620,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
         "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: serializer :/: copyFn) :/: "};"
     }
     val entries = optTP.structs.map(structToDoc).mkDocument("\n")
-    val entryIdxes = "#define int unsigned int" :/:  optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n") :/: "#undef int"
+    val entryIdxes = "#define int unsigned int" :/: optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n") :/: "#undef int"
     val idxes = optTP.globalVars.map(s => s ->(collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap // store -> (AB(idxSym, IdxType, uniq, other), AB(IdxName))
     optTP.initBlock.stmts.collect {
       case Statement(s, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) => {
@@ -634,27 +631,25 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     }
     val idx2 = idxes.map(t => t._1 -> (t._2._1 zip t._2._2 map (x => (x._1._1, x._1._2, x._1._3, x._1._4, x._2))).toList) // Store -> List[Sym, Type, unique, otherInfo, IdxName ]
 
-    val storesnames = optTP.globalVars.zip(allnames).toMap
+
     val stores = optTP.globalVars.map(s => {
 
       if (s.tp.isInstanceOf[StoreType[_]]) {
-        def idxTypeName(i: Int) = storesnames(s) :: "Idx" :: i :: "Type"
+        def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
         val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
         val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
         val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-        val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${storesnames(s)}_map;"
-        val entryTypeDef = doc"typedef $entryTp ${storesnames(s)}_entry;"
-        val storeDecl = storesnames(s) :: "_map  " :: storesnames(s) :: "(10000);"
-        val storeRef = doc"${storesnames(s)}_map& $s = ${storesnames(s)};"
+        val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}_map;"
+        val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
+        val storeDecl = s.name :: "_map  " :: s.name :: "(10000);"
 
-        val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${storesnames(s)}.index[${t._2}];").mkDocument("\n")
+        val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
         val primaryIdx = idx2(s)(0)
-        val primaryRef = doc"${idxTypeName(0)}& ${storesnames(s)}PrimaryIdx = * (${idxTypeName(0)} *) ${storesnames(s)}.index[0];"
-        idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: storeRef :\\: idxDecl :\\: primaryRef
+        val primaryRef = doc"${idxTypeName(0)}& ${s.name}PrimaryIdx = * (${idxTypeName(0)} *) ${s.name}.index[0];"
+        idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: idxDecl :\\: primaryRef
       } else {
-        doc"${s.tp} ${storesnames(s)};" :/:
-          doc"${s.tp}& $s = ${storesnames(s)};"
+        doc"${s.tp} ${s.name};"
       }
     }).mkDocument("\n", "\n\n\n", "\n")
 

@@ -17,14 +17,14 @@ case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: 
 }
 
 object Optimizer {
-  var analyzeEntry: Boolean = false
+  var analyzeEntry: Boolean = true
   var analyzeIndex: Boolean = true
   var fixedRange: Boolean = false
   var onlineOpts = false
   var tmpVarHoist = false
   var tmpMapHoist = false
   var indexInline = false
-  var indexLookupFusion = true
+  var indexLookupFusion = false
   var indexLookupPartialFusion = false
   var deadIndexUpdate = false
   var codeMotion = false

@@ -108,7 +108,7 @@ object TpccXactGenerator_SC {
     import Sqd.Quasicodes._
 
     import Context.Predef._
-    import Context.{__newStore, Date, overloaded2, typeGenericEntry}
+    import Context.{__newStore, __newStoreNamed, Date, overloaded2, typeGenericEntry}
     import Context.{IntType, StringType, DoubleType, DateType, BooleanType}
 
     lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
@@ -139,15 +139,15 @@ object TpccXactGenerator_SC {
     val customerKey = List(1, 2, 3)
     val stockKey = List(1, 2)
 
-    val newOrderTbl = __newStore[GenericEntry]
-    val historyTbl = __newStore[GenericEntry]
-    val warehouseTbl = __newStore[GenericEntry]
-    val itemTbl = __newStore[GenericEntry]
-    val orderTbl = __newStore[GenericEntry]
-    val districtTbl = __newStore[GenericEntry]
-    val orderLineTbl = __newStore[GenericEntry]
-    val customerTbl = __newStore[GenericEntry]
-    val stockTbl = __newStore[GenericEntry]
+    val newOrderTbl = __newStoreNamed[GenericEntry]("newOrderTbl")
+    val historyTbl = __newStoreNamed[GenericEntry]("historyTbl")
+    val warehouseTbl = __newStoreNamed[GenericEntry]("warehouseTbl")
+    val itemTbl = __newStoreNamed[GenericEntry]("itemTbl")
+    val orderTbl = __newStoreNamed[GenericEntry]("orderTbl")
+    val districtTbl = __newStoreNamed[GenericEntry]("districtTbl")
+    val orderLineTbl = __newStoreNamed[GenericEntry]("orderLineTbl")
+    val customerTbl = __newStoreNamed[GenericEntry]("customerTbl")
+    val stockTbl = __newStoreNamed[GenericEntry]("stockTbl")
 
     val codeForOutput = false
     val allKeys = List(newOrderTbl -> newOrderKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
