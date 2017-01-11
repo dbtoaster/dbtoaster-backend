@@ -58,4 +58,6 @@ class MStore[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]]) {
   def clear: Unit = ???
 
   def index(idx: Int, idxType: String, uniq: Boolean, otherIdx: Int): Idx[E] = ???
+
+  def copyIntoPool(e: E): E = ???
 }

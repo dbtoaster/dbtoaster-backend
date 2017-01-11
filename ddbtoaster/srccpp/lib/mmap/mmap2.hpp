@@ -149,7 +149,7 @@ struct ZeroVal {
         return V();
     }
 
-    virtual bool isZero(V a) {
+    bool isZero(V a) {
         return (a == V());
     }
 };
@@ -357,7 +357,7 @@ private:
                 if (n->obj) { //add_(n->obj); // does not resize the bucket array, does not maintain count
                     h = n->hash;
                     na = &buckets_[h % size_];
-                    n->obj->backPtrs[Index<T,V>::idxId] = na;
+                    n->obj->backPtrs[Index<T, V>::idxId] = na;
                     if (na->obj) {
                         tmp_allocated_from_pool = true;
                         nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -478,7 +478,7 @@ public:
         return true;
     }
 
-    FORCE_INLINE virtual bool hashDiffers(const T& x, const T& y) {
+    FORCE_INLINE bool hashDiffers(const T& x, const T& y) {
         return IDX_FN::hash(x) != IDX_FN::hash(y);
     }
     // retrieves the first element equivalent to the key or nullptr if not found
@@ -487,7 +487,7 @@ public:
         return get(*key);
     }
 
-    inline virtual T* get(const T& key) const {
+    inline T* get(const T& key) const {
         HASH_RES_t h = IDX_FN::hash(key);
         IdxNode* n = &buckets_[h % size_];
         do {
@@ -500,7 +500,7 @@ public:
         return get(*key, h);
     }
 
-    inline virtual T* get(const T& key, const HASH_RES_t h) const {
+    inline T* get(const T& key, const HASH_RES_t h) const {
         IdxNode* n = &buckets_[h % size_];
         do {
             if (n->obj && h == n->hash && !IDX_FN::cmp(key, *n->obj)) return n->obj;
@@ -508,38 +508,38 @@ public:
         return nullptr;
     }
 
-    inline virtual T* getCopyDependent(const T& key) {
+    inline T* getCopyDependent(const T& key) {
         T* ref = get(key);
         return ref ? ref->copy() : nullptr;
     }
 
-    inline virtual T* getCopyDependent(const T* key) {
+    inline T* getCopyDependent(const T* key) {
         T* ref = get(key);
         return ref ? ref->copy() : nullptr;
     }
 
-    inline virtual T* getCopy(const T& key) {
+    inline T* getCopy(const T& key) {
         T* ref = get(key);
         return ref ? ref->copy() : nullptr;
     }
 
-    inline virtual T* getCopy(const T* key) {
+    inline T* getCopy(const T* key) {
         T* ref = get(key);
         return ref ? ref->copy() : nullptr;
     }
 
     // inserts regardless of whether element exists already
 
-    FORCE_INLINE virtual void add(T& obj) {
+    FORCE_INLINE void add(T& obj) {
         add(&obj);
     }
 
-    FORCE_INLINE virtual void add(T* obj) {
+    FORCE_INLINE void add(T* obj) {
         HASH_RES_t h = IDX_FN::hash(*obj);
         add(obj, h);
     }
 
-    FORCE_INLINE virtual void add(T* obj, const HASH_RES_t h) {
+    FORCE_INLINE void add(T* obj, const HASH_RES_t h) {
         auto idxId = Index<T, V>::idxId;
         if (count_ > threshold_) {
             //            throw std::logic_error("HashIndex resize disabled for this experiment");
@@ -605,24 +605,24 @@ public:
         }
     }
 
-    FORCE_INLINE void insert_nocheck(T* obj) override {
+    FORCE_INLINE void insert_nocheck(T* obj) {
         add(obj); //FIX LATER
     }
 
 
     // deletes an existing elements (equality by pointer comparison)
 
-    FORCE_INLINE virtual void del(const T& obj) {
+    FORCE_INLINE void del(const T& obj) {
         const T* ptr = get(obj);
         if (ptr) del(ptr);
     }
 
-    FORCE_INLINE virtual void del(const T& obj, const HASH_RES_t h) {
+    FORCE_INLINE void del(const T& obj, const HASH_RES_t h) {
         const T* ptr = get(obj, h);
         if (ptr) del(ptr, h);
     }
 
-    FORCE_INLINE virtual void del(const T* obj) {
+    FORCE_INLINE void del(const T* obj) {
         IdxNode *n = (IdxNode *) obj->backPtrs[Index<T, V>::idxId];
         del_(obj, n);
     }
@@ -655,11 +655,11 @@ public:
         } while ((n = next));
     }
 
-    FORCE_INLINE virtual void del(const T* obj, const HASH_RES_t h) {
+    FORCE_INLINE void del(const T* obj, const HASH_RES_t h) {
         del_(obj, &buckets_[h % size_]);
     }
 
-    inline virtual void foreach(std::function<void (const T&) > f) const {
+    inline void foreach(std::function<void (const T&) > f) const {
         for (size_t b = 0; b < size_; ++b) {
             IdxNode* n = &buckets_[b];
             do {
@@ -668,7 +668,7 @@ public:
         }
     }
 
-    inline void update(T* elem) override {
+    inline void update(T* elem) {
         //        HASH_RES_t h = IDX_FN::hash(*elem);
         //        IdxNode* n = &(buckets_[h % size_]);
         if (is_unique) {
@@ -682,7 +682,7 @@ public:
         return slice(*key, f);
     }
 
-    inline virtual void slice(const T& key, std::function<void (const T&) > f) {
+    inline void slice(const T& key, std::function<void (const T&) > f) {
         HASH_RES_t h = IDX_FN::hash(key);
         IdxNode* n = &(buckets_[h % size_]);
         do {
@@ -695,11 +695,11 @@ public:
         } while ((n = n->nxt));
     }
 
-    inline virtual void sliceCopy(const T* key, std::function<void (const T&) > f) {
+    inline void sliceCopy(const T* key, std::function<void (const T&) > f) {
         sliceCopy(*key, f);
     }
 
-    inline virtual void sliceCopy(const T& key, std::function<void (const T&) > f) {
+    inline void sliceCopy(const T& key, std::function<void (const T&) > f) {
         HASH_RES_t h = IDX_FN::hash(key);
         std::vector<T*> entries;
         IdxNode* n = &(buckets_[h % size_]);
@@ -717,7 +717,7 @@ public:
         }
     }
 
-    inline virtual void clear() {
+    inline void clear() {
         if (allocated_from_pool_) {
             IdxNode* head = nullptr;
             for (size_t b = 0; b < size_; ++b) {
@@ -738,40 +738,40 @@ public:
         memset(buckets_, 0, sizeof (IdxNode) * size_);
     }
 
-    FORCE_INLINE virtual size_t count() {
+    FORCE_INLINE size_t count() {
         return count_;
     }
 
-    FORCE_INLINE virtual HASH_RES_t computeHash(const T& key) {
+    FORCE_INLINE HASH_RES_t computeHash(const T& key) {
         return IDX_FN::hash(key);
     }
 
-    inline virtual V getValueOrDefault(const T& key) const {
+    inline V getValueOrDefault(const T& key) const {
         throw std::logic_error("Not implemented");
         return zero;
     }
 
-    inline virtual V getValueOrDefault(const T& key, HASH_RES_t h) const {
+    inline V getValueOrDefault(const T& key, HASH_RES_t h) const {
         throw std::logic_error("Not implemented");
         return zero;
     }
 
-    inline virtual int setOrDelOnZero(const T& k, const V& v) {
+    inline int setOrDelOnZero(const T& k, const V& v) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    inline virtual int setOrDelOnZero(const T& k, const V& v, HASH_RES_t h) {
+    inline int setOrDelOnZero(const T& k, const V& v, HASH_RES_t h) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    inline virtual int addOrDelOnZero(const T& k, const V& v) {
+    inline int addOrDelOnZero(const T& k, const V& v) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    inline virtual int addOrDelOnZero(const T& k, const V& v, HASH_RES_t h) {
+    inline int addOrDelOnZero(const T& k, const V& v, HASH_RES_t h) {
         throw std::logic_error("Not implemented");
         return 0;
     }
@@ -1109,20 +1109,20 @@ public:
 
     // inserts regardless of whether element exists already
 
-    FORCE_INLINE virtual void add(T& obj) override {
+    FORCE_INLINE void add(T& obj) {
         add(& obj);
     }
 
-    FORCE_INLINE void insert_nocheck(T* obj) override {
+    FORCE_INLINE void insert_nocheck(T* obj) {
         add(obj); //TODO: Fix later
     }
 
-    FORCE_INLINE virtual void add(T* obj) override {
+    FORCE_INLINE void add(T* obj) {
         HASH_RES_t h = IDX_FN1::hash(*obj);
         add(obj, h);
     }
 
-    FORCE_INLINE virtual void add(T* obj, const HASH_RES_t h) override {
+    FORCE_INLINE void add(T* obj, const HASH_RES_t h) {
         if (count_ > threshold_) {
             std::cerr << "  Index resize count=" << count_ << "  size=" << size_ << std::endl;
             exit(1);
@@ -1185,12 +1185,12 @@ public:
 
     // deletes an existing elements (equality by pointer comparison)
 
-    FORCE_INLINE virtual void del(const T* obj) override {
+    FORCE_INLINE void del(const T* obj) {
         HASH_RES_t h = IDX_FN1::hash(*obj);
         del(obj, h);
     }
 
-    FORCE_INLINE virtual void del(const T* obj, const HASH_RES_t h) override {
+    FORCE_INLINE void del(const T* obj, const HASH_RES_t h) {
         IdxNode *n = &buckets_[h % size_];
         IdxNode *prev = nullptr, *next; // previous and next pointers
         do {
@@ -1237,7 +1237,7 @@ public:
         std::cout << "--------------------------" << std::endl;
     }
 
-    FORCE_INLINE virtual size_t count() override {
+    FORCE_INLINE size_t count() {
         return count_;
     }
 
@@ -1283,7 +1283,7 @@ public:
     //        }
     //    };
 
-    FORCE_INLINE virtual bool hashDiffers(const T& x, const T& y) override {
+    FORCE_INLINE bool hashDiffers(const T& x, const T& y) {
         return IDX_FN1::hash(x) != IDX_FN1::hash(y);
     }
 
@@ -1291,7 +1291,7 @@ public:
         return get(*key);
     }
 
-    FORCE_INLINE virtual T* get(const T& key) const override {
+    FORCE_INLINE T* get(const T& key) const {
         HASH_RES_t h = IDX_FN1::hash(key);
         IdxNode* n = &(buckets_[h % size_]);
 
@@ -1309,7 +1309,7 @@ public:
         return get(*key, h);
     }
 
-    FORCE_INLINE virtual T* get(const T& key, const HASH_RES_t h) const override {
+    FORCE_INLINE T* get(const T& key, const HASH_RES_t h) const {
 
         IdxNode* n = &(buckets_[h % size_]);
 
@@ -1323,47 +1323,47 @@ public:
         return nullptr;
     }
 
-    inline virtual V getValueOrDefault(const T& key) const override {
+    inline V getValueOrDefault(const T& key) const {
         throw std::logic_error("Not implemented");
         return zero;
     }
 
-    V getValueOrDefault(const T& key, const size_t hash_val) const override {
+    V getValueOrDefault(const T& key, const size_t hash_val) const {
         throw std::logic_error("Not implemented");
         return zero;
     }
 
-    int setOrDelOnZero(const T& k, const V& v) override {
+    int setOrDelOnZero(const T& k, const V& v) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) override {
+    int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    int addOrDelOnZero(const T& k, const V& v) override {
+    int addOrDelOnZero(const T& k, const V& v) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) override {
+    int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    void del(const T& obj) override {
+    void del(const T& obj) {
         const T* ptr = get(obj);
         if (ptr) del(ptr);
     }
 
-    void del(const T& obj, const size_t h) override {
+    void del(const T& obj, const size_t h) {
         const T* ptr = get(obj, h);
         if (ptr) del(ptr);
     }
 
-    FORCE_INLINE void foreach(std::function<void (const T&) > f) const override {
+    FORCE_INLINE void foreach(std::function<void (const T&) > f) const {
         //TODO: implement
     }
 
@@ -1375,21 +1375,21 @@ public:
         throw std::logic_error("Not implemented");
     }
 
-    FORCE_INLINE void slice(const T& key, std::function<void (const T&) > f) override {
+    FORCE_INLINE void slice(const T& key, std::function<void (const T&) > f) {
         throw std::logic_error("Not implemented");
         //TODO: implement.  traversal type?
     }
 
-    FORCE_INLINE void sliceCopy(const T& key, std::function<void (const T&) > f) override {
+    FORCE_INLINE void sliceCopy(const T& key, std::function<void (const T&) > f) {
         throw std::logic_error("Not implemented");
         //TODO: implement.  traversal type?
     }
 
-    void clear() override {
+    void clear() {
         throw std::logic_error("Not implemented");
     }
 
-    size_t computeHash(const T& key) override {
+    size_t computeHash(const T& key) {
         return IDX_FN1::hash(key);
     }
 
@@ -1433,26 +1433,26 @@ public:
         return get(*key);
     }
 
-    FORCE_INLINE virtual T* get(const T& key) const override {
+    FORCE_INLINE T* get(const T& key) const {
         HASH_RES_t idx = IDX_FN::hash(key);
         if (idx >= 0 && idx < size && isUsed[idx]) //TODO: remove check
             return array[idx];
         return nullptr;
     }
 
-    FORCE_INLINE virtual void foreach(std::function<void (const T&) > f) const override {
+    FORCE_INLINE void foreach(std::function<void (const T&) > f) const {
         for (size_t b = 0; b < size; ++b) {
             if (isUsed[b])
                 f(*array[b]);
         }
     }
 
-    FORCE_INLINE virtual void del(const T* obj) override {
+    FORCE_INLINE void del(const T* obj) {
         HASH_RES_t idx = IDX_FN::hash(*obj);
         isUsed[idx] = false;
     }
 
-    FORCE_INLINE virtual void add(T* obj) override {
+    FORCE_INLINE void add(T* obj) {
         auto idxId = Index<T, V>::idxId;
         HASH_RES_t idx = IDX_FN::hash(*obj);
         isUsed[idx] = true;
@@ -1460,91 +1460,91 @@ public:
         array[idx] = obj;
     }
 
-    FORCE_INLINE void insert_nocheck(T* obj) override {
+    FORCE_INLINE void insert_nocheck(T* obj) {
         add(obj); //TODO: Fix later
     }
 
-    bool hashDiffers(const T& x, const T& y) override {
+    bool hashDiffers(const T& x, const T& y) {
         return IDX_FN::hash(x) != IDX_FN::hash(y);
     }
 
-    T* get(const T& key, const size_t h) const override {
+    T* get(const T& key, const size_t h) const {
         return array[h];
     }
 
-    V getValueOrDefault(const T& key) const override {
+    V getValueOrDefault(const T& key) const {
         throw std::logic_error("Not implemented");
         return zero;
     }
 
-    V getValueOrDefault(const T& key, const size_t hash_val) const override {
+    V getValueOrDefault(const T& key, const size_t hash_val) const {
         throw std::logic_error("Not implemented");
         return zero;
     }
 
-    int setOrDelOnZero(const T& k, const V& v) override {
+    int setOrDelOnZero(const T& k, const V& v) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) override {
+    int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    int addOrDelOnZero(const T& k, const V& v) override {
+    int addOrDelOnZero(const T& k, const V& v) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) override {
+    int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) {
         throw std::logic_error("Not implemented");
         return 0;
     }
 
-    void add(T* obj, const size_t h) override {
+    void add(T* obj, const size_t h) {
         array[h] = obj;
         isUsed[h] = true;
     }
 
-    void add(T& obj) override {
+    void add(T& obj) {
         add(&obj);
     }
 
-    void update(T* obj) override {
+    void update(T* obj) {
         //Do nothing
     }
 
-    void del(const T* obj, const size_t h) override {
+    void del(const T* obj, const size_t h) {
         isUsed[h] = false;
     }
 
-    void del(const T& obj) override {
+    void del(const T& obj) {
         const T* ptr = get(obj);
         if (ptr) del(ptr);
     }
 
-    void del(const T& obj, const size_t h) override {
+    void del(const T& obj, const size_t h) {
         isUsed[h] = false;
     }
 
-    void slice(const T& key, std::function<void (const T&) > f) override {
+    void slice(const T& key, std::function<void (const T&) > f) {
         throw std::logic_error("Not implemented");
     }
 
-    void sliceCopy(const T& key, std::function<void (const T&) > f) override {
+    void sliceCopy(const T& key, std::function<void (const T&) > f) {
         throw std::logic_error("Not implemented");
     }
 
-    size_t count() override {
+    size_t count() {
         return 0;
     }
 
-    void clear() override {
+    void clear() {
 
     }
 
-    size_t computeHash(const T& key) override {
+    size_t computeHash(const T& key) {
         return IDX_FN::hash(key);
     }
 };
@@ -1604,7 +1604,7 @@ public:
 #endif
     }
 
-    virtual ~MultiHashMap() {
+    ~MultiHashMap() {
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) delete index[i];
         delete[] index;
         delete[] modified;
@@ -1638,6 +1638,18 @@ public:
         return index[idx]->get(key, h);
     }
 
+    FORCE_INLINE T* copyIntoPool(const T* e) {
+        T* copy = pool.add();
+        new(copy) T(*e);
+        return copy;
+    }
+
+    FORCE_INLINE T* copyIntoPool(const T& e) {
+        T* copy = pool.add();
+        new(copy) T(e);
+        return copy;
+    }
+
     FORCE_INLINE void add(const T& obj) {
         add(&obj);
     }
@@ -1645,10 +1657,7 @@ public:
     void add(const T* elem) {
         T* cur = index[0]->get(*elem);
         if (cur == nullptr) {
-            cur = pool.add();
-            // cur->~T();
-            // *cur=std::move(*elem);
-            new(cur) T(*elem);
+            cur = copyIntoPool(elem);
 #ifdef USE_STORE_FE
             if (head) {
                 cur->prv = nullptr;
@@ -1678,14 +1687,12 @@ public:
         }
     }
 
-    FORCE_INLINE  void insert_nocheck(const T* elem) {
+    FORCE_INLINE void insert_nocheck(const T* elem) {
         insert_nocheck(*elem);
     }
-    FORCE_INLINE  void insert_nocheck(const T& elem) {
-        T* cur = pool.add();
-        // cur->~T();
-        // *cur=std::move(elem);
-        new(cur) T(elem);
+
+    FORCE_INLINE void insert_nocheck(const T& elem) {
+        T* cur = copyIntoPool(elem);
 #ifdef USE_STORE_FE
         cur->prv = nullptr;
         cur->nxt = head;
@@ -1695,11 +1702,8 @@ public:
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->insert_nocheck(cur);
     }
 
-    FORCE_INLINE  void insert_nocheck(const T& elem, HASH_RES_t h) { // assume that mainIdx=0
-        T* cur = pool.add();
-        // cur->~T();
-        // *cur=std::move(elem);
-        new(cur) T(elem);
+    FORCE_INLINE void insert_nocheck(const T& elem, HASH_RES_t h) { // assume that mainIdx=0
+        T* cur = copyIntoPool(elem);
 #ifdef USE_STORE_FE
         cur->prv = nullptr;
         cur->nxt = head;
@@ -1827,10 +1831,11 @@ public:
         }
     }
 
-    FORCE_INLINE void updateCopyDependent(T* obj) {
-        if (obj == nullptr)
+    FORCE_INLINE void updateCopyDependent(T* obj2) {
+        if (obj2 == nullptr)
             return;
-        T * elem = index[0]->get(*obj);
+        T* elem = index[0]->get(*obj2);
+        T* obj = copyIntoPool(obj2);
 #ifdef USE_STORE_FE
         T *elemPrv = elem->prv, *elemNxt = elem->nxt;
         if (elemPrv) elemPrv->nxt = obj;
@@ -1846,11 +1851,11 @@ public:
         }
     }
 
-    FORCE_INLINE void updateCopy(T* obj) {
-        if (obj == nullptr)
+    FORCE_INLINE void updateCopy(T* obj2) {
+        if (obj2 == nullptr)
             return;
 
-
+        T* obj = copyIntoPool(obj2);
 #ifdef USE_STORE_FE
 
         T * elem = index[0]->get(*obj);
@@ -1892,11 +1897,11 @@ public:
             ar << "\n"; dbtoaster::serialize_nvp_tabbed(ar, "item", e, "\t\t"); });
     }
 
-    inline virtual V getValueOrDefault(const T& key, int mainIdx = 0) const {
+    inline V getValueOrDefault(const T& key, int mainIdx = 0) const {
         return index[mainIdx]->getValueOrDefault(key);
     }
 
-    inline virtual void setOrDelOnZero(T& k, const V& v, const int mainIdx = 0) {
+    inline void setOrDelOnZero(T& k, const V& v, const int mainIdx = 0) {
         HASH_RES_t h = index[mainIdx]->computeHash(k);
         switch (index[mainIdx]->setOrDelOnZero(k, v, h)) {
             case INSERT_INTO_MMAP:
@@ -1911,7 +1916,7 @@ public:
         }
     }
 
-    inline virtual void addOrDelOnZero(T& k, const V& v, const int mainIdx = 0) {
+    inline void addOrDelOnZero(T& k, const V& v, const int mainIdx = 0) {
         HASH_RES_t h = index[mainIdx]->computeHash(k);
         switch (index[mainIdx]->addOrDelOnZero(k, v, h)) {
             case INSERT_INTO_MMAP:
@@ -1946,15 +1951,15 @@ public:
 
     }
 
-    FORCE_INLINE void add(T& obj) override {
+    FORCE_INLINE void add(T& obj) {
         add(&obj);
     }
 
-    FORCE_INLINE void insert_nocheck(T* obj) override {
+    FORCE_INLINE void insert_nocheck(T* obj) {
         add(obj); //TODO: Fix later
     }
 
-    FORCE_INLINE void add(T* obj, const size_t h) override {
+    FORCE_INLINE void add(T* obj, const size_t h) {
         auto idxId = Index<T, V>::idxId;
         Container *reusable = nullptr;
         if (is_unique && head != nullptr) {
@@ -1997,19 +2002,19 @@ public:
         }
     }
 
-    FORCE_INLINE void add(T* obj) override {
+    FORCE_INLINE void add(T* obj) {
         add(obj, 0);
     }
 
-    FORCE_INLINE int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) override {
+    FORCE_INLINE int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) {
         throw std::logic_error("Not implemented");
     }
 
-    FORCE_INLINE int addOrDelOnZero(const T& k, const V& v) override {
+    FORCE_INLINE int addOrDelOnZero(const T& k, const V& v) {
         throw std::logic_error("Not implemented");
     }
 
-    FORCE_INLINE void clear() override {
+    FORCE_INLINE void clear() {
 
         Container *cur = head, *next;
         while (cur != nullptr) {
@@ -2021,11 +2026,11 @@ public:
         head = tail = nullptr;
     }
 
-    FORCE_INLINE size_t computeHash(const T& key) override {
+    FORCE_INLINE size_t computeHash(const T& key) {
         return IDX_FN::hash(key);
     }
 
-    FORCE_INLINE size_t count() override {
+    FORCE_INLINE size_t count() {
         Container *cur = head;
         size_t cnt = 0;
         while (cur != nullptr) {
@@ -2060,19 +2065,19 @@ public:
         nodes_.del(cur);
     }
 
-    FORCE_INLINE void del(const T& obj, const size_t h) override {
+    FORCE_INLINE void del(const T& obj, const size_t h) {
         del(&obj, h);
     }
 
-    FORCE_INLINE void del(const T* obj) override {
+    FORCE_INLINE void del(const T* obj) {
         del(obj, 0);
     }
 
-    FORCE_INLINE void del(const T& obj) override {
+    FORCE_INLINE void del(const T& obj) {
         del(&obj, 0);
     }
 
-    FORCE_INLINE void foreach(std::function<void (const T&) > f) const override {
+    FORCE_INLINE void foreach(std::function<void (const T&) > f) const {
         Container *cur = head;
         while (cur != nullptr) {
             f(*cur->obj);
@@ -2080,7 +2085,7 @@ public:
         }
     }
 
-    FORCE_INLINE T* get(const T& key) const override {
+    FORCE_INLINE T* get(const T& key) const {
         throw std::logic_error("get disabled for list index for now");
         Container *cur = head;
         while (cur != nullptr) {
@@ -2091,31 +2096,31 @@ public:
         return nullptr;
     }
 
-    FORCE_INLINE T* get(const T& key, const size_t h) const override {
+    FORCE_INLINE T* get(const T& key, const size_t h) const {
         return get(key);
     }
 
-    FORCE_INLINE V getValueOrDefault(const T& key, const size_t hash_val) const override {
+    FORCE_INLINE V getValueOrDefault(const T& key, const size_t hash_val) const {
         throw std::logic_error("Not implemented");
     }
 
-    FORCE_INLINE V getValueOrDefault(const T& key) const override {
+    FORCE_INLINE V getValueOrDefault(const T& key) const {
         throw std::logic_error("Not implemented");
     }
 
-    FORCE_INLINE bool hashDiffers(const T& x, const T& y) override {
+    FORCE_INLINE bool hashDiffers(const T& x, const T& y) {
         return IDX_FN::hash(x) != IDX_FN::hash(y);
     }
 
-    FORCE_INLINE int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) override {
+    FORCE_INLINE int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) {
         throw std::logic_error("Not implemented");
     }
 
-    FORCE_INLINE int setOrDelOnZero(const T& k, const V& v) override {
+    FORCE_INLINE int setOrDelOnZero(const T& k, const V& v) {
         throw std::logic_error("Not implemented");
     }
 
-    inline virtual void slice(const T& key, std::function<void (const T&) > f) {
+    inline void slice(const T& key, std::function<void (const T&) > f) {
         throw std::logic_error("slice disabled for list index for now");
         Container *cur = head;
         while (cur != nullptr) {
@@ -2125,7 +2130,7 @@ public:
         }
     }
 
-    inline virtual void sliceCopy(const T& key, std::function<void (const T&) > f) {
+    inline void sliceCopy(const T& key, std::function<void (const T&) > f) {
         throw std::logic_error("slicecopy disabled for list index for now");
         std::vector<T*> entries;
         Container *cur = head;
@@ -2139,7 +2144,7 @@ public:
         }
     }
 
-    FORCE_INLINE void update(T* obj) override {
+    FORCE_INLINE void update(T* obj) {
         //TODO: SBJ: Check
         if (is_unique) {
             throw std::logic_error("update disabled for list index for now");
@@ -2148,7 +2153,7 @@ public:
         }
     }
 
-    virtual ~ListIndex() {
+    ~ListIndex() {
     }
 
 };

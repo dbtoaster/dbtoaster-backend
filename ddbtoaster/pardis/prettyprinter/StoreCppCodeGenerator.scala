@@ -133,6 +133,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StoreSliceCopyDependent(self, idx, key, f) => doc"$self.sliceCopyDependent($idx, $key, $f)"
     case StoreForeach(self, f) => doc"$self.foreach($f)"
     case StoreClear(self) => doc"$self.clear()"
+    case StoreCopyIntoPool(self, e) => doc"$self.copyIntoPool($e)"
 
     case IdxGet(self, key) => doc"$self.get($key)"
     case IdxGetCopy(self, key) => doc"$self.getCopy($key)"

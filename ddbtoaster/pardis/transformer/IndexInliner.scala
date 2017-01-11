@@ -73,10 +73,14 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
       implicit val typeE = e.tp.asInstanceOf[TypeRep[Entry]]
       val idx = IdxRep(indexMap((store, 0)))(typeE)
       val ref = idx.get(e)
-      indexMap.collect { case ((`store`, idx), sym) => sym.updateCopyDependent(e, ref) }
+      val e2 = store.copyIntoPool(e)
+      indexMap.collect { case ((`store`, idx), sym) => sym.updateCopyDependent(e2, ref) }
       unit()
     }
-    case StoreUpdateCopy(store, e) => indexMap.toSeq.sortWith(_._1._2 > _._1._2).collect { case ((`store`, idx), sym) => sym.updateCopy(e, indexMap((store, 0))) }; unit()
+    case StoreUpdateCopy(store, e) =>
+      val e2 = store.copyIntoPool(e)
+      indexMap.toSeq.sortWith(_._1._2 > _._1._2).collect { case ((`store`, idx), sym) => sym.updateCopy(e2, indexMap((store, 0))) }
+      unit()
     case StoreUpdate(store, e) if updatedCols contains e =>
       val idxes = store.asInstanceOf[Sym[_]].attributes.get(IndexesFlag).get.indexes
       indexMap.collect { case ((`store`, idx), sym) => {
