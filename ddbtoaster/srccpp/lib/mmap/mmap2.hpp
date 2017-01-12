@@ -274,13 +274,14 @@ public:
 
     virtual void del(const T* obj, const HASH_RES_t h) = 0;
 
-    virtual void foreach(std::function<void (const T&) > f) const = 0;
+    virtual void foreach(std::function<void (T*) > f) = 0;
 
-    virtual void slice(const T& key, std::function<void (const T&) > f) = 0;
 
-    virtual void sliceCopy(const T& key, std::function<void (const T&) > f) = 0;
+    virtual void slice(const T& key, std::function<void (T*) > f) = 0;
 
-    FORCE_INLINE void sliceCopyDependent(const T& key, std::function<void (const T&) > f) {
+    virtual void sliceCopy(const T& key, std::function<void (T*) > f) = 0;
+
+    FORCE_INLINE void sliceCopyDependent(const T& key, std::function<void (T*) > f) {
         sliceCopy(key, f);
     }
 
@@ -659,11 +660,11 @@ public:
         del_(obj, &buckets_[h % size_]);
     }
 
-    inline void foreach(std::function<void (const T&) > f) const {
+    inline void foreach(std::function<void (T*) > f) {
         for (size_t b = 0; b < size_; ++b) {
             IdxNode* n = &buckets_[b];
             do {
-                if (n->obj) f(*n->obj);
+                if (n->obj) f(n->obj);
             } while ((n = n->nxt));
         }
     }
@@ -678,28 +679,28 @@ public:
         }
     }
 
-    inline void slice(const T* key, std::function<void (const T&) > f) {
+    inline void slice(const T* key, std::function<void (T*) > f) {
         return slice(*key, f);
     }
 
-    inline void slice(const T& key, std::function<void (const T&) > f) {
+    inline void slice(const T& key, std::function<void (T*) > f) {
         HASH_RES_t h = IDX_FN::hash(key);
         IdxNode* n = &(buckets_[h % size_]);
         do {
             if (n->obj && h == n->hash && !IDX_FN::cmp(key, *n->obj)) {
                 do {
-                    f(*n->obj);
+                    f(n->obj);
                 } while ((n = n->nxt) && (h == n->hash) && !IDX_FN::cmp(key, *n->obj));
                 return;
             }
         } while ((n = n->nxt));
     }
 
-    inline void sliceCopy(const T* key, std::function<void (const T&) > f) {
+    inline void sliceCopy(const T* key, std::function<void (T*) > f) {
         sliceCopy(*key, f);
     }
 
-    inline void sliceCopy(const T& key, std::function<void (const T&) > f) {
+    inline void sliceCopy(const T& key, std::function<void (T*) > f) {
         HASH_RES_t h = IDX_FN::hash(key);
         std::vector<T*> entries;
         IdxNode* n = &(buckets_[h % size_]);
@@ -713,7 +714,7 @@ public:
             }
         } while ((n = n->nxt));
         for (auto it : entries) {
-            f(*it);
+            f(it);
         }
     }
 
@@ -1363,7 +1364,7 @@ public:
         if (ptr) del(ptr);
     }
 
-    FORCE_INLINE void foreach(std::function<void (const T&) > f) const {
+    FORCE_INLINE void foreach(std::function<void (T*) > f) {
         //TODO: implement
     }
 
@@ -1371,16 +1372,16 @@ public:
         //Do nothing for now
     }
 
-    FORCE_INLINE void slice(const T* key, std::function<void (const T&) > f) {
+    FORCE_INLINE void slice(const T* key, std::function<void (T*) > f) {
         throw std::logic_error("Not implemented");
     }
 
-    FORCE_INLINE void slice(const T& key, std::function<void (const T&) > f) {
+    FORCE_INLINE void slice(const T& key, std::function<void (T*) > f) {
         throw std::logic_error("Not implemented");
         //TODO: implement.  traversal type?
     }
 
-    FORCE_INLINE void sliceCopy(const T& key, std::function<void (const T&) > f) {
+    FORCE_INLINE void sliceCopy(const T& key, std::function<void (T*) > f) {
         throw std::logic_error("Not implemented");
         //TODO: implement.  traversal type?
     }
@@ -1440,10 +1441,10 @@ public:
         return nullptr;
     }
 
-    FORCE_INLINE void foreach(std::function<void (const T&) > f) const {
+    FORCE_INLINE void foreach(std::function<void (T*) > f) {
         for (size_t b = 0; b < size; ++b) {
             if (isUsed[b])
-                f(*array[b]);
+                f(array[b]);
         }
     }
 
@@ -1528,11 +1529,11 @@ public:
         isUsed[h] = false;
     }
 
-    void slice(const T& key, std::function<void (const T&) > f) {
+    void slice(const T& key, std::function<void (T*) > f) {
         throw std::logic_error("Not implemented");
     }
 
-    void sliceCopy(const T& key, std::function<void (const T&) > f) {
+    void sliceCopy(const T& key, std::function<void (T*) > f) {
         throw std::logic_error("Not implemented");
     }
 
@@ -1786,40 +1787,40 @@ public:
         pool.del(elem);
     }
 
-    inline void foreach(std::function<void (const T&) > f) const {
+    inline void foreach(std::function<void (T*) > f) {
 #ifndef USE_STORE_FE
         size_t lastIdx = sizeof...(INDEXES) - 1;
         index[lastIdx]->foreach(f);
 #else
         T* tmp = head;
         while (tmp) {
-            f(*tmp);
+            f(tmp);
             tmp = tmp->nxt;
         }
 #endif
     }
 
-    void slice(int idx, const T* key, std::function<void (const T&) > f) {
+    void slice(int idx, const T* key, std::function<void (T*) > f) {
         index[idx]->slice(*key, f);
     }
 
-    void slice(int idx, const T& key, std::function<void (const T&) > f) {
+    void slice(int idx, const T& key, std::function<void (T*) > f) {
         index[idx]->slice(key, f);
     }
 
-    void sliceCopy(int idx, const T* key, std::function<void (const T&) > f) {
+    void sliceCopy(int idx, const T* key, std::function<void (T*) > f) {
         index[idx]->sliceCopy(*key, f);
     }
 
-    void sliceCopy(int idx, const T& key, std::function<void (const T&) > f) {
+    void sliceCopy(int idx, const T& key, std::function<void (T*) > f) {
         index[idx]->sliceCopy(key, f);
     }
 
-    void sliceCopyDependent(int idx, const T* key, std::function<void (const T&) > f) {
+    void sliceCopyDependent(int idx, const T* key, std::function<void (T*) > f) {
         index[idx]->sliceCopy(*key, f);
     }
 
-    void sliceCopyDependent(int idx, const T& key, std::function<void (const T&) > f) {
+    void sliceCopyDependent(int idx, const T& key, std::function<void (T*) > f) {
         index[idx]->sliceCopy(key, f);
     }
 
@@ -1893,8 +1894,10 @@ public:
     void serialize(Archive& ar, const unsigned int version) const {
         ar << "\n\t\t";
         dbtoaster::serialize_nvp(ar, "count", count());
-        foreach([&ar] (const T & e) {
-            ar << "\n"; dbtoaster::serialize_nvp_tabbed(ar, "item", e, "\t\t"); });
+        //SBJ: Hack! fix it!  Cannot use store.foreach directly , as the last index may not be ListIndex created
+        auto idx = const_cast<Index<T, V> *> (index[0]);
+        idx->foreach([&ar] (T * e) {
+            ar << "\n"; dbtoaster::serialize_nvp_tabbed(ar, "item", *e, "\t\t"); });
     }
 
     inline V getValueOrDefault(const T& key, int mainIdx = 0) const {
@@ -2077,16 +2080,25 @@ public:
         del(&obj, 0);
     }
 
-    FORCE_INLINE void foreach(std::function<void (const T&) > f) const {
+    FORCE_INLINE void foreach(std::function<void (T*) > f) {
         Container *cur = head;
         while (cur != nullptr) {
-            f(*cur->obj);
+            f(cur->obj);
+            cur = cur->next;
+        }
+    }
+
+    //Not overloaded; const foreach
+
+    FORCE_INLINE void foreach(std::function<void (const T*) > f) const {
+        Container *cur = head;
+        while (cur != nullptr) {
+            f(cur->obj);
             cur = cur->next;
         }
     }
 
     FORCE_INLINE T* get(const T& key) const {
-        throw std::logic_error("get disabled for list index for now");
         Container *cur = head;
         while (cur != nullptr) {
             if (IDX_FN::cmp(key, *cur->obj) == 0)
@@ -2120,18 +2132,18 @@ public:
         throw std::logic_error("Not implemented");
     }
 
-    inline void slice(const T& key, std::function<void (const T&) > f) {
-        throw std::logic_error("slice disabled for list index for now");
+    inline void slice(const T& key, std::function<void (T*) > f) {
+
         Container *cur = head;
         while (cur != nullptr) {
             if (IDX_FN::cmp(key, *cur->obj) == 0)
-                f(*cur->obj);
+                f(cur->obj);
             cur = cur->next;
         }
     }
 
-    inline void sliceCopy(const T& key, std::function<void (const T&) > f) {
-        throw std::logic_error("slicecopy disabled for list index for now");
+    inline void sliceCopy(const T& key, std::function<void (T*) > f) {
+
         std::vector<T*> entries;
         Container *cur = head;
         while (cur != nullptr) {
@@ -2140,17 +2152,34 @@ public:
             cur = cur->next;
         }
         for (auto it : entries) {
-            f(*it);
+            f(it);
         }
     }
 
     FORCE_INLINE void update(T* obj) {
         //TODO: SBJ: Check
         if (is_unique) {
-            throw std::logic_error("update disabled for list index for now");
+
             del(obj);
             add(obj);
         }
+    }
+
+    bool operator==(const ListIndex<T, V, IDX_FN, is_unique>& right) const {
+        auto hasher = [](const T & e) {
+            return IDX_FN::hash(e);
+        };
+        auto equals = [](const T& e1, const T & e2) {
+            return IDX_FN::cmp(e1, e2) == 0;
+        };
+        std::unordered_set<T, decltype(hasher), decltype(equals) > s1(10000, hasher, equals), s2(10000, hasher, equals);
+        foreach([&](const T * e) {
+            s1.insert(*e);
+        });
+        right.foreach([&](const T * e) {
+            s2.insert(*e);
+        });
+        return s1 == s2;
     }
 
     ~ListIndex() {

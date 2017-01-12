@@ -65,6 +65,8 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
       doc"override def hash(${h.i} : ${h.i.tp}) = ${blockToDocument(h.o)}" :/:
         doc"override def cmp(${c.i1} : ${c.i1.tp} , ${c.i2} : ${c.i2.tp}) = ${blockToDocument(c.o)}") :/: doc"}"
     case StoreCopyIntoPool(_, _) => Document.empty
+    case s@SetApplyObject1(Def(LiftedSeq(e))) => doc"Set.apply[${s.typeT}](${e.mkDocument(", ")}) //Apply1"
+    case s@SetApplyObject2() => doc"Set.apply[${s.typeT}]() //Apply2"
     case _ => super.nodeToDocument(node)
   }
 

@@ -156,6 +156,10 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     implicit val entryTp = s.tp
     __lambda((e: Rep[SEntry]) => {
       val hash = __newVar(unit(0xcafebabe))
+      /* SBJ: This is wrong ! Should not hash all columns other than key columns.
+    But this is okay for now as we are doing this only for the ones with no primary key attached, and they are not updated
+    ListIndex ignores hash.
+     */
       val cols2 = if (cols == Nil) (1 to s.sch.size).toList else cols
       cols2.foreach(c => {
         implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]

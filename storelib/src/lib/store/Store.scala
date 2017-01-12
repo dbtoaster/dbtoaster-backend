@@ -72,6 +72,10 @@ abstract class EntryIdx[E <: Entry] {
 case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
     val cols2 = if(cols == Nil) 1 to e.map.size else cols
+    /* SBJ: This is wrong ! Should not hash all columns other than key columns.
+     But this is okay for now as we are doing this only for the ones with no primary key attached, and they are not updated
+     ListIndex ignores hash.
+      */
     var h = 16;
     cols2.foreach(i => h = h * 41 + e.map(i).hashCode())
     h

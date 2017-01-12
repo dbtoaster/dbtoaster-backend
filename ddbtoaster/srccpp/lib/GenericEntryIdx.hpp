@@ -1,3 +1,4 @@
+
 #ifndef GEIDX_HPP
 #define GEIDX_HPP
 #include "GenericEntry.hpp"
@@ -7,6 +8,10 @@ public:
 
     FORCE_INLINE static size_t hash(const GenericEntry& e) {
         size_t h = 16;
+         /* SBJ: This is wrong ! Should not hash all columns other than key columns.
+             But this is okay for now as we are doing this only for the ones with no primary key attached, and they are not updated
+             ListIndex ignores hash.
+              */
         for(auto it : e.map){
             h = h * 41 + HASH(it.second);
         }

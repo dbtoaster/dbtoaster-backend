@@ -261,7 +261,7 @@ public:
         return map.at(i).data.s;
     }
 
-    GenericEntry* copy() {
+    GenericEntry* copy() const {
         //ONLY SHALLOW COPY for PString.
         return new GenericEntry(map);
     }

@@ -320,8 +320,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     if (q.keys.size > 0)
       "{ val " + res + " = new scala.collection.mutable.HashMap[" + tup(mapKeys.map(_.toScala)) + "," + q.map.tp.toScala + "](); " + map + ".foreach{e => " + res + " += ((" + (if (mapKeys.size >= 1) tup(mapKeys.zipWithIndex.map { case (_, i) => get(i + 1) }) else "e") + "," + get(if (mapKeys.size >= 1) (mapKeys.size + 1) else mapKeys.size) + ")) }; " + res + ".toMap }"
     else {
-      val c = ctx0(q.name)._1.asInstanceOf[IR.Sym[_]];
-      s"${c.name + c.id}"
+      q.name
     }
   }
 
@@ -608,7 +607,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
         }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
-        val copyFn = doc"${tag.typeName}* copy() { return new ${tag.typeName}(" :: fields.map(x => {
+        val copyFn = doc"${tag.typeName}* copy() const { return new ${tag.typeName}(" :: fields.map(x => {
           if (x.tpe == StringType)
             doc"*${x.name}.copy()"
           else

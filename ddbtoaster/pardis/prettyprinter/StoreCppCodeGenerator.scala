@@ -43,8 +43,18 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case Statement(sym, ab@ArrayBufferNew2()) => doc"vector<${ab.typeA}*> $sym;"
     case Statement(sym, ArrayBufferSortWith(self, f)) => doc"sort($self.begin(), $self.end(), $f);"
-    case Statement(sym, s@SetApplyObject2()) => doc"unordered_set<${s.typeT}> $sym;"
+
+    case Statement(sym, s@SetApplyObject1(Def(PardisLiftedSeq(es)))) => doc"unordered_set<${s.typeT}> $sym(${es.mkDocument("{", ", ", "}")}); //setApply1"
+    case Statement(sym, s@SetApplyObject2()) => doc"unordered_set<${s.typeT}> $sym; //setApply2"
     case Statement(sym, `Set+=`(self, elem)) => doc"$self.insert($elem);"
+
+
+    case Statement(sym, agg@AggregatorMaxObject(f)) =>
+      doc"${agg.typeE}* ${sym}result;" :/:
+        doc"MaxAggregator<${agg.typeE}, ${agg.typeR}> $sym($f, &${sym}result);"
+    case Statement(sym, agg@AggregatorMinObject(f)) =>
+      doc"${agg.typeE}* ${sym}result;" :/:
+        doc"MinAggregator<${agg.typeE}, ${agg.typeR}> $sym($f, &${sym}result);"
 
     case Statement(sym, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) =>
       val entryTp = sym.tp.asInstanceOf[StoreType[_]].typeE match {
@@ -188,12 +198,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case LiftedSeq(ops) if node.tp.isInstanceOf[SeqType[EntryIdx[_]]] => Document.empty
     case PardisLambda(_, i, o) =>
-      val tp = i.tp.typeArguments match {
-        case content :: tail => content
-        case Nil => i.tp
-      }
-      val refToPtr = doc"${i.tp} $i = const_cast<${i.tp}>(&sliceVar);"
-      doc"[&](const $tp&  sliceVar) {" :/: Document.nest(NEST_COUNT, refToPtr :: blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
+      doc"[&](${i.tp} $i) {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
     //    case PardisLambda2(_, i1, i2, o) if refSymbols.contains(i1) =>
     //      val t1 = i1.tp.typeArguments match {
