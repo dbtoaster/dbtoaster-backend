@@ -136,7 +136,7 @@ public:
         }
     }
 
-    PString* copy() {
+    PString* copy() const {
         return new PString(data_, size_ - 1);
     }
 

@@ -217,6 +217,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"$cond ? $ift : $iff"
 
     case `Int>>>1`(self, x) => doc"$self >> ($x & (8*sizeof($self)-1))"
+    case Equal(a, Constant(null)) if a.tp == StringType => doc"$a.data_ == nullptr"
     //    case Equal(a, b) if a.tp == StringType => //doc"!strcmpi($a, $b)"
     case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name)) =>
       refSymbols ++= List(h.i, c.i1, c.i2).map(_.asInstanceOf[Sym[_]])
