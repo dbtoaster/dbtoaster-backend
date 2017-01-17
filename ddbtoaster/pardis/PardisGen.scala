@@ -619,7 +619,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
         "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: serializer :/: copyFn) :/: "};"
     }
     val entries = optTP.structs.map(structToDoc).mkDocument("\n")
-    val entryIdxes = "#define int unsigned int" :/: optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n") :/: "#undef int"
+    val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
     val idxes = optTP.globalVars.map(s => s ->(collection.mutable.ArrayBuffer[(Sym[_], String, Boolean, Int)](), collection.mutable.ArrayBuffer[String]())).toMap // store -> (AB(idxSym, IdxType, uniq, other), AB(IdxName))
     optTP.initBlock.stmts.collect {
       case Statement(s, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) => {

@@ -101,6 +101,7 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
     case StoreGetCopy(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       if (idxes.primary == Nil) {
+        throw new Exception("Primarykey must be specified")
         idxes.primary = cols.map({ case Constant(v) => v })
         sym.attributes += idxes
       }

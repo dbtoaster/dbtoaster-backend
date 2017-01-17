@@ -13,7 +13,7 @@ import scala.collection.mutable
   */
 class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransformer[StoreDSL](IR) {
 
-  import IR._
+  import IR.{EntryType => _, _}
 
   def super_optimize[T: TypeRep](node: Block[T]): Block[T] = {
     val analyseProgram = classOf[RuleBasedTransformer[StoreDSL]].getDeclaredMethod("analyseProgram", classOf[Block[T]], classOf[TypeRep[T]])
@@ -63,25 +63,34 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     case StoreGet(store, Constant(idx), e) => idxGet(indexMap((store, idx)), e)(e.tp)
     case StoreGetCopyDependent(store, Constant(idx), e) => idxGetCopyDependent(indexMap((store, idx)), e)(e.tp)
     case StoreForeach(store, f) => {
+      implicit val entTp = store.tp.typeArguments(0).asInstanceOf[TypeRep[Entry]]
       val lastIdx = indexMap.collect { case ((`store`, idx), sym) => (idx, sym) }.toSeq.sortWith(_._1 > _._1)(0)
       lastIdx._2.foreach(f)
     }
-    case StoreSliceCopy(store, Constant(idx), e, f) => indexMap((store, idx)).sliceCopy(e, f)
-    case StoreSliceCopyDependent(store, Constant(idx), e, f) => indexMap((store, idx)).sliceCopyDependent(e, f)
-    case StoreSlice(store, Constant(idx), e, f) => indexMap((store, idx)).slice(e, f)
+    case StoreSliceCopy(store, Constant(idx), e, f) =>
+      implicit val entTp = e.tp.asInstanceOf[TypeRep[Entry]]
+      indexMap((store, idx)).sliceCopy(e, f)
+    case StoreSliceCopyDependent(store, Constant(idx), e, f) =>
+      implicit val entTp = e.tp.asInstanceOf[TypeRep[Entry]]
+      indexMap((store, idx)).sliceCopyDependent(e, f)
+    case StoreSlice(store, Constant(idx), e, f) =>
+      implicit val entTp = e.tp.asInstanceOf[TypeRep[Entry]]
+      indexMap((store, idx)).slice(e, f)
     case StoreUpdateCopyDependent(store, e) => {
-      implicit val typeE = e.tp.asInstanceOf[TypeRep[Entry]]
-      val idx = IdxRep(indexMap((store, 0)))(typeE)
-      val ref = idx.get(e)
-      val e2 = store.copyIntoPool(e)
+      implicit val entTp = e.tp.asInstanceOf[TypeRep[Entry]]
+      val ref = indexMap((store, 0)).get(e)
+      System.err.println(store.tp)
+      val e2 = if(Optimizer.cTransformer) store.copyIntoPool(e) else e
       indexMap.collect { case ((`store`, idx), sym) => sym.updateCopyDependent(e2, ref) }
       unit()
     }
     case StoreUpdateCopy(store, e) =>
-      val e2 = store.copyIntoPool(e)
+      implicit val entTp = e.tp.asInstanceOf[TypeRep[Entry]]
+      val e2 = if(Optimizer.cTransformer) store.copyIntoPool(e) else e
       indexMap.toSeq.sortWith(_._1._2 > _._1._2).collect { case ((`store`, idx), sym) => sym.updateCopy(e2, indexMap((store, 0))) }
       unit()
     case StoreUpdate(store, e) if updatedCols contains e =>
+      implicit val entTp = e.tp.asInstanceOf[TypeRep[Entry]]
       val idxes = store.asInstanceOf[Sym[_]].attributes.get(IndexesFlag).get.indexes
       indexMap.collect { case ((`store`, idx), sym) => {
         if (idx != 0 && !updatedCols(e).intersect(idxes(idx).cols.toSet).isEmpty) //SBJ: TODO: add checks for columns of min/max index too. What if idx0 is not primary
@@ -90,7 +99,9 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
       }
       unit()
 
-    case StoreUpdate(store, e) => indexMap.collect { case ((`store`, idx), sym) => sym.update(e) }; unit()
+    case StoreUpdate(store, e) =>
+      implicit val entTp = e.tp.asInstanceOf[TypeRep[Entry]]
+      indexMap.collect { case ((`store`, idx), sym) => sym.update(e) }; unit()
 
       //SBJ : Cannot inline delete for CPP.
 //    case StoreDeleteCopyDependent(store, e) => val ref = indexMap((store, 0)).get(e); indexMap.collect { case ((`store`, idx), sym) => sym.deleteCopyDependent(ref) }; unit()

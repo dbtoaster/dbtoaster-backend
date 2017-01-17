@@ -2166,20 +2166,15 @@ public:
     }
 
     bool operator==(const ListIndex<T, V, IDX_FN, is_unique>& right) const {
-        auto hasher = [](const T & e) {
-            return IDX_FN::hash(e);
-        };
-        auto equals = [](const T& e1, const T & e2) {
-            return IDX_FN::cmp(e1, e2) == 0;
-        };
-        std::unordered_set<T, decltype(hasher), decltype(equals) > s1(10000, hasher, equals), s2(10000, hasher, equals);
+        HashIndex<T, V, IDX_FN, true> h1, h2;
+        h1.idxId = h2.idxId = 0;
         foreach([&](const T * e) {
-            s1.insert(*e);
+            h1.insert_nocheck(const_cast<T *>(e));
         });
         right.foreach([&](const T * e) {
-            s2.insert(*e);
+            h2.insert_nocheck(const_cast<T *>(e));
         });
-        return s1 == s2;
+        return h1 == h2;
     }
 
     ~ListIndex() {

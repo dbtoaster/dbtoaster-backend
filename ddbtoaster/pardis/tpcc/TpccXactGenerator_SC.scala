@@ -23,6 +23,7 @@ object TpccXactGenerator_SC {
       case "online" => Optimizer.onlineOpts = true
       case "m3cmpmult" => Optimizer.m3CompareMultiply = true
       case "tmpvar" => Optimizer.tmpVarHoist = true
+      case "tmpmap" => Optimizer.tmpMapHoist = true
       case "idxinline" => Optimizer.indexInline = true
       case "lookupfusion" => Optimizer.indexLookupFusion = true
       case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true

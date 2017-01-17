@@ -17,6 +17,10 @@ class StoreDCE(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL]
   }
   rewrite += statement{
     case sym->st if (toRemove.contains(sym)) => ()
+      //Remove left overs after hoisting
     case sym -> (st:EntryIdxApplyObject[_]) => ()
+    case sym -> (st: EntryIdxGenericOpsObject) => ()
+    case sym -> (st: EntryIdxGenericCmpObject[_]) => ()
+    case sym -> (st: EntryIdxGenericFixedRangeOpsObject) => ()
   }
 }

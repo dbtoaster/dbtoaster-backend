@@ -1,8 +1,8 @@
 package ddbt.codegen
 
 import ch.epfl.data.sc.pardis.ir._
-import ch.epfl.data.sc.pardis.optimization.{CountingAnalysis, ParameterPromotion, DCE, TransformerHandler}
-import ch.epfl.data.sc.pardis.types.{PardisType, UnitType, RecordType}
+import ch.epfl.data.sc.pardis.optimization.{CountingAnalysis, DCE, ParameterPromotion, TransformerHandler}
+import ch.epfl.data.sc.pardis.types.{PardisType}
 import ddbt.lib.store.deep.EntryIdxIRs.EntryIdxApplyObject
 import ddbt.lib.store.deep.StoreDSL
 import ddbt.transformer._

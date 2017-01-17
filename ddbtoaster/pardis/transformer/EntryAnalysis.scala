@@ -182,10 +182,12 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   }
 
   def equal_cmp(cols: Seq[Int], s: SEntry): Rep[(SEntry, SEntry) => Int] = {
-    if (cols == Nil) {
+    if (!Optimizer.analyzeIndex || cols == Nil) {  //We might pass some cols (primary key) even if Index analysis is turned off. We dont want to consider them here
       //No index Analysis
       implicit val entryTp = s.tp
       __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => {
+        //If either is sample entry, we want the cols of the sample entry
+        //If both are full entries (happens only in TPCH), we compare all columns, except the last
         val allCols = (1 until s.sch.size).toList
         val allConds = allCols.foldLeft(unit(true))((res, i) => {
           implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
@@ -240,6 +242,21 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   }
 
   rewrite += statement {
+    case sym -> (agg@AggregatorMaxObject(f)) if entryTypes.contains(sym) =>
+      val sch = schema(sym)
+      implicit val entTp = SEntry(sch).tp
+      Aggregator.max(f)(entTp, agg.typeR, agg.order)
+
+    case sym -> (agg@AggregatorMinObject(f)) if entryTypes.contains(sym) =>
+      val sch = schema(sym)
+      implicit val entTp = SEntry(sch).tp
+      Aggregator.min(f)(entTp, agg.typeR, agg.order)
+
+    case sym -> (res@AggregatorResult(self)) if entryTypes.contains(sym) =>
+      val sch = schema(sym)
+      implicit val entTp = SEntry(sch).tp.asInstanceOf[TypeRep[Entry]]
+      aggregatorResult(self)(entTp)
+
     case sym -> (StoreGetCopy(self, idx, key, _)) if !sym.tp.isInstanceOf[RecordType[_]] => {
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp
@@ -325,7 +342,10 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         }
         case Def(node: EntryIdxGenericOpsObject) => {
 
-          val cols = if (Optimizer.analyzeIndex) node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]] else Nil
+          val cols =  node.cols match {
+            case Constant(seq : Seq[Int]) => seq
+            case _ => Nil
+          }
           lazy val news = EntryIdx.apply(hashfn(cols, entry), equal_cmp(cols, entry), unit(entry.name + "_Idx" + cols.mkString("")))
           genOps getOrElseUpdate((cols, entry), news)
         }

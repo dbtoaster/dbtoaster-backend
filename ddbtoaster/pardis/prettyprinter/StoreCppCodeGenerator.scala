@@ -226,7 +226,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val co = t(IR)(c.o)(c.o.typeT)
 
       doc" struct $name {" :/: Document.nest(NEST_COUNT,
-        doc"FORCE_INLINE static size_t hash(const ${h.i.tp}& ${h.i})  { " :: Document.nest(NEST_COUNT, blockToDocument(ho) :/: getBlockResult(ho, true)) :/: "}" :\\:
+        doc"#define int unsigned int" :\\:
+          doc"FORCE_INLINE static size_t hash(const ${h.i.tp}& ${h.i})  { " :: Document.nest(NEST_COUNT, blockToDocument(ho) :/: getBlockResult(ho, true)) :/: "}" :\\:
+          doc"#undef int" :\\:
           doc"FORCE_INLINE static char cmp(const ${c.i1.tp}& ${c.i1}, const ${c.i2.tp}& ${c.i2}) { " :: Document.nest(NEST_COUNT, blockToDocument(co) :/: getBlockResult(co, true)) :/: "}") :/: "};"
 
     case EntryIdxGenericOpsObject(Constant(cols)) =>
@@ -234,9 +236,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         val name = "GenericOps_" + cols.mkString("")
         val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
           "size_t h = 16;" :/:
-            s"for(int c : {${
-              cols.mkString(", ")
-            }})" :/:
+            s"for(int c : {${cols.mkString(", ")}})" :/:
             "  h = h * 41 + HASH(e.map.at(c));" :/:
             "return h;"
         ) :/: "}"
@@ -252,9 +252,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
               |         return 1;
               |  }
               |}else {
-              |  for(int c : {${
-            cols.mkString(", ")
-          }})
+              |  for(int c : {${cols.mkString(", ")}})
               |    if(e1.map.at(c) != e2.map.at(c))
               |      return 1;
               |}
@@ -299,18 +297,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       }").mkString("_")
       val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
         s"""size_t h = 0;
-            |int cols[] = {${
-          cols.map(_._1).mkString(", ")
-        }};
-            |int lower[] = {${
-          cols.map(_._2).mkString(", ")
-        }};
-            |int upper[] = {${
-          cols.map(_._3).mkString(", ")
-        }};
-            |for(int i = 0; i < ${
-          cols.size
-        }; ++i)
+            |int cols[] = {${cols.map(_._1).mkString(", ")}};
+            |int lower[] = {${cols.map(_._2).mkString(", ")}};
+            |int upper[] = {${cols.map(_._3).mkString(", ")}};
+            |for(int i = 0; i < ${cols.size}; ++i)
             |  h = h * (upper[i] - lower[i]) + e.getInt(cols[i]) - lower[i];  //Defined only for int
             |return h;
         """.stripMargin

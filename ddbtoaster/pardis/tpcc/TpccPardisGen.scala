@@ -352,7 +352,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |#endif
          |
       """.stripMargin
-    file.println(header :/: structs :\\: structEquals :\\: "#define int unsigned int" :\\: entryIdxes :\\: "#undef int" :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: codeGen.footer)
+    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: codeGen.footer)
     file.close()
   }
 }

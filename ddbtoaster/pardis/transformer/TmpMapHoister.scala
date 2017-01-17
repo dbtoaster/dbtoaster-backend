@@ -49,8 +49,7 @@ class TmpMapHoister(override val IR: StoreDSL) extends RecursiveRuleBasedTransfo
   rewrite += statement {
     case sym -> (s: StoreNew3[_]) if tmpMaps.contains(sym) => storeClear(sym.asInstanceOf[Rep[Store[ddbt.lib.store.Entry]]])(s.typeE.asInstanceOf[TypeRep[ddbt.lib.store.Entry]]); sym
     case sym -> (StoreIndex(self: Sym[_], _, _, _, _)) if tmpMaps.contains(self) => sym
-    case sym -> (ArrayApplyObject(Def(LiftedSeq(ei)))) if tmpArrays contains (sym) => ei.foreach(e => tmpArrays += e.asInstanceOf[Sym[_]]); sym
-    case sym -> rhs if tmpArrays contains (sym) =>  sym
+    case sym -> (ArrayApplyObject(Def(LiftedSeq(ei)))) if tmpArrays contains (sym) => sym
   }
 
 

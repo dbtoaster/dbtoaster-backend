@@ -82,14 +82,14 @@ case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
   }
 
   def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
-    val colsToCompare = if (e1.map.size > e2.map.size)
+    val colsToCompare = if (e1.map.size > e2.map.size)  //e2 is sampleEntry
       e2.map.keysIterator
-    else if (e1.map.size < e2.map.size)
+    else if (e1.map.size < e2.map.size)  //e1 is sampleEntry
       e1.map.keysIterator
-    else if (cols != Nil)
-      cols.iterator
+    else if (cols != Nil) //both are full entries. Cannot be slice
+      cols.iterator //TPCC has the keys given(except for History) and will stop here
     else
-      1 until e1.map.size //TODO: SBJ: Fix: Assumes that all columns except the last form key
+      1 until e1.map.size //TODO: SBJ: Fix: Assumes that all columns except the last form key (TPCH only).
     for (i <- colsToCompare) {
       if (e1.map.get(i).get != e2.map.get(i).get) {
         return 1
