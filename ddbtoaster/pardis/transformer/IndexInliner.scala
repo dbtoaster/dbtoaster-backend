@@ -59,7 +59,7 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
       case StructFieldDecr(e, idx, _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += idx.drop(1).toInt; ()
     }
   rewrite += rule {
-    case StoreGetCopy(store, Constant(idx), e, _) => idxGetCopy(indexMap((store, idx)), e)(e.tp)
+    case StoreGetCopy(store, Constant(idx), e) => idxGetCopy(indexMap((store, idx)), e)(e.tp)
     case StoreGet(store, Constant(idx), e) => idxGet(indexMap((store, idx)), e)(e.tp)
     case StoreGetCopyDependent(store, Constant(idx), e) => idxGetCopyDependent(indexMap((store, idx)), e)(e.tp)
     case StoreForeach(store, f) => {

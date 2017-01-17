@@ -53,9 +53,9 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
   analysis += statement {
     //      case sym -> (GenericEntryApplyObject(_, _)) => EntryTypes += sym -> EntryTypeRef; ()
 
-    case sym -> (StoreGetCopy(store, _, key@Def(SteNewSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
-    case sym -> (StoreGetCopy(store, _, key@Def(SteSampleSEntry(_, _)), _)) => add(key, store); add(sym, store); ()
-    case sym -> (StoreGetCopy(store, _, key@Def(GenericEntryApplyObject(_, _)), _)) => add(key, store); add(sym, store); ()
+    case sym -> (StoreGetCopy(store, _, key@Def(SteNewSEntry(_, _)))) => add(key, store); add(sym, store); ()
+    case sym -> (StoreGetCopy(store, _, key@Def(SteSampleSEntry(_, _)))) => add(key, store); add(sym, store); ()
+    case sym -> (StoreGetCopy(store, _, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); add(sym, store); ()
 
     case sym -> (StoreInsert(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
     case sym -> (StoreInsert(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
@@ -257,7 +257,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       implicit val entTp = SEntry(sch).tp.asInstanceOf[TypeRep[Entry]]
       aggregatorResult(self)(entTp)
 
-    case sym -> (StoreGetCopy(self, idx, key, _)) if !sym.tp.isInstanceOf[RecordType[_]] => {
+    case sym -> (StoreGetCopy(self, idx, key)) if !sym.tp.isInstanceOf[RecordType[_]] => {
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp
       self.asInstanceOf[Rep[Store[SEntry]]].getCopy(idx, key.asInstanceOf[Rep[SEntry]])

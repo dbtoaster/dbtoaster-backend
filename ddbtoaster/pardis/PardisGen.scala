@@ -462,7 +462,8 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       val mapAccess = scala.collection.mutable.HashMap[Rep[_], OpInfo]()
       //
       analysis += statement {
-        case sym -> (node@StoreGetCopy(map, _, _, _)) =>
+        case sym -> (node@StoreGetCopy
+          (map, _, _)) =>
           mapAccess.getOrElseUpdate(map, new OpInfo(0)).count += 1
           ()
       }
@@ -496,7 +497,12 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     // java.lang.System.err.println(analysisRound2.mapAccess)
 
     val allSchema = classLevelMaps.map({ case MapDef(name, tp, kt, _) => ctx0(name)._1.asInstanceOf[IR.Sym[_]] -> (kt.map(_._2) :+ tp).map(man) }) ++ tempMapSchema
-    allSchema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
+    allSchema.foreach(x => {
+      x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2)
+      val idx = new IndexedCols
+      idx.primary = (1 until x._2.size).toSeq
+      x._1.asInstanceOf[Sym[_]].attributes += idx
+    })
     tempMapSchema.clear()
     val allnames = classLevelMaps.collect { case MapDef(name, _, _, _) => name }
     val iGlobal = allnames.map(ctx0(_)._1.asInstanceOf[Sym[_]])

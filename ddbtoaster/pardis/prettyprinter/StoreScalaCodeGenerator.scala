@@ -77,7 +77,7 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
     case Statement(sym, StringExtraStringPrintfObject(size, f, Def(LiftedSeq(args)))) =>
       doc"var $sym = $f.format(${args.mkDocument(",")})" :\\:
         doc"if($sym.size > $size) " :\\: Document.nest(NEST_COUNT, doc"$sym = $sym.substring(0, $size)")
-    case Statement(sym, StoreGetCopy(self, idx, key, _)) => doc"val $sym = $self.getCopy($idx, $key)"
+    case Statement(sym, StoreGetCopy(self, idx, key)) => doc"val $sym = $self.getCopy($idx, $key)"
     case Statement(sym, arr@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"val $sym = Array[${arr.typeT}](" :: ops.collect {
       case Def(EntryIdxApplyObject(_, _, Constant(name))) => Document.text(name)
       case Def(node) => nodeToDocument(node)

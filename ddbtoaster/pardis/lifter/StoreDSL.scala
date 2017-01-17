@@ -116,14 +116,15 @@ trait StoreDSL extends
 
     //For TPCC
     def get1(args: (Int, Rep[Any])*): Rep[E] = {
-      stGet(self.asInstanceOf[Rep[Store[E]]], args.map(_._1), stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args))
+      stGet(self.asInstanceOf[Rep[Store[E]]], stSampleEntry(self.asInstanceOf[Rep[Store[E]]], args))
     }
 
 
   }
 
-  def __newStoreNamed[E <: ddbt.lib.store.Entry](name: String)(implicit cE : Manifest[E], typeE : TypeRep[E]) : Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name), StoreNew2[E]()(typeE, cE)))
-  def __newStoreNamed2[E <: ddbt.lib.store.Entry](name: String, n : Rep[Int], ops : Rep[Array[EntryIdx[E]]])(implicit cE : Manifest[E], typeE : TypeRep[E]) : Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name), StoreNew3[E](n, ops)(typeE, cE)))
+  def __newStoreNamed[E <: ddbt.lib.store.Entry](name: String)(implicit cE: Manifest[E], typeE: TypeRep[E]): Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name), StoreNew2[E]()(typeE, cE)))
+
+  def __newStoreNamed2[E <: ddbt.lib.store.Entry](name: String, n: Rep[Int], ops: Rep[Array[EntryIdx[E]]])(implicit cE: Manifest[E], typeE: TypeRep[E]): Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name), StoreNew3[E](n, ops)(typeE, cE)))
 
   //override   def record_newDef[T: TypeRep](fields: Seq[(String, Boolean, Rep[Any])]): Def[T] = {
   //  val fieldSyms = createFieldsSyms(fields)
@@ -160,7 +161,6 @@ trait StoreDSL extends
   }
 
   def m3_apply[T: TypeRep](name1: String, args: List[Rep[_]]): Rep[T] = M3Apply[T](name1, args)
-
 
 
   //case class M3Add[E<:Entry:TypeRep](s:Rep[Store[E]], e:Rep[E]) extends FunctionDef[E](Some(s), "add", List(List(e)))
@@ -277,12 +277,16 @@ trait StoreDSL extends
     var idx = 0
     if (tmp) {
       // this never happens in practice
-      __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {currentEnt.update(n, entVal); map.updateCopy(currentEnt)}) // same
+      __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {
+        currentEnt.update(n, entVal); map.updateCopy(currentEnt)
+      }) // same
     } else {
       __ifThenElse(infix_==(entVal, unit(zero(lastMan))), {
         __ifThenElse(infix_==(currentEnt, unit(null)), unit(()), map.deleteCopy(currentEnt))
       }, {
-        __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {currentEnt.update(n, entVal); map.updateCopy(currentEnt)}) // same
+        __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {
+          currentEnt.update(n, entVal); map.updateCopy(currentEnt)
+        }) // same
       })
     }
   }
@@ -290,15 +294,7 @@ trait StoreDSL extends
   def steGet[E <: Entry : TypeRep, T: TypeRep](x: Rep[E], i: Int): Rep[T] = //SteGet[E, T](x, i)
     x.get[T](unit(i))
 
-  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], keyCols: Seq[Int], key: Rep[E]): Rep[E] = x.getCopy(unit(0), key, keyCols.map(unit(_)): _*)
-
-  //Assuming full entry of TPCH
-  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], key: Rep[E]): Rep[E] = {
-    val keyCols = key match {
-      case Def(SteNewSEntry(_, args)) => args
-    }
-    stGet(x, (1 until keyCols.size).toList, key)(EntryType.asInstanceOf[TypeRep[E]])
-  }
+  def stGet[E <: Entry : TypeRep](x: Rep[Store[E]], key: Rep[E]): Rep[E] = storeGetCopy(x, unit(0), key)(EntryType.asInstanceOf[TypeRep[E]])
 
   def stClear[E <: Entry : TypeRep](x: Rep[Store[E]]): Rep[Unit] = x.clear //StClear[E](x)
 
@@ -326,7 +322,7 @@ trait StoreDSL extends
 
   def dtGetTime(x: Rep[Date]): Rep[Long] = dateGetTime(x)
 
-  def stProxyGet[E <: Entry : TypeRep](x: Rep[Store[E]], args: (Int, Rep[Any])*): Rep[E] = stGet[E](x, (1 to args.size).toList, stSampleEntry[E](x, args))
+  def stProxyGet[E <: Entry : TypeRep](x: Rep[Store[E]], args: (Int, Rep[Any])*): Rep[E] = stGet[E](x, stSampleEntry[E](x, args))
 
   def stSampleEntry[E <: Entry : TypeRep](x: Rep[Store[E]], args: Seq[(Int, Rep[Any])]): Rep[E] = SteSampleSEntry[E](x, args)
 

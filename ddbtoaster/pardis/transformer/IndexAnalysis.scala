@@ -98,15 +98,15 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
     //Check TPCH
 
     //Causes Issues when get is used without they key colums. So temporarily disabled.
-    case StoreGetCopy(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
-      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
-      if (idxes.primary == Nil) {
-        throw new Exception("Primarykey must be specified")
-        idxes.primary = cols.map({ case Constant(v) => v })
-        sym.attributes += idxes
-      }
-      ()
-    }
+//    case StoreGetCopy(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
+//      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
+//      if (idxes.primary == Nil) {
+//        throw new Exception("Primarykey must be specified")
+//        idxes.primary = cols.map({ case Constant(v) => v })
+//        sym.attributes += idxes
+//      }
+//      ()
+//    }
 
     case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMaxObject(Def(f@PardisLambda(_, _, _))))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
@@ -288,7 +288,7 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
   rewrite += rule {
     case AggregatorResult(agg) => {
       val t = aggResultMap(agg)
-      StoreGetCopy(t._1.asInstanceOf[Rep[Store[Entry]]], t._2, t._3.asInstanceOf[Rep[Entry]], __liftSeq(List(unit(-1))))
+      StoreGetCopy(t._1.asInstanceOf[Rep[Store[Entry]]], t._2, t._3.asInstanceOf[Rep[Entry]])
     }
   }
   rewrite += rule {
