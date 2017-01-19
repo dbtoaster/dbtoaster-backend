@@ -156,12 +156,9 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     implicit val entryTp = s.tp
     __lambda((e: Rep[SEntry]) => {
       val hash = __newVar(unit(0xcafebabe))
-      /* SBJ: This is wrong ! Should not hash all columns other than key columns.
-    But this is okay for now as we are doing this only for the ones with no primary key attached, and they are not updated
-    ListIndex ignores hash.
-     */
-      val cols2 = if (cols == Nil) (1 to s.sch.size).toList else cols
-      cols2.foreach(c => {
+      if (cols == Nil)
+        throw new Exception("Cols should not be empty for EntryIdx hash")
+      cols.foreach(c => {
         implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]
         //System.err.println(s"Getting field $c of $e in hash")
         val mix_1 = unit(0xcc9e2d51) * elemhash(fieldGetter(e, "_" + c)(tp))
@@ -182,21 +179,47 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   }
 
   def equal_cmp(cols: Seq[Int], s: SEntry): Rep[(SEntry, SEntry) => Int] = {
-    if (!Optimizer.analyzeIndex || cols == Nil) {  //We might pass some cols (primary key) even if Index analysis is turned off. We dont want to consider them here
+    if (cols == Nil)
+      throw new Exception("Cols should not be empty for EntryIdx cmp")
+    if (!Optimizer.analyzeIndex) {
+      //We might pass some cols (primary key) even if Index analysis is turned off. We dont want to consider them here
       //No index Analysis
       implicit val entryTp = s.tp
       __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => {
         //If either is sample entry, we want the cols of the sample entry
-        //If both are full entries (happens only in TPCH), we compare all columns, except the last
-        val allCols = (1 until s.sch.size).toList
-        val allConds = allCols.foldLeft(unit(true))((res, i) => {
-          implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-          res && {
-            val v1 = fieldGetter(e1, "_" + i)(tp)
-            val v2 = fieldGetter(e2, "_" + i)(tp)
-            val vNull = nullValue(s.sch(i - 1))
-            ((v1 __== vNull) || (v2 __== vNull) || (v1 __== v2))
-          }
+        val allConds = __ifThenElse(fieldGetter(e1, "isSE"), {
+          val allCols = (1 to s.sch.size).toList
+          allCols.foldLeft(unit(true))((res, i) => {
+            implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
+            res && {
+              val v1 = fieldGetter(e1, "_" + i)(tp)
+              val v2 = fieldGetter(e2, "_" + i)(tp)
+              val vNull = nullValue(s.sch(i - 1))
+              (v1 __== vNull) || (v1 __== v2)
+            }
+          })
+        }, {
+          __ifThenElse(fieldGetter(e2, "isSE"), {
+            val allCols = (1 to s.sch.size).toList
+            allCols.foldLeft(unit(true))((res, i) => {
+              implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
+              res && {
+                val v1 = fieldGetter(e1, "_" + i)(tp)
+                val v2 = fieldGetter(e2, "_" + i)(tp)
+                val vNull = nullValue(s.sch(i - 1))
+                (v2 __== vNull) || (v1 __== v2)
+              }
+            })
+          }, {
+            cols.foldLeft(unit(true))((res, i) => {
+              implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
+              res && {
+                val v1 = fieldGetter(e1, "_" + i)(tp)
+                val v2 = fieldGetter(e2, "_" + i)(tp)
+                (v1 __== v2)
+              }
+            })
+          })
         })
         BooleanExtra.conditional(allConds, unit(0), unit(1))
       })
@@ -266,7 +289,8 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     case sym -> (GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp
-      __new[SEntry](args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1)): _*)
+      val allargs: Seq[(String, Boolean, Expression[Any])] = (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1))
+      __new[SEntry](allargs: _*)
     }
     case sym -> (GenericEntryApplyObject(Constant("SteSampleSEntry"), Def(LiftedSeq(args)))) if entryTypes.contains(sym) => {
       val sch = schema(sym)
@@ -274,21 +298,22 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         case (Constant(v: Int), i) if i < args.size / 2 => v -> (args(i + args.size / 2))
       }.toMap
       implicit val entTp = SEntry(sch).tp
-      val allargs = (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1)))))
-      __new[SEntry](allargs.map(a => (a._1, true, a._2)): _*)
+      val allargs =  (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
+      __new[SEntry](allargs: _*)
     }
 
     case sym -> (SteNewSEntry(_, args)) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp
-      __new[SEntry](args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1)): _*)
+      val allargs = (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1))
+      __new[SEntry](allargs: _*)
     }
     case sym -> (SteSampleSEntry(_, args)) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       val cols = args.toMap
       implicit val entTp = SEntry(sch).tp
-      val allargs = (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1)))))
-      __new[SEntry](allargs.map(a => (a._1, true, a._2)): _*)
+      val allargs = (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
+      __new[SEntry](allargs: _*)
     }
     case sym -> (PardisNewVar(v)) if entryTypes.contains(sym) => {
       val sch = schema(sym)
@@ -326,12 +351,16 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val entry = SEntry(sch)
       implicit val entryTp = entry.tp
       val tag = entryTp.asInstanceOf[RecordType[SEntry]].tag
-      structsDefMap += (tag -> PardisStructDef(tag, sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true)), Nil).asInstanceOf[PardisStructDef[Any]])
+      val allfields = (if(Optimizer.analyzeIndex) Nil else List(StructElemInformation("isSE", BooleanType.asInstanceOf[TypeRep[Any]], true))) ++ sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true))
+      structsDefMap += (tag -> PardisStructDef(tag, allfields, Nil).asInstanceOf[PardisStructDef[Any]])
       val ops_ = ops.collect {
         case Def(node: EntryIdxGenericCmpObject[_]) => {
           implicit val typeR = node.typeR
           //SBJ: TODO: Handle duplicity
-          val cols = if (Optimizer.analyzeIndex) node.cols.asInstanceOf[Constant[Seq[_]]].underlying.asInstanceOf[Seq[Int]] else Nil
+          val cols = node.cols match {
+            case Constant(seq: Seq[Int]) => seq
+//            case _ => Nil
+          }
           val hl = hashfn(cols, entry)
           val cl = order_cmp(node.f, entry)
           val ordCol = Def.unapply(node.f).get.asInstanceOf[PardisLambda[_, _]].o.stmts(0).rhs match {
@@ -342,9 +371,9 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         }
         case Def(node: EntryIdxGenericOpsObject) => {
 
-          val cols =  node.cols match {
-            case Constant(seq : Seq[Int]) => seq
-            case _ => Nil
+          val cols = node.cols match {
+            case Constant(seq: Seq[Int]) => seq
+//            case _ => Nil
           }
           lazy val news = EntryIdx.apply(hashfn(cols, entry), equal_cmp(cols, entry), unit(entry.name + "_Idx" + cols.mkString("")))
           genOps getOrElseUpdate((cols, entry), news)

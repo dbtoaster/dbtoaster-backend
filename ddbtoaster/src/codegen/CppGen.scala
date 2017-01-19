@@ -514,10 +514,11 @@ trait ICppGen extends IScalaGen {
 
     def genTableTriggers = s0.sources.filter(!_.stream).map{ s =>
       val name = s.schema.name
-      val genericEntryParam = if(usingPardis && !Optimizer.analyzeEntry) "false_type(), " else ""
+      val entryParam = if(usingPardis && (!Optimizer.analyzeEntry || !Optimizer.analyzeIndex)) "false_type(), " else ""
+
       val fields = s.schema.fields
       "void on_insert_"+name+"("+fields.map{case (fld,tp) => "const "+tp.toCpp+" "+fld }.mkString(", ")+") {\n"+
-      "  "+name+"_entry e("+genericEntryParam+fields.map{case (fld,_) => fld }.mkString(", ")+", 1L);\n"+
+      "  "+name+"_entry e("+entryParam+fields.map{case (fld,_) => fld }.mkString(", ")+", 1L);\n"+
       "  "+INSERT_TO_MAP_FUNC(name)+"(e);\n"+
       "}\n\n"+
       generateUnwrapFunction(EvtAdd(s.schema))+
@@ -531,7 +532,7 @@ trait ICppGen extends IScalaGen {
         "  size_t sz = eaList.size();\n"+
         "  for(size_t i=0; i < sz; i++){\n"+
         "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
-        "    "+name+"_entry e("+genericEntryParam+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"1L);\n"+
+        "    "+name+"_entry e("+entryParam+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"1L);\n"+
         "    "+INSERT_TO_MAP_FUNC(name)+"(e);\n"+
         "  }\n"+
         "}\n\n"

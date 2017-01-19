@@ -71,25 +71,22 @@ abstract class EntryIdx[E <: Entry] {
 
 case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
-    val cols2 = if(cols == Nil) 1 to e.map.size else cols
-    /* SBJ: This is wrong ! Should not hash all columns other than key columns.
-     But this is okay for now as we are doing this only for the ones with no primary key attached, and they are not updated
-     ListIndex ignores hash.
-      */
+    if (cols == Nil)
+      throw new Exception("Cols should not be empty for GenOps")
     var h = 16;
-    cols2.foreach(i => h = h * 41 + e.map(i).hashCode())
+    cols.foreach(i => h = h * 41 + e.map(i).hashCode())
     h
   }
 
   def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
-    val colsToCompare = if (e1.map.size > e2.map.size)  //e2 is sampleEntry
+    val colsToCompare = if (e1.map.size > e2.map.size) //e2 is sampleEntry
       e2.map.keysIterator
-    else if (e1.map.size < e2.map.size)  //e1 is sampleEntry
+    else if (e1.map.size < e2.map.size) //e1 is sampleEntry
       e1.map.keysIterator
     else if (cols != Nil) //both are full entries. Cannot be slice
       cols.iterator //TPCC has the keys given(except for History) and will stop here
     else
-      1 until e1.map.size //TODO: SBJ: Fix: Assumes that all columns except the last form key (TPCH only).
+      throw new Exception("Cols should not be empty for GenOps")
     for (i <- colsToCompare) {
       if (e1.map.get(i).get != e2.map.get(i).get) {
         return 1
@@ -101,6 +98,8 @@ case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
 
 case class GenericFixedRangeOps(val colsRange: Seq[(Int, Int, Int)]) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
+    if (colsRange == Nil)
+      throw new Exception("Cols should not be empty for GenFixedOps")
     colsRange.foldLeft((0))((acc, cur) => (acc * (cur._3 - cur._2) + e.get[Int](cur._1) - cur._2))
     //Acc = (hash, weight)
     //Cur = (column_no, lower_bound, upper_bound)
@@ -423,7 +422,8 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     if (key == null) return key;
     idxs(idx).getCopyDependent(key)
   }
-//TODO: Change to last index. Causes problems for result-checking -> use another kind of foreach for result checking
+
+  //TODO: Change to last index. Causes problems for result-checking -> use another kind of foreach for result checking
   // assumes idxs(0) is the most efficient index
   def foreach(f: E => Unit): Unit = time("foreach") {
     idxs(0).foreach(f)
@@ -578,7 +578,7 @@ class IdxDirect[E <: Entry](st: Store[E], idx: Int, unique: Boolean, var data: A
     else w("data is note dense, immediate mode")
   }
 
-//  prepare
+  //  prepare
   size = data.length
 
   override def unsafeInsert(e: E) {

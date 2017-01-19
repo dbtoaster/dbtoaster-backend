@@ -4,6 +4,7 @@ import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter._
 import ch.epfl.data.sc.pardis.types._
 import ch.epfl.data.sc.pardis.utils.document._
+import ddbt.codegen.Optimizer
 import ddbt.lib.store.deep.StoreDSL
 
 
@@ -52,7 +53,11 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
 
     override def body(structDef: PardisStructDef[_]): Document = {
       val constructor = doc"def this() = " :: structDef.fields.map(x => nullValue(x.tpe)).mkDocument("this(", ", ", ")")
-      doc" {$constructor ; def copy = ${structDef.tag.typeName}(${(1 to structDef.fields.size).map("_" + _).mkString(", ")}) }"
+      val copyFn = if (Optimizer.analyzeIndex)
+        (1 to structDef.fields.size).map("_" + _)
+      else
+        "isSE" :: (1 to structDef.fields.size - 1).map("_" + _).toList
+      doc" {$constructor ; def copy = ${structDef.tag.typeName}(${copyFn.mkString(", ")}) }"
     }
   }
 

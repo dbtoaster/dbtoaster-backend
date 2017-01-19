@@ -304,7 +304,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     if (Optimizer.analyzeEntry) {
       val ctx = ctx0(map)
       val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
-      map + s".unsafeInsert(0, $name(" + keyNames.map(e => e._1).mkString(",") + ",1L))"
+      map + s".unsafeInsert(0, $name("+ (if(Optimizer.analyzeIndex) "" else "false,")  + keyNames.map(e => e._1).mkString(",") + ",1L))"
     }
     else
       map + ".unsafeInsert(0, GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ",1L))"
@@ -400,6 +400,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
   var m3System: M3.System = null
 
   override def genPardis(s0: M3.System): (String, String, String) = {
+    ExpressionSymbol.globalId = 0
     m3System = s0
     val classLevelMaps = s0.triggers.filter(_.evt match {
       case EvtBatchUpdate(s) => true
@@ -508,7 +509,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     val iGlobal = allnames.map(ctx0(_)._1.asInstanceOf[Sym[_]])
     val initTP = TransactionProgram(globalMembersBlock, iGlobal, tsResBlks, Nil, Nil)
     val optTP = new Optimizer(IR).optimize(initTP)
-    ExpressionSymbol.globalId = 0
+
     val printInfoDef = doc"def printMapsInfo() = {}"
 
     genCodeForProgram(optTP)

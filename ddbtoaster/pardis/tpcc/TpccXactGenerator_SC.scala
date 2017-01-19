@@ -74,7 +74,7 @@ object TpccXactGenerator_SC {
       unit((1))
     }
     var lang = "cpp"
-//    var lang = "scala"
+    //    var lang = "scala"
     val codeGen = lang match {
       case "scala" => new TpccPardisScalaGen(Context)
       case "cpp" => Optimizer.cTransformer = true;
@@ -132,6 +132,7 @@ object TpccXactGenerator_SC {
     val StockEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, IntType, IntType, IntType, StringType)
 
     val newOrderKey = List(1, 2, 3)
+    val historyKey = List(1, 2, 3, 4, 5, 6, 7, 8)
     val wareHouseKey = List(1)
     val itemKey = List(1)
     val orderKey = List(1, 2, 3)
@@ -151,7 +152,7 @@ object TpccXactGenerator_SC {
     val stockTbl = __newStoreNamed[GenericEntry]("stockTbl")
 
     val codeForOutput = false
-    val allKeys = List(newOrderTbl -> newOrderKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
+    val allKeys = List(newOrderTbl -> newOrderKey, historyTbl -> historyKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
     val schema = List[(Rep[_], List[TypeRep[_]])](newOrderTbl -> NewOrderEntry, historyTbl -> HistoryEntry, warehouseTbl -> WarehouseEntry, itemTbl -> ItemEntry, orderTbl -> OrderEntry, districtTbl -> DistrictEntry, orderLineTbl -> OrderLineEntry, customerTbl -> CustomerEntry, stockTbl -> StockEntry)
 
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
@@ -534,37 +535,37 @@ object TpccXactGenerator_SC {
           }
           d_id = d_id + 1
         }
-//        if ($(showOutput)) {
-//          var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
-//            " Date: " + $(datetime) +
-//            "\n\n Warehouse: " + $(w_id) +
-//            "\n Carrier:   " + $(o_carrier_id) +
-//            "\n\n Delivered Orders\n"
-//          var skippedDeliveries = 0
-//          var i: Int = 1
-//
-//          while (i <= 10) {
-//            if (orderIDs(i - 1) >= 0) {
-//              output = output + ("  District ") +
-//                (if (i < 10) " " else "") +
-//                (i) +
-//                (": Order number ") +
-//                (orderIDs(i - 1)) +
-//                (" was delivered.\n")
-//            }
-//            else {
-//              output = output + ("  District ") +
-//                (if (i < 10) " " else "") +
-//                (i) +
-//                (": No orders to be delivered.\n")
-//              skippedDeliveries += 1
-//            }
-//            i += 1
-//          }
-//          output = output + ("+-----------------------------------------------------------------+\n\n")
-//          println(output)
-//          ()
-//        }
+        //        if ($(showOutput)) {
+        //          var output = "\n+---------------------------- DELIVERY ---------------------------+\n" +
+        //            " Date: " + $(datetime) +
+        //            "\n\n Warehouse: " + $(w_id) +
+        //            "\n Carrier:   " + $(o_carrier_id) +
+        //            "\n\n Delivered Orders\n"
+        //          var skippedDeliveries = 0
+        //          var i: Int = 1
+        //
+        //          while (i <= 10) {
+        //            if (orderIDs(i - 1) >= 0) {
+        //              output = output + ("  District ") +
+        //                (if (i < 10) " " else "") +
+        //                (i) +
+        //                (": Order number ") +
+        //                (orderIDs(i - 1)) +
+        //                (" was delivered.\n")
+        //            }
+        //            else {
+        //              output = output + ("  District ") +
+        //                (if (i < 10) " " else "") +
+        //                (i) +
+        //                (": No orders to be delivered.\n")
+        //              skippedDeliveries += 1
+        //            }
+        //            i += 1
+        //          }
+        //          output = output + ("+-----------------------------------------------------------------+\n\n")
+        //          println(output)
+        //          ()
+        //        }
         1
       }.toRep
     }
@@ -589,15 +590,15 @@ object TpccXactGenerator_SC {
           i += 1
         }
         val stock_count = unique_ol_i_id.size
-//        if ($(showOutput)) {
-//          val output = "\n+-------------------------- STOCK-LEVEL --------------------------+" +
-//            "\n Warehouse: " + $(w_id) +
-//            "\n District:  " + $(d_id) +
-//            "\n\n Stock Level Threshold: " + $(threshold) +
-//            "\n Low Stock Count:       " + stock_count +
-//            "\n+-----------------------------------------------------------------+\n\n"
-//          println(output)
-//        }
+        //        if ($(showOutput)) {
+        //          val output = "\n+-------------------------- STOCK-LEVEL --------------------------+" +
+        //            "\n Warehouse: " + $(w_id) +
+        //            "\n District:  " + $(d_id) +
+        //            "\n\n Stock Level Threshold: " + $(threshold) +
+        //            "\n Low Stock Count:       " + stock_count +
+        //            "\n+-----------------------------------------------------------------+\n\n"
+        //          println(output)
+        //        }
         1
       }.toRep
     }

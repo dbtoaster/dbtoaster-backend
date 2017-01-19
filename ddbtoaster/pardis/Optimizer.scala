@@ -82,7 +82,7 @@ class Optimizer(val IR: StoreDSL) {
   pipeline += new StoreDCE(IR)
 
   if (Optimizer.cTransformer) {
-    pipeline += new ScalaConstructsToCTranformer(IR, false)
+    pipeline += new ScalaConstructsToCTranformer(IR, false)   //P.S.  This transformer is also used inside StoreCppCodeGenerator to convert hoisted lambdas. TODO: somehow convert the lambdas here itself
     pipeline += new ScalaStructToMallocTransformer(IR)
     pipeline += new StringToCTransformer(IR)
   }
