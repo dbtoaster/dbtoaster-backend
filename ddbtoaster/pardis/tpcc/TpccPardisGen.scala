@@ -99,6 +99,9 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
   override def header: String = codeGen.header +
     s"""
+       |#define SC_GENERATED 1
+       |#define USING_GENERIC_ENTRY ${!Optimizer.analyzeEntry}
+       |
        |#include <algorithm>
        |#include <vector>
        |#include <unordered_set>
@@ -107,8 +110,6 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include "hpds/pstring.hpp"
        |#include "hpds/pstringops.hpp"
        |#include "program_base.hpp"
-       |
-       |#define USING_GENERIC_ENTRY ${!Optimizer.analyzeEntry}
        |
        |#ifdef NUMWARE
        |  const int numWare = NUMWARE;

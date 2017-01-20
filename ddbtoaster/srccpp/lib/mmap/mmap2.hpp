@@ -318,7 +318,7 @@ public:
     typedef struct __IdxNode {
         HASH_RES_t hash;
         T* obj;
-        struct __IdxNode* nxt;
+        struct __IdxNode* nxt, *prv;
     } IdxNode; //  the linked list is maintained 'compactly': if a IdxNode has a nxt, it is full.
     IdxNode* buckets_;
     size_t size_;
@@ -358,7 +358,7 @@ private:
                 if (n->obj) { //add_(n->obj); // does not resize the bucket array, does not maintain count
                     h = n->hash;
                     na = &buckets_[h % size_];
-                    n->obj->backPtrs[Index<T, V>::idxId] = na;
+
                     if (na->obj) {
                         tmp_allocated_from_pool = true;
                         nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -366,14 +366,23 @@ private:
                         //to preserve the order of elements, as it is required for
                         //non-unique hash maps
                         nw->hash = na->hash;
+                        na->obj->backPtrs[Index<T, V>::idxId] = nw;
                         nw->obj = na->obj;
+
                         na->hash = h;
+                        n->obj->backPtrs[Index<T, V>::idxId] = na;
                         na->obj = n->obj;
+
                         nw->nxt = na->nxt;
+                        if (nw->nxt)
+                            nw->nxt->prv = nw;
+
+                        nw->prv = na;
                         na->nxt = nw;
                     } else { // space left in last IdxNode
                         na->hash = h;
                         na->obj = n->obj; //na->nxt=nullptr;
+                        n->obj->backPtrs[Index<T, V>::idxId] = na;
                     }
                 }
                 if (pooled) {
@@ -548,7 +557,6 @@ public:
         }
         size_t b = h % size_;
         IdxNode* n = &buckets_[b];
-        obj->backPtrs[idxId] = (void *) n; //store head of bucket in backPtr
         IdxNode* nw;
 
         if (is_unique) {
@@ -556,13 +564,21 @@ public:
             if (n->obj) {
                 allocated_from_pool_ = true;
                 nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
+
                 nw->hash = h;
+                obj->backPtrs[idxId] = nw;
                 nw->obj = obj;
+
                 nw->nxt = n->nxt;
+                if (nw->nxt)
+                    nw->nxt->prv = nw;
+
                 n->nxt = nw;
+                nw->prv = n;
             } else { // space left in last IdxNode
                 n->hash = h;
                 n->obj = obj; //n->nxt=nullptr;
+                obj->backPtrs[idxId] = n;
             }
         } else {
             // ++count_;
@@ -570,6 +586,7 @@ public:
                 ++count_;
                 n->hash = h;
                 n->obj = obj; //n->nxt=nullptr;
+                obj->backPtrs[idxId] = n;
                 return;
             }
             do {
@@ -578,8 +595,14 @@ public:
                     nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
                     nw->hash = h;
                     nw->obj = obj;
+                    obj->backPtrs[idxId] = nw;
+
                     nw->nxt = n->nxt;
+                    if (nw->nxt)
+                        nw->nxt->prv = nw;
+
                     n->nxt = nw;
+                    nw->prv = n;
                     return;
                 }/*else {
           //go ahead, and look for an element in the same slice
@@ -596,11 +619,19 @@ public:
             //non-unique hash maps (as the first element might be the start of)
             //a chain of non-unique elements belonging to the same slice
             nw->hash = n->hash;
+            n->obj->backPtrs[idxId] = nw;
             nw->obj = n->obj;
+
             n->hash = h;
+            obj->backPtrs[idxId] = n;
             n->obj = obj;
+
             nw->nxt = n->nxt;
+            if (nw->nxt)
+                nw->nxt->prv = nw;
+
             n->nxt = nw;
+            nw->prv = n;
             // return;
             // }
         }
@@ -614,50 +645,47 @@ public:
     // deletes an existing elements (equality by pointer comparison)
 
     FORCE_INLINE void del(const T& obj) {
+        throw std::logic_error("del by reference not supported");
         const T* ptr = get(obj);
         if (ptr) del(ptr);
     }
 
     FORCE_INLINE void del(const T& obj, const HASH_RES_t h) {
+        throw std::logic_error("del by reference not supported");
         const T* ptr = get(obj, h);
         if (ptr) del(ptr, h);
     }
 
     FORCE_INLINE void del(const T* obj) {
         IdxNode *n = (IdxNode *) obj->backPtrs[Index<T, V>::idxId];
-        del_(obj, n);
-    }
+        auto h = n->hash;
+        IdxNode *prev = n->prv;
+        IdxNode *next = n->nxt;
+        if (prev) { //not head
+            prev->nxt = next;
+            if (next)
+                next->prv = prev;
+            nodes_.del(n);
+        } else if (next) { //head and has other elements
+            next->obj->backPtrs[Index<T, V>::idxId] = n;
+            n->obj = next->obj;
+            n->hash = next->hash;
 
-    FORCE_INLINE void del_(const T* obj, IdxNode *n) {
-        HASH_RES_t h = n->hash;
-        IdxNode *prev = nullptr, *next; // previous and next pointers
-        do {
-            next = n->nxt;
-            if (/*n->obj &&*/ n->obj == obj) { //we only need a pointer comparison, as all objects are stored in the pool
-                if (prev) { //it is an element in the linked list (and not in the bucket itself)
-                    prev->nxt = next;
-                    // n->nxt = nullptr;
-                    // n->obj = nullptr;
-                    nodes_.del(n);
-                } else if (next) { //it is the elements in the bucket, and there are other elements in linked list
-                    n->obj = next->obj;
-                    n->hash = next->hash;
-                    n->nxt = next->nxt;
-                    nodes_.del(next);
-                    next = n;
-                } else { //it is the only element in the bucket
-                    n->obj = nullptr;
-                }
-                if (is_unique || !((prev && prev->obj && (h == prev->hash) && !IDX_FN::cmp(*obj, *prev->obj)) ||
-                        (next && next->obj && (h == next->hash) && !IDX_FN::cmp(*obj, *next->obj)))) --count_;
-                return;
-            }
-            prev = n;
-        } while ((n = next));
+            n->nxt = next->nxt;
+            if (next->nxt)
+                next->nxt->prv = n;
+
+            nodes_.del(next);
+            next = n;
+        } else { //head and the only element
+            n->obj = nullptr;
+        }
+        if (is_unique || !((prev && prev->obj && (h == prev->hash) && !IDX_FN::cmp(*obj, *prev->obj)) ||
+                (next && next->obj && (h == next->hash) && !IDX_FN::cmp(*obj, *next->obj)))) --count_;
     }
 
     FORCE_INLINE void del(const T* obj, const HASH_RES_t h) {
-        del_(obj, &buckets_[h % size_]);
+        del(obj);
     }
 
     inline void foreach(std::function<void (T*) > f) {
@@ -2169,10 +2197,10 @@ public:
         HashIndex<T, V, IDX_FN, true> h1, h2;
         h1.idxId = h2.idxId = 0;
         foreach([&](const T * e) {
-            h1.insert_nocheck(const_cast<T *>(e));
+            h1.insert_nocheck(const_cast<T *> (e));
         });
         right.foreach([&](const T * e) {
-            h2.insert_nocheck(const_cast<T *>(e));
+            h2.insert_nocheck(const_cast<T *> (e));
         });
         return h1 == h2;
     }

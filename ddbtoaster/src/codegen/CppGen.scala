@@ -13,7 +13,7 @@ trait ICppGen extends IScalaGen {
   import ddbt.ast.M3._
   import ddbt.Utils.{ind,fresh,freshClear} // common functions
   val VALUE_NAME = "__av"
-
+  val usingPardis = false
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
 
@@ -209,7 +209,7 @@ trait ICppGen extends IScalaGen {
       }
     // Mul(el,er)
     // ==
-    //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) ) 
+    //   Mul( (el,ctx0) -> (vl,ctx1) , (er,ctx1) -> (vr,ctx2) )
     //    ==>
     //   (v=vl*vr , ctx2)
     case Mul(el,er) => //cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(if (vl=="1L") vr else if (vr=="1L") vl else "("+vl+" * "+vr+")"),am),am)
@@ -226,7 +226,7 @@ trait ICppGen extends IScalaGen {
       cpsExpr(el,(vl:String)=>cpsExpr(er,(vr:String)=>co(mul(vl,vr)),am),am)
     // Add(el,er)
     // ==
-    //   Add( (el,ctx0) -> (vl,ctx1) , (er,ctx0) -> (vr,ctx2) ) 
+    //   Add( (el,ctx0) -> (vl,ctx1) , (er,ctx0) -> (vr,ctx2) )
     //         <-------- L -------->    <-------- R -------->
     //    (add - if there's no free variable) ==>
     //   (v=vl+vr , ctx0)
@@ -234,7 +234,7 @@ trait ICppGen extends IScalaGen {
     //   T = Map[....]
     //   foreach vl in L, T += vl
     //   foreach vr in R, T += vr
-    //   foreach t in T, co(t) 
+    //   foreach t in T, co(t)
     case a@Add(el,er) =>
       if (a.agg==Nil) {
         val cur=ctx.save
@@ -246,7 +246,7 @@ trait ICppGen extends IScalaGen {
           },am)
         },am)
       } else am match {
-        case Some(t) if t.toSet.subsetOf(a.agg.toSet) => 
+        case Some(t) if t.toSet.subsetOf(a.agg.toSet) =>
           val cur=ctx.save
           val s1=cpsExpr(el,co,am)
           ctx.load(cur)
@@ -316,7 +316,7 @@ trait ICppGen extends IScalaGen {
           )
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => 
+      ctx.load(); clear+init+cpsExpr(e,(v:String) =>
         (if (m.keys.size==0) {
           extractBooleanExp(v) match {
             case Some((c,t)) =>
@@ -403,9 +403,9 @@ trait ICppGen extends IScalaGen {
 
   private def getInitializationForPublicValues(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>(queries.filter(_.name==m.name).size != 0) && (m.keys.size == 0)}.map{m=>", "+m.name+"(" + m.tp.zeroCpp + ")"}.mkString
 
-  private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) = ""//getInitializationForPublicValues(maps,queries) + (if(isExpressiveTLQSEnabled(queries)) getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps else "")
+  private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) = if(usingPardis)"" else (getInitializationForPublicValues(maps,queries) + (if(isExpressiveTLQSEnabled(queries)) getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps else ""))
 
-  private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) =""// (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps)
+  private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) =  if(usingPardis)"" else (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps)
 
   def generateUnwrapFunction(evt:EvtTrigger)(implicit s0:System) = {
     val (op,name,fields) = evt match {
@@ -472,13 +472,12 @@ trait ICppGen extends IScalaGen {
     }
   }
   override def apply(s0:System):String = {
-    var usingPardis = true
     implicit val s0_ = s0
     def register_maps = s0.maps.map{m=>"pb.add_map<"+m.toCppType+">( \""+m.name+"\", "+m.name+" );\n"}.mkString
 
     def register_relations = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ", true") + ");\n"}.mkString
 
-    def register_table_triggers = s0.sources.filter(!_.stream).map{ s => 
+    def register_table_triggers = s0.sources.filter(!_.stream).map{ s =>
       (if(s0.triggers.exists{
         t=>t.evt match {
           case EvtBatchUpdate(_) => true
@@ -486,7 +485,7 @@ trait ICppGen extends IScalaGen {
         }
       }) "pb.add_trigger(\""+s.schema.name+"\", batch_update, std::bind(&data_t::unwrap_batch_update_"+s.schema.name+", this, std::placeholders::_1));\n" else "") +
       "pb.add_trigger(\""+s.schema.name+"\", insert_tuple, std::bind(&data_t::unwrap_insert_"+s.schema.name+", this, std::placeholders::_1));\n"
-      
+
     }.mkString
 
     def register_stream_triggers = s0.triggers.filter(_.evt != EvtReady).map{ t=>t.evt match {
@@ -558,7 +557,7 @@ trait ICppGen extends IScalaGen {
       val allIndices = ((0 until m.keys.size).toList -> true /*unique*/) :: indices.map(is => (is -> false /*non_unique*/))
       val multiKeyIndices = allIndices.filter{case (is,_) => is.size > 1}
 
-      def genEntryStruct = 
+      def genEntryStruct =
         "struct "+mapEntry+" {\n"+
         "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+" "+mapEntry+"* nxt; "+mapEntry+"* prv;\n"+
         "  explicit "+mapEntry+"() : nxt(nullptr), prv(nullptr) { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
@@ -603,7 +602,7 @@ trait ICppGen extends IScalaGen {
 
       genEntryStruct+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs
     }
-    def genTempTupleTypes = tempTupleTypes.map{case (name,(ksTp,vsTp)) => 
+    def genTempTupleTypes = tempTupleTypes.map{case (name,(ksTp,vsTp)) =>
       val ksTpWithIdx = ksTp.zipWithIndex
       val valVarName = VALUE_NAME
       "struct " + name +" {\n"+
@@ -645,8 +644,6 @@ trait ICppGen extends IScalaGen {
     mapDefs = mapDefsList.toMap
     maps = mapDefs
     val (tsSC, msSC, tmpEntrySC) = genPardis(s0)
-    if(tsSC == null)
-      usingPardis = false
     val ts =
       "/* Trigger functions for table relations */\n"+
       //table initializations (a.k.a ld0)
@@ -687,10 +684,10 @@ trait ICppGen extends IScalaGen {
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
     "struct data_t : tlq_t{\n"+
     "  data_t(): tlq_t()"+getInitializationForDATA_T(s0.maps,s0.queries)+" {\n"+
-         ind(constsInit,2)+"\n"+ 
+         ind(constsInit,2)+"\n"+
     (if(regexpCacheMap.isEmpty) "" else
     "    /* regex_t init */\n"+
-    regexpCacheMap.map{case (regex,preg) => 
+    regexpCacheMap.map{case (regex,preg) =>
     "    if(regcomp(&"+preg+", \""+regex+"\", REG_EXTENDED | REG_NOSUB)){\n"+
     "      cerr << \"Error compiling regular expression: /"+regex+"/\" << endl;\n"+
     "      exit(-1);\n"+
@@ -732,8 +729,11 @@ trait ICppGen extends IScalaGen {
     regexpCacheMap.map{case (_,preg) => "  regex_t "+preg+";\n"}.mkString)+
     "\n"+
     "  /* Data structures used for storing materialized views */\n"+
-//       ind(genIntermediateDataStructureRefs(mapDefsList.map(_._2).toList,s0.queries))+"\n"+
-//       ind(genTempMapDefs)+"\n"+
+      (if (usingPardis) ""
+      else {
+        ind(genIntermediateDataStructureRefs(mapDefsList.map(_._2).toList, s0.queries)) + "\n" +
+          ind(genTempMapDefs) + "\n"
+      }) +
        ind(consts)+
     "\n\n"} else "")+
       //end of constants
@@ -755,7 +755,7 @@ trait ICppGen extends IScalaGen {
       "const " + query.toCppRefType + " get_"+query.name+"() const {\n"+
       (query.map match {
         case MapRef(n,_,_) if (n == query.name) => "  return "+query.name+";\n"
-        case _ => 
+        case _ =>
           ctx = Ctx[(Type,String)]()
           ind(
             if(query.keys.length == 0) cpsExpr(query.map, (v:String) => "return "+v+";")+"\n"
@@ -800,7 +800,7 @@ trait ICppGen extends IScalaGen {
     "protected:\n"+
     "\n"+
     "  /* Data structures used for storing / computing top level queries */\n"+
-//         ind(compile_tlqs_decls)+
+      (if(usingPardis) "" else ind(compile_tlqs_decls))+
     "\n\n"+
     (if(isExpressiveTLQSEnabled(s0.queries)) {
     "  /* Data structures used for storing materialized views */\n"+
@@ -861,7 +861,7 @@ trait ICppGen extends IScalaGen {
     val sourceFileVar = sourceId+"_file"
     val in = s.in match { case SourceFile(path) => "std::shared_ptr<dbt_file_source> "+sourceFileVar+"(new dbt_file_source(\""+path+"\","+sourceSplitVar+","+adaptorVar+"));\n" }
     val split = "frame_descriptor "+sourceSplitVar+(s.split match { case SplitLine => "(\"\\n\")" case SplitSep(sep) => "(\""+sep+"\")" case SplitSize(bytes) => "("+bytes+")" case SplitPrefix(p) => "XXXXX("+p+")" })+";\n" //XXXX for SplitPrefix
-    
+
     val schema_param = s.schema.fields.map{case (_,tp) => tp.toString}.mkString(",")
     val adaptor = s.adaptor.name match {
       case "ORDERBOOK" => {
@@ -877,7 +877,7 @@ trait ICppGen extends IScalaGen {
           "std::shared_ptr<order_books::order_book_adaptor> "+adaptorVar+"(new order_books::order_book_adaptor("+bidsAndAsks.map{ x => {if(s.adaptor.options.contains(x)) "get_relation_id(\""+s.adaptor.options(x)+"\")" else "-1"}+","}.mkString+numParams+","+paramsVar+"));\n"
 
         a_def
-      }      
+      }
       case "CSV" => {
         val a_opts = s.adaptor.options ++ Map("schema" -> schema_param)
         val numParams = a_opts.size
@@ -907,7 +907,7 @@ trait ICppGen extends IScalaGen {
     ss
   }
 
-  override def pkgWrapper(pkg:String, body:String) = additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
+  override def pkgWrapper(pkg:String, body:String) = (if(usingPardis) "#define SC_GENERATED 1\n" else "") + additionalImports()+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
 
   def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
 

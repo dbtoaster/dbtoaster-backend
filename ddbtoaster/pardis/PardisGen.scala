@@ -572,6 +572,8 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
   import IR._
 
+  override val usingPardis: Boolean = true
+
   override def genCodeForProgram[T](optTP: TransactionProgram[T]) = {
     import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
     var ts = ""
