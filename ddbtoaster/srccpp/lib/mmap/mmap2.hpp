@@ -252,9 +252,9 @@ public:
     virtual void add(T* obj, const HASH_RES_t h) = 0;
 
 
-    virtual void del(const T& obj) = 0;
+    virtual void del(T& obj) = 0;
 
-    virtual void del(const T* obj) = 0;
+    virtual void del(T* obj) = 0;
 
     FORCE_INLINE void delCopy(const T& obj, Index<T, V>* primary) {
         T* orig = primary->get(obj);
@@ -270,9 +270,9 @@ public:
         del(obj);
     }
 
-    virtual void del(const T& obj, const HASH_RES_t h) = 0;
+    virtual void del(T& obj, const HASH_RES_t h) = 0;
 
-    virtual void del(const T* obj, const HASH_RES_t h) = 0;
+    virtual void del(T* obj, const HASH_RES_t h) = 0;
 
     virtual void foreach(std::function<void (T*) > f) = 0;
 
@@ -321,6 +321,8 @@ public:
         struct __IdxNode* nxt, *prv;
     } IdxNode; //  the linked list is maintained 'compactly': if a IdxNode has a nxt, it is full.
     IdxNode* buckets_;
+    T* dataHead; //entries are linked together for efficient foreach
+    Pool<T>* storePool;
     size_t size_;
 private:
     Pool<IdxNode> nodes_;
@@ -399,7 +401,9 @@ private:
 
 public:
 
-    HashIndex(size_t size = DEFAULT_CHUNK_SIZE, double load_factor = .75) : nodes_(size), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
+    HashIndex(Pool<T>* stPool = nullptr, size_t size = DEFAULT_CHUNK_SIZE, double load_factor = .75) : nodes_(size), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
+        storePool = stPool;
+        dataHead = nullptr;
         load_factor_ = load_factor;
         size_ = 0;
         count_ = 0;
@@ -551,6 +555,14 @@ public:
 
     FORCE_INLINE void add(T* obj, const HASH_RES_t h) {
         auto idxId = Index<T, V>::idxId;
+        if (idxId == 0) { //maintain usedEntry list for efficient for-each
+            obj->prv = nullptr;
+            obj->nxt = dataHead;
+            if (dataHead) {
+                dataHead->prv = obj;
+            }
+            dataHead = obj;
+        }
         if (count_ > threshold_) {
             //            throw std::logic_error("HashIndex resize disabled for this experiment");
             resize_(size_ << 1);
@@ -644,20 +656,29 @@ public:
 
     // deletes an existing elements (equality by pointer comparison)
 
-    FORCE_INLINE void del(const T& obj) {
+    FORCE_INLINE void del(T& obj) {
         throw std::logic_error("del by reference not supported");
-        const T* ptr = get(obj);
+        T* ptr = get(obj);
         if (ptr) del(ptr);
     }
 
-    FORCE_INLINE void del(const T& obj, const HASH_RES_t h) {
+    FORCE_INLINE void del(T& obj, const HASH_RES_t h) {
         throw std::logic_error("del by reference not supported");
-        const T* ptr = get(obj, h);
+        T* ptr = get(obj, h);
         if (ptr) del(ptr, h);
     }
 
-    FORCE_INLINE void del(const T* obj) {
-        IdxNode *n = (IdxNode *) obj->backPtrs[Index<T, V>::idxId];
+    FORCE_INLINE void del(T* obj) {
+        auto idxId = Index<T, V>::idxId;
+        if (idxId == 0) {
+            T *elemPrv = obj->prv, *elemNxt = obj->nxt;
+            if (elemPrv) elemPrv->nxt = elemNxt;
+            if (elemNxt) elemNxt->prv = elemPrv;
+            if (obj == dataHead) dataHead = elemNxt;
+            obj->nxt = nullptr;
+            obj->prv = nullptr;
+        }
+        IdxNode *n = (IdxNode *) obj->backPtrs[idxId];
         auto h = n->hash;
         IdxNode *prev = n->prv;
         IdxNode *next = n->nxt;
@@ -684,7 +705,7 @@ public:
                 (next && next->obj && (h == next->hash) && !IDX_FN::cmp(*obj, *next->obj)))) --count_;
     }
 
-    FORCE_INLINE void del(const T* obj, const HASH_RES_t h) {
+    FORCE_INLINE void del(T* obj, const HASH_RES_t h) {
         del(obj);
     }
 
@@ -765,6 +786,10 @@ public:
         allocated_from_pool_ = false;
         count_ = 0;
         memset(buckets_, 0, sizeof (IdxNode) * size_);
+        if (dataHead != nullptr) {
+            storePool->delete_all(dataHead);
+            dataHead = nullptr;
+        }
     }
 
     FORCE_INLINE size_t count() {
@@ -1123,7 +1148,7 @@ public:
 
     }
 
-    TreeIndex(size_t size = DEFAULT_CHUNK_SIZE, double load_factor = .75) : equiv_nodes_(size), nodes_(size), zero(ZeroVal<V>().get()) {
+    TreeIndex(Pool<T>* stPool = nullptr, size_t size = DEFAULT_CHUNK_SIZE, double load_factor = .75) : equiv_nodes_(size), nodes_(size), zero(ZeroVal<V>().get()) {
         load_factor_ = load_factor;
         size_ = 0;
         count_ = 0;
@@ -1214,12 +1239,12 @@ public:
 
     // deletes an existing elements (equality by pointer comparison)
 
-    FORCE_INLINE void del(const T* obj) {
+    FORCE_INLINE void del(T* obj) {
         HASH_RES_t h = IDX_FN1::hash(*obj);
         del(obj, h);
     }
 
-    FORCE_INLINE void del(const T* obj, const HASH_RES_t h) {
+    FORCE_INLINE void del(T* obj, const HASH_RES_t h) {
         IdxNode *n = &buckets_[h % size_];
         IdxNode *prev = nullptr, *next; // previous and next pointers
         do {
@@ -1382,12 +1407,12 @@ public:
         return 0;
     }
 
-    void del(const T& obj) {
+    void del(T& obj) {
         const T* ptr = get(obj);
         if (ptr) del(ptr);
     }
 
-    void del(const T& obj, const size_t h) {
+    void del(T& obj, const size_t h) {
         const T* ptr = get(obj, h);
         if (ptr) del(ptr);
     }
@@ -1434,7 +1459,7 @@ class ArrayIndex : public Index<T, V> {
     const V zero;
 public:
 
-    ArrayIndex(int s = size) : zero(ZeroVal<V>().get()) { //Constructor argument is ignored
+    ArrayIndex(Pool<T>* stPool = nullptr, int s = size) : zero(ZeroVal<V>().get()) { //Constructor argument is ignored
         memset(isUsed, 0, size);
     }
 
@@ -1476,7 +1501,7 @@ public:
         }
     }
 
-    FORCE_INLINE void del(const T* obj) {
+    FORCE_INLINE void del(T* obj) {
         HASH_RES_t idx = IDX_FN::hash(*obj);
         isUsed[idx] = false;
     }
@@ -1544,16 +1569,16 @@ public:
         //Do nothing
     }
 
-    void del(const T* obj, const size_t h) {
+    void del(T* obj, const size_t h) {
         isUsed[h] = false;
     }
 
-    void del(const T& obj) {
+    void del(T& obj) {
         const T* ptr = get(obj);
         if (ptr) del(ptr);
     }
 
-    void del(const T& obj, const size_t h) {
+    void del(T& obj, const size_t h) {
         isUsed[h] = false;
     }
 
@@ -1585,41 +1610,32 @@ private:
     bool *modified;
 public:
     Index<T, V>** index;
-#ifdef USE_STORE_FE
-    T* head;
-#endif
 
     MultiHashMap() { // by defintion index 0 is always unique
         index = new Index<T, V>*[sizeof...(INDEXES)] {
-            new INDEXES()...
+            new INDEXES(&pool)...
         };
         modified = new bool[sizeof...(INDEXES)];
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
             index[i]->idxId = i;
             modified[i] = false;
         }
-#ifdef USE_STORE_FE
-        head = nullptr;
-#endif
     }
 
     MultiHashMap(size_t init_capacity) : pool(init_capacity) { // by defintion index 0 is always unique
         index = new Index<T, V>*[sizeof...(INDEXES)] {
-            new INDEXES(init_capacity)...
+            new INDEXES(&pool, init_capacity)...
         };
         modified = new bool[sizeof...(INDEXES)];
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
             index[i]->idxId = i;
             modified[i] = false;
         }
-#ifdef USE_STORE_FE
-        head = nullptr;
-#endif
     }
 
     MultiHashMap(const MultiHashMap& other) { // by defintion index 0 is always unique
         index = new Index<T, V>*[sizeof...(INDEXES)] {
-            new INDEXES()...
+            new INDEXES(&pool)...
         };
         modified = new bool[sizeof...(INDEXES)];
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
@@ -1628,9 +1644,6 @@ public:
         }
         other.index[0]->foreach([this] (const T & e) {
             this->insert_nocheck(e); });
-#ifdef USE_STORE_FE
-        head = nullptr;
-#endif
     }
 
     ~MultiHashMap() {
@@ -1687,14 +1700,6 @@ public:
         T* cur = index[0]->get(*elem);
         if (cur == nullptr) {
             cur = copyIntoPool(elem);
-#ifdef USE_STORE_FE
-            if (head) {
-                cur->prv = nullptr;
-                cur->nxt = head;
-                head->prv = cur;
-            }
-            head = cur;
-#endif
             for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
         } else {
             // cur->~T();
@@ -1722,33 +1727,22 @@ public:
 
     FORCE_INLINE void insert_nocheck(const T& elem) {
         T* cur = copyIntoPool(elem);
-#ifdef USE_STORE_FE
-        cur->prv = nullptr;
-        cur->nxt = head;
-        if (head) head->prv = cur;
-        head = cur;
-#endif
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->insert_nocheck(cur);
     }
 
     FORCE_INLINE void insert_nocheck(const T& elem, HASH_RES_t h) { // assume that mainIdx=0
         T* cur = copyIntoPool(elem);
-#ifdef USE_STORE_FE
-        cur->prv = nullptr;
-        cur->nxt = head;
-        if (head) head->prv = cur;
-        head = cur;
-#endif
         index[0]->add(cur, h);
         for (size_t i = 1; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
     }
 
-    //    FORCE_INLINE void del(const T& key/*, int idx=0*/) { // assume that mainIdx=0
+    //    FORCE_INLINE void del(T& key/*, int idx=0*/) { // assume that mainIdx=0
     //        T* elem = get(key);
     //        if (elem != nullptr) del(elem);
     //    }
 
-    FORCE_INLINE void del(const T& key, HASH_RES_t h, int idx = 0) {
+    FORCE_INLINE void del(T& key, HASH_RES_t h, int idx = 0) {
+        throw std::logic_error("Del by reference not supported");
         T* elem = get(key, h, idx);
         if (elem != nullptr) del(elem, h);
     }
@@ -1759,42 +1753,18 @@ public:
     }
 
     FORCE_INLINE void del(T* elem) { // assume that the element is already in the map
-#ifdef USE_STORE_FE
-        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-        if (elemPrv) elemPrv->nxt = elemNxt;
-        if (elemNxt) elemNxt->prv = elemPrv;
-        if (elem == head) head = elemNxt;
-        elem->nxt = nullptr;
-        elem->prv = nullptr;
-#endif
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
         pool.del(elem);
     }
 
     FORCE_INLINE void delCopyDependent(T* obj) {
         T* elem = index[0]->get(obj);
-#ifdef USE_STORE_FE
-        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-        if (elemPrv) elemPrv->nxt = elemNxt;
-        if (elemNxt) elemNxt->prv = elemPrv;
-        if (elem == head) head = elemNxt;
-        elem->nxt = nullptr;
-        elem->prv = nullptr;
-#endif
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->delCopyDependent(elem);
         pool.del(elem);
     }
 
     FORCE_INLINE void delCopy(T* obj) {
         T* elem = index[0]->get(obj);
-#ifdef USE_STORE_FE
-        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-        if (elemPrv) elemPrv->nxt = elemNxt;
-        if (elemNxt) elemNxt->prv = elemPrv;
-        if (elem == head) head = elemNxt;
-        elem->nxt = nullptr;
-        elem->prv = nullptr;
-#endif
         for (size_t i = sizeof...(INDEXES) - 1; i != 0; --i)
             index[i]->delCopy(obj, index[0]);
         index[0]->delCopy(obj, index[0]);
@@ -1802,30 +1772,13 @@ public:
     }
 
     FORCE_INLINE void del(T* elem, HASH_RES_t h) { // assume that the element is already in the map and mainIdx=0
-#ifdef USE_STORE_FE
-        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-        if (elemPrv) elemPrv->nxt = elemNxt;
-        if (elemNxt) elemNxt->prv = elemPrv;
-        if (elem == head) head = elemNxt;
-        elem->nxt = nullptr;
-        elem->prv = nullptr;
-#endif
         index[0]->del(elem, h);
         for (size_t i = 1; i<sizeof...(INDEXES); ++i) index[i]->del(elem);
         pool.del(elem);
     }
 
     inline void foreach(std::function<void (T*) > f) {
-#ifndef USE_STORE_FE
-        size_t lastIdx = sizeof...(INDEXES) - 1;
-        index[lastIdx]->foreach(f);
-#else
-        T* tmp = head;
-        while (tmp) {
-            f(tmp);
-            tmp = tmp->nxt;
-        }
-#endif
+        index[0]->foreach(f);
     }
 
     void slice(int idx, const T* key, std::function<void (T*) > f) {
@@ -1865,16 +1818,6 @@ public:
             return;
         T* elem = index[0]->get(*obj2);
         T* obj = copyIntoPool(obj2);
-#ifdef USE_STORE_FE
-        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-        if (elemPrv) elemPrv->nxt = obj;
-        if (elemNxt) elemNxt->prv = obj;
-        if (elem == head) head = obj;
-        elem->nxt = nullptr;
-        elem->prv = nullptr;
-        obj->nxt = elemNxt;
-        obj->prv = elemPrv;
-#endif
         for (size_t i = 0; i < sizeof...(INDEXES); ++i) {
             index[i]->updateCopyDependent(obj, elem);
         }
@@ -1885,18 +1828,6 @@ public:
             return;
 
         T* obj = copyIntoPool(obj2);
-#ifdef USE_STORE_FE
-
-        T * elem = index[0]->get(*obj);
-        T *elemPrv = elem->prv, *elemNxt = elem->nxt;
-        if (elemPrv) elemPrv->nxt = obj;
-        if (elemNxt) elemNxt->prv = obj;
-        if (elem == head) head = obj;
-        elem->nxt = nullptr;
-        elem->prv = nullptr;
-        obj->nxt = elemNxt;
-        obj->prv = elemPrv;
-#endif
         //i >= 0 cant be used with unsigned type
         for (size_t i = sizeof...(INDEXES) - 1; i != 0; --i) {
             index[i]->updateCopy(obj, index[0]);
@@ -1909,13 +1840,9 @@ public:
     }
 
     FORCE_INLINE void clear() {
-        for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->clear();
-#ifdef USE_STORE_FE
-        pool.delete_all(head);
-        head = nullptr;
-#else
-        pool.clear();
-#endif
+        for (size_t i = sizeof...(INDEXES) - 1; i != 0; --i)
+            index[i]->clear();
+        index[0]->clear();
     }
 
     template<class Archive>
@@ -1978,7 +1905,7 @@ class ListIndex : public Index<T, V> {
     Pool<Container> nodes_;
 public:
 
-    ListIndex(size_t size = DEFAULT_CHUNK_SIZE) : head(nullptr), tail(nullptr), nodes_(size) {
+    ListIndex(Pool<T>* stPool = nullptr, size_t size = DEFAULT_CHUNK_SIZE) : head(nullptr), tail(nullptr), nodes_(size) {
 
     }
 
@@ -2071,7 +1998,7 @@ public:
         return cnt;
     }
 
-    FORCE_INLINE void del(const T* obj, const size_t h) {
+    FORCE_INLINE void del(T* obj, const size_t h) {
         auto idxId = Index<T, V>::idxId;
         //Assumes isUnique behaviour even though it is false
         if (head == nullptr) return;
@@ -2096,15 +2023,15 @@ public:
         nodes_.del(cur);
     }
 
-    FORCE_INLINE void del(const T& obj, const size_t h) {
+    FORCE_INLINE void del(T& obj, const size_t h) {
         del(&obj, h);
     }
 
-    FORCE_INLINE void del(const T* obj) {
+    FORCE_INLINE void del(T* obj) {
         del(obj, 0);
     }
 
-    FORCE_INLINE void del(const T& obj) {
+    FORCE_INLINE void del(T& obj) {
         del(&obj, 0);
     }
 

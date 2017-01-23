@@ -423,7 +423,7 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     idxs(idx).getCopyDependent(key)
   }
 
-  //TODO: Change to last index. Causes problems for result-checking -> use another kind of foreach for result checking
+
   // assumes idxs(0) is the most efficient index
   def foreach(f: E => Unit): Unit = time("foreach") {
     idxs(0).foreach(f)

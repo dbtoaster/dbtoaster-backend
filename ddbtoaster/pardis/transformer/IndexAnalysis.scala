@@ -26,11 +26,10 @@ class IndexedCols extends Property {
   val secondary = collection.mutable.Set[Seq[Int]]()
   val min = collection.mutable.Set[(Seq[Int], PardisLambda[_, _])]()
   val max = collection.mutable.Set[(Seq[Int], PardisLambda[_, _])]()
-  var list = false
 }
 
 object IndexedCols {
-  def unapply(i: IndexedCols) = Some(i.primary, i.secondary, i.min, i.max, i.list)
+  def unapply(i: IndexedCols) = Some(i.primary, i.secondary, i.min, i.max)
 }
 
 class Indexes extends Property {
@@ -51,6 +50,8 @@ class Indexes extends Property {
         indexes += Index(count, null, IDirect, true, size, null, cols.fixedrange.toList) //SBJ: Fixme:   Passing size as sliceIdx
       }
       count = count + 1
+    } else {
+      throw new Exception("Must have primary index")
     }
     //SBJ: FIXME: In the absence of gets, no primary assigned and the first secondary treated as primary. WIll cause problems if it is KV index. May cause problem otherwise too. Key is subset/superset of actual key, semantics might change
     // SBJ: FIXME: Also causes problems when IndexLookupFusion is disabled and no primary key is inferred.
@@ -72,11 +73,6 @@ class Indexes extends Property {
     }
     })
 
-    if (cols.list) {
-      indexes += Index(count, cols.primary.toList, IList, false)
-      count += 1
-    }
-
     if (count == 0) {
       indexes += Index(0, List(), IList, false)
     }
@@ -94,19 +90,6 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
   import IR._
 
   analysis += rule {
-    //The extra parameter in  deep verison can possibly be removed. In TPCC, the primary keys are given. No need to specify key columns.
-    //Check TPCH
-
-    //Causes Issues when get is used without they key colums. So temporarily disabled.
-//    case StoreGetCopy(sym: Sym[_], _, _, Def(LiftedSeq(cols))) => {
-//      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
-//      if (idxes.primary == Nil) {
-//        throw new Exception("Primarykey must be specified")
-//        idxes.primary = cols.map({ case Constant(v) => v })
-//        sym.attributes += idxes
-//      }
-//      ()
-//    }
 
     case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMaxObject(Def(f@PardisLambda(_, _, _))))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
@@ -134,12 +117,6 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
       idxes.secondary += (args.map(_._1))
       sym.attributes += idxes
 
-      ()
-    }
-    case StoreForeach(sym: Sym[_], _) => {
-      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
-      idxes.list = true
-      sym.attributes += idxes
       ()
     }
   }
@@ -227,7 +204,9 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
             genCmp += ((cols, ordCol) -> rep)
           rep
         }
-        case Index(_, cols, IList, _, _, _, _) =>
+        case Index(id, cols, IList, _, _, _, _) =>
+          if (Optimizer.analyzeIndex || id != 0)
+            throw new Exception("List index should be the only index")
           val rep = EntryIdx.genericOps(unit[Seq[Int]](cols))
           if (!genOps.contains(cols))
             genOps += (cols -> rep)

@@ -17,20 +17,20 @@ case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: 
 }
 
 object Optimizer {
-  var analyzeEntry: Boolean = false
-  var analyzeIndex: Boolean = false
-  var fixedRange: Boolean = false
-  var onlineOpts = false
-  var tmpVarHoist = false
-  var tmpMapHoist = false
-  var indexInline = false
-  var indexLookupFusion = false
+  var analyzeEntry: Boolean = true
+  var analyzeIndex: Boolean = true
+  var fixedRange: Boolean = true
+  var onlineOpts = true
+  var tmpVarHoist = true
+  var tmpMapHoist = true
+  var indexInline = true
+  var indexLookupFusion = true
   var indexLookupPartialFusion = false
-  var deadIndexUpdate = false
-  var codeMotion = false
+  var deadIndexUpdate = true
+  var codeMotion = true
   var refCounter = true
-  var m3CompareMultiply = false //Lazy evaluation
-  var cTransformer = false
+  var m3CompareMultiply = true //Lazy evaluation
+  var cTransformer = true
 }
 
 class Optimizer(val IR: StoreDSL) {
