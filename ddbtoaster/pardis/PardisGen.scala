@@ -304,7 +304,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     if (Optimizer.analyzeEntry) {
       val ctx = ctx0(map)
       val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
-      map + s".unsafeInsert(0, $name("+ (if(Optimizer.analyzeIndex) "" else "false,")  + keyNames.map(e => e._1).mkString(",") + ",1L))"
+      map + s".unsafeInsert(0, $name(" + (if (Optimizer.analyzeIndex) "" else "false,") + keyNames.map(e => e._1).mkString(",") + ",1L))"
     }
     else
       map + ".unsafeInsert(0, GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ",1L))"
@@ -581,7 +581,18 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     codeGen.refSymbols ++= optTP.tempVars.map(_._1)
     for (x <- optTP.codeBlocks) {
       import codeGen.{doc => _, _}
-      val doc2 = codeGen.blockToDocument((x._3))
+      val preBody =
+        s"""
+           |BEGIN_TRIGGER(exec_stats,"${x._1.drop(1)}")
+           |BEGIN_TRIGGER(ivc_stats,"${x._1.drop(1)}")
+           |${if (x._1.contains("system_ready")) "" else "++tN;"}
+         """.stripMargin
+      val postBody =
+        s"""
+           |END_TRIGGER(exec_stats,"${x._1.drop(1)}")
+           |END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
+         """.stripMargin
+      val doc2 = preBody :: codeGen.blockToDocument((x._3)) :: postBody
       ts += doc"void on${x._1}(${x._2.map(s => doc"${s.tp}& $s").mkDocument(", ")}) {" :/: Document.nest(2, doc2) :/: doc"\n}\n"
     }
     m3System.triggers.filter(_.evt != EvtReady).foreach(t => ts += (generateUnwrapFunction(t.evt)(m3System) + "\n"))
