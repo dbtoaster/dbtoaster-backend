@@ -661,7 +661,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
         val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}_map;"
         val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
-        val storeDecl = s.name :: "_map  " :: s.name :: "(10000);"
+        val storeDecl = s.name :: "_map  " :: s.name :: ";"
 
         val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
         val primaryIdx = idx2(s)(0)
