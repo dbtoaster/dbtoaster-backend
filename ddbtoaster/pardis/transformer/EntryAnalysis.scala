@@ -2,7 +2,7 @@ package ddbt.transformer
 
 import ch.epfl.data.sc.pardis.property.{Property, TypedPropertyFlag}
 import ch.epfl.data.sc.pardis.utils.TypeUtils._
-import ch.epfl.data.sc.pardis.types.{AnyType, PardisType, RecordType}
+import ch.epfl.data.sc.pardis.types.{AnyType, PardisType, RecordType, UnitType}
 import ddbt.lib.store.deep.DateIRs.DateType
 import ddbt.lib.store.deep._
 import ch.epfl.data.sc.pardis.optimization.{RecursiveRuleBasedTransformer, RuleBasedTransformer}
@@ -178,6 +178,11 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     })
   }
 
+  def recurseCols(cols: Seq[Int], func: Int => Rep[Boolean], ret: Var[Int]): Rep[Unit] = cols match {
+    case h :: Nil => __ifThenElse(func(h), __assign(ret, unit(0)), __assign(ret, unit(1)))(UnitType)
+    case h :: tail => __ifThenElse(func(h), recurseCols(tail, func, ret), __assign(ret, unit(1)))(UnitType)
+  }
+
   def equal_cmp(cols: Seq[Int], s: SEntry): Rep[(SEntry, SEntry) => Int] = {
     if (cols == Nil)
       throw new Exception("Cols should not be empty for EntryIdx cmp")
@@ -187,54 +192,54 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       implicit val entryTp = s.tp
       __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => {
         //If either is sample entry, we want the cols of the sample entry
-        val allConds = __ifThenElse(fieldGetter(e1, "isSE"), {
+        val allConds = __newVar(unit(0))
+        implicit val tpu = UnitType
+          __ifThenElse(fieldGetter(e1, "isSE"), {
           val allCols = (1 to s.sch.size).toList
-          allCols.foldLeft(unit(true))((res, i) => {
+          val func = (i: Int) => {
             implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-            res && {
-              val v1 = fieldGetter(e1, "_" + i)(tp)
-              val v2 = fieldGetter(e2, "_" + i)(tp)
-              val vNull = nullValue(s.sch(i - 1))
-              (v1 __== vNull) || (v1 __== v2)
-            }
-          })
+            val v1 = fieldGetter(e1, "_" + i)(tp)
+            val v2 = fieldGetter(e2, "_" + i)(tp)
+            val vNull = nullValue(s.sch(i - 1))
+            (v1 __== vNull) || (v1 __== v2)
+          }
+          recurseCols(allCols, func, allConds)
         }, {
           __ifThenElse(fieldGetter(e2, "isSE"), {
             val allCols = (1 to s.sch.size).toList
-            allCols.foldLeft(unit(true))((res, i) => {
+            val func = (i: Int) => {
               implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-              res && {
-                val v1 = fieldGetter(e1, "_" + i)(tp)
-                val v2 = fieldGetter(e2, "_" + i)(tp)
-                val vNull = nullValue(s.sch(i - 1))
-                (v2 __== vNull) || (v1 __== v2)
-              }
-            })
+
+              val v1 = fieldGetter(e1, "_" + i)(tp)
+              val v2 = fieldGetter(e2, "_" + i)(tp)
+              val vNull = nullValue(s.sch(i - 1))
+              (v2 __== vNull) || (v1 __== v2)
+            }
+            recurseCols(allCols, func, allConds)
           }, {
-            cols.foldLeft(unit(true))((res, i) => {
+            val func = (i: Int) => {
               implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-              res && {
-                val v1 = fieldGetter(e1, "_" + i)(tp)
-                val v2 = fieldGetter(e2, "_" + i)(tp)
-                (v1 __== v2)
-              }
-            })
+              val v1 = fieldGetter(e1, "_" + i)(tp)
+              val v2 = fieldGetter(e2, "_" + i)(tp)
+              (v1 __== v2)
+            }
+            recurseCols(cols, func, allConds)
           })
         })
-        BooleanExtra.conditional(allConds, unit(0), unit(1))
+        __readVar(allConds)
       })
     } else {
       implicit val entryTp = s.tp
       __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => {
-        val allConds: Rep[Boolean] = cols.foldLeft(unit(true))((res, i) => {
+        val func = (i: Int) => {
           implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-          res && {
-            val v1 = fieldGetter(e1, "_" + i)(tp)
-            val v2 = fieldGetter(e2, "_" + i)(tp)
-            (v1 __== v2)
-          }
-        })
-        BooleanExtra.conditional(allConds, unit(0), unit(1))
+          val v1 = fieldGetter(e1, "_" + i)(tp)
+          val v2 = fieldGetter(e2, "_" + i)(tp)
+          (v1 __== v2)
+        }
+        val allConds = __newVar(unit(0))
+          recurseCols(cols, func, allConds)
+        __readVar(allConds)
       })
     }
   }
@@ -298,7 +303,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         case (Constant(v: Int), i) if i < args.size / 2 => v -> (args(i + args.size / 2))
       }.toMap
       implicit val entTp = SEntry(sch).tp
-      val allargs =  (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
+      val allargs = (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
       __new[SEntry](allargs: _*)
     }
 
@@ -351,7 +356,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val entry = SEntry(sch)
       implicit val entryTp = entry.tp
       val tag = entryTp.asInstanceOf[RecordType[SEntry]].tag
-      val allfields = (if(Optimizer.analyzeIndex) Nil else List(StructElemInformation("isSE", BooleanType.asInstanceOf[TypeRep[Any]], true))) ++ sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true))
+      val allfields = (if (Optimizer.analyzeIndex) Nil else List(StructElemInformation("isSE", BooleanType.asInstanceOf[TypeRep[Any]], true))) ++ sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true))
       structsDefMap += (tag -> PardisStructDef(tag, allfields, Nil).asInstanceOf[PardisStructDef[Any]])
       val ops_ = ops.collect {
         case Def(node: EntryIdxGenericCmpObject[_]) => {
@@ -359,7 +364,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
           //SBJ: TODO: Handle duplicity
           val cols = node.cols match {
             case Constant(seq: Seq[Int]) => seq
-//            case _ => Nil
+            //            case _ => Nil
           }
           val hl = hashfn(cols, entry)
           val cl = order_cmp(node.f, entry)
@@ -373,7 +378,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
 
           val cols = node.cols match {
             case Constant(seq: Seq[Int]) => seq
-//            case _ => Nil
+            //            case _ => Nil
           }
           lazy val news = EntryIdx.apply(hashfn(cols, entry), equal_cmp(cols, entry), unit(entry.name + "_Idx" + cols.mkString("")))
           genOps getOrElseUpdate((cols, entry), news)
