@@ -155,6 +155,28 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     }
     implicit val entryTp = s.tp
     __lambda((e: Rep[SEntry]) => {
+      val hash = __newVar(unit(0))
+      if (cols == Nil)
+        throw new Exception("Cols should not be empty for EntryIdx hash")
+      cols.foreach(c => {
+        implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]
+        //System.err.println(s"Getting field $c of $e in hash")
+        val temp = __readVar(hash)
+        __assign(hash, temp ^ (elemhash(fieldGetter(e, "_" + c)(tp)) + unit (0x9e3779b9) + (temp << unit(6)) + (temp >> unit(2))))
+      })
+      __readVar(hash)
+    })
+  }
+  /* OLD HASH FUNCTION. Could be possibly better, but takes more time (VERIFY!). Also change in GenericOps for C++ and Scala
+  def hashfn(cols: Seq[Int], s: SEntry): Rep[SEntry => Int] = {
+    //System.err.println(s"Generating hash function for ${s.tp} with cols $cols")
+    def elemhash(value: Rep[Any])(implicit tp: TypeRep[Any]): Rep[Int] = value match {
+      //      case v: Rep[Long] => v.toInt
+      //      case v: Rep[Int] => v
+      case v => infix_hashCode(value)
+    }
+    implicit val entryTp = s.tp
+    __lambda((e: Rep[SEntry]) => {
       val hash = __newVar(unit(0xcafebabe))
       if (cols == Nil)
         throw new Exception("Cols should not be empty for EntryIdx hash")
@@ -177,7 +199,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       hash_5
     })
   }
-
+*/
   def recurseCols(cols: Seq[Int], func: Int => Rep[Boolean], ret: Var[Int]): Rep[Unit] = cols match {
     case h :: Nil => __ifThenElse(func(h), __assign(ret, unit(0)), __assign(ret, unit(1)))(UnitType)
     case h :: tail => __ifThenElse(func(h), recurseCols(tail, func, ret), __assign(ret, unit(1)))(UnitType)
@@ -194,7 +216,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         //If either is sample entry, we want the cols of the sample entry
         val allConds = __newVar(unit(0))
         implicit val tpu = UnitType
-          __ifThenElse(fieldGetter(e1, "isSE"), {
+        __ifThenElse(fieldGetter(e1, "isSE"), {
           val allCols = (1 to s.sch.size).toList
           val func = (i: Int) => {
             implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
@@ -238,7 +260,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
           (v1 __== v2)
         }
         val allConds = __newVar(unit(0))
-          recurseCols(cols, func, allConds)
+        recurseCols(cols, func, allConds)
         __readVar(allConds)
       })
     }

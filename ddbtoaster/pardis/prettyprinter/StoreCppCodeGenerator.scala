@@ -6,6 +6,7 @@ import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.CCodeGenerator
 import ch.epfl.data.sc.pardis.types.{ArrayType, PardisVariableType, SeqType, UnitType}
 import ch.epfl.data.sc.pardis.utils.document._
+import ddbt.codegen.Optimizer
 import ddbt.lib.store.{IHash, IList}
 import ddbt.lib.store.deep.{StoreDSL, StructFieldDecr, StructFieldIncr}
 import ddbt.transformer.{Index, IndexesFlag, ScalaConstructsToCTranformer}
@@ -94,6 +95,39 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"MultiHashMap<$entryTp, char," :: idxes.map(i => doc"${sym}_Idx_${i.idxNum}_Type").mkDocument(", ") :: doc"> $sym;"
 
     case Statement(sym, StoreIndex(self, idxNum, _, _, _)) => doc"${self}_Idx_${idxNum}_Type& $sym = * (${self}_Idx_${idxNum}_Type *)$self.index[$idxNum];"
+
+
+    case Statement(sym, IdxSlice(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
+      val symid = sym.id.toString
+
+      val IDX_FN = "IDXFN" + sym.id
+      val pre =
+        doc"//slice " :\\:
+          doc"typedef typename ${self}Idx${idxNum}Type::IFN $IDX_FN;" :\\:
+          doc"HASH_RES_t h$symid = $IDX_FN::hash($key);" :\\:
+          doc"auto* n$symid = &($idx.buckets_[h$symid % $idx.size_]);" :\\:
+          doc"do if(n$symid -> obj && h$symid == n$symid->hash && !$IDX_FN::cmp($key, *n$symid->obj)) {" :\\:
+          doc"  do {" :\\:
+          doc"      auto $i = n$symid->obj;"
+      val post =
+        doc"   } while((n$symid = n$symid->nxt) && (h$symid == n$symid->hash) && !$IDX_FN::cmp($key, *n$symid->obj));" :\\:
+          doc"  return;" :\\:
+          doc"} while((n$symid = n$symid->nxt));"
+      pre :/: Document.nest(6, blockToDocument(o)) :/: post
+
+    case Statement(sym, IdxForeach(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)), Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
+      val symid = sym.id.toString
+      val IDX_FN = "IDXFN" + sym.id
+      if (idxNum != 0)
+        throw new Error("For-each on secondary index !")
+      val pre =
+        doc"//foreach" :\\:
+          doc"${i.tp} $i= $idx.dataHead;" :\\:
+          doc"while($i) {"
+      val post =
+        doc"  $i = $i -> nxt;" :\\:
+          doc"}"
+      pre :/: Document.nest(2, blockToDocument(o)) :/: post
     case _ => super.stmtToDocument(stmt)
   }
 
@@ -216,28 +250,25 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"$cond ? $ift : $iff"
 
-    case `Int>>>1`(self, x) => doc"$self >> ($x & (8*sizeof($self)-1))"
+    case `Int>>>1`(self, Constant(v)) if (v < 0) => doc"$self >> ${v & 31}"
+    case `Int>>>1`(self, x) => doc"$self >> $x"
     case Equal(a, Constant(null)) if a.tp == StringType => doc"$a.data_ == nullptr"
     //    case Equal(a, b) if a.tp == StringType => //doc"!strcmpi($a, $b)"
     case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name)) =>
       refSymbols ++= List(h.i, c.i1, c.i2).map(_.asInstanceOf[Sym[_]])
-      val t = new ScalaConstructsToCTranformer(IR, false)
-      val ho = t(IR)(h.o)(h.o.typeT)
-      val co = t(IR)(c.o)(c.o.typeT)
-
       doc" struct $name {" :/: Document.nest(NEST_COUNT,
         doc"#define int unsigned int" :\\:
-          doc"FORCE_INLINE static size_t hash(const ${h.i.tp}& ${h.i})  { " :: Document.nest(NEST_COUNT, blockToDocument(ho) :/: getBlockResult(ho, true)) :/: "}" :\\:
+          doc"FORCE_INLINE static size_t hash(const ${h.i.tp}& ${h.i})  { " :: Document.nest(NEST_COUNT, blockToDocument(h.o) :/: getBlockResult(h.o, true)) :/: "}" :\\:
           doc"#undef int" :\\:
-          doc"FORCE_INLINE static char cmp(const ${c.i1.tp}& ${c.i1}, const ${c.i2.tp}& ${c.i2}) { " :: Document.nest(NEST_COUNT, blockToDocument(co) :/: getBlockResult(co, true)) :/: "}") :/: "};"
+          doc"FORCE_INLINE static char cmp(const ${c.i1.tp}& ${c.i1}, const ${c.i2.tp}& ${c.i2}) { " :: Document.nest(NEST_COUNT, blockToDocument(c.o) :/: getBlockResult(c.o, true)) :/: "}") :/: "};"
 
     case EntryIdxGenericOpsObject(Constant(cols)) =>
       if (cols != Nil) {
         val name = "GenericOps_" + cols.mkString("")
         val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
-          "size_t h = 16;" :/:
+          "size_t h = 0;" :/:
             s"for(int c : {${cols.mkString(", ")}})" :/:
-            "  h = h * 41 + HASH(e.map.at(c));" :/:
+            "  h = h ^ (HASH(e.map.at(c) + 0x9e3779b9 + (h<<6) + (h>>2));" :/:
             "return h;"
         ) :/: "}"
         val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :/: Document.nest(2,
@@ -268,9 +299,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val name = "GenericCmp_" + cols.mkString("") + "_" + ordCol
       val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
         "size_t h = 16;" :/:
-          s"for(int c : {${
-            cols.mkString("")
-          }})" :/:
+          s"for(int c : {${cols.mkString("")}})" :/:
           "  h = h * 41 + HASH(e.map.at(c));" :/:
           "return h;"
       ) :/: "}"
@@ -288,13 +317,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"
 
     case EntryIdxGenericFixedRangeOpsObject(Constant(cols)) =>
-      val name = "GenericFixedRange_" + cols.map(t => s"${
-        t._1
-      }f${
-        t._2
-      }t${
-        t._3
-      }").mkString("_")
+      val name = "GenericFixedRange_" + cols.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")
       val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
         s"""size_t h = 0;
             |int cols[] = {${cols.map(_._1).mkString(", ")}};

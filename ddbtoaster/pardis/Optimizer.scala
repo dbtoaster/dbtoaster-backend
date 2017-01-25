@@ -12,7 +12,7 @@ import scala.collection.mutable
 /**
   * Created by sachin on 27.04.16.
   */
-case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: List[ExpressionSymbol[Any]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structs: List[PardisStructDef[Any]], val entryIdxDefs: Seq[PardisNode[_]], val tempVars: Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil, val tmpMaps : Seq[(ExpressionSymbol[_], collection.mutable.ArrayBuffer[ExpressionSymbol[_]])] = Nil) extends PardisProgram {
+case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: List[ExpressionSymbol[Any]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structs: List[PardisStructDef[Any]], val entryIdxDefs: Seq[PardisNode[_]], val tempVars: Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil, val tmpMaps: Seq[(ExpressionSymbol[_], collection.mutable.ArrayBuffer[ExpressionSymbol[_]])] = Nil) extends PardisProgram {
   override val main: PardisBlock[Any] = initBlock.asInstanceOf[PardisBlock[Any]]
 }
 
@@ -26,10 +26,12 @@ object Optimizer {
   var indexInline = true
   var indexLookupFusion = true
   var indexLookupPartialFusion = false
+  var sliceInline = true
   var deadIndexUpdate = true
   var codeMotion = true
   var refCounter = true
-  var m3CompareMultiply = true //Lazy evaluation
+  var m3CompareMultiply = true
+  //Lazy evaluation
   var cTransformer = true
 }
 
@@ -71,22 +73,26 @@ class Optimizer(val IR: StoreDSL) {
   if (Optimizer.indexInline)
     pipeline += new IndexInliner(IR)
 
-  if(Optimizer.tmpMapHoist)
+  if (Optimizer.tmpMapHoist)
     pipeline += new TmpMapHoister(IR)
 
   if (Optimizer.deadIndexUpdate && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("DeadIndexUpdate opt requires both index inline as well as indexlookup fusion")
+
+  if(Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion && Optimizer.cTransformer))
+    throw new Error("Inlining slice requires both Index Inline as well as IndexLookupFusion and implemented only for c++")
+
   pipeline += DCE
   pipeline += ParameterPromotion
 
   pipeline += new StoreDCE(IR)
 
   if (Optimizer.cTransformer) {
-    pipeline += new ScalaConstructsToCTranformer(IR, false)   //P.S.  This transformer is also used inside StoreCppCodeGenerator to convert hoisted lambdas. TODO: somehow convert the lambdas here itself
+    pipeline += new ScalaConstructsToCTranformer(IR, false)
     pipeline += new ScalaStructToMallocTransformer(IR)
     pipeline += new StringToCTransformer(IR)
   }
-//  pipeline += TreeDumper(false)
+  //  pipeline += TreeDumper(false)
   if (Optimizer.refCounter)
     pipeline += new CountingAnalysis[StoreDSL](IR) with TransformerHandler {
       override def apply[Lang <: Base, T](context: Lang)(block: context.Block[T])(implicit evidence$1: PardisType[T]): context.Block[T] = {
@@ -100,14 +106,19 @@ class Optimizer(val IR: StoreDSL) {
 
   def applyOptimization[T: PardisType](prg: TransactionProgram[T], opt: TransformerHandler) = {
     opt match {
-      case tmh : TmpMapHoister => tmh.globalMaps = prg.globalVars
+      case tmh: TmpMapHoister => tmh.globalMaps = prg.globalVars
       case _ => ()
     }
     val init_ = opt(IR)(prg.initBlock)
     val codeB_ = prg.codeBlocks.map(t => (t._1, t._2, opt(IR)(t._3)))
     val (global_, structs_, entryidx_) = opt match {
-      case writer: IndexDecider => (writer.changeGlobal(prg.globalVars), prg.structs, if(Optimizer.cTransformer) (writer.genOps.values ++ writer.genCmp.values ++ writer.genFixed.values).toSeq.map(IR.Def.unapply(_).get) else prg.entryIdxDefs)
+      case writer: IndexDecider => (writer.changeGlobal(prg.globalVars), prg.structs, if (Optimizer.cTransformer) (writer.genOps.values ++ writer.genCmp.values ++ writer.genFixed.values).toSeq.map(IR.Def.unapply(_).get) else prg.entryIdxDefs)
       case writer: EntryTransformer => (writer.changeGlobal(prg.globalVars), prg.structs ++ writer.structsDefMap.map(_._2), (writer.genOps.map(_._2) ++ writer.genCmp.map(_._2) ++ writer.genFixRngOps.map(_._2)).toSeq.collect { case IR.Def(e: EntryIdxApplyObject[_]) => e })
+      case reader: CountingAnalysis[StoreDSL] =>
+        prg.entryIdxDefs.collect {
+          case EntryIdxApplyObject(IR.Def(hl@PardisLambda(_, _, h)), IR.Def(cl@PardisLambda2(_, _, _, c)), _) => reader(IR)(h)(hl.typeS); reader(IR)(c)(cl.typeS)
+        }
+        (prg.globalVars, prg.structs, prg.entryIdxDefs)
       case _ => (prg.globalVars, prg.structs, prg.entryIdxDefs)
     }
     val vars_ = opt match {
@@ -115,7 +126,7 @@ class Optimizer(val IR: StoreDSL) {
       case _ => prg.tempVars
     }
     val tmpMaps_ = opt match {
-      case tmh : TmpMapHoister => tmh.tmpMaps.toSeq
+      case tmh: TmpMapHoister => tmh.tmpMaps.toSeq
       case _ => prg.tmpMaps
     }
     TransactionProgram(init_, global_, codeB_, structs_, entryidx_, vars_, tmpMaps_)

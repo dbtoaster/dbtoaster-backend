@@ -360,7 +360,7 @@ struct TPCCDataGen {
     }
 #ifdef VERIFY_TPCC
 
-    TPCCDataGen() : wareRes(warehouseTblSize), distRes(districtTblSize), custRes(customerTblSize), ordRes(orderTblSize), ordLRes(orderLineTblSize), newOrdRes(newOrderTblSize), itemRes(itemTblSize), stockRes(stockTblSize), histRes(historyTblSize) {
+    TPCCDataGen() : wareRes(nullptr, warehouseTblSize), distRes(nullptr, districtTblSize), custRes(nullptr, customerTblSize), ordRes(nullptr, orderTblSize), ordLRes(nullptr, orderLineTblSize), newOrdRes(nullptr, newOrderTblSize), itemRes(nullptr, itemTblSize), stockRes(nullptr, stockTblSize), histRes(nullptr, historyTblSize) {
         wareRes.idxId = 0;
         distRes.idxId = 0;
         custRes.idxId = 0;

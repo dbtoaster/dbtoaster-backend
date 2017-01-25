@@ -61,6 +61,7 @@ object Compiler {
       case "tmpvar" => Optimizer.tmpVarHoist = true
       case "tmpmap" => Optimizer.tmpMapHoist = true
       case "idxinline" => Optimizer.indexInline = true
+      case "sliceinline" => Optimizer.sliceInline = true
       case "lookupfusion" => Optimizer.indexLookupFusion = true
       case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true
       case "deadidx" => Optimizer.deadIndexUpdate = true

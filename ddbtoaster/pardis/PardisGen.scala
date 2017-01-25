@@ -21,9 +21,12 @@ import ddbt.codegen.prettyprinter.{StoreCodeGenerator, StoreCppCodeGenerator, St
 import ch.epfl.data.sc.pardis.optimization._
 import ddbt.transformer._
 
+import scala.collection.mutable
+
 abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) extends IScalaGen {
 
-
+  val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpMapHoist" -> tmpMapHoist, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "SliceInline" -> sliceInline, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
+  java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
   import scala.language.implicitConversions
   import ddbt.lib.store.deep._
   import IR._
@@ -525,8 +528,6 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
   import Optimizer._;
   import IR._
 
-  val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpMapHoist" -> tmpMapHoist, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
-  java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
   override val codeGen = new StoreScalaCodeGenerator(IR)
 
   override def getTriggerNameArgs(t: Trigger) = t.evt match {
@@ -650,7 +651,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     }
     val idx2 = idxes.map(t => t._1 -> (t._2._1 zip t._2._2 map (x => (x._1._1, x._1._2, x._1._3, x._1._4, x._2))).toList) // Store -> List[Sym, Type, unique, otherInfo, IdxName ]
 
-
+    val toCheck = mutable.ArrayBuffer[String]()  //Gather all maps for debug printing
     val stores = optTP.globalVars.map(s => {
 
       if (s.tp.isInstanceOf[StoreType[_]]) {
@@ -662,6 +663,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
         val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}_map;"
         val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
         val storeDecl = s.name :: "_map  " :: s.name :: ";"
+        toCheck ++= idx2(s).filter(_._2 == "IHash").map(s => s._1.name + s._1.id)
 
         val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
         val primaryIdx = idx2(s)(0)
@@ -673,12 +675,18 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     }).mkDocument("\n", "\n\n\n", "\n")
 
     val tempMaps = optTP.tmpMaps.map(s => {
+      toCheck ++= s._2.map(s => s.name + s.id)
       val entryTp = s._1.tp.asInstanceOf[StoreType[_]].typeE
       codeGen.stmtToDocument(Statement(s._1, Def.unapply(s._1).get)) :/:
         s._2.map(i => codeGen.stmtToDocument(Statement(i, Def.unapply(i).get))).mkDocument("\n") //index refs
 
     }).mkDocument("\n")
-    val ms = (entries :/: entryIdxes :/: stores :/: tempMaps).toString
+
+    val checks = doc"void checkAll() {" :/: Document.nest(2, {
+      toCheck.map(s => doc"CHECK_STAT($s);").mkDocument("\n")
+    }) :/: "}"
+
+    val ms = (entries :/: entryIdxes :/: stores :/: tempMaps :/: checks).toString
 
     val tempEntries = optTP.tempVars.map(t => doc"${t._2.tp} ${t._1};").mkDocument("\n").toString
 

@@ -73,8 +73,8 @@ case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
   def hash(e: GenericEntry): Int = {
     if (cols == Nil)
       throw new Exception("Cols should not be empty for GenOps")
-    var h = 16;
-    cols.foreach(i => h = h * 41 + e.map(i).hashCode())
+    var h = 0;
+    cols.foreach(i => h = h ^ (0x9e3779b9 + (h<<6) + (h>>2) + e.map(i).hashCode()))
     h
   }
 

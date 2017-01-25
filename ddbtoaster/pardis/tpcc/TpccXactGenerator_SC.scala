@@ -25,6 +25,7 @@ object TpccXactGenerator_SC {
       case "tmpvar" => Optimizer.tmpVarHoist = true
       case "tmpmap" => Optimizer.tmpMapHoist = true
       case "idxinline" => Optimizer.indexInline = true
+      case "sliceinline" => Optimizer.sliceInline = true
       case "lookupfusion" => Optimizer.indexLookupFusion = true
       case "partiallookupfusion" => Optimizer.indexLookupPartialFusion = true
       case "deadidx" => Optimizer.deadIndexUpdate = true
@@ -58,7 +59,7 @@ object TpccXactGenerator_SC {
 
     import Optimizer._
 
-    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
+    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
     java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
 
 
