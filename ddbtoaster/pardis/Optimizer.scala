@@ -32,7 +32,7 @@ object Optimizer {
   var refCounter = true
   var m3CompareMultiply = true
   //Lazy evaluation
-  var cTransformer = true
+  var cTransformer = false
 }
 
 class Optimizer(val IR: StoreDSL) {
@@ -79,7 +79,7 @@ class Optimizer(val IR: StoreDSL) {
   if (Optimizer.deadIndexUpdate && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("DeadIndexUpdate opt requires both index inline as well as indexlookup fusion")
 
-  if(Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion && Optimizer.cTransformer))
+  if(Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("Inlining slice requires both Index Inline as well as IndexLookupFusion and implemented only for c++")
 
   pipeline += DCE

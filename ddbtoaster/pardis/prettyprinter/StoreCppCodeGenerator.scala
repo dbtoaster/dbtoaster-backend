@@ -4,7 +4,7 @@ import ch.epfl.data.sc.pardis.ir.CNodes.StrStr
 import ch.epfl.data.sc.pardis.ir.CTypes.PointerType
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.CCodeGenerator
-import ch.epfl.data.sc.pardis.types.{ArrayType, PardisVariableType, SeqType, UnitType}
+import ch.epfl.data.sc.pardis.types._
 import ch.epfl.data.sc.pardis.utils.document._
 import ddbt.codegen.Optimizer
 import ddbt.lib.store.{IHash, IList}
@@ -111,7 +111,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
           doc"      auto $i = n$symid->obj;"
       val post =
         doc"   } while((n$symid = n$symid->nxt) && (h$symid == n$symid->hash) && !$IDX_FN::cmp($key, *n$symid->obj));" :\\:
-          doc"  return;" :\\:
+          doc"  break;" :\\:
           doc"} while((n$symid = n$symid->nxt));"
       pre :/: Document.nest(6, blockToDocument(o)) :/: post
 
@@ -128,6 +128,12 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"  $i = $i -> nxt;" :\\:
           doc"}"
       pre :/: Document.nest(2, blockToDocument(o)) :/: post
+
+    case Statement(sym, StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType && refSymbols.contains(self) =>
+    doc"const PString& $sym = $self.$idx;"
+    case Statement(sym, StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType =>
+    doc"const PString& $sym = $self->$idx;"
+
     case _ => super.stmtToDocument(stmt)
   }
 

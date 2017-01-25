@@ -75,7 +75,7 @@ object TpccXactGenerator_SC {
       unit((1))
     }
     var lang = "cpp"
-    //    var lang = "scala"
+//        var lang = "scala"
     val codeGen = lang match {
       case "scala" => new TpccPardisScalaGen(Context)
       case "cpp" => Optimizer.cTransformer = true;

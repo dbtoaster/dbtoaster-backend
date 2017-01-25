@@ -25,6 +25,7 @@ import scala.collection.mutable
 
 abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) extends IScalaGen {
 
+  import Optimizer._;
   val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpMapHoist" -> tmpMapHoist, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "SliceInline" -> sliceInline, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
   java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
   import scala.language.implicitConversions
@@ -525,7 +526,6 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
 
 class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.onlineOpts) new StoreDSLOptimized {} else new StoreDSL {}) {
 
-  import Optimizer._;
   import IR._
 
   override val codeGen = new StoreScalaCodeGenerator(IR)
