@@ -201,7 +201,7 @@ object TypeCheck extends (M3.System => M3.System) {
           cr = c ++ ie(l, c, t) ++ r.flatMap(x => ie(x, c, t))
         case Exists(e) => cr = ie(e, c, t)
         case Lift(n,e) => 
-          ie(e, c, t)
+          cr = ie(e, c, t)
           c.get(n) match { 
             case Some(t) => 
               try { tpRes(t, e.tp, ex) } 
@@ -210,7 +210,7 @@ object TypeCheck extends (M3.System => M3.System) {
                   err("Value " + n + " lifted as " + t + 
                       " compared with " + e.tp) 
               } 
-            case None => cr = c + ((n, e.tp)) 
+            case None => cr = cr + ((n, e.tp))
           }
         case a @ AggSum(ks, e) =>
           val in = ie(e, c, t)

@@ -39,9 +39,12 @@ class SparkConfig(input: InputStream) {
       .set("spark.network.timeout", "1200s")
       
       // Kryo Serializer
+
       .set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
       .set("spark.kryo.referenceTracking", "false")
       .set("spark.kryo.registrator", "ddbt.lib.spark.Registrator")
+      .set("spark.kryoserializer.buffer.max", "256m")
+
 
 //      .set("spark.default.parallelism", "16")
 //      .set("spark.broadcast.compress", "false")
@@ -50,6 +53,9 @@ class SparkConfig(input: InputStream) {
 //      .set("spark.shuffle.file.buffer.kb", "10000")
 //      .set("spark.shuffle.spill.compress", "false")
 //      .set("spark.rdd.compress", "false")     
+//      .set("spark.scheduler.mode", "FAIR")
+
+      .set("spark.locality.wait", "30s")
 
     if (sparkEventLogEnabled != null) {
       conf.set("spark.eventLog.enabled", sparkEventLogEnabled)

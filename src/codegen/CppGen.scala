@@ -878,46 +878,61 @@ trait ICppGen extends IScalaGen {
     "\n"
   }
 
+  private def printIf(flag: Boolean, s: String) = if (flag) s else ""
+
   // Helper that contains the main and stream generator
   private def helper(s0:System) = {
-    ""
-    // val dataset = "standard" //XXXX
-    // "/* Type definition providing a way to execute the sql program */\n"+
-    // "class Program : public ProgramBase\n"+
-    // "{\n"+
-    // "  public:\n"+
-    // "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
-    // "      data.register_data(*this);\n"+
-    //        ind(streams(s0.sources),3)+"\n\n"+
-    // "    }\n"+
-    // "\n"+
-    // "    /* Imports data for static tables and performs view initialization based on it. */\n"+
-    // "    void init() {\n"+
-    // "        //P0_PLACE_HOLDER\n"+
-    // "        table_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, true);\n"+
-    // "        stream_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, false);\n"+
-    // "        process_tables();\n"+
-    // "        data.on_system_ready_event();\n"+
-    // "        //P2_PLACE_HOLDER\n"+
-    // "    }\n"+
-    // "\n"+
-    // "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
-    // "    snapshot_t take_snapshot(){\n"+
-    // "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
-    // "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
-    // "        return snapshot_t( d );\n"+
-    // "    }\n"+
-    // "\n"+
-    // "  protected:\n"+
-    // "    data_t data;\n"+
-    // "};\n"+ (if (cls != "Program") {
-    // "class "+cls+" : public Program\n"+
-    // "{\n"+
-    // "  public:\n"+
-    // "    "+cls+"(int argc = 0, char* argv[] = 0) : Program(argc,argv) {\n"+
-    // "    }\n"+
-    // "};\n"
-    // } else "")
+//     val dataset = "standard" //XXXX
+//     "/* Type definition providing a way to execute the sql program */\n"+
+//     "class Program : public ProgramBase\n"+
+//     "{\n"+
+//     "  public:\n"+
+//     "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
+//     "      data.register_data(*this);\n"+
+//            ind(streams(s0.sources),3)+"\n\n"+
+//     "    }\n"+
+//     "\n"+
+//     "    /* Imports data for static tables and performs view initialization based on it. */\n"+
+//     "    void init() {\n"+
+//     "        //P0_PLACE_HOLDER\n"+
+//     "        table_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, true);\n"+
+//     "        stream_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, false);\n"+
+//     "        process_tables();\n"+
+//     printIf( ddbt.Compiler.PRINT_TIMING_INFO,
+//       "        gettimeofday(&data.t0, NULL);\n"
+//     ) +
+//     "        data.on_system_ready_event();\n"+
+//     "        //P2_PLACE_HOLDER\n"+
+//     printIf( ddbt.Compiler.PRINT_TIMING_INFO,
+//       "        gettimeofday(&data.t, NULL);\n"+
+//       "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
+//       "        std::cout << \"OnSystemReady running time: \" << t << \" (ms)\" << std::endl;\n"+
+//       "        gettimeofday(&data.t0, NULL);\n"
+//     ) +
+//     "    }\n"+
+//     "\n"+
+//     "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
+//     "    snapshot_t take_snapshot(){\n"+
+//     printIf(ddbt.Compiler.PRINT_TIMING_INFO,
+//       "        gettimeofday(&data.t, NULL);\n"+
+//       "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
+//       "        std::cout << \"Trigger running time: \" << t << \" (ms)\" << std::endl;\n"
+//     ) +
+//     "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
+//     "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
+//     "        return snapshot_t( d );\n"+
+//     "    }\n"+
+//     "\n"+
+//     "  protected:\n"+
+//     "    data_t data;\n"+
+//     "};\n"+ (if (cls != "Program") {
+//     "class "+cls+" : public Program\n"+
+//     "{\n"+
+//     "  public:\n"+
+//     "    "+cls+"(int argc = 0, char* argv[] = 0) : Program(argc,argv) {\n"+
+//     "    }\n"+
+//     "};\n"
+//     } else "")
   }
 
   private def genStreams(s:Source): String = {

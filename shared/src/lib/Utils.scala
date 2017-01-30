@@ -192,7 +192,7 @@ object Utils {
     val homeDir = prop.getProperty("spark.home.dir")
     val masterURL = prop.getProperty("spark.master.url")
     val driverMemory = prop.getProperty("spark.driver.memory")
-    val numExecutors = prop.getProperty("spark.partitions.num")
+    val numExecutors = prop.getProperty("spark.executors.num")
     val execMemory = prop.getProperty("spark.executor.memory")
     val execCores = prop.getProperty("spark.executor.cores")
 
@@ -259,7 +259,7 @@ object Utils {
 
   def exec(cmd: Array[String], dir: File = null, env: Array[String] = null, 
       fatal: Boolean = true, prefix: String = null): (String, String) = {
-    //System.err.println(cmd.mkString(" "))
+    // System.err.println(cmd.mkString(" "))
     val p = Runtime.getRuntime.exec(cmd, env, dir)
     val out = gobble(p.getInputStream, scala.Console.out, prefix)
     val err = gobble(p.getErrorStream, scala.Console.err, prefix)
@@ -455,5 +455,10 @@ object Utils {
       }
     }
     queryName
+  }
+
+  def nonNegativeMod(x: Int, mod: Int): Int = {
+    val rawMod = x % mod
+    rawMod + (if (rawMod < 0) mod else 0)
   }
 }

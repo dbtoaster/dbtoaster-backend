@@ -181,8 +181,9 @@ case object OpAdd extends OpMap { override def toString = " += " }
 
 //---------- Map types
 sealed abstract class StoreType 
-case object IndexedStore extends StoreType       // Default store type (Store)
-case object LogStore     extends StoreType       // Only append and foreach
+case object IndexedStore extends StoreType       // Default store type (row-oriented Store)
+case object ArrayStore   extends StoreType       // Array store (row-oriented, only foreach)
+case object LogStore     extends StoreType       // Columnar store (only append and foreach)
 case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores 
 
 
@@ -515,7 +516,12 @@ object M3 {
   // Operations
   case class AggSum(var ks: List[(String, Type)], e: Expr) extends Expr { 
     def tp = e.tp
-    def locality = e.locality
+    def locality = e.locality match {
+      case l @ Some(DistByKeyExp(pk)) =>
+        val expVars = (e.schema._1 ++ ks).toSet
+        if (pk.forall(expVars.contains)) l else Some(DistRandomExp)
+      case l => l
+    }
     override def toString =
       "AggSum([" + ks.map(_._1).mkString(", ") + "],\n" + ind(e.toString) + "\n)"
   } // (grouping_keys)->sum relation

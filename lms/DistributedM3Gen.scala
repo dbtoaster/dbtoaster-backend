@@ -16,7 +16,12 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
   import ManifestHelper.{man,zero,manEntry,manStore}
   import impl.Rep
 
-  
+  // Use static arrays for input batches; only foreach supported
+  val UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH = true
+  val OPTIMIZATION_SIMPLIFICATION = true
+  val OPTIMIZATION_STATEMENT_LEVEL = true
+  val OPTIMIZATION_BLOCK_LEVEL = true
+
   //----------
   case class MapInfo(name: String, tp: Type, keys: List[(String, Type)], 
                      expr: Expr, locality: LocalityType, storeType: StoreType,
@@ -317,6 +322,14 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
 
   object Optimizer {
 
+    private def isReferenced(map: MapRef, stmts: List[Statement]): Boolean =
+      stmts match {
+        case Nil => false
+        case head :: tail =>
+          if (map == head.lhsMap) !(head.opMap == OpSet)
+          else (head.rhsMapNames.contains(map.name) || isReferenced(map, tail))
+      }
+
     def optBlockFusion = new Function1[List[StatementBlock], List[StatementBlock]] {
       def apply(blocks: List[StatementBlock]): List[StatementBlock] = blocks match {
         case Nil => Nil
@@ -358,6 +371,53 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
           if (blocks.length > newBlocks.length) apply(newBlocks)
           else head :: apply(tail)
       }  
+    }
+
+    def optBlockDropIndexTransfomers = new Function1[List[StatementBlock], List[StatementBlock]] {
+
+      def isReferenced(map: MapRef, blocks: List[StatementBlock]): Boolean =
+        Optimizer.isReferenced(map, blocks.flatMap(_.stmts))    // execMode is irrelevant
+
+      def mapRequiresNoIndex(map: MapRef, expr: Expr): Boolean = {
+        def re(e: Expr): List[Boolean] = e.collect { case Mul(l, r) =>
+          val rightBranchHasMap = r.collect { case m: MapRef if map == m => List(true) }.contains(true)
+          if (rightBranchHasMap) List(true) else re(l)
+        }
+        !re(expr).contains(true)
+      }
+
+      def mapRequiresNoIndex(map: MapRef, stmt: Statement): Boolean =
+        (map == stmt.lhsMap || mapRequiresNoIndex(map, stmt.rhsTransformer.expr) ||
+         stmt.initTransformer.map(t => mapRequiresNoIndex(map, t.expr)).getOrElse(false))
+
+      def dropIndexTransformers(block: StatementBlock, valid: MapRef => Boolean) = {
+        def drop(stmts: List[Statement]): List[Statement] = stmts match {
+          case Nil => Nil
+          case Statement(lhsMap, IndexStoreTransformer(MapRef(rhsMapName,_,_)), None, OpSet, _) :: tail
+            if valid(lhsMap) && tail.forall(t => mapRequiresNoIndex(lhsMap, t)) =>
+            {
+              // java.lang.System.err.println("REMOVE " + lhsMap.name +  " AND REPLACE BY " + rhsMapName)
+              val mapping = Map(lhsMap.name -> rhsMapName)
+              tail.map(_.rename(mapping))
+              drop(tail)
+            }
+          case head :: tail => head :: drop(tail)
+        }
+        StatementBlock(block.execMode, drop(block.stmts))
+      }
+
+      def apply(blocks: List[StatementBlock]): List[StatementBlock] = blocks match {
+        case Nil => Nil
+        case head :: tail =>
+          val newHead = dropIndexTransformers(head, m => !isReferenced(m, tail))
+          if (newHead.stmts.length == 0) apply(tail)
+          else newHead :: apply(tail)
+      }
+    }
+
+    def optimizeBlocks(blocks: List[StatementBlock]): List[StatementBlock] = {
+      val optBlocks = (optBlockFusion andThen optBlockDropIndexTransfomers)(blocks)
+      if (blocks == optBlocks) optBlocks else optimizeBlocks(optBlocks)
     }
 
     def optCSE = new Function1[List[Statement], List[Statement]] {
@@ -452,12 +512,6 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
     }
 
     def optDCE = new Function1[List[Statement], List[Statement]] {
-      def isReferenced(map: MapRef, stmts: List[Statement]): Boolean = stmts match {
-        case Nil => false
-        case head :: tail =>
-          if (map == head.lhsMap) !(head.opMap == OpSet)    
-          else (head.rhsMapNames.contains(map.name) || isReferenced(map, tail))
-      }
 
       def deadStatements(stmts: List[Statement]): List[Statement] = stmts match {
         case Nil => Nil
@@ -492,7 +546,7 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
     }
 
     def optimize(stmts: List[Statement]): List[Statement] = {
-      val optStmts = (optCSE andThen optDCE andThen optDropTopLevelStmts )(stmts)
+      val optStmts = (optCSE andThen optDCE andThen optDropTopLevelStmts)(stmts)
       if (stmts == optStmts) optStmts else optimize(optStmts)
     }
   }
@@ -623,7 +677,7 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
         case Some(DistRandomExp) =>
           val repartStmts = Statement.createRepartition(subexp, ks)
           (stmts ++ repartStmts, repartStmts.last.lhsMap)
-        case Some(DistByKeyExp(pkeys)) if (pkeys != ks) =>
+        case Some(DistByKeyExp(pkeys)) if (pkeys != ks || !OPTIMIZATION_SIMPLIFICATION) =>
           val repartStmts = Statement.createRepartition(subexp, ks)
           (stmts ++ repartStmts, repartStmts.last.lhsMap)
         case Some(DistByKeyExp(_)) | None => (stmts, subexp)
