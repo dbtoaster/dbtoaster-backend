@@ -808,6 +808,8 @@ trait ICppGen extends IScalaGen {
     "\n"
   }
 
+  private def printIf(flag: Boolean, s: String) = if (flag) s else ""
+
   // Helper that contains the main and stream generator
   private def helper(s0:System) = {
     val dataset = "standard" //XXXX
@@ -826,12 +828,26 @@ trait ICppGen extends IScalaGen {
     "        table_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, true);\n"+
     "        stream_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, false);\n"+
     "        process_tables();\n"+
+    printIf( ddbt.Compiler.PRINT_TIMING_INFO,
+      "        gettimeofday(&data.t0, NULL);\n"
+    ) +
     "        data.on_system_ready_event();\n"+
     "        //P2_PLACE_HOLDER\n"+
+    printIf( ddbt.Compiler.PRINT_TIMING_INFO,
+      "        gettimeofday(&data.t, NULL);\n"+
+      "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
+      "        std::cout << \"OnSystemReady running time: \" << t << \" (ms)\" << std::endl;\n"+
+      "        gettimeofday(&data.t0, NULL);\n"
+    ) +
     "    }\n"+
     "\n"+
     "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
     "    snapshot_t take_snapshot(){\n"+
+    printIf(ddbt.Compiler.PRINT_TIMING_INFO,
+      "        gettimeofday(&data.t, NULL);\n"+
+      "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
+      "        std::cout << \"Trigger running time: \" << t << \" (ms)\" << std::endl;\n"
+    ) +
     "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
     "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
     "        return snapshot_t( d );\n"+

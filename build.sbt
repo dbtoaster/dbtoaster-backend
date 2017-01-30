@@ -178,9 +178,11 @@ commands += Command.command("release")((state:State) => {
   println("compiling sources")
   val compilerClassContent = read("src/Compiler.scala")
   write("src/Compiler.scala", compilerClassContent.replace("=DEPLOYMENT_STATUS_DEVELOPMENT", "=DEPLOYMENT_STATUS_RELEASE"))
-  Project.evaluateTask(compile, state)
+  //Project.evaluateTask(compile, state)
+  Project.runTask(compile, state)
   println("execute pack task")
-  Project.evaluateTask(pack, state)
+  //Project.evaluateTask(pack, state)
+  Project.runTask(pack, state)
   println("copy all the Scala dependency libraries")
   val sourceDir = base/"target"/"pack"/"lib";
   if (sourceDir.exists) {
