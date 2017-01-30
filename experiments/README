@@ -1,0 +1,35 @@
+See also datasets/README
+
+
+Generating TPC-H C++ source files:
+sbt "unit -d standard -s 1 -w 0 -l cpp -O3 -p 2 -q tpch.query[0-9]+ -t 3600000 -xvm -F HEURISTICS-DECOMPOSE-OVER-TABLES -F IGNORE-DELETES"
+sbt "unit -d standard -s 1 -w 0 -l cpp -O3 -p 2 -q tpch.query[0-9]+ -t 3600000 -xvm -F HEURISTICS-DECOMPOSE-OVER-TABLES --batch"
+
+Generating TPC-DS C++ source files:
+
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds3VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query3.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds7VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query7.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds19VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query19.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds27VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query27.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds34VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query34.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds42VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query42.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds43VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query43.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds46VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query46.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds52VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query52.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds55VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query55.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds68VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query68.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds73VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query73.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" -F IGNORE-DELETES -o experiments/src/tpcds/codegen_revision_r3408/Tpcds79VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query79.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds3VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query3.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds7VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query7.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds19VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query19.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds27VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query27.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds34VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query34.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds42VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query42.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds43VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query43.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds46VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query46.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds52VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query52.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds55VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query55.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds68VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query68.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds73VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query73.sql"
+sbt "toast -l cpp -O3 -xa "-t3600000" --batch -o experiments/src/tpcds/codegen_revision_r3408_batch/Tpcds79VCpp.hpp  /Users/nikolic/DBToaster/alpha5/test/queries/tpcds/query79.sql"

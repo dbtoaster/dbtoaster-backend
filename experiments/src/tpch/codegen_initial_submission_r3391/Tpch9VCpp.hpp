@@ -1,0 +1,4165 @@
+#include <sys/time.h>
+#include "macro.hpp"
+#include "types.hpp"
+#include "functions.hpp"
+#include "hash.hpp"
+#include "hashmap.hpp"
+#include "serialization.hpp"
+
+#define ELEM_SEPARATOR "\n\t\t\t"
+
+namespace dbtoaster {
+  
+  /* Definitions of auxiliary maps for storing materialized views. */
+  struct NATION_entry {
+    long NATION_NATIONKEY; STRING_TYPE NATION_NAME; long NATION_REGIONKEY; STRING_TYPE NATION_COMMENT; long __av; 
+    explicit NATION_entry() { /*NATION_NATIONKEY = 0L; NATION_NAME = ""; NATION_REGIONKEY = 0L; NATION_COMMENT = ""; __av = 0L; */ }
+    explicit NATION_entry(const long c0, const STRING_TYPE& c1, const long c2, const STRING_TYPE& c3, const long c4) { NATION_NATIONKEY = c0; NATION_NAME = c1; NATION_REGIONKEY = c2; NATION_COMMENT = c3; __av = c4; }
+    NATION_entry(const NATION_entry& other) : NATION_NATIONKEY( other.NATION_NATIONKEY ), NATION_NAME( other.NATION_NAME ), NATION_REGIONKEY( other.NATION_REGIONKEY ), NATION_COMMENT( other.NATION_COMMENT ), __av( other.__av ) {}
+    FORCE_INLINE NATION_entry& modify(const long c0, const STRING_TYPE& c1, const long c2, const STRING_TYPE& c3) { NATION_NATIONKEY = c0; NATION_NAME = c1; NATION_REGIONKEY = c2; NATION_COMMENT = c3;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, NATION_NATIONKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, NATION_NAME);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, NATION_REGIONKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, NATION_COMMENT);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct NATION_mapkey0123_idxfn {
+    FORCE_INLINE static size_t hash(const NATION_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.NATION_NATIONKEY);
+      hash_combine(h, e.NATION_NAME);
+      hash_combine(h, e.NATION_REGIONKEY);
+      hash_combine(h, e.NATION_COMMENT);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const NATION_entry& x, const NATION_entry& y) {
+      return x.NATION_NATIONKEY == y.NATION_NATIONKEY && x.NATION_NAME == y.NATION_NAME && x.NATION_REGIONKEY == y.NATION_REGIONKEY && x.NATION_COMMENT == y.NATION_COMMENT;
+    }
+  };
+  
+  typedef MultiHashMap<NATION_entry,long,
+    HashIndex<NATION_entry,long,NATION_mapkey0123_idxfn,true>
+  > NATION_map;
+  typedef HashIndex<NATION_entry,long,NATION_mapkey0123_idxfn,true> HashIndex_NATION_map_0123;
+  
+  struct SUM_PROFIT_entry {
+    STRING_TYPE PROFIT_NATION; long PROFIT_O_YEAR; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_entry() { /*PROFIT_NATION = ""; PROFIT_O_YEAR = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_entry(const STRING_TYPE& c0, const long c1, const DOUBLE_TYPE c2) { PROFIT_NATION = c0; PROFIT_O_YEAR = c1; __av = c2; }
+    SUM_PROFIT_entry(const SUM_PROFIT_entry& other) : PROFIT_NATION( other.PROFIT_NATION ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_entry& modify(const STRING_TYPE& c0, const long c1) { PROFIT_NATION = c0; PROFIT_O_YEAR = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_NATION);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.PROFIT_NATION);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_entry& x, const SUM_PROFIT_entry& y) {
+      return x.PROFIT_NATION == y.PROFIT_NATION && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_entry,DOUBLE_TYPE,SUM_PROFIT_mapkey01_idxfn,true>
+  > SUM_PROFIT_map;
+  typedef HashIndex<SUM_PROFIT_entry,DOUBLE_TYPE,SUM_PROFIT_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_map_01;
+  
+  struct SUM_PROFIT_mORDERS12_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; STRING_TYPE PROFIT_NATION; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS12_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; PROFIT_NATION = ""; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS12_entry(const long c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; PROFIT_NATION = c1; __av = c2; }
+    SUM_PROFIT_mORDERS12_entry(const SUM_PROFIT_mORDERS12_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), PROFIT_NATION( other.PROFIT_NATION ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS12_entry& modify(const long c0, const STRING_TYPE& c1) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; PROFIT_NATION = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_NATION);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS12_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.PROFIT_NATION);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_entry& x, const SUM_PROFIT_mORDERS12_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.PROFIT_NATION == y.PROFIT_NATION;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_entry& x, const SUM_PROFIT_mORDERS12_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS12_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS12_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mapkey01_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS12_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mapkey0_idxfn,false>
+  > SUM_PROFIT_mORDERS12_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mORDERS12_map_01;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_map_0;
+  
+  struct SUM_PROFIT_mORDERS12_mPARTSUPP3_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; long SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY; long SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS12_mPARTSUPP3_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY = 0L; SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS12_mPARTSUPP3_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY = c1; SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY = c2; __av = c3; }
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry(const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY( other.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY ), SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY( other.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& modify(const long c0, const long c1, const long c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY = c1; SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& modify12(const long c1, const long c2) { SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY = c1; SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY = c2;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& x, const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY == y.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY && x.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY == y.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& x, const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& x, const SUM_PROFIT_mORDERS12_mPARTSUPP3_entry& y) {
+      return x.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY == y.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY && x.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY == y.SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS12_mPARTSUPP3_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS12_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS12_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS12_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn,false>
+  > SUM_PROFIT_mORDERS12_mPARTSUPP3_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_012;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_0;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12;
+  
+  struct SUM_PROFIT_mORDERS12_mSUPPLIER1_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; long SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS12_mSUPPLIER1_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS12_mSUPPLIER1_entry(const long c0, const long c1, const DOUBLE_TYPE c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY = c1; __av = c2; }
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry(const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY( other.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& modify(const long c0, const long c1) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& modify1(const long c1) { SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& x, const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& x, const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& x, const SUM_PROFIT_mORDERS12_mSUPPLIER1_entry& y) {
+      return x.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS12_mSUPPLIER1_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey01_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey1_idxfn,false>
+  > SUM_PROFIT_mORDERS12_mSUPPLIER1_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_01;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_0;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey1_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_1;
+  
+  struct SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; long SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY; long SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY = 0L; SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY = c1; SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY = c2; __av = c3; }
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry(const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY( other.SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY ), SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY( other.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& modify(const long c0, const long c1, const long c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY = c1; SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& modify1(const long c1) { SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& modify2(const long c2) { SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY = c2;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& x, const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY == y.SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY && x.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& x, const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& x, const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY == y.SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey2_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& x, const SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey1_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey2_idxfn,false>
+  > SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_012;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_0;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey1_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_1;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey2_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_2;
+  
+  struct SUM_PROFIT_mORDERS12_mPART2_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; long SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY; STRING_TYPE PROFIT_NATION; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS12_mPART2_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY = 0L; PROFIT_NATION = ""; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS12_mPART2_entry(const long c0, const long c1, const STRING_TYPE& c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY = c1; PROFIT_NATION = c2; __av = c3; }
+    SUM_PROFIT_mORDERS12_mPART2_entry(const SUM_PROFIT_mORDERS12_mPART2_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY( other.SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY ), PROFIT_NATION( other.PROFIT_NATION ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mPART2_entry& modify(const long c0, const long c1, const STRING_TYPE& c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY = c1; PROFIT_NATION = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mPART2_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS12_mPART2_entry& modify1(const long c1) { SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_NATION);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS12_mPART2_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY);
+      hash_combine(h, e.PROFIT_NATION);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mPART2_entry& x, const SUM_PROFIT_mORDERS12_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY == y.SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY && x.PROFIT_NATION == y.PROFIT_NATION;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mPART2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mPART2_entry& x, const SUM_PROFIT_mORDERS12_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS12_mPART2_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS12_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS12_mPART2_entry& x, const SUM_PROFIT_mORDERS12_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY == y.SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS12_mPART2_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS12_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPART2_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS12_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPART2_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS12_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPART2_mapkey1_idxfn,false>
+  > SUM_PROFIT_mORDERS12_mPART2_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPART2_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_012;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPART2_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_0;
+  typedef HashIndex<SUM_PROFIT_mORDERS12_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS12_mPART2_mapkey1_idxfn,false> HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_1;
+  
+  struct SUM_PROFIT_mORDERS14_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; STRING_TYPE PROFIT_NATION; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS14_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; PROFIT_NATION = ""; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS14_entry(const long c0, const STRING_TYPE& c1, const DOUBLE_TYPE c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; PROFIT_NATION = c1; __av = c2; }
+    SUM_PROFIT_mORDERS14_entry(const SUM_PROFIT_mORDERS14_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), PROFIT_NATION( other.PROFIT_NATION ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS14_entry& modify(const long c0, const STRING_TYPE& c1) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; PROFIT_NATION = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_NATION);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS14_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.PROFIT_NATION);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_entry& x, const SUM_PROFIT_mORDERS14_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.PROFIT_NATION == y.PROFIT_NATION;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_entry& x, const SUM_PROFIT_mORDERS14_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS14_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS14_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mapkey01_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS14_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mapkey0_idxfn,false>
+  > SUM_PROFIT_mORDERS14_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mORDERS14_map_01;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_map_0;
+  
+  struct SUM_PROFIT_mORDERS14_mPARTSUPP3_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; long SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY; long SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS14_mPARTSUPP3_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY = 0L; SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS14_mPARTSUPP3_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY = c1; SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY = c2; __av = c3; }
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry(const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY( other.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY ), SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY( other.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& modify(const long c0, const long c1, const long c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY = c1; SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& modify12(const long c1, const long c2) { SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY = c1; SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY = c2;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& x, const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY == y.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY && x.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY == y.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& x, const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& x, const SUM_PROFIT_mORDERS14_mPARTSUPP3_entry& y) {
+      return x.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY == y.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY && x.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY == y.SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS14_mPARTSUPP3_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS14_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS14_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS14_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn,false>
+  > SUM_PROFIT_mORDERS14_mPARTSUPP3_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_012;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_0;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mPARTSUPP3_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12;
+  
+  struct SUM_PROFIT_mORDERS14_mSUPPLIER1_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; long SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS14_mSUPPLIER1_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS14_mSUPPLIER1_entry(const long c0, const long c1, const DOUBLE_TYPE c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY = c1; __av = c2; }
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry(const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY( other.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& modify(const long c0, const long c1) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& modify1(const long c1) { SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& x, const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& x, const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& x, const SUM_PROFIT_mORDERS14_mSUPPLIER1_entry& y) {
+      return x.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS14_mSUPPLIER1_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey01_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey1_idxfn,false>
+  > SUM_PROFIT_mORDERS14_mSUPPLIER1_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_01;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_0;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey1_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_1;
+  
+  struct SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; long SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY; long SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY = 0L; SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY = c1; SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY = c2; __av = c3; }
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry(const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY( other.SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY ), SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY( other.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& modify(const long c0, const long c1, const long c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY = c1; SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& modify1(const long c1) { SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& modify2(const long c2) { SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY = c2;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& x, const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY == y.SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY && x.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& x, const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& x, const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY == y.SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey2_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& x, const SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey1_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey2_idxfn,false>
+  > SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_012;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_0;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey1_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_1;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey2_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_2;
+  
+  struct SUM_PROFIT_mORDERS14_mPART2_entry {
+    long SUM_PROFIT_mORDERSORDERS_ORDERKEY; long SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY; STRING_TYPE PROFIT_NATION; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mORDERS14_mPART2_entry() { /*SUM_PROFIT_mORDERSORDERS_ORDERKEY = 0L; SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY = 0L; PROFIT_NATION = ""; __av = 0.0; */ }
+    explicit SUM_PROFIT_mORDERS14_mPART2_entry(const long c0, const long c1, const STRING_TYPE& c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY = c1; PROFIT_NATION = c2; __av = c3; }
+    SUM_PROFIT_mORDERS14_mPART2_entry(const SUM_PROFIT_mORDERS14_mPART2_entry& other) : SUM_PROFIT_mORDERSORDERS_ORDERKEY( other.SUM_PROFIT_mORDERSORDERS_ORDERKEY ), SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY( other.SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY ), PROFIT_NATION( other.PROFIT_NATION ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mPART2_entry& modify(const long c0, const long c1, const STRING_TYPE& c2) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0; SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY = c1; PROFIT_NATION = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mPART2_entry& modify0(const long c0) { SUM_PROFIT_mORDERSORDERS_ORDERKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mORDERS14_mPART2_entry& modify1(const long c1) { SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_NATION);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mORDERS14_mPART2_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY);
+      hash_combine(h, e.PROFIT_NATION);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mPART2_entry& x, const SUM_PROFIT_mORDERS14_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY && x.SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY == y.SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY && x.PROFIT_NATION == y.PROFIT_NATION;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mPART2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERSORDERS_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mPART2_entry& x, const SUM_PROFIT_mORDERS14_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERSORDERS_ORDERKEY == y.SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mORDERS14_mPART2_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mORDERS14_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mORDERS14_mPART2_entry& x, const SUM_PROFIT_mORDERS14_mPART2_entry& y) {
+      return x.SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY == y.SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mORDERS14_mPART2_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mORDERS14_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPART2_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mORDERS14_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPART2_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mORDERS14_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPART2_mapkey1_idxfn,false>
+  > SUM_PROFIT_mORDERS14_mPART2_map;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPART2_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_012;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPART2_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_0;
+  typedef HashIndex<SUM_PROFIT_mORDERS14_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mORDERS14_mPART2_mapkey1_idxfn,false> HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_1;
+  
+  struct SUM_PROFIT_mPARTSUPP13_entry {
+    long SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY; long SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY; long PROFIT_O_YEAR; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mPARTSUPP13_entry() { /*SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY = 0L; SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY = 0L; PROFIT_O_YEAR = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mPARTSUPP13_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY = c0; SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY = c1; PROFIT_O_YEAR = c2; __av = c3; }
+    SUM_PROFIT_mPARTSUPP13_entry(const SUM_PROFIT_mPARTSUPP13_entry& other) : SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY( other.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY ), SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY( other.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mPARTSUPP13_entry& modify(const long c0, const long c1, const long c2) { SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY = c0; SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY = c1; PROFIT_O_YEAR = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mPARTSUPP13_entry& modify01(const long c0, const long c1) { SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY = c0; SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mPARTSUPP13_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mPARTSUPP13_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mPARTSUPP13_entry& x, const SUM_PROFIT_mPARTSUPP13_entry& y) {
+      return x.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY == y.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY && x.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY == y.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR;
+    }
+  };
+  
+  struct SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mPARTSUPP13_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mPARTSUPP13_entry& x, const SUM_PROFIT_mPARTSUPP13_entry& y) {
+      return x.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY == y.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY && x.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY == y.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mPARTSUPP13_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mPARTSUPP13_entry,DOUBLE_TYPE,SUM_PROFIT_mPARTSUPP13_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mPARTSUPP13_entry,DOUBLE_TYPE,SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn,false>
+  > SUM_PROFIT_mPARTSUPP13_map;
+  typedef HashIndex<SUM_PROFIT_mPARTSUPP13_entry,DOUBLE_TYPE,SUM_PROFIT_mPARTSUPP13_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mPARTSUPP13_map_012;
+  typedef HashIndex<SUM_PROFIT_mPARTSUPP13_entry,DOUBLE_TYPE,SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn,false> HashIndex_SUM_PROFIT_mPARTSUPP13_map_01;
+  
+  struct SUM_PROFIT_mPARTSUPP17_entry {
+    long SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY; long SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY; long PROFIT_O_YEAR; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mPARTSUPP17_entry() { /*SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY = 0L; SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY = 0L; PROFIT_O_YEAR = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mPARTSUPP17_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY = c0; SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY = c1; PROFIT_O_YEAR = c2; __av = c3; }
+    SUM_PROFIT_mPARTSUPP17_entry(const SUM_PROFIT_mPARTSUPP17_entry& other) : SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY( other.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY ), SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY( other.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mPARTSUPP17_entry& modify(const long c0, const long c1, const long c2) { SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY = c0; SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY = c1; PROFIT_O_YEAR = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mPARTSUPP17_entry& modify01(const long c0, const long c1) { SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY = c0; SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mPARTSUPP17_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mPARTSUPP17_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mPARTSUPP17_entry& x, const SUM_PROFIT_mPARTSUPP17_entry& y) {
+      return x.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY == y.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY && x.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY == y.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR;
+    }
+  };
+  
+  struct SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mPARTSUPP17_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mPARTSUPP17_entry& x, const SUM_PROFIT_mPARTSUPP17_entry& y) {
+      return x.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY == y.SUM_PROFIT_mPARTSUPPPARTSUPP_PARTKEY && x.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY == y.SUM_PROFIT_mPARTSUPPPARTSUPP_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mPARTSUPP17_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mPARTSUPP17_entry,DOUBLE_TYPE,SUM_PROFIT_mPARTSUPP17_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mPARTSUPP17_entry,DOUBLE_TYPE,SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn,false>
+  > SUM_PROFIT_mPARTSUPP17_map;
+  typedef HashIndex<SUM_PROFIT_mPARTSUPP17_entry,DOUBLE_TYPE,SUM_PROFIT_mPARTSUPP17_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mPARTSUPP17_map_012;
+  typedef HashIndex<SUM_PROFIT_mPARTSUPP17_entry,DOUBLE_TYPE,SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn,false> HashIndex_SUM_PROFIT_mPARTSUPP17_map_01;
+  
+  struct SUM_PROFIT_mLINEITEM11_entry {
+    long SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY; long __av; 
+    explicit SUM_PROFIT_mLINEITEM11_entry() { /*SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0L; */ }
+    explicit SUM_PROFIT_mLINEITEM11_entry(const long c0, const long c1) { SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY = c0; __av = c1; }
+    SUM_PROFIT_mLINEITEM11_entry(const SUM_PROFIT_mLINEITEM11_entry& other) : SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY( other.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mLINEITEM11_entry& modify(const long c0) { SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mLINEITEM11_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mLINEITEM11_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mLINEITEM11_entry& x, const SUM_PROFIT_mLINEITEM11_entry& y) {
+      return x.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY == y.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mLINEITEM11_entry,long,
+    HashIndex<SUM_PROFIT_mLINEITEM11_entry,long,SUM_PROFIT_mLINEITEM11_mapkey0_idxfn,true>
+  > SUM_PROFIT_mLINEITEM11_map;
+  typedef HashIndex<SUM_PROFIT_mLINEITEM11_entry,long,SUM_PROFIT_mLINEITEM11_mapkey0_idxfn,true> HashIndex_SUM_PROFIT_mLINEITEM11_map_0;
+  
+  struct SUM_PROFIT_mLINEITEM12_entry {
+    long SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY; STRING_TYPE PROFIT_NATION; long __av; 
+    explicit SUM_PROFIT_mLINEITEM12_entry() { /*SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = 0L; PROFIT_NATION = ""; __av = 0L; */ }
+    explicit SUM_PROFIT_mLINEITEM12_entry(const long c0, const STRING_TYPE& c1, const long c2) { SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = c0; PROFIT_NATION = c1; __av = c2; }
+    SUM_PROFIT_mLINEITEM12_entry(const SUM_PROFIT_mLINEITEM12_entry& other) : SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY( other.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY ), PROFIT_NATION( other.PROFIT_NATION ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mLINEITEM12_entry& modify(const long c0, const STRING_TYPE& c1) { SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = c0; PROFIT_NATION = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mLINEITEM12_entry& modify0(const long c0) { SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_NATION);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mLINEITEM12_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mLINEITEM12_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY);
+      hash_combine(h, e.PROFIT_NATION);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mLINEITEM12_entry& x, const SUM_PROFIT_mLINEITEM12_entry& y) {
+      return x.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY == y.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY && x.PROFIT_NATION == y.PROFIT_NATION;
+    }
+  };
+  
+  struct SUM_PROFIT_mLINEITEM12_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mLINEITEM12_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mLINEITEM12_entry& x, const SUM_PROFIT_mLINEITEM12_entry& y) {
+      return x.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY == y.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mLINEITEM12_entry,long,
+    HashIndex<SUM_PROFIT_mLINEITEM12_entry,long,SUM_PROFIT_mLINEITEM12_mapkey01_idxfn,true>,
+    HashIndex<SUM_PROFIT_mLINEITEM12_entry,long,SUM_PROFIT_mLINEITEM12_mapkey0_idxfn,false>
+  > SUM_PROFIT_mLINEITEM12_map;
+  typedef HashIndex<SUM_PROFIT_mLINEITEM12_entry,long,SUM_PROFIT_mLINEITEM12_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mLINEITEM12_map_01;
+  typedef HashIndex<SUM_PROFIT_mLINEITEM12_entry,long,SUM_PROFIT_mLINEITEM12_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mLINEITEM12_map_0;
+  
+  struct SUM_PROFIT_mLINEITEM13_entry {
+    long SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY; long SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY; long __av; 
+    explicit SUM_PROFIT_mLINEITEM13_entry() { /*SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY = 0L; SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = 0L; __av = 0L; */ }
+    explicit SUM_PROFIT_mLINEITEM13_entry(const long c0, const long c1, const long c2) { SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY = c0; SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = c1; __av = c2; }
+    SUM_PROFIT_mLINEITEM13_entry(const SUM_PROFIT_mLINEITEM13_entry& other) : SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY( other.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY ), SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY( other.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mLINEITEM13_entry& modify(const long c0, const long c1) { SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY = c0; SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mLINEITEM13_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mLINEITEM13_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mLINEITEM13_entry& x, const SUM_PROFIT_mLINEITEM13_entry& y) {
+      return x.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY == y.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY && x.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY == y.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mLINEITEM13_entry,long,
+    HashIndex<SUM_PROFIT_mLINEITEM13_entry,long,SUM_PROFIT_mLINEITEM13_mapkey01_idxfn,true>
+  > SUM_PROFIT_mLINEITEM13_map;
+  typedef HashIndex<SUM_PROFIT_mLINEITEM13_entry,long,SUM_PROFIT_mLINEITEM13_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mLINEITEM13_map_01;
+  
+  struct SUM_PROFIT_mLINEITEM14_entry {
+    long SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY; long PROFIT_O_YEAR; long __av; 
+    explicit SUM_PROFIT_mLINEITEM14_entry() { /*SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY = 0L; PROFIT_O_YEAR = 0L; __av = 0L; */ }
+    explicit SUM_PROFIT_mLINEITEM14_entry(const long c0, const long c1, const long c2) { SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY = c0; PROFIT_O_YEAR = c1; __av = c2; }
+    SUM_PROFIT_mLINEITEM14_entry(const SUM_PROFIT_mLINEITEM14_entry& other) : SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY( other.SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mLINEITEM14_entry& modify(const long c0, const long c1) { SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY = c0; PROFIT_O_YEAR = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mLINEITEM14_entry& modify0(const long c0) { SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mLINEITEM14_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mLINEITEM14_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mLINEITEM14_entry& x, const SUM_PROFIT_mLINEITEM14_entry& y) {
+      return x.SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY == y.SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR;
+    }
+  };
+  
+  struct SUM_PROFIT_mLINEITEM14_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mLINEITEM14_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mLINEITEM14_entry& x, const SUM_PROFIT_mLINEITEM14_entry& y) {
+      return x.SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY == y.SUM_PROFIT_mLINEITEMLINEITEM_ORDERKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mLINEITEM14_entry,long,
+    HashIndex<SUM_PROFIT_mLINEITEM14_entry,long,SUM_PROFIT_mLINEITEM14_mapkey01_idxfn,true>,
+    HashIndex<SUM_PROFIT_mLINEITEM14_entry,long,SUM_PROFIT_mLINEITEM14_mapkey0_idxfn,false>
+  > SUM_PROFIT_mLINEITEM14_map;
+  typedef HashIndex<SUM_PROFIT_mLINEITEM14_entry,long,SUM_PROFIT_mLINEITEM14_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mLINEITEM14_map_01;
+  typedef HashIndex<SUM_PROFIT_mLINEITEM14_entry,long,SUM_PROFIT_mLINEITEM14_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mLINEITEM14_map_0;
+  
+  struct SUM_PROFIT_mLINEITEM110_entry {
+    long SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY; long SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mLINEITEM110_entry() { /*SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY = 0L; SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mLINEITEM110_entry(const long c0, const long c1, const DOUBLE_TYPE c2) { SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY = c0; SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = c1; __av = c2; }
+    SUM_PROFIT_mLINEITEM110_entry(const SUM_PROFIT_mLINEITEM110_entry& other) : SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY( other.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY ), SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY( other.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mLINEITEM110_entry& modify(const long c0, const long c1) { SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY = c0; SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mLINEITEM110_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mLINEITEM110_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mLINEITEM110_entry& x, const SUM_PROFIT_mLINEITEM110_entry& y) {
+      return x.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY == y.SUM_PROFIT_mLINEITEMLINEITEM_PARTKEY && x.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY == y.SUM_PROFIT_mLINEITEMLINEITEM_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mLINEITEM110_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mLINEITEM110_entry,DOUBLE_TYPE,SUM_PROFIT_mLINEITEM110_mapkey01_idxfn,true>
+  > SUM_PROFIT_mLINEITEM110_map;
+  typedef HashIndex<SUM_PROFIT_mLINEITEM110_entry,DOUBLE_TYPE,SUM_PROFIT_mLINEITEM110_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mLINEITEM110_map_01;
+  
+  struct SUM_PROFIT_mSUPPLIER11_entry {
+    long SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY; long PROFIT_O_YEAR; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mSUPPLIER11_entry() { /*SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = 0L; PROFIT_O_YEAR = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mSUPPLIER11_entry(const long c0, const long c1, const DOUBLE_TYPE c2) { SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c0; PROFIT_O_YEAR = c1; __av = c2; }
+    SUM_PROFIT_mSUPPLIER11_entry(const SUM_PROFIT_mSUPPLIER11_entry& other) : SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY( other.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER11_entry& modify(const long c0, const long c1) { SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c0; PROFIT_O_YEAR = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER11_entry& modify0(const long c0) { SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mSUPPLIER11_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER11_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER11_entry& x, const SUM_PROFIT_mSUPPLIER11_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR;
+    }
+  };
+  
+  struct SUM_PROFIT_mSUPPLIER11_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER11_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER11_entry& x, const SUM_PROFIT_mSUPPLIER11_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mSUPPLIER11_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mSUPPLIER11_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mapkey01_idxfn,true>,
+    HashIndex<SUM_PROFIT_mSUPPLIER11_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mapkey0_idxfn,false>
+  > SUM_PROFIT_mSUPPLIER11_map;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER11_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mSUPPLIER11_map_01;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER11_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mSUPPLIER11_map_0;
+  
+  struct SUM_PROFIT_mSUPPLIER11_mPART2_entry {
+    long SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY; long SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY; long PROFIT_O_YEAR; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mSUPPLIER11_mPART2_entry() { /*SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY = 0L; SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = 0L; PROFIT_O_YEAR = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mSUPPLIER11_mPART2_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY = c0; SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c1; PROFIT_O_YEAR = c2; __av = c3; }
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry(const SUM_PROFIT_mSUPPLIER11_mPART2_entry& other) : SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY( other.SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY ), SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY( other.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER11_mPART2_entry& modify(const long c0, const long c1, const long c2) { SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY = c0; SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c1; PROFIT_O_YEAR = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER11_mPART2_entry& modify0(const long c0) { SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER11_mPART2_entry& modify1(const long c1) { SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mSUPPLIER11_mPART2_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER11_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER11_mPART2_entry& x, const SUM_PROFIT_mSUPPLIER11_mPART2_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY == y.SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY && x.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR;
+    }
+  };
+  
+  struct SUM_PROFIT_mSUPPLIER11_mPART2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER11_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER11_mPART2_entry& x, const SUM_PROFIT_mSUPPLIER11_mPART2_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY == y.SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mSUPPLIER11_mPART2_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER11_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER11_mPART2_entry& x, const SUM_PROFIT_mSUPPLIER11_mPART2_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mSUPPLIER11_mPART2_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mSUPPLIER11_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mPART2_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mSUPPLIER11_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mPART2_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mSUPPLIER11_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mPART2_mapkey1_idxfn,false>
+  > SUM_PROFIT_mSUPPLIER11_mPART2_map;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER11_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mPART2_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_012;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER11_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mPART2_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_0;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER11_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER11_mPART2_mapkey1_idxfn,false> HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_1;
+  
+  struct SUM_PROFIT_mSUPPLIER12_entry {
+    long SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY; STRING_TYPE PROFIT_NATION; long __av; 
+    explicit SUM_PROFIT_mSUPPLIER12_entry() { /*SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY = 0L; PROFIT_NATION = ""; __av = 0L; */ }
+    explicit SUM_PROFIT_mSUPPLIER12_entry(const long c0, const STRING_TYPE& c1, const long c2) { SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY = c0; PROFIT_NATION = c1; __av = c2; }
+    SUM_PROFIT_mSUPPLIER12_entry(const SUM_PROFIT_mSUPPLIER12_entry& other) : SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY( other.SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY ), PROFIT_NATION( other.PROFIT_NATION ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER12_entry& modify(const long c0, const STRING_TYPE& c1) { SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY = c0; PROFIT_NATION = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER12_entry& modify0(const long c0) { SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_NATION);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mSUPPLIER12_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER12_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY);
+      hash_combine(h, e.PROFIT_NATION);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER12_entry& x, const SUM_PROFIT_mSUPPLIER12_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY && x.PROFIT_NATION == y.PROFIT_NATION;
+    }
+  };
+  
+  struct SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER12_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER12_entry& x, const SUM_PROFIT_mSUPPLIER12_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_NATIONKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mSUPPLIER12_entry,long,
+    HashIndex<SUM_PROFIT_mSUPPLIER12_entry,long,SUM_PROFIT_mSUPPLIER12_mapkey01_idxfn,true>,
+    HashIndex<SUM_PROFIT_mSUPPLIER12_entry,long,SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn,false>
+  > SUM_PROFIT_mSUPPLIER12_map;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER12_entry,long,SUM_PROFIT_mSUPPLIER12_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mSUPPLIER12_map_01;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER12_entry,long,SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mSUPPLIER12_map_0;
+  
+  struct SUM_PROFIT_mSUPPLIER13_entry {
+    long SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY; long PROFIT_O_YEAR; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mSUPPLIER13_entry() { /*SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = 0L; PROFIT_O_YEAR = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mSUPPLIER13_entry(const long c0, const long c1, const DOUBLE_TYPE c2) { SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c0; PROFIT_O_YEAR = c1; __av = c2; }
+    SUM_PROFIT_mSUPPLIER13_entry(const SUM_PROFIT_mSUPPLIER13_entry& other) : SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY( other.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER13_entry& modify(const long c0, const long c1) { SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c0; PROFIT_O_YEAR = c1;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER13_entry& modify0(const long c0) { SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mSUPPLIER13_mapkey01_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER13_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER13_entry& x, const SUM_PROFIT_mSUPPLIER13_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR;
+    }
+  };
+  
+  struct SUM_PROFIT_mSUPPLIER13_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER13_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER13_entry& x, const SUM_PROFIT_mSUPPLIER13_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mSUPPLIER13_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mSUPPLIER13_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mapkey01_idxfn,true>,
+    HashIndex<SUM_PROFIT_mSUPPLIER13_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mapkey0_idxfn,false>
+  > SUM_PROFIT_mSUPPLIER13_map;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER13_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mapkey01_idxfn,true> HashIndex_SUM_PROFIT_mSUPPLIER13_map_01;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER13_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mSUPPLIER13_map_0;
+  
+  struct SUM_PROFIT_mSUPPLIER13_mPART2_entry {
+    long SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY; long SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY; long PROFIT_O_YEAR; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mSUPPLIER13_mPART2_entry() { /*SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY = 0L; SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = 0L; PROFIT_O_YEAR = 0L; __av = 0.0; */ }
+    explicit SUM_PROFIT_mSUPPLIER13_mPART2_entry(const long c0, const long c1, const long c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY = c0; SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c1; PROFIT_O_YEAR = c2; __av = c3; }
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry(const SUM_PROFIT_mSUPPLIER13_mPART2_entry& other) : SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY( other.SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY ), SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY( other.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER13_mPART2_entry& modify(const long c0, const long c1, const long c2) { SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY = c0; SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c1; PROFIT_O_YEAR = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER13_mPART2_entry& modify0(const long c0) { SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY = c0;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mSUPPLIER13_mPART2_entry& modify1(const long c1) { SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY = c1;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mSUPPLIER13_mPART2_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER13_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY);
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER13_mPART2_entry& x, const SUM_PROFIT_mSUPPLIER13_mPART2_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY == y.SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY && x.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR;
+    }
+  };
+  
+  struct SUM_PROFIT_mSUPPLIER13_mPART2_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER13_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER13_mPART2_entry& x, const SUM_PROFIT_mSUPPLIER13_mPART2_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY == y.SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY;
+    }
+  };
+  
+  struct SUM_PROFIT_mSUPPLIER13_mPART2_mapkey1_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mSUPPLIER13_mPART2_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mSUPPLIER13_mPART2_entry& x, const SUM_PROFIT_mSUPPLIER13_mPART2_entry& y) {
+      return x.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY == y.SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mSUPPLIER13_mPART2_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mSUPPLIER13_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mPART2_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mSUPPLIER13_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mPART2_mapkey0_idxfn,false>,
+    HashIndex<SUM_PROFIT_mSUPPLIER13_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mPART2_mapkey1_idxfn,false>
+  > SUM_PROFIT_mSUPPLIER13_mPART2_map;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER13_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mPART2_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_012;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER13_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mPART2_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_0;
+  typedef HashIndex<SUM_PROFIT_mSUPPLIER13_mPART2_entry,DOUBLE_TYPE,SUM_PROFIT_mSUPPLIER13_mPART2_mapkey1_idxfn,false> HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_1;
+  
+  struct SUM_PROFIT_mPART12_entry {
+    long SUM_PROFIT_mPARTPART_PARTKEY; long PROFIT_O_YEAR; STRING_TYPE PROFIT_NATION; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mPART12_entry() { /*SUM_PROFIT_mPARTPART_PARTKEY = 0L; PROFIT_O_YEAR = 0L; PROFIT_NATION = ""; __av = 0.0; */ }
+    explicit SUM_PROFIT_mPART12_entry(const long c0, const long c1, const STRING_TYPE& c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mPARTPART_PARTKEY = c0; PROFIT_O_YEAR = c1; PROFIT_NATION = c2; __av = c3; }
+    SUM_PROFIT_mPART12_entry(const SUM_PROFIT_mPART12_entry& other) : SUM_PROFIT_mPARTPART_PARTKEY( other.SUM_PROFIT_mPARTPART_PARTKEY ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), PROFIT_NATION( other.PROFIT_NATION ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mPART12_entry& modify(const long c0, const long c1, const STRING_TYPE& c2) { SUM_PROFIT_mPARTPART_PARTKEY = c0; PROFIT_O_YEAR = c1; PROFIT_NATION = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mPART12_entry& modify0(const long c0) { SUM_PROFIT_mPARTPART_PARTKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mPARTPART_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_NATION);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mPART12_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mPART12_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mPARTPART_PARTKEY);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      hash_combine(h, e.PROFIT_NATION);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mPART12_entry& x, const SUM_PROFIT_mPART12_entry& y) {
+      return x.SUM_PROFIT_mPARTPART_PARTKEY == y.SUM_PROFIT_mPARTPART_PARTKEY && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR && x.PROFIT_NATION == y.PROFIT_NATION;
+    }
+  };
+  
+  struct SUM_PROFIT_mPART12_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mPART12_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mPARTPART_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mPART12_entry& x, const SUM_PROFIT_mPART12_entry& y) {
+      return x.SUM_PROFIT_mPARTPART_PARTKEY == y.SUM_PROFIT_mPARTPART_PARTKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mPART12_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mPART12_entry,DOUBLE_TYPE,SUM_PROFIT_mPART12_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mPART12_entry,DOUBLE_TYPE,SUM_PROFIT_mPART12_mapkey0_idxfn,false>
+  > SUM_PROFIT_mPART12_map;
+  typedef HashIndex<SUM_PROFIT_mPART12_entry,DOUBLE_TYPE,SUM_PROFIT_mPART12_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mPART12_map_012;
+  typedef HashIndex<SUM_PROFIT_mPART12_entry,DOUBLE_TYPE,SUM_PROFIT_mPART12_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mPART12_map_0;
+  
+  struct SUM_PROFIT_mPART14_entry {
+    long SUM_PROFIT_mPARTPART_PARTKEY; long PROFIT_O_YEAR; STRING_TYPE PROFIT_NATION; DOUBLE_TYPE __av; 
+    explicit SUM_PROFIT_mPART14_entry() { /*SUM_PROFIT_mPARTPART_PARTKEY = 0L; PROFIT_O_YEAR = 0L; PROFIT_NATION = ""; __av = 0.0; */ }
+    explicit SUM_PROFIT_mPART14_entry(const long c0, const long c1, const STRING_TYPE& c2, const DOUBLE_TYPE c3) { SUM_PROFIT_mPARTPART_PARTKEY = c0; PROFIT_O_YEAR = c1; PROFIT_NATION = c2; __av = c3; }
+    SUM_PROFIT_mPART14_entry(const SUM_PROFIT_mPART14_entry& other) : SUM_PROFIT_mPARTPART_PARTKEY( other.SUM_PROFIT_mPARTPART_PARTKEY ), PROFIT_O_YEAR( other.PROFIT_O_YEAR ), PROFIT_NATION( other.PROFIT_NATION ), __av( other.__av ) {}
+    FORCE_INLINE SUM_PROFIT_mPART14_entry& modify(const long c0, const long c1, const STRING_TYPE& c2) { SUM_PROFIT_mPARTPART_PARTKEY = c0; PROFIT_O_YEAR = c1; PROFIT_NATION = c2;  return *this; }
+    FORCE_INLINE SUM_PROFIT_mPART14_entry& modify0(const long c0) { SUM_PROFIT_mPARTPART_PARTKEY = c0;  return *this; }
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const 
+    {
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, SUM_PROFIT_mPARTPART_PARTKEY);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_O_YEAR);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROFIT_NATION);
+      ar << ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  struct SUM_PROFIT_mPART14_mapkey012_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mPART14_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mPARTPART_PARTKEY);
+      hash_combine(h, e.PROFIT_O_YEAR);
+      hash_combine(h, e.PROFIT_NATION);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mPART14_entry& x, const SUM_PROFIT_mPART14_entry& y) {
+      return x.SUM_PROFIT_mPARTPART_PARTKEY == y.SUM_PROFIT_mPARTPART_PARTKEY && x.PROFIT_O_YEAR == y.PROFIT_O_YEAR && x.PROFIT_NATION == y.PROFIT_NATION;
+    }
+  };
+  
+  struct SUM_PROFIT_mPART14_mapkey0_idxfn {
+    FORCE_INLINE static size_t hash(const SUM_PROFIT_mPART14_entry& e) {
+      size_t h = 0;
+      hash_combine(h, e.SUM_PROFIT_mPARTPART_PARTKEY);
+      return h;
+    }
+    FORCE_INLINE static bool equals(const SUM_PROFIT_mPART14_entry& x, const SUM_PROFIT_mPART14_entry& y) {
+      return x.SUM_PROFIT_mPARTPART_PARTKEY == y.SUM_PROFIT_mPARTPART_PARTKEY;
+    }
+  };
+  
+  typedef MultiHashMap<SUM_PROFIT_mPART14_entry,DOUBLE_TYPE,
+    HashIndex<SUM_PROFIT_mPART14_entry,DOUBLE_TYPE,SUM_PROFIT_mPART14_mapkey012_idxfn,true>,
+    HashIndex<SUM_PROFIT_mPART14_entry,DOUBLE_TYPE,SUM_PROFIT_mPART14_mapkey0_idxfn,false>
+  > SUM_PROFIT_mPART14_map;
+  typedef HashIndex<SUM_PROFIT_mPART14_entry,DOUBLE_TYPE,SUM_PROFIT_mPART14_mapkey012_idxfn,true> HashIndex_SUM_PROFIT_mPART14_map_012;
+  typedef HashIndex<SUM_PROFIT_mPART14_entry,DOUBLE_TYPE,SUM_PROFIT_mPART14_mapkey0_idxfn,false> HashIndex_SUM_PROFIT_mPART14_map_0;
+  
+  struct tuple2_L_D {
+    long _1; DOUBLE_TYPE __av;
+    explicit tuple2_L_D() { }
+    explicit tuple2_L_D(const long c1, DOUBLE_TYPE c__av=0.0) { _1 = c1; __av = c__av;}
+    int operator==(const tuple2_L_D &rhs) const { return ((this->_1==rhs._1)); }
+    FORCE_INLINE tuple2_L_D& modify(const long c0, DOUBLE_TYPE c__av) { _1 = c0; __av = c__av; return *this; }
+    static bool equals(const tuple2_L_D &x, const tuple2_L_D &y) { return ((x._1==y._1)); }
+    static long hash(const tuple2_L_D &e) {
+      size_t h = 0;
+      hash_combine(h, e._1);
+      return h;
+    }
+  };
+  struct tuple2_S_D {
+    STRING_TYPE _1; DOUBLE_TYPE __av;
+    explicit tuple2_S_D() { }
+    explicit tuple2_S_D(const STRING_TYPE& c1, DOUBLE_TYPE c__av=0.0) { _1 = c1; __av = c__av;}
+    int operator==(const tuple2_S_D &rhs) const { return ((this->_1==rhs._1)); }
+    FORCE_INLINE tuple2_S_D& modify(const STRING_TYPE& c0, DOUBLE_TYPE c__av) { _1 = c0; __av = c__av; return *this; }
+    static bool equals(const tuple2_S_D &x, const tuple2_S_D &y) { return ((x._1==y._1)); }
+    static long hash(const tuple2_S_D &e) {
+      size_t h = 0;
+      hash_combine(h, e._1);
+      return h;
+    }
+  };
+  
+  /* Type definition providing a way to access the results of the sql program */
+  struct tlq_t{
+    struct timeval t0,t; long tT,tN,tS;
+    tlq_t(): tN(0), tS(0) { gettimeofday(&t0,NULL); }
+  
+  /* Serialization Code */
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int version) const {
+  
+      ar << "\n";
+      const SUM_PROFIT_map& _SUM_PROFIT = get_SUM_PROFIT();
+      dbtoaster::serialize_nvp_tabbed(ar, STRING_TYPE(SUM_PROFIT), _SUM_PROFIT, "\t");
+  
+    }
+  
+    /* Functions returning / computing the results of top level queries */
+    const SUM_PROFIT_map& get_SUM_PROFIT() const {
+      return SUM_PROFIT;
+    
+    }
+  
+  protected:
+  
+    /* Data structures used for storing / computing top level queries */
+    SUM_PROFIT_map SUM_PROFIT;
+  
+  };
+  
+  /* Type definition providing a way to incrementally maintain the results of the sql program */
+  struct data_t : tlq_t{
+    data_t(): tlq_t(), _c1(16U), _c4(16U), _c6(16U), _c3(16U), _c2(16U), _c5(16U) {
+      
+      /* regex_t init */
+      if(regcomp(&preg1, "^.*green.*$", REG_EXTENDED | REG_NOSUB)){
+        cerr << "Error compiling regular expression: /^.*green.*$/" << endl;
+        exit(-1);
+      }
+    }
+  
+    ~data_t() {
+      regfree(&preg1);
+    }
+  
+    /* Trigger functions for table relations */
+    void on_insert_NATION(const long nation_nationkey, const STRING_TYPE nation_name, const long nation_regionkey, const STRING_TYPE nation_comment) {
+      NATION_entry e(nation_nationkey, nation_name, nation_regionkey, nation_comment, 1L);
+      NATION.addOrDelOnZero(e,1L);
+    }
+    
+    
+    
+    /* Trigger functions for stream relations */
+    void on_insert_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        { //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i1 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h2 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se6.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n1 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i1->slice(se6, h2));
+          SUM_PROFIT_mLINEITEM12_entry* e1;
+         
+          if (n1 && (e1 = n1->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e1->PROFIT_NATION;
+              long v1 = e1->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i2 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+                const HASH_RES_t h1 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se5.modify0(lineitem_orderkey));
+                HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n2 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i2->slice(se5, h1));
+                SUM_PROFIT_mLINEITEM14_entry* e2;
+               
+                if (n2 && (e2 = n2->obj)) {
+                  do {                
+                    long profit_o_year = e2->PROFIT_O_YEAR;
+                    long v2 = e2->__av;
+                    SUM_PROFIT.addOrDelOnZero(se1.modify(profit_nation,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se2.modify(lineitem_partkey)) * (v1 * (v2 * ((SUM_PROFIT_mLINEITEM13.getValueOrDefault(se3.modify(lineitem_partkey,lineitem_suppkey)) * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))) + (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se4.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * lineitem_quantity)))))));
+                    n2 = n2->nxt;
+                  } while (n2 && (e2 = n2->obj) && h1 == n2->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se5, *e2)); 
+                }
+              }
+              n1 = n1->nxt;
+            } while (n1 && (e1 = n1->obj) && h2 == n1->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se6, *e1)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i3 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h3 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se10.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n3 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i3->slice(se10, h3));
+          SUM_PROFIT_mLINEITEM12_entry* e3;
+         
+          if (n3 && (e3 = n3->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e3->PROFIT_NATION;
+              long v3 = e3->__av;
+              SUM_PROFIT_mORDERS12.addOrDelOnZero(se7.modify(lineitem_orderkey,profit_nation),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se8.modify(lineitem_partkey)) * (v3 * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se9.modify(lineitem_partkey,lineitem_suppkey)) * lineitem_quantity))));
+              n3 = n3->nxt;
+            } while (n3 && (e3 = n3->obj) && h3 == n3->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se10, *e3)); 
+          }
+        }SUM_PROFIT_mORDERS12_mPARTSUPP3.addOrDelOnZero(se11.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),lineitem_quantity);
+        SUM_PROFIT_mORDERS12_mSUPPLIER1.addOrDelOnZero(se12.modify(lineitem_orderkey,lineitem_suppkey),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se13.modify(lineitem_partkey)) * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se14.modify(lineitem_partkey,lineitem_suppkey)) * lineitem_quantity)));
+        SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.addOrDelOnZero(se15.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),(SUM_PROFIT_mLINEITEM110.getValueOrDefault(se16.modify(lineitem_partkey,lineitem_suppkey)) * lineitem_quantity));
+        { //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i4 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h4 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se19.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n4 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i4->slice(se19, h4));
+          SUM_PROFIT_mLINEITEM12_entry* e4;
+         
+          if (n4 && (e4 = n4->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e4->PROFIT_NATION;
+              long v4 = e4->__av;
+              SUM_PROFIT_mORDERS12_mPART2.addOrDelOnZero(se17.modify(lineitem_orderkey,lineitem_partkey,profit_nation),(v4 * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se18.modify(lineitem_partkey,lineitem_suppkey)) * lineitem_quantity)));
+              n4 = n4->nxt;
+            } while (n4 && (e4 = n4->obj) && h4 == n4->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se19, *e4)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i5 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h5 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se23.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n5 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i5->slice(se23, h5));
+          SUM_PROFIT_mLINEITEM12_entry* e5;
+         
+          if (n5 && (e5 = n5->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e5->PROFIT_NATION;
+              long v5 = e5->__av;
+              SUM_PROFIT_mORDERS14.addOrDelOnZero(se20.modify(lineitem_orderkey,profit_nation),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se21.modify(lineitem_partkey)) * (v5 * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se22.modify(lineitem_partkey,lineitem_suppkey)) * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))))));
+              n5 = n5->nxt;
+            } while (n5 && (e5 = n5->obj) && h5 == n5->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se23, *e5)); 
+          }
+        }SUM_PROFIT_mORDERS14_mPARTSUPP3.addOrDelOnZero(se24.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),(lineitem_extendedprice * (1L + (-1L * lineitem_discount))));
+        SUM_PROFIT_mORDERS14_mSUPPLIER1.addOrDelOnZero(se25.modify(lineitem_orderkey,lineitem_suppkey),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se26.modify(lineitem_partkey)) * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se27.modify(lineitem_partkey,lineitem_suppkey)) * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))));
+        SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.addOrDelOnZero(se28.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),(SUM_PROFIT_mLINEITEM13.getValueOrDefault(se29.modify(lineitem_partkey,lineitem_suppkey)) * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))));
+        { //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i6 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h6 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se32.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n6 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i6->slice(se32, h6));
+          SUM_PROFIT_mLINEITEM12_entry* e6;
+         
+          if (n6 && (e6 = n6->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e6->PROFIT_NATION;
+              long v6 = e6->__av;
+              SUM_PROFIT_mORDERS14_mPART2.addOrDelOnZero(se30.modify(lineitem_orderkey,lineitem_partkey,profit_nation),(v6 * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se31.modify(lineitem_partkey,lineitem_suppkey)) * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))));
+              n6 = n6->nxt;
+            } while (n6 && (e6 = n6->obj) && h6 == n6->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se32, *e6)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i7 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h7 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se34.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n7 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i7->slice(se34, h7));
+          SUM_PROFIT_mLINEITEM14_entry* e7;
+         
+          if (n7 && (e7 = n7->obj)) {
+            do {                
+              long profit_o_year = e7->PROFIT_O_YEAR;
+              long v7 = e7->__av;
+              SUM_PROFIT_mPARTSUPP13.addOrDelOnZero(se33.modify(lineitem_partkey,lineitem_suppkey,profit_o_year),(v7 * lineitem_quantity));
+              n7 = n7->nxt;
+            } while (n7 && (e7 = n7->obj) && h7 == n7->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se34, *e7)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i8 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h8 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se36.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n8 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i8->slice(se36, h8));
+          SUM_PROFIT_mLINEITEM14_entry* e8;
+         
+          if (n8 && (e8 = n8->obj)) {
+            do {                
+              long profit_o_year = e8->PROFIT_O_YEAR;
+              long v8 = e8->__av;
+              SUM_PROFIT_mPARTSUPP17.addOrDelOnZero(se35.modify(lineitem_partkey,lineitem_suppkey,profit_o_year),(v8 * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))));
+              n8 = n8->nxt;
+            } while (n8 && (e8 = n8->obj) && h8 == n8->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se36, *e8)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i9 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h9 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se40.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n9 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i9->slice(se40, h9));
+          SUM_PROFIT_mLINEITEM14_entry* e9;
+         
+          if (n9 && (e9 = n9->obj)) {
+            do {                
+              long profit_o_year = e9->PROFIT_O_YEAR;
+              long v9 = e9->__av;
+              SUM_PROFIT_mSUPPLIER11.addOrDelOnZero(se37.modify(lineitem_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se38.modify(lineitem_partkey)) * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se39.modify(lineitem_partkey,lineitem_suppkey)) * (v9 * lineitem_quantity))));
+              n9 = n9->nxt;
+            } while (n9 && (e9 = n9->obj) && h9 == n9->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se40, *e9)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i10 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h10 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se43.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n10 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i10->slice(se43, h10));
+          SUM_PROFIT_mLINEITEM14_entry* e10;
+         
+          if (n10 && (e10 = n10->obj)) {
+            do {                
+              long profit_o_year = e10->PROFIT_O_YEAR;
+              long v10 = e10->__av;
+              SUM_PROFIT_mSUPPLIER11_mPART2.addOrDelOnZero(se41.modify(lineitem_partkey,lineitem_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM110.getValueOrDefault(se42.modify(lineitem_partkey,lineitem_suppkey)) * (v10 * lineitem_quantity)));
+              n10 = n10->nxt;
+            } while (n10 && (e10 = n10->obj) && h10 == n10->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se43, *e10)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i11 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h11 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se47.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n11 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i11->slice(se47, h11));
+          SUM_PROFIT_mLINEITEM14_entry* e11;
+         
+          if (n11 && (e11 = n11->obj)) {
+            do {                
+              long profit_o_year = e11->PROFIT_O_YEAR;
+              long v11 = e11->__av;
+              SUM_PROFIT_mSUPPLIER13.addOrDelOnZero(se44.modify(lineitem_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se45.modify(lineitem_partkey)) * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se46.modify(lineitem_partkey,lineitem_suppkey)) * (v11 * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))))));
+              n11 = n11->nxt;
+            } while (n11 && (e11 = n11->obj) && h11 == n11->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se47, *e11)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i12 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h12 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se50.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n12 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i12->slice(se50, h12));
+          SUM_PROFIT_mLINEITEM14_entry* e12;
+         
+          if (n12 && (e12 = n12->obj)) {
+            do {                
+              long profit_o_year = e12->PROFIT_O_YEAR;
+              long v12 = e12->__av;
+              SUM_PROFIT_mSUPPLIER13_mPART2.addOrDelOnZero(se48.modify(lineitem_partkey,lineitem_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM13.getValueOrDefault(se49.modify(lineitem_partkey,lineitem_suppkey)) * (v12 * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))));
+              n12 = n12->nxt;
+            } while (n12 && (e12 = n12->obj) && h12 == n12->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se50, *e12)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i13 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h14 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se54.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n13 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i13->slice(se54, h14));
+          SUM_PROFIT_mLINEITEM12_entry* e13;
+         
+          if (n13 && (e13 = n13->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e13->PROFIT_NATION;
+              long v13 = e13->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i14 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+                const HASH_RES_t h13 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se53.modify0(lineitem_orderkey));
+                HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n14 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i14->slice(se53, h13));
+                SUM_PROFIT_mLINEITEM14_entry* e14;
+               
+                if (n14 && (e14 = n14->obj)) {
+                  do {                
+                    long profit_o_year = e14->PROFIT_O_YEAR;
+                    long v14 = e14->__av;
+                    SUM_PROFIT_mPART12.addOrDelOnZero(se51.modify(lineitem_partkey,profit_o_year,profit_nation),(v13 * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se52.modify(lineitem_partkey,lineitem_suppkey)) * (v14 * lineitem_quantity))));
+                    n14 = n14->nxt;
+                  } while (n14 && (e14 = n14->obj) && h13 == n14->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se53, *e14)); 
+                }
+              }
+              n13 = n13->nxt;
+            } while (n13 && (e13 = n13->obj) && h14 == n13->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se54, *e13)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i15 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h16 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se58.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n15 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i15->slice(se58, h16));
+          SUM_PROFIT_mLINEITEM12_entry* e15;
+         
+          if (n15 && (e15 = n15->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e15->PROFIT_NATION;
+              long v15 = e15->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i16 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+                const HASH_RES_t h15 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se57.modify0(lineitem_orderkey));
+                HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n16 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i16->slice(se57, h15));
+                SUM_PROFIT_mLINEITEM14_entry* e16;
+               
+                if (n16 && (e16 = n16->obj)) {
+                  do {                
+                    long profit_o_year = e16->PROFIT_O_YEAR;
+                    long v16 = e16->__av;
+                    SUM_PROFIT_mPART14.addOrDelOnZero(se55.modify(lineitem_partkey,profit_o_year,profit_nation),(v15 * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se56.modify(lineitem_partkey,lineitem_suppkey)) * (v16 * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))))));
+                    n16 = n16->nxt;
+                  } while (n16 && (e16 = n16->obj) && h15 == n16->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se57, *e16)); 
+                }
+              }
+              n15 = n15->nxt;
+            } while (n15 && (e15 = n15->obj) && h16 == n15->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se58, *e15)); 
+          }
+        }
+      }
+    }
+    void on_delete_LINEITEM(const long lineitem_orderkey, const long lineitem_partkey, const long lineitem_suppkey, const long lineitem_linenumber, const DOUBLE_TYPE lineitem_quantity, const DOUBLE_TYPE lineitem_extendedprice, const DOUBLE_TYPE lineitem_discount, const DOUBLE_TYPE lineitem_tax, const STRING_TYPE& lineitem_returnflag, const STRING_TYPE& lineitem_linestatus, const date lineitem_shipdate, const date lineitem_commitdate, const date lineitem_receiptdate, const STRING_TYPE& lineitem_shipinstruct, const STRING_TYPE& lineitem_shipmode, const STRING_TYPE& lineitem_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        { //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i17 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h18 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se64.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n17 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i17->slice(se64, h18));
+          SUM_PROFIT_mLINEITEM12_entry* e17;
+         
+          if (n17 && (e17 = n17->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e17->PROFIT_NATION;
+              long v17 = e17->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i18 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+                const HASH_RES_t h17 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se63.modify0(lineitem_orderkey));
+                HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n18 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i18->slice(se63, h17));
+                SUM_PROFIT_mLINEITEM14_entry* e18;
+               
+                if (n18 && (e18 = n18->obj)) {
+                  do {                
+                    long profit_o_year = e18->PROFIT_O_YEAR;
+                    long v18 = e18->__av;
+                    SUM_PROFIT.addOrDelOnZero(se59.modify(profit_nation,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se60.modify(lineitem_partkey)) * (v17 * (v18 * ((SUM_PROFIT_mLINEITEM13.getValueOrDefault(se61.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))) + (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se62.modify(lineitem_partkey,lineitem_suppkey)) * lineitem_quantity))))));
+                    n18 = n18->nxt;
+                  } while (n18 && (e18 = n18->obj) && h17 == n18->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se63, *e18)); 
+                }
+              }
+              n17 = n17->nxt;
+            } while (n17 && (e17 = n17->obj) && h18 == n17->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se64, *e17)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i19 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h19 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se68.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n19 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i19->slice(se68, h19));
+          SUM_PROFIT_mLINEITEM12_entry* e19;
+         
+          if (n19 && (e19 = n19->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e19->PROFIT_NATION;
+              long v19 = e19->__av;
+              SUM_PROFIT_mORDERS12.addOrDelOnZero(se65.modify(lineitem_orderkey,profit_nation),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se66.modify(lineitem_partkey)) * (v19 * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se67.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * lineitem_quantity)))));
+              n19 = n19->nxt;
+            } while (n19 && (e19 = n19->obj) && h19 == n19->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se68, *e19)); 
+          }
+        }SUM_PROFIT_mORDERS12_mPARTSUPP3.addOrDelOnZero(se69.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),(-1L * lineitem_quantity));
+        SUM_PROFIT_mORDERS12_mSUPPLIER1.addOrDelOnZero(se70.modify(lineitem_orderkey,lineitem_suppkey),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se71.modify(lineitem_partkey)) * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se72.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * lineitem_quantity))));
+        SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.addOrDelOnZero(se73.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),(SUM_PROFIT_mLINEITEM110.getValueOrDefault(se74.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * lineitem_quantity)));
+        { //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i20 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h20 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se77.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n20 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i20->slice(se77, h20));
+          SUM_PROFIT_mLINEITEM12_entry* e20;
+         
+          if (n20 && (e20 = n20->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e20->PROFIT_NATION;
+              long v20 = e20->__av;
+              SUM_PROFIT_mORDERS12_mPART2.addOrDelOnZero(se75.modify(lineitem_orderkey,lineitem_partkey,profit_nation),(v20 * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se76.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * lineitem_quantity))));
+              n20 = n20->nxt;
+            } while (n20 && (e20 = n20->obj) && h20 == n20->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se77, *e20)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i21 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h21 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se81.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n21 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i21->slice(se81, h21));
+          SUM_PROFIT_mLINEITEM12_entry* e21;
+         
+          if (n21 && (e21 = n21->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e21->PROFIT_NATION;
+              long v21 = e21->__av;
+              SUM_PROFIT_mORDERS14.addOrDelOnZero(se78.modify(lineitem_orderkey,profit_nation),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se79.modify(lineitem_partkey)) * (v21 * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se80.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))))));
+              n21 = n21->nxt;
+            } while (n21 && (e21 = n21->obj) && h21 == n21->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se81, *e21)); 
+          }
+        }SUM_PROFIT_mORDERS14_mPARTSUPP3.addOrDelOnZero(se82.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),(-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))));
+        SUM_PROFIT_mORDERS14_mSUPPLIER1.addOrDelOnZero(se83.modify(lineitem_orderkey,lineitem_suppkey),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se84.modify(lineitem_partkey)) * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se85.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))))));
+        SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.addOrDelOnZero(se86.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),(SUM_PROFIT_mLINEITEM13.getValueOrDefault(se87.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))));
+        { //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i22 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h22 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se90.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n22 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i22->slice(se90, h22));
+          SUM_PROFIT_mLINEITEM12_entry* e22;
+         
+          if (n22 && (e22 = n22->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e22->PROFIT_NATION;
+              long v22 = e22->__av;
+              SUM_PROFIT_mORDERS14_mPART2.addOrDelOnZero(se88.modify(lineitem_orderkey,lineitem_partkey,profit_nation),(v22 * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se89.modify(lineitem_partkey,lineitem_suppkey)) * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))))));
+              n22 = n22->nxt;
+            } while (n22 && (e22 = n22->obj) && h22 == n22->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se90, *e22)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i23 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h23 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se92.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n23 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i23->slice(se92, h23));
+          SUM_PROFIT_mLINEITEM14_entry* e23;
+         
+          if (n23 && (e23 = n23->obj)) {
+            do {                
+              long profit_o_year = e23->PROFIT_O_YEAR;
+              long v23 = e23->__av;
+              SUM_PROFIT_mPARTSUPP13.addOrDelOnZero(se91.modify(lineitem_partkey,lineitem_suppkey,profit_o_year),(v23 * (-1L * lineitem_quantity)));
+              n23 = n23->nxt;
+            } while (n23 && (e23 = n23->obj) && h23 == n23->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se92, *e23)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i24 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h24 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se94.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n24 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i24->slice(se94, h24));
+          SUM_PROFIT_mLINEITEM14_entry* e24;
+         
+          if (n24 && (e24 = n24->obj)) {
+            do {                
+              long profit_o_year = e24->PROFIT_O_YEAR;
+              long v24 = e24->__av;
+              SUM_PROFIT_mPARTSUPP17.addOrDelOnZero(se93.modify(lineitem_partkey,lineitem_suppkey,profit_o_year),(v24 * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))));
+              n24 = n24->nxt;
+            } while (n24 && (e24 = n24->obj) && h24 == n24->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se94, *e24)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i25 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h25 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se98.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n25 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i25->slice(se98, h25));
+          SUM_PROFIT_mLINEITEM14_entry* e25;
+         
+          if (n25 && (e25 = n25->obj)) {
+            do {                
+              long profit_o_year = e25->PROFIT_O_YEAR;
+              long v25 = e25->__av;
+              SUM_PROFIT_mSUPPLIER11.addOrDelOnZero(se95.modify(lineitem_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se96.modify(lineitem_partkey)) * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se97.modify(lineitem_partkey,lineitem_suppkey)) * (v25 * (-1L * lineitem_quantity)))));
+              n25 = n25->nxt;
+            } while (n25 && (e25 = n25->obj) && h25 == n25->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se98, *e25)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i26 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h26 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se101.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n26 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i26->slice(se101, h26));
+          SUM_PROFIT_mLINEITEM14_entry* e26;
+         
+          if (n26 && (e26 = n26->obj)) {
+            do {                
+              long profit_o_year = e26->PROFIT_O_YEAR;
+              long v26 = e26->__av;
+              SUM_PROFIT_mSUPPLIER11_mPART2.addOrDelOnZero(se99.modify(lineitem_partkey,lineitem_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM110.getValueOrDefault(se100.modify(lineitem_partkey,lineitem_suppkey)) * (v26 * (-1L * lineitem_quantity))));
+              n26 = n26->nxt;
+            } while (n26 && (e26 = n26->obj) && h26 == n26->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se101, *e26)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i27 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h27 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se105.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n27 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i27->slice(se105, h27));
+          SUM_PROFIT_mLINEITEM14_entry* e27;
+         
+          if (n27 && (e27 = n27->obj)) {
+            do {                
+              long profit_o_year = e27->PROFIT_O_YEAR;
+              long v27 = e27->__av;
+              SUM_PROFIT_mSUPPLIER13.addOrDelOnZero(se102.modify(lineitem_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se103.modify(lineitem_partkey)) * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se104.modify(lineitem_partkey,lineitem_suppkey)) * (v27 * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))))));
+              n27 = n27->nxt;
+            } while (n27 && (e27 = n27->obj) && h27 == n27->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se105, *e27)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i28 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+          const HASH_RES_t h28 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se108.modify0(lineitem_orderkey));
+          HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n28 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i28->slice(se108, h28));
+          SUM_PROFIT_mLINEITEM14_entry* e28;
+         
+          if (n28 && (e28 = n28->obj)) {
+            do {                
+              long profit_o_year = e28->PROFIT_O_YEAR;
+              long v28 = e28->__av;
+              SUM_PROFIT_mSUPPLIER13_mPART2.addOrDelOnZero(se106.modify(lineitem_partkey,lineitem_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM13.getValueOrDefault(se107.modify(lineitem_partkey,lineitem_suppkey)) * (v28 * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount)))))));
+              n28 = n28->nxt;
+            } while (n28 && (e28 = n28->obj) && h28 == n28->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se108, *e28)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i29 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h30 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se112.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n29 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i29->slice(se112, h30));
+          SUM_PROFIT_mLINEITEM12_entry* e29;
+         
+          if (n29 && (e29 = n29->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e29->PROFIT_NATION;
+              long v29 = e29->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i30 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+                const HASH_RES_t h29 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se111.modify0(lineitem_orderkey));
+                HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n30 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i30->slice(se111, h29));
+                SUM_PROFIT_mLINEITEM14_entry* e30;
+               
+                if (n30 && (e30 = n30->obj)) {
+                  do {                
+                    long profit_o_year = e30->PROFIT_O_YEAR;
+                    long v30 = e30->__av;
+                    SUM_PROFIT_mPART12.addOrDelOnZero(se109.modify(lineitem_partkey,profit_o_year,profit_nation),(v29 * (SUM_PROFIT_mLINEITEM110.getValueOrDefault(se110.modify(lineitem_partkey,lineitem_suppkey)) * (v30 * (-1L * lineitem_quantity)))));
+                    n30 = n30->nxt;
+                  } while (n30 && (e30 = n30->obj) && h29 == n30->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se111, *e30)); 
+                }
+              }
+              n29 = n29->nxt;
+            } while (n29 && (e29 = n29->obj) && h30 == n29->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se112, *e29)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i31 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h32 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se116.modify0(lineitem_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n31 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i31->slice(se116, h32));
+          SUM_PROFIT_mLINEITEM12_entry* e31;
+         
+          if (n31 && (e31 = n31->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e31->PROFIT_NATION;
+              long v31 = e31->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mLINEITEM14_map_0* i32 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0*>(SUM_PROFIT_mLINEITEM14.index[1]);
+                const HASH_RES_t h31 = SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::hash(se115.modify0(lineitem_orderkey));
+                HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode* n32 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM14_map_0::IdxNode*>(i32->slice(se115, h31));
+                SUM_PROFIT_mLINEITEM14_entry* e32;
+               
+                if (n32 && (e32 = n32->obj)) {
+                  do {                
+                    long profit_o_year = e32->PROFIT_O_YEAR;
+                    long v32 = e32->__av;
+                    SUM_PROFIT_mPART14.addOrDelOnZero(se113.modify(lineitem_partkey,profit_o_year,profit_nation),(v31 * (SUM_PROFIT_mLINEITEM13.getValueOrDefault(se114.modify(lineitem_partkey,lineitem_suppkey)) * (v32 * (-1L * (lineitem_extendedprice * (1L + (-1L * lineitem_discount))))))));
+                    n32 = n32->nxt;
+                  } while (n32 && (e32 = n32->obj) && h31 == n32->hash &&  SUM_PROFIT_mLINEITEM14_mapkey0_idxfn::equals(se115, *e32)); 
+                }
+              }
+              n31 = n31->nxt;
+            } while (n31 && (e31 = n31->obj) && h32 == n31->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se116, *e31)); 
+          }
+        }
+      }
+    }
+    void on_insert_ORDERS(const long orders_orderkey, const long orders_custkey, const STRING_TYPE& orders_orderstatus, const DOUBLE_TYPE orders_totalprice, const date orders_orderdate, const STRING_TYPE& orders_orderpriority, const STRING_TYPE& orders_clerk, const long orders_shippriority, const STRING_TYPE& orders_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        long l1 = Uyear_part(orders_orderdate);
+        _c1.clear();
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_map_0* i33 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_map_0*>(SUM_PROFIT_mORDERS12.index[1]);
+          const HASH_RES_t h33 = SUM_PROFIT_mORDERS12_mapkey0_idxfn::hash(se118.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_map_0::IdxNode* n33 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_map_0::IdxNode*>(i33->slice(se118, h33));
+          SUM_PROFIT_mORDERS12_entry* e33;
+         
+          if (n33 && (e33 = n33->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e33->PROFIT_NATION;
+              DOUBLE_TYPE v34 = e33->__av;
+              _c1.addOrDelOnZero(st1.modify(profit_nation,(v34 * -1L)), (v34 * -1L));
+              n33 = n33->nxt;
+            } while (n33 && (e33 = n33->obj) && h33 == n33->hash &&  SUM_PROFIT_mORDERS12_mapkey0_idxfn::equals(se118, *e33)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_map_0* i34 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_map_0*>(SUM_PROFIT_mORDERS14.index[1]);
+          const HASH_RES_t h34 = SUM_PROFIT_mORDERS14_mapkey0_idxfn::hash(se119.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_map_0::IdxNode* n34 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_map_0::IdxNode*>(i34->slice(se119, h34));
+          SUM_PROFIT_mORDERS14_entry* e34;
+         
+          if (n34 && (e34 = n34->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e34->PROFIT_NATION;
+              DOUBLE_TYPE v35 = e34->__av;
+              _c1.addOrDelOnZero(st2.modify(profit_nation,v35), v35);
+              n34 = n34->nxt;
+            } while (n34 && (e34 = n34->obj) && h34 == n34->hash &&  SUM_PROFIT_mORDERS14_mapkey0_idxfn::equals(se119, *e34)); 
+          }
+        }{  // temp foreach
+          const HashIndex<tuple2_S_D, DOUBLE_TYPE>* i35 = static_cast<HashIndex<tuple2_S_D, DOUBLE_TYPE>*>(_c1.index[0]);
+          HashIndex<tuple2_S_D, DOUBLE_TYPE>::IdxNode* n35; 
+          tuple2_S_D* e35;
+        
+          for (size_t i = 0; i < i35->size_; i++)
+          {
+            n35 = i35->buckets_ + i;
+            while (n35 && (e35 = n35->obj))
+            {
+              STRING_TYPE profit_nation = e35->_1;  
+              DOUBLE_TYPE v36 = e35->__av; 
+            SUM_PROFIT.addOrDelOnZero(se117.modify(profit_nation,l1),v36);      
+              n35 = n35->nxt;
+            }
+          }
+        }long l2 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_0* i36 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_0*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[1]);
+          const HASH_RES_t h35 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey0_idxfn::hash(se121.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_0::IdxNode* n36 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_0::IdxNode*>(i36->slice(se121, h35));
+          SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e36;
+         
+          if (n36 && (e36 = n36->obj)) {
+            do {                
+              long sum_profit_mpartsupppartsupp_partkey = e36->SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY;
+              long sum_profit_mpartsupppartsupp_suppkey = e36->SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY;
+              DOUBLE_TYPE v37 = e36->__av;
+              SUM_PROFIT_mPARTSUPP13.addOrDelOnZero(se120.modify(sum_profit_mpartsupppartsupp_partkey,sum_profit_mpartsupppartsupp_suppkey,l2),v37);
+              n36 = n36->nxt;
+            } while (n36 && (e36 = n36->obj) && h35 == n36->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey0_idxfn::equals(se121, *e36)); 
+          }
+        }long l3 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_0* i37 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_0*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[1]);
+          const HASH_RES_t h36 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey0_idxfn::hash(se123.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_0::IdxNode* n37 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_0::IdxNode*>(i37->slice(se123, h36));
+          SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e37;
+         
+          if (n37 && (e37 = n37->obj)) {
+            do {                
+              long sum_profit_mpartsupppartsupp_partkey = e37->SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY;
+              long sum_profit_mpartsupppartsupp_suppkey = e37->SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY;
+              DOUBLE_TYPE v38 = e37->__av;
+              SUM_PROFIT_mPARTSUPP17.addOrDelOnZero(se122.modify(sum_profit_mpartsupppartsupp_partkey,sum_profit_mpartsupppartsupp_suppkey,l3),v38);
+              n37 = n37->nxt;
+            } while (n37 && (e37 = n37->obj) && h36 == n37->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey0_idxfn::equals(se123, *e37)); 
+          }
+        }long l4 = Uyear_part(orders_orderdate);
+        SUM_PROFIT_mLINEITEM14.addOrDelOnZero(se124.modify(orders_orderkey,l4),1L);
+        long l5 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_0* i38 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_0*>(SUM_PROFIT_mORDERS12_mSUPPLIER1.index[1]);
+          const HASH_RES_t h37 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey0_idxfn::hash(se126.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_0::IdxNode* n38 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_0::IdxNode*>(i38->slice(se126, h37));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_entry* e38;
+         
+          if (n38 && (e38 = n38->obj)) {
+            do {                
+              long sum_profit_msuppliersupplier_suppkey = e38->SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v39 = e38->__av;
+              SUM_PROFIT_mSUPPLIER11.addOrDelOnZero(se125.modify(sum_profit_msuppliersupplier_suppkey,l5),v39);
+              n38 = n38->nxt;
+            } while (n38 && (e38 = n38->obj) && h37 == n38->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey0_idxfn::equals(se126, *e38)); 
+          }
+        }long l6 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_0* i39 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_0*>(SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.index[1]);
+          const HASH_RES_t h38 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey0_idxfn::hash(se128.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_0::IdxNode* n39 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_0::IdxNode*>(i39->slice(se128, h38));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry* e39;
+         
+          if (n39 && (e39 = n39->obj)) {
+            do {                
+              long sum_profit_msupplier11_mpartpart_partkey = e39->SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY;
+              long sum_profit_msuppliersupplier_suppkey = e39->SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v40 = e39->__av;
+              SUM_PROFIT_mSUPPLIER11_mPART2.addOrDelOnZero(se127.modify(sum_profit_msupplier11_mpartpart_partkey,sum_profit_msuppliersupplier_suppkey,l6),v40);
+              n39 = n39->nxt;
+            } while (n39 && (e39 = n39->obj) && h38 == n39->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey0_idxfn::equals(se128, *e39)); 
+          }
+        }long l7 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_0* i40 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_0*>(SUM_PROFIT_mORDERS14_mSUPPLIER1.index[1]);
+          const HASH_RES_t h39 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey0_idxfn::hash(se130.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_0::IdxNode* n40 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_0::IdxNode*>(i40->slice(se130, h39));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_entry* e40;
+         
+          if (n40 && (e40 = n40->obj)) {
+            do {                
+              long sum_profit_msuppliersupplier_suppkey = e40->SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v41 = e40->__av;
+              SUM_PROFIT_mSUPPLIER13.addOrDelOnZero(se129.modify(sum_profit_msuppliersupplier_suppkey,l7),v41);
+              n40 = n40->nxt;
+            } while (n40 && (e40 = n40->obj) && h39 == n40->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey0_idxfn::equals(se130, *e40)); 
+          }
+        }long l8 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_0* i41 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_0*>(SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.index[1]);
+          const HASH_RES_t h40 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey0_idxfn::hash(se132.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_0::IdxNode* n41 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_0::IdxNode*>(i41->slice(se132, h40));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry* e41;
+         
+          if (n41 && (e41 = n41->obj)) {
+            do {                
+              long sum_profit_msupplier13_mpartpart_partkey = e41->SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY;
+              long sum_profit_msuppliersupplier_suppkey = e41->SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v42 = e41->__av;
+              SUM_PROFIT_mSUPPLIER13_mPART2.addOrDelOnZero(se131.modify(sum_profit_msupplier13_mpartpart_partkey,sum_profit_msuppliersupplier_suppkey,l8),v42);
+              n41 = n41->nxt;
+            } while (n41 && (e41 = n41->obj) && h40 == n41->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey0_idxfn::equals(se132, *e41)); 
+          }
+        }long l9 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_0* i42 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_0*>(SUM_PROFIT_mORDERS12_mPART2.index[1]);
+          const HASH_RES_t h41 = SUM_PROFIT_mORDERS12_mPART2_mapkey0_idxfn::hash(se134.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_0::IdxNode* n42 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_0::IdxNode*>(i42->slice(se134, h41));
+          SUM_PROFIT_mORDERS12_mPART2_entry* e42;
+         
+          if (n42 && (e42 = n42->obj)) {
+            do {                
+              long sum_profit_mpartpart_partkey = e42->SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY;
+              STRING_TYPE profit_nation = e42->PROFIT_NATION;
+              DOUBLE_TYPE v43 = e42->__av;
+              SUM_PROFIT_mPART12.addOrDelOnZero(se133.modify(sum_profit_mpartpart_partkey,l9,profit_nation),v43);
+              n42 = n42->nxt;
+            } while (n42 && (e42 = n42->obj) && h41 == n42->hash &&  SUM_PROFIT_mORDERS12_mPART2_mapkey0_idxfn::equals(se134, *e42)); 
+          }
+        }long l10 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_0* i43 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_0*>(SUM_PROFIT_mORDERS14_mPART2.index[1]);
+          const HASH_RES_t h42 = SUM_PROFIT_mORDERS14_mPART2_mapkey0_idxfn::hash(se136.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_0::IdxNode* n43 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_0::IdxNode*>(i43->slice(se136, h42));
+          SUM_PROFIT_mORDERS14_mPART2_entry* e43;
+         
+          if (n43 && (e43 = n43->obj)) {
+            do {                
+              long sum_profit_mpartpart_partkey = e43->SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY;
+              STRING_TYPE profit_nation = e43->PROFIT_NATION;
+              DOUBLE_TYPE v44 = e43->__av;
+              SUM_PROFIT_mPART14.addOrDelOnZero(se135.modify(sum_profit_mpartpart_partkey,l10,profit_nation),v44);
+              n43 = n43->nxt;
+            } while (n43 && (e43 = n43->obj) && h42 == n43->hash &&  SUM_PROFIT_mORDERS14_mPART2_mapkey0_idxfn::equals(se136, *e43)); 
+          }
+        }
+      }
+    }
+    void on_delete_ORDERS(const long orders_orderkey, const long orders_custkey, const STRING_TYPE& orders_orderstatus, const DOUBLE_TYPE orders_totalprice, const date orders_orderdate, const STRING_TYPE& orders_orderpriority, const STRING_TYPE& orders_clerk, const long orders_shippriority, const STRING_TYPE& orders_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        long l11 = Uyear_part(orders_orderdate);
+        _c2.clear();
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_map_0* i44 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_map_0*>(SUM_PROFIT_mORDERS12.index[1]);
+          const HASH_RES_t h43 = SUM_PROFIT_mORDERS12_mapkey0_idxfn::hash(se138.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_map_0::IdxNode* n44 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_map_0::IdxNode*>(i44->slice(se138, h43));
+          SUM_PROFIT_mORDERS12_entry* e44;
+         
+          if (n44 && (e44 = n44->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e44->PROFIT_NATION;
+              DOUBLE_TYPE v46 = e44->__av;
+              _c2.addOrDelOnZero(st3.modify(profit_nation,v46), v46);
+              n44 = n44->nxt;
+            } while (n44 && (e44 = n44->obj) && h43 == n44->hash &&  SUM_PROFIT_mORDERS12_mapkey0_idxfn::equals(se138, *e44)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_map_0* i45 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_map_0*>(SUM_PROFIT_mORDERS14.index[1]);
+          const HASH_RES_t h44 = SUM_PROFIT_mORDERS14_mapkey0_idxfn::hash(se139.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_map_0::IdxNode* n45 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_map_0::IdxNode*>(i45->slice(se139, h44));
+          SUM_PROFIT_mORDERS14_entry* e45;
+         
+          if (n45 && (e45 = n45->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e45->PROFIT_NATION;
+              DOUBLE_TYPE v47 = e45->__av;
+              _c2.addOrDelOnZero(st4.modify(profit_nation,(v47 * -1L)), (v47 * -1L));
+              n45 = n45->nxt;
+            } while (n45 && (e45 = n45->obj) && h44 == n45->hash &&  SUM_PROFIT_mORDERS14_mapkey0_idxfn::equals(se139, *e45)); 
+          }
+        }{  // temp foreach
+          const HashIndex<tuple2_S_D, DOUBLE_TYPE>* i46 = static_cast<HashIndex<tuple2_S_D, DOUBLE_TYPE>*>(_c2.index[0]);
+          HashIndex<tuple2_S_D, DOUBLE_TYPE>::IdxNode* n46; 
+          tuple2_S_D* e46;
+        
+          for (size_t i = 0; i < i46->size_; i++)
+          {
+            n46 = i46->buckets_ + i;
+            while (n46 && (e46 = n46->obj))
+            {
+              STRING_TYPE profit_nation = e46->_1;  
+              DOUBLE_TYPE v48 = e46->__av; 
+            SUM_PROFIT.addOrDelOnZero(se137.modify(profit_nation,l11),v48);      
+              n46 = n46->nxt;
+            }
+          }
+        }long l12 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_0* i47 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_0*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[1]);
+          const HASH_RES_t h45 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey0_idxfn::hash(se141.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_0::IdxNode* n47 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_0::IdxNode*>(i47->slice(se141, h45));
+          SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e47;
+         
+          if (n47 && (e47 = n47->obj)) {
+            do {                
+              long sum_profit_mpartsupppartsupp_partkey = e47->SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_PARTKEY;
+              long sum_profit_mpartsupppartsupp_suppkey = e47->SUM_PROFIT_mORDERS12_mPARTSUPPPARTSUPP_SUPPKEY;
+              DOUBLE_TYPE v49 = e47->__av;
+              SUM_PROFIT_mPARTSUPP13.addOrDelOnZero(se140.modify(sum_profit_mpartsupppartsupp_partkey,sum_profit_mpartsupppartsupp_suppkey,l12),(v49 * -1L));
+              n47 = n47->nxt;
+            } while (n47 && (e47 = n47->obj) && h45 == n47->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey0_idxfn::equals(se141, *e47)); 
+          }
+        }long l13 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_0* i48 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_0*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[1]);
+          const HASH_RES_t h46 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey0_idxfn::hash(se143.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_0::IdxNode* n48 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_0::IdxNode*>(i48->slice(se143, h46));
+          SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e48;
+         
+          if (n48 && (e48 = n48->obj)) {
+            do {                
+              long sum_profit_mpartsupppartsupp_partkey = e48->SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_PARTKEY;
+              long sum_profit_mpartsupppartsupp_suppkey = e48->SUM_PROFIT_mORDERS14_mPARTSUPPPARTSUPP_SUPPKEY;
+              DOUBLE_TYPE v50 = e48->__av;
+              SUM_PROFIT_mPARTSUPP17.addOrDelOnZero(se142.modify(sum_profit_mpartsupppartsupp_partkey,sum_profit_mpartsupppartsupp_suppkey,l13),(v50 * -1L));
+              n48 = n48->nxt;
+            } while (n48 && (e48 = n48->obj) && h46 == n48->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey0_idxfn::equals(se143, *e48)); 
+          }
+        }long l14 = Uyear_part(orders_orderdate);
+        SUM_PROFIT_mLINEITEM14.addOrDelOnZero(se144.modify(orders_orderkey,l14),-1L);
+        long l15 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_0* i49 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_0*>(SUM_PROFIT_mORDERS12_mSUPPLIER1.index[1]);
+          const HASH_RES_t h47 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey0_idxfn::hash(se146.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_0::IdxNode* n49 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_0::IdxNode*>(i49->slice(se146, h47));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_entry* e49;
+         
+          if (n49 && (e49 = n49->obj)) {
+            do {                
+              long sum_profit_msuppliersupplier_suppkey = e49->SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v51 = e49->__av;
+              SUM_PROFIT_mSUPPLIER11.addOrDelOnZero(se145.modify(sum_profit_msuppliersupplier_suppkey,l15),(v51 * -1L));
+              n49 = n49->nxt;
+            } while (n49 && (e49 = n49->obj) && h47 == n49->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey0_idxfn::equals(se146, *e49)); 
+          }
+        }long l16 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_0* i50 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_0*>(SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.index[1]);
+          const HASH_RES_t h48 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey0_idxfn::hash(se148.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_0::IdxNode* n50 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_0::IdxNode*>(i50->slice(se148, h48));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry* e50;
+         
+          if (n50 && (e50 = n50->obj)) {
+            do {                
+              long sum_profit_msupplier11_mpartpart_partkey = e50->SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY;
+              long sum_profit_msuppliersupplier_suppkey = e50->SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v52 = e50->__av;
+              SUM_PROFIT_mSUPPLIER11_mPART2.addOrDelOnZero(se147.modify(sum_profit_msupplier11_mpartpart_partkey,sum_profit_msuppliersupplier_suppkey,l16),(v52 * -1L));
+              n50 = n50->nxt;
+            } while (n50 && (e50 = n50->obj) && h48 == n50->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey0_idxfn::equals(se148, *e50)); 
+          }
+        }long l17 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_0* i51 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_0*>(SUM_PROFIT_mORDERS14_mSUPPLIER1.index[1]);
+          const HASH_RES_t h49 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey0_idxfn::hash(se150.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_0::IdxNode* n51 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_0::IdxNode*>(i51->slice(se150, h49));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_entry* e51;
+         
+          if (n51 && (e51 = n51->obj)) {
+            do {                
+              long sum_profit_msuppliersupplier_suppkey = e51->SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v53 = e51->__av;
+              SUM_PROFIT_mSUPPLIER13.addOrDelOnZero(se149.modify(sum_profit_msuppliersupplier_suppkey,l17),(v53 * -1L));
+              n51 = n51->nxt;
+            } while (n51 && (e51 = n51->obj) && h49 == n51->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey0_idxfn::equals(se150, *e51)); 
+          }
+        }long l18 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_0* i52 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_0*>(SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.index[1]);
+          const HASH_RES_t h50 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey0_idxfn::hash(se152.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_0::IdxNode* n52 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_0::IdxNode*>(i52->slice(se152, h50));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry* e52;
+         
+          if (n52 && (e52 = n52->obj)) {
+            do {                
+              long sum_profit_msupplier13_mpartpart_partkey = e52->SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY;
+              long sum_profit_msuppliersupplier_suppkey = e52->SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v54 = e52->__av;
+              SUM_PROFIT_mSUPPLIER13_mPART2.addOrDelOnZero(se151.modify(sum_profit_msupplier13_mpartpart_partkey,sum_profit_msuppliersupplier_suppkey,l18),(v54 * -1L));
+              n52 = n52->nxt;
+            } while (n52 && (e52 = n52->obj) && h50 == n52->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey0_idxfn::equals(se152, *e52)); 
+          }
+        }long l19 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_0* i53 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_0*>(SUM_PROFIT_mORDERS12_mPART2.index[1]);
+          const HASH_RES_t h51 = SUM_PROFIT_mORDERS12_mPART2_mapkey0_idxfn::hash(se154.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_0::IdxNode* n53 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_0::IdxNode*>(i53->slice(se154, h51));
+          SUM_PROFIT_mORDERS12_mPART2_entry* e53;
+         
+          if (n53 && (e53 = n53->obj)) {
+            do {                
+              long sum_profit_mpartpart_partkey = e53->SUM_PROFIT_mORDERS12_mPARTPART_PARTKEY;
+              STRING_TYPE profit_nation = e53->PROFIT_NATION;
+              DOUBLE_TYPE v55 = e53->__av;
+              SUM_PROFIT_mPART12.addOrDelOnZero(se153.modify(sum_profit_mpartpart_partkey,l19,profit_nation),(v55 * -1L));
+              n53 = n53->nxt;
+            } while (n53 && (e53 = n53->obj) && h51 == n53->hash &&  SUM_PROFIT_mORDERS12_mPART2_mapkey0_idxfn::equals(se154, *e53)); 
+          }
+        }long l20 = Uyear_part(orders_orderdate);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_0* i54 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_0*>(SUM_PROFIT_mORDERS14_mPART2.index[1]);
+          const HASH_RES_t h52 = SUM_PROFIT_mORDERS14_mPART2_mapkey0_idxfn::hash(se156.modify0(orders_orderkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_0::IdxNode* n54 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_0::IdxNode*>(i54->slice(se156, h52));
+          SUM_PROFIT_mORDERS14_mPART2_entry* e54;
+         
+          if (n54 && (e54 = n54->obj)) {
+            do {                
+              long sum_profit_mpartpart_partkey = e54->SUM_PROFIT_mORDERS14_mPARTPART_PARTKEY;
+              STRING_TYPE profit_nation = e54->PROFIT_NATION;
+              DOUBLE_TYPE v56 = e54->__av;
+              SUM_PROFIT_mPART14.addOrDelOnZero(se155.modify(sum_profit_mpartpart_partkey,l20,profit_nation),(v56 * -1L));
+              n54 = n54->nxt;
+            } while (n54 && (e54 = n54->obj) && h52 == n54->hash &&  SUM_PROFIT_mORDERS14_mPART2_mapkey0_idxfn::equals(se156, *e54)); 
+          }
+        }
+      }
+    }
+    void on_insert_PART(const long part_partkey, const STRING_TYPE& part_name, const STRING_TYPE& part_mfgr, const STRING_TYPE& part_brand, const STRING_TYPE& part_type, const long part_size, const STRING_TYPE& part_container, const DOUBLE_TYPE part_retailprice, const STRING_TYPE& part_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        { //slice 
+          const HashIndex_SUM_PROFIT_mPART12_map_0* i55 = static_cast<HashIndex_SUM_PROFIT_mPART12_map_0*>(SUM_PROFIT_mPART12.index[1]);
+          const HASH_RES_t h53 = SUM_PROFIT_mPART12_mapkey0_idxfn::hash(se158.modify0(part_partkey));
+          HashIndex_SUM_PROFIT_mPART12_map_0::IdxNode* n55 = static_cast<HashIndex_SUM_PROFIT_mPART12_map_0::IdxNode*>(i55->slice(se158, h53));
+          SUM_PROFIT_mPART12_entry* e55;
+         
+          if (n55 && (e55 = n55->obj)) {
+            do {                
+              long profit_o_year = e55->PROFIT_O_YEAR;
+              STRING_TYPE profit_nation = e55->PROFIT_NATION;
+              DOUBLE_TYPE v57 = e55->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT.addOrDelOnZero(se157.modify(profit_nation,profit_o_year),(v57 * -1L)) : (void)0);
+              n55 = n55->nxt;
+            } while (n55 && (e55 = n55->obj) && h53 == n55->hash &&  SUM_PROFIT_mPART12_mapkey0_idxfn::equals(se158, *e55)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mPART14_map_0* i56 = static_cast<HashIndex_SUM_PROFIT_mPART14_map_0*>(SUM_PROFIT_mPART14.index[1]);
+          const HASH_RES_t h54 = SUM_PROFIT_mPART14_mapkey0_idxfn::hash(se159.modify0(part_partkey));
+          HashIndex_SUM_PROFIT_mPART14_map_0::IdxNode* n56 = static_cast<HashIndex_SUM_PROFIT_mPART14_map_0::IdxNode*>(i56->slice(se159, h54));
+          SUM_PROFIT_mPART14_entry* e56;
+         
+          if (n56 && (e56 = n56->obj)) {
+            do {                
+              long profit_o_year = e56->PROFIT_O_YEAR;
+              STRING_TYPE profit_nation = e56->PROFIT_NATION;
+              DOUBLE_TYPE v58 = e56->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT.addOrDelOnZero(se157.modify(profit_nation,profit_o_year),v58) : (void)0);
+              n56 = n56->nxt;
+            } while (n56 && (e56 = n56->obj) && h54 == n56->hash &&  SUM_PROFIT_mPART14_mapkey0_idxfn::equals(se159, *e56)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_1* i57 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_1*>(SUM_PROFIT_mORDERS12_mPART2.index[2]);
+          const HASH_RES_t h55 = SUM_PROFIT_mORDERS12_mPART2_mapkey1_idxfn::hash(se161.modify1(part_partkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_1::IdxNode* n57 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_1::IdxNode*>(i57->slice(se161, h55));
+          SUM_PROFIT_mORDERS12_mPART2_entry* e57;
+         
+          if (n57 && (e57 = n57->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e57->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              STRING_TYPE profit_nation = e57->PROFIT_NATION;
+              DOUBLE_TYPE v59 = e57->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mORDERS12.addOrDelOnZero(se160.modify(sum_profit_mordersorders_orderkey,profit_nation),v59) : (void)0);
+              n57 = n57->nxt;
+            } while (n57 && (e57 = n57->obj) && h55 == n57->hash &&  SUM_PROFIT_mORDERS12_mPART2_mapkey1_idxfn::equals(se161, *e57)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_1* i58 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_1*>(SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.index[2]);
+          const HASH_RES_t h56 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey1_idxfn::hash(se163.modify1(part_partkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_1::IdxNode* n58 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_1::IdxNode*>(i58->slice(se163, h56));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry* e58;
+         
+          if (n58 && (e58 = n58->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e58->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              long sum_profit_morders12_msuppliersupplier_suppkey = e58->SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v60 = e58->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mORDERS12_mSUPPLIER1.addOrDelOnZero(se162.modify(sum_profit_mordersorders_orderkey,sum_profit_morders12_msuppliersupplier_suppkey),v60) : (void)0);
+              n58 = n58->nxt;
+            } while (n58 && (e58 = n58->obj) && h56 == n58->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey1_idxfn::equals(se163, *e58)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_1* i59 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_1*>(SUM_PROFIT_mORDERS14_mPART2.index[2]);
+          const HASH_RES_t h57 = SUM_PROFIT_mORDERS14_mPART2_mapkey1_idxfn::hash(se165.modify1(part_partkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_1::IdxNode* n59 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_1::IdxNode*>(i59->slice(se165, h57));
+          SUM_PROFIT_mORDERS14_mPART2_entry* e59;
+         
+          if (n59 && (e59 = n59->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e59->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              STRING_TYPE profit_nation = e59->PROFIT_NATION;
+              DOUBLE_TYPE v61 = e59->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mORDERS14.addOrDelOnZero(se164.modify(sum_profit_mordersorders_orderkey,profit_nation),v61) : (void)0);
+              n59 = n59->nxt;
+            } while (n59 && (e59 = n59->obj) && h57 == n59->hash &&  SUM_PROFIT_mORDERS14_mPART2_mapkey1_idxfn::equals(se165, *e59)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_1* i60 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_1*>(SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.index[2]);
+          const HASH_RES_t h58 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey1_idxfn::hash(se167.modify1(part_partkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_1::IdxNode* n60 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_1::IdxNode*>(i60->slice(se167, h58));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry* e60;
+         
+          if (n60 && (e60 = n60->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e60->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              long sum_profit_morders14_msuppliersupplier_suppkey = e60->SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v62 = e60->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mORDERS14_mSUPPLIER1.addOrDelOnZero(se166.modify(sum_profit_mordersorders_orderkey,sum_profit_morders14_msuppliersupplier_suppkey),v62) : (void)0);
+              n60 = n60->nxt;
+            } while (n60 && (e60 = n60->obj) && h58 == n60->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey1_idxfn::equals(se167, *e60)); 
+          }
+        }(/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mLINEITEM11.addOrDelOnZero(se168.modify(part_partkey),1L) : (void)0);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_0* i61 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_0*>(SUM_PROFIT_mSUPPLIER11_mPART2.index[1]);
+          const HASH_RES_t h59 = SUM_PROFIT_mSUPPLIER11_mPART2_mapkey0_idxfn::hash(se170.modify0(part_partkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_0::IdxNode* n61 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_0::IdxNode*>(i61->slice(se170, h59));
+          SUM_PROFIT_mSUPPLIER11_mPART2_entry* e61;
+         
+          if (n61 && (e61 = n61->obj)) {
+            do {                
+              long sum_profit_msuppliersupplier_suppkey = e61->SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY;
+              long profit_o_year = e61->PROFIT_O_YEAR;
+              DOUBLE_TYPE v63 = e61->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mSUPPLIER11.addOrDelOnZero(se169.modify(sum_profit_msuppliersupplier_suppkey,profit_o_year),v63) : (void)0);
+              n61 = n61->nxt;
+            } while (n61 && (e61 = n61->obj) && h59 == n61->hash &&  SUM_PROFIT_mSUPPLIER11_mPART2_mapkey0_idxfn::equals(se170, *e61)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_0* i62 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_0*>(SUM_PROFIT_mSUPPLIER13_mPART2.index[1]);
+          const HASH_RES_t h60 = SUM_PROFIT_mSUPPLIER13_mPART2_mapkey0_idxfn::hash(se172.modify0(part_partkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_0::IdxNode* n62 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_0::IdxNode*>(i62->slice(se172, h60));
+          SUM_PROFIT_mSUPPLIER13_mPART2_entry* e62;
+         
+          if (n62 && (e62 = n62->obj)) {
+            do {                
+              long sum_profit_msuppliersupplier_suppkey = e62->SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY;
+              long profit_o_year = e62->PROFIT_O_YEAR;
+              DOUBLE_TYPE v64 = e62->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mSUPPLIER13.addOrDelOnZero(se171.modify(sum_profit_msuppliersupplier_suppkey,profit_o_year),v64) : (void)0);
+              n62 = n62->nxt;
+            } while (n62 && (e62 = n62->obj) && h60 == n62->hash &&  SUM_PROFIT_mSUPPLIER13_mPART2_mapkey0_idxfn::equals(se172, *e62)); 
+          }
+        }
+      }
+    }
+    void on_delete_PART(const long part_partkey, const STRING_TYPE& part_name, const STRING_TYPE& part_mfgr, const STRING_TYPE& part_brand, const STRING_TYPE& part_type, const long part_size, const STRING_TYPE& part_container, const DOUBLE_TYPE part_retailprice, const STRING_TYPE& part_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        { //slice 
+          const HashIndex_SUM_PROFIT_mPART12_map_0* i63 = static_cast<HashIndex_SUM_PROFIT_mPART12_map_0*>(SUM_PROFIT_mPART12.index[1]);
+          const HASH_RES_t h61 = SUM_PROFIT_mPART12_mapkey0_idxfn::hash(se174.modify0(part_partkey));
+          HashIndex_SUM_PROFIT_mPART12_map_0::IdxNode* n63 = static_cast<HashIndex_SUM_PROFIT_mPART12_map_0::IdxNode*>(i63->slice(se174, h61));
+          SUM_PROFIT_mPART12_entry* e63;
+         
+          if (n63 && (e63 = n63->obj)) {
+            do {                
+              long profit_o_year = e63->PROFIT_O_YEAR;
+              STRING_TYPE profit_nation = e63->PROFIT_NATION;
+              DOUBLE_TYPE v65 = e63->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT.addOrDelOnZero(se173.modify(profit_nation,profit_o_year),v65) : (void)0);
+              n63 = n63->nxt;
+            } while (n63 && (e63 = n63->obj) && h61 == n63->hash &&  SUM_PROFIT_mPART12_mapkey0_idxfn::equals(se174, *e63)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mPART14_map_0* i64 = static_cast<HashIndex_SUM_PROFIT_mPART14_map_0*>(SUM_PROFIT_mPART14.index[1]);
+          const HASH_RES_t h62 = SUM_PROFIT_mPART14_mapkey0_idxfn::hash(se175.modify0(part_partkey));
+          HashIndex_SUM_PROFIT_mPART14_map_0::IdxNode* n64 = static_cast<HashIndex_SUM_PROFIT_mPART14_map_0::IdxNode*>(i64->slice(se175, h62));
+          SUM_PROFIT_mPART14_entry* e64;
+         
+          if (n64 && (e64 = n64->obj)) {
+            do {                
+              long profit_o_year = e64->PROFIT_O_YEAR;
+              STRING_TYPE profit_nation = e64->PROFIT_NATION;
+              DOUBLE_TYPE v66 = e64->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT.addOrDelOnZero(se173.modify(profit_nation,profit_o_year),(v66 * -1L)) : (void)0);
+              n64 = n64->nxt;
+            } while (n64 && (e64 = n64->obj) && h62 == n64->hash &&  SUM_PROFIT_mPART14_mapkey0_idxfn::equals(se175, *e64)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_1* i65 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_1*>(SUM_PROFIT_mORDERS12_mPART2.index[2]);
+          const HASH_RES_t h63 = SUM_PROFIT_mORDERS12_mPART2_mapkey1_idxfn::hash(se177.modify1(part_partkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_1::IdxNode* n65 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPART2_map_1::IdxNode*>(i65->slice(se177, h63));
+          SUM_PROFIT_mORDERS12_mPART2_entry* e65;
+         
+          if (n65 && (e65 = n65->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e65->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              STRING_TYPE profit_nation = e65->PROFIT_NATION;
+              DOUBLE_TYPE v67 = e65->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mORDERS12.addOrDelOnZero(se176.modify(sum_profit_mordersorders_orderkey,profit_nation),(v67 * -1L)) : (void)0);
+              n65 = n65->nxt;
+            } while (n65 && (e65 = n65->obj) && h63 == n65->hash &&  SUM_PROFIT_mORDERS12_mPART2_mapkey1_idxfn::equals(se177, *e65)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_1* i66 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_1*>(SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.index[2]);
+          const HASH_RES_t h64 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey1_idxfn::hash(se179.modify1(part_partkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_1::IdxNode* n66 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_1::IdxNode*>(i66->slice(se179, h64));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry* e66;
+         
+          if (n66 && (e66 = n66->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e66->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              long sum_profit_morders12_msuppliersupplier_suppkey = e66->SUM_PROFIT_mORDERS12_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v68 = e66->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mORDERS12_mSUPPLIER1.addOrDelOnZero(se178.modify(sum_profit_mordersorders_orderkey,sum_profit_morders12_msuppliersupplier_suppkey),(v68 * -1L)) : (void)0);
+              n66 = n66->nxt;
+            } while (n66 && (e66 = n66->obj) && h64 == n66->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey1_idxfn::equals(se179, *e66)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_1* i67 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_1*>(SUM_PROFIT_mORDERS14_mPART2.index[2]);
+          const HASH_RES_t h65 = SUM_PROFIT_mORDERS14_mPART2_mapkey1_idxfn::hash(se181.modify1(part_partkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_1::IdxNode* n67 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPART2_map_1::IdxNode*>(i67->slice(se181, h65));
+          SUM_PROFIT_mORDERS14_mPART2_entry* e67;
+         
+          if (n67 && (e67 = n67->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e67->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              STRING_TYPE profit_nation = e67->PROFIT_NATION;
+              DOUBLE_TYPE v69 = e67->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mORDERS14.addOrDelOnZero(se180.modify(sum_profit_mordersorders_orderkey,profit_nation),(v69 * -1L)) : (void)0);
+              n67 = n67->nxt;
+            } while (n67 && (e67 = n67->obj) && h65 == n67->hash &&  SUM_PROFIT_mORDERS14_mPART2_mapkey1_idxfn::equals(se181, *e67)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_1* i68 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_1*>(SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.index[2]);
+          const HASH_RES_t h66 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey1_idxfn::hash(se183.modify1(part_partkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_1::IdxNode* n68 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_1::IdxNode*>(i68->slice(se183, h66));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry* e68;
+         
+          if (n68 && (e68 = n68->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e68->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              long sum_profit_morders14_msuppliersupplier_suppkey = e68->SUM_PROFIT_mORDERS14_mSUPPLIERSUPPLIER_SUPPKEY;
+              DOUBLE_TYPE v70 = e68->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mORDERS14_mSUPPLIER1.addOrDelOnZero(se182.modify(sum_profit_mordersorders_orderkey,sum_profit_morders14_msuppliersupplier_suppkey),(v70 * -1L)) : (void)0);
+              n68 = n68->nxt;
+            } while (n68 && (e68 = n68->obj) && h66 == n68->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey1_idxfn::equals(se183, *e68)); 
+          }
+        }(/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mLINEITEM11.addOrDelOnZero(se184.modify(part_partkey),-1L) : (void)0);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_0* i69 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_0*>(SUM_PROFIT_mSUPPLIER11_mPART2.index[1]);
+          const HASH_RES_t h67 = SUM_PROFIT_mSUPPLIER11_mPART2_mapkey0_idxfn::hash(se186.modify0(part_partkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_0::IdxNode* n69 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_0::IdxNode*>(i69->slice(se186, h67));
+          SUM_PROFIT_mSUPPLIER11_mPART2_entry* e69;
+         
+          if (n69 && (e69 = n69->obj)) {
+            do {                
+              long sum_profit_msuppliersupplier_suppkey = e69->SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY;
+              long profit_o_year = e69->PROFIT_O_YEAR;
+              DOUBLE_TYPE v71 = e69->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mSUPPLIER11.addOrDelOnZero(se185.modify(sum_profit_msuppliersupplier_suppkey,profit_o_year),(v71 * -1L)) : (void)0);
+              n69 = n69->nxt;
+            } while (n69 && (e69 = n69->obj) && h67 == n69->hash &&  SUM_PROFIT_mSUPPLIER11_mPART2_mapkey0_idxfn::equals(se186, *e69)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_0* i70 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_0*>(SUM_PROFIT_mSUPPLIER13_mPART2.index[1]);
+          const HASH_RES_t h68 = SUM_PROFIT_mSUPPLIER13_mPART2_mapkey0_idxfn::hash(se188.modify0(part_partkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_0::IdxNode* n70 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_0::IdxNode*>(i70->slice(se188, h68));
+          SUM_PROFIT_mSUPPLIER13_mPART2_entry* e70;
+         
+          if (n70 && (e70 = n70->obj)) {
+            do {                
+              long sum_profit_msuppliersupplier_suppkey = e70->SUM_PROFIT_mSUPPLIERSUPPLIER_SUPPKEY;
+              long profit_o_year = e70->PROFIT_O_YEAR;
+              DOUBLE_TYPE v72 = e70->__av;
+              (/*if */(0L != Upreg_match(preg1,part_name)) ? SUM_PROFIT_mSUPPLIER13.addOrDelOnZero(se187.modify(sum_profit_msuppliersupplier_suppkey,profit_o_year),(v72 * -1L)) : (void)0);
+              n70 = n70->nxt;
+            } while (n70 && (e70 = n70->obj) && h68 == n70->hash &&  SUM_PROFIT_mSUPPLIER13_mPART2_mapkey0_idxfn::equals(se188, *e70)); 
+          }
+        }
+      }
+    }
+    void on_insert_SUPPLIER(const long supplier_suppkey, const STRING_TYPE& supplier_name, const STRING_TYPE& supplier_address, const long supplier_nationkey, const STRING_TYPE& supplier_phone, const DOUBLE_TYPE supplier_acctbal, const STRING_TYPE& supplier_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        { //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i71 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+          const HASH_RES_t h71 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se192.modify0(supplier_nationkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n71 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i71->slice(se192, h71));
+          SUM_PROFIT_mSUPPLIER12_entry* e71;
+         
+          if (n71 && (e71 = n71->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e71->PROFIT_NATION;
+              long v73 = e71->__av;
+              _c3.clear();
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER11_map_0* i72 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_map_0*>(SUM_PROFIT_mSUPPLIER11.index[1]);
+                const HASH_RES_t h69 = SUM_PROFIT_mSUPPLIER11_mapkey0_idxfn::hash(se190.modify0(supplier_suppkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER11_map_0::IdxNode* n72 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_map_0::IdxNode*>(i72->slice(se190, h69));
+                SUM_PROFIT_mSUPPLIER11_entry* e72;
+               
+                if (n72 && (e72 = n72->obj)) {
+                  do {                
+                    long profit_o_year = e72->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v75 = e72->__av;
+                    _c3.addOrDelOnZero(st5.modify(profit_o_year,(v75 * -1L)), (v75 * -1L));
+                    n72 = n72->nxt;
+                  } while (n72 && (e72 = n72->obj) && h69 == n72->hash &&  SUM_PROFIT_mSUPPLIER11_mapkey0_idxfn::equals(se190, *e72)); 
+                }
+              }{ //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER13_map_0* i73 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_map_0*>(SUM_PROFIT_mSUPPLIER13.index[1]);
+                const HASH_RES_t h70 = SUM_PROFIT_mSUPPLIER13_mapkey0_idxfn::hash(se191.modify0(supplier_suppkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER13_map_0::IdxNode* n73 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_map_0::IdxNode*>(i73->slice(se191, h70));
+                SUM_PROFIT_mSUPPLIER13_entry* e73;
+               
+                if (n73 && (e73 = n73->obj)) {
+                  do {                
+                    long profit_o_year = e73->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v76 = e73->__av;
+                    _c3.addOrDelOnZero(st6.modify(profit_o_year,v76), v76);
+                    n73 = n73->nxt;
+                  } while (n73 && (e73 = n73->obj) && h70 == n73->hash &&  SUM_PROFIT_mSUPPLIER13_mapkey0_idxfn::equals(se191, *e73)); 
+                }
+              }{  // temp foreach
+                const HashIndex<tuple2_L_D, DOUBLE_TYPE>* i74 = static_cast<HashIndex<tuple2_L_D, DOUBLE_TYPE>*>(_c3.index[0]);
+                HashIndex<tuple2_L_D, DOUBLE_TYPE>::IdxNode* n74; 
+                tuple2_L_D* e74;
+              
+                for (size_t i = 0; i < i74->size_; i++)
+                {
+                  n74 = i74->buckets_ + i;
+                  while (n74 && (e74 = n74->obj))
+                  {
+                    long profit_o_year = e74->_1;  
+                    DOUBLE_TYPE v77 = e74->__av; 
+                  SUM_PROFIT.addOrDelOnZero(se189.modify(profit_nation,profit_o_year),(v73 * v77));      
+                    n74 = n74->nxt;
+                  }
+                }
+              }
+              n71 = n71->nxt;
+            } while (n71 && (e71 = n71->obj) && h71 == n71->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se192, *e71)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_1* i75 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_1*>(SUM_PROFIT_mORDERS12_mSUPPLIER1.index[2]);
+          const HASH_RES_t h73 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey1_idxfn::hash(se195.modify1(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_1::IdxNode* n75 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_1::IdxNode*>(i75->slice(se195, h73));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_entry* e75;
+         
+          if (n75 && (e75 = n75->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e75->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v78 = e75->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i76 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h72 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se194.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n76 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i76->slice(se194, h72));
+                SUM_PROFIT_mSUPPLIER12_entry* e76;
+               
+                if (n76 && (e76 = n76->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e76->PROFIT_NATION;
+                    long v79 = e76->__av;
+                    SUM_PROFIT_mORDERS12.addOrDelOnZero(se193.modify(sum_profit_mordersorders_orderkey,profit_nation),(v78 * v79));
+                    n76 = n76->nxt;
+                  } while (n76 && (e76 = n76->obj) && h72 == n76->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se194, *e76)); 
+                }
+              }
+              n75 = n75->nxt;
+            } while (n75 && (e75 = n75->obj) && h73 == n75->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey1_idxfn::equals(se195, *e75)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_2* i77 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_2*>(SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.index[3]);
+          const HASH_RES_t h75 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey2_idxfn::hash(se198.modify2(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_2::IdxNode* n77 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_2::IdxNode*>(i77->slice(se198, h75));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry* e77;
+         
+          if (n77 && (e77 = n77->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e77->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              long sum_profit_morders12_mpartpart_partkey = e77->SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY;
+              DOUBLE_TYPE v80 = e77->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i78 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h74 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se197.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n78 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i78->slice(se197, h74));
+                SUM_PROFIT_mSUPPLIER12_entry* e78;
+               
+                if (n78 && (e78 = n78->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e78->PROFIT_NATION;
+                    long v81 = e78->__av;
+                    SUM_PROFIT_mORDERS12_mPART2.addOrDelOnZero(se196.modify(sum_profit_mordersorders_orderkey,sum_profit_morders12_mpartpart_partkey,profit_nation),(v80 * v81));
+                    n78 = n78->nxt;
+                  } while (n78 && (e78 = n78->obj) && h74 == n78->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se197, *e78)); 
+                }
+              }
+              n77 = n77->nxt;
+            } while (n77 && (e77 = n77->obj) && h75 == n77->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey2_idxfn::equals(se198, *e77)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_1* i79 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_1*>(SUM_PROFIT_mORDERS14_mSUPPLIER1.index[2]);
+          const HASH_RES_t h77 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey1_idxfn::hash(se201.modify1(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_1::IdxNode* n79 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_1::IdxNode*>(i79->slice(se201, h77));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_entry* e79;
+         
+          if (n79 && (e79 = n79->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e79->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v82 = e79->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i80 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h76 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se200.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n80 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i80->slice(se200, h76));
+                SUM_PROFIT_mSUPPLIER12_entry* e80;
+               
+                if (n80 && (e80 = n80->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e80->PROFIT_NATION;
+                    long v83 = e80->__av;
+                    SUM_PROFIT_mORDERS14.addOrDelOnZero(se199.modify(sum_profit_mordersorders_orderkey,profit_nation),(v82 * v83));
+                    n80 = n80->nxt;
+                  } while (n80 && (e80 = n80->obj) && h76 == n80->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se200, *e80)); 
+                }
+              }
+              n79 = n79->nxt;
+            } while (n79 && (e79 = n79->obj) && h77 == n79->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey1_idxfn::equals(se201, *e79)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_2* i81 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_2*>(SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.index[3]);
+          const HASH_RES_t h79 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey2_idxfn::hash(se204.modify2(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_2::IdxNode* n81 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_2::IdxNode*>(i81->slice(se204, h79));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry* e81;
+         
+          if (n81 && (e81 = n81->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e81->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              long sum_profit_morders14_mpartpart_partkey = e81->SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY;
+              DOUBLE_TYPE v84 = e81->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i82 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h78 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se203.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n82 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i82->slice(se203, h78));
+                SUM_PROFIT_mSUPPLIER12_entry* e82;
+               
+                if (n82 && (e82 = n82->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e82->PROFIT_NATION;
+                    long v85 = e82->__av;
+                    SUM_PROFIT_mORDERS14_mPART2.addOrDelOnZero(se202.modify(sum_profit_mordersorders_orderkey,sum_profit_morders14_mpartpart_partkey,profit_nation),(v84 * v85));
+                    n82 = n82->nxt;
+                  } while (n82 && (e82 = n82->obj) && h78 == n82->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se203, *e82)); 
+                }
+              }
+              n81 = n81->nxt;
+            } while (n81 && (e81 = n81->obj) && h79 == n81->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey2_idxfn::equals(se204, *e81)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i83 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+          const HASH_RES_t h80 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se206.modify0(supplier_nationkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n83 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i83->slice(se206, h80));
+          SUM_PROFIT_mSUPPLIER12_entry* e83;
+         
+          if (n83 && (e83 = n83->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e83->PROFIT_NATION;
+              long v86 = e83->__av;
+              SUM_PROFIT_mLINEITEM12.addOrDelOnZero(se205.modify(supplier_suppkey,profit_nation),v86);
+              n83 = n83->nxt;
+            } while (n83 && (e83 = n83->obj) && h80 == n83->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se206, *e83)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_1* i84 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_1*>(SUM_PROFIT_mSUPPLIER11_mPART2.index[2]);
+          const HASH_RES_t h82 = SUM_PROFIT_mSUPPLIER11_mPART2_mapkey1_idxfn::hash(se209.modify1(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_1::IdxNode* n84 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_1::IdxNode*>(i84->slice(se209, h82));
+          SUM_PROFIT_mSUPPLIER11_mPART2_entry* e84;
+         
+          if (n84 && (e84 = n84->obj)) {
+            do {                
+              long sum_profit_mpartpart_partkey = e84->SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY;
+              long profit_o_year = e84->PROFIT_O_YEAR;
+              DOUBLE_TYPE v87 = e84->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i85 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h81 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se208.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n85 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i85->slice(se208, h81));
+                SUM_PROFIT_mSUPPLIER12_entry* e85;
+               
+                if (n85 && (e85 = n85->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e85->PROFIT_NATION;
+                    long v88 = e85->__av;
+                    SUM_PROFIT_mPART12.addOrDelOnZero(se207.modify(sum_profit_mpartpart_partkey,profit_o_year,profit_nation),(v87 * v88));
+                    n85 = n85->nxt;
+                  } while (n85 && (e85 = n85->obj) && h81 == n85->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se208, *e85)); 
+                }
+              }
+              n84 = n84->nxt;
+            } while (n84 && (e84 = n84->obj) && h82 == n84->hash &&  SUM_PROFIT_mSUPPLIER11_mPART2_mapkey1_idxfn::equals(se209, *e84)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_1* i86 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_1*>(SUM_PROFIT_mSUPPLIER13_mPART2.index[2]);
+          const HASH_RES_t h84 = SUM_PROFIT_mSUPPLIER13_mPART2_mapkey1_idxfn::hash(se212.modify1(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_1::IdxNode* n86 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_1::IdxNode*>(i86->slice(se212, h84));
+          SUM_PROFIT_mSUPPLIER13_mPART2_entry* e86;
+         
+          if (n86 && (e86 = n86->obj)) {
+            do {                
+              long sum_profit_mpartpart_partkey = e86->SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY;
+              long profit_o_year = e86->PROFIT_O_YEAR;
+              DOUBLE_TYPE v89 = e86->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i87 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h83 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se211.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n87 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i87->slice(se211, h83));
+                SUM_PROFIT_mSUPPLIER12_entry* e87;
+               
+                if (n87 && (e87 = n87->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e87->PROFIT_NATION;
+                    long v90 = e87->__av;
+                    SUM_PROFIT_mPART14.addOrDelOnZero(se210.modify(sum_profit_mpartpart_partkey,profit_o_year,profit_nation),(v89 * v90));
+                    n87 = n87->nxt;
+                  } while (n87 && (e87 = n87->obj) && h83 == n87->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se211, *e87)); 
+                }
+              }
+              n86 = n86->nxt;
+            } while (n86 && (e86 = n86->obj) && h84 == n86->hash &&  SUM_PROFIT_mSUPPLIER13_mPART2_mapkey1_idxfn::equals(se212, *e86)); 
+          }
+        }
+      }
+    }
+    void on_delete_SUPPLIER(const long supplier_suppkey, const STRING_TYPE& supplier_name, const STRING_TYPE& supplier_address, const long supplier_nationkey, const STRING_TYPE& supplier_phone, const DOUBLE_TYPE supplier_acctbal, const STRING_TYPE& supplier_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        { //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i88 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+          const HASH_RES_t h87 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se216.modify0(supplier_nationkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n88 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i88->slice(se216, h87));
+          SUM_PROFIT_mSUPPLIER12_entry* e88;
+         
+          if (n88 && (e88 = n88->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e88->PROFIT_NATION;
+              long v91 = e88->__av;
+              _c4.clear();
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER11_map_0* i89 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_map_0*>(SUM_PROFIT_mSUPPLIER11.index[1]);
+                const HASH_RES_t h85 = SUM_PROFIT_mSUPPLIER11_mapkey0_idxfn::hash(se214.modify0(supplier_suppkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER11_map_0::IdxNode* n89 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_map_0::IdxNode*>(i89->slice(se214, h85));
+                SUM_PROFIT_mSUPPLIER11_entry* e89;
+               
+                if (n89 && (e89 = n89->obj)) {
+                  do {                
+                    long profit_o_year = e89->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v93 = e89->__av;
+                    _c4.addOrDelOnZero(st7.modify(profit_o_year,v93), v93);
+                    n89 = n89->nxt;
+                  } while (n89 && (e89 = n89->obj) && h85 == n89->hash &&  SUM_PROFIT_mSUPPLIER11_mapkey0_idxfn::equals(se214, *e89)); 
+                }
+              }{ //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER13_map_0* i90 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_map_0*>(SUM_PROFIT_mSUPPLIER13.index[1]);
+                const HASH_RES_t h86 = SUM_PROFIT_mSUPPLIER13_mapkey0_idxfn::hash(se215.modify0(supplier_suppkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER13_map_0::IdxNode* n90 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_map_0::IdxNode*>(i90->slice(se215, h86));
+                SUM_PROFIT_mSUPPLIER13_entry* e90;
+               
+                if (n90 && (e90 = n90->obj)) {
+                  do {                
+                    long profit_o_year = e90->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v94 = e90->__av;
+                    _c4.addOrDelOnZero(st8.modify(profit_o_year,(v94 * -1L)), (v94 * -1L));
+                    n90 = n90->nxt;
+                  } while (n90 && (e90 = n90->obj) && h86 == n90->hash &&  SUM_PROFIT_mSUPPLIER13_mapkey0_idxfn::equals(se215, *e90)); 
+                }
+              }{  // temp foreach
+                const HashIndex<tuple2_L_D, DOUBLE_TYPE>* i91 = static_cast<HashIndex<tuple2_L_D, DOUBLE_TYPE>*>(_c4.index[0]);
+                HashIndex<tuple2_L_D, DOUBLE_TYPE>::IdxNode* n91; 
+                tuple2_L_D* e91;
+              
+                for (size_t i = 0; i < i91->size_; i++)
+                {
+                  n91 = i91->buckets_ + i;
+                  while (n91 && (e91 = n91->obj))
+                  {
+                    long profit_o_year = e91->_1;  
+                    DOUBLE_TYPE v95 = e91->__av; 
+                  SUM_PROFIT.addOrDelOnZero(se213.modify(profit_nation,profit_o_year),(v91 * v95));      
+                    n91 = n91->nxt;
+                  }
+                }
+              }
+              n88 = n88->nxt;
+            } while (n88 && (e88 = n88->obj) && h87 == n88->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se216, *e88)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_1* i92 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_1*>(SUM_PROFIT_mORDERS12_mSUPPLIER1.index[2]);
+          const HASH_RES_t h89 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey1_idxfn::hash(se219.modify1(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_1::IdxNode* n92 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_map_1::IdxNode*>(i92->slice(se219, h89));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_entry* e92;
+         
+          if (n92 && (e92 = n92->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e92->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v96 = e92->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i93 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h88 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se218.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n93 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i93->slice(se218, h88));
+                SUM_PROFIT_mSUPPLIER12_entry* e93;
+               
+                if (n93 && (e93 = n93->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e93->PROFIT_NATION;
+                    long v97 = e93->__av;
+                    SUM_PROFIT_mORDERS12.addOrDelOnZero(se217.modify(sum_profit_mordersorders_orderkey,profit_nation),(v96 * (v97 * -1L)));
+                    n93 = n93->nxt;
+                  } while (n93 && (e93 = n93->obj) && h88 == n93->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se218, *e93)); 
+                }
+              }
+              n92 = n92->nxt;
+            } while (n92 && (e92 = n92->obj) && h89 == n92->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mapkey1_idxfn::equals(se219, *e92)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_2* i94 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_2*>(SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.index[3]);
+          const HASH_RES_t h91 = SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey2_idxfn::hash(se222.modify2(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_2::IdxNode* n94 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map_2::IdxNode*>(i94->slice(se222, h91));
+          SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry* e94;
+         
+          if (n94 && (e94 = n94->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e94->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              long sum_profit_morders12_mpartpart_partkey = e94->SUM_PROFIT_mORDERS12_mSUPPLIER1_mPARTPART_PARTKEY;
+              DOUBLE_TYPE v98 = e94->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i95 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h90 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se221.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n95 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i95->slice(se221, h90));
+                SUM_PROFIT_mSUPPLIER12_entry* e95;
+               
+                if (n95 && (e95 = n95->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e95->PROFIT_NATION;
+                    long v99 = e95->__av;
+                    SUM_PROFIT_mORDERS12_mPART2.addOrDelOnZero(se220.modify(sum_profit_mordersorders_orderkey,sum_profit_morders12_mpartpart_partkey,profit_nation),(v98 * (v99 * -1L)));
+                    n95 = n95->nxt;
+                  } while (n95 && (e95 = n95->obj) && h90 == n95->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se221, *e95)); 
+                }
+              }
+              n94 = n94->nxt;
+            } while (n94 && (e94 = n94->obj) && h91 == n94->hash &&  SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_mapkey2_idxfn::equals(se222, *e94)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_1* i96 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_1*>(SUM_PROFIT_mORDERS14_mSUPPLIER1.index[2]);
+          const HASH_RES_t h93 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey1_idxfn::hash(se225.modify1(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_1::IdxNode* n96 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_map_1::IdxNode*>(i96->slice(se225, h93));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_entry* e96;
+         
+          if (n96 && (e96 = n96->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e96->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v100 = e96->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i97 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h92 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se224.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n97 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i97->slice(se224, h92));
+                SUM_PROFIT_mSUPPLIER12_entry* e97;
+               
+                if (n97 && (e97 = n97->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e97->PROFIT_NATION;
+                    long v101 = e97->__av;
+                    SUM_PROFIT_mORDERS14.addOrDelOnZero(se223.modify(sum_profit_mordersorders_orderkey,profit_nation),(v100 * (v101 * -1L)));
+                    n97 = n97->nxt;
+                  } while (n97 && (e97 = n97->obj) && h92 == n97->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se224, *e97)); 
+                }
+              }
+              n96 = n96->nxt;
+            } while (n96 && (e96 = n96->obj) && h93 == n96->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mapkey1_idxfn::equals(se225, *e96)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_2* i98 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_2*>(SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.index[3]);
+          const HASH_RES_t h95 = SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey2_idxfn::hash(se228.modify2(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_2::IdxNode* n98 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map_2::IdxNode*>(i98->slice(se228, h95));
+          SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry* e98;
+         
+          if (n98 && (e98 = n98->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e98->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              long sum_profit_morders14_mpartpart_partkey = e98->SUM_PROFIT_mORDERS14_mSUPPLIER1_mPARTPART_PARTKEY;
+              DOUBLE_TYPE v102 = e98->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i99 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h94 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se227.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n99 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i99->slice(se227, h94));
+                SUM_PROFIT_mSUPPLIER12_entry* e99;
+               
+                if (n99 && (e99 = n99->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e99->PROFIT_NATION;
+                    long v103 = e99->__av;
+                    SUM_PROFIT_mORDERS14_mPART2.addOrDelOnZero(se226.modify(sum_profit_mordersorders_orderkey,sum_profit_morders14_mpartpart_partkey,profit_nation),(v102 * (v103 * -1L)));
+                    n99 = n99->nxt;
+                  } while (n99 && (e99 = n99->obj) && h94 == n99->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se227, *e99)); 
+                }
+              }
+              n98 = n98->nxt;
+            } while (n98 && (e98 = n98->obj) && h95 == n98->hash &&  SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_mapkey2_idxfn::equals(se228, *e98)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i100 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+          const HASH_RES_t h96 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se230.modify0(supplier_nationkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n100 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i100->slice(se230, h96));
+          SUM_PROFIT_mSUPPLIER12_entry* e100;
+         
+          if (n100 && (e100 = n100->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e100->PROFIT_NATION;
+              long v104 = e100->__av;
+              SUM_PROFIT_mLINEITEM12.addOrDelOnZero(se229.modify(supplier_suppkey,profit_nation),(v104 * -1L));
+              n100 = n100->nxt;
+            } while (n100 && (e100 = n100->obj) && h96 == n100->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se230, *e100)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_1* i101 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_1*>(SUM_PROFIT_mSUPPLIER11_mPART2.index[2]);
+          const HASH_RES_t h98 = SUM_PROFIT_mSUPPLIER11_mPART2_mapkey1_idxfn::hash(se233.modify1(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_1::IdxNode* n101 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER11_mPART2_map_1::IdxNode*>(i101->slice(se233, h98));
+          SUM_PROFIT_mSUPPLIER11_mPART2_entry* e101;
+         
+          if (n101 && (e101 = n101->obj)) {
+            do {                
+              long sum_profit_mpartpart_partkey = e101->SUM_PROFIT_mSUPPLIER11_mPARTPART_PARTKEY;
+              long profit_o_year = e101->PROFIT_O_YEAR;
+              DOUBLE_TYPE v105 = e101->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i102 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h97 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se232.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n102 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i102->slice(se232, h97));
+                SUM_PROFIT_mSUPPLIER12_entry* e102;
+               
+                if (n102 && (e102 = n102->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e102->PROFIT_NATION;
+                    long v106 = e102->__av;
+                    SUM_PROFIT_mPART12.addOrDelOnZero(se231.modify(sum_profit_mpartpart_partkey,profit_o_year,profit_nation),(v105 * (v106 * -1L)));
+                    n102 = n102->nxt;
+                  } while (n102 && (e102 = n102->obj) && h97 == n102->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se232, *e102)); 
+                }
+              }
+              n101 = n101->nxt;
+            } while (n101 && (e101 = n101->obj) && h98 == n101->hash &&  SUM_PROFIT_mSUPPLIER11_mPART2_mapkey1_idxfn::equals(se233, *e101)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_1* i103 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_1*>(SUM_PROFIT_mSUPPLIER13_mPART2.index[2]);
+          const HASH_RES_t h100 = SUM_PROFIT_mSUPPLIER13_mPART2_mapkey1_idxfn::hash(se236.modify1(supplier_suppkey));
+          HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_1::IdxNode* n103 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER13_mPART2_map_1::IdxNode*>(i103->slice(se236, h100));
+          SUM_PROFIT_mSUPPLIER13_mPART2_entry* e103;
+         
+          if (n103 && (e103 = n103->obj)) {
+            do {                
+              long sum_profit_mpartpart_partkey = e103->SUM_PROFIT_mSUPPLIER13_mPARTPART_PARTKEY;
+              long profit_o_year = e103->PROFIT_O_YEAR;
+              DOUBLE_TYPE v107 = e103->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mSUPPLIER12_map_0* i104 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0*>(SUM_PROFIT_mSUPPLIER12.index[1]);
+                const HASH_RES_t h99 = SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::hash(se235.modify0(supplier_nationkey));
+                HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode* n104 = static_cast<HashIndex_SUM_PROFIT_mSUPPLIER12_map_0::IdxNode*>(i104->slice(se235, h99));
+                SUM_PROFIT_mSUPPLIER12_entry* e104;
+               
+                if (n104 && (e104 = n104->obj)) {
+                  do {                
+                    STRING_TYPE profit_nation = e104->PROFIT_NATION;
+                    long v108 = e104->__av;
+                    SUM_PROFIT_mPART14.addOrDelOnZero(se234.modify(sum_profit_mpartpart_partkey,profit_o_year,profit_nation),(v107 * (v108 * -1L)));
+                    n104 = n104->nxt;
+                  } while (n104 && (e104 = n104->obj) && h99 == n104->hash &&  SUM_PROFIT_mSUPPLIER12_mapkey0_idxfn::equals(se235, *e104)); 
+                }
+              }
+              n103 = n103->nxt;
+            } while (n103 && (e103 = n103->obj) && h100 == n103->hash &&  SUM_PROFIT_mSUPPLIER13_mPART2_mapkey1_idxfn::equals(se236, *e103)); 
+          }
+        }
+      }
+    }
+    void on_insert_PARTSUPP(const long partsupp_partkey, const long partsupp_suppkey, const long partsupp_availqty, const DOUBLE_TYPE partsupp_supplycost, const STRING_TYPE& partsupp_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        { //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i105 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h103 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se241.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n105 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i105->slice(se241, h103));
+          SUM_PROFIT_mLINEITEM12_entry* e105;
+         
+          if (n105 && (e105 = n105->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e105->PROFIT_NATION;
+              long v109 = e105->__av;
+              _c5.clear();
+              { //slice 
+                const HashIndex_SUM_PROFIT_mPARTSUPP13_map_01* i106 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01*>(SUM_PROFIT_mPARTSUPP13.index[1]);
+                const HASH_RES_t h101 = SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::hash(se239.modify01(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode* n106 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode*>(i106->slice(se239, h101));
+                SUM_PROFIT_mPARTSUPP13_entry* e106;
+               
+                if (n106 && (e106 = n106->obj)) {
+                  do {                
+                    long profit_o_year = e106->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v111 = e106->__av;
+                    _c5.addOrDelOnZero(st9.modify(profit_o_year,(v111 * (-1L * partsupp_supplycost))), (v111 * (-1L * partsupp_supplycost)));
+                    n106 = n106->nxt;
+                  } while (n106 && (e106 = n106->obj) && h101 == n106->hash &&  SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::equals(se239, *e106)); 
+                }
+              }{ //slice 
+                const HashIndex_SUM_PROFIT_mPARTSUPP17_map_01* i107 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01*>(SUM_PROFIT_mPARTSUPP17.index[1]);
+                const HASH_RES_t h102 = SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::hash(se240.modify01(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode* n107 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode*>(i107->slice(se240, h102));
+                SUM_PROFIT_mPARTSUPP17_entry* e107;
+               
+                if (n107 && (e107 = n107->obj)) {
+                  do {                
+                    long profit_o_year = e107->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v112 = e107->__av;
+                    _c5.addOrDelOnZero(st10.modify(profit_o_year,v112), v112);
+                    n107 = n107->nxt;
+                  } while (n107 && (e107 = n107->obj) && h102 == n107->hash &&  SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::equals(se240, *e107)); 
+                }
+              }{  // temp foreach
+                const HashIndex<tuple2_L_D, DOUBLE_TYPE>* i108 = static_cast<HashIndex<tuple2_L_D, DOUBLE_TYPE>*>(_c5.index[0]);
+                HashIndex<tuple2_L_D, DOUBLE_TYPE>::IdxNode* n108; 
+                tuple2_L_D* e108;
+              
+                for (size_t i = 0; i < i108->size_; i++)
+                {
+                  n108 = i108->buckets_ + i;
+                  while (n108 && (e108 = n108->obj))
+                  {
+                    long profit_o_year = e108->_1;  
+                    DOUBLE_TYPE v113 = e108->__av; 
+                  SUM_PROFIT.addOrDelOnZero(se237.modify(profit_nation,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se238.modify(partsupp_partkey)) * (v109 * v113)));      
+                    n108 = n108->nxt;
+                  }
+                }
+              }
+              n105 = n105->nxt;
+            } while (n105 && (e105 = n105->obj) && h103 == n105->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se241, *e105)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i109 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h105 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se245.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n109 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i109->slice(se245, h105));
+          SUM_PROFIT_mLINEITEM12_entry* e109;
+         
+          if (n109 && (e109 = n109->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e109->PROFIT_NATION;
+              long v114 = e109->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12* i110 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[2]);
+                const HASH_RES_t h104 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::hash(se244.modify12(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode* n110 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode*>(i110->slice(se244, h104));
+                SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e110;
+               
+                if (n110 && (e110 = n110->obj)) {
+                  do {                
+                    long sum_profit_mordersorders_orderkey = e110->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+                    DOUBLE_TYPE v115 = e110->__av;
+                    SUM_PROFIT_mORDERS12.addOrDelOnZero(se242.modify(sum_profit_mordersorders_orderkey,profit_nation),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se243.modify(partsupp_partkey)) * (v114 * (v115 * partsupp_supplycost))));
+                    n110 = n110->nxt;
+                  } while (n110 && (e110 = n110->obj) && h104 == n110->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::equals(se244, *e110)); 
+                }
+              }
+              n109 = n109->nxt;
+            } while (n109 && (e109 = n109->obj) && h105 == n109->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se245, *e109)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12* i111 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[2]);
+          const HASH_RES_t h106 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::hash(se248.modify12(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode* n111 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode*>(i111->slice(se248, h106));
+          SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e111;
+         
+          if (n111 && (e111 = n111->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e111->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v116 = e111->__av;
+              SUM_PROFIT_mORDERS12_mSUPPLIER1.addOrDelOnZero(se246.modify(sum_profit_mordersorders_orderkey,partsupp_suppkey),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se247.modify(partsupp_partkey)) * (v116 * partsupp_supplycost)));
+              n111 = n111->nxt;
+            } while (n111 && (e111 = n111->obj) && h106 == n111->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::equals(se248, *e111)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12* i112 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[2]);
+          const HASH_RES_t h107 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::hash(se250.modify12(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode* n112 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode*>(i112->slice(se250, h107));
+          SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e112;
+         
+          if (n112 && (e112 = n112->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e112->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v117 = e112->__av;
+              SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.addOrDelOnZero(se249.modify(sum_profit_mordersorders_orderkey,partsupp_partkey,partsupp_suppkey),(v117 * partsupp_supplycost));
+              n112 = n112->nxt;
+            } while (n112 && (e112 = n112->obj) && h107 == n112->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::equals(se250, *e112)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i113 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h109 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se253.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n113 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i113->slice(se253, h109));
+          SUM_PROFIT_mLINEITEM12_entry* e113;
+         
+          if (n113 && (e113 = n113->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e113->PROFIT_NATION;
+              long v118 = e113->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12* i114 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[2]);
+                const HASH_RES_t h108 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::hash(se252.modify12(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode* n114 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode*>(i114->slice(se252, h108));
+                SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e114;
+               
+                if (n114 && (e114 = n114->obj)) {
+                  do {                
+                    long sum_profit_mordersorders_orderkey = e114->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+                    DOUBLE_TYPE v119 = e114->__av;
+                    SUM_PROFIT_mORDERS12_mPART2.addOrDelOnZero(se251.modify(sum_profit_mordersorders_orderkey,partsupp_partkey,profit_nation),(v118 * (v119 * partsupp_supplycost)));
+                    n114 = n114->nxt;
+                  } while (n114 && (e114 = n114->obj) && h108 == n114->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::equals(se252, *e114)); 
+                }
+              }
+              n113 = n113->nxt;
+            } while (n113 && (e113 = n113->obj) && h109 == n113->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se253, *e113)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i115 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h111 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se257.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n115 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i115->slice(se257, h111));
+          SUM_PROFIT_mLINEITEM12_entry* e115;
+         
+          if (n115 && (e115 = n115->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e115->PROFIT_NATION;
+              long v120 = e115->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12* i116 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[2]);
+                const HASH_RES_t h110 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::hash(se256.modify12(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode* n116 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode*>(i116->slice(se256, h110));
+                SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e116;
+               
+                if (n116 && (e116 = n116->obj)) {
+                  do {                
+                    long sum_profit_mordersorders_orderkey = e116->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+                    DOUBLE_TYPE v121 = e116->__av;
+                    SUM_PROFIT_mORDERS14.addOrDelOnZero(se254.modify(sum_profit_mordersorders_orderkey,profit_nation),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se255.modify(partsupp_partkey)) * (v120 * v121)));
+                    n116 = n116->nxt;
+                  } while (n116 && (e116 = n116->obj) && h110 == n116->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::equals(se256, *e116)); 
+                }
+              }
+              n115 = n115->nxt;
+            } while (n115 && (e115 = n115->obj) && h111 == n115->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se257, *e115)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12* i117 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[2]);
+          const HASH_RES_t h112 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::hash(se260.modify12(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode* n117 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode*>(i117->slice(se260, h112));
+          SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e117;
+         
+          if (n117 && (e117 = n117->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e117->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v122 = e117->__av;
+              SUM_PROFIT_mORDERS14_mSUPPLIER1.addOrDelOnZero(se258.modify(sum_profit_mordersorders_orderkey,partsupp_suppkey),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se259.modify(partsupp_partkey)) * v122));
+              n117 = n117->nxt;
+            } while (n117 && (e117 = n117->obj) && h112 == n117->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::equals(se260, *e117)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12* i118 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[2]);
+          const HASH_RES_t h113 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::hash(se262.modify12(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode* n118 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode*>(i118->slice(se262, h113));
+          SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e118;
+         
+          if (n118 && (e118 = n118->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e118->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v123 = e118->__av;
+              SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.addOrDelOnZero(se261.modify(sum_profit_mordersorders_orderkey,partsupp_partkey,partsupp_suppkey),v123);
+              n118 = n118->nxt;
+            } while (n118 && (e118 = n118->obj) && h113 == n118->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::equals(se262, *e118)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i119 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h115 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se265.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n119 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i119->slice(se265, h115));
+          SUM_PROFIT_mLINEITEM12_entry* e119;
+         
+          if (n119 && (e119 = n119->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e119->PROFIT_NATION;
+              long v124 = e119->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12* i120 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[2]);
+                const HASH_RES_t h114 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::hash(se264.modify12(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode* n120 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode*>(i120->slice(se264, h114));
+                SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e120;
+               
+                if (n120 && (e120 = n120->obj)) {
+                  do {                
+                    long sum_profit_mordersorders_orderkey = e120->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+                    DOUBLE_TYPE v125 = e120->__av;
+                    SUM_PROFIT_mORDERS14_mPART2.addOrDelOnZero(se263.modify(sum_profit_mordersorders_orderkey,partsupp_partkey,profit_nation),(v124 * v125));
+                    n120 = n120->nxt;
+                  } while (n120 && (e120 = n120->obj) && h114 == n120->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::equals(se264, *e120)); 
+                }
+              }
+              n119 = n119->nxt;
+            } while (n119 && (e119 = n119->obj) && h115 == n119->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se265, *e119)); 
+          }
+        }SUM_PROFIT_mLINEITEM13.addOrDelOnZero(se266.modify(partsupp_partkey,partsupp_suppkey),1L);
+        SUM_PROFIT_mLINEITEM110.addOrDelOnZero(se267.modify(partsupp_partkey,partsupp_suppkey),partsupp_supplycost);
+        { //slice 
+          const HashIndex_SUM_PROFIT_mPARTSUPP13_map_01* i121 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01*>(SUM_PROFIT_mPARTSUPP13.index[1]);
+          const HASH_RES_t h116 = SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::hash(se270.modify01(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode* n121 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode*>(i121->slice(se270, h116));
+          SUM_PROFIT_mPARTSUPP13_entry* e121;
+         
+          if (n121 && (e121 = n121->obj)) {
+            do {                
+              long profit_o_year = e121->PROFIT_O_YEAR;
+              DOUBLE_TYPE v126 = e121->__av;
+              SUM_PROFIT_mSUPPLIER11.addOrDelOnZero(se268.modify(partsupp_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se269.modify(partsupp_partkey)) * (v126 * partsupp_supplycost)));
+              n121 = n121->nxt;
+            } while (n121 && (e121 = n121->obj) && h116 == n121->hash &&  SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::equals(se270, *e121)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mPARTSUPP13_map_01* i122 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01*>(SUM_PROFIT_mPARTSUPP13.index[1]);
+          const HASH_RES_t h117 = SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::hash(se272.modify01(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode* n122 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode*>(i122->slice(se272, h117));
+          SUM_PROFIT_mPARTSUPP13_entry* e122;
+         
+          if (n122 && (e122 = n122->obj)) {
+            do {                
+              long profit_o_year = e122->PROFIT_O_YEAR;
+              DOUBLE_TYPE v127 = e122->__av;
+              SUM_PROFIT_mSUPPLIER11_mPART2.addOrDelOnZero(se271.modify(partsupp_partkey,partsupp_suppkey,profit_o_year),(v127 * partsupp_supplycost));
+              n122 = n122->nxt;
+            } while (n122 && (e122 = n122->obj) && h117 == n122->hash &&  SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::equals(se272, *e122)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mPARTSUPP17_map_01* i123 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01*>(SUM_PROFIT_mPARTSUPP17.index[1]);
+          const HASH_RES_t h118 = SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::hash(se275.modify01(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode* n123 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode*>(i123->slice(se275, h118));
+          SUM_PROFIT_mPARTSUPP17_entry* e123;
+         
+          if (n123 && (e123 = n123->obj)) {
+            do {                
+              long profit_o_year = e123->PROFIT_O_YEAR;
+              DOUBLE_TYPE v128 = e123->__av;
+              SUM_PROFIT_mSUPPLIER13.addOrDelOnZero(se273.modify(partsupp_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se274.modify(partsupp_partkey)) * v128));
+              n123 = n123->nxt;
+            } while (n123 && (e123 = n123->obj) && h118 == n123->hash &&  SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::equals(se275, *e123)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mPARTSUPP17_map_01* i124 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01*>(SUM_PROFIT_mPARTSUPP17.index[1]);
+          const HASH_RES_t h119 = SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::hash(se277.modify01(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode* n124 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode*>(i124->slice(se277, h119));
+          SUM_PROFIT_mPARTSUPP17_entry* e124;
+         
+          if (n124 && (e124 = n124->obj)) {
+            do {                
+              long profit_o_year = e124->PROFIT_O_YEAR;
+              DOUBLE_TYPE v129 = e124->__av;
+              SUM_PROFIT_mSUPPLIER13_mPART2.addOrDelOnZero(se276.modify(partsupp_partkey,partsupp_suppkey,profit_o_year),v129);
+              n124 = n124->nxt;
+            } while (n124 && (e124 = n124->obj) && h119 == n124->hash &&  SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::equals(se277, *e124)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i125 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h121 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se280.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n125 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i125->slice(se280, h121));
+          SUM_PROFIT_mLINEITEM12_entry* e125;
+         
+          if (n125 && (e125 = n125->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e125->PROFIT_NATION;
+              long v130 = e125->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mPARTSUPP13_map_01* i126 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01*>(SUM_PROFIT_mPARTSUPP13.index[1]);
+                const HASH_RES_t h120 = SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::hash(se279.modify01(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode* n126 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode*>(i126->slice(se279, h120));
+                SUM_PROFIT_mPARTSUPP13_entry* e126;
+               
+                if (n126 && (e126 = n126->obj)) {
+                  do {                
+                    long profit_o_year = e126->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v131 = e126->__av;
+                    SUM_PROFIT_mPART12.addOrDelOnZero(se278.modify(partsupp_partkey,profit_o_year,profit_nation),(v130 * (v131 * partsupp_supplycost)));
+                    n126 = n126->nxt;
+                  } while (n126 && (e126 = n126->obj) && h120 == n126->hash &&  SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::equals(se279, *e126)); 
+                }
+              }
+              n125 = n125->nxt;
+            } while (n125 && (e125 = n125->obj) && h121 == n125->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se280, *e125)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i127 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h123 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se283.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n127 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i127->slice(se283, h123));
+          SUM_PROFIT_mLINEITEM12_entry* e127;
+         
+          if (n127 && (e127 = n127->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e127->PROFIT_NATION;
+              long v132 = e127->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mPARTSUPP17_map_01* i128 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01*>(SUM_PROFIT_mPARTSUPP17.index[1]);
+                const HASH_RES_t h122 = SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::hash(se282.modify01(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode* n128 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode*>(i128->slice(se282, h122));
+                SUM_PROFIT_mPARTSUPP17_entry* e128;
+               
+                if (n128 && (e128 = n128->obj)) {
+                  do {                
+                    long profit_o_year = e128->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v133 = e128->__av;
+                    SUM_PROFIT_mPART14.addOrDelOnZero(se281.modify(partsupp_partkey,profit_o_year,profit_nation),(v132 * v133));
+                    n128 = n128->nxt;
+                  } while (n128 && (e128 = n128->obj) && h122 == n128->hash &&  SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::equals(se282, *e128)); 
+                }
+              }
+              n127 = n127->nxt;
+            } while (n127 && (e127 = n127->obj) && h123 == n127->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se283, *e127)); 
+          }
+        }
+      }
+    }
+    void on_delete_PARTSUPP(const long partsupp_partkey, const long partsupp_suppkey, const long partsupp_availqty, const DOUBLE_TYPE partsupp_supplycost, const STRING_TYPE& partsupp_comment) {
+      {  if (tS>0) { ++tS; return; } if ((tN&127)==0) { gettimeofday(&(t),NULL); tT=((t).tv_sec-(t0).tv_sec)*1000000L+((t).tv_usec-(t0).tv_usec); if (tT>3600000000L) { tS=1; return; } } ++tN;
+        { //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i129 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h126 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se288.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n129 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i129->slice(se288, h126));
+          SUM_PROFIT_mLINEITEM12_entry* e129;
+         
+          if (n129 && (e129 = n129->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e129->PROFIT_NATION;
+              long v134 = e129->__av;
+              _c6.clear();
+              { //slice 
+                const HashIndex_SUM_PROFIT_mPARTSUPP13_map_01* i130 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01*>(SUM_PROFIT_mPARTSUPP13.index[1]);
+                const HASH_RES_t h124 = SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::hash(se286.modify01(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode* n130 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode*>(i130->slice(se286, h124));
+                SUM_PROFIT_mPARTSUPP13_entry* e130;
+               
+                if (n130 && (e130 = n130->obj)) {
+                  do {                
+                    long profit_o_year = e130->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v136 = e130->__av;
+                    _c6.addOrDelOnZero(st11.modify(profit_o_year,(v136 * partsupp_supplycost)), (v136 * partsupp_supplycost));
+                    n130 = n130->nxt;
+                  } while (n130 && (e130 = n130->obj) && h124 == n130->hash &&  SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::equals(se286, *e130)); 
+                }
+              }{ //slice 
+                const HashIndex_SUM_PROFIT_mPARTSUPP17_map_01* i131 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01*>(SUM_PROFIT_mPARTSUPP17.index[1]);
+                const HASH_RES_t h125 = SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::hash(se287.modify01(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode* n131 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode*>(i131->slice(se287, h125));
+                SUM_PROFIT_mPARTSUPP17_entry* e131;
+               
+                if (n131 && (e131 = n131->obj)) {
+                  do {                
+                    long profit_o_year = e131->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v137 = e131->__av;
+                    _c6.addOrDelOnZero(st12.modify(profit_o_year,(v137 * -1L)), (v137 * -1L));
+                    n131 = n131->nxt;
+                  } while (n131 && (e131 = n131->obj) && h125 == n131->hash &&  SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::equals(se287, *e131)); 
+                }
+              }{  // temp foreach
+                const HashIndex<tuple2_L_D, DOUBLE_TYPE>* i132 = static_cast<HashIndex<tuple2_L_D, DOUBLE_TYPE>*>(_c6.index[0]);
+                HashIndex<tuple2_L_D, DOUBLE_TYPE>::IdxNode* n132; 
+                tuple2_L_D* e132;
+              
+                for (size_t i = 0; i < i132->size_; i++)
+                {
+                  n132 = i132->buckets_ + i;
+                  while (n132 && (e132 = n132->obj))
+                  {
+                    long profit_o_year = e132->_1;  
+                    DOUBLE_TYPE v138 = e132->__av; 
+                  SUM_PROFIT.addOrDelOnZero(se284.modify(profit_nation,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se285.modify(partsupp_partkey)) * (v134 * v138)));      
+                    n132 = n132->nxt;
+                  }
+                }
+              }
+              n129 = n129->nxt;
+            } while (n129 && (e129 = n129->obj) && h126 == n129->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se288, *e129)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i133 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h128 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se292.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n133 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i133->slice(se292, h128));
+          SUM_PROFIT_mLINEITEM12_entry* e133;
+         
+          if (n133 && (e133 = n133->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e133->PROFIT_NATION;
+              long v139 = e133->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12* i134 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[2]);
+                const HASH_RES_t h127 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::hash(se291.modify12(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode* n134 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode*>(i134->slice(se291, h127));
+                SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e134;
+               
+                if (n134 && (e134 = n134->obj)) {
+                  do {                
+                    long sum_profit_mordersorders_orderkey = e134->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+                    DOUBLE_TYPE v140 = e134->__av;
+                    SUM_PROFIT_mORDERS12.addOrDelOnZero(se289.modify(sum_profit_mordersorders_orderkey,profit_nation),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se290.modify(partsupp_partkey)) * (v139 * (v140 * (-1L * partsupp_supplycost)))));
+                    n134 = n134->nxt;
+                  } while (n134 && (e134 = n134->obj) && h127 == n134->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::equals(se291, *e134)); 
+                }
+              }
+              n133 = n133->nxt;
+            } while (n133 && (e133 = n133->obj) && h128 == n133->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se292, *e133)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12* i135 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[2]);
+          const HASH_RES_t h129 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::hash(se295.modify12(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode* n135 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode*>(i135->slice(se295, h129));
+          SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e135;
+         
+          if (n135 && (e135 = n135->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e135->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v141 = e135->__av;
+              SUM_PROFIT_mORDERS12_mSUPPLIER1.addOrDelOnZero(se293.modify(sum_profit_mordersorders_orderkey,partsupp_suppkey),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se294.modify(partsupp_partkey)) * (v141 * (-1L * partsupp_supplycost))));
+              n135 = n135->nxt;
+            } while (n135 && (e135 = n135->obj) && h129 == n135->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::equals(se295, *e135)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12* i136 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[2]);
+          const HASH_RES_t h130 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::hash(se297.modify12(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode* n136 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode*>(i136->slice(se297, h130));
+          SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e136;
+         
+          if (n136 && (e136 = n136->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e136->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v142 = e136->__av;
+              SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2.addOrDelOnZero(se296.modify(sum_profit_mordersorders_orderkey,partsupp_partkey,partsupp_suppkey),(v142 * (-1L * partsupp_supplycost)));
+              n136 = n136->nxt;
+            } while (n136 && (e136 = n136->obj) && h130 == n136->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::equals(se297, *e136)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i137 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h132 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se300.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n137 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i137->slice(se300, h132));
+          SUM_PROFIT_mLINEITEM12_entry* e137;
+         
+          if (n137 && (e137 = n137->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e137->PROFIT_NATION;
+              long v143 = e137->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12* i138 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS12_mPARTSUPP3.index[2]);
+                const HASH_RES_t h131 = SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::hash(se299.modify12(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode* n138 = static_cast<HashIndex_SUM_PROFIT_mORDERS12_mPARTSUPP3_map_12::IdxNode*>(i138->slice(se299, h131));
+                SUM_PROFIT_mORDERS12_mPARTSUPP3_entry* e138;
+               
+                if (n138 && (e138 = n138->obj)) {
+                  do {                
+                    long sum_profit_mordersorders_orderkey = e138->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+                    DOUBLE_TYPE v144 = e138->__av;
+                    SUM_PROFIT_mORDERS12_mPART2.addOrDelOnZero(se298.modify(sum_profit_mordersorders_orderkey,partsupp_partkey,profit_nation),(v143 * (v144 * (-1L * partsupp_supplycost))));
+                    n138 = n138->nxt;
+                  } while (n138 && (e138 = n138->obj) && h131 == n138->hash &&  SUM_PROFIT_mORDERS12_mPARTSUPP3_mapkey12_idxfn::equals(se299, *e138)); 
+                }
+              }
+              n137 = n137->nxt;
+            } while (n137 && (e137 = n137->obj) && h132 == n137->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se300, *e137)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i139 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h134 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se304.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n139 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i139->slice(se304, h134));
+          SUM_PROFIT_mLINEITEM12_entry* e139;
+         
+          if (n139 && (e139 = n139->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e139->PROFIT_NATION;
+              long v145 = e139->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12* i140 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[2]);
+                const HASH_RES_t h133 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::hash(se303.modify12(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode* n140 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode*>(i140->slice(se303, h133));
+                SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e140;
+               
+                if (n140 && (e140 = n140->obj)) {
+                  do {                
+                    long sum_profit_mordersorders_orderkey = e140->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+                    DOUBLE_TYPE v146 = e140->__av;
+                    SUM_PROFIT_mORDERS14.addOrDelOnZero(se301.modify(sum_profit_mordersorders_orderkey,profit_nation),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se302.modify(partsupp_partkey)) * (v145 * (v146 * -1L))));
+                    n140 = n140->nxt;
+                  } while (n140 && (e140 = n140->obj) && h133 == n140->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::equals(se303, *e140)); 
+                }
+              }
+              n139 = n139->nxt;
+            } while (n139 && (e139 = n139->obj) && h134 == n139->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se304, *e139)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12* i141 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[2]);
+          const HASH_RES_t h135 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::hash(se307.modify12(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode* n141 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode*>(i141->slice(se307, h135));
+          SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e141;
+         
+          if (n141 && (e141 = n141->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e141->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v147 = e141->__av;
+              SUM_PROFIT_mORDERS14_mSUPPLIER1.addOrDelOnZero(se305.modify(sum_profit_mordersorders_orderkey,partsupp_suppkey),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se306.modify(partsupp_partkey)) * (v147 * -1L)));
+              n141 = n141->nxt;
+            } while (n141 && (e141 = n141->obj) && h135 == n141->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::equals(se307, *e141)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12* i142 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[2]);
+          const HASH_RES_t h136 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::hash(se309.modify12(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode* n142 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode*>(i142->slice(se309, h136));
+          SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e142;
+         
+          if (n142 && (e142 = n142->obj)) {
+            do {                
+              long sum_profit_mordersorders_orderkey = e142->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+              DOUBLE_TYPE v148 = e142->__av;
+              SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2.addOrDelOnZero(se308.modify(sum_profit_mordersorders_orderkey,partsupp_partkey,partsupp_suppkey),(v148 * -1L));
+              n142 = n142->nxt;
+            } while (n142 && (e142 = n142->obj) && h136 == n142->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::equals(se309, *e142)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i143 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h138 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se312.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n143 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i143->slice(se312, h138));
+          SUM_PROFIT_mLINEITEM12_entry* e143;
+         
+          if (n143 && (e143 = n143->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e143->PROFIT_NATION;
+              long v149 = e143->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12* i144 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12*>(SUM_PROFIT_mORDERS14_mPARTSUPP3.index[2]);
+                const HASH_RES_t h137 = SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::hash(se311.modify12(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode* n144 = static_cast<HashIndex_SUM_PROFIT_mORDERS14_mPARTSUPP3_map_12::IdxNode*>(i144->slice(se311, h137));
+                SUM_PROFIT_mORDERS14_mPARTSUPP3_entry* e144;
+               
+                if (n144 && (e144 = n144->obj)) {
+                  do {                
+                    long sum_profit_mordersorders_orderkey = e144->SUM_PROFIT_mORDERSORDERS_ORDERKEY;
+                    DOUBLE_TYPE v150 = e144->__av;
+                    SUM_PROFIT_mORDERS14_mPART2.addOrDelOnZero(se310.modify(sum_profit_mordersorders_orderkey,partsupp_partkey,profit_nation),(v149 * (v150 * -1L)));
+                    n144 = n144->nxt;
+                  } while (n144 && (e144 = n144->obj) && h137 == n144->hash &&  SUM_PROFIT_mORDERS14_mPARTSUPP3_mapkey12_idxfn::equals(se311, *e144)); 
+                }
+              }
+              n143 = n143->nxt;
+            } while (n143 && (e143 = n143->obj) && h138 == n143->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se312, *e143)); 
+          }
+        }SUM_PROFIT_mLINEITEM13.addOrDelOnZero(se313.modify(partsupp_partkey,partsupp_suppkey),-1L);
+        SUM_PROFIT_mLINEITEM110.addOrDelOnZero(se314.modify(partsupp_partkey,partsupp_suppkey),(-1L * partsupp_supplycost));
+        { //slice 
+          const HashIndex_SUM_PROFIT_mPARTSUPP13_map_01* i145 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01*>(SUM_PROFIT_mPARTSUPP13.index[1]);
+          const HASH_RES_t h139 = SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::hash(se317.modify01(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode* n145 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode*>(i145->slice(se317, h139));
+          SUM_PROFIT_mPARTSUPP13_entry* e145;
+         
+          if (n145 && (e145 = n145->obj)) {
+            do {                
+              long profit_o_year = e145->PROFIT_O_YEAR;
+              DOUBLE_TYPE v151 = e145->__av;
+              SUM_PROFIT_mSUPPLIER11.addOrDelOnZero(se315.modify(partsupp_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se316.modify(partsupp_partkey)) * (v151 * (-1L * partsupp_supplycost))));
+              n145 = n145->nxt;
+            } while (n145 && (e145 = n145->obj) && h139 == n145->hash &&  SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::equals(se317, *e145)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mPARTSUPP13_map_01* i146 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01*>(SUM_PROFIT_mPARTSUPP13.index[1]);
+          const HASH_RES_t h140 = SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::hash(se319.modify01(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode* n146 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode*>(i146->slice(se319, h140));
+          SUM_PROFIT_mPARTSUPP13_entry* e146;
+         
+          if (n146 && (e146 = n146->obj)) {
+            do {                
+              long profit_o_year = e146->PROFIT_O_YEAR;
+              DOUBLE_TYPE v152 = e146->__av;
+              SUM_PROFIT_mSUPPLIER11_mPART2.addOrDelOnZero(se318.modify(partsupp_partkey,partsupp_suppkey,profit_o_year),(v152 * (-1L * partsupp_supplycost)));
+              n146 = n146->nxt;
+            } while (n146 && (e146 = n146->obj) && h140 == n146->hash &&  SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::equals(se319, *e146)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mPARTSUPP17_map_01* i147 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01*>(SUM_PROFIT_mPARTSUPP17.index[1]);
+          const HASH_RES_t h141 = SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::hash(se322.modify01(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode* n147 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode*>(i147->slice(se322, h141));
+          SUM_PROFIT_mPARTSUPP17_entry* e147;
+         
+          if (n147 && (e147 = n147->obj)) {
+            do {                
+              long profit_o_year = e147->PROFIT_O_YEAR;
+              DOUBLE_TYPE v153 = e147->__av;
+              SUM_PROFIT_mSUPPLIER13.addOrDelOnZero(se320.modify(partsupp_suppkey,profit_o_year),(SUM_PROFIT_mLINEITEM11.getValueOrDefault(se321.modify(partsupp_partkey)) * (v153 * -1L)));
+              n147 = n147->nxt;
+            } while (n147 && (e147 = n147->obj) && h141 == n147->hash &&  SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::equals(se322, *e147)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mPARTSUPP17_map_01* i148 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01*>(SUM_PROFIT_mPARTSUPP17.index[1]);
+          const HASH_RES_t h142 = SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::hash(se324.modify01(partsupp_partkey, partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode* n148 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode*>(i148->slice(se324, h142));
+          SUM_PROFIT_mPARTSUPP17_entry* e148;
+         
+          if (n148 && (e148 = n148->obj)) {
+            do {                
+              long profit_o_year = e148->PROFIT_O_YEAR;
+              DOUBLE_TYPE v154 = e148->__av;
+              SUM_PROFIT_mSUPPLIER13_mPART2.addOrDelOnZero(se323.modify(partsupp_partkey,partsupp_suppkey,profit_o_year),(v154 * -1L));
+              n148 = n148->nxt;
+            } while (n148 && (e148 = n148->obj) && h142 == n148->hash &&  SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::equals(se324, *e148)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i149 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h144 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se327.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n149 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i149->slice(se327, h144));
+          SUM_PROFIT_mLINEITEM12_entry* e149;
+         
+          if (n149 && (e149 = n149->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e149->PROFIT_NATION;
+              long v155 = e149->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mPARTSUPP13_map_01* i150 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01*>(SUM_PROFIT_mPARTSUPP13.index[1]);
+                const HASH_RES_t h143 = SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::hash(se326.modify01(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode* n150 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP13_map_01::IdxNode*>(i150->slice(se326, h143));
+                SUM_PROFIT_mPARTSUPP13_entry* e150;
+               
+                if (n150 && (e150 = n150->obj)) {
+                  do {                
+                    long profit_o_year = e150->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v156 = e150->__av;
+                    SUM_PROFIT_mPART12.addOrDelOnZero(se325.modify(partsupp_partkey,profit_o_year,profit_nation),(v155 * (v156 * (-1L * partsupp_supplycost))));
+                    n150 = n150->nxt;
+                  } while (n150 && (e150 = n150->obj) && h143 == n150->hash &&  SUM_PROFIT_mPARTSUPP13_mapkey01_idxfn::equals(se326, *e150)); 
+                }
+              }
+              n149 = n149->nxt;
+            } while (n149 && (e149 = n149->obj) && h144 == n149->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se327, *e149)); 
+          }
+        }{ //slice 
+          const HashIndex_SUM_PROFIT_mLINEITEM12_map_0* i151 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0*>(SUM_PROFIT_mLINEITEM12.index[1]);
+          const HASH_RES_t h146 = SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::hash(se330.modify0(partsupp_suppkey));
+          HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode* n151 = static_cast<HashIndex_SUM_PROFIT_mLINEITEM12_map_0::IdxNode*>(i151->slice(se330, h146));
+          SUM_PROFIT_mLINEITEM12_entry* e151;
+         
+          if (n151 && (e151 = n151->obj)) {
+            do {                
+              STRING_TYPE profit_nation = e151->PROFIT_NATION;
+              long v157 = e151->__av;
+              { //slice 
+                const HashIndex_SUM_PROFIT_mPARTSUPP17_map_01* i152 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01*>(SUM_PROFIT_mPARTSUPP17.index[1]);
+                const HASH_RES_t h145 = SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::hash(se329.modify01(partsupp_partkey, partsupp_suppkey));
+                HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode* n152 = static_cast<HashIndex_SUM_PROFIT_mPARTSUPP17_map_01::IdxNode*>(i152->slice(se329, h145));
+                SUM_PROFIT_mPARTSUPP17_entry* e152;
+               
+                if (n152 && (e152 = n152->obj)) {
+                  do {                
+                    long profit_o_year = e152->PROFIT_O_YEAR;
+                    DOUBLE_TYPE v158 = e152->__av;
+                    SUM_PROFIT_mPART14.addOrDelOnZero(se328.modify(partsupp_partkey,profit_o_year,profit_nation),(v157 * (v158 * -1L)));
+                    n152 = n152->nxt;
+                  } while (n152 && (e152 = n152->obj) && h145 == n152->hash &&  SUM_PROFIT_mPARTSUPP17_mapkey01_idxfn::equals(se329, *e152)); 
+                }
+              }
+              n151 = n151->nxt;
+            } while (n151 && (e151 = n151->obj) && h146 == n151->hash &&  SUM_PROFIT_mLINEITEM12_mapkey0_idxfn::equals(se330, *e151)); 
+          }
+        }
+      }
+    }
+    void on_system_ready_event() {
+      {  
+        SUM_PROFIT_mSUPPLIER12.clear();
+        {  // foreach
+          const HashIndex_NATION_map_0123* i153 = static_cast<HashIndex_NATION_map_0123*>(NATION.index[0]);
+          HashIndex_NATION_map_0123::IdxNode* n153; 
+          NATION_entry* e153;
+        
+          for (size_t i = 0; i < i153->size_; i++)
+          {
+            n153 = i153->buckets_ + i;
+            while (n153 && (e153 = n153->obj))
+            {
+                long sum_profit_msuppliersupplier_nationkey = e153->NATION_NATIONKEY;
+                STRING_TYPE n_name = e153->NATION_NAME;
+                long n_regionkey = e153->NATION_REGIONKEY;
+                STRING_TYPE n_comment = e153->NATION_COMMENT;
+                long v159 = e153->__av;
+                SUM_PROFIT_mSUPPLIER12.addOrDelOnZero(se331.modify(sum_profit_msuppliersupplier_nationkey,n_name),v159);
+              n153 = n153->nxt;
+            }
+          }
+        }
+      }
+    }
+  
+  private:
+  
+    /* Sample entries for avoiding recreation of temporary objects */
+    SUM_PROFIT_entry se1;
+    SUM_PROFIT_mLINEITEM11_entry se2;
+    SUM_PROFIT_mLINEITEM13_entry se3;
+    SUM_PROFIT_mLINEITEM110_entry se4;
+    SUM_PROFIT_mLINEITEM14_entry se5;
+    SUM_PROFIT_mLINEITEM12_entry se6;
+    SUM_PROFIT_mORDERS12_entry se7;
+    SUM_PROFIT_mLINEITEM11_entry se8;
+    SUM_PROFIT_mLINEITEM110_entry se9;
+    SUM_PROFIT_mLINEITEM12_entry se10;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se11;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se12;
+    SUM_PROFIT_mLINEITEM11_entry se13;
+    SUM_PROFIT_mLINEITEM110_entry se14;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se15;
+    SUM_PROFIT_mLINEITEM110_entry se16;
+    SUM_PROFIT_mORDERS12_mPART2_entry se17;
+    SUM_PROFIT_mLINEITEM110_entry se18;
+    SUM_PROFIT_mLINEITEM12_entry se19;
+    SUM_PROFIT_mORDERS14_entry se20;
+    SUM_PROFIT_mLINEITEM11_entry se21;
+    SUM_PROFIT_mLINEITEM13_entry se22;
+    SUM_PROFIT_mLINEITEM12_entry se23;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se24;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se25;
+    SUM_PROFIT_mLINEITEM11_entry se26;
+    SUM_PROFIT_mLINEITEM13_entry se27;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se28;
+    SUM_PROFIT_mLINEITEM13_entry se29;
+    SUM_PROFIT_mORDERS14_mPART2_entry se30;
+    SUM_PROFIT_mLINEITEM13_entry se31;
+    SUM_PROFIT_mLINEITEM12_entry se32;
+    SUM_PROFIT_mPARTSUPP13_entry se33;
+    SUM_PROFIT_mLINEITEM14_entry se34;
+    SUM_PROFIT_mPARTSUPP17_entry se35;
+    SUM_PROFIT_mLINEITEM14_entry se36;
+    SUM_PROFIT_mSUPPLIER11_entry se37;
+    SUM_PROFIT_mLINEITEM11_entry se38;
+    SUM_PROFIT_mLINEITEM110_entry se39;
+    SUM_PROFIT_mLINEITEM14_entry se40;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se41;
+    SUM_PROFIT_mLINEITEM110_entry se42;
+    SUM_PROFIT_mLINEITEM14_entry se43;
+    SUM_PROFIT_mSUPPLIER13_entry se44;
+    SUM_PROFIT_mLINEITEM11_entry se45;
+    SUM_PROFIT_mLINEITEM13_entry se46;
+    SUM_PROFIT_mLINEITEM14_entry se47;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se48;
+    SUM_PROFIT_mLINEITEM13_entry se49;
+    SUM_PROFIT_mLINEITEM14_entry se50;
+    SUM_PROFIT_mPART12_entry se51;
+    SUM_PROFIT_mLINEITEM110_entry se52;
+    SUM_PROFIT_mLINEITEM14_entry se53;
+    SUM_PROFIT_mLINEITEM12_entry se54;
+    SUM_PROFIT_mPART14_entry se55;
+    SUM_PROFIT_mLINEITEM13_entry se56;
+    SUM_PROFIT_mLINEITEM14_entry se57;
+    SUM_PROFIT_mLINEITEM12_entry se58;
+    SUM_PROFIT_entry se59;
+    SUM_PROFIT_mLINEITEM11_entry se60;
+    SUM_PROFIT_mLINEITEM13_entry se61;
+    SUM_PROFIT_mLINEITEM110_entry se62;
+    SUM_PROFIT_mLINEITEM14_entry se63;
+    SUM_PROFIT_mLINEITEM12_entry se64;
+    SUM_PROFIT_mORDERS12_entry se65;
+    SUM_PROFIT_mLINEITEM11_entry se66;
+    SUM_PROFIT_mLINEITEM110_entry se67;
+    SUM_PROFIT_mLINEITEM12_entry se68;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se69;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se70;
+    SUM_PROFIT_mLINEITEM11_entry se71;
+    SUM_PROFIT_mLINEITEM110_entry se72;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se73;
+    SUM_PROFIT_mLINEITEM110_entry se74;
+    SUM_PROFIT_mORDERS12_mPART2_entry se75;
+    SUM_PROFIT_mLINEITEM110_entry se76;
+    SUM_PROFIT_mLINEITEM12_entry se77;
+    SUM_PROFIT_mORDERS14_entry se78;
+    SUM_PROFIT_mLINEITEM11_entry se79;
+    SUM_PROFIT_mLINEITEM13_entry se80;
+    SUM_PROFIT_mLINEITEM12_entry se81;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se82;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se83;
+    SUM_PROFIT_mLINEITEM11_entry se84;
+    SUM_PROFIT_mLINEITEM13_entry se85;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se86;
+    SUM_PROFIT_mLINEITEM13_entry se87;
+    SUM_PROFIT_mORDERS14_mPART2_entry se88;
+    SUM_PROFIT_mLINEITEM13_entry se89;
+    SUM_PROFIT_mLINEITEM12_entry se90;
+    SUM_PROFIT_mPARTSUPP13_entry se91;
+    SUM_PROFIT_mLINEITEM14_entry se92;
+    SUM_PROFIT_mPARTSUPP17_entry se93;
+    SUM_PROFIT_mLINEITEM14_entry se94;
+    SUM_PROFIT_mSUPPLIER11_entry se95;
+    SUM_PROFIT_mLINEITEM11_entry se96;
+    SUM_PROFIT_mLINEITEM110_entry se97;
+    SUM_PROFIT_mLINEITEM14_entry se98;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se99;
+    SUM_PROFIT_mLINEITEM110_entry se100;
+    SUM_PROFIT_mLINEITEM14_entry se101;
+    SUM_PROFIT_mSUPPLIER13_entry se102;
+    SUM_PROFIT_mLINEITEM11_entry se103;
+    SUM_PROFIT_mLINEITEM13_entry se104;
+    SUM_PROFIT_mLINEITEM14_entry se105;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se106;
+    SUM_PROFIT_mLINEITEM13_entry se107;
+    SUM_PROFIT_mLINEITEM14_entry se108;
+    SUM_PROFIT_mPART12_entry se109;
+    SUM_PROFIT_mLINEITEM110_entry se110;
+    SUM_PROFIT_mLINEITEM14_entry se111;
+    SUM_PROFIT_mLINEITEM12_entry se112;
+    SUM_PROFIT_mPART14_entry se113;
+    SUM_PROFIT_mLINEITEM13_entry se114;
+    SUM_PROFIT_mLINEITEM14_entry se115;
+    SUM_PROFIT_mLINEITEM12_entry se116;
+    SUM_PROFIT_entry se117;
+    tuple2_S_D st1;
+    SUM_PROFIT_mORDERS12_entry se118;
+    tuple2_S_D st2;
+    SUM_PROFIT_mORDERS14_entry se119;
+    SUM_PROFIT_mPARTSUPP13_entry se120;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se121;
+    SUM_PROFIT_mPARTSUPP17_entry se122;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se123;
+    SUM_PROFIT_mLINEITEM14_entry se124;
+    SUM_PROFIT_mSUPPLIER11_entry se125;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se126;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se127;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se128;
+    SUM_PROFIT_mSUPPLIER13_entry se129;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se130;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se131;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se132;
+    SUM_PROFIT_mPART12_entry se133;
+    SUM_PROFIT_mORDERS12_mPART2_entry se134;
+    SUM_PROFIT_mPART14_entry se135;
+    SUM_PROFIT_mORDERS14_mPART2_entry se136;
+    SUM_PROFIT_entry se137;
+    tuple2_S_D st3;
+    SUM_PROFIT_mORDERS12_entry se138;
+    tuple2_S_D st4;
+    SUM_PROFIT_mORDERS14_entry se139;
+    SUM_PROFIT_mPARTSUPP13_entry se140;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se141;
+    SUM_PROFIT_mPARTSUPP17_entry se142;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se143;
+    SUM_PROFIT_mLINEITEM14_entry se144;
+    SUM_PROFIT_mSUPPLIER11_entry se145;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se146;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se147;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se148;
+    SUM_PROFIT_mSUPPLIER13_entry se149;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se150;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se151;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se152;
+    SUM_PROFIT_mPART12_entry se153;
+    SUM_PROFIT_mORDERS12_mPART2_entry se154;
+    SUM_PROFIT_mPART14_entry se155;
+    SUM_PROFIT_mORDERS14_mPART2_entry se156;
+    SUM_PROFIT_entry se157;
+    SUM_PROFIT_mPART12_entry se158;
+    SUM_PROFIT_mPART14_entry se159;
+    SUM_PROFIT_mORDERS12_entry se160;
+    SUM_PROFIT_mORDERS12_mPART2_entry se161;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se162;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se163;
+    SUM_PROFIT_mORDERS14_entry se164;
+    SUM_PROFIT_mORDERS14_mPART2_entry se165;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se166;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se167;
+    SUM_PROFIT_mLINEITEM11_entry se168;
+    SUM_PROFIT_mSUPPLIER11_entry se169;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se170;
+    SUM_PROFIT_mSUPPLIER13_entry se171;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se172;
+    SUM_PROFIT_entry se173;
+    SUM_PROFIT_mPART12_entry se174;
+    SUM_PROFIT_mPART14_entry se175;
+    SUM_PROFIT_mORDERS12_entry se176;
+    SUM_PROFIT_mORDERS12_mPART2_entry se177;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se178;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se179;
+    SUM_PROFIT_mORDERS14_entry se180;
+    SUM_PROFIT_mORDERS14_mPART2_entry se181;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se182;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se183;
+    SUM_PROFIT_mLINEITEM11_entry se184;
+    SUM_PROFIT_mSUPPLIER11_entry se185;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se186;
+    SUM_PROFIT_mSUPPLIER13_entry se187;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se188;
+    SUM_PROFIT_entry se189;
+    tuple2_L_D st5;
+    SUM_PROFIT_mSUPPLIER11_entry se190;
+    tuple2_L_D st6;
+    SUM_PROFIT_mSUPPLIER13_entry se191;
+    SUM_PROFIT_mSUPPLIER12_entry se192;
+    SUM_PROFIT_mORDERS12_entry se193;
+    SUM_PROFIT_mSUPPLIER12_entry se194;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se195;
+    SUM_PROFIT_mORDERS12_mPART2_entry se196;
+    SUM_PROFIT_mSUPPLIER12_entry se197;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se198;
+    SUM_PROFIT_mORDERS14_entry se199;
+    SUM_PROFIT_mSUPPLIER12_entry se200;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se201;
+    SUM_PROFIT_mORDERS14_mPART2_entry se202;
+    SUM_PROFIT_mSUPPLIER12_entry se203;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se204;
+    SUM_PROFIT_mLINEITEM12_entry se205;
+    SUM_PROFIT_mSUPPLIER12_entry se206;
+    SUM_PROFIT_mPART12_entry se207;
+    SUM_PROFIT_mSUPPLIER12_entry se208;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se209;
+    SUM_PROFIT_mPART14_entry se210;
+    SUM_PROFIT_mSUPPLIER12_entry se211;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se212;
+    SUM_PROFIT_entry se213;
+    tuple2_L_D st7;
+    SUM_PROFIT_mSUPPLIER11_entry se214;
+    tuple2_L_D st8;
+    SUM_PROFIT_mSUPPLIER13_entry se215;
+    SUM_PROFIT_mSUPPLIER12_entry se216;
+    SUM_PROFIT_mORDERS12_entry se217;
+    SUM_PROFIT_mSUPPLIER12_entry se218;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se219;
+    SUM_PROFIT_mORDERS12_mPART2_entry se220;
+    SUM_PROFIT_mSUPPLIER12_entry se221;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se222;
+    SUM_PROFIT_mORDERS14_entry se223;
+    SUM_PROFIT_mSUPPLIER12_entry se224;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se225;
+    SUM_PROFIT_mORDERS14_mPART2_entry se226;
+    SUM_PROFIT_mSUPPLIER12_entry se227;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se228;
+    SUM_PROFIT_mLINEITEM12_entry se229;
+    SUM_PROFIT_mSUPPLIER12_entry se230;
+    SUM_PROFIT_mPART12_entry se231;
+    SUM_PROFIT_mSUPPLIER12_entry se232;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se233;
+    SUM_PROFIT_mPART14_entry se234;
+    SUM_PROFIT_mSUPPLIER12_entry se235;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se236;
+    SUM_PROFIT_entry se237;
+    SUM_PROFIT_mLINEITEM11_entry se238;
+    tuple2_L_D st9;
+    SUM_PROFIT_mPARTSUPP13_entry se239;
+    tuple2_L_D st10;
+    SUM_PROFIT_mPARTSUPP17_entry se240;
+    SUM_PROFIT_mLINEITEM12_entry se241;
+    SUM_PROFIT_mORDERS12_entry se242;
+    SUM_PROFIT_mLINEITEM11_entry se243;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se244;
+    SUM_PROFIT_mLINEITEM12_entry se245;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se246;
+    SUM_PROFIT_mLINEITEM11_entry se247;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se248;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se249;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se250;
+    SUM_PROFIT_mORDERS12_mPART2_entry se251;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se252;
+    SUM_PROFIT_mLINEITEM12_entry se253;
+    SUM_PROFIT_mORDERS14_entry se254;
+    SUM_PROFIT_mLINEITEM11_entry se255;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se256;
+    SUM_PROFIT_mLINEITEM12_entry se257;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se258;
+    SUM_PROFIT_mLINEITEM11_entry se259;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se260;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se261;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se262;
+    SUM_PROFIT_mORDERS14_mPART2_entry se263;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se264;
+    SUM_PROFIT_mLINEITEM12_entry se265;
+    SUM_PROFIT_mLINEITEM13_entry se266;
+    SUM_PROFIT_mLINEITEM110_entry se267;
+    SUM_PROFIT_mSUPPLIER11_entry se268;
+    SUM_PROFIT_mLINEITEM11_entry se269;
+    SUM_PROFIT_mPARTSUPP13_entry se270;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se271;
+    SUM_PROFIT_mPARTSUPP13_entry se272;
+    SUM_PROFIT_mSUPPLIER13_entry se273;
+    SUM_PROFIT_mLINEITEM11_entry se274;
+    SUM_PROFIT_mPARTSUPP17_entry se275;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se276;
+    SUM_PROFIT_mPARTSUPP17_entry se277;
+    SUM_PROFIT_mPART12_entry se278;
+    SUM_PROFIT_mPARTSUPP13_entry se279;
+    SUM_PROFIT_mLINEITEM12_entry se280;
+    SUM_PROFIT_mPART14_entry se281;
+    SUM_PROFIT_mPARTSUPP17_entry se282;
+    SUM_PROFIT_mLINEITEM12_entry se283;
+    SUM_PROFIT_entry se284;
+    SUM_PROFIT_mLINEITEM11_entry se285;
+    tuple2_L_D st11;
+    SUM_PROFIT_mPARTSUPP13_entry se286;
+    tuple2_L_D st12;
+    SUM_PROFIT_mPARTSUPP17_entry se287;
+    SUM_PROFIT_mLINEITEM12_entry se288;
+    SUM_PROFIT_mORDERS12_entry se289;
+    SUM_PROFIT_mLINEITEM11_entry se290;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se291;
+    SUM_PROFIT_mLINEITEM12_entry se292;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_entry se293;
+    SUM_PROFIT_mLINEITEM11_entry se294;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se295;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_entry se296;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se297;
+    SUM_PROFIT_mORDERS12_mPART2_entry se298;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_entry se299;
+    SUM_PROFIT_mLINEITEM12_entry se300;
+    SUM_PROFIT_mORDERS14_entry se301;
+    SUM_PROFIT_mLINEITEM11_entry se302;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se303;
+    SUM_PROFIT_mLINEITEM12_entry se304;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_entry se305;
+    SUM_PROFIT_mLINEITEM11_entry se306;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se307;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_entry se308;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se309;
+    SUM_PROFIT_mORDERS14_mPART2_entry se310;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_entry se311;
+    SUM_PROFIT_mLINEITEM12_entry se312;
+    SUM_PROFIT_mLINEITEM13_entry se313;
+    SUM_PROFIT_mLINEITEM110_entry se314;
+    SUM_PROFIT_mSUPPLIER11_entry se315;
+    SUM_PROFIT_mLINEITEM11_entry se316;
+    SUM_PROFIT_mPARTSUPP13_entry se317;
+    SUM_PROFIT_mSUPPLIER11_mPART2_entry se318;
+    SUM_PROFIT_mPARTSUPP13_entry se319;
+    SUM_PROFIT_mSUPPLIER13_entry se320;
+    SUM_PROFIT_mLINEITEM11_entry se321;
+    SUM_PROFIT_mPARTSUPP17_entry se322;
+    SUM_PROFIT_mSUPPLIER13_mPART2_entry se323;
+    SUM_PROFIT_mPARTSUPP17_entry se324;
+    SUM_PROFIT_mPART12_entry se325;
+    SUM_PROFIT_mPARTSUPP13_entry se326;
+    SUM_PROFIT_mLINEITEM12_entry se327;
+    SUM_PROFIT_mPART14_entry se328;
+    SUM_PROFIT_mPARTSUPP17_entry se329;
+    SUM_PROFIT_mLINEITEM12_entry se330;
+    SUM_PROFIT_mSUPPLIER12_entry se331;
+    /* regex_t temporary objects */
+    regex_t preg1;
+  
+    /* Data structures used for storing materialized views */
+    NATION_map NATION;
+    SUM_PROFIT_mORDERS12_map SUM_PROFIT_mORDERS12;
+    SUM_PROFIT_mORDERS12_mPARTSUPP3_map SUM_PROFIT_mORDERS12_mPARTSUPP3;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_map SUM_PROFIT_mORDERS12_mSUPPLIER1;
+    SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2_map SUM_PROFIT_mORDERS12_mSUPPLIER1_mPART2;
+    SUM_PROFIT_mORDERS12_mPART2_map SUM_PROFIT_mORDERS12_mPART2;
+    SUM_PROFIT_mORDERS14_map SUM_PROFIT_mORDERS14;
+    SUM_PROFIT_mORDERS14_mPARTSUPP3_map SUM_PROFIT_mORDERS14_mPARTSUPP3;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_map SUM_PROFIT_mORDERS14_mSUPPLIER1;
+    SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2_map SUM_PROFIT_mORDERS14_mSUPPLIER1_mPART2;
+    SUM_PROFIT_mORDERS14_mPART2_map SUM_PROFIT_mORDERS14_mPART2;
+    SUM_PROFIT_mPARTSUPP13_map SUM_PROFIT_mPARTSUPP13;
+    SUM_PROFIT_mPARTSUPP17_map SUM_PROFIT_mPARTSUPP17;
+    SUM_PROFIT_mLINEITEM11_map SUM_PROFIT_mLINEITEM11;
+    SUM_PROFIT_mLINEITEM12_map SUM_PROFIT_mLINEITEM12;
+    SUM_PROFIT_mLINEITEM13_map SUM_PROFIT_mLINEITEM13;
+    SUM_PROFIT_mLINEITEM14_map SUM_PROFIT_mLINEITEM14;
+    SUM_PROFIT_mLINEITEM110_map SUM_PROFIT_mLINEITEM110;
+    SUM_PROFIT_mSUPPLIER11_map SUM_PROFIT_mSUPPLIER11;
+    SUM_PROFIT_mSUPPLIER11_mPART2_map SUM_PROFIT_mSUPPLIER11_mPART2;
+    SUM_PROFIT_mSUPPLIER12_map SUM_PROFIT_mSUPPLIER12;
+    SUM_PROFIT_mSUPPLIER13_map SUM_PROFIT_mSUPPLIER13;
+    SUM_PROFIT_mSUPPLIER13_mPART2_map SUM_PROFIT_mSUPPLIER13_mPART2;
+    SUM_PROFIT_mPART12_map SUM_PROFIT_mPART12;
+    SUM_PROFIT_mPART14_map SUM_PROFIT_mPART14;
+    MultiHashMap<tuple2_S_D,DOUBLE_TYPE,HashIndex<tuple2_S_D,DOUBLE_TYPE> > _c1;
+    MultiHashMap<tuple2_L_D,DOUBLE_TYPE,HashIndex<tuple2_L_D,DOUBLE_TYPE> > _c4;
+    MultiHashMap<tuple2_L_D,DOUBLE_TYPE,HashIndex<tuple2_L_D,DOUBLE_TYPE> > _c6;
+    MultiHashMap<tuple2_L_D,DOUBLE_TYPE,HashIndex<tuple2_L_D,DOUBLE_TYPE> > _c3;
+    MultiHashMap<tuple2_S_D,DOUBLE_TYPE,HashIndex<tuple2_S_D,DOUBLE_TYPE> > _c2;
+    MultiHashMap<tuple2_L_D,DOUBLE_TYPE,HashIndex<tuple2_L_D,DOUBLE_TYPE> > _c5;
+    
+  
+  };
+
+}
