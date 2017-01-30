@@ -1,6 +1,9 @@
 #ifndef DBTOASTER_TEST_TEMPLATE_HPP
 #define DBTOASTER_TEST_TEMPLATE_HPP
 
+#include <iostream>
+#include <fstream>
+#include <sstream>
 #include "stopwatch.hpp"
 
 const string dataPath = "datasets/tpch";

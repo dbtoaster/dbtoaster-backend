@@ -11,16 +11,6 @@
 #include "stopwatch.hpp"
 #include "serialization.hpp"
 
-#ifdef MEMORY_MODE
-    #include "tpch/tpch_template_memory.hpp"
-#elif TPCH
-    #include "tpch/tpch.hpp"
-    #include "tpch/tpch_template.hpp"
-#elif TPCDS
-    #include "tpcds/tpcds.hpp"
-    #include "tpcds/tpcds_template.hpp"
-#endif
-
 using namespace std;
 using namespace dbtoaster;
 
