@@ -274,7 +274,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
           "size_t h = 0;" :/:
             s"for(int c : {${cols.mkString(", ")}})" :/:
-            "  h = h ^ (HASH(e.map.at(c) + 0x9e3779b9 + (h<<6) + (h>>2));" :/:
+            "  h = h ^ (HASH(e.map.at(c)) + 0x9e3779b9 + (h<<6) + (h>>2));" :/:
             "return h;"
         ) :/: "}"
         val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :/: Document.nest(2,

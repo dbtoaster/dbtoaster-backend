@@ -501,7 +501,7 @@ object TpccXactGenerator_SC {
       //        def deliveryTx(showOutput: Boolean, datetime: Date, w_id: Int, o_carrier_id: Int): Int = {
       ir {
         val DIST_PER_WAREHOUSE = 10
-        val orderIDs = new Array[Int](123)
+        val orderIDs = new Array[Int](DIST_PER_WAREHOUSE)
         var d_id = 1
         while (d_id <= DIST_PER_WAREHOUSE) {
           val agg = Aggregator.min[GenericEntry, Int](e => e.get[Int](1))

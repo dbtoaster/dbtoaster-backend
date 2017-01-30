@@ -106,6 +106,9 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <vector>
        |#include <unordered_set>
        |#include <mmap.hpp>
+       |
+       |#include "ExecutionProfiler.h"
+       |
        |using namespace std;
        |#include "hpds/pstring.hpp"
        |#include "hpds/pstringops.hpp"
@@ -257,48 +260,57 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |tpcc.loadHist();
          |tpcc.loadStocks();
          |
+         |uint xactCounts[5] = {0, 0, 0, 0, 0};
+         |auto start = Now;
          |for(size_t i = 0; i < numPrograms; ++i){
          |  Program *prg = tpcc.programs[i];
          |  switch(prg->id){
          |     case NEWORDER :
          |      {
          |         NewOrder& p = *(NewOrder *)prg;
+         |         xactCounts[0]++;
          |         NewOrderTx($showOutput, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
          |         break;
          |      }
          |    case PAYMENTBYID :
          |      {
          |         PaymentById& p = *(PaymentById *) prg;
+         |         xactCounts[1]++;
          |         PaymentTx($showOutput, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
          |         break;
          |      }
          |    case PAYMENTBYNAME :
          |      {
          |         PaymentByName& p = *(PaymentByName *) prg;
+         |         xactCounts[1]++;
          |         PaymentTx($showOutput, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
          |         break;
          |      }
          |    case ORDERSTATUSBYID :
          |      {
          |         OrderStatusById &p = *(OrderStatusById *) prg;
+         |         xactCounts[2]++;
          |         OrderStatusTx($showOutput, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
          |         break;
          |      }
          |    case ORDERSTATUSBYNAME :
          |      {
          |         OrderStatusByName &p = *(OrderStatusByName *) prg;
+         |         xactCounts[2]++;
          |         OrderStatusTx($showOutput, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
          |         break;
          |      }
          |    case DELIVERY :
          |      {
          |         Delivery &p = *(Delivery *) prg;
+         |         xactCounts[3]++;
          |         DeliveryTx($showOutput, p.datetime, p.w_id, p.o_carrier_id);
          |         break;
          |      }
          |    case STOCKLEVEL :
          |     {
          |       StockLevel &p = *(StockLevel *) prg;
+         |       xactCounts[4]++;
          |       StockLevelTx($showOutput, -1, -1, p.w_id, p.d_id, p.threshold);
          |       break;
          |     }
@@ -306,6 +318,10 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |
          |  }
          |}
+         |auto end = Now;
+         |auto execTime = DurationMS(end - start);
+         |cout << "Total time = " << execTime << " ms" << endl;
+         |cout << "TpmC = " << xactCounts[0] * 60000.0/execTime << endl;
 
          |#ifdef VERIFY_TPCC
          |    if (warehouseTblPrimaryIdx == tpcc.wareRes) {

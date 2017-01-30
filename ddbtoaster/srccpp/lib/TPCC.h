@@ -21,7 +21,7 @@
 #define EXPAND(x) #x
 #define STRINGIFY(x) EXPAND(x)
 
-#define VERIFY_TPCC 1
+//#define VERIFY_TPCC 1
 const std::string TStore = PROJECT_ROOT;
 const std::string commandfile = TStore + "commands.txt";
 //const std::string inputTableDir = "/home/sachin/sem3/Project/test/input/";

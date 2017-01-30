@@ -17,21 +17,21 @@ case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: 
 }
 
 object Optimizer {
-  var analyzeEntry: Boolean = true
-  var analyzeIndex: Boolean = true
-  var fixedRange: Boolean = true
-  var onlineOpts = true
-  var tmpVarHoist = true
-  var tmpMapHoist = true
-  var indexInline = true
-  var indexLookupFusion = true
+  var analyzeEntry: Boolean = false
+  var analyzeIndex: Boolean = false
+  var fixedRange: Boolean = false
+  var onlineOpts = false
+  var tmpVarHoist = false
+  var tmpMapHoist = false
+  var indexInline = false
+  var indexLookupFusion = false
   var indexLookupPartialFusion = false
-  var sliceInline = true
-  var deadIndexUpdate = true
-  var codeMotion = true
+  var sliceInline = false
+  var deadIndexUpdate = false
+  var codeMotion = false
+  var m3CompareMultiply = false
+
   var refCounter = true
-  var m3CompareMultiply = true
-  //Lazy evaluation
   var cTransformer = false
 }
 
@@ -79,8 +79,8 @@ class Optimizer(val IR: StoreDSL) {
   if (Optimizer.deadIndexUpdate && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("DeadIndexUpdate opt requires both index inline as well as indexlookup fusion")
 
-  if(Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
-    throw new Error("Inlining slice requires both Index Inline as well as IndexLookupFusion and implemented only for c++")
+  if(Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion && Optimizer.tmpVarHoist))  //hash and cmp not implemented for pointer
+    throw new Error("Inlining slice requires Index Inline, IndexLookupFusion and TempVarHoisting implemented only for c++")
 
   pipeline += DCE
   pipeline += ParameterPromotion
