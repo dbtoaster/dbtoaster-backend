@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "hash.hpp"
 #include "pool.hpp"
-
+#include "serialization.hpp"
 
 namespace dbtoaster 
 {
@@ -81,7 +81,7 @@ namespace dbtoaster
                 size_t old_size = size_;
 
                 buckets_ = new IdxNode[new_size];
-                memset(buckets_, 0, sizeof(IdxNode) * new_size);            
+                memset(buckets_, 0, sizeof(IdxNode) * new_size);
                 size_ = new_size;
                 index_mask_ = size_ - 1;
                 threshold_ = size_ * load_factor_;
@@ -413,6 +413,23 @@ namespace dbtoaster
                 // not found
                 return nullptr;
             }
+
+            template<class Archive>
+            void serialize(Archive& ar, const unsigned int version) const
+            {
+                ar << "\n\t\t";
+                dbtoaster::serialize_nvp(ar, "count", count());
+                T* elem;
+                for (size_t i = 0; i < size_; i++) 
+                {
+                    IdxNode* n = buckets_ + i;
+                    while (n && (elem = n->obj))
+                    {
+                        ar << "\n"; dbtoaster::serialize_nvp_tabbed(ar, "item", *elem, "\t\t"); 
+                        n = n->nxt;
+                    }
+                }
+            }
     };
 
     template<typename T, typename V, typename...INDEXES> 
@@ -511,7 +528,13 @@ namespace dbtoaster
                 {
                     del(k, h);
                 }
-            }            
+            }
+
+            template<class Archive>
+            void serialize(Archive& ar, const unsigned int version) const
+            {
+                primary_index->serialize(ar, version);
+            }
     };
 
     template<typename T, typename V, typename PRIMARY_INDEX, typename SECONDARY_INDEX>
@@ -614,6 +637,12 @@ namespace dbtoaster
                     del(k, h);
                 }
             }
+
+            template<class Archive>
+            void serialize(Archive& ar, const unsigned int version) const
+            {
+                primary_index->serialize(ar, version);
+            }            
     };
 
 
@@ -741,6 +770,12 @@ namespace dbtoaster
                     del(k, h);
                 }
             }
+
+            template<class Archive>
+            void serialize(Archive& ar, const unsigned int version) const
+            {
+                primary_index->serialize(ar, version);
+            }            
     };
 }
 

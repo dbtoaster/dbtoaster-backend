@@ -207,10 +207,11 @@ trait ICppGen extends IScalaGen {
               |    while (${n0} && (${e0} = ${n0}->obj))
               |    {
               |${ind(body,4)}
-              |      ${n0} = ${n0}->nxt;
+              |        ${n0} = ${n0}->nxt;
               |    }
               |  }
-              |}""".stripMargin 
+              |}
+              |""".stripMargin 
 
             // "{ //foreach\n"+
             // "  "+mapEntry+"* "+e0+" = "+mapName+".head;\n"+
@@ -814,7 +815,7 @@ trait ICppGen extends IScalaGen {
     def compile_serialization = s0.queries.map{q =>
       "ar << \"\\n\";\n"+
       "const " + q.toCppRefType + " _"+q.name+" = get_"+q.name+"();\n"+
-      "dbtoaster::serialize_nvp_tabbed(ar, STRING_TYPE("+q.name+"), _"+q.name+", \"\\t\");\n"
+      "dbtoaster::serialize_nvp_tabbed(ar, STRING("+q.name+"), _"+q.name+", \"\\t\");\n"
     }.mkString
 
     def compile_tlqs = s0.queries.map{ query =>
