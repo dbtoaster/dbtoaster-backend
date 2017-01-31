@@ -14,7 +14,7 @@
 
 namespace dbtoaster 
 {
-    #define DEFAULT_CHUNK_SIZE 32     // 2^N
+    #define DEFAULT_CHUNK_SIZE 16     // 2^N
     #define INSERT_INTO_MMAP 1
     #define DELETE_FROM_MMAP -1
 
@@ -42,7 +42,7 @@ namespace dbtoaster
 
             virtual T* get(const T& key, const HASH_RES_t h) const = 0;
 
-            virtual V getValueOrDefault(const T& key) const = 0;
+            virtual const V& getValueOrDefault(const T& key) const = 0;
 
             virtual size_t count() const = 0;
 
@@ -166,12 +166,12 @@ namespace dbtoaster
                 return nullptr;
             }
 
-            FORCE_INLINE V getValueOrDefault(const T& key) const 
+            FORCE_INLINE const V& getValueOrDefault(const T& key) const 
             {
                 return getValueOrDefault(key, IDX_FN::hash(key));
             }
 
-            FORCE_INLINE V getValueOrDefault(const T& key, HASH_RES_t h) const 
+            FORCE_INLINE const V& getValueOrDefault(const T& key, HASH_RES_t h) const 
             {
                 IdxNode* n = buckets_ + (h & index_mask_);
                 do 
@@ -495,7 +495,7 @@ namespace dbtoaster
                 pool.clear();
             }
 
-            FORCE_INLINE V getValueOrDefault(const T& key) const 
+            FORCE_INLINE const V& getValueOrDefault(const T& key) const 
             { 
                 return primary_index->getValueOrDefault(key); 
             }
@@ -603,7 +603,7 @@ namespace dbtoaster
                 pool.clear();
             }
 
-            FORCE_INLINE V getValueOrDefault(const T& key) const 
+            FORCE_INLINE const V& getValueOrDefault(const T& key) const 
             { 
                 return primary_index->getValueOrDefault(key); 
             }
@@ -736,7 +736,7 @@ namespace dbtoaster
                 pool.clear();
             }
 
-            FORCE_INLINE V getValueOrDefault(const T& key) const 
+            FORCE_INLINE const V& getValueOrDefault(const T& key) const 
             { 
                 return primary_index->getValueOrDefault(key); 
             }
