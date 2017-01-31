@@ -32,6 +32,7 @@ object TpccXactGenerator_SC {
       case "codemotion" => Optimizer.codeMotion = true
       case "refcounter" => Optimizer.refCounter = true
       case "fixedrange" => Optimizer.fixedRange = true
+      case "regex" => Optimizer.regexHoister = true
       case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }
@@ -59,7 +60,7 @@ object TpccXactGenerator_SC {
 
     import Optimizer._
 
-    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
+    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
     java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
 
 

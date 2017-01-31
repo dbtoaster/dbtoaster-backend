@@ -26,7 +26,7 @@ import scala.collection.mutable
 abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) extends IScalaGen {
 
   import Optimizer._;
-  val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpMapHoist" -> tmpMapHoist, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "SliceInline" -> sliceInline, "CodeMotion" -> codeMotion, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
+  val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpMapHoist" -> tmpMapHoist, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "DeadIdx" -> deadIndexUpdate, "SliceInline" -> sliceInline, "CodeMotion" -> codeMotion, "RegexHoist" -> regexHoister,  "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
   java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
   import scala.language.implicitConversions
   import ddbt.lib.store.deep._
@@ -70,7 +70,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     case s: Product => s.productIterator.collect { case e: Expr => containsForeachOrSlice(e) }.foldLeft(false)(_ || _)
   }
 
-  val csSym = collection.mutable.HashMap[String, Rep[_]]()
+  val nameToSymMap = collection.mutable.HashMap[String, Rep[_]]()  //maps the name used in IScalaGen/ICppGen to SC Symbols
 
   // Expression CPS transformation from M3 AST to LMS graph representation
   //   ex : expression to convert
@@ -94,7 +94,11 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
       }
       if (as.forall(_.isInstanceOf[Const])) {
         val cName = constApply(a)
-        co(csSym.get(cName) match { case Some(n) => n case None => val cSym = IR.freshNamed(cName)(typeToTypeRep(tp)); csSym += ((cName, cSym)); cSym }) // hoist constants resulting from function application
+        co(nameToSymMap.getOrElseUpdate(cName, IR.freshNamed(cName)(typeToTypeRep(tp)))) // hoist constants resulting from function application
+      } else if (Optimizer.regexHoister && fn.equals("regexp_match") && as(0).isInstanceOf[Const]) {
+        val cName = regexpCacheMap.getOrElseUpdate(as(0).asInstanceOf[Const].v, ddbt.Utils.fresh("preg"))
+        val regex = nameToSymMap.getOrElseUpdate(cName, IR.freshNamed(cName)(RegexType))
+        expr(as(1), (v: Rep[_]) => co(IR.m3apply("preg_match", List(regex, v), tp)))
       }
       else app(as, Nil)
 

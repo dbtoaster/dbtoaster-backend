@@ -1,5 +1,7 @@
 package ddbt.lib.store.deep
 
+import java.util.regex.Pattern
+
 import ch.epfl.data.sc.pardis.deep.scalalib._
 import ch.epfl.data.sc.pardis.deep.scalalib.collection.{ArrayBufferComponent, SeqComponent, SetComponent}
 import ch.epfl.data.sc.pardis.ir._
@@ -149,6 +151,11 @@ trait StoreDSL extends
     }
   }
 
+  case object RegexType extends TypeRep[Pattern] {
+    def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = RegexType
+    val name = "java.util.Pattern"
+    val typeArguments = Nil
+  }
   // Global variables
   val USE_UNIQUE_INDEX_WHEN_POSSIBLE = true
   val USE_STORE1 = true
@@ -158,6 +165,7 @@ trait StoreDSL extends
   // cases classes
   case class M3Apply[T: TypeRep](name1: String, args1: List[Rep[_]]) extends FunctionDef[T](None, "U" + name1, List(args1)) {
     override def rebuild(children: FunctionArg*) = M3Apply[T](name1, children.asInstanceOf[List[Rep[Any]]])
+    override def isPure: Boolean = true
   }
 
   def m3_apply[T: TypeRep](name1: String, args: List[Rep[_]]): Rep[T] = M3Apply[T](name1, args)

@@ -67,6 +67,7 @@ object Compiler {
       case "deadidx" => Optimizer.deadIndexUpdate = true
       case "codemotion" =>Optimizer.codeMotion = true
       case "refcounter" => Optimizer.refCounter = true
+      case "regex" => Optimizer.regexHoister = true
       case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }

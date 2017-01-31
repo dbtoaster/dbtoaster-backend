@@ -30,8 +30,9 @@ object Optimizer {
   var deadIndexUpdate = false
   var codeMotion = false
   var m3CompareMultiply = false
+  var regexHoister = false
 
-  var refCounter = true
+  var refCounter = false
   var cTransformer = false
 }
 

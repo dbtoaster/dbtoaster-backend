@@ -723,7 +723,7 @@ trait ICppGen extends IScalaGen {
     "private:\n"+
     "\n"+
     "  /* Sample entries for avoiding recreation of temporary objects */\n"+
-      (if(tmpEntrySC != null) tmpEntrySC else sampleEntDef)+
+      (if(tmpEntrySC != null) tmpEntrySC else sampleEntDef)+ "\n" +
     (if(regexpCacheMap.isEmpty) "" else
     "  /* regex_t temporary objects */\n"+
     regexpCacheMap.map{case (_,preg) => "  regex_t "+preg+";\n"}.mkString)+
