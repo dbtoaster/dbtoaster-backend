@@ -112,12 +112,6 @@ namespace dbtoaster
 
     void print_result(dbtoaster::data_t& data)
     {
-        // std::cout << "AGG COUNT: " << data.get_AGG().count() << std::endl;
-        // std::cout << "AGG_UA_CNT COUNT: " << data.AGG_UA_CNT.count() << std::endl;
-        // std::cout << "AGG_UA COUNT: " << data.AGG_UA.count() << std::endl;
-        // std::cout << "AGG_UA2 COUNT: " << data.AGG_UA2.count() << std::endl;
-        // std::cout << "AGG_UF_UA2 COUNT: " << data.AGG_UF_UA2.count() << std::endl;
-        // std::cout << "AGG_UA_S_Weight COUNT: " << data.AGG_UA_S_Weight.count() << std::endl;
         data.serialize(std::cout, 0);
     }
 }
