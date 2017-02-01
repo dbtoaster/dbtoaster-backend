@@ -106,6 +106,9 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <vector>
        |#include <unordered_set>
        |#include <mmap.hpp>
+       |#include <iomanip>
+       |#include <fstream>
+       |#include <locale>
        |
        |#include "ExecutionProfiler.h"
        |
@@ -321,7 +324,12 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |auto end = Now;
          |auto execTime = DurationMS(end - start);
          |cout << "Total time = " << execTime << " ms" << endl;
-         |cout << "TpmC = " << xactCounts[0] * 60000.0/execTime << endl;
+         |cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
+         |ofstream fout("tpcc_res_cpp.csv", ios::app);
+         |if(argc == 1 || atoi(argv[1]) == 1)
+         |  fout << "\\nCPP-${Optimizer.optCombination},";
+         |fout << fixed << xactCounts[0] * 60000.0/execTime << ",";
+         |fout.close();
 
          |#ifdef VERIFY_TPCC
          |    if (warehouseTblPrimaryIdx == tpcc.wareRes) {

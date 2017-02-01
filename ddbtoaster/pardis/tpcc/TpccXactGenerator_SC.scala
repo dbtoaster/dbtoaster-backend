@@ -16,7 +16,7 @@ object TpccXactGenerator_SC {
 
   def main(args: Array[String]): Unit = {
     var numWare = 1
-
+    var lang = ""
     def opts(o: String) = o match {
       case "entry" => Optimizer.analyzeEntry = true
       case "index" => Optimizer.analyzeIndex = true
@@ -50,6 +50,7 @@ object TpccXactGenerator_SC {
         args(i) match {
           case "-opt" => eat(s => opts(s), true)
           case "-ware" => eat(s => numWare = s.toInt)
+          case "-lang" => eat(s => lang = s)
           case _ =>
         }
         i += 1
@@ -60,7 +61,7 @@ object TpccXactGenerator_SC {
 
     import Optimizer._
 
-    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "CmpMult" -> m3CompareMultiply)
+    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter)
     java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
 
 
@@ -75,8 +76,7 @@ object TpccXactGenerator_SC {
       prog = new Prog(Context, numWare)
       unit((1))
     }
-    var lang = "cpp"
-//        var lang = "scala"
+
     val codeGen = lang match {
       case "scala" => new TpccPardisScalaGen(Context)
       case "cpp" => Optimizer.cTransformer = true;

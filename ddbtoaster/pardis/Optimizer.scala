@@ -34,10 +34,18 @@ object Optimizer {
 
   var refCounter = false
   var cTransformer = false
+  var optCombination: String = ""
 }
 
 class Optimizer(val IR: StoreDSL) {
   val pipeline = scala.collection.mutable.ArrayBuffer[TransformerHandler]()
+
+  import Optimizer._
+
+  optCombination = List(analyzeEntry -> "E", analyzeIndex -> "I", fixedRange -> "G", onlineOpts -> "O",
+     tmpVarHoist -> "V", tmpMapHoist -> "M", indexInline -> "N", indexLookupFusion -> "F",
+    indexLookupPartialFusion -> "P", sliceInline -> "S", deadIndexUpdate -> "D", codeMotion -> "C",
+    m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
 
   if (Optimizer.analyzeIndex) {
     pipeline += new IndexAnalysis(IR)
@@ -80,7 +88,7 @@ class Optimizer(val IR: StoreDSL) {
   if (Optimizer.deadIndexUpdate && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("DeadIndexUpdate opt requires both index inline as well as indexlookup fusion")
 
-  if(Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion && Optimizer.tmpVarHoist))  //hash and cmp not implemented for pointer
+  if (Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion && Optimizer.tmpVarHoist)) //hash and cmp not implemented for pointer
     throw new Error("Inlining slice requires Index Inline, IndexLookupFusion and TempVarHoisting implemented only for c++")
 
   pipeline += DCE
