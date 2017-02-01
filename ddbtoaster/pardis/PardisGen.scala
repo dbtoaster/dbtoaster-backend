@@ -598,7 +598,11 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
            |END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
          """.stripMargin
       val doc2 = preBody :: codeGen.blockToDocument((x._3)) :: postBody
-      ts += doc"void on${x._1}(${x._2.map(s => doc"${s.tp}& $s").mkDocument(", ")}) {" :/: Document.nest(2, doc2) :/: doc"\n}\n"
+      def argTypeToDoc(tp: TypeRep[_]) = tp match {
+        case StringType => doc"const $tp&"
+        case _ => doc"const $tp"
+      }
+      ts += doc"void on${x._1}(${x._2.map(s => argTypeToDoc(s.tp) :: doc" $s").mkDocument(", ")}) {" :/: Document.nest(2, doc2) :/: doc"\n}\n"
     }
     m3System.triggers.filter(_.evt != EvtReady).foreach(t => ts += (generateUnwrapFunction(t.evt)(m3System) + "\n"))
 
