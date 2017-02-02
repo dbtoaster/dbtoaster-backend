@@ -17,7 +17,7 @@ object Compiler {
 
   val DEPLOYMENT_STATUS=DEPLOYMENT_STATUS_DEVELOPMENT
 
-  val PRINT_TIMING_INFO = true
+  val PRINT_TIMING_INFO = false
 
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"

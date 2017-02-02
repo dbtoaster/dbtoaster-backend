@@ -16,6 +16,8 @@ trait ICppGen extends IScalaGen {
   import ddbt.lib.Utils.{ ind, fresh, freshClear } // common functions
   val VALUE_NAME = "__av"
 
+  val EXPERIMENTAL_CPP_HASHMAP = false
+
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
 
@@ -27,16 +29,27 @@ trait ICppGen extends IScalaGen {
   def FIND_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("FIND_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("FIND_IN_MAP_FUNC" -> m),0)+1); m+".getValueOrDefault" }
   def SET_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("SET_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("SET_IN_MAP_FUNC" -> m),0)+1); m+".setOrDelOnZero" }
   def ADD_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("ADD_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("ADD_TO_MAP_FUNC" -> m),0)+1); m+".addOrDelOnZero" }
-  def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) = {
-    val sampleTempEnt=fresh("st")
-    sampleEntDef+="  "+tupType(ksTp, vsTp)+" "+sampleTempEnt+";\n"
-    extractBooleanExp(vs) match {
-      case Some((c,t)) =>
-        "(/*if */("+c+") ? " + m + ".addOrDelOnZero("+sampleTempEnt+".modify"+tup(ks map rn, t)+", " + t + ") : (void)0);\n"
-      case _ =>
-        m + ".addOrDelOnZero("+sampleTempEnt+".modify"+tup(ks map rn, vs)+", " + vs + ");\n"
+  def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) = 
+    if (EXPERIMENTAL_CPP_HASHMAP) {
+      val sampleTempEnt=fresh("st")
+      sampleEntDef+="  "+tupType(ksTp, vsTp)+" "+sampleTempEnt+";\n"
+      extractBooleanExp(vs) match {
+        case Some((c,t)) =>
+          "(/*if */("+c+") ? " + m + ".addOrDelOnZero("+sampleTempEnt+".modify"+tup(ks map rn, t)+", " + t + ") : (void)0);\n"
+        case _ =>
+          m + ".addOrDelOnZero("+sampleTempEnt+".modify"+tup(ks map rn, vs)+", " + vs + ");\n"
+      }
     }
-  }
+    else {
+      val sampleTempEnt=fresh("st")
+      sampleEntDef+="  "+tupType(ksTp, vsTp)+" "+sampleTempEnt+";\n"
+      extractBooleanExp(vs) match {
+        case Some((c,t)) =>
+          "(/*if */("+c+") ? add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, t)+") : voidFunc());\n"
+        case _ =>
+          "add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, vs)+");\n"
+      }
+    }
 
   val tempTupleTypes = HashMap[String,(List[Type],Type)]()
   def tup(ks:List[String],vs:String) = "("+ks.mkString(",")+","+vs+")"
@@ -170,92 +183,98 @@ trait ICppGen extends IScalaGen {
             sampleEntDef+=(if (m.keys.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
 
             val h0= fresh("h")
-            s"""|{ //slice 
-                |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[${idxIndex}]);
-                |  const HASH_RES_t ${h0} = ${idxFn}::hash(${sampleEnt}.modify${getIndexId(mapName,is)}(${iKeys.mkString(", ")}));
-                |  ${idxName}::IdxNode* ${n0} = static_cast<${idxName}::IdxNode*>(${idx0}->slice(${sampleEnt}, ${h0}));
-                |  ${mapEntry}* ${e0};
-                | 
-                |  if (${n0} && (${e0} = ${n0}->obj)) {
-                |    do {                
-                |${ind(body, 3)}
-                |      ${n0} = ${n0}->nxt;
-                |    } while (${n0} && (${e0} = ${n0}->obj) && ${h0} == ${n0}->hash &&  ${idxFn}::equals(${sampleEnt}, *${e0})); 
-                |  }
-                |}""".stripMargin
-
-            // "{ //slice\n"+
-            // "  const "+idxName+"* "+idx0+" = static_cast<"+idxName+"*>("+mapName+".index["+idxIndex+"]);\n"+            
-            // "  const HASH_RES_t "+h0+" = "+idxFn+"::hash("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"));\n"+            
-            // "  "+idxName+"::IdxNode* "+n0+" = static_cast<" + idxName + "::IdxNode*>(" + idx0 + "->slice(" + sampleEnt + ", " + h0 + "));\n"+
-            // "  "+mapEntry+"* "+e0+";\n"+
-            // "  \n" +
-            // "  do if (("+e0+"="+n0+"->obj) && "+h0+" == "+n0+"->hash && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
-            //      ind(body,2)+"\n"+
-            // "  } while (("+n0+"="+n0+"->nxt));\n"+
-            // "}\n"
+            if (EXPERIMENTAL_CPP_HASHMAP) {
+              s"""|{ //slice
+                  |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[${idxIndex}]);
+                  |  const HASH_RES_t ${h0} = ${idxFn}::hash(${sampleEnt}.modify${getIndexId(mapName,is)}(${iKeys.mkString(", ")}));
+                  |  ${idxName}::IdxNode* ${n0} = static_cast<${idxName}::IdxNode*>(${idx0}->slice(${sampleEnt}, ${h0}));
+                  |  ${mapEntry}* ${e0};
+                  |
+                  |  if (${n0} && (${e0} = ${n0}->obj)) {
+                  |    do {
+                  |${ind(body, 3)}
+                  |      ${n0} = ${n0}->nxt;
+                  |    } while (${n0} && (${e0} = ${n0}->obj) && ${h0} == ${n0}->hash &&  ${idxFn}::equals(${sampleEnt}, *${e0}));
+                  |  }
+                  |}""".stripMargin
+            }
+            else {
+              "{ //slice\n"+
+              "  const HASH_RES_t "+h0+" = "+idxFn+"::hash("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"));\n"+
+              "  const "+idxName+"* "+idx0+" = static_cast<"+idxName+"*>("+mapName+".index["+idxIndex+"]);\n"+
+              "  "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+h0+" % "+idx0+"->size_]);\n"+
+              "  "+mapEntry+"* "+e0+";\n"+
+              "  do if (("+e0+"="+n0+"->obj) && "+h0+" == "+n0+"->hash && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
+                   ind(body,2)+"\n"+
+              "  } while (("+n0+"="+n0+"->nxt));\n"+
+              "}\n"
+            }
           } else { //foreach
-
-          s"""|{  // foreach
-              |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[0]);
-              |  ${idxName}::IdxNode* ${n0}; 
-              |  ${mapEntry}* ${e0};
-              |
-              |  for (size_t i = 0; i < ${idx0}->size_; i++)
-              |  {
-              |    ${n0} = ${idx0}->buckets_ + i;
-              |    while (${n0} && (${e0} = ${n0}->obj))
-              |    {
-              |${ind(body,4)}
-              |        ${n0} = ${n0}->nxt;
-              |    }
-              |  }
-              |}
-              |""".stripMargin 
-
-            // "{ //foreach\n"+
-            // "  "+mapEntry+"* "+e0+" = "+mapName+".head;\n"+
-            // "  while("+e0+"){\n"+
-            //      ind(body,2)+"\n"+
-            // "    "+e0+" = "+e0+"->nxt;\n"+
-            // "  }\n"+
-            // "}\n"
+            if (EXPERIMENTAL_CPP_HASHMAP) {
+              s"""|{  // foreach
+                  |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[0]);
+                  |  ${idxName}::IdxNode* ${n0}; 
+                  |  ${mapEntry}* ${e0};
+                  |
+                  |  for (size_t i = 0; i < ${idx0}->size_; i++)
+                  |  {
+                  |    ${n0} = ${idx0}->buckets_ + i;
+                  |    while (${n0} && (${e0} = ${n0}->obj))
+                  |    {
+                  |${ind(body,4)}
+                  |        ${n0} = ${n0}->nxt;
+                  |    }
+                  |  }
+                  |}
+                  |""".stripMargin
+            }
+            else {
+              "{ //foreach\n"+
+              "  "+mapEntry+"* "+e0+" = "+mapName+".head;\n"+
+              "  while("+e0+"){\n"+
+                   ind(body,2)+"\n"+
+              "    "+e0+" = "+e0+"->nxt;\n"+
+              "  }\n"+
+              "}\n"              
+            }
           }
         } else { //only foreach for Temp map
+          if (EXPERIMENTAL_CPP_HASHMAP) {
+            val n0= fresh("n")
+            val idx0= fresh("i")
+            val mapEntry = tupType(ks.map(_._2), m.tp)
+            val idxName = s"HashIndex<${mapEntry}, ${tp.toCpp}>"          
+            val assigns = ki.map { case ((k,ktp), i)=> "      " + ktp.toCpp + " " + rn(k) + " = " + e0 + "->_" + (i + 1) + ";" }.mkString("\n")
 
-          val n0= fresh("n")
-          val idx0= fresh("i")
-          val mapEntry = tupType(ks.map(_._2), m.tp)
-          val idxName = s"HashIndex<${mapEntry}, ${tp.toCpp}>"          
-          val assigns = ki.map { case ((k,ktp), i)=> "      " + ktp.toCpp + " " + rn(k) + " = " + e0 + "->_" + (i + 1) + ";" }.mkString("\n")
-
-          s"""|{  // temp foreach
-              |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[0]);
-              |  ${idxName}::IdxNode* ${n0}; 
-              |  ${mapEntry}* ${e0};
-              |
-              |  for (size_t i = 0; i < ${idx0}->size_; i++)
-              |  {
-              |    ${n0} = ${idx0}->buckets_ + i;
-              |    while (${n0} && (${e0} = ${n0}->obj))
-              |    {
-              |${assigns}  
-              |      ${tp.toCpp} ${v0} = ${e0}->${VALUE_NAME}; 
-              |${ind(co(v0),2)}      
-              |      ${n0} = ${n0}->nxt;
-              |    }
-              |  }
-              |}""".stripMargin 
-          
-          // "{ //temp foreach\n"+
-          // "  "+tupType(ks.map(_._2), m.tp)+"* "+e0+" = "+mapName+".head;\n"+
-          // "  while("+e0+"){\n"+
-          // ki.map{case ((k,ktp),i)=> "    "+ktp.toCpp+" "+rn(k)+" = "+e0+"->_"+(i+1)+";\n"}.mkString+
-          // "    "+tp.toCpp+" "+v0+" = "+e0+"->"+VALUE_NAME+";\n"+
-          //      ind(co(v0),2)+"\n"+
-          // "    "+e0+" = "+e0+"->nxt;\n"+
-          // "  }\n"+
-          // "}\n"
+            s"""|{  // temp foreach
+                |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[0]);
+                |  ${idxName}::IdxNode* ${n0}; 
+                |  ${mapEntry}* ${e0};
+                |
+                |  for (size_t i = 0; i < ${idx0}->size_; i++)
+                |  {
+                |    ${n0} = ${idx0}->buckets_ + i;
+                |    while (${n0} && (${e0} = ${n0}->obj))
+                |    {
+                |${assigns}  
+                |      ${tp.toCpp} ${v0} = ${e0}->${VALUE_NAME}; 
+                |${ind(co(v0),2)}      
+                |      ${n0} = ${n0}->nxt;
+                |    }
+                |  }
+                |}""".stripMargin 
+          }
+          else {
+            "{ //temp foreach\n"+
+            "  "+tupType(ks.map(_._2), m.tp)+"* "+e0+" = "+mapName+".head;\n"+
+            "  while("+e0+"){\n"+
+            ki.map{case ((k,ktp),i)=> "    "+ktp.toCpp+" "+rn(k)+" = "+e0+"->_"+(i+1)+";\n"}.mkString+
+            "    "+tp.toCpp+" "+v0+" = "+e0+"->"+VALUE_NAME+";\n"+
+                 ind(co(v0),2)+"\n"+
+            "    "+e0+" = "+e0+"->nxt;\n"+
+            "  }\n"+
+            "}\n"
+          }
         }
       }
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
@@ -415,14 +434,9 @@ trait ICppGen extends IScalaGen {
       case EvtDel(Schema(n,cs)) => ("delete_"+n,cs,"++tN;")
     }
     ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap)
-    val preBody=//"BEGIN_TRIGGER(exec_stats,\""+n+"\")\n"+
-                //"BEGIN_TRIGGER(ivc_stats,\""+n+"\")\n"+
-                "{  "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+xActCounter+"\n"
+    val preBody="{  "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+xActCounter+"\n"
     val body=ind(t.stmts.map(genStmt).mkString)
     val pstBody="\n}\n"
-                // +
-                // "END_TRIGGER(exec_stats,\""+n+"\")\n"+
-                // "END_TRIGGER(ivc_stats,\""+n+"\")\n"
     ctx=null
     val params = t.evt match {
       case EvtBatchUpdate(Schema(n,_)) =>
@@ -498,17 +512,7 @@ trait ICppGen extends IScalaGen {
       }
     }.mkString
 
-    def init_stats = {
-      "#ifdef DBT_PROFILE\n"+
-      "exec_stats = pb.exec_stats;\n"+
-      "ivc_stats = pb.ivc_stats;\n"+
-      //TODO XXX should be completed
-      s0.triggers.map{ trg => trg.stmts.zipWithIndex.map { case (stmt,i) =>
-          "exec_stats->register_probe("+stmt.stmtId+", \""+trg.evt.evtName+"_s"+i+"\");\n"
-        }.mkString
-      }.mkString+
-      "#endif // DBT_PROFILE\n"
-    }
+    def init_stats = ""
 
     def genTableTriggers = s0.sources.filter(!_.stream).map{ s =>
       val name = s.schema.name
@@ -516,24 +520,25 @@ trait ICppGen extends IScalaGen {
       "void on_insert_"+name+"("+fields.map{case (fld,tp) => "const "+tp.toCpp+" "+fld }.mkString(", ")+") {\n"+
       "  "+name+"_entry e("+fields.map{case (fld,_) => fld }.mkString(", ")+", 1L);\n"+
       "  "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
-      "}\n\n"
-      // +
-      // generateUnwrapFunction(EvtAdd(s.schema))+
-      // (if(s0.triggers.exists{
-      //     t=>t.evt match {
-      //       case EvtBatchUpdate(_) => true
-      //       case _ => false
-      //     }
-      //   })
-      //   "void unwrap_batch_update_"+name+"(const event_args_t& eaList) {\n"+
-      //   "  size_t sz = eaList.size();\n"+
-      //   "  for(size_t i=0; i < sz; i++){\n"+
-      //   "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
-      //   "    "+name+"_entry e("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"1L);\n"+
-      //   "    "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
-      //   "  }\n"+
-      //   "}\n\n"
-      // else "")
+      "}\n\n" +
+      (if (EXPERIMENTAL_CPP_HASHMAP) "" else {
+        generateUnwrapFunction(EvtAdd(s.schema))+
+        (if(s0.triggers.exists{
+            t=>t.evt match {
+              case EvtBatchUpdate(_) => true
+              case _ => false
+            }
+          })
+          "void unwrap_batch_update_"+name+"(const event_args_t& eaList) {\n"+
+          "  size_t sz = eaList.size();\n"+
+          "  for(size_t i=0; i < sz; i++){\n"+
+          "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
+          "    "+name+"_entry e("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"1L);\n"+
+          "    "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
+          "  }\n"+
+          "}\n\n"
+        else "")
+      })
     }.mkString
 
     def genStreamTriggers = s0.triggers.map(t =>
@@ -541,84 +546,73 @@ trait ICppGen extends IScalaGen {
       (if(t.evt != EvtReady) generateUnwrapFunction(t.evt) else "")
     ).mkString
 
-    def generateUnwrapFunction(evt:EvtTrigger) = ""
-    // {
-    //   val (op,name,fields) = evt match {
-    //     case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
-    //     case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
-    //     case EvtDel(Schema(n,cs)) => ("delete",n,cs)
-    //     case _ => sys.error("Unsupported trigger event "+evt)
-    //   }
-    //   evt match {
-    //     case b@EvtBatchUpdate(_) =>
-    //       var code =    "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"
-    //       code = code + "  size_t sz = eaList.size();\n"
+    def generateUnwrapFunction(evt:EvtTrigger) = if (EXPERIMENTAL_CPP_HASHMAP) "" else {
+      val (op,name,fields) = evt match {
+        case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
+        case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
+        case EvtDel(Schema(n,cs)) => ("delete",n,cs)
+        case _ => sys.error("Unsupported trigger event "+evt)
+      }
+      evt match {
+        case b@EvtBatchUpdate(_) =>
+          var code =    "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"
+          code = code + "  size_t sz = eaList.size();\n"
 
-    //       for (sources <- s0.sources.filter(_.stream)) {
-    //         val schema = sources.schema;
-    //         val deltaRel = schema.deltaName
-    //         code = code + "    "+deltaRel+".clear();\n"
-    //       }
+          for (sources <- s0.sources.filter(_.stream)) {
+            val schema = sources.schema;
+            val deltaRel = schema.deltaName
+            code = code + "    "+deltaRel+".clear();\n"
+          }
           
-    //       code = code +   "    for(size_t i=0; i < sz; i++){\n"
-    //       code = code +   "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
-    //       code = code +   "      relation_id_t relation = *(reinterpret_cast<relation_id_t*>((*ea).back().get()));\n"
+          code = code +   "    for(size_t i=0; i < sz; i++){\n"
+          code = code +   "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
+          code = code +   "      relation_id_t relation = *(reinterpret_cast<relation_id_t*>((*ea).back().get()));\n"
           
-    //       for (sources <- s0.sources.filter(_.stream)) {
-    //         val schema = sources.schema;
-    //         val deltaRel = schema.deltaName
-    //         val entryClass = deltaRel + "_entry"  
+          for (sources <- s0.sources.filter(_.stream)) {
+            val schema = sources.schema;
+            val deltaRel = schema.deltaName
+            val entryClass = deltaRel + "_entry"  
          
-    //         code = code + "      if (relation == program_base->get_relation_id(\"" + schema.name + "\"" + ")) { \n"
-    //         code = code + "        event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
-    //         code = code + "        "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
-    //         code = code + "        "+deltaRel+".addOrDelOnZero(e, *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
-    //         code = code + "      }\n"
-    //       }
-    //       code = code +   "    }\n"
-    //       for (sources <- s0.sources.filter(_.stream)) {
-    //         val schema = sources.schema;
-    //         val deltaRel = schema.deltaName
-    //         code = code + "  on_"+op+"_"+schema.name+"("+deltaRel+");\n"
-    //       }            
-    //       code = code +   "}\n\n"
+            code = code + "      if (relation == program_base->get_relation_id(\"" + schema.name + "\"" + ")) { \n"
+            code = code + "        event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
+            code = code + "        "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
+            code = code + "        "+deltaRel+".addOrDelOnZero(e, *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
+            code = code + "      }\n"
+          }
+          code = code +   "    }\n"
+          for (sources <- s0.sources.filter(_.stream)) {
+            val schema = sources.schema;
+            val deltaRel = schema.deltaName
+            code = code + "  on_"+op+"_"+schema.name+"("+deltaRel+");\n"
+          }            
+          code = code +   "}\n\n"
 
-    //       val schema = s0.sources.filter(_.schema.name == name)(0).schema
-    //       val deltaRel = schema.deltaName
-    //       val entryClass = deltaRel + "_entry"            
-    //       code +
-    //       (if(hasOnlyBatchProcessingForAdd(s0,b))
-    //         "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
-    //         "  if("+deltaRel+".head){\n"+
-    //         "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
-    //         "    "+deltaRel+".head->__av =  1L;\n"+
-    //         "  } else {\n"+
-    //         "    "+deltaRel+".clear();\n"+
-    //         "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+" 1L);\n"+
-    //         "    "+deltaRel+".insert_nocheck(e);\n"+
-    //         "  }\n"+
-    //         "  on_batch_update_"+name+"("+deltaRel+");\n"+
-    //         "}\n\n"
-    //        else "") +
-    //       (if(hasOnlyBatchProcessingForDel(s0,b))
-    //         "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
-    //         "  if("+deltaRel+".head){\n"+
-    //         "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
-    //         "    "+deltaRel+".head->__av = -1L;\n"+
-    //         "  } else {\n"+
-    //         "    "+deltaRel+".clear();\n"+
-    //         "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+"-1L);\n"+
-    //         "    "+deltaRel+".insert_nocheck(e);\n"+
-    //         "  }\n"+
-    //         "  on_batch_update_"+name+"("+deltaRel+");\n"+
-    //         "}\n\n"
-    //        else "")
-    //     case _ =>
-    //       "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
-    //       "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
-    //       "}\n\n"
-    //   }
-    // }
+          val schema = s0.sources.filter(_.schema.name == name)(0).schema
+          val deltaRel = schema.deltaName
+          val entryClass = deltaRel + "_entry"            
+          code +
+          (if(hasOnlyBatchProcessingForAdd(s0,b))
+            "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
+            "  "+deltaRel+".clear();\n"+
+            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+" 1L);\n"+
+            "  "+deltaRel+".insert_nocheck(e);\n"+
+            "  on_batch_update_"+name+"("+deltaRel+");\n"+
+            "}\n\n"
+           else "") +
+          (if(hasOnlyBatchProcessingForDel(s0,b))
+            "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
+            "  "+deltaRel+".clear();\n"+
+            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+"-1L);\n"+
+            "  "+deltaRel+".insert_nocheck(e);\n"+
+            "  on_batch_update_"+name+"("+deltaRel+");\n"+
+            "}\n\n"
+           else "")
+        case _ =>
+          "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
+          "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
+          "}\n\n"
+      }
+    }
 
     def genMapStructDef(m:MapDef) = {
       val mapName = m.name
@@ -633,22 +627,42 @@ trait ICppGen extends IScalaGen {
       val multiKeyIndices = allIndices.filter{case (is,_) => is.size > 1}
 
       def genEntryStruct = 
-        "struct "+mapEntry+" {\n"+
-        "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+"\n"+
-        "  explicit "+mapEntry+"() { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
-        "  explicit "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => "const "+tp.toCppRefType+" c"+i}.mkString(", ")+") { "+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
-        "  "+mapEntry+"(const "+mapEntry+"& other) : "+fieldsWithIdx.map{case ((fld,tp),i) => fld+"( other."+fld+" )"}.mkString(", ")+" {}\n"+
-        // "  "+mapEntry+"& operator=(const "+mapEntry+"& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = other."+fld+";"}.mkString+" return *this; }\n"+
-        // "  "+mapEntry+"& operator=(const "+mapEntry+"&& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+(if(tp.isBasicCppType) "other."+fld else "std::move(other."+fld+")")+";"}.mkString+" return *this; }\n"+
-        allIndices.map{ case (is,unique) =>
-        "  FORCE_INLINE "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => "const "+fields(i)._2.toCppRefType+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
-        }.mkString+
-        "  template<class Archive>\n"+
-        "  void serialize(Archive& ar, const unsigned int version) const \n"+
-        "  {\n"+
-        fields.map{case (fld,_) => "    ar << ELEM_SEPARATOR;\n    DBT_SERIALIZATION_NVP(ar, "+fld+");\n"}.mkString+
-        "  }\n"+
-        "};"
+        if (EXPERIMENTAL_CPP_HASHMAP) {
+          "struct "+mapEntry+" {\n"+
+          "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+"\n"+
+          "  explicit "+mapEntry+"() { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
+          "  explicit "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => "const "+tp.toCppRefType+" c"+i}.mkString(", ")+") { "+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
+          "  "+mapEntry+"(const "+mapEntry+"& other) : "+fieldsWithIdx.map{case ((fld,tp),i) => fld+"( other."+fld+" )"}.mkString(", ")+" {}\n"+
+          // "  "+mapEntry+"& operator=(const "+mapEntry+"& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = other."+fld+";"}.mkString+" return *this; }\n"+
+          // "  "+mapEntry+"& operator=(const "+mapEntry+"&& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+(if(tp.isBasicCppType) "other."+fld else "std::move(other."+fld+")")+";"}.mkString+" return *this; }\n"+
+          allIndices.map{ case (is,unique) =>
+          "  FORCE_INLINE "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => "const "+fields(i)._2.toCppRefType+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
+          }.mkString+
+          "  template<class Archive>\n"+
+          "  void serialize(Archive& ar, const unsigned int version) const \n"+
+          "  {\n"+
+          fields.map{case (fld,_) => "    ar << ELEM_SEPARATOR;\n    DBT_SERIALIZATION_NVP(ar, "+fld+");\n"}.mkString+
+          "  }\n"+
+          "};"
+        }
+        else {
+          "struct "+mapEntry+" {\n"+
+          "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+" "+mapEntry+"* nxt; "+mapEntry+"* prv;\n"+
+          "  explicit "+mapEntry+"() : nxt(nullptr), prv(nullptr) { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
+          "  explicit "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => "const "+tp.toCppRefType+" c"+i}.mkString(", ")+") { "+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
+          "  "+mapEntry+"(const "+mapEntry+"& other) : "+fieldsWithIdx.map{case ((fld,tp),i) => fld+"( other."+fld+" ), "}.mkString+"nxt( nullptr ), prv( nullptr ) {}\n"+
+          // "  "+mapEntry+"& operator=(const "+mapEntry+"& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = other."+fld+";"}.mkString+" return *this; }\n"+
+          // "  "+mapEntry+"& operator=(const "+mapEntry+"&& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+(if(tp.isBasicCppType) "other."+fld else "std::move(other."+fld+")")+";"}.mkString+" return *this; }\n"+
+          allIndices.map{ case (is,unique) =>
+          "  FORCE_INLINE "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => "const "+fields(i)._2.toCppRefType+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
+          }.mkString+
+          "  template<class Archive>\n"+
+          "  void serialize(Archive& ar, const unsigned int version) const \n"+
+          "  {\n"+
+          fields.map{case (fld,_) => "    ar << ELEM_SEPARATOR;\n    DBT_SERIALIZATION_NVP(ar, "+fld+");\n"}.mkString+
+          "  }\n"+
+          "};"          
+        }
 
       def genExtractorsAndHashers = allIndices.map{ case (is,unique) =>
         "struct "+mapType+"key"+getIndexId(mapName,is)+"_idxfn {\n"+
@@ -677,24 +691,47 @@ trait ICppGen extends IScalaGen {
 
       genEntryStruct+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs
     }
-    def genTempTupleTypes = tempTupleTypes.map{case (name,(ksTp,vsTp)) => 
-      val ksTpWithIdx = ksTp.zipWithIndex
-      val valVarName = VALUE_NAME
-      "struct " + name +" {\n"+
-      "  "+ksTpWithIdx.map{case (k,i) => k.toCpp+" _"+(i+1)+"; "}.mkString+(vsTp.toCpp+" "+valVarName+";")+"\n"+
-      "  explicit "+name+"() { "/*+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = "+k.zeroCpp+"; "}.mkString+(valVarName+" = "+vsTp.zeroCpp+";")*/+"}\n"+
-      "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
-      // "  int operator<(const "+name+" &rhs) const { \n"+ksTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
-      "  int operator==(const "+name+" &rhs) const { return ("+ksTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
-      "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
-      "  static bool equals(const "+name+" &x, const "+name+" &y) { return ("+ksTpWithIdx.map{case (v,i) => "(x._"+(i+1)+"==y._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
-      "  static long hash(const "+name+" &e) {\n"+
-      "    size_t h = 0;\n"+
-      ksTpWithIdx.map{ case (v,i) => "    hash_combine(h, e._"+(i+1)+");\n" }.mkString +
-      "    return h;\n"+
-      "  }\n"+
-      "};"
-    }
+    def genTempTupleTypes = 
+      if (EXPERIMENTAL_CPP_HASHMAP) {
+        tempTupleTypes.map{case (name,(ksTp,vsTp)) => 
+          val ksTpWithIdx = ksTp.zipWithIndex
+          val valVarName = VALUE_NAME
+          "struct " + name +" {\n"+
+          "  "+ksTpWithIdx.map{case (k,i) => k.toCpp+" _"+(i+1)+"; "}.mkString+(vsTp.toCpp+" "+valVarName+";")+"\n"+
+          "  explicit "+name+"() { "/*+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = "+k.zeroCpp+"; "}.mkString+(valVarName+" = "+vsTp.zeroCpp+";")*/+"}\n"+
+          "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
+          // "  int operator<(const "+name+" &rhs) const { \n"+ksTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
+          "  int operator==(const "+name+" &rhs) const { return ("+ksTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
+          "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
+          "  static bool equals(const "+name+" &x, const "+name+" &y) { return ("+ksTpWithIdx.map{case (v,i) => "(x._"+(i+1)+"==y._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
+          "  static long hash(const "+name+" &e) {\n"+
+          "    size_t h = 0;\n"+
+          ksTpWithIdx.map{ case (v,i) => "    hash_combine(h, e._"+(i+1)+");\n" }.mkString +
+          "    return h;\n"+
+          "  }\n"+
+          "};"
+        }
+      }
+      else {
+        tempTupleTypes.map{case (name,(ksTp,vsTp)) => 
+          val ksTpWithIdx = ksTp.zipWithIndex
+          val valVarName = VALUE_NAME
+          "struct " + name +" {\n"+
+          "  "+ksTpWithIdx.map{case (k,i) => k.toCpp+" _"+(i+1)+"; "}.mkString+(vsTp.toCpp+" "+valVarName+"; "+name+"* nxt; "+name+"* prv;")+"\n"+
+          "  explicit "+name+"() : nxt(nullptr), prv(nullptr) { "/*+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = "+k.zeroCpp+"; "}.mkString+(valVarName+" = "+vsTp.zeroCpp+";")*/+"}\n"+
+          "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") : nxt(nullptr), prv(nullptr) { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
+          "  int operator<(const "+name+" &rhs) const { \n"+ksTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
+          "  int operator==(const "+name+" &rhs) const { return ("+ksTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
+          "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
+          "  static bool equals(const "+name+" &x, const "+name+" &y) { return ("+ksTpWithIdx.map{case (v,i) => "(x._"+(i+1)+"==y._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
+          "  static long hash(const "+name+" &e) {\n"+
+          "    size_t h = 0;\n"+
+          ksTpWithIdx.map{ case (v,i) => "    hash_combine(h, e._"+(i+1)+");\n" }.mkString +
+          "    return h;\n"+
+          "  }\n"+
+          "};"
+        }
+      }
 
     freshClear
     clearOut
@@ -767,30 +804,26 @@ trait ICppGen extends IScalaGen {
         "    regfree(&" + preg + ");\n" 
       }.mkString + 
       "  }\n") + 
-    // "  #ifdef DBT_PROFILE\n"+
-    // "  std::shared_ptr<dbtoaster::statistics::trigger_exec_stats> exec_stats;\n"+
-    // "  std::shared_ptr<dbtoaster::statistics::trigger_exec_stats> ivc_stats;\n"+
-    // "  #endif\n"+
-    // "\n"+
-    // "  /* Registering relations and trigger functions */\n"+
-    // "  ProgramBase* program_base;\n"+
-    // "  void register_data(ProgramBase& pb) {\n"+
-    // "  program_base = &pb;\n"+
-    // //"  map<relation_id_t, std::shared_ptr<ProgramBase::relation_t> >::iterator r_it = pb.relations_by_id.find(12);\n"+
-    // "\n"+
-    //      ind(register_maps,2)+
-    // "\n\n"+
-    //      ind(register_relations,2)+
-    // "\n\n"+
-    //      ind(register_table_triggers,2)+
-    // "\n\n"+
-    //      ind(register_stream_triggers,2)+
-    // "\n\n"+
-    //      ind(init_stats,2)+
-    // "\n\n"+
-    // "  }\n"+
     "\n"+
-       ind(ts)+
+    "  /* Registering relations and trigger functions */\n"+
+    "  ProgramBase* program_base;\n"+
+    "  void register_data(ProgramBase& pb) {\n"+
+    "  program_base = &pb;\n"+
+    //"  map<relation_id_t, std::shared_ptr<ProgramBase::relation_t> >::iterator r_it = pb.relations_by_id.find(12);\n"+
+    "\n"+
+         ind(register_maps,2)+
+    "\n\n"+
+         ind(register_relations,2)+
+    "\n\n"+
+         ind(register_table_triggers,2)+
+    "\n\n"+
+         ind(register_stream_triggers,2)+
+    "\n\n"+
+         ind(init_stats,2)+
+    "\n\n"+
+    "  }\n"+
+    "\n"+
+    ind(ts)+
     "\n\n"+
     (if(!isExpressiveTLQSEnabled(s0.queries)) {
     "private:\n"+
@@ -882,58 +915,64 @@ trait ICppGen extends IScalaGen {
   private def printIf(flag: Boolean, s: String) = if (flag) s else ""
 
   // Helper that contains the main and stream generator
-  private def helper(s0:System) = {
-//     val dataset = "standard" //XXXX
-//     "/* Type definition providing a way to execute the sql program */\n"+
-//     "class Program : public ProgramBase\n"+
-//     "{\n"+
-//     "  public:\n"+
-//     "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
-//     "      data.register_data(*this);\n"+
-//            ind(streams(s0.sources),3)+"\n\n"+
-//     "    }\n"+
-//     "\n"+
-//     "    /* Imports data for static tables and performs view initialization based on it. */\n"+
-//     "    void init() {\n"+
-//     "        //P0_PLACE_HOLDER\n"+
-//     "        table_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, true);\n"+
-//     "        stream_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, false);\n"+
-//     "        process_tables();\n"+
-//     printIf( ddbt.Compiler.PRINT_TIMING_INFO,
-//       "        gettimeofday(&data.t0, NULL);\n"
-//     ) +
-//     "        data.on_system_ready_event();\n"+
-//     "        //P2_PLACE_HOLDER\n"+
-//     printIf( ddbt.Compiler.PRINT_TIMING_INFO,
-//       "        gettimeofday(&data.t, NULL);\n"+
-//       "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
-//       "        std::cout << \"OnSystemReady running time: \" << t << \" (ms)\" << std::endl;\n"+
-//       "        gettimeofday(&data.t0, NULL);\n"
-//     ) +
-//     "    }\n"+
-//     "\n"+
-//     "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
-//     "    snapshot_t take_snapshot(){\n"+
-//     printIf(ddbt.Compiler.PRINT_TIMING_INFO,
-//       "        gettimeofday(&data.t, NULL);\n"+
-//       "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
-//       "        std::cout << \"Trigger running time: \" << t << \" (ms)\" << std::endl;\n"
-//     ) +
-//     "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
-//     "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
-//     "        return snapshot_t( d );\n"+
-//     "    }\n"+
-//     "\n"+
-//     "  protected:\n"+
-//     "    data_t data;\n"+
-//     "};\n"+ (if (cls != "Program") {
-//     "class "+cls+" : public Program\n"+
-//     "{\n"+
-//     "  public:\n"+
-//     "    "+cls+"(int argc = 0, char* argv[] = 0) : Program(argc,argv) {\n"+
-//     "    }\n"+
-//     "};\n"
-//     } else "")
+  private def helper(s0:System) = if (EXPERIMENTAL_CPP_HASHMAP) "" else {
+    val dataset = "standard" //XXXX
+    "/* Type definition providing a way to execute the sql program */\n"+
+    "class Program : public ProgramBase\n"+
+    "{\n"+
+    "  public:\n"+
+    "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
+    "      data.register_data(*this);\n"+
+           ind(streams(s0.sources),3)+"\n\n"+
+    "    }\n"+
+    "\n"+
+    "    /* Imports data for static tables and performs view initialization based on it. */\n"+
+    "    void init() {\n"+
+    "        //P0_PLACE_HOLDER\n"+
+    "        table_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, true);\n"+
+    "        stream_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, false);\n"+
+    printIf( ddbt.Compiler.PRINT_TIMING_INFO,
+      "        struct timeval ts0, ts1, ts2;\n" +
+      "        gettimeofday(&ts0, NULL);\n"
+    ) +
+    "        process_tables();\n"+
+    printIf( ddbt.Compiler.PRINT_TIMING_INFO,
+      "        gettimeofday(&ts1, NULL);\n"+
+      "        long int et1 = (ts1.tv_sec - ts0.tv_sec) * 1000L + (ts1.tv_usec - ts0.tv_usec) / 1000;\n"+
+      "        std::cout << \"Loading tables time: \" << et1 << \" (ms)\" << std::endl;\n"
+    ) +
+    "        data.on_system_ready_event();\n"+
+    "        //P2_PLACE_HOLDER\n"+
+    printIf( ddbt.Compiler.PRINT_TIMING_INFO,
+      "        gettimeofday(&ts2, NULL);\n"+
+      "        long int et2 = (ts2.tv_sec - ts1.tv_sec) * 1000L + (ts2.tv_usec - ts1.tv_usec) / 1000;\n"+
+      "        std::cout << \"OnSystemReady time: \" << et2 << \" (ms)\" << std::endl;\n"+
+      "        gettimeofday(&data.t0, NULL);\n"
+    ) +
+    "    }\n"+
+    "\n"+
+    "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
+    "    snapshot_t take_snapshot(){\n"+
+    printIf(ddbt.Compiler.PRINT_TIMING_INFO,
+      "        gettimeofday(&data.t, NULL);\n"+
+      "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
+      "        std::cout << \"Trigger running time: \" << t << \" (ms)\" << std::endl;\n"
+    ) +
+    "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
+    "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
+    "        return snapshot_t( d );\n"+
+    "    }\n"+
+    "\n"+
+    "  protected:\n"+
+    "    data_t data;\n"+
+    "};\n"+ (if (cls != "Program") {
+    "class "+cls+" : public Program\n"+
+    "{\n"+
+    "  public:\n"+
+    "    "+cls+"(int argc = 0, char* argv[] = 0) : Program(argc,argv) {\n"+
+    "    }\n"+
+    "};\n"
+    } else "")
   }
 
   private def genStreams(s:Source): String = {
@@ -995,14 +1034,19 @@ trait ICppGen extends IScalaGen {
   def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
 
   override val additionalImports: String = 
-    s"""|#include <sys/time.h>
-        |#include "macro.hpp"
-        |#include "types.hpp"
-        |#include "functions.hpp"
-        |#include "hash.hpp"
-        |#include "hashmap.hpp"
-        |#include "serialization.hpp"
-        |
-        |#define ELEM_SEPARATOR "\\n\\t\\t\\t"
-        |""".stripMargin
+    if (EXPERIMENTAL_CPP_HASHMAP) {
+      s"""|#include <sys/time.h>
+          |#include "macro.hpp"
+          |#include "types.hpp"
+          |#include "functions.hpp"
+          |#include "hash.hpp"
+          |#include "hashmap.hpp"
+          |#include "serialization.hpp"
+          |
+          |#define ELEM_SEPARATOR "\\n\\t\\t\\t"
+          |""".stripMargin      
+    }
+    else {
+      "#include \"program_base.hpp\"\n#include \"hpds/KDouble.hpp\"\n#include \"hash.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n#define ELEM_SEPARATOR \"\\n\\t\\t\\t\"\n"
+    }
 }
