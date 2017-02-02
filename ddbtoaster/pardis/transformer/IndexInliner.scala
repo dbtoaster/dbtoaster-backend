@@ -78,7 +78,6 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     case StoreUpdateCopyDependent(store, e) => {
       implicit val entTp = e.tp.asInstanceOf[TypeRep[Entry]]
       val ref = indexMap((store, 0)).get(e)
-      System.err.println(store.tp)
       val e2 = if(Optimizer.cTransformer) store.copyIntoPool(e) else e
       indexMap.collect { case ((`store`, idx), sym) => sym.updateCopyDependent(e2, ref) }
       unit()
