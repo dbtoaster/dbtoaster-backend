@@ -333,24 +333,33 @@ object Utils {
   }
 
   // Files I/O
-  def read(file: String) = { 
-    val f = new File(file)
-    val cs = new Array[Char](f.length.toInt)
-    val r = new FileReader(f)
-    r.read(cs)
-    r.close
-    new String(cs) 
+  def read(file: String) = {
+    var reader: FileReader = null
+    var content = ""
+    try {
+      val f = new File(file)
+      val charArray = new Array[Char](f.length.toInt)
+      reader = new FileReader(f)
+      reader.read(charArray)
+      content = new String(charArray)
+    }
+    catch { case ex: Exception => content = "" }
+    finally { if (reader != null) reader.close() }
+    content
   }
 
-  def write(file: String, data: String) { 
-    val f = new File(file)
-    val dir = f.getParentFile
-    if (dir != null && !dir.exists) dir.mkdirs
-    val o = new PrintWriter(f)
-    o.write(data)
-    o.close() 
+  def write(file: String, data: String) = {
+    var writer: PrintWriter = null
+    try {
+      val f = new File(file)
+      val dir = f.getParentFile
+      if (dir != null && !dir.exists) dir.mkdirs
+      writer = new PrintWriter(f)
+      writer.write(data)
+    }
+    catch { case ex: Exception => }
+    finally { if (writer != null) writer.close() }
   }
-
 
   // String manipulation
   def ind(s: String, n: Int = 1) = { 

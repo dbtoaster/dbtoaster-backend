@@ -1,6 +1,8 @@
 #ifndef DBTOASTER_MACRO_HPP
 #define DBTOASTER_MACRO_HPP
 
+#define STRING(s) #s
+
 //-----------------------------------------------------------------------------
 // Microsoft Visual Studio
 

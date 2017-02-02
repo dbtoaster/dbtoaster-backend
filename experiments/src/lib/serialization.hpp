@@ -12,8 +12,8 @@
 #include <iomanip>
 #include "types.hpp"
 
-#define DBT_SERIALIZATION_NVP_OF_PTR(ar, name)  dbtoaster::serialize_nvp(ar, std::string(name), *name)
-#define DBT_SERIALIZATION_NVP(ar, name)  dbtoaster::serialize_nvp(ar, std::string(name), name)
+#define DBT_SERIALIZATION_NVP_OF_PTR(ar, name)  dbtoaster::serialize_nvp(ar, STRING(name), *name)
+#define DBT_SERIALIZATION_NVP(ar, name)  dbtoaster::serialize_nvp(ar, STRING(name), name)
 
 namespace dbtoaster {
 
