@@ -17,7 +17,7 @@ object Compiler {
 
   val DEPLOYMENT_STATUS=DEPLOYMENT_STATUS_DEVELOPMENT
 
-  val PRINT_TIMING_INFO = false
+  val PRINT_TIMING_INFO = true
 
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"
@@ -321,36 +321,49 @@ object Compiler {
         }
 
       case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
-        val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = 
-          ddbt.lib.Helper.extractExecArgs(("-b" + exec_bs :: exec_args).toArray)
-        val actual_exec_args = List("-b " + exec_bs, "-p " + pMode)
-        val compiledSrc = Utils.read(out)
-        datasets.foreach{ dataset =>
-          def tc(p: String = "") = 
-            "gettimeofday(&(" + p + "t),NULL); " + p + "tT=((" +
-            p + "t).tv_sec-(" + p + "t0).tv_sec)*1000000L+((" + 
-            p + "t).tv_usec-(" + p + "t0).tv_usec);"
-          val srcTmp = compiledSrc.replace("standard", dataset)
-            .replace("++tN;",(if (timeout > 0) "if (tS>0) { ++tS; return; } if ((tN&127)==0) { " + tc() + " if (tT>" + (timeout * 1000L) + "L) { tS=1; return; } } " else "") + "++tN;")
-            .replace("//P"+pMode+"_PLACE_HOLDER",
-                      "struct timeval t0;\n"+
-            "          gettimeofday(&t0,NULL);\n"+
-            "          data.t0 = t0;\n")
-          //TODO XXX dataset should be an argument to the program
-          val src = if (dataset.contains("_del")) 
-              srcTmp.replace("make_pair(\"schema\",\"", 
-                             "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"")
-                    .replace("\"),2,", "\"),3,") 
-            else srcTmp
-          Utils.write(out, src)
-          if (exec) {
-            val pl = "srccpp/lib"
-            val po = if (cPath != null) cPath else out.substring(0, out.lastIndexOf("."))
-            val t2 = Utils.ns(() =>
-              Utils.cppCompiler(out, out.substring(0, out.lastIndexOf(".")), null, pl))._1; 
-            if (t_comp != null) t_comp(t2)
-            if (t_run != null) {
-              t_run(() => {
+        if (out != null) {
+          val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize) = 
+            ddbt.lib.Helper.extractExecArgs(("-b" + exec_bs :: exec_args).toArray)
+          val actual_exec_args = List("-b " + exec_bs, "-p " + pMode)
+          val compiledSrc = Utils.read(out)
+          datasets.foreach{ dataset =>
+            def tc(p: String = "") =
+              "gettimeofday(&(" + p + "t),NULL); " + p + "tT=((" +
+              p + "t).tv_sec-(" + p + "t0).tv_sec)*1000000L+((" +
+              p + "t).tv_usec-(" + p + "t0).tv_usec);"
+            val srcTmp = compiledSrc.replace("standard", dataset)
+              .replace("++tN;",(if (timeout > 0) "if (tS>0) { ++tS; return; } if ((tN&127)==0) { " + tc() + " if (tT>" + (timeout * 1000L) + "L) { tS=1; return; } } " else "") + "++tN;")
+              .replace("//P"+pMode+"_PLACE_HOLDER",
+                        "struct timeval t0;\n"+
+              "          gettimeofday(&t0,NULL);\n"+
+              "          data.t0 = t0;\n")
+            //TODO XXX dataset should be an argument to the program
+            val src = if (dataset.contains("_del"))
+                srcTmp.replace("make_pair(\"schema\",\"",
+                               "make_pair(\"deletions\",\"true\"), make_pair(\"schema\",\"")
+                      .replace("\"),2,", "\"),3,")
+              else srcTmp
+            Utils.write(out, src)
+            if (exec) {
+              val pl = "srccpp/lib"
+              val po = if (cPath != null) cPath else out.substring(0, out.lastIndexOf("."))
+              val t2 = Utils.ns(() =>
+                Utils.cppCompiler(out, out.substring(0, out.lastIndexOf(".")), null, pl))._1;
+              if (t_comp != null) t_comp(t2)
+              if (t_run != null) {
+                t_run(() => {
+                  var i = 0
+                  while (i < samplesAndWarmupRounds) {
+                    i += 1
+                    val (out, err) = Utils.exec((po :: actual_exec_args).toArray, null, null)
+                    if(t_verify != null) t_verify(out, m3, dataset)
+                    if (err != "") System.err.println(err)
+                    Utils.write(po + "_" + lang + ".txt", out)
+                    println(out)
+                  }
+                })
+              } 
+              else {
                 var i = 0
                 while (i < samplesAndWarmupRounds) {
                   i += 1
@@ -360,16 +373,6 @@ object Compiler {
                   Utils.write(po + "_" + lang + ".txt", out)
                   println(out)
                 }
-              })
-            } else {
-              var i = 0
-              while (i < samplesAndWarmupRounds) {
-                i += 1
-                val (out, err) = Utils.exec((po :: actual_exec_args).toArray, null, null)
-                if(t_verify != null) t_verify(out, m3, dataset)
-                if (err != "") System.err.println(err)
-                Utils.write(po + "_" + lang + ".txt", out)
-                println(out)
               }
             }
           }
