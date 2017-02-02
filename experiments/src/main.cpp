@@ -1,25 +1,9 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <vector>
 #include <sched.h>
-
 #include "macro.hpp"
 #include "types.hpp"
 #include "functions.hpp"
 #include "stopwatch.hpp"
 #include "serialization.hpp"
-
-#ifdef MEMORY_MODE
-    #include "tpch/tpch_template_memory.hpp"
-#elif TPCH
-    #include "tpch/tpch.hpp"
-    #include "tpch/tpch_template.hpp"
-#elif TPCDS
-    #include "tpcds/tpcds.hpp"
-    #include "tpcds/tpcds_template.hpp"
-#endif
 
 using namespace std;
 using namespace dbtoaster;
@@ -86,7 +70,7 @@ void RunQuery()
 
     load_relations();
 
-    Stopwatch sw;
+    Stopwatch sw, local_sw;
     for (int run = 0; run < NUMBER_OF_RUNS; run++) 
     {
     //    std::cout << "Press ENTER...";
@@ -95,30 +79,41 @@ void RunQuery()
 
         data_t data;
 
-        std::cout << "Processing tables... " << std::flush;
+        std::cout << "-------------" << std::endl;
+
+        local_sw.restart();
+        std::cout << "1. Processing tables... " << std::flush;
         process_tables(data);
-        std::cout << "Done! " << std::endl;
+        local_sw.stop();
+        std::cout << local_sw.elapsedTimeInMilliSeconds() << " ms" << std::endl;
 
         gettimeofday(&data.t0,NULL);
 
         sw.restart();
 
-        std::cout << "OnSystemReady... " << std::flush;
-        data.on_system_ready_event();        
-        std::cout << "Done! " << std::endl;
+        local_sw.restart();
+        std::cout << "2. OnSystemReady... " << std::flush;
+        data.on_system_ready_event();
+        local_sw.stop();
+        std::cout << local_sw.elapsedTimeInMilliSeconds() << " ms" << std::endl;
 
-        std::cout << "Processing streams... " << std::flush;;
+        local_sw.restart();
+        std::cout << "3. Processing streams... " << std::flush;;
         process_streams(data);
-        std::cout << "Done! " << std::endl;
+        local_sw.stop();
+        std::cout << local_sw.elapsedTimeInMilliSeconds() << " ms" << std::endl;
 
         sw.stop();
 
         print_result(data);
         
-        std::cout << "Processed: " << data.tN 
+        std::cout << "Run: " << run 
+                  << "    Processed: " << data.tN 
                   << "    Skipped: " << data.tS 
                   << "    Execution time: " << sw.elapsedTimeInMilliSeconds() << " ms" 
-                  << std::endl;        
+                  << std::endl
+                  << "-------------"
+                  << std::endl;
     }
 
     destroy_relations();
@@ -139,3 +134,4 @@ int main()
     RunQuery();
     return 0;
 }
+    
