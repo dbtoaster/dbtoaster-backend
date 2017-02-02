@@ -43,3 +43,4 @@ for i in {1..5}
 do
 ./tpcc.out $i
 done
+done

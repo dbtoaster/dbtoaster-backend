@@ -11,6 +11,7 @@
 
 #define DEFAULT_CHUNK_SIZE 32
 #define DEFAULT_LIST_SIZE 8
+#define DEFAULT_HEAP_SIZE 32
 
 #define INSERT_INTO_MMAP 1
 #define DELETE_FROM_MMAP -1
@@ -495,6 +496,7 @@ public:
     }
 
     bool operator==(const HashIndex<T, V, IDX_FN, is_unique> & that) const {
+        bool check = true;
         for (size_t b = 0; b < size_; ++b) {
             IdxNode* n1 = &buckets_[b];
             IdxNode* n2 = &that.buckets_[b];
@@ -505,6 +507,7 @@ public:
                 if (n2 -> obj)
                     std::cerr << *n2->obj << " is missing" << std::endl;
                 //                return false;
+                check = false;
             }
             if (!n1->obj || !n2->obj)
                 continue;
@@ -516,6 +519,7 @@ public:
                 } while ((n2_iter = n2_iter->nxt));
                 if (!n2_iter) {
                     std::cerr << *n1->obj << " is extra in table" << std::endl;
+                    check = false;
                     //                    return false;
                 }
             } while ((n1 = n1->nxt));
@@ -528,11 +532,12 @@ public:
                 } while ((n1_iter = n1_iter->nxt));
                 if (!n1_iter) {
                     std::cerr << *n2->obj << " not found in table" << std::endl;
+                    check = false;
                     //                    return false;
                 }
             } while ((n2 = n2->nxt));
         }
-        return true;
+        return check;
     }
 
     FORCE_INLINE bool hashDiffers(const T& x, const T& y) {
@@ -873,6 +878,360 @@ public:
     }
 
     template<typename TP, typename VP, typename...INDEXES> friend class MultiHashMap;
+};
+
+template<typename T, typename V, typename IDX_FN1, typename IDX_FN2, bool is_max>
+class SlicedHeapIndex : public Index<T, V> {
+
+    struct __IdxHeapNode {
+        T** array;
+        uint arraySize;
+        uint size;
+        HASH_RES_t hash;
+        __IdxHeapNode * nxt;
+
+        __IdxHeapNode() {
+            arraySize = DEFAULT_HEAP_SIZE + 1;
+            array = new T*[arraySize];
+            size = 0;
+        }
+
+        void checkHeap(int idx) {
+            for (uint i = 1; i <= size; ++i) {
+                uint l = 2 * i;
+                uint r = l + 1;
+                T* x = array[i];
+
+                if (is_max) {
+                    if (l <= size) {
+                        assert(IDX_FN2::cmp(*x, *array[l]) == 1);
+                        if (r <= size)
+                            assert(IDX_FN2::cmp(*x, *array[r]) == 1);
+                    }
+                } else {
+                    if (l <= size) {
+                        assert(IDX_FN2::cmp(*x, *array[l]) == -1);
+                        if (r <= size)
+                            assert(IDX_FN2::cmp(*x, *array[r]) == -1);
+                    }
+                }
+                assert(x->backPtrs[idx] == this);
+            }
+        }
+
+        FORCE_INLINE void double_() {
+
+            uint newsize = arraySize << 1;
+            T** temp = new T*[newsize];
+            mempcpy(temp, array, arraySize * sizeof (T*));
+            arraySize = newsize;
+            delete[] array;
+            array = temp;
+        }
+
+        FORCE_INLINE void percolateDown(uint holeInput) {
+            uint hole = holeInput;
+            uint child = hole << 1;
+            T* tmp = array[hole];
+            while (child <= size) {
+                if (child != size && IDX_FN2::cmp(*array[child + 1], *array[child]) == (is_max ? 1 : -1))
+                    child++;
+                if (IDX_FN2::cmp(*array[child], *tmp) == (is_max ? 1 : -1))
+                    array[hole] = array[child];
+                else {
+                    array[hole] = tmp;
+
+                    return;
+                }
+                hole = child;
+                child = hole << 1;
+            }
+            array[hole] = tmp;
+        }
+
+        FORCE_INLINE void add(T* e) {
+            if (size == arraySize - 1) double_();
+            size++;
+            uint hole = size;
+            uint h = size >> 1;
+            while (hole > 1 && IDX_FN2::cmp(*e, *array[h]) == (is_max ? 1 : -1)) {
+
+                array[hole] = array[h];
+                hole = h;
+                h = hole >> 1;
+            }
+            array[hole] = e;
+        }
+
+        FORCE_INLINE void remove(T* e) {
+            uint p = 1;
+            if (array[p] != e) {
+                p++;
+                while (p <= size) {
+                    if (array[p] == e)
+                        break;
+                    p++;
+                }
+                if (p == size + 1)
+                    return;
+            }
+            array[p] = array[size];
+            array[size] = nullptr;
+            size--;
+
+            if (p < size)
+                percolateDown(p);
+        }
+    };
+
+    typedef __IdxHeapNode* IdxNode;
+
+
+
+
+    //    Pool<IdxEquivNode> equiv_nodes_;
+    //    Pool<__IdxHeapNode> nodes_;
+    const V zero;
+    size_t count_, threshold_;
+    double load_factor_;
+
+    void resize_(size_t new_size) {
+        IdxNode *old = buckets_;
+        size_t sz = size_;
+        buckets_ = new IdxNode[new_size];
+        memset(buckets_, 0, sizeof (IdxNode) * new_size);
+        size_ = new_size;
+        threshold_ = size_ * load_factor_;
+        for (size_t b = 0; b < sz; ++b) {
+            IdxNode q = old[b];
+            while (q != nullptr) {
+                IdxNode nq = q->nxt;
+                uint b = q->hash % size_;
+                q->nxt = buckets_[b];
+                buckets_[b] = q;
+                q = nq;
+            }
+        }
+
+        if (old) delete[] old;
+    }
+public:
+
+    SlicedHeapIndex(Pool<T>* stPool = nullptr, size_t size = DEFAULT_CHUNK_SIZE, double load_factor = .75) : zero(ZeroVal<V>().get()) {
+
+        load_factor_ = load_factor;
+        size_ = 0;
+        count_ = 0;
+        buckets_ = nullptr;
+        resize_(size);
+
+    }
+
+    IdxNode* buckets_;
+    size_t size_;
+
+    inline V getValueOrDefault(const T& key) const {
+        throw std::logic_error("Not implemented");
+
+        return zero;
+    }
+
+    V getValueOrDefault(const T& key, const size_t hash_val) const {
+        throw std::logic_error("Not implemented");
+
+        return zero;
+    }
+
+    int setOrDelOnZero(const T& k, const V& v) {
+        throw std::logic_error("Not implemented");
+
+        return 0;
+    }
+
+    int setOrDelOnZero(const T& k, const V& v, const size_t hash_val0) {
+        throw std::logic_error("Not implemented");
+
+        return 0;
+    }
+
+    int addOrDelOnZero(const T& k, const V& v) {
+        throw std::logic_error("Not implemented");
+
+        return 0;
+    }
+
+    int addOrDelOnZero(const T& k, const V& v, const size_t hash_val) {
+        throw std::logic_error("Not implemented");
+
+        return 0;
+    }
+
+    void del(T& obj) {
+        throw std::logic_error("del by reference not supported");
+        T* ptr = get(obj);
+
+        if (ptr) del(ptr);
+    }
+
+    void del(T& obj, const size_t h) {
+        throw std::logic_error("del by reference not supported");
+        T* ptr = get(obj, h);
+
+        if (ptr) del(ptr);
+    }
+
+    FORCE_INLINE void foreach(FuncType f) {
+        //TODO: implement
+    }
+
+    FORCE_INLINE void update(T* elem) {
+        //Do nothing for now
+    }
+
+    FORCE_INLINE void slice(const T* key, FuncType f) {
+
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE void slice(const T& key, FuncType f) {
+
+        throw std::logic_error("Not implemented");
+        //TODO: implement.  traversal type?
+    }
+
+    FORCE_INLINE void sliceCopy(const T& key, FuncType f) {
+
+        throw std::logic_error("Not implemented");
+        //TODO: implement.  traversal type?
+    }
+
+    void clear() {
+
+        throw std::logic_error("Not implemented");
+    }
+
+    size_t computeHash(const T& key) {
+
+        return IDX_FN1::hash(key);
+    }
+
+    FORCE_INLINE void add(T& obj) {
+
+        add(& obj);
+    }
+
+    FORCE_INLINE void insert_nocheck(T* obj) {
+
+        add(obj); //TODO: Fix later
+    }
+
+    FORCE_INLINE void add(T* obj) {
+
+        HASH_RES_t h = IDX_FN1::hash(*obj);
+        add(obj, h);
+    }
+
+    FORCE_INLINE void add(T* obj, const HASH_RES_t h) {
+        if (count_ > threshold_) {
+            std::cerr << "  Index resize count=" << count_ << "  size=" << size_ << std::endl;
+            exit(1);
+            //resize_(size_ << 1);
+        }
+        size_t b = h % size_;
+        IdxNode q = buckets_[b];
+        while (q != nullptr) {
+            if (q->hash == h && IDX_FN1::cmp(*obj, *q->array[1]) == 0) {
+                //                q->checkHeap(Index<T, V>::idxId);
+                q->add(obj);
+                obj->backPtrs[Index<T, V>::idxId] = q;
+                //                q->checkHeap(Index<T, V>::idxId);
+                return;
+            }
+            q = q->nxt;
+        }
+        q = new __IdxHeapNode();
+        q->hash = h;
+        q->nxt = buckets_[b];
+        q->add(obj);
+        obj->backPtrs[Index<T, V>::idxId] = q;
+        //        q->checkHeap(Index<T, V>::idxId);
+        buckets_[b] = q;
+        count_++;
+    }
+
+    FORCE_INLINE void del(T* obj, const size_t h) {
+
+        del(obj);
+    }
+
+    FORCE_INLINE void del(T* obj) {
+        IdxNode q = (IdxNode) obj->backPtrs[Index<T, V>::idxId];
+        //        q->checkHeap(Index<T, V>::idxId);
+        q->remove(obj);
+        //        q->checkHeap(Index<T, V>::idxId);
+        if (q->size == 0) {
+            assert(q->array[1] == nullptr);
+            auto h = q->hash;
+            size_t b = h % size_;
+            IdxNode p = buckets_[b];
+            if (p == q) {
+                buckets_[b] = q->nxt;
+                count_--;
+                delete q;
+                return;
+            } else {
+                while (p != nullptr) {
+                    if (p->nxt == q) {
+                        p->nxt = q->nxt;
+                        count_--;
+                        delete q;
+
+                        return;
+                    }
+                    p = p->nxt;
+                }
+            }
+
+        }
+
+    }
+
+    FORCE_INLINE size_t count() {
+
+        return count_;
+    }
+
+    FORCE_INLINE T* get(const T& key) const {
+        HASH_RES_t h = IDX_FN1::hash(key);
+
+        return get(key, h);
+    };
+
+    FORCE_INLINE T* get(const T* key) const {
+        HASH_RES_t h = IDX_FN1::hash(*key);
+
+        return get(*key, h);
+    }
+
+    FORCE_INLINE T* get(const T& key, size_t h) const {
+        IdxNode n = buckets_[h % size_];
+        //        if (n) n->checkHeap(Index<T, V>::idxId);
+        while (n != nullptr) {
+            T* obj;
+            if (n->hash == h && IDX_FN1::cmp(key, *(obj = n->array[1])) == 0) {
+                return obj;
+            }
+            n = n->nxt;
+        }
+        return nullptr;
+    }
+
+    bool hashDiffers(const T& x, const T& y) {
+
+        return IDX_FN1::hash(x) != IDX_FN1::hash(y);
+    }
+
+
 };
 
 template<typename T, typename V, typename IDX_FN1, typename IDX_FN2, bool is_max>
