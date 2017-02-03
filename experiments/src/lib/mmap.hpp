@@ -27,9 +27,9 @@ class Index {
 
     virtual T *get(const T &key, const HASH_RES_t h) const = 0;
 
-    virtual V getValueOrDefault(const T &key) const = 0;
+    virtual const V& getValueOrDefault(const T &key) const = 0;
 
-    virtual V getValueOrDefault(const T &key, const HASH_RES_t hash_val) const = 0;
+    virtual const V& getValueOrDefault(const T &key, const HASH_RES_t hash_val) const = 0;
 
     virtual int setOrDelOnZero(const T &k, const V &v) = 0;
 
@@ -362,7 +362,7 @@ class HashIndex : public Index<T, V> {
       return IDX_FN::hash(key);
     }
 
-    inline virtual V getValueOrDefault(const T &key) const {
+    inline virtual const V& getValueOrDefault(const T &key) const {
       HASH_RES_t h = IDX_FN::hash(key);
       IdxNode *n = &buckets_[h % size_];
       do {
@@ -373,7 +373,7 @@ class HashIndex : public Index<T, V> {
       return zero;
     }
 
-    inline virtual V getValueOrDefault(const T &key, HASH_RES_t h) const {
+    inline virtual const V& getValueOrDefault(const T &key, HASH_RES_t h) const {
       IdxNode *n = &buckets_[h % size_];
       do {
         T *lkup = n->obj;
@@ -639,7 +639,7 @@ class MultiHashMap {
       });
     }
 
-    inline virtual V getValueOrDefault(const T &key, int mainIdx = 0) const {
+    inline virtual const V& getValueOrDefault(const T &key, int mainIdx = 0) const {
       return index[mainIdx]->getValueOrDefault(key);
     }
 
