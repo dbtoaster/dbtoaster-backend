@@ -12,7 +12,7 @@
 #include "pool.hpp"
 #include "serialization.hpp"
 
-namespace dbtoaster 
+namespace dbtoaster_DEPRECATED
 {
     #define DEFAULT_CHUNK_SIZE 16     // 2^N
     #define INSERT_INTO_MMAP 1

@@ -1,7 +1,7 @@
 #ifndef DBTOASTER_TYPES_HPP
 #define DBTOASTER_TYPES_HPP
 
-#include <stdexcept>
+// #include <stdexcept>
 #include "string.hpp"
 
 //#define DOUBLE_ZERO_APPROXIMATED

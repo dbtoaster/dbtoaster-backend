@@ -14,6 +14,7 @@
 
 #define DBT_SERIALIZATION_NVP_OF_PTR(ar, name)  dbtoaster::serialize_nvp(ar, STRING(name), *name)
 #define DBT_SERIALIZATION_NVP(ar, name)  dbtoaster::serialize_nvp(ar, STRING(name), name)
+#define ELEM_SEPARATOR "\n\t\t\t"
 
 namespace dbtoaster {
 

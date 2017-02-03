@@ -3,6 +3,7 @@
 
 #include "stopwatch.hpp"
 #include "csvreader.hpp"
+#include "lastfm.hpp"
 
 using namespace std;
 

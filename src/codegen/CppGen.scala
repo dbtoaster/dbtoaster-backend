@@ -17,6 +17,7 @@ trait ICppGen extends IScalaGen {
   val VALUE_NAME = "__av"
 
   val EXPERIMENTAL_CPP_HASHMAP = false
+  val EXPERIMENTAL_RUNTIME_LIBRARY = true
 
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
@@ -521,7 +522,7 @@ trait ICppGen extends IScalaGen {
       "  "+name+"_entry e("+fields.map{case (fld,_) => fld }.mkString(", ")+", 1L);\n"+
       "  "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
       "}\n\n" +
-      (if (EXPERIMENTAL_CPP_HASHMAP) "" else {
+      (if (EXPERIMENTAL_RUNTIME_LIBRARY) "" else {
         generateUnwrapFunction(EvtAdd(s.schema))+
         (if(s0.triggers.exists{
             t=>t.evt match {
@@ -546,7 +547,7 @@ trait ICppGen extends IScalaGen {
       (if(t.evt != EvtReady) generateUnwrapFunction(t.evt) else "")
     ).mkString
 
-    def generateUnwrapFunction(evt:EvtTrigger) = if (EXPERIMENTAL_CPP_HASHMAP) "" else {
+    def generateUnwrapFunction(evt:EvtTrigger) = if (EXPERIMENTAL_RUNTIME_LIBRARY) "" else {
       val (op,name,fields) = evt match {
         case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
         case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
@@ -804,24 +805,26 @@ trait ICppGen extends IScalaGen {
         "    regfree(&" + preg + ");\n" 
       }.mkString + 
       "  }\n") + 
-    "\n"+
-    "  /* Registering relations and trigger functions */\n"+
-    "  ProgramBase* program_base;\n"+
-    "  void register_data(ProgramBase& pb) {\n"+
-    "  program_base = &pb;\n"+
-    //"  map<relation_id_t, std::shared_ptr<ProgramBase::relation_t> >::iterator r_it = pb.relations_by_id.find(12);\n"+
-    "\n"+
-         ind(register_maps,2)+
-    "\n\n"+
-         ind(register_relations,2)+
-    "\n\n"+
-         ind(register_table_triggers,2)+
-    "\n\n"+
-         ind(register_stream_triggers,2)+
-    "\n\n"+
-         ind(init_stats,2)+
-    "\n\n"+
-    "  }\n"+
+    (if (EXPERIMENTAL_RUNTIME_LIBRARY) "" else {
+      "\n"+ 
+      "  /* Registering relations and trigger functions */\n"+
+      "  ProgramBase* program_base;\n"+
+      "  void register_data(ProgramBase& pb) {\n"+
+      "  program_base = &pb;\n"+
+      //"  map<relation_id_t, std::shared_ptr<ProgramBase::relation_t> >::iterator r_it = pb.relations_by_id.find(12);\n"+
+      "\n"+
+           ind(register_maps,2)+
+      "\n\n"+
+           ind(register_relations,2)+
+      "\n\n"+
+           ind(register_table_triggers,2)+
+      "\n\n"+
+           ind(register_stream_triggers,2)+
+      "\n\n"+
+           ind(init_stats,2)+
+      "\n\n"+
+      "  }\n"
+    }) +
     "\n"+
     ind(ts)+
     "\n\n"+
@@ -915,7 +918,7 @@ trait ICppGen extends IScalaGen {
   private def printIf(flag: Boolean, s: String) = if (flag) s else ""
 
   // Helper that contains the main and stream generator
-  private def helper(s0:System) = if (EXPERIMENTAL_CPP_HASHMAP) "" else {
+  private def helper(s0:System) = if (EXPERIMENTAL_RUNTIME_LIBRARY) "" else {
     val dataset = "standard" //XXXX
     "/* Type definition providing a way to execute the sql program */\n"+
     "class Program : public ProgramBase\n"+
@@ -1034,19 +1037,23 @@ trait ICppGen extends IScalaGen {
   def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
 
   override val additionalImports: String = 
-    if (EXPERIMENTAL_CPP_HASHMAP) {
+    if (EXPERIMENTAL_RUNTIME_LIBRARY) {
       s"""|#include <sys/time.h>
           |#include "macro.hpp"
           |#include "types.hpp"
           |#include "functions.hpp"
           |#include "hash.hpp"
-          |#include "hashmap.hpp"
+          |${if (EXPERIMENTAL_CPP_HASHMAP) "#include \"hashmap.hpp\"" else "#include \"mmap.hpp\""}
           |#include "serialization.hpp"
-          |
-          |#define ELEM_SEPARATOR "\\n\\t\\t\\t"
           |""".stripMargin      
     }
     else {
-      "#include \"program_base.hpp\"\n#include \"hpds/KDouble.hpp\"\n#include \"hash.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n#define ELEM_SEPARATOR \"\\n\\t\\t\\t\"\n"
+      s"""|#include "program_base.hpp"
+          |#include "hpds/KDouble.hpp"
+          |#include "hash.hpp"
+          |#include "mmap/mmap.hpp"
+          |#include "hpds/pstring.hpp"
+          |#include "hpds/pstringops.hpp"
+          |""".stripMargin
     }
 }

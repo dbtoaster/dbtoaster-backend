@@ -1,6 +1,7 @@
 #ifndef DBTOASTER_STRING_HPP
 #define DBTOASTER_STRING_HPP
 
+#include <string>
 #include <cstring>
 #include "pool.hpp"
 

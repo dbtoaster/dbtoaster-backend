@@ -1,0 +1,678 @@
+#ifndef DBTOASTER_MMAP_HPP
+#define DBTOASTER_MMAP_HPP
+
+#include <iostream>
+#include <functional>
+#include <string>
+
+#include "macro.hpp"
+#include "types.hpp"
+#include "hash.hpp"
+#include "pool.hpp"
+#include "serialization.hpp"
+
+namespace dbtoaster {
+
+#define DEFAULT_CHUNK_SIZE 32
+
+#define INSERT_INTO_MMAP 1
+#define DELETE_FROM_MMAP -1
+
+template <typename T, typename V> 
+class Index {
+  public:
+    virtual bool hashDiffers(const T &x, const T &y) = 0;
+
+    virtual T *get(const T &key) const = 0;
+
+    virtual T *get(const T &key, const HASH_RES_t h) const = 0;
+
+    virtual V getValueOrDefault(const T &key) const = 0;
+
+    virtual V getValueOrDefault(const T &key, const HASH_RES_t hash_val) const = 0;
+
+    virtual int setOrDelOnZero(const T &k, const V &v) = 0;
+
+    virtual int setOrDelOnZero(const T &k, const V &v, const HASH_RES_t hash_val0) = 0;
+
+    virtual int addOrDelOnZero(const T &k, const V &v) = 0;
+
+    virtual int addOrDelOnZero(const T &k, const V &v, const HASH_RES_t hash_val) = 0;
+
+    virtual void add(T &obj) = 0;
+
+    virtual void add(T *obj) = 0;
+
+    virtual void add(T *obj, const HASH_RES_t h) = 0;
+
+    virtual void del(const T &obj) = 0;
+
+    virtual void del(const T &obj, const HASH_RES_t h) = 0;
+
+    virtual void del(const T *obj) = 0;
+
+    virtual void del(const T *obj, const HASH_RES_t h) = 0;
+
+    virtual void foreach (std::function<void(const T &)> f) const = 0;
+
+    virtual void slice(const T &key, std::function<void(const T &)> f) = 0;
+
+    virtual size_t count() = 0;
+
+    virtual void clear() = 0;
+
+    virtual HASH_RES_t computeHash(const T &key) = 0;
+
+    virtual ~Index(){};
+};
+
+template <typename T, typename V, typename IDX_FN = T, bool is_unique = true>
+class HashIndex : public Index<T, V> {
+  public:
+    typedef struct __IdxNode {
+      HASH_RES_t hash;
+      T *obj;
+      struct __IdxNode *nxt;
+    } IdxNode; //  the linked list is maintained 'compactly': 
+               // if a IdxNode has a nxt, it is full.
+    IdxNode *buckets_;
+    size_t size_;
+
+  private:
+    Pool<IdxNode> nodes_;
+    bool allocated_from_pool_;
+    size_t count_, threshold_;
+    double load_factor_;
+    const V zero;
+
+    // void add_(T* obj) { // does not resize the bucket array, does not maintain
+    // count
+    //   HASH_RES_t h = IDX_FN::hash(*obj);
+    //   IdxNode* n = &buckets_[h % size_];
+    //   if (n->obj) {
+    //     IdxNode* nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a
+    //     node
+    //     nw->hash = h; nw->obj = obj;
+    //     nw->nxt = n->nxt; n->nxt=nw;
+    //   } else {  // space left in last IdxNode
+    //     n->hash = h; n->obj = obj; //n->nxt=nullptr;
+    //   }
+    // }
+
+    void resize_(size_t new_size) {
+      IdxNode *old = buckets_, *n, *na, *nw, *d;
+      HASH_RES_t h;
+      size_t sz = size_;
+      buckets_ = new IdxNode[new_size];
+      memset(buckets_, 0, sizeof(IdxNode) * new_size);
+      size_ = new_size;
+      threshold_ = size_ * load_factor_;
+      bool tmp_allocated_from_pool = false;
+      for (size_t b = 0; b < sz; ++b) {
+        n = &old[b];
+        bool pooled = false;
+        do {
+          if (n->obj) { // add_(n->obj); // does not resize the bucket array,
+                        // does not maintain count
+            h = n->hash;
+            na = &buckets_[h % size_];
+            if (na->obj) {
+              tmp_allocated_from_pool = true;
+              nw = nodes_.add(); // memset(nw, 0, sizeof(IdxNode)); // add a node
+              // in addition to adding nw, we also change the place of nw with na
+              // to preserve the order of elements, as it is required for
+              // non-unique hash maps
+              nw->hash = na->hash;
+              nw->obj = na->obj;
+              na->hash = h;
+              na->obj = n->obj;
+              nw->nxt = na->nxt;
+              na->nxt = nw;
+            } else { // space left in last IdxNode
+              na->hash = h;
+              na->obj = n->obj; // na->nxt=nullptr;
+            }
+          }
+          if (pooled) {
+            d = n;
+            n = n->nxt;
+            nodes_.del(d);
+          } else
+            n = n->nxt;
+          pooled = true;
+        } while (n);
+      }
+      allocated_from_pool_ = tmp_allocated_from_pool;
+      if (old)
+        delete[] old;
+    }
+
+  public:
+    HashIndex(size_t size = DEFAULT_CHUNK_SIZE, double load_factor = .75)
+        : nodes_(size), allocated_from_pool_(false), zero(ZeroValue<V>().get()) {
+      load_factor_ = load_factor;
+      size_ = 0;
+      count_ = 0;
+      buckets_ = nullptr;
+      resize_(size);
+    }
+
+    ~HashIndex() {
+      if (buckets_ != nullptr)
+        delete[] buckets_;
+    }
+
+    T &operator[](const T &key) { return *get(key); }
+    FORCE_INLINE virtual bool hashDiffers(const T &x, const T &y) {
+      return IDX_FN::hash(x) != IDX_FN::hash(y);
+    }
+
+    // retrieves the first element equivalent to the key or nullptr if not found
+    inline virtual T *get(const T &key) const {
+      HASH_RES_t h = IDX_FN::hash(key);
+      IdxNode *n = &buckets_[h % size_];
+      do {
+        if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj))
+          return n->obj;
+      } while ((n = n->nxt));
+      return nullptr;
+    }
+
+    inline virtual T *get(const T &key, const HASH_RES_t h) const {
+      IdxNode *n = &buckets_[h % size_];
+      do {
+        if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj))
+          return n->obj;
+      } while ((n = n->nxt));
+      return nullptr;
+    }
+
+    // inserts regardless of whether element exists already
+    FORCE_INLINE virtual void add(T &obj) { add(&obj); }
+
+    FORCE_INLINE virtual void add(T *obj) {
+      HASH_RES_t h = IDX_FN::hash(*obj);
+      add(obj, h);
+    }
+
+    FORCE_INLINE virtual void add(T *obj, const HASH_RES_t h) {
+      if (count_ > threshold_)
+        resize_(size_ << 1);
+      size_t b = h % size_;
+      IdxNode *n = &buckets_[b];
+      IdxNode *nw;
+
+      if (is_unique) {
+        ++count_;
+        if (n->obj) {
+          allocated_from_pool_ = true;
+          nw = nodes_.add(); // memset(nw, 0, sizeof(IdxNode)); // add a node
+          nw->hash = h;
+          nw->obj = obj;
+          nw->nxt = n->nxt;
+          n->nxt = nw;
+        } else { // space left in last IdxNode
+          n->hash = h;
+          n->obj = obj; // n->nxt=nullptr;
+        }
+      } else {
+        // ++count_;
+        if (!n->obj) { // space left in last IdxNode
+          ++count_;
+          n->hash = h;
+          n->obj = obj; // n->nxt=nullptr;
+          return;
+        }
+        do {
+          if (h == n->hash && IDX_FN::equals(*obj, *n->obj)) {
+            allocated_from_pool_ = true;
+            nw = nodes_.add(); // memset(nw, 0, sizeof(IdxNode)); // add a node
+            nw->hash = h;
+            nw->obj = obj;
+            nw->nxt = n->nxt;
+            n->nxt = nw;
+            return;
+          } 
+          /*else {
+            //go ahead, and look for an element in the same slice
+            //or reach the end of linked list of IdxNodes
+          }*/
+        } while ((n = n->nxt));
+        // if(!n) {
+        ++count_;
+        n = &buckets_[b];
+        allocated_from_pool_ = true;
+        nw = nodes_.add(); // memset(nw, 0, sizeof(IdxNode)); // add a node
+        // in addition to adding nw, we also change the place of nw with n
+        // to preserve the order of elements, as it is required for
+        // non-unique hash maps (as the first element might be the start of)
+        // a chain of non-unique elements belonging to the same slice
+        nw->hash = n->hash;
+        nw->obj = n->obj;
+        n->hash = h;
+        n->obj = obj;
+        nw->nxt = n->nxt;
+        n->nxt = nw;
+        // return;
+        // }
+      }
+    }
+
+    // deletes an existing elements (equality by pointer comparison)
+    FORCE_INLINE virtual void del(const T &obj) {
+      const T *ptr = get(obj);
+      if (ptr)
+        del(ptr);
+    }
+    FORCE_INLINE virtual void del(const T &obj, const HASH_RES_t h) {
+      const T *ptr = get(obj, h);
+      if (ptr)
+        del(ptr, h);
+    }
+    FORCE_INLINE virtual void del(const T *obj) {
+      HASH_RES_t h = IDX_FN::hash(*obj);
+      del(obj, h);
+    }
+    FORCE_INLINE virtual void del(const T *obj, const HASH_RES_t h) {
+      IdxNode *n = &buckets_[h % size_];
+      IdxNode *prev = nullptr, *next; // previous and next pointers
+      do {
+        next = n->nxt;
+        if (/*n->obj &&*/ n->obj == obj) { // we only need a pointer comparison,
+                                           // as all objects are stored in the
+                                           // pool
+          if (prev) { // it is an element in the linked list (and not in the
+                      // bucket itself)
+            prev->nxt = next;
+            // n->nxt = nullptr;
+            // n->obj = nullptr;
+            nodes_.del(n);
+          } else if (next) { // it is the elements in the bucket, and there are
+                             // other elements in linked list
+            n->obj = next->obj;
+            n->hash = next->hash;
+            n->nxt = next->nxt;
+            nodes_.del(next);
+            next = n;
+          } else { // it is the only element in the bucket
+            n->obj = nullptr;
+          }
+          if (is_unique ||
+              !((prev && prev->obj && (h == prev->hash) &&
+                 IDX_FN::equals(*obj, *prev->obj)) ||
+                (next && next->obj && (h == next->hash) &&
+                 IDX_FN::equals(*obj, *next->obj))))
+            --count_;
+          return;
+        }
+        prev = n;
+      } while ((n = next));
+    }
+
+    inline virtual void foreach (std::function<void(const T &)> f) const {
+      for (size_t b = 0; b < size_; ++b) {
+        IdxNode *n = &buckets_[b];
+        do {
+          if (n->obj)
+            f(*n->obj);
+        } while ((n = n->nxt));
+      }
+    }
+
+    inline virtual void slice(const T &key, std::function<void(const T &)> f) {
+      HASH_RES_t h = IDX_FN::hash(key);
+      IdxNode *n = &(buckets_[h % size_]);
+      do {
+        if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) {
+          do {
+            f(*n->obj);
+          } while ((n = n->nxt) && (h == n->hash) &&
+                   IDX_FN::equals(key, *n->obj));
+          return;
+        }
+      } while ((n = n->nxt));
+    }
+
+    inline virtual void clear() {
+      if (allocated_from_pool_) {
+        IdxNode *head = nullptr;
+        for (size_t b = 0; b < size_; ++b) {
+          IdxNode *n = buckets_[b].nxt;
+          if (n) {
+            IdxNode *tmp = n;
+            if (head) {
+              while (n->nxt)
+                n = n->nxt;
+              n->nxt = head;
+              head = tmp;
+            } else
+              head = n;
+          }
+        }
+        nodes_.delete_all(head);
+      }
+      allocated_from_pool_ = false;
+      count_ = 0;
+      memset(buckets_, 0, sizeof(IdxNode) * size_);
+    }
+
+    FORCE_INLINE virtual size_t count() { return count_; }
+
+    FORCE_INLINE virtual HASH_RES_t computeHash(const T &key) {
+      return IDX_FN::hash(key);
+    }
+
+    inline virtual V getValueOrDefault(const T &key) const {
+      HASH_RES_t h = IDX_FN::hash(key);
+      IdxNode *n = &buckets_[h % size_];
+      do {
+        T *lkup = n->obj;
+        if (lkup && h == n->hash && IDX_FN::equals(key, *lkup))
+          return lkup->__av;
+      } while ((n = n->nxt));
+      return zero;
+    }
+
+    inline virtual V getValueOrDefault(const T &key, HASH_RES_t h) const {
+      IdxNode *n = &buckets_[h % size_];
+      do {
+        T *lkup = n->obj;
+        if (lkup && h == n->hash && IDX_FN::equals(key, *lkup))
+          return lkup->__av;
+      } while ((n = n->nxt));
+      return zero;
+    }
+
+    inline virtual int setOrDelOnZero(const T &k, const V &v) {
+      HASH_RES_t h = IDX_FN::hash(k);
+      IdxNode *n = &buckets_[h % size_];
+      do {
+        T *lkup = n->obj;
+        if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
+          if (ZeroValue<V>().isZero(v)) {
+            return DELETE_FROM_MMAP;
+          }
+          lkup->__av = v;
+          return 0;
+        }
+      } while ((n = n->nxt));
+      // not found
+      if (!ZeroValue<V>().isZero(v))
+        return INSERT_INTO_MMAP; // insert it into the map
+      return 0;
+    }
+
+    inline virtual int setOrDelOnZero(const T &k, const V &v, HASH_RES_t h) {
+      IdxNode *n = &buckets_[h % size_];
+      do {
+        T *lkup = n->obj;
+        if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
+          if (ZeroValue<V>().isZero(v)) {
+            return DELETE_FROM_MMAP;
+          }
+          lkup->__av = v;
+          return 0;
+        }
+      } while ((n = n->nxt));
+      // not found
+      if (!ZeroValue<V>().isZero(v))
+        return INSERT_INTO_MMAP; // insert it into the map
+      return 0;
+    }
+
+    inline virtual int addOrDelOnZero(const T &k, const V &v) {
+      if (!ZeroValue<V>().isZero(v)) {
+        HASH_RES_t h = IDX_FN::hash(k);
+        IdxNode *n = &buckets_[h % size_];
+        do {
+          T *lkup = n->obj;
+          if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
+            lkup->__av += v;
+            if (ZeroValue<V>().isZero(lkup->__av)) {
+              return DELETE_FROM_MMAP;
+            }
+            return 0;
+          }
+        } while ((n = n->nxt));
+        // not found
+        return INSERT_INTO_MMAP; // insert it into the map
+      }
+      return 0;
+    }
+
+    inline virtual int addOrDelOnZero(const T &k, const V &v, HASH_RES_t h) {
+      if (!ZeroValue<V>().isZero(v)) {
+        IdxNode *n = &buckets_[h % size_];
+        do {
+          T *lkup = n->obj;
+          if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
+            lkup->__av += v;
+            if (ZeroValue<V>().isZero(lkup->__av)) {
+              return DELETE_FROM_MMAP;
+            }
+            return 0;
+          }
+        } while ((n = n->nxt));
+        // not found
+        return INSERT_INTO_MMAP; // insert it into the map
+      }
+      return 0;
+    }
+
+    template <typename TP, typename VP, typename... INDEXES>
+    friend class MultiHashMap;
+};
+
+template <typename T, typename V, typename... INDEXES> 
+class MultiHashMap {
+  private:
+    Pool<T> pool;
+
+  public:
+    Index<T, V> **index;
+    T *head;
+
+    MultiHashMap() : head(nullptr) { // by defintion index 0 is always unique
+      index = new Index<T, V> *[sizeof...(INDEXES)]{new INDEXES()...};
+    }
+
+    MultiHashMap(size_t init_capacity): head(nullptr) { // by defintion index 0 is always unique
+      index = new Index<T, V> *[sizeof...(INDEXES)]{new INDEXES(init_capacity)...};
+    }
+
+    MultiHashMap(const MultiHashMap &other) : head(nullptr) { // by defintion index 0 is always unique
+      index = new Index<T, V> *[sizeof...(INDEXES)]{new INDEXES()...};
+      other.index[0]->foreach ([this](const T &e) { this->insert_nocheck(e); });
+    }
+
+    virtual ~MultiHashMap() {
+      for (size_t i = 0; i < sizeof...(INDEXES); ++i)
+        delete index[i];
+      delete[] index;
+    }
+
+    FORCE_INLINE T *get(const T &key /*, const size_t idx=0*/) const {
+      return index[0]->get(key);
+    } // assume mainIdx=0
+
+    FORCE_INLINE T *get(const T &key, const HASH_RES_t h, const size_t idx = 0) const {
+      return index[idx]->get(key, h);
+    }
+
+    FORCE_INLINE void add(const T &obj) { add(&obj); }
+
+    void add(const T *elem) {
+      T *cur = index[0]->get(*elem);
+      if (cur == nullptr) {
+        cur = pool.add();
+        // cur->~T();
+        // *cur=std::move(*elem);
+        new (cur) T(*elem);
+        if (head) {
+          cur->prv = nullptr;
+          cur->nxt = head;
+          head->prv = cur;
+        }
+        head = cur;
+        for (size_t i = 0; i < sizeof...(INDEXES); ++i)
+          index[i]->add(cur);
+      } else {
+        // cur->~T();
+        // *cur=std::move(*elem);
+        new (cur) T(*elem);
+        for (size_t i = 0; i < sizeof...(INDEXES); ++i) {
+          if (index[i]->hashDiffers(*cur, *elem)) {
+            index[i]->del(cur);
+            index[i]->add(cur);
+          }
+        }
+      }
+    }
+
+    FORCE_INLINE virtual void insert_nocheck(const T &elem) {
+      T *cur = pool.add();
+      // cur->~T();
+      // *cur=std::move(elem);
+      new (cur) T(elem);
+      cur->prv = nullptr;
+      cur->nxt = head;
+      if (head)
+        head->prv = cur;
+      head = cur;
+      for (size_t i = 0; i < sizeof...(INDEXES); ++i)
+        index[i]->add(cur);
+    }
+    
+    FORCE_INLINE virtual void insert_nocheck(const T &elem, HASH_RES_t h) { // assume mainIdx=0
+      T *cur = pool.add();
+      // cur->~T();
+      // *cur=std::move(elem);
+      new (cur) T(elem);
+      cur->prv = nullptr;
+      cur->nxt = head;
+      if (head)
+        head->prv = cur;
+      head = cur;
+      index[0]->add(cur, h);
+      for (size_t i = 1; i < sizeof...(INDEXES); ++i)
+        index[i]->add(cur);
+    }
+
+    FORCE_INLINE void del(const T &key /*, int idx=0*/) { // assume mainIdx=0
+      T *elem = get(key);
+      if (elem != nullptr)
+        del(elem);
+    }
+
+    FORCE_INLINE void del(const T &key, HASH_RES_t h, int idx = 0) {
+      T *elem = get(key, h, idx);
+      if (elem != nullptr)
+        del(elem, h);
+    }
+
+    void delSlice(const T &key, int idx = 0) {
+      slice(idx, key, [](const T &e) { del(e); });
+    }
+
+    FORCE_INLINE void del(T *elem) { // assume the element is already in the map
+      T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+      if (elemPrv)
+        elemPrv->nxt = elemNxt;
+      if (elemNxt)
+        elemNxt->prv = elemPrv;
+      if (elem == head)
+        head = elemNxt;
+      elem->nxt = nullptr;
+      elem->prv = nullptr;
+
+      for (size_t i = 0; i < sizeof...(INDEXES); ++i)
+        index[i]->del(elem);
+      pool.del(elem);
+    }
+
+    FORCE_INLINE void del(T *elem, HASH_RES_t h) { // assume the element is already in the map and mainIdx=0
+      T *elemPrv = elem->prv, *elemNxt = elem->nxt;
+      if (elemPrv)
+        elemPrv->nxt = elemNxt;
+      if (elemNxt)
+        elemNxt->prv = elemPrv;
+      if (elem == head)
+        head = elemNxt;
+      elem->nxt = nullptr;
+      elem->prv = nullptr;
+
+      index[0]->del(elem, h);
+      for (size_t i = 1; i < sizeof...(INDEXES); ++i)
+        index[i]->del(elem);
+      pool.del(elem);
+    }
+
+    inline void foreach (std::function<void(const T &)> f) const {
+      // index[0]->foreach(f);
+      T *tmp = head;
+      while (tmp) {
+        f(*tmp);
+        tmp = tmp->nxt;
+      }
+    }
+
+    void slice(int idx, const T &key, std::function<void(const T &)> f) {
+      index[idx]->slice(key, f);
+    }
+
+    FORCE_INLINE size_t count() const { return index[0]->count(); }
+
+    FORCE_INLINE void clear() {
+      for (size_t i = 0; i < sizeof...(INDEXES); ++i)
+        index[i]->clear();
+      pool.delete_all(head);
+      head = nullptr;
+    }
+
+    template <class Archive>
+    void serialize(Archive &ar, const unsigned int version) const {
+      ar << "\n\t\t";
+      dbtoaster::serialize_nvp(ar, "count", count());
+      foreach ([&ar](const T &e) {
+        ar << "\n";
+        dbtoaster::serialize_nvp_tabbed(ar, "item", e, "\t\t");
+      });
+    }
+
+    inline virtual V getValueOrDefault(const T &key, int mainIdx = 0) const {
+      return index[mainIdx]->getValueOrDefault(key);
+    }
+
+    inline virtual void setOrDelOnZero(T &k, const V &v, const int mainIdx = 0) {
+      HASH_RES_t h = index[mainIdx]->computeHash(k);
+      switch (index[mainIdx]->setOrDelOnZero(k, v, h)) {
+      case INSERT_INTO_MMAP:
+        k.__av = v;
+        insert_nocheck(k, h);
+        break;
+      case DELETE_FROM_MMAP:
+        del(k, h);
+        break;
+      default:
+        break;
+      }
+    }
+
+    inline virtual void addOrDelOnZero(T &k, const V &v, const int mainIdx = 0) {
+      HASH_RES_t h = index[mainIdx]->computeHash(k);
+      switch (index[mainIdx]->addOrDelOnZero(k, v, h)) {
+      case INSERT_INTO_MMAP:
+        k.__av = v;
+        insert_nocheck(k, h);
+        break;
+      case DELETE_FROM_MMAP:
+        del(k, h);
+        break;
+      default:
+        break;
+      }
+    }
+};
+}
+
+#endif /* DBTOASTER_MMAP_HPP */
