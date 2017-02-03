@@ -12,6 +12,7 @@
 #include <iomanip>
 #include "types.hpp"
 
+#define DBT_SERIALIZATION_NVP_OF_ARRAY(ar, name, length)  dbtoaster::serialize_nvp_array(ar, STRING(name), name, length)
 #define DBT_SERIALIZATION_NVP_OF_PTR(ar, name)  dbtoaster::serialize_nvp(ar, STRING(name), *name)
 #define DBT_SERIALIZATION_NVP(ar, name)  dbtoaster::serialize_nvp(ar, STRING(name), name)
 #define ELEM_SEPARATOR "\n\t\t\t"
@@ -71,56 +72,23 @@ namespace dbtoaster {
     }
 
     template <typename T, typename Archive>
+    inline Archive & serialize_nvp_array(Archive & ar, const char * name, const T *t, size_t length)
+    {
+        ar << "<"  << name << ">[ ";
+        for (size_t i = 0; i < length; i++) {
+            serialize(ar, 0, t[i]);
+            ar << " ";
+        }
+        ar << " ]</" << name << ">";
+        return ar;
+    }
+
+    template <typename T, typename Archive>
     inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const T & t, const char* tab)
     {
         ar << tab << "<"  << name << ">";
         serialize(ar, 0, t);
         ar << tab << "</" << name << ">";
-        return ar;
-    }
-
-    template <typename Archive>
-    inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const int & t, const char* tab)
-    {
-        ar << tab << "<"  << name << ">";
-        serialize(ar, 0, t);
-        ar << "</" << name << ">";
-        return ar;
-    }
-
-    template <typename Archive>
-    inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const size_t & t, const char* tab)
-    {
-        ar << tab << "<"  << name << ">";
-        serialize(ar, 0, t);
-        ar << "</" << name << ">";
-        return ar;
-    }
-
-    template <typename Archive>
-    inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const long & t, const char* tab)
-    {
-        ar << tab << "<"  << name << ">";
-        serialize(ar, 0, t);
-        ar << "</" << name << ">";
-        return ar;
-    }
-
-    template <typename Archive>
-    inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const STRING_TYPE & t, const char* tab)
-    {
-        ar << tab << "<"  << name << ">";
-        serialize(ar, 0, t);
-        ar << "</" << name << ">";
-        return ar;
-    }
-    
-    template<class Archive>
-    inline Archive & serialize_nvp_tabbed(Archive & ar, const char * name, const double & t, const char* tab)
-    {
-        ar << tab << "<"  << name << ">";
-        serialize(ar, 0, t);
-        ar << "</" << name << ">";
         return ar;
     }
 
