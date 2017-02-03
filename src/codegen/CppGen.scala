@@ -17,21 +17,30 @@ trait ICppGen extends IScalaGen {
   val VALUE_NAME = "__av"
 
   val EXPERIMENTAL_CPP_HASHMAP = false
-  val EXPERIMENTAL_RUNTIME_LIBRARY = false
+  val EXPERIMENTAL_RUNTIME_LIBRARY = true
 
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
 
   private def stringIf(flag: Boolean, t: => String, e: => String = "") = if (flag) t else e
+  private val ifReleaseMode = stringIf(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE, "// ")
+  private val ifPrintTimingInfo = stringIf(!ddbt.Compiler.PRINT_TIMING_INFO, "// ")
 
   private var mapDefs = Map[String,MapDef]() //mapName => MapDef
   private val mapDefsList = scala.collection.mutable.MutableList[(String,MapDef)]() //List(mapName => MapDef) to preserver the order
   private val tmpMapDefs = HashMap[String,(List[Type],Type)]() //tmp mapName => (List of key types and value type)
+  private var deltaMapNames = Set[String]()
+
+  private var usedRelationDirectives = ""
 
   private val helperFuncUsage = HashMap[(String,String),Int]()
+
   def FIND_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("FIND_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("FIND_IN_MAP_FUNC" -> m),0)+1); m+".getValueOrDefault" }
+
   def SET_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("SET_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("SET_IN_MAP_FUNC" -> m),0)+1); m+".setOrDelOnZero" }
+
   def ADD_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("ADD_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("ADD_TO_MAP_FUNC" -> m),0)+1); m+".addOrDelOnZero" }
+
   def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) = 
     if (EXPERIMENTAL_CPP_HASHMAP) {
       val sampleTempEnt=fresh("st")
@@ -44,8 +53,8 @@ trait ICppGen extends IScalaGen {
       }
     }
     else {
-      val sampleTempEnt=fresh("st")
-      sampleEntDef+="  "+tupType(ksTp, vsTp)+" "+sampleTempEnt+";\n"
+      val sampleTempEnt = fresh("st")
+      sampleEntDef += "  " + tupType(ksTp, vsTp) + " " + sampleTempEnt + ";\n"
       extractBooleanExp(vs) match {
         case Some((c,t)) =>
           "(/*if */("+c+") ? add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, t)+") : voidFunc());\n"
@@ -55,7 +64,9 @@ trait ICppGen extends IScalaGen {
     }
 
   val tempTupleTypes = HashMap[String,(List[Type],Type)]()
+  
   def tup(ks:List[String],vs:String) = "("+ks.mkString(",")+","+vs+")"
+  
   def tupType(ksTp:List[Type], vsTp:Type):String = {
     val tupleTp="tuple"+(ksTp.size+1)+"_"+ksTp.map(_.simpleName).mkString+"_"+vsTp.simpleName
     tempTupleTypes.update(tupleTp,(ksTp, vsTp))
@@ -147,43 +158,53 @@ trait ICppGen extends IScalaGen {
       applyFunc(co,fn,tp,as)
     }
     case m @ MapRef(mapName,tp,ks) =>
-      val (ko,ki) = ks.zipWithIndex.partition{case((n,t),i)=>ctx.contains(n)}
-      val mapType = mapName+"_map"
-      val mapEntry = mapName+"_entry"
-      if(ks.size == 0) { // variable
-        if(ctx contains mapName) co(rn(mapName)) else co(mapName)
-      } else if (ki.size==0) {
-        val sampleEnt=fresh("se")
-        sampleEntDef+=(if(ks.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
-        co(FIND_IN_MAP_FUNC(mapName)+"("+sampleEnt+".modify("+(ks map (x => rn(x._1))).mkString(",")+"))") // all keys are bound
-      } else {
+      val (ko, ki) = ks.zipWithIndex.partition { case((n,t),i) => ctx.contains(n) }
+      val mapType = mapName + "_map"
+      val mapEntry = mapName + "_entry"
+      if (ks.size == 0) { // variable
+        if (ctx contains mapName) co(rn(mapName)) else co(mapName)
+      } 
+      else if (ki.size == 0) {
+        val sampleEnt = fresh("se")
+        sampleEntDef += stringIf(ks.size > 0, s"  ${mapEntry} ${sampleEnt};\n");
+        val argList = (ks map (x => rn(x._1))).mkString(",")
+        co(s"${FIND_IN_MAP_FUNC(mapName)}(${sampleEnt}.modify(${argList}))") // all keys are bound
+      } 
+      else {
         val lup0 = fresh("lkup") //lookup
-        val lupItr0 = lup0+"_it"
-        val lupItrNext0 = "next_"+lupItr0
-        val lupEnd0 = lup0+"_end"
+        val lupItr0 = lup0 + "_it"
+        val lupItrNext0 = "next_" + lupItr0
+        val lupEnd0 = lup0 + "_end"
         val is = ko.map(_._2)
-        val iKeys = ko.map(x=>rn(x._1._1))
-        val iKeysTp = ko.map(x=>x._1._2)
-        val (k0,v0,e0)=(fresh("k"),fresh("v"),fresh("e"))
+        val iKeys = ko.map(x => rn(x._1._1))
+        val iKeysTp = ko.map(x => x._1._2)
+        val (k0, v0, e0) = (fresh("k"), fresh("v"), fresh("e"))
 
-        ctx.add(ks.filter(x=> !ctx.contains(x._1)).map(x=>(x._1,(x._2,x._1))).toMap)
+        ctx.add(ks.filter(x => !ctx.contains(x._1)).map(x => (x._1, (x._2, x._1))).toMap)
 
         if (!m.isTemp) { // slice or foreach
           val mapDef = mapDefs(mapName)
-
-          val n0= fresh("n")
+          val n0 = fresh("n")
           val idx0= fresh("i")
-          val mapType = mapName+"_map"
-          val idxName = "HashIndex_"+mapType+"_"+getIndexId(mapName,is)
-          val idxFn = mapType+"key"+getIndexId(mapName,is)+"_idxfn"
-          val body = ki.map{case ((k,ktp),i)=>ktp.toCpp+" "+rn(k)+" = "+e0+"->"+mapDef.keys(i)._1+";\n"}.mkString+
-          tp.toCpp+" "+v0+" = "+e0+"->"+VALUE_NAME+";\n"+
-          co(v0)
+          val mapType = mapName + "_map"
+          val idxName = "HashIndex_" + mapType + "_" + getIndexId(mapName, is)
+          val idxFn = mapType + "key" + getIndexId(mapName, is) + "_idxfn"
+          
+          val body = 
+            ki.map { case ((k,ktp), i) => 
+              ktp.toCpp + " " + rn(k) + " = " + e0 + "->" + mapDef.keys(i)._1 + ";\n"
+            }.mkString + 
+            tp.toCpp + " " + v0 + " = " + e0 + "->" + VALUE_NAME + ";\n" +
+            co(v0)
 
-          if (ko.size>0) { //slice
-            val idxIndex = slice(mapName,is)+1 //+1 because the index 0 is the unique index
-            val sampleEnt=fresh("se")
-            sampleEntDef+=(if (m.keys.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
+          if (ko.size > 0) { //slice
+            if (EXPERIMENTAL_RUNTIME_LIBRARY && deltaMapNames.contains(mapName)) {
+              sys.error("Delta relation requires secondary indices. Turn off experimental runtime library.")
+            }
+
+            val idxIndex = slice(mapName, is) + 1 //+1 because the index 0 is the unique index
+            val sampleEnt = fresh("se")
+            sampleEntDef += stringIf(m.keys.size > 0, s"  ${mapEntry} ${sampleEnt};\n");
 
             val h0= fresh("h")
             if (EXPERIMENTAL_CPP_HASHMAP) {
@@ -199,18 +220,20 @@ trait ICppGen extends IScalaGen {
                   |      ${n0} = ${n0}->nxt;
                   |    } while (${n0} && (${e0} = ${n0}->obj) && ${h0} == ${n0}->hash &&  ${idxFn}::equals(${sampleEnt}, *${e0}));
                   |  }
+                  |
                   |}""".stripMargin
             }
             else {
-              "{ //slice\n"+
-              "  const HASH_RES_t "+h0+" = "+idxFn+"::hash("+sampleEnt+".modify"+getIndexId(mapName,is)+"("+iKeys.mkString(", ")+"));\n"+
-              "  const "+idxName+"* "+idx0+" = static_cast<"+idxName+"*>("+mapName+".index["+idxIndex+"]);\n"+
-              "  "+idxName+"::IdxNode* "+n0+" = &("+idx0+"->buckets_["+h0+" % "+idx0+"->size_]);\n"+
-              "  "+mapEntry+"* "+e0+";\n"+
-              "  do if (("+e0+"="+n0+"->obj) && "+h0+" == "+n0+"->hash && "+idxFn+"::equals("+sampleEnt+", *"+e0+")) {\n"+
-                   ind(body,2)+"\n"+
-              "  } while (("+n0+"="+n0+"->nxt));\n"+
-              "}\n"
+              s"""|{ //slice
+                  |  const HASH_RES_t ${h0} = ${idxFn}::hash(${sampleEnt}.modify${getIndexId(mapName,is)}(${iKeys.mkString(", ")}));
+                  |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[${idxIndex}]);
+                  |  ${idxName}::IdxNode* ${n0} = &(${idx0}->buckets_[${h0} % ${idx0}->size_]);
+                  |  ${mapEntry}* ${e0};
+                  |  do if ((${e0} = ${n0}->obj) && ${h0} == ${n0}->hash && ${idxFn}::equals(${sampleEnt}, *${e0})) {
+                  |${ind(body, 2)}
+                  |  } while ((${n0} = ${n0}->nxt));
+                  |}
+                  |""".stripMargin
             }
           } else { //foreach
             if (EXPERIMENTAL_CPP_HASHMAP) {
@@ -232,16 +255,28 @@ trait ICppGen extends IScalaGen {
                   |""".stripMargin
             }
             else {
-              "{ //foreach\n"+
-              "  "+mapEntry+"* "+e0+" = "+mapName+".head;\n"+
-              "  while("+e0+"){\n"+
-                   ind(body,2)+"\n"+
-              "    "+e0+" = "+e0+"->nxt;\n"+
-              "  }\n"+
-              "}\n"              
+              if (EXPERIMENTAL_RUNTIME_LIBRARY && deltaMapNames.contains(mapName)) {
+                s"""|{ //foreach
+                    |  for (typename std::vector<T>::iterator ${e0} = begin; ${e0} != end; ${e0}++) {
+                    |${ind(body, 2)}
+                    |  }
+                    |}
+                    |""".stripMargin                
+              }
+              else {
+                s"""|{ //foreach
+                    |  ${mapEntry}* ${e0} = ${mapName}.head;
+                    |  while (${e0}) {
+                    |${ind(body, 2)}
+                    |    ${e0} = ${e0}->nxt;
+                    |  }
+                    |}
+                    |""".stripMargin
+              }
             }
           }
-        } else { //only foreach for Temp map
+        } 
+        else { //only foreach for Temp map
           if (EXPERIMENTAL_CPP_HASHMAP) {
             val n0= fresh("n")
             val idx0= fresh("i")
@@ -268,15 +303,23 @@ trait ICppGen extends IScalaGen {
                 |}""".stripMargin 
           }
           else {
-            "{ //temp foreach\n"+
-            "  "+tupType(ks.map(_._2), m.tp)+"* "+e0+" = "+mapName+".head;\n"+
-            "  while("+e0+"){\n"+
-            ki.map{case ((k,ktp),i)=> "    "+ktp.toCpp+" "+rn(k)+" = "+e0+"->_"+(i+1)+";\n"}.mkString+
-            "    "+tp.toCpp+" "+v0+" = "+e0+"->"+VALUE_NAME+";\n"+
-                 ind(co(v0),2)+"\n"+
-            "    "+e0+" = "+e0+"->nxt;\n"+
-            "  }\n"+
-            "}\n"
+            val body = 
+              ki.map { case ((k,ktp), i) => 
+                s"    ${ktp.toCpp} ${rn(k)} = ${e0}->_${(i + 1)};"
+              }.mkString("\n") +
+              s"""|
+                  |    ${tp.toCpp} ${v0} = ${e0}->${VALUE_NAME};
+                  |${ind(co(v0),2)}
+                  |    ${e0} = ${e0}->nxt;
+                  |""".stripMargin
+
+            s"""|{ //temp foreach
+                |  ${tupType(ks.map(_._2), m.tp)}* ${e0} = ${mapName}.head;
+                |  while(${e0}) {
+                |${body}  
+                |  }
+                |}
+                |""".stripMargin
           }
         }
       }
@@ -393,38 +436,52 @@ trait ICppGen extends IScalaGen {
 
   override def genStmt(s:Stmt):String = s match {
     case StmtMap(m,e,op,oi) =>
-      val (fop,sop)=op match { case OpAdd => (ADD_TO_MAP_FUNC(m.name),"+=") case OpSet => (ADD_TO_MAP_FUNC(m.name),"=") }
+      val (fop, sop) = op match { 
+        case OpAdd => (ADD_TO_MAP_FUNC(m.name), "+=") 
+        case OpSet => (ADD_TO_MAP_FUNC(m.name), "=") 
+      }
       val mapName = m.name
       val mapType = mapName+"_map"
       val mapEntry = mapName+"_entry"
-      val sampleEnt=fresh("se")
-      sampleEntDef+=(if(m.keys.size > 0) "  "+mapEntry+" "+sampleEnt+";\n" else "")
-      val clear = op match { case OpAdd => "" case OpSet => if (m.keys.size>0) m.name+".clear();\n" else "" }
+      val sampleEnt = fresh("se")
+      sampleEntDef += stringIf(m.keys.size > 0,  s"  ${mapEntry} ${sampleEnt};\n")
+      val clear = op match { 
+        case OpAdd => "" 
+        case OpSet => stringIf(m.keys.size > 0, s"${m.name}.clear();\n");
+      }
       val init = oi match {
         case Some(ie) =>
           ctx.load()
-          cpsExpr(ie,(i:String)=>
-            if (m.keys.size==0) "if ("+m.name+"==0) "+m.name+" = "+i+";\n"
-            else "if ("+FIND_IN_MAP_FUNC(m.name)+"("+sampleEnt+".modify("+(m.keys map (x => rn(x._1))).mkString(",")+"))==0) "+SET_IN_MAP_FUNC(m.name)+"("+sampleEnt+", "+i+");\n"
+          cpsExpr(ie, (i: String) =>
+            if (m.keys.size == 0) s"if (${m.name} == 0) ${m.name} = ${i};\n"
+            else "if (" + FIND_IN_MAP_FUNC(m.name) + "(" +
+              sampleEnt + ".modify(" + (m.keys map (x => rn(x._1))).mkString(",") + ")) == 0) " + 
+              SET_IN_MAP_FUNC(m.name) + "(" + sampleEnt + ", " + i + ");\n"
           )
         case None => ""
       }
-      ctx.load(); clear+init+cpsExpr(e,(v:String) => 
-        (if (m.keys.size==0) {
+      ctx.load(); 
+      
+      clear + 
+      init + 
+      cpsExpr(e, (v: String) => 
+        (if (m.keys.size == 0) {
           extractBooleanExp(v) match {
             case Some((c,t)) =>
-              "(/*if */("+c+") ? "+m.name+" "+sop+" "+t+" : 0L);\n"
+              s"(/*if */(${c}) ? ${m.name} ${sop} ${t} : 0L);\n"
             case _ =>
-              m.name+" "+sop+" "+v+";\n"
+              s"${m.name} ${sop} ${v};\n"
           }
         } else {
+          val argList = (m.keys map (x => rn(x._1))).mkString(", ")
           extractBooleanExp(v) match {
-            case Some((c,t)) =>
-              "(/*if */("+c+") ? "+fop+"("+sampleEnt+".modify("+(m.keys map (x => rn(x._1))).mkString(",")+"),"+t+") : (void)0);\n"
+            case Some((c,t)) =>            
+              s"(/*if */(${c}) ? ${fop}(${sampleEnt}.modify(${argList}), ${t}) : (void)0);\n"
             case _ =>
-              fop+"("+sampleEnt+".modify("+(m.keys map (x => rn(x._1))).mkString(",")+"),"+v+");\n"
+              s"${fop}(${sampleEnt}.modify(${argList}), ${v});\n"
           }
         }), /*if (op==OpAdd)*/ Some(m.keys) /*else None*/)
+
     case m: MapDef => "" //nothing to do
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
@@ -438,21 +495,34 @@ trait ICppGen extends IScalaGen {
       case EvtAdd(Schema(n,cs)) => ("insert_" + n, cs, "++tN;")
       case EvtDel(Schema(n,cs)) => ("delete_" + n, cs, "++tN;")
     }
-    ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap)
-    val preBody="{  "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+xActCounter+"\n"
-    val body=ind(t.stmts.map(genStmt).mkString)
-    val pstBody="\n}\n"
-    ctx=null
-    val params = t.evt match {
-      case EvtBatchUpdate(Schema(n,_)) =>
-        val rel = s0.sources.filter(_.schema.name == n)(0).schema
-        val ks = rel.fields.map(_._2)
-        val tp = TypeLong
-        rel.deltaName + "_map& " + rel.deltaName
-      case _ =>
-        as.map(a=>"const "+a._2.toCppRefType+" "+a._1).mkString(", ")
-    }
-    "void on_"+n+"("+params+") {\n"+ind(preBody+body+pstBody)+"\n}"
+    ctx = Ctx(as.map(x => (x._1, (x._2, x._1))).toMap)
+
+    val triggerBody = 
+      s"""|${ifReleaseMode + xActCounter}
+          |${t.stmts.map(genStmt).mkString}""".stripMargin
+    ctx = null
+
+    val triggerHeader = 
+      if (EXPERIMENTAL_RUNTIME_LIBRARY && (t.evt match { case EvtBatchUpdate(_) => true  case _ => false })) {
+          s"""|template<typename T>
+              |void on_${n}(const typename std::vector<T>::iterator &begin, const typename std::vector<T>::iterator &end)""".stripMargin
+      } 
+      else {
+        val params = t.evt match {
+          case EvtBatchUpdate(Schema(n,_)) =>
+            val rel = s0.sources.filter(_.schema.name == n)(0).schema
+            val ks = rel.fields.map(_._2)
+            val tp = TypeLong
+            rel.deltaName + "_map& " + rel.deltaName
+          case _ =>
+            as.map(a => s"const ${a._2.toCppRefType} ${a._1}").mkString(", ")
+        }
+        s"void on_${n}(${params})"
+      }
+    s"""|${triggerHeader} {
+        |${ind(triggerBody)}
+        |}
+        |""".stripMargin
   }
 
   override def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
@@ -746,23 +816,37 @@ trait ICppGen extends IScalaGen {
     freshClear
     clearOut
 
-    s0.maps.foreach{m =>
+    s0.maps.foreach { m =>
       mapDefsList += (m.name -> m)
     }
     s0.triggers.foreach(_.evt match { //delta relations
       case EvtBatchUpdate(s) =>
         val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
         val deltaRel = schema.deltaName
-        mapDefsList += (deltaRel -> MapDef(deltaRel,TypeLong,schema.fields,null,LocalExp))
+        mapDefsList += (deltaRel -> MapDef(deltaRel, TypeLong, schema.fields, null, LocalExp))
       case _ => //nothing to do
     })
-    s0.triggers.foreach{ t=> //local maps
+    s0.triggers.foreach{ t => //local maps
       t.stmts.map{
         case m: MapDef => mapDefsList += (m.name -> m)
         case _ => //nothing to do
       }
     }
     mapDefs = mapDefsList.toMap
+
+    deltaMapNames = s0.triggers.flatMap(_.evt match { //delta relations
+      case EvtBatchUpdate(s) =>
+        val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
+        List(schema.deltaName)
+      case _ => Nil
+    }).toSet
+
+    usedRelationDirectives = 
+      s0.sources.map { s => 
+        if (s.stream) s"#define RELATION_${s.schema.name.toUpperCase}_DYNAMIC" 
+        else s"#define RELATION_${s.schema.name.toUpperCase}_STATIC"
+      }.mkString("\n")
+
     val ts =
       "/* Trigger functions for table relations */\n"+
       genTableTriggers+
@@ -889,7 +973,7 @@ trait ICppGen extends IScalaGen {
       "\n}\n"
     }.mkString
 
-    def compile_tlqs_decls = s0.queries.map{q =>
+    def compile_tlqs_decls = s0.queries.map { q =>
       q.toCppType + " "+q.name+";\n"
     }.mkString
 
@@ -927,8 +1011,6 @@ trait ICppGen extends IScalaGen {
   // Helper that contains the main and stream generator
   private def helper(s0: System) = stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY, {
     val dataset = "standard"
-    val ifReleaseMode = stringIf(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE, "// ")
-    val ifPrintTimingInfo = stringIf(!ddbt.Compiler.PRINT_TIMING_INFO, "// ")
     val programClass = stringIf(cls != "Program",
       s"""|class ${cls} : public Program
           |{
@@ -984,65 +1066,9 @@ trait ICppGen extends IScalaGen {
         |
         |${programClass}
         |""".stripMargin
-
-    // "/* Type definition providing a way to execute the sql program */\n"+
-    // "class Program : public ProgramBase\n"+
-    // "{\n"+
-    // "  public:\n"+
-    // "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
-    // "      data.register_data(*this);\n"+
-    //        ind(streams(s0.sources),3)+"\n\n"+
-    // "    }\n"+
-    // "\n"+
-    // "    /* Imports data for static tables and performs view initialization based on it. */\n"+
-    // "    void init() {\n"+
-    // "        //P0_PLACE_HOLDER\n"+
-    // "        table_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, true);\n"+
-    // "        stream_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, false);\n"+
-    // stringIf( ddbt.Compiler.PRINT_TIMING_INFO,
-    //   "        struct timeval ts0, ts1, ts2;\n" +
-    //   "        gettimeofday(&ts0, NULL);\n"
-    // ) +
-    // "        process_tables();\n"+
-    // stringIf( ddbt.Compiler.PRINT_TIMING_INFO,
-    //   "        gettimeofday(&ts1, NULL);\n"+
-    //   "        long int et1 = (ts1.tv_sec - ts0.tv_sec) * 1000L + (ts1.tv_usec - ts0.tv_usec) / 1000;\n"+
-    //   "        std::cout << \"Populating tables: \" << et1 << \" (ms)\" << std::endl;\n"
-    // ) +
-    // "        data.on_system_ready_event();\n"+
-    // "        //P2_PLACE_HOLDER\n"+
-    // stringIf( ddbt.Compiler.PRINT_TIMING_INFO,
-    //   "        gettimeofday(&ts2, NULL);\n"+
-    //   "        long int et2 = (ts2.tv_sec - ts1.tv_sec) * 1000L + (ts2.tv_usec - ts1.tv_usec) / 1000;\n"+
-    //   "        std::cout << \"OnSystemReady time: \" << et2 << \" (ms)\" << std::endl;\n"+
-    //   "        gettimeofday(&data.t0, NULL);\n"
-    // ) +
-    // "    }\n"+
-    // "\n"+
-    // "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
-    // "    snapshot_t take_snapshot(){\n"+
-    // stringIf(ddbt.Compiler.PRINT_TIMING_INFO,
-    //   "        gettimeofday(&data.t, NULL);\n"+
-    //   "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
-    //   "        std::cout << \"Trigger running time: \" << t << \" (ms)\" << std::endl;\n"
-    // ) +
-    // "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
-    // "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
-    // "        return snapshot_t( d );\n"+
-    // "    }\n"+
-    // "\n"+
-    // "  protected:\n"+
-    // "    data_t data;\n"+
-    // "};\n"+ 
-    // stringIf(cls != "Program",
-    //   "class " + cls + " : public Program\n"+
-    //   "{\n"+
-    //   "  public:\n"+
-    //   "    " + cls + "(int argc = 0, char* argv[] = 0) : Program(argc,argv) {\n"+
-    //   "    }\n"+
-    //   "};\n"
-    // )
   })
+
+  private def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
 
   private def genStreams(s:Source): String = {
     val sourceId = fresh("source");
@@ -1098,25 +1124,32 @@ trait ICppGen extends IScalaGen {
     ss
   }
 
-  override def pkgWrapper(pkg:String, body:String) = additionalImports+"\n"+"namespace dbtoaster {\n"+ind(body)+"\n\n}\n"
-
-  def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
-
   override val additionalImports: String = 
     stringIf(EXPERIMENTAL_RUNTIME_LIBRARY,
       s"""|#include <sys/time.h>
+          |#include <vector>
           |#include "macro.hpp"
           |#include "types.hpp"
           |#include "functions.hpp"
           |#include "hash.hpp"
           |${stringIf(EXPERIMENTAL_CPP_HASHMAP, "#include \"hashmap.hpp\"", "#include \"mmap.hpp\"")}
           |#include "serialization.hpp"
-          |""".stripMargin,          
+          |""".stripMargin,
+
       s"""|#include "program_base.hpp"
-           |#include "hpds/KDouble.hpp"
+          |#include "hpds/KDouble.hpp"
           |#include "hash.hpp"
           |#include "mmap/mmap.hpp"
           |#include "hpds/pstring.hpp"
           |#include "hpds/pstringops.hpp"
           |""".stripMargin)
+
+  override def pkgWrapper(pkg: String, body: String) = 
+    s"""|${additionalImports}
+        |${stringIf(EXPERIMENTAL_RUNTIME_LIBRARY, usedRelationDirectives)}
+        |
+        |namespace dbtoaster {
+        |${ind(body)}
+        |}
+        """.stripMargin    
 }
