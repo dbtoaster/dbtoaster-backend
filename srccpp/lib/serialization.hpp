@@ -19,6 +19,8 @@
 #define DBT_SERIALIZATION_NVP( ar , name )  \
     dbtoaster::serialize_nvp(ar, STRING(name), name)
 
+#define ELEM_SEPARATOR "\n\t\t\t"
+
 namespace dbtoaster {
 
 typedef std::ostream xml_oarchive;

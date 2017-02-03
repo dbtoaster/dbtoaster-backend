@@ -17,10 +17,12 @@ trait ICppGen extends IScalaGen {
   val VALUE_NAME = "__av"
 
   val EXPERIMENTAL_CPP_HASHMAP = false
-  val EXPERIMENTAL_RUNTIME_LIBRARY = true
+  val EXPERIMENTAL_RUNTIME_LIBRARY = false
 
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
+
+  private def stringIf(flag: Boolean, t: => String, e: => String = "") = if (flag) t else e
 
   private var mapDefs = Map[String,MapDef]() //mapName => MapDef
   private val mapDefsList = scala.collection.mutable.MutableList[(String,MapDef)]() //List(mapName => MapDef) to preserver the order
@@ -427,12 +429,14 @@ trait ICppGen extends IScalaGen {
     case _ => sys.error("Unimplemented") // we leave room for other type of events
   }
 
-  override def genTrigger(t:Trigger, s0:System):String = {
-    val (n,as, xActCounter) = t.evt match {
-      case EvtReady => ("system_ready_event",Nil,"")
-      case EvtBatchUpdate(sc@Schema(n,cs)) => ("batch_update_"+n,cs,"tN+="+sc.deltaName+".count()-1; ++tN;") //later, we will find ++tN in the code to add some benchmarkings, so we will let it remain here
-      case EvtAdd(Schema(n,cs)) => ("insert_"+n,cs,"++tN;")
-      case EvtDel(Schema(n,cs)) => ("delete_"+n,cs,"++tN;")
+  override def genTrigger(t: Trigger, s0: System): String = {
+    val (n, as, xActCounter) = t.evt match {
+      case EvtReady => ("system_ready_event", Nil, "")
+      case EvtBatchUpdate(sc @ Schema(n,cs)) => 
+        //later, we will find ++tN in the code to add some benchmarkings, so we will let it remain here
+        ("batch_update_" + n, cs, "tN+=" + sc.deltaName + ".count()-1; ++tN;") 
+      case EvtAdd(Schema(n,cs)) => ("insert_" + n, cs, "++tN;")
+      case EvtDel(Schema(n,cs)) => ("delete_" + n, cs, "++tN;")
     }
     ctx=Ctx(as.map(x=>(x._1,(x._2,x._1))).toMap)
     val preBody="{  "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+xActCounter+"\n"
@@ -487,67 +491,72 @@ trait ICppGen extends IScalaGen {
   private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) = (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps)
 
   override def apply(s0:System):String = {
-    def register_maps = s0.maps.map{m=>"pb.add_map<"+m.toCppType+">( \""+m.name+"\", "+m.name+" );\n"}.mkString
 
-    def register_relations = s0.sources.map{s => "pb.add_relation(\""+s.schema.name+"\"" + (if(s.stream) "" else ", true") + ");\n"}.mkString
+    def register_maps = s0.maps.map { m => 
+        "pb.add_map<" + m.toCppType + ">( \"" + m.name + "\", " + m.name + " );\n"
+      }.mkString
 
-    def register_table_triggers = s0.sources.filter(!_.stream).map{ s => 
-      (if(s0.triggers.exists{
-        t=>t.evt match {
-          case EvtBatchUpdate(_) => true
-          case _ => false
-        }
-      }) "pb.add_trigger(\""+s.schema.name+"\", batch_update, std::bind(&data_t::unwrap_batch_update_"+s.schema.name+", this, std::placeholders::_1));\n" else "") +
-      "pb.add_trigger(\""+s.schema.name+"\", insert_tuple, std::bind(&data_t::unwrap_insert_"+s.schema.name+", this, std::placeholders::_1));\n"
-      
-    }.mkString
+    def register_relations = s0.sources.map { s => 
+        "pb.add_relation(\"" + s.schema.name + "\"" + (if (s.stream) "" else ", true") + ");\n"
+      }.mkString
 
-    def register_stream_triggers = s0.triggers.filter(_.evt != EvtReady).map{ t=>t.evt match {
+    def register_table_triggers = s0.sources.filter(!_.stream).map { s => 
+        stringIf(
+          s0.triggers.exists { _.evt match {
+              case EvtBatchUpdate(_) => true
+              case _ => false
+          }}, "pb.add_trigger(\"" + s.schema.name + "\", batch_update, std::bind(&data_t::unwrap_batch_update_" + s.schema.name + ", this, std::placeholders::_1));\n" 
+        ) + 
+        "pb.add_trigger(\"" + s.schema.name + "\", insert_tuple, std::bind(&data_t::unwrap_insert_" + s.schema.name + ", this, std::placeholders::_1));\n"      
+      }.mkString
+
+    def register_stream_triggers = s0.triggers.filter(_.evt != EvtReady).map { _.evt match {
         case EvtBatchUpdate(Schema(n,_)) =>
-          "pb.add_trigger(\""+n+"\", batch_update, std::bind(&data_t::unwrap_batch_update_"+n+", this, std::placeholders::_1));\n" +
-          "pb.add_trigger(\""+n+"\", insert_tuple, std::bind(&data_t::unwrap_insert_"+n+", this, std::placeholders::_1));\n" +
-          "pb.add_trigger(\""+n+"\", delete_tuple, std::bind(&data_t::unwrap_delete_"+n+", this, std::placeholders::_1));\n"
-        case EvtAdd(Schema(n,_)) => "pb.add_trigger(\""+n+"\", insert_tuple, std::bind(&data_t::unwrap_insert_"+n+", this, std::placeholders::_1));\n"
-        case EvtDel(Schema(n,_)) => "pb.add_trigger(\""+n+"\", delete_tuple, std::bind(&data_t::unwrap_delete_"+n+", this, std::placeholders::_1));\n"
+          "pb.add_trigger(\"" + n + "\", batch_update, std::bind(&data_t::unwrap_batch_update_" + n + ", this, std::placeholders::_1));\n" +
+          "pb.add_trigger(\"" + n + "\", insert_tuple, std::bind(&data_t::unwrap_insert_" + n + ", this, std::placeholders::_1));\n" +
+          "pb.add_trigger(\"" + n + "\", delete_tuple, std::bind(&data_t::unwrap_delete_" + n + ", this, std::placeholders::_1));\n"
+        case EvtAdd(Schema(n,_)) => "pb.add_trigger(\"" + n + "\", insert_tuple, std::bind(&data_t::unwrap_insert_" + n + ", this, std::placeholders::_1));\n"
+        case EvtDel(Schema(n,_)) => "pb.add_trigger(\"" + n + "\", delete_tuple, std::bind(&data_t::unwrap_delete_" + n + ", this, std::placeholders::_1));\n"
         case _ => ""
-      }
-    }.mkString
+      }}.mkString
 
     def init_stats = ""
 
-    def genTableTriggers = s0.sources.filter(!_.stream).map{ s =>
-      val name = s.schema.name
-      val fields = s.schema.fields
-      "void on_insert_"+name+"("+fields.map{case (fld,tp) => "const "+tp.toCpp+" "+fld }.mkString(", ")+") {\n"+
-      "  "+name+"_entry e("+fields.map{case (fld,_) => fld }.mkString(", ")+", 1L);\n"+
-      "  "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
-      "}\n\n" +
-      (if (EXPERIMENTAL_RUNTIME_LIBRARY) "" else {
-        generateUnwrapFunction(EvtAdd(s.schema))+
-        (if(s0.triggers.exists{
-            t=>t.evt match {
-              case EvtBatchUpdate(_) => true
-              case _ => false
-            }
-          })
-          "void unwrap_batch_update_"+name+"(const event_args_t& eaList) {\n"+
-          "  size_t sz = eaList.size();\n"+
-          "  for(size_t i=0; i < sz; i++){\n"+
-          "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
-          "    "+name+"_entry e("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"1L);\n"+
-          "    "+ADD_TO_MAP_FUNC(name)+"(e,1L);\n"+
-          "  }\n"+
-          "}\n\n"
-        else "")
-      })
-    }.mkString
+    def genTableTriggers = s0.sources.filter(!_.stream).map { s =>
+        val name = s.schema.name
+        val fields = s.schema.fields
+        
+        "void on_insert_" + name + "(" + fields.map { 
+            case (fld,tp) => "const " + tp.toCpp + " " + fld 
+          }.mkString(", ") + ") {\n"+
+        "  " + name + "_entry e(" + fields.map { case (fld,_) => fld }.mkString(", ") + ", 1L);\n" +
+        "  " + ADD_TO_MAP_FUNC(name) + "(e,1L);\n" +
+        "}\n\n" +
+        stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY,
+          generateUnwrapFunction(EvtAdd(s.schema)) +
+          stringIf(
+            s0.triggers.exists { _.evt match {
+                case EvtBatchUpdate(_) => true
+                case _ => false
+            }},
+            "void unwrap_batch_update_" + name + "(const event_args_t& eaList) {\n"+
+            "  size_t sz = eaList.size();\n"+
+            "  for(size_t i=0; i < sz; i++){\n"+
+            "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
+            "    " + name + "_entry e(" + fields.zipWithIndex.map { case ((_, tp), i) => "*(reinterpret_cast<" + tp.toCpp + "*>((*ea)[" + i + "].get())), "}.mkString + "1L);\n" +
+            "    " + ADD_TO_MAP_FUNC(name) + "(e,1L);\n" +
+            "  }\n" +
+            "}\n\n"
+          )
+        )
+      }.mkString
 
     def genStreamTriggers = s0.triggers.map(t =>
-      genTrigger(t,s0)+"\n"+
-      (if(t.evt != EvtReady) generateUnwrapFunction(t.evt) else "")
-    ).mkString
+        genTrigger(t, s0) + "\n" + 
+        stringIf(t.evt != EvtReady, generateUnwrapFunction(t.evt))
+      ).mkString
 
-    def generateUnwrapFunction(evt:EvtTrigger) = if (EXPERIMENTAL_RUNTIME_LIBRARY) "" else {
+    def generateUnwrapFunction(evt:EvtTrigger) = stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY, {
       val (op,name,fields) = evt match {
         case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
         case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
@@ -613,7 +622,7 @@ trait ICppGen extends IScalaGen {
           "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
           "}\n\n"
       }
-    }
+    })
 
     def genMapStructDef(m:MapDef) = {
       val mapName = m.name
@@ -915,68 +924,125 @@ trait ICppGen extends IScalaGen {
     "\n"
   }
 
-  private def printIf(flag: Boolean, s: String) = if (flag) s else ""
-
   // Helper that contains the main and stream generator
-  private def helper(s0:System) = if (EXPERIMENTAL_RUNTIME_LIBRARY) "" else {
-    val dataset = "standard" //XXXX
-    "/* Type definition providing a way to execute the sql program */\n"+
-    "class Program : public ProgramBase\n"+
-    "{\n"+
-    "  public:\n"+
-    "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
-    "      data.register_data(*this);\n"+
-           ind(streams(s0.sources),3)+"\n\n"+
-    "    }\n"+
-    "\n"+
-    "    /* Imports data for static tables and performs view initialization based on it. */\n"+
-    "    void init() {\n"+
-    "        //P0_PLACE_HOLDER\n"+
-    "        table_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, true);\n"+
-    "        stream_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, false);\n"+
-    printIf( ddbt.Compiler.PRINT_TIMING_INFO,
-      "        struct timeval ts0, ts1, ts2;\n" +
-      "        gettimeofday(&ts0, NULL);\n"
-    ) +
-    "        process_tables();\n"+
-    printIf( ddbt.Compiler.PRINT_TIMING_INFO,
-      "        gettimeofday(&ts1, NULL);\n"+
-      "        long int et1 = (ts1.tv_sec - ts0.tv_sec) * 1000L + (ts1.tv_usec - ts0.tv_usec) / 1000;\n"+
-      "        std::cout << \"Loading tables time: \" << et1 << \" (ms)\" << std::endl;\n"
-    ) +
-    "        data.on_system_ready_event();\n"+
-    "        //P2_PLACE_HOLDER\n"+
-    printIf( ddbt.Compiler.PRINT_TIMING_INFO,
-      "        gettimeofday(&ts2, NULL);\n"+
-      "        long int et2 = (ts2.tv_sec - ts1.tv_sec) * 1000L + (ts2.tv_usec - ts1.tv_usec) / 1000;\n"+
-      "        std::cout << \"OnSystemReady time: \" << et2 << \" (ms)\" << std::endl;\n"+
-      "        gettimeofday(&data.t0, NULL);\n"
-    ) +
-    "    }\n"+
-    "\n"+
-    "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
-    "    snapshot_t take_snapshot(){\n"+
-    printIf(ddbt.Compiler.PRINT_TIMING_INFO,
-      "        gettimeofday(&data.t, NULL);\n"+
-      "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
-      "        std::cout << \"Trigger running time: \" << t << \" (ms)\" << std::endl;\n"
-    ) +
-    "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
-    "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
-    "        return snapshot_t( d );\n"+
-    "    }\n"+
-    "\n"+
-    "  protected:\n"+
-    "    data_t data;\n"+
-    "};\n"+ (if (cls != "Program") {
-    "class "+cls+" : public Program\n"+
-    "{\n"+
-    "  public:\n"+
-    "    "+cls+"(int argc = 0, char* argv[] = 0) : Program(argc,argv) {\n"+
-    "    }\n"+
-    "};\n"
-    } else "")
-  }
+  private def helper(s0: System) = stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY, {
+    val dataset = "standard"
+    val ifReleaseMode = stringIf(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE, "// ")
+    val ifPrintTimingInfo = stringIf(!ddbt.Compiler.PRINT_TIMING_INFO, "// ")
+    val programClass = stringIf(cls != "Program",
+      s"""|class ${cls} : public Program
+          |{
+          |  public:
+          |    ${cls}(int argc = 0, char* argv[] = 0) : Program(argc, argv) { }
+          |};""".stripMargin
+    )
+    s"""|/* Type definition providing a way to execute the sql program */
+        |class Program : public ProgramBase
+        |{
+        |  public:
+        |    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {
+        |      data.register_data(*this);
+        |${ind(streams(s0.sources), 3)}
+        |    }
+        |
+        |    /* Imports data for static tables and performs view initialization based on it. */
+        |    void init() {
+        |        //P0_PLACE_HOLDER
+        |        table_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, true);
+        |        stream_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, false);
+        |
+        |        ${ifPrintTimingInfo}struct timeval ts0, ts1, ts2;
+        |        ${ifPrintTimingInfo}gettimeofday(&ts0, NULL);
+        |        process_tables();
+        |        ${ifPrintTimingInfo}gettimeofday(&ts1, NULL);
+        |        ${ifPrintTimingInfo}long int et1 = (ts1.tv_sec - ts0.tv_sec) * 1000L + (ts1.tv_usec - ts0.tv_usec) / 1000;
+        |        ${ifPrintTimingInfo}std::cout << "Populating static tables time: " << et1 << " (ms)" << std::endl;
+        |
+        |        data.on_system_ready_event();
+        |        ${ifPrintTimingInfo}gettimeofday(&ts2, NULL);
+        |        ${ifPrintTimingInfo}long int et2 = (ts2.tv_sec - ts1.tv_sec) * 1000L + (ts2.tv_usec - ts1.tv_usec) / 1000;
+        |        ${ifPrintTimingInfo}std::cout << "OnSystemReady time: " << et2 << " (ms)" << std::endl;
+        |
+        |        //P2_PLACE_HOLDER
+        |        gettimeofday(&data.t0, NULL);
+        |    }
+        |
+        |    /* Saves a snapshot of the data required to obtain the results of top level queries. */
+        |    snapshot_t take_snapshot() {
+        |        ${ifPrintTimingInfo}gettimeofday(&data.t, NULL);
+        |        ${ifPrintTimingInfo}long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;
+        |        ${ifPrintTimingInfo}std::cout << "Trigger running time: " << t << " (ms)" << std::endl;
+        |
+        |        tlq_t* d = new tlq_t((tlq_t&) data);
+        |        ${ifReleaseMode}if (d->tS == 0) { ${tc("d->")} } printf(\"SAMPLE=${dataset},%ld,%ld,%ld\\n\", d->tT, d->tN, d->tS);
+        |        return snapshot_t( d );
+        |    }
+        |
+        |  protected:
+        |    data_t data;
+        |};
+        |
+        |${programClass}
+        |""".stripMargin
+
+    // "/* Type definition providing a way to execute the sql program */\n"+
+    // "class Program : public ProgramBase\n"+
+    // "{\n"+
+    // "  public:\n"+
+    // "    Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {\n"+
+    // "      data.register_data(*this);\n"+
+    //        ind(streams(s0.sources),3)+"\n\n"+
+    // "    }\n"+
+    // "\n"+
+    // "    /* Imports data for static tables and performs view initialization based on it. */\n"+
+    // "    void init() {\n"+
+    // "        //P0_PLACE_HOLDER\n"+
+    // "        table_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, true);\n"+
+    // "        stream_multiplexer.init_source(run_opts->batch_size, run_opts->parallel, false);\n"+
+    // stringIf( ddbt.Compiler.PRINT_TIMING_INFO,
+    //   "        struct timeval ts0, ts1, ts2;\n" +
+    //   "        gettimeofday(&ts0, NULL);\n"
+    // ) +
+    // "        process_tables();\n"+
+    // stringIf( ddbt.Compiler.PRINT_TIMING_INFO,
+    //   "        gettimeofday(&ts1, NULL);\n"+
+    //   "        long int et1 = (ts1.tv_sec - ts0.tv_sec) * 1000L + (ts1.tv_usec - ts0.tv_usec) / 1000;\n"+
+    //   "        std::cout << \"Populating tables: \" << et1 << \" (ms)\" << std::endl;\n"
+    // ) +
+    // "        data.on_system_ready_event();\n"+
+    // "        //P2_PLACE_HOLDER\n"+
+    // stringIf( ddbt.Compiler.PRINT_TIMING_INFO,
+    //   "        gettimeofday(&ts2, NULL);\n"+
+    //   "        long int et2 = (ts2.tv_sec - ts1.tv_sec) * 1000L + (ts2.tv_usec - ts1.tv_usec) / 1000;\n"+
+    //   "        std::cout << \"OnSystemReady time: \" << et2 << \" (ms)\" << std::endl;\n"+
+    //   "        gettimeofday(&data.t0, NULL);\n"
+    // ) +
+    // "    }\n"+
+    // "\n"+
+    // "    /* Saves a snapshot of the data required to obtain the results of top level queries. */\n"+
+    // "    snapshot_t take_snapshot(){\n"+
+    // stringIf(ddbt.Compiler.PRINT_TIMING_INFO,
+    //   "        gettimeofday(&data.t, NULL);\n"+
+    //   "        long int t = (data.t.tv_sec - data.t0.tv_sec) * 1000L + (data.t.tv_usec - data.t0.tv_usec) / 1000;\n"+
+    //   "        std::cout << \"Trigger running time: \" << t << \" (ms)\" << std::endl;\n"
+    // ) +
+    // "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
+    // "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
+    // "        return snapshot_t( d );\n"+
+    // "    }\n"+
+    // "\n"+
+    // "  protected:\n"+
+    // "    data_t data;\n"+
+    // "};\n"+ 
+    // stringIf(cls != "Program",
+    //   "class " + cls + " : public Program\n"+
+    //   "{\n"+
+    //   "  public:\n"+
+    //   "    " + cls + "(int argc = 0, char* argv[] = 0) : Program(argc,argv) {\n"+
+    //   "    }\n"+
+    //   "};\n"
+    // )
+  })
 
   private def genStreams(s:Source): String = {
     val sourceId = fresh("source");
@@ -1037,23 +1103,20 @@ trait ICppGen extends IScalaGen {
   def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
 
   override val additionalImports: String = 
-    if (EXPERIMENTAL_RUNTIME_LIBRARY) {
+    stringIf(EXPERIMENTAL_RUNTIME_LIBRARY,
       s"""|#include <sys/time.h>
           |#include "macro.hpp"
           |#include "types.hpp"
           |#include "functions.hpp"
           |#include "hash.hpp"
-          |${if (EXPERIMENTAL_CPP_HASHMAP) "#include \"hashmap.hpp\"" else "#include \"mmap.hpp\""}
+          |${stringIf(EXPERIMENTAL_CPP_HASHMAP, "#include \"hashmap.hpp\"", "#include \"mmap.hpp\"")}
           |#include "serialization.hpp"
-          |""".stripMargin      
-    }
-    else {
+          |""".stripMargin,          
       s"""|#include "program_base.hpp"
-          |#include "hpds/KDouble.hpp"
+           |#include "hpds/KDouble.hpp"
           |#include "hash.hpp"
           |#include "mmap/mmap.hpp"
           |#include "hpds/pstring.hpp"
           |#include "hpds/pstringops.hpp"
-          |""".stripMargin
-    }
+          |""".stripMargin)
 }

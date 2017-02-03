@@ -4,6 +4,7 @@
 #include "macro.hpp"
 #include <regex.h>
 #include <iostream>
+#include <stdexcept>
 
 using namespace std;
 
