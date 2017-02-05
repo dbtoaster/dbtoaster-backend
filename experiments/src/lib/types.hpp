@@ -4,8 +4,8 @@
 // #include <stdexcept>
 #include "string.hpp"
 
-//#define DOUBLE_ZERO_APPROXIMATED
-//#define DOUBLE_ZERO_THRESHOLD 1e-8
+// #define DOUBLE_ZERO_APPROXIMATED
+// #define DOUBLE_ZERO_THRESHOLD 1e-8
 
 namespace dbtoaster
 {

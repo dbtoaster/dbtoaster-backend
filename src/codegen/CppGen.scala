@@ -6,7 +6,7 @@ import ddbt.ast._
  * CppGen is responsible to transform a typed AST into 
  * vanilla C++ code (String).
  *
- * @author Mohammad Dashti
+ * @author Mohammad Dashti, Milos Nikolic
  */
 class CppGen(override val cls:String="Query") extends ICppGen
 
@@ -29,7 +29,7 @@ trait ICppGen extends IScalaGen {
   private var mapDefs = Map[String,MapDef]() //mapName => MapDef
   private val mapDefsList = scala.collection.mutable.MutableList[(String,MapDef)]() //List(mapName => MapDef) to preserver the order
   private val tmpMapDefs = HashMap[String,(List[Type],Type)]() //tmp mapName => (List of key types and value type)
-  private var deltaMapNames = Set[String]()
+  private var deltaRelationNames = Set[String]()
 
   private var usedRelationDirectives = ""
 
@@ -198,7 +198,7 @@ trait ICppGen extends IScalaGen {
             co(v0)
 
           if (ko.size > 0) { //slice
-            if (EXPERIMENTAL_RUNTIME_LIBRARY && deltaMapNames.contains(mapName)) {
+            if (EXPERIMENTAL_RUNTIME_LIBRARY && deltaRelationNames.contains(mapName)) {
               sys.error("Delta relation requires secondary indices. Turn off experimental runtime library.")
             }
 
@@ -255,7 +255,8 @@ trait ICppGen extends IScalaGen {
                   |""".stripMargin
             }
             else {
-              if (EXPERIMENTAL_RUNTIME_LIBRARY && deltaMapNames.contains(mapName)) {
+              if (EXPERIMENTAL_RUNTIME_LIBRARY && deltaRelationNames.contains(mapName)) {
+                // TODO: if relation has alias, then this won't match external data structures.
                 s"""|{ //foreach
                     |  for (typename std::vector<T>::iterator ${e0} = begin; ${e0} != end; ${e0}++) {
                     |${ind(body, 2)}
@@ -431,7 +432,7 @@ trait ICppGen extends IScalaGen {
     case Repartition(ks, e) => cpsExpr(e, (v: String) => co(v))
     case Gather(e) => cpsExpr(e, (v: String) => co(v))
   
-    case _ => sys.error("Don't know how to generate "+ex)
+    case _ => sys.error("Don't know how to generate " + ex)
   }
 
   override def genStmt(s:Stmt):String = s match {
@@ -441,8 +442,8 @@ trait ICppGen extends IScalaGen {
         case OpSet => (ADD_TO_MAP_FUNC(m.name), "=") 
       }
       val mapName = m.name
-      val mapType = mapName+"_map"
-      val mapEntry = mapName+"_entry"
+      val mapType = mapName + "_map"
+      val mapEntry = mapName + "_entry"
       val sampleEnt = fresh("se")
       sampleEntDef += stringIf(m.keys.size > 0,  s"  ${mapEntry} ${sampleEnt};\n")
       val clear = op match { 
@@ -491,7 +492,10 @@ trait ICppGen extends IScalaGen {
       case EvtReady => ("system_ready_event", Nil, "")
       case EvtBatchUpdate(sc @ Schema(n,cs)) => 
         //later, we will find ++tN in the code to add some benchmarkings, so we will let it remain here
-        ("batch_update_" + n, cs, "tN+=" + sc.deltaName + ".count()-1; ++tN;") 
+        if (EXPERIMENTAL_RUNTIME_LIBRARY) 
+          ("batch_update_" + n, cs, "tN += std::distance(begin, end);")
+        else 
+          ("batch_update_" + n, cs, "tN += " + sc.deltaName + ".count() - 1; ++tN;") 
       case EvtAdd(Schema(n,cs)) => ("insert_" + n, cs, "++tN;")
       case EvtDel(Schema(n,cs)) => ("delete_" + n, cs, "++tN;")
     }
@@ -511,8 +515,8 @@ trait ICppGen extends IScalaGen {
         val params = t.evt match {
           case EvtBatchUpdate(Schema(n,_)) =>
             val rel = s0.sources.filter(_.schema.name == n)(0).schema
-            val ks = rel.fields.map(_._2)
-            val tp = TypeLong
+            // val ks = rel.fields.map(_._2)
+            // val tp = TypeLong
             rel.deltaName + "_map& " + rel.deltaName
           case _ =>
             as.map(a => s"const ${a._2.toCppRefType} ${a._1}").mkString(", ")
@@ -525,40 +529,55 @@ trait ICppGen extends IScalaGen {
         |""".stripMargin
   }
 
-  override def slice(m:String,i:List[Int]):Int = { // add slicing over particular index capability
-    val s=sx.getOrElse(m,List[List[Int]]()); val n=s.indexOf(i)
+  override def slice(m: String, i: List[Int]):Int = { // add slicing over particular index capability
+    val s = sx.getOrElse(m, List[List[Int]]())
+    val n = s.indexOf(i)
     if (n != -1) n else { sx.put(m,s ::: List(i)); s.size }
   }
 
-  override def genMap(m: MapDef):String = {
-    m.toCppType+" "+m.name+";\n"
-  }
+  override def genMap(m: MapDef):String = 
+    m.toCppType + " " + m.name + ";\n"
+ 
+  override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = 
+    map + ".add(" + keyNamesConcat + ", 1L)"
 
-  override def genInitializationFor(map:String, keyNames:List[(String,Type)], keyNamesConcat: String) = map+".add("+keyNamesConcat+",1L)"
-
-  override def toMapFunction(q: Query) = q.name+".toMap"
+  override def toMapFunction(q: Query) = q.name + ".toMap"
   override def clearOut = {}
   override def onEndStream = ""
 
-  def genIntermediateDataStructureRefs(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>queries.filter(_.name==m.name).size == 0}.map(genMap).mkString
+  def genIntermediateDataStructureRefs(maps:List[MapDef], queries:List[Query]) = 
+    maps.filter { m => queries.filter(_.name == m.name).size == 0}.map(genMap).mkString
 
-  def genTempMapDefs = tmpMapDefs.map{ case (n, (ksTp, vsTp)) => "MultiHashMap<"+tupType(ksTp, vsTp)+","+vsTp.toCpp+",HashIndex<"+tupType(ksTp, vsTp)+","+vsTp.toCpp+"> > "+n+";\n" }.mkString
+  def genTempMapDefs = 
+    tmpMapDefs.map{ case (n, (ksTp, vsTp)) => 
+      "MultiHashMap<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + ", HashIndex<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + "> > " + n + ";\n"
+    }.mkString
 
-  def isExpressiveTLQSEnabled(queries:List[Query]) = queries.exists{ query => query.map match {
-      case MapRef(n,_,_) => if (n == query.name) false else true
-      case _ => true
+  def isExpressiveTLQSEnabled(queries:List[Query]) = 
+    queries.exists { query => query.map match {
+        case MapRef(n,_,_) => (n != query.name)
+        case _ => true
+      }
     }
-  }
 
-  private def getInitializationForIntermediateValues(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>(queries.filter(_.name==m.name).size == 0) && (m.keys.size == 0)}.map{m=>", "+m.name+"(" + m.tp.zeroCpp + ")"}.mkString
+  private def getInitializationForIntermediateValues(maps:List[MapDef],queries:List[Query]) = 
+    maps.filter { m => (queries.filter(_.name == m.name).size == 0) && (m.keys.size == 0)}
+        .map { m => ", " + m.name + "(" + m.tp.zeroCpp + ")"}
+        .mkString
 
   private def getInitializationForTempMaps = tmpMapDefs.map{ case (n, (ksTp, vsTp)) => ", "+n+"(16U)" }.mkString
 
-  private def getInitializationForPublicValues(maps:List[MapDef],queries:List[Query]) = maps.filter{m=>(queries.filter(_.name==m.name).size != 0) && (m.keys.size == 0)}.map{m=>", "+m.name+"(" + m.tp.zeroCpp + ")"}.mkString
+  private def getInitializationForPublicValues(maps:List[MapDef],queries:List[Query]) = 
+    maps.filter { m => (queries.filter(_.name == m.name).size != 0) && (m.keys.size == 0)}
+        .map { m => ", " + m.name + "(" + m.tp.zeroCpp + ")"}
+        .mkString
 
-  private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) = getInitializationForPublicValues(maps,queries) + (if(isExpressiveTLQSEnabled(queries)) getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps else "")
+  private def getInitializationForTLQ_T(maps:List[MapDef],queries:List[Query]) = 
+    getInitializationForPublicValues(maps,queries) + 
+    stringIf(isExpressiveTLQSEnabled(queries), getInitializationForIntermediateValues(maps,queries) + getInitializationForTempMaps)
 
-  private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) = (if(isExpressiveTLQSEnabled(queries)) "" else getInitializationForIntermediateValues(maps,queries)+getInitializationForTempMaps)
+  private def getInitializationForDATA_T(maps:List[MapDef],queries:List[Query]) = 
+    stringIf(!isExpressiveTLQSEnabled(queries), getInitializationForIntermediateValues(maps,queries) + getInitializationForTempMaps)
 
   override def apply(s0:System):String = {
 
@@ -762,11 +781,11 @@ trait ICppGen extends IScalaGen {
       }.mkString("\n")
 
       def genTypeDefs =
-        "typedef MultiHashMap<"+mapEntry+","+mapValueType+","+
-        allIndices.map{case (is,unique) => "\n  HashIndex<"+mapEntry+","+mapValueType+","+mapType+"key"+getIndexId(mapName,is)+"_idxfn,"+unique+">"}.mkString(",")+
-        "\n> "+mapType+";\n"+
-        allIndices.map{ case (is,unique) =>
-          "typedef HashIndex<"+mapEntry+","+mapValueType+","+mapType+"key"+getIndexId(mapName,is)+"_idxfn,"+unique+"> HashIndex_"+mapType+"_"+getIndexId(mapName,is)+";\n"
+        "typedef MultiHashMap<" + mapEntry + ", " + mapValueType + ", " +
+        allIndices.map { case (is, unique) => "\n  HashIndex<" + mapEntry + ", " + mapValueType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn, " + unique + ">"}.mkString(",") +
+        "\n> " + mapType + ";\n" +
+        allIndices.map { case (is, unique) =>
+          "typedef HashIndex<" + mapEntry + ", " + mapValueType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn, " + unique + "> HashIndex_" + mapType + "_" + getIndexId(mapName, is) + ";\n"
         }.mkString
 
       genEntryStruct+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs
@@ -834,7 +853,7 @@ trait ICppGen extends IScalaGen {
     }
     mapDefs = mapDefsList.toMap
 
-    deltaMapNames = s0.triggers.flatMap(_.evt match { //delta relations
+    deltaRelationNames = s0.triggers.flatMap(_.evt match { //delta relations
       case EvtBatchUpdate(s) =>
         val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
         List(schema.deltaName)
@@ -943,18 +962,18 @@ trait ICppGen extends IScalaGen {
   private def helperResultAccessor(s0:System) = {
     def compile_serialization = s0.queries.map{q =>
       "ar << \"\\n\";\n"+
-      "const " + q.toCppRefType + " _"+q.name+" = get_"+q.name+"();\n"+
-      "dbtoaster::serialize_nvp_tabbed(ar, STRING("+q.name+"), _"+q.name+", \"\\t\");\n"
+      "const " + q.toCppRefType + " _" + q.name + " = get_" + q.name + "();\n"+ 
+      "dbtoaster::serialize_nvp_tabbed(ar, STRING(" + q.name+"), _" + q.name + ", \"\\t\");\n"
     }.mkString
 
     def compile_tlqs = s0.queries.map{ query =>
-      "const " + query.toCppRefType + " get_"+query.name+"() const {\n"+
+      "const " + query.toCppRefType + " get_" + query.name + "() const {\n"+
       (query.map match {
-        case MapRef(n,_,_) if (n == query.name) => "  return "+query.name+";\n"
+        case MapRef(n,_,_) if (n == query.name) => "  return " + query.name + ";"
         case _ => 
           ctx = Ctx[(Type,String)]()
           ind(
-            if(query.keys.length == 0) cpsExpr(query.map, (v:String) => "return "+v+";")+"\n"
+            if (query.keys.length == 0) cpsExpr(query.map, (v: String) => "return " + v + ";") + "\n"
             else {
               val nk = query.keys.map(_._1)
               val nkTp = query.keys.map(_._2)
@@ -974,38 +993,37 @@ trait ICppGen extends IScalaGen {
     }.mkString
 
     def compile_tlqs_decls = s0.queries.map { q =>
-      q.toCppType + " "+q.name+";\n"
+      q.toCppType + " " +q.name + ";\n"
     }.mkString
 
-    "/* Type definition providing a way to access the results of the sql program */\n"+
-    "struct tlq_t{\n"+
-    "  struct timeval t0,t; long tT,tN,tS;\n"+
-    "  tlq_t(): tN(0), tS(0)"+getInitializationForTLQ_T(s0.maps,s0.queries)+" { gettimeofday(&t0,NULL); }\n"+
-    "\n"+
-    "/* Serialization Code */\n"+
-    "  template<class Archive>\n"+
-    "  void serialize(Archive& ar, const unsigned int version) const {\n"+
-    "\n"+
-         ind(compile_serialization,2)+
-    "\n\n"+
-    "  }\n"+
-    "\n"+
-    "  /* Functions returning / computing the results of top level queries */\n"+
-         ind(compile_tlqs)+
-    "\n\n"+
-    "protected:\n"+
-    "\n"+
-    "  /* Data structures used for storing / computing top level queries */\n"+
-         ind(compile_tlqs_decls)+
-    "\n\n"+
-    (if(isExpressiveTLQSEnabled(s0.queries)) {
-    "  /* Data structures used for storing materialized views */\n"+
-       ind(genIntermediateDataStructureRefs(mapDefsList.map(_._2).toList,s0.queries))+"\n"+
-       ind(genTempMapDefs)+"\n"+
-       ind(consts)+
-    "\n\n"} else "")+
-    "};\n"+
-    "\n"
+    def compile_expressive_tlqs = stringIf(isExpressiveTLQSEnabled(s0.queries), 
+      "\n  /* Data structures used for storing materialized views */\n" +
+      ind(genIntermediateDataStructureRefs(mapDefsList.map(_._2).toList, s0.queries)) + "\n" +
+      ind(genTempMapDefs) + "\n" +
+      ind(consts) + "\n"
+    )
+
+    s"""|/* Type definition providing a way to access the results of the sql program */
+        |struct tlq_t {
+        |  struct timeval t0, t; long tT, tN, tS;
+        |  tlq_t(): tN(0), tS(0) ${getInitializationForTLQ_T(s0.maps,s0.queries)} { gettimeofday(&t0, NULL); }
+        |
+        |  /* Serialization Code */
+        |  template<class Archive>
+        |  void serialize(Archive& ar, const unsigned int version) const {
+        |${ind(compile_serialization, 2)}
+        |  }
+        |
+        |  /* Functions returning / computing the results of top level queries */
+        |${ind(compile_tlqs)}
+        |
+        |protected:
+        |  /* Data structures used for storing / computing top level queries */
+        |${ind(compile_tlqs_decls)}
+        |${compile_expressive_tlqs}
+        |};
+        |
+        |""".stripMargin
   }
 
   // Helper that contains the main and stream generator
