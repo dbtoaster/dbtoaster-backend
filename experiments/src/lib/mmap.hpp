@@ -673,6 +673,15 @@ class MultiHashMap {
       }
     }
 };
+
+template<typename T, typename V>
+FORCE_INLINE void add_to_temp_map(MultiHashMap<T, V, HashIndex<T, V, T> >& m, const T& k)
+{
+    if (ZeroValue<V>().isZero(k.__av)) return;
+    T* lkup = m.get(k);
+    if (lkup != nullptr) lkup->__av += k.__av;
+    else /*k.__av = v;*/ m.insert_nocheck(k);
 }
 
+}
 #endif /* DBTOASTER_MMAP_HPP */

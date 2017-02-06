@@ -57,7 +57,7 @@ trait ICppGen extends IScalaGen {
       sampleEntDef += "  " + tupType(ksTp, vsTp) + " " + sampleTempEnt + ";\n"
       extractBooleanExp(vs) match {
         case Some((c,t)) =>
-          "(/*if */("+c+") ? add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, t)+") : voidFunc());\n"
+          "(/*if */("+c+") ? add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, t)+") : (void)0);\n"
         case _ =>
           "add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, vs)+");\n"
       }
