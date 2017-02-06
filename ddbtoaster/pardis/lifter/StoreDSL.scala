@@ -240,7 +240,6 @@ trait StoreDSL extends
 
     //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
     //var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
-    var idx = 0
     //println(s"tpeeee: ${m.typeArguments}")
     val entVal = ent.get(n.asInstanceOf[Rep[Int]])(lastMan)
     // if(tmp) {
@@ -262,7 +261,7 @@ trait StoreDSL extends
     __ifThenElse(infix_==(entVal, unit(zero(lastMan))), unit(()), {
       ///////
       val currentEnt = stGet(map, ent) //map.get((1 until n).map(i => (i, ent.get(i))) : _*)
-      __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {
+      __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(ent), {
         currentEnt +=(n, entVal)
         val currentEntVal = currentEnt.get(n)(lastMan)
         __ifThenElse(infix_==(currentEntVal, unit(zero(lastMan))), map.deleteCopy(currentEnt), map.updateCopy(currentEnt)) // question ???? changed delete - stDelete
@@ -282,17 +281,16 @@ trait StoreDSL extends
 
     //val tupVal = ((IHash,(1 until manifest[E].typeArguments.size).toList,USE_UNIQUE_INDEX_WHEN_POSSIBLE,-1))
     //var idx= -1; addIndicesToEntryClass[E](map, (xx, m) => { idx=m.indexOf(tupVal); if(idx < 0) { m+=tupVal; idx=m.size-1 } })
-    var idx = 0
     if (tmp) {
       // this never happens in practice
-      __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {
+      __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(ent), {
         currentEnt.update(n, entVal); map.updateCopy(currentEnt)
       }) // same
     } else {
       __ifThenElse(infix_==(entVal, unit(zero(lastMan))), {
         __ifThenElse(infix_==(currentEnt, unit(null)), unit(()), map.deleteCopy(currentEnt))
       }, {
-        __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(unit(idx), ent), {
+        __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(ent), {
           currentEnt.update(n, entVal); map.updateCopy(currentEnt)
         }) // same
       })
@@ -306,7 +304,7 @@ trait StoreDSL extends
 
   def stClear[E <: Entry : TypeRep](x: Rep[Store[E]]): Rep[Unit] = x.clear //StClear[E](x)
 
-  def stUnsafeInsert[E <: Entry : TypeRep](x: Rep[Store[E]], e: Rep[E], idx: Int): Rep[Unit] = x.unsafeInsert(unit(idx), e) //StUnsafeInsert[E](x, e, idx)
+  def stUnsafeInsert[E <: Entry : TypeRep](x: Rep[Store[E]], e: Rep[E]): Rep[Unit] = x.unsafeInsert(e) //StUnsafeInsert[E](x, e)
 
   def stNewEntry[E <: Entry : TypeRep](x: Rep[Store[E]], args: Seq[Rep[Any]]) = SteNewSEntry[E](x, args)
 

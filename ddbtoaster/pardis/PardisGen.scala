@@ -312,10 +312,10 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     if (Optimizer.analyzeEntry) {
       val ctx = ctx0(map)
       val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
-      map + s".unsafeInsert(0, $name(" + (if (Optimizer.analyzeIndex) "" else "false,") + keyNames.map(e => e._1).mkString(",") + ",1L))"
+      map + s".unsafeInsert($name(" + (if (Optimizer.analyzeIndex) "" else "false,") + keyNames.map(e => e._1).mkString(",") + ",1L))"
     }
     else
-      map + ".unsafeInsert(0, GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ",1L))"
+      map + ".unsafeInsert(GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ",1L))"
   }
 
   override def toMapFunction(q: Query) = {

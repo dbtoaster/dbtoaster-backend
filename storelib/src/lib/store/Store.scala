@@ -328,14 +328,13 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
 
   private val n = idxs.length
 
-  def unsafeInsert(idx: Int, ec: E): Unit = time("unsafeInsert") {
+  def unsafeInsert(ec: E): Unit = time("unsafeInsert") {
     if (ec == null) return;
     val e = ec.copy().asInstanceOf[E]
-    idxs(idx).unsafeInsert(e);
     var i = 0;
     while (i < n) {
-      if (idx != i && idxs(i) != null) idxs(i).insert(e);
-      i += 1;
+      if (idxs(i) != null) idxs(i).unsafeInsert(e)
+      i += 1
     }
   }
 

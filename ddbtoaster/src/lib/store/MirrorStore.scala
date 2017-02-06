@@ -16,7 +16,7 @@ class MStore[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]]) {
 
   // def this(n:Int) = this(new Array[Idx[E]](n),null)(cE)
   // def this(n:Int,ops:Array[EntryIdx[E]]) = this(new Array[Idx[E]](n),ops)(cE)
-  def unsafeInsert(idx: Int, e: E): Unit = ???
+  def unsafeInsert(e: E): Unit = ???
 
   def insert(e: E): Unit = ???
 

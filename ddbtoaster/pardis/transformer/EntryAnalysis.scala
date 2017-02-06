@@ -57,6 +57,8 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
     case sym -> (StoreGetCopy(store, _, key@Def(SteSampleSEntry(_, _)))) => add(key, store); add(sym, store); ()
     case sym -> (StoreGetCopy(store, _, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); add(sym, store); ()
 
+    case sym -> (StoreUnsafeInsert(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
+    case sym -> (StoreUnsafeInsert(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
     case sym -> (StoreInsert(store, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); ()
     case sym -> (StoreInsert(store, key@Def(SteNewSEntry(_, _)))) => add(key, store); ()
 

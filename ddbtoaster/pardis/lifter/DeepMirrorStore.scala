@@ -17,7 +17,7 @@ trait StoreOps extends Base with ArrayOps with EntryIdxOps with IdxOps {
   type StoreType[E <: ddbt.lib.store.Entry] = StoreIRs.StoreType[E]
   implicit def typeStore[E <: ddbt.lib.store.Entry: TypeRep]: TypeRep[Store[E]] = StoreType(implicitly[TypeRep[E]])
   implicit class StoreRep[E <: ddbt.lib.store.Entry](self : Rep[Store[E]])(implicit typeE : TypeRep[E]) {
-     def unsafeInsert(idx : Rep[Int], e : Rep[E]) : Rep[Unit] = storeUnsafeInsert[E](self, idx, e)(typeE)
+     def unsafeInsert(e : Rep[E]) : Rep[Unit] = storeUnsafeInsert[E](self, e)(typeE)
      def insert(e : Rep[E]) : Rep[Unit] = storeInsert[E](self, e)(typeE)
      def update(e : Rep[E]) : Rep[Unit] = storeUpdate[E](self, e)(typeE)
      def updateCopy(e : Rep[E]) : Rep[Unit] = storeUpdateCopy[E](self, e)(typeE)
@@ -105,7 +105,7 @@ trait StoreOps extends Base with ArrayOps with EntryIdxOps with IdxOps {
    def storeNew1[E <: ddbt.lib.store.Entry](idxs : Rep[Array[Idx[E]]], ops : Rep[Array[EntryIdx[E]]])(implicit typeE : TypeRep[E]) : Rep[Store[E]] = StoreNew1[E](idxs, ops)
    def storeNew2[E <: ddbt.lib.store.Entry]()(implicit typeE : TypeRep[E], cE : Manifest[E]) : Rep[Store[E]] = StoreNew2[E]()
    def storeNew3[E <: ddbt.lib.store.Entry](n : Rep[Int], ops : Rep[Array[EntryIdx[E]]])(implicit typeE : TypeRep[E], cE : Manifest[E]) : Rep[Store[E]] = StoreNew3[E](n, ops)
-   def storeUnsafeInsert[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreUnsafeInsert[E](self, idx, e)
+   def storeUnsafeInsert[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreUnsafeInsert[E](self, e)
    def storeInsert[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreInsert[E](self, e)
    def storeUpdate[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreUpdate[E](self, e)
    def storeUpdateCopy[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = StoreUpdateCopy[E](self, e)
@@ -154,7 +154,7 @@ object StoreIRs extends Base {
     override def curriedConstructor = (copy[E] _).curried
   }
 
-  case class StoreUnsafeInsert[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], idx : Rep[Int], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "unsafeInsert", List(List(idx,e))){
+  case class StoreUnsafeInsert[E <: ddbt.lib.store.Entry](self : Rep[Store[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "unsafeInsert", List(List(e))){
     override def curriedConstructor = (copy[E] _).curried
   }
 
