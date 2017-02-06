@@ -110,6 +110,8 @@ public abstract class Idx<E extends Entry> {
         w("compact");
     }
 
+    public void getBucketStats() {}
+
     public String info() {
         return this.getClass().getName() + "(" + idx + "," + (unique ? "unique" : "multiple") + ")";
     }
@@ -214,6 +216,45 @@ class IdxHash<E extends Entry> extends Idx<E> {
         i.next = data[b];
         data[b] = i;
         size += 1;
+    }
+
+    @Override
+    public void getBucketStats() {
+        int maxEntries = 0;
+        int maxSlices = 0;
+        int numBuckets = 0;
+        int numSlices = 0;
+        int numEntries = 0;
+
+        for (int b = 0; b < data.length; ++b) {
+            IdxHashEntry<E> n1 = data[b];
+            if (n1 == null)
+                continue;
+            numBuckets++;
+            int ns = 0;
+            int es = 0;
+            IdxHashEntry<E> n2 = n1;
+            do {
+                do {
+                    ++es;
+                } while ((n2 = n2.next) != null && n2.hash == n1.hash && ops.cmp(n1.data, n2.data) == 0);
+                ++ns;
+            } while ((n1 = n2) != null);
+            if (es > maxEntries)
+                maxEntries = es;
+            if (ns > maxSlices)
+                maxSlices = ns;
+            numEntries += es;
+            numSlices += ns;
+        }
+        if (numBuckets == 0)
+            System.err.println("Empty");
+        else {
+            String idxs = "IDX = " + idx;
+            String ents = "    Entries : total = " + numEntries + "  avg = " + (numEntries / (1.0 * numBuckets)) + "  max = " + maxEntries;
+            String slices = "    Slices : total = " + numBuckets + "  avg = " + (numSlices / (1.0 * numBuckets)) + "  max = " + maxSlices;
+            System.err.println(idxs + ents + slices);
+        }
     }
 
     @Override
@@ -506,7 +547,7 @@ class IdxList<E extends Entry> extends Idx<E> {
                 if (e == n) {
                     p.data[idx] = n.data[idx];
                     if (n == tail) tail = p;
-                    if(unique) break;
+                    if (unique) break;
                 } else p = n;
             } while (p != null);
         }
@@ -560,7 +601,7 @@ class IdxList<E extends Entry> extends Idx<E> {
             if (ops.cmp(key, p) == 0) entries.add((E) p.copy());
             p = n;
         } while (p != null);
-        for(E e_ : entries)
+        for (E e_ : entries)
             f.apply(e_);
     }
 

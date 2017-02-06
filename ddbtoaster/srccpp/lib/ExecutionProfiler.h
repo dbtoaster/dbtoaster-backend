@@ -62,7 +62,7 @@ struct ExecutionProfiler {
         std::cout << "Profile Results :: " << std::endl;
 #ifdef EXEC_PROFILE
             for (auto it : durations) {
-                std::cout << it.first << "count = " << counters[it.first] << " time = " << it.second / 1000000.0 << " ms" << std:: endl;
+                std::cout << it.first << "   count = " << counters[it.first] << " time = " << it.second / 1000000.0 << " ms    avg time = "<< it.second /counters[it.first] <<" ns" << std:: endl;
             }
 
 #endif
