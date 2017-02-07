@@ -12,17 +12,13 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
 
   import IR._
 
-  //TODO: SBJ: Bug in ScalaCodeGen
-  override def blockToDocument(block: Block[_]): Document = {
-    Document.text("{") :: Document.nest(NEST_COUNT,
-      mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)) :/: "}"
-  }
 
   def blockToDocumentNoBraces(block: Block[_]): Document = {
     mergeDocs(block.stmts.map(s => stmtToDocument(s)), true) :\\: expToDocument(block.res)
   }
 
   override def expToDocument(exp: Expression[_]): Document = exp match {
+    case c@Constant(q) if c.tp == UnitType => Document.empty
     case Constant(b: Boolean) => s"$b"
     case Constant(l: List[Any]) =>
       val tp = exp.tp.typeArguments(0).asInstanceOf[TypeRep[Any]]
@@ -65,6 +61,9 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
 
 
   override def nodeToDocument(node: PardisNode[_]): Document = node match {
+    case IfThenElse(c, ift, iff) =>
+      def blkToDoc(b: Block[_]) = Document.nest(NEST_COUNT, mergeDocs(b.stmts.map(s => stmtToDocument(s)), true))
+      "if(" :: expToDocument(c) :: ") {" :: blkToDoc(ift) :: (if (ift.tp == UnitType) Document.empty else "" :/: expToDocument(ift.res)) :/: "} else {" :: blkToDoc(iff) :: (if (iff.tp == UnitType) Document.empty else "" :/: expToDocument(iff.res)) :/: "}"
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"if($cond) $ift else $iff"
     case EntryIdxApplyObject(Def(h: PardisLambda[_, _]), Def(c: PardisLambda2[_, _, _]), Constant(name)) => doc" object $name extends EntryIdx[${h.i.tp}] {" :/: Document.nest(NEST_COUNT,
       doc"override def hash(${h.i} : ${h.i.tp}) = ${blockToDocument(h.o)}" :/:
