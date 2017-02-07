@@ -97,6 +97,49 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, StoreIndex(self, idxNum, _, _, _)) => doc"${self}_Idx_${idxNum}_Type& $sym = * (${self}_Idx_${idxNum}_Type *)$self.index[$idxNum];"
 
 
+    case Statement(sym, IdxSliceRes(idx@Def(StoreIndex(self, idxNum, _, _, _)), key)) if Optimizer.sliceInline =>
+      val h = "h" + sym.id
+      val IDX_FN = "IDXFN" + sym.id
+
+      doc"//sliceRes " :\\:
+        doc"typedef typename ${self}Idx${idxNum}Type::IFN $IDX_FN;" :\\:
+        doc"HASH_RES_t $h = $IDX_FN::hash($key);" :\\:
+        doc"auto* $sym = &($idx.buckets_[$h % $idx.size_]);" :\\:
+        doc"do if($sym -> obj && $h == $sym->hash && !$IDX_FN::cmp($key, *$sym->obj))" :\\:
+        doc"     break;" :\\:
+        doc"while(($sym = $sym->nxt));"
+
+    case Statement(sym, IdxSliceRes(idx, key)) => doc"auto* $sym = $idx.sliceRes($key);"
+
+    case Statement(sym, IdxSliceResMap(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)), res: Sym[_])) if Optimizer.sliceInline =>
+      val h = "h" + res.id
+      val IDX_FN = "IDXFN" + res.id
+
+      val pre = doc"//sliceResMap " :\\:
+        doc"do {" :\\:
+        doc"  auto $i = $res->obj;"
+      val post = doc"} while(($res = $res->nxt) && ($h== $res->hash) && !$IDX_FN::cmp($key, *$res->obj));"
+      pre :/: Document.nest(6, blockToDocument(o)) :/: post
+
+    case Statement(sym, IdxSliceResMap(idx, key, f, res: Sym[_])) => doc"$idx.sliceResMap($key, $f, $res);"
+
+    case Statement(sym, IdxForeachRes(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)))) if Optimizer.sliceInline => doc"auto* $sym = $idx.dataHead;"
+
+    case Statement(sym, IdxForeachRes(idx)) => doc"auto* $sym = $idx.foreachRes();"
+
+    case Statement(sym, IdxForeachResMap(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)), Def(PardisLambda(_, i, o)), res: Sym[_])) if Optimizer.sliceInline =>
+      val pre =
+        doc"//foreach" :\\:
+          doc"${i.tp} $i= $res;" :\\:
+          doc"while($i) {"
+      val post =
+        doc"  $i = $i -> nxt;" :\\:
+          doc"}"
+      pre :/: Document.nest(2, blockToDocument(o)) :/: post
+
+    case Statement(sym, IdxForeachResMap(idx, f, res: Sym[_])) => doc"$idx.foreachResMap($f, $res);"
+
+
     case Statement(sym, IdxSlice(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
       val symid = sym.id.toString
 
@@ -117,7 +160,6 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case Statement(sym, IdxForeach(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)), Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
       val symid = sym.id.toString
-      val IDX_FN = "IDXFN" + sym.id
       if (idxNum != 0)
         throw new Error("For-each on secondary index !")
       val pre =
@@ -130,9 +172,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       pre :/: Document.nest(2, blockToDocument(o)) :/: post
 
     case Statement(sym, StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType && refSymbols.contains(self) =>
-    doc"const PString& $sym = $self.$idx;"
+      doc"const PString& $sym = $self.$idx;"
     case Statement(sym, StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType =>
-    doc"const PString& $sym = $self->$idx;"
+      doc"const PString& $sym = $self->$idx;"
 
     case _ => super.stmtToDocument(stmt)
   }
@@ -166,6 +208,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StringSubstring2(self, pos, len) => doc"$self.substr($pos, $len)" //Different from scala substring
     case StringExtraStringCompareObject(str1, str2) => doc"strcmpi($str1.data_, $str2.data_)"
 
+    case MultiResIsEmpty(self: Sym[_]) =>  doc"$self == nullptr"
 
     case StoreInsert(self, e) => doc"$self.add($e)"
     case StoreUnsafeInsert(self, e) => doc"$self.insert_nocheck($e)"
@@ -337,6 +380,12 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :: Document.nest(2, "return 0;") :: "}"
       doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"
 
+    case PardisIfThenElse(cond, thenp, elsep) =>   //more compact compared to super
+      "if(" :: expToDocument(cond) :: ") {" :: Document.nest(NEST_COUNT, blockToDocument(thenp)) :/:
+        "}" :: {
+        if (elsep.stmts.size != 0) " else {" :: Document.nest(NEST_COUNT, blockToDocument(elsep)) :/: "}"
+        else Document.text("")
+      }
     case HashCode(a) => doc"HASH($a)"
     case _ => super.nodeToDocument(node)
   }

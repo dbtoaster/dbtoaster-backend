@@ -68,6 +68,7 @@ object Compiler {
       case "codemotion" =>Optimizer.codeMotion = true
       case "refcounter" => Optimizer.refCounter = true
       case "regex" => Optimizer.regexHoister = true
+      case "multires" => Optimizer.multiResSplitter = true
       case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }

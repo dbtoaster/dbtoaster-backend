@@ -3,6 +3,7 @@ package ddbt.lib.store;
 import scala.Function1;
 import scala.Unit;
 
+
 import java.util.ArrayList;
 
 /**
@@ -82,6 +83,16 @@ public abstract class Idx<E extends Entry> {
         return null;
     }
 
+    public void foreachResMap(Function1<E, Unit> f, MultiRes res) {
+        //TODO :Fix later
+        foreach(f);
+    }
+
+    public MultiRes foreachRes() {
+        //TODO: Fix later
+        return new ddbt.lib.store.ForEachRes<E>(null);
+    }
+
     public void foreach(Function1<E, Unit> f) {
         w("foreach");
     } // on all elements; warning: what about reordering updates?
@@ -89,6 +100,14 @@ public abstract class Idx<E extends Entry> {
     public void slice(E key, Function1<E, Unit> f) {
         w("slice");
     } // foreach on a slice
+
+    public MultiRes sliceRes(E key) {
+        return null;
+    }
+
+    public void sliceResMap(E key, Function1<E, Unit> f, MultiRes res) {
+
+    }
 
     public void sliceCopy(E key, Function1<E, Unit> f) {
         w("sliceCopy");
@@ -110,7 +129,8 @@ public abstract class Idx<E extends Entry> {
         w("compact");
     }
 
-    public void getBucketStats() {}
+    public void getBucketStats() {
+    }
 
     public String info() {
         return this.getClass().getName() + "(" + idx + "," + (unique ? "unique" : "multiple") + ")";
@@ -326,6 +346,27 @@ class IdxHash<E extends Entry> extends Idx<E> {
                 e = en;
             } while (e != null);
         }
+    }
+
+    @Override
+    public MultiRes sliceRes(E key) {
+        int h = ops.hash(key);
+        IdxHashEntry<E> e = data[h & (data.length - 1)];
+        if (e != null) do {
+            if (e.hash == h && ops.cmp(key, e.data) == 0)
+                return new SliceRes<E>(e);
+            e = e.next;
+        } while (e != null);
+        return new SliceRes<E>(null);
+    }
+
+    @Override
+    public void sliceResMap(E key, Function1<E, Unit> f, MultiRes res) {
+        IdxHashEntry<E> e = ((SliceRes<E>) res).sliceHead();
+        int h = e.hash;
+        do {
+            f.apply(e.data);
+        } while ((e = e.next) != null && e.hash == h && ops.cmp(key, e.data) == 0);
     }
 
     @Override

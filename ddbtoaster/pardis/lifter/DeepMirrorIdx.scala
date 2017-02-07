@@ -11,7 +11,7 @@ import pardis.deep.scalalib._
 import pardis.deep.scalalib.collection._
 import pardis.deep.scalalib.io._
 
-trait IdxOps extends Base  {  
+trait IdxOps extends Base with MultiResOps {  
   // Type representation
   val IdxType = IdxIRs.IdxType
   type IdxType[E <: ddbt.lib.store.Entry] = IdxIRs.IdxType[E]
@@ -29,7 +29,11 @@ trait IdxOps extends Base  {
      def getCopy(key : Rep[E]) : Rep[E] = idxGetCopy[E](self, key)(typeE)
      def getCopyDependent(key : Rep[E]) : Rep[E] = idxGetCopyDependent[E](self, key)(typeE)
      def foreach(f : Rep[(E => Unit)]) : Rep[Unit] = idxForeach[E](self, f)(typeE)
+     def foreachRes() : Rep[MultiRes] = idxForeachRes[E](self)(typeE)
+     def foreachResMap(f : Rep[(E => Unit)], res : Rep[MultiRes]) : Rep[Unit] = idxForeachResMap[E](self, f, res)(typeE)
      def slice(key : Rep[E], f : Rep[(E => Unit)]) : Rep[Unit] = idxSlice[E](self, key, f)(typeE)
+     def sliceRes(key : Rep[E]) : Rep[MultiRes] = idxSliceRes[E](self, key)(typeE)
+     def sliceResMap(key : Rep[E], f : Rep[(E => Unit)], res : Rep[MultiRes]) : Rep[Unit] = idxSliceResMap[E](self, key, f, res)(typeE)
      def sliceCopy(key : Rep[E], f : Rep[(E => Unit)]) : Rep[Unit] = idxSliceCopy[E](self, key, f)(typeE)
      def sliceCopyDependent(key : Rep[E], f : Rep[(E => Unit)]) : Rep[Unit] = idxSliceCopyDependent[E](self, key, f)(typeE)
      def clear() : Rep[Unit] = idxClear[E](self)(typeE)
@@ -64,8 +68,16 @@ trait IdxOps extends Base  {
   type IdxGetCopyDependent[E <: ddbt.lib.store.Entry] = IdxIRs.IdxGetCopyDependent[E]
   val IdxForeach = IdxIRs.IdxForeach
   type IdxForeach[E <: ddbt.lib.store.Entry] = IdxIRs.IdxForeach[E]
+  val IdxForeachRes = IdxIRs.IdxForeachRes
+  type IdxForeachRes[E <: ddbt.lib.store.Entry] = IdxIRs.IdxForeachRes[E]
+  val IdxForeachResMap = IdxIRs.IdxForeachResMap
+  type IdxForeachResMap[E <: ddbt.lib.store.Entry] = IdxIRs.IdxForeachResMap[E]
   val IdxSlice = IdxIRs.IdxSlice
   type IdxSlice[E <: ddbt.lib.store.Entry] = IdxIRs.IdxSlice[E]
+  val IdxSliceRes = IdxIRs.IdxSliceRes
+  type IdxSliceRes[E <: ddbt.lib.store.Entry] = IdxIRs.IdxSliceRes[E]
+  val IdxSliceResMap = IdxIRs.IdxSliceResMap
+  type IdxSliceResMap[E <: ddbt.lib.store.Entry] = IdxIRs.IdxSliceResMap[E]
   val IdxSliceCopy = IdxIRs.IdxSliceCopy
   type IdxSliceCopy[E <: ddbt.lib.store.Entry] = IdxIRs.IdxSliceCopy[E]
   val IdxSliceCopyDependent = IdxIRs.IdxSliceCopyDependent
@@ -85,13 +97,18 @@ trait IdxOps extends Base  {
    def idxGetCopy[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[E] = IdxGetCopy[E](self, key)
    def idxGetCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[E] = IdxGetCopyDependent[E](self, key)
    def idxForeach[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxForeach[E](self, f)
+   def idxForeachRes[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]])(implicit typeE : TypeRep[E]) : Rep[MultiRes] = IdxForeachRes[E](self)
+   def idxForeachResMap[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], f : Rep[((E) => Unit)], res : Rep[MultiRes])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxForeachResMap[E](self, f, res)
    def idxSlice[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxSlice[E](self, key, f)
+   def idxSliceRes[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[MultiRes] = IdxSliceRes[E](self, key)
+   def idxSliceResMap[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E], f : Rep[((E) => Unit)], res : Rep[MultiRes])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxSliceResMap[E](self, key, f, res)
    def idxSliceCopy[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxSliceCopy[E](self, key, f)
    def idxSliceCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxSliceCopyDependent[E](self, key, f)
    def idxClear[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxClear[E](self)
   type Idx[E <: ddbt.lib.store.Entry] = ddbt.lib.store.Idx[E]
 }
 object IdxIRs extends Base {
+  import MultiResIRs._
   // Type representation
   case class IdxType[E <: ddbt.lib.store.Entry](typeE: TypeRep[E]) extends TypeRep[Idx[E]] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = IdxType(newArguments(0).asInstanceOf[TypeRep[_ <: ddbt.lib.store.Entry]])
@@ -151,7 +168,23 @@ object IdxIRs extends Base {
     override def curriedConstructor = (copy[E] _).curried
   }
 
+  case class IdxForeachRes[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[MultiRes](Some(self), "foreachRes", List(List())){
+    override def curriedConstructor = (copy[E] _)
+  }
+
+  case class IdxForeachResMap[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], f : Rep[((E) => Unit)], res : Rep[MultiRes])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "foreachResMap", List(List(f,res))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
   case class IdxSlice[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E], f : Rep[((E) => Unit)])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "slice", List(List(key,f))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class IdxSliceRes[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[MultiRes](Some(self), "sliceRes", List(List(key))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class IdxSliceResMap[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E], f : Rep[((E) => Unit)], res : Rep[MultiRes])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "sliceResMap", List(List(key,f,res))){
     override def curriedConstructor = (copy[E] _).curried
   }
 

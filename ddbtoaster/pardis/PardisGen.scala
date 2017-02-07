@@ -26,8 +26,9 @@ import scala.collection.mutable
 abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) extends IScalaGen {
 
   import Optimizer._;
-  val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter)
+  val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter)
   java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
+
   import scala.language.implicitConversions
   import ddbt.lib.store.deep._
   import IR._
@@ -70,7 +71,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     case s: Product => s.productIterator.collect { case e: Expr => containsForeachOrSlice(e) }.foldLeft(false)(_ || _)
   }
 
-  val nameToSymMap = collection.mutable.HashMap[String, Rep[_]]()  //maps the name used in IScalaGen/ICppGen to SC Symbols
+  val nameToSymMap = collection.mutable.HashMap[String, Rep[_]]() //maps the name used in IScalaGen/ICppGen to SC Symbols
 
   // Expression CPS transformation from M3 AST to LMS graph representation
   //   ex : expression to convert
@@ -659,28 +660,28 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     }
     val idx2 = idxes.map(t => t._1 -> (t._2._1 zip t._2._2 map (x => (x._1._1, x._1._2, x._1._3, x._1._4, x._2))).toList) // Store -> List[Sym, Type, unique, otherInfo, IdxName ]
 
-    val toCheck = mutable.ArrayBuffer[String]()  //Gather all maps for debug printing
+    val toCheck = mutable.ArrayBuffer[String]() //Gather all maps for debug printing
     val stores = optTP.globalVars.map(s => {
 
-      if (s.tp.isInstanceOf[StoreType[_]]) {
-        def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
-        val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
-        val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
-        val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
+        if (s.tp.isInstanceOf[StoreType[_]]) {
+          def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
+          val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
+          val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
+          val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-        val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}_map;"
-        val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
-        val storeDecl = s.name :: "_map  " :: s.name :: ";"
-        toCheck ++= idx2(s).filter(_._2 == "IHash").map(s => s._1.name + s._1.id)
+          val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}_map;"
+          val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
+          val storeDecl = s.name :: "_map  " :: s.name :: ";"
+          toCheck ++= idx2(s).filter(_._2 == "IHash").map(s => s._1.name + s._1.id)
 
-        val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
-        val primaryIdx = idx2(s)(0)
-        val primaryRef = doc"${idxTypeName(0)}& ${s.name}PrimaryIdx = * (${idxTypeName(0)} *) ${s.name}.index[0];"
-        idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: idxDecl :\\: primaryRef
-      } else {
-        doc"${s.tp} ${s.name};"
-      }
-    }).mkDocument("\n", "\n\n\n", "\n")
+          val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
+          val primaryIdx = idx2(s)(0)
+          val primaryRef = doc"${idxTypeName(0)}& ${s.name}PrimaryIdx = * (${idxTypeName(0)} *) ${s.name}.index[0];"
+          idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: idxDecl :\\: primaryRef
+        } else {
+          doc"${s.tp} ${s.name};"
+        }
+      }).mkDocument("\n", "\n\n\n", "\n")
 
     val tempMaps = optTP.tmpMaps.map(s => {
       toCheck ++= s._2.map(s => s.name + s.id)

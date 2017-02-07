@@ -1,8 +1,8 @@
 package ddbt.codegen
 
 import ch.epfl.data.sc.pardis.ir._
-import ch.epfl.data.sc.pardis.optimization.{CountingAnalysis, DCE, ParameterPromotion, TransformerHandler}
-import ch.epfl.data.sc.pardis.types.{PardisType}
+import ch.epfl.data.sc.pardis.optimization._
+import ch.epfl.data.sc.pardis.types.PardisType
 import ddbt.lib.store.deep.EntryIdxIRs.EntryIdxApplyObject
 import ddbt.lib.store.deep.StoreDSL
 import ddbt.transformer._
@@ -31,8 +31,9 @@ object Optimizer {
   var codeMotion = false
   var m3CompareMultiply = false
   var regexHoister = false
+  var multiResSplitter = true
 
-  var refCounter = false
+  var refCounter = true
   var cTransformer = false
   var optCombination: String = ""
 }
@@ -43,9 +44,9 @@ class Optimizer(val IR: StoreDSL) {
   import Optimizer._
 
   optCombination = List(analyzeEntry -> "E", analyzeIndex -> "I", fixedRange -> "G", onlineOpts -> "O",
-     tmpVarHoist -> "V", tmpMapHoist -> "M", indexInline -> "N", indexLookupFusion -> "F",
+    tmpVarHoist -> "V", tmpMapHoist -> "M", indexInline -> "N", indexLookupFusion -> "F",
     indexLookupPartialFusion -> "P", sliceInline -> "S", deadIndexUpdate -> "D", codeMotion -> "C",
-    m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
+    m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R", multiResSplitter -> "U").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
 
   if (Optimizer.analyzeIndex) {
     pipeline += new IndexAnalysis(IR)
@@ -81,6 +82,12 @@ class Optimizer(val IR: StoreDSL) {
 
   if (Optimizer.indexInline)
     pipeline += new IndexInliner(IR)
+
+  if(Optimizer.multiResSplitter && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
+    throw new Error("MultiRes Splitter requires Index Inline, IndexLookupFusion")
+
+  if(Optimizer.multiResSplitter)
+    pipeline += new MultiResSplitter(IR)
 
   if (Optimizer.tmpMapHoist)
     pipeline += new TmpMapHoister(IR)

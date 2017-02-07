@@ -427,6 +427,43 @@ public:
         return check;
     }
 
+    FORCE_INLINE IdxNode* sliceRes(const T* key) {
+        return sliceRes(*key);
+    }
+
+    FORCE_INLINE IdxNode* sliceRes(const T& key) {
+        HASH_RES_t h = IDX_FN::hash(key);
+        IdxNode* n = &(buckets_[h % size_]);
+        do {
+            if (n->obj && h == n->hash && !IDX_FN::cmp(key, *n->obj)) {
+                return n;
+            }
+        } while ((n = n->nxt));
+        return nullptr;
+    }
+
+    FORCE_INLINE void sliceResMap(const T* key, FuncType f, IdxNode* n) {
+        sliceResMap(*key, f, n);
+    }
+
+    FORCE_INLINE void sliceResMap(const T& key, FuncType f, IdxNode* n) {
+        HASH_RES_t h = n->hash;
+        do {
+            f(n->obj);
+        } while ((n = n->nxt) && (h == n->hash) && !IDX_FN::cmp(key, *n->obj));
+    }
+
+    FORCE_INLINE T* foreachRes() {
+        return dataHead;
+    }
+
+    FORCE_INLINE void foreachResMap(FuncType f, T* cur) {
+        while (cur) {
+            f(cur);
+            cur = cur->nxt;
+        }
+    }
+
     /********************    virtual functions *******************************/
 
     FORCE_INLINE bool hashDiffers(const T& x, const T& y) const override {
@@ -986,7 +1023,7 @@ public:
         //Do nothing for now
     }
 
-        /*Ideally, we should check if the hash changes and then delete and insert.
+    /*Ideally, we should check if the hash changes and then delete and insert.
      *  However, in the cases where we use it, hash does not change, so to have
      *   an impact, deleted and insert in all cases  */
     FORCE_INLINE void updateCopyDependent(T* obj, T* orig) override {
@@ -998,8 +1035,9 @@ public:
         T* orig = primaryIdx->get(obj);
         del(orig);
         add(obj);
-    
+
     }
+
     FORCE_INLINE size_t count() const override {
         return count_;
     }
@@ -1516,7 +1554,7 @@ public:
         del(orig);
         add(obj);
     }
-    
+
     FORCE_INLINE size_t count() const override {
         return count_;
     }
@@ -1657,7 +1695,7 @@ public:
     FORCE_INLINE void update(T* obj) override {
         //Do nothing
     }
-    
+
     /*Ideally, we should check if the hash changes and then delete and insert.
      *  However, in the cases where we use it, hash does not change, so to have
      *   an impact, deleted and insert in all cases  */
@@ -1916,7 +1954,7 @@ public:
         del(orig);
         add(obj);
     }
-    
+
     FORCE_INLINE size_t count() const override {
         Container *cur = head;
         size_t cnt = 0;
