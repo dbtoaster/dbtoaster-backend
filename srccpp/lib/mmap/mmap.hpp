@@ -229,6 +229,7 @@ public:
   } IdxNode;  //  the linked list is maintained 'compactly': if a IdxNode has a nxt, it is full.
   IdxNode* buckets_;
   size_t size_;
+  size_t mask_;
 private:
   Pool<IdxNode> nodes_;
   bool allocated_from_pool_;
@@ -239,7 +240,7 @@ private:
 
   // void add_(T* obj) { // does not resize the bucket array, does not maintain count
   //   HASH_RES_t h = IDX_FN::hash(*obj);
-  //   IdxNode* n = &buckets_[h % size_];
+  //   IdxNode* n = &buckets_[h & mask_];
   //   if (n->obj) {
   //     IdxNode* nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
   //     nw->hash = h; nw->obj = obj;
@@ -256,6 +257,7 @@ private:
     buckets_ = new IdxNode[new_size];
     memset(buckets_, 0, sizeof(IdxNode) * new_size);
     size_ = new_size;
+    mask_ = size_ - 1;
     threshold_ = size_ * load_factor_;
     bool tmp_allocated_from_pool = false;
     for (size_t b=0; b<sz; ++b) {
@@ -264,7 +266,7 @@ private:
       do {
         if(n->obj) { //add_(n->obj); // does not resize the bucket array, does not maintain count
           h = n->hash;
-          na = &buckets_[h % size_];
+          na = &buckets_[h & mask_];
           if (na->obj) {
             tmp_allocated_from_pool = true;
             nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -290,6 +292,7 @@ public:
   HashIndex(size_t size=DEFAULT_CHUNK_SIZE, double load_factor=.75) : nodes_(size), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
     load_factor_ = load_factor;
     size_ = 0;
+    mask_ = 0;
     count_ = 0;
     buckets_ = nullptr;
     resize_(size);
@@ -306,14 +309,14 @@ public:
   // retrieves the first element equivalent to the key or nullptr if not found
   inline virtual T* get(const T& key) const {
     HASH_RES_t h = IDX_FN::hash(key);
-    IdxNode* n = &buckets_[h % size_];
+    IdxNode* n = &buckets_[h & mask_];
     do {
       if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) return n->obj;
     } while ((n=n->nxt));
     return nullptr;
   }
   inline virtual T* get(const T& key, const HASH_RES_t h) const {
-    IdxNode* n = &buckets_[h % size_];
+    IdxNode* n = &buckets_[h & mask_];
     do {
       if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) return n->obj;
     } while ((n=n->nxt));
@@ -328,7 +331,7 @@ public:
   }
   FORCE_INLINE virtual void add(T* obj, const HASH_RES_t h) {
     if (count_>threshold_) resize_(size_<<1);
-    size_t b = h % size_;
+    size_t b = h & mask_;
     IdxNode* n = &buckets_[b];
     IdxNode* nw;
     
@@ -386,7 +389,7 @@ public:
     del(obj, h);
   }
   FORCE_INLINE virtual void del(const T* obj, const HASH_RES_t h) {
-    IdxNode *n = &buckets_[h % size_];
+    IdxNode *n = &buckets_[h & mask_];
     IdxNode *prev = nullptr, *next; // previous and next pointers
     do {
       next = n->nxt;
@@ -422,7 +425,7 @@ public:
 
   inline virtual void slice(const T& key, std::function<void (const T&)> f) {
     HASH_RES_t h = IDX_FN::hash(key);
-    IdxNode* n = &(buckets_[h % size_]);
+    IdxNode* n = &(buckets_[h & mask_]);
     do {
       if (n->obj && h == n->hash && IDX_FN::equals(key, *n->obj)) {
         do {
@@ -461,7 +464,7 @@ public:
 
   inline virtual V getValueOrDefault(const T& key) const {
     HASH_RES_t h = IDX_FN::hash(key);
-    IdxNode* n = &buckets_[h % size_];
+    IdxNode* n = &buckets_[h & mask_];
     do {
       T* lkup = n->obj;
       if (lkup && h == n->hash && IDX_FN::equals(key, *lkup)) return lkup->__av;
@@ -470,7 +473,7 @@ public:
   }
 
   inline virtual V getValueOrDefault(const T& key, HASH_RES_t h) const {
-    IdxNode* n = &buckets_[h % size_];
+    IdxNode* n = &buckets_[h & mask_];
     do {
       T* lkup = n->obj;
       if (lkup && h == n->hash && IDX_FN::equals(key, *lkup)) return lkup->__av;
@@ -480,7 +483,7 @@ public:
 
   inline virtual int setOrDelOnZero(const T& k, const V& v) {
     HASH_RES_t h = IDX_FN::hash(k);
-    IdxNode* n = &buckets_[h % size_];
+    IdxNode* n = &buckets_[h & mask_];
     do {
       T* lkup = n->obj;
       if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
@@ -497,7 +500,7 @@ public:
   }
 
   inline virtual int setOrDelOnZero(const T& k, const V& v, HASH_RES_t h) {
-    IdxNode* n = &buckets_[h % size_];
+    IdxNode* n = &buckets_[h & mask_];
     do {
       T* lkup = n->obj;
       if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
@@ -516,7 +519,7 @@ public:
   inline virtual int addOrDelOnZero(const T& k, const V& v) {
     if(!ZeroVal<V>().isZero(v)) {
       HASH_RES_t h = IDX_FN::hash(k);
-      IdxNode* n = &buckets_[h % size_];
+      IdxNode* n = &buckets_[h & mask_];
       do {
         T* lkup = n->obj;
         if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
@@ -535,7 +538,7 @@ public:
 
   inline virtual int addOrDelOnZero(const T& k, const V& v, HASH_RES_t h) {
     if(!ZeroVal<V>().isZero(v)) {
-      IdxNode* n = &buckets_[h % size_];
+      IdxNode* n = &buckets_[h & mask_];
       do {
         T* lkup = n->obj;
         if (lkup && h == n->hash && IDX_FN::equals(k, *lkup)) {
