@@ -198,7 +198,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
       val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}StoreType;"
-      val storeDecl = s.name :: "StoreType  " :: s.name :: "(" :: s.name :: "Size);"
+      val storeDecl = s.name :: "StoreType  " :: s.name :: ";" //"(" :: s.name :: "Size);"
 
       val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
       val primaryIdx = idx2(s)(0)

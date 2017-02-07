@@ -282,7 +282,7 @@ private:
             do {
                 if (n->obj) { //add_(n->obj); // does not resize the bucket array, does not maintain count
                     h = n->hash;
-                    na = &buckets_[h % size_];
+                    na = &buckets_[h & (size_ - 1)];
 
                     if (na->obj) {
                         tmp_allocated_from_pool = true;
@@ -433,7 +433,7 @@ public:
 
     FORCE_INLINE IdxNode* sliceRes(const T& key) {
         HASH_RES_t h = IDX_FN::hash(key);
-        IdxNode* n = &(buckets_[h % size_]);
+        IdxNode* n = &(buckets_[h & (size_ - 1)]);
         do {
             if (n->obj && h == n->hash && !IDX_FN::cmp(key, *n->obj)) {
                 return n;
@@ -474,7 +474,7 @@ public:
 
     FORCE_INLINE T* get(const T* key) const override {
         HASH_RES_t h = IDX_FN::hash(*key);
-        IdxNode* n = &buckets_[h % size_];
+        IdxNode* n = &buckets_[h & (size_ - 1)];
         do {
             if (n->obj && h == n->hash && !IDX_FN::cmp(*key, *n->obj)) return n->obj;
         } while ((n = n->nxt));
@@ -500,7 +500,7 @@ public:
             //            throw std::logic_error("HashIndex resize disabled for this experiment");
             resize_(size_ << 1);
         }
-        size_t b = h % size_;
+        size_t b = h & (size_ - 1);
         IdxNode* n = &buckets_[b];
         IdxNode* nw;
 
@@ -636,7 +636,7 @@ public:
 
     FORCE_INLINE void slice(const T* key, FuncType f) override {
         HASH_RES_t h = IDX_FN::hash(*key);
-        IdxNode* n = &(buckets_[h % size_]);
+        IdxNode* n = &(buckets_[h & (size_ - 1)]);
         do {
             if (n->obj && h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
                 do {
@@ -650,7 +650,7 @@ public:
     FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
         HASH_RES_t h = IDX_FN::hash(*key);
         std::vector<T*> entries;
-        IdxNode* n = &(buckets_[h % size_]);
+        IdxNode* n = &(buckets_[h & (size_ - 1)]);
         do {
             if (n->obj && h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
                 do {
@@ -667,7 +667,7 @@ public:
 
     FORCE_INLINE void update(T* elem) override {
         //        HASH_RES_t h = IDX_FN::hash(*elem);
-        //        IdxNode* n = &(buckets_[h % size_]);
+        //        IdxNode* n = &(buckets_[h & (size_ - 1)]);
         if (is_unique) {
             // ???
         } else {
@@ -890,7 +890,7 @@ class SlicedHeapIndex : public Index<T, V> {
             IdxNode q = old[b];
             while (q != nullptr) {
                 IdxNode nq = q->nxt;
-                uint b = q->hash % size_;
+                uint b = q->hash & (size_ - 1);
                 q->nxt = buckets_[b];
                 buckets_[b] = q;
                 q = nq;
@@ -922,7 +922,7 @@ public:
 
     FORCE_INLINE T* get(const T* key) const override {
         HASH_RES_t h = IDX_FN1::hash(*key);
-        IdxNode n = buckets_[h % size_];
+        IdxNode n = buckets_[h & (size_ - 1)];
         //        if (n) n->checkHeap(Index<T, V>::idxId);
         while (n != nullptr) {
             T* obj;
@@ -941,11 +941,11 @@ public:
     FORCE_INLINE void add(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
         if (count_ > threshold_) {
-            std::cerr << "  Index resize count=" << count_ << "  size=" << size_ << std::endl;
-            exit(1);
-            //resize_(size_ << 1);
+//            std::cerr << "  Index resize count=" << count_ << "  size=" << size_ << std::endl;
+//            exit(1);
+            resize_(size_ << 1);
         }
-        size_t b = h % size_;
+        size_t b = h & (size_ - 1);
         IdxNode q = buckets_[b];
         while (q != nullptr) {
             if (q->hash == h && IDX_FN1::cmp(*obj, *q->array[1]) == 0) {
@@ -975,7 +975,7 @@ public:
         if (q->size == 0) {
             assert(q->array[1] == nullptr);
             auto h = q->hash;
-            size_t b = h % size_;
+            size_t b = h & (size_ - 1);
             IdxNode p = buckets_[b];
             if (p == q) {
                 buckets_[b] = q->nxt;
@@ -1132,7 +1132,7 @@ private:
             do {
                 if (n->equivNodes) { //add_(n->obj); // does not resize the bucket array, does not maintain count
                     h = n->hash;
-                    na = &buckets_[h % size_];
+                    na = &buckets_[h & (size_ - 1)];
                     if (na->equivNodes) {
 
                         nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -1222,7 +1222,7 @@ private:
                     std::cout << ' ';
             }
 
-            //TODO: SBJ: FIXME 
+            //TODO: SBJ: FIXME
             std::cout << *p->obj << "\n ";
             if (p->left) printTreePreorder(p->left, indent + 4);
             if (p->right) printTreePreorder(p->right, indent + 4);
@@ -1397,7 +1397,7 @@ public:
     void printTree(const T& key) {
         std::cout << "--------------------------" << std::endl;
         HASH_RES_t h = IDX_FN1::hash(key);
-        IdxNode* n = &(buckets_[h % size_]);
+        IdxNode* n = &(buckets_[h & (size_ - 1)]);
 
         do {
             if (n->equivNodes && h == n->hash && !IDX_FN1::cmp(key, *n->equivNodes->obj)) {
@@ -1418,7 +1418,7 @@ public:
 
     FORCE_INLINE T* get(const T* key) const override {
         HASH_RES_t h = IDX_FN1::hash(key);
-        IdxNode* n = &(buckets_[h % size_]);
+        IdxNode* n = &(buckets_[h & (size_ - 1)]);
 
         do {
             if (n->equivNodes && h == n->hash && !IDX_FN1::cmp(*key, *n->equivNodes->obj)) {
@@ -1443,7 +1443,7 @@ public:
             exit(1);
             //resize_(size_ << 1);
         }
-        size_t b = h % size_;
+        size_t b = h & (size_ - 1);
         IdxNode* n = &buckets_[b];
         IdxNode* nw;
 
@@ -1488,7 +1488,7 @@ public:
 
     FORCE_INLINE void del(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
-        IdxNode *n = &buckets_[h % size_];
+        IdxNode *n = &buckets_[h & (size_ - 1)];
         IdxNode *prev = nullptr, *next; // previous and next pointers
         do {
             next = n->nxt;
