@@ -933,52 +933,52 @@ void StockLevelTx(int x81, date x82, int x83, int x84, int x85, int x86) {
   };
 }
 void OrderStatusTx(int x125, date x126, int x127, int x128, int x129, int x130, int x131, PString x132) {
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite16438 = NULL;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite16829 = NULL;
   if((x130>(0))) {
-    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x16439;
+    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x16830;
     x6755._2 = x129;
     x6755._3 = x128;
     x6755._6 = x132;
     //sliceRes 
-    typedef typename customerTblIdx1Type::IFN IDXFN16446;
-    HASH_RES_t h16446 = IDXFN16446::hash(x6755);
-    auto* x16446 = &(x4245.buckets_[h16446 % x4245.size_]);
-    do if(x16446 -> obj && h16446 == x16446->hash && !IDXFN16446::cmp(x6755, *x16446->obj))
+    typedef typename customerTblIdx1Type::IFN IDXFN16837;
+    HASH_RES_t h16837 = IDXFN16837::hash(x6755);
+    auto* x16837 = &(x4245.buckets_[h16837 % x4245.size_]);
+    do if(x16837 -> obj && h16837 == x16837->hash && !IDXFN16837::cmp(x6755, *x16837->obj))
          break;
-    while((x16446 = x16446->nxt));
-    if((x16446 == nullptr)) {
+    while((x16837 = x16837->nxt));
+    if((x16837 == nullptr)) {
     } else {
       //sliceResMap 
       do {
-        auto custEntry = x16446->obj;
+        auto custEntry = x16837->obj;
             
-            x16439.push_back(custEntry);
-      } while((x16446 = x16446->nxt) && (h16446== x16446->hash) && !IDXFN16446::cmp(x6755, *x16446->obj));
+            x16830.push_back(custEntry);
+      } while((x16837 = x16837->nxt) && (h16837== x16837->hash) && !IDXFN16837::cmp(x6755, *x16837->obj));
     };
-    int x16450 = x16439.size();
-    int x16452 = (x16450/(2));
-    int x16460 = x16439.size();
-    if(((x16460%(2))==(0))) {
-      int x151 = x16452;
-      x16452 = (x151-(1));
+    int x16841 = x16830.size();
+    int x16843 = (x16841/(2));
+    int x16851 = x16830.size();
+    if(((x16851%(2))==(0))) {
+      int x151 = x16843;
+      x16843 = (x151-(1));
     };
-    sort(x16439.begin(), x16439.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c1, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c2) {
+    sort(x16830.begin(), x16830.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c1, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c2) {
       
       const PString& x6796 = c1->_4;
       const PString& x6797 = c2->_4;
       return ((strcmpi(x6796.data_, x6797.data_))<(0)); 
     }));
-    int x16468 = x16452;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x16469 = x16439[x16468];
-    ite16438 = x16469;
+    int x16859 = x16843;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x16860 = x16830[x16859];
+    ite16829 = x16860;
   } else {
     x6772._1 = x131;
     x6772._2 = x129;
     x6772._3 = x128;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x16474 = x4244.get(x6772);
-    ite16438 = x16474;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x16865 = x4244.get(x6772);
+    ite16829 = x16865;
   };
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6742 = ite16438;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6742 = ite16829;
   int x6743 = x6742->_3;
   x6745._2 = x129;
   x6745._3 = x128;
@@ -996,56 +996,56 @@ void PaymentTx(int x186, date x187, int x188, int x189, int x190, int x191, int 
   x6865._2 = x189;
   struct SEntry11_IISSSSSSDDI* x11047 = x4024.get(x6865);
   x11047->_10 += x196;
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite16543 = NULL;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite16934 = NULL;
   if((x191>(0))) {
-    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x16544;
+    vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x16935;
     x6905._2 = x193;
     x6905._3 = x192;
     x6905._6 = x195;
     //sliceRes 
-    typedef typename customerTblIdx1Type::IFN IDXFN16551;
-    HASH_RES_t h16551 = IDXFN16551::hash(x6905);
-    auto* x16551 = &(x4245.buckets_[h16551 % x4245.size_]);
-    do if(x16551 -> obj && h16551 == x16551->hash && !IDXFN16551::cmp(x6905, *x16551->obj))
+    typedef typename customerTblIdx1Type::IFN IDXFN16942;
+    HASH_RES_t h16942 = IDXFN16942::hash(x6905);
+    auto* x16942 = &(x4245.buckets_[h16942 % x4245.size_]);
+    do if(x16942 -> obj && h16942 == x16942->hash && !IDXFN16942::cmp(x6905, *x16942->obj))
          break;
-    while((x16551 = x16551->nxt));
-    if((x16551 == nullptr)) {
+    while((x16942 = x16942->nxt));
+    if((x16942 == nullptr)) {
     } else {
       //sliceResMap 
       do {
-        auto custEntry = x16551->obj;
+        auto custEntry = x16942->obj;
             
-            x16544.push_back(custEntry);
-      } while((x16551 = x16551->nxt) && (h16551== x16551->hash) && !IDXFN16551::cmp(x6905, *x16551->obj));
+            x16935.push_back(custEntry);
+      } while((x16942 = x16942->nxt) && (h16942== x16942->hash) && !IDXFN16942::cmp(x6905, *x16942->obj));
     };
-    int x16555 = x16544.size();
-    int x16557 = (x16555/(2));
-    int x16565 = x16544.size();
-    if(((x16565%(2))==(0))) {
-      int x227 = x16557;
-      x16557 = (x227-(1));
+    int x16946 = x16935.size();
+    int x16948 = (x16946/(2));
+    int x16956 = x16935.size();
+    if(((x16956%(2))==(0))) {
+      int x227 = x16948;
+      x16948 = (x227-(1));
     };
-    sort(x16544.begin(), x16544.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c1, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c2) {
+    sort(x16935.begin(), x16935.end(), ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c1, struct SEntry21_IIISSSSSSSSSTSDDDDIIS* c2) {
       
       const PString& x6968 = c1->_4;
       const PString& x6969 = c2->_4;
       return ((strcmpi(x6968.data_, x6969.data_))<(0)); 
     }));
-    int x16573 = x16557;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x16574 = x16544[x16573];
-    ite16543 = x16574;
+    int x16964 = x16948;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x16965 = x16935[x16964];
+    ite16934 = x16965;
   } else {
     x6922._1 = x194;
     x6922._2 = x193;
     x6922._3 = x192;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x16579 = x4244.get(x6922);
-    ite16543 = x16579;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x16970 = x4244.get(x6922);
+    ite16934 = x16970;
   };
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6870 = ite16543;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6870 = ite16934;
   const PString& x6871 = x6870->_21;
   const PString& x6872 = x6870->_14;
-  char* x17925 = strstr(x6872.data_, "BC");
-  if((x17925!=(NULL))) {
+  char* x18316 = strstr(x6872.data_, "BC");
+  if((x18316!=(NULL))) {
     int x6875 = x6870->_1;
     PString c_new_data(500);
     snprintf(c_new_data.data_, 501, "%d %d %d %d %d $%f %s | %s", x6875, x193, x192, x190, x189, x196, IntToStrdate(x187), x6871.data_);
@@ -1067,7 +1067,7 @@ void PaymentTx(int x186, date x187, int x188, int x189, int x190, int x191, int 
   x6888._6 = x187;
   x6888._7 = x196;
   x6888._8 = h_data;
-  historyTbl.add(x6888);
+  historyTbl.insert_nocheck(x6888);
 }
 void NewOrderTx(int x269, date x270, int x271, int x272, int x273, int x274, int x275, int x276, int* x277, int* x278, int* x279, double* x280, PString* x281, int* x282, PString* x283, double* x284) {
   int x286 = 0;
@@ -1077,17 +1077,17 @@ void NewOrderTx(int x269, date x270, int x271, int x272, int x273, int x274, int
   while(1) {
     
     int x296 = x286;
-    int ite16871 = 0;
+    int ite17262 = 0;
     if((x296<(x275))) {
       
       int x298 = x294;
-      int x16872 = x298;
-      ite16871 = x16872;
+      int x17263 = x298;
+      ite17262 = x17263;
     } else {
-      ite16871 = 0;
+      ite17262 = 0;
     };
-    int x16686 = ite16871;
-    if (!(x16686)) break; 
+    int x17077 = ite17262;
+    if (!(x17077)) break; 
     
     int x301 = x286;
     int x302 = x277[x301];
@@ -1130,11 +1130,11 @@ void NewOrderTx(int x269, date x270, int x271, int x272, int x273, int x274, int
     x7110._6 = -1;
     x7110._7 = x275;
     x7110._8 = (x276>(0));
-    orderTbl.add(x7110);
+    orderTbl.insert_nocheck(x7110);
     x7113._1 = x7105;
     x7113._2 = x273;
     x7113._3 = x272;
-    newOrderTbl.add(x7113);
+    newOrderTbl.insert_nocheck(x7113);
     double x347 = 0.0;
     x286 = 0;
     while(1) {
@@ -1151,96 +1151,96 @@ void NewOrderTx(int x269, date x270, int x271, int x272, int x273, int x274, int
       x7127._1 = ol_i_id;
       x7127._2 = ol_supply_w_id;
       struct SEntry17_IIISSSSSSSSSSIIIS* x11255 = x4270.get(x7127);
-      PString ite16749 = PString();
+      PString ite17140 = PString();
       if((x273==(1))) {
-        const PString& x16750 = x11255->_4;
-        ite16749 = x16750;
+        const PString& x17141 = x11255->_4;
+        ite17140 = x17141;
       } else {
-        PString ite16754 = PString();
+        PString ite17145 = PString();
         if((x273==(2))) {
-          const PString& x16755 = x11255->_5;
-          ite16754 = x16755;
+          const PString& x17146 = x11255->_5;
+          ite17145 = x17146;
         } else {
-          PString ite16759 = PString();
+          PString ite17150 = PString();
           if((x273==(3))) {
-            const PString& x16760 = x11255->_6;
-            ite16759 = x16760;
+            const PString& x17151 = x11255->_6;
+            ite17150 = x17151;
           } else {
-            PString ite16764 = PString();
+            PString ite17155 = PString();
             if((x273==(4))) {
-              const PString& x16765 = x11255->_7;
-              ite16764 = x16765;
+              const PString& x17156 = x11255->_7;
+              ite17155 = x17156;
             } else {
-              PString ite16769 = PString();
+              PString ite17160 = PString();
               if((x273==(5))) {
-                const PString& x16770 = x11255->_8;
-                ite16769 = x16770;
+                const PString& x17161 = x11255->_8;
+                ite17160 = x17161;
               } else {
-                PString ite16774 = PString();
+                PString ite17165 = PString();
                 if((x273==(6))) {
-                  const PString& x16775 = x11255->_9;
-                  ite16774 = x16775;
+                  const PString& x17166 = x11255->_9;
+                  ite17165 = x17166;
                 } else {
-                  PString ite16779 = PString();
+                  PString ite17170 = PString();
                   if((x273==(7))) {
-                    const PString& x16780 = x11255->_10;
-                    ite16779 = x16780;
+                    const PString& x17171 = x11255->_10;
+                    ite17170 = x17171;
                   } else {
-                    PString ite16784 = PString();
+                    PString ite17175 = PString();
                     if((x273==(8))) {
-                      const PString& x16785 = x11255->_11;
-                      ite16784 = x16785;
+                      const PString& x17176 = x11255->_11;
+                      ite17175 = x17176;
                     } else {
-                      PString ite16789 = PString();
+                      PString ite17180 = PString();
                       if((x273==(9))) {
-                        const PString& x16790 = x11255->_12;
-                        ite16789 = x16790;
+                        const PString& x17181 = x11255->_12;
+                        ite17180 = x17181;
                       } else {
-                        const PString& x16792 = x11255->_13;
-                        ite16789 = x16792;
+                        const PString& x17183 = x11255->_13;
+                        ite17180 = x17183;
                       };
-                      PString x16788 = ite16789;
-                      ite16784 = x16788;
+                      PString x17179 = ite17180;
+                      ite17175 = x17179;
                     };
-                    PString x16783 = ite16784;
-                    ite16779 = x16783;
+                    PString x17174 = ite17175;
+                    ite17170 = x17174;
                   };
-                  PString x16778 = ite16779;
-                  ite16774 = x16778;
+                  PString x17169 = ite17170;
+                  ite17165 = x17169;
                 };
-                PString x16773 = ite16774;
-                ite16769 = x16773;
+                PString x17164 = ite17165;
+                ite17160 = x17164;
               };
-              PString x16768 = ite16769;
-              ite16764 = x16768;
+              PString x17159 = ite17160;
+              ite17155 = x17159;
             };
-            PString x16763 = ite16764;
-            ite16759 = x16763;
+            PString x17154 = ite17155;
+            ite17150 = x17154;
           };
-          PString x16758 = ite16759;
-          ite16754 = x16758;
+          PString x17149 = ite17150;
+          ite17145 = x17149;
         };
-        PString x16753 = ite16754;
-        ite16749 = x16753;
+        PString x17144 = ite17145;
+        ite17140 = x17144;
       };
-      PString ol_dist_info = ite16749;
+      PString ol_dist_info = ite17140;
       int x7157 = x11255->_3;
       int x396 = x286;
       x282[x396] = x7157;
       const PString& x7160 = x11215->_14;
-      char* x18163 = strstr(x7160.data_, "original");
-      int ite17007 = 0;
-      if((x18163!=(NULL))) {
+      char* x18554 = strstr(x7160.data_, "original");
+      int ite17398 = 0;
+      if((x18554!=(NULL))) {
         
         const PString& x7163 = x11255->_17;
-        char* x18169 = strstr(x7163.data_, "original");
-        int x17008 = (x18169!=(NULL));
-        ite17007 = x17008;
+        char* x18560 = strstr(x7163.data_, "original");
+        int x17399 = (x18560!=(NULL));
+        ite17398 = x17399;
       } else {
-        ite17007 = 0;
+        ite17398 = 0;
       };
-      int x16817 = ite17007;
-      if(x16817) {
+      int x17208 = ite17398;
+      if(x17208) {
         int x403 = x286;
         x283[x403] = "B";
       } else {
@@ -1275,7 +1275,7 @@ void NewOrderTx(int x269, date x270, int x271, int x272, int x273, int x274, int
       x7200._8 = ol_quantity;
       x7200._9 = ol_amount;
       x7200._10 = ol_dist_info;
-      orderLineTbl.add(x7200);
+      orderLineTbl.insert_nocheck(x7200);
       int x446 = x286;
       x286 = (x446+(1));
     };

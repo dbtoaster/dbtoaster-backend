@@ -26,14 +26,14 @@ object Optimizer {
   var indexInline = true
   var indexLookupFusion = true
   var indexLookupPartialFusion = false
-  var sliceInline = false
+  var sliceInline = true
   var deadIndexUpdate = true
   var codeMotion = true
   var m3CompareMultiply = true
   var regexHoister = true
   var multiResSplitter = true
 
-  var refCounter = false
+  var refCounter = true
   var cTransformer = false
   var optCombination: String = ""
 }
@@ -103,6 +103,8 @@ class Optimizer(val IR: StoreDSL) {
 
   pipeline += new StoreDCE(IR)
 
+//  pipeline += new CommonPureExpression(IR)
+  pipeline += new InsertNoChecks(IR)
   if (Optimizer.cTransformer) {
     pipeline += new ScalaConstructsToCTranformer(IR, false)
     pipeline += new ScalaStructToMallocTransformer(IR)
