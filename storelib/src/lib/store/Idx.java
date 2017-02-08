@@ -155,7 +155,7 @@ class IdxHashEntry<E extends Entry> {
 
     int hash;
     E data;
-    IdxHashEntry<E> next;
+    IdxHashEntry<E> next, prev;
 }
 
 @SuppressWarnings("unchecked")
@@ -188,7 +188,10 @@ class IdxHash<E extends Entry> extends Idx<E> {
                 en = e.next;
                 int b = e.hash & (new_capacity - 1);
                 e.next = d[b];
+                if (d[b] != null)
+                    d[b].prev = e;
                 d[b] = e;
+                e.prev = null;
                 e = en;
             }
         }
@@ -202,29 +205,27 @@ class IdxHash<E extends Entry> extends Idx<E> {
         else _resize(n << 1);
     }
 
-    protected boolean _del(E e, IdxHashEntry<E> i) {
-        IdxHashEntry<E> p = i.next;
-        if (p != null) {
-            i.hash = p.hash;
-            i.next = p.next;
-            i.data = p.data;
-            p.data.data[idx] = i;
-            return true;
-        } // eat next child
-        int h = i.hash, b = h & (data.length - 1);
-        p = data[b];
-        if (i == p) {
-            data[b] = null;
-            return true;
-        } // head of list
-        else do {
-            if (i == p.next) {
-                p.next = null;
-                return true;
-            }
-            p = p.next;
-        } while (p != null); // tail
-        return false;
+    protected void _del(E e, IdxHashEntry<E> i) {
+        IdxHashEntry<E> nxt = i.next;
+        IdxHashEntry<E> prv = i.prev;
+        if (prv != null) { //not head
+            prv.next = nxt;
+            if (nxt != null)
+                nxt.prev = prv;
+        } else if (nxt != null) { //head and has other elements
+            i.hash = nxt.hash;
+            i.next = nxt.next;
+            if (nxt.next != null)
+                nxt.next.prev = i;
+            i.data = nxt.data;
+            nxt.data.data[idx] = i;
+        } else { //head and the only element
+            int h = i.hash, b = h & (data.length - 1);
+            if(data[b] == i)
+                data[b] = null;
+            else
+                throw new IllegalStateException();
+        }
     }
 
     // Public
@@ -235,6 +236,8 @@ class IdxHash<E extends Entry> extends Idx<E> {
         IdxHashEntry<E> i = new IdxHashEntry<E>(h, e);
         e.data[idx] = i;
         i.next = data[b];
+        if (data[b] != null)
+            data[b].prev = i;
         data[b] = i;
         size += 1;
     }
@@ -282,7 +285,8 @@ class IdxHash<E extends Entry> extends Idx<E> {
     @Override
     public void delete(E e) {
         IdxHashEntry<E> i = (IdxHashEntry<E>) e.data[idx];
-        if (i != null && _del(e, i)) {
+        if (i != null) {
+            _del(e, i);
             e.data[idx] = null;
             size -= 1;
         }
@@ -291,7 +295,8 @@ class IdxHash<E extends Entry> extends Idx<E> {
     @Override
     public void update(E e) {
         IdxHashEntry<E> i = (IdxHashEntry<E>) e.data[idx];
-        if (i != null && i.hash != ops.hash(e) && _del(e, i)) {
+        if (i != null && i.hash != ops.hash(e)) {
+            _del(e, i);
             size -= 1;
             unsafeInsert(e);
         }
@@ -474,7 +479,8 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
     @Override
     public void delete(E e) {
         IdxHashEntry<E> i = (IdxHashEntry<E>) e.data[idx];
-        if (i == null || !_del(e, i)) return;
+        if (i == null) return;
+        _del(e, i);
         e.data[idx] = null;
         // Find a replacement candidate
         Function1<E, Unit> f = new JFun1<E, Unit>() {
