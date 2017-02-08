@@ -32,9 +32,6 @@ public abstract class Idx<E extends Entry> {
         w("unsafeInsert");
     }
 
-    public void insert(E e) {
-        w("insert");
-    }
 
     public void delete(E e) {
         w("delete");
@@ -55,13 +52,13 @@ public abstract class Idx<E extends Entry> {
 
     public void updateCopyDependent(E e, E ref) {
         delete(ref);
-        insert(e);
+        unsafeInsert(e);
     }
 
     public void updateCopy(E e, Idx<E> primary) {
         E ref = primary.get(e);
         delete(ref);
-        insert(e);
+        unsafeInsert(e);
     }
 
     public E get(E key) {
@@ -130,6 +127,10 @@ public abstract class Idx<E extends Entry> {
     }
 
     public void getBucketStats() {
+    }
+
+    public boolean hashDiffers(E e1, E e2) {
+        return ops.hash(e1) != ops.hash(e2);
     }
 
     public String info() {
@@ -277,35 +278,6 @@ class IdxHash<E extends Entry> extends Idx<E> {
         }
     }
 
-    @Override
-    public void insert(E e) {
-        if (size == threshold) _resize();
-        int h = ops.hash(e), b = h & (data.length - 1);
-        IdxHashEntry<E> p = data[b], i = new IdxHashEntry<E>(h, e);
-        e.data[idx] = i;
-        if (p == null) {
-            data[b] = i;
-            size += 1;
-            return;
-        } else if (!unique) {
-            i.next = data[b];
-            data[b] = i;
-            size += 1;
-            return;
-        } else do { // unique
-            if (p.hash == h && ops.cmp(e, p.data) == 0) {
-                p.data = e;
-                e.data[idx] = p;
-                return;
-            }
-            if (p.next == null) {
-                p.next = i;
-                size += 1;
-                return;
-            }
-            p = p.next;
-        } while (p != null);
-    }
 
     @Override
     public void delete(E e) {
@@ -321,7 +293,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
         IdxHashEntry<E> i = (IdxHashEntry<E>) e.data[idx];
         if (i != null && i.hash != ops.hash(e) && _del(e, i)) {
             size -= 1;
-            insert(e);
+            unsafeInsert(e);
         }
     }
 
@@ -472,12 +444,8 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
     }
 
     @Override
+    //SBJ: TODO: Remove checks
     public void unsafeInsert(E e) {
-        insert(e);
-    }
-
-    @Override
-    public void insert(E e) {
         if (size == threshold) _resize();
         int h = ops.hash(e), b = h & (data.length - 1);
         IdxHashEntry<E> p = data[b], i = new IdxHashEntry<E>(h, e);
@@ -517,7 +485,7 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
             }
         };
         idxs[idx].slice(e, f);
-        if (cmpE != null) insert(cmpE);
+        if (cmpE != null) unsafeInsert(cmpE);
         else size -= 1;
         cmpE = null;
     }
@@ -544,12 +512,8 @@ class IdxList<E extends Entry> extends Idx<E> {
     private E tail = null;
 
     @Override
+    //SBJ: TODO: Remove checks
     public void unsafeInsert(E e) {
-        insert(e);
-    }
-
-    @Override
-    public void insert(E e) {
         if (unique && head != null) {
             if (e == head) {
                 head = (E) head.data[idx];
@@ -600,7 +564,7 @@ class IdxList<E extends Entry> extends Idx<E> {
     public void update(E e) {
         if (unique) {
             delete(e);
-            insert(e);
+            unsafeInsert(e);
         }
     }
 

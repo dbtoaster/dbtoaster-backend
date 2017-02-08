@@ -218,8 +218,6 @@ public:
 
     virtual T* get(const T* key) const = 0;
 
-    virtual void insert_nocheck(T* obj) = 0;
-
     virtual void add(T* obj) = 0;
 
     virtual void del(T* obj) = 0;
@@ -481,10 +479,6 @@ public:
             if (n->obj && h == n->hash && !IDX_FN::cmp(*key, *n->obj)) return n->obj;
         } while ((n = n->nxt));
         return nullptr;
-    }
-
-    FORCE_INLINE void insert_nocheck(T* obj) override {
-        add(obj); //FIX LATER
     }
 
     FORCE_INLINE void add(T* obj) override {
@@ -876,9 +870,6 @@ public:
         return nullptr;
     }
 
-    FORCE_INLINE void insert_nocheck(T* obj) override {
-        add(obj); //TODO: Fix later
-    }
 
     FORCE_INLINE void add(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
@@ -1374,9 +1365,6 @@ public:
 
     // inserts regardless of whether element exists already
 
-    FORCE_INLINE void insert_nocheck(T* obj) override {
-        add(obj); //TODO: Fix later
-    }
 
     FORCE_INLINE void add(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
@@ -1597,9 +1585,6 @@ public:
         return nullptr;
     }
 
-    FORCE_INLINE void insert_nocheck(T* obj) override {
-        add(obj); //TODO: Fix later
-    }
 
     FORCE_INLINE void add(T* obj) override {
         auto idxId = Index<T, V>::idxId;
@@ -1731,10 +1716,10 @@ public:
         HashIndex<T, V, IDX_FN, true> h1, h2;
         h1.idxId = h2.idxId = 0;
         foreach([&](const T * e) {
-            h1.insert_nocheck(const_cast<T *> (e));
+            h1.add(const_cast<T *> (e));
         });
         right.foreach([&](const T * e) {
-            h2.insert_nocheck(const_cast<T *> (e));
+            h2.add(const_cast<T *> (e));
         });
         return h1 == h2;
     }
@@ -1766,9 +1751,6 @@ public:
         return nullptr;
     }
 
-    FORCE_INLINE void insert_nocheck(T* obj) override {
-        add(obj); //TODO: Fix later
-    }
 
     FORCE_INLINE void add(T* obj) override {
         auto idxId = Index<T, V>::idxId;
@@ -2090,7 +2072,7 @@ public:
 
     FORCE_INLINE void insert_nocheck(const T* elem) {
         T* cur = copyIntoPool(elem);
-        for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->insert_nocheck(cur);
+        for (size_t i = 0; i<sizeof...(INDEXES); ++i) index[i]->add(cur);
     }
 
     FORCE_INLINE void del(T* elem) { // assume that the element is already in the map

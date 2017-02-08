@@ -1,5 +1,7 @@
 package ddbt.lib.store;
 
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
+
 /**
  * Abstract entry that is specialized for each map.
  * There is no key/value distinction as it is encoded by the indices.
@@ -12,6 +14,9 @@ public abstract class Entry {
   final Object[] data;
   public Entry(int n) { data=new Object[n]; }
   abstract public Entry copy(); // returns a copy of the entry, for B-Trees only
+  public void copyFrom(Entry e){
+    throw new NotImplementedException();
+  };  //copies contents of "e" into this
   //abstract public boolean zero(); // the tuple can safely be deleted from the map
   //abstract public void merge(Entry e); // combine e in this (some kine of aggregation)
 

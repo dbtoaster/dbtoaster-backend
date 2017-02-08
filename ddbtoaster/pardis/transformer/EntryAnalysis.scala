@@ -25,6 +25,7 @@ case class StoreSchema(val sch: List[PardisType[_]] = List()) extends Property {
 
 case class SEntry(val sch: List[PardisType[_]] = List()) extends ddbt.lib.store.Entry(0) with Property {
   def copy = ???
+  override def copyFrom(sEntry: ddbt.lib.store.Entry) = ???
 
   import ddbt.lib.store.deep.GenericEntryIRs.GenericEntryType
 

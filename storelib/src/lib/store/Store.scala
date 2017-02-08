@@ -74,7 +74,7 @@ case class GenericOps(val cols: Seq[Int]) extends EntryIdx[GenericEntry] {
     if (cols == Nil)
       throw new Exception("Cols should not be empty for GenOps")
     var h = 0;
-    cols.foreach(i => h = h ^ (0x9e3779b9 + (h<<6) + (h>>2) + e.map(i).hashCode()))
+    cols.foreach(i => h = h ^ (0x9e3779b9 + (h << 6) + (h >> 2) + e.map(i).hashCode()))
     h
   }
 
@@ -327,11 +327,12 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
   def this(n: Int, ops: Array[EntryIdx[E]])(implicit cE: ClassTag[E]) = this(new Array[Idx[E]](n), ops)(cE)
 
   private val n = idxs.length
+  private val modified = new Array[Boolean](n)
 
   def unsafeInsert(ec: E): Unit = time("unsafeInsert") {
     if (ec == null) return;
     val e = ec.copy().asInstanceOf[E]
-    var i = 0;
+    var i = 0
     while (i < n) {
       if (idxs(i) != null) idxs(i).unsafeInsert(e)
       i += 1
@@ -340,11 +341,33 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
 
   def insert(ec: E): Unit = time("insert") {
     if (ec == null) return;
-    val e = ec.copy().asInstanceOf[E]
-    var i = 0;
-    while (i < n) {
-      if (idxs(i) != null) idxs(i).insert(e);
-      i += 1;
+    val orig = idxs(0).get(ec)
+    if (orig == null) {
+      val e = ec.copy().asInstanceOf[E]
+      var i = 0
+      while (i < n) {
+        if (idxs(i) != null) idxs(i).unsafeInsert(e);
+        i += 1;
+      }
+    } else {
+      var i = 0
+      while (i < n) {
+        if (idxs(i).hashDiffers(orig, ec)) {
+          idxs(i).delete(orig)
+          modified(i) = true
+        }
+        i += 1
+      }
+      orig.copyFrom(ec)
+      i = 0
+      while (i < n) {
+        if (modified(i)) {
+          idxs(i).unsafeInsert(orig)
+          modified(i) = false
+        }
+        i += 1
+      }
+
     }
   }
 
@@ -500,7 +523,7 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     }
     if (idxs(0) != null) tp match {
       case INone | IDirect | IArray => // nothing to do
-      case _ => idxs(0).foreach(i.insert(_))
+      case _ => idxs(0).foreach(i.unsafeInsert(_))
     }
     idxs(idx) = i
     i
@@ -514,20 +537,21 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     //   val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
     //   res.append("    time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
     // }
-    idxs.zipWithIndex.foreach { case (idx, idxID) =>
-      if (idx == null) res.append(ind(ind("INone"))).append(",\n")
-      else {
-        res.append(ind(ind(idx.info)))
-        // res.append(" --> {\n")
-        // timersPerIndex.foreach{ case (f,fMap) =>
-        //   if(fMap.contains(idxID)) {
-        //     val (t,count) = fMap(idxID)
-        //     val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
-        //     res.append("      time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
-        //   }
-        // }
-        // res.append("    }\n")
-      }
+    idxs.zipWithIndex.foreach {
+      case (idx, idxID) =>
+        if (idx == null) res.append(ind(ind("INone"))).append(",\n")
+        else {
+          res.append(ind(ind(idx.info)))
+          // res.append(" --> {\n")
+          // timersPerIndex.foreach{ case (f,fMap) =>
+          //   if(fMap.contains(idxID)) {
+          //     val (t,count) = fMap(idxID)
+          //     val avg = (t.asInstanceOf[Double] / count.asInstanceOf[Double]).asInstanceOf[Int]
+          //     res.append("      time in ").append(f).append(" => (").append(t/1000000).append(".").append((t/1000)%1000).append(" ms spent for ").append(count).append(" calls) in average -> ").append(avg).append(" ns per call").append("\n")
+          //   }
+          // }
+          // res.append("    }\n")
+        }
     }
     res.append("]")
     res.append("}").toString
@@ -580,15 +604,10 @@ class IdxDirect[E <: Entry](st: Store[E], idx: Int, unique: Boolean, var data: A
   //  prepare
   size = data.length
 
-  override def unsafeInsert(e: E) {
-    insert(e)
-  }
 
-  override def insert(e: E) {
+  override def unsafeInsert(e: E) {
     val h = ops.hash(e);
-    if (imm && h >= off && h <= off + size - 1)
-      data(h - off) = e
-    else w("insert")
+    data(h - off) = e
   }
 
   override def delete(e: E) {
@@ -741,7 +760,7 @@ class IdxArray[E <: Entry](st: Store[E], idx: Int, unique: Boolean, var data: Ar
   data = data.sortWith((l: E, r: E) => ops.cmp(l, r) <= 0)
 
   override def unsafeInsert(e: E) {
-    insert(e)
+    throw new NotImplementedError("unsafeInsert Array")
   }
 
   override def get(key: E): E = if (size == 0) nil
@@ -842,9 +861,6 @@ class IdxBTree[E <: Entry](st: Store[E], idx: Int, unique: Boolean)(implicit cE:
 
   if (!unique) println("WARNING: BTree index only works with distinct keys")
 
-  override def unsafeInsert(e: E) {
-    insert(e)
-  }
 
   def dump() = root.dump("")
 
@@ -992,7 +1008,8 @@ class IdxBTree[E <: Entry](st: Store[E], idx: Int, unique: Boolean)(implicit cE:
 
   // Inserts a pair (key, value). If there is a previous pair with
   // the same key, the old value is overwritten with the new one.
-  override def insert(e: E) {
+  //SBJ: TODO: Remove checks
+   override  def unsafeInsert(e: E) {
     val split = _insert(root, e);
     if (split == null) return
     val r = new InnerNode();
@@ -1040,7 +1057,7 @@ class IdxBTree[E <: Entry](st: Store[E], idx: Int, unique: Boolean)(implicit cE:
       if (ops.cmp(n.data(i - 1), n.data(i)) < 1 && ops.cmp(n.data(i), n.data(i + 1)) < 1) return; // well positionned
     }
     delete(e);
-    insert(e)
+    unsafeInsert(e)
   }
 
   // Delete the given key and returns true. If not found, returns false.
@@ -1184,9 +1201,6 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
 
   @inline private def _meta(e: E): Heap = e.data(idx).asInstanceOf[Heap]
 
-  override def unsafeInsert(e: E) {
-    insert(e)
-  }
 
   override def foreach(f: (E) => Unit): Unit = {
     for (d <- data) {
@@ -1257,7 +1271,8 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
     false
   }
 
-  override def insert(e: E) {
+  //SBJ: TODO: Remove checks
+ override def unsafeInsert(e: E) {
     if (size == threshold) {
       val n = data.length;
       if (n == max_capacity) threshold = java.lang.Integer.MAX_VALUE; else _resize(n << 1)
@@ -1294,7 +1309,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
     if (h2 == h) return; // did not change partition
     else if (_del(e)) {
       size -= 1;
-      insert(e)
+      unsafeInsert(e)
     }
   }
 

@@ -49,11 +49,13 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
 
     override def body(structDef: PardisStructDef[_]): Document = {
       val constructor = doc"def this() = " :: structDef.fields.map(x => nullValue(x.tpe)).mkDocument("this(", ", ", ")")
-      val copyFn = if (Optimizer.analyzeIndex)
+
+      val argList = if (Optimizer.analyzeIndex)
         (1 to structDef.fields.size).map("_" + _)
       else
         "isSE" :: (1 to structDef.fields.size - 1).map("_" + _).toList
-      doc" {$constructor ; def copy = ${structDef.tag.typeName}(${copyFn.mkString(", ")}) }"
+      val copyFromFn = doc"override def copyFrom(e: Entry) = { val that = e.asInstanceOf[${structDef.tag.typeName}]; " :: argList.map(a => s"$a = that.$a").mkString("", ";", "}")
+      doc" {$constructor ; def copy = ${structDef.tag.typeName}(${argList.mkString(", ")}); $copyFromFn }"
     }
   }
 

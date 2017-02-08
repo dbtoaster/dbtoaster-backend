@@ -3,7 +3,7 @@ package ddbt.lib.store
 import scala.collection.mutable
 
 //abstract class SEntry[E<:Product:Manifest] extends Entry(manifest[E].runtimeClass.newInstance.asInstanceOf[Product].productArity)
-class GenericEntry(val map: mutable.HashMap[Int, Any], val n: Int, val isSampleEntry: Boolean) extends Entry(n) {
+class GenericEntry(var map: mutable.HashMap[Int, Any], var n: Int, var isSampleEntry: Boolean) extends Entry(n) {
   def this(n: Int) = this(new mutable.HashMap[Int, Any], n, false)
 
   def update(i: Int, v: Any): Unit = map.put(i, v)
@@ -29,6 +29,13 @@ class GenericEntry(val map: mutable.HashMap[Int, Any], val n: Int, val isSampleE
 
   def copy: GenericEntry = new GenericEntry(map.clone, map.size, isSampleEntry)
 
+  override def copyFrom(e: Entry) = {
+    val that = e.asInstanceOf[GenericEntry]
+    map = that.map
+    n = that.n
+    isSampleEntry = that.isSampleEntry
+  }
+
   override def toString = map.mkString("[", ", ", "]")
 }
 
@@ -51,7 +58,6 @@ object GenericEntry {
     new GenericEntry(map, map.size, ignore == "SteSampleSEntry")
   }
 }
-
 
 
 abstract class SEntry2[T1: Manifest, T2: Manifest] extends Entry(2)

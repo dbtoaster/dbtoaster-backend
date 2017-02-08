@@ -69,7 +69,7 @@ class IdxHashT<E extends Entry> extends Idx<E> {
     int h=ops.hash(e), b=h&(data.length-1);
     IdxHashTEntry<E> i=new IdxHashTEntry<E>(h,e); i.diff=data[b]; data[b]=i; size+=1;
   }
-  @Override public void insert(E e) {
+  public void insert(E e) {
     if (size==threshold) _resize();
     int h=ops.hash(e), b=h&(data.length-1);
     IdxHashTEntry<E> p=data[b], i=new IdxHashTEntry<E>(h,e); e.data[idx]=i;
