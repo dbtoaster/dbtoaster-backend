@@ -370,7 +370,7 @@ public:
             numSlices += ns;
             numEntries += es;
         }
-        assert(numSlices == count_);
+        assert(numEntries == count_);
         if (numBuckets == 0) {
             cerr << "Empty" << endl;
         } else {
@@ -503,9 +503,9 @@ public:
         size_t b = h & (size_ - 1);
         IdxNode* n = &buckets_[b];
         IdxNode* nw;
-
+         ++count_;
         if (is_unique) {
-            ++count_;
+           
             if (n->obj) {
                 allocated_from_pool_ = true;
                 nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -528,7 +528,7 @@ public:
         } else {
             // ++count_;
             if (!n->obj) { // space left in last IdxNode
-                ++count_;
+//                ++count_;
                 n->hash = h;
                 n->obj = obj; //n->nxt=nullptr;
                 obj->backPtrs[idxId] = n;
@@ -555,7 +555,7 @@ public:
         }*/
             } while ((n = n->nxt));
             // if(!n) {
-            ++count_;
+//            ++count_;
             n = &buckets_[b];
             allocated_from_pool_ = true;
             nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -617,8 +617,8 @@ public:
         } else { //head and the only element
             n->obj = nullptr;
         }
-        if (is_unique || !((prev && prev->obj && (h == prev->hash) && !IDX_FN::cmp(*obj, *prev->obj)) ||
-                (next && next->obj && (h == next->hash) && !IDX_FN::cmp(*obj, *next->obj)))) --count_;
+        --count_;
+        
     }
 
     FORCE_INLINE void delCopy(const T* obj, Index<T, V>* primary) override {
@@ -941,8 +941,8 @@ public:
     FORCE_INLINE void add(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
         if (count_ > threshold_) {
-//            std::cerr << "  Index resize count=" << count_ << "  size=" << size_ << std::endl;
-//            exit(1);
+            //            std::cerr << "  Index resize count=" << count_ << "  size=" << size_ << std::endl;
+            //            exit(1);
             resize_(size_ << 1);
         }
         size_t b = h & (size_ - 1);
