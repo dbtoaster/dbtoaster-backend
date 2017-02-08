@@ -17,6 +17,7 @@ trait ICppGen extends IScalaGen {
   val VALUE_NAME = "__av"
 
   val EXPERIMENTAL_RUNTIME_LIBRARY = false
+  val EXPERIMENTAL_HASHMAP = true
 
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
@@ -40,16 +41,27 @@ trait ICppGen extends IScalaGen {
 
   def ADD_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("ADD_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("ADD_TO_MAP_FUNC" -> m),0)+1); m+".addOrDelOnZero" }
 
-  def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) = {
-    val sampleTempEnt = fresh("st")
-    sampleEntDef += "  " + tupType(ksTp, vsTp) + " " + sampleTempEnt + ";\n"
-    extractBooleanExp(vs) match {
-      case Some((c,t)) =>
-        "(/*if */("+c+") ? add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, t)+") : (void)0);\n"
-      case _ =>
-        "add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, vs)+");\n"
+  def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) =
+    if (EXPERIMENTAL_HASHMAP) {
+      val sampleTempEnt = fresh("st")
+      sampleEntDef += "  " + tupType(ksTp, vsTp) + " " + sampleTempEnt + ";\n"
+      extractBooleanExp(vs) match {
+        case Some((c,t)) =>
+          s"(/*if */(${c}) ? ${m}.add(${sampleTempEnt}.modify(${ks.map(rn).mkString(", ")}), ${t}) : (void)0);\n"
+        case _ =>
+          s"${m}.add(${sampleTempEnt}.modify(${ks.map(rn).mkString(", ")}), ${vs});\n"
+      }
     }
-  }
+    else {
+      val sampleTempEnt = fresh("st")
+      sampleEntDef += "  " + tupType(ksTp, vsTp) + " " + sampleTempEnt + ";\n"
+      extractBooleanExp(vs) match {
+        case Some((c,t)) =>
+          "(/*if */("+c+") ? add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, t)+") : (void)0);\n"
+        case _ =>
+          "add_to_temp_map"+/*"<"+tupType(ksTp, vsTp)+">"+*/"("+m+", "+sampleTempEnt+".modify"+tup(ks map rn, vs)+");\n"
+      }
+    }
 
   val tempTupleTypes = HashMap[String,(List[Type],Type)]()
   
@@ -175,7 +187,9 @@ trait ICppGen extends IScalaGen {
           val n0 = fresh("n")
           val idx0= fresh("i")
           val mapType = mapName + "_map"
-          val idxName = "HashIndex_" + mapType + "_" + getIndexId(mapName, is)
+          val idxName =
+            if (EXPERIMENTAL_HASHMAP) "PrimaryHashIndex_" + mapType + "_" + getIndexId(mapName, is)
+            else "HashIndex_" + mapType + "_" + getIndexId(mapName, is)
           val idxFn = mapType + "key" + getIndexId(mapName, is) + "_idxfn"
           
           val body = 
@@ -195,16 +209,31 @@ trait ICppGen extends IScalaGen {
             sampleEntDef += stringIf(m.keys.size > 0, s"  ${mapEntry} ${sampleEnt};\n");
 
             val h0= fresh("h")
-            s"""|{ //slice
-                |  const HASH_RES_t ${h0} = ${idxFn}::hash(${sampleEnt}.modify${getIndexId(mapName,is)}(${iKeys.mkString(", ")}));
-                |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[${idxIndex}]);
-                |  ${idxName}::IdxNode* ${n0} = &(${idx0}->buckets_[${h0} & ${idx0}->mask_]);
-                |  ${mapEntry}* ${e0};
-                |  do if ((${e0} = ${n0}->obj) && ${h0} == ${n0}->hash && ${idxFn}::equals(${sampleEnt}, *${e0})) {
-                |${ind(body, 2)}
-                |  } while ((${n0} = ${n0}->nxt));
-                |}
-                |""".stripMargin
+            if (EXPERIMENTAL_HASHMAP) {
+              s"""|{ //slice
+                  |  const SecondaryIdxNode<${mapEntry}>* ${n0}_head = static_cast<const SecondaryIdxNode<${mapEntry}>*>(${mapName}.slice(${sampleEnt}.modify${getIndexId(mapName,is)}(${iKeys.mkString(", ")}), ${idxIndex - 1}));
+                  |  const SecondaryIdxNode<${mapEntry}>* ${n0} = ${n0}_head;
+                  |  ${mapEntry}* ${e0};
+                  |  while (${n0}) {
+                  |    ${e0} = ${n0}->obj;
+                  |${ind(body, 2)}
+                  |    ${n0} = (${n0} != ${n0}_head ? ${n0}->nxt : ${n0}->child);
+                  |  }
+                  |}
+                  |""".stripMargin
+            }
+            else {
+              s"""|{ //slice
+                  |  const HASH_RES_t ${h0} = ${idxFn}::hash(${sampleEnt}.modify${getIndexId(mapName,is)}(${iKeys.mkString(", ")}));
+                  |  const ${idxName}* ${idx0} = static_cast<${idxName}*>(${mapName}.index[${idxIndex}]);
+                  |  ${idxName}::IdxNode* ${n0} = &(${idx0}->buckets_[${h0} & ${idx0}->mask_]);
+                  |  ${mapEntry}* ${e0};
+                  |  do if ((${e0} = ${n0}->obj) && ${h0} == ${n0}->hash && ${idxFn}::equals(${sampleEnt}, *${e0})) {
+                  |${ind(body, 2)}
+                  |  } while ((${n0} = ${n0}->nxt));
+                  |}
+                  |""".stripMargin
+            }
           } else { //foreach
             if (EXPERIMENTAL_RUNTIME_LIBRARY && deltaRelationNames.contains(mapName)) {
               // TODO: if relation has alias, then this won't match external data structures.
@@ -472,9 +501,16 @@ trait ICppGen extends IScalaGen {
     maps.filter { m => queries.filter(_.name == m.name).size == 0}.map(genMap).mkString
 
   def genTempMapDefs = 
-    tmpMapDefs.map{ case (n, (ksTp, vsTp)) => 
-      "MultiHashMap<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + ", HashIndex<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + "> > " + n + ";\n"
-    }.mkString
+    if (EXPERIMENTAL_HASHMAP) {
+      tmpMapDefs.map{ case (n, (ksTp, vsTp)) =>
+        "MultiHashMap<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + ", PrimaryHashIndex<" + tupType(ksTp, vsTp) + "> > " + n + ";\n"
+      }.mkString
+    }
+    else {
+      tmpMapDefs.map{ case (n, (ksTp, vsTp)) =>
+        "MultiHashMap<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + ", HashIndex<" + tupType(ksTp, vsTp) + ", " + vsTp.toCpp + "> > " + n + ";\n"
+      }.mkString
+    }
 
   def isExpressiveTLQSEnabled(queries:List[Query]) = 
     queries.exists { query => query.map match {
@@ -685,33 +721,64 @@ trait ICppGen extends IScalaGen {
       }.mkString("\n")
 
       def genTypeDefs =
-        "typedef MultiHashMap<" + mapEntry + ", " + mapValueType + ", " +
-        allIndices.map { case (is, unique) => "\n  HashIndex<" + mapEntry + ", " + mapValueType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn, " + unique + ">"}.mkString(",") +
-        "\n> " + mapType + ";\n" +
-        allIndices.map { case (is, unique) =>
-          "typedef HashIndex<" + mapEntry + ", " + mapValueType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn, " + unique + "> HashIndex_" + mapType + "_" + getIndexId(mapName, is) + ";\n"
-        }.mkString
+        if (EXPERIMENTAL_HASHMAP) {
+          "typedef MultiHashMap<" + mapEntry + ", " + mapValueType + ", " +
+          allIndices.map { case (is, unique) =>
+            if (unique) "\n  PrimaryHashIndex<" + mapEntry + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn>"
+            else "\n  SecondaryHashIndex<" + mapEntry + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn>"
+          }.mkString(", ") +
+          "\n> " + mapType + ";\n"
+        }
+        else {
+          "typedef MultiHashMap<" + mapEntry + ", " + mapValueType + ", " +
+          allIndices.map { case (is, unique) => "\n  HashIndex<" + mapEntry + ", " + mapValueType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn, " + unique + ">"}.mkString(",") +
+          "\n> " + mapType + ";\n" +
+          allIndices.map { case (is, unique) =>
+            "typedef HashIndex<" + mapEntry + ", " + mapValueType + ", " + mapType + "key" + getIndexId(mapName, is) + "_idxfn, " + unique + "> HashIndex_" + mapType + "_" + getIndexId(mapName, is) + ";\n"
+          }.mkString
+        }
 
       genEntryStruct+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs
     }
     def genTempTupleTypes = {
-      tempTupleTypes.map{case (name,(ksTp,vsTp)) => 
-        val ksTpWithIdx = ksTp.zipWithIndex
-        val valVarName = VALUE_NAME
-        "struct " + name +" {\n"+
-        "  "+ksTpWithIdx.map{case (k,i) => k.toCpp+" _"+(i+1)+"; "}.mkString+(vsTp.toCpp+" "+valVarName+"; "+name+"* nxt; "+name+"* prv;")+"\n"+
-        "  explicit "+name+"() : nxt(nullptr), prv(nullptr) { "/*+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = "+k.zeroCpp+"; "}.mkString+(valVarName+" = "+vsTp.zeroCpp+";")*/+"}\n"+
-        "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") : nxt(nullptr), prv(nullptr) { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
-        "  int operator<(const "+name+" &rhs) const { \n"+ksTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
-        "  int operator==(const "+name+" &rhs) const { return ("+ksTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
-        "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
-        "  static bool equals(const "+name+" &x, const "+name+" &y) { return ("+ksTpWithIdx.map{case (v,i) => "(x._"+(i+1)+"==y._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
-        "  static long hash(const "+name+" &e) {\n"+
-        "    size_t h = 0;\n"+
-        ksTpWithIdx.map{ case (v,i) => "    hash_combine(h, e._"+(i+1)+");\n" }.mkString +
-        "    return h;\n"+
-        "  }\n"+
-        "};"
+      if (EXPERIMENTAL_HASHMAP) {
+        tempTupleTypes.map { case (name, (ksTp, vsTp)) =>
+          val ksTpWithIdx = ksTp.zipWithIndex
+          s"""|struct ${name} {
+              |  ${ksTpWithIdx.map { case (k,i) => k.toCpp + " _" + (i + 1) + "; "}.mkString} ${vsTp.toCpp} ${VALUE_NAME}; ${name}* nxt; ${name}* prv;
+              |  explicit ${name}() : nxt(nullptr), prv(nullptr) { }
+              |  FORCE_INLINE ${name}& modify(${ksTpWithIdx.map { case (k,i) => "const " + k.toCppRefType + " c" + i}.mkString(", ")}) { ${ksTpWithIdx.map { case (k,i) => "_" + (i + 1) + " = c" + i + "; "}.mkString} return *this; }
+              |  static bool equals(const ${name} &x, const ${name} &y) {
+              |    return (${ksTpWithIdx.map { case (v,i) => "(x._" + (i + 1) + "==y._" + (i + 1) + ")"}.mkString(" && ")});
+              |  }
+              |  static long hash(const ${name} &e) {
+              |    size_t h = 0;
+              |    ${ksTpWithIdx.map { case (v,i) => "    hash_combine(h, e._" + (i + 1) + ");" }.mkString("\n")}
+              |    return h;
+              |  }
+              |};
+              |""".stripMargin
+        }
+      }
+      else {
+        tempTupleTypes.map{case (name,(ksTp,vsTp)) =>
+          val ksTpWithIdx = ksTp.zipWithIndex
+          val valVarName = VALUE_NAME
+          "struct " + name +" {\n"+
+          "  "+ksTpWithIdx.map{case (k,i) => k.toCpp+" _"+(i+1)+"; "}.mkString+(vsTp.toCpp+" "+valVarName+"; "+name+"* nxt; "+name+"* prv;")+"\n"+
+          "  explicit "+name+"() : nxt(nullptr), prv(nullptr) { "/*+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = "+k.zeroCpp+"; "}.mkString+(valVarName+" = "+vsTp.zeroCpp+";")*/+"}\n"+
+          "  explicit "+name+"("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+(i+1)+", "}.mkString+(vsTp.toCpp+" c"+valVarName+"="+vsTp.zeroCpp)+") : nxt(nullptr), prv(nullptr) { "+ksTpWithIdx.map{case (_,i) => "_"+(i+1)+" = c"+(i+1)+"; "}.mkString+(valVarName+" = c"+valVarName+";")+"}\n"+
+          "  int operator<(const "+name+" &rhs) const { \n"+ksTpWithIdx.map{case (v,i) => "    if(this->_"+(i+1)+"!=rhs._"+(i+1)+") return (this->_"+(i+1)+"<rhs._"+(i+1)+");\n"}.mkString+"    return 0;\n  }\n"+
+          "  int operator==(const "+name+" &rhs) const { return ("+ksTpWithIdx.map{case (v,i) => "(this->_"+(i+1)+"==rhs._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
+          "  FORCE_INLINE "+name+"& modify("+ksTpWithIdx.map{case (k,i) => "const "+k.toCppRefType+" c"+i+", "}.mkString+vsTp.toCpp+" c"+valVarName+") { "+ksTpWithIdx.map{case (k,i) => "_"+(i+1)+" = c"+i+"; "}.mkString+valVarName+" = c"+valVarName+"; return *this; }\n"+
+          "  static bool equals(const "+name+" &x, const "+name+" &y) { return ("+ksTpWithIdx.map{case (v,i) => "(x._"+(i+1)+"==y._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
+          "  static long hash(const "+name+" &e) {\n"+
+          "    size_t h = 0;\n"+
+          ksTpWithIdx.map{ case (v,i) => "    hash_combine(h, e._"+(i+1)+");\n" }.mkString +
+          "    return h;\n"+
+          "  }\n"+
+          "};"
+        }
       }
     }
 
