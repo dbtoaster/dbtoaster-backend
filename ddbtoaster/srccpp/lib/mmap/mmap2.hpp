@@ -434,11 +434,12 @@ public:
     FORCE_INLINE IdxNode* sliceRes(const T& key) {
         HASH_RES_t h = IDX_FN::hash(key);
         IdxNode* n = &(buckets_[h & (size_ - 1)]);
-        do {
-            if (n->obj && h == n->hash && !IDX_FN::cmp(key, *n->obj)) {
-                return n;
-            }
-        } while ((n = n->nxt));
+        if (n->obj)
+            do {
+                if (h == n->hash && !IDX_FN::cmp(key, *n->obj)) {
+                    return n;
+                }
+            } while ((n = n->nxt));
         return nullptr;
     }
 
@@ -449,8 +450,9 @@ public:
     FORCE_INLINE void sliceResMap(const T& key, FuncType f, IdxNode* n) {
         HASH_RES_t h = n->hash;
         do {
-            f(n->obj);
-        } while ((n = n->nxt) && (h == n->hash) && !IDX_FN::cmp(key, *n->obj));
+            if (h == n->hash && !IDX_FN::cmp(key, *n->obj))
+                f(n->obj);
+        } while ((n = n->nxt));
     }
 
     FORCE_INLINE T* foreachRes() {
@@ -503,73 +505,14 @@ public:
         size_t b = h & (size_ - 1);
         IdxNode* n = &buckets_[b];
         IdxNode* nw;
-         ++count_;
-        if (is_unique) {
-           
-            if (n->obj) {
-                allocated_from_pool_ = true;
-                nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-
-                nw->hash = h;
-                obj->backPtrs[idxId] = nw;
-                nw->obj = obj;
-
-                nw->nxt = n->nxt;
-                if (nw->nxt)
-                    nw->nxt->prv = nw;
-
-                n->nxt = nw;
-                nw->prv = n;
-            } else { // space left in last IdxNode
-                n->hash = h;
-                n->obj = obj; //n->nxt=nullptr;
-                obj->backPtrs[idxId] = n;
-            }
-        } else {
-            // ++count_;
-            if (!n->obj) { // space left in last IdxNode
-//                ++count_;
-                n->hash = h;
-                n->obj = obj; //n->nxt=nullptr;
-                obj->backPtrs[idxId] = n;
-                return;
-            }
-            do {
-                if (h == n->hash && !IDX_FN::cmp(*obj, *n->obj)) {
-                    allocated_from_pool_ = true;
-                    nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-                    nw->hash = h;
-                    nw->obj = obj;
-                    obj->backPtrs[idxId] = nw;
-
-                    nw->nxt = n->nxt;
-                    if (nw->nxt)
-                        nw->nxt->prv = nw;
-
-                    n->nxt = nw;
-                    nw->prv = n;
-                    return;
-                }/*else {
-          //go ahead, and look for an element in the same slice
-          //or reach the end of linked list of IdxNodes
-        }*/
-            } while ((n = n->nxt));
-            // if(!n) {
-//            ++count_;
-            n = &buckets_[b];
+        ++count_;
+        if (n->obj) {
             allocated_from_pool_ = true;
             nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-            //in addition to adding nw, we also change the place of nw with n
-            //to preserve the order of elements, as it is required for
-            //non-unique hash maps (as the first element might be the start of)
-            //a chain of non-unique elements belonging to the same slice
-            nw->hash = n->hash;
-            n->obj->backPtrs[idxId] = nw;
-            nw->obj = n->obj;
 
-            n->hash = h;
-            obj->backPtrs[idxId] = n;
-            n->obj = obj;
+            nw->hash = h;
+            obj->backPtrs[idxId] = nw;
+            nw->obj = obj;
 
             nw->nxt = n->nxt;
             if (nw->nxt)
@@ -577,9 +520,12 @@ public:
 
             n->nxt = nw;
             nw->prv = n;
-            // return;
-            // }
+        } else { // space left in last IdxNode
+            n->hash = h;
+            n->obj = obj; //n->nxt=nullptr;
+            obj->backPtrs[idxId] = n;
         }
+
     }
 
     // deletes an existing element (equality by pointer comparison)
@@ -618,7 +564,7 @@ public:
             n->obj = nullptr;
         }
         --count_;
-        
+
     }
 
     FORCE_INLINE void delCopy(const T* obj, Index<T, V>* primary) override {
@@ -637,29 +583,25 @@ public:
     FORCE_INLINE void slice(const T* key, FuncType f) override {
         HASH_RES_t h = IDX_FN::hash(*key);
         IdxNode* n = &(buckets_[h & (size_ - 1)]);
-        do {
-            if (n->obj && h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
-                do {
+        if (n->obj)
+            do {
+                if (h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
                     f(n->obj);
-                } while ((n = n->nxt) && (h == n->hash) && !IDX_FN::cmp(*key, *n->obj));
-                return;
-            }
-        } while ((n = n->nxt));
+                }
+            } while ((n = n->nxt));
     }
 
     FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
         HASH_RES_t h = IDX_FN::hash(*key);
         std::vector<T*> entries;
         IdxNode* n = &(buckets_[h & (size_ - 1)]);
-        do {
-            if (n->obj && h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
-                do {
+        if (n->obj)
+            do {
+                if (h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
                     T* temp = n->obj->copy();
                     entries.push_back(temp);
-                } while ((n = n->nxt) && (h == n->hash) && !IDX_FN::cmp(*key, *n->obj));
-                break;
-            }
-        } while ((n = n->nxt));
+                }
+            } while ((n = n->nxt));
         for (auto it : entries) {
             f(it);
         }

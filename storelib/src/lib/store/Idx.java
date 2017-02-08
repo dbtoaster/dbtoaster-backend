@@ -365,8 +365,9 @@ class IdxHash<E extends Entry> extends Idx<E> {
         IdxHashEntry<E> e = ((SliceRes<E>) res).sliceHead();
         int h = e.hash;
         do {
-            f.apply(e.data);
-        } while ((e = e.next) != null && e.hash == h && ops.cmp(key, e.data) == 0);
+            if (e.hash == h && ops.cmp(key, e.data) == 0)
+                f.apply(e.data);
+        } while ((e = e.next) != null);
     }
 
     @Override
