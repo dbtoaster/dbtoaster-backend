@@ -17,6 +17,7 @@ public abstract class Entry {
   public void copyFrom(Entry e){
     throw new NotImplementedException();
   };  //copies contents of "e" into this
+  Entry next, prev;
   //abstract public boolean zero(); // the tuple can safely be deleted from the map
   //abstract public void merge(Entry e); // combine e in this (some kine of aggregation)
 

@@ -528,9 +528,12 @@ public:
         auto idxId = Index<T, V>::idxId;
         if (idxId == 0) {
             T *elemPrv = obj->prv, *elemNxt = obj->nxt;
-            if (elemPrv) elemPrv->nxt = elemNxt;
+            if (elemPrv)
+              elemPrv->nxt = elemNxt;
+            else
+               dataHead = elemNxt;
             if (elemNxt) elemNxt->prv = elemPrv;
-            if (obj == dataHead) dataHead = elemNxt;
+
             obj->nxt = nullptr;
             obj->prv = nullptr;
         }

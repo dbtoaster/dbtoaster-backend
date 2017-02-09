@@ -20,6 +20,7 @@ public abstract class Idx<E extends Entry> {
         this.unique = unique;
     }
 
+    protected Entry dataHead;
     protected final EntryIdx<E> ops;
     protected final int idx;
     protected final boolean unique;
@@ -206,6 +207,18 @@ class IdxHash<E extends Entry> extends Idx<E> {
     }
 
     protected void _del(E e, IdxHashEntry<E> i) {
+        if (idx == 0) {
+            Entry elemPrev = e.prev, elemNext = e.next;
+            if (elemPrev != null)
+                elemPrev.next = elemNext;
+            else
+                dataHead = elemNext;
+
+            if (elemNext != null) elemNext.prev = elemPrev;
+
+            e.next = null;
+            e.prev = null;
+        }
         IdxHashEntry<E> nxt = i.next;
         IdxHashEntry<E> prv = i.prev;
         if (prv != null) { //not head
@@ -221,7 +234,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
             nxt.data.data[idx] = i;
         } else { //head and the only element
             int h = i.hash, b = h & (data.length - 1);
-            if(data[b] == i)
+            if (data[b] == i)
                 data[b] = null;
             else
                 throw new IllegalStateException();
@@ -233,6 +246,13 @@ class IdxHash<E extends Entry> extends Idx<E> {
     public void unsafeInsert(E e) {
         if (size == threshold) _resize();
         int h = ops.hash(e), b = h & (data.length - 1);
+        if (idx == 0) {
+            e.prev = null;
+            e.next = dataHead;
+            if (dataHead != null)
+                dataHead.prev = e;
+            dataHead = e;
+        }
         IdxHashEntry<E> i = new IdxHashEntry<E>(h, e);
         e.data[idx] = i;
         i.next = data[b];
@@ -312,16 +332,10 @@ class IdxHash<E extends Entry> extends Idx<E> {
 
     @Override
     public void foreach(Function1<E, Unit> f) {
-        E d;
-        IdxHashEntry<E> e, en;
-        for (int i = 0, n = data.length; i < n; ++i) {
-            e = data[i];
-            if (e != null) do {
-                en = e.next;
-                d = e.data;
-                f.apply(d);
-                e = en;
-            } while (e != null);
+        Entry cur = dataHead;
+        while (cur != null) {
+            f.apply((E)cur);
+            cur = cur.next;
         }
     }
 
@@ -389,6 +403,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
     @Override
     public void clear() {
         IdxHashEntry<E> z = null;
+        dataHead = null;
         for (int i = 0, n = data.length; i < n; ++i) {
             data[i] = z;
         }
