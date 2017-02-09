@@ -59,6 +59,8 @@ struct ZeroValue<double>
 #endif
 };
 
+#define USE_OLD_MAP
+
 #ifndef USE_OLD_MAP
 
 template <typename T>
