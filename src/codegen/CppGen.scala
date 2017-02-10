@@ -17,7 +17,7 @@ trait ICppGen extends IScalaGen {
   val VALUE_NAME = "__av"
 
   val EXPERIMENTAL_RUNTIME_LIBRARY = false
-  val EXPERIMENTAL_HASHMAP = false
+  val EXPERIMENTAL_HASHMAP = true
 
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
@@ -145,14 +145,12 @@ trait ICppGen extends IScalaGen {
     }
 
     case Exists(e) => cpsExpr(e, (v: String) => 
-      //TODO: HERE
-      co("(" + v + " != 0 ? 1L : 0L)"))
+      co(cmpFunc(TypeLong, OpNe, v, ex.tp.zeroCpp)))
 
     case Cmp(l,r,op) =>
       co(cpsExpr(l, (ll: String) => cpsExpr(r, (rr: String) => cmpFunc(l.tp, op, ll, rr))))
 
     case CmpOrList(l,r) =>
-      // TODO: HERE
       co(cpsExpr(l, (ll: String) =>
         "(/*if */((" +
         r.map(x => cpsExpr(x, (rr: String) => "(" + ll + " == " + rr + ")"))
@@ -292,7 +290,7 @@ trait ICppGen extends IScalaGen {
     // "1L" is the neutral element for multiplication, and chaining is done with multiplication
     case Lift(n,e) =>
     // Mul(Lift(x,3),Mul(Lift(x,4),x)) ==> (x=3;x) == (x=4;x)
-      if (ctx.contains(n)) cpsExpr(e, (v: String) => co(cmpFunc(TypeLong, OpEq, rn(n), v, false)), am)
+      if (ctx.contains(n)) cpsExpr(e, (v: String) => co(cmpFunc(TypeLong, OpEq, rn(n), v)), am)
       else e match {
         case Ref(n2) => ctx.add(n,(e.tp,rn(n2))); co("1L") // de-aliasing
         //This renaming is required. As an example:
@@ -317,18 +315,14 @@ trait ICppGen extends IScalaGen {
         val body = cpsExpr(er, (vr: String) => {
           (extractBooleanExp(vl), extractBooleanExp(vr)) match {
               case (Some((cl,tl)), Some((cr,tr))) =>
-                // if (unionDepth == 0) { ifcond = cl + " && " + cr;  co(vx(tl,tr)) }
-                // else 
-                co("(/*if */(" + cl + " && " + cr + ") ? " + vx(tl,tr) + " : " + ex.tp.zeroCpp + ")")
+                if (unionDepth == 0) { ifcond = cl;  co("(/*if */(" + cr + ") ? " + vx(vl,tr) + " : " + ex.tp.zeroCpp + ")") }
+                else co("(/*if */(" + cl + " && " + cr + ") ? " + vx(tl,tr) + " : " + ex.tp.zeroCpp + ")")
 
               case (Some((cl,tl)), _) =>
-                // if (unionDepth == 0) { ifcond = cl; co(vx(tl,vr)) }
-                // else
-                co("(/*if */(" + cl + ") ? " + vx(tl,vr) + " : " + ex.tp.zeroCpp + ")")
+                if (unionDepth == 0) { ifcond = cl; co(vx(tl,vr)) }
+                else co("(/*if */(" + cl + ") ? " + vx(tl,vr) + " : " + ex.tp.zeroCpp + ")")
 
               case (_, Some((cr,tr))) =>
-                // if (unionDepth == 0) { ifcond = cr; co(vx(vl,tr)) }
-                // else 
                 co("(/*if */(" + cr + ") ? " + vx(vl,tr) + " : " + ex.tp.zeroCpp + ")")
 
               case _ => co(vx(vl,vr))
