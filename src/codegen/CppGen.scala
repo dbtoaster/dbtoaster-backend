@@ -246,9 +246,8 @@ trait ICppGen extends IScalaGen {
             }
           } else { //foreach
             if (EXPERIMENTAL_RUNTIME_LIBRARY && deltaRelationNames.contains(mapName)) {
-              // TODO: if relation has alias, then this won't match external data structures.
               s"""|{ //foreach
-                  |  for (typename std::vector<T>::iterator ${e0} = begin; ${e0} != end; ${e0}++) {
+                  |  for (std::vector<${mapEntry}>::iterator ${e0} = begin; ${e0} != end; ${e0}++) {
                   |${ind(body, 2)}
                   |  }
                   |}
@@ -477,45 +476,68 @@ trait ICppGen extends IScalaGen {
   }
 
   override def genTrigger(t: Trigger, s0: System): String = {
-    val (n, as, xActCounter) = t.evt match {
-      case EvtReady => ("system_ready_event", Nil, "")
-      case EvtBatchUpdate(sc @ Schema(n,cs)) => 
-        //later, we will find ++tN in the code to add some benchmarkings, so we will let it remain here
-        if (EXPERIMENTAL_RUNTIME_LIBRARY) 
-          ("batch_update_" + n, cs, "tN += std::distance(begin, end);")
-        else 
-          ("batch_update_" + n, cs, "tN += " + sc.deltaName + ".count() - 1; ++tN;") 
-      case EvtAdd(Schema(n,cs)) => ("insert_" + n, cs, "++tN;")
-      case EvtDel(Schema(n,cs)) => ("delete_" + n, cs, "++tN;")
+    val fields = t.evt match {
+      case EvtBatchUpdate(_) | EvtAdd(_) | EvtDel(_) => t.evt.schema.fields
+      case EvtReady => Nil
     }
-    ctx = Ctx(as.map(x => (x._1, (x._2, x._1))).toMap)
 
-    val triggerBody = 
-      s"""|${xActCounter}
-          |${t.stmts.map(genStmt).mkString}""".stripMargin
+    ctx = Ctx(fields.map(x => (x._1, (x._2, x._1))).toMap)
+    val sTriggerBody = t.stmts.map(genStmt).mkString
     ctx = null
 
-    val triggerHeader = 
-      if (EXPERIMENTAL_RUNTIME_LIBRARY && (t.evt match { case EvtBatchUpdate(_) => true  case _ => false })) {
-          s"""|template<typename T>
-              |void on_${n}(const typename std::vector<T>::iterator &begin, const typename std::vector<T>::iterator &end)""".stripMargin
-      } 
-      else {
-        val params = t.evt match {
-          case EvtBatchUpdate(Schema(n,_)) =>
-            val rel = s0.sources.filter(_.schema.name == n)(0).schema
-            // val ks = rel.fields.map(_._2)
-            // val tp = TypeLong
-            rel.deltaName + "_map& " + rel.deltaName
-          case _ =>
-            as.map(a => s"const ${a._2.toCppRefType} ${a._1}").mkString(", ")
+    t.evt match {
+      case EvtBatchUpdate(s) =>
+        if (EXPERIMENTAL_RUNTIME_LIBRARY) {
+          s"""|void on_batch_update_${s.name}(const std::vector<${s.name}_entry>::iterator &begin, const std::vector<${s.name}_entry>::iterator &end) {
+              |  tN += std::distance(begin, end);
+              |${ind(sTriggerBody)}
+              |}
+              |""".stripMargin
         }
-        s"void on_${n}(${params})"
-      }
-    s"""|${triggerHeader} {
-        |${ind(triggerBody)}
-        |}
-        |""".stripMargin
+        else {
+          val schema = t.evt.schema
+          s"""|void on_batch_update_${schema.name}(${schema.deltaName}_map &${schema.deltaName}) {
+              |  tN += ${schema.deltaName}.count() - 1; ++tN;
+              |${ind(sTriggerBody)}
+              |}
+              |""".stripMargin
+        }
+      case EvtAdd(s) =>
+        val params = fields.map(f => s"const ${f._2.toCppRefType} ${f._1}").mkString(", ")
+        val schema = s0.sources.filter(_.schema.name == s.name).head.schema
+        val args = schema.fields.map(f => s"e.${f._1}").mkString(", ")
+        s"""|void on_insert_${s.name}(${params}) {
+            |  ++tN;
+            |${ind(sTriggerBody)}
+            |}
+            |""".stripMargin +
+        stringIf(EXPERIMENTAL_RUNTIME_LIBRARY,
+            s"""|void on_insert_${s.name}(${s.name}_entry &e) {
+                |  on_insert_${s.name}(${args});
+                |}
+                |""".stripMargin)
+
+      case EvtDel(s) =>
+        val params = fields.map(a => s"const ${a._2.toCppRefType} ${a._1}").mkString(", ")
+        val schema = s0.sources.filter(_.schema.name == s.name).head.schema
+        val args = schema.fields.map(f => s"e.${f._1}").mkString(", ")
+        s"""|void on_delete_${s.name}(${params}) {
+            |  ++tN;
+            |${ind(sTriggerBody)}
+            |}
+            |""".stripMargin +
+        stringIf(EXPERIMENTAL_RUNTIME_LIBRARY,
+            s"""|void on_delete_${s.name}(${s.name}_entry &e) {
+                |  on_delete_${s.name}(${args});
+                |}
+                |""".stripMargin)
+
+      case EvtReady =>
+        s"""|void on_system_ready_event() {
+            |${ind(sTriggerBody)}
+            |}
+            |""".stripMargin
+    }
   }
 
   override def slice(m: String, i: List[Int]):Int = { // add slicing over particular index capability
@@ -607,34 +629,54 @@ trait ICppGen extends IScalaGen {
 
     def init_stats = ""
 
-    def genTableTriggers = s0.sources.filter(!_.stream).map { s =>
-        val name = s.schema.name
-        val fields = s.schema.fields
-        
-        "void on_insert_" + name + "(" + fields.map { 
-            case (fld,tp) => "const " + tp.toCpp + " " + fld 
-          }.mkString(", ") + ") {\n"+
-        "  " + name + "_entry e(" + fields.map { case (fld,_) => fld }.mkString(", ") + ", 1L);\n" +
-        "  " + ADD_TO_MAP_FUNC(name) + "(e,1L);\n" +
-        "}\n\n" +
-        stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY,
-          generateUnwrapFunction(EvtAdd(s.schema)) +
-          stringIf(
-            s0.triggers.exists { _.evt match {
-                case EvtBatchUpdate(_) => true
-                case _ => false
-            }},
-            "void unwrap_batch_update_" + name + "(const event_args_t& eaList) {\n"+
-            "  size_t sz = eaList.size();\n"+
-            "  for(size_t i=0; i < sz; i++){\n"+
-            "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
-            "    " + name + "_entry e(" + fields.zipWithIndex.map { case ((_, tp), i) => "*(reinterpret_cast<" + tp.toCpp + "*>((*ea)[" + i + "].get())), "}.mkString + "1L);\n" +
-            "    " + ADD_TO_MAP_FUNC(name) + "(e,1L);\n" +
-            "  }\n" +
-            "}\n\n"
-          )
-        )
-      }.mkString
+    def genTableTriggers = 
+      if (EXPERIMENTAL_RUNTIME_LIBRARY) {
+        s0.sources.filter(!_.stream).map { s =>
+          val name = s.schema.name
+          val fields = s.schema.fields
+          val params = s.schema.fields.map { case (fld,tp) => "const " + tp.toCpp + " " + fld  }.mkString(", ")
+          val args = s.schema.fields.map(_._1).mkString(", ")
+
+          s"""|void on_insert_${name}(${params}) {
+              |  ${name}_entry e(${args}, 1L);
+              |  ${ADD_TO_MAP_FUNC(name)}(e, 1L);
+              |}
+              |""".stripMargin +
+          s"""|void on_insert_${name}(${name}_entry &e) {
+              |  e.${VALUE_NAME} = 1L;
+              |  ${ADD_TO_MAP_FUNC(name)}(e, 1L);
+              |}
+              |""".stripMargin
+        }.mkString
+      }
+      else {
+        s0.sources.filter(!_.stream).map { s =>
+            val name = s.schema.name
+            val fields = s.schema.fields
+            
+            "void on_insert_" + name + "(" + fields.map { 
+                case (fld,tp) => "const " + tp.toCpp + " " + fld 
+              }.mkString(", ") + ") {\n"+
+            "  " + name + "_entry e(" + fields.map { case (fld,_) => fld }.mkString(", ") + ", 1L);\n" +
+            "  " + ADD_TO_MAP_FUNC(name) + "(e,1L);\n" +
+            "}\n\n" +
+            generateUnwrapFunction(EvtAdd(s.schema)) +
+            stringIf(
+              s0.triggers.exists { _.evt match {
+                  case EvtBatchUpdate(_) => true
+                  case _ => false
+              }},
+              "void unwrap_batch_update_" + name + "(const event_args_t& eaList) {\n"+
+              "  size_t sz = eaList.size();\n"+
+              "  for(size_t i=0; i < sz; i++){\n"+
+              "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
+              "    " + name + "_entry e(" + fields.zipWithIndex.map { case ((_, tp), i) => "*(reinterpret_cast<" + tp.toCpp + "*>((*ea)[" + i + "].get())), "}.mkString + "1L);\n" +
+              "    " + ADD_TO_MAP_FUNC(name) + "(e,1L);\n" +
+              "  }\n" +
+              "}\n\n"
+            )
+          }.mkString        
+      }
 
     def genStreamTriggers = s0.triggers.map(t =>
         genTrigger(t, s0) + "\n" + 
@@ -643,10 +685,10 @@ trait ICppGen extends IScalaGen {
 
     def generateUnwrapFunction(evt:EvtTrigger) = stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY, {
       val (op,name,fields) = evt match {
-        case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
-        case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
-        case EvtDel(Schema(n,cs)) => ("delete",n,cs)
-        case _ => sys.error("Unsupported trigger event "+evt)
+        case EvtBatchUpdate(Schema(n,cs)) => ("batch_update", n, cs)
+        case EvtAdd(Schema(n,cs)) => ("insert", n, cs)
+        case EvtDel(Schema(n,cs)) => ("delete", n, cs)
+        case _ => sys.error("Unsupported trigger event " + evt)
       }
       evt match {
         case b@EvtBatchUpdate(_) =>
@@ -709,35 +751,57 @@ trait ICppGen extends IScalaGen {
       }
     })
 
-    def genMapStructDef(m:MapDef) = {
+    def genMapStructDef(m: MapDef) = {
       val mapName = m.name
-      val mapType = mapName+"_map"
-      val mapEntry = mapName+"_entry"
+      val mapType = mapName + "_map"
+      val mapEntry = mapName + "_entry"
       val mapValueType = m.tp.toCpp
       val fields = m.keys ++ List(VALUE_NAME -> m.tp)
       val fieldsWithIdx = fields.zipWithIndex
-      val indices = sx.getOrElse(m.name,List[List[Int]]())
+      val indices = sx.getOrElse(m.name, List[List[Int]]())
       //TODO XXX is it always required to create a unique index?
       val allIndices = ((0 until m.keys.size).toList -> true /*unique*/) :: indices.map(is => (is -> false /*non_unique*/))
       val multiKeyIndices = allIndices.filter{case (is,_) => is.size > 1}
 
       def genEntryStruct = {
-        "struct "+mapEntry+" {\n"+
-        "  "+fields.map{case (fld,tp) => tp.toCpp+" "+fld+"; "}.mkString+" "+mapEntry+"* nxt; "+mapEntry+"* prv;\n"+
-        "  explicit "+mapEntry+"() : nxt(nullptr), prv(nullptr) { /*"+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+tp.zeroCpp+"; "}.mkString+"*/ }\n"+
-        "  explicit "+mapEntry+"("+fieldsWithIdx.map{case ((_,tp),i) => "const "+tp.toCppRefType+" c"+i}.mkString(", ")+") { "+fieldsWithIdx.map{case ((fld,_),i) => fld+" = c"+i+"; "}.mkString+"}\n"+
-        "  "+mapEntry+"(const "+mapEntry+"& other) : "+fieldsWithIdx.map{case ((fld,tp),i) => fld+"( other."+fld+" ), "}.mkString+"nxt( nullptr ), prv( nullptr ) {}\n"+
-        // "  "+mapEntry+"& operator=(const "+mapEntry+"& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = other."+fld+";"}.mkString+" return *this; }\n"+
-        // "  "+mapEntry+"& operator=(const "+mapEntry+"&& other) { "+fieldsWithIdx.map{case ((fld,tp),i) => fld+" = "+(if(tp.isBasicCppType) "other."+fld else "std::move(other."+fld+")")+";"}.mkString+" return *this; }\n"+
-        allIndices.map{ case (is,unique) =>
-        "  FORCE_INLINE "+mapEntry+"& modify"+(if(unique) "" else getIndexId(mapName,is))+"("+is.map{case i => "const "+fields(i)._2.toCppRefType+" c"+i}.mkString(", ")+") { "+is.map{case i => fields(i)._1+" = c"+i+"; "}.mkString+" return *this; }\n"
-        }.mkString+
-        "  template<class Archive>\n"+
-        "  void serialize(Archive& ar, const unsigned int version) const \n"+
-        "  {\n"+
-        fields.map{case (fld,_) => "    ar << ELEM_SEPARATOR;\n    DBT_SERIALIZATION_NVP(ar, "+fld+");\n"}.mkString+
-        "  }\n"+
-        "};"
+        val sFields = fields.map { case (fld,tp) => tp.toCpp + " " + fld + "; "}.mkString + mapEntry + "* nxt; " + mapEntry + "* prv;"
+        val sConstructorParams = fieldsWithIdx.map { case ((_,tp), i) => "const " + tp.toCppRefType + " c" + i }.mkString(", ")
+        val sConstructorBody = fieldsWithIdx.map { case ((fld,_), i) => fld + " = c" + i + "; " }.mkString
+        val sInitializers = fieldsWithIdx.map { case ((fld,tp),i) => fld + "(other." + fld + "), "}.mkString + "nxt(nullptr), prv(nullptr)"
+        val sStringInit = m.keys.zipWithIndex.map { case ((fld,tp),i) =>
+            tp match {
+              case TypeLong | TypeDate => fld + " = std::stol(f[" + i + "]);"
+              case TypeDouble => fld + " = std::stod(f[" + i + "]);"
+              case TypeString => fld + " = f[" + i + "];"
+              case _ => sys.error("Unsupported type in fromString")
+            }
+          }.mkString(" ") + s" ${VALUE_NAME} = v; nxt = nullptr; prv = nullptr;" 
+        val sModifyFn = allIndices.map { case (is,unique) =>
+          s"FORCE_INLINE ${mapEntry}& modify" + stringIf(!unique, getIndexId(mapName, is)) + 
+          "(" + is.map { case i => "const " + fields(i)._2.toCppRefType + " c" + i }.mkString(", ") + ") { " +
+          is.map { case i => fields(i)._1 + " = c" + i + "; "}.mkString + " return *this; }"
+        }.mkString
+        val sSerialization = fields.map { case (fld,_) => 
+            s"""|ar << ELEM_SEPARATOR;
+                |DBT_SERIALIZATION_NVP(ar, ${fld});
+                |""".stripMargin
+          }.mkString
+        val initFromString = stringIf(EXPERIMENTAL_RUNTIME_LIBRARY, 
+          s"${mapEntry}(const std::vector<std::string>& f, const ${m.tp.toCppRefType} v) { if (f.size() < ${m.keys.size}) return; ${sStringInit} }")
+
+        s"""|struct ${mapEntry} {
+            |  ${sFields}
+            |  explicit ${mapEntry}() : nxt(nullptr), prv(nullptr) { }
+            |  explicit ${mapEntry}(${sConstructorParams}) { ${sConstructorBody} }
+            |  ${mapEntry}(const ${mapEntry}& other) : ${sInitializers} { }
+            |  ${initFromString}
+            |${ind(sModifyFn)}
+            |  template<class Archive>
+            |  void serialize(Archive& ar, const unsigned int version) const {
+            |${ind(sSerialization, 2)}
+            |  }
+            |};
+            |""".stripMargin
       }
 
       def genExtractorsAndHashers = allIndices.map{ case (is,unique) =>
@@ -775,8 +839,11 @@ trait ICppGen extends IScalaGen {
           }.mkString
         }
 
-      genEntryStruct+"\n"+genExtractorsAndHashers+"\n"+genTypeDefs
+      s"""|${genEntryStruct}
+          |${genExtractorsAndHashers}
+          |${genTypeDefs}""".stripMargin
     }
+
     def genTempTupleTypes = {
       if (EXPERIMENTAL_HASHMAP) {
         tempTupleTypes.map { case (name, (ksTp, vsTp)) =>
@@ -860,28 +927,45 @@ trait ICppGen extends IScalaGen {
       "/* Trigger functions for stream relations */\n"+
       genStreamTriggers
     val resAcc = helperResultAccessor(s0)
-    val ms = s0.queries.filter(q=>(s0.maps.filter(_.name==q.name).size == 0) && (q.keys.size > 0)).map(q=>genMapStructDef(MapDef(q.name,q.tp,q.keys,q.map,LocalExp))).mkString("\n") + // queries`without a map (with -F EXPRESSIVE-TLQS)
-            s0.triggers.map(_.evt match { //delta relations
-              case EvtBatchUpdate(s) =>
-                val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
-                val deltaRel = schema.deltaName
-                genMapStructDef(MapDef(deltaRel,TypeLong,schema.fields,null,LocalExp))+"\n"
-              case _ => ""
-            }).mkString +
-            s0.triggers.flatMap{ t=> //local maps
-              t.stmts.filter{
-                case m: MapDef => true
-                case _ => false
-              }.map{
-               case m: MapDef => genMapStructDef(m)+"\n"
-               case _ => ""
-              }
-            }.mkString +
-            s0.maps.filter(_.keys.size > 0).map(genMapStructDef(_)+"\n").mkString + // maps
-            genTempTupleTypes.mkString("\n")
+    
+    val sDataStructures = {
+      // queries without a map (with -F EXPRESSIVE-TLQS)
+      s0.queries.filter(q => (s0.maps.filter(_.name == q.name).size == 0) && (q.keys.size > 0))
+                .map(q => genMapStructDef(MapDef(q.name, q.tp, q.keys, q.map, LocalExp))).mkString("\n") +
+      // delta relations
+      ( if (EXPERIMENTAL_RUNTIME_LIBRARY) {
+          s0.triggers.map(_.evt match {
+            case EvtBatchUpdate(s) =>
+              val schema = s0.sources.filter(_.schema.name == s.name).head.schema
+              genMapStructDef(MapDef(schema.name, TypeLong, schema.fields, null, LocalExp)) + 
+              s"""|typedef ${schema.name}_entry ${schema.deltaName}_entry;
+                  |typedef ${schema.name}_map ${schema.deltaName}_map;
+                  |""".stripMargin
+            case EvtAdd(s) =>
+              val schema = s0.sources.filter(_.schema.name == s.name).head.schema
+              genMapStructDef(MapDef(schema.name, TypeLong, schema.fields, null, LocalExp))
+            case _ => ""
+          }).mkString
+        }
+        else {
+          s0.triggers.map(_.evt match {
+            case EvtBatchUpdate(s) =>
+              val schema = s0.sources.filter(_.schema.name == s.name).head.schema
+              genMapStructDef(MapDef(schema.deltaName, TypeLong, schema.fields, null, LocalExp))
+            case _ => ""
+          }).mkString 
+        }
+      ) +
+      // local maps
+      s0.triggers.flatMap { _.stmts.map { case m: MapDef => genMapStructDef(m) case _ => "" }}.mkString +
+      // maps
+      s0.maps.filter(_.keys.size > 0).map(genMapStructDef).mkString + 
+      // temp tuples
+      genTempTupleTypes.mkString("\n")
+    }
 
     "\n/* Definitions of auxiliary maps for storing materialized views. */\n"+
-    ms +
+    sDataStructures +
     "\n\n"+
     resAcc+
     "/* Type definition providing a way to incrementally maintain the results of the sql program */\n"+
