@@ -245,7 +245,7 @@ object TpccXactGenerator_SC {
             val s_quantity = stockEntry.get[Int](3) //s_quantity
             $(stock).update(ol_number, s_quantity)
 
-            if (customerEntry.get[String](14).contains("original") && /*s_data*/ stockEntry.get[String](17).contains("original"))
+            if (idata(ol_number).contains("original") && /*s_data*/ stockEntry.get[String](17).contains("original"))
               $(bg)(ol_number) = "B"
             else
               $(bg)(ol_number) = "G"

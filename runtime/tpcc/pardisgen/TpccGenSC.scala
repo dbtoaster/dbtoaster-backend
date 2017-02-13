@@ -560,29 +560,29 @@ class SCExecutor {
       0
     }
   }
-  val x6922 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
-  val x6772 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
-  val x6860 = SEntry9_ISSSSSSDD(-2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308);
+  val x6862 = SEntry11_IISSSSSSDDI(-2147483648, -2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648);
+  val x7074 = SEntry5_IISDS(-2147483648, -2147483648, null, -1.7976931348623157E308, null);
+  val x7198 = SEntry10_IIIIIITIDS(-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -1.7976931348623157E308, null);
   val x6554 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
-  val x7103 = SEntry11_IISSSSSSDDI(-2147483648, -2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648);
+  val x6902 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x6698 = SEntry17_IIISSSSSSSSSSIIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, -2147483648, -2147483648, -2147483648, null);
   val x6541 = SEntry8_IIIITIIB(-2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -2147483648, false);
-  val x7077 = SEntry5_IISDS(-2147483648, -2147483648, null, -1.7976931348623157E308, null);
-  val x6680 = SEntry10_IIIIIITIDS(-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -1.7976931348623157E308, null);
-  val x7110 = SEntry8_IIIITIIB(-2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -2147483648, false);
-  val x6700 = SEntry17_IIISSSSSSSSSSIIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, -2147483648, -2147483648, -2147483648, null);
-  val x7200 = SEntry10_IIIIIITIDS(-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -1.7976931348623157E308, null);
-  val x6905 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x6742 = SEntry8_IIIITIIB(-2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -2147483648, false);
+  val x7107 = SEntry8_IIIITIIB(-2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -2147483648, false);
+  val x7110 = SEntry3_III(-2147483648, -2147483648, -2147483648);
+  val x6679 = SEntry10_IIIIIITIDS(-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -1.7976931348623157E308, null);
+  val x7124 = SEntry17_IIISSSSSSSSSSIIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, -2147483648, -2147483648, -2147483648, null);
   val x6667 = SEntry11_IISSSSSSDDI(-2147483648, -2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648);
-  val x6865 = SEntry11_IISSSSSSDDI(-2147483648, -2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648);
-  val x6888 = SEntry8_IIIIITDS(-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, null, -1.7976931348623157E308, null);
-  val x6745 = SEntry8_IIIITIIB(-2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -2147483648, false);
-  val x7113 = SEntry3_III(-2147483648, -2147483648, -2147483648);
-  val x6755 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
-  val x7127 = SEntry17_IIISSSSSSSSSSIIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, -2147483648, -2147483648, -2147483648, null);
+  val x6752 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x6769 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x7094 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x6919 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
   val x6530 = SEntry3_III(-2147483648, -2147483648, -2147483648);
-  val x7097 = SEntry21_IIISSSSSSSSSTSDDDDIIS(-2147483648, -2147483648, -2147483648, null, null, null, null, null, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648, -2147483648, null);
+  val x7097 = SEntry9_ISSSSSSDD(-2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308);
   val x6550 = SEntry10_IIIIIITIDS(-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, -2147483648, null, -2147483648, -1.7976931348623157E308, null);
-  val x7100 = SEntry9_ISSSSSSDD(-2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308);
+  val x7100 = SEntry11_IISSSSSSDDI(-2147483648, -2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308, -2147483648);
+  val x6857 = SEntry9_ISSSSSSDD(-2147483648, null, null, null, null, null, null, -1.7976931348623157E308, -1.7976931348623157E308);
+  val x6885 = SEntry8_IIIIITDS(-2147483648, -2147483648, -2147483648, -2147483648, -2147483648, null, -1.7976931348623157E308, null);
   class DeliveryTx(newOrderTbl : Store[SEntry3_III], historyTbl : Store[SEntry8_IIIIITDS], warehouseTbl : Store[SEntry9_ISSSSSSDD], itemTbl : Store[SEntry5_IISDS], orderTbl : Store[SEntry8_IIIITIIB], districtTbl : Store[SEntry11_IISSSSSSDDI], orderLineTbl : Store[SEntry10_IIIIIITIDS], customerTbl : Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], stockTbl : Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int) => Int ) {
     def apply(x10 : Boolean, x11 : Date, x12 : Int, x13 : Int) =     {
       val orderIDs = new Array[Int](10);
@@ -595,26 +595,26 @@ class SCExecutor {
         val x27 = x18;
         x6530._2_=(x27)
         x6530._3_=(x12)
-        val x10787 = x3658.get(x6530);
-        if((x10787.!=(null))) {
-          val x6534 = x10787._1;
+        val x10786 = x3658.get(x6530);
+        if((x10786.!=(null))) {
+          val x6534 = x10786._1;
           val x36 = x18;
           orderIDs.update((x36.-(1)), x6534)
-          newOrderTbl.delete(x10787)
+          newOrderTbl.delete(x10786)
           val x41 = x18;
           x6541._1_=(x6534)
           x6541._2_=(x41)
           x6541._3_=(x12)
-          val x10800 = x3997.get(x6541);
-          val x6543 = x10800._4;
-          x10800._6_=(x13)
+          val x10799 = x3997.get(x6541);
+          val x6543 = x10799._4;
+          x10799._6_=(x13)
           var x50: Double = 0.0;
           val x52 = x18;
           x6550._1_=(x6534)
           x6550._2_=(x52)
           x6550._3_=(x12)
-          val x12288 = x4157.sliceRes(x6550);
-          if((x12288.isEmpty)) {
+          val x12287 = x4157.sliceRes(x6550);
+          if((x12287.isEmpty)) {
           } else {
             x4157.sliceResMap(x6550, ({ orderLineEntry: SEntry10_IIIIIITIDS => {
                 orderLineEntry._7_=(x11)
@@ -623,16 +623,16 @@ class SCExecutor {
                 x50 = (x57.+(x6594))
               
               }
-            }), x12288)
+            }), x12287)
           }
           val x65 = x18;
           x6554._1_=(x6543)
           x6554._2_=(x65)
           x6554._3_=(x12)
-          val x10822 = x4244.get(x6554);
+          val x10821 = x4244.get(x6554);
           val x69 = x50;
-          x10822._17 +=(x69)
-          x10822._20 +=(1)
+          x10821._17 +=(x69)
+          x10821._20 +=(1)
         } else {
           val x73 = x18;
           orderIDs.update((x73.-(1)), 0)
@@ -648,353 +648,354 @@ class SCExecutor {
     def apply(x81 : Boolean, x82 : Date, x83 : Int, x84 : Int, x85 : Int, x86 : Int) =     {
       x6667._1_=(x85)
       x6667._2_=(x84)
-      val x10889 = x4024.get(x6667);
-      val x6669 = x10889._11;
+      val x10888 = x4024.get(x6667);
+      val x6669 = x10888._11;
       var x95: Int = (x6669.-(20));
-      val unique_ol_i_id = Set.apply[Int]() //Apply1;
+      val unique_ol_i_id = Set.apply[Int]() //Apply2;
       while({
-        val x100 = x95;
-        (x100.<(x6669))
+        val x99 = x95;
+        (x99.<(x6669))
       })
       {
-        val x102 = x95;
-        x6680._1_=(x102)
-        x6680._2_=(x85)
-        x6680._3_=(x84)
-        val x12335 = x4157.sliceRes(x6680);
-        if((x12335.isEmpty)) {
+        val x101 = x95;
+        x6679._1_=(x101)
+        x6679._2_=(x85)
+        x6679._3_=(x84)
+        val x12333 = x4157.sliceRes(x6679);
+        if((x12333.isEmpty)) {
         } else {
-          x4157.sliceResMap(x6680, ({ orderLineEntry: SEntry10_IIIIIITIDS => {
-              val x6698 = orderLineEntry._5;
-              x6700._1_=(x6698)
-              x6700._2_=(x84)
-              val x10904 = x4270.get(x6700);
-              val x6702 = x10904._3;
-              if((x6702.<(x86))) {
-                val x115 = unique_ol_i_id.+=(x6698);
+          x4157.sliceResMap(x6679, ({ orderLineEntry: SEntry10_IIIIIITIDS => {
+              val x6696 = orderLineEntry._5;
+              x6698._1_=(x6696)
+              x6698._2_=(x84)
+              val x10902 = x4270.get(x6698);
+              val x6700 = x10902._3;
+              if((x6700.<(x86))) {
+                val x114 = unique_ol_i_id.+=(x6696);
               } else {
               }
               ()
             }
-          }), x12335)
+          }), x12333)
         }
-        val x119 = x95;
-        x95 = (x119.+(1))
+        val x118 = x95;
+        x95 = (x118.+(1))
         ()
       }
       1
     }
   }
   class OrderStatusTx(newOrderTbl : Store[SEntry3_III], historyTbl : Store[SEntry8_IIIIITDS], warehouseTbl : Store[SEntry9_ISSSSSSDD], itemTbl : Store[SEntry5_IISDS], orderTbl : Store[SEntry8_IIIITIIB], districtTbl : Store[SEntry11_IISSSSSSDDI], orderLineTbl : Store[SEntry10_IIIIIITIDS], customerTbl : Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], stockTbl : Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, String) => Int ) {
-    def apply(x125 : Boolean, x126 : Date, x127 : Int, x128 : Int, x129 : Int, x130 : Int, x131 : Int, x132 : String) =     {
-      val x6742 = if((x130.>(0))) {
-        val x6752 = new ArrayBuffer[SEntry21_IIISSSSSSSSSTSDDDDIIS]();
-        x6755._2_=(x129)
-        x6755._3_=(x128)
-        x6755._6_=(x132)
-        val x12352 = x4245.sliceRes(x6755);
-        if((x12352.isEmpty)) {
+    def apply(x124 : Boolean, x125 : Date, x126 : Int, x127 : Int, x128 : Int, x129 : Int, x130 : Int, x131 : String) =     {
+      val x6739 = if((x129.>(0))) {
+        val x6749 = new ArrayBuffer[SEntry21_IIISSSSSSSSSTSDDDDIIS]();
+        x6752._2_=(x128)
+        x6752._3_=(x127)
+        x6752._6_=(x131)
+        val x12350 = x4245.sliceRes(x6752);
+        if((x12350.isEmpty)) {
         } else {
-          x4245.sliceResMap(x6755, ({ custEntry: SEntry21_IIISSSSSSSSSTSDDDDIIS => {
-              x6752.append(custEntry)
+          x4245.sliceResMap(x6752, ({ custEntry: SEntry21_IIISSSSSSSSSTSDDDDIIS => {
+              x6749.append(custEntry)
               ()
             }
-          }), x12352)
+          }), x12350)
         }
-        val x144 = x6752.size;
-        var x146: Int = (x144./(2));
-        val x148 = x6752.size;
-        if(((x148.%(2)).==(0))) {
-          val x151 = x146;
-          x146 = (x151.-(1))
+        val x143 = x6749.size;
+        var x145: Int = (x143./(2));
+        val x147 = x6749.size;
+        if(((x147.%(2)).==(0))) {
+          val x150 = x145;
+          x145 = (x150.-(1))
         } else {
         }
-        val x162 = x6752.sortWith(({ (c1: SEntry21_IIISSSSSSSSSTSDDDDIIS, c2: SEntry21_IIISSSSSSSSSTSDDDDIIS) => {
-            val x6796 = c1._4;
-            val x6797 = c2._4;
-            ((StringExtra.StringCompare(x6796, x6797)).<(0))
+        val x161 = x6749.sortWith(({ (c1: SEntry21_IIISSSSSSSSSTSDDDDIIS, c2: SEntry21_IIISSSSSSSSSTSDDDDIIS) => {
+            val x6793 = c1._4;
+            val x6794 = c2._4;
+            ((StringExtra.StringCompare(x6793, x6794)).<(0))
           }
         }));
-        val x163 = x146;
-        val x6770 = x162.apply(x163);
-      x6770
+        val x162 = x145;
+        val x6767 = x161.apply(x162);
+      x6767
       } else {
-        x6772._1_=(x131)
-        x6772._2_=(x129)
-        x6772._3_=(x128)
-        val x10985 = x4244.get(x6772);
-      x10985
+        x6769._1_=(x130)
+        x6769._2_=(x128)
+        x6769._3_=(x127)
+        val x10982 = x4244.get(x6769);
+      x10982
       };
-      val x6743 = x6742._3;
-      x6745._2_=(x129)
-      x6745._3_=(x128)
-      x6745._4_=(x6743)
-      val x10991 = x3998.get(x6745);
-      var x182: Int = 0;
-      val x6748 = x10991._1;
-      x182 = x6748
+      val x6740 = x6739._3;
+      x6742._2_=(x128)
+      x6742._3_=(x127)
+      x6742._4_=(x6740)
+      val x10988 = x3998.get(x6742);
+      var x181: Int = 0;
+      val x6745 = x10988._1;
+      x181 = x6745
       1
     }
   }
   class PaymentTx(newOrderTbl : Store[SEntry3_III], historyTbl : Store[SEntry8_IIIIITDS], warehouseTbl : Store[SEntry9_ISSSSSSDD], itemTbl : Store[SEntry5_IISDS], orderTbl : Store[SEntry8_IIIITIIB], districtTbl : Store[SEntry11_IISSSSSSDDI], orderLineTbl : Store[SEntry10_IIIIIITIDS], customerTbl : Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], stockTbl : Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double) => Int ) {
-    def apply(x186 : Boolean, x187 : Date, x188 : Int, x189 : Int, x190 : Int, x191 : Int, x192 : Int, x193 : Int, x194 : Int, x195 : String, x196 : Double) =     {
-      x6860._1_=(x189)
-      val x11042 = x3814.get(x6860);
-      x11042._9 +=(x196)
-      x6865._1_=(x190)
-      x6865._2_=(x189)
-      val x11047 = x4024.get(x6865);
-      x11047._10 +=(x196)
-      val x6870 = if((x191.>(0))) {
-        val x6902 = new ArrayBuffer[SEntry21_IIISSSSSSSSSTSDDDDIIS]();
-        x6905._2_=(x193)
-        x6905._3_=(x192)
-        x6905._6_=(x195)
-        val x12409 = x4245.sliceRes(x6905);
-        if((x12409.isEmpty)) {
+    def apply(x185 : Boolean, x186 : Date, x187 : Int, x188 : Int, x189 : Int, x190 : Int, x191 : Int, x192 : Int, x193 : Int, x194 : String, x195 : Double) =     {
+      x6857._1_=(x188)
+      val x11039 = x3814.get(x6857);
+      x11039._9 +=(x195)
+      x6862._1_=(x189)
+      x6862._2_=(x188)
+      val x11044 = x4024.get(x6862);
+      x11044._10 +=(x195)
+      val x6867 = if((x190.>(0))) {
+        val x6899 = new ArrayBuffer[SEntry21_IIISSSSSSSSSTSDDDDIIS]();
+        x6902._2_=(x192)
+        x6902._3_=(x191)
+        x6902._6_=(x194)
+        val x12407 = x4245.sliceRes(x6902);
+        if((x12407.isEmpty)) {
         } else {
-          x4245.sliceResMap(x6905, ({ custEntry: SEntry21_IIISSSSSSSSSTSDDDDIIS => {
-              x6902.append(custEntry)
+          x4245.sliceResMap(x6902, ({ custEntry: SEntry21_IIISSSSSSSSSTSDDDDIIS => {
+              x6899.append(custEntry)
               ()
             }
-          }), x12409)
+          }), x12407)
         }
-        val x220 = x6902.size;
-        var x222: Int = (x220./(2));
-        val x224 = x6902.size;
-        if(((x224.%(2)).==(0))) {
-          val x227 = x222;
-          x222 = (x227.-(1))
+        val x219 = x6899.size;
+        var x221: Int = (x219./(2));
+        val x223 = x6899.size;
+        if(((x223.%(2)).==(0))) {
+          val x226 = x221;
+          x221 = (x226.-(1))
         } else {
         }
-        val x238 = x6902.sortWith(({ (c1: SEntry21_IIISSSSSSSSSTSDDDDIIS, c2: SEntry21_IIISSSSSSSSSTSDDDDIIS) => {
-            val x6968 = c1._4;
-            val x6969 = c2._4;
-            ((StringExtra.StringCompare(x6968, x6969)).<(0))
+        val x237 = x6899.sortWith(({ (c1: SEntry21_IIISSSSSSSSSTSDDDDIIS, c2: SEntry21_IIISSSSSSSSSTSDDDDIIS) => {
+            val x6965 = c1._4;
+            val x6966 = c2._4;
+            ((StringExtra.StringCompare(x6965, x6966)).<(0))
           }
         }));
-        val x239 = x222;
-        val x6920 = x238.apply(x239);
-      x6920
+        val x238 = x221;
+        val x6917 = x237.apply(x238);
+      x6917
       } else {
-        x6922._1_=(x194)
-        x6922._2_=(x193)
-        x6922._3_=(x192)
-        val x11084 = x4244.get(x6922);
-      x11084
+        x6919._1_=(x193)
+        x6919._2_=(x192)
+        x6919._3_=(x191)
+        val x11081 = x4244.get(x6919);
+      x11081
       };
-      val x6871 = x6870._21;
-      val x6872 = x6870._14;
-      val x248 = x6872.contains("BC");
-      if(x248) {
-        val x6875 = x6870._1;
-        var c_new_data = "%d %d %d %d %d $%f %s | %s".format(x6875,x193,x192,x190,x189,x196,x187,x6871)
+      val x6868 = x6867._21;
+      val x6869 = x6867._14;
+      val x247 = x6869.contains("BC");
+      if(x247) {
+        val x6872 = x6867._1;
+        var c_new_data = "%d %d %d %d %d $%f %s | %s".format(x6872,x192,x191,x189,x188,x195,x186,x6868)
         if(c_new_data.size > 500) 
           c_new_data = c_new_data.substring(0, 500)
-        x6870._17 +=(x196)
-        x6870._21_=(c_new_data)
+        x6867._17 +=(x195)
+        x6867._21_=(c_new_data)
       } else {
-        x6870._17 +=(x196)
+        x6867._17 +=(x195)
       }
-      val x6882 = x11042._2;
-      val x6883 = x11047._3;
-      var h_data = "%.10s    %.10s".format(x6882,x6883)
+      val x6879 = x11039._2;
+      val x6880 = x11044._3;
+      var h_data = "%.10s    %.10s".format(x6879,x6880)
       if(h_data.size > 24) 
         h_data = h_data.substring(0, 24)
-      val x6886 = x6870._1;
-      x6888._1_=(x6886)
-      x6888._2_=(x193)
-      x6888._3_=(x192)
-      x6888._4_=(x190)
-      x6888._5_=(x189)
-      x6888._6_=(x187)
-      x6888._7_=(x196)
-      x6888._8_=(h_data)
-      historyTbl.unsafeInsert(x6888)
+      val x6883 = x6867._1;
+      x6885._1_=(x6883)
+      x6885._2_=(x192)
+      x6885._3_=(x191)
+      x6885._4_=(x189)
+      x6885._5_=(x188)
+      x6885._6_=(x186)
+      x6885._7_=(x195)
+      x6885._8_=(h_data)
+      historyTbl.unsafeInsert(x6885)
       1
     }
   }
   class NewOrderTx(newOrderTbl : Store[SEntry3_III], historyTbl : Store[SEntry8_IIIIITDS], warehouseTbl : Store[SEntry9_ISSSSSSDD], itemTbl : Store[SEntry5_IISDS], orderTbl : Store[SEntry8_IIIITIIB], districtTbl : Store[SEntry11_IISSSSSSDDI], orderLineTbl : Store[SEntry10_IIIIIITIDS], customerTbl : Store[SEntry21_IIISSSSSSSSSTSDDDDIIS], stockTbl : Store[SEntry17_IIISSSSSSSSSSIIIS]) extends ((Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double]) => Int ) {
-    def apply(x269 : Boolean, x270 : Date, x271 : Int, x272 : Int, x273 : Int, x274 : Int, x275 : Int, x276 : Int, x277 : Array[Int], x278 : Array[Int], x279 : Array[Int], x280 : Array[Double], x281 : Array[String], x282 : Array[Int], x283 : Array[String], x284 : Array[Double]) =     {
-      var x286: Int = 0;
-      var x289: Int = 0;
-      val idata = new Array[String](x275);
-      var x294: Boolean = true;
+    def apply(x268 : Boolean, x269 : Date, x270 : Int, x271 : Int, x272 : Int, x273 : Int, x274 : Int, x275 : Int, x276 : Array[Int], x277 : Array[Int], x278 : Array[Int], x279 : Array[Double], x280 : Array[String], x281 : Array[Int], x282 : Array[String], x283 : Array[Double]) =     {
+      var x285: Int = 0;
+      var x288: Int = 0;
+      val idata = new Array[String](x274);
+      var x293: Boolean = true;
       while({
-        val x296 = x286;
-        ((x296.<(x275)).&&({
-          val x298 = x294;
-          x298
+        val x295 = x285;
+        ((x295.<(x274)).&&({
+          val x297 = x293;
+          x297
         }))
       })
       {
-        val x301 = x286;
-        val x302 = x277.apply(x301);
-        x7077._1_=(x302)
-        val x11193 = x3833.get(x7077);
-        if((x11193.==(null))) {
-          x294 = false
+        val x300 = x285;
+        val x301 = x276.apply(x300);
+        x7074._1_=(x301)
+        val x11190 = x3833.get(x7074);
+        if((x11190.==(null))) {
+          x293 = false
         } else {
-          val x308 = x286;
-          val x7083 = x11193._3;
-          x281.update(x308, x7083)
-          val x311 = x286;
-          val x7086 = x11193._4;
-          x280.update(x311, x7086)
-          val x314 = x286;
-          val x7089 = x11193._5;
-          idata.update(x314, x7089)
+          val x307 = x285;
+          val x7080 = x11190._3;
+          x280.update(x307, x7080)
+          val x310 = x285;
+          val x7083 = x11190._4;
+          x279.update(x310, x7083)
+          val x313 = x285;
+          val x7086 = x11190._5;
+          idata.update(x313, x7086)
         }
-        val x318 = x286;
-        x286 = (x318.+(1))
+        val x317 = x285;
+        x285 = (x317.+(1))
         ()
       }
-      val x322 = x294;
-      if(x322) {
-        x7097._1_=(x274)
-        x7097._2_=(x273)
-        x7097._3_=(x272)
-        val x11215 = x4244.get(x7097);
+      val x321 = x293;
+      if(x321) {
+        x7094._1_=(x273)
+        x7094._2_=(x272)
+        x7094._3_=(x271)
+        val x11212 = x4244.get(x7094);
+        x7097._1_=(x271)
+        val x11215 = x3814.get(x7097);
         x7100._1_=(x272)
-        val x11218 = x3814.get(x7100);
-        x7103._1_=(x273)
-        x7103._2_=(x272)
-        val x11222 = x4024.get(x7103);
-        val x7105 = x11222._11;
-        x11222._11 +=(1)
-        x7110._1_=(x7105)
-        x7110._2_=(x273)
-        x7110._3_=(x272)
-        x7110._4_=(x274)
-        x7110._5_=(x270)
-        x7110._6_=(-1)
-        x7110._7_=(x275)
-        x7110._8_=((x276.>(0)))
-        orderTbl.unsafeInsert(x7110)
-        x7113._1_=(x7105)
-        x7113._2_=(x273)
-        x7113._3_=(x272)
-        newOrderTbl.unsafeInsert(x7113)
-        var x347: Double = 0.0;
-        x286 = 0
+        x7100._2_=(x271)
+        val x11219 = x4024.get(x7100);
+        val x7102 = x11219._11;
+        x11219._11 +=(1)
+        x7107._1_=(x7102)
+        x7107._2_=(x272)
+        x7107._3_=(x271)
+        x7107._4_=(x273)
+        x7107._5_=(x269)
+        x7107._6_=(-1)
+        x7107._7_=(x274)
+        x7107._8_=((x275.>(0)))
+        orderTbl.unsafeInsert(x7107)
+        x7110._1_=(x7102)
+        x7110._2_=(x272)
+        x7110._3_=(x271)
+        newOrderTbl.unsafeInsert(x7110)
+        var x346: Double = 0.0;
+        x285 = 0
         while({
-          val x350 = x286;
-          (x350.<(x275))
+          val x349 = x285;
+          (x349.<(x274))
         })
         {
-          val x353 = x286;
-          val ol_supply_w_id = x278.apply(x353);
-          val x356 = x286;
-          val ol_i_id = x277.apply(x356);
-          val x359 = x286;
-          val ol_quantity = x279.apply(x359);
-          x7127._1_=(ol_i_id)
-          x7127._2_=(ol_supply_w_id)
-          val x11255 = x4270.get(x7127);
-          val ol_dist_info = if((x273.==(1))) {
-            val x7131 = x11255._4;
-          x7131
+          val x352 = x285;
+          val ol_supply_w_id = x277.apply(x352);
+          val x355 = x285;
+          val ol_i_id = x276.apply(x355);
+          val x358 = x285;
+          val ol_quantity = x278.apply(x358);
+          x7124._1_=(ol_i_id)
+          x7124._2_=(ol_supply_w_id)
+          val x11252 = x4270.get(x7124);
+          val ol_dist_info = if((x272.==(1))) {
+            val x7128 = x11252._4;
+          x7128
           } else {
-            val x392 = if((x273.==(2))) {
-              val x7134 = x11255._5;
-            x7134
+            val x391 = if((x272.==(2))) {
+              val x7131 = x11252._5;
+            x7131
             } else {
-              val x391 = if((x273.==(3))) {
-                val x7137 = x11255._6;
-              x7137
+              val x390 = if((x272.==(3))) {
+                val x7134 = x11252._6;
+              x7134
               } else {
-                val x390 = if((x273.==(4))) {
-                  val x7140 = x11255._7;
-                x7140
+                val x389 = if((x272.==(4))) {
+                  val x7137 = x11252._7;
+                x7137
                 } else {
-                  val x389 = if((x273.==(5))) {
-                    val x7143 = x11255._8;
-                  x7143
+                  val x388 = if((x272.==(5))) {
+                    val x7140 = x11252._8;
+                  x7140
                   } else {
-                    val x388 = if((x273.==(6))) {
-                      val x7146 = x11255._9;
-                    x7146
+                    val x387 = if((x272.==(6))) {
+                      val x7143 = x11252._9;
+                    x7143
                     } else {
-                      val x387 = if((x273.==(7))) {
-                        val x7149 = x11255._10;
-                      x7149
+                      val x386 = if((x272.==(7))) {
+                        val x7146 = x11252._10;
+                      x7146
                       } else {
-                        val x386 = if((x273.==(8))) {
-                          val x7152 = x11255._11;
-                        x7152
+                        val x385 = if((x272.==(8))) {
+                          val x7149 = x11252._11;
+                        x7149
                         } else {
-                          val x385 = if((x273.==(9))) {
-                            val x7155 = x11255._12;
-                          x7155
+                          val x384 = if((x272.==(9))) {
+                            val x7152 = x11252._12;
+                          x7152
                           } else {
-                            val x7156 = x11255._13;
-                          x7156
+                            val x7153 = x11252._13;
+                          x7153
                           };
-                        x385
+                        x384
                         };
-                      x386
+                      x385
                       };
-                    x387
+                    x386
                     };
-                  x388
+                  x387
                   };
-                x389
+                x388
                 };
-              x390
+              x389
               };
-            x391
+            x390
             };
-          x392
+          x391
           };
-          val x7157 = x11255._3;
-          val x396 = x286;
-          x282.update(x396, x7157)
-          val x7160 = x11215._14;
-          val x399 = x7160.contains("original");
+          val x7154 = x11252._3;
+          val x395 = x285;
+          x281.update(x395, x7154)
+          val x397 = x285;
+          val x398 = idata.apply(x397);
+          val x399 = x398.contains("original");
           if((x399.&&({
-            val x7163 = x11255._17;
-            val x401 = x7163.contains("original");
+            val x7161 = x11252._17;
+            val x401 = x7161.contains("original");
             x401
           }))) {
-            val x403 = x286;
-            x283.update(x403, "B")
+            val x403 = x285;
+            x282.update(x403, "B")
           } else {
-            val x405 = x286;
-            x283.update(x405, "G")
+            val x405 = x285;
+            x282.update(x405, "G")
           }
-          x11255._3_=((x7157.-(ol_quantity)))
-          if((x7157.<=(ol_quantity))) {
-            x11255._3 +=(91)
+          x11252._3_=((x7154.-(ol_quantity)))
+          if((x7154.<=(ol_quantity))) {
+            x11252._3 +=(91)
           } else {
           }
           var x414: Int = 0;
-          if((ol_supply_w_id.!=(x272))) {
+          if((ol_supply_w_id.!=(x271))) {
             x414 = 1
           } else {
           }
-          val x7180 = x11215._16;
-          val x7181 = x11218._8;
-          val x7182 = x11222._9;
-          val x427 = x286;
-          val x428 = x280.apply(x427);
-          val ol_amount = (((ol_quantity.toDouble).*(x428)).*(((1.0.+(x7181)).+(x7182)))).*((1.0.-(x7180)));
-          val x436 = x286;
-          x284.update(x436, ol_amount)
-          val x438 = x347;
-          x347 = (x438.+(ol_amount))
-          val x441 = x286;
-          x7200._1_=(x7105)
-          x7200._2_=(x273)
-          x7200._3_=(x272)
-          x7200._4_=((x441.+(1)))
-          x7200._5_=(ol_i_id)
-          x7200._6_=(ol_supply_w_id)
-          x7200._8_=(ol_quantity)
-          x7200._9_=(ol_amount)
-          x7200._10_=(ol_dist_info)
-          orderLineTbl.unsafeInsert(x7200)
-          val x446 = x286;
-          x286 = (x446.+(1))
+          val x7178 = x11212._16;
+          val x7179 = x11215._8;
+          val x7180 = x11219._9;
+          val x427 = x285;
+          val x428 = x279.apply(x427);
+          val ol_amount = (((ol_quantity.toDouble).*(x428)).*(((1.0.+(x7179)).+(x7180)))).*((1.0.-(x7178)));
+          val x436 = x285;
+          x283.update(x436, ol_amount)
+          val x438 = x346;
+          x346 = (x438.+(ol_amount))
+          val x441 = x285;
+          x7198._1_=(x7102)
+          x7198._2_=(x272)
+          x7198._3_=(x271)
+          x7198._4_=((x441.+(1)))
+          x7198._5_=(ol_i_id)
+          x7198._6_=(ol_supply_w_id)
+          x7198._8_=(ol_quantity)
+          x7198._9_=(ol_amount)
+          x7198._10_=(ol_dist_info)
+          orderLineTbl.unsafeInsert(x7198)
+          val x446 = x285;
+          x285 = (x446.+(1))
           ()
         }
       } else {
