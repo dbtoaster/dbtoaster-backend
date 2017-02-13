@@ -32,7 +32,9 @@ public abstract class Idx<E extends Entry> {
     public void unsafeInsert(E e) {
         w("unsafeInsert");
     }
-
+    public String getSizeStat() {
+        return "";
+    }
 
     public void delete(E e) {
         w("delete");
@@ -176,12 +178,23 @@ class IdxHash<E extends Entry> extends Idx<E> {
 
     IdxHash(Store<E> st, int idx, boolean unique) {
         super(st, idx, unique);
-        load_factor = unique ? 0.75f : 4.0f;
+        load_factor = 0.75f ;
         threshold = Math.round(init_capacity * load_factor);
     }
 
+    @Override
+    public String getSizeStat() {
+        int numInArray = 0;
+        for(int i = 0; i < data.length; ++i){
+            if(data[i] != null) {
+                numInArray++;
+            }
+        }
+       return  "array length = "+ data.length + "  numElements  = "+size + "  threshold = "+threshold+"   numInArray = "+numInArray;
+    }
+
     // Private/inlined functions
-    private void _resize(int new_capacity) {
+    void _resize(int new_capacity) {
         IdxHashEntry<E>[] d = new IdxHashEntry[new_capacity];
         for (int i = 0, n = data.length; i < n; ++i) {
             IdxHashEntry<E> e = data[i], en;

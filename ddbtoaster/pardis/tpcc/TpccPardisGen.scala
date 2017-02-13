@@ -57,16 +57,43 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
   override def generate[T](optTP: TransactionProgram[T]): Unit = {
     import IR._
     import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2
-    var codestr = codeGen.blockToDocument(optTP.initBlock).toString
+    var codestr = Document.nest(2, codeGen.blockToDocumentNoBraces(optTP.initBlock)).toString
     var i = codestr.lastIndexOf("1")
     val allstores = optTP.globalVars.map(_.name).mkDocument(", ")
-    val executor = "class SCExecutor \n" + codestr.substring(0, i) + "\n" +
+    val executor =
       s"""
-         |  val newOrderTxInst = new NewOrderTx($allstores)
-         |  val paymentTxInst = new PaymentTx($allstores)
-         |  val orderStatusTxInst = new OrderStatusTx($allstores)
-         |  val deliveryTxInst = new DeliveryTx($allstores)
-         |  val stockLevelTxInst = new StockLevelTx($allstores)
+         |class SCExecutor {
+         |  val warehouseTblArrayLengths = List(0)
+         |  val itemTblArrayLengths = List(0)
+         |  val districtTblArrayLengths = List(0)
+         |  val customerTblArrayLengths = List(0, 65536)
+         |  val orderTblArrayLengths = List(1048576, 65536)
+         |  val newOrderTblArrayLengths = List(16384, 32)
+         |  val orderLineTblArrayLengths = List(8388608, 8388608)
+         |  val stockTblArrayLengths = List(0)
+         |  val historyTblArrayLengths = List(1048576)
+         |
+        """.stripMargin + codestr.substring(0, i) + "\n" +
+        (if (Optimizer.initialStoreSize)
+          s"""
+             |  warehouseTbl.setInitialSizes(warehouseTblArrayLengths)
+             |  historyTbl.setInitialSizes(historyTblArrayLengths)
+             |  districtTbl.setInitialSizes(districtTblArrayLengths)
+             |  customerTbl.setInitialSizes(customerTblArrayLengths)
+             |  orderTbl.setInitialSizes(orderLineTblArrayLengths)
+             |  newOrderTbl.setInitialSizes(newOrderTblArrayLengths)
+             |  orderLineTbl.setInitialSizes(orderLineTblArrayLengths)
+             |  stockTbl.setInitialSizes(stockTblArrayLengths)
+             |  historyTbl.setInitialSizes(historyTblArrayLengths)
+             |
+       """.stripMargin
+        else "") +
+        s"""
+           |  val newOrderTxInst = new NewOrderTx($allstores)
+           |  val paymentTxInst = new PaymentTx($allstores)
+           |  val orderStatusTxInst = new OrderStatusTx($allstores)
+           |  val deliveryTxInst = new DeliveryTx($allstores)
+           |  val stockLevelTxInst = new StockLevelTx($allstores)
 
       """.stripMargin
     file.println(header)
@@ -138,6 +165,25 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |const size_t stockTblSize = numWare * itemTblSize;
        |const size_t historyTblSize = orderTblSize;
        |
+       |const size_t warehouseTblArrayLengths[] = {0};
+       |const size_t itemTblArrayLengths[] = {0};
+       |const size_t districtTblArrayLengths[] = {0};
+       |const size_t customerTblArrayLengths[] = {0, 65536};
+       |const size_t orderTblArrayLengths[] = {1048576, 65536};
+       |const size_t newOrderTblArrayLengths[] = {16384, 32};
+       |const size_t orderLineTblArrayLengths[] = {8388608, 8388608};
+       |const size_t stockTblArrayLengths[] = {0};
+       |const size_t historyTblArrayLengths[] = {1048576};
+       |
+       |const size_t warehouseTblPoolSizes[] = {8, 0};
+       |const size_t itemTblPoolSizes[] = {65536*2, 0};
+       |const size_t districtTblPoolSizes[] = {16, 0};
+       |const size_t customerTblPoolSizes[] = {16384*2, 0, 16384};
+       |const size_t orderTblPoolSizes[] = {262144*2, 65536, 0};
+       |const size_t newOrderTblPoolSizes[] = {8192*2, 2048, 0};
+       |const size_t orderLineTblPoolSizes[] = {4194304*2, 1048576, 2097152};
+       |const size_t stockTblPoolSizes[] = {65536*2, 0};
+       |const size_t historyTblPoolSizes[] = {262144*2, 65536};
      """.stripMargin
 
   override val codeGen = new StoreCppCodeGenerator(IR)
@@ -198,7 +244,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
       val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}StoreType;"
-      val storeDecl = s.name :: "StoreType  " :: s.name :: ";" //"(" :: s.name :: "Size);"
+      val initSize = if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes);" else doc";"
+      val storeDecl = s.name :: "StoreType  " :: s.name :: initSize
 
       val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
       val primaryIdx = idx2(s)(0)
@@ -332,6 +379,16 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |fout.close();
 
          |#ifdef VERIFY_TPCC
+         |    warehouseTblPrimaryIdx.resize_(warehouseTblSize);
+         |    districtTblPrimaryIdx.resize_(districtTblSize);
+         |    customerTblPrimaryIdx.resize_(customerTblSize);
+         |    orderTblPrimaryIdx.resize_(orderTblSize);
+         |    newOrderTblPrimaryIdx.resize_(newOrderTblSize);
+         |    orderLineTblPrimaryIdx.resize_(orderLineTblSize);
+         |    itemTblPrimaryIdx.resize_(itemTblSize);
+         |    stockTblPrimaryIdx.resize_(stockTblSize);
+         |    historyTblPrimaryIdx.resize_(historyTblSize);
+         |
          |    if (warehouseTblPrimaryIdx == tpcc.wareRes) {
          |        cout << "Warehouse results are correct" << endl;
          |    } else {

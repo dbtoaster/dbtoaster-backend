@@ -310,6 +310,19 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
   // } else {
   //   block
   // }
+
+  def setInitialSizes(s: List[Int]): Unit = {
+    var i = 0;
+    while(i < n) {
+      idxs(i) match {
+        case hi : IdxHash[_] => hi._resize(s(i))
+        case shi : IdxSlicedHeap[_] => shi._resize(s(i))
+        case _ => ()
+      }
+      i += 1
+    }
+  }
+
   @inline private def time[R](f: String)(block: => R): R = {
     block
   }
@@ -1201,6 +1214,24 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
 
   @inline private def _meta(e: E): Heap = e.data(idx).asInstanceOf[Heap]
 
+  override def getSizeStat: String = {
+    var numInArray = 0
+    var numHeap = 0
+    var maxSize = 0
+    var size2 = 0
+    data.foreach(d => if(d != null){
+      numInArray += 1
+      var cur = d
+      do {
+        numHeap += 1
+        if(cur.array.length > maxSize)
+          maxSize = cur.array.length
+        size2 += cur.size
+        cur = cur.next
+      }while(cur != null);
+    })
+    return s"  array length = ${data.length}    count = ${size}  numElements = ${size2}  numHeaps = ${numHeap}   numInArray = ${numInArray}  maxHeap = ${maxSize}"
+  }
 
   override def foreach(f: (E) => Unit): Unit = {
     for (d <- data) {
@@ -1213,7 +1244,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
   }
 
   // HashMap of Heap: for each partition of sliceIdx, we maintain one min/max heap
-  private final val init_capacity = 128
+  private final val init_capacity = 32
   private final val max_capacity = 1 << 30
   private final val load_factor = 0.75f;
   private final val compact_factor = 0.05f
@@ -1227,7 +1258,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
     h ^ (h >>> 7) ^ (h >>> 4);
   }
 
-  @inline private def _resize(new_capacity: Int) {
+  @inline def _resize(new_capacity: Int) {
     val d = new Array[Heap](new_capacity)
     var i = 0;
     val n = data.size;
@@ -1343,7 +1374,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
     var hash: Int = 0;
     var next: Heap = null.asInstanceOf[Heap]
     // Inherited as HashMap entry
-    private var array = new Array[E](default_capacity + 1)
+    var array = new Array[E](default_capacity)
     var size = 0
 
     @inline private def _double {

@@ -2,7 +2,7 @@
 import java.io.PrintWriter
 import scala.io.Source._
 object HelloWorld extends App {
-  val optsMap = List("" -> " ", "Entry" -> "E", "TmpVar" -> "V" , "TmpMap" -> "M", "CmpMult" -> "T", "FixedRange" -> "G" , "Online" -> "O", "Inline" -> "N" , "DeadIdx" -> "D", "Fusion full" -> "F", "CodeMotion" -> "C", "RegexHoister" -> "X", "RefCnt" -> "R" , "Index" -> "I", "SliceInline" -> "S", "Fusion"->"P", "MultiResSplitter" -> "U" ).toMap
+  val optsMap = List("" -> " ", "Entry" -> "E", "TmpVar" -> "V" , "TmpMap" -> "M", "CmpMult" -> "T", "FixedRange" -> "G" , "Online" -> "O", "Inline" -> "N" , "DeadIdx" -> "D", "Fusion full" -> "F", "CodeMotion" -> "C", "RegexHoister" -> "X", "RefCnt" -> "R" , "Index" -> "I", "SliceInline" -> "S", "Fusion"->"P", "MultiResSplitter" -> "U", "InitialStoreSize" -> "Z").toMap
   val lines = fromFile("out_dump.txt").getLines().mkString("\n")
   val parts = lines.split("Optimizations ::").drop(1)
   println(s"Number of parts = ${parts.size}")

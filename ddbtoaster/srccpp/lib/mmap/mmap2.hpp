@@ -11,7 +11,10 @@
 
 #define DEFAULT_CHUNK_SIZE 32
 #define DEFAULT_LIST_SIZE 8
-#define DEFAULT_HEAP_SIZE 32
+
+#ifndef DEFAULT_HEAP_SIZE
+#define DEFAULT_HEAP_SIZE 16
+#endif
 
 #define INSERT_INTO_MMAP 1
 #define DELETE_FROM_MMAP -1
@@ -53,7 +56,7 @@ struct El {
 
 template<typename T>
 class Pool {
-private:
+public:
     El<T>* free_;
     El<T>* data_;
     size_t size_;
@@ -68,6 +71,15 @@ private:
         free_ = chunk;
     }
 public:
+
+    Pool(bool donotallocate): free_(nullptr), data_(nullptr) {
+
+    }
+
+    void initialize(size_t chunk_size) {
+        size_ = chunk_size;
+        add_chunk();
+    }
 
     Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE) : free_(nullptr), data_(nullptr), size_(chunk_size >> 1) {
         add_chunk();
@@ -240,6 +252,8 @@ public:
 
     virtual void clear() = 0;
 
+    virtual void prepareSize(size_t arrayS, size_t poolS) = 0;
+
     virtual ~Index() {
     };
 };
@@ -264,7 +278,8 @@ private:
     size_t count_, threshold_;
     double load_factor_;
     const V zero;
-
+public:
+    
     void resize_(size_t new_size) {
         IdxNode *old = buckets_, *n, *na, *nw, *d;
         HASH_RES_t h;
@@ -320,16 +335,30 @@ private:
         if (old) delete[] old;
     }
 
-public:
 
-    HashIndex(Pool<T>* stPool = nullptr, size_t size = DEFAULT_CHUNK_SIZE, double load_factor = .75) : nodes_(size), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
+
+    HashIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : nodes_(size), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
         storePool = stPool;
         dataHead = nullptr;
-        load_factor_ = load_factor;
+        load_factor_ = 0.75;
         size_ = 0;
         count_ = 0;
         buckets_ = nullptr;
         resize_(size);
+    }
+
+    HashIndex(Pool<T>* stPool = nullptr) : nodes_(false), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
+        storePool = stPool;
+        dataHead = nullptr;
+        load_factor_ = 0.75;
+        size_ = 0;
+        count_ = 0;
+        buckets_ = nullptr;
+    }
+
+    void prepareSize(size_t arrayS, size_t poolS) override {
+        resize_(arrayS);
+        nodes_.initialize(poolS);
     }
 
     ~HashIndex() {
@@ -338,6 +367,19 @@ public:
 
     T& operator[](const T& key) {
         return *get(key);
+    }
+
+    void getSizeStats() {
+        cout << "  array length  = " << size_;
+        cout << "  pool size = " << nodes_.size_;
+        cout << "  numElements = " << count_;
+        cout << "  threshold = " << threshold_;
+        size_t numInArray = 0;
+        for (uint i = 0; i < size_; ++i) {
+            if (buckets_[i].obj)
+                numInArray++;
+        }
+        cout << "  numInArray = " << numInArray << endl;
     }
 
     void getBucketStats() {
@@ -529,16 +571,15 @@ public:
         if (idxId == 0) {
             T *elemPrv = obj->prv, *elemNxt = obj->nxt;
             if (elemPrv)
-              elemPrv->nxt = elemNxt;
+                elemPrv->nxt = elemNxt;
             else
-               dataHead = elemNxt;
+                dataHead = elemNxt;
             if (elemNxt) elemNxt->prv = elemPrv;
 
             obj->nxt = nullptr;
             obj->prv = nullptr;
         }
         IdxNode *n = (IdxNode *) obj->backPtrs[idxId];
-        auto h = n->hash;
         IdxNode *prev = n->prv;
         IdxNode *next = n->nxt;
         if (prev) { //not head
@@ -717,7 +758,7 @@ class SlicedHeapIndex : public Index<T, V> {
         __IdxHeapNode * nxt;
 
         __IdxHeapNode() {
-            arraySize = DEFAULT_HEAP_SIZE + 1;
+            arraySize = DEFAULT_HEAP_SIZE;
             array = new T*[arraySize];
             size = 0;
         }
@@ -840,7 +881,32 @@ class SlicedHeapIndex : public Index<T, V> {
     }
 public:
 
-    SlicedHeapIndex(Pool<T>* stPool = nullptr, size_t size = DEFAULT_CHUNK_SIZE, double load_factor = .75) : zero(ZeroVal<V>().get()) {
+    void getSizeStats() {
+        cout << "  array length = " << size_;
+        uint maxSize = 0;
+        uint numHeaps = 0;
+        uint numInArray = 0;
+        uint nE = 0;
+        for (uint i = 0; i < size_; ++i) {
+            if (buckets_[i]) {
+                numInArray++;
+                auto cur = buckets_[i];
+                do {
+                    if (cur->arraySize > maxSize)
+                        maxSize = cur->arraySize;
+                    numHeaps++;
+                    nE += cur->size;
+                } while ((cur = cur->nxt));
+            }
+        }
+        cout << "  num Heaps = " << numHeaps;
+        cout << "  count = " << count_;
+        cout << "  numElements = " << nE;
+        cout << "  numInArray = " << numInArray;
+        cout << "  maxHeapSize = " << maxSize << endl;
+    }
+
+    SlicedHeapIndex(Pool<T>* stPool, size_t size , double load_factor = .75) : zero(ZeroVal<V>().get()) {
 
         load_factor_ = load_factor;
         size_ = 0;
@@ -848,6 +914,17 @@ public:
         buckets_ = nullptr;
         resize_(size);
 
+    }
+
+    SlicedHeapIndex(Pool<T>* stPool = nullptr) : zero(ZeroVal<V>().get()) {
+        load_factor_ = 0.75;
+        size_ = 0;
+        count_ = 0;
+        buckets_ = nullptr;
+    }
+
+    void prepareSize(size_t arrayS, size_t poolS) override {
+        resize_(arrayS);
     }
 
     IdxNode* buckets_;
@@ -872,7 +949,6 @@ public:
         }
         return nullptr;
     }
-
 
     FORCE_INLINE void add(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
@@ -1317,13 +1393,26 @@ public:
 
     }
 
-    TreeIndex(Pool<T>* stPool = nullptr, size_t size = DEFAULT_CHUNK_SIZE, double load_factor = .75) : equiv_nodes_(size), nodes_(size), zero(ZeroVal<V>().get()) {
+    TreeIndex(Pool<T>* stPool , size_t size , double load_factor = .75) : equiv_nodes_(size), nodes_(size), zero(ZeroVal<V>().get()) {
         load_factor_ = load_factor;
         size_ = 0;
         count_ = 0;
         buckets_ = nullptr;
         resize_(size);
 
+    }
+
+    TreeIndex(Pool<T>* stPool = nullptr) : equiv_nodes_(false), nodes_(false), zero(ZeroVal<V>().get()) {
+        load_factor_ = 0.75;
+        size_ = 0;
+        count_ = 0;
+        buckets_ = nullptr;
+    }
+
+    void prepareSize(size_t arrayS, size_t poolS) override {
+        nodes_.initialize(poolS);
+        equiv_nodes_.initialize(poolS);
+        resize_(arrayS);
     }
 
     ~TreeIndex() {
@@ -1367,7 +1456,6 @@ public:
     }
 
     // inserts regardless of whether element exists already
-
 
     FORCE_INLINE void add(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
@@ -1555,6 +1643,14 @@ public:
         memset(isUsed, 0, size);
     }
 
+    void prepareSize(size_t arrayS, size_t poolS) override {
+        //DO NOTHING
+    }
+
+    void resize_( size_t newsize) {
+        //DO NOTHING
+    }
+    
     bool operator==(const ArrayIndex<T, V, IDX_FN, size> & that) const {
         for (size_t i = 0; i < size; ++i) {
             if (isUsed[i] != that.isUsed[i]) {
@@ -1587,7 +1683,6 @@ public:
             return array[idx];
         return nullptr;
     }
-
 
     FORCE_INLINE void add(T* obj) override {
         auto idxId = Index<T, V>::idxId;
@@ -1711,8 +1806,15 @@ class ListIndex : public Index<T, V> {
     Pool<Container> nodes_;
 public:
 
-    ListIndex(Pool<T>* stPool = nullptr, size_t size = DEFAULT_CHUNK_SIZE) : head(nullptr), tail(nullptr), nodes_(size) {
+    ListIndex(Pool<T>* stPool, size_t size) : head(nullptr), tail(nullptr), nodes_(size) {
 
+    }
+
+    ListIndex(Pool<T>* stPool = nullptr) : head(nullptr), tail(nullptr), nodes_(false) {
+
+    }
+    void prepareSize(size_t arrayS, size_t poolS) override {
+        nodes_->initialize(poolS);
     }
 
     bool operator==(const ListIndex<T, V, IDX_FN, is_unique>& right) const {
@@ -1753,7 +1855,6 @@ public:
         }
         return nullptr;
     }
-
 
     FORCE_INLINE void add(T* obj) override {
         auto idxId = Index<T, V>::idxId;
@@ -1954,14 +2055,15 @@ public:
 template<typename T, typename V, typename...INDEXES>
 class MultiHashMap {
 private:
-    Pool<T> pool;
+
     bool *modified;
 public:
+    Pool<T> pool;
     Index<T, V>** index;
 
     MultiHashMap() { // by defintion index 0 is always unique
         index = new Index<T, V>*[sizeof...(INDEXES)] {
-            new INDEXES(&pool)...
+            new INDEXES(&pool, DEFAULT_CHUNK_SIZE)...
         };
         modified = new bool[sizeof...(INDEXES)];
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
@@ -1970,12 +2072,13 @@ public:
         }
     }
 
-    MultiHashMap(size_t init_capacity) : pool(init_capacity) { // by defintion index 0 is always unique
+    MultiHashMap(const size_t* arrayLengths, const size_t* poolSizes) : pool(poolSizes[0]) { // by defintion index 0 is always unique
         index = new Index<T, V>*[sizeof...(INDEXES)] {
-            new INDEXES(&pool, init_capacity)...
+            new INDEXES(&pool)...
         };
         modified = new bool[sizeof...(INDEXES)];
         for (size_t i = 0; i<sizeof...(INDEXES); ++i) {
+            index[i]->prepareSize(arrayLengths[i], poolSizes[i + 1]);
             index[i]->idxId = i;
             modified[i] = false;
         }
