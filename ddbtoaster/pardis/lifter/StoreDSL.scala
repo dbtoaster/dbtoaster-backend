@@ -128,6 +128,13 @@ trait StoreDSL extends
 
   def __newStoreNamed2[E <: ddbt.lib.store.Entry](name: String, n: Rep[Int], ops: Rep[Array[EntryIdx[E]]])(implicit cE: Manifest[E], typeE: TypeRep[E]): Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name), StoreNew3[E](n, ops)(typeE, cE)))
 
+  override def storeIndex[E <: ddbt.lib.store.Entry](self: Rep[Store[E]], idx: Rep[Int], idxType: Rep[String], uniq: Rep[Boolean], otherIdx: Rep[Int])(implicit typeE: TypeRep[E]): Rep[Idx[E]] = {
+
+    val sym = self.asInstanceOf[Sym[_]]
+    val name = (if(sym.name.startsWith("x")) sym.name + sym.id else sym.name) + "Idx"+idx.asInstanceOf[Constant[_]].underlying
+    IRReifier.reflectStm(Stm(freshNamed[Idx[E]](name), StoreIndex[E](self, idx, idxType, uniq, otherIdx)(typeE)))
+  }
+
   //override   def record_newDef[T: TypeRep](fields: Seq[(String, Boolean, Rep[Any])]): Def[T] = {
   //  val fieldSyms = createFieldsSyms(fields)
   //  val tp = getRecordType[T]
@@ -153,9 +160,11 @@ trait StoreDSL extends
 
   case object RegexType extends TypeRep[Pattern] {
     def rebuild(newArguments: TypeRep[_]*): TypeRep[_] = RegexType
+
     val name = "java.util.Pattern"
     val typeArguments = Nil
   }
+
   // Global variables
   val USE_UNIQUE_INDEX_WHEN_POSSIBLE = true
   val USE_STORE1 = true
@@ -165,6 +174,7 @@ trait StoreDSL extends
   // cases classes
   case class M3Apply[T: TypeRep](name1: String, args1: List[Rep[_]]) extends FunctionDef[T](None, "U" + name1, List(args1)) {
     override def rebuild(children: FunctionArg*) = M3Apply[T](name1, children.asInstanceOf[List[Rep[Any]]])
+
     override def isPure: Boolean = true
   }
 
@@ -284,14 +294,16 @@ trait StoreDSL extends
     if (tmp) {
       // this never happens in practice
       __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(ent), {
-        currentEnt.update(n, entVal); map.updateCopy(currentEnt)
+        currentEnt.update(n, entVal);
+        map.updateCopy(currentEnt)
       }) // same
     } else {
       __ifThenElse(infix_==(entVal, unit(zero(lastMan))), {
         __ifThenElse(infix_==(currentEnt, unit(null)), unit(()), map.deleteCopy(currentEnt))
       }, {
         __ifThenElse(infix_==(currentEnt, unit(null)), /*stUnsafeInsert(map,ent,idx)*/ map.unsafeInsert(ent), {
-          currentEnt.update(n, entVal); map.updateCopy(currentEnt)
+          currentEnt.update(n, entVal);
+          map.updateCopy(currentEnt)
         }) // same
       })
     }

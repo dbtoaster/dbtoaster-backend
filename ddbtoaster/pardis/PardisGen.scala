@@ -675,19 +675,18 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
           val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}_map;"
           val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
           val storeDecl = s.name :: "_map  " :: s.name :: ";"
-          toCheck ++= idx2(s).filter(_._2 == "IHash").map(s => s._1.name + s._1.id)
+          toCheck ++= idx2(s).filter(_._2 == "IHash").map(s => s._1.name)
 
           val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
           val primaryIdx = idx2(s)(0)
-          val primaryRef = doc"${idxTypeName(0)}& ${s.name}PrimaryIdx = * (${idxTypeName(0)} *) ${s.name}.index[0];"
-          idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: idxDecl :\\: primaryRef
+          idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: idxDecl
         } else {
           doc"${s.tp} ${s.name};"
         }
       }).mkDocument("\n", "\n\n\n", "\n")
 
     val tempMaps = optTP.tmpMaps.map(s => {
-      toCheck ++= s._2.map(s => s.name + s.id)
+      toCheck ++= s._2.map(s => s.name)
       val entryTp = s._1.tp.asInstanceOf[StoreType[_]].typeE
       codeGen.stmtToDocument(Statement(s._1, Def.unapply(s._1).get)) :/:
         s._2.map(i => codeGen.stmtToDocument(Statement(i, Def.unapply(i).get))).mkDocument("\n") //index refs

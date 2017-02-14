@@ -249,8 +249,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
       val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
       val primaryIdx = idx2(s)(0)
-      val primaryRef = doc"${idxTypeName(0)}& ${s.name}PrimaryIdx = * (${idxTypeName(0)} *) ${s.name}.index[0];"
-      idxTypeDefs :\\: storeTypeDef :\\: storeDecl :\\: idxDecl :\\: primaryRef
+      idxTypeDefs :\\: storeTypeDef :\\: storeDecl :\\: idxDecl
     }).mkDocument("\n", "\n\n\n", "\n")
 
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
@@ -379,57 +378,57 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |fout.close();
 
          |#ifdef VERIFY_TPCC
-         |    warehouseTblPrimaryIdx.resize_(warehouseTblSize);
-         |    districtTblPrimaryIdx.resize_(districtTblSize);
-         |    customerTblPrimaryIdx.resize_(customerTblSize);
-         |    orderTblPrimaryIdx.resize_(orderTblSize);
-         |    newOrderTblPrimaryIdx.resize_(newOrderTblSize);
-         |    orderLineTblPrimaryIdx.resize_(orderLineTblSize);
-         |    itemTblPrimaryIdx.resize_(itemTblSize);
-         |    stockTblPrimaryIdx.resize_(stockTblSize);
-         |    historyTblPrimaryIdx.resize_(historyTblSize);
+         |    warehouseTblIdx0.resize_(warehouseTblSize);
+         |    districtTblIdx0.resize_(districtTblSize);
+         |    customerTblIdx0.resize_(customerTblSize);
+         |    orderTblIdx0.resize_(orderTblSize);
+         |    newOrderTblIdx0.resize_(newOrderTblSize);
+         |    orderLineTblIdx0.resize_(orderLineTblSize);
+         |    itemTblIdx0.resize_(itemTblSize);
+         |    stockTblIdx0.resize_(stockTblSize);
+         |    historyTblIdx0.resize_(historyTblSize);
          |
-         |    if (warehouseTblPrimaryIdx == tpcc.wareRes) {
+         |    if (warehouseTblIdx0 == tpcc.wareRes) {
          |        cout << "Warehouse results are correct" << endl;
          |    } else {
          |        cerr << "Warehouse results INCORRECT!" << endl;
          |    }
-         |    if (districtTblPrimaryIdx == tpcc.distRes) {
+         |    if (districtTblIdx0 == tpcc.distRes) {
          |        cout << "District results are correct" << endl;
          |    } else {
          |        cerr << "District results INCORRECT!" << endl;
          |    }
-         |    if (customerTblPrimaryIdx == tpcc.custRes) {
+         |    if (customerTblIdx0 == tpcc.custRes) {
          |        cout << "Customer results are correct" << endl;
          |    } else {
          |        cerr << "Customer results INCORRECT!" << endl;
          |    }
-         |    if (orderTblPrimaryIdx == tpcc.ordRes) {
+         |    if (orderTblIdx0 == tpcc.ordRes) {
          |        cout << "Order results are correct" << endl;
          |    } else {
          |        cerr << "Order results INCORRECT!" << endl;
          |    }
-         |    if (orderLineTblPrimaryIdx == tpcc.ordLRes) {
+         |    if (orderLineTblIdx0 == tpcc.ordLRes) {
          |        cout << "OrderLine results are correct" << endl;
          |    } else {
          |        cerr << "OrderLine results INCORRECT!" << endl;
          |    }
-         |    if (newOrderTblPrimaryIdx == tpcc.newOrdRes) {
+         |    if (newOrderTblIdx0 == tpcc.newOrdRes) {
          |        cout << "NewOrder results are correct" << endl;
          |    } else {
          |        cerr << "NewOrder results INCORRECT!" << endl;
          |    }
-         |    if (itemTblPrimaryIdx == tpcc.itemRes) {
+         |    if (itemTblIdx0 == tpcc.itemRes) {
          |        cout << "Item results are correct" << endl;
          |    } else {
          |        cerr << "Item results INCORRECT!" << endl;
          |    }
-         |    if (stockTblPrimaryIdx == tpcc.stockRes) {
+         |    if (stockTblIdx0 == tpcc.stockRes) {
          |        cout << "Stock results are correct" << endl;
          |    } else {
          |        cerr << "Stock results INCORRECT!" << endl;
          |    }
-         |    if (historyTblPrimaryIdx == tpcc.histRes) {
+         |    if (historyTblIdx0 == tpcc.histRes) {
          |        cout << "History results are correct" << endl;
          |    } else {
          |        cerr << "History results INCORRECT!" << endl;
