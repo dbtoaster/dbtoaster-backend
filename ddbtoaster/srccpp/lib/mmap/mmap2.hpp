@@ -54,6 +54,8 @@ struct El {
     }
 };
 
+#ifdef USE_POOL
+
 template<typename T>
 class Pool {
 public:
@@ -72,7 +74,7 @@ public:
     }
 public:
 
-    Pool(bool donotallocate): free_(nullptr), data_(nullptr) {
+    Pool(bool donotallocate) : free_(nullptr), data_(nullptr) {
 
     }
 
@@ -156,6 +158,37 @@ public:
         free_ = data_;
     }
 };
+#else
+
+template<typename T>
+class Pool {
+public:
+    size_t size_;
+
+    Pool(bool donotallocate){
+    }
+
+    void initialize(size_t chunk_size) {
+    }
+
+    Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE) {
+    }
+
+    inline void clear() {
+    }
+
+    inline void delete_all(T* current_data) {
+    }
+
+    FORCE_INLINE T* add() {
+        return (T*) malloc(sizeof (T));
+    }
+
+    FORCE_INLINE void del(T* obj) {
+        free(obj);
+    }
+};
+#endif
 
 template<typename V>
 struct ZeroVal {
@@ -279,7 +312,7 @@ private:
     double load_factor_;
     const V zero;
 public:
-    
+
     void resize_(size_t new_size) {
         IdxNode *old = buckets_, *n, *na, *nw, *d;
         HASH_RES_t h;
@@ -334,8 +367,6 @@ public:
         allocated_from_pool_ = tmp_allocated_from_pool;
         if (old) delete[] old;
     }
-
-
 
     HashIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : nodes_(size), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
         storePool = stPool;
@@ -906,7 +937,7 @@ public:
         cout << "  maxHeapSize = " << maxSize << endl;
     }
 
-    SlicedHeapIndex(Pool<T>* stPool, size_t size , double load_factor = .75) : zero(ZeroVal<V>().get()) {
+    SlicedHeapIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : zero(ZeroVal<V>().get()) {
 
         load_factor_ = load_factor;
         size_ = 0;
@@ -1393,7 +1424,7 @@ public:
 
     }
 
-    TreeIndex(Pool<T>* stPool , size_t size , double load_factor = .75) : equiv_nodes_(size), nodes_(size), zero(ZeroVal<V>().get()) {
+    TreeIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : equiv_nodes_(size), nodes_(size), zero(ZeroVal<V>().get()) {
         load_factor_ = load_factor;
         size_ = 0;
         count_ = 0;
@@ -1647,10 +1678,10 @@ public:
         //DO NOTHING
     }
 
-    void resize_( size_t newsize) {
+    void resize_(size_t newsize) {
         //DO NOTHING
     }
-    
+
     bool operator==(const ArrayIndex<T, V, IDX_FN, size> & that) const {
         for (size_t i = 0; i < size; ++i) {
             if (isUsed[i] != that.isUsed[i]) {
@@ -1813,6 +1844,7 @@ public:
     ListIndex(Pool<T>* stPool = nullptr) : head(nullptr), tail(nullptr), nodes_(false) {
 
     }
+
     void prepareSize(size_t arrayS, size_t poolS) override {
         nodes_->initialize(poolS);
     }
