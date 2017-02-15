@@ -1682,6 +1682,10 @@ public:
         //DO NOTHING
     }
 
+    void getSizeStats(){
+        cout << endl;
+    }
+    
     bool operator==(const ArrayIndex<T, V, IDX_FN, size> & that) const {
         for (size_t i = 0; i < size; ++i) {
             if (isUsed[i] != that.isUsed[i]) {

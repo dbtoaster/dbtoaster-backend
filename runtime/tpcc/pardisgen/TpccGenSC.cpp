@@ -1385,12 +1385,29 @@ int main(int argc, char** argv) {
   auto end = Now;
   auto execTime = DurationMS(end - start);
   cout << "Total time = " << execTime << " ms" << endl;
+  cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  xactCounts[0]  << endl;
   cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
   ofstream fout("tpcc_res_cpp.csv", ios::app);
   if(argc == 1 || atoi(argv[1]) == 1)
     fout << "\nCPP-CDEFGIMNORSTUVXZ,";
   fout << fixed << xactCounts[0] * 60000.0/execTime << ",";
   fout.close();
+  
+  #ifdef GETSIZES
+  GET_SIZE_STAT(warehouseTblIdx0);
+  GET_SIZE_STAT(stockTblIdx0);
+  GET_SIZE_STAT(districtTblIdx0);
+  GET_SIZE_STAT(newOrderTblIdx0);
+  GET_SIZE_STAT(newOrderTblIdx1);
+  GET_SIZE_STAT(itemTblIdx0);
+  GET_SIZE_STAT(historyTblIdx0);
+  GET_SIZE_STAT(orderLineTblIdx0);
+  GET_SIZE_STAT(orderLineTblIdx1);
+  GET_SIZE_STAT(orderTblIdx0);
+  GET_SIZE_STAT(orderTblIdx1);
+  GET_SIZE_STAT(customerTblIdx0);
+  GET_SIZE_STAT(customerTblIdx1);
+  #endif
   
   #ifdef VERIFY_TPCC
       warehouseTblIdx0.resize_(warehouseTblSize);

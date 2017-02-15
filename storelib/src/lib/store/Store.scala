@@ -1307,6 +1307,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
     if (size == threshold) {
       val n = data.length;
       if (n == max_capacity) threshold = java.lang.Integer.MAX_VALUE; else _resize(n << 1)
+      //throw new IllegalStateException("slicedHeap resize")
     }
     val h = _hash(e);
     val b = h & (data.length - 1);

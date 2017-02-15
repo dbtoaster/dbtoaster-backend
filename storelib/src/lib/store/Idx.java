@@ -257,7 +257,10 @@ class IdxHash<E extends Entry> extends Idx<E> {
     // Public
     @Override
     public void unsafeInsert(E e) {
-        if (size == threshold) _resize();
+        if (size == threshold) {
+            _resize();
+            //throw new IllegalStateException("Heap resize");
+        }
         int h = ops.hash(e), b = h & (data.length - 1);
         if (idx == 0) {
             e.prev = null;

@@ -248,7 +248,6 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       val storeDecl = s.name :: "StoreType  " :: s.name :: initSize
 
       val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
-      val primaryIdx = idx2(s)(0)
       idxTypeDefs :\\: storeTypeDef :\\: storeDecl :\\: idxDecl
     }).mkDocument("\n", "\n\n\n", "\n")
 
@@ -295,6 +294,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     //    optTP.codeBlocks.foreach(x => codeGen.functionsList += (blockTofunction(x)))
 
     val blocks = optTP.codeBlocks.map(x => doc"void ${x._1}(${argsDoc(x._2)}) {" :: Document.nest(2, codeGen.blockToDocument(x._3)) :/: "}").mkDocument("\n")
+    val getSizes = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1)).map(i => doc"GET_SIZE_STAT($i);").toList.mkDocument("\n")
     def mainPrg =
       s"""
          |TPCCDataGen tpcc;
@@ -370,12 +370,17 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |auto end = Now;
          |auto execTime = DurationMS(end - start);
          |cout << "Total time = " << execTime << " ms" << endl;
+         |cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  xactCounts[0]  << endl;
          |cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
          |ofstream fout("tpcc_res_cpp.csv", ios::app);
          |if(argc == 1 || atoi(argv[1]) == 1)
          |  fout << "\\nCPP-${Optimizer.optCombination},";
          |fout << fixed << xactCounts[0] * 60000.0/execTime << ",";
          |fout.close();
+         |
+         |#ifdef GETSIZES
+         |${getSizes}
+         |#endif
 
          |#ifdef VERIFY_TPCC
          |    warehouseTblIdx0.resize_(warehouseTblSize);
