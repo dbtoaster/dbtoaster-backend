@@ -26,7 +26,7 @@ object Optimizer {
   var indexInline = true
   var indexLookupFusion = true
   var indexLookupPartialFusion = false
-  var sliceInline = true
+  var sliceInline = false
   var deadIndexUpdate = true
   var codeMotion = true
   var m3CompareMultiply = true
