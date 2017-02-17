@@ -15,7 +15,7 @@ using namespace dbtoaster;
 #define STRINGIFY(x) EXPAND(x)
 #define FORCE_INLINE inline __attribute__((always_inline))
 #define CHECK_STAT(x) cerr << STRINGIFY(x) << " -> "; x.getBucketStats()
-#define GET_SIZE_STAT(x) cout << STRINGIFY(x) << " -> "; x.getSizeStats()
+#define GET_RUN_STAT(x, f) f << "\"" << STRINGIFY(x) << "\" : "; x.getSizeStats(f)
 
 FORCE_INLINE size_t HASH(int x) {
     return x;

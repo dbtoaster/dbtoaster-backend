@@ -12,6 +12,8 @@
 #define DEFAULT_CHUNK_SIZE 32
 #define DEFAULT_LIST_SIZE 8
 
+#define INV_LF 1.4   //inverse_load factor
+
 #ifndef DEFAULT_HEAP_SIZE
 #define DEFAULT_HEAP_SIZE 16
 #endif
@@ -165,7 +167,7 @@ class Pool {
 public:
     size_t size_;
 
-    Pool(bool donotallocate){
+    Pool(bool donotallocate) {
     }
 
     void initialize(size_t chunk_size) {
@@ -305,6 +307,7 @@ public:
     T* dataHead; //entries are linked together for efficient foreach
     Pool<T>* storePool;
     size_t size_;
+    size_t maxElems;
 private:
     Pool<IdxNode> nodes_;
     bool allocated_from_pool_;
@@ -328,7 +331,7 @@ public:
             do {
                 if (n->obj) { //add_(n->obj); // does not resize the bucket array, does not maintain count
                     h = n->hash;
-                    na = &buckets_[h & (size_ - 1)];
+                    na = &buckets_[h % size_];
 
                     if (na->obj) {
                         tmp_allocated_from_pool = true;
@@ -374,6 +377,7 @@ public:
         load_factor_ = 0.75;
         size_ = 0;
         count_ = 0;
+        maxElems = 0;
         buckets_ = nullptr;
         resize_(size);
     }
@@ -384,6 +388,7 @@ public:
         load_factor_ = 0.75;
         size_ = 0;
         count_ = 0;
+        maxElems = 0;
         buckets_ = nullptr;
     }
 
@@ -400,17 +405,17 @@ public:
         return *get(key);
     }
 
-    void getSizeStats() {
-        cout << "  array length  = " << size_;
-        cout << "  pool size = " << nodes_.size_;
-        cout << "  numElements = " << count_;
-        cout << "  threshold = " << threshold_;
+    void getSizeStats(std::ostream& fout) {
+        fout << "{ \"ArrayLength\" : \"" << size_ << "\", ";
+        fout << " \"OptArrayLength\" : \"" << (size_t) ((maxElems + 1) * INV_LF) << "\", ";
+        fout << "  \"PoolSize\" : \"" << nodes_.size_ << "\", ";
+        fout << "  \"NumElements\" : \"" << count_ << "\", ";
         size_t numInArray = 0;
         for (uint i = 0; i < size_; ++i) {
             if (buckets_[i].obj)
                 numInArray++;
         }
-        cout << "  numInArray = " << numInArray << endl;
+        fout << "  \"NumInArray\" : \"" << numInArray << "\"}";
     }
 
     void getBucketStats() {
@@ -504,7 +509,7 @@ public:
 
     FORCE_INLINE IdxNode* sliceRes(const T& key) {
         HASH_RES_t h = IDX_FN::hash(key);
-        IdxNode* n = &(buckets_[h & (size_ - 1)]);
+        IdxNode* n = &(buckets_[h % size_]);
         if (n->obj)
             do {
                 if (h == n->hash && !IDX_FN::cmp(key, *n->obj)) {
@@ -547,7 +552,7 @@ public:
 
     FORCE_INLINE T* get(const T* key) const override {
         HASH_RES_t h = IDX_FN::hash(*key);
-        IdxNode* n = &buckets_[h & (size_ - 1)];
+        IdxNode* n = &buckets_[h % size_];
         do {
             if (n->obj && h == n->hash && !IDX_FN::cmp(*key, *n->obj)) return n->obj;
         } while ((n = n->nxt));
@@ -566,13 +571,18 @@ public:
             dataHead = obj;
         }
         if (count_ > threshold_) {
+#ifdef NORESIZE
+            std::cerr << " Hash Index resize size=" << size_ << std::endl;
+#endif
             //            throw std::logic_error("HashIndex resize disabled for this experiment");
             resize_(size_ << 1);
         }
-        size_t b = h & (size_ - 1);
+        size_t b = h % size_;
         IdxNode* n = &buckets_[b];
         IdxNode* nw;
-        ++count_;
+        if (++count_ > maxElems)
+            maxElems = count_;
+
         if (n->obj) {
             allocated_from_pool_ = true;
             nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -651,7 +661,7 @@ public:
 
     FORCE_INLINE void slice(const T* key, FuncType f) override {
         HASH_RES_t h = IDX_FN::hash(*key);
-        IdxNode* n = &(buckets_[h & (size_ - 1)]);
+        IdxNode* n = &(buckets_[h % size_]);
         if (n->obj)
             do {
                 if (h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
@@ -663,7 +673,7 @@ public:
     FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
         HASH_RES_t h = IDX_FN::hash(*key);
         std::vector<T*> entries;
-        IdxNode* n = &(buckets_[h & (size_ - 1)]);
+        IdxNode* n = &(buckets_[h % size_]);
         if (n->obj)
             do {
                 if (h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
@@ -678,7 +688,7 @@ public:
 
     FORCE_INLINE void update(T* elem) override {
         //        HASH_RES_t h = IDX_FN::hash(*elem);
-        //        IdxNode* n = &(buckets_[h & (size_ - 1)]);
+        //        IdxNode* n = &(buckets_[h % size_]);
         if (is_unique) {
             // ???
         } else {
@@ -887,7 +897,7 @@ class SlicedHeapIndex : public Index<T, V> {
     //    Pool<IdxEquivNode> equiv_nodes_;
     //    Pool<__IdxHeapNode> nodes_;
     const V zero;
-    size_t count_, threshold_;
+    size_t count_, threshold_, maxHeaps;
     double load_factor_;
 
     void resize_(size_t new_size) {
@@ -901,7 +911,7 @@ class SlicedHeapIndex : public Index<T, V> {
             IdxNode q = old[b];
             while (q != nullptr) {
                 IdxNode nq = q->nxt;
-                uint b = q->hash & (size_ - 1);
+                uint b = q->hash % size_;
                 q->nxt = buckets_[b];
                 buckets_[b] = q;
                 q = nq;
@@ -912,8 +922,9 @@ class SlicedHeapIndex : public Index<T, V> {
     }
 public:
 
-    void getSizeStats() {
-        cout << "  array length = " << size_;
+    void getSizeStats(std::ostream& fout) {
+        fout << "{ \"ArrayLength\" : \"" << size_ << "\", ";
+        fout << "  \"OptArrayLength\" : \"" << (size_t) ((maxHeaps + 1) * INV_LF) << "\", ";
         uint maxSize = 0;
         uint numHeaps = 0;
         uint numInArray = 0;
@@ -930,11 +941,11 @@ public:
                 } while ((cur = cur->nxt));
             }
         }
-        cout << "  num Heaps = " << numHeaps;
-        cout << "  count = " << count_;
-        cout << "  numElements = " << nE;
-        cout << "  numInArray = " << numInArray;
-        cout << "  maxHeapSize = " << maxSize << endl;
+        fout << "  \"NumHeaps\" : \"" << numHeaps << "\", ";
+        fout << "  \"Count\" : \"" << count_ << "\", ";
+        fout << "  \"NumElements\" : \"" << nE << "\", ";
+        fout << "  \"NumInArray\" : \"" << numInArray << "\", ";
+        fout << "  \"MaxHeapSize\" : \"" << maxSize << "\" }";
     }
 
     SlicedHeapIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : zero(ZeroVal<V>().get()) {
@@ -942,6 +953,7 @@ public:
         load_factor_ = load_factor;
         size_ = 0;
         count_ = 0;
+        maxHeaps = 0;
         buckets_ = nullptr;
         resize_(size);
 
@@ -951,6 +963,7 @@ public:
         load_factor_ = 0.75;
         size_ = 0;
         count_ = 0;
+        maxHeaps = 0;
         buckets_ = nullptr;
     }
 
@@ -969,7 +982,7 @@ public:
 
     FORCE_INLINE T* get(const T* key) const override {
         HASH_RES_t h = IDX_FN1::hash(*key);
-        IdxNode n = buckets_[h & (size_ - 1)];
+        IdxNode n = buckets_[h % size_];
         //        if (n) n->checkHeap(Index<T, V>::idxId);
         while (n != nullptr) {
             T* obj;
@@ -984,11 +997,13 @@ public:
     FORCE_INLINE void add(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
         if (count_ > threshold_) {
-            //            std::cerr << "  Index resize count=" << count_ << "  size=" << size_ << std::endl;
+#ifdef NORESIZE
+            std::cerr << " Heap Index resize size=" << size_ << std::endl;
+#endif
             //            exit(1);
             resize_(size_ << 1);
         }
-        size_t b = h & (size_ - 1);
+        size_t b = h % size_;
         IdxNode q = buckets_[b];
         while (q != nullptr) {
             if (q->hash == h && IDX_FN1::cmp(*obj, *q->array[1]) == 0) {
@@ -1007,7 +1022,8 @@ public:
         obj->backPtrs[Index<T, V>::idxId] = q;
         //        q->checkHeap(Index<T, V>::idxId);
         buckets_[b] = q;
-        count_++;
+        if (++count_ > maxHeaps)
+            maxHeaps = count_;
     }
 
     FORCE_INLINE void del(T* obj) override {
@@ -1018,7 +1034,7 @@ public:
         if (q->size == 0) {
             assert(q->array[1] == nullptr);
             auto h = q->hash;
-            size_t b = h & (size_ - 1);
+            size_t b = h % size_;
             IdxNode p = buckets_[b];
             if (p == q) {
                 buckets_[b] = q->nxt;
@@ -1175,7 +1191,7 @@ private:
             do {
                 if (n->equivNodes) { //add_(n->obj); // does not resize the bucket array, does not maintain count
                     h = n->hash;
-                    na = &buckets_[h & (size_ - 1)];
+                    na = &buckets_[h % size_];
                     if (na->equivNodes) {
 
                         nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
@@ -1453,7 +1469,7 @@ public:
     void printTree(const T& key) {
         std::cout << "--------------------------" << std::endl;
         HASH_RES_t h = IDX_FN1::hash(key);
-        IdxNode* n = &(buckets_[h & (size_ - 1)]);
+        IdxNode* n = &(buckets_[h % size_]);
 
         do {
             if (n->equivNodes && h == n->hash && !IDX_FN1::cmp(key, *n->equivNodes->obj)) {
@@ -1474,7 +1490,7 @@ public:
 
     FORCE_INLINE T* get(const T* key) const override {
         HASH_RES_t h = IDX_FN1::hash(key);
-        IdxNode* n = &(buckets_[h & (size_ - 1)]);
+        IdxNode* n = &(buckets_[h % size_]);
 
         do {
             if (n->equivNodes && h == n->hash && !IDX_FN1::cmp(*key, *n->equivNodes->obj)) {
@@ -1495,7 +1511,7 @@ public:
             exit(1);
             //resize_(size_ << 1);
         }
-        size_t b = h & (size_ - 1);
+        size_t b = h % size_;
         IdxNode* n = &buckets_[b];
         IdxNode* nw;
 
@@ -1540,7 +1556,7 @@ public:
 
     FORCE_INLINE void del(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
-        IdxNode *n = &buckets_[h & (size_ - 1)];
+        IdxNode *n = &buckets_[h % size_];
         IdxNode *prev = nullptr, *next; // previous and next pointers
         do {
             next = n->nxt;
@@ -1682,10 +1698,10 @@ public:
         //DO NOTHING
     }
 
-    void getSizeStats(){
-        cout << endl;
+    void getSizeStats(std::ostream & fout) {
+        fout << "{}";
     }
-    
+
     bool operator==(const ArrayIndex<T, V, IDX_FN, size> & that) const {
         for (size_t i = 0; i < size; ++i) {
             if (isUsed[i] != that.isUsed[i]) {

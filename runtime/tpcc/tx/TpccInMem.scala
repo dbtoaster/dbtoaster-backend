@@ -51,7 +51,7 @@ object TpccInMem {
 
   private val TRANSACTION_NAME = Array("NewOrder", "Payment", "Order Stat", "Delivery", "Slev")
 
-  var NUM_ITERATIONS = 5
+  var NUM_ITERATIONS = 1
 
   @volatile var counting_on: Boolean = false
 

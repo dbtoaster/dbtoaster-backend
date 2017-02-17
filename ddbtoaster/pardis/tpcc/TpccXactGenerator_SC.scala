@@ -53,6 +53,7 @@ object TpccXactGenerator_SC {
           case "-opt" => eat(s => opts(s), true)
           case "-ware" => eat(s => numWare = s.toInt)
           case "-lang" => eat(s => lang = s)
+          case "-info" => eat(s => Optimizer.infoFileName = s)
           case _ =>
         }
         i += 1

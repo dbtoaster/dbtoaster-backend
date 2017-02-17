@@ -332,7 +332,7 @@ char* IntToStrdate(date d) {
 ////////////
 
 struct TPCCDataGen {
-    Program* programs[numPrograms];
+    Program** programs;
 #ifdef VERIFY_TPCC
     warehouseTblIdx0Type wareRes;
     districtTblIdx0Type distRes;
@@ -357,6 +357,7 @@ struct TPCCDataGen {
     ~TPCCDataGen() {
         for (size_t i = 0; i < numPrograms; i++)
             delete programs[i];
+        delete programs;
     }
 #ifdef VERIFY_TPCC
 
@@ -370,6 +371,11 @@ struct TPCCDataGen {
         itemRes.idxId = 0;
         stockRes.idxId = 0;
         histRes.idxId = 0;
+        programs = new Program*[numPrograms];
+    }
+#else
+    TPCCDataGen() {
+        programs = new Program*[numPrograms];
     }
 #endif
 

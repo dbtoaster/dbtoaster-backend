@@ -1,6 +1,6 @@
 package sc.tpcc
 
-import java.io.PrintWriter
+import java.io.{File, PrintWriter}
 import java.nio.file.Files._
 import java.nio.file.Paths._
 import java.nio.file.StandardCopyOption._
@@ -13,12 +13,28 @@ import ddbt.codegen.{Optimizer, TransactionProgram}
 import ddbt.codegen.prettyprinter.{StoreCodeGenerator, StoreCppCodeGenerator, StoreScalaCodeGenerator}
 import ddbt.lib.store.deep.StoreDSL
 
+import scala.util.parsing.json.JSON
+
 
 /**
   * Created by sachin on 14/09/16.
   */
 trait TpccPardisGen {
   def header: String
+
+
+  val infoFile = new File(s"../runtime/stats/${if (Optimizer.infoFileName == "") "default" else Optimizer.infoFileName}.json")
+  val infoFilePath = infoFile.getAbsolutePath
+  var StoreArrayLengths = Map[String, String]()
+  var idxSymNames: List[String] = null
+
+  if (infoFile.exists()) {
+    val txt = new java.util.Scanner(infoFile).useDelimiter("\\Z").next()
+    val allinfo: Map[String, _] = JSON.parseFull(txt).get.asInstanceOf[Map[String, _]]
+    StoreArrayLengths = allinfo.map(t => t._1 -> t._2.asInstanceOf[Map[String, String]].getOrElse("OptArrayLength", "0"))
+  } else {
+    System.err.println("Runtime info file missing!!  Using default initial sizes")
+  }
 
   val codeGen: StoreCodeGenerator
   val genDir = "../runtime/tpcc/pardisgen"
@@ -61,32 +77,11 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
     var i = codestr.lastIndexOf("1")
     val allstores = optTP.globalVars.map(_.name).mkDocument(", ")
     val executor =
-      s"""
-         |class SCExecutor {
-         |  val warehouseTblArrayLengths = List(0)
-         |  val itemTblArrayLengths = List(0)
-         |  val districtTblArrayLengths = List(0)
-         |  val customerTblArrayLengths = List(0, 65536)
-         |  val orderTblArrayLengths = List(1048576, 65536)
-         |  val newOrderTblArrayLengths = List(16384, 32)
-         |  val orderLineTblArrayLengths = List(8388608, 8388608)
-         |  val stockTblArrayLengths = List(0)
-         |  val historyTblArrayLengths = List(1048576)
-         |
-        """.stripMargin + codestr.substring(0, i) + "\n" +
-        (if (Optimizer.initialStoreSize)
-          s"""
-             |  warehouseTbl.setInitialSizes(warehouseTblArrayLengths)
-             |  historyTbl.setInitialSizes(historyTblArrayLengths)
-             |  districtTbl.setInitialSizes(districtTblArrayLengths)
-             |  customerTbl.setInitialSizes(customerTblArrayLengths)
-             |  orderTbl.setInitialSizes(orderLineTblArrayLengths)
-             |  newOrderTbl.setInitialSizes(newOrderTblArrayLengths)
-             |  orderLineTbl.setInitialSizes(orderLineTblArrayLengths)
-             |  stockTbl.setInitialSizes(stockTblArrayLengths)
-             |  historyTbl.setInitialSizes(historyTblArrayLengths)
-             |
-       """.stripMargin
+      "class SCExecutor {\n" + codestr.substring(0, i) + "\n" +
+        (if (Optimizer.initialStoreSize && !StoreArrayLengths.isEmpty) {
+            val tbls = StoreArrayLengths.keys.toList.groupBy(_.split("Idx")(0)).map(t => t._1 -> t._2.map(StoreArrayLengths.getOrElse(_, "1")))
+            tbls.map(t => doc"  ${t._1}.setInitialSizes(List(${t._2.mkString(",")}))").mkString("\n") +"\n"
+        }
         else "") +
         s"""
            |  val newOrderTxInst = new NewOrderTx($allstores)
@@ -123,6 +118,11 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
 class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
   import IR._
+
+  def genInitArrayLengths = {
+    val tbls = idxSymNames.groupBy(_.split("Idx")(0)).map(t => t._1 -> t._2.map(StoreArrayLengths.getOrElse(_, "1")))
+    tbls.map(t => doc"const size_t ${t._1}ArrayLengths[] = ${t._2.mkString("{", ",", "};")}").toList.mkDocument("\n")
+  }
 
   override def header: String = codeGen.header +
     s"""
@@ -165,15 +165,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |const size_t stockTblSize = numWare * itemTblSize;
        |const size_t historyTblSize = orderTblSize;
        |
-       |const size_t warehouseTblArrayLengths[] = {0};
-       |const size_t itemTblArrayLengths[] = {0};
-       |const size_t districtTblArrayLengths[] = {0};
-       |const size_t customerTblArrayLengths[] = {0, 65536};
-       |const size_t orderTblArrayLengths[] = {1048576, 65536};
-       |const size_t newOrderTblArrayLengths[] = {16384, 32};
-       |const size_t orderLineTblArrayLengths[] = {8388608, 8388608};
-       |const size_t stockTblArrayLengths[] = {0};
-       |const size_t historyTblArrayLengths[] = {1048576};
+       |${genInitArrayLengths}
        |
        |const size_t warehouseTblPoolSizes[] = {8, 0};
        |const size_t itemTblPoolSizes[] = {65536*2, 0};
@@ -294,9 +286,14 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     //    optTP.codeBlocks.foreach(x => codeGen.functionsList += (blockTofunction(x)))
 
     val blocks = optTP.codeBlocks.map(x => doc"void ${x._1}(${argsDoc(x._2)}) {" :: Document.nest(2, codeGen.blockToDocument(x._3)) :/: "}").mkDocument("\n")
-    val getSizes = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1)).map(i => doc"GET_SIZE_STAT($i);").toList.mkDocument("\n")
+    idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name)).toList
+    val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT($i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
     def mainPrg =
       s"""
+         |#ifndef NORESIZE
+         |cout << "Index Resizing warning disabled" << endl;
+         |#endif
+         |
          |TPCCDataGen tpcc;
          |tpcc.loadPrograms();
          |tpcc.loadWare();
@@ -374,13 +371,15 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
          |ofstream fout("tpcc_res_cpp.csv", ios::app);
          |if(argc == 1 || atoi(argv[1]) == 1)
-         |  fout << "\\nCPP-${Optimizer.optCombination},";
+         |  fout << "\\nCPP-" << numPrograms << ",";
          |fout << fixed << xactCounts[0] * 60000.0/execTime << ",";
          |fout.close();
          |
-         |#ifdef GETSIZES
+         |
+         |ofstream info("$infoFilePath");
          |${getSizes}
-         |#endif
+         |info.close();
+         |
 
          |#ifdef VERIFY_TPCC
          |    warehouseTblIdx0.resize_(warehouseTblSize);

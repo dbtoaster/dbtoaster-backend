@@ -36,6 +36,7 @@ object Optimizer {
   var refCounter = true
   var cTransformer = false
   var initialStoreSize = false
+  var infoFileName = ""
   var optCombination: String = ""
 }
 

@@ -19,31 +19,54 @@ allopts=(
 cnt=1
 
 rm -f out_dump.txt
-rm -f tpcc_res_scala.csv
-rm -f tpcc_res_cpp.csv
-echo "Entry,TmpVar,CmpMult,FixedRange,Online,Inline,DeadIdx,TmpMap,RegexHoister,Fusion full,CodeMotion,RefCnt,Index,SliceInline,Fusion" > tpcc_res_cpp.csv
-echo "E,V,T,G,O,N,D,M,X,F,C,R,I,S,F" >> tpcc_res_cpp.csv
+rm -f tpcc*.csv
+#echo "Entry,TmpVar,CmpMult,FixedRange,Online,Inline,DeadIdx,TmpMap,RegexHoister,Fusion full,CodeMotion,RefCnt,Index,SliceInline,Fusion" > tpcc_res_cpp.csv
+#echo "E,V,T,G,O,N,D,M,X,F,C,R,I,S,F" >> tpcc_res_cpp.csv
 
 initsize="-opt initsize"
 
-for opt in "${allopts[@]}"
+#for opt in "${allopts[@]}"
+#do
+#echo "$cnt $opt" >> opt_list.txt
+
+
+rm -f runtime/stats/*
+for n in 1000000 2000000 4000000 8000000 16000000
 do
-echo "$cnt $opt" >> opt_list.txt
-#Scala
-sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang scala" 2>&1 | tee -a out_color.txt
-sbt "Runtime/runMain  ddbt.tpcc.tx.TpccInMem"  2>&1 | tee -a out_color.txt
-sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" out_color.txt > out_dump.txt
-rm out_color.txt
-./tpcc_res.sh
+##CPP
+sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang cpp -info tpcc-$n"
 
-
-#CPP
-sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang cpp"
+#nothing
 rm -f tpcc.out
-g++ -std=c++11 -O3 -DNUMWARE=1 -DNUMPROG=100000 -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/  -ldbtoaster -ljemalloc -o tpcc.out
-for i in {1..5}
+g++ -std=c++11 -O3 -DNUMWARE=1  -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/  -ldbtoaster -o tpcc.out
+for i in {1..1}
 do
 ./tpcc.out $i
 done
+
+#noinitsize only jemalloc
+rm -f tpcc.out
+g++ -std=c++11 -O3 -DNUMWARE=1  -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
+for i in {1..1}
+do
+./tpcc.out $i
+done
+
+sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang cpp -info tpcc-$n"
+#initsize and jemalloc
+rm -f tpcc.out
+g++ -std=c++11 -O3 -DNUMWARE=1 -DNORESIZE=1 -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
+for i in {1..1}
+do
+./tpcc.out $i
+done
+
+scalatime=$((14 * n/1000000))
+#Scala
+sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang scala -info tpcc-$n" 2>&1 | tee -a out_color.txt
+sbt "Runtime/runMain  ddbt.tpcc.tx.TpccInMem -t $scalatime"  2>&1 | tee -a out_color.txt
+sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" out_color.txt > out_dump.txt
+rm out_color.txt
+./tpcc_res.sh
 
 done

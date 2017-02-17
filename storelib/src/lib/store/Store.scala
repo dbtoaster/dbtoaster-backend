@@ -313,10 +313,10 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
 
   def setInitialSizes(s: List[Int]): Unit = {
     var i = 0;
-    while(i < n) {
+    while (i < n) {
       idxs(i) match {
-        case hi : IdxHash[_] => hi._resize(s(i))
-        case shi : IdxSlicedHeap[_] => shi._resize(s(i))
+        case hi: IdxHash[_] => hi._resize(s(i))
+        case shi: IdxSlicedHeap[_] => shi._resize(s(i))
         case _ => ()
       }
       i += 1
@@ -1022,7 +1022,7 @@ class IdxBTree[E <: Entry](st: Store[E], idx: Int, unique: Boolean)(implicit cE:
   // Inserts a pair (key, value). If there is a previous pair with
   // the same key, the old value is overwritten with the new one.
   //SBJ: TODO: Remove checks
-   override  def unsafeInsert(e: E) {
+  override def unsafeInsert(e: E) {
     val split = _insert(root, e);
     if (split == null) return
     val r = new InnerNode();
@@ -1219,16 +1219,16 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
     var numHeap = 0
     var maxSize = 0
     var size2 = 0
-    data.foreach(d => if(d != null){
+    data.foreach(d => if (d != null) {
       numInArray += 1
       var cur = d
       do {
         numHeap += 1
-        if(cur.array.length > maxSize)
+        if (cur.array.length > maxSize)
           maxSize = cur.array.length
         size2 += cur.size
         cur = cur.next
-      }while(cur != null);
+      } while (cur != null);
     })
     return s"  array length = ${data.length}    count = ${size}  numElements = ${size2}  numHeaps = ${numHeap}   numInArray = ${numInArray}  maxHeap = ${maxSize}"
   }
@@ -1266,7 +1266,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
       var q = data(i);
       while (q != null) {
         val nq = q.next;
-        val b = q.hash & (new_capacity - 1);
+        val b = (if (q.hash > 0) q.hash else -q.hash) % new_capacity;
         q.next = d(b);
         d(b) = q;
         q = nq
@@ -1284,7 +1284,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
     if (q.size == 0) {
       // delete q
       val h = q.hash;
-      val b = h & (data.length - 1);
+      val b = (if (h > 0) h else -h) % data.length;
       var p = data(b);
       if (p.eq(q)) {
         data(b) = q.next;
@@ -1303,14 +1303,15 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
   }
 
   //SBJ: TODO: Remove checks
- override def unsafeInsert(e: E) {
+  override def unsafeInsert(e: E) {
     if (size == threshold) {
-      val n = data.length;
+      val n = data.length
+      if (!Idx.allowResize)
+        throw new IllegalStateException(s"slicedHeap resize   size=$size  length=$n")
       if (n == max_capacity) threshold = java.lang.Integer.MAX_VALUE; else _resize(n << 1)
-      //throw new IllegalStateException("slicedHeap resize")
     }
     val h = _hash(e);
-    val b = h & (data.length - 1);
+    val b = (if (h > 0) h else -h) % data.length
     var p = nil;
     var q = data(b);
     // add value to slice heap if exists
@@ -1347,7 +1348,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
 
   override def get(e: E): E = {
     val h = _hash(e);
-    var q = data(h & (data.length - 1));
+    var q = data((if (h > 0) h else -h) % data.length)
     while (q != null) {
       if (q.hash == h && ops.cmp(e, q.get) == 0) return q.get;
       q = q.next;
@@ -1462,7 +1463,7 @@ class Store1[E <: Entry1[E]]()(implicit cE: ClassTag[E]) {
           var e = data(i);
           while (e != null) {
             val ne = e.next;
-            val b = e.hash & (new_capacity - 1);
+            val b = (if (e.hash > 0) e.hash else -e.hash) % new_capacity
             e.next = d(b);
             d(b) = e;
             e = ne
@@ -1474,7 +1475,7 @@ class Store1[E <: Entry1[E]]()(implicit cE: ClassTag[E]) {
       }
     }
     // insert and merge equivalent entries
-    val b = e.hash & (data.length - 1);
+    val b = (if (e.hash > 0) e.hash else -e.hash) % data.length
     var p = data(b);
     if (p == null) {
       data(b) = e;

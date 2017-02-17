@@ -1,0 +1,15 @@
+{
+"warehouseTblIdx0" : {},
+"stockTblIdx0" : {},
+"districtTblIdx0" : {},
+"newOrderTblIdx0" : { "ArrayLength" : "12602",  "OptArrayLength" : "12602",   "PoolSize" : "0",   "NumElements" : "397",   "NumInArray" : "392"},
+"newOrderTblIdx1" : { "ArrayLength" : "15",   "OptArrayLength" : "15",   "NumHeaps" : "10",   "Count" : "10",   "NumElements" : "397",   "NumInArray" : "8",   "MaxHeapSize" : "256" },
+"itemTblIdx0" : {},
+"historyTblIdx0" : { "ArrayLength" : "2476784",  "OptArrayLength" : "2476784",   "PoolSize" : "0",   "NumElements" : "1769131",   "NumInArray" : "1263825"},
+"orderLineTblIdx0" : { "ArrayLength" : "24528463",  "OptArrayLength" : "24528463",   "PoolSize" : "0",   "NumElements" : "17520330",   "NumInArray" : "12394631"},
+"orderLineTblIdx1" : { "ArrayLength" : "24528463",  "OptArrayLength" : "24528463",   "PoolSize" : "0",   "NumElements" : "17520330",   "NumInArray" : "1662988"},
+"orderTblIdx0" : { "ArrayLength" : "2452440",  "OptArrayLength" : "2452440",   "PoolSize" : "0",   "NumElements" : "1751742",   "NumInArray" : "1237131"},
+"orderTblIdx1" : { "ArrayLength" : "41305",   "OptArrayLength" : "41305",   "NumHeaps" : "29503",   "Count" : "29503",   "NumElements" : "1751742",   "NumInArray" : "24468",   "MaxHeapSize" : "4096" },
+"customerTblIdx0" : {},
+"customerTblIdx1" : { "ArrayLength" : "42001",  "OptArrayLength" : "42001",   "PoolSize" : "0",   "NumElements" : "30000",   "NumInArray" : "7189"}
+}

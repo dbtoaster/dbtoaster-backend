@@ -40,15 +40,15 @@ const size_t orderLineTblSize = orderTblSize * 12;
 const size_t stockTblSize = numWare * itemTblSize;
 const size_t historyTblSize = orderTblSize;
 
-const size_t warehouseTblArrayLengths[] = {0};
-const size_t itemTblArrayLengths[] = {0};
 const size_t districtTblArrayLengths[] = {0};
-const size_t customerTblArrayLengths[] = {0, 65536};
-const size_t orderTblArrayLengths[] = {1048576, 65536};
-const size_t newOrderTblArrayLengths[] = {16384, 32};
-const size_t orderLineTblArrayLengths[] = {8388608, 8388608};
+const size_t customerTblArrayLengths[] = {0,42000};
+const size_t itemTblArrayLengths[] = {0};
+const size_t historyTblArrayLengths[] = {4911566};
+const size_t orderTblArrayLengths[] = {4862943,41676};
+const size_t newOrderTblArrayLengths[] = {12601,14};
+const size_t warehouseTblArrayLengths[] = {0};
 const size_t stockTblArrayLengths[] = {0};
-const size_t historyTblArrayLengths[] = {1048576};
+const size_t orderLineTblArrayLengths[] = {48629600,48629600};
 
 const size_t warehouseTblPoolSizes[] = {8, 0};
 const size_t itemTblPoolSizes[] = {65536*2, 0};
@@ -864,27 +864,16 @@ void DeliveryTx(int x10, date x11, int x12, int x13) {
       x6559._1 = x6543;
       x6559._2 = x52;
       x6559._3 = x12;
-      //sliceRes 
-      typedef typename orderLineTblIdx1Type::IFN IDXFN12304;
-      HASH_RES_t h12304 = IDXFN12304::hash(x6559);
-      auto* x12304 = &(orderLineTblIdx1.buckets_[h12304 % orderLineTblIdx1.size_]);
-      if(x12304 -> obj)
-         do if(h12304 == x12304->hash && !IDXFN12304::cmp(x6559, *x12304->obj))
-           break;
-         while((x12304 = x12304->nxt));
-      else 
-         x12304 = nullptr;
+      auto* x12304 = orderLineTblIdx1.sliceRes(x6559);
       if((x12304 == nullptr)) {
       } else {
-        //sliceResMap 
-         do if(h12304== x12304->hash && !IDXFN12304::cmp(x6559, *x12304->obj)) {
-            auto orderLineEntry = x12304->obj;
-            
-            orderLineEntry->_7 = x11;
-            double x57 = x50;
-            double x6603 = orderLineEntry->_9;
-            x50 = (x57+(x6603));
-        } while((x12304 = x12304->nxt));
+        orderLineTblIdx1.sliceResMap(x6559, ([&](struct SEntry10_IIIIIITIDS* orderLineEntry) {
+          orderLineEntry->_7 = x11;
+          double x57 = x50;
+          double x6603 = orderLineEntry->_9;
+          x50 = (x57+(x6603));
+        
+        }), x12304);
       };
       int x65 = x18;
       x6563._1 = x6552;
@@ -918,31 +907,20 @@ void StockLevelTx(int x81, date x82, int x83, int x84, int x85, int x86) {
     x6689._1 = x102;
     x6689._2 = x85;
     x6689._3 = x84;
-    //sliceRes 
-    typedef typename orderLineTblIdx1Type::IFN IDXFN12351;
-    HASH_RES_t h12351 = IDXFN12351::hash(x6689);
-    auto* x12351 = &(orderLineTblIdx1.buckets_[h12351 % orderLineTblIdx1.size_]);
-    if(x12351 -> obj)
-       do if(h12351 == x12351->hash && !IDXFN12351::cmp(x6689, *x12351->obj))
-         break;
-       while((x12351 = x12351->nxt));
-    else 
-       x12351 = nullptr;
+    auto* x12351 = orderLineTblIdx1.sliceRes(x6689);
     if((x12351 == nullptr)) {
     } else {
-      //sliceResMap 
-       do if(h12351== x12351->hash && !IDXFN12351::cmp(x6689, *x12351->obj)) {
-          auto orderLineEntry = x12351->obj;
-          
-          int x6707 = orderLineEntry->_5;
-          x6709._1 = x6707;
-          x6709._2 = x84;
-          struct SEntry17_IIISSSSSSSSSSIIIS* x10918 = stockTblIdx0.get(x6709);
-          int x6711 = x10918->_3;
-          if((x6711<(x86))) {
-            unique_ol_i_id.insert(x6707);
-          };
-      } while((x12351 = x12351->nxt));
+      orderLineTblIdx1.sliceResMap(x6689, ([&](struct SEntry10_IIIIIITIDS* orderLineEntry) {
+        int x6707 = orderLineEntry->_5;
+        x6709._1 = x6707;
+        x6709._2 = x84;
+        struct SEntry17_IIISSSSSSSSSSIIIS* x10918 = stockTblIdx0.get(x6709);
+        int x6711 = x10918->_3;
+        if((x6711<(x86))) {
+          unique_ol_i_id.insert(x6707);
+        };
+      
+      }), x12351);
     };
     int x119 = x95;
     x95 = (x119+(1));
@@ -955,24 +933,13 @@ void OrderStatusTx(int x125, date x126, int x127, int x128, int x129, int x130, 
     x6764._2 = x129;
     x6764._3 = x128;
     x6764._6 = x132;
-    //sliceRes 
-    typedef typename customerTblIdx1Type::IFN IDXFN16859;
-    HASH_RES_t h16859 = IDXFN16859::hash(x6764);
-    auto* x16859 = &(customerTblIdx1.buckets_[h16859 % customerTblIdx1.size_]);
-    if(x16859 -> obj)
-       do if(h16859 == x16859->hash && !IDXFN16859::cmp(x6764, *x16859->obj))
-         break;
-       while((x16859 = x16859->nxt));
-    else 
-       x16859 = nullptr;
+    auto* x16859 = customerTblIdx1.sliceRes(x6764);
     if((x16859 == nullptr)) {
     } else {
-      //sliceResMap 
-       do if(h16859== x16859->hash && !IDXFN16859::cmp(x6764, *x16859->obj)) {
-          auto custEntry = x16859->obj;
-          
-          x16852.push_back(custEntry);
-      } while((x16859 = x16859->nxt));
+      customerTblIdx1.sliceResMap(x6764, ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* custEntry) {
+        x16852.push_back(custEntry);
+      
+      }), x16859);
     };
     int x16863 = x16852.size();
     int x16865 = (x16863/(2));
@@ -1021,24 +988,13 @@ void PaymentTx(int x186, date x187, int x188, int x189, int x190, int x191, int 
     x6914._2 = x193;
     x6914._3 = x192;
     x6914._6 = x195;
-    //sliceRes 
-    typedef typename customerTblIdx1Type::IFN IDXFN16964;
-    HASH_RES_t h16964 = IDXFN16964::hash(x6914);
-    auto* x16964 = &(customerTblIdx1.buckets_[h16964 % customerTblIdx1.size_]);
-    if(x16964 -> obj)
-       do if(h16964 == x16964->hash && !IDXFN16964::cmp(x6914, *x16964->obj))
-         break;
-       while((x16964 = x16964->nxt));
-    else 
-       x16964 = nullptr;
+    auto* x16964 = customerTblIdx1.sliceRes(x6914);
     if((x16964 == nullptr)) {
     } else {
-      //sliceResMap 
-       do if(h16964== x16964->hash && !IDXFN16964::cmp(x6914, *x16964->obj)) {
-          auto custEntry = x16964->obj;
-          
-          x16957.push_back(custEntry);
-      } while((x16964 = x16964->nxt));
+      customerTblIdx1.sliceResMap(x6914, ([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* custEntry) {
+        x16957.push_back(custEntry);
+      
+      }), x16964);
     };
     int x16968 = x16957.size();
     int x16970 = (x16968/(2));
@@ -1389,25 +1345,41 @@ int main(int argc, char** argv) {
   cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
   ofstream fout("tpcc_res_cpp.csv", ios::app);
   if(argc == 1 || atoi(argv[1]) == 1)
-    fout << "\nCPP-CDEFGIMNORSTUVXZ,";
+    fout << "\nCPP-CDEFGIMNORTUVXZ-" << numPrograms << ",";
   fout << fixed << xactCounts[0] * 60000.0/execTime << ",";
   fout.close();
   
-  #ifdef GETSIZES
-  GET_SIZE_STAT(warehouseTblIdx0);
-  GET_SIZE_STAT(stockTblIdx0);
-  GET_SIZE_STAT(districtTblIdx0);
-  GET_SIZE_STAT(newOrderTblIdx0);
-  GET_SIZE_STAT(newOrderTblIdx1);
-  GET_SIZE_STAT(itemTblIdx0);
-  GET_SIZE_STAT(historyTblIdx0);
-  GET_SIZE_STAT(orderLineTblIdx0);
-  GET_SIZE_STAT(orderLineTblIdx1);
-  GET_SIZE_STAT(orderTblIdx0);
-  GET_SIZE_STAT(orderTblIdx1);
-  GET_SIZE_STAT(customerTblIdx0);
-  GET_SIZE_STAT(customerTblIdx1);
-  #endif
+  
+  ofstream info("/home/sachin/Data/EPFL/Sem4/DDBToaster/ddbtoaster/../runtime/stats/tpcc-8000000.json");
+  info << "{\n";
+  GET_RUN_STAT(warehouseTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(stockTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(districtTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(newOrderTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(newOrderTblIdx1, info);
+  info <<",\n";
+  GET_RUN_STAT(itemTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(historyTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orderLineTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orderLineTblIdx1, info);
+  info <<",\n";
+  GET_RUN_STAT(orderTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orderTblIdx1, info);
+  info <<",\n";
+  GET_RUN_STAT(customerTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(customerTblIdx1, info);
+  info << "\n}\n";
+  info.close();
+  
   
   #ifdef VERIFY_TPCC
       warehouseTblIdx0.resize_(warehouseTblSize);

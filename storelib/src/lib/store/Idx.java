@@ -14,6 +14,7 @@ import java.util.ArrayList;
  * @author TCK
  */
 public abstract class Idx<E extends Entry> {
+    static boolean allowResize = false;
     Idx(Store<E> st, int idx, boolean unique) {
         this.ops = st.ops()[idx];
         this.idx = idx;
@@ -200,7 +201,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
             IdxHashEntry<E> e = data[i], en;
             while (e != null) {
                 en = e.next;
-                int b = e.hash & (new_capacity - 1);
+                int b = (e.hash > 0 ? e.hash : -e.hash) % new_capacity;
                 e.next = d[b];
                 if (d[b] != null)
                     d[b].prev = e;
@@ -246,7 +247,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
             i.data = nxt.data;
             nxt.data.data[idx] = i;
         } else { //head and the only element
-            int h = i.hash, b = h & (data.length - 1);
+            int h = i.hash, b = (h > 0 ? h : -h) % data.length;
             if (data[b] == i)
                 data[b] = null;
             else
@@ -259,9 +260,10 @@ class IdxHash<E extends Entry> extends Idx<E> {
     public void unsafeInsert(E e) {
         if (size == threshold) {
             _resize();
-            //throw new IllegalStateException("Heap resize");
+            if (!allowResize)
+                throw new IllegalStateException("Heap resize");
         }
-        int h = ops.hash(e), b = h & (data.length - 1);
+        int h = ops.hash(e), b = (h > 0 ? h : -h) % data.length;
         if (idx == 0) {
             e.prev = null;
             e.next = dataHead;
@@ -341,7 +343,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
     @Override
     public E get(E key) {
         int h = ops.hash(key);
-        IdxHashEntry<E> e = data[h & (data.length - 1)];
+        IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
         while (e != null && (e.hash != h || ops.cmp(key, e.data) != 0)) e = e.next;
         return e != null ? e.data : null;
     }
@@ -358,7 +360,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
     @Override
     public MultiRes sliceRes(E key) {
         int h = ops.hash(key);
-        IdxHashEntry<E> e = data[h & (data.length - 1)];
+        IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
         if (e != null) do {
             if (e.hash == h && ops.cmp(key, e.data) == 0)
                 return new SliceRes<E>(e);
@@ -380,7 +382,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
     @Override
     public void slice(E key, Function1<E, Unit> f) {
         int h = ops.hash(key);
-        IdxHashEntry<E> e = data[h & (data.length - 1)];
+        IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
         if (e != null) do {
             if (e.hash == h && ops.cmp(key, e.data) == 0) f.apply(e.data);
             e = e.next;
@@ -391,7 +393,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
     public void sliceCopy(E key, Function1<E, Unit> f) {
         int h = ops.hash(key);
         ArrayList<E> entries = new ArrayList<E>();
-        IdxHashEntry<E> e = data[h & (data.length - 1)];
+        IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
         if (e != null) do {
             if (e.hash == h && ops.cmp(key, e.data) == 0)
                 entries.add((E) e.data.copy());
@@ -483,7 +485,7 @@ class IdxSliced<E extends Entry> extends IdxHash<E> {
     //SBJ: TODO: Remove checks
     public void unsafeInsert(E e) {
         if (size == threshold) _resize();
-        int h = ops.hash(e), b = h & (data.length - 1);
+        int h = ops.hash(e), b = (h > 0 ? h : -h) % data.length;
         IdxHashEntry<E> p = data[b], i = new IdxHashEntry<E>(h, e);
         e.data[idx] = i;
         if (p == null) {
