@@ -94,7 +94,7 @@ trait StoreDSL extends
 
   def fieldDecr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]): Expression[Unit] = fieldSetter(struct, index, numeric_minus(fieldGetter(struct, index)(tp), rhs))(tp)
 
-  def nullValue(tp: TypeRep[_]) : Rep[Any] = tp match {
+  def nullValue(tp: TypeRep[_]): Expression[Any] = tp match {
     case IntType => unit(scala.Int.MinValue)
     case LongType => unit(scala.Int.MinValue.asInstanceOf[scala.Long])
     case DoubleType => unit(scala.Double.MinValue)
@@ -132,7 +132,7 @@ trait StoreDSL extends
   override def storeIndex[E <: ddbt.lib.store.Entry](self: Rep[Store[E]], idx: Rep[Int], idxType: Rep[String], uniq: Rep[Boolean], otherIdx: Rep[Int])(implicit typeE: TypeRep[E]): Rep[Idx[E]] = {
 
     val sym = self.asInstanceOf[Sym[_]]
-    val name = (if(sym.name.startsWith("x")) sym.name + sym.id else sym.name) + "Idx"+idx.asInstanceOf[Constant[_]].underlying
+    val name = (if (sym.name.startsWith("x")) sym.name + sym.id else sym.name) + "Idx" + idx.asInstanceOf[Constant[_]].underlying
     IRReifier.reflectStm(Stm(freshNamed[Idx[E]](name), StoreIndex[E](self, idx, idxType, uniq, otherIdx)(typeE)))
   }
 
