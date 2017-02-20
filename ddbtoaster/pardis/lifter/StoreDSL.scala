@@ -6,7 +6,7 @@ import ch.epfl.data.sc.pardis.deep.scalalib._
 import ch.epfl.data.sc.pardis.deep.scalalib.collection.{ArrayBufferComponent, SeqComponent, SetComponent}
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
-import ch.epfl.data.sc.pardis.types.PardisType
+import ch.epfl.data.sc.pardis.types.{PardisType, PardisVariableType}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeAny, typeUnit}
 import ddbt.ast.{Type, TypeDouble, TypeLong}
 import ddbt.lib.store._
@@ -94,14 +94,15 @@ trait StoreDSL extends
 
   def fieldDecr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]): Expression[Unit] = fieldSetter(struct, index, numeric_minus(fieldGetter(struct, index)(tp), rhs))(tp)
 
-  def nullValue(tp: TypeRep[_]) = tp match {
+  def nullValue(tp: TypeRep[_]) : Rep[Any] = tp match {
     case IntType => unit(scala.Int.MinValue)
     case LongType => unit(scala.Int.MinValue.asInstanceOf[scala.Long])
     case DoubleType => unit(scala.Double.MinValue)
     case BooleanType => unit(false)
     case StringType => unit[String](null)
     case DateType => unit[Date](null)
-    case _ => unit(null)
+    case PardisVariableType(ctp) => nullValue(ctp)
+    case _ => System.err.println(s"Type $tp doesn't have nullValue defined"); unit(null)
   }
 
   def storeType(s: Sym[_]) = s.attributes.get[SEntry](SEntryFlag).getOrElse(SEntry())
