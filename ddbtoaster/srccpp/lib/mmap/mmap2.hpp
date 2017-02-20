@@ -177,9 +177,17 @@ public:
     }
 
     inline void clear() {
+        throw std::logic_error("Not implemented");
     }
 
     inline void delete_all(T* current_data) {
+        T* tmp;
+        while (current_data) {
+            tmp = current_data;
+            current_data = current_data->nxt;
+            free(tmp);
+        }
+        //        throw std::logic_error("Not implemented");
     }
 
     FORCE_INLINE T* add() {
@@ -313,7 +321,6 @@ private:
     bool allocated_from_pool_;
     size_t count_, threshold_;
     double load_factor_;
-    const V zero;
 public:
 
     void resize_(size_t new_size) {
@@ -358,20 +365,20 @@ public:
                         na->obj = n->obj; //na->nxt=nullptr;
                         n->obj->backPtrs[Index<T, V>::idxId] = na;
                     }
-                }
+                    }
                 if (pooled) {
                     d = n;
                     n = n->nxt;
                     nodes_.del(d);
                 } else n = n->nxt;
                 pooled = true;
-            } while (n);
+                } while (n);
         }
         allocated_from_pool_ = tmp_allocated_from_pool;
         if (old) delete[] old;
     }
 
-    HashIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : nodes_(size), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
+    HashIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : nodes_(size), allocated_from_pool_(false) {
         storePool = stPool;
         dataHead = nullptr;
         load_factor_ = 0.75;
@@ -382,7 +389,7 @@ public:
         resize_(size);
     }
 
-    HashIndex(Pool<T>* stPool = nullptr) : nodes_(false), allocated_from_pool_(false), zero(ZeroVal<V>().get()) {
+    HashIndex(Pool<T>* stPool = nullptr) : nodes_(false), allocated_from_pool_(false) {
         storePool = stPool;
         dataHead = nullptr;
         load_factor_ = 0.75;
@@ -405,7 +412,7 @@ public:
         return *get(key);
     }
 
-    void getSizeStats(std::ostream& fout) {
+    void getSizeStats(std::ostream& fout) const {
         fout << "{ \"ArrayLength\" : \"" << size_ << "\", ";
         fout << " \"OptArrayLength\" : \"" << (size_t) ((maxElems + 1) * INV_LF) << "\", ";
         fout << "  \"PoolSize\" : \"" << nodes_.size_ << "\", ";
@@ -418,7 +425,7 @@ public:
         fout << "  \"NumInArray\" : \"" << numInArray << "\"}";
     }
 
-    void getBucketStats() {
+    void getBucketStats() const {
         uint maxEntries = 0;
         uint maxSlices = 0;
         uint numBuckets = 0;
@@ -433,9 +440,12 @@ public:
             uint ns = 0;
             uint es = 0;
             IdxNode *n2 = n1;
+            IdxNode *prev = nullptr;
             do {
                 do {
                     ++es;
+                    assert(n2->prv == prev);
+                    prev = n2;
                 } while ((n2 = n2->nxt) && n2->hash == n1->hash && !IDX_FN::cmp(*n1->obj, *n2->obj));
                 ++ns;
             } while ((n1 = n2));
@@ -601,6 +611,8 @@ public:
             n->hash = h;
             n->obj = obj; //n->nxt=nullptr;
             obj->backPtrs[idxId] = n;
+            n->nxt = nullptr;
+            n->prv = nullptr;
         }
 
     }
@@ -1866,7 +1878,7 @@ public:
     }
 
     void prepareSize(size_t arrayS, size_t poolS) override {
-        nodes_->initialize(poolS);
+        nodes_.initialize(poolS);
     }
 
     bool operator==(const ListIndex<T, V, IDX_FN, is_unique>& right) const {
@@ -2003,7 +2015,7 @@ public:
         std::vector<T*> entries;
         Container *cur = head;
         while (cur != nullptr) {
-            if (IDX_FN::cmp(key, *cur->obj) == 0)
+            if (IDX_FN::cmp(*key, *cur->obj) == 0)
                 entries.push_back(cur->obj->copy());
             cur = cur->next;
         }

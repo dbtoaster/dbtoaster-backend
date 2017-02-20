@@ -17,21 +17,21 @@ case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: 
 }
 
 object Optimizer {
-  var analyzeEntry: Boolean = true
-  var analyzeIndex: Boolean = true
-  var fixedRange: Boolean = true
-  var onlineOpts = true
-  var tmpVarHoist = true
-  var tmpMapHoist = true
-  var indexInline = true
-  var indexLookupFusion = true
+  var analyzeEntry: Boolean = false
+  var analyzeIndex: Boolean = false
+  var fixedRange: Boolean = false
+  var onlineOpts = false
+  var tmpVarHoist = false
+  var tmpMapHoist = false
+  var indexInline = false
+  var indexLookupFusion = false
   var indexLookupPartialFusion = false
   var sliceInline = false
-  var deadIndexUpdate = true
-  var codeMotion = true
-  var m3CompareMultiply = true
-  var regexHoister = true
-  var multiResSplitter = true
+  var deadIndexUpdate = false
+  var codeMotion = false
+  var m3CompareMultiply = false
+  var regexHoister = false
+  var multiResSplitter = false
 
   var refCounter = true
   var cTransformer = false
@@ -112,7 +112,7 @@ class Optimizer(val IR: StoreDSL) {
     pipeline += new ScalaStructToMallocTransformer(IR)
     pipeline += new StringToCTransformer(IR)
   }
-  //  pipeline += TreeDumper(false)
+//    pipeline += TreeDumper(false)
   if (Optimizer.refCounter)
     pipeline += new CountingAnalysis[StoreDSL](IR) with TransformerHandler {
       override def apply[Lang <: Base, T](context: Lang)(block: context.Block[T])(implicit evidence$1: PardisType[T]): context.Block[T] = {

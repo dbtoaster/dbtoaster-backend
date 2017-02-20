@@ -646,10 +646,11 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
           else
             doc"${x.name}"
         }).mkDocument(", ") :: "); }"
+        val streamOp = doc"""friend std::ostream& operator<<(std::ostream& os, const ${tag.typeName}& obj) {  os <<"(" <<${fields.map(x => doc"obj.${x.name}").mkDocument(doc""" << "," << """)} << ")"; return os; }"""
         val serializer = doc"template<class Archive> \nvoid serialize(Archive& ar, const unsigned int version) const {" :/:
           Document.nest(4, fields.map(x => doc"DBT_SERIALIZATION_NVP(ar,${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n", "\nar << ELEM_SEPARATOR;\n", "\n")) :/: "}"
 
-        "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: serializer :/: copyFn) :/: "};"
+        "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: serializer :/: copyFn :/: streamOp) :/: "};"
     }
     val entries = optTP.structs.map(structToDoc).mkDocument("\n")
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")

@@ -14,7 +14,7 @@ import java.util.ArrayList;
  * @author TCK
  */
 public abstract class Idx<E extends Entry> {
-    static boolean allowResize = false;
+    static boolean allowResize = true;
     Idx(Store<E> st, int idx, boolean unique) {
         this.ops = st.ops()[idx];
         this.idx = idx;
