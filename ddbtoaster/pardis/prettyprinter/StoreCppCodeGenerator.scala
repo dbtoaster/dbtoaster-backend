@@ -106,12 +106,14 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"typedef typename ${self}Idx${idxNum}Type::IFN $IDX_FN;" :\\:
         doc"HASH_RES_t $h = $IDX_FN::hash($key);" :\\:
         doc"auto* $sym = &($idx.buckets_[$h % $idx.size_]);" :\\:
-        doc"if($sym -> obj)" :\\:
-        doc"   do if($h == $sym->hash && !$IDX_FN::cmp($key, *$sym->obj))" :\\:
-        doc"     break;" :\\:
-        doc"   while(($sym = $sym->nxt));" :\\:
-        doc"else " :\\:
-        doc"   $sym = nullptr;"
+        doc"if($sym -> head.obj) {" :\\:
+        doc"   do {" :\\:
+        doc"     if($h == $sym->hash && !$IDX_FN::cmp($key, *$sym->head.obj))" :\\:
+        doc"       break;" :\\:
+        doc"   } while(($sym = $sym->nxt));" :\\:
+        doc"} else { " :\\:
+        doc"   $sym = nullptr;" :\\:
+        doc"}"
 
     case Statement(sym, IdxSliceRes(idx, key)) => doc"auto* $sym = $idx.sliceRes($key);"
 
@@ -120,10 +122,11 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val IDX_FN = "IDXFN" + res.id
 
       val pre = doc"//sliceResMap " :\\:
-        doc" do if($h== $res->hash && !$IDX_FN::cmp($key, *$res->obj)) {" :\\:
-        doc"    auto $i = $res->obj;"
-      val post = doc"} while(($res = $res->nxt));"
-      pre :/: Document.nest(4, blockToDocument(o)) :/: post
+        doc"auto* n$res = &$res->head;" :\\:
+        doc"do {" :\\:
+        doc"  auto $i = n$res->obj;"
+      val post = doc"} while((n$res = n$res->nxt));"
+      pre :: Document.nest(2, blockToDocument(o)) :/: post
 
     case Statement(sym, IdxSliceResMap(idx, key, f, res: Sym[_])) => doc"$idx.sliceResMap($key, $f, $res);"
 
@@ -139,7 +142,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val post =
         doc"  $i = $i -> nxt;" :\\:
           doc"}"
-      pre :/: Document.nest(2, blockToDocument(o)) :/: post
+      pre :: Document.nest(2, blockToDocument(o)) :/: post
 
     case Statement(sym, IdxForeachResMap(idx, f, res: Sym[_])) => doc"$idx.foreachResMap($f, $res);"
 
@@ -152,13 +155,19 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"//slice " :\\:
           doc"typedef typename ${self}Idx${idxNum}Type::IFN $IDX_FN;" :\\:
           doc"HASH_RES_t h$symid = $IDX_FN::hash($key);" :\\:
-          doc"auto* n$symid = &($idx.buckets_[h$symid % $idx.size_]);" :\\:
-          doc"if(n$symid -> obj)" :\\:
-          doc"  do if(h$symid == n$symid->hash && !$IDX_FN::cmp($key, *n$symid->obj)) {" :\\:
-          doc"    auto $i = n$symid->obj;"
+          doc"auto* e$symid = &($idx.buckets_[h$symid % $idx.size_]);" :\\:
+          doc"if(e$symid->head.obj)" :\\:
+          doc"  do {" :\\:
+          doc"    auto* n$symid = &e$symid->head;" :\\:
+          doc"    if(h$symid == e$symid->hash && !$IDX_FN::cmp($key, *n$symid->obj)) {" :\\:
+          doc"      do {" :\\:
+          doc"        auto $i = n$symid->obj;"
       val post =
-          doc"  } while((n$symid = n$symid->nxt));"
-      pre :/: Document.nest(4, blockToDocument(o)) :/: post
+          doc"      } while((n$symid = n$symid->nxt));" :\\:
+          doc"      break;" :\\:
+          doc"    }" :\\:
+          doc"  } while((e$symid = e$symid->nxt));"
+      pre :: Document.nest(8, blockToDocument(o)) :/: post
 
     case Statement(sym, IdxForeach(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)), Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
       val symid = sym.id.toString
@@ -171,7 +180,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val post =
         doc"  $i = $i -> nxt;" :\\:
           doc"}"
-      pre :/: Document.nest(2, blockToDocument(o)) :/: post
+      pre :: Document.nest(2, blockToDocument(o)) :/: post
 
     case Statement(sym, StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType && refSymbols.contains(self) =>
       doc"const PString& $sym = $self.$idx;"
