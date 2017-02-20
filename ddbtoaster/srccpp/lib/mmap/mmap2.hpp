@@ -324,7 +324,7 @@ private:
 public:
 
     void resize_(size_t new_size) {
-        IdxNode *old = buckets_, *n, *na, *nw, *d;
+        IdxNode *old = buckets_, *n, *n2a, *n2w, *nnext;
         HASH_RES_t h;
         size_t sz = size_;
         buckets_ = new IdxNode[new_size];
@@ -334,44 +334,49 @@ public:
         bool tmp_allocated_from_pool = false;
         for (size_t b = 0; b < sz; ++b) {
             n = &old[b];
-            bool pooled = false;
-            do {
-                if (n->obj) { //add_(n->obj); // does not resize the bucket array, does not maintain count
+            bool pooled1 = false, pooled2 = false;
+            if (n->obj) do {
                     h = n->hash;
-                    na = &buckets_[h % size_];
-
-                    if (na->obj) {
+                    n2a = &buckets_[h % size_];
+                    nnext = n->nxt;
+                    if (n2a->obj) {
                         tmp_allocated_from_pool = true;
-                        nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
-                        //in addition to adding nw, we also change the place of nw with na
-                        //to preserve the order of elements, as it is required for
-                        //non-unique hash maps
-                        nw->hash = na->hash;
-                        na->obj->backPtrs[Index<T, V>::idxId] = nw;
-                        nw->obj = na->obj;
+                        pooled2 = true;
+                        if (!pooled1) {
+                            n2w = nodes_.add();
+                            n2w->hash = h;
+                            n2w->obj = n->obj;
+                            n->obj->backPtrs[Index<T, V>::idxId] = n2w;
 
-                        na->hash = h;
-                        n->obj->backPtrs[Index<T, V>::idxId] = na;
-                        na->obj = n->obj;
+                            n2w->nxt = n2a->nxt;
+                            if (n2w->nxt)
+                                n2w->nxt->prv = n2w;
 
-                        nw->nxt = na->nxt;
-                        if (nw->nxt)
-                            nw->nxt->prv = nw;
+                            n2w->prv = n2a;
+                            n2a->nxt = n2w;
+                        } else {
+                            n->nxt = n2a->nxt;
+                            if (n->nxt)
+                                n->nxt->prv = n;
+                            n2a->nxt = n;
+                            n->prv = n2a;
 
-                        nw->prv = na;
-                        na->nxt = nw;
+                        }
+
                     } else { // space left in last IdxNode
-                        na->hash = h;
-                        na->obj = n->obj; //na->nxt=nullptr;
-                        n->obj->backPtrs[Index<T, V>::idxId] = na;
+                        pooled2 = false;
+                        n2a->hash = h;
+                        n2a->obj = n->obj; //na->nxt=nullptr;
+                        n2a->obj->backPtrs[Index<T, V>::idxId] = n2a;
+                        n2a->nxt = nullptr;
+                        n2a->prv = nullptr;
                     }
+
+                    if (pooled1 && !pooled2) {
+                        nodes_.del(n);
                     }
-                if (pooled) {
-                    d = n;
-                    n = n->nxt;
-                    nodes_.del(d);
-                } else n = n->nxt;
-                pooled = true;
+                    n = nnext;
+                    pooled1 = true;
                 } while (n);
         }
         allocated_from_pool_ = tmp_allocated_from_pool;
@@ -425,6 +430,7 @@ public:
         fout << "  \"NumInArray\" : \"" << numInArray << "\"}";
     }
 
+
     void getBucketStats() const {
         uint maxEntries = 0;
         uint maxSlices = 0;
@@ -456,6 +462,7 @@ public:
             numSlices += ns;
             numEntries += es;
         }
+        assert(numEntries == numSlices);
         assert(numEntries == count_);
         if (numBuckets == 0) {
             cerr << "Empty" << endl;
@@ -518,15 +525,7 @@ public:
     }
 
     FORCE_INLINE IdxNode* sliceRes(const T& key) {
-        HASH_RES_t h = IDX_FN::hash(key);
-        IdxNode* n = &(buckets_[h % size_]);
-        if (n->obj)
-            do {
-                if (h == n->hash && !IDX_FN::cmp(key, *n->obj)) {
-                    return n;
-                }
-            } while ((n = n->nxt));
-        return nullptr;
+        throw std::logic_error("No sliceRes for primary index");
     }
 
     FORCE_INLINE void sliceResMap(const T* key, FuncType f, IdxNode* n) {
@@ -534,11 +533,7 @@ public:
     }
 
     FORCE_INLINE void sliceResMap(const T& key, FuncType f, IdxNode* n) {
-        HASH_RES_t h = n->hash;
-        do {
-            if (h == n->hash && !IDX_FN::cmp(key, *n->obj))
-                f(n->obj);
-        } while ((n = n->nxt));
+        throw std::logic_error("No sliceRes for primary index");
     }
 
     FORCE_INLINE T* foreachRes() {
@@ -672,30 +667,11 @@ public:
     }
 
     FORCE_INLINE void slice(const T* key, FuncType f) override {
-        HASH_RES_t h = IDX_FN::hash(*key);
-        IdxNode* n = &(buckets_[h % size_]);
-        if (n->obj)
-            do {
-                if (h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
-                    f(n->obj);
-                }
-            } while ((n = n->nxt));
+        throw std::logic_error("Slice not implemented for primary index");
     }
 
     FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
-        HASH_RES_t h = IDX_FN::hash(*key);
-        std::vector<T*> entries;
-        IdxNode* n = &(buckets_[h % size_]);
-        if (n->obj)
-            do {
-                if (h == n->hash && !IDX_FN::cmp(*key, *n->obj)) {
-                    T* temp = n->obj->copy();
-                    entries.push_back(temp);
-                }
-            } while ((n = n->nxt));
-        for (auto it : entries) {
-            f(it);
-        }
+        throw std::logic_error("SliceCopy not implemented for primary index");
     }
 
     FORCE_INLINE void update(T* elem) override {
@@ -749,6 +725,522 @@ public:
             storePool->delete_all(dataHead);
             dataHead = nullptr;
         }
+    }
+
+    /******************* non-virtual function wrappers ************************/
+
+    FORCE_INLINE T* get(const T& key) const {
+        return get(&key);
+    }
+
+    FORCE_INLINE T* getCopy(const T* key) const {
+        T* obj = get(key);
+        return obj ? obj->copy() : nullptr;
+    }
+
+    FORCE_INLINE T* getCopy(const T& key) const {
+        T* obj = get(&key);
+        return obj ? obj->copy() : nullptr;
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T* key) const {
+        T* obj = get(key);
+        return obj ? obj->copy() : nullptr;
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T& key) const {
+        T* obj = get(&key);
+        return obj ? obj->copy() : nullptr;
+    }
+
+    FORCE_INLINE void slice(const T& key, FuncType f) {
+        slice(&key, f);
+    }
+
+    FORCE_INLINE void sliceCopy(const T& key, FuncType f) {
+        sliceCopy(&key, f);
+    }
+
+    FORCE_INLINE void sliceCopyDependent(const T* key, FuncType f) {
+        sliceCopy(key, f);
+    }
+
+    FORCE_INLINE void sliceCopyDependent(const T& key, FuncType f) {
+        sliceCopy(&key, f);
+    }
+
+    FORCE_INLINE void delCopyDependent(const T* obj) {
+        del(obj);
+    }
+
+    template<typename TP, typename VP, typename...INDEXES> friend class MultiHashMap;
+};
+
+//Partial specialization for non-unique HashIndex
+
+template<typename T, typename V, typename IDX_FN >
+class HashIndex<T, V, IDX_FN, false> : public Index<T, V> {
+public:
+    typedef IDX_FN IFN;
+    struct IdxEquivNode;
+
+    struct IdxN {
+
+        IdxN(const IdxN& that) {
+            obj = that.obj;
+            nxt = that.nxt;
+            prv = that.prv;
+        }
+
+        IdxN() : equiv(nullptr), obj(nullptr), nxt(nullptr), prv(nullptr) {
+        }
+        IdxEquivNode* equiv;
+        T* obj;
+        IdxN *nxt, *prv;
+    };
+
+    struct IdxEquivNode {
+        HASH_RES_t hash;
+        IdxN head;
+        IdxEquivNode *nxt;
+
+        IdxEquivNode() : head(), nxt(nullptr) {
+        }
+
+        FORCE_INLINE void fixEquivPtr() {
+            IdxN* n = &head;
+            if (n->nxt) n->nxt->prv = n;
+            IdxN* p = nullptr;
+            do {
+                assert(n->prv == p);
+                p = n;
+                n->equiv = this;
+            } while ((n = n->nxt));
+        }
+
+        FORCE_INLINE void add(T * obj, int idxId, Pool<IdxN>& nodes) {
+            if (head.obj) {
+                IdxN* nw = nodes.add();
+                nw->prv = &head;
+                nw->nxt = head.nxt;
+                if (head.nxt)
+                    head.nxt->prv = nw;
+                head.nxt = nw;
+                nw->obj = obj;
+                nw->equiv = this;
+                obj->backPtrs[idxId] = nw;
+            } else {
+                head.obj = obj;
+                obj->backPtrs[idxId] = &head;
+                head.equiv = this;
+            }
+        }
+    };
+
+    IdxEquivNode* buckets_;
+    size_t size_;
+    size_t maxSlices;
+private:
+    Pool<IdxN> nodes_;
+    Pool<IdxEquivNode> equivNodes_;
+    bool allocated_from_pool_;
+    size_t count_, threshold_;
+    double load_factor_;
+public:
+
+    void resize_(size_t new_size) {
+        IdxEquivNode *old = buckets_;
+        IdxEquivNode *n, *n2a, *n2w, *nnext;
+        size_t sz = size_;
+        buckets_ = new IdxEquivNode[new_size];
+        memset(buckets_, 0, sizeof (IdxEquivNode) * new_size);
+        size_ = new_size;
+        threshold_ = size_ * load_factor_;
+        bool tmp_allocated_from_pool = false;
+        for (size_t b = 0; b < sz; ++b) {
+            n = &old[b];
+            bool pooled1 = false, pooled2 = false; //denote whether the equiv node was allocated from pool or from array in the previous and new buckets respectively
+            if (n->head.obj)
+                do {
+                    int b2 = n->hash % size_;
+                    nnext = n->nxt;
+                    n2a = &buckets_[b2];
+                    if (n2a->head.obj) { //array slot already occupied
+                        tmp_allocated_from_pool = true;
+                        pooled2 = true;
+                        if (!pooled1) { //equiv_node in array slot in the old bucket, need to create new node from pool
+                            n2w = equivNodes_.add();
+                            n2w->hash = n->hash;
+                            n2w->head = n->head; //copying IdxNode. Need to change backPtr of obj of the head.
+                            n->head.obj->backPtrs[Index<T, V>::idxId] = &n2w->head; //Remove if head is implemented as pointer
+                            n2w->fixEquivPtr();
+
+                            //add as next to array slot
+                            n2w->nxt = n2a->nxt;
+                            n2a->nxt = n2w;
+                        } else { //pooled node even in previous bucket, reuse it
+                            n->nxt = n2a->nxt;
+                            n2a->nxt = n;
+                        }
+                    } else {
+                        pooled2 = false;
+                        n2a->hash = n->hash;
+                        n2a->head = n->head; //copying IdxNode. Need to change backPtr of obj of the head.
+                        n2a->fixEquivPtr();
+                        n->head.obj->backPtrs[Index<T, V>::idxId] = &n2a->head; //Remove if head is implemented as pointer
+                    }
+
+                    if (pooled1 && !pooled2) {
+                        equivNodes_.del(n);
+                    }
+
+                    pooled1 = true;
+                    n = nnext;
+                } while (n);
+        }
+        allocated_from_pool_ = tmp_allocated_from_pool;
+        if (old) delete[] old;
+    }
+
+    HashIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : nodes_(size), equivNodes_(size), allocated_from_pool_(false) {
+        load_factor_ = 0.75;
+        size_ = 0;
+        count_ = 0;
+        maxSlices = 0;
+        buckets_ = nullptr;
+        resize_(size);
+    }
+
+    HashIndex(Pool<T>* stPool = nullptr) : nodes_(false), equivNodes_(false), allocated_from_pool_(false) {
+        load_factor_ = 0.75;
+        size_ = 0;
+        count_ = 0;
+        maxSlices = 0;
+        buckets_ = nullptr;
+    }
+
+    void prepareSize(size_t arrayS, size_t poolS) override {
+        resize_(arrayS);
+        nodes_.initialize(poolS);
+        equivNodes_.initialize(poolS);
+    }
+
+    ~HashIndex() {
+        if (buckets_ != nullptr) delete[] buckets_;
+    }
+
+    void getSizeStats(std::ostream& fout) {
+        fout << "{ \"ArrayLength\" : \"" << size_ << "\", ";
+        fout << " \"OptArrayLength\" : \"" << (size_t) ((maxSlices + 1) * INV_LF) << "\", ";
+        fout << "  \"PoolSize\" : \"" << nodes_.size_ << "\", ";
+        fout << "  \"NumSlices\" : \"" << count_ << "\", ";
+        size_t numInArray = 0;
+        for (uint i = 0; i < size_; ++i) {
+            if (buckets_[i].head.obj)
+                numInArray++;
+        }
+        fout << "  \"NumInArray\" : \"" << numInArray << "\"}";
+    }
+
+        void printBuckets() const {
+            cout << "--------------------------------------------------------------";
+            for (size_t b = 0; b < size_; ++b) {
+                IdxEquivNode* n1 = &buckets_[b];
+                if (!n1 -> head.obj)
+                    continue;
+                cout << "\n\n Bucket " << b << endl;
+                do {
+                    IdxN *n2 = &n1->head;
+                    cout << "\t";
+                    do {
+
+                        cout << (*n2->obj) << " ->  ";
+                        assert(n2->equiv == n1);
+                        assert(IDX_FN::cmp(*n1->head.obj, *n2->obj) == 0);
+                    } while ((n2 = n2->nxt));
+
+                    cout << endl;
+                } while ((n1 = n1->nxt));
+            }
+        }
+
+    void getBucketStats() const {
+        uint maxEntriesInBucket = 0;
+        uint maxSlicesInBucket = 0;
+        uint numBuckets = 0;
+        uint numSlices = 0;
+        uint numEntries = 0;
+
+        for (size_t b = 0; b < size_; ++b) {
+            IdxEquivNode* n1 = &buckets_[b];
+            if (!n1 -> head.obj)
+                continue;
+            numBuckets++;
+            uint ns = 0;
+            uint es = 0;
+            do {
+                IdxN *n2 = &n1->head;
+                do {
+                    ++es;
+                    assert(n2->equiv == n1);
+                    assert(n2->obj->_1 != -1);
+                    assert(IDX_FN::cmp(*n1->head.obj, *n2->obj) == 0);
+                } while ((n2 = n2->nxt));
+                ++ns;
+            } while ((n1 = n1->nxt));
+            if (es > maxEntriesInBucket)
+                maxEntriesInBucket = es;
+            if (ns > maxSlicesInBucket)
+                maxSlicesInBucket = ns;
+            numSlices += ns;
+            numEntries += es;
+        }
+
+        assert(numSlices == count_);
+        assert(numSlices <= maxSlices);
+                if (numBuckets == 0) {
+                    cerr << "Empty" << endl;
+                } else {
+                    cerr << "IDX = " << Index<T, V>::idxId;
+                    cerr << "    Entries : total = " << numEntries << "  avg = " << numEntries / (1.0 * numBuckets) << " max = " << maxEntriesInBucket;
+                    cerr << "    Slices : total = " << numSlices << "  avg = " << numSlices / (1.0 * numBuckets) << "  max = " << maxSlicesInBucket << "!" << endl;
+                    //            cerr << "   count_ = " << count_
+
+                }
+    }
+
+    FORCE_INLINE IdxEquivNode* sliceRes(const T* key) {
+        return sliceRes(*key);
+    }
+
+    FORCE_INLINE IdxEquivNode* sliceRes(const T& key) {
+        HASH_RES_t h = IDX_FN::hash(key);
+        IdxEquivNode* n = &(buckets_[h % size_]);
+        if (n->head.obj)
+            do {
+                if (h == n->hash && !IDX_FN::cmp(key, *n->head.obj)) {
+                    return n;
+                }
+            } while ((n = n->nxt));
+        return nullptr;
+    }
+
+    FORCE_INLINE void sliceResMap(const T* key, FuncType f, IdxEquivNode* n) {
+        sliceResMap(*key, f, n);
+    }
+
+    FORCE_INLINE void sliceResMap(const T& key, FuncType f, IdxEquivNode* e) {
+        IdxN *n = &e->head;
+        do {
+            f(n->obj);
+        } while ((n = n->nxt));
+    }
+
+    /********************    virtual functions *******************************/
+
+    FORCE_INLINE bool hashDiffers(const T& x, const T& y) const override {
+        return IDX_FN::hash(x) != IDX_FN::hash(y);
+    }
+
+    // retrieves the first element equivalent to the key or nullptr if not found
+
+    FORCE_INLINE T* get(const T* key) const override {
+        throw std::logic_error("Get not implemented in non-unique HashIndex");
+    }
+
+    FORCE_INLINE void add(T* obj) override {
+        HASH_RES_t h = IDX_FN::hash(*obj);
+        if (count_ > threshold_) {
+#ifdef NORESIZE
+            std::cerr << " NonUnique Hash Index resize size=" << size_ << std::endl;
+#endif
+            //            throw std::logic_error("NonUnique HashIndex resize disabled for this experiment");
+            resize_(size_ << 1);
+        }
+        size_t b = h % size_;
+        IdxEquivNode* n = &buckets_[b];
+        IdxEquivNode* nw;
+
+        if (n->head.obj) {
+            do {
+                if (n->hash == h && !IDX_FN::cmp(*obj, *n->head.obj)) {
+                    n->add(obj, Index<T, V>::idxId, nodes_);
+                    return;
+                }
+            } while ((n = n->nxt));
+            n = &buckets_[b];
+            nw = equivNodes_.add();
+            memset(nw, 0, sizeof (IdxEquivNode));
+            if (++count_ > maxSlices) {
+                maxSlices = count_;
+            }
+            nw->hash = h;
+            nw->nxt = n->nxt;
+            n->nxt = nw;
+            nw->add(obj, Index<T, V>::idxId, nodes_);
+
+        } else { // space left in last IdxNode
+            n->hash = h;
+            if (++count_ > maxSlices) {
+                maxSlices = count_;
+            }
+            n->add(obj, Index<T, V>::idxId, nodes_);
+        }
+
+    }
+
+    // deletes an existing element (equality by pointer comparison)
+
+    FORCE_INLINE void del(T* obj) override {
+        auto idxId = Index<T, V>::idxId;
+        IdxN *n = (IdxN *) obj->backPtrs[idxId];
+        IdxN *prev = n->prv;
+        IdxN *next = n->nxt;
+        if (prev) { //not head
+            prev->nxt = next;
+            if (next)
+                next->prv = prev;
+            nodes_.del(n);
+        } else if (next) { //head and has other elements
+            next->obj->backPtrs[Index<T, V>::idxId] = n;
+            n->obj = next->obj;
+            n->nxt = next->nxt;
+            if (next->nxt)
+                next->nxt->prv = n;
+
+            nodes_.del(next);
+            next = n;
+        } else { //head and the only element
+            IdxEquivNode * e = n->equiv;
+            n->obj = nullptr;
+            auto h = e->hash;
+            size_t b = h % size_;
+            IdxEquivNode *ea = &buckets_[b];
+            IdxEquivNode *enext = e->nxt;
+            if (ea == e) {
+                if (enext) {
+                    buckets_[b].hash = enext->hash;
+                    buckets_[b].head = enext->head; //IdxNode copied
+                    buckets_[b].fixEquivPtr();
+                    buckets_[b].head.obj->backPtrs[Index<T, V>::idxId] = &buckets_[b].head;
+                    buckets_[b].nxt = enext->nxt;
+                } else {
+                    buckets_[b].head.obj = nullptr;
+                }
+
+            } else {
+                while (ea != nullptr) {
+                    if (ea->nxt == e) {
+                        ea->nxt = enext;
+                        equivNodes_.del(e);
+                        break;
+                    }
+                    ea = ea->nxt;
+                }
+            }
+            --count_;
+        }
+    }
+
+    FORCE_INLINE void delCopy(const T* obj, Index<T, V>* primary) override {
+        T* orig = primary->get(obj);
+        del(orig);
+    }
+
+    FORCE_INLINE void foreach(FuncType f) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE void slice(const T* key, FuncType f) override {
+        HASH_RES_t h = IDX_FN::hash(*key);
+        IdxEquivNode* e = &(buckets_[h % size_]);
+        if (e->head.obj)
+            do {
+                IdxN *n = &e->head;
+                if (h == e->hash && !IDX_FN::cmp(*key, *n->obj)) {
+                    do {
+                        f(n->obj);
+                    } while ((n = n->nxt));
+                    break;
+                }
+            } while ((e = e->nxt));
+    }
+
+    FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
+        HASH_RES_t h = IDX_FN::hash(*key);
+        std::vector<T*> entries;
+        IdxEquivNode* e = &(buckets_[h % size_]);
+        if (e->head.obj)
+            do {
+                IdxN *n = &e->head;
+                if (h == e->hash && !IDX_FN::cmp(*key, *n->obj)) {
+                    do {
+                        T* temp = n->obj->copy();
+                        entries.push_back(temp);
+                    } while ((n = n->nxt));
+                }
+            } while ((e = e->nxt));
+        for (auto it : entries) {
+            f(it);
+        }
+    }
+
+    FORCE_INLINE void update(T* elem) override {
+        //??
+    }
+
+    /*Ideally, we should check if the hash changes and then delete and insert.
+     *  However, in the cases where we use it, hash does not change, so to have
+     *   an impact, deleted and insert in all cases  */
+    FORCE_INLINE void updateCopyDependent(T* obj, T* orig) override {
+        del(orig);
+        add(obj);
+    }
+
+    FORCE_INLINE void updateCopy(T* obj, Index<T, V>* primaryIdx) override {
+        T* orig = primaryIdx->get(obj);
+        del(orig);
+        add(obj);
+    }
+
+    FORCE_INLINE size_t count() const override {
+        return count_;
+    }
+
+    FORCE_INLINE void clear() override {
+        if (allocated_from_pool_) {
+            IdxEquivNode* head = nullptr;
+            IdxN *head2 = nullptr;
+            for (size_t b = 0; b < size_; ++b) {
+                IdxEquivNode* n = &buckets_[b];
+
+                while (n) {
+                    IdxN *n2 = n->head.nxt;
+                    IdxN* tmp = n2;
+                    if (head2) {
+                        while (n2->nxt) n2 = n2->nxt;
+                        n2->nxt = head2;
+                        head2 = tmp;
+                    } else
+                        head2 = n2;
+                    n = n->nxt;
+                }
+                n = buckets_[b].nxt;
+                if (n) {
+                    IdxEquivNode* temp = n;
+                    if (head) {
+                        while (n->nxt) n = n->nxt;
+                        n->nxt = head;
+                        head = temp;
+                    } else head = n;
+                }
+            }
+            nodes_.delete_all(head2);
+            equivNodes_.delete_all(head);
+        }
+        allocated_from_pool_ = false;
+        count_ = 0;
+        memset(buckets_, 0, sizeof (IdxEquivNode) * size_);
     }
 
     /******************* non-virtual function wrappers ************************/
