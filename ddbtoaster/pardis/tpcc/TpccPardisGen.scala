@@ -371,7 +371,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
          |ofstream fout("tpcc_res_cpp.csv", ios::app);
          |if(argc == 1 || atoi(argv[1]) == 1)
-         |  fout << "\\nCPP-" << numPrograms << ",";
+         |  fout << "\\nCPP-${Optimizer.optCombination}-" << numPrograms << ",";
          |fout << fixed << xactCounts[0] * 60000.0/execTime << ",";
          |fout.close();
          |

@@ -6,7 +6,7 @@ import ch.epfl.data.sc.pardis.deep.scalalib._
 import ch.epfl.data.sc.pardis.deep.scalalib.collection.{ArrayBufferComponent, SeqComponent, SetComponent}
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.quasi.anf.BaseQuasiExp
-import ch.epfl.data.sc.pardis.types.{PardisType, PardisVariableType}
+import ch.epfl.data.sc.pardis.types.{NullType, PardisType, PardisVariableType}
 import ch.epfl.data.sc.pardis.types.PardisTypeImplicits.{typeAny, typeUnit}
 import ddbt.ast.{Type, TypeDouble, TypeLong}
 import ddbt.lib.store._
@@ -102,6 +102,8 @@ trait StoreDSL extends
     case StringType => unit[String](null)
     case DateType => unit[Date](null)
     case PardisVariableType(ctp) => nullValue(ctp)
+    case NullType => unit(null)
+    case rtp if rtp.isRecord => unit(null)
     case _ => System.err.println(s"Type $tp doesn't have nullValue defined"); unit(null)
   }
 

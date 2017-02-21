@@ -410,6 +410,7 @@ public:
     }
 
     ~HashIndex() {
+        clear();
         if (buckets_ != nullptr) delete[] buckets_;
     }
 
@@ -429,7 +430,6 @@ public:
         }
         fout << "  \"NumInArray\" : \"" << numInArray << "\"}";
     }
-
 
     void getBucketStats() const {
         uint maxEntries = 0;
@@ -675,13 +675,8 @@ public:
     }
 
     FORCE_INLINE void update(T* elem) override {
-        //        HASH_RES_t h = IDX_FN::hash(*elem);
-        //        IdxNode* n = &(buckets_[h % size_]);
-        if (is_unique) {
-            // ???
-        } else {
-            // ???
-        }
+        del(elem);
+        add(elem);
     }
 
     /*Ideally, we should check if the hash changes and then delete and insert.
@@ -926,6 +921,7 @@ public:
     }
 
     ~HashIndex() {
+        clear();
         if (buckets_ != nullptr) delete[] buckets_;
     }
 
@@ -942,27 +938,27 @@ public:
         fout << "  \"NumInArray\" : \"" << numInArray << "\"}";
     }
 
-        void printBuckets() const {
-            cout << "--------------------------------------------------------------";
-            for (size_t b = 0; b < size_; ++b) {
-                IdxEquivNode* n1 = &buckets_[b];
-                if (!n1 -> head.obj)
-                    continue;
-                cout << "\n\n Bucket " << b << endl;
+    void printBuckets() const {
+        cout << "--------------------------------------------------------------";
+        for (size_t b = 0; b < size_; ++b) {
+            IdxEquivNode* n1 = &buckets_[b];
+            if (!n1 -> head.obj)
+                continue;
+            cout << "\n\n Bucket " << b << endl;
+            do {
+                IdxN *n2 = &n1->head;
+                cout << "\t";
                 do {
-                    IdxN *n2 = &n1->head;
-                    cout << "\t";
-                    do {
 
-                        cout << (*n2->obj) << " ->  ";
-                        assert(n2->equiv == n1);
-                        assert(IDX_FN::cmp(*n1->head.obj, *n2->obj) == 0);
-                    } while ((n2 = n2->nxt));
+                    cout << (*n2->obj) << " ->  ";
+                    assert(n2->equiv == n1);
+                    assert(IDX_FN::cmp(*n1->head.obj, *n2->obj) == 0);
+                } while ((n2 = n2->nxt));
 
-                    cout << endl;
-                } while ((n1 = n1->nxt));
-            }
+                cout << endl;
+            } while ((n1 = n1->nxt));
         }
+    }
 
     void getBucketStats() const {
         uint maxEntriesInBucket = 0;
@@ -998,15 +994,15 @@ public:
 
         assert(numSlices == count_);
         assert(numSlices <= maxSlices);
-                if (numBuckets == 0) {
-                    cerr << "Empty" << endl;
-                } else {
-                    cerr << "IDX = " << Index<T, V>::idxId;
-                    cerr << "    Entries : total = " << numEntries << "  avg = " << numEntries / (1.0 * numBuckets) << " max = " << maxEntriesInBucket;
-                    cerr << "    Slices : total = " << numSlices << "  avg = " << numSlices / (1.0 * numBuckets) << "  max = " << maxSlicesInBucket << "!" << endl;
-                    //            cerr << "   count_ = " << count_
+        if (numBuckets == 0) {
+            cerr << "Empty" << endl;
+        } else {
+            cerr << "IDX = " << Index<T, V>::idxId;
+            cerr << "    Entries : total = " << numEntries << "  avg = " << numEntries / (1.0 * numBuckets) << " max = " << maxEntriesInBucket;
+            cerr << "    Slices : total = " << numSlices << "  avg = " << numSlices / (1.0 * numBuckets) << "  max = " << maxSlicesInBucket << "!" << endl;
+            //            cerr << "   count_ = " << count_
 
-                }
+        }
     }
 
     FORCE_INLINE IdxEquivNode* sliceRes(const T* key) {
@@ -1186,7 +1182,8 @@ public:
     }
 
     FORCE_INLINE void update(T* elem) override {
-        //??
+        del(elem);
+        add(elem);
     }
 
     /*Ideally, we should check if the hash changes and then delete and insert.
@@ -1583,7 +1580,8 @@ public:
     }
 
     FORCE_INLINE void update(T* elem) override {
-        //Do nothing for now
+        del(elem);
+        add(elem);
     }
 
     /*Ideally, we should check if the hash changes and then delete and insert.
@@ -1967,6 +1965,7 @@ public:
     }
 
     ~TreeIndex() {
+        clear();
         if (buckets_ != nullptr) delete[] buckets_;
     }
 
@@ -2110,7 +2109,8 @@ public:
     }
 
     FORCE_INLINE void update(T* elem) override {
-        //Do nothing for now
+        del(elem);
+        add(elem);
     }
 
     /*Ideally, we should check if the hash changes and then delete and insert.
@@ -2273,7 +2273,8 @@ public:
     }
 
     FORCE_INLINE void update(T* obj) override {
-        //Do nothing
+        del(obj);
+        add(obj);
     }
 
     /*Ideally, we should check if the hash changes and then delete and insert.
@@ -2373,6 +2374,10 @@ public:
         nodes_.initialize(poolS);
     }
 
+    void getSizeStats(std::ostream & fout) {
+        fout << "{}";
+    }
+
     bool operator==(const ListIndex<T, V, IDX_FN, is_unique>& right) const {
         HashIndex<T, V, IDX_FN, true> h1, h2;
         h1.idxId = h2.idxId = 0;
@@ -2386,6 +2391,7 @@ public:
     }
 
     ~ListIndex() {
+        clear();
     }
     //Not overloaded; const foreach
 
@@ -2415,6 +2421,7 @@ public:
     FORCE_INLINE void add(T* obj) override {
         auto idxId = Index<T, V>::idxId;
         Container *reusable = nullptr;
+        /*
         if (is_unique && head != nullptr) {
             if (head->obj == obj || IDX_FN::cmp(*obj, *head->obj) == 0) {
                 reusable = head;
@@ -2442,6 +2449,7 @@ public:
                 }
             }
         }
+         */
         Container *newc = reusable ? reusable : nodes_.add();
         //Adding previous container as backPointer , NOT it's own container!!
         obj->backPtrs[idxId] = (void *) tail;
@@ -2517,12 +2525,8 @@ public:
     }
 
     FORCE_INLINE void update(T* obj) override {
-        //TODO: SBJ: Check
-        if (is_unique) {
-
-            del(obj);
-            add(obj);
-        }
+        del(obj);
+        add(obj);
     }
 
     /*Ideally, we should check if the hash changes and then delete and insert.
