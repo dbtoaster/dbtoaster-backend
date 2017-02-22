@@ -125,7 +125,7 @@ object SCDataLoader {
       java.lang.System.out.println("District data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_HISTORIES);
       while (rs.next()) {
-        exec.historyTbl.insert(SEntry8_IIIIITDS(false,
+        exec.historyTbl.unsafeInsert(SEntry8_IIIIITDS(false,
           rs.getInt("h_c_id"),
           rs.getInt("h_c_d_id"),
           rs.getInt("h_c_w_id"),

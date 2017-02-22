@@ -553,6 +553,7 @@ class IdxList<E extends Entry> extends Idx<E> {
     @Override
     //SBJ: TODO: Remove checks
     public void unsafeInsert(E e) {
+        /*
         if (unique && head != null) {
             if (e == head) {
                 head = (E) head.data[idx];
@@ -570,6 +571,7 @@ class IdxList<E extends Entry> extends Idx<E> {
                 } while (p != null);
             }
         }
+        */
         if (tail != null) {
             tail.data[idx] = e;
             tail = e;
@@ -592,7 +594,7 @@ class IdxList<E extends Entry> extends Idx<E> {
                 if (e == n) {
                     p.data[idx] = n.data[idx];
                     if (n == tail) tail = p;
-                    if (unique) break;
+                    break;
                 } else p = n;
             } while (p != null);
         }
@@ -601,10 +603,8 @@ class IdxList<E extends Entry> extends Idx<E> {
 
     @Override
     public void update(E e) {
-        if (unique) {
             delete(e);
             unsafeInsert(e);
-        }
     }
 
     @Override
