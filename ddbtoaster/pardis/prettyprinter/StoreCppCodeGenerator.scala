@@ -123,9 +123,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
       val pre = doc"//sliceResMap " :\\:
         doc"auto* n$res = &$res->head;" :\\:
-        doc"do {" :\\:
-        doc"  auto $i = n$res->obj;"
-      val post = doc"} while((n$res = n$res->nxt));"
+        doc"std::vector<${i.tp}> entVector$res;" :\\:
+        doc"do entVector$res.push_back(n$res->obj); while((n$res = n$res->nxt));" :\\:
+        doc"for(auto $i: entVector$res) {"
+      val post = doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
     case Statement(sym, IdxSliceResMap(idx, key, f, res: Sym[_])) => doc"$idx.sliceResMap($key, $f, $res);"
@@ -155,19 +156,21 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"//slice " :\\:
           doc"typedef typename ${self}Idx${idxNum}Type::IFN $IDX_FN;" :\\:
           doc"HASH_RES_t h$symid = $IDX_FN::hash($key);" :\\:
+          doc"std::vector<${i.tp}> entVector$symid;" :\\:
           doc"auto* e$symid = &($idx.buckets_[h$symid % $idx.size_]);" :\\:
           doc"if(e$symid->head.obj)" :\\:
           doc"  do {" :\\:
           doc"    auto* n$symid = &e$symid->head;" :\\:
           doc"    if(h$symid == e$symid->hash && !$IDX_FN::cmp($key, *n$symid->obj)) {" :\\:
-          doc"      do {" :\\:
-          doc"        auto $i = n$symid->obj;"
-      val post =
-          doc"      } while((n$symid = n$symid->nxt));" :\\:
+          doc"      do entVector$symid.push_back(n$symid->obj); while((n$symid = n$symid->nxt));" :\\:
           doc"      break;" :\\:
           doc"    }" :\\:
-          doc"  } while((e$symid = e$symid->nxt));"
-      pre :: Document.nest(8, blockToDocument(o)) :/: post
+          doc"  } while((e$symid = e$symid->nxt));" :\\:
+          doc"  for(auto $i: entVector$symid) {"
+      val post =
+        doc"      }"
+
+      pre :: Document.nest(4, blockToDocument(o)) :/: post
 
     case Statement(sym, IdxForeach(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)), Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
       val symid = sym.id.toString

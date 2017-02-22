@@ -1027,9 +1027,13 @@ public:
 
     FORCE_INLINE void sliceResMap(const T& key, FuncType f, IdxEquivNode* e) {
         IdxN *n = &e->head;
+         std::vector<T*> entries;
         do {
-            f(n->obj);
+            entries.push_back(n->obj);
         } while ((n = n->nxt));
+        for (auto it : entries) {
+            f(it);
+        }
     }
 
     /********************    virtual functions *******************************/
@@ -1150,16 +1154,20 @@ public:
     FORCE_INLINE void slice(const T* key, FuncType f) override {
         HASH_RES_t h = IDX_FN::hash(*key);
         IdxEquivNode* e = &(buckets_[h % size_]);
+        std::vector<T*> entries;
         if (e->head.obj)
             do {
                 IdxN *n = &e->head;
                 if (h == e->hash && !IDX_FN::cmp(*key, *n->obj)) {
                     do {
-                        f(n->obj);
+                        entries.push_back(n->obj);
                     } while ((n = n->nxt));
                     break;
                 }
             } while ((e = e->nxt));
+        for (auto it : entries) {
+            f(it);
+        }
     }
 
     FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
@@ -1213,13 +1221,15 @@ public:
 
                 while (n) {
                     IdxN *n2 = n->head.nxt;
-                    IdxN* tmp = n2;
-                    if (head2) {
-                        while (n2->nxt) n2 = n2->nxt;
-                        n2->nxt = head2;
-                        head2 = tmp;
-                    } else
-                        head2 = n2;
+                    if (n2) {
+                        IdxN* tmp = n2;
+                        if (head2) {
+                            while (n2->nxt) n2 = n2->nxt;
+                            n2->nxt = head2;
+                            head2 = tmp;
+                        } else
+                            head2 = n2;
+                    }
                     n = n->nxt;
                 }
                 n = buckets_[b].nxt;
