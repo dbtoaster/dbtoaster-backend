@@ -163,7 +163,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#endif
        |
        |const size_t warehouseTblSize = 8 * (numWare / 8 + 1);
-       |const size_t itemTblSize = 100000;
+       |const size_t itemTblSize = 100000 * 1.5;
        |const size_t districtTblSize = 8 * ((numWare * 10) / 8 + 1);
        |const size_t customerTblSize = districtTblSize * 3000;
        |const size_t orderTblSize = customerTblSize * 1.5 + 0.5 * numPrograms;
