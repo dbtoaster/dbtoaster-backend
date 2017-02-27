@@ -78,7 +78,7 @@ class ScalaConstructsToCTranformer(override val IR: StoreDSL, val ifAgg: Boolean
 
     case IfThenElse(cond, thenp, elsep) if thenp.tp != UnitType =>
       implicit val tpe = thenp.tp
-      val res = __newVarNamed(nullValue(tpe), "ite")
+      val res = __newVarNamed(unit[Any](null)(tpe), "ite")
       __ifThenElse(cond, {
         __assign(res, inlineBlock(thenp)(thenp.tp))(thenp.tp)
       }, {

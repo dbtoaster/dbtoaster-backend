@@ -25,6 +25,7 @@ case class StoreSchema(val sch: List[PardisType[_]] = List()) extends Property {
 
 case class SEntry(val sch: List[PardisType[_]] = List()) extends ddbt.lib.store.Entry(0) with Property {
   def copy = ???
+
   override def copyFrom(sEntry: ddbt.lib.store.Entry) = ???
 
   import ddbt.lib.store.deep.GenericEntryIRs.GenericEntryType
@@ -72,6 +73,7 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
 
     case sym -> (StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMaxObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
     case sym -> (StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMinObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
+    case sym -> (StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, _)), agg@Def(AggregatorMedianObject(f@Def(PardisLambda(_, i, _)))))) => add(key, store); add(agg, store); add(i, store); add(f, store); ()
     case sym -> (StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
     case sym -> (StoreSliceCopy(store, _, key@Def(SteSampleSEntry(_, _)), f@Def(PardisLambda(_, i, _)))) => add(key, store); add(i, store); add(f, store); ()
 
@@ -165,11 +167,12 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]
         //System.err.println(s"Getting field $c of $e in hash")
         val temp = __readVar(hash)
-        __assign(hash, temp ^ (elemhash(fieldGetter(e, "_" + c)(tp)) + unit (0x9e3779b9) + (temp << unit(6)) + (temp >> unit(2))))
+        __assign(hash, temp ^ (elemhash(fieldGetter(e, "_" + c)(tp)) + unit(0x9e3779b9) + (temp << unit(6)) + (temp >> unit(2))))
       })
       __readVar(hash)
     })
   }
+
   /* OLD HASH FUNCTION. Could be possibly better, but takes more time (VERIFY!). Also change in GenericOps for C++ and Scala
   def hashfn(cols: Seq[Int], s: SEntry): Rep[SEntry => Int] = {
     //System.err.println(s"Generating hash function for ${s.tp} with cols $cols")
@@ -285,7 +288,12 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => {
       val r1 = inlineFunction(fdef, e1)
       val r2 = inlineFunction(fdef, e2)
-      BooleanExtra.conditional(Equal(r1, r2), unit(0), BooleanExtra.conditional(ordering_gt(r1, r2), unit(1), unit(-1)))
+      if (r1.tp == StringType) {
+        val v = IR.StringExtra.StringCompare(r1.asInstanceOf[Rep[String]], r2.asInstanceOf[Rep[String]])
+        BooleanExtra.conditional(v > unit(0), unit(1), BooleanExtra.conditional(v < unit(0), unit(-1), unit(0)))
+      }
+      else
+        BooleanExtra.conditional(Equal(r1, r2), unit(0), BooleanExtra.conditional(ordering_gt(r1, r2), unit(1), unit(-1)))
     })
   }
 
@@ -393,10 +401,8 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
           }
           val hl = hashfn(cols, entry)
           val cl = order_cmp(node.f, entry)
-          val ordCol = Def.unapply(node.f).get.asInstanceOf[PardisLambda[_, _]].o.stmts(0).rhs match {
-            case GenericEntryGet(_, Constant(i)) => i
-          }
-          lazy val rep = EntryIdx.apply(hl, cl, unit(entry.name + "_Idx" + cols.mkString("") + "_Ordering"))
+          val ordCol = Index.getColumnNumFromLambda(Def.unapply(node.f).get.asInstanceOf[PardisLambda[_, _]])
+          lazy val rep = EntryIdx.apply(hl, cl, unit(entry.name + "_Idx" + cols.mkString("") + s"_$ordCol"))
           genCmp getOrElseUpdate((cols, ordCol, entry), rep)
         }
         case Def(node: EntryIdxGenericOpsObject) => {

@@ -1,10 +1,11 @@
 package lifter
 
 import ch.epfl.data.sc.pardis
-import ch.epfl.data.sc.pardis.types.AnyType
-
+import ch.epfl.data.sc.pardis.types.{AnyType, StringType}
+import ddbt.lib.store.StringExtra
 import ddbt.lib.store.deep.StoreDSL
-import pardis.deep.scalalib.{NumericOps}
+import ddbt.lib.store.deep.StringExtraIRs.StringExtraStringCompareObject
+import pardis.deep.scalalib.NumericOps
 import pardis.ir._
 
 /**

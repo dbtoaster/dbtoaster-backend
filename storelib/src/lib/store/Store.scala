@@ -56,6 +56,8 @@ case object ISliceHeapMin extends IndexType
 // Operate over a slicing index and store all elements in a heap
 case object ISliceHeapMax extends IndexType
 
+case object ISlicedHeapMed extends IndexType
+
 // O(N) to delete any, O(log N) to delete min/max
 
 /** Map-specific operations on entries */
@@ -118,7 +120,8 @@ case class GenericCmp[R](val cols: Seq[Int], val f: GenericEntry => R)(implicit 
   }
 
   def cmp(e1: GenericEntry, e2: GenericEntry): Int = {
-    order.compare(f(e1), f(e2))
+    val v = order.compare(f(e1), f(e2))
+    if (v < 0) -1 else if (v > 0) 1 else 0
   }
 }
 
@@ -533,6 +536,7 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
       case ISliceMax => new IdxSliced(this, idx, sliceIdx, true)
       case ISliceHeapMin => new IdxSlicedHeap(this, idx, sliceIdx, false)
       case ISliceHeapMax => new IdxSlicedHeap(this, idx, sliceIdx, true)
+      case ISlicedHeapMed => new IdxMedianHeap[E](this, idx, sliceIdx)
     }
     if (idxs(0) != null) tp match {
       case INone | IDirect | IArray => // nothing to do
@@ -1251,12 +1255,6 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
   private var data = new Array[Heap](init_capacity)
   private var threshold = (init_capacity * load_factor).toInt
 
-  // Inlined functions
-  @inline private def _hash(e: E) = {
-    var h = ops.hash(e);
-    h ^= (h >>> 20) ^ (h >>> 12) ^ (h << 9);
-    h ^ (h >>> 7) ^ (h >>> 4);
-  }
 
   @inline def _resize(new_capacity: Int) {
     val d = new Array[Heap](new_capacity)
@@ -1310,7 +1308,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
         throw new IllegalStateException(s"slicedHeap resize   size=$size  length=$n")
       if (n == max_capacity) threshold = java.lang.Integer.MAX_VALUE; else _resize(n << 1)
     }
-    val h = _hash(e);
+    val h = ops.hash(e)
     val b = (if (h > 0) h else -h) % data.length
     var p = nil;
     var q = data(b);
@@ -1338,7 +1336,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
   override def update(e: E) {
     val q = _meta(e);
     val h = q.hash;
-    val h2 = _hash(e);
+    val h2 = ops.hash(e);
     if (h2 == h) return; // did not change partition
     else if (_del(e)) {
       size -= 1;
@@ -1347,7 +1345,7 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
   }
 
   override def get(e: E): E = {
-    val h = _hash(e);
+    val h = ops.hash(e);
     var q = data((if (h > 0) h else -h) % data.length)
     while (q != null) {
       if (q.hash == h && ops.cmp(e, q.get) == 0) return q.get;
@@ -1419,8 +1417,13 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
     }
 
     def remove(x: E) {
-      val p = if (x.eq(array(1))) 1 else array.indexOf(x);
+      var p = if (x.eq(array(1))) 1 else array.indexOf(x);
       if (p == -1) return
+      while (p != 1) {
+        val h = p >> 1
+        array(p) = array(h)
+        p = h
+      }
       array(p) = array(size);
       array(size) = nil;
       size -= 1;
@@ -1429,6 +1432,321 @@ class IdxSlicedHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int, max: Bool
 
     // def get = array(1)
   }
+
+}
+
+class IdxMedianHeap[E <: Entry](st: Store[E], idx: Int, sliceIdx: Int)(implicit cE: ClassTag[E]) extends Idx[E](st, sliceIdx, true) {
+  private final val ops2 = st.ops(idx)
+  private final val nil = null.asInstanceOf[E]
+  private final val default_capacity = 16
+
+  // comparison result: "better"
+  private final val hnil = null.asInstanceOf[IdxNode]
+
+  @inline private def _meta(e: E): IdxNode = e.data(idx).asInstanceOf[IdxNode]
+
+  override def getSizeStat: String = {
+    var numInArray = 0
+    var numHeap = 0
+    var maxSize = 0
+    var size2 = 0
+    return s"  array length = ${data.length}    count = ${size}"
+  }
+
+  override def foreach(f: (E) => Unit): Unit = {
+    for (d <- data) {
+      var h = d;
+      while (h != null) {
+        h.left.foreach(f)
+        h.right.foreach(f)
+        h = h.next
+      }
+    }
+  }
+
+  private final val init_capacity = 32
+  private final val max_capacity = 1 << 30
+  private final val load_factor = 0.75f;
+  private var data = new Array[IdxNode](init_capacity)
+  private var threshold = (init_capacity * load_factor).toInt
+
+  @inline def _resize(new_capacity: Int) {
+    val d = new Array[IdxNode](new_capacity)
+    var i = 0;
+    val n = data.size;
+    while (i < n) {
+      var q = data(i);
+      while (q != null) {
+        val nq = q.next;
+        val b = (if (q.hash > 0) q.hash else -q.hash) % new_capacity;
+        q.next = d(b);
+        d(b) = q;
+        q = nq
+      };
+      i += 1
+    }
+    data = d;
+    threshold = Math.min((new_capacity * load_factor).toInt, max_capacity + 1);
+  }
+
+  //@inline
+  private def _del(e: E): Boolean = {
+    val q = _meta(e);
+    q.remove(e)
+    if (q.left.size == 0) {
+      // delete q
+      val h = q.hash;
+      val b = (if (h > 0) h else -h) % data.length;
+      var p = data(b);
+      if (p.eq(q)) {
+        data(b) = q.next;
+        return true
+      }
+      else {
+        while (!p.eq(null)) {
+          if (p.next.eq(q)) {
+            p.next = q.next;
+            return true;
+          } else p = p.next
+        }
+      }
+    }
+    false
+  }
+
+  override def unsafeInsert(e: E) {
+    if (size == threshold) {
+      val n = data.length
+      if (!Idx.allowResize)
+        throw new IllegalStateException(s"slicedHeapMedian resize   size=$size  length=$n")
+      if (n == max_capacity) threshold = java.lang.Integer.MAX_VALUE; else _resize(n << 1)
+    }
+    val h = ops.hash(e);
+    val b = (if (h > 0) h else -h) % data.length
+    var p = nil;
+    var q = data(b);
+    // add value to slice heap if exists
+    while (q != null) {
+      if (q.hash == h && ops.cmp(e, q.left.get) == 0) {
+        q.add(e);
+        return
+      } // found slice's heap
+      q = q.next
+    }
+    // new slice
+    q = new IdxNode(h);
+    q.next = data(b);
+    q.add(e);
+    data(b) = q;
+    size += 1
+  }
+
+  override def delete(e: E) {
+    if (_del(e)) size -= 1
+  }
+
+  override def update(e: E) {
+    val q = _meta(e);
+    val h = q.hash;
+    val h2 = ops.hash(e);
+    if (h2 == h) return; // did not change partition
+    else if (_del(e)) {
+      size -= 1;
+      unsafeInsert(e)
+    }
+  }
+
+  override def get(e: E): E = {
+    val h = ops.hash(e);
+    var q = data((if (h > 0) h else -h) % data.length)
+    while (q != null) {
+      if (q.hash == h && ops.cmp(e, q.left.get) == 0) {
+        return q.left.get
+      }
+      q = q.next;
+    };
+    nil
+  }
+
+  override def clear {
+    var i = 0;
+    val n = data.length;
+    while (i < n) {
+      data(i) = hnil;
+      i += 1;
+    };
+    size = 0
+  }
+
+  class Heap(max: Boolean) {
+    private final val cRes = if (max) 1 else -1
+    var n: IdxNode = null
+
+    def foreach(f: (E) => Unit): Unit = {
+      array.foreach(e => if (e != null) f(e))
+    }
+
+    // Inherited as HashMap entry
+    var array = new Array[E](default_capacity)
+    var size = 0
+
+    @inline private def _double {
+
+      val tmp = array;
+      array = new Array[E](array.length * 2);
+      System.arraycopy(tmp, 0, array, 0, tmp.length)
+    }
+
+    @inline def _percolateDown(holeInput: Int) {
+      var hole = holeInput;
+      var child = hole << 1 // invariant: child = hole*2
+      val tmp = array(hole)
+      while (child <= size) {
+        if (child != size && ops2.cmp(array(child + 1), array(child)) == cRes) child += 1
+        if (ops2.cmp(array(child), tmp) * cRes > 0) array(hole) = array(child)
+        else {
+          array(hole) = tmp;
+          return
+        }
+        hole = child;
+        child = hole << 1
+      }
+      array(hole) = tmp
+    }
+
+    def get = array(1)
+
+    @inline def add(x: E) {
+      if (size == array.length - 1) _double;
+      size += 1;
+      var hole = size;
+      var h = hole >> 1 // invariant: h = hole/2
+      while (hole > 1 && ops2.cmp(x, array(h)) == cRes) {
+        array(hole) = array(h);
+        hole = h;
+        h = hole >> 1
+      }
+      array(hole) = x
+    }
+
+    @inline def update(old: E, nw: E) {
+      var hole = if (old.eq(array(1))) 1 else array.indexOf(old)
+      var h = hole >> 1 // invariant: h = hole/2
+      while (hole > 1 && ops2.cmp(nw, array(h)) == cRes) {
+        array(hole) = array(h);
+        hole = h;
+        h = hole >> 1
+      }
+      array(hole) = nw
+
+    }
+
+    @inline def remove(x: E) {
+      var p = if (x.eq(array(1))) 1 else array.indexOf(x);
+      if (p == -1) return
+      while (p != 1) {
+        val h = p >> 1
+        array(p) = array(h)
+        p = h
+      }
+      array(p) = array(size);
+      array(size) = nil;
+      size -= 1;
+      if (p < size) _percolateDown(p)
+    }
+
+    def checkHeap: Unit = {
+      var i = 1
+      while (i <= size) {
+        val l = 2 * i
+        val r = l + 1
+        val x = array(i)
+        assert(_meta(x) == n)
+        if (l <= size) {
+          val lc = ops2.cmp(x, array(l))
+          assert(lc == cRes || lc == 0)
+          if (r <= size) {
+            val rc = ops2.cmp(x, array(r))
+            assert(rc == cRes || rc == 0)
+          }
+        }
+        i += 1
+      }
+    }
+
+    // def get = array(1)
+  }
+
+  class IdxNode(val hash: Int, var next: IdxNode, val left: Heap, val right: Heap) {
+    def this(h: Int) = this(h, null, new Heap(true), new Heap(false))
+
+    left.n = this
+    right.n = this
+
+    def check(): Unit = {
+      left.checkHeap
+      right.checkHeap
+
+      val r = right.get
+      if (r != null && ops2.cmp(left.get, r) > 0)
+        throw new IllegalStateException("left > right")
+      if (!(left.size == right.size || left.size == right.size + 1))
+        throw new IllegalStateException("unbalanced medheap")
+    }
+
+    def add(e: E) {
+      if (left.size == 0) {
+        left.add(e)
+      } else {
+        if (ops2.cmp(e, left.get) > 0) {
+          if (right.size == left.size) {
+            if (ops2.cmp(e, right.get) > 0) {
+              val e2 = right.get
+              right.array(1) = e
+              right._percolateDown(1)
+              left.add(e2)
+            } else {
+              left.add(e)
+            }
+          } else {
+            right.add(e)
+          }
+        } else {
+          if (left.size > right.size) {
+            val e2 = left.get
+            left.array(1) = e
+            left._percolateDown(1)
+            right.add(e2)
+          } else {
+            left.add(e)
+          }
+        }
+      }
+      e.data(idx) = this
+    }
+
+    def remove(e: E): Unit = {
+      if (ops2.cmp(e, left.get) > 0) {
+        if (left.size > right.size) {
+          val e2 = left.get
+          left.remove(e2)
+          right.update(e, e2)
+        } else {
+          right.remove(e)
+        }
+      } else {
+        if (left.size == right.size) {
+          val e2 = right.get
+          right.remove(e2)
+          left.update(e, e2)
+        } else {
+          left.remove(e)
+        }
+      }
+    }
+
+  }
+
 
 }
 

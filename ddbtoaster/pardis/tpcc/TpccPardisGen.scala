@@ -12,6 +12,7 @@ import ch.epfl.data.sc.pardis.utils.document._
 import ddbt.codegen.{Optimizer, TransactionProgram}
 import ddbt.codegen.prettyprinter.{StoreCodeGenerator, StoreCppCodeGenerator, StoreScalaCodeGenerator}
 import ddbt.lib.store.deep.StoreDSL
+import ddbt.transformer.Index
 
 import scala.util.parsing.json.JSON
 
@@ -50,6 +51,7 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
     """
       |package tpcc.sc
       |import ddbt.lib.store._
+      |import math.Ordering.{String => _}
       |import scala.collection.mutable.{ArrayBuffer,Set}
       |import java.util.Date
       | """.stripMargin
@@ -77,7 +79,12 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
     var i = codestr.lastIndexOf("1")
     val allstores = optTP.globalVars.map(_.name).mkDocument(", ")
     val executor =
-      "class SCExecutor {\n" + codestr.substring(0, i) + "\n" +
+      s"""class SCExecutor {
+          |  implicit object StringNoCase extends Ordering[String]{
+          |   override def compare(x: String, y: String): Int = x.compareToIgnoreCase(y)
+          |  }
+          |
+          """.stripMargin + codestr.substring(0, i) + "\n" +
         (if (Optimizer.initialStoreSize && !StoreArrayLengths.isEmpty) {
             val tbls = StoreArrayLengths.keys.toList.groupBy(_.split("Idx")(0)).map(t => t._1 -> t._2.map(StoreArrayLengths.getOrElse(_, "1")))
             tbls.map(t => doc"  ${t._1}.setInitialSizes(List(${t._2.mkString(",")}))").mkString("\n") +"\n"
@@ -89,7 +96,7 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
            |  val orderStatusTxInst = new OrderStatusTx($allstores)
            |  val deliveryTxInst = new DeliveryTx($allstores)
            |  val stockLevelTxInst = new StockLevelTx($allstores)
-
+           |
       """.stripMargin
     file.println(header)
     val entries = optTP.structs.map(codeGen.getStruct).mkDocument("\n")
@@ -202,9 +209,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
               s"GenericOps_$cols"
             }
           case Def(n: EntryIdxGenericCmpObject[_]) =>
-            val ord = Def.unapply(n.f).get.asInstanceOf[PardisLambda[_, _]].o.stmts(0).rhs match {
-              case GenericEntryGet(_, Constant(i)) => i
-            }
+            val ord = Index.getColumnNumFromLambda(Def.unapply(n.f).get.asInstanceOf[PardisLambda[_, _]])
             val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
             s"GenericCmp_${cols.mkString("")}_$ord"
 
@@ -223,6 +228,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
         case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"SlicedHeapIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(true)}>"
         case "ISliceHeapMin" => val idx2 = allIdxs(idx._4); doc"SlicedHeapIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(false)}>"
+        case "ISlicedHeapMed" => val idx2 = allIdxs(idx._4); doc"SlicedMedHeapIndex<$entryTp, char, ${idx2._5}, ${idx._5}>"
         case "IList" => doc"ListIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
       }
 

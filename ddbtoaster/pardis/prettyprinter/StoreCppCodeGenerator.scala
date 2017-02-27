@@ -57,6 +57,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, agg@AggregatorMinObject(f)) =>
       doc"${agg.typeE}* ${sym}result;" :/:
         doc"MinAggregator<${agg.typeE}, ${agg.typeR}> $sym($f, &${sym}result);"
+    case Statement(sym, agg@AggregatorMedianObject(f)) =>
+      doc"std::vector<${agg.typeE}*> ${sym}results;" :/:
+        doc"MedianAggregator<${agg.typeE}, ${agg.typeR}> $sym($f, ${sym}results);"
 
     case Statement(sym, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) =>
       val entryTp = sym.tp.asInstanceOf[StoreType[_]].typeE match {
@@ -75,9 +78,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
             s"GenericOps_$cols"
           }
         case Def(n: EntryIdxGenericCmpObject[_]) =>
-          val ord = Def.unapply(n.f).get.asInstanceOf[PardisLambda[_, _]].o.stmts(0).rhs match {
-            case GenericEntryGet(_, Constant(i)) => i
-          }
+          val ord = Index.getColumnNumFromLambda(Def.unapply(n.f).get.asInstanceOf[PardisLambda[_, _]])
           val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
           s"GenericCmp_${cols.mkString("")}_$ord"
 
@@ -185,10 +186,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
           doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
-    case Statement(sym, StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType && refSymbols.contains(self) =>
-      doc"const PString& $sym = $self.$idx;"
-    case Statement(sym, StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType =>
-      doc"const PString& $sym = $self->$idx;"
+    case Statement(sym, n@StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType =>
+      doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
+    case Statement(sym, n@GenericEntryGet(self: Sym[_], idx)) if sym.tp == StringType =>
+      doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
 
     case _ => super.stmtToDocument(stmt)
   }
@@ -223,6 +224,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StringExtraStringCompareObject(str1, str2) => doc"strcmpi($str1.data_, $str2.data_)"
 
     case MultiResIsEmpty(self: Sym[_]) => doc"$self == nullptr"
+
+    case AggregatorResult(self: Sym[_]) => doc"$self.result()"
 
     case StoreInsert(self, e) => doc"$self.add($e)"
     case StoreUnsafeInsert(self, e) => doc"$self.insert_nocheck($e)"
@@ -309,7 +312,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     //      "[&](" :: tpeToDocument(t1) :: " & " :: expToDocument(i1) :: ", " :: tpeToDocument(t2) :: " & " :: expToDocument(i2) :: ") {" :/: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
     //
     case PardisLambda2(_, i1, i2, o) =>
-      doc"[&](${i1.tp} $i1, ${i2.tp} $i2) {" :/: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
+      doc"[&](${i1.tp} $i1, ${i2.tp} $i2) {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"$cond ? $ift : $iff"
 
@@ -355,10 +358,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"
       } else Document.empty
 
-    case EntryIdxGenericCmpObject(Constant(cols), Def(PardisLambda(_, _, o))) =>
-      val ordCol = o.stmts(0).rhs match {
-        case GenericEntryGet(_, Constant(i)) => i
-      }
+    case EntryIdxGenericCmpObject(Constant(cols), Def(l@PardisLambda(_, _, _))) =>
+      val ordCol = Index.getColumnNumFromLambda(l)
       val name = "GenericCmp_" + cols.mkString("") + "_" + ordCol
       val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
         "size_t h = 16;" :/:

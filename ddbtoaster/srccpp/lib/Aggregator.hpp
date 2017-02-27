@@ -1,6 +1,8 @@
 #ifndef AGGREGATOR_HPP
 #define AGGREGATOR_HPP
 #include <functional>
+#include <vector>
+#include <algorithm>
 
 template <typename E, typename R>
 struct MinAggregator {
@@ -27,6 +29,9 @@ struct MinAggregator {
         }
     }
 
+    E* result() {
+        return *minEntry;
+    }
 };
 
 template <typename E, typename R>
@@ -54,5 +59,37 @@ struct MaxAggregator {
         }
     }
 
+    E* result() {
+        return *maxEntry;
+    }
+
 };
+
+template<typename E, typename R>
+struct MedianAggregator {
+    std::function<R(E*) > func;
+    std::vector<E*>& results;
+
+    MedianAggregator(const  std::function<R(E*)>& f, std::vector<E*>& res) : func(f), results(res) {
+    }
+
+    void operator()(E* e) {
+        results.push_back(e);
+    }
+
+    E* result() {
+        std::sort(results.begin(), results.end(), [&](E* e1, E* e2) { 
+            assert(e1);
+            assert(e2);
+            const R& v1 = func(e1);
+            const R& v2 = func(e2);
+            return v1 < v2; 
+        });
+        int s = results.size();
+        int i = s / 2;
+        if(s % 2 == 0) i--;
+        return results[i];
+    }
+};
+
 #endif

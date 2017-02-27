@@ -316,17 +316,9 @@ object TpccXactGenerator_SC {
         $(districtTbl).updateCopy(districtEntry)
 
         val customerEntry = if ($(c_by_name) > 0) {
-          val customersWithLastName = new ArrayBuffer[GenericEntry]()
-          $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), {
-            custEntry => customersWithLastName.append(custEntry)
-          })
-
-          var index = (customersWithLastName.size / 2)
-          if (customersWithLastName.size % 2 == 0) {
-            index = index - 1
-          }
-          customersWithLastName.sortWith({ (c1, c2) => StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
-
+          val custagg = Aggregator.median[GenericEntry, String](e => e.get[java.lang.String](4))
+          $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), custagg)
+          custagg.result
         }
         else {
           $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(c_d_id), $(c_w_id)))
@@ -425,15 +417,9 @@ object TpccXactGenerator_SC {
     def orderStatusTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_id: Rep[Int], c_last: Rep[String]): Rep[Int] = {
       ir {
         val customerEntry = if ($(c_by_name) > 0) {
-          val customersWithLastName = new ArrayBuffer[GenericEntry]()
-          $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), {
-            custEntry => customersWithLastName.append(custEntry)
-          })
-          var index = (customersWithLastName.size / 2)
-          if (customersWithLastName.size % 2 == 0) {
-            index = index - 1
-          }
-          customersWithLastName.sortWith({ (c1, c2) => StringExtra.StringCompare(c1.get[java.lang.String](4), c2.get[java.lang.String](4)) < 0 })(index)
+          val custagg = Aggregator.median[GenericEntry, String](e => e.get[java.lang.String](4))
+          $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), custagg)
+          custagg.result
         }
         else {
           $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(d_id), $(w_id)))

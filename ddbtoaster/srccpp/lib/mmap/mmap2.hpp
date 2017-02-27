@@ -200,71 +200,6 @@ public:
 };
 #endif
 
-template<typename V>
-struct ZeroVal {
-
-    V get() {
-        return V();
-    }
-
-    bool isZero(V a) {
-        return (a == V());
-    }
-};
-
-template<>
-struct ZeroVal<long> {
-
-    long get() {
-        return 0L;
-    }
-
-    FORCE_INLINE bool isZero(long a) {
-        return (a == 0L);
-    }
-};
-
-template<>
-struct ZeroVal<double> {
-
-    double get() {
-        return 0.0;
-    }
-#ifdef DOUBLE_ZERO_APPROXIMATED
-
-    FORCE_INLINE bool isZero(double a) {
-        return (a >= -DOUBLE_ZERO_THRESHOLD && a <= DOUBLE_ZERO_THRESHOLD);
-    }
-#else
-
-    FORCE_INLINE bool isZero(double a) {
-        return (a == 0.0);
-    }
-#endif
-};
-
-template<>
-struct ZeroVal<PString> {
-
-    PString get() {
-        return PString();
-    }
-
-    FORCE_INLINE bool isZero(PString a) {
-        return (a == PString());
-    }
-};
-
-/*template<typename T>
-struct GenericIndexFn {
-  static HASH_RES_t hash(const T& e) {
-    return 0;
-  }
-  static bool equals(const T& x,const T& y) {
-    return false;
-  }
-};*/
-
 template<typename T, typename V>
 class Index {
 public:
@@ -1027,7 +962,7 @@ public:
 
     FORCE_INLINE void sliceResMap(const T& key, FuncType f, IdxEquivNode* e) {
         IdxN *n = &e->head;
-         std::vector<T*> entries;
+        std::vector<T*> entries;
         do {
             entries.push_back(n->obj);
         } while ((n = n->nxt));
@@ -1394,6 +1329,11 @@ class SlicedHeapIndex : public Index<T, V> {
                 if (p == size + 1)
                     return;
             }
+            while (p != 1) {
+                uint h = p >> 1;
+                array[p] = array[h];
+                p = h;
+            }
             array[p] = array[size];
             array[size] = nullptr;
             size--;
@@ -1407,7 +1347,6 @@ class SlicedHeapIndex : public Index<T, V> {
 
     //    Pool<IdxEquivNode> equiv_nodes_;
     //    Pool<__IdxHeapNode> nodes_;
-    const V zero;
     size_t count_, threshold_, maxHeaps;
     double load_factor_;
 
@@ -1459,7 +1398,7 @@ public:
         fout << "  \"MaxHeapSize\" : \"" << maxSize << "\" }";
     }
 
-    SlicedHeapIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : zero(ZeroVal<V>().get()) {
+    SlicedHeapIndex(Pool<T>* stPool, size_t size, double load_factor = .75) {
 
         load_factor_ = load_factor;
         size_ = 0;
@@ -1470,7 +1409,7 @@ public:
 
     }
 
-    SlicedHeapIndex(Pool<T>* stPool = nullptr) : zero(ZeroVal<V>().get()) {
+    SlicedHeapIndex(Pool<T>* stPool = nullptr) {
         load_factor_ = 0.75;
         size_ = 0;
         count_ = 0;
@@ -1664,6 +1603,454 @@ public:
     }
 };
 
+template<typename T, typename V, typename IDX_FN1, typename IDX_FN2>
+class SlicedMedHeapIndex : public Index<T, V> {
+    struct __IdxNode;
+
+    template<bool is_max>
+    struct __IdxHeapNode {
+        T** array;
+        __IdxNode *n;
+        uint arraySize;
+        uint size;
+
+        __IdxHeapNode() {
+            arraySize = DEFAULT_HEAP_SIZE;
+            array = new T*[arraySize];
+            size = 0;
+        }
+//
+//        void print() {
+//            for (uint i = 1; i <= size; ++i) {
+//                if ((i & (i - 1)) == 0)
+//                    std::cout << std::endl;
+//                std::cout << array[i]->getString(4) << "\t";
+//            }
+//            std::cout << std::endl;
+//        }
+
+        void checkHeap(int idx) {
+            for (uint i = 1; i <= size; ++i) {
+                uint l = 2 * i;
+                uint r = l + 1;
+                T* x = array[i];
+
+                if (is_max) {
+                    if (l <= size) {
+                        assert(IDX_FN2::cmp(*x, *array[l]) == 1);
+                        if (r <= size)
+                            assert(IDX_FN2::cmp(*x, *array[r]) == 1);
+                    }
+                } else {
+                    if (l <= size) {
+                        assert(IDX_FN2::cmp(*x, *array[l]) == -1);
+                        if (r <= size)
+                            assert(IDX_FN2::cmp(*x, *array[r]) == -1);
+                    }
+                }
+                assert(x->backPtrs[idx] == n);
+            }
+        }
+
+        FORCE_INLINE void double_() {
+
+            uint newsize = arraySize << 1;
+            T** temp = new T*[newsize];
+            mempcpy(temp, array, arraySize * sizeof (T*));
+            arraySize = newsize;
+            delete[] array;
+            array = temp;
+        }
+
+        FORCE_INLINE void percolateDown(uint holeInput) {
+            uint hole = holeInput;
+            uint child = hole << 1;
+            T* tmp = array[hole];
+            while (child <= size) {
+                if (child != size && IDX_FN2::cmp(*array[child + 1], *array[child]) == (is_max ? 1 : -1))
+                    child++;
+                if (IDX_FN2::cmp(*array[child], *tmp) == (is_max ? 1 : -1))
+                    array[hole] = array[child];
+                else {
+                    array[hole] = tmp;
+                    return;
+                }
+                hole = child;
+                child = hole << 1;
+            }
+            array[hole] = tmp;
+        }
+
+        FORCE_INLINE void add(T* e) {
+            if (size == arraySize - 1) double_();
+            size++;
+            uint hole = size;
+            uint h = size >> 1;
+            while (hole > 1 && IDX_FN2::cmp(*e, *array[h]) == (is_max ? 1 : -1)) {
+                array[hole] = array[h];
+                hole = h;
+                h = hole >> 1;
+            }
+            array[hole] = e;
+        }
+
+        //SBJ: Should only be called for a newer value that would be closer to root
+        //In a max heap, the newer value must be greater
+        //In a min heap, the newer value must be smaller
+        //TOFIX: Not considering equal values
+
+        FORCE_INLINE void update(T* old, T* nw) {
+            assert(IDX_FN2::cmp(*nw, *old) == (is_max ? 1 : -1));
+            uint p = 1;
+            if (array[p] != old) {
+                p++;
+                while (p <= size) {
+                    if (array[p] == old)
+                        break;
+                    p++;
+                }
+                if (p == size + 1)
+                    throw std::logic_error("Element not found in heap");
+            }
+            uint hole = p;
+            uint h = p >> 1;
+            while (hole > 1 && IDX_FN2::cmp(*nw, *array[h]) == (is_max ? 1 : -1)) {
+                array[hole] = array[h];
+                hole = h;
+                h = hole >> 1;
+            }
+            array[hole] = nw;
+
+        }
+
+        FORCE_INLINE void remove(T* e) {
+            uint p = 1;
+            if (array[p] != e) {
+                p++;
+                while (p <= size) {
+                    if (array[p] == e)
+                        break;
+                    p++;
+                }
+                if (p == size + 1)
+                    throw std::logic_error("Element not found in heap");
+            }
+
+            while (p != 1) {
+                uint h = p >> 1;
+                array[p] = array[h];
+                p = h;
+            }
+            array[p] = array[size];
+            array[size] = nullptr;
+            size--;
+
+            if (p < size)
+                percolateDown(p);
+        }
+    };
+
+    struct __IdxNode {
+        __IdxHeapNode<true> left;
+        __IdxHeapNode<false> right;
+        HASH_RES_t hash;
+        __IdxNode* nxt;
+
+        __IdxNode() {
+            left.n = this;
+            right.n = this;
+        }
+        //invariant : l.size = r.size OR l.size = r.size + 1
+
+        void add(T* obj) {
+            if (left.size == 0) {
+                left.add(obj);
+                return;
+            }
+            assert(left.size > 0);
+            if (IDX_FN2::cmp(*obj, *left.array[1]) == 1) { //obj greater than median
+                if (right.size == left.size) { // right side will be unbalanced on adding
+                    if (IDX_FN2::cmp(*obj, *right.array[1]) == 1) { //obj greater than min of right
+                        T* obj2 = right.array[1]; //add obj to right. move min of right to left
+                        right.array[1] = obj;
+                        right.percolateDown(1);
+                        left.add(obj2);
+                    } else { //object is new median 
+                        left.add(obj);
+                    }
+                } else {
+                    right.add(obj);
+                }
+
+            } else { //obj same or less as median
+                if (left.size > right.size) { //left will be unbalanced on adding
+                    T* obj2 = left.array[1];
+                    left.array[1] = obj;
+                    left.percolateDown(1);
+                    right.add(obj2);
+                } else {
+                    left.add(obj);
+                }
+            }
+        }
+
+        //SBJ: May not find the right element if it is median and there are duplicates of it spread across left and right
+
+        void remove(T *obj) {
+
+            if (IDX_FN2::cmp(*obj, *left.array[1]) == 1) {
+                //obj in right
+                if (left.size > right.size) {
+                    T * obj2 = left.array[1];
+                    left.remove(obj2);
+                    right.update(obj, obj2); //we are decreasing value in min-heap, safe to call update
+                } else {
+                    right.remove(obj);
+                }
+            } else {
+                //obj in left
+                if (left.size == right.size) {
+                    T* obj2 = right.array[1];
+                    right.remove(obj2);
+                    left.update(obj, obj2); //increasing value in max-heap
+                } else {
+                    left.remove(obj);
+                }
+            }
+        }
+
+        void check(int idx) {
+            left.checkHeap(idx);
+            right.checkHeap(idx);
+            T* r = right.array[1];
+            T* l = left.array[1];
+            assert(left.size == 0 || right.size == 0 || IDX_FN2::cmp(*l, *r) == -1); //can be 0 too, but we want to know if there is such a case
+            assert(left.size == right.size || left.size == right.size + 1);
+        }
+    };
+
+    typedef __IdxNode* IdxNode;
+    size_t count_, threshold_, maxSlices;
+    double load_factor_;
+
+    void resize_(size_t new_size) {
+        IdxNode *old = buckets_;
+        size_t sz = size_;
+        buckets_ = new IdxNode[new_size];
+        memset(buckets_, 0, sizeof (IdxNode) * new_size);
+        size_ = new_size;
+        threshold_ = size_ * load_factor_;
+        for (size_t b = 0; b < sz; ++b) {
+            IdxNode q = old[b];
+            while (q != nullptr) {
+                IdxNode nq = q->nxt;
+                uint b = q->hash % size_;
+                q->nxt = buckets_[b];
+                buckets_[b] = q;
+                q = nq;
+            }
+        }
+
+        if (old) delete[] old;
+    }
+public:
+
+    void getSizeStats(std::ostream& fout) {
+        fout << "{ \"ArrayLength\" : \"" << size_ << "\", ";
+        fout << "  \"OptArrayLength\" : \"" << (size_t) ((maxSlices + 1) * INV_LF) << "\"}";
+    }
+
+    SlicedMedHeapIndex(Pool<T>* stPool, size_t size, double load_factor = .75) {
+        load_factor_ = load_factor;
+        size_ = 0;
+        count_ = 0;
+        maxSlices = 0;
+        buckets_ = nullptr;
+        resize_(size);
+
+    }
+
+    SlicedMedHeapIndex(Pool<T>* stPool = nullptr) {
+        load_factor_ = 0.75;
+        size_ = 0;
+        count_ = 0;
+        maxSlices = 0;
+        buckets_ = nullptr;
+    }
+
+    void prepareSize(size_t arrayS, size_t poolS) override {
+        resize_(arrayS);
+    }
+
+    IdxNode* buckets_;
+    size_t size_;
+
+    /********************    virtual functions *******************************/
+
+    FORCE_INLINE bool hashDiffers(const T& x, const T& y) const override {
+        return IDX_FN1::hash(x) != IDX_FN1::hash(y);
+    }
+
+    FORCE_INLINE T* get(const T* key) const override {
+        HASH_RES_t h = IDX_FN1::hash(*key);
+        IdxNode n = buckets_[h % size_];
+        while (n != nullptr) {
+            T* obj;
+            if (n->hash == h && !IDX_FN1::cmp(*key, *(obj = n->left.array[1]))) {
+                return obj;
+            }
+            n = n->nxt;
+        }
+        return nullptr;
+    }
+
+    FORCE_INLINE void add(T* obj) override {
+        HASH_RES_t h = IDX_FN1::hash(*obj);
+        if (count_ > threshold_) {
+#ifdef NORESIZE
+            std::cerr << " MedHeap Index resize size=" << size_ << std::endl;
+#endif
+            //            exit(1);
+            resize_(size_ << 1);
+        }
+        size_t b = h % size_;
+        IdxNode q = buckets_[b];
+        while (q != nullptr) {
+            if (q->hash == h && IDX_FN1::cmp(*obj, *q->left.array[1]) == 0) {
+                q->add(obj);
+                obj->backPtrs[Index<T, V>::idxId] = q;
+                return;
+            }
+            q = q->nxt;
+        }
+        q = new __IdxNode();
+        q->hash = h;
+        q->nxt = buckets_[b];
+        q->add(obj);
+        obj->backPtrs[Index<T, V>::idxId] = q;
+        buckets_[b] = q;
+        if (++count_ > maxSlices)
+            maxSlices = count_;
+    }
+
+    FORCE_INLINE void del(T* obj) override {
+        IdxNode q = (IdxNode) obj->backPtrs[Index<T, V>::idxId];
+        q->remove(obj);
+        if (q->left.array[1] == nullptr) {
+            auto h = q->hash;
+            size_t b = h % size_;
+            IdxNode p = buckets_[b];
+            if (p == q) {
+                buckets_[b] = q->nxt;
+                count_--;
+                delete q;
+                return;
+            } else {
+                while (p != nullptr) {
+                    if (p->nxt == q) {
+                        p->nxt = q->nxt;
+                        count_--;
+                        delete q;
+                        return;
+                    }
+                    p = p->nxt;
+                }
+            }
+        }
+    }
+
+    FORCE_INLINE void delCopy(const T* obj, Index<T, V>* primary) override {
+        T* orig = primary->get(obj);
+        del(orig);
+    }
+
+    FORCE_INLINE void foreach(FuncType f) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE void slice(const T* key, FuncType f) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE void update(T* elem) override {
+        del(elem);
+        add(elem);
+    }
+
+    /*Ideally, we should check if the hash changes and then delete and insert.
+     *  However, in the cases where we use it, hash does not change, so to have
+     *   an impact, deleted and insert in all cases  */
+    FORCE_INLINE void updateCopyDependent(T* obj, T* orig) override {
+        del(orig);
+        add(obj);
+    }
+
+    FORCE_INLINE void updateCopy(T* obj, Index<T, V>* primaryIdx) override {
+        T* orig = primaryIdx->get(obj);
+        del(orig);
+        add(obj);
+
+    }
+
+    FORCE_INLINE size_t count() const override {
+        return count_;
+    }
+
+    FORCE_INLINE void clear() override {
+        throw std::logic_error("Not implemented");
+    }
+
+    /******************* non-virtual function wrappers ************************/
+
+    FORCE_INLINE T* get(const T& key) const {
+        return get(&key);
+    }
+
+    FORCE_INLINE T* getCopy(const T* key) const {
+        T* obj = get(key);
+        return obj ? obj->copy() : nullptr;
+    }
+
+    FORCE_INLINE T* getCopy(const T& key) const {
+        T* obj = get(&key);
+        return obj ? obj->copy() : nullptr;
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T* key) const {
+        T* obj = get(key);
+        return obj ? obj->copy() : nullptr;
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T& key) const {
+        T* obj = get(&key);
+        return obj ? obj->copy() : nullptr;
+    }
+
+    FORCE_INLINE void slice(const T& key, FuncType f) {
+        slice(&key, f);
+    }
+
+    FORCE_INLINE void sliceCopy(const T& key, FuncType f) {
+        sliceCopy(&key, f);
+    }
+
+    FORCE_INLINE void sliceCopyDependent(const T* key, FuncType f) {
+        sliceCopy(key, f);
+    }
+
+    FORCE_INLINE void sliceCopyDependent(const T& key, FuncType f) {
+        sliceCopy(&key, f);
+    }
+
+    FORCE_INLINE void delCopyDependent(const T* obj) {
+        del(obj);
+    }
+};
+
 template<typename T, typename V, typename IDX_FN1, typename IDX_FN2, bool is_max>
 class TreeIndex : public Index<T, V> {
 public:
@@ -1685,8 +2072,7 @@ private:
     const bool is_unique = false;
     Pool<IdxEquivNode> equiv_nodes_;
     Pool<IdxNode> nodes_;
-    const V zero;
-    size_t count_, threshold_;
+    size_t count_, threshold_, maxSlices;
     double load_factor_;
 
     void resize_(size_t new_size) {
@@ -1943,28 +2329,31 @@ public:
     //storesize the size of Store that manages the memory for HashMap index entries. The number of distinct index entries
     //          is an upper bound on this number
 
-    TreeIndex(size_t size, size_t storesize, size_t equivsize, double load_factor) : equiv_nodes_(equivsize), nodes_(storesize), zero(ZeroVal<V>().get()) {
+    TreeIndex(size_t size, size_t storesize, size_t equivsize, double load_factor) : equiv_nodes_(equivsize), nodes_(storesize) {
         load_factor_ = load_factor;
         size_ = 0;
         count_ = 0;
+        maxSlices = 0;
         buckets_ = nullptr;
         resize_(size);
 
     }
 
-    TreeIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : equiv_nodes_(size), nodes_(size), zero(ZeroVal<V>().get()) {
+    TreeIndex(Pool<T>* stPool, size_t size, double load_factor = .75) : equiv_nodes_(size), nodes_(size) {
         load_factor_ = load_factor;
         size_ = 0;
         count_ = 0;
+        maxSlices = 0;
         buckets_ = nullptr;
         resize_(size);
 
     }
 
-    TreeIndex(Pool<T>* stPool = nullptr) : equiv_nodes_(false), nodes_(false), zero(ZeroVal<V>().get()) {
+    TreeIndex(Pool<T>* stPool = nullptr) : equiv_nodes_(false), nodes_(false) {
         load_factor_ = 0.75;
         size_ = 0;
         count_ = 0;
+        maxSlices = 0;
         buckets_ = nullptr;
     }
 
@@ -1977,6 +2366,19 @@ public:
     ~TreeIndex() {
         clear();
         if (buckets_ != nullptr) delete[] buckets_;
+    }
+
+    void getSizeStats(std::ostream & fout) {
+        fout << "{ \"ArrayLength\" : \"" << size_ << "\", ";
+        fout << " \"OptArrayLength\" : \"" << (size_t) ((maxSlices + 1) * INV_LF) << "\", ";
+        fout << "  \"PoolSize\" : \"" << nodes_.size_ << "\", ";
+        fout << "  \"NumSlices\" : \"" << count_ << "\", ";
+        size_t numInArray = 0;
+        for (uint i = 0; i < size_; ++i) {
+            if (buckets_[i].equivNodes)
+                numInArray++;
+        }
+        fout << "  \"NumInArray\" : \"" << numInArray << "\"}";
     }
 
     void printTree(const T& key) {
@@ -2002,13 +2404,13 @@ public:
     }
 
     FORCE_INLINE T* get(const T* key) const override {
-        HASH_RES_t h = IDX_FN1::hash(key);
+        HASH_RES_t h = IDX_FN1::hash(*key);
         IdxNode* n = &(buckets_[h % size_]);
 
         do {
             if (n->equivNodes && h == n->hash && !IDX_FN1::cmp(*key, *n->equivNodes->obj)) {
                 IdxEquivNode* curr = n->equivNodes;
-                while (curr->left) curr = curr->left;
+                //                while (curr->left) curr = curr->left;
                 return curr->obj;
             }
         } while ((n = n->nxt));
@@ -2020,16 +2422,20 @@ public:
     FORCE_INLINE void add(T* obj) override {
         HASH_RES_t h = IDX_FN1::hash(*obj);
         if (count_ > threshold_) {
-            std::cerr << "  Index resize count=" << count_ << "  size=" << size_ << std::endl;
-            exit(1);
-            //resize_(size_ << 1);
+#ifdef NORESIZE
+            std::cerr << " Tree Index resize size=" << size_ << std::endl;
+#endif
+            //            std::cerr << "  Index resize count=" << count_ << "  size=" << size_ << std::endl;
+            //            exit(1);
+            resize_(size_ << 1);
         }
         size_t b = h % size_;
         IdxNode* n = &buckets_[b];
         IdxNode* nw;
 
         if (!n->equivNodes) { // space left in last IdxNode
-            ++count_;
+            if (++count_ > maxSlices)
+                maxSlices = count_;
             n->hash = h;
             n->equivNodes = equiv_nodes_.add();
             n->equivNodes->obj = obj; // n->equivNodes->nxt=nullptr;
@@ -2050,7 +2456,8 @@ public:
         }*/
         } while ((n = n->nxt));
         // if(!n) {
-        ++count_;
+        if (++count_ > maxSlices)
+            maxSlices = count_;
         n = &buckets_[b];
         nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
         nw->hash = h;
@@ -2197,10 +2604,9 @@ template <typename T, typename V, typename IDX_FN, size_t size>
 class ArrayIndex : public Index<T, V> {
     T* array[size];
     bool isUsed[size];
-    const V zero;
 public:
 
-    ArrayIndex(Pool<T>* stPool = nullptr, int s = size) : zero(ZeroVal<V>().get()) { //Constructor argument is ignored
+    ArrayIndex(Pool<T>* stPool = nullptr, int s = size) { //Constructor argument is ignored
         memset(isUsed, 0, size);
     }
 
@@ -2388,8 +2794,15 @@ public:
         fout << "{}";
     }
 
+    void resize_(size_t s) {
+
+    }
+
     bool operator==(const ListIndex<T, V, IDX_FN, is_unique>& right) const {
         HashIndex<T, V, IDX_FN, true> h1, h2;
+        size_t s = count();
+        h1.resize_(s);
+        h2.resize_(s);
         h1.idxId = h2.idxId = 0;
         foreach([&](const T * e) {
             h1.add(const_cast<T *> (e));

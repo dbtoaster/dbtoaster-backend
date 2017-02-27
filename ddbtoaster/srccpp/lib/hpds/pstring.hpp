@@ -207,7 +207,7 @@ public:
     }
 
     inline bool operator==(const PString &other) const {
-//        if (this->size_ != other.size_) return false;  Disabled due to direct operations on data after which size is incorrect
+        //        if (this->size_ != other.size_) return false;  Disabled due to direct operations on data after which size is incorrect
         return (strcmp(this->data_, other.data_) == 0);
     }
 
@@ -217,19 +217,21 @@ public:
     }
 
     inline bool operator<(const PString &other) const {
-        if (this->size_ != other.size_) {
-            return (this->size_ < other.size_);
+        int i = 0;
+        while (true) {
+            char c1 = tolower(data_[i]);
+            char c2 = tolower(other.data_[i]);
+            if (!c1)
+                return c2; 
+            else if (!c2)
+                return false;
+            else if (c1 == c2) {
+                i++;
+                continue;
+            } else if (c1 < c2)
+                return true;
+            else return false;
         }
-        char *tmp1 = this->data_;
-        char *tmp2 = other.data_;
-        while (*tmp1 != 0) {
-            if (*tmp1 != *tmp2) {
-                return (*tmp1 < *tmp2);
-            }
-            ++tmp1;
-            ++tmp2;
-        }
-        return false;
     }
 
     inline bool operator==(const char *other) {

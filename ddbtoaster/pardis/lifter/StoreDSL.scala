@@ -103,7 +103,6 @@ trait StoreDSL extends
     case DateType => unit[Date](null)
     case PardisVariableType(ctp) => nullValue(ctp)
     case NullType => unit(null)
-    case rtp if rtp.isRecord => unit(null)
     case _ => System.err.println(s"Type $tp doesn't have nullValue defined"); unit(null)
   }
 

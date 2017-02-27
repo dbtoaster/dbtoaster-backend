@@ -6,6 +6,7 @@ import ch.epfl.data.sc.pardis.property.{Property, TypedPropertyFlag}
 import ch.epfl.data.sc.pardis.types.AnyType
 import ddbt.codegen.Optimizer
 import ddbt.lib.store._
+import ddbt.lib.store.deep.GenericEntryIRs.GenericEntryGet
 import ddbt.lib.store.deep.StoreDSL
 
 /**
@@ -24,8 +25,9 @@ class IndexedCols extends Property {
   var primary: Seq[Int] = Nil
   var fixedrange: Seq[(Int, Int, Int)] = Nil
   val secondary = collection.mutable.Set[Seq[Int]]()
-  val min = collection.mutable.Set[(Seq[Int], PardisLambda[_, _])]()
-  val max = collection.mutable.Set[(Seq[Int], PardisLambda[_, _])]()
+  val min = collection.mutable.HashMap[(Seq[Int], Int), PardisLambda[_, _]]()
+  val max = collection.mutable.HashMap[(Seq[Int], Int), PardisLambda[_, _]]()
+  val med = collection.mutable.HashMap[(Seq[Int], Int), PardisLambda[_, _]]()
 }
 
 object IndexedCols {
@@ -60,16 +62,21 @@ class Indexes extends Property {
       indexes += Index(count, l.toList, IHash, false)
       count = count + 1
     })
-    cols.max.foreach({ case (l, f) => {
+    cols.max.foreach({ case ((l, c), f) => {
       indexes += Index(count, l.toList, ISliceHeapMax, false, count + 1, f)
       indexes += Index(count + 1, l.toList, INone, false)
       count = count + 2
     }
     })
-    cols.min.foreach({ case (l, f) => {
+    cols.min.foreach({ case ((l, c), f) => {
       indexes += Index(count, l.toList, ISliceHeapMin, false, count + 1, f)
       indexes += Index(count + 1, l.toList, INone, false)
       count = count + 2
+    }
+    })
+    cols.med.foreach({ case ((l, c), f) => {
+      indexes += Index(count, l.toList, ISlicedHeapMed, false, count + 1, f)
+      indexes += Index(count + 1, l.toList, INone, false)
     }
     })
 
@@ -83,6 +90,15 @@ class Indexes extends Property {
   def getIdxForMin(c: Seq[Int]): Int = indexes.find(i => i.cols == c && (i.tp == ISliceHeapMin || i.tp == ISliceMin)).map(_.idxNum).getOrElse(-1)
 
   def getIdxForMax(c: Seq[Int]): Int = indexes.find(i => i.cols == c && (i.tp == ISliceHeapMax || i.tp == ISliceMax)).map(_.idxNum).getOrElse(-1)
+
+  def getIdxForMedian(c: Seq[Int]): Int = indexes.find(i => i.cols == c && i.tp == ISlicedHeapMed).map(_.idxNum).getOrElse(-1)
+
+}
+
+object Index {
+  def getColumnNumFromLambda(f : PardisLambda[_, _]) = f.o.stmts(0).rhs match {
+    case GenericEntryGet(_, Constant(i)) => i
+  }
 }
 
 class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {
@@ -93,30 +109,40 @@ class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
 
     case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMaxObject(Def(f@PardisLambda(_, _, _))))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
-      idxes.max += ((args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }) -> f.asInstanceOf[Lambda[_, _]])
+      val cols = (args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v })
+      val ordC = Index.getColumnNumFromLambda(f)
+      idxes.max += ((cols, ordC) -> f)
       sym.attributes += idxes
-
       ()
     }
     case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMinObject(Def(f@PardisLambda(_, _, _))))) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
-      idxes.min += ((args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }) -> f.asInstanceOf[Lambda[_, _]])
+      val cols = (args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v })
+      val ordC = Index.getColumnNumFromLambda(f)
+      idxes.min += ((cols, ordC) -> f)
       sym.attributes += idxes
-
       ()
     }
+
+    case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), Def(AggregatorMedianObject(Def(f@PardisLambda(_, _, _))))) => {
+      val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
+      val cols = (args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v })
+      val ordC = Index.getColumnNumFromLambda(f)
+      idxes.med += ((cols, ordC) -> f)
+      sym.attributes += idxes
+      ()
+    }
+
     case StoreSliceCopy(sym: Sym[_], _, Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), z@_) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       idxes.secondary += (args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v })
       sym.attributes += idxes
-
       ()
     }
     case StoreSliceCopy(sym: Sym[_], _, Def(SteSampleSEntry(_, args)), z@_) => {
       val idxes = sym.attributes.get[IndexedCols](IndexedColsFlag).getOrElse(new IndexedCols())
       idxes.secondary += (args.map(_._1))
       sym.attributes += idxes
-
       ()
     }
   }
@@ -185,9 +211,7 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
         case Index(_, cols, ISliceHeapMax, _, _, f, _) => {
           implicit val tp = f.tp.asInstanceOf[TypeRep[(GenericEntry => Any)]]
           implicit val typeR = f.typeS.asInstanceOf[TypeRep[Any]]
-          val ordCol = f.o.stmts(0).rhs match {
-            case GenericEntryGet(_, Constant(i)) => i
-          }
+          val ordCol =Index.getColumnNumFromLambda(f)
           val rep = EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
           if (!genCmp.contains((cols, ordCol)))
             genCmp += ((cols, ordCol) -> rep)
@@ -197,13 +221,21 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
           implicit val tp = f.tp.asInstanceOf[TypeRep[(GenericEntry => Any)]]
           implicit val typeR = f.typeS.asInstanceOf[TypeRep[Any]]
           val rep = EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
-          val ordCol = f.o.stmts(0).rhs match {
-            case GenericEntryGet(_, Constant(i)) => i
-          }
+          val ordCol = Index.getColumnNumFromLambda(f)
           if (!genCmp.contains((cols, ordCol)))
             genCmp += ((cols, ordCol) -> rep)
           rep
         }
+        case Index(_, cols, ISlicedHeapMed, _, _, f, _) => {
+          implicit val tp = f.tp.asInstanceOf[TypeRep[(GenericEntry => Any)]]
+          implicit val typeR = f.typeS.asInstanceOf[TypeRep[Any]]
+          val rep = EntryIdx.genericCmp(unit[Seq[Int]](cols), toAtom(f.asInstanceOf[PardisLambda[GenericEntry, Any]]))
+          val ordCol = Index.getColumnNumFromLambda(f)
+          if (!genCmp.contains((cols, ordCol)))
+            genCmp += ((cols, ordCol) -> rep)
+          rep
+        }
+
         case Index(id, cols, IList, _, _, _, _) =>
           if (Optimizer.analyzeIndex || id != 0)
             throw new Exception("List index should be the only index")
@@ -255,6 +287,16 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
       aggResultMap += (agg ->(store, unit(idx), key))
       ()
     }
+
+    case StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMedianObject(_))) => {
+      //System.err.println(s"Looking for index of $store")
+      val idxes = store.asInstanceOf[Sym[_]].attributes.get[Indexes](IndexesFlag).get
+      val cols = args.zipWithIndex.collect { case (Constant(v: Int), i) if i < args.size / 2 => v }
+      val idx = idxes.getIdxForMedian(cols)
+      //System.err.println(s"Added $agg to AggResult")
+      aggResultMap += (agg ->(store, unit(idx), key))
+      ()
+    }
   }
   rewrite += remove {
     case StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMaxObject(_))) => {
@@ -263,9 +305,12 @@ class IndexTransformer(override val IR: StoreDSL) extends RuleBasedTransformer[S
     case StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMinObject(_))) => {
       ()
     }
+    case StoreSliceCopy(store, _, key@Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))), agg@Def(AggregatorMedianObject(_))) => {
+      ()
+    }
   }
   rewrite += rule {
-    case AggregatorResult(agg) => {
+    case AggregatorResult(agg) if aggResultMap contains agg => {
       val t = aggResultMap(agg)
       StoreGetCopy(t._1.asInstanceOf[Rep[Store[Entry]]], t._2, t._3.asInstanceOf[Rep[Entry]])
     }

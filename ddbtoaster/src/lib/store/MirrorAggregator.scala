@@ -17,4 +17,6 @@ object MirrorAggregator {
   def min[E <: Entry, R](f: E => R)(implicit order: Ordering[R]) : Aggregator[E] = ???
   @pure
   def max[E <: Entry, R](f: E => R)(implicit order: Ordering[R]) : Aggregator[E] = ???
+  @pure
+  def median[E <: Entry, R](f: E => R)(implicit order: Ordering[R]) : Aggregator[E] = ???
 }

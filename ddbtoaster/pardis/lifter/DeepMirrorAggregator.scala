@@ -25,6 +25,7 @@ trait AggregatorOps extends Base  {
   object Aggregator {
      def min[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = aggregatorMinObject[E, R](f)(typeE, typeR, order)
      def max[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = aggregatorMaxObject[E, R](f)(typeE, typeR, order)
+     def median[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = aggregatorMedianObject[E, R](f)(typeE, typeR, order)
   }
   // constructors
 
@@ -41,6 +42,8 @@ trait AggregatorOps extends Base  {
   type AggregatorMinObject[E <: ddbt.lib.store.Entry, R] = AggregatorIRs.AggregatorMinObject[E, R]
   val AggregatorMaxObject = AggregatorIRs.AggregatorMaxObject
   type AggregatorMaxObject[E <: ddbt.lib.store.Entry, R] = AggregatorIRs.AggregatorMaxObject[E, R]
+  val AggregatorMedianObject = AggregatorIRs.AggregatorMedianObject
+  type AggregatorMedianObject[E <: ddbt.lib.store.Entry, R] = AggregatorIRs.AggregatorMedianObject[E, R]
   // method definitions
    def aggregatorApply[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = AggregatorApply[E](self, e)
    def aggregatorResult[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit typeE : TypeRep[E]) : Rep[E] = AggregatorResult[E](self)
@@ -48,6 +51,7 @@ trait AggregatorOps extends Base  {
    def aggregatorAndThen[E <: ddbt.lib.store.Entry, A](self : Rep[Aggregator[E]], g : Rep[((Unit) => A)])(implicit typeE : TypeRep[E], typeA : TypeRep[A]) : Rep[(E => A)] = AggregatorAndThen[E, A](self, g)
    def aggregatorMinObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = AggregatorMinObject[E, R](f)
    def aggregatorMaxObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = AggregatorMaxObject[E, R](f)
+   def aggregatorMedianObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = AggregatorMedianObject[E, R](f)
   type Aggregator[E <: ddbt.lib.store.Entry] = ddbt.lib.store.Aggregator[E]
 }
 object AggregatorIRs extends Base {
@@ -95,6 +99,18 @@ object AggregatorIRs extends Base {
     override def partiallyEvaluate(children: Any*): Aggregator[E] = {
       val f = children(0).asInstanceOf[(E => R)]
       ddbt.lib.store.MirrorAggregator.max[E, R](f)
+    }
+    override def partiallyEvaluable: Boolean = true
+
+  }
+
+  case class AggregatorMedianObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit val typeE : TypeRep[E], val typeR : TypeRep[R], val order : Ordering[R]) extends FunctionDef[Aggregator[E]](None, "Aggregator.median", List(List(f))){
+    override def curriedConstructor = (copy[E, R] _)
+    override def isPure = true
+
+    override def partiallyEvaluate(children: Any*): Aggregator[E] = {
+      val f = children(0).asInstanceOf[(E => R)]
+      ddbt.lib.store.MirrorAggregator.median[E, R](f)
     }
     override def partiallyEvaluable: Boolean = true
 
