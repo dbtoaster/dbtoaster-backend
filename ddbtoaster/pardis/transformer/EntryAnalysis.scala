@@ -313,6 +313,11 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       implicit val entTp = SEntry(sch).tp
       Aggregator.min(f)(entTp, agg.typeR, agg.order)
 
+    case sym -> (agg@AggregatorMedianObject(f)) if entryTypes.contains(sym) =>
+      val sch = schema(sym)
+      implicit val entTp = SEntry(sch).tp
+      Aggregator.median(f)(entTp, agg.typeR, agg.order)
+
     case sym -> (res@AggregatorResult(self)) if entryTypes.contains(sym) =>
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp.asInstanceOf[TypeRep[Entry]]
