@@ -2794,6 +2794,10 @@ public:
         fout << "{}";
     }
 
+    void getBucketStats() {
+        cerr << count() << endl;
+    }
+
     void resize_(size_t s) {
 
     }
