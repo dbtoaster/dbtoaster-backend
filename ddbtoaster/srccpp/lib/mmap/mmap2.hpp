@@ -971,6 +971,32 @@ public:
         }
     }
 
+    FORCE_INLINE void sliceResMapNoUpd(const T* key, FuncType f, IdxEquivNode* e) {
+        sliceResMapNoUpd(key, f, e);
+    }
+    
+    FORCE_INLINE void sliceResMapNoUpd(const T& key, FuncType f, IdxEquivNode* e) {
+        IdxN *n = &e->head;
+        do {
+             f(n->obj);
+        } while ((n = n->nxt));
+    }
+    
+    FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f){
+        HASH_RES_t h = IDX_FN::hash(*key);
+        IdxEquivNode* e = &(buckets_[h % size_]);
+        if (e->head.obj)
+            do {
+                IdxN *n = &e->head;
+                if (h == e->hash && !IDX_FN::cmp(*key, *n->obj)) {
+                    do {
+                        f(n->obj);
+                    } while ((n = n->nxt));
+                    break;
+                }
+            } while ((e = e->nxt));
+    }
+
     /********************    virtual functions *******************************/
 
     FORCE_INLINE bool hashDiffers(const T& x, const T& y) const override {
@@ -1213,6 +1239,10 @@ public:
 
     FORCE_INLINE void slice(const T& key, FuncType f) {
         slice(&key, f);
+    }
+    
+    FORCE_INLINE void sliceNoUpdate(const T& key, FuncType f) {
+        sliceNoUpdate(&key, f);
     }
 
     FORCE_INLINE void sliceCopy(const T& key, FuncType f) {
@@ -2928,7 +2958,7 @@ public:
         }
     }
 
-    FORCE_INLINE void slice(const T* key, FuncType f) override {
+    FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f) override {
         Container *cur = head;
         while (cur != nullptr) {
             if (IDX_FN::cmp(*key, *cur->obj) == 0)
@@ -2937,6 +2967,17 @@ public:
         }
     }
 
+  FORCE_INLINE void slice(const T* key, FuncType f) override {
+        std::vector<T*> entries;
+        Container *cur = head;
+        while (cur != nullptr) {
+            if (IDX_FN::cmp(*key, *cur->obj) == 0)
+                entries.push_back(cur->obj);
+            cur = cur->next;
+        }
+        for(auto e : entries)
+           f(e);
+    }
     FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
 
         std::vector<T*> entries;

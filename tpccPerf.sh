@@ -15,6 +15,7 @@ allopts=(
 "-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar -opt idxinline -opt deadidx"
 "-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar -opt idxinline -opt deadidx -opt sliceinline"
 "-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar  -opt idxinline -opt deadidx -opt sliceinline -opt codemotion"
+#"-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar  -opt idxinline -opt deadidx -opt sliceinline -opt codemotion -opt slicenoupd"
 )
 cnt=1
 
@@ -58,7 +59,7 @@ cnt=$((cnt+1))
 done
 n=1000000
 #most optimal case dry run
-opt="-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar  -opt idxinline -opt deadidx -opt sliceinline -opt codemotion"
+opt="-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar  -opt idxinline -opt deadidx -opt sliceinline -opt codemotion -opt slicenoupd"
 sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang cpp -info tpcc-$n"
 rm -f tpcc.out
 g++ -std=c++11 -O3 -DNUMWARE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out

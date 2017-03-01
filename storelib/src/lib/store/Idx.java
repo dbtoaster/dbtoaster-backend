@@ -1,6 +1,7 @@
 package ddbt.lib.store;
 
 import scala.Function1;
+import scala.NotImplementedError;
 import scala.Unit;
 
 
@@ -28,7 +29,8 @@ public abstract class Idx<E extends Entry> {
     protected int size;
 
     protected void w(String n) {
-    } //println(this.getClass.getName+": "+n+" not supported")
+        throw new NotImplementedError(this.getClass().getName()+": "+n+" not supported");
+    }
 
     public void unsafeInsert(E e) {
         w("unsafeInsert");
@@ -102,12 +104,19 @@ public abstract class Idx<E extends Entry> {
         w("slice");
     } // foreach on a slice
 
+    public void sliceNoUpdate(E key, Function1<E, Unit> f) {
+        w("sliceNoUpdate");
+    }
+
     public MultiRes sliceRes(E key) {
         return null;
     }
 
     public void sliceResMap(E key, Function1<E, Unit> f, MultiRes res) {
-
+        w("sliceResMap");
+    }
+    public void sliceResMapNoUpd(E key, Function1<E, Unit> f, MultiRes res) {
+        w("sliceResMapNoUpd");
     }
 
     public void sliceCopy(E key, Function1<E, Unit> f) {
@@ -370,7 +379,7 @@ class IdxHash<E extends Entry> extends Idx<E> {
     }
 
     @Override
-    public void sliceResMap(E key, Function1<E, Unit> f, MultiRes res) {
+    public void sliceResMapNoUpd(E key, Function1<E, Unit> f, MultiRes res) {
         IdxHashEntry<E> e = ((SliceRes<E>) res).sliceHead();
         int h = e.hash;
         do {
@@ -380,13 +389,41 @@ class IdxHash<E extends Entry> extends Idx<E> {
     }
 
     @Override
-    public void slice(E key, Function1<E, Unit> f) {
+    public void sliceResMap(E key, Function1<E, Unit> f, MultiRes res) {
+        IdxHashEntry<E> e = ((SliceRes<E>) res).sliceHead();
+        ArrayList<E> entries = new ArrayList<E>();
+        int h = e.hash;
+        do {
+            if (e.hash == h && ops.cmp(key, e.data) == 0)
+                entries.add(e.data);
+        } while ((e = e.next) != null);
+        for (E e_ : entries) {
+            f.apply(e_);
+        }
+    }
+
+    @Override
+    public void sliceNoUpdate(E key, Function1<E, Unit> f) {
         int h = ops.hash(key);
         IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
         if (e != null) do {
             if (e.hash == h && ops.cmp(key, e.data) == 0) f.apply(e.data);
             e = e.next;
         } while (e != null);
+    }
+
+    @Override
+    public void slice(E key, Function1<E, Unit> f) {
+        int h = ops.hash(key);
+        ArrayList<E> entries = new ArrayList<E>();
+        IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
+        if (e != null) do {
+            if (e.hash == h && ops.cmp(key, e.data) == 0) entries.add(e.data);
+            e = e.next;
+        } while (e != null);
+        for (E e_ : entries) {
+            f.apply(e_);
+        }
     }
 
     @Override

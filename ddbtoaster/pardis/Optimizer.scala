@@ -32,6 +32,7 @@ object Optimizer {
   var m3CompareMultiply = false
   var regexHoister = false
   var multiResSplitter = false
+  var sliceNoUpd = false
 
   var refCounter = true
   var cTransformer = false
@@ -48,7 +49,7 @@ class Optimizer(val IR: StoreDSL) {
   optCombination = List(analyzeEntry -> "E", analyzeIndex -> "I", fixedRange -> "G", onlineOpts -> "O",
     tmpVarHoist -> "V", tmpMapHoist -> "M", indexInline -> "N", indexLookupFusion -> "F",
     indexLookupPartialFusion -> "P", sliceInline -> "S", deadIndexUpdate -> "D", codeMotion -> "C",
-    m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R", multiResSplitter -> "U", initialStoreSize -> "Z").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
+    m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R", multiResSplitter -> "U", initialStoreSize -> "Z", sliceNoUpd -> "L").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
 
   if (Optimizer.analyzeIndex) {
     pipeline += new IndexAnalysis(IR)
@@ -87,6 +88,12 @@ class Optimizer(val IR: StoreDSL) {
 
   if(Optimizer.multiResSplitter && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("MultiRes Splitter requires Index Inline, IndexLookupFusion")
+
+  if (Optimizer.sliceNoUpd && !Optimizer.deadIndexUpdate)
+    throw new Error("SliceNoUpdate requires deadIndexUpdate")
+
+  if(Optimizer.sliceNoUpd)
+    pipeline += new SliceToSliceNoUpd(IR)
 
   if(Optimizer.multiResSplitter)
     pipeline += new MultiResSplitter(IR)

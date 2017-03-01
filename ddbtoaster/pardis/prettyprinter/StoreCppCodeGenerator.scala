@@ -50,6 +50,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, s@SetApplyObject2()) => doc"unordered_set<${s.typeT}> $sym; //setApply2"
     case Statement(sym, `Set+=`(self, elem)) => doc"$self.insert($elem);"
 
+    case Statement(sym, v@PardisNewVar(Constant(0))) if v.typeT == StringType => doc"${sym.tp} $sym;"
 
     case Statement(sym, agg@AggregatorMaxObject(f)) =>
       doc"${agg.typeE}* ${sym}result;" :/:
@@ -130,7 +131,16 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val post = doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
-    case Statement(sym, IdxSliceResMap(idx, key, f, res: Sym[_])) => doc"$idx.sliceResMap($key, $f, $res);"
+    case Statement(sym, IdxSliceResMapNoUpd(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)), res: Sym[_])) if Optimizer.sliceInline =>
+      val h = "h" + res.id
+      val IDX_FN = "IDXFN" + res.id
+
+      val pre = doc"//sliceResMapNoUpd " :\\:
+        doc"auto* n$res = &$res->head;" :\\:
+        doc"do {" :\\:
+        doc"  auto $i = n$res->obj;"
+      val post = doc"} while((n$res = n$res->nxt));"
+      pre :: Document.nest(2, blockToDocument(o)) :/: post
 
     case Statement(sym, IdxForeachRes(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)))) if Optimizer.sliceInline => doc"auto* $sym = $idx.dataHead;"
 
@@ -145,9 +155,6 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"  $i = $i -> nxt;" :\\:
           doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
-
-    case Statement(sym, IdxForeachResMap(idx, f, res: Sym[_])) => doc"$idx.foreachResMap($f, $res);"
-
 
     case Statement(sym, IdxSlice(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
       val symid = sym.id.toString
@@ -172,6 +179,29 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"      }"
 
       pre :: Document.nest(4, blockToDocument(o)) :/: post
+
+    case Statement(sym, IdxSliceNoUpdate(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
+      val symid = sym.id.toString
+
+      val IDX_FN = "IDXFN" + sym.id
+      val pre =
+        doc"//sliceNoUpdate " :\\:
+          doc"typedef typename ${self}Idx${idxNum}Type::IFN $IDX_FN;" :\\:
+          doc"HASH_RES_t h$symid = $IDX_FN::hash($key);" :\\:
+          doc"auto* e$symid = &($idx.buckets_[h$symid % $idx.size_]);" :\\:
+          doc"if(e$symid->head.obj)" :\\:
+          doc"  do {" :\\:
+          doc"    auto* n$symid = &e$symid->head;" :\\:
+          doc"    if(h$symid == e$symid->hash && !$IDX_FN::cmp($key, *n$symid->obj)) {" :\\:
+          doc"      do {" :\\:
+          doc"        auto $i = n$symid->obj;"
+      val post =
+        doc"      } while((n$symid = n$symid->nxt));" :\\:
+        doc"      break;" :\\:
+        doc"    }" :\\:
+        doc"  } while((e$symid = e$symid->nxt));"
+
+      pre :: Document.nest(8, blockToDocument(o)) :/: post
 
     case Statement(sym, IdxForeach(idx@Def(StoreIndex(self, Constant(idxNum), _, _, _)), Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
       val symid = sym.id.toString
@@ -255,10 +285,14 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case IdxDeleteCopy(self, key, primary) => doc"$self.delCopy($key, &$primary)"
     case IdxDeleteCopyDependent(self, key) => doc"$self.delCopyDependent($key)"
     case IdxSlice(self, key, f) => doc"$self.slice($key, $f)"
+    case IdxSliceNoUpdate(self, key, f) => doc"$self.sliceNoUpdate($key, $f)"
     case IdxSliceCopy(self, key, f) => doc"$self.sliceCopy($key, $f)"
     case IdxSliceCopyDependent(self, key, f) => doc"$self.sliceCopyDependent($key, $f)"
     case IdxForeach(self, f) => doc"$self.foreach($f)"
     case IdxClear(self) => doc"$self.clear()"
+    case IdxForeachResMap(idx, f, res: Sym[_]) => doc"$idx.foreachResMap($f, $res)"
+    case IdxSliceResMap(idx, key, f, res: Sym[_]) => doc"$idx.sliceResMap($key, $f, $res)"
+    case IdxSliceResMapNoUpd(idx, key, f, res: Sym[_]) => doc"$idx.sliceResMapNoUpd($key, $f, $res)"
 
     case ArrayBufferAppend(self, elem) => doc"$self.push_back($elem)"
     case ArrayBufferApply(Def(ArrayBufferSortWith(self, _)), i) => doc"$self[$i]"

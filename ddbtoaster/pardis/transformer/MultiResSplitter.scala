@@ -15,6 +15,9 @@ class MultiResSplitter(override val IR: StoreDSL) extends RuleBasedTransformer[S
     case IdxSlice(self, key, f) =>
       val res = self.sliceRes(key)
       __ifThenElse(res.isEmpty, unit(), self.sliceResMap(key, f, res))(UnitType)
+    case IdxSliceNoUpdate(self, key, f) =>
+      val res = self.sliceRes(key)
+      __ifThenElse(res.isEmpty, unit(), self.sliceResMapNoUpd(key, f, res))(UnitType)
     case IdxForeach(self, f) =>
       val res = self.foreachRes()
       __ifThenElse(res.isEmpty, unit(), self.foreachResMap(f, res))(UnitType)
