@@ -2958,7 +2958,7 @@ public:
         }
     }
 
-    FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f) override {
+    FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f) {
         Container *cur = head;
         while (cur != nullptr) {
             if (IDX_FN::cmp(*key, *cur->obj) == 0)

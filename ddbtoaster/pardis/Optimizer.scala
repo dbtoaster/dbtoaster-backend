@@ -74,28 +74,38 @@ class Optimizer(val IR: StoreDSL) {
       pipeline += new SampleEntryHoister(IR)
   } else if (Optimizer.tmpVarHoist) {
     throw new Error("Tmp Var Hoisting cannot be enabled without Entry analysis")
+    //TmpVar hoisting will do nothing without EntryAnalysis, as the cases for GenericEntries are not defined.
   }
 
 
   //    pipeline += PartiallyEvaluate
-  if (!Optimizer.indexLookupFusion && !Optimizer.analyzeIndex && Optimizer.analyzeEntry)
-    throw new Error("Entry analysis requires either indexlookup or index analysis")
   if (Optimizer.indexLookupFusion || Optimizer.indexLookupPartialFusion)
     pipeline += new IndexLookupFusion(IR)
 
   if (Optimizer.indexInline)
     pipeline += new IndexInliner(IR)
 
-  if(Optimizer.multiResSplitter && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
+  if (Optimizer.multiResSplitter && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("MultiRes Splitter requires Index Inline, IndexLookupFusion")
+  /* MultiRes covers cases of only IdxSlice and IdxForEach.
+     Theoretically, this can be done at StoreLevel as well as for SliceCopy functions. However, doing so increases the
+    number of possible nodes to increase thereby increasing the number of scenarios that sliceInline needs to handle
+    */
 
   if (Optimizer.sliceNoUpd && !Optimizer.deadIndexUpdate)
     throw new Error("SliceNoUpdate requires deadIndexUpdate")
+  /*
+      SliceNoUpdate covers the case of only IdxSlice.
+      Even though this optimization can be performed without the deadIndexUpdate, for the best case, it should be after
+      doing deadIdxupdate which removes all updates (atleast in current benchmarks)
+      To do this optimization without LookupFusion, there should be "noUpd" nodes for sliceCopy and sliceCopyDependent
+      To do it without IdxInline, there should be "noUpd" versions for StoreSlice
+   */
 
-  if(Optimizer.sliceNoUpd)
+  if (Optimizer.sliceNoUpd)
     pipeline += new SliceToSliceNoUpd(IR)
 
-  if(Optimizer.multiResSplitter)
+  if (Optimizer.multiResSplitter)
     pipeline += new MultiResSplitter(IR)
 
   if (Optimizer.tmpMapHoist)
@@ -103,23 +113,39 @@ class Optimizer(val IR: StoreDSL) {
 
   if (Optimizer.deadIndexUpdate && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("DeadIndexUpdate opt requires both index inline as well as indexlookup fusion")
+  /*
+    This optimization makes no sense without IdxInline, as without it, it can only be done at runtime by the store.
+    This optimization requires lookupfusion because, in the current model of updateCopy, the original element is removed,
+    and the new element is inserted. Thus, if one index updates, all of them should also update. However, this is not the case if
+     the memory location of the original element is overwritten using the values of the new element. Primary index has to update always,
+    as there could be changes in value field, but updates to other indexes could possibly be avoided.
+    SBJ: What are the issues with the latter approach?
+   */
 
   if (Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion && Optimizer.tmpVarHoist)) //hash and cmp not implemented for pointer
     throw new Error("Inlining slice requires Index Inline, IndexLookupFusion and TempVarHoisting implemented only for c++")
+  /*
+      Restrictions on IdxInline and LookupFusion imposed to reduce the number of cases that needs to handled, but
+      theoretically, they can be removed.
+      Currently implemented as a hack on CPP code generator, and not for scala (but no error is given if this is enabled for scala, and nothing happens)
+      TmpVar hoisting is needed to avoid handling cases with and without pointers in C++.
+        Currently, sampleEntries are pointers without hoisting and references after hoisting
+        If this is changed, then sliceInline has no requirement of TmpVarHoist
+   */
 
   pipeline += DCE
   pipeline += ParameterPromotion
 
   pipeline += new StoreDCE(IR)
 
-//  pipeline += new CommonPureExpression(IR)
+  //  pipeline += new CommonPureExpression(IR)
   pipeline += new InsertNoChecks(IR)
   if (Optimizer.cTransformer) {
     pipeline += new ScalaConstructsToCTranformer(IR, false)
     pipeline += new ScalaStructToMallocTransformer(IR)
     pipeline += new StringToCTransformer(IR)
   }
-//    pipeline += TreeDumper(false)
+  //    pipeline += TreeDumper(false)
   if (Optimizer.refCounter)
     pipeline += new CountingAnalysis[StoreDSL](IR) with TransformerHandler {
       override def apply[Lang <: Base, T](context: Lang)(block: context.Block[T])(implicit evidence$1: PardisType[T]): context.Block[T] = {
