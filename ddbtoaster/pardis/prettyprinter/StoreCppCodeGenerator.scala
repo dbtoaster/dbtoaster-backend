@@ -197,9 +197,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
           doc"        auto $i = n$symid->obj;"
       val post =
         doc"      } while((n$symid = n$symid->nxt));" :\\:
-        doc"      break;" :\\:
-        doc"    }" :\\:
-        doc"  } while((e$symid = e$symid->nxt));"
+          doc"      break;" :\\:
+          doc"    }" :\\:
+          doc"  } while((e$symid = e$symid->nxt));"
 
       pre :: Document.nest(8, blockToDocument(o)) :/: post
 
@@ -366,9 +366,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       if (cols != Nil) {
         val name = "GenericOps_" + cols.mkString("")
         val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
-          "size_t h = 0;" :/:
-            s"for(int c : {${cols.mkString(", ")}})" :/:
-            "  h = h ^ (HASH(e.map.at(c)) + 0x9e3779b9 + (h<<6) + (h>>2));" :/:
+          "unsigned int h = 0;" :/:
+            cols.map(c => s"h = h ^ (HASH(e.map.at($c)) + 0x9e3779b9 + (h<<6) + (h>>2));").mkDocument("\n") :\\:
             "return h;"
         ) :/: "}"
         val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :/: Document.nest(2,
@@ -383,9 +382,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
               |         return 1;
               |  }
               |}else {
-              |  for(int c : {${cols.mkString(", ")}})
-              |    if(e1.map.at(c) != e2.map.at(c))
-              |      return 1;
+              | if(${cols.map(c => s"e1.map.at($c) != e2.map.at($c)").mkString(" || ")})
+              |   return 1;
               |}
               |return 0;""".stripMargin
         ) :/: "}"
@@ -396,9 +394,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val ordCol = Index.getColumnNumFromLambda(l)
       val name = "GenericCmp_" + cols.mkString("") + "_" + ordCol
       val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
-        "size_t h = 16;" :/:
-          s"for(int c : {${cols.mkString("")}})" :/:
-          "  h = h * 41 + HASH(e.map.at(c));" :/:
+        "unsigned int h = 0;" :/:
+          cols.map(c => s"h = h ^ (HASH(e.map.at($c)) + 0x9e3779b9 + (h<<6) + (h>>2));").mkDocument("\n") :\\:
           "return h;"
       ) :/: "}"
       val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :: Document.nest(2,
@@ -417,14 +414,9 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case EntryIdxGenericFixedRangeOpsObject(Constant(cols)) =>
       val name = "GenericFixedRange_" + cols.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")
       val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
-        s"""size_t h = 0;
-            |int cols[] = {${cols.map(_._1).mkString(", ")}};
-            |int lower[] = {${cols.map(_._2).mkString(", ")}};
-            |int upper[] = {${cols.map(_._3).mkString(", ")}};
-            |for(int i = 0; i < ${cols.size}; ++i)
-            |  h = h * (upper[i] - lower[i]) + e.getInt(cols[i]) - lower[i];  //Defined only for int
-            |return h;
-        """.stripMargin
+        doc"unsigned int h = 0;  //Defined only for int fields" :/:
+          cols.collect { case (c, l, u) if (u-l) > 1 => s"""h = h * ${u-l} + e.getInt($c) - $l; """ }.mkDocument("\n") :\\:
+          doc"return h;"
       ) :/: "}"
       val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :: Document.nest(2, "return 0;") :: "}"
       doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"

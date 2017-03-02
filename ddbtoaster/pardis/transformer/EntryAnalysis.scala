@@ -143,9 +143,12 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     __lambda((e: Rep[SEntry]) => {
       val hash = __newVar(unit(0))
       colsRange.foreach(c => {
-        val colval = fieldGetter(e, "_" + c._1)(IntType) - unit(c._2)
-        val weight = unit(c._3 - c._2)
-        __assign(hash, __readVar(hash) * weight + colval)
+        val w = c._3 - c._2
+        if(w > 1) {
+          val weight = unit(w)
+          val colval = fieldGetter(e, "_" + c._1)(IntType) - unit(c._2)
+          __assign(hash, __readVar(hash) * weight + colval)
+        }
       })
       __readVar(hash)
     })
