@@ -54,7 +54,7 @@ object Compiler {
   var exec_args = List[String]() // arguments passed for execution
   def opts(o: String) = o match{
       case "entry" => Optimizer.analyzeEntry=true
-      case "index" => Optimizer.analyzeIndex=true
+      case "index" => Optimizer.secondaryIndex=true
       case "fixedrange" => Optimizer.fixedRange=true
       case "online" => Optimizer.onlineOpts=true
       case "m3cmpmult" => Optimizer.m3CompareMultiply=true
@@ -70,6 +70,9 @@ object Compiler {
       case "regex" => Optimizer.regexHoister = true
       case "multires" => Optimizer.multiResSplitter = true
       case "slicenoupd" => Optimizer.sliceNoUpd = true
+      case "spl" => Optimizer.splSecondaryIdx = true
+      case "minmax" => Optimizer.minMaxIdx = true
+      case "med" => Optimizer.medIdx = true
       case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }

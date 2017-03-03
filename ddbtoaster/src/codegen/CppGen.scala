@@ -513,7 +513,7 @@ trait ICppGen extends IScalaGen {
 
     def genTableTriggers = s0.sources.filter(!_.stream).map{ s =>
       val name = s.schema.name
-      val entryParam = if(usingPardis && (!Optimizer.analyzeEntry || !Optimizer.analyzeIndex)) "false_type(), " else ""
+      val entryParam = if(usingPardis && (!Optimizer.analyzeEntry || !Optimizer.secondaryIndex)) "false_type(), " else ""
 
       val fields = s.schema.fields
       "void on_insert_"+name+"("+fields.map{case (fld,tp) => "const "+tp.toCpp+" "+fld }.mkString(", ")+") {\n"+

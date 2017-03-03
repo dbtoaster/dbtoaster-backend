@@ -16,6 +16,7 @@ import java.util.ArrayList;
  */
 public abstract class Idx<E extends Entry> {
     static boolean allowResize = true;
+
     Idx(Store<E> st, int idx, boolean unique) {
         this.ops = st.ops()[idx];
         this.idx = idx;
@@ -29,12 +30,13 @@ public abstract class Idx<E extends Entry> {
     protected int size;
 
     protected void w(String n) {
-        throw new NotImplementedError(this.getClass().getName()+": "+n+" not supported");
+        throw new NotImplementedError(this.getClass().getName() + ": " + n + " not supported");
     }
 
     public void unsafeInsert(E e) {
         w("unsafeInsert");
     }
+
     public String getSizeStat() {
         return "";
     }
@@ -115,6 +117,7 @@ public abstract class Idx<E extends Entry> {
     public void sliceResMap(E key, Function1<E, Unit> f, MultiRes res) {
         w("sliceResMap");
     }
+
     public void sliceResMapNoUpd(E key, Function1<E, Unit> f, MultiRes res) {
         w("sliceResMapNoUpd");
     }
@@ -188,19 +191,19 @@ class IdxHash<E extends Entry> extends Idx<E> {
 
     IdxHash(Store<E> st, int idx, boolean unique) {
         super(st, idx, unique);
-        load_factor = 0.75f ;
+        load_factor = 0.75f;
         threshold = Math.round(init_capacity * load_factor);
     }
 
     @Override
     public String getSizeStat() {
         int numInArray = 0;
-        for(int i = 0; i < data.length; ++i){
-            if(data[i] != null) {
+        for (int i = 0; i < data.length; ++i) {
+            if (data[i] != null) {
                 numInArray++;
             }
         }
-       return  "array length = "+ data.length + "  numElements  = "+size + "  threshold = "+threshold+"   numInArray = "+numInArray;
+        return "array length = " + data.length + "  numElements  = " + size + "  threshold = " + threshold + "   numInArray = " + numInArray;
     }
 
     // Private/inlined functions
@@ -353,7 +356,8 @@ class IdxHash<E extends Entry> extends Idx<E> {
     public E get(E key) {
         int h = ops.hash(key);
         IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
-        while (e != null && (e.hash != h || ops.cmp(key, e.data) != 0)) e = e.next;
+        while (e != null && (e.hash != h || ops.cmp(key, e.data) != 0))
+            e = e.next;
         return e != null ? e.data : null;
     }
 
@@ -361,66 +365,101 @@ class IdxHash<E extends Entry> extends Idx<E> {
     public void foreach(Function1<E, Unit> f) {
         Entry cur = dataHead;
         while (cur != null) {
-            f.apply((E)cur);
+            f.apply((E) cur);
             cur = cur.next;
         }
     }
 
     @Override
     public MultiRes sliceRes(E key) {
-        int h = ops.hash(key);
-        IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
-        if (e != null) do {
-            if (e.hash == h && ops.cmp(key, e.data) == 0)
-                return new SliceRes<E>(e);
-            e = e.next;
-        } while (e != null);
-        return new SliceRes<E>(null);
+        if (idx == 0) {
+            //Can't use primary hash fn for slice
+            throw new NotImplementedError("slice res not implemented for primary idx");
+        } else {
+            int h = ops.hash(key);
+            IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
+            if (e != null) do {
+                if (e.hash == h && ops.cmp(key, e.data) == 0)
+                    return new SliceRes<E>(e);
+                e = e.next;
+            } while (e != null);
+            return new SliceRes<E>(null);
+        }
     }
 
     @Override
     public void sliceResMapNoUpd(E key, Function1<E, Unit> f, MultiRes res) {
-        IdxHashEntry<E> e = ((SliceRes<E>) res).sliceHead();
-        int h = e.hash;
-        do {
-            if (e.hash == h && ops.cmp(key, e.data) == 0)
-                f.apply(e.data);
-        } while ((e = e.next) != null);
+        if (idx == 0) {
+            //Can't use primary hash fn for slice
+            throw new NotImplementedError("sliceresMapNoUpd not implemented for primary idx");
+        } else {
+            IdxHashEntry<E> e = ((SliceRes<E>) res).sliceHead();
+            int h = e.hash;
+            do {
+                if (e.hash == h && ops.cmp(key, e.data) == 0)
+                    f.apply(e.data);
+            } while ((e = e.next) != null);
+        }
     }
 
     @Override
     public void sliceResMap(E key, Function1<E, Unit> f, MultiRes res) {
-        IdxHashEntry<E> e = ((SliceRes<E>) res).sliceHead();
-        ArrayList<E> entries = new ArrayList<E>();
-        int h = e.hash;
-        do {
-            if (e.hash == h && ops.cmp(key, e.data) == 0)
-                entries.add(e.data);
-        } while ((e = e.next) != null);
-        for (E e_ : entries) {
-            f.apply(e_);
+        if (idx == 0) {
+            //Can't use primary hash fn for slice
+            throw new NotImplementedError("sliceResMap not implemented for primary idx");
+        } else {
+            IdxHashEntry<E> e = ((SliceRes<E>) res).sliceHead();
+            ArrayList<E> entries = new ArrayList<E>();
+            int h = e.hash;
+            do {
+                if (e.hash == h && ops.cmp(key, e.data) == 0)
+                    entries.add(e.data);
+            } while ((e = e.next) != null);
+            for (E e_ : entries) {
+                f.apply(e_);
+            }
         }
     }
 
     @Override
     public void sliceNoUpdate(E key, Function1<E, Unit> f) {
-        int h = ops.hash(key);
-        IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
-        if (e != null) do {
-            if (e.hash == h && ops.cmp(key, e.data) == 0) f.apply(e.data);
-            e = e.next;
-        } while (e != null);
+        if (idx == 0) {
+            //Can't use primary hash fn for slice
+            Entry e = dataHead;
+            while(e != null) {
+                if(ops.cmp(key, (E)e) == 0)
+                    f.apply((E)e);
+                e = e.next;
+            }
+        } else {
+            int h = ops.hash(key);
+            IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
+            if (e != null) do {
+                if (e.hash == h && ops.cmp(key, e.data) == 0) f.apply(e.data);
+                e = e.next;
+            } while (e != null);
+        }
     }
 
     @Override
     public void slice(E key, Function1<E, Unit> f) {
-        int h = ops.hash(key);
         ArrayList<E> entries = new ArrayList<E>();
-        IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
-        if (e != null) do {
-            if (e.hash == h && ops.cmp(key, e.data) == 0) entries.add(e.data);
-            e = e.next;
-        } while (e != null);
+        if (idx == 0) {
+            //Can't use primary hash fn for slice
+            Entry e = dataHead;
+            while(e != null) {
+                if(ops.cmp(key, (E)e) == 0)
+                    entries.add((E) e);
+                e = e.next;
+            }
+        } else {
+            int h = ops.hash(key);
+            IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
+            if (e != null) do {
+                if (e.hash == h && ops.cmp(key, e.data) == 0) entries.add(e.data);
+                e = e.next;
+            } while (e != null);
+        }
         for (E e_ : entries) {
             f.apply(e_);
         }
@@ -428,14 +467,24 @@ class IdxHash<E extends Entry> extends Idx<E> {
 
     @Override
     public void sliceCopy(E key, Function1<E, Unit> f) {
-        int h = ops.hash(key);
         ArrayList<E> entries = new ArrayList<E>();
-        IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
-        if (e != null) do {
-            if (e.hash == h && ops.cmp(key, e.data) == 0)
-                entries.add((E) e.data.copy());
-            e = e.next;
-        } while (e != null);
+        if (idx == 0) {
+            //Can't use primary hash fn for slice
+            Entry e = dataHead;
+            while(e != null) {
+                if(ops.cmp(key, (E)e) == 0)
+                    entries.add((E) e.copy());
+                e = e.next;
+            }
+        } else {
+            int h = ops.hash(key);
+            IdxHashEntry<E> e = data[(h > 0 ? h : -h) % data.length];
+            if (e != null) do {
+                if (e.hash == h && ops.cmp(key, e.data) == 0)
+                    entries.add((E) e.data.copy());
+                e = e.next;
+            } while (e != null);
+        }
         for (E e_ : entries) {
             f.apply(e_);
         }
@@ -640,8 +689,8 @@ class IdxList<E extends Entry> extends Idx<E> {
 
     @Override
     public void update(E e) {
-            delete(e);
-            unsafeInsert(e);
+        delete(e);
+        unsafeInsert(e);
     }
 
     @Override

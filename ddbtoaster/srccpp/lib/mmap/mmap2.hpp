@@ -455,27 +455,61 @@ public:
         return check;
     }
 
-    FORCE_INLINE IdxNode* sliceRes(const T* key) {
+    FORCE_INLINE T* sliceRes(const T* key) {
         return sliceRes(*key);
     }
 
-    FORCE_INLINE IdxNode* sliceRes(const T& key) {
-        throw std::logic_error("No sliceRes for primary index");
+    FORCE_INLINE T* sliceRes(const T& key) {
+        //Can't rely on primaryidx hash for slice
+        T* obj = dataHead;
+        while (obj) {
+            if (!IDX_FN::cmp(key, *obj)) {
+                return obj;
+            }
+            obj = obj->nxt;
+        }
+        return nullptr;
     }
 
-    FORCE_INLINE void sliceResMap(const T* key, FuncType f, IdxNode* n) {
-        sliceResMap(*key, f, n);
+    FORCE_INLINE void sliceResMap(const T* key, FuncType f, T* obj) {
+        sliceResMap(*key, f, obj);
     }
 
-    FORCE_INLINE void sliceResMap(const T& key, FuncType f, IdxNode* n) {
-        throw std::logic_error("No sliceRes for primary index");
+    FORCE_INLINE void sliceResMap(const T& key, FuncType f, T* obj) {
+        //Can't rely on primaryidx hash for slice
+        std::vector<T*> entries;
+        entries.push_back(obj);
+        obj = obj->nxt;
+        while (obj) {
+            if (!IDX_FN::cmp(key, *obj)) {
+                entries.push_back(obj);
+            }
+        }
+        for (auto it : entries) {
+            f(it);
+        }
     }
 
-    FORCE_INLINE T* foreachRes() {
+    FORCE_INLINE void sliceResMapNoUpd(const T* key, FuncType f, T* obj) {
+        sliceResMapNoUpd(key, f, obj);
+    }
+
+    FORCE_INLINE void sliceResMapNoUpd(const T& key, FuncType f, T* obj) {
+        //Can't rely on primaryidx hash for slice
+        f(obj);
+        while ((obj = obj->nxt)) {
+            if (!IDX_FN::cmp(key, *obj)) {
+                f(obj);
+            }
+        }
+
+    }
+
+    FORCE_INLINE T * foreachRes() {
         return dataHead;
     }
 
-    FORCE_INLINE void foreachResMap(FuncType f, T* cur) {
+    FORCE_INLINE void foreachResMap(FuncType f, T * cur) {
         while (cur) {
             f(cur);
             cur = cur->nxt;
@@ -484,13 +518,13 @@ public:
 
     /********************    virtual functions *******************************/
 
-    FORCE_INLINE bool hashDiffers(const T& x, const T& y) const override {
+    FORCE_INLINE bool hashDiffers(const T& x, const T & y) const override {
         return IDX_FN::hash(x) != IDX_FN::hash(y);
     }
 
     // retrieves the first element equivalent to the key or nullptr if not found
 
-    FORCE_INLINE T* get(const T* key) const override {
+    FORCE_INLINE T * get(const T * key) const override {
         HASH_RES_t h = IDX_FN::hash(*key);
         IdxNode* n = &buckets_[h % size_];
         do {
@@ -499,7 +533,7 @@ public:
         return nullptr;
     }
 
-    FORCE_INLINE void add(T* obj) override {
+    FORCE_INLINE void add(T * obj) override {
         HASH_RES_t h = IDX_FN::hash(*obj);
         auto idxId = Index<T, V>::idxId;
         if (idxId == 0) { //maintain usedEntry list for efficient for-each
@@ -549,7 +583,7 @@ public:
 
     // deletes an existing element (equality by pointer comparison)
 
-    FORCE_INLINE void del(T* obj) override {
+    FORCE_INLINE void del(T * obj) override {
         auto idxId = Index<T, V>::idxId;
         if (idxId == 0) {
             T *elemPrv = obj->prv, *elemNxt = obj->nxt;
@@ -601,15 +635,49 @@ public:
         }
     }
 
+    FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f) {
+        //Can't rely on primaryidx hash for slice
+        T* obj = dataHead;
+        while (obj) {
+            if (!IDX_FN::cmp(*key, *obj)) {
+                f(obj);
+            }
+            obj = obj->nxt;
+        }
+    }
+
     FORCE_INLINE void slice(const T* key, FuncType f) override {
-        throw std::logic_error("Slice not implemented for primary index");
+        //Can't rely on primaryidx hash for slice
+        T* obj = dataHead;
+        std::vector<T*> entries;
+        while (obj) {
+            if (!IDX_FN::cmp(*key, *obj)) {
+                entries.push_back(obj);
+            }
+            obj = obj->nxt;
+        }
+        for (auto it : entries) {
+            f(it);
+        }
     }
 
     FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
-        throw std::logic_error("SliceCopy not implemented for primary index");
+        //Can't rely on primaryidx hash for slice
+        std::vector<T*> entries;
+        T* obj = dataHead;
+        while (obj) {
+            if (!IDX_FN::cmp(*key, *obj)) {
+                T* temp = obj->copy();
+                entries.push_back(temp);
+            }
+            obj = obj->nxt;
+        }
+        for (auto it : entries) {
+            f(it);
+        }
     }
 
-    FORCE_INLINE void update(T* elem) override {
+    FORCE_INLINE void update(T * elem) override {
         del(elem);
         add(elem);
     }
@@ -617,7 +685,7 @@ public:
     /*Ideally, we should check if the hash changes and then delete and insert.
      *  However, in the cases where we use it, hash does not change, so to have
      *   an impact, deleted and insert in all cases  */
-    FORCE_INLINE void updateCopyDependent(T* obj, T* orig) override {
+    FORCE_INLINE void updateCopyDependent(T* obj, T * orig) override {
         del(orig);
         add(obj);
     }
@@ -659,26 +727,26 @@ public:
 
     /******************* non-virtual function wrappers ************************/
 
-    FORCE_INLINE T* get(const T& key) const {
+    FORCE_INLINE T * get(const T & key) const {
         return get(&key);
     }
 
-    FORCE_INLINE T* getCopy(const T* key) const {
+    FORCE_INLINE T * getCopy(const T * key) const {
         T* obj = get(key);
         return obj ? obj->copy() : nullptr;
     }
 
-    FORCE_INLINE T* getCopy(const T& key) const {
+    FORCE_INLINE T * getCopy(const T & key) const {
         T* obj = get(&key);
         return obj ? obj->copy() : nullptr;
     }
 
-    FORCE_INLINE T* getCopyDependent(const T* key) const {
+    FORCE_INLINE T * getCopyDependent(const T * key) const {
         T* obj = get(key);
         return obj ? obj->copy() : nullptr;
     }
 
-    FORCE_INLINE T* getCopyDependent(const T& key) const {
+    FORCE_INLINE T * getCopyDependent(const T & key) const {
         T* obj = get(&key);
         return obj ? obj->copy() : nullptr;
     }
@@ -699,7 +767,7 @@ public:
         sliceCopy(&key, f);
     }
 
-    FORCE_INLINE void delCopyDependent(const T* obj) {
+    FORCE_INLINE void delCopyDependent(const T * obj) {
         del(obj);
     }
 
@@ -974,15 +1042,15 @@ public:
     FORCE_INLINE void sliceResMapNoUpd(const T* key, FuncType f, IdxEquivNode* e) {
         sliceResMapNoUpd(key, f, e);
     }
-    
+
     FORCE_INLINE void sliceResMapNoUpd(const T& key, FuncType f, IdxEquivNode* e) {
         IdxN *n = &e->head;
         do {
-             f(n->obj);
+            f(n->obj);
         } while ((n = n->nxt));
     }
-    
-    FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f){
+
+    FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f) {
         HASH_RES_t h = IDX_FN::hash(*key);
         IdxEquivNode* e = &(buckets_[h % size_]);
         if (e->head.obj)
@@ -1240,7 +1308,7 @@ public:
     FORCE_INLINE void slice(const T& key, FuncType f) {
         slice(&key, f);
     }
-    
+
     FORCE_INLINE void sliceNoUpdate(const T& key, FuncType f) {
         sliceNoUpdate(&key, f);
     }
@@ -1649,15 +1717,15 @@ class SlicedMedHeapIndex : public Index<T, V> {
             array = new T*[arraySize];
             size = 0;
         }
-//
-//        void print() {
-//            for (uint i = 1; i <= size; ++i) {
-//                if ((i & (i - 1)) == 0)
-//                    std::cout << std::endl;
-//                std::cout << array[i]->getString(4) << "\t";
-//            }
-//            std::cout << std::endl;
-//        }
+        //
+        //        void print() {
+        //            for (uint i = 1; i <= size; ++i) {
+        //                if ((i & (i - 1)) == 0)
+        //                    std::cout << std::endl;
+        //                std::cout << array[i]->getString(4) << "\t";
+        //            }
+        //            std::cout << std::endl;
+        //        }
 
         void checkHeap(int idx) {
             for (uint i = 1; i <= size; ++i) {
@@ -2967,7 +3035,7 @@ public:
         }
     }
 
-  FORCE_INLINE void slice(const T* key, FuncType f) override {
+    FORCE_INLINE void slice(const T* key, FuncType f) override {
         std::vector<T*> entries;
         Container *cur = head;
         while (cur != nullptr) {
@@ -2975,9 +3043,10 @@ public:
                 entries.push_back(cur->obj);
             cur = cur->next;
         }
-        for(auto e : entries)
-           f(e);
+        for (auto e : entries)
+            f(e);
     }
+
     FORCE_INLINE void sliceCopy(const T* key, FuncType f) override {
 
         std::vector<T*> entries;

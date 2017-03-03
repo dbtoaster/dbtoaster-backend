@@ -62,7 +62,7 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
   implicit def toPath(filename: String) = get(filename)
 
   if (Optimizer.analyzeEntry) {
-    if (Optimizer.analyzeIndex) {
+    if (Optimizer.secondaryIndex) {
       copy(s"$genDir/SCTxSplEntry.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)
     } else {
       copy(s"$genDir/SCTxSplEntry-SE.txt", s"$genDir/SCTx.scala", REPLACE_EXISTING)

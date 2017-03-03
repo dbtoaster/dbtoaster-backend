@@ -17,9 +17,12 @@ case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: 
 }
 
 object Optimizer {
-  var analyzeEntry: Boolean = false
-  var analyzeIndex: Boolean = false
-  var fixedRange: Boolean = false
+  var analyzeEntry = false
+  var secondaryIndex = false
+  var splSecondaryIdx = false
+  var minMaxIdx = false
+  var medIdx = false
+  var fixedRange = false
   var onlineOpts = false
   var tmpVarHoist = false
   var tmpMapHoist = false
@@ -46,12 +49,12 @@ class Optimizer(val IR: StoreDSL) {
 
   import Optimizer._
 
-  optCombination = List(analyzeEntry -> "E", analyzeIndex -> "I", fixedRange -> "G", onlineOpts -> "O",
+  optCombination = List(analyzeEntry -> "E", secondaryIndex -> "I", fixedRange -> "G", onlineOpts -> "O",
     tmpVarHoist -> "V", tmpMapHoist -> "M", indexInline -> "N", indexLookupFusion -> "F",
     indexLookupPartialFusion -> "P", sliceInline -> "S", deadIndexUpdate -> "D", codeMotion -> "C",
-    m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R", multiResSplitter -> "U", initialStoreSize -> "Z", sliceNoUpd -> "L").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
+    m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R", multiResSplitter -> "U", initialStoreSize -> "Z", sliceNoUpd -> "L", splSecondaryIdx -> "Y", minMaxIdx -> "A", medIdx -> "B").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
 
-  if (Optimizer.analyzeIndex) {
+  if (Optimizer.secondaryIndex) {
     pipeline += new IndexAnalysis(IR)
     pipeline += new IndexDecider(IR)
     pipeline += new IndexTransformer(IR)
@@ -59,6 +62,9 @@ class Optimizer(val IR: StoreDSL) {
     pipeline += new IndexDecider(IR)
     if (Optimizer.fixedRange)
       throw new Error("Fixed range optimization cannot be enabled without Index analysis")
+    /*
+      We are not interested in such a case, and therefore, slice etc has not been implented on ArrayIndex
+     */
   }
 
   if (Optimizer.codeMotion) {
@@ -92,7 +98,7 @@ class Optimizer(val IR: StoreDSL) {
     number of possible nodes to increase thereby increasing the number of scenarios that sliceInline needs to handle
     */
 
-  if (Optimizer.sliceNoUpd && !Optimizer.deadIndexUpdate)
+  if (Optimizer.sliceNoUpd && !(Optimizer.deadIndexUpdate))
     throw new Error("SliceNoUpdate requires deadIndexUpdate")
   /*
       SliceNoUpdate covers the case of only IdxSlice.
@@ -122,10 +128,10 @@ class Optimizer(val IR: StoreDSL) {
     SBJ: What are the issues with the latter approach?
    */
 
-  if (Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion && Optimizer.tmpVarHoist)) //hash and cmp not implemented for pointer
+  if (Optimizer.sliceInline && !(Optimizer.indexInline && Optimizer.indexLookupFusion && Optimizer.tmpVarHoist && Optimizer.secondaryIndex))
     throw new Error("Inlining slice requires Index Inline, IndexLookupFusion and TempVarHoisting implemented only for c++")
   /*
-      Restrictions on IdxInline and LookupFusion imposed to reduce the number of cases that needs to handled, but
+      Restrictions on IdxInline, LookupFusion and secondaryIndex imposed to reduce the number of cases that needs to handled, but
       theoretically, they can be removed.
       Currently implemented as a hack on CPP code generator, and not for scala (but no error is given if this is enabled for scala, and nothing happens)
       TmpVar hoisting is needed to avoid handling cases with and without pointers in C++.

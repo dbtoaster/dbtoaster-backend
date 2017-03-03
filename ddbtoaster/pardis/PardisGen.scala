@@ -26,7 +26,7 @@ import scala.collection.mutable
 abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) extends IScalaGen {
 
   import Optimizer._;
-  val opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd)
+  val opts =  Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl"->splSecondaryIdx, "MinMax"->minMaxIdx, "Med"->medIdx)
   java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
 
   import scala.language.implicitConversions
@@ -316,7 +316,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     if (Optimizer.analyzeEntry) {
       val ctx = ctx0(map)
       val name = SEntry((ctx._2.map(_._2) :+ ctx._3).map(man)).name
-      map + s".unsafeInsert($name(" + (if (Optimizer.analyzeIndex) "" else "false,") + keyNames.map(e => e._1).mkString(",") + ",1L))"
+      map + s".unsafeInsert($name(" + (if (Optimizer.secondaryIndex) "" else "false,") + keyNames.map(e => e._1).mkString(",") + ",1L))"
     }
     else
       map + ".unsafeInsert(GenericEntry(\"SteNewSEntry\"," + keyNames.map(e => e._1).mkString(",") + ",1L))"

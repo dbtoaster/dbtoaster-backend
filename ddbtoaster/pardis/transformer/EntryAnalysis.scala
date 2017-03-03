@@ -217,7 +217,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
   def equal_cmp(cols: Seq[Int], s: SEntry): Rep[(SEntry, SEntry) => Int] = {
     if (cols == Nil)
       throw new Exception("Cols should not be empty for EntryIdx cmp")
-    if (!Optimizer.analyzeIndex) {
+    if (!Optimizer.secondaryIndex) {
       //We might pass some cols (primary key) even if Index analysis is turned off. We dont want to consider them here
       //No index Analysis
       implicit val entryTp = s.tp
@@ -335,7 +335,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     case sym -> (GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp
-      val allargs: Seq[(String, Boolean, Expression[Any])] = (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1))
+      val allargs: Seq[(String, Boolean, Expression[Any])] = (if (Optimizer.secondaryIndex) Nil else List(("isSE", true, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1))
       __new[SEntry](allargs: _*)
     }
     case sym -> (GenericEntryApplyObject(Constant("SteSampleSEntry"), Def(LiftedSeq(args)))) if entryTypes.contains(sym) => {
@@ -344,21 +344,21 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         case (Constant(v: Int), i) if i < args.size / 2 => v -> (args(i + args.size / 2))
       }.toMap
       implicit val entTp = SEntry(sch).tp
-      val allargs = (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
+      val allargs = (if (Optimizer.secondaryIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
       __new[SEntry](allargs: _*)
     }
 
     case sym -> (SteNewSEntry(_, args)) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp
-      val allargs = (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1))
+      val allargs = (if (Optimizer.secondaryIndex) Nil else List(("isSE", true, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1))
       __new[SEntry](allargs: _*)
     }
     case sym -> (SteSampleSEntry(_, args)) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       val cols = args.toMap
       implicit val entTp = SEntry(sch).tp
-      val allargs = (if (Optimizer.analyzeIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
+      val allargs = (if (Optimizer.secondaryIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
       __new[SEntry](allargs: _*)
     }
     case sym -> (PardisNewVar(v)) if entryTypes.contains(sym) => {
@@ -397,7 +397,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val entry = SEntry(sch)
       implicit val entryTp = entry.tp
       val tag = entryTp.asInstanceOf[RecordType[SEntry]].tag
-      val allfields = (if (Optimizer.analyzeIndex) Nil else List(StructElemInformation("isSE", BooleanType.asInstanceOf[TypeRep[Any]], true))) ++ sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true))
+      val allfields = (if (Optimizer.secondaryIndex) Nil else List(StructElemInformation("isSE", BooleanType.asInstanceOf[TypeRep[Any]], true))) ++ sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true))
       structsDefMap += (tag -> PardisStructDef(tag, allfields, Nil).asInstanceOf[PardisStructDef[Any]])
       val ops_ = ops.collect {
         case Def(node: EntryIdxGenericCmpObject[_]) => {

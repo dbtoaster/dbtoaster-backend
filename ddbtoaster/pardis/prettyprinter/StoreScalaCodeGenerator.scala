@@ -50,7 +50,7 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
     override def body(structDef: PardisStructDef[_]): Document = {
       val constructor = doc"def this() = " :: structDef.fields.map(x => nullValue(x.tpe)).mkDocument("this(", ", ", ")")
 
-      val argList = if (Optimizer.analyzeIndex)
+      val argList = if (Optimizer.secondaryIndex)
         (1 to structDef.fields.size).map("_" + _)
       else
         "isSE" :: (1 to structDef.fields.size - 1).map("_" + _).toList

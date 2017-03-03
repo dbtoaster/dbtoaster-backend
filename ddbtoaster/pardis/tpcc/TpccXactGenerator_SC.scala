@@ -19,7 +19,7 @@ object TpccXactGenerator_SC {
     var lang = ""
     def opts(o: String) = o match {
       case "entry" => Optimizer.analyzeEntry = true
-      case "index" => Optimizer.analyzeIndex = true
+      case "index" => Optimizer.secondaryIndex = true
       case "online" => Optimizer.onlineOpts = true
       case "m3cmpmult" => Optimizer.m3CompareMultiply = true
       case "tmpvar" => Optimizer.tmpVarHoist = true
@@ -36,6 +36,9 @@ object TpccXactGenerator_SC {
       case "multires" => Optimizer.multiResSplitter = true
       case "initsize" => Optimizer.initialStoreSize = true
       case "slicenoupd" => Optimizer.sliceNoUpd = true
+      case "spl" => Optimizer.splSecondaryIdx = true
+      case "minmax" => Optimizer.minMaxIdx = true
+      case "med" => Optimizer.medIdx = true
       case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }
@@ -65,7 +68,7 @@ object TpccXactGenerator_SC {
 
     import Optimizer._
 
-    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> analyzeIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd)
+    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl"->splSecondaryIdx, "MinMax"->minMaxIdx, "Med"->medIdx)
     java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
 
 
