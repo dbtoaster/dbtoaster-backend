@@ -1,0 +1,8 @@
+{
+"COUNT_mLINEITEM1_L3_1Idx0" : { "ArrayLength" : "515",  "OptArrayLength" : "513",   "PoolSize" : "0",   "NumElements" : "366",   "NumInArray" : "298"},
+"COUNT_mLINEITEM1_L4_1_E1_1Idx0" : { "ArrayLength" : "515",  "OptArrayLength" : "513",   "PoolSize" : "0",   "NumElements" : "366",   "NumInArray" : "298"},
+"COUNTIdx0" : { "ArrayLength" : "2",  "OptArrayLength" : "2",   "PoolSize" : "0",   "NumElements" : "1",   "NumInArray" : "1"},
+"COUNT_mLINEITEM1_E2_1Idx0" : { "ArrayLength" : "515",  "OptArrayLength" : "513",   "PoolSize" : "0",   "NumElements" : "366",   "NumInArray" : "298"},
+"COUNT_mLINEITEM1_L4_1_L2_1Idx0" : { "ArrayLength" : "515",  "OptArrayLength" : "513",   "PoolSize" : "0",   "NumElements" : "366",   "NumInArray" : "298"},
+"COUNT_mLINEITEM1Idx0" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumElements" : "1000",   "NumInArray" : "715"}
+}

@@ -1,0 +1,6 @@
+{
+"QUERY17_mLINEITEM1Idx0" : { "ArrayLength" : "160647",  "OptArrayLength" : "160647",   "PoolSize" : "0",   "NumElements" : "114655",   "NumInArray" : "84161"},
+"QUERY17_mLINEITEM1Idx1" : { "ArrayLength" : "27962",  "OptArrayLength" : "27962",   "PoolSize" : "0",   "NumSlices" : "19959",   "NumInArray" : "19959"},
+"QUERY17_mLINEITEM1_L1_1Idx0" : { "ArrayLength" : "27962",  "OptArrayLength" : "27962",   "PoolSize" : "0",   "NumElements" : "19958",   "NumInArray" : "19958"},
+"QUERY17_mLINEITEM2Idx0" : { "ArrayLength" : "28001",  "OptArrayLength" : "28001",   "PoolSize" : "0",   "NumElements" : "20000",   "NumInArray" : "20000"}
+}

@@ -1,0 +1,20 @@
+{
+"QUERY11_mPARTSUPP1_L3_1Idx0" : { "ArrayLength" : "36",  "OptArrayLength" : "36",   "PoolSize" : "0",   "NumElements" : "25",   "NumInArray" : "25"},
+"QUERY11_mPARTSUPP1_E1_1Idx0" : { "ArrayLength" : "35680",  "OptArrayLength" : "33646",   "PoolSize" : "0",   "NumElements" : "24032",   "NumInArray" : "17718"},
+"QUERY11_mPARTSUPP1_E1_1Idx1" : { "ArrayLength" : "36",  "OptArrayLength" : "36",   "PoolSize" : "0",   "NumSlices" : "25",   "NumInArray" : "25"},
+"QUERY11_mPARTSUPP1_L3_1_mPARTSUPP1Idx0" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumElements" : "1000",   "NumInArray" : "717"},
+"QUERY11_mPARTSUPP1_L3_1_mPARTSUPP1Idx1" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumSlices" : "1000",   "NumInArray" : "1000"},
+"QUERY11_mSUPPLIER3_L3_4Idx0" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumElements" : "1000",   "NumInArray" : "1000"},
+"QUERY11Idx0" : { "ArrayLength" : "14012",  "OptArrayLength" : "13979",   "PoolSize" : "0",   "NumElements" : "9981",   "NumInArray" : "6777"},
+"QUERY11_mSUPPLIER4_E3_2Idx0" : { "ArrayLength" : "36541",  "OptArrayLength" : "34441",   "PoolSize" : "0",   "NumElements" : "24600",   "NumInArray" : "17651"},
+"QUERY11_mSUPPLIER4_E3_2Idx1" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumSlices" : "1000",   "NumInArray" : "1000"},
+"QUERY11_mPARTSUPP1_L2_1Idx0" : { "ArrayLength" : "35680",  "OptArrayLength" : "33646",   "PoolSize" : "0",   "NumElements" : "24032",   "NumInArray" : "17718"},
+"QUERY11_mSUPPLIER3_L2_3Idx0" : { "ArrayLength" : "36541",  "OptArrayLength" : "34441",   "PoolSize" : "0",   "NumElements" : "24600",   "NumInArray" : "17651"},
+"QUERY11_mSUPPLIER3_L2_3Idx1" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumSlices" : "1000",   "NumInArray" : "1000"},
+"QUERY11_mPARTSUPP1_E1_1_mPARTSUPP1Idx0" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumElements" : "1000",   "NumInArray" : "717"},
+"QUERY11_mPARTSUPP1_E1_1_mPARTSUPP1Idx1" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumSlices" : "1000",   "NumInArray" : "1000"},
+"TmpStore1Idx0" : { "ArrayLength" : "116",  "OptArrayLength" : "116",   "PoolSize" : "0",   "NumElements" : "0",   "NumInArray" : "0"},
+"TmpStore2Idx0" : { "ArrayLength" : "116",  "OptArrayLength" : "116",   "PoolSize" : "0",   "NumElements" : "66",   "NumInArray" : "49"},
+"TmpStore4Idx0" : { "ArrayLength" : "1",  "OptArrayLength" : "1",   "PoolSize" : "0",   "NumElements" : "0",   "NumInArray" : "0"},
+"TmpStore3Idx0" : { "ArrayLength" : "1",  "OptArrayLength" : "1",   "PoolSize" : "0",   "NumElements" : "0",   "NumInArray" : "0"}
+}

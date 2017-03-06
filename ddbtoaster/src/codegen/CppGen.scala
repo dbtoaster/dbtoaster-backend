@@ -839,6 +839,7 @@ trait ICppGen extends IScalaGen {
     "        tlq_t* d = new tlq_t((tlq_t&)data);\n"+
     "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
     "        //checkAll(); //print bucket statistics\n" +
+    s"        ${if(Optimizer.initialStoreSize) "" else "//"} getRuntimeInfo(); //get runtime information\n" +
     "        return snapshot_t( d );\n"+
     "    }\n"+
     "\n"+

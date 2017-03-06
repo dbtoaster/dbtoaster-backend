@@ -1,0 +1,5 @@
+{
+"PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1Idx0" : { "ArrayLength" : "2284",  "OptArrayLength" : "2284",   "PoolSize" : "0",   "NumElements" : "1604",   "NumInArray" : "1168"},
+"PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3Idx0" : { "ArrayLength" : "28001",  "OptArrayLength" : "28001",   "PoolSize" : "0",   "NumElements" : "20000",   "NumInArray" : "20000"},
+"PROMO_REVENUE_mLINEITEM2_mLINEITEM3Idx0" : { "ArrayLength" : "4634",  "OptArrayLength" : "4634",   "PoolSize" : "0",   "NumElements" : "3309",   "NumInArray" : "2505"}
+}

@@ -1,0 +1,6 @@
+{
+"ORDER_COUNTIdx0" : { "ArrayLength" : "8",  "OptArrayLength" : "8",   "PoolSize" : "0",   "NumElements" : "5",   "NumInArray" : "4"},
+"ORDER_COUNT_mLINEITEM1Idx0" : { "ArrayLength" : "1649",  "OptArrayLength" : "1649",   "PoolSize" : "0",   "NumElements" : "1132",   "NumInArray" : "824"},
+"ORDER_COUNT_mLINEITEM1Idx1" : { "ArrayLength" : "1649",  "OptArrayLength" : "1649",   "PoolSize" : "0",   "NumSlices" : "1132",   "NumInArray" : "831"},
+"ORDER_COUNT_mORDERS3_E1_1Idx0" : { "ArrayLength" : "38634",  "OptArrayLength" : "38634",   "PoolSize" : "0",   "NumElements" : "27509",   "NumInArray" : "22443"}
+}

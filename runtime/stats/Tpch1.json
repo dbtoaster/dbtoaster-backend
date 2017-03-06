@@ -1,0 +1,14 @@
+{
+"COUNT_ORDERIdx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"SUM_BASE_PRICEIdx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"SUM_CHARGEIdx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"AVG_QTY_mLINEITEM1_L1_1Idx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"AVG_QTYIdx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"SUM_QTYIdx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"AVG_PRICEIdx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"AVG_DISC_mLINEITEM2Idx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"AVG_PRICE_mLINEITEM2Idx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"SUM_DISC_PRICEIdx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"AVG_DISCIdx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"},
+"AVG_QTY_mLINEITEM2Idx0" : { "ArrayLength" : "7",  "OptArrayLength" : "7",   "PoolSize" : "0",   "NumElements" : "4",   "NumInArray" : "3"}
+}

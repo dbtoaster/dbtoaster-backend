@@ -1,7 +1,9 @@
 package ddbt
 import java.io._
 import java.util.concurrent.{BlockingQueue, LinkedBlockingQueue}
+
 import Compiler._
+import ddbt.codegen.Optimizer
 import ddbt.lib.ManifestHelper
 import ddbt.lib.Helper
 /**
@@ -144,6 +146,7 @@ object UnitTest {
       try {
         println("---------[[ "+name(q.sql)+" ]]---------")
         var queryName = name(q.sql)
+        Optimizer.infoFileName = queryName
         val (t0,m3) = {
           var f = "target/m3/"+queryName+".m3"
           if (cache && new File(f).exists) ns(()=>Utils.read(f))

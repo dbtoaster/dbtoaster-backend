@@ -233,12 +233,13 @@ trait StoreDSL extends
       case _ => m3_apply(fn, args)(man(tp)) // fallback for large or unknown functions
     }
   }
-
+  var tmpStoreCnt = 1
   def m3temp[E <: Entry]()(implicit tp: TypeRep[E]): Rep[Store[E]] = {
     // val sym = StNewStore[E](tp)
     //sym.asInstanceOf[Sym[_]].attributes.put("_isTemp",true);
     implicit val manE = manifest[Int].asInstanceOf[Manifest[E]]
-    val sym = __newStore[E]()
+    val sym = __newStoreNamed[E](s"TmpStore$tmpStoreCnt")(manE, tp)
+    tmpStoreCnt += 1
     sym.asInstanceOf[Rep[Store[E]]]
     //    null
   }

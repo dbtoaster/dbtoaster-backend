@@ -69,6 +69,7 @@ object Compiler {
       case "refcounter" => Optimizer.refCounter = true
       case "regex" => Optimizer.regexHoister = true
       case "multires" => Optimizer.multiResSplitter = true
+      case "initsize" => Optimizer.initialStoreSize = true
       case "slicenoupd" => Optimizer.sliceNoUpd = true
       case "spl" => Optimizer.splSecondaryIdx = true
       case "minmax" => Optimizer.minMaxIdx = true

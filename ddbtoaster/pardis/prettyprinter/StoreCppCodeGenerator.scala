@@ -93,9 +93,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         case IHash => doc"HashIndex<$entryTp, char, ${t._2}, ${if (t._1.unique) "1" else "0"}>"
         case IList => doc"ListIndex<$entryTp, char, ${t._2},  ${if (t._1.unique) "1" else "0"}>"
       }
+      val initSize = if (Optimizer.initialStoreSize) doc"(${sym}ArrayLengths, ${sym}PoolSizes);" else doc";"
       val idxTypeDefs = idxes.zip(names).map(t => doc"typedef ${idxToDoc(t)} ${sym}_Idx_${t._1.idxNum}_Type;").mkDocument("\n")
       idxTypeDefs :/:
-        doc"MultiHashMap<$entryTp, char," :: idxes.map(i => doc"${sym}_Idx_${i.idxNum}_Type").mkDocument(", ") :: doc"> $sym;"
+        doc"MultiHashMap<$entryTp, char," :: idxes.map(i => doc"${sym}_Idx_${i.idxNum}_Type").mkDocument(", ") :: doc"> $sym$initSize"
 
     case Statement(sym, StoreIndex(self, idxNum, _, _, _)) => doc"${self}_Idx_${idxNum}_Type& $sym = * (${self}_Idx_${idxNum}_Type *)$self.index[$idxNum];"
 
