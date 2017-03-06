@@ -33,7 +33,7 @@ trait TpccPardisGen {
     val txt = new java.util.Scanner(infoFile).useDelimiter("\\Z").next()
     val allinfo: Map[String, _] = JSON.parseFull(txt).get.asInstanceOf[Map[String, _]]
     StoreArrayLengths = allinfo.map(t => t._1 -> t._2.asInstanceOf[Map[String, String]].getOrElse("OptArrayLength", "0"))
-  } else {
+  } else if(Optimizer.initialStoreSize) {
     System.err.println("Runtime info file missing!!  Using default initial sizes")
   }
 
