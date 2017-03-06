@@ -491,7 +491,7 @@ public:
     }
 
     FORCE_INLINE void sliceResMapNoUpd(const T* key, FuncType f, T* obj) {
-        sliceResMapNoUpd(key, f, obj);
+        sliceResMapNoUpd(*key, f, obj);
     }
 
     FORCE_INLINE void sliceResMapNoUpd(const T& key, FuncType f, T* obj) {
@@ -1040,7 +1040,7 @@ public:
     }
 
     FORCE_INLINE void sliceResMapNoUpd(const T* key, FuncType f, IdxEquivNode* e) {
-        sliceResMapNoUpd(key, f, e);
+        sliceResMapNoUpd(*key, f, e);
     }
 
     FORCE_INLINE void sliceResMapNoUpd(const T& key, FuncType f, IdxEquivNode* e) {
