@@ -54,7 +54,8 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
       case GenericEntryDecrease(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
       case GenericEntry$minus$eq(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
       case GenericEntry$plus$eq(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
-      case StructFieldSetter(e, idx, _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += idx.drop(1).toInt; ()
+        //Ignore isSE field, if present
+      case StructFieldSetter(e, idx, _) if idx.startsWith("_") => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += idx.drop(1).toInt; ()
       case StructFieldIncr(e, idx, _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += idx.drop(1).toInt; ()
       case StructFieldDecr(e, idx, _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += idx.drop(1).toInt; ()
     }
