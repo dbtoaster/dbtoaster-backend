@@ -52,8 +52,8 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
       // debug(getFreeVars(cr.block.stmts.head.rhs).map(x => x -> countingAnalysis.symCounts(x)))
     }
     // traverseBlock(node)
-    // transformProgram(node)
-    node
+    transformProgram(node)
+    // node
   }
 
   // def backwardAnalysis[T, C](node: Def[T]): Unit = {
@@ -155,13 +155,13 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   /**
    * Extracts the statements defined in the given definition.
    */
-  def getStatements(n: Def[_]): List[Stm[_]] = n match {
-    case Block(stmts, res) => stmts ++ stmts.flatMap(x => getStatements(x.rhs))
-    case n if n.funArgs.exists(_.isInstanceOf[Block[_]]) => n.funArgs.collect({ case b: Block[_] =>
-      getStatements(b)
-    }).flatten
-    case _ => Nil
-  }
+  // def getStatements(n: Def[_]): List[Stm[_]] = n match {
+  //   case Block(stmts, res) => stmts ++ stmts.flatMap(x => getStatements(x.rhs))
+  //   case n if n.funArgs.exists(_.isInstanceOf[Block[_]]) => n.funArgs.collect({ case b: Block[_] =>
+  //     getStatements(b)
+  //   }).flatten
+  //   case _ => Nil
+  // }
 
   /**
    * Specifies if we have already hoisted a statement which contains the given statement.
@@ -222,30 +222,47 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
    * Removes the hoisted statements from the hot region and reifies them outside
    * the hot region.
    */
-  // override def transformStmToMultiple(stm: Stm[_]): List[to.Stm[_]] =
-  //   if (hoistedRegionStatements.exists(_._2.contains(stm.asInstanceOf[Stm[Any]])))
-  //     Nil
-  //   else stm match {
-  //     // Removing the lambda expression of the hot region, as it should be reified
-  //     // after the expressions
-  //     case Stm(sym, rhs) if hoistedRegionStatements.exists(_._1.lambda.exists(_._1 == sym)) => 
-  //       Nil
-  //     case Stm(sym, rhs) if hoistedRegionStatements.exists(_._1.symbol == sym) =>
-  //       val hotRegion = coldRegionAnalysis.coldRegions(sym)
-  //       val stmts = hoistedRegionStatements(hotRegion)
-  //       // Reifies the hoisted statements outside the hot region.
-  //       for(st <- stmts.reverse) {
-  //         reflectStm(st)
-  //       }
-  //       debug(s"${hotRegion.boundSymbols} -> ${stmts.size}")
-  //       // If the hot region contains a lambda, it transforms the lambda expression.
-  //       for((lambdaSym: Sym[Any], lambdaNode: Def[Any] with PardisLambdaDef) <- hotRegion.lambda) {
-  //         reflectStm(Stm(lambdaSym, transformDef(lambdaNode)(lambdaNode.tp))(lambdaNode.tp))
-  //       }
-  //       super.transformStmToMultiple(stm)
-  //     case _ =>
-  //       super.transformStmToMultiple(stm)
-  //   }
+  override def transformStmToMultiple(stm: Stm[_]): List[to.Stm[_]] =
+    if (hoistedRegionStatements.exists(_._2.contains(stm.asInstanceOf[Stm[Any]])))
+      Nil
+    else 
+    // stm match {
+    //   // Removing the lambda expression of the hot region, as it should be reified
+    //   // after the expressions
+    //   // case Stm(sym, rhs) if hoistedRegionStatements.exists(_._1.lambda.exists(_._1 == sym)) => 
+    //   //   Nil
+    //   case Stm(sym, rhs) if hoistedRegionStatements.exists(_._1.symbol == sym) =>
+    //     val hotRegion = coldRegionAnalysis.coldRegions(sym)
+    //     val stmts = hoistedRegionStatements(hotRegion)
+    //     // Reifies the hoisted statements outside the hot region.
+    //     for(st <- stmts.reverse) {
+    //       reflectStm(st)
+    //     }
+    //     debug(s"${hotRegion.boundSymbols} -> ${stmts.size}")
+    //     // If the hot region contains a lambda, it transforms the lambda expression.
+    //     for((lambdaSym: Sym[Any], lambdaNode: Def[Any] with PardisLambdaDef) <- hotRegion.lambda) {
+    //       reflectStm(Stm(lambdaSym, transformDef(lambdaNode)(lambdaNode.tp))(lambdaNode.tp))
+    //     }
+    //     super.transformStmToMultiple(stm)
+    //   case _ =>
+        super.transformStmToMultiple(stm)
+    // }
+
+    override protected def transformBlockTyped[T: TypeRep, S: TypeRep](block: Block[T]): Block[S] = if(hoistedRegionStatements.exists(_._1.block == block)) {
+        
+        val coldRegion = hoistedRegionStatements.find(_._1.block == block).get._1
+        val newStmts = hoistedRegionStatements(coldRegion)
+        debug("happy for " + coldRegion.symbol)
+        reifyBlock[S] {
+          for(st <- newStmts) {
+            reflectStm(st)
+          }
+          block.stmts.foreach(transformStmToMultiple)
+          transformExp[T, S](block.res)
+        }
+      } else {
+        super.transformBlockTyped(block)
+      }
 }
 
 class ColdRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {
