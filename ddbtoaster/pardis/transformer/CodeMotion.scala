@@ -187,7 +187,10 @@ class SideEffectsAnalysis(override val IR: StoreDSL) extends RuleBasedTransforme
     symEffectsInfo.getOrElseUpdate(stm.sym, if(stm.rhs.isPure) Pure else IO)
   }
 
-  def isPure(sym: Rep[_]): Boolean = symEffectsInfo(sym) == Pure
+  def isPure(sym: Rep[_]): Boolean = symEffectsInfo.get(sym) match {
+    case Some(eff) => eff == Pure
+    case None      => Def.unapply(sym).map(_.isPure).getOrElse(true)
+  }
 
   def getEffectOfBlock(block: Block[_]): Effect = {
     blockEffectsInfo.getOrElseUpdate(block, if(block.stmts.map(getEffectOfStm).forall(_ == Pure)) Pure else IO)
