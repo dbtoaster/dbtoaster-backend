@@ -32,6 +32,7 @@ object Optimizer {
   var m3CompareMultiply = true
   var regexHoister = true
   var multiResSplitter = true
+  var coldMotion = true
 
   var refCounter = false
   var cTransformer = false
@@ -88,6 +89,10 @@ class Optimizer(val IR: StoreDSL) {
 
   if(Optimizer.multiResSplitter)
     pipeline += new MultiResSplitter(IR)
+
+  if(Optimizer.coldMotion) {
+    pipeline += new ColdMotion(IR)
+  }
 
   if (Optimizer.tmpMapHoist)
     pipeline += new TmpMapHoister(IR)
