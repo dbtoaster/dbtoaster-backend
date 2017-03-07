@@ -33,16 +33,60 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   def optimize[T: TypeRep](node: Block[T]): to.Block[T] = {
     effectAnalysis.optimize(node)
     coldRegionAnalysis.optimize(node)
-    debug(coldRegionAnalysis.coldRegions)
+    // debug(coldRegionAnalysis.coldRegions)
     countingAnalysis.optimize(node)
-    traverseBlock(node)
+    for((_, currentRegion) <- coldRegionAnalysis.coldRegions) {
+      // debug(currentRegion)
+      debug(currentRegion.symbol)
+      currentHoistedStatements = Nil
+      for(stm <- currentRegion.block.stmts.reverse) {
+        for(v <- getFreeVars(stm.rhs)) {
+          backwardAnalysis(v)
+        }
+      }
+      if (currentHoistedStatements.nonEmpty) {
+        debug("injected statement symbols: " + currentHoistedStatements.reverse.map(_.sym))
+        hoistedRegionStatements(currentRegion) = currentHoistedStatements.reverse
+      }
+      
+      // debug(getFreeVars(cr.block.stmts.head.rhs).map(x => x -> countingAnalysis.symCounts(x)))
+    }
+    // traverseBlock(node)
     // transformProgram(node)
     node
   }
+
+  // def backwardAnalysis[T, C](node: Def[T]): Unit = {
+  //   node match {
+  //     case Block(stmts, res) =>
+  //       for(Stm(lhs, rhs) <- stmts.reverse) {
+  //         backwardAnalysis(rhs)
+  //       }
+  //     case _ =>
+
+  //   }
+  // }
+  def backwardAnalysis[T](sym: Rep[T]): Unit = {
+    sym match {
+      case Def(node) if countingAnalysis.symCounts(sym) == 1 && effectAnalysis.isPure(sym) => {
+        // debug("count is 1 for " + sym + "-->" + node)
+        // debug("is among cold regions " + coldRegionAnalysis.isColdSymbol(sym))
+        // debug("is pure " + effectAnalysis.isPure(sym))
+        // debug("freeVars: " + getFreeVars(node))
+        for(s <- getFreeVars(node)) {
+          backwardAnalysis(s)
+        }
+        val symbol = sym.asInstanceOf[Sym[Any]]
+        currentHoistedStatements ::= Stm(symbol, node)(symbol.tp)
+      }
+      case _ =>
+    }
+  }
+
   /**
    * Specifies the cold region surrounding the current context.
    */
-  var currentRegion: ColdRegion = _
+  // var currentRegion: ColdRegion = _
   /**
    * The list of statements should be hoisted in the current context.
    */
@@ -51,7 +95,7 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   /**
    * The list of variables bound in the current context.
    */
-  var currentBoundSymbols = collection.Set[Rep[_]]()
+  // var currentBoundSymbols = collection.Set[Rep[_]]()
 
   /**
    * Mapping between hot regions and the statements should be hoisted outside that region. 
@@ -61,27 +105,52 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   /**
    * Returns the symbols that the given definition is dependent on them.
    */
-  def getDependencies(node: Def[_]): List[Sym[Any]] =
+  // def getDependencies(node: Def[_]): List[Sym[Any]] =
+  //   node.funArgs.collect({
+  //     case s: Sym[Any] => List(s)
+  //     case b: Block[Any] => (b.res match {
+  //       case s: Sym[Any] => List(s)
+  //       case _ => Nil
+  //     }) ++ getStatements(b).flatMap(s => s.sym :: getDependencies(s.rhs)).distinct
+  //   }).flatten
+
+  /**
+   * Returns free variables occuring in a given definition.
+   */
+  def getFreeVars(node: Def[_]): List[Sym[Any]] =
     node.funArgs.collect({
       case s: Sym[Any] => List(s)
       case b: Block[Any] => (b.res match {
         case s: Sym[Any] => List(s)
         case _ => Nil
-      }) ++ getStatements(b).flatMap(s => s.sym :: getDependencies(s.rhs)).distinct
-    }).flatten
+      }) ++ b.stmts.flatMap(s => getFreeVars(s.rhs)).distinct
+    }).flatten.filterNot(s => getBoundVars(node).contains(s))
+
+  /**
+   * Returns bound variables defined in a given definition.
+   */
+  def getBoundVars(node: Def[_]): List[Sym[Any]] = 
+    node match {
+      case lambda: PardisLambdaDef => lambda.inputs.asInstanceOf[List[Sym[Any]]] ++ getBoundVars(lambda.body)
+      case b: Block[Any] => b.stmts.flatMap(s => s.sym :: getBoundVars(s.rhs)).distinct
+      case _ => node.funArgs.collect({
+        case b: Block[Any] => getBoundVars(b)
+        case _ => Nil
+      }).flatten
+    }
 
   /**
    * Specifies if the given statement can be hoisted from the current context.
    */
-  def isFloating(stm: Stm[_]): Boolean = {
-    effectAnalysis.isPure(stm.sym) && !stm.rhs.isInstanceOf[PardisLambdaDef] && 
-    getDependencies(stm.rhs).forall(x => !currentBoundSymbols.contains(x))
-  }
+  // def isFloating(stm: Stm[_]): Boolean = {
+  //   effectAnalysis.isPure(stm.sym) && !stm.rhs.isInstanceOf[PardisLambdaDef] && 
+  //   getDependencies(stm.rhs).forall(x => !currentBoundSymbols.contains(x))
+  // }
 
   /**
    * Specifies if we are currently in a context in which we should perform hoisting.
    */
-  def isInMotionableContext(): Boolean = currentRegion != null
+  // def isInMotionableContext(): Boolean = currentRegion != null
 
   /**
    * Extracts the statements defined in the given definition.
@@ -102,9 +171,9 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
    * Hence, this method returns true in such cases.
    * 
    */
-  def isContextAlreadyHoisted(stm: Stm[_]): Boolean = {
-    currentHoistedStatements.exists(cstm => getStatements(cstm.rhs).contains(stm))
-  }
+  // def isContextAlreadyHoisted(stm: Stm[_]): Boolean = {
+  //   currentHoistedStatements.exists(cstm => getStatements(cstm.rhs).contains(stm))
+  // }
 
   /**
    * Collects the statements that should be hoisted from hot regions.
@@ -143,11 +212,11 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   /**
    * Updating the list of bound symbols.
    */
-  override def traverseBlock(block: Block[_]): Unit = {
-    val previousBoundSymbols = currentBoundSymbols
-    super.traverseBlock(block)
-    currentBoundSymbols = previousBoundSymbols
-  }
+  // override def traverseBlock(block: Block[_]): Unit = {
+  //   val previousBoundSymbols = currentBoundSymbols
+  //   super.traverseBlock(block)
+  //   currentBoundSymbols = previousBoundSymbols
+  // }
 
   /**
    * Removes the hoisted statements from the hot region and reifies them outside
@@ -188,7 +257,7 @@ class ColdRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer
 
   val coldRegions = scala.collection.mutable.Map[Rep[_], ColdRegion]()
 
-  // def isHotSymbol(s: Rep[_]): Boolean = coldRegions.exists(_._1 == s)
+  def isColdSymbol(s: Rep[_]): Boolean = coldRegions.exists(_._1 == s)
 
   def getColdRegion(s: Rep[_]): ColdRegion = coldRegions(s)
 
