@@ -54,6 +54,7 @@ class Optimizer(val IR: StoreDSL) {
     indexLookupPartialFusion -> "P", sliceInline -> "S", deadIndexUpdate -> "D", codeMotion -> "C",
     m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R", multiResSplitter -> "U", initialStoreSize -> "Z", sliceNoUpd -> "L", splSecondaryIdx -> "Y", minMaxIdx -> "A", medIdx -> "B").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
 
+  pipeline += new Deforestation(IR)
   if (Optimizer.secondaryIndex) {
     pipeline += new IndexAnalysis(IR)
     pipeline += new IndexDecider(IR)

@@ -345,6 +345,19 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
   private val n = idxs.length
   private val modified = new Array[Boolean](n)
 
+
+  def filter(f: E => Boolean): Store[E] = ???
+
+  def map[U <: Entry](f: E => U): Store[U] = ???
+
+  def fold[U](zero: U)(f: (U, E) => U): U = ???
+
+  //  def join[U <: Entry](s:Store[U],t:(U,E)=>Boolean):Store[TupleEntry[T,U]]
+
+  def groupBy[K](p: E => K, f: (E, E) => E): Store[E] = ???
+
+  def union(s: Store[E]): Store[E] = ???
+
   def unsafeInsert(ec: E): Unit = time("unsafeInsert") {
     if (ec == null) return;
     val e = ec.copy().asInstanceOf[E]

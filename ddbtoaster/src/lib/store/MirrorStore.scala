@@ -16,6 +16,22 @@ class MStore[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]]) {
 
   // def this(n:Int) = this(new Array[Idx[E]](n),null)(cE)
   // def this(n:Int,ops:Array[EntryIdx[E]]) = this(new Array[Idx[E]](n),ops)(cE)
+  @read
+  def filter(f: E => Boolean): Store[E] = ???
+
+  @read
+  def map[U <: Entry](f: E => U): Store[U] = ???
+
+  @read
+  def fold[U](zero: U)(f: (U, E) => U): U = ???
+
+  //  def join[U <: Entry](s:Store[U],t:(U,E)=>Boolean):Store[TupleEntry[T,U]]
+  @read
+  def groupBy[K](p: E => K, f: (E, E) => E): Store[E] = ???
+
+  @read
+  def union(s: Store[E]): Store[E] = ???
+
   def unsafeInsert(e: E): Unit = ???
 
   def insert(e: E): Unit = ???
