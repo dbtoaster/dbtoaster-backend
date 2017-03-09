@@ -47,6 +47,9 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
       signatureMod(structDef) :: " class " :: name :: "(" :: fieldsDef(structDef) :: ")" :: " extends " :: s"Entry($count)"
     }
 
+    override def fieldDef(field: StructElemInformation): Document =
+     "var " :: field.name :: ": " :: tpeToDocument(field.tpe)
+
     override def body(structDef: PardisStructDef[_]): Document = {
       val constructor = doc"def this() = " :: structDef.fields.map(x => nullValue(x.tpe)).mkDocument("this(", ", ", ")")
 

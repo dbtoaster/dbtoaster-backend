@@ -146,7 +146,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         val w = c._3 - c._2
         if(w > 1) {
           val weight = unit(w)
-          val colval = fieldGetter(e, "_" + c._1)(IntType) - unit(c._2)
+          val colval = field(e, "_" + c._1)(IntType) - unit(c._2)
           __assign(hash, __readVar(hash) * weight + colval)
         }
       })
@@ -170,7 +170,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]
         //System.err.println(s"Getting field $c of $e in hash")
         val temp = __readVar(hash)
-        __assign(hash, temp ^ (elemhash(fieldGetter(e, "_" + c)(tp)) + unit(0x9e3779b9) + (temp << unit(6)) + (temp >> unit(2))))
+        __assign(hash, temp ^ (elemhash(field(e, "_" + c)(tp)) + unit(0x9e3779b9) + (temp << unit(6)) + (temp >> unit(2))))
       })
       __readVar(hash)
     })
@@ -192,7 +192,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       cols.foreach(c => {
         implicit val tp = s.sch(c - 1).asInstanceOf[TypeRep[Any]]
         //System.err.println(s"Getting field $c of $e in hash")
-        val mix_1 = unit(0xcc9e2d51) * elemhash(fieldGetter(e, "_" + c)(tp))
+        val mix_1 = unit(0xcc9e2d51) * elemhash(field(e, "_" + c)(tp))
         val mix_2 = (mix_1 << unit(15)) | (mix_1 >>> unit(-15))
         val mix_3 = mix_2 * unit(0x1b873593)
         val mix_4 = mix_3 ^ __readVar(hash)
@@ -225,24 +225,24 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         //If either is sample entry, we want the cols of the sample entry
         val allConds = __newVar(unit(0))
         implicit val tpu = UnitType
-        __ifThenElse(fieldGetter(e1, "isSE"), {
+        __ifThenElse(field(e1, "isSE"), {
           val allCols = (1 to s.sch.size).toList
           val func = (i: Int) => {
             implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-            val v1 = fieldGetter(e1, "_" + i)(tp)
-            val v2 = fieldGetter(e2, "_" + i)(tp)
+            val v1 = field(e1, "_" + i)(tp)
+            val v2 = field(e2, "_" + i)(tp)
             val vNull = nullValue(s.sch(i - 1))
             (v1 __== vNull) || (v1 __== v2)
           }
           recurseCols(allCols, func, allConds)
         }, {
-          __ifThenElse(fieldGetter(e2, "isSE"), {
+          __ifThenElse(field(e2, "isSE"), {
             val allCols = (1 to s.sch.size).toList
             val func = (i: Int) => {
               implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
 
-              val v1 = fieldGetter(e1, "_" + i)(tp)
-              val v2 = fieldGetter(e2, "_" + i)(tp)
+              val v1 = field(e1, "_" + i)(tp)
+              val v2 = field(e2, "_" + i)(tp)
               val vNull = nullValue(s.sch(i - 1))
               (v2 __== vNull) || (v1 __== v2)
             }
@@ -250,8 +250,8 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
           }, {
             val func = (i: Int) => {
               implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-              val v1 = fieldGetter(e1, "_" + i)(tp)
-              val v2 = fieldGetter(e2, "_" + i)(tp)
+              val v1 = field(e1, "_" + i)(tp)
+              val v2 = field(e2, "_" + i)(tp)
               (v1 __== v2)
             }
             recurseCols(cols, func, allConds)
@@ -264,8 +264,8 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       __lambda((e1: Rep[SEntry], e2: Rep[SEntry]) => {
         val func = (i: Int) => {
           implicit val tp = s.sch(i - 1).asInstanceOf[TypeRep[Any]]
-          val v1 = fieldGetter(e1, "_" + i)(tp)
-          val v2 = fieldGetter(e2, "_" + i)(tp)
+          val v1 = field(e1, "_" + i)(tp)
+          val v2 = field(e2, "_" + i)(tp)
           (v1 __== v2)
         }
         val allConds = __newVar(unit(0))
@@ -284,7 +284,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val symMap = collection.mutable.HashMap[Sym[_], Sym[_]]()
 
       func.o.stmts.foreach {
-        case Statement(sym, GenericEntryGet(self, Constant(i))) => val rep = fieldGetter(arg.asInstanceOf[Sym[_]], "_" + i)(s.sch(i - 1).asInstanceOf[TypeRep[Any]]); symMap += sym -> rep.asInstanceOf[Sym[_]]
+        case Statement(sym, GenericEntryGet(self, Constant(i))) => val rep = field(arg.asInstanceOf[Sym[_]], "_" + i)(s.sch(i - 1).asInstanceOf[TypeRep[Any]]); symMap += sym -> rep.asInstanceOf[Sym[_]]
       }
       symMap(func.o.res.asInstanceOf[Sym[_]]).asInstanceOf[Sym[R]]
     }
@@ -335,7 +335,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     case sym -> (GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp
-      val allargs: Seq[(String, Boolean, Expression[Any])] = (if (Optimizer.secondaryIndex) Nil else List(("isSE", true, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1))
+      val allargs: Seq[(String, Boolean, Expression[Any])] = (if (Optimizer.secondaryIndex) Nil else List(("isSE", false, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), false, t._1))
       __new[SEntry](allargs: _*)
     }
     case sym -> (GenericEntryApplyObject(Constant("SteSampleSEntry"), Def(LiftedSeq(args)))) if entryTypes.contains(sym) => {
@@ -344,21 +344,21 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         case (Constant(v: Int), i) if i < args.size / 2 => v -> (args(i + args.size / 2))
       }.toMap
       implicit val entTp = SEntry(sch).tp
-      val allargs = (if (Optimizer.secondaryIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
+      val allargs = (if (Optimizer.secondaryIndex) Nil else List(("isSE", false, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, false, a._2))
       __new[SEntry](allargs: _*)
     }
 
     case sym -> (SteNewSEntry(_, args)) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       implicit val entTp = SEntry(sch).tp
-      val allargs = (if (Optimizer.secondaryIndex) Nil else List(("isSE", true, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), true, t._1))
+      val allargs = (if (Optimizer.secondaryIndex) Nil else List(("isSE", false, unit(false)))) ++ args.zipWithIndex.map(t => ("_" + (t._2 + 1), false, t._1))
       __new[SEntry](allargs: _*)
     }
     case sym -> (SteSampleSEntry(_, args)) if entryTypes.contains(sym) => {
       val sch = schema(sym)
       val cols = args.toMap
       implicit val entTp = SEntry(sch).tp
-      val allargs = (if (Optimizer.secondaryIndex) Nil else List(("isSE", true, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, true, a._2))
+      val allargs = (if (Optimizer.secondaryIndex) Nil else List(("isSE", false, unit(true)))) ++ (1 until (sch.size + 1)).map(c => ("_" + c, cols getOrElse(c, nullValue(sch(c - 1))))).map(a => (a._1, false, a._2))
       __new[SEntry](allargs: _*)
     }
     case sym -> (PardisNewVar(v)) if entryTypes.contains(sym) => {
@@ -397,7 +397,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val entry = SEntry(sch)
       implicit val entryTp = entry.tp
       val tag = entryTp.asInstanceOf[RecordType[SEntry]].tag
-      val allfields = (if (Optimizer.secondaryIndex) Nil else List(StructElemInformation("isSE", BooleanType.asInstanceOf[TypeRep[Any]], true))) ++ sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], true))
+      val allfields = (if (Optimizer.secondaryIndex) Nil else List(StructElemInformation("isSE", BooleanType.asInstanceOf[TypeRep[Any]], false))) ++ sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], false))
       structsDefMap += (tag -> PardisStructDef(tag, allfields, Nil).asInstanceOf[PardisStructDef[Any]])
       val ops_ = ops.collect {
         case Def(node: EntryIdxGenericCmpObject[_]) => {
@@ -448,7 +448,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       if (i > sch.size || i <= 0)
         throw new IllegalArgumentException("Accessing a column which is not in schema")
       implicit val tp = sch(i - 1).asInstanceOf[TypeRep[Any]]
-      fieldGetter(ent, "_" + i)(tp)
+      field(ent, "_" + i)(tp)
     }
     case GenericEntry$minus$eq(ent: Sym[_], Constant(i: Int), v@_) if entryTypes.contains(ent) => {
       val sch = schema(ent)

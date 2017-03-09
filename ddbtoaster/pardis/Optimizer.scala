@@ -56,6 +56,7 @@ class Optimizer(val IR: StoreDSL) {
 
   pipeline += new DSKReordering(IR)
   pipeline += new Deforestation(IR)
+  pipeline += DCE
 
   if (Optimizer.secondaryIndex) {
     pipeline += new IndexAnalysis(IR)

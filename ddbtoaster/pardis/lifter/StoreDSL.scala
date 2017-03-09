@@ -358,7 +358,7 @@ trait StoreDSL extends
   def stSlice[E <: Entry : TypeRep](x: Rep[Store[E]], f: Rep[E] => Rep[Unit], args: (Int, Rep[Any])*): Rep[Unit] = stSlice(x, 0, stSampleEntry(x, args), f)
 
   // FIXME
-  def store2StoreOpsCls[E <: Entry](store: Rep[Store[E]]) = new StoreRep(store.asInstanceOf[Rep[Store[E]]])(runtimeType[Int].asInstanceOf[TypeRep[E]])
+  def store2StoreOpsCls[E <: Entry](store: Rep[Store[E]]) = new StoreRep(store.asInstanceOf[Rep[Store[E]]])(EntryType.asInstanceOf[TypeRep[E]])
 
   // def dtGetYear(x: Rep[Date]): Rep[Long] = dateGetYear(x)
 

@@ -306,6 +306,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case StructFieldSetter(self: Sym[_], idx, rhs) if refSymbols.contains(self) => doc"$self.$idx = $rhs"
     case StructFieldGetter(self: Sym[_], idx) if refSymbols.contains(self) => doc"$self.$idx"
+    case StructImmutableField(self: Sym[_], idx) if refSymbols.contains(self) => doc"$self.$idx"
     case StructFieldIncr(self, idx, rhs) if refSymbols.contains(self) => doc"$self.$idx += $rhs"
     case StructFieldDecr(self, idx, rhs) if refSymbols.contains(self) => doc"$self.$idx -= $rhs"
     case StructFieldIncr(self, idx, rhs) => doc"$self->$idx += $rhs"
