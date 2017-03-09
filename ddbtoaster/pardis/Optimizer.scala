@@ -53,7 +53,7 @@ class Optimizer(val IR: StoreDSL) {
   optCombination = List(analyzeEntry -> "E", secondaryIndex -> "I", fixedRange -> "G", onlineOpts -> "O",
     tmpVarHoist -> "V", tmpMapHoist -> "M", indexInline -> "N", indexLookupFusion -> "F",
     indexLookupPartialFusion -> "P", sliceInline -> "S", deadIndexUpdate -> "D", codeMotion -> "C",
-    m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R", multiResSplitter -> "U", initialStoreSize -> "Z", sliceNoUpd -> "L", splSecondaryIdx -> "Y", minMaxIdx -> "A", medIdx -> "B").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
+    m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R", multiResSplitter -> "U", initialStoreSize -> "Z", sliceNoUpd -> "L", splSecondaryIdx -> "Y", minMaxIdx -> "A", medIdx -> "B", coldMotion -> "Q").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
 
   pipeline += new DSKReordering(IR)
   pipeline += new Deforestation(IR)
