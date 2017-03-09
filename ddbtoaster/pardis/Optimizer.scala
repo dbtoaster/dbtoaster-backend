@@ -36,6 +36,7 @@ object Optimizer {
   var regexHoister = false
   var multiResSplitter = false
   var sliceNoUpd = false
+  var coldMotion = true
 
   var refCounter = true
   var cTransformer = false
@@ -118,6 +119,9 @@ class Optimizer(val IR: StoreDSL) {
   if (Optimizer.multiResSplitter)
     pipeline += new MultiResSplitter(IR)
 
+  if(Optimizer.coldMotion) {
+    pipeline += new ColdMotion(IR)
+  }
   if (Optimizer.tmpMapHoist)
     pipeline += new TmpMapHoister(IR)
 
