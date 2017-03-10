@@ -30,7 +30,7 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
 
   /**
    * First, it performs side effect analysis to have more precise effect information.
-   * Second, it identifes the colde regions inside which some statements should be injected. 
+   * Second, it identifies the cold regions inside which some statements should be injected.
    * Then, for each cold region specifies the list of statements that should
    * be injected. Finally, it performs the transformation to rewrite the cold regions
    * to include the injected statements, instead of reifying them before that cold region.
@@ -71,18 +71,18 @@ class ColdMotion(override val IR: StoreDSL)  extends Optimizer[StoreDSL](IR) {
   }
 
   /**
-   * The list of statements should be injected in the current cold region.
+   * The list of statements that should be injected in the current cold region.
    */
   var currentHoistedStatements = List[Stm[_]]()
 
 
   /**
-   * Mapping between cold regions and the statements should be inject inside that region. 
+   * Mapping between cold regions and the statements that should be injected inside that region.
    */
   val hoistedRegionStatements = collection.mutable.Map[ColdRegion, List[Stm[_]]]()
 
   /**
-   * Returns free variables occuring in a given definition.
+   * Returns free variables occurring in a given definition.
    */
   def getFreeVars(node: Def[_]): List[Sym[Any]] =
     node.funArgs.collect({
@@ -155,6 +155,7 @@ class ColdRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer
     block.stmts match {
       case List(Stm(_, definition)) => definition match {
         case IdxSliceResMap(_, _, _, _) => true
+        case IdxSliceResMapNoUpd(_, _, _, _) => true
         case IdxForeachResMap(_, _, _)  => true
         case _ => false
       }
@@ -175,7 +176,7 @@ class ColdRegionAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer
 }
 
 /** A version of counting analysis which uses a local hash table for
-  * for maintaing the number of usages of each symbol.
+  * for maintaining the number of usages of each symbol.
   */
 class CountingAnalysisLocal(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {
   import IR._

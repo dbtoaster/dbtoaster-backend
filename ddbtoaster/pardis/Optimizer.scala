@@ -36,7 +36,7 @@ object Optimizer {
   var regexHoister = false
   var multiResSplitter = false
   var sliceNoUpd = false
-  var coldMotion = true
+  var coldMotion = false
 
   var refCounter = true
   var cTransformer = false
