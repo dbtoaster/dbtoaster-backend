@@ -1,9 +1,10 @@
 package sc.micro
 
+import ch.epfl.data.sc.pardis.types.{DoubleType, StringType}
 import ddbt.codegen.TransactionProgram
 import ddbt.lib.store.{GenericEntry, Store}
 import ddbt.lib.store.deep._
-import ddbt.transformer.IndexedCols
+import ddbt.transformer.{IndexedCols, StoreSchema}
 import sc.micro.MicroBenchRunner._
 class MB1 (override val Context : StoreDSL) extends Prog(Context) {
   import Sqd.Predef.{anyContextIsEmptyContext => _, _}
@@ -26,6 +27,7 @@ class MB1 (override val Context : StoreDSL) extends Prog(Context) {
     val idxCols = new IndexedCols
     idxCols.primary = List(1)
     tbl.asInstanceOf[Sym[_]].attributes += idxCols
+    tbl.asInstanceOf[Sym[_]].attributes += StoreSchema(List(DoubleType, DoubleType, StringType, DoubleType))
     TransactionProgram(initBlock, List(tbl.asInstanceOf[Sym[_]]), List(("fun1", List(), reifyBlock(body))), Nil, Nil)
   }
 }

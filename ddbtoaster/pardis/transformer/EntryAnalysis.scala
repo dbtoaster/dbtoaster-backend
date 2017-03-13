@@ -41,20 +41,33 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
   import IR._
 
   def add(key: Any, store: Rep[Store[_]]) = {
-    //System.err.println(s"Adding $key from store $store")
+//    System.err.println(s"Adding $key from store $store")
     EntryTypes += key.asInstanceOf[Sym[_]] -> TypeVar(store.asInstanceOf[Sym[_]])
   }
-
+  def addSchema(key: Any, sch: List[TypeRep[_]]) = {
+//    System.err.println(s"Adding schema $sch to $key")
+    EntryTypes += key.asInstanceOf[Sym[_]] -> sch
+  }
   def addVar(key: Any, other: Any) = {
     //System.err.println(s"Adding $key from var $other")
     EntryTypes += key.asInstanceOf[Sym[_]] -> TypeVar(other.asInstanceOf[Sym[_]])
   }
 
+
   val EntryTypes = collection.mutable.HashMap[Sym[_], Any]()
 
   analysis += statement {
     //      case sym -> (GenericEntryApplyObject(_, _)) => EntryTypes += sym -> EntryTypeRef; ()
-
+    case sym -> (StoreFilter(store, f@Def(PardisLambda(_, i, _)))) => add(f, store); add(i, store); add(sym, store); ()
+    case sym -> (StoreMap(store, f@Def(PardisLambda(_, i, o)))) =>
+      val resType = o.res match {
+        case Def(GenericEntryApplyObject(_, Def(LiftedSeq(args)))) => args.map(_.tp).toList
+      }
+      add(f, store); add(i, store); addSchema(sym, resType); ()
+    case sym -> (StoreFold(store, z, f@Def(PardisLambda2(_, _, i2, _)))) => add(f, store); add(i2, store); ()
+    case sym -> (GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) =>
+      val resType = args.map(_.tp).toList
+      addSchema(sym, resType); ()
     case sym -> (StoreGetCopy(store, _, key@Def(SteNewSEntry(_, _)))) => add(key, store); add(sym, store); ()
     case sym -> (StoreGetCopy(store, _, key@Def(SteSampleSEntry(_, _)))) => add(key, store); add(sym, store); ()
     case sym -> (StoreGetCopy(store, _, key@Def(GenericEntryApplyObject(_, _)))) => add(key, store); add(sym, store); ()
@@ -296,7 +309,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
         BooleanExtra.conditional(v > unit(0), unit(1), BooleanExtra.conditional(v < unit(0), unit(-1), unit(0)))
       }
       else
-        BooleanExtra.conditional(Equal(r1, r2), unit(0), BooleanExtra.conditional(ordering_gt(r1, r2), unit(1), unit(-1)))
+        BooleanExtra.conditional(Equal(r1, r2), unit(0), BooleanExtra.conditional(ordering_gt(r1, r2)(r1.tp), unit(1), unit(-1)))
     })
   }
 
@@ -492,7 +505,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       PardisLambda(f_, i_, o)(entTp, l.typeS)
 
     }
-    case l@PardisLambda2(f, i1: Sym[GenericEntry], i2: Sym[GenericEntry], o) if entryTypes.contains(i1) && i1.tp == GenericEntryType => {
+    case l@PardisLambda2(f, i1: Sym[GenericEntry], i2: Sym[GenericEntry], o) if entryTypes.contains(i1) && entryTypes.contains(i2) && i1.tp == GenericEntryType => {
       val sch = schema(i1)
       implicit val entTp: TypeRep[SEntry] = SEntry(sch).tp
       val i1_ = Sym[SEntry](i1.id, i1.name)
@@ -501,6 +514,15 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val f_ = (e1: Rep[SEntry], e2: Rep[SEntry]) => f(e1.asInstanceOf[Rep[Nothing]], e2.asInstanceOf[Rep[Nothing]])
       PardisLambda2(f_, i1_, i2_, o)(entTp, entTp, l.typeS)
 
+    }
+
+    case l@PardisLambda2(f, i1: Sym[GenericEntry], i2: Sym[GenericEntry], o) if entryTypes.contains(i2) && (i2.tp == GenericEntryType || i2.tp == EntryType) => {
+      val sch = schema(i2)
+      implicit val entTp: TypeRep[SEntry] = SEntry(sch).tp
+      val i2_ = Sym[SEntry](i2.id, i2.name)
+
+      val f_ = (e1: Rep[Any], e2: Rep[SEntry]) => f(e1, e2.asInstanceOf[Rep[Nothing]])
+      PardisLambda2(f_, i1, i2_, o)(i1.tp, entTp, l.typeS)
     }
   }
   rewrite += remove {

@@ -119,6 +119,10 @@ class Optimizer(val IR: StoreDSL) {
   if (Optimizer.multiResSplitter)
     pipeline += new MultiResSplitter(IR)
 
+  if(Optimizer.coldMotion && !Optimizer.multiResSplitter)
+    throw new Error("ColdMotion requires MultiResSplitter")
+  //MultiResSplitter is required for ColdMotion to move computation to necessary place
+
   if(Optimizer.coldMotion) {
     pipeline += new ColdMotion(IR)
   }

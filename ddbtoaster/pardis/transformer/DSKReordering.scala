@@ -2,6 +2,7 @@ package ddbt.transformer
 
 import ch.epfl.data.sc.pardis.ir.PardisLambda
 import ch.epfl.data.sc.pardis.optimization.{RecursiveRuleBasedTransformer, RuleBasedTransformer}
+import ddbt.lib.store.deep.EntryIRs.EntryType
 import ddbt.lib.store.deep.StoreDSL
 
 /**
@@ -42,10 +43,13 @@ class DSKReordering(override val IR: StoreDSL) extends RecursiveRuleBasedTransfo
   rewrite += rule {
     case StoreFilter(Def(sm@StoreMap(self, mlrep@Def(ml@PardisLambda(mapfn, _, _)))), Def(fl@PardisLambda(filterfn, _ , _))) =>
       //SBJ: TODO: Check if correct typereps are passed
+      //SBJ: For some reason, all the types associated with lambdas are "AnyType". Therefore, explicitly passing GE
+
       val filterfn_ = mapfn andThen filterfn
-      val fl_ = doLambda(filterfn_)(ml.typeT, fl.typeS)
-      val sf = toAtom(StoreFilter(self, fl_)(sm.typeE))(self.tp)
-      StoreMap(sf, mlrep)(sm.typeE, sm.typeU)
+      val fl_ = doLambda(filterfn_)(EntryType, BooleanType)
+//      java.lang.System.err.println(s"${sm.typeE} ${sm.typeU}  ${ml.typeT} ${ml.typeS} ${fl.typeS} ${fl.typeT}")
+      val sf = toAtom(StoreFilter(self, fl_)(EntryType))(self.tp)
+      StoreMap(sf, mlrep)(EntryType, EntryType)
 
 
 //    case StoreMap(Def(StoreMap(self, Def(i@PardisLambda(inner, _, _)))), Def(o@PardisLambda(outer, _, _))) =>

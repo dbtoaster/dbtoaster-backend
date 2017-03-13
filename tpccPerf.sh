@@ -1,21 +1,22 @@
 #!/usr/bin/env bash
 rm -f opt_list.txt
 allopts=(
-" "
-"-opt lookupfusion -opt entry"
-"-opt index"
-"-opt index -opt fixedrange"
-"-opt index -opt fixedrange -opt lookupfusion"
-"-opt index -opt entry"
-"-opt index -opt lookupfusion -opt entry"
-"-opt index -opt fixedrange -opt lookupfusion -opt entry"
-"-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online"
-"-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar"
-"-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar -opt idxinline"
-"-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar -opt idxinline -opt deadidx"
-"-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar -opt idxinline -opt deadidx -opt sliceinline"
-"-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar  -opt idxinline -opt deadidx -opt sliceinline -opt codemotion"
-#"-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar  -opt idxinline -opt deadidx -opt sliceinline -opt codemotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt multires -opt coldmotion"
+"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt slicenoupd"
+#"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt sliceinline -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt codemotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt lookupfusion -opt codemotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt idxinline -opt lookupfusion -opt deadidx -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt med  -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt minmax -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt index -opt spl -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt index -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt entry -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
+"-opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt idxinline -opt lookupfusion -opt deadidx -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
 )
 cnt=1
 
@@ -32,13 +33,13 @@ do
 echo "$cnt $opt" >> opt_list.txt
 
 
-if [ $cnt -eq 1 ]
-then
-n=100
-elif [ $cnt -eq 2 ]
+if [ $cnt -eq 14 ]
 then
 n=1000
-elif [ $cnt -lt 7 ]
+elif [ $cnt -eq 6 ]
+then
+n=100000
+elif [ $cnt -eq 15 ]
 then
 n=100000
 else
@@ -59,7 +60,7 @@ cnt=$((cnt+1))
 done
 n=1000000
 #most optimal case dry run
-opt="-opt index -opt fixedrange -opt lookupfusion -opt entry -opt online -opt tmpvar  -opt idxinline -opt deadidx -opt sliceinline -opt codemotion -opt slicenoupd"
+opt="-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
 sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang cpp -info tpcc-$n"
 rm -f tpcc.out
 g++ -std=c++11 -O3 -DNUMWARE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
