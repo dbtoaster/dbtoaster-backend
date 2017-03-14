@@ -122,7 +122,7 @@ class MicroBenchPardisCppGen(val IR: StoreDSL) extends MicroBenchPardisGen {
   override val codeGen = new StoreCppCodeGenerator(IR)
 
 
-  override val file: PrintWriter = new PrintWriter(s"$genDir/TpccGenSC.cpp")
+  override val file: PrintWriter = new PrintWriter(s"$genDir/MicroBench.cpp")
   val showOutput = false
 
   override def generate[T](optTP: TransactionProgram[T]): Unit = {
@@ -230,10 +230,20 @@ class MicroBenchPardisCppGen(val IR: StoreDSL) extends MicroBenchPardisGen {
     val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT($i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
     def mainPrg =
       s"""
+         | MB1 loader;
+         | loader.loadCust();
          |
+         | size_t durations[5];
+         | for(int i = 0; i < 5; ++i) {
+         |    auto start = Now;
+         |    fun1();
+         |    auto end = Now;
+         |    durations[i] = DurationMS(end-start);
+         |    cout << durations[i] << endl;
+         | }
          |
       """.stripMargin
-    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: traits :/: Document.nest(2, mainPrg) :/: codeGen.footer)
+    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"MB1.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }

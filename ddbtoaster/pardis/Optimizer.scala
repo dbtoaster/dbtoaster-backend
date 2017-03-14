@@ -184,7 +184,7 @@ class Optimizer(val IR: StoreDSL) {
     val codeB_ = prg.codeBlocks.map(t => (t._1, t._2, opt(IR)(t._3)))
     val (global_, structs_, entryidx_) = opt match {
       case writer: IndexDecider => (writer.changeGlobal(prg.globalVars), prg.structs, if (Optimizer.cTransformer) (writer.genOps.values ++ writer.genCmp.values ++ writer.genFixed.values).toSeq.map(IR.Def.unapply(_).get) else prg.entryIdxDefs)
-      case writer: EntryTransformer => (writer.changeGlobal(prg.globalVars), prg.structs ++ writer.structsDefMap.map(_._2), (writer.genOps.map(_._2) ++ writer.genCmp.map(_._2) ++ writer.genFixRngOps.map(_._2)).toSeq.collect { case IR.Def(e: EntryIdxApplyObject[_]) => e })
+      case writer: EntryTransformer => (writer.changeGlobal(prg.globalVars), prg.structs ++ writer.getStructDefs, (writer.genOps.map(_._2) ++ writer.genCmp.map(_._2) ++ writer.genFixRngOps.map(_._2)).toSeq.collect { case IR.Def(e: EntryIdxApplyObject[_]) => e })
       case reader: CountingAnalysis[StoreDSL] =>
         prg.entryIdxDefs.collect {
           case EntryIdxApplyObject(IR.Def(hl@PardisLambda(_, _, h)), IR.Def(cl@PardisLambda2(_, _, _, c)), _) => reader(IR)(h)(hl.typeS); reader(IR)(c)(cl.typeS)

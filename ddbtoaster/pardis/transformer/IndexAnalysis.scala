@@ -6,7 +6,7 @@ import ch.epfl.data.sc.pardis.property.{Property, TypedPropertyFlag}
 import ch.epfl.data.sc.pardis.types.AnyType
 import ddbt.codegen.Optimizer
 import ddbt.lib.store._
-import ddbt.lib.store.deep.GenericEntryIRs.GenericEntryGet
+import ddbt.lib.store.deep.GenericEntryIRs.{GenericEntryGet}
 import ddbt.lib.store.deep.StoreDSL
 
 /**
@@ -253,7 +253,12 @@ class IndexDecider(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
       //System.err.println(s" $s -> $newS")
       newS
     }
-
+//    case s->StoreMap(store, Def(PardisLambda(_, _, o))) =>
+//      val resType = o.res match {
+//        case Def(GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) => (1 to args.length)
+//      }
+//      val ei = genOps getOrElseUpdate (resType, EntryIdx.genericOps(unit[Seq[Int]](resType)))
+//      s
   }
 
   def changeGlobal(global: List[Sym[_]]) = global.map(x => apply(x.asInstanceOf[Sym[Any]])(AnyType).asInstanceOf[Sym[_]])

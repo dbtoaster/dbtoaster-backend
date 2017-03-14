@@ -44,10 +44,12 @@ class EntryAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
 //    System.err.println(s"Adding $key from store $store")
     EntryTypes += key.asInstanceOf[Sym[_]] -> TypeVar(store.asInstanceOf[Sym[_]])
   }
+
   def addSchema(key: Any, sch: List[TypeRep[_]]) = {
 //    System.err.println(s"Adding schema $sch to $key")
     EntryTypes += key.asInstanceOf[Sym[_]] -> sch
   }
+
   def addVar(key: Any, other: Any) = {
     //System.err.println(s"Adding $key from var $other")
     EntryTypes += key.asInstanceOf[Sym[_]] -> TypeVar(other.asInstanceOf[Sym[_]])
@@ -157,7 +159,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val hash = __newVar(unit(0))
       colsRange.foreach(c => {
         val w = c._3 - c._2
-        if(w > 1) {
+        if (w > 1) {
           val weight = unit(w)
           val colval = field(e, "_" + c._1)(IntType) - unit(c._2)
           __assign(hash, __readVar(hash) * weight + colval)
@@ -318,6 +320,17 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     case sch: List[TypeRep[_]] => sch
   }
 
+  def getStructDefs() = {
+    entryTypes.collect({
+      case (sym, sch: List[TypeRep[_]]) =>
+        implicit val entryTp = SEntry(sch).tp
+        val tag = entryTp.asInstanceOf[RecordType[SEntry]].tag
+        val allfields = (if (Optimizer.secondaryIndex) Nil else List(StructElemInformation("isSE", BooleanType.asInstanceOf[TypeRep[Any]], false))) ++ sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], false))
+        structsDefMap += (tag -> PardisStructDef(tag, allfields, Nil).asInstanceOf[PardisStructDef[Any]])
+    })
+    structsDefMap.values
+  }
+
   rewrite += statement {
     case sym -> (agg@AggregatorMaxObject(f)) if entryTypes.contains(sym) =>
       val sch = schema(sym)
@@ -409,9 +422,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       val sch = schema(sym)
       val entry = SEntry(sch)
       implicit val entryTp = entry.tp
-      val tag = entryTp.asInstanceOf[RecordType[SEntry]].tag
-      val allfields = (if (Optimizer.secondaryIndex) Nil else List(StructElemInformation("isSE", BooleanType.asInstanceOf[TypeRep[Any]], false))) ++ sch.zipWithIndex.map(t => StructElemInformation("_" + (t._2 + 1), t._1.asInstanceOf[TypeRep[Any]], false))
-      structsDefMap += (tag -> PardisStructDef(tag, allfields, Nil).asInstanceOf[PardisStructDef[Any]])
+
       val ops_ = ops.collect {
         case Def(node: EntryIdxGenericCmpObject[_]) => {
           implicit val typeR = node.typeR
@@ -452,6 +463,17 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       ssym.attributes += entry
       newS
     }
+//SBJ: TODO: Change types of StoreFilter as well
+    case sym -> (StoreMap(store, f)) if entryTypes.contains(sym) =>
+      val sch = schema(sym)
+      val entry = SEntry(sch)
+      implicit val entryTp = entry.tp
+      val cols = (1 to sch.size).toList
+      lazy val newei = EntryIdx.apply(hashfn(cols, entry), equal_cmp(cols, entry), unit(entry.name + "_Idx" + cols.mkString("")))
+      genOps getOrElseUpdate((cols, entry), newei)
+      val newS = store.asInstanceOf[Rep[Store[Entry]]].map(f)(entryTp.asInstanceOf[TypeRep[Entry]])
+//      System.err.println(s"$newS  ${newS.tp}")
+      newS
 
   }
   rewrite += rule {

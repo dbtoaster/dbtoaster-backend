@@ -1,6 +1,6 @@
 package ddbt.codegen.prettyprinter
 
-import ch.epfl.data.sc.pardis.ir.CNodes.StrStr
+import ch.epfl.data.sc.pardis.ir.CNodes.{Malloc, StrStr}
 import ch.epfl.data.sc.pardis.ir.CTypes.PointerType
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.CCodeGenerator
@@ -221,7 +221,22 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
     case Statement(sym, n@GenericEntryGet(self: Sym[_], idx)) if sym.tp == StringType =>
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
+    case Statement(sym, StoreMap(self, f@Def(PardisLambda(_, _, o)))) =>
+      val typeE = sym.tp.asInstanceOf[StoreType[_]].typeE.asInstanceOf[PointerType[_]].contentsType
+      val entidx = o.res.asInstanceOf[Rep[Any]] match {
+        case Def(GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) => "GenericOps_" + (1 to args.length).mkString("")
+        case Def(mc@Malloc(_)) =>
+          val tp = mc.typeT.asInstanceOf[RecordType[_]].tag.typeName
+          val cols = tp.drop(6).split("_")(0).toInt  //SBJ: Assuming SEntry<number>_.....
+          tp + "_Idx" + (1 to cols).mkString("")
 
+      }
+      val idx = doc"HashIndex<$typeE, char, $entidx, 1>"
+      doc"auto& $sym = $self.map<$typeE, $idx>($f);"
+    case Statement(sym, StoreFold(self, z, f)) =>
+      doc"${z.tp} $sym = $self.fold<${z.tp}>($z, $f);"
+    case Statement(sym, StoreFilter(self, f)) =>
+      doc"auto& $sym = $self.filter($f);"
     case _ => super.stmtToDocument(stmt)
   }
 
@@ -334,7 +349,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case LiftedSeq(ops) if node.tp.isInstanceOf[SeqType[EntryIdx[_]]] => Document.empty
     case PardisLambda(_, i, o) =>
-      doc"[&](${i.tp} $i) {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
+      val retTp = if(o.res.tp == UnitType) doc" {"  else  doc" -> ${o.res.tp} {"
+      doc"[&](${i.tp} $i)" :: retTp :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
     //    case PardisLambda2(_, i1, i2, o) if refSymbols.contains(i1) =>
     //      val t1 = i1.tp.typeArguments match {
@@ -348,7 +364,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     //      "[&](" :: tpeToDocument(t1) :: " & " :: expToDocument(i1) :: ", " :: tpeToDocument(t2) :: " & " :: expToDocument(i2) :: ") {" :/: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
     //
     case PardisLambda2(_, i1, i2, o) =>
-      doc"[&](${i1.tp} $i1, ${i2.tp} $i2) {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
+      val retTp = if(o.res.tp == UnitType) doc" {"  else  doc" -> ${o.res.tp} {"
+      doc"[&](${i1.tp} $i1, ${i2.tp} $i2)" :: retTp :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"$cond ? $ift : $iff"
 
@@ -417,7 +434,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val name = "GenericFixedRange_" + cols.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")
       val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
         doc"unsigned int h = 0;  //Defined only for int fields" :/:
-          cols.collect { case (c, l, u) if (u-l) > 1 => s"""h = h * ${u-l} + e.getInt($c) - $l; """ }.mkDocument("\n") :\\:
+          cols.collect { case (c, l, u) if (u - l) > 1 => s"""h = h * ${u - l} + e.getInt($c) - $l; """ }.mkDocument("\n") :\\:
           doc"return h;"
       ) :/: "}"
       val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :: Document.nest(2, "return 0;") :: "}"

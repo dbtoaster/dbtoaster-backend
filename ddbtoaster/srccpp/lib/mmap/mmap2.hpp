@@ -3200,6 +3200,33 @@ public:
         delete[] modified;
     }
 
+    FORCE_INLINE MultiHashMap<T, V, INDEXES...>& filter(const std::function<bool (T*)>& filterFn) {
+        MultiHashMap<T, V, INDEXES...>* result = new MultiHashMap<T, V, INDEXES...>();
+        index[0]->foreach([&](T * entry) {
+            if (filterFn(entry))
+                result->insert_nocheck(entry);  //SBJ: Insert with check?
+        });
+        return *result;
+    }
+
+    template<typename U>
+    FORCE_INLINE U fold(U zero, const std::function<U(U, T*)>& foldFn) {
+        U result = zero;
+        index[0]->foreach([&](T * entry) {
+            result = foldFn(result, entry);
+        });
+        return result;
+    }
+
+    template<typename T2, typename... INDEXES2>
+    FORCE_INLINE MultiHashMap<T2, V, INDEXES2...>& map(const std::function<T2* (T*)>& mapFn) {
+        MultiHashMap<T2, V, INDEXES2...> *result = new MultiHashMap<T2, V, INDEXES2...>();
+        index[0]->foreach([&](T* entry){
+            result->insert_nocheck(mapFn(entry)); //SBJ: Insert with check?
+        });
+        return *result;
+    }
+
     FORCE_INLINE T* get(const T& key, const size_t idx = 0) const {
         return index[idx]->get(&key);
     }
