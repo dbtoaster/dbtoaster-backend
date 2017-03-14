@@ -38,7 +38,10 @@ object Optimizer {
   var sliceNoUpd = false
   var coldMotion = false
 
-  var refCounter = true
+  var profileBlocks = false
+  var profileStoreOperations = false
+
+  var refCounter = false
   var cTransformer = false
   var initialStoreSize = false
   var infoFileName = ""
@@ -89,6 +92,9 @@ class Optimizer(val IR: StoreDSL) {
   }
 
 
+  if (Optimizer.profileStoreOperations)
+    pipeline += new Profiler(IR)
+
   //    pipeline += PartiallyEvaluate
   if (Optimizer.indexLookupFusion || Optimizer.indexLookupPartialFusion)
     pipeline += new IndexLookupFusion(IR)
@@ -103,8 +109,8 @@ class Optimizer(val IR: StoreDSL) {
     number of possible nodes to increase thereby increasing the number of scenarios that sliceInline needs to handle
     */
 
-//  if (Optimizer.sliceNoUpd && !(Optimizer.deadIndexUpdate))
-//    throw new Error("SliceNoUpdate requires deadIndexUpdate")
+  //  if (Optimizer.sliceNoUpd && !(Optimizer.deadIndexUpdate))
+  //    throw new Error("SliceNoUpdate requires deadIndexUpdate")
   /*
       SliceNoUpdate covers the case of only IdxSlice.
       Even though this optimization can be performed without the deadIndexUpdate, for the best case, it should be after
@@ -119,11 +125,11 @@ class Optimizer(val IR: StoreDSL) {
   if (Optimizer.multiResSplitter)
     pipeline += new MultiResSplitter(IR)
 
-  if(Optimizer.coldMotion && !Optimizer.multiResSplitter)
+  if (Optimizer.coldMotion && !Optimizer.multiResSplitter)
     throw new Error("ColdMotion requires MultiResSplitter")
   //MultiResSplitter is required for ColdMotion to move computation to necessary place
 
-  if(Optimizer.coldMotion) {
+  if (Optimizer.coldMotion) {
     pipeline += new ColdMotion(IR)
   }
   if (Optimizer.tmpMapHoist)
@@ -190,6 +196,16 @@ class Optimizer(val IR: StoreDSL) {
           case EntryIdxApplyObject(IR.Def(hl@PardisLambda(_, _, h)), IR.Def(cl@PardisLambda2(_, _, _, c)), _) => reader(IR)(h)(hl.typeS); reader(IR)(c)(cl.typeS)
         }
         (prg.globalVars, prg.structs, prg.entryIdxDefs)
+//      case writer : ScalaConstructsToCTranformer =>
+//        val ei2 = prg.entryIdxDefs.collect({
+//          case EntryIdxApplyObject(IR.Def(hl@PardisLambda(_, hi, h)), IR.Def(cl@PardisLambda2(_, ci1, ci2, c)), n) =>
+//            val h2 = writer(IR)(h)(hl.typeS)
+//            val c2 = writer(IR)(h)(cl.typeS)
+//            val hl2 = ??
+//            val cl2 = ???
+//            EntryIdxApplyObject(hl2, cl2, n)
+//
+//        })
       case _ => (prg.globalVars, prg.structs, prg.entryIdxDefs)
     }
     val vars_ = opt match {

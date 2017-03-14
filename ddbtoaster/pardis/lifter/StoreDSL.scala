@@ -49,6 +49,14 @@ case class StructFieldIncr[T: PardisType](struct: Expression[Any], index: String
   override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
 }
 
+case class ProfileStart(n: Expression[String]) extends FunctionNode[Unit](None, "ExP.start", List(List(n))) {
+  override def curriedConstructor = copy _
+}
+
+case class ProfileEnd(n: Expression[String]) extends FunctionNode[Unit](None, "ExP.end", List(List(n))) {
+  override def curriedConstructor = copy _
+}
+
 trait StoreDSLOptimized extends StoreDSL with OnlineOptimizations {
 
   override def fieldIncr[T](struct: Expression[Any], index: String, rhs: Expression[T])(implicit tp: TypeRep[T]) = StructFieldIncr(struct, index, rhs)

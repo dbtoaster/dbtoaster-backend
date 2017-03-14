@@ -40,6 +40,8 @@ object TpccXactGenerator_SC {
       case "minmax" => Optimizer.minMaxIdx = true
       case "med" => Optimizer.medIdx = true
       case "coldmotion" => Optimizer.coldMotion = true
+      case "profileblocks" => Optimizer.profileBlocks = true
+      case "profilestore" => Optimizer.profileStoreOperations = true
       case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }

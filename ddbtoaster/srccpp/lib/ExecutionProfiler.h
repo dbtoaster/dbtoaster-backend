@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <chrono>
 #include <iostream>
+#include <fstream>
 #define EXEC_PROFILE 1
 using std::chrono::high_resolution_clock;
 using std::chrono::system_clock;
@@ -61,10 +62,22 @@ struct ExecutionProfiler {
     static void printProfile() {
         std::cout << "Profile Results :: " << std::endl;
 #ifdef EXEC_PROFILE
-            for (auto it : durations) {
-                std::cout << it.first << "   count = " << counters[it.first] << " time = " << it.second / 1000000.0 << " ms    avg time = "<< it.second /counters[it.first] <<" ns" << std:: endl;
-            }
+        for (auto it : durations) {
+            std::cout << it.first << "   count = " << counters[it.first] << " time = " << it.second / 1000000.0 << " ms    avg time = " << it.second / counters[it.first] << " ns" << std::endl;
+        }
 
+#endif
+    }
+
+    static void printProfileToFile() {
+#ifdef EXEC_PROFILE
+        std::ofstream fout("profile.csv");
+        fout << ",count,timeMS,avgTimeNS" << std::endl;
+
+        for (auto it : durations) {
+            fout << it.first << "," << counters[it.first] << "," << it.second / 1000000.0 << "," << it.second / counters[it.first] << std::endl;
+        }
+        fout.close();
 #endif
     }
 };

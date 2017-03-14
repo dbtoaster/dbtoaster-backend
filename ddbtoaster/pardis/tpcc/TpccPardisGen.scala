@@ -291,7 +291,11 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     //    }
     //    optTP.codeBlocks.foreach(x => codeGen.functionsList += (blockTofunction(x)))
 
-    val blocks = optTP.codeBlocks.map(x => doc"void ${x._1}(${argsDoc(x._2)}) {" :: Document.nest(2, codeGen.blockToDocument(x._3)) :/: "}").mkDocument("\n")
+    val blocks = optTP.codeBlocks.map(x => doc"void ${x._1}(${argsDoc(x._2)}) {" ::
+      (if(Optimizer.profileBlocks) doc"""\nExecutionProfiler::startProfile("${x._1}");""" else doc"") ::
+      Document.nest(2, codeGen.blockToDocument(x._3)) ::
+      (if(Optimizer.profileBlocks) doc"""\nExecutionProfiler::endProfile("${x._1}");""" else doc"") :/:
+      "}").mkDocument("\n")
     idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name)).toList
     val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT($i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
     def mainPrg =
@@ -375,6 +379,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "Total time = " << execTime << " ms" << endl;
          |cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  xactCounts[0]  << endl;
          |cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
+         |${if(Optimizer.profileBlocks || Optimizer.profileStoreOperations) "ExecutionProfiler::printProfileToFile();" else  doc""}
          |ofstream fout("tpcc_res_cpp.csv", ios::app);
          |if(argc == 1 || atoi(argv[1]) == 1)
          |  fout << "\\nCPP-${Optimizer.optCombination}-" << numPrograms << ",";
@@ -447,7 +452,12 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |#endif
          |
       """.stripMargin
-    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
+    val execProfile = if(Optimizer.profileBlocks || Optimizer.profileStoreOperations)
+      s""" std::unordered_map<std::string, Timepoint> startTimes;
+        | std::unordered_map<std::string, size_t> durations;
+        | std::unordered_map<std::string, size_t> counters;""".stripMargin
+    else ""
+    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }

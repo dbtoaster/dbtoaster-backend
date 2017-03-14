@@ -8,7 +8,7 @@ import ch.epfl.data.sc.pardis.types._
 import ch.epfl.data.sc.pardis.utils.document._
 import ddbt.codegen.Optimizer
 import ddbt.lib.store.{IHash, IList}
-import ddbt.lib.store.deep.{StoreDSL, StructFieldDecr, StructFieldIncr}
+import ddbt.lib.store.deep.{ProfileEnd, ProfileStart, StoreDSL, StructFieldDecr, StructFieldIncr}
 import ddbt.transformer.{Index, IndexesFlag, ScalaConstructsToCTranformer}
 import sun.security.x509.CRLDistributionPointsExtension
 
@@ -227,7 +227,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         case Def(GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) => "GenericOps_" + (1 to args.length).mkString("")
         case Def(mc@Malloc(_)) =>
           val tp = mc.typeT.asInstanceOf[RecordType[_]].tag.typeName
-          val cols = tp.drop(6).split("_")(0).toInt  //SBJ: Assuming SEntry<number>_.....
+          val cols = tp.drop(6).split("_")(0).toInt //SBJ: Assuming SEntry<number>_.....
           tp + "_Idx" + (1 to cols).mkString("")
 
       }
@@ -243,11 +243,15 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   override def symToDocument(sym: ExpressionSymbol[_]): Document = if (sym.tp == UnitType)
     doc"()"
   else {
-    if (sym.name != "x" && sym.name != "ite") {
-      Document.text(sym.name.stripSuffix("_$"))
-    } else {
-      super.symToDocument(sym)
+    sym match {
+      case Def(l: PardisLambdaDef) => nodeToDocument(l)
+      case _ => if (sym.name != "x" && sym.name != "ite") {
+        Document.text(sym.name.stripSuffix("_$"))
+      } else {
+        super.symToDocument(sym)
+      }
     }
+
   }
 
   override def expToDocument(exp: Expression[_]): Document = exp match {
@@ -349,7 +353,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case LiftedSeq(ops) if node.tp.isInstanceOf[SeqType[EntryIdx[_]]] => Document.empty
     case PardisLambda(_, i, o) =>
-      val retTp = if(o.res.tp == UnitType) doc" {"  else  doc" -> ${o.res.tp} {"
+      val retTp = if (o.res.tp == UnitType) doc" {" else doc" -> ${o.res.tp} {"
       doc"[&](${i.tp} $i)" :: retTp :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
     //    case PardisLambda2(_, i1, i2, o) if refSymbols.contains(i1) =>
@@ -364,7 +368,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     //      "[&](" :: tpeToDocument(t1) :: " & " :: expToDocument(i1) :: ", " :: tpeToDocument(t2) :: " & " :: expToDocument(i2) :: ") {" :/: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
     //
     case PardisLambda2(_, i1, i2, o) =>
-      val retTp = if(o.res.tp == UnitType) doc" {"  else  doc" -> ${o.res.tp} {"
+      val retTp = if (o.res.tp == UnitType) doc" {" else doc" -> ${o.res.tp} {"
       doc"[&](${i1.tp} $i1, ${i2.tp} $i2)" :: retTp :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"$cond ? $ift : $iff"
@@ -447,6 +451,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         else Document.text("")
       }
     case HashCode(a) => doc"HASH($a)"
+
+    case ProfileStart(n) => doc"ExecutionProfiler::startProfile($n)"
+    case ProfileEnd(n) => doc"ExecutionProfiler::endProfile($n)"
+
     case _ => super.nodeToDocument(node)
   }
 }

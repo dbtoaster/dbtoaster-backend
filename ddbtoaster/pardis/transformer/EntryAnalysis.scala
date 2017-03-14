@@ -229,6 +229,14 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     case h :: tail => __ifThenElse(func(h), recurseCols(tail, func, ret), __assign(ret, unit(1)))(UnitType)
   }
 
+  def booleanOr(e1: Rep[Boolean], e2: => Rep[Boolean]) : Rep[Boolean] = if(Optimizer.cTransformer) {
+    val v = __newVar(unit(true))
+    __ifThenElse(e1, unit(), __assign(v, e2))(UnitType)
+    __readVar(v)
+  } else {
+    e1 || e2
+  }
+
   def equal_cmp(cols: Seq[Int], s: SEntry): Rep[(SEntry, SEntry) => Int] = {
     if (cols == Nil)
       throw new Exception("Cols should not be empty for EntryIdx cmp")
@@ -247,7 +255,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
             val v1 = field(e1, "_" + i)(tp)
             val v2 = field(e2, "_" + i)(tp)
             val vNull = nullValue(s.sch(i - 1))
-            (v1 __== vNull) || (v1 __== v2)
+            booleanOr((v1 __== vNull), (v1 __== v2))
           }
           recurseCols(allCols, func, allConds)
         }, {
@@ -259,7 +267,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
               val v1 = field(e1, "_" + i)(tp)
               val v2 = field(e2, "_" + i)(tp)
               val vNull = nullValue(s.sch(i - 1))
-              (v2 __== vNull) || (v1 __== v2)
+              booleanOr((v2 __== vNull), (v1 __== v2))
             }
             recurseCols(allCols, func, allConds)
           }, {
