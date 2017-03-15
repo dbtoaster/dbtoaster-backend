@@ -237,6 +237,22 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"${z.tp} $sym = $self.fold<${z.tp}>($z, $f);"
     case Statement(sym, StoreFilter(self, f)) =>
       doc"auto& $sym = $self.filter($f);"
+
+    case Statement(sym, ProfileStart(n@Constant(str))) =>
+      val id = str.split(",")(2)
+      doc"auto start$id = Now;"
+    case Statement(sym, ProfileEnd(n@Constant(str))) =>
+      val id = str.split(",")(2)
+      doc"auto end$id = Now;" :/:
+        doc"if(durations.find($n) == durations.end()) {" :/:
+      doc"  durations[$n] = DurationNS(end$id - start$id);" :/:
+      doc"  counters[$n] = 1;" :/:
+      doc"} else  {" :/:
+      doc"  durations[$n] += DurationNS(end$id- start$id);" :/:
+      doc"  counters[$n]++;" :/:
+      doc"}"
+
+
     case _ => super.stmtToDocument(stmt)
   }
 
@@ -452,8 +468,6 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       }
     case HashCode(a) => doc"HASH($a)"
 
-    case ProfileStart(n) => doc"ExecutionProfiler::startProfile($n)"
-    case ProfileEnd(n) => doc"ExecutionProfiler::endProfile($n)"
 
     case _ => super.nodeToDocument(node)
   }

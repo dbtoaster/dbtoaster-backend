@@ -159,7 +159,7 @@ class Optimizer(val IR: StoreDSL) {
 
   pipeline += DCE
   pipeline += ParameterPromotion
-
+  pipeline += DCE
   pipeline += new StoreDCE(IR)
 
   //  pipeline += new CommonPureExpression(IR)
