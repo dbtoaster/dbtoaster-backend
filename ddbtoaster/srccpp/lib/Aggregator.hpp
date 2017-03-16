@@ -78,6 +78,9 @@ struct MedianAggregator {
     }
 
     E* result() {
+        if(results.empty())
+            return nullptr;
+        
         std::sort(results.begin(), results.end(), [&](E* e1, E* e2) { 
             assert(e1);
             assert(e2);

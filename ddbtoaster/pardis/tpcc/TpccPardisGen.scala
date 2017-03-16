@@ -390,9 +390,13 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
          |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "ExecutionProfiler::printProfileToFile();" else doc""}
          |ofstream fout("tpcc_res_cpp.csv", ios::app);
-         |if(argc == 1 || atoi(argv[1]) == 1)
+         |if(argc == 1 || atoi(argv[1]) == 1) {
          |  fout << "\\nCPP-${Optimizer.optCombination}-" << numPrograms << ",";
-         |fout << fixed << xactCounts[0] * 60000.0/execTime << ",";
+         |  for(int i = 0; i < 5 ; ++i)
+         |     fout << xactCounts[i] << ",";
+         |  fout <<",";
+         | }
+         |fout << execTime << ",";
          |fout.close();
          |
          |

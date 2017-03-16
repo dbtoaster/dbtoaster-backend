@@ -53,10 +53,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, v@PardisNewVar(Constant(0))) if v.typeT == StringType => doc"${sym.tp} $sym;"
 
     case Statement(sym, agg@AggregatorMaxObject(f)) =>
-      doc"${agg.typeE}* ${sym}result;" :/:
+      doc"${agg.typeE}* ${sym}result = nullptr;" :/:
         doc"MaxAggregator<${agg.typeE}, ${agg.typeR}> $sym($f, &${sym}result);"
     case Statement(sym, agg@AggregatorMinObject(f)) =>
-      doc"${agg.typeE}* ${sym}result;" :/:
+      doc"${agg.typeE}* ${sym}result = nullptr;" :/:
         doc"MinAggregator<${agg.typeE}, ${agg.typeR}> $sym($f, &${sym}result);"
     case Statement(sym, agg@AggregatorMedianObject(f)) =>
       doc"std::vector<${agg.typeE}*> ${sym}results;" :/:
