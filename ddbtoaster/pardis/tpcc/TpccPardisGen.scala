@@ -301,9 +301,9 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       doc"}"
     else doc""
 
-    val blocks = optTP.codeBlocks.map(x => doc"void ${x._1}(${argsDoc(x._2)}) {" ::
+    val blocks = optTP.codeBlocks.map(x => doc"FORCE_INLINE void ${x._1}(${argsDoc(x._2)}) {" ::
       stPrf(x._1) :: Document.nest(2, codeGen.blockToDocument(x._3)) :: endPrf(x._1) :/:
-    "}").mkDocument("\n")
+      "}").mkDocument("\n")
 
     idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name)).toList
     val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT($i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")

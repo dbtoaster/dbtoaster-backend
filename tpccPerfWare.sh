@@ -18,7 +18,7 @@ allopts=(
 "-opt entry -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
 "-opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt idxinline -opt lookupfusion -opt deadidx -opt codemotion -opt multires -opt coldmotion -opt slicenoupd"
 )
-cnt=1
+
 
 rm -f out_dump.txt
 rm -f tpcc*.csv
@@ -39,13 +39,13 @@ do
 echo "$cnt $opt" >> opt_list.txt
 
 
-if [ $cnt -eq 14 ]
+if [ $cnt -eq 15 ]
 then
 n=1000
-elif [ $cnt -eq 6 ]
+elif [ $cnt -eq 7 ]
 then
 n=100000
-elif [ $cnt -eq 15 ]
+elif [ $cnt -eq 16 ]
 then
 n=100000
 else
@@ -67,7 +67,7 @@ cnt=$((cnt+1))
 done
 
 
-n=695000
+n=1000000
 #most optimal case dry run
 opt="-opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx -opt sliceinline -opt codemotion -opt multires -opt coldmotion -opt slicenoupd -ware $numWare"
 sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang cpp -info tpcc-$n"

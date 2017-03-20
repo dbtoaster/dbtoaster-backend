@@ -46,6 +46,8 @@ object Optimizer {
   var initialStoreSize = false
   var infoFileName = ""
   var optCombination: String = ""
+
+  var currentBlock:String =""
 }
 
 class Optimizer(val IR: StoreDSL) {
@@ -187,7 +189,7 @@ class Optimizer(val IR: StoreDSL) {
       case _ => ()
     }
     val init_ = opt(IR)(prg.initBlock)
-    val codeB_ = prg.codeBlocks.map(t => (t._1, t._2, opt(IR)(t._3)))
+    val codeB_ = prg.codeBlocks.map(t =>  {Optimizer.currentBlock = t._1; (t._1, t._2, opt(IR)(t._3))})
     val (global_, structs_, entryidx_) = opt match {
       case writer: IndexDecider => (writer.changeGlobal(prg.globalVars), prg.structs, if (Optimizer.cTransformer) (writer.genOps.values ++ writer.genCmp.values ++ writer.genFixed.values).toSeq.map(IR.Def.unapply(_).get) else prg.entryIdxDefs)
       case writer: EntryTransformer => (writer.changeGlobal(prg.globalVars), prg.structs ++ writer.getStructDefs, (writer.genOps.map(_._2) ++ writer.genCmp.map(_._2) ++ writer.genFixRngOps.map(_._2)).toSeq.collect { case IR.Def(e: EntryIdxApplyObject[_]) => e })

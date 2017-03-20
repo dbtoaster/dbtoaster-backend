@@ -42,52 +42,52 @@ class Profiler(override val IR: StoreDSL) extends RecursiveRuleBasedTransformer[
   }
 
   val alreadyProfiled = collection.mutable.ArrayBuffer[Sym[_]]()
-
+  import ddbt.codegen.Optimizer._
   rewrite += statement {
     case sym -> (node@StoreGetCopy(s: Sym[_], i, key)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"${s.name},Get,${sym.id}")
+      val name = unit(s"${s.name},Get,$currentBlock,${sym.id}")
       toAtom(ProfileStart(name))(UnitType)
       val rep = toAtom(node)(node.typeE)
       alreadyProfiled += rep.asInstanceOf[Sym[_]]
       toAtom(ProfileEnd(name))(UnitType)
       rep
     case sym -> (node@StoreUpdateCopy(s: Sym[_], _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"${s.name},Update,${sym.id}")
+      val name = unit(s"${s.name},Update,$currentBlock,${sym.id}")
       toAtom(ProfileStart(name))(UnitType)
       val rep = toAtom(node)(UnitType)
       alreadyProfiled += rep.asInstanceOf[Sym[_]]
       toAtom(ProfileEnd(name))(UnitType)
       rep
     case sym -> (node@StoreSliceCopy(s: Sym[_], _, _, _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"${s.name},Slice,${sym.id}")
+      val name = unit(s"${s.name},Slice,$currentBlock,${sym.id}")
       toAtom(ProfileStart(name))(UnitType)
       val rep = toAtom(node)(UnitType)
       alreadyProfiled += rep.asInstanceOf[Sym[_]]
       toAtom(ProfileEnd(name))(UnitType)
       rep
     case sym -> (node@StoreInsert(s: Sym[_], _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"${s.name},Insert,${sym.id}")
+      val name = unit(s"${s.name},Insert,$currentBlock,${sym.id}")
       toAtom(ProfileStart(name))(UnitType)
       val rep = toAtom(node)(UnitType)
       alreadyProfiled += rep.asInstanceOf[Sym[_]]
       toAtom(ProfileEnd(name))(UnitType)
       rep
     case sym -> (node@StoreUnsafeInsert(s: Sym[_], _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"${s.name},UnsafeInsert,${sym.id}")
+      val name = unit(s"${s.name},UnsafeInsert,$currentBlock,${sym.id}")
       toAtom(ProfileStart(name))(UnitType)
       val rep = toAtom(node)(UnitType)
       alreadyProfiled += rep.asInstanceOf[Sym[_]]
       toAtom(ProfileEnd(name))(UnitType)
       rep
     case sym -> (node@StoreDeleteCopy(s: Sym[_], _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"${s.name},Delete,${sym.id}")
+      val name = unit(s"${s.name},Delete,$currentBlock,${sym.id}")
       toAtom(ProfileStart(name))(UnitType)
       val rep = toAtom(node)(UnitType)
       alreadyProfiled += rep.asInstanceOf[Sym[_]]
       toAtom(ProfileEnd(name))(UnitType)
       rep
     case sym -> (node@StoreForeach(s: Sym[_], _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"${s.name},Foreach,${sym.id}")
+      val name = unit(s"${s.name},Foreach,$currentBlock,${sym.id}")
       toAtom(ProfileStart(name))(UnitType)
       val rep = toAtom(node)(UnitType)
       alreadyProfiled += rep.asInstanceOf[Sym[_]]

@@ -71,7 +71,7 @@ struct ExecutionProfiler {
 
     static void printProfileToFile() {
 #ifdef EXEC_PROFILE
-        std::ofstream fout("profile.csv");
+        std::ofstream fout("profile.csv", std::ios::app);
         fout << ",count,timeMS,avgTimeNS" << std::endl;
 
         for (auto it : durations) {

@@ -239,10 +239,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"auto& $sym = $self.filter($f);"
 
     case Statement(sym, ProfileStart(n@Constant(str))) =>
-      val id = str.split(",")(2)
+      val id = str.split(",")(3)
       doc"auto start$id = Now;"
     case Statement(sym, ProfileEnd(n@Constant(str))) =>
-      val id = str.split(",")(2)
+      val id = str.split(",")(3)
       doc"auto end$id = Now;" :/:
         doc"if(durations.find($n) == durations.end()) {" :/:
       doc"  durations[$n] = DurationNS(end$id - start$id);" :/:
