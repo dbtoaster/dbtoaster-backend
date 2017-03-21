@@ -10,9 +10,16 @@ trait StringExtra
 
 
 object StringExtra {
+
+  def StringNew(len: Int): String = ""
+
+  def StringAppend(str: String, obj: Any): Unit = ???
+
+  def StringAppendN(str: String, obj: Any, n: Int): Unit = ???
+
   @pure
-  def StringCompare(str1 : String, str2 : String) : Int = str1.compareToIgnoreCase(str2)
+  def StringCompare(str1: String, str2: String): Int = str1.compareToIgnoreCase(str2)
 
   @write
-  def StringPrintf(maxSize : Int, f: String, args : Any*) : String = f.format(args)
+  def StringPrintf(maxSize: Int, f: String, args: Any*): String = f.format(args)
 }

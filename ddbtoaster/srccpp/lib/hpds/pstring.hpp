@@ -27,7 +27,7 @@
 #include "charpool.hpp"
 #include <string>
 #include <iostream>
-
+#include <cstring>
 #include "../smhasher/MurmurHash2.hpp"
 
 #ifndef STRING_TYPE
@@ -44,6 +44,7 @@ public:
     static CharPool<> pool_;
 #endif //USE_POOL
     size_t size_;
+    size_t pos;
     char *data_;
     size_t *ptr_count_;
 
@@ -63,20 +64,21 @@ protected:
 
 public:
 
-    PString() : size_(0), data_(nullptr), ptr_count_(new size_t(1)) {
+    PString() : size_(0), pos(0), data_(nullptr), ptr_count_(new size_t(1)) {
     }
 
-    PString(size_t len) : size_(len + 1), ptr_count_(new size_t(1)) {
+    PString(size_t len) : size_(len + 1), pos(0), ptr_count_(new size_t(1)) {
 #ifdef USE_POOL
         size_t num_cells = getNumCells(size_);
         data_ = pool_.add(num_cells);
 #else
         data_ = new char[size_];
+        memset(data_, 0, size_);
 #endif //USE_POOL      
         //SBJ: Initialized externally
     }
 
-    PString(const char *str) : ptr_count_(new size_t(1)) {
+    PString(const char *str) : pos(0), ptr_count_(new size_t(1)) {
         if (str != nullptr) {
             size_ = strlen(str) + 1;
 #ifdef USE_POOL
@@ -92,7 +94,7 @@ public:
         }
     }
 
-    PString(const char *str, size_t strln) : ptr_count_(new size_t(1)) {
+    PString(const char *str, size_t strln) : pos(0), ptr_count_(new size_t(1)) {
         size_ = strln + 1;
 #ifdef USE_POOL
         size_t num_cells = getNumCells(size_);
@@ -116,7 +118,7 @@ public:
     //     memcpy(data_, str.c_str(), size_ * sizeof(char));
     //   }
 
-    PString(const PString &pstr) {
+    PString(const PString &pstr) : pos(0) {
         *pstr.ptr_count_ += 1;
         this->ptr_count_ = pstr.ptr_count_;
         this->data_ = pstr.data_;
@@ -150,6 +152,100 @@ public:
 
     FORCE_INLINE const char *c_str() const {
         return data_;
+    }
+
+    FORCE_INLINE void append(char c) {
+        data_[pos++] = c;
+    }
+
+    FORCE_INLINE void appendDate(long d) {
+        char *s = data_ + pos;
+        s[0] = '2';
+        s[1] = '0';
+        s[20] = '0';
+        s[19] = '.';
+        s[18] = d % 10 + '0';
+        d /= 10;
+        s[17] = d % 10 + '0';
+        d /= 10;
+        s[16] = ':';
+        s[15] = d % 10 + '0';
+        d /= 10;
+        s[14] = d % 10 + '0';
+        d /= 10;
+        s[13] = ':';
+        s[12] = d % 10 + '0';
+        d /= 10;
+        s[11] = d % 10 + '0';
+        d /= 10;
+        s[10] = ' ';
+        s[9] = d % 10 + '0';
+        d /= 10;
+        s[8] = d % 10 + '0';
+        d /= 10;
+        s[7] = '-';
+        s[6] = d % 10 + '0';
+        d /= 10;
+        s[5] = d % 10 + '0';
+        d /= 10;
+        s[4] = '-';
+        s[3] = d % 10 + '0';
+        d /= 10;
+        s[2] = d % 10 + '0';
+        pos += 21;
+    }
+
+    FORCE_INLINE void append(int c) {
+        int c2 = c;
+        int n = 1;
+
+        while (c2 > 9) {
+            c2 /= 10;
+            n *= 10;
+        }
+
+        while (n != 1) {
+            data_[pos++] = (c / n) + '0';
+            c = c % n;
+            n /= 10;
+        }
+        data_[pos++] = c + '0';
+    }
+
+    FORCE_INLINE void append(double d) {
+        float f = d;
+        int c = f;
+        int n = 1;
+        while (c > 9) {
+            c /= 10;
+            n *= 10;
+        }
+        c = f;
+        while (n != 1) {
+            data_[pos++] = (c / n) + '0';
+            c = c % n;
+            n /= 10;
+        }
+        data_[pos++] = c + '0';
+        data_[pos++] = '.';
+        float f2 = f - (int) f;
+        for (int i = 0; i < 6; ++i) {
+            f2 *= 10;
+            int c2 = int(f2);
+            data_[pos++] = c2 + '0';
+            f2 -= c2;
+        }
+
+
+    }
+
+    FORCE_INLINE void append(const char *str, int len) {
+        int remaining = size_ - pos - 1;
+        int len2 = remaining > len ? len : remaining;
+        int strlen = std::strlen(str);
+        int len3 = len2 > strlen ? strlen : len2;
+        memcpy(data_ + pos , str, len3);
+        pos += len3;
     }
 
     inline char &operator[](const int x) {
@@ -222,7 +318,7 @@ public:
             char c1 = tolower(data_[i]);
             char c2 = tolower(other.data_[i]);
             if (!c1)
-                return c2; 
+                return c2;
             else if (!c2)
                 return false;
             else if (c1 == c2) {

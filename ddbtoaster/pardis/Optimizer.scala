@@ -77,6 +77,10 @@ class Optimizer(val IR: StoreDSL) {
      */
   }
 
+  if(Optimizer.regexHoister){
+    pipeline += new StringFormatEvaluator(IR)
+  }
+
   if (Optimizer.codeMotion) {
     pipeline += DCE
     pipeline += new CodeMotion(IR)

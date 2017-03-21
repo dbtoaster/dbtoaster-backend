@@ -76,6 +76,9 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
     case StoreCopyIntoPool(_, _) => Document.empty
     case s@SetApplyObject1(Def(LiftedSeq(e))) => doc"Set.apply[${s.typeT}](${e.mkDocument(", ")}) //Apply1"
     case s@SetApplyObject2() => doc"Set.apply[${s.typeT}]() //Apply2"
+    case StringExtraStringNewObject(len) =>   doc"new StringBuilder($len)"
+    case StringExtraStringAppendObject(str, obj) => doc"$str.append($obj)"
+    case StringExtraStringAppendNObject(str, obj, n) => doc"$str.append($obj.take($n))"
     case _ => super.nodeToDocument(node)
   }
 

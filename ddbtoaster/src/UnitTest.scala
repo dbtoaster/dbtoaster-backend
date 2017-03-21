@@ -418,7 +418,7 @@ object UnitTest {
       "import org.dbtoaster.dbtoasterlib.DBToasterExceptions._\n"+
       "import org.dbtoaster.dbtoasterlib.QueryInterface._\n"+
       "object RunQuery {\n"+
-      "  def run1(set:String,p:Int,timeout:Long) = {\n"+
+      "  def run1(set:String,p:Int,timeout:Long, batchSize:Int = 1, noOutput: Boolean = false) = {\n"+
       "    val to = timeout * 1000000L;\n"+
       "    val q = new Query(); var time=0L; val t0=System.nanoTime; var tN=0L; var tS=0L;\n"+
       "    val msgRcvr = new DBTMessageReceiver {\n"+

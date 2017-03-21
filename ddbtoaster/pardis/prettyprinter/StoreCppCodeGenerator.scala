@@ -245,12 +245,12 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       val id = str.split(",")(3)
       doc"auto end$id = Now;" :/:
         doc"if(durations.find($n) == durations.end()) {" :/:
-      doc"  durations[$n] = DurationNS(end$id - start$id);" :/:
-      doc"  counters[$n] = 1;" :/:
-      doc"} else  {" :/:
-      doc"  durations[$n] += DurationNS(end$id- start$id);" :/:
-      doc"  counters[$n]++;" :/:
-      doc"}"
+        doc"  durations[$n] = DurationNS(end$id - start$id);" :/:
+        doc"  counters[$n] = 1;" :/:
+        doc"} else  {" :/:
+        doc"  durations[$n] += DurationNS(end$id- start$id);" :/:
+        doc"  counters[$n]++;" :/:
+        doc"}"
 
 
     case _ => super.stmtToDocument(stmt)
@@ -467,7 +467,17 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         else Document.text("")
       }
     case HashCode(a) => doc"HASH($a)"
-
+    case StringExtraStringNewObject(len) => doc"PString($len)"
+    case StringExtraStringAppendObject(str, obj) => obj.tp match {
+      case d if d==DateType => doc"$str.appendDate($obj)"
+      case _ => doc"$str.append($obj)"
+    }
+    case StringExtraStringAppendNObject(str, obj, n) =>
+      val arg = obj match {
+        case Def(_) => doc"$obj.data_"
+        case c@Constant(_) => expToDocument(c)
+      }
+      doc"$str.append($arg, $n)"
 
     case _ => super.nodeToDocument(node)
   }
