@@ -229,27 +229,7 @@ object TpccXactGenerator_SC {
             //              $ {
             //              stockTbl.get1((1, ol_i_id), (2, ol_supply_w_id))
             //            }
-            val ol_dist_info = if ($(d_id) == 1) {
-              stockEntry.get[String](4) //s_dist_01
-            } else if ($(d_id) == 2) {
-              stockEntry.get[String](5) //s_dist_02
-            } else if ($(d_id) == 3) {
-              stockEntry.get[String](6) //s_dist_03
-            } else if ($(d_id) == 4) {
-              stockEntry.get[String](7) //s_dist_04
-            } else if ($(d_id) == 5) {
-              stockEntry.get[String](8) //s_dist_05
-            } else if ($(d_id) == 6) {
-              stockEntry.get[String](9) //s_dist_06
-            } else if ($(d_id) == 7) {
-              stockEntry.get[String](10) //s_dist_07
-            } else if ($(d_id) == 8) {
-              stockEntry.get[String](11) //s_dist_08
-            } else if ($(d_id) == 9) {
-              stockEntry.get[String](12) //s_dist_09
-            } else /*if(d_id == 10)*/ {
-              stockEntry.get[String](13) //s_dist_10
-            }
+            val ol_dist_info = stockEntry.get[String](3 + $(d_id))
             val s_quantity = stockEntry.get[Int](3) //s_quantity
             $(stock).update(ol_number, s_quantity)
 

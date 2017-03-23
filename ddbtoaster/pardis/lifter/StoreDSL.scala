@@ -49,6 +49,10 @@ case class StructFieldIncr[T: PardisType](struct: Expression[Any], index: String
   override def rebuild(children: PardisFunArg*) = curriedConstructor.asInstanceOf[PardisFunArg => (PardisFunArg => PardisNode[Unit])](children(0))(children(1))
 }
 
+case class StructDynamicFieldAccess[T: PardisType](struct: Expression[Any], baseField: String, offset: Expression[Int]) extends FunctionNode[T](Some(struct), "getField", List(List(offset))) {
+  override def curriedConstructor =(x: Expression[Any]) => { (r: Expression[Int]) => copy[T](x, baseField, r) }
+}
+
 case class ProfileStart(n: Expression[String]) extends FunctionNode[Unit](None, "ExP.start", List(List(n))) {
   override def curriedConstructor = copy _
 }

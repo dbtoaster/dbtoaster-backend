@@ -153,7 +153,7 @@ struct NewOrder : public Program {
 
     NewOrder() : Program(NEWORDER) {
         for (int i = 0; i < 15; ++i) {
-            bg[i] = new char[2];
+            bg[i] = PString(1);
         }
         o_all_local = true;
     }

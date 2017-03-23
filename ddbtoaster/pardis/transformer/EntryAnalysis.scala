@@ -493,6 +493,12 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
       implicit val tp = sch(i - 1).asInstanceOf[TypeRep[Any]]
       field(ent, "_" + i)(tp)
     }
+    case ge@GenericEntryGet(ent: Sym[_], i) if entryTypes.contains(ent) => {
+      //System.err.println(s"Changed GenericEntryGet $ent $i")
+      val sch = schema(ent)
+      implicit val tp = ge.typeE
+      toAtom(StructDynamicFieldAccess(ent, "", i)(tp))(tp)
+    }
     case GenericEntry$minus$eq(ent: Sym[_], Constant(i: Int), v@_) if entryTypes.contains(ent) => {
       val sch = schema(ent)
       val col = "_" + i

@@ -8,7 +8,7 @@ import ch.epfl.data.sc.pardis.types._
 import ch.epfl.data.sc.pardis.utils.document._
 import ddbt.codegen.Optimizer
 import ddbt.lib.store.{IHash, IList}
-import ddbt.lib.store.deep.{ProfileEnd, ProfileStart, StoreDSL, StructFieldDecr, StructFieldIncr}
+import ddbt.lib.store.deep.{ProfileEnd, ProfileStart, StoreDSL, StructDynamicFieldAccess, StructFieldDecr, StructFieldIncr}
 import ddbt.transformer.{Index, IndexesFlag, ScalaConstructsToCTranformer}
 import sun.security.x509.CRLDistributionPointsExtension
 
@@ -39,7 +39,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case Statement(sym, ab@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"${sym.tp} $sym = { ${ops.mkDocument(",")} };"
     case Statement(sym, ArrayNew(size)) => doc"${sym.tp.asInstanceOf[ArrayType[_]].elementType} $sym[$size];"
-    //    case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) => doc"strcpy($self[$i], $r);"
+    case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) if rhs.length == 1 => doc"""$self[$i].data_[0] = '$rhs';"""
+    case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) => doc"strcpy($self[$i].data_, $r);"
     case Statement(sym, ArrayUpdate(self, i, x)) => doc"$self[$i] = $x;"
     case Statement(sym, a@ArrayApply(self, i)) if a.typeT == StringType => doc"PString& $sym = $self[$i];"
 
@@ -221,6 +222,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
     case Statement(sym, n@GenericEntryGet(self: Sym[_], idx)) if sym.tp == StringType =>
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
+    case Statement(sym, n@StructDynamicFieldAccess(_, _, _)) if sym.tp == StringType =>
+      doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
     case Statement(sym, StoreMap(self, f@Def(PardisLambda(_, _, o)))) =>
       val typeE = sym.tp.asInstanceOf[StoreType[_]].typeE.asInstanceOf[PointerType[_]].contentsType
       val entidx = o.res.asInstanceOf[Rep[Any]] match {
@@ -346,6 +349,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StructFieldDecr(self, idx, rhs) if refSymbols.contains(self) => doc"$self.$idx -= $rhs"
     case StructFieldIncr(self, idx, rhs) => doc"$self->$idx += $rhs"
     case StructFieldDecr(self, idx, rhs) => doc"$self->$idx -= $rhs"
+    case StructDynamicFieldAccess(self, i, o) if refSymbols.contains(self) => doc"*(&$self._$i + ($o-1))" //assuming continuous range of same typed elements
+    case StructDynamicFieldAccess(self, i, o)  => doc"*(&$self->_$i + ($o-1))" //assuming continuous range of same typed elements
 
     case SteNewSEntry(_, args) => doc"new GenericEntry(false_type(), ${args.mkDocument(", ")})"
     case SteSampleSEntry(_, args) =>
@@ -469,7 +474,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case HashCode(a) => doc"HASH($a)"
     case StringExtraStringNewObject(len) => doc"PString($len)"
     case StringExtraStringAppendObject(str, obj) => obj.tp match {
-      case d if d==DateType => doc"$str.appendDate($obj)"
+      case d if d == DateType => doc"$str.appendDate($obj)"
       case _ => doc"$str.append($obj)"
     }
     case StringExtraStringAppendNObject(str, obj, n) =>

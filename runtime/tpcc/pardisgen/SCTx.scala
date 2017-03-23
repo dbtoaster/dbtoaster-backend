@@ -62,7 +62,7 @@ object SCDataLoader {
       rs = stmt.executeQuery(TpccSelectQueries.ALL_WAREHOUSES);
       while (rs.next()) {
 
-        exec.warehouseTbl.unsafeInsert(GenericEntry("SteNewSEntry",
+        exec.warehouseTbl.unsafeInsert(SEntry9_ISSSSSSDD(
           rs.getInt("w_id"),
           rs.getString("w_name"),
           rs.getString("w_street_1"),
@@ -78,7 +78,7 @@ object SCDataLoader {
       java.lang.System.out.println("Warehouse data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_CUSTOMERS);
       while (rs.next()) {
-        exec.customerTbl.unsafeInsert(GenericEntry("SteNewSEntry",
+        exec.customerTbl.unsafeInsert(SEntry21_IIISSSSSSSSSTSDDDDIIS(
           rs.getInt("c_id"),
           rs.getInt("c_d_id"),
           rs.getInt("c_w_id"),
@@ -107,7 +107,7 @@ object SCDataLoader {
 
       rs = stmt.executeQuery(TpccSelectQueries.ALL_DISTRICTS);
       while (rs.next()) {
-        exec.districtTbl.unsafeInsert(GenericEntry("SteNewSEntry",
+        exec.districtTbl.unsafeInsert(SEntry11_IISSSSSSDDI(
           rs.getInt("d_id"),
           rs.getInt("d_w_id"),
           rs.getString("d_name"),
@@ -125,7 +125,7 @@ object SCDataLoader {
       java.lang.System.out.println("District data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_HISTORIES);
       while (rs.next()) {
-        exec.historyTbl.unsafeInsert(GenericEntry("SteNewSEntry",
+        exec.historyTbl.unsafeInsert(SEntry8_IIIIITDS(
           rs.getInt("h_c_id"),
           rs.getInt("h_c_d_id"),
           rs.getInt("h_c_w_id"),
@@ -140,7 +140,7 @@ object SCDataLoader {
       java.lang.System.out.println("History data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_ITEMS);
       while (rs.next()) {
-        exec.itemTbl.unsafeInsert(GenericEntry("SteNewSEntry",
+        exec.itemTbl.unsafeInsert(SEntry5_IISDS(
           rs.getInt("i_id"),
           rs.getInt("i_im_id"),
           rs.getString("i_name"),
@@ -152,7 +152,7 @@ object SCDataLoader {
       java.lang.System.out.println("Item data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_NEW_ORDERS);
       while (rs.next()) {
-        exec.newOrderTbl.unsafeInsert(GenericEntry("SteNewSEntry",
+        exec.newOrderTbl.unsafeInsert(SEntry3_III(
           rs.getInt("no_o_id"),
           rs.getInt("no_d_id"),
           rs.getInt("no_w_id")
@@ -162,7 +162,7 @@ object SCDataLoader {
       java.lang.System.out.println("NewOrder data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_ORDER_LINES);
       while (rs.next()) {
-        exec.orderLineTbl.unsafeInsert(GenericEntry("SteNewSEntry",
+        exec.orderLineTbl.unsafeInsert(SEntry10_IIIIIITIDS(
           rs.getInt("ol_o_id"),
           rs.getInt("ol_d_id"),
           rs.getInt("ol_w_id"),
@@ -182,7 +182,7 @@ object SCDataLoader {
         val o_carrier_id = rs.getInt("o_carrier_id")
         val o_carrier_id_wasNull = rs.wasNull
         val o_all_local = (rs.getInt("o_all_local") > 0)
-        exec.orderTbl.unsafeInsert(GenericEntry("SteNewSEntry",
+        exec.orderTbl.unsafeInsert(SEntry8_IIIITIIB(
           rs.getInt("o_id"),
           rs.getInt("o_d_id"),
           rs.getInt("o_w_id"),
@@ -197,7 +197,7 @@ object SCDataLoader {
       java.lang.System.out.println("Order data loaded")
       rs = stmt.executeQuery(TpccSelectQueries.ALL_STOCKS);
       while (rs.next()) {
-        exec.stockTbl.unsafeInsert(GenericEntry("SteNewSEntry",
+        exec.stockTbl.unsafeInsert(SEntry17_IIISSSSSSSSSSIIIS(
           rs.getInt("s_i_id"),
           rs.getInt("s_w_id"),
           rs.getInt("s_quantity"),
@@ -243,15 +243,15 @@ object SCDataLoader {
   def moveDataToTpccTable(exec: SCExecutor): TpccTable = {
     val res = new TpccTable
 
-    exec.newOrderTbl.foreach { e => res.onInsert_NewOrder(e.get[Int](1), e.get[Int](2), e.get[Int](3)) }
-    exec.historyTbl.foreach { e => res.onInsert_HistoryTbl(e.get[Int](1), e.get[Int](2), e.get[Int](3), e.get[Int](4), e.get[Int](5), e.get[Date](6), e.get[Double](7), e.get[String](8)) }
-    exec.warehouseTbl.foreach { e => res.onInsert_Warehouse(e.get[Int](1), e.get[String](2), e.get[String](3), e.get[String](4), e.get[String](5), e.get[String](6), e.get[String](7), e.get[Double](8), e.get[Double](9)) }
-    exec.itemTbl.foreach { e => res.onInsert_Item(e.get[Int](1), e.get[Int](2), e.get[String](3), e.get[Double](4), e.get[String](5)) }
-    exec.orderTbl.foreach { e => res.onInsert_Order(e.get[Int](1), e.get[Int](2), e.get[Int](3), e.get[Int](4), e.get[Date](5), if (e.get[Int](6) == -1) None else Some(e.get[Int](6)), e.get[Int](7), e.get[Boolean](8) )}
-    exec.districtTbl.foreach { e => res.onInsert_District(e.get[Int](1), e.get[Int](2), e.get[String](3), e.get[String](4), e.get[String](5), e.get[String](6), e.get[String](7), e.get[String](8), e.get[Double](9), e.get[Double](10), e.get[Int](11)) }
-    exec.orderLineTbl.foreach { e => res.onInsertOrderLine(e.get[Int](1), e.get[Int](2), e.get[Int](3), e.get[Int](4), e.get[Int](5), e.get[Int](6), if (e.get[Date](7) == null) None else Some(e.get[Date](7)), e.get[Int](8), e.get[Double](9), e.get[String](10)) }
-    exec.customerTbl.foreach { e => res.onInsertCustomer(e.get[Int](1), e.get[Int](2), e.get[Int](3), e.get[String](4), e.get[String](5), e.get[String](6), e.get[String](7), e.get[String](8), e.get[String](9), e.get[String](10), e.get[String](11), e.get[String](12), e.get[Date](13), e.get[String](14), e.get[Double](15), e.get[Double](16), e.get[Double](17), e.get[Double](18), e.get[Int](19), e.get[Int](20), e.get[String](21)) }
-    exec.stockTbl.foreach { e => res.onInsertStock(e.get[Int](1), e.get[Int](2), e.get[Int](3), e.get[String](4), e.get[String](5), e.get[String](6), e.get[String](7), e.get[String](8), e.get[String](9), e.get[String](10), e.get[String](11), e.get[String](12), e.get[String](13), e.get[Int](14), e.get[Int](15), e.get[Int](16), e.get[String](17)) }
+    exec.newOrderTbl.foreach { e => res.onInsert_NewOrder(e._1, e._2, e._3) }
+    exec.historyTbl.foreach { e => res.onInsert_HistoryTbl(e._1, e._2, e._3, e._4, e._5, e._6, e._7, e._8) }
+    exec.warehouseTbl.foreach { e => res.onInsert_Warehouse(e._1, e._2, e._3, e._4, e._5, e._6, e._7, e._8, e._9) }
+    exec.itemTbl.foreach { e => res.onInsert_Item(e._1, e._2, e._3, e._4, e._5) }
+    exec.orderTbl.foreach { e => res.onInsert_Order(e._1, e._2, e._3, e._4, e._5, if (e._6 == -1) None else Some(e._6) , e._7, e._8) }
+    exec.districtTbl.foreach { e => res.onInsert_District(e._1, e._2, e._3, e._4, e._5, e._6, e._7, e._8, e._9, e._10, e._11) }
+    exec.orderLineTbl.foreach { e => res.onInsertOrderLine(e._1, e._2, e._3, e._4, e._5, e._6, if (e._7 == null) None else Some(e._7), e._8, e._9, e._10) }
+    exec.customerTbl.foreach { e => res.onInsertCustomer(e._1, e._2, e._3, e._4, e._5, e._6, e._7, e._8, e._9, e._10, e._11, e._12, e._13, e._14, e._15, e._16, e._17, e._18, e._19, e._20, e._21) }
+    exec.stockTbl.foreach { e => res.onInsertStock(e._1, e._2, e._3, e._4, e._5, e._6, e._7, e._8, e._9, e._10, e._11, e._12, e._13, e._14, e._15, e._16, e._17) }
     res
   }
 }

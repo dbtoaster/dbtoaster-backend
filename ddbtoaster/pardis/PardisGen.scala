@@ -27,7 +27,7 @@ import scala.util.parsing.json.JSON
 abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) extends IScalaGen {
 
   import Optimizer._;
-  val opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl"->splSecondaryIdx, "MinMax"->minMaxIdx, "Med"->medIdx, "ColdMotion"->coldMotion)
+  val opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl" -> splSecondaryIdx, "MinMax" -> minMaxIdx, "Med" -> medIdx, "ColdMotion" -> coldMotion)
   java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
 
   import scala.language.implicitConversions
@@ -43,7 +43,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     val txt = new java.util.Scanner(infoFile).useDelimiter("\\Z").next()
     val allinfo: Map[String, _] = JSON.parseFull(txt).get.asInstanceOf[Map[String, _]]
     StoreArrayLengths = allinfo.map(t => t._1 -> t._2.asInstanceOf[Map[String, String]].getOrElse("OptArrayLength", "0"))
-  } else if(Optimizer.initialStoreSize) {
+  } else if (Optimizer.initialStoreSize) {
     java.lang.System.err.println("Runtime info file missing!!  Using default initial sizes")
   }
 
@@ -536,7 +536,12 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
 
     val printInfoDef = doc"def printMapsInfo() = {}"
 
-    genCodeForProgram(optTP)
+    val res = genCodeForProgram(optTP)
+//    val ext = if(cTransformer) "hpp" else "scala"
+//    val trigs = new PrintWriter(s"$cls.$ext")
+//    trigs.print(res._1)
+//    trigs.close()
+    res
   }
 
   def genCodeForProgram[T](prg: TransactionProgram[T]): (String, String, String)
@@ -682,30 +687,30 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     def genInitArrayLengths = {
       val tbls = idxSymNames.groupBy(_.split("Idx")(0)).map(t => t._1 -> t._2.map(StoreArrayLengths.getOrElse(_, "1")))
       tbls.map(t => doc"const size_t ${t._1}ArrayLengths[] = ${t._2.mkString("{", ",", "};")}").toList.mkDocument("\n") :\\:
-      tbls.map(t => doc"const size_t ${t._1}PoolSizes[] = ${t._2.map(_ => "0").mkString("{0, ", ",", "};")}").toList.mkDocument("\n")
+        tbls.map(t => doc"const size_t ${t._1}PoolSizes[] = ${t._2.map(_ => "0").mkString("{0, ", ",", "};")}").toList.mkDocument("\n")
     }
 
     val stores = optTP.globalVars.map(s => {
 
-        if (s.tp.isInstanceOf[StoreType[_]]) {
-          def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
-          val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
-          val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
-          val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
+      if (s.tp.isInstanceOf[StoreType[_]]) {
+        def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
+        val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
+        val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
+        val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-          val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}_map;"
-          val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
-          val initSize = if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes);" else doc";"
-          val storeDecl = s.name :: "_map  " :: s.name :: initSize
-          toCheck ++= idx2(s).filter(_._2 == "IHash").map(s => s._1.name)
-          idxSymNames ++= idx2(s).filter(_._2 != "INone").map(s => s._1.name)
-          val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
-          val primaryIdx = idx2(s)(0)
-          idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: idxDecl
-        } else {
-          doc"${s.tp} ${s.name};"
-        }
-      }).mkDocument("\n", "\n\n\n", "\n")
+        val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}_map;"
+        val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
+        val initSize = if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes);" else doc";"
+        val storeDecl = s.name :: "_map  " :: s.name :: initSize
+        toCheck ++= idx2(s).filter(_._2 == "IHash").map(s => s._1.name)
+        idxSymNames ++= idx2(s).filter(_._2 != "INone").map(s => s._1.name)
+        val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
+        val primaryIdx = idx2(s)(0)
+        idxTypeDefs :\\: storeTypeDef :\\: entryTypeDef :\\: storeDecl :\\: idxDecl
+      } else {
+        doc"${s.tp} ${s.name};"
+      }
+    }).mkDocument("\n", "\n\n\n", "\n")
 
     val tempMaps = optTP.tmpMaps.map(s => {
       toCheck ++= s._2.map(s => s.name)
@@ -722,11 +727,11 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
     val runtime = doc"void getRuntimeInfo() {" :/: Document.nest(2, {
       doc"""std::ofstream info("$infoFilePath");""" :\\:
-      idxSymNames.map(s => doc"GET_RUN_STAT($s, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";") :\\:
-      doc"info.close();"
+        idxSymNames.map(s => doc"GET_RUN_STAT($s, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";") :\\:
+        doc"info.close();"
     }) :/: "}"
 
-    val ms = (entries :/: entryIdxes :/: genInitArrayLengths :/:stores :/: tempMaps :/: checks :/: runtime).toString
+    val ms = (entries :/: entryIdxes :/: genInitArrayLengths :/: stores :/: tempMaps :/: checks :/: runtime).toString
 
     val tempEntries = optTP.tempVars.map(t => doc"${t._2.tp} ${t._1};").mkDocument("\n").toString
 

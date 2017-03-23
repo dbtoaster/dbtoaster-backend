@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #define EXEC_PROFILE 1
+#define FORCE_INLINE inline __attribute__((always_inline))
 using std::chrono::high_resolution_clock;
 using std::chrono::system_clock;
 using std::chrono::milliseconds;
@@ -38,14 +39,14 @@ extern std::unordered_map<std::string, size_t> counters;
 
 struct ExecutionProfiler {
 
-    static void startProfile(std::string name) {
+    FORCE_INLINE static void startProfile(const std::string& name) {
 #ifdef EXEC_PROFILE
         Timepoint &st = startTimes[name];
         st = Now;
 #endif
     }
 
-    static void endProfile(std::string name) {
+    FORCE_INLINE static void endProfile(const std::string& name) {
 #ifdef EXEC_PROFILE
         auto end = Now;
         auto start = startTimes[name];

@@ -171,6 +171,8 @@ class Optimizer(val IR: StoreDSL) {
   //  pipeline += new CommonPureExpression(IR)
   pipeline += new InsertNoChecks(IR)
   if (Optimizer.cTransformer) {
+    pipeline += new StructDynamicAccessTransformer(IR)
+    pipeline += DCE
     pipeline += new ScalaConstructsToCTranformer(IR, false)
     pipeline += new ScalaStructToMallocTransformer(IR)
     pipeline += new StringToCTransformer(IR)

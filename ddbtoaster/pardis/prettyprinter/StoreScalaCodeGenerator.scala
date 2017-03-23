@@ -5,7 +5,7 @@ import ch.epfl.data.sc.pardis.prettyprinter._
 import ch.epfl.data.sc.pardis.types._
 import ch.epfl.data.sc.pardis.utils.document._
 import ddbt.codegen.Optimizer
-import ddbt.lib.store.deep.StoreDSL
+import ddbt.lib.store.deep.{StoreDSL, StructDynamicFieldAccess}
 
 
 class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenerator with StoreCodeGenerator {
@@ -77,8 +77,13 @@ class StoreScalaCodeGenerator(override val IR: StoreDSL) extends ScalaCodeGenera
     case s@SetApplyObject1(Def(LiftedSeq(e))) => doc"Set.apply[${s.typeT}](${e.mkDocument(", ")}) //Apply1"
     case s@SetApplyObject2() => doc"Set.apply[${s.typeT}]() //Apply2"
     case StringExtraStringNewObject(len) =>   doc"new StringBuilder($len)"
+    case StringExtraStringAppendObject(str, obj) if obj.tp == DoubleType => doc"$str.append(new DoubleExtra($obj).toSB)"
     case StringExtraStringAppendObject(str, obj) => doc"$str.append($obj)"
     case StringExtraStringAppendNObject(str, obj, n) => doc"$str.append($obj.take($n))"
+    case n@StructDynamicFieldAccess(str, _, Def(Int$plus2(Constant(i), o))) =>
+      val decr = if (Optimizer.secondaryIndex) 1 else 0
+      val i2 = i - decr
+      doc"$str.productElement($i2 + $o).asInstanceOf[${n.tp}]"
     case _ => super.nodeToDocument(node)
   }
 

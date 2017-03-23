@@ -84,6 +84,22 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
           |   override def compare(x: String, y: String): Int = x.compareToIgnoreCase(y)
           |  }
           |
+          |  class DoubleExtra(var d: Double) {
+          |    def toSB : StringBuilder = {
+          |      var i = d.toInt
+          |      val sb = new StringBuilder(15)
+          |      sb.append(i); sb.append('.')
+          |      val len = sb.length
+          |      d = ((d - i) * 1000000); i=d.toInt ; sb.append(i)
+          |      var x = sb.length - len
+          |      while(x < 6) {
+          |       sb.append('0');
+          |        x+=1;
+          |       }
+          |      sb
+          |    }
+          |  }
+          |
           """.stripMargin + codestr.substring(0, i) + "\n" +
         (if (Optimizer.initialStoreSize && !StoreArrayLengths.isEmpty) {
           val tbls = StoreArrayLengths.keys.toList.groupBy(_.split("Idx")(0)).map(t => t._1 -> t._2.map(StoreArrayLengths.getOrElse(_, "1")))
@@ -107,14 +123,17 @@ class TpccPardisScalaGen(IR: StoreDSL) extends TpccPardisGen {
     val tempVars = optTP.tempVars.map(t => codeGen.stmtToDocument(Statement(t._1, t._2))).mkDocument("\n")
     val r = Document.nest(2, entryIdxes :/: tempVars)
     file.println(r)
+//    val txns = new PrintWriter("TpccTxns.scala")
     optTP.codeBlocks.foreach { case (className, args: List[Sym[_]], body) => {
       val argsWithTypes = optTP.globalVars.map(m => doc"$m : Store[${storeType(m).tp}]").mkDocument(", ")
       val genCode = doc"  class $className($argsWithTypes) extends ((${args.map(_.tp).mkDocument(", ")}) => ${body.typeT} ) {" :/:
         doc"    def apply(${args.map(s => doc"$s : ${s.tp}").mkDocument(", ")}) = "
       val cgDoc = Document.nest(4, codeGen.blockToDocument(body))
       file.println(genCode + cgDoc.toString + "\n  }")
+//      txns.println(genCode + cgDoc.toString + "\n  }")
     }
     }
+//    txns.close()
     file.println("\n}")
 
     //    new TpccCompiler(Context).compile(codeBlock, "test/gen/tpcc")
@@ -470,6 +489,9 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
           | std::unordered_map<std::string, size_t> durations;
           | std::unordered_map<std::string, size_t> counters;""".stripMargin
     else ""
+//    val txns = new PrintWriter("TpccTxns.hpp")
+//    txns.print(blocks)
+//    txns.close()
     file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
