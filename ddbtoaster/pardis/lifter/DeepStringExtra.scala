@@ -22,6 +22,7 @@ trait StringExtraOps extends Base  {
      def StringNew(len : Rep[Int]) : Rep[String] = stringExtraStringNewObject(len)
      def StringAppend(str : Rep[String], obj : Rep[Any]) : Rep[Unit] = stringExtraStringAppendObject(str, obj)
      def StringAppendN(str : Rep[String], obj : Rep[Any], n : Rep[Int]) : Rep[Unit] = stringExtraStringAppendNObject(str, obj, n)
+     def Substring(str : Rep[String], init : Rep[Int], len : Rep[Int]) : Rep[String] = stringExtraSubstringObject(str, init, len)
      def StringCompare(str1 : Rep[String], str2 : Rep[String]) : Rep[Int] = stringExtraStringCompareObject(str1, str2)
      def StringPrintf(maxSize : Rep[Int], f : Rep[String], args : Rep[Any]*) : Rep[String] = stringExtraStringPrintfObject(maxSize, f, args:_*)
   }
@@ -34,6 +35,8 @@ trait StringExtraOps extends Base  {
   type StringExtraStringAppendObject = StringExtraIRs.StringExtraStringAppendObject
   val StringExtraStringAppendNObject = StringExtraIRs.StringExtraStringAppendNObject
   type StringExtraStringAppendNObject = StringExtraIRs.StringExtraStringAppendNObject
+  val StringExtraSubstringObject = StringExtraIRs.StringExtraSubstringObject
+  type StringExtraSubstringObject = StringExtraIRs.StringExtraSubstringObject
   val StringExtraStringCompareObject = StringExtraIRs.StringExtraStringCompareObject
   type StringExtraStringCompareObject = StringExtraIRs.StringExtraStringCompareObject
   val StringExtraStringPrintfObject = StringExtraIRs.StringExtraStringPrintfObject
@@ -42,6 +45,7 @@ trait StringExtraOps extends Base  {
    def stringExtraStringNewObject(len : Rep[Int]) : Rep[String] = StringExtraStringNewObject(len)
    def stringExtraStringAppendObject(str : Rep[String], obj : Rep[Any]) : Rep[Unit] = StringExtraStringAppendObject(str, obj)
    def stringExtraStringAppendNObject(str : Rep[String], obj : Rep[Any], n : Rep[Int]) : Rep[Unit] = StringExtraStringAppendNObject(str, obj, n)
+   def stringExtraSubstringObject(str : Rep[String], init : Rep[Int], len : Rep[Int]) : Rep[String] = StringExtraSubstringObject(str, init, len)
    def stringExtraStringCompareObject(str1 : Rep[String], str2 : Rep[String]) : Rep[Int] = StringExtraStringCompareObject(str1, str2)
    def stringExtraStringPrintfObject(maxSize : Rep[Int], f : Rep[String], args : Rep[Any]*) : Rep[String] = {
     val argsOutput = __liftSeq(args.toSeq)
@@ -68,6 +72,20 @@ object StringExtraIRs extends Base {
 
   case class StringExtraStringAppendNObject(str : Rep[String], obj : Rep[Any], n : Rep[Int]) extends FunctionDef[Unit](None, "StringExtra.StringAppendN", List(List(str,obj,n))){
     override def curriedConstructor = (copy _).curried
+  }
+
+  case class StringExtraSubstringObject(str : Rep[String], init : Rep[Int], len : Rep[Int]) extends FunctionDef[String](None, "StringExtra.Substring", List(List(str,init,len))){
+    override def curriedConstructor = (copy _).curried
+    override def isPure = true
+
+    override def partiallyEvaluate(children: Any*): String = {
+      val str = children(0).asInstanceOf[String]
+      val init = children(1).asInstanceOf[Int]
+      val len = children(2).asInstanceOf[Int]
+      ddbt.lib.store.StringExtra.Substring(str, init, len)
+    }
+    override def partiallyEvaluable: Boolean = true
+
   }
 
   case class StringExtraStringCompareObject(str1 : Rep[String], str2 : Rep[String]) extends FunctionDef[Int](None, "StringExtra.StringCompare", List(List(str1,str2))){

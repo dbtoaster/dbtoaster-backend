@@ -1334,8 +1334,9 @@ public:
 
 template<typename T, typename V, typename IDX_FN1, typename IDX_FN2, bool is_max>
 class SlicedHeapIndex : public Index<T, V> {
-
+public:
     struct __IdxHeapNode {
+        T heapKey;
         T** array;
         uint arraySize;
         uint size;
@@ -1468,7 +1469,7 @@ class SlicedHeapIndex : public Index<T, V> {
 
         if (old) delete[] old;
     }
-public:
+
 
     void getSizeStats(std::ostream& fout) {
         fout << "{ \"ArrayLength\" : \"" << size_ << "\", ";
@@ -1534,7 +1535,7 @@ public:
         //        if (n) n->checkHeap(Index<T, V>::idxId);
         while (n != nullptr) {
             T* obj;
-            if (n->hash == h && IDX_FN1::cmp(*key, *(obj = n->array[1])) == 0) {
+            if (n->size > 0 && n->hash == h && IDX_FN1::cmp(*key, *(obj = n->array[1])) == 0) {
                 return obj;
             }
             n = n->nxt;
@@ -1554,8 +1555,9 @@ public:
         size_t b = h % size_;
         IdxNode q = buckets_[b];
         while (q != nullptr) {
-            if (q->hash == h && IDX_FN1::cmp(*obj, *q->array[1]) == 0) {
+            if (q->hash == h && (!q->array[0] || IDX_FN1::cmp(*obj, q->heapKey) == 0)) {
                 //                q->checkHeap(Index<T, V>::idxId);
+                if(!q->array[0]) { q->array[0] = obj; q->heapKey = *obj;}
                 q->add(obj);
                 obj->backPtrs[Index<T, V>::idxId] = q;
                 //                q->checkHeap(Index<T, V>::idxId);
@@ -1566,6 +1568,8 @@ public:
         q = new __IdxHeapNode();
         q->hash = h;
         q->nxt = buckets_[b];
+        q->array[0] = obj;
+        q->heapKey = *obj;
         q->add(obj);
         obj->backPtrs[Index<T, V>::idxId] = q;
         //        q->checkHeap(Index<T, V>::idxId);
@@ -1579,30 +1583,31 @@ public:
         //        q->checkHeap(Index<T, V>::idxId);
         q->remove(obj);
         //        q->checkHeap(Index<T, V>::idxId);
-        if (q->size == 0) {
-            assert(q->array[1] == nullptr);
-            auto h = q->hash;
-            size_t b = h % size_;
-            IdxNode p = buckets_[b];
-            if (p == q) {
-                buckets_[b] = q->nxt;
-                count_--;
-                delete q;
-                return;
-            } else {
-                while (p != nullptr) {
-                    if (p->nxt == q) {
-                        p->nxt = q->nxt;
-                        count_--;
-                        delete q;
-
-                        return;
-                    }
-                    p = p->nxt;
-                }
-            }
-
-        }
+        return;
+//        if (q->size == 0) {
+//            assert(q->array[1] == nullptr);
+//            auto h = q->hash;
+//            size_t b = h % size_;
+//            IdxNode p = buckets_[b];
+//            if (p == q) {
+//                buckets_[b] = q->nxt;
+//                count_--;
+//                delete q;
+//                return;
+//            } else {
+//                while (p != nullptr) {
+//                    if (p->nxt == q) {
+//                        p->nxt = q->nxt;
+//                        count_--;
+//                        delete q;
+//
+//                        return;
+//                    }
+//                    p = p->nxt;
+//                }
+//            }
+//
+//        }
 
     }
 

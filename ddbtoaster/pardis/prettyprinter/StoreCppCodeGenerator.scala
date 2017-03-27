@@ -290,6 +290,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   override def nodeToDocument(node: PardisNode[_]): Document = node match {
     //    case ToString(a) if a.tp == DateType => doc"IntToStrDate($a)"
     case StringSubstring2(self, pos, len) => doc"$self.substr($pos, $len)" //Different from scala substring
+    case StringExtraSubstringObject(self, pos, len) => doc"$self.substr($pos, $len)" //Different from scala substring
     case StringExtraStringCompareObject(str1, str2) => doc"strcmpi($str1.data_, $str2.data_)"
 
     case MultiResIsEmpty(self: Sym[_]) => doc"$self == nullptr"

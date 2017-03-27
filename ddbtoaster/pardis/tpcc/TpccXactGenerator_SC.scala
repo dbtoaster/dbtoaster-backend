@@ -71,7 +71,7 @@ object TpccXactGenerator_SC {
 
     import Optimizer._
 
-    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline,  "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl"->splSecondaryIdx, "MinMax"->minMaxIdx, "Med"->medIdx, "ColdMotion"->coldMotion)
+    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl" -> splSecondaryIdx, "MinMax" -> minMaxIdx, "Med" -> medIdx, "ColdMotion" -> coldMotion)
     java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
 
 
@@ -415,9 +415,10 @@ object TpccXactGenerator_SC {
         val found_c_id = customerEntry.get[Int](3)
         val agg = Aggregator.max[GenericEntry, Int](e => e.get[Int](1))
         $(orderTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 4, $(d_id), $(w_id), found_c_id), agg)
-        val newestOrderEntry = agg.result
-        var dceBlocker = 0
-        dceBlocker = newestOrderEntry.get[Int](1) //SBJ : TO avoid removal by DCE
+        val max_id = agg.result.get[Int](1)
+        $(orderLineTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, max_id, $(d_id), $(w_id)), { orderLineEntry =>
+          var dceBlocker = 1
+        })
         1
       }.toRep
       /*

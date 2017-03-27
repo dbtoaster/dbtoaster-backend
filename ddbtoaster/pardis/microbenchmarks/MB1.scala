@@ -3,7 +3,7 @@ package sc.micro
 import ch.epfl.data.sc.pardis.types.{DoubleType, IntType, StringType}
 import ddbt.codegen.TransactionProgram
 import ddbt.lib.store.deep.DateIRs.DateType
-import ddbt.lib.store.{GenericEntry, Store}
+import ddbt.lib.store.{GenericEntry, Store, StringExtra}
 import ddbt.lib.store.deep._
 import ddbt.transformer.{IndexedCols, StoreSchema}
 import sc.micro.MicroBenchRunner._
@@ -18,7 +18,7 @@ class MB1 (override val Context : StoreDSL) extends Prog(Context) {
     unit(1)
   })
   def body = ir {
-    var customerNames = $(tbl).map(e => GenericEntry("SteNewSEntry", e.get[Double](16)-e.get[Double](17), e.get[String](1))).filter(e => e.get[Double](1) < 1000.0).map(e => GenericEntry("SteNewSEntry", e.get[String](2))).fold(0)((a, b) => a+1)
+    var customerNames = $(tbl).map(e => GenericEntry("SteNewSEntry", e.get[Double](15)-e.get[Double](17), StringExtra.Substring(e.get[String](4), 0, 5))).filter(e => e.get[Double](1) < 47000.0).map(e => GenericEntry("SteNewSEntry", e.get[String](2))).fold(0)((a, b) => a+1)
 //    var test = $(tbl).map(e => GenericEntry(10)).map(e => GenericEntry(20))
 //    $(tbl).map(e => GenericEntry("SteNewSEntry", e.get[Int](3) * -2, 2, e.get[String](2))).filter(e => e.get[Int](1) > 0).map(e => GenericEntry("SteNewSEntry", e.get[Int](1)*100)).getCopy(0, GenericEntry("SteSampleSEntry", 1))
 //    entry += (1, 11)

@@ -18,6 +18,9 @@ object StringExtra {
   def StringAppendN(str: String, obj: Any, n: Int): Unit = ???
 
   @pure
+  def Substring(str: String, init: Int, len: Int) : String = ???
+
+  @pure
   def StringCompare(str1: String, str2: String): Int = str1.compareToIgnoreCase(str2)
 
   @write

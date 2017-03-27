@@ -47,6 +47,44 @@ date StrToIntdate(const char* s) {
     d = d * 10 + s[18] - '0';
     return d;
 }
+char* IntToStrdate(date d) {
+    static char s[22];
+    s[0] = '2';
+    s[1] = '0';
+    s[21] = 0;
+    s[20] = '0';
+    s[19] = '.';
+    s[18] = d % 10 + '0';
+    d /= 10;
+    s[17] = d % 10 + '0';
+    d /= 10;
+    s[16] = ':';
+    s[15] = d % 10 + '0';
+    d /= 10;
+    s[14] = d % 10 + '0';
+    d /= 10;
+    s[13] = ':';
+    s[12] = d % 10 + '0';
+    d /= 10;
+    s[11] = d % 10 + '0';
+    d /= 10;
+    s[10] = ' ';
+    s[9] = d % 10 + '0';
+    d /= 10;
+    s[8] = d % 10 + '0';
+    d /= 10;
+    s[7] = '-';
+    s[6] = d % 10 + '0';
+    d /= 10;
+    s[5] = d % 10 + '0';
+    d /= 10;
+    s[4] = '-';
+    s[3] = d % 10 + '0';
+    d /= 10;
+    s[2] = d % 10 + '0';
+    d /= 10;
+    return s;
+}
 ////////////
 
 struct MB1 {
@@ -61,7 +99,7 @@ struct MB1 {
 #define nullable "%[^,]"   
 
     void loadCust() {
-        std::ifstream fin(inputTableDir + "customer.txt");
+        std::ifstream fin(TStore + "../customerRes.txt");
         std::string line;
         CustomerEntry c;
         char datestr[20];

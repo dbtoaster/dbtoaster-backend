@@ -12,6 +12,7 @@ class DBToasterSquidBinding[SC <: StoreDSL](val SC: SC) {
     protected val WhileSymbol = loadMtdSymbol(loadTypSymbol("squid.lib.package$"), "While", None)
     protected val StrCmpSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.StringExtra$"), "StringCompare", None)
     protected val StrPrintfSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.StringExtra$"), "StringPrintf", None)
+    protected val StrSubSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.StringExtra$"), "Substring", None)
     protected val MinAggSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.Aggregator$"), "min", None)
     protected val MaxAggSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.Aggregator$"), "max", None)
     protected val MedAggSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.Aggregator$"), "median", None)
@@ -29,6 +30,9 @@ class DBToasterSquidBinding[SC <: StoreDSL](val SC: SC) {
       case StrCmpSymbol =>
         val Args(s1, s2) :: Nil = argss
         blockWithType(tp)(SC.StringExtra.StringCompare(toExpr(s1).asInstanceOf[sc.Rep[String]], toExpr(s2).asInstanceOf[sc.Rep[String]]))
+      case StrSubSymbol =>
+        val Args(str, init, len) :: Nil = argss
+        blockWithType(tp)(SC.StringExtra.Substring(toExpr(str).asInstanceOf[sc.Rep[String]], toExpr(init).asInstanceOf[sc.Rep[Int]], toExpr(len).asInstanceOf[sc.Rep[Int]]))
       case StrPrintfSymbol =>
         val ArgsVarargs(Args(s, f), Args(varargs@_*)) :: Nil = argss
         blockWithType(tp)(SC.StringExtra.StringPrintf(toExpr(s).asInstanceOf[sc.Rep[Int]], toExpr(f).asInstanceOf[sc.Rep[String]], varargs map toExpr: _*))

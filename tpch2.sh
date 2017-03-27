@@ -40,3 +40,4 @@ opt="-opt entry -opt index -opt online -opt tmpvar -opt tmpmap -opt lookupfusion
 #sbt "DDBToaster/runMain  ddbt.UnitTest -x -p 2 -w 0 -s $numExec -t 60000  -csv rvcpp.csv -dump rvcpp.txt  -l vcpp -d big_del $opt -q $queries"
 sbt "DDBToaster/runMain  ddbt.UnitTest -x -p 2 -w 0 -s $numExec -t 60000  -csv r0.csv -dump r0.txt  -l cpp -d big_del $opt -opt initsize -q $queries"
 sbt "DDBToaster/runMain  ddbt.UnitTest -x -p 2 -w 0 -s $numExec -t 60000  -csv r0i.csv -dump r0i.txt  -l cpp -d big_del $opt -opt initsize -q $queries"
+sbt "DDBToaster/runMain  ddbt.UnitTest -x -xsc -xvm -p 2 -w 3 -s $numExec -t 60000  -csv r0iscala.csv -dump r0iscala.txt  -l scala -d big_del $opt -opt initsize -q $queries"
