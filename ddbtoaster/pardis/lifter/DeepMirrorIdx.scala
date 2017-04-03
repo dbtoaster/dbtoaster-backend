@@ -29,6 +29,7 @@ trait IdxOps extends Base with MultiResOps {
      def getCopy(key : Rep[E]) : Rep[E] = idxGetCopy[E](self, key)(typeE)
      def getCopyDependent(key : Rep[E]) : Rep[E] = idxGetCopyDependent[E](self, key)(typeE)
      def foreach(f : Rep[(E => Unit)]) : Rep[Unit] = idxForeach[E](self, f)(typeE)
+     def foreachCopy(f : Rep[(E => Unit)]) : Rep[Unit] = idxForeachCopy[E](self, f)(typeE)
      def foreachRes() : Rep[MultiRes] = idxForeachRes[E](self)(typeE)
      def foreachResMap(f : Rep[(E => Unit)], res : Rep[MultiRes]) : Rep[Unit] = idxForeachResMap[E](self, f, res)(typeE)
      def sliceNoUpdate(key : Rep[E], f : Rep[(E => Unit)]) : Rep[Unit] = idxSliceNoUpdate[E](self, key, f)(typeE)
@@ -70,6 +71,8 @@ trait IdxOps extends Base with MultiResOps {
   type IdxGetCopyDependent[E <: ddbt.lib.store.Entry] = IdxIRs.IdxGetCopyDependent[E]
   val IdxForeach = IdxIRs.IdxForeach
   type IdxForeach[E <: ddbt.lib.store.Entry] = IdxIRs.IdxForeach[E]
+  val IdxForeachCopy = IdxIRs.IdxForeachCopy
+  type IdxForeachCopy[E <: ddbt.lib.store.Entry] = IdxIRs.IdxForeachCopy[E]
   val IdxForeachRes = IdxIRs.IdxForeachRes
   type IdxForeachRes[E <: ddbt.lib.store.Entry] = IdxIRs.IdxForeachRes[E]
   val IdxForeachResMap = IdxIRs.IdxForeachResMap
@@ -103,6 +106,7 @@ trait IdxOps extends Base with MultiResOps {
    def idxGetCopy[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[E] = IdxGetCopy[E](self, key)
    def idxGetCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E])(implicit typeE : TypeRep[E]) : Rep[E] = IdxGetCopyDependent[E](self, key)
    def idxForeach[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxForeach[E](self, f)
+   def idxForeachCopy[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxForeachCopy[E](self, f)
    def idxForeachRes[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]])(implicit typeE : TypeRep[E]) : Rep[MultiRes] = IdxForeachRes[E](self)
    def idxForeachResMap[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], f : Rep[((E) => Unit)], res : Rep[MultiRes])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxForeachResMap[E](self, f, res)
    def idxSliceNoUpdate[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], key : Rep[E], f : Rep[((E) => Unit)])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxSliceNoUpdate[E](self, key, f)
@@ -173,6 +177,10 @@ object IdxIRs extends Base {
   }
 
   case class IdxForeach[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], f : Rep[((E) => Unit)])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "foreach", List(List(f))){
+    override def curriedConstructor = (copy[E] _).curried
+  }
+
+  case class IdxForeachCopy[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], f : Rep[((E) => Unit)])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "foreachCopy", List(List(f))){
     override def curriedConstructor = (copy[E] _).curried
   }
 

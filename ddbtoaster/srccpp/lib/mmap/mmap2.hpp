@@ -208,6 +208,10 @@ public:
 
     virtual T* get(const T* key) const = 0;
 
+    virtual bool getOrInsert(T* &entry) {
+        return false;
+    }
+
     virtual void add(T* obj) = 0;
 
     virtual void del(T* obj) = 0;
@@ -215,6 +219,8 @@ public:
     virtual void delCopy(const T* obj, Index<T, V>* primary) = 0;
 
     virtual void foreach(FuncType f) = 0;
+
+    virtual void foreachCopy(FuncType f) = 0;
 
     virtual void slice(const T* key, FuncType f) = 0;
 
@@ -533,6 +539,53 @@ public:
         return nullptr;
     }
 
+    FORCE_INLINE bool getOrInsert(T* &entry) override {
+        HASH_RES_t h = IDX_FN::hash(*entry);
+        IdxNode* n = &buckets_[h % size_];
+        do {
+            if (n->obj && h == n->hash && !IDX_FN::cmp(*entry, *n->obj)) {
+                entry = n->obj;
+                return true;
+            }
+        } while ((n = n->nxt));
+
+        T* obj = storePool->add();
+        new(obj) T(*entry);
+        entry = obj;
+        obj->prv = nullptr;
+        obj->nxt = dataHead;
+        if (dataHead) {
+            dataHead->prv = obj;
+        }
+        dataHead = obj;
+        if (++count_ > maxElems)
+            maxElems = count_;
+        IdxNode *nw;
+        auto idxId = Index<T, V>::idxId;
+        if (n->obj) {
+            allocated_from_pool_ = true;
+            nw = nodes_.add(); //memset(nw, 0, sizeof(IdxNode)); // add a node
+
+            nw->hash = h;
+            obj->backPtrs[idxId] = nw;
+            nw->obj = obj;
+
+            nw->nxt = n->nxt;
+            if (nw->nxt)
+                nw->nxt->prv = nw;
+
+            n->nxt = nw;
+            nw->prv = n;
+        } else { // space left in last IdxNode
+            n->hash = h;
+            n->obj = obj; //n->nxt=nullptr;
+            obj->backPtrs[idxId] = n;
+            n->nxt = nullptr;
+            n->prv = nullptr;
+        }
+        return false;
+    }
+
     FORCE_INLINE void add(T * obj) override {
         HASH_RES_t h = IDX_FN::hash(*obj);
         auto idxId = Index<T, V>::idxId;
@@ -632,6 +685,18 @@ public:
         while (cur) {
             f(cur);
             cur = cur->nxt;
+        }
+    }
+
+    FORCE_INLINE void foreachCopy(FuncType f) override {
+        std::vector<T*> entries;
+        T* cur = dataHead;
+        while (cur) {
+            entries.push_back(cur->copy());
+            cur = cur->nxt;
+        }
+        for (auto it : entries) {
+            f(it);
         }
     }
 
@@ -982,7 +1047,7 @@ public:
                 do {
                     ++es;
                     assert(n2->equiv == n1);
-                    assert(n2->obj->_1 != -1);
+                    //assert(n2->obj->_1 != -1);
                     assert(IDX_FN::cmp(*n1->head.obj, *n2->obj) == 0);
                 } while ((n2 = n2->nxt));
                 ++ns;
@@ -1177,6 +1242,10 @@ public:
     }
 
     FORCE_INLINE void foreach(FuncType f) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE void foreachCopy(FuncType f) override {
         throw std::logic_error("Not implemented");
     }
 
@@ -1408,7 +1477,6 @@ public:
             uint hole = size;
             uint h = size >> 1;
             while (hole > 1 && IDX_FN2::cmp(*e, *array[h]) == (is_max ? 1 : -1)) {
-
                 array[hole] = array[h];
                 hole = h;
                 h = hole >> 1;
@@ -1470,6 +1538,36 @@ public:
         if (old) delete[] old;
     }
 
+    void getBucketStats() const {
+        uint maxSize = 0;
+        uint numHeaps = 0;
+        uint totHeapSize = 0;
+        uint numInArray = 0;
+        uint nE = 0;
+        uint numBuckets = 0;
+        uint nh = 0;
+        uint maxHeapInBucket = 0;
+        for (uint i = 0; i < size_; ++i) {
+            nh = 0;
+            if (buckets_[i]) {
+                numInArray++;
+                numBuckets++;
+                auto cur = buckets_[i];
+                do {
+                    if (cur->arraySize > maxSize)
+                        maxSize = cur->arraySize;
+                    totHeapSize += cur->arraySize;
+                    numHeaps++;
+                    nh++;
+                    nE += cur->size;
+                } while ((cur = cur->nxt));
+            }
+            if (nh > maxHeapInBucket)
+                maxHeapInBucket = nh;
+        }
+        cerr << "nE = " << nE << "    Heaps:  tot=" << numHeaps << "  avg=" << numHeaps / (1.0 * numBuckets) << " max=" << maxHeapInBucket << " numInArray=" << numInArray;
+        cerr << "    maxSize=" << maxSize << "  totSize=" << totHeapSize << endl;
+    }
 
     void getSizeStats(std::ostream& fout) {
         fout << "{ \"ArrayLength\" : \"" << size_ << "\", ";
@@ -1557,7 +1655,10 @@ public:
         while (q != nullptr) {
             if (q->hash == h && (!q->array[0] || IDX_FN1::cmp(*obj, q->heapKey) == 0)) {
                 //                q->checkHeap(Index<T, V>::idxId);
-                if(!q->array[0]) { q->array[0] = obj; q->heapKey = *obj;}
+                if (!q->array[0]) {
+                    q->array[0] = obj;
+                    q->heapKey = *obj;
+                }
                 q->add(obj);
                 obj->backPtrs[Index<T, V>::idxId] = q;
                 //                q->checkHeap(Index<T, V>::idxId);
@@ -1584,30 +1685,30 @@ public:
         q->remove(obj);
         //        q->checkHeap(Index<T, V>::idxId);
         return;
-//        if (q->size == 0) {
-//            assert(q->array[1] == nullptr);
-//            auto h = q->hash;
-//            size_t b = h % size_;
-//            IdxNode p = buckets_[b];
-//            if (p == q) {
-//                buckets_[b] = q->nxt;
-//                count_--;
-//                delete q;
-//                return;
-//            } else {
-//                while (p != nullptr) {
-//                    if (p->nxt == q) {
-//                        p->nxt = q->nxt;
-//                        count_--;
-//                        delete q;
-//
-//                        return;
-//                    }
-//                    p = p->nxt;
-//                }
-//            }
-//
-//        }
+        //        if (q->size == 0) {
+        //            assert(q->array[1] == nullptr);
+        //            auto h = q->hash;
+        //            size_t b = h % size_;
+        //            IdxNode p = buckets_[b];
+        //            if (p == q) {
+        //                buckets_[b] = q->nxt;
+        //                count_--;
+        //                delete q;
+        //                return;
+        //            } else {
+        //                while (p != nullptr) {
+        //                    if (p->nxt == q) {
+        //                        p->nxt = q->nxt;
+        //                        count_--;
+        //                        delete q;
+        //
+        //                        return;
+        //                    }
+        //                    p = p->nxt;
+        //                }
+        //            }
+        //
+        //        }
 
     }
 
@@ -1617,6 +1718,10 @@ public:
     }
 
     FORCE_INLINE void foreach(FuncType f) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE void foreachCopy(FuncType f) override {
         throw std::logic_error("Not implemented");
     }
 
@@ -2068,6 +2173,10 @@ public:
     }
 
     FORCE_INLINE void foreach(FuncType f) override {
+        throw std::logic_error("Not implemented");
+    }
+
+    FORCE_INLINE void foreachCopy(FuncType f) override {
         throw std::logic_error("Not implemented");
     }
 
@@ -2619,6 +2728,10 @@ public:
         //TODO: implement
     }
 
+    FORCE_INLINE void foreachCopy(FuncType f) override {
+        throw std::logic_error("Not implemented");
+    }
+
     FORCE_INLINE void slice(const T* key, FuncType f) override {
         throw std::logic_error("Not implemented");
     }
@@ -2711,6 +2824,7 @@ public:
 
     ArrayIndex(Pool<T>* stPool = nullptr, int s = size) { //Constructor argument is ignored
         memset(isUsed, 0, size);
+        memset(array, 0, size * 8);
     }
 
     void prepareSize(size_t arrayS, size_t poolS) override {
@@ -2781,6 +2895,16 @@ public:
             if (isUsed[b])
                 f(array[b]);
         }
+    }
+
+    FORCE_INLINE void foreachCopy(FuncType f) override {
+        std::vector<T*> entries;
+        for (size_t b = 0; b < size; ++b) {
+            if (isUsed[b])
+                entries.push_back(array[b]->copy());
+        }
+        for (auto it : entries)
+            f(it);
     }
 
     FORCE_INLINE void slice(const T* key, FuncType f) override {
@@ -3031,6 +3155,17 @@ public:
         }
     }
 
+    FORCE_INLINE void foreachCopy(FuncType f) override {
+        Container *cur = head;
+        std::vector<T*> entries;
+        while (cur != nullptr) {
+            entries.push_back(cur->obj->copy());
+            cur = cur->next;
+        }
+        for (auto it : entries)
+            f(it);
+    }
+
     FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f) {
         Container *cur = head;
         while (cur != nullptr) {
@@ -3209,7 +3344,7 @@ public:
         MultiHashMap<T, V, INDEXES...>* result = new MultiHashMap<T, V, INDEXES...>();
         index[0]->foreach([&](T * entry) {
             if (filterFn(entry))
-                result->insert_nocheck(entry);  //SBJ: Insert with check?
+                result->insert_nocheck(entry); //SBJ: Insert with check?
         });
         return *result;
     }
@@ -3226,7 +3361,7 @@ public:
     template<typename T2, typename... INDEXES2>
     FORCE_INLINE MultiHashMap<T2, V, INDEXES2...>& map(const std::function<T2* (T*)>& mapFn) {
         MultiHashMap<T2, V, INDEXES2...> *result = new MultiHashMap<T2, V, INDEXES2...>();
-        index[0]->foreach([&](T* entry){
+        index[0]->foreach([&](T* entry) {
             result->insert_nocheck(mapFn(entry)); //SBJ: Insert with check?
         });
         return *result;
@@ -3331,6 +3466,10 @@ public:
 
     FORCE_INLINE void foreach(FuncType f) {
         index[0]->foreach(f);
+    }
+
+    FORCE_INLINE void foreachCopy(FuncType f) {
+        index[0]->foreachCopy(f);
     }
 
     void slice(int idx, const T* key, FuncType f) {

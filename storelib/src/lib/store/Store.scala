@@ -480,6 +480,10 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     idxs(0).foreach(f)
   }
 
+ def foreachCopy(f: E => Unit): Unit = time("foreach") {
+    idxs(0).foreachCopy(f)
+  }
+
 
   def slice(idx: Int, key: E, f: E => Unit) = time("slice", idx) {
     if (key != null) {
@@ -689,6 +693,21 @@ class IdxDirect[E <: Entry](st: Store[E], idx: Int, unique: Boolean, var data: A
     }
   }
 
+  override def foreachCopy(f: E => Unit) {
+    val n = data.size;
+    var i = 0
+    val entries = new ArrayBuffer[E]()
+    if (imm) while (i < n) {
+      val e = data(i);
+      if (e != null) entries += e.copy.asInstanceOf[E];
+      i += 1;
+    }
+    else while (i < n) {
+      entries += data(i).copy.asInstanceOf[E];
+      i += 1;
+    }
+    entries.foreach(f);
+  }
   override def slice(key: E, f: E => Unit) {
     val h = ops.hash(key)
     if (imm) {

@@ -102,6 +102,8 @@ public abstract class Idx<E extends Entry> {
         w("foreach");
     } // on all elements; warning: what about reordering updates?
 
+    public void foreachCopy(Function1<E, Unit> f) { w("foreachCopy"); }
+
     public void slice(E key, Function1<E, Unit> f) {
         w("slice");
     } // foreach on a slice
@@ -368,6 +370,18 @@ class IdxHash<E extends Entry> extends Idx<E> {
             f.apply((E) cur);
             cur = cur.next;
         }
+    }
+
+    @Override
+    public void foreachCopy(Function1<E, Unit> f) {
+        ArrayList<E> entries = new ArrayList<E>();
+        Entry cur = dataHead;
+        while (cur != null) {
+            entries.add((E) cur.copy());
+            cur = cur.next;
+        }
+        for(E e_ : entries)
+            f.apply(e_);
     }
 
     @Override
@@ -712,7 +726,18 @@ class IdxList<E extends Entry> extends Idx<E> {
             p = n;
         } while (p != null);
     }
-
+    @Override
+    public void foreachCopy(Function1<E, Unit> f) {
+        E p = head;
+        ArrayList<E> entries = new ArrayList<E>();
+        if (p != null) do {
+            E n = (E) p.data[idx];
+            entries.add((E) p.copy());
+            p = n;
+        } while (p != null);
+        for(E e_ : entries)
+            f.apply(e_);
+    }
     @Override
     public void slice(E key, Function1<E, Unit> f) {
         E p = head;

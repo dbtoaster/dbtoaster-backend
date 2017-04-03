@@ -59,7 +59,12 @@ struct ExecutionProfiler {
         }
 #endif
     }
-
+    static void reset() {
+        for (auto it : durations) {
+            durations[it.first] = 0;
+            counters[it.first] = 0;
+        }
+    }
     static void printProfile() {
         std::cout << "Profile Results :: " << std::endl;
 #ifdef EXEC_PROFILE

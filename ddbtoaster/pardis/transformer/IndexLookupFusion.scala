@@ -46,7 +46,7 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
     analysis += statement {
       case sym -> (s: StoreGetCopy[_]) => storeGets += sym; ()
       case sym -> StoreSliceCopy(_, _, _, Def(PardisLambda(_, i, _))) => storeGets += i; ()
-      case sym -> StoreForeach(_, Def(PardisLambda(_, i, _))) => storeGets += i; ()
+      case sym -> StoreForeachCopy(_, Def(PardisLambda(_, i, _))) => storeGets += i; ()
       case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) if storeGets.contains(rhs) => storeGets += lhs; ()
       case sym -> (PardisAssign(PardisVar(lhs), rhs@Sym(_, _))) => storeGets -= lhs; ()
       case sym -> (PardisReadVar(PardisVar(v@Sym(_, _)))) if storeGets contains v => storeGets += sym; ()
@@ -63,6 +63,7 @@ class IndexLookupFusion(override val IR: StoreDSL) extends RecursiveRuleBasedTra
       case StoreGetCopy(store, idx, key) => val rep = storeGet(store, idx, key)(key.tp); storeGets += rep.asInstanceOf[Sym[_]]; rep
       case StoreSliceCopy(store, idx, key, f) => store.slice(idx, key, f)
         //SBJ : Two stage change to allow two rounds of analysis. Without this, the entries inside a nested block (eg. If then else) are not detected
+      case StoreForeachCopy(store, f) => store.foreach(f)
       case StoreUpdateCopy(store, e) if storeGets contains e => store.update(e)
       case StoreUpdateCopyDependent(store, e) if storeGets contains e => store.update(e)
       case StoreUpdateCopy(store, e) =>  store.updateCopyDependent(e)

@@ -200,7 +200,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
           }, ko.map { case (k, i) => (i + 1, cx(k)) }: _*)
         } else {
           implicit val mE = me(m.tks, tp)
-          proxy.foreach(__lambda { e: Rep[Entry] => {
+          proxy.foreachCopy(__lambda { e: Rep[Entry] => {
             //println(s"********************tpe here! ${mE}")
             // println(s"********************tpe here! ${mE.typeArguments}")
             cx.add(ki.map { case (k, i) => (k, IR.steGet(e, i + 1)(IR.EntryType, mE.typeArguments(i))) }.toMap)
@@ -268,7 +268,7 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
     implicit val mE = manEntry(keys.map(_._2) ::: List(value_tp))
     // val mE = impl.EntryType
     val proxy = mapProxy(map)
-    proxy.foreach {
+    proxy.foreachCopy {
       __lambda {
         e: Rep[Entry] =>
           cx.add(keys.zipWithIndex.filter(x => !cx.contains(x._1._1)).map { case ((n, t), i) => (n, IR.steGet(e, i + 1)(IR.EntryType, mE.typeArguments(i))) }.toMap)

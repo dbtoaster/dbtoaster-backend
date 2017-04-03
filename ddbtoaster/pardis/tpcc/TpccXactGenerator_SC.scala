@@ -153,6 +153,10 @@ object TpccXactGenerator_SC {
     val customerKey = List(1, 2, 3)
     val stockKey = List(1, 2)
 
+    var failedDel = newVarNamed(unit(0), "failedDel")
+    var failedOS = newVarNamed(unit(0), "failedOS")
+    var failedNO = newVarNamed(unit(0), "failedNO")
+
     val newOrderTbl = __newStoreNamed[GenericEntry]("newOrderTbl")
     val historyTbl = __newStoreNamed[GenericEntry]("historyTbl")
     val warehouseTbl = __newStoreNamed[GenericEntry]("warehouseTbl")
@@ -286,6 +290,8 @@ object TpccXactGenerator_SC {
           //        }
           //        ()
           //        """.toRep
+        } else {
+          $(failedNO):= (1+ $(failedNO).!)
         }
 
         1
@@ -415,11 +421,18 @@ object TpccXactGenerator_SC {
         val found_c_id = customerEntry.get[Int](3)
         val agg = Aggregator.max[GenericEntry, Int](e => e.get[Int](1))
         $(orderTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 4, $(d_id), $(w_id), found_c_id), agg)
-        val max_id = agg.result.get[Int](1)
-        $(orderLineTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, max_id, $(d_id), $(w_id)), { orderLineEntry =>
-          var dceBlocker = 1
-        })
-        1
+        val res = agg.result
+        if (res == null) {
+          $(failedOS):= (1+ $(failedOS).!)
+          0
+        }
+        else {
+          val max_id = res.get[Int](1)
+          $(orderLineTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, max_id, $(d_id), $(w_id)), { orderLineEntry =>
+            var dceBlocker = 1
+          })
+          1
+        }
       }.toRep
       /*
   dsl"""
@@ -510,6 +523,7 @@ object TpccXactGenerator_SC {
 
           } else {
             // not found
+            $(failedDel):= (1 + $(failedDel).!)
             orderIDs.update(d_id - 1, 0)
           }
           d_id = d_id + 1

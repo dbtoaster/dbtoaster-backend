@@ -23,7 +23,7 @@
 
 //#define VERIFY_TPCC 1
 const std::string TStore = PROJECT_ROOT;
-const std::string commandfile = TStore + "commands.txt";
+const std::string commandfile = TStore + "commands" STRINGIFY(NUMWARE) ".txt";
 //const std::string inputTableDir = "/home/sachin/sem3/Project/test/input/";
 //const std::string outputTableDir = "/home/sachin/sem3/Project/test/output/";
 const std::string inputTableDir = TStore + "bench/systems/tpcc/mysql/db" STRINGIFY(NUMWARE) "innodb/";
@@ -381,6 +381,7 @@ struct TPCCDataGen {
 
     void loadPrograms() {
         std::ifstream fin(commandfile);
+        std::cerr << "Programs loaded from " << commandfile << std::endl;
         std::string line;
         size_t curPrg = 0;
         while (std::getline(fin, line) && curPrg < numPrograms) {

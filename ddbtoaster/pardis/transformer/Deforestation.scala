@@ -29,11 +29,11 @@ class Deforestation(override val IR: StoreDSL) extends RuleBasedTransformer[Stor
     case Def(sf@StoreFilter(self, Def(PardisLambda(f, _ ,_)))) => toCollector(self)(sf.typeE).filter(f)
     case Def(sm@StoreMap(self, Def(PardisLambda(f, _, _)))) => toCollector(self)(sm.typeE).map(f)
     case Def(st@StoreNew2()) => new Collector{
-      override def apply(f: (Rep[T]) => Rep[Unit]) = n.foreach(doLambda(f)(typeT, UnitType))
+      override def apply(f: (Rep[T]) => Rep[Unit]) = n.foreachCopy(doLambda(f)(typeT, UnitType))
     }
   }
   rewrite += rule {
-      case sf@StoreForeach(self, Def(PardisLambda(f, _, _))) => toCollector(self)(sf.typeE).apply(f)
+      case sf@StoreForeachCopy(self, Def(PardisLambda(f, _, _))) => toCollector(self)(sf.typeE).apply(f)
       case sf@StoreFold(self, zero, Def(PardisLambda2(f, _, _, _))) =>
         val res = __newVar(zero)(sf.typeU)
         toCollector(self)(sf.typeE).apply({

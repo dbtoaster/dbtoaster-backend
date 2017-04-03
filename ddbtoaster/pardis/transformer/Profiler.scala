@@ -86,7 +86,7 @@ class Profiler(override val IR: StoreDSL) extends RecursiveRuleBasedTransformer[
       alreadyProfiled += rep.asInstanceOf[Sym[_]]
       toAtom(ProfileEnd(name))(UnitType)
       rep
-    case sym -> (node@StoreForeach(s: Sym[_], _)) if !alreadyProfiled.contains(sym) =>
+    case sym -> (node@StoreForeachCopy(s: Sym[_], _)) if !alreadyProfiled.contains(sym) =>
       val name = unit(s"${s.name},Foreach,$currentBlock,${sym.id}")
       toAtom(ProfileStart(name))(UnitType)
       val rep = toAtom(node)(UnitType)

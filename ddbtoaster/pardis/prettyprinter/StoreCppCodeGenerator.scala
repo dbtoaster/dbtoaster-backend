@@ -312,6 +312,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StoreSliceCopy(self, idx, key, f) => doc"$self.sliceCopy($idx, $key, $f)"
     case StoreSliceCopyDependent(self, idx, key, f) => doc"$self.sliceCopyDependent($idx, $key, $f)"
     case StoreForeach(self, f) => doc"$self.foreach($f)"
+    case StoreForeachCopy(self, f) => doc"$self.foreachCopy($f)"
     case StoreClear(self) => doc"$self.clear()"
     case StoreCopyIntoPool(self, e) => doc"$self.copyIntoPool($e)"
 
@@ -329,6 +330,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case IdxSliceCopy(self, key, f) => doc"$self.sliceCopy($key, $f)"
     case IdxSliceCopyDependent(self, key, f) => doc"$self.sliceCopyDependent($key, $f)"
     case IdxForeach(self, f) => doc"$self.foreach($f)"
+    case IdxForeachCopy(self, f) => doc"$self.foreachCopy($f)"
     case IdxClear(self) => doc"$self.clear()"
     case IdxForeachResMap(idx, f, res: Sym[_]) => doc"$idx.foreachResMap($f, $res)"
     case IdxSliceResMap(idx, key, f, res: Sym[_]) => doc"$idx.sliceResMap($key, $f, $res)"
@@ -416,7 +418,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
             "return h;"
         ) :/: "}"
         val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :/: Document.nest(2,
-          s"""if (e1.isSampleEntry) {
+          (if(!Optimizer.secondaryIndex) s"""if (e1.isSampleEntry) {
               |  for (auto it : e1.map) {
               |    if (e2.map.at(it.first) != it.second)
               |        return 1;
@@ -426,11 +428,12 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
               |     if (e1.map.at(it.first) != it.second)
               |         return 1;
               |  }
-              |}else {
-              | if(${cols.map(c => s"e1.map.at($c) != e2.map.at($c)").mkString(" || ")})
-              |   return 1;
-              |}
-              |return 0;""".stripMargin
+              |}else """.stripMargin else "")
+            ::
+            s"""if(${cols.map(c => s"e1.map.at($c) != e2.map.at($c)").mkString(" || ")})
+              |   return 1;""".stripMargin
+            :/:
+              "return 0;"
         ) :/: "}"
         doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"
       } else Document.empty

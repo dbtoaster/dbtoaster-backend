@@ -181,6 +181,10 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |  const size_t numPrograms = 100;
        |#endif
        |
+       |uint failedOS = 0;
+       |uint failedDel = 0;
+       |uint failedNO = 0;
+       |
        |const size_t warehouseTblSize = 8 * (numWare / 8 + 1);
        |const size_t itemTblSize = 100000 * 1.5;
        |const size_t districtTblSize = 8 * ((numWare * 10) / 8 + 1);
@@ -404,7 +408,11 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |}
          |auto end = Now;
          |auto execTime = DurationMS(end - start);
+         |cout << "Failed NO = " << failedNO << endl;
+         |cout << "Failed Del = " << failedDel << endl;
+         |cout << "Failed OS = " << failedOS << endl;
          |cout << "Total time = " << execTime << " ms" << endl;
+         |uint failedCount[] = {failedNO, 0, failedOS, failedDel, 0};
          |cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  xactCounts[0]  << endl;
          |cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
          |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "ExecutionProfiler::printProfileToFile();" else doc""}
@@ -412,7 +420,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |if(argc == 1 || atoi(argv[1]) == 1) {
          |  fout << "\\nCPP-${Optimizer.optCombination}-" << numPrograms << ",";
          |  for(int i = 0; i < 5 ; ++i)
-         |     fout << xactCounts[i] << ",";
+         |     fout << xactCounts[i] - failedCount[i] << ",";
          |  fout <<",";
          | }
          |fout << execTime << ",";

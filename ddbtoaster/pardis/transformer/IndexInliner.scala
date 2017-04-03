@@ -49,11 +49,11 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
   if (Optimizer.deadIndexUpdate)
   //SBJ: TODO:  Add check to ensure entry comes from a get or slice
     analysis += rule {
-      case GenericEntryUpdate(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
-      case GenericEntryIncrease(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
-      case GenericEntryDecrease(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
-      case GenericEntry$minus$eq(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
-      case GenericEntry$plus$eq(e, Constant(i), _) => updatedCols.getOrElse(e, new mutable.HashSet[Int]()) += i; ()
+      case GenericEntryUpdate(e, Constant(i), _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += i; ()
+      case GenericEntryIncrease(e, Constant(i), _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += i; ()
+      case GenericEntryDecrease(e, Constant(i), _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += i; ()
+      case GenericEntry$minus$eq(e, Constant(i), _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += i; ()
+      case GenericEntry$plus$eq(e, Constant(i), _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += i; ()
         //Ignore isSE field, if present
       case StructFieldSetter(e, idx, _) if idx.startsWith("_") => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += idx.drop(1).toInt; ()
       case StructFieldIncr(e, idx, _) => updatedCols.getOrElseUpdate(e, new mutable.HashSet[Int]()) += idx.drop(1).toInt; ()
@@ -66,6 +66,10 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
     case StoreForeach(store, f) => {
       implicit val entTp = store.tp.typeArguments(0).asInstanceOf[TypeRep[Entry]]
       indexMap((store, 0)).foreach(f)
+    }
+    case StoreForeachCopy(store, f) => {
+      implicit val entTp = store.tp.typeArguments(0).asInstanceOf[TypeRep[Entry]]
+      indexMap((store, 0)).foreachCopy(f)
     }
     case StoreSliceCopy(store, Constant(idx), e, f) =>
       implicit val entTp = e.tp.asInstanceOf[TypeRep[Entry]]

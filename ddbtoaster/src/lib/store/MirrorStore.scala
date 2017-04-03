@@ -59,6 +59,8 @@ class MStore[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]]) {
 
   def foreach(f: E => Unit): Unit = ???
 
+  def foreachCopy(f: E => Unit): Unit = ???
+
   def slice(idx: Int, key: E, f: E => Unit): Unit = ???
 
   def sliceCopy(idx: Int, key: E, f: E => Unit): Unit = ???

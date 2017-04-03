@@ -24,6 +24,7 @@ trait MirrorIdx[E <: Entry] {
   @read
   def getCopyDependent(key: E): E = ???
   def foreach(f: (E) => Unit): Unit = ???
+  def foreachCopy(f: (E) => Unit): Unit = ???
   def foreachRes(): MultiRes = ???
   def foreachResMap(f: (E) => Unit, res: MultiRes): Unit = ???
   def sliceNoUpdate(key: E, f: E => Unit) : Unit = ???
