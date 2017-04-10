@@ -75,6 +75,8 @@ object Compiler {
       case "minmax" => Optimizer.minMaxIdx = true
       case "med" => Optimizer.medIdx = true
       case "coldmotion" => Optimizer.coldMotion = true
+      case "profilestore" => Optimizer.profileStoreOperations = true
+      case "parpromo" => Optimizer.parameterPromotion = true
       case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }

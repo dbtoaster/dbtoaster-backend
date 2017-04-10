@@ -28,15 +28,16 @@ trait TpccPardisGen {
   val infoFilePath = infoFile.getAbsolutePath
   var StoreArrayLengths = Map[String, String]()
   var idxSymNames: List[String] = null
-
+if(Optimizer.initialStoreSize) {
   if (infoFile.exists()) {
+    System.err.println(s"Loading runtime info from ${infoFilePath}")
     val txt = new java.util.Scanner(infoFile).useDelimiter("\\Z").next()
     val allinfo: Map[String, _] = JSON.parseFull(txt).get.asInstanceOf[Map[String, _]]
     StoreArrayLengths = allinfo.map(t => t._1 -> t._2.asInstanceOf[Map[String, String]].getOrElse("OptArrayLength", "0"))
-  } else if (Optimizer.initialStoreSize) {
+  } else  {
     System.err.println("Runtime info file missing!!  Using default initial sizes")
   }
-
+}
   val codeGen: StoreCodeGenerator
   val genDir = "../runtime/tpcc/pardisgen"
 
@@ -163,6 +164,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <fstream>
        |#include <locale>
        |
+       |${if(Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
        |#include "ExecutionProfiler.h"
        |
        |using namespace std;
@@ -308,7 +310,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     }).mkDocument("\n")
 
     val traits = doc"/* TRAITS STARTING */" :/: codeGen.getTraitSignature :/: doc" /* TRAITS ENDING   */"
-    def argsDoc(args: List[Sym[_]]) = args.map(t => doc"${t.tp} ${t}").mkDocument(", ")
+    def argsDoc(args: List[Sym[_]]) = args.map(t => doc"${t.tp} ${t}").mkDocument(", ")  //SBJ: These args are both input/output. Should not be made const
     //    def blockTofunction(x :(String, List[ExpressionSymbol[_]], PardisBlock[T])) = {
     //      (Sym.freshNamed(x._1)(x._3.typeT, IR), x._2, x._3)
     //    }
@@ -412,10 +414,15 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "Failed Del = " << failedDel << endl;
          |cout << "Failed OS = " << failedOS << endl;
          |cout << "Total time = " << execTime << " ms" << endl;
-         |uint failedCount[] = {failedNO, 0, failedOS, failedDel, 0};
+         |uint failedCount[] = {failedNO, 0, failedOS, failedDel/10, 0};
          |cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  xactCounts[0]  << endl;
-         |cout << "TpmC = " << fixed <<  xactCounts[0] * 60000.0/execTime << endl;
-         |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "ExecutionProfiler::printProfileToFile();" else doc""}
+         |cout << "TpmC = " << fixed <<  (xactCounts[0] - failedNO)* 60000.0/execTime << endl;
+         |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations)
+           s"""
+              |counters["FailedNO"] = failedNO; counters["FailedDel"] = failedDel/10; counters["FailedOS"] = failedOS;
+              |durations["FailedNO"] = 0; durations["FailedDel"] = 0; durations["FailedOS"] = 0;
+              |ExecutionProfiler::printProfileToFile();
+            """.stripMargin else doc""}
          |ofstream fout("tpcc_res_cpp.csv", ios::app);
          |if(argc == 1 || atoi(argv[1]) == 1) {
          |  fout << "\\nCPP-${Optimizer.optCombination}-" << numPrograms << ",";

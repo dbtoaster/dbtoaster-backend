@@ -167,13 +167,13 @@ class Pool {
 public:
     size_t size_;
 
-    Pool(bool donotallocate) {
+    Pool(bool donotallocate): size_(0) {
     }
 
     void initialize(size_t chunk_size) {
     }
 
-    Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE) {
+    Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE): size_(0) {
     }
 
     inline void clear() {

@@ -357,7 +357,7 @@ struct TPCCDataGen {
     ~TPCCDataGen() {
         for (size_t i = 0; i < numPrograms; i++)
             delete programs[i];
-        delete programs;
+        delete[] programs;
     }
 #ifdef VERIFY_TPCC
 
@@ -381,7 +381,7 @@ struct TPCCDataGen {
 
     void loadPrograms() {
         std::ifstream fin(commandfile);
-        std::cerr << "Programs loaded from " << commandfile << std::endl;
+        std::cerr << numPrograms << "  programs loaded from " << commandfile << std::endl;
         std::string line;
         size_t curPrg = 0;
         while (std::getline(fin, line) && curPrg < numPrograms) {

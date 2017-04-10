@@ -306,7 +306,7 @@ class EntryTransformer(override val IR: StoreDSL, val entryTypes: collection.mut
     def inlineFunction(func: PardisLambda[_, _], arg: Rep[SEntry]) = {
       val symMap = collection.mutable.HashMap[Sym[_], Sym[_]]()
 
-      func.o.stmts.foreach {
+      func.o.stmts.collect { //Ignoring other nodes including profiling!!
         case Statement(sym, GenericEntryGet(self, Constant(i))) => val rep = field(arg.asInstanceOf[Sym[_]], "_" + i)(s.sch(i - 1).asInstanceOf[TypeRep[Any]]); symMap += sym -> rep.asInstanceOf[Sym[_]]
       }
       symMap(func.o.res.asInstanceOf[Sym[_]]).asInstanceOf[Sym[R]]

@@ -42,6 +42,7 @@ object TpccXactGenerator_SC {
       case "coldmotion" => Optimizer.coldMotion = true
       case "profileblocks" => Optimizer.profileBlocks = true
       case "profilestore" => Optimizer.profileStoreOperations = true
+      case "parpromo" => Optimizer.parameterPromotion = true
       case _ => throw new IllegalArgumentException(s"Unknown option $o")
 
     }
@@ -71,7 +72,13 @@ object TpccXactGenerator_SC {
 
     import Optimizer._
 
-    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl" -> splSecondaryIdx, "MinMax" -> minMaxIdx, "Med" -> medIdx, "ColdMotion" -> coldMotion)
+    val all_opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts,
+      "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion,
+      "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion,
+      "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter,
+      "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl" -> splSecondaryIdx, "MinMax" -> minMaxIdx,
+      "Med" -> medIdx, "ColdMotion" -> coldMotion, "StoreProfile" -> profileStoreOperations, "BlockProfile" -> profileBlocks,
+    "ParameterPromotion" -> parameterPromotion)
     java.lang.System.err.println("Optimizations :: " + all_opts.filter(_._2).map(_._1).mkString(", "))
 
 

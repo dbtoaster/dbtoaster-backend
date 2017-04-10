@@ -27,7 +27,13 @@ import scala.util.parsing.json.JSON
 abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) extends IScalaGen {
 
   import Optimizer._;
-  val opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts, "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion, "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion, "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter, "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl" -> splSecondaryIdx, "MinMax" -> minMaxIdx, "Med" -> medIdx, "ColdMotion" -> coldMotion)
+  val opts = Map("Entry" -> analyzeEntry, "Index" -> secondaryIndex, "FixedRange" -> fixedRange, "Online" -> onlineOpts,
+    "TmpVar" -> tmpVarHoist, "TmpMap" -> tmpMapHoist, "Inline" -> indexInline, "Fusion full" -> indexLookupFusion,
+    "Fusion" -> indexLookupPartialFusion, "SliceInline" -> sliceInline, "DeadIdx" -> deadIndexUpdate, "CodeMotion" -> codeMotion,
+    "CmpMult" -> m3CompareMultiply, "RegexHoister" -> regexHoister, "RefCnt" -> refCounter, "MultiResSplitter" -> multiResSplitter,
+    "InitialStoreSize" -> initialStoreSize, "SliceNoUpdate" -> sliceNoUpd, "Spl" -> splSecondaryIdx, "MinMax" -> minMaxIdx,
+    "Med" -> medIdx, "ColdMotion" -> coldMotion, "StoreProfile" -> profileStoreOperations, "BlockProfile" -> profileBlocks,
+    "ParameterPromotion" -> parameterPromotion)
   java.lang.System.err.println("Optimizations :: " + opts.filter(_._2).map(_._1).mkString(", "))
 
   import scala.language.implicitConversions
@@ -38,15 +44,16 @@ abstract class PardisGen(override val cls: String = "Query", val IR: StoreDSL) e
   val infoFilePath = infoFile.getAbsolutePath
   var StoreArrayLengths = Map[String, String]()
   var idxSymNames: List[String] = null
-
+if(Optimizer.initialStoreSize) {
   if (infoFile.exists()) {
+    java.lang.System.err.println(s"Loading runtime info from $infoFilePath")
     val txt = new java.util.Scanner(infoFile).useDelimiter("\\Z").next()
     val allinfo: Map[String, _] = JSON.parseFull(txt).get.asInstanceOf[Map[String, _]]
     StoreArrayLengths = allinfo.map(t => t._1 -> t._2.asInstanceOf[Map[String, String]].getOrElse("OptArrayLength", "0"))
-  } else if (Optimizer.initialStoreSize) {
+  } else {
     java.lang.System.err.println("Runtime info file missing!!  Using default initial sizes")
   }
-
+}
 
   val codeGen: StoreCodeGenerator
   val tempMapSchema = collection.mutable.ArrayBuffer[(Sym[_], List[TypeRep[_]])]()
@@ -638,9 +645,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
         }
       case Def(n: EntryIdxGenericCmpObject[_]) =>
-        val ord = Def.unapply(n.f).get.asInstanceOf[PardisLambda[_, _]].o.stmts(0).rhs match {
-          case GenericEntryGet(_, Constant(i)) => i
-        }
+        val ord = Index.getColumnNumFromLambda(Def.unapply(n.f).get.asInstanceOf[PardisLambda[_, _]])
         val cols = n.cols.asInstanceOf[Constant[List[Int]]].underlying.mkString("")
         s"GenericCmp_${cols.mkString("")}_$ord"
 

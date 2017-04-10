@@ -1,6 +1,6 @@
 package ddbt.codegen.prettyprinter
 
-import ch.epfl.data.sc.pardis.ir.CNodes.{Malloc, StrStr}
+import ch.epfl.data.sc.pardis.ir.CNodes.{Malloc, StrStr, StructCopy}
 import ch.epfl.data.sc.pardis.ir.CTypes.PointerType
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.prettyprinter.CCodeGenerator
@@ -255,7 +255,31 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"  counters[$n]++;" :/:
         doc"}"
 
+    case Statement(sym, m@Malloc(Constant(1))) =>
+      val tp = sym.tp.asInstanceOf[PointerType[_]].contentsType
+      val id = sym.id.toString
+      doc"$tp y$id; " ::
+        doc"${sym.tp} $sym = &y$id;"
 
+    case Statement(sym, SteNewSEntry(_, args)) =>
+      val id = sym.id.toString
+      doc"GenericEntry y$id(false_type(),${args.mkDocument(", ")});" :: doc"GenericEntry* $sym = &y$id;"
+
+    case Statement(sym, SteSampleSEntry(_, args)) =>
+      val newargs = args.map(t => List(Constant(t._1), t._2)).flatten
+      val argsDoc = newargs.mkDocument(", ")
+      val id = sym.id.toString
+      doc"GenericEntry y$id(true_type(), $argsDoc); GenericEntry* $sym = &y$id;"
+    case Statement(sym, GenericEntryApplyObject(Constant("SteSampleSEntry"), Def(LiftedSeq(args)))) =>
+      val newargs = args.zipWithIndex.collect({
+        case (a, i) if i < args.size / 2 => List(a, args(i + args.size / 2))
+      }).flatten
+      val argsDoc = newargs.mkDocument(", ")
+      val id = sym.id.toString
+      doc"GenericEntry y$id(true_type(), $argsDoc); GenericEntry* $sym = &y$id;"
+    case Statement(sym, GenericEntryApplyObject(_, Def(LiftedSeq(args)))) =>
+      val id = sym.id.toString
+      doc"GenericEntry y$id(false_type(), ${args.mkDocument(", ")}); GenericEntry* $sym = &y$id;"
     case _ => super.stmtToDocument(stmt)
   }
 
@@ -353,20 +377,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StructFieldIncr(self, idx, rhs) => doc"$self->$idx += $rhs"
     case StructFieldDecr(self, idx, rhs) => doc"$self->$idx -= $rhs"
     case StructDynamicFieldAccess(self, i, o) if refSymbols.contains(self) => doc"*(&$self._$i + ($o-1))" //assuming continuous range of same typed elements
-    case StructDynamicFieldAccess(self, i, o)  => doc"*(&$self->_$i + ($o-1))" //assuming continuous range of same typed elements
+    case StructDynamicFieldAccess(self, i, o) => doc"*(&$self->_$i + ($o-1))" //assuming continuous range of same typed elements
 
-    case SteNewSEntry(_, args) => doc"new GenericEntry(false_type(), ${args.mkDocument(", ")})"
-    case SteSampleSEntry(_, args) =>
-      val newargs = args.map(t => List(Constant(t._1), t._2)).flatten
-      val argsDoc = newargs.mkDocument(", ")
-      doc"new GenericEntry(true_type(), $argsDoc)"
-    case GenericEntryApplyObject(Constant("SteSampleSEntry"), Def(LiftedSeq(args))) =>
-      val newargs = args.zipWithIndex.collect({
-        case (a, i) if i < args.size / 2 => List(a, args(i + args.size / 2))
-      }).flatten
-      val argsDoc = newargs.mkDocument(", ")
-      doc"new GenericEntry(true_type(), $argsDoc)"
-    case GenericEntryApplyObject(_, Def(LiftedSeq(args))) => doc"new GenericEntry(false_type(), ${args.mkDocument(", ")})"
     case g@GenericEntryGet(self, i) => doc"$self->get${g.typeE.name}($i)"
     case GenericEntryIncrease(self, i, v) => doc"$self->increase($i, $v)"
     case GenericEntry$plus$eq(self, i, v) => doc"$self->increase($i, $v)"
@@ -418,22 +430,24 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
             "return h;"
         ) :/: "}"
         val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :/: Document.nest(2,
-          (if(!Optimizer.secondaryIndex) s"""if (e1.isSampleEntry) {
-              |  for (auto it : e1.map) {
-              |    if (e2.map.at(it.first) != it.second)
-              |        return 1;
-              |  }
-              |} else if (e2.isSampleEntry) {
-              | for (auto it : e2.map) {
-              |     if (e1.map.at(it.first) != it.second)
-              |         return 1;
-              |  }
-              |}else """.stripMargin else "")
+          (if (!Optimizer.secondaryIndex)
+            s"""if (e1.isSampleEntry) {
+                |  for (auto it : e1.map) {
+                |    if (e2.map.at(it.first) != it.second)
+                |        return 1;
+                |  }
+                |} else if (e2.isSampleEntry) {
+                | for (auto it : e2.map) {
+                |     if (e1.map.at(it.first) != it.second)
+                |         return 1;
+                |  }
+                |}else """.stripMargin
+          else "")
             ::
             s"""if(${cols.map(c => s"e1.map.at($c) != e2.map.at($c)").mkString(" || ")})
-              |   return 1;""".stripMargin
+                |   return 1;""".stripMargin
             :/:
-              "return 0;"
+            "return 0;"
         ) :/: "}"
         doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"
       } else Document.empty
@@ -487,7 +501,11 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         case c@Constant(_) => expToDocument(c)
       }
       doc"$str.append($arg, $n)"
-
+    case StructCopy(s, orig) =>
+      val origStruct = orig.correspondingNode.asInstanceOf[PardisStruct[Any]]
+      origStruct.elems.collect { case x if (x.init != nullValue(x.init.tp)) =>
+        expToDocument(s) :: "->" :: x.name :: " = " :: expToDocument(x.init)
+      }.mkDocument("; ")
     case _ => super.nodeToDocument(node)
   }
 }

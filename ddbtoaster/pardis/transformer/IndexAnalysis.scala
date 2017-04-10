@@ -1,12 +1,12 @@
 package ddbt.transformer
 
-import ch.epfl.data.sc.pardis.ir.{Constant, PardisLambda}
+import ch.epfl.data.sc.pardis.ir.{Constant, PardisLambda, Statement}
 import ch.epfl.data.sc.pardis.optimization.{RecursiveRuleBasedTransformer, RuleBasedTransformer}
 import ch.epfl.data.sc.pardis.property.{Property, TypedPropertyFlag}
 import ch.epfl.data.sc.pardis.types.AnyType
 import ddbt.codegen.Optimizer
 import ddbt.lib.store._
-import ddbt.lib.store.deep.GenericEntryIRs.{GenericEntryGet}
+import ddbt.lib.store.deep.GenericEntryIRs.GenericEntryGet
 import ddbt.lib.store.deep.StoreDSL
 
 /**
@@ -96,9 +96,10 @@ class Indexes extends Property {
 }
 
 object Index {
-  def getColumnNumFromLambda(f: PardisLambda[_, _]) = f.o.stmts(0).rhs match {
-    case GenericEntryGet(_, Constant(i)) => i
-  }
+  //SBJ: HACK..
+  def getColumnNumFromLambda(f: PardisLambda[_, _]) = f.o.stmts.collect {
+    case Statement(sym,GenericEntryGet(_, Constant(i))) => i
+  }.last
 }
 
 class IndexAnalysis(override val IR: StoreDSL) extends RuleBasedTransformer[StoreDSL](IR) {

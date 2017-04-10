@@ -840,6 +840,7 @@ trait ICppGen extends IScalaGen {
     "        "+(if(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE) "//" else "")+"if (d->tS==0) { "+tc("d->")+" } printf(\"SAMPLE="+dataset+",%ld,%ld,%ld\\n\",d->tT,d->tN,d->tS);\n"+
     "        //checkAll(); //print bucket statistics\n" +
     s"        ${if(Optimizer.initialStoreSize) "" else "//"} getRuntimeInfo(); //get runtime information\n" +
+    s"""        ${if(Optimizer.profileStoreOperations || Optimizer.profileBlocks) "" else "//"} ExecutionProfiler::printProfileToFile("profile${cls}.csv");"""+"\n" +
     "        return snapshot_t( d );\n"+
     "    }\n"+
     "\n"+
@@ -913,5 +914,6 @@ trait ICppGen extends IScalaGen {
 
   def tc(p:String="") = "gettimeofday(&("+p+"t),NULL); "+p+"tT=(("+p+"t).tv_sec-("+p+"t0).tv_sec)*1000000L+(("+p+"t).tv_usec-("+p+"t0).tv_usec);"
 
-  override def additionalImports():String = "#include \"program_base.hpp\"\n#include \"hpds/KDouble.hpp\"\n#include \"hash.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n#define ELEM_SEPARATOR \"\\n\\t\\t\\t\"\n"
+  override def additionalImports():String = "#include \"program_base.hpp\"\n#include \"hpds/KDouble.hpp\"\n#include \"hash.hpp\"\n#include \"mmap/mmap.hpp\"\n#include \"hpds/pstring.hpp\"\n#include \"hpds/pstringops.hpp\"\n#include \"ExecutionProfiler.h\"\n#define ELEM_SEPARATOR \"\\n\\t\\t\\t\"\n" +
+    (if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1"  else "")
 }

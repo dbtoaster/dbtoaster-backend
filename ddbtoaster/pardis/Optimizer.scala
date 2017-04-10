@@ -37,11 +37,12 @@ object Optimizer {
   var multiResSplitter = false
   var sliceNoUpd = false
   var coldMotion = false
+  var parameterPromotion = true
 
   var profileBlocks = false
   var profileStoreOperations = false
 
-  var refCounter = false
+  var refCounter = true
   var cTransformer = false
   var initialStoreSize = false
   var infoFileName = ""
@@ -77,6 +78,9 @@ class Optimizer(val IR: StoreDSL) {
      */
   }
 
+  if (Optimizer.profileStoreOperations)
+    pipeline += new Profiler(IR)
+
   if(Optimizer.regexHoister){
     pipeline += new StringFormatEvaluator(IR)
   }
@@ -85,6 +89,9 @@ class Optimizer(val IR: StoreDSL) {
     pipeline += DCE
     pipeline += new CodeMotion(IR)
   }
+
+
+
   if (Optimizer.analyzeEntry) {
     val ea = new EntryAnalysis(IR)
     val et = new EntryTransformer(IR, ea.EntryTypes)
@@ -98,8 +105,6 @@ class Optimizer(val IR: StoreDSL) {
   }
 
 
-  if (Optimizer.profileStoreOperations)
-    pipeline += new Profiler(IR)
 
   //    pipeline += PartiallyEvaluate
   if (Optimizer.indexLookupFusion || Optimizer.indexLookupPartialFusion)
@@ -115,8 +120,8 @@ class Optimizer(val IR: StoreDSL) {
     number of possible nodes to increase thereby increasing the number of scenarios that sliceInline needs to handle
     */
 
-  //  if (Optimizer.sliceNoUpd && !(Optimizer.deadIndexUpdate))
-  //    throw new Error("SliceNoUpdate requires deadIndexUpdate")
+    if (Optimizer.sliceNoUpd && !(Optimizer.deadIndexUpdate))
+      throw new Error("SliceNoUpdate requires deadIndexUpdate")
   /*
       SliceNoUpdate covers the case of only IdxSlice.
       Even though this optimization can be performed without the deadIndexUpdate, for the best case, it should be after
@@ -164,8 +169,10 @@ class Optimizer(val IR: StoreDSL) {
    */
 
   pipeline += DCE
-  pipeline += ParameterPromotion
-  pipeline += DCE
+  if(Optimizer.parameterPromotion) {
+    pipeline += ParameterPromotion
+    pipeline += DCE
+  }
   pipeline += new StoreDCE(IR)
 
   //  pipeline += new CommonPureExpression(IR)

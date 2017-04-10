@@ -64,7 +64,7 @@ protected:
 
 public:
 
-    PString() : size_(0), pos(0), data_(nullptr), ptr_count_(new size_t(1)) {
+    PString() : size_(0), pos(0), data_(nullptr), ptr_count_(nullptr) {
     }
 
     PString(size_t len) : size_(len + 1), pos(0), ptr_count_(new size_t(1)) {
@@ -119,30 +119,40 @@ public:
     //   }
 
     PString(const PString &pstr) : pos(0) {
-        *pstr.ptr_count_ += 1;
+        if (pstr.data_) {
+            *pstr.ptr_count_ += 1;
+        }
         this->ptr_count_ = pstr.ptr_count_;
         this->data_ = pstr.data_;
         this->size_ = pstr.size_;
+
     }
 
     ~PString() {
-        if (((--(*ptr_count_)) == 0) && data_) {
+        if (data_) {
+            if ((--(*ptr_count_)) == 0) {
 #ifdef USE_POOL
-            pool_.del(getNumCells(size_), data_);
+                pool_.del(getNumCells(size_), data_);
 #else
-            delete[] data_;
+                delete[] data_;
 #endif //USE_POOL
-            data_ = nullptr;
-            delete ptr_count_;
-            ptr_count_ = nullptr;
+                data_ = nullptr;
+                delete ptr_count_;
+                ptr_count_ = nullptr;
+            }
         }
     }
 
     PString* copy() const {
-        return new PString(data_, size_ - 1);
+        if (data_)
+            return new PString(data_, size_ - 1);
+        else
+            return new PString();
     }
 
     void recomputeSize() {
+        if(!ptr_count_) 
+            ptr_count_ = new size_t(1);
         size_ = strlen(data_) + 1;
     }
 
@@ -244,7 +254,7 @@ public:
         int len2 = remaining > len ? len : remaining;
         int strlen = std::strlen(str);
         int len3 = len2 > strlen ? strlen : len2;
-        memcpy(data_ + pos , str, len3);
+        memcpy(data_ + pos, str, len3);
         pos += len3;
     }
 
@@ -283,10 +293,13 @@ public:
     }
 
     PString &operator=(const PString &pstr) {
-        (*pstr.ptr_count_)++;
+        if (pstr.data_) {
+            (*pstr.ptr_count_)++;
+        }
         this->ptr_count_ = pstr.ptr_count_;
         this->data_ = pstr.data_;
         this->size_ = pstr.size_;
+
         return *this;
     }
 
@@ -304,10 +317,14 @@ public:
 
     inline bool operator==(const PString &other) const {
         //        if (this->size_ != other.size_) return false;  Disabled due to direct operations on data after which size is incorrect
-        return (strcmp(this->data_, other.data_) == 0);
+        if (data_ && other.data_)
+            return (strcmp(this->data_, other.data_) == 0);
+        else
+            return !(data_ || other.data_); //both empty
     }
 
     inline bool operator!=(const PString &other) const {
+        //SBJ: Not consistent with ! ==. 
         if (this->size_ != other.size_) return true;
         return (strcmp(this->data_, other.data_) != 0);
     }

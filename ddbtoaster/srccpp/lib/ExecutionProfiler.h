@@ -4,7 +4,7 @@
 #include <chrono>
 #include <iostream>
 #include <fstream>
-#define EXEC_PROFILE 1
+
 #define FORCE_INLINE inline __attribute__((always_inline))
 using std::chrono::high_resolution_clock;
 using std::chrono::system_clock;
@@ -60,28 +60,33 @@ struct ExecutionProfiler {
 #endif
     }
     static void reset() {
+        #ifdef EXEC_PROFILE
         for (auto it : durations) {
             durations[it.first] = 0;
             counters[it.first] = 0;
         }
+#endif
     }
     static void printProfile() {
         std::cout << "Profile Results :: " << std::endl;
 #ifdef EXEC_PROFILE
         for (auto it : durations) {
-            std::cout << it.first << "   count = " << counters[it.first] << " time = " << it.second / 1000000.0 << " ms    avg time = " << it.second / counters[it.first] << " ns" << std::endl;
+             size_t c =  counters[it.first];
+            std::cout << it.first << "   count = " << counters[it.first] << " time = " << it.second / 1000000.0 << " ms    avg time = " << (c ? it.second / c : 0) << " ns" << std::endl;
         }
-
+#else
+        std::cout << "PROFILE DISABLED" << std::endl;
 #endif
     }
 
-    static void printProfileToFile() {
+    static void printProfileToFile(const std::string& name = "profile.csv") {
 #ifdef EXEC_PROFILE
-        std::ofstream fout("profile.csv", std::ios::app);
+        std::ofstream fout(name, std::ios::app);
         fout << ",count,timeMS,avgTimeNS" << std::endl;
 
         for (auto it : durations) {
-            fout << it.first << "," << counters[it.first] << "," << it.second / 1000000.0 << "," << it.second / counters[it.first] << std::endl;
+            size_t c =  counters[it.first];
+            fout << it.first << "," << counters[it.first] << "," << it.second / 1000000.0 << "," <<  (c ? it.second / c : 0) << std::endl;
         }
         fout.close();
 #endif
