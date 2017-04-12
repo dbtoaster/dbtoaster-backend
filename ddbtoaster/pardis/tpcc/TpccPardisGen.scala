@@ -266,7 +266,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}StoreType;"
+      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :: idxTypes.map(t=>idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}StoreType;"
       val initSize = if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes);" else doc";"
       val storeDecl = s.name :: "StoreType  " :: s.name :: initSize
 
@@ -284,12 +284,12 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
           else doc"${x.name}(${nullValue(x.tpe)})"
         }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
         val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
-        val copyFn = doc"${tag.typeName}* copy() const { return new ${tag.typeName}(" :: fields.map(x => {
-          if (x.tpe == StringType)
-            doc"*${x.name}.copy()"
-          else
+        val copyFn = doc"FORCE_INLINE ${tag.typeName}* copy() const {  ${tag.typeName}* ptr = (${tag.typeName}*) malloc(sizeof(${tag.typeName})); new(ptr) ${tag.typeName}(" :: fields.map(x => {
+//          if (x.tpe == StringType)
+//            doc"*${x.name}.copy()"
+//          else
             doc"${x.name}"
-        }).mkDocument(", ") :: "); }"
+        }).mkDocument(", ") :: ");  return ptr;}"
         "struct " :: tag.typeName :: " {" :/: Document.nest(2, fieldsDoc :/: constructor :/: constructorWithArgs :/: copyFn) :/: "};"
     }
 
@@ -327,7 +327,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     else doc""
 
     val blocks = optTP.codeBlocks.map(x => doc"FORCE_INLINE void ${x._1}(${argsDoc(x._2)}) {" ::
-      stPrf(x._1) :: Document.nest(2, codeGen.blockToDocument(x._3)) :: endPrf(x._1) :/:
+      stPrf(x._1) :: Document.nest(2, codeGen.blockToDocument(x._3)) :: endPrf(x._1) :/: stPrf(x._1 + "clear") :/: "  clearTempMem();" :/: endPrf(x._1 + "clear") :/:
       "}").mkDocument("\n")
 
     idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name)).toList

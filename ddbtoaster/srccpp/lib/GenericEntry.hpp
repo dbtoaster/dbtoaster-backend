@@ -89,7 +89,7 @@ struct Any {
     Any(const Any& that) : data(that.data), type(that.type) {
     }
 
-    bool operator==(const Any& that) const {
+    FORCE_INLINE bool operator==(const Any& that) const {
         if (type == UNDEFINED || that.type == UNDEFINED) throw std::logic_error("UNDEFINED Type in Any ");
         if (type != that.type) return false;
         switch (type) {
@@ -105,7 +105,7 @@ struct Any {
         }
     }
 
-    bool operator!=(const Any& that) const {
+    FORCE_INLINE  bool operator!=(const Any& that) const {
         if (type == UNDEFINED || that.type == UNDEFINED) throw std::logic_error("UNDEFINED Type in Any ");
         if (type != that.type) return true;
         switch (type) {
@@ -121,7 +121,7 @@ struct Any {
         }
     }
 
-    bool operator<(const Any& that) const {
+    FORCE_INLINE  bool operator<(const Any& that) const {
         if (type == UNDEFINED || that.type == UNDEFINED) throw std::logic_error("UNDEFINED Type in Any ");
         if (type != that.type) throw std::logic_error("Cannot compare different types in Any");
         switch (type) {
@@ -239,34 +239,36 @@ public:
         map[i].data.t -= v;
     }
 
-    int getInt(int i) const {
+    FORCE_INLINE  int getInt(int i) const {
         return map.at(i).data.i;
     }
 
-    date getDate(int i) const {
+    FORCE_INLINE  date getDate(int i) const {
         return map.at(i).data.t;
     }
 
     //Assuming long is same as date type
 
-    long getLong(int i) const {
+    FORCE_INLINE  long getLong(int i) const {
         return map.at(i).data.t;
     }
 
-    double getDouble(int i) const {
+    FORCE_INLINE double getDouble(int i) const {
         return map.at(i).data.d;
     }
 
-    const PString& getString(int i) const {
+    FORCE_INLINE const PString& getString(int i) const {
         return map.at(i).data.s;
     }
 
-    GenericEntry* copy() const {
+    FORCE_INLINE GenericEntry* copy() const {
         //ONLY SHALLOW COPY for PString.
-        return new GenericEntry(map);
+        GenericEntry* ptr = (GenericEntry* ) malloc(sizeof(GenericEntry));
+        new(ptr) GenericEntry(map);
+        return ptr;
     }
 
-    bool operator==(const GenericEntry& right) const {
+    FORCE_INLINE bool operator==(const GenericEntry& right) const {
         return map == right.map;
     }
 

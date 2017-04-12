@@ -134,7 +134,7 @@ object TpccXactGenerator_SC {
     lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
     lazy val warehouseRange = List((1, 1, numWare + 1))
     lazy val customerRange = List((1, 1, 3001), (2, 1, 11), (3, 1, numWare + 1))
-    lazy val itemRange = List((1, 1, 100001))
+    lazy val itemRange = List((1, 1, 100002))
     lazy val stockRange = List((1, 1, 100001), (2, 1, numWare + 1))
     lazy val allRanges = List(warehouseTbl -> warehouseRange, districtTbl -> districtRange, customerTbl -> customerRange, itemTbl -> itemRange, stockTbl -> stockRange).toMap
 

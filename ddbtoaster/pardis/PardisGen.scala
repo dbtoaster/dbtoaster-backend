@@ -622,6 +622,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
          """.stripMargin
       val postBody =
         s"""
+           |clearTempMem();
            |END_TRIGGER(exec_stats,"${x._1.drop(1)}")
            |END_TRIGGER(ivc_stats,"${x._1.drop(1)}")
          """.stripMargin
@@ -662,12 +663,12 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
         }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
-        val copyFn = doc"${tag.typeName}* copy() const { return new ${tag.typeName}(" :: fields.map(x => {
-          if (x.tpe == StringType)
-            doc"*${x.name}.copy()"
-          else
+        val copyFn = doc"FORCE_INLINE ${tag.typeName}* copy() const { ${tag.typeName}* ptr = (${tag.typeName}*) malloc(sizeof(${tag.typeName})); new(ptr) ${tag.typeName}(" :: fields.map(x => {
+//          if (x.tpe == StringType)
+//            doc"*${x.name}.copy()"
+//          else
             doc"${x.name}"
-        }).mkDocument(", ") :: "); }"
+        }).mkDocument(", ") :: "); return ptr; }"
         val streamOp = doc"""friend std::ostream& operator<<(std::ostream& os, const ${tag.typeName}& obj) {  os <<"(" <<${fields.map(x => doc"obj.${x.name}").mkDocument(doc""" << "," << """)} << ")"; return os; }"""
         val serializer = doc"template<class Archive> \nvoid serialize(Archive& ar, const unsigned int version) const {" :/:
           Document.nest(4, fields.map(x => doc"DBT_SERIALIZATION_NVP(ar,${x.name});").mkDocument("ar << ELEM_SEPARATOR;\n", "\nar << ELEM_SEPARATOR;\n", "\n")) :/: "}"
@@ -703,7 +704,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
         val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
         val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-        val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(_._1).mkDocument("   ", ",\n   ", ">") :: doc" ${s.name}_map;"
+        val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :/: idxTypes.map(t => idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}_map;"
         val entryTypeDef = doc"typedef $entryTp ${s.name}_entry;"
         val initSize = if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes);" else doc";"
         val storeDecl = s.name :: "_map  " :: s.name :: initSize

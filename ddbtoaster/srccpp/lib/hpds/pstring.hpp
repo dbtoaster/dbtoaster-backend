@@ -94,16 +94,19 @@ public:
         }
     }
 
-    PString(const char *str, size_t strln) : pos(0), ptr_count_(new size_t(1)) {
-        size_ = strln + 1;
+    PString(const char *str, size_t strln) : pos(0) {
+        if (str) {
+            ptr_count_ = new size_t(1);
+            size_ = strln + 1;
 #ifdef USE_POOL
-        size_t num_cells = getNumCells(size_);
-        data_ = pool_.add(num_cells);
+            size_t num_cells = getNumCells(size_);
+            data_ = pool_.add(num_cells);
 #else
-        data_ = new char[size_];
+            data_ = new char[size_];
 #endif //USE_POOL
-        memcpy(data_, str, strln * sizeof (char));
-        data_[strln] = '\0';
+            memcpy(data_, str, strln * sizeof (char));
+            data_[strln] = '\0';
+        }
     }
 
     //   PString(const std::string &str) : ptr_count_(new size_t(1))
@@ -143,15 +146,15 @@ public:
         }
     }
 
-    PString* copy() const {
-        if (data_)
-            return new PString(data_, size_ - 1);
-        else
-            return new PString();
-    }
+//    PString copy() const {
+//        if (data_)
+//            return PString(data_, size_ - 1);
+//        else
+//            return PString();
+//    }
 
     void recomputeSize() {
-        if(!ptr_count_) 
+        if (!ptr_count_)
             ptr_count_ = new size_t(1);
         size_ = strlen(data_) + 1;
     }

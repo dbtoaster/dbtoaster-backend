@@ -8,6 +8,14 @@
 #include "../serialization.hpp"
 #include "../hpds/pstring.hpp"
 #include "../hpds/macro.hpp"
+#include <vector>
+std::vector<void*> tempMem;
+
+FORCE_INLINE void clearTempMem() {
+    for (auto ptr : tempMem)
+        free(ptr);
+    tempMem.clear();
+}
 
 #define DEFAULT_CHUNK_SIZE 32
 #define DEFAULT_LIST_SIZE 8
@@ -167,13 +175,13 @@ class Pool {
 public:
     size_t size_;
 
-    Pool(bool donotallocate): size_(0) {
+    Pool(bool donotallocate) : size_(0) {
     }
 
     void initialize(size_t chunk_size) {
     }
 
-    Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE): size_(0) {
+    Pool(size_t chunk_size = DEFAULT_CHUNK_SIZE) : size_(0) {
     }
 
     inline void clear() {
@@ -697,6 +705,7 @@ public:
         }
         for (auto it : entries) {
             f(it);
+            free(it); //Not calling destructor
         }
     }
 
@@ -733,6 +742,7 @@ public:
         while (obj) {
             if (!IDX_FN::cmp(*key, *obj)) {
                 T* temp = obj->copy();
+                tempMem.push_back(temp);
                 entries.push_back(temp);
             }
             obj = obj->nxt;
@@ -798,22 +808,42 @@ public:
 
     FORCE_INLINE T * getCopy(const T * key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T * getCopy(const T & key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T * getCopyDependent(const T * key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T * getCopyDependent(const T & key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE void slice(const T& key, FuncType f) {
@@ -1278,6 +1308,7 @@ public:
                 if (h == e->hash && !IDX_FN::cmp(*key, *n->obj)) {
                     do {
                         T* temp = n->obj->copy();
+                        tempMem.push_back(temp);
                         entries.push_back(temp);
                     } while ((n = n->nxt));
                 }
@@ -1356,22 +1387,42 @@ public:
 
     FORCE_INLINE T* getCopy(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopy(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE void slice(const T& key, FuncType f) {
@@ -1404,6 +1455,7 @@ public:
 template<typename T, typename V, typename IDX_FN1, typename IDX_FN2, bool is_max>
 class SlicedHeapIndex : public Index<T, V> {
 public:
+
     struct __IdxHeapNode {
         T heapKey;
         T** array;
@@ -1772,22 +1824,42 @@ public:
 
     FORCE_INLINE T* getCopy(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopy(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE void slice(const T& key, FuncType f) {
@@ -2224,22 +2296,42 @@ public:
 
     FORCE_INLINE T* getCopy(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopy(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE void slice(const T& key, FuncType f) {
@@ -2776,22 +2868,42 @@ public:
 
     FORCE_INLINE T* getCopy(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopy(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE void slice(const T& key, FuncType f) {
@@ -2823,8 +2935,8 @@ class ArrayIndex : public Index<T, V> {
 public:
 
     ArrayIndex(Pool<T>* stPool = nullptr, int s = size) { //Constructor argument is ignored
-        memset(isUsed, 0, size);
-        memset(array, 0, size * 8);
+        memset(isUsed, 0, size * sizeof(bool));
+        memset(array, 0, size * sizeof(T*));
     }
 
     void prepareSize(size_t arrayS, size_t poolS) override {
@@ -2867,9 +2979,9 @@ public:
 
     FORCE_INLINE T* get(const T* key) const override {
         HASH_RES_t idx = IDX_FN::hash(*key);
-        if (idx >= 0 && idx < size && isUsed[idx]) //TODO: remove check
+//        if (idx >= 0 && idx < size && isUsed[idx]) //TODO: remove check
             return array[idx];
-        return nullptr;
+//        return nullptr;
     }
 
     FORCE_INLINE void add(T* obj) override {
@@ -2883,6 +2995,7 @@ public:
     FORCE_INLINE void del(T* obj) override {
         HASH_RES_t idx = IDX_FN::hash(*obj);
         isUsed[idx] = false;
+        array[idx] = nullptr;
     }
 
     FORCE_INLINE void delCopy(const T* obj, Index<T, V>* primary) override {
@@ -2903,8 +3016,10 @@ public:
             if (isUsed[b])
                 entries.push_back(array[b]->copy());
         }
-        for (auto it : entries)
+        for (auto it : entries) {
             f(it);
+            free(it);
+        }
     }
 
     FORCE_INLINE void slice(const T* key, FuncType f) override {
@@ -2939,8 +3054,8 @@ public:
     }
 
     FORCE_INLINE void clear() override {
-        for (size_t b = 0; b < size; ++b)
-            isUsed[b] = false;
+    memset(isUsed, 0, size * sizeof(bool));
+    memset(array, 0, size * sizeof(T*));
     }
 
     /******************* non-virtual function wrappers ************************/
@@ -2951,22 +3066,42 @@ public:
 
     FORCE_INLINE T* getCopy(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopy(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE void slice(const T& key, FuncType f) {
@@ -3162,8 +3297,10 @@ public:
             entries.push_back(cur->obj->copy());
             cur = cur->next;
         }
-        for (auto it : entries)
+        for (auto it : entries) {
             f(it);
+            free(it);
+        }
     }
 
     FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f) {
@@ -3192,8 +3329,11 @@ public:
         std::vector<T*> entries;
         Container *cur = head;
         while (cur != nullptr) {
-            if (IDX_FN::cmp(*key, *cur->obj) == 0)
-                entries.push_back(cur->obj->copy());
+            if (IDX_FN::cmp(*key, *cur->obj) == 0) {
+                T* tmp = cur->obj->copy();
+                tempMem.push_back(tmp);
+                entries.push_back(tmp);
+            }
             cur = cur->next;
         }
         for (auto it : entries) {
@@ -3249,22 +3389,42 @@ public:
 
     FORCE_INLINE T* getCopy(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopy(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T* key) const {
         T* obj = get(key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T& key) const {
         T* obj = get(&key);
-        return obj ? obj->copy() : nullptr;
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE void slice(const T& key, FuncType f) {
@@ -3361,7 +3521,7 @@ public:
     template<typename T2, typename... INDEXES2>
     FORCE_INLINE MultiHashMap<T2, V, INDEXES2...>& map(const std::function<T2* (T*)>& mapFn) {
         MultiHashMap<T2, V, INDEXES2...> *result = new MultiHashMap<T2, V, INDEXES2...>();
-        index[0]->foreach([&](T* entry) {
+        index[0]->foreach([&](T * entry) {
             result->insert_nocheck(mapFn(entry)); //SBJ: Insert with check?
         });
         return *result;
@@ -3376,23 +3536,43 @@ public:
     }
 
     FORCE_INLINE T* getCopy(const T& key, const size_t idx = 0) const {
-        T* ref = index[idx]->get(&key);
-        return ref ? ref->copy() : nullptr;
+        T* obj = index[idx]->get(&key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopy(const T* key, const size_t idx = 0) const {
-        T* ref = index[idx]->get(key);
-        return ref ? ref->copy() : nullptr;
+        T* obj = index[idx]->get(key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T* key, const size_t idx = 0) const {
-        T* ref = index[idx]->get(key);
-        return ref ? ref->copy() : nullptr;
+        T* obj = index[idx]->get(key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* getCopyDependent(const T& key, const size_t idx = 0) const {
-        T* ref = index[idx]->get(&key);
-        return ref ? ref->copy() : nullptr;
+        T* obj = index[idx]->get(&key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
     }
 
     FORCE_INLINE T* copyIntoPool(const T* e) {
