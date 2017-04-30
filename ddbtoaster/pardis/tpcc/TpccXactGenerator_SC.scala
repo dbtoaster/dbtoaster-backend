@@ -131,11 +131,11 @@ object TpccXactGenerator_SC {
     import Context.{__newStore, __newStoreNamed, Date, overloaded2, typeGenericEntry}
     import Context.{IntType, StringType, DoubleType, DateType, BooleanType}
 
-    lazy val districtRange = List((1, 1, 11), (2, 1, numWare + 1))
+    lazy val districtRange = List((2, 1, numWare + 1), (1, 1, 11))
     lazy val warehouseRange = List((1, 1, numWare + 1))
-    lazy val customerRange = List((1, 1, 3001), (2, 1, 11), (3, 1, numWare + 1))
+    lazy val customerRange = List((3, 1, numWare + 1), (2, 1, 11), (1, 1, 3001))
     lazy val itemRange = List((1, 1, 100002))
-    lazy val stockRange = List((1, 1, 100001), (2, 1, numWare + 1))
+    lazy val stockRange = List((2, 1, numWare + 1), (1, 1, 100001))
     lazy val allRanges = List(warehouseTbl -> warehouseRange, districtTbl -> districtRange, customerTbl -> customerRange, itemTbl -> itemRange, stockTbl -> stockRange).toMap
 
     implicit val DSL = Context
@@ -150,15 +150,15 @@ object TpccXactGenerator_SC {
     val CustomerEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, DateType, StringType, DoubleType, DoubleType, DoubleType, DoubleType, IntType, IntType, StringType)
     val StockEntry = List(IntType, IntType, IntType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, StringType, IntType, IntType, IntType, StringType)
 
-    val newOrderKey = List(1, 2, 3)
+    val newOrderKey = List(3, 2, 1)
     val historyKey = List(1, 2, 3, 4, 5, 6, 7, 8)
     val wareHouseKey = List(1)
     val itemKey = List(1)
-    val orderKey = List(1, 2, 3)
-    val districtKey = List(1, 2)
-    val orderLineKey = List(1, 2, 3, 4)
-    val customerKey = List(1, 2, 3)
-    val stockKey = List(1, 2)
+    val orderKey = List(3, 2, 1)
+    val districtKey = List(2, 1)
+    val orderLineKey = List(3, 2, 1, 4)
+    val customerKey = List(3, 2, 1)
+    val stockKey = List(2, 1)
 
     var failedDel = newVarNamed(unit(0), "failedDel")
     var failedOS = newVarNamed(unit(0), "failedOS")

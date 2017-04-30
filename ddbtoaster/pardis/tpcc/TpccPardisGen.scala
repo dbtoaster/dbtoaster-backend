@@ -160,6 +160,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <vector>
        |#include <unordered_set>
        |#include <mmap.hpp>
+       |#include <valgrind/callgrind.h>
        |#include <iomanip>
        |#include <fstream>
        |#include <locale>
@@ -327,7 +328,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     else doc""
 
     val blocks = optTP.codeBlocks.map(x => doc"FORCE_INLINE void ${x._1}(${argsDoc(x._2)}) {" ::
-      stPrf(x._1) :: Document.nest(2, codeGen.blockToDocument(x._3)) :: endPrf(x._1) :/: stPrf(x._1 + "clear") :/: "  clearTempMem();" :/: endPrf(x._1 + "clear") :/:
+      stPrf(x._1) :: Document.nest(2, codeGen.blockToDocument(x._3)) :/: "  clearTempMem();" :: endPrf(x._1) :/:
       "}").mkDocument("\n")
 
     idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name)).toList
@@ -352,6 +353,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |
          |uint xactCounts[5] = {0, 0, 0, 0, 0};
          |auto start = Now;
+         |//CALLGRIND_START_INSTRUMENTATION;
          |for(size_t i = 0; i < numPrograms; ++i){
          |  Program *prg = tpcc.programs[i];
          |  switch(prg->id){
@@ -408,6 +410,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |
          |  }
          |}
+         |//CALLGRIND_STOP_INSTRUMENTATION;
+         |//CALLGRIND_DUMP_STATS;
          |auto end = Now;
          |auto execTime = DurationMS(end - start);
          |cout << "Failed NO = " << failedNO << endl;
@@ -419,8 +423,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "TpmC = " << fixed <<  (xactCounts[0] - failedNO)* 60000.0/execTime << endl;
          |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations)
            s"""
-              |counters["FailedNO"] = failedNO; counters["FailedDel"] = failedDel/10; counters["FailedOS"] = failedOS;
-              |durations["FailedNO"] = 0; durations["FailedDel"] = 0; durations["FailedOS"] = 0;
+              |//counters["FailedNO"] = failedNO; counters["FailedDel"] = failedDel/10; counters["FailedOS"] = failedOS;
+              |//durations["FailedNO"] = 0; durations["FailedDel"] = 0; durations["FailedOS"] = 0;
               |ExecutionProfiler::printProfileToFile();
             """.stripMargin else doc""}
          |ofstream fout("tpcc_res_cpp.csv", ios::app);
