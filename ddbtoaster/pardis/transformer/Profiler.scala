@@ -96,86 +96,87 @@ class Profiler(override val IR: StoreDSL) extends RecursiveRuleBasedTransformer[
       alreadyProfiled += rep.asInstanceOf[Sym[_]]
       toAtom(ProfileEnd(name))(UnitType)
       rep
-    case sym -> (node@GenericEntryApplyObject(i, e)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"Entry,Constructor,$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
-
-    case sym -> (node@SteNewSEntry(i, e)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"Entry,Constructor,$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
-
-    case sym -> (node@SteSampleSEntry(i, e)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"Entry,Constructor,$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
-
-    case sym -> (node@GenericEntryGet(i, e)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"Entry,Get,$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
-
-
-    case sym -> (node@GenericEntry$minus$eq(_, _, _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"Entry,Update,$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
-
-    case sym -> (node@GenericEntryDecrease(_, _, _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"Entry,Update,$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
-
-    case sym -> (node@GenericEntryIncrease(_, _, _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"Entry,Update,à$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
-
-    case sym -> (node@GenericEntry$plus$eq(_, _, _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"Entry,Update,$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
-
-    case sym -> (node@GenericEntryUpdate(_, _, _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"Entry,Update,$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
-
-    case sym -> (node@StringExtraStringPrintfObject(_, _, _)) if !alreadyProfiled.contains(sym) =>
-      val name = unit(s"String,Printf,$currentBlock,${sym.id}")
-      toAtom(ProfileStart(name))(UnitType)
-      val rep = toAtom(node)(node.tp)
-      alreadyProfiled += rep.asInstanceOf[Sym[_]]
-      toAtom(ProfileEnd(name))(UnitType)
-      rep
+//      /**************************** ENTRY ***********************************************************/
+//    case sym -> (node@GenericEntryApplyObject(i, e)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"Entry,Constructor,$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
+//
+//    case sym -> (node@SteNewSEntry(i, e)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"Entry,Constructor,$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
+//
+//    case sym -> (node@SteSampleSEntry(i, e)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"Entry,Constructor,$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
+//
+//    case sym -> (node@GenericEntryGet(i, e)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"Entry,Get,$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
+//
+//
+//    case sym -> (node@GenericEntry$minus$eq(_, _, _)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"Entry,Update,$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
+//
+//    case sym -> (node@GenericEntryDecrease(_, _, _)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"Entry,Update,$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
+//
+//    case sym -> (node@GenericEntryIncrease(_, _, _)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"Entry,Update,à$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
+//
+//    case sym -> (node@GenericEntry$plus$eq(_, _, _)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"Entry,Update,$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
+//
+//    case sym -> (node@GenericEntryUpdate(_, _, _)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"Entry,Update,$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
+//    /**************************** PRINTF ***********************************************************/
+//    case sym -> (node@StringExtraStringPrintfObject(_, _, _)) if !alreadyProfiled.contains(sym) =>
+//      val name = unit(s"String,Printf,$currentBlock,${sym.id}")
+//      toAtom(ProfileStart(name))(UnitType)
+//      val rep = toAtom(node)(node.tp)
+//      alreadyProfiled += rep.asInstanceOf[Sym[_]]
+//      toAtom(ProfileEnd(name))(UnitType)
+//      rep
 
 
   }
