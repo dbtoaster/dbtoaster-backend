@@ -33,7 +33,7 @@ trait TpccPardisGen {
       System.err.println(s"Loading runtime info from ${infoFilePath}")
       val txt = new java.util.Scanner(infoFile).useDelimiter("\\Z").next()
       val allinfo: Map[String, _] = JSON.parseFull(txt).get.asInstanceOf[Map[String, _]]
-      StoreArrayLengths = allinfo.map(t => t._1 -> t._2.asInstanceOf[Map[String, String]].getOrElse("OptArrayLength", "0"))
+      StoreArrayLengths = allinfo.map(t => t._1 -> t._2.asInstanceOf[List[Map[String, String]]].map(_.getOrElse("OptArrayLength", "0")).map(_.toInt).max.toString)
     } else {
       System.err.println("Runtime info file missing!!  Using default initial sizes")
     }
@@ -362,7 +362,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       "}").mkDocument("\n")
 
     idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name)).toList
-    val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT($i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
+    val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT_P($i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
     val threadFn =
       s"""
          |void threadFunction(uint8_t thread_id) {
@@ -572,11 +572,11 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |fout << execTime << ",";
          |fout.close();
          |
-         |/*
+         |
          |ofstream info("$infoFilePath");
          |${getSizes}
          |info.close();
-         |*/
+         |
 
          |#ifdef VERIFY_TPCC
          |    warehouseTblIdx0Type warehouseTblIdx0;

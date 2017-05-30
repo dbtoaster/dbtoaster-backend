@@ -16,6 +16,11 @@ using namespace dbtoaster;
 #define FORCE_INLINE inline __attribute__((always_inline))
 #define CHECK_STAT(x) cerr << STRINGIFY(x) << " -> "; x.getBucketStats()
 #define GET_RUN_STAT(x, f) f << "\"" << STRINGIFY(x) << "\" : "; x.getSizeStats(f)
+#define GET_RUN_STAT_P(x, f)\
+  f << "\"" << STRINGIFY(x) << "\" : [";\
+  partitions[0].x.getSizeStats(f);\
+  for(int i=1; i<numThreads;++i) { f << "," ; partitions[i].x.getSizeStats(f); }\
+  f << "]";
 
 FORCE_INLINE size_t HASH(int x) {
     return x;
