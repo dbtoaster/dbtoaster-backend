@@ -794,7 +794,7 @@ public:
         allocated_from_pool_ = false;
         count_ = 0;
         memset(buckets_, 0, sizeof (IdxNode) * size_);
-        if (dataHead != nullptr) {
+        if (dataHead && storePool) {
             storePool->delete_all(dataHead);
             dataHead = nullptr;
         }
