@@ -114,11 +114,11 @@ object TpccXactGenerator_SC {
     codeBlocks += codeGen.codeGen.emitSource6[Boolean, Date, Int, Int, Int, Int, Int](prog.stockLevelTx, "StockLevelTx")
     codeBlocks += codeGen.codeGen.emitSource8[Boolean, Date, Int, Int, Int, Int, Int, String, Int](prog.orderStatusTx, "OrderStatusTx")
     codeBlocks += codeGen.codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTx, "PaymentTx")
-    codeBlocks += codeGen.codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTxLocal, "PaymentTxLocal")
-    codeBlocks += codeGen.codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTxRemote, "PaymentTxRemote")
+//    codeBlocks += codeGen.codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTxLocal, "PaymentTxLocal")
+//    codeBlocks += codeGen.codeGen.emitSource11[Boolean, Date, Int, Int, Int, Int, Int, Int, Int, String, Double, Int](prog.paymentTxRemote, "PaymentTxRemote")
     codeBlocks += codeGen.codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTx, "NewOrderTx")
-    codeBlocks += codeGen.codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTxLocal, "NewOrderTxLocal")
-    codeBlocks += codeGen.codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTxRemote, "NewOrderTxRemote")
+//    codeBlocks += codeGen.codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTxLocal, "NewOrderTxLocal")
+//    codeBlocks += codeGen.codeGen.emitSource16[Boolean, Date, Int, Int, Int, Int, Int, Int, Array[Int], Array[Int], Array[Int], Array[Double], Array[String], Array[Int], Array[String], Array[Double], Int](prog.newOrderTxRemote, "NewOrderTxRemote")
 
 
     val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]), codeBlocks, Nil, Nil)
@@ -164,9 +164,11 @@ object TpccXactGenerator_SC {
     val customerKey = List(3, 2, 1)
     val stockKey = List(2, 1)
 
-    var failedDel = newVarNamed(unit(0), "failedDel")
-    var failedOS = newVarNamed(unit(0), "failedOS")
-    var failedNO = newVarNamed(unit(0), "failedNO")
+    val failedDel = newVarNamed(unit(0), "failedDel")
+    val failedOS = newVarNamed(unit(0), "failedOS")
+    val failedNO = newVarNamed(unit(0), "failedNO")
+    val numThreads = Sym.freshNamed[Int]("numThreads")
+    val partitionID = Sym.freshNamed[Int]("partitionID")
 
     val newOrderTbl = __newStoreNamed[GenericEntry]("newOrderTbl")
     val historyTbl = __newStoreNamed[GenericEntry]("historyTbl")
@@ -182,6 +184,8 @@ object TpccXactGenerator_SC {
     val allKeys = List(newOrderTbl -> newOrderKey, historyTbl -> historyKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
     val schema = List[(Rep[_], List[TypeRep[_]])](newOrderTbl -> NewOrderEntry, historyTbl -> HistoryEntry, warehouseTbl -> WarehouseEntry, itemTbl -> ItemEntry, orderTbl -> OrderEntry, districtTbl -> DistrictEntry, orderLineTbl -> OrderLineEntry, customerTbl -> CustomerEntry, stockTbl -> StockEntry)
 
+    def partForW(w: Rep[Int]): Rep[Int] = ir"$w % $numThreads".toRep
+
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
       if (codeForOutput) {
         ir"""
@@ -194,9 +198,13 @@ object TpccXactGenerator_SC {
         val idata = new Array[String]($(o_ol_count))
 
         var all_items_exist = true
-
-        while ((ol_number < $(o_ol_count)) && all_items_exist) {
-
+        var toBeExecuted: Boolean = $(partForW(w_id)) == $(partitionID)
+        var all_local = 1
+        while (all_items_exist && (ol_number < $(o_ol_count))) {
+          val supwid = $(supware)(ol_number)
+          if(supwid != $(w_id))
+            all_local = 0
+          toBeExecuted = toBeExecuted || (supwid % $(numThreads)) == $(partitionID)
           val itemEntry /*(i_id, _, i_name, i_price, i_data)*/ = $(itemTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, $(itemid)(ol_number)))
           if (itemEntry == null) {
             all_items_exist = false
@@ -207,86 +215,89 @@ object TpccXactGenerator_SC {
           }
           ol_number += 1
         }
-
-        if (all_items_exist) {
+        ol_number = 0
+        if (all_items_exist && toBeExecuted) {
           /*(c_id,d_id,w_id, c_discount, c_last, c_credit, w_tax)*/
-          val customerEntry = $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(d_id), $(w_id)))
-          val warehouseEntry = $(warehouseTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, $(w_id)))
-          val districtEntry = $(districtTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, $(d_id), $(w_id)))
-          val o_id = districtEntry.get[Int](11)
-          districtEntry +=(11, 1) //d_next_o_id+1
-          $(districtTbl).updateCopy(districtEntry)
+          if ($(partForW(w_id)) == $(partitionID)) {
+            val customerEntry = $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(d_id), $(w_id)))
+            val warehouseEntry = $(warehouseTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, $(w_id)))
+            val districtEntry = $(districtTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, $(d_id), $(w_id)))
+            val o_id = districtEntry.get[Int](11)
+            districtEntry +=(11, 1) //d_next_o_id+1
+            $(districtTbl).updateCopy(districtEntry)
 
 
-          $(orderTbl).insert(GenericEntry("SteNewSEntry", o_id, $(d_id), $(w_id), $(c_id), $(datetime), -1, $(o_ol_count), $(o_all_local) > 0))
-          $(newOrderTbl).insert(GenericEntry("SteNewSEntry", o_id, $(d_id), $(w_id)))
+            $(orderTbl).insert(GenericEntry("SteNewSEntry", o_id, $(d_id), $(w_id), $(c_id), $(datetime), -1, $(o_ol_count), all_local > 0))
+            $(newOrderTbl).insert(GenericEntry("SteNewSEntry", o_id, $(d_id), $(w_id)))
+
+            var total = 0.0
 
 
+            while (ol_number < $(o_ol_count)) {
+              val ol_supply_w_id = $(supware)(ol_number)
+              val ol_i_id = $(itemid)(ol_number)
+              val ol_quantity = $(quantity)(ol_number)
 
-          var total = 0.0
-          ol_number = 0
+              val stockEntry = $(stockTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, ol_i_id, ol_supply_w_id))
+              val ol_dist_info = stockEntry.get[String](3 + $(d_id))
+              val s_quantity = stockEntry.get[Int](3) //s_quantity
+              $(stock).update(ol_number, s_quantity)
 
+              if (ol_supply_w_id % $(numThreads) == $(partitionID)) {
+                stockEntry(3) = s_quantity - ol_quantity
+                if (s_quantity <= ol_quantity) {
+                  stockEntry +=(3, 91)
+                  ()
+                }
+                var s_remote_cnt_increment = 0
+                if (ol_supply_w_id != $(w_id)) s_remote_cnt_increment = 1
+                //TODO this is the correct version but is not implemented in the correctness test
+                //stockEntry._14 += ol_quantity //s_ytd
+                //stockEntry._15 += 1 //s_order_cnt
+                //stockEntry._16 += s_remote_cnt_increment //s_remote_cnt
+                $(stockTbl).updateCopy(stockEntry)
+              }
 
-          while (ol_number < $(o_ol_count)) {
-            val ol_supply_w_id = $(supware)(ol_number)
-            val ol_i_id = $(itemid)(ol_number)
-            val ol_quantity = $(quantity)(ol_number)
+              if (idata(ol_number).contains("original") && /*s_data*/ stockEntry.get[String](17).contains("original"))
+                $(bg)(ol_number) = "B"
+              else
+                $(bg)(ol_number) = "G"
 
-            //            val stockEntry = null.asInstanceOf[GenericEntry]
-            //            val x = ol_i_id
-            //            val y = ol_supply_w_id
-            //            val stockEntry = $(ir"$stockTbl".get2[Any {val x: Int; val y: Int}]((1, ir"$$x:Int"), (2, ir"$$y : Int")))
-            val stockEntry = $(stockTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, ol_i_id, ol_supply_w_id))
-            //            println("""SBJ: FIXME""", ol_i_id, ol_supply_w_id)
+              val c_discount = customerEntry.get[Double](16)
+              val w_tax = warehouseEntry.get[Double](8)
+              val d_tax = districtEntry.get[Double](9)
+              val ol_amount = (ol_quantity * $(price)(ol_number) * (1.0 + w_tax + d_tax) * (1.0 - c_discount)) /*.asInstanceOf[Double]*/
+              $(amt).update(ol_number, ol_amount)
+              total += ol_amount
 
-            //            val t2 = t1.subs('x -> ol_i_id)
-            //            val stockEntry = t2.subs('y -> ol_supply_w_id)
-            //              $ {
-            //              stockTbl.get1((1, ol_i_id), (2, ol_supply_w_id))
-            //            }
-            val ol_dist_info = stockEntry.get[String](3 + $(d_id))
-            val s_quantity = stockEntry.get[Int](3) //s_quantity
-            $(stock).update(ol_number, s_quantity)
-
-            if (idata(ol_number).contains("original") && /*s_data*/ stockEntry.get[String](17).contains("original"))
-              $(bg)(ol_number) = "B"
-            else
-              $(bg)(ol_number) = "G"
-
-
-            stockEntry(3) = s_quantity - ol_quantity
-            if (s_quantity <= ol_quantity) {
-              stockEntry +=(3, 91)
-              ()
+              $(orderLineTbl).insert(GenericEntry("SteNewSEntry", o_id, $(d_id), $(w_id), ol_number + 1 /*to start from 1*/ , ol_i_id, ol_supply_w_id, null, ol_quantity, ol_amount, ol_dist_info))
+              ol_number += 1
             }
+          } else {
+            while (ol_number < $(o_ol_count)) {
+              val ol_supply_w_id = $(supware)(ol_number)
+              if (ol_supply_w_id % $(numThreads) == $(partitionID)) {
+                val ol_i_id = $(itemid)(ol_number)
+                val ol_quantity = $(quantity)(ol_number)
+                val stockEntry = $(stockTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, ol_i_id, ol_supply_w_id))
+                val s_quantity = stockEntry.get[Int](3) //s_quantity
 
-            var s_remote_cnt_increment = 0
-
-            if (ol_supply_w_id != $(w_id)) s_remote_cnt_increment = 1
-
-
-            //TODO this is the correct version but is not implemented in the correctness test
-            //stockEntry._14 += ol_quantity //s_ytd
-            //stockEntry._15 += 1 //s_order_cnt
-            //stockEntry._16 += s_remote_cnt_increment //s_remote_cnt
-            $(stockTbl).updateCopy(stockEntry)
-
-            val c_discount = customerEntry.get[Double](16)
-            val w_tax = warehouseEntry.get[Double](8)
-            val d_tax = districtEntry.get[Double](9)
-            val ol_amount = (ol_quantity * $(price)(ol_number) * (1.0 + w_tax + d_tax) * (1.0 - c_discount)) /*.asInstanceOf[Double]*/
-            $(amt).update(ol_number, ol_amount)
-            total += ol_amount
-
-            $(orderLineTbl).insert(GenericEntry("SteNewSEntry", o_id, $(d_id), $(w_id), ol_number + 1 /*to start from 1*/ , ol_i_id, ol_supply_w_id, null, ol_quantity, ol_amount, ol_dist_info))
-
-            ol_number += 1
-
-            //             if (showOutput) println("An error occurred in handling NewOrder transaction for warehouse=%d, district=%d, customer=%d".format(w_id, d_id, c_id))
-
-
+                stockEntry(3) = s_quantity - ol_quantity
+                if (s_quantity <= ol_quantity) {
+                  stockEntry +=(3, 91)
+                  ()
+                }
+                var s_remote_cnt_increment = 0
+                if (ol_supply_w_id != $(w_id)) s_remote_cnt_increment = 1
+                //TODO this is the correct version but is not implemented in the correctness test
+                //stockEntry._14 += ol_quantity //s_ytd
+                //stockEntry._15 += 1 //s_order_cnt
+                //stockEntry._16 += s_remote_cnt_increment //s_remote_cnt
+                $(stockTbl).updateCopy(stockEntry)
+              }
+              ol_number += 1
+            }
           }
-
           //        dbg_ir"""
           //          $ol_number := 0
           //            val ol_supply_w_id = $supware($ol_number!)
@@ -443,58 +454,67 @@ object TpccXactGenerator_SC {
 
     def paymentTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_by_name: Rep[Int], c_w_id: Rep[Int], c_d_id: Rep[Int], c_id: Rep[Int], c_last_input: Rep[String], h_amount: Rep[Double]): Rep[Int] = {
       ir {
-        val warehouseEntry = $(warehouseTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, $(w_id)))
-        warehouseEntry +=(9, $(h_amount)) //w_ytd
-        $(warehouseTbl).updateCopy(warehouseEntry)
-
-        val districtEntry = $(districtTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, $(d_id), $(w_id)))
-        districtEntry +=(10, $(h_amount))
-        $(districtTbl).updateCopy(districtEntry)
-
-        val customerEntry = if ($(c_by_name) > 0) {
+        var local_c_id = 0
+        var customerEntry: GenericEntry = null
+        if ($(c_by_name) > 0) {
           val custagg = Aggregator.median[GenericEntry, String](e => e.get[java.lang.String](4))
           $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), custagg)
-          custagg.result
+          customerEntry = custagg.result
         }
-        else {
-          $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(c_d_id), $(c_w_id)))
+        if ($(partForW(c_w_id)) == $(partitionID)) {
+           if ($(c_by_name) == 0) {
+            customerEntry = $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(c_d_id), $(c_w_id)))
+          }
+
+          val c_data = customerEntry.get[String](21)
+          local_c_id = customerEntry.get[Int](1)
+          if (customerEntry.get[String](14).contains("BC")) {
+            //c_credit
+            //TODO this is the correct version but is not implemented in the correctness test
+            //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
+            val c_new_data = StringExtra.StringPrintf(500, "%d %d %d %d %d $%f %s | %s", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(h_amount), $(datetime), c_data)
+            customerEntry +=(17 /*c_balance*/ , $(h_amount))
+            //SBJ: FIXME!
+            //TODO this is the correct version but is not implemented in the correctness test
+            //customerEntry += (18 /*c_ytd_payment*/, h_amount)
+            //customerEntry += (19 /*c_payment_cnt*/, 1)
+            customerEntry.update(21 /*c_data*/ , c_new_data)
+            ()
+          } else {
+            customerEntry +=(17 /*c_balance*/ , $(h_amount))
+            //SBJ: FIXME!
+            //TODO this is the correct version but is not implemented in the correctness test
+            //customerEntry += (18 /*c_ytd_payment*/, h_amount)
+            //customerEntry += (19 /*c_payment_cnt*/, 1)
+            ()
+          }
+          $(customerTbl).updateCopy(customerEntry)
+        }
+        if ($(partForW(w_id)) == $(partitionID)) {
+          if($(partForW(c_w_id)) != $(partitionID)) {
+            if ($(c_by_name) > 0) {
+              local_c_id = customerEntry.get[Int](1)
+            }
+            else {
+              local_c_id = $(c_id)
+            }
+          }
+          val warehouseEntry = $(warehouseTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, $(w_id)))
+          warehouseEntry +=(9, $(h_amount)) //w_ytd
+          $(warehouseTbl).updateCopy(warehouseEntry)
+
+          val districtEntry = $(districtTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, $(d_id), $(w_id)))
+          districtEntry +=(10, $(h_amount))
+          $(districtTbl).updateCopy(districtEntry)
+          val w_name = warehouseEntry.get[String](2)
+          val d_name = districtEntry.get[String](3)
+          //TODO this is the correct version but is not implemented in the correctness test
+          val h_data = StringExtra.StringPrintf(24, "%.10s    %.10s", w_name, d_name)
+
+          //          $(historyTbl).insert(GenericEntry("SteNewSEntry", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(datetime), $(h_amount), h_data))
+          $(historyTbl).insert(GenericEntry("SteNewSEntry", local_c_id, $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(datetime), $(h_amount), h_data))
         }
 
-
-
-        val c_data = customerEntry.get[String](21)
-
-        if (customerEntry.get[String](14).contains("BC")) {
-          //c_credit
-          //TODO this is the correct version but is not implemented in the correctness test
-          //c_data = found_c_id + " " + c_d_id + " " + c_w_id + " " + d_id + " " + w_id + " " + h_amount + " | " + c_data
-          val c_new_data = StringExtra.StringPrintf(500, "%d %d %d %d %d $%f %s | %s", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(h_amount), $(datetime), c_data)
-          customerEntry +=(17 /*c_balance*/ , $(h_amount))
-          //SBJ: FIXME!
-          //TODO this is the correct version but is not implemented in the correctness test
-          //customerEntry += (18 /*c_ytd_payment*/, h_amount)
-          //customerEntry += (19 /*c_payment_cnt*/, 1)
-          customerEntry.update(21 /*c_data*/ , c_new_data)
-          ()
-
-        } else {
-          customerEntry +=(17 /*c_balance*/ , $(h_amount))
-          //SBJ: FIXME!
-          //TODO this is the correct version but is not implemented in the correctness test
-          //customerEntry += (18 /*c_ytd_payment*/, h_amount)
-          //customerEntry += (19 /*c_payment_cnt*/, 1)
-          ()
-        }
-
-
-        $(customerTbl).updateCopy(customerEntry)
-        val w_name = warehouseEntry.get[String](2)
-        val d_name = districtEntry.get[String](3)
-        //TODO this is the correct version but is not implemented in the correctness test
-        val h_data = StringExtra.StringPrintf(24, "%.10s    %.10s", w_name, d_name)
-
-
-        $(historyTbl).insert(GenericEntry("SteNewSEntry", customerEntry.get[Int](1), $(c_d_id), $(c_w_id), $(d_id), $(w_id), $(datetime), $(h_amount), h_data))
         1
       }.toRep
       //      if ($showOutput) {

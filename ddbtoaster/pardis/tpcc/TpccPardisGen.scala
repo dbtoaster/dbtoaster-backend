@@ -380,98 +380,50 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |            case NEWORDER:
          |            {
          |                NewOrder& p = *(NewOrder *) prg;
-         |                if (CORE_FOR_W(p.w_id) == thread_id) {
-         |                    bool local = true;
-         |                    for (int ol = 0; ol < p.o_ol_cnt; ++ol)
-         |                        if (CORE_FOR_W(p.supware[ol]) != thread_id) {
-         |                            local = false;
-         |                            break;
-         |                        }
-         |                    pt.xactCounts[0]++;
-         |                    p.o_all_local = local;
-         |                    if (local)
-         |                        pt.NewOrderTx(false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
-         |                    else
-         |                        pt.NewOrderTxLocal(false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
-         |                } else {
-         |                    bool remote = false;
-         |                    for (int ol = 0; ol < p.o_ol_cnt; ++ol)
-         |                        if (CORE_FOR_W(p.supware[ol]) == thread_id) {
-         |                            remote = true;
-         |                            break;
-         |                        }
-         |                    if (remote) {
-         |                        p.o_all_local = false;
-         |                        pt.xactCounts[0]++;
-         |                        pt.NewOrderTxRemote(false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
-         |                    }
-         |                }
+         |                pt.xactCounts[0]++;
+         |                pt.NewOrderTx(false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
          |                break;
          |            }
          |            case PAYMENTBYID:
          |            {
          |                PaymentById& p = *(PaymentById *) prg;
-         |                if (CORE_FOR_W(p.w_id) == thread_id) {
-         |                    pt.xactCounts[1]++;
-         |                    if (CORE_FOR_W(p.c_w_id) == thread_id)
-         |                        pt.PaymentTx( false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
-         |                    else
-         |                        pt.PaymentTxLocal(false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
-         |                } else if (CORE_FOR_W(p.c_w_id) == thread_id) {
-         |                    pt.xactCounts[1]++;
-         |                    pt.PaymentTxRemote(false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
-         |                }
+         |                pt.xactCounts[1]++;
+         |                pt.PaymentTx( false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
          |                break;
          |            }
          |            case PAYMENTBYNAME:
          |            {
          |                PaymentByName& p = *(PaymentByName *) prg;
-         |                if (CORE_FOR_W(p.w_id) == thread_id) {
-         |                    pt.xactCounts[1]++;
-         |                    if (CORE_FOR_W(p.c_w_id) == thread_id)
-         |                        pt.PaymentTx(false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
-         |                    else
-         |                        pt.PaymentTxLocal(false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
-         |                } else if (CORE_FOR_W(p.c_w_id) == thread_id) {
-         |                    pt.xactCounts[1]++;
-         |                    pt.PaymentTxRemote(false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
-         |                }
+         |                pt.xactCounts[1]++;
+         |                pt.PaymentTx(false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
          |                break;
          |            }
          |            case ORDERSTATUSBYID:
          |            {
          |                OrderStatusById &p = *(OrderStatusById *) prg;
-         |                if (CORE_FOR_W(p.w_id) == thread_id) {
-         |                    pt.xactCounts[2]++;
-         |                    pt.OrderStatusTx(false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
-         |                }
+         |                pt.xactCounts[2]++;
+         |                pt.OrderStatusTx(false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
          |                break;
          |            }
          |            case ORDERSTATUSBYNAME:
          |            {
          |                OrderStatusByName &p = *(OrderStatusByName *) prg;
-         |                if (CORE_FOR_W(p.w_id) == thread_id) {
-         |                    pt.xactCounts[2]++;
-         |                    pt.OrderStatusTx(false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
-         |                }
+         |                pt.xactCounts[2]++;
+         |                pt.OrderStatusTx(false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
          |                break;
          |            }
          |            case DELIVERY:
          |            {
          |                Delivery &p = *(Delivery *) prg;
-         |                if (CORE_FOR_W(p.w_id) == thread_id) {
-         |                    pt.xactCounts[3]++;
-         |                    pt.DeliveryTx(false, p.datetime, p.w_id, p.o_carrier_id);
-         |                }
+         |                pt.xactCounts[3]++;
+         |                pt.DeliveryTx(false, p.datetime, p.w_id, p.o_carrier_id);
          |                break;
          |            }
          |            case STOCKLEVEL:
          |            {
          |                StockLevel &p = *(StockLevel *) prg;
-         |                if (CORE_FOR_W(p.w_id) == thread_id) {
-         |                    pt.xactCounts[4]++;
-         |                    pt.StockLevelTx(false, -1, -1, p.w_id, p.d_id, p.threshold);
-         |                }
+         |                pt.xactCounts[4]++;
+         |                pt.StockLevelTx(false, -1, -1, p.w_id, p.d_id, p.threshold);
          |                break;
          |            }
          |            default: cerr << "UNKNOWN PROGRAM TYPE" << endl;
@@ -531,14 +483,18 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |endTime = Now;
          |uint totalPrgsExec = 0;
          |for (int i = 0; i < numThreads; ++i) {
-         |    failedNO += partitions[i].failedNO;
+         |
          |    cout << "\\n Thread " << i << " : ";
          |    for (int x = 0; x < 5; ++x) {
          |        cout << partitions[i].xactCounts[x] << "  ";
-         |        xactCounts[x] += partitions[i].xactCounts[x];
-         |        totalPrgsExec += partitions[i].xactCounts[x];
          |    }
          |}
+         |failedNO = partitions[0].failedNO;
+         |for (int i = 0; i < 5; ++i ) {
+         |  xactCounts[i] = partitions[0].xactCounts[i];
+         |  totalPrgsExec += partitions[0].xactCounts[i];
+         |}
+         |
          |cout << endl;
          |//CALLGRIND_STOP_INSTRUMENTATION;
          |//CALLGRIND_DUMP_STATS;
@@ -712,7 +668,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       stDecl :\\: structVars ::
       s"""
          |
-         |uint partitionID;
+         |int partitionID;
          |uint failedNO;
          |uint xactCounts[5];
        """.stripMargin :\\: blocks) :\\:
