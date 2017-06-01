@@ -461,8 +461,12 @@ struct TPCCDataGen {
             char c_21[501];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c_1, &c_2, &c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12, datestr, c_14, &c_15, &c_16, &c_17, &c_18, &c_19, &c_20, c_21);
             c_13 = StrToIntdate(datestr);
+#ifdef PARTITIONED
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
+#else
+            customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
+#endif
 #else
 
             c._4.data_ = new char[17];
@@ -489,8 +493,12 @@ struct TPCCDataGen {
             c._12.recomputeSize();
             c._14.recomputeSize();
             c._21.recomputeSize();
+#ifdef PARTITIONED
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].customerTbl.insert_nocheck(c);
+#else
+            customerTbl.insert_nocheck(c);
+#endif
 #endif
         }
         fin.close();
@@ -578,8 +586,11 @@ struct TPCCDataGen {
             double d_10;
             int d_11;
             sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d_1, &d_2, d_3, d_4, d_5, d_6, d_7, d_8, &d_9, &d_10, &d_11);
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(d_2)].districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
+#else
+            districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
+#endif
 #else
             d._3.data_ = new char[11];
             d._4.data_ = new char[21];
@@ -594,8 +605,11 @@ struct TPCCDataGen {
             d._6.recomputeSize();
             d._7.recomputeSize();
             d._8.recomputeSize();
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].districtTbl.insert_nocheck(d);
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(d._2)].districtTbl.insert_nocheck(d);
+#else
+            districtTbl.insert_nocheck(d);
+#endif
 #endif
         }
         fin.close();
@@ -661,16 +675,22 @@ struct TPCCDataGen {
             char h_8[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h_1, &h_2, &h_3, &h_4, &h_5, datestr, &h_7, h_8);
             h_6 = StrToIntdate(datestr);
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(h_5)].historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
+#else
+            historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
+#endif
 
 #else
             h._8.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h._1, &h._2, &h._3, &h._4, &h._5, datestr, &h._7, h._8.data_);
             h._6 = StrToIntdate(datestr);
             h._8.recomputeSize();
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].historyTbl.insert_nocheck(h);
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(h._5)].historyTbl.insert_nocheck(h);
+#else
+            historyTbl.insert_nocheck(h);
+#endif
 #endif
         }
         fin.close();
@@ -719,16 +739,24 @@ struct TPCCDataGen {
             double i_4;
             char i_5[51];
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i_1, &i_2, i_3, &i_4, i_5);
+#ifdef PARTITIONED
             for (int x = 0; x < numThreads; ++x)
                 partitions[x].itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
+#else
+            itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
+#endif
 #else
             i._3.data_ = new char[25];
             i._5.data_ = new char[51];
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i._1, &i._2, i._3.data_, &i._4, i._5.data_);
             i._3.recomputeSize();
             i._5.recomputeSize();
+#ifdef PARTITIONED
             for (int x = 0; x < numThreads; ++x)
                 partitions[x].itemTbl.insert_nocheck(i);
+#else
+            itemTbl.insert_nocheck(i);
+#endif
 #endif
         }
         fin.close();
@@ -772,12 +800,18 @@ struct TPCCDataGen {
             int n_2;
             int n_3;
             sscanf(line.c_str(), u32 "," u8 "," u8, &n_1, &n_2, &n_3);
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3));
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(n_3)].newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3));
+#else
+            newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3));
+#endif
 #else
             sscanf(line.c_str(), u32 "," u8 "," u8, &n._1, &n._2, &n._3);
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].newOrderTbl.insert_nocheck(n);
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(n._3)].newOrderTbl.insert_nocheck(n);
+#else
+            newOrderTbl.insert_nocheck(n);
+#endif
 #endif
         }
         fin.close();
@@ -824,15 +858,21 @@ struct TPCCDataGen {
             char e_10[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e_1, &e_2, &e_3, &e_4, &e_5, &e_6, datestr, &e_8, &e_9, e_10);
             e_7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(e_3)].orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
+#else
+            orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
+#endif
 #else
             e._10.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e._1, &e._2, &e._3, &e._4, &e._5, &e._6, datestr, &e._8, &e._9, e._10.data_);
             e._7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
             e._10.recomputeSize();
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].orderLineTbl.insert_nocheck(e);
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(e._3)].orderLineTbl.insert_nocheck(e);
+#else
+            orderLineTbl.insert_nocheck(e);
+#endif
 #endif
         }
         fin.close();
@@ -893,15 +933,21 @@ struct TPCCDataGen {
             o_5 = StrToIntdate(datestr);
             o_6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             o_8 = local;
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(o_3)].orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
+#else
+            orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
+#endif
 #else
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &o._1, &o._2, &o._3, &o._4, datestr, carrier, &o._7, &local);
             o._5 = StrToIntdate(datestr);
             o._6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             o._8 = local;
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].orderTbl.insert_nocheck(o);
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(o._3)].orderTbl.insert_nocheck(o);
+#else
+            orderTbl.insert_nocheck(o);
+#endif
 #endif
         }
         fin.close();
@@ -965,8 +1011,12 @@ struct TPCCDataGen {
             int s_16;
             char s_17[51];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &s_1, &s_2, &s_3, s_4, s_5, s_6, s_7, s_8, s_9, s_10, s_11, s_12, s_13, &s_14, &s_15, &s_16, s_17);
+#ifdef PARTITIONED
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
+#else
+            stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
+#endif
 #else
             s._4.data_ = new char[25];
             s._5.data_ = new char[25];
@@ -991,8 +1041,12 @@ struct TPCCDataGen {
             s._12.recomputeSize();
             s._13.recomputeSize();
             s._17.recomputeSize();
+#ifdef PARTITIONED
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].stockTbl.insert_nocheck(s);
+#else
+            stockTbl.insert_nocheck(s);
+#endif
 #endif
         }
         fin.close();
@@ -1071,8 +1125,11 @@ struct TPCCDataGen {
             double w_8;
             double w_9;
             sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w_1, w_2, w_3, w_4, w_5, w_6, w_7, &w_8, &w_9);
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(w_1)].warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
+#else
+            warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
+#endif
 #else
             w._2.data_ = new char[11];
             w._3.data_ = new char[21];
@@ -1087,8 +1144,12 @@ struct TPCCDataGen {
             w._5.recomputeSize();
             w._6.recomputeSize();
             w._7.recomputeSize();
-            for (int i = 0; i < numThreads; ++i)
-                partitions[i].warehouseTbl.insert_nocheck(w);
+#ifdef PARTITIONED
+            partitions[CORE_FOR_W(w._1)].warehouseTbl.insert_nocheck(w);
+#else
+            warehouseTbl.insert_nocheck(w);
+#endif
+
 #endif
         }
         fin.close();
