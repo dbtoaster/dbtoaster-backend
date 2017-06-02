@@ -3525,7 +3525,8 @@ struct CuckooIndex : public Index<T, V> {
             }
             dataHead = obj;
         }
-        if (index.insert(obj->copy(), obj))
+        //SBJ: No need to pass obj->copy() unlike secondary index
+        if (index.insert(obj, obj))
             count_++;
         else
             std::logic_error("insert failed");
@@ -3558,7 +3559,7 @@ struct CuckooIndex : public Index<T, V> {
             obj->nxt = nullptr;
             obj->prv = nullptr;
         }
-        //SBJ: TODO:  Free memory pointed to by "key" as well!
+
         if (index.erase(obj)) {
             count_--;
         } else {
