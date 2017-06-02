@@ -547,15 +547,17 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |    stockTblIdx0.idxId = 0;
          |    historyTblIdx0.idxId = 0;
          |
-         |    warehouseTblIdx0.resize_(warehouseTblSize);
-         |    districtTblIdx0.resize_(districtTblSize);
-         |    customerTblIdx0.resize_(customerTblSize);
-         |    orderTblIdx0.resize_(orderTblSize);
-         |    newOrderTblIdx0.resize_(newOrderTblSize);
-         |    orderLineTblIdx0.resize_(orderLineTblSize);
-         |    itemTblIdx0.resize_(itemTblSize);
-         |    stockTblIdx0.resize_(stockTblSize);
-         |    historyTblIdx0.resize_(historyTblSize);
+         |    warehouseTblIdx0.resize_(warehouseTblSize); tpcc.wareRes.resize_(warehouseTblSize);
+         |    districtTblIdx0.resize_(districtTblSize); tpcc.distRes.resize_(districtTblSize);
+         |    customerTblIdx0.resize_(customerTblSize); tpcc.custRes.resize_(customerTblSize);
+         |    orderTblIdx0.resize_(orderTblSize); tpcc.ordRes.resize_(orderTblSize);
+         |    newOrderTblIdx0.resize_(newOrderTblSize); tpcc.newOrdRes.resize_(newOrderTblSize);
+         |    orderLineTblIdx0.resize_(orderLineTblSize); tpcc.ordLRes.resize_(orderLineTblSize);
+         |    itemTblIdx0.resize_(itemTblSize); tpcc.itemRes.resize_(itemTblSize);
+         |    stockTblIdx0.resize_(stockTblSize); tpcc.stockRes.resize_(stockTblSize);
+         |    historyTblIdx0.resize_(historyTblSize); tpcc.histRes.resize_(historyTblSize);
+         |
+         |
          |    for (int i = 0; i < numThreads; ++i) {
          |        partitions[i].warehouseTblIdx0.foreach([&](WarehouseEntry * e) {
          |                warehouseTblIdx0.add(e->copy());
@@ -775,6 +777,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     val idx2 = idxes.map(t => t._1 -> (t._2._1 zip t._2._2 map (x => (x._1._1, x._1._2, x._1._3, x._1._4, x._2))).toList) // Store -> List[Sym, Type, unique, otherInfo, IdxName ]
     def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]): Document = {
       idx._2 match {
+        case "IHash" if idx._3 => doc"CuckooIndex<$entryTp, char, ${idx._5}>"
+        case "IHash" if !idx._3 => doc"ConcurrentCuckooSecondaryIndex<$entryTp, char, ${idx._5}>"
         case "IHash" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
         case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
         case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"SlicedHeapIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(true)}>"
@@ -968,15 +972,15 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |info.close();
          |
          |#ifdef VERIFY_TPCC
-         |    warehouseTblIdx0.resize_(warehouseTblSize);
-         |    districtTblIdx0.resize_(districtTblSize);
-         |    customerTblIdx0.resize_(customerTblSize);
-         |    orderTblIdx0.resize_(orderTblSize);
-         |    newOrderTblIdx0.resize_(newOrderTblSize);
-         |    orderLineTblIdx0.resize_(orderLineTblSize);
-         |    itemTblIdx0.resize_(itemTblSize);
-         |    stockTblIdx0.resize_(stockTblSize);
-         |    historyTblIdx0.resize_(historyTblSize);
+         |    warehouseTblIdx0.resize_(warehouseTblSize); tpcc.wareRes.resize_(warehouseTblSize);
+         |    districtTblIdx0.resize_(districtTblSize); tpcc.distRes.resize_(districtTblSize);
+         |    customerTblIdx0.resize_(customerTblSize); tpcc.custRes.resize_(customerTblSize);
+         |    orderTblIdx0.resize_(orderTblSize); tpcc.ordRes.resize_(orderTblSize);
+         |    newOrderTblIdx0.resize_(newOrderTblSize); tpcc.newOrdRes.resize_(newOrderTblSize);
+         |    orderLineTblIdx0.resize_(orderLineTblSize); tpcc.ordLRes.resize_(orderLineTblSize);
+         |    itemTblIdx0.resize_(itemTblSize); tpcc.itemRes.resize_(itemTblSize);
+         |    stockTblIdx0.resize_(stockTblSize); tpcc.stockRes.resize_(stockTblSize);
+         |    historyTblIdx0.resize_(historyTblSize); tpcc.histRes.resize_(historyTblSize);
          |
          |    if (warehouseTblIdx0 == tpcc.wareRes) {
          |        cout << "Warehouse results are correct" << endl;

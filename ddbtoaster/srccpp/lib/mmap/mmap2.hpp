@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <functional>
 #include <string.h>
+#include <libcuckoo/cuckoohash_map.hh>
 #include "../serialization.hpp"
 #include "../hpds/pstring.hpp"
 #include "../hpds/macro.hpp"
@@ -426,6 +427,10 @@ public:
 
     bool operator==(const HashIndex<T, V, IDX_FN, is_unique> & that) const {
         bool check = true;
+        if (size_ != that.size_) {
+            std::cerr << "Number of buckets don't match " << size_ << " " << that.size_ << std::endl;
+            check = false;
+        }
         for (size_t b = 0; b < size_; ++b) {
             IdxNode* n1 = &buckets_[b];
             IdxNode* n2 = &that.buckets_[b];
@@ -2935,8 +2940,8 @@ class ArrayIndex : public Index<T, V> {
 public:
 
     ArrayIndex(Pool<T>* stPool = nullptr, int s = size) { //Constructor argument is ignored
-        memset(isUsed, 0, size * sizeof(bool));
-        memset(array, 0, size * sizeof(T*));
+        memset(isUsed, 0, size * sizeof (bool));
+        memset(array, 0, size * sizeof (T*));
     }
 
     void prepareSize(size_t arrayS, size_t poolS) override {
@@ -2979,9 +2984,9 @@ public:
 
     FORCE_INLINE T* get(const T* key) const override {
         HASH_RES_t idx = IDX_FN::hash(*key);
-//        if (idx >= 0 && idx < size && isUsed[idx]) //TODO: remove check
-            return array[idx];
-//        return nullptr;
+        //        if (idx >= 0 && idx < size && isUsed[idx]) //TODO: remove check
+        return array[idx];
+        //        return nullptr;
     }
 
     FORCE_INLINE void add(T* obj) override {
@@ -3054,8 +3059,8 @@ public:
     }
 
     FORCE_INLINE void clear() override {
-    memset(isUsed, 0, size * sizeof(bool));
-    memset(array, 0, size * sizeof(T*));
+        memset(isUsed, 0, size * sizeof (bool));
+        memset(array, 0, size * sizeof (T*));
     }
 
     /******************* non-virtual function wrappers ************************/
@@ -3383,6 +3388,531 @@ public:
 
     /******************* non-virtual function wrappers ************************/
 
+    FORCE_INLINE T* get(const T& key) const {
+        return get(&key);
+    }
+
+    FORCE_INLINE T* getCopy(const T* key) const {
+        T* obj = get(key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
+    }
+
+    FORCE_INLINE T* getCopy(const T& key) const {
+        T* obj = get(&key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T* key) const {
+        T* obj = get(key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T& key) const {
+        T* obj = get(&key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
+    }
+
+    FORCE_INLINE void slice(const T& key, FuncType f) {
+        slice(&key, f);
+    }
+
+    FORCE_INLINE void sliceCopy(const T& key, FuncType f) {
+        sliceCopy(&key, f);
+    }
+
+    FORCE_INLINE void sliceCopyDependent(const T* key, FuncType f) {
+        sliceCopy(key, f);
+    }
+
+    FORCE_INLINE void sliceCopyDependent(const T& key, FuncType f) {
+        sliceCopy(&key, f);
+    }
+
+    FORCE_INLINE void delCopyDependent(const T* obj) {
+        del(obj);
+    }
+
+};
+
+template<typename T, typename V, typename IDX_FN >
+struct CuckooIndex : public Index<T, V> {
+
+    struct HE {
+
+        size_t operator()(const T* e) const {
+            size_t h = IDX_FN::hash(*e);
+            return h;
+        }
+
+        bool operator()(const T* e1, const T* e2) const {
+            return IDX_FN::cmp(*e1, *e2) == 0;
+        }
+    };
+    cuckoohash_map<T*, T*, HE, HE, std::allocator<std::pair<T*, T*>>, 16> index;
+    Pool<T>* storePool;
+    T* dataHead;
+    size_t count_;
+
+    CuckooIndex(Pool<T>* stPool = nullptr, int s = 0) : index(s, 0.001), storePool(stPool) { //Constructor argument is ignored
+        dataHead = nullptr;
+        count_ = 0;
+    }
+
+    void resize_(size_t new_size) {
+
+    }
+
+    bool operator==(CuckooIndex<T, V, IDX_FN>& that) {
+        auto t1 = index.lock_table();
+        bool flag = true;
+        for (auto e1 = t1.cbegin(); e1 != t1.cend(); ++e1) {
+            T* e2;
+            if (!that.index.find(e1->first, e2)) {
+                std::cerr << *e1->first << "is extra in table" << std::endl;
+                flag = false;
+            } else if (!(*e2 == *e1->second)) {
+                std::cerr << "Found " << *e1->second << " where it should have been " << *e2 << std::endl;
+                flag = false;
+            }
+        }
+        t1.release();
+        auto t2 = that.index.lock_table();
+        for (auto e2 = t2.cbegin(); e2 != t2.cend(); ++e2) {
+            T* e1;
+            if (!index.find(e2->first, e1)) {
+                std::cerr << *e2->first << " is missing from table " << std::endl;
+                flag = false;
+            } else if (!(*e1 == *e2->second)) {
+                std::cerr << "Found" << *e1 << " where it should ahve been " << *e2->second << std::endl;
+                flag = false;
+            }
+        }
+        return flag;
+    }
+
+    void getSizeStats(std::ostream & fout) {
+        fout << "{}";
+    }
+
+    void add(T* obj) override {
+        auto idxId = Index<T, V>::idxId;
+        if (idxId == 0) { //maintain usedEntry list for efficient for-each
+            obj->prv = nullptr;
+            obj->nxt = dataHead;
+            if (dataHead) {
+
+                dataHead->prv = obj;
+            }
+            dataHead = obj;
+        }
+        if (index.insert(obj->copy(), obj))
+            count_++;
+        else
+            std::logic_error("insert failed");
+    }
+
+    void clear() override {
+        count_ = 0;
+        index.clear();
+        if (dataHead && storePool) {
+            storePool->delete_all(dataHead);
+            dataHead = nullptr;
+        }
+    }
+
+    size_t count() const override {
+        return count_;
+    }
+
+    void del(T* obj) override {
+        auto idxId = Index<T, V>::idxId;
+        if (idxId == 0) {
+            T *elemPrv = obj->prv, *elemNxt = obj->nxt;
+            if (elemPrv)
+                elemPrv->nxt = elemNxt;
+            else
+                dataHead = elemNxt;
+
+            if (elemNxt) elemNxt->prv = elemPrv;
+
+            obj->nxt = nullptr;
+            obj->prv = nullptr;
+        }
+        //SBJ: TODO:  Free memory pointed to by "key" as well!
+        if (index.erase(obj)) {
+            count_--;
+        } else {
+            throw std::logic_error("Delete failed");
+        }
+    }
+
+    void delCopy(const T* obj, Index<T, V>* primary) override {
+        T* orig = primary->get(obj);
+        del(orig);
+    }
+
+    void foreach(FuncType f) override {
+        T* cur = dataHead;
+        while (cur) {
+            f(cur);
+            cur = cur->nxt;
+        }
+    }
+
+    void foreachCopy(FuncType f) override {
+        std::vector<T*> entries;
+        T* cur = dataHead;
+        while (cur) {
+            entries.push_back(cur->copy());
+            cur = cur->nxt;
+        }
+        for (auto it : entries) {
+            f(it);
+            free(it); //Not calling destructor
+        }
+    }
+
+    T* get(const T* key) const override {
+        T* result;
+        if (index.find(key, result)) {
+            return result;
+        } else {
+            return nullptr;
+        }
+    }
+
+    bool hashDiffers(const T& x, const T& y) const override {
+        return IDX_FN::hash(x) != IDX_FN::hash(y);
+    }
+
+    void prepareSize(size_t arrayS, size_t poolS) override {
+    }
+
+    void slice(const T* key, FuncType f) override {
+    }
+
+    void sliceCopy(const T* key, FuncType f) override {
+    }
+
+    void update(T* obj) override {
+    }
+
+    void updateCopy(T* obj, Index<T, V>* primary) override {
+    }
+
+    void updateCopyDependent(T* obj, T* elem) override {
+    }
+
+    bool getOrInsert(T*& entry) override {
+
+        return false;
+    }
+
+    virtual ~CuckooIndex() {
+
+    }
+
+    /******************* non-virtual function wrappers ************************/
+    FORCE_INLINE T* get(const T& key) const {
+        return get(&key);
+    }
+
+    FORCE_INLINE T* getCopy(const T* key) const {
+        T* obj = get(key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
+    }
+
+    FORCE_INLINE T* getCopy(const T& key) const {
+        T* obj = get(&key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T* key) const {
+        T* obj = get(key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
+    }
+
+    FORCE_INLINE T* getCopyDependent(const T& key) const {
+        T* obj = get(&key);
+        if (obj) {
+            T* ptr = obj->copy();
+            tempMem.push_back(ptr);
+            return ptr;
+        } else
+            return nullptr;
+    }
+
+    FORCE_INLINE void slice(const T& key, FuncType f) {
+        slice(&key, f);
+    }
+
+    FORCE_INLINE void sliceCopy(const T& key, FuncType f) {
+        sliceCopy(&key, f);
+    }
+
+    FORCE_INLINE void sliceCopyDependent(const T* key, FuncType f) {
+        sliceCopy(key, f);
+    }
+
+    FORCE_INLINE void sliceCopyDependent(const T& key, FuncType f) {
+        sliceCopy(&key, f);
+    }
+
+    FORCE_INLINE void delCopyDependent(const T* obj) {
+        del(obj);
+    }
+
+};
+
+const uint64_t mask = 1LL << 63;
+
+template<typename T>
+FORCE_INLINE bool isMarked(T t) {
+    return ((size_t) t & mask);
+}
+
+template<typename T>
+FORCE_INLINE T mark(T t) {
+    return (T) ((size_t) t | mask);
+}
+
+template<typename T>
+FORCE_INLINE T unmark(T t) {
+    return (T) ((size_t) t & ~mask);
+}
+
+template<typename T, typename V, typename IDX_FN>
+struct ConcurrentCuckooSecondaryIndex : public Index<T, V> {
+
+    struct HE {
+
+        size_t operator()(const T* e) const {
+            size_t h = IDX_FN::hash(*e);
+            return h;
+        }
+
+        bool operator()(const T* e1, const T* e2) const {
+            return IDX_FN::cmp(*e1, *e2) == 0;
+        }
+    };
+
+    struct Container {
+        T* e;
+        std::atomic<Container *> next;
+
+        Container(T* e) :
+        e(e), next(nullptr) {
+        }
+
+        Container(Container *nxt) : e(nullptr), next(nxt) {
+
+        }
+    };
+    cuckoohash_map<T*, Container*, HE, HE, std::allocator<std::pair<T*, Container*>>, 16> index;
+
+    ConcurrentCuckooSecondaryIndex(Pool<T*> st, size_t size = 100000) : index(size) {
+    }
+    // Inserts an entry into the secondary index.
+    //Uses cuckoo hashmap as backend
+    //Inserts the entry if it does not exist already in cuckoo index, otherwise if it exists,updates it
+    //Cuckoo points towards a sentinel to protect against concurrent insertions/deletions
+
+    void add(T* obj) override {
+
+        Container *newc = new Container(obj);
+        Container *sentinel = new Container(newc);
+        auto updatefn = [newc, sentinel](Container* &c) {
+            delete sentinel;
+            Container *nxt = c->next;
+            do {
+                newc->next = nxt;
+            } while (!c->next.compare_exchange_weak(nxt, newc));
+        };
+        index.upsert(obj->copy(), updatefn, sentinel);
+    }
+
+    //Marks an entry for removal from concurrent list
+    //Will be actually removed only by a later traversal
+    //Removes other nodes marked for removal during its traversal
+    // Loop focus on cur. prev is before cur, curNext is afterCur. prevNext is node after prev (ideally, cur)
+    // ..... prev -> prevNext (....) cur -> curNext ...
+    // a node is said to be marked for removal if its next pointer is marked.
+    //For example, to see if cur is deleted, we check isMarked(curNext)
+
+    void del(T* obj) override {
+        Container *sentinel, *cur;
+        if (index.find(obj, sentinel) && ((cur = sentinel->next) != nullptr)) {
+            Container* prev = sentinel, *curNext = cur->next, *prevNext = cur;
+            //while cur is a deleted node or not what we are looking for
+            while (isMarked(curNext) || cur->e != obj) {
+                //if cur is not a deleted node, we can remove everything between prev and cur
+                if (!isMarked(curNext)) {
+                    if (prevNext != cur) { //if prevNext is same as cur, there is nothing in between
+                        prev->next.compare_exchange_strong(prevNext, cur);
+                    }
+                    //cur becomes prev and the new value of cur comes from curNext                    
+                    prev = cur;
+                    prevNext = curNext;
+                    cur = curNext;
+                } else {
+                    //curNext is marked, so we get the unmarked version
+                    cur = unmark(curNext);
+                }
+                if (!cur) //stop at nullptr
+                    break;
+                curNext = cur->next;
+            }
+            if (cur == nullptr) {
+                //Element not present
+                //Remove any marked nodes from prev until here
+                if (prevNext != cur) {
+                    prev->next.compare_exchange_strong(prevNext, cur);
+                }
+
+            } else {
+                //mark cur for deletion by marking its next pointer 
+                while (!cur->next.compare_exchange_weak(curNext, mark(curNext)));
+
+                //attempt to fix prev, if it fails, we dont care
+                prev->next.compare_exchange_strong(prevNext, curNext);
+            }
+        } else {
+            throw std::logic_error("Entry to be deleted not in Secondary Index");
+        }
+
+    }
+
+    FORCE_INLINE void slice(const T* key, FuncType f) {
+    }
+
+    FORCE_INLINE void sliceNoUpdate(const T& key, FuncType f) {
+        sliceNoUpdate(&key, f);
+    }
+
+    FORCE_INLINE void sliceNoUpdate(const T* key, FuncType f) {
+        Container *sentinel;
+        if (index.find(key, sentinel)) {
+            Container *prev = sentinel, *prevNext = sentinel->next, *cur = prevNext, *curNext;
+            //Skip all deleted nodes and remove them
+            uint slicecount = 0;
+            do {
+                curNext = cur -> next;
+                while (isMarked(curNext)) {
+                    cur = unmark(curNext);
+                    if (!cur)
+                        break;
+                    curNext = cur->next;
+                }
+                slicecount++;
+                prev->next.compare_exchange_strong(prevNext, cur);
+                assert(IDX_FN::cmp(*key, *cur->e) == 0);
+                f(cur->e);
+                prev = cur;
+                prevNext = curNext;
+                cur = curNext;
+            } while (cur);
+        } else {
+            throw std::logic_error("Empty slice");
+        }
+    }
+
+    void clear() override {
+        index.clear();
+    }
+
+    size_t count() const override {
+        return 0;
+    }
+
+    void delCopy(const T* obj, Index<T, V>* primary) override {
+        T* orig = primary->get(obj);
+        del(orig);
+    }
+
+    void foreach(FuncType f) override {
+
+    }
+
+    void foreachCopy(FuncType f) override {
+
+    }
+
+    T* get(const T* key) const override {
+        return nullptr;
+    }
+
+    bool hashDiffers(const T& x, const T& y) const override {
+        return IDX_FN::hash(x) != IDX_FN::hash(y);
+    }
+
+    void prepareSize(size_t arrayS, size_t poolS) override {
+
+    }
+
+    void sliceCopy(const T* key, FuncType f) override {
+
+    }
+
+    void update(T* obj) override {
+
+    }
+
+    void updateCopy(T* obj, Index<T, V>* primary) override {
+
+    }
+
+    void updateCopyDependent(T* obj, T* elem) override {
+
+    }
+
+    bool getOrInsert(T*& entry) override {
+        return false;
+    }
+
+    virtual ~ConcurrentCuckooSecondaryIndex() {
+
+    }
+
+    void getSizeStats(std::ostream & fout) {
+        fout << "{}";
+    }
+
+    /******************* non-virtual function wrappers ************************/
     FORCE_INLINE T* get(const T& key) const {
         return get(&key);
     }
