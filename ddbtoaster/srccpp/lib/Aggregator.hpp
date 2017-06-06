@@ -3,6 +3,7 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
+#include "Version.h"
 
 template <typename E, typename R>
 struct MinAggregator {
@@ -31,6 +32,15 @@ struct MinAggregator {
 
     E* result() {
         return *minEntry;
+    }
+
+    E* resultForUpdate() {
+        E* resE = *minEntry;
+        EntryMV<E>* e = resE->e;
+        Version<E>* newV = new Version<E>(*resE);
+        newV->oldV = e->versionHead;
+        e->versionHead = newV;
+        return &newV->obj;
     }
 };
 
@@ -63,6 +73,14 @@ struct MaxAggregator {
         return *maxEntry;
     }
 
+    E* resultForUpdate() {
+        E* resE = *maxEntry;
+        EntryMV<E>* e = resE->e;
+        Version<E>* newV = new Version<E>(*resE);
+        newV->oldV = e->versionHead;
+        e->versionHead = newV;
+        return &newV->obj;
+    }
 };
 
 template<typename E, typename R>
@@ -70,7 +88,7 @@ struct MedianAggregator {
     std::function<R(E*) > func;
     std::vector<E*>& results;
 
-    MedianAggregator(const  std::function<R(E*)>& f, std::vector<E*>& res) : func(f), results(res) {
+    MedianAggregator(const std::function<R(E*)>& f, std::vector<E*>& res) : func(f), results(res) {
     }
 
     void operator()(E* e) {
@@ -78,20 +96,42 @@ struct MedianAggregator {
     }
 
     E* result() {
-        if(results.empty())
+        if (results.empty())
             return nullptr;
-        
-        std::sort(results.begin(), results.end(), [&](E* e1, E* e2) { 
+
+        std::sort(results.begin(), results.end(), [&](E* e1, E * e2) {
             assert(e1);
             assert(e2);
             const R& v1 = func(e1);
             const R& v2 = func(e2);
-            return v1 < v2; 
+            return v1 < v2;
         });
         int s = results.size();
         int i = s / 2;
-        if(s % 2 == 0) i--;
+        if (s % 2 == 0) i--;
         return results[i];
+    }
+
+    E* resultForUpdate() {
+        if (results.empty())
+            return nullptr;
+
+        std::sort(results.begin(), results.end(), [&](E* e1, E * e2) {
+            assert(e1);
+            assert(e2);
+            const R& v1 = func(e1);
+            const R& v2 = func(e2);
+            return v1 < v2;
+        });
+        int s = results.size();
+        int i = s / 2;
+        if (s % 2 == 0) i--;
+        E* resE = results[i];
+        EntryMV<E>* e = resE->e;
+        Version<E>* newV = new Version<E>(*resE);
+        newV->oldV = e->versionHead.load();
+        e->versionHead = newV;
+        return &newV->obj;
     }
 };
 

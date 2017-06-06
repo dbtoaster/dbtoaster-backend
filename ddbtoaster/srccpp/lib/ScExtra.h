@@ -6,14 +6,15 @@
 #include <cctype>
 #include "hpds/pstring.hpp"
 #include "program_base.hpp"
+#include "types.h"
 #include "GenericEntry.hpp"
+#include "Version.h"
 #include "Aggregator.hpp"
 
 using namespace std;
 using namespace dbtoaster;
 #define EXPAND(x) #x
 #define STRINGIFY(x) EXPAND(x)
-#define FORCE_INLINE inline __attribute__((always_inline))
 #define CHECK_STAT(x) cerr << STRINGIFY(x) << " -> "; x.getBucketStats()
 #define GET_RUN_STAT(x, f) f << "\"" << STRINGIFY(x) << "\" : ["; x.getSizeStats(f); f << "]";
 #define GET_RUN_STAT_P(x, f)\

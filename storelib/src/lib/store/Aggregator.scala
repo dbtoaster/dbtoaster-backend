@@ -11,6 +11,8 @@ trait Aggregator[E <: Entry] extends (E => Unit) {
   def apply(e: E): Unit //TODO: Have a pure functional version
 
   def result: E
+
+  def resultForUpdate: E
 }
 
 object Aggregator {
@@ -36,6 +38,8 @@ class MinAggregator[E <: Entry, R](val f: E => R)(implicit order: Ordering[R]) e
   }
 
   override def result: E = minEntry
+
+  override def resultForUpdate: E = ???
 }
 
 class MaxAggregator[E <: Entry, R](val f: E => R)(implicit order: Ordering[R]) extends Aggregator[E] {
@@ -52,6 +56,8 @@ class MaxAggregator[E <: Entry, R](val f: E => R)(implicit order: Ordering[R]) e
     maxEntry = e
   }
 
+  override def resultForUpdate: E = ???
+
   override def result: E = maxEntry
 }
 
@@ -59,6 +65,8 @@ class MedianAggregator[E <: Entry, R](val f: E => R)(implicit order: Ordering[R]
   val results = ArrayBuffer[E]()
 
   override def apply(e: E): Unit = results.append(e)
+
+  override def resultForUpdate: E = ???
 
   override def result: E = {
     val s = results.size

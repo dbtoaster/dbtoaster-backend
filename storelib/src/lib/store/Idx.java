@@ -87,6 +87,9 @@ public abstract class Idx<E extends Entry> {
             return (E) e.copy();
         return null;
     }
+    public E getForUpdate(E key) {
+        return get(key);
+    }
 
     public void foreachResMap(Function1<E, Unit> f, MultiRes res) {
         //TODO :Fix later

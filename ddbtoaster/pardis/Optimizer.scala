@@ -38,6 +38,7 @@ object Optimizer {
   var sliceNoUpd = false
   var coldMotion = false
   var parameterPromotion = true
+  var mvget = true
 
   var profileBlocks = false
   var profileStoreOperations = false
@@ -112,6 +113,15 @@ class Optimizer(val IR: StoreDSL) {
 
   if (Optimizer.indexInline)
     pipeline += new IndexInliner(IR)
+
+  if(Optimizer.mvget && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
+    throw new Error("MV-get requires idxInline and lookupfusion")
+
+  if(Optimizer.mvget)
+    pipeline += new MVGet(IR)
+
+  if(Optimizer.deadIndexUpdate)
+    pipeline += new DeadIdxUpdate(IR)
 
   if (Optimizer.multiResSplitter && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("MultiRes Splitter requires Index Inline, IndexLookupFusion")

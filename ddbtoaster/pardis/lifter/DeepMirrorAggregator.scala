@@ -19,6 +19,7 @@ trait AggregatorOps extends Base  {
   implicit class AggregatorRep[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit typeE : TypeRep[E]) {
      def apply(e : Rep[E]) : Rep[Unit] = aggregatorApply[E](self, e)(typeE)
      def result : Rep[E] = aggregatorResult[E](self)(typeE)
+     def resultForUpdate : Rep[E] = aggregatorResultForUpdate[E](self)(typeE)
      def compose[A](g : Rep[(A => E)])(implicit typeA : TypeRep[A]) : Rep[(A => Unit)] = aggregatorCompose[E, A](self, g)(typeE, typeA)
      def andThen[A](g : Rep[(Unit => A)])(implicit typeA : TypeRep[A]) : Rep[(E => A)] = aggregatorAndThen[E, A](self, g)(typeE, typeA)
   }
@@ -34,6 +35,8 @@ trait AggregatorOps extends Base  {
   type AggregatorApply[E <: ddbt.lib.store.Entry] = AggregatorIRs.AggregatorApply[E]
   val AggregatorResult = AggregatorIRs.AggregatorResult
   type AggregatorResult[E <: ddbt.lib.store.Entry] = AggregatorIRs.AggregatorResult[E]
+  val AggregatorResultForUpdate = AggregatorIRs.AggregatorResultForUpdate
+  type AggregatorResultForUpdate[E <: ddbt.lib.store.Entry] = AggregatorIRs.AggregatorResultForUpdate[E]
   val AggregatorCompose = AggregatorIRs.AggregatorCompose
   type AggregatorCompose[E <: ddbt.lib.store.Entry, A] = AggregatorIRs.AggregatorCompose[E, A]
   val AggregatorAndThen = AggregatorIRs.AggregatorAndThen
@@ -47,6 +50,7 @@ trait AggregatorOps extends Base  {
   // method definitions
    def aggregatorApply[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = AggregatorApply[E](self, e)
    def aggregatorResult[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit typeE : TypeRep[E]) : Rep[E] = AggregatorResult[E](self)
+   def aggregatorResultForUpdate[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit typeE : TypeRep[E]) : Rep[E] = AggregatorResultForUpdate[E](self)
    def aggregatorCompose[E <: ddbt.lib.store.Entry, A](self : Rep[Aggregator[E]], g : Rep[((A) => E)])(implicit typeE : TypeRep[E], typeA : TypeRep[A]) : Rep[(A => Unit)] = AggregatorCompose[E, A](self, g)
    def aggregatorAndThen[E <: ddbt.lib.store.Entry, A](self : Rep[Aggregator[E]], g : Rep[((Unit) => A)])(implicit typeE : TypeRep[E], typeA : TypeRep[A]) : Rep[(E => A)] = AggregatorAndThen[E, A](self, g)
    def aggregatorMinObject[E <: ddbt.lib.store.Entry, R](f : Rep[(E => R)])(implicit typeE : TypeRep[E], typeR : TypeRep[R], order : Ordering[R]) : Rep[Aggregator[E]] = AggregatorMinObject[E, R](f)
@@ -70,6 +74,10 @@ object AggregatorIRs extends Base {
   case class AggregatorResult[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "result", List()){
     override def curriedConstructor = (copy[E] _)
     override def effect = Read(self)
+  }
+
+  case class AggregatorResultForUpdate[E <: ddbt.lib.store.Entry](self : Rep[Aggregator[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[E](Some(self), "resultForUpdate", List()){
+    override def curriedConstructor = (copy[E] _)
   }
 
   case class AggregatorCompose[E <: ddbt.lib.store.Entry, A](self : Rep[Aggregator[E]], g : Rep[((A) => E)])(implicit val typeE : TypeRep[E], val typeA : TypeRep[A]) extends FunctionDef[(A => Unit)](Some(self), "compose", List(List(g))){

@@ -11,6 +11,7 @@ trait MirrorAggregator[E <: Entry] extends (E => Unit) {
   def apply(e: E): Unit
   @read
   def result: E
+  def resultForUpdate: E
 }
 object MirrorAggregator {
   @pure

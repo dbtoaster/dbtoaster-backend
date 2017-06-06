@@ -777,8 +777,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     val idx2 = idxes.map(t => t._1 -> (t._2._1 zip t._2._2 map (x => (x._1._1, x._1._2, x._1._3, x._1._4, x._2))).toList) // Store -> List[Sym, Type, unique, otherInfo, IdxName ]
     def idxToDoc(idx: (Sym[_], String, Boolean, Int, String), entryTp: PardisType[_], allIdxs: List[(Sym[_], String, Boolean, Int, String)]): Document = {
       idx._2 match {
-        case "IHash" if idx._3 => doc"CuckooIndex<$entryTp, char, ${idx._5}>"
-        case "IHash" if !idx._3 => doc"ConcurrentCuckooSecondaryIndex<$entryTp, char, ${idx._5}>"
+        case "IHash" if idx._3 => doc"CuckooIndex<$entryTp, ${idx._5}>"
+        case "IHash" if !idx._3 => doc"ConcurrentCuckooSecondaryIndex<$entryTp, ${idx._5}>"
         case "IHash" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
         case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
         case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"SlicedHeapIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(true)}>"
@@ -796,7 +796,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :: idxTypes.map(t=>idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}StoreType;"
+      val storeTypeDef = doc"typedef MultiHashMapMV<${entryTp}," :: idxTypes.map(t=>idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}StoreType;"
       val initSize = if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes);" else doc";"
       val storeDecl = s.name :: "StoreType  " :: s.name :: initSize
 
@@ -807,13 +807,16 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
-        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
+        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  bool isInvalid; EntryMV<${tag.typeName}>* e;"
+//        :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
         val constructor = doc"${tag.typeName}() :" :: fields.map(x => {
           if (x.tpe == StringType)
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
-        }).mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
-        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", prv(nullptr), nxt(nullptr) {}"
+        }).mkDocument(", ") :: ", isInvalid(false), e(nullptr) {}"
+//        :: ", prv(nullptr), nxt(nullptr) {}"
+        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", isInvalid(false), e(nullptr) {}"
+//  ", prv(nullptr), nxt(nullptr) {}"
         val copyFn = doc"FORCE_INLINE ${tag.typeName}* copy() const {  ${tag.typeName}* ptr = (${tag.typeName}*) malloc(sizeof(${tag.typeName})); new(ptr) ${tag.typeName}(" :: fields.map(x => {
           //          if (x.tpe == StringType)
           //            doc"*${x.name}.copy()"
@@ -836,7 +839,9 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         }
       }
       val equals = s.fields.map(eqFn).reduce(_ :: " && " :/: _)
-      doc"bool operator== (const $sname& o1, const $sname& o2) {" :\\: Document.nest(2, "return " :: equals :: ";") :\\: "}"
+      doc"bool operator== (const $sname& o1, const $sname& o2) {" :\\: Document.nest(2,
+        "if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;" :\\:
+        "else return " :: equals :: ";") :\\: "}"
     }).mkDocument("\n")
 
     val traits = doc"/* TRAITS STARTING */" :/: codeGen.getTraitSignature :/: doc" /* TRAITS ENDING   */"
@@ -972,6 +977,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |info.close();
          |
          |#ifdef VERIFY_TPCC
+         |/*
          |    warehouseTblIdx0.resize_(warehouseTblSize); tpcc.wareRes.resize_(warehouseTblSize);
          |    districtTblIdx0.resize_(districtTblSize); tpcc.distRes.resize_(districtTblSize);
          |    customerTblIdx0.resize_(customerTblSize); tpcc.custRes.resize_(customerTblSize);
@@ -981,7 +987,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |    itemTblIdx0.resize_(itemTblSize); tpcc.itemRes.resize_(itemTblSize);
          |    stockTblIdx0.resize_(stockTblSize); tpcc.stockRes.resize_(stockTblSize);
          |    historyTblIdx0.resize_(historyTblSize); tpcc.histRes.resize_(historyTblSize);
-         |
+         |*/
          |    if (warehouseTblIdx0 == tpcc.wareRes) {
          |        cout << "Warehouse results are correct" << endl;
          |    } else {

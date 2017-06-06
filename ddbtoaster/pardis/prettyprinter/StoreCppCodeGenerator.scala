@@ -218,6 +218,12 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
           doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
+//    case Statement(sym, n@IdxGet(_, _)) if Optimizer.mvget =>
+//      doc"const ${sym.tp} $sym = " :: nodeToDocument(n) :: ";"
+
+    case Statement(sym, n@StoreDelete1(_, k)) if Optimizer.mvget =>
+      doc"$k->isInvalid = true;"
+
     case Statement(sym, n@StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType =>
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
     case Statement(sym, n@GenericEntryGet(self: Sym[_], idx)) if sym.tp == StringType =>
@@ -320,6 +326,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case MultiResIsEmpty(self: Sym[_]) => doc"$self == nullptr"
 
     case AggregatorResult(self: Sym[_]) => doc"$self.result()"
+    case AggregatorResultForUpdate(self: Sym[_]) => doc"$self.resultForUpdate()"
 
     case StoreInsert(self, e) => doc"$self.add($e)"
     case StoreUnsafeInsert(self, e) => doc"$self.insert_nocheck($e)"
@@ -343,6 +350,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case IdxGet(self, key) => doc"$self.get($key)"
     case IdxGetCopy(self, key) => doc"$self.getCopy($key)"
     case IdxGetCopyDependent(self, key) => doc"$self.getCopyDependent($key)"
+    case IdxGetForUpdate(self, key) => doc"$self.getForUpdate($key)"
     case IdxUpdate(self, key) => doc"$self.update($key)"
     case IdxUpdateCopy(self, key, primary) => doc"$self.updateCopy($key, &$primary)"
     case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopyDependent($key, $ref)"
