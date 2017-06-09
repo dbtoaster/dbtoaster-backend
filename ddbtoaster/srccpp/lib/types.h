@@ -33,5 +33,23 @@ FORCE_INLINE T unmark(T t) {
     return (T) ((size_t) t & ~mask);
 }
 
+enum TransactionReturnStatus : char {
+    SUCCESS, ABORT, WW_ABORT, COMMIT_FAILURE
+};
+
+enum Operation : char {
+    NOOP, INSERT, DELETE, UPDATE, INVALID
+};
+
+enum OperationReturnStatus : char {
+    OP_SUCCESS, NO_KEY, DUPLICATE_KEY, WW_VALUE
+};
+
+FORCE_INLINE TransactionReturnStatus TR(OperationReturnStatus op) {
+    return op == WW_VALUE ? WW_ABORT : ABORT;
+}
+FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
+    return op == WW_ABORT ? WW_VALUE : NO_KEY;
+}
 #endif /* TYPES_H */
 

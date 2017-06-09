@@ -39,7 +39,7 @@ object Optimizer {
   var coldMotion = false
   var parameterPromotion = true
   var mvget = true
-
+  var OpResChecks = true
   var profileBlocks = false
   var profileStoreOperations = false
 

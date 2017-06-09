@@ -26,13 +26,13 @@ struct Version {
 template <typename T>
 struct EntryMV {
     std::atomic<Version<T>*> versionHead;
-    EntryMV<T> *nxt, *prv;
-
-    EntryMV() : versionHead(nullptr), nxt(nullptr), prv(nullptr) {
+    std::atomic<EntryMV<T>*> nxt;
+  
+    EntryMV() : versionHead(nullptr), nxt(nullptr) {
 
     }
 
-    EntryMV(Version<T>* v) : versionHead(v), nxt(nullptr), prv(nullptr) {
+    EntryMV(Version<T>* v) : versionHead(v), nxt(nullptr) {
 
     }
 };

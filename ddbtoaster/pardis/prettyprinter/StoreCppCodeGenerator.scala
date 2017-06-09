@@ -23,6 +23,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   val refSymbols = collection.mutable.ArrayBuffer[Sym[_]]()
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
+/*************************** STRING *********************************************/
     case Statement(sym, StringExtraStringPrintfObject(Constant(size), f, Def(LiftedSeq(args)))) =>
       def ArgToDoc(arg: Rep[_]) = arg.tp match {
         case StringType => doc"$arg.data_"
@@ -32,11 +33,14 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"PString $sym($size);" :\\: doc"snprintf($sym.data_, ${size + 1}, $f, ${args.map(ArgToDoc).mkDocument(", ")});"
     case Statement(sym, StrStr(x, y)) => doc"char* ${sym} = strstr($x.data_, $y);"
 
+
+    /*************************** ENTRY IDX *********************************************/
     case Statement(sym, EntryIdxGenericCmpObject(_, _)) => Document.empty
     case Statement(sym, EntryIdxGenericOpsObject(_)) => Document.empty
     case Statement(sym, EntryIdxGenericFixedRangeOpsObject(_)) => Document.empty
     case Statement(sym, ab@ArrayApplyObject(_)) if ab.typeT.isInstanceOf[EntryIdxType[_]] => Document.empty
 
+    /*************************** ARRAY *********************************************/
     case Statement(sym, ab@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"${sym.tp} $sym = { ${ops.mkDocument(",")} };"
     case Statement(sym, ArrayNew(size)) => doc"${sym.tp.asInstanceOf[ArrayType[_]].elementType} $sym[$size];"
     case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) if rhs.length == 1 => doc"""$self[$i].data_[0] = '$rhs';"""
@@ -44,15 +48,19 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, ArrayUpdate(self, i, x)) => doc"$self[$i] = $x;"
     case Statement(sym, a@ArrayApply(self, i)) if a.typeT == StringType => doc"PString& $sym = $self[$i];"
 
+    /*************************** ARRAYBUFER *********************************************/
     case Statement(sym, ab@ArrayBufferNew2()) => doc"vector<${ab.typeA}*> $sym;"
     case Statement(sym, ArrayBufferSortWith(self, f)) => doc"sort($self.begin(), $self.end(), $f);"
 
+    /*************************** SET *********************************************/
     case Statement(sym, s@SetApplyObject1(Def(PardisLiftedSeq(es)))) => doc"unordered_set<${s.typeT}> $sym(${es.mkDocument("{", ", ", "}")}); //setApply1"
     case Statement(sym, s@SetApplyObject2()) => doc"unordered_set<${s.typeT}> $sym; //setApply2"
     case Statement(sym, `Set+=`(self, elem)) => doc"$self.insert($elem);"
 
+    /*************************** VAR *********************************************/
     case Statement(sym, v@PardisNewVar(Constant(0))) if v.typeT == StringType => doc"${sym.tp} $sym;"
 
+    /*************************** AGGREGATOR *********************************************/
     case Statement(sym, agg@AggregatorMaxObject(f)) =>
       doc"${agg.typeE}* ${sym}result = nullptr;" :/:
         doc"MaxAggregator<${agg.typeE}, ${agg.typeR}> $sym($f, &${sym}result);"
@@ -63,12 +71,17 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"std::vector<${agg.typeE}*> ${sym}results;" :/:
         doc"MedianAggregator<${agg.typeE}, ${agg.typeR}> $sym($f, ${sym}results);"
 
+    case Statement(sym, n@AggregatorResultForUpdate(agg)) if Optimizer.OpResChecks =>
+      doc"OperationReturnStatus st$sym;" :\\:
+      doc"${sym.tp} $sym = $agg.resultForUpdate(st$sym);" :\\:
+      doc"if(st$sym != OP_SUCCESS) return TR(st$sym);"
+
+    /*************************** STORE *********************************************/
     case Statement(sym, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) =>
       val entryTp = sym.tp.asInstanceOf[StoreType[_]].typeE match {
         case PointerType(tp) => tp
         case tp => tp
       }
-
       val names = ops.collect {
         //TODO: COMMON part. Move.
         case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
@@ -87,7 +100,6 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         case Def(n: EntryIdxGenericFixedRangeOpsObject) =>
           val cols = n.colsRange.asInstanceOf[Constant[List[(Int, Int, Int)]]].underlying.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")
           s"GenericFixedRange_$cols"
-
       }
       val idxes = sym.attributes.get(IndexesFlag).get.indexes
       def idxToDoc(t: (Index, String)) = t._1.tp match {
@@ -100,8 +112,33 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"MultiHashMap<$entryTp, char," :: idxes.map(i => doc"${sym}_Idx_${i.idxNum}_Type").mkDocument(", ") :: doc"> $sym$initSize"
 
     case Statement(sym, StoreIndex(self, idxNum, _, _, _)) => doc"${self}_Idx_${idxNum}_Type& $sym = * (${self}_Idx_${idxNum}_Type *)$self.index[$idxNum];"
+    case Statement(sym, n@StoreDelete1(_, k)) if Optimizer.mvget =>
+      doc"$k->isInvalid = true;"
+
+    case Statement(sym, StoreMap(self, f@Def(PardisLambda(_, _, o)))) =>
+      val typeE = sym.tp.asInstanceOf[StoreType[_]].typeE.asInstanceOf[PointerType[_]].contentsType
+      val entidx = o.res.asInstanceOf[Rep[Any]] match {
+        case Def(GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) => "GenericOps_" + (1 to args.length).mkString("")
+        case Def(mc@Malloc(_)) =>
+          val tp = mc.typeT.asInstanceOf[RecordType[_]].tag.typeName
+          val cols = tp.drop(6).split("_")(0).toInt //SBJ: Assuming SEntry<number>_.....
+          tp + "_Idx" + (1 to cols).mkString("")
+
+      }
+      val idx = doc"HashIndex<$typeE, char, $entidx, 1>"
+      doc"auto& $sym = $self.map<$typeE, $idx>($f);"
+    case Statement(sym, StoreFold(self, z, f)) =>
+      doc"${z.tp} $sym = $self.fold<${z.tp}>($z, $f);"
+    case Statement(sym, StoreFilter(self, f)) =>
+      doc"auto& $sym = $self.filter($f);"
 
 
+case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
+  val symid = sym.id.toString
+      doc"OperationReturnStatus st$symid = $store.insert_nocheck($e);" :\\:
+      doc"if(st$symid != OP_SUCCESS) return TR(st$symid);"
+
+    /*************************** INDEX *********************************************/
     case Statement(sym, IdxSliceRes(idx@Def(StoreIndex(self, idxNum, _, _, _)), key)) if Optimizer.sliceInline =>
       val h = "h" + sym.id
       val IDX_FN = "IDXFN" + sym.id
@@ -221,32 +258,32 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 //    case Statement(sym, n@IdxGet(_, _)) if Optimizer.mvget =>
 //      doc"const ${sym.tp} $sym = " :: nodeToDocument(n) :: ";"
 
-    case Statement(sym, n@StoreDelete1(_, k)) if Optimizer.mvget =>
-      doc"$k->isInvalid = true;"
+//    case Statement(sym, n@IdxGet(_, _)) if Optimizer.OpResChecks =>
+//      doc"${sym.tp} $sym = " :: nodeToDocument(n) :: ";" :\\:
+//      doc"if($sym == nullptr) return ABORT;"
 
+    case Statement(sym, n@IdxGetForUpdate(idx, key)) if Optimizer.OpResChecks =>
+      doc"OperationReturnStatus st$sym;" :\\:
+      doc"${sym.tp} $sym =  $idx.getForUpdate($key, st$sym);" :\\:
+      doc"if(st$sym != OP_SUCCESS) return TR(st$sym);"
+
+    case Statement(sym, n@IdxSliceNoUpdate(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.OpResChecks =>
+      val symid = sym.id.toString
+      doc"OperationReturnStatus st$symid = $idx.sliceNoUpdate($key, " ::
+        doc"[&](${i.tp} $i) -> TransactionReturnStatus {"  :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "});" :\\:
+        doc"if(st$symid != OP_SUCCESS) return TR(st$symid);"
+
+
+    /*************************** FIELD GET STRING *********************************************/
     case Statement(sym, n@StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType =>
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
     case Statement(sym, n@GenericEntryGet(self: Sym[_], idx)) if sym.tp == StringType =>
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
     case Statement(sym, n@StructDynamicFieldAccess(_, _, _)) if sym.tp == StringType =>
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
-    case Statement(sym, StoreMap(self, f@Def(PardisLambda(_, _, o)))) =>
-      val typeE = sym.tp.asInstanceOf[StoreType[_]].typeE.asInstanceOf[PointerType[_]].contentsType
-      val entidx = o.res.asInstanceOf[Rep[Any]] match {
-        case Def(GenericEntryApplyObject(Constant("SteNewSEntry"), Def(LiftedSeq(args)))) => "GenericOps_" + (1 to args.length).mkString("")
-        case Def(mc@Malloc(_)) =>
-          val tp = mc.typeT.asInstanceOf[RecordType[_]].tag.typeName
-          val cols = tp.drop(6).split("_")(0).toInt //SBJ: Assuming SEntry<number>_.....
-          tp + "_Idx" + (1 to cols).mkString("")
 
-      }
-      val idx = doc"HashIndex<$typeE, char, $entidx, 1>"
-      doc"auto& $sym = $self.map<$typeE, $idx>($f);"
-    case Statement(sym, StoreFold(self, z, f)) =>
-      doc"${z.tp} $sym = $self.fold<${z.tp}>($z, $f);"
-    case Statement(sym, StoreFilter(self, f)) =>
-      doc"auto& $sym = $self.filter($f);"
 
+    /*************************** PROFILER *********************************************/
     case Statement(sym, ProfileStart(n@Constant(str))) =>
       val id = str.split(",")(3)
       doc"auto start$id = Now;"
@@ -261,12 +298,14 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"  counters[$n]++;" :/:
         doc"}"
 
+    /*************************** MALLOC -> STACK ALLOC *********************************************/
     case Statement(sym, m@Malloc(Constant(1))) =>
       val tp = sym.tp.asInstanceOf[PointerType[_]].contentsType
       val id = sym.id.toString
       doc"$tp y$id; " ::
         doc"${sym.tp} $sym = &y$id;"
 
+    /*************************** ENTRY  *********************************************/
     case Statement(sym, SteNewSEntry(_, args)) =>
       val id = sym.id.toString
       doc"GenericEntry y$id(false_type(),${args.mkDocument(", ")});" :: doc"GenericEntry* $sym = &y$id;"
@@ -286,6 +325,8 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, GenericEntryApplyObject(_, Def(LiftedSeq(args)))) =>
       val id = sym.id.toString
       doc"GenericEntry y$id(false_type(), ${args.mkDocument(", ")}); GenericEntry* $sym = &y$id;"
+
+
     case _ => super.stmtToDocument(stmt)
   }
 
@@ -326,7 +367,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case MultiResIsEmpty(self: Sym[_]) => doc"$self == nullptr"
 
     case AggregatorResult(self: Sym[_]) => doc"$self.result()"
-    case AggregatorResultForUpdate(self: Sym[_]) => doc"$self.resultForUpdate()"
+    case AggregatorResultForUpdate(self: Sym[_]) if !Optimizer.OpResChecks=> doc"$self.resultForUpdate()"
 
     case StoreInsert(self, e) => doc"$self.add($e)"
     case StoreUnsafeInsert(self, e) => doc"$self.insert_nocheck($e)"

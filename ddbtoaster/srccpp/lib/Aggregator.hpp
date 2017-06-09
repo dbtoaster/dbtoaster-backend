@@ -15,7 +15,7 @@ struct MinAggregator {
     MinAggregator(const std::function<R(E*) >& f, E**res) : minEntry(res), func(f), first(true) {
     }
 
-    void operator()(E* e) {
+    TransactionReturnStatus operator()(E* e) {
         if (first) {
             first = false;
             minRes = func(e);
@@ -28,18 +28,20 @@ struct MinAggregator {
 
             }
         }
+        return SUCCESS;
     }
 
     E* result() {
         return *minEntry;
     }
 
-    E* resultForUpdate() {
+    E* resultForUpdate(OperationReturnStatus& st) {
         E* resE = *minEntry;
         EntryMV<E>* e = resE->e;
         Version<E>* newV = new Version<E>(*resE);
         newV->oldV = e->versionHead;
         e->versionHead = newV;
+        st = OP_SUCCESS;
         return &newV->obj;
     }
 };
@@ -54,7 +56,7 @@ struct MaxAggregator {
     MaxAggregator(const std::function<R(E*) >& f, E**res) : maxEntry(res), func(f), first(true) {
     }
 
-    void operator()(E* e) {
+    TransactionReturnStatus operator()(E* e) {
         if (first) {
             first = false;
             maxRes = func(e);
@@ -67,18 +69,20 @@ struct MaxAggregator {
 
             }
         }
+        return SUCCESS;
     }
 
     E* result() {
         return *maxEntry;
     }
 
-    E* resultForUpdate() {
+    E* resultForUpdate(OperationReturnStatus& st) {
         E* resE = *maxEntry;
         EntryMV<E>* e = resE->e;
         Version<E>* newV = new Version<E>(*resE);
         newV->oldV = e->versionHead;
         e->versionHead = newV;
+        st = OP_SUCCESS;
         return &newV->obj;
     }
 };
@@ -91,8 +95,9 @@ struct MedianAggregator {
     MedianAggregator(const std::function<R(E*)>& f, std::vector<E*>& res) : func(f), results(res) {
     }
 
-    void operator()(E* e) {
+    TransactionReturnStatus operator()(E* e) {
         results.push_back(e);
+        return SUCCESS;
     }
 
     E* result() {
@@ -112,7 +117,7 @@ struct MedianAggregator {
         return results[i];
     }
 
-    E* resultForUpdate() {
+    E* resultForUpdate(OperationReturnStatus& st) {
         if (results.empty())
             return nullptr;
 
@@ -131,6 +136,7 @@ struct MedianAggregator {
         Version<E>* newV = new Version<E>(*resE);
         newV->oldV = e->versionHead.load();
         e->versionHead = newV;
+        st = OP_SUCCESS;
         return &newV->obj;
     }
 };
