@@ -13,6 +13,8 @@
 #include <fstream>
 #include <locale>
 
+#include "TransactionManager.h"
+
 
 #include "ExecutionProfiler.h"
 
@@ -750,17 +752,22 @@ struct SEntry21_IIISSSSSSSSSTSDDDDIIS x4902;
 struct SEntry3_III x4918;
 struct SEntry8_IIIITIIB x4915;
 
+TransactionManager xactManager;
+TransactionManager& Transaction::tm(xactManager);
+Transaction xact;
+
+
 
 FORCE_INLINE TransactionReturnStatus PaymentTx(int x16, date x17, int x18, int x19, int x20, int x21, int x22, int x23, int x24, PString x25, double x26) {
   x4626._1 = x19;
   OperationReturnStatus stx10395;
-  struct SEntry9_ISSSSSSDD* x10395 =  warehouseTblIdx0.getForUpdate(x4626, stx10395);
+  struct SEntry9_ISSSSSSDD* x10395 =  warehouseTblIdx0.getForUpdate(x4626, stx10395, xact);
   if(stx10395 != OP_SUCCESS) return TR(stx10395);
   x10395->_9 += x26;
   x4631._1 = x20;
   x4631._2 = x19;
   OperationReturnStatus stx10401;
-  struct SEntry11_IISSSSSSDDI* x10401 =  districtTblIdx0.getForUpdate(x4631, stx10401);
+  struct SEntry11_IISSSSSSDDI* x10401 =  districtTblIdx0.getForUpdate(x4631, stx10401, xact);
   if(stx10401 != OP_SUCCESS) return TR(stx10401);
   x10401->_10 += x26;
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite18312 = 0;
@@ -772,9 +779,9 @@ FORCE_INLINE TransactionReturnStatus PaymentTx(int x16, date x17, int x18, int x
     x4692._2 = x23;
     x4692._3 = x22;
     x4692._6 = x25;
-    customerTblIdx1.sliceNoUpdate(x4692, x18316);
+    customerTblIdx1.sliceNoUpdate(x4692, x18316, xact);
     OperationReturnStatus stx18321;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18321 = x18316.resultForUpdate(stx18321);
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18321 = x18316.resultForUpdate(stx18321, xact);
     if(stx18321 != OP_SUCCESS) return TR(stx18321);
     ite18312 = x18321;
   } else {
@@ -782,7 +789,7 @@ FORCE_INLINE TransactionReturnStatus PaymentTx(int x16, date x17, int x18, int x
     x4696._2 = x23;
     x4696._3 = x22;
     OperationReturnStatus stx18326;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18326 =  customerTblIdx0.getForUpdate(x4696, stx18326);
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18326 =  customerTblIdx0.getForUpdate(x4696, stx18326, xact);
     if(stx18326 != OP_SUCCESS) return TR(stx18326);
     ite18312 = x18326;
   };
@@ -825,7 +832,7 @@ FORCE_INLINE TransactionReturnStatus PaymentTx(int x16, date x17, int x18, int x
   x4675._6 = x17;
   x4675._7 = x26;
   x4675._8 = x2429;
-  OperationReturnStatus st17267 = historyTbl.insert_nocheck(x4675);
+  OperationReturnStatus st17267 = historyTbl.insert_nocheck(x4675, xact);
   if(st17267 != OP_SUCCESS) return TR(st17267);
   clearTempMem();
   return SUCCESS;
@@ -859,7 +866,7 @@ FORCE_INLINE TransactionReturnStatus NewOrderTx(int x78, date x79, int x80, int 
     int x119 = x95;
     int x120 = x86[x119];
     x4882._1 = x120;
-    struct SEntry5_IISDS* x9077 = itemTblIdx0.get(x4882);
+    struct SEntry5_IISDS* x9077 = itemTblIdx0.get(x4882, xact);
     if((x9077==(NULL))) {
       x103 = 0;
     } else {
@@ -878,13 +885,13 @@ FORCE_INLINE TransactionReturnStatus NewOrderTx(int x78, date x79, int x80, int 
     x4902._1 = x83;
     x4902._2 = x82;
     x4902._3 = x81;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9099 = customerTblIdx0.get(x4902);
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9099 = customerTblIdx0.get(x4902, xact);
     x4905._1 = x81;
-    struct SEntry9_ISSSSSSDD* x9102 = warehouseTblIdx0.get(x4905);
+    struct SEntry9_ISSSSSSDD* x9102 = warehouseTblIdx0.get(x4905, xact);
     x4908._1 = x82;
     x4908._2 = x81;
     OperationReturnStatus stx10669;
-    struct SEntry11_IISSSSSSDDI* x10669 =  districtTblIdx0.getForUpdate(x4908, stx10669);
+    struct SEntry11_IISSSSSSDDI* x10669 =  districtTblIdx0.getForUpdate(x4908, stx10669, xact);
     if(stx10669 != OP_SUCCESS) return TR(stx10669);
     int x4910 = x10669->_11;
     x10669->_11 += 1;
@@ -897,12 +904,12 @@ FORCE_INLINE TransactionReturnStatus NewOrderTx(int x78, date x79, int x80, int 
     x4915._6 = -1;
     x4915._7 = x84;
     x4915._8 = x157;
-    OperationReturnStatus st17324 = orderTbl.insert_nocheck(x4915);
+    OperationReturnStatus st17324 = orderTbl.insert_nocheck(x4915, xact);
     if(st17324 != OP_SUCCESS) return TR(st17324);
     x4918._1 = x4910;
     x4918._2 = x82;
     x4918._3 = x81;
-    OperationReturnStatus st17328 = newOrderTbl.insert_nocheck(x4918);
+    OperationReturnStatus st17328 = newOrderTbl.insert_nocheck(x4918, xact);
     if(st17328 != OP_SUCCESS) return TR(st17328);
     double x165 = 0.0;
     x95 = 0;
@@ -920,7 +927,7 @@ FORCE_INLINE TransactionReturnStatus NewOrderTx(int x78, date x79, int x80, int 
       x4932._1 = ol_i_id;
       x4932._2 = ol_supply_w_id;
       OperationReturnStatus stx10703;
-      struct SEntry17_IIISSSSSSSSSSIIIS* x10703 =  stockTblIdx0.getForUpdate(x4932, stx10703);
+      struct SEntry17_IIISSSSSSSSSSIIIS* x10703 =  stockTblIdx0.getForUpdate(x4932, stx10703, xact);
       if(stx10703 != OP_SUCCESS) return TR(stx10703);
       const PString& x4935 = *(&x10703->_4 + (x82-1));
       int x4936 = x10703->_3;
@@ -971,7 +978,7 @@ FORCE_INLINE TransactionReturnStatus NewOrderTx(int x78, date x79, int x80, int 
       x4980._8 = ol_quantity;
       x4980._9 = ol_amount;
       x4980._10 = x4935;
-      OperationReturnStatus st17396 = orderLineTbl.insert_nocheck(x4980);
+      OperationReturnStatus st17396 = orderLineTbl.insert_nocheck(x4980, xact);
       if(st17396 != OP_SUCCESS) return TR(st17396);
       int x239 = x95;
       x95 = (x239+(1));
@@ -998,7 +1005,7 @@ FORCE_INLINE TransactionReturnStatus DeliveryTx(int x247, date x248, int x249, i
     int x264 = x255;
     x5121._2 = x264;
     x5121._3 = x249;
-    newOrderTblIdx1.sliceNoUpdate(x5121, x5118);
+    newOrderTblIdx1.sliceNoUpdate(x5121, x5118, xact);
     struct SEntry3_III* x5123 = x5118.result();
     if((x5123!=(NULL))) {
       int x5126 = x5123->_1;
@@ -1010,7 +1017,7 @@ FORCE_INLINE TransactionReturnStatus DeliveryTx(int x247, date x248, int x249, i
       x5133._2 = x278;
       x5133._3 = x249;
       OperationReturnStatus stx10938;
-      struct SEntry8_IIIITIIB* x10938 =  orderTblIdx0.getForUpdate(x5133, stx10938);
+      struct SEntry8_IIIITIIB* x10938 =  orderTblIdx0.getForUpdate(x5133, stx10938, xact);
       if(stx10938 != OP_SUCCESS) return TR(stx10938);
       x10938->_6 = x250;
       double x287 = 0.0;
@@ -1023,14 +1030,14 @@ FORCE_INLINE TransactionReturnStatus DeliveryTx(int x247, date x248, int x249, i
         double x294 = x287;
         x287 = (x294+((orderLineEntry->_9)));
         return SUCCESS;
-      });
+      }, xact);
       if(st13326 != OP_SUCCESS) return TR(st13326);
       int x302 = x255;
       x5146._1 = (x10938->_4);
       x5146._2 = x302;
       x5146._3 = x249;
       OperationReturnStatus stx10964;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x10964 =  customerTblIdx0.getForUpdate(x5146, stx10964);
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x10964 =  customerTblIdx0.getForUpdate(x5146, stx10964, xact);
       if(stx10964 != OP_SUCCESS) return TR(stx10964);
       double x306 = x287;
       x10964->_17 += x306;
@@ -1050,7 +1057,7 @@ FORCE_INLINE TransactionReturnStatus DeliveryTx(int x247, date x248, int x249, i
 FORCE_INLINE TransactionReturnStatus StockLevelTx(int x321, date x322, int x323, int x324, int x325, int x326) {
   x5278._1 = x325;
   x5278._2 = x324;
-  struct SEntry11_IISSSSSSDDI* x9487 = districtTblIdx0.get(x5278);
+  struct SEntry11_IISSSSSSDDI* x9487 = districtTblIdx0.get(x5278, xact);
   int x5280 = x9487->_11;
   int x335 = (x5280-(20));
   unordered_set<int> unique_ol_i_id; //setApply2
@@ -1067,12 +1074,12 @@ FORCE_INLINE TransactionReturnStatus StockLevelTx(int x321, date x322, int x323,
       int x5307 = orderLineEntry->_5;
       x5309._1 = x5307;
       x5309._2 = x324;
-      struct SEntry17_IIISSSSSSSSSSIIIS* x9501 = stockTblIdx0.get(x5309);
+      struct SEntry17_IIISSSSSSSSSSIIIS* x9501 = stockTblIdx0.get(x5309, xact);
       if(((x9501->_3)<(x326))) {
         unique_ol_i_id.insert(x5307);
       };
       return SUCCESS;
-    });
+    }, xact);
     if(st13434 != OP_SUCCESS) return TR(st13434);
     int x358 = x335;
     x335 = (x358+(1));
@@ -1090,14 +1097,14 @@ FORCE_INLINE TransactionReturnStatus OrderStatusTx(int x364, date x365, int x366
     x5373._2 = x368;
     x5373._3 = x367;
     x5373._6 = x371;
-    customerTblIdx1.sliceNoUpdate(x5373, x18951);
+    customerTblIdx1.sliceNoUpdate(x5373, x18951, xact);
     struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18956 = x18951.result();
     ite18947 = x18956;
   } else {
     x5377._1 = x370;
     x5377._2 = x368;
     x5377._3 = x367;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18961 = customerTblIdx0.get(x5377);
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18961 = customerTblIdx0.get(x5377, xact);
     ite18947 = x18961;
   };
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x5350 = ite18947;
@@ -1108,7 +1115,7 @@ FORCE_INLINE TransactionReturnStatus OrderStatusTx(int x364, date x365, int x366
   x5355._2 = x368;
   x5355._3 = x367;
   x5355._4 = (x5350->_3);
-  orderTblIdx1.sliceNoUpdate(x5355, x5353);
+  orderTblIdx1.sliceNoUpdate(x5355, x5353, xact);
   struct SEntry8_IIIITIIB* x5357 = x5353.result();
   int ite18976 = 0;
   if((x5357==(NULL))) {
@@ -1122,7 +1129,7 @@ FORCE_INLINE TransactionReturnStatus OrderStatusTx(int x364, date x365, int x366
     OperationReturnStatus st18988 = orderLineTblIdx1.sliceNoUpdate(x5366, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
       int x409 = 1;
       return SUCCESS;
-    });
+    }, xact);
     if(st18988 != OP_SUCCESS) return TR(st18988);
     ite18976 = 1;
   };
@@ -1144,74 +1151,89 @@ int main(int argc, char** argv) {
   
   TPCCDataGen tpcc;
   tpcc.loadPrograms();
-  tpcc.loadWare();
-  tpcc.loadDist();
-  tpcc.loadCust();
-  tpcc.loadItem();
-  tpcc.loadNewOrd();
-  tpcc.loadOrders();
-  tpcc.loadOrdLine();
-  tpcc.loadHist();
-  tpcc.loadStocks();
+  
+  
+  xactManager.begin(xact);
+  tpcc.loadWare(xact);
+  tpcc.loadDist(xact);
+  tpcc.loadCust(xact);
+  tpcc.loadItem(xact);
+  tpcc.loadNewOrd(xact);
+  tpcc.loadOrders(xact);
+  tpcc.loadOrdLine(xact);
+  tpcc.loadHist(xact);
+  tpcc.loadStocks(xact);
+  xactManager.commit(xact);
   
   uint xactCounts[5] = {0, 0, 0, 0, 0};
   auto start = Now;
   //CALLGRIND_START_INSTRUMENTATION;
   for(size_t i = 0; i < numPrograms; ++i){
     Program *prg = tpcc.programs[i];
+    xactManager.begin(xact);
+    TransactionReturnStatus st;
     switch(prg->id){
        case NEWORDER :
         {
            NewOrder& p = *(NewOrder *)prg;
            xactCounts[0]++;
-           NewOrderTx(false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
+           st = NewOrderTx(false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
            break;
         }
       case PAYMENTBYID :
         {
            PaymentById& p = *(PaymentById *) prg;
            xactCounts[1]++;
-           PaymentTx(false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
+           st = PaymentTx(false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
            break;
         }
       case PAYMENTBYNAME :
         {
            PaymentByName& p = *(PaymentByName *) prg;
            xactCounts[1]++;
-           PaymentTx(false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
+           st = PaymentTx(false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
            break;
         }
       case ORDERSTATUSBYID :
         {
            OrderStatusById &p = *(OrderStatusById *) prg;
            xactCounts[2]++;
-           OrderStatusTx(false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
+           st = OrderStatusTx(false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
            break;
         }
       case ORDERSTATUSBYNAME :
         {
            OrderStatusByName &p = *(OrderStatusByName *) prg;
            xactCounts[2]++;
-           OrderStatusTx(false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
+           st = OrderStatusTx(false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
            break;
         }
       case DELIVERY :
         {
            Delivery &p = *(Delivery *) prg;
            xactCounts[3]++;
-           DeliveryTx(false, p.datetime, p.w_id, p.o_carrier_id);
+           st = DeliveryTx(false, p.datetime, p.w_id, p.o_carrier_id);
            break;
         }
       case STOCKLEVEL :
        {
          StockLevel &p = *(StockLevel *) prg;
          xactCounts[4]++;
-         StockLevelTx(false, -1, -1, p.w_id, p.d_id, p.threshold);
+         st = StockLevelTx(false, -1, -1, p.w_id, p.d_id, p.threshold);
          break;
        }
        default : cerr << "UNKNOWN PROGRAM TYPE" << endl;
   
     }
+    if(st == SUCCESS) {
+      bool ret = xactManager.validateAndCommit(xact);
+      assert(ret);
+    } else if (st == ABORT) {
+      xactManager.rollback(xact);
+    } else if (st == WW_ABORT) {
+      throw std::logic_error("Cannot have WW abort");
+    }
+  
   }
   //CALLGRIND_STOP_INSTRUMENTATION;
   //CALLGRIND_DUMP_STATS;

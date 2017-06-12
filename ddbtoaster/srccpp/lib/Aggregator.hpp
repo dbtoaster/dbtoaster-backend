@@ -117,7 +117,7 @@ struct MedianAggregator {
         return results[i];
     }
 
-    E* resultForUpdate(OperationReturnStatus& st) {
+    E* resultForUpdate(OperationReturnStatus& st, Transaction& xact) {
         if (results.empty())
             return nullptr;
 
@@ -132,9 +132,15 @@ struct MedianAggregator {
         int i = s / 2;
         if (s % 2 == 0) i--;
         E* resE = results[i];
+
         EntryMV<E>* e = resE->e;
-        Version<E>* newV = new Version<E>(*resE);
-        newV->oldV = e->versionHead.load();
+        Version<E>* vh = e->versionHead;
+        if (&vh->obj != resE) {
+            st = WW_VALUE;
+            return nullptr;
+        }
+        Version<E>* newV = new Version<E>(*resE, xact);
+        newV->oldV = vh;
         e->versionHead = newV;
         st = OP_SUCCESS;
         return &newV->obj;

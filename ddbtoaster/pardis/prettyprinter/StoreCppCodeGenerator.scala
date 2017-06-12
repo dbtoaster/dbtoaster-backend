@@ -73,7 +73,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case Statement(sym, n@AggregatorResultForUpdate(agg)) if Optimizer.OpResChecks =>
       doc"OperationReturnStatus st$sym;" :\\:
-      doc"${sym.tp} $sym = $agg.resultForUpdate(st$sym);" :\\:
+      doc"${sym.tp} $sym = $agg.resultForUpdate(st$sym, xact);" :\\:
       doc"if(st$sym != OP_SUCCESS) return TR(st$sym);"
 
     /*************************** STORE *********************************************/
@@ -135,7 +135,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
 case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
   val symid = sym.id.toString
-      doc"OperationReturnStatus st$symid = $store.insert_nocheck($e);" :\\:
+      doc"OperationReturnStatus st$symid = $store.insert_nocheck($e, xact);" :\\:
       doc"if(st$symid != OP_SUCCESS) return TR(st$symid);"
 
     /*************************** INDEX *********************************************/
@@ -264,13 +264,13 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
 
     case Statement(sym, n@IdxGetForUpdate(idx, key)) if Optimizer.OpResChecks =>
       doc"OperationReturnStatus st$sym;" :\\:
-      doc"${sym.tp} $sym =  $idx.getForUpdate($key, st$sym);" :\\:
+      doc"${sym.tp} $sym =  $idx.getForUpdate($key, st$sym, xact);" :\\:
       doc"if(st$sym != OP_SUCCESS) return TR(st$sym);"
 
     case Statement(sym, n@IdxSliceNoUpdate(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.OpResChecks =>
       val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $idx.sliceNoUpdate($key, " ::
-        doc"[&](${i.tp} $i) -> TransactionReturnStatus {"  :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "});" :\\:
+        doc"[&](${i.tp} $i) -> TransactionReturnStatus {"  :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
         doc"if(st$symid != OP_SUCCESS) return TR(st$symid);"
 
 
@@ -367,10 +367,10 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
     case MultiResIsEmpty(self: Sym[_]) => doc"$self == nullptr"
 
     case AggregatorResult(self: Sym[_]) => doc"$self.result()"
-    case AggregatorResultForUpdate(self: Sym[_]) if !Optimizer.OpResChecks=> doc"$self.resultForUpdate()"
+    case AggregatorResultForUpdate(self: Sym[_]) if !Optimizer.OpResChecks=> doc"$self.resultForUpdate(xact)"
 
     case StoreInsert(self, e) => doc"$self.add($e)"
-    case StoreUnsafeInsert(self, e) => doc"$self.insert_nocheck($e)"
+    case StoreUnsafeInsert(self, e) => doc"$self.insert_nocheck($e, xact)"
     case StoreGet(self, idx, key) => doc"$self.get($key, $idx)"
     case StoreGetCopy(self, idx, key) => doc"$self.getCopy($key, $idx)"
     case StoreGetCopyDependent(self, idx, key) => doc"$self.getCopyDependent($key, $idx)"
@@ -388,10 +388,10 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
     case StoreClear(self) => doc"$self.clear()"
     case StoreCopyIntoPool(self, e) => doc"$self.copyIntoPool($e)"
 
-    case IdxGet(self, key) => doc"$self.get($key)"
+    case IdxGet(self, key) => doc"$self.get($key, xact)"
     case IdxGetCopy(self, key) => doc"$self.getCopy($key)"
     case IdxGetCopyDependent(self, key) => doc"$self.getCopyDependent($key)"
-    case IdxGetForUpdate(self, key) => doc"$self.getForUpdate($key)"
+    case IdxGetForUpdate(self, key) => doc"$self.getForUpdate($key, xact)"
     case IdxUpdate(self, key) => doc"$self.update($key)"
     case IdxUpdateCopy(self, key, primary) => doc"$self.updateCopy($key, &$primary)"
     case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopyDependent($key, $ref)"
@@ -399,10 +399,10 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
     case IdxDeleteCopy(self, key, primary) => doc"$self.delCopy($key, &$primary)"
     case IdxDeleteCopyDependent(self, key) => doc"$self.delCopyDependent($key)"
     case IdxSlice(self, key, f) => doc"$self.slice($key, $f)"
-    case IdxSliceNoUpdate(self, key, f) => doc"$self.sliceNoUpdate($key, $f)"
+    case IdxSliceNoUpdate(self, key, f) => doc"$self.sliceNoUpdate($key, $f, xact)"
     case IdxSliceCopy(self, key, f) => doc"$self.sliceCopy($key, $f)"
     case IdxSliceCopyDependent(self, key, f) => doc"$self.sliceCopyDependent($key, $f)"
-    case IdxForeach(self, f) => doc"$self.foreach($f)"
+    case IdxForeach(self, f) => doc"$self.foreach($f, xact)"
     case IdxForeachCopy(self, f) => doc"$self.foreachCopy($f)"
     case IdxClear(self) => doc"$self.clear()"
     case IdxForeachResMap(idx, f, res: Sym[_]) => doc"$idx.foreachResMap($f, $res)"

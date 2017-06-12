@@ -692,6 +692,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |#include <fstream>
        |#include <locale>
        |
+       |#include "TransactionManager.h"
+       |
        |${if(Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
        |#include "ExecutionProfiler.h"
        |
@@ -875,74 +877,89 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |
          |TPCCDataGen tpcc;
          |tpcc.loadPrograms();
-         |tpcc.loadWare();
-         |tpcc.loadDist();
-         |tpcc.loadCust();
-         |tpcc.loadItem();
-         |tpcc.loadNewOrd();
-         |tpcc.loadOrders();
-         |tpcc.loadOrdLine();
-         |tpcc.loadHist();
-         |tpcc.loadStocks();
+         |
+         |
+         |xactManager.begin(xact);
+         |tpcc.loadWare(xact);
+         |tpcc.loadDist(xact);
+         |tpcc.loadCust(xact);
+         |tpcc.loadItem(xact);
+         |tpcc.loadNewOrd(xact);
+         |tpcc.loadOrders(xact);
+         |tpcc.loadOrdLine(xact);
+         |tpcc.loadHist(xact);
+         |tpcc.loadStocks(xact);
+         |xactManager.commit(xact);
          |
          |uint xactCounts[5] = {0, 0, 0, 0, 0};
          |auto start = Now;
          |//CALLGRIND_START_INSTRUMENTATION;
          |for(size_t i = 0; i < numPrograms; ++i){
          |  Program *prg = tpcc.programs[i];
+         |  xactManager.begin(xact);
+         |  TransactionReturnStatus st;
          |  switch(prg->id){
          |     case NEWORDER :
          |      {
          |         NewOrder& p = *(NewOrder *)prg;
          |         xactCounts[0]++;
-         |         NewOrderTx($showOutput, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
+         |         st = NewOrderTx($showOutput, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
          |         break;
          |      }
          |    case PAYMENTBYID :
          |      {
          |         PaymentById& p = *(PaymentById *) prg;
          |         xactCounts[1]++;
-         |         PaymentTx($showOutput, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
+         |         st = PaymentTx($showOutput, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
          |         break;
          |      }
          |    case PAYMENTBYNAME :
          |      {
          |         PaymentByName& p = *(PaymentByName *) prg;
          |         xactCounts[1]++;
-         |         PaymentTx($showOutput, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
+         |         st = PaymentTx($showOutput, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
          |         break;
          |      }
          |    case ORDERSTATUSBYID :
          |      {
          |         OrderStatusById &p = *(OrderStatusById *) prg;
          |         xactCounts[2]++;
-         |         OrderStatusTx($showOutput, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
+         |         st = OrderStatusTx($showOutput, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
          |         break;
          |      }
          |    case ORDERSTATUSBYNAME :
          |      {
          |         OrderStatusByName &p = *(OrderStatusByName *) prg;
          |         xactCounts[2]++;
-         |         OrderStatusTx($showOutput, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
+         |         st = OrderStatusTx($showOutput, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
          |         break;
          |      }
          |    case DELIVERY :
          |      {
          |         Delivery &p = *(Delivery *) prg;
          |         xactCounts[3]++;
-         |         DeliveryTx($showOutput, p.datetime, p.w_id, p.o_carrier_id);
+         |         st = DeliveryTx($showOutput, p.datetime, p.w_id, p.o_carrier_id);
          |         break;
          |      }
          |    case STOCKLEVEL :
          |     {
          |       StockLevel &p = *(StockLevel *) prg;
          |       xactCounts[4]++;
-         |       StockLevelTx($showOutput, -1, -1, p.w_id, p.d_id, p.threshold);
+         |       st = StockLevelTx($showOutput, -1, -1, p.w_id, p.d_id, p.threshold);
          |       break;
          |     }
          |     default : cerr << "UNKNOWN PROGRAM TYPE" << endl;
          |
          |  }
+         |  if(st == SUCCESS) {
+         |    bool ret = xactManager.validateAndCommit(xact);
+         |    assert(ret);
+         |  } else if (st == ABORT) {
+         |    xactManager.rollback(xact);
+         |  } else if (st == WW_ABORT) {
+         |    throw std::logic_error("Cannot have WW abort");
+         |  }
+         |
          |}
          |//CALLGRIND_STOP_INSTRUMENTATION;
          |//CALLGRIND_DUMP_STATS;
@@ -1045,7 +1062,14 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     //    val txns = new PrintWriter("TpccTxns.hpp")
     //    txns.print(blocks)
     //    txns.close()
-    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
+    val tm =
+      """
+        |TransactionManager xactManager;
+        |TransactionManager& Transaction::tm(xactManager);
+        |Transaction xact;
+        |""".stripMargin
+
+    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :\\: tm :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }

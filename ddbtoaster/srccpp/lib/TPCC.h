@@ -431,7 +431,7 @@ struct TPCCDataGen {
         fin.close();
     }
 
-    void loadCust() {
+    void loadCust(Transaction& xact) {
         std::ifstream fin(inputTableDir + "customer.txt");
         std::string line;
         CustomerEntry c;
@@ -465,7 +465,7 @@ struct TPCCDataGen {
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
 #else
-            customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
+            customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)), xact);
 #endif
 #else
 
@@ -497,7 +497,7 @@ struct TPCCDataGen {
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].customerTbl.insert_nocheck(c);
 #else
-            customerTbl.insert_nocheck(c);
+            customerTbl.insert_nocheck(c, xact);
 #endif
 #endif
         }
@@ -531,7 +531,7 @@ struct TPCCDataGen {
             char c_21[501];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c_1, &c_2, &c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12, datestr, c_14, &c_15, &c_16, &c_17, &c_18, &c_19, &c_20, c_21);
             c_13 = StrToIntdate(datestr);
-            custRes.add(new CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
+            custRes.add(new CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)), xact);
 #else
             CustomerEntry *cR = new CustomerEntry();
             cR->_4.data_ = new char[17];
@@ -558,7 +558,7 @@ struct TPCCDataGen {
             cR->_12.recomputeSize();
             cR->_14.recomputeSize();
             cR->_21.recomputeSize();
-            custRes.add(cR);
+            custRes.add(cR, xact);
 #endif
         }
         fin.close();
@@ -566,7 +566,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadDist() {
+    void loadDist(Transaction& xact) {
         std::string line;
         std::ifstream fin(inputTableDir + "district.txt");
 
@@ -589,7 +589,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(d_2)].districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
 #else
-            districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
+            districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11), xact);
 #endif
 #else
             d._3.data_ = new char[11];
@@ -608,7 +608,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(d._2)].districtTbl.insert_nocheck(d);
 #else
-            districtTbl.insert_nocheck(d);
+            districtTbl.insert_nocheck(d, xact);
 #endif
 #endif
         }
@@ -630,7 +630,7 @@ struct TPCCDataGen {
             double d_10;
             int d_11;
             sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d_1, &d_2, d_3, d_4, d_5, d_6, d_7, d_8, &d_9, &d_10, &d_11);
-            distRes.add(new DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
+            distRes.add(new DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11), xact);
 
 #else
             DistrictEntry *dR = new DistrictEntry();
@@ -647,7 +647,7 @@ struct TPCCDataGen {
             dR->_6.recomputeSize();
             dR->_7.recomputeSize();
             dR->_8.recomputeSize();
-            distRes.add(dR);
+            distRes.add(dR, xact);
 #endif
         }
         fin.close();
@@ -655,7 +655,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadHist() {
+    void loadHist(Transaction& xact) {
 
         std::string line;
         std::ifstream fin;
@@ -678,7 +678,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(h_5)].historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
 #else
-            historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
+            historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)), xact);
 #endif
 
 #else
@@ -689,7 +689,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(h._5)].historyTbl.insert_nocheck(h);
 #else
-            historyTbl.insert_nocheck(h);
+            historyTbl.insert_nocheck(h, xact);
 #endif
 #endif
         }
@@ -709,14 +709,14 @@ struct TPCCDataGen {
             char h_8[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h_1, &h_2, &h_3, &h_4, &h_5, datestr, &h_7, h_8);
             h_6 = StrToIntdate(datestr);
-            histRes.add(new HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
+            histRes.add(new HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)), xact);
 #else
             HistoryEntry *hR = new HistoryEntry();
             hR->_8.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &hR->_1, &hR->_2, &hR->_3, &hR->_4, &hR->_5, datestr, &hR->_7, hR->_8.data_);
             hR->_6 = StrToIntdate(datestr);
             hR->_8.recomputeSize();
-            histRes.add(hR);
+            histRes.add(hR, xact);
 #endif
         }
         fin.close();
@@ -724,7 +724,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadItem() {
+    void loadItem(Transaction& xact) {
 
         std::string line;
         std::ifstream fin;
@@ -743,7 +743,7 @@ struct TPCCDataGen {
             for (int x = 0; x < numThreads; ++x)
                 partitions[x].itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
 #else
-            itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
+            itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5), xact);
 #endif
 #else
             i._3.data_ = new char[25];
@@ -755,7 +755,7 @@ struct TPCCDataGen {
             for (int x = 0; x < numThreads; ++x)
                 partitions[x].itemTbl.insert_nocheck(i);
 #else
-            itemTbl.insert_nocheck(i);
+            itemTbl.insert_nocheck(i, xact);
 #endif
 #endif
         }
@@ -771,7 +771,7 @@ struct TPCCDataGen {
             double i_4;
             char i_5[51];
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i_1, &i_2, i_3, &i_4, i_5);
-            itemRes.add(new ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
+            itemRes.add(new ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5), xact);
 #else
             ItemEntry *iR = new ItemEntry();
             iR->_3.data_ = new char[25];
@@ -779,7 +779,7 @@ struct TPCCDataGen {
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &iR->_1, &iR->_2, iR->_3.data_, &iR->_4, iR->_5.data_);
             iR->_3.recomputeSize();
             iR->_5.recomputeSize();
-            itemRes.add(iR);
+            itemRes.add(iR, xact);
 #endif
         }
         fin.close();
@@ -787,7 +787,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadNewOrd() {
+    void loadNewOrd(Transaction& xact) {
         std::string line;
         std::ifstream fin;
 
@@ -803,14 +803,14 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(n_3)].newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3));
 #else
-            newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3));
+            newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3), xact);
 #endif
 #else
             sscanf(line.c_str(), u32 "," u8 "," u8, &n._1, &n._2, &n._3);
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(n._3)].newOrderTbl.insert_nocheck(n);
 #else
-            newOrderTbl.insert_nocheck(n);
+            newOrderTbl.insert_nocheck(n, xact);
 #endif
 #endif
         }
@@ -824,11 +824,11 @@ struct TPCCDataGen {
             int n_2;
             int n_3;
             sscanf(line.c_str(), u32 "," u8 "," u8, &n_1, &n_2, &n_3);
-            newOrdRes.add(new NewOrderEntry(false_type(), n_1, n_2, n_3));
+            newOrdRes.add(new NewOrderEntry(false_type(), n_1, n_2, n_3), xact);
 #else
             NewOrderEntry *nR = new NewOrderEntry();
             sscanf(line.c_str(), u32 "," u8 "," u8, &nR->_1, &nR->_2, &nR->_3);
-            newOrdRes.add(nR);
+            newOrdRes.add(nR, xact);
 #endif
         }
         fin.close();
@@ -836,7 +836,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadOrdLine() {
+    void loadOrdLine(Transaction& xact) {
 
         std::string line;
         std::ifstream fin;
@@ -861,7 +861,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(e_3)].orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
 #else
-            orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
+            orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)), xact);
 #endif
 #else
             e._10.data_ = new char[25];
@@ -871,7 +871,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(e._3)].orderLineTbl.insert_nocheck(e);
 #else
-            orderLineTbl.insert_nocheck(e);
+            orderLineTbl.insert_nocheck(e, xact);
 #endif
 #endif
         }
@@ -893,14 +893,14 @@ struct TPCCDataGen {
             char e_10[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e_1, &e_2, &e_3, &e_4, &e_5, &e_6, datestr, &e_8, &e_9, e_10);
             e_7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
-            ordLRes.add(new OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
+            ordLRes.add(new OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)), xact);
 #else
             OrderLineEntry * eR = new OrderLineEntry();
             eR->_10.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &eR->_1, &eR->_2, &eR->_3, &eR->_4, &eR->_5, &eR->_6, datestr, &eR->_8, &eR->_9, eR->_10.data_);
             eR->_7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
             eR->_10.recomputeSize();
-            ordLRes.add(eR);
+            ordLRes.add(eR, xact);
 #endif
         }
         fin.close();
@@ -908,7 +908,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadOrders() {
+    void loadOrders(Transaction& xact) {
 
         std::string line;
         std::ifstream fin;
@@ -936,7 +936,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(o_3)].orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
 #else
-            orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
+            orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8), xact);
 #endif
 #else
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &o._1, &o._2, &o._3, &o._4, datestr, carrier, &o._7, &local);
@@ -946,7 +946,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(o._3)].orderTbl.insert_nocheck(o);
 #else
-            orderTbl.insert_nocheck(o);
+            orderTbl.insert_nocheck(o, xact);
 #endif
 #endif
         }
@@ -968,14 +968,14 @@ struct TPCCDataGen {
             o_5 = StrToIntdate(datestr);
             o_6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             o_8 = local;
-            ordRes.add(new OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
+            ordRes.add(new OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8), xact);
 #else
             OrderEntry *oR = new OrderEntry();
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &oR->_1, &oR->_2, &oR->_3, &oR->_4, datestr, carrier, &oR->_7, &local);
             oR->_5 = StrToIntdate(datestr);
             oR->_6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             oR->_8 = local;
-            ordRes.add(oR);
+            ordRes.add(oR, xact);
 #endif
         }
         fin.close();
@@ -983,7 +983,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadStocks() {
+    void loadStocks(Transaction& xact) {
 
         std::string line;
         std::ifstream fin;
@@ -1015,7 +1015,7 @@ struct TPCCDataGen {
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
 #else
-            stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
+            stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)), xact);
 #endif
 #else
             s._4.data_ = new char[25];
@@ -1045,7 +1045,7 @@ struct TPCCDataGen {
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].stockTbl.insert_nocheck(s);
 #else
-            stockTbl.insert_nocheck(s);
+            stockTbl.insert_nocheck(s, xact);
 #endif
 #endif
         }
@@ -1073,7 +1073,7 @@ struct TPCCDataGen {
             int s_16;
             char s_17[51];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &s_1, &s_2, &s_3, s_4, s_5, s_6, s_7, s_8, s_9, s_10, s_11, s_12, s_13, &s_14, &s_15, &s_16, s_17);
-            stockRes.add(new StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
+            stockRes.add(new StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)), xact);
 #else
             StockEntry *sR = new StockEntry();
             sR->_4.data_ = new char[25];
@@ -1099,7 +1099,7 @@ struct TPCCDataGen {
             sR->_12.recomputeSize();
             sR->_13.recomputeSize();
             sR->_17.recomputeSize();
-            stockRes.add(sR);
+            stockRes.add(sR, xact);
 #endif
         }
         fin.close();
@@ -1107,7 +1107,7 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadWare() {
+    void loadWare(Transaction& xact) {
 
         std::string line;
         std::ifstream fin;
@@ -1128,7 +1128,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(w_1)].warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
 #else
-            warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
+            warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9), xact);
 #endif
 #else
             w._2.data_ = new char[11];
@@ -1147,7 +1147,7 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(w._1)].warehouseTbl.insert_nocheck(w);
 #else
-            warehouseTbl.insert_nocheck(w);
+            warehouseTbl.insert_nocheck(w, xact);
 #endif
 
 #endif
@@ -1168,7 +1168,7 @@ struct TPCCDataGen {
             double w_8;
             double w_9;
             sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w_1, w_2, w_3, w_4, w_5, w_6, w_7, &w_8, &w_9);
-            wareRes.add(new WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
+            wareRes.add(new WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9), xact);
 #else
             WarehouseEntry *wR = new WarehouseEntry();
             wR->_2.data_ = new char[11];
@@ -1184,7 +1184,7 @@ struct TPCCDataGen {
             wR->_5.recomputeSize();
             wR->_6.recomputeSize();
             wR->_7.recomputeSize();
-            wareRes.add(wR);
+            wareRes.add(wR, xact);
 #endif
         }
         fin.close();

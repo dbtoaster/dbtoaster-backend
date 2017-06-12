@@ -3,7 +3,8 @@
 #define TYPES_H
 struct Transaction;
 struct TransactionManager;
-
+struct PRED;
+struct VBase;
 
 #ifdef NDEBUG
 #define  FORCEINLINE  __attribute__((always_inline))
@@ -17,6 +18,10 @@ typedef uint64_t timestamp;
 const timestamp mask = 1LL << 63;
 const timestamp nonAccessibleMemory = mask + 100;
 const timestamp initCommitTS = mask + 5;
+
+#define isTempTS(ts) (ts&mask)  //to check if timestamp is temporary or a proper commit ts
+#define PTRtoTS(t) ((timestamp) t ^ mask) // generate temporary timestamp for transaction from its pointer
+#define TStoPTR(ts) ((Transaction*) (ts ^ mask)) //get transaction pointer from its temporary timestamp
 
 template<typename T>
 FORCE_INLINE bool isMarked(T t) {
@@ -33,13 +38,15 @@ FORCE_INLINE T unmark(T t) {
     return (T) ((size_t) t & ~mask);
 }
 
+typedef std::bitset<32> col_type;
+
 enum TransactionReturnStatus : char {
     SUCCESS, ABORT, WW_ABORT, COMMIT_FAILURE
 };
 
-enum Operation : char {
-    NOOP, INSERT, DELETE, UPDATE, INVALID
-};
+//enum Operation : char {
+//    NOOP, INSERT, DELETE, UPDATE, INVALID
+//};
 
 enum OperationReturnStatus : char {
     OP_SUCCESS, NO_KEY, DUPLICATE_KEY, WW_VALUE
