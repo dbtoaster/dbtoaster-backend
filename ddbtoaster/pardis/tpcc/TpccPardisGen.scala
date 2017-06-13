@@ -669,6 +669,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
     file.close()
   }
 }
+
 class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
   import IR._
@@ -694,7 +695,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |
        |#include "TransactionManager.h"
        |
-       |${if(Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
+       |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations) "#define EXEC_PROFILE 1" else ""}
        |#include "ExecutionProfiler.h"
        |
        |using namespace std;
@@ -791,34 +792,37 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
     }
 
-    val stores = optTP.globalVars.map(s => {
+    val (stTypdef, stDecl, stInit) = optTP.globalVars.map(s => {
       def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
 
       val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
-      val idxTypes = idx2(s).filter(_._2 != "INone").map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
+      val idx3 = idx2(s).filter(_._2 != "INone")
+      val idxTypes = idx3.map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = doc"typedef MultiHashMapMV<${entryTp}," :: idxTypes.map(t=>idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}StoreType;"
-      val initSize = if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes);" else doc";"
-      val storeDecl = s.name :: "StoreType  " :: s.name :: initSize
+      val storeTypeDef = doc"typedef MultiHashMapMV<${entryTp}," :: idxTypes.map(t => idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}StoreType;"
 
-      val idxDecl = idx2(s).filter(_._2 != "INone").zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1} = * (${idxTypeName(t._2)} *)${s.name}.index[${t._2}];").mkDocument("\n")
-      idxTypeDefs :\\: storeTypeDef :\\: storeDecl :\\: idxDecl
-    }).mkDocument("\n", "\n\n\n", "\n")
+      val storeDecl = s.name :: "StoreType  " :: s.name :: ";"
+      val idxDecl = idx3.zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1};").mkDocument("\n")
+
+      val storeinit = s.name :: (if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes)" else doc"()") :: ", "
+      val idxInit = idx3.zipWithIndex.map(t => doc"${t._1._1}(*(${idxTypeName(t._2)} *)${s.name}.index[${t._2}])").mkDocument(", ")
+      (idxTypeDefs :\\: storeTypeDef :: "\n", storeDecl :\\: idxDecl :: "\n", storeinit :: idxInit)
+    }).reduce((a, b) => (a._1 :\\: b._1, a._2 :\\: b._2, a._3 :: ", " :\\: b._3))
 
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
-        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  bool isInvalid; EntryMV<${tag.typeName}>* e;"
-//        :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
+        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  bool isInvalid;"
+        //        :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
         val constructor = doc"${tag.typeName}() :" :: fields.map(x => {
           if (x.tpe == StringType)
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
-        }).mkDocument(", ") :: ", isInvalid(false), e(nullptr) {}"
-//        :: ", prv(nullptr), nxt(nullptr) {}"
-        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", isInvalid(false), e(nullptr) {}"
-//  ", prv(nullptr), nxt(nullptr) {}"
+        }).mkDocument(", ") :: ", isInvalid(false){}"
+        //        :: ", prv(nullptr), nxt(nullptr) {}"
+        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", isInvalid(false){}"
+        //  ", prv(nullptr), nxt(nullptr) {}"
         val copyFn = doc"FORCE_INLINE ${tag.typeName}* copy() const {  ${tag.typeName}* ptr = (${tag.typeName}*) malloc(sizeof(${tag.typeName})); new(ptr) ${tag.typeName}(" :: fields.map(x => {
           //          if (x.tpe == StringType)
           //            doc"*${x.name}.copy()"
@@ -843,11 +847,11 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       val equals = s.fields.map(eqFn).reduce(_ :: " && " :/: _)
       doc"bool operator== (const $sname& o1, const $sname& o2) {" :\\: Document.nest(2,
         "if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;" :\\:
-        "else return " :: equals :: ";") :\\: "}"
+          "else return " :: equals :: ";") :\\: "}"
     }).mkDocument("\n")
 
     val traits = doc"/* TRAITS STARTING */" :/: codeGen.getTraitSignature :/: doc" /* TRAITS ENDING   */"
-    def argsDoc(args: List[Sym[_]]) = args.map(t => doc"${t.tp} ${t}").mkDocument(", ")  //SBJ: These args are both input/output. Should not be made const
+    def argsDoc(args: List[Sym[_]]) = args.map(t => doc"${t.tp} ${t}").mkDocument(", ") //SBJ: These args are both input/output. Should not be made const
     //    def blockTofunction(x :(String, List[ExpressionSymbol[_]], PardisBlock[T])) = {
     //      (Sym.freshNamed(x._1)(x._3.typeT, IR), x._2, x._3)
     //    }
@@ -863,12 +867,12 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       doc"}"
     else doc""
 
-    val blocks = optTP.codeBlocks.map(x => doc"FORCE_INLINE TransactionReturnStatus ${x._1}(${argsDoc(x._2)}) {" ::
+    val blocks = optTP.codeBlocks.map(x => doc"FORCE_INLINE TransactionReturnStatus ${x._1}(Transaction& xact, ${argsDoc(x._2)}) {" ::
       stPrf(x._1) :: Document.nest(2, codeGen.blockToDocument(x._3)) :/: "  clearTempMem();" :: endPrf(x._1) :/: "  return SUCCESS;" :/:
       "}").mkDocument("\n")
 
     idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name)).toList
-    val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT($i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
+    val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT(orig.$i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
     def mainPrg =
       s"""
          |#ifndef NORESIZE
@@ -878,111 +882,109 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |TPCCDataGen tpcc;
          |tpcc.loadPrograms();
          |
+         |Transaction t0;
+         |xactManager.begin(t0);
+         |tpcc.loadWare(t0);
+         |tpcc.loadDist(t0);
+         |tpcc.loadCust(t0);
+         |tpcc.loadItem(t0);
+         |tpcc.loadNewOrd(t0);
+         |tpcc.loadOrders(t0);
+         |tpcc.loadOrdLine(t0);
+         |tpcc.loadHist(t0);
+         |tpcc.loadStocks(t0);
+         |xactManager.commit(t0);
          |
-         |xactManager.begin(xact);
-         |tpcc.loadWare(xact);
-         |tpcc.loadDist(xact);
-         |tpcc.loadCust(xact);
-         |tpcc.loadItem(xact);
-         |tpcc.loadNewOrd(xact);
-         |tpcc.loadOrders(xact);
-         |tpcc.loadOrdLine(xact);
-         |tpcc.loadHist(xact);
-         |tpcc.loadStocks(xact);
-         |xactManager.commit(xact);
-         |
-         |uint xactCounts[5] = {0, 0, 0, 0, 0};
+         |memset(xactCounts, 0, 5 * sizeof(uint));
+         |Program * failedPrograms[2 * windowsize];
+         |size_t failedHead = 0, failedTail = 0, currentHead = 0, failedCount = 0, finishedCount = 0;
          |auto start = Now;
-         |//CALLGRIND_START_INSTRUMENTATION;
-         |for(size_t i = 0; i < numPrograms; ++i){
-         |  Program *prg = tpcc.programs[i];
-         |  xactManager.begin(xact);
-         |  TransactionReturnStatus st;
-         |  switch(prg->id){
-         |     case NEWORDER :
-         |      {
-         |         NewOrder& p = *(NewOrder *)prg;
-         |         xactCounts[0]++;
-         |         st = NewOrderTx($showOutput, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
-         |         break;
-         |      }
-         |    case PAYMENTBYID :
-         |      {
-         |         PaymentById& p = *(PaymentById *) prg;
-         |         xactCounts[1]++;
-         |         st = PaymentTx($showOutput, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
-         |         break;
-         |      }
-         |    case PAYMENTBYNAME :
-         |      {
-         |         PaymentByName& p = *(PaymentByName *) prg;
-         |         xactCounts[1]++;
-         |         st = PaymentTx($showOutput, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
-         |         break;
-         |      }
-         |    case ORDERSTATUSBYID :
-         |      {
-         |         OrderStatusById &p = *(OrderStatusById *) prg;
-         |         xactCounts[2]++;
-         |         st = OrderStatusTx($showOutput, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
-         |         break;
-         |      }
-         |    case ORDERSTATUSBYNAME :
-         |      {
-         |         OrderStatusByName &p = *(OrderStatusByName *) prg;
-         |         xactCounts[2]++;
-         |         st = OrderStatusTx($showOutput, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
-         |         break;
-         |      }
-         |    case DELIVERY :
-         |      {
-         |         Delivery &p = *(Delivery *) prg;
-         |         xactCounts[3]++;
-         |         st = DeliveryTx($showOutput, p.datetime, p.w_id, p.o_carrier_id);
-         |         break;
-         |      }
-         |    case STOCKLEVEL :
-         |     {
-         |       StockLevel &p = *(StockLevel *) prg;
-         |       xactCounts[4]++;
-         |       st = StockLevelTx($showOutput, -1, -1, p.w_id, p.d_id, p.threshold);
-         |       break;
-         |     }
-         |     default : cerr << "UNKNOWN PROGRAM TYPE" << endl;
+         |size_t numWindows = 0;
+         |while (currentHead < numPrograms || failedHead != failedTail) {
+         |  uint count = 0;
+         |  Program * window[windowsize];
+         |  size_t failedTail_old = failedTail;
          |
-         |  }
-         |  if(st == SUCCESS) {
-         |    bool ret = xactManager.validateAndCommit(xact);
-         |    assert(ret);
-         |  } else if (st == ABORT) {
-         |    xactManager.rollback(xact);
-         |  } else if (st == WW_ABORT) {
-         |    throw std::logic_error("Cannot have WW abort");
+         |  while (failedHead != failedTail_old && count < windowsize) {
+         |    Program *p = failedPrograms[failedHead++];
+         |    if (failedHead == 2 * windowsize)
+         |      failedHead = 0;
+         |    runProgram(p, 0, orig); //begin
+         |    auto status = runProgram(p, 1, orig); //run
+         |    if (status == SUCCESS) {
+         |      window[count++] = p;
+         |    } else {
+         |      runProgram(p, 3, orig); //rollback
+         |      if (status != ABORT) {
+         |        failedPrograms[failedTail++] = p;
+         |        if (failedTail == 2 * windowsize)
+         |          failedTail = 0;
+         |        failedCount++;
+         |        if (failedTail == failedHead)
+         |          throw std::out_of_range("Total failed programs execeeded limit2");
+         |      }
+         |      window[count++] = nullptr;
+         |    }
          |  }
          |
+         |  while (currentHead < numPrograms && count < windowsize) {
+         |    Program *p = tpcc.programs[currentHead++];
+         |    runProgram(p, 0, orig);
+         |    auto status = runProgram(p, 1, orig);
+         |    if (status == SUCCESS) {
+         |      window[count++] = p;
+         |    } else {
+         |      runProgram(p, 3, orig);
+         |      if (status != ABORT) {
+         |        failedPrograms[failedTail++] = p;
+         |        if (failedTail == 2 * windowsize)
+         |          failedTail = 0;
+         |        failedCount++;
+         |        if (failedTail == failedHead)
+         |          throw std::out_of_range("Total failed programs execeeded limit3");
+         |      }
+         |      window[count++] = nullptr;
+         |    }
+         |  }
+         |
+         |  for (uint i = 0; i < count; i++) {
+         |    Program *p = window[i];
+         |    if (p == nullptr)continue;
+         |    if (runProgram(p, 2, orig) != SUCCESS) {
+         |     runProgram(p, 3, orig); // rollback
+         |      failedPrograms[failedTail++] = p;
+         |      if (failedTail == 2 * windowsize)
+         |        failedTail = 0;
+         |      if (failedTail == failedHead)
+         |        throw std::out_of_range("Total failed validations exceeded limit");
+         |    } else {
+         |      finishedCount++;
+         |    }
+         |  }
+         |  numWindows++;
          |}
-         |//CALLGRIND_STOP_INSTRUMENTATION;
-         |//CALLGRIND_DUMP_STATS;
          |auto end = Now;
          |auto execTime = DurationMS(end - start);
          |cout << "Failed NO = " << failedNO << endl;
          |cout << "Failed Del = " << failedDel << endl;
          |cout << "Failed OS = " << failedOS << endl;
          |cout << "Total time = " << execTime << " ms" << endl;
-         |uint failedCount[] = {failedNO, 0, failedOS, failedDel/10, 0};
          |cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  xactCounts[0]  << endl;
-         |cout << "TpmC = " << fixed <<  (xactCounts[0] - failedNO)* 60000.0/execTime << endl;
-         |${if (Optimizer.profileBlocks || Optimizer.profileStoreOperations)
-        s"""
-           |//counters["FailedNO"] = failedNO; counters["FailedDel"] = failedDel/10; counters["FailedOS"] = failedOS;
-           |//durations["FailedNO"] = 0; durations["FailedDel"] = 0; durations["FailedOS"] = 0;
-           |ExecutionProfiler::printProfileToFile();
-            """.stripMargin else doc""}
+         |cout << "TpmC = " << fixed <<  (xactCounts[0])* 60000.0/execTime << endl;
+         |${
+        if (Optimizer.profileBlocks || Optimizer.profileStoreOperations)
+          s"""
+             |//counters["FailedNO"] = failedNO; counters["FailedDel"] = failedDel/10; counters["FailedOS"] = failedOS;
+             |//durations["FailedNO"] = 0; durations["FailedDel"] = 0; durations["FailedOS"] = 0;
+             |ExecutionProfiler::printProfileToFile();
+            """.stripMargin
+        else doc""
+      }
          |ofstream fout("tpcc_res_cpp.csv", ios::app);
          |if(argc == 1 || atoi(argv[1]) == 1) {
          |  fout << "\\nCPP-${Optimizer.optCombination}-" << numPrograms << ",";
          |  for(int i = 0; i < 5 ; ++i)
-         |     fout << xactCounts[i] - failedCount[i] << ",";
+         |     fout << xactCounts[i] << ",";
          |  fout <<",";
          | }
          |fout << execTime << ",";
@@ -992,7 +994,69 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |ofstream info("$infoFilePath");
          |${getSizes}
          |info.close();
-         |
+         |#ifdef VERIFY_CONC
+         |std::sort(tpcc.programs, tpcc.programs + numPrograms, [](const Program* a, const Program * b) {
+         |  return a->xact.commitTS < b->xact.commitTS;
+         |});
+         |xactManager.committedXactsTail = nullptr;
+         |for (uint i = 0; i < numPrograms; ++i) {
+         |  Program* p = tpcc.programs[i];
+         |  if (p->xact.commitTS == initCommitTS)
+         |    break;
+         |  p->xact.reset();
+         |  TransactionReturnStatus st;
+         |  runProgram(p, 0, res);
+         |  st = runProgram(p, 1, res);
+         |  assert(st == SUCCESS);
+         |  st = runProgram(p, 2, res);
+         |  assert(st == SUCCESS);
+         |}
+         |if (orig.warehouseTblIdx0 == res.warehouseTblIdx0) {
+         |  cout << "Warehouse results are same as serial version" << endl;
+         |} else {
+         |  cerr << "Warehouse results INCORRECT!" << endl;
+         |}
+         |if (orig.districtTblIdx0 == res.districtTblIdx0) {
+         |  cout << "District results are same as serial version" << endl;
+         |} else {
+         |  cerr << "District results INCORRECT!" << endl;
+         |}
+         |if (orig.customerTblIdx0 == res.customerTblIdx0) {
+         |  cout << "Customer results are same as serial version" << endl;
+         |} else {
+         |  cerr << "Customer results INCORRECT!" << endl;
+         |}
+         |if (orig.orderTblIdx0 == res.orderTblIdx0) {
+         |  cout << "Order results are same as serial version" << endl;
+         |} else {
+         |  cerr << "Order results INCORRECT!" << endl;
+         |}
+         |if (orig.orderLineTblIdx0 == res.orderLineTblIdx0) {
+         |  cout << "OrderLine results are same as serial version" << endl;
+         |} else {
+         |  cerr << "OrderLine results INCORRECT!" << endl;
+         |}
+         |if (orig.newOrderTblIdx0 == res.newOrderTblIdx0) {
+         |  cout << "NewOrder results are same as serial version" << endl;
+         |} else {
+         |  cerr << "NewOrder results INCORRECT!" << endl;
+         |}
+         |if (orig.itemTblIdx0 == res.itemTblIdx0) {
+         |  cout << "Item results are same as serial version" << endl;
+         |} else {
+         |  cerr << "Item results INCORRECT!" << endl;
+         |}
+         |if (orig.stockTblIdx0 == res.stockTblIdx0) {
+         |  cout << "Stock results are same as serial version" << endl;
+         |} else {
+         |  cerr << "Stock results INCORRECT!" << endl;
+         |}
+         |if (orig.historyTblIdx0 == res.historyTblIdx0) {
+         |  cout << "History results are same as serial version" << endl;
+         |} else {
+         |  cerr << "History results INCORRECT!" << endl;
+         |}
+         |#endif
          |#ifdef VERIFY_TPCC
          |/*
          |    warehouseTblIdx0.resize_(warehouseTblSize); tpcc.wareRes.resize_(warehouseTblSize);
@@ -1005,47 +1069,47 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |    stockTblIdx0.resize_(stockTblSize); tpcc.stockRes.resize_(stockTblSize);
          |    historyTblIdx0.resize_(historyTblSize); tpcc.histRes.resize_(historyTblSize);
          |*/
-         |    if (warehouseTblIdx0 == tpcc.wareRes) {
+         |    if (orig.warehouseTblIdx0 == tpcc.wareRes) {
          |        cout << "Warehouse results are correct" << endl;
          |    } else {
          |        cerr << "Warehouse results INCORRECT!" << endl;
          |    }
-         |    if (districtTblIdx0 == tpcc.distRes) {
+         |    if (orig.districtTblIdx0 == tpcc.distRes) {
          |        cout << "District results are correct" << endl;
          |    } else {
          |        cerr << "District results INCORRECT!" << endl;
          |    }
-         |    if (customerTblIdx0 == tpcc.custRes) {
+         |    if (orig.customerTblIdx0 == tpcc.custRes) {
          |        cout << "Customer results are correct" << endl;
          |    } else {
          |        cerr << "Customer results INCORRECT!" << endl;
          |    }
-         |    if (orderTblIdx0 == tpcc.ordRes) {
+         |    if (orig.orderTblIdx0 == tpcc.ordRes) {
          |        cout << "Order results are correct" << endl;
          |    } else {
          |        cerr << "Order results INCORRECT!" << endl;
          |    }
-         |    if (orderLineTblIdx0 == tpcc.ordLRes) {
+         |    if (orig.orderLineTblIdx0 == tpcc.ordLRes) {
          |        cout << "OrderLine results are correct" << endl;
          |    } else {
          |        cerr << "OrderLine results INCORRECT!" << endl;
          |    }
-         |    if (newOrderTblIdx0 == tpcc.newOrdRes) {
+         |    if (orig.newOrderTblIdx0 == tpcc.newOrdRes) {
          |        cout << "NewOrder results are correct" << endl;
          |    } else {
          |        cerr << "NewOrder results INCORRECT!" << endl;
          |    }
-         |    if (itemTblIdx0 == tpcc.itemRes) {
+         |    if (orig.itemTblIdx0 == tpcc.itemRes) {
          |        cout << "Item results are correct" << endl;
          |    } else {
          |        cerr << "Item results INCORRECT!" << endl;
          |    }
-         |    if (stockTblIdx0 == tpcc.stockRes) {
+         |    if (orig.stockTblIdx0 == tpcc.stockRes) {
          |        cout << "Stock results are correct" << endl;
          |    } else {
          |        cerr << "Stock results INCORRECT!" << endl;
          |    }
-         |    if (historyTblIdx0 == tpcc.histRes) {
+         |    if (orig.historyTblIdx0 == tpcc.histRes) {
          |        cout << "History results are correct" << endl;
          |    } else {
          |        cerr << "History results INCORRECT!" << endl;
@@ -1066,10 +1130,99 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       """
         |TransactionManager xactManager;
         |TransactionManager& Transaction::tm(xactManager);
-        |Transaction xact;
-        |""".stripMargin
+        |uint xactCounts[5];
+        |uint8_t prgId7to5[] = {0, 1, 1, 2, 2, 3, 4};
+        |const uint windowsize = 5;
+        |TPCC_Data orig;
+        |#define CONCURRENT 1
+        |#ifdef VERIFY_CONC
+        |   TPCC_Data res;
+        |#endif
+        | """.stripMargin
 
-    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stores :\\: structVars :\\: tm :: "\n\n" :\\: blocks :\\: "#include \"TPCC.h\"\n" :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
+    val runPrgFn =
+      """
+        |TransactionReturnStatus runProgram(Program* prg, short id, TPCC_Data& dataset) {
+        |  TransactionReturnStatus ret = SUCCESS;
+        |  switch (id) {
+        |    case 0:
+        |      xactManager.begin(prg->xact);
+        |      break;
+        |    case 1:
+        |    {
+        |      switch (prg->id) {
+        |        case NEWORDER:
+        |        {
+        |          NewOrder& p = *(NewOrder *) prg;
+        |          ret = dataset.NewOrderTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
+        |          break;
+        |        }
+        |        case PAYMENTBYID:
+        |        {
+        |          PaymentById& p = *(PaymentById *) prg;
+        |          ret = dataset.PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
+        |          break;
+        |        }
+        |        case PAYMENTBYNAME:
+        |        {
+        |          PaymentByName& p = *(PaymentByName *) prg;
+        |          ret = dataset.PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
+        |          break;
+        |        }
+        |        case ORDERSTATUSBYID:
+        |        {
+        |          OrderStatusById &p = *(OrderStatusById *) prg;
+        |          ret = dataset.OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
+        |          break;
+        |        }
+        |        case ORDERSTATUSBYNAME:
+        |        {
+        |          OrderStatusByName &p = *(OrderStatusByName *) prg;
+        |          ret = dataset.OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
+        |          break;
+        |        }
+        |        case DELIVERY:
+        |        {
+        |          Delivery &p = *(Delivery *) prg;
+        |          ret = dataset.DeliveryTx(prg->xact, false, p.datetime, p.w_id, p.o_carrier_id);
+        |          break;
+        |        }
+        |        case STOCKLEVEL:
+        |        {
+        |          StockLevel &p = *(StockLevel *) prg;
+        |          ret = dataset.StockLevelTx(prg->xact, false, -1, -1, p.w_id, p.d_id, p.threshold);
+        |          break;
+        |        }
+        |        default: cerr << "UNKNOWN PROGRAM TYPE" << endl;
+        |
+        |      }
+        |      break;
+        |    }
+        |    case 2:
+        |    {
+        |      if (xactManager.validateAndCommit(prg->xact)) {
+        |        uint8_t id = prgId7to5[prg->id];
+        |        xactCounts[id]++;
+        |        ret = SUCCESS;
+        |      } else
+        |        ret = COMMIT_FAILURE;
+        |    }
+        |      break;
+        |    case 3:
+        |    {
+        |      xactManager.rollback(prg->xact);
+        |    }
+        |      break;
+        |    default: cerr << "UNKNOWN EXECUTION ID";
+        |  }
+        |  return ret;
+        |}
+      """.stripMargin
+    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stTypdef :\\:
+      doc"struct TPCC_Data { " :\\: Document.nest(2, doc"TPCC_Data():" :\\:
+    stInit :: doc"{}" :\\:
+    stDecl :\\: structVars :\\: blocks) :\\: "};" :\\:
+    tm :: "\n\n#include \"TPCC.h\"\n" :\\: runPrgFn :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }

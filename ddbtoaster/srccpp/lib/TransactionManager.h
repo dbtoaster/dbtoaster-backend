@@ -23,12 +23,18 @@ struct TransactionManager {
         counterLock.unlock();
     }
 
-    FORCE_INLINE void rollback(Transaction&  xact) {
+    FORCE_INLINE void rollback(Transaction& xact) {
         auto dv = xact.undoBufferHead;
 
         while (dv) {
             dv->removeFromVersionChain();
             dv = dv->nextInUndoBuffer;
+        }
+        PRED* p;
+        while (xact.predicateHead) {
+            p = xact.predicateHead;
+            xact.predicateHead = xact.predicateHead->next;
+            free(p);
         }
         xact.undoBufferHead = nullptr;
         xact.predicateHead = nullptr;
@@ -62,23 +68,35 @@ struct TransactionManager {
         commitLock.unlock();
 
         while (dv) {
+            assert(dv->xactid == PTRtoTS(&xact));
             dv->xactid = xact.commitTS; //TODO: DOES NOT SET CommitTS on the moved version
             //This is still correct , as the getCorrectDV looks up commit TS of transaction even if not set in version
             // BUt this has performance overhead as in almost all cases, it will lookup transaction un necessarily
             dv = dv->nextInUndoBuffer;
         }
+        PRED* p;
+        while (xact.predicateHead) {
+            p = xact.predicateHead;
+            xact.predicateHead = xact.predicateHead->next;
+            free(p);
+        }
     }
 
     FORCE_INLINE bool validateAndCommit(Transaction& xact) {
         if (xact.undoBufferHead == nullptr) { //Read only transaction
-            commitLock.lock();
-            commit(xact);
+            PRED* p;
+            while (xact.predicateHead) {
+                p = xact.predicateHead;
+                xact.predicateHead = xact.predicateHead->next;
+                free(p);
+            }
+            xact.commitTS = xact.startTS;
             return true;
         }
 
-       
+
         Transaction *startXact = committedXactsTail, *endXact = nullptr, *currentXact;
-     
+
         /*
          We validate in rounds. We start from the most recently committed transaction and go backwards until
              we reach nullptr, 
@@ -102,7 +120,7 @@ struct TransactionManager {
                     //in OMVCC, if validate returns false, we abort and do full restart
                     if (!validate(xact, currentXact))
                         return false;
-                    currentXact = currentXact->prevCommitted;       
+                    currentXact = currentXact->prevCommitted;
                 }
             }
             endXact = startXact;
@@ -114,15 +132,15 @@ struct TransactionManager {
             }
             //we have the lock here
 
-                xact.prevCommitted = startXact;
-                //try adding this transaction as the latest committed
-                if (!committedXactsTail.compare_exchange_strong(startXact, &xact)) {
-                    commitLock.unlock();
-                    continue;
-                }
+            xact.prevCommitted = startXact;
+            //try adding this transaction as the latest committed
+            if (!committedXactsTail.compare_exchange_strong(startXact, &xact)) {
+                commitLock.unlock();
+                continue;
+            }
 
-                commit(xact); //will release commitLock internally
-                return true;
+            commit(xact); //will release commitLock internally
+            return true;
         } while (true);
     }
 };

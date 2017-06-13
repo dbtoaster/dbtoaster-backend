@@ -35,11 +35,21 @@ struct MinAggregator {
         return *minEntry;
     }
 
-    E* resultForUpdate(OperationReturnStatus& st) {
+    E* resultForUpdate(OperationReturnStatus& st, Transaction& xact) {
         E* resE = *minEntry;
-        EntryMV<E>* e = resE->e;
-        Version<E>* newV = new Version<E>(*resE);
-        newV->oldV = e->versionHead;
+        Version<E>* resV = (Version<E>*) VBase::getVersionFromT((char*) resE);
+        assert(&resV->obj == resE);
+        EntryMV<E>* e = (EntryMV<E>*) resV->e;
+        Version<E>* vh = e->versionHead;
+
+        if (vh != resV) {
+            st = WW_VALUE;
+            return nullptr;
+        }
+        Version<E>* newV = (Version<E>*) malloc(sizeof(Version<E>));
+        new(newV) Version<E>(*resE, xact);
+        newV->oldV = vh;
+        newV->e = (EntryMV<void>*)e;
         e->versionHead = newV;
         st = OP_SUCCESS;
         return &newV->obj;
@@ -76,11 +86,21 @@ struct MaxAggregator {
         return *maxEntry;
     }
 
-    E* resultForUpdate(OperationReturnStatus& st) {
+    E* resultForUpdate(OperationReturnStatus& st, Transaction& xact) {
         E* resE = *maxEntry;
-        EntryMV<E>* e = resE->e;
-        Version<E>* newV = new Version<E>(*resE);
-        newV->oldV = e->versionHead;
+        Version<E>* resV = (Version<E>*) VBase::getVersionFromT((char*) resE);
+        assert(&resV->obj == resE);
+        EntryMV<E>* e = (EntryMV<E>*)resV->e;
+        Version<E>* vh = e->versionHead;
+
+        if (vh != resV) {
+            st = WW_VALUE;
+            return nullptr;
+        }
+        Version<E>* newV = (Version<E>*) malloc(sizeof(Version<E>));
+        new(newV) Version<E>(*resE, xact);
+        newV->oldV = vh;
+        newV->e = (EntryMV<void>*)e;
         e->versionHead = newV;
         st = OP_SUCCESS;
         return &newV->obj;
@@ -133,14 +153,20 @@ struct MedianAggregator {
         if (s % 2 == 0) i--;
         E* resE = results[i];
 
-        EntryMV<E>* e = resE->e;
+        Version<E>* resV = (Version<E>*) VBase::getVersionFromT((char *)resE); //SBJ: Hack !
+        assert(&resV->obj == resE);
+        EntryMV<E>* e = (EntryMV<E>*)resV->e;
         Version<E>* vh = e->versionHead;
-        if (&vh->obj != resE) {
+
+        if (vh != resV) {
             st = WW_VALUE;
             return nullptr;
         }
-        Version<E>* newV = new Version<E>(*resE, xact);
+
+        Version<E>* newV = (Version<E>* ) malloc(sizeof(Version<E>));
+        new(newV) Version<E>(*resE, xact);
         newV->oldV = vh;
+        newV->e = (EntryMV<void>*)e;
         e->versionHead = newV;
         st = OP_SUCCESS;
         return &newV->obj;

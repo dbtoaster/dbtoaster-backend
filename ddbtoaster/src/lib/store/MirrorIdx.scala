@@ -11,9 +11,6 @@ import ch.epfl.data.sc.pardis.annotations.{deep, needs, read, reflect}
 trait MirrorIdx[E <: Entry] {
   def unsafeInsert(e: E): Unit = ???
   def insert(e: E): Unit = ???
-  def delete(e: E): Unit = ???
-  def deleteCopy(e: E, primary: Idx[E]): Unit = ???
-  def deleteCopyDependent(e: E): Unit = ???
   def update(e: E): Unit = ???
   def updateCopyDependent(e: E, ref: E): Unit = ???
   def updateCopy(e: E, primary: Idx[E]): Unit = ???

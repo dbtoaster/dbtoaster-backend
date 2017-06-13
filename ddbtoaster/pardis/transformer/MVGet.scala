@@ -40,7 +40,7 @@ class MVGet(override val IR: StoreDSL) extends RecursiveRuleBasedTransformer[Sto
     case sym -> (IdxUpdate(_, e: Sym[_])) => upds += e; ()
     case sym -> (Assign(_, rhs: Sym[_])) if upds.contains(sym) => upds += rhs; ()
     case sym -> (IfThenElse(_, thenp, elsep)) if upds.contains(sym) => upds += (thenp.res.asInstanceOf[Sym[_]], elsep.res.asInstanceOf[Sym[_]]); ()
-    case sym -> (IdxDelete(_, e: Sym[_])) => upds += e; ()
+    case sym -> (StoreDelete1(_, e: Sym[_])) => upds += e; ()
   }
   rewrite += statement {
     case sym -> (IdxGet(idx, e)) if upds.contains(sym) && !alreadyTransformed.contains(sym) =>

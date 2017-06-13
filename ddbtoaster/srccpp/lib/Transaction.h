@@ -1,6 +1,7 @@
 #ifndef TRANSACTION_H
 #define TRANSACTION_H
 #include "types.h"
+
 struct Transaction {
     VBase* undoBufferHead;
     PRED* predicateHead;
@@ -15,6 +16,15 @@ struct Transaction {
         commitTS = initCommitTS;
         undoBufferHead = nullptr;
         predicateHead = nullptr;
+        prevCommitted = nullptr;
+    }
+
+    void reset() {
+        threadId = 0;
+        commitTS = initCommitTS;
+        undoBufferHead = nullptr;
+        predicateHead = nullptr;
+        prevCommitted = nullptr;
     }
 };
 

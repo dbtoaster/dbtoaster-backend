@@ -15,7 +15,7 @@
 #include <string>
 
 #include "mmap/mmap.hpp"
-
+#include "types.h"
 
 
 #define EXPAND(x) #x
@@ -120,6 +120,7 @@ std::ostream &operator<<(std::ostream &os, const NewOrderEntry &m) {
 
 struct Program {
     const short id;
+    Transaction xact;
     virtual std::ostream& print(std::ostream& s) = 0;
 
     virtual ~Program() {
@@ -464,8 +465,13 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
+#elif CONCURRENT
+            orig.customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)), xact);
+#ifdef VERIFY_CONC
+            res.customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)), xact);
+#endif
 #else
-            customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)), xact);
+            customerTbl.insert_nocheck(CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
 #endif
 #else
 
@@ -496,8 +502,13 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].customerTbl.insert_nocheck(c);
+#elif CONCURRENT
+            orig.customerTbl.insert_nocheck(c, xact);
+#ifdef VERIFY_CONC
+            res.customerTbl.insert_nocheck(c, xact);
+#endif
 #else
-            customerTbl.insert_nocheck(c, xact);
+            customerTbl.insert_nocheck(c);
 #endif
 #endif
         }
@@ -588,8 +599,13 @@ struct TPCCDataGen {
             sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d_1, &d_2, d_3, d_4, d_5, d_6, d_7, d_8, &d_9, &d_10, &d_11);
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(d_2)].districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
+#elif CONCURRENT
+            orig.districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11), xact);
+#ifdef VERIFY_CONC
+            res.districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11), xact);
+#endif
 #else
-            districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11), xact);
+            districtTbl.insert_nocheck(DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
 #endif
 #else
             d._3.data_ = new char[11];
@@ -607,8 +623,13 @@ struct TPCCDataGen {
             d._8.recomputeSize();
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(d._2)].districtTbl.insert_nocheck(d);
+#elif CONCURRENT
+            orig.districtTbl.insert_nocheck(d, xact);
+#ifdef VERIFY_CONC
+            res.districtTbl.insert_nocheck(d, xact);
+#endif
 #else
-            districtTbl.insert_nocheck(d, xact);
+            districtTbl.insert_nocheck(d);
 #endif
 #endif
         }
@@ -677,8 +698,13 @@ struct TPCCDataGen {
             h_6 = StrToIntdate(datestr);
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(h_5)].historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
+#elif CONCURRENT
+            orig.historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)), xact);
+#ifdef VERIFY_CONC
+            res.historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)), xact);
+#endif
 #else
-            historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)), xact);
+            historyTbl.insert_nocheck(HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
 #endif
 
 #else
@@ -688,8 +714,13 @@ struct TPCCDataGen {
             h._8.recomputeSize();
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(h._5)].historyTbl.insert_nocheck(h);
+#elif CONCURRENT
+            orig.historyTbl.insert_nocheck(h, xact);
+#ifdef VERIFY_CONC
+            res.historyTbl.insert_nocheck(h, xact);
+#endif
 #else
-            historyTbl.insert_nocheck(h, xact);
+            historyTbl.insert_nocheck(h);
 #endif
 #endif
         }
@@ -742,8 +773,13 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             for (int x = 0; x < numThreads; ++x)
                 partitions[x].itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
+#elif CONCURRENT
+            orig.itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5), xact);
+#ifdef VERIFY_CONC
+            res.itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5), xact);
+#endif
 #else
-            itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5), xact);
+            itemTbl.insert_nocheck(ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
 #endif
 #else
             i._3.data_ = new char[25];
@@ -754,8 +790,13 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             for (int x = 0; x < numThreads; ++x)
                 partitions[x].itemTbl.insert_nocheck(i);
+#elif CONCURRENT
+            orig.itemTbl.insert_nocheck(i, xact);
+#ifdef VERIFY_CONC
+            res.itemTbl.insert_nocheck(i, xact);
+#endif
 #else
-            itemTbl.insert_nocheck(i, xact);
+            itemTbl.insert_nocheck(i);
 #endif
 #endif
         }
@@ -802,15 +843,25 @@ struct TPCCDataGen {
             sscanf(line.c_str(), u32 "," u8 "," u8, &n_1, &n_2, &n_3);
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(n_3)].newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3));
+#elif CONCURRENT
+            orig.newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3), xact);
+#ifdef VERIFY_CONC
+            res.newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3), xact);
+#endif
 #else
-            newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3), xact);
+            newOrderTbl.insert_nocheck(NewOrderEntry(false_type(), n_1, n_2, n_3));
 #endif
 #else
             sscanf(line.c_str(), u32 "," u8 "," u8, &n._1, &n._2, &n._3);
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(n._3)].newOrderTbl.insert_nocheck(n);
+#elif CONCURRENT
+            orig.newOrderTbl.insert_nocheck(n, xact);
+#ifdef VERIFY_CONC
+            res.newOrderTbl.insert_nocheck(n, xact);
+#endif
 #else
-            newOrderTbl.insert_nocheck(n, xact);
+            newOrderTbl.insert_nocheck(n);
 #endif
 #endif
         }
@@ -860,8 +911,13 @@ struct TPCCDataGen {
             e_7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(e_3)].orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
+#elif CONCURRENT
+            orig.orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)), xact);
+#ifdef VERIFY_CONC
+            res.orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)), xact);
+#endif
 #else
-            orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)), xact);
+            orderLineTbl.insert_nocheck(OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
 #endif
 #else
             e._10.data_ = new char[25];
@@ -870,8 +926,13 @@ struct TPCCDataGen {
             e._10.recomputeSize();
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(e._3)].orderLineTbl.insert_nocheck(e);
+#elif CONCURRENT
+            orig.orderLineTbl.insert_nocheck(e, xact);
+#ifdef VERIFY_CONC
+            res.orderLineTbl.insert_nocheck(e, xact);
+#endif
 #else
-            orderLineTbl.insert_nocheck(e, xact);
+            orderLineTbl.insert_nocheck(e);
 #endif
 #endif
         }
@@ -935,8 +996,13 @@ struct TPCCDataGen {
             o_8 = local;
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(o_3)].orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
+#elif CONCURRENT
+            orig.orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8), xact);
+#ifdef VERIFY_CONC
+            res.orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8), xact);
+#endif
 #else
-            orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8), xact);
+            orderTbl.insert_nocheck(OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
 #endif
 #else
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &o._1, &o._2, &o._3, &o._4, datestr, carrier, &o._7, &local);
@@ -945,8 +1011,13 @@ struct TPCCDataGen {
             o._8 = local;
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(o._3)].orderTbl.insert_nocheck(o);
+#elif CONCURRENT
+            orig.orderTbl.insert_nocheck(o, xact);
+#ifdef VERIFY_CONC
+            res.orderTbl.insert_nocheck(o, xact);
+#endif
 #else
-            orderTbl.insert_nocheck(o, xact);
+            orderTbl.insert_nocheck(o);
 #endif
 #endif
         }
@@ -1014,8 +1085,13 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
+#elif CONCURRENT
+            orig.stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)), xact);
+#ifdef VERIFY_CONC
+            res.stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)), xact);
+#endif
 #else
-            stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)), xact);
+            stockTbl.insert_nocheck(StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
 #endif
 #else
             s._4.data_ = new char[25];
@@ -1044,8 +1120,13 @@ struct TPCCDataGen {
 #ifdef PARTITIONED
             for (int i = 0; i < numThreads; ++i)
                 partitions[i].stockTbl.insert_nocheck(s);
+#elif CONCURRENT
+            orig.stockTbl.insert_nocheck(s, xact);
+#ifdef VERIFY_CONC
+            res.stockTbl.insert_nocheck(s, xact);
+#endif
 #else
-            stockTbl.insert_nocheck(s, xact);
+            stockTbl.insert_nocheck(s);
 #endif
 #endif
         }
@@ -1127,8 +1208,13 @@ struct TPCCDataGen {
             sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w_1, w_2, w_3, w_4, w_5, w_6, w_7, &w_8, &w_9);
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(w_1)].warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
+#elif CONCURRENT
+            orig.warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9), xact);
+#ifdef VERIFY_CONC
+            res.warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9), xact);
+#endif
 #else
-            warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9), xact);
+            warehouseTbl.insert_nocheck(WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
 #endif
 #else
             w._2.data_ = new char[11];
@@ -1146,8 +1232,13 @@ struct TPCCDataGen {
             w._7.recomputeSize();
 #ifdef PARTITIONED
             partitions[CORE_FOR_W(w._1)].warehouseTbl.insert_nocheck(w);
+#elif CONCURRENT
+            orig.warehouseTbl.insert_nocheck(w, xact);
+#ifdef VERIFY_CONC
+            res.warehouseTbl.insert_nocheck(w, xact);
+#endif
 #else
-            warehouseTbl.insert_nocheck(w, xact);
+            warehouseTbl.insert_nocheck(w);
 #endif
 
 #endif

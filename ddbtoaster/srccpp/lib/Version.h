@@ -5,6 +5,7 @@
 #include <atomic>
 #include "types.h"
 #include "Transaction.h"
+#include "mmap/cmmap.hpp"
 template <typename T>
 struct EntryMV;
 
@@ -12,10 +13,17 @@ struct VBase {
     timestamp xactid;
     std::atomic<VBase*> oldV;
     VBase* nextInUndoBuffer;
+    EntryMV<void>* e; //SBJ: Hack to avoid Entry base class
     col_type cols;
 
-    VBase(Transaction& x) : xactid(PTRtoTS(&x)), oldV(nullptr), nextInUndoBuffer(nullptr), cols(-1) {
+    VBase(Transaction& x) : xactid(PTRtoTS(&x)), oldV(nullptr), nextInUndoBuffer(x.undoBufferHead), cols(-1) {
+        x.undoBufferHead = this;
     }
+
+    static FORCE_INLINE VBase* getVersionFromT(char* entry) {
+        return (VBase *) (entry - sizeof (VBase));
+    }
+
     virtual void removeFromVersionChain() = 0;
 };
 
@@ -33,13 +41,18 @@ struct Version : public VBase {
     //    }
 
     void removeFromVersionChain() override {
-        EntryMV<T>* e = obj.e;
-        assert(e->versionHead == this);
-        Version<T>* dv = this;
-        auto dvOld = (Version<T>*)oldV.load();
-        if (!e->versionHead.compare_exchange_strong(dv, dvOld)) {
-
-            cerr << "DV being removed is not the first version" << endl;
+        EntryMV<T>* eptr = (EntryMV<T>*)e;
+        assert(eptr->versionHead == this);
+        if (oldV == nullptr) { // Only version, created by INSERT
+            eptr->tbl->del(&obj, eptr);
+//            free(eptr);
+//            free(this);
+        } else {
+            Version<T>* dv = this;
+            auto dvOld = (Version<T>*)oldV.load();
+            if (!eptr->versionHead.compare_exchange_strong(dv, dvOld)) {
+                cerr << "DV being removed is not the first version" << endl;
+            }
         }
     }
 
@@ -61,18 +74,17 @@ struct Version : public VBase {
 
 template <typename T>
 struct EntryMV {
-    void* tbl;
+    MBase* tbl;
     std::atomic<Version<T>*> versionHead;
     std::atomic<EntryMV<T>*> nxt;
 
-    EntryMV() : versionHead(nullptr), nxt(nullptr) {
-    }
-
-    EntryMV(Version<T>* v) : versionHead(v), nxt(nullptr) {
+    EntryMV(MBase* tbl, Version<T>* v) : tbl(tbl), versionHead(v), nxt(nullptr) {
     }
 
     Version<T>* getCorrectVersion(Transaction& xact) {
         Version<T>* dv = (Version<T>*)versionHead.load(); //dv != nullptr as there will always be one version
+        if (dv == nullptr) //Can happen if GC removes version but not the EntryMV
+            return nullptr;
         VBase* dvOld = dv->oldV;
         VBase *old = nullptr;
         VBase *oldOld = dv;

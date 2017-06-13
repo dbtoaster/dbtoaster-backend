@@ -19,9 +19,6 @@ trait IdxOps extends Base with MultiResOps {
   implicit class IdxRep[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]])(implicit typeE : TypeRep[E]) {
      def unsafeInsert(e : Rep[E]) : Rep[Unit] = idxUnsafeInsert[E](self, e)(typeE)
      def insert(e : Rep[E]) : Rep[Unit] = idxInsert[E](self, e)(typeE)
-     def delete(e : Rep[E]) : Rep[Unit] = idxDelete[E](self, e)(typeE)
-     def deleteCopy(e : Rep[E], primary : Rep[Idx[E]]) : Rep[Unit] = idxDeleteCopy[E](self, e, primary)(typeE)
-     def deleteCopyDependent(e : Rep[E]) : Rep[Unit] = idxDeleteCopyDependent[E](self, e)(typeE)
      def update(e : Rep[E]) : Rep[Unit] = idxUpdate[E](self, e)(typeE)
      def updateCopyDependent(e : Rep[E], ref : Rep[E]) : Rep[Unit] = idxUpdateCopyDependent[E](self, e, ref)(typeE)
      def updateCopy(e : Rep[E], primary : Rep[Idx[E]]) : Rep[Unit] = idxUpdateCopy[E](self, e, primary)(typeE)
@@ -52,12 +49,6 @@ trait IdxOps extends Base with MultiResOps {
   type IdxUnsafeInsert[E <: ddbt.lib.store.Entry] = IdxIRs.IdxUnsafeInsert[E]
   val IdxInsert = IdxIRs.IdxInsert
   type IdxInsert[E <: ddbt.lib.store.Entry] = IdxIRs.IdxInsert[E]
-  val IdxDelete = IdxIRs.IdxDelete
-  type IdxDelete[E <: ddbt.lib.store.Entry] = IdxIRs.IdxDelete[E]
-  val IdxDeleteCopy = IdxIRs.IdxDeleteCopy
-  type IdxDeleteCopy[E <: ddbt.lib.store.Entry] = IdxIRs.IdxDeleteCopy[E]
-  val IdxDeleteCopyDependent = IdxIRs.IdxDeleteCopyDependent
-  type IdxDeleteCopyDependent[E <: ddbt.lib.store.Entry] = IdxIRs.IdxDeleteCopyDependent[E]
   val IdxUpdate = IdxIRs.IdxUpdate
   type IdxUpdate[E <: ddbt.lib.store.Entry] = IdxIRs.IdxUpdate[E]
   val IdxUpdateCopyDependent = IdxIRs.IdxUpdateCopyDependent
@@ -99,9 +90,6 @@ trait IdxOps extends Base with MultiResOps {
   // method definitions
    def idxUnsafeInsert[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxUnsafeInsert[E](self, e)
    def idxInsert[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxInsert[E](self, e)
-   def idxDelete[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxDelete[E](self, e)
-   def idxDeleteCopy[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E], primary : Rep[Idx[E]])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxDeleteCopy[E](self, e, primary)
-   def idxDeleteCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxDeleteCopyDependent[E](self, e)
    def idxUpdate[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxUpdate[E](self, e)
    def idxUpdateCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E], ref : Rep[E])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxUpdateCopyDependent[E](self, e, ref)
    def idxUpdateCopy[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E], primary : Rep[Idx[E]])(implicit typeE : TypeRep[E]) : Rep[Unit] = IdxUpdateCopy[E](self, e, primary)
@@ -138,18 +126,6 @@ object IdxIRs extends Base {
   }
 
   case class IdxInsert[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "insert", List(List(e))){
-    override def curriedConstructor = (copy[E] _).curried
-  }
-
-  case class IdxDelete[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "delete", List(List(e))){
-    override def curriedConstructor = (copy[E] _).curried
-  }
-
-  case class IdxDeleteCopy[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E], primary : Rep[Idx[E]])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "deleteCopy", List(List(e,primary))){
-    override def curriedConstructor = (copy[E] _).curried
-  }
-
-  case class IdxDeleteCopyDependent[E <: ddbt.lib.store.Entry](self : Rep[Idx[E]], e : Rep[E])(implicit val typeE : TypeRep[E]) extends FunctionDef[Unit](Some(self), "deleteCopyDependent", List(List(e))){
     override def curriedConstructor = (copy[E] _).curried
   }
 

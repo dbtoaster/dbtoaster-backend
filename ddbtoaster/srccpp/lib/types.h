@@ -5,13 +5,14 @@ struct Transaction;
 struct TransactionManager;
 struct PRED;
 struct VBase;
+struct MBase;
 
 #ifdef NDEBUG
 #define  FORCEINLINE  __attribute__((always_inline))
 #define NOINLINE __attribute__ ((noinline))
 #else
 #define NOINLINE __attribute__ ((noinline))
-#define FORCEINLINE  
+#define FORCEINLINE   __attribute__ ((noinline))
 #endif 
 
 typedef uint64_t timestamp;
@@ -53,7 +54,7 @@ enum OperationReturnStatus : char {
 };
 
 FORCE_INLINE TransactionReturnStatus TR(OperationReturnStatus op) {
-    return op == WW_VALUE ? WW_ABORT : ABORT;
+    return op == NO_KEY ? ABORT : WW_ABORT;
 }
 FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
     return op == WW_ABORT ? WW_VALUE : NO_KEY;
