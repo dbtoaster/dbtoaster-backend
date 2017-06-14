@@ -25,8 +25,8 @@ struct TransactionManager {
 
     FORCE_INLINE void rollback(Transaction& xact) {
         auto dv = xact.undoBufferHead;
-
         while (dv) {
+            assert(TStoPTR(dv->xactid) == &xact);
             dv->removeFromVersionChain();
             dv = dv->nextInUndoBuffer;
         }

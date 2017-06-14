@@ -273,6 +273,12 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
         doc"[&](${i.tp} $i) -> TransactionReturnStatus {"  :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
         doc"if(st$symid != OP_SUCCESS) return TR(st$symid);"
 
+    case Statement(sym, n@IdxSlice(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.OpResChecks =>
+      val symid = sym.id.toString
+      doc"OperationReturnStatus st$symid = $idx.slice($key, " ::
+        doc"[&](${i.tp} $i) -> TransactionReturnStatus {"  :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
+        doc"if(st$symid != OP_SUCCESS) return TR(st$symid);"
+
 
     /*************************** FIELD GET STRING *********************************************/
     case Statement(sym, n@StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType =>
@@ -395,7 +401,7 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
     case IdxUpdate(self, key) => doc"$self.update($key)"
     case IdxUpdateCopy(self, key, primary) => doc"$self.updateCopy($key, &$primary)"
     case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopyDependent($key, $ref)"
-    case IdxSlice(self, key, f) => doc"$self.slice($key, $f)"
+    case IdxSlice(self, key, f) => doc"$self.slice($key, $f, xact)"
     case IdxSliceNoUpdate(self, key, f) => doc"$self.sliceNoUpdate($key, $f, xact)"
     case IdxSliceCopy(self, key, f) => doc"$self.sliceCopy($key, $f)"
     case IdxSliceCopyDependent(self, key, f) => doc"$self.sliceCopyDependent($key, $f)"

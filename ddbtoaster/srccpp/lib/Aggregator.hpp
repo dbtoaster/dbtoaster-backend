@@ -46,11 +46,15 @@ struct MinAggregator {
             st = WW_VALUE;
             return nullptr;
         }
-        Version<E>* newV = (Version<E>*) malloc(sizeof(Version<E>));
-        new(newV) Version<E>(*resE, xact);
-        newV->oldV = vh;
-        newV->e = (EntryMV<void>*)e;
-        e->versionHead = newV;
+        Version<E>* newV = (Version<E>*) malloc(sizeof (Version<E>));
+        new(newV) Version<E>(vh, xact);
+        
+        if (!e->versionHead.compare_exchange_strong(vh, newV)) {
+            st = WW_VALUE;
+            free(newV);
+            return nullptr;
+        }
+        xact.undoBufferHead = newV;
         st = OP_SUCCESS;
         return &newV->obj;
     }
@@ -97,11 +101,15 @@ struct MaxAggregator {
             st = WW_VALUE;
             return nullptr;
         }
-        Version<E>* newV = (Version<E>*) malloc(sizeof(Version<E>));
-        new(newV) Version<E>(*resE, xact);
-        newV->oldV = vh;
-        newV->e = (EntryMV<void>*)e;
-        e->versionHead = newV;
+        Version<E>* newV = (Version<E>*) malloc(sizeof (Version<E>));
+        new(newV) Version<E>(vh, xact);
+        
+        if (!e->versionHead.compare_exchange_strong(vh, newV)) {
+            st = WW_VALUE;
+            free(newV);
+            return nullptr;
+        }
+        xact.undoBufferHead = newV;
         st = OP_SUCCESS;
         return &newV->obj;
     }
@@ -153,8 +161,10 @@ struct MedianAggregator {
         if (s % 2 == 0) i--;
         E* resE = results[i];
 
-        Version<E>* resV = (Version<E>*) VBase::getVersionFromT((char *)resE); //SBJ: Hack !
+        Version<E>* resV = (Version<E>*) VBase::getVersionFromT((char *) resE); //SBJ: Hack !
         assert(&resV->obj == resE);
+        assert(((char*)&resV->obj - (char *)resV) == sizeof(VBase));
+        
         EntryMV<E>* e = (EntryMV<E>*)resV->e;
         Version<E>* vh = e->versionHead;
 
@@ -163,11 +173,15 @@ struct MedianAggregator {
             return nullptr;
         }
 
-        Version<E>* newV = (Version<E>* ) malloc(sizeof(Version<E>));
-        new(newV) Version<E>(*resE, xact);
-        newV->oldV = vh;
-        newV->e = (EntryMV<void>*)e;
-        e->versionHead = newV;
+        Version<E>* newV = (Version<E>*) malloc(sizeof (Version<E>));
+        new(newV) Version<E>(vh, xact);
+        
+         if (!e->versionHead.compare_exchange_strong(vh, newV)) {
+            st = WW_VALUE;
+            free(newV);
+            return nullptr;
+        }
+         xact.undoBufferHead = newV;
         st = OP_SUCCESS;
         return &newV->obj;
     }

@@ -6,6 +6,7 @@ struct TransactionManager;
 struct PRED;
 struct VBase;
 struct MBase;
+struct Program;
 
 #ifdef NDEBUG
 #define  FORCEINLINE  __attribute__((always_inline))
@@ -59,5 +60,21 @@ FORCE_INLINE TransactionReturnStatus TR(OperationReturnStatus op) {
 FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
     return op == WW_ABORT ? WW_VALUE : NO_KEY;
 }
+
+#define setAffinity(thread_id)\
+    cpu_set_t cpuset;\
+    CPU_ZERO(&cpuset);\
+    CPU_SET(thread_id+1, &cpuset);\
+    auto s = sched_setaffinity(0, sizeof (cpu_set_t), &cpuset);\
+    if (s != 0)\
+        throw std::runtime_error("Cannot set affinity");
+
+#define setSched(type)\
+    sched_param param;\
+    param.__sched_priority =  sched_get_priority_max(type);\
+    s = sched_setscheduler(0, type, &param);\
+    if (s != 0)\
+        cerr << "Cannot set scheduler" << endl;
+
 #endif /* TYPES_H */
 

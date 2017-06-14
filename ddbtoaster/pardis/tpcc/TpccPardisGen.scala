@@ -792,7 +792,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
     }
 
-    val (stTypdef, stDecl, stInit) = optTP.globalVars.map(s => {
+    val (stTypdef, stDecl, stInit1, stRefs, stInit2) = optTP.globalVars.map(s => {
       def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
 
       val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
@@ -802,13 +802,19 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
       val storeTypeDef = doc"typedef MultiHashMapMV<${entryTp}," :: idxTypes.map(t => idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}StoreType;"
 
-      val storeDecl = s.name :: "StoreType  " :: s.name :: ";"
-      val idxDecl = idx3.zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1};").mkDocument("\n")
+      val storeDecl = s.name :: "StoreType  " :: s.name :: ";  "
+      val storeRef = s.name :: "StoreType& " :: s.name :: ";  "
+
+      val idxDecl = idx3.zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1};").mkDocument("  ")
 
       val storeinit = s.name :: (if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes)" else doc"()") :: ", "
+      val storeRefInit = s.name :: "(t." :: s.name :: "), "
+
       val idxInit = idx3.zipWithIndex.map(t => doc"${t._1._1}(*(${idxTypeName(t._2)} *)${s.name}.index[${t._2}])").mkDocument(", ")
-      (idxTypeDefs :\\: storeTypeDef :: "\n", storeDecl :\\: idxDecl :: "\n", storeinit :: idxInit)
-    }).reduce((a, b) => (a._1 :\\: b._1, a._2 :\\: b._2, a._3 :: ", " :\\: b._3))
+      val idxRefInit = idx3.zipWithIndex.map(t=> doc"${t._1._1}(t.${t._1._1})").mkDocument(", ")
+
+      (idxTypeDefs :\\: storeTypeDef :: "\n", storeDecl :: idxDecl , storeinit :: idxInit , storeRef :: idxDecl , storeRefInit :: idxRefInit)
+    }).reduce((a, b) => (a._1 :\\: b._1, a._2 :\\: b._2, a._3 :: ", " :/: b._3, a._4 :\\: b._4, a._5 ::", ":\\: b._5))
 
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
     def structToDoc(s: PardisStructDef[_]) = s match {
@@ -869,7 +875,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
 
     val blocks = optTP.codeBlocks.map(x => doc"FORCE_INLINE TransactionReturnStatus ${x._1}(Transaction& xact, ${argsDoc(x._2)}) {" ::
       stPrf(x._1) :: Document.nest(2, codeGen.blockToDocument(x._3)) :/: "  clearTempMem();" :: endPrf(x._1) :/: "  return SUCCESS;" :/:
-      "}").mkDocument("\n")
+      "}").mkDocument("\n\n")
 
     idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name)).toList
     val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT(orig.$i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
@@ -879,7 +885,6 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "Index Resizing warning disabled" << endl;
          |#endif
          |
-         |TPCCDataGen tpcc;
          |tpcc.loadPrograms();
          |
          |Transaction t0;
@@ -896,75 +901,35 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |xactManager.commit(t0);
          |
          |memset(xactCounts, 0, 5 * sizeof(uint));
-         |Program * failedPrograms[2 * windowsize];
-         |size_t failedHead = 0, failedTail = 0, currentHead = 0, failedCount = 0, finishedCount = 0;
-         |auto start = Now;
-         |size_t numWindows = 0;
-         |while (currentHead < numPrograms || failedHead != failedTail) {
-         |  uint count = 0;
-         |  Program * window[windowsize];
-         |  size_t failedTail_old = failedTail;
+         |Timepoint startTime, endTime;
+         |std::thread workers[numThreads];
          |
-         |  while (failedHead != failedTail_old && count < windowsize) {
-         |    Program *p = failedPrograms[failedHead++];
-         |    if (failedHead == 2 * windowsize)
-         |      failedHead = 0;
-         |    runProgram(p, 0, orig); //begin
-         |    auto status = runProgram(p, 1, orig); //run
-         |    if (status == SUCCESS) {
-         |      window[count++] = p;
-         |    } else {
-         |      runProgram(p, 3, orig); //rollback
-         |      if (status != ABORT) {
-         |        failedPrograms[failedTail++] = p;
-         |        if (failedTail == 2 * windowsize)
-         |          failedTail = 0;
-         |        failedCount++;
-         |        if (failedTail == failedHead)
-         |          throw std::out_of_range("Total failed programs execeeded limit2");
-         |      }
-         |      window[count++] = nullptr;
-         |    }
-         |  }
-         |
-         |  while (currentHead < numPrograms && count < windowsize) {
-         |    Program *p = tpcc.programs[currentHead++];
-         |    runProgram(p, 0, orig);
-         |    auto status = runProgram(p, 1, orig);
-         |    if (status == SUCCESS) {
-         |      window[count++] = p;
-         |    } else {
-         |      runProgram(p, 3, orig);
-         |      if (status != ABORT) {
-         |        failedPrograms[failedTail++] = p;
-         |        if (failedTail == 2 * windowsize)
-         |          failedTail = 0;
-         |        failedCount++;
-         |        if (failedTail == failedHead)
-         |          throw std::out_of_range("Total failed programs execeeded limit3");
-         |      }
-         |      window[count++] = nullptr;
-         |    }
-         |  }
-         |
-         |  for (uint i = 0; i < count; i++) {
-         |    Program *p = window[i];
-         |    if (p == nullptr)continue;
-         |    if (runProgram(p, 2, orig) != SUCCESS) {
-         |     runProgram(p, 3, orig); // rollback
-         |      failedPrograms[failedTail++] = p;
-         |      if (failedTail == 2 * windowsize)
-         |        failedTail = 0;
-         |      if (failedTail == failedHead)
-         |        throw std::out_of_range("Total failed validations exceeded limit");
-         |    } else {
-         |      finishedCount++;
-         |    }
-         |  }
-         |  numWindows++;
+         |for (uint8_t i = 0; i < numThreads; ++i) {
+         |    workers[i] = std::thread(threadFunction, i, &orig);
          |}
-         |auto end = Now;
-         |auto execTime = DurationMS(end - start);
+         |bool all_ready = true;
+         |//check if all worker threads are ready. Execution can be started once all threads finish startup procedure
+         |while (true) {
+         |    for (uint8_t i = 0; i < numThreads; ++i) {
+         |        if (isReady[i] == false) {
+         |            all_ready = false;
+         |            break;
+         |        }
+         |    }
+         |    if (all_ready) {
+         |        startTime = Now;
+         |        startExecution = true;
+         |        break;
+         |    }
+         |    all_ready = true;
+         |}
+         |
+         |for (uint8_t i = 0; i < numThreads; ++i) {
+         |    workers[i].join();
+         |}
+         |endTime = Now;
+         |auto execTime = DurationMS(endTime - startTime);
+         |
          |cout << "Failed NO = " << failedNO << endl;
          |cout << "Failed Del = " << failedDel << endl;
          |cout << "Failed OS = " << failedOS << endl;
@@ -994,7 +959,9 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |ofstream info("$infoFilePath");
          |${getSizes}
          |info.close();
+         |
          |#ifdef VERIFY_CONC
+         |ThreadLocal ver(-1, res);
          |std::sort(tpcc.programs, tpcc.programs + numPrograms, [](const Program* a, const Program * b) {
          |  return a->xact.commitTS < b->xact.commitTS;
          |});
@@ -1005,12 +972,13 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |    break;
          |  p->xact.reset();
          |  TransactionReturnStatus st;
-         |  runProgram(p, 0, res);
-         |  st = runProgram(p, 1, res);
+         |  xactManager.begin(p->xact);
+         |  st = ver.runProgram(p);
          |  assert(st == SUCCESS);
-         |  st = runProgram(p, 2, res);
-         |  assert(st == SUCCESS);
+         |  bool st2 = xactManager.validateAndCommit(p->xact);
+         |  assert(st2);
          |}
+         |
          |if (orig.warehouseTblIdx0 == res.warehouseTblIdx0) {
          |  cout << "Warehouse results are same as serial version" << endl;
          |} else {
@@ -1132,97 +1100,110 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |TransactionManager& Transaction::tm(xactManager);
         |uint xactCounts[5];
         |uint8_t prgId7to5[] = {0, 1, 1, 2, 2, 3, 4};
-        |const uint windowsize = 5;
-        |TPCC_Data orig;
+        |
+        |const uint numThreads = 2;
+        |volatile bool isReady[numThreads];
+        |volatile bool startExecution, hasFinished;
+        |
+        |
         |#define CONCURRENT 1
+        |TPCC_Data orig;
         |#ifdef VERIFY_CONC
         |   TPCC_Data res;
         |#endif
         | """.stripMargin
 
     val runPrgFn =
-      """
-        |TransactionReturnStatus runProgram(Program* prg, short id, TPCC_Data& dataset) {
-        |  TransactionReturnStatus ret = SUCCESS;
-        |  switch (id) {
-        |    case 0:
-        |      xactManager.begin(prg->xact);
-        |      break;
-        |    case 1:
-        |    {
-        |      switch (prg->id) {
-        |        case NEWORDER:
-        |        {
-        |          NewOrder& p = *(NewOrder *) prg;
-        |          ret = dataset.NewOrderTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
-        |          break;
-        |        }
-        |        case PAYMENTBYID:
-        |        {
-        |          PaymentById& p = *(PaymentById *) prg;
-        |          ret = dataset.PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
-        |          break;
-        |        }
-        |        case PAYMENTBYNAME:
-        |        {
-        |          PaymentByName& p = *(PaymentByName *) prg;
-        |          ret = dataset.PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
-        |          break;
-        |        }
-        |        case ORDERSTATUSBYID:
-        |        {
-        |          OrderStatusById &p = *(OrderStatusById *) prg;
-        |          ret = dataset.OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
-        |          break;
-        |        }
-        |        case ORDERSTATUSBYNAME:
-        |        {
-        |          OrderStatusByName &p = *(OrderStatusByName *) prg;
-        |          ret = dataset.OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
-        |          break;
-        |        }
-        |        case DELIVERY:
-        |        {
-        |          Delivery &p = *(Delivery *) prg;
-        |          ret = dataset.DeliveryTx(prg->xact, false, p.datetime, p.w_id, p.o_carrier_id);
-        |          break;
-        |        }
-        |        case STOCKLEVEL:
-        |        {
-        |          StockLevel &p = *(StockLevel *) prg;
-        |          ret = dataset.StockLevelTx(prg->xact, false, -1, -1, p.w_id, p.d_id, p.threshold);
-        |          break;
-        |        }
-        |        default: cerr << "UNKNOWN PROGRAM TYPE" << endl;
+      """TPCCDataGen tpcc;
         |
-        |      }
-        |      break;
-        |    }
-        |    case 2:
+        |TransactionReturnStatus ThreadLocal::runProgram(Program* prg) {
+        |  TransactionReturnStatus ret = SUCCESS;
+        |  switch (prg->id) {
+        |    case NEWORDER:
         |    {
-        |      if (xactManager.validateAndCommit(prg->xact)) {
-        |        uint8_t id = prgId7to5[prg->id];
-        |        xactCounts[id]++;
-        |        ret = SUCCESS;
-        |      } else
-        |        ret = COMMIT_FAILURE;
-        |    }
+        |      NewOrder& p = *(NewOrder *) prg;
+        |      ret = NewOrderTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
         |      break;
-        |    case 3:
+        |    }
+        |    case PAYMENTBYID:
         |    {
-        |      xactManager.rollback(prg->xact);
-        |    }
+        |      PaymentById& p = *(PaymentById *) prg;
+        |      ret = PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
         |      break;
-        |    default: cerr << "UNKNOWN EXECUTION ID";
+        |    }
+        |    case PAYMENTBYNAME:
+        |    {
+        |      PaymentByName& p = *(PaymentByName *) prg;
+        |      ret = PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
+        |      break;
+        |    }
+        |    case ORDERSTATUSBYID:
+        |    {
+        |      OrderStatusById &p = *(OrderStatusById *) prg;
+        |      ret = OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
+        |      break;
+        |    }
+        |    case ORDERSTATUSBYNAME:
+        |    {
+        |      OrderStatusByName &p = *(OrderStatusByName *) prg;
+        |      ret = OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
+        |      break;
+        |    }
+        |    case DELIVERY:
+        |    {
+        |      Delivery &p = *(Delivery *) prg;
+        |      ret = DeliveryTx(prg->xact, false, p.datetime, p.w_id, p.o_carrier_id);
+        |      break;
+        |    }
+        |    case STOCKLEVEL:
+        |    {
+        |      StockLevel &p = *(StockLevel *) prg;
+        |      ret = StockLevelTx(prg->xact, false, -1, -1, p.w_id, p.d_id, p.threshold);
+        |      break;
+        |    }
+        |    default: cerr << "UNKNOWN PROGRAM TYPE" << endl;
+        |
         |  }
         |  return ret;
         |}
       """.stripMargin
+    val threadFn =
+      s"""std::atomic<uint> PC(0);
+         |void threadFunction(uint8_t thread_id, TPCC_Data* data) {
+         |    setAffinity(thread_id);
+         |    //    setSched(SCHED_FIFO);
+         |
+         |  ThreadLocal tl(thread_id, *data);
+         |  isReady[thread_id] = true;
+         |  uint pid = PC++;
+         |  Program* p;
+         |  TransactionReturnStatus st;
+         |  while (!startExecution);
+         |  while (pid < numPrograms && (p = tpcc.programs[pid]) && !hasFinished) {
+         |    xactManager.begin(p->xact);
+         |    st = tl.runProgram(p);
+         |    if (st != SUCCESS) {
+         |      xactManager.rollback(p->xact);
+         |    } else {
+         |      if (!xactManager.validateAndCommit(p->xact)) {
+         |        xactManager.rollback(p->xact);
+         |      } else {
+         |        pid = PC++;
+         |        xactCounts[prgId7to5[p->id]]++;
+         |      }
+         |    }
+         |  }
+         |  hasFinished = true;
+         |}
+         |
+       """.stripMargin
+    val tpccData = doc"struct TPCC_Data {" :\\: Document.nest(2, doc"TPCC_Data(): " :\\: stInit1 :: "{}\n" :\\: stDecl) :\\: "};"
+    val threadLocal = doc"struct ThreadLocal { " :\\: Document.nest(2,
+    "\nuint8_t threadId;\nuint xactCounts[5];\n" :\\: doc"ThreadLocal(uint8_t tid, TPCC_Data& t): threadId(tid), "
+      :\\: stInit2 :: "{\n   memset(xactCounts, 0, sizeof(uint)*5);\n}\n" :\\: stRefs :: "\n" :\\: structVars :: "\n"
+      :\\: blocks :\\: "\n TransactionReturnStatus runProgram(Program* prg);") :\\: "};"
     file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stTypdef :\\:
-      doc"struct TPCC_Data { " :\\: Document.nest(2, doc"TPCC_Data():" :\\:
-    stInit :: doc"{}" :\\:
-    stDecl :\\: structVars :\\: blocks) :\\: "};" :\\:
-    tm :: "\n\n#include \"TPCC.h\"\n" :\\: runPrgFn :\\: traits :/: Document.nest(2, mainPrg) :/: "}")
+    tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"TPCC.h\"\n"  :\\: runPrgFn :\\: threadFn:\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }

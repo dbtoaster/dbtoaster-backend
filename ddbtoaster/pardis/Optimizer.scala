@@ -117,8 +117,10 @@ class Optimizer(val IR: StoreDSL) {
   if(Optimizer.mvget && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("MV-get requires idxInline and lookupfusion")
 
-  if(Optimizer.mvget)
+  if(Optimizer.mvget) {
     pipeline += new MVGet(IR)
+    pipeline += new SliceToSliceNoUpd(IR)
+  }
 
   if(Optimizer.deadIndexUpdate)
     pipeline += new DeadIdxUpdate(IR)
@@ -140,7 +142,7 @@ class Optimizer(val IR: StoreDSL) {
       To do it without IdxInline, there should be "noUpd" versions for StoreSlice
    */
 
-  if (Optimizer.sliceNoUpd)
+  if (Optimizer.sliceNoUpd && !Optimizer.mvget)
     pipeline += new SliceToSliceNoUpd(IR)
 
   if (Optimizer.multiResSplitter)

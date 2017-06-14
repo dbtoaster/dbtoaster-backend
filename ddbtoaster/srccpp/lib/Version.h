@@ -17,7 +17,7 @@ struct VBase {
     col_type cols;
 
     VBase(Transaction& x) : xactid(PTRtoTS(&x)), oldV(nullptr), nextInUndoBuffer(x.undoBufferHead), cols(-1) {
-        x.undoBufferHead = this;
+       //Should not add to x.undoBuffer now. This version can still be deleted
     }
 
     static FORCE_INLINE VBase* getVersionFromT(char* entry) {
@@ -31,7 +31,9 @@ template <typename T>
 struct Version : public VBase {
     T obj;
 
-    Version(const Version& that, Transaction& x) : VBase(x), obj(that.obj) {
+    Version(Version* that, Transaction& x) : VBase(x), obj(that->obj) {
+        e = that->e;
+        oldV = that;
     }
 
     Version(const T&o, Transaction& x) : VBase(x), obj(o) {
@@ -64,7 +66,6 @@ struct Version : public VBase {
                 return true;
         } else { //transaction that wrote DV is definitely committed   dv->xactId == t->commitTS
             if (ts < xact->startTS)
-
                 return true;
         }
         return false;

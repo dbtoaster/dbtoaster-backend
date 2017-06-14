@@ -696,8 +696,8 @@ typedef MultiHashMapMV<struct SEntry21_IIISSSSSSSSSTSDDDDIIS,customerTblIdx0Type
 typedef CuckooIndex<struct SEntry17_IIISSSSSSSSSSIIIS, SEntry17_IIISSSSSSSSSSIIIS_Idx21> stockTblIdx0Type;
 typedef MultiHashMapMV<struct SEntry17_IIISSSSSSSSSSIIIS,stockTblIdx0Type> stockTblStoreType;
 
-struct TPCC_Data { 
-  TPCC_Data():
+struct TPCC_Data {
+  TPCC_Data(): 
   newOrderTbl(), newOrderTblIdx0(*(newOrderTblIdx0Type *)newOrderTbl.index[0]), newOrderTblIdx1(*(newOrderTblIdx1Type *)newOrderTbl.index[1]), 
   historyTbl(), historyTblIdx0(*(historyTblIdx0Type *)historyTbl.index[0]), 
   warehouseTbl(), warehouseTblIdx0(*(warehouseTblIdx0Type *)warehouseTbl.index[0]), 
@@ -707,36 +707,44 @@ struct TPCC_Data {
   orderLineTbl(), orderLineTblIdx0(*(orderLineTblIdx0Type *)orderLineTbl.index[0]), orderLineTblIdx1(*(orderLineTblIdx1Type *)orderLineTbl.index[1]), 
   customerTbl(), customerTblIdx0(*(customerTblIdx0Type *)customerTbl.index[0]), customerTblIdx1(*(customerTblIdx1Type *)customerTbl.index[1]), 
   stockTbl(), stockTblIdx0(*(stockTblIdx0Type *)stockTbl.index[0]){}
-  newOrderTblStoreType  newOrderTbl;
-  newOrderTblIdx0Type& newOrderTblIdx0;
-  newOrderTblIdx1Type& newOrderTblIdx1;
   
-  historyTblStoreType  historyTbl;
-  historyTblIdx0Type& historyTblIdx0;
+  newOrderTblStoreType  newOrderTbl;  newOrderTblIdx0Type& newOrderTblIdx0;  newOrderTblIdx1Type& newOrderTblIdx1;
+  historyTblStoreType  historyTbl;  historyTblIdx0Type& historyTblIdx0;
+  warehouseTblStoreType  warehouseTbl;  warehouseTblIdx0Type& warehouseTblIdx0;
+  itemTblStoreType  itemTbl;  itemTblIdx0Type& itemTblIdx0;
+  orderTblStoreType  orderTbl;  orderTblIdx0Type& orderTblIdx0;  orderTblIdx1Type& orderTblIdx1;
+  districtTblStoreType  districtTbl;  districtTblIdx0Type& districtTblIdx0;
+  orderLineTblStoreType  orderLineTbl;  orderLineTblIdx0Type& orderLineTblIdx0;  orderLineTblIdx1Type& orderLineTblIdx1;
+  customerTblStoreType  customerTbl;  customerTblIdx0Type& customerTblIdx0;  customerTblIdx1Type& customerTblIdx1;
+  stockTblStoreType  stockTbl;  stockTblIdx0Type& stockTblIdx0;
+};
+struct ThreadLocal { 
   
-  warehouseTblStoreType  warehouseTbl;
-  warehouseTblIdx0Type& warehouseTblIdx0;
+  uint8_t threadId;
+  uint xactCounts[5];
   
-  itemTblStoreType  itemTbl;
-  itemTblIdx0Type& itemTblIdx0;
+  ThreadLocal(uint8_t tid, TPCC_Data& t): threadId(tid), 
+  newOrderTbl(t.newOrderTbl), newOrderTblIdx0(t.newOrderTblIdx0), newOrderTblIdx1(t.newOrderTblIdx1), 
+  historyTbl(t.historyTbl), historyTblIdx0(t.historyTblIdx0), 
+  warehouseTbl(t.warehouseTbl), warehouseTblIdx0(t.warehouseTblIdx0), 
+  itemTbl(t.itemTbl), itemTblIdx0(t.itemTblIdx0), 
+  orderTbl(t.orderTbl), orderTblIdx0(t.orderTblIdx0), orderTblIdx1(t.orderTblIdx1), 
+  districtTbl(t.districtTbl), districtTblIdx0(t.districtTblIdx0), 
+  orderLineTbl(t.orderLineTbl), orderLineTblIdx0(t.orderLineTblIdx0), orderLineTblIdx1(t.orderLineTblIdx1), 
+  customerTbl(t.customerTbl), customerTblIdx0(t.customerTblIdx0), customerTblIdx1(t.customerTblIdx1), 
+  stockTbl(t.stockTbl), stockTblIdx0(t.stockTblIdx0){
+     memset(xactCounts, 0, sizeof(uint)*5);
+  }
   
-  orderTblStoreType  orderTbl;
-  orderTblIdx0Type& orderTblIdx0;
-  orderTblIdx1Type& orderTblIdx1;
-  
-  districtTblStoreType  districtTbl;
-  districtTblIdx0Type& districtTblIdx0;
-  
-  orderLineTblStoreType  orderLineTbl;
-  orderLineTblIdx0Type& orderLineTblIdx0;
-  orderLineTblIdx1Type& orderLineTblIdx1;
-  
-  customerTblStoreType  customerTbl;
-  customerTblIdx0Type& customerTblIdx0;
-  customerTblIdx1Type& customerTblIdx1;
-  
-  stockTblStoreType  stockTbl;
-  stockTblIdx0Type& stockTblIdx0;
+  newOrderTblStoreType& newOrderTbl;  newOrderTblIdx0Type& newOrderTblIdx0;  newOrderTblIdx1Type& newOrderTblIdx1;
+  historyTblStoreType& historyTbl;  historyTblIdx0Type& historyTblIdx0;
+  warehouseTblStoreType& warehouseTbl;  warehouseTblIdx0Type& warehouseTblIdx0;
+  itemTblStoreType& itemTbl;  itemTblIdx0Type& itemTblIdx0;
+  orderTblStoreType& orderTbl;  orderTblIdx0Type& orderTblIdx0;  orderTblIdx1Type& orderTblIdx1;
+  districtTblStoreType& districtTbl;  districtTblIdx0Type& districtTblIdx0;
+  orderLineTblStoreType& orderLineTbl;  orderLineTblIdx0Type& orderLineTblIdx0;  orderLineTblIdx1Type& orderLineTblIdx1;
+  customerTblStoreType& customerTbl;  customerTblIdx0Type& customerTblIdx0;  customerTblIdx1Type& customerTblIdx1;
+  stockTblStoreType& stockTbl;  stockTblIdx0Type& stockTblIdx0;
   
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS x5373;
   struct SEntry10_IIIIIITIDS x5142;
@@ -762,6 +770,7 @@ struct TPCC_Data {
   struct SEntry21_IIISSSSSSSSSTSDDDDIIS x4902;
   struct SEntry3_III x4918;
   struct SEntry8_IIIITIIB x4915;
+  
   FORCE_INLINE TransactionReturnStatus PaymentTx(Transaction& xact, int x16, date x17, int x18, int x19, int x20, int x21, int x22, int x23, int x24, PString x25, double x26) {
     x4626._1 = x19;
     OperationReturnStatus stx10395;
@@ -774,32 +783,32 @@ struct TPCC_Data {
     struct SEntry11_IISSSSSSDDI* x10401 =  districtTblIdx0.getForUpdate(x4631, stx10401, xact);
     if(stx10401 != OP_SUCCESS) return TR(stx10401);
     x10401->_10 += x26;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite18312 = 0;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite18334 = 0;
     if((x21>(0))) {
-      std::vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x18316results;
-      MedianAggregator<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, PString> x18316([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* e) -> PString {
+      std::vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x18338results;
+      MedianAggregator<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, PString> x18338([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* e) -> PString {
         return (e->_4); 
-      }, x18316results);
+      }, x18338results);
       x4692._2 = x23;
       x4692._3 = x22;
       x4692._6 = x25;
-      customerTblIdx1.sliceNoUpdate(x4692, x18316, xact);
-      OperationReturnStatus stx18321;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18321 = x18316.resultForUpdate(stx18321, xact);
-      if(stx18321 != OP_SUCCESS) return TR(stx18321);
-      ite18312 = x18321;
+      customerTblIdx1.sliceNoUpdate(x4692, x18338, xact);
+      OperationReturnStatus stx18343;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18343 = x18338.resultForUpdate(stx18343, xact);
+      if(stx18343 != OP_SUCCESS) return TR(stx18343);
+      ite18334 = x18343;
     } else {
       x4696._1 = x24;
       x4696._2 = x23;
       x4696._3 = x22;
-      OperationReturnStatus stx18326;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18326 =  customerTblIdx0.getForUpdate(x4696, stx18326, xact);
-      if(stx18326 != OP_SUCCESS) return TR(stx18326);
-      ite18312 = x18326;
+      OperationReturnStatus stx18348;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18348 =  customerTblIdx0.getForUpdate(x4696, stx18348, xact);
+      if(stx18348 != OP_SUCCESS) return TR(stx18348);
+      ite18334 = x18348;
     };
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x4636 = ite18312;
-    char* x19495 = strstr((x4636->_14).data_, "BC");
-    if((x19495!=(NULL))) {
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x4636 = ite18334;
+    char* x19517 = strstr((x4636->_14).data_, "BC");
+    if((x19517!=(NULL))) {
       PString x2403 = PString(500);
       x2403.append((x4636->_1));
       x2403.append(' ');
@@ -836,11 +845,12 @@ struct TPCC_Data {
     x4675._6 = x17;
     x4675._7 = x26;
     x4675._8 = x2429;
-    OperationReturnStatus st17267 = historyTbl.insert_nocheck(x4675, xact);
-    if(st17267 != OP_SUCCESS) return TR(st17267);
+    OperationReturnStatus st17289 = historyTbl.insert_nocheck(x4675, xact);
+    if(st17289 != OP_SUCCESS) return TR(st17289);
     clearTempMem();
     return SUCCESS;
   }
+  
   FORCE_INLINE TransactionReturnStatus NewOrderTx(Transaction& xact, int x78, date x79, int x80, int x81, int x82, int x83, int x84, int x85, int* x86, int* x87, int* x88, double* x89, PString* x90, int* x91, PString* x92, double* x93) {
     int x95 = 0;
     int x98 = 0;
@@ -850,17 +860,17 @@ struct TPCC_Data {
     while(1) {
       
       int x108 = x95;
-      int ite18582 = 0;
+      int ite18604 = 0;
       if((x108<(x84))) {
         
         int x110 = x103;
-        int x18583 = x110;
-        ite18582 = x18583;
+        int x18605 = x110;
+        ite18604 = x18605;
       } else {
-        ite18582 = 0;
+        ite18604 = 0;
       };
-      int x18450 = ite18582;
-      if (!(x18450)) break; 
+      int x18472 = ite18604;
+      if (!(x18472)) break; 
       
       int x113 = x95;
       int supwid = x87[x113];
@@ -908,13 +918,13 @@ struct TPCC_Data {
       x4915._6 = -1;
       x4915._7 = x84;
       x4915._8 = x157;
-      OperationReturnStatus st17324 = orderTbl.insert_nocheck(x4915, xact);
-      if(st17324 != OP_SUCCESS) return TR(st17324);
+      OperationReturnStatus st17346 = orderTbl.insert_nocheck(x4915, xact);
+      if(st17346 != OP_SUCCESS) return TR(st17346);
       x4918._1 = x4910;
       x4918._2 = x82;
       x4918._3 = x81;
-      OperationReturnStatus st17328 = newOrderTbl.insert_nocheck(x4918, xact);
-      if(st17328 != OP_SUCCESS) return TR(st17328);
+      OperationReturnStatus st17350 = newOrderTbl.insert_nocheck(x4918, xact);
+      if(st17350 != OP_SUCCESS) return TR(st17350);
       double x165 = 0.0;
       x95 = 0;
       while(1) {
@@ -939,18 +949,18 @@ struct TPCC_Data {
         x91[x188] = x4936;
         int x190 = x95;
         PString& x191 = idata[x190];
-        char* x19693 = strstr(x191.data_, "original");
-        int ite18661 = 0;
-        if((x19693!=(NULL))) {
+        char* x19715 = strstr(x191.data_, "original");
+        int ite18683 = 0;
+        if((x19715!=(NULL))) {
           
-          char* x19699 = strstr((x10703->_17).data_, "original");
-          int x18662 = (x19699!=(NULL));
-          ite18661 = x18662;
+          char* x19721 = strstr((x10703->_17).data_, "original");
+          int x18684 = (x19721!=(NULL));
+          ite18683 = x18684;
         } else {
-          ite18661 = 0;
+          ite18683 = 0;
         };
-        int x18524 = ite18661;
-        if(x18524) {
+        int x18546 = ite18683;
+        if(x18546) {
           int x196 = x95;
           x92[x196].data_[0] = 'B';
         } else {
@@ -982,8 +992,8 @@ struct TPCC_Data {
         x4980._8 = ol_quantity;
         x4980._9 = ol_amount;
         x4980._10 = x4935;
-        OperationReturnStatus st17396 = orderLineTbl.insert_nocheck(x4980, xact);
-        if(st17396 != OP_SUCCESS) return TR(st17396);
+        OperationReturnStatus st17418 = orderLineTbl.insert_nocheck(x4980, xact);
+        if(st17418 != OP_SUCCESS) return TR(st17418);
         int x239 = x95;
         x95 = (x239+(1));
       };
@@ -994,6 +1004,7 @@ struct TPCC_Data {
     clearTempMem();
     return SUCCESS;
   }
+  
   FORCE_INLINE TransactionReturnStatus DeliveryTx(Transaction& xact, int x247, date x248, int x249, int x250) {
     int orderIDs[10];
     int x255 = 1;
@@ -1031,13 +1042,13 @@ struct TPCC_Data {
         x5142._1 = x5126;
         x5142._2 = x289;
         x5142._3 = x249;
-        OperationReturnStatus st13326 = orderLineTblIdx1.sliceNoUpdate(x5142, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
+        OperationReturnStatus st9395 = orderLineTblIdx1.slice(x5142, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
           orderLineEntry->_7 = x248;
           double x294 = x287;
           x287 = (x294+((orderLineEntry->_9)));
           return SUCCESS;
         }, xact);
-        if(st13326 != OP_SUCCESS) return TR(st13326);
+        if(st9395 != OP_SUCCESS) return TR(st9395);
         int x302 = x255;
         x5146._1 = (x10938->_4);
         x5146._2 = x302;
@@ -1060,6 +1071,7 @@ struct TPCC_Data {
     clearTempMem();
     return SUCCESS;
   }
+  
   FORCE_INLINE TransactionReturnStatus StockLevelTx(Transaction& xact, int x321, date x322, int x323, int x324, int x325, int x326) {
     x5278._1 = x325;
     x5278._2 = x324;
@@ -1076,7 +1088,7 @@ struct TPCC_Data {
       x5290._1 = x341;
       x5290._2 = x325;
       x5290._3 = x324;
-      OperationReturnStatus st13434 = orderLineTblIdx1.sliceNoUpdate(x5290, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
+      OperationReturnStatus st12343 = orderLineTblIdx1.sliceNoUpdate(x5290, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
         int x5307 = orderLineEntry->_5;
         x5309._1 = x5307;
         x5309._2 = x324;
@@ -1086,34 +1098,35 @@ struct TPCC_Data {
         };
         return SUCCESS;
       }, xact);
-      if(st13434 != OP_SUCCESS) return TR(st13434);
+      if(st12343 != OP_SUCCESS) return TR(st12343);
       int x358 = x335;
       x335 = (x358+(1));
     };
     clearTempMem();
     return SUCCESS;
   }
+  
   FORCE_INLINE TransactionReturnStatus OrderStatusTx(Transaction& xact, int x364, date x365, int x366, int x367, int x368, int x369, int x370, PString x371) {
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite18947 = 0;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite18969 = 0;
     if((x369>(0))) {
-      std::vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x18951results;
-      MedianAggregator<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, PString> x18951([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* e) -> PString {
+      std::vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x18973results;
+      MedianAggregator<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, PString> x18973([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* e) -> PString {
         return (e->_4); 
-      }, x18951results);
+      }, x18973results);
       x5373._2 = x368;
       x5373._3 = x367;
       x5373._6 = x371;
-      customerTblIdx1.sliceNoUpdate(x5373, x18951, xact);
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18956 = x18951.result();
-      ite18947 = x18956;
+      customerTblIdx1.sliceNoUpdate(x5373, x18973, xact);
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18978 = x18973.result();
+      ite18969 = x18978;
     } else {
       x5377._1 = x370;
       x5377._2 = x368;
       x5377._3 = x367;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18961 = customerTblIdx0.get(x5377, xact);
-      ite18947 = x18961;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18983 = customerTblIdx0.get(x5377, xact);
+      ite18969 = x18983;
     };
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x5350 = ite18947;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x5350 = ite18969;
     struct SEntry8_IIIITIIB* x5353result = nullptr;
     MaxAggregator<struct SEntry8_IIIITIIB, int> x5353([&](struct SEntry8_IIIITIIB* e) -> int {
       return (e->_1); 
@@ -1123,35 +1136,42 @@ struct TPCC_Data {
     x5355._4 = (x5350->_3);
     orderTblIdx1.sliceNoUpdate(x5355, x5353, xact);
     struct SEntry8_IIIITIIB* x5357 = x5353.result();
-    int ite18976 = 0;
+    int ite18998 = 0;
     if((x5357==(NULL))) {
-      int x18977 = failedOS;
-      failedOS = (1+(x18977));
-      ite18976 = 0;
+      int x18999 = failedOS;
+      failedOS = (1+(x18999));
+      ite18998 = 0;
     } else {
       x5366._1 = (x5357->_1);
       x5366._2 = x368;
       x5366._3 = x367;
-      OperationReturnStatus st18988 = orderLineTblIdx1.sliceNoUpdate(x5366, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
+      OperationReturnStatus st19010 = orderLineTblIdx1.sliceNoUpdate(x5366, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
         int x409 = 1;
         return SUCCESS;
       }, xact);
-      if(st18988 != OP_SUCCESS) return TR(st18988);
-      ite18976 = 1;
+      if(st19010 != OP_SUCCESS) return TR(st19010);
+      ite18998 = 1;
     };
-    int x413 = ite18976;
+    int x413 = ite18998;
     clearTempMem();
     return SUCCESS;
   }
+  
+   TransactionReturnStatus runProgram(Program* prg);
 };
 
 TransactionManager xactManager;
 TransactionManager& Transaction::tm(xactManager);
 uint xactCounts[5];
 uint8_t prgId7to5[] = {0, 1, 1, 2, 2, 3, 4};
-const uint windowsize = 10;
-TPCC_Data orig;
+
+const uint numThreads = 8;
+volatile bool isReady[numThreads];
+volatile bool startExecution, hasFinished;
+
+
 #define CONCURRENT 1
+TPCC_Data orig;
 #ifdef VERIFY_CONC
    TPCC_Data res;
 #endif
@@ -1159,83 +1179,100 @@ TPCC_Data orig;
 
 #include "TPCC.h"
 
+TPCCDataGen tpcc;
 
-TransactionReturnStatus runProgram(Program* prg, short id, TPCC_Data& dataset) {
+TransactionReturnStatus ThreadLocal::runProgram(Program* prg) {
   TransactionReturnStatus ret = SUCCESS;
-  switch (id) {
-    case 0:
-      xactManager.begin(prg->xact);
-      break;
-    case 1:
+  switch (prg->id) {
+    case NEWORDER:
     {
-      switch (prg->id) {
-        case NEWORDER:
-        {
-          NewOrder& p = *(NewOrder *) prg;
-          ret = dataset.NewOrderTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
-          break;
-        }
-        case PAYMENTBYID:
-        {
-          PaymentById& p = *(PaymentById *) prg;
-          ret = dataset.PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
-          break;
-        }
-        case PAYMENTBYNAME:
-        {
-          PaymentByName& p = *(PaymentByName *) prg;
-          ret = dataset.PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
-          break;
-        }
-        case ORDERSTATUSBYID:
-        {
-          OrderStatusById &p = *(OrderStatusById *) prg;
-          ret = dataset.OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
-          break;
-        }
-        case ORDERSTATUSBYNAME:
-        {
-          OrderStatusByName &p = *(OrderStatusByName *) prg;
-          ret = dataset.OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
-          break;
-        }
-        case DELIVERY:
-        {
-          Delivery &p = *(Delivery *) prg;
-          ret = dataset.DeliveryTx(prg->xact, false, p.datetime, p.w_id, p.o_carrier_id);
-          break;
-        }
-        case STOCKLEVEL:
-        {
-          StockLevel &p = *(StockLevel *) prg;
-          ret = dataset.StockLevelTx(prg->xact, false, -1, -1, p.w_id, p.d_id, p.threshold);
-          break;
-        }
-        default: cerr << "UNKNOWN PROGRAM TYPE" << endl;
+      NewOrder& p = *(NewOrder *) prg;
+      ret = NewOrderTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
+      break;
+    }
+    case PAYMENTBYID:
+    {
+      PaymentById& p = *(PaymentById *) prg;
+      ret = PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
+      break;
+    }
+    case PAYMENTBYNAME:
+    {
+      PaymentByName& p = *(PaymentByName *) prg;
+      ret = PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
+      break;
+    }
+    case ORDERSTATUSBYID:
+    {
+      OrderStatusById &p = *(OrderStatusById *) prg;
+      ret = OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
+      break;
+    }
+    case ORDERSTATUSBYNAME:
+    {
+      OrderStatusByName &p = *(OrderStatusByName *) prg;
+      ret = OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
+      break;
+    }
+    case DELIVERY:
+    {
+      Delivery &p = *(Delivery *) prg;
+      ret = DeliveryTx(prg->xact, false, p.datetime, p.w_id, p.o_carrier_id);
+      break;
+    }
+    case STOCKLEVEL:
+    {
+      StockLevel &p = *(StockLevel *) prg;
+      ret = StockLevelTx(prg->xact, false, -1, -1, p.w_id, p.d_id, p.threshold);
+      break;
+    }
+    default: cerr << "UNKNOWN PROGRAM TYPE" << endl;
 
-      }
-      break;
-    }
-    case 2:
-    {
-      if (xactManager.validateAndCommit(prg->xact)) {
-        uint8_t id = prgId7to5[prg->id];
-        xactCounts[id]++;
-        ret = SUCCESS;
-      } else
-        ret = COMMIT_FAILURE;
-    }
-      break;
-    case 3:
-    {
-      xactManager.rollback(prg->xact);
-    }
-      break;
-    default: cerr << "UNKNOWN EXECUTION ID";
   }
   return ret;
 }
       
+std::atomic<uint> PC(0);
+void threadFunction(uint8_t thread_id, TPCC_Data* data) {
+    setAffinity(thread_id);
+    //    setSched(SCHED_FIFO);
+
+  ThreadLocal tl(thread_id, *data);
+  isReady[thread_id] = true;
+  uint pid = PC++;
+  Program* p;
+  TransactionReturnStatus st;
+  while (!startExecution);
+  while (pid < numPrograms && (p = tpcc.programs[pid]) && !hasFinished) {
+    xactManager.begin(p->xact);
+    st = tl.runProgram(p);
+    if (st != SUCCESS) {
+//      xactManager.outLock.lock();
+//      cout << pid << " ex" << endl;
+//      xactManager.outLock.unlock();
+      xactManager.rollback(p->xact);
+    } else {
+      if (!xactManager.validateAndCommit(p->xact)) {
+        
+//      xactManager.outLock.lock();
+//      cout << pid << " val" << endl;
+//      xactManager.outLock.unlock();
+        xactManager.rollback(p->xact);
+      } else {
+        
+//      xactManager.outLock.lock();
+//      cout << pid << " fin" << endl;
+//      xactManager.outLock.unlock();
+      
+        pid = PC++;
+        xactCounts[prgId7to5[p->id]]++;
+      }
+    }
+  }
+  hasFinished = true;
+}
+
+       
 /* TRAITS STARTING */
 
 
@@ -1246,7 +1283,6 @@ int main(int argc, char** argv) {
   cout << "Index Resizing warning disabled" << endl;
   #endif
   
-  TPCCDataGen tpcc;
   tpcc.loadPrograms();
   
   Transaction t0;
@@ -1263,75 +1299,35 @@ int main(int argc, char** argv) {
   xactManager.commit(t0);
   
   memset(xactCounts, 0, 5 * sizeof(uint));
-  Program * failedPrograms[2 * windowsize];
-  size_t failedHead = 0, failedTail = 0, currentHead = 0, failedCount = 0, finishedCount = 0;
-  auto start = Now;
-  size_t numWindows = 0;
-  while (currentHead < numPrograms || failedHead != failedTail) {
-    uint count = 0;
-    Program * window[windowsize];
-    size_t failedTail_old = failedTail;
+  Timepoint startTime, endTime;
+  std::thread workers[numThreads];
   
-    while (failedHead != failedTail_old && count < windowsize) {
-      Program *p = failedPrograms[failedHead++];
-      if (failedHead == 2 * windowsize)
-        failedHead = 0;
-      runProgram(p, 0, orig); //begin
-      auto status = runProgram(p, 1, orig); //run
-      if (status == SUCCESS) {
-        window[count++] = p;
-      } else {
-        runProgram(p, 3, orig); //rollback
-        if (status != ABORT) {
-          failedPrograms[failedTail++] = p;
-          if (failedTail == 2 * windowsize)
-            failedTail = 0;
-          failedCount++;
-          if (failedTail == failedHead)
-            throw std::out_of_range("Total failed programs execeeded limit2");
-        }
-        window[count++] = nullptr;
-      }
-    }
-  
-    while (currentHead < numPrograms && count < windowsize) {
-      Program *p = tpcc.programs[currentHead++];
-      runProgram(p, 0, orig);
-      auto status = runProgram(p, 1, orig);
-      if (status == SUCCESS) {
-        window[count++] = p;
-      } else {
-        runProgram(p, 3, orig);
-        if (status != ABORT) {
-          failedPrograms[failedTail++] = p;
-          if (failedTail == 2 * windowsize)
-            failedTail = 0;
-          failedCount++;
-          if (failedTail == failedHead)
-            throw std::out_of_range("Total failed programs execeeded limit3");
-        }
-        window[count++] = nullptr;
-      }
-    }
-  
-    for (uint i = 0; i < count; i++) {
-      Program *p = window[i];
-      if (p == nullptr)continue;
-      if (runProgram(p, 2, orig) != SUCCESS) {
-       runProgram(p, 3, orig); // rollback
-        failedPrograms[failedTail++] = p;
-        if (failedTail == 2 * windowsize)
-          failedTail = 0;
-        if (failedTail == failedHead)
-          throw std::out_of_range("Total failed validations exceeded limit");
-      } else {
-        finishedCount++;
-      }
-    }
-    numWindows++;
+  for (uint8_t i = 0; i < numThreads; ++i) {
+      workers[i] = std::thread(threadFunction, i, &orig);
   }
-  auto end = Now;
-  auto execTime = DurationMS(end - start);
+  bool all_ready = true;
+  //check if all worker threads are ready. Execution can be started once all threads finish startup procedure
+  while (true) {
+      for (uint8_t i = 0; i < numThreads; ++i) {
+          if (isReady[i] == false) {
+              all_ready = false;
+              break;
+          }
+      }
+      if (all_ready) {
+          startTime = Now;
+          startExecution = true;
+          break;
+      }
+      all_ready = true;
+  }
+  
+  for (uint8_t i = 0; i < numThreads; ++i) {
+      workers[i].join();
+  }
+  endTime = Now;
+  auto execTime = DurationMS(endTime - startTime);
+  
   cout << "Failed NO = " << failedNO << endl;
   cout << "Failed Del = " << failedDel << endl;
   cout << "Failed OS = " << failedOS << endl;
@@ -1379,7 +1375,9 @@ int main(int argc, char** argv) {
   GET_RUN_STAT(orig.stockTblIdx0, info);
   info << "\n}\n";
   info.close();
+  
   #ifdef VERIFY_CONC
+  ThreadLocal ver(-1, res);
   std::sort(tpcc.programs, tpcc.programs + numPrograms, [](const Program* a, const Program * b) {
     return a->xact.commitTS < b->xact.commitTS;
   });
@@ -1390,12 +1388,13 @@ int main(int argc, char** argv) {
       break;
     p->xact.reset();
     TransactionReturnStatus st;
-    runProgram(p, 0, res);
-    st = runProgram(p, 1, res);
+    xactManager.begin(p->xact);
+    st = ver.runProgram(p);
     assert(st == SUCCESS);
-    st = runProgram(p, 2, res);
-    assert(st == SUCCESS);
+    bool st2 = xactManager.validateAndCommit(p->xact);
+    assert(st2);
   }
+  
   if (orig.warehouseTblIdx0 == res.warehouseTblIdx0) {
     cout << "Warehouse results are same as serial version" << endl;
   } else {
