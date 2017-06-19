@@ -242,18 +242,14 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
   (fabs(o1._8 - o2._8) < 0.01) && 
   (fabs(o1._9 - o2._9) < 0.01);
 }
- struct SEntry8_IIIITIIB_Idx234 {
+ 
+struct SEntry8_IIIITIIB_Idx234 {  // O 1
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3468)  { 
-    int x3469 = 0;
-    int x3470 = x3469;
-    x3469 = (x3470^(((((HASH((x3468._2)))+(-1640531527))+((x3470<<(6))))+((x3470>>(2))))));
-    int x3480 = x3469;
-    x3469 = (x3480^(((((HASH((x3468._3)))+(-1640531527))+((x3480<<(6))))+((x3480>>(2))))));
-    int x3490 = x3469;
-    x3469 = (x3490^(((((HASH((x3468._4)))+(-1640531527))+((x3490<<(6))))+((x3490>>(2))))));
-    int x3500 = x3469;
-    return x3500; 
+    int x1 = x3468._4;
+    int x2 = (x1 << 2) + x3468._3;
+    int x3 = (x2 << 4) + x3468._2;
+    return x3;
   }
   #undef int
   FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3502, const struct SEntry8_IIIITIIB& x3503) { 
@@ -275,20 +271,14 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3521; 
   }
 };
- struct SEntry10_IIIIIITIDS_Idx3214 {
+ struct SEntry10_IIIIIITIDS_Idx3214 { // OL 0
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x3576)  { 
-    int x3577 = 0;
-    int x3578 = x3577;
-    x3577 = (x3578^(((((HASH((x3576._3)))+(-1640531527))+((x3578<<(6))))+((x3578>>(2))))));
-    int x3588 = x3577;
-    x3577 = (x3588^(((((HASH((x3576._2)))+(-1640531527))+((x3588<<(6))))+((x3588>>(2))))));
-    int x3598 = x3577;
-    x3577 = (x3598^(((((HASH((x3576._1)))+(-1640531527))+((x3598<<(6))))+((x3598>>(2))))));
-    int x3608 = x3577;
-    x3577 = (x3608^(((((HASH((x3576._4)))+(-1640531527))+((x3608<<(6))))+((x3608>>(2))))));
-    int x3618 = x3577;
-    return x3618; 
+    int x1 = x3576._1;
+    int x2 = (x1 << 2) + x3576._3;
+    int x3 = (x2 << 4) + x3576._2;
+    int x4 = (x3 << 4) + x3576._4;
+    return x4;
   }
   #undef int
   FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x3620, const struct SEntry10_IIIIIITIDS& x3621) { 
@@ -314,18 +304,13 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3644; 
   }
 };
- struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx321 {
+ struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx321 {  //C 0
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3709)  { 
-    int x3710 = 0;
-    int x3711 = x3710;
-    x3710 = (x3711^(((((HASH((x3709._3)))+(-1640531527))+((x3711<<(6))))+((x3711>>(2))))));
-    int x3721 = x3710;
-    x3710 = (x3721^(((((HASH((x3709._2)))+(-1640531527))+((x3721<<(6))))+((x3721>>(2))))));
-    int x3731 = x3710;
-    x3710 = (x3731^(((((HASH((x3709._1)))+(-1640531527))+((x3731<<(6))))+((x3731>>(2))))));
-    int x3741 = x3710;
-    return x3741; 
+    int x2 = x3709._3;
+    int x3 = (x2 << 4) + x3709._2;
+    int x1 = (x3 << 12) + x3709._1;
+    return x1;
   }
   #undef int
   FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3743, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3744) { 
@@ -347,7 +332,7 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3762; 
   }
 };
- struct SEntry8_IIIIITDS_Idx12345678 {
+ struct SEntry8_IIIIITDS_Idx12345678 {  //H Idx0
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry8_IIIIITDS& x3215)  { 
     int x3216 = 0;
@@ -410,18 +395,13 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3343; 
   }
 };
- struct SEntry8_IIIITIIB_Idx321 {
+ struct SEntry8_IIIITIIB_Idx321 {  // O 0
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3412)  { 
-    int x3413 = 0;
-    int x3414 = x3413;
-    x3413 = (x3414^(((((HASH((x3412._3)))+(-1640531527))+((x3414<<(6))))+((x3414>>(2))))));
-    int x3424 = x3413;
-    x3413 = (x3424^(((((HASH((x3412._2)))+(-1640531527))+((x3424<<(6))))+((x3424>>(2))))));
-    int x3434 = x3413;
-    x3413 = (x3434^(((((HASH((x3412._1)))+(-1640531527))+((x3434<<(6))))+((x3434>>(2))))));
-    int x3444 = x3413;
-    return x3444; 
+    int x1 = x3412._1;
+    int x2 = (x1 << 2) + x3412._3;
+    int x3 = (x2 << 4) + x3412._2;
+    return x3;
   }
   #undef int
   FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3446, const struct SEntry8_IIIITIIB& x3447) { 
@@ -443,16 +423,12 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3465; 
   }
 };
- struct SEntry17_IIISSSSSSSSSSIIIS_Idx21 {
+ struct SEntry17_IIISSSSSSSSSSIIIS_Idx21 { // S 0
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry17_IIISSSSSSSSSSIIIS& x3826)  { 
-    int x3827 = 0;
-    int x3828 = x3827;
-    x3827 = (x3828^(((((HASH((x3826._2)))+(-1640531527))+((x3828<<(6))))+((x3828>>(2))))));
-    int x3838 = x3827;
-    x3827 = (x3838^(((((HASH((x3826._1)))+(-1640531527))+((x3838<<(6))))+((x3838>>(2))))));
-    int x3848 = x3827;
-    return x3848; 
+    int x1 = x3826._1;
+    int x2 = (x1 << 2) + x3826._2;
+    return x2; 
   }
   #undef int
   FORCE_INLINE static char cmp(const struct SEntry17_IIISSSSSSSSSSIIIS& x3850, const struct SEntry17_IIISSSSSSSSSSIIIS& x3851) { 
@@ -470,16 +446,12 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3864; 
   }
 };
- struct SEntry3_III_Idx23 {
+ struct SEntry3_III_Idx23 {  //NO Idx 1
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry3_III& x3168)  { 
-    int x3169 = 0;
-    int x3170 = x3169;
-    x3169 = (x3170^(((((HASH((x3168._2)))+(-1640531527))+((x3170<<(6))))+((x3170>>(2))))));
-    int x3180 = x3169;
-    x3169 = (x3180^(((((HASH((x3168._3)))+(-1640531527))+((x3180<<(6))))+((x3180>>(2))))));
-    int x3190 = x3169;
-    return x3190; 
+    int x1 = x3168._3;
+    int x2 = (x1 << 4) + x3168._2;
+    return x2;
   }
   #undef int
   FORCE_INLINE static char cmp(const struct SEntry3_III& x3192, const struct SEntry3_III& x3193) { 
@@ -497,18 +469,13 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3206; 
   }
 };
- struct SEntry10_IIIIIITIDS_Idx123 {
+ struct SEntry10_IIIIIITIDS_Idx123 {  // OL 1
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x3647)  { 
-    int x3648 = 0;
-    int x3649 = x3648;
-    x3648 = (x3649^(((((HASH((x3647._1)))+(-1640531527))+((x3649<<(6))))+((x3649>>(2))))));
-    int x3659 = x3648;
-    x3648 = (x3659^(((((HASH((x3647._2)))+(-1640531527))+((x3659<<(6))))+((x3659>>(2))))));
-    int x3669 = x3648;
-    x3648 = (x3669^(((((HASH((x3647._3)))+(-1640531527))+((x3669<<(6))))+((x3669>>(2))))));
-    int x3679 = x3648;
-    return x3679; 
+    int x1 = x3647._1;
+    int x2 = (x1 << 2) + x3647._3;
+    int x3 = (x2 << 4) + x3647._2;
+    return x3;
   }
   #undef int
   FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x3681, const struct SEntry10_IIIIIITIDS& x3682) { 
@@ -530,18 +497,13 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3700; 
   }
 };
- struct SEntry3_III_Idx321 {
+ struct SEntry3_III_Idx321 {  //NO Idx0
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry3_III& x3112)  { 
-    int x3113 = 0;
-    int x3114 = x3113;
-    x3113 = (x3114^(((((HASH((x3112._3)))+(-1640531527))+((x3114<<(6))))+((x3114>>(2))))));
-    int x3124 = x3113;
-    x3113 = (x3124^(((((HASH((x3112._2)))+(-1640531527))+((x3124<<(6))))+((x3124>>(2))))));
-    int x3134 = x3113;
-    x3113 = (x3134^(((((HASH((x3112._1)))+(-1640531527))+((x3134<<(6))))+((x3134>>(2))))));
-    int x3144 = x3113;
-    return x3144; 
+    int x1 = x3112._1;
+    int x2 = (x1 << 2) + x3112._3; 
+    int x3 = (x2 << 4) + x3112._2; 
+    return x3;
   }
   #undef int
   FORCE_INLINE static char cmp(const struct SEntry3_III& x3146, const struct SEntry3_III& x3147) { 
@@ -563,7 +525,7 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3165; 
   }
 };
- struct SEntry5_IISDS_Idx1 {
+ struct SEntry5_IISDS_Idx1 { // I 0
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry5_IISDS& x3381)  { 
     int x3382 = 0;
@@ -584,18 +546,13 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3404; 
   }
 };
- struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236 {
+ struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236 { // C 1
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3765)  { 
-    int x3766 = 0;
-    int x3767 = x3766;
-    x3766 = (x3767^(((((HASH((x3765._2)))+(-1640531527))+((x3767<<(6))))+((x3767>>(2))))));
-    int x3777 = x3766;
-    x3766 = (x3777^(((((HASH((x3765._3)))+(-1640531527))+((x3777<<(6))))+((x3777>>(2))))));
-    int x3787 = x3766;
-    x3766 = (x3787^(((((HASH((x3765._6)))+(-1640531527))+((x3787<<(6))))+((x3787>>(2))))));
-    int x3797 = x3766;
-    return x3797; 
+    int x1 = HASH(x3765._6);
+    int x2 = (x1 << 2) + x3765._3;
+    int x3 = (x2 << 4) + x3765._2;
+    return x3;
   }
   #undef int
   FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3799, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3800) { 
@@ -617,7 +574,7 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3818; 
   }
 };
- struct SEntry9_ISSSSSSDD_Idx1 {
+ struct SEntry9_ISSSSSSDD_Idx1 { // W 0
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry9_ISSSSSSDD& x3351)  { 
     int x3352 = 0;
@@ -638,7 +595,7 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3374; 
   }
 };
- struct SEntry11_IISSSSSSDDI_Idx21 {
+ struct SEntry11_IISSSSSSDDI_Idx21 { // D 0
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry11_IISSSSSSDDI& x3530)  { 
     int x3531 = 0;
@@ -665,6 +622,8 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
     return x3568; 
   }
 };
+
+
 typedef CuckooIndex<struct SEntry3_III, SEntry3_III_Idx321> newOrderTblIdx0Type;
 typedef ConcurrentCuckooSecondaryIndex<struct SEntry3_III, SEntry3_III_Idx23> newOrderTblIdx1Type;
 typedef MultiHashMapMV<struct SEntry3_III,newOrderTblIdx0Type, newOrderTblIdx1Type> newOrderTblStoreType;

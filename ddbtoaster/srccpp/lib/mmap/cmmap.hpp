@@ -289,7 +289,7 @@ struct CuckooIndex : public IndexMV<T> {
 
             Version<T> *newv = (Version<T> *) malloc(sizeof (Version<T>));
             new(newv) Version<T>(resV, xact);
-            newv->vid = GET;
+            
             if (!result->versionHead.compare_exchange_strong(resV, newv)) {
                 st = WW_VALUE;
                 free(newv);
@@ -545,7 +545,7 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                 if (v && !v->obj.isInvalid) {
                     Version<T> * newV = (Version<T>*)malloc(sizeof (Version<T>));
                     new(newV) Version<T>(v, xact);
-                    newV->vid = SLICE;
+                 
                     if (!cur->e->versionHead.compare_exchange_strong(v, newV)) {
                         free(newV);
                         return WW_VALUE;
