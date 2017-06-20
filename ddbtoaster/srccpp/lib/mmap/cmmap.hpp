@@ -81,7 +81,7 @@ struct CuckooIndex : public IndexMV<T> {
             return IDX_FN::cmp(*e1, *e2) == 0;
         }
     };
-    cuckoohash_map<T*, EntryMV<T>*, HE, HE, std::allocator<std::pair<T, EntryMV<T>*>>, 32> index;
+    cuckoohash_map<T*, EntryMV<T>*, HE, HE, std::allocator<std::pair<T, EntryMV<T>*>>, 2> index;
 
     std::atomic<EntryMV<T>*> dataHead;
 
@@ -89,7 +89,7 @@ struct CuckooIndex : public IndexMV<T> {
         dataHead = nullptr;
     }
 
-    CuckooIndex(void* ptr, int s = 0) : index(1<<12) { //Constructor argument is ignored
+    CuckooIndex(void* ptr, int s = 0) : index(1<<23) { //Constructor argument is ignored
         dataHead = nullptr;
     }
 
@@ -437,9 +437,9 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
         }
     };
 
-    cuckoohash_map<T*, Container*, HE, HE, std::allocator<std::pair<T*, Container*>>, 32> index;
+    cuckoohash_map<T*, Container*, HE, HE, std::allocator<std::pair<T*, Container*>>, 2> index;
 
-    ConcurrentCuckooSecondaryIndex(size_t size = 100000) : index((1<<16)) {
+    ConcurrentCuckooSecondaryIndex(size_t size = 100000) : index((1<<23)) {
     }
     // Inserts an entry into the secondary index.
     //Uses cuckoo hashmap as backend

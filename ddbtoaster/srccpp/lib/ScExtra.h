@@ -29,7 +29,7 @@ FORCE_INLINE size_t HASH(int x) {
 
 FORCE_INLINE size_t HASH(char *x) {
     size_t hash = 7;
-    for (int i = 0; i < 10 && x[i]; i++) {
+    for (int i = 0; i < 20 && x[i]; i++) {
         hash = hash * 31 + x[i];
     }
     return hash;

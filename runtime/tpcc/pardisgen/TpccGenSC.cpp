@@ -623,7 +623,6 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
   }
 };
 
-
 typedef CuckooIndex<struct SEntry3_III, SEntry3_III_Idx321> newOrderTblIdx0Type;
 typedef ConcurrentCuckooSecondaryIndex<struct SEntry3_III, SEntry3_III_Idx23> newOrderTblIdx1Type;
 typedef MultiHashMapMV<struct SEntry3_III,newOrderTblIdx0Type, newOrderTblIdx1Type> newOrderTblStoreType;
