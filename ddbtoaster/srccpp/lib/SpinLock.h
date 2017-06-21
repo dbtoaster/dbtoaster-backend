@@ -3,7 +3,7 @@
 #define __COMMON_SPIN_LOCK_H__
 #include <atomic>
 
-class SpinLock {
+class  __attribute__((aligned(64))) SpinLock {
     std::atomic_flag lock_;
 public:
 
