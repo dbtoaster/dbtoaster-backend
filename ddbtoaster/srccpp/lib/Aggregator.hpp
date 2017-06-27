@@ -44,6 +44,10 @@ struct MinAggregator {
 
         if (vh != resV) {
             st = WW_VALUE;
+            if (vh->xactid > initCommitTS) {
+                Transaction* otherXact = TStoPTR(vh->xactid);
+                xact.failedBecauseOf = otherXact;
+            }
             return nullptr;
         }
         Version<E>* newV = (Version<E>*) malloc(sizeof (Version<E>));
@@ -51,6 +55,10 @@ struct MinAggregator {
         
         if (!e->versionHead.compare_exchange_strong(vh, newV)) {
             st = WW_VALUE;
+            if (vh->xactid > initCommitTS) {
+                Transaction* otherXact = TStoPTR(vh->xactid);
+                xact.failedBecauseOf = otherXact;
+            }
             free(newV);
             return nullptr;
         }
@@ -99,6 +107,10 @@ struct MaxAggregator {
 
         if (vh != resV) {
             st = WW_VALUE;
+            if (vh->xactid > initCommitTS) {
+                Transaction* otherXact = TStoPTR(vh->xactid);
+                xact.failedBecauseOf = otherXact;
+            }
             return nullptr;
         }
         Version<E>* newV = (Version<E>*) malloc(sizeof (Version<E>));
@@ -106,6 +118,10 @@ struct MaxAggregator {
         
         if (!e->versionHead.compare_exchange_strong(vh, newV)) {
             st = WW_VALUE;
+            if (vh->xactid > initCommitTS) {
+                Transaction* otherXact = TStoPTR(vh->xactid);
+                xact.failedBecauseOf = otherXact;
+            }
             free(newV);
             return nullptr;
         }
@@ -169,6 +185,10 @@ struct MedianAggregator {
         Version<E>* vh = e->versionHead;
 
         if (vh != resV) {
+            if (vh->xactid > initCommitTS) {
+                Transaction* otherXact = TStoPTR(vh->xactid);
+                xact.failedBecauseOf = otherXact;
+            }
             st = WW_VALUE;
             return nullptr;
         }

@@ -16,6 +16,7 @@
 
 #include "mmap/mmap.hpp"
 #include "types.h"
+#include "Transaction.h"
 
 
 #define EXPAND(x) #x
@@ -85,7 +86,7 @@ std::ostream &operator<<(std::ostream &os, const HistoryEntry &m) {
 }
 
 std::ostream &operator<<(std::ostream &os, const NewOrderEntry &m) {
-    return os << m._1 << " " << m._2 << "  " << m._3;
+    return os << m._1 << " " << m._2 << "  " << m._3 << (m.isInvalid ? "DEL" : " ");
 }
 #endif
 //------------------------------------------------------------------------------
@@ -127,6 +128,7 @@ struct Program {
     }
 
     Program(short i) : id(i) {
+        xact.ptype = i;
     }
 };
 

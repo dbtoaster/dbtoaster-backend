@@ -81,15 +81,15 @@ struct CuckooIndex : public IndexMV<T> {
             return IDX_FN::cmp(*e1, *e2) == 0;
         }
     };
-    cuckoohash_map<T*, EntryMV<T>*, HE, HE, std::allocator<std::pair<T, EntryMV<T>*>>, 2> index;
+    cuckoohash_map<T*, EntryMV<T>*, HE, HE, std::allocator<std::pair<T, EntryMV<T>*>>> index;
 
     std::atomic<EntryMV<T>*> dataHead;
 
-    CuckooIndex(int s = 0) : index((1<<23)) { //Constructor argument is ignored
+    CuckooIndex(int s = 0) : index((1 << 25)) { //Constructor argument is ignored
         dataHead = nullptr;
     }
 
-    CuckooIndex(void* ptr, int s = 0) : index(1<<23) { //Constructor argument is ignored
+    CuckooIndex(void* ptr, int s = 0) : index(1 << 25) { //Constructor argument is ignored
         dataHead = nullptr;
     }
 
@@ -278,6 +278,10 @@ struct CuckooIndex : public IndexMV<T> {
             Version<T>* resV = result->versionHead;
 
             if (!resV->isVisible(&xact)) {
+                if (resV->xactid > initCommitTS) {
+                    Transaction* otherXact = TStoPTR(resV->xactid);
+                    xact.failedBecauseOf = otherXact;
+                }
                 st = WW_VALUE;
                 return nullptr;
             }
@@ -291,6 +295,10 @@ struct CuckooIndex : public IndexMV<T> {
             new(newv) Version<T>(resV, xact);
             
             if (!result->versionHead.compare_exchange_strong(resV, newv)) {
+                if (resV->xactid > initCommitTS) {
+                    Transaction* otherXact = TStoPTR(resV->xactid);
+                    xact.failedBecauseOf = otherXact;
+                }
                 st = WW_VALUE;
                 free(newv);
                 return nullptr;
@@ -437,9 +445,9 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
         }
     };
 
-    cuckoohash_map<T*, Container*, HE, HE, std::allocator<std::pair<T*, Container*>>, 2> index;
+    cuckoohash_map<T*, Container*, HE, HE, std::allocator<std::pair<T*, Container*>>> index;
 
-    ConcurrentCuckooSecondaryIndex(size_t size = 100000) : index((1<<23)) {
+    ConcurrentCuckooSecondaryIndex(size_t size = 100000) : index((1 << 25)) {
     }
     // Inserts an entry into the secondary index.
     //Uses cuckoo hashmap as backend
@@ -540,6 +548,10 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                 prev->next.compare_exchange_strong(prevNext, cur);
                 Version<T>* v = cur->e->versionHead;
                 if (!v->isVisible(&xact)) {
+                    if (v->xactid > initCommitTS) {
+                        Transaction* otherXact = TStoPTR(v->xactid);
+                        xact.failedBecauseOf = otherXact;
+                    }
                     return WW_VALUE;
                 }
                 if (v && !v->obj.isInvalid) {
@@ -547,6 +559,10 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                     new(newV) Version<T>(v, xact);
                  
                     if (!cur->e->versionHead.compare_exchange_strong(v, newV)) {
+                        if (v->xactid > initCommitTS) {
+                            Transaction* otherXact = TStoPTR(v->xactid);
+                            xact.failedBecauseOf = otherXact;
+                        }
                         free(newV);
                         return WW_VALUE;
                     }
@@ -588,6 +604,9 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                     curNext = cur->next;
                 }
                 prev->next.compare_exchange_strong(prevNext, cur);
+                if (!cur)
+                    break;
+                
                 Version<T>* v = cur->e->getCorrectVersion(xact);
 
                 if (v && !v->obj.isInvalid) {
@@ -601,7 +620,6 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
             } while (cur);
             return OP_SUCCESS;
         } else {
-            throw std::logic_error("Empty slice");
             return NO_KEY;
         }
     }
@@ -865,7 +883,7 @@ public:
                 return OP_SUCCESS;
                 return DUPLICATE_KEY;
             }
-             xact.undoBufferHead = newV;
+            xact.undoBufferHead = newV;
         } else {
             return OP_SUCCESS;
             return DUPLICATE_KEY;

@@ -888,7 +888,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |tpcc.loadPrograms();
          |
          |Transaction t0;
-         |xactManager.begin(t0);
+         |xactManager.begin(t0, 0);
          |tpcc.loadWare(t0);
          |tpcc.loadDist(t0);
          |tpcc.loadCust(t0);
@@ -898,9 +898,11 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |tpcc.loadOrdLine(t0);
          |tpcc.loadHist(t0);
          |tpcc.loadStocks(t0);
-         |xactManager.commit(t0);
+         |xactManager.commit(t0, 0);
          |
          |memset(xactCounts, 0, 5 * sizeof(uint));
+         |memset(xactManager.activeXactStartTS, 0xff, sizeof(xactManager.activeXactStartTS[0]) * numThreads);
+         |
          |Timepoint startTime, endTime;
          |std::thread workers[numThreads];
          |
@@ -922,6 +924,9 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |        break;
          |    }
          |    all_ready = true;
+         |}
+         |while (!hasFinished) {
+         |  xactManager.garbageCollect();
          |}
          |
          |for (uint8_t i = 0; i < numThreads; ++i) {
@@ -972,10 +977,10 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |    break;
          |  p->xact.reset();
          |  TransactionReturnStatus st;
-         |  xactManager.begin(p->xact);
+         |  xactManager.begin(p->xact, 0);
          |  st = ver.runProgram(p);
          |  assert(st == SUCCESS);
-         |  bool st2 = xactManager.validateAndCommit(p->xact);
+         |  bool st2 = xactManager.validateAndCommit(p->xact, 0);
          |  assert(st2);
          |}
          |
@@ -1101,7 +1106,6 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |uint xactCounts[5];
         |uint8_t prgId7to5[] = {0, 1, 1, 2, 2, 3, 4};
         |
-        |const uint numThreads = 2;
         |volatile bool isReady[numThreads];
         |volatile bool startExecution, hasFinished;
         |
@@ -1180,14 +1184,12 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |  TransactionReturnStatus st;
          |  while (!startExecution);
          |  while (pid < numPrograms && (p = tpcc.programs[pid]) && !hasFinished) {
-         |    xactManager.begin(p->xact);
+         |    xactManager.begin(p->xact, thread_id);
          |    st = tl.runProgram(p);
          |    if (st != SUCCESS) {
-         |      xactManager.rollback(p->xact);
+         |      xactManager.rollback(p->xact, thread_id);
          |    } else {
-         |      if (!xactManager.validateAndCommit(p->xact)) {
-         |        xactManager.rollback(p->xact);
-         |      } else {
+         |      if (xactManager.validateAndCommit(p->xact, thread_id)) {   //rollback happens inside function if it fails
          |        pid = PC++;
          |        xactCounts[prgId7to5[p->id]]++;
          |      }
@@ -1202,7 +1204,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     "\nuint8_t threadId;\nuint xactCounts[5];\n" :\\: doc"ThreadLocal(uint8_t tid, TPCC_Data& t): threadId(tid), "
       :\\: stInit2 :: "{\n   memset(xactCounts, 0, sizeof(uint)*5);\n}\n" :\\: stRefs :: "\n" :\\: structVars :: "\n"
       :\\: blocks :\\: "\n TransactionReturnStatus runProgram(Program* prg);") :\\: "};"
-    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stTypdef :\\:
+    //disabled entryidx temporarily
+    file.println(header :/: execProfile :/: structs :\\: structEquals  :\\: stTypdef :\\:
     tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"TPCC.h\"\n"  :\\: runPrgFn :\\: threadFn:\\: traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }

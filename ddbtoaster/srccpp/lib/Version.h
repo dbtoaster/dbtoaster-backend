@@ -23,7 +23,7 @@ struct VBase {
     static FORCE_INLINE VBase* getVersionFromT(char* entry) {
         return (VBase *) (entry - sizeof (VBase));
     }
-
+    virtual VBase* getVersionAfter(timestamp oldest) = 0;
     virtual void removeFromVersionChain() = 0;
 };
 
@@ -42,13 +42,61 @@ struct Version : public VBase {
     //    Version(bool ignore, const Args&... args): obj(args...), entry(nullptr), xactid(mask), oldV(nullptr){
     //    }
 
+    VBase* getVersionAfter(timestamp oldest) override {
+        EntryMV<T>* e = (EntryMV<T>*)this->e;
+        Version<T>* dv = e->versionHead.load(); //dv != nullptr as there will always be one version
+        if (dv == nullptr) //Can happen if GC removes version but not the EntryMV
+            return nullptr;
+        VBase* dvOld = dv->oldV;
+        VBase *old = nullptr;
+        VBase *oldOld = dv;
+        while (isMarked(dvOld) || dv->xactid > oldest) {
+            if (!isMarked(dvOld)) {
+                if (oldOld != dv) {
+                    if (old == nullptr) {
+                        Version<T> * oldOldKV = (Version<T>*) oldOld;
+                        e->versionHead.compare_exchange_strong(oldOldKV, dv); //dont care abt result
+                    } else
+                        old->oldV.compare_exchange_strong(oldOld, dv); //dont care abt result
+                }
+                old = dv;
+                dv = (Version<T>*)dvOld;
+                assert(!dv || dv->e == this->e);
+                oldOld = dvOld;
+            } else {
+                dv = (Version<T>*)unmark(dvOld);
+            }
+            if (!dv)
+                break;
+            dvOld = dv->oldV.load();
+        }
+        if (oldOld != dv) {
+            if (old == nullptr) {
+                Version<T> * oldOldKV = (Version<T> *) oldOld;
+                e->versionHead.compare_exchange_strong(oldOldKV, (Version<T> *) dv); //dont care abt result
+            } else
+                old->oldV.compare_exchange_strong(oldOld, dv); //dont care abt result
+        }
+        if (!dv)
+            return nullptr;
+        if (old == nullptr) {  //latest version
+            if (dv->obj.isInvalid)
+                e->tbl->del(&dv->obj, e);
+            //Not really safe to delete dv here. But assuming that it takes a while after this return for dv to be deleted, it is safe
+            return dv->oldV;
+        } else if (old->xactid >= initCommitTS) //dv is the first committed version, cannot be deleted
+            return dv->oldV;
+        else
+            return dv;
+    }
+
     void removeFromVersionChain() override {
         EntryMV<T>* eptr = (EntryMV<T>*)e;
         assert(eptr->versionHead == this);
         if (oldV == nullptr) { // Only version, created by INSERT
             eptr->tbl->del(&obj, eptr);
-//            free(eptr);
-//            free(this);
+            //            free(eptr);
+            //            free(this);
         } else {
             Version<T>* dv = this;
             auto dvOld = (Version<T>*)oldV.load();
@@ -82,6 +130,7 @@ struct EntryMV {
     EntryMV(MBase* tbl, Version<T>* v) : tbl(tbl), versionHead(v), nxt(nullptr) {
     }
 
+    //Returns the first version with cts > oldest AND not the only first committed version
     Version<T>* getCorrectVersion(Transaction& xact) {
         Version<T>* dv = (Version<T>*)versionHead.load(); //dv != nullptr as there will always be one version
         if (dv == nullptr) //Can happen if GC removes version but not the EntryMV
@@ -99,8 +148,9 @@ struct EntryMV {
                         old->oldV.compare_exchange_strong(oldOld, dv); //dont care abt result
                 }
                 old = dv;
-                oldOld = dvOld;
                 dv = (Version<T>*)dvOld;
+                assert(!dv || dv->e == ((EntryMV<void>*)this));
+                oldOld = dvOld;
             } else {
                 dv = (Version<T>*) unmark(dvOld);
             }

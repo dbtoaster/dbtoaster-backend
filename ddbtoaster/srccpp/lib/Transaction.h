@@ -11,7 +11,10 @@ struct Transaction {
     Transaction * prevCommitted;
     uint8_t threadId;
 
+    uint8_t ptype;
+    Transaction* failedBecauseOf;
     Transaction() {
+        failedBecauseOf = nullptr;
         threadId = 0;
         commitTS = initCommitTS;
         undoBufferHead = nullptr;

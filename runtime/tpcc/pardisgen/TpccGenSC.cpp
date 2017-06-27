@@ -1123,7 +1123,6 @@ TransactionManager& Transaction::tm(xactManager);
 uint xactCounts[5];
 uint8_t prgId7to5[] = {0, 1, 1, 2, 2, 3, 4};
 
-const uint numThreads = 2;
 volatile bool isReady[numThreads];
 volatile bool startExecution, hasFinished;
 
@@ -1201,17 +1200,47 @@ void threadFunction(uint8_t thread_id, TPCC_Data* data) {
   Program* p;
   TransactionReturnStatus st;
   while (!startExecution);
-  while (pid < numPrograms && (p = tpcc.programs[pid]) && !hasFinished) {
-    xactManager.begin(p->xact);
+  const uint failedProgramSize = 32;
+  Program * failedPrograms[failedProgramSize];
+  uint head = 0, tail = 0;
+  bool full = false;
+  p = tpcc.programs[pid];
+  while (true) {
+    xactManager.begin(p->xact, thread_id);
+
     st = tl.runProgram(p);
+
     if (st != SUCCESS) {
-      xactManager.rollback(p->xact);
-    } else {
-      if (!xactManager.validateAndCommit(p->xact)) {
-        xactManager.rollback(p->xact);
-      } else {
+      xactManager.rollback(p->xact, thread_id);
+
+      if (!full && p->xact.failedBecauseOf != nullptr) {
+        failedPrograms[tail++] = p;
+        if (tail == failedProgramSize)
+          tail = 0;
+        if (head == tail)
+          full = true;
         pid = PC++;
+        if (pid >= numPrograms)
+          break;
+        p = tpcc.programs[pid];
+      }
+    } else {
+      if (xactManager.validateAndCommit(p->xact, thread_id)) { //rollback happens inside function if it fails
         xactCounts[prgId7to5[p->id]]++;
+        if (head != tail || full) {
+          p = failedPrograms[head];
+          if (p->xact.failedBecauseOf->commitTS != initCommitTS) {
+            head++;
+            full = false;
+            if (head == failedProgramSize)
+              head = 0;
+            continue;
+          }
+        }
+        pid = PC++;
+        if (pid >= numPrograms)
+          break;
+        p = tpcc.programs[pid];
       }
     }
   }
@@ -1232,7 +1261,7 @@ int main(int argc, char** argv) {
   tpcc.loadPrograms();
   
   Transaction t0;
-  xactManager.begin(t0);
+  xactManager.begin(t0, 0);
   tpcc.loadWare(t0);
   tpcc.loadDist(t0);
   tpcc.loadCust(t0);
@@ -1242,9 +1271,11 @@ int main(int argc, char** argv) {
   tpcc.loadOrdLine(t0);
   tpcc.loadHist(t0);
   tpcc.loadStocks(t0);
-  xactManager.commit(t0);
+  xactManager.commit(t0, 0);
   
   memset(xactCounts, 0, 5 * sizeof(uint));
+  memset(xactManager.activeXactStartTS, 0xff, sizeof(xactManager.activeXactStartTS[0]) * numThreads);
+  
   Timepoint startTime, endTime;
   std::thread workers[numThreads];
   
@@ -1266,6 +1297,9 @@ int main(int argc, char** argv) {
           break;
       }
       all_ready = true;
+  }
+  while (!hasFinished) {
+    xactManager.garbageCollect();
   }
   
   for (uint8_t i = 0; i < numThreads; ++i) {
@@ -1334,13 +1368,13 @@ int main(int argc, char** argv) {
       break;
     p->xact.reset();
     TransactionReturnStatus st;
-    xactManager.begin(p->xact);
+    xactManager.begin(p->xact, 0);
     st = ver.runProgram(p);
     assert(st == SUCCESS);
-    bool st2 = xactManager.validateAndCommit(p->xact);
+    bool st2 = xactManager.validateAndCommit(p->xact, 0);
     assert(st2);
   }
-  
+  xactManager.garbageCollect();
   if (orig.warehouseTblIdx0 == res.warehouseTblIdx0) {
     cout << "Warehouse results are same as serial version" << endl;
   } else {
