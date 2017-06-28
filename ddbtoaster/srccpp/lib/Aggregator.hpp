@@ -198,6 +198,10 @@ struct MedianAggregator {
         
          if (!e->versionHead.compare_exchange_strong(vh, newV)) {
             st = WW_VALUE;
+            if (vh->xactid > initCommitTS) {
+                Transaction* otherXact = TStoPTR(vh->xactid);
+                xact.failedBecauseOf = otherXact;
+            }
             free(newV);
             return nullptr;
         }

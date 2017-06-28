@@ -1298,10 +1298,7 @@ int main(int argc, char** argv) {
       }
       all_ready = true;
   }
-  while (!hasFinished) {
-    xactManager.garbageCollect();
-  }
-  
+ 
   for (uint8_t i = 0; i < numThreads; ++i) {
       workers[i].join();
   }

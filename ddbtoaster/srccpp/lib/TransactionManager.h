@@ -91,6 +91,7 @@ struct TransactionManager {
             xact.predicateHead = xact.predicateHead->next;
             free(p);
         }
+        garbageCollect();
     }
 
     FORCE_INLINE bool validateAndCommit(Transaction& xact, uint8_t tid) {
