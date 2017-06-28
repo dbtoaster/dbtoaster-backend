@@ -77,7 +77,7 @@ FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
         cerr << "Cannot set scheduler" << endl;
 
 #ifndef NUMTHREADS
-#define NUMTHREADS 1
+#define NUMTHREADS 4
 #endif 
 
 const uint numThreads = NUMTHREADS;

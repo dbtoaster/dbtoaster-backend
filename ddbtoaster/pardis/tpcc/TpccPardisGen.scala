@@ -1183,15 +1183,47 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |  Program* p;
          |  TransactionReturnStatus st;
          |  while (!startExecution);
-         |  while (pid < numPrograms && (p = tpcc.programs[pid]) && !hasFinished) {
+         |  const uint failedProgramSize = 32;
+         |  Program * failedPrograms[failedProgramSize];
+         |  uint head = 0, tail = 0;
+         |  bool full = false;
+         |  p = tpcc.programs[pid];
+         |  while (!hasFinished) {
+         |
          |    xactManager.begin(p->xact, thread_id);
+         |
          |    st = tl.runProgram(p);
+         |
          |    if (st != SUCCESS) {
          |      xactManager.rollback(p->xact, thread_id);
+         |      if (!full && p->xact.failedBecauseOf != nullptr) {
+         |        failedPrograms[tail++] = p;
+         |        if (tail == failedProgramSize)
+         |          tail = 0;
+         |        if (head == tail)
+         |          full = true;
+         |        pid = PC++;
+         |        if (pid >= numPrograms)
+         |          break;
+         |        p = tpcc.programs[pid];
+         |      }
          |    } else {
          |      if (xactManager.validateAndCommit(p->xact, thread_id)) {   //rollback happens inside function if it fails
-         |        pid = PC++;
          |        xactCounts[prgId7to5[p->id]]++;
+         |        if (head != tail || full) {
+         |          p = failedPrograms[head];
+         |          if (p->xact.failedBecauseOf->commitTS != initCommitTS) {
+         |            head++;
+         |            full = false;
+         |            if (head == failedProgramSize)
+         |              head = 0;
+         |            continue;
+         |          }
+         |        }
+         |        pid = PC++;
+         |        if(pid >= numPrograms)
+         |          break;
+         |        p = tpcc.programs[pid];
          |      }
          |    }
          |  }
