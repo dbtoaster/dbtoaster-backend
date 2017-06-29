@@ -1,11 +1,11 @@
 
 #ifndef TYPES_H
 #define TYPES_H
-struct Transaction;
-struct TransactionManager;
+struct alignas(64) Transaction;
+struct alignas(64) TransactionManager;
 struct PRED;
-struct VBase;
-struct MBase;
+struct alignas(64) VBase;
+struct alignas(64) MBase;
 struct Program;
 
 #ifdef NDEBUG

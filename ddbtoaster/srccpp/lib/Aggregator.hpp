@@ -179,7 +179,7 @@ struct MedianAggregator {
 
         Version<E>* resV = (Version<E>*) VBase::getVersionFromT((char *) resE); //SBJ: Hack !
         assert(&resV->obj == resE);
-        assert(((char*)&resV->obj - (char *)resV) == sizeof(VBase));
+//        assert(((char*)&resV->obj - (char *)resV) == sizeof(VBase));
         
         EntryMV<E>* e = (EntryMV<E>*)resV->e;
         Version<E>* vh = e->versionHead;

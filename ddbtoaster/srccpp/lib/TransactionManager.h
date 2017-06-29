@@ -8,7 +8,7 @@
 #include "SpinLock.h"
 #include <type_traits>
 
-struct TransactionManager {
+struct alignas(64) TransactionManager {
     std::atomic<timestamp> timestampGen;
     SpinLock commitLock, counterLock;
     std::atomic<Transaction *> committedXactsTail;

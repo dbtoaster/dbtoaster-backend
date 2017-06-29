@@ -7,9 +7,9 @@
 #include "Transaction.h"
 #include "mmap/cmmap.hpp"
 template <typename T>
-struct EntryMV;
+struct alignas(64)EntryMV;
 
-struct VBase {
+struct alignas(64) VBase {
     timestamp xactid;
     std::atomic<VBase*> oldV;
     VBase* nextInUndoBuffer;
@@ -21,14 +21,14 @@ struct VBase {
     }
 
     static FORCE_INLINE VBase* getVersionFromT(char* entry) {
-        return (VBase *) (entry - sizeof (VBase));
+        return (VBase *) ((size_t)entry & (~63));
     }
     virtual VBase* getVersionAfter(timestamp oldest) = 0;
     virtual void removeFromVersionChain() = 0;
 };
 
 template <typename T>
-struct Version : public VBase {
+ struct alignas(64) Version : public VBase {
     T obj;
 
     Version(Version* that, Transaction& x) : VBase(x), obj(that->obj) {
@@ -122,7 +122,7 @@ struct Version : public VBase {
 };
 
 template <typename T>
-struct EntryMV {
+ struct alignas(64) EntryMV {
     MBase* tbl;
     std::atomic<Version<T>*> versionHead;
     std::atomic<EntryMV<T>*> nxt;
