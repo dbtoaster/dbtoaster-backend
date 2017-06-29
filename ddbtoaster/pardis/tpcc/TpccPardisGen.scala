@@ -819,16 +819,19 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     val entryIdxes = optTP.entryIdxDefs.map(codeGen.nodeToDocument).mkDocument("\n")
     def structToDoc(s: PardisStructDef[_]) = s match {
       case PardisStructDef(tag, fields, methods) =>
-        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") :: doc"  bool isInvalid;"
-        //        :: doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
+        val fieldsDoc = fields.map(x => doc"${x.tpe} ${x.name};").mkDocument("  ") ::
+          doc"  bool isInvalid;"
+//        doc"  ${tag.typeName} *prv;  ${tag.typeName} *nxt; void* backPtrs[${fields.size}];"
         val constructor = doc"${tag.typeName}() :" :: fields.map(x => {
           if (x.tpe == StringType)
             doc"${x.name}()"
           else doc"${x.name}(${nullValue(x.tpe)})"
-        }).mkDocument(", ") :: ", isInvalid(false){}"
-        //        :: ", prv(nullptr), nxt(nullptr) {}"
-        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") :: ", isInvalid(false){}"
-        //  ", prv(nullptr), nxt(nullptr) {}"
+        }).mkDocument(", ") ::
+          ", isInvalid(false){}"
+//          ", prv(nullptr), nxt(nullptr) {}"
+        val constructorWithArgs = doc"${tag.typeName}(" :: fields.map(x => doc"const ${x.tpe}& ${x.name}").mkDocument(", ") :: ") : " :: fields.map(x => doc"${x.name}(${x.name})").mkDocument(", ") ::
+          ", isInvalid(false){}"
+//          ", prv(nullptr), nxt(nullptr) {}"
         val copyFn = doc"FORCE_INLINE ${tag.typeName}* copy() const {  ${tag.typeName}* ptr = (${tag.typeName}*) malloc(sizeof(${tag.typeName})); new(ptr) ${tag.typeName}(" :: fields.map(x => {
           //          if (x.tpe == StringType)
           //            doc"*${x.name}.copy()"
@@ -899,6 +902,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |tpcc.loadHist(t0);
          |tpcc.loadStocks(t0);
          |xactManager.commit(t0, 0);
+         |cout.imbue(std::locale(""));
          |
          |memset(xactCounts, 0, 5 * sizeof(uint));
          |memset(xactManager.activeXactStartTS, 0xff, sizeof(xactManager.activeXactStartTS[0]) * numThreads);
@@ -1234,8 +1238,393 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       :\\: stInit2 :: "{\n   memset(xactCounts, 0, sizeof(uint)*5);\n}\n" :\\: stRefs :: "\n" :\\: structVars :: "\n"
       :\\: blocks :\\: "\n TransactionReturnStatus runProgram(Program* prg);") :\\: "};"
     //disabled entryidx temporarily
-    file.println(header :/: execProfile :/: structs :\\: structEquals  :\\: stTypdef :\\:
-    tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"TPCC.h\"\n"  :\\: runPrgFn :\\: threadFn:\\: traits :/: Document.nest(2, mainPrg) :/: "}")
+    val entryidx2 =
+      """
+        |struct SEntry8_IIIITIIB_Idx234 {  // O 1
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3468)  {
+        |    int x1 = x3468._4;
+        |    int x2 = (x1 << 2) + x3468._3;
+        |    int x3 = (x2 << 4) + x3468._2;
+        |    return x3;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3502, const struct SEntry8_IIIITIIB& x3503) {
+        |    int x3504 = 0;
+        |    if(((x3502._2)==((x3503._2)))) {
+        |      if(((x3502._3)==((x3503._3)))) {
+        |        if(((x3502._4)==((x3503._4)))) {
+        |          x3504 = 0;
+        |        } else {
+        |          x3504 = 1;
+        |        };
+        |      } else {
+        |        x3504 = 1;
+        |      };
+        |    } else {
+        |      x3504 = 1;
+        |    };
+        |    int x3521 = x3504;
+        |    return x3521;
+        |  }
+        |};
+        | struct SEntry10_IIIIIITIDS_Idx3214 { // OL 0
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x3576)  {
+        |    int x1 = x3576._1;
+        |    int x2 = (x1 << 2) + x3576._3;
+        |    int x3 = (x2 << 4) + x3576._2;
+        |    int x4 = (x3 << 4) + x3576._4;
+        |    return x4;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x3620, const struct SEntry10_IIIIIITIDS& x3621) {
+        |    int x3622 = 0;
+        |    if(((x3620._3)==((x3621._3)))) {
+        |      if(((x3620._2)==((x3621._2)))) {
+        |        if(((x3620._1)==((x3621._1)))) {
+        |          if(((x3620._4)==((x3621._4)))) {
+        |            x3622 = 0;
+        |          } else {
+        |            x3622 = 1;
+        |          };
+        |        } else {
+        |          x3622 = 1;
+        |        };
+        |      } else {
+        |        x3622 = 1;
+        |      };
+        |    } else {
+        |      x3622 = 1;
+        |    };
+        |    int x3644 = x3622;
+        |    return x3644;
+        |  }
+        |};
+        | struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx321 {  //C 0
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3709)  {
+        |    int x2 = x3709._3;
+        |    int x3 = (x2 << 4) + x3709._2;
+        |    int x1 = (x3 << 12) + x3709._1;
+        |    return x1;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3743, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3744) {
+        |    int x3745 = 0;
+        |    if(((x3743._3)==((x3744._3)))) {
+        |      if(((x3743._2)==((x3744._2)))) {
+        |        if(((x3743._1)==((x3744._1)))) {
+        |          x3745 = 0;
+        |        } else {
+        |          x3745 = 1;
+        |        };
+        |      } else {
+        |        x3745 = 1;
+        |      };
+        |    } else {
+        |      x3745 = 1;
+        |    };
+        |    int x3762 = x3745;
+        |    return x3762;
+        |  }
+        |};
+        | struct SEntry8_IIIIITDS_Idx12345678 {  //H Idx0
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry8_IIIIITDS& x3215)  {
+        |    int x3216 = 0;
+        |    int x3217 = x3216;
+        |    x3216 = (x3217^(((((HASH((x3215._1)))+(-1640531527))+((x3217<<(6))))+((x3217>>(2))))));
+        |    int x3227 = x3216;
+        |    x3216 = (x3227^(((((HASH((x3215._2)))+(-1640531527))+((x3227<<(6))))+((x3227>>(2))))));
+        |    int x3237 = x3216;
+        |    x3216 = (x3237^(((((HASH((x3215._3)))+(-1640531527))+((x3237<<(6))))+((x3237>>(2))))));
+        |    int x3247 = x3216;
+        |    x3216 = (x3247^(((((HASH((x3215._4)))+(-1640531527))+((x3247<<(6))))+((x3247>>(2))))));
+        |    int x3257 = x3216;
+        |    x3216 = (x3257^(((((HASH((x3215._5)))+(-1640531527))+((x3257<<(6))))+((x3257>>(2))))));
+        |    int x3267 = x3216;
+        |    x3216 = (x3267^(((((HASH((x3215._6)))+(-1640531527))+((x3267<<(6))))+((x3267>>(2))))));
+        |    int x3277 = x3216;
+        |    x3216 = (x3277^(((((HASH((x3215._7)))+(-1640531527))+((x3277<<(6))))+((x3277>>(2))))));
+        |    int x3287 = x3216;
+        |    x3216 = (x3287^(((((HASH((x3215._8)))+(-1640531527))+((x3287<<(6))))+((x3287>>(2))))));
+        |    int x3297 = x3216;
+        |    return x3297;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry8_IIIIITDS& x3299, const struct SEntry8_IIIIITDS& x3300) {
+        |    int x3301 = 0;
+        |    if(((x3299._1)==((x3300._1)))) {
+        |      if(((x3299._2)==((x3300._2)))) {
+        |        if(((x3299._3)==((x3300._3)))) {
+        |          if(((x3299._4)==((x3300._4)))) {
+        |            if(((x3299._5)==((x3300._5)))) {
+        |              if(((x3299._6)==((x3300._6)))) {
+        |                if(((x3299._7)==((x3300._7)))) {
+        |                  if(((x3299._8)==((x3300._8)))) {
+        |                    x3301 = 0;
+        |                  } else {
+        |                    x3301 = 1;
+        |                  };
+        |                } else {
+        |                  x3301 = 1;
+        |                };
+        |              } else {
+        |                x3301 = 1;
+        |              };
+        |            } else {
+        |              x3301 = 1;
+        |            };
+        |          } else {
+        |            x3301 = 1;
+        |          };
+        |        } else {
+        |          x3301 = 1;
+        |        };
+        |      } else {
+        |        x3301 = 1;
+        |      };
+        |    } else {
+        |      x3301 = 1;
+        |    };
+        |    int x3343 = x3301;
+        |    return x3343;
+        |  }
+        |};
+        | struct SEntry8_IIIITIIB_Idx321 {  // O 0
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3412)  {
+        |    int x1 = x3412._1;
+        |    int x2 = (x1 << 2) + x3412._3;
+        |    int x3 = (x2 << 4) + x3412._2;
+        |    return x3;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3446, const struct SEntry8_IIIITIIB& x3447) {
+        |    int x3448 = 0;
+        |    if(((x3446._3)==((x3447._3)))) {
+        |      if(((x3446._2)==((x3447._2)))) {
+        |        if(((x3446._1)==((x3447._1)))) {
+        |          x3448 = 0;
+        |        } else {
+        |          x3448 = 1;
+        |        };
+        |      } else {
+        |        x3448 = 1;
+        |      };
+        |    } else {
+        |      x3448 = 1;
+        |    };
+        |    int x3465 = x3448;
+        |    return x3465;
+        |  }
+        |};
+        | struct SEntry17_IIISSSSSSSSSSIIIS_Idx21 { // S 0
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry17_IIISSSSSSSSSSIIIS& x3826)  {
+        |    int x1 = x3826._1;
+        |    int x2 = (x1 << 2) + x3826._2;
+        |    return x2;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry17_IIISSSSSSSSSSIIIS& x3850, const struct SEntry17_IIISSSSSSSSSSIIIS& x3851) {
+        |    int x3852 = 0;
+        |    if(((x3850._2)==((x3851._2)))) {
+        |      if(((x3850._1)==((x3851._1)))) {
+        |        x3852 = 0;
+        |      } else {
+        |        x3852 = 1;
+        |      };
+        |    } else {
+        |      x3852 = 1;
+        |    };
+        |    int x3864 = x3852;
+        |    return x3864;
+        |  }
+        |};
+        | struct SEntry3_III_Idx23 {  //NO Idx 1
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3168)  {
+        |    int x1 = x3168._3;
+        |    int x2 = (x1 << 4) + x3168._2;
+        |    return x2;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry3_III& x3192, const struct SEntry3_III& x3193) {
+        |    int x3194 = 0;
+        |    if(((x3192._2)==((x3193._2)))) {
+        |      if(((x3192._3)==((x3193._3)))) {
+        |        x3194 = 0;
+        |      } else {
+        |        x3194 = 1;
+        |      };
+        |    } else {
+        |      x3194 = 1;
+        |    };
+        |    int x3206 = x3194;
+        |    return x3206;
+        |  }
+        |};
+        | struct SEntry10_IIIIIITIDS_Idx123 {  // OL 1
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x3647)  {
+        |    int x1 = x3647._1;
+        |    int x2 = (x1 << 2) + x3647._3;
+        |    int x3 = (x2 << 4) + x3647._2;
+        |    return x3;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x3681, const struct SEntry10_IIIIIITIDS& x3682) {
+        |    int x3683 = 0;
+        |    if(((x3681._1)==((x3682._1)))) {
+        |      if(((x3681._2)==((x3682._2)))) {
+        |        if(((x3681._3)==((x3682._3)))) {
+        |          x3683 = 0;
+        |        } else {
+        |          x3683 = 1;
+        |        };
+        |      } else {
+        |        x3683 = 1;
+        |      };
+        |    } else {
+        |      x3683 = 1;
+        |    };
+        |    int x3700 = x3683;
+        |    return x3700;
+        |  }
+        |};
+        | struct SEntry3_III_Idx321 {  //NO Idx0
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3112)  {
+        |    int x1 = x3112._1;
+        |    int x2 = (x1 << 2) + x3112._3;
+        |    int x3 = (x2 << 4) + x3112._2;
+        |    return x3;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry3_III& x3146, const struct SEntry3_III& x3147) {
+        |    int x3148 = 0;
+        |    if(((x3146._3)==((x3147._3)))) {
+        |      if(((x3146._2)==((x3147._2)))) {
+        |        if(((x3146._1)==((x3147._1)))) {
+        |          x3148 = 0;
+        |        } else {
+        |          x3148 = 1;
+        |        };
+        |      } else {
+        |        x3148 = 1;
+        |      };
+        |    } else {
+        |      x3148 = 1;
+        |    };
+        |    int x3165 = x3148;
+        |    return x3165;
+        |  }
+        |};
+        | struct SEntry5_IISDS_Idx1 { // I 0
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry5_IISDS& x3381)  {
+        |    int x3382 = 0;
+        |    int x3383 = x3382;
+        |    x3382 = (x3383^(((((HASH((x3381._1)))+(-1640531527))+((x3383<<(6))))+((x3383>>(2))))));
+        |    int x3393 = x3382;
+        |    return x3393;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry5_IISDS& x3395, const struct SEntry5_IISDS& x3396) {
+        |    int x3397 = 0;
+        |    if(((x3395._1)==((x3396._1)))) {
+        |      x3397 = 0;
+        |    } else {
+        |      x3397 = 1;
+        |    };
+        |    int x3404 = x3397;
+        |    return x3404;
+        |  }
+        |};
+        | struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236 { // C 1
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3765)  {
+        |    int x1 = HASH(x3765._6);
+        |    int x2 = (x1 << 2) + x3765._3;
+        |    int x3 = (x2 << 4) + x3765._2;
+        |    return x3;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3799, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3800) {
+        |    int x3801 = 0;
+        |    if(((x3799._2)==((x3800._2)))) {
+        |      if(((x3799._3)==((x3800._3)))) {
+        |        if(((x3799._6)==((x3800._6)))) {
+        |          x3801 = 0;
+        |        } else {
+        |          x3801 = 1;
+        |        };
+        |      } else {
+        |        x3801 = 1;
+        |      };
+        |    } else {
+        |      x3801 = 1;
+        |    };
+        |    int x3818 = x3801;
+        |    return x3818;
+        |  }
+        |};
+        | struct SEntry9_ISSSSSSDD_Idx1 { // W 0
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry9_ISSSSSSDD& x3351)  {
+        |    int x3352 = 0;
+        |    int x3353 = x3352;
+        |    x3352 = (x3353^(((((HASH((x3351._1)))+(-1640531527))+((x3353<<(6))))+((x3353>>(2))))));
+        |    int x3363 = x3352;
+        |    return x3363;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry9_ISSSSSSDD& x3365, const struct SEntry9_ISSSSSSDD& x3366) {
+        |    int x3367 = 0;
+        |    if(((x3365._1)==((x3366._1)))) {
+        |      x3367 = 0;
+        |    } else {
+        |      x3367 = 1;
+        |    };
+        |    int x3374 = x3367;
+        |    return x3374;
+        |  }
+        |};
+        | struct SEntry11_IISSSSSSDDI_Idx21 { // D 0
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry11_IISSSSSSDDI& x3530)  {
+        |    int x3531 = 0;
+        |    int x3532 = x3531;
+        |    x3531 = (x3532^(((((HASH((x3530._2)))+(-1640531527))+((x3532<<(6))))+((x3532>>(2))))));
+        |    int x3542 = x3531;
+        |    x3531 = (x3542^(((((HASH((x3530._1)))+(-1640531527))+((x3542<<(6))))+((x3542>>(2))))));
+        |    int x3552 = x3531;
+        |    return x3552;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry11_IISSSSSSDDI& x3554, const struct SEntry11_IISSSSSSDDI& x3555) {
+        |    int x3556 = 0;
+        |    if(((x3554._2)==((x3555._2)))) {
+        |      if(((x3554._1)==((x3555._1)))) {
+        |        x3556 = 0;
+        |      } else {
+        |        x3556 = 1;
+        |      };
+        |    } else {
+        |      x3556 = 1;
+        |    };
+        |    int x3568 = x3556;
+        |    return x3568;
+        |  }
+        |};
+        |
+      """.stripMargin
+    file.println(header :/: execProfile :/: structs :\\: structEquals  :\\: entryidx2 :\\: stTypdef :\\:
+    tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"TPCC.h\"\n"  :\\: runPrgFn :\\:
+//      threadFn:\\:
+      traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
 }

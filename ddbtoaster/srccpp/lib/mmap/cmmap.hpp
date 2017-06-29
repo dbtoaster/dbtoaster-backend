@@ -259,13 +259,13 @@ struct CuckooIndex : public IndexMV<T> {
 
     T* get(const T* key, Transaction& xact) const override {
         EntryMV<T>* result;
-        GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
-        new(pred) GetPred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
-        xact.predicateHead = pred;
         if (index.find(key, result)) {
             Version<T>* v = result->getCorrectVersion(xact);
             if (v->obj.isInvalid)
                 return nullptr;
+            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
+            new(pred) GetPred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
+            xact.predicateHead = pred;
             return &v->obj;
         } else {
             return nullptr;
@@ -530,9 +530,6 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
 
     FORCE_INLINE OperationReturnStatus slice(const T* key, FuncType f, Transaction& xact) {
         Container *sentinel;
-        SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof (SlicePred<T, IDX_FN>));
-        new(pred) SlicePred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
-        xact.predicateHead = pred;
         if (index.find(key, sentinel)) {
             Container *prev = sentinel, *prevNext = sentinel->next, *cur = prevNext, *curNext;
             //SBJ: TODO: Skip all deleted nodes and remove them
@@ -575,9 +572,11 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                 prevNext = curNext;
                 cur = curNext;
             } while (cur);
+            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof (SlicePred<T, IDX_FN>));
+            new(pred) SlicePred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
+            xact.predicateHead = pred;
             return OP_SUCCESS;
         } else {
-            throw std::logic_error("Empty slice");
             return NO_KEY;
         }
     }
@@ -588,9 +587,7 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
 
     FORCE_INLINE OperationReturnStatus sliceNoUpdate(const T* key, FuncType f, Transaction& xact) {
         Container *sentinel;
-        SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof (SlicePred<T, IDX_FN>));
-        new(pred) SlicePred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
-        xact.predicateHead = pred;
+
         if (index.find(key, sentinel)) {
             Container *prev = sentinel, *prevNext = sentinel->next, *cur = prevNext, *curNext;
             //SBJ: TODO: Skip all deleted nodes and remove them
@@ -618,6 +615,9 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                 prevNext = curNext;
                 cur = curNext;
             } while (cur);
+            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof (SlicePred<T, IDX_FN>));
+            new(pred) SlicePred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
+            xact.predicateHead = pred;
             return OP_SUCCESS;
         } else {
             return NO_KEY;
@@ -885,9 +885,8 @@ public:
             }
             xact.undoBufferHead = newV;
         } else {
-            return OP_SUCCESS;
             return DUPLICATE_KEY;
-            throw std::logic_error("Element already exists");
+           
             // cur->~T();
             // *cur=std::move(*elem);
 

@@ -3468,12 +3468,12 @@ struct CuckooIndex : public Index<T, V> {
             return IDX_FN::cmp(*e1, *e2) == 0;
         }
     };
-    cuckoohash_map<T*, T*, HE, HE, std::allocator<std::pair<T*, T*>>, 16> index;
+    cuckoohash_map<T*, T*, HE, HE, std::allocator<std::pair<T*, T*>>> index;
     Pool<T>* storePool;
     T* dataHead;
     size_t count_;
 
-    CuckooIndex(Pool<T>* stPool = nullptr, int s = 0) : index(s, 0.001), storePool(stPool) { //Constructor argument is ignored
+    CuckooIndex(Pool<T>* stPool = nullptr, int s = 0) : index((1<<25)), storePool(stPool) { //Constructor argument is ignored
         dataHead = nullptr;
         count_ = 0;
     }
@@ -3700,23 +3700,6 @@ struct CuckooIndex : public Index<T, V> {
 
 };
 
-const uint64_t mask = 1LL << 63;
-
-template<typename T>
-FORCE_INLINE bool isMarked(T t) {
-    return ((size_t) t & mask);
-}
-
-template<typename T>
-FORCE_INLINE T mark(T t) {
-    return (T) ((size_t) t | mask);
-}
-
-template<typename T>
-FORCE_INLINE T unmark(T t) {
-    return (T) ((size_t) t & ~mask);
-}
-
 template<typename T, typename V, typename IDX_FN>
 struct ConcurrentCuckooSecondaryIndex : public Index<T, V> {
 
@@ -3744,9 +3727,9 @@ struct ConcurrentCuckooSecondaryIndex : public Index<T, V> {
 
         }
     };
-    cuckoohash_map<T*, Container*, HE, HE, std::allocator<std::pair<T*, Container*>>, 16> index;
+    cuckoohash_map<T*, Container*, HE, HE, std::allocator<std::pair<T*, Container*>>> index;
 
-    ConcurrentCuckooSecondaryIndex(Pool<T*> st, size_t size = 100000) : index(size) {
+    ConcurrentCuckooSecondaryIndex(Pool<T*> st, size_t size = 100000) : index((1<<25)) {
     }
     // Inserts an entry into the secondary index.
     //Uses cuckoo hashmap as backend
