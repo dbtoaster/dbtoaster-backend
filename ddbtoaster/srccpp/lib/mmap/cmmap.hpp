@@ -17,6 +17,7 @@ std::vector<void*> tempMem;
 
 #define DEFAULT_CHUNK_SIZE 32
 
+#define MAX_IDXES_PER_TBL 3
 FORCE_INLINE void clearTempMem() {
     for (auto ptr : tempMem)
         free(ptr);
@@ -93,7 +94,7 @@ struct CuckooIndex : public IndexMV<T> {
         dataHead = nullptr;
     }
 
-    bool operator==(CuckooIndex<T, IDX_FN>& that) {
+    FORCE_INLINE bool operator==(CuckooIndex<T, IDX_FN>& that) {
         auto t1 = index.lock_table();
         bool flag = true;
         Version<T>* v1, *v2;
@@ -133,13 +134,13 @@ struct CuckooIndex : public IndexMV<T> {
         return flag;
     }
 
-    void getSizeStats(std::ostream & fout) {
+    FORCE_INLINE void getSizeStats(std::ostream & fout) {
         fout << "{}";
     }
 
     //SBJ: Only for data  result loading . To be removed later
 
-    void add(T* obj, Transaction& xact) {
+    FORCE_INLINE void add(T* obj, Transaction& xact) {
         Version<T>* v = (Version<T>*) malloc(sizeof (Version<T>));
         new(v) Version<T>(*obj, xact);
         EntryMV<T>* e = (EntryMV<T>*) malloc(sizeof (EntryMV<T>));
@@ -149,7 +150,7 @@ struct CuckooIndex : public IndexMV<T> {
         xact.undoBufferHead = v;
     }
 
-    OperationReturnStatus add(T* key, EntryMV<T>* obj) override {
+    FORCE_INLINE OperationReturnStatus add(T* key, EntryMV<T>* obj) override {
         auto idxId = IndexMV<T>::idxId;
         T* keyC = key->copy();
         //need to pass copy as key is sampleEntry that is hoisted
@@ -193,7 +194,7 @@ struct CuckooIndex : public IndexMV<T> {
     //        return -1;
     //    }
 
-    void del(T* obj, EntryMV<T>* emv) override {
+    FORCE_INLINE void del(T* obj, EntryMV<T>* emv) override {
         EntryMV<T>* nxt = emv->nxt;
         while (!emv->nxt.compare_exchange_strong(nxt, mark(nxt))); //removing from foreach list
         //SBJ: TODO: Mark other fields as well???
@@ -228,7 +229,7 @@ struct CuckooIndex : public IndexMV<T> {
     //        del(orig);
     //    }
 
-    OperationReturnStatus foreach(FuncType f, Transaction& xact) override {
+    FORCE_INLINE OperationReturnStatus foreach(FuncType f, Transaction& xact) override {
         EntryMV<T>* cur = dataHead;
         ForEachPred<T>* pred = (ForEachPred<T>*) malloc(sizeof (ForEachPred<T>));
         new(pred) ForEachPred<T>(xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
@@ -257,7 +258,7 @@ struct CuckooIndex : public IndexMV<T> {
     //        }
     //    }
 
-    T* get(const T* key, Transaction& xact) const override {
+    FORCE_INLINE T* get(const T* key, Transaction& xact) const override {
         EntryMV<T>* result;
         if (index.find(key, result)) {
             Version<T>* v = result->getCorrectVersion(xact);
@@ -272,7 +273,7 @@ struct CuckooIndex : public IndexMV<T> {
         }
     }
 
-    T* getForUpdate(const T* key, OperationReturnStatus& st, Transaction& xact) override {
+    FORCE_INLINE T* getForUpdate(const T* key, OperationReturnStatus& st, Transaction& xact) override {
         EntryMV<T>* result;
         if (index.find(key, result)) {
             Version<T>* resV = result->versionHead;
@@ -317,7 +318,7 @@ struct CuckooIndex : public IndexMV<T> {
         }
     }
 
-    void prepareSize(size_t arrayS, size_t poolS) override {
+    FORCE_INLINE void prepareSize(size_t arrayS, size_t poolS) override {
         index.reserve(arrayS);
     }
     //
@@ -460,8 +461,9 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
         Container *sentinel = (Container*) malloc(sizeof (Container));
         new(sentinel) Container(newc);
         T* keyc = key->copy();
-        auto updatefn = [newc, sentinel](Container* &c) {
+        auto updatefn = [newc, sentinel, keyc](Container* &c) {
             free(sentinel);
+            free(keyc);
             Container *nxt = c->next;
             do {
                 newc->next = nxt;
@@ -482,46 +484,9 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
     //For example, to see if cur is deleted, we check isMarked(curNext)
 
     void del(T* obj, EntryMV<T>* emv) override {
-        Container *sentinel, *cur;
-        if (index.find(obj, sentinel) && ((cur = sentinel->next) != nullptr)) {
-            Container* prev = sentinel, *curNext = cur->next, *prevNext = cur;
-            //while cur is a deleted node or not what we are looking for
-            while (isMarked(curNext) || cur->e != emv) {
-                //if cur is not a deleted node, we can remove everything between prev and cur
-                if (!isMarked(curNext)) {
-                    if (prevNext != cur) { //if prevNext is same as cur, there is nothing in between
-                        prev->next.compare_exchange_strong(prevNext, cur);
-                    }
-                    //cur becomes prev and the new value of cur comes from curNext                    
-                    prev = cur;
-                    prevNext = curNext;
-                    cur = curNext;
-                } else {
-                    //curNext is marked, so we get the unmarked version
-                    cur = unmark(curNext);
-                }
-                if (!cur) //stop at nullptr
-                    break;
-                curNext = cur->next;
-            }
-            if (cur == nullptr) {
-                //Element not present
-                //Remove any marked nodes from prev until here
-                if (prevNext != cur) {
-                    prev->next.compare_exchange_strong(prevNext, cur);
-                }
-
-            } else {
-                //mark cur for deletion by marking its next pointer 
-                while (!cur->next.compare_exchange_weak(curNext, mark(curNext)));
-
-                //attempt to fix prev, if it fails, we dont care
-                prev->next.compare_exchange_strong(prevNext, curNext);
-            }
-        } else {
-            throw std::logic_error("Entry to be deleted not in Secondary Index");
-        }
-
+        Container *cur = (Container*) emv->backptrs[IndexMV<T>::idxId];
+        Container* nxt = cur->next;
+        while(!cur->next.compare_exchange_weak(nxt, mark(nxt)));
     }
 
     FORCE_INLINE OperationReturnStatus slice(const T& key, FuncType f, Transaction& xact) {
@@ -769,6 +734,9 @@ public:
     IndexMV<T>** index;
 
     MultiHashMapMV() { // by defintion index 0 is always unique
+        if(sizeof...(INDEXES) > MAX_IDXES_PER_TBL) {
+            cerr << "The maximum indexes per table is configured to be " << MAX_IDXES_PER_TBL << " which is less than the required indexes" << endl;
+        }
         index = new IndexMV<T>*[sizeof...(INDEXES)] {
             new INDEXES(DEFAULT_CHUNK_SIZE)...
         };
@@ -781,6 +749,9 @@ public:
     }
 
     MultiHashMapMV(const size_t* arrayLengths, const size_t* poolSizes) { // by defintion index 0 is always unique
+        if(sizeof...(INDEXES) > MAX_IDXES_PER_TBL) {
+            cerr << "The maximum indexes per table is configured to be " << MAX_IDXES_PER_TBL << " which is less than the required indexes" << endl;
+        }
         index = new IndexMV<T>*[sizeof...(INDEXES)] {
             new INDEXES()...
         };

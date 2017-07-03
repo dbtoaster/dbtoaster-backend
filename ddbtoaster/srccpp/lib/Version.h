@@ -126,7 +126,7 @@ template <typename T>
     MBase* tbl;
     std::atomic<Version<T>*> versionHead;
     std::atomic<EntryMV<T>*> nxt;
-
+    void* backptrs[MAX_IDXES_PER_TBL];
     EntryMV(MBase* tbl, Version<T>* v) : tbl(tbl), versionHead(v), nxt(nullptr) {
     }
 
