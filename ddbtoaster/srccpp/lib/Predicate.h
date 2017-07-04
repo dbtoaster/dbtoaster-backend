@@ -254,6 +254,7 @@ struct MaxSlicePred : public PRED {
             if (IDX_FN::cmp(k2, key) == 0 && k2 == key) // older version was the maximum, and was overwritten 
                 return true;
         }
+        return false;
     }
 
     virtual ~MaxSlicePred() {
