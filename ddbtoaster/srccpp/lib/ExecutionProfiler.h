@@ -5,7 +5,6 @@
 #include <iostream>
 #include <fstream>
 
-#define FORCE_INLINE inline __attribute__((always_inline))
 using std::chrono::high_resolution_clock;
 using std::chrono::system_clock;
 using std::chrono::milliseconds;

@@ -5,6 +5,7 @@
 #include <types.h>
 #include "Transaction.h"
 #include "Version.h"
+
 struct PRED {
     MBase* tbl;
     PRED* next;
@@ -86,7 +87,7 @@ struct GetPred : public PRED {
         if (e->tbl != tbl)
             return false;
         Version<T>*dv = (Version<T>*)V;
-        
+
 #ifdef ATTRIB_LEVEL
         if ((colsToBeChecked & dv->cols).none())
             return false;
@@ -128,7 +129,7 @@ struct SlicePred : public PRED {
         EntryMV<T>*e = (EntryMV<T>*)V->e;
         if (e->tbl != tbl)
             return false;
-         Version<T>*dv = (Version<T>*)V;
+        Version<T>*dv = (Version<T>*)V;
 #ifdef ATTRIB_LEVEL
         if ((colsToBeChecked & dv->cols).none())
             return false;
@@ -140,7 +141,7 @@ struct SlicePred : public PRED {
 
         if (!k1.isInvalid && IDX_FN::cmp(k1, key) == 0)
             return true;
-        
+
         if (dv2 != nullptr) {
             const T& k2 = dv2->obj;
             if (!k2.isInvalid && IDX_FN::cmp(k2, key) == 0)
@@ -153,4 +154,109 @@ struct SlicePred : public PRED {
     }
 };
 
+template <typename T, typename IDX_FN, typename IDX_FN2>
+struct MinSlicePred : public PRED {
+    T key; //initially populated by key, will be overwritten by result
+
+#ifdef ATTRIB_LEVEL
+    col_type colsToBeChecked;
+
+    MinSlicePred(const T& k, PRED* n, MBase* mmapPtr, const col_type& cols) : PRED(mmapPtr, n), key(k), colsToBeChecked(cols) {
+    }
+#else
+
+    MinSlicePred(const T& k, PRED* n, MBase* mmapPtr, const col_type& cols) : PRED(mmapPtr, n), key(k) {
+    }
+#endif
+
+    virtual bool matchesAny(Transaction *t) {
+        VBase* dv = t->undoBufferHead;
+        while (dv != nullptr) {
+            if (matches(dv))
+                return true;
+            dv = dv->nextInUndoBuffer;
+        }
+        return false;
+    }
+
+    FORCE_INLINE bool matches(VBase* V) {
+        EntryMV<T>*e = (EntryMV<T>*)V->e;
+        if (e->tbl != tbl)
+            return false;
+        Version<T>*dv = (Version<T>*)V;
+#ifdef ATTRIB_LEVEL
+        if ((colsToBeChecked & dv->cols).none())
+            return false;
+#endif
+
+        Version<T>* dv2 = (Version<T>*) dv->oldV.load();
+
+        const T& k1 = dv->obj; //newer version
+
+        if (!k1.isInvalid && IDX_FN::cmp(k1, key) == 0 && IDX_FN2::cmp(k1, key) < 0) //newever version more valid than currentMin
+            return true;
+
+        if (dv2 != nullptr) {
+            const T& k2 = dv2->obj;
+            if (IDX_FN::cmp(k2, key) == 0 && k2 == key) // older version was the minimum, and was overwritten 
+                return true;
+        }
+        return false;
+    }
+
+    virtual ~MinSlicePred() {
+    }
+};
+
+template <typename T, typename IDX_FN, typename IDX_FN2>
+struct MaxSlicePred : public PRED {
+    T key;
+#ifdef ATTRIB_LEVEL
+    col_type colsToBeChecked;
+
+    MaxSlicePred(const T& k, PRED* n, MBase* mmapPtr, const col_type& cols) : PRED(mmapPtr, n), key(k), colsToBeChecked(cols) {
+    }
+#else
+
+    MaxSlicePred(const T& k, PRED* n, MBase* mmapPtr, const col_type& cols) : PRED(mmapPtr, n), key(k) {
+    }
+#endif
+
+    virtual bool matchesAny(Transaction *t) {
+        VBase* dv = t->undoBufferHead;
+        while (dv != nullptr) {
+            if (matches(dv))
+                return true;
+            dv = dv->nextInUndoBuffer;
+        }
+        return false;
+    }
+
+    FORCE_INLINE bool matches(VBase* V) {
+        EntryMV<T>*e = (EntryMV<T>*)V->e;
+        if (e->tbl != tbl)
+            return false;
+        Version<T>*dv = (Version<T>*)V;
+#ifdef ATTRIB_LEVEL
+        if ((colsToBeChecked & dv->cols).none())
+            return false;
+#endif
+
+        Version<T>* dv2 = (Version<T>*) dv->oldV.load();
+
+        const T& k1 = dv->obj; //newer version
+
+        if (!k1.isInvalid && IDX_FN::cmp(k1, key) == 0 && IDX_FN2::cmp(k1, key) > 0) //newever version more valid than currentMax
+            return true;
+
+        if (dv2 != nullptr) {
+            const T& k2 = dv2->obj;
+            if (IDX_FN::cmp(k2, key) == 0 && k2 == key) // older version was the maximum, and was overwritten 
+                return true;
+        }
+    }
+
+    virtual ~MaxSlicePred() {
+    }
+};
 #endif /* PREDICATE_H */

@@ -112,8 +112,6 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
         doc"MultiHashMap<$entryTp, char," :: idxes.map(i => doc"${sym}_Idx_${i.idxNum}_Type").mkDocument(", ") :: doc"> $sym$initSize"
 
     case Statement(sym, StoreIndex(self, idxNum, _, _, _)) => doc"${self}_Idx_${idxNum}_Type& $sym = * (${self}_Idx_${idxNum}_Type *)$self.index[$idxNum];"
-    case Statement(sym, n@StoreDelete1(_, k)) if Optimizer.mvget =>
-      doc"$k->isInvalid = true;"
 
     case Statement(sym, StoreMap(self, f@Def(PardisLambda(_, _, o)))) =>
       val typeE = sym.tp.asInstanceOf[StoreType[_]].typeE.asInstanceOf[PointerType[_]].contentsType

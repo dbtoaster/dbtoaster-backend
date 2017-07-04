@@ -242,17 +242,17 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
   (fabs(o1._8 - o2._8) < 0.01) && 
   (fabs(o1._9 - o2._9) < 0.01);
 }
- 
+
 struct SEntry8_IIIITIIB_Idx234 {  // O 1
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3468)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3468)  {
     int x1 = x3468._4;
     int x2 = (x1 << 2) + x3468._3;
     int x3 = (x2 << 4) + x3468._2;
     return x3;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3502, const struct SEntry8_IIIITIIB& x3503) { 
+  FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3502, const struct SEntry8_IIIITIIB& x3503) {
     int x3504 = 0;
     if(((x3502._2)==((x3503._2)))) {
       if(((x3502._3)==((x3503._3)))) {
@@ -268,12 +268,12 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3504 = 1;
     };
     int x3521 = x3504;
-    return x3521; 
+    return x3521;
   }
 };
  struct SEntry10_IIIIIITIDS_Idx3214 { // OL 0
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x3576)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x3576)  {
     int x1 = x3576._1;
     int x2 = (x1 << 2) + x3576._3;
     int x3 = (x2 << 4) + x3576._2;
@@ -281,7 +281,7 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
     return x4;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x3620, const struct SEntry10_IIIIIITIDS& x3621) { 
+  FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x3620, const struct SEntry10_IIIIIITIDS& x3621) {
     int x3622 = 0;
     if(((x3620._3)==((x3621._3)))) {
       if(((x3620._2)==((x3621._2)))) {
@@ -301,19 +301,19 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3622 = 1;
     };
     int x3644 = x3622;
-    return x3644; 
+    return x3644;
   }
 };
  struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx321 {  //C 0
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3709)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3709)  {
     int x2 = x3709._3;
     int x3 = (x2 << 4) + x3709._2;
     int x1 = (x3 << 12) + x3709._1;
     return x1;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3743, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3744) { 
+  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3743, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3744) {
     int x3745 = 0;
     if(((x3743._3)==((x3744._3)))) {
       if(((x3743._2)==((x3744._2)))) {
@@ -329,12 +329,12 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3745 = 1;
     };
     int x3762 = x3745;
-    return x3762; 
+    return x3762;
   }
 };
  struct SEntry8_IIIIITDS_Idx12345678 {  //H Idx0
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry8_IIIIITDS& x3215)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry8_IIIIITDS& x3215)  {
     int x3216 = 0;
     int x3217 = x3216;
     x3216 = (x3217^(((((HASH((x3215._1)))+(-1640531527))+((x3217<<(6))))+((x3217>>(2))))));
@@ -353,10 +353,10 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
     int x3287 = x3216;
     x3216 = (x3287^(((((HASH((x3215._8)))+(-1640531527))+((x3287<<(6))))+((x3287>>(2))))));
     int x3297 = x3216;
-    return x3297; 
+    return x3297;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry8_IIIIITDS& x3299, const struct SEntry8_IIIIITDS& x3300) { 
+  FORCE_INLINE static char cmp(const struct SEntry8_IIIIITDS& x3299, const struct SEntry8_IIIIITDS& x3300) {
     int x3301 = 0;
     if(((x3299._1)==((x3300._1)))) {
       if(((x3299._2)==((x3300._2)))) {
@@ -392,19 +392,19 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3301 = 1;
     };
     int x3343 = x3301;
-    return x3343; 
+    return x3343;
   }
 };
  struct SEntry8_IIIITIIB_Idx321 {  // O 0
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3412)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3412)  {
     int x1 = x3412._1;
     int x2 = (x1 << 2) + x3412._3;
     int x3 = (x2 << 4) + x3412._2;
     return x3;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3446, const struct SEntry8_IIIITIIB& x3447) { 
+  FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3446, const struct SEntry8_IIIITIIB& x3447) {
     int x3448 = 0;
     if(((x3446._3)==((x3447._3)))) {
       if(((x3446._2)==((x3447._2)))) {
@@ -420,18 +420,18 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3448 = 1;
     };
     int x3465 = x3448;
-    return x3465; 
+    return x3465;
   }
 };
  struct SEntry17_IIISSSSSSSSSSIIIS_Idx21 { // S 0
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry17_IIISSSSSSSSSSIIIS& x3826)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry17_IIISSSSSSSSSSIIIS& x3826)  {
     int x1 = x3826._1;
     int x2 = (x1 << 2) + x3826._2;
-    return x2; 
+    return x2;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry17_IIISSSSSSSSSSIIIS& x3850, const struct SEntry17_IIISSSSSSSSSSIIIS& x3851) { 
+  FORCE_INLINE static char cmp(const struct SEntry17_IIISSSSSSSSSSIIIS& x3850, const struct SEntry17_IIISSSSSSSSSSIIIS& x3851) {
     int x3852 = 0;
     if(((x3850._2)==((x3851._2)))) {
       if(((x3850._1)==((x3851._1)))) {
@@ -443,18 +443,18 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3852 = 1;
     };
     int x3864 = x3852;
-    return x3864; 
+    return x3864;
   }
 };
  struct SEntry3_III_Idx23 {  //NO Idx 1
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3168)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3168)  {
     int x1 = x3168._3;
     int x2 = (x1 << 4) + x3168._2;
     return x2;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry3_III& x3192, const struct SEntry3_III& x3193) { 
+  FORCE_INLINE static char cmp(const struct SEntry3_III& x3192, const struct SEntry3_III& x3193) {
     int x3194 = 0;
     if(((x3192._2)==((x3193._2)))) {
       if(((x3192._3)==((x3193._3)))) {
@@ -466,19 +466,19 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3194 = 1;
     };
     int x3206 = x3194;
-    return x3206; 
+    return x3206;
   }
 };
  struct SEntry10_IIIIIITIDS_Idx123 {  // OL 1
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x3647)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry10_IIIIIITIDS& x3647)  {
     int x1 = x3647._1;
     int x2 = (x1 << 2) + x3647._3;
     int x3 = (x2 << 4) + x3647._2;
     return x3;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x3681, const struct SEntry10_IIIIIITIDS& x3682) { 
+  FORCE_INLINE static char cmp(const struct SEntry10_IIIIIITIDS& x3681, const struct SEntry10_IIIIIITIDS& x3682) {
     int x3683 = 0;
     if(((x3681._1)==((x3682._1)))) {
       if(((x3681._2)==((x3682._2)))) {
@@ -494,19 +494,19 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3683 = 1;
     };
     int x3700 = x3683;
-    return x3700; 
+    return x3700;
   }
 };
  struct SEntry3_III_Idx321 {  //NO Idx0
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3112)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3112)  {
     int x1 = x3112._1;
-    int x2 = (x1 << 2) + x3112._3; 
-    int x3 = (x2 << 4) + x3112._2; 
+    int x2 = (x1 << 2) + x3112._3;
+    int x3 = (x2 << 4) + x3112._2;
     return x3;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry3_III& x3146, const struct SEntry3_III& x3147) { 
+  FORCE_INLINE static char cmp(const struct SEntry3_III& x3146, const struct SEntry3_III& x3147) {
     int x3148 = 0;
     if(((x3146._3)==((x3147._3)))) {
       if(((x3146._2)==((x3147._2)))) {
@@ -522,20 +522,20 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3148 = 1;
     };
     int x3165 = x3148;
-    return x3165; 
+    return x3165;
   }
 };
  struct SEntry5_IISDS_Idx1 { // I 0
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry5_IISDS& x3381)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry5_IISDS& x3381)  {
     int x3382 = 0;
     int x3383 = x3382;
     x3382 = (x3383^(((((HASH((x3381._1)))+(-1640531527))+((x3383<<(6))))+((x3383>>(2))))));
     int x3393 = x3382;
-    return x3393; 
+    return x3393;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry5_IISDS& x3395, const struct SEntry5_IISDS& x3396) { 
+  FORCE_INLINE static char cmp(const struct SEntry5_IISDS& x3395, const struct SEntry5_IISDS& x3396) {
     int x3397 = 0;
     if(((x3395._1)==((x3396._1)))) {
       x3397 = 0;
@@ -543,19 +543,19 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3397 = 1;
     };
     int x3404 = x3397;
-    return x3404; 
+    return x3404;
   }
 };
  struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236 { // C 1
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3765)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3765)  {
     int x1 = HASH(x3765._6);
     int x2 = (x1 << 2) + x3765._3;
     int x3 = (x2 << 4) + x3765._2;
     return x3;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3799, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3800) { 
+  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3799, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3800) {
     int x3801 = 0;
     if(((x3799._2)==((x3800._2)))) {
       if(((x3799._3)==((x3800._3)))) {
@@ -571,20 +571,20 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3801 = 1;
     };
     int x3818 = x3801;
-    return x3818; 
+    return x3818;
   }
 };
  struct SEntry9_ISSSSSSDD_Idx1 { // W 0
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry9_ISSSSSSDD& x3351)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry9_ISSSSSSDD& x3351)  {
     int x3352 = 0;
     int x3353 = x3352;
     x3352 = (x3353^(((((HASH((x3351._1)))+(-1640531527))+((x3353<<(6))))+((x3353>>(2))))));
     int x3363 = x3352;
-    return x3363; 
+    return x3363;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry9_ISSSSSSDD& x3365, const struct SEntry9_ISSSSSSDD& x3366) { 
+  FORCE_INLINE static char cmp(const struct SEntry9_ISSSSSSDD& x3365, const struct SEntry9_ISSSSSSDD& x3366) {
     int x3367 = 0;
     if(((x3365._1)==((x3366._1)))) {
       x3367 = 0;
@@ -592,22 +592,22 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3367 = 1;
     };
     int x3374 = x3367;
-    return x3374; 
+    return x3374;
   }
 };
  struct SEntry11_IISSSSSSDDI_Idx21 { // D 0
   #define int unsigned int
-  FORCE_INLINE static size_t hash(const struct SEntry11_IISSSSSSDDI& x3530)  { 
+  FORCE_INLINE static size_t hash(const struct SEntry11_IISSSSSSDDI& x3530)  {
     int x3531 = 0;
     int x3532 = x3531;
     x3531 = (x3532^(((((HASH((x3530._2)))+(-1640531527))+((x3532<<(6))))+((x3532>>(2))))));
     int x3542 = x3531;
     x3531 = (x3542^(((((HASH((x3530._1)))+(-1640531527))+((x3542<<(6))))+((x3542>>(2))))));
     int x3552 = x3531;
-    return x3552; 
+    return x3552;
   }
   #undef int
-  FORCE_INLINE static char cmp(const struct SEntry11_IISSSSSSDDI& x3554, const struct SEntry11_IISSSSSSDDI& x3555) { 
+  FORCE_INLINE static char cmp(const struct SEntry11_IISSSSSSDDI& x3554, const struct SEntry11_IISSSSSSDDI& x3555) {
     int x3556 = 0;
     if(((x3554._2)==((x3555._2)))) {
       if(((x3554._1)==((x3555._1)))) {
@@ -619,12 +619,122 @@ struct SEntry8_IIIITIIB_Idx234 {  // O 1
       x3556 = 1;
     };
     int x3568 = x3556;
-    return x3568; 
+    return x3568;
   }
 };
 
+struct SEntry9_ISSSSSSDD_Idx1f1t6 {
+#define int unsigned int
+
+  FORCE_INLINE static size_t hash(const struct SEntry9_ISSSSSSDD& x3379) {
+    return (x3379._1);
+  }
+#undef int
+
+  FORCE_INLINE static char cmp(const struct SEntry9_ISSSSSSDD& x3376, const struct SEntry9_ISSSSSSDD& x3377) {
+    return 0;
+  }
+};
+
+struct SEntry11_IISSSSSSDDI_Idx2f1t6_1f1t11 {
+#define int unsigned int
+
+  FORCE_INLINE static size_t hash(const struct SEntry11_IISSSSSSDDI& x3535) {
+    return x3535._2 * 10 + x3535._1;
+  }
+#undef int
+
+  FORCE_INLINE static char cmp(const struct SEntry11_IISSSSSSDDI& x3532, const struct SEntry11_IISSSSSSDDI& x3533) {
+    return 0;
+  }
+};
+
+struct SEntry5_IISDS_Idx1f1t100002 {
+#define int unsigned int
+
+  FORCE_INLINE static size_t hash(const struct SEntry5_IISDS& x3398) {
+    return (x3398._1);
+  }
+#undef int
+
+  FORCE_INLINE static char cmp(const struct SEntry5_IISDS& x3395, const struct SEntry5_IISDS& x3396) {
+    return 0;
+  }
+};
+
+struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx3f1t6_2f1t11_1f1t3001 {
+#define int unsigned int
+
+  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3693) {
+    return (x3693._3 * 10 + x3693._2)*3000 + x3693._1;
+  }
+#undef int
+
+  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3690, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3691) {
+    return 0;
+  }
+};
+
+struct SEntry17_IIISSSSSSSSSSIIIS_Idx2f1t6_1f1t100001 {
+#define int unsigned int
+
+  FORCE_INLINE static size_t hash(const struct SEntry17_IIISSSSSSSSSSIIIS& x3781) {
+    return x3781._2 * 100000 + x3781._1;
+  }
+#undef int
+
+  FORCE_INLINE static char cmp(const struct SEntry17_IIISSSSSSSSSSIIIS& x3778, const struct SEntry17_IIISSSSSSSSSSIIIS& x3779) {
+    return 0;
+  }
+};
+
+struct SEntry3_III_Idx23_1 {
+  #define int unsigned int
+  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3168)  {
+    int x1 = x3168._3;
+    int x2 = (x1 << 4) + x3168._2;
+    return x2;
+  }
+  #undef int
+  FORCE_INLINE static char cmp(const struct SEntry3_III& x3251, const struct SEntry3_III& x3252) {
+    int x3253 = x3251._1;
+    int x3254 = x3252._1;
+    return ((x3253==(x3254)) ? 0 : ((x3253>(x3254)) ? 1 : -1));
+  }
+};
+ struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236_4 {
+  #define int unsigned int
+  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3765)  {
+    int x1 = HASH(x3765._6);
+    int x2 = (x1 << 2) + x3765._3;
+    int x3 = (x2 << 4) + x3765._2;
+    return x3;
+  }
+  #undef int
+  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3944, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3945) {
+    int x3948 = strcmpi((x3944._4).data_, (x3945._4).data_);
+    return ((x3948>(0)) ? 1 : ((x3948<(0)) ? -1 : 0));
+  }
+};
+ struct SEntry8_IIIITIIB_Idx234_1 {
+  #define int unsigned int
+  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3468)  {
+    int x1 = x3468._4;
+    int x2 = (x1 << 2) + x3468._3;
+    int x3 = (x2 << 4) + x3468._2;
+    return x3;
+  }
+  #undef int
+  FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3599, const struct SEntry8_IIIITIIB& x3600) {
+    int x3601 = x3599._1;
+    int x3602 = x3600._1;
+    return ((x3601==(x3602)) ? 0 : ((x3601>(x3602)) ? 1 : -1));
+  }
+};
+
+      
 typedef CuckooIndex<struct SEntry3_III, SEntry3_III_Idx321> newOrderTblIdx0Type;
-typedef ConcurrentCuckooSecondaryIndex<struct SEntry3_III, SEntry3_III_Idx23> newOrderTblIdx1Type;
+typedef MinHeapIndex<struct SEntry3_III, SEntry3_III_Idx23, SEntry3_III_Idx23_1> newOrderTblIdx1Type;
 typedef MultiHashMapMV<struct SEntry3_III,newOrderTblIdx0Type, newOrderTblIdx1Type> newOrderTblStoreType;
 
 typedef CuckooIndex<struct SEntry8_IIIIITDS, SEntry8_IIIIITDS_Idx12345678> historyTblIdx0Type;
@@ -637,7 +747,7 @@ typedef CuckooIndex<struct SEntry5_IISDS, SEntry5_IISDS_Idx1> itemTblIdx0Type;
 typedef MultiHashMapMV<struct SEntry5_IISDS,itemTblIdx0Type> itemTblStoreType;
 
 typedef CuckooIndex<struct SEntry8_IIIITIIB, SEntry8_IIIITIIB_Idx321> orderTblIdx0Type;
-typedef ConcurrentCuckooSecondaryIndex<struct SEntry8_IIIITIIB, SEntry8_IIIITIIB_Idx234> orderTblIdx1Type;
+typedef MaxHeapIndex<struct SEntry8_IIIITIIB, SEntry8_IIIITIIB_Idx234, SEntry8_IIIITIIB_Idx234_1> orderTblIdx1Type;
 typedef MultiHashMapMV<struct SEntry8_IIIITIIB,orderTblIdx0Type, orderTblIdx1Type> orderTblStoreType;
 
 typedef CuckooIndex<struct SEntry11_IISSSSSSDDI, SEntry11_IISSSSSSDDI_Idx21> districtTblIdx0Type;
@@ -648,7 +758,7 @@ typedef ConcurrentCuckooSecondaryIndex<struct SEntry10_IIIIIITIDS, SEntry10_IIII
 typedef MultiHashMapMV<struct SEntry10_IIIIIITIDS,orderLineTblIdx0Type, orderLineTblIdx1Type> orderLineTblStoreType;
 
 typedef CuckooIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx321> customerTblIdx0Type;
-typedef ConcurrentCuckooSecondaryIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236> customerTblIdx1Type;
+typedef MedHeapIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236_4> customerTblIdx1Type;
 typedef MultiHashMapMV<struct SEntry21_IIISSSSSSSSSTSDDDDIIS,customerTblIdx0Type, customerTblIdx1Type> customerTblStoreType;
 
 typedef CuckooIndex<struct SEntry17_IIISSSSSSSSSSIIIS, SEntry17_IIISSSSSSSSSSIIIS_Idx21> stockTblIdx0Type;
@@ -704,107 +814,102 @@ struct ThreadLocal {
   customerTblStoreType& customerTbl;  customerTblIdx0Type& customerTblIdx0;  customerTblIdx1Type& customerTblIdx1;
   stockTblStoreType& stockTbl;  stockTblIdx0Type& stockTblIdx0;
   
-  struct SEntry11_IISSSSSSDDI x5287;
-  struct SEntry8_IIIITIIB x5142;
-  struct SEntry8_IIIIITDS x4684;
-  struct SEntry8_IIIITIIB x4924;
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x4911;
-  struct SEntry10_IIIIIITIDS x5378;
-  struct SEntry3_III x5130;
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x4705;
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x5155;
-  struct SEntry17_IIISSSSSSSSSSIIIS x5320;
-  struct SEntry9_ISSSSSSDD x4635;
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x5385;
-  struct SEntry8_IIIITIIB x5367;
-  struct SEntry3_III x4927;
-  struct SEntry5_IISDS x4891;
-  struct SEntry17_IIISSSSSSSSSSIIIS x4941;
-  struct SEntry11_IISSSSSSDDI x4640;
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x5389;
-  struct SEntry10_IIIIIITIDS x5151;
-  struct SEntry10_IIIIIITIDS x4989;
-  struct SEntry9_ISSSSSSDD x4914;
-  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x4701;
-  struct SEntry11_IISSSSSSDDI x4917;
-  struct SEntry10_IIIIIITIDS x5300;
+  struct SEntry10_IIIIIITIDS x7350;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7207;
+  struct SEntry8_IIIIITDS x6800;
+  struct SEntry11_IISSSSSSDDI x6970;
+  struct SEntry17_IIISSSSSSSSSSIIIS x7370;
+  struct SEntry10_IIIIIITIDS x7427;
+  struct SEntry5_IISDS x6944;
+  struct SEntry8_IIIITIIB x7417;
+  struct SEntry10_IIIIIITIDS x7203;
+  struct SEntry11_IISSSSSSDDI x7337;
+  struct SEntry9_ISSSSSSDD x6751;
+  struct SEntry10_IIIIIITIDS x7042;
+  struct SEntry3_III x7183;
+  struct SEntry8_IIIITIIB x7194;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x6964;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x6822;
+  struct SEntry11_IISSSSSSDDI x6756;
+  struct SEntry3_III x6980;
+  struct SEntry8_IIIITIIB x6977;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x6819;
+  struct SEntry9_ISSSSSSDD x6967;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7437;
+  struct SEntry17_IIISSSSSSSSSSIIIS x6994;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7434;
   
   FORCE_INLINE TransactionReturnStatus PaymentTx(Transaction& xact, int x16, date x17, int x18, int x19, int x20, int x21, int x22, int x23, int x24, PString x25, double x26) {
-    x4635._1 = x19;
-    OperationReturnStatus stx10412;
-    struct SEntry9_ISSSSSSDD* x10412 =  warehouseTblIdx0.getForUpdate(x4635, stx10412, xact);
-    if(stx10412 != OP_SUCCESS) return TR(stx10412);
-    x10412->_9 += x26;
-    x4640._1 = x20;
-    x4640._2 = x19;
-    OperationReturnStatus stx10418;
-    struct SEntry11_IISSSSSSDDI* x10418 =  districtTblIdx0.getForUpdate(x4640, stx10418, xact);
-    if(stx10418 != OP_SUCCESS) return TR(stx10418);
-    x10418->_10 += x26;
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite18362 = 0;
+    x6751._1 = x19;
+    OperationReturnStatus stx12974;
+    struct SEntry9_ISSSSSSDD* x12974 =  warehouseTblIdx0.getForUpdate(x6751, stx12974, xact);
+    if(stx12974 != OP_SUCCESS) return TR(stx12974);
+    x12974->_9 += x26;
+    x6756._1 = x20;
+    x6756._2 = x19;
+    OperationReturnStatus stx12980;
+    struct SEntry11_IISSSSSSDDI* x12980 =  districtTblIdx0.getForUpdate(x6756, stx12980, xact);
+    if(stx12980 != OP_SUCCESS) return TR(stx12980);
+    x12980->_10 += x26;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite21286 = 0;
     if((x21>(0))) {
-      std::vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x18366results;
-      MedianAggregator<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, PString> x18366([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* e) -> PString {
-        return (e->_4); 
-      }, x18366results);
-      x4701._2 = x23;
-      x4701._3 = x22;
-      x4701._6 = x25;
-      customerTblIdx1.sliceNoUpdate(x4701, x18366, xact);
-      OperationReturnStatus stx18371;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18371 = x18366.resultForUpdate(stx18371, xact);
-      if(stx18371 != OP_SUCCESS) return TR(stx18371);
-      ite18362 = x18371;
+      x6819._2 = x23;
+      x6819._3 = x22;
+      x6819._6 = x25;
+      OperationReturnStatus stx21290;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x21290 =  customerTblIdx1.getForUpdate(x6819, stx21290, xact);
+      if(stx21290 != OP_SUCCESS) return TR(stx21290);
+      ite21286 = x21290;
     } else {
-      x4705._1 = x24;
-      x4705._2 = x23;
-      x4705._3 = x22;
-      OperationReturnStatus stx18376;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x18376 =  customerTblIdx0.getForUpdate(x4705, stx18376, xact);
-      if(stx18376 != OP_SUCCESS) return TR(stx18376);
-      ite18362 = x18376;
+      x6822._1 = x24;
+      x6822._2 = x23;
+      x6822._3 = x22;
+      OperationReturnStatus stx21295;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x21295 =  customerTblIdx0.getForUpdate(x6822, stx21295, xact);
+      if(stx21295 != OP_SUCCESS) return TR(stx21295);
+      ite21286 = x21295;
     };
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x4645 = ite18362;
-    char* x19547 = strstr((x4645->_14).data_, "BC");
-    if((x19547!=(NULL))) {
-      PString x2410 = PString(500);
-      x2410.append((x4645->_1));
-      x2410.append(' ');
-      x2410.append(x23);
-      x2410.append(' ');
-      x2410.append(x22);
-      x2410.append(' ');
-      x2410.append(x20);
-      x2410.append(' ');
-      x2410.append(x19);
-      x2410.append(' ');
-      x2410.append('$');
-      x2410.append(x26);
-      x2410.append(' ');
-      x2410.appendDate(x17);
-      x2410.append(' ');
-      x2410.append('|');
-      x2410.append(' ');
-      x2410.append((x4645->_21).data_, 500);
-      x4645->_17 += x26;
-      x4645->_21 = x2410;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6761 = ite21286;
+    char* x22417 = strstr((x6761->_14).data_, "BC");
+    if((x22417!=(NULL))) {
+      PString x2459 = PString(500);
+      x2459.append((x6761->_1));
+      x2459.append(' ');
+      x2459.append(x23);
+      x2459.append(' ');
+      x2459.append(x22);
+      x2459.append(' ');
+      x2459.append(x20);
+      x2459.append(' ');
+      x2459.append(x19);
+      x2459.append(' ');
+      x2459.append('$');
+      x2459.append(x26);
+      x2459.append(' ');
+      x2459.appendDate(x17);
+      x2459.append(' ');
+      x2459.append('|');
+      x2459.append(' ');
+      x2459.append((x6761->_21).data_, 500);
+      x6761->_17 += x26;
+      x6761->_21 = x2459;
     } else {
-      x4645->_17 += x26;
+      x6761->_17 += x26;
     };
-    PString x2436 = PString(24);
-    x2436.append((x10412->_2).data_, 10);
-    x2436.append("    ", 4);
-    x2436.append((x10418->_3).data_, 10);
-    x4684._1 = (x4645->_1);
-    x4684._2 = x23;
-    x4684._3 = x22;
-    x4684._4 = x20;
-    x4684._5 = x19;
-    x4684._6 = x17;
-    x4684._7 = x26;
-    x4684._8 = x2436;
-    OperationReturnStatus st17314 = historyTbl.insert_nocheck(x4684, xact);
-    if(st17314 != OP_SUCCESS) return TR(st17314);
+    PString x2485 = PString(24);
+    x2485.append((x12974->_2).data_, 10);
+    x2485.append("    ", 4);
+    x2485.append((x12980->_3).data_, 10);
+    x6800._1 = (x6761->_1);
+    x6800._2 = x23;
+    x6800._3 = x22;
+    x6800._4 = x20;
+    x6800._5 = x19;
+    x6800._6 = x17;
+    x6800._7 = x26;
+    x6800._8 = x2485;
+    OperationReturnStatus st20284 = historyTbl.insert_nocheck(x6800, xact);
+    if(st20284 != OP_SUCCESS) return TR(st20284);
     clearTempMem();
     return SUCCESS;
   }
@@ -818,17 +923,17 @@ struct ThreadLocal {
     while(1) {
       
       int x108 = x95;
-      int ite18632 = 0;
+      int ite21546 = 0;
       if((x108<(x84))) {
         
         int x110 = x103;
-        int x18633 = x110;
-        ite18632 = x18633;
+        int x21547 = x110;
+        ite21546 = x21547;
       } else {
-        ite18632 = 0;
+        ite21546 = 0;
       };
-      int x18500 = ite18632;
-      if (!(x18500)) break; 
+      int x21414 = ite21546;
+      if (!(x21414)) break; 
       
       int x113 = x95;
       int supwid = x87[x113];
@@ -837,52 +942,52 @@ struct ThreadLocal {
       };
       int x119 = x95;
       int x120 = x86[x119];
-      x4891._1 = x120;
-      struct SEntry5_IISDS* x9092 = itemTblIdx0.get(x4891, xact);
-      if((x9092==(NULL))) {
+      x6944._1 = x120;
+      struct SEntry5_IISDS* x11525 = itemTblIdx0.get(x6944, xact);
+      if((x11525==(NULL))) {
         x103 = 0;
       } else {
         int x126 = x95;
-        x90[x126] = (x9092->_3);
+        x90[x126] = (x11525->_3);
         int x129 = x95;
-        x89[x129] = (x9092->_4);
+        x89[x129] = (x11525->_4);
         int x132 = x95;
-        idata[x132] = (x9092->_5);
+        idata[x132] = (x11525->_5);
       };
       int x136 = x95;
       x95 = (x136+(1));
     };
     int x140 = x103;
     if(x140) {
-      x4911._1 = x83;
-      x4911._2 = x82;
-      x4911._3 = x81;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9114 = customerTblIdx0.get(x4911, xact);
-      x4914._1 = x81;
-      struct SEntry9_ISSSSSSDD* x9117 = warehouseTblIdx0.get(x4914, xact);
-      x4917._1 = x82;
-      x4917._2 = x81;
-      OperationReturnStatus stx10686;
-      struct SEntry11_IISSSSSSDDI* x10686 =  districtTblIdx0.getForUpdate(x4917, stx10686, xact);
-      if(stx10686 != OP_SUCCESS) return TR(stx10686);
-      int x4919 = x10686->_11;
-      x10686->_11 += 1;
+      x6964._1 = x83;
+      x6964._2 = x82;
+      x6964._3 = x81;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x11547 = customerTblIdx0.get(x6964, xact);
+      x6967._1 = x81;
+      struct SEntry9_ISSSSSSDD* x11550 = warehouseTblIdx0.get(x6967, xact);
+      x6970._1 = x82;
+      x6970._2 = x81;
+      OperationReturnStatus stx13245;
+      struct SEntry11_IISSSSSSDDI* x13245 =  districtTblIdx0.getForUpdate(x6970, stx13245, xact);
+      if(stx13245 != OP_SUCCESS) return TR(stx13245);
+      int x6972 = x13245->_11;
+      x13245->_11 += 1;
       int x157 = x106;
-      x4924._1 = x4919;
-      x4924._2 = x82;
-      x4924._3 = x81;
-      x4924._4 = x83;
-      x4924._5 = x79;
-      x4924._6 = -1;
-      x4924._7 = x84;
-      x4924._8 = x157;
-      OperationReturnStatus st17371 = orderTbl.insert_nocheck(x4924, xact);
-      if(st17371 != OP_SUCCESS) return TR(st17371);
-      x4927._1 = x4919;
-      x4927._2 = x82;
-      x4927._3 = x81;
-      OperationReturnStatus st17375 = newOrderTbl.insert_nocheck(x4927, xact);
-      if(st17375 != OP_SUCCESS) return TR(st17375);
+      x6977._1 = x6972;
+      x6977._2 = x82;
+      x6977._3 = x81;
+      x6977._4 = x83;
+      x6977._5 = x79;
+      x6977._6 = -1;
+      x6977._7 = x84;
+      x6977._8 = x157;
+      OperationReturnStatus st20341 = orderTbl.insert_nocheck(x6977, xact);
+      if(st20341 != OP_SUCCESS) return TR(st20341);
+      x6980._1 = x6972;
+      x6980._2 = x82;
+      x6980._3 = x81;
+      OperationReturnStatus st20345 = newOrderTbl.insert_nocheck(x6980, xact);
+      if(st20345 != OP_SUCCESS) return TR(st20345);
       double x165 = 0.0;
       x95 = 0;
       while(1) {
@@ -896,38 +1001,38 @@ struct ThreadLocal {
         int ol_i_id = x86[x174];
         int x177 = x95;
         int ol_quantity = x88[x177];
-        x4941._1 = ol_i_id;
-        x4941._2 = ol_supply_w_id;
-        OperationReturnStatus stx10720;
-        struct SEntry17_IIISSSSSSSSSSIIIS* x10720 =  stockTblIdx0.getForUpdate(x4941, stx10720, xact);
-        if(stx10720 != OP_SUCCESS) return TR(stx10720);
-        const PString& x4944 = *(&x10720->_4 + (x82-1));
-        int x4945 = x10720->_3;
+        x6994._1 = ol_i_id;
+        x6994._2 = ol_supply_w_id;
+        OperationReturnStatus stx13279;
+        struct SEntry17_IIISSSSSSSSSSIIIS* x13279 =  stockTblIdx0.getForUpdate(x6994, stx13279, xact);
+        if(stx13279 != OP_SUCCESS) return TR(stx13279);
+        const PString& x6997 = *(&x13279->_4 + (x82-1));
+        int x6998 = x13279->_3;
         int x188 = x95;
-        x91[x188] = x4945;
+        x91[x188] = x6998;
         int x190 = x95;
         PString& x191 = idata[x190];
-        char* x19745 = strstr(x191.data_, "original");
-        int ite18711 = 0;
-        if((x19745!=(NULL))) {
+        char* x22610 = strstr(x191.data_, "original");
+        int ite21625 = 0;
+        if((x22610!=(NULL))) {
           
-          char* x19751 = strstr((x10720->_17).data_, "original");
-          int x18712 = (x19751!=(NULL));
-          ite18711 = x18712;
+          char* x22616 = strstr((x13279->_17).data_, "original");
+          int x21626 = (x22616!=(NULL));
+          ite21625 = x21626;
         } else {
-          ite18711 = 0;
+          ite21625 = 0;
         };
-        int x18574 = ite18711;
-        if(x18574) {
+        int x21488 = ite21625;
+        if(x21488) {
           int x196 = x95;
           x92[x196].data_[0] = 'B';
         } else {
           int x198 = x95;
           x92[x198].data_[0] = 'G';
         };
-        x10720->_3 = (x4945-(ol_quantity));
-        if((x4945<=(ol_quantity))) {
-          x10720->_3 += 91;
+        x13279->_3 = (x6998-(ol_quantity));
+        if((x6998<=(ol_quantity))) {
+          x13279->_3 += 91;
         };
         int x207 = 0;
         if((ol_supply_w_id!=(x81))) {
@@ -935,23 +1040,23 @@ struct ThreadLocal {
         };
         int x220 = x95;
         double x221 = x89[x220];
-        double ol_amount = ((ol_quantity*(x221))*(((1.0+((x9117->_8)))+((x10686->_9)))))*((1.0-((x9114->_16))));
+        double ol_amount = ((ol_quantity*(x221))*(((1.0+((x11550->_8)))+((x13245->_9)))))*((1.0-((x11547->_16))));
         int x229 = x95;
         x93[x229] = ol_amount;
         double x231 = x165;
         x165 = (x231+(ol_amount));
         int x234 = x95;
-        x4989._1 = x4919;
-        x4989._2 = x82;
-        x4989._3 = x81;
-        x4989._4 = (x234+(1));
-        x4989._5 = ol_i_id;
-        x4989._6 = ol_supply_w_id;
-        x4989._8 = ol_quantity;
-        x4989._9 = ol_amount;
-        x4989._10 = x4944;
-        OperationReturnStatus st17443 = orderLineTbl.insert_nocheck(x4989, xact);
-        if(st17443 != OP_SUCCESS) return TR(st17443);
+        x7042._1 = x6972;
+        x7042._2 = x82;
+        x7042._3 = x81;
+        x7042._4 = (x234+(1));
+        x7042._5 = ol_i_id;
+        x7042._6 = ol_supply_w_id;
+        x7042._8 = ol_quantity;
+        x7042._9 = ol_amount;
+        x7042._10 = x6997;
+        OperationReturnStatus st20413 = orderLineTbl.insert_nocheck(x7042, xact);
+        if(st20413 != OP_SUCCESS) return TR(st20413);
         int x239 = x95;
         x95 = (x239+(1));
       };
@@ -971,52 +1076,47 @@ struct ThreadLocal {
       int x257 = x255;
       if (!((x257<=(10)))) break; 
       
-      struct SEntry3_III* x5127result = nullptr;
-      MinAggregator<struct SEntry3_III, int> x5127([&](struct SEntry3_III* e) -> int {
-        return (e->_1); 
-      }, &x5127result);
       int x264 = x255;
-      x5130._2 = x264;
-      x5130._3 = x249;
-      newOrderTblIdx1.sliceNoUpdate(x5130, x5127, xact);
-      OperationReturnStatus stx10942;
-      struct SEntry3_III* x10942 = x5127.resultForUpdate(stx10942, xact);
-      if(stx10942 != OP_SUCCESS) return TR(stx10942);
-      if((x10942!=(NULL))) {
-        int x5135 = x10942->_1;
+      x7183._2 = x264;
+      x7183._3 = x249;
+      OperationReturnStatus stx13500;
+      struct SEntry3_III* x13500 =  newOrderTblIdx1.getForUpdate(x7183, stx13500, xact);
+      if(stx13500 != OP_SUCCESS) return TR(stx13500);
+      if((x13500!=(NULL))) {
+        int x7187 = x13500->_1;
         int x273 = x255;
-        orderIDs[(x273-(1))] = x5135;
-        x10942->isInvalid = true;
+        orderIDs[(x273-(1))] = x7187;
+        newOrderTbl.del(x13500);
         int x278 = x255;
-        x5142._1 = x5135;
-        x5142._2 = x278;
-        x5142._3 = x249;
-        OperationReturnStatus stx10955;
-        struct SEntry8_IIIITIIB* x10955 =  orderTblIdx0.getForUpdate(x5142, stx10955, xact);
-        if(stx10955 != OP_SUCCESS) return TR(stx10955);
-        x10955->_6 = x250;
+        x7194._1 = x7187;
+        x7194._2 = x278;
+        x7194._3 = x249;
+        OperationReturnStatus stx13513;
+        struct SEntry8_IIIITIIB* x13513 =  orderTblIdx0.getForUpdate(x7194, stx13513, xact);
+        if(stx13513 != OP_SUCCESS) return TR(stx13513);
+        x13513->_6 = x250;
         double x287 = 0.0;
         int x289 = x255;
-        x5151._1 = x5135;
-        x5151._2 = x289;
-        x5151._3 = x249;
-        OperationReturnStatus st9410 = orderLineTblIdx1.slice(x5151, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
+        x7203._1 = x7187;
+        x7203._2 = x289;
+        x7203._3 = x249;
+        OperationReturnStatus st11842 = orderLineTblIdx1.slice(x7203, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
           orderLineEntry->_7 = x248;
           double x294 = x287;
           x287 = (x294+((orderLineEntry->_9)));
           return SUCCESS;
         }, xact);
-        if(st9410 != OP_SUCCESS) return TR(st9410);
+        if(st11842 != OP_SUCCESS) return TR(st11842);
         int x302 = x255;
-        x5155._1 = (x10955->_4);
-        x5155._2 = x302;
-        x5155._3 = x249;
-        OperationReturnStatus stx10981;
-        struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x10981 =  customerTblIdx0.getForUpdate(x5155, stx10981, xact);
-        if(stx10981 != OP_SUCCESS) return TR(stx10981);
+        x7207._1 = (x13513->_4);
+        x7207._2 = x302;
+        x7207._3 = x249;
+        OperationReturnStatus stx13539;
+        struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13539 =  customerTblIdx0.getForUpdate(x7207, stx13539, xact);
+        if(stx13539 != OP_SUCCESS) return TR(stx13539);
         double x306 = x287;
-        x10981->_17 += x306;
-        x10981->_20 += 1;
+        x13539->_17 += x306;
+        x13539->_20 += 1;
       } else {
         int x310 = failedDel;
         failedDel = (1+(x310));
@@ -1031,32 +1131,32 @@ struct ThreadLocal {
   }
   
   FORCE_INLINE TransactionReturnStatus StockLevelTx(Transaction& xact, int x321, date x322, int x323, int x324, int x325, int x326) {
-    x5287._1 = x325;
-    x5287._2 = x324;
-    struct SEntry11_IISSSSSSDDI* x9502 = districtTblIdx0.get(x5287, xact);
-    int x5289 = x9502->_11;
-    int x335 = (x5289-(20));
+    x7337._1 = x325;
+    x7337._2 = x324;
+    struct SEntry11_IISSSSSSDDI* x11933 = districtTblIdx0.get(x7337, xact);
+    int x7339 = x11933->_11;
+    int x335 = (x7339-(20));
     unordered_set<int> unique_ol_i_id({}); //setApply1
     while(1) {
       
       int x340 = x335;
-      if (!((x340<(x5289)))) break; 
+      if (!((x340<(x7339)))) break; 
       
       int x342 = x335;
-      x5300._1 = x342;
-      x5300._2 = x325;
-      x5300._3 = x324;
-      OperationReturnStatus st12362 = orderLineTblIdx1.sliceNoUpdate(x5300, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
-        int x5318 = orderLineEntry->_5;
-        x5320._1 = x5318;
-        x5320._2 = x324;
-        struct SEntry17_IIISSSSSSSSSSIIIS* x9517 = stockTblIdx0.get(x5320, xact);
-        if(((x9517->_3)<(x326))) {
-          unique_ol_i_id.insert(x5318);
+      x7350._1 = x342;
+      x7350._2 = x325;
+      x7350._3 = x324;
+      OperationReturnStatus st14906 = orderLineTblIdx1.sliceNoUpdate(x7350, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
+        int x7368 = orderLineEntry->_5;
+        x7370._1 = x7368;
+        x7370._2 = x324;
+        struct SEntry17_IIISSSSSSSSSSIIIS* x11948 = stockTblIdx0.get(x7370, xact);
+        if(((x11948->_3)<(x326))) {
+          unique_ol_i_id.insert(x7368);
         };
         return SUCCESS;
       }, xact);
-      if(st12362 != OP_SUCCESS) return TR(st12362);
+      if(st14906 != OP_SUCCESS) return TR(st14906);
       int x359 = x335;
       x335 = (x359+(1));
     };
@@ -1065,52 +1165,42 @@ struct ThreadLocal {
   }
   
   FORCE_INLINE TransactionReturnStatus OrderStatusTx(Transaction& xact, int x365, date x366, int x367, int x368, int x369, int x370, int x371, PString x372) {
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite18998 = 0;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite21907 = 0;
     if((x370>(0))) {
-      std::vector<struct SEntry21_IIISSSSSSSSSTSDDDDIIS*> x19002results;
-      MedianAggregator<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, PString> x19002([&](struct SEntry21_IIISSSSSSSSSTSDDDDIIS* e) -> PString {
-        return (e->_4); 
-      }, x19002results);
-      x5385._2 = x369;
-      x5385._3 = x368;
-      x5385._6 = x372;
-      customerTblIdx1.sliceNoUpdate(x5385, x19002, xact);
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x19007 = x19002.result();
-      ite18998 = x19007;
+      x7434._2 = x369;
+      x7434._3 = x368;
+      x7434._6 = x372;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x21911 = customerTblIdx1.get(x7434, xact);
+      ite21907 = x21911;
     } else {
-      x5389._1 = x371;
-      x5389._2 = x369;
-      x5389._3 = x368;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x19012 = customerTblIdx0.get(x5389, xact);
-      ite18998 = x19012;
+      x7437._1 = x371;
+      x7437._2 = x369;
+      x7437._3 = x368;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x21916 = customerTblIdx0.get(x7437, xact);
+      ite21907 = x21916;
     };
-    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x5362 = ite18998;
-    struct SEntry8_IIIITIIB* x5365result = nullptr;
-    MaxAggregator<struct SEntry8_IIIITIIB, int> x5365([&](struct SEntry8_IIIITIIB* e) -> int {
-      return (e->_1); 
-    }, &x5365result);
-    x5367._2 = x369;
-    x5367._3 = x368;
-    x5367._4 = (x5362->_3);
-    orderTblIdx1.sliceNoUpdate(x5367, x5365, xact);
-    struct SEntry8_IIIITIIB* x5369 = x5365.result();
-    int ite19027 = 0;
-    if((x5369==(NULL))) {
-      int x19028 = failedOS;
-      failedOS = (1+(x19028));
-      ite19027 = 0;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7412 = ite21907;
+    x7417._2 = x369;
+    x7417._3 = x368;
+    x7417._4 = (x7412->_3);
+    struct SEntry8_IIIITIIB* x12019 = orderTblIdx1.get(x7417, xact);
+    int ite21926 = 0;
+    if((x12019==(NULL))) {
+      int x21927 = failedOS;
+      failedOS = (1+(x21927));
+      ite21926 = 0;
     } else {
-      x5378._1 = (x5369->_1);
-      x5378._2 = x369;
-      x5378._3 = x368;
-      OperationReturnStatus st19039 = orderLineTblIdx1.sliceNoUpdate(x5378, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
+      x7427._1 = (x12019->_1);
+      x7427._2 = x369;
+      x7427._3 = x368;
+      OperationReturnStatus st21938 = orderLineTblIdx1.sliceNoUpdate(x7427, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
         int x410 = 1;
         return SUCCESS;
       }, xact);
-      if(st19039 != OP_SUCCESS) return TR(st19039);
-      ite19027 = 1;
+      if(st21938 != OP_SUCCESS) return TR(st21938);
+      ite21926 = 1;
     };
-    int x414 = ite19027;
+    int x414 = ite21926;
     clearTempMem();
     return SUCCESS;
   }
@@ -1205,14 +1295,14 @@ void threadFunction(uint8_t thread_id, TPCC_Data* data) {
   uint head = 0, tail = 0;
   bool full = false;
   p = tpcc.programs[pid];
-  while (true) {
+  while (!hasFinished) {
+
     xactManager.begin(p->xact, thread_id);
 
     st = tl.runProgram(p);
 
     if (st != SUCCESS) {
       xactManager.rollback(p->xact, thread_id);
-
       if (!full && p->xact.failedBecauseOf != nullptr) {
         failedPrograms[tail++] = p;
         if (tail == failedProgramSize)
@@ -1225,7 +1315,7 @@ void threadFunction(uint8_t thread_id, TPCC_Data* data) {
         p = tpcc.programs[pid];
       }
     } else {
-      if (xactManager.validateAndCommit(p->xact, thread_id)) { //rollback happens inside function if it fails
+      if (xactManager.validateAndCommit(p->xact, thread_id)) {   //rollback happens inside function if it fails
         xactCounts[prgId7to5[p->id]]++;
         if (head != tail || full) {
           p = failedPrograms[head];
@@ -1238,7 +1328,7 @@ void threadFunction(uint8_t thread_id, TPCC_Data* data) {
           }
         }
         pid = PC++;
-        if (pid >= numPrograms)
+        if(pid >= numPrograms)
           break;
         p = tpcc.programs[pid];
       }
@@ -1272,7 +1362,8 @@ int main(int argc, char** argv) {
   tpcc.loadHist(t0);
   tpcc.loadStocks(t0);
   xactManager.commit(t0, 0);
-  
+  cout.imbue(std::locale(""));
+
   memset(xactCounts, 0, 5 * sizeof(uint));
   memset(xactManager.activeXactStartTS, 0xff, sizeof(xactManager.activeXactStartTS[0]) * numThreads);
   
@@ -1298,7 +1389,7 @@ int main(int argc, char** argv) {
       }
       all_ready = true;
   }
- 
+  
   for (uint8_t i = 0; i < numThreads; ++i) {
       workers[i].join();
   }
@@ -1314,7 +1405,7 @@ int main(int argc, char** argv) {
   
   ofstream fout("tpcc_res_cpp.csv", ios::app);
   if(argc == 1 || atoi(argv[1]) == 1) {
-    fout << "\nCPP-DEFILNORVX-" << numPrograms << ",";
+    fout << "\nCPP-ABDEFILNORVXY-" << numPrograms << ",";
     for(int i = 0; i < 5 ; ++i)
        fout << xactCounts[i] << ",";
     fout <<",";
@@ -1322,36 +1413,37 @@ int main(int argc, char** argv) {
   fout << execTime << ",";
   fout.close();
   
-  
+  /*
   ofstream info("/home/sachin/Data/EPFL/Sem4/DDBToaster/ddbtoaster/../runtime/stats/default.json");
   info << "{\n";
-  GET_RUN_STAT(orig.orderLineTblIdx0, info);
-  info <<",\n";
-  GET_RUN_STAT(orig.orderLineTblIdx1, info);
-  info <<",\n";
-  GET_RUN_STAT(orig.orderTblIdx0, info);
-  info <<",\n";
-  GET_RUN_STAT(orig.orderTblIdx1, info);
-  info <<",\n";
   GET_RUN_STAT(orig.districtTblIdx0, info);
   info <<",\n";
-  GET_RUN_STAT(orig.newOrderTblIdx0, info);
-  info <<",\n";
-  GET_RUN_STAT(orig.newOrderTblIdx1, info);
-  info <<",\n";
   GET_RUN_STAT(orig.itemTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orig.warehouseTblIdx0, info);
   info <<",\n";
   GET_RUN_STAT(orig.customerTblIdx0, info);
   info <<",\n";
   GET_RUN_STAT(orig.customerTblIdx1, info);
   info <<",\n";
-  GET_RUN_STAT(orig.historyTblIdx0, info);
-  info <<",\n";
   GET_RUN_STAT(orig.stockTblIdx0, info);
   info <<",\n";
-  GET_RUN_STAT(orig.warehouseTblIdx0, info);
+  GET_RUN_STAT(orig.orderLineTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orig.orderLineTblIdx1, info);
+  info <<",\n";
+  GET_RUN_STAT(orig.historyTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orig.orderTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orig.orderTblIdx1, info);
+  info <<",\n";
+  GET_RUN_STAT(orig.newOrderTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orig.newOrderTblIdx1, info);
   info << "\n}\n";
   info.close();
+  */
   
   #ifdef VERIFY_CONC
   ThreadLocal ver(-1, res);
@@ -1371,7 +1463,7 @@ int main(int argc, char** argv) {
     bool st2 = xactManager.validateAndCommit(p->xact, 0);
     assert(st2);
   }
-  xactManager.garbageCollect();
+  
   if (orig.warehouseTblIdx0 == res.warehouseTblIdx0) {
     cout << "Warehouse results are same as serial version" << endl;
   } else {

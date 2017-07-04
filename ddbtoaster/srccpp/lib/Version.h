@@ -13,7 +13,7 @@ struct alignas(64) VBase {
     timestamp xactid;
     std::atomic<VBase*> oldV;
     VBase* nextInUndoBuffer;
-    EntryMV<void>* e; //SBJ: Hack to avoid Entry base class
+    EBase* e; 
     col_type cols;
 
     VBase(Transaction& x) : xactid(PTRtoTS(&x)), oldV(nullptr), nextInUndoBuffer(x.undoBufferHead), cols(-1) {
@@ -81,7 +81,7 @@ template <typename T>
             return nullptr;
         if (old == nullptr) {  //latest version
             if (dv->obj.isInvalid)
-                e->tbl->del(&dv->obj, e);
+                e->tbl->removeEntry(&dv->obj, e);
             //Not really safe to delete dv here. But assuming that it takes a while after this return for dv to be deleted, it is safe
             return dv->oldV;
         } else if (old->xactid >= initCommitTS) //dv is the first committed version, cannot be deleted
@@ -93,8 +93,9 @@ template <typename T>
     void removeFromVersionChain() override {
         EntryMV<T>* eptr = (EntryMV<T>*)e;
         assert(eptr->versionHead == this);
+        eptr->tbl->undo(this);
         if (oldV == nullptr) { // Only version, created by INSERT
-            eptr->tbl->del(&obj, eptr);
+            eptr->tbl->removeEntry(&obj, eptr);
             //            free(eptr);
             //            free(this);
         } else {
@@ -121,13 +122,18 @@ template <typename T>
 
 };
 
-template <typename T>
- struct alignas(64) EntryMV {
+struct alignas(64) EBase {
     MBase* tbl;
+    EBase(MBase* tbl) : tbl(tbl) {      
+    }
+};
+template <typename T>
+ struct alignas(64) EntryMV : public EBase{
+    const T key;  //to avoid looking up versionHead to do key comparison for ordering. Assumes indexed columns same across all versions
     std::atomic<Version<T>*> versionHead;
     std::atomic<EntryMV<T>*> nxt;
     void* backptrs[MAX_IDXES_PER_TBL];
-    EntryMV(MBase* tbl, Version<T>* v) : tbl(tbl), versionHead(v), nxt(nullptr) {
+    EntryMV(MBase* tbl, T& k, Version<T>* v) : EBase(tbl), key(k), versionHead(v), nxt(nullptr) {
     }
 
     //Returns the first version with cts > oldest AND not the only first committed version
@@ -149,7 +155,7 @@ template <typename T>
                 }
                 old = dv;
                 dv = (Version<T>*)dvOld;
-                assert(!dv || dv->e == ((EntryMV<void>*)this));
+                assert(!dv || dv->e == this);
                 oldOld = dvOld;
             } else {
                 dv = (Version<T>*) unmark(dvOld);

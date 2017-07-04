@@ -6,14 +6,15 @@ struct alignas(64) TransactionManager;
 struct PRED;
 struct alignas(64) VBase;
 struct alignas(64) MBase;
+struct alignas(64) EBase;
 struct Program;
 
 #ifdef NDEBUG
-#define  FORCEINLINE  __attribute__((always_inline))
+#define  FORCE_INLINE  __attribute__((always_inline))
 #define NOINLINE __attribute__ ((noinline))
 #else
 #define NOINLINE __attribute__ ((noinline))
-#define FORCEINLINE   __attribute__ ((noinline))
+#define FORCE_INLINE  __attribute__((always_inline))
 #endif 
 
 typedef uint64_t timestamp;
@@ -79,6 +80,8 @@ FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
 #ifndef NUMTHREADS
 #define NUMTHREADS 4
 #endif 
+
+#define MAX_IDXES_PER_TBL 3
 
 const uint numThreads = NUMTHREADS;
 #endif /* TYPES_H */

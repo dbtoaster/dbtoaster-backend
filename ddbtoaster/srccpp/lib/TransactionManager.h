@@ -22,6 +22,8 @@ struct alignas(64) TransactionManager {
 
     FORCE_INLINE void begin(Transaction& xact, uint8_t tid) {
         counterLock.lock();
+        assert(xact.predicateHead == nullptr);
+        assert(xact.undoBufferHead == nullptr);
         auto ts = timestampGen++;
         xact.startTS = ts;
         counterLock.unlock();

@@ -783,10 +783,10 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         case "IHash" if idx._3 => doc"CuckooIndex<$entryTp, ${idx._5}>"
         case "IHash" if !idx._3 => doc"ConcurrentCuckooSecondaryIndex<$entryTp, ${idx._5}>"
         case "IHash" => doc"HashIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
-        case "IDirect" => doc"ArrayIndex<$entryTp, char, ${idx._5}, ${unit(idx._4)}>"
-        case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"SlicedHeapIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(true)}>"
-        case "ISliceHeapMin" => val idx2 = allIdxs(idx._4); doc"SlicedHeapIndex<$entryTp, char, ${idx2._5}, ${idx._5}, ${unit(false)}>"
-        case "ISlicedHeapMed" => val idx2 = allIdxs(idx._4); doc"SlicedMedHeapIndex<$entryTp, char, ${idx2._5}, ${idx._5}>"
+        case "IDirect" => doc"ConcurrentArrayIndex<$entryTp, ${idx._5}, ${unit(idx._4)}>"
+        case "ISliceHeapMax" => val idx2 = allIdxs(idx._4); doc"MaxHeapIndex<$entryTp, ${idx2._5}, ${idx._5}>"
+        case "ISliceHeapMin" => val idx2 = allIdxs(idx._4); doc"MinHeapIndex<$entryTp, ${idx2._5}, ${idx._5}>"
+        case "ISlicedHeapMed" => val idx2 = allIdxs(idx._4); doc"MedHeapIndex<$entryTp, ${idx2._5}, ${idx._5}>"
         case "IList" => doc"ListIndex<$entryTp, char, ${idx._5}, ${unit(idx._3)}>"
       }
 
@@ -961,10 +961,11 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |fout << execTime << ",";
          |fout.close();
          |
-         |
+         |/*
          |ofstream info("$infoFilePath");
          |${getSizes}
          |info.close();
+         |*/
          |
          |#ifdef VERIFY_CONC
          |ThreadLocal ver(-1, res);
@@ -1620,10 +1621,119 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |  }
         |};
         |
+        |struct SEntry9_ISSSSSSDD_Idx1f1t6 {
+        |#define int unsigned int
+        |
+        |  FORCE_INLINE static size_t hash(const struct SEntry9_ISSSSSSDD& x3379) {
+        |    return (x3379._1);
+        |  }
+        |#undef int
+        |
+        |  FORCE_INLINE static char cmp(const struct SEntry9_ISSSSSSDD& x3376, const struct SEntry9_ISSSSSSDD& x3377) {
+        |    return 0;
+        |  }
+        |};
+        |
+        |struct SEntry11_IISSSSSSDDI_Idx2f1t6_1f1t11 {
+        |#define int unsigned int
+        |
+        |  FORCE_INLINE static size_t hash(const struct SEntry11_IISSSSSSDDI& x3535) {
+        |    return x3535._2 * 10 + x3535._1;
+        |  }
+        |#undef int
+        |
+        |  FORCE_INLINE static char cmp(const struct SEntry11_IISSSSSSDDI& x3532, const struct SEntry11_IISSSSSSDDI& x3533) {
+        |    return 0;
+        |  }
+        |};
+        |
+        |struct SEntry5_IISDS_Idx1f1t100002 {
+        |#define int unsigned int
+        |
+        |  FORCE_INLINE static size_t hash(const struct SEntry5_IISDS& x3398) {
+        |    return (x3398._1);
+        |  }
+        |#undef int
+        |
+        |  FORCE_INLINE static char cmp(const struct SEntry5_IISDS& x3395, const struct SEntry5_IISDS& x3396) {
+        |    return 0;
+        |  }
+        |};
+        |
+        |struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx3f1t6_2f1t11_1f1t3001 {
+        |#define int unsigned int
+        |
+        |  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3693) {
+        |    return (x3693._3 * 10 + x3693._2)*3000 + x3693._1;
+        |  }
+        |#undef int
+        |
+        |  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3690, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3691) {
+        |    return 0;
+        |  }
+        |};
+        |
+        |struct SEntry17_IIISSSSSSSSSSIIIS_Idx2f1t6_1f1t100001 {
+        |#define int unsigned int
+        |
+        |  FORCE_INLINE static size_t hash(const struct SEntry17_IIISSSSSSSSSSIIIS& x3781) {
+        |    return x3781._2 * 100000 + x3781._1;
+        |  }
+        |#undef int
+        |
+        |  FORCE_INLINE static char cmp(const struct SEntry17_IIISSSSSSSSSSIIIS& x3778, const struct SEntry17_IIISSSSSSSSSSIIIS& x3779) {
+        |    return 0;
+        |  }
+        |};
+        |
+        |struct SEntry3_III_Idx23_1 {
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry3_III& x3168)  {
+        |    int x1 = x3168._3;
+        |    int x2 = (x1 << 4) + x3168._2;
+        |    return x2;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry3_III& x3251, const struct SEntry3_III& x3252) {
+        |    int x3253 = x3251._1;
+        |    int x3254 = x3252._1;
+        |    return ((x3253==(x3254)) ? 0 : ((x3253>(x3254)) ? 1 : -1));
+        |  }
+        |};
+        | struct SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236_4 {
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3765)  {
+        |    int x1 = HASH(x3765._6);
+        |    int x2 = (x1 << 2) + x3765._3;
+        |    int x3 = (x2 << 4) + x3765._2;
+        |    return x3;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3944, const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3945) {
+        |    int x3948 = strcmpi((x3944._4).data_, (x3945._4).data_);
+        |    return ((x3948>(0)) ? 1 : ((x3948<(0)) ? -1 : 0));
+        |  }
+        |};
+        | struct SEntry8_IIIITIIB_Idx234_1 {
+        |  #define int unsigned int
+        |  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3468)  {
+        |    int x1 = x3468._4;
+        |    int x2 = (x1 << 2) + x3468._3;
+        |    int x3 = (x2 << 4) + x3468._2;
+        |    return x3;
+        |  }
+        |  #undef int
+        |  FORCE_INLINE static char cmp(const struct SEntry8_IIIITIIB& x3599, const struct SEntry8_IIIITIIB& x3600) {
+        |    int x3601 = x3599._1;
+        |    int x3602 = x3600._1;
+        |    return ((x3601==(x3602)) ? 0 : ((x3601>(x3602)) ? 1 : -1));
+        |  }
+        |};
+
       """.stripMargin
     file.println(header :/: execProfile :/: structs :\\: structEquals  :\\: entryidx2 :\\: stTypdef :\\:
     tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"TPCC.h\"\n"  :\\: runPrgFn :\\:
-//      threadFn:\\:
+      threadFn:\\:
       traits :/: Document.nest(2, mainPrg) :/: "}")
     file.close()
   }
