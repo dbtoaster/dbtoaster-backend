@@ -1,12 +1,15 @@
 
 #ifndef TYPES_H
 #define TYPES_H
-struct alignas(64) Transaction;
-struct alignas(64) TransactionManager;
+
+#define ALIGN alignas(64)
+
+struct ALIGN Transaction;
+struct ALIGN TransactionManager;
 struct PRED;
-struct alignas(64) VBase;
-struct alignas(64) MBase;
-struct alignas(64) EBase;
+struct ALIGN VBase;
+struct ALIGN MBase;
+struct ALIGN EBase;
 struct Program;
 
 #ifdef NDEBUG
@@ -78,11 +81,13 @@ FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
         cerr << "Cannot set scheduler" << endl;
 
 #ifndef NUMTHREADS
-#define NUMTHREADS 4
+#define NUMTHREADS 1
 #endif 
 
 #define MAX_IDXES_PER_TBL 3
 
+
 const uint numThreads = NUMTHREADS;
+#define EXEC_PROFILE 1
 #endif /* TYPES_H */
 

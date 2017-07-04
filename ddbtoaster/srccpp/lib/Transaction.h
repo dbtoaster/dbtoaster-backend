@@ -2,7 +2,7 @@
 #define TRANSACTION_H
 #include "types.h"
 
-struct alignas(64) Transaction {
+struct ALIGN Transaction {
     VBase* undoBufferHead;
     PRED* predicateHead;
     static TransactionManager& tm;

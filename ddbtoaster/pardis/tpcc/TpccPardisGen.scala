@@ -1625,7 +1625,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |#define int unsigned int
         |
         |  FORCE_INLINE static size_t hash(const struct SEntry9_ISSSSSSDD& x3379) {
-        |    return (x3379._1);
+        |    return (x3379._1)-1;
         |  }
         |#undef int
         |
@@ -1638,7 +1638,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |#define int unsigned int
         |
         |  FORCE_INLINE static size_t hash(const struct SEntry11_IISSSSSSDDI& x3535) {
-        |    return x3535._2 * 10 + x3535._1;
+        |    return (x3535._2-1) * 10 + x3535._1-1;
         |  }
         |#undef int
         |
@@ -1651,7 +1651,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |#define int unsigned int
         |
         |  FORCE_INLINE static size_t hash(const struct SEntry5_IISDS& x3398) {
-        |    return (x3398._1);
+        |    return (x3398._1)-1;
         |  }
         |#undef int
         |
@@ -1664,7 +1664,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |#define int unsigned int
         |
         |  FORCE_INLINE static size_t hash(const struct SEntry21_IIISSSSSSSSSTSDDDDIIS& x3693) {
-        |    return (x3693._3 * 10 + x3693._2)*3000 + x3693._1;
+        |    return ((x3693._3-1) * 10 + x3693._2-1)*3000 + x3693._1-1;
         |  }
         |#undef int
         |
@@ -1677,7 +1677,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |#define int unsigned int
         |
         |  FORCE_INLINE static size_t hash(const struct SEntry17_IIISSSSSSSSSSIIIS& x3781) {
-        |    return x3781._2 * 100000 + x3781._1;
+        |    return (x3781._2-1)* 100000 + x3781._1-1;
         |  }
         |#undef int
         |

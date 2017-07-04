@@ -151,9 +151,9 @@ struct CuckooIndex : public IndexMV<T> {
     //SBJ: Only for data  result loading . To be removed later
 
     FORCE_INLINE void add(T* obj, Transaction& xact) {
-        Version<T>* v = (Version<T>*) malloc(sizeof(Version<T>));
+        Version<T>* v = (Version<T>*) malloc(sizeof (Version<T>));
         new(v) Version<T>(*obj, xact);
-        EntryMV<T>* e = (EntryMV<T>*) malloc(sizeof(EntryMV<T>));
+        EntryMV<T>* e = (EntryMV<T>*) malloc(sizeof (EntryMV<T>));
         new(e) EntryMV<T>(nullptr, *obj, v);
         v->e = e;
         index.insert(*obj, e);
@@ -308,7 +308,7 @@ struct CuckooIndex : public IndexMV<T> {
                 return nullptr;
             }
 
-            Version<T> *newv = (Version<T> *) malloc(sizeof(Version<T>));
+            Version<T> *newv = (Version<T> *) malloc(sizeof (Version<T>));
             new(newv) Version<T>(resV, xact);
 
             if (!result->versionHead.compare_exchange_strong(resV, newv)) {
@@ -322,7 +322,7 @@ struct CuckooIndex : public IndexMV<T> {
             }
 
 
-            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof(GetPred<T, IDX_FN>));
+            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
             new(pred) GetPred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
             xact.undoBufferHead = newv;
@@ -432,109 +432,121 @@ struct CuckooIndex : public IndexMV<T> {
 
 };
 
+template <typename T, typename IDX_FN, size_t size>
+struct ConcurrentArrayIndex : public IndexMV<T> {
 
-//template <typename T, typename IDX_FN, size_t size>
-//struct ConcurrentArrayIndex : public IndexMV<T> {
-//
-//    template<typename A>
-//    struct alignas(64) CacheAtomic {
-//        std::atomic<A> elem;
-//    };
-//    typedef CacheAtomic<EntryMV<T>*> AlignedEntry;
-//    AlignedEntry array[size];
-//
-//    ConcurrentArrayIndex(size_t s) {//ignore
-//        cout << "Size = " << sizeof (AlignedEntry) << "   atomioc size = " << sizeof (std::atomic<EntryMV<T>*>) << endl;
-//        memset(array, 0, sizeof (AlignedEntry) * size);
-//    }
-//
-//    FORCE_INLINE OperationReturnStatus add(T* key, EntryMV<T>* obj) override {
-//        size_t idx = IDX_FN::hash(*key);
-//        EntryMV<T>* temp = nullptr;
-//        obj->backptrs[IndexMV<T>::idxId] = array+idx;
-//        if (array[idx].elem.compare_exchange_strong(temp, obj)) {
-//            return OP_SUCCESS;
-//        } else
-//            return DUPLICATE_KEY;
-//    }
-//
-//    FORCE_INLINE void del(T* obj, EntryMV<T>* emv) override {
-////        size_t idx = IDX_FN::hash(*obj);
-//        CacheAtomic<T>* ca = (CacheAtomic<T>*)emv->backptrs[IndexMV<T>::idxId];
-//        ca->elem.compare_exchange_strong(emv, nullptr);
-//    }
-//
-//    FORCE_INLINE OperationReturnStatus foreach(FuncType f, Transaction& xact) override {
-//        //Do nothing for now
-//        return OP_SUCCESS;
-//    }
-//
-//    FORCE_INLINE T* get(const T* key, Transaction& xact) const override {
-//        return get(*key, xact);
-//    }
-//
-//    T* get(const T& key, Transaction& xact) const {
-//        size_t idx = IDX_FN::hash(key);
-//
-//        EntryMV<T>* e = array[idx].elem.load();
-//        if (!e)
-//            return nullptr;
-//        Version<T>* v = e->getCorrectVersion(xact);
-//        if (!v)
-//            return nullptr;
-//        else {
-//            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
-//            new(pred) GetPred<T, IDX_FN>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
-//            xact.predicateHead = pred;
-//            return &v->obj;
-//        }
-//    }
-//
-//    T* getForUpdate(const T* key, OperationReturnStatus& s, Transaction& xact) override {
-//        return getForUpdate(*key, s, xact);
-//    }
-//
-//    T* getForUpdate(const T& key, OperationReturnStatus& s, Transaction& xact) {
-//        size_t idx = IDX_FN::hash(key);
-//
-//        EntryMV<T>* e = array[idx].elem;
-//        if (!e) {
-//            s = NO_KEY;
-//            return nullptr;
-//        }
-//        Version<T>* resV = e->versionHead;
-//        if (!resV->isVisible(&xact)) {
-//            if (resV->xactid > initCommitTS) {
-//                Transaction* otherXact = TStoPTR(resV->xactid);
-//                xact.failedBecauseOf = otherXact;
-//            }
-//            s = WW_VALUE;
-//            return nullptr;
-//        }
-//        Version<T>* newv = (Version<T>*) malloc(sizeof (Version<T>));
-//        new (newv) Version<T>(resV, xact);
-//        if (!e->versionHead.compare_exchange_strong(resV, newv)) {
-//            if (resV->xactid > initCommitTS) {
-//                Transaction* otherXact = TStoPTR(resV->xactid);
-//                xact.failedBecauseOf = otherXact;
-//            }
-//            s = WW_VALUE;
-//            free(newv);
-//            return nullptr;
-//        }
-//        GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
-//        new(pred) GetPred<T, IDX_FN>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
-//        xact.predicateHead = pred;
-//        xact.undoBufferHead = newv;
-//        s = OP_SUCCESS;
-//        return &newv->obj;
-//        return &resV->obj;
-//    }
-//
-//    void prepareSize(size_t arrayS, size_t poolS) override {
-//        //do nothing
-//    }
-//};
+    template<typename A>
+    struct ALIGN CacheAtomic {
+        std::atomic<A> elem;
+    };
+
+    typedef CacheAtomic<EntryMV<T>*> AlignedEntry;
+    AlignedEntry array[size];
+
+    ConcurrentArrayIndex(size_t s) {//ignore
+        memset(array, 0, sizeof (AlignedEntry) * size);
+    }
+
+    FORCE_INLINE OperationReturnStatus add(Version<T>* v) override {
+        size_t idx = IDX_FN::hash(v->obj);
+        assert(idx >= 0 && idx < size);
+        EntryMV<T>* emv = (EntryMV<T>*)v->e;
+        EntryMV<T>* temp = nullptr;
+        emv->backptrs[IndexMV<T>::idxId] = array + idx;
+        if (array[idx].elem.compare_exchange_strong(temp, emv)) {
+            return OP_SUCCESS;
+        } else
+            return DUPLICATE_KEY;
+    }
+
+    void removeEntry(T* obj, EntryMV<T>* emv) override {
+
+    }
+
+    void undo(Version<T>* v) override {
+
+    }
+
+    FORCE_INLINE void del(Version<T>* v) override {
+        //        size_t idx = IDX_FN::hash(*obj);
+        EntryMV<T>* emv = (EntryMV<T>*)v->e;
+        AlignedEntry* ca = (AlignedEntry*) emv->backptrs[IndexMV<T>::idxId];
+        auto idx = ca - array;
+        assert(idx >= 0 && idx < size);
+        ca->elem.compare_exchange_strong(emv, nullptr);
+    }
+
+    FORCE_INLINE OperationReturnStatus foreach(FuncType f, Transaction& xact) override {
+        //Do nothing for now
+        return OP_SUCCESS;
+    }
+
+    FORCE_INLINE T* get(const T* key, Transaction& xact) const override {
+        return get(*key, xact);
+    }
+
+    FORCE_INLINE T* get(const T& key, Transaction& xact) const {
+        size_t idx = IDX_FN::hash(key);
+        assert(idx >= 0 && idx < size);
+        EntryMV<T>* e = array[idx].elem.load();
+        if (!e)
+            return nullptr;
+        Version<T>* v = e->getCorrectVersion(xact);
+        if (!v)
+            return nullptr;
+        else {
+            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
+            new(pred) GetPred<T, IDX_FN>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
+            xact.predicateHead = pred;
+            return &v->obj;
+        }
+    }
+
+    T * getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) override {
+        return getForUpdate(*key, s, xact);
+    }
+
+    T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
+        size_t idx = IDX_FN::hash(key);
+        assert(idx >= 0 && idx < size);
+        EntryMV<T>* e = array[idx].elem;
+        if (!e) {
+            s = NO_KEY;
+            return nullptr;
+        }
+        Version<T>* resV = e->versionHead;
+        if (!resV->isVisible(&xact)) {
+            if (resV->xactid > initCommitTS) {
+                Transaction* otherXact = TStoPTR(resV->xactid);
+                xact.failedBecauseOf = otherXact;
+            }
+            s = WW_VALUE;
+            return nullptr;
+        }
+        Version<T>* newv = (Version<T>*) malloc(sizeof (Version<T>));
+        new (newv) Version<T>(resV, xact);
+        if (!e->versionHead.compare_exchange_strong(resV, newv)) {
+            if (resV->xactid > initCommitTS) {
+                Transaction* otherXact = TStoPTR(resV->xactid);
+                xact.failedBecauseOf = otherXact;
+            }
+            s = WW_VALUE;
+            free(newv);
+            return nullptr;
+        }
+        GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
+        new(pred) GetPred<T, IDX_FN>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
+        xact.predicateHead = pred;
+        xact.undoBufferHead = newv;
+        s = OP_SUCCESS;
+        return &newv->obj;
+        return &resV->obj;
+    }
+
+    void prepareSize(size_t arrayS, size_t poolS) override {
+        //do nothing
+    }
+};
 //
 //template <typename T>
 //struct TreeNode {
@@ -860,7 +872,7 @@ struct Heap {
     FORCE_INLINE void double_() {
         uint newsize = arraySize << 1;
         EntryMV<T>** temp = new EntryMV<T>*[newsize];
-        mempcpy(temp, array, arraySize * sizeof(EntryMV<T>*));
+        mempcpy(temp, array, arraySize * sizeof (EntryMV<T>*));
         arraySize = newsize;
         delete[] array;
         array = temp;
@@ -914,8 +926,8 @@ struct Heap {
                     break;
                 p++;
             }
-//            if (p == size + 1)
-//                throw std::logic_error("Element not found in heap");
+            //            if (p == size + 1)
+            //                throw std::logic_error("Element not found in heap");
         }
         uint hole = p;
         uint h = p >> 1;
@@ -937,8 +949,8 @@ struct Heap {
                     break;
                 p++;
             }
-//            if (p == size + 1)
-//                throw std::logic_error("Element not found in heap");
+            //            if (p == size + 1)
+            //                throw std::logic_error("Element not found in heap");
         }
 
         while (p != 1) {
@@ -1048,9 +1060,11 @@ struct VersionedAggregator : public IndexMV<T> {
         VersionedContainer* head;
         SpinLock lock;
         ST_IDX sliceST;
-        VersionedSlice(): head(nullptr), lock(), sliceST() {
-            
+
+        VersionedSlice() : head(nullptr), lock(), sliceST() {
+
         }
+
         FORCE_INLINE OperationReturnStatus add(Version<T>* newv) {
             EntryMV<T>* e = (EntryMV<T>*)newv->e;
             lock.lock();
@@ -1061,7 +1075,7 @@ struct VersionedAggregator : public IndexMV<T> {
                     lock.unlock();
                     return WW_VALUE;
                 }
-                VersionedContainer* vc = (VersionedContainer*) malloc(sizeof(VersionedContainer));
+                VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
                 new(vc) VersionedContainer(aggE, TStoPTR(newv->xactid), head);
                 head = vc;
             }
@@ -1079,7 +1093,7 @@ struct VersionedAggregator : public IndexMV<T> {
                     lock.unlock();
                     return WW_VALUE;
                 }
-                VersionedContainer* vc = (VersionedContainer*) malloc(sizeof(VersionedContainer));
+                VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
                 new(vc) VersionedContainer(aggE, TStoPTR(v->xactid), head);
                 head = vc;
             }
@@ -1125,10 +1139,10 @@ struct VersionedAggregator : public IndexMV<T> {
     }
 
     FORCE_INLINE OperationReturnStatus add(Version<T>* newv) override {
-        VersionedSlice * vsnew = (VersionedSlice*) malloc(sizeof(VersionedSlice));
+        VersionedSlice * vsnew = (VersionedSlice*) malloc(sizeof (VersionedSlice));
         new (vsnew) VersionedSlice();
-        
-        VersionedContainer* vc = (VersionedContainer*) malloc(sizeof(VersionedContainer));
+
+        VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
         EntryMV<T>* e = (EntryMV<T>*)newv->e;
         new(vc) VersionedContainer(e, TStoPTR(newv->xactid), nullptr);
         e->backptrs[IndexMV<T>::idxId] = vsnew;
@@ -1202,7 +1216,7 @@ struct VersionedAggregator : public IndexMV<T> {
                 return nullptr;
             }
 
-            Version<T> *newv = (Version<T> *) malloc(sizeof(Version<T>));
+            Version<T> *newv = (Version<T> *) malloc(sizeof (Version<T>));
             new(newv) Version<T>(resV, xact);
 
             if (!resE->versionHead.compare_exchange_strong(resV, newv)) {
@@ -1249,8 +1263,8 @@ struct MinHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
     T * get(const T* key, Transaction & xact) const override {
         T* ret = Super::get(key, xact);
         if (ret) {
-//            assert(ret->_4.data_);
-            MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof(MinSlicePred<T, IDX_FN1, IDX_FN2>));
+            //            assert(ret->_4.data_);
+            MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MinSlicePred<T, IDX_FN1, IDX_FN2>));
             new(pred) MinSlicePred<T, IDX_FN1, IDX_FN2>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
@@ -1262,8 +1276,8 @@ struct MinHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
     T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
         T* ret = Super::getForUpdate(key, s, xact);
         if (ret) {
-//            assert(ret->_4.data_);
-            MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof(MinSlicePred<T, IDX_FN1, IDX_FN2>));
+            //            assert(ret->_4.data_);
+            MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MinSlicePred<T, IDX_FN1, IDX_FN2>));
             new(pred) MinSlicePred<T, IDX_FN1, IDX_FN2>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
@@ -1288,7 +1302,7 @@ struct MaxHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
     T * get(const T* key, Transaction & xact) const override {
         T* ret = Super::get(key, xact);
         if (ret) {
-            MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof(MaxSlicePred<T, IDX_FN1, IDX_FN2>));
+            MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MaxSlicePred<T, IDX_FN1, IDX_FN2>));
             new(pred) MaxSlicePred<T, IDX_FN1, IDX_FN2>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
@@ -1300,7 +1314,7 @@ struct MaxHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
     T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
         T* ret = Super::getForUpdate(key, s, xact);
         if (ret) {
-            MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof(MaxSlicePred<T, IDX_FN1, IDX_FN2>));
+            MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MaxSlicePred<T, IDX_FN1, IDX_FN2>));
             new(pred) MaxSlicePred<T, IDX_FN1, IDX_FN2>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
@@ -1325,7 +1339,7 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
     T * get(const T* key, Transaction & xact) const override {
         T* ret = Super::get(key, xact);
         if (ret) {
-            SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof(SlicePred<T, IDX_FN1>));
+            SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof (SlicePred<T, IDX_FN1>));
             new(pred) SlicePred<T, IDX_FN1>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
 
@@ -1336,7 +1350,7 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
     T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
         T* ret = Super::getForUpdate(key, s, xact);
         if (ret) {
-            SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof(SlicePred<T, IDX_FN1>));
+            SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof (SlicePred<T, IDX_FN1>));
             new(pred) SlicePred<T, IDX_FN1>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
         }
@@ -1372,11 +1386,11 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
     //Cuckoo points towards a sentinel to protect against concurrent insertions/deletions
 
     FORCE_INLINE OperationReturnStatus add(Version<T>* newv) override {
-        Container *newc = (Container *) malloc(sizeof(Container));
+        Container *newc = (Container *) malloc(sizeof (Container));
         EntryMV<T>* obj = (EntryMV<T>*)newv->e;
         new(newc) Container(obj);
         obj->backptrs[IndexMV<T>::idxId] = newc;
-        Container *sentinel = (Container*) malloc(sizeof(Container));
+        Container *sentinel = (Container*) malloc(sizeof (Container));
         new(sentinel) Container(newc);
         T* keyc = newv->obj.copy();
         auto updatefn = [newc, sentinel, keyc](Container* &c) {
@@ -1445,7 +1459,7 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                     return WW_VALUE;
                 }
                 if (v && !v->obj.isInvalid) {
-                    Version<T> * newV = (Version<T>*)malloc(sizeof(Version<T>));
+                    Version<T> * newV = (Version<T>*)malloc(sizeof (Version<T>));
                     new(newV) Version<T>(v, xact);
 
                     if (!cur->e->versionHead.compare_exchange_strong(v, newV)) {
@@ -1465,7 +1479,7 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                 prevNext = curNext;
                 cur = curNext;
             } while (cur);
-            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof(SlicePred<T, IDX_FN>));
+            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof (SlicePred<T, IDX_FN>));
             new(pred) SlicePred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
             return OP_SUCCESS;
@@ -1508,7 +1522,7 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                 prevNext = curNext;
                 cur = curNext;
             } while (cur);
-            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof(SlicePred<T, IDX_FN>));
+            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof (SlicePred<T, IDX_FN>));
             new(pred) SlicePred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
             return OP_SUCCESS;
@@ -1767,10 +1781,10 @@ public:
     FORCE_INLINE OperationReturnStatus add(T* elem, Transaction& xact) {
         T* cur = index[0]->get(elem);
         if (cur == nullptr) {
-            Version<T>* newV = (Version<T>*) malloc(sizeof(Version<T>));
+            Version<T>* newV = (Version<T>*) malloc(sizeof (Version<T>));
             new(newV) Version<T>(*cur, xact);
             newV->xactid = PTRtoTS(xact);
-            EntryMV<T> * newE = (EntryMV<T> *) malloc(sizeof(EntryMV<T>));
+            EntryMV<T> * newE = (EntryMV<T> *) malloc(sizeof (EntryMV<T>));
             new(newE) EntryMV<T>(this, *elem, newV);
             newV->e = newE;
             auto primarySt = index[0] -> add(newV);
@@ -1811,9 +1825,9 @@ public:
     }
 
     FORCE_INLINE OperationReturnStatus insert_nocheck(T* elem, Transaction& xact) {
-        Version<T>* newV = (Version<T>*) malloc(sizeof(Version<T>));
+        Version<T>* newV = (Version<T>*) malloc(sizeof (Version<T>));
         new(newV) Version<T>(*elem, xact);
-        EntryMV<T>* newE = (EntryMV<T>*) malloc(sizeof(EntryMV<T>));
+        EntryMV<T>* newE = (EntryMV<T>*) malloc(sizeof (EntryMV<T>));
         new(newE) EntryMV<T>(this, *elem, newV);
         newV->e = newE;
         //        newV->obj.e = newE;

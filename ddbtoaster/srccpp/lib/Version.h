@@ -7,9 +7,9 @@
 #include "Transaction.h"
 #include "mmap/cmmap.hpp"
 template <typename T>
-struct alignas(64)EntryMV;
+struct ALIGN EntryMV;
 
-struct alignas(64) VBase {
+struct ALIGN VBase {
     timestamp xactid;
     std::atomic<VBase*> oldV;
     VBase* nextInUndoBuffer;
@@ -28,7 +28,7 @@ struct alignas(64) VBase {
 };
 
 template <typename T>
- struct alignas(64) Version : public VBase {
+ struct ALIGN Version : public VBase {
     T obj;
 
     Version(Version* that, Transaction& x) : VBase(x), obj(that->obj) {
@@ -122,13 +122,13 @@ template <typename T>
 
 };
 
-struct alignas(64) EBase {
+struct ALIGN EBase {
     MBase* tbl;
     EBase(MBase* tbl) : tbl(tbl) {      
     }
 };
 template <typename T>
- struct alignas(64) EntryMV : public EBase{
+ struct ALIGN EntryMV : public EBase{
     const T key;  //to avoid looking up versionHead to do key comparison for ordering. Assumes indexed columns same across all versions
     std::atomic<Version<T>*> versionHead;
     std::atomic<EntryMV<T>*> nxt;
