@@ -12,12 +12,14 @@ struct ALIGN MBase;
 struct ALIGN EBase;
 struct Program;
 
+#undef FORCE_INLINE 
+
 #ifdef NDEBUG
 #define  FORCE_INLINE  __attribute__((always_inline))
 #define NOINLINE __attribute__ ((noinline))
 #else
 #define NOINLINE __attribute__ ((noinline))
-#define FORCE_INLINE  __attribute__((always_inline))
+#define FORCE_INLINE 
 #endif 
 
 typedef uint64_t timestamp;

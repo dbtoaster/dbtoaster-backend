@@ -1347,7 +1347,7 @@ int main(int argc, char** argv) {
   #ifndef NORESIZE
   cout << "Index Resizing warning disabled" << endl;
   #endif
-  
+  cout << "NumThreads = " << numThreads << endl;
   tpcc.loadPrograms();
   
   Transaction t0;
@@ -1363,7 +1363,7 @@ int main(int argc, char** argv) {
   tpcc.loadStocks(t0);
   xactManager.commit(t0, 0);
   cout.imbue(std::locale(""));
-  
+
   memset(xactCounts, 0, 5 * sizeof(uint));
   memset(xactManager.activeXactStartTS, 0xff, sizeof(xactManager.activeXactStartTS[0]) * numThreads);
   

@@ -156,7 +156,7 @@ struct CuckooIndex : public IndexMV<T> {
         EntryMV<T>* e = (EntryMV<T>*) malloc(sizeof (EntryMV<T>));
         new(e) EntryMV<T>(nullptr, *obj, v);
         v->e = e;
-        index.insert(*obj, e);
+        index.insert(obj, e);
         xact.undoBufferHead = v;
     }
 
@@ -247,7 +247,7 @@ struct CuckooIndex : public IndexMV<T> {
 
     FORCE_INLINE OperationReturnStatus foreach(FuncType f, Transaction& xact) override {
         EntryMV<T>* cur = dataHead;
-        ForEachPred<T>* pred = (ForEachPred<T>*) malloc(sizeof(ForEachPred<T>));
+        ForEachPred<T>* pred = (ForEachPred<T>*) malloc(sizeof (ForEachPred<T>));
         new(pred) ForEachPred<T>(xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
         xact.predicateHead = pred;
         while (cur) {
@@ -280,7 +280,7 @@ struct CuckooIndex : public IndexMV<T> {
             Version<T>* v = result->getCorrectVersion(xact);
             if (v->obj.isInvalid)
                 return nullptr;
-            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof(GetPred<T, IDX_FN>));
+            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
             new(pred) GetPred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
             return &v->obj;
@@ -443,10 +443,50 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
     typedef CacheAtomic<EntryMV<T>*> AlignedEntry;
     AlignedEntry array[size];
 
+    bool operator==(const ConcurrentArrayIndex<T, IDX_FN, size>& that) {
+        for (size_t i = 0; i < size; ++i) {
+            EntryMV<T>* e1 = array[i].elem;
+            EntryMV<T>* e2 = that.array[i].elem;
+            
+            if ((!e1 && e2) || (e1 && !e2)) {
+                cerr << "Array slots don't match" << endl;
+                if(e1) 
+                    cerr << e1->versionHead.load()->obj << "is extra";
+                else
+                    cerr << e2->versionHead.load()->obj << "is missing";
+                return false;
+            }
+            if(!e1)
+                continue;
+            T& t1 = e1->versionHead.load()->obj;
+            T& t2 = e2->versionHead.load()->obj;
+            if(!(t1 == t2)) {
+                cerr << "Found " << t1 << "  where it should have been " << t2 << endl;
+                return false;
+            }
+        }
+        return true;
+    }
+
     ConcurrentArrayIndex(size_t s) {//ignore
         memset(array, 0, sizeof (AlignedEntry) * size);
     }
+    ConcurrentArrayIndex(void* ptr, size_t s) {//ignore
+        memset(array, 0, sizeof (AlignedEntry) * size);
+    }
 
+    //Data Result loading 
+    FORCE_INLINE void add(T* obj, Transaction& xact) {
+        Version<T>* v = (Version<T>*) malloc(sizeof (Version<T>));
+        new(v) Version<T>(*obj, xact);
+        EntryMV<T>* e = (EntryMV<T>*) malloc(sizeof (EntryMV<T>));
+        new(e) EntryMV<T>(nullptr, *obj, v);
+        v->e = e;
+        size_t idx = IDX_FN::hash(v->obj);
+        array[idx].elem = e;
+        xact.undoBufferHead = v;
+    }
+    
     FORCE_INLINE OperationReturnStatus add(Version<T>* v) override {
         size_t idx = IDX_FN::hash(v->obj);
         assert(idx >= 0 && idx < size);
@@ -826,6 +866,7 @@ struct Heap {
     EntryMV<T>** array;
     uint arraySize;
     uint size;
+    typedef EntryMV<T>* HeapElemType;
 
     Heap() {
         arraySize = DEFAULT_HEAP_SIZE;
@@ -1046,6 +1087,8 @@ struct MedianHeap {
 template<typename T, typename IDX_FN1, typename IDX_FN2, typename ST_IDX>
 struct VersionedAggregator : public IndexMV<T> {
     typedef HE_<T, IDX_FN1> HE;
+    typedef ST_IDX typeST;
+    typedef EntryMV<T>* EntryType;
 
     struct VersionedContainer {
         EntryMV<T>* aggE;
@@ -1070,14 +1113,27 @@ struct VersionedAggregator : public IndexMV<T> {
             lock.lock();
             sliceST.add(e);
             EntryMV<T>* aggE = sliceST.get();
-            if (head->aggE != aggE) {
-                if (head->xact->commitTS == initCommitTS) {
-                    lock.unlock();
-                    return WW_VALUE;
+
+            if (head && head->xact != TStoPTR(newv->xactid) && head->xact->commitTS == initCommitTS) {
+                lock.unlock();
+                return WW_VALUE;
+            }
+
+            /* This is not correct for median index. For example,  if there was 
+                        ab(c) de
+             *          ab(c) xde
+             *          aby(c) xde           
+             and now if we undo x, we should have ab(y) cde. However, this would still return c
+             * Each modification should create a version in median index
+             */
+            if (!head || head->aggE != aggE) {
+                if (!head || head->xact != TStoPTR(newv->xactid)) {
+                    VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
+                    new(vc) VersionedContainer(aggE, TStoPTR(newv->xactid), head);
+                    head = vc;
+                } else {
+                    head->aggE = aggE;
                 }
-                VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
-                new(vc) VersionedContainer(aggE, TStoPTR(newv->xactid), head);
-                head = vc;
             }
             lock.unlock();
             return OP_SUCCESS;
@@ -1088,14 +1144,19 @@ struct VersionedAggregator : public IndexMV<T> {
             lock.lock();
             sliceST.remove(e);
             EntryMV<T>* aggE = sliceST.get();
+
+            if (head->xact != TStoPTR(v->xactid) && head->xact->commitTS == initCommitTS) {
+                lock.unlock();
+                return WW_VALUE;
+            }
             if (head->aggE != aggE) {
-                if (head->xact->commitTS == initCommitTS) {
-                    lock.unlock();
-                    return WW_VALUE;
+                if (head->xact != TStoPTR(v->xactid)) {
+                    VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
+                    new(vc) VersionedContainer(aggE, TStoPTR(v->xactid), head);
+                    head = vc;
+                } else {
+                    head->aggE = aggE;
                 }
-                VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
-                new(vc) VersionedContainer(aggE, TStoPTR(v->xactid), head);
-                head = vc;
             }
             lock.unlock();
             return OP_SUCCESS;
@@ -1103,20 +1164,22 @@ struct VersionedAggregator : public IndexMV<T> {
 
         FORCE_INLINE void undo(Version<T>* v) {
             EntryMV<T>*e = (EntryMV<T>*)v->e;
-            assert(v->xactid == PTRtoTS(head->xact));
+
             lock.lock();
             if (v->obj.isInvalid) { //deleted version, to undo it, need to re-insert entry into index
                 sliceST.add(e);
-            } else if (v->oldV == nullptr) { //omly version, inserted. Need to remove to undo
+            } else if (v->oldV == nullptr) { //only version, inserted. Need to remove to undo
                 sliceST.remove(e);
-            } else {
+            } else { //assuming that normal updates are only to non-key fields, no impact here
                 lock.unlock();
                 return;
             }
-            EntryMV<T>* e_new = sliceST.get();
-            if (head->xact == TStoPTR(v->xactid))
+//            EntryMV<T>* e_new = sliceST.get(); //to be removed in final version
+            if (head->xact == TStoPTR(v->xactid)) {
                 head = head->next;
-            assert(e_new == head->aggE);
+                flag = true;
+            }
+//            assert(e_new == (head ? head->aggE : nullptr));
             lock.unlock();
         }
 
@@ -1173,7 +1236,7 @@ struct VersionedAggregator : public IndexMV<T> {
     FORCE_INLINE void undo(Version<T>* v) override {
         EntryMV<T>* emv = (EntryMV<T>*) v->e;
         VersionedSlice* vs = (VersionedSlice*) emv->backptrs[IndexMV<T>::idxId];
-        vs->removeEntry(emv);
+        vs->undo(v);
     }
 
     OperationReturnStatus foreach(FuncType f, Transaction& xact) override {

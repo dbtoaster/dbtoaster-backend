@@ -888,6 +888,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "Index Resizing warning disabled" << endl;
          |#endif
          |
+         |cout  << "NumThreads = " << numThreads << endl;
+         |
          |tpcc.loadPrograms();
          |
          |Transaction t0;

@@ -22,10 +22,15 @@
 #define EXPAND(x) #x
 #define STRINGIFY(x) EXPAND(x)
 
+#ifdef VERIFY_TPCC
+#define VERFILE ".ver"
+#else
+#define VERFILE 
+#endif
 
 //#define VERIFY_TPCC 1
 const std::string TStore = PROJECT_ROOT;
-const std::string commandfile = TStore + "commands" STRINGIFY(NUMWARE) ".txt";
+const std::string commandfile = TStore + "commands" STRINGIFY(NUMWARE) VERFILE ".txt";
 //const std::string inputTableDir = "/home/sachin/sem3/Project/test/input/";
 //const std::string outputTableDir = "/home/sachin/sem3/Project/test/output/";
 const std::string inputTableDir = TStore + "bench/systems/tpcc/mysql/db" STRINGIFY(NUMWARE) "innodb/";
