@@ -242,7 +242,192 @@ bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
   (fabs(o1._8 - o2._8) < 0.01) && 
   (fabs(o1._9 - o2._9) < 0.01);
 }
+#if USING_GENERIC_ENTRY
+struct GenericOps_3214 {  //OL 0
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    int x1 = e.map.at(1).data.i;
+    int x2 = (x1 << 2) + e.map.at(3).data.i;
+    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    int x4 = (x3 << 4) + e.map.at(4).data.i;
+    return x4;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    if(e1.map.at(3) != e2.map.at(3) || e1.map.at(2) != e2.map.at(2) || e1.map.at(1) != e2.map.at(1) || e1.map.at(4) != e2.map.at(4))
+       return 1;
+    return 0;
+  }
+};
+struct GenericOps_23 { //NO 1
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    int x1 = e.map.at(3).data.i;
+    int x2 = (x1 << 4) + e.map.at(2).data.i;
+    return x2;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3))
+       return 1;
+    return 0;
+  }
+};
+struct GenericOps_321 { //C0  O0   NO0
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    int x1 = e.map.at(1).data.i;
+    int x2 = (x1 << 2) + e.map.at(3).data.i;
+    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    return x3;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    if(e1.map.at(3) != e2.map.at(3) || e1.map.at(2) != e2.map.at(2) || e1.map.at(1) != e2.map.at(1))
+       return 1;
+    return 0;
+  }
+};
+struct GenericOps_236 { //C 1
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    int x1 = HASH(e.map.at(6).data.s);
+    int x2 = (x1 << 2) + e.map.at(3).data.i;
+    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    return x3;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(6) != e2.map.at(6))
+       return 1;
+    return 0;
+  }
+};
+struct GenericOps_123 { //OL1
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    int x1 = e.map.at(1).data.i;
+    int x2 = (x1 << 2) + e.map.at(3).data.i;
+    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    return x3;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    if(e1.map.at(1) != e2.map.at(1) || e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3))
+       return 1;
+    return 0;
+  }
+};
+struct GenericOps_12345678 { // H0
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    unsigned int h = 0;
+    h = h ^ (HASH(e.map.at(1)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.map.at(2)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.map.at(3)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.map.at(4)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.map.at(5)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.map.at(6)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.map.at(7)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.map.at(8)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    return h;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    if(e1.map.at(1) != e2.map.at(1) || e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(4) != e2.map.at(4) || e1.map.at(5) != e2.map.at(5) || e1.map.at(6) != e2.map.at(6) || e1.map.at(7) != e2.map.at(7) || e1.map.at(8) != e2.map.at(8))
+       return 1;
+    return 0;
+  }
+};
+struct GenericOps_234 {  //O 1
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    int x1 = e.map.at(4).data.i;
+    int x2 = (x1 << 2) + e.map.at(3).data.i;
+    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    return x3;
 
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(4) != e2.map.at(4))
+       return 1;
+    return 0;
+  }
+};
+struct GenericCmp_236_4 {
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    int x1 = HASH(e.map.at(6));
+    int x2 = (x1 << 2) + e.map.at(3).data.i;
+    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    return x3;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    const Any &r1 = e1.map.at(4);
+    const Any &r2 = e2.map.at(4);
+    if (r1 == r2)
+      return 0;
+    else if( r1 < r2)
+      return -1;
+    else
+      return 1;
+
+  }
+};
+struct GenericCmp_23_1 {
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    int x1 = e.getInt(3);
+    int x2 = (x1 << 4) + e.getInt(2);
+    return x2;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    const Any &r1 = e1.map.at(1);
+    const Any &r2 = e2.map.at(1);
+    if (r1 == r2)
+      return 0;
+    else if( r1 < r2)
+      return -1;
+    else
+      return 1;
+
+  }
+};
+struct GenericCmp_234_1 {
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    int x1 = e.map.at(4).data.i;
+    int x2 = (x1 << 2) + e.map.at(3).data.i;
+    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    return x3;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+    const Any &r1 = e1.map.at(1);
+    const Any &r2 = e2.map.at(1);
+    if (r1 == r2)
+      return 0;
+    else if( r1 < r2)
+      return -1;
+    else
+      return 1;
+
+  }
+};
+struct GenericFixedRange_1f1t100002 {
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    return e.getInt(1)-1;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+};
+struct GenericFixedRange_3f1t6_2f1t11_1f1t3001 {
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    return ((e.getInt(3)-1) * 10 + e.getInt(2)-1)*3000 + e.getInt(1)-1;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+};
+struct GenericFixedRange_2f1t6_1f1t100001 {
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    return (e.getInt(2)-1)* 100000 + e.getInt(1)-1;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+};
+struct GenericFixedRange_1f1t6 {
+  FORCE_INLINE static size_t hash(const GenericEntry& e)
+    return  e.getInt(1) - 1;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+};
+struct GenericFixedRange_2f1t6_1f1t11 {
+  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+    return (e.getInt(2)-1) * 10 + e.getInt(1)-1;;
+  }
+  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+};
+#else
 struct SEntry8_IIIITIIB_Idx234 {  // O 1
   #define int unsigned int
   FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3468)  {
@@ -731,6 +916,7 @@ struct SEntry3_III_Idx23_1 {
     return ((x3601==(x3602)) ? 0 : ((x3601>(x3602)) ? 1 : -1));
   }
 };
+#endif
 
       
 typedef CuckooIndex<struct SEntry3_III, SEntry3_III_Idx321> newOrderTblIdx0Type;
@@ -843,13 +1029,13 @@ struct ThreadLocal {
     x6400._1 = x19;
     OperationReturnStatus stx12247;
     struct SEntry9_ISSSSSSDD* x12247 =  warehouseTblIdx0.getForUpdate(x6400, stx12247, xact);
-    if(stx12247 != OP_SUCCESS) return TR(stx12247);
+    if(stx12247 == WW_VALUE) return WW_ABORT;
     x12247->_9 += x26;
     x6405._1 = x20;
     x6405._2 = x19;
     OperationReturnStatus stx12253;
     struct SEntry11_IISSSSSSDDI* x12253 =  districtTblIdx0.getForUpdate(x6405, stx12253, xact);
-    if(stx12253 != OP_SUCCESS) return TR(stx12253);
+    if(stx12253 == WW_VALUE) return WW_ABORT;
     x12253->_10 += x26;
     struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite20083 = 0;
     if((x21>(0))) {
@@ -858,7 +1044,7 @@ struct ThreadLocal {
       x6468._6 = x25;
       OperationReturnStatus stx20087;
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x20087 =  customerTblIdx1.getForUpdate(x6468, stx20087, xact);
-      if(stx20087 != OP_SUCCESS) return TR(stx20087);
+      if(stx20087 == WW_VALUE) return WW_ABORT;
       ite20083 = x20087;
     } else {
       x6471._1 = x24;
@@ -866,7 +1052,7 @@ struct ThreadLocal {
       x6471._3 = x22;
       OperationReturnStatus stx20092;
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x20092 =  customerTblIdx0.getForUpdate(x6471, stx20092, xact);
-      if(stx20092 != OP_SUCCESS) return TR(stx20092);
+      if(stx20092 == WW_VALUE) return WW_ABORT;
       ite20083 = x20092;
     };
     struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6410 = ite20083;
@@ -909,7 +1095,7 @@ struct ThreadLocal {
     x6449._7 = x26;
     x6449._8 = x2505;
     OperationReturnStatus st19081 = historyTbl.insert_nocheck(x6449, xact);
-    if(st19081 != OP_SUCCESS) return TR(st19081);
+    if(st19081 == WW_VALUE) return WW_ABORT;
     clearTempMem();
     return SUCCESS;
   }
@@ -969,7 +1155,7 @@ struct ThreadLocal {
       x6619._2 = x81;
       OperationReturnStatus stx12518;
       struct SEntry11_IISSSSSSDDI* x12518 =  districtTblIdx0.getForUpdate(x6619, stx12518, xact);
-      if(stx12518 != OP_SUCCESS) return TR(stx12518);
+      if(stx12518 == WW_VALUE) return WW_ABORT;
       int x6621 = x12518->_11;
       x12518->_11 += 1;
       int x157 = x106;
@@ -982,12 +1168,12 @@ struct ThreadLocal {
       x6626._7 = x84;
       x6626._8 = x157;
       OperationReturnStatus st19138 = orderTbl.insert_nocheck(x6626, xact);
-      if(st19138 != OP_SUCCESS) return TR(st19138);
+      if(st19138 == WW_VALUE) return WW_ABORT;
       x6629._1 = x6621;
       x6629._2 = x82;
       x6629._3 = x81;
       OperationReturnStatus st19142 = newOrderTbl.insert_nocheck(x6629, xact);
-      if(st19142 != OP_SUCCESS) return TR(st19142);
+      if(st19142 == WW_VALUE) return WW_ABORT;
       double x165 = 0.0;
       x95 = 0;
       while(1) {
@@ -1005,7 +1191,7 @@ struct ThreadLocal {
         x6643._2 = ol_supply_w_id;
         OperationReturnStatus stx12552;
         struct SEntry17_IIISSSSSSSSSSIIIS* x12552 =  stockTblIdx0.getForUpdate(x6643, stx12552, xact);
-        if(stx12552 != OP_SUCCESS) return TR(stx12552);
+        if(stx12552 == WW_VALUE) return WW_ABORT;
         const PString& x6646 = *(&x12552->_4 + (x82-1));
         int x6647 = x12552->_3;
         int x188 = x95;
@@ -1056,7 +1242,7 @@ struct ThreadLocal {
         x6691._9 = ol_amount;
         x6691._10 = x6646;
         OperationReturnStatus st19210 = orderLineTbl.insert_nocheck(x6691, xact);
-        if(st19210 != OP_SUCCESS) return TR(st19210);
+        if(st19210 == WW_VALUE) return WW_ABORT;
         int x239 = x95;
         x95 = (x239+(1));
       };
@@ -1081,7 +1267,7 @@ struct ThreadLocal {
       x6832._3 = x249;
       OperationReturnStatus stx12773;
       struct SEntry3_III* x12773 =  newOrderTblIdx1.getForUpdate(x6832, stx12773, xact);
-      if(stx12773 != OP_SUCCESS) return TR(stx12773);
+      if(stx12773 == WW_VALUE) return WW_ABORT;
       if((x12773!=(NULL))) {
         int x6836 = x12773->_1;
         int x273 = x255;
@@ -1093,7 +1279,7 @@ struct ThreadLocal {
         x6843._3 = x249;
         OperationReturnStatus stx12786;
         struct SEntry8_IIIITIIB* x12786 =  orderTblIdx0.getForUpdate(x6843, stx12786, xact);
-        if(stx12786 != OP_SUCCESS) return TR(stx12786);
+        if(stx12786 == WW_VALUE) return WW_ABORT;
         x12786->_6 = x250;
         double x287 = 0.0;
         int x289 = x255;
@@ -1106,14 +1292,14 @@ struct ThreadLocal {
           x287 = (x294+((orderLineEntry->_9)));
           return SUCCESS;
         }, xact);
-        if(st11209 != OP_SUCCESS) return TR(st11209);
+        if(st11209 == WW_VALUE) return WW_ABORT;
         int x302 = x255;
         x6856._1 = (x12786->_4);
         x6856._2 = x302;
         x6856._3 = x249;
         OperationReturnStatus stx12812;
         struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12812 =  customerTblIdx0.getForUpdate(x6856, stx12812, xact);
-        if(stx12812 != OP_SUCCESS) return TR(stx12812);
+        if(stx12812 == WW_VALUE) return WW_ABORT;
         double x306 = x287;
         x12812->_17 += x306;
         x12812->_20 += 1;
@@ -1156,7 +1342,7 @@ struct ThreadLocal {
         };
         return SUCCESS;
       }, xact);
-      if(st14085 != OP_SUCCESS) return TR(st14085);
+      if(st14085 == WW_VALUE) return WW_ABORT;
       int x359 = x335;
       x335 = (x359+(1));
     };
@@ -1197,7 +1383,7 @@ struct ThreadLocal {
         int x410 = 1;
         return SUCCESS;
       }, xact);
-      if(st20735 != OP_SUCCESS) return TR(st20735);
+      if(st20735 == WW_VALUE) return WW_ABORT;
       ite20723 = 1;
     };
     int x414 = ite20723;
@@ -1347,7 +1533,9 @@ int main(int argc, char** argv) {
   #ifndef NORESIZE
   cout << "Index Resizing warning disabled" << endl;
   #endif
-  cout << "NumThreads = " << numThreads << endl;
+  
+  cout  << "NumThreads = " << numThreads << endl;
+  
   tpcc.loadPrograms();
   
   Transaction t0;
@@ -1363,7 +1551,7 @@ int main(int argc, char** argv) {
   tpcc.loadStocks(t0);
   xactManager.commit(t0, 0);
   cout.imbue(std::locale(""));
-
+  
   memset(xactCounts, 0, 5 * sizeof(uint));
   memset(xactManager.activeXactStartTS, 0xff, sizeof(xactManager.activeXactStartTS[0]) * numThreads);
   

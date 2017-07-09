@@ -74,7 +74,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, n@AggregatorResultForUpdate(agg)) if Optimizer.OpResChecks =>
       doc"OperationReturnStatus st$sym;" :\\:
       doc"${sym.tp} $sym = $agg.resultForUpdate(st$sym, xact);" :\\:
-      doc"if(st$sym != OP_SUCCESS) return TR(st$sym);"
+      doc"if(st$sym == WW_VALUE) return WW_ABORT;"
 
     /*************************** STORE *********************************************/
     case Statement(sym, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) =>
@@ -134,7 +134,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
   val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $store.insert_nocheck($e, xact);" :\\:
-      doc"if(st$symid != OP_SUCCESS) return TR(st$symid);"
+      doc"if(st$symid == WW_VALUE) return WW_ABORT;"
 
     /*************************** INDEX *********************************************/
     case Statement(sym, IdxSliceRes(idx@Def(StoreIndex(self, idxNum, _, _, _)), key)) if Optimizer.sliceInline =>
@@ -263,19 +263,19 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
     case Statement(sym, n@IdxGetForUpdate(idx, key)) if Optimizer.OpResChecks =>
       doc"OperationReturnStatus st$sym;" :\\:
       doc"${sym.tp} $sym =  $idx.getForUpdate($key, st$sym, xact);" :\\:
-      doc"if(st$sym != OP_SUCCESS) return TR(st$sym);"
+      doc"if(st$sym == WW_VALUE) return WW_ABORT;"
 
     case Statement(sym, n@IdxSliceNoUpdate(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.OpResChecks =>
       val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $idx.sliceNoUpdate($key, " ::
         doc"[&](${i.tp} $i) -> TransactionReturnStatus {"  :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
-        doc"if(st$symid != OP_SUCCESS) return TR(st$symid);"
+        doc"if(st$symid == WW_VALUE) return WW_ABORT;"
 
     case Statement(sym, n@IdxSlice(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.OpResChecks =>
       val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $idx.slice($key, " ::
         doc"[&](${i.tp} $i) -> TransactionReturnStatus {"  :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
-        doc"if(st$symid != OP_SUCCESS) return TR(st$symid);"
+        doc"if(st$symid == WW_VALUE) return WW_ABORT;"
 
 
     /*************************** FIELD GET STRING *********************************************/

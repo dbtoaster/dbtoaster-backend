@@ -884,6 +884,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT(orig.$i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
     def mainPrg =
       s"""
+         |setAffinity(-1);
          |#ifndef NORESIZE
          |cout << "Index Resizing warning disabled" << endl;
          |#endif
@@ -1242,7 +1243,192 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       :\\: blocks :\\: "\n TransactionReturnStatus runProgram(Program* prg);") :\\: "};"
     //disabled entryidx temporarily
     val entryidx2 =
-      """
+      """#if USING_GENERIC_ENTRY
+        |struct GenericOps_3214 {  //OL 0
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    int x1 = e.map.at(1).data.i;
+        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
+        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    int x4 = (x3 << 4) + e.map.at(4).data.i;
+        |    return x4;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    if(e1.map.at(3) != e2.map.at(3) || e1.map.at(2) != e2.map.at(2) || e1.map.at(1) != e2.map.at(1) || e1.map.at(4) != e2.map.at(4))
+        |       return 1;
+        |    return 0;
+        |  }
+        |};
+        |struct GenericOps_23 { //NO 1
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    int x1 = e.map.at(3).data.i;
+        |    int x2 = (x1 << 4) + e.map.at(2).data.i;
+        |    return x2;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3))
+        |       return 1;
+        |    return 0;
+        |  }
+        |};
+        |struct GenericOps_321 { //C0  O0   NO0
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    int x1 = e.map.at(1).data.i;
+        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
+        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    return x3;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    if(e1.map.at(3) != e2.map.at(3) || e1.map.at(2) != e2.map.at(2) || e1.map.at(1) != e2.map.at(1))
+        |       return 1;
+        |    return 0;
+        |  }
+        |};
+        |struct GenericOps_236 { //C 1
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    int x1 = HASH(e.map.at(6).data.s);
+        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
+        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    return x3;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(6) != e2.map.at(6))
+        |       return 1;
+        |    return 0;
+        |  }
+        |};
+        |struct GenericOps_123 { //OL1
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    int x1 = e.map.at(1).data.i;
+        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
+        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    return x3;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    if(e1.map.at(1) != e2.map.at(1) || e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3))
+        |       return 1;
+        |    return 0;
+        |  }
+        |};
+        |struct GenericOps_12345678 { // H0
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    unsigned int h = 0;
+        |    h = h ^ (HASH(e.map.at(1)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.map.at(2)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.map.at(3)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.map.at(4)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.map.at(5)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.map.at(6)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.map.at(7)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.map.at(8)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    return h;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    if(e1.map.at(1) != e2.map.at(1) || e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(4) != e2.map.at(4) || e1.map.at(5) != e2.map.at(5) || e1.map.at(6) != e2.map.at(6) || e1.map.at(7) != e2.map.at(7) || e1.map.at(8) != e2.map.at(8))
+        |       return 1;
+        |    return 0;
+        |  }
+        |};
+        |struct GenericOps_234 {  //O 1
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    int x1 = e.map.at(4).data.i;
+        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
+        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    return x3;
+        |
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(4) != e2.map.at(4))
+        |       return 1;
+        |    return 0;
+        |  }
+        |};
+        |struct GenericCmp_236_4 {
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    int x1 = HASH(e.map.at(6));
+        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
+        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    return x3;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    const Any &r1 = e1.map.at(4);
+        |    const Any &r2 = e2.map.at(4);
+        |    if (r1 == r2)
+        |      return 0;
+        |    else if( r1 < r2)
+        |      return -1;
+        |    else
+        |      return 1;
+        |
+        |  }
+        |};
+        |struct GenericCmp_23_1 {
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    int x1 = e.getInt(3);
+        |    int x2 = (x1 << 4) + e.getInt(2);
+        |    return x2;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    const Any &r1 = e1.map.at(1);
+        |    const Any &r2 = e2.map.at(1);
+        |    if (r1 == r2)
+        |      return 0;
+        |    else if( r1 < r2)
+        |      return -1;
+        |    else
+        |      return 1;
+        |
+        |  }
+        |};
+        |struct GenericCmp_234_1 {
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    int x1 = e.map.at(4).data.i;
+        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
+        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    return x3;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
+        |    const Any &r1 = e1.map.at(1);
+        |    const Any &r2 = e2.map.at(1);
+        |    if (r1 == r2)
+        |      return 0;
+        |    else if( r1 < r2)
+        |      return -1;
+        |    else
+        |      return 1;
+        |
+        |  }
+        |};
+        |struct GenericFixedRange_1f1t100002 {
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    return e.getInt(1)-1;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+        |};
+        |struct GenericFixedRange_3f1t6_2f1t11_1f1t3001 {
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    return ((e.getInt(3)-1) * 10 + e.getInt(2)-1)*3000 + e.getInt(1)-1;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+        |};
+        |struct GenericFixedRange_2f1t6_1f1t100001 {
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    return (e.getInt(2)-1)* 100000 + e.getInt(1)-1;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+        |};
+        |struct GenericFixedRange_1f1t6 {
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e)
+        |    return  e.getInt(1) - 1;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+        |};
+        |struct GenericFixedRange_2f1t6_1f1t11 {
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
+        |    return (e.getInt(2)-1) * 10 + e.getInt(1)-1;;
+        |  }
+        |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
+        |};
+        |#else
         |struct SEntry8_IIIITIIB_Idx234 {  // O 1
         |  #define int unsigned int
         |  FORCE_INLINE static size_t hash(const struct SEntry8_IIIITIIB& x3468)  {
@@ -1731,6 +1917,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |    return ((x3601==(x3602)) ? 0 : ((x3601>(x3602)) ? 1 : -1));
         |  }
         |};
+        |#endif
 
       """.stripMargin
     file.println(header :/: execProfile :/: structs :\\: structEquals  :\\: entryidx2 :\\: stTypdef :\\:

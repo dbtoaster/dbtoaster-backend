@@ -174,7 +174,7 @@ struct CuckooIndex : public IndexMV<T> {
             }
             return OP_SUCCESS;
         } else {
-            return DUPLICATE_KEY;
+            return WW_VALUE;
         }
     }
 
@@ -337,26 +337,21 @@ struct CuckooIndex : public IndexMV<T> {
     FORCE_INLINE void prepareSize(size_t arrayS, size_t poolS) override {
         index.reserve(arrayS);
     }
-    //
-    //    void slice(const T* key, FuncType f) override {
-    //    }
 
-    //    void sliceCopy(const T* key, FuncType f) override {
-    //    }
+    //Assumption : primary key columns don't change. So do nothing
 
-    //    void update(T* obj) override {
-    //    }
-    //
-    //    void updateCopy(T* obj, Index<T, V>* primary) override {
-    //    }
-    //
-    //    void updateCopyDependent(T* obj, T* elem) override {
-    //    }
-    //
-    //    bool getOrInsert(T*& entry) override {
-    //
-    //        return false;
-    //    }
+    FORCE_INLINE OperationReturnStatus update(T* obj) {
+        //        Version<T>* v = (Version<T>*) VBase::getVersionFromT((char *) obj);
+        //        EntryMV<T>* emv = (EntryMV<T>*) v->e;
+        //        EntryMV<T>* res;
+        //        if (index.find(obj, res)) {
+        //            return res == emv ? OP_SUCCESS : DUPLICATE_KEY;
+        //        } else {
+        //            if (!index.insert(obj, emv))
+        //                return DUPLICATE_KEY;
+        //        }
+        return OP_SUCCESS;
+    }
 
     virtual ~CuckooIndex() {
 
@@ -447,20 +442,20 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
         for (size_t i = 0; i < size; ++i) {
             EntryMV<T>* e1 = array[i].elem;
             EntryMV<T>* e2 = that.array[i].elem;
-            
+
             if ((!e1 && e2) || (e1 && !e2)) {
                 cerr << "Array slots don't match" << endl;
-                if(e1) 
+                if (e1)
                     cerr << e1->versionHead.load()->obj << "is extra";
                 else
                     cerr << e2->versionHead.load()->obj << "is missing";
                 return false;
             }
-            if(!e1)
+            if (!e1)
                 continue;
             T& t1 = e1->versionHead.load()->obj;
             T& t2 = e2->versionHead.load()->obj;
-            if(!(t1 == t2)) {
+            if (!(t1 == t2)) {
                 cerr << "Found " << t1 << "  where it should have been " << t2 << endl;
                 return false;
             }
@@ -471,11 +466,13 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
     ConcurrentArrayIndex(size_t s) {//ignore
         memset(array, 0, sizeof (AlignedEntry) * size);
     }
+
     ConcurrentArrayIndex(void* ptr, size_t s) {//ignore
         memset(array, 0, sizeof (AlignedEntry) * size);
     }
 
     //Data Result loading 
+
     FORCE_INLINE void add(T* obj, Transaction& xact) {
         Version<T>* v = (Version<T>*) malloc(sizeof (Version<T>));
         new(v) Version<T>(*obj, xact);
@@ -486,7 +483,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
         array[idx].elem = e;
         xact.undoBufferHead = v;
     }
-    
+
     FORCE_INLINE OperationReturnStatus add(Version<T>* v) override {
         size_t idx = IDX_FN::hash(v->obj);
         assert(idx >= 0 && idx < size);
@@ -496,7 +493,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
         if (array[idx].elem.compare_exchange_strong(temp, emv)) {
             return OP_SUCCESS;
         } else
-            return DUPLICATE_KEY;
+            return WW_VALUE;
     }
 
     void removeEntry(T* obj, EntryMV<T>* emv) override {
@@ -505,6 +502,20 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
 
     void undo(Version<T>* v) override {
 
+    }
+
+    //Assumption: Primary key columns do not change. So, do nothing
+
+    FORCE_INLINE OperationReturnStatus update(T* obj) {
+        //        Version<T>* v = (Version<T>*) VBase::getVersionFromT((char *) obj);
+        //        EntryMV<T>* emv = (EntryMV<T>*) v->e;
+        //        EntryMV<T>* res = nullptr;
+        //        size_t idx = IDX_FN::hash(*obj);
+        //        //SBJ: Backpointer??
+        //        if (!array[idx].elem.compare_exchange_strong(res, emv)) {
+        //            return res == emv ? OP_SUCCESS : DUPLICATE_KEY;
+        //        }
+        return OP_SUCCESS;
     }
 
     FORCE_INLINE void del(Version<T>* v) override {
@@ -887,7 +898,15 @@ struct Heap {
         return array[1];
     }
 
-    void checkHeap(int idx) {
+    FORCE_INLINE bool checkIfExists(EntryMV<T>* emv) {
+        for (uint i = 1; i <= size; ++i) {
+            if (array[i] == emv)
+                return true;
+        }
+        return false;
+    }
+
+    FORCE_INLINE void checkHeap(int idx) {
         for (uint i = 1; i <= size; ++i) {
             uint l = 2 * i;
             uint r = l + 1;
@@ -1014,7 +1033,7 @@ struct MedianHeap {
     Heap<T, IDX_FN2, false> right;
     //invariant : l.size = r.size OR l.size = r.size + 1
 
-    void add(EntryMV<T>* obj) {
+    FORCE_INLINE void add(EntryMV<T>* obj) {
         if (left.size == 0) {
             left.add(obj);
             return;
@@ -1048,7 +1067,11 @@ struct MedianHeap {
 
     //SBJ: May not find the right element if it is median and there are duplicates of it spread across left and right
 
-    void remove(EntryMV<T> *obj) {
+    FORCE_INLINE bool checkIfExists(EntryMV<T>* emv) {
+        return left.checkIfExists(emv) || right.checkIfExists(emv);
+    }
+
+    FORCE_INLINE void remove(EntryMV<T> *obj) {
         if (IDX_FN2::cmp(obj->key, left.array[1]->key) == 1) {
             //obj in right
             if (left.size > right.size) {
@@ -1074,7 +1097,7 @@ struct MedianHeap {
         return left.array[1];
     }
 
-    void check(int idx) {
+    FORCE_INLINE void check(int idx) {
         left.checkHeap(idx);
         right.checkHeap(idx);
         EntryMV<T>* r = right.array[1];
@@ -1174,17 +1197,27 @@ struct VersionedAggregator : public IndexMV<T> {
                 lock.unlock();
                 return;
             }
-//            EntryMV<T>* e_new = sliceST.get(); //to be removed in final version
+            //            EntryMV<T>* e_new = sliceST.get(); //to be removed in final version
             if (head->xact == TStoPTR(v->xactid)) {
                 head = head->next;
-                flag = true;
             }
-//            assert(e_new == (head ? head->aggE : nullptr));
+            //            assert(e_new == (head ? head->aggE : nullptr));
             lock.unlock();
         }
 
         FORCE_INLINE void removeEntry(EntryMV<T>* e) {
             //Do nothing?
+        }
+
+        FORCE_INLINE OperationReturnStatus update(Version<T>* v) {
+            EntryMV<T>* emv = (EntryMV<T>*) v->e;
+            lock.lock();
+            if (sliceST.checkIfExists(emv)) {
+                lock.unlock();
+                return OP_SUCCESS;
+            } else {
+                return add(emv);
+            }
         }
 
         FORCE_INLINE EntryMV<T>* get(Transaction & xact) {
@@ -1264,6 +1297,10 @@ struct VersionedAggregator : public IndexMV<T> {
         VersionedSlice* result;
         if (index.find(key, result)) {
             EntryMV<T>* resE = result->get(xact);
+            if (!resE) {
+                st = NO_KEY;
+                return nullptr;
+            }
             Version<T>* resV = resE->versionHead;
             if (!resV->isVisible(&xact)) {
                 if (resV->xactid > initCommitTS) {
@@ -1298,6 +1335,19 @@ struct VersionedAggregator : public IndexMV<T> {
             st = NO_KEY;
             return nullptr;
         }
+    }
+
+    FORCE_INLINE OperationReturnStatus update(T* obj) {
+        VersionedSlice* res;
+        Version<T>* v = (Version<T>*)VBase::getVersionFromT((char*) obj);
+        bool ret;
+        if (index.find(obj, res)) {
+            ret = res->update(v);
+        } else {
+            ret = add(v);
+        }
+        assert(ret == OP_SUCCESS);
+        return ret;
     }
 
     void prepareSize(size_t arrayS, size_t poolS) override {
@@ -1484,6 +1534,45 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
         while (!cur->next.compare_exchange_weak(nxt, mark(nxt)));
     }
 
+
+    //Assumption: Primary key columns do not change
+
+    FORCE_INLINE OperationReturnStatus update(T* obj) {
+        Version<T>* v = (Version<T>*) VBase::getVersionFromT((char *) obj);
+        EntryMV<T>* emv = (EntryMV<T>*) v->e;
+
+        Container* sentinel;
+        if (index.find(obj, sentinel)) { //slice already exists, need to check if entry is already there 
+            Container *cur = sentinel->next, *curNext = cur->next, *old = sentinel, *oldNext = cur;
+            while (isMarked(curNext) || cur->e != emv) {
+                if (!isMarked(curNext)) {
+                    if (oldNext != cur) {
+                        old->next.compare_exchange_strong(oldNext, cur);
+                    }
+                    old = cur;
+                    cur = curNext;
+                    oldNext = curNext;
+                } else {
+                    cur = unmark(curNext);
+                }
+                if (!cur)
+                    break;
+                curNext = cur->next;
+            }
+            if (!cur) { //emv does not exist in slice
+                Container *newc = (Container *) malloc(sizeof (Container));
+                new(newc) Container(emv);
+                Container *nxt = sentinel->next;
+                do {
+                    newc->next = nxt;
+                } while (!sentinel->next.compare_exchange_weak(nxt, newc));
+            }
+            return OP_SUCCESS;
+        } else { //new slice
+            return add(v);
+        }
+    }
+
     void undo(Version<T>* v) override {
         //Do nothing
     }
@@ -1594,26 +1683,9 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
         }
     }
 
-    //    void clear() override {
-    //        index.clear();
-    //    }
-    //
-    //    size_t count() const override {
-    //        return -1;
-    //    }
-
-    //    void delCopy(const T* obj, Index<T, V>* primary) override {
-    //        T* orig = primary->get(obj);
-    //        del(orig);
-    //    }
-
     OperationReturnStatus foreach(FuncType f, Transaction& xact) override {
         return NO_KEY;
     }
-
-    //    void foreachCopy(FuncType f) override {
-    //
-    //    }
 
     T* get(const T* key, Transaction& xact) const override {
         return nullptr;
@@ -1624,37 +1696,15 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
         return nullptr;
     }
 
-    //    bool hashDiffers(const T& x, const T& y) const override {
-    //        return IDX_FN::hash(x) != IDX_FN::hash(y);
-    //    }
-
     void prepareSize(size_t arrayS, size_t poolS) override {
         index.reserve(arrayS);
     }
-
-    //    void sliceCopy(const T* key, FuncType f) override {
-    //
-    //    }
-    //
-    //    void update(T* obj) override {
-    //
-    //    }
-    //
-    //    void updateCopy(T* obj, Index<T, V>* primary) override {
-    //
-    //    }
-    //
-    //    void updateCopyDependent(T* obj, T* elem) override {
-    //
-    //    }
-    //
 
     virtual ~ConcurrentCuckooSecondaryIndex() {
 
     }
 
     void getSizeStats(std::ostream & fout) {
-
         fout << "{}";
     }
 
@@ -1663,65 +1713,6 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
         return get(&key, xact);
     }
 
-    //    FORCE_INLINE T* getCopy(const T* key) const {
-    //        T* obj = get(key);
-    //        if (obj) {
-    //            T* ptr = obj->copy();
-    //            tempMem.push_back(ptr);
-    //            return ptr;
-    //        } else
-    //            return nullptr;
-    //    }
-    //
-    //    FORCE_INLINE T* getCopy(const T& key) const {
-    //        T* obj = get(&key);
-    //        if (obj) {
-    //            T* ptr = obj->copy();
-    //            tempMem.push_back(ptr);
-    //            return ptr;
-    //        } else
-    //            return nullptr;
-    //    }
-    //
-    //    FORCE_INLINE T* getCopyDependent(const T* key) const {
-    //        T* obj = get(key);
-    //        if (obj) {
-    //            T* ptr = obj->copy();
-    //            tempMem.push_back(ptr);
-    //            return ptr;
-    //        } else
-    //            return nullptr;
-    //    }
-    //
-    //    FORCE_INLINE T* getCopyDependent(const T& key) const {
-    //        T* obj = get(&key);
-    //        if (obj) {
-    //            T* ptr = obj->copy();
-    //            tempMem.push_back(ptr);
-    //            return ptr;
-    //        } else
-    //            return nullptr;
-    //    }
-    //
-    //    FORCE_INLINE void slice(const T& key, FuncType f) {
-    //        slice(&key, f);
-    //    }
-
-    //    FORCE_INLINE void sliceCopy(const T& key, FuncType f) {
-    //        sliceCopy(&key, f);
-    //    }
-    //
-    //    FORCE_INLINE void sliceCopyDependent(const T* key, FuncType f) {
-    //        sliceCopy(key, f);
-    //    }
-    //
-    //    FORCE_INLINE void sliceCopyDependent(const T& key, FuncType f) {
-    //        sliceCopy(&key, f);
-    //    }
-    //
-    //    FORCE_INLINE void delCopyDependent(const T* obj) {
-    //        del(obj);
-    //    }
 
 };
 
@@ -1857,12 +1848,11 @@ public:
             } else {
                 free(newE);
                 free(newV);
-                return OP_SUCCESS;
-                return DUPLICATE_KEY;
+                return WW_VALUE;
             }
             xact.undoBufferHead = newV;
         } else {
-            return DUPLICATE_KEY;
+            return WW_VALUE;
 
             // cur->~T();
             // *cur=std::move(*elem);
@@ -1902,7 +1892,7 @@ public:
         } else {
             free(newE);
             free(newV);
-            return DUPLICATE_KEY;
+            return WW_VALUE;
         }
     }
 

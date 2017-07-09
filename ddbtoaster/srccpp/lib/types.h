@@ -12,15 +12,6 @@ struct ALIGN MBase;
 struct ALIGN EBase;
 struct Program;
 
-#undef FORCE_INLINE 
-
-#ifdef NDEBUG
-#define  FORCE_INLINE  __attribute__((always_inline))
-#define NOINLINE __attribute__ ((noinline))
-#else
-#define NOINLINE __attribute__ ((noinline))
-#define FORCE_INLINE 
-#endif 
 
 typedef uint64_t timestamp;
 const timestamp mask = 1LL << 63;
@@ -57,12 +48,9 @@ enum TransactionReturnStatus : char {
 //};
 
 enum OperationReturnStatus : char {
-    OP_SUCCESS, NO_KEY, DUPLICATE_KEY, WW_VALUE
+    OP_SUCCESS, NO_KEY, WW_VALUE
 };
 
-FORCE_INLINE TransactionReturnStatus TR(OperationReturnStatus op) {
-    return op == NO_KEY ? ABORT : WW_ABORT;
-}
 FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
     return op == WW_ABORT ? WW_VALUE : NO_KEY;
 }
@@ -83,7 +71,7 @@ FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
         cerr << "Cannot set scheduler" << endl;
 
 #ifndef NUMTHREADS
-#define NUMTHREADS 1
+#define NUMTHREADS 4
 #endif 
 
 #define MAX_IDXES_PER_TBL 3
