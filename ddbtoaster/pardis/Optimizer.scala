@@ -132,7 +132,7 @@ class Optimizer(val IR: StoreDSL) {
     number of possible nodes to increase thereby increasing the number of scenarios that sliceInline needs to handle
     */
 
-    if (Optimizer.sliceNoUpd && !(Optimizer.deadIndexUpdate))
+    if (Optimizer.sliceNoUpd && !(Optimizer.deadIndexUpdate) && !Optimizer.mvget)
       throw new Error("SliceNoUpdate requires deadIndexUpdate")
   /*
       SliceNoUpdate covers the case of only IdxSlice.

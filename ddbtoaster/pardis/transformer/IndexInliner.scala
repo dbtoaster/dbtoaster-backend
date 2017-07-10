@@ -46,7 +46,7 @@ class IndexInliner(override val IR: StoreDSL) extends RecursiveRuleBasedTransfor
   analysis += statement {
     case sym -> (StoreIndex(st, Constant(idx), Constant(idxType), _, _)) if idxType != "INone" => indexMap += (st, idx) -> sym.asInstanceOf[Rep[Idx[Entry]]]; ()
   }
-  if (Optimizer.deadIndexUpdate)
+
   //SBJ: TODO:  Add check to ensure entry comes from a get or slice
 
     rewrite += rule {

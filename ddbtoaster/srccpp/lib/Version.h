@@ -133,7 +133,7 @@ template <typename T>
     std::atomic<Version<T>*> versionHead;
     std::atomic<EntryMV<T>*> nxt;
     void* backptrs[MAX_IDXES_PER_TBL];
-    EntryMV(MBase* tbl, T& k, Version<T>* v) : EBase(tbl), key(k), versionHead(v), nxt(nullptr) {
+    EntryMV(MBase* tbl, const T& k, Version<T>* v) : EBase(tbl), key(k), versionHead(v), nxt(nullptr) {
     }
 
     //Returns the first version with cts > oldest AND not the only first committed version

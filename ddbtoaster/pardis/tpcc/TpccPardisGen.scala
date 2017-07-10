@@ -683,6 +683,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     s"""
        |#define SC_GENERATED 1
        |#define USING_GENERIC_ENTRY ${!Optimizer.analyzeEntry}
+       |#define CONCURRENT 1
        |
        |#include <algorithm>
        |#include <vector>
@@ -1115,7 +1116,6 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |volatile bool startExecution, hasFinished;
         |
         |
-        |#define CONCURRENT 1
         |TPCC_Data orig;
         |#ifdef VERIFY_CONC
         |   TPCC_Data res;
@@ -1417,7 +1417,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}
         |};
         |struct GenericFixedRange_1f1t6 {
-        |  FORCE_INLINE static size_t hash(const GenericEntry& e)
+        |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
         |    return  e.getInt(1) - 1;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { return 0;}

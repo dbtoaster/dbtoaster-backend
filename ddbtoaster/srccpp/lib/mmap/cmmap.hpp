@@ -110,6 +110,7 @@ struct CuckooIndex : public IndexMV<T> {
         Version<T>* v1, *v2;
         for (auto e1 = t1.cbegin(); e1 != t1.cend(); ++e1) {
             EntryMV<T>* e2;
+            
             v1 = e1->second->versionHead;
             //SBJ: v1 cannot be nullptr if rollback removes EntryMV if all versions are gone
             if (!v1 || v1->obj.isInvalid)
@@ -1216,7 +1217,7 @@ struct VersionedAggregator : public IndexMV<T> {
                 lock.unlock();
                 return OP_SUCCESS;
             } else {
-                return add(emv);
+                return add(v);
             }
         }
 
@@ -1276,7 +1277,7 @@ struct VersionedAggregator : public IndexMV<T> {
         return OP_SUCCESS;
     }
 
-    FORCE_INLINE T* get(const T* key, Transaction& xact) const override {
+    FORCE_INLINE T* get_(const T* key, Transaction& xact) const {
         VersionedSlice * vs;
         if (index.find(key, vs)) {
             EntryMV<T>* e = vs->get(xact);
@@ -1289,11 +1290,8 @@ struct VersionedAggregator : public IndexMV<T> {
         }
     }
 
-    FORCE_INLINE T* getForUpdate(const T& key, OperationReturnStatus& st, Transaction& xact) {
-        return getForUpdate(&key, st, xact);
-    }
 
-    FORCE_INLINE T* getForUpdate(const T* key, OperationReturnStatus& st, Transaction& xact) override {
+    FORCE_INLINE T* getForUpdate_(const T* key, OperationReturnStatus& st, Transaction& xact)  {
         VersionedSlice* result;
         if (index.find(key, result)) {
             EntryMV<T>* resE = result->get(xact);
@@ -1340,7 +1338,7 @@ struct VersionedAggregator : public IndexMV<T> {
     FORCE_INLINE OperationReturnStatus update(T* obj) {
         VersionedSlice* res;
         Version<T>* v = (Version<T>*)VBase::getVersionFromT((char*) obj);
-        bool ret;
+        OperationReturnStatus ret;
         if (index.find(obj, res)) {
             ret = res->update(v);
         } else {
@@ -1369,12 +1367,12 @@ struct MinHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
 
     }
 
-    T * get(const T& key, Transaction & xact) const {
+    FORCE_INLINE T* get(const T& key, Transaction & xact) const {
         return get(&key, xact);
     }
 
-    T * get(const T* key, Transaction & xact) const override {
-        T* ret = Super::get(key, xact);
+    FORCE_INLINE T* get(const T* key, Transaction & xact) const override {
+        T* ret = Super::get_(key, xact);
         if (ret) {
             //            assert(ret->_4.data_);
             MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MinSlicePred<T, IDX_FN1, IDX_FN2>));
@@ -1386,12 +1384,15 @@ struct MinHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
         return ret;
     }
 
-    T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
-        T* ret = Super::getForUpdate(key, s, xact);
+    FORCE_INLINE T* getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
+        return getForUpdate(&key, s, xact);
+    }
+    FORCE_INLINE T* getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
+        T* ret = Super::getForUpdate_(key, s, xact);
         if (ret) {
             //            assert(ret->_4.data_);
             MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MinSlicePred<T, IDX_FN1, IDX_FN2>));
-            new(pred) MinSlicePred<T, IDX_FN1, IDX_FN2>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
+            new(pred) MinSlicePred<T, IDX_FN1, IDX_FN2>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
         }
@@ -1408,12 +1409,12 @@ struct MaxHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
 
     }
 
-    T * get(const T& key, Transaction & xact) const {
+    FORCE_INLINE T* get(const T& key, Transaction & xact) const {
         return get(&key, xact);
     }
 
-    T * get(const T* key, Transaction & xact) const override {
-        T* ret = Super::get(key, xact);
+    FORCE_INLINE T* get(const T* key, Transaction & xact) const override {
+        T* ret = Super::get_(key, xact);
         if (ret) {
             MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MaxSlicePred<T, IDX_FN1, IDX_FN2>));
             new(pred) MaxSlicePred<T, IDX_FN1, IDX_FN2>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
@@ -1424,11 +1425,14 @@ struct MaxHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
         return ret;
     }
 
-    T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
-        T* ret = Super::getForUpdate(key, s, xact);
+    FORCE_INLINE T* getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
+        return getForUpdate(&key, s, xact);
+    }
+    FORCE_INLINE T* getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
+        T* ret = Super::getForUpdate_(key, s, xact);
         if (ret) {
             MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MaxSlicePred<T, IDX_FN1, IDX_FN2>));
-            new(pred) MaxSlicePred<T, IDX_FN1, IDX_FN2>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
+            new(pred) MaxSlicePred<T, IDX_FN1, IDX_FN2>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
         }
@@ -1445,12 +1449,12 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
 
     }
 
-    T * get(const T& key, Transaction & xact) const {
+    FORCE_INLINE T* get(const T& key, Transaction & xact) const {
         return get(&key, xact);
     }
 
-    T * get(const T* key, Transaction & xact) const override {
-        T* ret = Super::get(key, xact);
+    FORCE_INLINE T* get(const T* key, Transaction & xact) const override {
+        T* ret = Super::get_(key, xact);
         if (ret) {
             SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof (SlicePred<T, IDX_FN1>));
             new(pred) SlicePred<T, IDX_FN1>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
@@ -1459,16 +1463,21 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
         }
         return ret;
     }
-
-    T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
-        T* ret = Super::getForUpdate(key, s, xact);
+    
+    FORCE_INLINE T* getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
+        T* ret = Super::getForUpdate_(key, s, xact);
         if (ret) {
             SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof (SlicePred<T, IDX_FN1>));
-            new(pred) SlicePred<T, IDX_FN1>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
+            new(pred) SlicePred<T, IDX_FN1>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
         }
         return ret;
     }
+    
+    FORCE_INLINE T* getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
+        return getForUpdate(&key, s, xact);
+    }
+
 
 };
 
@@ -1590,7 +1599,6 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
         if (index.find(key, sentinel)) {
             Container *prev = sentinel, *prevNext = sentinel->next, *cur = prevNext, *curNext;
             //SBJ: TODO: Skip all deleted nodes and remove them
-
             do {
                 curNext = cur -> next;
                 while (isMarked(curNext)) {
@@ -1873,11 +1881,11 @@ public:
         }
     }
 
-    FORCE_INLINE OperationReturnStatus insert_nocheck(T& elem, Transaction& xact) {
+    FORCE_INLINE OperationReturnStatus insert_nocheck(const T& elem, Transaction& xact) {
         return insert_nocheck(&elem, xact);
     }
 
-    FORCE_INLINE OperationReturnStatus insert_nocheck(T* elem, Transaction& xact) {
+    FORCE_INLINE OperationReturnStatus insert_nocheck(const T* elem, Transaction& xact) {
         Version<T>* newV = (Version<T>*) malloc(sizeof (Version<T>));
         new(newV) Version<T>(*elem, xact);
         EntryMV<T>* newE = (EntryMV<T>*) malloc(sizeof (EntryMV<T>));

@@ -23,7 +23,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
   val refSymbols = collection.mutable.ArrayBuffer[Sym[_]]()
 
   override def stmtToDocument(stmt: Statement[_]): Document = stmt match {
-/*************************** STRING *********************************************/
+    /** ************************* STRING *********************************************/
     case Statement(sym, StringExtraStringPrintfObject(Constant(size), f, Def(LiftedSeq(args)))) =>
       def ArgToDoc(arg: Rep[_]) = arg.tp match {
         case StringType => doc"$arg.data_"
@@ -34,13 +34,13 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, StrStr(x, y)) => doc"char* ${sym} = strstr($x.data_, $y);"
 
 
-    /*************************** ENTRY IDX *********************************************/
+    /** ************************* ENTRY IDX *********************************************/
     case Statement(sym, EntryIdxGenericCmpObject(_, _)) => Document.empty
     case Statement(sym, EntryIdxGenericOpsObject(_)) => Document.empty
     case Statement(sym, EntryIdxGenericFixedRangeOpsObject(_)) => Document.empty
     case Statement(sym, ab@ArrayApplyObject(_)) if ab.typeT.isInstanceOf[EntryIdxType[_]] => Document.empty
 
-    /*************************** ARRAY *********************************************/
+    /** ************************* ARRAY *********************************************/
     case Statement(sym, ab@ArrayApplyObject(Def(LiftedSeq(ops)))) => doc"${sym.tp} $sym = { ${ops.mkDocument(",")} };"
     case Statement(sym, ArrayNew(size)) => doc"${sym.tp.asInstanceOf[ArrayType[_]].elementType} $sym[$size];"
     case Statement(sym, ArrayUpdate(self, i, r@Constant(rhs: String))) if rhs.length == 1 => doc"""$self[$i].data_[0] = '$rhs';"""
@@ -48,19 +48,19 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case Statement(sym, ArrayUpdate(self, i, x)) => doc"$self[$i] = $x;"
     case Statement(sym, a@ArrayApply(self, i)) if a.typeT == StringType => doc"PString& $sym = $self[$i];"
 
-    /*************************** ARRAYBUFER *********************************************/
+    /** ************************* ARRAYBUFER *********************************************/
     case Statement(sym, ab@ArrayBufferNew2()) => doc"vector<${ab.typeA}*> $sym;"
     case Statement(sym, ArrayBufferSortWith(self, f)) => doc"sort($self.begin(), $self.end(), $f);"
 
-    /*************************** SET *********************************************/
+    /** ************************* SET *********************************************/
     case Statement(sym, s@SetApplyObject1(Def(PardisLiftedSeq(es)))) => doc"unordered_set<${s.typeT}> $sym(${es.mkDocument("{", ", ", "}")}); //setApply1"
     case Statement(sym, s@SetApplyObject2()) => doc"unordered_set<${s.typeT}> $sym; //setApply2"
     case Statement(sym, `Set+=`(self, elem)) => doc"$self.insert($elem);"
 
-    /*************************** VAR *********************************************/
+    /** ************************* VAR *********************************************/
     case Statement(sym, v@PardisNewVar(Constant(0))) if v.typeT == StringType => doc"${sym.tp} $sym;"
 
-    /*************************** AGGREGATOR *********************************************/
+    /** ************************* AGGREGATOR *********************************************/
     case Statement(sym, agg@AggregatorMaxObject(f)) =>
       doc"${agg.typeE}* ${sym}result = nullptr;" :/:
         doc"MaxAggregator<${agg.typeE}, ${agg.typeR}> $sym($f, &${sym}result);"
@@ -73,10 +73,10 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
 
     case Statement(sym, n@AggregatorResultForUpdate(agg)) if Optimizer.OpResChecks =>
       doc"OperationReturnStatus st$sym;" :\\:
-      doc"${sym.tp} $sym = $agg.resultForUpdate(st$sym, xact);" :\\:
-      doc"if(st$sym == WW_VALUE) return WW_ABORT;"
+        doc"${sym.tp} $sym = $agg.resultForUpdate(st$sym, xact);" :\\:
+        doc"if(st$sym == WW_VALUE) return WW_ABORT;"
 
-    /*************************** STORE *********************************************/
+    /** ************************* STORE *********************************************/
     case Statement(sym, StoreNew3(_, Def(ArrayApplyObject(Def(LiftedSeq(ops)))))) =>
       val entryTp = sym.tp.asInstanceOf[StoreType[_]].typeE match {
         case PointerType(tp) => tp
@@ -131,12 +131,12 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"auto& $sym = $self.filter($f);"
 
 
-case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
-  val symid = sym.id.toString
+    case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
+      val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $store.insert_nocheck($e, xact);" :\\:
-      doc"if(st$symid == WW_VALUE) return WW_ABORT;"
+        doc"if(st$symid == WW_VALUE) return WW_ABORT;"
 
-    /*************************** INDEX *********************************************/
+    /** ************************* INDEX *********************************************/
     case Statement(sym, IdxSliceRes(idx@Def(StoreIndex(self, idxNum, _, _, _)), key)) if Optimizer.sliceInline =>
       val h = "h" + sym.id
       val IDX_FN = "IDXFN" + sym.id
@@ -193,15 +193,23 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
           doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
+
+
     case Statement(sym, IdxSlice(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
       val symid = sym.id.toString
 
       val IDX_FN = "IDXFN" + sym.id
       val pre =
         doc"//slice " :\\:
-          doc"typedef typename ${self}Idx${idxNum}Type::IFN $IDX_FN;" :\\:
+          doc"typedef typename ${
+            self
+          }Idx${
+            idxNum
+          }Type::IFN $IDX_FN;" :\\:
           doc"HASH_RES_t h$symid = $IDX_FN::hash($key);" :\\:
-          doc"std::vector<${i.tp}> entVector$symid;" :\\:
+          doc"std::vector<${
+            i.tp
+          }> entVector$symid;" :\\:
           doc"auto* e$symid = &($idx.buckets_[h$symid % $idx.size_]);" :\\:
           doc"if(e$symid->head.obj)" :\\:
           doc"  do {" :\\:
@@ -223,7 +231,11 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
       val IDX_FN = "IDXFN" + sym.id
       val pre =
         doc"//sliceNoUpdate " :\\:
-          doc"typedef typename ${self}Idx${idxNum}Type::IFN $IDX_FN;" :\\:
+          doc"typedef typename ${
+            self
+          }Idx${
+            idxNum
+          }Type::IFN $IDX_FN;" :\\:
           doc"HASH_RES_t h$symid = $IDX_FN::hash($key);" :\\:
           doc"auto* e$symid = &($idx.buckets_[h$symid % $idx.size_]);" :\\:
           doc"if(e$symid->head.obj)" :\\:
@@ -246,39 +258,47 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
         throw new Error("For-each on secondary index !")
       val pre =
         doc"//foreach" :\\:
-          doc"${i.tp} $i= $idx.dataHead;" :\\:
+          doc"${
+            i.tp
+          } $i= $idx.dataHead;" :\\:
           doc"while($i) {"
       val post =
         doc"  $i = $i -> nxt;" :\\:
           doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
-//    case Statement(sym, n@IdxGet(_, _)) if Optimizer.mvget =>
-//      doc"const ${sym.tp} $sym = " :: nodeToDocument(n) :: ";"
+    //    case Statement(sym, n@IdxGet(_, _)) if Optimizer.mvget =>
+    //      doc"const ${sym.tp} $sym = " :: nodeToDocument(n) :: ";"
 
-//    case Statement(sym, n@IdxGet(_, _)) if Optimizer.OpResChecks =>
-//      doc"${sym.tp} $sym = " :: nodeToDocument(n) :: ";" :\\:
-//      doc"if($sym == nullptr) return ABORT;"
+    //    case Statement(sym, n@IdxGet(_, _)) if Optimizer.OpResChecks =>
+    //      doc"${sym.tp} $sym = " :: nodeToDocument(n) :: ";" :\\:
+    //      doc"if($sym == nullptr) return ABORT;"
 
     case Statement(sym, n@IdxGetForUpdate(idx, key)) if Optimizer.OpResChecks =>
       doc"OperationReturnStatus st$sym;" :\\:
-      doc"${sym.tp} $sym =  $idx.getForUpdate($key, st$sym, xact);" :\\:
-      doc"if(st$sym == WW_VALUE) return WW_ABORT;"
+        doc"${
+          sym.tp
+        } $sym =  $idx.getForUpdate($key, st$sym, xact);" :\\:
+        doc"if(st$sym == WW_VALUE) return WW_ABORT;"
 
     case Statement(sym, n@IdxSliceNoUpdate(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.OpResChecks =>
       val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $idx.sliceNoUpdate($key, " ::
-        doc"[&](${i.tp} $i) -> TransactionReturnStatus {"  :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
+        doc"[&](${
+          i.tp
+        } $i) -> TransactionReturnStatus {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
         doc"if(st$symid == WW_VALUE) return WW_ABORT;"
 
     case Statement(sym, n@IdxSlice(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.OpResChecks =>
       val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $idx.slice($key, " ::
-        doc"[&](${i.tp} $i) -> TransactionReturnStatus {"  :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
+        doc"[&](${
+          i.tp
+        } $i) -> TransactionReturnStatus {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
         doc"if(st$symid == WW_VALUE) return WW_ABORT;"
 
 
-    /*************************** FIELD GET STRING *********************************************/
+    /** ************************* FIELD GET STRING *********************************************/
     case Statement(sym, n@StructFieldGetter(self: Sym[_], idx)) if sym.tp == StringType =>
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
     case Statement(sym, n@GenericEntryGet(self: Sym[_], idx)) if sym.tp == StringType =>
@@ -287,7 +307,7 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
       doc"const PString& $sym = " :: nodeToDocument(n) :: ";"
 
 
-    /*************************** PROFILER *********************************************/
+    /** ************************* PROFILER *********************************************/
     case Statement(sym, ProfileStart(n@Constant(str))) =>
       val id = str.split(",")(3)
       doc"auto start$id = Now;"
@@ -302,17 +322,21 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
         doc"  counters[$n]++;" :/:
         doc"}"
 
-    /*************************** MALLOC -> STACK ALLOC *********************************************/
+    /** ************************* MALLOC -> STACK ALLOC *********************************************/
     case Statement(sym, m@Malloc(Constant(1))) =>
       val tp = sym.tp.asInstanceOf[PointerType[_]].contentsType
       val id = sym.id.toString
       doc"$tp y$id; " ::
-        doc"${sym.tp} $sym = &y$id;"
+        doc"${
+          sym.tp
+        } $sym = &y$id;"
 
-    /*************************** ENTRY  *********************************************/
+    /** ************************* ENTRY  *********************************************/
     case Statement(sym, SteNewSEntry(_, args)) =>
       val id = sym.id.toString
-      doc"GenericEntry y$id(false_type(),${args.mkDocument(", ")});" :: doc"GenericEntry* $sym = &y$id;"
+      doc"GenericEntry y$id(false_type(),${
+        args.mkDocument(", ")
+      });" :: doc"GenericEntry* $sym = &y$id;"
 
     case Statement(sym, SteSampleSEntry(_, args)) =>
       val newargs = args.map(t => List(Constant(t._1), t._2)).flatten
@@ -328,7 +352,9 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
       doc"GenericEntry y$id(true_type(), $argsDoc); GenericEntry* $sym = &y$id;"
     case Statement(sym, GenericEntryApplyObject(_, Def(LiftedSeq(args)))) =>
       val id = sym.id.toString
-      doc"GenericEntry y$id(false_type(), ${args.mkDocument(", ")}); GenericEntry* $sym = &y$id;"
+      doc"GenericEntry y$id(false_type(), ${
+        args.mkDocument(", ")
+      }); GenericEntry* $sym = &y$id;"
 
 
     case _ => super.stmtToDocument(stmt)
@@ -371,7 +397,7 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
     case MultiResIsEmpty(self: Sym[_]) => doc"$self == nullptr"
 
     case AggregatorResult(self: Sym[_]) => doc"$self.result()"
-    case AggregatorResultForUpdate(self: Sym[_]) if !Optimizer.OpResChecks=> doc"$self.resultForUpdate(xact)"
+    case AggregatorResultForUpdate(self: Sym[_]) if !Optimizer.OpResChecks => doc"$self.resultForUpdate(xact)"
 
     case StoreInsert(self, e) => doc"$self.add($e)"
     case StoreUnsafeInsert(self, e) => doc"$self.insert_nocheck($e, xact)"
@@ -429,7 +455,9 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
     case StructDynamicFieldAccess(self, i, o) if refSymbols.contains(self) => doc"*(&$self._$i + ($o-1))" //assuming continuous range of same typed elements
     case StructDynamicFieldAccess(self, i, o) => doc"*(&$self->_$i + ($o-1))" //assuming continuous range of same typed elements
 
-    case g@GenericEntryGet(self, i) => doc"$self->get${g.typeE.name}($i)"
+    case g@GenericEntryGet(self, i) => doc"$self->get${
+      g.typeE.name
+    }($i)"
     case GenericEntryIncrease(self, i, v) => doc"$self->increase($i, $v)"
     case GenericEntry$plus$eq(self, i, v) => doc"$self->increase($i, $v)"
     case GenericEntryDecrease(self, i, v) => doc"$self->decrease($i, $v)"
@@ -439,8 +467,13 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
 
     case LiftedSeq(ops) if node.tp.isInstanceOf[SeqType[EntryIdx[_]]] => Document.empty
     case PardisLambda(_, i, o) =>
-      val retTp = if (o.res.tp == UnitType) doc" {" else doc" -> ${o.res.tp} {"
-      doc"[&](${i.tp} $i)" :: retTp :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
+      val retTp = if (o.res.tp == UnitType) doc" {"
+      else doc" -> ${
+        o.res.tp
+      } {"
+      doc"[&](${
+        i.tp
+      } $i)" :: retTp :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
     //    case PardisLambda2(_, i1, i2, o) if refSymbols.contains(i1) =>
     //      val t1 = i1.tp.typeArguments match {
@@ -454,12 +487,21 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
     //      "[&](" :: tpeToDocument(t1) :: " & " :: expToDocument(i1) :: ", " :: tpeToDocument(t2) :: " & " :: expToDocument(i2) :: ") {" :/: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
     //
     case PardisLambda2(_, i1, i2, o) =>
-      val retTp = if (o.res.tp == UnitType) doc" {" else doc" -> ${o.res.tp} {"
-      doc"[&](${i1.tp} $i1, ${i2.tp} $i2)" :: retTp :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
+      val retTp = if (o.res.tp == UnitType) doc" {"
+      else doc" -> ${
+        o.res.tp
+      } {"
+      doc"[&](${
+        i1.tp
+      } $i1, ${
+        i2.tp
+      } $i2)" :: retTp :: Document.nest(NEST_COUNT, blockToDocument(o) :/: getBlockResult(o, true)) :/: "}"
 
     case BooleanExtraConditionalObject(cond, ift, iff) => doc"$cond ? $ift : $iff"
 
-    case `Int>>>1`(self, Constant(v)) if (v < 0) => doc"$self >> ${v & 31}"
+    case `Int>>>1`(self, Constant(v)) if (v < 0) => doc"$self >> ${
+      v & 31
+    }"
     case `Int>>>1`(self, x) => doc"$self >> $x"
     case Equal(a, Constant(null)) if a.tp == StringType => doc"$a.data_ == nullptr"
     //    case Equal(a, b) if a.tp == StringType => //doc"!strcmpi($a, $b)"
@@ -467,9 +509,21 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
       refSymbols ++= List(h.i, c.i1, c.i2).map(_.asInstanceOf[Sym[_]])
       doc" struct $name {" :/: Document.nest(NEST_COUNT,
         doc"#define int unsigned int" :\\:
-          doc"FORCE_INLINE static size_t hash(const ${h.i.tp}& ${h.i})  { " :: Document.nest(NEST_COUNT, blockToDocument(h.o) :/: getBlockResult(h.o, true)) :/: "}" :\\:
+          doc"FORCE_INLINE static size_t hash(const ${
+            h.i.tp
+          }& ${
+            h.i
+          })  { " :: Document.nest(NEST_COUNT, blockToDocument(h.o) :/: getBlockResult(h.o, true)) :/: "}" :\\:
           doc"#undef int" :\\:
-          doc"FORCE_INLINE static char cmp(const ${c.i1.tp}& ${c.i1}, const ${c.i2.tp}& ${c.i2}) { " :: Document.nest(NEST_COUNT, blockToDocument(c.o) :/: getBlockResult(c.o, true)) :/: "}") :/: "};"
+          doc"FORCE_INLINE static char cmp(const ${
+            c.i1.tp
+          }& ${
+            c.i1
+          }, const ${
+            c.i2.tp
+          }& ${
+            c.i2
+          }) { " :: Document.nest(NEST_COUNT, blockToDocument(c.o) :/: getBlockResult(c.o, true)) :/: "}") :/: "};"
 
     case EntryIdxGenericOpsObject(Constant(cols)) =>
       if (cols != Nil) {
@@ -494,7 +548,9 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
                 |}else """.stripMargin
           else "")
             ::
-            s"""if(${cols.map(c => s"e1.map.at($c) != e2.map.at($c)").mkString(" || ")})
+            s"""if(${
+              cols.map(c => s"e1.map.at($c) != e2.map.at($c)").mkString(" || ")
+            })
                 |   return 1;""".stripMargin
             :/:
             "return 0;"
@@ -524,10 +580,20 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
       doc"struct $name {" :/: Document.nest(2, hash :/: cmp) :/: "};"
 
     case EntryIdxGenericFixedRangeOpsObject(Constant(cols)) =>
-      val name = "GenericFixedRange_" + cols.map(t => s"${t._1}f${t._2}t${t._3}").mkString("_")
+      val name = "GenericFixedRange_" + cols.map(t => s"${
+        t._1
+      }f${
+        t._2
+      }t${
+        t._3
+      }").mkString("_")
       val hash = doc"FORCE_INLINE static size_t hash(const GenericEntry& e) {" :/: Document.nest(2,
         doc"unsigned int h = 0;  //Defined only for int fields" :/:
-          cols.collect { case (c, l, u) if (u - l) > 1 => s"""h = h * ${u - l} + e.getInt($c) - $l; """ }.mkDocument("\n") :\\:
+          cols.collect {
+            case (c, l, u) if (u - l) > 1 => s"""h = h * ${
+              u - l
+            } + e.getInt($c) - $l; """
+          }.mkDocument("\n") :\\:
           doc"return h;"
       ) :/: "}"
       val cmp = doc"FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) { " :: Document.nest(2, "return 0;") :: "}"
@@ -553,8 +619,9 @@ case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
       doc"$str.append($arg, $n)"
     case StructCopy(s, orig) =>
       val origStruct = orig.correspondingNode.asInstanceOf[PardisStruct[Any]]
-      origStruct.elems.collect { case x if (x.init != nullValue(x.init.tp)) =>
-        expToDocument(s) :: "->" :: x.name :: " = " :: expToDocument(x.init)
+      origStruct.elems.collect {
+        case x if (x.init != nullValue(x.init.tp)) =>
+          expToDocument(s) :: "->" :: x.name :: " = " :: expToDocument(x.init)
       }.mkDocument("; ")
     case _ => super.nodeToDocument(node)
   }

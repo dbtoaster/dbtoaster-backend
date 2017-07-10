@@ -9,9 +9,12 @@ using dbtoaster::date;
 template <class GE, typename T>
 void processSampleEntry(GE* e, const int& col, const T& arg) {
     e->update(col, arg);
+#ifndef CONCURRENT
     e->backPtrs = new void*[col + 1];
     for (int i = 0; i < col + 1; i++)
         e->backPtrs[i] = nullptr;
+
+#endif
 }
 
 template <class GE, typename T, typename... Args>
@@ -23,9 +26,11 @@ void processSampleEntry(GE* e, const int& col, const T& arg, const Args&... args
 template <class GE, typename T>
 void processFullEntry(GE* e, int col, const T& arg) {
     e->update(col, arg);
+#ifndef CONCURRENT
     e->backPtrs = new void*[col + 1];
     for (int i = 0; i < col + 1; i++)
         e->backPtrs[i] = nullptr;
+#endif
 }
 
 template <class GE, typename T, typename... Args>
@@ -105,7 +110,7 @@ struct Any {
         }
     }
 
-    FORCE_INLINE  bool operator!=(const Any& that) const {
+    FORCE_INLINE bool operator!=(const Any& that) const {
         if (type == UNDEFINED || that.type == UNDEFINED) throw std::logic_error("UNDEFINED Type in Any ");
         if (type != that.type) return true;
         switch (type) {
@@ -115,13 +120,13 @@ struct Any {
                 break;
             case DATE: return data.t != that.data.t;
                 break;
-            case STRING: return data.s != that.data.s;
+            case STRING: return !(data.s == that.data.s);
                 break;
             default: throw std::logic_error("Unknown type");
         }
     }
 
-    FORCE_INLINE  bool operator<(const Any& that) const {
+    FORCE_INLINE bool operator<(const Any& that) const {
         if (type == UNDEFINED || that.type == UNDEFINED) throw std::logic_error("UNDEFINED Type in Any ");
         if (type != that.type) throw std::logic_error("Cannot compare different types in Any");
         switch (type) {
@@ -140,20 +145,29 @@ struct Any {
 
 class GenericEntry {
 
-    GenericEntry(const std::unordered_map<int, Any> & m) : map(m), nxt(nullptr), prv(nullptr) {        
+    GenericEntry(const std::unordered_map<int, Any> & m) : map(m) {
+#ifndef CONCURRENT
+        nxt = prv = nullptr;
         int s = m.size() + 1;
         backPtrs = new void*[s];
         for (int i = 0; i < s; i++)
             backPtrs[i] = nullptr;
+#else
+        isInvalid = false;
+#endif
         isSampleEntry = false;
     }
     friend class GenericOps;
 public:
     std::unordered_map<int, Any> map;
-    void** backPtrs;
     bool isSampleEntry;
+#ifdef CONCURRENT
+    bool isInvalid;
+#else
+    void** backPtrs;
     GenericEntry *nxt;
     GenericEntry *prv;
+#endif
 
     template<class Archive>
     void serialize(Archive& ar, const unsigned int version) const {
@@ -178,20 +192,32 @@ public:
     template <typename... Args>
     GenericEntry(true_type isSampleEntry, const Args&... args) : map() {
         this->isSampleEntry = true;
+#ifdef CONCURRENT
+        isInvalid = false;
+#endif
         processSampleEntry(this, args...);
     }
 
     template <typename... Args>
     GenericEntry(false_type isSampleEntry, const Args&... args) : map() {
         this->isSampleEntry = false;
+#ifdef CONCURRENT
+        isInvalid = false;
+#endif
         processFullEntry(this, 1, args...);
 
     }
 
-    GenericEntry(int maxIdx = 10) : nxt(nullptr), prv(nullptr) {
+    GenericEntry(int maxIdx = 10) {
+#ifdef CONCURRENT
+        isInvalid = false;
+#else
+        nxt = prv = nullptr;
         backPtrs = new void*[maxIdx];
         for (int i = 0; i < maxIdx; i++)
             backPtrs[i] = nullptr;
+
+#endif
         isSampleEntry = false;
     }
 
@@ -239,17 +265,17 @@ public:
         map[i].data.t -= v;
     }
 
-    FORCE_INLINE  int getInt(int i) const {
+    FORCE_INLINE int getInt(int i) const {
         return map.at(i).data.i;
     }
 
-    FORCE_INLINE  date getDate(int i) const {
+    FORCE_INLINE date getDate(int i) const {
         return map.at(i).data.t;
     }
 
     //Assuming long is same as date type
 
-    FORCE_INLINE  long getLong(int i) const {
+    FORCE_INLINE long getLong(int i) const {
         return map.at(i).data.t;
     }
 
@@ -263,7 +289,7 @@ public:
 
     FORCE_INLINE GenericEntry* copy() const {
         //ONLY SHALLOW COPY for PString.
-        GenericEntry* ptr = (GenericEntry* ) malloc(sizeof(GenericEntry));
+        GenericEntry* ptr = (GenericEntry*) malloc(sizeof (GenericEntry));
         new(ptr) GenericEntry(map);
         return ptr;
     }
