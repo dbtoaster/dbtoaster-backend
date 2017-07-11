@@ -132,18 +132,18 @@ public:
     }
 
     ~PString() {
-        if (data_) {
-            if ((--(*ptr_count_)) == 0) {
-#ifdef USE_POOL
-                pool_.del(getNumCells(size_), data_);
-#else
-                delete[] data_;
-#endif //USE_POOL
-                data_ = nullptr;
-                delete ptr_count_;
-                ptr_count_ = nullptr;
-            }
-        }
+//         if (data_) {
+//             if ((--(*ptr_count_)) == 0) {
+// #ifdef USE_POOL
+//                 pool_.del(getNumCells(size_), data_);
+// #else
+//                 delete[] data_;
+// #endif //USE_POOL
+//                 data_ = nullptr;
+//                 delete ptr_count_;
+//                 ptr_count_ = nullptr;
+//             }
+//         }
     }
 
 //    PString copy() const {

@@ -188,8 +188,12 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |  const size_t numPrograms = 100;
        |#endif
        |
+        |#ifndef NUMTHREADS
+       |  #define NUMTHREADS 1
+       |#endif
+       |
        |struct Partition;
-       |const int numThreads = 3;
+       |const int numThreads = NUMTHREADS;
        |std::thread workers[numThreads];
        |volatile bool isReady[numThreads];
        |volatile bool startExecution, hasFinished;
@@ -444,6 +448,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |tpcc.loadHist();
          |tpcc.loadStocks();
          |
+         |cout << "NumThreads = " << numThreads << endl;
          |uint xactCounts[5] = {0, 0, 0, 0, 0};
          |Timepoint startTime, endTime;
          |
@@ -506,7 +511,8 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
           s"""
              |//counters["FailedNO"] = failedNO; counters["FailedDel"] = failedDel/10; counters["FailedOS"] = failedOS;
              |//durations["FailedNO"] = 0; durations["FailedDel"] = 0; durations["FailedOS"] = 0;
-             |ExecutionProfiler::printProfileToFile();
+             |for(uint i = 0; i<numThreads; ++i)
+             |  ExecutionProfiler::printProfileToFilePartitioned(i, partitions[i].durations, partitions[i].counters);
             """.stripMargin
         else doc""
       }
@@ -647,7 +653,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
     //    val txns = new PrintWriter("TpccTxns.hpp")
     //    txns.print(blocks)
     //    txns.close()
-    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stTypdef :\\:
+    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stTypdef :\\:
       doc"struct Partition { " :\\: Document.nest(2, doc"Partition():" :\\:
       stInit :: doc"  {\n  memset(xactCounts, 0, sizeof(uint) *5); }\n" :\\:
       stDecl :\\: structVars ::
@@ -656,7 +662,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |int partitionID;
          |uint failedNO;
          |uint xactCounts[5];
-       """.stripMargin :\\: blocks) :\\:
+       """.stripMargin :\\: execProfile :\\: blocks) :\\:
       "};" :\\:
       "Partition partitions[numThreads];" :\\:
       "#define PARTITIONED 1" :\\:

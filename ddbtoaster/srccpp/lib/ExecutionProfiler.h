@@ -59,19 +59,21 @@ struct ExecutionProfiler {
         }
 #endif
     }
+
     static void reset() {
-        #ifdef EXEC_PROFILE
+#ifdef EXEC_PROFILE
         for (auto it : durations) {
             durations[it.first] = 0;
             counters[it.first] = 0;
         }
 #endif
     }
+
     static void printProfile() {
         std::cout << "Profile Results :: " << std::endl;
 #ifdef EXEC_PROFILE
         for (auto it : durations) {
-             size_t c =  counters[it.first];
+            size_t c = counters[it.first];
             std::cout << it.first << "   count = " << counters[it.first] << " time = " << it.second / 1000000.0 << " ms    avg time = " << (c ? it.second / c : 0) << " ns" << std::endl;
         }
 #else
@@ -85,8 +87,22 @@ struct ExecutionProfiler {
         fout << ",count,timeMS,avgTimeNS" << std::endl;
 
         for (auto it : durations) {
-            size_t c =  counters[it.first];
-            fout << it.first << "," << counters[it.first] << "," << it.second / 1000000.0 << "," <<  (c ? it.second / c : 0) << std::endl;
+            size_t c = counters[it.first];
+            fout << it.first << "," << counters[it.first] << "," << it.second / 1000000.0 << "," << (c ? it.second / c : 0) << std::endl;
+        }
+        fout.close();
+#endif
+    }
+
+    static void printProfileToFilePartitioned(int partId, std::unordered_map<std::string, size_t>& DUR, std::unordered_map<std::string, size_t>& COU, const std::string& name = "profile.csv") {
+#ifdef EXEC_PROFILE
+        std::ofstream fout(name, std::ios::app);
+        if (partId == 0)
+            fout << ",count,timeMS,avgTimeNS" << std::endl;
+
+        for (auto it : DUR) {
+            size_t c = COU[it.first];
+            fout << "part-" << partId << ":" << it.first << "," << COU[it.first] << "," << it.second / 1000000.0 << "," << (c ? it.second / c : 0) << std::endl;
         }
         fout.close();
 #endif

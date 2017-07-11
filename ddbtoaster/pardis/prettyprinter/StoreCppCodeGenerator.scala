@@ -307,6 +307,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StringType => "PString"
     case DateType => "date"
     case IR.ArrayType(atp) => doc"$atp*"
+    case PardisVariableType(vtp) if vtp == NullType => tpeToDocument(PointerType(GenericEntryType))
     case PardisVariableType(vtp) => tpeToDocument(vtp)
     case _ => super.tpeToDocument(tp)
   }
