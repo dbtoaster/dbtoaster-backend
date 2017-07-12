@@ -449,7 +449,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |tpcc.loadStocks();
          |
          |cout << "NumThreads = " << numThreads << endl;
-         |uint xactCounts[5] = {0, 0, 0, 0, 0};
+         |uint globalXactCounts[5] = {0, 0, 0, 0, 0};
          |Timepoint startTime, endTime;
          |
          |
@@ -485,7 +485,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |    cout << "\\n Thread " << i << " : ";
          |    for (int x = 0; x < 5; ++x) {
          |        cout << partitions[i].xactCounts[x] << "  ";
-         |        xactCounts[x] += partitions[i].xactCounts[x];
+         |        globalXactCounts[x] += partitions[i].xactCounts[x];
          |        totalPrgsExec += partitions[i].xactCounts[x];
          |    }
          |}
@@ -502,8 +502,8 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "Failed OS = " << failedOS << endl;
          |cout << "Total time = " << execTime << " ms" << endl;
          |uint failedCount[] = {failedNO, 0, failedOS, failedDel / 10, 0};
-         |cout << "Total transactions = " << totalPrgsExec << "   NewOrder = " << xactCounts[0] << endl;
-         |cout << "TpmC = " << fixed << (xactCounts[0])* 60000.0 / execTime << endl;
+         |cout << "Total transactions = " << totalPrgsExec << "   NewOrder = " << globalXactCounts[0] << endl;
+         |cout << "TpmC = " << fixed << (globalXactCounts[0])* 60000.0 / execTime << endl;
 
 
          |${
@@ -520,7 +520,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |if(argc == 1 || atoi(argv[1]) == 1) {
          |  fout << "\\nCPP-${Optimizer.optCombination}-" << numPrograms << ",";
          |  for(int i = 0; i < 5 ; ++i)
-         |     fout << xactCounts[i] - failedCount[i] << ",";
+         |     fout << globalXactCounts[i] - failedCount[i] << ",";
          |  fout <<",";
          | }
          |fout << execTime << ",";

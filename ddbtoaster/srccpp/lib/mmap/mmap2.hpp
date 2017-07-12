@@ -9,7 +9,7 @@
 #include "../hpds/pstring.hpp"
 #include "../hpds/macro.hpp"
 #include <vector>
-std::vector<void*> tempMem;
+thread_local std::vector<void*> tempMem;
 
 FORCE_INLINE void clearTempMem() {
     for (auto ptr : tempMem)

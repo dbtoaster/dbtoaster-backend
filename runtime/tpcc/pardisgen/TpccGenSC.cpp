@@ -36,8 +36,12 @@ using namespace std;
   const size_t numPrograms = 100;
 #endif
 
+#ifndef NUMTHREADS
+  #define NUMTHREADS 1
+#endif
+
 struct Partition;
-const int numThreads = 3;
+const int numThreads = NUMTHREADS;
 std::thread workers[numThreads];
 volatile bool isReady[numThreads];
 volatile bool startExecution, hasFinished;
@@ -93,7 +97,6 @@ const size_t orderLineTblPoolSizes[] = {4194304*2, 1048576, 2097152};
 const size_t stockTblPoolSizes[] = {65536*2, 0};
 const size_t historyTblPoolSizes[] = {262144*2, 65536};
      
-
 struct SEntry5_IISDS {
   int _1;  int _2;  PString _3;  double _4;  PString _5;  SEntry5_IISDS *prv;  SEntry5_IISDS *nxt; void* backPtrs[5];
   SEntry5_IISDS() :_1(-2147483648), _2(-2147483648), _3(), _4(-1.7976931348623157E308), _5(), prv(nullptr), nxt(nullptr) {}
@@ -792,6 +795,7 @@ struct Partition {
   uint failedNO;
   uint xactCounts[5];
          
+  
   FORCE_INLINE void PaymentTx(int x16, date x17, int x18, int x19, int x20, int x21, int x22, int x23, int x24, PString x25, double x26) {
     int x28 = 0;
     struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9113 = NULL;
@@ -800,23 +804,23 @@ struct Partition {
       x9119._2 = x23;
       x9119._3 = x22;
       x9119._6 = x25;
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13702 = customerTblIdx1.get(x9119);
-      x9113 = x13702;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12028 = customerTblIdx1.getCopy(x9119);
+      x9113 = x12028;
     };
     if((x45==(partitionID))) {
       if((x21==(0))) {
         x9127._1 = x24;
         x9127._2 = x23;
         x9127._3 = x22;
-        struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13712 = customerTblIdx0.get(x9127);
-        x9113 = x13712;
+        struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12038 = customerTblIdx0.getCopy(x9127);
+        x9113 = x12038;
       };
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9130 = x9113;
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9132 = x9113;
       x28 = (x9132->_1);
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9135 = x9113;
-      char* x29033 = strstr((x9135->_14).data_, "BC");
-      if((x29033!=(NULL))) {
+      char* x19891 = strstr((x9135->_14).data_, "BC");
+      if((x19891!=(NULL))) {
         struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9139 = x9113;
         PString x3181 = PString(500);
         x3181.append((x9139->_1));
@@ -846,8 +850,9 @@ struct Partition {
         x9164->_17 += x26;
       };
       struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9166 = x9113;
-      customerTblIdx0.update(x9166);
-      customerTblIdx1.update(x9166);
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12077 = customerTbl.copyIntoPool(x9166);
+      customerTblIdx1.updateCopy(x12077, &customerTblIdx0);
+      customerTblIdx0.updateCopy(x12077, &customerTblIdx0);
     };
     if(((x19%(numThreads))==(partitionID))) {
       int x80 = xactCounts[1];
@@ -861,16 +866,20 @@ struct Partition {
         };
       };
       x9182._1 = x19;
-      struct SEntry9_ISSSSSSDD* x13768 = warehouseTblIdx0.get(x9182);
-      x13768->_9 += x26;
+      struct SEntry9_ISSSSSSDD* x12095 = warehouseTblIdx0.getCopy(x9182);
+      x12095->_9 += x26;
+      struct SEntry9_ISSSSSSDD* x12097 = warehouseTbl.copyIntoPool(x12095);
+      warehouseTblIdx0.updateCopy(x12097, &warehouseTblIdx0);
       x9187._1 = x20;
       x9187._2 = x19;
-      struct SEntry11_IISSSSSSDDI* x13773 = districtTblIdx0.get(x9187);
-      x13773->_10 += x26;
+      struct SEntry11_IISSSSSSDDI* x12102 = districtTblIdx0.getCopy(x9187);
+      x12102->_10 += x26;
+      struct SEntry11_IISSSSSSDDI* x12104 = districtTbl.copyIntoPool(x12102);
+      districtTblIdx0.updateCopy(x12104, &districtTblIdx0);
       PString x3234 = PString(24);
-      x3234.append((x13768->_2).data_, 10);
+      x3234.append((x12095->_2).data_, 10);
       x3234.append("    ", 4);
-      x3234.append((x13773->_3).data_, 10);
+      x3234.append((x12102->_3).data_, 10);
       int x110 = x28;
       x9199._1 = x110;
       x9199._2 = x23;
@@ -895,17 +904,17 @@ struct Partition {
     while(1) {
       
       int x150 = x140;
-      int ite27916 = 0;
+      int ite18754 = 0;
       if(x150) {
         
         int x151 = x132;
-        int x27917 = (x151<(x121));
-        ite27916 = x27917;
+        int x18755 = (x151<(x121));
+        ite18754 = x18755;
       } else {
-        ite27916 = 0;
+        ite18754 = 0;
       };
-      int x27741 = ite27916;
-      if (!(x27741)) break; 
+      int x18573 = ite18754;
+      if (!(x18573)) break; 
       
       int x155 = x132;
       int supwid = x124[x155];
@@ -913,29 +922,29 @@ struct Partition {
         x148 = 0;
       };
       int x160 = x145;
-      int ite27930 = 0;
+      int ite18768 = 0;
       if(x160) {
-        ite27930 = 1;
+        ite18768 = 1;
       } else {
         
-        int x27932 = ((supwid%(numThreads))==(partitionID));
-        ite27930 = x27932;
+        int x18770 = ((supwid%(numThreads))==(partitionID));
+        ite18768 = x18770;
       };
-      int x27749 = ite27930;
-      x145 = x27749;
+      int x18581 = ite18768;
+      x145 = x18581;
       int x166 = x132;
       int x167 = x123[x166];
       x9316._1 = x167;
-      struct SEntry5_IISDS* x13919 = itemTblIdx0.get(x9316);
-      if((x13919==(NULL))) {
+      struct SEntry5_IISDS* x12255 = itemTblIdx0.getCopy(x9316);
+      if((x12255==(NULL))) {
         x140 = 0;
       } else {
         int x173 = x132;
-        x127[x173] = (x13919->_3);
+        x127[x173] = (x12255->_3);
         int x176 = x132;
-        x126[x176] = (x13919->_4);
+        x126[x176] = (x12255->_4);
         int x179 = x132;
-        idata[x179] = (x13919->_5);
+        idata[x179] = (x12255->_5);
       };
       int x183 = x132;
       x132 = (x183+(1));
@@ -951,14 +960,16 @@ struct Partition {
           x9343._1 = x120;
           x9343._2 = x119;
           x9343._3 = x118;
-          struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x13948 = customerTblIdx0.get(x9343);
+          struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12284 = customerTblIdx0.getCopy(x9343);
           x9346._1 = x118;
-          struct SEntry9_ISSSSSSDD* x13951 = warehouseTblIdx0.get(x9346);
+          struct SEntry9_ISSSSSSDD* x12287 = warehouseTblIdx0.getCopy(x9346);
           x9349._1 = x119;
           x9349._2 = x118;
-          struct SEntry11_IISSSSSSDDI* x13955 = districtTblIdx0.get(x9349);
-          int x9351 = x13955->_11;
-          x13955->_11 += 1;
+          struct SEntry11_IISSSSSSDDI* x12291 = districtTblIdx0.getCopy(x9349);
+          int x9351 = x12291->_11;
+          x12291->_11 += 1;
+          struct SEntry11_IISSSSSSDDI* x12294 = districtTbl.copyIntoPool(x12291);
+          districtTblIdx0.updateCopy(x12294, &districtTblIdx0);
           int x210 = x148;
           x9356._1 = x9351;
           x9356._2 = x119;
@@ -987,35 +998,37 @@ struct Partition {
             int ol_quantity = x125[x229];
             x9372._1 = ol_i_id;
             x9372._2 = ol_supply_w_id;
-            struct SEntry17_IIISSSSSSSSSSIIIS* x13987 = stockTblIdx0.get(x9372);
-            const PString& x9375 = *(&x13987->_4 + (x119-1));
-            int x9376 = x13987->_3;
+            struct SEntry17_IIISSSSSSSSSSIIIS* x12325 = stockTblIdx0.getCopy(x9372);
+            const PString& x9375 = *(&x12325->_4 + (x119-1));
+            int x9376 = x12325->_3;
             int x240 = x132;
             x128[x240] = x9376;
             if(((ol_supply_w_id%(numThreads))==(partitionID))) {
-              x13987->_3 = (x9376-(ol_quantity));
+              x12325->_3 = (x9376-(ol_quantity));
               if((x9376<=(ol_quantity))) {
-                x13987->_3 += 91;
+                x12325->_3 += 91;
               };
               int x250 = 0;
               if((ol_supply_w_id!=(x118))) {
                 x250 = 1;
               };
+              struct SEntry17_IIISSSSSSSSSSIIIS* x12343 = stockTbl.copyIntoPool(x12325);
+              stockTblIdx0.updateCopy(x12343, &stockTblIdx0);
             };
             int x257 = x132;
             PString& x258 = idata[x257];
-            char* x29315 = strstr(x258.data_, "original");
-            int ite28024 = 0;
-            if((x29315!=(NULL))) {
+            char* x20187 = strstr(x258.data_, "original");
+            int ite18866 = 0;
+            if((x20187!=(NULL))) {
               
-              char* x29321 = strstr((x13987->_17).data_, "original");
-              int x28025 = (x29321!=(NULL));
-              ite28024 = x28025;
+              char* x20193 = strstr((x12325->_17).data_, "original");
+              int x18867 = (x20193!=(NULL));
+              ite18866 = x18867;
             } else {
-              ite28024 = 0;
+              ite18866 = 0;
             };
-            int x27837 = ite28024;
-            if(x27837) {
+            int x18673 = ite18866;
+            if(x18673) {
               int x263 = x132;
               x129[x263].data_[0] = 'B';
             } else {
@@ -1024,7 +1037,7 @@ struct Partition {
             };
             int x275 = x132;
             double x276 = x126[x275];
-            double ol_amount = ((ol_quantity*(x276))*(((1.0+((x13951->_8)))+((x13955->_9)))))*((1.0-((x13948->_16))));
+            double ol_amount = ((ol_quantity*(x276))*(((1.0+((x12287->_8)))+((x12291->_9)))))*((1.0-((x12284->_16))));
             int x284 = x132;
             x130[x284] = ol_amount;
             double x286 = x218;
@@ -1058,16 +1071,18 @@ struct Partition {
               int ol_quantity = x125[x309];
               x9441._1 = ol_i_id;
               x9441._2 = ol_supply_w_id;
-              struct SEntry17_IIISSSSSSSSSSIIIS* x14064 = stockTblIdx0.get(x9441);
-              int x9443 = x14064->_3;
-              x14064->_3 = (x9443-(ol_quantity));
+              struct SEntry17_IIISSSSSSSSSSIIIS* x12404 = stockTblIdx0.getCopy(x9441);
+              int x9443 = x12404->_3;
+              x12404->_3 = (x9443-(ol_quantity));
               if((x9443<=(ol_quantity))) {
-                x14064->_3 += 91;
+                x12404->_3 += 91;
               };
               int x323 = 0;
               if((ol_supply_w_id!=(x118))) {
                 x323 = 1;
               };
+              struct SEntry17_IIISSSSSSSSSSIIIS* x12415 = stockTbl.copyIntoPool(x12404);
+              stockTblIdx0.updateCopy(x12415, &stockTblIdx0);
             };
             int x330 = x132;
             x132 = (x330+(1));
@@ -1092,54 +1107,46 @@ struct Partition {
         int x359 = x350;
         x9640._2 = x359;
         x9640._3 = x342;
-        struct SEntry3_III* x14282 = newOrderTblIdx1.get(x9640);
-        if((x14282!=(NULL))) {
-          int x9644 = x14282->_1;
+        struct SEntry3_III* x12630 = newOrderTblIdx1.getCopy(x9640);
+        if((x12630!=(NULL))) {
+          int x9644 = x12630->_1;
           int x368 = x350;
           orderIDs[(x368-(1))] = x9644;
-          newOrderTbl.del(x14282);
+          newOrderTbl.delCopy(x12630);
           int x373 = x350;
           x9651._1 = x9644;
           x9651._2 = x373;
           x9651._3 = x342;
-          struct SEntry8_IIIITIIB* x14295 = orderTblIdx0.get(x9651);
-          x14295->_6 = x343;
+          struct SEntry8_IIIITIIB* x12643 = orderTblIdx0.getCopy(x9651);
+          x12643->_6 = x343;
+          struct SEntry8_IIIITIIB* x12646 = orderTbl.copyIntoPool(x12643);
+          orderTblIdx1.updateCopy(x12646, &orderTblIdx0);
+          orderTblIdx0.updateCopy(x12646, &orderTblIdx0);
           double x382 = 0.0;
           int x384 = x350;
           x9660._1 = x9644;
           x9660._2 = x384;
           x9660._3 = x342;
-          //sliceRes 
-          typedef typename orderLineTblIdx1Type::IFN IDXFN17053;
-          HASH_RES_t h17053 = IDXFN17053::hash(x9660);
-          auto* x17053 = &(orderLineTblIdx1.buckets_[h17053 % orderLineTblIdx1.size_]);
-          if(x17053 -> head.obj) {
-             do {
-               if(h17053 == x17053->hash && !IDXFN17053::cmp(x9660, *x17053->head.obj))
-                 break;
-             } while((x17053 = x17053->nxt));
-          } else { 
-             x17053 = nullptr;
-          }
-          if((x17053 == nullptr)) {
-          } else {
-            //sliceResMapNoUpd 
-            auto* nx17053 = &x17053->head;
-            do {
-              auto orderLineEntry = nx17053->obj;
-              orderLineEntry->_7 = x341;
-              double x389 = x382;
-              x382 = (x389+((orderLineEntry->_9)));
-            } while((nx17053 = nx17053->nxt));
-          };
+          orderLineTblIdx1.sliceCopy(x9660, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) {
+            orderLineEntry->_7 = x341;
+            double x389 = x382;
+            x382 = (x389+((orderLineEntry->_9)));
+            struct SEntry10_IIIIIITIDS* x12657 = orderLineTbl.copyIntoPool(orderLineEntry);
+            orderLineTblIdx1.updateCopy(x12657, &orderLineTblIdx0);
+            orderLineTblIdx0.updateCopy(x12657, &orderLineTblIdx0);
+          
+          });
           int x397 = x350;
-          x9664._1 = (x14295->_4);
+          x9664._1 = (x12643->_4);
           x9664._2 = x397;
           x9664._3 = x342;
-          struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x14317 = customerTblIdx0.get(x9664);
+          struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12671 = customerTblIdx0.getCopy(x9664);
           double x401 = x382;
-          x14317->_17 += x401;
-          x14317->_20 += 1;
+          x12671->_17 += x401;
+          x12671->_20 += 1;
+          struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12675 = customerTbl.copyIntoPool(x12671);
+          customerTblIdx1.updateCopy(x12675, &customerTblIdx0);
+          customerTblIdx0.updateCopy(x12675, &customerTblIdx0);
         } else {
           int x405 = failedDel;
           failedDel = (1+(x405));
@@ -1158,8 +1165,8 @@ struct Partition {
     if(((x424%(numThreads))==(partitionID))) {
       x9804._1 = x425;
       x9804._2 = x424;
-      struct SEntry11_IISSSSSSDDI* x14402 = districtTblIdx0.get(x9804);
-      int x9806 = x14402->_11;
+      struct SEntry11_IISSSSSSDDI* x12768 = districtTblIdx0.getCopy(x9804);
+      int x9806 = x12768->_11;
       int x437 = (x9806-(20));
       unordered_set<int> unique_ol_i_id({}); //setApply1
       while(1) {
@@ -1171,33 +1178,16 @@ struct Partition {
         x9817._1 = x444;
         x9817._2 = x425;
         x9817._3 = x424;
-        //sliceRes 
-        typedef typename orderLineTblIdx1Type::IFN IDXFN17109;
-        HASH_RES_t h17109 = IDXFN17109::hash(x9817);
-        auto* x17109 = &(orderLineTblIdx1.buckets_[h17109 % orderLineTblIdx1.size_]);
-        if(x17109 -> head.obj) {
-           do {
-             if(h17109 == x17109->hash && !IDXFN17109::cmp(x9817, *x17109->head.obj))
-               break;
-           } while((x17109 = x17109->nxt));
-        } else { 
-           x17109 = nullptr;
-        }
-        if((x17109 == nullptr)) {
-        } else {
-          //sliceResMapNoUpd 
-          auto* nx17109 = &x17109->head;
-          do {
-            auto orderLineEntry = nx17109->obj;
-            int x9841 = orderLineEntry->_5;
-            x9843._1 = x9841;
-            x9843._2 = x424;
-            struct SEntry17_IIISSSSSSSSSSIIIS* x14417 = stockTblIdx0.get(x9843);
-            if(((x14417->_3)<(x426))) {
-              unique_ol_i_id.insert(x9841);
-            };
-          } while((nx17109 = nx17109->nxt));
-        };
+        orderLineTblIdx1.sliceCopy(x9817, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) {
+          int x9841 = orderLineEntry->_5;
+          x9843._1 = x9841;
+          x9843._2 = x424;
+          struct SEntry17_IIISSSSSSSSSSIIIS* x12783 = stockTblIdx0.getCopy(x9843);
+          if(((x12783->_3)<(x426))) {
+            unique_ol_i_id.insert(x9841);
+          };
+        
+        });
         int x461 = x437;
         x437 = (x461+(1));
       };
@@ -1208,58 +1198,41 @@ struct Partition {
   }
   FORCE_INLINE void OrderStatusTx(int x472, date x473, int x474, int x475, int x476, int x477, int x478, PString x479) {
     if(((x475%(numThreads))==(partitionID))) {
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite28396 = 0;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite19249 = 0;
       if((x477>(0))) {
         x9921._2 = x476;
         x9921._3 = x475;
         x9921._6 = x479;
-        struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x28400 = customerTblIdx1.get(x9921);
-        ite28396 = x28400;
+        struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x19253 = customerTblIdx1.getCopy(x9921);
+        ite19249 = x19253;
       } else {
         x9924._1 = x478;
         x9924._2 = x476;
         x9924._3 = x475;
-        struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x28405 = customerTblIdx0.get(x9924);
-        ite28396 = x28405;
+        struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x19258 = customerTblIdx0.getCopy(x9924);
+        ite19249 = x19258;
       };
-      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9897 = ite28396;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x9897 = ite19249;
       x9900._2 = x476;
       x9900._3 = x475;
       x9900._4 = (x9897->_3);
-      struct SEntry8_IIIITIIB* x14492 = orderTblIdx1.get(x9900);
-      int ite28415 = 0;
-      if((x14492==(NULL))) {
-        int x28416 = failedOS;
-        failedOS = (1+(x28416));
-        ite28415 = 0;
+      struct SEntry8_IIIITIIB* x12858 = orderTblIdx1.getCopy(x9900);
+      int ite19268 = 0;
+      if((x12858==(NULL))) {
+        int x19269 = failedOS;
+        failedOS = (1+(x19269));
+        ite19268 = 0;
       } else {
-        x9910._1 = (x14492->_1);
+        x9910._1 = (x12858->_1);
         x9910._2 = x476;
         x9910._3 = x475;
-        //sliceRes 
-        typedef typename orderLineTblIdx1Type::IFN IDXFN28424;
-        HASH_RES_t h28424 = IDXFN28424::hash(x9910);
-        auto* x28424 = &(orderLineTblIdx1.buckets_[h28424 % orderLineTblIdx1.size_]);
-        if(x28424 -> head.obj) {
-           do {
-             if(h28424 == x28424->hash && !IDXFN28424::cmp(x9910, *x28424->head.obj))
-               break;
-           } while((x28424 = x28424->nxt));
-        } else { 
-           x28424 = nullptr;
-        }
-        if((x28424 == nullptr)) {
-        } else {
-          //sliceResMapNoUpd 
-          auto* nx28424 = &x28424->head;
-          do {
-            auto orderLineEntry = nx28424->obj;
-            int x519 = 1;
-          } while((nx28424 = nx28424->nxt));
-        };
-        ite28415 = 1;
+        orderLineTblIdx1.sliceCopy(x9910, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) {
+          int x519 = 1;
+        
+        });
+        ite19268 = 1;
       };
-      int x523 = ite28415;
+      int x523 = ite19268;
       int x525 = xactCounts[2];
       xactCounts[2] = (x525+(1));
     };
@@ -1355,7 +1328,8 @@ int main(int argc, char** argv) {
   tpcc.loadHist();
   tpcc.loadStocks();
   
-  uint xactCounts[5] = {0, 0, 0, 0, 0};
+  cout << "NumThreads = " << numThreads << endl;
+  uint globalXactCounts[5] = {0, 0, 0, 0, 0};
   Timepoint startTime, endTime;
   
   
@@ -1391,7 +1365,7 @@ int main(int argc, char** argv) {
       cout << "\n Thread " << i << " : ";
       for (int x = 0; x < 5; ++x) {
           cout << partitions[i].xactCounts[x] << "  ";
-          xactCounts[x] += partitions[i].xactCounts[x];
+          globalXactCounts[x] += partitions[i].xactCounts[x];
           totalPrgsExec += partitions[i].xactCounts[x];
       }
   }
@@ -1408,16 +1382,16 @@ int main(int argc, char** argv) {
   cout << "Failed OS = " << failedOS << endl;
   cout << "Total time = " << execTime << " ms" << endl;
   uint failedCount[] = {failedNO, 0, failedOS, failedDel / 10, 0};
-  cout << "Total transactions = " << totalPrgsExec << "   NewOrder = " << xactCounts[0] << endl;
-  cout << "TpmC = " << fixed << (xactCounts[0])* 60000.0 / execTime << endl;
+  cout << "Total transactions = " << totalPrgsExec << "   NewOrder = " << globalXactCounts[0] << endl;
+  cout << "TpmC = " << fixed << (globalXactCounts[0])* 60000.0 / execTime << endl;
   
   
   
   ofstream fout("tpcc_res_cpp.csv", ios::app);
   if(argc == 1 || atoi(argv[1]) == 1) {
-    fout << "\nCPP-ABCDEFGILNOQRSUVXY-" << numPrograms << ",";
+    fout << "\nCPP-ABCEGINORVXY-" << numPrograms << ",";
     for(int i = 0; i < 5 ; ++i)
-       fout << xactCounts[i] - failedCount[i] << ",";
+       fout << globalXactCounts[i] - failedCount[i] << ",";
     fout <<",";
    }
   fout << execTime << ",";

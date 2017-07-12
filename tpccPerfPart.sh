@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 rm -f opt_list.txt
-exec="0711/t2"
+exec="0713/parts/t1"
 
 allopts=(
 
@@ -47,7 +47,7 @@ rm -f tpcc_res_cpp.csv
 
 cnt=1
 numWare=5
-profTx="-opt profileblocks"
+profTx="" #-opt profileblocks"
 
 numThreads=5
 initsize="-opt initsize"
@@ -58,7 +58,7 @@ do
         echo "Running optimization combo $cnt"
         echo "$cnt $opt" >> opt_list.txt
 
-        n=8000000
+        n=800000
 
         mkdir -p $exec/tpcc$cnt/
         rm -f profile.csv
@@ -83,10 +83,10 @@ do
 
     cnt=0
     mkdir -p $exec/tpcc$cnt/
-    n=8000000
-    #most optimal case dry run
+    n=800000
+    # #most optimal case dry run
 
-    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang pcpp -info tpcc-$numWare-$n"
+    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
     rm -f tpcc.out
     g++ -std=c++11 -O3 -g -DNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
 
@@ -96,9 +96,9 @@ do
     done
 
     #actual run
-    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profileblocks $initsize -lang pcpp -info tpcc-$numWare-$n"
+    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profileblocks $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
     rm -f tpcc.out
-    g++ -std=c++11 -O3 -g -viDNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNORESIZE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
+    g++ -std=c++11 -O3 -g -DNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNORESIZE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
 
     for i in {1..3}
     do
@@ -107,15 +107,28 @@ do
 
     mv profile.csv $exec/tpcc$cnt/profileBlock.csv
     cp runtime/tpcc/pardisgen/TpccGenSC.cpp $exec/tpcc$cnt/TpccBlock.cpp
-
+    mv tpcc_res_cpp.csv $exec/tpccPartOpts.csv
     for numThreads in {1..5}
     do
+        sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
         rm -f tpcc.out
-        g++ -std=c++11 -O3 -DNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNORESIZE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
-        for i in {1..3}
+        g++ -std=c++11 -O3 -g -DNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
+
+        for i in {1..1}
         do
-             ./tpcc.out $i
+            ./tpcc.out $i
         done
-    mv profile.csv $exec/tpcc_p$numThreads.csv
+
+        #actual run
+        sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profileblocks $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
+        rm -f tpcc.out
+        g++ -std=c++11 -O3 -g -DNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNORESIZE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
+
+        for i in {1..3}
+            do
+        ./tpcc.out $i
+        done
+        mv profile.csv $exec/tpcc_p$numThreads.csv
     done
+    mv tpcc_res_cpp.csv $exec/tpccParts.csv
 done
