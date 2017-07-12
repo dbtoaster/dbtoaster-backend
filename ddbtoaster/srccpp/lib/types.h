@@ -7,7 +7,7 @@
 struct ALIGN Transaction;
 struct ALIGN TransactionManager;
 struct PRED;
-struct ALIGN VBase;
+struct VBase;
 struct ALIGN MBase;
 struct ALIGN EBase;
 struct Program;
@@ -71,7 +71,7 @@ FORCE_INLINE OperationReturnStatus OR(TransactionReturnStatus op) {
         cerr << "Cannot set scheduler" << endl;
 
 #ifndef NUMTHREADS
-#define NUMTHREADS 4
+#define NUMTHREADS 5
 #endif 
 
 #define MAX_IDXES_PER_TBL 3

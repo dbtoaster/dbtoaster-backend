@@ -193,7 +193,65 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
           doc"}"
       pre :: Document.nest(2, blockToDocument(o)) :/: post
 
-
+//    case Statement(sym, IdxSlice(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline && Optimizer.mvget =>
+//      val symid = sym.id.toString
+//      val IDX_FN = "IDXFN" + symid
+//      val T = i.tp
+//      val pre = "//cuckoo_slice" :\\:
+//        doc"OperationReturnStatus st$symid;" :\\:
+//      doc"Container *sentinel$symid;" :\\:
+//        doc"if ($idx.index.find($key, sentinel$symid)) {" :\\:
+//        doc"  Container *prev$symid = sentinel$symid, *prevNext$symid = sentinel$symid->next, *cur$symid = prevNext$symid, *curNext$symid;" :\\:
+//        doc"  do { " :\\:
+//        Document.nest(4,
+//          doc"curNext$symid = cur$symid -> next;" :\\:
+//            doc"while (isMarked(curNext$symid)) {" :\\:
+//            doc"  cur$symid = unmark(curNext$symid);" :\\:
+//            doc"  if (!cur$symid)" :\\:
+//            doc"    break;" :\\:
+//            doc"  curNext$symid = cur$symid -> next;" :\\:
+//            doc"}" :\\:
+//            doc"if (!cur$symid)" :\\:
+//            doc"  break;" :\\:
+//            doc"prev$symid -> next$symid.compare_exchange_strong(prevNext$symid, cur$symid);" :\\:
+//            doc"Version<$T>* v$symid = cur$symid -> e -> versionHead;" :\\:
+//            doc"if (!v$symid -> isVisible(&xact)) {" :\\:
+//            doc"  if (v$symid -> xactid > initCommitTS) { " :\\:
+//            doc"    Transaction * otherXact = TStoPTR(v$symid -> xactid);" :\\:
+//            doc"    xact.failedBecauseOf = otherXact;" :\\:
+//            doc"   }" :\\:
+//            doc"  st$symid = WW_VALUE;" :\\:
+//            doc"  break;" :\\:
+//            doc"}" :\\:
+//            doc"if (v$symid && !v$symid -> obj.isInvalid) {" :\\:
+//            doc"  Version <$T>* newV$symid = (Version<$T>*)malloc(sizeof(Version<$T>));" :\\:
+//            doc"  new (newV$symid) Version<$T>(v$symid, xact);" :\\:
+//            doc"  if (!cur$symid -> e -> versionHead.compare_exchange_strong(v$symid, newV$symid)) { " :\\:
+//            doc"     if (v$symid -> xactid > initCommitTS) { " :\\:
+//            doc"        Transaction* otherXact = TStoPTR(v$symid -> xactid); " :\\:
+//            doc"        xact.failedBecauseOf = otherXact;" :\\:
+//            doc"     }" :\\:
+//            doc"     free(newV$symid); " :\\:
+//            doc"     st$symid = WW_VALUE;" :\\:
+//            doc"     break;" :\\:
+//            doc"  }" :\\:
+//            doc"  xact.undoBufferHead = newV$symid;" :\\:
+//            doc"  TransactionReturnStatus funcst$symid = f$symid(&newV$symid -> obj);" :\\:
+//            doc"  if (funcst$symid != SUCCESS)" :\\:
+//            doc"    return OR(funcst$symid);" :\\:
+//            doc"}" :\\:
+//            doc"prev$symid = cur$symid;" :\\:
+//            doc"prevNext$symid = curNext$symid;" :\\:
+//            doc"cur$symid = curNext$symid;" :\\:
+//            doc"}while (cur$symid);") :\\:
+//        doc"  SlicePred<$T, $IDX_FN >* pred$symid = (SlicePred<$T, $IDX_FN >*) malloc(sizeof(SlicePred<$T, $IDX_FN>));" :\\:
+//        doc"  new (pred$symid) SlicePred <$T, $IDX_FN > ($key, xact.predicateHead, $idx.mmapmv, col_type (- 1));" :\\:
+//        doc"  xact.predicateHead = pred$symid;" :\\:
+//        doc"  st$symid = OP_SUCCESS;" :\\:
+//        doc"} else " :\\:
+//        doc"st$symid = NO_KEY;" :\\:
+//        (if (Optimizer.OpResChecks) doc"if(st$symid == WW_VALUE) return WW_ABORT;" else doc"")
+//      pre
 
     case Statement(sym, IdxSlice(idx@Def(StoreIndex(self, idxNum, _, _, _)), key, Def(PardisLambda(_, i, o)))) if Optimizer.sliceInline =>
       val symid = sym.id.toString

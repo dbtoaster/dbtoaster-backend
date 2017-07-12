@@ -110,7 +110,7 @@ struct CuckooIndex : public IndexMV<T> {
         Version<T>* v1, *v2;
         for (auto e1 = t1.cbegin(); e1 != t1.cend(); ++e1) {
             EntryMV<T>* e2;
-            
+
             v1 = e1->second->versionHead;
             //SBJ: v1 cannot be nullptr if rollback removes EntryMV if all versions are gone
             if (!v1 || v1->obj.isInvalid)
@@ -1117,18 +1117,18 @@ struct VersionedAggregator : public IndexMV<T> {
     struct VersionedContainer {
         EntryMV<T>* aggE;
         Transaction* xact;
-        VersionedContainer* next;
+        volatile VersionedContainer* next;
 
-        VersionedContainer(EntryMV<T>*e, Transaction* xact, VersionedContainer* n) : aggE(e), xact(xact), next(n) {
+        VersionedContainer(EntryMV<T>*e, Transaction* xact, volatile VersionedContainer* n) : aggE(e), xact(xact), next(n) {
         }
     };
 
     struct VersionedSlice {
-        VersionedContainer* head;
+        volatile VersionedContainer* head;
         SpinLock lock;
         ST_IDX sliceST;
 
-        VersionedSlice() : head(nullptr), lock(), sliceST() {
+        VersionedSlice() :  head(nullptr), lock(), sliceST() {
 
         }
 
@@ -1222,7 +1222,7 @@ struct VersionedAggregator : public IndexMV<T> {
         }
 
         FORCE_INLINE EntryMV<T>* get(Transaction & xact) {
-            VersionedContainer* cur = head;
+            volatile VersionedContainer* cur = head;
             while (cur && cur->xact->commitTS > xact.startTS) {
                 cur = cur->next;
             }
@@ -1245,6 +1245,7 @@ struct VersionedAggregator : public IndexMV<T> {
         e->backptrs[IndexMV<T>::idxId] = vsnew;
         vsnew->head = vc;
         vsnew->sliceST.add(e);
+
         T* keyc = newv->obj.copy();
         index.upsert(keyc, [&](VersionedSlice * vsold) {
             free(keyc);
@@ -1290,8 +1291,7 @@ struct VersionedAggregator : public IndexMV<T> {
         }
     }
 
-
-    FORCE_INLINE T* getForUpdate_(const T* key, OperationReturnStatus& st, Transaction& xact)  {
+        FORCE_INLINE T* getForUpdate_(const T* key, OperationReturnStatus& st, Transaction& xact) {
         VersionedSlice* result;
         if (index.find(key, result)) {
             EntryMV<T>* resE = result->get(xact);
@@ -1367,11 +1367,11 @@ struct MinHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
 
     }
 
-    FORCE_INLINE T* get(const T& key, Transaction & xact) const {
+    FORCE_INLINE T * get(const T& key, Transaction & xact) const {
         return get(&key, xact);
     }
 
-    FORCE_INLINE T* get(const T* key, Transaction & xact) const override {
+    FORCE_INLINE T * get(const T* key, Transaction & xact) const override {
         T* ret = Super::get_(key, xact);
         if (ret) {
             //            assert(ret->_4.data_);
@@ -1384,10 +1384,11 @@ struct MinHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
         return ret;
     }
 
-    FORCE_INLINE T* getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
+    FORCE_INLINE T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
         return getForUpdate(&key, s, xact);
     }
-    FORCE_INLINE T* getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
+
+    FORCE_INLINE T * getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
         T* ret = Super::getForUpdate_(key, s, xact);
         if (ret) {
             //            assert(ret->_4.data_);
@@ -1409,11 +1410,11 @@ struct MaxHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
 
     }
 
-    FORCE_INLINE T* get(const T& key, Transaction & xact) const {
+    FORCE_INLINE T * get(const T& key, Transaction & xact) const {
         return get(&key, xact);
     }
 
-    FORCE_INLINE T* get(const T* key, Transaction & xact) const override {
+    FORCE_INLINE T * get(const T* key, Transaction & xact) const override {
         T* ret = Super::get_(key, xact);
         if (ret) {
             MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MaxSlicePred<T, IDX_FN1, IDX_FN2>));
@@ -1425,10 +1426,11 @@ struct MaxHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
         return ret;
     }
 
-    FORCE_INLINE T* getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
+    FORCE_INLINE T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
         return getForUpdate(&key, s, xact);
     }
-    FORCE_INLINE T* getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
+
+    FORCE_INLINE T * getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
         T* ret = Super::getForUpdate_(key, s, xact);
         if (ret) {
             MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MaxSlicePred<T, IDX_FN1, IDX_FN2>));
@@ -1449,11 +1451,11 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
 
     }
 
-    FORCE_INLINE T* get(const T& key, Transaction & xact) const {
+    FORCE_INLINE T * get(const T& key, Transaction & xact) const {
         return get(&key, xact);
     }
 
-    FORCE_INLINE T* get(const T* key, Transaction & xact) const override {
+    FORCE_INLINE T * get(const T* key, Transaction & xact) const override {
         T* ret = Super::get_(key, xact);
         if (ret) {
             SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof (SlicePred<T, IDX_FN1>));
@@ -1463,8 +1465,8 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
         }
         return ret;
     }
-    
-    FORCE_INLINE T* getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
+
+    FORCE_INLINE T * getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
         T* ret = Super::getForUpdate_(key, s, xact);
         if (ret) {
             SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof (SlicePred<T, IDX_FN1>));
@@ -1473,8 +1475,8 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
         }
         return ret;
     }
-    
-    FORCE_INLINE T* getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
+
+    FORCE_INLINE T * getForUpdate(const T& key, OperationReturnStatus& s, Transaction & xact) {
         return getForUpdate(&key, s, xact);
     }
 

@@ -9,7 +9,7 @@
 template <typename T>
 struct ALIGN EntryMV;
 
-struct ALIGN VBase {
+struct VBase {
     timestamp xactid;
     std::atomic<VBase*> oldV;
     VBase* nextInUndoBuffer;
@@ -21,7 +21,8 @@ struct ALIGN VBase {
     }
 
     static FORCE_INLINE VBase* getVersionFromT(char* entry) {
-        return (VBase *) ((size_t)entry & (~63));
+        size_t ptr2 = (size_t)entry - sizeof(VBase);
+        return (VBase *) (ptr2 & (~63));
     }
     virtual VBase* getVersionAfter(timestamp oldest) = 0;
     virtual void removeFromVersionChain() = 0;

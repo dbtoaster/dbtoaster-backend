@@ -908,14 +908,15 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |xactManager.commit(t0, 0);
          |cout.imbue(std::locale(""));
          |
-         |memset(xactCounts, 0, 5 * sizeof(uint));
+         |memset(globalXactCounts, 0, 5 * sizeof(uint));
          |memset(xactManager.activeXactStartTS, 0xff, sizeof(xactManager.activeXactStartTS[0]) * numThreads);
-         |
+         |ThreadLocal *tls[numThreads];
          |Timepoint startTime, endTime;
          |std::thread workers[numThreads];
          |
          |for (uint8_t i = 0; i < numThreads; ++i) {
-         |    workers[i] = std::thread(threadFunction, i, &orig);
+         |    tls[i] = new ThreadLocal(i, orig);
+         |    workers[i] = std::thread(threadFunction, i, tls[i]);
          |}
          |bool all_ready = true;
          |//check if all worker threads are ready. Execution can be started once all threads finish startup procedure
@@ -940,12 +941,18 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |endTime = Now;
          |auto execTime = DurationMS(endTime - startTime);
          |
+         |for(uint i = 0; i < numThreads;  ++i) {
+         |   for(uint j = 0; j < 5; ++j) {
+         |      globalXactCounts[j] += tls[i]->threadXactCounts[j];
+         |    }
+         |}
+         |
          |cout << "Failed NO = " << failedNO << endl;
          |cout << "Failed Del = " << failedDel << endl;
          |cout << "Failed OS = " << failedOS << endl;
          |cout << "Total time = " << execTime << " ms" << endl;
-         |cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  xactCounts[0]  << endl;
-         |cout << "TpmC = " << fixed <<  (xactCounts[0])* 60000.0/execTime << endl;
+         |cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  globalXactCounts[0]  << endl;
+         |cout << "TpmC = " << fixed <<  (globalXactCounts[0])* 60000.0/execTime << endl;
          |${
         if (Optimizer.profileBlocks || Optimizer.profileStoreOperations)
           s"""
@@ -959,7 +966,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |if(argc == 1 || atoi(argv[1]) == 1) {
          |  fout << "\\nCPP-${Optimizer.optCombination}-" << numPrograms << ",";
          |  for(int i = 0; i < 5 ; ++i)
-         |     fout << xactCounts[i] << ",";
+         |     fout << globalXactCounts[i] << ",";
          |  fout <<",";
          | }
          |fout << execTime << ",";
@@ -1109,7 +1116,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       """
         |TransactionManager xactManager;
         |TransactionManager& Transaction::tm(xactManager);
-        |uint xactCounts[5];
+        |uint globalXactCounts[5];
         |uint8_t prgId7to5[] = {0, 1, 1, 2, 2, 3, 4};
         |
         |volatile bool isReady[numThreads];
@@ -1178,11 +1185,11 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       """.stripMargin
     val threadFn =
       s"""std::atomic<uint> PC(0);
-         |void threadFunction(uint8_t thread_id, TPCC_Data* data) {
+         |void threadFunction(uint8_t thread_id, ThreadLocal* tl) {
          |    setAffinity(thread_id);
          |    //    setSched(SCHED_FIFO);
          |
-         |  ThreadLocal tl(thread_id, *data);
+         |
          |  isReady[thread_id] = true;
          |  uint pid = PC++;
          |  Program* p;
@@ -1197,7 +1204,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |
          |    xactManager.begin(p->xact, thread_id);
          |
-         |    st = tl.runProgram(p);
+         |    st = tl->runProgram(p);
          |
          |    if (st != SUCCESS) {
          |      xactManager.rollback(p->xact, thread_id);
@@ -1214,7 +1221,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |      }
          |    } else {
          |      if (xactManager.validateAndCommit(p->xact, thread_id)) {   //rollback happens inside function if it fails
-         |        xactCounts[prgId7to5[p->id]]++;
+         |        tl->threadXactCounts[prgId7to5[p->id]]++;
          |        if (head != tail || full) {
          |          p = failedPrograms[head];
          |          if (p->xact.failedBecauseOf->commitTS != initCommitTS) {
@@ -1237,74 +1244,74 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |
        """.stripMargin
     val tpccData = doc"struct TPCC_Data {" :\\: Document.nest(2, doc"TPCC_Data(): " :\\: stInit1 :: "{}\n" :\\: stDecl) :\\: "};"
-    val threadLocal = doc"struct ThreadLocal { " :\\: Document.nest(2,
-    "\nuint8_t threadId;\nuint xactCounts[5];\n" :\\: doc"ThreadLocal(uint8_t tid, TPCC_Data& t): threadId(tid), "
-      :\\: stInit2 :: "{\n   memset(xactCounts, 0, sizeof(uint)*5);\n}\n" :\\: stRefs :: "\n" :\\: structVars :: "\n"
+    val threadLocal = doc"struct ALIGN ThreadLocal { " :\\: Document.nest(2,
+    "\nuint8_t threadId;\nuint threadXactCounts[5];\n" :\\: doc"ThreadLocal(uint8_t tid, TPCC_Data& t): threadId(tid), "
+      :\\: stInit2 :: "{\n   memset(threadXactCounts, 0, sizeof(uint)*5);\n}\n" :\\: stRefs :: "\n" :\\: structVars :: "\n"
       :\\: blocks :\\: "\n TransactionReturnStatus runProgram(Program* prg);") :\\: "};"
     //disabled entryidx temporarily
     val entryidx2 =
       """#if USING_GENERIC_ENTRY
         |struct GenericOps_3214 {  //OL 0
         |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
-        |    int x1 = e.map.at(1).data.i;
-        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
-        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
-        |    int x4 = (x3 << 4) + e.map.at(4).data.i;
+        |    int x1 = e.get(1).data.i;
+        |    int x2 = (x1 << 2) + e.get(3).data.i;
+        |    int x3 = (x2 << 4) + e.get(2).data.i;
+        |    int x4 = (x3 << 4) + e.get(4).data.i;
         |    return x4;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    if(e1.map.at(3) != e2.map.at(3) || e1.map.at(2) != e2.map.at(2) || e1.map.at(1) != e2.map.at(1) || e1.map.at(4) != e2.map.at(4))
+        |    if(e1.get(3) != e2.get(3) || e1.get(2) != e2.get(2) || e1.get(1) != e2.get(1) || e1.get(4) != e2.get(4))
         |       return 1;
         |    return 0;
         |  }
         |};
         |struct GenericOps_23 { //NO 1
         |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
-        |    int x1 = e.map.at(3).data.i;
-        |    int x2 = (x1 << 4) + e.map.at(2).data.i;
+        |    int x1 = e.get(3).data.i;
+        |    int x2 = (x1 << 4) + e.get(2).data.i;
         |    return x2;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3))
+        |    if(e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3))
         |       return 1;
         |    return 0;
         |  }
         |};
         |struct GenericOps_321 { //C0  O0   NO0
         |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
-        |    int x1 = e.map.at(1).data.i;
-        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
-        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    int x1 = e.get(1).data.i;
+        |    int x2 = (x1 << 2) + e.get(3).data.i;
+        |    int x3 = (x2 << 4) + e.get(2).data.i;
         |    return x3;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    if(e1.map.at(3) != e2.map.at(3) || e1.map.at(2) != e2.map.at(2) || e1.map.at(1) != e2.map.at(1))
+        |    if(e1.get(3) != e2.get(3) || e1.get(2) != e2.get(2) || e1.get(1) != e2.get(1))
         |       return 1;
         |    return 0;
         |  }
         |};
         |struct GenericOps_236 { //C 1
         |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
-        |    int x1 = HASH(e.map.at(6).data.s);
-        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
-        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    int x1 = HASH(e.get(6).data.s);
+        |    int x2 = (x1 << 2) + e.get(3).data.i;
+        |    int x3 = (x2 << 4) + e.get(2).data.i;
         |    return x3;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(6) != e2.map.at(6))
+        |    if(e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3) || e1.get(6) != e2.get(6))
         |       return 1;
         |    return 0;
         |  }
         |};
         |struct GenericOps_123 { //OL1
         |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
-        |    int x1 = e.map.at(1).data.i;
-        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
-        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    int x1 = e.get(1).data.i;
+        |    int x2 = (x1 << 2) + e.get(3).data.i;
+        |    int x3 = (x2 << 4) + e.get(2).data.i;
         |    return x3;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    if(e1.map.at(1) != e2.map.at(1) || e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3))
+        |    if(e1.get(1) != e2.get(1) || e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3))
         |       return 1;
         |    return 0;
         |  }
@@ -1312,46 +1319,46 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |struct GenericOps_12345678 { // H0
         |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
         |    unsigned int h = 0;
-        |    h = h ^ (HASH(e.map.at(1)) + 0x9e3779b9 + (h<<6) + (h>>2));
-        |    h = h ^ (HASH(e.map.at(2)) + 0x9e3779b9 + (h<<6) + (h>>2));
-        |    h = h ^ (HASH(e.map.at(3)) + 0x9e3779b9 + (h<<6) + (h>>2));
-        |    h = h ^ (HASH(e.map.at(4)) + 0x9e3779b9 + (h<<6) + (h>>2));
-        |    h = h ^ (HASH(e.map.at(5)) + 0x9e3779b9 + (h<<6) + (h>>2));
-        |    h = h ^ (HASH(e.map.at(6)) + 0x9e3779b9 + (h<<6) + (h>>2));
-        |    h = h ^ (HASH(e.map.at(7)) + 0x9e3779b9 + (h<<6) + (h>>2));
-        |    h = h ^ (HASH(e.map.at(8)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.get(1)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.get(2)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.get(3)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.get(4)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.get(5)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.get(6)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.get(7)) + 0x9e3779b9 + (h<<6) + (h>>2));
+        |    h = h ^ (HASH(e.get(8)) + 0x9e3779b9 + (h<<6) + (h>>2));
         |    return h;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    if(e1.map.at(1) != e2.map.at(1) || e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(4) != e2.map.at(4) || e1.map.at(5) != e2.map.at(5) || e1.map.at(6) != e2.map.at(6) || e1.map.at(7) != e2.map.at(7) || e1.map.at(8) != e2.map.at(8))
+        |    if(e1.get(1) != e2.get(1) || e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3) || e1.get(4) != e2.get(4) || e1.get(5) != e2.get(5) || e1.get(6) != e2.get(6) || e1.get(7) != e2.get(7) || e1.get(8) != e2.get(8))
         |       return 1;
         |    return 0;
         |  }
         |};
         |struct GenericOps_234 {  //O 1
         |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
-        |    int x1 = e.map.at(4).data.i;
-        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
-        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    int x1 = e.get(4).data.i;
+        |    int x2 = (x1 << 2) + e.get(3).data.i;
+        |    int x3 = (x2 << 4) + e.get(2).data.i;
         |    return x3;
         |
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(4) != e2.map.at(4))
+        |    if(e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3) || e1.get(4) != e2.get(4))
         |       return 1;
         |    return 0;
         |  }
         |};
         |struct GenericCmp_236_4 {
         |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
-        |    int x1 = HASH(e.map.at(6));
-        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
-        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    int x1 = HASH(e.get(6));
+        |    int x2 = (x1 << 2) + e.get(3).data.i;
+        |    int x3 = (x2 << 4) + e.get(2).data.i;
         |    return x3;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    const Any &r1 = e1.map.at(4);
-        |    const Any &r2 = e2.map.at(4);
+        |    const Any &r1 = e1.get(4);
+        |    const Any &r2 = e2.get(4);
         |    if (r1 == r2)
         |      return 0;
         |    else if( r1 < r2)
@@ -1368,8 +1375,8 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |    return x2;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    const Any &r1 = e1.map.at(1);
-        |    const Any &r2 = e2.map.at(1);
+        |    const Any &r1 = e1.get(1);
+        |    const Any &r2 = e2.get(1);
         |    if (r1 == r2)
         |      return 0;
         |    else if( r1 < r2)
@@ -1381,14 +1388,14 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |};
         |struct GenericCmp_234_1 {
         |  FORCE_INLINE static size_t hash(const GenericEntry& e) {
-        |    int x1 = e.map.at(4).data.i;
-        |    int x2 = (x1 << 2) + e.map.at(3).data.i;
-        |    int x3 = (x2 << 4) + e.map.at(2).data.i;
+        |    int x1 = e.get(4).data.i;
+        |    int x2 = (x1 << 2) + e.get(3).data.i;
+        |    int x3 = (x2 << 4) + e.get(2).data.i;
         |    return x3;
         |  }
         |  FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-        |    const Any &r1 = e1.map.at(1);
-        |    const Any &r2 = e2.map.at(1);
+        |    const Any &r1 = e1.get(1);
+        |    const Any &r2 = e2.get(1);
         |    if (r1 == r2)
         |      return 0;
         |    else if( r1 < r2)

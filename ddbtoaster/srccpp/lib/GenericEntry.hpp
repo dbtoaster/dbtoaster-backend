@@ -265,6 +265,10 @@ public:
         map[i].data.t -= v;
     }
 
+    FORCE_INLINE const Any& get(int i) const {
+        return map.at(i);
+    }
+
     FORCE_INLINE int getInt(int i) const {
         return map.at(i).data.i;
     }

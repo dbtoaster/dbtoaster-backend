@@ -75,65 +75,65 @@ const size_t historyTblPoolSizes[] = {262144*2, 65536};
 #if USING_GENERIC_ENTRY
 struct GenericOps_3214 {  //OL 0
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
-    int x1 = e.map.at(1).data.i;
-    int x2 = (x1 << 2) + e.map.at(3).data.i;
-    int x3 = (x2 << 4) + e.map.at(2).data.i;
-    int x4 = (x3 << 4) + e.map.at(4).data.i;
+    int x1 = e.get(1).data.i;
+    int x2 = (x1 << 2) + e.get(3).data.i;
+    int x3 = (x2 << 4) + e.get(2).data.i;
+    int x4 = (x3 << 4) + e.get(4).data.i;
     return x4;
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    if(e1.map.at(3) != e2.map.at(3) || e1.map.at(2) != e2.map.at(2) || e1.map.at(1) != e2.map.at(1) || e1.map.at(4) != e2.map.at(4))
+    if(e1.get(3) != e2.get(3) || e1.get(2) != e2.get(2) || e1.get(1) != e2.get(1) || e1.get(4) != e2.get(4))
        return 1;
     return 0;
   }
 };
 struct GenericOps_23 { //NO 1
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
-    int x1 = e.map.at(3).data.i;
-    int x2 = (x1 << 4) + e.map.at(2).data.i;
+    int x1 = e.get(3).data.i;
+    int x2 = (x1 << 4) + e.get(2).data.i;
     return x2;
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3))
+    if(e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3))
        return 1;
     return 0;
   }
 };
 struct GenericOps_321 { //C0  O0   NO0
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
-    int x1 = e.map.at(1).data.i;
-    int x2 = (x1 << 2) + e.map.at(3).data.i;
-    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    int x1 = e.get(1).data.i;
+    int x2 = (x1 << 2) + e.get(3).data.i;
+    int x3 = (x2 << 4) + e.get(2).data.i;
     return x3;
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    if(e1.map.at(3) != e2.map.at(3) || e1.map.at(2) != e2.map.at(2) || e1.map.at(1) != e2.map.at(1))
+    if(e1.get(3) != e2.get(3) || e1.get(2) != e2.get(2) || e1.get(1) != e2.get(1))
        return 1;
     return 0;
   }
 };
 struct GenericOps_236 { //C 1
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
-    int x1 = HASH(e.map.at(6).data.s);
-    int x2 = (x1 << 2) + e.map.at(3).data.i;
-    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    int x1 = HASH(e.get(6).data.s);
+    int x2 = (x1 << 2) + e.get(3).data.i;
+    int x3 = (x2 << 4) + e.get(2).data.i;
     return x3;
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(6) != e2.map.at(6))
+    if(e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3) || e1.get(6) != e2.get(6))
        return 1;
     return 0;
   }
 };
 struct GenericOps_123 { //OL1
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
-    int x1 = e.map.at(1).data.i;
-    int x2 = (x1 << 2) + e.map.at(3).data.i;
-    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    int x1 = e.get(1).data.i;
+    int x2 = (x1 << 2) + e.get(3).data.i;
+    int x3 = (x2 << 4) + e.get(2).data.i;
     return x3;
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    if(e1.map.at(1) != e2.map.at(1) || e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3))
+    if(e1.get(1) != e2.get(1) || e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3))
        return 1;
     return 0;
   }
@@ -141,46 +141,46 @@ struct GenericOps_123 { //OL1
 struct GenericOps_12345678 { // H0
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
     unsigned int h = 0;
-    h = h ^ (HASH(e.map.at(1)) + 0x9e3779b9 + (h<<6) + (h>>2));
-    h = h ^ (HASH(e.map.at(2)) + 0x9e3779b9 + (h<<6) + (h>>2));
-    h = h ^ (HASH(e.map.at(3)) + 0x9e3779b9 + (h<<6) + (h>>2));
-    h = h ^ (HASH(e.map.at(4)) + 0x9e3779b9 + (h<<6) + (h>>2));
-    h = h ^ (HASH(e.map.at(5)) + 0x9e3779b9 + (h<<6) + (h>>2));
-    h = h ^ (HASH(e.map.at(6)) + 0x9e3779b9 + (h<<6) + (h>>2));
-    h = h ^ (HASH(e.map.at(7)) + 0x9e3779b9 + (h<<6) + (h>>2));
-    h = h ^ (HASH(e.map.at(8)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.get(1)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.get(2)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.get(3)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.get(4)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.get(5)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.get(6)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.get(7)) + 0x9e3779b9 + (h<<6) + (h>>2));
+    h = h ^ (HASH(e.get(8)) + 0x9e3779b9 + (h<<6) + (h>>2));
     return h;
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    if(e1.map.at(1) != e2.map.at(1) || e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(4) != e2.map.at(4) || e1.map.at(5) != e2.map.at(5) || e1.map.at(6) != e2.map.at(6) || e1.map.at(7) != e2.map.at(7) || e1.map.at(8) != e2.map.at(8))
+    if(e1.get(1) != e2.get(1) || e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3) || e1.get(4) != e2.get(4) || e1.get(5) != e2.get(5) || e1.get(6) != e2.get(6) || e1.get(7) != e2.get(7) || e1.get(8) != e2.get(8))
        return 1;
     return 0;
   }
 };
 struct GenericOps_234 {  //O 1
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
-    int x1 = e.map.at(4).data.i;
-    int x2 = (x1 << 2) + e.map.at(3).data.i;
-    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    int x1 = e.get(4).data.i;
+    int x2 = (x1 << 2) + e.get(3).data.i;
+    int x3 = (x2 << 4) + e.get(2).data.i;
     return x3;
 
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    if(e1.map.at(2) != e2.map.at(2) || e1.map.at(3) != e2.map.at(3) || e1.map.at(4) != e2.map.at(4))
+    if(e1.get(2) != e2.get(2) || e1.get(3) != e2.get(3) || e1.get(4) != e2.get(4))
        return 1;
     return 0;
   }
 };
 struct GenericCmp_236_4 {
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
-    int x1 = HASH(e.map.at(6));
-    int x2 = (x1 << 2) + e.map.at(3).data.i;
-    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    int x1 = HASH(e.get(6));
+    int x2 = (x1 << 2) + e.get(3).data.i;
+    int x3 = (x2 << 4) + e.get(2).data.i;
     return x3;
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    const Any &r1 = e1.map.at(4);
-    const Any &r2 = e2.map.at(4);
+    const Any &r1 = e1.get(4);
+    const Any &r2 = e2.get(4);
     if (r1 == r2)
       return 0;
     else if( r1 < r2)
@@ -197,8 +197,8 @@ struct GenericCmp_23_1 {
     return x2;
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    const Any &r1 = e1.map.at(1);
-    const Any &r2 = e2.map.at(1);
+    const Any &r1 = e1.get(1);
+    const Any &r2 = e2.get(1);
     if (r1 == r2)
       return 0;
     else if( r1 < r2)
@@ -210,14 +210,14 @@ struct GenericCmp_23_1 {
 };
 struct GenericCmp_234_1 {
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
-    int x1 = e.map.at(4).data.i;
-    int x2 = (x1 << 2) + e.map.at(3).data.i;
-    int x3 = (x2 << 4) + e.map.at(2).data.i;
+    int x1 = e.get(4).data.i;
+    int x2 = (x1 << 2) + e.get(3).data.i;
+    int x3 = (x2 << 4) + e.get(2).data.i;
     return x3;
   }
   FORCE_INLINE static char cmp(const GenericEntry& e1, const GenericEntry& e2) {
-    const Any &r1 = e1.map.at(1);
-    const Any &r2 = e2.map.at(1);
+    const Any &r1 = e1.get(1);
+    const Any &r2 = e2.get(1);
     if (r1 == r2)
       return 0;
     else if( r1 < r2)
@@ -802,10 +802,10 @@ struct TPCC_Data {
   customerTblStoreType  customerTbl;  customerTblIdx0Type& customerTblIdx0;  customerTblIdx1Type& customerTblIdx1;
   stockTblStoreType  stockTbl;  stockTblIdx0Type& stockTblIdx0;
 };
-struct ThreadLocal { 
+struct ALIGN ThreadLocal { 
   
   uint8_t threadId;
-  uint xactCounts[5];
+  uint threadXactCounts[5];
   
   ThreadLocal(uint8_t tid, TPCC_Data& t): threadId(tid), 
   newOrderTbl(t.newOrderTbl), newOrderTblIdx0(t.newOrderTblIdx0), newOrderTblIdx1(t.newOrderTblIdx1), 
@@ -817,7 +817,7 @@ struct ThreadLocal {
   orderLineTbl(t.orderLineTbl), orderLineTblIdx0(t.orderLineTblIdx0), orderLineTblIdx1(t.orderLineTblIdx1), 
   customerTbl(t.customerTbl), customerTblIdx0(t.customerTblIdx0), customerTblIdx1(t.customerTblIdx1), 
   stockTbl(t.stockTbl), stockTblIdx0(t.stockTblIdx0){
-     memset(xactCounts, 0, sizeof(uint)*5);
+     memset(threadXactCounts, 0, sizeof(uint)*5);
   }
   
   newOrderTblStoreType& newOrderTbl;  newOrderTblIdx0Type& newOrderTblIdx0;  newOrderTblIdx1Type& newOrderTblIdx1;
@@ -838,32 +838,30 @@ struct ThreadLocal {
     GenericEntry* x4310 =  warehouseTblIdx0.getForUpdate(x29, stx4310, xact);
     if(stx4310 == WW_VALUE) return WW_ABORT;
     x4310->increase(9, x26);
-    warehouseTblIdx0.update(x4310);
     GenericEntry y35(true_type(), 1, x20, 2, x19); GenericEntry* x35 = &y35;
     OperationReturnStatus stx4315;
     GenericEntry* x4315 =  districtTblIdx0.getForUpdate(x35, stx4315, xact);
     if(stx4315 == WW_VALUE) return WW_ABORT;
     x4315->increase(10, x26);
-    districtTblIdx0.update(x4315);
-    GenericEntry* ite7882 = 0;
+    GenericEntry* ite8161 = 0;
     if((x21>(0))) {
-      GenericEntry y7884(true_type(), 2, x23, 3, x22, 6, x25); GenericEntry* x7884 = &y7884;
-      OperationReturnStatus stx7885;
-      GenericEntry* x7885 =  customerTblIdx1.getForUpdate(x7884, stx7885, xact);
-      if(stx7885 == WW_VALUE) return WW_ABORT;
-      ite7882 = x7885;
+      GenericEntry y8163(true_type(), 2, x23, 3, x22, 6, x25); GenericEntry* x8163 = &y8163;
+      OperationReturnStatus stx8164;
+      GenericEntry* x8164 =  customerTblIdx1.getForUpdate(x8163, stx8164, xact);
+      if(stx8164 == WW_VALUE) return WW_ABORT;
+      ite8161 = x8164;
     } else {
-      GenericEntry y7888(true_type(), 1, x24, 2, x23, 3, x22); GenericEntry* x7888 = &y7888;
-      OperationReturnStatus stx7889;
-      GenericEntry* x7889 =  customerTblIdx0.getForUpdate(x7888, stx7889, xact);
-      if(stx7889 == WW_VALUE) return WW_ABORT;
-      ite7882 = x7889;
+      GenericEntry y8167(true_type(), 1, x24, 2, x23, 3, x22); GenericEntry* x8167 = &y8167;
+      OperationReturnStatus stx8168;
+      GenericEntry* x8168 =  customerTblIdx0.getForUpdate(x8167, stx8168, xact);
+      if(stx8168 == WW_VALUE) return WW_ABORT;
+      ite8161 = x8168;
     };
-    GenericEntry* customerEntry = ite7882;
+    GenericEntry* customerEntry = ite8161;
     const PString& c_data = customerEntry->getString(21);
     const PString& x56 = customerEntry->getString(14);
-    char* x8972 = strstr(x56.data_, "BC");
-    if((x8972!=(NULL))) {
+    char* x9219 = strstr(x56.data_, "BC");
+    if((x9219!=(NULL))) {
       int x59 = customerEntry->getInt(1);
       PString x2479 = PString(500);
       x2479.append(x59);
@@ -889,8 +887,6 @@ struct ThreadLocal {
     } else {
       customerEntry->increase(17, x26);
     };
-    customerTblIdx1.update(customerEntry);
-    customerTblIdx0.update(customerEntry);
     const PString& w_name = x4310->getString(2);
     const PString& d_name = x4315->getString(3);
     PString x2505 = PString(24);
@@ -899,8 +895,8 @@ struct ThreadLocal {
     x2505.append(d_name.data_, 10);
     int x74 = customerEntry->getInt(1);
     GenericEntry y76(false_type(), x74, x23, x22, x20, x19, x17, x26, x2505); GenericEntry* x76 = &y76;
-    OperationReturnStatus st6894 = historyTbl.insert_nocheck(x76, xact);
-    if(st6894 == WW_VALUE) return WW_ABORT;
+    OperationReturnStatus st7207 = historyTbl.insert_nocheck(x76, xact);
+    if(st7207 == WW_VALUE) return WW_ABORT;
     clearTempMem();
     return SUCCESS;
   }
@@ -914,17 +910,17 @@ struct ThreadLocal {
     while(1) {
       
       int x108 = x95;
-      int ite8123 = 0;
+      int ite8394 = 0;
       if((x108<(x84))) {
         
         int x110 = x103;
-        int x8124 = x110;
-        ite8123 = x8124;
+        int x8395 = x110;
+        ite8394 = x8395;
       } else {
-        ite8123 = 0;
+        ite8394 = 0;
       };
-      int x8001 = ite8123;
-      if (!(x8001)) break; 
+      int x8274 = ite8394;
+      if (!(x8274)) break; 
       
       int x113 = x95;
       int supwid = x87[x113];
@@ -963,14 +959,13 @@ struct ThreadLocal {
       if(stx4542 == WW_VALUE) return WW_ABORT;
       int o_id = x4542->getInt(11);
       x4542->increase(11, 1);
-      districtTblIdx0.update(x4542);
       int x157 = x106;
       GenericEntry y159(false_type(), o_id, x82, x81, x83, x79, -1, x84, x157); GenericEntry* x159 = &y159;
-      OperationReturnStatus st6947 = orderTbl.insert_nocheck(x159, xact);
-      if(st6947 == WW_VALUE) return WW_ABORT;
+      OperationReturnStatus st7259 = orderTbl.insert_nocheck(x159, xact);
+      if(st7259 == WW_VALUE) return WW_ABORT;
       GenericEntry y162(false_type(), o_id, x82, x81); GenericEntry* x162 = &y162;
-      OperationReturnStatus st6950 = newOrderTbl.insert_nocheck(x162, xact);
-      if(st6950 == WW_VALUE) return WW_ABORT;
+      OperationReturnStatus st7262 = newOrderTbl.insert_nocheck(x162, xact);
+      if(st7262 == WW_VALUE) return WW_ABORT;
       double x165 = 0.0;
       x95 = 0;
       while(1) {
@@ -994,19 +989,19 @@ struct ThreadLocal {
         x91[x188] = s_quantity;
         int x190 = x95;
         PString& x191 = idata[x190];
-        char* x9154 = strstr(x191.data_, "original");
-        int ite8198 = 0;
-        if((x9154!=(NULL))) {
+        char* x9394 = strstr(x191.data_, "original");
+        int ite8468 = 0;
+        if((x9394!=(NULL))) {
           
           const PString& x193 = x4566->getString(17);
-          char* x9160 = strstr(x193.data_, "original");
-          int x8199 = (x9160!=(NULL));
-          ite8198 = x8199;
+          char* x9400 = strstr(x193.data_, "original");
+          int x8469 = (x9400!=(NULL));
+          ite8468 = x8469;
         } else {
-          ite8198 = 0;
+          ite8468 = 0;
         };
-        int x8071 = ite8198;
-        if(x8071) {
+        int x8343 = ite8468;
+        if(x8343) {
           int x196 = x95;
           x92[x196].data_[0] = 'B';
         } else {
@@ -1021,7 +1016,6 @@ struct ThreadLocal {
         if((ol_supply_w_id!=(x81))) {
           x207 = 1;
         };
-        stockTblIdx0.update(x4566);
         double c_discount = x3789->getDouble(16);
         double w_tax = x3792->getDouble(8);
         double d_tax = x4542->getDouble(9);
@@ -1034,8 +1028,8 @@ struct ThreadLocal {
         x165 = (x231+(ol_amount));
         int x234 = x95;
         GenericEntry y237(false_type(), o_id, x82, x81, (x234+(1)), ol_i_id, ol_supply_w_id, NULL, ol_quantity, ol_amount, ol_dist_info); GenericEntry* x237 = &y237;
-        OperationReturnStatus st7012 = orderLineTbl.insert_nocheck(x237, xact);
-        if(st7012 == WW_VALUE) return WW_ABORT;
+        OperationReturnStatus st7323 = orderLineTbl.insert_nocheck(x237, xact);
+        if(st7323 == WW_VALUE) return WW_ABORT;
         int x239 = x95;
         x95 = (x239+(1));
       };
@@ -1072,8 +1066,6 @@ struct ThreadLocal {
         if(stx4768 == WW_VALUE) return WW_ABORT;
         int c_id = x4768->getInt(4);
         x4768->update(6, x250);
-        orderTblIdx0.update(x4768);
-        orderTblIdx1.update(x4768);
         double x287 = 0.0;
         int x289 = x255;
         GenericEntry y291(true_type(), 1, no_o_id, 2, x289, 3, x249); GenericEntry* x291 = &y291;
@@ -1082,8 +1074,6 @@ struct ThreadLocal {
           double x294 = x287;
           double x295 = orderLineEntry->getDouble(9);
           x287 = (x294+(x295));
-          orderLineTblIdx0.update(orderLineEntry);
-          orderLineTblIdx1.update(orderLineEntry);
           return SUCCESS;
         }, xact);
         if(st4039 == WW_VALUE) return WW_ABORT;
@@ -1095,8 +1085,6 @@ struct ThreadLocal {
         double x306 = x287;
         x4790->increase(17, x306);
         x4790->increase(20, 1);
-        customerTblIdx1.update(x4790);
-        customerTblIdx0.update(x4790);
       } else {
         int x310 = failedDel;
         failedDel = (1+(x310));
@@ -1142,36 +1130,36 @@ struct ThreadLocal {
   }
   
   FORCE_INLINE TransactionReturnStatus OrderStatusTx(Transaction& xact, int x365, date x366, int x367, int x368, int x369, int x370, int x371, PString x372) {
-    GenericEntry* ite8466 = 0;
+    GenericEntry* ite8727 = 0;
     if((x370>(0))) {
-      GenericEntry y8468(true_type(), 2, x369, 3, x368, 6, x372); GenericEntry* x8468 = &y8468;
-      GenericEntry* x8469 = customerTblIdx1.get(x8468, xact);
-      ite8466 = x8469;
+      GenericEntry y8729(true_type(), 2, x369, 3, x368, 6, x372); GenericEntry* x8729 = &y8729;
+      GenericEntry* x8730 = customerTblIdx1.get(x8729, xact);
+      ite8727 = x8730;
     } else {
-      GenericEntry y8472(true_type(), 1, x371, 2, x369, 3, x368); GenericEntry* x8472 = &y8472;
-      GenericEntry* x8473 = customerTblIdx0.get(x8472, xact);
-      ite8466 = x8473;
+      GenericEntry y8733(true_type(), 1, x371, 2, x369, 3, x368); GenericEntry* x8733 = &y8733;
+      GenericEntry* x8734 = customerTblIdx0.get(x8733, xact);
+      ite8727 = x8734;
     };
-    GenericEntry* customerEntry = ite8466;
+    GenericEntry* customerEntry = ite8727;
     int found_c_id = customerEntry->getInt(3);
     GenericEntry y396(true_type(), 2, x369, 3, x368, 4, found_c_id); GenericEntry* x396 = &y396;
     GenericEntry* x4193 = orderTblIdx1.get(x396, xact);
-    int ite8482 = 0;
+    int ite8743 = 0;
     if((x4193==(NULL))) {
-      int x8483 = failedOS;
-      failedOS = (1+(x8483));
-      ite8482 = 0;
+      int x8744 = failedOS;
+      failedOS = (1+(x8744));
+      ite8743 = 0;
     } else {
-      int x8487 = x4193->getInt(1);
-      GenericEntry y8492(true_type(), 1, x8487, 2, x369, 3, x368); GenericEntry* x8492 = &y8492;
-      OperationReturnStatus st8493 = orderLineTblIdx1.sliceNoUpdate(x8492, [&](GenericEntry* orderLineEntry) -> TransactionReturnStatus {
+      int x8748 = x4193->getInt(1);
+      GenericEntry y8753(true_type(), 1, x8748, 2, x369, 3, x368); GenericEntry* x8753 = &y8753;
+      OperationReturnStatus st8754 = orderLineTblIdx1.sliceNoUpdate(x8753, [&](GenericEntry* orderLineEntry) -> TransactionReturnStatus {
         int x410 = 1;
         return SUCCESS;
       }, xact);
-      if(st8493 == WW_VALUE) return WW_ABORT;
-      ite8482 = 1;
+      if(st8754 == WW_VALUE) return WW_ABORT;
+      ite8743 = 1;
     };
-    int x414 = ite8482;
+    int x414 = ite8743;
     clearTempMem();
     return SUCCESS;
   }
@@ -1181,7 +1169,7 @@ struct ThreadLocal {
 
 TransactionManager xactManager;
 TransactionManager& Transaction::tm(xactManager);
-uint xactCounts[5];
+uint globalXactCounts[5];
 uint8_t prgId7to5[] = {0, 1, 1, 2, 2, 3, 4};
 
 volatile bool isReady[numThreads];
@@ -1250,11 +1238,11 @@ TransactionReturnStatus ThreadLocal::runProgram(Program* prg) {
 }
       
 std::atomic<uint> PC(0);
-void threadFunction(uint8_t thread_id, TPCC_Data* data) {
+void threadFunction(uint8_t thread_id, ThreadLocal* tl) {
     setAffinity(thread_id);
     //    setSched(SCHED_FIFO);
 
-  ThreadLocal tl(thread_id, *data);
+
   isReady[thread_id] = true;
   uint pid = PC++;
   Program* p;
@@ -1269,7 +1257,7 @@ void threadFunction(uint8_t thread_id, TPCC_Data* data) {
 
     xactManager.begin(p->xact, thread_id);
 
-    st = tl.runProgram(p);
+    st = tl->runProgram(p);
 
     if (st != SUCCESS) {
       xactManager.rollback(p->xact, thread_id);
@@ -1286,7 +1274,7 @@ void threadFunction(uint8_t thread_id, TPCC_Data* data) {
       }
     } else {
       if (xactManager.validateAndCommit(p->xact, thread_id)) {   //rollback happens inside function if it fails
-        xactCounts[prgId7to5[p->id]]++;
+        tl->threadXactCounts[prgId7to5[p->id]]++;
         if (head != tail || full) {
           p = failedPrograms[head];
           if (p->xact.failedBecauseOf->commitTS != initCommitTS) {
@@ -1337,14 +1325,15 @@ int main(int argc, char** argv) {
   xactManager.commit(t0, 0);
   cout.imbue(std::locale(""));
   
-  memset(xactCounts, 0, 5 * sizeof(uint));
+  memset(globalXactCounts, 0, 5 * sizeof(uint));
   memset(xactManager.activeXactStartTS, 0xff, sizeof(xactManager.activeXactStartTS[0]) * numThreads);
-  
+  ThreadLocal *tls[numThreads];
   Timepoint startTime, endTime;
   std::thread workers[numThreads];
   
   for (uint8_t i = 0; i < numThreads; ++i) {
-      workers[i] = std::thread(threadFunction, i, &orig);
+      tls[i] = new ThreadLocal(i, orig);
+      workers[i] = std::thread(threadFunction, i, tls[i]);
   }
   bool all_ready = true;
   //check if all worker threads are ready. Execution can be started once all threads finish startup procedure
@@ -1369,18 +1358,24 @@ int main(int argc, char** argv) {
   endTime = Now;
   auto execTime = DurationMS(endTime - startTime);
   
+  for(uint i = 0; i < numThreads;  ++i) {
+     for(uint j = 0; j < 5; ++j) {
+        globalXactCounts[j] += tls[i]->threadXactCounts[j];
+      }
+  }
+  
   cout << "Failed NO = " << failedNO << endl;
   cout << "Failed Del = " << failedDel << endl;
   cout << "Failed OS = " << failedOS << endl;
   cout << "Total time = " << execTime << " ms" << endl;
-  cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  xactCounts[0]  << endl;
-  cout << "TpmC = " << fixed <<  (xactCounts[0])* 60000.0/execTime << endl;
+  cout << "Total transactions = " << numPrograms << "   NewOrder = " <<  globalXactCounts[0]  << endl;
+  cout << "TpmC = " << fixed <<  (globalXactCounts[0])* 60000.0/execTime << endl;
   
   ofstream fout("tpcc_res_cpp.csv", ios::app);
   if(argc == 1 || atoi(argv[1]) == 1) {
-    fout << "\nCPP-ABFGILNORXY-" << numPrograms << ",";
+    fout << "\nCPP-ABDFGINORXY-" << numPrograms << ",";
     for(int i = 0; i < 5 ; ++i)
-       fout << xactCounts[i] << ",";
+       fout << globalXactCounts[i] << ",";
     fout <<",";
    }
   fout << execTime << ",";
