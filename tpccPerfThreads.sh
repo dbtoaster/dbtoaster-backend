@@ -18,7 +18,7 @@ allopts=(
 "-opt refcounter -opt regex -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt idxinline -opt lookupfusion -opt deadidx"
 
 #no_opts
-"-opt refcounter -opt index -opt idxinline -opt lookupfusion"
+"-opt refcounter -opt index -opt idxinline -opt lookupfusion -opt fixedrange"
 )
 numWare=5
 profTx="" #"-opt profileblocks"
@@ -49,4 +49,5 @@ do
         mv runtime/tpcc/pardisgen/TpccGenSC.cpp $exec/tpcc$cnt/TpccBlock.cpp
         cnt=$((cnt+1))
     done
+    mv  tpcc_res_cpp.csv $exec/
 done
