@@ -28,7 +28,7 @@ initsize="" #"-opt initsize"
 
 for numWare in 5
 do
-    for opts in "${allopts[@]}"
+    for opt in "${allopts[@]}"
     do
     echo "running opt combo $cnt"
     mkdir -p $exec/tpcc$cnt
