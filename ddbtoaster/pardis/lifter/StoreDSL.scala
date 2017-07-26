@@ -138,15 +138,15 @@ trait StoreDSL extends
 
   }
 
-  def __newStoreNamed[E <: ddbt.lib.store.Entry](name: String)(implicit cE: Manifest[E], typeE: TypeRep[E]): Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name), StoreNew2[E]()(typeE, cE)))
+  def __newStoreNamed[E <: ddbt.lib.store.Entry](name: String)(implicit cE: Manifest[E], typeE: TypeRep[E]): Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name+"!$"), StoreNew2[E]()(typeE, cE)))
 
   def __newStoreNamed2[E <: ddbt.lib.store.Entry](name: String, n: Rep[Int], ops: Rep[Array[EntryIdx[E]]])(implicit cE: Manifest[E], typeE: TypeRep[E]): Rep[Store[E]] = IRReifier.reflectStm(Stm(freshNamed[Store[E]](name), StoreNew3[E](n, ops)(typeE, cE)))
 
   override def storeIndex[E <: ddbt.lib.store.Entry](self: Rep[Store[E]], idx: Rep[Int], idxType: Rep[String], uniq: Rep[Boolean], otherIdx: Rep[Int])(implicit typeE: TypeRep[E]): Rep[Idx[E]] = {
 
     val sym = self.asInstanceOf[Sym[_]]
-    val name = (if (sym.name.startsWith("x")) sym.name + sym.id else sym.name) + "Idx" + idx.asInstanceOf[Constant[_]].underlying
-    IRReifier.reflectStm(Stm(freshNamed[Idx[E]](name), StoreIndex[E](self, idx, idxType, uniq, otherIdx)(typeE)))
+    val name = (if (sym.name.startsWith("x")) sym.name + sym.id else sym.name).stripSuffix("!$") + "Idx" + idx.asInstanceOf[Constant[_]].underlying
+    IRReifier.reflectStm(Stm(freshNamed[Idx[E]](name+"!$"), StoreIndex[E](self, idx, idxType, uniq, otherIdx)(typeE)))
   }
 
   //override   def record_newDef[T: TypeRep](fields: Seq[(String, Boolean, Rep[Any])]): Def[T] = {

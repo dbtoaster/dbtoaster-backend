@@ -288,20 +288,22 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
     }
 
     val (stTypdef, stDecl, stInit) = optTP.globalVars.map(s => {
-      def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
+      val sname = s.name.stripSuffix("!$")
+
+      def idxTypeName(i: Int) = sname :: "Idx" :: i :: "Type"
 
       val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
       val idx3 = idx2(s).filter(_._2 != "INone")
       val idxTypes = idx3.map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :: idxTypes.map(t => idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}StoreType;"
+      val storeTypeDef = doc"typedef MultiHashMap<${entryTp}, char," :: idxTypes.map(t => idxTypeName(t._2)).mkDocument(", ") :: doc"> ${sname}StoreType;"
 
-      val storeDecl = s.name :: "StoreType  " :: s.name :: ";"
+      val storeDecl = sname :: "StoreType  " :: sname :: ";"
       val idxDecl = idx3.zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1};").mkDocument("\n")
 
-      val storeinit = s.name :: (if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes)" else doc"()") :: ", "
-      val idxInit = idx3.zipWithIndex.map(t => doc"${t._1._1}(*(${idxTypeName(t._2)} *)${s.name}.index[${t._2}])").mkDocument(", ")
+      val storeinit = sname :: (if (Optimizer.initialStoreSize) doc"(${sname}ArrayLengths, ${sname}PoolSizes)" else doc"()") :: ", "
+      val idxInit = idx3.zipWithIndex.map(t => doc"${t._1._1}(*(${idxTypeName(t._2)} *)${sname}.index[${t._2}])").mkDocument(", ")
       (idxTypeDefs :\\: storeTypeDef :: "\n", storeDecl :\\: idxDecl :: "\n", storeinit :: idxInit)
     }).reduce((a, b) => (a._1 :\\: b._1, a._2 :\\: b._2, a._3 :: ", " :\\: b._3))
 
@@ -794,24 +796,25 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
     }
 
     val (stTypdef, stDecl, stInit1, stRefs, stInit2) = optTP.globalVars.map(s => {
-      def idxTypeName(i: Int) = s.name :: "Idx" :: i :: "Type"
+      val sname = s.name.stripSuffix("!$")
+      def idxTypeName(i: Int) = sname :: "Idx" :: i :: "Type"
 
       val entryTp = s.tp.asInstanceOf[StoreType[_]].typeE
       val idx3 = idx2(s).filter(_._2 != "INone")
       val idxTypes = idx3.map(idxToDoc(_, entryTp, idx2(s))).zipWithIndex
       val idxTypeDefs = idxTypes.map(t => doc"typedef ${t._1} ${idxTypeName(t._2)};").mkDocument("\n")
 
-      val storeTypeDef = doc"typedef MultiHashMapMV<${entryTp}," :: idxTypes.map(t => idxTypeName(t._2)).mkDocument(", ") :: doc"> ${s.name}StoreType;"
+      val storeTypeDef = doc"typedef MultiHashMapMV<${entryTp}," :: idxTypes.map(t => idxTypeName(t._2)).mkDocument(", ") :: doc"> ${sname}StoreType;"
 
-      val storeDecl = s.name :: "StoreType  " :: s.name :: ";  "
-      val storeRef = s.name :: "StoreType& " :: s.name :: ";  "
+      val storeDecl = sname :: "StoreType  " :: sname :: ";  "
+      val storeRef = sname :: "StoreType& " :: sname :: ";  "
 
       val idxDecl = idx3.zipWithIndex.map(t => doc"${idxTypeName(t._2)}& ${t._1._1};").mkDocument("  ")
 
-      val storeinit = s.name :: (if (Optimizer.initialStoreSize) doc"(${s.name}ArrayLengths, ${s.name}PoolSizes)" else doc"()") :: ", "
-      val storeRefInit = s.name :: "(t." :: s.name :: "), "
+      val storeinit = sname :: (if (Optimizer.initialStoreSize) doc"(${sname}ArrayLengths, ${sname}PoolSizes)" else doc"()") :: ", "
+      val storeRefInit = sname :: "(t." :: sname :: "), "
 
-      val idxInit = idx3.zipWithIndex.map(t => doc"${t._1._1}(*(${idxTypeName(t._2)} *)${s.name}.index[${t._2}])").mkDocument(", ")
+      val idxInit = idx3.zipWithIndex.map(t => doc"${t._1._1}(*(${idxTypeName(t._2)} *)${sname}.index[${t._2}])").mkDocument(", ")
       val idxRefInit = idx3.zipWithIndex.map(t=> doc"${t._1._1}(t.${t._1._1})").mkDocument(", ")
 
       (idxTypeDefs :\\: storeTypeDef :: "\n", storeDecl :: idxDecl , storeinit :: idxInit , storeRef :: idxDecl , storeRefInit :: idxRefInit)
@@ -881,7 +884,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
       stPrf(x._1) :: Document.nest(2, codeGen.blockToDocument(x._3)) :/: "  clearTempMem();" :: endPrf(x._1) :/: "  return SUCCESS;" :/:
       "}").mkDocument("\n\n")
 
-    idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name)).toList
+    idxSymNames = idx2.values.flatMap(l => l.filter(x => x._2 != "INone").map(_._1.name.stripSuffix("!$"))).toList
     val getSizes = idxSymNames.map(i => doc"GET_RUN_STAT(orig.$i, info);").mkDocument("info << \"{\\n\";\n", "\ninfo <<\",\\n\";\n", "\ninfo << \"\\n}\\n\";")
     def mainPrg =
       s"""
@@ -1138,43 +1141,43 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |    case NEWORDER:
         |    {
         |      NewOrder& p = *(NewOrder *) prg;
-        |      ret = NewOrderTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, p.c_id, p.o_ol_cnt, p.o_all_local, p.itemid, p.supware, p.quantity, p.price, p.iname, p.stock, p.bg, p.amt);
+        |      ret = NewOrderTx(prg->xact, p.amt, p.bg, p.c_id, p.d_id, p.datetime, p.iname, p.itemid, p.o_ol_cnt, p.price, p.quantity, p.stock, p.supware, p.w_id);
         |      break;
         |    }
         |    case PAYMENTBYID:
         |    {
         |      PaymentById& p = *(PaymentById *) prg;
-        |      ret = PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 0, p.c_w_id, p.c_d_id, p.c_id, nullptr, p.h_amount);
+        |      ret = PaymentTx(prg->xact, 0, p.c_d_id, p.c_id, nullptr, p.c_w_id, p.d_id, p.datetime, p.h_amount, p.w_id);
         |      break;
         |    }
         |    case PAYMENTBYNAME:
         |    {
         |      PaymentByName& p = *(PaymentByName *) prg;
-        |      ret = PaymentTx(prg->xact, false, p.datetime, -1, p.w_id, p.d_id, 1, p.c_w_id, p.c_d_id, -1, p.c_last_input, p.h_amount);
+        |      ret = PaymentTx(prg->xact, 1, p.c_d_id, -1, p.c_last_input, p.c_w_id, p.d_id, p.datetime, p.h_amount, p.w_id);
         |      break;
         |    }
         |    case ORDERSTATUSBYID:
         |    {
         |      OrderStatusById &p = *(OrderStatusById *) prg;
-        |      ret = OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 0, p.c_id, nullptr);
+        |      ret = OrderStatusTx(prg->xact, 0, p.c_id, nullptr, p.d_id, p.w_id);
         |      break;
         |    }
         |    case ORDERSTATUSBYNAME:
         |    {
         |      OrderStatusByName &p = *(OrderStatusByName *) prg;
-        |      ret = OrderStatusTx(prg->xact, false, -1, -1, p.w_id, p.d_id, 1, -1, p.c_last);
+        |      ret = OrderStatusTx(prg->xact, 1, -1, p.c_last, p.d_id, p.w_id);
         |      break;
         |    }
         |    case DELIVERY:
         |    {
         |      Delivery &p = *(Delivery *) prg;
-        |      ret = DeliveryTx(prg->xact, false, p.datetime, p.w_id, p.o_carrier_id);
+        |      ret = DeliveryTx(prg->xact, p.datetime, p.o_carrier_id, p.w_id);
         |      break;
         |    }
         |    case STOCKLEVEL:
         |    {
         |      StockLevel &p = *(StockLevel *) prg;
-        |      ret = StockLevelTx(prg->xact, false, -1, -1, p.w_id, p.d_id, p.threshold);
+        |      ret = StockLevelTx(prg->xact, p.d_id, p.threshold, p.w_id);
         |      break;
         |    }
         |    default: cerr << "UNKNOWN PROGRAM TYPE" << endl;

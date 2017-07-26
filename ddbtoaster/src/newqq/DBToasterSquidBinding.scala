@@ -1,13 +1,15 @@
 package ddbt.newqq
 
+import ch.epfl.data.sc.pardis.ir.ANFNode
 import ddbt.lib.store.deep.StoreDSL
+import squid.lang.Base
 import squid.scback._
 import squid.utils._
 
 class DBToasterSquidBinding[SC <: StoreDSL](val SC: SC) {
 
-  object Sqd extends AutoboundPardisIR[SC.type](SC) with PardisBinding.DefaultRedirections[SC.type] {
-
+  object Sqd  extends SCSquid
+  class SCSquid extends AutoboundPardisIR[SC.type](SC) with PardisBinding.DefaultRedirections[SC.type] {
     protected val GEApplySymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.GenericEntry$"), "apply", None)
     protected val WhileSymbol = loadMtdSymbol(loadTypSymbol("squid.lib.package$"), "While", None)
     protected val StrCmpSymbol = loadMtdSymbol(loadTypSymbol("ddbt.lib.store.StringExtra$"), "StringCompare", None)
@@ -54,11 +56,11 @@ class DBToasterSquidBinding[SC <: StoreDSL](val SC: SC) {
 
       case _ => super.methodApp(self, mtd, targs, argss, tp)
     }
+
+    val base: this.type = this
+    ab = AutoBinder(SC, this) // this is going to generate a big binding structure; it's in a separate class/file so it's not always recomputed and recompiled!
+
   }
-
-  val base: Sqd.type = Sqd
-
-  Sqd.ab = AutoBinder(SC, Sqd) // this is going to generate a big binding structure; it's in a separate class/file so it's not always recomputed and recompiled!
 
 }
 

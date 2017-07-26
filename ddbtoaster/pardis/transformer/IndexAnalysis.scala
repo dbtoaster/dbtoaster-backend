@@ -20,10 +20,8 @@ case class Index(val idxNum: Int, val cols: List[Int], tp: IndexType, unique: Bo
   override def toString = idxNum + ", " + tp + ", " + unique + ", " + sliceIdx
 }
 
-class IndexedCols extends Property {
+class IndexedCols(var primary: Seq[Int] = Nil, var fixedrange: Seq[(Int, Int, Int)] = Nil) extends Property {
   val flag = IndexedColsFlag
-  var primary: Seq[Int] = Nil
-  var fixedrange: Seq[(Int, Int, Int)] = Nil
   val secondary = collection.mutable.Set[Seq[Int]]()
   val min = collection.mutable.HashMap[(Seq[Int], Int), PardisLambda[_, _]]()
   val max = collection.mutable.HashMap[(Seq[Int], Int), PardisLambda[_, _]]()

@@ -464,7 +464,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
         return true;
     }
 
-    ConcurrentArrayIndex(size_t s) {//ignore
+    ConcurrentArrayIndex(size_t s = 0) {//ignore
         memset(array, 0, sizeof (AlignedEntry) * size);
     }
 
@@ -1363,7 +1363,7 @@ struct MinHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
 {
     typedef VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, IDX_FN2, false >> Super;
 
-    MinHeapIndex(size_t s) : Super(s) {
+    MinHeapIndex(size_t s = 0) : Super(s) {
 
     }
 
@@ -1406,7 +1406,7 @@ struct MaxHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
 {
     typedef VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, IDX_FN2, true >> Super;
 
-    MaxHeapIndex(size_t s) : Super(s) {
+    MaxHeapIndex(size_t s = 0) : Super(s) {
 
     }
 
@@ -1447,7 +1447,7 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
 {
     typedef VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap<T, IDX_FN2>> Super;
 
-    MedHeapIndex(size_t s) : Super(s) {
+    MedHeapIndex(size_t s = 0) : Super(s) {
 
     }
 

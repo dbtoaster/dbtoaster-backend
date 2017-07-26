@@ -189,7 +189,9 @@ object TpccXactGenerator_SC {
     val allKeys = List(newOrderTbl -> newOrderKey, historyTbl -> historyKey, warehouseTbl -> wareHouseKey, itemTbl -> itemKey, orderTbl -> orderKey, districtTbl -> districtKey, orderLineTbl -> orderLineKey, customerTbl -> customerKey, stockTbl -> stockKey)
     val schema = List[(Rep[_], List[TypeRep[_]])](newOrderTbl -> NewOrderEntry, historyTbl -> HistoryEntry, warehouseTbl -> WarehouseEntry, itemTbl -> ItemEntry, orderTbl -> OrderEntry, districtTbl -> DistrictEntry, orderLineTbl -> OrderLineEntry, customerTbl -> CustomerEntry, stockTbl -> StockEntry)
 
-    def partForW(w: Rep[Int]): Rep[Int] = ir"$w % $numThreads".toRep
+    def partForW2(w: IR[Int, AnyRef]): IR[Int, AnyRef] = ir"$w % $numThreads"
+
+    //    def partForW2[C](w: IR[Int, C]) = ir"w?:Int % $numThreads"
 
     def newOrderTx(showOutput: Rep[Boolean], datetime: Rep[Date], t_num: Rep[Int], w_id: Rep[Int], d_id: Rep[Int], c_id: Rep[Int], o_ol_count: Rep[Int], o_all_local: Rep[Int], itemid: Rep[Array[Int]], supware: Rep[Array[Int]], quantity: Rep[Array[Int]], price: Rep[Array[Double]], iname: Rep[Array[String]], stock: Rep[Array[Int]], bg: Rep[Array[String]], amt: Rep[Array[Double]]): Rep[Int] = {
       if (codeForOutput) {
@@ -330,7 +332,7 @@ object TpccXactGenerator_SC {
         val idata = new Array[String]($(o_ol_count))
 
         var all_items_exist = true
-        var toBeExecuted: Boolean = $(partForW(w_id)) == $(partitionID)
+        var toBeExecuted: Boolean = $(partForW2(w_id)) == $(partitionID)
         var all_local = true
         while (all_items_exist && (ol_number < $(o_ol_count))) {
           val supwid = $(supware)(ol_number)
@@ -348,10 +350,10 @@ object TpccXactGenerator_SC {
           ol_number += 1
         }
         ol_number = 0
-        if(toBeExecuted) {
+        if (toBeExecuted) {
           if (all_items_exist) {
             /*(c_id,d_id,w_id, c_discount, c_last, c_credit, w_tax)*/
-            if ($(partForW(w_id)) == $(partitionID)) {
+            if ($(partForW2(w_id)) == $(partitionID)) {
               $(xactCnt)(0) += 1
               val customerEntry = $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(d_id), $(w_id)))
               val warehouseEntry = $(warehouseTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, $(w_id)))
@@ -376,7 +378,7 @@ object TpccXactGenerator_SC {
                 val ol_dist_info = stockEntry.get[String](3 + $(d_id))
                 val s_quantity = stockEntry.get[Int](3) //s_quantity
                 $(stock).update(ol_number, s_quantity)
-
+                val c2 = Sqd.$(partForW2 _)(ol_supply_w_id)
                 if (ol_supply_w_id % $(numThreads) == $(partitionID)) {
                   stockEntry(3) = s_quantity - ol_quantity
                   if (s_quantity <= ol_quantity) {
@@ -574,7 +576,7 @@ object TpccXactGenerator_SC {
           $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), custagg)
           customerEntry = custagg.result
         }
-        if ($(partForW(c_w_id)) == $(partitionID)) {
+        if ($(partForW2(c_w_id)) == $(partitionID)) {
           if ($(c_by_name) == 0) {
             customerEntry = $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(c_d_id), $(c_w_id)))
           }
@@ -603,9 +605,9 @@ object TpccXactGenerator_SC {
           }
           $(customerTbl).updateCopy(customerEntry)
         }
-        if ($(partForW(w_id)) == $(partitionID)) {
+        if ($(partForW2(w_id)) == $(partitionID)) {
           $(xactCnt)(1) += 1
-          if ($(partForW(c_w_id)) != $(partitionID)) {
+          if ($(partForW2(c_w_id)) != $(partitionID)) {
             if ($(c_by_name) > 0) {
               local_c_id = customerEntry.get[Int](1)
             }
@@ -663,8 +665,9 @@ object TpccXactGenerator_SC {
       }.toRep
       if (parallel) {
         ir {
-          if ($(partForW(w_id)) == $(partitionID)) {
-            $(txn); $(xactCnt)(2) += 1
+          if ($(partForW2(w_id)) == $(partitionID)) {
+            $(txn);
+            $(xactCnt)(2) += 1
           }
           1
         }.toRep
@@ -799,8 +802,9 @@ object TpccXactGenerator_SC {
       }.toRep
       if (parallel) {
         ir {
-          if ($(partForW(w_id)) == $(partitionID)) {
-            $(txn);$(xactCnt)(3) += 1
+          if ($(partForW2(w_id)) == $(partitionID)) {
+            $(txn);
+            $(xactCnt)(3) += 1
           }
           1
         }.toRep
@@ -839,10 +843,11 @@ object TpccXactGenerator_SC {
         //        }
         1
       }.toRep
-      if(parallel) {
+      if (parallel) {
         ir {
-          if ($(partForW(w_id)) == $(partitionID)) {
-            $(txn); $(xactCnt)(4) += 1
+          if ($(partForW2(w_id)) == $(partitionID)) {
+            $(txn);
+            $(xactCnt)(4) += 1
           }
           1
         }.toRep

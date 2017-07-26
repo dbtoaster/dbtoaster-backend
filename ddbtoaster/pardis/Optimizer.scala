@@ -2,18 +2,70 @@ package ddbt.codegen
 
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.optimization._
-import ch.epfl.data.sc.pardis.types.PardisType
+import ch.epfl.data.sc.pardis.types.{PardisType, PardisTypeImplicits}
+import ddbt.lib.store.GenericEntry
 import ddbt.lib.store.deep.EntryIdxIRs.EntryIdxApplyObject
+import ddbt.lib.store.deep.GenericEntryIRs.GenericEntryType
 import ddbt.lib.store.deep.StoreDSL
+import ddbt.newqq.DBToasterSquidBinding
 import ddbt.transformer._
+import squid.anf.analysis
+import squid.ir.{ClassEmbedder, StandardEffects}
+import squid.lang.ScalaCore
+import squid.quasi.SimpleReps
+import squid.scback.AutoBinder
 
 import scala.collection.mutable
 
 /**
   * Created by sachin on 27.04.16.
   */
+object Embedding extends squid.ir.SchedulingANF with ScalaCore with ClassEmbedder with analysis.BlockHelpers
+  with StandardEffects
+  with SimpleReps
+
 case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: List[ExpressionSymbol[Any]], val codeBlocks: Seq[(String, List[ExpressionSymbol[_]], PardisBlock[T])], val structs: List[PardisStructDef[Any]], val entryIdxDefs: Seq[PardisNode[_]], val tempVars: Seq[(ExpressionSymbol[_], PardisStruct[_])] = Nil, val tmpMaps: Seq[(ExpressionSymbol[_], collection.mutable.ArrayBuffer[ExpressionSymbol[_]])] = Nil) extends PardisProgram {
   override val main: PardisBlock[Any] = initBlock.asInstanceOf[PardisBlock[Any]]
+}
+
+case class SquidProgram[T](val globalMaps: Map[String, (StoreSchema, IndexedCols)], val codeBlocks: Seq[(String, Embedding.Predef.IR[T, _])]) {
+
+  import Embedding.Predef._
+
+  def getIR: String = codeBlocks.map(_._2.toString).mkString("\n")
+
+  def getSCTP(Context: StoreDSL) = {
+    val binder = new DBToasterSquidBinding(Context)
+    import Context._
+    import PardisTypeImplicits.typeUnit
+    lazy val scMaps = globalMaps.keys.map(n => n -> Context.__newStoreNamed[GenericEntry](n).asInstanceOf[Sym[_]]).toMap
+    val initB = binder.Sqd.sc.reifyBlock({ scMaps; Context.unit(1) })
+    scMaps.foreach { case (n, sym) =>
+      sym.attributes += globalMaps(n)._1
+      sym.attributes += globalMaps(n)._2
+    }
+    val scBlocks = codeBlocks.map(b => {
+      val holeMapper = collection.mutable.LinkedHashMap[String, binder.Sqd.sc.Sym[_]]()
+      val converter = new binder.SCSquid {
+        override def hole(name: String, typ: sc.TypeRep[Any]): ANFNode = {
+          if (globalMaps.contains(name))
+            scMaps(name)
+          else if (holeMapper.contains(name))
+           holeMapper(name)
+          else {
+            val sym = sc.Sym.freshNamed(name)(typ, Context)
+            holeMapper += name -> sym
+            sym
+          }
+        }
+      }
+      val newb =  b._2.reinterpretIn(converter).rep.asInstanceOf[Block[Int]]
+      //      converter.ab = AutoBinder(Context, converter)
+
+      (b._1, holeMapper.toList.sortBy(_._1).map(_._2), newb)
+    })
+    TransactionProgram(initB, scMaps.values.toList, scBlocks, Nil, Nil)
+  }
 }
 
 object Optimizer {
@@ -49,7 +101,7 @@ object Optimizer {
   var infoFileName = ""
   var optCombination: String = ""
 
-  var currentBlock:String =""
+  var currentBlock: String = ""
 }
 
 class Optimizer(val IR: StoreDSL) {
@@ -82,7 +134,7 @@ class Optimizer(val IR: StoreDSL) {
   if (Optimizer.profileStoreOperations)
     pipeline += new Profiler(IR)
 
-  if(Optimizer.regexHoister){
+  if (Optimizer.regexHoister) {
     pipeline += new StringFormatEvaluator(IR)
   }
 
@@ -114,15 +166,15 @@ class Optimizer(val IR: StoreDSL) {
   if (Optimizer.indexInline)
     pipeline += new IndexInliner(IR)
 
-  if(Optimizer.mvget && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
+  if (Optimizer.mvget && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
     throw new Error("MV-get requires idxInline and lookupfusion")
 
-  if(Optimizer.mvget) {
+  if (Optimizer.mvget) {
     pipeline += new MVGet(IR)
     pipeline += new SliceToSliceNoUpd(IR)
   }
 
-  if(Optimizer.deadIndexUpdate)
+  if (Optimizer.deadIndexUpdate)
     pipeline += new DeadIdxUpdate(IR)
 
   if (Optimizer.multiResSplitter && !(Optimizer.indexInline && Optimizer.indexLookupFusion))
@@ -132,8 +184,8 @@ class Optimizer(val IR: StoreDSL) {
     number of possible nodes to increase thereby increasing the number of scenarios that sliceInline needs to handle
     */
 
-    if (Optimizer.sliceNoUpd && !(Optimizer.deadIndexUpdate) && !Optimizer.mvget)
-      throw new Error("SliceNoUpdate requires deadIndexUpdate")
+  if (Optimizer.sliceNoUpd && !(Optimizer.deadIndexUpdate) && !Optimizer.mvget)
+    throw new Error("SliceNoUpdate requires deadIndexUpdate")
   /*
       SliceNoUpdate covers the case of only IdxSlice.
       Even though this optimization can be performed without the deadIndexUpdate, for the best case, it should be after
@@ -181,7 +233,7 @@ class Optimizer(val IR: StoreDSL) {
    */
 
   pipeline += DCE
-  if(Optimizer.parameterPromotion) {
+  if (Optimizer.parameterPromotion) {
     pipeline += ParameterPromotion
     pipeline += DCE
   }
@@ -214,7 +266,10 @@ class Optimizer(val IR: StoreDSL) {
       case _ => ()
     }
     val init_ = opt(IR)(prg.initBlock)
-    val codeB_ = prg.codeBlocks.map(t =>  {Optimizer.currentBlock = t._1; (t._1, t._2, opt(IR)(t._3))})
+    val codeB_ = prg.codeBlocks.map(t => {
+      Optimizer.currentBlock = t._1;
+      (t._1, t._2, opt(IR)(t._3))
+    })
     val (global_, structs_, entryidx_) = opt match {
       case writer: IndexDecider => (writer.changeGlobal(prg.globalVars), prg.structs, if (Optimizer.cTransformer) (writer.genOps.values ++ writer.genCmp.values ++ writer.genFixed.values).toSeq.map(IR.Def.unapply(_).get) else prg.entryIdxDefs)
       case writer: EntryTransformer => (writer.changeGlobal(prg.globalVars), prg.structs ++ writer.getStructDefs, (writer.genOps.map(_._2) ++ writer.genCmp.map(_._2) ++ writer.genFixRngOps.map(_._2)).toSeq.collect { case IR.Def(e: EntryIdxApplyObject[_]) => e })
@@ -223,16 +278,16 @@ class Optimizer(val IR: StoreDSL) {
           case EntryIdxApplyObject(IR.Def(hl@PardisLambda(_, _, h)), IR.Def(cl@PardisLambda2(_, _, _, c)), _) => reader(IR)(h)(hl.typeS); reader(IR)(c)(cl.typeS)
         }
         (prg.globalVars, prg.structs, prg.entryIdxDefs)
-//      case writer : ScalaConstructsToCTranformer =>
-//        val ei2 = prg.entryIdxDefs.collect({
-//          case EntryIdxApplyObject(IR.Def(hl@PardisLambda(_, hi, h)), IR.Def(cl@PardisLambda2(_, ci1, ci2, c)), n) =>
-//            val h2 = writer(IR)(h)(hl.typeS)
-//            val c2 = writer(IR)(h)(cl.typeS)
-//            val hl2 = ??
-//            val cl2 = ???
-//            EntryIdxApplyObject(hl2, cl2, n)
-//
-//        })
+      //      case writer : ScalaConstructsToCTranformer =>
+      //        val ei2 = prg.entryIdxDefs.collect({
+      //          case EntryIdxApplyObject(IR.Def(hl@PardisLambda(_, hi, h)), IR.Def(cl@PardisLambda2(_, ci1, ci2, c)), n) =>
+      //            val h2 = writer(IR)(h)(hl.typeS)
+      //            val c2 = writer(IR)(h)(cl.typeS)
+      //            val hl2 = ??
+      //            val cl2 = ???
+      //            EntryIdxApplyObject(hl2, cl2, n)
+      //
+      //        })
       case _ => (prg.globalVars, prg.structs, prg.entryIdxDefs)
     }
     val vars_ = opt match {
