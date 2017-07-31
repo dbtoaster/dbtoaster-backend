@@ -1930,7 +1930,7 @@ class TpccPardisCppGen(val IR: StoreDSL) extends TpccPardisGen {
         |#endif
 
       """.stripMargin
-    file.println(header :/: execProfile :/: structs :\\: structEquals  :\\: entryidx2 :\\: stTypdef :\\:
+    file.println(header :/: execProfile :/: structs :\\: structEquals  :\\: entryIdxes :\\: stTypdef :\\:
     tpccData :\\: threadLocal :\\: tm :: "\n\n#include \"TPCC.h\"\n"  :\\: runPrgFn :\\:
       threadFn:\\:
       traits :/: Document.nest(2, mainPrg) :/: "}")

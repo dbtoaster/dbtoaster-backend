@@ -39,7 +39,9 @@ class GenericEntry(var map: mutable.HashMap[Int, Any], var n: Int, var isSampleE
   override def toString = map.mkString("[", ", ", "]")
 }
 
+import squid.lib.transparencyPropagating
 object GenericEntry {
+  @transparencyPropagating
   def apply(ignore: Any, elems: Any*): GenericEntry = {
     val map = new mutable.HashMap[Int, Any]
 

@@ -497,6 +497,12 @@ class Store[E <: Entry](val idxs: Array[Idx[E]], val ops: Array[EntryIdx[E]] = n
     }
   }
 
+  def sliceCopyAgg(idx: Int, key: E, agg: ()=> Aggregator[E]): E = {
+    val aggInst = agg()
+    sliceCopy(idx, key, aggInst)
+    aggInst.result
+  }
+
   def sliceCopyDependent(idx: Int, key: E, f: E => Unit) = time("slice", idx) {
     if (key != null) {
       idxs(idx).sliceCopyDependent(key, f)

@@ -17,7 +17,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.3.10",
   "com.typesafe.akka" %% "akka-remote"    % "2.3.10",
   "org.scala-lang"     % "scala-actors"   % scalaVersion.value, // to compile legacy Scala
-  "org.scala-lang"     % "scala-compiler" % scalaVersion.value
+  "org.scala-lang"     % "scala-compiler" % scalaVersion.value,
+  "ch.epfl.data" % "squid-core_2.11" % "0.1.1-SNAPSHOT"
 )
 
 // --------- Compilation options
