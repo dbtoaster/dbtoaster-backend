@@ -2,10 +2,9 @@ package ddbt.codegen
 
 import ch.epfl.data.sc.pardis.ir._
 import ch.epfl.data.sc.pardis.optimization._
-import ch.epfl.data.sc.pardis.types.{PardisType, PardisTypeImplicits}
-import ddbt.lib.store.GenericEntry
+import ch.epfl.data.sc.pardis.types.PardisType
+import ddbt.lib.store._
 import ddbt.lib.store.deep.EntryIdxIRs.EntryIdxApplyObject
-import ddbt.lib.store.deep.GenericEntryIRs.GenericEntryType
 import ddbt.lib.store.deep.StoreDSL
 import ddbt.newqq.DBToasterSquidBinding
 import ddbt.transformer._
@@ -13,9 +12,6 @@ import squid.anf.analysis
 import squid.ir.{ClassEmbedder, StandardEffects}
 import squid.lang.ScalaCore
 import squid.quasi.SimpleReps
-import squid.scback.AutoBinder
-
-import scala.collection.mutable
 
 /**
   * Created by sachin on 27.04.16.
@@ -28,7 +24,8 @@ case class TransactionProgram[T](val initBlock: PardisBlock[T], val globalVars: 
   override val main: PardisBlock[Any] = initBlock.asInstanceOf[PardisBlock[Any]]
 }
 
-case class SquidProgram[T](val globalMaps: Map[String, (StoreSchema, IndexedCols)], val codeBlocks: Seq[(String, Embedding.Predef.IR[T, _])]) {
+case class SquidProgram[T](val globalMaps: Map[String, (StoreSchema, IndexedCols, Indexes)], val codeBlocks: Seq[(String, Embedding.Predef.IR[T, _])]) {
+  type GenOpsType = Seq[Int]
 
   import Embedding.Predef._
 
@@ -37,12 +34,62 @@ case class SquidProgram[T](val globalMaps: Map[String, (StoreSchema, IndexedCols
   def getSCTP(Context: StoreDSL) = {
     val binder = new DBToasterSquidBinding(Context)
     import Context._
-    import PardisTypeImplicits.typeUnit
-    lazy val scMaps = globalMaps.keys.map(n => n -> Context.__newStoreNamed[GenericEntry](n).asInstanceOf[Sym[_]]).toMap
-    val initB = binder.Sqd.sc.reifyBlock({ scMaps; Context.unit(1) })
-    scMaps.foreach { case (n, sym) =>
-      sym.attributes += globalMaps(n)._1
-      sym.attributes += globalMaps(n)._2
+
+    val genOps = collection.mutable.HashMap[Seq[Int], Rep[EntryIdx[GenericEntry]]]()
+    val genCmp = collection.mutable.HashMap[(Seq[Int], Int, IRType[_]), Rep[EntryIdx[GenericEntry]]]()
+    val genFixed = collection.mutable.HashMap[Seq[(Int, Int, Int)], Rep[EntryIdx[GenericEntry]]]()
+
+    def genSCEntryIdx(idx: Indexes): Seq[Rep[EntryIdx[GenericEntry]]] = idx.indexes.map(_ match {
+      case Index(_, cols, IHash, _, _, _, _, _) =>
+        genOps getOrElseUpdate(cols, Context.EntryIdx.genericOps(unit[Seq[Int]](cols)))
+      case Index(_, _, IDirect, _, _, _, _, colsRange) =>
+        val tp = SeqType(Tuple3Type(IntType, IntType, IntType))
+        genFixed getOrElseUpdate(colsRange, Context.EntryIdx.genericFixedRangeOps(unit[Seq[(Int, Int, Int)]](colsRange)(tp)))
+      case Index(_, cols, INone, _, _, _, _, _) =>
+        genOps getOrElseUpdate (cols, Context.EntryIdx.genericOps(unit[Seq[Int]](cols)))
+      case Index(_, cols, ISliceHeapMax, _, _, o, t:IRType[t0], _) => {
+        implicit val tpe = t
+        val f1 = ir"(ge: GenericEntry) => ge.get[t0](${Const(o)})"
+        val f2 = f1.reinterpretIn(binder.Sqd).rep.asInstanceOf[Rep[GenericEntry => Any]]
+        val rep = Context.EntryIdx.genericCmp(unit[Seq[Int]](cols), f2)(f2.tp.typeArguments(1).asInstanceOf[TypeRep[Any]])
+        genCmp getOrElseUpdate ((cols, o, t), rep)
+      }
+      case Index(_, cols, ISliceHeapMin, _, _, o, t:IRType[t0], _) => {
+        implicit val tpe = t
+        val f1 = ir"(ge: GenericEntry) => ge.get[t0](${Const(o)})"
+        val f2 = f1.reinterpretIn(binder.Sqd).rep.asInstanceOf[Rep[GenericEntry => Any]]
+        val rep = Context.EntryIdx.genericCmp(unit[Seq[Int]](cols), f2)(f2.tp.typeArguments(1).asInstanceOf[TypeRep[Any]])
+        genCmp getOrElseUpdate ((cols, o, t), rep)
+      }
+      case Index(_, cols, ISlicedHeapMed, _, _, o, t:IRType[t0], _) => {
+        implicit val tpe = t
+        val f1 = ir"(ge: GenericEntry) => ge.get[t0](${Const(o)})"
+        val f2 = f1.reinterpretIn(binder.Sqd).rep.asInstanceOf[Rep[GenericEntry => Any]]
+        val rep = Context.EntryIdx.genericCmp(unit[Seq[Int]](cols), f2)(f2.tp.typeArguments(1).asInstanceOf[TypeRep[Any]])
+        genCmp getOrElseUpdate ((cols, o, t), rep)
+      }
+    })
+    lazy val scMaps = globalMaps.map {
+      case (n, (sch, cols, idx)) => {
+        val ei = genSCEntryIdx(idx)
+        val store = Context.__newStoreNamed2[GenericEntry](n, unit(ei.size), Context.Array(ei: _*))
+        idx.indexes.foreach(i => store.index(Context.unit(i.idxNum), Context.unit(i.tp.toString), Context.unit(i.unique), Context.unit(i.sliceIdx)))
+        n -> store.asInstanceOf[Sym[_]]
+      }
+    }
+
+    val initB = binder.Sqd.sc.reifyBlock({
+      scMaps;
+      Context.unit(1)
+    })
+
+    val entIdxes = (genOps.values ++ genFixed.values ++ genCmp.values).map(Def.unapply(_).get).toList
+
+    scMaps.foreach {
+      case (n, sym) =>
+        sym.attributes += globalMaps(n)._1
+        sym.attributes += globalMaps(n)._2
+        sym.attributes += globalMaps(n)._3
     }
     val scBlocks = codeBlocks.map(b => {
       val holeMapper = collection.mutable.LinkedHashMap[String, binder.Sqd.sc.Sym[_]]()
@@ -51,7 +98,7 @@ case class SquidProgram[T](val globalMaps: Map[String, (StoreSchema, IndexedCols
           if (globalMaps.contains(name))
             scMaps(name)
           else if (holeMapper.contains(name))
-           holeMapper(name)
+            holeMapper(name)
           else {
             val sym = sc.Sym.freshNamed(name)(typ, Context)
             holeMapper += name -> sym
@@ -59,12 +106,12 @@ case class SquidProgram[T](val globalMaps: Map[String, (StoreSchema, IndexedCols
           }
         }
       }
-      val newb =  b._2.reinterpretIn(converter).rep.asInstanceOf[Block[Int]]
+      val newb = b._2.reinterpretIn(converter).rep.asInstanceOf[Block[Int]]
       //      converter.ab = AutoBinder(Context, converter)
 
       (b._1, holeMapper.toList.sortBy(_._1).map(_._2), newb)
     })
-    TransactionProgram(initB, scMaps.values.toList, scBlocks, Nil, Nil)
+    TransactionProgram(initB, scMaps.values.toList, scBlocks, Nil, entIdxes)
   }
 }
 
@@ -118,18 +165,18 @@ class Optimizer(val IR: StoreDSL) {
   pipeline += new Deforestation(IR)
   pipeline += DCE
 
-  if (Optimizer.secondaryIndex) {
-    pipeline += new IndexAnalysis(IR)
-    pipeline += new IndexDecider(IR)
-    pipeline += new IndexTransformer(IR)
-  } else {
-    pipeline += new IndexDecider(IR)
-    if (Optimizer.fixedRange)
-      throw new Error("Fixed range optimization cannot be enabled without Index analysis")
-    /*
-      We are not interested in such a case, and therefore, slice etc has not been implented on ArrayIndex
-     */
-  }
+  //  if (Optimizer.secondaryIndex) {
+  //    pipeline += new IndexAnalysis(IR)
+  //    pipeline += new IndexDecider(IR)
+  //    pipeline += new IndexTransformer(IR)
+  //  } else {
+  //    pipeline += new IndexDecider(IR)
+  //    if (Optimizer.fixedRange)
+  //      throw new Error("Fixed range optimization cannot be enabled without Index analysis")
+  //    /*
+  //      We are not interested in such a case, and therefore, slice etc has not been implented on ArrayIndex
+  //     */
+  //  }
 
   if (Optimizer.profileStoreOperations)
     pipeline += new Profiler(IR)

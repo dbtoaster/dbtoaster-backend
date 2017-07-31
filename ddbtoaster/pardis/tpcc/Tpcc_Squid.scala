@@ -1,4 +1,4 @@
-package sc.tpcc
+package ddbt.squid.tpcc
 
 //import ddbt.codegen.{Optimizer, TransactionProgram}
 //import ddbt.lib.store.deep._
@@ -9,11 +9,13 @@ import ddbt.newqq.DBToasterSquidBinding
 
 import scala.language.implicitConversions
 import java.util.Date
+
 import scala.collection.mutable.Set
 import ch.epfl.data.sc.pardis.ir.ObjectOpsIRs.TypeRep
 import ch.epfl.data.sc.pardis.types.{BooleanType, DoubleType, IntType, StringType}
 import ddbt.lib.store.deep.DateIRs.DateType
-import ddbt.transformer.{IndexedCols, StoreSchema}
+import ddbt.transformer.{IndexedCols, Indexes, StoreSchema}
+import sc.tpcc.{TpccPardisCppGen, TpccPardisParallelCppGen, TpccPardisScalaGen}
 
 
 object Tpcc_Squid {
@@ -96,7 +98,7 @@ object Tpcc_Squid {
 
     val squidBlocks = new scala.collection.mutable.ArrayBuffer[(String, IR[Int, _])]
     val storeNames = List("newOrderTbl", "historyTbl", "warehouseTbl", "itemTbl", "orderTbl", "districtTbl", "orderLineTbl", "customerTbl", "stockTbl")
-    val storeInfo = storeNames.map(n => n ->(StoreSchema(schema(n)), new IndexedCols(allKeys(n), allRanges.getOrElse(n, Nil)))).toMap
+    val storeInfo = storeNames.map(n => n ->(StoreSchema(schema(n)), new IndexedCols(allKeys(n), allRanges.getOrElse(n, Nil)), new Indexes())).toMap
     if (lang.equals("pcpp")) {
       squidBlocks += "NewOrderTx" -> newOrderTxParallel
       squidBlocks += "PaymentTx" -> paymentTxParallel
@@ -108,9 +110,13 @@ object Tpcc_Squid {
     squidBlocks += "DeliveryTx" -> deliveryTx
     squidBlocks += "StockLevelTx" -> stockLevelTx
     val sqPrgm = SquidProgram(storeInfo, squidBlocks)
-    System.out.println("\n\nSquid IR :\n" + sqPrgm.getIR)
-    val initialTP = sqPrgm.getSCTP(Context)
-    //
+
+
+    val sq2 = ddbt.squid.transformer.IndexTransformer.optimize(sqPrgm)
+    val sqFinalPrgm = sq2
+    //    System.out.println("\n\nSquid IR :\n" + sqFinalPrgm.getIR)
+    val initialTP = sqFinalPrgm.getSCTP(Context)
+
     val codeGen = lang match {
       case "scala" => new TpccPardisScalaGen(Context)
       case "cpp" => Optimizer.cTransformer = true;
@@ -144,7 +150,6 @@ object Tpcc_Squid {
     //    val initialTP = TransactionProgram(initB, List(prog.newOrderTbl, prog.historyTbl, prog.warehouseTbl, prog.itemTbl, prog.orderTbl, prog.districtTbl, prog.orderLineTbl, prog.customerTbl, prog.stockTbl).map(_.asInstanceOf[Sym[_]]), codeBlocks, Nil, Nil)
     val optTP = new Optimizer(Context).optimize(initialTP)
     codeGen.generate(optTP)
-
   }
 
   var parallel = false
@@ -510,9 +515,8 @@ object Tpcc_Squid {
       $(districtTbl).updateCopy(districtEntry)
 
       val customerEntry = if ($(c_by_name) > 0) {
-        val custagg = Aggregator.median[GenericEntry, String](e => e.get[java.lang.String](4))
-        $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), custagg)
-        custagg.result
+        val custAggF = () => Aggregator.median[GenericEntry, String](e => e.get[java.lang.String](4))
+        $(customerTbl).sliceCopyAgg(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), custAggF)
       }
       else {
         $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(c_d_id), $(c_w_id)))
@@ -624,9 +628,9 @@ object Tpcc_Squid {
       var local_c_id = 0
       var customerEntry: GenericEntry = null
       if ($(c_by_name) > 0) {
-        val custagg = Aggregator.median[GenericEntry, String](e => e.get[java.lang.String](4))
-        $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), custagg)
-        customerEntry = custagg.result
+        val custAggF = () => Aggregator.median[GenericEntry, String](e => e.get[java.lang.String](4))
+        $(customerTbl).sliceCopyAgg(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(c_d_id), $(c_w_id), $(c_last_input)), custAggF)
+
       }
       if ($(partForW(c_w_id)) == $(partitionID)) {
         if ($(c_by_name) == 0) {
@@ -697,18 +701,16 @@ object Tpcc_Squid {
     val c_last = ir"c_last?:String"
     lazy val txn = ir {
       val customerEntry = if ($(c_by_name) > 0) {
-        val custagg = Aggregator.median[GenericEntry, String](e => e.get[java.lang.String](4))
-        $(customerTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), custagg)
-        custagg.result
+        val custAggF = () => Aggregator.median[GenericEntry, String](e => e.get[java.lang.String](4))
+        $(customerTbl).sliceCopyAgg(0, GenericEntry("SteSampleSEntry", 2, 3, 6, $(d_id), $(w_id), $(c_last)), custAggF)
       }
       else {
         $(customerTbl).getCopy(0, GenericEntry("SteSampleSEntry", 1, 2, 3, $(c_id), $(d_id), $(w_id)))
       }
 
       val found_c_id = customerEntry.get[Int](3)
-      val agg = Aggregator.max[GenericEntry, Int](e => e.get[Int](1))
-      $(orderTbl).sliceCopy(0, GenericEntry("SteSampleSEntry", 2, 3, 4, $(d_id), $(w_id), found_c_id), agg)
-      val res = agg.result
+      val aggF = () => Aggregator.max[GenericEntry, Int](e => e.get[Int](1))
+      val res = $(orderTbl).sliceCopyAgg(0, GenericEntry("SteSampleSEntry", 2, 3, 4, $(d_id), $(w_id), found_c_id), aggF)
       if (res == null) {
         $(failedOS) := (1 + $(failedOS).!)
         0
@@ -796,9 +798,9 @@ dsl"""
       val orderIDs = new Array[Int](DIST_PER_WAREHOUSE)
       var d_id = 1
       while (d_id <= DIST_PER_WAREHOUSE) {
-        val agg = Aggregator.min[GenericEntry, Int](e => e.get[Int](1))
-        $(newOrderTbl).sliceCopy(0 /*no_o_id*/ , GenericEntry("SteSampleSEntry", 2, 3, d_id, $(w_id)), agg)
-        val firstOrderEntry = agg.result
+        val aggF = () => Aggregator.min[GenericEntry, Int](e => e.get[Int](1))
+        val firstOrderEntry = $(newOrderTbl).sliceCopyAgg(0 /*no_o_id*/ , GenericEntry("SteSampleSEntry", 2, 3, d_id, $(w_id)), aggF)
+
         if (firstOrderEntry != null) {
           // found
           val no_o_id = firstOrderEntry.get[Int](1)
