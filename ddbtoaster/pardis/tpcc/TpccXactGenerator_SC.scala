@@ -100,6 +100,11 @@ object TpccXactGenerator_SC {
         new TpccPardisCppGen(Context)
       case "pcpp" => Optimizer.cTransformer = true;
         new TpccPardisParallelCppGen(Context)
+      case "ccpp" =>
+        Optimizer.cTransformer = true
+        Optimizer.mvget = true
+        Optimizer.concCPP = true
+        new TpccPardisConcCppGen(Context)
     }
     val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
     prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))

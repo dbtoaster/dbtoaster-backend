@@ -3,8 +3,12 @@
 #include <functional>
 #include <vector>
 #include <algorithm>
+#ifdef CONCURRENT
 #include "Version.h"
-
+#else
+typedef void TransactionReturnStatus;
+#define SUCCESS 
+#endif
 template <typename E, typename R>
 struct MinAggregator {
     E** minEntry;
@@ -34,7 +38,7 @@ struct MinAggregator {
     E* result() {
         return *minEntry;
     }
-
+#ifdef CONCURRENT
     E* resultForUpdate(OperationReturnStatus& st, Transaction& xact) {
         E* resE = *minEntry;
         Version<E>* resV = (Version<E>*) VBase::getVersionFromT((char*) resE);
@@ -50,7 +54,7 @@ struct MinAggregator {
             }
             return nullptr;
         }
-        Version<E>* newV = (Version<E>*) malloc(sizeof (Version<E>));
+        Version<E>* newV = aligned_malloc(Version<E>);
         new(newV) Version<E>(vh, xact);
         
         if (!e->versionHead.compare_exchange_strong(vh, newV)) {
@@ -66,6 +70,7 @@ struct MinAggregator {
         st = OP_SUCCESS;
         return &newV->obj;
     }
+#endif
 };
 
 template <typename E, typename R>
@@ -98,6 +103,7 @@ struct MaxAggregator {
         return *maxEntry;
     }
 
+#ifdef CONCURRENT
     E* resultForUpdate(OperationReturnStatus& st, Transaction& xact) {
         E* resE = *maxEntry;
         Version<E>* resV = (Version<E>*) VBase::getVersionFromT((char*) resE);
@@ -113,7 +119,7 @@ struct MaxAggregator {
             }
             return nullptr;
         }
-        Version<E>* newV = (Version<E>*) malloc(sizeof (Version<E>));
+        Version<E>* newV = aligned_malloc(Version<E>);
         new(newV) Version<E>(vh, xact);
         
         if (!e->versionHead.compare_exchange_strong(vh, newV)) {
@@ -129,6 +135,7 @@ struct MaxAggregator {
         st = OP_SUCCESS;
         return &newV->obj;
     }
+#endif
 };
 
 template<typename E, typename R>
@@ -160,7 +167,7 @@ struct MedianAggregator {
         if (s % 2 == 0) i--;
         return results[i];
     }
-
+#ifdef CONCURRENT
     E* resultForUpdate(OperationReturnStatus& st, Transaction& xact) {
         if (results.empty())
             return nullptr;
@@ -193,7 +200,7 @@ struct MedianAggregator {
             return nullptr;
         }
 
-        Version<E>* newV = (Version<E>*) malloc(sizeof (Version<E>));
+        Version<E>* newV = aligned_malloc(Version<E>);
         new(newV) Version<E>(vh, xact);
         
          if (!e->versionHead.compare_exchange_strong(vh, newV)) {
@@ -209,6 +216,7 @@ struct MedianAggregator {
         st = OP_SUCCESS;
         return &newV->obj;
     }
+#endif
 };
 
 #endif

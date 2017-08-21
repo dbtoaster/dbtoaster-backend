@@ -22,6 +22,7 @@ const timestamp initCommitTS = mask + 5;
 #define PTRtoTS(t) ((timestamp) t ^ mask) // generate temporary timestamp for transaction from its pointer
 #define TStoPTR(ts) ((Transaction*) (ts ^ mask)) //get transaction pointer from its temporary timestamp
 
+#define aligned_malloc(x) (x*)aligned_alloc(alignof(x), sizeof(x))
 template<typename T>
 FORCE_INLINE bool isMarked(T t) {
     return ((size_t) t & mask);

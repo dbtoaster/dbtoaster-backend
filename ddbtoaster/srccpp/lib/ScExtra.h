@@ -6,11 +6,12 @@
 #include <cctype>
 #include "hpds/pstring.hpp"
 #include "program_base.hpp"
-#include "types.h"
 #include "GenericEntry.hpp"
-#include "Version.h"
 #include "Aggregator.hpp"
-
+#ifdef CONCURRENT
+#include "types.h"
+#include "Version.h"
+#endif
 using namespace std;
 using namespace dbtoaster;
 #define EXPAND(x) #x

@@ -152,9 +152,9 @@ struct CuckooIndex : public IndexMV<T> {
     //SBJ: Only for data  result loading . To be removed later
 
     FORCE_INLINE void add(T* obj, Transaction& xact) {
-        Version<T>* v = (Version<T>*) malloc(sizeof (Version<T>));
+        Version<T>* v = aligned_malloc(Version<T>);
         new(v) Version<T>(*obj, xact);
-        EntryMV<T>* e = (EntryMV<T>*) malloc(sizeof (EntryMV<T>));
+        EntryMV<T>* e = aligned_malloc(EntryMV<T>);
         new(e) EntryMV<T>(nullptr, *obj, v);
         v->e = e;
         index.insert(obj, e);
@@ -248,7 +248,7 @@ struct CuckooIndex : public IndexMV<T> {
 
     FORCE_INLINE OperationReturnStatus foreach(FuncType f, Transaction& xact) override {
         EntryMV<T>* cur = dataHead;
-        ForEachPred<T>* pred = (ForEachPred<T>*) malloc(sizeof (ForEachPred<T>));
+        ForEachPred<T>* pred = (ForEachPred<T>*) malloc(sizeof(ForEachPred<T>));
         new(pred) ForEachPred<T>(xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
         xact.predicateHead = pred;
         while (cur) {
@@ -281,7 +281,7 @@ struct CuckooIndex : public IndexMV<T> {
             Version<T>* v = result->getCorrectVersion(xact);
             if (v->obj.isInvalid)
                 return nullptr;
-            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
+            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof(GetPred<T, IDX_FN>));
             new(pred) GetPred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
             return &v->obj;
@@ -309,7 +309,7 @@ struct CuckooIndex : public IndexMV<T> {
                 return nullptr;
             }
 
-            Version<T> *newv = (Version<T> *) malloc(sizeof (Version<T>));
+            Version<T> *newv = aligned_malloc(Version<T>);
             new(newv) Version<T>(resV, xact);
 
             if (!result->versionHead.compare_exchange_strong(resV, newv)) {
@@ -323,7 +323,7 @@ struct CuckooIndex : public IndexMV<T> {
             }
 
 
-            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
+            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof(GetPred<T, IDX_FN>));
             new(pred) GetPred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
             xact.undoBufferHead = newv;
@@ -465,19 +465,19 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
     }
 
     ConcurrentArrayIndex(size_t s) {//ignore
-        memset(array, 0, sizeof (AlignedEntry) * size);
+        memset(array, 0, sizeof(AlignedEntry) * size);
     }
 
     ConcurrentArrayIndex(void* ptr, size_t s) {//ignore
-        memset(array, 0, sizeof (AlignedEntry) * size);
+        memset(array, 0, sizeof(AlignedEntry) * size);
     }
 
     //Data Result loading 
 
     FORCE_INLINE void add(T* obj, Transaction& xact) {
-        Version<T>* v = (Version<T>*) malloc(sizeof (Version<T>));
+        Version<T>* v = aligned_malloc(Version<T>);
         new(v) Version<T>(*obj, xact);
-        EntryMV<T>* e = (EntryMV<T>*) malloc(sizeof (EntryMV<T>));
+        EntryMV<T>* e = aligned_malloc(EntryMV<T>);
         new(e) EntryMV<T>(nullptr, *obj, v);
         v->e = e;
         size_t idx = IDX_FN::hash(v->obj);
@@ -547,7 +547,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
         if (!v)
             return nullptr;
         else {
-            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
+            GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof(GetPred<T, IDX_FN>));
             new(pred) GetPred<T, IDX_FN>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
             return &v->obj;
@@ -575,7 +575,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
             s = WW_VALUE;
             return nullptr;
         }
-        Version<T>* newv = (Version<T>*) malloc(sizeof (Version<T>));
+        Version<T>* newv = aligned_malloc(Version<T>);
         new (newv) Version<T>(resV, xact);
         if (!e->versionHead.compare_exchange_strong(resV, newv)) {
             if (resV->xactid > initCommitTS) {
@@ -586,7 +586,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
             free(newv);
             return nullptr;
         }
-        GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof (GetPred<T, IDX_FN>));
+        GetPred<T, IDX_FN>* pred = (GetPred<T, IDX_FN>*) malloc(sizeof(GetPred<T, IDX_FN>));
         new(pred) GetPred<T, IDX_FN>(key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
         xact.predicateHead = pred;
         xact.undoBufferHead = newv;
@@ -618,7 +618,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
 //    SpinLock lock;
 //
 //    _Tree(EntryMV<T>* e) {
-//        root = malloc(sizeof (Node));
+//        root = malloc(sizeof(Node));
 //        new (root) Node(e, nullptr);
 //    }
 //    FORCE_INLINE Node* getNext(Node* p) {
@@ -694,7 +694,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
 //            //assumes that slice columns as well as the ord column are same across all versions of Entry
 //            if (IDX_FN2::cmp(*obj, curObj) < 0) {
 //                if (cur->left == nullptr) {
-//                    Node* newnode = (Node*) malloc(sizeof (Node));
+//                    Node* newnode = (Node*) malloc(sizeof(Node));
 //                    new(newnode) Node(emv, cur);
 //                    cur->left = newnode;
 //
@@ -719,7 +719,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
 //                cur = cur->left;
 //            } else {
 //                if (cur->right == nullptr) {
-//                    Node* newnode = (Node*) malloc(sizeof (Node));
+//                    Node* newnode = (Node*) malloc(sizeof(Node));
 //                    new(newnode) Node(emv, cur);
 //                    cur->right = newnode;
 //
@@ -822,7 +822,7 @@ struct ConcurrentArrayIndex : public IndexMV<T> {
 //    }
 //
 //    OperationReturnStatus add(T* key, EntryMV<T>* obj) override {
-//        Tree* newtr = (Tree*) malloc(sizeof (Tree));
+//        Tree* newtr = (Tree*) malloc(sizeof(Tree));
 //        new Tree(obj);
 //        T* keyc = key->copy();
 //        auto updatefn = [newtr, keyc](Tree* &oldtr) {
@@ -933,7 +933,7 @@ struct Heap {
     FORCE_INLINE void double_() {
         uint newsize = arraySize << 1;
         EntryMV<T>** temp = new EntryMV<T>*[newsize];
-        mempcpy(temp, array, arraySize * sizeof (EntryMV<T>*));
+        mempcpy(temp, array, arraySize * sizeof(EntryMV<T>*));
         arraySize = newsize;
         delete[] array;
         array = temp;
@@ -1114,7 +1114,7 @@ struct VersionedAggregator : public IndexMV<T> {
     typedef ST_IDX typeST;
     typedef EntryMV<T>* EntryType;
 
-    struct VersionedContainer {
+    struct ALIGN VersionedContainer {
         EntryMV<T>* aggE;
         Transaction* xact;
         volatile VersionedContainer* next;
@@ -1123,12 +1123,12 @@ struct VersionedAggregator : public IndexMV<T> {
         }
     };
 
-    struct VersionedSlice {
-        volatile VersionedContainer* head;
+    struct ALIGN VersionedSlice {
         SpinLock lock;
+        volatile VersionedContainer* head;
         ST_IDX sliceST;
 
-        VersionedSlice() :  head(nullptr), lock(), sliceST() {
+        VersionedSlice() :   lock(), head(nullptr), sliceST() {
 
         }
 
@@ -1152,7 +1152,7 @@ struct VersionedAggregator : public IndexMV<T> {
              */
             if (!head || head->aggE != aggE) {
                 if (!head || head->xact != TStoPTR(newv->xactid)) {
-                    VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
+                    VersionedContainer* vc = aligned_malloc(VersionedContainer);
                     new(vc) VersionedContainer(aggE, TStoPTR(newv->xactid), head);
                     head = vc;
                 } else {
@@ -1175,7 +1175,7 @@ struct VersionedAggregator : public IndexMV<T> {
             }
             if (head->aggE != aggE) {
                 if (head->xact != TStoPTR(v->xactid)) {
-                    VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
+                    VersionedContainer* vc = aligned_malloc(VersionedContainer);
                     new(vc) VersionedContainer(aggE, TStoPTR(v->xactid), head);
                     head = vc;
                 } else {
@@ -1236,10 +1236,10 @@ struct VersionedAggregator : public IndexMV<T> {
     }
 
     FORCE_INLINE OperationReturnStatus add(Version<T>* newv) override {
-        VersionedSlice * vsnew = (VersionedSlice*) malloc(sizeof (VersionedSlice));
+        VersionedSlice * vsnew = aligned_malloc(VersionedSlice);
         new (vsnew) VersionedSlice();
 
-        VersionedContainer* vc = (VersionedContainer*) malloc(sizeof (VersionedContainer));
+        VersionedContainer* vc = aligned_malloc(VersionedContainer);
         EntryMV<T>* e = (EntryMV<T>*)newv->e;
         new(vc) VersionedContainer(e, TStoPTR(newv->xactid), nullptr);
         e->backptrs[IndexMV<T>::idxId] = vsnew;
@@ -1314,7 +1314,7 @@ struct VersionedAggregator : public IndexMV<T> {
                 return nullptr;
             }
 
-            Version<T> *newv = (Version<T> *) malloc(sizeof (Version<T>));
+            Version<T> *newv = aligned_malloc(Version<T>);
             new(newv) Version<T>(resV, xact);
 
             if (!resE->versionHead.compare_exchange_strong(resV, newv)) {
@@ -1375,7 +1375,7 @@ struct MinHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
         T* ret = Super::get_(key, xact);
         if (ret) {
             //            assert(ret->_4.data_);
-            MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MinSlicePred<T, IDX_FN1, IDX_FN2>));
+            MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof(MinSlicePred<T, IDX_FN1, IDX_FN2>));
             new(pred) MinSlicePred<T, IDX_FN1, IDX_FN2>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
@@ -1392,7 +1392,7 @@ struct MinHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
         T* ret = Super::getForUpdate_(key, s, xact);
         if (ret) {
             //            assert(ret->_4.data_);
-            MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MinSlicePred<T, IDX_FN1, IDX_FN2>));
+            MinSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MinSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof(MinSlicePred<T, IDX_FN1, IDX_FN2>));
             new(pred) MinSlicePred<T, IDX_FN1, IDX_FN2>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
@@ -1417,7 +1417,7 @@ struct MaxHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
     FORCE_INLINE T * get(const T* key, Transaction & xact) const override {
         T* ret = Super::get_(key, xact);
         if (ret) {
-            MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MaxSlicePred<T, IDX_FN1, IDX_FN2>));
+            MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof(MaxSlicePred<T, IDX_FN1, IDX_FN2>));
             new(pred) MaxSlicePred<T, IDX_FN1, IDX_FN2>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
@@ -1433,7 +1433,7 @@ struct MaxHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, Heap<T, ID
     FORCE_INLINE T * getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
         T* ret = Super::getForUpdate_(key, s, xact);
         if (ret) {
-            MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof (MaxSlicePred<T, IDX_FN1, IDX_FN2>));
+            MaxSlicePred<T, IDX_FN1, IDX_FN2>* pred = (MaxSlicePred<T, IDX_FN1, IDX_FN2>*) malloc(sizeof(MaxSlicePred<T, IDX_FN1, IDX_FN2>));
             new(pred) MaxSlicePred<T, IDX_FN1, IDX_FN2>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             pred->key = *ret;
             xact.predicateHead = pred;
@@ -1458,7 +1458,7 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
     FORCE_INLINE T * get(const T* key, Transaction & xact) const override {
         T* ret = Super::get_(key, xact);
         if (ret) {
-            SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof (SlicePred<T, IDX_FN1>));
+            SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof(SlicePred<T, IDX_FN1>));
             new(pred) SlicePred<T, IDX_FN1>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
 
@@ -1469,7 +1469,7 @@ struct MedHeapIndex : public VersionedAggregator<T, IDX_FN1, IDX_FN2, MedianHeap
     FORCE_INLINE T * getForUpdate(const T* key, OperationReturnStatus& s, Transaction & xact) {
         T* ret = Super::getForUpdate_(key, s, xact);
         if (ret) {
-            SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof (SlicePred<T, IDX_FN1>));
+            SlicePred<T, IDX_FN1>* pred = (SlicePred<T, IDX_FN1>*) malloc(sizeof(SlicePred<T, IDX_FN1>));
             new(pred) SlicePred<T, IDX_FN1>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
         }
@@ -1487,7 +1487,7 @@ template<typename T, typename IDX_FN>
 struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
     typedef HE_<T, IDX_FN> HE;
 
-    struct Container {
+    struct ALIGN Container {
         EntryMV<T>* e;
         std::atomic<Container *> next;
 
@@ -1510,11 +1510,11 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
     //Cuckoo points towards a sentinel to protect against concurrent insertions/deletions
 
     FORCE_INLINE OperationReturnStatus add(Version<T>* newv) override {
-        Container *newc = (Container *) malloc(sizeof (Container));
+        Container *newc = aligned_malloc(Container);
         EntryMV<T>* obj = (EntryMV<T>*)newv->e;
         new(newc) Container(obj);
         obj->backptrs[IndexMV<T>::idxId] = newc;
-        Container *sentinel = (Container*) malloc(sizeof (Container));
+        Container *sentinel = aligned_malloc(Container);
         new(sentinel) Container(newc);
         T* keyc = newv->obj.copy();
         auto updatefn = [newc, sentinel, keyc](Container* &c) {
@@ -1571,7 +1571,7 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                 curNext = cur->next;
             }
             if (!cur) { //emv does not exist in slice
-                Container *newc = (Container *) malloc(sizeof (Container));
+                Container *newc = aligned_malloc(Container);
                 new(newc) Container(emv);
                 Container *nxt = sentinel->next;
                 do {
@@ -1621,7 +1621,7 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                     return WW_VALUE;
                 }
                 if (v && !v->obj.isInvalid) {
-                    Version<T> * newV = (Version<T>*)malloc(sizeof (Version<T>));
+                    Version<T> * newV = aligned_malloc(Version<T>);
                     new(newV) Version<T>(v, xact);
 
                     if (!cur->e->versionHead.compare_exchange_strong(v, newV)) {
@@ -1641,7 +1641,7 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                 prevNext = curNext;
                 cur = curNext;
             } while (cur);
-            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof (SlicePred<T, IDX_FN>));
+            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof(SlicePred<T, IDX_FN>));
             new(pred) SlicePred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
             return OP_SUCCESS;
@@ -1684,7 +1684,7 @@ struct ConcurrentCuckooSecondaryIndex : public IndexMV<T> {
                 prevNext = curNext;
                 cur = curNext;
             } while (cur);
-            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof (SlicePred<T, IDX_FN>));
+            SlicePred<T, IDX_FN>* pred = (SlicePred<T, IDX_FN>*) malloc(sizeof(SlicePred<T, IDX_FN>));
             new(pred) SlicePred<T, IDX_FN>(*key, xact.predicateHead, IndexMV<T>::mmapmv, col_type(-1));
             xact.predicateHead = pred;
             return OP_SUCCESS;
@@ -1845,10 +1845,10 @@ public:
     FORCE_INLINE OperationReturnStatus add(T* elem, Transaction& xact) {
         T* cur = index[0]->get(elem);
         if (cur == nullptr) {
-            Version<T>* newV = (Version<T>*) malloc(sizeof (Version<T>));
+            Version<T>* newV = aligned_malloc(Version<T>);
             new(newV) Version<T>(*cur, xact);
             newV->xactid = PTRtoTS(xact);
-            EntryMV<T> * newE = (EntryMV<T> *) malloc(sizeof (EntryMV<T>));
+            EntryMV<T> * newE = aligned_malloc(EntryMV<T>);
             new(newE) EntryMV<T>(this, *elem, newV);
             newV->e = newE;
             auto primarySt = index[0] -> add(newV);
@@ -1888,9 +1888,9 @@ public:
     }
 
     FORCE_INLINE OperationReturnStatus insert_nocheck(const T* elem, Transaction& xact) {
-        Version<T>* newV = (Version<T>*) malloc(sizeof (Version<T>));
+        Version<T>* newV = aligned_malloc(Version<T>);
         new(newV) Version<T>(*elem, xact);
-        EntryMV<T>* newE = (EntryMV<T>*) malloc(sizeof (EntryMV<T>));
+        EntryMV<T>* newE = aligned_malloc(EntryMV<T>);
         new(newE) EntryMV<T>(this, *elem, newV);
         newV->e = newE;
         //        newV->obj.e = newE;

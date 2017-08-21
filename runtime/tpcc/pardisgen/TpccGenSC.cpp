@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #define SC_GENERATED 1
-#define USING_GENERIC_ENTRY true
+#define USING_GENERIC_ENTRY false
 #define CONCURRENT 1
 
 #include <algorithm>
@@ -70,8 +70,179 @@ const size_t stockTblPoolSizes[] = {65536*2, 0};
 const size_t historyTblPoolSizes[] = {262144*2, 65536};
      
 
-
-
+struct SEntry5_IISDS {
+  int _1;  int _2;  PString _3;  double _4;  PString _5;  bool isInvalid;
+  SEntry5_IISDS() :_1(-2147483648), _2(-2147483648), _3(), _4(-1.7976931348623157E308), _5(), isInvalid(false){}
+  SEntry5_IISDS(const int& _1, const int& _2, const PString& _3, const double& _4, const PString& _5) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), isInvalid(false){}
+  FORCE_INLINE SEntry5_IISDS* copy() const {  SEntry5_IISDS* ptr = (SEntry5_IISDS*) malloc(sizeof(SEntry5_IISDS)); new(ptr) SEntry5_IISDS(_1, _2, _3, _4, _5);  return ptr;}
+};
+struct SEntry11_IISSSSSSDDI {
+  int _1;  int _2;  PString _3;  PString _4;  PString _5;  PString _6;  PString _7;  PString _8;  double _9;  double _10;  int _11;  bool isInvalid;
+  SEntry11_IISSSSSSDDI() :_1(-2147483648), _2(-2147483648), _3(), _4(), _5(), _6(), _7(), _8(), _9(-1.7976931348623157E308), _10(-1.7976931348623157E308), _11(-2147483648), isInvalid(false){}
+  SEntry11_IISSSSSSDDI(const int& _1, const int& _2, const PString& _3, const PString& _4, const PString& _5, const PString& _6, const PString& _7, const PString& _8, const double& _9, const double& _10, const int& _11) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), _10(_10), _11(_11), isInvalid(false){}
+  FORCE_INLINE SEntry11_IISSSSSSDDI* copy() const {  SEntry11_IISSSSSSDDI* ptr = (SEntry11_IISSSSSSDDI*) malloc(sizeof(SEntry11_IISSSSSSDDI)); new(ptr) SEntry11_IISSSSSSDDI(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11);  return ptr;}
+};
+struct SEntry8_IIIITIIB {
+  int _1;  int _2;  int _3;  int _4;  date _5;  int _6;  int _7;  int _8;  bool isInvalid;
+  SEntry8_IIIITIIB() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(-2147483648), _5(0), _6(-2147483648), _7(-2147483648), _8(0), isInvalid(false){}
+  SEntry8_IIIITIIB(const int& _1, const int& _2, const int& _3, const int& _4, const date& _5, const int& _6, const int& _7, const int& _8) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), isInvalid(false){}
+  FORCE_INLINE SEntry8_IIIITIIB* copy() const {  SEntry8_IIIITIIB* ptr = (SEntry8_IIIITIIB*) malloc(sizeof(SEntry8_IIIITIIB)); new(ptr) SEntry8_IIIITIIB(_1, _2, _3, _4, _5, _6, _7, _8);  return ptr;}
+};
+struct SEntry3_III {
+  int _1;  int _2;  int _3;  bool isInvalid;
+  SEntry3_III() :_1(-2147483648), _2(-2147483648), _3(-2147483648), isInvalid(false){}
+  SEntry3_III(const int& _1, const int& _2, const int& _3) : _1(_1), _2(_2), _3(_3), isInvalid(false){}
+  FORCE_INLINE SEntry3_III* copy() const {  SEntry3_III* ptr = (SEntry3_III*) malloc(sizeof(SEntry3_III)); new(ptr) SEntry3_III(_1, _2, _3);  return ptr;}
+};
+struct SEntry21_IIISSSSSSSSSTSDDDDIIS {
+  int _1;  int _2;  int _3;  PString _4;  PString _5;  PString _6;  PString _7;  PString _8;  PString _9;  PString _10;  PString _11;  PString _12;  date _13;  PString _14;  double _15;  double _16;  double _17;  double _18;  int _19;  int _20;  PString _21;  bool isInvalid;
+  SEntry21_IIISSSSSSSSSTSDDDDIIS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(), _5(), _6(), _7(), _8(), _9(), _10(), _11(), _12(), _13(0), _14(), _15(-1.7976931348623157E308), _16(-1.7976931348623157E308), _17(-1.7976931348623157E308), _18(-1.7976931348623157E308), _19(-2147483648), _20(-2147483648), _21(), isInvalid(false){}
+  SEntry21_IIISSSSSSSSSTSDDDDIIS(const int& _1, const int& _2, const int& _3, const PString& _4, const PString& _5, const PString& _6, const PString& _7, const PString& _8, const PString& _9, const PString& _10, const PString& _11, const PString& _12, const date& _13, const PString& _14, const double& _15, const double& _16, const double& _17, const double& _18, const int& _19, const int& _20, const PString& _21) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), _10(_10), _11(_11), _12(_12), _13(_13), _14(_14), _15(_15), _16(_16), _17(_17), _18(_18), _19(_19), _20(_20), _21(_21), isInvalid(false){}
+  FORCE_INLINE SEntry21_IIISSSSSSSSSTSDDDDIIS* copy() const {  SEntry21_IIISSSSSSSSSTSDDDDIIS* ptr = (SEntry21_IIISSSSSSSSSTSDDDDIIS*) malloc(sizeof(SEntry21_IIISSSSSSSSSTSDDDDIIS)); new(ptr) SEntry21_IIISSSSSSSSSTSDDDDIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21);  return ptr;}
+};
+struct SEntry8_IIIIITDS {
+  int _1;  int _2;  int _3;  int _4;  int _5;  date _6;  double _7;  PString _8;  bool isInvalid;
+  SEntry8_IIIIITDS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(-2147483648), _5(-2147483648), _6(0), _7(-1.7976931348623157E308), _8(), isInvalid(false){}
+  SEntry8_IIIIITDS(const int& _1, const int& _2, const int& _3, const int& _4, const int& _5, const date& _6, const double& _7, const PString& _8) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), isInvalid(false){}
+  FORCE_INLINE SEntry8_IIIIITDS* copy() const {  SEntry8_IIIIITDS* ptr = (SEntry8_IIIIITDS*) malloc(sizeof(SEntry8_IIIIITDS)); new(ptr) SEntry8_IIIIITDS(_1, _2, _3, _4, _5, _6, _7, _8);  return ptr;}
+};
+struct SEntry10_IIIIIITIDS {
+  int _1;  int _2;  int _3;  int _4;  int _5;  int _6;  date _7;  int _8;  double _9;  PString _10;  bool isInvalid;
+  SEntry10_IIIIIITIDS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(-2147483648), _5(-2147483648), _6(-2147483648), _7(0), _8(-2147483648), _9(-1.7976931348623157E308), _10(), isInvalid(false){}
+  SEntry10_IIIIIITIDS(const int& _1, const int& _2, const int& _3, const int& _4, const int& _5, const int& _6, const date& _7, const int& _8, const double& _9, const PString& _10) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), _10(_10), isInvalid(false){}
+  FORCE_INLINE SEntry10_IIIIIITIDS* copy() const {  SEntry10_IIIIIITIDS* ptr = (SEntry10_IIIIIITIDS*) malloc(sizeof(SEntry10_IIIIIITIDS)); new(ptr) SEntry10_IIIIIITIDS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10);  return ptr;}
+};
+struct SEntry17_IIISSSSSSSSSSIIIS {
+  int _1;  int _2;  int _3;  PString _4;  PString _5;  PString _6;  PString _7;  PString _8;  PString _9;  PString _10;  PString _11;  PString _12;  PString _13;  int _14;  int _15;  int _16;  PString _17;  bool isInvalid;
+  SEntry17_IIISSSSSSSSSSIIIS() :_1(-2147483648), _2(-2147483648), _3(-2147483648), _4(), _5(), _6(), _7(), _8(), _9(), _10(), _11(), _12(), _13(), _14(-2147483648), _15(-2147483648), _16(-2147483648), _17(), isInvalid(false){}
+  SEntry17_IIISSSSSSSSSSIIIS(const int& _1, const int& _2, const int& _3, const PString& _4, const PString& _5, const PString& _6, const PString& _7, const PString& _8, const PString& _9, const PString& _10, const PString& _11, const PString& _12, const PString& _13, const int& _14, const int& _15, const int& _16, const PString& _17) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), _10(_10), _11(_11), _12(_12), _13(_13), _14(_14), _15(_15), _16(_16), _17(_17), isInvalid(false){}
+  FORCE_INLINE SEntry17_IIISSSSSSSSSSIIIS* copy() const {  SEntry17_IIISSSSSSSSSSIIIS* ptr = (SEntry17_IIISSSSSSSSSSIIIS*) malloc(sizeof(SEntry17_IIISSSSSSSSSSIIIS)); new(ptr) SEntry17_IIISSSSSSSSSSIIIS(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17);  return ptr;}
+};
+struct SEntry9_ISSSSSSDD {
+  int _1;  PString _2;  PString _3;  PString _4;  PString _5;  PString _6;  PString _7;  double _8;  double _9;  bool isInvalid;
+  SEntry9_ISSSSSSDD() :_1(-2147483648), _2(), _3(), _4(), _5(), _6(), _7(), _8(-1.7976931348623157E308), _9(-1.7976931348623157E308), isInvalid(false){}
+  SEntry9_ISSSSSSDD(const int& _1, const PString& _2, const PString& _3, const PString& _4, const PString& _5, const PString& _6, const PString& _7, const double& _8, const double& _9) : _1(_1), _2(_2), _3(_3), _4(_4), _5(_5), _6(_6), _7(_7), _8(_8), _9(_9), isInvalid(false){}
+  FORCE_INLINE SEntry9_ISSSSSSDD* copy() const {  SEntry9_ISSSSSSDD* ptr = (SEntry9_ISSSSSSDD*) malloc(sizeof(SEntry9_ISSSSSSDD)); new(ptr) SEntry9_ISSSSSSDD(_1, _2, _3, _4, _5, _6, _7, _8, _9);  return ptr;}
+};
+bool operator== (const SEntry5_IISDS& o1, const SEntry5_IISDS& o2) {
+  if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;
+  else return o1._1 == o2._1 && 
+  o1._2 == o2._2 && 
+  o1._3 == o2._3 && 
+  (fabs(o1._4 - o2._4) < 0.01) && 
+  o1._5 == o2._5;
+}
+bool operator== (const SEntry11_IISSSSSSDDI& o1, const SEntry11_IISSSSSSDDI& o2) {
+  if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;
+  else return o1._1 == o2._1 && 
+  o1._2 == o2._2 && 
+  o1._3 == o2._3 && 
+  o1._4 == o2._4 && 
+  o1._5 == o2._5 && 
+  o1._6 == o2._6 && 
+  o1._7 == o2._7 && 
+  o1._8 == o2._8 && 
+  (fabs(o1._9 - o2._9) < 0.01) && 
+  (fabs(o1._10 - o2._10) < 0.01) && 
+  o1._11 == o2._11;
+}
+bool operator== (const SEntry8_IIIITIIB& o1, const SEntry8_IIIITIIB& o2) {
+  if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;
+  else return o1._1 == o2._1 && 
+  o1._2 == o2._2 && 
+  o1._3 == o2._3 && 
+  o1._4 == o2._4 && 
+  o1._5 == o2._5 && 
+  o1._6 == o2._6 && 
+  o1._7 == o2._7 && 
+  o1._8 == o2._8;
+}
+bool operator== (const SEntry3_III& o1, const SEntry3_III& o2) {
+  if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;
+  else return o1._1 == o2._1 && 
+  o1._2 == o2._2 && 
+  o1._3 == o2._3;
+}
+bool operator== (const SEntry21_IIISSSSSSSSSTSDDDDIIS& o1, const SEntry21_IIISSSSSSSSSTSDDDDIIS& o2) {
+  if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;
+  else return o1._1 == o2._1 && 
+  o1._2 == o2._2 && 
+  o1._3 == o2._3 && 
+  o1._4 == o2._4 && 
+  o1._5 == o2._5 && 
+  o1._6 == o2._6 && 
+  o1._7 == o2._7 && 
+  o1._8 == o2._8 && 
+  o1._9 == o2._9 && 
+  o1._10 == o2._10 && 
+  o1._11 == o2._11 && 
+  o1._12 == o2._12 && 
+  o1._13 == o2._13 && 
+  o1._14 == o2._14 && 
+  (fabs(o1._15 - o2._15) < 0.01) && 
+  (fabs(o1._16 - o2._16) < 0.01) && 
+  (fabs(o1._17 - o2._17) < 0.01) && 
+  (fabs(o1._18 - o2._18) < 0.01) && 
+  o1._19 == o2._19 && 
+  o1._20 == o2._20 && 
+  o1._21 == o2._21;
+}
+bool operator== (const SEntry8_IIIIITDS& o1, const SEntry8_IIIIITDS& o2) {
+  if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;
+  else return o1._1 == o2._1 && 
+  o1._2 == o2._2 && 
+  o1._3 == o2._3 && 
+  o1._4 == o2._4 && 
+  o1._5 == o2._5 && 
+  o1._6 == o2._6 && 
+  (fabs(o1._7 - o2._7) < 0.01) && 
+  o1._8 == o2._8;
+}
+bool operator== (const SEntry10_IIIIIITIDS& o1, const SEntry10_IIIIIITIDS& o2) {
+  if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;
+  else return o1._1 == o2._1 && 
+  o1._2 == o2._2 && 
+  o1._3 == o2._3 && 
+  o1._4 == o2._4 && 
+  o1._5 == o2._5 && 
+  o1._6 == o2._6 && 
+  o1._7 == o2._7 && 
+  o1._8 == o2._8 && 
+  (fabs(o1._9 - o2._9) < 0.01) && 
+  o1._10 == o2._10;
+}
+bool operator== (const SEntry17_IIISSSSSSSSSSIIIS& o1, const SEntry17_IIISSSSSSSSSSIIIS& o2) {
+  if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;
+  else return o1._1 == o2._1 && 
+  o1._2 == o2._2 && 
+  o1._3 == o2._3 && 
+  o1._4 == o2._4 && 
+  o1._5 == o2._5 && 
+  o1._6 == o2._6 && 
+  o1._7 == o2._7 && 
+  o1._8 == o2._8 && 
+  o1._9 == o2._9 && 
+  o1._10 == o2._10 && 
+  o1._11 == o2._11 && 
+  o1._12 == o2._12 && 
+  o1._13 == o2._13 && 
+  o1._14 == o2._14 && 
+  o1._15 == o2._15 && 
+  o1._16 == o2._16 && 
+  o1._17 == o2._17;
+}
+bool operator== (const SEntry9_ISSSSSSDD& o1, const SEntry9_ISSSSSSDD& o2) {
+  if (o1.isInvalid || o2.isInvalid) return o1.isInvalid && o2.isInvalid;
+  else return o1._1 == o2._1 && 
+  o1._2 == o2._2 && 
+  o1._3 == o2._3 && 
+  o1._4 == o2._4 && 
+  o1._5 == o2._5 && 
+  o1._6 == o2._6 && 
+  o1._7 == o2._7 && 
+  (fabs(o1._8 - o2._8) < 0.01) && 
+  (fabs(o1._9 - o2._9) < 0.01);
+}
 #if USING_GENERIC_ENTRY
 struct GenericOps_3214 {  //OL 0
   FORCE_INLINE static size_t hash(const GenericEntry& e) {
@@ -749,36 +920,36 @@ struct SEntry3_III_Idx23_1 {
 #endif
 
       
-typedef CuckooIndex<GenericEntry, GenericOps_321> newOrderTblIdx0Type;
-typedef MinHeapIndex<GenericEntry, GenericOps_23, GenericCmp_23_1> newOrderTblIdx1Type;
-typedef MultiHashMapMV<GenericEntry,newOrderTblIdx0Type, newOrderTblIdx1Type> newOrderTblStoreType;
+typedef CuckooIndex<struct SEntry3_III, SEntry3_III_Idx321> newOrderTblIdx0Type;
+typedef MinHeapIndex<struct SEntry3_III, SEntry3_III_Idx23, SEntry3_III_Idx23_1> newOrderTblIdx1Type;
+typedef MultiHashMapMV<struct SEntry3_III,newOrderTblIdx0Type, newOrderTblIdx1Type> newOrderTblStoreType;
 
-typedef CuckooIndex<GenericEntry, GenericOps_12345678> historyTblIdx0Type;
-typedef MultiHashMapMV<GenericEntry,historyTblIdx0Type> historyTblStoreType;
+typedef CuckooIndex<struct SEntry8_IIIIITDS, SEntry8_IIIIITDS_Idx12345678> historyTblIdx0Type;
+typedef MultiHashMapMV<struct SEntry8_IIIIITDS,historyTblIdx0Type> historyTblStoreType;
 
-typedef ConcurrentArrayIndex<GenericEntry, GenericFixedRange_1f1t6, 5> warehouseTblIdx0Type;
-typedef MultiHashMapMV<GenericEntry,warehouseTblIdx0Type> warehouseTblStoreType;
+typedef ConcurrentArrayIndex<struct SEntry9_ISSSSSSDD, SEntry9_ISSSSSSDD_Idx1f1t6, 5> warehouseTblIdx0Type;
+typedef MultiHashMapMV<struct SEntry9_ISSSSSSDD,warehouseTblIdx0Type> warehouseTblStoreType;
 
-typedef ConcurrentArrayIndex<GenericEntry, GenericFixedRange_1f1t100002, 100001> itemTblIdx0Type;
-typedef MultiHashMapMV<GenericEntry,itemTblIdx0Type> itemTblStoreType;
+typedef ConcurrentArrayIndex<struct SEntry5_IISDS, SEntry5_IISDS_Idx1f1t100002, 100001> itemTblIdx0Type;
+typedef MultiHashMapMV<struct SEntry5_IISDS,itemTblIdx0Type> itemTblStoreType;
 
-typedef CuckooIndex<GenericEntry, GenericOps_321> orderTblIdx0Type;
-typedef MaxHeapIndex<GenericEntry, GenericOps_234, GenericCmp_234_1> orderTblIdx1Type;
-typedef MultiHashMapMV<GenericEntry,orderTblIdx0Type, orderTblIdx1Type> orderTblStoreType;
+typedef CuckooIndex<struct SEntry8_IIIITIIB, SEntry8_IIIITIIB_Idx321> orderTblIdx0Type;
+typedef MaxHeapIndex<struct SEntry8_IIIITIIB, SEntry8_IIIITIIB_Idx234, SEntry8_IIIITIIB_Idx234_1> orderTblIdx1Type;
+typedef MultiHashMapMV<struct SEntry8_IIIITIIB,orderTblIdx0Type, orderTblIdx1Type> orderTblStoreType;
 
-typedef ConcurrentArrayIndex<GenericEntry, GenericFixedRange_2f1t6_1f1t11, 50> districtTblIdx0Type;
-typedef MultiHashMapMV<GenericEntry,districtTblIdx0Type> districtTblStoreType;
+typedef ConcurrentArrayIndex<struct SEntry11_IISSSSSSDDI, SEntry11_IISSSSSSDDI_Idx2f1t6_1f1t11, 50> districtTblIdx0Type;
+typedef MultiHashMapMV<struct SEntry11_IISSSSSSDDI,districtTblIdx0Type> districtTblStoreType;
 
-typedef CuckooIndex<GenericEntry, GenericOps_3214> orderLineTblIdx0Type;
-typedef ConcurrentCuckooSecondaryIndex<GenericEntry, GenericOps_123> orderLineTblIdx1Type;
-typedef MultiHashMapMV<GenericEntry,orderLineTblIdx0Type, orderLineTblIdx1Type> orderLineTblStoreType;
+typedef CuckooIndex<struct SEntry10_IIIIIITIDS, SEntry10_IIIIIITIDS_Idx3214> orderLineTblIdx0Type;
+typedef ConcurrentCuckooSecondaryIndex<struct SEntry10_IIIIIITIDS, SEntry10_IIIIIITIDS_Idx123> orderLineTblIdx1Type;
+typedef MultiHashMapMV<struct SEntry10_IIIIIITIDS,orderLineTblIdx0Type, orderLineTblIdx1Type> orderLineTblStoreType;
 
-typedef ConcurrentArrayIndex<GenericEntry, GenericFixedRange_3f1t6_2f1t11_1f1t3001, 150000> customerTblIdx0Type;
-typedef MedHeapIndex<GenericEntry, GenericOps_236, GenericCmp_236_4> customerTblIdx1Type;
-typedef MultiHashMapMV<GenericEntry,customerTblIdx0Type, customerTblIdx1Type> customerTblStoreType;
+typedef ConcurrentArrayIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx3f1t6_2f1t11_1f1t3001, 150000> customerTblIdx0Type;
+typedef MedHeapIndex<struct SEntry21_IIISSSSSSSSSTSDDDDIIS, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236, SEntry21_IIISSSSSSSSSTSDDDDIIS_Idx236_4> customerTblIdx1Type;
+typedef MultiHashMapMV<struct SEntry21_IIISSSSSSSSSTSDDDDIIS,customerTblIdx0Type, customerTblIdx1Type> customerTblStoreType;
 
-typedef ConcurrentArrayIndex<GenericEntry, GenericFixedRange_2f1t6_1f1t100001, 500000> stockTblIdx0Type;
-typedef MultiHashMapMV<GenericEntry,stockTblIdx0Type> stockTblStoreType;
+typedef ConcurrentArrayIndex<struct SEntry17_IIISSSSSSSSSSIIIS, SEntry17_IIISSSSSSSSSSIIIS_Idx2f1t6_1f1t100001, 500000> stockTblIdx0Type;
+typedef MultiHashMapMV<struct SEntry17_IIISSSSSSSSSSIIIS,stockTblIdx0Type> stockTblStoreType;
 
 struct TPCC_Data {
   TPCC_Data(): 
@@ -830,73 +1001,102 @@ struct ALIGN ThreadLocal {
   customerTblStoreType& customerTbl;  customerTblIdx0Type& customerTblIdx0;  customerTblIdx1Type& customerTblIdx1;
   stockTblStoreType& stockTbl;  stockTblIdx0Type& stockTblIdx0;
   
-  
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7071;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x6462;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x7074;
+  struct SEntry3_III x6620;
+  struct SEntry9_ISSSSSSDD x6391;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x6604;
+  struct SEntry11_IISSSSSSDDI x6610;
+  struct SEntry9_ISSSSSSDD x6607;
+  struct SEntry8_IIIITIIB x7054;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x6459;
+  struct SEntry10_IIIIIITIDS x6843;
+  struct SEntry5_IISDS x6584;
+  struct SEntry11_IISSSSSSDDI x6396;
+  struct SEntry17_IIISSSSSSSSSSIIIS x6634;
+  struct SEntry17_IIISSSSSSSSSSIIIS x7008;
+  struct SEntry3_III x6823;
+  struct SEntry11_IISSSSSSDDI x6977;
+  struct SEntry10_IIIIIITIDS x7064;
+  struct SEntry8_IIIITIIB x6834;
+  struct SEntry8_IIIITIIB x6617;
+  struct SEntry10_IIIIIITIDS x6989;
+  struct SEntry8_IIIIITDS x6440;
+  struct SEntry10_IIIIIITIDS x6682;
+  struct SEntry21_IIISSSSSSSSSTSDDDDIIS x6847;
   
   FORCE_INLINE TransactionReturnStatus PaymentTx(Transaction& xact, int x16, date x17, int x18, int x19, int x20, int x21, int x22, int x23, int x24, PString x25, double x26) {
-    GenericEntry y29(true_type(), 1, x19); GenericEntry* x29 = &y29;
-    OperationReturnStatus stx4310;
-    GenericEntry* x4310 =  warehouseTblIdx0.getForUpdate(x29, stx4310, xact);
-    if(stx4310 == WW_VALUE) return WW_ABORT;
-    x4310->increase(9, x26);
-    GenericEntry y35(true_type(), 1, x20, 2, x19); GenericEntry* x35 = &y35;
-    OperationReturnStatus stx4315;
-    GenericEntry* x4315 =  districtTblIdx0.getForUpdate(x35, stx4315, xact);
-    if(stx4315 == WW_VALUE) return WW_ABORT;
-    x4315->increase(10, x26);
-    GenericEntry* ite8161 = 0;
+    x6391._1 = x19;
+    OperationReturnStatus stx12230;
+    struct SEntry9_ISSSSSSDD* x12230 =  warehouseTblIdx0.getForUpdate(x6391, stx12230, xact);
+    if(stx12230 == WW_VALUE) return WW_ABORT;
+    x12230->_9 += x26;
+    x6396._1 = x20;
+    x6396._2 = x19;
+    OperationReturnStatus stx12236;
+    struct SEntry11_IISSSSSSDDI* x12236 =  districtTblIdx0.getForUpdate(x6396, stx12236, xact);
+    if(stx12236 == WW_VALUE) return WW_ABORT;
+    x12236->_10 += x26;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite20055 = 0;
     if((x21>(0))) {
-      GenericEntry y8163(true_type(), 2, x23, 3, x22, 6, x25); GenericEntry* x8163 = &y8163;
-      OperationReturnStatus stx8164;
-      GenericEntry* x8164 =  customerTblIdx1.getForUpdate(x8163, stx8164, xact);
-      if(stx8164 == WW_VALUE) return WW_ABORT;
-      ite8161 = x8164;
+      x6459._2 = x23;
+      x6459._3 = x22;
+      x6459._6 = x25;
+      OperationReturnStatus stx20059;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x20059 =  customerTblIdx1.getForUpdate(x6459, stx20059, xact);
+      if(stx20059 == WW_VALUE) return WW_ABORT;
+      ite20055 = x20059;
     } else {
-      GenericEntry y8167(true_type(), 1, x24, 2, x23, 3, x22); GenericEntry* x8167 = &y8167;
-      OperationReturnStatus stx8168;
-      GenericEntry* x8168 =  customerTblIdx0.getForUpdate(x8167, stx8168, xact);
-      if(stx8168 == WW_VALUE) return WW_ABORT;
-      ite8161 = x8168;
+      x6462._1 = x24;
+      x6462._2 = x23;
+      x6462._3 = x22;
+      OperationReturnStatus stx20064;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x20064 =  customerTblIdx0.getForUpdate(x6462, stx20064, xact);
+      if(stx20064 == WW_VALUE) return WW_ABORT;
+      ite20055 = x20064;
     };
-    GenericEntry* customerEntry = ite8161;
-    const PString& c_data = customerEntry->getString(21);
-    const PString& x56 = customerEntry->getString(14);
-    char* x9219 = strstr(x56.data_, "BC");
-    if((x9219!=(NULL))) {
-      int x59 = customerEntry->getInt(1);
-      PString x2479 = PString(500);
-      x2479.append(x59);
-      x2479.append(' ');
-      x2479.append(x23);
-      x2479.append(' ');
-      x2479.append(x22);
-      x2479.append(' ');
-      x2479.append(x20);
-      x2479.append(' ');
-      x2479.append(x19);
-      x2479.append(' ');
-      x2479.append('$');
-      x2479.append(x26);
-      x2479.append(' ');
-      x2479.appendDate(x17);
-      x2479.append(' ');
-      x2479.append('|');
-      x2479.append(' ');
-      x2479.append(c_data.data_, 500);
-      customerEntry->increase(17, x26);
-      customerEntry->update(21, x2479);
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x6401 = ite20055;
+    char* x21184 = strstr((x6401->_14).data_, "BC");
+    if((x21184!=(NULL))) {
+      PString x2472 = PString(500);
+      x2472.append((x6401->_1));
+      x2472.append(' ');
+      x2472.append(x23);
+      x2472.append(' ');
+      x2472.append(x22);
+      x2472.append(' ');
+      x2472.append(x20);
+      x2472.append(' ');
+      x2472.append(x19);
+      x2472.append(' ');
+      x2472.append('$');
+      x2472.append(x26);
+      x2472.append(' ');
+      x2472.appendDate(x17);
+      x2472.append(' ');
+      x2472.append('|');
+      x2472.append(' ');
+      x2472.append((x6401->_21).data_, 500);
+      x6401->_17 += x26;
+      x6401->_21 = x2472;
     } else {
-      customerEntry->increase(17, x26);
+      x6401->_17 += x26;
     };
-    const PString& w_name = x4310->getString(2);
-    const PString& d_name = x4315->getString(3);
-    PString x2505 = PString(24);
-    x2505.append(w_name.data_, 10);
-    x2505.append("    ", 4);
-    x2505.append(d_name.data_, 10);
-    int x74 = customerEntry->getInt(1);
-    GenericEntry y76(false_type(), x74, x23, x22, x20, x19, x17, x26, x2505); GenericEntry* x76 = &y76;
-    OperationReturnStatus st7207 = historyTbl.insert_nocheck(x76, xact);
-    if(st7207 == WW_VALUE) return WW_ABORT;
+    PString x2498 = PString(24);
+    x2498.append((x12230->_2).data_, 10);
+    x2498.append("    ", 4);
+    x2498.append((x12236->_3).data_, 10);
+    x6440._1 = (x6401->_1);
+    x6440._2 = x23;
+    x6440._3 = x22;
+    x6440._4 = x20;
+    x6440._5 = x19;
+    x6440._6 = x17;
+    x6440._7 = x26;
+    x6440._8 = x2498;
+    OperationReturnStatus st19056 = historyTbl.insert_nocheck(x6440, xact);
+    if(st19056 == WW_VALUE) return WW_ABORT;
     clearTempMem();
     return SUCCESS;
   }
@@ -910,17 +1110,17 @@ struct ALIGN ThreadLocal {
     while(1) {
       
       int x108 = x95;
-      int ite8394 = 0;
+      int ite20315 = 0;
       if((x108<(x84))) {
         
         int x110 = x103;
-        int x8395 = x110;
-        ite8394 = x8395;
+        int x20316 = x110;
+        ite20315 = x20316;
       } else {
-        ite8394 = 0;
+        ite20315 = 0;
       };
-      int x8274 = ite8394;
-      if (!(x8274)) break; 
+      int x20183 = ite20315;
+      if (!(x20183)) break; 
       
       int x113 = x95;
       int supwid = x87[x113];
@@ -929,43 +1129,52 @@ struct ALIGN ThreadLocal {
       };
       int x119 = x95;
       int x120 = x86[x119];
-      GenericEntry y122(true_type(), 1, x120); GenericEntry* x122 = &y122;
-      GenericEntry* x3769 = itemTblIdx0.get(x122, xact);
-      if((x3769==(NULL))) {
+      x6584._1 = x120;
+      struct SEntry5_IISDS* x10877 = itemTblIdx0.get(x6584, xact);
+      if((x10877==(NULL))) {
         x103 = 0;
       } else {
         int x126 = x95;
-        const PString& x127 = x3769->getString(3);
-        x90[x126] = x127;
+        x90[x126] = (x10877->_3);
         int x129 = x95;
-        double x130 = x3769->getDouble(4);
-        x89[x129] = x130;
+        x89[x129] = (x10877->_4);
         int x132 = x95;
-        const PString& x133 = x3769->getString(5);
-        idata[x132] = x133;
+        idata[x132] = (x10877->_5);
       };
       int x136 = x95;
       x95 = (x136+(1));
     };
     int x140 = x103;
     if(x140) {
-      GenericEntry y143(true_type(), 1, x83, 2, x82, 3, x81); GenericEntry* x143 = &y143;
-      GenericEntry* x3789 = customerTblIdx0.get(x143, xact);
-      GenericEntry y147(true_type(), 1, x81); GenericEntry* x147 = &y147;
-      GenericEntry* x3792 = warehouseTblIdx0.get(x147, xact);
-      GenericEntry y151(true_type(), 1, x82, 2, x81); GenericEntry* x151 = &y151;
-      OperationReturnStatus stx4542;
-      GenericEntry* x4542 =  districtTblIdx0.getForUpdate(x151, stx4542, xact);
-      if(stx4542 == WW_VALUE) return WW_ABORT;
-      int o_id = x4542->getInt(11);
-      x4542->increase(11, 1);
+      x6604._1 = x83;
+      x6604._2 = x82;
+      x6604._3 = x81;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x10899 = customerTblIdx0.get(x6604, xact);
+      x6607._1 = x81;
+      struct SEntry9_ISSSSSSDD* x10902 = warehouseTblIdx0.get(x6607, xact);
+      x6610._1 = x82;
+      x6610._2 = x81;
+      OperationReturnStatus stx12501;
+      struct SEntry11_IISSSSSSDDI* x12501 =  districtTblIdx0.getForUpdate(x6610, stx12501, xact);
+      if(stx12501 == WW_VALUE) return WW_ABORT;
+      int x6612 = x12501->_11;
+      x12501->_11 += 1;
       int x157 = x106;
-      GenericEntry y159(false_type(), o_id, x82, x81, x83, x79, -1, x84, x157); GenericEntry* x159 = &y159;
-      OperationReturnStatus st7259 = orderTbl.insert_nocheck(x159, xact);
-      if(st7259 == WW_VALUE) return WW_ABORT;
-      GenericEntry y162(false_type(), o_id, x82, x81); GenericEntry* x162 = &y162;
-      OperationReturnStatus st7262 = newOrderTbl.insert_nocheck(x162, xact);
-      if(st7262 == WW_VALUE) return WW_ABORT;
+      x6617._1 = x6612;
+      x6617._2 = x82;
+      x6617._3 = x81;
+      x6617._4 = x83;
+      x6617._5 = x79;
+      x6617._6 = -1;
+      x6617._7 = x84;
+      x6617._8 = x157;
+      OperationReturnStatus st19113 = orderTbl.insert_nocheck(x6617, xact);
+      if(st19113 == WW_VALUE) return WW_ABORT;
+      x6620._1 = x6612;
+      x6620._2 = x82;
+      x6620._3 = x81;
+      OperationReturnStatus st19117 = newOrderTbl.insert_nocheck(x6620, xact);
+      if(st19117 == WW_VALUE) return WW_ABORT;
       double x165 = 0.0;
       x95 = 0;
       while(1) {
@@ -979,57 +1188,62 @@ struct ALIGN ThreadLocal {
         int ol_i_id = x86[x174];
         int x177 = x95;
         int ol_quantity = x88[x177];
-        GenericEntry y181(true_type(), 1, ol_i_id, 2, ol_supply_w_id); GenericEntry* x181 = &y181;
-        OperationReturnStatus stx4566;
-        GenericEntry* x4566 =  stockTblIdx0.getForUpdate(x181, stx4566, xact);
-        if(stx4566 == WW_VALUE) return WW_ABORT;
-        const PString& ol_dist_info = x4566->getString((3+(x82)));
-        int s_quantity = x4566->getInt(3);
+        x6634._1 = ol_i_id;
+        x6634._2 = ol_supply_w_id;
+        OperationReturnStatus stx12535;
+        struct SEntry17_IIISSSSSSSSSSIIIS* x12535 =  stockTblIdx0.getForUpdate(x6634, stx12535, xact);
+        if(stx12535 == WW_VALUE) return WW_ABORT;
+        const PString& x6637 = *(&x12535->_4 + (x82-1));
+        int x6638 = x12535->_3;
         int x188 = x95;
-        x91[x188] = s_quantity;
+        x91[x188] = x6638;
         int x190 = x95;
         PString& x191 = idata[x190];
-        char* x9394 = strstr(x191.data_, "original");
-        int ite8468 = 0;
-        if((x9394!=(NULL))) {
+        char* x21377 = strstr(x191.data_, "original");
+        int ite20394 = 0;
+        if((x21377!=(NULL))) {
           
-          const PString& x193 = x4566->getString(17);
-          char* x9400 = strstr(x193.data_, "original");
-          int x8469 = (x9400!=(NULL));
-          ite8468 = x8469;
+          char* x21383 = strstr((x12535->_17).data_, "original");
+          int x20395 = (x21383!=(NULL));
+          ite20394 = x20395;
         } else {
-          ite8468 = 0;
+          ite20394 = 0;
         };
-        int x8343 = ite8468;
-        if(x8343) {
+        int x20257 = ite20394;
+        if(x20257) {
           int x196 = x95;
           x92[x196].data_[0] = 'B';
         } else {
           int x198 = x95;
           x92[x198].data_[0] = 'G';
         };
-        x4566->update(3, (s_quantity-(ol_quantity)));
-        if((s_quantity<=(ol_quantity))) {
-          x4566->increase(3, 91);
+        x12535->_3 = (x6638-(ol_quantity));
+        if((x6638<=(ol_quantity))) {
+          x12535->_3 += 91;
         };
         int x207 = 0;
         if((ol_supply_w_id!=(x81))) {
           x207 = 1;
         };
-        double c_discount = x3789->getDouble(16);
-        double w_tax = x3792->getDouble(8);
-        double d_tax = x4542->getDouble(9);
         int x220 = x95;
         double x221 = x89[x220];
-        double ol_amount = ((ol_quantity*(x221))*(((1.0+(w_tax))+(d_tax))))*((1.0-(c_discount)));
+        double ol_amount = ((ol_quantity*(x221))*(((1.0+((x10902->_8)))+((x12501->_9)))))*((1.0-((x10899->_16))));
         int x229 = x95;
         x93[x229] = ol_amount;
         double x231 = x165;
         x165 = (x231+(ol_amount));
         int x234 = x95;
-        GenericEntry y237(false_type(), o_id, x82, x81, (x234+(1)), ol_i_id, ol_supply_w_id, NULL, ol_quantity, ol_amount, ol_dist_info); GenericEntry* x237 = &y237;
-        OperationReturnStatus st7323 = orderLineTbl.insert_nocheck(x237, xact);
-        if(st7323 == WW_VALUE) return WW_ABORT;
+        x6682._1 = x6612;
+        x6682._2 = x82;
+        x6682._3 = x81;
+        x6682._4 = (x234+(1));
+        x6682._5 = ol_i_id;
+        x6682._6 = ol_supply_w_id;
+        x6682._8 = ol_quantity;
+        x6682._9 = ol_amount;
+        x6682._10 = x6637;
+        OperationReturnStatus st19185 = orderLineTbl.insert_nocheck(x6682, xact);
+        if(st19185 == WW_VALUE) return WW_ABORT;
         int x239 = x95;
         x95 = (x239+(1));
       };
@@ -1050,41 +1264,46 @@ struct ALIGN ThreadLocal {
       if (!((x257<=(10)))) break; 
       
       int x264 = x255;
-      GenericEntry y266(true_type(), 2, x264, 3, x249); GenericEntry* x266 = &y266;
-      OperationReturnStatus stx4757;
-      GenericEntry* x4757 =  newOrderTblIdx1.getForUpdate(x266, stx4757, xact);
-      if(stx4757 == WW_VALUE) return WW_ABORT;
-      if((x4757!=(NULL))) {
-        int no_o_id = x4757->getInt(1);
+      x6823._2 = x264;
+      x6823._3 = x249;
+      OperationReturnStatus stx12756;
+      struct SEntry3_III* x12756 =  newOrderTblIdx1.getForUpdate(x6823, stx12756, xact);
+      if(stx12756 == WW_VALUE) return WW_ABORT;
+      if((x12756!=(NULL))) {
+        int x6827 = x12756->_1;
         int x273 = x255;
-        orderIDs[(x273-(1))] = no_o_id;
-        newOrderTbl.del(x4757);
+        orderIDs[(x273-(1))] = x6827;
+        newOrderTbl.del(x12756);
         int x278 = x255;
-        GenericEntry y280(true_type(), 1, no_o_id, 2, x278, 3, x249); GenericEntry* x280 = &y280;
-        OperationReturnStatus stx4768;
-        GenericEntry* x4768 =  orderTblIdx0.getForUpdate(x280, stx4768, xact);
-        if(stx4768 == WW_VALUE) return WW_ABORT;
-        int c_id = x4768->getInt(4);
-        x4768->update(6, x250);
+        x6834._1 = x6827;
+        x6834._2 = x278;
+        x6834._3 = x249;
+        OperationReturnStatus stx12769;
+        struct SEntry8_IIIITIIB* x12769 =  orderTblIdx0.getForUpdate(x6834, stx12769, xact);
+        if(stx12769 == WW_VALUE) return WW_ABORT;
+        x12769->_6 = x250;
         double x287 = 0.0;
         int x289 = x255;
-        GenericEntry y291(true_type(), 1, no_o_id, 2, x289, 3, x249); GenericEntry* x291 = &y291;
-        OperationReturnStatus st4039 = orderLineTblIdx1.slice(x291, [&](GenericEntry* orderLineEntry) -> TransactionReturnStatus {
-          orderLineEntry->update(7, x248);
+        x6843._1 = x6827;
+        x6843._2 = x289;
+        x6843._3 = x249;
+        OperationReturnStatus st11194 = orderLineTblIdx1.slice(x6843, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
+          orderLineEntry->_7 = x248;
           double x294 = x287;
-          double x295 = orderLineEntry->getDouble(9);
-          x287 = (x294+(x295));
+          x287 = (x294+((orderLineEntry->_9)));
           return SUCCESS;
         }, xact);
-        if(st4039 == WW_VALUE) return WW_ABORT;
+        if(st11194 == WW_VALUE) return WW_ABORT;
         int x302 = x255;
-        GenericEntry y304(true_type(), 1, c_id, 2, x302, 3, x249); GenericEntry* x304 = &y304;
-        OperationReturnStatus stx4790;
-        GenericEntry* x4790 =  customerTblIdx0.getForUpdate(x304, stx4790, xact);
-        if(stx4790 == WW_VALUE) return WW_ABORT;
+        x6847._1 = (x12769->_4);
+        x6847._2 = x302;
+        x6847._3 = x249;
+        OperationReturnStatus stx12795;
+        struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x12795 =  customerTblIdx0.getForUpdate(x6847, stx12795, xact);
+        if(stx12795 == WW_VALUE) return WW_ABORT;
         double x306 = x287;
-        x4790->increase(17, x306);
-        x4790->increase(20, 1);
+        x12795->_17 += x306;
+        x12795->_20 += 1;
       } else {
         int x310 = failedDel;
         failedDel = (1+(x310));
@@ -1099,67 +1318,76 @@ struct ALIGN ThreadLocal {
   }
   
   FORCE_INLINE TransactionReturnStatus StockLevelTx(Transaction& xact, int x321, date x322, int x323, int x324, int x325, int x326) {
-    GenericEntry y329(true_type(), 1, x325, 2, x324); GenericEntry* x329 = &y329;
-    GenericEntry* x4120 = districtTblIdx0.get(x329, xact);
-    int o_id = x4120->getInt(11);
-    int x335 = (o_id-(20));
-    unordered_set<int> unique_ol_i_id({}); //setApply1
+    x6977._1 = x325;
+    x6977._2 = x324;
+    struct SEntry11_IISSSSSSDDI* x11285 = districtTblIdx0.get(x6977, xact);
+    int x6979 = x11285->_11;
+    int x335 = (x6979-(20));
+    unordered_set<int> unique_ol_i_id; //setApply2
     while(1) {
       
-      int x340 = x335;
-      if (!((x340<(o_id)))) break; 
+      int x339 = x335;
+      if (!((x339<(x6979)))) break; 
       
-      int x342 = x335;
-      GenericEntry y344(true_type(), 1, x342, 2, x325, 3, x324); GenericEntry* x344 = &y344;
-      OperationReturnStatus st5266 = orderLineTblIdx1.sliceNoUpdate(x344, [&](GenericEntry* orderLineEntry) -> TransactionReturnStatus {
-        int ol_i_id = orderLineEntry->getInt(5);
-        GenericEntry y350(true_type(), 1, ol_i_id, 2, x324); GenericEntry* x350 = &y350;
-        GenericEntry* x4134 = stockTblIdx0.get(x350, xact);
-        int s_quantity = x4134->getInt(3);
-        if((s_quantity<(x326))) {
-          unique_ol_i_id.insert(ol_i_id);
+      int x341 = x335;
+      x6989._1 = x341;
+      x6989._2 = x325;
+      x6989._3 = x324;
+      OperationReturnStatus st14066 = orderLineTblIdx1.sliceNoUpdate(x6989, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
+        int x7006 = orderLineEntry->_5;
+        x7008._1 = x7006;
+        x7008._2 = x324;
+        struct SEntry17_IIISSSSSSSSSSIIIS* x11299 = stockTblIdx0.get(x7008, xact);
+        if(((x11299->_3)<(x326))) {
+          unique_ol_i_id.insert(x7006);
         };
         return SUCCESS;
       }, xact);
-      if(st5266 == WW_VALUE) return WW_ABORT;
-      int x359 = x335;
-      x335 = (x359+(1));
+      if(st14066 == WW_VALUE) return WW_ABORT;
+      int x358 = x335;
+      x335 = (x358+(1));
     };
     clearTempMem();
     return SUCCESS;
   }
   
-  FORCE_INLINE TransactionReturnStatus OrderStatusTx(Transaction& xact, int x365, date x366, int x367, int x368, int x369, int x370, int x371, PString x372) {
-    GenericEntry* ite8727 = 0;
-    if((x370>(0))) {
-      GenericEntry y8729(true_type(), 2, x369, 3, x368, 6, x372); GenericEntry* x8729 = &y8729;
-      GenericEntry* x8730 = customerTblIdx1.get(x8729, xact);
-      ite8727 = x8730;
+  FORCE_INLINE TransactionReturnStatus OrderStatusTx(Transaction& xact, int x364, date x365, int x366, int x367, int x368, int x369, int x370, PString x371) {
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* ite20675 = 0;
+    if((x369>(0))) {
+      x7071._2 = x368;
+      x7071._3 = x367;
+      x7071._6 = x371;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x20679 = customerTblIdx1.get(x7071, xact);
+      ite20675 = x20679;
     } else {
-      GenericEntry y8733(true_type(), 1, x371, 2, x369, 3, x368); GenericEntry* x8733 = &y8733;
-      GenericEntry* x8734 = customerTblIdx0.get(x8733, xact);
-      ite8727 = x8734;
+      x7074._1 = x370;
+      x7074._2 = x368;
+      x7074._3 = x367;
+      struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x20684 = customerTblIdx0.get(x7074, xact);
+      ite20675 = x20684;
     };
-    GenericEntry* customerEntry = ite8727;
-    int found_c_id = customerEntry->getInt(3);
-    GenericEntry y396(true_type(), 2, x369, 3, x368, 4, found_c_id); GenericEntry* x396 = &y396;
-    GenericEntry* x4193 = orderTblIdx1.get(x396, xact);
-    int ite8743 = 0;
-    if((x4193==(NULL))) {
-      int x8744 = failedOS;
-      failedOS = (1+(x8744));
-      ite8743 = 0;
+    struct SEntry21_IIISSSSSSSSSTSDDDDIIS* x7049 = ite20675;
+    x7054._2 = x368;
+    x7054._3 = x367;
+    x7054._4 = (x7049->_3);
+    struct SEntry8_IIIITIIB* x11369 = orderTblIdx1.get(x7054, xact);
+    int ite20694 = 0;
+    if((x11369==(NULL))) {
+      int x20695 = failedOS;
+      failedOS = (1+(x20695));
+      ite20694 = 0;
     } else {
-      int x8748 = x4193->getInt(1);
-      GenericEntry y8753(true_type(), 1, x8748, 2, x369, 3, x368); GenericEntry* x8753 = &y8753;
-      OperationReturnStatus st8754 = orderLineTblIdx1.sliceNoUpdate(x8753, [&](GenericEntry* orderLineEntry) -> TransactionReturnStatus {
-        int x410 = 1;
+      x7064._1 = (x11369->_1);
+      x7064._2 = x368;
+      x7064._3 = x367;
+      OperationReturnStatus st20706 = orderLineTblIdx1.sliceNoUpdate(x7064, [&](struct SEntry10_IIIIIITIDS* orderLineEntry) -> TransactionReturnStatus {
+        int x409 = 1;
         return SUCCESS;
       }, xact);
-      if(st8754 == WW_VALUE) return WW_ABORT;
-      ite8743 = 1;
+      if(st20706 == WW_VALUE) return WW_ABORT;
+      ite20694 = 1;
     };
-    int x414 = ite8743;
+    int x413 = ite20694;
     clearTempMem();
     return SUCCESS;
   }
@@ -1373,7 +1601,7 @@ int main(int argc, char** argv) {
   
   ofstream fout("tpcc_res_cpp.csv", ios::app);
   if(argc == 1 || atoi(argv[1]) == 1) {
-    fout << "\nCPP-ABDFGINORXY-" << numPrograms << ",";
+    fout << "\nCPP-ABDEFGINORVXY-" << numPrograms << ",";
     for(int i = 0; i < 5 ; ++i)
        fout << globalXactCounts[i] << ",";
     fout <<",";
@@ -1388,7 +1616,13 @@ int main(int argc, char** argv) {
   info <<",\n";
   GET_RUN_STAT(orig.newOrderTblIdx1, info);
   info <<",\n";
+  GET_RUN_STAT(orig.orderLineTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orig.orderLineTblIdx1, info);
+  info <<",\n";
   GET_RUN_STAT(orig.itemTblIdx0, info);
+  info <<",\n";
+  GET_RUN_STAT(orig.warehouseTblIdx0, info);
   info <<",\n";
   GET_RUN_STAT(orig.customerTblIdx0, info);
   info <<",\n";
@@ -1400,15 +1634,9 @@ int main(int argc, char** argv) {
   info <<",\n";
   GET_RUN_STAT(orig.orderTblIdx1, info);
   info <<",\n";
-  GET_RUN_STAT(orig.orderLineTblIdx0, info);
-  info <<",\n";
-  GET_RUN_STAT(orig.orderLineTblIdx1, info);
-  info <<",\n";
-  GET_RUN_STAT(orig.stockTblIdx0, info);
-  info <<",\n";
   GET_RUN_STAT(orig.districtTblIdx0, info);
   info <<",\n";
-  GET_RUN_STAT(orig.warehouseTblIdx0, info);
+  GET_RUN_STAT(orig.stockTblIdx0, info);
   info << "\n}\n";
   info.close();
   */
