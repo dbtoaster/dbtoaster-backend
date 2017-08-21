@@ -187,8 +187,12 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        |  const size_t numPrograms = 100;
        |#endif
        |
+        |#ifndef NUMTHREADS
+       |  #define NUMTHREADS 1
+       |#endif
+       |
        |struct Partition;
-       |const int numThreads = 3;
+       |const int numThreads = NUMTHREADS;
        |std::thread workers[numThreads];
        |volatile bool isReady[numThreads];
        |volatile bool startExecution, hasFinished;
@@ -443,7 +447,8 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |tpcc.loadHist();
          |tpcc.loadStocks();
          |
-         |uint xactCounts[5] = {0, 0, 0, 0, 0};
+         |cout << "NumThreads = " << numThreads << endl;
+         |uint globalXactCounts[5] = {0, 0, 0, 0, 0};
          |Timepoint startTime, endTime;
          |
          |
@@ -479,7 +484,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |    cout << "\\n Thread " << i << " : ";
          |    for (int x = 0; x < 5; ++x) {
          |        cout << partitions[i].xactCounts[x] << "  ";
-         |        xactCounts[x] += partitions[i].xactCounts[x];
+         |        globalXactCounts[x] += partitions[i].xactCounts[x];
          |        totalPrgsExec += partitions[i].xactCounts[x];
          |    }
          |}
@@ -496,8 +501,8 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |cout << "Failed OS = " << failedOS << endl;
          |cout << "Total time = " << execTime << " ms" << endl;
          |uint failedCount[] = {failedNO, 0, failedOS, failedDel / 10, 0};
-         |cout << "Total transactions = " << totalPrgsExec << "   NewOrder = " << xactCounts[0] << endl;
-         |cout << "TpmC = " << fixed << (xactCounts[0])* 60000.0 / execTime << endl;
+         |cout << "Total transactions = " << totalPrgsExec << "   NewOrder = " << globalXactCounts[0] << endl;
+         |cout << "TpmC = " << fixed << (globalXactCounts[0])* 60000.0 / execTime << endl;
 
 
          |${
@@ -505,7 +510,8 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
           s"""
              |//counters["FailedNO"] = failedNO; counters["FailedDel"] = failedDel/10; counters["FailedOS"] = failedOS;
              |//durations["FailedNO"] = 0; durations["FailedDel"] = 0; durations["FailedOS"] = 0;
-             |ExecutionProfiler::printProfileToFile();
+             |for(uint i = 0; i<numThreads; ++i)
+             |  ExecutionProfiler::printProfileToFilePartitioned(i, partitions[i].durations, partitions[i].counters);
             """.stripMargin
         else doc""
       }
@@ -513,7 +519,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |if(argc == 1 || atoi(argv[1]) == 1) {
          |  fout << "\\nCPP-${Optimizer.optCombination}-" << numPrograms << ",";
          |  for(int i = 0; i < 5 ; ++i)
-         |     fout << xactCounts[i] - failedCount[i] << ",";
+         |     fout << globalXactCounts[i] - failedCount[i] << ",";
          |  fout <<",";
          | }
          |fout << execTime << ",";
@@ -648,7 +654,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
     //    val txns = new PrintWriter("TpccTxns.hpp")
     //    txns.print(blocks)
     //    txns.close()
-    file.println(header :/: execProfile :/: structs :\\: structEquals :\\: entryIdxes :\\: stTypdef :\\:
+    file.println(header :/: structs :\\: structEquals :\\: entryIdxes :\\: stTypdef :\\:
       doc"struct Partition { " :\\: Document.nest(2, doc"Partition():" :\\:
       stInit :: doc"  {\n  memset(xactCounts, 0, sizeof(uint) *5); }\n" :\\:
       stDecl :\\: structVars ::
@@ -657,7 +663,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |int partitionID;
          |uint failedNO;
          |uint xactCounts[5];
-       """.stripMargin :\\: blocks) :\\:
+       """.stripMargin :\\: execProfile :\\: blocks) :\\:
       "};" :\\:
       "Partition partitions[numThreads];" :\\:
       "#define PARTITIONED 1" :\\:
