@@ -10,8 +10,11 @@
 #include "../hpds/pstring.hpp"
 #include "../hpds/macro.hpp"
 #include <vector>
+#ifdef PARTITIONED
 thread_local std::vector<void*> tempMem;
-
+#else
+std::vector<void*> tempMem;
+#endif
 FORCE_INLINE void clearTempMem() {
     for (auto ptr : tempMem)
         free(ptr);

@@ -552,7 +552,7 @@ object TpccXactGenerator_SC {
       //          "\n Credit Limit:     " + /*c_credit_lim*/ customerEntry.get(15) +
       //          "\n New Cust-Balance: " + /*c_balance*/ customerEntry.get(17)
       //        if (customerEntry.get(14) == "BC") {
-      //          val cdata = c_data
+      //          val cdata = c_datta
       //          if (cdata.length > 50) {
       //            output = output + "\n\n Cust-Data: " + cdata.substring(0, 50)
       //            val data_chunks = (if (cdata.length > 200) 4 else cdata.length / 50)
