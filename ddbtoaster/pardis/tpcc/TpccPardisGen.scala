@@ -571,7 +571,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |                districtTblIdx0.add(e->copy());
          |        });
          |        partitions[i].customerTblIdx0.foreach([&](CustomerEntry * e) {
-         |            if (CORE_FOR_W(e->_3) == i) {
+         |            if (CORE_FOR_W(${if(Optimizer.analyzeEntry)"e->_3" else "e->getInt(3)"}) == i) {
          |                customerTblIdx0.add(e->copy());
          |            }
          |        });
@@ -588,7 +588,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |                itemTblIdx0.add(e->copy());
          |        });
          |        partitions[i].stockTblIdx0.foreach([&](StockEntry * e) {
-         |            if (CORE_FOR_W(e->_2) == i)
+         |            if (CORE_FOR_W(${if(Optimizer.analyzeEntry)"e->_2" else "e->getInt(2)"}) == i)
          |                stockTblIdx0.add(e->copy());
          |        });
          |
