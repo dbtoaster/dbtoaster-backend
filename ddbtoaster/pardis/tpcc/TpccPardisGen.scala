@@ -154,6 +154,7 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
     s"""
        |#define SC_GENERATED 1
        |#define USING_GENERIC_ENTRY ${!Optimizer.analyzeEntry}
+       |#define PARTITIONED 1
        |
        |#include <algorithm>
        |#include <vector>
@@ -426,7 +427,9 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |
          |        }
          |    }
+         |    #ifndef VERIFY_TPCC
          |    hasFinished = true;
+         |    #endif
          |}
          |
        """.stripMargin
@@ -584,18 +587,17 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |        partitions[i].orderLineTblIdx0.foreach([&](OrderLineEntry * e) {
          |                orderLineTblIdx0.add(e->copy());
          |        });
-         |        partitions[0].itemTblIdx0.foreach([&](ItemEntry * e) {
-         |                itemTblIdx0.add(e->copy());
-         |        });
          |        partitions[i].stockTblIdx0.foreach([&](StockEntry * e) {
          |            if (CORE_FOR_W(${if(Optimizer.analyzeEntry)"e->_2" else "e->getInt(2)"}) == i)
          |                stockTblIdx0.add(e->copy());
          |        });
-         |
          |        partitions[i].historyTblIdx0.foreach([&](HistoryEntry * e) {
          |                historyTblIdx0.add(e->copy());
          |        });
          |    }
+         |    partitions[0].itemTblIdx0.foreach([&](ItemEntry * e) {
+         |                itemTblIdx0.add(e->copy());
+         |    });
          |
          |    if (warehouseTblIdx0 == tpcc.wareRes) {
          |        cout << "Warehouse results are correct" << endl;
@@ -666,7 +668,6 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
        """.stripMargin :\\: execProfile :\\: blocks) :\\:
       "};" :\\:
       "Partition partitions[numThreads];" :\\:
-      "#define PARTITIONED 1" :\\:
       "#include \"TPCC.h\"\n" :\\:
       "TPCCDataGen tpcc;" :\\:
       threadFn :\\:
@@ -1244,7 +1245,9 @@ class TpccPardisConcCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |      }
          |    }
          |  }
+         |#ifndef VERIFY_CONC
          |  hasFinished = true;
+         |#endif
          |}
          |
        """.stripMargin

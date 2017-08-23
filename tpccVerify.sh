@@ -59,7 +59,7 @@ allopts=(
 # "-opt refcounter -opt entry -opt index -opt spl -opt minmax -opt med -opt fixedrange -opt online -opt tmpvar -opt idxinline -opt lookupfusion -opt deadidx"
 # )
 cnt=1
-
+ware=5
 for opt in "${allopts[@]}" 
 do
 echo "$cnt $opt" >> opt_list.txt
@@ -68,9 +68,9 @@ echo "$cnt $opt" >> opt_list.txt
 #sbt "Runtime/runMain  ddbt.tpcc.tx.TpccUnitTest"
 
 #CPP
-sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt -lang pcpp -ware 1"
+sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt -lang pcpp -ware $ware"
 rm -f tpcc.out
-g++ -std=c++11 -O3 -DNUMWARE=1 -DNUMTHREADS=3 -DNUMPROG=1000  -DVERIFY_TPCC=1 -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/  -ldbtoaster -o tpcc.out -pthread
+g++ -std=c++11 -O3 -DNUMWARE=$ware -DNUMTHREADS=3 -DNUMPROG=1000  -DVERIFY_TPCC=1 -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/  -ldbtoaster -o tpcc.out -pthread
 ./tpcc.out
 
 

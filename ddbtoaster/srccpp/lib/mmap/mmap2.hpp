@@ -3476,7 +3476,7 @@ struct CuckooIndex : public Index<T, V> {
     T* dataHead;
     size_t count_;
 
-    CuckooIndex(Pool<T>* stPool = nullptr, int s = 0) : index((1<<25)), storePool(stPool) { //Constructor argument is ignored
+    CuckooIndex(Pool<T>* stPool = nullptr, int s = 0) : index((1 << 25)), storePool(stPool) { //Constructor argument is ignored
         dataHead = nullptr;
         count_ = 0;
     }
@@ -3732,7 +3732,7 @@ struct ConcurrentCuckooSecondaryIndex : public Index<T, V> {
     };
     cuckoohash_map<T*, Container*, HE, HE, std::allocator<std::pair<T*, Container*>>> index;
 
-    ConcurrentCuckooSecondaryIndex(Pool<T*> st, size_t size = 100000) : index((1<<25)) {
+    ConcurrentCuckooSecondaryIndex(Pool<T*> st, size_t size = 100000) : index((1 << 25)) {
     }
     // Inserts an entry into the secondary index.
     //Uses cuckoo hashmap as backend

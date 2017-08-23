@@ -310,7 +310,7 @@ date StrToIntdate(const char* s) {
 }
 
 char* IntToStrdate(date d) {
-    static char s[22];
+    thread_local static char s[22];
     s[0] = '2';
     s[1] = '0';
     s[21] = 0;
