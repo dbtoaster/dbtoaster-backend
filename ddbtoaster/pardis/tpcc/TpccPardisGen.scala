@@ -552,15 +552,15 @@ class TpccPardisParallelCppGen(val IR: StoreDSL) extends TpccPardisGen {
          |    stockTblIdx0.idxId = 0;
          |    historyTblIdx0.idxId = 0;
          |
-         |    warehouseTblIdx0.resize_(warehouseTblSize); tpcc.wareRes.resize_(warehouseTblSize);
-         |    districtTblIdx0.resize_(districtTblSize); tpcc.distRes.resize_(districtTblSize);
-         |    customerTblIdx0.resize_(customerTblSize); tpcc.custRes.resize_(customerTblSize);
-         |    orderTblIdx0.resize_(orderTblSize); tpcc.ordRes.resize_(orderTblSize);
-         |    newOrderTblIdx0.resize_(newOrderTblSize); tpcc.newOrdRes.resize_(newOrderTblSize);
-         |    orderLineTblIdx0.resize_(orderLineTblSize); tpcc.ordLRes.resize_(orderLineTblSize);
-         |    itemTblIdx0.resize_(itemTblSize); tpcc.itemRes.resize_(itemTblSize);
-         |    stockTblIdx0.resize_(stockTblSize); tpcc.stockRes.resize_(stockTblSize);
-         |    historyTblIdx0.resize_(historyTblSize); tpcc.histRes.resize_(historyTblSize);
+         |    warehouseTblIdx0.resize_(warehouseTblSize);
+         |    districtTblIdx0.resize_(districtTblSize);
+         |    customerTblIdx0.resize_(customerTblSize);
+         |    orderTblIdx0.resize_(orderTblSize);
+         |    newOrderTblIdx0.resize_(newOrderTblSize);
+         |    orderLineTblIdx0.resize_(orderLineTblSize);
+         |    itemTblIdx0.resize_(itemTblSize);
+         |    stockTblIdx0.resize_(stockTblSize);
+         |    historyTblIdx0.resize_(historyTblSize);
          |
          |
          |    for (int i = 0; i < numThreads; ++i) {
