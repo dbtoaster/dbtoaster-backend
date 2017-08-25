@@ -55,8 +55,9 @@ object UnitTest {
   var q_f = (s: String) => true // query filter (sql file name)
   var no_output: Boolean = false  // do not print the output result in the standard output
 
-  def parseArgs(args:Array[String]) {
+  def parseArgs(args: Array[String]) {
     import scala.collection.mutable.{Set => MSet}
+
     val qinc = MSet[String]()
     val qexcl = MSet[String]()
     var qfail = false
@@ -156,15 +157,18 @@ object UnitTest {
 
   private def tf(ns: Long) = "%7s".format(time(ns, false))
 
-  def name(f: String) = { 
-    val s = f.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]","")
-    (s(0) + "").toUpperCase + s.substring(1) 
+  def name(f: String) = {
+    val s = f.replaceAll("tmp/|test/queries/|finance/|simple/|/query|.sql|[/_]", "")
+    (s(0) + "").toUpperCase + s.substring(1)
   }
   
   def main(args: Array[String]) {
+
     parseArgs(args)
+
     // Zeus mode
     if (zeus) { genZeus; return }
+
     // Regular mode
     val sel = all.filter(q => q_f(q.sql)).map{ q => 
       QueryTest(q.sql, 
@@ -270,25 +274,32 @@ object UnitTest {
 
   // ---------------------------------------------------------------------------
   // Zeus mode
-  def genZeus {
-    val num=if(seed!=0) 1 else samples; samples=1; warmup=0; timeout=0; benchmark=true
-    var i=0; while(i < num) { i+=1
-      val sql = exec("scripts/zeus.rb"+(if (seed!=0) " -s "+seed else ""),true)._1.replaceAll("@@DATA@@",pathRepo+"/../../experiments/data/simple/tiny")
+  def genZeus = {
+    val num = if (seed != 0) 1 else samples
+    samples = 1; warmup = 0; timeout = 0; benchmark = true
+    for (i <- 1 to num) {
+      val sql = exec("scripts/zeus.rb" + (if (seed != 0) " -s " + seed else ""), true)._1.replaceAll("@@DATA@@", pathRepo + "/../../experiments/data/simple/tiny")
       val ma = java.util.regex.Pattern.compile("^-- seed *= *([0-9]+).*").matcher(sql.split("\n")(0))
       val id = if (ma.matches) ma.group(1).toLong else sys.error("No seed")
-      println("---------[[ Zeus "+id+" ]]---------")
+      println("---------[[ Zeus " + id + " ]]---------")
 
-      val queryName = if(replaceQuery) "zeus"+id else Utils.generateNewFileName("zeus"+id,tmp+"/%s.sql")
-      val f=tmp+"/"+queryName+".sql"
-      val m3={ write(f,sql); Compiler.in=List(f); Compiler.toast("m3")._2 }
+      val queryName = if(replaceQuery) "zeus" + id else Utils.generateNewFileName("zeus" + id, tmp + "/%s.sql")
+      val f = tmp + "/" + queryName + ".sql"
+      val m3 = {
+        write(f,sql)
+        Compiler.in = List(f)
+        Compiler.toast("m3")._2
+      }
 
       for (m <- modes) m match {
-        case LANG_SCALA|LANG_SCALA_LMS => genQueryScala(queryName,QueryTest(f),new Printer("Scala"),m3,m)
-        case LANG_SPARK_LMS => genQuerySpark(queryName,QueryTest(f),new Printer("Spark"),m3,m)
-        case LANG_CPP|LANG_CPP_LMS|LANG_LMS => genQueryCpp(queryName,QueryTest(f),new Printer("Cpp"),m3,m)
+        case LANG_SCALA | LANG_SCALA_LMS =>
+          genQueryScala(queryName, QueryTest(f), new Printer("Scala"), m3, m)
+        case LANG_SPARK_LMS =>
+          genQuerySpark(queryName, QueryTest(f), new Printer("Spark"), m3, m)
+        case LANG_CPP | LANG_CPP_LMS | LANG_LMS =>
+          genQueryCpp(queryName, QueryTest(f), new Printer("Cpp"), m3, m)
         case _ => ()
       }
-      
     }
   }
 
@@ -596,6 +607,7 @@ object UnitTest {
                                  .sorted.map(x => UnitParser(read(repo.getPath+"/"+x)))
             else if (!new java.io.File(path_examples).exists) { warning("folder '"+path_examples+"' does not exist, tests skipped !"); Array[QueryTest]() }
             else exec(Array("find",path_examples,"-name","*.sql","-and","-not","-name","schemas.sql"))._1.split("\n").sorted.map(f=>QueryTest(f))
+  
   // Helper for other tests
   def sqlFiles(valid:Boolean=true) = { val qs=all.map(q=>q.sql); if (valid) qs.filter(s=> !skip.exists(e=>s.endsWith(e+".sql"))) else qs }
 

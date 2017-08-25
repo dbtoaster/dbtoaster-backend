@@ -24,7 +24,7 @@ class Registrator extends KryoRegistrator {
     kryo.register(classOf[java.lang.Class[_]])
     kryo.register(classOf[scala.collection.immutable.$colon$colon[_]])
     // NOTICE: Uncomment the following line after successfully compiling the spark subproject
-    //kryo.register(classOf[scala.collection.immutable.Nil$])
+    // kryo.register(classOf[scala.collection.immutable.Nil$])
 
 
     kryo.register(classOf[Array[StoreWrapper]], new Serializer[Array[StoreWrapper]] {
