@@ -1,6 +1,0 @@
-{
-"QUERY22Idx0" : { "ArrayLength" : "36",  "OptArrayLength" : "36",   "PoolSize" : "0",   "NumElements" : "25",   "NumInArray" : "25"},
-"QUERY22_mCUSTOMER1Idx0" : { "ArrayLength" : "21001",  "OptArrayLength" : "21001",   "PoolSize" : "0",   "NumElements" : "15000",   "NumInArray" : "10751"},
-"QUERY22_mCUSTOMER1Idx1" : { "ArrayLength" : "21001",  "OptArrayLength" : "21001",   "PoolSize" : "0",   "NumSlices" : "15000",   "NumInArray" : "15000"},
-"QUERY22_mCUSTOMER1_L3_1Idx0" : { "ArrayLength" : "13007",  "OptArrayLength" : "13007",   "PoolSize" : "0",   "NumElements" : "9226",   "NumInArray" : "8665"}
-}

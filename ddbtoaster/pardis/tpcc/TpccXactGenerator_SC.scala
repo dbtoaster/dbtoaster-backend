@@ -100,6 +100,11 @@ object TpccXactGenerator_SC {
         new TpccPardisCppGen(Context)
       case "pcpp" => Optimizer.cTransformer = true;
         new TpccPardisParallelCppGen(Context)
+      case "ccpp" =>
+        Optimizer.cTransformer = true
+        Optimizer.mvget = true
+        Optimizer.concCPP = true
+        new TpccPardisConcCppGen(Context)
     }
     val codeBlocks: collection.mutable.ArrayBuffer[(String, List[Sym[_]], Block[Int])] = collection.mutable.ArrayBuffer()
     prog.schema.foreach(x => x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2))
@@ -549,7 +554,7 @@ object TpccXactGenerator_SC {
       //          "\n Credit Limit:     " + /*c_credit_lim*/ customerEntry.get(15) +
       //          "\n New Cust-Balance: " + /*c_balance*/ customerEntry.get(17)
       //        if (customerEntry.get(14) == "BC") {
-      //          val cdata = c_data
+      //          val cdata = c_datta
       //          if (cdata.length > 50) {
       //            output = output + "\n\n Cust-Data: " + cdata.substring(0, 50)
       //            val data_chunks = (if (cdata.length > 200) 4 else cdata.length / 50)

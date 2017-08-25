@@ -15,9 +15,10 @@
 #include <string>
 
 #include "mmap/mmap.hpp"
+#ifdef CONCURRENT
 #include "types.h"
 #include "Transaction.h"
-
+#endif
 
 #define EXPAND(x) #x
 #define STRINGIFY(x) EXPAND(x)
@@ -91,7 +92,11 @@ std::ostream &operator<<(std::ostream &os, const HistoryEntry &m) {
 }
 
 std::ostream &operator<<(std::ostream &os, const NewOrderEntry &m) {
+#ifdef CONCURRENT
     return os << m._1 << " " << m._2 << "  " << m._3 << (m.isInvalid ? "DEL" : " ");
+#else
+    return os << m._1 << " " << m._2 << "  " << m._3;
+#endif
 }
 #endif
 //------------------------------------------------------------------------------
@@ -126,14 +131,18 @@ std::ostream &operator<<(std::ostream &os, const NewOrderEntry &m) {
 
 struct Program {
     const short id;
+#ifdef CONCURRENT
     Transaction xact;
+#endif
     virtual std::ostream& print(std::ostream& s) = 0;
 
     virtual ~Program() {
     }
 
     Program(short i) : id(i) {
+#ifdef CONCURRENT
         xact.ptype = i;
+#endif
     }
 };
 
@@ -301,7 +310,7 @@ date StrToIntdate(const char* s) {
 }
 
 char* IntToStrdate(date d) {
-    static char s[22];
+    thread_local static char s[22];
     s[0] = '2';
     s[1] = '0';
     s[21] = 0;
@@ -439,7 +448,12 @@ struct TPCCDataGen {
         fin.close();
     }
 
+
+#ifdef CONCURRENT
     void loadCust(Transaction& xact) {
+#else
+    void loadCust() {
+#endif
         std::ifstream fin(inputTableDir + "customer.txt");
         std::string line;
         CustomerEntry c;
@@ -549,7 +563,11 @@ struct TPCCDataGen {
             char c_21[501];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," DATE "," STR "," dp "," fp "," dp "," dp "," u16 "," u16 "," STR, &c_1, &c_2, &c_3, c_4, c_5, c_6, c_7, c_8, c_9, c_10, c_11, c_12, datestr, c_14, &c_15, &c_16, &c_17, &c_18, &c_19, &c_20, c_21);
             c_13 = StrToIntdate(datestr);
+#ifdef CONCURRENT
             custRes.add(new CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)), xact);
+#else
+            custRes.add(new CustomerEntry(false_type(), c_1, c_2, c_3, PString(c_4), PString(c_5), PString(c_6), PString(c_7), PString(c_8), PString(c_9), PString(c_10), PString(c_11), PString(c_12), c_13, PString(c_14), c_15, c_16, c_17, c_18, c_19, c_20, PString(c_21)));
+#endif
 #else
             CustomerEntry *cR = new CustomerEntry();
             cR->_4.data_ = new char[17];
@@ -576,7 +594,11 @@ struct TPCCDataGen {
             cR->_12.recomputeSize();
             cR->_14.recomputeSize();
             cR->_21.recomputeSize();
+#ifdef CONCURRENT
             custRes.add(cR, xact);
+#else
+            custRes.add(cR);
+#endif
 #endif
         }
         fin.close();
@@ -584,7 +606,13 @@ struct TPCCDataGen {
 #endif
     }
 
+
+
+#ifdef CONCURRENT
     void loadDist(Transaction& xact) {
+#else
+    void loadDist() {
+#endif
         std::string line;
         std::ifstream fin(inputTableDir + "district.txt");
 
@@ -658,7 +686,11 @@ struct TPCCDataGen {
             double d_10;
             int d_11;
             sscanf(line.c_str(), u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp "," u32, &d_1, &d_2, d_3, d_4, d_5, d_6, d_7, d_8, &d_9, &d_10, &d_11);
+#ifdef CONCURRENT
             distRes.add(new DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11), xact);
+#else
+            distRes.add(new DistrictEntry(false_type(), d_1, d_2, PString(d_3), PString(d_4), PString(d_5), PString(d_6), PString(d_7), PString(d_8), d_9, d_10, d_11));
+#endif       
 
 #else
             DistrictEntry *dR = new DistrictEntry();
@@ -675,7 +707,11 @@ struct TPCCDataGen {
             dR->_6.recomputeSize();
             dR->_7.recomputeSize();
             dR->_8.recomputeSize();
+#ifdef CONCURRENT
             distRes.add(dR, xact);
+#else
+            distRes.add(dR);
+#endif
 #endif
         }
         fin.close();
@@ -683,8 +719,11 @@ struct TPCCDataGen {
 #endif
     }
 
+#ifdef CONCURRENT
     void loadHist(Transaction& xact) {
-
+#else
+    void loadHist() {
+#endif
         std::string line;
         std::ifstream fin;
         char datestr[20];
@@ -747,14 +786,22 @@ struct TPCCDataGen {
             char h_8[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &h_1, &h_2, &h_3, &h_4, &h_5, datestr, &h_7, h_8);
             h_6 = StrToIntdate(datestr);
+#ifdef CONCURRENT
             histRes.add(new HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)), xact);
+#else
+            histRes.add(new HistoryEntry(false_type(), h_1, h_2, h_3, h_4, h_5, h_6, h_7, PString(h_8)));
+#endif
 #else
             HistoryEntry *hR = new HistoryEntry();
             hR->_8.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," DATE "," fp "," STR, &hR->_1, &hR->_2, &hR->_3, &hR->_4, &hR->_5, datestr, &hR->_7, hR->_8.data_);
             hR->_6 = StrToIntdate(datestr);
             hR->_8.recomputeSize();
+#ifdef CONCURRENT
             histRes.add(hR, xact);
+#else
+            histRes.add(hR);
+#endif
 #endif
         }
         fin.close();
@@ -762,8 +809,11 @@ struct TPCCDataGen {
 #endif
     }
 
+#ifdef CONCURRENT
     void loadItem(Transaction& xact) {
-
+#else
+    void loadItem() {
+#endif
         std::string line;
         std::ifstream fin;
         ItemEntry i;
@@ -819,7 +869,11 @@ struct TPCCDataGen {
             double i_4;
             char i_5[51];
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &i_1, &i_2, i_3, &i_4, i_5);
+#ifdef CONCURRENT
             itemRes.add(new ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5), xact);
+#else
+            itemRes.add(new ItemEntry(false_type(), i_1, i_2, PString(i_3), i_4, i_5));
+#endif
 #else
             ItemEntry *iR = new ItemEntry();
             iR->_3.data_ = new char[25];
@@ -827,7 +881,11 @@ struct TPCCDataGen {
             sscanf(line.c_str(), u32 "," u32 "," STR "," fp "," STR, &iR->_1, &iR->_2, iR->_3.data_, &iR->_4, iR->_5.data_);
             iR->_3.recomputeSize();
             iR->_5.recomputeSize();
+#ifdef CONCURRENT
             itemRes.add(iR, xact);
+#else
+            itemRes.add(iR);
+#endif
 #endif
         }
         fin.close();
@@ -835,7 +893,12 @@ struct TPCCDataGen {
 #endif
     }
 
+
+#ifdef CONCURRENT
     void loadNewOrd(Transaction& xact) {
+#else
+    void loadNewOrd() {
+#endif
         std::string line;
         std::ifstream fin;
 
@@ -882,11 +945,19 @@ struct TPCCDataGen {
             int n_2;
             int n_3;
             sscanf(line.c_str(), u32 "," u8 "," u8, &n_1, &n_2, &n_3);
+#ifdef CONCURRENT
             newOrdRes.add(new NewOrderEntry(false_type(), n_1, n_2, n_3), xact);
+#else
+            newOrdRes.add(new NewOrderEntry(false_type(), n_1, n_2, n_3));
+#endif
 #else
             NewOrderEntry *nR = new NewOrderEntry();
             sscanf(line.c_str(), u32 "," u8 "," u8, &nR->_1, &nR->_2, &nR->_3);
+#ifdef CONCURRENT
             newOrdRes.add(nR, xact);
+#else
+            newOrdRes.add(nR);
+#endif
 #endif
         }
         fin.close();
@@ -894,8 +965,12 @@ struct TPCCDataGen {
 #endif
     }
 
-    void loadOrdLine(Transaction& xact) {
 
+#ifdef CONCURRENT
+    void loadOrdLine(Transaction& xact) {
+#else
+    void loadOrdLine() {
+#endif
         std::string line;
         std::ifstream fin;
         char datestr[20];
@@ -961,23 +1036,33 @@ struct TPCCDataGen {
             char e_10[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &e_1, &e_2, &e_3, &e_4, &e_5, &e_6, datestr, &e_8, &e_9, e_10);
             e_7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
+#ifdef CONCURRENT
             ordLRes.add(new OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)), xact);
+#else
+            ordLRes.add(new OrderLineEntry(false_type(), e_1, e_2, e_3, e_4, e_5, e_6, e_7, e_8, e_9, PString(e_10)));
+#endif
 #else
             OrderLineEntry * eR = new OrderLineEntry();
             eR->_10.data_ = new char[25];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u8 "," u32 "," u8 "," nullable "," u8 "," fp "," STR, &eR->_1, &eR->_2, &eR->_3, &eR->_4, &eR->_5, &eR->_6, datestr, &eR->_8, &eR->_9, eR->_10.data_);
             eR->_7 = strcmp(datestr, "\\N") == 0 ? 0 : StrToIntdate(datestr + 1);
             eR->_10.recomputeSize();
+#ifdef CONCURRENT
             ordLRes.add(eR, xact);
+#else
+            ordLRes.add(eR);
+#endif
 #endif
         }
         fin.close();
         std::cout << "OrderLine Table Results loaded" << std::endl;
 #endif
     }
-
+#ifdef CONCURRENT
     void loadOrders(Transaction& xact) {
-
+#else 
+    void loadOrders() {
+#endif
         std::string line;
         std::ifstream fin;
         char datestr[20];
@@ -1046,23 +1131,33 @@ struct TPCCDataGen {
             o_5 = StrToIntdate(datestr);
             o_6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             o_8 = local;
+#ifdef CONCURRENT
             ordRes.add(new OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8), xact);
+#else
+            ordRes.add(new OrderEntry(false_type(), o_1, o_2, o_3, o_4, o_5, o_6, o_7, o_8));
+#endif
 #else
             OrderEntry *oR = new OrderEntry();
             sscanf(line.c_str(), u32 "," u8 "," u8 "," u32 "," DATE "," nullable "," u8 "," u8, &oR->_1, &oR->_2, &oR->_3, &oR->_4, datestr, carrier, &oR->_7, &local);
             oR->_5 = StrToIntdate(datestr);
             oR->_6 = strcmp(carrier, "\\N") == 0 ? -1 : atoi(carrier);
             oR->_8 = local;
+#ifdef CONCURRENT
             ordRes.add(oR, xact);
+#else
+            ordRes.add(oR);
+#endif
 #endif
         }
         fin.close();
         std::cout << "Order Table results loaded" << std::endl;
 #endif
     }
-
+#ifdef CONCURRENT
     void loadStocks(Transaction& xact) {
-
+#else 
+    void loadStocks() {
+#endif
         std::string line;
         std::ifstream fin;
         StockEntry s;
@@ -1161,7 +1256,11 @@ struct TPCCDataGen {
             int s_16;
             char s_17[51];
             sscanf(line.c_str(), u32 "," u8 "," u8 "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," STR "," u32 "," u16 "," u16 "," STR, &s_1, &s_2, &s_3, s_4, s_5, s_6, s_7, s_8, s_9, s_10, s_11, s_12, s_13, &s_14, &s_15, &s_16, s_17);
+#ifdef CONCURRENT
             stockRes.add(new StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)), xact);
+#else
+            stockRes.add(new StockEntry(false_type(), s_1, s_2, s_3, PString(s_4), PString(s_5), PString(s_6), PString(s_7), PString(s_8), PString(s_9), PString(s_10), PString(s_11), PString(s_12), PString(s_13), s_14, s_15, s_16, PString(s_17)));
+#endif
 #else
             StockEntry *sR = new StockEntry();
             sR->_4.data_ = new char[25];
@@ -1187,16 +1286,22 @@ struct TPCCDataGen {
             sR->_12.recomputeSize();
             sR->_13.recomputeSize();
             sR->_17.recomputeSize();
+#ifdef CONCURRENT
             stockRes.add(sR, xact);
+#else
+            stockRes.add(sR);
+#endif
 #endif
         }
         fin.close();
         std::cout << "Stock Table results loaded" << std::endl;
 #endif
     }
-
+#ifdef CONCURRENT
     void loadWare(Transaction& xact) {
-
+#else 
+    void loadWare() {
+#endif
         std::string line;
         std::ifstream fin;
         WarehouseEntry w;
@@ -1266,7 +1371,11 @@ struct TPCCDataGen {
             double w_8;
             double w_9;
             sscanf(line.c_str(), u8 "," STR "," STR "," STR "," STR "," STR "," STR "," fp "," dp, &w_1, w_2, w_3, w_4, w_5, w_6, w_7, &w_8, &w_9);
+#ifdef CONCURRENT
             wareRes.add(new WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9), xact);
+#else
+            wareRes.add(new WarehouseEntry(false_type(), w_1, PString(w_2), PString(w_3), PString(w_4), PString(w_5), PString(w_6), PString(w_7), w_8, w_9));
+#endif
 #else
             WarehouseEntry *wR = new WarehouseEntry();
             wR->_2.data_ = new char[11];
@@ -1282,7 +1391,11 @@ struct TPCCDataGen {
             wR->_5.recomputeSize();
             wR->_6.recomputeSize();
             wR->_7.recomputeSize();
+#ifdef CONCURRENT
             wareRes.add(wR, xact);
+#else
+            wareRes.add(wR);
+#endif
 #endif
         }
         fin.close();

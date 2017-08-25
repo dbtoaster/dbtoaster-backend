@@ -1,6 +1,0 @@
-{
-"QUERY11AIdx0" : { "ArrayLength" : "28001",  "OptArrayLength" : "28001",   "PoolSize" : "0",   "NumElements" : "20000",   "NumInArray" : "20000"},
-"QUERY11A_mSUPPLIER1Idx0" : { "ArrayLength" : "112001",  "OptArrayLength" : "112001",   "PoolSize" : "0",   "NumElements" : "80000",   "NumInArray" : "56405"},
-"QUERY11A_mSUPPLIER1Idx1" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumSlices" : "1000",   "NumInArray" : "1000"},
-"QUERY11A_mPARTSUPP1Idx0" : { "ArrayLength" : "1401",  "OptArrayLength" : "1401",   "PoolSize" : "0",   "NumElements" : "1000",   "NumInArray" : "1000"}
-}

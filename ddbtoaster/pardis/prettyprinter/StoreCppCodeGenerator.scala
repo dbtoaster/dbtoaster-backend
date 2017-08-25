@@ -71,7 +71,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"std::vector<${agg.typeE }*> ${sym }results;" :/:
         doc"MedianAggregator<${agg.typeE }, ${agg.typeR }> $sym($f, ${sym }results);"
 
-    case Statement(sym, n@AggregatorResultForUpdate(agg)) if Optimizer.OpResChecks =>
+    case Statement(sym, n@AggregatorResultForUpdate(agg)) if Optimizer.concCPP =>
       doc"OperationReturnStatus st$sym;" :\\:
         doc"${sym.tp } $sym = $agg.resultForUpdate(st$sym, xact);" :\\:
         doc"if(st$sym == WW_VALUE) return WW_ABORT;"
@@ -131,7 +131,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
       doc"auto& $sym = $self.filter($f);"
 
 
-    case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.OpResChecks =>
+    case Statement(sym, StoreUnsafeInsert(store, e)) if Optimizer.concCPP =>
       val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $store.insert_nocheck($e, xact);" :\\:
         doc"if(st$symid == WW_VALUE) return WW_ABORT;"
@@ -320,18 +320,18 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     //      doc"${sym.tp} $sym = " :: nodeToDocument(n) :: ";" :\\:
     //      doc"if($sym == nullptr) return ABORT;"
 
-    case Statement(sym, n@IdxGetForUpdate(idx, key)) if Optimizer.OpResChecks =>
+    case Statement(sym, n@IdxGetForUpdate(idx, key)) if Optimizer.concCPP =>
       doc"OperationReturnStatus st$sym;" :\\:
         doc"${sym.tp } $sym =  $idx.getForUpdate($key, st$sym, xact);" :\\:
         doc"if(st$sym == WW_VALUE) return WW_ABORT;"
 
-    case Statement(sym, n@IdxSliceNoUpdate(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.OpResChecks =>
+    case Statement(sym, n@IdxSliceNoUpdate(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.concCPP =>
       val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $idx.sliceNoUpdate($key, " ::
         doc"[&](${i.tp } $i) -> TransactionReturnStatus {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
         doc"if(st$symid == WW_VALUE) return WW_ABORT;"
 
-    case Statement(sym, n@IdxSlice(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.OpResChecks =>
+    case Statement(sym, n@IdxSlice(idx, key, Def(PardisLambda(_, i, o)))) if Optimizer.concCPP =>
       val symid = sym.id.toString
       doc"OperationReturnStatus st$symid = $idx.slice($key, " ::
         doc"[&](${i.tp } $i) -> TransactionReturnStatus {" :: Document.nest(NEST_COUNT, blockToDocument(o) :/: "return SUCCESS;") :/: "}, xact);" :\\:
@@ -418,6 +418,7 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StringType => "PString"
     case DateType => "date"
     case IR.ArrayType(atp) => doc"$atp*"
+    case PardisVariableType(vtp) if vtp == NullType => tpeToDocument(PointerType(GenericEntryType))
     case PardisVariableType(vtp) => tpeToDocument(vtp)
     case _ => super.tpeToDocument(tp)
   }
@@ -431,10 +432,11 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case MultiResIsEmpty(self: Sym[_]) => doc"$self == nullptr"
 
     case AggregatorResult(self: Sym[_]) => doc"$self.result()"
-    case AggregatorResultForUpdate(self: Sym[_]) if !Optimizer.OpResChecks => doc"$self.resultForUpdate(xact)"
+    case AggregatorResultForUpdate(self: Sym[_]) if !Optimizer.concCPP => doc"$self.resultForUpdate(xact)"
 
     case StoreInsert(self, e) => doc"$self.add($e)"
-    case StoreUnsafeInsert(self, e) => doc"$self.insert_nocheck($e, xact)"
+    case StoreUnsafeInsert(self, e) if Optimizer.concCPP => doc"$self.insert_nocheck($e, xact)"
+    case StoreUnsafeInsert(self, e)  => doc"$self.insert_nocheck($e)"
     case StoreGet(self, idx, key) => doc"$self.get($key, $idx)"
     case StoreGetCopy(self, idx, key) => doc"$self.getCopy($key, $idx)"
     case StoreGetCopyDependent(self, idx, key) => doc"$self.getCopyDependent($key, $idx)"
@@ -452,18 +454,23 @@ class StoreCppCodeGenerator(override val IR: StoreDSL) extends CCodeGenerator wi
     case StoreClear(self) => doc"$self.clear()"
     case StoreCopyIntoPool(self, e) => doc"$self.copyIntoPool($e)"
 
-    case IdxGet(self, key) => doc"$self.get($key, xact)"
+    case IdxGet(self, key) if Optimizer.concCPP=> doc"$self.get($key, xact)"
+    case IdxGet(self, key) => doc"$self.get($key)"
     case IdxGetCopy(self, key) => doc"$self.getCopy($key)"
     case IdxGetCopyDependent(self, key) => doc"$self.getCopyDependent($key)"
-    case IdxGetForUpdate(self, key) => doc"$self.getForUpdate($key, xact)"
+    case IdxGetForUpdate(self, key) if Optimizer.concCPP => doc"$self.getForUpdate($key, xact)"
+    case IdxGetForUpdate(self, key) => doc"$self.getForUpdate($key)"
     case IdxUpdate(self, key) => doc"$self.update($key)"
     case IdxUpdateCopy(self, key, primary) => doc"$self.updateCopy($key, &$primary)"
     case IdxUpdateCopyDependent(self, key, ref) => doc"$self.updateCopyDependent($key, $ref)"
-    case IdxSlice(self, key, f) => doc"$self.slice($key, $f, xact)"
-    case IdxSliceNoUpdate(self, key, f) => doc"$self.sliceNoUpdate($key, $f, xact)"
+    case IdxSlice(self, key, f) if Optimizer.concCPP => doc"$self.slice($key, $f, xact)"
+    case IdxSlice(self, key, f) => doc"$self.slice($key, $f)"
+    case IdxSliceNoUpdate(self, key, f) if Optimizer.concCPP => doc"$self.sliceNoUpdate($key, $f, xact)"
+    case IdxSliceNoUpdate(self, key, f) => doc"$self.sliceNoUpdate($key, $f)"
     case IdxSliceCopy(self, key, f) => doc"$self.sliceCopy($key, $f)"
     case IdxSliceCopyDependent(self, key, f) => doc"$self.sliceCopyDependent($key, $f)"
-    case IdxForeach(self, f) => doc"$self.foreach($f, xact)"
+    case IdxForeach(self, f) if Optimizer.concCPP => doc"$self.foreach($f, xact)"
+    case IdxForeach(self, f) => doc"$self.foreach($f)"
     case IdxForeachCopy(self, f) => doc"$self.foreachCopy($f)"
     case IdxClear(self) => doc"$self.clear()"
     case IdxForeachResMap(idx, f, res: Sym[_]) => doc"$idx.foreachResMap($f, $res)"

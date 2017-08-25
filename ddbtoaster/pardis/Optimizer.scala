@@ -137,8 +137,8 @@ object Optimizer {
   var sliceNoUpd = false
   var coldMotion = false
   var parameterPromotion = true
-  var mvget = true
-  var OpResChecks = true
+  var mvget = false
+  var concCPP = false
   var profileBlocks = false
   var profileStoreOperations = false
 
