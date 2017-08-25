@@ -18,6 +18,7 @@ trait ICppGen extends IScalaGen {
 
   val EXPERIMENTAL_RUNTIME_LIBRARY = false
   val EXPERIMENTAL_HASHMAP = true
+  val EXPERIMENTAL_MAX_INDEX_VARS = Int.MaxValue
 
   //Sample entry definitions are accumulated in this variable
   var sampleEntDef = ""
@@ -780,14 +781,14 @@ trait ICppGen extends IScalaGen {
           s"FORCE_INLINE ${mapEntry}& modify" + stringIf(!unique, getIndexId(mapName, is)) + 
           "(" + is.map { case i => "const " + fields(i)._2.toCppRefType + " c" + i }.mkString(", ") + ") { " +
           is.map { case i => fields(i)._1 + " = c" + i + "; "}.mkString + " return *this; }"
-        }.mkString
+        }.mkString("\n")
         val sSerialization = fields.map { case (fld,_) => 
             s"""|ar << ELEM_SEPARATOR;
                 |DBT_SERIALIZATION_NVP(ar, ${fld});
                 |""".stripMargin
           }.mkString
         val initFromString = stringIf(EXPERIMENTAL_RUNTIME_LIBRARY, 
-          s"${mapEntry}(const std::vector<std::string>& f, const ${m.tp.toCppRefType} v) { if (f.size() < ${m.keys.size}) return; ${sStringInit} }")
+          s"${mapEntry}(const std::vector<std::string>& f, const ${m.tp.toCppRefType} v) { /* if (f.size() < ${m.keys.size}) return; */ ${sStringInit} }")
 
         s"""|struct ${mapEntry} {
             |  ${sFields}
@@ -805,10 +806,10 @@ trait ICppGen extends IScalaGen {
       }
 
       def genExtractorsAndHashers = allIndices.map{ case (is,unique) =>
-        "struct "+mapType+"key"+getIndexId(mapName,is)+"_idxfn {\n"+
+        "struct " + mapType + "key" + getIndexId(mapName, is) + "_idxfn {\n"+
         "  FORCE_INLINE static size_t hash(const "+mapEntry+"& e) {\n"+
         "    size_t h = 0;\n"+
-        is.map{ isIndex => "    hash_combine(h, e."+fields(isIndex)._1+");\n" }.mkString +
+        is.take(EXPERIMENTAL_MAX_INDEX_VARS).map{ isIndex => "    hash_combine(h, e."+fields(isIndex)._1+");\n" }.mkString +
         "    return h;\n"+
         "  }\n"+
         "  FORCE_INLINE static bool equals(const "+mapEntry+"& x, const "+mapEntry+"& y) {\n"+
@@ -841,7 +842,8 @@ trait ICppGen extends IScalaGen {
 
       s"""|${genEntryStruct}
           |${genExtractorsAndHashers}
-          |${genTypeDefs}""".stripMargin
+          |${genTypeDefs}
+          |""".stripMargin
     }
 
     def genTempTupleTypes = {
@@ -857,7 +859,7 @@ trait ICppGen extends IScalaGen {
               |  }
               |  static long hash(const ${name} &e) {
               |    size_t h = 0;
-              |    ${ksTpWithIdx.map { case (v,i) => "    hash_combine(h, e._" + (i + 1) + ");" }.mkString("\n")}
+              |    ${ksTpWithIdx.take(EXPERIMENTAL_MAX_INDEX_VARS).map { case (v,i) => "    hash_combine(h, e._" + (i + 1) + ");" }.mkString("\n")}
               |    return h;
               |  }
               |};
@@ -878,7 +880,7 @@ trait ICppGen extends IScalaGen {
           "  static bool equals(const "+name+" &x, const "+name+" &y) { return ("+ksTpWithIdx.map{case (v,i) => "(x._"+(i+1)+"==y._"+(i+1)+")"}.mkString(" && ")+"); }\n"+
           "  static long hash(const "+name+" &e) {\n"+
           "    size_t h = 0;\n"+
-          ksTpWithIdx.map{ case (v,i) => "    hash_combine(h, e._"+(i+1)+");\n" }.mkString +
+          ksTpWithIdx.take(EXPERIMENTAL_MAX_INDEX_VARS).map{ case (v,i) => "    hash_combine(h, e._"+(i+1)+");\n" }.mkString +
           "    return h;\n"+
           "  }\n"+
           "};"
