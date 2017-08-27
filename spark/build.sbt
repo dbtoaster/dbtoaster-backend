@@ -1,4 +1,4 @@
-// --------- Project informations
+// --------- Project information
 Seq(
   name := "DBToaster-spark",
   organization := "ch.epfl.data",
@@ -8,7 +8,7 @@ Seq(
 javacOptions ++= Seq("-source", "1.7", "-target", "1.7")
 scalacOptions += "-target:jvm-1.7"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.10.6"
 
 // --------- Paths
 Seq(

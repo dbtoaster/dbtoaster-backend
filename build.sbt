@@ -1,4 +1,4 @@
-// --------- Project informations
+// --------- Project information
 Seq(
   name := "DBToaster",
   organization := "ch.epfl.data",
@@ -22,9 +22,13 @@ Seq(
   resourceDirectory in Compile <<= baseDirectory / "conf"
 )
 
+scalaVersion := "2.10.6"
 
 // --------- Dependencies
-libraryDependencies ++= Seq()
+libraryDependencies ++= Seq(
+  "org.scala-lang" % "scala-library" % scalaVersion.value
+)
+
 
 // --------- Compilation options
 Seq(
@@ -32,13 +36,6 @@ Seq(
   javacOptions ++= Seq("-Xlint:unchecked","-Xlint:-options","-source", "1.7", "-target", "1.7"),
   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-optimise","-Yinline-warnings","-target:jvm-1.7")
 )
-
-// Seq(
-//   scalaVersion := "2.10.4",
-//   scalacOptions ++= Seq("-deprecation","-unchecked","-feature","-optimise","-Yinline-warnings"), // ,"-target:jvm-1.7"
-//   javacOptions ++= Seq("-Xlint:unchecked","-Xlint:-options","-source","1.6","-target","1.6")     // forces JVM 1.6 compatibility with JDK 1.7 compiler
-// )
-
 
 // --------- Execution options
 Seq(
