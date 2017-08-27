@@ -265,8 +265,14 @@ commands += Command.command("release")((state: State) => {
   else Seq(
     // assemblyOption in assembly ~= { _.copy(includeScala = false) }
     sources in Compile ~= (fs => fs.filter(f => !f.toString.endsWith("codegen/LMSGen.scala"))), // ++ (new java.io.File("lms") ** "*.scala").get
+    
     scalaSource in Compile <<= baseDirectory / "lms", // incorrect; but fixes dependency and allows incremental compilation (SBT 0.13.0)
     //unmanagedSourceDirectories in Compile += file("lms"),
+
+    sources in Compile ~= (fs => fs.filter(
+      f => !f.toString.contains("lms/dboptimizer") && 
+           !f.toString.contains("lms/tpcc"))
+    ),
     
     // LMS-specific options
     scalaOrganization := "org.scala-lang.virtualized",
