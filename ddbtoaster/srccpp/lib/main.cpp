@@ -11,7 +11,7 @@ std::unordered_map<std::string, size_t> counters;
 namespace dbtoaster {
 
     class CustomProgram_1 : public Program {
-    public:
+      public:
 
         void process_stream_event(const event_t& ev) {
             cout << "on_" << dbtoaster::event_name[ev.type] << "_";
@@ -22,13 +22,13 @@ namespace dbtoaster {
     };
 
     class CustomProgram_2 : public Program {
-    public:
+      public:
 
         void process_streams() {
             for (long i = 1; i <= 10; ++i) {
                 event_args_t ev_args;
-                ev_args.push_back(new long(i));
-                ev_args.push_back(new long(i + 10));
+                ev_args.push_back(std::shared_ptr<long>(new long(i)));
+                ev_args.push_back(std::shared_ptr<long>(new long(i + 10)));
                 event_t ev(insert_tuple, get_relation_id("S"), 0, ev_args);
 
                 process_stream_event(ev);

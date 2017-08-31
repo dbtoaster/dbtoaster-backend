@@ -112,6 +112,7 @@ void runtime_options::process_options(int argc, char* argv[])
 				break;
 			case LOGCOUNT:
 				log_tuple_count_every = std::atoi(opt.arg);
+				break;
 			case BATCH_SIZE:
 				batch_size = std::atoi(opt.arg);
 				break;

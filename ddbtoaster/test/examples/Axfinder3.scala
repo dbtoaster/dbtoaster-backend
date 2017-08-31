@@ -14,7 +14,7 @@ import ddbt.lib._
 
 object Axfinder3 {
   import Helper._
-  def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long,b:Int,no_output:Boolean)=>runLocal[Axfinder3Master,Axfinder3Worker](args)(Seq(
+  def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long,b:Int)=>runLocal[Axfinder3Master,Axfinder3Worker](args)(Seq(
     (new java.io.FileInputStream("/Documents/EPFL/Data/cornell_db_maybms/dbtoaster/experiments/data/finance/"+d+"/finance.csv"),new Adaptor.OrderBook(brokers=10,deterministic=true,bids="BIDS",asks="ASKS"),Split())
   ),p,t),f)
   def main(args:Array[String]) {
@@ -102,10 +102,10 @@ class Axfinder3Master extends Axfinder3Worker with MasterActor {
 
   val queries = List(0)
   val dispatch : PartialFunction[TupleEvent,Unit] = {
-    case TupleEvent(_,TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onAddBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(_,TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onDelBIDS(v0,v1,v2,v3,v4)
-    case TupleEvent(_,TupleInsert,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onAddASKS(v0,v1,v2,v3,v4)
-    case TupleEvent(_,TupleDelete,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onDelASKS(v0,v1,v2,v3,v4)
+    case TupleEvent(TupleInsert,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onAddBIDS(v0,v1,v2,v3,v4)
+    case TupleEvent(TupleDelete,"BIDS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onDelBIDS(v0,v1,v2,v3,v4)
+    case TupleEvent(TupleInsert,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onAddASKS(v0,v1,v2,v3,v4)
+    case TupleEvent(TupleDelete,"ASKS",List(v0:Double,v1:Long,v2:Long,v3:Double,v4:Double)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; skip=true } else tN+=1 } else tN+=1; onDelASKS(v0,v1,v2,v3,v4)
     case _ => deq
   }
   def onAddBIDS(t:Double, id:Long, broker_id:Long, volume:Double, price:Double) { rpc(0,broker_id, addBIDS, broker_id,volume,price); deq }

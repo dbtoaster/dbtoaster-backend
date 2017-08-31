@@ -21,7 +21,7 @@ object Rid {
   def streams(d:String) = Seq(
     (new java.io.FileInputStream("../cornell_db_maybms/dbtoaster/experiments/data/simple/tiny/r.dat"),new Adaptor.CSV("R","long,long","\\Q,\\E",if(d.endsWith("_del")) "ins+del" else "insert"),Split())
   )
-  def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long,b:Int,no_output:Boolean)=>runLocal[RidMaster,RidWorker](args)(streams(d),p,t),f)
+  def execute(args:Array[String],f:List[Any]=>Unit) = bench(args,(d:String,p:Int,t:Long,b:Int)=>runLocal[RidMaster,RidWorker](args)(streams(d),p,t),f)
   def main(args:Array[String]) {
     execute(args,(res:List[Any])=>{
       println("COUNT:\n"+M3Map.toStr(res(0))+"\n")
@@ -84,8 +84,8 @@ class RidMaster extends RidWorker with MasterActor {
 
   val queries = List(0)
   val dispatch : PartialFunction[TupleEvent,Unit] = {
-    case TupleEvent(_,TupleInsert,"R",List(v0:Long,v1:Long)) => onAddR(v0,v1)
-    case TupleEvent(_,TupleDelete,"R",List(v0:Long,v1:Long)) => onDelR(v0,v1)
+    case TupleEvent(TupleInsert,"R",List(v0:Long,v1:Long)) => onAddR(v0,v1)
+    case TupleEvent(TupleDelete,"R",List(v0:Long,v1:Long)) => onDelR(v0,v1)
     case _ => deq
   }
 
