@@ -281,28 +281,30 @@ object Utils {
 
   // Capture console/default output and error streams in two strings
   def captureOut[R](f: () => R, prefix: String = null) : (R, String, String) = { 
-    val c = scala.Console
-    val o0 = c.out
-    val so0 = System.out
+    import scala.Console
+
     val po = new PipedOutputStream
-    c.setOut(new PrintStream(po))
-    System.setOut(new PrintStream(po))
-    val out = gobble(new PipedInputStream(po), o0, prefix)
-    val e0 = c.err
-    val se0 = System.err
+    val out = Console.withOut(new PrintStream(po)) {
+      System.setOut(new PrintStream(po))
+      gobble(new PipedInputStream(po), Console.out, prefix)
+    }
     val pe = new PipedOutputStream
-    c.setErr(new PrintStream(pe))
-    System.setErr(new PrintStream(pe))
-    val err = gobble(new PipedInputStream(pe), e0, prefix)
+    val err = Console.withErr(new PrintStream(pe)) {
+      System.setErr(new PrintStream(pe))  
+      gobble(new PipedInputStream(pe), Console.err, prefix)
+    }
+
     val r = 
-      try { f() } 
+      try { f() }
       finally { 
-        c.setOut(o0)
-        System.setOut(so0)
-        po.close
-        c.setErr(e0)
-        System.setErr(se0)
-        pe.close 
+        Console.withOut(Console.out) {
+          System.setOut(System.out)  
+          po.close()
+        }
+        Console.withErr(Console.err) {
+          System.setErr(System.err)
+          pe.close()
+        }
       }
     (r, out.toString, err.toString)
   }

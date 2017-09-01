@@ -708,16 +708,18 @@ object UnitTest {
         }
       }
       t.start
-      try {
-        scala.Console.setOut(o)
-        System.setOut(o)
-        f()
+      try {        
+        scala.Console.withOut(o) {
+          System.setOut(o)
+          f()  
+        }        
       }
       finally {
-        scala.Console.setOut(c0)
-        System.setOut(s0)
-        o.flush
-        o.close
+        scala.Console.withOut(c0) {
+          System.setOut(s0)
+          o.flush()
+          o.close() 
+        }
       }
       t.join
     }
