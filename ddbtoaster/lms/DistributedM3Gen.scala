@@ -1,6 +1,6 @@
 package ddbt.codegen
 
-import ddbt.codegen.lms._
+import ddbt.codegen._
 import ddbt.ast._
 
 /**

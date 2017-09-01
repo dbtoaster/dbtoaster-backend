@@ -5,10 +5,12 @@ Seq(
   version := "1.0"
 )
 
-javacOptions ++= Seq("-source", "1.7", "-target", "1.7")
-scalacOptions += "-target:jvm-1.7"
-
-scalaVersion := "2.10.6"
+// --------- Compilation options
+Seq(
+  scalaVersion := "2.11.8",
+  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings", "-target:jvm-1.6"),
+  javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:-options", "-source", "1.6", "-target","1.6")
+)
 
 // --------- Paths
 Seq(

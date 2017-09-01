@@ -84,12 +84,12 @@ if(Optimizer.initialStoreSize) {
   def containsForeachOrSlice(ex: Expr): Boolean = ex match {
     case MapRef(_, _, ks) => {
       ks.size > 0 && {
-        val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k) }
+        val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
         ki.size > 0
       }
     }
-    case a@Add(l, r) if (a.agg != Nil) => true
-    case a@AggSum(ks, e) if ((ks zip a.tks).filter { case (n, t) => !cx.contains(n) }).size != 0 => true
+    case a@Add(l, r) if a.schema._2.exists { case (n, t) => !cx.contains(n) } => true
+    case a@AggSum(ks, e) if ks.exists { case (n, t) => !cx.contains(n) } => true
     case s: Product => s.productIterator.collect { case e: Expr => containsForeachOrSlice(e) }.foldLeft(false)(_ || _)
   }
 
@@ -148,7 +148,8 @@ if(Optimizer.initialStoreSize) {
       }, IR.unit(zero(rr.tp))(tp))(tp)), am), am)
     case Mul(l, r) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(mul(vl, vr, ex.tp)), am), am)
     case a@Add(l, r) =>
-      if (a.agg == Nil) {
+      val agg = a.schema._2.filter { case (n, t) => !cx.contains(n) }
+      if (agg == Nil) {
         val cur = cx.save
         expr(l, (vl: Rep[_]) => {
           cx.load(cur)
@@ -158,7 +159,7 @@ if(Optimizer.initialStoreSize) {
           }, am)
         }, am)
       } else am match {
-        case Some(t) if t.toSet.subsetOf(a.agg.toSet) =>
+        case Some(t) if t.toSet.subsetOf(agg.toSet) =>
           val cur = cx.save
           expr(l, co, am)
           cx.load(cur)
@@ -166,20 +167,20 @@ if(Optimizer.initialStoreSize) {
           cx.load(cur)
           IR.unit(())
         case _ =>
-          implicit val mE = me(a.agg.map(_._2), a.tp)
+          implicit val mE = me(agg.map(_._2), a.tp)
           val acc = IR.m3temp()(mE)
-          tempMapSchema += acc.asInstanceOf[Sym[_]] -> (a.agg.map(_._2) :+ a.tp).map(man)
-          val inCo = (v: Rep[_]) => IR.m3add(acc, IR.stNewEntry2(acc, (a.agg.map(x => cx(x._1)) ++ List(v)): _*))(mE)
+          tempMapSchema += acc.asInstanceOf[Sym[_]] -> (agg.map(_._2) :+ a.tp).map(man)
+          val inCo = (v: Rep[_]) => IR.m3add(acc, IR.stNewEntry2(acc, (agg.map(x => cx(x._1)) ++ List(v)): _*))(mE)
           val cur = cx.save
-          expr(l, inCo, Some(a.agg));
+          expr(l, inCo, Some(agg));
           cx.load(cur)
-          expr(r, inCo, Some(a.agg));
+          expr(r, inCo, Some(agg));
           cx.load(cur)
-          foreach(acc, a.agg, a.tp, co)
+          foreach(acc, agg, a.tp, co)
       }
 
     case m@MapRef(n, tp, ks) =>
-      val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k) }
+      val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
       val proxy = mapProxy(cx(n))
       val proxy2 = mapProxy2(cx(n))
       if (ks.size == 0) {
@@ -188,7 +189,7 @@ if(Optimizer.initialStoreSize) {
       } else if (ki.size == 0) {
         // all keys are bound
         val z = IR.unit(zero(tp))
-        val vs = ks.zipWithIndex.map { case (n, i) => (i + 1, cx(n)) }
+        val vs = ks.zipWithIndex.map { case (k, i) => (i + 1, cx(k._1)) }
         //TODO: SBJ: Check ok?
         val r = proxy2.get1(vs: _*)
         val mE = man(tp).asInstanceOf[TypeRep[Any]]
@@ -199,18 +200,18 @@ if(Optimizer.initialStoreSize) {
       } else {
         // we need to iterate over all keys not bound (ki)
         if (ko.size > 0) {
-          implicit val mE = me(m.tks, tp)
+          implicit val mE = me(ks.map(_._2), tp)
           val mm = cx(n).asInstanceOf[Rep[Store[Entry]]]
           IR.stSlice(mm, { (e: Rep[Entry]) =>
             //            println(s"tpe here! ${mE.typeArguments(i+1)}")
-            cx.add(ki.map { case (k, i) => (k, IR.steGet(e, i + 1)(IR.EntryType, mE.typeArguments(i))) }.toMap); co(IR.steGet(e, ks.size + 1)(IR.EntryType, mE.typeArguments(ks.size)))
-          }, ko.map { case (k, i) => (i + 1, cx(k)) }: _*)
+            cx.add(ki.map { case (k, i) => (k._1, IR.steGet(e, i + 1)(IR.EntryType, mE.typeArguments(i))) }.toMap); co(IR.steGet(e, ks.size + 1)(IR.EntryType, mE.typeArguments(ks.size)))
+          }, ko.map { case (k, i) => (i + 1, cx(k._1)) }: _*)
         } else {
-          implicit val mE = me(m.tks, tp)
+          implicit val mE = me(ks.map(_._2), tp)
           proxy.foreachCopy(__lambda { e: Rep[Entry] => {
             //println(s"********************tpe here! ${mE}")
             // println(s"********************tpe here! ${mE.typeArguments}")
-            cx.add(ki.map { case (k, i) => (k, IR.steGet(e, i + 1)(IR.EntryType, mE.typeArguments(i))) }.toMap)
+            cx.add(ki.map { case (k, i) => (k._1, IR.steGet(e, i + 1)(IR.EntryType, mE.typeArguments(i))) }.toMap)
 
             co(IR.steGet(e, ks.size + 1)(IR.EntryType, mE.typeArguments(ks.size)))
           }
@@ -219,7 +220,7 @@ if(Optimizer.initialStoreSize) {
       }
 
     case a@AggSum(ks, e) =>
-      val agg_keys = (ks zip a.tks).filter { case (n, t) => !cx.contains(n) } // the aggregation is only made on free variables
+      val agg_keys = ks.filter { case (n, t) => !cx.contains(n) } // the aggregation is only made on free variables
       if (agg_keys.size == 0) {
         // Accumulate expr(e) in the acc, returns (Rep[Unit],ctx) and we ignore ctx
         val cur = cx.save;
@@ -397,26 +398,26 @@ if(Optimizer.initialStoreSize) {
             })
           } else {
             val mm = cx(m.name).asInstanceOf[Rep[Store[Entry]]]
-            implicit val mE = manEntry(m.tks ++ List(m.tp))
+            implicit val mE = manEntry(m.keys.map(_._2) ++ List(m.tp))
             if (op == OpSet) IR.stClear(mm)
             oi match {
               case None =>
               case Some(ie) =>
                 expr(ie, (r: Rep[_]) => {
-                  val ent = IR.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)): _*)
-                  IR.__ifThenElse(IR.infix_==(stProxyGet(mm, m.keys.zipWithIndex.map { case (n, i) => (i + 1, cx(n)) }: _*),
+                  val ent = IR.stNewEntry2(mm, (m.keys.map(x => cx(x._1)) ++ List(r)): _*)
+                  IR.__ifThenElse(IR.infix_==(stProxyGet(mm, m.keys.zipWithIndex.map { case (k, i) => (i + 1, cx(k._1)) }: _*),
                     IR.unit(null)), IR.m3set(mm, ent)(mE), IR.unit(()))
                 })
             }
             cx.load()
             expr(e, (r: Rep[_]) => {
-              val ent = IR.stNewEntry2(mm, (m.keys.map(cx) ++ List(r)): _*)
+              val ent = IR.stNewEntry2(mm, (m.keys.map(x => cx(x._1)) ++ List(r)): _*)
               op match {
                 case OpAdd | OpSet => IR.m3add(mm, ent)(mE)
               }
-            }, /*if (op==OpAdd)*/ Some(m.keys zip m.tks) /*else None*/) // XXXX commented out the if expression
+            }, /*if (op==OpAdd)*/ Some(m.keys) /*else None*/) // XXXX commented out the if expression
           }
-        case m@MapDef(name, tp, keys, _) =>
+        case m@MapDef(name, tp, keys, _, _) =>
         case _ => sys.error("Unimplemented") // we leave room for other type of events
       }
       IR.unit(())
@@ -441,27 +442,27 @@ if(Optimizer.initialStoreSize) {
       case EvtBatchUpdate(sc) =>
         val name = sc.name
         val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
-        val deltaRel = sc.deltaSchema
+        val deltaRel = sc.deltaName
         val tp = TypeLong
         val keys = schema.fields
-        MapDef(deltaRel, tp, keys, null)
+        MapDef(deltaRel, tp, keys, null, LocalExp)
       case _ => null
     }) ++
       s0.triggers.flatMap { t => //local maps
         t.stmts.filter {
-          case MapDef(_, _, _, _) => true
+          case MapDef(_, _, _, _, _) => true
           case _ => false
         }.map {
-          case m@MapDef(_, _, _, _) => m
+          case m@MapDef(_, _, _, _, _) => m
           case _ => null
         }
       } ++
       maps.map {
-        case (_, m@MapDef(_, _, _, _)) => m
+        case (_, m@MapDef(_, _, _, _, _)) => m
       } // XXX missing indexes
     globalMembersBlock = IR.reifyBlock {
       ctx0 = classLevelMaps.map {
-        case MapDef(name, tp, keys, _) => if (keys.size == 0) {
+        case MapDef(name, tp, keys, _, _) => if (keys.size == 0) {
           val m = man(tp).asInstanceOf[TypeRep[Any]]
 
           val s = IR.__newVarNamed(unit(zero(tp))(m), name)(m).e // xxx::: Change nulls impl.named(name,false)(m)
@@ -528,7 +529,7 @@ if(Optimizer.initialStoreSize) {
     //     java.lang.System.err.println(analysisRound.mapAccess)
     // java.lang.System.err.println(analysisRound2.mapAccess)
 
-    val allSchema = classLevelMaps.map({ case MapDef(name, tp, kt, _) => ctx0(name)._1.asInstanceOf[IR.Sym[_]] -> (kt.map(_._2) :+ tp).map(man) }) ++ tempMapSchema
+    val allSchema = classLevelMaps.map({ case MapDef(name, tp, kt, _, _) => ctx0(name)._1.asInstanceOf[IR.Sym[_]] -> (kt.map(_._2) :+ tp).map(man) }) ++ tempMapSchema
     allSchema.foreach(x => {
       x._1.asInstanceOf[Sym[_]].attributes += StoreSchema(x._2)
       val idx = new IndexedCols
@@ -536,7 +537,7 @@ if(Optimizer.initialStoreSize) {
       x._1.asInstanceOf[Sym[_]].attributes += idx
     })
     tempMapSchema.clear()
-    val allnames = classLevelMaps.collect { case MapDef(name, _, _, _) => name }
+    val allnames = classLevelMaps.collect { case MapDef(name, _, _, _, _) => name }
     val iGlobal = allnames.map(ctx0(_)._1.asInstanceOf[Sym[_]])
     val initTP = TransactionProgram(globalMembersBlock, iGlobal, tsResBlks, Nil, Nil)
     val optTP = new Optimizer(IR).optimize(initTP)
@@ -743,6 +744,71 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
     (ts, ms, tempEntries)
   }
+
+  def generateUnwrapFunction(evt:EvtTrigger)(implicit s0:System) = {
+    val (op,name,fields) = evt match {
+      case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
+      case EvtAdd(Schema(n,cs)) => ("insert",n,cs)
+      case EvtDel(Schema(n,cs)) => ("delete",n,cs)
+      case _ => sys.error("Unsupported trigger event "+evt)
+    }
+    evt match {
+      case b@EvtBatchUpdate(_) =>
+        val schema = s0.sources.filter(_.schema.name == name)(0).schema
+        val deltaRel = schema.deltaName
+        val entryClass = deltaRel + "_entry"
+        "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"+
+          "  size_t sz = eaList.size();\n"+
+          "  if(sz == "+deltaRel+".count()) {\n"+
+          "    "+entryClass+"* head = "+deltaRel+".head;\n"+
+          "    for(size_t i=0; i < sz; i++){\n"+
+          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
+          "      head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"]))"}.mkString(", ")+");\n"+
+          "      head->__av =  *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"]));\n"+
+          "      head = head->nxt;\n"+
+          "    }\n"+
+          "  } else {\n"+
+          "    "+deltaRel+".clear();\n"+
+          "    for(size_t i=0; i < sz; i++){\n"+
+          "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i]);\n"+
+          "      "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"])), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"])));\n"+
+          "      "+deltaRel+".insert_nocheck(e);\n"+
+          "    }\n"+
+          "  }\n"+
+          "  on_"+op+"_"+name+"("+deltaRel+");\n"+
+          "}\n\n" +
+          (if(hasOnlyBatchProcessingForAdd(s0,b))
+            "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
+              "  if("+deltaRel+".head){\n"+
+              "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+              "    "+deltaRel+".head->__av =  1L;\n"+
+              "  } else {\n"+
+              "    "+deltaRel+".clear();\n"+
+              "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+" 1L);\n"+
+              "    "+deltaRel+".insert_nocheck(e);\n"+
+              "  }\n"+
+              "  on_batch_update_"+name+"("+deltaRel+");\n"+
+              "}\n\n"
+          else "") +
+          (if(hasOnlyBatchProcessingForDel(s0,b))
+            "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
+              "  if("+deltaRel+".head){\n"+
+              "    "+deltaRel+".head->modify("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+              "    "+deltaRel+".head->__av = -1L;\n"+
+              "  } else {\n"+
+              "    "+deltaRel+".clear();\n"+
+              "    "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"])), "}.mkString+"-1L);\n"+
+              "    "+deltaRel+".insert_nocheck(e);\n"+
+              "  }\n"+
+              "  on_batch_update_"+name+"("+deltaRel+");\n"+
+              "}\n\n"
+          else "")
+      case _ =>
+        "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
+          "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"]))"}.mkString(", ")+");\n"+
+          "}\n\n"
+    }
+  } 
 
   //  def storeToDoc(s: ConstructorDef[Store[_]]) = s match {
   //  import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2

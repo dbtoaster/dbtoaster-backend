@@ -22,7 +22,7 @@ libraryDependencies ++= Seq(
 
 // --------- Compilation options
 Seq(
-  scalaVersion := "2.11.2",
+  scalaVersion := "2.11.8",
   scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings", "-target:jvm-1.6"),
   javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:-options", "-source", "1.6", "-target","1.6")
 )

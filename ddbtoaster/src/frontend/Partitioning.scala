@@ -25,7 +25,7 @@ case class Partitioning(cps:List[Partitioning.CoPart],score:Double,loc:Set[Strin
 }
 
 object Partitioning extends (M3.System => (Partitioning,String)) {
-  import ddbt.lib.Utils.{ ind, tup }
+  import ddbt.Utils.{ ind, tup }
   import M3._
   // A co-partitioning is given by a mapping relation->partitioning keys and a frequency.
   case class CoPart(var freq:Int=0) extends scala.collection.mutable.HashMap[String,List[Int]] with Ordered[CoPart] {

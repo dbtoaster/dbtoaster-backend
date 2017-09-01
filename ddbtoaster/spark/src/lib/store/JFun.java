@@ -1,9 +1,10 @@
-package ddbt.lib.store;
+package ddbt.lib.spark.store;
+
 import scala.Function1;
 import scala.runtime.BoxedUnit;
 
 /* Removes all the specialization boiler plate to define a Scala function. */
-abstract class JFun1<T,R> implements Function1<T,R> {
+abstract class JFun1<T, R> implements Function1<T, R> {
 
   //public R apply(T a) { return null; }
   

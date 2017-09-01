@@ -3,9 +3,9 @@ import Keys._
 
 object DDBToasterBuild extends Build {
  
-  lazy val DDBToaster = Project(id = "DDBToaster", base = file("ddbtoaster")) dependsOn (storeLib, /* spark */)
+  lazy val DDBToaster = Project(id = "DDBToaster", base = file("ddbtoaster")) dependsOn (storelib, spark)
 
-  lazy val spark = Project(id = "DDBToaster-spark", base = file("spark")) dependsOn (shared)
+  lazy val spark = Project(id = "DDBToaster-spark", base = file("ddbtoaster/spark")) dependsOn (storelib)
 
   lazy val storelib = Project(id = "storelib", base = file("storelib"))
 

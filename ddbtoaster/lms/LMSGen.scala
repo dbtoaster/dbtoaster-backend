@@ -119,7 +119,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
 
     case a @ Add(l, r) =>
       val agg = a.schema._2.filter { case (n, t) => !cx.contains(n) }
-      if (agg == Nil) {  
+      if (agg == Nil) {
         val cur = cx.save
         expr(l, (vl: Rep[_]) => {
           cx.load(cur)

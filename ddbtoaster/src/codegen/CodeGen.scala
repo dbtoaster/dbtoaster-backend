@@ -13,7 +13,7 @@ import ddbt.ast.{ M3, Source, Type, EvtBatchUpdate, EvtAdd, EvtDel }
 trait CodeGen extends (M3.System => String) {
   val cls = "Query"
 
-  def printProgress:Long
+  val printProgress: Long = 0L
 
   // Generate the system (everything but stream and views I/O)
   def apply(s: M3.System): String

@@ -13,7 +13,7 @@ class CppGen(override val cls:String="Query") extends ICppGen
 trait ICppGen extends IScalaGen {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
-  import ddbt.lib.Utils.{ ind, fresh, freshClear } // common functions
+  import ddbt.Utils.{ ind, fresh, freshClear, stringIf } // common functions
   val VALUE_NAME = "__av"
 
   val usingPardis = false
@@ -27,7 +27,6 @@ trait ICppGen extends IScalaGen {
 
   var unionDepth = 0
 
-  private def stringIf(flag: Boolean, t: => String, e: => String = "") = if (flag) t else e
   private val ifReleaseMode = stringIf(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE, "// ")
   private val ifPrintTimingInfo = stringIf(!ddbt.Compiler.PRINT_TIMING_INFO, "// ")
 

@@ -1,4 +1,4 @@
-package ddbt.lib
+package ddbt
 import java.io._
 
 /**
@@ -470,4 +470,6 @@ object Utils {
     val rawMod = x % mod
     rawMod + (if (rawMod < 0) mod else 0)
   }
+
+  def stringIf(flag: Boolean, t: => String, e: => String = "") = if (flag) t else e
 }

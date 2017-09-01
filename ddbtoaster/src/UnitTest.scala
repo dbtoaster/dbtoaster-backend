@@ -17,8 +17,8 @@ import ddbt.lib.Helper
  */
 object UnitTest {
 
-  import ddbt.lib.Utils
-  import ddbt.lib.Utils._
+  import ddbt.Utils
+  import ddbt.Utils._
 
   def med(ts: Seq[Long]) = 
     if (ts.size == 0) 0L 
@@ -636,7 +636,7 @@ object UnitTest {
 
   class Printer(name:String) {
     private val (c0,s0)=(scala.Console.out,System.out)
-    @inline private def pr(op:String,s:String,c:Boolean=false) = { c0.println("%-70s".format("%-20s".format(name+" "+op)+": "+s)); if (c) c0.print("\033[F"+"[info] "); c0.flush; s0.flush } // assumes terminal + SBT
+    @inline private def pr(op:String,s:String,c:Boolean=false) = { c0.println("%-70s".format("%-20s".format(name+" "+op)+": "+s)); if (c) c0.print("\u001b[F"+"[info] "); c0.flush; s0.flush } // assumes terminal + SBT
     @inline private def add(s:String=",,,,,,,,,") { tr+=s; ds+=1 }
     var tg=Seq[Long](); var tc=Seq[Long](); var tr=""; var ds=0;
     def gen(t:Long) { pr("codegen",tf(t)); tg=tg:+t; }

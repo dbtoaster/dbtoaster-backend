@@ -1,7 +1,5 @@
 package ddbt.lib.store
 
-import ddbt.lib.store.Entry
-
 import scala.collection.mutable.ArrayBuffer
 
 /**
