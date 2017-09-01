@@ -309,8 +309,7 @@ object UnitTest {
   // ---------------------------------------------------------------------------
   // Query generator
   def genQueryScala(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
-    val nonLmsMode = mode.contains(LANG_SCALA)
-    val cls = qName+(if(nonLmsMode) "VScala" else "")
+    val cls = qName + (if (mode == LANG_SCALA) "VScala" else "")
     var sp=""
     // Correctness
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
@@ -456,7 +455,7 @@ object UnitTest {
 
   def genQueryCpp(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
     val CPP_SUFFIX = ".hpp"
-    val cls = qName+(if(mode.contains(LANG_CPP_LMS)) "" else "VCpp")
+    val cls = qName + (if (mode == LANG_CPP) "VCpp" else "")
     var sp=""
     def post(sys:ddbt.ast.M3.System) { } //sp=spec(sys,true); /*if (verify) inject("  def main(args: Array[String]) {\n",ind(spec(sys,false),2)+"\n")*/ }
 
