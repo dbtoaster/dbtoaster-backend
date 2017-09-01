@@ -745,6 +745,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
     (ts, ms, tempEntries)
   }
 
+  /*
   def generateUnwrapFunction(evt:EvtTrigger)(implicit s0:System) = {
     val (op,name,fields) = evt match {
       case EvtBatchUpdate(Schema(n,cs)) => ("batch_update",n,cs)
@@ -809,6 +810,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
           "}\n\n"
     }
   } 
+  */
 
   //  def storeToDoc(s: ConstructorDef[Store[_]]) = s match {
   //  import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2

@@ -700,74 +700,6 @@ trait ICppGen extends IScalaGen {
         stringIf(t.evt != EvtReady, generateUnwrapFunction(t.evt))
       ).mkString
 
-    def generateUnwrapFunction(evt:EvtTrigger) = stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY, {
-      val (op,name,fields) = evt match {
-        case EvtBatchUpdate(Schema(n,cs)) => ("batch_update", n, cs)
-        case EvtAdd(Schema(n,cs)) => ("insert", n, cs)
-        case EvtDel(Schema(n,cs)) => ("delete", n, cs)
-        case _ => sys.error("Unsupported trigger event " + evt)
-      }
-      evt match {
-        case b@EvtBatchUpdate(_) =>
-          var code =    "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"
-          code = code + "  size_t sz = eaList.size();\n"
-
-          for (sources <- s0.sources.filter(_.stream)) {
-            val schema = sources.schema;
-            val deltaRel = schema.deltaName
-            code = code + "    "+deltaRel+".clear();\n"
-          }
-          
-          code = code +   "    for(size_t i=0; i < sz; i++){\n"
-          code = code +   "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
-          code = code +   "      relation_id_t relation = *(reinterpret_cast<relation_id_t*>((*ea).back().get()));\n"
-          
-          for (sources <- s0.sources.filter(_.stream)) {
-            val schema = sources.schema;
-            val deltaRel = schema.deltaName
-            val entryClass = deltaRel + "_entry"  
-         
-            code = code + "      if (relation == program_base->get_relation_id(\"" + schema.name + "\"" + ")) { \n"
-            code = code + "        event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
-            code = code + "        "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
-            code = code + "        "+deltaRel+".addOrDelOnZero(e, *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
-            code = code + "      }\n"
-          }
-          code = code +   "    }\n"
-          for (sources <- s0.sources.filter(_.stream)) {
-            val schema = sources.schema;
-            val deltaRel = schema.deltaName
-            code = code + "  on_"+op+"_"+schema.name+"("+deltaRel+");\n"
-          }            
-          code = code +   "}\n\n"
-
-          val schema = s0.sources.filter(_.schema.name == name)(0).schema
-          val deltaRel = schema.deltaName
-          val entryClass = deltaRel + "_entry"            
-          code +
-          (if(hasOnlyBatchProcessingForAdd(s0,b))
-            "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
-            "  "+deltaRel+".clear();\n"+
-            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+" 1L);\n"+
-            (if (EXPERIMENTAL_HASHMAP) "  "+deltaRel+".insert(e);\n" else "  "+deltaRel+".insert_nocheck(e);\n") +
-            "  on_batch_update_"+name+"("+deltaRel+");\n"+
-            "}\n\n"
-           else "") +
-          (if(hasOnlyBatchProcessingForDel(s0,b))
-            "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
-            "  "+deltaRel+".clear();\n"+
-            "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+"-1L);\n"+
-            (if (EXPERIMENTAL_HASHMAP) "  "+deltaRel+".insert(e);\n" else "  "+deltaRel+".insert_nocheck(e);\n") +
-            "  on_batch_update_"+name+"("+deltaRel+");\n"+
-            "}\n\n"
-           else "")
-        case _ =>
-          "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
-          "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
-          "}\n\n"
-      }
-    })
-
     def genMapStructDef(m: MapDef) = {
       val mapName = m.name
       val mapType = mapName + "_map"
@@ -1062,6 +994,75 @@ trait ICppGen extends IScalaGen {
     helper(s0)
     //end of the common part between all CPP code generators (part 2)
   }
+
+  def generateUnwrapFunction(evt:EvtTrigger)(implicit s0:System) = stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY, {
+    val (op,name,fields) = evt match {
+      case EvtBatchUpdate(Schema(n,cs)) => ("batch_update", n, cs)
+      case EvtAdd(Schema(n,cs)) => ("insert", n, cs)
+      case EvtDel(Schema(n,cs)) => ("delete", n, cs)
+      case _ => sys.error("Unsupported trigger event " + evt)
+    }
+    evt match {
+      case b@EvtBatchUpdate(_) =>
+        var code =    "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"
+        code = code + "  size_t sz = eaList.size();\n"
+
+        for (sources <- s0.sources.filter(_.stream)) {
+          val schema = sources.schema;
+          val deltaRel = schema.deltaName
+          code = code + "    "+deltaRel+".clear();\n"
+        }
+        
+        code = code +   "    for(size_t i=0; i < sz; i++){\n"
+        code = code +   "      event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
+        code = code +   "      relation_id_t relation = *(reinterpret_cast<relation_id_t*>((*ea).back().get()));\n"
+        
+        for (sources <- s0.sources.filter(_.stream)) {
+          val schema = sources.schema;
+          val deltaRel = schema.deltaName
+          val entryClass = deltaRel + "_entry"  
+       
+          code = code + "      if (relation == program_base->get_relation_id(\"" + schema.name + "\"" + ")) { \n"
+          code = code + "        event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"
+          code = code + "        "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>((*ea)["+i+"].get())), "}.mkString+"*(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
+          code = code + "        "+deltaRel+".addOrDelOnZero(e, *(reinterpret_cast<"+TypeLong.toCpp+"*>((*ea)["+schema.fields.size+"].get())));\n"
+          code = code + "      }\n"
+        }
+        code = code +   "    }\n"
+        for (sources <- s0.sources.filter(_.stream)) {
+          val schema = sources.schema;
+          val deltaRel = schema.deltaName
+          code = code + "  on_"+op+"_"+schema.name+"("+deltaRel+");\n"
+        }            
+        code = code +   "}\n\n"
+
+        val schema = s0.sources.filter(_.schema.name == name)(0).schema
+        val deltaRel = schema.deltaName
+        val entryClass = deltaRel + "_entry"            
+        code +
+        (if(hasOnlyBatchProcessingForAdd(s0,b))
+          "void unwrap_insert_"+name+"(const event_args_t& ea) {\n"+
+          "  "+deltaRel+".clear();\n"+
+          "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+" 1L);\n"+
+          (if (EXPERIMENTAL_HASHMAP) "  "+deltaRel+".insert(e);\n" else "  "+deltaRel+".insert_nocheck(e);\n") +
+          "  on_batch_update_"+name+"("+deltaRel+");\n"+
+          "}\n\n"
+         else "") +
+        (if(hasOnlyBatchProcessingForDel(s0,b))
+          "void unwrap_delete_"+name+"(const event_args_t& ea) {\n"+
+          "  "+deltaRel+".clear();\n"+
+          "  "+entryClass+" e("+schema.fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get())), "}.mkString+"-1L);\n"+
+          (if (EXPERIMENTAL_HASHMAP) "  "+deltaRel+".insert(e);\n" else "  "+deltaRel+".insert_nocheck(e);\n") +
+          "  on_batch_update_"+name+"("+deltaRel+");\n"+
+          "}\n\n"
+         else "")
+      case _ =>
+        "void unwrap_"+op+"_"+name+"(const event_args_t& ea) {\n"+
+        "  on_"+op+"_"+name+"("+fields.zipWithIndex.map{ case ((_,tp),i) => "*(reinterpret_cast<"+tp.toCpp+"*>(ea["+i+"].get()))"}.mkString(", ")+");\n"+
+        "}\n\n"
+    }
+  })
+
 
   private def helperResultAccessor(s0:System) = {
     def compile_serialization = s0.queries.map{q =>
