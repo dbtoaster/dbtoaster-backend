@@ -5,9 +5,7 @@ object DDBToasterBuild extends Build {
  
   lazy val DDBToaster = Project(id = "DDBToaster", base = file("ddbtoaster")) dependsOn (storeLib, /* spark */)
 
-  // lazy val shared = Project(id = "DDBToaster-shared", base = file("shared"))
-
-  // lazy val spark = Project(id = "DDBToaster-spark", base = file("spark")) dependsOn (shared)
+  lazy val spark = Project(id = "DDBToaster-spark", base = file("spark")) dependsOn (shared)
 
   lazy val storelib = Project(id = "storelib", base = file("storelib"))
 
