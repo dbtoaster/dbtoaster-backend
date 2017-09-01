@@ -110,6 +110,15 @@ if(Optimizer.initialStoreSize) {
     }
     case Exists(e) => expr(e, (ve: Rep[_]) => co(IR.BooleanExtra.conditional(IR.infix_!=(ve.asInstanceOf[Rep[Long]], IR.unit(0L)), IR.unit(1L), IR.unit(0L))))
     case Cmp(l, r, op) => expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(cmp(vl, op, vr, ex.tp)))) // formally, we should take the derived type from left and right, but this makes no difference to LMS
+    case CmpOrList(l, rr) =>
+      expr(l, (vl: Rep[_]) => {
+        val orCond = rr.map { r => 
+           var cond: Rep[Boolean] = null
+           expr(r, (vr: Rep[_]) => { cond = condition(vl, OpEq, vr, ex.tp); IR.unit })
+           cond
+         }.reduce(_ || _)
+        co(IR.BooleanExtra.conditional(orCond, IR.unit(1L), IR.unit(0L)))
+      })
     case a@M3ASTApply(fn, tp, as) =>
       def app(es: List[Expr], vs: List[Rep[_]]): Rep[Unit] = es match {
         case x :: xs => expr(x, (v: Rep[_]) => app(xs, v :: vs))
