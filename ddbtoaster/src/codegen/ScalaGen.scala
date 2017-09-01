@@ -886,5 +886,5 @@ trait IScalaGen extends CodeGen {
   override def pkgWrapper(pkg: String, body: String) = 
     "package " + pkg + "\n\n" + body + "\n"
 
-  override val additionalImports: String = ""
+  override def additionalImports: String = ""
 }

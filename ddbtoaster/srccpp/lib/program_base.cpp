@@ -324,7 +324,7 @@ void ProgramBase::trace(const path& trace_file, bool debug) {
 }
 
 void ProgramBase::trace(std::ostream &ofs, bool debug) {
-	std::auto_ptr<dbtoaster::xml_oarchive> oa;
+	std::unique_ptr<dbtoaster::xml_oarchive> oa;
 
 	map<string, ProgramBase::map_ptr_t>::iterator it = 
 			maps_by_name.begin();
@@ -334,7 +334,7 @@ void ProgramBase::trace(std::ostream &ofs, bool debug) {
 	#endif
 	{
 		if (!oa.get())
-			oa = std::auto_ptr<dbtoaster::xml_oarchive>(&ofs);
+			oa = std::unique_ptr<dbtoaster::xml_oarchive>(&ofs);
 		it->second->serialize_fn(*oa);
 	}
 }

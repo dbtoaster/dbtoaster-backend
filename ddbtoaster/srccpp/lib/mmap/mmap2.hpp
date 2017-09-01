@@ -39,6 +39,7 @@ FORCE_INLINE void clearTempMem() {
 #define DOUBLE_ZERO_THRESHOLD 1e-8
 
 #define FuncType const std::function<void (T*)>&
+#define _unused(x) ((void)(x))
 
 template<typename T>
 struct El {
@@ -405,6 +406,7 @@ public:
                     ++es;
                     assert(n2->prv == prev);
                     prev = n2;
+                    _unused(prev); // suppress unused-but-set-variable warning
                 } while ((n2 = n2->nxt) && n2->hash == n1->hash && !IDX_FN::cmp(*n1->obj, *n2->obj));
                 ++ns;
             } while ((n1 = n2));

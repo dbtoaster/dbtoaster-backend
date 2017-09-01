@@ -667,6 +667,7 @@ trait ICppGen extends IScalaGen {
         }.mkString
       }
       else {
+        val entryParam = if(usingPardis && (!Optimizer.analyzeEntry || !Optimizer.secondaryIndex)) "false_type(), " else ""
         s0.sources.filter(!_.stream).map { s =>
             val name = s.schema.name
             val fields = s.schema.fields
@@ -674,8 +675,9 @@ trait ICppGen extends IScalaGen {
             "void on_insert_" + name + "(" + fields.map { 
                 case (fld,tp) => "const " + tp.toCpp + " " + fld 
               }.mkString(", ") + ") {\n"+
-            "  " + name + "_entry e(" + fields.map { case (fld,_) => fld }.mkString(", ") + ", 1L);\n" +
-            "  " + ADD_TO_MAP_FUNC(name) + "(e,1L);\n" +
+            "  " + name + "_entry e(" + entryParam + fields.map { case (fld,_) => fld }.mkString(", ") + ", 1L);\n" +
+            (if (usingPardis) "  " + INSERT_TO_MAP_FUNC(name) + "(e);\n"
+             else "  " + ADD_TO_MAP_FUNC(name) + "(e, 1L);\n") +
             "}\n\n" +
             generateUnwrapFunction(EvtAdd(s.schema)) +
             stringIf(
@@ -688,7 +690,8 @@ trait ICppGen extends IScalaGen {
               "  for(size_t i=0; i < sz; i++){\n"+
               "    event_args_t* ea = reinterpret_cast<event_args_t*>(eaList[i].get());\n"+
               "    " + name + "_entry e(" + fields.zipWithIndex.map { case ((_, tp), i) => "*(reinterpret_cast<" + tp.toCpp + "*>((*ea)[" + i + "].get())), "}.mkString + "1L);\n" +
-              "    " + ADD_TO_MAP_FUNC(name) + "(e,1L);\n" +
+              (if (usingPardis) "    " + INSERT_TO_MAP_FUNC(name) + "(e);\n"
+               else "    " + ADD_TO_MAP_FUNC(name) + "(e, 1L);\n") +
               "  }\n" +
               "}\n\n"
             )
@@ -950,7 +953,7 @@ trait ICppGen extends IScalaGen {
       "  /* Registering relations and trigger functions */\n"+
       "  ProgramBase* program_base;\n"+
       "  void register_data(ProgramBase& pb) {\n"+
-      "  program_base = &pb;\n"+
+      "    program_base = &pb;\n"+
       //"  map<relation_id_t, std::shared_ptr<ProgramBase::relation_t> >::iterator r_it = pb.relations_by_id.find(12);\n"+
       "\n"+
            ind(register_maps,2)+
@@ -1250,8 +1253,9 @@ trait ICppGen extends IScalaGen {
     ss
   }
 
-  override val additionalImports: String =
+  override def additionalImports: String =
     stringIf(usingPardis, "#define SC_GENERATED 1\n") +
+    stringIf(!EXPERIMENTAL_HASHMAP, "#define USE_OLD_MAP\n") +
     stringIf(EXPERIMENTAL_RUNTIME_LIBRARY,
       s"""|#include <sys/time.h>
           |#include <vector>
@@ -1262,7 +1266,6 @@ trait ICppGen extends IScalaGen {
           |#include "mmap.hpp"
           |#include "serialization.hpp"
           |""".stripMargin,
-
       s"""|#include "program_base.hpp"
           |#include "hpds/KDouble.hpp"
           |#include "hash.hpp"

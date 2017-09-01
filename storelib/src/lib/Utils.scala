@@ -127,11 +127,11 @@ object Utils {
   }
 
   // C++ compiler wrapper
-  def cppCompiler(out:String,cPath:String,boost:String,cppLibDir:String) = {
+  def cppCompiler(out: String, cPath: String, boost: String, cppLibDir: String) = {
     val as = 
       ( List(prop("gpp", "g++"), cppLibDir + "/main.cpp", "-Wall", 
           "-Wno-unused-variable", "-Wno-strict-overflow", "-std=c++11",
-          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldbtoaster", "-ljemalloc",
+          "-include", out, "-o", cPath, "-O3", "-DNDEBUG", "-lpthread", "-ldbtoaster", //"-ljemalloc",
           "-I" + cppLibDir, "-L" + cppLibDir) :::
         (if (boost == null) Nil else 
           List("program_options", "serialization", "system", "filesystem",
@@ -274,7 +274,7 @@ object Utils {
       } else {
         scala.Console.err.print("Error: exit value is " + exitVal)
       }
-      // System.exit(if (exitVal != 0) exitVal else 1)
+      System.exit(if (exitVal != 0) exitVal else 1)
     }
     (o, e)
   }
