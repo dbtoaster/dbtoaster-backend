@@ -63,11 +63,17 @@ object Utils {
     .filter(_.matches("(.*)/(\\.(sbt|ivy2)|target)/.*"))
     .filter(_.indexOf("virtualized")== -1)
 
-  private lazy val jScalaBootclasspaths = 
-    jClasspaths.filter(_.matches(".*(akka-actor|akka-remote|typesafe).*")) ++
-    jClasspaths.filter(_.matches(".*scala-(library|compiler|reflect).*"))
+  private lazy val scalaEmbeddedClasspaths = 
+    jClasspaths.filter(_.matches(".*(com.typesafe.akka/akka-actor).*")) ++
+    jClasspaths.filter(_.matches(".*(org.scala-lang/scala-library).*")) ++
+    jClasspaths.filter(_.matches(".*(storelib/target).*"))
 
-  private lazy val jScalaClasspaths = 
+  private lazy val scalacExternalClasspaths =
+    jClasspaths.filter(_.matches(".*(storelib/target).*"))
+
+  private lazy val javaRuntimeClasspaths = 
+    jClasspaths.filter(_.matches(".*(com.typesafe.akka/akka-actor|com.typesafe/config/bundles/config).*")) ++  
+    jClasspaths.filter(_.matches(".*(org.scala-lang/scala-library).*")) ++
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
   
   private lazy val jSparkBootclasspaths = 
@@ -80,13 +86,12 @@ object Utils {
     jClasspaths.filterNot(jSparkBootclasspaths.toSet)    
 
   // Scala compiler wrapper
-  def scalaCompiler(dir: File, classpath: String = null, external: Boolean = false): List[String] => Unit = {   
-    val cp = (if (classpath == null || classpath == "") "" else classpath + ":") + jScalaClasspaths.mkString(":")
-    val bootcp = jScalaBootclasspaths.mkString(":")
+  def scalaCompiler(dir: File, classpath: String = null, external: Boolean = false): List[String] => Unit = {
+    val cp = if (classpath == null || classpath == "") Nil else List(classpath)
     val pathDir = dir.getAbsolutePath
 
-    if (external) externalScalaCompiler(scalacOpts, bootcp, cp, pathDir)  
-    else embeddedScalaCompiler(scalacOpts, bootcp, cp, pathDir)  
+    if (external) externalScalaCompiler(scalacOpts, "", (cp ++ scalacExternalClasspaths).mkString(":"), pathDir)  
+    else embeddedScalaCompiler(scalacOpts, "", (cp ++ scalaEmbeddedClasspaths).mkString(":"), pathDir)  
   }
 
   // Spark compiler wrapper
@@ -103,7 +108,7 @@ object Utils {
     val s = new scala.tools.nsc.Settings()
     s.processArguments(opts, true)
     s.bootclasspath.value = bootcp
-    s.classpath.value = cp      
+    s.classpath.value = cp //+ " -J-XX:-DontCompileHugeMethods -J-XX:+CMSClassUnloadingEnabled"
     s.outputDirs.setSingleOutput(pathDir)
     val g = new scala.tools.nsc.Global(s)
     (fs: List[String]) => 
@@ -156,8 +161,7 @@ object Utils {
       exec(
         ( "java " + prop("jvm") + 
           " -cp " + (
-              jScalaBootclasspaths ++ 
-              jScalaClasspaths ++ 
+              javaRuntimeClasspaths ++
               cp.map(_.getAbsolutePath)
             ).mkString(":") + " " + 
           className + " " + args.mkString(" ")

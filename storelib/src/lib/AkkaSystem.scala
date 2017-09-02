@@ -193,7 +193,7 @@ abstract class WorkerActor extends Actor {
     case Shutdown => workers.foreach{ _ ! PoisonPill }; self ! PoisonPill // assert(self==master)
     case m => println("Not understood: "+m.toString)
   }
-  override def postStop() = context.system.shutdown
+  override def postStop() = context.system.terminate()
 
   // ---- map operations
   // Element operation: if key hashes to local, apply locally, otherwise call remote worker

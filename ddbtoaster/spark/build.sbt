@@ -7,8 +7,8 @@ Seq(
 
 // --------- Compilation options
 Seq(
-  scalaVersion := "2.11.8",
-  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings", "-target:jvm-1.6"),
+  scalaVersion := "2.11.11",
+  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-target:jvm-1.6" /* , "-Yinline-warnings" */),
   javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:-options", "-source", "1.6", "-target","1.6")
 )
 

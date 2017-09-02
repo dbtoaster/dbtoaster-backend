@@ -63,7 +63,7 @@ object Helper {
     val system = actorSys()
     val query = system.actorOf(Props[Q] /* .withDispatcher("bounded-mailbox") */, "Query")
     try { mux(query, streams, parallel, timeout, batchSize) } 
-    finally { system.shutdown }
+    finally { system.terminate() }
   }
 
   // ---------------------------------------------------------------------------
@@ -92,7 +92,7 @@ object Helper {
         case 0|1 => master ! Members(master,workers.toArray)
         case _ if isMaster =>askWait[Any](system.actorOf(Props(classOf[HelperActor],master,wnum),name="helper"),"ready")
         case _ => val (h,p)=ad("-M",(host,port),x=>(x(0),x(1).toInt)); system.actorSelection("akka.tcp://DDBT@"+h+":"+p+"/user/helper") ! workers.toArray
-          println(wnum+" workers started"); system.awaitTermination; println("Shutdown"); System.exit(0)
+          println(wnum+" workers started"); Await.result(system.whenTerminated, scala.concurrent.duration.Duration.Inf); println("Shutdown"); System.exit(0)
       }
       class HelperActor(master:ActorRef,waiting:Int) extends Actor {
         private var workers = new Array[ActorRef](0)      // Collects all workers advertisements and forward them to the master.
@@ -124,7 +124,7 @@ object Helper {
     def ad[T](s: String, d: T, f: String => T) = 
       args.filter(_.startsWith(s)).lastOption.map(x => f(x.substring(s.length))).getOrElse(d)
     val num = ad("-n", 1, x => math.max(0, x.toInt))
-    val mode = ad("-m", -1, x => x.toInt)
+    val mode = ad("-m", 0, x => x.toInt)
     val timeout = ad("-t", 0L, x => x.toLong)
     val parallel = ad("-p", 2, x => x.toInt)
     val batchSize = ad("-b", 0, x => x.toInt)

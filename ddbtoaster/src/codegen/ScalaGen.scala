@@ -818,8 +818,9 @@ trait IScalaGen extends CodeGen {
   // Helper that contains the main and stream generator
   private def helper(s0: System) = {
     val sResults = s0.queries.zipWithIndex.map { case (q, i) => 
+        val skeys = q.keys.map(k => "\"" + k._1 + "\"").mkString(", ")
         "println(\"<" + q.name + ">\\n\" + M3Map.toStr(res(" + i + ")" +
-        stringIf(q.keys.nonEmpty, ", List(" + q.keys.map(k => "\"" + k._1 + "\"").mkString(",") + ")") + ")+\"\\n\" + \"</" + q.name + ">\\n\")"
+        stringIf(q.keys.nonEmpty, ", List(" + skeys + ")") + ")+\"\\n\" + \"</" + q.name + ">\\n\")"
       }.mkString("\n")
     val sStreams = streams(s0.sources)
     s"""|import ddbt.lib._
@@ -838,10 +839,11 @@ trait IScalaGen extends CodeGen {
         |      parallelMode, timeout, batchSize), f)
         |
         |  def main(args: Array[String]) {
+        |
         |    val argMap = parseArgs(args)
         |    
         |    execute(args, (res: List[Any]) => {
-        |      if (!argMap.contains("--no-output")) {
+        |      if (!argMap.contains("noOutput")) {
         |        println("<snap>")
         |${ind(sResults, 4)}
         |        println("<\\\\snap>")

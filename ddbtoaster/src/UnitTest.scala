@@ -327,7 +327,7 @@ object UnitTest {
       val qt = sys.queries.map{q=>(q.name, (q.keys.map(_._2), q.tp)) }.toMap
       val body = 
       "import scala.language.implicitConversions\n"+
-      "implicit def strConv(d:Long) = \"\"+d\n"+ // fix for TPCH22
+      "implicit def strConv(d: Long) = d.toString\n\n"+ // fix for TPCH22
       q.sets.filterKeys(datasets.contains).map { case (sz,set) =>
         (if (full) cls+"." else "")+"execute(Array(\"-n1\",\"-m0\",\"-d"+sz+"\",\"-b" + Compiler.exec_bs + "\"),(res:List[Any])=>"+(if (full) "describe(\"Dataset '"+sz+"'\") " else "")+"{\n"+ind(
         set.out.map {

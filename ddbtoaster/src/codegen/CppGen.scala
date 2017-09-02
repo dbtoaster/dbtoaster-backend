@@ -161,14 +161,7 @@ trait ICppGen extends IScalaGen {
         ")) ? 1L : 0L)"
       ))
 
-    case Apply(fn1,tp,as1) => {
-      val (as,fn) = fn1 match {
-        case "date_part" if as1.head.isInstanceOf[Const] => 
-          (as1.tail, as1.head.asInstanceOf[Const].v.toLowerCase + "_part")
-        case _ => (as1, fn1)
-      }
-      applyFunc(co,fn,tp,as)
-    }
+    case Apply(fn,tp,as) => applyFunc(co,fn,tp,as)
 
     case m @ MapRef(mapName,tp,ks) =>
       val (ko, ki) = ks.zipWithIndex.partition { case((n,t),i) => ctx.contains(n) }

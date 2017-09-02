@@ -27,6 +27,7 @@ Seq(
 // --------- Dependencies
 libraryDependencies ++= Seq(
   "org.scala-lang" % "scala-library" % scalaVersion.value,
+  "org.scala-lang"     % "scala-compiler" % scalaVersion.value,
   "org.scala-lang.plugins" %% "scala-continuations-library" % "1.0.2",
   "ch.epfl.data" % "squid-sc-backend_2.11" % "0.1-SNAPSHOT"
 )
@@ -34,15 +35,15 @@ libraryDependencies ++= Seq(
 
 // --------- Compilation options
 Seq(
-  scalaVersion := "2.11.8",
-  javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:-options", "-P:continuations:enable", "-source", "1.6", "-target", "1.6"),
-  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings", "-target:jvm-1.6")
+  scalaVersion := "2.11.11",
+  javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:-options", "-P:continuations:enable", "-XX:-DontCompileHugeMethods", "-XX:+CMSClassUnloadingEnabled", "-source", "1.6", "-target", "1.6"),
+  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-J-XX:-DontCompileHugeMethods", "-J-XX:+CMSClassUnloadingEnabled", "-target:jvm-1.6" /* , "-Yinline-warnings" */)
 )
 
 // --------- Execution options
 Seq(
   fork := true, // required to enable javaOptions
-  javaOptions ++= Seq("-Xss128m", "-XX:-DontCompileHugeMethods", "-XX:+CMSClassUnloadingEnabled"), // ,"-Xss512m","-XX:MaxPermSize=2G"
+  javaOptions ++= Seq("-Xss128m", "-XX:-DontCompileHugeMethods", "-XX:+CMSClassUnloadingEnabled"), // ,"-Xss512m"
   javaOptions ++= Seq("-Xmx4G", "-Xms1G"/*,"-verbose:gc"*/), parallelExecution in Test := false, // for large benchmarks
   javaOptions <+= (fullClasspath in Runtime) map (cp => "-Dsbt.classpath=" + cp.files.absString) // propagate paths
 )
@@ -51,8 +52,8 @@ Seq(
 val LANG_SCALA = "vscala"
 val LANG_SCALA_LMS = "scala"
 
-addCommandAlias("toast", ";run-main ddbt.Compiler ") ++
-addCommandAlias("unit", ";run-main ddbt.UnitTest ") ++
+addCommandAlias("toast", ";DDBToaster/runMain ddbt.Compiler ") ++
+addCommandAlias("unit", ";DDBToaster/runMain ddbt.UnitTest ") ++
 addCommandAlias("queries", "unit -dd -v -x -s 0 -l " + LANG_SCALA + " ") ++
 addCommandAlias("queries-lms", "unit -dd -v -x -s 0 -l lms -xsc ") ++
 addCommandAlias("queries-akka", "unit -dd -v -x -s 0 -l akka -qx mddb/query2 -qx tpch/query21 ") // too long to compile/execute
@@ -128,12 +129,12 @@ commands += Command.command("release")((state: State) => {
   
   // load all the properties
   val prop = new java.util.Properties()
-  try { prop.load(new java.io.FileInputStream("conf/ddbt.properties")) } 
+  try { prop.load(new java.io.FileInputStream("ddbtoaster/conf/ddbt.properties")) } 
   catch { case _: Throwable => }
 
   println("defining base and release paths")
-  val base = baseDirectory.value
-  val releaseDir = base/"release";
+  val baseDir = baseDirectory.value
+  val releaseDir = baseDir/"release";
 
   println("cleaning")
   IO.delete(releaseDir/"bin"/"dbtoaster_frontend")
@@ -145,34 +146,33 @@ commands += Command.command("release")((state: State) => {
   IO.delete(releaseDir/"lib")
 
   println("compiling sources")
-  val compilerClassContent = read("src/Compiler.scala")
-  write("src/Compiler.scala", compilerClassContent.replace("=DEPLOYMENT_STATUS_DEVELOPMENT", "=DEPLOYMENT_STATUS_RELEASE"))
-  //Project.evaluateTask(compile, state)
+  val compilerFilePath = (baseDir/"src/Compiler.scala").getAbsolutePath
+  val compilerClassContent = read(compilerFilePath)
+  write(compilerFilePath, compilerClassContent.replace("= DEPLOYMENT_STATUS_DEVELOPMENT", "= DEPLOYMENT_STATUS_RELEASE"))
   Project.runTask(compile, state)
+
   println("execute pack task")
-  //Project.evaluateTask(pack, state)
   Project.runTask(pack, state)
 
   println("copy all the Scala dependency libraries")
-  val sourceDir = base/"target"/"pack"/"lib";
+  val sourceDir = baseDir/"target"/"pack"/"lib";
   if (sourceDir.exists) {
     val targetDir = releaseDir/"lib"/"dbt_scala"
     targetDir.mkdirs
 
-    copyFiles(IO.listFiles(sourceDir).filter { f => 
-      (f.getName.matches(".*(akka-actor_2.10-2.2.3|config-1.0.2|lms|scalariform).*") ||
-       f.getName.matches(".*scala-(library|compiler|reflect)-2.10.2.*")  ||
-       f.getName.matches(".*dbtoaster(_|-shared_).*"))
-    }, targetDir)
+    copyFiles(IO.listFiles(sourceDir).filter { _.getName.matches(
+      "(akka-actor|config|scala-library|scala-reflect|scala-parser-combinators" + 
+      "|sc-shared|sc-pardis-compiler|sc-pardis-core-compiler|sc-pardis-library|sc-pardis-quasi|scala-yinyang|squid-sc-backend" +
+      "|dbtoaster_|sstore_).*") }, targetDir)
 
-    val ddbtJar = targetDir/"dbtoaster_2.10-2.3.jar"
+    val ddbtJar = targetDir/s"dbtoaster_${scalaBinaryVersion.value}-${version.value}.jar"
     if (prop.getProperty("ddbt.lms","0") != "1") { // vanilla scala
-      println("using vanilla Scala version using dbtoaster_2.10-2.3-scala.jar")
-      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.3-scala.jar")
+      println(s"using vanilla Scala + PARDIS version using dbtoaster_${scalaBinaryVersion.value}-${version.value}.jar")
+      IO.copyFile(ddbtJar, targetDir/s"dbtoaster-${version.value}.jar")
     } 
     else { // lms
-      println("using Scala+LMS version using dbtoaster_2.10-2.3.jar")
-      IO.copyFile(ddbtJar, targetDir/"dbtoaster_2.10-2.3-lms.jar")
+      println(s"using Scala + LMS version using dbtoaster_${scalaBinaryVersion.value}-${version.value}.jar")
+      IO.copyFile(ddbtJar, targetDir/s"dbtoaster-${version.value}-lms.jar")
     }
     IO.delete(ddbtJar)
   } else {
@@ -180,9 +180,9 @@ commands += Command.command("release")((state: State) => {
   }
 
   println("copy dbtoaster_release")
-  val baseRepo = file(prop.getProperty("ddbt.base_repo",""))
-  if (baseRepo != "") {
-    val currentBranchPath = baseRepo/"/dbtoaster"/"compiler"/"alpha5"
+  val frontendRepo = file(prop.getProperty("ddbt.base_repo",""))
+  if (frontendRepo != "") {
+    val currentBranchPath = frontendRepo/"/dbtoaster"/"compiler"/"alpha5"
     
     println("make dbt_release")
     ("make -C " + currentBranchPath.getAbsolutePath)!;
@@ -202,16 +202,16 @@ commands += Command.command("release")((state: State) => {
     val releaseDocDir = releaseDir/"doc"
     releaseDocDir.mkdirs
     copyFiles(
-      List("9.jpg", "style.css", "bakeoff.png", "bluetab.gif",
-           "bluetabactive.gif", "dropdowntabs.js", "dbtoaster-logo.gif")
+      List("9.jpg", "bakeoff.png", "bluetab.gif", "bluetabactive.gif", "dbtoaster-logo.gif",
+           "favicon.ico", "internal_arch.png", "perf.png", "schematic.png")
         .map(f => currentBranchPath/"doc"/"site_html"/f),
       releaseDocDir)
-    copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html").filter(_.getName.endsWith(".html")), releaseDocDir)
+    copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html").filter(f => f.getName.endsWith(".html") && !f.getName.startsWith("samples_")), releaseDocDir)
     copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html"/"css").filter(_.getName.endsWith(".css")), releaseDocDir/"css")
     copyFiles(IO.listFiles(currentBranchPath/"doc"/"site_html"/"js").filter(_.getName.endsWith(".js")), releaseDocDir/"js")
 
     println("make c++ libs")
-    val cppLibDir = base/"srccpp"/"lib"
+    val cppLibDir = baseDir/"srccpp"/"lib"    
     ("make -C " + cppLibDir.getAbsolutePath)!;
 
     println("copy c++ libs")
@@ -220,7 +220,7 @@ commands += Command.command("release")((state: State) => {
     (releaseCppLibDir/"hpds").mkdirs
     (releaseCppLibDir/"mmap").mkdirs
     (releaseCppLibDir/"smhasher").mkdirs
-    copyFiles(IO.listFiles(cppLibDir).filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile" == f.getName }, releaseCppLibDir)
+    copyFiles(IO.listFiles(cppLibDir).filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".h") || f.getName.endsWith(".a") || "makefile" == f.getName }, releaseCppLibDir)
     copyFiles(IO.listFiles(cppLibDir/"hpds").filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile" == f.getName }, releaseCppLibDir/"hpds")
     copyFiles(IO.listFiles(cppLibDir/"mmap").filter { f => f.getName.endsWith(".cpp") || f.getName.endsWith(".hpp") || f.getName.endsWith(".a") || "makefile" == f.getName }, releaseCppLibDir/"mmap")
     copyFiles(IO.listFiles(cppLibDir/"smhasher").filter { f => f.getName.startsWith("MurmurHash2") }, releaseCppLibDir/"smhasher")
@@ -235,10 +235,10 @@ commands += Command.command("release")((state: State) => {
     // copyFile(currentBranchPath/"lib"/"dbt_scala"/"tuplegen.jar", releaseDir/"lib"/"dbt_scala")
 
     println("copy data files to data")
-    copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"simple"/"tiny").filter(_.getName.endsWith(".dat")), releaseDir/"examples"/"data"/"simple")
-    copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"tpch"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"tpch")
-    copyFiles(IO.listFiles(baseRepo/"dbtoaster"/"experiments"/"data"/"mddb"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"mddb")
-    copyFile(baseRepo/"dbtoaster"/"experiments"/"data"/"finance"/"tiny"/"finance.csv", releaseDir/"examples"/"data")
+    copyFiles(IO.listFiles(frontendRepo/"dbtoaster"/"experiments"/"data"/"simple"/"tiny").filter(_.getName.endsWith(".dat")), releaseDir/"examples"/"data"/"simple")
+    copyFiles(IO.listFiles(frontendRepo/"dbtoaster"/"experiments"/"data"/"tpch"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"tpch")
+    copyFiles(IO.listFiles(frontendRepo/"dbtoaster"/"experiments"/"data"/"mddb"/"tiny").filter(_.getName.endsWith(".csv")), releaseDir/"examples"/"data"/"mddb")
+    copyFile(frontendRepo/"dbtoaster"/"experiments"/"data"/"finance"/"tiny"/"finance.csv", releaseDir/"examples"/"data")
     
     println("copy query files to queries")
     fixSqlFiles((currentBranchPath/"test"/"queries"/"simple") * "r*.sql" get, releaseDir/"examples"/"queries"/"simple")
@@ -246,13 +246,14 @@ commands += Command.command("release")((state: State) => {
     fixSqlFiles(((currentBranchPath/"test"/"queries"/"finance") * "*.sql" get).filter(_.getName != "chrissedtrades.sql"), releaseDir/"examples"/"queries"/"finance")
     fixSqlFiles(IO.listFiles(currentBranchPath/"test"/"queries"/"mddb").filter(f => !"""((query[1-2]+.sql)|(schemas.sql)|(README))""".r.findFirstIn(f.getName).isEmpty), releaseDir/"examples"/"queries"/"mddb")
     
-    val distDir = base/"dist";
+    val distDir = baseDir/"dist";
     if (!distDir.exists) distDir.mkdirs;
-    ("mv ./release ./dbtoaster")!;
-    ("tar -cvzf ./dist/dbtoaster.tgz ./dbtoaster")!;
-    ("mv ./dbtoaster ./release")!;
+    val tmpDir = baseDir/"dbtoaster"
+    (s"mv ${releaseDir.getAbsolutePath} ${tmpDir.getAbsolutePath}")!;
+    (s"tar -cvzf ${distDir.getAbsolutePath}/dbtoaster.tgz -C ${baseDir} ./dbtoaster")!;
+    (s"mv ${tmpDir.getAbsolutePath} ${releaseDir.getAbsolutePath}")!;
   }
-  write("src/Compiler.scala", compilerClassContent)
+  write(compilerFilePath, compilerClassContent)
 
   state
 })

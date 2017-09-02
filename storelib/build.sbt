@@ -12,17 +12,17 @@ Seq(
 )
 
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor"     % "2.3.11",
-  "com.typesafe.akka" %% "akka-remote"    % "2.3.11",
+  "org.scala-lang.modules" % "scala-xml_2.11" % "1.0.6",
+  "com.typesafe.akka" %% "akka-actor"     % "2.5.4",
+  "com.typesafe.akka" %% "akka-remote"    % "2.5.4",
+  "org.scala-lang"     % "scala-compiler" % scalaVersion.value
   // "com.typesafe.akka" %% "akka-actor"     % "2.2.3",   // release only
   // "com.typesafe.akka" %% "akka-remote"    % "2.2.3",   // release only  
-  "org.scala-lang"     % "scala-actors"   % scalaVersion.value, // to compile legacy Scala
-  "org.scala-lang"     % "scala-compiler" % scalaVersion.value
 )
 
 // --------- Compilation options
 Seq(
-  scalaVersion := "2.11.8",
-  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-Yinline-warnings", "-target:jvm-1.6"),
+  scalaVersion := "2.11.11",
+  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-target:jvm-1.6" /* , "-Yinline-warnings" */),
   javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:-options", "-source", "1.6", "-target","1.6")
 )

@@ -10,13 +10,13 @@ namespace dbtoaster {
 // Date extraction functions
 // ImperativeCompiler synthesizes calls to the following from calls to 
 // date_part
-long Uyear_part(date d) { 
+long Udate_year(date d) { 
 	return (d / 10000) % 10000;
 }
-long Umonth_part(date d) { 
+long Udate_month(date d) { 
 	return (d / 100) % 100;
 }
-long Uday_part(date d) { 
+long Udate_day(date d) { 
 	return d % 100;
 }
 

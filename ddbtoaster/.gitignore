@@ -31,6 +31,7 @@ dbtoaster_release
 release/LICENSE
 release/README
 release/doc
+release/bin/dbtoaster_frontend
 *.o
 dist/*
 CHANGELOG

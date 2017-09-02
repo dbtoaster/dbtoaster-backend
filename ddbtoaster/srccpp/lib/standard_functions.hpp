@@ -15,9 +15,9 @@ namespace dbtoaster {
   // Date extraction functions
   // ImperativeCompiler synthesizes calls to the following from calls to 
   // date_part
-  long Uyear_part(date d);
-  long Umonth_part(date d);
-  long Uday_part(date d);
+  long Udate_year(date d);
+  long Udate_month(date d);
+  long Udate_day(date d);
   
   // String functions
   STRING_TYPE Usubstring(const STRING_TYPE &s, long start, long len);
