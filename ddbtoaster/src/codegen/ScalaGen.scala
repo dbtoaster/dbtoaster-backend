@@ -49,7 +49,7 @@ trait IScalaGen extends CodeGen {
 
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
-  import ddbt.Utils.{ ind, tup, fresh, freshClear, stringIf } // common functions
+  import ddbt.lib.Utils.{ ind, tup, fresh, freshClear, stringIf } // common functions
 
   def mapRef(n: String, tp: Type, keys: List[(String, Type)]) = { 
     val m = M3.MapRef(n, tp, keys)
@@ -725,7 +725,7 @@ trait IScalaGen extends CodeGen {
           case _ => ""
         }
       }.mkString + s0.maps.map(m => genMap(m)).mkString("\n") // maps
-      ms + "\n\n" + genQueries(s0.queries) + "\n\n" + ts
+      ms + "\n" + genQueries(s0.queries) + "\n" + ts
     }
     // val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
     val (str,ld0,gc) =  genInternals(s0)
@@ -816,31 +816,41 @@ trait IScalaGen extends CodeGen {
   def getEntryDefinitions: String = tuples.values.mkString("\n")
 
   // Helper that contains the main and stream generator
-  private def helper(s0: System) =
-    "import ddbt.lib._\n" + additionalImports +
-    "\nimport akka.actor.Actor\n\n" +
-    "object " + cls + " {\n" + 
-    ind(
-      "import Helper._\nval precision = 7; " + 
-      "// significative numbers (7 to pass r_sumdivgrp, 10 otherwise)\n" + 
-      "val diff_p = Math.pow(0.1,precision)\n" + getEntryDefinitions + "\n" +
-      "def execute(args: Array[String], f: List[Any] => Unit) = " + 
-      "bench(args, (dataset: String, parallelMode: Int, timeout: Long, batchSize: Int)"+ 
-      " => run[" + cls + "](" + 
-      streams(s0.sources) + ", parallelMode, timeout, batchSize), f)\n\n" +
-      "def main(args: Array[String]) {\n" + 
-        ind(
-          "execute(args, (res: List[Any]) => {\n" +
-          ind("println(\"<snap>\")\n") +
-          ind(
-            s0.queries.zipWithIndex.map { case (q, i) => 
-              "println(\"<" + q.name +
-              ">\\n\" + M3Map.toStr(res(" + i + ")" +
-              stringIf(q.keys.nonEmpty, ", List(" + q.keys.map(k => "\"" + k._1 + "\"").mkString(",") + ")") + ")+\"\\n\" + \"</" + q.name + ">\\n\")"
-            }.mkString("\n")
-          ) + "\n})"
-        ) + "\n}"
-    ) + "\n}\n"
+  private def helper(s0: System) = {
+    val sResults = s0.queries.zipWithIndex.map { case (q, i) => 
+        "println(\"<" + q.name + ">\\n\" + M3Map.toStr(res(" + i + ")" +
+        stringIf(q.keys.nonEmpty, ", List(" + q.keys.map(k => "\"" + k._1 + "\"").mkString(",") + ")") + ")+\"\\n\" + \"</" + q.name + ">\\n\")"
+      }.mkString("\n")
+    val sStreams = streams(s0.sources)
+    s"""|import ddbt.lib._
+        |import ddbt.lib.store._
+        |${additionalImports}
+        |import akka.actor.Actor
+        |
+        |object ${cls} {
+        |  import Helper._
+        |
+        |${ind(getEntryDefinitions)}
+        |
+        |  def execute(args: Array[String], f: List[Any] => Unit) = 
+        |    bench(args, (dataset: String, parallelMode: Int, timeout: Long, batchSize: Int) => run[${cls}](
+        |${ind(sStreams, 3)}, 
+        |      parallelMode, timeout, batchSize), f)
+        |
+        |  def main(args: Array[String]) {
+        |    val argMap = parseArgs(args)
+        |    
+        |    execute(args, (res: List[Any]) => {
+        |      if (!argMap.contains("--no-output")) {
+        |        println("<snap>")
+        |${ind(sResults, 4)}
+        |        println("<\\\\snap>")
+        |      }
+        |    })
+        |  }  
+        |}
+        |""".stripMargin
+  }
 
   protected def genClass(s0: System, body: String, pp: String, ld: String, gc: String, snap: String, str: String) = {
 
@@ -855,6 +865,7 @@ trait IScalaGen extends CodeGen {
         |
         |class ${cls} extends ${cls}Base with Actor {
         |  import ddbt.lib.Messages._
+        |  import ddbt.lib.Functions._
         |  import ${cls}._
         |  
         |  var t0 = 0L; var t1 = 0L; var tN = 0L; var tS = 0L

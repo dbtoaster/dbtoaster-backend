@@ -6,7 +6,7 @@
 #define ELEM_SEPARATOR "\n\t\t\t"
 using dbtoaster::date;
 
-typedef unsigned int uint;      // necessary for gcc 6.4.0
+typedef unsigned int uint;      // necessary on macOS with gcc 6.4.0
 
 template <class GE, typename T>
 void processSampleEntry(GE* e, const int& col, const T& arg) {

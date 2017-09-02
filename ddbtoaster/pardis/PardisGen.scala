@@ -4,7 +4,7 @@ import ch.epfl.data.sc.pardis.types.{PardisType, RecordType, UnitType}
 import ch.epfl.data.sc.pardis.utils.TypeUtils
 import ch.epfl.data.sc.pardis.utils.document._
 import com.sun.org.apache.xalan.internal.xsltc.compiler.Constants
-import ddbt.Utils._
+import ddbt.lib.Utils._
 import java.io.{File, PrintWriter, StringWriter}
 
 import ch.epfl.data.sc.pardis.ir.CTypes.{Pointer, PointerType}
@@ -67,7 +67,9 @@ if(Optimizer.initialStoreSize) {
       case TypeLong => runtimeType[Long]
       case TypeDouble => runtimeType[Double]
       case TypeString => runtimeType[String]
-      case TypeDate => runtimeType[Date]
+      case TypeDate => runtimeType[Long]
+      // case TypeDate => runtimeType[Date]
+      case _ => sys.error("Unsupported type: " + tp)
     }
   }.asInstanceOf[TypeRep[Any]]
 
@@ -128,7 +130,7 @@ if(Optimizer.initialStoreSize) {
         val cName = constApply(a)
         co(nameToSymMap.getOrElseUpdate(cName, IR.freshNamed(cName)(typeToTypeRep(tp)))) // hoist constants resulting from function application
       } else if (Optimizer.regexHoister && fn.equals("regexp_match") && as(0).isInstanceOf[Const]) {
-        val cName = regexpCacheMap.getOrElseUpdate(as(0).asInstanceOf[Const].v, ddbt.Utils.fresh("preg"))
+        val cName = regexpCacheMap.getOrElseUpdate(as(0).asInstanceOf[Const].v, ddbt.lib.Utils.fresh("preg"))
         val regex = nameToSymMap.getOrElseUpdate(cName, IR.freshNamed(cName)(RegexType))
         expr(as(1), (v: Rep[_]) => co(IR.m3apply("preg_match", List(regex, v), tp)))
       }
@@ -324,7 +326,8 @@ if(Optimizer.initialStoreSize) {
       case TypeLong => cmp2[Long](l, r)
       case TypeDouble => cmp2[Double](l, r)
       case TypeString => cmp2[String](l, r)
-      case TypeDate => cmp2[Long](IR.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]), IR.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
+      case TypeDate => cmp2[Long](l, r)
+      // case TypeDate => cmp2[Long](IR.dtGetTime(l.asInstanceOf[Rep[java.util.Date]]), IR.dtGetTime(r.asInstanceOf[Rep[java.util.Date]]))
       case _ => sys.error("Unsupported type")
     }
   }
@@ -396,7 +399,8 @@ if(Optimizer.initialStoreSize) {
               case TypeLong => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Long]]]) -> LongType
               case TypeDouble => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Double]]]) -> DoubleType
               case TypeString => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[String]]]) -> StringType
-              case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[java.util.Date]]]) -> DateType
+              case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[Date]]]) -> LongType
+              // case TypeDate => IR.Var(cx(m.name).asInstanceOf[Rep[IR.Var[java.util.Date]]]) -> DateType
               case _ => sys.error("Unsupported type " + m.tp)
             }
 

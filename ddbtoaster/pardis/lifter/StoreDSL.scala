@@ -239,7 +239,12 @@ trait StoreDSL extends
         case _ => m3_apply(fn, args)(man(tp))
       }
       case "date_part" => args(0) match {
-        case Constant(t: String) if t.toLowerCase == "year" => m3_apply("year_part", args.drop(1))(man(tp))
+        case Constant(t: String) => t.toLowerCase match {
+          case "year" => m3_apply("date_year", args.drop(1))(man(tp))
+          case "month" => m3_apply("date_month", args.drop(1))(man(tp))
+          case "day" => m3_apply("date_day", args.drop(1))(man(tp))
+          case p => throw new IllegalArgumentException("Invalid date part: " + p)
+        }
         case _ => m3_apply(fn, args)(man(tp))
       }
       case _ => m3_apply(fn, args)(man(tp)) // fallback for large or unknown functions

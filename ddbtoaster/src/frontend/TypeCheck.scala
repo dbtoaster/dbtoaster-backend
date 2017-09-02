@@ -9,7 +9,7 @@ import ddbt.ast._
   */
 object TypeCheck extends (M3.System => M3.System) {
 
-  import ddbt.Utils.{ fresh, freshClear }
+  import ddbt.lib.Utils.{ fresh, freshClear }
   import ddbt.ast.M3._
 
   @inline def err(msg: String) = sys.error("Type checking error: " + msg)

@@ -1,4 +1,5 @@
 package ddbt.lib.store;
+
 import scala.Function1;
 import scala.runtime.BoxedUnit;
 

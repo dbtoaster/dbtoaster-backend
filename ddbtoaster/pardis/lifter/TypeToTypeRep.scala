@@ -15,7 +15,8 @@ trait TypeToTypeRep { this: StoreDSL =>
     case TypeLong => runtimeType[Long]
     case TypeDouble => runtimeType[Double]
     case TypeString => runtimeType[String]
-    case TypeDate => runtimeType[java.util.Date]
+    case TypeDate => runtimeType[Long]
+    // case TypeDate => runtimeType[java.util.Date]
     case _ => sys.error("No typeRep for "+tp)
   }
   def man(ts:List[Type]):TypeRep[_] = ts.size match {
@@ -62,7 +63,8 @@ trait TypeToTypeRep { this: StoreDSL =>
     case TypeLong => 0L
     case TypeDouble => 0.0
     case TypeString => ""
-    case TypeDate => new java.util.Date()
+    case TypeDate => 0L
+    // case TypeDate => new java.util.Date()
     case _ => sys.error("Bad Type")
   }
 //  def unitZero(tp: Type) = tp match {

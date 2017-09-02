@@ -17,8 +17,8 @@ import ddbt.lib.Helper
  */
 object UnitTest {
 
-  import ddbt.Utils
-  import ddbt.Utils._
+  import ddbt.lib.Utils
+  import ddbt.lib.Utils._
 
   def med(ts: Seq[Long]) = 
     if (ts.size == 0) 0L 
@@ -30,7 +30,7 @@ object UnitTest {
 
   val path_examples = "examples/queries"
   val path_sources = "test/gen"
-  val path_classes = "target/scala-2.10/test-classes"
+  val path_classes = "target/scala-2.11/test-classes"
   val path_cache = "target/m3"
   val skip = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                   "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
@@ -71,70 +71,75 @@ object UnitTest {
       if (i < l) f(if (s) args(i).toLowerCase else args(i)) 
     }
     while (i < l) { args(i) match {
-      case "-d" => eat(s => if (!datasets.contains(s)) datasets = datasets :+ s, true)
-      case "-dd" => val ds = List("tiny", "tiny_del", "standard", "standard_del")
-                    datasets = ds ::: datasets.filter(!ds.contains(_))
-      case "-m" | "-l" => eat(s => if (!modes.contains(s)) modes = modes :+ s, true)
-      case "-q" => eat(s => qinc += s)
-      case "-qx" => eat(s => qexcl += s)
-      case "-qfail" => qfail = true
-      case "-x" => benchmark = true
-      case "-v" => verify = true
-      case "-p" => eat(s => parallel = s.toInt)
-      case "-z" => zeus = true
-      case "-seed" => eat(s => seed = s.toInt)
-      case "-s" => eat(s => samples = s.toInt)
-      case "-w" => eat(s => warmup = s.toInt)
-      case "-t" => eat(s => timeout = s.toLong)
-      case "-csv" => eat(s => csvFile = s)
-      case "-dump" => eat(s => dumpFile = s)
-      case "-cache" => cache = true
-      case "-noreplace" => replaceQuery = false
-      case "--no-output" => no_output = true
-      case "-h"|"-help"|"--help" => import Compiler.{error => e}
-        e("Usage: Unit [options] [compiler options]")
-        e("Zeus mode:")
-        e("  -z            enable zeus mode")
-        e("  -s <n>        number of samples to test (default: 10, 0=infinite)")
-        e("  -seed <int>   set the seed to test (implies 1 sample)")
-        e("Filtering options:")
-        e("  -d <dataset>  add a dataset: tiny, standard, big, huge (_del)?")
-        e("  -dd           add tiny,tiny_del,standard,standard_del datasets")
-        e("  -m <mode>     add mode: " + 
-                            List(LANG_SCALA, LANG_CPP, LANG_CPP_LMS, 
-                                 LANG_SCALA_LMS, LANG_SPARK_LMS, LANG_AKKA)
-                              .mkString(", ") + " (_spec|_full|_0-10)?")
-        e("                          lscala, lcpp, llms")
-        e("  -q <filter>   add an inclusion filter for queries")
-        e("  -qx <filter>  add an exclusion filter for queries")
-        e("  -qfail        also include queries that are known to fail")
-        e("Benchmarking options:")
-        e("  -x            enable benchmarks (compile and execute)")
-        e("  -v            verification against reference result") // consistency verification is always enabled
-        e("  -p <mode>     parallel streams (0=off"/*+", 1=thread"*/+", 2=deterministic)")
-        e("  -s <n>        number of samples to take (default: 10)")
-        e("  -w <n>        number of warm-up transients (default: 0)")
-        e("  -t <ms>       test duration timeout (in ms, default: 0)")
-        e("  -csv <file>   store benchmark results in a file")
-        e("  -dump <file>  dump raw benchmark samples in a file")
-        e("  -cache        enable M3 cache")
-        e("  -xbs <n>      execute with batches of certain size")
-        e("  -noreplace    disable replacing generated trigger programs, if any exists")
-        e("")
-        e("Other options are forwarded to the compiler:")
-        Compiler.parseArgs(Array[String]())
-      case s => as = s :: as
+        case "-d" => eat(s => if (!datasets.contains(s)) datasets = datasets :+ s, true)
+        case "-dd" => val ds = List("tiny", "tiny_del", "standard", "standard_del")
+                      datasets = ds ::: datasets.filter(!ds.contains(_))
+        case "-m" | "-l" => eat(s => if (!modes.contains(s)) modes = modes :+ s, true)
+        case "-q" => eat(s => qinc += s)
+        case "-qx" => eat(s => qexcl += s)
+        case "-qfail" => qfail = true
+        case "-x" => benchmark = true
+        case "-v" => verify = true
+        case "-p" => eat(s => parallel = s.toInt)
+        case "-z" => zeus = true
+        case "-seed" => eat(s => seed = s.toInt)
+        case "-s" => eat(s => samples = s.toInt)
+        case "-w" => eat(s => warmup = s.toInt)
+        case "-t" => eat(s => timeout = s.toLong)
+        case "-csv" => eat(s => csvFile = s)
+        case "-dump" => eat(s => dumpFile = s)
+        case "-cache" => cache = true
+        case "-noreplace" => replaceQuery = false
+        case "--no-output" => no_output = true
+        case "-h"|"-help"|"--help" => import Compiler.{error => e}
+          e("Usage: Unit [options] [compiler options]")
+          e("Zeus mode:")
+          e("  -z            enable zeus mode")
+          e("  -s <n>        number of samples to test (default: 10, 0=infinite)")
+          e("  -seed <int>   set the seed to test (implies 1 sample)")
+          e("Filtering options:")
+          e("  -d <dataset>  add a dataset: tiny, standard, big, huge (_del)?")
+          e("  -dd           add tiny,tiny_del,standard,standard_del datasets")
+          e("  -m <mode>     add mode: " + 
+                              List(LANG_CPP_VANILLA, LANG_CPP_LMS, LANG_CPP_PARDIS, 
+                                   LANG_SCALA_VANILLA, LANG_SCALA_LMS, LANG_SCALA_PARDIS, 
+                                   LANG_SPARK_LMS, LANG_AKKA)
+                                .mkString(", ") + " (_spec|_full|_0-10)?")
+          // e("                          lscala, lcpp, llms")
+          e("  -q <filter>   add an inclusion filter for queries")
+          e("  -qx <filter>  add an exclusion filter for queries")
+          e("  -qfail        also include queries that are known to fail")
+          e("Benchmarking options:")
+          e("  -x            enable benchmarks (compile and execute)")
+          e("  -v            verification against reference result") // consistency verification is always enabled
+          e("  -p <mode>     parallel streams (0=off"/*+", 1=thread"*/+", 2=deterministic)")
+          e("  -s <n>        number of samples to take (default: 10)")
+          e("  -w <n>        number of warm-up transients (default: 0)")
+          e("  -t <ms>       test duration timeout (in ms, default: 0)")
+          e("  -csv <file>   store benchmark results in a file")
+          e("  -dump <file>  dump raw benchmark samples in a file")
+          e("  -cache        enable M3 cache")
+          e("  -xbs <n>      execute with batches of certain size")
+          e("  -noreplace    disable replacing generated trigger programs, if any exists")
+          e("")
+          e("Other options are forwarded to the compiler:")
+          Compiler.parseArgs(Array[String]())
+        case s => as = s :: as
+      }
+      i += 1 
     }
-    i += 1 }
     if (verify && no_output) { 
       sys.error("Result validation is impossible while the --no-output option is enabled.\n" +
                 "Please disable one of these options (-v or --no-output) and try again.") 
     }
 
     if (datasets.size == 0) datasets = List("standard")
-    if (modes.size == 0) modes = List(LANG_SCALA)
-    if ((modes.toSet & Set("lscala", "lcpp", "llms")).size>0 && !benchmark) 
-      warning("Legacy modes are meaningful only with benchmarks enabled")
+
+    if (modes.size == 0) modes = List(DEFAULT_LANG_CPP)
+    
+    // if ((modes.toSet & Set("lscala", "lcpp", "llms")).size > 0 && !benchmark) 
+    //   warning("Legacy modes are meaningful only with benchmarks enabled")
+
     def re(set: MSet[String]) = java.util.regex.Pattern.compile(".*(" + set.mkString("|") + ")(\\.sql)?")
     if (qinc.size > 0) { 
       val pi = re(qinc)
@@ -246,15 +251,15 @@ object UnitTest {
         if (csv != null) csv.print(name(q.sql) + "," + time(t0) + ",")
         ;
         for (m <- modes) m match {
-          case "lscala"|"llms" if (repo != null && benchmark) => 
-            legacyScala(queryName, q, new Printer(if (m == "llms") "LLMS" else "LScala"), t0, m == "llms")
-          case "lcpp" if (repo != null && benchmark) => 
-            legacyCPP(queryName, q, new Printer("LCPP"), t0)
-          case LANG_SCALA|LANG_SCALA_LMS => 
+          // case "lscala"|"llms" if (repo != null && benchmark) => 
+          //   legacyScala(queryName, q, new Printer(if (m == "llms") "LLMS" else "LScala"), t0, m == "llms")
+          // case "lcpp" if (repo != null && benchmark) => 
+          //   legacyCPP(queryName, q, new Printer("LCPP"), t0)
+          case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS => 
             genQueryScala(queryName, q, new Printer(mn(m)), m3, m)
           case LANG_SPARK_LMS => 
             genQuerySpark(queryName, q, new Printer(mn(m)), dm3, m)
-          case LANG_CPP | LANG_CPP_LMS | LANG_LMS => 
+          case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS => 
             genQueryCpp(queryName, q, new Printer(mn(m)), m3, m)
           case _ => sys.error("Mode is not supported: " + m)
         }
@@ -295,11 +300,11 @@ object UnitTest {
       }
 
       for (m <- modes) m match {
-        case LANG_SCALA | LANG_SCALA_LMS =>
+        case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS =>
           genQueryScala(queryName, QueryTest(f), new Printer("Scala"), m3, m)
         case LANG_SPARK_LMS =>
           genQuerySpark(queryName, QueryTest(f), new Printer("Spark"), m3, m)
-        case LANG_CPP | LANG_CPP_LMS | LANG_LMS =>
+        case LANG_CPP_VANILLA | LANG_CPP_LMS | LANG_CPP_PARDIS =>
           genQueryCpp(queryName, QueryTest(f), new Printer("Cpp"), m3, m)
         case _ => ()
       }
@@ -309,7 +314,12 @@ object UnitTest {
   // ---------------------------------------------------------------------------
   // Query generator
   def genQueryScala(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
-    val cls = qName + (if (mode == LANG_SCALA) "VScala" else "")
+    val cls = qName + (mode match {
+        case LANG_SCALA_VANILLA => "VScala"
+        case LANG_SCALA_LMS => "LMSScala"
+        case LANG_SCALA_PARDIS => "PardisScala"
+        case _ => sys.error("Unknown mode: " + mode)
+      })
     var sp=""
     // Correctness
     def spec(sys:ddbt.ast.M3.System,full:Boolean=true) = {
@@ -455,7 +465,12 @@ object UnitTest {
 
   def genQueryCpp(qName:String,q:QueryTest,p:Printer,m3:String,mode:String,genSpec:Boolean=true) {
     val CPP_SUFFIX = ".hpp"
-    val cls = qName + (if (mode == LANG_CPP) "VCpp" else "")
+    val cls = qName + (mode match {
+        case LANG_CPP_VANILLA => "VCpp"
+        case LANG_CPP_LMS => "LMSCpp"
+        case LANG_CPP_PARDIS => "PardisCpp"
+        case _ => sys.error("Unknown mode: " + mode)
+      })
     var sp=""
     def post(sys:ddbt.ast.M3.System) { } //sp=spec(sys,true); /*if (verify) inject("  def main(args: Array[String]) {\n",ind(spec(sys,false),2)+"\n")*/ }
 

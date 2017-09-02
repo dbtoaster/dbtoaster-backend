@@ -134,7 +134,7 @@ object Helper {
     (num, mode, timeout, parallel, datasets, batchSize, noOutput)
   }
 
-  def bench(args: Array[String], run: (String, Int, Long, Int, Boolean) => (StreamStat, List[Any]), op: List[Any] => Unit = null) {
+  def bench(args: Array[String], run: (String, Int, Long, Int) => (StreamStat, List[Any]), op: List[Any] => Unit = null) {
     val (num, mode, timeout, parallel, datasets, batchSize, noOutput) = extractExecArgs(args)
     if (mode < 0) println("Java " + System.getProperty("java.version") + ", Scala " + util.Properties.versionString.replaceAll(".* ",""))
     datasets.foreach { dataset => 
@@ -142,7 +142,7 @@ object Helper {
       var i = 0 
       while (i < num) { 
         i += 1
-        val (t, res) = run(dataset, parallel, timeout, batchSize, noOutput)
+        val (t, res) = run(dataset, parallel, timeout, batchSize)
         if (t.skip == 0) {
           if (res0 == null) res0 = res
           else assert(res0 == res, s"Inconsistent results: $res0 != $res")

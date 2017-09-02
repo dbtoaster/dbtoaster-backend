@@ -1,4 +1,5 @@
-package ddbt
+package ddbt.lib
+
 import java.io._
 
 /**
@@ -67,15 +68,15 @@ object Utils {
     jClasspaths.filter(_.matches(".*scala-(library|compiler|reflect).*"))
 
   private lazy val jScalaClasspaths = 
-    jClasspaths.filter(_.matches(".*(shared/target).*"))
-
+    jClasspaths.filter(_.matches(".*(storelib/target).*"))
+  
   private lazy val jSparkBootclasspaths = 
     jClasspaths.filter(_.matches(".*(spark-).*")) ++
     jClasspaths.filter(_.matches(".*(akka-actor|akka-remote|typesafe).*")) ++
     jClasspaths.filter(_.matches(".*scala-(library|compiler|reflect).*"))
 
   private lazy val jSparkClasspaths = 
-    jClasspaths.filter(_.matches(".*(shared/target|spark/target|org.apache.spark).*")) ++
+    jClasspaths.filter(_.matches(".*(storelib/target|spark/target|org.apache.spark).*")) ++
     jClasspaths.filterNot(jSparkBootclasspaths.toSet)    
 
   // Scala compiler wrapper

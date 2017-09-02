@@ -22,13 +22,18 @@ object Compiler {
   val LANG_CALC = "calc"
   val LANG_M3 = "m3"
   val LANG_DIST_M3 = "annotm3"
-  val LANG_SCALA = "vscala"
-  val LANG_CPP = "vcpp"
-  val LANG_AKKA = "akka"
-  val LANG_LMS = "lms"
-  val LANG_CPP_LMS = "cpp"
-  val LANG_SCALA_LMS = "scala"
+  val LANG_CPP_VANILLA = "vcpp"
+  val LANG_CPP_LMS = "lmscpp"
+  val LANG_CPP_PARDIS = "cpp"
+  val LANG_SCALA_VANILLA = "vscala"
+  val LANG_SCALA_LMS = "lmsscala"
+  val LANG_SCALA_PARDIS = "scala"
   val LANG_SPARK_LMS = "spark"
+  val LANG_AKKA = "akka"
+
+  // Default languages 
+  val DEFAULT_LANG_CPP = LANG_CPP_VANILLA
+  val DEFAULT_LANG_SCALA = LANG_SCALA_PARDIS
 
   val M3_FILE_SUFFIX = ".m3"
 
@@ -46,7 +51,7 @@ object Compiler {
   var libs : List[String] = Nil  // runtime libraries (defaults to lib/ddbt.jar for scala)
   var ni   : Boolean = false     // non-incremental query evaluation (implies depth=0)
   var inl  : Int = 0             // inlining level, in range [0-10]
-  var watch : Boolean = false   // stream of updates on result map
+  var watch : Boolean = false    // stream of updates on result map
   // Execution
   var exec    : Boolean = false  // compile and execute immediately
   var exec_dir: String  = null   // execution classpath
@@ -89,7 +94,7 @@ object Compiler {
   def error(str: String, fatal: Boolean = false) = {
     System.err.println(str)
     if (fatal) System.exit(0)
-    null 
+    null
   }
 
   def toast(lang: String, opts: String*): (Long, String) = { 
@@ -129,14 +134,17 @@ object Compiler {
     var i = 0 
     def eat(f: String => Unit, s: Boolean = false) { 
       i += 1
-      if (i < l) f(if(s) args(i).toLowerCase else args(i)) 
+      if (i < l) f(if (s) args(i).toLowerCase else args(i)) 
     }
     while (i < l) {
       args(i) match {
         case "-l" => eat(s => s match { 
-          case LANG_CALC|LANG_M3|LANG_DIST_M3|LANG_SCALA|LANG_CPP|LANG_LMS|
-               LANG_CPP_LMS|LANG_SCALA_LMS|LANG_SPARK_LMS|LANG_AKKA => lang = s
-          case _ => error("Unsupported language: " + s, true) }, true)
+            case LANG_CALC|LANG_M3|LANG_DIST_M3|
+                 LANG_CPP_VANILLA|LANG_CPP_LMS|LANG_CPP_PARDIS|
+                 LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|
+                 LANG_SPARK_LMS|LANG_AKKA => lang = s
+            case _ => error("Unsupported language: " + s, true) 
+          }, true)
         case "--frontend" => eat(s => frontend_path_bin = s)
         case "--batch" => batching_enabled = true
         case "-o" => eat(s => out = s)
@@ -173,21 +181,23 @@ object Compiler {
       i += 1
     }
     if (in.size == 0) {
+      def pad(s: String) = f"${s}%6s"
       error("Usage: Compiler [options] file1 [file2 [...]]")
       error("Global options:")
       error("  -o <file>     output file (default: stdout)")
       error("  -c <file>     invoke a second stage compiler on the source file")
       error("  -l <lang>     defines the target language")
-      error("                - "+LANG_CALC     +"     : relational calculus")
-      error("                - "+LANG_M3       +"       : M3 program")
-      // error("                - "+LANG_DIST_M3  +"    : distributed M3 program")
-      error("                - "+LANG_SCALA    +"   : vanilla Scala code")
-      error("                - "+LANG_CPP      +"      : vanilla C++ code")
-      // error("                - "+LANG_AKKA     +"     : distributed Akka code")
-      // error("                - "+LANG_CPP_LMS  +"      : LMS-optimized C++")
-      error("                - "+LANG_SCALA_LMS+"    : LMS-optimized Scala")
-      // error("                - "+LANG_SPARK_LMS+" : LMS-optimized Spark")
-      //   ("                - dcpp     : distributed C/C++ code")
+      error("                - " + pad(LANG_CALC)          + ": relational calculus")
+      error("                - " + pad(LANG_M3)            + ": M3 program")
+      error("                - " + pad(LANG_DIST_M3)       + ": distributed M3 program")
+      error("                - " + pad(LANG_CPP_VANILLA)   + ": vanilla C++ code")
+      // error("                - " + pad(LANG_CPP_LMS)       + ": LMS-optimized C++")
+      error("                - " + pad(LANG_CPP_PARDIS)    + ": PARDIS-optimized C++")
+      error("                - " + pad(LANG_SCALA_VANILLA) + ": vanilla Scala code")
+      error("                - " + pad(LANG_SCALA_LMS)     + ": LMS-optimized Scala")
+      error("                - " + pad(LANG_SCALA_PARDIS)  + ": PARDIS-optimized Scala")
+      error("                - " + pad(LANG_SPARK_LMS)     + ": LMS-optimized Spark")
+      // error("                - " + pad(LANG_AKKA)          +": distributed Akka code")
       error("Front-end options:")
       error("  --depth <depth>    incrementalization depth (default: infinite)")
       error("  --batch       Enable batch processing")
@@ -207,33 +217,34 @@ object Compiler {
       // error("  -xa <arg>     pass an argument to generated program")
       error("", true) //exit the application
     }
+
     if (exec && batching_enabled && exec_bs <= 0) { 
       error("Invalid batch size")
       exec = false 
     }
+
     if(lang == null) {
-      if(out != null){
-        lang = if (out.endsWith(".cpp") || out.endsWith(".hpp") || 
-                   out.endsWith(".h") || out.endsWith(".c")) LANG_CPP 
-               else LANG_SCALA
-      } else {
-        lang = LANG_CPP
-      }
+      lang = if (out == null || out.endsWith(".cpp") || out.endsWith(".hpp") ||
+                 out.endsWith(".h") || out.endsWith(".c")) DEFAULT_LANG_CPP
+             else DEFAULT_LANG_SCALA
     }
+
     if (out == null && exec) { 
       error("Execution disabled, specify an output file")
       exec = false 
     }
+
     if (name == null) {
       val n = if (out != null) out.replaceAll(".*[/\\\\]", "").replaceAll("\\..*", "") else "query"
       val firstChar = n.substring(0, 1)
       name = (if(Character.isDigit(firstChar(0))) "_" + firstChar 
               else firstChar.toUpperCase) + n.substring(1)
     }
+
     def lib(s: String) = if (new File(s).exists) { libs = s :: Nil; true } else false
     if (libs == Nil && exec) lang match {
-      case LANG_SCALA => 
-        lib("lib/ddbt.jar") || lib("target/scala-2.10/classes") || 
+      case LANG_SCALA_VANILLA | LANG_SCALA_LMS | LANG_SCALA_PARDIS => 
+        lib("lib/ddbt.jar") || lib("target/scala-2.11/classes") || 
         ({ error("Cannot find runtime libraries"); exec = false; false })
       case _ =>
     }
@@ -252,14 +263,14 @@ object Compiler {
 
     // Back-end
     val cg: CodeGen = lang match {
-      case LANG_SCALA => new ScalaGen(name, printProgress)
-      case LANG_CPP => new CppGen(name)
-      case LANG_AKKA => new AkkaGen(name)
-      // case LANG_LMS => new LMSCppGen(name)
-      case LANG_CPP_LMS => Optimizer.cTransformer = true ; new PardisCppGen(name)
-      // case LANG_SCALA_LMS => new LMSScalaGen(name, watch)
-      case LANG_SCALA_LMS => new PardisScalaGen(name) //DSL
+      case LANG_CPP_VANILLA => new CppGen(name)
+      // case LANG_CPP_LMS => new LMSCppGen(name)
+      case LANG_CPP_PARDIS => Optimizer.cTransformer = true ; new PardisCppGen(name)
+      case LANG_SCALA_VANILLA => new ScalaGen(name, printProgress)
+      case LANG_SCALA_LMS => new LMSScalaGen(name, watch)
+      case LANG_SCALA_PARDIS => new PardisScalaGen(name) //DSL
       case LANG_SPARK_LMS => new LMSSparkGen(name)
+      case LANG_AKKA => new AkkaGen(name)
       case _ => error("Code generation for " + lang + " is not supported", true)
     }
     if (ni) {
@@ -294,7 +305,7 @@ object Compiler {
         d 
       } else Utils.makeTempDir()
       lang match {        
-        case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
+        case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_AKKA =>
           val t2 = Utils.ns(() =>
             Utils.scalaCompiler(dir, 
                                 if (libs != Nil) libs.mkString(":") else null,
@@ -310,9 +321,9 @@ object Compiler {
           exec_vm = true
           val baseDir = new File("./")
           val sharedDirPath = 
-            baseDir.getAbsolutePath + "/shared/target/scala-2.10/classes"
+            baseDir.getAbsolutePath + "/../storelib/target/scala-2.11/classes"
           val sparkDirPath = 
-            baseDir.getAbsolutePath + "/spark/target/scala-2.10/classes"
+            baseDir.getAbsolutePath + "/spark/target/scala-2.11/classes"
           val pkgDir = new File("./pkg")
           if (!pkgDir.exists) pkgDir.mkdirs
           Utils.exec(Array[String](
@@ -323,16 +334,16 @@ object Compiler {
             "-C", sparkDirPath, "log4j.properties", 
             "-C", sparkDirPath, "spark.config"))
 
-        case LANG_CPP|LANG_LMS|LANG_CPP_LMS => if (cPath != null) {
-          val pl = "srccpp/lib"
-          val t2 = Utils.ns(() => Utils.cppCompiler(out, cPath, null, pl))._1; 
-          if (t_comp != null) t_comp(t2)
-        }
+        case LANG_CPP_VANILLA|LANG_CPP_LMS|LANG_CPP_PARDIS => 
+          if (cPath != null) {
+            val t2 = Utils.ns(() => Utils.cppCompiler(out, cPath, null, "srccpp/lib"))._1; 
+            if (t_comp != null) t_comp(t2)
+          }
       }
     }
     // Execution
     lang match {        
-      case LANG_SCALA|LANG_AKKA|LANG_SCALA_LMS =>
+      case LANG_SCALA_VANILLA|LANG_SCALA_LMS|LANG_SCALA_PARDIS|LANG_AKKA =>
         if (exec) { 
           Utils.scalaExec(
             dir :: libs.map(p => new File(p)), 
@@ -354,7 +365,7 @@ object Compiler {
           //   exec_vm)
         }
 
-      case LANG_CPP|LANG_LMS|LANG_CPP_LMS =>
+      case LANG_CPP_VANILLA|LANG_CPP_LMS|LANG_CPP_PARDIS =>
         if (out != null) {
           val (samplesAndWarmupRounds, mode, timeout, pMode, datasets, batchSize, noOutput) =
             ddbt.lib.Helper.extractExecArgs(("-b" + exec_bs :: exec_args).toArray)

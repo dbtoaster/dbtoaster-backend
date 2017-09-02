@@ -13,7 +13,7 @@ class CppGen(override val cls:String="Query") extends ICppGen
 trait ICppGen extends IScalaGen {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
-  import ddbt.Utils.{ ind, fresh, freshClear, stringIf } // common functions
+  import ddbt.lib.Utils.{ ind, fresh, freshClear, stringIf } // common functions
   val VALUE_NAME = "__av"
 
   val usingPardis = false
