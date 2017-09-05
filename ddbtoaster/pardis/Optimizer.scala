@@ -62,9 +62,9 @@ class Optimizer(val IR: StoreDSL) {
     indexLookupPartialFusion -> "P", sliceInline -> "S", deadIndexUpdate -> "D", codeMotion -> "C",
     m3CompareMultiply -> "T", regexHoister -> "X", refCounter -> "R", multiResSplitter -> "U", initialStoreSize -> "Z", sliceNoUpd -> "L", splSecondaryIdx -> "Y", minMaxIdx -> "A", medIdx -> "B", coldMotion -> "Q").filter(_._1).sortWith(_._2 < _._2).foldLeft("")((a, c) => a + c._2)
 
-  pipeline += new DSKReordering(IR)
-  pipeline += new Deforestation(IR)
-  pipeline += DCE
+  //pipeline += new DSKReordering(IR)
+  //pipeline += new Deforestation(IR)
+  //pipeline += DCE
 
   if (Optimizer.secondaryIndex) {
     pipeline += new IndexAnalysis(IR)
