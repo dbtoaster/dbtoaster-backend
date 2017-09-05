@@ -1,12 +1,10 @@
-package ddbt.codegen.lms
+package ddbt.codegen
 
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
-import ddbt.ast._
-import scalariform.formatter.preferences._
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
-import oltp.opt.lifters._
+import ddbt.lms.oltp.opt.lifters._
 
 /**
  * Helpers for LMS code generation
@@ -20,7 +18,7 @@ trait LMSExpGen extends M3OpsExp
                    with Effects { self =>
 
   trait MyGenericCodegen extends GenericCodegen 
-                            with oltp.opt.lifters.GenericGenStore {
+                            with GenericGenStore {
     val IR: self.type = self
 
     def storeEntryType(sym: Exp[_]): String

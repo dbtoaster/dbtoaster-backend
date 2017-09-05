@@ -8,15 +8,22 @@ import ddbt.ast._
  *
  * @author Mohammad Dashti, Milos Nikolic
  */
-class CppGen(override val cls:String="Query") extends ICppGen
+class CppGen(override val cls: String = "Query", override val isReleaseMode: Boolean, override val printTiminingInfo: Boolean) extends ICppGen
 
 trait ICppGen extends IScalaGen {
   import scala.collection.mutable.HashMap
   import ddbt.ast.M3._
   import ddbt.lib.Utils.{ ind, fresh, freshClear, stringIf } // common functions
+
+  def isReleaseMode: Boolean = true
+
+  def printTiminingInfo: Boolean = false
+
   val VALUE_NAME = "__av"
 
   val usingPardis = false
+  val pardisExtendEntryParam = false
+  val pardisProfilingOn = false
 
   val EXPERIMENTAL_RUNTIME_LIBRARY = false
   val EXPERIMENTAL_HASHMAP = true
@@ -27,10 +34,10 @@ trait ICppGen extends IScalaGen {
 
   var unionDepth = 0
 
-  private val ifReleaseMode = stringIf(ddbt.Compiler.DEPLOYMENT_STATUS == ddbt.Compiler.DEPLOYMENT_STATUS_RELEASE, "// ")
-  private val ifPrintTimingInfo = stringIf(!ddbt.Compiler.PRINT_TIMING_INFO, "// ")
+  private val ifReleaseMode = stringIf(isReleaseMode, "// ")
+  private val ifPrintTimingInfo = stringIf(!printTiminingInfo, "// ")
 
-  private var mapDefs = Map[String,MapDef]() //mapName => MapDef
+  // private var mapDefs = Map[String,MapDef]() //mapName => MapDef
   private val mapDefsList = scala.collection.mutable.MutableList[(String,MapDef)]() //List(mapName => MapDef) to preserver the order
   private val tmpMapDefs = HashMap[String,(List[Type],Type)]() //tmp mapName => (List of key types and value type)
   private var deltaRelationNames = Set[String]()
@@ -44,6 +51,7 @@ trait ICppGen extends IScalaGen {
   def SET_IN_MAP_FUNC(m:String) = { helperFuncUsage.update(("SET_IN_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("SET_IN_MAP_FUNC" -> m),0)+1); m+".setOrDelOnZero" }
 
   def ADD_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("ADD_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("ADD_TO_MAP_FUNC" -> m),0)+1); m+".addOrDelOnZero" }
+ 
   def INSERT_TO_MAP_FUNC(m:String) = { helperFuncUsage.update(("INSERT_TO_MAP_FUNC" -> m),helperFuncUsage.getOrElse(("INSERT_TO_MAP_FUNC" -> m),0)+1); m+".insert_nocheck" }
 
   def ADD_TO_TEMP_MAP_FUNC(ksTp:List[Type],vsTp:Type,m:String,ks:List[String],vs:String) =
@@ -660,7 +668,7 @@ trait ICppGen extends IScalaGen {
         }.mkString
       }
       else {
-        val entryParam = if(usingPardis && (!Optimizer.analyzeEntry || !Optimizer.secondaryIndex)) "false_type(), " else ""
+        val entryParam = if(usingPardis && pardisExtendEntryParam) "false_type(), " else ""
         s0.sources.filter(!_.stream).map { s =>
             val name = s.schema.name
             val fields = s.schema.fields
@@ -852,7 +860,6 @@ trait ICppGen extends IScalaGen {
       }
     }
     mapDefs = mapDefsList.toMap
-    maps = mapDefs
     val (tsSC, msSC, tmpEntrySC) = genPardis(s0)
 
     deltaRelationNames = s0.triggers.flatMap(_.evt match { //delta relations
@@ -1177,8 +1184,7 @@ trait ICppGen extends IScalaGen {
         |        tlq_t* d = new tlq_t((tlq_t&) data);
         |        ${ifReleaseMode}if (d->tS == 0) { ${tc("d->")} } printf(\"SAMPLE=${dataset},%ld,%ld,%ld\\n\", d->tT, d->tN, d->tS);
         |        //checkAll(); //print bucket statistics
-        |        ${if(Optimizer.initialStoreSize) "" else "//"} getRuntimeInfo(); //get runtime information
-        |        ${if(Optimizer.profileStoreOperations || Optimizer.profileBlocks) "" else "//"} ExecutionProfiler::printProfileToFile("profile${cls}.csv");
+        |        ${if (pardisProfilingOn) "" else "//"}ExecutionProfiler::printProfileToFile("profile${cls}.csv");
         |        return snapshot_t( d );
         |    }
         |
@@ -1265,9 +1271,8 @@ trait ICppGen extends IScalaGen {
           |#include "mmap/mmap.hpp"
           |#include "hpds/pstring.hpp"
           |#include "hpds/pstringops.hpp"
-          |""".stripMargin) +
-    stringIf(Optimizer.profileBlocks || Optimizer.profileStoreOperations,
-             "#define EXEC_PROFILE 1\n") +
+          |""".stripMargin) +    
+    stringIf(pardisProfilingOn, "#define EXEC_PROFILE 1\n") +
     "#include \"ExecutionProfiler.h\"\n"
 
   override def pkgWrapper(pkg: String, body: String) = 

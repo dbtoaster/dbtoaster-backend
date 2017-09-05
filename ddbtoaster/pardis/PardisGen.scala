@@ -356,7 +356,7 @@ if(Optimizer.initialStoreSize) {
 
   override def toMapFunction(q: Query) = {
     val map = q.name
-    val m = maps(map)
+    val m = mapDefs(map)
     val mapKeys = m.keys.map(_._2)
     val nodeName = map + "_node"
     val res = nodeName + "_mres"
@@ -470,7 +470,7 @@ if(Optimizer.initialStoreSize) {
           case _ => null
         }
       } ++
-      maps.map {
+      mapDefs.map {
         case (_, m@MapDef(_, _, _, _, _)) => m
       } // XXX missing indexes
     globalMembersBlock = IR.reifyBlock {
@@ -619,7 +619,9 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
   import IR._
 
-  override val usingPardis: Boolean = true
+  override val usingPardis = true
+  override val pardisExtendEntryParam = !Optimizer.analyzeEntry || !Optimizer.secondaryIndex
+  override val pardisProfilingOn = Optimizer.profileStoreOperations || Optimizer.profileBlocks
 
   override def genCodeForProgram[T](optTP: TransactionProgram[T]) = {
     import codeGen.expLiftable, codeGen.tpeLiftable, codeGen.ListDocumentOps2

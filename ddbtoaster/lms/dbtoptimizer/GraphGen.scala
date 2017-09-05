@@ -1,8 +1,8 @@
-package dbtoptimizer
+package ddbt.lms.dbtoptimizer
 
 import java.io._
 import scala.virtualization.lms.internal._
-import dbtoptimizer.lifters._
+import ddbt.lms.dbtoptimizer.lifters._
 import scala.reflect.SourceContext
 
 trait DependencyGraphExport extends GraphVizDependencyGraphExport {

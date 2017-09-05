@@ -1,6 +1,5 @@
 package ddbt.codegen
 
-import ddbt.codegen._
 import ddbt.ast._
 
 /**
@@ -13,7 +12,7 @@ class DistributedM3Gen(cls: String = "Query", impl: LMSExpGen)
   
   import ddbt.ast.M3._
   import ddbt.lib.Utils.{ ind, block, tup, fresh, freshClear } // common functions
-  import ManifestHelper.{man,zero,manEntry,manStore}
+  import ddbt.lib.ManifestHelper.{ man, zero, manEntry, manStore }
   import impl.Rep
 
   // Use static arrays for input batches; only foreach supported

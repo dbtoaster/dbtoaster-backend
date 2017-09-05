@@ -1,12 +1,11 @@
-package dbtoptimizer
+package ddbt.lms.dbtoptimizer
 
 import java.io._
-import scala.actors.Actor._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
 import scalariform.formatter.ScalaFormatter
 import scalariform.parser.ScalaParserException
-import dbtoptimizer.lifters._
+import ddbt.lms.dbtoptimizer.lifters._
 import scala.reflect.SourceContext
 
 trait ToasterBoosterScalaCodegen extends ScalaConciseCodegen { self =>

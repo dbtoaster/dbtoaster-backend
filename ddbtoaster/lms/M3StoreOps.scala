@@ -1,11 +1,10 @@
-package ddbt.codegen.lms
+package ddbt.codegen
 
 import ddbt.ast._
-import oltp.opt.lifters._
-import ddbt.codegen.ManifestHelper._
+import ddbt.lms.oltp.opt.lifters._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
-import scala.reflect.SourceContext
+import ddbt.lib.ManifestHelper._
 import ddbt.lib.Utils.ind
 import ddbt.lib.store.{ Store, Entry, IHash, IList, IndexType }
 
@@ -21,7 +20,7 @@ trait M3StoreOps extends StoreOps with Equal with IfThenElse {
 
   def named(name: String, tp: Type, mutable: Boolean = false): Rep[_]  
   
-  def named[T](name: String, mutable: Boolean = false)(implicit mT: Manifest[T]): Rep[T]
+  def named[T](name: String, mutable: Boolean)(implicit mT: Manifest[T]): Rep[T]
   
   def namedVar(name: String, tp: Type): Rep[_]
               
@@ -51,7 +50,7 @@ trait M3StoreOpsExp extends BaseExp
   def named(name: String, tp: Type, mutable: Boolean = false) =
     named(name, mutable)(man(tp))
 
-  def named[T](name: String, mutable: Boolean = false)(implicit mT: Manifest[T]) = { 
+  def named[T](name: String, mutable: Boolean)(implicit mT: Manifest[T]) = { 
     val n = Named(name)(mT)
     if (mutable) reflectMutable(n) else n 
   }
@@ -94,7 +93,7 @@ trait M3StoreOpsExp extends BaseExp
       case ArrayStore => sys.error("ArrayStore does not support m3add operation")
       case LogStore | PartitionStore(_) =>
         __ifThenElse(
-          __equal(entVal, unit(ddbt.codegen.ManifestHelper.zero(lastMan))), 
+          __equal(entVal, unit(ddbt.lib.ManifestHelper.zero(lastMan))), 
           unit(()),
           stInsert(map, ent)
         )
@@ -310,7 +309,7 @@ trait ScalaGenM3StoreOps extends ScalaGenBase
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(NAME_ATTRIBUTE, n)
     case StUnsafeInsert(x, e, i) =>
-      emitValDef(sym, quote(x) + ".unsafeInsert(" + i + "," + quote(e) + ")")
+      emitValDef(sym, quote(x) + ".unsafeInsert(" /* + i + "," */ + quote(e) + ")")
     case M3Add(s, e) =>
       stream.println(quote(s) + ".add(" + quote(e) + ")")
     case StForeach(x, blockSym, block) 
@@ -678,7 +677,7 @@ trait CGenM3StoreOps extends CGenBase
   override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
     case Named(n) => /*emitValDef(sym, n);*/ sym.attributes.update(NAME_ATTRIBUTE, n)
     case StUnsafeInsert(x, e, i) => 
-      emitValDef(sym, quote(x) + ".unsafeInsert(" + i + "," + quote(e) + ")")
+      emitValDef(sym, quote(x) + ".unsafeInsert(" /* + i + "," */ + quote(e) + ")")
     case M3Add(s, e) =>
       stream.println(quote(s) + ".add(" + quote(e) + ")")
     case StForeach(x, blockSym, block) 

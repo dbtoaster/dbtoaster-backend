@@ -1,9 +1,10 @@
-package oltp.opt.lifters
+package ddbt.lms.oltp.opt.lifters
 
 import scala.virtualization.lms.common._
-import scala.virtualization.lms.internal.{GenericNestedCodegen, GenerationFailedException, ExtendedExpressions, Effects}
+import scala.virtualization.lms.internal.{ GenericNestedCodegen, GenerationFailedException, ExtendedExpressions, Effects }
 import scala.reflect.SourceContext
 import scala.language.implicitConversions
+import ddbt.lms.dbtoptimizer.{ ToasterBoosterScalaCodegen, ToasterBoosterCCodegen }
 
 import ddbt.lib.store._
 import Store._
@@ -106,7 +107,7 @@ trait SEntryExp extends StoreOps with BaseExp with EffectExp with VariablesExp {
 
 trait SEntryExpOpt extends SEntryExp
 
-trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaCodegen {
+trait ScalaGenSEntry extends ScalaGenBase with ToasterBoosterScalaCodegen {
   val IR: SEntryExp with ExtendedExpressions with Effects
   import IR._
 
@@ -127,7 +128,7 @@ trait ScalaGenSEntry extends ScalaGenBase with dbtoptimizer.ToasterBoosterScalaC
   }
 }
 
-trait CGenSEntry extends CGenBase with dbtoptimizer.ToasterBoosterCCodegen {
+trait CGenSEntry extends CGenBase with ToasterBoosterCCodegen {
   val IR: SEntryExp with ExtendedExpressions with Effects
   import IR._
 
@@ -885,6 +886,7 @@ trait CGenStore extends CGenBase with CGenSEntry with GenericGenStore {
     functionNames.foreach { fn =>
       out.println("    val %sInst = new %s(%s)".format(fn,fn,classArgs.map{ c =>
         quote(c, true)
+      }.mkString(", ")))
     }
   }
 

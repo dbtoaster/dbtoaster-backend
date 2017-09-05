@@ -263,7 +263,7 @@ object Compiler {
 
     // Back-end
     val cg: CodeGen = lang match {
-      case LANG_CPP_VANILLA => new CppGen(name)
+      case LANG_CPP_VANILLA => new CppGen(name, DEPLOYMENT_STATUS == DEPLOYMENT_STATUS_RELEASE, PRINT_TIMING_INFO)
       // case LANG_CPP_LMS => new LMSCppGen(name)
       case LANG_CPP_PARDIS => Optimizer.cTransformer = true ; new PardisCppGen(name)
       case LANG_SCALA_VANILLA => new ScalaGen(name, printProgress)
@@ -321,10 +321,10 @@ object Compiler {
           exec_vm = true
           val baseDir = new File("./")
           val sharedDirPath = 
-            baseDir.getAbsolutePath + "/../storelib/target/scala-2.11/classes"
+            baseDir.getAbsolutePath + "/storelib/target/scala-2.11/classes"          
           val sparkDirPath = 
-            baseDir.getAbsolutePath + "/spark/target/scala-2.11/classes"
-          val pkgDir = new File("./pkg")
+            baseDir.getAbsolutePath + "/ddbtoaster/spark/target/scala-2.11/classes"
+          val pkgDir = new File("./ddbtoaster/pkg")
           if (!pkgDir.exists) pkgDir.mkdirs
           Utils.exec(Array[String](
             "jar", "-cMf", (pkgDir.getAbsolutePath + "/ddbt_gen.jar"), 
@@ -336,7 +336,7 @@ object Compiler {
 
         case LANG_CPP_VANILLA|LANG_CPP_LMS|LANG_CPP_PARDIS => 
           if (cPath != null) {
-            val t2 = Utils.ns(() => Utils.cppCompiler(out, cPath, null, "srccpp/lib"))._1; 
+            val t2 = Utils.ns(() => Utils.cppCompiler(out, cPath, null, "ddbtoaster/srccpp/lib"))._1; 
             if (t_comp != null) t_comp(t2)
           }
       }
@@ -390,7 +390,7 @@ object Compiler {
               else srcTmp
             Utils.write(out, src)
             if (exec) {
-              val pl = "srccpp/lib"
+              val pl = "ddbtoaster/srccpp/lib"
               val po = if (cPath != null) cPath else out.substring(0, out.lastIndexOf("."))
               val t2 = Utils.ns(() =>
                 Utils.cppCompiler(out, out.substring(0, out.lastIndexOf(".")), null, pl))._1;

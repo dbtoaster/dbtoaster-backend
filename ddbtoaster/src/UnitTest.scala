@@ -3,9 +3,8 @@ package ddbt
 import java.io._
 import java.util.concurrent.{ BlockingQueue, LinkedBlockingQueue }
 import Compiler._
-import ddbt.codegen.Optimizer
-import ddbt.lib.ManifestHelper
 import ddbt.lib.Helper
+import ddbt.codegen.Optimizer
 
 /**
  * Benchmarking and correctness verification generator. Instruments the
@@ -29,9 +28,9 @@ object UnitTest {
     }
 
   val path_examples = "examples/queries"
-  val path_sources = "test/gen"
-  val path_classes = "target/scala-2.11/test-classes"
-  val path_cache = "target/m3"
+  val path_sources = "ddbtoaster/test/gen"
+  val path_classes = "ddbtoaster/target/scala-2.11/test-classes"
+  val path_cache = "ddbtoaster/target/m3"
   val skip = List("11","11a","12","52","53","56","57","58","62","63","64","65","66","66a", // front-end failure (SQL constructs not supported)
                   "15", // regular expressions not supported by front-end: LIKE 'S____' ==> "^S____$" where "^S....$" is expected
                   "35b","36b").map("employee/query"+_) ::: // front-end swaps table order in JOIN .. ON, test (and Scala typing) fails
@@ -218,13 +217,13 @@ object UnitTest {
 
         val (tm3, m3) =
           if (modes.exists(_ != LANG_SPARK_LMS)) {
-            var file = "target/m3/" + queryName + ".m3"
+            var file = "ddbtoaster/target/m3/" + queryName + ".m3"
             if (cache && new File(file).exists) ns(() => Utils.read(file))
             else {
               queryName = 
                 if (replaceQuery) name(q.sql) 
-                else Utils.generateNewFileName(name(q.sql), "target/m3/%s.m3")
-              file = "target/m3/" + queryName + ".m3"
+                else Utils.generateNewFileName(name(q.sql), "ddbtoaster/target/m3/%s.m3")
+              file = "ddbtoaster/target/m3/" + queryName + ".m3"
               val (t, m3) = Compiler.toast(LANG_M3, q.sql)
               Utils.write(file, m3)
               println("SQL -> M3           : " + tf(t))
@@ -233,13 +232,13 @@ object UnitTest {
           } else (-1L, "")
         val (tdm3, dm3) = 
           if (modes.exists(_ == LANG_SPARK_LMS)) {
-            var file = "target/m3/" + queryName + ".dm3"
+            var file = "ddbtoaster/target/m3/" + queryName + ".dm3"
             if (cache && new File(file).exists) ns(() => Utils.read(file))
             else {
               queryName = 
                 if (replaceQuery) name(q.sql) 
-                else Utils.generateNewFileName(name(q.sql), "target/m3/%s.dm3")
-              file = "target/m3/" + queryName + ".dm3"
+                else Utils.generateNewFileName(name(q.sql), "ddbtoaster/target/m3/%s.dm3")
+              file = "ddbtoaster/target/m3/" + queryName + ".dm3"
               val (t, dm3) = Compiler.toast(LANG_DIST_M3, q.sql)
               Utils.write(file, dm3)
               println("SQL -> DIST M3      : " + tf(t))

@@ -2,7 +2,6 @@ package ddbt.lib.spark
 
 import org.apache.spark.HashPartitioner
 import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext.rddToPairRDDFunctions
 import org.apache.spark.rdd.RDD
 import org.apache.hadoop.fs.{ Path, FileSystem }
 import org.apache.hadoop.conf.Configuration

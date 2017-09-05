@@ -1,6 +1,5 @@
 package ddbt.codegen
 
-import ddbt.codegen.lms._
 import ddbt.ast._
 
 /**
@@ -14,7 +13,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
   import ddbt.ast.M3._
   import ddbt.lib.Utils.{ ind, tup, fresh, freshClear } // common functions
   import ddbt.lib.store.{ Store, Entry }
-  import ManifestHelper.{man, zero, manEntry, manStore}
+  import ddbt.lib.ManifestHelper.{man, zero, manEntry, manStore}
   import impl.Rep
   implicit val overloaded1 = impl.overloaded1
   
@@ -406,7 +405,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
   override def toMapFunction(q: Query) = {
     if (q.keys.nonEmpty) {
       val map = q.name
-      val m = maps(map)
+      val m = mapDefs(map)
       val mapKeys = m.keys.map(_._2)
       val nodeName = map + "_node"
       val res = nodeName + "_mres"
@@ -472,7 +471,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
         MapDef(deltaRel, tp, keys, null, LocalExp)
       case _ => null
     }) ++
-    s0.triggers.flatMap { t=> //local maps
+    s0.triggers.flatMap { t => //local maps
       t.stmts.filter{
         case m: MapDef => true
         case _ => false
@@ -481,7 +480,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
         case _ => null
       }
     } ++
-    maps.map{
+    mapDefs.map {
       case (_, m: MapDef) => m
     } // XXX missing indexes
 
@@ -519,7 +518,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
     val ds = outStream.toString
     val printInfoDef = if (Store.GATHER_STATISTICS) {
       "def printMapsInfo() = {\n" + 
-        maps.map { case (m, MapDef(_, _, keys, _, _)) => 
+        mapDefs.map { case (m, MapDef(_, _, keys, _, _)) => 
           if (keys.size > 0) 
             "  System.out.println(\"" + m + " => \" + " + m + 
             ".getInfoStr)\n  Store.addTimersFromStore(\"" + m + 
@@ -561,7 +560,7 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
   }
 
   override def clearOut = {
-    maps = Map()
+    mapDefs = Map()
     impl.reset
   }
 
@@ -581,15 +580,15 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
       "var " + name + ": " + tp.toScala + " = " + tp.zero
   }
 
-  override protected def genSnap(s0: System): String = {
+  override protected def emitGetSnapshotBody(queries: List[Query]): String = {
     val snap = "List(" +
-      s0.queries.map(q =>
-        (if (q.keys.size > 0) toMapFunction(q) else (if (watch && resultMapNames.contains(q.name)) q.name + ".value" else q.name))).mkString(",") +
+      queries.map(q =>
+        (if (q.keys.size > 0) toMapFunction(q) else (if (watch && resultMapNames.contains(q.name)) q.name + ".value" else q.name))).mkString(", ") +
       ")"
     snap
   }
 
-  override protected def genClass(s0: System, body: String, pp: String, ld: String, gc: String, snap: String, str: String) = {
+  override protected def emitActorClass(s0: System, body: String, pp: String, ld: String, gc: String, snap: String, str: String) = {
     if (watch) {
       "class " + cls + "Impl extends IQuery {\n" +
         ind(
@@ -639,7 +638,7 @@ class LMSScalaGen(cls: String = "Query", watch: Boolean = false) extends LMSGen(
             "\n}\n") +
         "\n}\n"
     } else {
-      super.genClass(s0, body, pp, ld, gc, snap, str)
+      super.emitActorClass(s0, body, pp, ld, gc, snap, str)
     }
   }
 }

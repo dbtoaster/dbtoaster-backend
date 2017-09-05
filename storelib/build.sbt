@@ -1,11 +1,8 @@
-// --------- Project informations
 Seq(
-  name := "sstore",
-  organization := "ch.epfl.data",
-  version := "2.1"
-)
+  // --------- Project informations
+  name := "dbtoaster-sstore",
 
-Seq(
+  // --------- Paths  
   scalaSource in Compile <<= baseDirectory / "src",
   javaSource in Compile <<= baseDirectory / "src",
   sourceDirectory in Compile <<= baseDirectory / "src"
@@ -16,13 +13,4 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor"     % "2.5.4",
   "com.typesafe.akka" %% "akka-remote"    % "2.5.4",
   "org.scala-lang"     % "scala-compiler" % scalaVersion.value
-  // "com.typesafe.akka" %% "akka-actor"     % "2.2.3",   // release only
-  // "com.typesafe.akka" %% "akka-remote"    % "2.2.3",   // release only  
-)
-
-// --------- Compilation options
-Seq(
-  scalaVersion := "2.11.11",
-  scalacOptions ++= Seq("-deprecation", "-unchecked", "-feature", "-optimise", "-target:jvm-1.6" /* , "-Yinline-warnings" */),
-  javacOptions ++= Seq("-Xlint:unchecked", "-Xlint:-options", "-source", "1.6", "-target","1.6")
 )

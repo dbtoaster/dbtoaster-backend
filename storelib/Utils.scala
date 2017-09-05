@@ -76,14 +76,14 @@ object Utils {
     jClasspaths.filter(_.matches(".*(org.scala-lang/scala-library).*")) ++
     jClasspaths.filter(_.matches(".*(storelib/target).*"))
   
-  private lazy val jSparkBootclasspaths = 
-    jClasspaths.filter(_.matches(".*(spark-).*")) ++
-    jClasspaths.filter(_.matches(".*(akka-actor|akka-remote|typesafe).*")) ++
-    jClasspaths.filter(_.matches(".*scala-(library|compiler|reflect).*"))
+  private lazy val jSparkBootclasspaths = List[String]()
 
   private lazy val jSparkClasspaths = 
-    jClasspaths.filter(_.matches(".*(storelib/target|spark/target|org.apache.spark).*")) ++
-    jClasspaths.filterNot(jSparkBootclasspaths.toSet)    
+    jClasspaths.filter(_.matches(".*(org.apache.spark/spark-core).*")) ++
+    jClasspaths.filter(_.matches(".*(org.apache.hadoop/hadoop-common|org.apache.hadoop/hadoop-annotations).*")) ++
+    jClasspaths.filter(_.matches(".*(log4j/log4j|).*")) ++
+    jClasspaths.filter(_.matches(".*(storelib/target).*")) ++
+    jClasspaths.filter(_.matches(".*(spark/target).*"))
 
   // Scala compiler wrapper
   def scalaCompiler(dir: File, classpath: String = null, external: Boolean = false): List[String] => Unit = {
@@ -192,7 +192,7 @@ object Utils {
 
   def sparkSubmit(className: String, args: Array[String]) = {
     val prop = new java.util.Properties
-    prop.load(new java.io.FileInputStream("spark/conf/spark.config"))
+    prop.load(new java.io.FileInputStream("ddbtoaster/spark/conf/spark.config"))
 
     val homeDir = prop.getProperty("spark.home.dir")
     val masterURL = prop.getProperty("spark.master.url")
@@ -227,13 +227,16 @@ object Utils {
     val env = ("JAVA_HOME=" + pathJDK :: 
       scala.collection.JavaConversions.mapAsScalaMap(System.getenv)
         .filter(_._1.toUpperCase != "JAVA_HOME")
-        .map(x => x._1 + "=" + x._2).toList).toArray      
+        .map(x => x._1 + "=" + x._2).toList).toArray
+
+    val runtimeJars = javaRuntimeClasspaths.filter(_.endsWith(".jar")).mkString(",")
 
     exec(
       ( s"$submit $sMaster $sDeploy $sDriverMemory $sNumExecutors " + 
-        s"$sExecMemory $sExecCores --files spark/conf/log4j.properties " +
+        s"$sExecMemory $sExecCores --files ddbtoaster/spark/conf/log4j.properties " +
         s"--conf spark.ui.showConsoleProgress=false " +
-        s"--class $className ./pkg/ddbt_gen.jar " + args.mkString(" ")
+        s"--jars $runtimeJars " +
+        s"--class $className ./ddbtoaster/pkg/ddbt_gen.jar " + args.mkString(" ")
       ).split(" +"),
       env = env, fatal = true, prefix = "")
   }
@@ -264,7 +267,7 @@ object Utils {
 
   def exec(cmd: Array[String], dir: File = null, env: Array[String] = null, 
       fatal: Boolean = true, prefix: String = null): (String, String) = {
-    // System.err.println(cmd.mkString(" "))
+    System.err.println(cmd.mkString(" "))
     val p = Runtime.getRuntime.exec(cmd, env, dir)
     val out = gobble(p.getInputStream, scala.Console.out, prefix)
     val err = gobble(p.getErrorStream, scala.Console.err, prefix)
@@ -397,7 +400,7 @@ object Utils {
 
   // Create a temporary directory that will be removed at shutdown
   def makeTempDir(path: String = null, auto_delete: Boolean = false): File = {
-    val tmp = if (path != null) new File(path) else new File("target/tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
+    val tmp = if (path != null) new File(path) else new File("ddbtoaster/target/tmp") //File.createTempFile("ddbt",null) deletes folder too early on OracleJVM7/MacOS
     def del(f: File) {
       if (f.isDirectory()) f.listFiles().foreach(del)
       if (!f.delete()) sys.error("Failed to delete file: " + f)

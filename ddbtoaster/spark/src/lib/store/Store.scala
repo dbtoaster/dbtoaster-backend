@@ -175,7 +175,14 @@ class Store[E<:MapEntry](val indices: Vector[Index[E]])(implicit cE:ClassTag[E])
 
   private val numIndices = indices.length
   
-  def unsafeInsert(idx:Int,e:E):Unit = time("unsafeInsert") { if (e==null) return; indices(idx).unsafeInsert(e); var i=0; while(i < numIndices) { if (idx!=i && indices(i)!=null) indices(i).insert(e); i+=1; } }
+  def unsafeInsert(e: E):Unit = time("unsafeInsert") { 
+    if (e==null) return
+    var i = 0
+    while (i < idxs.length) {
+      if (idxs(i) != null) idxs(i).unsafeInsert(e)
+      i += 1
+    }
+  }
   def insert(e:E):Unit = time("insert") { if (e==null) return; var i=0; while(i < numIndices) { if (indices(i)!=null) indices(i).insert(e); i+=1; } }
   def update(e:E):Unit = time("update") { if (e==null) return; var i=0; while(i < numIndices) { if (indices(i)!=null) indices(i).update(e); i+=1; } } // e already in the Store, update in foreach is _NOT_ supported
   def delete(e:E):Unit = time("delete") { if (e==null) return; var i=0; while(i < numIndices) { if (indices(i)!=null) indices(i).delete(e); i+=1; } } // e already in the Store

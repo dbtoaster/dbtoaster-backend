@@ -675,7 +675,7 @@ trait IScalaGen extends CodeGen {
 
   override def toMapFunction(q: Query) = {
     val map = q.name
-    val m = maps(map)
+    val m = mapDefs(map)
     val mapKeys = m.keys.map(_._2)
     val nodeName = map + "_node"
     val res = nodeName + "_mres"
@@ -691,22 +691,24 @@ trait IScalaGen extends CodeGen {
       q.name
   }
 
-  override def clearOut = {}
+  override def clearOut() = {}
   
   override def onEndStream = ""
 
-  var maps = Map[String, MapDef]() // declared global maps
+  var mapDefs = Map[String, MapDef]() // declared global maps
   
   def apply(s0: System): String = {
 
-    maps = s0.maps.map(m => (m.name, m)).toMap
-    //val (lms,strLMS,ld0LMS,gcLMS) = genLMS(s0)
+    mapDefs = s0.maps.map(m => (m.name, m)).toMap
+    
     val (tsSC, msSC, tempEntrySC) = genPardis(s0)
-    //    val (lms,strLMS,ld0LMS,gcLMS) = genPardis(s0)
+    val (lms, strLMS, ld0LMS, gcLMS) = genLMS(s0)
 
     val body = if (tsSC != null) {
       msSC + "\n\n" + tempEntrySC + "\n" + tsSC
-    } else {
+    } 
+    else if (lms != null) lms
+    else {
       // triggers (need to be generated before maps)
       val ts = s0.triggers.map(genTrigger(_, s0)).mkString("\n\n") 
       val ms = s0.triggers.map(_.evt match { //delta relations
@@ -727,24 +729,25 @@ trait IScalaGen extends CodeGen {
       }.mkString + s0.maps.map(m => genMap(m)).mkString("\n") // maps
       ms + "\n" + genQueries(s0.queries) + "\n" + ts
     }
-    // val (str,ld0,gc) = if(lms!=null) (strLMS,ld0LMS,gcLMS) else genInternals(s0)
-    val (str,ld0,gc) =  genInternals(s0)
+    val (str, ld0, gc) = if (lms != null) (strLMS, ld0LMS, gcLMS)
+                         else genInternals(s0)
     val ld =
       // optional preloading of static tables content
       if (ld0 != "") "\n\ndef loadTables() {\n" + ind(ld0) + "\n}" else "" 
     freshClear()
-    val snap: String = genSnap(s0)
+    val snap: String = emitGetSnapshotBody(s0.queries)
     val pp = ""
       // if (printProgress > 0L) 
       //   "def printProgress(): Unit = if (tN % " + printProgress + 
       //   " == 0) Console.println((System.nanoTime - t0) + \"\\t\" + tN);\n" 
       // else ""
-    clearOut
-    helper(s0) + genClass(s0, body, pp, ld, gc, snap, str)
+    clearOut()
+    emitMainClass(s0.queries, s0.sources) + 
+    emitActorClass(s0, body, pp, ld, gc, snap, str)
   }
 
-  protected def genSnap(s0: System): String =
-    "List(" + s0.queries.map(toMapFunction).mkString(",") + ")"
+  protected def emitGetSnapshotBody(queries: List[Query]) = 
+    "List(" + queries.map(toMapFunction).mkString(", ") + ")"
 
   protected def genStream(s: Source): (String, String, String) = {
     val in = s.in match { 
@@ -816,17 +819,17 @@ trait IScalaGen extends CodeGen {
   def getEntryDefinitions: String = tuples.values.mkString("\n")
 
   // Helper that contains the main and stream generator
-  private def helper(s0: System) = {
-    val sResults = s0.queries.zipWithIndex.map { case (q, i) => 
+  private def emitMainClass(queries: List[Query], sources: List[Source]) = {
+    val sResults = queries.zipWithIndex.map { case (q, i) => 
         val skeys = q.keys.map(k => "\"" + k._1 + "\"").mkString(", ")
         "println(\"<" + q.name + ">\\n\" + M3Map.toStr(res(" + i + ")" +
         stringIf(q.keys.nonEmpty, ", List(" + skeys + ")") + ")+\"\\n\" + \"</" + q.name + ">\\n\")"
       }.mkString("\n")
-    val sStreams = streams(s0.sources)
+    val sStreams = streams(sources)
     s"""|import ddbt.lib._
         |import ddbt.lib.store._
-        |${additionalImports}
         |import akka.actor.Actor
+        |${additionalImports}
         |
         |object ${cls} {
         |  import Helper._
@@ -854,7 +857,7 @@ trait IScalaGen extends CodeGen {
         |""".stripMargin
   }
 
-  protected def genClass(s0: System, body: String, pp: String, ld: String, gc: String, snap: String, str: String) = {
+  protected def emitActorClass(s0: System, body: String, pp: String, ld: String, gc: String, snap: String, str: String) = {
 
     s"""|class ${cls}Base {
         |  import ${cls}._

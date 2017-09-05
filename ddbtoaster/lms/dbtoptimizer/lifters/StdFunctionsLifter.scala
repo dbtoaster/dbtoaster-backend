@@ -1,4 +1,4 @@
-package dbtoptimizer.lifters
+package ddbt.lms.dbtoptimizer.lifters
 
 import scala.virtualization.lms.common._
 import scala.reflect.SourceContext

@@ -1,10 +1,10 @@
-package dbtoptimizer
+package ddbt.lms.dbtoptimizer
 
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
-import dbtoptimizer._
-import dbtoptimizer.lifters._
-import oltp.opt.lifters._
+import ddbt.lms.dbtoptimizer._
+import ddbt.lms.dbtoptimizer.lifters._
+import ddbt.lms.oltp.opt.lifters._
 import ddbt.lib.store._
 import scala.reflect.SourceContext
 

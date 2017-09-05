@@ -1,10 +1,10 @@
-package tpcc.lms
+package ddbt.lms.tpcc
 
 import java.util.Date
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._
-import dbtoptimizer._
-import oltp.opt.lifters._
+import ddbt.lms.dbtoptimizer._
+import ddbt.lms.oltp.opt.lifters._
 import ddbt.lib.store._
 import scala.language.implicitConversions
 

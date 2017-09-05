@@ -1,8 +1,5 @@
 package ddbt.codegen
 
-import ddbt.codegen.lms._
-import ddbt.ast._
-import ddbt.lib._
 import ddbt.lib.spark.GlobalMapContext
 
 /**
@@ -13,8 +10,9 @@ import ddbt.lib.spark.GlobalMapContext
 class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpGen) {  
   
   import ddbt.ast.M3._
+  import ddbt.ast._
   import ddbt.lib.Utils.{ ind, block, tup, fresh, freshClear } // common functions
-  import ManifestHelper.{ man, zero, manEntry, manStore }
+  import ddbt.lib.ManifestHelper.{ man, zero, manEntry, manStore }
   import ddbt.lib.store._
   import impl.Rep
 
@@ -1305,7 +1303,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
     }
   }
 
-  protected def emitGetSnapshotBody(queries: List[Query]): String = {
+  override protected def emitGetSnapshotBody(queries: List[Query]): String = {
     val sCreateHashMap = queries.map(q => 
       if (q.keys.size > 0) toMapFunction(q) else q.name
     ).mkString(", ")

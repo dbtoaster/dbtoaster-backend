@@ -1,4 +1,4 @@
-package oltp.tpcc
+package ddbt.lms.oltp.opt.lifters
 
 object SEntryGen {
   def main(args: Array[String]): Unit = {
