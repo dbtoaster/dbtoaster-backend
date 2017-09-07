@@ -12,7 +12,7 @@ opt="-opt refcounter -opt regex -opt entry -opt index -opt spl -opt minmax -opt 
 for  numWare in 15 20 25 30 40 50 70 90 100
 do
     #most optimal case dry run
-    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang cpp -info tpcc-$numWare-$n"
+    sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang cpp -info tpcc-$numWare-$n"
     rm -f tpcc.out
     g++ -std=c++11 -O3 -DNUMWARE=$numWare -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
 
@@ -22,7 +22,7 @@ do
     done
 
     #actual run
-    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC -ware $numWare  $opt  -opt profileblocks $initsize -lang cpp -info tpcc-$numWare-$n"
+    sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC -ware $numWare  $opt  -opt profileblocks $initsize -lang cpp -info tpcc-$numWare-$n"
     rm -f tpcc.out
     g++ -std=c++11 -O3 -DNUMWARE=$numWare -DNORESIZE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
 
@@ -36,7 +36,7 @@ do
 
 #    scalatime=$((14 * n/1000000))
 #    #Scala
-#    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang scala -info tpcc-$numWare-$n" 2>&1 | tee -a out_color.txt
+#    sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $initsize -lang scala -info tpcc-$numWare-$n" 2>&1 | tee -a out_color.txt
 #    sbt "Runtime/runMain  ddbt.tpcc.tx.TpccInMem -t $scalatime"  2>&1 | tee -a out_color.txt
 #    sed -r "s/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g" out_color.txt > out_dump.txt
 #    rm out_color.txt

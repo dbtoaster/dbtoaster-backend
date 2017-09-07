@@ -17,7 +17,7 @@ mkdir -p $exec/$lang/stdout
 mkdir -p $exec/$lang/gen
 
 #initsize
-sbt "DDBToaster/runMain  ddbt.UnitTest -x -p 2 -w 0 -s 1 -t 60000  -csv r0.csv -dump r0.txt  -l cpp -d $dataset $opt -opt initsize -q $queries"
+sbt "DBToaster/runMain  ddbt.UnitTest -x -p 2 -w 0 -s 1 -t 60000  -csv r0.csv -dump r0.txt  -l cpp -d $dataset $opt -opt initsize -q $queries"
 mv ddbtoaster/target/tmp/*.hpp $exec/$lang/gen/
 mv ddbtoaster/target/tmp/*.txt $exec/$lang/stdout/
 
@@ -26,7 +26,7 @@ do
     mkdir -p $exec/$lang/stdout
     mkdir -p $exec/$lang/gen
 
-    sbt "DDBToaster/runMain  ddbt.UnitTest -x -xsc -xvm -p 2 -w 2 -s $numExec -t 60000  -csv $lang.csv -dump $lang.txt  -l $lang  -d $dataset  -q  $queries $opt"
+    sbt "DBToaster/runMain  ddbt.UnitTest -x -xsc -xvm -p 2 -w 2 -s $numExec -t 60000  -csv $lang.csv -dump $lang.txt  -l $lang  -d $dataset  -q  $queries $opt"
     mv ddbtoaster/target/tmp/*.hpp $exec/$lang/gen/
     mv ddbtoaster/target/tmp/*.scala $exec/$lang/gen/
     mv ddbtoaster/target/tmp/*.txt $exec/$lang/stdout/

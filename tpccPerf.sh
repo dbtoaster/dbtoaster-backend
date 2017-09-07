@@ -64,7 +64,7 @@ do
         rm -f profile.csv
 
         ##CPP
-        sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $profTx -lang cpp -ware $numWare"
+        sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $profTx -lang cpp -ware $numWare"
         #noinitsize only jemalloc
         rm -f tpcc.out
         g++ -std=c++11   -DNUMWARE=$numWare -O3 -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
@@ -77,7 +77,7 @@ do
         mv runtime/tpcc/pardisgen/TpccGenSC.cpp $exec/tpcc$cnt/TpccBlock.cpp
 
 
-        sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt -opt profilestore -lang cpp -ware $numWare"
+        sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt -opt profilestore -lang cpp -ware $numWare"
         #noinitsize only jemalloc
         rm -f tpcc.out
         g++ -std=c++11 -DNUMWARE=$numWare -O3 -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
@@ -99,7 +99,7 @@ do
     n=8000000
     #most optimal case dry run
 
-    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang cpp -info tpcc-$numWare-$n"
+    sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang cpp -info tpcc-$numWare-$n"
     rm -f tpcc.out
     g++ -std=c++11 -O3 -g -DNUMWARE=$numWare -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
 
@@ -109,7 +109,7 @@ do
     done
 
     #actual run
-    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profileblocks $initsize -lang cpp -info tpcc-$numWare-$n"
+    sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profileblocks $initsize -lang cpp -info tpcc-$numWare-$n"
     rm -f tpcc.out
     g++ -std=c++11 -O3 -g -DNUMWARE=$numWare -DNORESIZE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
 
@@ -122,7 +122,7 @@ do
     mv runtime/tpcc/pardisgen/TpccGenSC.cpp $exec/tpcc$cnt/TpccBlock.cpp
 
 
-    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profilestore $initsize -lang cpp -info tpcc-$numWare-$n"
+    sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profilestore $initsize -lang cpp -info tpcc-$numWare-$n"
     rm -f tpcc.out
     g++ -std=c++11 -O3 -DNUMWARE=$numWare -DNORESIZE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -o tpcc.out
 

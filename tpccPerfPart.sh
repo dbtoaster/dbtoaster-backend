@@ -64,7 +64,7 @@ do
         rm -f profile.csv
 
         ##CPP
-        sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $profTx -lang pcpp -ware $numWare"
+        sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $profTx -lang pcpp -ware $numWare"
         #noinitsize only jemalloc
         rm -f tpcc.out
         g++ -std=c++11  -DNUMTHREADS=$numThreads -DNDEBUG -DNUMWARE=$numWare -O3 -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
@@ -86,7 +86,7 @@ do
     n=800000
     # #most optimal case dry run
 
-    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
+    sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
     rm -f tpcc.out
     g++ -std=c++11 -O3 -g -DNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
 
@@ -96,7 +96,7 @@ do
     done
 
     #actual run
-    sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profileblocks $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
+    sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profileblocks $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
     rm -f tpcc.out
     g++ -std=c++11 -O3 -g -DNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNORESIZE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
 
@@ -110,7 +110,7 @@ do
     mv tpcc_res_cpp.csv $exec/tpccPartOpts.csv
     for numThreads in {1..5}
     do
-        sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
+        sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
         rm -f tpcc.out
         g++ -std=c++11 -O3 -g -DNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
 
@@ -120,7 +120,7 @@ do
         done
 
         #actual run
-        sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profileblocks $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
+        sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  -ware $numWare $opt -opt profileblocks $initsize -lang pcpp -info tpcc-$numWare-$n-p$numThreads"
         rm -f tpcc.out
         g++ -std=c++11 -O3 -g -DNUMTHREADS=$numThreads -DNUMWARE=$numWare -DNORESIZE=1 -DNDEBUG -DNUMPROG=$n -DPROJECT_ROOT=\"/home/sachin/TStore/\" runtime/tpcc/pardisgen/TpccGenSC.cpp -I ddbtoaster/srccpp/lib/ -I ddbtoaster/srccpp/lib/mmap/  -L ddbtoaster/srccpp/lib/ -ljemalloc -ldbtoaster -pthread -o tpcc.out
 

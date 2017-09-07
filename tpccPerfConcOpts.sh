@@ -42,7 +42,7 @@ do
         rm -f profile.csv
 
         ##CPP
-        sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $profTx -lang cpp -ware $numWare"
+        sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $profTx -lang cpp -ware $numWare"
 
         #noinitsize only jemalloc
         rm -f tpcc.out

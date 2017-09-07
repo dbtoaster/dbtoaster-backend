@@ -33,7 +33,7 @@ do
     echo "running opt combo $cnt"
     mkdir -p $exec/tpcc$cnt
         rm -f profile.csv
-        sbt "DDBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $profTx -lang cpp -ware $numWare"
+        sbt "DBToaster/runMain sc.tpcc.TpccXactGenerator_SC  $opt $profTx -lang cpp -ware $numWare"
         for numThread in {1..5}
         do
             echo "Running thread $numThread"
