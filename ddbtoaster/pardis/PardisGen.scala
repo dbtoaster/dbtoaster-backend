@@ -83,7 +83,7 @@ if(Optimizer.initialStoreSize) {
   def mapProxy2(m: Rep[_]) = new IR.StoreRep1(m.asInstanceOf[Rep[Store[Entry]]])
 
 
-  def containsForeachOrSlice(ex: Expr): Boolean = ex match {
+  def containsForeachOrSliceOrLift(ex: Expr): Boolean = ex match {
     case MapRef(_, _, ks) => {
       ks.size > 0 && {
         val (ko, ki) = ks.zipWithIndex.partition { case (k, i) => cx.contains(k._1) }
@@ -92,7 +92,13 @@ if(Optimizer.initialStoreSize) {
     }
     case a@Add(l, r) if a.schema._2.exists { case (n, t) => !cx.contains(n) } => true
     case a@AggSum(ks, e) if ks.exists { case (n, t) => !cx.contains(n) } => true
-    case s: Product => s.productIterator.collect { case e: Expr => containsForeachOrSlice(e) }.foldLeft(false)(_ || _)
+    case s: Product => s.productIterator.collect { case e: Expr => containsForeachOrSliceOrLift(e) }.foldLeft(false)(_ || _)
+    case Lift(n, e) =>
+      if (cx.contains(n)) false
+      else e match {
+        case Ref(n2) => false
+        case _ => true
+      }
   }
 
   val nameToSymMap = collection.mutable.HashMap[String, Rep[_]]() //maps the name used in IScalaGen/ICppGen to SC Symbols
@@ -147,7 +153,7 @@ if(Optimizer.initialStoreSize) {
         })
       }
     //        case Mul(Cmp(l1, r1, o1), Cmp(l2, r2, o2)) => expr(l1, (vl1: Rep[_]) => expr(r1, (vr1: Rep[_]) => expr(l2, (vl2: Rep[_]) => expr(r2, (vr2: Rep[_]) => co(IR.BooleanExtra.conditional(condition(vl1, o1, vr1, ex.tp) && condition(vl2, o2, vr2, ex.tp), unit(1L), unit(0L))))))) //TODO: SBJ: am??
-    case Mul(Cmp(l, r, op), rr) if Optimizer.m3CompareMultiply && !containsForeachOrSlice(rr) =>
+    case Mul(Cmp(l, r, op), rr) if Optimizer.m3CompareMultiply && !containsForeachOrSliceOrLift(rr) =>
       val tp = man(rr.tp).asInstanceOf[TypeRep[Any]]
       expr(l, (vl: Rep[_]) => expr(r, (vr: Rep[_]) => co(IR.__ifThenElse(condition(vl, op, vr, ex.tp), {
         var tmpVrr: Rep[_] = null;
