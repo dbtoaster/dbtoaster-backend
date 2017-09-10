@@ -912,10 +912,14 @@ public:
         FORCE_INLINE void fixEquivPtr() {
             IdxN* n = &head;
             if (n->nxt) n->nxt->prv = n;
+            #ifndef NDEBUG
             IdxN* p = nullptr;
+            #endif
             do {
+                #ifndef NDEBUG
                 assert(n->prv == p);
                 p = n;
+                #endif
                 n->equiv = this;
             } while ((n = n->nxt));
         }
