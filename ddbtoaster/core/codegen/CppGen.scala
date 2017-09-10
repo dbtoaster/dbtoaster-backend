@@ -15,7 +15,7 @@ trait ICppGen extends IScalaGen {
   import ddbt.ast.M3._
   import ddbt.lib.Utils.{ ind, fresh, freshClear, stringIf } // common functions
 
-  def isReleaseMode: Boolean = true
+  def isReleaseMode: Boolean = false
 
   def printTiminingInfo: Boolean = false
 
