@@ -234,16 +234,16 @@ object M3Parser extends ExtParser with (String => M3.System) {
       ("{" ~> rep(stmt) <~ "}") ^^ { 
         case op ~ n ~ f ~ ss => 
           val s = Schema(n, f.map{ (_,null) })
-          Trigger(if (op == "+") EvtAdd(s) else EvtDel(s), ss) 
+          Trigger(if (op == "+") EventInsert(s) else EventDelete(s), ss) 
       }
     | "ON" ~> "BATCH" ~> "UPDATE" ~> "OF" ~> ident ~ 
       ("{" ~> rep(stmt) <~ "}") ^^ { 
         case n ~ ss => 
           val s = Schema(n, Nil)
-          Trigger(EvtBatchUpdate(s), ss) 
+          Trigger(EventBatchUpdate(s), ss) 
       }      
     | "ON" ~> "SYSTEM" ~> "READY" ~> "{" ~> rep(stmt) <~ "}" ^^ { 
-        Trigger(EvtReady, _) 
+        Trigger(EventReady, _) 
       } 
     | failure("Bad M3 trigger")
     )

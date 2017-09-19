@@ -78,16 +78,16 @@ object Partitioning extends (M3.System => (Partitioning,String)) {
   def apply(s0:System):(Partitioning,String) = {
     sys0=s0; parts=Nil
     tableNames = s0.sources.filter(!_.stream).map(_.schema.name).toSet
-    deltaNames = s0.triggers.flatMap(_.evt match {
-      case EvtBatchUpdate(s) => List(s.deltaName) case _ => Nil
+    deltaNames = s0.triggers.flatMap(_.event match {
+      case EventBatchUpdate(s) => List(s.deltaName) case _ => Nil
     }).toSet
     mapDefs = s0.maps.map { case m: MapDef => (m.name, m.keys.map(_._1))}.toMap
     s0.triggers.foreach { t => cm0=Nil
-      ctx0 = (t.evt match { 
-        case EvtReady => Nil 
-        case EvtAdd(s) => s.fields 
-        case EvtDel(s) => s.fields 
-        case EvtBatchUpdate(s) => s.fields }).map(_._1)
+      ctx0 = (t.event match { 
+        case EventReady => Nil 
+        case EventInsert(s) => s.fields 
+        case EventDelete(s) => s.fields 
+        case EventBatchUpdate(s) => s.fields }).map(_._1)
       t.stmts.foreach { case StmtMap(m,e,_,oi) =>
         cm0.foreach(x=>join(m,x))
         if (!(ctx0.toSet & m.keys.map(_._1).toSet).isEmpty) cm0=m::cm0

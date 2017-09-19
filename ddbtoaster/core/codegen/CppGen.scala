@@ -480,17 +480,17 @@ trait ICppGen extends IScalaGen {
   }
 
   override def genTrigger(t: Trigger, s0: System): String = {
-    val fields = t.evt match {
-      case EvtBatchUpdate(_) | EvtAdd(_) | EvtDel(_) => t.evt.schema.fields
-      case EvtReady => Nil
+    val fields = t.event match {
+      case EventBatchUpdate(_) | EventInsert(_) | EventDelete(_) => t.event.schema.fields
+      case EventReady => Nil
     }
 
     ctx = Ctx(fields.map(x => (x._1, (x._2, x._1))).toMap)
     val sTriggerBody = t.stmts.map(genStmt).mkString
     ctx = null
 
-    t.evt match {
-      case EvtBatchUpdate(s) =>
+    t.event match {
+      case EventBatchUpdate(s) =>
         if (EXPERIMENTAL_RUNTIME_LIBRARY) {
           s"""|void on_batch_update_${s.name}(const std::vector<${s.name}_entry>::iterator &begin, const std::vector<${s.name}_entry>::iterator &end) {
               |  tN += std::distance(begin, end);
@@ -499,14 +499,14 @@ trait ICppGen extends IScalaGen {
               |""".stripMargin
         }
         else {
-          val schema = t.evt.schema
+          val schema = t.event.schema
           s"""|void on_batch_update_${schema.name}(${schema.deltaName}_map &${schema.deltaName}) {
               |  tN += ${schema.deltaName}.count() - 1; ++tN;
               |${ind(sTriggerBody)}
               |}
               |""".stripMargin
         }
-      case EvtAdd(s) =>
+      case EventInsert(s) =>
         val params = fields.map(f => s"const ${f._2.toCppRefType} ${f._1}").mkString(", ")
         val schema = s0.sources.filter(_.schema.name == s.name).head.schema
         val args = schema.fields.map(f => s"e.${f._1}").mkString(", ")
@@ -521,7 +521,7 @@ trait ICppGen extends IScalaGen {
                 |}
                 |""".stripMargin)
 
-      case EvtDel(s) =>
+      case EventDelete(s) =>
         val params = fields.map(a => s"const ${a._2.toCppRefType} ${a._1}").mkString(", ")
         val schema = s0.sources.filter(_.schema.name == s.name).head.schema
         val args = schema.fields.map(f => s"e.${f._1}").mkString(", ")
@@ -536,7 +536,7 @@ trait ICppGen extends IScalaGen {
                 |}
                 |""".stripMargin)
 
-      case EvtReady =>
+      case EventReady =>
         s"""|void on_system_ready_event() {
             |${ind(sTriggerBody)}
             |}
@@ -626,21 +626,21 @@ trait ICppGen extends IScalaGen {
 
     def register_table_triggers = s0.sources.filter(!_.stream).map { s => 
         stringIf(
-          s0.triggers.exists { _.evt match {
-              case EvtBatchUpdate(_) => true
+          s0.triggers.exists { _.event match {
+              case EventBatchUpdate(_) => true
               case _ => false
           }}, "pb.add_trigger(\"" + s.schema.name + "\", batch_update, std::bind(&data_t::unwrap_batch_update_" + s.schema.name + ", this, std::placeholders::_1));\n" 
         ) + 
         "pb.add_trigger(\"" + s.schema.name + "\", insert_tuple, std::bind(&data_t::unwrap_insert_" + s.schema.name + ", this, std::placeholders::_1));\n"      
       }.mkString
 
-    def register_stream_triggers = s0.triggers.filter(_.evt != EvtReady).map { _.evt match {
-        case EvtBatchUpdate(Schema(n,_)) =>
+    def register_stream_triggers = s0.triggers.filter(_.event != EventReady).map { _.event match {
+        case EventBatchUpdate(Schema(n,_)) =>
           "pb.add_trigger(\"" + n + "\", batch_update, std::bind(&data_t::unwrap_batch_update_" + n + ", this, std::placeholders::_1));\n" +
           "pb.add_trigger(\"" + n + "\", insert_tuple, std::bind(&data_t::unwrap_insert_" + n + ", this, std::placeholders::_1));\n" +
           "pb.add_trigger(\"" + n + "\", delete_tuple, std::bind(&data_t::unwrap_delete_" + n + ", this, std::placeholders::_1));\n"
-        case EvtAdd(Schema(n,_)) => "pb.add_trigger(\"" + n + "\", insert_tuple, std::bind(&data_t::unwrap_insert_" + n + ", this, std::placeholders::_1));\n"
-        case EvtDel(Schema(n,_)) => "pb.add_trigger(\"" + n + "\", delete_tuple, std::bind(&data_t::unwrap_delete_" + n + ", this, std::placeholders::_1));\n"
+        case EventInsert(Schema(n,_)) => "pb.add_trigger(\"" + n + "\", insert_tuple, std::bind(&data_t::unwrap_insert_" + n + ", this, std::placeholders::_1));\n"
+        case EventDelete(Schema(n,_)) => "pb.add_trigger(\"" + n + "\", delete_tuple, std::bind(&data_t::unwrap_delete_" + n + ", this, std::placeholders::_1));\n"
         case _ => ""
       }
     }.mkString
@@ -680,10 +680,10 @@ trait ICppGen extends IScalaGen {
             (if (usingPardis) "  " + INSERT_TO_MAP_FUNC(name) + "(e);\n"
              else "  " + ADD_TO_MAP_FUNC(name) + "(e, 1L);\n") +
             "}\n\n" +
-            generateUnwrapFunction(EvtAdd(s.schema)) +
+            generateUnwrapFunction(EventInsert(s.schema)) +
             stringIf(
-              s0.triggers.exists { _.evt match {
-                  case EvtBatchUpdate(_) => true
+              s0.triggers.exists { _.event match {
+                  case EventBatchUpdate(_) => true
                   case _ => false
               }},
               "void unwrap_batch_update_" + name + "(const event_args_t& eaList) {\n"+
@@ -701,7 +701,7 @@ trait ICppGen extends IScalaGen {
 
     def genStreamTriggers = s0.triggers.map(t =>
         genTrigger(t, s0) + "\n" + 
-        stringIf(t.evt != EvtReady, generateUnwrapFunction(t.evt))
+        stringIf(t.event != EventReady, generateUnwrapFunction(t.event))
       ).mkString
 
     def genMapStructDef(m: MapDef) = {
@@ -846,8 +846,8 @@ trait ICppGen extends IScalaGen {
     s0.maps.foreach { m =>
       mapDefsList += (m.name -> m)
     }
-    s0.triggers.foreach(_.evt match { //delta relations
-      case EvtBatchUpdate(s) =>
+    s0.triggers.foreach(_.event match { //delta relations
+      case EventBatchUpdate(s) =>
         val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
         val deltaRel = schema.deltaName
         mapDefsList += (deltaRel -> MapDef(deltaRel, TypeLong, schema.fields, null, LocalExp))
@@ -862,8 +862,8 @@ trait ICppGen extends IScalaGen {
     mapDefs = mapDefsList.toMap
     val (tsSC, msSC, tmpEntrySC) = genPardis(s0)
 
-    deltaRelationNames = s0.triggers.flatMap(_.evt match { //delta relations
-      case EvtBatchUpdate(s) =>
+    deltaRelationNames = s0.triggers.flatMap(_.event match { //delta relations
+      case EventBatchUpdate(s) =>
         val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
         List(schema.deltaName)
       case _ => Nil
@@ -893,22 +893,22 @@ trait ICppGen extends IScalaGen {
                 .map(q => genMapStructDef(MapDef(q.name, q.tp, q.keys, q.map, LocalExp))).mkString("\n") +
       // delta relations
       ( if (EXPERIMENTAL_RUNTIME_LIBRARY) {
-          s0.triggers.map(_.evt match {
-            case EvtBatchUpdate(s) =>
+          s0.triggers.map(_.event match {
+            case EventBatchUpdate(s) =>
               val schema = s0.sources.filter(_.schema.name == s.name).head.schema
               genMapStructDef(MapDef(schema.name, TypeLong, schema.fields, null, LocalExp)) + 
               s"""|typedef ${schema.name}_entry ${schema.deltaName}_entry;
                   |typedef ${schema.name}_map ${schema.deltaName}_map;
                   |""".stripMargin
-            case EvtAdd(s) =>
+            case EventInsert(s) =>
               val schema = s0.sources.filter(_.schema.name == s.name).head.schema
               genMapStructDef(MapDef(schema.name, TypeLong, schema.fields, null, LocalExp))
             case _ => ""
           }).mkString
         }
         else {
-          s0.triggers.map(_.evt match {
-            case EvtBatchUpdate(s) =>
+          s0.triggers.map(_.event match {
+            case EventBatchUpdate(s) =>
               val schema = s0.sources.filter(_.schema.name == s.name).head.schema
               genMapStructDef(MapDef(schema.deltaName, TypeLong, schema.fields, null, LocalExp))
             case _ => ""
@@ -998,15 +998,15 @@ trait ICppGen extends IScalaGen {
     //end of the common part between all CPP code generators (part 2)
   }
 
-  def generateUnwrapFunction(evt:EvtTrigger)(implicit s0:System) = stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY, {
+  def generateUnwrapFunction(evt:EventTrigger)(implicit s0:System) = stringIf(!EXPERIMENTAL_RUNTIME_LIBRARY, {
     val (op,name,fields) = evt match {
-      case EvtBatchUpdate(Schema(n,cs)) => ("batch_update", n, cs)
-      case EvtAdd(Schema(n,cs)) => ("insert", n, cs)
-      case EvtDel(Schema(n,cs)) => ("delete", n, cs)
+      case EventBatchUpdate(Schema(n,cs)) => ("batch_update", n, cs)
+      case EventInsert(Schema(n,cs)) => ("insert", n, cs)
+      case EventDelete(Schema(n,cs)) => ("delete", n, cs)
       case _ => sys.error("Unsupported trigger event " + evt)
     }
     evt match {
-      case b@EvtBatchUpdate(_) =>
+      case b@EventBatchUpdate(_) =>
         var code =    "void unwrap_"+op+"_"+name+"(const event_args_t& eaList) {\n"
         code = code + "  size_t sz = eaList.size();\n"
 

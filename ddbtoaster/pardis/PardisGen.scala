@@ -389,8 +389,8 @@ if(Optimizer.initialStoreSize) {
       // Trigger context: global maps + trigger arguments
       cx = Ctx((
         ctx0.map { case (name, (sym, keys, tp)) => (name, sym) }.toList union {
-          t.evt match {
-            case EvtBatchUpdate(Schema(n, _)) =>
+          t.event match {
+            case EventBatchUpdate(Schema(n, _)) =>
               Nil
             case _ =>
               args.map { case (name, tp) => (name, IR.freshNamed(name)(typeToTypeRep(tp))) }
@@ -453,12 +453,12 @@ if(Optimizer.initialStoreSize) {
   override def genPardis(s0: M3.System): (String, String, String) = {
     ExpressionSymbol.globalId = 0
     m3System = s0
-    val classLevelMaps = s0.triggers.filter(_.evt match {
-      case EvtBatchUpdate(s) => true
+    val classLevelMaps = s0.triggers.filter(_.event match {
+      case EventBatchUpdate(s) => true
       case _ => false
-    }).map(_.evt match {
+    }).map(_.event match {
       //delta relations
-      case EvtBatchUpdate(sc) =>
+      case EventBatchUpdate(sc) =>
         val name = sc.name
         val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
         val deltaRel = sc.deltaName
@@ -582,11 +582,11 @@ class PardisScalaGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer
 
   override val codeGen = new StoreScalaCodeGenerator(IR)
 
-  override def getTriggerNameArgs(t: Trigger) = t.evt match {
-    case EvtReady => ("SystemReady", Nil)
-    case EvtBatchUpdate(Schema(n, cs)) => ("BatchUpdate" + n, cs)
-    case EvtAdd(Schema(n, cs)) => ("Add" + n, cs)
-    case EvtDel(Schema(n, cs)) => ("Del" + n, cs)
+  override def getTriggerNameArgs(t: Trigger) = t.event match {
+    case EventReady => ("SystemReady", Nil)
+    case EventBatchUpdate(Schema(n, cs)) => ("BatchUpdate" + n, cs)
+    case EventInsert(Schema(n, cs)) => ("Add" + n, cs)
+    case EventDelete(Schema(n, cs)) => ("Del" + n, cs)
   }
 
   override def genCodeForProgram[T](optTP: TransactionProgram[T]) = {
@@ -655,7 +655,7 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
       }
       ts += doc"void on${x._1}(${x._2.map(s => argTypeToDoc(s.tp) :: doc" $s").mkDocument(", ")}) {" :/: Document.nest(2, doc2) :/: doc"\n}\n"
     }
-    m3System.triggers.filter(_.evt != EvtReady).foreach(t => ts += (generateUnwrapFunction(t.evt)(m3System) + "\n"))
+    m3System.triggers.filter(_.event != EventReady).foreach(t => ts += (generateUnwrapFunction(t.event)(m3System) + "\n"))
 
     def getEntryIdxNames(ops: Seq[Expression[EntryIdx[Entry]]]) = ops.collect {
       case Def(EntryIdxApplyObject(_, _, Constant(name))) => name
@@ -783,20 +783,20 @@ class PardisCppGen(cls: String = "Query") extends PardisGen(cls, if (Optimizer.o
 
   }
 
-  override def getTriggerNameArgs(t: Trigger) = t.evt match {
-    case EvtReady => ("_system_ready_event", Nil)
-    case EvtBatchUpdate(Schema(n, cs)) => ("_batch_update_" + n, cs)
-    case EvtAdd(Schema(n, cs)) => ("_insert_" + n, cs)
-    case EvtDel(Schema(n, cs)) => ("_delete_" + n, cs)
+  override def getTriggerNameArgs(t: Trigger) = t.event match {
+    case EventReady => ("_system_ready_event", Nil)
+    case EventBatchUpdate(Schema(n, cs)) => ("_batch_update_" + n, cs)
+    case EventInsert(Schema(n, cs)) => ("_insert_" + n, cs)
+    case EventDelete(Schema(n, cs)) => ("_delete_" + n, cs)
   }
 
   override def genTrigger(t: Trigger, s0: System): String = {
     val (name, params, block) = genTriggerPardis(t, s0)
-    val Cname = t.evt match {
-      case EvtReady => "system_ready_event"
-      case EvtBatchUpdate(sc@Schema(n, cs)) => "batch_update_" + n
-      case EvtAdd(Schema(n, cs)) => "insert_" + n
-      case EvtDel(Schema(n, cs)) => "delete_" + n
+    val Cname = t.event match {
+      case EventReady => "system_ready_event"
+      case EventBatchUpdate(sc@Schema(n, cs)) => "batch_update_" + n
+      case EventInsert(Schema(n, cs)) => "insert_" + n
+      case EventDelete(Schema(n, cs)) => "delete_" + n
     }
     val code = codeGen.blockToDocument(block)
     s"void on_$Cname(" + params.map(i => "const")

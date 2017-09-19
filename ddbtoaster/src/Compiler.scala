@@ -279,14 +279,14 @@ object Compiler {
       import M3._
       //XXX: Make this work with EXPRESSIVE-TLQS
       val (qns, qss) = (m3.queries.map(_.name), collection.mutable.HashMap[String,Stmt]())
-      val triggers = m3.triggers.map(t => Trigger(t.evt, t.stmts.filter {
+      val triggers = m3.triggers.map(t => Trigger(t.event, t.stmts.filter {
         case s @ StmtMap(m,e,op,i) => 
           if (qns.contains(m.name)) { qss += ((m.name, s)); false } else true
         // case case MapDef(n,tp,ks,e) => XXXXXX
         case _ => true
       }))
       val r = cg.pkgWrapper(pkg, cg(System(m3.sources, m3.maps, m3.queries, 
-        Trigger(EvtAdd(Schema("__execute__", Nil)), qss.map(_._2).toList) :: triggers)))
+        Trigger(EventInsert(Schema("__execute__", Nil)), qss.map(_._2).toList) :: triggers)))
       // XXX: improve this RegExp
       output(r.replaceAll("GetSnapshot\\(_\\) => ", 
                           "GetSnapshot(_) => onAdd__execute__(); ")

@@ -1,6 +1,7 @@
 package ddbt.codegen
 
 import ddbt.ast._
+import ddbt.ast.M3.{ StoreType, IndexedStore, ArrayStore, LogStore, PartitionStore }
 import ddbt.lms.oltp.opt.lifters._
 import scala.virtualization.lms.common._
 import scala.virtualization.lms.internal._

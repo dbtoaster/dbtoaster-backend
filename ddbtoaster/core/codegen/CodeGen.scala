@@ -1,6 +1,7 @@
 package ddbt.codegen
 
-import ddbt.ast.{ M3, Source, Type, EvtBatchUpdate, EvtAdd, EvtDel }
+import ddbt.ast.{ M3, Source, Type }
+import ddbt.ast.M3.{ EventBatchUpdate, EventInsert, EventDelete }
 
 /**
   * An abstraction of the code generator.
@@ -71,16 +72,16 @@ trait CodeGen extends (M3.System => String) {
 
   def pkgWrapper(pkg: String, body: String): String
 
-  def hasOnlyBatchProcessingForAdd(s0: M3.System, evt: EvtBatchUpdate) = 
-    s0.triggers.forall { t => t.evt match {
-      case EvtAdd(s) if (evt.schema.name == s.name) => false
+  def hasOnlyBatchProcessingForAdd(s0: M3.System, event: EventBatchUpdate) = 
+    s0.triggers.forall { t => t.event match {
+      case EventInsert(s) if (event.schema.name == s.name) => false
       case _ => true
     }
   }
 
-  def hasOnlyBatchProcessingForDel(s0: M3.System, evt: EvtBatchUpdate) = 
-    s0.triggers.forall{ t => t.evt match {
-      case EvtDel(s) if (evt.schema.name == s.name) => false
+  def hasOnlyBatchProcessingForDel(s0: M3.System, event: EventBatchUpdate) = 
+    s0.triggers.forall{ t => t.event match {
+      case EventDelete(s) if (event.schema.name == s.name) => false
       case _ => true
     }
   }

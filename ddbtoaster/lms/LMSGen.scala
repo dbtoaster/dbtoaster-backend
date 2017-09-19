@@ -307,17 +307,17 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
 
   // Trigger code generation
   def genTriggerLMS(t: Trigger, s0: System) = {
-    val (name, args) = t.evt match {
-      case EvtReady => ("SystemReady", Nil)
-      case EvtBatchUpdate(Schema(n, cs)) => ("BatchUpdate" + n, cs)
-      case EvtAdd(Schema(n, cs)) => ("Add" + n, cs)
-      case EvtDel(Schema(n, cs)) => ("Del" + n, cs)
+    val (name, args) = t.event match {
+      case EventReady => ("SystemReady", Nil)
+      case EventBatchUpdate(Schema(n, cs)) => ("BatchUpdate" + n, cs)
+      case EventInsert(Schema(n, cs)) => ("Add" + n, cs)
+      case EventDelete(Schema(n, cs)) => ("Del" + n, cs)
     }
 
     var params = ""
     val block = impl.reifyEffects {
-      params = t.evt match {
-        case EvtBatchUpdate(Schema(n, _)) =>
+      params = t.event match {
+        case EventBatchUpdate(Schema(n, _)) =>
           val rel = s0.sources.filter(_.schema.name == n)(0).schema
           val name = rel.deltaName    
           name + ": Store[" + impl.codegen.storeEntryType(ctx0(name)._1) + "]"
@@ -327,8 +327,8 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
       cx = Ctx((
         ctx0.map{ case (name, (sym, keys, tp)) => (name, sym) }.toList union
         {
-          t.evt match {
-            case EvtBatchUpdate(Schema(n, _)) =>
+          t.event match {
+            case EventBatchUpdate(Schema(n, _)) =>
               // val rel = s0.sources.filter(_.schema.name == n)(0).schema
               // val ks = rel.fields.map(_._2)
               // val tp = TypeLong
@@ -458,11 +458,11 @@ abstract class LMSGen(override val cls: String = "Query", val impl: LMSExpGen, o
   var resultMapNames = List[String]()
 
   override def genLMS(s0: System): (String, String, String, String) = {
-    val classLevelMaps = s0.triggers.filter(_.evt match {
-      case EvtBatchUpdate(s) => true
+    val classLevelMaps = s0.triggers.filter(_.event match {
+      case EventBatchUpdate(s) => true
       case _ => false
-    }).map(_.evt match { //delta relations
-      case EvtBatchUpdate(sc) =>
+    }).map(_.event match { //delta relations
+      case EventBatchUpdate(sc) =>
         val name = sc.name
         val schema = s0.sources.filter(x => x.schema.name == name)(0).schema
         val deltaRel = sc.deltaName

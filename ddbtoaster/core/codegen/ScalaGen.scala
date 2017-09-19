@@ -461,17 +461,17 @@ trait IScalaGen extends CodeGen {
   }
 
   def genTrigger(t: Trigger, s0: System): String = {
-    val (n, as) = t.evt match {
-      case EvtReady => ("SystemReady", Nil)
-      case EvtBatchUpdate(Schema(n, cs)) => ("BatchUpdate" + n, cs)
-      case EvtAdd(Schema(n, cs)) => ("Add" + n, cs)
-      case EvtDel(Schema(n, cs)) => ("Del" + n, cs)
+    val (n, as) = t.event match {
+      case EventReady => ("SystemReady", Nil)
+      case EventBatchUpdate(Schema(n, cs)) => ("BatchUpdate" + n, cs)
+      case EventInsert(Schema(n, cs)) => ("Add" + n, cs)
+      case EventDelete(Schema(n, cs)) => ("Del" + n, cs)
     }
     ctx = Ctx(as.map(x => (x._1, (x._2, x._1))).toMap)
     val body = t.stmts.map(genStmt).mkString
     ctx = null
-    val params = t.evt match {
-      case EvtBatchUpdate(Schema(n, _)) =>
+    val params = t.event match {
+      case EventBatchUpdate(Schema(n, _)) =>
         val rel = s0.sources.filter(_.schema.name == n)(0).schema
         val ks = rel.fields.map(_._2)
         val tp = TypeLong
@@ -537,21 +537,21 @@ trait IScalaGen extends CodeGen {
       " } else tN += 1L } else tN += 1L; "
     val pp = "" //if (printProgress > 0L) "printProgress(); " else ""
     
-    val (systemEvent, others) = s0.triggers.partition(_.evt match { 
-      case EvtReady => true
+    val (systemEvent, others) = s0.triggers.partition(_.event match { 
+      case EventReady => true
       case _ => false
     })
-    val (singleEvents, batchEvents) = others.partition(_.evt match { 
-      case EvtBatchUpdate(_) => false
-      case EvtAdd(_) | EvtDel(_) => true
+    val (singleEvents, batchEvents) = others.partition(_.event match { 
+      case EventBatchUpdate(_) => false
+      case EventInsert(_) | EventDelete(_) => true
       case _ => sys.error("Unexpected trigger event")
     })
-    val singleStr = singleEvents.map(_.evt match {
-      case EvtAdd(s) =>
+    val singleStr = singleEvents.map(_.event match {
+      case EventInsert(s) =>
         val (i, _, o, pl) = ev(s)
         "case TupleEvent(TupleInsert, \"" + s.name + 
         "\", List(" + i + ")) => " + skip + pp + "onAdd" + s.name + o + "\n"
-      case EvtDel(s) =>
+      case EventDelete(s) =>
         val (i, _, o, pl) = ev(s)
         "case TupleEvent(TupleDelete, \"" + s.name + 
         "\", List(" + i + ")) => " + skip + pp + "onDel" + s.name + o + "\n"
@@ -559,8 +559,8 @@ trait IScalaGen extends CodeGen {
     }).mkString
 
     val batchStr = if (batchEvents.size == 0) "" else {
-      val sBatchEvents = batchEvents.map(_.evt match { 
-        case EvtBatchUpdate(s) =>
+      val sBatchEvents = batchEvents.map(_.event match { 
+        case EventBatchUpdate(s) =>
           val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
           val (params, _, _, _) = ev(schema)
           val deltaName = schema.deltaName
@@ -618,22 +618,22 @@ trait IScalaGen extends CodeGen {
         fs)
     }
 
-    val (systemEvent, others) = s0.triggers.partition(_.evt match {
-      case EvtReady => true
+    val (systemEvent, others) = s0.triggers.partition(_.event match {
+      case EventReady => true
       case _ => false
     })
 
-    val (singleEvents, _) = others.partition(_.evt match {
-      case EvtBatchUpdate(_) => false
-      case EvtAdd(_) | EvtDel(_) => true
+    val (singleEvents, _) = others.partition(_.event match {
+      case EventBatchUpdate(_) => false
+      case EventInsert(_) | EventDelete(_) => true
       case _ => sys.error("Unexpected trigger event")
     })
-    val singleStr = singleEvents.map(_.evt match {
-      case EvtAdd(s) =>
+    val singleStr = singleEvents.map(_.event match {
+      case EventInsert(s) =>
         val (i, _, o, pl) = ev(s)
         "case TupleEvent(TupleInsert, \"" + s.name +
           "\", List(" + i + ")) => onAdd" + s.name + o + "\n"
-      case EvtDel(s) =>
+      case EventDelete(s) =>
         val (i, _, o, pl) = ev(s)
         "case TupleEvent(TupleDelete, \"" + s.name +
           "\", List(" + i + ")) => onDel" + s.name + o + "\n"
@@ -705,8 +705,8 @@ trait IScalaGen extends CodeGen {
     else {
       // triggers (need to be generated before maps)
       val ts = s0.triggers.map(genTrigger(_, s0)).mkString("\n\n") 
-      val ms = s0.triggers.map(_.evt match { //delta relations
-        case EvtBatchUpdate(s) =>
+      val ms = s0.triggers.map(_.event match { //delta relations
+        case EventBatchUpdate(s) =>
           val schema = s0.sources.filter(_.schema.name == s.name)(0).schema
           val deltaRel = schema.deltaName
           genMap(MapDef(deltaRel, TypeLong, schema.fields, null, LocalExp)) + "\n"

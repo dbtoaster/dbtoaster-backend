@@ -37,13 +37,13 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
     }
 
     // Create delta MapInfo definitions
-    deltaMapInfo = s0.triggers.flatMap { _.evt match {
-      case EvtBatchUpdate(s @ Schema(name, _)) => 
+    deltaMapInfo = s0.triggers.flatMap { _.event match {
+      case EventBatchUpdate(s @ Schema(name, _)) => 
         val source = s0.sources.filter(_.schema.name == name).head
         val keys = source.schema.fields
         val storeType = if (UNSAFE_OPTIMIZATION_USE_ARRAYS_FOR_DELTA_BATCH) ArrayStore else IndexedStore
         List((s.deltaName, MapInfo(s.deltaName, TypeLong, keys, DeltaMapRefConst(name, keys), source.locality, storeType)))
-      case EvtAdd(_) | EvtDel(_) => 
+      case EventInsert(_) | EventDelete(_) => 
         sys.error("Distributed programs run only in batch mode.")
       case _ => Nil
     }}
@@ -58,11 +58,11 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
     // Lift and merge trigger statements 
     val updateStmts = reorderTriggers(s0.triggers).flatMap { 
-      case Trigger(EvtBatchUpdate(_), stmts) => stmts.flatMap(prepareStatement)
+      case Trigger(EventBatchUpdate(_), stmts) => stmts.flatMap(prepareStatement)
       case _ => Nil
     }
     val systemReadyStmts = s0.triggers.flatMap { 
-      case Trigger(EvtReady, stmts) => stmts.flatMap(prepareStatement)
+      case Trigger(EventReady, stmts) => stmts.flatMap(prepareStatement)
       case _ => Nil
     }
 
@@ -997,8 +997,8 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
 
   protected def emitEventHandlers(s0: System, skipExec: Boolean): String = {
     val step = 128 // periodicity of timeout verification, must be a power of 2
-    val (batchEvents, otherEvents) = s0.triggers.map(_.evt).partition {
-      case EvtBatchUpdate(_) => true
+    val (batchEvents, otherEvents) = s0.triggers.map(_.event).partition {
+      case EventBatchUpdate(_) => true
       case _ => false
     }
     val sBatchEventHandler = 
@@ -1023,7 +1023,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
               |}
               |""".stripMargin      
         val sStreamCase = batchEvents.map {
-          case EvtBatchUpdate(s) =>
+          case EventBatchUpdate(s) =>
             val schema = s0.sources.filter(_.schema.name == s.name).head.schema
             val deltaName = schema.deltaName
             val params = fieldsToParamList(schema.fields)
@@ -1035,7 +1035,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
           case _ => ""
         }.mkString("\n")
         val deltaNames = batchEvents.flatMap {
-          case EvtBatchUpdate(s) => List(s.deltaName)
+          case EventBatchUpdate(s) => List(s.deltaName)
           case _ => Nil
         } 
         val onBatchArgs = deltaNames.mkString(", ")
@@ -1069,7 +1069,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
             |}
             |""".stripMargin      
       otherEvents.map {
-        case EvtAdd(schema) => if (skipExec) {
+        case EventInsert(schema) => if (skipExec) {
             s"""|case TupleEvent(TupleInsert, "${schema.name}", _) =>
                 |  tuplesSkipped += 1
                 |""".stripMargin
@@ -1081,7 +1081,7 @@ class LMSSparkGen(cls: String = "Query") extends DistributedM3Gen(cls, SparkExpG
                 |  onAdd${schema.name}(${fieldsToArgList(schema.fields)})  
                 |""".stripMargin
           }
-        case EvtDel(schema) =>  if (skipExec) {
+        case EventDelete(schema) =>  if (skipExec) {
             s"""|case TupleEvent(TupleDelete, "${schema.name}", _) =>
                 |  tuplesSkipped += 1
                 |""".stripMargin

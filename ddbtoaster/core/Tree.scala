@@ -1,5 +1,7 @@
 package ddbt.ast
 
+import ddbt.lib.Utils.ind
+
 /**
  * This defines the generic nodes that we manipulate during transformations
  * and optimization phases between SQL/M3 and target code. To obtain the exact
@@ -108,8 +110,8 @@ case object OpGt extends OpCmp { override def toString = ">" }
 case object OpGe extends OpCmp { override def toString = ">=" } 
 
 
-// ---------- Expression locality types
-abstract sealed class LocalityType
+// ------ Expression locality types
+abstract sealed class LocalityType extends Tree
 case object LocalExp extends LocalityType {
   override def toString = "<Local>"
 }
@@ -174,63 +176,26 @@ case class SplitPrefix(bytes: Int) extends Split {
 } // records are prefixed with their length in bytes
 
 
-// ---------- Map update operators
-sealed abstract class OpMap extends Tree
-case object OpSet extends OpMap { override def toString = " := " }
-case object OpAdd extends OpMap { override def toString = " += " }
-
-//---------- Map types
-sealed abstract class StoreType 
-case object IndexedStore extends StoreType       // Default store type (row-oriented Store)
-case object ArrayStore   extends StoreType       // Array store (row-oriented, only foreach)
-case object LogStore     extends StoreType       // Columnar store (only append and foreach)
-case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores 
-
-
-// ---------- Trigger events
-sealed abstract class EvtTrigger extends Tree { 
-  def evtName: String
-  def schema: Schema 
-  def args = List[(String, Type)]()
-}
-
-case object EvtReady extends EvtTrigger { 
-  override val evtName = "system_ready"
-  override val schema = null 
-  override def toString = "SYSTEM READY"
-}
-
-case class EvtAdd(schema: Schema) extends EvtTrigger { 
-  override val evtName = "insert_" + schema.name 
-  override def args = schema.fields 
-  override def toString = 
-    "+ " + schema.name + " (" + schema.fields.map(_._1).mkString(", ") + ")"
-}
-
-case class EvtDel(schema: Schema) extends EvtTrigger { 
-  override val evtName = "delete_" + schema.name 
-  override def args = schema.fields
-  override def toString = 
-    "- " + schema.name + " (" + schema.fields.map(_._1).mkString(", ") + ")"
-}
-
-case class EvtBatchUpdate(schema: Schema) extends EvtTrigger { 
-  override val evtName = "batch_" + schema.name 
-  override def args = Nil
-  override def toString = "BATCH UPDATE OF " + schema.name
-}
-
-
-// Cleanup/Failure/Shutdown/Checkpoint
 // -----------------------------------------------------------------------------
 // M3 language
 
-sealed abstract class M3 // see ddbt.frontend.M3Parser
+sealed abstract class M3 extends Tree   // see ddbt.frontend.Parsers
 
 object M3 {
 
-  import ddbt.lib.Utils.ind
+  // ---------- Map update operators
+  sealed abstract class OpMap extends M3
+  case object OpSet extends OpMap { override def toString = " := " }
+  case object OpAdd extends OpMap { override def toString = " += " }
 
+  //---------- Map types
+  sealed abstract class StoreType extends M3
+  case object IndexedStore extends StoreType       // Default store type (row-oriented Store)
+  case object ArrayStore   extends StoreType       // Array store (row-oriented, only foreach)
+  case object LogStore     extends StoreType       // Columnar store (only append and foreach)
+  case class  PartitionStore(pkeys: List[Int]) extends StoreType     // Multiple log stores  
+
+  // -------- M3 system
   case class System(sources: List[Source], maps: List[MapDef], queries: List[Query], triggers: List[Trigger]) extends M3 {
     lazy val mapType =              // String => (List[Type], Type)
       ( maps.map { m => 
@@ -252,6 +217,7 @@ object M3 {
       triggers.mkString("\n\n")
   }
 
+  // ---------- Map definition statement
   case class MapDef(name: String, tp: Type, keys: List[(String, Type)], expr: Expr, locality: LocalityType) extends Stmt {    
     override def toString = 
       "DECLARE MAP " + name + (if (tp != null) "(" + tp + ")" else "") + "[][" + 
@@ -269,6 +235,7 @@ object M3 {
     def toCppRefType = if (keys.size == 0) toCppType else toCppType + "&"
   }
 
+  // -------- Query definition
   case class Query(name: String, map: Expr) extends M3 {
     var keys: List[(String, Type)] = null
     var tp: Type = null
@@ -280,9 +247,44 @@ object M3 {
     def toCppRefType = if (keys.size == 0) toCppType else toCppType + "&"
   }
 
-  case class Trigger(evt: EvtTrigger, stmts: List[Stmt]) extends M3 { 
-    override def toString = "ON " + evt + " {\n" + ind(stmts.mkString("\n")) + "\n}" 
+  // -------- Trigger definition
+  case class Trigger(event: EventTrigger, stmts: List[Stmt]) extends M3 { 
+    override def toString = "ON " + event + " {\n" + ind(stmts.mkString("\n")) + "\n}" 
   }
+
+  // -------- Trigger definition
+  sealed abstract class EventTrigger extends M3 { 
+    def name: String
+    def schema: Schema 
+    def params: List[(String, Type)]
+  }
+
+  case object EventReady extends EventTrigger { 
+    override val name = "system_ready"
+    override val schema = Schema("", Nil) 
+    override val params = Nil
+    override def toString = "SYSTEM READY"
+  }
+
+  case class EventInsert(schema: Schema) extends EventTrigger { 
+    override val name = "insert_" + schema.name 
+    override val params = schema.fields
+    override def toString = 
+      "+ " + schema.name + " (" + schema.fields.map(_._1).mkString(", ") + ")"
+  }
+
+  case class EventDelete(schema: Schema) extends EventTrigger { 
+    override val name = "delete_" + schema.name 
+    override val params = schema.fields
+    override def toString = 
+      "- " + schema.name + " (" + schema.fields.map(_._1).mkString(", ") + ")"
+  }
+
+  case class EventBatchUpdate(schema: Schema) extends EventTrigger { 
+    override val name = "batch_" + schema.name 
+    override val params = Nil
+    override def toString = "BATCH UPDATE OF " + schema.name
+  } 
 
   // ---------- Expressions (values)
   sealed abstract class Expr extends M3 {

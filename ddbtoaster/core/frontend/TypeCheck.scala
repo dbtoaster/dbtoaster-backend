@@ -31,7 +31,7 @@ object TypeCheck extends (M3.System => M3.System) {
       case MapDef(n, tp, ks, e, l) => 
         MapDef(n, tp, ks, if (e != null) re(e) else e, l)
     }
-    val triggers = s0.triggers.map { t => Trigger(t.evt, t.stmts map rst) }
+    val triggers = s0.triggers.map { t => Trigger(t.event, t.stmts map rst) }
     val queries = s0.queries.map { q => Query(q.name, re(q.map)) }
     val tabMaps = s0.sources.filter { s => 
         !s.stream && used.contains(s.schema.name) 
@@ -62,7 +62,7 @@ object TypeCheck extends (M3.System => M3.System) {
       case Apply(f, tp, as) => Apply(fn(f), tp, as.map(re(_, t)))       
     }
     def localMap(name: String, t: Trigger) = {
-      val newName = name + "_" + t.evt.evtName
+      val newName = name + "_" + t.event.name
       localMaps += (name -> newName)
       newName
     }
@@ -84,9 +84,9 @@ object TypeCheck extends (M3.System => M3.System) {
     }
     val triggers = s0.triggers.map { t => 
       localMaps.clear
-      Trigger(t.evt match {
-        case EvtAdd(sc) => EvtAdd(rs(sc))
-        case EvtDel(sc) => EvtDel(rs(sc))
+      Trigger(t.event match {
+        case EventInsert(sc) => EventInsert(rs(sc))
+        case EventDelete(sc) => EventDelete(rs(sc))
         case e => e
       }, t.stmts map(s => rst(s, t)))
     }
@@ -103,9 +103,9 @@ object TypeCheck extends (M3.System => M3.System) {
       case Some(s2) => assert(s.fields.map(_._1) == s2.fields.map(_._1)); s2
       case None => err("Trigger input not found "+s)
     }
-    val triggers = s0.triggers.map(t => Trigger(t.evt match {
-      case EvtAdd(s) => EvtAdd(sch(s))
-      case EvtDel(s) => EvtDel(sch(s))
+    val triggers = s0.triggers.map(t => Trigger(t.event match {
+      case EventInsert(s) => EventInsert(sch(s))
+      case EventDelete(s) => EventDelete(sch(s))
       case e => e
     }, t.stmts))
     val mtp = 
@@ -163,7 +163,7 @@ object TypeCheck extends (M3.System => M3.System) {
     }
     val triggers = s0.triggers.map { 
       case Trigger(e, ss) => 
-        val locked = e.args.map(_._1).toSet
+        val locked = e.params.map(_._1).toSet
         Trigger(e, ss.map(x => rst(x, locked)))
     }
     val queries = s0.queries.map(q => Query(q.name, re(q.map, Set())))
@@ -291,7 +291,7 @@ object TypeCheck extends (M3.System => M3.System) {
         ie(m, b, t)
       case MapDef(n, tp, ks, e, l) => if (e != null) ie(e, b, t) // XXX ie(MapRef(...),b,t)
     }
-    s0.triggers.foreach { t=> t.stmts foreach (x => ist(x, t.evt.args.toMap, Some(t))) }
+    s0.triggers.foreach { t=> t.stmts foreach (x => ist(x, t.event.params.toMap, Some(t))) }
     s0.queries.foreach {
       q => {
         val m = ie(q.map, Map(), None)
