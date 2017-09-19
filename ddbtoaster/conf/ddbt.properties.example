@@ -1,4 +1,16 @@
 # The paths are relative to DBToaster's base folder.
 # - ddbt.dbtoaster: dbtoaster binary (required if base_repo is not set)
 
+# ddbt.base_repo = ../dbtoaster-a5
 ddbt.dbtoaster.frontend = ./bin/dbtoaster_frontend
+# ddbt.lms       = 0
+# ddbt.scalac    = -deprecation -unchecked -feature -optimise -Yinline-warnings
+# ddbt.jvm       = -Xmx14G -Xms14G -Xss32m
+# ddbt.jdk       = jdk6
+# ddbt.jdk6      = /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
+# ddbt.jdk7      = /Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home
+# ddbt.jdk8      = /Library/Java/JavaVirtualMachines/jdk1.8.0.jdk/Contents/Home
+
+ddbt.pardis.outputFolder = pardis/lifter
+ddbt.pardis.inputPackage = ddbt.lib.store
+ddbt.pardis.outputPackage = ddbt.lib.store.deep

@@ -39,8 +39,7 @@ object Utils {
 
   // Paths related to DBToaster
   val pathRepo = { 
-    val r = prop("base_repo", null)
-    if (r == null) null else r + "/dbtoaster/compiler/alpha5" 
+    prop("base_repo", null)
   }
 
   val pathDBTBin  = (if (pathRepo != null) pathRepo + "/" else "") + 
